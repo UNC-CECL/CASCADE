@@ -266,18 +266,28 @@ Qoverwash = np.zeros(np.size(barrier3d[iB3D]._model._QowTS)) # m^3/m/yr
 for iB3D in range(brie._ny):
     Qoverwash = Qoverwash + (np.array(barrier3d[iB3D]._model._QowTS) * (barrier3d[iB3D]._model._BarrierLength * 10)) # m^3/yr
 
+Qoverwash = Qoverwash / (brie._ny * brie._dy)
+QoverwashLTA = brieLTA._Qoverwash / (brieLTA._ny * brieLTA._dy)
+
 plt.figure()
 plt.plot(Qoverwash)
-plt.plot(brieLTA._Qoverwash)
+plt.plot(QoverwashLTA)
 fig = plt.gcf()
 fig.set_size_inches(14, 5)
 plt.xlabel('Time (yrs)')
-plt.ylabel('Qow (m^3/yr)')
+plt.ylabel('Qow (m^3/m/yr)')
 plt.title('Overwash Flux')
 plt.legend(['CASCADE (Barrier3D)', 'BRIE (LTA14)'])
 plt.show()
 name = 'Output/Overwash'
 
-# left off here: what other variables should I compare? shoreline change and shoreface flux?
+# left off here: what other variables should I compare? shoreline change and shoreface flux? watch some movies?
 
 # Talk with Ian about next steps
+# - 500 yr & 1000 yr run with alongshore homogenous dune line: look at island behavior (check initial conditions with him)
+# - make movies for brie and CASCADE
+# - stats summary, Qsf, Qow, (a) shoreline position, average width, dune height (for both brie and CASCADE)
+# - mean barrier width (brie and CASCADE) [future, with and without inlets]
+# - barrier evolution (block diagram?, like Jaap Figure 1a) for brie and CASCADE (maybe 3 snapshots?)
+# - cross shore transects for an example dy brie vs CASCADE, first and last time steps?
+# - [eventually with inlets, Qow vs Qinlet]
