@@ -40,12 +40,12 @@ brie._b3d_barrier_model_on = True  # B3d overwash model on
 
 # wave climate parameters
 brie._wave_height = 1  # m (lowered from 1 m to reduce k_sf)
-brie._wave_period = 8  # s (lowered from 10 s to reduce k_sf)
+brie._wave_period = 6  # s (lowered from 10 s to reduce k_sf)
 brie._wave_asym = 0.8  # fraction approaching from left
 brie._wave_high = 0.2  # fraction of waves approaching from higher than 45 degrees
 
 # barrier model parameters (the following are needed for other calculations even if the barrier model is off)
-brie._slr = 0.004  # m/yr
+brie._slr = 0.002  # m/yr
 brie._s_background = 0.02  # background slope (for shoreface toe position & inlet calculations)
 brie._z = 10  # initial sea level (for tracking SL, Eulerian reference frame)
 brie._bb_depth = 3  # back-barrier depth
@@ -54,7 +54,7 @@ brie._bb_depth = 3  # back-barrier depth
 brie._dy = 500  # m, length of alongshore section (same as B3D)
 brie._ny = 10  # number of alongshore sections (10=5 km for testing AST, make 30 for inlets=15 km)
 brie._dt = 1  # yr, timestep (same as B3D)
-brie._nt = 100  # timesteps for 100 morphologic years
+brie._nt = 200  # timesteps for 200 morphologic years
 brie._dtsave = 1  # save spacing (every year)
 
 # inlet parameters (use default)
@@ -70,11 +70,10 @@ Brie.dependent(brie)
 ###############################################################################
 
 # when using the BMI, all values currently have to be updated in the yaml
-datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"
+datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"
 
 # for each B3D subgrid, set the initial shoreface geometry equal to what is set in brie (some random perturbations);
 # all other B3D variables are set equal
-# FUTURE NOTE: for final tidal inlet runs, vary both the growth parameter and storms (external .npy files)
 barrier3d = []
 
 for iB3D in range(brie._ny):
@@ -87,6 +86,7 @@ for iB3D in range(brie._ny):
     set_yaml('LShoreface', float(brie._x_s[iB3D] - brie._x_t[iB3D]),
              datadir)  # [m] Length of shoreface (calculate from brie variables, shoreline - shoreface toe)
     set_yaml('ShorefaceToe', float(brie._x_t[iB3D]), datadir)  # [m] Start location of shoreface toe
+    set_yaml('BermEl', 2.0 , datadir) # [m] Static elevation of berm; berm elevation + dune height = dune elevation
     set_yaml('BayDepth', brie._bb_depth, datadir)  # [m] Depth of bay behind island segment (set to brie bay depth)
     set_yaml('MHW', brie._a0, datadir)  # [m] Elevation of Mean High Water (set to brie tidal amplitude?) ????????????
     set_yaml('DuneParamStart', True, datadir)  # Dune height will come from external file
@@ -186,21 +186,26 @@ brieLTA._b3d_barrier_model_on = False  # B3d overwash model off
 
 # wave climate parameters
 brieLTA._wave_height = 1  # m (lowered from 1 m to reduce k_sf)
-brieLTA._wave_period = 8  # s (lowered from 10 s to reduce k_sf)
+brieLTA._wave_period = 6  # s (lowered from 10 s to reduce k_sf)
 brieLTA._wave_asym = 0.8  # fraction approaching from left
 brieLTA._wave_high = 0.2  # fraction of waves approaching from higher than 45 degrees
 
 # barrier model parameters (the following are needed for other calculations even if the barrier model is off)
-brieLTA._slr = 0.004  # m/yr
+brieLTA._slr = 0.002  # m/yr
 brieLTA._s_background = 0.02  # background slope (for shoreface toe position & inlet calculations)
 brieLTA._z = 10  # initial sea level (for tracking SL, Eulerian reference frame)
 brieLTA._bb_depth = 3  # back-barrier depth
+
+# also need these to be as similar as possible to "storm conditions" for B3D
+brieLTA._w_b_crit = 200  # critical barrier width [m]
+brieLTA._h_b_crit = 2 #(barrier3d[iB3D]._model._BermEl + barrier3d[iB3D]._model._MHW) * 10  # critical barrier height [m] (should equal B3D original BermEl above)
+brieLTA._Qow_max = 40  # max overwash flux [m3/m/yr]
 
 # model setup
 brieLTA._dy = 500  # m, length of alongshore section (same as B3D)
 brieLTA._ny = 10  # number of alongshore sections (10=5 km for testing AST, make 30 for inlets=15 km)
 brieLTA._dt = 1  # yr, timestep (same as B3D)
-brieLTA._nt = 100  # timesteps for 100 morphologic years
+brieLTA._nt = 200  # timesteps for 200 morphologic years
 brieLTA._dtsave = 1  # save spacing (every year)
 
 # inlet parameters (use default)
@@ -211,12 +216,13 @@ brieLTA._marsh_cover = 0.5  # % of backbarrier covered by marsh and therefore do
 # get dependent variables
 Brie.dependent(brieLTA)
 
+# NOTE: the LTA model does not work well when you set the width and height from B3D
 # now update brie x_b, x_b_save[:,0], h_b, h_b_save[:,0] from B3D so all the initial conditions are the same
-for iB3D in range(brie._ny):
-    brieLTA._x_b[iB3D] = (barrier3d[iB3D]._model._x_b_TS[0] * 10)
-    brieLTA._h_b[iB3D] = (barrier3d[iB3D]._model._h_b_TS[0] * 10)
-    brieLTA._x_b_save[iB3D, 0] = brieLTA._x_b[iB3D]
-    brieLTA._h_b_save[iB3D, 0] = brieLTA._h_b[iB3D]
+#for iB3D in range(brie._ny):
+#    brieLTA._x_b[iB3D] = (barrier3d[iB3D]._model._x_b_TS[0] * 10)
+#    brieLTA._h_b[iB3D] = (barrier3d[iB3D]._model._h_b_TS[0] * 10)
+#    brieLTA._x_b_save[iB3D, 0] = brieLTA._x_b[iB3D]
+#    brieLTA._h_b_save[iB3D, 0] = brieLTA._h_b[iB3D]
 
     # debugging
     # brieLTA._h_b_save[:, 0] - brie._h_b_save[:, 0]
@@ -230,6 +236,22 @@ for time_step in range(brieLTA._nt - 1):
 ###############################################################################
 # plot
 ###############################################################################
+
+# mean barrier width from brie+LTA (self._x_b - self._x_s)
+plt.figure()
+plt.plot(brieLTA._x_s_save[5,:])
+
+
+fig = plt.gcf()
+fig.set_size_inches(14, 5)
+plt.xlabel('Time (yrs)')
+plt.ylabel('Qow (m^3/m/yr)')
+plt.title('Overwash Flux')
+plt.legend(['CASCADE (Barrier3D)', 'BRIE (LTA14)'])
+plt.show()
+name = 'Output/Overwash'
+
+
 
 #===================================================
 # 1: Dune Height Over Time for CASCADE
@@ -281,13 +303,43 @@ plt.legend(['CASCADE (Barrier3D)', 'BRIE (LTA14)'])
 plt.show()
 name = 'Output/Overwash'
 
-# left off here: what other variables should I compare? shoreline change and shoreface flux? watch some movies?
+###############################################################################
+# save data
+###############################################################################
+name = 'CASCADE_BRIE_COMPARISON'
+filename = name+'.npz'
 
-# Talk with Ian about next steps
-# - 500 yr & 1000 yr run with alongshore homogenous dune line: look at island behavior (check initial conditions with him)
+# loop through and create separate variable names
+
+#np.savez(filename, DuneDomain = DuneDomain, DomainTS = DomainTS, x_s_TS = x_s_TS, x_b_TS = x_b_TS, x_t_TS = x_t_TS, s_sf_TS = s_sf_TS, InteriorWidth_AvgTS = InteriorWidth_AvgTS, QowTS = QowTS, QsfTS = QsfTS, Hd_AverageTS = Hd_AverageTS,
+#         PercentCoverTS = PercentCoverTS, DeadPercentCoverTS = DeadPercentCoverTS, ShrubArea = ShrubArea, ShrubDomainAll = ShrubDomainAll, ShrubDeadTS = ShrubDeadTS, StormCount = StormCount, t = t, RunUpCount = RunUpCount, InundationCount = InundationCount,
+#         ShorelineChange = ShorelineChange, Hd_Loss_TS = Hd_Loss_TS, SimDuration = SimDuration, StormSeries = StormSeries, Dmax = Dmax, SL = SL, MaxAvgSlope = MaxAvgSlope, fluxLimit = fluxLimit, SimParams = SimParams)
+
+#output = np.empty( (np.size(param1), np.size(param2)), dtype=object)
+# next to do: make the cross-sections of brie versus CASCADE to see if this was a good example run, make colorplots to check if the shoreline change makes sense
+
+np.savez(filename, brie=brie, brieLTA=brieLTA, barrier3d=barrier3d)
+
+# blah blah blah
+
+
+# FIGURES TO DO
 # - make movies for brie and CASCADE
 # - stats summary, Qsf, Qow, (a) shoreline position, average width, dune height (for both brie and CASCADE)
 # - mean barrier width (brie and CASCADE) [future, with and without inlets]
 # - barrier evolution (block diagram?, like Jaap Figure 1a) for brie and CASCADE (maybe 3 snapshots?)
 # - cross shore transects for an example dy brie vs CASCADE, first and last time steps?
 # - [eventually with inlets, Qow vs Qinlet]
+
+# 1) highlight different processes in models
+# - 500 yr & 1000 yr run with alongshore homogenous dune line, Qow = 40, K = 30,000 (1 m wave height, 8 sec period), critical barrier height = 2 m, critical barrier width = 200
+# - make a run in brie to see if we get the expected behavior from LTA14
+
+# 2) what is the effect of dunes (from Ian's paper)
+# 3) what is the effect of the alongshore variability of dunes (30 km)
+#   - vary the growth parameter by varying rmin and rmax, but keep difference (range) constant
+#        - [rmin = 0.35, raverage = 0.6, and rmax = 0.85 everywhere as control case] with diffusive wave parameters (look at Brie paper to see what conditions are considered diffusive, or high angle)
+#        - 2 B3Ds at raverage = 0.45 (0.3) and 2 B3Ds at raverage=0.75 (0.9), all along the barrier, check that raverage is 0.6 across the barrier
+#   - show A outcome, but any conclusion need to come from averaging of different storm scenarios
+#   - hyopthesis is that it will prevent punctuated retreat
+# 4) what is the effect of dunes on relative importance of tidal inlets (need to check brie discretization)

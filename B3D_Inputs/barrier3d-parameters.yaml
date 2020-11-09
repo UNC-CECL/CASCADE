@@ -1,6 +1,6 @@
 BarrierLength: 500
 BayDepth: 3
-BermEl: 1.9
+BermEl: 2.0
 BurialLimit: 0.5
 C1: 8.8
 C2: 4.6
@@ -20,7 +20,7 @@ GrowthParamStart: true
 HdDiffu: 0.75
 Ki: 7.5e-06
 Kr: 7.5e-05
-LShoreface: 461.3868411367856
+LShoreface: 595.5555975227139
 MHW: 0.5
 MaxShrubHeight: 3.5
 MaxUpSlope: 0.25
@@ -30,7 +30,7 @@ Qs_bb_min: 1
 Qs_min: 1.0
 Qshrub_max: 0.15
 RSLR_Constant: true
-RSLR_const: 0.004
+RSLR_const: 0.002
 Rat: 0.0
 Rin_i: 0.25
 Rin_r: 2.0
@@ -44,17 +44,17 @@ Shrub_ON: false
 SprayDist: 170
 StormSeries: []
 StormStart: 2
-TMAX: 100
+TMAX: 200
 TideAmp: 1.2
 TimeFruit: 5.0
 UprootLimit: -0.3
 beta: 0.04
 disp_mu: -0.721891
 disp_sigma: 1.5
-k_sf: 26983.223032111026
+k_sf: 13144.588099756602
 mm: 2.0
 nn: 0.5
 rmax: 0.85
 rmin: 0.35
-s_sf_eq: 0.019329993766927633
+s_sf_eq: 0.014954352712561993
 threshold_in: 0.25
