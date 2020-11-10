@@ -8,6 +8,8 @@ import time
 
 from barrier3d import Barrier3dBmi
 from brie import Brie
+import Barrier3D_Functions as B3Dplt
+import CASCADE_plotters as CASCADEplt
 
 
 # temporary placement - I want this added to the BMI but keep getting an object error
@@ -40,21 +42,21 @@ brie._b3d_barrier_model_on = True  # B3d overwash model on
 
 # wave climate parameters
 brie._wave_height = 1  # m (lowered from 1 m to reduce k_sf)
-brie._wave_period = 6  # s (lowered from 10 s to reduce k_sf)
+brie._wave_period = 10  # s (lowered from 10 s to reduce k_sf)
 brie._wave_asym = 0.8  # fraction approaching from left
 brie._wave_high = 0.2  # fraction of waves approaching from higher than 45 degrees
 
 # barrier model parameters (the following are needed for other calculations even if the barrier model is off)
 brie._slr = 0.002  # m/yr
-brie._s_background = 0.02  # background slope (for shoreface toe position & inlet calculations)
+brie._s_background = 0.001  # background slope (for shoreface toe position, back-barrier & inlet calculations)
 brie._z = 10  # initial sea level (for tracking SL, Eulerian reference frame)
 brie._bb_depth = 3  # back-barrier depth
 
 # model setup
 brie._dy = 500  # m, length of alongshore section (same as B3D)
-brie._ny = 10  # number of alongshore sections (10=5 km for testing AST, make 30 for inlets=15 km)
+brie._ny = 6  # number of alongshore sections (6=3 km for testing AST, make 30 for inlets=15 km)
 brie._dt = 1  # yr, timestep (same as B3D)
-brie._nt = 200  # timesteps for 200 morphologic years
+brie._nt = 25  # timesteps for 200 morphologic years
 brie._dtsave = 1  # save spacing (every year)
 
 # inlet parameters (use default)
@@ -70,7 +72,8 @@ Brie.dependent(brie)
 ###############################################################################
 
 # when using the BMI, all values currently have to be updated in the yaml
-datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"
+#datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"
+datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"
 
 # for each B3D subgrid, set the initial shoreface geometry equal to what is set in brie (some random perturbations);
 # all other B3D variables are set equal
@@ -186,27 +189,27 @@ brieLTA._b3d_barrier_model_on = False  # B3d overwash model off
 
 # wave climate parameters
 brieLTA._wave_height = 1  # m (lowered from 1 m to reduce k_sf)
-brieLTA._wave_period = 6  # s (lowered from 10 s to reduce k_sf)
+brieLTA._wave_period = 10  # s (lowered from 10 s to reduce k_sf)
 brieLTA._wave_asym = 0.8  # fraction approaching from left
 brieLTA._wave_high = 0.2  # fraction of waves approaching from higher than 45 degrees
 
 # barrier model parameters (the following are needed for other calculations even if the barrier model is off)
 brieLTA._slr = 0.002  # m/yr
-brieLTA._s_background = 0.02  # background slope (for shoreface toe position & inlet calculations)
+brieLTA._s_background = 0.001  # background slope (for shoreface toe position & inlet calculations)
 brieLTA._z = 10  # initial sea level (for tracking SL, Eulerian reference frame)
 brieLTA._bb_depth = 3  # back-barrier depth
 
 # also need these to be as similar as possible to "storm conditions" for B3D
-brieLTA._w_b_crit = 200  # critical barrier width [m]
+brieLTA._w_b_crit = 450  # critical barrier width [m]
 brieLTA._h_b_crit = 2 #(barrier3d[iB3D]._model._BermEl + barrier3d[iB3D]._model._MHW) * 10  # critical barrier height [m] (should equal B3D original BermEl above)
-brieLTA._Qow_max = 40  # max overwash flux [m3/m/yr]
+brieLTA._Qow_max = 20  # max overwash flux [m3/m/yr]
 
 # model setup
-brieLTA._dy = 500  # m, length of alongshore section (same as B3D)
-brieLTA._ny = 10  # number of alongshore sections (10=5 km for testing AST, make 30 for inlets=15 km)
-brieLTA._dt = 1  # yr, timestep (same as B3D)
-brieLTA._nt = 200  # timesteps for 200 morphologic years
-brieLTA._dtsave = 1  # save spacing (every year)
+brieLTA._dy = 100  # m, length of alongshore section (same as B3D)
+brieLTA._ny = 60  # number of alongshore sections (10=6 km for testing AST, make 30 for inlets=15 km)
+brieLTA._dt = 0.05  # yr, timestep (same as B3D)
+brieLTA._nt = 100000  # timesteps for 200 morphologic years
+brieLTA._dtsave = 1000  # save spacing (every year)
 
 # inlet parameters (use default)
 brieLTA._Jmin = 10000  # minimum inlet spacing [m]
@@ -230,27 +233,153 @@ Brie.dependent(brieLTA)
     # brieLTA._x_t_save[:, 0] - brie._x_t_save[:, 0]
     # brieLTA._x_s_save[:, 0] - brie._x_s_save[:, 0] # need to turn off the random number generator
 
-for time_step in range(brieLTA._nt - 1):
+for time_step in range(int(brieLTA._nt) - 1):
     brieLTA.update()
 
 ###############################################################################
 # plot
 ###############################################################################
 
-# mean barrier width from brie+LTA (self._x_b - self._x_s)
-plt.figure()
-plt.plot(brieLTA._x_s_save[5,:])
+# 4: Animation Frames of Barrier and Dune Elevation
+
+#def plot_ElevAnimation(InteriorWidth_AvgTS, ShorelineChange, DomainTS, DuneDomain, SL, x_s_TS, PercentCoverTS,
+#                       TMAX, DeadPercentCoverTS):
+
+InteriorWidth_AvgTS = []
+ShorelineChange = []
+DomainTS = np.array()
+DuneDomain = []
+x_s_TS = []
+SL = []
+TMAX = []
+
+for iB3D in range(brie._ny):
+    InteriorWidth_AvgTS.append(barrier3d[iB3D]._model._InteriorWidth_AvgTS)
+    ShorelineChange.append(barrier3d[iB3D]._model._ShorelineChange)
+    DomainTS.append(barrier3d[iB3D]._model._DomainTS)
+    DuneDomain.append(barrier3d[iB3D]._model._DuneDomain)
+    x_s_TS.append(barrier3d[iB3D]._model._x_s_TS)
+    SL.append(barrier3d[iB3D]._model._SL)
+    TMAX.append(barrier3d[iB3D]._model._TMAX)
+
+InteriorWidth_AvgTS = np.vstack(InteriorWidth_AvgTS).astype(float)
+ShorelineChange = np.vstack(ShorelineChange).astype(float)
+DomainTS = np.vstack(DomainTS).astype(float)
+
+BeachWidth = 6
+#OriginY = 10
+OriginY = [10]
+AniDomainWidth = int(max(InteriorWidth_AvgTS) + BeachWidth + abs(ShorelineChange) + OriginY + 35)  # was +15  # KA, just set for the first subgrid?
+
+for t in range(TMAX):
+
+    for iB3D in range(brie._ny):
+        # Build beach elevation domain
+        BeachDomain = np.zeros([barrier3d[iB3D]._model._BeachWidth, barrier3d[iB3D]._model._BarrierLength])
+        berm = math.ceil(barrier3d[iB3D]._model._BeachWidth * 0.65)
+        BeachDomain[berm:barrier3d[iB3D]._model._BeachWidth + 1, :] = barrier3d[iB3D]._model._BermEl
+        add = (barrier3d[iB3D]._model._BermEl - barrier3d[iB3D]._model._SL) / berm
+        for i in range(berm):
+            BeachDomain[i, :] = barrier3d[iB3D]._model._SL + add * i
+
+        # Make animation frame domain
+        Domain = barrier3d[iB3D]._model._DomainTS[t] * 10
+        Dunes = (barrier3d[iB3D]._model._DuneDomain[t, :, :] + barrier3d[iB3D]._model._BermEl) * 10
+        Dunes = np.rot90(Dunes)
+        Dunes = np.flipud(Dunes)
+        Beach = BeachDomain * 10
+        Domain = np.vstack([Beach, Dunes, Domain])
+        Domain[Domain < 0] = -1
+        AnimateDomain = np.ones([AniDomainWidth + 1, barrier3d[iB3D]._model._BarrierLength]) * -1
+        widthTS = len(Domain)
+        scts = [(x - barrier3d[iB3D]._model._x_s_TS[0]) for x in barrier3d[iB3D]._model._x_s_TS]
+        if scts[t] >= 0:
+            OriginTstart = OriginY + math.floor(scts[t])
+        else:
+            OriginTstart = OriginY + math.ceil(scts[t])
+        OriginTstop = OriginTstart + widthTS
+        #AnimateDomain[OriginTstart:OriginTstop, 0: barrier3d[iB3D]._model._BarrierLength] = Domain
 
 
-fig = plt.gcf()
-fig.set_size_inches(14, 5)
-plt.xlabel('Time (yrs)')
-plt.ylabel('Qow (m^3/m/yr)')
-plt.title('Overwash Flux')
-plt.legend(['CASCADE (Barrier3D)', 'BRIE (LTA14)'])
+
+    # Plot and save
+    elevFig1 = plt.figure(figsize=(7, 12))
+    ax = elevFig1.add_subplot(111)
+    cax = ax.matshow(AnimateDomain, origin='lower', cmap='terrain', vmin=-1.1,
+                     vmax=4.0)  # , interpolation='gaussian') # analysis:ignore
+    ax.xaxis.set_ticks_position('bottom')
+    # cbar = elevFig1.colorbar(cax)
+    plt.xlabel('Alongshore Distance (dam)')
+    plt.ylabel('Cross-Shore Diatance (dam)')
+    plt.title('Interior Elevation')
+    plt.tight_layout()
+    timestr = 'Time = ' + str(t) + ' yrs'
+    newpath = 'Output/SimFrames/'
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+    plt.text(1, 1, timestr)
+    name = 'Output/SimFrames/elev_' + str(t)
+    elevFig1.savefig(name)  # dpi=200
+    plt.close(elevFig1)
+
+frames = []
+for filenum in range(TMAX):
+    filename = 'Output/SimFrames/elev_' + str(filenum) + '.png'
+    frames.append(imageio.imread(filename))
+imageio.mimsave('Output/SimFrames/elev.gif', frames, 'GIF-FI')
+print()
+print('[ * GIF successfully generated * ]')
+
+# plot_ShorelinePositions(x_s_TS, x_b_TS):
+B3Dplt.plot_ShorelinePositions(barrier3d[5]._model._x_s_TS, barrier3d[5]._model._x_b_TS)
+
+#===================================================
+# 1: CASCADE: shoreline transects
+
+# plot_XShoreTransects(InteriorDomain, DuneDomain, SL, TMAX):
+B3Dplt.plot_XShoreTransects(barrier3d[5]._model._InteriorDomain, barrier3d[5]._model._DuneDomain, barrier3d[5]._model._SL, barrier3d[5]._model._TMAX)
+
+# plot_LTATransects(SL, TMAX, x_b_TS, x_t_TS, x_s_TS):
+# B3Dplt.plot_LTATransects(barrier3d[5]._model._SL,
+#                          barrier3d[5]._model._TMAX,
+#                          barrier3d[5]._model._x_b_TS,
+#                          barrier3d[5]._model._x_t_TS,
+#                          barrier3d[5]._model._x_s_TS,
+#                          barrier3d[5]._model._RSLR,
+#                          barrier3d[5]._model._DShoreface,
+#                          barrier3d[5]._model._BayDepth,
+#                          barrier3d[5]._model._BermEl)
+
+xmax = barrier3d[5]._model._x_b_TS[barrier3d[5]._model._TMAX - 1] + 20
+
+SFfig = plt.figure(figsize=(20, 5))
+colors = plt.cm.jet(np.linspace(0, 1, barrier3d[5]._model._TMAX))
+
+for t in range(0, barrier3d[5]._model._TMAX, 5):  # Plots one transect every 5 years
+    # Create data points
+    Tx = barrier3d[5]._model._x_t_TS[t]
+    Ty = ((barrier3d[5]._model._SL + (t * barrier3d[5]._model._RSLR[t])) - barrier3d[5]._model._DShoreface) * 10
+    Sx = barrier3d[5]._model._x_s_TS[t]
+    Sy = (barrier3d[5]._model._SL + (t * barrier3d[5]._model._RSLR[t])) * 10
+    Bx = barrier3d[5]._model._x_b_TS[t]
+    By = ((barrier3d[5]._model._SL + (t * barrier3d[5]._model._RSLR[t])) - barrier3d[5]._model._BayDepth) * 10
+    Hx1 = Sx
+    Hy1 = ((t * barrier3d[5]._model._RSLR[t]) + barrier3d[5]._model._BermEl) * 10
+    Hx2 = Bx
+    Hy2 = Hy1
+    Mx = xmax
+    My = By
+
+    x = [Tx, Sx, Hx1, Hx2, Bx, Mx]
+    y = [Ty, Sy, Hy1, Hy2, By, My]
+
+    # Plot
+    plt.plot(x, y, color=colors[t])
+
+plt.xlabel('Alongshore Distance (dam)')
+plt.ylabel('Elevation (m)')
+plt.title('Shoreface Evolution')
 plt.show()
-name = 'Output/Overwash'
-
 
 
 #===================================================
@@ -289,10 +418,10 @@ for iB3D in range(brie._ny):
     Qoverwash = Qoverwash + (np.array(barrier3d[iB3D]._model._QowTS) * (barrier3d[iB3D]._model._BarrierLength * 10)) # m^3/yr
 
 Qoverwash = Qoverwash / (brie._ny * brie._dy)
-QoverwashLTA = brieLTA._Qoverwash / (brieLTA._ny * brieLTA._dy)
+QoverwashLTA = brieLTA._Qoverwash / (brieLTA._ny * brieLTA._dy) # from brie in m^3/yr
 
 plt.figure()
-plt.plot(Qoverwash)
+#plt.plot(Qoverwash)
 plt.plot(QoverwashLTA)
 fig = plt.gcf()
 fig.set_size_inches(14, 5)
@@ -302,6 +431,96 @@ plt.title('Overwash Flux')
 plt.legend(['CASCADE (Barrier3D)', 'BRIE (LTA14)'])
 plt.show()
 name = 'Output/Overwash'
+
+# mean barrier width from brie+LTA (self._x_b - self._x_s)
+plt.figure()
+plt.plot(brieLTA._x_b_save[5, :]-brieLTA._x_s_save[5, :])
+
+plt.figure()
+plt.plot(np.array(barrier3d[5]._model._x_b_TS[:]) - np.array(barrier3d[5]._model._x_s_TS[:]))
+
+# plot_BRIE_LTA
+
+
+# plot_BRIE_frames
+# CASCADEplt.plot_BRIE_frames(brieLTA._y,
+#                             brieLTA._x_t_save,
+#                             brieLTA._x_s_save,
+#                             brieLTA._x_b_save,
+#                             brieLTA._nt,
+#                             brieLTA._ny,
+#                             brieLTA._dy,
+#                             brieLTA._dtsave,
+#                             brieLTA._inlet_idx,
+#                             'True',
+#                             'test')
+
+y = brieLTA._y
+x_t = brieLTA._x_t_save
+x_s = brieLTA._x_s_save
+x_b = brieLTA._x_b_save
+nt = brieLTA._nt
+ny = brieLTA._ny
+dy = brieLTA._dy
+dtsave = brieLTA._dtsave
+inlet_idx = brieLTA._inlet_idx
+make_gif = 'True'
+file_name = 'test'
+directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
+
+# create time array
+t = np.arange(0, nt, dtsave)
+
+if make_gif:
+    os.chdir(directory)
+    os.mkdir(directory+'/GIF')
+
+fig, axes = plt.subplots()
+frames = []
+ymax = int(math.ceil(np.max(x_b[:, -1]) / 100.0)) * 100
+ymin = int(math.floor(np.min(x_t[:, 0]) / 100.0)) * 100
+
+for i in np.arange(0, np.size(t)):
+
+    # plot initial conditions
+    axes.plot(y / 1000, x_t[:, i], color="cornflowerblue")
+    axes.plot(y / 1000, x_s[:, i], color="gold")
+    axes.plot(y / 1000, x_b[:, i], color="teal")
+    axes.fill_between(y / 1000, ymin, x_t[:, i], color="royalblue")
+    axes.fill_between(y / 1000, x_b[:, i], ymax, color="teal", alpha=0.6)
+    axes.fill_between(y / 1000, x_t[:, i], x_s[:, i], color="cornflowerblue", alpha=0.6)
+    axes.fill_between(y / 1000, x_s[:, i], x_b[:, i], color="gold", alpha=0.6)
+    axes.legend(['x_t', 'x_s', 'x_b'])
+    plt.xlabel('Alongshore (km)')
+    plt.ylabel('Cross-shore (m)')
+    plt.title('Time = ' + str(int(t[i])) + ' yr')
+    axes.set_xlim(0, (ny-1) * dy / 1000)
+    # axes.set_ylim(-2000, 6000)  # KA, will need to update later - placeholder
+    # ratio = 0.4   # aspect ratio
+    # axes.set_aspect(0.05)
+    # axes.margins(0.5)
+    # axes.set_aspect(1/axes.get_data_ratio())
+    axes.set_ylim(ymin, ymax)
+
+    # Here I chose to only mark the inlets (all indices), and not where the barrier volume is less than 0...
+    # need to go back and fix
+    # if np.size(inlet_idx) != 0 :
+    #    axes.plot(y[np.hstack(inlet_idx)]/1000, x_s[np.hstack(inlet_idx)], 'kD')
+
+    if make_gif:
+        filename = 'GIF/year_' + str(int(t[i])) + '.png'
+        fig.savefig(filename, dpi=200)
+
+        # use imageio to create gif
+        frames.append(imageio.imread(filename))
+        os.remove(filename)
+
+    axes.clear()  # alternatively, plt.pause(0.0001)
+
+# make gif from saved png files
+if make_gif:
+    imageio.mimsave(name + '.gif', frames, 'GIF-FI')
+    os.rmdir(directory + '/GIF')
 
 ###############################################################################
 # save data
