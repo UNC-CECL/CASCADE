@@ -85,26 +85,26 @@ def initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny
         set_yaml('LShoreface', float(brie._x_s[iB3D] - brie._x_t[iB3D]),
                  datadir)  # [m] Length of shoreface (calculate from brie variables, shoreline - shoreface toe)
         set_yaml('ShorefaceToe', float(brie._x_t[iB3D]), datadir)  # [m] Start location of shoreface toe
-        set_yaml('BermEl', 2.0 , datadir) # [m] Static elevation of berm; berm elevation + dune height = dune elevation
+        #set_yaml('BermEl', 1.9 , datadir) # [m] Static elevation of berm (NOTE: if this is changed, the MSSM storm list and storm time series needs to be remade)
         set_yaml('BayDepth', brie._bb_depth, datadir)  # [m] Depth of bay behind island segment (set to brie bay depth)
-        set_yaml('MHW', brie._a0, datadir)  # [m] Elevation of Mean High Water (set to brie tidal amplitude?) ????????????
+        #set_yaml('MHW', 0.46, datadir)  # [m] Elevation of Mean High Water (NOTE: if this is changed, the storm time series needs to be remade)
         set_yaml('DuneParamStart', True, datadir)  # Dune height will come from external file
-        set_yaml('GrowthParamStart', True, datadir)  # Dune growth parameter will come from external file
-        set_yaml('Dmaxel', 3.4, datadir)  # [m] Maximum elevation of dunes
         set_yaml('Rat', 0.0,
                  datadir)  # [m / y] corresponds to Qat in LTA formulations (!!! must set to 0 because Qs is calculated in brie !!!)
         set_yaml('RSLR_Constant', True,
                  datadir)  # Relative sea-level rise rate will be constant, otherwise logistic growth function used for time series
         set_yaml('RSLR_const', brie._slr, datadir)  # [m / y] Relative sea-level rise rate
-        set_yaml('beta', 0.04, datadir)  # Beach slope for runup calculations
+        #set_yaml('beta', 0.04, datadir)  # Beach slope for runup calculations
         set_yaml('k_sf', float(brie._k_sf),
                  datadir)  # [m^3 / m / y] Shoreface flux rate constant (function of wave parameters from brie)
         set_yaml('s_sf_eq', float(brie._s_sf_eq),
                  datadir)  # Equilibrium shoreface slope (function of wave and sediment parameters from brie)
         if np.size(rmin) > 1:
+            set_yaml('GrowthParamStart', False, datadir)  # Dune growth parameter will come from external file
             set_yaml('rmin', rmin[iB3D], datadir)  # Minimum growth rate for logistic dune growth
             set_yaml('rmax', rmin[iB3D], datadir)  # Maximum growth rate for logistic dune growth
         else:
+            set_yaml('GrowthParamStart', True, datadir)  # Dune growth parameter will come from external file
             set_yaml('rmin', rmin, datadir)  # Minimum growth rate for logistic dune growth
             set_yaml('rmax', rmax, datadir)  # Maximum growth rate for logistic dune growth
 
@@ -231,7 +231,7 @@ def LTA(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt, w
     # NOTE: the LTA model does not work well when you set the width and height from B3D so we set the critical barrier
     # width to the width of the B3D Interior Domain
     brieLTA._w_b_crit = w_b_crit  # critical barrier width [m]
-    brieLTA._h_b_crit = h_b_crit  # (barrier3d[iB3D]._model._BermEl + barrier3d[iB3D]._model._MHW) * 10  # critical barrier height [m] (should equal B3D original BermEl above)
+    brieLTA._h_b_crit = h_b_crit  # (should equal B3D original BermEl above)
     brieLTA._Qow_max = Qow_max  # max overwash flux [m3/m/yr]
 
     # model setup
