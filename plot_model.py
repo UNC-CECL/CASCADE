@@ -12,38 +12,7 @@ output = np.load(filename, allow_pickle=True)
 b3d = output['barrier3d']
 brie = output['brie']
 
-###############################################################################
-# pl
-###############################################################################
-
-# 1: Animation Frames of Barrier and Dune Elevation (#4 in Barrier3D_Functions, modified here for CASCADE)
-TMAX = b3d[0].time_index - 1  # just in case the barrier drowned
-ny = len(b3d)
-CASCADEplt.plot_ElevAnimation(b3d, ny, save_directory, TMAX)
-
 #===================================================
-
-# 2: Shoreline positions over time (#6 in Barrier3D_Functions)
-CASCADEplt.plot_ShorelinePositions(b3d[0]._x_s_TS, b3d[0]._x_b_TS)
-
-#===================================================
-
-# 3: Cross-Shore Transect for one subgrid every 100 m for last time step (#5 in Barrier3D_Functions)
-TMAX = b3d[0].time_index - 1  # just in case the barrier drowned
-CASCADEplt.plot_XShoreTransects(b3d[0], TMAX)
-
-#===================================================
-
-# 4: Cross-shore transects for both brie and B3d
-iB3D = 0
-TMAX = b3d[0].time_index - 1  # just in case the barrier drowned
-time_step = [0, int(TMAX/2), TMAX-2]
-CASCADEplt.plot_ModelTransects(b3d, brieLTA, time_step, iB3D)
-
-#===================================================
-
-#5: LTA model plots [LEFT OFF HERE]
-
 
 # 1: Dune Height Over Time for CASCADE
 
@@ -192,12 +161,5 @@ if make_gif:
 # - barrier evolution (block diagram?, like Jaap Figure 1a) for brie and CASCADE (maybe 3 snapshots?)
 # - [eventually with inlets, Qow vs Qinlet]
 
-# 1) highlight different processes in models with alongshore homogenous dune line, 3000 year simulation
-    # 1b) i.e, what is the effect of dunes (from Ian's paper)
-# 2) what is the effect of the alongshore variability of dunes (30 km)
-#   - vary the growth parameter by varying rmin and rmax, but keep difference (range) constant
-#        - [rmin = 0.35, raverage = 0.6, and rmax = 0.85 everywhere as control case] with diffusive wave parameters (look at Brie paper to see what conditions are considered diffusive, or high angle)
-#        - 2 B3Ds at raverage = 0.45 (0.3) and 2 B3Ds at raverage=0.75 (0.9), all along the barrier, check that raverage is 0.6 across the barrier
-#   - show A outcome, but any conclusion need to come from averaging of different storm scenarios
-#   - hyopthesis is that it will prevent punctuated retreat
+
 # 3) what is the effect of dunes on relative importance of tidal inlets (need to check brie discretization)

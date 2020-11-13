@@ -22,21 +22,14 @@ import math
 # 1: Animation Frames of Barrier and Dune Elevation (#4 in Barrier3D_Functions, modified here for CASCADE)
 #
 #       inputs:         - barrier3d (a list containing BMI objects)
+#                       - ny (the number of barrier3d subgrids that you want to plot)
+#                       - directory (for saving)
+#                       - TMAX (the last time index for plotting)
+#                       - name (for saving new directory)
 #       outputs:        - gif
 
-def plot_ElevAnimation(barrier3d, ny, directory, TMAX):
+def plot_ElevAnimation(barrier3d, ny, directory, TMAX, name):
 
-    InteriorWidth_AvgTS = []
-    ShorelineChange = []
-
-    # for iB3D in range(ny):
-
-    #    InteriorWidth_AvgTS.append(barrier3d[iB3D]._InteriorWidth_AvgTS)
-    #    ShorelineChange.append(barrier3d[iB3D]._ShorelineChange)
-
-    #InteriorWidth_AvgTS = np.vstack(InteriorWidth_AvgTS).astype(float)
-    #ShorelineChange = np.vstack(ShorelineChange).astype(float)
-    #TMAX = barrier3d[0]._TMAX
     BarrierLength = barrier3d[0]._BarrierLength
 
     BeachWidth = 6
@@ -101,9 +94,9 @@ def plot_ElevAnimation(barrier3d, ny, directory, TMAX):
     frames = []
 
     for filenum in range(TMAX-1):
-        filename = 'Output/SimFrames/elev_' + str(filenum) + '.png'
+        filename = 'Output/' + name + '/SimFrames/elev_' + str(filenum) + '.png'
         frames.append(imageio.imread(filename))
-    imageio.mimsave('Output/SimFrames/elev.gif', frames, 'GIF-FI')
+    imageio.mimsave('Output/' + name + '/SimFrames/elev.gif', frames, 'GIF-FI')
     print()
     print('[ * GIF successfully generated * ]')
 
@@ -111,7 +104,7 @@ def plot_ElevAnimation(barrier3d, ny, directory, TMAX):
 # ===================================================
 # 2: Shoreline positions over time (#6 in Barrier3D_Functions)
 #
-#       inputs:         - shoreline and back-barrier time series for one B3D subgrid
+#       inputs:         - x_s_TS, x_b_TS (shoreline and back-barrier time series for one B3D subgrid)
 #       outputs:        - fig
 
 def plot_ShorelinePositions(x_s_TS, x_b_TS):
@@ -133,6 +126,7 @@ def plot_ShorelinePositions(x_s_TS, x_b_TS):
 # #3 B3D cross-Shore Transect for one subgrid every 100 m for last time step (#5 in Barrier3D_Functions)
 #
 #       inputs:         - barrier3d (a list containing BMI objects)
+#                       - TMAX (the last time index for plotting)
 #       outputs:        - fig
 
 def plot_XShoreTransects(barrier3d, TMAX):
@@ -260,3 +254,76 @@ def plot_ModelTransects(b3d, brieLTA, time_step, iB3D):
         plt.xlabel('Alongshore Distance (dam)')
         plt.ylabel('Elevation (m)')
         plt.show()
+
+# ===================================================
+# #5: Statistics from B3D
+#
+#       inputs:         - b3d (a list of B3D objects)
+#                       - iB3D (an integer corresponding to the B3D subdomain / brie alongshore grid)
+#                       - TMAX (the last time index for plotting)
+#                       - iB3D
+#       outputs:        - fig
+
+def plot_statistics(b3d, iB3D, TMAX):
+
+    colors = mpl.cm.viridis(np.linspace(0, 1, 10))
+    plt.figure(figsize=(10, 10))
+
+    # A Shoreface Slope
+    plt.subplot(3, 2, 1)
+    ssfTS = b3d[iB3D]._s_sf_TS
+    plt.plot(ssfTS, color=colors[1])
+    plt.hlines(b3d[iB3D]._s_sf_eq, 0, TMAX, colors='black', linestyles='dashed')
+    #plt.ylabel(r'$\alpha$')
+    plt.ylabel('Shoreface Slope')
+    plt.legend(['B3D sub-grid #'+str(iB3D)])
+    plt.rcParams["legend.loc"] = 'lower right'
+
+    # A Interior Width
+    plt.subplot(3, 2, 2)
+    aiw = [a * 10 for a in b3d[iB3D]._InteriorWidth_AvgTS]
+    plt.plot(aiw, color=colors[2])
+    plt.ylabel('Avg. Width (m)')  # Average Interior Width
+    plt.legend(['B3D sub-grid #'+str(iB3D)])
+    plt.rcParams["legend.loc"] = 'lower right'
+
+    # A Shoreline Change
+    scts = [(x - b3d[iB3D]._x_s_TS[0]) * 10 for x in b3d[iB3D]._x_s_TS]
+    plt.subplot(3, 2, 3)
+    plt.plot(scts, color=colors[3])
+    plt.ylabel('Shoreline Position (m)')
+    plt.legend(['B3D sub-grid #'+str(iB3D)])
+    plt.rcParams["legend.loc"] = 'lower right'
+
+    # A Dune Height
+    aHd = [a * 10 for a in b3d[iB3D]._Hd_AverageTS]
+    plt.subplot(3, 2, 4)
+    plt.plot(aHd, color=colors[4])
+    plt.ylabel('Avg. Dune Height (m)')  # Average Dune Height
+    plt.legend(['B3D sub-grid #'+str(iB3D)])
+    plt.rcParams["legend.loc"] = 'lower right'
+
+    # Qoverwash for entire B3D grid
+    plt.subplot(3, 2, 5)
+    Qoverwash = np.zeros(np.size(b3d[0]._QowTS[0:TMAX]))
+    for iGrid in range(len(b3d)):
+        Qoverwash = Qoverwash + (np.array(b3d[iGrid]._QowTS[0:TMAX]) * (b3d[iGrid]._BarrierLength * 10)) # m^3/yr
+    Qoverwash = Qoverwash / (len(b3d) * b3d[0]._BarrierLength * 10) # m^3/m/yr
+    plt.plot(Qoverwash, color=colors[5])
+    #    movingavg = np.convolve(QowTS, np.ones((50,))/50, mode='valid')
+    #    movingavg = [i * 10 for i in movingavg]
+    #    plt.plot(movingavg, 'r--')
+    plt.ylabel(r'Qow ($m^3/m/yr$)')
+    plt.xlabel('Year')
+
+    # Shoreface flux for entire B3D grid
+    plt.subplot(3, 2, 6)
+    Qsf = np.zeros(np.size(b3d[0]._QsfTS[0:TMAX]))
+    for iGrid in range(len(b3d)):
+        Qsf = Qsf + (np.array(b3d[iGrid]._QsfTS[0:TMAX]) * (b3d[iGrid]._BarrierLength * 10)) # m^3/yr
+    Qsf = Qsf / (len(b3d) * b3d[0]._BarrierLength * 10) # m^3/m/yr
+    plt.plot(Qsf, color=colors[6])
+    plt.ylabel(r'Qsf ($m^3/m/yr$)')
+    plt.xlabel('Year')
+
+    plt.show()

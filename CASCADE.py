@@ -102,7 +102,7 @@ def initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny
         if np.size(rmin) > 1:
             set_yaml('GrowthParamStart', False, datadir)  # Dune growth parameter will come from external file
             set_yaml('rmin', rmin[iB3D], datadir)  # Minimum growth rate for logistic dune growth
-            set_yaml('rmax', rmin[iB3D], datadir)  # Maximum growth rate for logistic dune growth
+            set_yaml('rmax', rmax[iB3D], datadir)  # Maximum growth rate for logistic dune growth
         else:
             set_yaml('GrowthParamStart', True, datadir)  # Dune growth parameter will come from external file
             set_yaml('rmin', rmin, datadir)  # Minimum growth rate for logistic dune growth
