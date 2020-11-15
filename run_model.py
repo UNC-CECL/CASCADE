@@ -13,7 +13,7 @@ import CASCADE as CASCADE
 # GOAL: highlight different processes in models with alongshore homogenous dune line, 3000 year simulation
 #
 # --------- INITIAL CONDITIONS ---------
-name = '1-CASCADE_LTA_COMPARISON'
+name = '1-CASCADE_LTA_COMPARISON_3000yr'
 wave_height = 1  # m
 wave_period = 7  # s (lowered from 10 s to reduce k_sf)
 asym_frac = 0.8  # fraction approaching from left
@@ -48,11 +48,13 @@ b3d = CASCADE.save(brie, barrier3d, save_directory, name) # this returns the bar
 filename = name + '.npz'
 output = np.load(filename, allow_pickle=True)
 b3d = output['barrier3d']
+brie = output['brie']
+brie = brie[0]
 
 # 1: Animation Frames of Barrier and Dune Elevation (#4 in Barrier3D_Functions, modified here for CASCADE)
 TMAX = b3d[0].time_index - 1  # just in case the barrier drowned
 ny = len(b3d)
-CASCADEplt.plot_ElevAnimation(b3d, ny, save_directory, TMAX)
+CASCADEplt.plot_ElevAnimation(b3d, ny, save_directory, TMAX, name)
 
 #===================================================
 
@@ -81,8 +83,14 @@ iB3D = 1
 CASCADEplt.plot_statistics(b3d, iB3D, TMAX)
 
 # 6: Statistics from BrieLTA [LEFT OFF HERE]
+TMAX = int((b3d[0].time_index - 1) / brieLTA._dt)
+iB3D = 1
+iB3D = iB3D * int( (b3d[0]._BarrierLength * 10) / brieLTA._dy)
+CASCADEplt.plot_statistics_BRIE(brieLTA, iB3D, TMAX)
 
-
+# ===================================================
+# 7: Calculate shoreline change periodicity
+Periodicity, AvgFastDur, AvgSlowDur, Punc = CASCADEplt.calc_ShorelinePeriodicity(b3d[0]._x_s_TS)
 
 # ###############################################################################
 # 2 - variable alongshore dune growth parameters
@@ -97,11 +105,11 @@ CASCADEplt.plot_statistics(b3d, iB3D, TMAX)
 #   - hypothesis is that it will prevent punctuated retreat
 
 # --------- INITIAL CONDITIONS ---------
-name = '2-AlongshoreVarGrowthParam'
+name = '2-AlongshoreVarGrowthParam_pt3HAF'
 wave_height = 1  # m
 wave_period = 7  # s (lowered from 10 s to reduce k_sf)
 asym_frac = 0.8  # fraction approaching from left
-high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
+high_ang_frac = 0.3  # fraction of waves approaching from higher than 45 degrees
 slr = 0.002  # m/yr
 ny = 32  # number of alongshore sections (30=15 km, 60=30 km, 32 = 16 km)
 nt = 1000  # timesteps for 1000 morphologic years
@@ -127,11 +135,13 @@ b3d = CASCADE.save(brie, barrier3d, save_directory, name) # this returns the bar
 filename = name + '.npz'
 output = np.load(filename, allow_pickle=True)
 b3d = output['barrier3d']
+brie = output['brie']
+brie = brie[0]
 
 # 1: Animation Frames of Barrier and Dune Elevation (#4 in Barrier3D_Functions, modified here for CASCADE)
 TMAX = b3d[0].time_index - 1  # just in case the barrier drowned
 ny = len(b3d)
-CASCADEplt.plot_ElevAnimation(b3d, ny, save_directory, TMAX)
+CASCADEplt.plot_ElevAnimation(b3d, ny, save_directory, TMAX, name)
 
 #===================================================
 

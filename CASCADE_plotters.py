@@ -17,6 +17,7 @@ import numpy as np
 import os
 import imageio
 import math
+from scipy import signal
 
 #===================================================
 # 1: Animation Frames of Barrier and Dune Elevation (#4 in Barrier3D_Functions, modified here for CASCADE)
@@ -37,6 +38,11 @@ def plot_ElevAnimation(barrier3d, ny, directory, TMAX, name):
     AniDomainWidth = int(np.amax(barrier3d[0]._InteriorWidth_AvgTS) + BeachWidth + np.abs(barrier3d[0]._ShorelineChange) + OriginY + 35)
 
     os.chdir(directory)
+    newpath = 'Output/' + name + '/SimFrames/'
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+    os.chdir(newpath)
+
 
     for t in range(TMAX-1):
 
@@ -72,7 +78,7 @@ def plot_ElevAnimation(barrier3d, ny, directory, TMAX, name):
 
 
         # Plot and save
-        elevFig1 = plt.figure(figsize=(7, 12))
+        elevFig1 = plt.figure(figsize=(15, 7))
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(AnimateDomain, origin='lower', cmap='terrain', vmin=-1.1,
                          vmax=4.0)  # , interpolation='gaussian') # analysis:ignore
@@ -83,20 +89,17 @@ def plot_ElevAnimation(barrier3d, ny, directory, TMAX, name):
         plt.title('Interior Elevation')
         plt.tight_layout()
         timestr = 'Time = ' + str(t) + ' yrs'
-        newpath = 'Output/SimFrames/'
-        if not os.path.exists(newpath):
-            os.makedirs(newpath)
         plt.text(1, 1, timestr)
-        name = 'Output/SimFrames/elev_' + str(t)
+        name = 'elev_' + str(t)
         elevFig1.savefig(name)  # dpi=200
         plt.close(elevFig1)
 
     frames = []
 
     for filenum in range(TMAX-1):
-        filename = 'Output/' + name + '/SimFrames/elev_' + str(filenum) + '.png'
+        filename = 'elev_' + str(filenum) + '.png'
         frames.append(imageio.imread(filename))
-    imageio.mimsave('Output/' + name + '/SimFrames/elev.gif', frames, 'GIF-FI')
+    imageio.mimsave('elev.gif', frames, 'GIF-FI')
     print()
     print('[ * GIF successfully generated * ]')
 
@@ -327,3 +330,215 @@ def plot_statistics(b3d, iB3D, TMAX):
     plt.xlabel('Year')
 
     plt.show()
+
+# ===================================================
+# #6: Statistics from BRIE with LTA
+#
+#       inputs:         - brieLTA (brie model with LTA on)
+#                       - iB3D (an integer corresponding to the B3D subdomain / brie alongshore grid)
+#                       - TMAX (the last time index for plotting and calculations)
+#       outputs:        - fig
+
+def plot_statistics_BRIE(brieLTA, iB3D, TMAX):
+
+    colors = mpl.cm.viridis(np.linspace(0, 1, 10))
+    plt.figure(figsize=(10, 10))
+
+    # A Shoreface Slope
+    plt.subplot(3, 2, 1)
+    ssfTS = brieLTA._s_sf_save[iB3D,:]
+    plt.plot(ssfTS, color=colors[1])
+    plt.hlines(brieLTA._s_sf_eq, 0, len(brieLTA._s_sf_save[iB3D,:]), colors='black', linestyles='dashed')
+    #plt.ylabel(r'$\alpha$')
+    plt.ylabel('Shoreface Slope')
+    plt.legend(['BRIE sub-grid #'+str(iB3D)])
+    plt.rcParams["legend.loc"] = 'lower right'
+
+    # A Interior Width
+    plt.subplot(3, 2, 2)
+    aiw = brieLTA._x_b_save[iB3D,:] - brieLTA._x_s_save[iB3D,:]
+    plt.plot(aiw, color=colors[2])
+    plt.ylabel('Barrier Width (m)')
+    plt.legend(['BRIE sub-grid #'+str(iB3D)])
+    plt.rcParams["legend.loc"] = 'lower right'
+
+    # A Shoreline Change
+    scts = [(x - brieLTA._x_s_save[iB3D,0]) for x in brieLTA._x_s_save[iB3D,:]]
+    plt.subplot(3, 2, 3)
+    plt.plot(scts, color=colors[3])
+    plt.ylabel('Shoreline Position (m)')
+    plt.legend(['BRIE sub-grid #'+str(iB3D)])
+    plt.rcParams["legend.loc"] = 'lower right'
+
+    # Barrier Height
+    aHd = brieLTA._h_b_save[iB3D,:]
+    plt.subplot(3, 2, 4)
+    plt.plot(aHd, color=colors[4])
+    plt.ylabel('Barrier Height (m)')  # Average Dune Height
+    plt.legend(['BRIE sub-grid #'+str(iB3D)])
+    plt.rcParams["legend.loc"] = 'upper right'
+    plt.xlabel('Year')
+
+    # Qoverwash for entire BRIE grid
+    plt.subplot(3, 2, 5)
+    QoverwashLTA = brieLTA._Qoverwash[0:TMAX] / (brieLTA._ny * brieLTA._dy)  # from brie in m^3/yr --> m^3/m/yr
+    plt.plot( brieLTA._t[0:TMAX], QoverwashLTA, color=colors[5])
+    #    movingavg = np.convolve(QowTS, np.ones((50,))/50, mode='valid')
+    #    movingavg = [i * 10 for i in movingavg]
+    #    plt.plot(movingavg, 'r--')
+    plt.ylabel(r'Qow ($m^3/m/yr$)')
+    plt.xlabel('Year')
+
+    # # Shoreface flux for entire B3D grid
+    # plt.subplot(3, 2, 6)
+    # Qsf = np.zeros(np.size(b3d[0]._QsfTS[0:TMAX]))
+    # for iGrid in range(len(b3d)):
+    #     Qsf = Qsf + (np.array(b3d[iGrid]._QsfTS[0:TMAX]) * (b3d[iGrid]._BarrierLength * 10)) # m^3/yr
+    # Qsf = Qsf / (len(b3d) * b3d[0]._BarrierLength * 10) # m^3/m/yr
+    # plt.plot(Qsf, color=colors[6])
+    # plt.ylabel(r'Qsf ($m^3/m/yr$)')
+    # plt.xlabel('Year')
+
+    plt.show()
+
+# ===================================================
+# #7: Calculate shoreline change periodicity
+#
+#       inputs:         - x_s_TS (an single shoreline timeseries for one B3D subdomain)
+#       outputs:        - Periodicity (period of punctuated retreat)
+#                       - AvgFastDur (average duration of fast periods)
+#                       - AvgSlowDur (average duration of slow periods)
+#                       - Punc (boolean for punctuated retreat)
+
+def calc_ShorelinePeriodicity(x_s_TS):
+
+    # Shoreline Change & Change Rate Over Time
+    scts = [(x - x_s_TS[0]) * 10 for x in x_s_TS]
+
+    # Filter
+    win = 31
+    poly = 3
+    der1 = (signal.savgol_filter(scts, win, poly, deriv=1))
+
+    HitDown = []  # Slow-downs
+    HitUp = []  # Speed-ups
+
+    window1 = 3  # Maximum allowed length for gaps in slow periods
+    window2 = 30  # Minimum length required for slow periods, including gaps
+    buffer = 3
+    thresh1 = 0.5  # Max slope for slow periods (if shoreline change rate is below this, immobile, otherwise transgressive)
+    thresh2 = 1
+
+    # Find slow periods
+    der_under = np.where(der1 < thresh1)[0]
+
+    if len(der_under) > 0:
+
+        gaps = np.diff(der_under) > window1
+        peak_start = np.insert(der_under[1:][gaps], 0, der_under[0])
+        peak_stop = np.append(der_under[:-1][gaps], der_under[-1])
+
+        for n in range(len(peak_stop)):
+            if peak_stop[n] - peak_start[n] > window2:
+                if len(HitDown) == 0:
+                    if peak_start[n] > buffer:
+                        HitDown.append(peak_start[n])
+                    if peak_stop[n] < len(scts) - buffer:
+                        HitUp.append(peak_stop[n])
+                else:
+                    gap_length = peak_start[n] - HitUp[-1]
+                    gap_slope = (scts[peak_start[n]] - scts[HitUp[-1]]) / gap_length
+                    if gap_length < window2 and gap_slope < thresh2:
+                        if peak_stop[n] < len(scts) - buffer:
+                            HitUp[-1] = peak_stop[n]
+                        else:
+                            del HitUp[-1]
+                    else:
+                        if peak_start[n] > buffer:
+                            HitDown.append(peak_start[n])
+                        if peak_stop[n] < len(scts) - buffer:
+                            HitUp.append(peak_stop[n])
+
+    ### CALCULATE STATS
+
+    Jumps = len(HitDown)
+    Slows = len(HitUp)
+    SlowDur = []
+    FastDur = []
+
+    if Jumps > 0 and Slows > 0:
+        DownFirst = HitDown[0] < HitUp[0]
+    elif Jumps == 0 and Slows > 1:
+        DownFirst = True
+    else:
+        DownFirst = False
+
+    if Jumps >= 2 or Slows >= 2:
+        if Jumps >= 2 and Slows >= 2:
+            Periodicity = (np.mean(np.diff(HitDown)) + np.mean(np.diff(HitUp))) / 2
+        elif Jumps >= Slows:
+            Periodicity = np.mean(np.diff(HitDown))
+        else:
+            Periodicity = np.mean(np.diff(HitUp))
+        if DownFirst:
+            for n in range(Slows):
+                SlowDur.append(HitUp[n] - HitDown[n])
+            for n in range(Jumps - 1):
+                FastDur.append(HitDown[n + 1] - HitUp[n])
+        else:
+            for n in range(Slows - 1):
+                SlowDur.append(HitUp[n + 1] - HitDown[n])
+            for n in range(Jumps):
+                FastDur.append(HitDown[n] - HitUp[n])
+    else:
+        Periodicity = 0
+        if Jumps == 1 and Slows == 1:
+            if DownFirst:
+                SlowDur.append(HitUp[0] - HitDown[0])
+            else:
+                FastDur.append(HitDown[0] - HitUp[0])
+
+    AvgFastDur = np.mean(FastDur)
+    if np.isnan(AvgFastDur):
+        AvgFastDur = 0
+    AvgSlowDur = np.mean(SlowDur)
+    if np.isnan(AvgSlowDur):
+        AvgSlowDur = 0
+
+    if len(SlowDur) >= 2 and len(FastDur) >= 2:
+        Punc = 1
+    else:
+        Punc = 0
+
+    return Periodicity, AvgFastDur, AvgSlowDur, Punc
+
+# ===================================================
+# #8: Dune Height Over Time for CASCADE
+#
+#       inputs:         - barrier3d (a list containing BMI objects)
+#                       - TMAX (the last time index for plotting)
+#       outputs:        - fig (dune domain for all sub-grids)
+
+def plot_dune_domain(b3d, TMAX):
+
+    DuneCrest = []
+    Dmax = []
+
+    for iB3D in range(len(b3d)):
+        sub_domain = b3d[iB3D]._DuneDomain[0:TMAX, :, :]
+        DuneCrest.append(sub_domain.max(axis=2))
+        Dmax.append(b3d[iB3D]._Dmax)
+
+    DuneCrest = np.hstack(DuneCrest).astype(float)
+    Dmax = np.max(Dmax)
+
+    duneFig = plt.figure(figsize=(14, 8))
+    plt.rcParams.update({'font.size': 13})
+    ax = duneFig.add_subplot(111)
+    ax.matshow((DuneCrest) * 10, origin='lower', cmap='bwr', aspect='auto', vmin=0, vmax=Dmax * 10)
+    cax = ax.xaxis.set_ticks_position('bottom')  # analysis:ignore
+    # cbar = duneFig.colorbar(cax)
+    # cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270)
+    plt.xlabel('Alongshore Distance (dam)')
+    plt.ylabel('Year')
+    plt.title('Dune Height (m)')

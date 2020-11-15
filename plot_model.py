@@ -5,74 +5,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-import CASCADE_plotters as CASCADEplt
-
-# note, when you load this output, you cannot have the BMIs imported; not sure why
-output = np.load(filename, allow_pickle=True)
-b3d = output['barrier3d']
-brie = output['brie']
-
-#===================================================
-
-# 1: Dune Height Over Time for CASCADE
-
-# plot dune domain for all sub-grids
-DuneCrest = []
-Dmax = []
-
-for iB3D in range(brie._ny):
-    DuneCrest.append(barrier3d[iB3D]._model._DuneDomain.max(axis=2))
-    Dmax.append(barrier3d[iB3D]._model._Dmax)
-
-DuneCrest = np.hstack(DuneCrest).astype(float)
-Dmax = np.max(Dmax)
-duneFig = plt.figure(figsize=(14, 8))
-plt.rcParams.update({'font.size': 13})
-ax = duneFig.add_subplot(111)
-ax.matshow((DuneCrest) * 10, origin='lower', cmap='bwr', aspect='auto', vmin=0, vmax=Dmax * 10)
-cax = ax.xaxis.set_ticks_position('bottom')  # analysis:ignore
-# cbar = duneFig.colorbar(cax)
-# cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270)
-plt.xlabel('Alongshore Distance (dam)')
-plt.ylabel('Year')
-plt.title('Dune Height (m)')
-name = 'Output/Dunes'
-# duneFig.savefig(name)
-
 #===================================================
 # CASCADE vs brie (LTA)
 
-TMAX = b3d[0].time_index - 1
-
-# sum Qoverwash for entire B3D grid
-Qoverwash = np.zeros(np.size(b3d[0]._QowTS[0:TMAX])) # m^3/m/yr
-
-for iB3D in range(brie._ny):
-    Qoverwash = Qoverwash + (np.array(b3d[iB3D]._QowTS[0:TMAX]) * (b3d[iB3D]._BarrierLength * 10)) # m^3/yr
-
-Qoverwash = Qoverwash / (brie._ny * brie._dy)
-QoverwashLTA = brieLTA._Qoverwash / (brieLTA._ny * brieLTA._dy) # from brie in m^3/yr
-
-plt.figure()
-plt.plot(Qoverwash)
-plt.plot(QoverwashLTA)
-fig = plt.gcf()
-fig.set_size_inches(14, 5)
-plt.xlabel('Time (yrs)')
-plt.ylabel('Qow (m^3/m/yr)')
-plt.title('Overwash Flux')
-plt.legend(['CASCADE (Barrier3D)', 'BRIE (LTA14)'])
-plt.show()
-name = 'Output/Overwash'
-
-# mean barrier width from brie+LTA (self._x_b - self._x_s)
-plt.figure()
-plt.plot(brieLTA._x_b_save[5, :]-brieLTA._x_s_save[5, :])
-
-plt.figure()
-plt.plot(np.array(barrier3d[5]._model._x_b_TS[:]) - np.array(barrier3d[5]._model._x_s_TS[:]))
-
-# plot_BRIE_LTA
 
 
 # plot_BRIE_frames

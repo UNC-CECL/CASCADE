@@ -188,13 +188,15 @@ def save(brie, barrier3d, directory, name):
     filename = name + '.npz'
 
     b3d = []
+    brie_save = []
 
     # save object without BMI
     for iB3D in range(brie._ny):
         b3d.append(barrier3d[iB3D]._model)
+    brie_save = brie_save.append(brie)
 
     os.chdir(directory)
-    np.savez(filename, barrier3d=b3d, brie=brie)
+    np.savez(filename, barrier3d=b3d, brie=brie_save)
 
     return b3d
 
