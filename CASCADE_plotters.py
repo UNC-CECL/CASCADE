@@ -14,12 +14,14 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib import cm
 import numpy as np
+import pandas as pd
 import os
 import imageio
 import math
+# import seaborn as sns
 from scipy import signal
 
-#===================================================
+# ===================================================
 # 1: Animation Frames of Barrier and Dune Elevation (#4 in Barrier3D_Functions, modified here for CASCADE)
 #
 #       inputs:         - barrier3d (a list containing BMI objects)
@@ -34,7 +36,7 @@ def plot_ElevAnimation(barrier3d, ny, directory, TMAX, name):
     BarrierLength = barrier3d[0]._BarrierLength
 
     BeachWidth = 6
-    OriginY = 10
+    OriginY = int(barrier3d[0]._x_s_TS[0]-barrier3d[0]._x_t_TS[0])
     AniDomainWidth = int(np.amax(barrier3d[0]._InteriorWidth_AvgTS) + BeachWidth + np.abs(barrier3d[0]._ShorelineChange) + OriginY + 35)
 
     os.chdir(directory)
@@ -72,10 +74,8 @@ def plot_ElevAnimation(barrier3d, ny, directory, TMAX, name):
             else:
                 OriginTstart = OriginY + math.ceil(scts[t])
             OriginTstop = OriginTstart + widthTS
-            #AnimateDomain[OriginTstart:OriginTstop, 0: barrier3d[iB3D]._BarrierLength] = Domain
             xOrigin = iB3D * BarrierLength
             AnimateDomain[OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength] = Domain
-
 
         # Plot and save
         elevFig1 = plt.figure(figsize=(15, 7))
@@ -83,13 +83,14 @@ def plot_ElevAnimation(barrier3d, ny, directory, TMAX, name):
         cax = ax.matshow(AnimateDomain, origin='lower', cmap='terrain', vmin=-1.1,
                          vmax=4.0)  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position('bottom')
-        # cbar = elevFig1.colorbar(cax)
+        elevFig1.colorbar(cax)
         plt.xlabel('Alongshore Distance (dam)')
-        plt.ylabel('Cross-Shore Diatance (dam)')
+        plt.ylabel('Cross-Shore Distance (dam)')
         plt.title('Interior Elevation')
         plt.tight_layout()
         timestr = 'Time = ' + str(t) + ' yrs'
         plt.text(1, 1, timestr)
+        plt.rcParams.update({'font.size': 20})
         name = 'elev_' + str(t)
         elevFig1.savefig(name)  # dpi=200
         plt.close(elevFig1)
@@ -103,6 +104,91 @@ def plot_ElevAnimation(barrier3d, ny, directory, TMAX, name):
     print()
     print('[ * GIF successfully generated * ]')
 
+def plot_ElevAnimationAGU(barrier3d, ny, directory, TMAX, name):
+
+    BarrierLength = barrier3d[0]._BarrierLength
+
+    BeachWidth = 6
+    OriginY = int(barrier3d[0]._x_s_TS[0]-barrier3d[0]._x_t_TS[0])
+    AniDomainWidth = int(np.amax(barrier3d[0]._InteriorWidth_AvgTS) + BeachWidth + np.abs(barrier3d[0]._ShorelineChange) + OriginY + 35)
+
+    os.chdir(directory)
+    newpath = 'Output/' + name + '/SimFrames/'
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+    os.chdir(newpath)
+
+
+    for t in range(TMAX-1): #range(TMAX-2, TMAX-1):# range(TMAX-1):
+
+        AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -1
+
+        for iB3D in range(ny):
+            # Build beach elevation domain
+            BeachDomain = np.zeros([BeachWidth, BarrierLength])
+            berm = math.ceil(BeachWidth * 0.65)
+            BeachDomain[berm:BeachWidth + 1, :] = barrier3d[iB3D]._BermEl
+            add = (barrier3d[iB3D]._BermEl - barrier3d[iB3D]._SL) / berm
+            for i in range(berm):
+                BeachDomain[i, :] = barrier3d[iB3D]._SL + add * i
+
+            # Make animation frame domain
+            Domain = barrier3d[iB3D]._DomainTS[t] * 10
+            Dunes = (barrier3d[iB3D]._DuneDomain[t, :, :] + barrier3d[iB3D]._BermEl) * 10
+            Dunes = np.rot90(Dunes)
+            Dunes = np.flipud(Dunes)
+            Beach = BeachDomain * 10
+            Domain = np.vstack([Beach, Dunes, Domain])
+            Domain[Domain < 0] = -1
+            widthTS = len(Domain)
+            scts = [(x - barrier3d[iB3D]._x_s_TS[0]) for x in barrier3d[iB3D]._x_s_TS]
+            if scts[t] >= 0:
+                OriginTstart = OriginY + math.floor(scts[t])
+            else:
+                OriginTstart = OriginY + math.ceil(scts[t])
+            OriginTstop = OriginTstart + widthTS
+            xOrigin = iB3D * BarrierLength
+            AnimateDomain[OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength] = Domain
+
+
+        # Plot and save
+        elevFig1 = plt.figure(figsize=(15, 7))
+        ax = elevFig1.add_subplot(111)
+        cax = ax.matshow(AnimateDomain, origin='lower', cmap='terrain', vmin=-1.1,
+                         vmax=4.0)  # , interpolation='gaussian') # analysis:ignore
+        ax.xaxis.set_ticks_position('bottom')
+        # cbar = elevFig1.colorbar(cax)
+        plt.xlabel('Alongshore Distance (dam)')
+        plt.ylabel('Cross-Shore Distance (dam)')
+        plt.title('Interior Elevation')
+        plt.tight_layout()
+        timestr = 'Time = ' + str(t) + ' yrs'
+        plt.text(1, 1, timestr)
+        plt.rcParams.update({'font.size': 20})
+        plt.xlim([0,599])  # hard coded
+        plt.ylim([0,217])
+        locs, labels = plt.xticks()
+        plt.xticks(locs, ['0', '1', '2', '3', '4', '5', '6'])
+        locs, labels = plt.yticks()
+        plt.yticks(locs, ['0', '0.5', '1', '1.5', '2', '2.5'])
+        #plt.xlim([0,299])
+        #plt.ylim([0,277])
+        plt.xlim([0,599])
+        plt.ylim([0,217])
+        plt.xlabel('Alongshore Distance (km)')
+        plt.ylabel('Cross-Shore Distance (km)')
+        name = 'elev_' + str(t)
+        elevFig1.savefig(name)  # dpi=200
+        plt.close(elevFig1)
+
+    frames = []
+
+    for filenum in range(TMAX-1):
+        filename = 'elev_' + str(filenum) + '.png'
+        frames.append(imageio.imread(filename))
+    imageio.mimsave('elev.gif', frames, 'GIF-FI')
+    print()
+    print('[ * GIF successfully generated * ]')
 
 # ===================================================
 # 2: Shoreline positions over time (#6 in Barrier3D_Functions)
@@ -113,7 +199,7 @@ def plot_ElevAnimation(barrier3d, ny, directory, TMAX, name):
 def plot_ShorelinePositions(x_s_TS, x_b_TS):
     scts = [(x - x_s_TS[0]) * -10 for x in x_s_TS]
     bscts = [(x - x_s_TS[0]) * -10 for x in x_b_TS]
-    shorelinefig = plt.figure()
+    plt.figure()
     plt.plot(scts, 'b')
     plt.plot(bscts, 'g')
     fig = plt.gcf()
@@ -121,9 +207,6 @@ def plot_ShorelinePositions(x_s_TS, x_b_TS):
     plt.ylabel('Shoreline Position (m)')
     plt.xlabel('Year')
     plt.show()
-    name = 'Output/Shorelines'
-    #shorelinefig.savefig(name)
-
 
 # ===================================================
 # #3 B3D cross-Shore Transect for one subgrid every 100 m for last time step (#5 in Barrier3D_Functions)
@@ -133,6 +216,7 @@ def plot_ShorelinePositions(x_s_TS, x_b_TS):
 #       outputs:        - fig
 
 def plot_XShoreTransects(barrier3d, TMAX):
+
     # Build beach elevation
     BW = 6  # beach width (dam) for illustration purposes
     BeachX = np.zeros(BW)
@@ -141,7 +225,7 @@ def plot_XShoreTransects(barrier3d, TMAX):
     add = (barrier3d._BermEl - barrier3d._SL) / berm
     for i in range(berm):
         BeachX[i] = barrier3d._SL + add * i
-        # Plot full tranects
+        # Plot full transects
     plt.figure()
 
     for v in range(0, barrier3d._BarrierLength, 20):
@@ -183,11 +267,11 @@ def plot_ModelTransects(b3d, brieLTA, time_step, iB3D):
         SL = (b3d[iB3D]._SL + (t * b3d[iB3D]._RSLR[t]))
 
         # Create data points
-        Tx = b3d[iB3D]._x_t_TS[t]
+        Tx = b3d[iB3D]._x_t_TS[t] - b3d[iB3D]._x_t_TS[0]  # subtract start position so starts at zero
         Ty = (SL - b3d[iB3D]._DShoreface) * 10
-        Sx = b3d[iB3D]._x_s_TS[t]
+        Sx = b3d[iB3D]._x_s_TS[t] - b3d[iB3D]._x_t_TS[0]
         Sy = SL * 10
-        Bx = b3d[iB3D]._x_b_TS[t]
+        Bx = b3d[iB3D]._x_b_TS[t] - b3d[iB3D]._x_t_TS[0]
         By = (SL - b3d[iB3D]._BayDepth) * 10
         My = By
 
@@ -218,6 +302,8 @@ def plot_ModelTransects(b3d, brieLTA, time_step, iB3D):
         plt.hlines(SL * 10, Tx, Mx, colors='dodgerblue')
         # plt.hlines((b3d[iB3D]._SL + (t * b3d[iB3D]._RSLR[t])) * 10, Tx, Sx, colors='dodgerblue')
         # plt.hlines((b3d[iB3D]._SL + (t * b3d[iB3D]._RSLR[t])) * 10, Bx + 2, xCrossElev[-1]+20, colors='dodgerblue')  # KA: scrappy fix
+        # plt.xlim([0, 500])
+        plt.rcParams.update({'font.size': 20})
 
         plt.ylabel('Elevation (m)')
         plt.title('Profile Evolution')
@@ -232,11 +318,11 @@ def plot_ModelTransects(b3d, brieLTA, time_step, iB3D):
         SL = (b3d[iB3D]._SL + (t * b3d[iB3D]._RSLR[t]))
 
         # Create data points
-        Tx = brieLTA._x_t_save[iB3D, t] / 10  # convert to dam
+        Tx = (brieLTA._x_t_save[iB3D, t] - brieLTA._x_t_save[iB3D,0]) / 10  # convert to dam and subtract start position
         Ty = (SL * 10) - brieLTA._d_sf  # units of m
-        Sx = brieLTA._x_s_save[iB3D, t] / 10
+        Sx = (brieLTA._x_s_save[iB3D, t] - brieLTA._x_t_save[iB3D,0]) / 10
         Sy = SL * 10
-        Bx = brieLTA._x_b_save[iB3D, t] / 10
+        Bx = (brieLTA._x_b_save[iB3D, t] - brieLTA._x_t_save[iB3D,0]) / 10
         By = (SL * 10) - brieLTA._bb_depth
         Hx1 = Sx
         Hy1 = brieLTA._h_b_save[iB3D, t] + Sy
@@ -250,6 +336,8 @@ def plot_ModelTransects(b3d, brieLTA, time_step, iB3D):
 
         # Plot
         plt.plot(x, y, color=colors[t])
+        # plt.xlim([0, 500])
+        plt.rcParams.update({'font.size': 20})
         plt.hlines(SL * 10, Tx, Mx, colors='dodgerblue')
         # plt.hlines((b3d[iB3D]._SL + (t * b3d[iB3D]._RSLR[t])) * 10, Tx, Sx, colors='dodgerblue')
         # plt.hlines((b3d[iB3D]._SL + (t * b3d[iB3D]._RSLR[t])) * 10, Bx, Mx, colors='dodgerblue')
@@ -313,9 +401,6 @@ def plot_statistics(b3d, iB3D, TMAX):
         Qoverwash = Qoverwash + (np.array(b3d[iGrid]._QowTS[0:TMAX]) * (b3d[iGrid]._BarrierLength * 10)) # m^3/yr
     Qoverwash = Qoverwash / (len(b3d) * b3d[0]._BarrierLength * 10) # m^3/m/yr
     plt.plot(Qoverwash, color=colors[5])
-    #    movingavg = np.convolve(QowTS, np.ones((50,))/50, mode='valid')
-    #    movingavg = [i * 10 for i in movingavg]
-    #    plt.plot(movingavg, 'r--')
     plt.ylabel(r'Qow ($m^3/m/yr$)')
     plt.xlabel('Year')
 
@@ -330,6 +415,113 @@ def plot_statistics(b3d, iB3D, TMAX):
     plt.xlabel('Year')
 
     plt.show()
+
+def plot_statisticsAGU(b3d, brieLTA, iB3D, iBRIE, TMAX, TMAX_BRIE):
+
+    # make a pretty colormap
+    # my_cmap = sns.color_palette("husl", 9, as_cmap=True)
+    # my_cmap = sns.color_palette("flare", as_cmap=True)
+    # my_cmap = sns.color_palette
+    # my_cmap = sns.color_palette("Set2", 9, as_cmap=True)
+    iC1 = 0
+    iC2 = 5
+    iC3 = 9
+    # colors = my_cmap(np.linspace(0, 1, 10))
+    colors = mpl.cm.vidiris(np.linspace(0, 1, 10))
+    fig = plt.figure(figsize=(16, 8))
+
+    # A Shoreface Slope
+    plt.subplot(2, 3, 1)
+    ssfTS = b3d[iB3D]._s_sf_TS
+    plt.plot(ssfTS, color=colors[iC1])
+    plt.hlines(b3d[iB3D]._s_sf_eq, 0, TMAX, colors='black', linestyles='dashed')
+
+    ssfTS = brieLTA._s_sf_save[iBRIE,:]
+    plt.plot(ssfTS, color=colors[iC2], linewidth=2)
+    plt.hlines(brieLTA._s_sf_eq, 0, len(brieLTA._s_sf_save[iBRIE,:]), colors='black', linestyles='dashed')
+
+    plt.ylabel('Shoreface Slope')
+    plt.xlabel('Year')
+    plt.xlim([0,1000])
+    plt.legend(['CASCADE', 'BRIE (no coupling)'])
+    plt.rcParams["legend.loc"] = 'lower right'
+    plt.rcParams.update({'font.size': 15})
+
+    # A Interior Width
+    plt.subplot(2, 3, 2)
+    aiw = [a * 10 for a in b3d[iB3D]._InteriorWidth_AvgTS]
+    plt.plot(aiw, color=colors[iC1])
+
+    aiw = brieLTA._x_b_save[iBRIE,:] - brieLTA._x_s_save[iBRIE,:]
+    plt.plot(aiw, color=colors[iC2], linewidth=3)
+    plt.rcParams["legend.loc"] = 'lower right'
+    plt.xlabel('Year')
+    plt.xlim([0,1000])
+    plt.ylabel('Barrier Width (m)')
+    plt.rcParams.update({'font.size': 15})
+
+    # A Shoreline Change
+    plt.subplot(2, 3, 3)
+    scts = [(x - b3d[iB3D]._x_s_TS[0]) * 10 for x in b3d[iB3D]._x_s_TS]
+    plt.plot(scts, color=colors[iC1], linewidth=2)
+
+    scts = [(x - brieLTA._x_s_save[iBRIE,0]) for x in brieLTA._x_s_save[iBRIE,:]]
+    plt.plot(scts, color=colors[iC2], linewidth=2)
+    plt.xlabel('Year')
+    plt.xlim([0,1000])
+    plt.ylim([0,500])
+    plt.ylabel('Shoreline Position (m)')
+    plt.rcParams["legend.loc"] = 'lower right'
+    plt.rcParams.update({'font.size': 15})
+
+    # Qoverwash for entire B3D grid
+    plt.subplot(2, 3, 4)
+    Qoverwash = np.zeros(np.size(b3d[0]._QowTS[0:TMAX]))
+    for iGrid in range(len(b3d)):
+        Qoverwash = Qoverwash + (np.array(b3d[iGrid]._QowTS[0:TMAX]) * (b3d[iGrid]._BarrierLength * 10)) # m^3/yr
+    Qoverwash = Qoverwash / (len(b3d) * b3d[0]._BarrierLength * 10) # m^3/m/yr
+    plt.plot(Qoverwash, color=colors[iC1])
+    #movingavg = np.convolve(Qoverwash, np.ones((50,))/50, mode='valid')
+    #movingavg = [i * 10 for i in movingavg]
+    #plt.plot(movingavg, 'r--')
+    df = pd.DataFrame(data=Qoverwash)
+    plt.plot(df.rolling(window=50).mean(), color=colors[iC3])
+
+    QoverwashLTA = (brieLTA._Qoverwash[0:TMAX_BRIE] / (brieLTA._ny * brieLTA._dy))  # from brie in m^3/yr --> m^3/m/yr
+    plt.plot(brieLTA._t[0:TMAX_BRIE], QoverwashLTA, color=colors[iC2], linewidth=2)
+    plt.ylabel(r'Qow ($m^3/m$)')
+    plt.xlabel('Year')
+    plt.xlim([0,1000])
+    plt.rcParams.update({'font.size': 15})
+
+    # shoreface flux for entire grid
+    plt.subplot(2, 3, 5)
+    Qsf = np.zeros(np.size(b3d[0]._QsfTS[0:TMAX]))
+    for iGrid in range(len(b3d)):
+        Qsf = Qsf + (np.array(b3d[iGrid]._QsfTS[0:TMAX]) * (b3d[iGrid]._BarrierLength * 10)) # m^3/yr
+    Qsf = Qsf / (len(b3d) * b3d[0]._BarrierLength * 10) # m^3/m/yr
+    plt.plot(Qsf, color=colors[iC1])
+    df = pd.DataFrame(data=Qsf)
+    plt.plot(df.rolling(window=50).mean(), color=colors[iC3])
+
+    QsfLTA = brieLTA._Qshoreface[0:TMAX_BRIE] / (brieLTA._ny * brieLTA._dy)  # from brie in m^3/yr --> m^3/m/yr
+    plt.plot(brieLTA._t[0:TMAX_BRIE], QsfLTA, color=colors[iC2], linewidth=2)
+    plt.ylabel(r'Qsf ($m^3/m$)')
+    plt.xlabel('Year')
+    plt.rcParams.update({'font.size': 15})
+    plt.xlim([0,1000])
+
+    # A Dune Height
+    aHd = [a * 10 for a in b3d[iB3D]._Hd_AverageTS]
+    plt.subplot(2, 3, 6)
+    plt.plot(aHd, color=colors[iC1])
+    plt.ylabel('Avg. Dune Height (m)')  # Average Dune Height
+    plt.xlim([0,1000])
+    plt.xlabel('Year')
+    plt.rcParams.update({'font.size': 15})
+
+    plt.show()
+    fig.tight_layout()
 
 # ===================================================
 # #6: Statistics from BRIE with LTA
@@ -383,28 +575,22 @@ def plot_statistics_BRIE(brieLTA, iB3D, TMAX):
     plt.subplot(3, 2, 5)
     QoverwashLTA = brieLTA._Qoverwash[0:TMAX] / (brieLTA._ny * brieLTA._dy)  # from brie in m^3/yr --> m^3/m/yr
     plt.plot( brieLTA._t[0:TMAX], QoverwashLTA, color=colors[5])
-    #    movingavg = np.convolve(QowTS, np.ones((50,))/50, mode='valid')
-    #    movingavg = [i * 10 for i in movingavg]
-    #    plt.plot(movingavg, 'r--')
     plt.ylabel(r'Qow ($m^3/m/yr$)')
     plt.xlabel('Year')
 
-    # # Shoreface flux for entire B3D grid
-    # plt.subplot(3, 2, 6)
-    # Qsf = np.zeros(np.size(b3d[0]._QsfTS[0:TMAX]))
-    # for iGrid in range(len(b3d)):
-    #     Qsf = Qsf + (np.array(b3d[iGrid]._QsfTS[0:TMAX]) * (b3d[iGrid]._BarrierLength * 10)) # m^3/yr
-    # Qsf = Qsf / (len(b3d) * b3d[0]._BarrierLength * 10) # m^3/m/yr
-    # plt.plot(Qsf, color=colors[6])
-    # plt.ylabel(r'Qsf ($m^3/m/yr$)')
-    # plt.xlabel('Year')
+    # Shoreface flux for entire B3D grid
+    plt.subplot(3, 2, 6)
+    QsfLTA = brieLTA._Qshoreface[0:TMAX] / (brieLTA._ny * brieLTA._dy)  # from brie in m^3/yr --> m^3/m/yr
+    plt.plot(QsfLTA, color=colors[6])
+    plt.ylabel(r'Qsf ($m^3/m/yr$)')
+    plt.xlabel('Year')
 
     plt.show()
 
 # ===================================================
 # #7: Calculate shoreline change periodicity
 #
-#       inputs:         - x_s_TS (an single shoreline timeseries for one B3D subdomain)
+#       inputs:         - x_s_TS (an single shoreline time series for one B3D subdomain)
 #       outputs:        - Periodicity (period of punctuated retreat)
 #                       - AvgFastDur (average duration of fast periods)
 #                       - AvgSlowDur (average duration of slow periods)
@@ -542,3 +728,97 @@ def plot_dune_domain(b3d, TMAX):
     plt.xlabel('Alongshore Distance (dam)')
     plt.ylabel('Year')
     plt.title('Dune Height (m)')
+
+
+# ===================================================
+# #9: Average shoreline change rate over time for CASCADE
+#
+#       inputs:         - b3d (a list containing BMI objects)
+#                       - TMAX (the last time index for plotting)
+#       outputs:        - fig (dune domain for all sub-grids)
+
+def plot_ShorelineChangeRate(b3d):
+
+    ave_rate = []
+
+    for iB3D in range(len(b3d)):
+        scts = [(x - b3d[iB3D]._x_s_TS[0]) * 10 for x in b3d[iB3D]._x_s_TS]
+        rate = [0]
+        for k in range(1, len(scts)):
+            rate.append(scts[k] - scts[k - 1])
+        ave_rate.append(rate)
+
+    df = pd.DataFrame(data=ave_rate)
+    ave = df.mean(axis=0)
+
+    ratefig = plt.figure()
+    plt.plot(ave)
+    fig = plt.gcf()
+    fig.set_size_inches(14, 5)
+    plt.xlabel('Year')
+    plt.ylabel('Shoreline Erosion Rate (m/yr)')
+    plt.show()
+
+def plot_ShorelineChangeRate_AGU(b3d1, b3d2):
+
+    plt.figure(figsize=(14, 5))
+
+    ave_rate1 = []
+    ave_scts1 = []
+
+    for iB3D in range(len(b3d1)):
+        scts = [(x - b3d1[iB3D]._x_s_TS[0]) * 10 for x in b3d1[iB3D]._x_s_TS]
+        rate = [0]
+        for k in range(1, len(scts)):
+            rate.append(scts[k] - scts[k - 1])
+        ave_rate1.append(rate)
+        ave_scts1.append(scts)
+
+    df = pd.DataFrame(data=ave_rate1)
+    ave1 = df.mean(axis=0)
+    df = pd.DataFrame(data=ave_scts1)
+    aveTS1 = df.mean(axis=0)
+
+    ave_rate2 = []
+    ave_scts2 = []
+
+    for iB3D in range(len(b3d2)):
+        scts = [(x - b3d2[iB3D]._x_s_TS[0]) * 10 for x in b3d2[iB3D]._x_s_TS]
+        rate = [0]
+        for k in range(1, len(scts)):
+            rate.append(scts[k] - scts[k - 1])
+        ave_rate2.append(rate)
+        ave_scts2.append(scts)
+
+    df = pd.DataFrame(data=ave_rate2)
+    ave2 = df.mean(axis=0)
+    df = pd.DataFrame(data=ave_scts2)
+    aveTS2 = df.mean(axis=0)
+
+    plt.subplot(1, 3, 1)
+    plt.plot(aveTS1)
+    plt.plot(aveTS2)
+    plt.xlabel('Year')
+    plt.ylabel('Average Shoreline Position (m)')
+    plt.legend(['homogenous dune growth', 'alongshore variable dune growth'])
+    plt.rcParams["legend.loc"] = 'best'
+
+    plt.subplot(1, 3, 2)
+    plt.plot(ave1)
+    plt.plot(ave2)
+    plt.xlabel('Year')
+    plt.ylabel('Average Shoreline Erosion Rate (m/yr)')
+    plt.rcParams.update({'font.size': 15})
+
+    # # Qoverwash for entire B3D grid
+    # plt.subplot(1, 3, 3)
+    #
+    # Qoverwash = np.zeros(np.size(b3d[0]._QowTS[0:TMAX]))
+    # for iGrid in range(len(b3d)):
+    #     Qoverwash = Qoverwash + (np.array(b3d[iGrid]._QowTS[0:TMAX]) * (b3d[iGrid]._BarrierLength * 10)) # m^3/yr
+    # Qoverwash = Qoverwash / (len(b3d) * b3d[0]._BarrierLength * 10) # m^3/m/yr
+    # plt.plot(Qoverwash)
+    # plt.ylabel(r'Qow ($m^3/m/yr$)')
+    # plt.xlabel('Year')
+
+    plt.show()

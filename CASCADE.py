@@ -1,7 +1,13 @@
-# Model guts to couple barrier3d and brie
-# Written by K.Anarde
+# Model coupling of Barrier3D and BRIE
+
+# ~******* CASCADE ********~
+
+"""----------------------------------------------------
+Copyright (C) 2020 Katherine Anarde
+----------------------------------------------------"""
 
 from yaml import full_load, dump
+from joblib import Parallel, delayed
 import numpy as np
 import time
 import os
@@ -126,43 +132,58 @@ def initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny
 # time loop
 ###############################################################################
 
-def time_loop(brie, barrier3d):
-    # preallocate arrays for shoreline and barrier height change used in time loops
-    x_t_dt, x_s_dt, x_b_dt, h_b_dt = [
-        np.zeros(np.size(barrier3d)).astype(float) for _ in range(4)
-    ]
+def time_loop(brie, barrier3d, num_cores):
 
     Time = time.time()
 
+    # parallelize update function for each B3D sub-grid (spread overwash routing algorithms to different cores)
+    def batchB3D(subB3D):
+
+        subB3D.update()
+
+        # get values for passing to brie (all in dam) [ UPDATE THIS WHEN BMI IS WORKING ]
+        x_t_TS = subB3D._values["shoreface_toe_position"]()
+        x_s_TS = subB3D._values["shoreline_position"]()
+        x_b_TS = subB3D._values["back_barrier_shoreline_position"]()
+        h_b_TS = subB3D._values["height_of_barrier"]()
+
+        # calculate the diff in shoreface toe, shorelines (dam), height of barrier and convert to m
+        sub_x_t_dt = (x_t_TS[-1] - x_t_TS[-2]) * 10
+        sub_x_s_dt = (x_s_TS[-1] - x_s_TS[-2]) * 10
+        sub_x_b_dt = (x_b_TS[-1] - x_b_TS[-2]) * 10
+        sub_h_b_dt = (h_b_TS[-1] - h_b_TS[-2]) * 10
+
+        return sub_x_t_dt, sub_x_s_dt, sub_x_b_dt, sub_h_b_dt
+
     for time_step in range(brie._nt-1):
 
-        # Print time step to screen
+        # Print time step to screen (NOTE: time_index in each model is time_step+1)
         print("\r", 'Time Step: ', time_step, end="")
 
-        for iB3D in range(brie._ny):
-            # advance B3D by one time step (this is time_index = 2 at start of loop)
-            barrier3d[iB3D].update()
+        # Advance B3D by one time step
+        # --- (NOTE: B3D initializes at time_index = 1 and then updates the time_index at
+        # the end of the update function. The dune and shoreline changes are saved at the beginning of the next time
+        # step because they come from BRIE) ---
 
-            # get values for passing to brie (all in dam)
-            x_t_TS = barrier3d[iB3D]._values["shoreface_toe_position"]()
-            x_s_TS = barrier3d[iB3D]._values["shoreline_position"]()
-            x_b_TS = barrier3d[iB3D]._values["back_barrier_shoreline_position"]()
-            h_b_TS = barrier3d[iB3D]._values["height_of_barrier"]()
+        batch_output = Parallel(n_jobs=num_cores)(
+            delayed(batchB3D)(barrier3d[iB3D]) for iB3D in range(brie._ny)
+        ) # set n_jobs=1 for no parallel processing (debugging) and -2 for all but 1 CPU
 
-            # calculate the diff in shoreface toe, shorelines (dam), height of barrier and convert to m
-            x_t_dt[iB3D] = (x_t_TS[-1] - x_t_TS[-2]) * 10
-            x_s_dt[iB3D] = (x_s_TS[-1] - x_s_TS[-2]) * 10
-            x_b_dt[iB3D] = (x_b_TS[-1] - x_b_TS[-2]) * 10
-            h_b_dt[iB3D] = (h_b_TS[-1] - h_b_TS[-2]) * 10
+        # reshape output from parallel processing and convert from tuple to list
+        x_t_dt, x_s_dt, x_b_dt, h_b_dt = zip(*batch_output)
+        x_t_dt = list(x_t_dt)
+        x_s_dt = list(x_s_dt)
+        x_b_dt = list(x_b_dt)
+        h_b_dt = list(h_b_dt)
 
-        # pass values from B3D subdomains to brie for use in second timestep
-        # (there has to be a better way to do this with the BMI)
+        # pass values from B3D subdomains to brie for use in second time step
+        # (there has to be a better way to do this with the BMI, but for now, access protected variables)
         brie._x_t_dt = x_t_dt
         brie._x_s_dt = x_s_dt
         brie._x_b_dt = x_b_dt
         brie._h_b_dt = h_b_dt
 
-        # update brie one time step (this is time index = 2 at start of loop)
+        # update brie one time step (this is time_index = 2 at start of loop)
         brie.update()
 
         # loop to pass x_s and x_b (maybe this will be important for inlets with the x_b_fldt) back to B3D from Brie
@@ -238,7 +259,7 @@ def LTA(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt, w
 
     # model setup
     brieLTA._dy = 100  # m, length of alongshore section (same as B3D)
-    brieLTA._ny = ny * 10  # number of alongshore sections (10=6 km for testing AST, make 30 for inlets=15 km)
+    brieLTA._ny = ny * int(500 / brieLTA._dy)  # number of alongshore sections (NOTE, currently hard-coded for B3D dy = 500 m)
     brieLTA._dt = 0.05  # yr, timestep (same as B3D)
     brieLTA._nt = int(nt/brieLTA._dt)  # timesteps for 200 morphologic years
     brieLTA._dtsave = 20  # save spacing (every year for 0.05 time step)
