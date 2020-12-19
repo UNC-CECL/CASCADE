@@ -1,5 +1,5 @@
 BarrierLength: 500
-BayDepth: 3
+BayDepth: 3.0
 BermEl: 1.9
 BurialLimit: 0.5
 C1: 8.8
@@ -16,11 +16,11 @@ DuneRestart: 0.075
 DuneWidth: 20.0
 Female: 0.5
 GermRate: 0.6
-GrowthParamStart: false
+GrowthParamStart: true
 HdDiffu: 0.75
 Ki: 7.5e-06
 Kr: 7.5e-05
-LShoreface: 524.2193800337714
+LShoreface: 524.236278118052
 MHW: 0.46
 MaxShrubHeight: 3.5
 MaxUpSlope: 0.25
@@ -44,7 +44,7 @@ Shrub_ON: false
 SprayDist: 170
 StormSeries: []
 StormStart: 2
-TMAX: 1000
+TMAX: 20
 TideAmp: 1.2
 TimeFruit: 5.0
 UprootLimit: -0.3
@@ -54,7 +54,7 @@ disp_sigma: 1.5
 k_sf: 19324.753176079226
 mm: 2.0
 nn: 0.5
-rmax: 0.95
-rmin: 0.55
+rmax: 0.85
+rmin: 0.35
 s_sf_eq: 0.01698590034494604
 threshold_in: 0.25
