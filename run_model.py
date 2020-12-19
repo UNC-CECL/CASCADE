@@ -17,7 +17,8 @@ import CASCADE_plotters as CASCADEplt
 import CASCADE as CASCADE
 
 # for laptop and desktop, use all but one core; on supercomputer, use all cores
-num_cores = multiprocessing.cpu_count() - 1
+# num_cores = multiprocessing.cpu_count() - 1
+num_cores = 1
 
 # ###############################################################################
 # 1 - CASCADE_LTA_COMPARISON
@@ -27,7 +28,7 @@ num_cores = multiprocessing.cpu_count() - 1
 # --------- INITIAL CONDITIONS ---------
 name = '1-CASCADE_LTA_COMPARISON_3km_3000yr'
 #name = '1-CASCADE_LTA_COMPARISON_6km_1500yr'
-wave_height = 1  # m
+wave_height = 1.0  # m
 wave_period = 7  # s (lowered from 10 s to reduce k_sf)
 asym_frac = 0.8  # fraction approaching from left
 high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
@@ -45,10 +46,15 @@ brie, barrier3d = CASCADE.initialize(name, wave_height, wave_period, asym_frac, 
 # --------- LOOP ---------
 brie, barrier3d = CASCADE.time_loop(brie, barrier3d, num_cores)
 
-# --------- RUN LTA ---------
+# --------- RUN LTA COMPARISON ---------
+# We need these parameters to be as similar as possible to "storm conditions" for B3D. NOTE: the LTA model does not work
+# well when you set the width and height directly from B3D so we set the critical barrier width to the width of the
+# (initial) B3D Interior Domain
 w_b_crit = 450  # critical barrier width [m]
 h_b_crit = 1.9  # (should equal B3D original BermEl in the yaml file, not what is presented in B3D (minus the MHW)
 Qow_max = 20  # max overwash flux [m3/m/yr]
+# Another NOTE: the LTA14 overwash model does best with a smaller cell size (dt) and time step (dt), so the values used
+# to define the grid size and time loop in the B3D run (i.e., ny and nt) are modified within CASCADE for BRIE (LTA14)
 brieLTA = CASCADE.LTA(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt, w_b_crit, h_b_crit, Qow_max)
 
 # --------- SAVE ---------
@@ -118,7 +124,7 @@ CASCADEplt.plot_ShorelinePositions(b3d[0]._x_s_TS[0:TMAX], b3d[0]._x_b_TS[0:TMAX
 
 # --------- INITIAL CONDITIONS ---------
 name = '2-AlongshoreVarGrowthParam_pt3HAF'
-wave_height = 1  # m
+wave_height = 1.0  # m
 wave_period = 7  # s (lowered from 10 s to reduce k_sf)
 asym_frac = 0.8  # fraction approaching from left
 high_ang_frac = 0.3  # fraction of waves approaching from higher than 45 degrees
@@ -170,7 +176,7 @@ CASCADEplt.plot_XShoreTransects(b3d[0], TMAX)
 
 # --------- INITIAL CONDITIONS ---------
 name = '3-AlongshoreVarGrowthParam_pt2HAF_gradient_1500yrs'
-wave_height = 1  # m
+wave_height = 1.0  # m
 wave_period = 7  # s (lowered from 10 s to reduce k_sf)
 asym_frac = 0.8  # fraction approaching from left
 high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
@@ -235,7 +241,7 @@ CASCADEplt.plot_ShorelinePositions(b3d[iB3D]._x_s_TS[0:TMAX], b3d[iB3D]._x_b_TS[
 
 # --------- INITIAL CONDITIONS ---------
 name = '4-AlongshoreVarGrowthParam_pt2HAF_LHL_1500yrs'
-wave_height = 1  # m
+wave_height = 1.0  # m
 wave_period = 7  # s (lowered from 10 s to reduce k_sf)
 asym_frac = 0.8  # fraction approaching from left
 high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
@@ -255,7 +261,7 @@ rmax = [0.65, 0.75, 0.75, 0.85, 0.85, 0.95, 0.95, 0.85, 0.85, 0.75, 0.75, 0.65] 
 
 # --------- INITIAL CONDITIONS ---------
 name = '5-AlongshoreVarGrowthParam_pt2HAF_HLH_1500yrs'
-wave_height = 1  # m
+wave_height = 1.0  # m
 wave_period = 7  # s (lowered from 10 s to reduce k_sf)
 asym_frac = 0.8  # fraction approaching from left
 high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
@@ -275,7 +281,7 @@ rmax = [0.95, 0.85, 0.85, 0.75, 0.75, 0.65, 0.65, 0.75, 0.75, 0.85, 0.85, 0.95] 
 
 # --------- INITIAL CONDITIONS ---------
 name = '3-AlongshoreVarGrowthParam_pt2HAF_gradient_1500yrs'
-wave_height = 1  # m
+wave_height = 1.0  # m
 wave_period = 7  # s (lowered from 10 s to reduce k_sf)
 asym_frac = 0.8  # fraction approaching from left
 high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
