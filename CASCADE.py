@@ -13,7 +13,7 @@ import time
 import os
 
 from barrier3d import Barrier3dBmi
-from brie import Brie
+from brie import Brie  # need to update this for the new BMI (i.e., BrieBMI)
 
 
 # temporary placement - I want this added to the BMI but keep getting an object error
@@ -158,6 +158,7 @@ def time_loop(brie, barrier3d, num_cores):
         subB3D.update()
 
         # get values for passing to brie (all in dam) [ UPDATE THIS WHEN BMI IS WORKING ]
+        # barrier3d.get_value("shoreface_flux", x) but need to set x=[] to empty first
         x_t_TS = subB3D._values["shoreface_toe_position"]()
         x_s_TS = subB3D._values["shoreline_position"]()
         x_b_TS = subB3D._values["back_barrier_shoreline_position"]()
