@@ -17,8 +17,7 @@ import CASCADE_plotters as CASCADEplt
 import CASCADE as CASCADE
 
 # for laptop and desktop, use all but one core; on supercomputer, use all cores
-# num_cores = multiprocessing.cpu_count() - 1
-num_cores = 1
+num_cores = multiprocessing.cpu_count() - 1
 
 # ###############################################################################
 # 1 - CASCADE_LTA_COMPARISON
@@ -34,9 +33,9 @@ asym_frac = 0.8  # fraction approaching from left
 high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
 slr = 0.002  # m/yr
 ny = 6  #12 # number of alongshore sections (6=3 km for 3000 yr run, 12=6 km for 1500 yr run)
-nt = 20 # 3000  #1500 # timesteps for 3000 morphologic years
-rmin = 0.35 # minimum growth rate for logistic dune growth (can be a list)
-rmax = 0.85 # maximum growth rate for logistic dune growth (can be a list)
+nt = 100  # 3000  #1500 # timesteps for 3000 morphologic years
+rmin = 0.35  # minimum growth rate for logistic dune growth (can be a list)
+rmax = 0.85  # maximum growth rate for logistic dune growth (can be a list)
 
 # --------- INITIALIZE ---------
 # datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml" # iMAC
@@ -196,8 +195,8 @@ brie, barrier3d = CASCADE.initialize(name, wave_height, wave_period, asym_frac, 
 brie, barrier3d = CASCADE.time_loop(brie, barrier3d, num_cores)
 
 # --------- SAVE ---------
-save_directory = "/Users/katherineanarde/PycharmProjects/CASCADE/"
-#save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
+save_directory = "/Users/katherineanarde/PycharmProjects/CASCADE/Run_Output"
+#save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output"
 b3d = CASCADE.save(brie, barrier3d, save_directory, name) # this returns the barrier3d model without the BMI
 
 # --------- plot ---------

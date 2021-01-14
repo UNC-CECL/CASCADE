@@ -133,6 +133,6 @@ dmypy.json
 .idea/
 
 # project specific files
-brie_venv/
+brie_venv
 Output/
 Run_Output/

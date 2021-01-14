@@ -157,12 +157,14 @@ def time_loop(brie, barrier3d, num_cores):
 
         subB3D.update()
 
-        # get values for passing to brie (all in dam) [ UPDATE THIS WHEN BMI IS WORKING ]
-        # barrier3d.get_value("shoreface_flux", x) but need to set x=[] to empty first
-        x_t_TS = subB3D._values["shoreface_toe_position"]()
-        x_s_TS = subB3D._values["shoreline_position"]()
-        x_b_TS = subB3D._values["back_barrier_shoreline_position"]()
-        h_b_TS = subB3D._values["height_of_barrier"]()
+        # get values for passing to brie (all in dam)
+        x_t_TS, x_s_TS, x_b_TS, h_b_TS = [
+                [] for _ in range(4)
+            ]
+        subB3D.get_value("shoreface_toe_position", x_t_TS)
+        subB3D.get_value("shoreline_position", x_s_TS)
+        subB3D.get_value("back_barrier_shoreline_position", x_b_TS)
+        subB3D.get_value("height_of_barrier", h_b_TS)
 
         # calculate the diff in shoreface toe, shorelines (dam), height of barrier and convert to m
         sub_x_t_dt = (x_t_TS[-1] - x_t_TS[-2]) * 10
@@ -170,7 +172,7 @@ def time_loop(brie, barrier3d, num_cores):
         sub_x_b_dt = (x_b_TS[-1] - x_b_TS[-2]) * 10
         sub_h_b_dt = (h_b_TS[-1] - h_b_TS[-2]) * 10
 
-        return sub_x_t_dt, sub_x_s_dt, sub_x_b_dt, sub_h_b_dt
+        return sub_x_t_dt, sub_x_s_dt, sub_x_b_dt, sub_h_b_dt, subB3D
 
     for time_step in range(brie._nt - 1):
 
@@ -187,11 +189,12 @@ def time_loop(brie, barrier3d, num_cores):
         )  # set n_jobs=1 for no parallel processing (debugging) and -2 for all but 1 CPU
 
         # reshape output from parallel processing and convert from tuple to list
-        x_t_dt, x_s_dt, x_b_dt, h_b_dt = zip(*batch_output)
+        x_t_dt, x_s_dt, x_b_dt, h_b_dt, b3d = zip(*batch_output)
         x_t_dt = list(x_t_dt)
         x_s_dt = list(x_s_dt)
         x_b_dt = list(x_b_dt)
         h_b_dt = list(h_b_dt)
+        barrier3d = list(b3d)
 
         # pass values from B3D subdomains to brie for use in second time step
         # (there has to be a better way to do this with the BMI, but for now, access protected variables)
@@ -204,7 +207,7 @@ def time_loop(brie, barrier3d, num_cores):
         brie.update()
 
         # loop to pass x_s and x_b (maybe this will be important for inlets with the x_b_fldt) back to B3D from Brie
-        # (convert back to dam)
+        # (convert back to dam) [need to update this for the BMI]
         for iB3D in range(brie._ny):
             barrier3d[iB3D]._model._x_s = brie._x_s[iB3D] / 10
             barrier3d[iB3D]._model._x_s_TS[-1] = brie._x_s[iB3D] / 10
