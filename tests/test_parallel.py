@@ -36,12 +36,14 @@ brie, barrier3d_6cores = CASCADE.initialize(name, wave_height, wave_period, asym
 brie, barrier3d_6cores = CASCADE.time_loop(brie, barrier3d_6cores, num_cores)
 
 # all but 1 core
-name = '1-CASCADE_Parallel_15cores'
+name = '1-CASCADE_LTA_COMPARISON_3km_100yr_Parallel_15cores'
 num_cores = multiprocessing.cpu_count() - 1
 datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"  # laptop
 brie, barrier3d_15cores = CASCADE.initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt, rmin, rmax, datadir)
 # --------- LOOP ---------
 brie, barrier3d_15cores = CASCADE.time_loop(brie, barrier3d_15cores, num_cores)
+save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output"
+b3d_1_15cores = CASCADE.save(brie, barrier3d_15cores, save_directory, name) # this returns the barrier3d model without the BMI
 
 # only 1 core (not in parallel)
 name = '1-CASCADE_NoParallel'
@@ -128,3 +130,6 @@ TMAX = b3d_3_15cores[0].time_index - 1  # just in case the barrier drowned
 ny = len(b3d_3_15cores)
 name = '3-AlongshoreVarGrowthParam_pt2HAF_gradient_500yrs_15cores'
 CASCADEplt.plot_ElevAnimation(b3d_3_15cores, ny, save_directory, TMAX, name)
+
+# NOTE: I saved the 100 year (15 core) simulation for #1 and 500 year simulation for #3 for future debugging
+# comparisions
