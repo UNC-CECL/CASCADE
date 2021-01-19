@@ -26,7 +26,6 @@ def set_yaml(var_name, new_vals, file_name):
     with open(file_name, 'w') as f:
         dump(doc, f)
 
-
 ###############################################################################
 # initial conditions for Brie
 ###############################################################################
@@ -121,12 +120,11 @@ def initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny
                  datadir)  # [m^3 / m / y] Shoreface flux rate constant (function of wave parameters from brie)
         set_yaml('s_sf_eq', float(brie._s_sf_eq),
                  datadir)  # Equilibrium shoreface slope (function of wave and sediment parameters from brie)
+        set_yaml('GrowthParamStart', False, datadir)  # Dune growth parameter WILL NOT come from external file
         if np.size(rmin) > 1:
-            set_yaml('GrowthParamStart', False, datadir)  # Dune growth parameter will come from external file
             set_yaml('rmin', rmin[iB3D], datadir)  # Minimum growth rate for logistic dune growth
             set_yaml('rmax', rmax[iB3D], datadir)  # Maximum growth rate for logistic dune growth
         else:
-            set_yaml('GrowthParamStart', True, datadir)  # Dune growth parameter will come from external file
             set_yaml('rmin', rmin, datadir)  # Minimum growth rate for logistic dune growth
             set_yaml('rmax', rmax, datadir)  # Maximum growth rate for logistic dune growth
 
