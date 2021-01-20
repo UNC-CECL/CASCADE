@@ -33,15 +33,15 @@ def RUN_1_CASCADE_LTA_COMPARISON():
     wave_period = 7  # s (lowered from 10 s to reduce k_sf)
     asym_frac = 0.8  # fraction approaching from left
     high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
-    slr = 0.002  # m/yr
+    slr = 0.004  # m/yr
     ny = 6  #12 # number of alongshore sections (6=3 km for 3000 yr run, 12=6 km for 1500 yr run)
-    nt = 100  # 3000  #1500 # timesteps for 3000 morphologic years
+    nt = 3000  # 3000  #1500 # timesteps for 3000 morphologic years
     rmin = 0.35  # minimum growth rate for logistic dune growth (can be a list)
     rmax = 0.85  # maximum growth rate for logistic dune growth (can be a list)
 
     # --------- INITIALIZE ---------
-    # datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml" # iMAC
-    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"  # laptop
+    # datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/" # iMAC
+    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"  # laptop
     brie, barrier3d = CASCADE.initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt, rmin, rmax, datadir)
 
     # --------- LOOP ---------
@@ -118,7 +118,7 @@ def PLOT_1_CASCADE_LTA_COMPARISON(brieLTA, name, save_directory):
     TMAX = b3d[0].time_index - 1  # just in case the barrier drowned
     CASCADEplt.plot_XShoreTransects(b3d[0], TMAX)
 
-def RUN_2_AlongshoreVarGrowthParam_pt3HAF():
+def RUN_2_AlongshoreVarGrowthParam_Alternating():
     # ###############################################################################
     # 2 - variable alongshore dune growth parameters
     # ###############################################################################
@@ -146,8 +146,8 @@ def RUN_2_AlongshoreVarGrowthParam_pt3HAF():
     rmax = rmax * int(ny/len(rmax))
 
     # --------- INITIALIZE ---------
-    # #datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"
-    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"
+    # #datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/"
+    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
     brie, barrier3d = CASCADE.initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt, rmin, rmax, datadir)
 
     # --------- LOOP ---------
@@ -158,20 +158,21 @@ def RUN_2_AlongshoreVarGrowthParam_pt3HAF():
     save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
     b3d = CASCADE.save(brie, barrier3d, save_directory, name) # this returns the barrier3d model without the BMI
 
-def RUN_3_AlongshoreVarGrowthParam_pt2HAF_gradient():
+def RUN_3_AlongshoreVarGrowthParam_Gradient():
     # ###############################################################################
     # 3 - variable alongshore dune growth parameters (gradient)
     # ###############################################################################
     # GOAL: what is the effect of the alongshore variability of dunes?
     #        - THIS RUN: make gradient in raverage across the barrier and reduce the grid size to 6 km
+    #        - Increased SLR to 0.004
 
     # --------- INITIAL CONDITIONS ---------
-    name = '3-AlongshoreVarGrowthParam_pt2HAF_gradient_1500yrs'
+    name = '3-VarGrowthParam_grad_pt2HAF_pt4SLR_1500yrs'
     wave_height = 1.0  # m
     wave_period = 7  # s (lowered from 10 s to reduce k_sf)
     asym_frac = 0.8  # fraction approaching from left
     high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
-    slr = 0.002  # m/yr
+    slr = 0.004  # m/yr
     ny = 12  # number of alongshore sections (12 = 6 km)
     nt = 1500  # timesteps for 1000 morphologic years
     rmin = [0.25, 0.25, 0.25, 0.35, 0.35, 0.35, 0.45, 0.45, 0.45, 0.55, 0.55, 0.55]  # minimum growth rate for logistic dune growth (list for alongshore variability)
@@ -179,16 +180,16 @@ def RUN_3_AlongshoreVarGrowthParam_pt2HAF_gradient():
     # rave = [0.45, 0.45, 0.45, 0.55, 0.55, 0.55, 0.65, 0.65, 0.65, 0.75, 0.75, 0.75]  # to help me remember the average
 
     # --------- INITIALIZE ---------
-    datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"
-    #datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"
+    # datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/" # iMAC
+    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"  # laptop
     brie, barrier3d = CASCADE.initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt, rmin, rmax, datadir)
 
     # --------- LOOP ---------
     brie, barrier3d = CASCADE.time_loop(brie, barrier3d, num_cores)
 
     # --------- SAVE ---------
-    save_directory = "/Users/katherineanarde/PycharmProjects/CASCADE/Run_Output"
-    #save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output"
+    #save_directory = "/Users/katherineanarde/PycharmProjects/CASCADE/Run_Output"
+    save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output"
     CASCADE.save(brie, barrier3d, save_directory, name) # this returns the barrier3d model without the BMI
 
 def PLOT_3_AlongshoreVarGrowthParam_pt2HAF_gradient(name, save_directory):
@@ -305,8 +306,8 @@ def RUN_4_B3D_Rave_pt45_SLR_pt004():
     # rave = [0.45]  # to help me remember the average
 
     # --------- INITIALIZE ---------
-    #datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"
-    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"
+    #datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/"
+    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
     brie, barrier3d = CASCADE.initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt, rmin,
                                          rmax, datadir)
 
@@ -359,11 +360,11 @@ def RUN_5_B3D_Rave_pt75_SLR_pt004():
     nt = 1000  # timesteps for 1000 morphologic years
     rmin = 0.55  # minimum growth rate for logistic dune growth (list for alongshore variability)
     rmax = 0.95  # maximum growth rate for logistic dune growth (list for alongshore variability)
-    # rave = [0.45]  # to help me remember the average
+    # rave = [0.75]  # to help me remember the average
 
     # --------- INITIALIZE ---------
-    #datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"
-    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"
+    #datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/"
+    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
     brie, barrier3d = CASCADE.initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt, rmin,
                                          rmax, datadir)
 
@@ -396,3 +397,4 @@ def RUN_5_B3D_Rave_pt75_SLR_pt004():
     # 2: Shoreline positions over time
     TMAX = b3d.time_index - 1
     CASCADEplt.plot_ShorelinePositions(b3d._x_s_TS[0:TMAX], b3d._x_b_TS[0:TMAX])
+
