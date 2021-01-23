@@ -89,7 +89,7 @@ rmax = [0.65, 0.65, 0.65, 0.75, 0.75, 0.75, 0.85, 0.85, 0.95, 0.95, 0.95, 0.95] 
 
 # all but 1 core
 num_cores = multiprocessing.cpu_count() - 1
-datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"  # laptop
+datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"  # laptop
 brie, barrier3d_3_15cores = CASCADE.initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt, rmin, rmax, datadir)
 # --------- LOOP ---------
 brie, barrier3d_3_15cores = CASCADE.time_loop(brie, barrier3d_3_15cores, num_cores)
@@ -98,7 +98,7 @@ save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Outpu
 b3d_3_15cores = CASCADE.save(brie, barrier3d_3_15cores, save_directory, name) # this returns the barrier3d model without the BMI
 
 # load earlier version
-filename = '3-AlongshoreVarGrowthParam_pt2HAF_gradient_500yrs.npz'
+filename = '3-VarGrowthParam_grad_pt2HAF_pt2SLR_500yrs.npz'
 os.chdir('/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output')
 output = np.load(filename, allow_pickle=True)
 b3d_original = output['barrier3d']

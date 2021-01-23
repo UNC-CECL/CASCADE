@@ -195,7 +195,7 @@ def RUN_3_AlongshoreVarGrowthParam_Gradient():
 def PLOT_3_AlongshoreVarGrowthParam_pt2HAF_gradient(name, save_directory):
     # --------- plot ---------
     filename = name + '.npz'
-    os.chdir('/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/')
+    os.chdir('/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output')
     output = np.load(filename, allow_pickle=True)
     b3d = output['barrier3d']
     brie = output['brie']

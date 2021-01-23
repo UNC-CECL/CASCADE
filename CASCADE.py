@@ -137,6 +137,8 @@ def initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny
         # print(brie.x_s[iB3D] - (barrier3d[iB3D].x_s_TS[0] * 10))
 
         # now update brie x_b, x_b_save[:,0], h_b, h_b_save[:,0] from B3D so all the initial conditions are the same
+        # NOTE: interestingly here we don't need to have a "setter" in the property class for x_b, h_b, etc. because we
+        #  are only replacing certain indices but added for completeness
         brie.x_b[iB3D] = (barrier3d[iB3D].x_b_TS[0] * 10)  # the shoreline position + average interior width
         brie.h_b[iB3D] = (barrier3d[iB3D].h_b_TS[0] * 10)  # average height of the interior domain
         brie.x_b_save[iB3D, 0] = brie.x_b[iB3D]
@@ -167,44 +169,50 @@ def time_loop(brie, barrier3d, num_cores):
 
     for time_step in range(brie.nt - 1):
 
-        # Print time step to screen (NOTE: time_index in each model is time_step+1)
-        print("\r", 'Time Step: ', time_step, end="")
+        # because of the parallelization of b3d, I don't want to throw an error and exit if a barrier has drowned (will
+        # lose the b3d model), so instead I just added a boolean to check for drowning (might need to do this in B3D too)
+        if brie.drown == False:
 
-        # Advance B3D by one time step
-        # --- (NOTE: B3D initializes at time_index = 1 and then updates the time_index at
-        # the end of the update function. The dune and shoreline changes are saved at the beginning of the next time
-        # step because they come from BRIE) ---
+            # Print time step to screen (NOTE: time_index in each model starts at 1)
+            print("\r", 'Time Step: ', brie.time_index+1, end="")
 
-        batch_output = Parallel(n_jobs=num_cores, max_nbytes='10M')(
-            delayed(batchB3D)(barrier3d[iB3D]) for iB3D in range(brie.ny)
-        )  # set n_jobs=1 for no parallel processing (debugging) and -2 for all but 1 CPU; note that joblib uses a
-        # threshold on the size of arrays passed to the workers; we use 'None' to disable memory mapping of large arrays
+            # Advance B3D by one time step
+            # --- (NOTE: B3D initializes at time_index = 1 and then updates the time_index at
+            # the end of the update function. The dune and shoreline changes are saved at the beginning of the next time
+            # step because they come from BRIE) ---
 
-        # reshape output from parallel processing and convert from tuple to list
-        x_t_dt, x_s_dt, x_b_dt, h_b_dt, b3d = zip(*batch_output)
-        x_t_dt = list(x_t_dt)
-        x_s_dt = list(x_s_dt)
-        x_b_dt = list(x_b_dt)
-        h_b_dt = list(h_b_dt)
-        barrier3d = list(b3d)
+            batch_output = Parallel(n_jobs=num_cores, max_nbytes='10M')(
+                delayed(batchB3D)(barrier3d[iB3D]) for iB3D in range(brie.ny)
+            )  # set n_jobs=1 for no parallel processing (debugging) and -2 for all but 1 CPU; note that joblib uses a
+            # threshold on the size of arrays passed to the workers; we use 'None' to disable memory mapping of large arrays
 
-        # pass values from B3D subdomains to brie for use in second time step
-        # (there has to be a better way to do this with the BMI, but for now, access protected variables)
-        brie.x_t_dt = x_t_dt
-        brie.x_s_dt = x_s_dt
-        brie.x_b_dt = x_b_dt
-        brie.h_b_dt = h_b_dt
+            # reshape output from parallel processing and convert from tuple to list
+            x_t_dt, x_s_dt, x_b_dt, h_b_dt, b3d = zip(*batch_output)
+            x_t_dt = list(x_t_dt)
+            x_s_dt = list(x_s_dt)
+            x_b_dt = list(x_b_dt)
+            h_b_dt = list(h_b_dt)
+            barrier3d = list(b3d)
 
-        # update brie one time step (this is time_index = 2 at start of loop)
-        brie.update()
+            # pass values from B3D subdomains to brie for use in second time step
+            brie.x_t_dt = x_t_dt
+            brie.x_s_dt = x_s_dt
+            brie.x_b_dt = x_b_dt
+            brie.h_b_dt = h_b_dt
 
-        # loop to pass x_s and x_b (maybe this will be important for inlets with the x_b_fldt) back to B3D from Brie
-        # (convert back to dam) [need to update this for the BMI]
-        for iB3D in range(brie.ny):
-            barrier3d[iB3D].x_s = brie.x_s[iB3D] / 10
-            barrier3d[iB3D].x_s_TS[-1] = brie.x_s[iB3D] / 10
-            # barrier3d[iB3D].x_b = brie.x_b[iB3D] / 10   # maybe will need this if tidal inlets on?
-            # barrier3d[iB3D].x_b_TS[-1] = brie.x_b[iB3D] / 10
+            # update brie one time step (this is time_index = 2 at start of loop)
+            brie.update()
+
+            # loop to pass x_s and x_b (maybe this will be important for inlets with the x_b_fldt) back to B3D from Brie
+            # (convert back to dam)
+            for iB3D in range(brie.ny):
+                barrier3d[iB3D].x_s = brie.x_s[iB3D] / 10
+                barrier3d[iB3D].x_s_TS[-1] = brie.x_s[iB3D] / 10
+                # barrier3d[iB3D].x_b = brie.x_b[iB3D] / 10   # maybe will need this if tidal inlets on?
+                # barrier3d[iB3D].x_b_TS[-1] = brie.x_b[iB3D] / 10
+        else:
+            # if the barrier drowns in brie, exit the time loop
+            break
 
     SimDuration = time.time() - Time
     print()
