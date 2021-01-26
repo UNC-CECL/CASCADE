@@ -31,7 +31,19 @@ def set_yaml(var_name, new_vals, file_name):
 # initial conditions for Brie
 ###############################################################################
 
-def initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt, rmin, rmax, datadir):
+def initialize(
+        name='Example',
+        wave_height=1,
+        wave_period=7,
+        asym_frac=0.8,
+        high_ang_frac=0.2,
+        slr=0.004,
+        ny=6,
+        nt=500,
+        rmin=0.35,
+        rmax=0.85,
+        datadir=None
+):
     """initialize both BRIE and Barrier3D"""
 
     # start by initializing BRIE b/c it has parameters related to wave climate that we use to initialize B3D
@@ -132,10 +144,6 @@ def initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny
 
         barrier3d.append(Barrier3d.from_yaml(datadir))
 
-        # debugging: check that the shoreface toe and shoreline are correct between the two models
-        # print(brie.x_t[iB3D] - (barrier3d[iB3D].x_t_TS[0] * 10))  # this isn't always zero; rounding error
-        # print(brie.x_s[iB3D] - (barrier3d[iB3D].x_s_TS[0] * 10))
-
         # now update brie x_b, x_b_save[:,0], h_b, h_b_save[:,0] from B3D so all the initial conditions are the same
         # NOTE: interestingly here we don't need to have a "setter" in the property class for x_b, h_b, etc. because we
         #  are only replacing certain indices but added for completeness
@@ -159,13 +167,12 @@ def time_loop(brie, barrier3d, num_cores):
 
         subB3D.update()
 
-        # calculate the diff in shoreface toe, shorelines (dam), height of barrier and convert to m
+        # calculate the diff in shoreface toe, shoreline, and height of barrier (dam)
         sub_x_t_dt = (subB3D.x_t_TS[-1] - subB3D.x_t_TS[-2]) * 10
         sub_x_s_dt = (subB3D.x_s_TS[-1] - subB3D.x_s_TS[-2]) * 10
-        sub_x_b_dt = (subB3D.x_b_TS[-1] - subB3D.x_b_TS[-2]) * 10
         sub_h_b_dt = (subB3D.h_b_TS[-1] - subB3D.h_b_TS[-2]) * 10
 
-        return sub_x_t_dt, sub_x_s_dt, sub_x_b_dt, sub_h_b_dt, subB3D
+        return sub_x_t_dt, sub_x_s_dt, sub_h_b_dt, subB3D
 
     for time_step in range(brie.nt - 1):
 
@@ -177,9 +184,7 @@ def time_loop(brie, barrier3d, num_cores):
             print("\r", 'Time Step: ', brie.time_index+1, end="")
 
             # Advance B3D by one time step
-            # --- (NOTE: B3D initializes at time_index = 1 and then updates the time_index at
-            # the end of the update function. The dune and shoreline changes are saved at the beginning of the next time
-            # step because they come from BRIE) ---
+            # NOTE: B3D initializes at time_index = 1 and then updates the time_index after update_dune_domain
 
             batch_output = Parallel(n_jobs=num_cores, max_nbytes='10M')(
                 delayed(batchB3D)(barrier3d[iB3D]) for iB3D in range(brie.ny)
@@ -187,31 +192,36 @@ def time_loop(brie, barrier3d, num_cores):
             # threshold on the size of arrays passed to the workers; we use 'None' to disable memory mapping of large arrays
 
             # reshape output from parallel processing and convert from tuple to list
-            x_t_dt, x_s_dt, x_b_dt, h_b_dt, b3d = zip(*batch_output)
+            x_t_dt, x_s_dt, h_b_dt, b3d = zip(*batch_output)
             x_t_dt = list(x_t_dt)
             x_s_dt = list(x_s_dt)
-            x_b_dt = list(x_b_dt)
             h_b_dt = list(h_b_dt)
             barrier3d = list(b3d)
 
-            # pass values from B3D subdomains to brie for use in second time step
+            # pass shoreline and shoreface values from B3D subdomains to brie for use in second time step
             brie.x_t_dt = x_t_dt
             brie.x_s_dt = x_s_dt
-            brie.x_b_dt = x_b_dt
+            brie.x_b_dt = 0  # dummy variable, will set x_b later
             brie.h_b_dt = h_b_dt
 
             # update brie one time step (this is time_index = 2 at start of loop)
             brie.update()
 
-            # loop to pass x_s and x_b (maybe this will be important for inlets with the x_b_fldt) back to B3D from Brie
-            # (convert back to dam)
             for iB3D in range(brie.ny):
+
+                # pass shoreline position back to B3D from Brie (convert from m to dam)
                 barrier3d[iB3D].x_s = brie.x_s[iB3D] / 10
                 barrier3d[iB3D].x_s_TS[-1] = brie.x_s[iB3D] / 10
-                # barrier3d[iB3D].x_b = brie.x_b[iB3D] / 10   # maybe will need this if tidal inlets on?
-                # barrier3d[iB3D].x_b_TS[-1] = brie.x_b[iB3D] / 10
+
+                # update dune domain in B3D (erode/prograde) based on on shoreline change from Brie
+                barrier3d[iB3D].update_dune_domain()
+
+                # update back-barrier shoreline location in BRIE based on new shoreline + average interior width in B3D
+                brie.x_b[iB3D] = barrier3d[iB3D].x_b_TS[-1] * 10
+                brie.x_b_save[iB3D, brie.time_index-1] = brie.x_b[iB3D]
+
         else:
-            # if the barrier drowns in brie, exit the time loop
+            # if the barrier drowns in brie, exit the time loop (although, I expect this to happen in B3D first)
             break
 
     SimDuration = time.time() - Time
