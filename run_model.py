@@ -14,6 +14,7 @@ import multiprocessing
 import time
 
 import CASCADE_plotters as CASCADEplt
+import matplotlib.pyplot as plt
 
 import CASCADE as CASCADE
 
@@ -254,7 +255,7 @@ def PLOT_1_CASCADE_LTA_COMPARISON(brieLTA, name, save_directory):
     TMAX = b3d[0].time_index - 1  # just in case the barrier drowned
     CASCADEplt.plot_XShoreTransects(b3d[0], TMAX)
 
-def PLOT_3_AlongshoreVarGrowthParam_pt2HAF_gradient(name, save_directory):
+def PLOT_3_AlongshoreVarGrowthParam_gradient(name, save_directory):
     # --------- plot ---------
     filename = name + '.npz'
     os.chdir('/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output')
@@ -306,6 +307,41 @@ def PLOT_3_AlongshoreVarGrowthParam_pt2HAF_gradient(name, save_directory):
 
     # 2: Shoreline change rate (AGU version)
     # CASCADEplt.plot_ShorelineChangeRate_AGU(b3d1, b3d2)
+
+def PLOT_5_AlongshoreVarGrowthParam_half(name, save_directory):
+    # --------- plot ---------
+    filename = name + '.npz'
+    os.chdir('/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output')
+    output = np.load(filename, allow_pickle=True)
+    CASCADE_b3d = output['barrier3d']
+
+    # 1: Animation Frames of Barrier and Dune Elevation
+    TMAX = CASCADE_b3d[0].time_index - 1  # just in case the barrier drowned
+    ny = len(CASCADE_b3d)
+    CASCADEplt.plot_ElevAnimation(CASCADE_b3d, ny, save_directory, TMAX, name)
+
+    # ===================================================
+    # 7: Calculate shoreline change periodicity from CASCADE model
+
+    # where does punctuated retreat occur for individual B3D models?
+    output = np.load('4-B3D_Rave_pt45_SLR_pt004.npz', allow_pickle=True)
+    b3d_pt45 = output['barrier3d']
+    output = np.load('4-B3D_Rave_pt75_SLR_pt004.npz', allow_pickle=True)
+    b3d_pt75 = output['barrier3d']
+
+    b3d_only = []
+
+    # the first 6 cells are rave = 0.45
+    ny = 6
+    for iB3D in range(ny):
+        b3d_only.append(b3d_pt45[0])
+
+    # the next 6 cells are rave = 0.75
+    for iB3D in range(ny):
+        b3d_only.append(b3d_pt75[0])
+
+
+
 
 # # ###############################################################################
 # # 4 - variable alongshore dune growth parameters (gradient, coalesce in middle high)
@@ -361,3 +397,8 @@ Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(rmin=0.25, 
 Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(rmin=0.35, rmax=0.75, name = '4-B3D_Rave_pt55_SLR_pt004')  # rave = 0.55
 Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(rmin=0.45, rmax=0.85, name = '4-B3D_Rave_pt65_SLR_pt004')  # rave = 0.65
 Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(rmin=0.55, rmax=0.95, name = '4-B3D_Rave_pt75_SLR_pt004')  # rave = 0.75
+
+
+# record of plotters
+PLOT_5_AlongshoreVarGrowthParam_half(name = '5-VarGrowthParam_half_pt4SLR_1500yrs',
+                                     save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output")

@@ -236,6 +236,7 @@ def time_loop(brie, barrier3d, num_cores):
 ###############################################################################
 
 def save(brie, barrier3d, directory, name):
+
     filename = name + '.npz'
 
     b3d = []
@@ -244,7 +245,8 @@ def save(brie, barrier3d, directory, name):
     # save object
     for iB3D in range(brie.ny):
         b3d.append(barrier3d[iB3D])
-    brie_save = brie_save.append(brie)
+
+    brie_save.append(brie)
 
     os.chdir(directory)
     np.savez(filename, barrier3d=b3d, brie=brie_save)

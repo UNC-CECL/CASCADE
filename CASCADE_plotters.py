@@ -823,6 +823,85 @@ def plot_ShorelineChangeRate_AGU(b3d1, b3d2):
 
     plt.show()
 
+def plot_punctuated_difference(CASCADE_b3d, b3d_only, ny):
+
+    # Calculate shoreline change periodicity from CASCADE model
+    Punc = []
+    Period = []
+    AvgFastDur = []
+    AvgSlowDur = []
+    ShorelinePosition = []
+
+    for iB3D in range(ny):
+        tmpPeriod, tmpAvgFastDur, tmpAvgSlowDur, tmpPunc = calc_ShorelinePeriodicity(CASCADE_b3d[iB3D]._x_s_TS)
+        Punc.append(tmpPunc)
+        Period.append(tmpPeriod)
+        AvgFastDur.append(tmpAvgFastDur)
+        AvgSlowDur.append(tmpAvgSlowDur)
+        ShorelinePosition.append(CASCADE_b3d[iB3D]._x_s_TS)
+
+    Punc_b3D = []
+    Period_b3D = []
+    AvgFastDur_b3D = []
+    AvgSlowDur_b3D = []
+    ShorelinePosition_b3D = []
+
+    for iB3D in range(ny):
+        tmpPeriod, tmpAvgFastDur, tmpAvgSlowDur, tmpPunc = calc_ShorelinePeriodicity(b3d_only[iB3D]._x_s_TS)
+        Punc_b3D.append(tmpPunc)
+        Period_b3D.append(tmpPeriod)
+        AvgFastDur_b3D.append(tmpAvgFastDur)
+        AvgSlowDur_b3D.append(tmpAvgSlowDur)
+        ShorelinePosition_b3D.append(b3d_only[iB3D]._x_s_TS)
+
+    colors = mpl.cm.viridis(np.linspace(0, 1, 10))
+    plt.figure(figsize=(10,5))
+
+    # punctuated retreat
+    plt.subplot(2, 2, 1)
+    plt.scatter(np.arange(500, 500*(ny+1), 500), Punc, color=colors[1])
+    plt.scatter(np.arange(500, 500*(ny+1), 500), Punc_b3D, color=colors[6])
+    plt.ylabel('Punctuated Retreat')
+    plt.xlabel('alongshore (m)')
+    plt.legend(['CASCADE', 'B3D only'])
+    plt.rcParams["legend.loc"] = 'lower right'
+
+    # period
+    plt.subplot(2, 2, 2)
+    plt.scatter(np.arange(500, 500*(ny+1), 500), Period, color=colors[1])
+    plt.scatter(np.arange(500, 500*(ny+1), 500), Period_b3D, color=colors[6])
+    plt.ylabel('Period (years)')
+    plt.xlabel('alongshore (m)')
+
+    # period
+    plt.subplot(2, 2, 3)
+    plt.scatter(np.arange(500, 500*(ny+1), 500), AvgFastDur, color=colors[1])
+    plt.scatter(np.arange(500, 500*(ny+1), 500), AvgFastDur_b3D, color=colors[6])
+    plt.ylabel('Ave Fast Duration (years)')
+    plt.xlabel('alongshore (m)')
+
+    # period
+    plt.subplot(2, 2, 4)
+    plt.scatter(np.arange(500, 500*(ny+1), 500), AvgSlowDur, color=colors[1])
+    plt.scatter(np.arange(500, 500*(ny+1), 500), AvgSlowDur_b3D, color=colors[6])
+    plt.ylabel('Ave Slow Duration (years)')
+    plt.xlabel('alongshore (m)')
+
+    # figure of shoreline change plots
+    plt.figure(figsize=(10,5))
+
+    for iB3D in range(ny):
+
+        plt.subplot(2, 6, iB3D+1)
+        plt.plot(ShorelinePosition[iB3D], color=colors[1])
+        plt.plot(ShorelinePosition_b3D[iB3D], color=colors[6])
+        plt.xlabel('Year')
+        plt.ylabel('Average Shoreline Position (m)')
+    plt.legend(['CASCADE', 'B3D only'])
+    plt.rcParams["legend.loc"] = 'upper left'
+
+    plt.tight_layout()
+
 ## OLD CODE THAT I NEED TO FIX EVENTUALLY:
 
 # plot_BRIE_frames
