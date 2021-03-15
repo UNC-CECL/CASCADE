@@ -13,10 +13,15 @@ import os
 import multiprocessing
 import time
 
-import CASCADE_plotters as CASCADEplt
-import matplotlib.pyplot as plt
+from scripts import CASCADE_plotters as CASCADEplt
 
 import CASCADE as CASCADE
+
+from Tools.Barrier3D_MakeTimeSeries import (
+    storms_per_year_from_MSSM_output,
+    gen_dune_height_start,
+    gen_alongshore_variable_rmin_rmax,
+)
 
 # for laptop and desktop, use all but one core; on supercomputer, use all cores
 num_cores = multiprocessing.cpu_count() - 1
@@ -310,6 +315,99 @@ def RUN_4_B3D_Rave_SLR_pt004(rmin, rmax, name):
     return Periodicity, AvgFastDur, AvgSlowDur, Punc
 
 
+def RUN_5_AlongshoreVarGrowthParam_half():
+
+    # ###############################################################################
+    # 5 - variable alongshore dune growth parameters (half/half)
+    # ###############################################################################
+    # GOAL: what is the effect of the alongshore variability of dunes?
+    #        - THIS RUN: make half the barrier have different raverage
+    #        - Increased SLR to 0.004
+
+    # --------- INITIAL CONDITIONS ---------
+    name = "5-VarGrowthParam_half_pt4SLR_1500yrs"
+    wave_height = 1.0  # m
+    wave_period = 7  # s (lowered from 10 s to reduce k_sf)
+    asym_frac = 0.8  # fraction approaching from left
+    high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
+    slr = 0.004  # m/yr
+    ny = 12  # number of alongshore sections (12 = 6 km)
+    nt = 1500  # timesteps for 1000 morphologic years
+    rmin = [
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.55,
+        0.55,
+        0.55,
+        0.55,
+        0.55,
+        0.55,
+    ]  # minimum growth rate for logistic dune growth (list for alongshore variability)
+    rmax = [
+        0.65,
+        0.65,
+        0.65,
+        0.65,
+        0.65,
+        0.65,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+    ]  # maximum growth rate for logistic dune growth (list for alongshore variability)
+    # rave = [0.45, 0.45, 0.45, 0.75, 0.75, 0.75]  # to help me remember the average
+
+    # --------- INITIALIZE ---------
+    # datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/"
+    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
+    brie, barrier3d = CASCADE.initialize(
+        name,
+        wave_height,
+        wave_period,
+        asym_frac,
+        high_ang_frac,
+        slr,
+        ny,
+        nt,
+        rmin,
+        rmax,
+        datadir,
+    )
+
+    # --------- LOOP ---------
+    # just use the first B3D grid and update B3D without brie coupling
+    Time = time.time()
+
+    for time_step in range(brie._nt - 1):
+
+        # Print time step to screen (NOTE: time_index in each model is time_step+1)
+        print("\r", "Time Step: ", time_step, end="")
+        barrier3d[0].update()
+        barrier3d[0].update_dune_domain()
+
+    SimDuration = time.time() - Time
+    print()
+    print("Elapsed Time: ", SimDuration, "sec")  # Print elapsed time of simulation
+
+    # --------- SAVE ---------
+    # save_directory = "/Users/katherineanarde/PycharmProjects/CASCADE/Run_Output"
+    save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output"
+    CASCADE.save(
+        brie, barrier3d, save_directory, name
+    )  # this returns the barrier3d model without the BMI
+
+    os.chdir(save_directory)
+    b3d = barrier3d[0]
+    filename = name + ".npz"
+    np.savez(filename, barrier3d=b3d)
+
+
 # # ###############################################################################
 # # plotters
 # # ###############################################################################
@@ -318,7 +416,7 @@ def RUN_4_B3D_Rave_SLR_pt004(rmin, rmax, name):
 def PLOT_1_CASCADE_LTA_COMPARISON(brieLTA, name, save_directory):
     # --------- plot ---------
     # load the simulation if previously saved
-    os.chdir("/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/")
+    os.chdir("//")
     filename = name + ".npz"
     output = np.load(filename, allow_pickle=True)
     b3d = output["barrier3d"]
@@ -372,7 +470,7 @@ def PLOT_1_CASCADE_LTA_COMPARISON(brieLTA, name, save_directory):
 def PLOT_3_AlongshoreVarGrowthParam_gradient(name, save_directory):
     # --------- plot ---------
     filename = name + ".npz"
-    os.chdir("/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output")
+    os.chdir("/Run_Output")
     output = np.load(filename, allow_pickle=True)
     b3d = output["barrier3d"]
     CASCADE_b3d = (
@@ -439,11 +537,11 @@ def PLOT_3_AlongshoreVarGrowthParam_gradient(name, save_directory):
     # # CASCADEplt.plot_ShorelineChangeRate_AGU(b3d1, b3d2)
 
 
-def PLOT_5_AlongshoreVarGrowthParam_half(name, save_directory):
+def PLOT_5_AlongshoreVarGrowthParam_half(name, save_directory, ny):
 
     # --------- plot ---------
     filename = name + ".npz"
-    os.chdir("/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output")
+    os.chdir("/Run_Output")
     output = np.load(filename, allow_pickle=True)
     CASCADE_b3d = output["barrier3d"]  # CASCADE run: with AST
 
@@ -459,20 +557,109 @@ def PLOT_5_AlongshoreVarGrowthParam_half(name, save_directory):
     b3d_only = []
 
     # the first 6 cells in the CASCADE run are rave = 0.45
-    ny = 6
-    for iB3D in range(ny):
+    nHalf = int(ny / 2)
+    for iB3D in range(nHalf):
         b3d_only.append(b3d_pt45[0])
 
     # the next 6 cells in the CASCADE run are rave = 0.75
-    for iB3D in range(ny):
+    for iB3D in range(nHalf):
         b3d_only.append(b3d_pt75[0])
 
-    CASCADEplt.plot_punctuated_difference(CASCADE_b3d, b3d_only, ny=12)
+    CASCADEplt.plot_punctuated_difference(CASCADE_b3d, b3d_only, ny=ny)
 
-    # # 1: Animation Frames of Barrier and Dune Elevation
-    # TMAX = CASCADE_b3d[0].time_index - 1  # just in case the barrier drowned
-    # ny = len(CASCADE_b3d)
-    # CASCADEplt.plot_ElevAnimation(CASCADE_b3d, ny, save_directory, TMAX, name)
+    # 1: Animation Frames of Barrier and Dune Elevation
+    TMAX = CASCADE_b3d[0].time_index - 1  # just in case the barrier drowned
+    ny = len(CASCADE_b3d)
+    CASCADEplt.plot_ElevAnimation(CASCADE_b3d, ny, save_directory, TMAX, name)
+
+
+def PLOT_5_Nonlinear_Dynamics(name, save_directory):
+
+    # --------- plot ---------
+    # filename = name + ".npz"
+    os.chdir("/Run_Output")
+    # output = np.load(filename, allow_pickle=True)
+    # CASCADE_b3d = output["barrier3d"]  # CASCADE run: with AST
+    output = np.load(
+        "4-B3D_Rave_pt45_SLR_pt004_10k-yrs.npz", allow_pickle=True
+    )  # B3D low growth rate run, no AST
+    b3d_pt45 = output["barrier3d"]
+    output = np.load(
+        "4-B3D_Rave_pt55_SLR_pt004_10k-yrs.npz", allow_pickle=True
+    )  # B3D high growth rate run, no AST
+    b3d_pt55 = output["barrier3d"]
+    output = np.load(
+        "4-B3D_Rave_pt65_SLR_pt004_10k-yrs.npz", allow_pickle=True
+    )  # B3D high growth rate run, no AST
+    b3d_pt65 = output["barrier3d"]
+    output = np.load(
+        "4-B3D_Rave_pt75_SLR_pt004_10k-yrs.npz", allow_pickle=True
+    )  # B3D high growth rate run, no AST
+    b3d_pt75 = output["barrier3d"]
+    # output = np.load(
+    #     "4-B3D_Rave_pt75_SLR_pt004.npz", allow_pickle=True
+    # )  # B3D high growth rate run, no AST
+    # b3d_pt75 = output["barrier3d"]
+
+    tmin = 9000  # 500
+    tmax = 10000  # 1000
+
+    # individual dune growth rates
+    ib3d = 0
+    (
+        BarrierWidth_45,
+        DuneCrestMean_45,
+        BarrierHeight_45,
+    ) = CASCADEplt.plot_nonlinear_stats(b3d_pt45, ib3d, tmin, tmax)
+    (
+        BarrierWidth_55,
+        DuneCrestMean_55,
+        BarrierHeight_55,
+    ) = CASCADEplt.plot_nonlinear_stats(b3d_pt55, ib3d, tmin, tmax)
+    (
+        BarrierWidth_65,
+        DuneCrestMean_65,
+        BarrierHeight_65,
+    ) = CASCADEplt.plot_nonlinear_stats(b3d_pt65, ib3d, tmin, tmax)
+    (
+        BarrierWidth_75,
+        DuneCrestMean_75,
+        BarrierHeight_75,
+    ) = CASCADEplt.plot_nonlinear_stats(b3d_pt75, ib3d, tmin, tmax)
+
+    CASCADEplt.nonlinear_comparison(
+        DuneCrestMean_45,
+        BarrierWidth_45,
+        DuneCrestMean_55,
+        BarrierWidth_55,
+        DuneCrestMean_65,
+        BarrierWidth_65,
+        DuneCrestMean_75,
+        BarrierWidth_75,
+    )
+
+    # save to text file
+    np.savetxt(
+        "Outputs_pt45.txt",
+        (
+            np.array(BarrierWidth_45),
+            np.array(BarrierHeight_45),
+            np.array(DuneCrestMean_45),
+        ),
+    )
+
+    np.savetxt(
+        "Outputs_pt75.txt",
+        (
+            np.array(BarrierWidth_75),
+            np.array(BarrierHeight_75),
+            np.array(DuneCrestMean_75),
+        ),
+    )
+
+    # half/half run
+    ib3d = 10
+    CASCADEplt.plot_nonlinear_stats(CASCADE_b3d, ib3d, tmin, tmax)
 
 
 # # ###############################################################################
@@ -543,15 +730,91 @@ Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
 Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
     rmin=0.55, rmax=0.95, name="4-B3D_Rave_pt75_SLR_pt004"
 )  # rave = 0.75
+Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
+    rmin=0.55, rmax=0.95, name="4-B3D_Rave_pt75_SLR_pt004_10k-yrs"
+)  # rave = 0.75
 
 
 # record of plotters
 PLOT_5_AlongshoreVarGrowthParam_half(
-    name="5-VarGrowthParam_half_pt4SLR_1500yrs",
+    name="5-VarGrowthParam_half_pt4SLR_1500yrs_6km",
     save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+    ny=12,
+)
+
+PLOT_5_AlongshoreVarGrowthParam_half(
+    name="5-VarGrowthParam_half_pt4SLR_1500yrs_1km",
+    save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+    ny=2,
+)
+
+PLOT_5_AlongshoreVarGrowthParam_half(
+    name="5-VarGrowthParam_half_pt4SLR_1500yrs_3km",
+    save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+    ny=6,
+)
+
+PLOT_5_AlongshoreVarGrowthParam_half(
+    name="5-VarGrowthParam_half_pt4SLR_1500yrs_12km",
+    save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+    ny=24,
 )
 
 PLOT_3_AlongshoreVarGrowthParam_gradient(
     name="3-VarGrowthParam_grad_pt2HAF_pt4SLR_1500yrs",
     save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
 )
+
+# these plots actually don't use run 5, just the individual B3D runs
+PLOT_5_Nonlinear_Dynamics(
+    name="5-VarGrowthParam_half_pt4SLR_1500yrs",
+    save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+)
+
+# record of time series made
+datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
+
+name = "StormTimeSeries_10k-yr.npy"
+storms_per_year_from_MSSM_output(
+    datadir=datadir,
+    name="StormTimeSeries_10k-yr.npy",
+    storm_list_name="VCRStormList.npy",
+    mean_storm=8.3,
+    SD_storm=5.9,
+    MHW=0.46,
+    StormStart=2,
+    BermEl=1.9,
+    model_years=10000,  # note, this is the number of storms contained in the MSSM model. probably should make more.
+)
+
+name = "StormTimeSeries_3000yr.npy"
+storms_per_year_from_MSSM_output(
+    datadir=datadir,
+    name="StormTimeSeries_10k-yr.npy",
+    storm_list_name="VCRStormList.npy",
+    mean_storm=8.3,
+    SD_storm=5.9,
+    MHW=0.46,
+    StormStart=2,
+    BermEl=1.9,
+    model_years=3000,
+)
+
+name = "StormTimeSeries_1000yr.npy"
+storms_per_year_from_MSSM_output(
+    datadir=datadir,
+    name="StormTimeSeries_10k-yr.npy",
+    storm_list_name="VCRStormList.npy",
+    mean_storm=8.3,
+    SD_storm=5.9,
+    MHW=0.46,
+    StormStart=2,
+    BermEl=1.9,
+    model_years=1000,
+)
+
+name = "DuneStart_1000dam.npy"
+gen_dune_height_start(datadir, name, Dstart=0.5, ny=1000)
+
+name = "growthparam_1000dam.npy"
+gen_alongshore_variable_rmin_rmax(datadir, name, rmin=0.35, rmax=0.85, ny=1000)

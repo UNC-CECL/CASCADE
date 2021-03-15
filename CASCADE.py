@@ -14,7 +14,7 @@ import os
 
 from barrier3d import Barrier3d
 from brie import Brie  # need to update this for the new BMI (i.e., BrieBMI)
-
+from bulldozer import bulldoze
 
 # temporary placement - I want this added to the BMI but keep getting an object error
 def set_yaml(var_name, new_vals, file_name):
@@ -23,7 +23,7 @@ def set_yaml(var_name, new_vals, file_name):
 
     doc[var_name] = new_vals
 
-    with open(file_name, 'w') as f:
+    with open(file_name, "w") as f:
         dump(doc, f)
 
 
@@ -31,18 +31,19 @@ def set_yaml(var_name, new_vals, file_name):
 # initial conditions for Brie
 ###############################################################################
 
+
 def initialize(
-        name='Example',
-        wave_height=1,
-        wave_period=7,
-        asym_frac=0.8,
-        high_ang_frac=0.2,
-        slr=0.004,
-        ny=6,
-        nt=500,
-        rmin=0.35,
-        rmax=0.85,
-        datadir=None
+    datadir,
+    name,
+    wave_height=1,
+    wave_period=7,
+    asym_frac=0.8,
+    high_ang_frac=0.2,
+    slr=0.004,
+    ny=6,
+    nt=500,
+    rmin=0.35,
+    rmax=0.85,
 ):
     """initialize both BRIE and Barrier3D"""
 
@@ -111,44 +112,70 @@ def initialize(
         fid = datadir + "barrier3d-parameters.yaml"
 
         # update yaml file (these are the only variables that I'm like to change from default)
-        set_yaml('TMAX', nt, fid)  # [yrs] Duration of simulation (if brie._dt = 1 yr, set to ._nt)
-        set_yaml('BarrierLength', dy, fid)  # [m] Static length of island segment (comprised of 10x10 cells)
-        set_yaml('DShoreface', brie.d_sf,
-                 fid)  # [m] Depth of shoreface (set to brie depth, function of wave height)
-        set_yaml('LShoreface', float(brie.x_s[iB3D] - brie.x_t[iB3D]),
-                 fid)  # [m] Length of shoreface (calculate from brie variables, shoreline - shoreface toe)
-        set_yaml('ShorefaceToe', float(brie.x_t[iB3D]), fid)  # [m] Start location of shoreface toe
+        set_yaml(
+            "TMAX", nt, fid
+        )  # [yrs] Duration of simulation (if brie._dt = 1 yr, set to ._nt)
+        set_yaml(
+            "BarrierLength", dy, fid
+        )  # [m] Static length of island segment (comprised of 10x10 cells)
+        set_yaml(
+            "DShoreface", brie.d_sf, fid
+        )  # [m] Depth of shoreface (set to brie depth, function of wave height)
+        set_yaml(
+            "LShoreface", float(brie.x_s[iB3D] - brie.x_t[iB3D]), fid
+        )  # [m] Length of shoreface (calculate from brie variables, shoreline - shoreface toe)
+        set_yaml(
+            "ShorefaceToe", float(brie.x_t[iB3D]), fid
+        )  # [m] Start location of shoreface toe
         # set_yaml('BermEl', 1.9 , datadir) # [m] Static elevation of berm
         # (NOTE: if BermEl is changed, the MSSM storm list and storm time series needs to be remade)
-        set_yaml('BayDepth', bb_depth, fid)  # [m] Depth of bay behind island segment (set to brie bay depth)
+        set_yaml(
+            "BayDepth", bb_depth, fid
+        )  # [m] Depth of bay behind island segment (set to brie bay depth)
         # set_yaml('MHW', 0.46, datadir)  # [m] Elevation of Mean High Water
         # (NOTE: if MHW is changed, the storm time series needs to be remade)
-        set_yaml('DuneParamStart', True, fid)  # Dune height will come from external file
-        set_yaml('Rat', 0.0,
-                 fid)  # [m / y] corresponds to Qat in LTA (!!! must set to 0 because Qs is calculated in brie !!!)
-        set_yaml('RSLR_Constant', True,
-                 fid)  # Relative sea-level rise rate will be constant, otherwise logistic growth function used
-        set_yaml('RSLR_const', slr, fid)  # [m / y] Relative sea-level rise rate
+        set_yaml(
+            "DuneParamStart", True, fid
+        )  # Dune height will come from external file
+        set_yaml(
+            "Rat", 0.0, fid
+        )  # [m / y] corresponds to Qat in LTA (!!! must set to 0 because Qs is calculated in brie !!!)
+        set_yaml(
+            "RSLR_Constant", True, fid
+        )  # Relative sea-level rise rate will be constant, otherwise logistic growth function used
+        set_yaml("RSLR_const", slr, fid)  # [m / y] Relative sea-level rise rate
         # set_yaml('beta', 0.04, datadir)  # Beach slope for runup calculations
-        set_yaml('k_sf', float(brie.k_sf),
-                 fid)  # [m^3 / m / y] Shoreface flux rate constant (function of wave parameters from brie)
-        set_yaml('s_sf_eq', float(brie.s_sf_eq),
-                 fid)  # Equilibrium shoreface slope (function of wave and sediment parameters from brie)
-        set_yaml('GrowthParamStart', False, fid)  # Dune growth parameter WILL NOT come from external file
+        set_yaml(
+            "k_sf", float(brie.k_sf), fid
+        )  # [m^3 / m / y] Shoreface flux rate constant (function of wave parameters from brie)
+        set_yaml(
+            "s_sf_eq", float(brie.s_sf_eq), fid
+        )  # Equilibrium shoreface slope (function of wave and sediment parameters from brie)
+        set_yaml(
+            "GrowthParamStart", False, fid
+        )  # Dune growth parameter WILL NOT come from external file
         if np.size(rmin) > 1:
-            set_yaml('rmin', rmin[iB3D], fid)  # Minimum growth rate for logistic dune growth
-            set_yaml('rmax', rmax[iB3D], fid)  # Maximum growth rate for logistic dune growth
+            set_yaml(
+                "rmin", rmin[iB3D], fid
+            )  # Minimum growth rate for logistic dune growth
+            set_yaml(
+                "rmax", rmax[iB3D], fid
+            )  # Maximum growth rate for logistic dune growth
         else:
-            set_yaml('rmin', rmin, fid)  # Minimum growth rate for logistic dune growth
-            set_yaml('rmax', rmax, fid)  # Maximum growth rate for logistic dune growth
+            set_yaml("rmin", rmin, fid)  # Minimum growth rate for logistic dune growth
+            set_yaml("rmax", rmax, fid)  # Maximum growth rate for logistic dune growth
 
         barrier3d.append(Barrier3d.from_yaml(datadir))
 
         # now update brie x_b, x_b_save[:,0], h_b, h_b_save[:,0] from B3D so all the initial conditions are the same
         # NOTE: interestingly here we don't need to have a "setter" in the property class for x_b, h_b, etc. because we
         #  are only replacing certain indices but added for completeness
-        brie.x_b[iB3D] = (barrier3d[iB3D].x_b_TS[0] * 10)  # the shoreline position + average interior width
-        brie.h_b[iB3D] = (barrier3d[iB3D].h_b_TS[0] * 10)  # average height of the interior domain
+        brie.x_b[iB3D] = (
+            barrier3d[iB3D].x_b_TS[0] * 10
+        )  # the shoreline position + average interior width
+        brie.h_b[iB3D] = (
+            barrier3d[iB3D].h_b_TS[0] * 10
+        )  # average height of the interior domain
         brie.x_b_save[iB3D, 0] = brie.x_b[iB3D]
         brie.h_b_save[iB3D, 0] = brie.h_b[iB3D]
 
@@ -159,7 +186,10 @@ def initialize(
 # time loop
 ###############################################################################
 
-def time_loop(brie, barrier3d, num_cores):
+
+def time_loop(
+    brie, barrier3d, num_cores, nt, road_ele=None, road_width=None, road_setback=None
+):
     Time = time.time()
 
     # parallelize update function for each B3D sub-grid (spread overwash routing algorithms to different cores)
@@ -174,19 +204,19 @@ def time_loop(brie, barrier3d, num_cores):
 
         return sub_x_t_dt, sub_x_s_dt, sub_h_b_dt, subB3D
 
-    for time_step in range(brie.nt - 1):
+    for time_step in range(nt - 1):
 
         # because of the parallelization of b3d, I don't want to throw an error and exit if a barrier has drowned (will
         # lose the b3d model), so instead I just added a boolean to check for drowning (might need to do this in B3D too)
         if brie.drown == False:
 
             # Print time step to screen (NOTE: time_index in each model starts at 1)
-            print("\r", 'Time Step: ', brie.time_index+1, end="")
+            print("\r", "Time Step: ", brie.time_index + 1, end="")
 
             # Advance B3D by one time step
             # NOTE: B3D initializes at time_index = 1 and then updates the time_index after update_dune_domain
 
-            batch_output = Parallel(n_jobs=num_cores, max_nbytes='10M')(
+            batch_output = Parallel(n_jobs=num_cores, max_nbytes="10M")(
                 delayed(batchB3D)(barrier3d[iB3D]) for iB3D in range(brie.ny)
             )  # set n_jobs=1 for no parallel processing (debugging) and -2 for all but 1 CPU; note that joblib uses a
             # threshold on the size of arrays passed to the workers; we use 'None' to disable memory mapping of large arrays
@@ -213,20 +243,57 @@ def time_loop(brie, barrier3d, num_cores):
                 barrier3d[iB3D].x_s = brie.x_s[iB3D] / 10
                 barrier3d[iB3D].x_s_TS[-1] = brie.x_s[iB3D] / 10
 
-                # update dune domain in B3D (erode/prograde) based on on shoreline change from Brie
+                # update dune domain in B3D (erode/prograde) based on shoreline change from Brie
                 barrier3d[iB3D].update_dune_domain()
 
                 # update back-barrier shoreline location in BRIE based on new shoreline + average interior width in B3D
                 brie.x_b[iB3D] = barrier3d[iB3D].x_b_TS[-1] * 10
-                brie.x_b_save[iB3D, brie.time_index-1] = brie.x_b[iB3D]
+                brie.x_b_save[iB3D, brie.time_index - 1] = brie.x_b[iB3D]
 
         else:
             # if the barrier drowns in brie, exit the time loop (although, I expect this to happen in B3D first)
             break
 
+        # human dynamics: remove overwash from 16 m-wide section at the start of the island interior -- corresponding to
+        # the roadway -- after each model year and place that material on the dune line (only affects B3D)
+        if road_ele is None or road_width is None or road_setback is None:
+            pass
+        else:
+            for iB3D in range(brie.ny):
+
+                (
+                    new_dune_domain,
+                    new_xyz_interior_domain,
+                    road_overwash_removal,
+                ) = bulldoze(
+                    road_ele=road_ele,
+                    road_width=road_width,
+                    road_setback=road_setback,
+                    xyz_interior_grid=barrier3d[
+                        iB3D
+                    ].InteriorDomain,  # interior domain from this last time step
+                    yxz_dune_grid=barrier3d[iB3D].DuneDomain[
+                        barrier3d[iB3D].time_index - 1, :, :
+                    ],  # dune domain from this last time step
+                )
+
+                # update class variables
+                barrier3d[iB3D].DuneDomain[
+                    barrier3d[iB3D].time_index - 1, :, :
+                ] = new_dune_domain
+                barrier3d[iB3D].InteriorDomain = new_xyz_interior_domain
+                barrier3d[iB3D].DomainTS[
+                    barrier3d[iB3D].time_index - 1
+                ] = new_xyz_interior_domain
+
+                # set dune growth rate to zero for next time step (turn off natural dynamics)
+                barrier3d[iB3D].growthparam = np.zeros(
+                    [1, np.size(barrier3d[iB3D].growthparam)]
+                )
+
     SimDuration = time.time() - Time
     print()
-    print('Elapsed Time: ', SimDuration, 'sec')  # Print elapsed time of simulation
+    print("Elapsed Time: ", SimDuration, "sec")  # Print elapsed time of simulation
 
     return brie, barrier3d
 
@@ -235,9 +302,10 @@ def time_loop(brie, barrier3d, num_cores):
 # save data
 ###############################################################################
 
+
 def save(brie, barrier3d, directory, name):
 
-    filename = name + '.npz'
+    filename = name + ".npz"
 
     b3d = []
     brie_save = []
@@ -258,7 +326,20 @@ def save(brie, barrier3d, directory, name):
 # run brie with LTA for comparison
 ###############################################################################
 
-def LTA(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt, w_b_crit, h_b_crit, Qow_max):
+
+def LTA(
+    name,
+    wave_height,
+    wave_period,
+    asym_frac,
+    high_ang_frac,
+    slr,
+    ny,
+    nt,
+    w_b_crit,
+    h_b_crit,
+    Qow_max,
+):
     # update the initial conditions
     ast_model = True  # shoreface formulations on
     barrier_model = True  # LTA14 overwash model on
@@ -278,10 +359,11 @@ def LTA(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt, w
     # model setup
     dy = 100  # m, length of alongshore section (NOT the same as B3D, but overwash model performs better with dy=100 m)
     ny = ny * int(
-        500 / dy)  # number of alongshore sections (NOTE, currently hard-coded for B3D dy = 500 m)
+        500 / dy
+    )  # number of alongshore sections (NOTE, currently hard-coded for B3D dy = 500 m)
     dt = 0.05  # yr, timestep (NOT the same as B3D, but again, LTA14 performs better with dt = 0.05 yr)
     nt = int(nt / dt)  # equivalent timesteps to B3D
-    dtsave = 20  # save spacing (equivalent of yearly for 0.05 time step)
+    dtsave = int(1 / dt)  # save spacing (equivalent of yearly for 0.05 time step)
 
     brieLTA = Brie(
         name=name,
@@ -307,7 +389,7 @@ def LTA(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt, w
         alongshore_section_count=ny,
         time_step=dt,
         time_step_count=nt,
-        save_spacing=dtsave
+        save_spacing=dtsave,
     )  # initialize class
 
     for time_step in range(int(brieLTA.nt) - 1):

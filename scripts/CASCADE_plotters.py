@@ -920,6 +920,9 @@ def plot_punctuated_difference(CASCADE_b3d, b3d_only, ny):
     AvgFastDur = []
     AvgSlowDur = []
     ShorelinePosition = []
+    sc_rate = []
+    var_sc_rate = []
+    mean_sc_rate = []
 
     for iB3D in range(ny):
         tmpPeriod, tmpAvgFastDur, tmpAvgSlowDur, tmpPunc = calc_ShorelinePeriodicity(
@@ -931,11 +934,26 @@ def plot_punctuated_difference(CASCADE_b3d, b3d_only, ny):
         AvgSlowDur.append(tmpAvgSlowDur)
         ShorelinePosition.append(CASCADE_b3d[iB3D]._x_s_TS)
 
+        # shoreline change rate
+        scts = [
+            (x - CASCADE_b3d[iB3D]._x_s_TS[0]) * 10 for x in CASCADE_b3d[iB3D]._x_s_TS
+        ]  # m/yr
+        rate = [0]
+        for k in range(1, len(scts)):
+            rate.append(scts[k] - scts[k - 1])
+        sc_rate.append(rate)
+        var_sc_rate.append(np.var(rate))  # variance of shoreline change rate
+        mean_sc_rate.append(np.mean(rate))  # mean of shoreline change rate
+
+    # Calculate shoreline change periodicity from b3d only model
     Punc_b3D = []
     Period_b3D = []
     AvgFastDur_b3D = []
     AvgSlowDur_b3D = []
     ShorelinePosition_b3D = []
+    sc_rate_b3d = []
+    var_sc_rate_b3d = []
+    mean_sc_rate_b3d = []
 
     for iB3D in range(ny):
         tmpPeriod, tmpAvgFastDur, tmpAvgSlowDur, tmpPunc = calc_ShorelinePeriodicity(
@@ -947,44 +965,135 @@ def plot_punctuated_difference(CASCADE_b3d, b3d_only, ny):
         AvgSlowDur_b3D.append(tmpAvgSlowDur)
         ShorelinePosition_b3D.append(b3d_only[iB3D]._x_s_TS)
 
+        # shoreline change rate
+        scts = [
+            (x - b3d_only[iB3D]._x_s_TS[0]) * 10 for x in b3d_only[iB3D]._x_s_TS
+        ]  # m/yr
+        rate = [0]
+        for k in range(1, len(scts)):
+            rate.append(scts[k] - scts[k - 1])
+        sc_rate_b3d.append(rate)
+        var_sc_rate_b3d.append(np.var(rate))  # variance of shoreline change rate
+        mean_sc_rate_b3d.append(np.mean(rate))  # mean of shoreline change rate
+
     colors = mpl.cm.viridis(np.linspace(0, 1, 10))
-    plt.figure(figsize=(10, 8))
+    # plt.figure(figsize=(10, 8))
+    plt.figure(figsize=(17, 8))
 
     # punctuated retreat
-    plt.subplot(2, 2, 1)
-    plt.scatter(np.arange(500, 500 * (ny + 1), 500), Punc, color=colors[1])
-    plt.scatter(np.arange(500, 500 * (ny + 1), 500), Punc_b3D, color=colors[6])
+    plt.subplot(2, 4, 1)
+    plt.scatter(
+        np.arange(500, 500 * (ny + 1), 500), Punc, color=colors[1], marker="p", s=500
+    )
+    plt.scatter(
+        np.arange(500, 500 * (ny + 1), 500),
+        Punc_b3D,
+        color=colors[6],
+        marker="o",
+        s=200,
+    )
     plt.ylabel("Punctuated Retreat")
     plt.xlabel("alongshore (m)")
-    plt.legend(["CASCADE", "B3D only"])
-    plt.rcParams["legend.loc"] = "lower right"
+    plt.legend(["CASCADE (AST)", "B3D (no AST)"])
+    plt.rcParams["legend.loc"] = "center"
 
     # period
-    plt.subplot(2, 2, 2)
-    plt.scatter(np.arange(500, 500 * (ny + 1), 500), Period, color=colors[1])
-    plt.scatter(np.arange(500, 500 * (ny + 1), 500), Period_b3D, color=colors[6])
+    plt.subplot(2, 4, 2)
+    plt.scatter(
+        np.arange(500, 500 * (ny + 1), 500), Period, color=colors[1], marker="p", s=500
+    )
+    plt.scatter(
+        np.arange(500, 500 * (ny + 1), 500),
+        Period_b3D,
+        color=colors[6],
+        marker="o",
+        s=200,
+    )
     plt.ylabel("Period (years)")
     plt.xlabel("alongshore (m)")
 
-    # period
-    plt.subplot(2, 2, 3)
-    plt.scatter(np.arange(500, 500 * (ny + 1), 500), AvgFastDur, color=colors[1])
-    plt.scatter(np.arange(500, 500 * (ny + 1), 500), AvgFastDur_b3D, color=colors[6])
+    # fast duration
+    plt.subplot(2, 4, 3)
+    plt.scatter(
+        np.arange(500, 500 * (ny + 1), 500),
+        AvgFastDur,
+        color=colors[1],
+        marker="p",
+        s=500,
+    )
+    plt.scatter(
+        np.arange(500, 500 * (ny + 1), 500),
+        AvgFastDur_b3D,
+        color=colors[6],
+        marker="o",
+        s=200,
+    )
     plt.ylabel("Ave Fast Duration (years)")
     plt.xlabel("alongshore (m)")
 
-    # period
-    plt.subplot(2, 2, 4)
-    plt.scatter(np.arange(500, 500 * (ny + 1), 500), AvgSlowDur, color=colors[1])
-    plt.scatter(np.arange(500, 500 * (ny + 1), 500), AvgSlowDur_b3D, color=colors[6])
+    # slow duration
+    plt.subplot(2, 4, 4)
+    plt.scatter(
+        np.arange(500, 500 * (ny + 1), 500),
+        AvgSlowDur,
+        color=colors[1],
+        marker="p",
+        s=500,
+    )
+    plt.scatter(
+        np.arange(500, 500 * (ny + 1), 500),
+        AvgSlowDur_b3D,
+        color=colors[6],
+        marker="o",
+        s=200,
+    )
     plt.ylabel("Ave Slow Duration (years)")
     plt.xlabel("alongshore (m)")
+
+    # shoreline change rate variance
+    plt.subplot(2, 4, 5)
+    plt.scatter(
+        np.arange(500, 500 * (ny + 1), 500),
+        var_sc_rate,
+        color=colors[1],
+        marker="p",
+        s=500,
+    )
+    plt.scatter(
+        np.arange(500, 500 * (ny + 1), 500),
+        var_sc_rate_b3d,
+        color=colors[6],
+        marker="o",
+        s=200,
+    )
+    plt.ylabel("Variance SCR (m/yr)")
+    plt.xlabel("alongshore (m)")
+
+    # shoreline change rate mean
+    plt.subplot(2, 4, 6)
+    plt.scatter(
+        np.arange(500, 500 * (ny + 1), 500),
+        mean_sc_rate,
+        color=colors[1],
+        marker="p",
+        s=500,
+    )
+    plt.scatter(
+        np.arange(500, 500 * (ny + 1), 500),
+        mean_sc_rate_b3d,
+        color=colors[6],
+        marker="o",
+        s=200,
+    )
+    plt.ylabel("Mean SCR (m/yr)")
+    plt.xlabel("alongshore (m)")
+
+    plt.tight_layout()
 
     # figure of shoreline change plots
     plt.figure(figsize=(17, 8))
 
     for iB3D in range(ny):
-
         plt.subplot(2, 6, iB3D + 1)
         plt.plot(ShorelinePosition[iB3D], color=colors[1])
         plt.plot(ShorelinePosition_b3D[iB3D], color=colors[6])
@@ -992,8 +1101,469 @@ def plot_punctuated_difference(CASCADE_b3d, b3d_only, ny):
         plt.ylabel("Average Shoreline Position (m)")
     plt.legend(["CASCADE", "B3D only"])
     plt.rcParams["legend.loc"] = "upper left"
+    plt.tight_layout()
+
+    # figure of shoreline change rate
+    plt.figure(figsize=(17, 8))
+
+    for iB3D in range(ny):
+        plt.subplot(2, 6, iB3D + 1)
+        plt.plot(sc_rate[iB3D], color=colors[1])
+        plt.plot(sc_rate_b3d[iB3D], color=colors[6])
+        plt.xlabel("Year")
+        plt.ylabel("Shoreline change rate (m/yr)")
+    plt.legend(["CASCADE", "B3D only"])
+    plt.rcParams["legend.loc"] = "upper left"
+    plt.tight_layout()
+
+    # figure of histograms
+    plt.figure(figsize=(17, 8))
+
+    for iB3D in range(ny):
+        plt.subplot(2, 6, iB3D + 1)
+        plt.hist(sc_rate[iB3D], color=colors[1], density=True, bins=30)
+        plt.hist(sc_rate_b3d[iB3D], color=colors[6], density=True, bins=30)
+        plt.xlabel("shoreline change rate [m/yr]")
+        plt.ylabel("density")
+    plt.legend(["CASCADE", "B3D only"])
+    plt.rcParams["legend.loc"] = "lower right"
+    plt.tight_layout()
+
+
+def plot_nonlinear_stats(CASCADE_b3d, ib3d, tmin, tmax):
+
+    # mean dune height ---------
+    # sub_domain = CASCADE_b3d[ib3d]._DuneDomain[:, :, :]
+    # DuneCrest = sub_domain.max(axis=2)
+    # DuneCrestMean = np.mean(DuneCrest, axis=1) * 10
+    DuneCrestMean = [
+        a * 10 for a in CASCADE_b3d[ib3d]._Hd_AverageTS
+    ]  # don't know why this is slightly different from above, but it is
+
+    # barrier width
+    BarrierWidth = (
+        np.array(CASCADE_b3d[ib3d].x_b_TS) - np.array(CASCADE_b3d[ib3d].x_s_TS)
+    ) * 10
+
+    # change in barrier width
+    bwts = [(x - BarrierWidth[0]) for x in BarrierWidth]
+    rate = [0]
+    for k in range(1, len(bwts)):
+        rate.append(bwts[k] - bwts[k - 1])
+    bw_rate = (
+        rate  # note, np.diff doesn't start with zero rate of change, so we do this calc
+    )
+
+    # average interior height
+    BarrierHeight = []
+    for t in range(len(CASCADE_b3d[ib3d]._DomainTS)):
+        bh_array = np.array(CASCADE_b3d[ib3d]._DomainTS[t]) * 10
+        BarrierHeight.append(bh_array[bh_array > 0].mean())
+
+    # change in barrier height
+    bhts = [(x - BarrierHeight[0]) for x in BarrierHeight]
+    rate = [0]
+    for k in range(1, len(bhts)):
+        rate.append(bhts[k] - bhts[k - 1])
+    bh_rate = (
+        rate  # note, np.diff doesn't start with zero rate of change, so we do this calc
+    )
+
+    # # shoreline change rate
+    # scts = [(x - CASCADE_b3d[ib3d]._x_s_TS[0]) * 10 for x in CASCADE_b3d[ib3d]._x_s_TS]
+    # rate = [0]
+    # for k in range(1, len(scts)):
+    #     rate.append(scts[k] - scts[k - 1])
+    # sc_rate = rate
+
+    # overwash flux
+    Qoverwash = CASCADE_b3d[ib3d].QowTS
+
+    plt.figure(figsize=(10, 5))
+
+    # individual time series
+    plt.subplot(2, 5, 1)
+    # plt.subplot(5, 2, 1)
+    plt.plot(DuneCrestMean)
+    # plt.plot(DuneCrestMean[tmin:tmax], "m")
+    plt.ylabel("Ave Dune Height (m)")
+    plt.xlabel("Time (yr)")
+
+    # plt.subplot(2, 5, 2)
+    # # plt.subplot(5, 2, 3)
+    # plt.plot(sc_rate)
+    # # plt.plot(sc_rate[tmin:tmax], "m")
+    # plt.ylabel("Shoreline change rate (m/yr)")
+    # plt.xlabel("Time (yr)")
+
+    plt.subplot(2, 5, 2)
+    plt.plot(BarrierHeight)
+    plt.ylabel("Ave barrier interior height (m)")
+    plt.xlabel("Time (yr)")
+
+    plt.subplot(2, 5, 3)
+    # plt.subplot(5, 2, 5)
+    plt.plot(BarrierWidth)
+    # plt.plot(BarrierWidth[tmin:tmax], "m")
+    plt.ylabel("Barrier width (m)")
+    plt.xlabel("Time (yr)")
+
+    # plt.subplot(2, 5, 4)
+    # # plt.subplot(5, 2, 7)
+    # plt.plot(Qoverwash)
+    # # plt.plot(Qoverwash[tmin:tmax], "m")
+    # plt.ylabel("Overwash flux ($m^3/m$)")
+    # plt.xlabel("Time (yr)")
+
+    plt.subplot(2, 5, 4)
+    # plt.subplot(5, 2, 7)
+    plt.plot(bh_rate)
+    # plt.plot(Qoverwash[tmin:tmax], "m")
+    plt.ylabel("Barrier height change rate (m/yr)")
+    plt.xlabel("Time (yr)")
+
+    plt.subplot(2, 5, 5)
+    # plt.subplot(5, 2, 9)
+    plt.plot(bw_rate)
+    plt.ylabel("Barrier width change rate (m/yr)")
+    plt.xlabel("Time (yr)")
+
+    # plt.subplot(2, 5, 5)
+    # plt.plot(np.array(CASCADE_b3d[ib3d]._x_s_TS) * 10)
+    # # plt.plot(np.array(CASCADE_b3d[ib3d]._x_s_TS[tmin:tmax]) * 10, "m")
+    # plt.ylabel("Shoreline position (m)")
+    # plt.xlabel("Time (yr)")
+
+    # # dune height vs shoreline position
+    # plt.subplot(2, 5, 6)
+    # # plt.plot(DuneCrestMean, np.array(CASCADE_b3d[ib3d]._x_s_TS) * 10)
+    # # plt.plot(
+    # #     DuneCrestMean[tmin:tmax],
+    # #     np.array(CASCADE_b3d[ib3d]._x_s_TS[tmin:tmax]) * 10,
+    # #     "m",
+    # # )
+    # plt.scatter(
+    #     DuneCrestMean,
+    #     np.array(CASCADE_b3d[ib3d]._x_s_TS) * 10,
+    #     c=np.arange(0, np.size(DuneCrestMean), 1),
+    #     cmap="Greens",
+    # )
+    # plt.xlabel("Ave Dune Height (m)")
+    # plt.ylabel("Shoreline position (m)")
+
+    # # dune height vs shoreline change rate
+    # plt.subplot(2, 5, 7)
+    # # plt.subplot(5, 2, 4)
+    # # plt.scatter(DuneCrestMean, sc_rate)
+    # # plt.plot(DuneCrestMean[tmin:tmax], sc_rate[tmin:tmax], "m")
+    # plt.scatter(
+    #     DuneCrestMean,
+    #     sc_rate,
+    #     c=np.arange(0, np.size(DuneCrestMean), 1),
+    #     cmap=cm.viridis,  # "Greens"
+    # )
+    # plt.xlabel("Ave Dune Height (m)")
+    # plt.ylabel("Shoreline change rate (m/yr)")
+
+    # # dune height vs overwash flux
+    # plt.subplot(2, 5, 8)
+    # # plt.subplot(5, 2, 6)
+    # # plt.scatter(DuneCrestMean, Qoverwash)
+    # # plt.plot(DuneCrestMean[tmin:tmax], Qoverwash[tmin:tmax], "m")
+    # plt.scatter(
+    #     DuneCrestMean,
+    #     Qoverwash,
+    #     c=np.arange(0, np.size(DuneCrestMean), 1),
+    #     cmap=cm.viridis,
+    # )
+    # plt.xlabel("Ave Dune Height (m)")
+    # plt.ylabel("Qoverwash ($m^3/m$)")
+
+    # dune height vs barrier height
+    plt.subplot(2, 5, 6)
+    plt.scatter(
+        DuneCrestMean,
+        BarrierHeight,
+        c=np.arange(0, np.size(DuneCrestMean), 1),
+        cmap=cm.viridis,
+    )
+    # plt.plot(DuneCrestMean[tmin:tmax], BarrierWidth[tmin:tmax], "m")
+    plt.xlabel("Ave Dune Height (m)")
+    plt.ylabel("Ave barrier interior height (m)")
+
+    # dune height vs barrier width
+    plt.subplot(2, 5, 7)
+    # plt.subplot(5, 2, 8)
+    # plt.plot(DuneCrestMean, BarrierWidth)
+    plt.scatter(
+        DuneCrestMean,
+        BarrierWidth,
+        c=np.arange(0, np.size(DuneCrestMean), 1),
+        cmap=cm.viridis,
+    )
+    # plt.plot(DuneCrestMean[tmin:tmax], BarrierWidth[tmin:tmax], "m")
+    plt.xlabel("Ave Dune Height (m)")
+    plt.ylabel("Barrier width (m)")
+
+    # # dune height vs barrier width change rate
+    # plt.subplot(2, 5, 6)
+    # # plt.subplot(5, 2, 2)
+    # plt.scatter(
+    #     DuneCrestMean,
+    #     np.array(bw_rate),
+    #     c=np.arange(0, np.size(DuneCrestMean), 1),
+    #     cmap=cm.viridis,
+    # )
+    # plt.xlabel("Ave Dune Height (m)")
+    # plt.ylabel("Change in barrier width (m/yr)")
 
     plt.tight_layout()
+
+    # # now try my hand at a 3d plot
+    # from mpl_toolkits import mplot3d
+    #
+    # plt.figure()
+    # ax = plt.axes(projection="3d")
+    #
+    # # three-dimensional line
+    # # ax.plot3D(DuneCrestMean, BarrierWidth, sc_rate, "gray")
+    # ax.plot3D(
+    #     DuneCrestMean[tmin:tmax], BarrierWidth[tmin:tmax], sc_rate[tmin:tmax], "gray"
+    # )
+    #
+    # # three-dimensional scattered points
+    # ax.scatter3D(
+    #     DuneCrestMean[tmin:tmax],
+    #     BarrierWidth[tmin:tmax],
+    #     sc_rate[tmin:tmax],
+    #     c=sc_rate[tmin:tmax],
+    #     cmap="Greens",
+    # )
+    # ax.set_title(str(tmin) + "-" + str(tmax) + " yrs")
+    # ax.set_xlabel("Dune height (m)")
+    # ax.set_ylabel("Barrier width (m)")
+    # ax.set_zlabel("Shoreline change rate (m/yr)")
+    #
+    # # try Qoverwash as the x axis instead of dune height
+    # fig = plt.figure()
+    # ax = plt.axes(projection="3d")
+    #
+    # # three-dimensional line
+    # # ax.plot3D(DuneCrestMean, BarrierWidth, sc_rate, "gray")
+    # ax.plot3D(Qoverwash[tmin:tmax], BarrierWidth[tmin:tmax], sc_rate[tmin:tmax], "gray")
+    #
+    # ax.scatter3D(
+    #     Qoverwash[tmin:tmax],
+    #     BarrierWidth[tmin:tmax],
+    #     sc_rate[tmin:tmax],
+    #     c=sc_rate[tmin:tmax],
+    #     cmap="Greens",
+    # )
+    # ax.set_title(str(tmin) + "-" + str(tmax) + " yrs")
+    # ax.set_xlabel("Overwash flux ($m^3/m$)")
+    # ax.set_ylabel("Barrier width (m)")
+    # ax.set_zlabel("Shoreline change rate (m/yr)")
+    #
+    # # try Qoverwash, dune height, and barrier width change
+    # fig = plt.figure()
+    # ax = plt.axes(projection="3d")
+    #
+    # ax.plot3D(
+    #     DuneCrestMean[tmin:tmax], Qoverwash[tmin:tmax], bw_rate[tmin:tmax], "gray"
+    # )
+    #
+    # # three-dimensional scattered points
+    # ax.scatter3D(
+    #     DuneCrestMean[tmin:tmax],
+    #     Qoverwash[tmin:tmax],
+    #     bw_rate[tmin:tmax],
+    #     c=bw_rate[tmin:tmax],
+    #     cmap="Greens",
+    # )
+    # ax.set_title(str(tmin) + "-" + str(tmax) + " yrs")
+    # ax.set_xlabel("Dune height (m)")
+    # ax.set_ylabel("Overwash flux ($m^3/m$)")
+    # ax.set_zlabel("Barrier width change rate (m/yr)")
+
+    return BarrierWidth, DuneCrestMean, BarrierHeight
+
+
+def nonlinear_animated(CASCADE_b3d, ib3d, tmin, tmax, name):
+
+    # mean dune height ---------
+    # sub_domain = CASCADE_b3d[ib3d]._DuneDomain[:, :, :]
+    # DuneCrest = sub_domain.max(axis=2)
+    # DuneCrestMean = np.mean(DuneCrest, axis=1) * 10
+    DuneCrestMean = [
+        a * 10 for a in CASCADE_b3d[ib3d]._Hd_AverageTS
+    ]  # don't know why this is slightly different, but it is
+
+    # barrier width
+    BarrierWidth = (
+        np.array(CASCADE_b3d[ib3d].x_b_TS) - np.array(CASCADE_b3d[ib3d].x_s_TS)
+    ) * 10
+
+    # change in barrier width (to accommodate lag?)
+    scts = [(x - BarrierWidth[0]) for x in BarrierWidth]
+    rate = [0]
+    for k in range(1, len(scts)):
+        rate.append(scts[k] - scts[k - 1])
+    bw_rate = (
+        rate  # note, np.diff doesn't start with zero rate of change, so we do this calc
+    )
+
+    # shoreline change rate
+    scts = [(x - CASCADE_b3d[ib3d]._x_s_TS[0]) * 10 for x in CASCADE_b3d[ib3d]._x_s_TS]
+    rate = [0]
+    for k in range(1, len(scts)):
+        rate.append(scts[k] - scts[k - 1])
+    sc_rate = rate
+
+    # overwash flux
+    Qoverwash = CASCADE_b3d[ib3d].QowTS
+
+    # try an animated scatter and line plot ---------------------
+    os.chdir("/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Output")
+    newpath = name + "/test" + "/SimFrames/"
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+    os.chdir(newpath)
+
+    nt = tmax - tmin
+    colors = mpl.cm.viridis(np.linspace(0, 1, nt))
+
+    for t in range(nt - 1):
+
+        fig = plt.figure()
+        ax = plt.axes(projection="3d")
+        ax.set_xlabel("Dune height (m)")
+        ax.set_zlabel("Barrier width change rate (m/yr)")
+        # ax.set_ylabel("Overwash flux ($m^3/m$)")
+        ax.set_zlabel("Shoreline change rate (m/yr)")
+
+        ax.set_title(str(tmin + t) + " yrs")
+
+        ax.plot3D(
+            DuneCrestMean[tmin : tmin + t],
+            bw_rate[tmin : tmin + t],
+            sc_rate[tmin : tmin + t],
+            "gray",
+        )
+        # three-dimensional scattered points
+        ax.scatter3D(
+            DuneCrestMean[tmin : tmin + t],
+            bw_rate[tmin : tmin + t],
+            sc_rate[tmin : tmin + t],
+            c=colors[0:t],
+        )
+        ax.set_xlim([np.min(DuneCrestMean), np.max(DuneCrestMean)])
+        ax.set_ylim([np.min(bw_rate), np.max(bw_rate)])
+        ax.set_zlim([np.min(sc_rate), np.max(sc_rate)])
+
+        fig.savefig(str(t))  # dpi=200
+        plt.close(fig)
+
+    frames = []
+
+    for filenum in range(nt - 1):
+        filename = str(filenum) + ".png"
+        frames.append(imageio.imread(filename))
+    imageio.mimsave("triplot.gif", frames, "GIF-FI")
+    print()
+    print("[ * GIF successfully generated * ]")
+
+    # three-dimensional surface
+    # ax.plot_surface(
+    #     DuneCrestMean[tmin:tmax],
+    #     BarrierWidth[tmin:tmax],
+    #     sc_rate[tmin:tmax], # this needs to be two dimensional, a function of x and y
+    #     rstride=1,
+    #     cstride=1,
+    #     cmap="viridis",
+    #     edgecolor="none",
+    # )
+    # ax.set_title("surface")
+
+    # export text files for mtm psd plots and coherence
+
+
+def nonlinear_comparison(
+    DuneCrestMean_45,
+    BarrierWidth_45,
+    DuneCrestMean_55,
+    BarrierWidth_55,
+    DuneCrestMean_65,
+    BarrierWidth_65,
+    DuneCrestMean_75,
+    BarrierWidth_75,
+):
+    # fig, axs = plt.subplots(1, 4, figsize=(10, 5), sharey=True)
+    plt.subplot(1, 4, 1)
+    plt.scatter(
+        DuneCrestMean_45,
+        BarrierWidth_45,
+        c=np.arange(0, np.size(DuneCrestMean_45), 1),
+        cmap=cm.viridis,
+    )
+    # plt.plot(DuneCrestMean[tmin:tmax], BarrierWidth[tmin:tmax], "m")
+    plt.xlabel("Ave Dune Height (m)")
+    plt.ylabel("Barrier width (m)")
+    plt.ylim([100, 500])
+
+    plt.subplot(1, 4, 2)
+    plt.scatter(
+        DuneCrestMean_55,
+        BarrierWidth_55,
+        c=np.arange(0, np.size(DuneCrestMean_55), 1),
+        cmap=cm.viridis,
+    )
+    # plt.plot(DuneCrestMean[tmin:tmax], BarrierWidth[tmin:tmax], "m")
+    plt.xlabel("Ave Dune Height (m)")
+    plt.ylim([100, 500])
+
+    plt.subplot(1, 4, 3)
+    plt.scatter(
+        DuneCrestMean_65,
+        BarrierWidth_65,
+        c=np.arange(0, np.size(DuneCrestMean_65), 1),
+        cmap=cm.viridis,
+    )
+    # plt.plot(DuneCrestMean[tmin:tmax], BarrierWidth[tmin:tmax], "m")
+    plt.xlabel("Ave Dune Height (m)")
+    plt.ylim([100, 500])
+
+    plt.subplot(1, 4, 4)
+    plt.scatter(
+        DuneCrestMean_75,
+        BarrierWidth_75,
+        c=np.arange(0, np.size(DuneCrestMean_75), 1),
+        cmap=cm.viridis,
+    )
+    # plt.plot(DuneCrestMean[tmin:tmax], BarrierWidth[tmin:tmax], "m")
+    plt.xlabel("Ave Dune Height (m)")
+    plt.ylim([100, 500])
+
+    # plt.subplot(1, 2, 1)
+    # plt.hist(BarrierWidth_75, density=True, bins=30)  # density=False would make counts
+    # plt.ylabel("Probability")
+    # plt.xlabel("Barrier Width - high dune growth rate")
+    # plt.xlim([100, 350])
+    #
+    # plt.subplot(1, 2, 2)
+    # plt.hist(BarrierWidth_75[9000:9999], density=True, bins=30)
+    # plt.xlabel("Barrier Width - high dune growth rate")
+    # plt.xlim([100, 350])
+    #
+    # plt.subplot(1, 2, 1)
+    # plt.hist(BarrierWidth_45, density=True, bins=30)  # density=False would make counts
+    # plt.ylabel("Probability")
+    # plt.xlabel("Barrier Width - low dune growth rate")
+    # plt.xlim([320, 460])
+    #
+    # plt.subplot(1, 2, 2)
+    # plt.hist(BarrierWidth_45[9000:9999], density=True, bins=30)
+    # plt.xlabel("Barrier Width - low dune growth rate")
+    # plt.xlim([320, 460])
 
 
 ## OLD CODE THAT I NEED TO FIX EVENTUALLY:
