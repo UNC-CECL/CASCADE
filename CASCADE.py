@@ -14,7 +14,7 @@ import os
 
 from barrier3d import Barrier3d
 from brie import Brie  # need to update this for the new BMI (i.e., BrieBMI)
-from bulldozer import bulldoze
+from bulldozer import bulldoze, rebuild_dunes
 
 # temporary placement - I want this added to the BMI but keep getting an object error
 def set_yaml(var_name, new_vals, file_name):
@@ -188,9 +188,20 @@ def initialize(
 
 
 def time_loop(
-    brie, barrier3d, num_cores, nt, road_ele=None, road_width=None, road_setback=None
+    brie,
+    barrier3d,
+    num_cores,
+    nt,
+    road_ele=None,
+    road_width=None,
+    road_setback=None,
+    artificial_max_dune_ele=None,
+    artificial_min_dune_ele=None,
 ):
     Time = time.time()
+    road_setback = [
+        road_setback
+    ] * brie.ny  # create an array for variable road setback distances for the human dynamics module
 
     # parallelize update function for each B3D sub-grid (spread overwash routing algorithms to different cores)
     def batchB3D(subB3D):
@@ -256,46 +267,26 @@ def time_loop(
 
         # human dynamics: remove overwash from 16 m-wide section at the start of the island interior -- corresponding to
         # the roadway -- after each model year and place that material on the dune line (only affects B3D)
-        if road_ele is None or road_width is None or road_setback is None:
+        if road_ele is None or road_width is None:
             pass
         else:
+            # call human dynamics module
             for iB3D in range(brie.ny):
 
-                (
-                    new_dune_domain,
-                    new_xyz_interior_domain,
-                    road_overwash_removal,
-                ) = bulldoze(
-                    road_ele=road_ele,
-                    road_width=road_width,
-                    road_setback=road_setback,
-                    xyz_interior_grid=barrier3d[
-                        iB3D
-                    ].InteriorDomain,  # interior domain from this last time step
-                    yxz_dune_grid=barrier3d[iB3D].DuneDomain[
-                        barrier3d[iB3D].time_index - 1, :, :
-                    ],  # dune domain from this last time step
-                )
-
-                # update class variables
-                barrier3d[iB3D].DuneDomain[
-                    barrier3d[iB3D].time_index - 1, :, :
-                ] = new_dune_domain
-                barrier3d[iB3D].InteriorDomain = new_xyz_interior_domain
-                barrier3d[iB3D].DomainTS[
-                    barrier3d[iB3D].time_index - 1
-                ] = new_xyz_interior_domain
-
-                # set dune growth rate to zero for next time step (turn off natural dynamics)
-                barrier3d[iB3D].growthparam = np.zeros(
-                    [1, np.size(barrier3d[iB3D].growthparam)]
+                barrier3d[iB3D], road_setback[iB3D] = roadway_management(
+                    barrier3d[iB3D],
+                    road_ele,
+                    road_width,
+                    road_setback[iB3D],
+                    artificial_max_dune_ele,
+                    artificial_min_dune_ele,
                 )
 
     SimDuration = time.time() - Time
     print()
     print("Elapsed Time: ", SimDuration, "sec")  # Print elapsed time of simulation
 
-    return brie, barrier3d
+    return brie, barrier3d, road_setback
 
 
 ###############################################################################
@@ -396,3 +387,66 @@ def LTA(
         brieLTA.update()
 
     return brieLTA
+
+
+###############################################################################
+# run human dynamics modules
+###############################################################################
+
+
+def roadway_management(
+    barrier3d,
+    road_ele,
+    road_width,
+    road_setback,
+    artificial_max_dune_ele,
+    artificial_min_dune_ele,
+):
+
+    # if dune line moved by one grid cell, substract that amount from the setback distance to keep road in
+    # the same place
+    if barrier3d.dune_migration:  # check if the dune has been forced to migrate in B3D
+        road_setback = road_setback - 10
+
+    # bulldoze that road!
+    new_dune_domain, new_xyz_interior_domain, road_overwash_removal = bulldoze(
+        road_ele=road_ele,  # m NAVD88
+        road_width=road_width,
+        road_setback=road_setback,
+        xyz_interior_grid=barrier3d.InteriorDomain,  # interior domain from this last time step
+        yxz_dune_grid=barrier3d.DuneDomain[
+            barrier3d.time_index - 1, :, :
+        ],  # dune domain from this last time step
+        dx=10,
+        dy=10,
+        dz=10,
+    )
+
+    # rebuild artifical dunes
+    if artificial_max_dune_ele is None or artificial_min_dune_ele is None:
+        pass
+    else:
+        # in B3D, dune height is the height above the berm crest (keep this in m)
+        artificial_max_dune_height = artificial_max_dune_ele - (barrier3d.BermEl * 10)
+        artificial_min_dune_height = artificial_min_dune_ele - (barrier3d.BermEl * 10)
+
+        # if front row of dunes is less than the height that dunes are typically rebuilt
+        # to -- as measured above the berm crest -- then rebuild artificial dunes back to this height
+        if np.max(new_dune_domain[:, 0]) < (artificial_max_dune_height / 10):
+            new_dune_domain = rebuild_dunes(
+                new_dune_domain,
+                max_dune_height=artificial_max_dune_height,
+                min_dune_height=artificial_min_dune_height,
+                dz=10,
+                rng=True,
+            )
+
+    # update class variables
+    barrier3d.DuneDomain[barrier3d.time_index - 1, :, :] = new_dune_domain
+    barrier3d.InteriorDomain = new_xyz_interior_domain
+    barrier3d.DomainTS[barrier3d.time_index - 1] = new_xyz_interior_domain
+
+    # set dune growth rate to zero for next time step (turn off natural dynamics)
+    barrier3d.growthparam = np.zeros([1, np.size(barrier3d.growthparam)])
+
+    return barrier3d, road_setback

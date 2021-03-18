@@ -54,6 +54,7 @@ def RUN_1_CASCADE_LTA_COMPARISON(ny, nt, name):
         "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"  # laptop
     )
     brie, barrier3d = CASCADE.initialize(
+        datadir,
         name,
         wave_height,
         wave_period,
@@ -64,7 +65,6 @@ def RUN_1_CASCADE_LTA_COMPARISON(ny, nt, name):
         nt,
         rmin,
         rmax,
-        datadir,
     )
 
     # --------- LOOP ---------
@@ -142,6 +142,7 @@ def RUN_2_AlongshoreVarGrowthParam_Alternating(name):
     # #datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/"
     datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
     brie, barrier3d = CASCADE.initialize(
+        datadir,
         name,
         wave_height,
         wave_period,
@@ -152,7 +153,6 @@ def RUN_2_AlongshoreVarGrowthParam_Alternating(name):
         nt,
         rmin,
         rmax,
-        datadir,
     )
 
     # --------- LOOP ---------
@@ -216,6 +216,7 @@ def RUN_3_AlongshoreVarGrowthParam_Gradient(slr, nt, name):
         "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"  # laptop
     )
     brie, barrier3d = CASCADE.initialize(
+        datadir,
         name,
         wave_height,
         wave_period,
@@ -226,7 +227,6 @@ def RUN_3_AlongshoreVarGrowthParam_Gradient(slr, nt, name):
         nt,
         rmin,
         rmax,
-        datadir,
     )
 
     # --------- LOOP ---------
@@ -261,6 +261,7 @@ def RUN_4_B3D_Rave_SLR_pt004(rmin, rmax, name):
     # datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/"
     datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
     brie, barrier3d = CASCADE.initialize(
+        datadir,
         name,
         wave_height,
         wave_period,
@@ -271,7 +272,6 @@ def RUN_4_B3D_Rave_SLR_pt004(rmin, rmax, name):
         nt,
         rmin,
         rmax,
-        datadir,
     )
 
     # --------- LOOP ---------
@@ -367,6 +367,7 @@ def RUN_5_AlongshoreVarGrowthParam_half():
     # datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/"
     datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
     brie, barrier3d = CASCADE.initialize(
+        datadir,
         name,
         wave_height,
         wave_period,
@@ -377,7 +378,6 @@ def RUN_5_AlongshoreVarGrowthParam_half():
         nt,
         rmin,
         rmax,
-        datadir,
     )
 
     # --------- LOOP ---------
@@ -406,6 +406,90 @@ def RUN_5_AlongshoreVarGrowthParam_half():
     b3d = barrier3d[0]
     filename = name + ".npz"
     np.savez(filename, barrier3d=b3d)
+
+
+def RUN_6_B3D_Rave_SLR_pt004_Humans(
+    rmin,
+    rmax,
+    name,
+    road_ele,
+    road_width,
+    road_setback,
+    artificial_max_dune_ele,
+    artificial_min_dune_ele,
+):
+
+    # ###############################################################################
+    # 6 - B3D with human modifications
+    # ###############################################################################
+    # GOAL: Use the starting interior domain from the 10,000 yr runs for each dune growth rate and run for 200 years
+    # with and without human modifications. NOTE, currently have to hard-code elevations and storm filenames, but just
+    # so I remember, I decided to use the 3000 yr storm time series.
+
+    # --------- INITIAL CONDITIONS ---------
+    wave_height = 1.0  # m
+    wave_period = 7  # s (lowered from 10 s to reduce k_sf)
+    asym_frac = 0.8  # fraction approaching from left
+    high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
+    slr = 0.004  # m/yr
+    ny = 2  # dummy variable
+    nt = 200  # timesteps for 1000 morphologic years
+    # rave = [0.45]  # to help me remember the average
+
+    # --------- INITIALIZE ---------
+    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
+    brie, barrier3d = CASCADE.initialize(
+        datadir,
+        name,
+        wave_height,
+        wave_period,
+        asym_frac,
+        high_ang_frac,
+        slr,
+        ny,
+        nt,
+        rmin,
+        rmax,
+    )
+
+    # --------- LOOP ---------
+    # just use the first B3D grid and update B3D without brie coupling
+    barrier3d = barrier3d[0]
+    Time = time.time()
+
+    for time_step in range(nt - 1):
+
+        # Print time step to screen (NOTE: time_index in each model is time_step+1)
+        print("\r", "Time Step: ", time_step, end="")
+        barrier3d.update()
+        barrier3d.update_dune_domain()
+
+        # human dynamics module
+        if road_ele is None or road_width is None:
+            pass
+        else:
+            barrier3d, road_setback = CASCADE.human_dynamics(
+                barrier3d,
+                road_ele,
+                road_width,
+                road_setback,
+                artificial_max_dune_ele,
+                artificial_min_dune_ele,
+            )
+
+    SimDuration = time.time() - Time
+    print()
+    print("Elapsed Time: ", SimDuration, "sec")  # Print elapsed time of simulation
+
+    # --------- SAVE ---------
+    save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output"
+    CASCADE.save(
+        brie, barrier3d, save_directory, name
+    )  # this returns the barrier3d model without the BMI
+
+    os.chdir(save_directory)
+    filename = name + ".npz"
+    np.savez(filename, barrier3d=barrier3d)
 
 
 # # ###############################################################################
@@ -577,7 +661,7 @@ def PLOT_5_Nonlinear_Dynamics(name, save_directory):
 
     # --------- plot ---------
     # filename = name + ".npz"
-    os.chdir("/Run_Output")
+    os.chdir("/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output")
     # output = np.load(filename, allow_pickle=True)
     # CASCADE_b3d = output["barrier3d"]  # CASCADE run: with AST
     output = np.load(
@@ -638,7 +722,7 @@ def PLOT_5_Nonlinear_Dynamics(name, save_directory):
         BarrierWidth_75,
     )
 
-    # save to text file
+    # save to text file for use in Matlab
     np.savetxt(
         "Outputs_pt45.txt",
         (
@@ -648,6 +732,16 @@ def PLOT_5_Nonlinear_Dynamics(name, save_directory):
         ),
     )
 
+    # save final interior and dune domain from last time step to csv (note, dunes are low, maybe set road at 1.7 m)
+    with open("b3d_pt45_10kyrs-elevations.csv", "w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerows(b3d_pt45[0].InteriorDomain)  # save in decameters
+    with open("b3d_pt45_10kyrs-dunes.csv", "w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(
+            b3d_pt45[0].DuneDomain[-1, :, 0]
+        )  # save in decameters, just first row
+
     np.savetxt(
         "Outputs_pt75.txt",
         (
@@ -656,52 +750,22 @@ def PLOT_5_Nonlinear_Dynamics(name, save_directory):
             np.array(DuneCrestMean_75),
         ),
     )
+    # save final interior and dune domain from last time step to csv (note, dunes are low, maybe set road at 1.5 m)
+    with open("b3d_pt75_10kyrs-elevations.csv", "w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerows(b3d_pt75[0]._InteriorDomain)  # save in decameters
+    with open("b3d_pt75_10kyrs-dunes.csv", "w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(
+            b3d_pt75[0].DuneDomain[-1, :, 0]
+        )  # save in decameters, just first row
 
     # half/half run
     ib3d = 10
     CASCADEplt.plot_nonlinear_stats(CASCADE_b3d, ib3d, tmin, tmax)
 
 
-# # ###############################################################################
-# # 4 - variable alongshore dune growth parameters (gradient, coalesce in middle high)
-# # ###############################################################################
-# # GOAL: what is the effect of the alongshore variability of dunes?
-# #        - THIS RUN: make gradient in raverage such that they coalesce in the middle
-#
-# # --------- INITIAL CONDITIONS ---------
-# name = '4-AlongshoreVarGrowthParam_pt2HAF_LHL_1500yrs'
-# wave_height = 1.0  # m
-# wave_period = 7  # s (lowered from 10 s to reduce k_sf)
-# asym_frac = 0.8  # fraction approaching from left
-# high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
-# slr = 0.002  # m/yr
-# ny = 12  # number of alongshore sections (12 = 6 km)
-# nt = 1500  # timesteps for 1000 morphologic years
-# rmin = [0.25, 0.35, 0.35, 0.45, 0.45, 0.55, 0.55, 0.45, 0.45, 0.35, 0.35, 0.25]  # minimum growth rate for logistic dune growth (list for alongshore variability)
-# rmax = [0.65, 0.75, 0.75, 0.85, 0.85, 0.95, 0.95, 0.85, 0.85, 0.75, 0.75, 0.65]  # maximum growth rate for logistic dune growth (list for alongshore variability)
-#
-# # THE FOLLOWING RUNS ARE ON SUPERCOMPUTER
-#
-# # ###############################################################################
-# # 5 - variable alongshore dune growth parameters (gradient, coalesce in middle low)
-# # ###############################################################################
-# # GOAL: what is the effect of the alongshore variability of dunes?
-# #        - THIS RUN: make gradient in raverage such that they coalesce in the middle
-#
-# # --------- INITIAL CONDITIONS ---------
-# name = '5-AlongshoreVarGrowthParam_pt2HAF_HLH_1500yrs'
-# wave_height = 1.0  # m
-# wave_period = 7  # s (lowered from 10 s to reduce k_sf)
-# asym_frac = 0.8  # fraction approaching from left
-# high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
-# slr = 0.002  # m/yr
-# ny = 12  # number of alongshore sections (12 = 6 km)
-# nt = 1500  # timesteps for 1000 morphologic years
-# rmin = [0.55, 0.45, 0.45, 0.35, 0.35, 0.25, 0.25, 0.35, 0.35, 0.45, 0.45, 0.55]  # minimum growth rate for logistic dune growth (list for alongshore variability)
-# rmax = [0.95, 0.85, 0.85, 0.75, 0.75, 0.65, 0.65, 0.75, 0.75, 0.85, 0.85, 0.95]  # maximum growth rate for logistic dune growth (list for alongshore variability)
-#
-
-# record of runs
+# record of runs -------------------------------------------------------------------------------------
 
 RUN_1_CASCADE_LTA_COMPARISON(ny=6, nt=3000, name="1-CASCADE_LTA_COMPARISON_3km_3000yr")
 RUN_1_CASCADE_LTA_COMPARISON(ny=12, nt=1500, name="1-CASCADE_LTA_COMPARISON_6km_1500yr")
@@ -818,3 +882,49 @@ gen_dune_height_start(datadir, name, Dstart=0.5, ny=1000)
 
 name = "growthparam_1000dam.npy"
 gen_alongshore_variable_rmin_rmax(datadir, name, rmin=0.35, rmax=0.85, ny=1000)
+
+# human dynamics runs
+RUN_6_B3D_Rave_SLR_pt004_Humans(
+    rmin=0.25,
+    rmax=0.65,  # rave = 0.45
+    name="6-B3D_Rave_pt45_200yrs_Natural",
+    road_ele=None,
+    road_width=None,
+    road_setback=None,
+    artificial_max_dune_ele=None,
+    artificial_min_dune_ele=None,
+)
+
+RUN_6_B3D_Rave_SLR_pt004_Humans(
+    rmin=0.25,
+    rmax=0.65,  # rave = 0.45
+    name="6-B3D_Rave_pt45_200yrs_Roadways",
+    road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
+    road_width=20,  # m
+    road_setback=30,  # m
+    artificial_max_dune_ele=3.7,  # m NAVD88, 4.7 = a 3 m dune above the roadway
+    artificial_min_dune_ele=2.7,  # m NAVD88, 3.7 =  a 2 m dune above the roadway
+)
+
+# REMEMBER TO SWITCH TOPOGRAHPHIES
+RUN_6_B3D_Rave_SLR_pt004_Humans(
+    rmin=0.55,
+    rmax=0.95,  # rave = 0.75
+    name="6-B3D_Rave_pt75_200yrs_Natural",
+    road_ele=None,
+    road_width=None,
+    road_setback=None,
+    artificial_max_dune_ele=None,
+    artificial_min_dune_ele=None,
+)
+
+RUN_6_B3D_Rave_SLR_pt004_Humans(
+    rmin=0.55,
+    rmax=0.95,  # rave = 0.75
+    name="6-B3D_Rave_pt75_200yrs_Roadways",
+    road_ele=1.5,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
+    road_width=20,  # m
+    road_setback=30,  # m
+    artificial_max_dune_ele=3.7,  # m NAVD88, 4.7 = a 3 m dune above the roadway
+    artificial_min_dune_ele=2.7,  # m NAVD88, 3.7 =  a 2 m dune above the roadway
+)

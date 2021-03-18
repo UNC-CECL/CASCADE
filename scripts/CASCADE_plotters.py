@@ -92,7 +92,7 @@ def plot_ElevAnimation(barrier3d, ny, directory, TMAX, name):
         elevFig1 = plt.figure(figsize=(15, 7))
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
-            AnimateDomain, origin="lower", cmap="terrain", vmin=-1.1, vmax=4.0
+            AnimateDomain, origin="lower", cmap="terrain", vmin=-1.1, vmax=5.0
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
