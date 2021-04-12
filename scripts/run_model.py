@@ -15,7 +15,9 @@ import time
 
 from scripts import CASCADE_plotters as CASCADEplt
 
-import CASCADE as CASCADE
+from CASCADE import Cascade  # the new class
+
+# import CASCADE as CASCADE
 
 from Tools.Barrier3D_MakeTimeSeries import (
     storms_per_year_from_MSSM_output,
@@ -296,10 +298,10 @@ def RUN_4_B3D_Rave_SLR_pt004(rmin, rmax, name):
         brie, barrier3d, save_directory, name
     )  # this returns the barrier3d model without the BMI
 
-    os.chdir(save_directory)
-    b3d = barrier3d[0]
-    filename = name + ".npz"
-    np.savez(filename, barrier3d=b3d)
+    # os.chdir(save_directory)
+    # b3d = barrier3d[0]
+    # filename = name + ".npz"
+    # np.savez(filename, barrier3d=b3d)
 
     # ===================================================
     # 7: Calculate shoreline change periodicity
@@ -409,6 +411,7 @@ def RUN_5_AlongshoreVarGrowthParam_half():
 
 
 def RUN_6_B3D_Rave_SLR_pt004_Humans(
+    nt,
     rmin,
     rmax,
     name,
@@ -417,6 +420,7 @@ def RUN_6_B3D_Rave_SLR_pt004_Humans(
     road_setback,
     artificial_max_dune_ele,
     artificial_min_dune_ele,
+    run_road_mgmt,
 ):
 
     # ###############################################################################
@@ -426,70 +430,43 @@ def RUN_6_B3D_Rave_SLR_pt004_Humans(
     # with and without human modifications. NOTE, currently have to hard-code elevations and storm filenames, but just
     # so I remember, I decided to use the 3000 yr storm time series.
 
-    # --------- INITIAL CONDITIONS ---------
-    wave_height = 1.0  # m
-    wave_period = 7  # s (lowered from 10 s to reduce k_sf)
-    asym_frac = 0.8  # fraction approaching from left
-    high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
-    slr = 0.004  # m/yr
-    ny = 2  # dummy variable
-    nt = 200  # timesteps for 1000 morphologic years
-    # rave = [0.45]  # to help me remember the average
-
     # --------- INITIALIZE ---------
     datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
-    brie, barrier3d = CASCADE.initialize(
+    cascade = Cascade(
         datadir,
         name,
-        wave_height,
-        wave_period,
-        asym_frac,
-        high_ang_frac,
-        slr,
-        ny,
-        nt,
-        rmin,
-        rmax,
+        wave_height=1,
+        wave_period=7,
+        wave_asymmetry=0.8,
+        wave_angle_high_fraction=0.2,
+        sea_level_rise_rate=0.004,
+        alongshore_section_count=1,
+        time_step_count=nt,
+        min_dune_growth_rate=rmin,
+        max_dune_growth_rate=rmax,
+        num_cores=5,
+        roadway_management_module=run_road_mgmt,
+        alongshore_transport_module=False,  # no brie coupling
+        road_ele=road_ele,
+        road_width=road_width,
+        road_setback=road_setback,
+        artificial_max_dune_ele=artificial_max_dune_ele,
+        artificial_min_dune_ele=artificial_min_dune_ele,
     )
 
     # --------- LOOP ---------
-    # just use the first B3D grid and update B3D without brie coupling
-    barrier3d = barrier3d[0]
     Time = time.time()
 
     for time_step in range(nt - 1):
-
         # Print time step to screen (NOTE: time_index in each model is time_step+1)
         print("\r", "Time Step: ", time_step, end="")
-        barrier3d.update()
-        barrier3d.update_dune_domain()
-
-        # human dynamics module
-        if road_ele is None or road_width is None:
-            pass
-        else:
-            barrier3d, road_setback = CASCADE.human_dynamics(
-                barrier3d,
-                road_ele,
-                road_width,
-                road_setback,
-                artificial_max_dune_ele,
-                artificial_min_dune_ele,
-            )
-
-    SimDuration = time.time() - Time
-    print()
-    print("Elapsed Time: ", SimDuration, "sec")  # Print elapsed time of simulation
+        cascade.update()
 
     # --------- SAVE ---------
     save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output"
-    CASCADE.save(
-        brie, barrier3d, save_directory, name
-    )  # this returns the barrier3d model without the BMI
+    cascade.save(save_directory)  # for now, this is a list
 
-    os.chdir(save_directory)
-    filename = name + ".npz"
-    np.savez(filename, barrier3d=barrier3d)
+    return cascade
 
 
 # # ###############################################################################
@@ -657,7 +634,7 @@ def PLOT_5_AlongshoreVarGrowthParam_half(name, save_directory, ny):
     CASCADEplt.plot_ElevAnimation(CASCADE_b3d, ny, save_directory, TMAX, name)
 
 
-def PLOT_5_Nonlinear_Dynamics(name, save_directory):
+def PLOT_5_Nonlinear_Dynamics_B3D(name, save_directory):
 
     # --------- plot ---------
     # filename = name + ".npz"
@@ -742,6 +719,7 @@ def PLOT_5_Nonlinear_Dynamics(name, save_directory):
             b3d_pt45[0].DuneDomain[-1, :, 0]
         )  # save in decameters, just first row
 
+    # now this is for the phase plots
     np.savetxt(
         "Outputs_pt75.txt",
         (
@@ -765,166 +743,375 @@ def PLOT_5_Nonlinear_Dynamics(name, save_directory):
     CASCADEplt.plot_nonlinear_stats(CASCADE_b3d, ib3d, tmin, tmax)
 
 
-# record of runs -------------------------------------------------------------------------------------
+def PLOT_5_Nonlinear_Dynamics_B3D_CNH(name_prefix, tmin, tmax, plot_name):
 
-RUN_1_CASCADE_LTA_COMPARISON(ny=6, nt=3000, name="1-CASCADE_LTA_COMPARISON_3km_3000yr")
-RUN_1_CASCADE_LTA_COMPARISON(ny=12, nt=1500, name="1-CASCADE_LTA_COMPARISON_6km_1500yr")
+    os.chdir("/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output")
 
-RUN_2_AlongshoreVarGrowthParam_Alternating(name="2-VarGrowthParam_Alternating")
+    # --------- plot ---------
+    output = np.load(name_prefix + ".npz", allow_pickle=True)
+    b3d = output["barrier3d"]
 
-RUN_3_AlongshoreVarGrowthParam_Gradient(
-    slr=0.002, nt=500, name="3-VarGrowthParam_grad_pt2HAF_pt2SLR_500yrs"
-)
-RUN_3_AlongshoreVarGrowthParam_Gradient(
-    slr=0.002, nt=1500, name="3-VarGrowthParam_grad_pt2HAF_pt2SLR_1500yrs"
-)
-RUN_3_AlongshoreVarGrowthParam_Gradient(
-    slr=0.004, nt=1500, name="3-VarGrowthParam_grad_pt2HAF_pt4SLR_1500yrs"
-)
+    # individual dune growth rates
+    ib3d = 0  # this is just B3D, so no alongshore grid cells
+    (
+        BarrierWidth,
+        DuneCrestMean,
+        BarrierHeight,
+    ) = CASCADEplt.plot_nonlinear_stats(b3d, ib3d, tmin, tmax)
 
-Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
-    rmin=0.25, rmax=0.65, name="4-B3D_Rave_pt45_SLR_pt004"
-)  # rave = 0.45
-Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
-    rmin=0.35, rmax=0.75, name="4-B3D_Rave_pt55_SLR_pt004"
-)  # rave = 0.55
-Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
-    rmin=0.45, rmax=0.85, name="4-B3D_Rave_pt65_SLR_pt004"
-)  # rave = 0.65
-Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
-    rmin=0.55, rmax=0.95, name="4-B3D_Rave_pt75_SLR_pt004"
-)  # rave = 0.75
-Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
-    rmin=0.55, rmax=0.95, name="4-B3D_Rave_pt75_SLR_pt004_10k-yrs"
-)  # rave = 0.75
+    # save to text file for use in Matlab
+    np.savetxt(
+        name_prefix + ".txt",
+        (
+            np.array(BarrierWidth),
+            np.array(BarrierHeight),
+            np.array(DuneCrestMean),
+        ),
+    )
+
+    # also make the gif
+    directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
+    CASCADEplt.plot_ElevAnimation(b3d, 1, directory, TMAX=tmax, name=plot_name)
 
 
-# record of plotters
-PLOT_5_AlongshoreVarGrowthParam_half(
-    name="5-VarGrowthParam_half_pt4SLR_1500yrs_6km",
-    save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
-    ny=12,
-)
+# # ###############################################################################
+# # runs
+# # ###############################################################################
 
-PLOT_5_AlongshoreVarGrowthParam_half(
-    name="5-VarGrowthParam_half_pt4SLR_1500yrs_1km",
-    save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
-    ny=2,
-)
+# record of non-human runs -------------------------------------------------------------------------------------
+def early_runs():
+    RUN_1_CASCADE_LTA_COMPARISON(
+        ny=6, nt=3000, name="1-CASCADE_LTA_COMPARISON_3km_3000yr"
+    )
+    RUN_1_CASCADE_LTA_COMPARISON(
+        ny=12, nt=1500, name="1-CASCADE_LTA_COMPARISON_6km_1500yr"
+    )
 
-PLOT_5_AlongshoreVarGrowthParam_half(
-    name="5-VarGrowthParam_half_pt4SLR_1500yrs_3km",
-    save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
-    ny=6,
-)
+    RUN_2_AlongshoreVarGrowthParam_Alternating(name="2-VarGrowthParam_Alternating")
 
-PLOT_5_AlongshoreVarGrowthParam_half(
-    name="5-VarGrowthParam_half_pt4SLR_1500yrs_12km",
-    save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
-    ny=24,
-)
+    RUN_3_AlongshoreVarGrowthParam_Gradient(
+        slr=0.002, nt=500, name="3-VarGrowthParam_grad_pt2HAF_pt2SLR_500yrs"
+    )
+    RUN_3_AlongshoreVarGrowthParam_Gradient(
+        slr=0.002, nt=1500, name="3-VarGrowthParam_grad_pt2HAF_pt2SLR_1500yrs"
+    )
+    RUN_3_AlongshoreVarGrowthParam_Gradient(
+        slr=0.004, nt=1500, name="3-VarGrowthParam_grad_pt2HAF_pt4SLR_1500yrs"
+    )
 
-PLOT_3_AlongshoreVarGrowthParam_gradient(
-    name="3-VarGrowthParam_grad_pt2HAF_pt4SLR_1500yrs",
-    save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
-)
+    Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
+        rmin=0.25, rmax=0.65, name="4-B3D_Rave_pt45_SLR_pt004"
+    )  # rave = 0.45
+    Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
+        rmin=0.35, rmax=0.75, name="4-B3D_Rave_pt55_SLR_pt004"
+    )  # rave = 0.55
+    Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
+        rmin=0.45, rmax=0.85, name="4-B3D_Rave_pt65_SLR_pt004"
+    )  # rave = 0.65
+    Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
+        rmin=0.55, rmax=0.95, name="4-B3D_Rave_pt75_SLR_pt004"
+    )  # rave = 0.75
+    Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
+        rmin=0.55, rmax=0.95, name="4-B3D_Rave_pt75_SLR_pt004_10k-yrs"
+    )  # rave = 0.75
 
-# these plots actually don't use run 5, just the individual B3D runs
-PLOT_5_Nonlinear_Dynamics(
-    name="5-VarGrowthParam_half_pt4SLR_1500yrs",
-    save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
-)
 
-# record of time series made
-datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
+# record of non-human plots -------------------------------------------------------------------------------------
+def early_plots():
 
-name = "StormTimeSeries_10k-yr.npy"
-storms_per_year_from_MSSM_output(
-    datadir=datadir,
-    name="StormTimeSeries_10k-yr.npy",
-    storm_list_name="VCRStormList.npy",
-    mean_storm=8.3,
-    SD_storm=5.9,
-    MHW=0.46,
-    StormStart=2,
-    BermEl=1.9,
-    model_years=10000,  # note, this is the number of storms contained in the MSSM model. probably should make more.
-)
+    PLOT_5_AlongshoreVarGrowthParam_half(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs_6km",
+        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+        ny=12,
+    )
 
-name = "StormTimeSeries_3000yr.npy"
-storms_per_year_from_MSSM_output(
-    datadir=datadir,
-    name="StormTimeSeries_10k-yr.npy",
-    storm_list_name="VCRStormList.npy",
-    mean_storm=8.3,
-    SD_storm=5.9,
-    MHW=0.46,
-    StormStart=2,
-    BermEl=1.9,
-    model_years=3000,
-)
+    PLOT_5_AlongshoreVarGrowthParam_half(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs_1km",
+        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+        ny=2,
+    )
 
-name = "StormTimeSeries_1000yr.npy"
-storms_per_year_from_MSSM_output(
-    datadir=datadir,
-    name="StormTimeSeries_10k-yr.npy",
-    storm_list_name="VCRStormList.npy",
-    mean_storm=8.3,
-    SD_storm=5.9,
-    MHW=0.46,
-    StormStart=2,
-    BermEl=1.9,
-    model_years=1000,
-)
+    PLOT_5_AlongshoreVarGrowthParam_half(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs_3km",
+        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+        ny=6,
+    )
 
-name = "DuneStart_1000dam.npy"
-gen_dune_height_start(datadir, name, Dstart=0.5, ny=1000)
+    PLOT_5_AlongshoreVarGrowthParam_half(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs_12km",
+        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+        ny=24,
+    )
 
-name = "growthparam_1000dam.npy"
-gen_alongshore_variable_rmin_rmax(datadir, name, rmin=0.35, rmax=0.85, ny=1000)
+    PLOT_3_AlongshoreVarGrowthParam_gradient(
+        name="3-VarGrowthParam_grad_pt2HAF_pt4SLR_1500yrs",
+        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+    )
 
-# human dynamics runs
-RUN_6_B3D_Rave_SLR_pt004_Humans(
-    rmin=0.25,
-    rmax=0.65,  # rave = 0.45
-    name="6-B3D_Rave_pt45_200yrs_Natural",
-    road_ele=None,
-    road_width=None,
-    road_setback=None,
-    artificial_max_dune_ele=None,
-    artificial_min_dune_ele=None,
-)
+    # these plots actually don't use run 5, just the individual B3D runs
+    PLOT_5_Nonlinear_Dynamics(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs",
+        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+    )
 
-RUN_6_B3D_Rave_SLR_pt004_Humans(
-    rmin=0.25,
-    rmax=0.65,  # rave = 0.45
-    name="6-B3D_Rave_pt45_200yrs_Roadways",
-    road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
-    road_width=20,  # m
-    road_setback=30,  # m
-    artificial_max_dune_ele=3.7,  # m NAVD88, 4.7 = a 3 m dune above the roadway
-    artificial_min_dune_ele=2.7,  # m NAVD88, 3.7 =  a 2 m dune above the roadway
-)
 
-# REMEMBER TO SWITCH TOPOGRAHPHIES
-RUN_6_B3D_Rave_SLR_pt004_Humans(
-    rmin=0.55,
-    rmax=0.95,  # rave = 0.75
-    name="6-B3D_Rave_pt75_200yrs_Natural",
-    road_ele=None,
-    road_width=None,
-    road_setback=None,
-    artificial_max_dune_ele=None,
-    artificial_min_dune_ele=None,
-)
+# record of B3D time series -------------------------------------------------------------------------------------
+def time_series():
+    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
 
-RUN_6_B3D_Rave_SLR_pt004_Humans(
-    rmin=0.55,
-    rmax=0.95,  # rave = 0.75
-    name="6-B3D_Rave_pt75_200yrs_Roadways",
-    road_ele=1.5,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
-    road_width=20,  # m
-    road_setback=30,  # m
-    artificial_max_dune_ele=3.7,  # m NAVD88, 4.7 = a 3 m dune above the roadway
-    artificial_min_dune_ele=2.7,  # m NAVD88, 3.7 =  a 2 m dune above the roadway
-)
+    name = "StormTimeSeries_10k-yr.npy"
+    storms_per_year_from_MSSM_output(
+        datadir=datadir,
+        name=name,
+        storm_list_name="VCRStormList.npy",
+        mean_storm=8.3,
+        SD_storm=5.9,
+        MHW=0.46,
+        StormStart=2,
+        BermEl=1.9,
+        model_years=10000,  # note, this is the number of storms contained in the MSSM model. probably should make more.
+    )
+
+    name = "StormTimeSeries_3000yr.npy"
+    storms_per_year_from_MSSM_output(
+        datadir=datadir,
+        name=name,
+        storm_list_name="VCRStormList.npy",
+        mean_storm=8.3,
+        SD_storm=5.9,
+        MHW=0.46,
+        StormStart=2,
+        BermEl=1.9,
+        model_years=3000,
+    )
+
+    name = "StormTimeSeries_1000yr.npy"
+    storms_per_year_from_MSSM_output(
+        datadir=datadir,
+        name=name,
+        storm_list_name="VCRStormList.npy",
+        mean_storm=8.3,
+        SD_storm=5.9,
+        MHW=0.46,
+        StormStart=2,
+        BermEl=1.9,
+        model_years=1000,
+    )
+
+    name = "StormTimeSeries_200yr.npy"
+    storms_per_year_from_MSSM_output(
+        datadir=datadir,
+        name=name,
+        storm_list_name="VCRStormList.npy",
+        mean_storm=8.3,
+        SD_storm=5.9,
+        MHW=0.46,
+        StormStart=2,
+        BermEl=1.9,
+        model_years=200,
+    )
+
+    name = "DuneStart_1000dam.npy"
+    gen_dune_height_start(datadir, name, Dstart=0.5, ny=1000)
+
+    name = "growthparam_1000dam.npy"
+    gen_alongshore_variable_rmin_rmax(datadir, name, rmin=0.35, rmax=0.85, ny=1000)
+
+
+# record of human runs -------------------------------------------------------------------------------------
+def human_runs():
+
+    b3d_pt45 = RUN_6_B3D_Rave_SLR_pt004_Humans(
+        nt=200,
+        rmin=0.25,
+        rmax=0.65,  # rave = 0.45
+        name="6-B3D_Rave_pt45_200yrs_Natural_v2",
+        road_ele=None,
+        road_width=None,
+        road_setback=None,
+        artificial_max_dune_ele=None,
+        artificial_min_dune_ele=None,
+    )
+
+    # v1 - didn't drown roadway, v2 - roadway drowned at 160, v3 - new class
+    # b3d_pt45_h1, dunes_rebuilt, road_overwash_volume = RUN_6_B3D_Rave_SLR_pt004_Humans(
+    cascade_pt45_h1 = RUN_6_B3D_Rave_SLR_pt004_Humans(
+        nt=159,  # 200
+        rmin=0.25,
+        rmax=0.65,  # rave = 0.45
+        name="6-B3D_Rave_pt45_200yrs_Roadways_2mDune_40mSetback_20mWidth_v3",
+        road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
+        road_width=20,  # m
+        road_setback=40,  # m
+        artificial_max_dune_ele=3.7,  # m NAVD88, rebuild to 2 m dune above the roadway
+        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
+        run_road_mgmt=True,
+    )
+
+    b3d_pt45_h2 = RUN_6_B3D_Rave_SLR_pt004_Humans(
+        nt=200,
+        rmin=0.25,
+        rmax=0.65,  # rave = 0.45
+        name="6-B3D_Rave_pt45_200yrs_Roadways_3mDune_40mSetback_20mWidth_v2",
+        road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
+        road_width=20,  # m
+        road_setback=40,  # m
+        artificial_max_dune_ele=4.7,  # m NAVD88, rebuild to 3 m dune above the roadway
+        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 3.7 m
+    )
+
+    # v1 drowned at 91 years, v2 - roadway drowned at 101 years
+    # b3d_pt45_h3 = RUN_6_B3D_Rave_SLR_pt004_Humans(
+    cascade_pt45_h3 = RUN_6_B3D_Rave_SLR_pt004_Humans(
+        nt=100,  # 90
+        rmin=0.25,
+        rmax=0.65,  # rave = 0.45
+        name="6-B3D_Rave_pt45_200yrs_Roadways_1mDune_40mSetback_20mWidth_v2_classtest2",
+        road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
+        road_width=20,  # m
+        road_setback=40,  # m
+        artificial_max_dune_ele=2.7,  # m NAVD88, rebuild to 1 m dune above the roadway
+        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 2.4 m
+        run_road_mgmt=True,
+    )
+
+    b3d_pt45_h4 = RUN_6_B3D_Rave_SLR_pt004_Humans(
+        nt=200,
+        rmin=0.25,
+        rmax=0.65,  # rave = 0.45
+        name="6-B3D_Rave_pt45_200yrs_Roadways_2mDune_40mSetback_30mWidth_v2",
+        road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
+        road_width=30,  # m
+        road_setback=40,  # m
+        artificial_max_dune_ele=3.7,  # m NAVD88, rebuild to 2 m dune above the roadway
+        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
+    )
+
+    # # v1 drowned at 183 years
+    # b3d_pt45_h5 = RUN_6_B3D_Rave_SLR_pt004_Humans(
+    #     nt=200,  # 182
+    #     rmin=0.25,
+    #     rmax=0.65,  # rave = 0.45
+    #     name="6-B3D_Rave_pt45_200yrs_Roadways_2mDune_30mSetback_20mWidth",
+    #     road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
+    #     road_width=20,  # m
+    #     road_setback=30,  # m
+    #     artificial_max_dune_ele=3.7,  # m NAVD88, 2 m dune above the roadway
+    #     artificial_min_dune_ele=2.7,  # m NAVD88, 1 m dune above the roadway
+    # )
+
+    # REMEMBER TO SWITCH TOPOGRAHPHY FILES
+    b3d_pt75 = RUN_6_B3D_Rave_SLR_pt004_Humans(
+        nt=200,
+        rmin=0.55,
+        rmax=0.95,  # rave = 0.75
+        name="6-B3D_Rave_pt75_200yrs_Natural",
+        road_ele=None,
+        road_width=None,
+        road_setback=None,
+        artificial_max_dune_ele=None,
+        artificial_min_dune_ele=None,
+    )
+
+    # v2, roadway drowned at 157 years
+    b3d_pt75_h1, dunes_rebuilt, road_overwash_volume = RUN_6_B3D_Rave_SLR_pt004_Humans(
+        nt=156,  # 200
+        rmin=0.55,
+        rmax=0.95,  # rave = 0.75
+        name="6-B3D_Rave_pt75_200yrs_Roadways_2mDune_40mSetback_20mWidth_v2",
+        road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
+        road_width=20,  # m
+        road_setback=40,  # m
+        artificial_max_dune_ele=3.7,  # m NAVD88, rebuild to 2 m dune above the roadway
+        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
+    )
+
+    b3d_pt75_h2 = RUN_6_B3D_Rave_SLR_pt004_Humans(
+        nt=200,
+        rmin=0.55,
+        rmax=0.95,  # rave = 0.75
+        name="6-B3D_Rave_pt75_200yrs_Roadways_3mDune_40mSetback_20mWidth_v2",
+        road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
+        road_width=20,  # m
+        road_setback=40,  # m
+        artificial_max_dune_ele=4.7,  # m NAVD88, rebuild to 3 m dune above the roadway
+        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 3.7 m
+    )
+
+    # v1 drowned at 88 years, v2 drowned at 105 years
+    b3d_pt75_h3, dunes_rebuilt, road_overwash_volume = RUN_6_B3D_Rave_SLR_pt004_Humans(
+        nt=104,  # 87
+        rmin=0.55,
+        rmax=0.95,  # rave = 0.75
+        name="6-B3D_Rave_pt75_200yrs_Roadways_1mDune_40mSetback_20mWidth_v2",
+        road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
+        road_width=20,  # m
+        road_setback=40,  # m
+        artificial_max_dune_ele=2.7,  # m NAVD88, rebuild to 1 m dune above the roadway
+        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 2.4 m
+    )
+
+
+# record of human plots -------------------------------------------------------------------------------------
+def human_plots():
+    # save text files for phase plots and basic statistics
+    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+        name_prefix="6-B3D_Rave_pt45_200yrs_Natural_v2",
+        tmin=0,
+        tmax=200,
+        plot_name="b3d_pt45_plots",
+    )
+    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+        name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_2mDune_40mSetback_20mWidth_v2",
+        tmin=0,
+        tmax=159,  # 200
+        plot_name="b3d_pt45_h1_plots_v2",
+    )
+    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+        name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_3mDune_40mSetback_20mWidth",
+        tmin=0,
+        tmax=200,
+        plot_name="b3d_pt45_h2_plots",
+    )
+    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+        name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_1mDune_40mSetback_20mWidth_v2",
+        tmin=0,
+        tmax=100,  # 90
+        plot_name="b3d_pt45_h3_plots_v2",
+    )
+    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+        name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_2mDune_40mSetback_30mWidth",
+        tmin=0,
+        tmax=200,
+        plot_name="b3d_pt45_h4_plots",
+    )
+    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+        name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_2mDune_30mSetback_20mWidth",
+        tmin=0,
+        tmax=182,
+        plot_name="b3d_pt45_h5_plots",
+    )
+    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+        name_prefix="6-B3D_Rave_pt75_200yrs_Natural",
+        tmin=0,
+        tmax=200,
+        plot_name="b3d_pt75_plots",
+    )
+    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+        name_prefix="6-B3D_Rave_pt75_200yrs_Roadways_2mDune_40mSetback_20mWidth_v2",
+        tmin=0,
+        tmax=156,  # 200
+        plot_name="b3d_pt75_h1_plots_v2",
+    )
+    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+        name_prefix="6-B3D_Rave_pt75_200yrs_Roadways_3mDune_40mSetback_20mWidth_v2",
+        tmin=0,
+        tmax=200,
+        plot_name="b3d_pt75_h2_plots_v2",
+    )
+    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+        name_prefix="6-B3D_Rave_pt75_200yrs_Roadways_1mDune_40mSetback_20mWidth_v2",
+        tmin=0,
+        tmax=104,  # 87
+        plot_name="b3d_pt75_h3_plots_v2",
+    )

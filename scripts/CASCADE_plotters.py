@@ -117,11 +117,13 @@ def plot_ElevAnimation(barrier3d, ny, directory, TMAX, name):
     print("[ * GIF successfully generated * ]")
 
 
+# changed limits and labels for AGU
 def plot_ElevAnimationAGU(barrier3d, ny, directory, TMAX, name):
 
     BarrierLength = barrier3d[0]._BarrierLength
 
     BeachWidth = 6
+    OriginY = int(barrier3d[0]._x_s_TS[0] - barrier3d[0]._x_t_TS[0])
     OriginY = int(barrier3d[0]._x_s_TS[0] - barrier3d[0]._x_t_TS[0])
     AniDomainWidth = int(
         np.amax(barrier3d[0]._InteriorWidth_AvgTS)
@@ -199,6 +201,160 @@ def plot_ElevAnimationAGU(barrier3d, ny, directory, TMAX, name):
         plt.ylim([0, 217])
         plt.xlabel("Alongshore Distance (km)")
         plt.ylabel("Cross-Shore Distance (km)")
+        name = "elev_" + str(t)
+        elevFig1.savefig(name)  # dpi=200
+        plt.close(elevFig1)
+
+    frames = []
+
+    for filenum in range(TMAX - 1):
+        filename = "elev_" + str(filenum) + ".png"
+        frames.append(imageio.imread(filename))
+    imageio.mimsave("elev.gif", frames, "GIF-FI")
+    print()
+    print("[ * GIF successfully generated * ]")
+
+
+# added a 0.5 time step for post-storm impacts before human modifications
+def plot_ElevAnimation_Humans(
+    cascade,
+    ny,
+    directory,
+    TMAX,
+    name,
+):
+
+    barrier3d = cascade.barrier3d
+
+    BarrierLength = barrier3d[0]._BarrierLength
+
+    BeachWidth = 6
+    OriginY = int(barrier3d[0]._x_s_TS[0] - barrier3d[0]._x_t_TS[0])
+    AniDomainWidth = int(
+        np.amax(barrier3d[0]._InteriorWidth_AvgTS)
+        + BeachWidth
+        + np.abs(barrier3d[0]._ShorelineChange)
+        + OriginY
+        + 35
+    )
+
+    os.chdir(directory)
+    newpath = "Output/" + name + "/SimFrames/"
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+    os.chdir(newpath)
+
+    for t in range(TMAX - 1):
+
+        # start with t=0, then post-storm dune and interior before rebuild, treating this as t=0.5 (i.e., this is really the
+        # final dune from storms at t=1,2,3,4,5,... but before human modifications to the dune (rebuild, move overwash);
+        # for the high dune scenarios, we should be able to see natural dune growth at t=0.5 before rebuild (i.e., t=0.5
+        # and t=1 should not be the same)
+        if t > 0:
+            AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -1
+
+            for iB3D in range(ny):
+                # Build beach elevation domain
+                BeachDomain = np.zeros([BeachWidth, BarrierLength])
+                berm = math.ceil(BeachWidth * 0.65)
+                BeachDomain[berm : BeachWidth + 1, :] = barrier3d[iB3D]._BermEl
+                add = (barrier3d[iB3D]._BermEl - barrier3d[iB3D]._SL) / berm
+                for i in range(berm):
+                    BeachDomain[i, :] = barrier3d[iB3D]._SL + add * i
+
+                # Make animation frame domain
+                Domain = cascade.post_storm_interior[t][iB3D] * 10
+                Dunes = (
+                    cascade.post_storm_dunes[t][iB3D] + barrier3d[iB3D]._BermEl
+                ) * 10
+                Dunes = np.rot90(Dunes)
+                Dunes = np.flipud(Dunes)
+                Beach = BeachDomain * 10
+                Domain = np.vstack([Beach, Dunes, Domain])
+                Domain[Domain < 0] = -1
+                widthTS = len(Domain)
+                scts = [
+                    (x - barrier3d[iB3D]._x_s_TS[0]) for x in barrier3d[iB3D]._x_s_TS
+                ]
+                if scts[t] >= 0:
+                    OriginTstart = OriginY + math.floor(scts[t])
+                else:
+                    OriginTstart = OriginY + math.ceil(scts[t])
+                OriginTstop = OriginTstart + widthTS
+                xOrigin = iB3D * BarrierLength
+                AnimateDomain[
+                    OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
+                ] = Domain
+
+            # Plot and save
+            elevFig1 = plt.figure(figsize=(15, 7))
+            ax = elevFig1.add_subplot(111)
+            cax = ax.matshow(
+                AnimateDomain, origin="lower", cmap="terrain", vmin=-1.1, vmax=5.0
+            )  # , interpolation='gaussian') # analysis:ignore
+            ax.xaxis.set_ticks_position("bottom")
+            elevFig1.colorbar(cax)
+            plt.xlabel("Alongshore Distance (dam)")
+            plt.ylabel("Cross-Shore Distance (dam)")
+            plt.title("Interior Elevation")
+            plt.tight_layout()
+            timestr = (
+                "Time = " + str(t - 0.5) + " yrs"
+            )  # we are letting the post-storm output represent 0.5 years
+            plt.text(1, 1, timestr)
+            plt.rcParams.update({"font.size": 20})
+            name = "elev_" + str(t - 1) + "pt5"
+            elevFig1.savefig(name)  # dpi=200
+            plt.close(elevFig1)
+
+        AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -1
+
+        for iB3D in range(ny):
+            # Build beach elevation domain
+            BeachDomain = np.zeros([BeachWidth, BarrierLength])
+            berm = math.ceil(BeachWidth * 0.65)
+            BeachDomain[berm : BeachWidth + 1, :] = barrier3d[iB3D]._BermEl
+            add = (barrier3d[iB3D]._BermEl - barrier3d[iB3D]._SL) / berm
+            for i in range(berm):
+                BeachDomain[i, :] = barrier3d[iB3D]._SL + add * i
+
+            # Make animation frame domain
+            Domain = barrier3d[iB3D]._DomainTS[t] * 10
+            Dunes = (
+                barrier3d[iB3D]._DuneDomain[t, :, :] + barrier3d[iB3D]._BermEl
+            ) * 10
+            Dunes = np.rot90(Dunes)
+            Dunes = np.flipud(Dunes)
+            Beach = BeachDomain * 10
+            Domain = np.vstack([Beach, Dunes, Domain])
+            Domain[Domain < 0] = -1
+            widthTS = len(Domain)
+            scts = [(x - barrier3d[iB3D]._x_s_TS[0]) for x in barrier3d[iB3D]._x_s_TS]
+            if scts[t] >= 0:
+                OriginTstart = OriginY + math.floor(scts[t])
+            else:
+                OriginTstart = OriginY + math.ceil(scts[t])
+            OriginTstop = OriginTstart + widthTS
+            xOrigin = iB3D * BarrierLength
+            AnimateDomain[
+                OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
+            ] = Domain
+
+        # Plot and save
+        elevFig1 = plt.figure(figsize=(15, 7))
+        ax = elevFig1.add_subplot(111)
+        cax = ax.matshow(
+            AnimateDomain, origin="lower", cmap="terrain", vmin=-1.1, vmax=5.0
+        )  # , interpolation='gaussian') # analysis:ignore
+        ax.xaxis.set_ticks_position("bottom")
+        elevFig1.colorbar(cax)
+        plt.xlabel("Alongshore Distance (dam)")
+        plt.ylabel("Cross-Shore Distance (dam)")
+        plt.title("Interior Elevation")
+        plt.tight_layout()
+        timestr = "Time = " + str(t) + " yrs"
+        plt.text(1, 1, timestr)
+        plt.rcParams.update({"font.size": 20})
         name = "elev_" + str(t)
         elevFig1.savefig(name)  # dpi=200
         plt.close(elevFig1)
@@ -1130,15 +1286,57 @@ def plot_punctuated_difference(CASCADE_b3d, b3d_only, ny):
     plt.tight_layout()
 
 
-def plot_nonlinear_stats(CASCADE_b3d, ib3d, tmin, tmax):
+def plot_nonlinear_stats(
+    CASCADE_b3d,
+    ib3d,
+    tmin,
+    tmax,
+    post_storm_dunes=None,
+    post_storm_interior=None,
+    design_height=None,
+    rebuild_threshold=None,
+):
 
-    # mean dune height ---------
-    # sub_domain = CASCADE_b3d[ib3d]._DuneDomain[:, :, :]
-    # DuneCrest = sub_domain.max(axis=2)
-    # DuneCrestMean = np.mean(DuneCrest, axis=1) * 10
-    DuneCrestMean = [
-        a * 10 for a in CASCADE_b3d[ib3d]._Hd_AverageTS
-    ]  # don't know why this is slightly different from above, but it is
+    # mean dune height (using both dune domain columns) ---------
+    # DuneCrestMean = [
+    #     (a + CASCADE_b3d[ib3d].BermEl) * 10 for a in CASCADE_b3d[ib3d]._Hd_AverageTS
+    # ]  # relative to NAVD88
+    DuneDomainCrest = (
+        CASCADE_b3d[ib3d]._DuneDomain[:, :, :].max(axis=2)
+    )  # Maximum height of each row in DuneDomain
+    # DuneDomainCrest = CASCADE_b3d[ib3d]._DuneDomain[
+    #     :, :, 0
+    # ]  # Just front row of dune domain
+    DuneDomainCrest[DuneDomainCrest < CASCADE_b3d[ib3d]._DuneRestart] = CASCADE_b3d[
+        ib3d
+    ]._DuneRestart
+    DuneCrestMean = (np.mean(DuneDomainCrest, axis=1) + CASCADE_b3d[ib3d].BermEl) * 10
+    DuneCrestMin = (np.min(DuneDomainCrest, axis=1) + CASCADE_b3d[ib3d].BermEl) * 10
+    DuneCrestMax = (np.max(DuneDomainCrest, axis=1) + CASCADE_b3d[ib3d].BermEl) * 10
+
+    if post_storm_dunes is not None:
+
+        post_DuneCrestMean = [None]
+        post_DuneCrestMin = [None]
+        post_DuneCrestMax = [None]
+
+        # same calculation as Hd_AverageTS, but here average post-storm dune-height for each time step
+        for t in range(1, CASCADE_b3d[ib3d].time_index):
+            DuneDomainCrest = post_storm_dunes[t][ib3d].max(
+                axis=1
+            )  # Maximum height of each row in DuneDomain (typically front row: could also just force this to be front row, more robust)
+            DuneDomainCrest[
+                DuneDomainCrest < CASCADE_b3d[ib3d]._DuneRestart
+            ] = CASCADE_b3d[ib3d]._DuneRestart
+            post_DuneCrestMean.append(
+                (np.mean(DuneDomainCrest) + CASCADE_b3d[ib3d].BermEl) * 10
+            )  # relative to NAVD88
+            post_DuneCrestMax.append(
+                (np.max(DuneDomainCrest) + CASCADE_b3d[ib3d].BermEl) * 10
+            )  # relative to NAVD88
+            post_DuneCrestMin.append(
+                (np.min(DuneDomainCrest) + CASCADE_b3d[ib3d].BermEl) * 10
+            )  # relative to NAVD88
 
     # barrier width
     BarrierWidth = (
@@ -1159,6 +1357,14 @@ def plot_nonlinear_stats(CASCADE_b3d, ib3d, tmin, tmax):
     for t in range(len(CASCADE_b3d[ib3d]._DomainTS)):
         bh_array = np.array(CASCADE_b3d[ib3d]._DomainTS[t]) * 10
         BarrierHeight.append(bh_array[bh_array > 0].mean())
+
+    # average interior height post-storm (before human modifications)
+    if post_storm_interior is not None:
+        post_BarrierHeight = [None]
+
+        for t in range(1, CASCADE_b3d[ib3d].time_index):
+            bh_array = np.array(post_storm_interior[t][ib3d]) * 10
+            post_BarrierHeight.append(bh_array[bh_array > 0].mean())
 
     # change in barrier height
     bhts = [(x - BarrierHeight[0]) for x in BarrierHeight]
@@ -1183,10 +1389,24 @@ def plot_nonlinear_stats(CASCADE_b3d, ib3d, tmin, tmax):
 
     # individual time series
     plt.subplot(2, 5, 1)
-    # plt.subplot(5, 2, 1)
-    plt.plot(DuneCrestMean)
+
+    if post_storm_dunes is not None:
+        # time = np.arange(0.5, CASCADE_b3d[ib3d].time_index - 1, 1)
+        # plt.scatter(time, post_DuneCrestMean[1:])
+        time = np.arange(0, CASCADE_b3d[ib3d].time_index - 0.5, 0.5)
+        combined = [None] * (len(time))
+        combined[::2] = DuneCrestMin
+        combined[1::2] = post_DuneCrestMin[1:]  # post_DuneCrestMean[1:]
+        plt.hlines(rebuild_threshold, time[0], time[-1], colors="red")
+        plt.hlines(design_height, time[0], time[-1], colors="black")
+        plt.hlines(CASCADE_b3d[ib3d]._Dmaxel * 10, time[0], time[-1], colors="green")
+        plt.plot(time, combined)
+        plt.legend(["Min dune height", "rebuild", "design", "max-equil"])
+
+    else:
+        plt.plot(DuneCrestMean)
     # plt.plot(DuneCrestMean[tmin:tmax], "m")
-    plt.ylabel("Ave Dune Height (m)")
+    plt.ylabel("Ave Dune Height (m NAVD88)")
     plt.xlabel("Time (yr)")
 
     # plt.subplot(2, 5, 2)
@@ -1198,7 +1418,7 @@ def plot_nonlinear_stats(CASCADE_b3d, ib3d, tmin, tmax):
 
     plt.subplot(2, 5, 2)
     plt.plot(BarrierHeight)
-    plt.ylabel("Ave barrier interior height (m)")
+    plt.ylabel("Ave barrier interior height (m NAVD88)")
     plt.xlabel("Time (yr)")
 
     plt.subplot(2, 5, 3)
