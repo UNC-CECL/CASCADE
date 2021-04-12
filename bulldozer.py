@@ -89,7 +89,7 @@ def bulldoze(
         road_start:road_end, :
     ] = new_road_domain  # update interior domain
 
-    return new_dune_domain, xyz_interior_grid, road_overwash_removal
+    return new_dune_domain, xyz_interior_grid, np.sum(road_overwash_removal)
 
 
 def rebuild_dunes(
@@ -136,11 +136,17 @@ def rebuild_dunes(
 
     if rng:
         # add some random perturbations to dune heights
+        RNG = np.random.default_rng(seed=1973)
+
         dune_start_max = np.ones([ny]) * (
-            max_height + (-0.01 + (0.01 - (-0.01)) * np.random.rand(ny))
+            # max_height + (-0.01 + (0.01 - (-0.01)) * np.random.rand(ny))
+            max_height
+            + (-0.01 + (0.01 - (-0.01)) * RNG.random(ny))
         )
         dune_start_min = np.ones([ny]) * (
-            min_height + (-0.01 + (0.01 - (-0.01)) * np.random.rand(ny))
+            # min_height + (-0.01 + (0.01 - (-0.01)) * np.random.rand(ny))
+            min_height
+            + (-0.01 + (0.01 - (-0.01)) * RNG.random(ny))
         )
     else:
         dune_start_max = np.ones([ny]) * max_height
@@ -154,3 +160,59 @@ def rebuild_dunes(
     new_dune_domain = f(np.arange(0, nx, 1), np.arange(0, ny, 1))
 
     return new_dune_domain
+
+
+def set_growth_parameters(
+    yxz_dune_grid,
+    Dmax,
+    growthparam,
+    original_growth_param=None,
+    rmin=0.35,
+    rmax=0.85,
+):
+    r"""Set dune growth rate to zero for next time step if the dune elevation (front row) is larger than the natural eq.
+    dune height (DMax) -- we know from modeling work (Duran and Moore 2013) that the dune will not grow above
+    the natural equilibrium height because of interactions between the wind field and the dune: too high and no sand
+    flux
+
+    Parameters
+    ----------
+    yxz_dune_grid: float or array of float
+        Dune topography [decameters]
+    Dmax: float
+        Maximum natural equilibrium dune height [decameters]
+    growthparam: float
+        growth parameters from last time step, used in Houser formulation [unitless]
+    original_growth_param: float, optional
+        growth parameters from first time step, before humans interfered [unitless]
+    rmin: float, optional
+        Minimum growth rate - used if now original_growth_parm provided [unitless]
+    rmax: float, optional
+        Maximum growth rate - used if now original_growth_parm provided [unitless]
+
+    Returns
+    -------
+    new_growth_param: array of float
+        New growth parameter array that accounts for human modifications to dune height above/below the equilibrium
+
+    """
+
+    ny = np.size(yxz_dune_grid, 0)
+    new_growth_param = np.copy(growthparam)
+    rng = np.random.default_rng(seed=1973)
+
+    for idune in range(ny):
+
+        if yxz_dune_grid[idune, 0] > Dmax:  # if dune height above dmax, don't grow
+            new_growth_param[0, idune] = 0
+
+        else:
+            # if dune is now below the Dmax (was formerly above), make sure it has a growth rate either the same as
+            # before (if original growth rate provided) or a random number between rmin and rmax
+            if growthparam[0, idune] == 0:
+                if original_growth_param is not None:
+                    new_growth_param[0, idune] = original_growth_param[0, idune]
+                else:
+                    new_growth_param[0, idune] = rmin + (rmax - rmin) * rng.random()
+
+    return new_growth_param
