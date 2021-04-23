@@ -2,7 +2,7 @@ import multiprocessing
 
 import matplotlib.pyplot as plt
 
-from cascade import CASCADE as CASCADE
+import CASCADE as CASCADE
 
 # use the default run to test the parallel code for different core options for a 100 year simulation and
 # 6 alongshore sections

@@ -10,7 +10,6 @@ Copyright (C) 2020 Katherine Anarde
 
 import numpy as np
 import os
-import multiprocessing
 import time
 
 from scripts import CASCADE_plotters as CASCADEplt
@@ -460,7 +459,7 @@ def RUN_6_B3D_Rave_SLR_pt004_Humans(
         # Print time step to screen (NOTE: time_index in each model is time_step+1)
         print("\r", "Time Step: ", time_step, end="")
         cascade.update()
-        if cascade.narrow_break or cascade.drown_break:
+        if cascade.road_break:
             break
 
     # --------- SAVE ---------

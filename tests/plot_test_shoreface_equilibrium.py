@@ -2,7 +2,7 @@ import multiprocessing
 
 import matplotlib.pyplot as plt
 
-from cascade import CASCADE as CASCADE
+import CASCADE as CASCADE
 from barrier3d import Barrier3dBmi
 import time
 

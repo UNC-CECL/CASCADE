@@ -7,7 +7,7 @@
 
 # import CASCADE_plotters as CASCADEplt
 
-from cascade import CASCADE as CASCADE
+import CASCADE as CASCADE
 
 # ###############################################################################
 # 4 - variable alongshore dune growth parameters (gradient, coalesce in middle)

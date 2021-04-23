@@ -1,6 +1,6 @@
 import multiprocessing
 
-from cascade import CASCADE as CASCADE
+import CASCADE as CASCADE
 
 # for laptop and desktop, use all but one core; on supercomputer, use all cores
 num_cores = multiprocessing.cpu_count() - 1

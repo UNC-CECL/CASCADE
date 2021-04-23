@@ -12,7 +12,7 @@ import multiprocessing
 
 import matplotlib.pyplot as plt
 
-from cascade import CASCADE as CASCADE
+from CASCADE import Cascade
 
 # NOTE: I saved the 100 year (15 core) simulation for #1 and 500 year simulation for #3 for debugging comparison for V2
 v1_500yr = "3-AlongshoreVarGrowthParam_pt2HAF_gradient_500yrs_15cores_v1.npz"
@@ -126,9 +126,7 @@ def run_3_500years(name=new_500_version):
 def plot_500_diff(filename_old=v1_500yr, filename_new=new_500_version):
 
     # load new version
-    os.chdir(
-        "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output/BMI_Version_Tests"
-    )
+    os.chdir("/Run_Output/BMI_Version_Tests")
     output = np.load(filename_new, allow_pickle=True)
     b3d_new = output["barrier3d"]
 
@@ -162,9 +160,7 @@ def plot_500_diff(filename_old=v1_500yr, filename_new=new_500_version):
 def plot_100_diff(filename_old=v2_100yr, filename_new=new_100_version):
 
     # load new version
-    os.chdir(
-        "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output/BMI_Version_Tests"
-    )
+    os.chdir("/Run_Output/BMI_Version_Tests")
     output = np.load(filename_new, allow_pickle=True)
     b3d_new = output["barrier3d"]
 
