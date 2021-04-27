@@ -238,15 +238,15 @@ def set_growth_parameters(
 
 
 class RoadwayManager:
-    #
-    # """Manage the road.
-    #
-    # Examples
-    # --------
-    # >>> from cascade.bulldozer import RoadwayManager
-    # >>> roadways = RoadwayManager()
-    # >>> roadways.update(barrier3d)
-    # """
+
+    """Manage the road.
+
+    Examples
+    --------
+    >>> from roadway_manager import RoadwayManager
+    >>> roadways = RoadwayManager()
+    >>> roadways.update(barrier3d)
+    """
 
     def __init__(
         self,

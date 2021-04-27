@@ -102,7 +102,7 @@ class Cascade:
 
         Examples
         --------
-        >>> from cascade.CASCADE import Cascade
+        >>> from CASCADE import Cascade
         >>> datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
         >>> cascade = Cascade(datadir)
         """

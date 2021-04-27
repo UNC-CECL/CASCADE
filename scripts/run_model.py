@@ -812,8 +812,8 @@ def PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
     ib3d = 0  # this is just B3D, so no alongshore grid cells
 
     if run_road_mgmt:
-        post_storm_dunes = cascade.post_storm_dunes
-        post_storm_interior = cascade.post_storm_interior
+        post_storm_dunes = cascade._post_storm_dunes
+        post_storm_interior = cascade._post_storm_interior
         design_height = cascade._artificial_max_dune_ele
         rebuild_threshold = cascade._artificial_min_dune_ele
     else:
@@ -830,6 +830,7 @@ def PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
         bh_rate,
         sc_rate,
         DuneCrestMin,
+        DuneCrestMax,
     ) = CASCADEplt.plot_nonlinear_stats(
         b3d,
         ib3d,
@@ -851,12 +852,12 @@ def PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
     #     ),
     # )
 
-    # also make the gif
-    directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
-    # CASCADEplt.plot_ElevAnimation(b3d, 1, directory, TMAX=tmax, name=plot_name)
-    CASCADEplt.plot_ElevAnimation_Humans(
-        cascade, 1, directory, TMAX=tmax, name=plot_name
-    )
+    # # also make the gif
+    # directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
+    # # CASCADEplt.plot_ElevAnimation(b3d, 1, directory, TMAX=tmax, name=plot_name)
+    # CASCADEplt.plot_ElevAnimation_Humans(
+    #     cascade, 1, directory, TMAX=tmax, name=plot_name
+    # )
 
     return (
         BarrierWidth,
@@ -866,6 +867,7 @@ def PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
         bh_rate,
         sc_rate,
         DuneCrestMin,
+        DuneCrestMax,
         cascade,
     )
 
@@ -1016,227 +1018,228 @@ def time_series():
 
 # record of human runs -------------------------------------------------------------------------------------
 def human_runs():
+    def pt45():
+        # used 3000 year storm time series for the _low and _high runs
+        cascade_pt45_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=550,
+            rmin=0.25,
+            rmax=0.65,  # rave = 0.45
+            name="6-B3D_Rave_pt45_550yrs_Natural_low",
+            road_ele=None,
+            road_width=None,
+            road_setback=None,
+            artificial_max_dune_ele=None,
+            artificial_min_dune_ele=None,
+            run_road_mgmt=False,
+        )
 
-    # used 3000 year storm time series for the _low and _high runs
-    cascade_pt45_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=550,
-        rmin=0.25,
-        rmax=0.65,  # rave = 0.45
-        name="6-B3D_Rave_pt45_550yrs_Natural_low",
-        road_ele=None,
-        road_width=None,
-        road_setback=None,
-        artificial_max_dune_ele=None,
-        artificial_min_dune_ele=None,
-        run_road_mgmt=False,
-    )
+        cascade_pt45_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=750,
+            rmin=0.25,
+            rmax=0.65,  # rave = 0.45
+            name="6-B3D_Rave_pt45_750yrs_Natural_high",
+            road_ele=None,
+            road_width=None,
+            road_setback=None,
+            artificial_max_dune_ele=None,
+            artificial_min_dune_ele=None,
+            run_road_mgmt=False,
+        )
 
-    cascade_pt45_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=750,
-        rmin=0.25,
-        rmax=0.65,  # rave = 0.45
-        name="6-B3D_Rave_pt45_750yrs_Natural_high",
-        road_ele=None,
-        road_width=None,
-        road_setback=None,
-        artificial_max_dune_ele=None,
-        artificial_min_dune_ele=None,
-        run_road_mgmt=False,
-    )
+        # note that this roadway is higher than the pt75 "low" scenario, and equal to the "high" scenario (just higher
+        # starting topoagraphy); drowned at 388 years
+        cascade_pt45_h1_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=387,
+            rmin=0.25,
+            rmax=0.65,  # rave = 0.45
+            name="6-B3D_Rave_pt45_387yrs_Roadways_2mDune_20mSetback_20mWidth_low",
+            road_ele=1.7,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
+            road_width=20,  # m
+            road_setback=20,  # m
+            artificial_max_dune_ele=3.7,  # m NAVD88, rebuild to 2 m dune above the roadway
+            artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
+            run_road_mgmt=True,
+        )
 
-    # note that this roadway is higher than the pt75 "low" scenario, and equal to the "high" scenario (just higher
-    # starting topoagraphy); drowned at 388 years
-    cascade_pt45_h1_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=387,
-        rmin=0.25,
-        rmax=0.65,  # rave = 0.45
-        name="6-B3D_Rave_pt45_387yrs_Roadways_2mDune_20mSetback_20mWidth_low",
-        road_ele=1.7,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
-        road_width=20,  # m
-        road_setback=20,  # m
-        artificial_max_dune_ele=3.7,  # m NAVD88, rebuild to 2 m dune above the roadway
-        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
-        run_road_mgmt=True,
-    )
+        # note that this roadway is higher than the pt75 "high" scenario (just higher starting topoagraphy); drowned at 515 years
+        cascade_pt45_h1_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=515,
+            rmin=0.25,
+            rmax=0.65,  # rave = 0.45
+            name="6-B3D_Rave_pt45_515yrs_Roadways_2mDune_20mSetback_20mWidth_high",
+            road_ele=1.7,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
+            road_width=20,  # m
+            road_setback=20,  # m
+            artificial_max_dune_ele=3.7,  # m NAVD88, rebuild to 2 m dune above the roadway
+            artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
+            run_road_mgmt=True,
+        )
 
-    # note that this roadway is higher than the pt75 "high" scenario (just higher starting topoagraphy); drowned at 515 years
-    cascade_pt45_h1_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=515,
-        rmin=0.25,
-        rmax=0.65,  # rave = 0.45
-        name="6-B3D_Rave_pt45_515yrs_Roadways_2mDune_20mSetback_20mWidth_high",
-        road_ele=1.7,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
-        road_width=20,  # m
-        road_setback=20,  # m
-        artificial_max_dune_ele=3.7,  # m NAVD88, rebuild to 2 m dune above the roadway
-        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
-        run_road_mgmt=True,
-    )
+        # drowned at 370 years
+        cascade_pt45_h2_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=369,
+            rmin=0.25,
+            rmax=0.65,  # rave = 0.45
+            name="6-B3D_Rave_pt45_369yrs_Roadways_3mDune_20mSetback_20mWidth_low",
+            road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
+            road_width=20,  # m
+            road_setback=20,  # m
+            artificial_max_dune_ele=4.7,  # m NAVD88, rebuild to 3 m dune above the roadway
+            artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
+            run_road_mgmt=True,
+        )
 
-    # drowned at 370 years
-    cascade_pt45_h2_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=369,
-        rmin=0.25,
-        rmax=0.65,  # rave = 0.45
-        name="6-B3D_Rave_pt45_369yrs_Roadways_3mDune_20mSetback_20mWidth_low",
-        road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
-        road_width=20,  # m
-        road_setback=20,  # m
-        artificial_max_dune_ele=4.7,  # m NAVD88, rebuild to 3 m dune above the roadway
-        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
-        run_road_mgmt=True,
-    )
+        cascade_pt45_h2_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=473,
+            rmin=0.25,
+            rmax=0.65,  # rave = 0.45
+            name="6-B3D_Rave_pt45_473yrs_Roadways_3mDune_20mSetback_20mWidth_high",
+            road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
+            road_width=20,  # m
+            road_setback=20,  # m
+            artificial_max_dune_ele=4.7,  # m NAVD88, rebuild to 3 m dune above the roadway
+            artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
+            run_road_mgmt=True,
+        )
 
-    cascade_pt45_h2_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=473,
-        rmin=0.25,
-        rmax=0.65,  # rave = 0.45
-        name="6-B3D_Rave_pt45_473yrs_Roadways_3mDune_20mSetback_20mWidth_high",
-        road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
-        road_width=20,  # m
-        road_setback=20,  # m
-        artificial_max_dune_ele=4.7,  # m NAVD88, rebuild to 3 m dune above the roadway
-        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
-        run_road_mgmt=True,
-    )
+        cascade_pt45_h3_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=503,
+            rmin=0.25,
+            rmax=0.65,  # rave = 0.45
+            name="6-B3D_Rave_pt45_503yrs_Roadways_1mDune_20mSetback_20mWidth_low",
+            road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
+            road_width=20,  # m
+            road_setback=20,  # m
+            artificial_max_dune_ele=2.7,  # m NAVD88, rebuild to 1 m dune above the roadway
+            artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
+            run_road_mgmt=True,
+        )
 
-    cascade_pt45_h3_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=503,
-        rmin=0.25,
-        rmax=0.65,  # rave = 0.45
-        name="6-B3D_Rave_pt45_503yrs_Roadways_1mDune_20mSetback_20mWidth_low",
-        road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
-        road_width=20,  # m
-        road_setback=20,  # m
-        artificial_max_dune_ele=2.7,  # m NAVD88, rebuild to 1 m dune above the roadway
-        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
-        run_road_mgmt=True,
-    )
+        cascade_pt45_h3_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=700,
+            rmin=0.25,
+            rmax=0.65,  # rave = 0.45
+            name="6-B3D_Rave_pt45_700yrs_Roadways_1mDune_20mSetback_20mWidth_high",
+            road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
+            road_width=20,  # m
+            road_setback=20,  # m
+            artificial_max_dune_ele=2.7,  # m NAVD88, rebuild to 1 m dune above the roadway
+            artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
+            run_road_mgmt=True,
+        )
 
-    cascade_pt45_h3_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=700,
-        rmin=0.25,
-        rmax=0.65,  # rave = 0.45
-        name="6-B3D_Rave_pt45_700yrs_Roadways_1mDune_20mSetback_20mWidth_high",
-        road_ele=1.7,  # 1.7 m NAVD88 for pt45, 1.5 m NAVD88 for pt75 (average of NC-12 is 1.3 m NAVD88), berm ele is 1.4 m NAV
-        road_width=20,  # m
-        road_setback=20,  # m
-        artificial_max_dune_ele=2.7,  # m NAVD88, rebuild to 1 m dune above the roadway
-        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
-        run_road_mgmt=True,
-    )
+    def pt75():
+        # REMEMBER TO SWITCH TOPOGRAHPHY FILES ------------------------
+        # used 3000 year storm time series for the _low and _high runs
+        cascade_pt75_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=200,
+            rmin=0.55,
+            rmax=0.95,  # rave = 0.75
+            name="6-B3D_Rave_pt75_200yrs_Natural_low",
+            road_ele=None,
+            road_width=None,
+            road_setback=None,
+            artificial_max_dune_ele=None,
+            artificial_min_dune_ele=None,
+            run_road_mgmt=False,
+        )
 
-    # REMEMBER TO SWITCH TOPOGRAHPHY FILES ------------------------
-    # used 3000 year storm time series for the _low and _high runs
-    cascade_pt75_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=200,
-        rmin=0.55,
-        rmax=0.95,  # rave = 0.75
-        name="6-B3D_Rave_pt75_200yrs_Natural_low",
-        road_ele=None,
-        road_width=None,
-        road_setback=None,
-        artificial_max_dune_ele=None,
-        artificial_min_dune_ele=None,
-        run_road_mgmt=False,
-    )
+        cascade_pt75_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=450,
+            rmin=0.55,
+            rmax=0.95,  # rave = 0.75
+            name="6-B3D_Rave_pt75_450yrs_Natural_high",
+            road_ele=None,
+            road_width=None,
+            road_setback=None,
+            artificial_max_dune_ele=None,
+            artificial_min_dune_ele=None,
+            run_road_mgmt=False,
+        )
 
-    cascade_pt75_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=450,
-        rmin=0.55,
-        rmax=0.95,  # rave = 0.75
-        name="6-B3D_Rave_pt75_450yrs_Natural_high",
-        road_ele=None,
-        road_width=None,
-        road_setback=None,
-        artificial_max_dune_ele=None,
-        artificial_min_dune_ele=None,
-        run_road_mgmt=False,
-    )
+        # lowered roadway and decreased setback to accommodate low-lying barrier, roadway drowned at 98 from back bay
+        cascade_pt75_h1_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=97,
+            rmin=0.55,
+            rmax=0.95,  # rave = 0.75
+            name="6-B3D_Rave_pt75_97yrs_Roadways_2mDune_20mSetback_20mWidth_low",
+            road_ele=1.4,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
+            road_width=20,  # m
+            road_setback=20,  # m
+            artificial_max_dune_ele=3.4,  # m NAVD88, rebuild to 2 m dune above the roadway
+            artificial_min_dune_ele=1.9,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
+            run_road_mgmt=True,
+        )
 
-    # lowered roadway and decreased setback to accommodate low-lying barrier, roadway drowned at 98 from back bay
-    cascade_pt75_h1_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=97,
-        rmin=0.55,
-        rmax=0.95,  # rave = 0.75
-        name="6-B3D_Rave_pt75_97yrs_Roadways_2mDune_20mSetback_20mWidth_low",
-        road_ele=1.4,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
-        road_width=20,  # m
-        road_setback=20,  # m
-        artificial_max_dune_ele=3.4,  # m NAVD88, rebuild to 2 m dune above the roadway
-        artificial_min_dune_ele=1.9,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
-        run_road_mgmt=True,
-    )
+        # able to set the highway slightly higher (0.3 m), kept setback the same; drowned at 428 years
+        cascade_pt75_h1_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=427,
+            rmin=0.55,
+            rmax=0.95,  # rave = 0.75
+            name="6-B3D_Rave_pt75_425yrs_Roadways_2mDune_20mSetback_20mWidth_high",
+            road_ele=1.7,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
+            road_width=20,  # m
+            road_setback=20,  # m
+            artificial_max_dune_ele=3.7,  # m NAVD88, rebuild to 2 m dune above the roadway
+            artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
+            run_road_mgmt=True,
+        )
 
-    # able to set the highway slightly higher (0.3 m), kept setback the same; drowned at 428 years
-    cascade_pt75_h1_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=427,
-        rmin=0.55,
-        rmax=0.95,  # rave = 0.75
-        name="6-B3D_Rave_pt75_425yrs_Roadways_2mDune_20mSetback_20mWidth_high",
-        road_ele=1.7,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
-        road_width=20,  # m
-        road_setback=20,  # m
-        artificial_max_dune_ele=3.7,  # m NAVD88, rebuild to 2 m dune above the roadway
-        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
-        run_road_mgmt=True,
-    )
+        # lowered roadway and decreased setback to accommodate low-lying barrier, drowned at 71 years
+        cascade_pt75_h2_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=70,
+            rmin=0.55,
+            rmax=0.95,  # rave = 0.75
+            name="6-B3D_Rave_pt75_70yrs_Roadways_3mDune_20mSetback_20mWidth_low",
+            road_ele=1.4,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
+            road_width=20,  # m
+            road_setback=20,  # m
+            artificial_max_dune_ele=4.4,  # m NAVD88, rebuild to 3 m dune above the roadway
+            artificial_min_dune_ele=1.9,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
+            run_road_mgmt=True,
+        )
 
-    # lowered roadway and decreased setback to accommodate low-lying barrier, drowned at 71 years
-    cascade_pt75_h2_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=70,
-        rmin=0.55,
-        rmax=0.95,  # rave = 0.75
-        name="6-B3D_Rave_pt75_70yrs_Roadways_3mDune_20mSetback_20mWidth_low",
-        road_ele=1.4,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
-        road_width=20,  # m
-        road_setback=20,  # m
-        artificial_max_dune_ele=4.4,  # m NAVD88, rebuild to 3 m dune above the roadway
-        artificial_min_dune_ele=1.9,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
-        run_road_mgmt=True,
-    )
+        # able to set the highway slightly higher (0.3 m), kept setback the same; drowned at 358 years
+        cascade_pt75_h2_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=357,
+            rmin=0.55,
+            rmax=0.95,  # rave = 0.75
+            name="6-B3D_Rave_pt75_357yrs_Roadways_3mDune_20mSetback_20mWidth_high",
+            road_ele=1.7,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
+            road_width=20,  # m
+            road_setback=20,  # m
+            artificial_max_dune_ele=4.7,  # m NAVD88, rebuild to 3 m dune above the roadway
+            artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
+            run_road_mgmt=True,
+        )
 
-    # able to set the highway slightly higher (0.3 m), kept setback the same; drowned at 358 years
-    cascade_pt75_h2_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=357,
-        rmin=0.55,
-        rmax=0.95,  # rave = 0.75
-        name="6-B3D_Rave_pt75_357yrs_Roadways_3mDune_20mSetback_20mWidth_high",
-        road_ele=1.7,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
-        road_width=20,  # m
-        road_setback=20,  # m
-        artificial_max_dune_ele=4.7,  # m NAVD88, rebuild to 3 m dune above the roadway
-        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
-        run_road_mgmt=True,
-    )
+        # lowered roadway and decreased setback to accommodate low-lying barrier, roadway drowned at 117 years
+        cascade_pt75_h3_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=116,
+            rmin=0.55,
+            rmax=0.95,  # rave = 0.75
+            name="6-B3D_Rave_pt75_116yrs_Roadways_1mDune_20mSetback_20mWidth_low",
+            road_ele=1.4,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
+            road_width=20,  # m
+            road_setback=20,  # m
+            artificial_max_dune_ele=2.4,  # m NAVD88, rebuild to 1 m dune above the roadway
+            artificial_min_dune_ele=1.9,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
+            run_road_mgmt=True,
+        )
 
-    # lowered roadway and decreased setback to accommodate low-lying barrier, roadway drowned at 117 years
-    cascade_pt75_h3_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=116,
-        rmin=0.55,
-        rmax=0.95,  # rave = 0.75
-        name="6-B3D_Rave_pt75_116yrs_Roadways_1mDune_20mSetback_20mWidth_low",
-        road_ele=1.4,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
-        road_width=20,  # m
-        road_setback=20,  # m
-        artificial_max_dune_ele=2.4,  # m NAVD88, rebuild to 1 m dune above the roadway
-        artificial_min_dune_ele=1.9,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
-        run_road_mgmt=True,
-    )
-
-    # able to set the highway slightly higher (0.3 m), kept setback the same; drowned at 439 years
-    cascade_pt75_h3_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
-        nt=438,
-        rmin=0.55,
-        rmax=0.95,  # rave = 0.75
-        name="6-B3D_Rave_pt75_438yrs_Roadways_1mDune_20mSetback_20mWidth_high",
-        road_ele=1.7,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
-        road_width=20,  # m
-        road_setback=20,  # m
-        artificial_max_dune_ele=2.7,  # m NAVD88, rebuild to 1 m dune above the roadway
-        artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
-        run_road_mgmt=True,
-    )
+        # able to set the highway slightly higher (0.3 m), kept setback the same; drowned at 439 years
+        cascade_pt75_h3_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            nt=438,
+            rmin=0.55,
+            rmax=0.95,  # rave = 0.75
+            name="6-B3D_Rave_pt75_438yrs_Roadways_1mDune_20mSetback_20mWidth_high",
+            road_ele=1.7,  # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAV (I don't want to set it lower than that)
+            road_width=20,  # m
+            road_setback=20,  # m
+            artificial_max_dune_ele=2.7,  # m NAVD88, rebuild to 1 m dune above the roadway
+            artificial_min_dune_ele=2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
+            run_road_mgmt=True,
+        )
 
     # OLD versions using the final output from 10,000 year run -------------------------------
     def old_10k_initial_elevation():
@@ -1385,62 +1388,66 @@ def human_runs():
 
 # record of human plots -------------------------------------------------------------------------------------
 def human_plots():
-    # save text files for phase plots and basic statistics
-    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
-        name_prefix="6-B3D_Rave_pt45_200yrs_Natural_v2",
-        tmin=0,
-        tmax=200,
-        plot_name="b3d_pt45_plots",
-    )
-    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
-        name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_2mDune_40mSetback_20mWidth_v2",
-        tmin=0,
-        tmax=159,  # 200
-        plot_name="b3d_pt45_h1_plots_v2",
-    )
-    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
-        name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_3mDune_40mSetback_20mWidth",
-        tmin=0,
-        tmax=200,
-        plot_name="b3d_pt45_h2_plots",
-    )
-    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
-        name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_1mDune_40mSetback_20mWidth_v2",
-        tmin=0,
-        tmax=100,  # 90
-        plot_name="b3d_pt45_h3_plots_v2",
-    )
-    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
-        name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_2mDune_40mSetback_30mWidth",
-        tmin=0,
-        tmax=200,
-        plot_name="b3d_pt45_h4_plots",
-    )
-    PLOT_5_Nonlinear_Dynamics_B3D_CNH(
-        name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_2mDune_30mSetback_20mWidth",
-        tmin=0,
-        tmax=182,
-        plot_name="b3d_pt45_h5_plots",
-    )
+
+    # rave = 0.45 runs, low
+    def old_10k_initial_elevation():
+        # save text files for phase plots and basic statistics
+        PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+            name_prefix="6-B3D_Rave_pt45_200yrs_Natural_v2",
+            tmin=0,
+            tmax=200,
+            plot_name="b3d_pt45_plots",
+        )
+        PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+            name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_2mDune_40mSetback_20mWidth_v2",
+            tmin=0,
+            tmax=159,  # 200
+            plot_name="b3d_pt45_h1_plots_v2",
+        )
+        PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+            name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_3mDune_40mSetback_20mWidth",
+            tmin=0,
+            tmax=200,
+            plot_name="b3d_pt45_h2_plots",
+        )
+        PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+            name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_1mDune_40mSetback_20mWidth_v2",
+            tmin=0,
+            tmax=100,  # 90
+            plot_name="b3d_pt45_h3_plots_v2",
+        )
+        PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+            name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_2mDune_40mSetback_30mWidth",
+            tmin=0,
+            tmax=200,
+            plot_name="b3d_pt45_h4_plots",
+        )
+        PLOT_5_Nonlinear_Dynamics_B3D_CNH(
+            name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_2mDune_30mSetback_20mWidth",
+            tmin=0,
+            tmax=182,
+            plot_name="b3d_pt45_h5_plots",
+        )
 
     # rave = 0.45 runs, low
     def pt45_low():
-        # (
-        #     BarrierWidth_nat,
-        #     DuneCrestMean_nat,
-        #     BarrierHeight_nat,
-        #     bw_rate_nat,
-        #     bh_rate_nat,
-        #     sc_rate_nat,
-        #     DuneCrestMin_nat,
-        #     cascade_nat,
-        # ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
-        #     name_prefix="6-B3D_Rave_pt75_200yrs_Natural_low",
-        #     tmin=0,
-        #     tmax=200,
-        #     plot_name="b3d_pt75_plots_low",
-        #     run_road_mgmt=False,
-        # )
+        (
+            BarrierWidth_nat,
+            DuneCrestMean_nat,
+            BarrierHeight_nat,
+            bw_rate_nat,
+            bh_rate_nat,
+            sc_rate_nat,
+            DuneCrestMin_nat,
+            DuneCrestMax_nat,
+            cascade_nat,
+        ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
+            name_prefix="6-B3D_Rave_pt45_550yrs_Natural_low",
+            tmin=0,
+            tmax=550,
+            plot_name="b3d_pt45_plots_low",
+            run_road_mgmt=False,
+        )
 
         (
             BarrierWidth_h1,
@@ -1450,96 +1457,106 @@ def human_plots():
             bh_rate_h1,
             sc_rate_h1,
             DuneCrestMin_h1,
+            DuneCrestMax_h1,
             cascade_h1,
         ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
-            name_prefix="6-B3D_Rave_pt45_97yrs_Roadways_2mDune_20mSetback_20mWidth_low",
+            name_prefix="6-B3D_Rave_pt45_387yrs_Roadways_2mDune_20mSetback_20mWidth_low",
             tmin=0,
-            tmax=10,
+            tmax=387,
             plot_name="b3d_pt45_h1_plots_low",
             run_road_mgmt=True,
         )
 
-        # (
-        #     BarrierWidth_h2,
-        #     DuneCrestMean_h2,
-        #     BarrierHeight_h2,
-        #     bw_rate_h2,
-        #     bh_rate_h2,
-        #     sc_rate_h2,
-        #     DuneCrestMin_h2,
-        #     cascade_h2,
-        # ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
-        #     name_prefix="6-B3D_Rave_pt75_70yrs_Roadways_3mDune_20mSetback_20mWidth_low",
-        #     tmin=0,
-        #     tmax=70,
-        #     plot_name="b3d_pt75_h2_plots_low",
-        #     run_road_mgmt=True,
-        # )
+        (
+            BarrierWidth_h2,
+            DuneCrestMean_h2,
+            BarrierHeight_h2,
+            bw_rate_h2,
+            bh_rate_h2,
+            sc_rate_h2,
+            DuneCrestMin_h2,
+            DuneCrestMax_h2,
+            cascade_h2,
+        ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
+            name_prefix="6-B3D_Rave_pt45_369yrs_Roadways_3mDune_20mSetback_20mWidth_low",
+            tmin=0,
+            tmax=369,
+            plot_name="b3d_pt45_h2_plots_low",
+            run_road_mgmt=True,
+        )
 
-        # (
-        #     BarrierWidth_h3,
-        #     DuneCrestMean_h3,
-        #     BarrierHeight_h3,
-        #     bw_rate_h3,
-        #     bh_rate_h3,
-        #     sc_rate_h3,
-        #     DuneCrestMin_h3,
-        #     cascade_h3,
-        # ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
-        #     name_prefix="6-B3D_Rave_pt75_116yrs_Roadways_1mDune_20mSetback_20mWidth_low",
-        #     tmin=0,
-        #     tmax=116,  # 87, 104
-        #     plot_name="b3d_pt75_h3_plots_low",
-        #     run_road_mgmt=True,
-        # )
-        #
-        # CASCADEplt.plot_nonlinear_stats_low_high(
-        #     cascade=[cascade_nat, cascade_h3, cascade_h1, cascade_h2],
-        #     DuneCrestMin=[
-        #         DuneCrestMin_nat,
-        #         DuneCrestMin_h3,
-        #         DuneCrestMin_h1,
-        #         DuneCrestMin_h2,
-        #     ],
-        #     BarrierHeight=[
-        #         BarrierHeight_nat,
-        #         BarrierHeight_h3,
-        #         BarrierHeight_h1,
-        #         BarrierHeight_h2,
-        #     ],
-        #     BarrierWidth=[
-        #         BarrierWidth_nat,
-        #         BarrierWidth_h3,
-        #         BarrierWidth_h1,
-        #         BarrierWidth_h2,
-        #     ],
-        #     DuneCrestMean=[
-        #         DuneCrestMean_nat,
-        #         DuneCrestMean_h3,
-        #         DuneCrestMean_h1,
-        #         DuneCrestMean_h2,
-        #     ],
-        #     TMAX=150,
-        # )
+        (
+            BarrierWidth_h3,
+            DuneCrestMean_h3,
+            BarrierHeight_h3,
+            bw_rate_h3,
+            bh_rate_h3,
+            sc_rate_h3,
+            DuneCrestMin_h3,
+            DuneCrestMax_h3,
+            cascade_h3,
+        ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
+            name_prefix="6-B3D_Rave_pt45_503yrs_Roadways_1mDune_20mSetback_20mWidth_low",
+            tmin=0,
+            tmax=503,
+            plot_name="b3d_pt45_h3_plots_low",
+            run_road_mgmt=True,
+        )
+
+        CASCADEplt.plot_nonlinear_stats_low_high(
+            cascade=[cascade_nat, cascade_h3, cascade_h1, cascade_h2],
+            DuneCrestMin=[
+                DuneCrestMin_nat,
+                DuneCrestMin_h3,
+                DuneCrestMin_h1,
+                DuneCrestMin_h2,
+            ],
+            DuneCrestMax=[
+                DuneCrestMax_nat,
+                DuneCrestMax_h3,
+                DuneCrestMax_h1,
+                DuneCrestMax_h2,
+            ],
+            BarrierHeight=[
+                BarrierHeight_nat,
+                BarrierHeight_h3,
+                BarrierHeight_h1,
+                BarrierHeight_h2,
+            ],
+            BarrierWidth=[
+                BarrierWidth_nat,
+                BarrierWidth_h3,
+                BarrierWidth_h1,
+                BarrierWidth_h2,
+            ],
+            DuneCrestMean=[
+                DuneCrestMean_nat,
+                DuneCrestMean_h3,
+                DuneCrestMean_h1,
+                DuneCrestMean_h2,
+            ],
+            TMAX=[515, 503, 387, 369],
+        )
 
     # rave = 0.45 runs, high
     def pt45_high():
-        # (
-        #     BarrierWidth_nat,
-        #     DuneCrestMean_nat,
-        #     BarrierHeight_nat,
-        #     bw_rate_nat,
-        #     bh_rate_nat,
-        #     sc_rate_nat,
-        #     DuneCrestMin_nat,
-        #     cascade_nat,
-        # ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
-        #     name_prefix="6-B3D_Rave_pt75_200yrs_Natural_low",
-        #     tmin=0,
-        #     tmax=200,
-        #     plot_name="b3d_pt75_plots_low",
-        #     run_road_mgmt=False,
-        # )
+        (
+            BarrierWidth_nat,
+            DuneCrestMean_nat,
+            BarrierHeight_nat,
+            bw_rate_nat,
+            bh_rate_nat,
+            sc_rate_nat,
+            DuneCrestMin_nat,
+            DuneCrestMax_nat,
+            cascade_nat,
+        ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
+            name_prefix="6-B3D_Rave_pt45_750yrs_Natural_high",
+            tmin=0,
+            tmax=750,
+            plot_name="b3d_pt45_plots_high",
+            run_road_mgmt=False,
+        )
 
         (
             BarrierWidth_h1,
@@ -1549,77 +1566,86 @@ def human_plots():
             bh_rate_h1,
             sc_rate_h1,
             DuneCrestMin_h1,
+            DuneCrestMax_h1,
             cascade_h1,
         ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
-            name_prefix="6-B3D_Rave_pt45_387yrs_Roadways_2mDune_20mSetback_20mWidth_high",
+            name_prefix="6-B3D_Rave_pt45_515yrs_Roadways_2mDune_20mSetback_20mWidth_high",
             tmin=0,
-            tmax=10,
+            tmax=515,
             plot_name="b3d_pt45_h1_plots_high",
             run_road_mgmt=True,
         )
 
-        # (
-        #     BarrierWidth_h2,
-        #     DuneCrestMean_h2,
-        #     BarrierHeight_h2,
-        #     bw_rate_h2,
-        #     bh_rate_h2,
-        #     sc_rate_h2,
-        #     DuneCrestMin_h2,
-        #     cascade_h2,
-        # ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
-        #     name_prefix="6-B3D_Rave_pt75_70yrs_Roadways_3mDune_20mSetback_20mWidth_low",
-        #     tmin=0,
-        #     tmax=70,
-        #     plot_name="b3d_pt75_h2_plots_low",
-        #     run_road_mgmt=True,
-        # )
+        (
+            BarrierWidth_h2,
+            DuneCrestMean_h2,
+            BarrierHeight_h2,
+            bw_rate_h2,
+            bh_rate_h2,
+            sc_rate_h2,
+            DuneCrestMin_h2,
+            DuneCrestMax_h2,
+            cascade_h2,
+        ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
+            name_prefix="6-B3D_Rave_pt45_473yrs_Roadways_3mDune_20mSetback_20mWidth_high",
+            tmin=0,
+            tmax=473,
+            plot_name="b3d_pt45_h2_plots_high",
+            run_road_mgmt=True,
+        )
 
-        # (
-        #     BarrierWidth_h3,
-        #     DuneCrestMean_h3,
-        #     BarrierHeight_h3,
-        #     bw_rate_h3,
-        #     bh_rate_h3,
-        #     sc_rate_h3,
-        #     DuneCrestMin_h3,
-        #     cascade_h3,
-        # ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
-        #     name_prefix="6-B3D_Rave_pt75_116yrs_Roadways_1mDune_20mSetback_20mWidth_low",
-        #     tmin=0,
-        #     tmax=116,  # 87, 104
-        #     plot_name="b3d_pt75_h3_plots_low",
-        #     run_road_mgmt=True,
-        # )
-        #
-        # CASCADEplt.plot_nonlinear_stats_low_high(
-        #     cascade=[cascade_nat, cascade_h3, cascade_h1, cascade_h2],
-        #     DuneCrestMin=[
-        #         DuneCrestMin_nat,
-        #         DuneCrestMin_h3,
-        #         DuneCrestMin_h1,
-        #         DuneCrestMin_h2,
-        #     ],
-        #     BarrierHeight=[
-        #         BarrierHeight_nat,
-        #         BarrierHeight_h3,
-        #         BarrierHeight_h1,
-        #         BarrierHeight_h2,
-        #     ],
-        #     BarrierWidth=[
-        #         BarrierWidth_nat,
-        #         BarrierWidth_h3,
-        #         BarrierWidth_h1,
-        #         BarrierWidth_h2,
-        #     ],
-        #     DuneCrestMean=[
-        #         DuneCrestMean_nat,
-        #         DuneCrestMean_h3,
-        #         DuneCrestMean_h1,
-        #         DuneCrestMean_h2,
-        #     ],
-        #     TMAX=150,
-        # )
+        (
+            BarrierWidth_h3,
+            DuneCrestMean_h3,
+            BarrierHeight_h3,
+            bw_rate_h3,
+            bh_rate_h3,
+            sc_rate_h3,
+            DuneCrestMin_h3,
+            DuneCrestMax_h3,
+            cascade_h3,
+        ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
+            name_prefix="6-B3D_Rave_pt45_700yrs_Roadways_1mDune_20mSetback_20mWidth_high",
+            tmin=0,
+            tmax=700,
+            plot_name="b3d_pt45_h3_plots_high",
+            run_road_mgmt=True,
+        )
+
+        CASCADEplt.plot_nonlinear_stats_low_high(
+            cascade=[cascade_nat, cascade_h3, cascade_h1, cascade_h2],
+            DuneCrestMin=[
+                DuneCrestMin_nat,
+                DuneCrestMin_h3,
+                DuneCrestMin_h1,
+                DuneCrestMin_h2,
+            ],
+            DuneCrestMax=[
+                DuneCrestMax_nat,
+                DuneCrestMax_h3,
+                DuneCrestMax_h1,
+                DuneCrestMax_h2,
+            ],
+            BarrierHeight=[
+                BarrierHeight_nat,
+                BarrierHeight_h3,
+                BarrierHeight_h1,
+                BarrierHeight_h2,
+            ],
+            BarrierWidth=[
+                BarrierWidth_nat,
+                BarrierWidth_h3,
+                BarrierWidth_h1,
+                BarrierWidth_h2,
+            ],
+            DuneCrestMean=[
+                DuneCrestMean_nat,
+                DuneCrestMean_h3,
+                DuneCrestMean_h1,
+                DuneCrestMean_h2,
+            ],
+            TMAX=[715, 700, 515, 473],
+        )
 
     # rave = 0.75 runs, low
     def pt75_low():

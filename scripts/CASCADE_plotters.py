@@ -18,6 +18,7 @@ import pandas as pd
 import os
 import imageio
 import math
+import plotly.graph_objects as go
 
 # import seaborn as sns
 from scipy import signal
@@ -250,7 +251,7 @@ def plot_ElevAnimation_Humans(
         # this is really the final dune from storms at t=1,2,3,4,5,... but before human modifications to the dune
         # (rebuild, move overwash); for the default dune inputs, we should be able to see natural dune growth at
         # t=0.5 before rebuild and storms (i.e., t=0.5 and t=1 should not be the same)
-        if t > 0 and cascade.post_storm_interior[t] is not None:
+        if t > 0 and cascade._post_storm_interior[t] is not None:
 
             AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -1
 
@@ -264,9 +265,9 @@ def plot_ElevAnimation_Humans(
                     BeachDomain[i, :] = barrier3d[iB3D]._SL + add * i
 
                 # Make animation frame domain
-                Domain = cascade.post_storm_interior[t][iB3D] * 10
+                Domain = cascade._post_storm_interior[t][iB3D] * 10
                 Dunes = (
-                    cascade.post_storm_dunes[t][iB3D] + barrier3d[iB3D]._BermEl
+                    cascade._post_storm_dunes[t][iB3D] + barrier3d[iB3D]._BermEl
                 ) * 10
                 Dunes = np.rot90(Dunes)
                 Dunes = np.flipud(Dunes)
@@ -366,7 +367,7 @@ def plot_ElevAnimation_Humans(
         filename = "elev_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
 
-        if filenum < TMAX - 2 and cascade.post_storm_interior[TMAX - 2] is not None:
+        if filenum < TMAX - 2 and cascade._post_storm_interior[TMAX - 2] is not None:
             filename = "elev_" + str(filenum) + "pt5" ".png"
             frames.append(imageio.imread(filename))
 
@@ -1308,7 +1309,9 @@ def plot_nonlinear_stats(
     #     (a + CASCADE_b3d[ib3d].BermEl) * 10 for a in CASCADE_b3d[ib3d]._Hd_AverageTS
     # ]  # relative to NAVD88
     DuneDomainCrest = (
-        CASCADE_b3d[ib3d]._DuneDomain[:, :, :].max(axis=2)
+        CASCADE_b3d[ib3d]
+        ._DuneDomain[tmin:tmax, :, :]
+        .max(axis=2)  # tmax allows for runs with early return (drown)
     )  # Maximum height of each row in DuneDomain
     # DuneDomainCrest = CASCADE_b3d[ib3d]._DuneDomain[
     #     :, :, 0
@@ -1345,18 +1348,23 @@ def plot_nonlinear_stats(
                 (np.min(DuneDomainCrest) + CASCADE_b3d[ib3d].BermEl) * 10
             )  # relative to NAVD88
 
-        time = np.arange(0, CASCADE_b3d[ib3d].time_index - 0.5, 0.5)
+        time = np.arange(0, tmax - 0.5, 0.5)
         combined_DuneCrestMin = [None] * (len(time))
         combined_DuneCrestMin[::2] = DuneCrestMin
         combined_DuneCrestMin[1::2] = post_DuneCrestMin[1:]  # post_DuneCrestMean[1:]
 
+        combined_DuneCrestMax = [None] * (len(time))
+        combined_DuneCrestMax[::2] = DuneCrestMax
+        combined_DuneCrestMax[1::2] = post_DuneCrestMax[1:]
+
     # barrier width
     BarrierWidth = (
-        np.array(CASCADE_b3d[ib3d].x_b_TS) - np.array(CASCADE_b3d[ib3d].x_s_TS)
+        np.array(CASCADE_b3d[ib3d].x_b_TS[tmin:tmax])
+        - np.array(CASCADE_b3d[ib3d].x_s_TS[tmin:tmax])
     ) * 10
 
     # change in barrier width
-    bwts = [(x - BarrierWidth[0]) for x in BarrierWidth]
+    bwts = [(x - BarrierWidth[0]) for x in BarrierWidth[tmin:tmax]]
     rate = [0]
     for k in range(1, len(bwts)):
         rate.append(bwts[k] - bwts[k - 1])
@@ -1366,7 +1374,7 @@ def plot_nonlinear_stats(
 
     # average interior height
     BarrierHeight = []
-    for t in range(len(CASCADE_b3d[ib3d]._DomainTS)):
+    for t in range(0, tmax):
         bh_array = np.array(CASCADE_b3d[ib3d]._DomainTS[t]) * 10
         BarrierHeight.append(bh_array[bh_array > 0].mean())
 
@@ -1374,12 +1382,12 @@ def plot_nonlinear_stats(
     # if post_storm_interior is not None:
     #     post_BarrierHeight = [None]
     #
-    #     for t in range(1, CASCADE_b3d[ib3d].time_index):
+    #     for t in range(1, tmax):
     #         bh_array = np.array(post_storm_interior[t][ib3d]) * 10
     #         post_BarrierHeight.append(bh_array[bh_array > 0].mean())
 
     # change in barrier height
-    bhts = [(x - BarrierHeight[0]) for x in BarrierHeight]
+    bhts = [(x - BarrierHeight[0]) for x in BarrierHeight[tmin:tmax]]
     rate = [0]
     for k in range(1, len(bhts)):
         rate.append(bhts[k] - bhts[k - 1])
@@ -1388,93 +1396,104 @@ def plot_nonlinear_stats(
     )
 
     # # shoreline change rate
-    scts = [(x - CASCADE_b3d[ib3d]._x_s_TS[0]) * 10 for x in CASCADE_b3d[ib3d]._x_s_TS]
+    scts = [
+        (x - CASCADE_b3d[ib3d]._x_s_TS[0]) * 10
+        for x in CASCADE_b3d[ib3d]._x_s_TS[tmin:tmax]
+    ]
     rate = [0]
     for k in range(1, len(scts)):
         rate.append(scts[k] - scts[k - 1])
     sc_rate = rate
 
-    # # overwash flux
-    # Qoverwash = CASCADE_b3d[ib3d].QowTS
-
-    plt.figure(figsize=(10, 5))
+    # overwash flux
+    Qoverwash = CASCADE_b3d[ib3d].QowTS[tmin:tmax]
 
     # individual time series
-    # plt.subplot(2, 5, 1)
+    plt.figure(figsize=(10, 5))
     plt.subplot(2, 3, 1)
 
     if post_storm_dunes is not None:
-        # time = np.arange(0.5, CASCADE_b3d[ib3d].time_index - 1, 1)
-        # plt.scatter(time, post_DuneCrestMean[1:])
-        time = np.arange(0, CASCADE_b3d[ib3d].time_index - 0.5, 0.5)
         plt.hlines(rebuild_threshold, time[0], time[-1], colors="red")
         plt.hlines(design_height, time[0], time[-1], colors="black")
         plt.hlines(CASCADE_b3d[ib3d]._Dmaxel * 10, time[0], time[-1], colors="green")
         plt.plot(time, combined_DuneCrestMin)
-        plt.legend(["Min dune ele", "rebuild", "design", "max-equil"])
+        plt.plot(time, combined_DuneCrestMax)
+        # pl.fill_between(x, y - error, y + error,
+        #                 alpha=0.5, edgecolor='#CC4F1B', facecolor='#FF9848')
+        plt.legend(["min", "max", "rebuild", "design", "max-equil"])
 
     else:
         plt.plot(DuneCrestMin)
-    # plt.plot(DuneCrestMean[tmin:tmax], "m")
-    # plt.ylabel("Ave dune elevation (m NAVD88)")
+        plt.plot(DuneCrestMax)
+        plt.legend(["min", "max"])
     plt.ylabel("dune elevation (m NAVD88)")
     plt.xlabel("Time (yr)")
 
-    # plt.subplot(2, 5, 2)
-    # # plt.subplot(5, 2, 3)
-    # plt.plot(sc_rate)
-    # # plt.plot(sc_rate[tmin:tmax], "m")
-    # plt.ylabel("Shoreline change rate (m/yr)")
-    # plt.xlabel("Time (yr)")
-
-    # plt.subplot(2, 5, 2)
     plt.subplot(2, 3, 2)
     plt.plot(BarrierHeight)
     plt.ylabel("Ave interior elevation (m NAVD88)")
     plt.xlabel("Time (yr)")
 
-    # plt.subplot(2, 5, 3)
-    # plt.subplot(5, 2, 5)
     plt.subplot(2, 3, 3)
     plt.plot(BarrierWidth)
-    # plt.plot(BarrierWidth[tmin:tmax], "m")
     plt.ylabel("Barrier width (m)")
     plt.xlabel("Time (yr)")
 
-    # plt.subplot(2, 5, 4)
-    # # plt.subplot(5, 2, 7)
+    # dune height vs barrier height
+    plt.subplot(2, 3, 4)
+    plt.scatter(
+        DuneCrestMean,
+        BarrierHeight,
+        c=np.arange(0, np.size(DuneCrestMean), 1),
+        cmap=cm.viridis,
+    )
+    plt.xlabel("Ave dune ele (m NAVD88)")
+    plt.ylabel("Ave interior ele (m NAVD88)")
+
+    # dune height vs barrier width
+    plt.subplot(2, 3, 5)
+    plt.scatter(
+        DuneCrestMean,
+        BarrierWidth,
+        c=np.arange(0, np.size(DuneCrestMean), 1),
+        cmap=cm.viridis,
+    )
+    plt.xlabel("Ave dune ele (m NAVD88)")
+    plt.ylabel("Barrier width (m)")
+
+    plt.tight_layout()
+
+    if post_storm_dunes is not None:
+        DuneCrestMin = combined_DuneCrestMin
+        DuneCrestMax = combined_DuneCrestMax
+
+    # plt.plot(sc_rate)
+    # plt.ylabel("Shoreline change rate (m/yr)")
+    # plt.xlabel("Time (yr)")
+
     # plt.plot(Qoverwash)
-    # # plt.plot(Qoverwash[tmin:tmax], "m")
     # plt.ylabel("Overwash flux ($m^3/m$)")
     # plt.xlabel("Time (yr)")
 
-    # plt.subplot(2, 5, 4)
-    # # plt.subplot(5, 2, 7)
     # plt.plot(bh_rate)
-    # # plt.plot(Qoverwash[tmin:tmax], "m")
     # plt.ylabel("Interior elevation change rate (m NAVD88/yr)")
     # plt.xlabel("Time (yr)")
-    #
-    # plt.subplot(2, 5, 5)
-    # # plt.subplot(5, 2, 9)
+
     # plt.plot(bw_rate)
     # plt.ylabel("Barrier width change rate (m/yr)")
     # plt.xlabel("Time (yr)")
 
-    # plt.subplot(2, 5, 5)
-    # plt.plot(np.array(CASCADE_b3d[ib3d]._x_s_TS) * 10)
-    # # plt.plot(np.array(CASCADE_b3d[ib3d]._x_s_TS[tmin:tmax]) * 10, "m")
+    # plt.plot(np.array(CASCADE_b3d[ib3d]._x_s_TS[tmin:tmax]) * 10, "m")
     # plt.ylabel("Shoreline position (m)")
     # plt.xlabel("Time (yr)")
 
-    # # dune height vs shoreline position
-    # plt.subplot(2, 5, 6)
-    # # plt.plot(DuneCrestMean, np.array(CASCADE_b3d[ib3d]._x_s_TS) * 10)
-    # # plt.plot(
-    # #     DuneCrestMean[tmin:tmax],
-    # #     np.array(CASCADE_b3d[ib3d]._x_s_TS[tmin:tmax]) * 10,
-    # #     "m",
-    # # )
+    # dune height vs shoreline position
+    # plt.plot(DuneCrestMean, np.array(CASCADE_b3d[ib3d]._x_s_TS) * 10)
+    # plt.plot(
+    #     DuneCrestMean[tmin:tmax],
+    #     np.array(CASCADE_b3d[ib3d]._x_s_TS[tmin:tmax]) * 10,
+    #     "m",
+    # )
     # plt.scatter(
     #     DuneCrestMean,
     #     np.array(CASCADE_b3d[ib3d]._x_s_TS) * 10,
@@ -1484,11 +1503,9 @@ def plot_nonlinear_stats(
     # plt.xlabel("Ave Dune Height (m)")
     # plt.ylabel("Shoreline position (m)")
 
-    # # dune height vs shoreline change rate
-    # plt.subplot(2, 5, 7)
-    # # plt.subplot(5, 2, 4)
-    # # plt.scatter(DuneCrestMean, sc_rate)
-    # # plt.plot(DuneCrestMean[tmin:tmax], sc_rate[tmin:tmax], "m")
+    # dune height vs shoreline change rate
+    # plt.scatter(DuneCrestMean, sc_rate)
+    # plt.plot(DuneCrestMean[tmin:tmax], sc_rate[tmin:tmax], "m")
     # plt.scatter(
     #     DuneCrestMean,
     #     sc_rate,
@@ -1498,11 +1515,9 @@ def plot_nonlinear_stats(
     # plt.xlabel("Ave Dune Height (m)")
     # plt.ylabel("Shoreline change rate (m/yr)")
 
-    # # dune height vs overwash flux
-    # plt.subplot(2, 5, 8)
-    # # plt.subplot(5, 2, 6)
-    # # plt.scatter(DuneCrestMean, Qoverwash)
-    # # plt.plot(DuneCrestMean[tmin:tmax], Qoverwash[tmin:tmax], "m")
+    # dune height vs overwash flux
+    # plt.scatter(DuneCrestMean, Qoverwash)
+    # plt.plot(DuneCrestMean[tmin:tmax], Qoverwash[tmin:tmax], "m")
     # plt.scatter(
     #     DuneCrestMean,
     #     Qoverwash,
@@ -1511,34 +1526,6 @@ def plot_nonlinear_stats(
     # )
     # plt.xlabel("Ave Dune Height (m)")
     # plt.ylabel("Qoverwash ($m^3/m$)")
-
-    # dune height vs barrier height
-    # plt.subplot(2, 5, 6)
-    plt.subplot(2, 3, 4)
-    plt.scatter(
-        DuneCrestMean,
-        BarrierHeight,
-        c=np.arange(0, np.size(DuneCrestMean), 1),
-        cmap=cm.viridis,
-    )
-    # plt.plot(DuneCrestMean[tmin:tmax], BarrierWidth[tmin:tmax], "m")
-    plt.xlabel("Ave dune ele (m NAVD88)")
-    plt.ylabel("Ave interior ele (m NAVD88)")
-
-    # dune height vs barrier width
-    # plt.subplot(2, 5, 7)
-    plt.subplot(2, 3, 5)
-    # plt.subplot(5, 2, 8)
-    # plt.plot(DuneCrestMean, BarrierWidth)
-    plt.scatter(
-        DuneCrestMean,
-        BarrierWidth,
-        c=np.arange(0, np.size(DuneCrestMean), 1),
-        cmap=cm.viridis,
-    )
-    # plt.plot(DuneCrestMean[tmin:tmax], BarrierWidth[tmin:tmax], "m")
-    plt.xlabel("Ave dune ele (m NAVD88)")
-    plt.ylabel("Barrier width (m)")
 
     # # dune height vs barrier width change rate
     # plt.subplot(2, 5, 6)
@@ -1551,8 +1538,6 @@ def plot_nonlinear_stats(
     # )
     # plt.xlabel("Ave Dune Height (m)")
     # plt.ylabel("Change in barrier width (m/yr)")
-
-    plt.tight_layout()
 
     # # now try my hand at a 3d plot
     # from mpl_toolkits import mplot3d
@@ -1620,9 +1605,6 @@ def plot_nonlinear_stats(
     # ax.set_ylabel("Overwash flux ($m^3/m$)")
     # ax.set_zlabel("Barrier width change rate (m/yr)")
 
-    if post_storm_dunes is not None:
-        DuneCrestMin = combined_DuneCrestMin
-
     return (
         BarrierWidth,
         DuneCrestMean,
@@ -1631,11 +1613,18 @@ def plot_nonlinear_stats(
         bh_rate,
         sc_rate,
         DuneCrestMin,
+        DuneCrestMax,
     )
 
 
 def plot_nonlinear_stats_low_high(
-    cascade, DuneCrestMin, BarrierHeight, BarrierWidth, DuneCrestMean, TMAX
+    cascade,
+    DuneCrestMin,
+    DuneCrestMax,
+    BarrierHeight,
+    BarrierWidth,
+    DuneCrestMean,
+    TMAX,
 ):
 
     # dunes
@@ -1643,7 +1632,9 @@ def plot_nonlinear_stats_low_high(
     for i in range(len(cascade)):
 
         if i > 0:
-            time = np.arange(0, cascade[i].barrier3d[0].time_index - 0.5, 0.5)
+            time = np.arange(0, TMAX[i] - 0.5, 0.5)
+            axs[i].plot(time, DuneCrestMin[i])
+            axs[i].plot(time, DuneCrestMax[i])
             axs[i].hlines(
                 cascade[i]._artificial_min_dune_ele, time[0], time[-1], colors="red"
             )
@@ -1653,14 +1644,15 @@ def plot_nonlinear_stats_low_high(
             axs[i].hlines(
                 cascade[i].barrier3d[0]._Dmaxel * 10, time[0], time[-1], colors="green"
             )
-            axs[i].plot(time, DuneCrestMin[i])
         else:
-            time = np.arange(0, cascade[i].barrier3d[0].time_index, 1)
-            axs[i].plot(time[0:TMAX], DuneCrestMin[i][0:TMAX])
+            # the natural scenario
+            time = np.arange(0, TMAX[i], 1)
+            axs[i].plot(time, DuneCrestMin[i][0 : TMAX[i]])
+            axs[i].plot(time, DuneCrestMax[i][0 : TMAX[i]])
         axs[i].set(xlabel="time (yr)")
 
     axs[0].set(ylabel="dune elevation (m NAVD88)")
-    axs[3].legend(["min", "rebuild", "design", "max-equil"])
+    axs[3].legend(["min", "max", "rebuild", "design", "max-equil"])
     plt.tight_layout()
 
     # interior height and width
@@ -1668,24 +1660,25 @@ def plot_nonlinear_stats_low_high(
     for i in range(len(cascade)):
 
         if i > 0:
-            time = np.arange(0, cascade[i].barrier3d[0].time_index, 1)
+            time = np.arange(0, TMAX[i], 1)
             axs2[0].plot(time, BarrierHeight[i])
             axs2[1].plot(time, BarrierWidth[i])
             scts = [
                 (x - cascade[i].barrier3d[0]._x_s_TS[0]) * 10
-                for x in cascade[i].barrier3d[0]._x_s_TS
+                for x in cascade[i].barrier3d[0]._x_s_TS[0 : TMAX[i]]
             ]
             axs2[2].plot(time, scts)
 
         else:
-            time = np.arange(0, cascade[i].barrier3d[0].time_index, 1)
-            axs2[0].plot(time[0:TMAX], BarrierHeight[i][0:TMAX])
-            axs2[1].plot(time[0:TMAX], BarrierWidth[i][0:TMAX])
+            # the natural scenario
+            time = np.arange(0, TMAX[i], 1)
+            axs2[0].plot(time, BarrierHeight[i][0 : TMAX[i]])
+            axs2[1].plot(time, BarrierWidth[i][0 : TMAX[i]])
             scts = [
                 (x - cascade[i].barrier3d[0]._x_s_TS[0]) * 10
-                for x in cascade[i].barrier3d[0]._x_s_TS
+                for x in cascade[i].barrier3d[0]._x_s_TS[0 : TMAX[i]]
             ]
-            axs2[2].plot(time[0:TMAX], scts[0:TMAX])
+            axs2[2].plot(time, scts)
 
         axs2[i].set(xlabel="time (yr)")
 
@@ -1716,15 +1709,15 @@ def plot_nonlinear_stats_low_high(
 
         else:
             axs3[0].scatter(
-                DuneCrestMean[i][0:TMAX],
-                BarrierHeight[i][0:TMAX],
-                c=np.arange(0, np.size(DuneCrestMean[i][0:TMAX]), 1),
+                DuneCrestMean[i][0 : TMAX[i]],
+                BarrierHeight[i][0 : TMAX[i]],
+                c=np.arange(0, np.size(DuneCrestMean[i][0 : TMAX[i]]), 1),
                 cmap=cmap[i],
             )
             axs3[1].scatter(
-                DuneCrestMean[i][0:TMAX],
-                BarrierWidth[i][0:TMAX],
-                c=np.arange(0, np.size(DuneCrestMean[i][0:TMAX]), 1),
+                DuneCrestMean[i][0 : TMAX[i]],
+                BarrierWidth[i][0 : TMAX[i]],
+                c=np.arange(0, np.size(DuneCrestMean[i][0 : TMAX[i]]), 1),
                 cmap=cmap[i],
             )
         axs3[i].set(xlabel="mean dune ele (m NAVD88)")
@@ -1732,6 +1725,19 @@ def plot_nonlinear_stats_low_high(
     axs3[1].set(ylabel="barrier width (m)")
     # axs3[1].legend(["natural", "1-m dune", "2-m dune", "3-m dune"])
     plt.tight_layout()
+
+
+def summary_table_stats_low_high(cascade):
+
+    fig = go.Figure(
+        data=[
+            go.Table(
+                header=dict(values=["A Scores", "B Scores"]),
+                cells=dict(values=[[100, 90, 80, 90], [95, 85, 75, 95]]),
+            )
+        ]
+    )
+    fig.show()
 
 
 def nonlinear_animated(CASCADE_b3d, ib3d, tmin, tmax, name):

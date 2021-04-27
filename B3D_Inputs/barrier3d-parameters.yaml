@@ -20,7 +20,7 @@ GrowthParamStart: false
 HdDiffu: 0.75
 Ki: 7.5e-06
 Kr: 7.5e-05
-LShoreface: 524.4074359851888
+LShoreface: 524.3969226015213
 MHW: 0.46
 MaxShrubHeight: 3.5
 MaxUpSlope: 0.25
@@ -44,7 +44,7 @@ Shrub_ON: false
 SprayDist: 170
 StormSeries: []
 StormStart: 2
-TMAX: 500
+TMAX: 99
 TideAmp: 1.2
 TimeFruit: 5.0
 UprootLimit: -0.3
@@ -54,7 +54,7 @@ disp_sigma: 1.5
 k_sf: 19324.753176079226
 mm: 2.0
 nn: 0.5
-rmax: 0.85
-rmin: 0.35
+rmax: 0.95
+rmin: 0.55
 s_sf_eq: 0.01698590034494604
 threshold_in: 0.25

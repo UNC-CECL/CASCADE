@@ -17,15 +17,15 @@ Notes
 
 
 class AlongshoreCoupler:
-    #
-    # """Couple brie and barrier3d for AST
-    #
-    # Examples
-    # --------
-    # >>> from cascade.alongshore_coupler import AlongshoreCoupler
-    # >>> ast_coupler = AlongshoreCoupler()
-    # >>> ast_coupler.update(brie, barrier3d)
-    # """
+
+    """Couple brie and barrier3d for AST
+
+    Examples
+    --------
+    >>> from alongshore_coupler import AlongshoreCoupler
+    >>> ast_coupler = AlongshoreCoupler()
+    >>> ast_coupler.update(brie, barrier3d)
+    """
 
     def __init__(self, ny=3):
         """The AlongshoreCoupler module.
