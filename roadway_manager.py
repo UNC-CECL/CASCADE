@@ -282,8 +282,6 @@ class RoadwayManager:
 
         """
 
-        self._dunes_rebuilt = None
-        self._road_overwash_removal = None
         self._road_width = road_width
         self._road_setback = road_setback
         self._road_ele = road_elevation
@@ -301,7 +299,7 @@ class RoadwayManager:
             self._nt
         )  # roadway setback from the shoreline (when it is rebuilt)
         self._road_setback_TS[0] = road_setback
-        self._dunes_rebuilt = np.zeros(self._nt)  # when dunes are rebuilt (boolean)
+        self._dunes_rebuilt_TS = np.zeros(self._nt)  # when dunes are rebuilt (boolean)
         self._road_overwash_volume = np.zeros(
             self._nt
         )  # total overwash removed from roadway [m^3]
@@ -319,6 +317,7 @@ class RoadwayManager:
     def update(self, barrier3d):
 
         self._time_index = barrier3d.time_index
+
         if self._original_growth_param is None:
             self._original_growth_param = barrier3d.growthparam
 
@@ -335,9 +334,6 @@ class RoadwayManager:
             barrier3d.dune_migration
         ):  # (NOTE: I may have been able to just use the B3D variable shoreline_change here!)
             self._road_setback = self._road_setback - 10
-            self._road_setback_TS[self._time_index - 1] = copy.deepcopy(
-                self._road_setback
-            )
 
             # with this shoreline change and dune migration, check if the roadway needs to be relocated
             if self._road_setback < 0:
@@ -368,8 +364,6 @@ class RoadwayManager:
                 )
             )
             return  # exit program
-
-        # manage that roadway!
         else:
             # bulldoze that road and put bulldozed sand back on the dunes
             (
@@ -405,7 +399,7 @@ class RoadwayManager:
                 road_overwash_removal * dm3_to_m3
             )  # convert from dm^3 to m^3
 
-            # dune management: rebuild artifical dunes!
+            # dune management: rebuild artificial dunes!
             if (
                 self._artificial_max_dune_ele is None
                 or self._artificial_min_dune_ele is None
@@ -434,7 +428,7 @@ class RoadwayManager:
                         dz=10,  # specifies dune domain is in decameters
                         rng=True,  # adds stochasticity to dune height (seeded)
                     )
-                    self._dunes_rebuilt[
+                    self._dunes_rebuilt_TS[
                         self._time_index - 1
                     ] = 1  # track when dunes are rebuilt
 
@@ -450,6 +444,9 @@ class RoadwayManager:
             self._growth_params[self._time_index - 1] = copy.deepcopy(
                 new_growth_parameters
             )
+            self._road_setback_TS[self._time_index - 1] = copy.deepcopy(
+                self._road_setback
+            )
 
             # update class variables
             barrier3d.DuneDomain[self._time_index - 1, :, :] = new_dune_domain
@@ -457,7 +454,7 @@ class RoadwayManager:
             barrier3d.DomainTS[self._time_index - 1] = new_xyz_interior_domain
             barrier3d.growthparam = new_growth_parameters
 
-        # return barrier3d  # I don't think this is needed
+        return
 
     @property
     def road_ele(self):

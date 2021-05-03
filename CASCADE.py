@@ -41,13 +41,17 @@ class Cascade:
         self,
         datadir,
         name="default",
+        storm_file="barrier3d-default-storms.npy",
+        elevation_file="barrier3d-default-elevation.npy",
+        dune_file="barrier3d-default-dunes.npy",
+        parameter_file="barrier3d-parameters.yaml",
         wave_height=1,
         wave_period=7,
         wave_asymmetry=0.8,
         wave_angle_high_fraction=0.2,
         sea_level_rise_rate=0.004,
         alongshore_section_count=6,
-        time_step_count=500,
+        time_step_count=200,
         min_dune_growth_rate=0.35,
         max_dune_growth_rate=0.85,
         num_cores=1,
@@ -121,6 +125,10 @@ class Cascade:
         self._roadway_management_module = roadway_management_module
         self._alongshore_transport_module = alongshore_transport_module
         self._filename = name
+        self._storm_file = storm_file
+        self._elevation_file = elevation_file
+        self._dune_file = dune_file
+        self._parameter_file = parameter_file
 
         ###############################################################################
         # initial conditions for BRIE
@@ -187,7 +195,7 @@ class Cascade:
 
         for iB3D in range(self._ny):
 
-            fid = datadir + "barrier3d-parameters.yaml"
+            fid = datadir + self._parameter_file
 
             # update yaml file (these are the only variables that I'm like to change from default)
             self.set_yaml(
@@ -248,6 +256,11 @@ class Cascade:
                 self.set_yaml(
                     "rmax", self._rmax, fid
                 )  # Maximum growth rate for logistic dune growth
+
+            # external file names used for initialization
+            self.set_yaml("storm_file", self._storm_file, fid)
+            self.set_yaml("dune_file", self._dune_file, fid)
+            self.set_yaml("elevation_file", self._elevation_file, fid)
 
             barrier3d.append(Barrier3d.from_yaml(datadir))
 
