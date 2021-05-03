@@ -376,6 +376,170 @@ def plot_ElevAnimation_Humans(
     print("[ * GIF successfully generated * ]")
 
 
+# added a 0.5 time step for post-storm impacts before human modifications
+def plot_ElevAnimation_Humans_Roadways(
+    cascade,
+    ny,
+    directory,
+    TMAX,
+    name,
+):
+
+    barrier3d = cascade.barrier3d
+
+    BarrierLength = barrier3d[0]._BarrierLength
+
+    BeachWidth = 6
+    OriginY = int(barrier3d[0]._x_s_TS[0] - barrier3d[0]._x_t_TS[0])
+    AniDomainWidth = int(
+        np.amax(barrier3d[0]._InteriorWidth_AvgTS)
+        + BeachWidth
+        + np.abs(barrier3d[0]._ShorelineChange)
+        + OriginY
+        + 35
+    )
+
+    os.chdir(directory)
+    newpath = "Output/" + name + "/SimFrames/"
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+    os.chdir(newpath)
+
+    for t in range(TMAX - 1):
+
+        # start with plotting t=0, then plot post-storm dune and interior before rebuild, treating this as t=0.5 (i.e.,
+        # this is really the final dune from storms at t=1,2,3,4,5,... but before human modifications to the dune
+        # (rebuild, move overwash); for the default dune inputs, we should be able to see natural dune growth at
+        # t=0.5 before rebuild and storms (i.e., t=0.5 and t=1 should not be the same)
+        if t > 0 and cascade.roadways[0]._post_storm_interior[t] is not None:
+
+            AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -1
+
+            for iB3D in range(ny):
+                # Build beach elevation domain
+                BeachDomain = np.zeros([BeachWidth, BarrierLength])
+                berm = math.ceil(BeachWidth * 0.65)
+                BeachDomain[berm : BeachWidth + 1, :] = barrier3d[iB3D]._BermEl
+                add = (barrier3d[iB3D]._BermEl - barrier3d[iB3D]._SL) / berm
+                for i in range(berm):
+                    BeachDomain[i, :] = barrier3d[iB3D]._SL + add * i
+
+                # Make animation frame domain
+                Domain = cascade.roadways[iB3D]._post_storm_interior[t] * 10
+                Dunes = (
+                    cascade.roadways[iB3D]._post_storm_dunes[t]
+                    + barrier3d[iB3D]._BermEl
+                ) * 10
+                Dunes = np.rot90(Dunes)
+                Dunes = np.flipud(Dunes)
+                Beach = BeachDomain * 10
+                Domain = np.vstack([Beach, Dunes, Domain])
+                Domain[Domain < 0] = -1
+                widthTS = len(Domain)
+                scts = [
+                    (x - barrier3d[iB3D]._x_s_TS[0]) for x in barrier3d[iB3D]._x_s_TS
+                ]
+                if scts[t] >= 0:
+                    OriginTstart = OriginY + math.floor(scts[t])
+                else:
+                    OriginTstart = OriginY + math.ceil(scts[t])
+                OriginTstop = OriginTstart + widthTS
+                xOrigin = iB3D * BarrierLength
+                AnimateDomain[
+                    OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
+                ] = Domain
+
+            # Plot and save
+            elevFig1 = plt.figure(figsize=(15, 7))
+            ax = elevFig1.add_subplot(111)
+            cax = ax.matshow(
+                AnimateDomain, origin="lower", cmap="terrain", vmin=-1.1, vmax=5.0
+            )  # , interpolation='gaussian') # analysis:ignore
+            ax.xaxis.set_ticks_position("bottom")
+            elevFig1.colorbar(cax)
+            plt.xlabel("Alongshore Distance (dam)")
+            plt.ylabel("Cross-Shore Distance (dam)")
+            plt.title("Interior Elevation")
+            plt.tight_layout()
+            timestr = (
+                "Time = " + str(t - 0.5) + " yrs"
+            )  # we are letting the post-storm output represent 0.5 years
+            plt.text(1, 1, timestr)
+            plt.rcParams.update({"font.size": 20})
+            name = "elev_" + str(t - 1) + "pt5"
+            elevFig1.savefig(name)  # dpi=200
+            plt.close(elevFig1)
+
+        AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -1
+
+        for iB3D in range(ny):
+            # Build beach elevation domain
+            BeachDomain = np.zeros([BeachWidth, BarrierLength])
+            berm = math.ceil(BeachWidth * 0.65)
+            BeachDomain[berm : BeachWidth + 1, :] = barrier3d[iB3D]._BermEl
+            add = (barrier3d[iB3D]._BermEl - barrier3d[iB3D]._SL) / berm
+            for i in range(berm):
+                BeachDomain[i, :] = barrier3d[iB3D]._SL + add * i
+
+            # Make animation frame domain
+            Domain = barrier3d[iB3D]._DomainTS[t] * 10
+            Dunes = (
+                barrier3d[iB3D]._DuneDomain[t, :, :] + barrier3d[iB3D]._BermEl
+            ) * 10
+            Dunes = np.rot90(Dunes)
+            Dunes = np.flipud(Dunes)
+            Beach = BeachDomain * 10
+            Domain = np.vstack([Beach, Dunes, Domain])
+            Domain[Domain < 0] = -1
+            widthTS = len(Domain)
+            scts = [(x - barrier3d[iB3D]._x_s_TS[0]) for x in barrier3d[iB3D]._x_s_TS]
+            if scts[t] >= 0:
+                OriginTstart = OriginY + math.floor(scts[t])
+            else:
+                OriginTstart = OriginY + math.ceil(scts[t])
+            OriginTstop = OriginTstart + widthTS
+            xOrigin = iB3D * BarrierLength
+            AnimateDomain[
+                OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
+            ] = Domain
+
+        # Plot and save
+        elevFig1 = plt.figure(figsize=(15, 7))
+        ax = elevFig1.add_subplot(111)
+        cax = ax.matshow(
+            AnimateDomain, origin="lower", cmap="terrain", vmin=-1.1, vmax=5.0
+        )  # , interpolation='gaussian') # analysis:ignore
+        ax.xaxis.set_ticks_position("bottom")
+        elevFig1.colorbar(cax)
+        plt.xlabel("Alongshore Distance (dam)")
+        plt.ylabel("Cross-Shore Distance (dam)")
+        plt.title("Interior Elevation")
+        plt.tight_layout()
+        timestr = "Time = " + str(t) + " yrs"
+        plt.text(1, 1, timestr)
+        plt.rcParams.update({"font.size": 20})
+        name = "elev_" + str(t)
+        elevFig1.savefig(name)  # dpi=200
+        plt.close(elevFig1)
+
+    frames = []
+
+    for filenum in range(TMAX - 1):
+        filename = "elev_" + str(filenum) + ".png"
+        frames.append(imageio.imread(filename))
+
+        if (
+            filenum < TMAX - 2
+            and cascade.roadways[iB3D]._post_storm_interior[TMAX - 2] is not None
+        ):
+            filename = "elev_" + str(filenum) + "pt5" ".png"
+            frames.append(imageio.imread(filename))
+
+    imageio.mimsave("elev.gif", frames, "GIF-FI")
+    print()
+    print("[ * GIF successfully generated * ]")
+
+
 # ===================================================
 # 2: Shoreline positions over time (#6 in Barrier3D_Functions)
 #
