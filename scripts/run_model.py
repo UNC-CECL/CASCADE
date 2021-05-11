@@ -16,8 +16,10 @@ from scripts import CASCADE_plotters as CASCADEplt
 
 from CASCADE import Cascade  # the new class
 
-from Tools.Barrier3D_MakeTimeSeries import (
-    storms_per_year_from_MSSM_output,
+from barrier3d.utilities.Barrier3D_MakeTimeSeries import (
+    yearly_storms_from_MSSM,
+    frequency_storms_from_MSSM,
+    shift_storm_intensity,
     gen_dune_height_start,
     gen_alongshore_variable_rmin_rmax,
 )
@@ -253,9 +255,9 @@ def RUN_4_B3D_Rave_SLR_pt004(rmin, rmax, name):
     asym_frac = 0.8  # fraction approaching from left
     high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
     slr = 0.004  # m/yr
-    ny = 12  # number of alongshore sections (12 = 6 km)
-    nt = 1000  # timesteps for 1000 morphologic years
-    # rave = [0.45]  # to help me remember the average
+    ny = 2  # number of alongshore sections (NOTE: this is just a dummy variable for this run)
+    nt = 10000  # timesteps for 1000 morphologic years
+    # rave = [0.45, 0.55., 0.65, 0.75]  # to help me remember the average
 
     # --------- INITIALIZE ---------
     # datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/"
@@ -313,6 +315,73 @@ def RUN_4_B3D_Rave_SLR_pt004(rmin, rmax, name):
     CASCADEplt.plot_ShorelinePositions(b3d._x_s_TS[0:TMAX], b3d._x_b_TS[0:TMAX])
 
     return Periodicity, AvgFastDur, AvgSlowDur, Punc
+
+
+def RUN_4_CASCADE_noAST_Rave_SLR_pt004(
+    nt,
+    rmin,
+    rmax,
+    name,
+    storm_file,
+    elevation_file,
+    dune_file,
+):
+
+    # ###############################################################################
+    # 4 - check B3D dune growth parameters
+    # ###############################################################################
+    # GOAL: check which growth rate parameters in B3D undergo punctuated retreat (increased SLR to 0.004)
+    # later GOAL: look at the range of barrier behavioer for different growth rates -- 10k runs
+
+    # --------- INITIALIZE ---------
+    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
+    cascade = Cascade(
+        datadir,
+        name,
+        storm_file=storm_file,
+        elevation_file=elevation_file,
+        dune_file=dune_file,
+        wave_height=1.0,
+        wave_period=7,  # s (lowered from 10 s to reduce k_sf)
+        wave_asymmetry=0.8,  # fraction approaching from left
+        wave_angle_high_fraction=0.2,  # fraction of waves approaching from higher than 45 degrees
+        sea_level_rise_rate=0.004,  # m/yr
+        alongshore_section_count=1,  # only one B3D domain
+        time_step_count=nt,
+        min_dune_growth_rate=rmin,  # rave = [0.45, 0.55., 0.65, 0.75]  # to help me remember the average
+        max_dune_growth_rate=rmax,
+        num_cores=1,
+        roadway_management_module=False,  # no roadway management
+        alongshore_transport_module=False,  # no brie coupling
+    )
+
+    # --------- LOOP ---------
+    Time = time.time()
+
+    for time_step in range(nt - 1):
+        # Print time step to screen (NOTE: time_index in each model is time_step+1)
+        print("\r", "Time Step: ", time_step, end="")
+        cascade.update()
+        if cascade.road_break:
+            break
+
+    # --------- SAVE ---------
+    save_directory = "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
+    cascade.save(save_directory)  # for now, this is a list
+
+    # # ===================================================
+    # # 7: Calculate shoreline change periodicity
+    # Periodicity, AvgFastDur, AvgSlowDur, Punc = CASCADEplt.calc_ShorelinePeriodicity(
+    #     b3d._x_s_TS
+    # )
+    # print("Barrier Punc = " + str(Punc) + " , Periodicity = " + str(Periodicity))
+    #
+    # # 2: Shoreline positions over time
+    # TMAX = b3d.time_index - 1
+    # CASCADEplt.plot_ShorelinePositions(b3d._x_s_TS[0:TMAX], b3d._x_b_TS[0:TMAX])
+    #
+    # return Periodicity, AvgFastDur, AvgSlowDur, Punc
+    return cascade
 
 
 def RUN_5_AlongshoreVarGrowthParam_half():
@@ -469,7 +538,7 @@ def RUN_6_B3D_Rave_SLR_pt004_Humans(
             break
 
     # --------- SAVE ---------
-    save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output"
+    save_directory = "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
     cascade.save(save_directory)  # for now, this is a list
 
     return cascade
@@ -806,7 +875,9 @@ def PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
     name_prefix, tmin, tmax, plot_name, run_road_mgmt
 ):
 
-    os.chdir("/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output")
+    os.chdir(
+        "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
+    )
 
     # --------- plot ---------
     output = np.load(name_prefix + ".npz", allow_pickle=True)
@@ -918,6 +989,9 @@ def early_runs():
         rmin=0.25, rmax=0.65, name="4-B3D_Rave_pt45_SLR_pt004"
     )  # rave = 0.45
     Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
+        rmin=0.25, rmax=0.65, name="4-B3D_Rave_pt45_SLR_pt004_v2"
+    )  # rave = 0.45, used initial topography from pt45 year 6741 (10k run) and 3000 year storm
+    Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
         rmin=0.35, rmax=0.75, name="4-B3D_Rave_pt55_SLR_pt004"
     )  # rave = 0.55
     Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
@@ -927,8 +1001,111 @@ def early_runs():
         rmin=0.55, rmax=0.95, name="4-B3D_Rave_pt75_SLR_pt004"
     )  # rave = 0.75
     Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
+        rmin=0.55, rmax=0.95, name="4-B3D_Rave_pt75_SLR_pt004_v2"
+    )  # rave = 0.75, used initial topography from pt45 year 6741 (10k run) and 3000 year storm
+    Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
         rmin=0.55, rmax=0.95, name="4-B3D_Rave_pt75_SLR_pt004_10k-yrs"
     )  # rave = 0.75
+    Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
+        rmin=0.55, rmax=0.95, name="4-B3D_Rave_pt75_SLR_pt004_10k-yrs"
+    )  # rave = 0.75
+    Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
+        rmin=0.45, rmax=0.85, name="4-B3D_Rave_pt65_SLR_pt004_10k-yrs"
+    )  # rave = 0.65
+    Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
+        rmin=0.35, rmax=0.75, name="4-B3D_Rave_pt55_SLR_pt004_10k-yrs"
+    )  # rave = 0.55
+    Periodicity, AvgFastDur, AvgSlowDur, Punc = RUN_4_B3D_Rave_SLR_pt004(
+        rmin=0.25, rmax=0.65, name="4-B3D_Rave_pt45_SLR_pt004_10k-yrs"
+    )  # rave = 0.45
+
+    # original RUN5, 6 km
+    rmin = [
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.55,
+        0.55,
+        0.55,
+        0.55,
+        0.55,
+        0.55,
+    ]  # minimum growth rate for logistic dune growth (list for alongshore variability)
+    rmax = [
+        0.65,
+        0.65,
+        0.65,
+        0.65,
+        0.65,
+        0.65,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+    ]  # maximum growth rate for logistic dune growth (list for alongshore variability)
+    # rave = [0.45, 0.45, 0.45, 0.75, 0.75, 0.75]  # to help me remember the average
+    RUN_5_AlongshoreVarGrowthParam_half(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs", ny=12, rmin=rmin, rmax=rmax
+    )
+
+    # 1 km
+    rmin = [0.25, 0.55]
+    rmax = [0.65, 0.95]
+    # rave = [0.45, 0.75]  # to help me remember the average
+    RUN_5_AlongshoreVarGrowthParam_half(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs_1km", ny=2, rmin=rmin, rmax=rmax
+    )
+    RUN_5_AlongshoreVarGrowthParam_half(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs_1km_v2", ny=2, rmin=rmin, rmax=rmax
+    )  # used initial topography from pt45 year 6741 (10k run) and 3000 year storm
+
+    # 3 km
+    rmin = [0.25, 0.25, 0.25, 0.55, 0.55, 0.55]
+    rmax = [0.65, 0.65, 0.65, 0.95, 0.95, 0.95]
+    # rave = [0.45, 0.45, 0.45, 0.75, 0.75, 0.75]  # to help me remember the average
+    RUN_5_AlongshoreVarGrowthParam_half(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs_3km", ny=6, rmin=rmin, rmax=rmax
+    )
+    RUN_5_AlongshoreVarGrowthParam_half(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs_3km_v2", ny=6, rmin=rmin, rmax=rmax
+    )  # used initial topography from pt45 year 6741 (10k run) and 3000 year storm
+
+    # 12 km
+    ny = 24
+    rmin = [0.25] * int(ny / 2) + [0.55] * int(ny / 2)
+    rmax = [0.65] * int(ny / 2) + [0.95] * int(ny / 2)
+    # rave = [0.45, 0.45, 0.45, 0.75, 0.75, 0.75]  # to help me remember the average
+    RUN_5_AlongshoreVarGrowthParam_half(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs_12km", ny=ny, rmin=rmin, rmax=rmax
+    )
+
+
+def cascade_10kyr():
+
+    cascade_10kyr_pt45 = RUN_4_CASCADE_noAST_Rave_SLR_pt004(
+        nt=10000,
+        rmin=0.25,  # rave = 0.45
+        rmax=0.65,
+        name="4-CASCADE_noAST_Rave_pt45_SLR_pt004_10k-yrs",
+        storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04.npy",
+        elevation_file="InitElevHog.npy",
+        dune_file="DuneStart_1000dam.npy",
+    )
+
+    cascade_10kyr_pt75 = RUN_4_CASCADE_noAST_Rave_SLR_pt004(
+        nt=10000,
+        rmin=0.55,  # rave = 0.75
+        rmax=0.95,
+        name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs",
+        storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04.npy",
+        elevation_file="InitElevHog.npy",
+        dune_file="DuneStart_1000dam.npy",
+    )
 
 
 # record of non-human plots -------------------------------------------------------------------------------------
@@ -972,59 +1149,89 @@ def early_plots():
 
 # record of B3D time series -------------------------------------------------------------------------------------
 def time_series():
+
     datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
 
-    name = "StormTimeSeries_10k-yr.npy"
-    storms_per_year_from_MSSM_output(
+    StormSeries_NormDist_10kyrs = yearly_storms_from_MSSM(
         datadir=datadir,
-        name=name,
-        storm_list_name="VCRStormList.npy",
-        mean_storm=8.3,
-        SD_storm=5.9,
-        MHW=0.46,
+        storm_list_name="StormList_20k_VCR_Berm1pt9m_Slope0pt04.csv",  # can by .py or .csv
+        mean_yearly_storms=8.3,
+        SD_yearly_storms=5.9,
+        MHW=0.46,  # m NAVD88
         StormStart=2,
-        BermEl=1.9,
-        model_years=10000,  # note, this is the number of storms contained in the MSSM model. probably should make more.
+        BermEl=1.9,  # m NAVD88, just used for plotting
+        model_years=10000,
+        bPlot=True,
+        bSave=True,
+        output_filename="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04",
     )
 
-    name = "StormTimeSeries_3000yr.npy"
-    storms_per_year_from_MSSM_output(
+    StormSeries_NormDist_1kyrs = yearly_storms_from_MSSM(
         datadir=datadir,
-        name=name,
-        storm_list_name="VCRStormList.npy",
-        mean_storm=8.3,
-        SD_storm=5.9,
-        MHW=0.46,
+        storm_list_name="StormList_20k_VCR_Berm1pt9m_Slope0pt04.csv",  # can by .py or .csv
+        mean_yearly_storms=8.3,
+        SD_yearly_storms=5.9,
+        MHW=0.46,  # m NAVD88
         StormStart=2,
-        BermEl=1.9,
-        model_years=3000,
-    )
-
-    name = "StormTimeSeries_1000yr.npy"
-    storms_per_year_from_MSSM_output(
-        datadir=datadir,
-        name=name,
-        storm_list_name="VCRStormList.npy",
-        mean_storm=8.3,
-        SD_storm=5.9,
-        MHW=0.46,
-        StormStart=2,
-        BermEl=1.9,
+        BermEl=1.9,  # m NAVD88, just used for plotting
         model_years=1000,
+        bPlot=True,
+        bSave=True,
+        output_filename="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04",
     )
 
-    name = "StormTimeSeries_200yr.npy"
-    storms_per_year_from_MSSM_output(
-        datadir=datadir,
-        name=name,
-        storm_list_name="VCRStormList.npy",
-        mean_storm=8.3,
-        SD_storm=5.9,
-        MHW=0.46,
-        StormStart=2,
-        BermEl=1.9,
-        model_years=200,
-    )
+    def BermEl_2m():
+        name = "StormTimeSeries_10k-yr.npy"
+        yearly_storms_from_MSSM(
+            datadir=datadir,
+            name=name,
+            storm_list_name="VCRStormList.npy",
+            mean_storm=8.3,
+            SD_storm=5.9,
+            MHW=0.46,
+            StormStart=2,
+            BermEl=1.9,
+            model_years=10000,  # note, this is the number of storms contained in the MSSM model. probably should make more.
+        )
+
+        name = "StormTimeSeries_3000yr.npy"
+        yearly_storms_from_MSSM(
+            datadir=datadir,
+            name=name,
+            storm_list_name="VCRStormList.npy",
+            mean_storm=8.3,
+            SD_storm=5.9,
+            MHW=0.46,
+            StormStart=2,
+            BermEl=1.9,
+            model_years=3000,
+        )
+
+        name = "StormTimeSeries_1000yr.npy"
+        yearly_storms_from_MSSM(
+            datadir=datadir,
+            name=name,
+            storm_list_name="VCRStormList.npy",
+            mean_storm=8.3,
+            SD_storm=5.9,
+            MHW=0.46,
+            StormStart=2,
+            BermEl=1.9,
+            model_years=1000,
+        )
+
+        name = "StormTimeSeries_200yr.npy"
+        yearly_storms_from_MSSM(
+            datadir=datadir,
+            name=name,
+            storm_list_name="VCRStormList.npy",
+            mean_storm=8.3,
+            SD_storm=5.9,
+            MHW=0.46,
+            StormStart=2,
+            BermEl=1.9,
+            model_years=200,
+        )
 
     name = "DuneStart_1000dam.npy"
     gen_dune_height_start(datadir, name, Dstart=0.5, ny=1000)
