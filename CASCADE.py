@@ -198,6 +198,7 @@ class Cascade:
             fid = datadir + self._parameter_file
 
             # update yaml file (these are the only variables that I'm like to change from default)
+            self.set_yaml("Shrub_ON", 0, fid)  # make sure that shrubs are turned off
             self.set_yaml(
                 "TMAX", self._nt, fid
             )  # [yrs] Duration of simulation (if brie._dt = 1 yr, set to ._nt)
@@ -364,8 +365,9 @@ class Cascade:
 
         # Check for drowning here from the last time step in brie. Note that this will stay false if brie is not used
         # for AST (i.e., a B3D only run).
-        if self._brie.drown == False:
-
+        if self._brie.drown == True:
+            return
+        else:
             # Advance B3D by one time step; NOTE: B3D initializes at time_index = 1 and then updates the time_index
             # after update_dune_domain
             batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
@@ -388,6 +390,11 @@ class Cascade:
             else:
                 for iB3D in range(self._ny):
                     self._barrier3d[iB3D].update_dune_domain()
+
+            # check also for width or height drowning in Barrier3D (would occur in update_dune_domain); important for
+            # B3D only runs
+            if self._barrier3d[iB3D].drown_break == 1:
+                return
 
             # human dynamics: remove overwash from roadway after each model year, place on the dune, rebuild dunes if
             # necessary, and check if dunes should grow naturally
