@@ -476,6 +476,37 @@ def RUN_5_AlongshoreVarGrowthParam_half():
     filename = name + ".npz"
     np.savez(filename, barrier3d=b3d)
 
+    # NOTE: the following code is from the iMac - not sure which one I used
+    # def RUN_5_AlongshoreVarGrowthParam_half(name, ny, rmin, rmax):
+    #     # name = '5-VarGrowthParam_half_pt4SLR_1500yrs'
+    #     wave_height = 1.0  # m
+    #     wave_period = 7  # s (lowered from 10 s to reduce k_sf)
+    #     asym_frac = 0.8  # fraction approaching from left
+    #     high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
+    #     slr = 0.004  # m/yr
+    #     nt = 1500  # timesteps for 1000 morphologic years
+    #     # ny = 12  # number of alongshore sections (12 = 6 km)
+    #     # rmin = [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.55, 0.55, 0.55, 0.55, 0.55,
+    #     #         0.55]  # minimum growth rate for logistic dune growth (list for alongshore variability)
+    #     # rmax = [0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.95, 0.95, 0.95, 0.95, 0.95,
+    #     #         0.95]  # maximum growth rate for logistic dune growth (list for alongshore variability)
+    #     # # rave = [0.45, 0.45, 0.45, 0.75, 0.75, 0.75]  # to help me remember the average
+    #
+    #     # --------- INITIALIZE ---------
+    #     datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/"  # iMAC
+    #     # datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"  # laptop
+    #     brie, barrier3d = CASCADE.initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt,
+    #                                          rmin,
+    #                                          rmax, datadir)
+    #
+    #     # --------- LOOP ---------
+    #     brie, barrier3d = CASCADE.time_loop(brie, barrier3d, num_cores)
+    #
+    #     # --------- SAVE ---------
+    #     save_directory = "/Users/katherineanarde/PycharmProjects/CASCADE"
+    #     # save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output"
+    #     CASCADE.save(brie, barrier3d, save_directory, name)  # this returns the barrier3d model without the BMI
+
 
 def RUN_6_B3D_Rave_SLR_pt004_Humans(
     nt,
