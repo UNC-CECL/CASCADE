@@ -279,6 +279,7 @@ class Cascade:
 
         # save array of Barrier3d models
         self._barrier3d = barrier3d
+        self._b3d_break = 0  # will = 1 if barrier in Barrier3D height or width drowns
 
         ###############################################################################
         # initial conditions for human dynamics module, ast module
@@ -323,6 +324,10 @@ class Cascade:
     @property
     def road_break(self):
         return self._road_break
+
+    @property
+    def b3d_break(self):
+        return self._b3d_break
 
     @property
     def brie(self):
@@ -394,6 +399,7 @@ class Cascade:
             # check also for width or height drowning in Barrier3D (would occur in update_dune_domain); important for
             # B3D only runs
             if self._barrier3d[iB3D].drown_break == 1:
+                self._b3d_break = 1
                 return
 
             # human dynamics: remove overwash from roadway after each model year, place on the dune, rebuild dunes if

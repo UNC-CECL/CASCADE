@@ -362,7 +362,7 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004(
         # Print time step to screen (NOTE: time_index in each model is time_step+1)
         print("\r", "Time Step: ", time_step, end="")
         cascade.update()
-        if cascade.road_break:
+        if cascade.road_break or cascade.b3d_break:
             break
 
     # --------- SAVE ---------
@@ -744,7 +744,9 @@ def PLOT_5_Nonlinear_Dynamics_B3D(name, save_directory):
 
     # --------- plot ---------
     # filename = name + ".npz"
-    os.chdir("/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output")
+    os.chdir(
+        "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
+    )
     # output = np.load(filename, allow_pickle=True)
     # CASCADE_b3d = output["barrier3d"]  # CASCADE run: with AST
     output = np.load(
@@ -763,12 +765,17 @@ def PLOT_5_Nonlinear_Dynamics_B3D(name, save_directory):
         "4-B3D_Rave_pt75_SLR_pt004_10k-yrs.npz", allow_pickle=True
     )  # B3D high growth rate run, no AST
     b3d_pt75 = output["barrier3d"]
+    output = np.load(
+        "4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs.npz", allow_pickle=True
+    )  # B3D high growth rate run, no AST
+    cascade_pt75_v2 = output["cascade"][0]
+    b3d_pt75_v2 = cascade_pt75_v2.barrier3d
     # output = np.load(
     #     "4-B3D_Rave_pt75_SLR_pt004.npz", allow_pickle=True
     # )  # B3D high growth rate run, no AST
     # b3d_pt75 = output["barrier3d"]
 
-    tmin = 9000  # 500
+    tmin = 0  # 500
     tmax = 10000  # 1000
 
     # individual dune growth rates
@@ -792,7 +799,22 @@ def PLOT_5_Nonlinear_Dynamics_B3D(name, save_directory):
         BarrierWidth_75,
         DuneCrestMean_75,
         BarrierHeight_75,
+        bw_rate_75,
+        bh_rate_75,
+        sc_rate_75,
+        DuneCrestMin_75,
+        DuneCrestMax_75,
     ) = CASCADEplt.plot_nonlinear_stats(b3d_pt75, ib3d, tmin, tmax)
+    (
+        BarrierWidth_75_v2,
+        DuneCrestMean_75_v2,
+        BarrierHeight_75_v2,
+        bw_rate_75_v2,
+        bh_rate_75_v2,
+        sc_rate_75_v2,
+        DuneCrestMin_75_v2,
+        DuneCrestMax_75_v2,
+    ) = CASCADEplt.plot_nonlinear_stats(b3d_pt75_v2, ib3d, tmin, 5724)
 
     CASCADEplt.nonlinear_comparison(
         DuneCrestMean_45,
