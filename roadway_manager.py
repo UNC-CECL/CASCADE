@@ -27,6 +27,7 @@ dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
 
 
 def bulldoze(
+    time_index,
     xyz_interior_grid,
     yxz_dune_grid,
     road_ele=2.0,
@@ -41,6 +42,8 @@ def bulldoze(
 
     Parameters
     ----------
+    time_index: int,
+        Time index for drowning error message
     xyz_interior_grid: array
         Interior barrier island topography [z units specified by dz; if dz=10, decameters NAVD88]
     yxz_dune_grid:
@@ -104,6 +107,11 @@ def bulldoze(
         and (np.min(xyz_interior_grid[road_start - 1, :] * dz) <= drown_threshold)
     ) or (np.min(xyz_interior_grid[road_end + 1, :] * dz) <= drown_threshold):
         roadway_drown = True
+        print(
+            "Roadway drowned at {time} years from the back-bay".format(
+                time=time_index - 1
+            )
+        )
     else:
         roadway_drown = False
 
@@ -237,8 +245,48 @@ def set_growth_parameters(
     return new_growth_param
 
 
-class RoadwayManager:
+def roadway_checks(
+    time_index,
+    dune_migrated,
+    road_setback,
+    road_relocation_setback,
+    road_width,
+    barrier_average_width,
+):
+    # if dune line moved by one grid cell, subtract that amount from the setback to keep road in the same place
+    if dune_migrated:
+        road_setback = road_setback - 10
 
+        # with this shoreline change and dune migration, check if the roadway needs to be relocated
+        if road_setback < 0:
+            # relocate the road only if the width of the island allows it
+            if (
+                road_relocation_setback
+                + (2 * road_width)  # bay shoreline buffer of 2x the roadway
+                > barrier_average_width * 10
+            ):
+                narrow_break = 1
+                print(
+                    "Island is to narrow for roadway to be relocated. Roadway drowned at {time} years".format(
+                        time=time_index - 1
+                    )  # -1 because B3D advances time step at end of dune_update
+                )
+            else:
+                road_setback = road_relocation_setback
+
+    # now check the other shoreline: if the roadway gets eaten up by the back-barrier, then it is lost
+    if (barrier_average_width * 10) <= road_setback:
+        drown_break = 1
+        print(
+            "Roadway drowned at {time} years from the back-bay".format(
+                time=time_index - 1
+            )
+        )
+
+    return road_setback, narrow_break, drown_break
+
+
+class RoadwayManager:
     """Manage the road.
 
     Examples
@@ -278,7 +326,7 @@ class RoadwayManager:
         time_step_count: int, optional
             Number of time steps.
         original_growth_param: optional
-            dune growth parameters from first time step of barrier3d, before human modifications [unitless]
+            Dune growth parameters from first time step of barrier3d, before human modifications [unitless]
 
         """
 
@@ -314,12 +362,27 @@ class RoadwayManager:
             None
         ] * self._nt  # keep track of post-storm interior impacts before humans
 
-    def update(self, barrier3d):
+    def update(
+        self,
+        barrier3d,
+        road_ele,
+        road_width,
+        road_relocation_setback,
+        artificial_max_dune_ele,
+        artificial_min_dune_ele,
+    ):
 
         self._time_index = barrier3d.time_index
 
         if self._original_growth_param is None:
             self._original_growth_param = barrier3d.growthparam
+
+        # if any roadway or dune parameters were updated in CASCADE, update them here
+        self._road_ele = road_ele
+        self._road_width = road_width
+        self._road_relocation_setback = road_relocation_setback
+        self._artificial_max_dune_ele = artificial_max_dune_ele
+        self._artificial_min_dune_ele = artificial_min_dune_ele
 
         # save post-storm dune and interior domain before human modifications
         self._post_storm_interior[self._time_index - 1] = copy.deepcopy(
@@ -329,49 +392,27 @@ class RoadwayManager:
             barrier3d.DuneDomain[self._time_index - 1, :, :]
         )
 
-        # if dune line moved by one grid cell, substract that amount from the setback to keep road in the same place
-        if (
-            barrier3d.dune_migration
-        ):  # (NOTE: I may have been able to just use the B3D variable shoreline_change here!)
-            self._road_setback = self._road_setback - 10
+        # check for barrier drowning and road relocation; if barrier drowns, exit program
+        [self._road_setback, self._narrow_break, self._drown_break] = roadway_checks(
+            self._time_index,
+            barrier3d.dune_migrated,
+            self._road_setback,
+            self._road_relocation_setback,
+            self._road_width,
+            barrier3d.InteriorWidth_AvgTS[-1],
+        )
+        if self._narrow_break == 1 or self._drown_break == 1:
+            return
 
-            # with this shoreline change and dune migration, check if the roadway needs to be relocated
-            if self._road_setback < 0:
-                # relocate the road only if the width of the island allows it
-                if (
-                    self._road_relocation_setback
-                    + (2 * self._road_width)  # bay shoreline buffer of 2x the roadway
-                    > barrier3d.InteriorWidth_AvgTS[-1] * 10
-                ):
-                    self._narrow_break = 1
-                    print(
-                        "Island is to narrow for roadway to be relocated. Roadway drowned at {time} years".format(
-                            time=self._time_index
-                            - 1  # -1 because B3D advances time step at end of dune_update
-                        )
-                    )
-                    return  # exit program
-                else:
-                    self._road_setback = self._road_relocation_setback
-
-        # now check the other shoreline: if the roadway gets eaten up by the back-barrier, then it is lost
-        if (barrier3d.InteriorWidth_AvgTS[-1] * 10) <= self._road_setback:
-            self._drown_break = 1
-            print(
-                "Roadway drowned at {time} years from the back-bay".format(
-                    time=self._time_index
-                    - 1  # -1 because B3D advances time step at end of dune_update
-                )
-            )
-            return  # exit program
+        # bulldoze that road and put bulldozed sand back on the dunes
         else:
-            # bulldoze that road and put bulldozed sand back on the dunes
             (
                 new_dune_domain,
                 new_xyz_interior_domain,
                 road_overwash_removal,
                 roadway_drown,
             ) = bulldoze(
+                time_index=self._time_index,
                 road_ele=self._road_ele,  # m NAVD88
                 road_width=self._road_width,
                 road_setback=self._road_setback,
@@ -387,12 +428,6 @@ class RoadwayManager:
             # another check on the location of the back-barrier shoreline: if the roadway touches a water cell, drown!
             if roadway_drown:
                 self._drown_break = 1
-                print(
-                    "Roadway drowned at {time} years from the back-bay".format(
-                        time=self._time_index
-                        - 1  # -1 because B3D advances time step at end of dune_update
-                    )
-                )
                 return  # exit program
 
             self._road_overwash_volume[self._time_index - 1] = (
@@ -417,15 +452,12 @@ class RoadwayManager:
                 # if any dune cell in the front row of dunes is less than a minimum threshold -- as measured above the
                 # berm crest -- then rebuild artificial dunes (first row up to the max dune height, second row to the
                 # minimum? -- nah, lets make it the max as well)
-                if np.min(new_dune_domain[:, 0]) < (
-                    artificial_min_dune_height / 10
-                ):  # dune domain is in dam; previously had np.max() and got a lot of small dune breaches that didn't
-                    # get repaired -- not realistic
-                    new_dune_domain = rebuild_dunes(  # decameters
-                        new_dune_domain,
+                if np.min(new_dune_domain[:, 0]) < (artificial_min_dune_height / 10):
+                    new_dune_domain = rebuild_dunes(
+                        new_dune_domain,  # dam
                         max_dune_height=artificial_max_dune_height,  # in m
                         min_dune_height=artificial_max_dune_height,  # in m
-                        dz=10,  # specifies dune domain is in decameters
+                        dz=10,  # specifies dune domain is in dam
                         rng=True,  # adds stochasticity to dune height (seeded)
                     )
                     self._dunes_rebuilt_TS[

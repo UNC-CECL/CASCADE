@@ -136,3 +136,4 @@ dmypy.json
 brie_venv
 Output/
 Run_Output/
+/brie_venv/

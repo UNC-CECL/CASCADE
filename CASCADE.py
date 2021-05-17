@@ -7,6 +7,7 @@ Copyright (C) 2020 Katherine Anarde
 ----------------------------------------------------"""
 
 from yaml import full_load, dump
+from pathlib import Path
 from joblib import Parallel, delayed
 import numpy as np
 import os
@@ -15,6 +16,7 @@ from barrier3d import Barrier3d
 from brie import Brie
 
 from roadway_manager import RoadwayManager
+from beach_nourisher import BeachNourisher
 from alongshore_coupler import AlongshoreCoupler
 
 
@@ -41,7 +43,7 @@ class Cascade:
         self,
         datadir,
         name="default",
-        storm_file="barrier3d-default-storms.npy",
+        storm_file="Default_StormTimeSeries_1000yr.npy",
         elevation_file="barrier3d-default-elevation.npy",
         dune_file="barrier3d-default-dunes.npy",
         parameter_file="barrier3d-parameters.yaml",
@@ -57,11 +59,14 @@ class Cascade:
         num_cores=1,
         roadway_management_module=False,
         alongshore_transport_module=True,
+        beach_nourishment_module=True,
         road_ele=1.7,
         road_width=30,
         road_setback=30,
         artificial_max_dune_ele=3.7,
         artificial_min_dune_ele=2.2,
+        nourishment_interval=None,
+        nourishment_volume=300,
     ):
         """initialize both BRIE and Barrier3D
 
@@ -103,11 +108,15 @@ class Cascade:
             Elevation to which dune is rebuilt to [m NAVD88]
         artificial_min_dune_ele: float, optional
             Elevation threshold which triggers rebuilding of dune [m NAVD88]
+        nourishment_interval: optional
+             Interval that nourishment occurs [yrs]
+        nourishment_volume: optional
+             Volume of nourished sand along cross-shore transect [m^3/m]
 
         Examples
         --------
         >>> from CASCADE import Cascade
-        >>> datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
+        >>> datadir = "./B3D_Inputs/"
         >>> cascade = Cascade(datadir)
         """
 
@@ -124,6 +133,7 @@ class Cascade:
         self._num_cores = num_cores
         self._roadway_management_module = roadway_management_module
         self._alongshore_transport_module = alongshore_transport_module
+        self._beach_nourishment_module = beach_nourishment_module
         self._filename = name
         self._storm_file = storm_file
         self._elevation_file = elevation_file
@@ -285,26 +295,68 @@ class Cascade:
         # initial conditions for human dynamics module, ast module
         ###############################################################################
 
-        self._artificial_max_dune_ele = artificial_max_dune_ele
-        self._artificial_min_dune_ele = artificial_min_dune_ele
-        self._road_width = road_width
-        self._road_ele = road_ele
-        self._orig_road_setback = road_setback
-        self._road_relocation_setback = road_setback
-        self._road_break = 0  # will = 1 if roadway drowns
+        if np.size(artificial_max_dune_ele) > 1:
+            self._artificial_max_dune_ele = artificial_max_dune_ele
+        else:
+            self._artificial_max_dune_ele = [artificial_max_dune_ele] * self._ny
+        if np.size(artificial_min_dune_ele) > 1:
+            self._artificial_min_dune_ele = artificial_min_dune_ele
+        else:
+            self._artificial_min_dune_ele = [artificial_min_dune_ele] * self._ny
+        if np.size(road_width) > 1:
+            self._road_width = road_width
+        else:
+            self._road_width = [road_width] * self._ny
+        if np.size(road_ele) > 1:
+            self._road_ele = road_ele
+        else:
+            self._road_ele = [road_ele] * self._ny
+        if np.size(road_setback) > 1:
+            self._orig_road_setback = road_setback
+            self._road_relocation_setback = road_setback
+        else:
+            self._orig_road_setback = [road_setback] * self._ny
+            self._road_relocation_setback = [road_setback] * self._ny
+        if np.size(nourishment_interval) > 1:
+            self._nourishment_interval = nourishment_interval
+        else:
+            self._nourishment_interval = [nourishment_interval] * self._ny
+        if np.size(nourishment_volume) > 1:
+            self._nourishment_volume = nourishment_volume
+        else:
+            self._nourishment_volume = [nourishment_volume] * self._ny
 
-        # initialize RoadwayManager (always, just in case we want to add a road during the simulation)
+        self._road_break = 0  # will = 1 if roadway drowns
+        self._nourish_now = [0] * self._ny
+
+        # initialize RoadwayManager and BeachNourisher (always, just in case we want to add a road or start nourishing
+        # during the simulation)
         self._roadways = []
+        self._nourishments = []
 
         for iB3D in range(self._ny):
             self._roadways.append(
                 RoadwayManager(
-                    road_elevation=self._road_ele,
-                    road_width=self._road_width,
-                    road_setback=self._orig_road_setback,
-                    road_relocation_setback=self._road_relocation_setback,
-                    dune_design_height=self._artificial_max_dune_ele,
-                    dune_minimum_height=self._artificial_min_dune_ele,
+                    road_elevation=self._road_ele[iB3D],
+                    road_width=self._road_width[iB3D],
+                    road_setback=self._orig_road_setback[iB3D],
+                    road_relocation_setback=self._road_relocation_setback[iB3D],
+                    dune_design_height=self._artificial_max_dune_ele[iB3D],
+                    dune_minimum_height=self._artificial_min_dune_ele[iB3D],
+                    time_step_count=self._nt,
+                    original_growth_param=self._barrier3d[iB3D].growthparam,
+                )
+            )
+            self._nourishments.append(
+                BeachNourisher(
+                    nourishment_interval=self._nourishment_interval[iB3D],
+                    nourishment_volume=self._nourishment_volume[iB3D],
+                    initial_beach_width=int(
+                        self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta
+                    )
+                    * 10,  # m
+                    dune_design_height=self._artificial_max_dune_ele[iB3D],
+                    dune_minimum_height=self._artificial_min_dune_ele[iB3D],
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
                 )
@@ -349,9 +401,9 @@ class Cascade:
     def roadways(self):
         return self._roadways
 
-    @roadways.setter
-    def roadways(self, value):
-        self._roadways = value
+    # @roadways.setter
+    # def roadways(self, value):
+    #     self._roadways = value
 
     @property
     def roadway_management_module(self):
@@ -360,6 +412,42 @@ class Cascade:
     @roadway_management_module.setter
     def roadway_management_module(self, value):
         self._roadway_management_module = value
+
+    @property
+    def beach_nourishment_module(self):
+        return self._beach_nourishment_module
+
+    @beach_nourishment_module.setter
+    def beach_nourishment_module(self, value):
+        self._beach_nourishment_module = value
+
+    @property
+    def nourishments(self):
+        return self._nourishments
+
+    @property
+    def nourish_now(self):
+        return self._nourish_now
+
+    @nourish_now.setter
+    def nourish_now(self, value):
+        self._nourish_now = value
+
+    @property
+    def nourishment_interval(self):
+        return self._nourishment_interval
+
+    @nourishment_interval.setter
+    def nourishment_interval(self, value):
+        self._nourishment_interval = value
+
+    @property
+    def nourishment_volume(self):
+        return self._nourishment_volume
+
+    @nourishment_volume.setter
+    def nourishment_volume(self, value):
+        self._nourishment_volume = value
 
     ###############################################################################
     # time loop
@@ -372,63 +460,72 @@ class Cascade:
         # for AST (i.e., a B3D only run).
         if self._brie.drown == True:
             return
+
+        # Advance B3D by one time step; NOTE: B3D initializes at time_index = 1 and then updates the time_index
+        # after update_dune_domain
+        batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
+            delayed(batchB3D)(self._barrier3d[iB3D]) for iB3D in range(self._ny)
+        )  # set n_jobs=1 for no parallel processing (debugging) and -2 for all but 1 CPU; note that joblib uses a
+        # threshold on the size of arrays passed to the workers; we use 'None' to disable memory mapping of large arrays
+
+        # reshape output from parallel processing and convert from tuple to list
+        x_t_dt, x_s_dt, h_b_dt, b3d = zip(*batch_output)
+        x_t_dt = list(x_t_dt)
+        x_s_dt = list(x_s_dt)
+        h_b_dt = list(h_b_dt)
+        self._barrier3d = list(b3d)
+
+        # use brie to connect B3D subgrids with alongshore sediment transport; otherwise, just update dune domain
+        if self._alongshore_transport_module:
+            self._ast_coupler.update(
+                self._brie, self._barrier3d, x_t_dt, x_s_dt, h_b_dt
+            )
         else:
-            # Advance B3D by one time step; NOTE: B3D initializes at time_index = 1 and then updates the time_index
-            # after update_dune_domain
-            batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
-                delayed(batchB3D)(self._barrier3d[iB3D]) for iB3D in range(self._ny)
-            )  # set n_jobs=1 for no parallel processing (debugging) and -2 for all but 1 CPU; note that joblib uses a
-            # threshold on the size of arrays passed to the workers; we use 'None' to disable memory mapping of large arrays
+            for iB3D in range(self._ny):
+                self._barrier3d[iB3D].update_dune_domain()
 
-            # reshape output from parallel processing and convert from tuple to list
-            x_t_dt, x_s_dt, h_b_dt, b3d = zip(*batch_output)
-            x_t_dt = list(x_t_dt)
-            x_s_dt = list(x_s_dt)
-            h_b_dt = list(h_b_dt)
-            self._barrier3d = list(b3d)
-
-            # use brie to connect B3D subgrids with alongshore sediment transport; otherwise, just update dune domain
-            if self._alongshore_transport_module:
-                self._ast_coupler.update(
-                    self._brie, self._barrier3d, x_t_dt, x_s_dt, h_b_dt
-                )
-            else:
-                for iB3D in range(self._ny):
-                    self._barrier3d[iB3D].update_dune_domain()
-
-            # check also for width or height drowning in Barrier3D (would occur in update_dune_domain); important for
-            # B3D only runs
+        # check also for width or height drowning in Barrier3D (would occur in update_dune_domain); important for
+        # B3D only runs
+        for iB3D in range(self._ny):
             if self._barrier3d[iB3D].drown_break == 1:
                 self._b3d_break = 1
                 return
 
-            # human dynamics: remove overwash from roadway after each model year, place on the dune, rebuild dunes if
-            # necessary, and check if dunes should grow naturally
-            if self._roadway_management_module:
-                for iB3D in range(self._ny):
-                    # if the user changed any of the roadway or dune parameters, update them in the module before advancing
-                    self._roadways[iB3D].road_ele = self._road_ele
-                    self._roadways[iB3D].road_width = self._road_width
-                    self._roadways[
-                        iB3D
-                    ].road_relocation_setback = self._road_relocation_setback
-                    self._roadways[
-                        iB3D
-                    ].artificial_max_dune_ele = self._artificial_max_dune_ele
-                    self._roadways[
-                        iB3D
-                    ].artificial_min_dune_ele = self._artificial_min_dune_ele
+        # human dynamics modules
+        # RoadwayManager: remove overwash from roadway after each model year, place on the dune, rebuild dunes if
+        # fall below height threshold, and check if dunes should grow naturally
+        if self._roadway_management_module:
+            for iB3D in range(self._ny):
+                # call roadway management module; if the user changed any of the roadway or dune parameters,
+                # they are updated in the update function
+                self._roadways[iB3D].update(
+                    self._barrier3d[iB3D],
+                    self._road_ele[iB3D],
+                    self._road_width[iB3D],
+                    self._road_relocation_setback[iB3D],
+                    self._artificial_max_dune_ele[iB3D],
+                    self._artificial_min_dune_ele[iB3D],
+                )
 
-                    # call roadway manamgement module
-                    self._roadways[iB3D].update(self._barrier3d[iB3D])
+                # if the road drowned or barrier was too narrow to be relocated, break
+                if (
+                    self._roadways[iB3D].drown_break
+                    or self._roadways[iB3D].narrow_break
+                ):
+                    self._road_break = 1
+                    return
 
-                    # if the road drowned or barrier was too narrow to be relocated, break
-                    if (
-                        self._roadways[iB3D].drown_break
-                        or self._roadways[iB3D].narrow_break
-                    ):
-                        self._road_break = 1
-                        return
+        # BeachNourisher: if interval specified, nourish at that interval, otherwise wait until told with nourish_now to
+        # nourish. Resets nourish_now parameter after nourishment.
+        if self._beach_nourishment_module:
+            for iB3D in range(self._ny):
+                self._nourish_now[iB3D] = self._nourishments[iB3D].update(
+                    self._barrier3d[iB3D],
+                    self._artificial_max_dune_ele[iB3D],
+                    self._nourish_now[iB3D],
+                    self._nourishment_interval[iB3D],
+                    self._nourishment_volume[iB3D],
+                )
 
     ###############################################################################
     # save data
