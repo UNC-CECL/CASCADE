@@ -1160,6 +1160,67 @@ def cascade_10kyr():
         dune_file="DuneStart_1000dam.npy",
     )
 
+    cascade_10kyr_pt75_02 = RUN_4_CASCADE_noAST_Rave_SLR_pt004(
+        nt=10000,
+        rmin=0.55,  # rave = 0.75
+        rmax=0.95,
+        name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_02",
+        storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_02.npy",
+        elevation_file="InitElevHog.npy",
+        dune_file="DuneStart_1000dam.npy",
+    )
+
+    cascade_10kyr_pt75_03 = RUN_4_CASCADE_noAST_Rave_SLR_pt004(
+        nt=10000,
+        rmin=0.55,  # rave = 0.75
+        rmax=0.95,
+        name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_03",
+        storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_03.npy",
+        elevation_file="InitElevHog.npy",
+        dune_file="DuneStart_1000dam.npy",
+    )
+
+    cascade_10kyr_pt75_Cbbr0pt5 = RUN_4_CASCADE_noAST_Rave_SLR_pt004(
+        nt=10000,
+        rmin=0.55,  # rave = 0.75
+        rmax=0.95,
+        name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_Cbb0pt5",
+        storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04.npy",
+        elevation_file="InitElevHog.npy",
+        dune_file="DuneStart_1000dam.npy",
+    )
+
+    cascade_10kyr_pt75_old_storms = RUN_4_CASCADE_noAST_Rave_SLR_pt004(
+        nt=10000,
+        rmin=0.55,  # rave = 0.75
+        rmax=0.95,
+        name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_OLD_STORMS",
+        storm_file="Default_StormTimeSeries_10k-yr.npy",
+        elevation_file="InitElevHog.npy",
+        dune_file="DuneStart_1000dam.npy",
+    )
+
+    cascade_10kyr_pt75_old_storms_Cbbr0pt5 = RUN_4_CASCADE_noAST_Rave_SLR_pt004(
+        nt=10000,
+        rmin=0.55,  # rave = 0.75
+        rmax=0.95,
+        name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_OLD_STORMS_Cbb0pt5",
+        storm_file="Default_StormTimeSeries_10k-yr.npy",
+        elevation_file="InitElevHog.npy",
+        dune_file="DuneStart_1000dam.npy",
+    )
+
+    # manually changed the berm elevation to 2.0 in the yaml
+    cascade_10kyr_pt75_old_storms_BermEl2 = RUN_4_CASCADE_noAST_Rave_SLR_pt004(
+        nt=10000,
+        rmin=0.55,  # rave = 0.75
+        rmax=0.95,
+        name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_OLD_STORMS_BermEl2",
+        storm_file="Default_StormTimeSeries_10k-yr.npy",
+        elevation_file="InitElevHog.npy",
+        dune_file="DuneStart_1000dam.npy",
+    )
+
 
 # record of non-human plots -------------------------------------------------------------------------------------
 def early_plots():
@@ -1217,6 +1278,34 @@ def time_series():
         bPlot=True,
         bSave=True,
         output_filename="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04",
+    )
+
+    StormSeries_NormDist_10kyrs_02 = yearly_storms_from_MSSM(
+        datadir=datadir,
+        storm_list_name="StormList_20k_VCR_Berm1pt9m_Slope0pt04.csv",  # can by .py or .csv
+        mean_yearly_storms=8.3,
+        SD_yearly_storms=5.9,
+        MHW=0.46,  # m NAVD88
+        StormStart=2,
+        BermEl=1.9,  # m NAVD88, just used for plotting
+        model_years=10000,
+        bPlot=True,
+        bSave=True,
+        output_filename="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_02",
+    )
+
+    StormSeries_NormDist_10kyrs_04 = yearly_storms_from_MSSM(
+        datadir=datadir,
+        storm_list_name="StormList_20k_VCR_Berm1pt9m_Slope0pt04.csv",  # can by .py or .csv
+        mean_yearly_storms=8.3,
+        SD_yearly_storms=5.9,
+        MHW=0.46,  # m NAVD88
+        StormStart=2,
+        BermEl=1.9,  # m NAVD88, just used for plotting
+        model_years=10000,
+        bPlot=True,
+        bSave=True,
+        output_filename="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_04",
     )
 
     StormSeries_NormDist_1kyrs = yearly_storms_from_MSSM(
