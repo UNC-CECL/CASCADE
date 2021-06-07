@@ -39,6 +39,7 @@ plt.matshow(
     vmin=-1.1,
     vmax=4.0,
 )
+plt.colorbar()
 
 # add a road and run for another 30 time steps
 cascade.roadway_management_module = True  # turn roadway management model on
