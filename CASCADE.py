@@ -14,10 +14,12 @@ import os
 
 from barrier3d import Barrier3d
 from brie import Brie
+# from chome import Chome
 
 from roadway_manager import RoadwayManager
 from beach_nourisher import BeachNourisher
 from alongshore_coupler import AlongshoreCoupler
+# from economics import ChomeBuyer
 
 
 def batchB3D(subB3D):
@@ -43,7 +45,7 @@ class Cascade:
         self,
         datadir,
         name="default",
-        storm_file="Default_StormTimeSeries_1000yr.npy",
+        storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04.npy",
         elevation_file="barrier3d-default-elevation.npy",
         dune_file="barrier3d-default-dunes.npy",
         parameter_file="barrier3d-parameters.yaml",
@@ -60,6 +62,7 @@ class Cascade:
         roadway_management_module=False,
         alongshore_transport_module=True,
         beach_nourishment_module=True,
+        # community_dynamics_module=True,
         road_ele=1.7,
         road_width=30,
         road_setback=30,
@@ -67,6 +70,7 @@ class Cascade:
         artificial_min_dune_ele=2.2,
         nourishment_interval=None,
         nourishment_volume=300,
+        # number_of_communities=2,  # the number of communities described by alongshore_section_count, will split evenly (TO DO)
     ):
         """initialize both BRIE and Barrier3D
 
@@ -292,7 +296,7 @@ class Cascade:
         self._b3d_break = 0  # will = 1 if barrier in Barrier3D height or width drowns
 
         ###############################################################################
-        # initial conditions for human dynamics module, ast module
+        # initial conditions for human dynamics modules, ast module
         ###############################################################################
 
         if np.size(artificial_max_dune_ele) > 1:
@@ -333,6 +337,7 @@ class Cascade:
         # during the simulation)
         self._roadways = []
         self._nourishments = []
+        # self._communities = []
 
         for iB3D in range(self._ny):
             self._roadways.append(
@@ -361,6 +366,11 @@ class Cascade:
                     original_growth_param=self._barrier3d[iB3D].growthparam,
                 )
             )
+
+        # # this may need to go above BeachNourisher!
+        # for iChome in range(self._number_of_communities):
+        #     self._communities.append(
+        #         ChomeBuyer())
 
         if self._alongshore_transport_module:
             self._ast_coupler = AlongshoreCoupler(self._ny)
@@ -516,13 +526,14 @@ class Cascade:
                     return
 
         # BeachNourisher: if interval specified, nourish at that interval, otherwise wait until told with nourish_now to
-        # nourish. Resets nourish_now parameter after nourishment.
+        # nourish. Resets nourish_now parameter to zero (false) after nourishment.
         if self._beach_nourishment_module:
             for iB3D in range(self._ny):
                 self._nourish_now[iB3D] = self._nourishments[iB3D].update(
                     self._barrier3d[iB3D],
                     self._artificial_max_dune_ele[iB3D],
                     self._nourish_now[iB3D],
+                    # self._build_dune_now[iB3D],  # NOTE: need to add this above
                     self._nourishment_interval[iB3D],
                     self._nourishment_volume[iB3D],
                 )
