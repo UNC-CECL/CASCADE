@@ -161,9 +161,13 @@ class BeachNourisher:
         # Barrier3D, and rebuild dunes
         if self._nourishment_counter is not None:
             self._nourishment_counter -= 1
+
         if nourish_now or self._nourishment_counter == 0:
             self._nourishment_TS[self._time_index - 1] = 1
+            if self._nourishment_counter is not None:
+                self._nourishment_counter = self._nourishment_interval  # reset if its what triggered nourishment
             self._nourishment_volume_TS[self._time_index - 1] = self._nourishment_volume
+
             (
                 barrier3d.x_s,
                 barrier3d.s_sf_TS[-1],
@@ -223,3 +227,11 @@ class BeachNourisher:
         )
 
         return nourish_now
+
+    @property
+    def beach_width(self):
+        return self._beach_width
+
+    @beach_width.setter
+    def beach_width(self, value):
+        self._beach_width = value
