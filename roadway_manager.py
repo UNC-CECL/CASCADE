@@ -253,6 +253,10 @@ def roadway_checks(
     road_width,
     barrier_average_width,
 ):
+    # initialize the break booleans as False
+    narrow_break = 0
+    drown_break = 0
+
     # if dune line moved by one grid cell, subtract that amount from the setback to keep road in the same place
     if dune_migrated:
         road_setback = road_setback - 10
