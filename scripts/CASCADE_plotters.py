@@ -703,60 +703,50 @@ def plot_ModelTransects_b3d_brie(b3d, brieLTA, time_step, iB3D):
 
 def plot_ModelTransects(cascade, time_step, iB3D):
     plt.figure(figsize=(10, 5))
-    colors = mpl.cm.viridis(np.linspace(0, 1, time_step[-1] + 1))
     fig = plt.subplot(1, 1, 1)
+    legend_t = []
 
     for t in time_step:
 
         # Sea level
-        SL = cascade.barrier3d[iB3D]._SL + (t * cascade.barrier3d[iB3D]._RSLR[t])
+        sea_level = cascade.barrier3d[iB3D]._SL + (t * cascade.barrier3d[iB3D]._RSLR[t])
 
         # Create data points
-        Tx = (
-                cascade.barrier3d[iB3D].x_t_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
-        )  # subtract start position so starts at zero
-        Ty = (SL - cascade.barrier3d[iB3D].DShoreface) * 10  # m
-        Sx = cascade.barrier3d[iB3D].x_s_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
-        Sy = SL * 10  # m
-        Bx = cascade.barrier3d[iB3D].x_b_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
-        By = (SL - cascade.barrier3d[iB3D]._BayDepth) * 10  # m
-        My = By
+        shoreface_toe_x = cascade.barrier3d[iB3D].x_t_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
+        shoreface_toe_y = (sea_level - cascade.barrier3d[iB3D].DShoreface) * 10  # m
+        shoreline_x = cascade.barrier3d[iB3D].x_s_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
+        shoreline_y = sea_level * 10  # m
+        bay_y = (sea_level - cascade.barrier3d[iB3D]._BayDepth) * 10  # m
+        end_of_bay_y = bay_y
 
-        BW = int(cascade.nourishments[iB3D].beach_width[t] / 10)  # beach width (in dam)
-        BeachX = np.zeros(BW)
-        berm = math.ceil(BW * 0.5)
-        BeachX[berm: BW + 1] = cascade.barrier3d[iB3D]._BermEl
-        add = (cascade.barrier3d[iB3D]._BermEl - cascade.barrier3d[iB3D]._SL) / berm
-        for i in range(berm):
-            BeachX[i] = cascade.barrier3d[iB3D]._SL + add * i
+        berm_x = shoreline_x + (cascade.nourishments[iB3D].beach_width[t] / 10)  # beach width (in dam)
+        berm_y = (cascade.barrier3d[iB3D]._BermEl * 10) + shoreline_y  # convert to meters
+        dune_toe_x = berm_x + 1  # just illustrate a 10 m wide berm to separate dunes from beach
+        dune_toe_y = berm_y
 
         v = 0  # just use the first transect
-        CrossElev = cascade.barrier3d[iB3D]._DomainTS[t]
-        CrossElev = CrossElev[:, v]
-        Dunes = cascade.barrier3d[iB3D]._DuneDomain[t, v, :] + cascade.barrier3d[iB3D]._BermEl
-        CrossElev1 = np.insert(CrossElev, 0, Dunes)
-        CrossElev2 = np.insert(CrossElev1, 0, BeachX)
-        CrossElev = (CrossElev2 * 10) + Sy  # Convert to meters
-        xCrossElev = np.arange(0, len(CrossElev), 1) + Sx
+        interior_y = cascade.barrier3d[iB3D]._DomainTS[t]
+        interior_y = interior_y[:, v]
+        dunes_y = cascade.barrier3d[iB3D]._DuneDomain[t, v, :] + cascade.barrier3d[iB3D]._BermEl
+        cross_barrier_y = np.insert(interior_y, 0, dunes_y)
+        cross_barrier_y = (cross_barrier_y * 10) + shoreline_y  # Convert to meters
+        cross_barrier_x = np.arange(0, len(cross_barrier_y), 1) + dune_toe_x + 0.5  # add 5 meters to make the dune look more like a dune (just aesthetics)
 
-        Mx = xCrossElev[-1] + 20  # just add a buffer to the end of the plt
+        end_of_bay_x = cross_barrier_x[-1] + 20  # just add a buffer to the end of the plt
 
-        x = np.hstack([Tx, Sx, xCrossElev, Mx])
-        y = np.hstack([Ty, Sy, CrossElev, My])
+        x = np.hstack([shoreface_toe_x, shoreline_x, berm_x, dune_toe_x, cross_barrier_x, end_of_bay_x])
+        y = np.hstack([shoreface_toe_y, shoreline_y, berm_y, dune_toe_y, cross_barrier_y, end_of_bay_y])
 
         # Plot
-        plt.plot(x, y, color=colors[t])
-        plt.hlines(SL * 10, Tx, Mx, colors="dodgerblue")
-        # plt.hlines((b3d[iB3D]._SL + (t * b3d[iB3D]._RSLR[t])) * 10, Tx, Sx, colors='dodgerblue')
-        # plt.hlines((b3d[iB3D]._SL + (t * b3d[iB3D]._RSLR[t])) * 10, Bx + 2, xCrossElev[-1]+20, colors='dodgerblue')  # KA: scrappy fix
-        # plt.xlim([0, 500])
+        plt.plot(x, y)
+        plt.hlines(sea_level * 10, shoreface_toe_x, end_of_bay_x, colors="dodgerblue")
         plt.rcParams.update({"font.size": 20})
+        legend_t.append(str(t))
 
-        plt.xlabel("Cross-shore position (dam)")
-        plt.ylabel("Elevation (m)")
-        plt.title("Profile Evolution")
-        plt.legend(t)
-        # plt.show()
+    plt.xlabel("Cross-shore position (dam)")
+    plt.ylabel("Elevation (m)")
+    plt.title("Profile Evolution")
+    plt.legend(legend_t)
 
     return fig
 
