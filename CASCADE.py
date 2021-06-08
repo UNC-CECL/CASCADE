@@ -45,8 +45,8 @@ class Cascade:
         self,
         datadir,
         name="default",
-        storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04.npy",
-        elevation_file="barrier3d-default-elevation.npy",
+        storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+        elevation_file="b3d_pt45_8750yrs_low-elevations.csv",  # associated with average dune growth rate of 0.45
         dune_file="barrier3d-default-dunes.npy",
         parameter_file="barrier3d-parameters.yaml",
         wave_height=1,
@@ -56,8 +56,8 @@ class Cascade:
         sea_level_rise_rate=0.004,
         alongshore_section_count=6,
         time_step_count=200,
-        min_dune_growth_rate=0.35,
-        max_dune_growth_rate=0.85,
+        min_dune_growth_rate=0.25,  # average is 0.45, low dune growth rate
+        max_dune_growth_rate=0.65,
         num_cores=1,
         roadway_management_module=False,
         alongshore_transport_module=True,
@@ -361,7 +361,6 @@ class Cascade:
                     )
                     * 10,  # m
                     dune_design_height=self._artificial_max_dune_ele[iB3D],
-                    dune_minimum_height=self._artificial_min_dune_ele[iB3D],
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
                 )
@@ -524,6 +523,11 @@ class Cascade:
                 ):
                     self._road_break = 1
                     return
+
+        # Community dynamics model
+        # -- needs as input 1) erosion rate from last time step, 2) the current beach width,
+        # 3) average interior barrier height, 4) average width of interior, 5) dune height
+        # -- as output, nourish_now and build_dune_now
 
         # BeachNourisher: if interval specified, nourish at that interval, otherwise wait until told with nourish_now to
         # nourish. Resets nourish_now parameter to zero (false) after nourishment.
