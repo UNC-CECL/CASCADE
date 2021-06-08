@@ -78,7 +78,6 @@ class BeachNourisher:
         nourishment_volume=100,
         initial_beach_width=10,
         dune_design_height=3.7,
-        dune_minimum_height=2.2,
         time_step_count=500,
         original_growth_param=None,
     ):
@@ -94,8 +93,6 @@ class BeachNourisher:
              initial beach width [m]
         dune_design_height: float, optional
             Elevation to which dune is rebuilt to [m NAVD88]
-        dune_minimum_height: float, optional
-            Elevation threshold which triggers rebuilding of dune [m NAVD88]
         time_step_count: int, optional
             Number of time steps.
         original_growth_param: optional
@@ -107,7 +104,6 @@ class BeachNourisher:
         self._nourishment_counter = nourishment_interval
         self._beach_width_threshold = 10  # m
         self._artificial_max_dune_ele = dune_design_height
-        self._artificial_min_dune_ele = dune_minimum_height
         self._original_growth_param = original_growth_param
         self._nt = time_step_count
         self._drown_break = 0
