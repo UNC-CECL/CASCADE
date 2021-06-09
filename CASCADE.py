@@ -14,12 +14,11 @@ import os
 
 from barrier3d import Barrier3d
 from brie import Brie
-# from chome import Chome
 
 from roadway_manager import RoadwayManager
 from beach_nourisher import BeachNourisher
 from alongshore_coupler import AlongshoreCoupler
-# from economics import ChomeBuyer
+from community_dynamics import ChomeBuyer
 
 
 def batchB3D(subB3D):
@@ -54,6 +53,7 @@ class Cascade:
         wave_asymmetry=0.8,
         wave_angle_high_fraction=0.2,
         sea_level_rise_rate=0.004,
+        sea_level_rise_constant=True,
         alongshore_section_count=6,
         time_step_count=200,
         min_dune_growth_rate=0.25,  # average is 0.45, low dune growth rate
@@ -62,15 +62,15 @@ class Cascade:
         roadway_management_module=False,
         alongshore_transport_module=True,
         beach_nourishment_module=True,
-        # community_dynamics_module=True,
+        community_dynamics_module=True,
         road_ele=1.7,
         road_width=30,
         road_setback=30,
         artificial_max_dune_ele=3.7,
         artificial_min_dune_ele=2.2,
         nourishment_interval=None,
-        nourishment_volume=300,
-        # number_of_communities=2,  # the number of communities described by alongshore_section_count, will split evenly (TO DO)
+        nourishment_volume=300.0,
+        number_of_communities=2,
     ):
         """initialize both BRIE and Barrier3D
 
@@ -90,6 +90,8 @@ class Cascade:
             Fraction of waves approaching from angles higher than 45 degrees.
         sea_level_rise_rate: float, optional
             Rate of sea_level rise [m/yr].
+        sea_level_rise_constant: boolean, optional
+            Rate of sea_level rise is constant if True, otherwise a logistic growth function is used.
         alongshore_section_count: int, optional
             Number of alongshore sections.
         time_step_count: int, optional
@@ -100,8 +102,14 @@ class Cascade:
             Maximum dune growth rate [unitless, for Houser growth rate formulation]
         num_cores: int, optional
             Number of (parallel) processing cores to be used
-        roadway_management: boolean, optional
-            If True, use roadway management module (includes dune management)
+        roadway_management_module: boolean, optional
+            If True, use roadway management module (overwash removal, road relocation, dune management)
+        alongshore_transport_module: boolean, optional
+            If True, couple Barrier3D with BRIE to use diffusive model for AST
+        community_dynamics_module: boolean, optional
+            If True, couple with CHOME, a community decision making model; requires nourishment module
+        beach_nourishment_module: boolean, optional
+            If True, use nourishment module (nourish shoreface, rebuild dunes)
         road_ele: float, optional
             Elevation of the roadway [m NAVD88]
         road_width: int, optional
@@ -112,10 +120,12 @@ class Cascade:
             Elevation to which dune is rebuilt to [m NAVD88]
         artificial_min_dune_ele: float, optional
             Elevation threshold which triggers rebuilding of dune [m NAVD88]
-        nourishment_interval: optional
+        nourishment_interval: int, optional
              Interval that nourishment occurs [yrs]
-        nourishment_volume: optional
+        nourishment_volume: float, optional
              Volume of nourished sand along cross-shore transect [m^3/m]
+        number_of_communities: int, optional
+            Number of communities described by the alongshore section count (Barrier3D grids)
 
         Examples
         --------
@@ -133,11 +143,12 @@ class Cascade:
         self._wave_assymetry = wave_asymmetry
         self._wave_angle_high_fraction = wave_angle_high_fraction
         self._sea_level_rise_rate = sea_level_rise_rate
-        self._slr_constant = True
+        self._slr_constant = sea_level_rise_constant
         self._num_cores = num_cores
         self._roadway_management_module = roadway_management_module
         self._alongshore_transport_module = alongshore_transport_module
         self._beach_nourishment_module = beach_nourishment_module
+        self._community_dynamics_module = community_dynamics_module
         self._filename = name
         self._storm_file = storm_file
         self._elevation_file = elevation_file
@@ -296,9 +307,10 @@ class Cascade:
         self._b3d_break = 0  # will = 1 if barrier in Barrier3D height or width drowns
 
         ###############################################################################
-        # initial conditions for human dynamics modules, ast module
+        # initial conditions for modules
         ###############################################################################
 
+        self._number_of_communities = number_of_communities
         if np.size(artificial_max_dune_ele) > 1:
             self._artificial_max_dune_ele = artificial_max_dune_ele
         else:
@@ -333,11 +345,49 @@ class Cascade:
         self._road_break = 0  # will = 1 if roadway drowns
         self._nourish_now = [0] * self._ny
 
+        # initialize modules
+        if self._alongshore_transport_module:
+            self._ast_coupler = AlongshoreCoupler(self._ny)
+
+        if self._community_dynamics_module:
+            self._communities = []
+
+            # create groups of barrier3d indices for each community
+            iB3D_communities = np.arange(self._ny)
+            alongshore_community_length = int(np.ceil(self._ny/self._number_of_communities))
+            iB3D_communities = [iB3D_communities[x:x+alongshore_community_length]
+                                for x in range(0,len(iB3D_communities),alongshore_community_length)]
+
+            if len(iB3D_communities) < self._number_of_communities:
+                self._number_of_communities = len(iB3D_communities)
+
+            for iCommunity in range(self._number_of_communities):
+                average_barrier_height = []
+                average_shoreface_depth = []
+                average_dune_design_height = []
+
+                for iB3D in len(iB3D_communities[iCommunity]):
+                    bh_array = np.array(self._barrier3d[iB3D]._DomainTS[0]) * 10  # in meters
+                    average_barrier_height.append(bh_array[bh_array > 0].mean())
+                    average_shoreface_depth.append(self._barrier3d[iB3D]._DShoreface)  # should all be the same
+                    average_dune_design_height.append(self._artificial_max_dune_ele-self._barrier3d[iB3D]._BermEl)
+
+                self._communities.append(
+                    ChomeBuyer(
+                        name=name,
+                        barrier_island_height=np.mean(average_barrier_height),
+                        shoreface_depth=np.mean(average_shoreface_depth),
+                        beach_nourishment_fill_width=self._dy,  # 500 m for Barrier3D
+                        dune_height_build=np.mean(average_dune_design_height),
+                    )
+                )
+            if self._beach_nourishment_module == False:
+                CascadeError("Beach nourishment module must be set to `TRUE` to couple with CHOME")
+
         # initialize RoadwayManager and BeachNourisher (always, just in case we want to add a road or start nourishing
         # during the simulation)
         self._roadways = []
         self._nourishments = []
-        # self._communities = []
 
         for iB3D in range(self._ny):
             self._roadways.append(
@@ -366,13 +416,6 @@ class Cascade:
                 )
             )
 
-        # # this may need to go above BeachNourisher!
-        # for iChome in range(self._number_of_communities):
-        #     self._communities.append(
-        #         ChomeBuyer())
-
-        if self._alongshore_transport_module:
-            self._ast_coupler = AlongshoreCoupler(self._ny)
 
     @classmethod
     def set_yaml(self, var_name, new_vals, file_name):
@@ -524,10 +567,22 @@ class Cascade:
                     self._road_break = 1
                     return
 
-        # Community dynamics model
-        # -- needs as input 1) erosion rate from last time step, 2) the current beach width,
-        # 3) average interior barrier height, 4) average width of interior, 5) dune height
-        # -- as output, nourish_now and build_dune_now
+        if self._community_dynamics_module:
+
+            for iCHOME in range(self._number_of_communities):
+                self._communities[iCHOME].update(
+                    change_shoreline_position,  # self._barrier3d[iB3D]._x_s_TS[-1] - self._barrier3d[iB3D]._x_s_TS[-2]
+                    self._road_ele[iB3D],
+                    self._road_width[iB3D],
+                    self._road_relocation_setback[iB3D],
+                    self._artificial_max_dune_ele[iB3D],
+                    self._artificial_min_dune_ele[iB3D],
+                )
+
+            # Community dynamics model
+            # -- needs as input 1) erosion rate from last time step, 2) the current beach width,
+            # 3) average interior barrier height, 4) average width of interior, 5) dune height, dune_sand volume
+            # -- as output, nourish_now and build_dune_now
 
         # BeachNourisher: if interval specified, nourish at that interval, otherwise wait until told with nourish_now to
         # nourish. Resets nourish_now parameter to zero (false) after nourishment.
