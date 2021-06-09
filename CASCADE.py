@@ -18,7 +18,7 @@ from brie import Brie
 from roadway_manager import RoadwayManager
 from beach_nourisher import BeachNourisher
 from alongshore_coupler import AlongshoreCoupler
-from community_dynamics import ChomeBuyer
+from chome_coupler import ChomeCoupler
 
 
 def batchB3D(subB3D):
@@ -291,8 +291,8 @@ class Cascade:
             barrier3d.append(Barrier3d.from_yaml(datadir))
 
             # now update brie x_b, x_b_save[:,0], h_b, h_b_save[:,0] from B3D so all the initial conditions are the same
-            # NOTE: interestingly here we don't need to have a "setter" in the property class for x_b, h_b, etc. because we
-            #  are only replacing certain indices but added for completeness
+            # NOTE: interestingly here we don't need to have a "setter" in the property class for x_b, h_b, etc. because
+            # we are only replacing certain indices but added for completeness
             self._brie.x_b[iB3D] = (
                 barrier3d[iB3D].x_b_TS[0] * 10
             )  # the shoreline position + average interior width
@@ -302,7 +302,7 @@ class Cascade:
             self._brie.x_b_save[iB3D, 0] = self._brie.x_b[iB3D]
             self._brie.h_b_save[iB3D, 0] = self._brie.h_b[iB3D]
 
-        # save array of Barrier3d models
+        # save array of B3d model instances
         self._barrier3d = barrier3d
         self._b3d_break = 0  # will = 1 if barrier in Barrier3D height or width drowns
 
@@ -345,47 +345,24 @@ class Cascade:
         self._road_break = 0  # will = 1 if roadway drowns
         self._nourish_now = [0] * self._ny
 
-        # initialize modules
+        # initialize couplers
         if self._alongshore_transport_module:
             self._ast_coupler = AlongshoreCoupler(self._ny)
 
         if self._community_dynamics_module:
-            self._communities = []
-
-            # create groups of barrier3d indices for each community
-            iB3D_communities = np.arange(self._ny)
-            alongshore_community_length = int(np.ceil(self._ny/self._number_of_communities))
-            iB3D_communities = [iB3D_communities[x:x+alongshore_community_length]
-                                for x in range(0,len(iB3D_communities),alongshore_community_length)]
-
-            if len(iB3D_communities) < self._number_of_communities:
-                self._number_of_communities = len(iB3D_communities)
-
-            for iCommunity in range(self._number_of_communities):
-                average_barrier_height = []
-                average_shoreface_depth = []
-                average_dune_design_height = []
-
-                for iB3D in len(iB3D_communities[iCommunity]):
-                    bh_array = np.array(self._barrier3d[iB3D]._DomainTS[0]) * 10  # in meters
-                    average_barrier_height.append(bh_array[bh_array > 0].mean())
-                    average_shoreface_depth.append(self._barrier3d[iB3D]._DShoreface)  # should all be the same
-                    average_dune_design_height.append(self._artificial_max_dune_ele-self._barrier3d[iB3D]._BermEl)
-
-                self._communities.append(
-                    ChomeBuyer(
-                        name=name,
-                        barrier_island_height=np.mean(average_barrier_height),
-                        shoreface_depth=np.mean(average_shoreface_depth),
-                        beach_nourishment_fill_width=self._dy,  # 500 m for Barrier3D
-                        dune_height_build=np.mean(average_dune_design_height),
-                    )
-                )
             if self._beach_nourishment_module == False:
                 CascadeError("Beach nourishment module must be set to `TRUE` to couple with CHOME")
+            else:
+                self._chome_coupler = ChomeCoupler(
+                    name=self._name,
+                    dy=self._dy,
+                    number_of_communities=self._number_of_communities,
+                    dune_design_elevation=self._artificial_max_dune_ele,
+                    barrier3d=self._barrier3d,
+                )
 
-        # initialize RoadwayManager and BeachNourisher (always, just in case we want to add a road or start nourishing
-        # during the simulation)
+        # initialize RoadwayManager and BeachNourisher modules (always, just in case we want to add a road or start
+        # nourishing during the simulation)
         self._roadways = []
         self._nourishments = []
 
@@ -568,21 +545,10 @@ class Cascade:
                     return
 
         if self._community_dynamics_module:
-
-            for iCHOME in range(self._number_of_communities):
-                self._communities[iCHOME].update(
-                    change_shoreline_position,  # self._barrier3d[iB3D]._x_s_TS[-1] - self._barrier3d[iB3D]._x_s_TS[-2]
-                    self._road_ele[iB3D],
-                    self._road_width[iB3D],
-                    self._road_relocation_setback[iB3D],
-                    self._artificial_max_dune_ele[iB3D],
-                    self._artificial_min_dune_ele[iB3D],
-                )
-
-            # Community dynamics model
-            # -- needs as input 1) erosion rate from last time step, 2) the current beach width,
-            # 3) average interior barrier height, 4) average width of interior, 5) dune height, dune_sand volume
-            # -- as output, nourish_now and build_dune_now
+            [self._nourish_now, self._rebuild_dune_now] = self._chome_coupler.update(
+                self._barrier3d,
+                self._nourishments
+            )  # ARE THERE ANY OTHER VARIABLES WE WILL WANT TO MODIFY??????
 
         # BeachNourisher: if interval specified, nourish at that interval, otherwise wait until told with nourish_now to
         # nourish. Resets nourish_now parameter to zero (false) after nourishment.
