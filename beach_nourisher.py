@@ -69,7 +69,7 @@ class BeachNourisher:
     --------
     >>> from beach_nourisher import BeachNourisher
     >>> nourish = BeachNourisher()
-    >>> nourish.update(barrier3d)
+    >>> nourish.update(barrier3d, artificial_max_dune_ele, nourish_now, nourishment_interval, nourishment_volume)
     """
 
     def __init__(
@@ -111,7 +111,7 @@ class BeachNourisher:
         self._time_index = 1
 
         # time series
-        self._beach_width = np.zeros(self._nt)  # keep track of beach width
+        self._beach_width = [None] * self._nt
         self._beach_width[0] = initial_beach_width  # m
         self._nourishment_TS = np.zeros(self._nt)
         self._nourishment_volume_TS = np.zeros(self._nt)
