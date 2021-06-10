@@ -130,22 +130,22 @@ def test_growth_params():
     assert new_growth_parameters == [0.7, 0.7, 0.6, 0.6]
 
 
-# NOTE FROM KA: I don't know how to use pytest, or test it, so leave for now
-# @pytest.mark.parametrize("nourishment_volume", (0, 100, 300))  # m^3/m
-# def test_shoreface_nourishment(nourishment_volume):
-#     x_t = 0  # m
-#     x_s = 500  # m
-#     average_barrier_height = 2  # m
-#     shoreface_depth = 10  # m
-#     beach_width = 0  # m
-#
-#     [new_x_s, s_sf, new_beach_width] = shoreface_nourishment(
-#         x_s,
-#         x_t,
-#         nourishment_volume,
-#         average_barrier_height,
-#         shoreface_depth,
-#         beach_width,
-#     )
-#
-#     assert np.floor(new_beach_width) == [0, 14, 42]
+NOTE FROM KA: I don't know how to use pytest, or test it, so leave for now
+@pytest.mark.parametrize("nourishment_volume", (0, 100, 300))  # m^3/m
+def test_shoreface_nourishment(nourishment_volume):
+    x_t = 0  # m
+    x_s = 500  # m
+    average_barrier_height = 2  # m
+    shoreface_depth = 10  # m
+    beach_width = 0  # m
+
+    [new_x_s, s_sf, new_beach_width] = shoreface_nourishment(
+        x_s,
+        x_t,
+        nourishment_volume,
+        average_barrier_height,
+        shoreface_depth,
+        beach_width,
+    )
+
+    assert np.floor(new_beach_width) == [0, 14, 42]
