@@ -156,8 +156,13 @@ def rebuild_dunes(
     -------
     new_dune_domain: float or array of float
         New yxz dune domain in z units specified by dz
+    rebuild_dune_volume: float
+        Volume of sand for dune rebuild, in units of dz^3
 
     """
+
+    # old_dune_domain = copy.deepcopy(yxz_dune_grid)
+    old_dune_domain = yxz_dune_grid
 
     # convert from m to grid z discretization
     max_height = max_dune_height / dz
@@ -185,8 +190,9 @@ def rebuild_dunes(
     z = np.transpose([dune_start_max, dune_start_min])
     f = interp2d(x, y, z)
     new_dune_domain = f(np.arange(0, nx, 1), np.arange(0, ny, 1))
+    rebuild_dune_volume = np.sum(new_dune_domain-old_dune_domain)
 
-    return new_dune_domain
+    return new_dune_domain, rebuild_dune_volume
 
 
 def set_growth_parameters(
@@ -352,6 +358,7 @@ class RoadwayManager:
         )  # roadway setback from the shoreline (when it is rebuilt)
         self._road_setback_TS[0] = road_setback
         self._dunes_rebuilt_TS = np.zeros(self._nt)  # when dunes are rebuilt (boolean)
+        self._rebuild_dune_volume_TS = np.zeros(self._nt)  # sand for rebuilding dunes [m^3]
         self._road_overwash_volume = np.zeros(
             self._nt
         )  # total overwash removed from roadway [m^3]
@@ -457,7 +464,7 @@ class RoadwayManager:
                 # berm crest -- then rebuild artificial dunes (first row up to the max dune height, second row to the
                 # minimum? -- nah, lets make it the max as well)
                 if np.min(new_dune_domain[:, 0]) < (artificial_min_dune_height / 10):
-                    new_dune_domain = rebuild_dunes(
+                    new_dune_domain, rebuild_dune_volume = rebuild_dunes(
                         new_dune_domain,  # dam
                         max_dune_height=artificial_max_dune_height,  # in m
                         min_dune_height=artificial_max_dune_height,  # in m
@@ -467,6 +474,7 @@ class RoadwayManager:
                     self._dunes_rebuilt_TS[
                         self._time_index - 1
                     ] = 1  # track when dunes are rebuilt
+                    self._rebuild_dune_volume_TS[self._time_index - 1] = rebuild_dune_volume * dm3_to_m3
 
             # set dune growth rate to zero for next time step if the dune elevation (front row) is larger than the
             # natural eq. dune height (Dmax)
