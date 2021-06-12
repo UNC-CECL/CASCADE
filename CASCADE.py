@@ -6,33 +6,15 @@
 Copyright (C) 2020 Katherine Anarde
 ----------------------------------------------------"""
 
-from yaml import full_load, dump
 from pathlib import Path
 from joblib import Parallel, delayed
 import numpy as np
 import os
 
-from barrier3d import Barrier3d
-from brie import Brie
-
 from roadway_manager import RoadwayManager
 from beach_nourisher import BeachNourisher
-from alongshore_coupler import AlongshoreCoupler
+from brie_coupler import BrieCoupler, initialize_equal, batchB3D
 from chome_coupler import ChomeCoupler
-
-
-def batchB3D(subB3D):
-
-    """parallelize update function for each B3D sub-grid (spread overwash routing algorithms to different cores)"""
-
-    subB3D.update()
-
-    # calculate the diff in shoreface toe, shoreline, and height of barrier (dam)
-    sub_x_t_dt = (subB3D.x_t_TS[-1] - subB3D.x_t_TS[-2]) * 10
-    sub_x_s_dt = (subB3D.x_s_TS[-1] - subB3D.x_s_TS[-2]) * 10
-    sub_h_b_dt = (subB3D.h_b_TS[-1] - subB3D.h_b_TS[-2]) * 10
-
-    return sub_x_t_dt, sub_x_s_dt, sub_h_b_dt, subB3D
 
 
 class CascadeError(Exception):
@@ -40,6 +22,52 @@ class CascadeError(Exception):
 
 
 class Cascade:
+
+    def module_lists(
+            self,
+            artificial_max_dune_ele,
+            artificial_min_dune_ele,
+            road_width,
+            road_ele,
+            road_setback,
+            nourishment_interval,
+            nourishment_volume
+    ):
+        """Configures lists to account for multiple barrier3d domains from single input variables; used in modules"""
+
+        if np.size(artificial_max_dune_ele) > 1:
+            self._artificial_max_dune_ele = artificial_max_dune_ele  # list of floats option
+        else:
+            self._artificial_max_dune_ele = [artificial_max_dune_ele] * self._ny
+        if np.size(artificial_min_dune_ele) > 1:
+            self._artificial_min_dune_ele = artificial_min_dune_ele
+        else:
+            self._artificial_min_dune_ele = [artificial_min_dune_ele] * self._ny
+        if np.size(road_width) > 1:
+            self._road_width = road_width
+        else:
+            self._road_width = [road_width] * self._ny
+        if np.size(road_ele) > 1:
+            self._road_ele = road_ele
+        else:
+            self._road_ele = [road_ele] * self._ny
+        if np.size(road_setback) > 1:
+            self._orig_road_setback = road_setback
+            self._road_relocation_setback = road_setback
+        else:
+            self._orig_road_setback = [road_setback] * self._ny
+            self._road_relocation_setback = [road_setback] * self._ny
+        if np.size(nourishment_interval) > 1:
+            self._nourishment_interval = nourishment_interval
+        else:
+            self._nourishment_interval = [nourishment_interval] * self._ny
+        if np.size(nourishment_volume) > 1:
+            self._nourishment_volume = nourishment_volume
+        else:
+            self._nourishment_volume = [nourishment_volume] * self._ny
+
+        return
+
     def __init__(
         self,
         datadir,
@@ -62,7 +90,7 @@ class Cascade:
         roadway_management_module=False,
         alongshore_transport_module=True,
         beach_nourishment_module=True,
-        community_dynamics_module=True,
+        community_dynamics_module=False,
         road_ele=1.7,
         road_width=30,
         road_setback=30,
@@ -70,9 +98,9 @@ class Cascade:
         artificial_min_dune_ele=2.2,
         nourishment_interval=None,
         nourishment_volume=300.0,
-        number_of_communities=2,
+        number_of_communities=1,
     ):
-        """initialize both BRIE and Barrier3D
+        """initialize models (Barrier3D, BRIE, CHOME) and human dynamics modules
 
         Parameters
         ----------
@@ -110,19 +138,19 @@ class Cascade:
             If True, couple with CHOME, a community decision making model; requires nourishment module
         beach_nourishment_module: boolean, optional
             If True, use nourishment module (nourish shoreface, rebuild dunes)
-        road_ele: float, optional
+        road_ele: float or list of floats, optional
             Elevation of the roadway [m NAVD88]
-        road_width: int, optional
+        road_width: int or list of int, optional
             Width of roadway [m]
-        road_setback: int, optional
+        road_setback: int or list of int, optional
             Setback of roadway from the inital dune line [m]
-        artificial_max_dune_ele: float, optional
+        artificial_max_dune_ele: float or list of floats, optional
             Elevation to which dune is rebuilt to [m NAVD88]
-        artificial_min_dune_ele: float, optional
+        artificial_min_dune_ele: float or list of floats, optional
             Elevation threshold which triggers rebuilding of dune [m NAVD88]
-        nourishment_interval: int, optional
+        nourishment_interval: int or list of ints, optional
              Interval that nourishment occurs [yrs]
-        nourishment_volume: float, optional
+        nourishment_volume: float or list of float, optional
              Volume of nourished sand along cross-shore transect [m^3/m]
         number_of_communities: int, optional
             Number of communities described by the alongshore section count (Barrier3D grids)
@@ -140,7 +168,7 @@ class Cascade:
         self._rmax = max_dune_growth_rate
         self._wave_height = wave_height
         self._wave_period = wave_period
-        self._wave_assymetry = wave_asymmetry
+        self._wave_asymmetry = wave_asymmetry
         self._wave_angle_high_fraction = wave_angle_high_fraction
         self._sea_level_rise_rate = sea_level_rise_rate
         self._slr_constant = sea_level_rise_constant
@@ -156,210 +184,64 @@ class Cascade:
         self._parameter_file = parameter_file
 
         ###############################################################################
-        # initial conditions for BRIE
+        # initialize brie and barrier3d classes
         ###############################################################################
 
-        # parameters that we need to initialize in BRIE for coupling (not necessarily default values), but I won't be
-        # modifying often (or ever) for CASCADE
-        self._brie_ast_model = True  # shoreface formulations on
-        self._brie_barrier_model = False  # LTA14 overwash model off
-        self._brie_inlet_model = False  # inlet model off
-        self._b3d_barrier_model = True  # B3d overwash model on
+        self._brie_coupler = BrieCoupler(
+            name,
+            self._wave_height,
+            self._wave_period,
+            self._wave_asymmetry,
+            self._wave_angle_high_fraction,
+            self._sea_level_rise_rate,
+            self._ny,
+            self._nt,
+        )
 
-        # barrier model parameters (the following are needed for other calculations even if the barrier model is off)
-        self._s_background = 0.001  # background slope (for shoreface toe position, back-barrier & inlet calculations)
-        self._z = 10.0  # initial sea level (for tracking SL, Eulerian reference frame)
-        self._bb_depth = 3.0  # back-barrier depth
-        self._h_b_crit = 1.9  # critical barrier height for overwash, used also to calculate shoreline diffusivity;
-        # we set equal to the static elevation of berm (NOTE: if the berm elevation is changed, the MSSM storm list and
-        # storm time series needs to be remade)
-
-        # inlet parameters (use default; these are here to remind me later that they are important and I can change)
-        self._Jmin = 10000  # minimum inlet spacing [m]
-        self._a0 = 0.5  # amplitude of tide [m]
-        self._marsh_cover = 0.5  # % of backbarrier covered by marsh and therefore does not contribute to tidal prism
-
-        # grid and time step params
-        self._dy = 500  # m, length of alongshore section (same as B3D)
-        self._dt = 1  # yr, timestep (same as B3D)
-        self._dtsave = 1  # save spacing (every year)
-
-        # start by initializing BRIE b/c it has parameters related to wave climate that we use to initialize B3D
-        self._brie = Brie(
-            name=name,
-            ast_model=self._brie_ast_model,
-            barrier_model=self._brie_barrier_model,
-            inlet_model=self._brie_inlet_model,
-            b3d=self._b3d_barrier_model,
-            wave_height=self._wave_height,
-            wave_period=self._wave_period,
-            wave_asymmetry=self._wave_assymetry,
-            wave_angle_high_fraction=self._wave_angle_high_fraction,
-            sea_level_rise_rate=self._sea_level_rise_rate,
-            sea_level_initial=self._z,
-            barrier_height_critical=self._h_b_crit,
-            tide_amplitude=self._a0,
-            back_barrier_marsh_fraction=self._marsh_cover,
-            back_barrier_depth=self._bb_depth,
-            xshore_slope=self._s_background,
-            inlet_min_spacing=self._Jmin,
-            alongshore_section_length=self._dy,
-            alongshore_section_count=self._ny,
-            time_step=self._dt,
-            time_step_count=self._nt,
-            save_spacing=self._dtsave,
-        )  # initialize class
+        self._barrier3d, self._brie_coupler._brie = initialize_equal(
+            datadir,
+            self._brie_coupler._brie,
+            self._slr_constant,
+            self._rmin,
+            self._rmax,
+            self._parameter_file,
+            self._storm_file,
+            self._dune_file,
+            self._elevation_file,
+        )
 
         ###############################################################################
-        # initial conditions for Barrier3D
+        # initialize human dynamics modules
         ###############################################################################
 
-        # for each B3D subgrid, set the initial shoreface geometry equal to what is set in brie (some random
-        # perturbations); all other B3D variables are set equal
-        barrier3d = []
-
-        for iB3D in range(self._ny):
-
-            fid = datadir + self._parameter_file
-
-            # update yaml file (these are the only variables that I'm like to change from default)
-            self.set_yaml("Shrub_ON", 0, fid)  # make sure that shrubs are turned off
-            self.set_yaml(
-                "TMAX", self._nt, fid
-            )  # [yrs] Duration of simulation (if brie._dt = 1 yr, set to ._nt)
-            self.set_yaml(
-                "BarrierLength", self._dy, fid
-            )  # [m] Static length of island segment (comprised of 10x10 cells)
-            self.set_yaml(
-                "DShoreface", self._brie.d_sf, fid
-            )  # [m] Depth of shoreface (set to brie depth, function of wave height)
-            self.set_yaml(
-                "LShoreface", float(self._brie.x_s[iB3D] - self._brie.x_t[iB3D]), fid
-            )  # [m] Length of shoreface (calculate from brie variables, shoreline - shoreface toe)
-            self.set_yaml(
-                "ShorefaceToe", float(self._brie.x_t[iB3D]), fid
-            )  # [m] Start location of shoreface toe
-            # set_yaml('BermEl', 1.9 , datadir) # [m] Static elevation of berm
-            # (NOTE: if BermEl is changed, the MSSM storm list and storm time series needs to be remade)
-            self.set_yaml(
-                "BayDepth", self._bb_depth, fid
-            )  # [m] Depth of bay behind island segment (set to brie bay depth)
-            # set_yaml('MHW', 0.46, datadir)  # [m] Elevation of Mean High Water
-            # (NOTE: if MHW is changed, the storm time series needs to be remade)
-            self.set_yaml(
-                "DuneParamStart", True, fid
-            )  # Dune height will come from external file
-            self.set_yaml(
-                "Rat", 0.0, fid
-            )  # [m / y] corresponds to Qat in LTA (!!! must set to 0 because Qs is calculated in brie !!!)
-            self.set_yaml(
-                "RSLR_Constant", self._slr_constant, fid
-            )  # Relative sea-level rise rate will be constant, otherwise logistic growth function used
-            self.set_yaml(
-                "RSLR_const", self._sea_level_rise_rate, fid
-            )  # [m / y] Relative sea-level rise rate
-            # set_yaml('beta', 0.04, datadir)  # Beach slope for runup calculations
-            self.set_yaml(
-                "k_sf", float(self._brie.k_sf), fid
-            )  # [m^3 / m / y] Shoreface flux rate constant (function of wave parameters from brie)
-            self.set_yaml(
-                "s_sf_eq", float(self._brie.s_sf_eq), fid
-            )  # Equilibrium shoreface slope (function of wave and sediment parameters from brie)
-            self.set_yaml(
-                "GrowthParamStart", False, fid
-            )  # Dune growth parameter WILL NOT come from external file
-            if np.size(self._rmin) > 1:
-                self.set_yaml(
-                    "rmin", self._rmin[iB3D], fid
-                )  # Minimum growth rate for logistic dune growth
-                self.set_yaml(
-                    "rmax", self._rmax[iB3D], fid
-                )  # Maximum growth rate for logistic dune growth
-            else:
-                self.set_yaml(
-                    "rmin", self._rmin, fid
-                )  # Minimum growth rate for logistic dune growth
-                self.set_yaml(
-                    "rmax", self._rmax, fid
-                )  # Maximum growth rate for logistic dune growth
-
-            # external file names used for initialization
-            self.set_yaml("storm_file", self._storm_file, fid)
-            self.set_yaml("dune_file", self._dune_file, fid)
-            self.set_yaml("elevation_file", self._elevation_file, fid)
-
-            barrier3d.append(Barrier3d.from_yaml(datadir))
-
-            # now update brie x_b, x_b_save[:,0], h_b, h_b_save[:,0] from B3D so all the initial conditions are the same
-            # NOTE: interestingly here we don't need to have a "setter" in the property class for x_b, h_b, etc. because
-            # we are only replacing certain indices but added for completeness
-            self._brie.x_b[iB3D] = (
-                barrier3d[iB3D].x_b_TS[0] * 10
-            )  # the shoreline position + average interior width
-            self._brie.h_b[iB3D] = (
-                barrier3d[iB3D].h_b_TS[0] * 10
-            )  # average height of the interior domain
-            self._brie.x_b_save[iB3D, 0] = self._brie.x_b[iB3D]
-            self._brie.h_b_save[iB3D, 0] = self._brie.h_b[iB3D]
-
-        # save array of B3d model instances
-        self._barrier3d = barrier3d
-        self._b3d_break = 0  # will = 1 if barrier in Barrier3D height or width drowns
-
-        ###############################################################################
-        # initial conditions for modules
-        ###############################################################################
+        # configure self to create lists of these variables
+        self.module_lists(
+            artificial_max_dune_ele,
+            artificial_min_dune_ele,
+            road_width,
+            road_ele,
+            road_setback,
+            nourishment_interval,
+            nourishment_volume
+        )
 
         self._number_of_communities = number_of_communities
-        if np.size(artificial_max_dune_ele) > 1:
-            self._artificial_max_dune_ele = artificial_max_dune_ele
-        else:
-            self._artificial_max_dune_ele = [artificial_max_dune_ele] * self._ny
-        if np.size(artificial_min_dune_ele) > 1:
-            self._artificial_min_dune_ele = artificial_min_dune_ele
-        else:
-            self._artificial_min_dune_ele = [artificial_min_dune_ele] * self._ny
-        if np.size(road_width) > 1:
-            self._road_width = road_width
-        else:
-            self._road_width = [road_width] * self._ny
-        if np.size(road_ele) > 1:
-            self._road_ele = road_ele
-        else:
-            self._road_ele = [road_ele] * self._ny
-        if np.size(road_setback) > 1:
-            self._orig_road_setback = road_setback
-            self._road_relocation_setback = road_setback
-        else:
-            self._orig_road_setback = [road_setback] * self._ny
-            self._road_relocation_setback = [road_setback] * self._ny
-        if np.size(nourishment_interval) > 1:
-            self._nourishment_interval = nourishment_interval
-        else:
-            self._nourishment_interval = [nourishment_interval] * self._ny
-        if np.size(nourishment_volume) > 1:
-            self._nourishment_volume = nourishment_volume
-        else:
-            self._nourishment_volume = [nourishment_volume] * self._ny
-
+        self._b3d_break = 0  # will = 1 if barrier in Barrier3D height or width drowns
         self._road_break = 0  # will = 1 if roadway drowns
-        self._nourish_now = [0] * self._ny
-
-        # initialize couplers
-        if self._alongshore_transport_module:
-            self._ast_coupler = AlongshoreCoupler(self._ny)
+        self._nourish_now = [0] * self._ny  # boolean for triggering nourishment
+        self._rebuild_dune_now = [0] * self._ny  # boolean for triggering dune rebuilding
 
         if self._community_dynamics_module:
             if self._beach_nourishment_module == False:
                 CascadeError("Beach nourishment module must be set to `TRUE` to couple with CHOME")
             else:
                 self._chome_coupler = ChomeCoupler(
-                    name=self._name,
-                    dy=self._dy,
-                    number_of_communities=self._number_of_communities,
-                    dune_design_elevation=self._artificial_max_dune_ele,
                     barrier3d=self._barrier3d,
-                )
+                    dy=self._brie_coupler._brie._dy,  # this is the barrier3d default, 500 m
+                    dune_design_elevation=self._artificial_max_dune_ele,
+                    number_of_communities=self._number_of_communities,
+                    name=self._filename,
+                ) # contains the CHOME model instances, which can be accessed via the communities property
 
         # initialize RoadwayManager and BeachNourisher modules (always, just in case we want to add a road or start
         # nourishing during the simulation)
@@ -393,15 +275,6 @@ class Cascade:
                 )
             )
 
-
-    @classmethod
-    def set_yaml(self, var_name, new_vals, file_name):
-        with open(file_name) as f:
-            doc = full_load(f)
-        doc[var_name] = new_vals
-        with open(file_name, "w") as f:
-            dump(doc, f)
-
     @property
     def road_break(self):
         return self._road_break
@@ -409,14 +282,6 @@ class Cascade:
     @property
     def b3d_break(self):
         return self._b3d_break
-
-    @property
-    def brie(self):
-        return self._brie
-
-    @brie.setter
-    def brie(self, value):
-        self._brie = value
 
     @property
     def barrier3d(self):
@@ -430,9 +295,13 @@ class Cascade:
     def roadways(self):
         return self._roadways
 
-    # @roadways.setter
-    # def roadways(self, value):
-    #     self._roadways = value
+    @property
+    def communities(self):
+        return self._chome_coupler.communities
+
+    @property
+    def brie(self):
+        return self._brie_coupler.brie
 
     @property
     def roadway_management_module(self):
@@ -487,7 +356,7 @@ class Cascade:
 
         # Check for drowning here from the last time step in brie. Note that this will stay false if brie is not used
         # for AST (i.e., a B3D only run).
-        if self._brie.drown == True:
+        if self._brie_coupler._brie.drown == True:
             return
 
         # Advance B3D by one time step; NOTE: B3D initializes at time_index = 1 and then updates the time_index
@@ -506,9 +375,7 @@ class Cascade:
 
         # use brie to connect B3D subgrids with alongshore sediment transport; otherwise, just update dune domain
         if self._alongshore_transport_module:
-            self._ast_coupler.update(
-                self._brie, self._barrier3d, x_t_dt, x_s_dt, h_b_dt
-            )
+            self._brie_coupler.update_ast(self._barrier3d, x_t_dt, x_s_dt, h_b_dt)
         else:
             for iB3D in range(self._ny):
                 self._barrier3d[iB3D].update_dune_domain()
@@ -545,20 +412,20 @@ class Cascade:
                     return
 
         if self._community_dynamics_module:
-            [self._nourish_now, self._rebuild_dune_now] = self._chome_coupler.update(
+            [self._nourish_now, self._rebuild_dune_now, self._nourishment_volume] = self._chome_coupler.update(
                 self._barrier3d,
                 self._nourishments
-            )  # ARE THERE ANY OTHER VARIABLES WE WILL WANT TO MODIFY??????
+            )
 
         # BeachNourisher: if interval specified, nourish at that interval, otherwise wait until told with nourish_now to
-        # nourish. Resets nourish_now parameter to zero (false) after nourishment.
+        # nourish or rebuild_dunes_now to rebuild dunes. Resets ..._now parameters to zero (false) after nourishment.
         if self._beach_nourishment_module:
             for iB3D in range(self._ny):
-                self._nourish_now[iB3D] = self._nourishments[iB3D].update(
+                [self._nourish_now[iB3D], self._rebuild_dune_now[iB3D]] = self._nourishments[iB3D].update(
                     self._barrier3d[iB3D],
                     self._artificial_max_dune_ele[iB3D],
                     self._nourish_now[iB3D],
-                    # self._build_dune_now[iB3D],  # NOTE: need to add this above
+                    self._rebuild_dune_now[iB3D],
                     self._nourishment_interval[iB3D],
                     self._nourishment_volume[iB3D],
                 )
@@ -574,20 +441,8 @@ class Cascade:
         csc8d = []
         csc8d.append(self)
 
-        # b3d = []
-        # brie_save = []
-        #
-        # # save object
-        # for iB3D in range(self._ny):
-        #     b3d.append(self._barrier3d[iB3D])
-        #
-        # brie_save.append(self._brie)
-
         os.chdir(directory)
         np.savez(filename, cascade=csc8d)
-        # np.savez(filename, barrier3d=b3d, brie=brie_save)
-
-        # return b3d
 
 
 ###############################################################################
