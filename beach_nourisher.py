@@ -17,6 +17,8 @@ import copy
 from roadway_manager import rebuild_dunes, set_growth_parameters
 
 
+dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
+
 def shoreface_nourishment(
     x_s, x_t, nourishment_volume, average_barrier_height, shoreface_depth, beach_width
 ):
@@ -114,7 +116,9 @@ class BeachNourisher:
         self._beach_width = [None] * self._nt
         self._beach_width[0] = initial_beach_width  # m
         self._nourishment_TS = np.zeros(self._nt)
-        self._nourishment_volume_TS = np.zeros(self._nt)
+        self._dunes_rebuilt_TS = np.zeros(self._nt)
+        self._nourishment_volume_TS = np.zeros(self._nt)  # m^3/m
+        self._rebuild_dune_volume_TS = np.zeros(self._nt)   # m^3
         self._growth_params = [
             None
         ] * self._nt  # track when dune growth parameters set to zero b/c of rebuild height
@@ -125,6 +129,7 @@ class BeachNourisher:
         barrier3d,
         artificial_max_dune_ele,
         nourish_now,
+        rebuild_dune_now,
         nourishment_interval,
         nourishment_volume,
     ):
@@ -153,43 +158,23 @@ class BeachNourisher:
         if self._beach_width[self._time_index - 1] <= self._beach_width_threshold:
             barrier3d.dune_migration_on = True
 
-        # update counter and check for nourishment flag: if yes, nourish shoreface, turn dune migration off in
-        # Barrier3D, and rebuild dunes
+        # update counter and check for nourishment and dune rebuild flags
         if self._nourishment_counter is not None:
             self._nourishment_counter -= 1
 
-        if nourish_now or self._nourishment_counter == 0:
-            self._nourishment_TS[self._time_index - 1] = 1
-            if self._nourishment_counter is not None:
-                self._nourishment_counter = self._nourishment_interval  # reset if its what triggered nourishment
-            self._nourishment_volume_TS[self._time_index - 1] = self._nourishment_volume
-
-            (
-                barrier3d.x_s,
-                barrier3d.s_sf_TS[-1],
-                self._beach_width[self._time_index - 1],
-            ) = shoreface_nourishment(
-                barrier3d.x_s,  # in dam
-                barrier3d.x_t,  # in dam
-                self._nourishment_volume / 100,  # convert m^3/m to dam^3/dam
-                barrier3d.h_b_TS[-1],  # in dam
-                barrier3d.DShoreface,  # in dam
-                self._beach_width[self._time_index - 1] / 10,  # convert m to dam
-            )
-            self._beach_width[self._time_index - 1] *= 10  # convert dam back to m
-
-            # dunes
-            barrier3d.dune_migration_on = False
+        if rebuild_dune_now or self._nourishment_counter == 0:
             artificial_max_dune_height = self._artificial_max_dune_ele - (
                 barrier3d.BermEl * 10
             )
-            new_dune_domain = rebuild_dunes(
+            new_dune_domain, rebuild_dune_volume = rebuild_dunes(
                 barrier3d.DuneDomain[self._time_index - 1, :, :],  # dam
                 max_dune_height=artificial_max_dune_height,  # in m
                 min_dune_height=artificial_max_dune_height,  # in m
                 dz=10,  # specifies dune domain is in dam
                 rng=True,  # adds stochasticity to dune height (seeded)
             )
+            self._dunes_rebuilt_TS[self._time_index - 1] = 1
+            self._rebuild_dune_volume_TS[self._time_index - 1] = rebuild_dune_volume * dm3_to_m3
 
             # [COMING SOON] check beach width and find associated DMAX, change DMAX and feed into next function
 
@@ -205,15 +190,41 @@ class BeachNourisher:
                 new_growth_parameters
             )
 
-            # update dune variables
+            # update barrier3d dune variables
             barrier3d.DuneDomain[self._time_index - 1, :, :] = new_dune_domain
             barrier3d.growthparam = new_growth_parameters
 
-            # reset nourish_now parameter
+            # reset rebuild_dune_now parameter; if nourishment_counter is what triggered the rebuild, it is reset in the
+            # nourishment section below
+            rebuild_dune_now = 0
+
+        if nourish_now or self._nourishment_counter == 0:
+            (
+                barrier3d.x_s,
+                barrier3d.s_sf_TS[-1],
+                self._beach_width[self._time_index - 1],
+            ) = shoreface_nourishment(
+                barrier3d.x_s,  # in dam
+                barrier3d.x_t,  # in dam
+                self._nourishment_volume / 100,  # convert m^3/m to dam^3/dam
+                barrier3d.h_b_TS[-1],  # in dam
+                barrier3d.DShoreface,  # in dam
+                self._beach_width[self._time_index - 1] / 10,  # convert m to dam
+            )
+            self._beach_width[self._time_index - 1] *= 10  # convert dam back to m
+            self._nourishment_TS[self._time_index - 1] = 1
+            self._nourishment_volume_TS[self._time_index - 1] = self._nourishment_volume
+
+            # reset counter if its what triggered nourishment and nourish_now parameter
+            if self._nourishment_counter is not None:
+                self._nourishment_counter = self._nourishment_interval
             nourish_now = 0
 
+            # set dune migration off after nourishment (we don't want the dune line to prograde)
+            barrier3d.dune_migration_on = False
+
         # update shoreline time series (just in case nourishment happened) and back-barrier location
-        # (this needs to be done every year because b3d doesn't include dune domain width)
+        # (this needs to be done every year because b3d doesn't include dune domain width when calculating back barrier)
         barrier3d.x_s_TS[-1] = barrier3d.x_s
         barrier3d.x_b_TS[-1] = (
             barrier3d.x_s
@@ -222,7 +233,7 @@ class BeachNourisher:
             + self._beach_width[self._time_index - 1] / 10  # in dam
         )
 
-        return nourish_now
+        return nourish_now, rebuild_dune_now
 
     @property
     def beach_width(self):
