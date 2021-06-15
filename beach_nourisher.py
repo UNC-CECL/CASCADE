@@ -54,6 +54,7 @@ def shoreface_nourishment(
     new_x_s = x_s - (2 * nourishment_volume) / (
         2 * average_barrier_height + shoreface_depth
     )
+    # nourishment_volume = beach_width * (2 * average_barrier_height + shoreface_depth) / 2
 
     # calculate new shoreface slope
     s_sf = shoreface_depth / (new_x_s - x_t)
@@ -79,7 +80,7 @@ class BeachNourisher:
         nourishment_interval=None,
         nourishment_volume=100,
         initial_beach_width=10,
-        dune_design_height=3.7,
+        dune_design_elevation=3.7,
         time_step_count=500,
         original_growth_param=None,
     ):
@@ -93,7 +94,7 @@ class BeachNourisher:
              Volume of nourished sand along cross-shore transect [m^3/m]
         initial_beach_width: int, optional
              initial beach width [m]
-        dune_design_height: float, optional
+        dune_design_elevation: float, optional
             Elevation to which dune is rebuilt to [m NAVD88]
         time_step_count: int, optional
             Number of time steps.
@@ -105,7 +106,7 @@ class BeachNourisher:
         self._nourishment_interval = nourishment_interval
         self._nourishment_counter = nourishment_interval
         self._beach_width_threshold = 10  # m
-        self._artificial_max_dune_ele = dune_design_height
+        self._artificial_max_dune_ele = dune_design_elevation
         self._original_growth_param = original_growth_param
         self._nt = time_step_count
         self._drown_break = 0
@@ -127,7 +128,7 @@ class BeachNourisher:
     def update(
         self,
         barrier3d,
-        artificial_max_dune_ele,
+        dune_design_elevation,
         nourish_now,
         rebuild_dune_now,
         nourishment_interval,
@@ -140,7 +141,7 @@ class BeachNourisher:
             self._original_growth_param = barrier3d.growthparam
 
         # if any dune or nourishment parameters were updated in CASCADE, update them here
-        self._artificial_max_dune_ele = artificial_max_dune_ele
+        self._artificial_max_dune_ele = dune_design_elevation
         self._nourishment_volume = nourishment_volume
         if self._nourishment_interval != nourishment_interval:
             self._nourishment_interval = nourishment_interval
