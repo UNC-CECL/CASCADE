@@ -312,8 +312,8 @@ class RoadwayManager:
         road_width=30,
         road_setback=30,
         road_relocation_setback=30,
-        dune_design_height=3.7,
-        dune_minimum_height=2.2,
+        dune_design_elevation=3.7,
+        dune_minimum_elevation=2.2,
         time_step_count=500,
         original_growth_param=None,
     ):
@@ -329,9 +329,9 @@ class RoadwayManager:
             Setback of roadway from the inital dune line [m]
         road_relocation_setback: int, optional
             Setback of roadway from the inital dune line when rebuilding the road [m]
-        dune_design_height: float, optional
+        dune_design_elevation: float, optional
             Elevation to which dune is rebuilt to [m NAVD88]
-        dune_minimum_height: float, optional
+        dune_minimum_elevation: float, optional
             Elevation threshold which triggers rebuilding of dune [m NAVD88]
         time_step_count: int, optional
             Number of time steps.
@@ -344,8 +344,8 @@ class RoadwayManager:
         self._road_setback = road_setback
         self._road_ele = road_elevation
         self._road_relocation_setback = road_relocation_setback
-        self._artificial_max_dune_ele = dune_design_height
-        self._artificial_min_dune_ele = dune_minimum_height
+        self._artificial_max_dune_ele = dune_design_elevation
+        self._artificial_min_dune_ele = dune_minimum_elevation
         self._original_growth_param = original_growth_param
         self._nt = time_step_count
         self._drown_break = 0
@@ -379,8 +379,8 @@ class RoadwayManager:
         road_ele,
         road_width,
         road_relocation_setback,
-        artificial_max_dune_ele,
-        artificial_min_dune_ele,
+        dune_design_elevation,
+        dune_minimum_elevation,
     ):
 
         self._time_index = barrier3d.time_index
@@ -392,8 +392,8 @@ class RoadwayManager:
         self._road_ele = road_ele
         self._road_width = road_width
         self._road_relocation_setback = road_relocation_setback
-        self._artificial_max_dune_ele = artificial_max_dune_ele
-        self._artificial_min_dune_ele = artificial_min_dune_ele
+        self._artificial_max_dune_ele = dune_design_elevation
+        self._artificial_min_dune_ele = dune_minimum_elevation
 
         # save post-storm dune and interior domain before human modifications
         self._post_storm_interior[self._time_index - 1] = copy.deepcopy(
