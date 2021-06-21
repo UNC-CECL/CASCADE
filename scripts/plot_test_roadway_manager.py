@@ -1,4 +1,4 @@
-from CASCADE import Cascade
+from cascade.cascade import Cascade
 import matplotlib.pyplot as plt
 from scripts import CASCADE_plotters as CASCADE_Plt
 
@@ -20,8 +20,8 @@ cascade = Cascade(
     road_ele=1.7,
     road_width=30,
     road_setback=30,
-    artificial_max_dune_ele=3.7,
-    artificial_min_dune_ele=2.2,
+    dune_design_elevation=3.7,
+    dune_minimum_elevation=2.2,
 )
 
 # advance the first 50 time steps without a road

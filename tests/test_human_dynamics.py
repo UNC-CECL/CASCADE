@@ -2,8 +2,8 @@ import pytest
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
-from roadway_manager import bulldoze, rebuild_dunes, set_growth_parameters
-from beach_nourisher import shoreface_nourishment
+from cascade.roadway_manager import bulldoze, rebuild_dunes, set_growth_parameters
+from cascade.beach_nourisher import shoreface_nourishment
 
 
 def test_bulldoze_volume():
@@ -130,8 +130,8 @@ def test_growth_params():
     assert new_growth_parameters == [0.7, 0.7, 0.6, 0.6]
 
 
-NOTE FROM KA: I don't know how to use pytest, or test it, so leave for now
-@pytest.mark.parametrize("nourishment_volume", (0, 100, 300))  # m^3/m
+# NOTE FROM KA: I don't know how to use pytest, or test it, so leave for now
+# @pytest.mark.parametrize("nourishment_volume", (0, 100, 300))  # m^3/m
 def test_shoreface_nourishment(nourishment_volume):
     x_t = 0  # m
     x_s = 500  # m
