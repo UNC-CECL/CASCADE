@@ -7,11 +7,15 @@ def read(filename):
         return fp.read()
 
 
+long_description = u"\n\n".join(
+    [read("README.rst"), read("AUTHORS.rst"), read("CHANGES.rst")]
+)
+
 setup(
     name="cascade",
     version="0.0.1.dev0",
     description="The CoAStal Community-lAnDscape Evolution (CASCADE) model",
-    long_description=open("README.md", encoding="utf-8").read(),
+    long_description=long_description,
     author="Katherine Anarde",
     author_email="kanarde@ncsu.edu",
     url="https://github.com/UNC-CECL/cascade",
