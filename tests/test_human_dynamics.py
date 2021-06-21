@@ -2,8 +2,8 @@ import pytest
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
-from roadway_manager import bulldoze, rebuild_dunes, set_growth_parameters
-from beach_nourisher import shoreface_nourishment
+from cascade.roadway_manager import bulldoze, rebuild_dunes, set_growth_parameters
+from cascade.beach_nourisher import shoreface_nourishment
 
 
 def test_bulldoze_volume():

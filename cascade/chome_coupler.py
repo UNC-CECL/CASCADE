@@ -20,7 +20,7 @@ Notes
 import numpy as np
 
 from chome import Chome
-from roadway_manager import rebuild_dunes
+from .roadway_manager import rebuild_dunes
 
 dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
 
@@ -30,7 +30,7 @@ class ChomeCoupler:
 
     Examples
     --------
-    >>> from chome_coupler import ChomeCoupler
+    >>> from cascade.chome_coupler import ChomeCoupler
     >>> chome_coupler = ChomeCoupler(barrier3d=, dune_design_elevation=)
     >>> chome_coupler.update()
     """
@@ -85,6 +85,7 @@ class ChomeCoupler:
 
         """
         self._number_of_communities = number_of_communities
+        self._dune_design_elevation = dune_design_elevation
         self._chome = []
         ny = len(barrier3d)
 
@@ -125,7 +126,7 @@ class ChomeCoupler:
 
                 avg_shoreface_depth.append(barrier3d[iB3D].DShoreface * 10)
                 avg_dune_design_height.append(
-                    dune_design_elevation[iB3D] - (barrier3d[iB3D].BermEl * 10)
+                    self._dune_design_elevation[iB3D] - (barrier3d[iB3D].BermEl * 10)
                 )
                 initial_beach_width = (
                     int(barrier3d[iB3D].BermEl / barrier3d[iB3D]._beta) * 10
@@ -163,7 +164,7 @@ class ChomeCoupler:
                 )
             )
 
-    def update(self, barrier3d, nourishments, dune_design_elevation):
+    def update(self, barrier3d, nourishments):
         # NOTE: dune design ele can not yet be updated at each time step in CHOME -- potential future functionality
 
         # time is updated at the end of the chome and barrier3d model loop
@@ -207,7 +208,7 @@ class ChomeCoupler:
                 avg_dune_height.append(np.mean(dune_height) * 10)
 
                 # volume needed to rebuild dunes up to design height
-                artificial_max_dune_height = dune_design_elevation[iB3D] - (
+                artificial_max_dune_height = self._dune_design_elevation[iB3D] - (
                     barrier3d[iB3D].BermEl * 10
                 )
                 _, rebuild_dune_volume = rebuild_dunes(
@@ -273,3 +274,11 @@ class ChomeCoupler:
     @property
     def chome(self):
         return self._chome
+
+    @property
+    def dune_design_elevation(self):
+        return self._dune_design_elevation
+
+    @dune_design_elevation.setter
+    def dune_design_elevation(self, value):
+        self._dune_design_elevation = value

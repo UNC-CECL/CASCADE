@@ -7,7 +7,7 @@
 
 from barrier3d import Barrier3dBmi
 from barrier3d.tools import plot as B3Dfunc
-from CASCADE import Cascade
+from cascade.cascade import Cascade
 import time
 import matplotlib.pyplot as plt
 

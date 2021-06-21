@@ -14,7 +14,7 @@ Notes
 """
 import numpy as np
 import copy
-from roadway_manager import rebuild_dunes, set_growth_parameters
+from .roadway_manager import rebuild_dunes, set_growth_parameters
 
 
 dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
@@ -70,9 +70,9 @@ class BeachNourisher:
 
     Examples
     --------
-    >>> from beach_nourisher import BeachNourisher
+    >>> from cascade.beach_nourisher import BeachNourisher
     >>> nourish = BeachNourisher()
-    >>> nourish.update(barrier3d, artificial_max_dune_ele, nourish_now, nourishment_interval, nourishment_volume)
+    >>> nourish.update(barrier3d=, nourish_now=, nourishment_interval=)
     """
 
     def __init__(
@@ -106,7 +106,7 @@ class BeachNourisher:
         self._nourishment_interval = nourishment_interval
         self._nourishment_counter = nourishment_interval
         self._beach_width_threshold = 10  # m
-        self._artificial_max_dune_ele = dune_design_elevation
+        self._dune_design_elevation = dune_design_elevation
         self._original_growth_param = original_growth_param
         self._nt = time_step_count
         self._drown_break = 0
@@ -128,11 +128,9 @@ class BeachNourisher:
     def update(
         self,
         barrier3d,
-        dune_design_elevation,
         nourish_now,
         rebuild_dune_now,
         nourishment_interval,
-        nourishment_volume,
     ):
 
         self._time_index = barrier3d.time_index
@@ -140,9 +138,7 @@ class BeachNourisher:
         if self._original_growth_param is None:
             self._original_growth_param = barrier3d.growthparam
 
-        # if any dune or nourishment parameters were updated in CASCADE, update them here
-        self._artificial_max_dune_ele = dune_design_elevation
-        self._nourishment_volume = nourishment_volume
+        # if nourishment interval was updated in CASCADE, update here
         if self._nourishment_interval != nourishment_interval:
             self._nourishment_interval = nourishment_interval
             self._nourishment_counter = (
@@ -164,7 +160,7 @@ class BeachNourisher:
             self._nourishment_counter -= 1
 
         if rebuild_dune_now or self._nourishment_counter == 0:
-            artificial_max_dune_height = self._artificial_max_dune_ele - (
+            artificial_max_dune_height = self._dune_design_elevation - (
                 barrier3d.BermEl * 10
             )
             new_dune_domain, rebuild_dune_volume = rebuild_dunes(
@@ -243,3 +239,19 @@ class BeachNourisher:
     @beach_width.setter
     def beach_width(self, value):
         self._beach_width = value
+
+    @property
+    def dune_design_elevation(self):
+        return self._dune_design_elevation
+
+    @dune_design_elevation.setter
+    def dune_design_elevation(self, value):
+        self._dune_design_elevation = value
+
+    @property
+    def nourishment_volume(self):
+        return self._nourishment_volume
+
+    @nourishment_volume.setter
+    def nourishment_volume(self, value):
+        self._nourishment_volume = value

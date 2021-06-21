@@ -1,6 +1,6 @@
 import numpy as np
 
-from CASCADE import Cascade
+from cascade.cascade import Cascade
 
 
 def test_initialize():

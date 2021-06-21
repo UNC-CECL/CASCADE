@@ -96,8 +96,8 @@ def initialize_equal(
             "RSLR_Constant", slr_constant, fid
         )  # Relative sea-level rise rate will be constant, otherwise logistic growth function used
         set_yaml(
-            "RSLR_const", brie._slr, fid
-        )  # [m / y] Relative sea-level rise rate
+            "RSLR_const", brie._slr[0], fid
+        )  # [m / y] Relative sea-level rise rate; initialized in brie, but saved as time series, so we use index 0
         # set_yaml('beta', 0.04, datadir)  # Beach slope for runup calculations
         set_yaml(
             "k_sf", float(brie.k_sf), fid
@@ -130,7 +130,9 @@ def initialize_equal(
 
         barrier3d.append(Barrier3d.from_yaml(datadir))
 
-        # now update brie x_b, x_b_save[:,0], h_b, h_b_save[:,0] from B3D so all the initial conditions are the same
+        # now update brie back barrier position, height of barrier, and SLRR time series with that from B3D so all
+        # the initial conditions are the same! The rate of slr can only be constant in brie, whereas it can accelerate
+        # in barrier3d, so by replacing the slr time series in brie we enable new functionality!
         # NOTE: interestingly here we don't need to have a "setter" in the property class for x_b, h_b, etc. because
         # we are only replacing certain indices but added for completeness
         brie.x_b[iB3D] = (
@@ -141,8 +143,9 @@ def initialize_equal(
         )  # average height of the interior domain
         brie.x_b_save[iB3D, 0] = brie.x_b[iB3D]
         brie.h_b_save[iB3D, 0] = brie.h_b[iB3D]
+    brie.slr = np.array(barrier3d[0].RSLR) * 10   # same for all b3d domains, just use first
 
-    return barrier3d, brie
+    return barrier3d
 
 
 class BrieCoupler:
@@ -150,7 +153,7 @@ class BrieCoupler:
 
     Examples
     --------
-    >>> from brie_coupler import BrieCoupler
+    >>> from cascade.brie_coupler import BrieCoupler
     >>> brie_coupler = BrieCoupler()
     >>> brie_coupler.update_inlets(brie, barrier3d)
     >>> brie_coupler.update_ast(brie, barrier3d)
@@ -231,9 +234,9 @@ class BrieCoupler:
 
     def update_ast(self, barrier3d, x_t_dt, x_s_dt, h_b_dt):
         # pass shoreline and shoreface values from B3D subdomains to brie for use in second time step
-        self._brie.x_t_dt = x_t_dt
+        self._brie.x_t_dt = x_t_dt  # this accounts for RSLR
         self._brie.x_s_dt = x_s_dt
-        self._brie.x_b_dt = 0  # dummy variable, will set x_b below
+        self._brie.x_b_dt = 0  # we set x_b below
         self._brie.h_b_dt = h_b_dt
 
         # update brie one time step (this is time_index = 2 at start of loop)
@@ -254,3 +257,7 @@ class BrieCoupler:
     @property
     def brie(self):
         return self._brie
+
+    # def update_tidal_inlets(self):
+    #     # just a reminder that when we couple inlets, we're going to have to reconcile the sloping back-barrier
+    #     # (vs not sloping in barrier3d) for basin_width -- maybe replace basin_width in the coupled version?

@@ -1,20 +1,12 @@
-# Model coupling of Barrier3D and BRIE
-
-# ~******* CASCADE ********~
-
-"""----------------------------------------------------
-Copyright (C) 2020 Katherine Anarde
-----------------------------------------------------"""
-
 from pathlib import Path
 from joblib import Parallel, delayed
 import numpy as np
 import os
 
-from roadway_manager import RoadwayManager
-from beach_nourisher import BeachNourisher
-from brie_coupler import BrieCoupler, initialize_equal, batchB3D
-from chome_coupler import ChomeCoupler
+from .roadway_manager import RoadwayManager
+from .beach_nourisher import BeachNourisher
+from .brie_coupler import BrieCoupler, initialize_equal, batchB3D
+from .chome_coupler import ChomeCoupler
 
 
 class CascadeError(Exception):
@@ -24,8 +16,8 @@ class CascadeError(Exception):
 class Cascade:
     def module_lists(
         self,
-        artificial_max_dune_ele,
-        artificial_min_dune_ele,
+        dune_design_elevation,
+        dune_minimum_elevation,
         road_width,
         road_ele,
         road_setback,
@@ -34,16 +26,16 @@ class Cascade:
     ):
         """Configures lists to account for multiple barrier3d domains from single input variables; used in modules"""
 
-        if np.size(artificial_max_dune_ele) > 1:
-            self._artificial_max_dune_ele = (
-                artificial_max_dune_ele  # list of floats option
+        if np.size(dune_design_elevation) > 1:
+            self._dune_design_elevation = (
+                dune_design_elevation  # list of floats option
             )
         else:
-            self._artificial_max_dune_ele = [artificial_max_dune_ele] * self._ny
-        if np.size(artificial_min_dune_ele) > 1:
-            self._artificial_min_dune_ele = artificial_min_dune_ele
+            self._dune_design_elevation = [dune_design_elevation] * self._ny
+        if np.size(dune_minimum_elevation) > 1:
+            self._dune_minimum_elevation = dune_minimum_elevation
         else:
-            self._artificial_min_dune_ele = [artificial_min_dune_ele] * self._ny
+            self._dune_minimum_elevation = [dune_minimum_elevation] * self._ny
         if np.size(road_width) > 1:
             self._road_width = road_width
         else:
@@ -95,8 +87,8 @@ class Cascade:
         road_ele=1.7,
         road_width=30,
         road_setback=30,
-        artificial_max_dune_ele=3.7,
-        artificial_min_dune_ele=2.2,
+        dune_design_elevation=3.7,
+        dune_minimum_elevation=2.2,
         nourishment_interval=None,
         nourishment_volume=300.0,
         number_of_communities=1,
@@ -153,9 +145,9 @@ class Cascade:
             Width of roadway [m]
         road_setback: int or list of int, optional
             Setback of roadway from the inital dune line [m]
-        artificial_max_dune_ele: float or list of floats, optional
+        dune_design_elevation: float or list of floats, optional
             Elevation to which dune is rebuilt to [m NAVD88]
-        artificial_min_dune_ele: float or list of floats, optional
+        dune_minimum_elevation: float or list of floats, optional
             Elevation threshold which triggers rebuilding of dune [m NAVD88]
         nourishment_interval: int or list of ints, optional
              Interval that nourishment occurs [yrs]
@@ -180,7 +172,7 @@ class Cascade:
 
         Examples
         --------
-        >>> from CASCADE import Cascade
+        >>> from cascade.cascade import Cascade
         >>> datadir = "./B3D_Inputs/"
         >>> cascade = Cascade(datadir)
         """
@@ -205,11 +197,17 @@ class Cascade:
         self._elevation_file = elevation_file
         self._dune_file = dune_file
         self._parameter_file = parameter_file
+        self._number_of_communities = number_of_communities
+        self._b3d_break = 0  # true if barrier in barrier3d height or width drowns
+        self._road_break = 0  # true if roadway drowns from bay reaching roadway
+        self._nourish_now = [0] * self._ny  # triggers nourishment
+        self._rebuild_dune_now = [0] * self._ny  # triggers dune rebuilding
 
         ###############################################################################
-        # initialize brie and barrier3d classes
+        # initialize brie and barrier3d model classes
         ###############################################################################
 
+        # initialize brie: used for initial shoreface calculations, AST (optional), tidal inlets (eventually)
         self._brie_coupler = BrieCoupler(
             name,
             self._wave_height,
@@ -221,7 +219,8 @@ class Cascade:
             self._nt,
         )
 
-        self._barrier3d, self._brie_coupler._brie = initialize_equal(
+        # initialize barrier3d and make both brie and barrier3d classes equivalent
+        self._barrier3d = initialize_equal(
             datadir,
             self._brie_coupler._brie,
             self._slr_constant,
@@ -237,24 +236,16 @@ class Cascade:
         # initialize human dynamics modules
         ###############################################################################
 
-        # configure self to create lists of these variables
+        # configure `self` to create lists of these variables
         self.module_lists(
-            artificial_max_dune_ele,
-            artificial_min_dune_ele,
+            dune_design_elevation,
+            dune_minimum_elevation,
             road_width,
             road_ele,
             road_setback,
             nourishment_interval,
             nourishment_volume,
         )
-
-        self._number_of_communities = number_of_communities
-        self._b3d_break = 0  # true if barrier in Barrier3D height or width drowns
-        self._road_break = 0  # true if roadway drowns
-        self._nourish_now = [0] * self._ny  # boolean for triggering nourishment
-        self._rebuild_dune_now = [
-            0
-        ] * self._ny  # boolean for triggering dune rebuilding
 
         if self._community_dynamics_module:
             if self._beach_nourishment_module == False:
@@ -266,7 +257,7 @@ class Cascade:
                     barrier3d=self._barrier3d,
                     total_time=self._nt,
                     alongshore_length_b3d=self._brie_coupler._brie._dy,  # this is the barrier3d default, 500 m
-                    dune_design_elevation=self._artificial_max_dune_ele,
+                    dune_design_elevation=self._dune_design_elevation,
                     number_of_communities=self._number_of_communities,
                     name=self._filename,
                     sand_cost=sand_cost,
@@ -279,8 +270,8 @@ class Cascade:
                     house_footprint=house_footprint,
                 )  # contains the CHOME model instances, one per community
 
-        # initialize RoadwayManager and BeachNourisher modules (always, just in case we want to add a road or start
-        # nourishing during the simulation)
+        # initialize RoadwayManager and BeachNourisher modules
+        # (always, just in case we want to add a road or start nourishing during the simulation)
         self._roadways = []
         self._nourishments = []
 
@@ -291,8 +282,8 @@ class Cascade:
                     road_width=self._road_width[iB3D],
                     road_setback=self._orig_road_setback[iB3D],
                     road_relocation_setback=self._road_relocation_setback[iB3D],
-                    dune_design_elevation=self._artificial_max_dune_ele[iB3D],
-                    dune_minimum_elevation=self._artificial_min_dune_ele[iB3D],
+                    dune_design_elevation=self._dune_design_elevation[iB3D],
+                    dune_minimum_elevation=self._dune_minimum_elevation[iB3D],
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
                 )
@@ -305,7 +296,7 @@ class Cascade:
                         self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta
                     )
                     * 10,  # m
-                    dune_design_elevation=self._artificial_max_dune_ele[iB3D],
+                    dune_design_elevation=self._dune_design_elevation[iB3D],
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
                 )
@@ -430,21 +421,20 @@ class Cascade:
                 self._b3d_break = 1
                 return
 
-        # human dynamics modules
-        # RoadwayManager: remove overwash from roadway after each model year, place on the dune, rebuild dunes if
+        # ---- human dynamics modules ----
+        # RoadwayManager:
+        # Remove overwash from roadway after each model year, place on the dune, rebuild dunes if
         # fall below height threshold, and check if dunes should grow naturally
         if self._roadway_management_module:
             for iB3D in range(self._ny):
-                # call roadway management module; if the user changed any of the roadway or dune parameters,
-                # they are updated in the update function
-                self._roadways[iB3D].update(
-                    barrier3d=self._barrier3d[iB3D],
-                    road_ele=self._road_ele[iB3D],
-                    road_width=self._road_width[iB3D],
-                    road_relocation_setback=self._road_relocation_setback[iB3D],
-                    dune_design_elevation=self._artificial_max_dune_ele[iB3D],
-                    dune_minimum_elevation=self._artificial_min_dune_ele[iB3D],
-                )
+
+                self._roadways[iB3D].dune_design_elevation = self._dune_design_elevation[iB3D],
+                self._roadways[iB3D].dune_minimum_elevation = self._dune_minimum_elevation[iB3D],
+                self._roadways[iB3D].road_ele = self._road_ele[iB3D],
+                self._roadways[iB3D].road_width = self._road_width[iB3D],
+                self._roadways[iB3D].road_relocation_setback = self._road_relocation_setback[iB3D],
+
+                self._roadways[iB3D].update(self._barrier3d[iB3D])
 
                 # if the road drowned or barrier was too narrow to be relocated, break
                 if (
@@ -455,6 +445,7 @@ class Cascade:
                     return
 
         if self._community_dynamics_module:
+            self._chome_coupler.dune_design_elevation = self._dune_design_elevation
             [
                 self._nourish_now,
                 self._rebuild_dune_now,
@@ -462,23 +453,23 @@ class Cascade:
             ] = self._chome_coupler.update(
                 barrier3d=self._barrier3d,
                 nourishments=self._nourishments,
-                dune_design_elevation=self._artificial_max_dune_ele,
             )
 
-        # BeachNourisher: if interval specified, nourish at that interval, otherwise wait until told with nourish_now to
-        # nourish or rebuild_dunes_now to rebuild dunes. Resets ..._now parameters to zero (false) after nourishment.
+        # BeachNourisher:
+        # If interval specified, nourish at that interval, otherwise wait until told with nourish_now to
+        # nourish or rebuild_dunes_now to rebuild dunes. Resets any "now" parameters to false after nourishment.
         if self._beach_nourishment_module:
             for iB3D in range(self._ny):
+                self._nourishments[iB3D].dune_design_elevation = self._dune_design_elevation[iB3D]
+                self._nourishments[iB3D].nourishment_volume = self._nourishment_volume[iB3D]
                 [
                     self._nourish_now[iB3D],
                     self._rebuild_dune_now[iB3D],
                 ] = self._nourishments[iB3D].update(
                     barrier3d=self._barrier3d[iB3D],
-                    dune_design_elevation=self._artificial_max_dune_ele[iB3D],
                     nourish_now=self._nourish_now[iB3D],
                     rebuild_dune_now=self._rebuild_dune_now[iB3D],
                     nourishment_interval=self._nourishment_interval[iB3D],
-                    nourishment_volume=self._nourishment_volume[iB3D],
                 )
 
     ###############################################################################
