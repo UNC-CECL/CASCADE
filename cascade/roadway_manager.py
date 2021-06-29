@@ -190,7 +190,7 @@ def rebuild_dunes(
     z = np.transpose([dune_start_max, dune_start_min])
     f = interp2d(x, y, z)
     new_dune_domain = f(np.arange(0, nx, 1), np.arange(0, ny, 1))
-    rebuild_dune_volume = np.sum(new_dune_domain-old_dune_domain)
+    rebuild_dune_volume = np.sum(new_dune_domain - old_dune_domain)
 
     return new_dune_domain, rebuild_dune_volume
 
@@ -303,7 +303,7 @@ class RoadwayManager:
     --------
     >>> from cascade.roadway_manager import RoadwayManager
     >>> roadways = RoadwayManager()
-    >>> roadways.update(barrier3d)
+    >>> roadways.update(barrier3d=)
     """
 
     def __init__(
@@ -356,7 +356,9 @@ class RoadwayManager:
         self._road_setback_TS = np.zeros(self._nt)
         self._road_setback_TS[0] = road_setback
         self._dunes_rebuilt_TS = np.zeros(self._nt)  # when dunes are rebuilt (boolean)
-        self._rebuild_dune_volume_TS = np.zeros(self._nt)  # sand for rebuilding dunes [m^3]
+        self._rebuild_dune_volume_TS = np.zeros(
+            self._nt
+        )  # sand for rebuilding dunes [m^3]
         self._road_overwash_volume = np.zeros(
             self._nt
         )  # total overwash removed from roadway [m^3]
@@ -442,9 +444,7 @@ class RoadwayManager:
                 dune_design_height = self._dune_design_elevation - (
                     barrier3d.BermEl * 10
                 )
-                min_dune_height = self._dune_minimum_elevation - (
-                    barrier3d.BermEl * 10
-                )
+                min_dune_height = self._dune_minimum_elevation - (barrier3d.BermEl * 10)
 
                 # if any dune cell in the front row of dunes is less than a minimum threshold -- as measured above the
                 # berm crest -- then rebuild the dune (all rows up to dune_design elevation)
@@ -459,7 +459,9 @@ class RoadwayManager:
                     self._dunes_rebuilt_TS[
                         self._time_index - 1
                     ] = 1  # track when dunes are rebuilt
-                    self._rebuild_dune_volume_TS[self._time_index - 1] = rebuild_dune_volume * dm3_to_m3
+                    self._rebuild_dune_volume_TS[self._time_index - 1] = (
+                        rebuild_dune_volume * dm3_to_m3
+                    )
 
             # set dune growth rate to zero for next time step if the dune elevation (front row) is larger than the
             # natural eq. dune height (Dmax)
