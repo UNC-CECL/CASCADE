@@ -27,9 +27,7 @@ class Cascade:
         """Configures lists to account for multiple barrier3d domains from single input variables; used in modules"""
 
         if np.size(dune_design_elevation) > 1:
-            self._dune_design_elevation = (
-                dune_design_elevation  # list of floats option
-            )
+            self._dune_design_elevation = dune_design_elevation  # list of floats option
         else:
             self._dune_design_elevation = [dune_design_elevation] * self._ny
         if np.size(dune_minimum_elevation) > 1:
@@ -428,11 +426,20 @@ class Cascade:
         if self._roadway_management_module:
             for iB3D in range(self._ny):
 
-                self._roadways[iB3D].dune_design_elevation = self._dune_design_elevation[iB3D],
-                self._roadways[iB3D].dune_minimum_elevation = self._dune_minimum_elevation[iB3D],
-                self._roadways[iB3D].road_ele = self._road_ele[iB3D],
-                self._roadways[iB3D].road_width = self._road_width[iB3D],
-                self._roadways[iB3D].road_relocation_setback = self._road_relocation_setback[iB3D],
+                # this is making everything a tuple and I don't know why
+                self._roadways[
+                    iB3D
+                ].dune_design_elevation = self._dune_design_elevation[
+                    iB3D
+                ]  # type: float
+                self._roadways[
+                    iB3D
+                ].dune_minimum_elevation = self._dune_minimum_elevation[iB3D]
+                self._roadways[iB3D].road_ele = self._road_ele[iB3D]
+                self._roadways[iB3D].road_width = self._road_width[iB3D]
+                self._roadways[
+                    iB3D
+                ].road_relocation_setback = self._road_relocation_setback[iB3D]
 
                 self._roadways[iB3D].update(self._barrier3d[iB3D])
 
@@ -460,8 +467,12 @@ class Cascade:
         # nourish or rebuild_dunes_now to rebuild dunes. Resets any "now" parameters to false after nourishment.
         if self._beach_nourishment_module:
             for iB3D in range(self._ny):
-                self._nourishments[iB3D].dune_design_elevation = self._dune_design_elevation[iB3D]
-                self._nourishments[iB3D].nourishment_volume = self._nourishment_volume[iB3D]
+                self._nourishments[
+                    iB3D
+                ].dune_design_elevation = self._dune_design_elevation[iB3D]
+                self._nourishments[iB3D].nourishment_volume = self._nourishment_volume[
+                    iB3D
+                ]
                 [
                     self._nourish_now[iB3D],
                     self._rebuild_dune_now[iB3D],
