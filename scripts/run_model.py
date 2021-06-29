@@ -1516,7 +1516,6 @@ def time_series():
 
 # record of human runs -------------------------------------------------------------------------------------
 def human_runs():
-
     def SLR_sensitivity():
 
         # misnomer here: only running the natural scenario
@@ -1764,19 +1763,19 @@ def human_runs():
             rmin=0.55,
             rmax=0.95,  # rave = 0.75
             name="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low",
-            road_ele=1.2, #1.4,
+            road_ele=1.2,  # 1.4,
             # average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m NAVD88
             road_width=20,  # m
             road_setback=20,  # m
-            dune_design_elevation=3.2, #3.4,  # m NAVD88, rebuild to 2 m dune above the roadway
-            dune_minimum_elevation=1.7, #1.9,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
+            dune_design_elevation=3.2,  # 3.4,  # m NAVD88, rebuild to 2 m dune above the roadway
+            dune_minimum_elevation=1.7,  # 1.9,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
             run_road_mgmt=True,
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
             dune_file="barrier3d-default-dunes.npy",
         )
 
-        # roadway drowned at 104 years
+        # roadway drowned at 104 years from the back bay
         cascade_pt75_h2_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
             nt=500,
             rmin=0.55,
@@ -1793,7 +1792,7 @@ def human_runs():
             dune_file="barrier3d-default-dunes.npy",
         )
 
-        # roadway drowned at 170 years
+        # roadway drowned at 170 years from the back bay
         cascade_pt75_h3_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
             nt=500,
             rmin=0.55,
@@ -1811,7 +1810,7 @@ def human_runs():
         )
 
         cascade_pt75_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
-            nt=500,
+            nt=550,
             rmin=0.55,
             rmax=0.95,  # rave = 0.75
             name="6-B3D_Rave_pt75_Natural_high",
@@ -1826,26 +1825,26 @@ def human_runs():
             dune_file="barrier3d-default-dunes.npy",
         )
 
-        # able to set the highway slightly higher, kept setback the same; drowned at 430 years
+        # able to set the highway slightly higher, kept setback the same; drowned at 430 years from back bay
         cascade_pt75_h1_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
-            nt=500,
+            nt=600,
             rmin=0.55,
             rmax=0.95,  # rave = 0.75
             name="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_high",
-            road_ele=2.0, #1.7,
+            road_ele=2.0,  # 1.7,
             road_width=20,  # m
             road_setback=20,  # m
-            dune_design_elevation=4.0, #3.7,  # m NAVD88, rebuild to 2 m dune above the roadway
-            dune_minimum_elevation=2.5, #2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
+            dune_design_elevation=4.0,  # 3.7,  # m NAVD88, rebuild to 2 m dune above the roadway
+            dune_minimum_elevation=2.5,  # 2.2,  # m NAVD88, allow dune to erode down to 0.5 m above the roadway
             run_road_mgmt=True,
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_829yrs_high-elevations.csv",
             dune_file="barrier3d-default-dunes.npy",
         )
 
-        # drowned at 425 years
+        # drowned at 425 years; island too narrow to be relocated
         cascade_pt75_h2_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
-            nt=500,
+            nt=600,
             rmin=0.55,
             rmax=0.95,  # rave = 0.75
             name="6-B3D_Rave_pt75_Roadways_3mDune_20mSetback_20mWidth_high",
@@ -1860,9 +1859,9 @@ def human_runs():
             dune_file="barrier3d-default-dunes.npy",
         )
 
-        # drowned at 439 years
+        # drowned at 539: island too narrow to be relocated
         cascade_pt75_h3_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
-            nt=500,
+            nt=600,
             rmin=0.55,
             rmax=0.95,  # rave = 0.75
             name="6-B3D_Rave_pt75_Roadways_1mDune_20mSetback_20mWidth_high",
@@ -1895,7 +1894,7 @@ def human_runs():
             dune_file="barrier3d-default-dunes.npy",
         )
 
-        # note that this roadway is higher than the pt75 "low" scenario (1.2 m), drowned at 404 years
+        # note that this roadway is higher than the pt75 "low" scenario (1.2 m), drowned at 404 years from back-bay
         cascade_pt45_h1_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
             nt=1000,
             rmin=0.25,
@@ -1912,7 +1911,7 @@ def human_runs():
             dune_file="barrier3d-default-dunes.npy",
         )
 
-        # drowned at 379 years
+        # drowned at 379 years from back-bay
         cascade_pt45_h2_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
             nt=1000,
             rmin=0.25,
@@ -1929,7 +1928,7 @@ def human_runs():
             dune_file="barrier3d-default-dunes.npy",
         )
 
-        # drowned at 526 years
+        # drowned at 526 years from back-bay
         cascade_pt45_h3_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
             nt=1000,
             rmin=0.25,
@@ -1962,7 +1961,7 @@ def human_runs():
             dune_file="barrier3d-default-dunes.npy",
         )
 
-        # note that this is equal to the 0.75 "high" scenario; drowned at 507 years
+        # note that this is equal to the 0.75 "high" scenario; drowned at 507 years from back-bay
         cascade_pt45_h1_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
             nt=1000,
             rmin=0.25,
@@ -1979,7 +1978,7 @@ def human_runs():
             dune_file="barrier3d-default-dunes.npy",
         )
 
-        # drowned at 434 years
+        # drowned at 434 years from back-bay
         cascade_pt45_h2_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
             nt=1000,
             rmin=0.25,
@@ -1996,7 +1995,7 @@ def human_runs():
             dune_file="barrier3d-default-dunes.npy",
         )
 
-        # drowned at 613 years
+        # drowned at 613 years from back-bay
         cascade_pt45_h3_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
             nt=1000,
             rmin=0.25,
@@ -2014,7 +2013,6 @@ def human_runs():
         )
 
     def old_overwash_model():
-
         def pt45():
             # used 3000 year storm time series for the _low and _high runs
             cascade_pt45_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
@@ -2403,7 +2401,6 @@ def human_runs():
 
 # record of human plots -------------------------------------------------------------------------------------
 def human_plots():
-
     def old_overwash_model():
 
         # rave = 0.45 runs, low
@@ -3309,7 +3306,6 @@ def human_plots():
         )
 
     def slr_sensitivity():
-
         def pt45_high():
             (
                 BarrierWidth_pt45_high_SLRacc,
@@ -3324,7 +3320,7 @@ def human_plots():
             ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
                 name_prefix="6-B3D_Rave_pt45_Natural_high_AccSLR",
                 tmin=0,
-                tmax=100,
+                tmax=200,
                 plot_name="b3d_pt45_Natural_high_AccSLR",
                 run_road_mgmt=False,
             )
@@ -3383,11 +3379,13 @@ def human_plots():
                 run_road_mgmt=False,
             )
 
-            cascade = [cascade_pt45_high_0pt004SLR,
-                       cascade_pt45_high_0pt008SLR,
-                       cascade_pt45_high_0pt012SLR,
-                       cascade_pt45_high_SLRacc]
-            TMAX = [200,200,200,100]
+            cascade = [
+                cascade_pt45_high_0pt004SLR,
+                cascade_pt45_high_0pt008SLR,
+                cascade_pt45_high_0pt012SLR,
+                cascade_pt45_high_SLRacc,
+            ]
+            TMAX = [200, 200, 200, 200]
             CASCADEplt.fig3_slr_sensitivity(
                 cascade,  # lists
                 TMAX,
@@ -3407,7 +3405,7 @@ def human_plots():
             ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
                 name_prefix="6-B3D_Rave_pt45_Natural_low_AccSLR",
                 tmin=0,
-                tmax=100,
+                tmax=200,
                 plot_name="b3d_pt45_Natural_low_AccSLR",
                 run_road_mgmt=False,
             )
@@ -3466,11 +3464,13 @@ def human_plots():
                 run_road_mgmt=False,
             )
 
-            cascade = [cascade_pt45_low_0pt004SLR,
-                       cascade_pt45_low_0pt008SLR,
-                       cascade_pt45_low_0pt012SLR,
-                       cascade_pt45_low_SLRacc]
-            TMAX = [200,200,200,100]
+            cascade = [
+                cascade_pt45_low_0pt004SLR,
+                cascade_pt45_low_0pt008SLR,
+                cascade_pt45_low_0pt012SLR,
+                cascade_pt45_low_SLRacc,
+            ]
+            TMAX = [200, 200, 200, 200]
             CASCADEplt.fig3_slr_sensitivity(
                 cascade,  # lists
                 TMAX,
@@ -3490,7 +3490,7 @@ def human_plots():
             ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
                 name_prefix="6-B3D_Rave_pt75_Natural_low_AccSLR",
                 tmin=0,
-                tmax=100,
+                tmax=200,
                 plot_name="b3d_pt75_Natural_low_AccSLR",
                 run_road_mgmt=False,
             )
@@ -3549,11 +3549,13 @@ def human_plots():
                 run_road_mgmt=False,
             )
 
-            cascade = [cascade_pt75_low_0pt004SLR,
-                       cascade_pt75_low_0pt008SLR,
-                       cascade_pt75_low_0pt012SLR,
-                       cascade_pt75_low_SLRacc]
-            TMAX = [200,200,200,100]
+            cascade = [
+                cascade_pt75_low_0pt004SLR,
+                cascade_pt75_low_0pt008SLR,
+                cascade_pt75_low_0pt012SLR,
+                cascade_pt75_low_SLRacc,
+            ]
+            TMAX = [200, 200, 200, 200]
             CASCADEplt.fig3_slr_sensitivity(
                 cascade,  # lists
                 TMAX,
@@ -3573,7 +3575,7 @@ def human_plots():
             ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
                 name_prefix="6-B3D_Rave_pt75_Natural_high_AccSLR",
                 tmin=0,
-                tmax=100,
+                tmax=200,
                 plot_name="b3d_pt75_Natural_high_AccSLR",
                 run_road_mgmt=False,
             )
@@ -3632,11 +3634,13 @@ def human_plots():
                 run_road_mgmt=False,
             )
 
-            cascade = [cascade_pt75_high_0pt004SLR,
-                       cascade_pt75_high_0pt008SLR,
-                       cascade_pt75_high_0pt012SLR,
-                       cascade_pt75_high_SLRacc]
-            TMAX = [200,200,200,100]
+            cascade = [
+                cascade_pt75_high_0pt004SLR,
+                cascade_pt75_high_0pt008SLR,
+                cascade_pt75_high_0pt012SLR,
+                cascade_pt75_high_SLRacc,
+            ]
+            TMAX = [200, 200, 200, 200]
             CASCADEplt.fig3_slr_sensitivity(
                 cascade,  # lists
                 TMAX,

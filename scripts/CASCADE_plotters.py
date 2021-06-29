@@ -1551,7 +1551,9 @@ def plot_nonlinear_stats(
     # DuneDomainCrest = CASCADE_b3d[ib3d]._DuneDomain[
     #     :, :, 0
     # ]  # Just front row of dune domain
-    DuneDomainCrest[DuneDomainCrest < CASCADE_b3d[ib3d]._DuneRestart] = CASCADE_b3d[ib3d]._DuneRestart
+    DuneDomainCrest[DuneDomainCrest < CASCADE_b3d[ib3d]._DuneRestart] = CASCADE_b3d[
+        ib3d
+    ]._DuneRestart
     DuneCrestMean = (np.mean(DuneDomainCrest, axis=1) + CASCADE_b3d[ib3d].BermEl) * 10
     DuneCrestMin = (np.min(DuneDomainCrest, axis=1) + CASCADE_b3d[ib3d].BermEl) * 10
     DuneCrestMax = (np.max(DuneDomainCrest, axis=1) + CASCADE_b3d[ib3d].BermEl) * 10
@@ -1887,9 +1889,14 @@ def plot_nonlinear_stats_low_high(
             axs[i].plot(time, DuneCrestMin[i][0 : TMAX[i]])
             axs[i].plot(time, DuneCrestMax[i][0 : TMAX[i]])
         axs[i].set(xlabel="time (yr)")
+        axs[i].set_xlim([-15, 665])
+        # axs2[0].set_ylim([0.15, 1.75])
+        axs[i].set_ylim([1.43, 5.2])
 
-    axs[0].set(ylabel="dune elevation (m NAVD88)")
-    axs[3].legend(["min", "max", "rebuild", "design", "max-equil"])
+    axs[0].set(ylabel="dune elevation (m MHW)")
+    axs[3].legend(
+        ["alongshore min", "alongshore max", "rebuild", "design", "max-equil"]
+    )
     plt.tight_layout()
 
     # interior height and width
@@ -1918,10 +1925,14 @@ def plot_nonlinear_stats_low_high(
             axs2[2].plot(time, scts)
 
         axs2[i].set(xlabel="time (yr)")
+        axs2[i].set_xlim([-15, 665])
 
-    axs2[0].set(ylabel="barrier height (m NAVD88)")
+    axs2[0].set(ylabel="barrier height (m MHW)")
+    axs2[0].set_ylim([0.15, 1.75])
     axs2[1].set(ylabel="barrier width (m)")
+    axs2[1].set_ylim([50, 425])
     axs2[2].set(ylabel="shoreline position (m)")
+    axs2[2].set_ylim([-10, 480])
     axs2[2].legend(["natural", "1-m dune", "2-m dune", "3-m dune"])
     plt.tight_layout()
 
@@ -2170,7 +2181,7 @@ def fig2_10kyr_topo(
     axs[2].plot(time, BarrierHeight_75)
     axs[3].plot(time, BarrierWidth_75)
     axs[0:4].set(xlabel="time (yr)")
-    axs[0].set(ylabel="barrier height (m NAVD88)")
+    axs[0].set(ylabel="barrier height (m MHW)")
     axs[1].set(ylabel="barrier width (m)")
     plt.tight_layout()
 
@@ -2212,30 +2223,59 @@ def fig3_slr_sensitivity(
     cascade,  # lists
     TMAX,
 ):
-    # row 1 - shoreline position (4 different SLR), each column is a different low high scenario
-    # row 2 - barrier width (4 different SLR), each column is a different low high scenario
+    # col 1 - barrier height (4 different SLR)
+    # col 2 - barrier width (4 different SLR)
+    # col 3 - shoreline position (4 different SLR)
+
+    fig1, axs1 = plt.subplots(1, 4, figsize=(10, 3), sharex=True)
+    for i in range(len(cascade)):
+        time = np.arange(0, TMAX[i], 1)
+
+        RSLR = cascade[i].barrier3d[0].RSLR[0 : TMAX[i]]  # in dam
+        SLR = np.cumsum(np.array(RSLR) * 10)
+
+        axs1[0].plot(time, SLR)
+
+    axs1[0].set(ylabel="sea level (m)")
+    axs1[0].set(xlabel="time (yr)")
+    axs1[0].legend(["0.004 m/yr", "0.008", "0.012", "Acc"])
+    plt.tight_layout()
 
     fig2, axs2 = plt.subplots(1, 4, figsize=(10, 3), sharex=True)
     for i in range(len(cascade)):
-
         time = np.arange(0, TMAX[i], 1)
+
         BarrierWidth = (
-                               np.array(cascade[i].barrier3d[0].x_b_TS[0:TMAX[i]])
-                               - np.array(cascade[i].barrier3d[0].x_s_TS[0:TMAX[i]])
-                       ) * 10
-        axs2[0].plot(time, BarrierWidth)
+            np.array(cascade[i].barrier3d[0].x_b_TS[0 : TMAX[i]])
+            - np.array(cascade[i].barrier3d[0].x_s_TS[0 : TMAX[i]])
+        ) * 10
+
+        # average interior height
+        BarrierHeight = []
+        for t in range(0, TMAX[i]):
+            bh_array = np.array(cascade[i].barrier3d[0]._DomainTS[t]) * 10  # dam to m
+            BarrierHeight.append(bh_array[bh_array > 0].mean())
+
         scts = [
             (x - cascade[i].barrier3d[0].x_s_TS[0]) * 10
             for x in cascade[i].barrier3d[0].x_s_TS[0 : TMAX[i]]
         ]
-        axs2[1].plot(time, scts)
+
+        axs2[0].plot(time, BarrierHeight)
+        axs2[1].plot(time, BarrierWidth)
+        axs2[2].plot(time, scts)
 
         axs2[i].set(xlabel="time (yr)")
 
-    axs2[0].set(ylabel="barrier width (m)")
-    axs2[1].set(ylabel="shoreline position (m)")
-    axs2[1].legend(["0.004 m/yr", "0.008", "0.012", "Acc"])
+    axs2[0].set(ylabel="barrier height (m MHW)")
+    axs2[0].set_ylim([0.15, 1.75])
+    axs2[1].set(ylabel="barrier width (m)")
+    axs2[1].set_ylim([50, 425])
+    axs2[2].set(ylabel="shoreline position (m)")
+    axs2[2].set_ylim([-10, 480])
+    axs2[2].legend(["0.004 m/yr", "0.008", "0.012", "Acc"])
     plt.tight_layout()
+
 
 ## OLD CODE THAT I NEED TO FIX EVENTUALLY:
 
