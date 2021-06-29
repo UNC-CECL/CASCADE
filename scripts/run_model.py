@@ -1212,10 +1212,50 @@ def cascade_10kyr_sensitivity():
 
     cascade_10kyr_pt45_01 = RUN_4_CASCADE_noAST_Rave_SLR_pt004(
         nt=10000,
-        rmin=0.25,  # rave = 0.45 (but not 0.5 spaced like in Houser)
+        rmin=0.25,  # rave = 0.45 (but not 0.5 spaced like in Reeves et al., 2021 -- arbitrary)
         rmax=0.65,
-        name="4-CASCADE_noAST_Rave_pt45_SLR_pt004_10k-yrs",
+        name="4-CASCADE_noAST_Rave_pt45_SLR_pt004_10k-yrs_01",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+        elevation_file="InitElevHog.npy",
+        dune_file="DuneStart_1000dam.npy",
+    )
+
+    cascade_10kyr_pt45_02 = RUN_4_CASCADE_noAST_Rave_SLR_pt004(
+        nt=10000,
+        rmin=0.25,  # rave = 0.45
+        rmax=0.65,
+        name="4-CASCADE_noAST_Rave_pt45_SLR_pt004_10k-yrs_02",
+        storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_02.npy",
+        elevation_file="InitElevHog.npy",
+        dune_file="DuneStart_1000dam.npy",
+    )
+
+    cascade_10kyr_pt45_03 = RUN_4_CASCADE_noAST_Rave_SLR_pt004(
+        nt=10000,
+        rmin=0.25,  # rave = 0.45
+        rmax=0.65,
+        name="4-CASCADE_noAST_Rave_pt45_SLR_pt004_10k-yrs_03",
+        storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_03.npy",
+        elevation_file="InitElevHog.npy",
+        dune_file="DuneStart_1000dam.npy",
+    )
+
+    cascade_10kyr_pt45_04 = RUN_4_CASCADE_noAST_Rave_SLR_pt004(
+        nt=10000,
+        rmin=0.25,  # rave = 0.45
+        rmax=0.65,
+        name="4-CASCADE_noAST_Rave_pt45_SLR_pt004_10k-yrs_04",
+        storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_04.npy",
+        elevation_file="InitElevHog.npy",
+        dune_file="DuneStart_1000dam.npy",
+    )
+
+    cascade_10kyr_pt45_05 = RUN_4_CASCADE_noAST_Rave_SLR_pt004(
+        nt=10000,
+        rmin=0.25,  # rave = 0.45
+        rmax=0.65,
+        name="4-CASCADE_noAST_Rave_pt45_SLR_pt004_10k-yrs_05",
+        storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_05.npy",
         elevation_file="InitElevHog.npy",
         dune_file="DuneStart_1000dam.npy",
     )
