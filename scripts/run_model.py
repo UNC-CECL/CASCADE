@@ -332,7 +332,7 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004(
     # AST turned off, and beach and dune management modules turned off
 
     # --------- INITIALIZE ---------
-    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
+    datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/"
     cascade = Cascade(
         datadir,
         name,
@@ -365,8 +365,12 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004(
         if cascade.road_break or cascade.b3d_break:
             break
 
+    SimDuration = time.time() - Time
+    print()
+    print("Elapsed Time: ", SimDuration, "sec")  # Print elapsed time of simulation
+
     # --------- SAVE ---------
-    save_directory = "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
+    save_directory = "/Users/katherineanarde/RESEARCH/RUN_OUTPUT"
     cascade.save(save_directory)  # for now, this is a list
 
     # # ===================================================
