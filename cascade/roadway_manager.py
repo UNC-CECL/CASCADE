@@ -1,7 +1,7 @@
 """Roadway Manager
 
-This module provides functions modifying a 3D grid (X,Y,Z) for human coastal management decision,
-including 1) bulldozing sand from roadways and adding to the dune line ....
+This module provides functions for modifying a 3D grid (X,Y,Z) of a barrier island for roadway management decisions
+on barrier islands, include road overwash removal, road relocation, and dune maintenance.
 
 References
 ----------
@@ -9,10 +9,6 @@ References
 .. [1] NCDOT (North Carolina Department of Transportation), 2008. NC 12 Transportation Improvements.
 http://www.ncdot.org/projects/NC12/ (accessed October 24, 2007).
 .. [2]
-.. [3] P.D. Komar, 1998, Beach processes and sedimentation: Upper Saddle River, New Jersey, Prentice Hall , 544 p.
-.. [4] Jaap H. Nienhuis, Jorge Lorenzo Trueba; Simulating barrier island response to sea level rise with the barrier
-    island and inlet environment (BRIE) model v1.0 ; Geosci. Model Dev., 12, 4013–4030, 2019;
-    https://doi.org/10.5194/gmd-12-4013-2019
 
 
 Notes
@@ -38,18 +34,19 @@ def bulldoze(
     dz=10,
     drown_threshold=0,
 ):
-    r"""Remove overwash from roadway and put it back on the dune. Spreads sand evenly across dune cells.
+    r"""
+    Remove overwash from roadway and put it back on the dune. Spreads sand evenly across dune cells.
 
     Parameters
     ----------
     time_index: int,
         Time index for drowning error message
     xyz_interior_grid: array
-        Interior barrier island topography [z units specified by dz; if dz=10, decameters NAVD88]
+        Interior barrier island topography [z units specified by dz; for barrier3d, dz=10, decameters MHW (NAVD88)]
     yxz_dune_grid:
-        Dune topography [z units specified by dz; if dz=10, decameters]
+        Dune topography [z units specified by dz; for barrier3d, dz=10, decameters]
     road_ele: float
-        Road elevation [m; needs to be in same reference frame as xyz and yxz, typically NAVD88]
+        Road elevation [m; needs to be in same reference frame as xyz; for barrier3d, decameters MHW (NAVD88)]
     road_width: int
         Width of roadway [m]
     road_setback: int
@@ -61,7 +58,7 @@ def bulldoze(
     dz: int
         Vertical discretization of z [m]
     drown_threshold: float
-        threshold for roadway drowning [m; needs to be in same reference frame as xyz and yxz, typically NAVD88]
+        threshold for roadway drowning [m; needs to be in same reference frame as xyz]
 
     Returns
     -------
@@ -257,7 +254,7 @@ def roadway_checks(
     road_setback,
     road_relocation_setback,
     road_width,
-    barrier_average_width,
+    average_barrier_width,
 ):
     # initialize the break booleans as False
     narrow_break = 0
@@ -273,7 +270,7 @@ def roadway_checks(
             if (
                 road_relocation_setback
                 + (2 * road_width)  # bay shoreline buffer of 2x the roadway
-                > barrier_average_width * 10
+                > average_barrier_width
             ):
                 narrow_break = 1
                 print(
@@ -285,7 +282,7 @@ def roadway_checks(
                 road_setback = road_relocation_setback
 
     # now check the other shoreline: if the roadway gets eaten up by the back-barrier, then it is lost
-    if (barrier_average_width * 10) <= road_setback:
+    if average_barrier_width <= road_setback:
         drown_break = 1
         print(
             "Roadway drowned at {time} years from the back-bay".format(
@@ -301,9 +298,9 @@ class RoadwayManager:
 
     Examples
     --------
-    >>> from cascade.roadway_manager import RoadwayManager
-    >>> roadways = RoadwayManager()
-    >>> roadways.update(barrier3d=)
+    # >>> from cascade.roadway_manager import RoadwayManager
+    # >>> roadways = RoadwayManager()
+    # >>> roadways.update(barrier3d)
     """
 
     def __init__(
@@ -368,10 +365,10 @@ class RoadwayManager:
         self._growth_params[0] = original_growth_param
         self._post_storm_dunes = [
             None
-        ] * self._nt  # keep track of post-storm dune impacts before humans
+        ] * self._nt  # keep track of post-storm dune impacts before human modifications
         self._post_storm_interior = [
             None
-        ] * self._nt  # keep track of post-storm interior impacts before humans
+        ] * self._nt  # keep track of post-storm interior impacts before human modifications
 
     def update(
         self,
@@ -392,13 +389,14 @@ class RoadwayManager:
         )
 
         # check for barrier drowning and road relocation; if barrier drowns, exit program
+        average_barrier_width = barrier3d.InteriorWidth_AvgTS[-1] * 10  # m
         [self._road_setback, self._narrow_break, self._drown_break] = roadway_checks(
             self._time_index,
             barrier3d.dune_migrated,
             self._road_setback,
             self._road_relocation_setback,
             self._road_width,
-            barrier3d.InteriorWidth_AvgTS[-1],
+            average_barrier_width,
         )
         if self._narrow_break == 1 or self._drown_break == 1:
             return
@@ -422,6 +420,7 @@ class RoadwayManager:
                 dx=10,
                 dy=10,
                 dz=10,
+                drown_threshold=0,
             )
 
             # another check on the location of the back-barrier shoreline: if the roadway touches a water cell, drown!
