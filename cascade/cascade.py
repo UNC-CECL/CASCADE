@@ -89,6 +89,7 @@ class Cascade:
         dune_minimum_elevation=2.2,
         nourishment_interval=None,
         nourishment_volume=300.0,
+        overwash_filter=40,
         number_of_communities=1,
         sand_cost=10,
         taxratio_oceanfront=1,
@@ -151,6 +152,8 @@ class Cascade:
              Interval that nourishment occurs [yrs]
         nourishment_volume: float or list of float, optional
              Volume of nourished sand along cross-shore transect [m^3/m]
+        overwash_filter: float,
+            Percent overwash removed from barrier interior [40-90% (residential-->commercial) from Rogers et al., 2015]
         number_of_communities: int, optional
             Number of communities (CHOME model instances) described by the alongshore section count (Barrier3D grids)
         sand_cost: int, optional
@@ -198,6 +201,9 @@ class Cascade:
         self._number_of_communities = number_of_communities
         self._b3d_break = 0  # true if barrier in barrier3d height or width drowns
         self._road_break = 0  # true if roadway drowns from bay reaching roadway
+        self._community_break = (
+            0  # true if community breaks due to minimum barrier width
+        )
         self._nourish_now = [0] * self._ny  # triggers nourishment
         self._rebuild_dune_now = [0] * self._ny  # triggers dune rebuilding
 
@@ -380,6 +386,10 @@ class Cascade:
     def nourishment_volume(self, value):
         self._nourishment_volume = value
 
+    @property
+    def community_break(self):
+        return self._community_break
+
     ###############################################################################
     # time loop
     ###############################################################################
@@ -443,7 +453,7 @@ class Cascade:
 
                 self._roadways[iB3D].update(self._barrier3d[iB3D])
 
-                # if the road drowned or barrier was too narrow to be relocated, break
+                # if the road drowned or barrier was too narrow for roadway to be relocated, break
                 if (
                     self._roadways[iB3D].drown_break
                     or self._roadways[iB3D].narrow_break
@@ -482,6 +492,11 @@ class Cascade:
                     rebuild_dune_now=self._rebuild_dune_now[iB3D],
                     nourishment_interval=self._nourishment_interval[iB3D],
                 )
+
+                # if the barrier is too narrow to sustain a community, break
+                if self._nourishments[iB3D].narrow_break:
+                    self._community_break = 1
+                    return
 
     ###############################################################################
     # save data
