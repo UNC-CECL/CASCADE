@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.testing import assert_array_almost_equal
 
 from cascade.cascade import Cascade
 
@@ -22,11 +23,11 @@ def test_initialize():
         h_b_TS.append(cascade.barrier3d[iB3D].h_b_TS[0] * 10)
 
     dt = cascade.brie.x_t - x_t_TS
-    ds = cascade.brie.x_s - x_s_TS  # this isn't always zero; rounding error
+    ds = cascade.brie.x_s - x_s_TS  # this isn't always zero due to rounding
     db = cascade.brie.x_b - x_b_TS
     dh = cascade.brie.h_b - h_b_TS
 
-    return dt, ds, db, dh
+    assert_array_almost_equal([dt, ds, db, dh], np.zeros([4, 6]))
 
 
 def test_shoreline_variable_exchange_AST():
@@ -54,9 +55,11 @@ def test_shoreline_variable_exchange_AST():
     dt = cascade.brie._x_t_save - np.array(x_t_TS).astype(int)
     db = cascade.brie._x_b_save - np.array(x_b_TS).astype(int)
     ds = cascade.brie._x_s_save - np.array(x_s_TS).astype(int)
-    dh = cascade.brie._h_b_save - np.array(h_b_TS)  # this isn't always zero; rounding error
+    dh = cascade.brie._h_b_save - np.array(
+        h_b_TS
+    )  # this isn't always zero; rounding error
 
-    return dt, ds, db, dh
+    assert_array_almost_equal([dt, ds, db, dh], np.zeros([4, 6, 3]))
 
 
 # other checks on the AST model?????
