@@ -2,7 +2,7 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal
 
 from cascade.roadway_manager import bulldoze, rebuild_dunes, set_growth_parameters
-from cascade.beach_nourisher import shoreface_nourishment, filter_overwash
+from cascade.beach_dune_manager import shoreface_nourishment, filter_overwash
 
 
 def test_bulldoze_volume():

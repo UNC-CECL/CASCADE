@@ -1,6 +1,11 @@
-"""Beach Nourisher
+"""Beach and Dune Manager
 
-This module provides functions ....  ADD DESCRIPTION HERE ONCE FINALIZED
+This module provides functions for modifying a barrier segment from Barrier3D -- consisting of 1+ rows of dune cells
+and a separate interior grid -- for beach and dune management decisions to protect a community, including:
+    1) beach and shoreface nourishment,
+    2) filtering of overwash deposition for development and placement of overwash on dunes,
+    3) dune rebuilding when beach nourished or user specified,
+    4) limiting dune migration.
 
 References
 ----------
@@ -11,9 +16,20 @@ References
         Anthropogenic controls on overwash deposition: Evidence and consequences. Journal of Geophysical Research:
         Earth Surface, 120(12), 2609-2624.
 
-
 Notes
 ---------
+The alongshore length of the barrier segment in Barrier3D is time-invariant, whereas the barrier interior
+width -- and number of cross-shore cells -- varies dynamically due to storm impacts and RSLR.
+
+In this module, we do not reduce the dune design elevation by SLR -- as in the RoadwayManager -- because here the
+dune design height is always relative to mean sea level, and not the elevation of the roadway (which decreases with
+RSLR).
+
+Barrier3D does not resolve the beach. To simulate a changing beach width with nourishment and subsequent shoreline
+change, we establish a beach width based on user input. This beach width is then modified dynamically by nourishment
+and shoreface dynamics. We also turn dune migration off in Barrier3D to keep the barrier location fixed, only allowing
+shoreline change to affect the beach width and not seaward progradation of the dune line with each nourishment and or
+landward migration of the dune line with shoreline erosion.
 
 """
 import numpy as np
@@ -27,10 +43,11 @@ def shoreface_nourishment(
     x_s, x_t, nourishment_volume, average_barrier_height, shoreface_depth, beach_width
 ):
     r"""
-    Following the formulation used in Ashton, A. D., & Lorenzo-Trueba, J. (2018), we apply a nourishment volume
-    (in m^3/m) along the entire shoreface.
+    Following the formulation used in Ashton and Lorenzo-Trueba (2018), we apply a nourishment volume (in m^3/m) along
+    the entire shoreface, represented in Barrier3D by a single cross-shore transect. This results in a new shoreline
+    position, beach width, and shoreface slope.
 
-    Note, all parameters below must be in the same units. Show meters below, but for use with barrier3D, decameters.
+    Note, all parameters below must be in the same units. Show meters below, but for use with Barrier3D, decameters.
 
     Parameters
     ----------
@@ -50,11 +67,11 @@ def shoreface_nourishment(
     Returns
     -------
     new_x_s: float
-        New shoreline position after nourishment
+        New shoreline position after nourishment [m]
     s_sf: float
-        Shoreface slope after nourishment
+        Shoreface slope after nourishment [unitless]
     beach_width: float
-        Beach width after nourishment
+        Beach width after nourishment [m]
     """
 
     # move shoreline back
@@ -73,7 +90,26 @@ def shoreface_nourishment(
 
 
 def resize_interior_domain(pre_storm_interior, post_storm_interior, bay_depth):
-    """If the pre-storm interior domains are not the same size, resize appropriately so we can easily diff"""
+    r"""
+    Resize the pre- or post-storm interior domains if they are not the same size by padding with bay cells so the two
+    domains can be easily differenced
+
+    Parameters
+    ----------
+    pre_storm_interior: grid
+        Pre-storm Barrier3D interior domain [dam * dam * dam]
+    post_storm_interior: grid
+        Post-storm Barrier3D interior domain [dam * dam * dam]
+    bay_depth: float
+        Bay depth [dam]
+
+    Returns
+    -------
+    grid
+        pre_storm_interior: resized
+        post_storm_interior: resized
+
+    """
 
     # if pre-storm domain is larger than post-storm, remove all rows of bay without any deposition from the domain
     if np.size(pre_storm_interior, 0) > np.size(post_storm_interior, 0):
@@ -101,34 +137,34 @@ def filter_overwash(
     post_storm_yxz_dune_grid,
 ):
     r"""
-    Remove a percentage of overwash from the interior, representative of the effect of development filtering
+    Remove a percentage of overwash from the barrier interior, representative of the effect of development filtering
     overwash (Rogers et al., 2015).
 
     Following Rogers et al., 2015, we suggest that `overwash_filter` be set between 40 and 90%, where the lower
     (upper) end is representative of the effect of residential (commercial) buildings in reducing overwash deposition.
     Overwash that is removed from the barrier interior is placed evenly across the dunes.
 
-    Note, all parameters below must be in the same units. For use with barrier3D, decameters.
+    Note, all parameters below must be in the same units. For use with Barrier3D, decameters.
 
     See also `bulldoze` in roadway_manager.py
 
     Parameters
     ----------
-    overwash_filter: float,
+    overwash_filter: int,
         Percent overwash removed from barrier interior [40-90% (residential-->commercial) from Rogers et al., 2015]
     post_storm_xyz_interior_grid: grid,
-        Interior barrier island topography [for barrier3d, decameters MHW (NAVD88)]
+        Interior barrier island topography [for Barrier3d, decameters MHW]
     pre_storm_xyz_interior_grid: grid,
-        Interior barrier island topography [for barrier3d, decameters MHW (NAVD88)]
+        Interior barrier island topography [for Barrier3d, decameters MHW]
     post_storm_yxz_dune_grid: grid,
-        Dune topography [for barrier3d, decameters]
+        Dune topography [for Barrier3d, decameters above the berm elevation]
 
     Returns
     -------
     array of float
         new_interior_domain: in units of xyz_interior_grid
         new_dune_domain: in units of yxz_dune_grid
-        overwash removal: in units of dz^3
+        overwash_removal: in units of dx*dy*dz (for Barrier3D, dam^3)
 
     """
 
@@ -158,8 +194,27 @@ def filter_overwash(
 def width_drown_checks(
     time_index,
     average_barrier_width,
-    minimum_community_width,
+    minimum_community_width=50,
 ):
+    r"""Checks on whether a community -- specified by a minimum width -- is eaten up by the back-barrier.
+
+    Parameters
+    ----------
+    time_index: int
+        Time index for drowning error message
+    average_barrier_width: float
+        The average barrier width from the last time step [m]
+    minimum_community_width: float
+        The minimum width to sustain a community (i.e., a road plus a house footprint) [m]
+
+    Returns
+    -------
+    boolean
+        narrow_break: no room for the road plus a home...what else makes a community if not a road+home? Make room for
+        an ark!
+
+    """
+
     # initialize the break booleans as False
     narrow_break = 0
 
@@ -175,13 +230,13 @@ def width_drown_checks(
     return narrow_break
 
 
-class BeachNourisher:
-    """Nourish the beach
+class BeachDuneManager:
+    """Manage those beaches and dunes to sustain a community!
 
     Examples
     --------
-    # >>> from cascade.beach_nourisher import BeachNourisher
-    # >>> nourish = BeachNourisher()
+    # >>> from cascade.beach_dune_manager import BeachDuneManager
+    # >>> nourish = BeachDuneManager()
     # >>> nourish.update(barrier3d, nourish_now, nourishment_interval)
     """
 
@@ -195,7 +250,7 @@ class BeachNourisher:
         original_growth_param=None,
         overwash_filter=40,
     ):
-        """The BeachNourisher module.
+        """The BeachDuneManager module.
 
          Parameters
          ----------
@@ -206,7 +261,7 @@ class BeachNourisher:
         initial_beach_width: int, optional
              initial beach width [m]
         dune_design_elevation: float, optional
-            Elevation to which dune is rebuilt to [m NAVD88]
+            Elevation to which dune is rebuilt to [m MHW]
         time_step_count: int, optional
             Number of time steps.
         original_growth_param: optional
@@ -226,7 +281,7 @@ class BeachNourisher:
         self._time_index = 1
         self._overwash_removal = True  # boolean for turning overwash removal on and off; for sensitivity testing
         self._overwash_filter = overwash_filter
-        self._minimum_community_width = 80  # m
+        self._minimum_community_width = 50  # m
 
         # time series
         self._beach_width = [None] * self._nt
@@ -298,7 +353,7 @@ class BeachNourisher:
             self._minimum_community_width,  # m
         )
         if self._narrow_break == 1:
-            return
+            return nourish_now, rebuild_dune_now  # exit program early
 
         # ------------------------------------- mgmt -------------------------------------
 
