@@ -1148,17 +1148,17 @@ def PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
     #     ),
     # )
 
-    # # also make the gif
-    # directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
-    # # CASCADEplt.plot_ElevAnimation(b3d, 1, directory, TMAX=tmax, name=plot_name)
-    # if cascade.roadways is not None:  # added the roadways class
-    #     CASCADEplt.plot_ElevAnimation_Humans_Roadways(
-    #         cascade, 1, directory, TMAX=tmax, name=plot_name
-    #     )
-    # else:
-    #     CASCADEplt.plot_ElevAnimation_Humans(
-    #         cascade, 1, directory, TMAX=tmax, name=plot_name
-    #     )
+    # also make the gif
+    directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
+    # CASCADEplt.plot_ElevAnimation(b3d, 1, directory, TMAX=tmax, name=plot_name)
+    if cascade.roadways is not None:  # added the roadways class
+        CASCADEplt.plot_ElevAnimation_Humans_Roadways(
+            cascade, 1, directory, TMAX=tmax, name=plot_name
+        )
+    else:
+        CASCADEplt.plot_ElevAnimation_Humans(
+            cascade, 1, directory, TMAX=tmax, name=plot_name
+        )
 
     return (
         BarrierWidth,
@@ -1540,6 +1540,38 @@ def early_plots():
         name="5-VarGrowthParam_half_pt4SLR_1500yrs",
         save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
     )
+
+
+def cascade_10kyr_plots():
+
+    datadir = "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output/"
+
+    b3d = []
+    bw = []
+    xs = []
+    storm_count = []
+    dune_height = []
+    time = []
+
+    ib3d = 0
+    tmax = [5725, 992, 4870, 10000, 6669]
+
+    for i in range(1, 6):
+        name_prefix = "4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_0" + str(i)
+        output = np.load(datadir + name_prefix + ".npz", allow_pickle=True)
+        cascade = output["cascade"][0]
+        b3d.append(cascade.barrier3d)
+        BarrierWidth = (
+            np.array(cascade.barrier3d[ib3d].x_b_TS[0 : tmax[i - 1]])
+            - np.array(cascade.barrier3d[ib3d].x_s_TS[0 : tmax[i - 1]])
+        ) * 10
+        bw.append(BarrierWidth)
+        # xs.append(np.array(cascade.barrier3d[ib3d].x_s_TS[0 : tmax[i - 1]]) * 10)
+        # storm_count.append(cascade.barrier3d[ib3d]._StormCount[0 : tmax[i - 1]])
+        time.append(np.arange(0, tmax[i - 1], 1))
+        dune_height.append(
+            np.array(cascade.barrier3d[ib3d]._Hd_AverageTS[0 : tmax[i - 1]]) * 10
+        )
 
 
 # record of B3D time series -------------------------------------------------------------------------------------
@@ -3151,7 +3183,7 @@ def human_plots():
         ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
             name_prefix="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low",
             tmin=0,
-            tmax=161,  # old 134
+            tmax=162,  # old 134
             plot_name="b3d_pt75_h1_plots_low",
             run_road_mgmt=True,
         )
@@ -3169,7 +3201,7 @@ def human_plots():
         ) = PLOT_5_Nonlinear_Dynamics_B3D_CNH_CASCADE(
             name_prefix="6-B3D_Rave_pt75_Roadways_3mDune_20mSetback_20mWidth_low",
             tmin=0,
-            tmax=104,  # same as old
+            tmax=69,
             plot_name="b3d_pt75_h2_plots_low",
             run_road_mgmt=True,
         )
@@ -3224,7 +3256,7 @@ def human_plots():
                 DuneCrestMean_h1,
                 DuneCrestMean_h2,
             ],
-            TMAX=[200, 173, 161, 104],
+            TMAX=[190, 190, 162, 69],
         )
 
     # rave = 0.75 runs, high
@@ -3333,7 +3365,7 @@ def human_plots():
                 DuneCrestMean_h1,
                 DuneCrestMean_h2,
             ],
-            TMAX=[550, 500, 430, 423],
+            TMAX=[500, 500, 430, 423],
         )
 
     # rave = 0.45 runs, low
@@ -3442,7 +3474,7 @@ def human_plots():
                 DuneCrestMean_h1,
                 DuneCrestMean_h2,
             ],
-            TMAX=[600, 566, 432, 379],
+            TMAX=[566, 566, 432, 379],
         )
 
     # rave = 0.45 runs, high
@@ -3551,7 +3583,7 @@ def human_plots():
                 DuneCrestMean_h1,
                 DuneCrestMean_h2,
             ],
-            TMAX=[650, 633, 520, 434],
+            TMAX=[633, 633, 520, 434],
         )
 
     def slr_sensitivity():

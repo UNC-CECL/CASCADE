@@ -2101,7 +2101,7 @@ def plot_nonlinear_stats_low_high(
         axs[i].set(xlabel="time (yr)")
         axs[i].set_xlim([-15, 665])
         # axs[i].set_ylim([1.43, 5.2])
-        axs[i].set_ylim([0, 5.2])
+        axs[i].set_ylim([0.75, 5.2])
 
     axs[0].set(ylabel="dune elevation (m MHW)")
     axs[3].legend(
@@ -2141,9 +2141,11 @@ def plot_nonlinear_stats_low_high(
     axs2[0].set(ylabel="barrier height (m MHW)")
     axs2[0].set_ylim([0.15, 1.75])
     axs2[1].set(ylabel="barrier width (m)")
-    axs2[1].set_ylim([50, 425])
+    # axs2[1].set_ylim([50, 425])
+    axs2[1].set_ylim([30, 450])
     axs2[2].set(ylabel="shoreline position (m)")
-    axs2[2].set_ylim([-10, 480])
+    # axs2[2].set_ylim([-10, 480])
+    axs2[2].set_ylim([-10, 500])
     axs2[2].legend(["natural", "1-m dune", "2-m dune", "3-m dune"])
     plt.tight_layout()
 
@@ -2486,6 +2488,35 @@ def fig3_slr_sensitivity(
     axs2[2].set_ylim([-10, 480])
     axs2[2].legend(["0.004 m/yr", "0.008", "0.012", "Acc"])
     plt.tight_layout()
+
+
+def supp_10kyr_timeseries(bw, time, dune_height):
+    fig1, axs1 = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
+
+    tlow = 0
+    thigh = 10000
+
+    axs1[0].plot(
+        time[0], bw[0], time[1], bw[1], time[2], bw[2], time[3], bw[3], time[4], bw[4]
+    )
+    axs1[0].ylabel("barrier width (m)")
+    axs1[0].xlim(tlow, thigh)
+
+    axs1[1].plot(
+        time[0],
+        dune_height[0],
+        time[1],
+        dune_height[1],
+        time[2],
+        dune_height[2],
+        time[3],
+        dune_height[3],
+        time[4],
+        dune_height[4],
+    )
+    axs1[1].ylabel("ave dune height (m)")
+    axs1[1].xlabel("years")
+    axs1[1].xlim(tlow, thigh)
 
 
 ## OLD CODE THAT I NEED TO FIX EVENTUALLY:
