@@ -4,7 +4,7 @@ import numpy as np
 import os
 
 from .roadway_manager import RoadwayManager
-from .beach_nourisher import BeachNourisher
+from .beach_dune_manager import BeachDuneManager
 from .brie_coupler import BrieCoupler, initialize_equal, batchB3D
 from .chome_coupler import ChomeCoupler
 
@@ -43,11 +43,9 @@ class Cascade:
         else:
             self._road_ele = [road_ele] * self._ny
         if np.size(road_setback) > 1:
-            self._orig_road_setback = road_setback
-            self._road_relocation_setback = road_setback
+            self._road_setback = road_setback
         else:
-            self._orig_road_setback = [road_setback] * self._ny
-            self._road_relocation_setback = [road_setback] * self._ny
+            self._road_setback = [road_setback] * self._ny
         if np.size(nourishment_interval) > 1:
             self._nourishment_interval = nourishment_interval
         else:
@@ -75,7 +73,7 @@ class Cascade:
         sea_level_rise_constant=True,
         alongshore_section_count=6,
         time_step_count=200,
-        min_dune_growth_rate=0.25,  # average is 0.45, low dune growth rate
+        min_dune_growth_rate=0.25,  # average is 0.45, a low dune growth rate
         max_dune_growth_rate=0.65,
         num_cores=1,
         roadway_management_module=False,
@@ -139,15 +137,15 @@ class Cascade:
         beach_nourishment_module: boolean, optional
             If True, use nourishment module (nourish shoreface, rebuild dunes)
         road_ele: float or list of floats, optional
-            Elevation of the roadway [m NAVD88]
+            Elevation of the initial roadway [m MHW] and after road relocations
         road_width: int or list of int, optional
-            Width of roadway [m]
+            Width of initial roadway [m] and road relocations
         road_setback: int or list of int, optional
-            Setback of roadway from the inital dune line [m]
+            Setback of initial roadway from the inital dune line [m] and after road relocations
         dune_design_elevation: float or list of floats, optional
-            Elevation to which dune is rebuilt to [m NAVD88]
+            Elevation to which dune is initially rebuilt to [m MHW] and after road relocations
         dune_minimum_elevation: float or list of floats, optional
-            Elevation threshold which triggers rebuilding of dune [m NAVD88]
+            Elevation threshold which triggers rebuilding of dune [m MHW]
         nourishment_interval: int or list of ints, optional
              Interval that nourishment occurs [yrs]
         nourishment_volume: float or list of float, optional
@@ -240,7 +238,7 @@ class Cascade:
         # initialize human dynamics modules
         ###############################################################################
 
-        # configure `self` to create lists of these variables
+        # configure `self` to create lists of these variables; time series of these variables are saved in modules
         self.module_lists(
             dune_design_elevation,
             dune_minimum_elevation,
@@ -274,7 +272,7 @@ class Cascade:
                     house_footprint=house_footprint,
                 )  # contains the CHOME model instances, one per community
 
-        # initialize RoadwayManager and BeachNourisher modules
+        # initialize RoadwayManager and BeachDuneManager modules
         # (always, just in case we want to add a road or start nourishing during the simulation)
         self._roadways = []
         self._nourishments = []
@@ -284,8 +282,7 @@ class Cascade:
                 RoadwayManager(
                     road_elevation=self._road_ele[iB3D],
                     road_width=self._road_width[iB3D],
-                    road_setback=self._orig_road_setback[iB3D],
-                    road_relocation_setback=self._road_relocation_setback[iB3D],
+                    road_setback=self._road_setback[iB3D],
                     dune_design_elevation=self._dune_design_elevation[iB3D],
                     dune_minimum_elevation=self._dune_minimum_elevation[iB3D],
                     time_step_count=self._nt,
@@ -293,7 +290,7 @@ class Cascade:
                 )
             )
             self._nourishments.append(
-                BeachNourisher(
+                BeachDuneManager(
                     nourishment_interval=self._nourishment_interval[iB3D],
                     nourishment_volume=self._nourishment_volume[iB3D],
                     initial_beach_width=int(
@@ -416,7 +413,8 @@ class Cascade:
         h_b_dt = list(h_b_dt)
         self._barrier3d = list(b3d)
 
-        # use brie to connect B3D subgrids with alongshore sediment transport; otherwise, just update dune domain
+        # use brie to connect B3D subgrids with alongshore sediment transport; otherwise, just update (erode/prograde)
+        # dune domain
         if self._alongshore_transport_module:
             self._brie_coupler.update_ast(self._barrier3d, x_t_dt, x_s_dt, h_b_dt)
         else:
@@ -439,17 +437,15 @@ class Cascade:
                 # this is making everything a tuple and I don't know why
                 self._roadways[
                     iB3D
-                ].dune_design_elevation = self._dune_design_elevation[
+                ].relocation_dune_design_elevation = self._dune_design_elevation[
                     iB3D
                 ]  # type: float
                 self._roadways[
                     iB3D
-                ].dune_minimum_elevation = self._dune_minimum_elevation[iB3D]
-                self._roadways[iB3D].road_ele = self._road_ele[iB3D]
-                self._roadways[iB3D].road_width = self._road_width[iB3D]
-                self._roadways[
-                    iB3D
-                ].road_relocation_setback = self._road_relocation_setback[iB3D]
+                ].relocation_dune_minimum_elevation = self._dune_minimum_elevation[iB3D]
+                self._roadways[iB3D].road_relocation_ele = self._road_ele[iB3D]
+                self._roadways[iB3D].road_relocation_width = self._road_width[iB3D]
+                self._roadways[iB3D].road_relocation_setback = self._road_setback[iB3D]
 
                 self._roadways[iB3D].update(self._barrier3d[iB3D])
 
@@ -461,6 +457,10 @@ class Cascade:
                     self._road_break = 1
                     return
 
+        # CHOME coupler:
+        # provide agents in the Coastal Home Ownership Model (CHOME) with variables describing the physical environment
+        # -- including barrier elevation, beach width, dune height, shoreline erosion rate -- who then decide if it is
+        # a nourishment year, the corresponding nourishment volume, and whether or not the dune should be rebuilt
         if self._community_dynamics_module:
             self._chome_coupler.dune_design_elevation = self._dune_design_elevation
             [
@@ -472,9 +472,10 @@ class Cascade:
                 nourishments=self._nourishments,
             )
 
-        # BeachNourisher:
+        # BeachDuneManager:
         # If interval specified, nourish at that interval, otherwise wait until told with nourish_now to
-        # nourish or rebuild_dunes_now to rebuild dunes. Resets any "now" parameters to false after nourishment.
+        # nourish or rebuild_dunes_now to rebuild dunes. Resets any "now" parameters to false after nourishment. Module
+        # also filters overwash deposition for residential or commercial community (user specified)
         if self._beach_nourishment_module:
             for iB3D in range(self._ny):
                 self._nourishments[
