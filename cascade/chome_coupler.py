@@ -52,7 +52,7 @@ class ChomeCoupler:
         nourishment_cost_subsidy=10e6,
         house_footprint=15,
     ):
-        """The ChomeBuyer module.
+        """The ChomeCoupler module.
 
         Parameters
         ----------
