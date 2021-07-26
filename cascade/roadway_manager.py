@@ -42,9 +42,12 @@ def bulldoze(
     dy=10,
     dz=10,
     drown_threshold=0,
+    percent_water_cells_touching_road=0.2,
 ):
     r"""
     Remove overwash from roadway and put it back on the dune. Spreads sand evenly across dune cells.
+
+    Check for width drowning of roadway (i.e., when a water cell touches the roadway)
 
     Parameters
     ----------
@@ -67,7 +70,9 @@ def bulldoze(
     dz: int
         Vertical discretization of z [default is dz=10, dam]
     drown_threshold: float
-        threshold for roadway drowning [m; needs to be in same reference frame as xyz]
+        Elevation threshold for roadway drowning [m; needs to be in same reference frame as xyz]
+    percent_water_cells_touching_road: float
+        Fraction of cells below drown_threshold
 
     Returns
     -------
@@ -108,14 +113,43 @@ def bulldoze(
     ] = new_road_domain  # update interior domain
 
     # check if any water cells border the road on either side
-    if (
-        road_start > 0
-        and (np.min(xyz_interior_grid[road_start - 1, :] * dz) <= drown_threshold)
-    ) or (np.min(xyz_interior_grid[road_end + 1, :] * dz) <= drown_threshold):
+    number_border_cells = np.size(xyz_interior_grid[road_end, :])
+    bayside_water_cells = (
+        np.count_nonzero((xyz_interior_grid[road_end + 1, :] * dz) <= drown_threshold)
+        / number_border_cells
+    )
+
+    if road_start > 0:
+        seaside_water_cells = (
+            np.count_nonzero(
+                (xyz_interior_grid[road_start - 1, :] * dz) <= drown_threshold
+            )
+            / number_border_cells
+        )
+    else:
+        seaside_water_cells = 0
+
+    # for debugging
+    # if seaside_water_cells > 0:
+    #     print(
+    #         " ALERT: {water_cells}% of seaside road borders water".format(
+    #             water_cells=np.array(seaside_water_cells) * 100
+    #         )
+    #     )
+    # if bayside_water_cells > 0:
+    #     print(
+    #         " ALERT: {water_cells}% of bayside road borders water".format(
+    #             water_cells=np.array(bayside_water_cells) * 100
+    #         )
+    #     )
+
+    if (seaside_water_cells > percent_water_cells_touching_road) or (
+        bayside_water_cells > percent_water_cells_touching_road
+    ):
         roadway_drown = True
         print(
-            "Roadway drowned at {time} years from the back-bay, water borders road".format(
-                time=time_index - 1
+            "Roadway width drowned at {time} years, {water}% of road borders water".format(
+                time=time_index - 1, water=percent_water_cells_touching_road * 100
             )
         )
     else:
@@ -255,7 +289,71 @@ def set_growth_parameters(
     return new_growth_param
 
 
-def roadway_checks(
+def get_road_relocation_elevation(
+    time_index,
+    xyz_interior_grid,
+    road_setback,
+    road_width,
+    dx=10,
+    dy=10,
+    dz=10,
+):
+    r"""
+    For a given setback distance, check what the road elevation would be if relocated at grade.
+
+    If zero MSL, the roadway can't be relocated (height drowned).
+
+    Parameters
+    ----------
+    time_index: int,
+        Time index for drowning error message
+    xyz_interior_grid: array
+        Interior barrier island topography [z units specified by dz; for Barrier3d, dz=10, decameters MHW]
+    road_width: int
+        Width of roadway [m]
+    road_setback: int
+        Setback distance of roadway from edge of interior domain [m]
+    dx: int
+        Cross-shore discretization of x [default is dx=10, dam]
+    dy: int
+        Alongshore discretization of y [default is dy=10, dam]
+    dz: int
+        Vertical discretization of z [default is dz=10, dam]
+
+    Returns
+    -------
+    array of float
+        road_ele: in units of dz
+    bool
+        roadway_drown: if the roadway elevation would be zero MSL, the roadway can't be constructed or relocated
+
+    """
+    roadway_drown = 0
+
+    # road parameters
+    road_start = int(
+        road_setback / dy
+    )  # grid index for start of roadway in interior domain (for B3D, convert to dam)
+    road_width = int(road_width / dx)
+    road_end = road_start + road_width
+
+    # calculate average elevation
+    road_domain = xyz_interior_grid[road_start:road_end, :]
+    road_ele = np.mean(road_domain) * dz  # dam to meters
+
+    # if the roadway elevation would be zero MSL, the roadway can't be constructed or relocated
+    if road_ele <= 0:
+        roadway_drown = 1
+        print(
+            "Roadway cannot be relocated at {time} years b/c the road would be at or below MSL".format(
+                time=time_index - 1
+            )
+        )
+
+    return road_ele, roadway_drown
+
+
+def road_relocation_checks(
     time_index,
     dune_migrated,
     road_setback,
@@ -263,8 +361,7 @@ def roadway_checks(
     road_relocation_width,
     average_barrier_width,
 ):
-    r"""Checks on roadway drowning and if the roadway needs to be relocated due to dune migration. Roadway drowning
-    checks include whether the road is eaten up by the back-barrier or if there is no room for roadway relocation.
+    r"""Check if the roadway needs to be relocated due to dune migration, and if there is room for roadway relocation.
 
     Parameters
     ----------
@@ -283,18 +380,16 @@ def roadway_checks(
 
     Returns
     -------
-    boolean
+    bool
         road_relocated: roadway was relocated due to dune migration
-        narrow_break: no room for relocation of the roadway
-        drown_break: bay touches roadway
+        relocation_break: no room for relocation of the roadway
     float
         road_setback: updated setback distance for dune migration and road relocation
 
     """
 
     # initialize the break booleans as False
-    narrow_break = 0
-    drown_break = 0
+    relocation_break = 0
     road_relocated = 0
 
     # if dune line eroded or prograded, subtract (erode) or add (prograde) to the setback to keep road in the same place
@@ -308,28 +403,21 @@ def roadway_checks(
             # relocate the road only if the width of the island allows it
             if (
                 road_relocation_setback
-                + (2 * road_relocation_width)  # bay shoreline buffer of 2x the roadway
+                + (
+                    2 * road_relocation_width
+                )  # bay shoreline buffer of one roadway width
                 > average_barrier_width
             ):
-                narrow_break = 1
+                relocation_break = 1
                 print(
-                    "Island is to narrow for roadway to be relocated. Roadway drowned at {time} years".format(
+                    "Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at {time} years".format(
                         time=time_index - 1
                     )  # -1 because B3D advances time step at end of dune_update
                 )
             else:
                 road_setback = road_relocation_setback
 
-    # now check the other shoreline: if the roadway gets eaten up by the back-barrier, then it is lost
-    if average_barrier_width <= road_setback:
-        drown_break = 1
-        print(
-            "Roadway drowned at {time} years from the back-bay".format(
-                time=time_index - 1
-            )
-        )
-
-    return road_relocated, road_setback, narrow_break, drown_break
+    return road_relocated, road_setback, relocation_break
 
 
 class RoadwayManager:
@@ -344,11 +432,11 @@ class RoadwayManager:
 
     def __init__(
         self,
-        road_elevation=1.7,
+        initial_road_elevation=1.7,
         road_width=30,
         road_setback=30,
-        dune_design_elevation=3.7,
-        dune_minimum_elevation=2.2,
+        initial_dune_design_elevation=3.7,
+        initial_dune_minimum_elevation=2.2,
         time_step_count=500,
         original_growth_param=None,
     ):
@@ -356,16 +444,16 @@ class RoadwayManager:
 
         Parameters
         ----------
-        road_elevation: float, optional
-            Elevation of the roadway [m MHW]
+        initial_road_elevation: float, optional
+            Initial elevation of the roadway [m MHW]; road relocation elevations are built to grade based on setback.
         road_width: int, optional
-            Width of roadway [m]
+            Width of roadway [m]. Also used for relocation width.
         road_setback: int, optional
-            Setback of roadway from the inital dune line [m]
-        dune_design_elevation: float, optional
-            Elevation to which dune is rebuilt to [m MHW]
-        dune_minimum_elevation: float, optional
-            Elevation threshold which triggers rebuilding of dune [m MHW]
+            Setback of roadway from the inital dune line [m]. Also used for relocation setback.
+        initial_dune_design_elevation: float, optional
+            Elevation which dune is originally rebuilt to when road established [m MHW]. Used for rebuild dune height.
+        initial_dune_minimum_elevation: float, optional
+            Elevation threshold which originally triggers rebuilding of dune [m MHW]. Used for min dune height.
         time_step_count: int, optional
             Number of time steps.
         original_growth_param: optional
@@ -375,21 +463,36 @@ class RoadwayManager:
 
         self._road_width = road_width
         self._road_setback = road_setback
-        self._road_ele = road_elevation
-        self._dune_design_elevation = dune_design_elevation  # NOTE: this can be `None` if user doesn't want to rebuild
-        self._dune_minimum_elevation = dune_minimum_elevation
+        self._road_ele = initial_road_elevation
+        self._dune_design_elevation = initial_dune_design_elevation  # can be `None` if user doesn't want to rebuild
+        self._dune_minimum_elevation = initial_dune_minimum_elevation
         self._original_growth_param = original_growth_param
         self._nt = time_step_count
         self._drown_break = 0
-        self._narrow_break = 0
+        self._relocation_break = 0
         self._time_index = 1
+        self._absolute_minimum_dune_height = 0.3
+        self._percent_water_cells_touching_road = 0.2
 
-        # set relocation parameters to original values; these can be updated outside update within cascade
-        self._road_relocation_width = road_width
-        self._road_relocation_setback = road_setback
-        self._road_relocation_ele = road_elevation
-        self._relocation_dune_design_elevation = dune_design_elevation
-        self._relocation_dune_minimum_elevation = dune_minimum_elevation
+        # set relocation parameters to original values
+        self._road_relocation_width = (
+            road_width  # can be updated outside `update` within cascade
+        )
+        self._road_relocation_setback = (
+            road_setback  # can be updated outside `update` within cascade
+        )
+
+        # user can specify that dune rebuilding is off with `None`: mostly for debugging and sensitivity testing
+        if (
+            self._dune_design_elevation is not None
+            and self._dune_minimum_elevation is not None
+        ):
+            self._relocation_dune_design_height_above_road = (
+                self._dune_design_elevation - self._road_ele
+            )  # m
+            self._relocation_dune_minimum_height_above_road = (
+                self._dune_minimum_elevation - self._road_ele
+            )  # m
 
         # time series
         self._road_setback_TS = np.zeros(
@@ -403,15 +506,15 @@ class RoadwayManager:
         self._road_ele_TS = np.zeros(
             self._nt
         )  # changes with time due to lagrangian SLR and user input
-        self._road_ele_TS[0] = road_elevation
+        self._road_ele_TS[0] = self._road_ele
         self._dune_design_elevation_TS = np.zeros(
             self._nt
         )  # changes with time due to lagrangian SLR and user input
-        self._dune_design_elevation_TS[0] = dune_design_elevation
+        self._dune_design_elevation_TS[0] = self._dune_design_elevation
         self._dune_minimum_elevation_TS = np.zeros(
             self._nt
         )  # changes with time due to lagrangian SLR and user input
-        self._dune_minimum_elevation_TS[0] = dune_minimum_elevation
+        self._dune_minimum_elevation_TS[0] = self._dune_minimum_elevation
         self._dunes_rebuilt_TS = np.zeros(self._nt)  # when dunes are rebuilt (boolean)
         self._road_relocated_TS = np.zeros(self._nt)  # when road is relocated (boolean)
         self._rebuild_dune_volume_TS = np.zeros(
@@ -420,19 +523,17 @@ class RoadwayManager:
         self._road_overwash_volume = np.zeros(
             self._nt
         )  # total overwash removed from roadway [m^3]
+        self._percent_below_min = [
+            None
+        ] * self._nt  # keep track of what percent of the dune elevations fall below minimum threshold
         self._growth_params = [
             None
         ] * self._nt  # when dune growth parameters set to zero b/c of rebuild height
         self._growth_params[0] = original_growth_param
-        self._post_storm_dunes = [
-            None
-        ] * self._nt  # keep track of post-storm dune impacts before human modifications
-        self._post_storm_interior = [
-            None
-        ] * self._nt  # keep track of post-storm interior impacts before human modifications
-        self._percent_below_min = [
-            None
-        ] * self._nt  # keep track of what percent of the dune elevations fall below minimum threshold
+
+        # also keep track of post-storm dune and interior impacts before human modifications
+        self._post_storm_dunes = [None] * self._nt
+        self._post_storm_interior = [None] * self._nt
 
     def update(
         self,
@@ -444,10 +545,10 @@ class RoadwayManager:
         if self._original_growth_param is None:
             self._original_growth_param = barrier3d.growthparam
 
-        # save post-storm dune and interior domain before human modifications
+        # save post-storm dune and interior domain before human modifications (essentially a 0.5 yr time step)
         self._post_storm_interior[self._time_index - 1] = copy.deepcopy(
             barrier3d.InteriorDomain
-        )  # hoping this makes a deep copy
+        )
         self._post_storm_dunes[self._time_index - 1] = copy.deepcopy(
             barrier3d.DuneDomain[self._time_index - 1, :, :]
         )
@@ -456,7 +557,7 @@ class RoadwayManager:
         # roadway checks for relocation, drowning; update for RSLR
         ###############################################################################
 
-        # check for barrier drowning and if road relocation is needed; if barrier drowns, exit program
+        # check if road relocation is needed
         average_barrier_width = barrier3d.InteriorWidth_AvgTS[-1] * 10  # m
         dune_migration = (
             barrier3d.ShorelineChangeTS[-1] * 10
@@ -464,32 +565,51 @@ class RoadwayManager:
         [
             road_relocated,
             self._road_setback,
-            self._narrow_break,
-            self._drown_break,
-        ] = roadway_checks(
+            self._relocation_break,
+        ] = road_relocation_checks(
             self._time_index,
             dune_migration,
-            self._road_setback,  # current road setback
-            self._road_relocation_setback,  # setback specified for relocation
-            self._road_relocation_width,  # width specified for relocation
-            average_barrier_width,  # current width
+            self._road_setback,  # current road setback, m
+            self._road_relocation_setback,  # setback specified for relocation, m
+            self._road_relocation_width,  # width specified for relocation, m
+            average_barrier_width,  # current width, m
         )
-        if self._narrow_break == 1 or self._drown_break == 1:
+
+        # if roadway can't be relocated, no longer manage and exit `update`; reset dune growth parameters to original
+        if self._relocation_break == 1:
+            barrier3d.growthparam = self._original_growth_param
             return
 
-        # if road is relocated, update the other road parameters and dune elevations dependent on the road for
-        # relocation; otherwise, decrease all elevations (m MHW) this year by RSLR increment
+        # if road is relocated, get the new road elevation (built at grade) and update dune elevations which are
+        # dependent on the road elevation; otherwise, decrease all elevations (m MHW) this year by the RSLR increment
         if road_relocated:
-            self._road_ele = self._road_relocation_ele
-            self._dune_design_elevation = self._relocation_dune_design_elevation
-            self._dune_minimum_elevation = self._relocation_dune_minimum_elevation
             self._road_width = self._road_relocation_width
-        else:
-            self._road_ele = self._road_ele - (
-                barrier3d.RSLR[self._time_index - 1] * 10
+            self._road_ele, self._drown_break = get_road_relocation_elevation(
+                self._time_index,
+                xyz_interior_grid=barrier3d.InteriorDomain,  # interior domain from this last time step, dam
+                road_setback=self._road_setback,  # m
+                road_width=self._road_width,  # m
+                dx=10,
+                dy=10,
+                dz=10,  # specifies interior is in dam
             )
 
             # user can specify that dune rebuilding is off with `None`
+            if (
+                self._dune_design_elevation is not None
+                or self._dune_minimum_elevation is not None
+            ):
+                self._dune_design_elevation = (
+                    self._road_ele + self._relocation_dune_design_height_above_road
+                )
+                self._dune_minimum_elevation = (
+                    self._road_ele + self._relocation_dune_minimum_height_above_road
+                )
+
+        else:
+            self._road_ele = self._road_ele - (
+                barrier3d.RSLR[self._time_index - 1] * 10
+            )  # m MHW
             if (
                 self._dune_design_elevation is not None
                 or self._dune_minimum_elevation is not None
@@ -501,20 +621,34 @@ class RoadwayManager:
                     barrier3d.RSLR[self._time_index - 1] * 10
                 )
 
-        # road cannot be below 0 m MHW (sea level); if this happens, the barrier should have drowned
+        # road cannot be below 0 m MHW (sea level); stop managing!
         if self._road_ele < 0:
             self._drown_break = 1
             print(
-                "Roadway drowned at {time} years - cannot be below 0 m MHW".format(
+                "Roadway drowned in place at {time} years due to SLR - road cannot be below 0 m MHW".format(
                     time=self._time_index - 1
                 )
             )
+            barrier3d.growthparam = self._original_growth_param
+            return
+        elif self._drown_break == 1:  # if road drowned from road relocation above
+            barrier3d.growthparam = self._original_growth_param
             return
 
-        # update time series
-        self._road_setback_TS[
-            self._time_index - 1
-        ] = self._road_setback  # not sure if I need copy.deepcopy
+        # when the roadway gets really low in elevation, the dune_design_elevation may not be above the berm; when this
+        # happens, we use a design height of 1 m above the berm to keep a dune to protect the roadway and rebuild
+        # whenever the dune drops to just above elevation of the berm (0.3 m) -- essentially, we just push the sand back
+        self._dune_design_elevation = max(
+            self._dune_design_elevation, (barrier3d.BermEl * 10) + 1.0
+        )
+        # note, Barrier3D adds a proto dune starter, so we need to overcome this (chose 30 over 20 cm)
+        self._dune_minimum_elevation = max(
+            self._dune_minimum_elevation,
+            (barrier3d.BermEl * 10) + self._absolute_minimum_dune_height,
+        )
+
+        # save time series
+        self._road_setback_TS[self._time_index - 1] = self._road_setback
         self._road_width_TS[self._time_index - 1] = self._road_width
         self._road_ele_TS[self._time_index - 1] = self._road_ele
         self._dune_design_elevation_TS[
@@ -526,42 +660,40 @@ class RoadwayManager:
         self._road_relocated_TS[self._time_index - 1] = road_relocated
 
         ###############################################################################
-        # bulldoze roadway after storms
+        # bulldoze roadway after storms and check for road width drowning
         ###############################################################################
 
-        # bulldoze the road and put bulldozed sand back on the dunes
+        # bulldoze the road and put bulldozed sand back on the dunes; drown road when a water cell touches either side
         (
             new_dune_domain,  # all in dam
             new_xyz_interior_domain,
             road_overwash_removal,
-            roadway_drown,
+            self._drown_break,
         ) = bulldoze(
             time_index=self._time_index,
             road_ele=self._road_ele,  # m MHW
-            road_width=self._road_width,
-            road_setback=self._road_setback,
-            xyz_interior_grid=barrier3d.InteriorDomain,  # interior domain from this last time step
+            road_width=self._road_width,  # m
+            road_setback=self._road_setback,  # m
+            xyz_interior_grid=barrier3d.InteriorDomain,  # interior domain from this last time step, dam
             yxz_dune_grid=barrier3d.DuneDomain[
                 self._time_index - 1, :, :
-            ],  # dune domain from this last time step
+            ],  # dune domain from this last time step, dam
             dx=10,
             dy=10,
-            dz=10,
-            drown_threshold=0,
+            dz=10,  # specifies dam for dune and interior domains
+            drown_threshold=0,  # 0 m MSL
+            percent_water_cells_touching_road=self._percent_water_cells_touching_road,  # fraction cells<drown_threshold
         )
+        if self._drown_break == 1:
+            barrier3d.growthparam = self._original_growth_param
+            return  # exit program
+
         self._road_overwash_volume[self._time_index - 1] = (
             road_overwash_removal * dm3_to_m3
         )  # convert from dam^3 to m^3
 
-        # another check on the location of the back-barrier shoreline: if the roadway touches a water cell, drown!
-        if roadway_drown:
-            self._drown_break = 1
-            return  # exit program
-
-        # update class variables
-        barrier3d.InteriorDomain = (
-            new_xyz_interior_domain  # I think these class variables are altered above
-        )
+        # update Barrier3D class variables
+        barrier3d.InteriorDomain = new_xyz_interior_domain
         barrier3d.DomainTS[self._time_index - 1] = new_xyz_interior_domain
 
         ###############################################################################
@@ -575,8 +707,6 @@ class RoadwayManager:
             # in B3D, dune height is the height above the berm crest
             dune_design_height = self._dune_design_elevation - (barrier3d.BermEl * 10)
             min_dune_height = self._dune_minimum_elevation - (barrier3d.BermEl * 10)
-            if min_dune_height < 0:  # min dune height can't be negative
-                min_dune_height = 0
 
             # if any dune cell in the front row of dunes is less than a minimum threshold -- as measured above the
             # berm crest -- then rebuild the dune (all rows up to dune_design_elevation)
@@ -602,18 +732,18 @@ class RoadwayManager:
                     rebuild_dune_volume * dm3_to_m3
                 )
 
-        # update class variables
+        # update Barrier3D class variables
         barrier3d.DuneDomain[self._time_index - 1, :, :] = new_dune_domain
 
         ###############################################################################
-        # Set dune growth rate to zero if dunes rebuilt
+        # Set dune growth rate to zero if dunes rebuilt > natural equilibrium height
         ###############################################################################
 
         # set dune growth rate to zero for next time step if the dune elevation (front row) is larger than the
         # natural eq. dune height (Dmax)
         new_growth_parameters = set_growth_parameters(
-            new_dune_domain,
-            barrier3d.Dmax,
+            new_dune_domain,  # in dam
+            barrier3d.Dmax,  # in dam
             barrier3d.growthparam,
             original_growth_param=self._original_growth_param,  # use original growth rates for resetting values
         )
@@ -623,14 +753,6 @@ class RoadwayManager:
         barrier3d.growthparam = new_growth_parameters
 
         return
-
-    @property
-    def road_relocation_ele(self):
-        return self._road_relocation_ele
-
-    @road_relocation_ele.setter
-    def road_relocation_ele(self, value):
-        self._road_relocation_ele = value
 
     @property
     def road_relocation_width(self):
@@ -649,22 +771,6 @@ class RoadwayManager:
         self._road_relocation_setback = value
 
     @property
-    def relocation_dune_design_elevation(self):
-        return self._relocation_dune_design_elevation
-
-    @relocation_dune_design_elevation.setter
-    def relocation_dune_design_elevation(self, value):
-        self._relocation_dune_design_elevation = value
-
-    @property
-    def relocation_dune_minimum_elevation(self):
-        return self._relocation_dune_minimum_elevation
-
-    @relocation_dune_minimum_elevation.setter
-    def relocation_dune_minimum_elevation(self, value):
-        self._relocation_dune_minimum_elevation = value
-
-    @property
     def drown_break(self):
         return self._drown_break
 
@@ -673,9 +779,9 @@ class RoadwayManager:
         self._drown_break = value
 
     @property
-    def narrow_break(self):
-        return self._narrow_break
+    def relocation_break(self):
+        return self._relocation_break
 
-    @narrow_break.setter
-    def narrow_break(self, value):
-        self._narrow_break = value
+    @relocation_break.setter
+    def relocation_break(self, value):
+        self._relocation_break = value

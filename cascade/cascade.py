@@ -280,23 +280,23 @@ class Cascade:
         for iB3D in range(self._ny):
             self._roadways.append(
                 RoadwayManager(
-                    road_elevation=self._road_ele[iB3D],
+                    initial_road_elevation=self._road_ele[iB3D],
                     road_width=self._road_width[iB3D],
                     road_setback=self._road_setback[iB3D],
-                    dune_design_elevation=self._dune_design_elevation[iB3D],
-                    dune_minimum_elevation=self._dune_minimum_elevation[iB3D],
+                    initial_dune_design_elevation=self._dune_design_elevation[iB3D],
+                    initial_dune_minimum_elevation=self._dune_minimum_elevation[iB3D],
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
                 )
             )
+            initial_beach_width = (
+                int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
+            )  # m
             self._nourishments.append(
                 BeachDuneManager(
                     nourishment_interval=self._nourishment_interval[iB3D],
                     nourishment_volume=self._nourishment_volume[iB3D],
-                    initial_beach_width=int(
-                        self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta
-                    )
-                    * 10,  # m
+                    initial_beach_width=initial_beach_width,
                     dune_design_elevation=self._dune_design_elevation[iB3D],
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
@@ -421,83 +421,95 @@ class Cascade:
             for iB3D in range(self._ny):
                 self._barrier3d[iB3D].update_dune_domain()
 
-        # check also for width/height drowning in B3D (would occur in update_dune_domain); important for B3D only runs
+        # check also for width/height drowning in B3D (would occur in update_dune_domain)
         for iB3D in range(self._ny):
             if self._barrier3d[iB3D].drown_break == 1:
                 self._b3d_break = 1
                 return
 
-        # ---- human dynamics modules ----
+        ###############################################################################
+        # human dynamics modules
+        ###############################################################################
+
         # RoadwayManager:
         # Remove overwash from roadway after each model year, place on the dune, rebuild dunes if
         # fall below height threshold, and check if dunes should grow naturally
         if self._roadway_management_module:
-            for iB3D in range(self._ny):
 
-                # this is making everything a tuple and I don't know why
-                self._roadways[
-                    iB3D
-                ].relocation_dune_design_elevation = self._dune_design_elevation[
-                    iB3D
-                ]  # type: float
-                self._roadways[
-                    iB3D
-                ].relocation_dune_minimum_elevation = self._dune_minimum_elevation[iB3D]
-                self._roadways[iB3D].road_relocation_ele = self._road_ele[iB3D]
-                self._roadways[iB3D].road_relocation_width = self._road_width[iB3D]
-                self._roadways[iB3D].road_relocation_setback = self._road_setback[iB3D]
+            # if the roadway drowned in the previous time step, or if the barrier was too narrow for the
+            # roadway to be relocated, stop managing the road!
+            if (
+                self._roadways[iB3D].drown_break
+                or self._roadways[iB3D].relocation_break
+            ):
+                self._road_break = 1
+                return
 
-                self._roadways[iB3D].update(self._barrier3d[iB3D])
+            else:
+                # manage that road!
+                for iB3D in range(self._ny):
 
-                # if the road drowned or barrier was too narrow for roadway to be relocated, break
-                if (
-                    self._roadways[iB3D].drown_break
-                    or self._roadways[iB3D].narrow_break
-                ):
-                    self._road_break = 1
-                    return
+                    self._roadways[iB3D].road_relocation_width = self._road_width[
+                        iB3D
+                    ]  # type: float
+                    self._roadways[iB3D].road_relocation_setback = self._road_setback[
+                        iB3D
+                    ]
+
+                    self._roadways[iB3D].update(self._barrier3d[iB3D])
 
         # CHOME coupler:
         # provide agents in the Coastal Home Ownership Model (CHOME) with variables describing the physical environment
         # -- including barrier elevation, beach width, dune height, shoreline erosion rate -- who then decide if it is
         # a nourishment year, the corresponding nourishment volume, and whether or not the dune should be rebuilt
         if self._community_dynamics_module:
-            self._chome_coupler.dune_design_elevation = self._dune_design_elevation
-            [
-                self._nourish_now,
-                self._rebuild_dune_now,
-                self._nourishment_volume,
-            ] = self._chome_coupler.update(
-                barrier3d=self._barrier3d,
-                nourishments=self._nourishments,
-            )
+
+            # if the barrier was found to be too narrow to sustain a community in the last time step, stop managing the
+            # beach and dune system!
+            if self._nourishments[iB3D].narrow_break:
+                self._community_break = 1
+                return
+            else:
+                self._chome_coupler.dune_design_elevation = self._dune_design_elevation
+                [
+                    self._nourish_now,
+                    self._rebuild_dune_now,
+                    self._nourishment_volume,
+                ] = self._chome_coupler.update(
+                    barrier3d=self._barrier3d,
+                    nourishments=self._nourishments,
+                )
 
         # BeachDuneManager:
         # If interval specified, nourish at that interval, otherwise wait until told with nourish_now to
         # nourish or rebuild_dunes_now to rebuild dunes. Resets any "now" parameters to false after nourishment. Module
         # also filters overwash deposition for residential or commercial community (user specified)
         if self._beach_nourishment_module:
-            for iB3D in range(self._ny):
-                self._nourishments[
-                    iB3D
-                ].dune_design_elevation = self._dune_design_elevation[iB3D]
-                self._nourishments[iB3D].nourishment_volume = self._nourishment_volume[
-                    iB3D
-                ]
-                [
-                    self._nourish_now[iB3D],
-                    self._rebuild_dune_now[iB3D],
-                ] = self._nourishments[iB3D].update(
-                    barrier3d=self._barrier3d[iB3D],
-                    nourish_now=self._nourish_now[iB3D],
-                    rebuild_dune_now=self._rebuild_dune_now[iB3D],
-                    nourishment_interval=self._nourishment_interval[iB3D],
-                )
 
-                # if the barrier is too narrow to sustain a community, break
-                if self._nourishments[iB3D].narrow_break:
-                    self._community_break = 1
-                    return
+            # if the barrier was found to be too narrow to sustain a community in the last time step, stop managing the
+            # beach and dune system!
+            if self._nourishments[iB3D].narrow_break:
+                self._community_break = 1
+                return
+            else:
+                for iB3D in range(self._ny):
+                    self._nourishments[
+                        iB3D
+                    ].dune_design_elevation = self._dune_design_elevation[
+                        iB3D
+                    ]  # m MHW
+                    self._nourishments[
+                        iB3D
+                    ].nourishment_volume = self._nourishment_volume[iB3D]
+                    [
+                        self._nourish_now[iB3D],
+                        self._rebuild_dune_now[iB3D],
+                    ] = self._nourishments[iB3D].update(
+                        barrier3d=self._barrier3d[iB3D],
+                        nourish_now=self._nourish_now[iB3D],
+                        rebuild_dune_now=self._rebuild_dune_now[iB3D],
+                        nourishment_interval=self._nourishment_interval[iB3D],
+                    )
 
     ###############################################################################
     # save data

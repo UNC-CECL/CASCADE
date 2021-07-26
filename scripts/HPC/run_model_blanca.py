@@ -1,80 +1,82 @@
-# Model runfile for CASCADE simulations
+# Model runfile for CASCADE simulations on the HPC
 # Written by K.Anarde
 
 # remember if I move to a different computer to $ pip install -e . in the brie and B3D directories for the BMI
 
-# import os
+import numpy as np
 
-# import CASCADE_plotters as CASCADEplt
+from cascade.cascade import Cascade  # the new class
 
-import CASCADE as CASCADE
 
-# ###############################################################################
-# 4 - variable alongshore dune growth parameters (gradient, coalesce in middle)
-# ###############################################################################
-# GOAL: what is the effect of the alongshore variability of dunes?
-#        - THIS RUN: make gradient in raverage such that they coalesce in the middle
-
-# --------- INITIAL CONDITIONS ---------
-name = "4-AlongshoreVarGrowthParam_pt2HAF_LHL_1500yrs"
-wave_height = 1  # m
-wave_period = 7  # s (lowered from 10 s to reduce k_sf)
-asym_frac = 0.8  # fraction approaching from left
-high_ang_frac = 0.2  # fraction of waves approaching from higher than 45 degrees
-slr = 0.002  # m/yr
-ny = 12  # number of alongshore sections (12 = 6 km)
-nt = 1500  # timesteps for 1000 morphologic years
-rmin = [
-    0.25,
-    0.35,
-    0.35,
-    0.45,
-    0.45,
-    0.55,
-    0.55,
-    0.45,
-    0.45,
-    0.35,
-    0.35,
-    0.25,
-]  # minimum growth rate for logistic dune growth (list for alongshore variability)
-rmax = [
-    0.65,
-    0.75,
-    0.75,
-    0.85,
-    0.85,
-    0.95,
-    0.95,
-    0.85,
-    0.85,
-    0.75,
-    0.75,
-    0.65,
-]  # maximum growth rate for logistic dune growth (list for alongshore variability)
-
-# --------- INITIALIZE ---------
-datadir = "barrier3d-parameters.yaml"
-# datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"
-brie, barrier3d = CASCADE.initialize(
-    name,
-    wave_height,
-    wave_period,
-    asym_frac,
-    high_ang_frac,
-    slr,
-    ny,
+def RUN_6_B3D_Rave_SLR_pt004_Humans(
     nt,
     rmin,
     rmax,
-    datadir,
-)
+    name,
+    run_road_mgmt,
+    storm_file,
+    elevation_file,
+    dune_file,
+    road_ele=1.7,  # dummy values for the no management runs
+    road_width=30,
+    road_setback=30,
+    dune_design_elevation=3.7,
+    dune_minimum_elevation=2.2,
+    percent_water_cells_sensitivity=None,
+):
 
-# --------- LOOP ---------
-brie, barrier3d = CASCADE.time_loop(brie, barrier3d)
+    # ###############################################################################
+    # 6 - B3D with dune management (just the roadways module)
+    # ###############################################################################
+    # GOAL: Use the starting interior domain from the 10,000 yr runs for each dune growth rate and run for 1000 years
+    # or until the barrier drowns. All other modules (beach nourishment, community dynamics) turned off.
 
-# --------- SAVE ---------
-# #datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/"
-b3d = CASCADE.save(
-    brie, barrier3d, name
-)  # this returns the barrier3d model without the BMI
+    # --------- INITIALIZE ---------
+    datadir = "B3D_Inputs/"
+    cascade = Cascade(
+        datadir,
+        name,
+        storm_file=storm_file,
+        elevation_file=elevation_file,
+        dune_file=dune_file,
+        wave_height=1,
+        wave_period=7,
+        wave_asymmetry=0.8,
+        wave_angle_high_fraction=0.2,
+        sea_level_rise_rate=0.004,
+        alongshore_section_count=1,
+        time_step_count=nt,
+        min_dune_growth_rate=rmin,
+        max_dune_growth_rate=rmax,
+        num_cores=1,
+        roadway_management_module=run_road_mgmt,
+        alongshore_transport_module=False,  # no brie coupling
+        beach_nourishment_module=False,  # no beach nourishment
+        community_dynamics_module=False,  # no community dynamics
+        road_ele=road_ele,
+        road_width=road_width,
+        road_setback=road_setback,
+        dune_design_elevation=dune_design_elevation,
+        dune_minimum_elevation=dune_minimum_elevation,
+    )
+
+    if percent_water_cells_sensitivity is not None:
+        cascade.roadways[
+            0
+        ]._percent_water_cells_touching_road = percent_water_cells_sensitivity
+
+    # --------- LOOP ---------
+
+    for time_step in range(nt - 1):
+        # Print time step to screen (NOTE: time_index in each model is time_step+1)
+        print("\r", "Time Step: ", time_step, end="")
+        cascade.update()
+        # if cascade.road_break or cascade.b3d_break:
+        if cascade.b3d_break:
+            break
+
+    # --------- SAVE ---------
+    save_directory = "Run_Output/"
+    cascade.save(save_directory)  # for now, this is a list
+
+    return cascade
