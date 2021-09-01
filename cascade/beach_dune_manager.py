@@ -136,6 +136,7 @@ def filter_overwash(
     post_storm_xyz_interior_grid,
     pre_storm_xyz_interior_grid,
     post_storm_yxz_dune_grid,
+    artificial_maximum_dune_height,
 ):
     r"""
     Remove a percentage of overwash from the barrier interior, representative of the effect of development filtering
@@ -143,11 +144,11 @@ def filter_overwash(
 
     Following Rogers et al., 2015, we suggest that `overwash_filter` be set between 40 and 90%, where the lower
     (upper) end is representative of the effect of residential (commercial) buildings in reducing overwash deposition.
-    Overwash that is removed from the barrier interior is placed evenly across the dunes.
+
+    Overwash that is removed from the barrier interior is placed evenly across the dunes. Note that this is different
+    from the RoadwayManager, where overwash is only placed along the adjacent dunes in `bulldoze`.
 
     Note, all parameters below must be in the same units. For use with Barrier3D, decameters.
-
-    See also `bulldoze` in roadway_manager.py
 
     Parameters
     ----------
@@ -159,13 +160,15 @@ def filter_overwash(
         Interior barrier island topography [for Barrier3d, decameters MHW]
     post_storm_yxz_dune_grid: grid,
         Dune topography [for Barrier3d, decameters above the berm elevation]
+    artificial_maximum_dune_height: float,
+        The maximum dune height than can be created by bulldozer after a storm [for Barrier3d, dam above berm elevation]
 
     Returns
     -------
     array of float
         new_interior_domain: in units of xyz_interior_grid
         new_dune_domain: in units of yxz_dune_grid
-        overwash_removal: in units of dx*dy*dz (for Barrier3D, dam^3)
+        total_overwash_removal: in units of dx*dy*dz (for Barrier3D, dam^3)
 
     """
 
@@ -178,17 +181,20 @@ def filter_overwash(
     new_interior_domain = post_storm_xyz_interior_grid - overwash_removal
 
     # spread overwash removed from interior equally over all dune cells
-    number_dune_cells = np.size(post_storm_yxz_dune_grid, 1)
-    overwash_removal = sum(overwash_removal)
-    overwash_to_dune = np.transpose(
-        [overwash_removal / number_dune_cells] * number_dune_cells
-    )
+    number_dune_cells = np.size(post_storm_yxz_dune_grid)
+    total_overwash_removal = np.sum(overwash_removal)
+    overwash_to_dune = total_overwash_removal / number_dune_cells
     new_dune_domain = post_storm_yxz_dune_grid + overwash_to_dune
+
+    # don't allow dunes to exceed a maximum height (limits 10-m dunes after big storms...yikes!)
+    new_dune_domain[
+        new_dune_domain > artificial_maximum_dune_height
+    ] = artificial_maximum_dune_height
 
     return (
         new_dune_domain,
         new_interior_domain,
-        np.sum(overwash_removal),
+        total_overwash_removal,
     )
 
 
@@ -275,7 +281,7 @@ class BeachDuneManager:
         self._nourishment_volume = nourishment_volume
         self._nourishment_interval = nourishment_interval
         self._nourishment_counter = nourishment_interval
-        self._beach_width_threshold = 10  # m
+        self._beach_width_threshold = 10  # m, triggers dune migration to turn back on
         self._dune_design_elevation = dune_design_elevation
         self._original_growth_param = original_growth_param
         self._nt = time_step_count
@@ -283,7 +289,10 @@ class BeachDuneManager:
         self._time_index = 1
         self._overwash_removal = True  # boolean for turning overwash removal on and off; for sensitivity testing
         self._overwash_filter = overwash_filter
-        self._minimum_community_width = 50  # m
+
+        # variables that we don't change, but maybe someone else will want to in the future
+        self._minimum_community_width = 50  # m, parameterized for Nags Head, NC
+        self._artificial_maximum_dune_height = 4  # m, parameterized for Nags Head, NC (maximum dune height above the berm crest that can be built...period
 
         # time series
         self._beach_width = [None] * self._nt
@@ -368,9 +377,8 @@ class BeachDuneManager:
             self._minimum_community_width,  # m
         )
 
-        # if community cannot be sustained, don't manage and exit `update` and reset to natural conditions
+        # if community cannot be sustained, don't manage and exit; reset dune migration; dune growth reset in CASCADE
         if self._narrow_break == 1:
-            barrier3d.growthparam = self._original_growth_param
             barrier3d.dune_migration_on = True
             return nourish_now, rebuild_dune_now
 
@@ -408,35 +416,50 @@ class BeachDuneManager:
                 post_storm_yxz_dune_grid=barrier3d.DuneDomain[
                     self._time_index - 1, :, :
                 ],  # dune domain from this last time step [dam]
+                artificial_maximum_dune_height=self._artificial_maximum_dune_height
+                / 10,  # dam
             )
 
             self._overwash_volume_removed[self._time_index - 1] = (
                 barrier_overwash_removed * dm3_to_m3
             )  # convert from dm^3 to m^3
 
+            # set dune growth rate to zero for next time step if the dune elevation (front row) is larger than the
+            # natural eq. dune height (Dmax) -- do this because overwash volumes can be very large
+            new_growth_parameters = set_growth_parameters(
+                new_yxz_dune_domain,  # in dam
+                barrier3d.Dmax,  # in dam
+                barrier3d.growthparam,
+                original_growth_param=self._original_growth_param,  # use original growth rates for resetting values
+            )
+            self._growth_params[self._time_index - 1] = copy.deepcopy(
+                new_growth_parameters
+            )
+
             # update Barrier3D class variables
-            barrier3d.DuneDomain[self._time_index - 1, :, :] = new_yxz_dune_domain
+            barrier3d.DuneDomain[self._time_index - 1, :, :] = copy.deepcopy(
+                new_yxz_dune_domain
+            )
             barrier3d.InteriorDomain = new_xyz_interior_domain
             barrier3d.DomainTS[self._time_index - 1] = new_xyz_interior_domain
+            barrier3d.growthparam = new_growth_parameters
 
-        # if specified, rebuild dune and nourish shoreface
+        # if specified, rebuild dune (if using nourishment counter option, nourishes dune automatically)
         if rebuild_dune_now or self._nourishment_counter == 0:
 
             # in B3D, dune height is the height above the berm crest
-            artificial_max_dune_height = self._dune_design_elevation - (
-                barrier3d.BermEl * 10
-            )
+            dune_design_height = self._dune_design_elevation - (barrier3d.BermEl * 10)
             new_dune_domain, rebuild_dune_volume = rebuild_dunes(
                 barrier3d.DuneDomain[self._time_index - 1, :, :],  # dam
-                max_dune_height=artificial_max_dune_height,  # in m
-                min_dune_height=artificial_max_dune_height,  # in m
+                max_dune_height=dune_design_height,  # in m
+                min_dune_height=dune_design_height,  # in m
                 dz=10,  # specifies dune domain is in dam
                 rng=True,  # adds stochasticity to dune height (seeded)
             )
             self._dunes_rebuilt_TS[self._time_index - 1] = 1
             self._rebuild_dune_volume_TS[self._time_index - 1] = (
                 rebuild_dune_volume * dm3_to_m3
-            )
+            )  # m^3
 
             # [COMING SOON] check beach width and find associated DMAX, change DMAX and feed into next function
 
@@ -453,13 +476,16 @@ class BeachDuneManager:
             )
 
             # update Barrier3d class dune variables
-            barrier3d.DuneDomain[self._time_index - 1, :, :] = new_dune_domain
+            barrier3d.DuneDomain[self._time_index - 1, :, :] = copy.deepcopy(
+                new_dune_domain
+            )
             barrier3d.growthparam = new_growth_parameters
 
             # reset rebuild_dune_now parameter; if nourishment_counter is what triggered the rebuild, it is reset in the
             # nourishment section below
             rebuild_dune_now = 0
 
+        # finally, nourish the shoreface
         if nourish_now or self._nourishment_counter == 0:
             (
                 barrier3d.x_s,  # save over class variables
