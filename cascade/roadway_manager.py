@@ -45,7 +45,7 @@ def bulldoze(
     percent_water_cells_touching_road=0.2,
 ):
     r"""
-    Remove overwash from roadway and put it back on the dune. Spreads sand evenly across dune cells.
+    Remove overwash from roadway and put it back on the adjacent dune. Spreads sand evenly across adjacent dune cells.
 
     Check for width drowning of roadway (i.e., when a water cell touches the roadway)
 
@@ -101,7 +101,7 @@ def bulldoze(
     road_overwash_removal = sum(old_road_domain - new_road_domain)
     road_overwash_removal[road_overwash_removal < 0] = 0
 
-    # spread overwash removed from roadway equally over all dune cells
+    # spread overwash removed from roadway equally over the adjacent dune cells
     number_dune_cells = np.size(yxz_dune_grid, 1)
     overwash_to_dune = np.transpose(
         [road_overwash_removal / number_dune_cells] * number_dune_cells
@@ -575,9 +575,8 @@ class RoadwayManager:
             average_barrier_width,  # current width, m
         )
 
-        # if roadway can't be relocated, no longer manage and exit `update`; reset dune growth parameters to original
+        # if road can't be relocated, no longer manage and exit; dune growth parameters reset to original in CASCADE
         if self._relocation_break == 1:
-            barrier3d.growthparam = self._original_growth_param
             return
 
         # if road is relocated, get the new road elevation (built at grade) and update dune elevations which are
@@ -629,10 +628,8 @@ class RoadwayManager:
                     time=self._time_index - 1
                 )
             )
-            barrier3d.growthparam = self._original_growth_param
             return
         elif self._drown_break == 1:  # if road drowned from road relocation above
-            barrier3d.growthparam = self._original_growth_param
             return
 
         # when the roadway gets really low in elevation, the dune_design_elevation may not be above the berm; when this
@@ -685,7 +682,7 @@ class RoadwayManager:
             percent_water_cells_touching_road=self._percent_water_cells_touching_road,  # fraction cells<drown_threshold
         )
         if self._drown_break == 1:
-            barrier3d.growthparam = self._original_growth_param
+            # barrier3d.growthparam = self._original_growth_param  # now reset in CASCADE
             return  # exit program
 
         self._road_overwash_volume[self._time_index - 1] = (
