@@ -670,6 +670,7 @@ def RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
     overwash_filter,
     nourishment_volume,
     beach_width_threshold,  # must be greater than 10
+    background_erosion,
 ):
 
     # ###############################################################################
@@ -690,6 +691,7 @@ def RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
         wave_angle_high_fraction=0.2,
         sea_level_rise_rate=0.004,
         sea_level_rise_constant=True,
+        background_erosion=background_erosion,
         alongshore_section_count=1,
         time_step_count=nt,
         min_dune_growth_rate=rmin,
@@ -708,13 +710,13 @@ def RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
     # --------- LOOP ---------
     Time = time.time()
 
-    # after each year, check the beach width and dune height and decide if you want to nourish or rebuild the dune the
-    # next year with nourish_now parameter
-    dune_min_height_threshold = (
-        0.3  # min dune height above the berm [m MHW], same as in RoadwayManager
-    )
-
     iB3D = 0  # we only have one Barrier3D domain here
+
+    # after each year, check the beach width and dune elevation and decide if you want to nourish or rebuild the dune
+    # next year with nourish_now parameter
+    dune_rebuild_threshold = 0.3 + (
+        cascade.barrier3d[iB3D].BermEl * 10
+    )  # same threshold for absolute minimum elevation as in RoadwayManager (m MHW)
 
     for time_step in range(nt - 1):
 
@@ -737,7 +739,13 @@ def RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
             DuneDomainCrest = (
                 cascade.barrier3d[iB3D].DuneDomain[t - 1, :, :].max(axis=1)
             )  # Maximum height of each row in dune domain [dam]
-            if (np.mean(DuneDomainCrest) * 10) < dune_min_height_threshold:
+            # DuneRestart = cascade.barrier3d[iB3D].DuneRestart
+            # DuneDomainCrest[DuneDomainCrest < DuneRestart] = DuneRestart
+            DuneCrestMin = (
+                np.min(DuneDomainCrest) + cascade.barrier3d[iB3D].BermEl
+            ) * 10  # m MHW
+
+            if DuneCrestMin < dune_rebuild_threshold:
                 cascade.rebuild_dune_now[iB3D] = 1
 
     # --------- SAVE ---------
@@ -1199,8 +1207,8 @@ def PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
     )
 
 
-def PLOT_6_Nonlinear_Dynamics_B3D_CNH_CASCADE_Nourishments(
-    name_prefix, tmin, tmax, plot_name
+def PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+    name_prefix, tmax_management, tmax_sim, plot_name
 ):
 
     os.chdir(
@@ -1218,8 +1226,14 @@ def PLOT_6_Nonlinear_Dynamics_B3D_CNH_CASCADE_Nourishments(
 
     post_storm_dunes = cascade.nourishments[ib3d]._post_storm_dunes
     post_storm_interior = cascade.nourishments[ib3d]._post_storm_interior
-    design_height = cascade.nourishments[ib3d]._dune_design_elevation  # relative to MSL
-    rebuild_threshold = cascade._dune_minimum_elevation  # relative to MSL
+    post_storm_x_s = cascade.nourishments[ib3d]._post_storm_x_s
+    post_storm_s_sf = cascade.nourishments[ib3d]._post_storm_s_sf
+    post_storm_beach_width = cascade.nourishments[ib3d]._post_storm_beach_width
+    design_elevation = cascade.nourishments[ib3d]._dune_design_elevation  # m MHW
+    rebuild_threshold = 0.3 + (
+        b3d[ib3d].BermEl * 10
+    )  # min dune height above the berm [m MHW], same as in RoadwayManager
+    dunes_rebuilt = cascade.nourishments[ib3d]._dunes_rebuilt_TS
 
     (
         BarrierWidth,
@@ -1230,20 +1244,31 @@ def PLOT_6_Nonlinear_Dynamics_B3D_CNH_CASCADE_Nourishments(
         sc_rate,
         DuneCrestMin,
         DuneCrestMax,
+        shoreline_position,
+        shoreface_slope,
+        beach_width,
+        net_overwash,
+        total_overwash,
     ) = CASCADEplt.plot_nonlinear_stats_BeachDuneManager(
         b3d,
         ib3d,
-        tmax,
+        nourishments=cascade.nourishments,
+        post_storm_x_s=post_storm_x_s,
+        post_storm_s_sf=post_storm_s_sf,
+        post_storm_beach_width=post_storm_beach_width,
+        tmax_management=tmax_management,
+        tmax_sim=tmax_sim,
         post_storm_dunes=post_storm_dunes,
         post_storm_interior=post_storm_interior,
-        design_height=design_height,
+        design_elevation=design_elevation,
         rebuild_threshold=rebuild_threshold,
+        dunes_rebuilt=dunes_rebuilt,
     )
 
     # also make the gif
     directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
     CASCADEplt.plot_ElevAnimation_Humans_BeachDuneManager(
-        cascade, 1, directory, TMAX=tmax, name=plot_name
+        cascade, 1, directory, TMAX=tmax_management, name=plot_name, TMAX_SIM=tmax_sim
     )
 
     return (
@@ -1255,6 +1280,11 @@ def PLOT_6_Nonlinear_Dynamics_B3D_CNH_CASCADE_Nourishments(
         sc_rate,
         DuneCrestMin,
         DuneCrestMax,
+        shoreline_position,
+        shoreface_slope,
+        beach_width,
+        net_overwash,
+        total_overwash,
         cascade,
     )
 
@@ -1977,7 +2007,7 @@ def human_runs():
 
             # Roadway width drowned at 162 years, 20.0% of road borders water
             # lower initial roadway for "low" case vs "high" case
-            cascade_pt75_h1_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            cascade_pt75_h2m_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=1000,
                 rmin=0.55,
                 rmax=0.95,  # rave = 0.75
@@ -1994,7 +2024,7 @@ def human_runs():
             )
 
             # Roadway width drowned at 78 years, 20.0% of road borders water
-            cascade_pt75_h2_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            cascade_pt75_h3m_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=1000,
                 rmin=0.55,
                 rmax=0.95,  # rave = 0.75
@@ -2011,7 +2041,7 @@ def human_runs():
             )
 
             # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 301 years
-            cascade_pt75_h3_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            cascade_pt75_h1m_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=1000,
                 rmin=0.55,
                 rmax=0.95,  # rave = 0.75
@@ -2041,7 +2071,7 @@ def human_runs():
             # able to set the highway slightly higher
             # Roadway width drowned at 531 years, 20.0% of road borders water
             # Barrier has HEIGHT DROWNED at t = 582 years
-            cascade_pt75_h1_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            cascade_pt75_h2m_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=1000,
                 rmin=0.55,
                 rmax=0.95,  # rave = 0.75
@@ -2058,7 +2088,7 @@ def human_runs():
             )
 
             # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 417 years
-            cascade_pt75_h2_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            cascade_pt75_h3m_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=1000,
                 rmin=0.55,
                 rmax=0.95,  # rave = 0.75
@@ -2075,7 +2105,7 @@ def human_runs():
             )
 
             # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 537 years
-            cascade_pt75_h3_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            cascade_pt75_h1m_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=1000,
                 rmin=0.55,
                 rmax=0.95,  # rave = 0.75
@@ -2106,7 +2136,7 @@ def human_runs():
 
             # note that this roadway is higher than the pt75 "low" scenario (1.2 m)
             # Roadway width drowned at 580 years, 20.0% of road borders water
-            cascade_pt45_h1_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            cascade_pt45_h2m_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=1000,
                 rmin=0.25,
                 rmax=0.65,  # rave = 0.45
@@ -2124,7 +2154,7 @@ def human_runs():
 
             # Roadway width drowned at 430 years, 20.0% of road borders water
             # Barrier has HEIGHT DROWNED at t = 442 years
-            cascade_pt45_h2_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            cascade_pt45_h3m_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=1000,
                 rmin=0.25,
                 rmax=0.65,  # rave = 0.45
@@ -2141,7 +2171,7 @@ def human_runs():
             )
 
             # Roadway width drowned at 595 years, 20.0% of road borders water
-            cascade_pt45_h3_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            cascade_pt45_h1m_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=1000,
                 rmin=0.25,
                 rmax=0.65,  # rave = 0.45
@@ -2169,7 +2199,7 @@ def human_runs():
             )
 
             # Roadway width drowned at 631 years, 20.0% of road borders water
-            cascade_pt45_h1_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            cascade_pt45_h2m_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=1000,
                 rmin=0.25,
                 rmax=0.65,  # rave = 0.45
@@ -2187,7 +2217,7 @@ def human_runs():
 
             # Roadway width drowned at 522 years, 20.0% of road borders water
             # Barrier has HEIGHT DROWNED at t = 532 years
-            cascade_pt45_h2_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            cascade_pt45_h3m_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=1000,
                 rmin=0.25,
                 rmax=0.65,  # rave = 0.45
@@ -2204,7 +2234,7 @@ def human_runs():
             )
 
             # Roadway width drowned at 731 years, 20.0% of road borders water
-            cascade_pt45_h3_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            cascade_pt45_h1m_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=1000,
                 rmin=0.25,
                 rmax=0.65,  # rave = 0.45
@@ -2220,12 +2250,13 @@ def human_runs():
                 dune_file="barrier3d-default-dunes.npy",
             )
 
-        def roadway_sensitivity_plot():
+        def roadway_sensitivity_abandonment_criteria():
 
             # test the sensitivity of varying the number of water cells that border the roadway as a metric to stop
             # managing the road for the most extreme barrier trajectory (high dune growth rate, low barrier)
 
-            cascade_pt75_h1_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            # Roadway width drowned at 159 years, 10.0% of road borders water
+            cascade_pt75_h2m_low_10percent = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=500,
                 rmin=0.55,
                 rmax=0.95,  # rave = 0.75
@@ -2242,7 +2273,8 @@ def human_runs():
                 percent_water_cells_sensitivity=0.1,
             )
 
-            cascade_pt75_h1_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            # Roadway width drowned at 162 years, 20.0% of road borders water
+            cascade_pt75_h2m_low_20percent = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=500,
                 rmin=0.55,
                 rmax=0.95,  # rave = 0.75
@@ -2259,7 +2291,8 @@ def human_runs():
                 percent_water_cells_sensitivity=0.2,
             )
 
-            cascade_pt75_h1_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            # Roadway width drowned at 165 years, 30.0% of road borders water
+            cascade_pt75_h2m_low_30percent = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=500,
                 rmin=0.55,
                 rmax=0.95,  # rave = 0.75
@@ -2276,7 +2309,8 @@ def human_runs():
                 percent_water_cells_sensitivity=0.3,
             )
 
-            cascade_pt75_h1_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            # Roadway width drowned at 173 years, 40.0% of road borders water
+            cascade_pt75_h2m_low_40percent = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=500,
                 rmin=0.55,
                 rmax=0.95,  # rave = 0.75
@@ -2293,7 +2327,8 @@ def human_runs():
                 percent_water_cells_sensitivity=0.4,
             )
 
-            cascade_pt75_h1_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+            # Roadway width drowned at 182 years, 50.0% of road borders water
+            cascade_pt75_h2m_low_50percent = RUN_6_B3D_Rave_SLR_pt004_Humans(
                 nt=500,
                 rmin=0.55,
                 rmax=0.95,  # rave = 0.75
@@ -2341,7 +2376,7 @@ def human_runs():
 
                 # note that this roadway is higher than the pt75 "low" scenario, and equal to the "high" scenario (just higher
                 # starting topoagraphy); drowned at 388 years
-                cascade_pt45_h1_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                cascade_pt45_h2m_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=387,
                     rmin=0.25,
                     rmax=0.65,  # rave = 0.45
@@ -2355,7 +2390,7 @@ def human_runs():
                 )
 
                 # note that this roadway is higher than the pt75 "high" scenario (just higher starting topoagraphy); drowned at 515 years
-                cascade_pt45_h1_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                cascade_pt45_h2m_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=515,
                     rmin=0.25,
                     rmax=0.65,  # rave = 0.45
@@ -2369,7 +2404,7 @@ def human_runs():
                 )
 
                 # drowned at 370 years
-                cascade_pt45_h2_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                cascade_pt45_h3m_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=369,
                     rmin=0.25,
                     rmax=0.65,  # rave = 0.45
@@ -2382,7 +2417,7 @@ def human_runs():
                     run_road_mgmt=True,
                 )
 
-                cascade_pt45_h2_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                cascade_pt45_h3m_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=473,
                     rmin=0.25,
                     rmax=0.65,  # rave = 0.45
@@ -2395,7 +2430,7 @@ def human_runs():
                     run_road_mgmt=True,
                 )
 
-                cascade_pt45_h3_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                cascade_pt45_h1m_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=503,
                     rmin=0.25,
                     rmax=0.65,  # rave = 0.45
@@ -2408,7 +2443,7 @@ def human_runs():
                     run_road_mgmt=True,
                 )
 
-                cascade_pt45_h3_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                cascade_pt45_h1m_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=700,
                     rmin=0.25,
                     rmax=0.65,  # rave = 0.45
@@ -2461,7 +2496,7 @@ def human_runs():
                 )
 
                 # lowered roadway and decreased setback to accommodate low-lying barrier, roadway drowned at 98 from back bay
-                cascade_pt75_h1_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                cascade_pt75_h2m_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=97,
                     rmin=0.55,
                     rmax=0.95,  # rave = 0.75
@@ -2479,7 +2514,7 @@ def human_runs():
                 )
 
                 # able to set the highway slightly higher (0.3 m), kept setback the same; drowned at 428 years
-                cascade_pt75_h1_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                cascade_pt75_h2m_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=427,
                     rmin=0.55,
                     rmax=0.95,  # rave = 0.75
@@ -2493,7 +2528,7 @@ def human_runs():
                 )
 
                 # lowered roadway and decreased setback to accommodate low-lying barrier, drowned at 71 years
-                cascade_pt75_h2_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                cascade_pt75_h3m_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=70,
                     rmin=0.55,
                     rmax=0.95,  # rave = 0.75
@@ -2511,7 +2546,7 @@ def human_runs():
                 )
 
                 # able to set the highway slightly higher (0.3 m), kept setback the same; drowned at 358 years
-                cascade_pt75_h2_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                cascade_pt75_h3m_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=357,
                     rmin=0.55,
                     rmax=0.95,  # rave = 0.75
@@ -2525,7 +2560,7 @@ def human_runs():
                 )
 
                 # lowered roadway and decreased setback to accommodate low-lying barrier, roadway drowned at 117 years
-                cascade_pt75_h3_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                cascade_pt75_h1m_low = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=116,
                     rmin=0.55,
                     rmax=0.95,  # rave = 0.75
@@ -2539,7 +2574,7 @@ def human_runs():
                 )
 
                 # able to set the highway slightly higher (0.3 m), kept setback the same; drowned at 439 years
-                cascade_pt75_h3_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                cascade_pt75_h1m_high = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=438,
                     rmin=0.55,
                     rmax=0.95,  # rave = 0.75
@@ -2567,8 +2602,8 @@ def human_runs():
                 )
 
                 # v1 - didn't drown roadway, v2 - roadway drowned at 160, v3 - new class
-                # b3d_pt45_h1, dunes_rebuilt, road_overwash_volume = RUN_6_B3D_Rave_SLR_pt004_Humans(
-                cascade_pt45_h1 = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                # b3d_pt45_h2m, dunes_rebuilt, road_overwash_volume = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                cascade_pt45_h2m = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=159,  # 200
                     rmin=0.25,
                     rmax=0.65,  # rave = 0.45
@@ -2581,7 +2616,7 @@ def human_runs():
                     run_road_mgmt=True,
                 )
 
-                b3d_pt45_h2 = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                b3d_pt45_h3m = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=200,
                     rmin=0.25,
                     rmax=0.65,  # rave = 0.45
@@ -2594,8 +2629,8 @@ def human_runs():
                 )
 
                 # v1 drowned at 91 years, v2 - roadway drowned at 101 years
-                # b3d_pt45_h3 = RUN_6_B3D_Rave_SLR_pt004_Humans(
-                cascade_pt45_h3 = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                # b3d_pt45_h1m = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                cascade_pt45_h1m = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=100,  # 90
                     rmin=0.25,
                     rmax=0.65,  # rave = 0.45
@@ -2650,7 +2685,7 @@ def human_runs():
                 )
 
                 # v2, roadway drowned at 157 years
-                b3d_pt75_h1 = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                b3d_pt75_h2m = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=156,  # 200
                     rmin=0.55,
                     rmax=0.95,  # rave = 0.75
@@ -2662,7 +2697,7 @@ def human_runs():
                     dune_minimum_elevation=2.2,  # m MHW, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
                 )
 
-                b3d_pt75_h2 = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                b3d_pt75_h3m = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=200,
                     rmin=0.55,
                     rmax=0.95,  # rave = 0.75
@@ -2675,7 +2710,7 @@ def human_runs():
                 )
 
                 # v1 drowned at 88 years, v2 drowned at 105 years, v3 roadway couldn't be relocated at 408 years
-                b3d_pt75_h3 = RUN_6_B3D_Rave_SLR_pt004_Humans(
+                b3d_pt75_h1m = RUN_6_B3D_Rave_SLR_pt004_Humans(
                     nt=407,  # 87, 104
                     rmin=0.55,
                     rmax=0.95,  # rave = 0.75
@@ -2692,11 +2727,13 @@ def human_runs():
 
         # note, here we keep all other variables the same for comparison to the roadways scenarios; note that the dune
         # is only rebuilt in the BeachDuneManager when it is totally wiped out (we specify 0.3 m above the berm)
-        cascade_pt75_h1_low_nourishment_residential = RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
-            nt=1000,
+
+        # Community reached minimum width, drowned at 178 years; roadway scenario drowned at 162 years
+        cascade_pt75_h2m_low_nourishment_residential = RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
+            nt=200,
             rmin=0.55,
             rmax=0.95,  # rave = 0.75
-            name="6-B3D_Rave_pt75_Nourishment_2mDune_lowEle_residential",
+            name="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_residential",
             dune_design_elevation=3.2,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
@@ -2704,13 +2741,15 @@ def human_runs():
             overwash_filter=40,  # corresponds with residential
             nourishment_volume=100,  # m^3/m
             beach_width_threshold=30,  # m, must be greater than 10
+            background_erosion=0.0,
         )
 
-        cascade_pt75_h1_low_nourishment_commercial = RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
-            nt=1000,
+        # Community reached minimum width, drowned at 90 years
+        cascade_pt75_h2m_low_nourishment_commercial = RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
+            nt=200,
             rmin=0.55,
             rmax=0.95,  # rave = 0.75
-            name="6-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial",
+            name="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial",
             dune_design_elevation=3.2,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
@@ -2718,14 +2757,32 @@ def human_runs():
             overwash_filter=90,  # corresponds with commercial
             nourishment_volume=100,  # m^3/m
             beach_width_threshold=30,  # m, must be greater than 10
+            background_erosion=0.0,
         )
 
-        # note that this roadway is higher than the pt75 "low" scenario (1.2 m), roadway scenario drowned at 404 years
-        cascade_pt45_h1_low_nourishment_residential = RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
-            nt=1000,
+        # Community reached minimum width, drowned at 90 years
+        cascade_pt75_h2m_low_nourishment_commercial_background_erosion = RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
+            nt=200,
+            rmin=0.55,
+            rmax=0.95,  # rave = 0.75
+            name="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial_backerosion",
+            dune_design_elevation=3.2,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
+            storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+            elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
+            dune_file="barrier3d-default-dunes.npy",
+            overwash_filter=90,  # corresponds with commercial
+            nourishment_volume=100,  # m^3/m
+            beach_width_threshold=30,  # m, must be greater than 10
+            background_erosion=-0.25,  # m/yr, background shoreline erosion
+        )
+
+        # roadway scenario drowned at 404 years
+        # Community reached minimum width, drowned at 462 years
+        cascade_pt45_h2m_low_nourishment_residential = RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
+            nt=500,
             rmin=0.25,
             rmax=0.65,  # rave = 0.45
-            name="6-B3D_Rave_pt45_Nourishment_2mDune_lowEle_residential",
+            name="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_residential",
             dune_design_elevation=3.7,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
@@ -2733,13 +2790,16 @@ def human_runs():
             overwash_filter=40,  # corresponds with commercial
             nourishment_volume=100,  # m^3/m
             beach_width_threshold=30,  # m, must be greater than 10
+            background_erosion=0.0,
         )
 
-        cascade_pt45_h1_low_nourishment_commercial = RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
-            nt=1000,
+        # Community reached minimum width, drowned at 421 years
+        # Barrier has HEIGHT DROWNED at t = 461 years
+        cascade_pt45_h2m_low_nourishment_commercial = RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
+            nt=500,
             rmin=0.25,
             rmax=0.65,  # rave = 0.45
-            name="6-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial",
+            name="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial",
             dune_design_elevation=3.7,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
@@ -2747,6 +2807,22 @@ def human_runs():
             overwash_filter=90,  # corresponds with commercial
             nourishment_volume=100,  # m^3/m
             beach_width_threshold=30,  # m, must be greater than 10
+            background_erosion=0.0,
+        )
+
+        cascade_pt45_h2m_low_nourishment_commercial_background_erosion = RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
+            nt=500,
+            rmin=0.25,
+            rmax=0.65,  # rave = 0.45
+            name="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial_backerosion",
+            dune_design_elevation=3.7,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
+            storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+            elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
+            dune_file="barrier3d-default-dunes.npy",
+            overwash_filter=90,  # corresponds with commercial
+            nourishment_volume=100,  # m^3/m
+            beach_width_threshold=30,  # m, must be greater than 10
+            background_erosion=-0.10,  # m/yr, background shoreline erosion
         )
 
 
@@ -2767,19 +2843,19 @@ def human_plots():
                 name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_2mDune_40mSetback_20mWidth_v2",
                 tmin=0,
                 tmax=159,  # 200
-                plot_name="b3d_pt45_h1_plots_v2",
+                plot_name="b3d_pt45_h2m_plots_v2",
             )
             PLOT_5_Nonlinear_Dynamics_B3D_CNH(
                 name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_3mDune_40mSetback_20mWidth",
                 tmin=0,
                 tmax=200,
-                plot_name="b3d_pt45_h2_plots",
+                plot_name="b3d_pt45_h3m_plots",
             )
             PLOT_5_Nonlinear_Dynamics_B3D_CNH(
                 name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_1mDune_40mSetback_20mWidth_v2",
                 tmin=0,
                 tmax=100,  # 90
-                plot_name="b3d_pt45_h3_plots_v2",
+                plot_name="b3d_pt45_h1m_plots_v2",
             )
             PLOT_5_Nonlinear_Dynamics_B3D_CNH(
                 name_prefix="6-B3D_Rave_pt45_200yrs_Roadways_2mDune_40mSetback_30mWidth",
@@ -2815,90 +2891,90 @@ def human_plots():
             )
 
             (
-                BarrierWidth_h1,
-                DuneCrestMean_h1,
-                BarrierHeight_h1,
-                bw_rate_h1,
-                bh_rate_h1,
-                sc_rate_h1,
-                DuneCrestMin_h1,
-                DuneCrestMax_h1,
-                cascade_h1,
+                BarrierWidth_h2m,
+                DuneCrestMean_h2m,
+                BarrierHeight_h2m,
+                bw_rate_h2m,
+                bh_rate_h2m,
+                sc_rate_h2m,
+                DuneCrestMin_h2m,
+                DuneCrestMax_h2m,
+                cascade_h2m,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
                 name_prefix="6-B3D_Rave_pt45_387yrs_Roadways_2mDune_20mSetback_20mWidth_low",
                 tmin=0,
                 tmax=387,
-                plot_name="b3d_pt45_h1_plots_low",
+                plot_name="b3d_pt45_h2m_plots_low",
                 run_road_mgmt=True,
             )
 
             (
-                BarrierWidth_h2,
-                DuneCrestMean_h2,
-                BarrierHeight_h2,
-                bw_rate_h2,
-                bh_rate_h2,
-                sc_rate_h2,
-                DuneCrestMin_h2,
-                DuneCrestMax_h2,
-                cascade_h2,
+                BarrierWidth_h3m,
+                DuneCrestMean_h3m,
+                BarrierHeight_h3m,
+                bw_rate_h3m,
+                bh_rate_h3m,
+                sc_rate_h3m,
+                DuneCrestMin_h3m,
+                DuneCrestMax_h3m,
+                cascade_h3m,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
                 name_prefix="6-B3D_Rave_pt45_369yrs_Roadways_3mDune_20mSetback_20mWidth_low",
                 tmin=0,
                 tmax=369,
-                plot_name="b3d_pt45_h2_plots_low",
+                plot_name="b3d_pt45_h3m_plots_low",
                 run_road_mgmt=True,
             )
 
             (
-                BarrierWidth_h3,
-                DuneCrestMean_h3,
-                BarrierHeight_h3,
-                bw_rate_h3,
-                bh_rate_h3,
-                sc_rate_h3,
-                DuneCrestMin_h3,
-                DuneCrestMax_h3,
-                cascade_h3,
+                BarrierWidth_h1m,
+                DuneCrestMean_h1m,
+                BarrierHeight_h1m,
+                bw_rate_h1m,
+                bh_rate_h1m,
+                sc_rate_h1m,
+                DuneCrestMin_h1m,
+                DuneCrestMax_h1m,
+                cascade_h1m,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
                 name_prefix="6-B3D_Rave_pt45_503yrs_Roadways_1mDune_20mSetback_20mWidth_low",
                 tmin=0,
                 tmax=503,
-                plot_name="b3d_pt45_h3_plots_low",
+                plot_name="b3d_pt45_h1m_plots_low",
                 run_road_mgmt=True,
             )
 
             CASCADEplt.plot_nonlinear_stats_low_high(
-                cascade=[cascade_nat, cascade_h3, cascade_h1, cascade_h2],
+                cascade=[cascade_nat, cascade_h1m, cascade_h2m, cascade_h3m],
                 DuneCrestMin=[
                     DuneCrestMin_nat,
-                    DuneCrestMin_h3,
-                    DuneCrestMin_h1,
-                    DuneCrestMin_h2,
+                    DuneCrestMin_h1m,
+                    DuneCrestMin_h2m,
+                    DuneCrestMin_h3m,
                 ],
                 DuneCrestMax=[
                     DuneCrestMax_nat,
-                    DuneCrestMax_h3,
-                    DuneCrestMax_h1,
-                    DuneCrestMax_h2,
+                    DuneCrestMax_h1m,
+                    DuneCrestMax_h2m,
+                    DuneCrestMax_h3m,
                 ],
                 BarrierHeight=[
                     BarrierHeight_nat,
-                    BarrierHeight_h3,
-                    BarrierHeight_h1,
-                    BarrierHeight_h2,
+                    BarrierHeight_h1m,
+                    BarrierHeight_h2m,
+                    BarrierHeight_h3m,
                 ],
                 BarrierWidth=[
                     BarrierWidth_nat,
-                    BarrierWidth_h3,
-                    BarrierWidth_h1,
-                    BarrierWidth_h2,
+                    BarrierWidth_h1m,
+                    BarrierWidth_h2m,
+                    BarrierWidth_h3m,
                 ],
                 DuneCrestMean=[
                     DuneCrestMean_nat,
-                    DuneCrestMean_h3,
-                    DuneCrestMean_h1,
-                    DuneCrestMean_h2,
+                    DuneCrestMean_h1m,
+                    DuneCrestMean_h2m,
+                    DuneCrestMean_h3m,
                 ],
                 TMAX=[515, 503, 387, 369],
             )
@@ -2924,90 +3000,90 @@ def human_plots():
             )
 
             (
-                BarrierWidth_h1,
-                DuneCrestMean_h1,
-                BarrierHeight_h1,
-                bw_rate_h1,
-                bh_rate_h1,
-                sc_rate_h1,
-                DuneCrestMin_h1,
-                DuneCrestMax_h1,
-                cascade_h1,
+                BarrierWidth_h2m,
+                DuneCrestMean_h2m,
+                BarrierHeight_h2m,
+                bw_rate_h2m,
+                bh_rate_h2m,
+                sc_rate_h2m,
+                DuneCrestMin_h2m,
+                DuneCrestMax_h2m,
+                cascade_h2m,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
                 name_prefix="6-B3D_Rave_pt45_515yrs_Roadways_2mDune_20mSetback_20mWidth_high",
                 tmin=0,
                 tmax=515,
-                plot_name="b3d_pt45_h1_plots_high",
+                plot_name="b3d_pt45_h2m_plots_high",
                 run_road_mgmt=True,
             )
 
             (
-                BarrierWidth_h2,
-                DuneCrestMean_h2,
-                BarrierHeight_h2,
-                bw_rate_h2,
-                bh_rate_h2,
-                sc_rate_h2,
-                DuneCrestMin_h2,
-                DuneCrestMax_h2,
-                cascade_h2,
+                BarrierWidth_h3m,
+                DuneCrestMean_h3m,
+                BarrierHeight_h3m,
+                bw_rate_h3m,
+                bh_rate_h3m,
+                sc_rate_h3m,
+                DuneCrestMin_h3m,
+                DuneCrestMax_h3m,
+                cascade_h3m,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
                 name_prefix="6-B3D_Rave_pt45_473yrs_Roadways_3mDune_20mSetback_20mWidth_high",
                 tmin=0,
                 tmax=473,
-                plot_name="b3d_pt45_h2_plots_high",
+                plot_name="b3d_pt45_h3m_plots_high",
                 run_road_mgmt=True,
             )
 
             (
-                BarrierWidth_h3,
-                DuneCrestMean_h3,
-                BarrierHeight_h3,
-                bw_rate_h3,
-                bh_rate_h3,
-                sc_rate_h3,
-                DuneCrestMin_h3,
-                DuneCrestMax_h3,
-                cascade_h3,
+                BarrierWidth_h1m,
+                DuneCrestMean_h1m,
+                BarrierHeight_h1m,
+                bw_rate_h1m,
+                bh_rate_h1m,
+                sc_rate_h1m,
+                DuneCrestMin_h1m,
+                DuneCrestMax_h1m,
+                cascade_h1m,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
                 name_prefix="6-B3D_Rave_pt45_700yrs_Roadways_1mDune_20mSetback_20mWidth_high",
                 tmin=0,
                 tmax=700,
-                plot_name="b3d_pt45_h3_plots_high",
+                plot_name="b3d_pt45_h1m_plots_high",
                 run_road_mgmt=True,
             )
 
             CASCADEplt.plot_nonlinear_stats_low_high(
-                cascade=[cascade_nat, cascade_h3, cascade_h1, cascade_h2],
+                cascade=[cascade_nat, cascade_h1m, cascade_h2m, cascade_h3m],
                 DuneCrestMin=[
                     DuneCrestMin_nat,
-                    DuneCrestMin_h3,
-                    DuneCrestMin_h1,
-                    DuneCrestMin_h2,
+                    DuneCrestMin_h1m,
+                    DuneCrestMin_h2m,
+                    DuneCrestMin_h3m,
                 ],
                 DuneCrestMax=[
                     DuneCrestMax_nat,
-                    DuneCrestMax_h3,
-                    DuneCrestMax_h1,
-                    DuneCrestMax_h2,
+                    DuneCrestMax_h1m,
+                    DuneCrestMax_h2m,
+                    DuneCrestMax_h3m,
                 ],
                 BarrierHeight=[
                     BarrierHeight_nat,
-                    BarrierHeight_h3,
-                    BarrierHeight_h1,
-                    BarrierHeight_h2,
+                    BarrierHeight_h1m,
+                    BarrierHeight_h2m,
+                    BarrierHeight_h3m,
                 ],
                 BarrierWidth=[
                     BarrierWidth_nat,
-                    BarrierWidth_h3,
-                    BarrierWidth_h1,
-                    BarrierWidth_h2,
+                    BarrierWidth_h1m,
+                    BarrierWidth_h2m,
+                    BarrierWidth_h3m,
                 ],
                 DuneCrestMean=[
                     DuneCrestMean_nat,
-                    DuneCrestMean_h3,
-                    DuneCrestMean_h1,
-                    DuneCrestMean_h2,
+                    DuneCrestMean_h1m,
+                    DuneCrestMean_h2m,
+                    DuneCrestMean_h3m,
                 ],
                 TMAX=[715, 700, 515, 473],
             )
@@ -3033,90 +3109,90 @@ def human_plots():
             )
 
             (
-                BarrierWidth_h1,
-                DuneCrestMean_h1,
-                BarrierHeight_h1,
-                bw_rate_h1,
-                bh_rate_h1,
-                sc_rate_h1,
-                DuneCrestMin_h1,
-                DuneCrestMax_h1,
-                cascade_h1,
+                BarrierWidth_h2m,
+                DuneCrestMean_h2m,
+                BarrierHeight_h2m,
+                bw_rate_h2m,
+                bh_rate_h2m,
+                sc_rate_h2m,
+                DuneCrestMin_h2m,
+                DuneCrestMax_h2m,
+                cascade_h2m,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
                 name_prefix="6-B3D_Rave_pt75_97yrs_Roadways_2mDune_20mSetback_20mWidth_low",
                 tmin=0,
                 tmax=97,
-                plot_name="b3d_pt75_h1_plots_low",
+                plot_name="b3d_pt75_h2m_plots_low",
                 run_road_mgmt=True,
             )
 
             (
-                BarrierWidth_h2,
-                DuneCrestMean_h2,
-                BarrierHeight_h2,
-                bw_rate_h2,
-                bh_rate_h2,
-                sc_rate_h2,
-                DuneCrestMin_h2,
-                DuneCrestMax_h2,
-                cascade_h2,
+                BarrierWidth_h3m,
+                DuneCrestMean_h3m,
+                BarrierHeight_h3m,
+                bw_rate_h3m,
+                bh_rate_h3m,
+                sc_rate_h3m,
+                DuneCrestMin_h3m,
+                DuneCrestMax_h3m,
+                cascade_h3m,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
                 name_prefix="6-B3D_Rave_pt75_70yrs_Roadways_3mDune_20mSetback_20mWidth_low",
                 tmin=0,
                 tmax=70,
-                plot_name="b3d_pt75_h2_plots_low",
+                plot_name="b3d_pt75_h3m_plots_low",
                 run_road_mgmt=True,
             )
 
             (
-                BarrierWidth_h3,
-                DuneCrestMean_h3,
-                BarrierHeight_h3,
-                bw_rate_h3,
-                bh_rate_h3,
-                sc_rate_h3,
-                DuneCrestMin_h3,
-                DuneCrestMax_h3,
-                cascade_h3,
+                BarrierWidth_h1m,
+                DuneCrestMean_h1m,
+                BarrierHeight_h1m,
+                bw_rate_h1m,
+                bh_rate_h1m,
+                sc_rate_h1m,
+                DuneCrestMin_h1m,
+                DuneCrestMax_h1m,
+                cascade_h1m,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
                 name_prefix="6-B3D_Rave_pt75_116yrs_Roadways_1mDune_20mSetback_20mWidth_low",
                 tmin=0,
                 tmax=116,  # 87, 104
-                plot_name="b3d_pt75_h3_plots_low",
+                plot_name="b3d_pt75_h1m_plots_low",
                 run_road_mgmt=True,
             )
 
             CASCADEplt.plot_nonlinear_stats_low_high(
-                cascade=[cascade_nat, cascade_h3, cascade_h1, cascade_h2],
+                cascade=[cascade_nat, cascade_h1m, cascade_h2m, cascade_h3m],
                 DuneCrestMin=[
                     DuneCrestMin_nat,
-                    DuneCrestMin_h3,
-                    DuneCrestMin_h1,
-                    DuneCrestMin_h2,
+                    DuneCrestMin_h1m,
+                    DuneCrestMin_h2m,
+                    DuneCrestMin_h3m,
                 ],
                 DuneCrestMax=[
                     DuneCrestMax_nat,
-                    DuneCrestMax_h3,
-                    DuneCrestMax_h1,
-                    DuneCrestMax_h2,
+                    DuneCrestMax_h1m,
+                    DuneCrestMax_h2m,
+                    DuneCrestMax_h3m,
                 ],
                 BarrierHeight=[
                     BarrierHeight_nat,
-                    BarrierHeight_h3,
-                    BarrierHeight_h1,
-                    BarrierHeight_h2,
+                    BarrierHeight_h1m,
+                    BarrierHeight_h2m,
+                    BarrierHeight_h3m,
                 ],
                 BarrierWidth=[
                     BarrierWidth_nat,
-                    BarrierWidth_h3,
-                    BarrierWidth_h1,
-                    BarrierWidth_h2,
+                    BarrierWidth_h1m,
+                    BarrierWidth_h2m,
+                    BarrierWidth_h3m,
                 ],
                 DuneCrestMean=[
                     DuneCrestMean_nat,
-                    DuneCrestMean_h3,
-                    DuneCrestMean_h1,
-                    DuneCrestMean_h2,
+                    DuneCrestMean_h1m,
+                    DuneCrestMean_h2m,
+                    DuneCrestMean_h3m,
                 ],
                 TMAX=150,
             )
@@ -3141,548 +3217,694 @@ def human_plots():
             )
 
             (
-                BarrierWidth_h1,
-                DuneCrestMean_h1,
-                BarrierHeight_h1,
-                bw_rate_h1,
-                bh_rate_h1,
-                sc_rate_h1,
-                DuneCrestMin_h1,
-                cascade_h1,
+                BarrierWidth_h2m,
+                DuneCrestMean_h2m,
+                BarrierHeight_h2m,
+                bw_rate_h2m,
+                bh_rate_h2m,
+                sc_rate_h2m,
+                DuneCrestMin_h2m,
+                cascade_h2m,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
                 name_prefix="6-B3D_Rave_pt75_425yrs_Roadways_2mDune_20mSetback_20mWidth_high",
                 tmin=0,
                 tmax=425,
-                plot_name="b3d_pt75_h1_plots_high",
+                plot_name="b3d_pt75_h2m_plots_high",
                 run_road_mgmt=True,
             )
 
             (
-                BarrierWidth_h2,
-                DuneCrestMean_h2,
-                BarrierHeight_h2,
-                bw_rate_h2,
-                bh_rate_h2,
-                sc_rate_h2,
-                DuneCrestMin_h2,
-                cascade_h2,
+                BarrierWidth_h3m,
+                DuneCrestMean_h3m,
+                BarrierHeight_h3m,
+                bw_rate_h3m,
+                bh_rate_h3m,
+                sc_rate_h3m,
+                DuneCrestMin_h3m,
+                cascade_h3m,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
                 name_prefix="6-B3D_Rave_pt75_357yrs_Roadways_3mDune_20mSetback_20mWidth_high",
                 tmin=0,
                 tmax=357,
-                plot_name="b3d_pt75_h2_plots_high",
+                plot_name="b3d_pt75_h3m_plots_high",
                 run_road_mgmt=True,
             )
 
             (
-                BarrierWidth_h3,
-                DuneCrestMean_h3,
-                BarrierHeight_h3,
-                bw_rate_h3,
-                bh_rate_h3,
-                sc_rate_h3,
-                DuneCrestMin_h3,
-                cascade_h3,
+                BarrierWidth_h1m,
+                DuneCrestMean_h1m,
+                BarrierHeight_h1m,
+                bw_rate_h1m,
+                bh_rate_h1m,
+                sc_rate_h1m,
+                DuneCrestMin_h1m,
+                cascade_h1m,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
                 name_prefix="6-B3D_Rave_pt75_438yrs_Roadways_1mDune_20mSetback_20mWidth_high",
                 tmin=0,
                 tmax=438,  # 87, 104
-                plot_name="b3d_pt75_h3_plots_high",
+                plot_name="b3d_pt75_h1m_plots_high",
                 run_road_mgmt=True,
             )
 
             CASCADEplt.plot_nonlinear_stats_low_high(
-                cascade=[cascade_nat, cascade_h3, cascade_h1, cascade_h2],
+                cascade=[cascade_nat, cascade_h1m, cascade_h2m, cascade_h3m],
                 DuneCrestMin=[
                     DuneCrestMin_nat,
-                    DuneCrestMin_h3,
-                    DuneCrestMin_h1,
-                    DuneCrestMin_h2,
+                    DuneCrestMin_h1m,
+                    DuneCrestMin_h2m,
+                    DuneCrestMin_h3m,
                 ],
                 BarrierHeight=[
                     BarrierHeight_nat,
-                    BarrierHeight_h3,
-                    BarrierHeight_h1,
-                    BarrierHeight_h2,
+                    BarrierHeight_h1m,
+                    BarrierHeight_h2m,
+                    BarrierHeight_h3m,
                 ],
                 BarrierWidth=[
                     BarrierWidth_nat,
-                    BarrierWidth_h3,
-                    BarrierWidth_h1,
-                    BarrierWidth_h2,
+                    BarrierWidth_h1m,
+                    BarrierWidth_h2m,
+                    BarrierWidth_h3m,
                 ],
                 DuneCrestMean=[
                     DuneCrestMean_nat,
-                    DuneCrestMean_h3,
-                    DuneCrestMean_h1,
-                    DuneCrestMean_h2,
+                    DuneCrestMean_h1m,
+                    DuneCrestMean_h2m,
+                    DuneCrestMean_h3m,
                 ],
                 TMAX=450,
             )
 
-    # rave = 0.75 runs, low
-    def pt75_low():
-        (
-            BarrierWidth_nat,
-            DuneCrestMean_nat,
-            BarrierHeight_nat,
-            bw_rate_nat,
-            bh_rate_nat,
-            sc_rate_nat,
-            DuneCrestMin_nat,
-            DuneCrestMax_nat,
-            cascade_nat,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt75_Natural_low",
-            tmin=0,
-            tmax_roadways=1000,  # dummy
-            tmax=1000,
-            plot_name="b3d_pt75_plots_low",
-            run_road_mgmt=False,
-        )
+    def roadways():
 
-        (
-            BarrierWidth_h1,
-            DuneCrestMean_h1,
-            BarrierHeight_h1,
-            bw_rate_h1,
-            bh_rate_h1,
-            sc_rate_h1,
-            DuneCrestMin_h1,
-            DuneCrestMax_h1,
-            cascade_h1,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low",
-            tmin=0,
-            tmax_roadways=161,
-            tmax_sim=500,
-            # tmax_sim=1000,
-            plot_name="b3d_pt75_h1_plots_low",
-            run_road_mgmt=True,
-        )
-
-        (
-            BarrierWidth_h2,
-            DuneCrestMean_h2,
-            BarrierHeight_h2,
-            bw_rate_h2,
-            bh_rate_h2,
-            sc_rate_h2,
-            DuneCrestMin_h2,
-            DuneCrestMax_h2,
-            cascade_h2,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt75_Roadways_3mDune_20mSetback_20mWidth_low",
-            tmin=0,
-            tmax_roadways=77,  # drowned at 78
-            tmax_sim=500,
-            # tmax_sim=1000,
-            plot_name="b3d_pt75_h2_plots_low",
-            run_road_mgmt=True,
-        )
-
-        (
-            BarrierWidth_h3,
-            DuneCrestMean_h3,
-            BarrierHeight_h3,
-            bw_rate_h3,
-            bh_rate_h3,
-            sc_rate_h3,
-            DuneCrestMin_h3,
-            DuneCrestMax_h3,
-            cascade_h3,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt75_Roadways_1mDune_20mSetback_20mWidth_low",
-            tmin=0,
-            tmax_roadways=300,
-            tmax_sim=500,
-            # tmax_sim=1000,
-            plot_name="b3d_pt75_h3_plots_low",
-            run_road_mgmt=True,
-        )
-
-        CASCADEplt.plot_nonlinear_stats_low_high(
-            cascade=[cascade_nat, cascade_h3, cascade_h1, cascade_h2],
-            DuneCrestMin=[
-                DuneCrestMin_nat,
-                DuneCrestMin_h3,
-                DuneCrestMin_h1,
-                DuneCrestMin_h2,
-            ],
-            DuneCrestMax=[
-                DuneCrestMax_nat,
-                DuneCrestMax_h3,
-                DuneCrestMax_h1,
-                DuneCrestMax_h2,
-            ],
-            BarrierHeight=[
-                BarrierHeight_nat,
-                BarrierHeight_h3,
-                BarrierHeight_h1,
-                BarrierHeight_h2,
-            ],
-            BarrierWidth=[
+        # rave = 0.75 runs, low
+        def pt75_low():
+            (
                 BarrierWidth_nat,
-                BarrierWidth_h3,
-                BarrierWidth_h1,
-                BarrierWidth_h2,
-            ],
-            DuneCrestMean=[
                 DuneCrestMean_nat,
-                DuneCrestMean_h3,
-                DuneCrestMean_h1,
-                DuneCrestMean_h2,
-            ],
-            TMAX=[750, 750, 750, 750],
-            tmax_roadways=[
-                0,
-                300,
-                161,
-                77,
-            ],  # h3, h1, h2 - 300, 161, 77 roadways drowned
-        )
-
-    # rave = 0.75 runs, high
-    def pt75_high():
-        (
-            BarrierWidth_nat,
-            DuneCrestMean_nat,
-            BarrierHeight_nat,
-            bw_rate_nat,
-            bh_rate_nat,
-            sc_rate_nat,
-            DuneCrestMin_nat,
-            DuneCrestMax_nat,
-            cascade_nat,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt75_Natural_high",
-            tmin=0,
-            tmax_roadways=1000,
-            tmax_sim=1000,
-            plot_name="b3d_pt75_plots_high",
-            run_road_mgmt=False,
-        )
-
-        (
-            BarrierWidth_h1,
-            DuneCrestMean_h1,
-            BarrierHeight_h1,
-            bw_rate_h1,
-            bh_rate_h1,
-            sc_rate_h1,
-            DuneCrestMin_h1,
-            DuneCrestMax_h1,
-            cascade_h1,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_high",
-            tmin=0,
-            tmax_roadways=530,
-            tmax_sim=582,
-            plot_name="b3d_pt75_h1_plots_high",
-            run_road_mgmt=True,
-        )
-
-        (
-            BarrierWidth_h2,
-            DuneCrestMean_h2,
-            BarrierHeight_h2,
-            bw_rate_h2,
-            bh_rate_h2,
-            sc_rate_h2,
-            DuneCrestMin_h2,
-            DuneCrestMax_h2,
-            cascade_h2,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt75_Roadways_3mDune_20mSetback_20mWidth_high",
-            tmin=0,
-            tmax_roadways=416,
-            tmax_sim=1000,
-            plot_name="b3d_pt75_h2_plots_high",
-            run_road_mgmt=True,
-        )
-
-        (
-            BarrierWidth_h3,
-            DuneCrestMean_h3,
-            BarrierHeight_h3,
-            bw_rate_h3,
-            bh_rate_h3,
-            sc_rate_h3,
-            DuneCrestMin_h3,
-            DuneCrestMax_h3,
-            cascade_h3,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt75_Roadways_1mDune_20mSetback_20mWidth_high",
-            tmin=0,
-            tmax_roadways=536,
-            tmax_sim=1000,
-            plot_name="b3d_pt75_h3_plots_high",
-            run_road_mgmt=True,
-        )
-
-        CASCADEplt.plot_nonlinear_stats_low_high(
-            cascade=[cascade_nat, cascade_h3, cascade_h1, cascade_h2],
-            DuneCrestMin=[
-                DuneCrestMin_nat,
-                DuneCrestMin_h3,
-                DuneCrestMin_h1,
-                DuneCrestMin_h2,
-            ],
-            DuneCrestMax=[
-                DuneCrestMax_nat,
-                DuneCrestMax_h3,
-                DuneCrestMax_h1,
-                DuneCrestMax_h2,
-            ],
-            BarrierHeight=[
                 BarrierHeight_nat,
-                BarrierHeight_h3,
-                BarrierHeight_h1,
-                BarrierHeight_h2,
-            ],
-            BarrierWidth=[
-                BarrierWidth_nat,
-                BarrierWidth_h3,
-                BarrierWidth_h1,
-                BarrierWidth_h2,
-            ],
-            DuneCrestMean=[
-                DuneCrestMean_nat,
-                DuneCrestMean_h3,
-                DuneCrestMean_h1,
-                DuneCrestMean_h2,
-            ],
-            TMAX=[750, 750, 582, 750],  # # h3, h1, h2 - 536, 530, 416 roadways drowned
-            tmax_roadways=[0, 536, 530, 416],
-        )
-
-    # rave = 0.45 runs, low
-    def pt45_low():
-        (
-            BarrierWidth_nat,
-            DuneCrestMean_nat,
-            BarrierHeight_nat,
-            bw_rate_nat,
-            bh_rate_nat,
-            sc_rate_nat,
-            DuneCrestMin_nat,
-            DuneCrestMax_nat,
-            cascade_nat,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt45_Natural_low",
-            tmin=0,
-            tmax_roadways=1000,
-            tmax_sim=1000,
-            plot_name="b3d_pt45_plots_low",
-            run_road_mgmt=False,
-        )
-
-        (
-            BarrierWidth_h1,
-            DuneCrestMean_h1,
-            BarrierHeight_h1,
-            bw_rate_h1,
-            bh_rate_h1,
-            sc_rate_h1,
-            DuneCrestMin_h1,
-            DuneCrestMax_h1,
-            cascade_h1,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_low",
-            tmin=0,
-            tmax_roadways=579,
-            tmax_sim=1000,
-            plot_name="b3d_pt45_h1_plots_low",
-            run_road_mgmt=True,
-        )
-
-        (
-            BarrierWidth_h2,
-            DuneCrestMean_h2,
-            BarrierHeight_h2,
-            bw_rate_h2,
-            bh_rate_h2,
-            sc_rate_h2,
-            DuneCrestMin_h2,
-            DuneCrestMax_h2,
-            cascade_h2,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt45_Roadways_3mDune_20mSetback_20mWidth_low",
-            tmin=0,
-            tmax_roadways=429,
-            tmax_sim=442,
-            plot_name="b3d_pt45_h2_plots_low",
-            run_road_mgmt=True,
-        )
-
-        (
-            BarrierWidth_h3,
-            DuneCrestMean_h3,
-            BarrierHeight_h3,
-            bw_rate_h3,
-            bh_rate_h3,
-            sc_rate_h3,
-            DuneCrestMin_h3,
-            DuneCrestMax_h3,
-            cascade_h3,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt45_Roadways_1mDune_20mSetback_20mWidth_low",
-            tmin=0,
-            tmax_roadways=594,
-            tmax_sim=1000,
-            plot_name="b3d_pt45_h3_plots_low",
-            run_road_mgmt=True,
-        )
-
-        CASCADEplt.plot_nonlinear_stats_low_high(
-            cascade=[cascade_nat, cascade_h3, cascade_h1, cascade_h2],
-            DuneCrestMin=[
+                bw_rate_nat,
+                bh_rate_nat,
+                sc_rate_nat,
                 DuneCrestMin_nat,
-                DuneCrestMin_h3,
-                DuneCrestMin_h1,
-                DuneCrestMin_h2,
-            ],
-            DuneCrestMax=[
                 DuneCrestMax_nat,
-                DuneCrestMax_h3,
-                DuneCrestMax_h1,
-                DuneCrestMax_h2,
-            ],
-            BarrierHeight=[
-                BarrierHeight_nat,
-                BarrierHeight_h3,
-                BarrierHeight_h1,
-                BarrierHeight_h2,
-            ],
-            BarrierWidth=[
+                cascade_nat,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt75_Natural_low",
+                tmin=0,
+                tmax_roadways=1000,  # dummy
+                tmax_sim=1000,
+                plot_name="b3d_pt75_plots_low",
+                run_road_mgmt=False,
+            )
+
+            (
+                BarrierWidth_h2m,
+                DuneCrestMean_h2m,
+                BarrierHeight_h2m,
+                bw_rate_h2m,
+                bh_rate_h2m,
+                sc_rate_h2m,
+                DuneCrestMin_h2m,
+                DuneCrestMax_h2m,
+                cascade_h2m,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low",
+                tmin=0,
+                tmax_roadways=161,
+                tmax_sim=1000,
+                plot_name="b3d_pt75_h2m_plots_low",
+                run_road_mgmt=True,
+            )
+
+            (
+                BarrierWidth_h3m,
+                DuneCrestMean_h3m,
+                BarrierHeight_h3m,
+                bw_rate_h3m,
+                bh_rate_h3m,
+                sc_rate_h3m,
+                DuneCrestMin_h3m,
+                DuneCrestMax_h3m,
+                cascade_h3m,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt75_Roadways_3mDune_20mSetback_20mWidth_low",
+                tmin=0,
+                tmax_roadways=77,  # drowned at 78
+                tmax_sim=1000,
+                plot_name="b3d_pt75_h3m_plots_low",
+                run_road_mgmt=True,
+            )
+
+            (
+                BarrierWidth_h1m,
+                DuneCrestMean_h1m,
+                BarrierHeight_h1m,
+                bw_rate_h1m,
+                bh_rate_h1m,
+                sc_rate_h1m,
+                DuneCrestMin_h1m,
+                DuneCrestMax_h1m,
+                cascade_h1m,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt75_Roadways_1mDune_20mSetback_20mWidth_low",
+                tmin=0,
+                tmax_roadways=300,
+                tmax_sim=1000,
+                plot_name="b3d_pt75_h1m_plots_low",
+                run_road_mgmt=True,
+            )
+
+            CASCADEplt.plot_nonlinear_stats_low_high(
+                cascade=[cascade_nat, cascade_h1m, cascade_h2m, cascade_h3m],
+                DuneCrestMin=[
+                    DuneCrestMin_nat,
+                    DuneCrestMin_h1m,
+                    DuneCrestMin_h2m,
+                    DuneCrestMin_h3m,
+                ],
+                DuneCrestMax=[
+                    DuneCrestMax_nat,
+                    DuneCrestMax_h1m,
+                    DuneCrestMax_h2m,
+                    DuneCrestMax_h3m,
+                ],
+                BarrierHeight=[
+                    BarrierHeight_nat,
+                    BarrierHeight_h1m,
+                    BarrierHeight_h2m,
+                    BarrierHeight_h3m,
+                ],
+                BarrierWidth=[
+                    BarrierWidth_nat,
+                    BarrierWidth_h1m,
+                    BarrierWidth_h2m,
+                    BarrierWidth_h3m,
+                ],
+                DuneCrestMean=[
+                    DuneCrestMean_nat,
+                    DuneCrestMean_h1m,
+                    DuneCrestMean_h2m,
+                    DuneCrestMean_h3m,
+                ],
+                TMAX=[750, 750, 750, 750],
+                tmax_roadways=[
+                    0,
+                    300,
+                    161,
+                    77,
+                ],  # h3, h1, h2 - 300, 161, 77 roadways drowned
+            )
+
+        # rave = 0.75 runs, high
+        def pt75_high():
+            (
                 BarrierWidth_nat,
-                BarrierWidth_h3,
-                BarrierWidth_h1,
-                BarrierWidth_h2,
-            ],
-            DuneCrestMean=[
                 DuneCrestMean_nat,
-                DuneCrestMean_h3,
-                DuneCrestMean_h1,
-                DuneCrestMean_h2,
-            ],
-            TMAX=[750, 750, 750, 442],
-            tmax_roadways=[0, 594, 579, 429],
-        )
-
-    # rave = 0.45 runs, high
-    def pt45_high():
-        (
-            BarrierWidth_nat,
-            DuneCrestMean_nat,
-            BarrierHeight_nat,
-            bw_rate_nat,
-            bh_rate_nat,
-            sc_rate_nat,
-            DuneCrestMin_nat,
-            DuneCrestMax_nat,
-            cascade_nat,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt45_Natural_high",
-            tmin=0,
-            tmax_roadways=1000,
-            tmax_sim=1000,
-            plot_name="b3d_pt45_plots_high",
-            run_road_mgmt=False,
-        )
-
-        (
-            BarrierWidth_h1,
-            DuneCrestMean_h1,
-            BarrierHeight_h1,
-            bw_rate_h1,
-            bh_rate_h1,
-            sc_rate_h1,
-            DuneCrestMin_h1,
-            DuneCrestMax_h1,
-            cascade_h1,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_high",
-            tmin=0,
-            tmax_roadways=630,
-            tmax_sim=1000,
-            plot_name="b3d_pt45_h1_plots_high",
-            run_road_mgmt=True,
-        )
-
-        (
-            BarrierWidth_h2,
-            DuneCrestMean_h2,
-            BarrierHeight_h2,
-            bw_rate_h2,
-            bh_rate_h2,
-            sc_rate_h2,
-            DuneCrestMin_h2,
-            DuneCrestMax_h2,
-            cascade_h2,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt45_Roadways_3mDune_20mSetback_20mWidth_high",
-            tmin=0,
-            tmax_roadways=521,
-            tmax_sim=532,
-            plot_name="b3d_pt45_h2_plots_high",
-            run_road_mgmt=True,
-        )
-
-        (
-            BarrierWidth_h3,
-            DuneCrestMean_h3,
-            BarrierHeight_h3,
-            bw_rate_h3,
-            bh_rate_h3,
-            sc_rate_h3,
-            DuneCrestMin_h3,
-            DuneCrestMax_h3,
-            cascade_h3,
-        ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-            name_prefix="6-B3D_Rave_pt45_Roadways_1mDune_20mSetback_20mWidth_high",
-            tmin=0,
-            tmax_roadways=730,
-            tmax_sim=1000,
-            plot_name="b3d_pt45_h3_plots_high",
-            run_road_mgmt=True,
-        )
-
-        CASCADEplt.plot_nonlinear_stats_low_high(
-            cascade=[cascade_nat, cascade_h3, cascade_h1, cascade_h2],
-            DuneCrestMin=[
+                BarrierHeight_nat,
+                bw_rate_nat,
+                bh_rate_nat,
+                sc_rate_nat,
                 DuneCrestMin_nat,
-                DuneCrestMin_h3,
-                DuneCrestMin_h1,
-                DuneCrestMin_h2,
-            ],
-            DuneCrestMax=[
                 DuneCrestMax_nat,
-                DuneCrestMax_h3,
-                DuneCrestMax_h1,
-                DuneCrestMax_h2,
-            ],
-            BarrierHeight=[
-                BarrierHeight_nat,
-                BarrierHeight_h3,
-                BarrierHeight_h1,
-                BarrierHeight_h2,
-            ],
-            BarrierWidth=[
+                cascade_nat,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt75_Natural_high",
+                tmin=0,
+                tmax_roadways=1000,
+                tmax_sim=1000,
+                plot_name="b3d_pt75_plots_high",
+                run_road_mgmt=False,
+            )
+
+            (
+                BarrierWidth_h2m,
+                DuneCrestMean_h2m,
+                BarrierHeight_h2m,
+                bw_rate_h2m,
+                bh_rate_h2m,
+                sc_rate_h2m,
+                DuneCrestMin_h2m,
+                DuneCrestMax_h2m,
+                cascade_h2m,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_high",
+                tmin=0,
+                tmax_roadways=530,
+                tmax_sim=582,  # this may break, want to try 581?
+                plot_name="b3d_pt75_h2m_plots_high",
+                run_road_mgmt=True,
+            )
+
+            (
+                BarrierWidth_h3m,
+                DuneCrestMean_h3m,
+                BarrierHeight_h3m,
+                bw_rate_h3m,
+                bh_rate_h3m,
+                sc_rate_h3m,
+                DuneCrestMin_h3m,
+                DuneCrestMax_h3m,
+                cascade_h3m,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt75_Roadways_3mDune_20mSetback_20mWidth_high",
+                tmin=0,
+                tmax_roadways=416,
+                tmax_sim=1000,
+                plot_name="b3d_pt75_h3m_plots_high",
+                run_road_mgmt=True,
+            )
+
+            (
+                BarrierWidth_h1m,
+                DuneCrestMean_h1m,
+                BarrierHeight_h1m,
+                bw_rate_h1m,
+                bh_rate_h1m,
+                sc_rate_h1m,
+                DuneCrestMin_h1m,
+                DuneCrestMax_h1m,
+                cascade_h1m,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt75_Roadways_1mDune_20mSetback_20mWidth_high",
+                tmin=0,
+                tmax_roadways=536,
+                tmax_sim=1000,
+                plot_name="b3d_pt75_h1m_plots_high",
+                run_road_mgmt=True,
+            )
+
+            CASCADEplt.plot_nonlinear_stats_low_high(
+                cascade=[cascade_nat, cascade_h1m, cascade_h2m, cascade_h3m],
+                DuneCrestMin=[
+                    DuneCrestMin_nat,
+                    DuneCrestMin_h1m,
+                    DuneCrestMin_h2m,
+                    DuneCrestMin_h3m,
+                ],
+                DuneCrestMax=[
+                    DuneCrestMax_nat,
+                    DuneCrestMax_h1m,
+                    DuneCrestMax_h2m,
+                    DuneCrestMax_h3m,
+                ],
+                BarrierHeight=[
+                    BarrierHeight_nat,
+                    BarrierHeight_h1m,
+                    BarrierHeight_h2m,
+                    BarrierHeight_h3m,
+                ],
+                BarrierWidth=[
+                    BarrierWidth_nat,
+                    BarrierWidth_h1m,
+                    BarrierWidth_h2m,
+                    BarrierWidth_h3m,
+                ],
+                DuneCrestMean=[
+                    DuneCrestMean_nat,
+                    DuneCrestMean_h1m,
+                    DuneCrestMean_h2m,
+                    DuneCrestMean_h3m,
+                ],
+                TMAX=[
+                    750,
+                    750,
+                    582,
+                    750,
+                ],  # # h3, h1, h2 - 536, 530, 416 roadways drowned
+                tmax_roadways=[0, 536, 530, 416],
+            )
+
+        # rave = 0.45 runs, low
+        def pt45_low():
+            (
                 BarrierWidth_nat,
-                BarrierWidth_h3,
-                BarrierWidth_h1,
-                BarrierWidth_h2,
-            ],
-            DuneCrestMean=[
                 DuneCrestMean_nat,
-                DuneCrestMean_h3,
-                DuneCrestMean_h1,
-                DuneCrestMean_h2,
-            ],
-            TMAX=[750, 750, 750, 532],
-            tmax_roadways=[0, 730, 630, 521],
-        )
+                BarrierHeight_nat,
+                bw_rate_nat,
+                bh_rate_nat,
+                sc_rate_nat,
+                DuneCrestMin_nat,
+                DuneCrestMax_nat,
+                cascade_nat,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt45_Natural_low",
+                tmin=0,
+                tmax_roadways=1000,
+                tmax_sim=1000,
+                plot_name="b3d_pt45_plots_low",
+                run_road_mgmt=False,
+            )
+
+            (
+                BarrierWidth_h2m,
+                DuneCrestMean_h2m,
+                BarrierHeight_h2m,
+                bw_rate_h2m,
+                bh_rate_h2m,
+                sc_rate_h2m,
+                DuneCrestMin_h2m,
+                DuneCrestMax_h2m,
+                cascade_h2m,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_low",
+                tmin=0,
+                tmax_roadways=579,
+                tmax_sim=1000,
+                plot_name="b3d_pt45_h2m_plots_low",
+                run_road_mgmt=True,
+            )
+
+            (
+                BarrierWidth_h3m,
+                DuneCrestMean_h3m,
+                BarrierHeight_h3m,
+                bw_rate_h3m,
+                bh_rate_h3m,
+                sc_rate_h3m,
+                DuneCrestMin_h3m,
+                DuneCrestMax_h3m,
+                cascade_h3m,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt45_Roadways_3mDune_20mSetback_20mWidth_low",
+                tmin=0,
+                tmax_roadways=429,
+                tmax_sim=442,
+                plot_name="b3d_pt45_h3m_plots_low",
+                run_road_mgmt=True,
+            )
+
+            (
+                BarrierWidth_h1m,
+                DuneCrestMean_h1m,
+                BarrierHeight_h1m,
+                bw_rate_h1m,
+                bh_rate_h1m,
+                sc_rate_h1m,
+                DuneCrestMin_h1m,
+                DuneCrestMax_h1m,
+                cascade_h1m,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt45_Roadways_1mDune_20mSetback_20mWidth_low",
+                tmin=0,
+                tmax_roadways=594,
+                tmax_sim=1000,
+                plot_name="b3d_pt45_h1m_plots_low",
+                run_road_mgmt=True,
+            )
+
+            CASCADEplt.plot_nonlinear_stats_low_high(
+                cascade=[cascade_nat, cascade_h1m, cascade_h2m, cascade_h3m],
+                DuneCrestMin=[
+                    DuneCrestMin_nat,
+                    DuneCrestMin_h1m,
+                    DuneCrestMin_h2m,
+                    DuneCrestMin_h3m,
+                ],
+                DuneCrestMax=[
+                    DuneCrestMax_nat,
+                    DuneCrestMax_h1m,
+                    DuneCrestMax_h2m,
+                    DuneCrestMax_h3m,
+                ],
+                BarrierHeight=[
+                    BarrierHeight_nat,
+                    BarrierHeight_h1m,
+                    BarrierHeight_h2m,
+                    BarrierHeight_h3m,
+                ],
+                BarrierWidth=[
+                    BarrierWidth_nat,
+                    BarrierWidth_h1m,
+                    BarrierWidth_h2m,
+                    BarrierWidth_h3m,
+                ],
+                DuneCrestMean=[
+                    DuneCrestMean_nat,
+                    DuneCrestMean_h1m,
+                    DuneCrestMean_h2m,
+                    DuneCrestMean_h3m,
+                ],
+                TMAX=[750, 750, 750, 442],
+                tmax_roadways=[0, 594, 579, 429],
+            )
+
+        # rave = 0.45 runs, high
+        def pt45_high():
+            (
+                BarrierWidth_nat,
+                DuneCrestMean_nat,
+                BarrierHeight_nat,
+                bw_rate_nat,
+                bh_rate_nat,
+                sc_rate_nat,
+                DuneCrestMin_nat,
+                DuneCrestMax_nat,
+                cascade_nat,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt45_Natural_high",
+                tmin=0,
+                tmax_roadways=1000,
+                tmax_sim=1000,
+                plot_name="b3d_pt45_plots_high",
+                run_road_mgmt=False,
+            )
+
+            (
+                BarrierWidth_h2m,
+                DuneCrestMean_h2m,
+                BarrierHeight_h2m,
+                bw_rate_h2m,
+                bh_rate_h2m,
+                sc_rate_h2m,
+                DuneCrestMin_h2m,
+                DuneCrestMax_h2m,
+                cascade_h2m,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_high",
+                tmin=0,
+                tmax_roadways=630,
+                tmax_sim=1000,
+                plot_name="b3d_pt45_h2m_plots_high",
+                run_road_mgmt=True,
+            )
+
+            (
+                BarrierWidth_h3m,
+                DuneCrestMean_h3m,
+                BarrierHeight_h3m,
+                bw_rate_h3m,
+                bh_rate_h3m,
+                sc_rate_h3m,
+                DuneCrestMin_h3m,
+                DuneCrestMax_h3m,
+                cascade_h3m,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt45_Roadways_3mDune_20mSetback_20mWidth_high",
+                tmin=0,
+                tmax_roadways=521,
+                tmax_sim=532,
+                plot_name="b3d_pt45_h3m_plots_high",
+                run_road_mgmt=True,
+            )
+
+            (
+                BarrierWidth_h1m,
+                DuneCrestMean_h1m,
+                BarrierHeight_h1m,
+                bw_rate_h1m,
+                bh_rate_h1m,
+                sc_rate_h1m,
+                DuneCrestMin_h1m,
+                DuneCrestMax_h1m,
+                cascade_h1m,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt45_Roadways_1mDune_20mSetback_20mWidth_high",
+                tmin=0,
+                tmax_roadways=730,
+                tmax_sim=1000,
+                plot_name="b3d_pt45_h1m_plots_high",
+                run_road_mgmt=True,
+            )
+
+            CASCADEplt.plot_nonlinear_stats_low_high(
+                cascade=[cascade_nat, cascade_h1m, cascade_h2m, cascade_h3m],
+                DuneCrestMin=[
+                    DuneCrestMin_nat,
+                    DuneCrestMin_h1m,
+                    DuneCrestMin_h2m,
+                    DuneCrestMin_h3m,
+                ],
+                DuneCrestMax=[
+                    DuneCrestMax_nat,
+                    DuneCrestMax_h1m,
+                    DuneCrestMax_h2m,
+                    DuneCrestMax_h3m,
+                ],
+                BarrierHeight=[
+                    BarrierHeight_nat,
+                    BarrierHeight_h1m,
+                    BarrierHeight_h2m,
+                    BarrierHeight_h3m,
+                ],
+                BarrierWidth=[
+                    BarrierWidth_nat,
+                    BarrierWidth_h1m,
+                    BarrierWidth_h2m,
+                    BarrierWidth_h3m,
+                ],
+                DuneCrestMean=[
+                    DuneCrestMean_nat,
+                    DuneCrestMean_h1m,
+                    DuneCrestMean_h2m,
+                    DuneCrestMean_h3m,
+                ],
+                TMAX=[750, 750, 750, 532],
+                tmax_roadways=[0, 730, 630, 521],
+            )
+
+        # supplementary material
+        def sensitivity_abandonment_criteria():
+            (
+                BarrierWidth_nat,
+                DuneCrestMean_nat,
+                BarrierHeight_nat,
+                bw_rate_nat,
+                bh_rate_nat,
+                sc_rate_nat,
+                DuneCrestMin_nat,
+                DuneCrestMax_nat,
+                cascade_nat,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt75_Natural_low",
+                tmin=0,
+                tmax_roadways=500,  # dummy
+                tmax_sim=500,
+                plot_name="b3d_pt75_plots_low",
+                run_road_mgmt=False,
+            )
+
+            (
+                BarrierWidth_10,
+                DuneCrestMean_10,
+                BarrierHeight_10,
+                bw_rate_10,
+                bh_rate_10,
+                sc_rate_10,
+                DuneCrestMin_10,
+                DuneCrestMax_10,
+                cascade_10,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low_10percent",
+                tmin=0,
+                tmax_roadways=158,
+                tmax_sim=500,
+                plot_name="b3d_pt75_h2m_plots_low_10percent",
+                run_road_mgmt=True,
+            )
+
+            (
+                BarrierWidth_20,
+                DuneCrestMean_20,
+                BarrierHeight_20,
+                bw_rate_20,
+                bh_rate_20,
+                sc_rate_20,
+                DuneCrestMin_20,
+                DuneCrestMax_20,
+                cascade_20,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low_20percent",
+                tmin=0,
+                tmax_roadways=161,  # drowned at 162
+                tmax_sim=500,
+                plot_name="b3d_pt75_h2m_plots_low_20percent",
+                run_road_mgmt=True,
+            )
+
+            (
+                BarrierWidth_30,
+                DuneCrestMean_30,
+                BarrierHeight_30,
+                bw_rate_30,
+                bh_rate_30,
+                sc_rate_30,
+                DuneCrestMin_30,
+                DuneCrestMax_30,
+                cascade_30,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low_30percent",
+                tmin=0,
+                tmax_roadways=164,  # drowned at 165
+                tmax_sim=500,
+                plot_name="b3d_pt75_h2m_plots_low_30percent",
+                run_road_mgmt=True,
+            )
+
+            (
+                BarrierWidth_40,
+                DuneCrestMean_40,
+                BarrierHeight_40,
+                bw_rate_40,
+                bh_rate_40,
+                sc_rate_40,
+                DuneCrestMin_40,
+                DuneCrestMax_40,
+                cascade_40,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low_40percent",
+                tmin=0,
+                tmax_roadways=172,  # drowned at 173
+                tmax_sim=500,
+                plot_name="b3d_pt75_h2m_plots_low_40percent",
+                run_road_mgmt=True,
+            )
+
+            (
+                BarrierWidth_50,
+                DuneCrestMean_50,
+                BarrierHeight_50,
+                bw_rate_50,
+                bh_rate_50,
+                sc_rate_50,
+                DuneCrestMin_50,
+                DuneCrestMax_50,
+                cascade_50,
+            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                name_prefix="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low_50percent",
+                tmin=0,
+                tmax_roadways=181,  # drowned at 182
+                tmax_sim=500,
+                plot_name="b3d_pt75_h2m_plots_low_50percent",
+                run_road_mgmt=True,
+            )
+
+            CASCADEplt.plot_nonlinear_stats_low_high_sensitivity(
+                cascade=[
+                    cascade_10,
+                    cascade_20,
+                    cascade_30,
+                    cascade_40,
+                    cascade_50,
+                ],
+                BarrierHeight=[
+                    BarrierHeight_10,
+                    BarrierHeight_20,
+                    BarrierHeight_30,
+                    BarrierHeight_40,
+                    BarrierHeight_50,
+                ],
+                BarrierWidth=[
+                    BarrierWidth_10,
+                    BarrierWidth_20,
+                    BarrierWidth_30,
+                    BarrierWidth_40,
+                    BarrierWidth_50,
+                ],
+                TMAX=[500, 500, 500, 500, 500],
+                tmax_roadways=[158, 161, 164, 172, 181],
+            )
 
     def slr_sensitivity():
         def pt45_high():
@@ -4025,4 +4247,113 @@ def human_plots():
                 TMAX,
             )
 
-    # def nourishments():
+    def nourishments():
+        (
+            BarrierWidth_pt75_low_40pc,
+            DuneCrestMean_pt75_low_40pc,
+            BarrierHeight_pt75_low_40pc,
+            bw_rate_pt75_low_40pc,
+            bh_rate_pt75_low_40pc,
+            sc_rate_pt75_low_40pc,
+            DuneCrestMin_pt75_low_40pc,
+            DuneCrestMax_pt75_low_40pc,
+            shoreline_position_pt75_low_40pc,
+            shoreface_slope_pt75_low_40pc,
+            beach_width_pt75_low_40pc,
+            net_overwash_pt75_low_40pc,
+            total_overwash_pt75_low_40pc,
+            cascade_pt75_low_40pc,
+        ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+            name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_residential",
+            tmax_management=177,
+            tmax_sim=200,
+            plot_name="b3d_pt75_Nourishment_2mDune_lowEle_residential",
+        )
+
+        (
+            BarrierWidth_pt75_low_90pc,
+            DuneCrestMean_pt75_low_90pc,
+            BarrierHeight_pt75_low_90pc,
+            bw_rate_pt75_low_90pc,
+            bh_rate_pt75_low_90pc,
+            sc_rate_pt75_low_90pc,
+            DuneCrestMin_pt75_low_90pc,
+            DuneCrestMax_pt75_low_90pc,
+            shoreline_position_pt75_low_90pc,
+            shoreface_slope_pt75_low_90pc,
+            beach_width_pt75_low_90pc,
+            net_overwash_pt75_low_90pc,
+            total_overwash_pt75_low_90pc,
+            cascade_pt75_low_90pc,
+        ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+            name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial",
+            tmax_management=90,  # community drowned at 90 years
+            tmax_sim=200,
+            plot_name="b3d_pt75_Nourishment_2mDune_lowEle_commercial",
+        )
+
+        (
+            BarrierWidth_pt45_low_40pc,
+            DuneCrestMean_pt45_low_40pc,
+            BarrierHeight_pt45_low_40pc,
+            bw_rate_pt45_low_40pc,
+            bh_rate_pt45_low_40pc,
+            sc_rate_pt45_low_40pc,
+            DuneCrestMin_pt45_low_40pc,
+            DuneCrestMax_pt45_low_40pc,
+            shoreline_position_pt45_low_40pc,
+            shoreface_slope_pt45_low_40pc,
+            beach_width_pt45_low_40pc,
+            net_overwash_pt45_low_40pc,
+            total_overwash_pt45_low_40pc,
+            cascade_pt45_low_40pc,
+        ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+            name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_residential",
+            tmax_management=461,
+            tmax_sim=500,
+            plot_name="b3d_pt45_Nourishment_2mDune_lowEle_residential",
+        )
+
+        (
+            BarrierWidth_pt45_low_90pc,
+            DuneCrestMean_pt45_low_90pc,
+            BarrierHeight_pt45_low_90pc,
+            bw_rate_pt45_low_90pc,
+            bh_rate_pt45_low_90pc,
+            sc_rate_pt45_low_90pc,
+            DuneCrestMin_pt45_low_90pc,
+            DuneCrestMax_pt45_low_90pc,
+            shoreline_position_pt45_low_90pc,
+            shoreface_slope_pt45_low_90pc,
+            beach_width_pt45_low_90pc,
+            net_overwash_pt45_low_90pc,
+            total_overwash_pt45_low_90pc,
+            cascade_pt45_low_90pc,
+        ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+            name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial",
+            tmax_management=420,  # community drowned at 421
+            tmax_sim=461,
+            plot_name="b3d_pt45_Nourishment_2mDune_lowEle_commercial",
+        )
+
+        (
+            BarrierWidth_pt45_low_90pc,
+            DuneCrestMean_pt45_low_90pc,
+            BarrierHeight_pt45_low_90pc,
+            bw_rate_pt45_low_90pc,
+            bh_rate_pt45_low_90pc,
+            sc_rate_pt45_low_90pc,
+            DuneCrestMin_pt45_low_90pc,
+            DuneCrestMax_pt45_low_90pc,
+            shoreline_position_pt45_low_90pc,
+            shoreface_slope_pt45_low_90pc,
+            beach_width_pt45_low_90pc,
+            net_overwash_pt45_low_90pc,
+            total_overwash_pt45_low_90pc,
+            cascade_pt45_low_90pc,
+        ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+            name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial_backerosion",
+            tmax_management=420,  # community drowned at 421
+            tmax_sim=500,
+            plot_name="b3d_pt45_Nourishment_2mDune_lowEle_commercial",
+        )
