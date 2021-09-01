@@ -49,13 +49,30 @@ def initialize_equal(
     slr_constant,
     rmin,
     rmax,
+    background_erosion,
     parameter_file,
     storm_file,
     dune_file,
     elevation_file,
 ):
-    # for each B3D subgrid, set the initial shoreface geometry equal to what is set in brie (some random
+    """
+    for each B3D subgrid, set the initial shoreface geometry equal to what is set in brie (some random
     # perturbations); all other B3D variables are set equal
+
+    :param datadir: the directory containing the Barrier3D parameter file
+    :param brie: the brie class
+    :param slr_constant: specifies whether SLR will be constant
+    :param rmin: the minimum dune growth rate
+    :param rmax: the maximum dune growth rate
+    :param background_erosion: Rate of shoreline retreat attributed to gradients in alongshore transport
+    :param parameter_file: name of the Barrier3D parameter file
+    :param storm_file: name of the Barrier3D storms file
+    :param dune_file: name of the Barrier3D dunes file
+    :param elevation_file: name of the Barrier3D elevation file
+
+    :return: barrier3d
+
+    """
     barrier3d = []
 
     for iB3D in range(brie.ny):
@@ -90,8 +107,8 @@ def initialize_equal(
             "DuneParamStart", True, fid
         )  # Dune height will come from external file
         set_yaml(
-            "Rat", 0.0, fid
-        )  # [m / y] corresponds to Qat in LTA (!!! must set to 0 because Qs is calculated in brie !!!)
+            "Rat", background_erosion, fid
+        )  # Rate of shoreline retreat attributed to gradients in alongshore transport; (-) = erosion, (+) = acc [m / y]
         set_yaml(
             "RSLR_Constant", slr_constant, fid
         )  # Relative sea-level rise rate will be constant, otherwise logistic growth function used
@@ -139,6 +156,7 @@ def initialize_equal(
         )  # average height of the interior domain
         brie.x_b_save[iB3D, 0] = brie.x_b[iB3D]
         brie.h_b_save[iB3D, 0] = brie.h_b[iB3D]
+
     brie.slr = (
         np.array(barrier3d[0].RSLR) * 10
     )  # same for all b3d domains, just use first
