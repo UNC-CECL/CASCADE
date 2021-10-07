@@ -1267,7 +1267,8 @@ def PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
 
     # also make the gif
     directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
-    CASCADEplt.plot_ElevAnimation_Humans_BeachDuneManager(
+    # CASCADEplt.plot_ElevAnimation_Humans_BeachDuneManager(
+    plot_ElevAnimation_Humans_BeachDuneManager(
         cascade, 1, directory, TMAX=tmax_management, name=plot_name, TMAX_SIM=tmax_sim
     )
 
@@ -1287,6 +1288,24 @@ def PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
         total_overwash,
         cascade,
     )
+
+
+def PLOT_7_Initial_CNH_Topographies(name_prefix_list):
+
+    os.chdir(
+        "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
+    )
+
+    cascade = []
+
+    for i in range(0, len(name_prefix_list)):
+        output = np.load(name_prefix_list[i] + ".npz", allow_pickle=True)
+        csc8d = output["cascade"]
+        cascade.append(csc8d[0])
+
+    CASCADEplt.fig2_initialCNH_topo(cascade)
+
+    return
 
 
 # # ###############################################################################
@@ -2825,6 +2844,39 @@ def human_runs():
             background_erosion=-0.10,  # m/yr, background shoreline erosion
         )
 
+        def topo_only():
+            # we only run 10 years of the following runs because we use them for plotting the initial topo figure for
+            # the CNH simulations
+            cascade_pt45_h2m_high_nourishment_commercial = RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
+                nt=10,
+                rmin=0.25,
+                rmax=0.65,  # rave = 0.45
+                name="8-B3D_Rave_pt45_Nourishment_2mDune_highEle_commercial",
+                dune_design_elevation=3.7,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
+                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                elevation_file="b3d_pt45_802yrs_high-elevations.csv",
+                dune_file="barrier3d-default-dunes.npy",
+                overwash_filter=90,  # corresponds with commercial
+                nourishment_volume=100,  # m^3/m
+                beach_width_threshold=30,  # m, must be greater than 10
+                background_erosion=0.0,
+            )
+
+            cascade_pt75_h2m_high_nourishment_commercial = RUN_8_CASCADE_Rave_SLR_pt004_Nourishment(
+                nt=10,
+                rmin=0.55,
+                rmax=0.95,  # rave = 0.75
+                name="8-B3D_Rave_pt75_Nourishment_2mDune_highEle_commercial",
+                dune_design_elevation=3.2,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
+                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                elevation_file="b3d_pt75_829yrs_high-elevations.csv",
+                dune_file="barrier3d-default-dunes.npy",
+                overwash_filter=90,  # corresponds with commercial
+                nourishment_volume=100,  # m^3/m
+                beach_width_threshold=30,  # m, must be greater than 10
+                background_erosion=0.0,
+            )
+
 
 # record of human plots -------------------------------------------------------------------------------------
 def human_plots():
@@ -4356,4 +4408,15 @@ def human_plots():
             tmax_management=420,  # community drowned at 421
             tmax_sim=500,
             plot_name="b3d_pt45_Nourishment_2mDune_lowEle_commercial",
+        )
+
+    def initial_topos():
+
+        PLOT_7_Initial_CNH_Topographies(
+            [
+                "8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial",
+                "8-B3D_Rave_pt45_Nourishment_2mDune_highEle_commercial",
+                "8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial",
+                "8-B3D_Rave_pt75_Nourishment_2mDune_highEle_commercial",
+            ]
         )
