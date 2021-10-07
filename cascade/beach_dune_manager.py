@@ -292,7 +292,8 @@ class BeachDuneManager:
 
         # variables that we don't change, but maybe someone else will want to in the future
         self._minimum_community_width = 50  # m, parameterized for Nags Head, NC
-        self._artificial_maximum_dune_height = 4  # m, parameterized for Nags Head, NC (maximum dune height above the berm crest that can be built...period
+        self._artificial_maximum_dune_height = 4  # m, parameterized for Nags Head, NC
+        # (maximum dune height above the berm crest that can be built...period
 
         # time series
         self._beach_width = [None] * self._nt
@@ -313,9 +314,13 @@ class BeachDuneManager:
         # shoreface configuration and beach width
         self._post_storm_dunes = [None] * self._nt
         self._post_storm_interior = [None] * self._nt
+        self._post_storm_ave_interior_width = [None] * self._nt
+        self._post_storm_ave_interior_height = [None] * self._nt
         self._post_storm_x_s = [None] * self._nt
         self._post_storm_s_sf = [None] * self._nt
         self._post_storm_beach_width = [None] * self._nt
+        self._post_storm_Qow = [None] * self._nt
+        self._post_storm_x_b = [None] * self._nt
 
     def update(
         self,
@@ -330,12 +335,23 @@ class BeachDuneManager:
         if self._original_growth_param is None:
             self._original_growth_param = barrier3d.growthparam
 
-        # if nourishment interval was updated in CASCADE, update here
+        # if nourishment interval was updated in CASCADE, update here; otherwise just update the counter if it exists
         if self._nourishment_interval != nourishment_interval:
             self._nourishment_interval = nourishment_interval
             self._nourishment_counter = (
                 self._nourishment_interval
             )  # reset the counter for the desired interval
+        if self._nourishment_counter is not None:
+            self._nourishment_counter -= 1
+
+        # reduce beach width by the amount of shoreline change from last time step; if the beach width is less than
+        # some threshold (we use 10 m), turn dune migration in Barrier3D back on
+        self._beach_width[self._time_index - 1] = (
+            self._beach_width[self._time_index - 2]
+            - (barrier3d.x_s_TS[-1] - barrier3d.x_s_TS[-2]) * 10  # m
+        )
+        if self._beach_width[self._time_index - 1] <= self._beach_width_threshold:
+            barrier3d.dune_migration_on = True
 
         # save post-storm dune and interior impacts before human modifications, as well as pre-nourishment
         # shoreface configuration (essentially a 0.5 yr time step)
@@ -349,35 +365,33 @@ class BeachDuneManager:
         self._post_storm_s_sf[self._time_index - 1] = copy.deepcopy(
             barrier3d.s_sf_TS[-1]
         )
-
-        # reduce beach width by the amount of shoreline change from last time step
-        self._beach_width[self._time_index - 1] = (
-            self._beach_width[self._time_index - 2]
-            - (barrier3d.x_s_TS[-1] - barrier3d.x_s_TS[-2]) * 10  # m
+        # in b3d, x_b = x_s + InteriorWidth_Avg and does not include dune domain or beach width, so we add that here
+        # and save as "post storm" -- prior to any human changes in beach width or barrier interior width
+        self._post_storm_x_b[self._time_index - 1] = (
+            barrier3d.x_s
+            + barrier3d.InteriorWidth_AvgTS[-1]
+            + np.size(barrier3d.DuneDomain, 2)  # dune domain width in dam
+            + (self._beach_width[self._time_index - 1] / 10)  # in dam
         )
-
-        # save post-storm beach width just in case it is modified for beach nourishment (essentially a 0.5 yr time step)
+        self._post_storm_Qow[self._time_index - 1] = copy.deepcopy(barrier3d.QowTS[-1])
+        self._post_storm_ave_interior_width[self._time_index - 1] = copy.deepcopy(
+            barrier3d.InteriorWidth_AvgTS[-1]
+        )
+        self._post_storm_ave_interior_height[self._time_index - 1] = copy.deepcopy(
+            barrier3d.h_b_TS[-1]
+        )
         self._post_storm_beach_width[self._time_index - 1] = self._beach_width[
             self._time_index - 1
-        ]
+        ]  # save post-storm beach width just in case it is modified later by beach nourishment
 
-        # if the beach width is less than some threshold (we use 10 m), turn dune migration in Barrier3D back on
-        if self._beach_width[self._time_index - 1] <= self._beach_width_threshold:
-            barrier3d.dune_migration_on = True
-
-        # update nourishment counter
-        if self._nourishment_counter is not None:
-            self._nourishment_counter -= 1
-
-        # check for community width drowning
+        # check for community width drowning prior to any management actions; if community cannot be sustained,
+        # don't manage and exit; reset dune migration; dune growth reset in CASCADE
         average_barrier_width = barrier3d.InteriorWidth_AvgTS[-1] * 10
         self._narrow_break = width_drown_checks(
             self._time_index,
             average_barrier_width,  # m
             self._minimum_community_width,  # m
         )
-
-        # if community cannot be sustained, don't manage and exit; reset dune migration; dune growth reset in CASCADE
         if self._narrow_break == 1:
             barrier3d.dune_migration_on = True
             return nourish_now, rebuild_dune_now
@@ -423,6 +437,16 @@ class BeachDuneManager:
             self._overwash_volume_removed[self._time_index - 1] = (
                 barrier_overwash_removed * dm3_to_m3
             )  # convert from dm^3 to m^3
+            net_overwash = barrier3d.QowTS[-1] - (
+                self._overwash_volume_removed[self._time_index - 1]
+                / (barrier3d.BarrierLength * 10)
+            )  # m^3/m, post-storm - human removal
+            new_domain_width, _, new_ave_interior_width = barrier3d.FindWidths(
+                new_xyz_interior_domain, barrier3d.SL
+            )
+            new_ave_interior_height = np.average(
+                new_xyz_interior_domain[new_xyz_interior_domain >= barrier3d.SL]
+            )
 
             # set dune growth rate to zero for next time step if the dune elevation (front row) is larger than the
             # natural eq. dune height (Dmax) -- do this because overwash volumes can be very large
@@ -442,7 +466,12 @@ class BeachDuneManager:
             )
             barrier3d.InteriorDomain = new_xyz_interior_domain
             barrier3d.DomainTS[self._time_index - 1] = new_xyz_interior_domain
+            barrier3d._DomainWidth = new_domain_width
             barrier3d.growthparam = new_growth_parameters
+            barrier3d.QowTS[-1] = net_overwash  # m^3/m
+            barrier3d.InteriorWidth_AvgTS[-1] = new_ave_interior_width  # dam
+            barrier3d.h_b_TS[-1] = new_ave_interior_height  # dam
+            # note x_b_TS is modified at the end
 
         # if specified, rebuild dune (if using nourishment counter option, nourishes dune automatically)
         if rebuild_dune_now or self._nourishment_counter == 0:
@@ -512,13 +541,12 @@ class BeachDuneManager:
             barrier3d.dune_migration_on = False
 
         # update shoreline time series (just in case nourishment happened) and back-barrier location
-        # (this needs to be done every year because b3d doesn't include dune domain width when calculating back barrier)
         barrier3d.x_s_TS[-1] = barrier3d.x_s
         barrier3d.x_b_TS[-1] = (
             barrier3d.x_s
             + barrier3d.InteriorWidth_AvgTS[-1]
             + np.size(barrier3d.DuneDomain, 2)  # dune domain width in dam
-            + self._beach_width[self._time_index - 1] / 10  # in dam
+            + (self._beach_width[self._time_index - 1] / 10)  # in dam
         )
 
         return nourish_now, rebuild_dune_now
