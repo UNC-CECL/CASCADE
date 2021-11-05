@@ -561,7 +561,8 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
         os.makedirs(newpath)
     os.chdir(newpath)
 
-    for t in range(TMAX - 1):
+    # for t in range(TMAX - 1):
+    for t in range(TMAX + 1):
 
         # start with plotting t=0, then plot post-storm dune, interior, shoreface, etc. before management, treating this
         # as t=0.5 (i.e., this is really the final configuration from storms at t=1,2,3,4,5,... but before human
@@ -576,7 +577,7 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
             for iB3D in range(ny):
 
                 actual_shoreline_post_storm = np.hstack(
-                    [0, cascade.nourishments[iB3D]._post_storm_x_s[1:TMAX]]
+                    [0, cascade.nourishments[iB3D]._post_storm_x_s[1 : TMAX + 1]]
                 )
 
                 # Build beach elevation domain, we only show beach width decreasing in increments of 10 m and we don't
@@ -651,7 +652,8 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
             elevFig1.savefig(name)  # dpi=200
             plt.close(elevFig1)
 
-    for t in range(TMAX_SIM - 1):
+    # for t in range(TMAX_SIM - 1):
+    for t in range(TMAX_SIM):
 
         # ok, now the annual time step, which incoporates human modifications to the shoreface, beach, dune, & interior
         AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -1
@@ -663,16 +665,19 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
             # Build beach elevation domain, we only show beach width decreasing in increments of 10 m and we don't
             # illustrate a berm, just a sloping beach up to the elevation of the berm
 
-            if cascade.nourishments[iB3D].beach_width[t] is not None:
+            if math.isnan(cascade.nourishments[iB3D].beach_width[t]):
+                # cellular_dune_toe_post_humans = np.floor(
+                #     actual_shoreline_post_humans[t]
+                #     + (cascade.nourishments[iB3D].beach_width[TMAX] / 10)
+                # )  # just set to the last TMAX so not weird jolt in shoreline position
+                cellular_dune_toe_post_humans = np.floor(
+                    actual_shoreline_post_humans[t]
+                )  # make bw zero
+            else:
                 cellular_dune_toe_post_humans = np.floor(
                     actual_shoreline_post_humans[t]
                     + (cascade.nourishments[iB3D].beach_width[t] / 10)
                 )
-            else:
-                cellular_dune_toe_post_humans = np.floor(
-                    actual_shoreline_post_humans[t]
-                    + (cascade.nourishments[iB3D].beach_width[TMAX] / 10)
-                )  # just set to the last TMAX so not weird jolt in shoreline position
 
             cellular_shoreline_post_humans = np.floor(actual_shoreline_post_humans[t])
             cellular_beach_width = int(
@@ -738,13 +743,18 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
 
     frames = []
 
-    for filenum in range(TMAX_SIM - 1):
+    # for filenum in range(TMAX_SIM - 1):
+    for filenum in range(TMAX_SIM):
         filename = "elev_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
 
+        # if (
+        #     filenum < TMAX - 2
+        #     and cascade.nourishments[iB3D]._post_storm_interior[TMAX - 2] is not None
+        # ):
         if (
-            filenum < TMAX - 2
-            and cascade.nourishments[iB3D]._post_storm_interior[TMAX - 2] is not None
+            filenum < TMAX
+            and cascade.nourishments[iB3D]._post_storm_interior[TMAX] is not None
         ):
             filename = "elev_" + str(filenum) + "pt5" ".png"
             frames.append(imageio.imread(filename))
@@ -1761,12 +1771,12 @@ def combine_post_storm_human_time_series(
 ):
 
     time = np.arange(0, tmax_sim - 0.5, 0.5)
-    combined_stastic = [None] * (len(time))
-    combined_stastic[::2] = human_modified_statistic
-    combined_stastic[1::2] = post_storm_statistic[1:]
-    combined_stastic = np.array(combined_stastic)
+    combined_statistic = [None] * (len(time))
+    combined_statistic[::2] = human_modified_statistic
+    combined_statistic[1::2] = post_storm_statistic[1:]
+    combined_statistic = np.array(combined_statistic)
 
-    return combined_stastic
+    return combined_statistic
 
 
 def plot_nonlinear_stats_RoadwayManager(
@@ -2372,7 +2382,7 @@ def plot_nonlinear_stats_BeachDuneManager(
         )
 
     # beach width -----------------------------------------
-    beach_width = nourishments[ib3d].beach_width  # m
+    beach_width = nourishments[ib3d].beach_width[0:tmax_sim]  # m
 
     # before human modifications
     if post_storm_beach_width is not None:
@@ -2484,13 +2494,14 @@ def plot_nonlinear_stats_BeachDuneManager(
         )
         mask = np.isfinite(combined_dune_toe)
         plt.plot(full_time[mask], combined_dune_toe[mask], "--m")
+        plt.legend(["shoreline", "dune toe"])
         # plt.legend(["includes post-storm", "mgmt only"])
     dune_toe = np.array(shoreline_position) + np.array(beach_width)
     plt.plot(shoreline_position, "k")
     plt.plot(dune_toe, "--k")
     plt.ylabel("Cross-shore position (m)")
     plt.xlabel("Time (yr)")
-    plt.legend(["shoreline", "dune toe"])
+    # plt.legend(["shoreline", "dune toe"])
 
     plt.tight_layout()
 
@@ -2540,11 +2551,12 @@ def plot_nonlinear_stats_BeachDuneManager(
     if post_storm_BarrierWidth is not None:
         BarrierWidth = combined_BarrierWidth
 
-    if post_storm_x_s is not None:
-        shoreline_position = combined_shoreline_position
+    # if post_storm_x_s is not None:
+    # shoreline_position = combined_shoreline_position
 
     if post_storm_beach_width is not None:
         beach_width = combined_beach_width
+        # dune_toe = combined_dune_toe
 
     if post_storm_s_sf is not None:
         shoreface_slope = combined_shoreface_slope
@@ -2561,10 +2573,11 @@ def plot_nonlinear_stats_BeachDuneManager(
         sc_rate,
         DuneCrestMin,
         DuneCrestMax,
-        shoreline_position,
+        shoreline_position,  # not combined
         shoreface_slope,
         beach_width,
         overwash,
+        dune_toe,  # not combined
     )
 
 
@@ -2572,15 +2585,22 @@ def plot_nonlinear_stats_BeachDuneManager(
 # The remaining figures are all used to create paper figures for "Pathways to barrier drowning from coastal management"
 
 
-def plot_nonlinear_stats_low_high(
+def plot_nonlinear_stats_mgmt_array4(
     cascade,  # these are lists
     DuneCrestMin,
     DuneCrestMax,
     BarrierHeight,
     BarrierWidth,
     DuneCrestMean,
+    shoreline_position,
+    overwash,
+    dune_toe,
     TMAX,
-    tmax_roadways,
+    tmax_management,
+    roadways_on=True,
+    nourishment_on=False,
+    rebuild_threshold=None,
+    scenarios=None,
 ):
     iB3D = 0
 
@@ -2595,34 +2615,53 @@ def plot_nonlinear_stats_low_high(
             dune_max = DuneCrestMax[i][0 : len(time)]
             mask1 = np.isfinite(dune_min)
             mask2 = np.isfinite(dune_max)
-            dunes_rebuilt_shoreline_change = (
+            dunes_rebuilt_cellular_shoreline_change = (
                 np.array(
-                    cascade[i].barrier3d[iB3D]._ShorelineChangeTS[0 : tmax_roadways[i]]
+                    cascade[i]
+                    .barrier3d[iB3D]
+                    ._ShorelineChangeTS[0 : tmax_management[i]]
                 )
                 < 0
             )
-            indices = [i for i, x in enumerate(dunes_rebuilt_shoreline_change) if x]
+            indices = [
+                i for i, x in enumerate(dunes_rebuilt_cellular_shoreline_change) if x
+            ]  # for nourishment this is typically zero
             axs[i].plot(time[mask1], dune_min[mask1])
             axs[i].plot(time[mask2], dune_max[mask2])
 
-            axs[i].plot(
-                yearly_time[0 : tmax_roadways[i]],
-                cascade[i]
-                ._roadways[iB3D]
-                ._dune_minimum_elevation_TS[0 : tmax_roadways[i]],
-                "-kD",
-                markevery=indices,
-            )
-            axs[i].plot(
-                yearly_time[0 : tmax_roadways[i]],
-                cascade[i]
-                ._roadways[iB3D]
-                ._dune_design_elevation_TS[0 : tmax_roadways[i]],
-            )
-            axs[i].plot(
-                yearly_time[0 : tmax_roadways[i]],
-                cascade[i]._roadways[iB3D]._road_ele_TS[0 : tmax_roadways[i]],
-            )
+            if roadways_on:
+                axs[i].plot(
+                    yearly_time[0 : tmax_management[i]],
+                    cascade[i]
+                    .roadways[iB3D]
+                    ._dune_minimum_elevation_TS[0 : tmax_management[i]],
+                    "-kD",
+                    markevery=indices,
+                )
+                axs[i].plot(
+                    yearly_time[0 : tmax_management[i]],
+                    cascade[i]
+                    .roadways[iB3D]
+                    ._dune_design_elevation_TS[0 : tmax_management[i]],
+                )
+                axs[i].plot(
+                    yearly_time[0 : tmax_management[i]],
+                    cascade[i].roadways[iB3D]._road_ele_TS[0 : tmax_management[i]],
+                )
+            if nourishment_on:
+                axs[i].hlines(
+                    rebuild_threshold,  # in m
+                    time[0],
+                    time[-1],
+                    "red",
+                )
+                axs[i].hlines(
+                    cascade[i].nourishments[iB3D]._dune_design_elevation,  # in m
+                    time[0],
+                    time[-1],
+                    "yellow",
+                )
+
             axs[i].hlines(
                 cascade[i].barrier3d[0]._Dmaxel * 10, time[0], time[-1], colors="green"
             )
@@ -2631,22 +2670,38 @@ def plot_nonlinear_stats_low_high(
             time = np.arange(0, TMAX[i], 1)
             axs[i].plot(time, DuneCrestMin[i][0 : TMAX[i]])
             axs[i].plot(time, DuneCrestMax[i][0 : TMAX[i]])
+            axs[i].hlines(
+                cascade[i].barrier3d[0]._Dmaxel * 10, time[0], time[-1], colors="green"
+            )
         axs[i].set(xlabel="time (yr)")
-        axs[i].set_xlim([-15, 765])
-        # axs[i].set_ylim([1.43, 5.2])
-        axs[i].set_ylim([0, 5.2])
-
+        if roadways_on:
+            axs[i].set_xlim([-15, 765])
+            axs[i].set_ylim([0, 5.5])
+        if nourishment_on:
+            axs[i].set_xlim([-15, 515])
+            axs[i].set_ylim([0, 5.5])
     axs[0].set(ylabel="elevation (m MHW)")
-    axs[3].legend(
-        [
-            "dune along. min",
-            "dune along. max",
-            "dune rebuild",
-            "dune design",
-            "road",
-            "dune max-equil",
-        ]
-    )
+    if roadways_on:
+        axs[3].legend(
+            [
+                "dune along. min",
+                "dune along. max",
+                "dune rebuild",
+                "dune design",
+                "road",
+                "dune max-equil",
+            ]
+        )
+    if nourishment_on:
+        axs[3].legend(
+            [
+                "dune along. min",
+                "dune along. max",
+                "dune rebuild",
+                "dune design",
+                "dune max-equil",
+            ]
+        )
     plt.tight_layout()
 
     # interior height and width
@@ -2657,9 +2712,69 @@ def plot_nonlinear_stats_low_high(
         if i > 0:
             time = np.arange(0, TMAX[i] - 0.5, 0.5)
             yearly_time = np.arange(0, TMAX[i], 1)
+
             barrier_height = BarrierHeight[i][0 : len(time)]
-            mask = np.isfinite(barrier_height)
-            axs2[0].plot(time[mask], barrier_height[mask], color[i])
+            mask_bh = np.isfinite(barrier_height)
+
+            scts = [
+                (x - shoreline_position[i][0])
+                for x in shoreline_position[i][0 : TMAX[i]]
+            ]
+            axs2[2].plot(yearly_time, scts, color[i])
+
+            if roadways_on:
+                axs2[0].plot(time[mask_bh], barrier_height[mask_bh], color[i])
+                axs2[1].plot(yearly_time, BarrierWidth[i][0 : TMAX[i]], color[i])
+                axs2[3].plot(yearly_time, overwash[0 : TMAX[i]], color[i])
+
+            if nourishment_on:
+                axs2[0].plot(
+                    time[mask_bh], barrier_height[mask_bh], color[i], alpha=0.3
+                )
+                axs2[0].plot(
+                    yearly_time,
+                    (np.array(cascade[i].barrier3d[0].h_b_TS[0 : TMAX[i]]) * 10),
+                    color[i],
+                )
+
+                barrier_width = BarrierWidth[i][0 : len(time)]
+                mask_bw = np.isfinite(barrier_width)
+                axs2[1].plot(time[mask_bw], barrier_width[mask_bw], color[i], alpha=0.3)
+                axs2[1].plot(
+                    yearly_time,
+                    (
+                        np.array(
+                            cascade[i].barrier3d[0].InteriorWidth_AvgTS[0 : TMAX[i]]
+                        )
+                        * 10
+                    ),  # m
+                    color[i],
+                )
+
+                dtts = np.array(
+                    [(x - shoreline_position[i][0]) for x in dune_toe[i][0 : TMAX[i]]]
+                )
+                mask_dtts = np.isnan(dtts)
+                axs2[2].plot(
+                    yearly_time[~mask_dtts], dtts[~mask_dtts], color[i], alpha=0.3
+                )
+
+                ow = overwash[i][0 : len(time)]
+                mask_ow = np.isfinite(ow)
+                axs2[3].plot(time[mask_ow], ow[mask_ow], color[i], alpha=0.3)
+                axs2[3].plot(
+                    yearly_time, cascade[i].barrier3d[0].QowTS[0 : TMAX[i]], color[i]
+                )
+
+            axs2[0].axvline(x=tmax_management[i], color=color[i])
+            axs2[1].axvline(x=tmax_management[i], color=color[i])
+            axs2[2].axvline(x=tmax_management[i], color=color[i])
+            axs2[3].axvline(x=tmax_management[i], color=color[i])
+
+        else:
+            # the natural scenario
+            yearly_time = np.arange(0, TMAX[i], 1)
+            axs2[0].plot(yearly_time, BarrierHeight[i][0 : TMAX[i]], color[i])
             axs2[1].plot(yearly_time, BarrierWidth[i][0 : TMAX[i]], color[i])
             scts = [
                 (x - cascade[i].barrier3d[0]._x_s_TS[0]) * 10
@@ -2669,36 +2784,72 @@ def plot_nonlinear_stats_low_high(
             axs2[3].plot(
                 yearly_time, cascade[i].barrier3d[0].QowTS[0 : TMAX[i]], color[i]
             )
-            axs2[0].axvline(x=tmax_roadways[i], color=color[i])
-            axs2[1].axvline(x=tmax_roadways[i], color=color[i])
-            axs2[2].axvline(x=tmax_roadways[i], color=color[i])
-            axs2[3].axvline(x=tmax_roadways[i], color=color[i])
-
-        else:
-            # the natural scenario
-            time = np.arange(0, TMAX[i], 1)
-            axs2[0].plot(time, BarrierHeight[i][0 : TMAX[i]], color[i])
-            axs2[1].plot(time, BarrierWidth[i][0 : TMAX[i]], color[i])
-            scts = [
-                (x - cascade[i].barrier3d[0]._x_s_TS[0]) * 10
-                for x in cascade[i].barrier3d[0]._x_s_TS[0 : TMAX[i]]
-            ]
-            axs2[2].plot(time, scts, color[i])
-            axs2[3].plot(time, cascade[i].barrier3d[0].QowTS[0 : TMAX[i]], color[i])
 
         axs2[i].set(xlabel="time (yr)")
-        axs2[i].set_xlim([-15, 765])
+        if roadways_on:
+            axs2[i].set_xlim([-15, 765])
+        if nourishment_on:
+            axs2[i].set_xlim([-15, 515])
 
     axs2[0].set(ylabel="barrier elevation (m MHW)")
     axs2[0].set_ylim([-0.03, 1.75])
     axs2[1].set(ylabel="barrier width (m)")
     axs2[1].set_ylim([-6, 425])
-    axs2[2].set(ylabel="shoreline position (m)")
-    axs2[2].set_ylim([-10, 615])
-    axs2[3].set_ylim([-3, 225])
+    if roadways_on:
+        axs2[2].set_ylim([-10, 615])
+        axs2[2].set(ylabel="shoreline position (m)")
+    if nourishment_on:
+        axs2[2].set_ylim([-30, 615])
+        axs2[2].set(ylabel="cross-shore position (m)")
+        axs2[2].legend(["shoreline", "dune toe"])
     axs2[3].set(ylabel="overwash flux (m$^3$/m)")
-    axs2[3].legend(["natural", "1-m dune", "2-m dune", "3-m dune"])
+    axs2[3].set_ylim([-3, 225])
+    if roadways_on:
+        scenarios = ["natural", "1-m dune", "2-m dune", "3-m dune"]
+        axs2[3].legend(scenarios)
+    if nourishment_on:
+        axs2[3].legend(scenarios)
     plt.tight_layout()
+
+    # plot a zoom in of nourishments
+    if nourishment_on:
+        fig3, axs3 = plt.subplots(1, 2, figsize=(10, 3), sharex=True)
+
+        color = ["b", "r", "g", "m"]
+        for i in range(len(cascade)):
+
+            if i > 0:
+                time = np.arange(0, TMAX[i] - 0.5, 0.5)
+                yearly_time = np.arange(0, TMAX[i], 1)
+
+                scts = [
+                    (x - shoreline_position[i][0])
+                    for x in shoreline_position[i][0 : TMAX[i]]
+                ]
+                axs3[1].plot(yearly_time, scts, color[i])
+
+                dtts = np.array(
+                    [(x - shoreline_position[i][0]) for x in dune_toe[i][0 : TMAX[i]]]
+                )
+                mask_dtts = np.isnan(dtts)
+                axs3[1].plot(
+                    yearly_time[~mask_dtts], dtts[~mask_dtts], color[i], alpha=0.3
+                )
+
+            else:
+                # the natural scenario
+                yearly_time = np.arange(0, TMAX[i], 1)
+                scts = [
+                    (x - cascade[i].barrier3d[0]._x_s_TS[0]) * 10
+                    for x in cascade[i].barrier3d[0]._x_s_TS[0 : TMAX[i]]
+                ]
+                axs3[1].plot(yearly_time, scts, color[i])
+
+            axs3[1].set(ylabel="cross-shore position (m)")
+            axs3[1].set_ylim([-30, 50])
+            axs3[1].set(xlabel="time (yr)")
+            axs3[1].set_xlim([110, 210])
+            axs3[1].legend(["shoreline", "dune toe"])
 
     # # characteristic trajectory plots
     # fig3, axs3 = plt.subplots(1, 4, figsize=(10, 3), sharex=True)
