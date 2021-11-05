@@ -527,7 +527,7 @@ class RoadwayManager:
             None
         ] * self._nt  # keep track of what percent of the dune elevations fall below minimum threshold
         self._growth_params = [
-            None
+            np.nan
         ] * self._nt  # when dune growth parameters set to zero b/c of rebuild height
         self._growth_params[0] = original_growth_param
 
@@ -560,7 +560,7 @@ class RoadwayManager:
         # check if road relocation is needed
         average_barrier_width = barrier3d.InteriorWidth_AvgTS[-1] * 10  # m
         dune_migration = (
-            barrier3d.ShorelineChangeTS[-1] * 10
+            barrier3d.ShorelineChangeTS[self._time_index - 1] * 10
         )  # if +, dune progrades; -, dune erodes into interior [m]
         [
             road_relocated,
