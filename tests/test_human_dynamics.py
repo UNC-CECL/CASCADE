@@ -1,8 +1,14 @@
 import numpy as np
 from numpy.testing import assert_array_almost_equal
+from pathlib import Path
+from tqdm import tqdm
 
 from cascade.roadway_manager import bulldoze, rebuild_dunes, set_growth_parameters
 from cascade.beach_dune_manager import shoreface_nourishment, filter_overwash
+from cascade import Cascade
+
+datadir = "../Cascade/B3D_Inputs/"
+Path(datadir)
 
 
 def test_bulldoze_volume():
@@ -64,6 +70,8 @@ def test_bulldoze_volume():
     assert_array_almost_equal(
         new_dune_domain, (np.zeros([20, 2]) + 1 / 10)
     )  # should equal 0.1 vertical decameter of accretion along each dune cell
+
+    # NOTE: need to make a test that shows unequal overwash volume removed per grid cell and placement on adjacent dunes
 
 
 def test_rebuild_dunes_interpolation():
@@ -186,6 +194,7 @@ def test_overwash_filter():
         post_storm_xyz_interior_grid=post_xyz_interior_grid,
         pre_storm_xyz_interior_grid=pre_xyz_interior_grid,
         post_storm_yxz_dune_grid=yxz_dune_grid,
+        artificial_maximum_dune_height=0.5,  # maximum height of artificial dunes in dam
     )
 
     # check that it only removes overwash, doesn't deepen areas where there wasn't overwash or eroded
@@ -207,6 +216,7 @@ def test_overwash_filter():
         post_storm_xyz_interior_grid=post_xyz_interior_grid,
         pre_storm_xyz_interior_grid=pre_xyz_interior_grid,
         post_storm_yxz_dune_grid=yxz_dune_grid,
+        artificial_maximum_dune_height=0.5,  # maximum height of artificial dunes in dam
     )
 
     post_xyz_interior_grid = (
@@ -227,9 +237,67 @@ def test_overwash_filter():
         post_storm_xyz_interior_grid=post_xyz_interior_grid,
         pre_storm_xyz_interior_grid=pre_xyz_interior_grid,
         post_storm_yxz_dune_grid=yxz_dune_grid,
+        artificial_maximum_dune_height=0.5,  # maximum height of artificial dunes in dam
     )
 
     assert all(
         [a == b] for a, b in zip(np.ceil(barrier_overwash_removed), [800, 792, 792])
     )
     # assert_array_almost_equal(barrier_overwash_removed, [800, 792, 792])
+
+
+def test_shoreline_migration():
+    """
+    As a check on the dynamics in Barrier3D, here we want to see if the dunes migrate when the beach width goes to zero
+    and the shoreline surpasses a full cell width (10 m). Indeed, dunes only migrate when humans allow them to
+    (beach width = 0), and when the shoreline moves a full cell width -- in year 57 and 65. Note that if one was to
+    check the `post_storm_x_s`, they would find that the dunes actually migrated at 56.5 since dune migration
+    occurrs prior to any human modifications.
+    """
+
+    iB3D = 0
+    total_time = 100
+
+    cascade = Cascade(
+        datadir,
+        name="test",
+        sea_level_rise_rate=0.007,
+        alongshore_section_count=1,
+        time_step_count=total_time,
+        num_cores=1,
+        roadway_management_module=False,
+        alongshore_transport_module=False,
+        beach_nourishment_module=True,
+        community_dynamics_module=False,
+        dune_design_elevation=3.7,
+        nourishment_interval=10,  # yrs
+        nourishment_volume=100,
+        background_erosion=-1.0,  # m/yr
+        overwash_filter=40,
+    )
+
+    # Loop for 50 years at a 10 year interval, 100 m^3/m and then 50 years at a 20 year interval with 300 m^3/m
+    nt = 50
+    for _ in tqdm(range(nt - 1)):
+        cascade.update()
+        if cascade.road_break or cascade.b3d_break:
+            break
+
+    # during the CASCADE initialization, the nourishment interval and volume is specified individually for each
+    # barrier3d alongshore cell; so to update these values, we need to specify which barrier3d cell we want to modify
+    # (here, we only have one cell)
+    cascade.nourishment_interval[iB3D] = 20  # increase to 20 years
+    cascade.nourishment_volume[iB3D] = 300  # increase to 300 m^3/m
+
+    for _ in tqdm(range(nt)):
+        cascade.update()
+        if cascade.road_break or cascade.b3d_break:
+            break
+
+    frac_grid_cell = np.array(cascade.barrier3d[iB3D]._x_s_TS) % 1
+    diff = np.hstack([0, np.diff(frac_grid_cell)])
+    diff[~np.array(cascade.nourishments[iB3D]._dune_migration_on)] = 0
+    shoreline_transgressed = diff < 0
+    dunes_migrated = cascade.barrier3d[iB3D]._ShorelineChangeTS < 0
+
+    assert all(shoreline_transgressed == dunes_migrated)
