@@ -44,18 +44,35 @@ def batchB3D(subB3D):
 
 
 def initialize_equal(
-        datadir,
-        brie,
-        slr_constant,
-        rmin,
-        rmax,
-        parameter_file,
-        storm_file,
-        dune_file,
-        elevation_file,
+    datadir,
+    brie,
+    slr_constant,
+    rmin,
+    rmax,
+    background_erosion,
+    parameter_file,
+    storm_file,
+    dune_file,
+    elevation_file,
 ):
-    # for each B3D subgrid, set the initial shoreface geometry equal to what is set in brie (some random
+    """
+    for each B3D subgrid, set the initial shoreface geometry equal to what is set in brie (some random
     # perturbations); all other B3D variables are set equal
+
+    :param datadir: the directory containing the Barrier3D parameter file
+    :param brie: the brie class
+    :param slr_constant: specifies whether SLR will be constant
+    :param rmin: the minimum dune growth rate
+    :param rmax: the maximum dune growth rate
+    :param background_erosion: Rate of shoreline retreat attributed to gradients in alongshore transport
+    :param parameter_file: name of the Barrier3D parameter file
+    :param storm_file: name of the Barrier3D storms file
+    :param dune_file: name of the Barrier3D dunes file
+    :param elevation_file: name of the Barrier3D elevation file
+
+    :return: barrier3d
+
+    """
     barrier3d = []
 
     for iB3D in range(brie.ny):
@@ -90,8 +107,8 @@ def initialize_equal(
             "DuneParamStart", True, fid
         )  # Dune height will come from external file
         set_yaml(
-            "Rat", 0.0, fid
-        )  # [m / y] corresponds to Qat in LTA (!!! must set to 0 because Qs is calculated in brie !!!)
+            "Rat", background_erosion, fid
+        )  # Rate of shoreline retreat attributed to gradients in alongshore transport; (-) = erosion, (+) = acc [m / y]
         set_yaml(
             "RSLR_Constant", slr_constant, fid
         )  # Relative sea-level rise rate will be constant, otherwise logistic growth function used
@@ -116,12 +133,8 @@ def initialize_equal(
                 "rmax", rmax[iB3D], fid
             )  # Maximum growth rate for logistic dune growth
         else:
-            set_yaml(
-                "rmin", rmin, fid
-            )  # Minimum growth rate for logistic dune growth
-            set_yaml(
-                "rmax", rmax, fid
-            )  # Maximum growth rate for logistic dune growth
+            set_yaml("rmin", rmin, fid)  # Minimum growth rate for logistic dune growth
+            set_yaml("rmax", rmax, fid)  # Maximum growth rate for logistic dune growth
 
         # external file names used for initialization
         set_yaml("storm_file", storm_file, fid)
@@ -136,14 +149,17 @@ def initialize_equal(
         # NOTE: interestingly here we don't need to have a "setter" in the property class for x_b, h_b, etc. because
         # we are only replacing certain indices but added for completeness
         brie.x_b[iB3D] = (
-                barrier3d[iB3D].x_b_TS[0] * 10
+            barrier3d[iB3D].x_b_TS[0] * 10
         )  # the shoreline position + average interior width
         brie.h_b[iB3D] = (
-                barrier3d[iB3D].h_b_TS[0] * 10
+            barrier3d[iB3D].h_b_TS[0] * 10
         )  # average height of the interior domain
         brie.x_b_save[iB3D, 0] = brie.x_b[iB3D]
         brie.h_b_save[iB3D, 0] = brie.h_b[iB3D]
-    brie.slr = np.array(barrier3d[0].RSLR) * 10   # same for all b3d domains, just use first
+
+    brie.slr = (
+        np.array(barrier3d[0].RSLR) * 10
+    )  # same for all b3d domains, just use first
 
     return barrier3d
 
@@ -153,29 +169,44 @@ class BrieCoupler:
 
     Examples
     --------
-    >>> from cascade.brie_coupler import BrieCoupler
-    >>> brie_coupler = BrieCoupler()
-    >>> brie_coupler.update_inlets(brie, barrier3d)
-    >>> brie_coupler.update_ast(brie, barrier3d)
+    # >>> from cascade.brie_coupler import BrieCoupler
+    # >>> brie_coupler = BrieCoupler()
+    # >>> brie_coupler.update_inlets(brie, barrier3d)
+    # >>> brie_coupler.update_ast(brie, barrier3d)
     """
 
     def __init__(
-            self,
-            name,
-            wave_height,
-            wave_period,
-            wave_assymetry,
-            wave_angle_high_fraction,
-            sea_level_rise_rate,
-            ny,
-            nt,
+        self,
+        name="default",
+        wave_height=1,
+        wave_period=7,
+        wave_asymmetry=0.8,
+        wave_angle_high_fraction=0.2,
+        sea_level_rise_rate=0.004,
+        ny=1,
+        nt=200,
     ):
         """The AlongshoreCoupler module.
 
         Parameters
         ----------
+        name: string, optional
+            Name of simulation
+        wave_height: float, optional
+            Mean offshore significant wave height [m].
+        wave_period: float, optional
+            Mean wave period [s].
+        wave_asymmetry: float, optional
+            Fraction of waves approaching from left (looking onshore).
+        wave_angle_high_fraction: float, optional
+            Fraction of waves approaching from angles higher than 45 degrees.
+        sea_level_rise_rate: float, optional
+            Rate of sea_level rise [m/yr].
         ny: int, optional
             The number of alongshore Barrier3D domains for simulation in BRIE
+        nt: int, optional
+            Number of time steps.
+
         """
         ###############################################################################
         # initial conditions for BRIE
@@ -215,7 +246,7 @@ class BrieCoupler:
             b3d=b3d_barrier_model,
             wave_height=wave_height,
             wave_period=wave_period,
-            wave_asymmetry=wave_assymetry,
+            wave_asymmetry=wave_asymmetry,
             wave_angle_high_fraction=wave_angle_high_fraction,
             sea_level_rise_rate=sea_level_rise_rate,
             sea_level_initial=z,

@@ -3,8 +3,8 @@ from joblib import Parallel, delayed
 import numpy as np
 import os
 
-from .roadway_manager import RoadwayManager
-from .beach_nourisher import BeachNourisher
+from .roadway_manager import RoadwayManager, set_growth_parameters
+from .beach_dune_manager import BeachDuneManager
 from .brie_coupler import BrieCoupler, initialize_equal, batchB3D
 from .chome_coupler import ChomeCoupler
 
@@ -27,9 +27,7 @@ class Cascade:
         """Configures lists to account for multiple barrier3d domains from single input variables; used in modules"""
 
         if np.size(dune_design_elevation) > 1:
-            self._dune_design_elevation = (
-                dune_design_elevation  # list of floats option
-            )
+            self._dune_design_elevation = dune_design_elevation  # list of floats option
         else:
             self._dune_design_elevation = [dune_design_elevation] * self._ny
         if np.size(dune_minimum_elevation) > 1:
@@ -45,11 +43,9 @@ class Cascade:
         else:
             self._road_ele = [road_ele] * self._ny
         if np.size(road_setback) > 1:
-            self._orig_road_setback = road_setback
-            self._road_relocation_setback = road_setback
+            self._road_setback = road_setback
         else:
-            self._orig_road_setback = [road_setback] * self._ny
-            self._road_relocation_setback = [road_setback] * self._ny
+            self._road_setback = [road_setback] * self._ny
         if np.size(nourishment_interval) > 1:
             self._nourishment_interval = nourishment_interval
         else:
@@ -60,6 +56,25 @@ class Cascade:
             self._nourishment_volume = [nourishment_volume] * self._ny
 
         return
+
+    def reset_dune_growth_rates(
+        self,
+        original_growth_param,
+        iB3D,
+    ):
+        """Reset dune growth paramerters to original values after human abandonment; dune heights must drop below Dmax
+        before reset"""
+
+        time_index = self._barrier3d[iB3D].time_index
+
+        new_growth_parameters = set_growth_parameters(
+            self._barrier3d[iB3D].DuneDomain[time_index - 1, :, :],
+            self._barrier3d[iB3D].Dmax,
+            self._barrier3d[iB3D].growthparam,
+            original_growth_param=original_growth_param,  # use original growth rates for resetting values
+        )
+
+        return new_growth_parameters
 
     def __init__(
         self,
@@ -75,9 +90,10 @@ class Cascade:
         wave_angle_high_fraction=0.2,
         sea_level_rise_rate=0.004,
         sea_level_rise_constant=True,
+        background_erosion=0.0,
         alongshore_section_count=6,
         time_step_count=200,
-        min_dune_growth_rate=0.25,  # average is 0.45, low dune growth rate
+        min_dune_growth_rate=0.25,  # average is 0.45, a low dune growth rate
         max_dune_growth_rate=0.65,
         num_cores=1,
         roadway_management_module=False,
@@ -91,6 +107,7 @@ class Cascade:
         dune_minimum_elevation=2.2,
         nourishment_interval=None,
         nourishment_volume=300.0,
+        overwash_filter=40,
         number_of_communities=1,
         sand_cost=10,
         taxratio_oceanfront=1,
@@ -121,6 +138,8 @@ class Cascade:
             Rate of sea_level rise [m/yr].
         sea_level_rise_constant: boolean, optional
             Rate of sea_level rise is constant if True, otherwise a logistic growth function is used.
+        background_erosion: float,
+            Rate of shoreline retreat attributed to gradients in alongshore transport; (-) = erosion, (+) = acc [m / y]
         alongshore_section_count: int, optional
             Number of alongshore sections.
         time_step_count: int, optional
@@ -140,19 +159,21 @@ class Cascade:
         beach_nourishment_module: boolean, optional
             If True, use nourishment module (nourish shoreface, rebuild dunes)
         road_ele: float or list of floats, optional
-            Elevation of the roadway [m NAVD88]
+            Elevation of the initial roadway [m MHW] and after road relocations
         road_width: int or list of int, optional
-            Width of roadway [m]
+            Width of initial roadway [m] and road relocations
         road_setback: int or list of int, optional
-            Setback of roadway from the inital dune line [m]
+            Setback of initial roadway from the inital dune line [m] and after road relocations
         dune_design_elevation: float or list of floats, optional
-            Elevation to which dune is rebuilt to [m NAVD88]
+            Elevation to which dune is initially rebuilt to [m MHW] and after road relocations
         dune_minimum_elevation: float or list of floats, optional
-            Elevation threshold which triggers rebuilding of dune [m NAVD88]
+            Elevation threshold which triggers rebuilding of dune [m MHW]
         nourishment_interval: int or list of ints, optional
              Interval that nourishment occurs [yrs]
         nourishment_volume: float or list of float, optional
              Volume of nourished sand along cross-shore transect [m^3/m]
+        overwash_filter: float,
+            Percent overwash removed from barrier interior [40-90% (residential-->commercial) from Rogers et al., 2015]
         number_of_communities: int, optional
             Number of communities (CHOME model instances) described by the alongshore section count (Barrier3D grids)
         sand_cost: int, optional
@@ -187,6 +208,7 @@ class Cascade:
         self._wave_angle_high_fraction = wave_angle_high_fraction
         self._sea_level_rise_rate = sea_level_rise_rate
         self._slr_constant = sea_level_rise_constant
+        self._background_erosion = background_erosion
         self._num_cores = num_cores
         self._roadway_management_module = roadway_management_module
         self._alongshore_transport_module = alongshore_transport_module
@@ -200,6 +222,9 @@ class Cascade:
         self._number_of_communities = number_of_communities
         self._b3d_break = 0  # true if barrier in barrier3d height or width drowns
         self._road_break = 0  # true if roadway drowns from bay reaching roadway
+        self._community_break = (
+            0  # true if community breaks due to minimum barrier width
+        )
         self._nourish_now = [0] * self._ny  # triggers nourishment
         self._rebuild_dune_now = [0] * self._ny  # triggers dune rebuilding
 
@@ -209,42 +234,43 @@ class Cascade:
 
         # initialize brie: used for initial shoreface calculations, AST (optional), tidal inlets (eventually)
         self._brie_coupler = BrieCoupler(
-            name,
-            self._wave_height,
-            self._wave_period,
-            self._wave_asymmetry,
-            self._wave_angle_high_fraction,
-            self._sea_level_rise_rate,
-            self._ny,
-            self._nt,
+            name=name,
+            wave_height=self._wave_height,
+            wave_period=self._wave_period,
+            wave_asymmetry=self._wave_asymmetry,
+            wave_angle_high_fraction=self._wave_angle_high_fraction,
+            sea_level_rise_rate=self._sea_level_rise_rate,
+            ny=self._ny,
+            nt=self._nt,
         )
 
         # initialize barrier3d and make both brie and barrier3d classes equivalent
         self._barrier3d = initialize_equal(
-            datadir,
-            self._brie_coupler._brie,
-            self._slr_constant,
-            self._rmin,
-            self._rmax,
-            self._parameter_file,
-            self._storm_file,
-            self._dune_file,
-            self._elevation_file,
+            datadir=datadir,
+            brie=self._brie_coupler._brie,
+            slr_constant=self._slr_constant,
+            rmin=self._rmin,
+            rmax=self._rmax,
+            background_erosion=self._background_erosion,
+            parameter_file=self._parameter_file,
+            storm_file=self._storm_file,
+            dune_file=self._dune_file,
+            elevation_file=self._elevation_file,
         )
 
         ###############################################################################
         # initialize human dynamics modules
         ###############################################################################
 
-        # configure `self` to create lists of these variables
+        # configure `self` to create lists of these variables; time series of these variables are saved in modules
         self.module_lists(
-            dune_design_elevation,
-            dune_minimum_elevation,
-            road_width,
-            road_ele,
-            road_setback,
-            nourishment_interval,
-            nourishment_volume,
+            dune_design_elevation=dune_design_elevation,
+            dune_minimum_elevation=dune_minimum_elevation,
+            road_width=road_width,
+            road_ele=road_ele,
+            road_setback=road_setback,
+            nourishment_interval=nourishment_interval,
+            nourishment_volume=nourishment_volume,
         )
 
         if self._community_dynamics_module:
@@ -270,7 +296,7 @@ class Cascade:
                     house_footprint=house_footprint,
                 )  # contains the CHOME model instances, one per community
 
-        # initialize RoadwayManager and BeachNourisher modules
+        # initialize RoadwayManager and BeachDuneManager modules
         # (always, just in case we want to add a road or start nourishing during the simulation)
         self._roadways = []
         self._nourishments = []
@@ -278,27 +304,27 @@ class Cascade:
         for iB3D in range(self._ny):
             self._roadways.append(
                 RoadwayManager(
-                    road_elevation=self._road_ele[iB3D],
+                    initial_road_elevation=self._road_ele[iB3D],
                     road_width=self._road_width[iB3D],
-                    road_setback=self._orig_road_setback[iB3D],
-                    road_relocation_setback=self._road_relocation_setback[iB3D],
-                    dune_design_elevation=self._dune_design_elevation[iB3D],
-                    dune_minimum_elevation=self._dune_minimum_elevation[iB3D],
+                    road_setback=self._road_setback[iB3D],
+                    initial_dune_design_elevation=self._dune_design_elevation[iB3D],
+                    initial_dune_minimum_elevation=self._dune_minimum_elevation[iB3D],
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
                 )
             )
+            initial_beach_width = (
+                int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
+            )  # m
             self._nourishments.append(
-                BeachNourisher(
+                BeachDuneManager(
                     nourishment_interval=self._nourishment_interval[iB3D],
                     nourishment_volume=self._nourishment_volume[iB3D],
-                    initial_beach_width=int(
-                        self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta
-                    )
-                    * 10,  # m
+                    initial_beach_width=initial_beach_width,
                     dune_design_elevation=self._dune_design_elevation[iB3D],
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
+                    overwash_filter=overwash_filter,
                 )
             )
 
@@ -382,6 +408,10 @@ class Cascade:
     def nourishment_volume(self, value):
         self._nourishment_volume = value
 
+    @property
+    def community_break(self):
+        return self._community_break
+
     ###############################################################################
     # time loop
     ###############################################################################
@@ -408,43 +438,72 @@ class Cascade:
         h_b_dt = list(h_b_dt)
         self._barrier3d = list(b3d)
 
-        # use brie to connect B3D subgrids with alongshore sediment transport; otherwise, just update dune domain
+        # use brie to connect B3D subgrids with alongshore sediment transport; otherwise, just update (erode/prograde)
+        # dune domain
         if self._alongshore_transport_module:
             self._brie_coupler.update_ast(self._barrier3d, x_t_dt, x_s_dt, h_b_dt)
         else:
             for iB3D in range(self._ny):
                 self._barrier3d[iB3D].update_dune_domain()
 
-        # check also for width/height drowning in B3D (would occur in update_dune_domain); important for B3D only runs
+        # check also for width/height drowning in B3D (would occur in update_dune_domain)
         for iB3D in range(self._ny):
             if self._barrier3d[iB3D].drown_break == 1:
                 self._b3d_break = 1
                 return
 
-        # ---- human dynamics modules ----
+        ###############################################################################
+        # human dynamics modules
+        ###############################################################################
+
         # RoadwayManager:
         # Remove overwash from roadway after each model year, place on the dune, rebuild dunes if
         # fall below height threshold, and check if dunes should grow naturally
         if self._roadway_management_module:
+
             for iB3D in range(self._ny):
 
-                self._roadways[iB3D].dune_design_elevation = self._dune_design_elevation[iB3D],
-                self._roadways[iB3D].dune_minimum_elevation = self._dune_minimum_elevation[iB3D],
-                self._roadways[iB3D].road_ele = self._road_ele[iB3D],
-                self._roadways[iB3D].road_width = self._road_width[iB3D],
-                self._roadways[iB3D].road_relocation_setback = self._road_relocation_setback[iB3D],
-
-                self._roadways[iB3D].update(self._barrier3d[iB3D])
-
-                # if the road drowned or barrier was too narrow to be relocated, break
+                # if the roadway drowned or was too narrow for the road to be relocated, stop managing the road!
                 if (
                     self._roadways[iB3D].drown_break
-                    or self._roadways[iB3D].narrow_break
+                    or self._roadways[iB3D].relocation_break
                 ):
                     self._road_break = 1
+
+                    # set dune growth rates back to original only when dune elevation is less than equilibrium
+                    self._barrier3d[iB3D].growthparam = self.reset_dune_growth_rates(
+                        original_growth_param=self._roadways[
+                            iB3D
+                        ]._original_growth_param,
+                        iB3D=iB3D,
+                    )
                     return
 
+                else:
+                    # manage that road!
+                    self._roadways[iB3D].road_relocation_width = self._road_width[
+                        iB3D
+                    ]  # type: float
+                    self._roadways[iB3D].road_relocation_setback = self._road_setback[
+                        iB3D
+                    ]
+                    self._roadways[iB3D].update(self._barrier3d[iB3D])
+
+        # CHOME coupler:
+        # provide agents in the Coastal Home Ownership Model (CHOME) with variables describing the physical environment
+        # -- including barrier elevation, beach width, dune height, shoreline erosion rate -- who then decide if it is
+        # a nourishment year, the corresponding nourishment volume, and whether or not the dune should be rebuilt
         if self._community_dynamics_module:
+
+            # if barrier was too narrow to sustain a community in the last time step, stop managing beach and dunes!
+            for iB3D in range(self._ny):
+                if self._nourishments[iB3D].narrow_break:
+                    self._community_break = 1
+
+                    # KA: dune growth rate code blurb probably needs to go here
+                    return
+
+            # otherwise, update chome using all barrier3d grids
             self._chome_coupler.dune_design_elevation = self._dune_design_elevation
             [
                 self._nourish_now,
@@ -455,22 +514,43 @@ class Cascade:
                 nourishments=self._nourishments,
             )
 
-        # BeachNourisher:
-        # If interval specified, nourish at that interval, otherwise wait until told with nourish_now to
-        # nourish or rebuild_dunes_now to rebuild dunes. Resets any "now" parameters to false after nourishment.
+        # BeachDuneManager:
+        # If interval specified, nourish at that interval, otherwise wait until told with nourish_now to nourish
+        # or rebuild_dunes_now to rebuild dunes. Resets any "now" parameters to false after nourishment. Module
+        # also filters overwash deposition for residential or commercial communities (user specified).
         if self._beach_nourishment_module:
+
             for iB3D in range(self._ny):
-                self._nourishments[iB3D].dune_design_elevation = self._dune_design_elevation[iB3D]
-                self._nourishments[iB3D].nourishment_volume = self._nourishment_volume[iB3D]
-                [
-                    self._nourish_now[iB3D],
-                    self._rebuild_dune_now[iB3D],
-                ] = self._nourishments[iB3D].update(
-                    barrier3d=self._barrier3d[iB3D],
-                    nourish_now=self._nourish_now[iB3D],
-                    rebuild_dune_now=self._rebuild_dune_now[iB3D],
-                    nourishment_interval=self._nourishment_interval[iB3D],
-                )
+                # if barrier was too narrow to sustain a community in the last time step, stop managing beach and dunes!
+                if self._nourishments[iB3D].narrow_break:
+                    self._community_break = 1
+
+                    # set dune growth rates back to original only when dune elevation is less than equilibrium
+                    self._barrier3d[iB3D].growthparam = self.reset_dune_growth_rates(
+                        original_growth_param=self._nourishments[
+                            iB3D
+                        ]._original_growth_param,
+                        iB3D=iB3D,
+                    )
+                    return
+                else:
+                    self._nourishments[
+                        iB3D
+                    ].dune_design_elevation = self._dune_design_elevation[
+                        iB3D
+                    ]  # m MHW
+                    self._nourishments[
+                        iB3D
+                    ].nourishment_volume = self._nourishment_volume[iB3D]
+                    [
+                        self._nourish_now[iB3D],
+                        self._rebuild_dune_now[iB3D],
+                    ] = self._nourishments[iB3D].update(
+                        barrier3d=self._barrier3d[iB3D],
+                        nourish_now=self._nourish_now[iB3D],
+                        rebuild_dune_now=self._rebuild_dune_now[iB3D],
+                        nourishment_interval=self._nourishment_interval[iB3D],
+                    )
 
     ###############################################################################
     # save data
@@ -485,79 +565,3 @@ class Cascade:
 
         os.chdir(directory)
         np.savez(filename, cascade=csc8d)
-
-
-###############################################################################
-# run brie with LTA for comparison
-###############################################################################
-
-
-# def LTA(
-#     name,
-#     wave_height,
-#     wave_period,
-#     asym_frac,
-#     high_ang_frac,
-#     slr,
-#     ny,
-#     nt,
-#     w_b_crit,
-#     h_b_crit,
-#     Qow_max,
-# ):
-#     # update the initial conditions
-#     ast_model = True  # shoreface formulations on
-#     barrier_model = True  # LTA14 overwash model on
-#     inlet_model = False  # inlet model off
-#     b3d = False  # B3d overwash model on
-#
-#     # barrier model parameters
-#     s_background = 0.001  # background slope (for shoreface toe position, back-barrier & inlet calculations)
-#     z = 10.0  # initial sea level (for tracking SL, Eulerian reference frame)
-#     bb_depth = 3.0  # back-barrier depth
-#
-#     # inlet parameters (use default; these are here to remind me later that they are important and I can change)
-#     Jmin = 10000  # minimum inlet spacing [m]
-#     a0 = 0.5  # amplitude of tide [m]
-#     marsh_cover = 0.5  # % of backbarrier covered by marsh and therefore does not contribute to tidal prism
-#
-#     # model setup
-#     dy = 100  # m, length of alongshore section (NOT the same as B3D, but overwash model performs better with dy=100 m)
-#     ny = ny * int(
-#         500 / dy
-#     )  # number of alongshore sections (NOTE, currently hard-coded for B3D dy = 500 m)
-#     dt = 0.05  # yr, timestep (NOT the same as B3D, but again, LTA14 performs better with dt = 0.05 yr)
-#     nt = int(nt / dt)  # equivalent timesteps to B3D
-#     dtsave = int(1 / dt)  # save spacing (equivalent of yearly for 0.05 time step)
-#
-#     brieLTA = Brie(
-#         name=name,
-#         ast_model=ast_model,
-#         barrier_model=barrier_model,
-#         inlet_model=inlet_model,
-#         b3d=b3d,
-#         wave_height=wave_height,
-#         wave_period=wave_period,
-#         wave_asymmetry=asym_frac,
-#         wave_angle_high_fraction=high_ang_frac,
-#         sea_level_rise_rate=slr,
-#         sea_level_initial=z,
-#         barrier_height_critical=h_b_crit,
-#         barrier_width_critical=w_b_crit,
-#         max_overwash_flux=Qow_max,
-#         tide_amplitude=a0,
-#         back_barrier_marsh_fraction=marsh_cover,
-#         back_barrier_depth=bb_depth,
-#         xshore_slope=s_background,
-#         inlet_min_spacing=Jmin,
-#         alongshore_section_length=dy,
-#         alongshore_section_count=ny,
-#         time_step=dt,
-#         time_step_count=nt,
-#         save_spacing=dtsave,
-#     )  # initialize class
-#
-#     for time_step in range(int(brieLTA.nt) - 1):
-#         brieLTA.update()
-#
-#     return brieLTA

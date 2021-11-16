@@ -30,9 +30,9 @@ class ChomeCoupler:
 
     Examples
     --------
-    >>> from cascade.chome_coupler import ChomeCoupler
-    >>> chome_coupler = ChomeCoupler(barrier3d=, dune_design_elevation=)
-    >>> chome_coupler.update()
+    # >>> from cascade.chome_coupler import ChomeCoupler
+    # >>> chome_coupler = ChomeCoupler(barrier3d=, dune_design_elevation=)
+    # >>> chome_coupler.update()
     """
 
     def __init__(
@@ -52,7 +52,7 @@ class ChomeCoupler:
         nourishment_cost_subsidy=10e6,
         house_footprint=15,
     ):
-        """The ChomeBuyer module.
+        """The ChomeCoupler module.
 
         Parameters
         ----------
@@ -93,7 +93,7 @@ class ChomeCoupler:
         self._community_index = np.arange(ny)
         alongshore_community_length = int(np.ceil(ny / self._number_of_communities))
         self._community_index = [
-            self._community_index[x: x + alongshore_community_length]
+            self._community_index[x : x + alongshore_community_length]
             for x in range(0, len(self._community_index), alongshore_community_length)
         ]
 
@@ -186,7 +186,9 @@ class ChomeCoupler:
             for iB3D in self._community_index[iCommunity]:
                 # Barrier3D in decameters --> convert to meters for CHOME; b/c time_index in B3D is updated at the end
                 # of the time loop, time_index-1 is the current time step for passing variable to CHOME
-                bh_array = np.array(barrier3d[iB3D].DomainTS[time_index_b3d - 1]) * 10  # meters
+                bh_array = (
+                    np.array(barrier3d[iB3D].DomainTS[time_index_b3d - 1]) * 10
+                )  # meters
                 avg_barrier_height.append(bh_array[bh_array > 0].mean())
 
                 change_in_shoreline_position = (
@@ -256,9 +258,7 @@ class ChomeCoupler:
                 [
                     # this is in m^3 in chome, divide by the length of the community to get m^3/m
                     (
-                        self._chome[iCommunity].nourishment_volume[
-                            time_index_chome
-                        ]
+                        self._chome[iCommunity].nourishment_volume[time_index_chome]
                         / self._chome[iCommunity].lLength
                     )
                     for _ in self._community_index[iCommunity]
