@@ -108,6 +108,7 @@ class Cascade:
         nourishment_interval=None,
         nourishment_volume=300.0,
         overwash_filter=40,
+        overwash_to_dune=10,
         number_of_communities=1,
         sand_cost=10,
         taxratio_oceanfront=1,
@@ -174,6 +175,8 @@ class Cascade:
              Volume of nourished sand along cross-shore transect [m^3/m]
         overwash_filter: float,
             Percent overwash removed from barrier interior [40-90% (residential-->commercial) from Rogers et al., 2015]
+        overwash_to_dune: float,
+            Percent overwash removed from barrier interior to dunes [%, overwash_filter+overwash_to_dune <=100]
         number_of_communities: int, optional
             Number of communities (CHOME model instances) described by the alongshore section count (Barrier3D grids)
         sand_cost: int, optional
@@ -325,6 +328,7 @@ class Cascade:
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
                     overwash_filter=overwash_filter,
+                    overwash_to_dune=overwash_to_dune,
                 )
             )
 
@@ -456,7 +460,7 @@ class Cascade:
         # human dynamics modules
         ###############################################################################
 
-        # RoadwayManager:
+        # ~~~~~~~~~~~~~~ RoadwayManager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Remove overwash from roadway after each model year, place on the dune, rebuild dunes if
         # fall below height threshold, and check if dunes should grow naturally
         if self._roadway_management_module:
@@ -489,7 +493,7 @@ class Cascade:
                     ]
                     self._roadways[iB3D].update(self._barrier3d[iB3D])
 
-        # CHOME coupler:
+        # ~~~~~~~~~~~~~~ CHOME coupler ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # provide agents in the Coastal Home Ownership Model (CHOME) with variables describing the physical environment
         # -- including barrier elevation, beach width, dune height, shoreline erosion rate -- who then decide if it is
         # a nourishment year, the corresponding nourishment volume, and whether or not the dune should be rebuilt
@@ -514,10 +518,11 @@ class Cascade:
                 nourishments=self._nourishments,
             )
 
-        # BeachDuneManager:
+        # ~~~~~~~~~~~~~~ BeachDuneManager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # If interval specified, nourish at that interval, otherwise wait until told with nourish_now to nourish
         # or rebuild_dunes_now to rebuild dunes. Resets any "now" parameters to false after nourishment. Module
-        # also filters overwash deposition for residential or commercial communities (user specified).
+        # also filters overwash deposition for residential or commercial communities (user specified) and bulldozes
+        # some of remaining overwash to dunes.
         if self._beach_nourishment_module:
 
             for iB3D in range(self._ny):
@@ -532,7 +537,8 @@ class Cascade:
                         ]._original_growth_param,
                         iB3D=iB3D,
                     )
-                    return
+                    # return
+                # else manage that community!
                 else:
                     self._nourishments[
                         iB3D
@@ -551,6 +557,23 @@ class Cascade:
                         rebuild_dune_now=self._rebuild_dune_now[iB3D],
                         nourishment_interval=self._nourishment_interval[iB3D],
                     )
+
+                # update x_b to include a beach width and the dune line; after the community is abandoned, we set the
+                # beach width for the remaining time steps to the last managed beach width in order to not have a huge
+                # jump in the back-barrier position in Barrier3D
+                self._barrier3d[iB3D].x_b_TS[-1] = (
+                    self._barrier3d[iB3D].x_s
+                    + self._barrier3d[iB3D].InteriorWidth_AvgTS[-1]
+                    + np.size(
+                        self._barrier3d[iB3D].DuneDomain, 2
+                    )  # dune domain width in dam
+                    + (
+                        self._nourishments[iB3D].beach_width[
+                            self._barrier3d[iB3D].time_index - 1
+                        ]
+                        / 10
+                    )  # dam
+                )
 
     ###############################################################################
     # save data
