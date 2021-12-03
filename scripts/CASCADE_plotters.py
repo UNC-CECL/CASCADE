@@ -536,19 +536,22 @@ def plot_ElevAnimation_Humans_Roadways(
 
 
 # for use with BeachDuneManager Module
-# -- NOTE THAT THE BEACH REPRESENTATION IS BASED ON A MODEL SPECIFIED BEACH WIDTH --
 def plot_ElevAnimation_Humans_BeachDuneManager(
     cascade, ny, directory, TMAX, name, TMAX_SIM  # management max  # simulation max
 ):
+    """
+    NOTE THAT THE BEACH REPRESENTATION IS BASED ON A MODEL SPECIFIED BEACH WIDTH. We set the beach width for the
+    remaining time steps after the community has been abandoned to the last managed beach width in order to not have a
+    huge jump in the back-barrier position in Barrier3D. OTHERWISE, it is meaningless to the dynamics Barrier3D.
+    """
     barrier3d = cascade.barrier3d
 
-    BarrierLength = barrier3d[0]._BarrierLength
+    BarrierLength = barrier3d[0].BarrierLength
 
     MaxBeachWidth = np.max(cascade.nourishments[0].beach_width[0:TMAX]) / 10  # dam
-    # OriginY = int(barrier3d[0]._x_s_TS[0] - barrier3d[0]._x_t_TS[0])
-    OriginY = int(barrier3d[0]._x_s_TS[0])
+    OriginY = int(barrier3d[0].x_s_TS[0])
     AniDomainWidth = int(
-        np.amax(barrier3d[0]._InteriorWidth_AvgTS)
+        np.amax(barrier3d[0].InteriorWidth_AvgTS)
         + MaxBeachWidth
         + np.abs(barrier3d[0]._ShorelineChange)
         + OriginY
@@ -561,7 +564,6 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
         os.makedirs(newpath)
     os.chdir(newpath)
 
-    # for t in range(TMAX - 1):
     for t in range(TMAX + 1):
 
         # start with plotting t=0, then plot post-storm dune, interior, shoreface, etc. before management, treating this
@@ -569,7 +571,7 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
         # modifications); for the default dune inputs, we should be able to see natural dune growth at
         # t=0.5 before rebuild and storms (i.e., t=0.5 and t=1 should not be the same)
 
-        if t > 0 and cascade.nourishments[0]._post_storm_interior[t] is not None:
+        if t > 0 and cascade.nourishments[0].post_storm_interior[t] is not None:
 
             # post-storm variables in the BeachDuneManager are: interior, dune height, x_s, s_sf, beach width
             AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -1
@@ -577,14 +579,14 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
             for iB3D in range(ny):
 
                 actual_shoreline_post_storm = np.hstack(
-                    [0, cascade.nourishments[iB3D]._post_storm_x_s[1 : TMAX + 1]]
+                    [0, cascade.nourishments[iB3D].post_storm_x_s[1 : TMAX + 1]]
                 )
 
                 # Build beach elevation domain, we only show beach width decreasing in increments of 10 m and we don't
                 # illustrate a berm, just a sloping beach up to the elevation of the berm
                 cellular_dune_toe_post_storm = np.floor(
                     actual_shoreline_post_storm[t]
-                    + (cascade.nourishments[iB3D]._post_storm_beach_width[t] / 10)
+                    + (cascade.nourishments[iB3D].post_storm_beach_width[t] / 10)
                 )
                 cellular_shoreline_post_storm = np.floor(actual_shoreline_post_storm[t])
                 cellular_beach_width = int(
@@ -600,17 +602,17 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
                 if cellular_beach_width == 0:
                     pass
                 else:
-                    add = (barrier3d[iB3D].BermEl - barrier3d[iB3D]._SL) / (
+                    add = (barrier3d[iB3D].BermEl - barrier3d[iB3D].SL) / (
                         cellular_beach_width + 1
                     )
                     for i in range(0, cellular_beach_width):
-                        BeachDomain[i, :] = (barrier3d[iB3D]._SL + add) * (i + 1)
+                        BeachDomain[i, :] = (barrier3d[iB3D].SL + add) * (i + 1)
 
                 # Make animation frame domain
-                Domain = cascade.nourishments[iB3D]._post_storm_interior[t] * 10
+                Domain = cascade.nourishments[iB3D].post_storm_interior[t] * 10
                 Dunes = (
-                    cascade.nourishments[iB3D]._post_storm_dunes[t]
-                    + barrier3d[iB3D]._BermEl
+                    cascade.nourishments[iB3D].post_storm_dunes[t]
+                    + barrier3d[iB3D].BermEl
                 ) * 10
                 Dunes = np.rot90(Dunes)
                 Dunes = np.flipud(Dunes)
@@ -652,32 +654,31 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
             elevFig1.savefig(name)  # dpi=200
             plt.close(elevFig1)
 
-    # for t in range(TMAX_SIM - 1):
     for t in range(TMAX_SIM):
 
-        # ok, now the annual time step, which incoporates human modifications to the shoreface, beach, dune, & interior
+        # ok, now the annual time step, which incorporates human modifications to the shoreface, beach, dune, & interior
         AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -1
 
         for iB3D in range(ny):
 
-            actual_shoreline_post_humans = barrier3d[iB3D]._x_s_TS[0:TMAX_SIM]
+            actual_shoreline_post_humans = barrier3d[iB3D].x_s_TS[0:TMAX_SIM]
 
             # Build beach elevation domain, we only show beach width decreasing in increments of 10 m and we don't
             # illustrate a berm, just a sloping beach up to the elevation of the berm
 
-            if math.isnan(cascade.nourishments[iB3D].beach_width[t]):
-                # cellular_dune_toe_post_humans = np.floor(
-                #     actual_shoreline_post_humans[t]
-                #     + (cascade.nourishments[iB3D].beach_width[TMAX] / 10)
-                # )  # just set to the last TMAX so not weird jolt in shoreline position
-                cellular_dune_toe_post_humans = np.floor(
-                    actual_shoreline_post_humans[t]
-                )  # make bw zero
-            else:
-                cellular_dune_toe_post_humans = np.floor(
-                    actual_shoreline_post_humans[t]
-                    + (cascade.nourishments[iB3D].beach_width[t] / 10)
-                )
+            # if math.isnan(cascade.nourishments[iB3D].beach_width[t]):
+            #     cellular_dune_toe_post_humans = np.floor(
+            #         actual_shoreline_post_humans[t]
+            #         + (cascade.nourishments[iB3D].beach_width[TMAX] / 10)
+            #     )  # just set to the last TMAX so not weird jolt in shoreline position
+            #     # cellular_dune_toe_post_humans = np.floor(
+            #     #     actual_shoreline_post_humans[t]
+            #     # )  # make bw zero
+            # else:
+            cellular_dune_toe_post_humans = np.floor(
+                actual_shoreline_post_humans[t]
+                + (cascade.nourishments[iB3D].beach_width[t] / 10)
+            )
 
             cellular_shoreline_post_humans = np.floor(actual_shoreline_post_humans[t])
             cellular_beach_width = int(
@@ -692,17 +693,15 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
             if cellular_beach_width == 0:
                 pass
             else:
-                add = (barrier3d[iB3D].BermEl - barrier3d[iB3D]._SL) / (
+                add = (barrier3d[iB3D].BermEl - barrier3d[iB3D].SL) / (
                     cellular_beach_width + 1
                 )
                 for i in range(0, cellular_beach_width):
-                    BeachDomain[i, :] = (barrier3d[iB3D]._SL + add) * (i + 1)
+                    BeachDomain[i, :] = (barrier3d[iB3D].SL + add) * (i + 1)
 
             # Make animation frame domain
-            Domain = barrier3d[iB3D]._DomainTS[t] * 10
-            Dunes = (
-                barrier3d[iB3D]._DuneDomain[t, :, :] + barrier3d[iB3D]._BermEl
-            ) * 10
+            Domain = barrier3d[iB3D].DomainTS[t] * 10
+            Dunes = (barrier3d[iB3D].DuneDomain[t, :, :] + barrier3d[iB3D].BermEl) * 10
             Dunes = np.rot90(Dunes)
             Dunes = np.flipud(Dunes)
             Beach = BeachDomain * 10
@@ -743,18 +742,13 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
 
     frames = []
 
-    # for filenum in range(TMAX_SIM - 1):
     for filenum in range(TMAX_SIM):
         filename = "elev_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
 
-        # if (
-        #     filenum < TMAX - 2
-        #     and cascade.nourishments[iB3D]._post_storm_interior[TMAX - 2] is not None
-        # ):
         if (
             filenum < TMAX
-            and cascade.nourishments[iB3D]._post_storm_interior[TMAX] is not None
+            and cascade.nourishments[iB3D].post_storm_interior[TMAX] is not None
         ):
             filename = "elev_" + str(filenum) + "pt5" ".png"
             frames.append(imageio.imread(filename))
