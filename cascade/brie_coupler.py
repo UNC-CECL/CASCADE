@@ -106,9 +106,11 @@ def initialize_equal(
         set_yaml(
             "DuneParamStart", True, fid
         )  # Dune height will come from external file
-        set_yaml(
-            "Rat", background_erosion, fid
-        )  # Rate of shoreline retreat attributed to gradients in alongshore transport; (-) = erosion, (+) = acc [m / y]
+        # Rate of shoreline retreat attributed to gradients in alongshore transport; (-) = erosion, (+) = acc [m / y]
+        if np.size(background_erosion) > 1:
+            set_yaml("Rat", background_erosion[iB3D], fid)
+        else:
+            set_yaml("Rat", background_erosion, fid)
         set_yaml(
             "RSLR_Constant", slr_constant, fid
         )  # Relative sea-level rise rate will be constant, otherwise logistic growth function used
@@ -129,17 +131,25 @@ def initialize_equal(
             set_yaml(
                 "rmin", rmin[iB3D], fid
             )  # Minimum growth rate for logistic dune growth
+        else:
+            set_yaml("rmin", rmin, fid)  # Minimum growth rate for logistic dune growth
+        if np.size(rmax) > 1:
             set_yaml(
                 "rmax", rmax[iB3D], fid
             )  # Maximum growth rate for logistic dune growth
         else:
-            set_yaml("rmin", rmin, fid)  # Minimum growth rate for logistic dune growth
             set_yaml("rmax", rmax, fid)  # Maximum growth rate for logistic dune growth
 
         # external file names used for initialization
         set_yaml("storm_file", storm_file, fid)
-        set_yaml("dune_file", dune_file, fid)
-        set_yaml("elevation_file", elevation_file, fid)
+        if np.size(dune_file) > 1:
+            set_yaml("dune_file", dune_file[iB3D], fid)
+        else:
+            set_yaml("dune_file", dune_file, fid)
+        if np.size(elevation_file) > 1:
+            set_yaml("elevation_file", elevation_file[iB3D], fid)
+        else:
+            set_yaml("elevation_file", elevation_file, fid)
 
         barrier3d.append(Barrier3d.from_yaml(datadir))
 

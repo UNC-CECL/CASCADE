@@ -571,7 +571,7 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
         # modifications); for the default dune inputs, we should be able to see natural dune growth at
         # t=0.5 before rebuild and storms (i.e., t=0.5 and t=1 should not be the same)
 
-        if t > 0 and cascade.nourishments[0].post_storm_interior[t] is not None:
+        if t > 0 and cascade.nourishments[0]._post_storm_interior[t] is not None:
 
             # post-storm variables in the BeachDuneManager are: interior, dune height, x_s, s_sf, beach width
             AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -1
@@ -579,14 +579,14 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
             for iB3D in range(ny):
 
                 actual_shoreline_post_storm = np.hstack(
-                    [0, cascade.nourishments[iB3D].post_storm_x_s[1 : TMAX + 1]]
+                    [0, cascade.nourishments[iB3D]._post_storm_x_s[1 : TMAX + 1]]
                 )
 
                 # Build beach elevation domain, we only show beach width decreasing in increments of 10 m and we don't
                 # illustrate a berm, just a sloping beach up to the elevation of the berm
                 cellular_dune_toe_post_storm = np.floor(
                     actual_shoreline_post_storm[t]
-                    + (cascade.nourishments[iB3D].post_storm_beach_width[t] / 10)
+                    + (cascade.nourishments[iB3D]._post_storm_beach_width[t] / 10)
                 )
                 cellular_shoreline_post_storm = np.floor(actual_shoreline_post_storm[t])
                 cellular_beach_width = int(
@@ -609,9 +609,9 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
                         BeachDomain[i, :] = (barrier3d[iB3D].SL + add) * (i + 1)
 
                 # Make animation frame domain
-                Domain = cascade.nourishments[iB3D].post_storm_interior[t] * 10
+                Domain = cascade.nourishments[iB3D]._post_storm_interior[t] * 10
                 Dunes = (
-                    cascade.nourishments[iB3D].post_storm_dunes[t]
+                    cascade.nourishments[iB3D]._post_storm_dunes[t]
                     + barrier3d[iB3D].BermEl
                 ) * 10
                 Dunes = np.rot90(Dunes)
@@ -748,7 +748,7 @@ def plot_ElevAnimation_Humans_BeachDuneManager(
 
         if (
             filenum < TMAX
-            and cascade.nourishments[iB3D].post_storm_interior[TMAX] is not None
+            and cascade.nourishments[iB3D]._post_storm_interior[TMAX] is not None
         ):
             filename = "elev_" + str(filenum) + "pt5" ".png"
             frames.append(imageio.imread(filename))

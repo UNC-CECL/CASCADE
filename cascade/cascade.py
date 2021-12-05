@@ -23,6 +23,10 @@ class Cascade:
         road_setback,
         nourishment_interval,
         nourishment_volume,
+        overwash_filter,
+        overwash_to_dune,
+        roadway_management_module,
+        beach_nourishment_module,
     ):
         """Configures lists to account for multiple barrier3d domains from single input variables; used in modules"""
 
@@ -54,6 +58,22 @@ class Cascade:
             self._nourishment_volume = nourishment_volume
         else:
             self._nourishment_volume = [nourishment_volume] * self._ny
+        if np.size(overwash_filter) > 1:
+            self._overwash_filter = overwash_filter
+        else:
+            self._overwash_filter = [overwash_filter] * self._ny
+        if np.size(overwash_to_dune) > 1:
+            self._overwash_to_dune = overwash_to_dune
+        else:
+            self._overwash_to_dune = [overwash_to_dune] * self._ny
+        if np.size(roadway_management_module) > 1:
+            self._roadway_management_module = roadway_management_module
+        else:
+            self._roadway_management_module = [roadway_management_module] * self._ny
+        if np.size(beach_nourishment_module) > 1:
+            self._beach_nourishment_module = beach_nourishment_module
+        else:
+            self._beach_nourishment_module = [beach_nourishment_module] * self._ny
 
         return
 
@@ -145,19 +165,19 @@ class Cascade:
             Number of alongshore sections.
         time_step_count: int, optional
             Number of time steps.
-        min_dune_growth_rate: float, optional
+        min_dune_growth_rate: float or list of floats, optional
             Minimum dune growth rate [unitless, for Houser growth rate formulation]
-        max_dune_growth_rate: float, optional
+        max_dune_growth_rate: float or list of floats, optional
             Maximum dune growth rate [unitless, for Houser growth rate formulation]
         num_cores: int, optional
             Number of (parallel) processing cores to be used
-        roadway_management_module: boolean, optional
+        roadway_management_module: boolean or list of booleans, optional
             If True, use roadway management module (overwash removal, road relocation, dune management)
         alongshore_transport_module: boolean, optional
             If True, couple Barrier3D with BRIE to use diffusive model for AST
         community_dynamics_module: boolean, optional
             If True, couple with CHOME, a community decision making model; requires nourishment module
-        beach_nourishment_module: boolean, optional
+        beach_nourishment_module: boolean or list of booleans, optional
             If True, use nourishment module (nourish shoreface, rebuild dunes)
         road_ele: float or list of floats, optional
             Elevation of the initial roadway [m MHW] and after road relocations
@@ -173,9 +193,9 @@ class Cascade:
              Interval that nourishment occurs [yrs]
         nourishment_volume: float or list of float, optional
              Volume of nourished sand along cross-shore transect [m^3/m]
-        overwash_filter: float,
+        overwash_filter: float or list of floats,
             Percent overwash removed from barrier interior [40-90% (residential-->commercial) from Rogers et al., 2015]
-        overwash_to_dune: float,
+        overwash_to_dune: float or list of floats,
             Percent overwash removed from barrier interior to dunes [%, overwash_filter+overwash_to_dune <=100]
         number_of_communities: int, optional
             Number of communities (CHOME model instances) described by the alongshore section count (Barrier3D grids)
@@ -213,9 +233,9 @@ class Cascade:
         self._slr_constant = sea_level_rise_constant
         self._background_erosion = background_erosion
         self._num_cores = num_cores
-        self._roadway_management_module = roadway_management_module
+        # self._roadway_management_module = roadway_management_module
         self._alongshore_transport_module = alongshore_transport_module
-        self._beach_nourishment_module = beach_nourishment_module
+        # self._beach_nourishment_module = beach_nourishment_module
         self._community_dynamics_module = community_dynamics_module
         self._filename = name
         self._storm_file = storm_file
@@ -247,18 +267,18 @@ class Cascade:
             nt=self._nt,
         )
 
-        # initialize barrier3d and make both brie and barrier3d classes equivalent
+        # initialize barrier3d models (number set by brie ny above) and make both brie and barrier3d classes equivalent
         self._barrier3d = initialize_equal(
             datadir=datadir,
             brie=self._brie_coupler._brie,
             slr_constant=self._slr_constant,
-            rmin=self._rmin,
-            rmax=self._rmax,
-            background_erosion=self._background_erosion,
+            rmin=self._rmin,  # can be array
+            rmax=self._rmax,  # can be array
+            background_erosion=self._background_erosion,  # can be array
             parameter_file=self._parameter_file,
             storm_file=self._storm_file,
-            dune_file=self._dune_file,
-            elevation_file=self._elevation_file,
+            dune_file=self._dune_file,  # can be array
+            elevation_file=self._elevation_file,  # can be array
         )
 
         ###############################################################################
@@ -274,10 +294,14 @@ class Cascade:
             road_setback=road_setback,
             nourishment_interval=nourishment_interval,
             nourishment_volume=nourishment_volume,
+            overwash_filter=overwash_filter,
+            overwash_to_dune=overwash_to_dune,
+            roadway_management_module=roadway_management_module,
+            beach_nourishment_module=beach_nourishment_module,
         )
 
         if self._community_dynamics_module:
-            if self._beach_nourishment_module == False:
+            if (self._beach_nourishment_module == False).any():
                 CascadeError(
                     "Beach nourishment module must be set to `TRUE` to couple with CHOME"
                 )
@@ -316,19 +340,19 @@ class Cascade:
                     original_growth_param=self._barrier3d[iB3D].growthparam,
                 )
             )
-            initial_beach_width = (
+            self._initial_beach_width = (
                 int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
-            )  # m
+            )  # m -- these need to be the same for all Barrier3D domains because there is only one storm file
             self._nourishments.append(
                 BeachDuneManager(
                     nourishment_interval=self._nourishment_interval[iB3D],
                     nourishment_volume=self._nourishment_volume[iB3D],
-                    initial_beach_width=initial_beach_width,
+                    initial_beach_width=self._initial_beach_width,
                     dune_design_elevation=self._dune_design_elevation[iB3D],
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
-                    overwash_filter=overwash_filter,
-                    overwash_to_dune=overwash_to_dune,
+                    overwash_filter=self._overwash_filter[iB3D],
+                    overwash_to_dune=self._overwash_to_dune[iB3D],
                 )
             )
 
@@ -463,9 +487,9 @@ class Cascade:
         # ~~~~~~~~~~~~~~ RoadwayManager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Remove overwash from roadway after each model year, place on the dune, rebuild dunes if
         # fall below height threshold, and check if dunes should grow naturally
-        if self._roadway_management_module:
+        for iB3D in range(self._ny):
 
-            for iB3D in range(self._ny):
+            if self._roadway_management_module[iB3D]:
 
                 # if the roadway drowned or was too narrow for the road to be relocated, stop managing the road!
                 if (
@@ -481,8 +505,7 @@ class Cascade:
                         ]._original_growth_param,
                         iB3D=iB3D,
                     )
-                    return
-
+                    # return
                 else:
                     # manage that road!
                     self._roadways[iB3D].road_relocation_width = self._road_width[
@@ -492,6 +515,18 @@ class Cascade:
                         iB3D
                     ]
                     self._roadways[iB3D].update(self._barrier3d[iB3D])
+
+                # update x_b to include a fake beach width and the dune line; we add a fake beach width for coupling
+                # with the beach nourishment module below (i.e., if half the domain is initialized with roadways and
+                # the other half with a community, I want them to start with the same beach back barrier position)
+                self._barrier3d[iB3D].x_b_TS[-1] = (
+                    self._barrier3d[iB3D].x_s
+                    + self._barrier3d[iB3D].InteriorWidth_AvgTS[-1]
+                    + np.size(
+                        self._barrier3d[iB3D].DuneDomain, 2
+                    )  # dune domain width in dam
+                    + (self._initial_beach_width / 10)  # dam
+                )
 
         # ~~~~~~~~~~~~~~ CHOME coupler ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # provide agents in the Coastal Home Ownership Model (CHOME) with variables describing the physical environment
@@ -523,9 +558,9 @@ class Cascade:
         # or rebuild_dunes_now to rebuild dunes. Resets any "now" parameters to false after nourishment. Module
         # also filters overwash deposition for residential or commercial communities (user specified) and bulldozes
         # some of remaining overwash to dunes.
-        if self._beach_nourishment_module:
+        for iB3D in range(self._ny):
 
-            for iB3D in range(self._ny):
+            if self._beach_nourishment_module[iB3D]:
                 # if barrier was too narrow to sustain a community in the last time step, stop managing beach and dunes!
                 if self._nourishments[iB3D].narrow_break:
                     self._community_break = 1
@@ -538,6 +573,7 @@ class Cascade:
                         iB3D=iB3D,
                     )
                     # return
+
                 # else manage that community!
                 else:
                     self._nourishments[
