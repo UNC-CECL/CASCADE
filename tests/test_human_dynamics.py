@@ -261,7 +261,9 @@ def test_overwash_filter():
     (
         new_yxz_dune_domain,  # [m], should be 0.1 m x 99 * 20 = 198 m^3 / (10 * 20) added to each cell (0.99 m)
         new_xyz_interior_domain,  # [m], should be 2.6 m depth in each cell except for row 0, which should be 1.0 m
-        barrier_overwash_removed[2],  # [m^3], should be 0.4 m^3 * 99 * 20 (792 m^3)
+        barrier_overwash_removed[
+            2
+        ],  # [m^3], should be 0.4 m^3 * 99 * 20 (792 m^3) + 198 m^3 bulldozed to dunes
         new_ave_interior_height,  # [m] for the rest
         beach_width_new,
         x_s_new,
@@ -284,10 +286,9 @@ def test_overwash_filter():
     new_dunes.append(new_yxz_dune_domain)
     expected_dunes.append(np.zeros([20, 10]) + 0.99)  # m
 
-    # assert all([a == b] for a, b in zip(barrier_overwash_removed, [800, 792, 792]))
-    assert (barrier_overwash_removed == [800, 792, 792]).all()
+    assert (np.round(barrier_overwash_removed) == [800, 792, 990]).all()
     assert all([a == b] for a, b in zip(new_dunes, expected_dunes))
-    # assert_array_almost_equal(barrier_overwash_removed, [800, 792, 792])
+    # assert_array_almost_equal(barrier_overwash_removed, [800, 792, 990])
 
 
 def test_shoreline_migration():
