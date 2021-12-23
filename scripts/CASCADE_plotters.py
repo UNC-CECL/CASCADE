@@ -942,9 +942,14 @@ def plot_ModelTransects(cascade, time_step, iB3D):
         bay_y = (sea_level - cascade.barrier3d[iB3D]._BayDepth) * 10  # m
         end_of_bay_y = bay_y
 
-        berm_x = shoreline_x + (
-            cascade.nourishments[iB3D].beach_width[t] / 10
-        )  # beach width (in dam)
+        if cascade.nourishments[iB3D].beach_width[t] is not None:
+            berm_x = shoreline_x + (
+                cascade.nourishments[iB3D].beach_width[t] / 10
+            )  # beach width (in dam)
+        else:
+            berm_x = shoreline_x + (
+                int(cascade.barrier3d[iB3D].BermEl / cascade.barrier3d[iB3D]._beta)
+            )  # initial beach width (in dam)
         berm_y = (
             cascade.barrier3d[iB3D]._BermEl * 10
         ) + shoreline_y  # convert to meters
@@ -2745,13 +2750,13 @@ def plot_nonlinear_stats_mgmt_array4(
                     color[i],
                 )
 
-                dtts = np.array(
-                    [(x - shoreline_position[i][0]) for x in dune_toe[i][0 : TMAX[i]]]
-                )
-                mask_dtts = np.isnan(dtts)
-                axs2[2].plot(
-                    yearly_time[~mask_dtts], dtts[~mask_dtts], color[i], alpha=0.3
-                )
+                # dtts = np.array(
+                #     [(x - shoreline_position[i][0]) for x in dune_toe[i][0 : TMAX[i]]]
+                # )
+                # mask_dtts = np.isnan(dtts)
+                # axs2[2].plot(
+                #     yearly_time[~mask_dtts], dtts[~mask_dtts], color[i], alpha=0.3
+                # )
 
                 ow = overwash[i][0 : len(time)]
                 mask_ow = np.isfinite(ow)
@@ -2783,7 +2788,8 @@ def plot_nonlinear_stats_mgmt_array4(
         if roadways_on:
             axs2[i].set_xlim([-15, 765])
         if nourishment_on:
-            axs2[i].set_xlim([-15, 515])
+            # axs2[i].set_xlim([-15, 515])
+            axs2[i].set_xlim([-15, 765])
 
     axs2[0].set(ylabel="barrier elevation (m MHW)")
     axs2[0].set_ylim([-0.03, 1.75])
@@ -2800,9 +2806,9 @@ def plot_nonlinear_stats_mgmt_array4(
     axs2[3].set_ylim([-3, 225])
     if roadways_on:
         scenarios = ["natural", "1-m dune", "2-m dune", "3-m dune"]
-        axs2[3].legend(scenarios)
+        axs2[2].legend(scenarios)
     if nourishment_on:
-        axs2[3].legend(scenarios)
+        axs2[2].legend(scenarios)
     plt.tight_layout()
 
     # plot a zoom in of nourishments
