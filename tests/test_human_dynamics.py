@@ -178,6 +178,8 @@ def test_overwash_filter():
     """
 
     barrier_overwash_removed = np.zeros(3)
+    new_dunes = []
+    expected_dunes = []
 
     post_xyz_interior_grid = (
         np.zeros([100, 20]) + 3.0
@@ -186,16 +188,30 @@ def test_overwash_filter():
     yxz_dune_grid = np.zeros([20, 10])  # dune domain is 10 cells (m) wide
     # remove 40% of 1 m^3 of overwash in each cell,
     (
-        new_yxz_dune_domain,  # [m], should be 800 m^3 / (10 * 20) added to each cell (4 m -- woah)
+        new_yxz_dune_domain,  # [m], should be zero
         new_xyz_interior_domain,  # [m], should be 2.6 m depth in each cell
         barrier_overwash_removed[0],  # [m^3], should be 0.4 m^3 * 100 * 20 (800 m^3)
+        new_ave_interior_height,  # [m] for the rest
+        beach_width_new,
+        x_s_new,
+        s_sf_new,
     ) = filter_overwash(
         overwash_filter=40,  # remove 40% of overwash deposit
+        overwash_to_dune=0,  # leave the rest of the overwash deposit, don't bulldoze to dunes
         post_storm_xyz_interior_grid=post_xyz_interior_grid,
         pre_storm_xyz_interior_grid=pre_xyz_interior_grid,
         post_storm_yxz_dune_grid=yxz_dune_grid,
-        artificial_maximum_dune_height=0.5,  # maximum height of artificial dunes in dam
+        artificial_maximum_dune_height=5,  # maximum height of artificial dunes in meters
+        sea_level=0,  # the rest of the variables are in meters
+        barrier_length=20,
+        x_s=200,
+        x_t=5,
+        beach_width=20,
+        shoreface_depth=8,
+        dune_spread_equal=False,
     )
+    new_dunes.append(new_yxz_dune_domain)
+    expected_dunes.append(np.zeros([20, 10]))
 
     # check that it only removes overwash, doesn't deepen areas where there wasn't overwash or eroded
     post_xyz_interior_grid = (
@@ -208,16 +224,30 @@ def test_overwash_filter():
     yxz_dune_grid = np.zeros([20, 10])  # dune domain is 10 cells (m) wide
     # remove 40% of 1 m^3 of overwash in each cell,
     (
-        new_yxz_dune_domain,  # [m], should be 792 m^3 / (10 * 20) added to each cell (3.96 m -- woah)
+        new_yxz_dune_domain,  # [m], should be zero
         new_xyz_interior_domain,  # [m], should be 2.6 m depth in each cell except for row 0, which should be 2.0 m
         barrier_overwash_removed[1],  # [m^3], should be 0.4 m^3 * 99 * 20 (792 m^3)
+        new_ave_interior_height,  # [m] for the rest
+        beach_width_new,
+        x_s_new,
+        s_sf_new,
     ) = filter_overwash(
         overwash_filter=40,  # remove 40% of overwash deposit
+        overwash_to_dune=0,
         post_storm_xyz_interior_grid=post_xyz_interior_grid,
         pre_storm_xyz_interior_grid=pre_xyz_interior_grid,
         post_storm_yxz_dune_grid=yxz_dune_grid,
-        artificial_maximum_dune_height=0.5,  # maximum height of artificial dunes in dam
+        artificial_maximum_dune_height=5,  # maximum height of artificial dunes in meters
+        sea_level=0,  # the rest of the variables are in meters
+        barrier_length=20,
+        x_s=200,
+        x_t=5,
+        beach_width=20,
+        shoreface_depth=8,
+        dune_spread_equal=False,
     )
+    new_dunes.append(new_yxz_dune_domain)
+    expected_dunes.append(np.zeros([20, 10]))
 
     post_xyz_interior_grid = (
         np.zeros([100, 20]) + 3.0
@@ -229,21 +259,36 @@ def test_overwash_filter():
     yxz_dune_grid = np.zeros([20, 10])  # dune domain is 10 cells (m) wide
     # remove 40% of 1 m^3 of overwash in each cell,
     (
-        new_yxz_dune_domain,  # [m], should be 792 m^3 / (10 * 20) added to each cell (3.96 m -- woah)
+        new_yxz_dune_domain,  # [m], should be 0.1 m x 99 * 20 = 198 m^3 / (10 * 20) added to each cell (0.99 m)
         new_xyz_interior_domain,  # [m], should be 2.6 m depth in each cell except for row 0, which should be 1.0 m
-        barrier_overwash_removed[2],  # [m^3], should be 0.4 m^3 * 99 * 20 (792 m^3)
+        barrier_overwash_removed[
+            2
+        ],  # [m^3], should be 0.4 m^3 * 99 * 20 (792 m^3) + 198 m^3 bulldozed to dunes
+        new_ave_interior_height,  # [m] for the rest
+        beach_width_new,
+        x_s_new,
+        s_sf_new,
     ) = filter_overwash(
         overwash_filter=40,  # remove 40% of overwash deposit
+        overwash_to_dune=10,
         post_storm_xyz_interior_grid=post_xyz_interior_grid,
         pre_storm_xyz_interior_grid=pre_xyz_interior_grid,
         post_storm_yxz_dune_grid=yxz_dune_grid,
-        artificial_maximum_dune_height=0.5,  # maximum height of artificial dunes in dam
+        artificial_maximum_dune_height=5,  # maximum height of artificial dunes in meters
+        sea_level=0,  # the rest of the variables are in meters
+        barrier_length=20,
+        x_s=200,
+        x_t=5,
+        beach_width=20,
+        shoreface_depth=8,
+        dune_spread_equal=False,
     )
+    new_dunes.append(new_yxz_dune_domain)
+    expected_dunes.append(np.zeros([20, 10]) + 0.99)  # m
 
-    assert all(
-        [a == b] for a, b in zip(np.ceil(barrier_overwash_removed), [800, 792, 792])
-    )
-    # assert_array_almost_equal(barrier_overwash_removed, [800, 792, 792])
+    assert (np.round(barrier_overwash_removed) == [800, 792, 990]).all()
+    assert all([a == b] for a, b in zip(new_dunes, expected_dunes))
+    # assert_array_almost_equal(barrier_overwash_removed, [800, 792, 990])
 
 
 def test_shoreline_migration():
@@ -252,7 +297,7 @@ def test_shoreline_migration():
     and the shoreline surpasses a full cell width (10 m). Indeed, dunes only migrate when humans allow them to
     (beach width = 0), and when the shoreline moves a full cell width -- in year 57 and 65. Note that if one was to
     check the `post_storm_x_s`, they would find that the dunes actually migrated at 56.5 since dune migration
-    occurrs prior to any human modifications.
+    occurs prior to any human modifications.
     """
 
     iB3D = 0
@@ -300,4 +345,4 @@ def test_shoreline_migration():
     shoreline_transgressed = diff < 0
     dunes_migrated = cascade.barrier3d[iB3D]._ShorelineChangeTS < 0
 
-    assert all(shoreline_transgressed == dunes_migrated)
+    assert np.all(shoreline_transgressed == dunes_migrated)
