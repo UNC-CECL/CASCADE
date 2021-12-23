@@ -226,12 +226,12 @@ def filter_overwash(
     """
 
     # error if the two percentages go over 100%
-    if (overwash_filter + overwash_to_dune) > 100:
+    if (overwash_filter + overwash_to_dune) >= 100:
         CascadeError("overwash_filter + overwash_to_dune must be less than 100%")
 
-    # remove sand from island interior (only account for positive values)
+    # remove sand from island interior
     overwash_deposition = post_storm_xyz_interior_grid - pre_storm_xyz_interior_grid
-    overwash_deposition[overwash_deposition < 0] = 0
+    # overwash_deposition[overwash_deposition < 0] = 0  #  (only account for positive values)
 
     # filter overwash deposition and remove remaining overwash for dune rebuilding
     overwash_removal_shoreface = overwash_deposition * (overwash_filter / 100)
@@ -270,6 +270,9 @@ def filter_overwash(
     else:
         # spread overwash removed from roadway equally over the adjacent dune cells
         total_overwash_removal_dune_volume = sum(overwash_removal_dune)  # array of dam
+        total_overwash_removal_dune_volume[
+            total_overwash_removal_dune_volume < 0
+        ] = 0  # don't let it erode a dune
         number_dune_cells = np.size(post_storm_yxz_dune_grid, 1)
         overwash_volume_to_dune = np.transpose(
             [total_overwash_removal_dune_volume / number_dune_cells] * number_dune_cells
@@ -285,7 +288,7 @@ def filter_overwash(
 
     total_overwash_removal = (
         total_overwash_removal_shoreface_volume + total_overwash_removal_dune_volume
-    )
+    )  # dam^3
 
     return (
         new_dune_domain,
@@ -483,7 +486,7 @@ class BeachDuneManager:
         time_step_count=500,
         original_growth_param=None,
         overwash_filter=40,
-        overwash_to_dune=10,
+        overwash_to_dune=5,
     ):
         """The BeachDuneManager module.
 
