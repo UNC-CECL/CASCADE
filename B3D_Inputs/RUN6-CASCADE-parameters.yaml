@@ -59,7 +59,7 @@ k_sf: 19324.753176079226
 mm: 2.0
 nn: 0.5
 rmax: 0.95
-rmin: 0.55
+rmin: 0.45
 s_sf_eq: 0.01698590034494604
 storm_file: StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy
 threshold_in: 0.25
