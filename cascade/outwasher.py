@@ -2,26 +2,22 @@
 # Use Murray/Paola to carve channels through dune gaps and transport sediment?
 import numpy as np
 
-# start with just the functions we want to create:
-# (called at every time step)
+# --------------------------------------------------------------------------------------------------------------------
 # 1. increase bay level by standard amount which will also change the interior domain in B3d
-#append dune domain and interior domain
-# package flow routing algorithm in b3d
-
 # this will only need to happen once, not every time step
+# combine the dune domain with the interior domain and flip them so that the dune is at the back
 def combine_domain(interior_domain, dune_domain):
-    whole_domain = interior_domain + dune_domain
-    flipped_domain = np.flip(whole_domain, axis=0)
+    whole_domain = np.append(interior_domain, dune_domain, axis=0)
+    flipped_domain = np.flip(whole_domain, 0)
     return flipped_domain
 
-# this and everything after will need to happen every time step (?)
-def bay_surge(flipped_domain):
-    bay_level = []
+# this and everything after will need to update every time step
+def bay_surge(flipped_domain, bay_level):
     flipped_domain = flipped_domain - bay_level
     return flipped_domain, bay_level
 
+# --------------------------------------------------------------------------------------------------------------------
 # 2. route water through interior: create channels in the interior domain to/through the dune domain using Murray/Paola
-# utilize the dune gaps function in b3d for this?
 # seems like in the paper they track bed elevation and sediment transport (outputs of this function?)
 # will we need to add some kind of force to get water to flow uphill, or will we need to submerge the entire interior?
 
@@ -510,10 +506,11 @@ def flow_routing(flipped_domain, barrier3d, Iow, DuneDomainCrest, Dow):
             ShrubDomainWidth,
             barrier3d._ShrubDomainAll,
         )
-
+# --------------------------------------------------------------------------------------------------------------------
 # 3. track sediment transport at the dune gaps using Nienhuis?
 # only at the dune gap itself and does not alter the gap width
 
+# --------------------------------------------------------------------------------------------------------------------
 # 4. add a beach and deposit sediment (in different ways to see what happens?)
 
 # other questions:
