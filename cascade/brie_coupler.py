@@ -78,6 +78,7 @@ def initialize_equal(
     for iB3D in range(brie.ny):
 
         fid = datadir + parameter_file
+        parameter_file_prefix = parameter_file.replace("-parameters.yaml", "")
 
         # update yaml file (these are the only variables that I'm like to change from default)
         set_yaml("Shrub_ON", 0, fid)  # make sure that shrubs are turned off
@@ -151,7 +152,7 @@ def initialize_equal(
         else:
             set_yaml("elevation_file", elevation_file, fid)
 
-        barrier3d.append(Barrier3d.from_yaml(datadir))
+        barrier3d.append(Barrier3d.from_yaml(datadir, prefix=parameter_file_prefix))
 
         # now update brie back barrier position, height of barrier, and SLRR time series with that from B3D so all
         # the initial conditions are the same! The rate of slr can only be constant in brie, whereas it can accelerate
