@@ -2675,10 +2675,11 @@ def plot_nonlinear_stats_mgmt_array4(
         axs[i].set(xlabel="time (yr)")
         if roadways_on:
             axs[i].set_xlim([-15, 765])
-            axs[i].set_ylim([0, 5.5])
+            axs[i].set_ylim([0, 5.2])
         if nourishment_on:
-            axs[i].set_xlim([-15, 515])
-            axs[i].set_ylim([0, 5.5])
+            # axs[i].set_xlim([-15, 515])
+            axs[i].set_xlim([-15, 765])
+            axs[i].set_ylim([0, 5.2])
     axs[0].set(ylabel="elevation (m MHW)")
     if roadways_on:
         axs[3].legend(
