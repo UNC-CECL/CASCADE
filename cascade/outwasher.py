@@ -14,37 +14,8 @@ b3d = Barrier3d.from_yaml("tests/test_params/")
 # 3. create a wall of discharge water from the bay (constant mag)
 # ------ later we will make this into a hydrograph
 
-# set inundation regime rules
-Rin = b3d.Rin      # from paper
-Si = 0.007      # directional slope positive bc uphill
-# how to find/calc this? what is the elevation of interior domain?
-# what does the interior domain variable hold?
-Slim = 0.25     # currently set in the yaml
-n = b3d.nn       # currently set in the yaml
-
-# creating the water domains
-interior_domain = Barrier3d.InteriorDomain # elevation cell
-
-add = 10
-bay_domain = np.ones([add, Barrier3d._BarrierLength]) * -Barrier3d._BayDepth
-beach_domain = np.ones([add, Barrier3d._BarrierLength]) * Barrier3d._BermEl
-full_domain = beach_domain.append(interior_domain, 0)
-full_domain = full_domain.append(bay_domain, 0)
-flipped_domain = np.flip(full_domain, 0)
-
 #  set discharge- currently set to the Qdune value?
-
 Qo = 0.5  # dam^3/hr function of time and full domain (3D array fun t, x, y)
-
-# water flow rules Murray
-# might want to calc slopes and calc discharge to neighbors based on slopes 1043
-#Qi = ((Qo - Rin)*abs(Si)**-n/sum(abs(Si)**-n))*(1-(abs(Si)/Slim))
-
-# sediment transport Murray
-Ki = b3d.Ki     # from paper
-C = 0.72        # order of the average slope (Murray), supposed to be 10x average slope of barrier
-m = b3d.mm      # >1 usually 2.5 (Murray), from yaml
-#Qsi = Ki*(Qi*(Si+C))**m
 
 DuneDomainCrest = Barrier3d._DuneDomain[Barrier3d._time_index, :, :].max(
     axis=1
@@ -115,17 +86,22 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
                 Barrier3d._InundationCount += 1
 
             # Set Domain
-            #add = 10
             duration = dur[n] * substep
-            width = (
-                np.shape(Barrier3d._InteriorDomain)[0] + 1 + add
-            )  # (dam) Add one for Dunes (really a row for setting water elevation and 25 for bay)
+            add = 10
+            interior_domain = Barrier3d.InteriorDomain  # elevation cell
+            bay_domain = np.ones([add, Barrier3d._BarrierLength]) * -Barrier3d._BayDepth
+            beach_domain = np.ones([add, Barrier3d._BarrierLength]) * Barrier3d._BermEl
+            full_domain = beach_domain.append(interior_domain, 0)
+            full_domain = full_domain.append(bay_domain, 0)
+            flipped_domain = np.flip(full_domain, 0)
+
+            width = np.shape(flipped_domain)[0]
             Elevation = np.zeros([duration, width, Barrier3d._BarrierLength])
-            Dunes = Dunes_prestorm + Barrier3d._BermEl
-            Bay = np.ones([add, Barrier3d._BarrierLength]) * -Barrier3d._BayDepth
-            Elevation[0, :, :] = np.vstack([Dunes, Barrier3d._InteriorDomain, Bay])
+            Elevation[0, :, :] = flipped_domain
+
 
             # Initialize Memory Storage Arrays
+            # I believe the barrier length should not have changed just the distribution of rows
             Discharge = np.zeros([duration, width, Barrier3d._BarrierLength])
             SedFluxIn = np.zeros([duration, width, Barrier3d._BarrierLength])
             SedFluxOut = np.zeros([duration, width, Barrier3d._BarrierLength])
@@ -146,7 +122,7 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
                 Discharge[:, 0, start:stop] = Qdune
 
                 if inundation == 1:  # Inundation regime
-                    Rin = Barrier3d._Rin_i
+                    Rin = b3d.Rin_i
 
                     # # Find average slope of interior
                     # AvgSlope = self._BermEl / InteriorWidth_Avg
@@ -155,9 +131,12 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
                     # AvgSlope = min(self._MaxAvgSlope, AvgSlope)
 
                     # Representative average slope of interior (made static - represent. of 200-m wide barrier)
-                    AvgSlope = Barrier3d._BermEl / 20
+                    #AvgSlope = Barrier3d._BermEl / 20
+                    Si = 0.007  # directional slope positive bc uphill
+                    Slim = 0.25  # currently set in the yaml
+                    C = b3d.Cx * Si # 10 x the avg slope
 
-                    C = Barrier3d._Cx * AvgSlope  # Momentum constant
+                    #C = Barrier3d._Cx * AvgSlope  # Momentum constant
 
 
             # ### Run Flow Routing Algorithm
@@ -216,29 +195,29 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
 
                                 Q1 = (
                                     Q0
-                                    * S1 ** Barrier3d._nn
+                                    * S1 ** b3d.nn
                                     / (
-                                        S1 ** Barrier3d._nn
-                                        + S2 ** Barrier3d._nn
-                                        + S3 ** Barrier3d._nn
+                                        S1 ** b3d.nn
+                                        + S2 ** b3d.nn
+                                        + S3 ** b3d.nn
                                     )
                                 )
                                 Q2 = (
                                     Q0
-                                    * S2 ** Barrier3d._nn
+                                    * S2 ** b3d.nn
                                     / (
-                                        S1 ** Barrier3d._nn
-                                        + S2 ** Barrier3d._nn
-                                        + S3 ** Barrier3d._nn
+                                        S1 ** b3d.nn
+                                        + S2 ** b3d.nn
+                                        + S3 ** b3d.nn
                                     )
                                 )
                                 Q3 = (
                                     Q0
-                                    * S3 ** Barrier3d._nn
+                                    * S3 ** b3d.nn
                                     / (
-                                        S1 ** Barrier3d._nn
-                                        + S2 ** Barrier3d._nn
-                                        + S3 ** Barrier3d._nn
+                                        S1 ** b3d.nn
+                                        + S2 ** b3d.nn
+                                        + S3 ** b3d.nn
                                     )
                                 )
 
@@ -278,29 +257,29 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
 
                                 Q1 = (
                                     Q0
-                                    * abs(S1) ** (-Barrier3d._nn)
+                                    * abs(S1) ** (-b3d.nn)
                                     / (
-                                        abs(S1) ** (-Barrier3d._nn)
-                                        + abs(S2) ** (-Barrier3d._nn)
-                                        + abs(S3) ** (-Barrier3d._nn)
+                                        abs(S1) ** (-b3d.nn)
+                                        + abs(S2) ** (-b3d.nn)
+                                        + abs(S3) ** (-b3d.nn)
                                     )
                                 )
                                 Q2 = (
                                     Q0
-                                    * abs(S2) ** (-Barrier3d._nn)
+                                    * abs(S2) ** (-b3d.nn)
                                     / (
-                                        abs(S1) ** (-Barrier3d._nn)
-                                        + abs(S2) ** (-Barrier3d._nn)
-                                        + abs(S3) ** (-Barrier3d._nn)
+                                        abs(S1) ** (-b3d.nn)
+                                        + abs(S2) ** (-b3d.nn)
+                                        + abs(S3) ** (-b3d.nn)
                                     )
                                 )
                                 Q3 = (
                                     Q0
-                                    * abs(S3) ** (-Barrier3d._nn)
+                                    * abs(S3) ** (-b3d.nn)
                                     / (
-                                        abs(S1) ** (-Barrier3d._nn)
-                                        + abs(S2) ** (-Barrier3d._nn)
-                                        + abs(S3) ** (-Barrier3d._nn)
+                                        abs(S1) ** (-b3d.nn)
+                                        + abs(S2) ** (-b3d.nn)
+                                        + abs(S3) ** (-b3d.nn)
                                     )
                                 )
 
@@ -310,52 +289,26 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
 
                                 # MaxUpSlope = 0.25  # dam
 
-                                if S1 > Barrier3d._MaxUpSlope:
+                                if S1 > b3d.MaxUpSlope:
                                     Q1 = 0
                                 else:
-                                    Q1 = Q1 * (1 - (abs(S1) / Barrier3d._MaxUpSlope))
+                                    Q1 = Q1 * (1 - (abs(S1) / b3d.MaxUpSlope))
 
-                                if S2 > Barrier3d._MaxUpSlope:
+                                if S2 > b3d.MaxUpSlope:
                                     Q2 = 0
                                 else:
-                                    Q2 = Q2 * (1 - (abs(S2) / Barrier3d._MaxUpSlope))
+                                    Q2 = Q2 * (1 - (abs(S2) / b3d.MaxUpSlope))
 
-                                if S3 > Barrier3d._MaxUpSlope:
+                                if S3 > b3d.MaxUpSlope:
                                     Q3 = 0
                                 else:
-                                    Q3 = Q3 * (1 - (abs(S3) / Barrier3d._MaxUpSlope))
+                                    Q3 = Q3 * (1 - (abs(S3) / b3d.MaxUpSlope))
 
 
                             # ### Calculate Sed Movement
                             fluxLimit = Barrier3d._Dmax
-
-                            # Run-up Regime
-                            # if inundation == 0:
-                            #     if Q1 > self._Qs_min and S1 >= 0:
-                            #         Qs1 = self._Kr * Q1
-                            #         if Qs1 > fluxLimit:
-                            #             Qs1 = fluxLimit
-                            #     else:
-                            #         Qs1 = 0
-                            #
-                            #     if Q2 > self._Qs_min and S2 >= 0:
-                            #         Qs2 = self._Kr * Q2
-                            #         if Qs2 > fluxLimit:
-                            #             Qs2 = fluxLimit
-                            #     else:
-                            #         Qs2 = 0
-                            #
-                            #     if Q3 > self._Qs_min and S3 >= 0:
-                            #         Qs3 = self._Kr * Q3
-                            #         if Qs3 > fluxLimit:
-                            #             Qs3 = fluxLimit
-                            #     else:
-                            #         Qs3 = 0
-
-                            # Inundation Regime - Murray and Paola (1994, 1997) Rule 3 with flux limiter
-                            # else:
-                            if Q1 > Barrier3d._Qs_min:
-                                Qs1 = Barrier3d._Ki * (Q1 * (S1 + C)) ** Barrier3d._mm
+                            if Q1 > b3d.Qs_min:
+                                Qs1 = b3d.Ki * (Q1 * (S1 + C)) ** b3d.mm
                                 if Qs1 < 0:
                                     Qs1 = 0
                                 elif Qs1 > fluxLimit:
@@ -363,8 +316,8 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
                             else:
                                 Qs1 = 0
 
-                            if Q2 > Barrier3d._Qs_min:
-                                Qs2 = Barrier3d._Ki * (Q2 * (S2 + C)) ** Barrier3d._mm
+                            if Q2 > b3d.Qs_min:
+                                Qs2 = b3d.Ki * (Q2 * (S2 + C)) ** b3d.mm
                                 if Qs2 < 0:
                                     Qs2 = 0
                                 elif Qs2 > fluxLimit:
@@ -372,8 +325,8 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
                             else:
                                 Qs2 = 0
 
-                            if Q3 > Barrier3d._Qs_min:
-                                Qs3 = Barrier3d._Ki * (Q3 * (S3 + C)) ** Barrier3d._mm
+                            if Q3 > b3d.Qs_min:
+                                Qs3 = b3d.Ki * (Q3 * (S3 + C)) ** b3d.mm
                                 if Qs3 < 0:
                                     Qs3 = 0
                                 elif Qs3 > fluxLimit:
@@ -388,7 +341,7 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
                             # ### Calculate Net Erosion/Accretion
                             if Elevation[TS, d, i] > Barrier3d._SL or any(
                                 z > Barrier3d._SL
-                                for z in Elevation[TS, d + 1 : d + 10, i]
+                                for z in Elevation[TS, d + 1: d + 10, i]
                             ):  # If cell is subaerial, elevation change is determined by difference between
                                 # flux in vs. flux out
                                 if i > 0:
@@ -419,15 +372,15 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
                                 Qs2 = np.nan_to_num(Qs2)
                                 Qs3 = np.nan_to_num(Qs3)
 
-                                if Qs1 < Barrier3d._Qs_bb_min:
+                                if Qs1 < b3d.Qs_bb_min:
                                     Qs1 = 0
                                 elif Qs1 > fluxLimit:
                                     Qs1 = fluxLimit
-                                if Qs2 < Barrier3d._Qs_bb_min:
+                                if Qs2 < b3d.Qs_bb_min:
                                     Qs2 = 0
                                 elif Qs2 > fluxLimit:
                                     Qs2 = fluxLimit
-                                if Qs3 < Barrier3d._Qs_bb_min:
+                                if Qs3 < b3d.Qs_bb_min:
                                     Qs3 = 0
                                 elif Qs3 > fluxLimit:
                                     Qs3 = fluxLimit
