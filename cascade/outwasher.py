@@ -5,42 +5,34 @@ from barrier3d import Barrier3d
 b3d = Barrier3d.from_yaml("tests/test_params/")
 
 # --------------------------------------------------------------------------------------------------------------------
-
-# within our flow routing we are going to assume inundation overwash
-# 1. set inundation rules
-# 2. create water domain (970 in other code)- one in front of interior domain and one behind
-# ------ sensitivity model for how many cells we need in front and behind
-# ------ also assume no dune rn to see how flow routing works
-# 3. create a wall of discharge water from the bay (constant mag)
-# ------ later we will make this into a hydrograph
-
 #  set discharge- currently set to the Qdune value?
 Qo = 0.5  # dam^3/hr function of time and full domain (3D array fun t, x, y)
 
-DuneDomainCrest = Barrier3d._DuneDomain[Barrier3d._time_index, :, :].max(
+# from the Barrier3D flow routing. Instead of having DuneCrestDomain, using interior
+interior_crest = Barrier3d._InteriorDomain[Barrier3d.time_index, :, :].max(
     axis=1
-)  # Maximum height of each row in DuneDomain
-DuneDomainCrest[DuneDomainCrest < Barrier3d._DuneRestart] = Barrier3d._DuneRestart
+)  # Maximum height of each row in InteriorDomain
+interior_crest[interior_crest < Barrier3d.DuneRestart] = Barrier3d.DuneRestart
 
-Barrier3d._Hd_AverageTS.append(
-    np.mean(DuneDomainCrest)
-)
+# Barrier3d.Hd_AverageTS.append(
+#     np.mean(interior_crest)
+# )  # Store average pre-storm dune-height for time step
 
 OWloss = 0
 DuneLoss = 0
 numstorm = 0
 
-if Barrier3d._time_index >= Barrier3d._StormStart:
+if Barrier3d.time_index >= Barrier3d.StormStart:
     # Select number of storms for this time step from normal distribution
-    TSloc = np.argwhere(Barrier3d._StormSeries[:, 0] == Barrier3d._time_index)
+    TSloc = np.argwhere(Barrier3d.StormSeries[:, 0] == Barrier3d.time_index)
     numstorm = int(len(TSloc))  # analysis:ignore
 
     if numstorm > 0:
         start = TSloc[0, 0]
         stop = TSloc[-1, 0] + 1
-        Rhigh = Barrier3d._StormSeries[start:stop, 1]
-        Rlow = Barrier3d._StormSeries[start:stop, 2]
-        dur = np.array(Barrier3d._StormSeries[start:stop, 4], dtype="int")
+        Rhigh = b3d._StormSeries[start:stop, 1]
+        Rlow = b3d._StormSeries[start:stop, 2]
+        dur = np.array(b3d._StormSeries[start:stop, 4], dtype="int")
 
         # ### Individual Storm Impacts
         for n in range(numstorm):  # Loop through each individual storm
@@ -51,60 +43,61 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
             # Find overwashed dunes and gaps
             Dow = [
                 index
-                for index, value in enumerate((DuneDomainCrest + Barrier3d._BermEl))
+                for index, value in enumerate((interior_crest + b3d._BermEl))
                 if value < Rhigh[n]
             ]
             gaps = Barrier3d.DuneGaps(
-                DuneDomainCrest, Dow, Barrier3d._BermEl, Rhigh[n]
+                interior_crest, Dow, b3d._BermEl, Rhigh[n]
             )  # Finds location and Rexcess of continuous gaps in dune ridge
 
             # ###########################################
             # ### Overwash
 
             Iow = 0  # Count of dune gaps in inundation regime
-            Dunes_prestorm = DuneDomainCrest
+            interior_prestorm = interior_crest
             for q in range(len(gaps)):
                 start = gaps[q][0]
                 stop = gaps[q][1]
                 gapwidth = stop - start + 1
                 meandune = (
-                    sum(Dunes_prestorm[start : stop + 1]) / gapwidth
-                ) + Barrier3d._BermEl  # Average elevation of dune gap
+                    sum(interior_prestorm[start : stop + 1]) / gapwidth
+                ) + b3d._BermEl  # Average elevation of dune gap
 
                 # Determine number of gaps in inundation regime
-                if Rlow[n] > meandune:
-                    Iow += 1
+                Iow += 1
+                # if Rlow[n] > meandune:
+                #     Iow += 1
 
             # Determine Sediment And Water Routing Rules
-
+            inundation_count = 0
             if (
                 len(gaps) > 0 #and Iow / len(gaps) >= Barrier3d._threshold_in
             ):  # If greater than threshold % of dune gaps are inunundation regime, use inun. regime routing
                 # we changed this to only use inundation regime rules
                 inundation = 1
-                substep = Barrier3d._OWss_i
-                Barrier3d._InundationCount += 1
+                substep = b3d.OWss_i
+                inundation_count += 1
 
             # Set Domain
             duration = dur[n] * substep
             add = 10
             interior_domain = Barrier3d.InteriorDomain  # elevation cell
-            bay_domain = np.ones([add, Barrier3d._BarrierLength]) * -Barrier3d._BayDepth
-            beach_domain = np.ones([add, Barrier3d._BarrierLength]) * Barrier3d._BermEl
+            bay_domain = np.ones([add, b3d._BarrierLength]) * - b3d._BayDepth
+            beach_domain = np.ones([add, b3d._BarrierLength]) * b3d._BermEl
             full_domain = beach_domain.append(interior_domain, 0)
             full_domain = full_domain.append(bay_domain, 0)
             flipped_domain = np.flip(full_domain, 0)
 
             width = np.shape(flipped_domain)[0]
-            Elevation = np.zeros([duration, width, Barrier3d._BarrierLength])
+            Elevation = np.zeros([duration, width, b3d._BarrierLength])
             Elevation[0, :, :] = flipped_domain
 
 
             # Initialize Memory Storage Arrays
             # I believe the barrier length should not have changed just the distribution of rows
-            Discharge = np.zeros([duration, width, Barrier3d._BarrierLength])
-            SedFluxIn = np.zeros([duration, width, Barrier3d._BarrierLength])
-            SedFluxOut = np.zeros([duration, width, Barrier3d._BarrierLength])
+            Discharge = np.zeros([duration, width, b3d._BarrierLength])
+            SedFluxIn = np.zeros([duration, width, b3d._BarrierLength])
+            SedFluxOut = np.zeros([duration, width, b3d._BarrierLength])
 
             Rin = 0  # (dam^3/t) Infiltration Rate, volume of overwash flow lost per m cross-shore per time
 
@@ -133,10 +126,8 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
                     # Representative average slope of interior (made static - represent. of 200-m wide barrier)
                     #AvgSlope = Barrier3d._BermEl / 20
                     Si = 0.007  # directional slope positive bc uphill
-                    Slim = 0.25  # currently set in the yaml
-                    C = b3d.Cx * Si # 10 x the avg slope
-
-                    #C = Barrier3d._Cx * AvgSlope  # Momentum constant
+                    Slim = b3d.MaxUpSlope
+                    C = b3d.Cx * Si  # 10 x the avg slope
 
 
             # ### Run Flow Routing Algorithm
@@ -155,7 +146,7 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
                         Discharge[TS, d, :][Discharge[TS, d, :] > 0] -= Rin
                     Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
 
-                    for i in range(Barrier3d._BarrierLength):
+                    for i in range(b3d._BarrierLength):
                         if Discharge[TS, d, i] > 0:
 
                             Q0 = Discharge[TS, d, i]
@@ -173,7 +164,7 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
                             S2 = Elevation[TS, d, i] - Elevation[TS, d + 1, i]
                             S2 = np.nan_to_num(S2)
 
-                            if i < (Barrier3d._BarrierLength - 1):
+                            if i < (b3d._BarrierLength - 1):
                                 S3 = (
                                     Elevation[TS, d, i]
                                     - Elevation[TS, d + 1, i + 1]
@@ -247,7 +238,7 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
                                     Q2 = Qx
                                 else:
                                     Q2 = 0
-                                if S3 == 0 and i < (Barrier3d._BarrierLength - 1):
+                                if S3 == 0 and i < (b3d._BarrierLength - 1):
                                     Q3 = Qx
                                 else:
                                     Q3 = 0
@@ -306,7 +297,7 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
 
 
                             # ### Calculate Sed Movement
-                            fluxLimit = Barrier3d._Dmax
+                            fluxLimit = Barrier3d.Dmax
                             if Q1 > b3d.Qs_min:
                                 Qs1 = b3d.Ki * (Q1 * (S1 + C)) ** b3d.mm
                                 if Qs1 < 0:
@@ -349,7 +340,7 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
 
                                 SedFluxIn[TS, d + 1, i] += Qs2
 
-                                if i < (Barrier3d._BarrierLength - 1):
+                                if i < (b3d._BarrierLength - 1):
                                     SedFluxIn[TS, d + 1, i + 1] += Qs3
 
                                 Qs_out = Qs1 + Qs2 + Qs3
@@ -358,9 +349,9 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
                             else:  # If cell is subaqeous, exponentially decay dep. of remaining sed across bay
 
                                 if inundation == 0:
-                                    Cbb = Barrier3d._Cbb_r
+                                    Cbb = b3d._Cbb_r
                                 else:
-                                    Cbb = Barrier3d._Cbb_i
+                                    Cbb = b3d._Cbb_i
 
                                 Qs0 = SedFluxIn[TS, d, i] * Cbb
 
@@ -390,7 +381,7 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
 
                                 SedFluxIn[TS, d + 1, i] += Qs2
 
-                                if i < (Barrier3d._BarrierLength - 1):
+                                if i < (b3d._BarrierLength - 1):
                                     SedFluxIn[TS, d + 1, i + 1] += Qs3
 
                                 Qs_out = Qs1 + Qs2 + Qs3
@@ -422,7 +413,7 @@ if Barrier3d._time_index >= Barrier3d._StormStart:
             # Remove all rows of bay without any deposition from the domain
             check = 1
             while check == 1:
-                if all(x <= -Barrier3d._BayDepth for x in InteriorUpdate[-1, :]):
+                if all(x <= -b3d._BayDepth for x in InteriorUpdate[-1, :]):
                     InteriorUpdate = np.delete(InteriorUpdate, (-1), axis=0)
                 else:
                     check = 0
