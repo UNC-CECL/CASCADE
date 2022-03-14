@@ -828,7 +828,6 @@ def RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
     )
 
     # --------- LOOP ---------
-    Time = time.time()
 
     # after each year, check the beach width and dune elevation and decide if you want to nourish or rebuild the dune
     # next year with nourish_now parameter; just use first B3D domain, since all berm elevations are equivalent
@@ -844,6 +843,10 @@ def RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
         if cascade.b3d_break:
             break
 
+        t = cascade.barrier3d[0].time_index
+        tmp_rebuild_dune = np.zeros(alongshore_section_count)
+        tmp_nourish_now = np.zeros(alongshore_section_count)
+
         for iB3D in range(alongshore_section_count):
             # don't do any beach/dune management activities if the barrier has become too narrow to sustain a community
             if cascade.community_break[iB3D]:
@@ -851,13 +854,12 @@ def RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
             # and only manage beach/dune if it is turned on
             elif beach_dune_manager_on[iB3D]:
 
-                t = cascade.barrier3d[iB3D].time_index
-
                 if (
                     cascade.nourishments[iB3D].beach_width[t - 1]
                     < beach_width_threshold[iB3D]
                 ):
-                    cascade.nourish_now[iB3D] = 1
+                    # cascade.nourish_now[iB3D] = 1
+                    tmp_nourish_now[iB3D] = 1
 
                 DuneDomainCrest = (
                     cascade.barrier3d[iB3D].DuneDomain[t - 1, :, :].max(axis=1)
@@ -867,7 +869,14 @@ def RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
                 ) * 10  # m MHW
 
                 if DuneCrestMin < dune_rebuild_threshold:
-                    cascade.rebuild_dune_now[iB3D] = 1
+                    # cascade.rebuild_dune_now[iB3D] = 1
+                    tmp_rebuild_dune[iB3D] = 1
+
+        # only nourish or rebuild dune if all segments fall below threshold (more realistic)
+        if np.all(tmp_nourish_now[beach_dune_manager_on]) == 1:
+            cascade.nourish_now = tmp_nourish_now
+        if np.all(tmp_rebuild_dune[beach_dune_manager_on]) == 1:
+            cascade.rebuild_dune_now = tmp_rebuild_dune
 
     # --------- SAVE ---------
     save_directory = "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
@@ -1446,6 +1455,95 @@ def PLOT_7_Initial_CNH_Topographies(name_prefix_list):
         cascade.append(csc8d[0])
 
     CASCADEplt.fig2_initialCNH_topo(cascade)
+
+    return
+
+
+def PLOT_9_Nonlinear_Dynamics_CASCADE_AST(
+    name_prefix,
+    tmax_management,  # an array
+    tmax_sim,  # not an array
+    plot_name,
+    beach_management_ny=None,
+    roadway_management_ny=None,
+    cross_sections=None,
+    text_out=False,
+    gif_on=False,
+    y_lim=None,
+    fig_size=None,
+):
+
+    os.chdir(
+        "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
+    )
+
+    # --------- plot ---------
+    output = np.load(name_prefix + ".npz", allow_pickle=True)
+    cascade = output["cascade"]
+    cascade = cascade[0]
+    b3d = cascade.barrier3d
+    ny = np.size(b3d)
+
+    # # rebuild_threshold = 0.3 + (
+    # rebuild_threshold = 1.0 + (
+    #     b3d[ib3d].BermEl * 10
+    # )  # min dune height above the berm [m MHW], same as in RoadwayManager
+    #
+    # (
+    #     BarrierWidth,
+    #     DuneCrestMean,
+    #     BarrierHeight,
+    #     bh_rate,
+    #     bw_rate,
+    #     sc_rate,
+    #     DuneCrestMin,
+    #     DuneCrestMax,
+    #     shoreline_position,
+    #     shoreface_slope,
+    #     beach_width,
+    #     overwash,
+    #     dune_toe,
+    # ) = CASCADEplt.plot_nonlinear_stats_BeachDuneManager(
+    #     b3d,
+    #     ib3d,
+    #     tmax_management=tmax_management,
+    #     tmax_sim=tmax_sim,
+    #     nourishments=cascade.nourishments,
+    #     post_storm_dunes=cascade.nourishments[ib3d]._post_storm_dunes,
+    #     post_storm_x_s=cascade.nourishments[ib3d]._post_storm_x_s,
+    #     post_storm_s_sf=cascade.nourishments[ib3d]._post_storm_s_sf,
+    #     post_storm_ave_interior_width=cascade.nourishments[
+    #         ib3d
+    #     ]._post_storm_ave_interior_width,
+    #     post_storm_ave_interior_height=cascade.nourishments[
+    #         ib3d
+    #     ]._post_storm_ave_interior_height,
+    #     post_storm_beach_width=cascade.nourishments[ib3d]._post_storm_beach_width,
+    #     post_storm_Qow=cascade.nourishments[ib3d]._post_storm_Qow,
+    #     design_elevation=cascade.nourishments[ib3d]._dune_design_elevation,  # m MHW,
+    #     rebuild_threshold=rebuild_threshold,
+    #     dunes_rebuilt=cascade.nourishments[ib3d]._dunes_rebuilt_TS,
+    # )
+
+    if gif_on:
+        directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
+        plot_ElevAnimation_CASCADE(
+            cascade,
+            ny=ny,
+            directory=directory,
+            TMAX_MGMT=tmax_management,  # an array
+            name=plot_name,
+            TMAX_SIM=tmax_sim,  # not an array
+            beach_management_ny=beach_management_ny,
+            roadway_management_ny=roadway_management_ny,
+            y_lim=y_lim,
+            fig_size=fig_size,
+        )
+
+    if cross_sections is not None:
+        time_step = cross_sections
+        fig = CASCADEplt.plot_ModelTransects(cascade, time_step, iB3D=0)
+        fig.set_title("BeachDuneManager")
 
     return
 
@@ -2982,8 +3080,7 @@ def human_runs():
             )
 
             # Roadway scenario drowned at 404 years
-            # Community reached minimum width, drowned at 648 years;
-            # old run, barrier HEIGHT DROWNED at t = 710 years, don't know why it doesn't here
+            # Community reached minimum width, drowned at 648 years, barrier HEIGHT DROWNED at t = 710 years
             cascade_pt45_h2m_high_nourishment_residential_RTpt3m = RUN_8_CASCADE_noAST_Rave_SLR_pt004_Nourishment(
                 nt=1000,
                 rmin=0.25,
@@ -3169,6 +3266,7 @@ def human_runs():
             )
 
             # For rebuild_threshold = 0.3 above, Community reached minimum width, drowned at 80 years
+            # Community reached minimum width, drowned at 80 years
             cascade_pt75_h2m_low_nourishment_commercial_BE1m_RT1m = RUN_8_CASCADE_noAST_Rave_SLR_pt004_Nourishment(
                 nt=1000,
                 rmin=0.55,
@@ -3291,7 +3389,7 @@ def human_runs():
             roads_on = [False] * number_barrier3d_models
             nourishments_on = [True] * number_barrier3d_models
 
-            # all B3D segments drown at 69 years
+            # all B3D segments drown at 80
             nourishment_only_6AST_low_pt75_comm_BE1m_RT1m = RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
                 nt=100,
                 name="9-CASCADE_Rave_pt75_Nourishment_2mDune_lowEle_comm_BE1m_RT1m_6AST",
@@ -3318,7 +3416,6 @@ def human_runs():
             )
 
         def nourishment_pt45_high_RT1m():
-            # need to test a height drowning at some point; these initial conditions drowned at 82 years in nourishments
             number_barrier3d_models = 6
             beach_width_threshold = [30] * number_barrier3d_models
             rmin = [0.25] * number_barrier3d_models
@@ -3331,7 +3428,6 @@ def human_runs():
             roads_on = [False] * number_barrier3d_models
             nourishments_on = [True] * number_barrier3d_models
 
-            # all B3D segments drown at 69 years
             nourishment_only_6AST_low_pt75_comm_BE1m_RT1m = RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
                 nt=100,
                 name="9-CASCADE_Rave_pt45_Nourishment_2mDune_highEle_res_BE1m_RT1m_6AST",
@@ -3371,9 +3467,9 @@ def human_runs():
             roads_on = [False] * number_barrier3d_models
             nourishments_on = [True] * number_barrier3d_models
 
-            #
+            # Community reached minimum width, drowned at 485 years
             nourishment_only_6AST_low_pt75_comm_BE1m_RT1m = RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
-                nt=100,
+                nt=500,
                 name="9-CASCADE_Rave_pt45_Nourishment_2mDune_highEle_res_BE1m_RT1m_6AST",
                 storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                 alongshore_section_count=number_barrier3d_models,  # NOTE: will want to go back to sensitivity modeling
@@ -3393,6 +3489,85 @@ def human_runs():
                 nourishment_volume=100,  # m^3/m
                 background_erosion=0,  # m/yr, background shoreline erosion
                 rebuild_dune_threshold=0.3,  # m above the berm elevation
+                roadway_management_on=roads_on,
+                beach_dune_manager_on=nourishments_on,
+            )
+
+        def nourishment_pt75_low_split_natural():
+            # these initial conditions drowned at 80 years in nourishments
+            number_barrier3d_models = 6
+            beach_width_threshold = [30] * number_barrier3d_models
+            rmin = [0.55] * number_barrier3d_models
+            rmax = [0.95] * number_barrier3d_models
+            elevation_file = [
+                "b3d_pt75_3284yrs_low-elevations.csv"
+            ] * number_barrier3d_models
+            dune_file = ["barrier3d-default-dunes.npy"] * number_barrier3d_models
+            dune_design_elevation = [3.2] * number_barrier3d_models
+            roads_on = [False] * number_barrier3d_models
+            nourishments_on = [True, True, True, False, False, False]
+
+            # very quickly these barriers separate
+            nourish_natural_6AST_low_pt75_comm_BE1m_RT1m = RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
+                nt=100,
+                name="9-CASCADE_Rave_pt75_2mDune_lowEle_comm_BE1m_RT1m_6AST_nourish_nat",
+                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                alongshore_section_count=number_barrier3d_models,  # NOTE: will want to go back to sensitivity modeling
+                num_cores=6,  # for my laptop, max is ?
+                beach_width_threshold=beach_width_threshold,  # m
+                rmin=rmin,
+                rmax=rmax,  # rave = 0.75
+                elevation_file=elevation_file,
+                dune_file=dune_file,
+                dune_design_elevation=dune_design_elevation,
+                dune_minimum_elevation=None,
+                road_ele=None,
+                road_width=None,
+                road_setback=None,
+                overwash_filter=90,  # corresponds with commercial
+                overwash_to_dune=9,
+                nourishment_volume=100,  # m^3/m
+                background_erosion=-1.00,  # m/yr, background shoreline erosion
+                rebuild_dune_threshold=1,  # m above the berm elevation
+                roadway_management_on=roads_on,
+                beach_dune_manager_on=nourishments_on,
+            )
+
+        def nourishment_pt75_low_split_roadways():
+            number_barrier3d_models = 6
+            beach_width_threshold = [30] * number_barrier3d_models
+            rmin = [0.55] * number_barrier3d_models
+            rmax = [0.95] * number_barrier3d_models
+            elevation_file = [
+                "b3d_pt75_3284yrs_low-elevations.csv"
+            ] * number_barrier3d_models
+            dune_file = ["barrier3d-default-dunes.npy"] * number_barrier3d_models
+            dune_design_elevation = [3.2] * number_barrier3d_models
+            roads_on = [False, False, False, True, True, True]
+            nourishments_on = [True, True, True, False, False, False]
+
+            # community next to roadway drowned at 80 years
+            nourishment_roadways_6AST_low_pt75_comm_BE1m_RT1m = RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
+                nt=100,
+                name="9-CASCADE_Rave_pt75_Nourish_2mDune_lowEle_comm_BE1m_RT1m_6AST_3roads",
+                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                alongshore_section_count=number_barrier3d_models,  # NOTE: will want to go back to sensitivity modeling
+                num_cores=6,  # for my laptop, max is ?
+                beach_width_threshold=beach_width_threshold,  # m
+                rmin=rmin,
+                rmax=rmax,  # rave = 0.75
+                elevation_file=elevation_file,
+                dune_file=dune_file,
+                dune_design_elevation=dune_design_elevation,
+                dune_minimum_elevation=1.7,  # m MHW, allow dune to erode down to 0.5 m above the roadway, so really COMPLETELY erode before rebuilding (this is essentially the dune toe)
+                road_ele=1.2,
+                road_width=20,  # m
+                road_setback=20,  # m
+                overwash_filter=90,  # corresponds with commercial
+                overwash_to_dune=9,
+                nourishment_volume=100,  # m^3/m
+                background_erosion=-1.0,  # m/yr, background shoreline erosion
+                rebuild_dune_threshold=1,  # m above the berm elevation
                 roadway_management_on=roads_on,
                 beach_dune_manager_on=nourishments_on,
             )
@@ -4828,618 +5003,8 @@ def human_plots():
             )
 
     def nourishments():
-        def pt45_high():
-            (
-                BarrierWidth_pt45_nat,
-                DuneCrestMean_pt45_nat,
-                BarrierHeight_pt45_nat,
-                bw_rate_pt45_nat,
-                bh_rate_pt45_nat,
-                sc_rate_pt45_nat,
-                DuneCrestMin_pt45_nat,
-                DuneCrestMax_pt45_nat,
-                cascade_pt45_nat,
-            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-                name_prefix="6-B3D_Rave_pt45_Natural_high",
-                tmin=0,
-                tmax_roadways=500,
-                tmax_sim=800,
-                plot_name="b3d_pt45_plots_high",
-                run_road_mgmt=False,
-            )
-
-            (
-                BarrierWidth_pt45_high_40pc,
-                DuneCrestMean_pt45_high_40pc,
-                BarrierHeight_pt45_high_40pc,
-                bh_rate_pt45_high_40pc,
-                bw_rate_pt45_high_40pc,
-                sc_rate_pt45_high_40pc,
-                DuneCrestMin_pt45_high_40pc,
-                DuneCrestMax_pt45_high_40pc,
-                shoreline_position_pt45_high_40pc,
-                shoreface_slope_pt45_high_40pc,
-                beach_width_pt45_high_40pc,
-                overwash_pt45_high_40pc,
-                dune_toe_pt45_high_40pc,
-                cascade_pt45_high_40pc,
-            ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
-                name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_highEle_residential",
-                tmax_management=648,  # Community reached minimum width, drowned at 648 years
-                tmax_sim=710,  # Barrier has HEIGHT DROWNED at t = 710 years
-                plot_name="b3d_pt45_Nourishment_2mDune_highEle_residential",
-            )
-
-            (
-                BarrierWidth_pt45_high_90pc,
-                DuneCrestMean_pt45_high_90pc,
-                BarrierHeight_pt45_high_90pc,
-                bh_rate_pt45_high_90pc,
-                bw_rate_pt45_high_90pc,
-                sc_rate_pt45_high_90pc,
-                DuneCrestMin_pt45_high_90pc,
-                DuneCrestMax_pt45_high_90pc,
-                shoreline_position_pt45_high_90pc,
-                shoreface_slope_pt45_high_90pc,
-                beach_width_pt45_high_90pc,
-                overwash_pt45_high_90pc,
-                dune_toe_pt45_high_90pc,
-                cascade_pt45_high_90pc,
-            ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
-                name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_highEle_commercial",
-                tmax_management=426,  # Community reached minimum width, drowned at 426 years
-                tmax_sim=452,  # Barrier has HEIGHT DROWNED at t = 452 years
-                plot_name="b3d_pt45_Nourishment_2mDune_highEle_commercial",
-            )
-
-            (
-                BarrierWidth_pt45_high_90pc_backerosion_pt25m,
-                DuneCrestMean_pt45_high_90pc_backerosion_pt25m,
-                BarrierHeight_pt45_high_90pc_backerosion_pt25m,
-                bh_rate_pt45_high_90pc_backerosion_pt25m,
-                bw_rate_pt45_high_90pc_backerosion_pt25m,
-                sc_rate_pt45_high_90pc_backerosion_pt25m,
-                DuneCrestMin_pt45_high_90pc_backerosion_pt25m,
-                DuneCrestMax_pt45_high_90pc_backerosion_pt25m,
-                shoreline_position_pt45_high_90pc_backerosion_pt25m,
-                shoreface_slope_pt45_high_90pc_backerosion_pt25m,
-                beach_width_pt45_high_90pc_backerosion_pt25m,
-                overwash_pt45_high_90pc_backerosion_pt25m,
-                dune_toe_pt45_high_90pc_backerosion_pt25m,
-                cascade_pt45_high_90pc_backerosion_pt25m,
-            ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
-                name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_highEle_commercial_backerosion_pt25m",
-                tmax_management=426,  # Community reached minimum width, drowned at 426 years
-                tmax_sim=800,
-                plot_name="b3d_pt45_Nourishment_2mDune_highEle_commercial_backerosion_pt25m",
-            )
-
-            (
-                BarrierWidth_pt45_high_90pc_backerosion_1m,
-                DuneCrestMean_pt45_high_90pc_backerosion_1m,
-                BarrierHeight_pt45_high_90pc_backerosion_1m,
-                bh_rate_pt45_high_90pc_backerosion_1m,
-                bw_rate_pt45_high_90pc_backerosion_1m,
-                sc_rate_pt45_high_90pc_backerosion_1m,
-                DuneCrestMin_pt45_high_90pc_backerosion_1m,
-                DuneCrestMax_pt45_high_90pc_backerosion_1m,
-                shoreline_position_pt45_high_90pc_backerosion_1m,
-                shoreface_slope_pt45_high_90pc_backerosion_1m,
-                beach_width_pt45_high_90pc_backerosion_1m,
-                overwash_pt45_high_90pc_backerosion_1m,
-                dune_toe_pt45_high_90pc_backerosion_1m,
-                cascade_pt45_high_90pc_backerosion_1m,
-            ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
-                name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_highEle_commercial_backerosion_1m",
-                tmax_management=426,  # Community reached minimum width, drowned at 426 years
-                tmax_sim=800,
-                plot_name="b3d_pt45_Nourishment_2mDune_highEle_commercial_backerosion_1m",
-                gif_on=False,
-                # cross_sections=[28, 29, 30],
-            )
-
-            rebuild_threshold = 0.3 + (cascade_pt45_high_40pc.barrier3d[0].BermEl * 10)
-
-            def version1_residential():
-                CASCADEplt.plot_nonlinear_stats_mgmt_array4(
-                    cascade=[
-                        cascade_pt45_nat,
-                        cascade_pt45_high_40pc,  # only residential here
-                        cascade_pt45_high_90pc,
-                        # cascade_pt45_high_90pc_backerosion_pt25m,
-                        cascade_pt45_high_90pc_backerosion_1m,
-                    ],
-                    DuneCrestMin=[
-                        DuneCrestMin_pt45_nat,
-                        DuneCrestMin_pt45_high_40pc,
-                        DuneCrestMin_pt45_high_90pc,
-                        # DuneCrestMin_pt45_high_90pc_backerosion_pt25m,
-                        DuneCrestMin_pt45_high_90pc_backerosion_1m,
-                    ],
-                    DuneCrestMax=[
-                        DuneCrestMax_pt45_nat,
-                        DuneCrestMax_pt45_high_40pc,
-                        DuneCrestMax_pt45_high_90pc,
-                        # DuneCrestMax_pt45_high_90pc_backerosion_pt25m,
-                        DuneCrestMax_pt45_high_90pc_backerosion_1m,
-                    ],
-                    BarrierHeight=[
-                        BarrierHeight_pt45_nat,
-                        BarrierHeight_pt45_high_40pc,
-                        BarrierHeight_pt45_high_90pc,
-                        # BarrierHeight_pt45_high_90pc_backerosion_pt25m,
-                        BarrierHeight_pt45_high_90pc_backerosion_1m,
-                    ],
-                    BarrierWidth=[
-                        BarrierWidth_pt45_nat,
-                        BarrierWidth_pt45_high_40pc,
-                        BarrierWidth_pt45_high_90pc,
-                        # BarrierWidth_pt45_high_90pc_backerosion_pt25m,
-                        BarrierWidth_pt45_high_90pc_backerosion_1m,
-                    ],
-                    DuneCrestMean=[
-                        DuneCrestMean_pt45_nat,
-                        DuneCrestMean_pt45_high_40pc,
-                        DuneCrestMean_pt45_high_90pc,
-                        # DuneCrestMean_pt45_high_90pc_backerosion_pt25m,
-                        DuneCrestMean_pt45_high_90pc_backerosion_1m,
-                    ],
-                    shoreline_position=[
-                        cascade_pt45_nat.barrier3d[
-                            0
-                        ].x_s_TS,  # wasn't saved yet in roadways, update later
-                        shoreline_position_pt45_high_40pc,
-                        shoreline_position_pt45_high_90pc,
-                        # shoreline_position_pt45_high_90pc_backerosion_pt25m,
-                        shoreline_position_pt45_high_90pc_backerosion_1m,
-                    ],
-                    overwash=[
-                        cascade_pt45_nat.barrier3d[
-                            0
-                        ].QowTS,  # wasn't saved yet in roadways, update later
-                        overwash_pt45_high_40pc,
-                        overwash_pt45_high_90pc,
-                        # overwash_pt45_high_90pc_backerosion_pt25m,
-                        overwash_pt45_high_90pc_backerosion_1m,
-                    ],
-                    dune_toe=[
-                        [0],  # dummy
-                        dune_toe_pt45_high_40pc,
-                        dune_toe_pt45_high_90pc,
-                        # dune_toe_pt45_high_90pc_backerosion_pt25m,
-                        dune_toe_pt45_high_90pc_backerosion_1m,
-                    ],
-                    TMAX=[
-                        750,  # was 800, switched to 750 to match roadways
-                        710,
-                        452,
-                        # 750,
-                        750,
-                    ],
-                    tmax_management=[
-                        750,  # dummy
-                        648,
-                        426,
-                        # 426,
-                        426,
-                    ],
-                    roadways_on=False,
-                    nourishment_on=True,
-                    rebuild_threshold=rebuild_threshold,
-                    # min dune height above the berm [m MHW], same as in RoadwayManager
-                    scenarios=[
-                        "natural",
-                        "residential",
-                        "commercial",
-                        "comm, 1 m/yr",
-                    ],
-                )
-
-            def version2_background_erosion():
-                CASCADEplt.plot_nonlinear_stats_mgmt_array4(
-                    cascade=[
-                        cascade_pt45_nat,
-                        # cascade_pt45_high_40pc,  # only residential here
-                        cascade_pt45_high_90pc,
-                        cascade_pt45_high_90pc_backerosion_pt25m,
-                        cascade_pt45_high_90pc_backerosion_1m,
-                    ],
-                    DuneCrestMin=[
-                        DuneCrestMin_pt45_nat,
-                        # DuneCrestMin_pt45_high_40pc,
-                        DuneCrestMin_pt45_high_90pc,
-                        DuneCrestMin_pt45_high_90pc_backerosion_pt25m,
-                        DuneCrestMin_pt45_high_90pc_backerosion_1m,
-                    ],
-                    DuneCrestMax=[
-                        DuneCrestMax_pt45_nat,
-                        # DuneCrestMax_pt45_high_40pc,
-                        DuneCrestMax_pt45_high_90pc,
-                        DuneCrestMax_pt45_high_90pc_backerosion_pt25m,
-                        DuneCrestMax_pt45_high_90pc_backerosion_1m,
-                    ],
-                    BarrierHeight=[
-                        BarrierHeight_pt45_nat,
-                        # BarrierHeight_pt45_high_40pc,
-                        BarrierHeight_pt45_high_90pc,
-                        BarrierHeight_pt45_high_90pc_backerosion_pt25m,
-                        BarrierHeight_pt45_high_90pc_backerosion_1m,
-                    ],
-                    BarrierWidth=[
-                        BarrierWidth_pt45_nat,
-                        # BarrierWidth_pt45_high_40pc,
-                        BarrierWidth_pt45_high_90pc,
-                        BarrierWidth_pt45_high_90pc_backerosion_pt25m,
-                        BarrierWidth_pt45_high_90pc_backerosion_1m,
-                    ],
-                    DuneCrestMean=[
-                        DuneCrestMean_pt45_nat,
-                        # DuneCrestMean_pt45_high_40pc,
-                        DuneCrestMean_pt45_high_90pc,
-                        DuneCrestMean_pt45_high_90pc_backerosion_pt25m,
-                        DuneCrestMean_pt45_high_90pc_backerosion_1m,
-                    ],
-                    shoreline_position=[
-                        cascade_pt45_nat.barrier3d[
-                            0
-                        ].x_s_TS,  # wasn't saved yet in roadways, update later
-                        # shoreline_position_pt45_high_40pc,
-                        shoreline_position_pt45_high_90pc,
-                        shoreline_position_pt45_high_90pc_backerosion_pt25m,
-                        shoreline_position_pt45_high_90pc_backerosion_1m,
-                    ],
-                    overwash=[
-                        cascade_pt45_nat.barrier3d[
-                            0
-                        ].QowTS,  # wasn't saved yet in roadways, update later
-                        # overwash_pt45_high_40pc,
-                        overwash_pt45_high_90pc,
-                        overwash_pt45_high_90pc_backerosion_pt25m,
-                        overwash_pt45_high_90pc_backerosion_1m,
-                    ],
-                    dune_toe=[
-                        [0],  # dummy
-                        # dune_toe_pt45_high_40pc,
-                        dune_toe_pt45_high_90pc,
-                        dune_toe_pt45_high_90pc_backerosion_pt25m,
-                        dune_toe_pt45_high_90pc_backerosion_1m,
-                    ],
-                    TMAX=[
-                        500,
-                        # 500,
-                        452,
-                        500,
-                        500,
-                    ],
-                    tmax_management=[
-                        500,  # dummy
-                        # 500,
-                        426,
-                        426,
-                        426,
-                    ],
-                    roadways_on=False,
-                    nourishment_on=True,
-                    rebuild_threshold=rebuild_threshold,
-                    # min dune height above the berm [m MHW], same as in RoadwayManager
-                    scenarios=[
-                        "natural",
-                        "commercial",
-                        "comm, 0.25 m/yr",
-                        "comm, 1 m/yr",
-                    ],
-                )
-
-        def pt75_low():
-            (
-                BarrierWidth_pt75_nat,
-                DuneCrestMean_pt75_nat,
-                BarrierHeight_pt75_nat,
-                bw_rate_pt75_nat,
-                bh_rate_pt75_nat,
-                sc_rate_pt75_nat,
-                DuneCrestMin_pt75_nat,
-                DuneCrestMax_pt75_nat,
-                cascade_pt75_nat,
-            ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-                name_prefix="6-B3D_Rave_pt75_Natural_low",
-                tmin=0,
-                tmax_roadways=1000,  # dummy
-                tmax_sim=1000,
-                plot_name="b3d_pt75_plots_low",
-                run_road_mgmt=False,
-            )
-
-            (
-                BarrierWidth_pt75_low_40pc,
-                DuneCrestMean_pt75_low_40pc,
-                BarrierHeight_pt75_low_40pc,
-                bh_rate_pt75_low_40pc,
-                bw_rate_pt75_low_40pc,
-                sc_rate_pt75_low_40pc,
-                DuneCrestMin_pt75_low_40pc,
-                DuneCrestMax_pt75_low_40pc,
-                shoreline_position_pt75_low_40pc,
-                shoreface_slope_pt75_low_40pc,
-                beach_width_pt75_low_40pc,
-                overwash_pt75_low_40pc,
-                dune_toe_pt75_low_40pc,
-                cascade_pt75_low_40pc,
-            ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
-                name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_residential",
-                tmax_management=178,  # drowned at 178
-                tmax_sim=800,
-                plot_name="b3d_pt75_Nourishment_2mDune_lowEle_residential",
-            )
-
-            (
-                BarrierWidth_pt75_low_90pc,
-                DuneCrestMean_pt75_low_90pc,
-                BarrierHeight_pt75_low_90pc,
-                bh_rate_pt75_low_90pc,
-                bw_rate_pt75_low_90pc,
-                sc_rate_pt75_low_90pc,
-                DuneCrestMin_pt75_low_90pc,
-                DuneCrestMax_pt75_low_90pc,
-                shoreline_position_pt75_low_90pc,
-                shoreface_slope_pt75_low_90pc,
-                beach_width_pt75_low_90pc,
-                overwash_pt75_low_90pc,
-                dune_toe_pt75_low_90pc,
-                cascade_pt75_low_90pc,
-            ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
-                name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial",
-                tmax_management=80,  # community drowned at 80 years
-                tmax_sim=800,
-                plot_name="b3d_pt75_Nourishment_2mDune_lowEle_commercial",
-                gif_on=False,
-                # cross_sections=[
-                #     0,
-                #     1,
-                # ],
-            )
-
-            (
-                BarrierWidth_pt75_low_90pc_backerosion_pt25m,
-                DuneCrestMean_pt75_low_90pc_backerosion_pt25m,
-                BarrierHeight_pt75_low_90pc_backerosion_pt25m,
-                bh_rate_pt75_low_90pc_backerosion_pt25m,
-                bw_rate_pt75_low_90pc_backerosion_pt25m,
-                sc_rate_pt75_low_90pc_backerosion_pt25m,
-                DuneCrestMin_pt75_low_90pc_backerosion_pt25m,
-                DuneCrestMax_pt75_low_90pc_backerosion_pt25m,
-                shoreline_position_pt75_low_90pc_backerosion_pt25m,
-                shoreface_slope_pt75_low_90pc_backerosion_pt25m,
-                beach_width_pt75_low_90pc_backerosion_pt25m,
-                overwash_pt75_low_90pc_backerosion_pt25m,
-                dune_toe_pt75_low_90pc_backerosion_pt25m,
-                cascade_pt75_low_90pc_backerosion_pt25m,
-            ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
-                name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial_backerosion_pt25m",
-                tmax_management=80,  # community drowned at 80 years
-                tmax_sim=800,
-                plot_name="b3d_pt75_Nourishment_2mDune_lowEle_commercial_backerosion_pt25m",
-            )
-
-            (
-                BarrierWidth_pt75_low_90pc_backerosion_1m,
-                DuneCrestMean_pt75_low_90pc_backerosion_1m,
-                BarrierHeight_pt75_low_90pc_backerosion_1m,
-                bh_rate_pt75_low_90pc_backerosion_1m,
-                bw_rate_pt75_low_90pc_backerosion_1m,
-                sc_rate_pt75_low_90pc_backerosion_1m,
-                DuneCrestMin_pt75_low_90pc_backerosion_1m,
-                DuneCrestMax_pt75_low_90pc_backerosion_1m,
-                shoreline_position_pt75_low_90pc_backerosion_1m,
-                shoreface_slope_pt75_low_90pc_backerosion_1m,
-                beach_width_pt75_low_90pc_backerosion_1m,
-                overwash_pt75_low_90pc_backerosion_1m,
-                dune_toe_pt75_low_90pc_backerosion_1m,
-                cascade_pt75_low_90pc_backerosion_1m,
-            ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
-                name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial_backerosion_1m",
-                tmax_management=80,  # community drowned at 80 years
-                tmax_sim=800,
-                plot_name="b3d_pt75_Nourishment_2mDune_lowEle_commercial_backerosion_1m",
-                gif_on=False,
-                # cross_sections=[
-                #     0,
-                #     1,
-                # ],
-            )
-
-            rebuild_threshold = 0.3 + (cascade_pt75_low_40pc.barrier3d[0].BermEl * 10)
-
-            def version2_background_erosion():
-                CASCADEplt.plot_nonlinear_stats_mgmt_array4(
-                    cascade=[
-                        cascade_pt75_nat,
-                        # cascade_pt75_low_40pc,  # only residential here
-                        cascade_pt75_low_90pc,
-                        cascade_pt75_low_90pc_backerosion_pt25m,
-                        cascade_pt75_low_90pc_backerosion_1m,
-                    ],
-                    DuneCrestMin=[
-                        DuneCrestMin_pt75_nat,
-                        # DuneCrestMin_pt75_low_40pc,
-                        DuneCrestMin_pt75_low_90pc,
-                        DuneCrestMin_pt75_low_90pc_backerosion_pt25m,
-                        DuneCrestMin_pt75_low_90pc_backerosion_1m,
-                    ],
-                    DuneCrestMax=[
-                        DuneCrestMax_pt75_nat,
-                        # DuneCrestMax_pt75_low_40pc,
-                        DuneCrestMax_pt75_low_90pc,
-                        DuneCrestMax_pt75_low_90pc_backerosion_pt25m,
-                        DuneCrestMax_pt75_low_90pc_backerosion_1m,
-                    ],
-                    BarrierHeight=[
-                        BarrierHeight_pt75_nat,
-                        # BarrierHeight_pt75_low_40pc,
-                        BarrierHeight_pt75_low_90pc,
-                        BarrierHeight_pt75_low_90pc_backerosion_pt25m,
-                        BarrierHeight_pt75_low_90pc_backerosion_1m,
-                    ],
-                    BarrierWidth=[
-                        BarrierWidth_pt75_nat,
-                        # BarrierWidth_pt75_low_40pc,
-                        BarrierWidth_pt75_low_90pc,
-                        BarrierWidth_pt75_low_90pc_backerosion_pt25m,
-                        BarrierWidth_pt75_low_90pc_backerosion_1m,
-                    ],
-                    DuneCrestMean=[
-                        DuneCrestMean_pt75_nat,
-                        # DuneCrestMean_pt75_low_40pc,
-                        DuneCrestMean_pt75_low_90pc,
-                        DuneCrestMean_pt75_low_90pc_backerosion_pt25m,
-                        DuneCrestMean_pt75_low_90pc_backerosion_1m,
-                    ],
-                    shoreline_position=[
-                        cascade_pt75_nat.barrier3d[
-                            0
-                        ].x_s_TS,  # wasn't saved yet in roadways, update later
-                        # shoreline_position_pt75_low_40pc,
-                        shoreline_position_pt75_low_90pc,
-                        shoreline_position_pt75_low_90pc_backerosion_pt25m,
-                        shoreline_position_pt75_low_90pc_backerosion_1m,
-                    ],
-                    overwash=[
-                        cascade_pt75_nat.barrier3d[
-                            0
-                        ].QowTS,  # wasn't saved yet in roadways, update later
-                        # overwash_pt75_low_40pc,
-                        overwash_pt75_low_90pc,
-                        overwash_pt75_low_90pc_backerosion_pt25m,
-                        overwash_pt75_low_90pc_backerosion_1m,
-                    ],
-                    dune_toe=[
-                        [0],  # dummy
-                        # dune_toe_pt75_low_40pc,
-                        dune_toe_pt75_low_90pc,
-                        dune_toe_pt75_low_90pc_backerosion_pt25m,
-                        dune_toe_pt75_low_90pc_backerosion_1m,
-                    ],
-                    TMAX=[
-                        750,
-                        # 750,
-                        750,
-                        750,
-                        750,
-                    ],
-                    tmax_management=[
-                        750,  # dummy
-                        # 178,
-                        80,
-                        80,
-                        80,
-                    ],
-                    roadways_on=False,
-                    nourishment_on=True,
-                    rebuild_threshold=rebuild_threshold,  # min dune height above the berm [m MHW], same as in RoadwayManager
-                    scenarios=[
-                        "natural",
-                        "commercial",
-                        "comm, 0.25 m/yr",
-                        "comm, 1 m/yr",
-                    ],
-                )
-
-            def version1_res_vs_commercial():
-                CASCADEplt.plot_nonlinear_stats_mgmt_array4(
-                    cascade=[
-                        cascade_pt75_nat,
-                        cascade_pt75_low_40pc,  # only residential here
-                        cascade_pt75_low_90pc,
-                        # cascade_pt75_low_90pc_backerosion_pt25m,
-                        cascade_pt75_low_90pc_backerosion_1m,
-                    ],
-                    DuneCrestMin=[
-                        DuneCrestMin_pt75_nat,
-                        DuneCrestMin_pt75_low_40pc,
-                        DuneCrestMin_pt75_low_90pc,
-                        # DuneCrestMin_pt75_low_90pc_backerosion_pt25m,
-                        DuneCrestMin_pt75_low_90pc_backerosion_1m,
-                    ],
-                    DuneCrestMax=[
-                        DuneCrestMax_pt75_nat,
-                        DuneCrestMax_pt75_low_40pc,
-                        DuneCrestMax_pt75_low_90pc,
-                        # DuneCrestMax_pt75_low_90pc_backerosion_pt25m,
-                        DuneCrestMax_pt75_low_90pc_backerosion_1m,
-                    ],
-                    BarrierHeight=[
-                        BarrierHeight_pt75_nat,
-                        BarrierHeight_pt75_low_40pc,
-                        BarrierHeight_pt75_low_90pc,
-                        # BarrierHeight_pt75_low_90pc_backerosion_pt25m,
-                        BarrierHeight_pt75_low_90pc_backerosion_1m,
-                    ],
-                    BarrierWidth=[
-                        BarrierWidth_pt75_nat,
-                        BarrierWidth_pt75_low_40pc,
-                        BarrierWidth_pt75_low_90pc,
-                        # BarrierWidth_pt75_low_90pc_backerosion_pt25m,
-                        BarrierWidth_pt75_low_90pc_backerosion_1m,
-                    ],
-                    DuneCrestMean=[
-                        DuneCrestMean_pt75_nat,
-                        DuneCrestMean_pt75_low_40pc,
-                        DuneCrestMean_pt75_low_90pc,
-                        # DuneCrestMean_pt75_low_90pc_backerosion_pt25m,
-                        DuneCrestMean_pt75_low_90pc_backerosion_1m,
-                    ],
-                    shoreline_position=[
-                        cascade_pt75_nat.barrier3d[
-                            0
-                        ].x_s_TS,  # wasn't saved yet in roadways, update later
-                        shoreline_position_pt75_low_40pc,
-                        shoreline_position_pt75_low_90pc,
-                        # shoreline_position_pt75_low_90pc_backerosion_pt25m,
-                        shoreline_position_pt75_low_90pc_backerosion_1m,
-                    ],
-                    overwash=[
-                        cascade_pt75_nat.barrier3d[
-                            0
-                        ].QowTS,  # wasn't saved yet in roadways, update later
-                        overwash_pt75_low_40pc,
-                        overwash_pt75_low_90pc,
-                        # overwash_pt75_low_90pc_backerosion_pt25m,
-                        overwash_pt75_low_90pc_backerosion_1m,
-                    ],
-                    dune_toe=[
-                        [0],  # dummy
-                        dune_toe_pt75_low_40pc,
-                        dune_toe_pt75_low_90pc,
-                        # dune_toe_pt75_low_90pc_backerosion_pt25m,
-                        dune_toe_pt75_low_90pc_backerosion_1m,
-                    ],
-                    TMAX=[
-                        750,
-                        750,
-                        750,
-                        # 750,
-                        750,
-                    ],
-                    tmax_management=[
-                        750,  # dummy
-                        178,
-                        80,
-                        # 80,
-                        80,
-                    ],
-                    roadways_on=False,
-                    nourishment_on=True,
-                    rebuild_threshold=rebuild_threshold,  # min dune height above the berm [m MHW], same as in RoadwayManager
-                    scenarios=[
-                        "natural",
-                        "residential",
-                        "commercial",
-                        "comm, 1 m/yr",
-                    ],
-                )
-
-        def old():
-            def pt45_low():
+        def rebuild_threshold_pt30m():
+            def pt45_high():
                 (
                     BarrierWidth_pt45_nat,
                     DuneCrestMean_pt45_nat,
@@ -5451,188 +5016,190 @@ def human_plots():
                     DuneCrestMax_pt45_nat,
                     cascade_pt45_nat,
                 ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-                    name_prefix="6-B3D_Rave_pt45_Natural_low",
+                    name_prefix="6-B3D_Rave_pt45_Natural_high",
                     tmin=0,
-                    tmax_roadways=1000,
-                    tmax_sim=1000,
-                    plot_name="b3d_pt45_plots_low",
+                    tmax_roadways=500,
+                    tmax_sim=800,
+                    plot_name="b3d_pt45_plots_high",
                     run_road_mgmt=False,
                 )
 
                 (
-                    BarrierWidth_pt45_low_40pc,
-                    DuneCrestMean_pt45_low_40pc,
-                    BarrierHeight_pt45_low_40pc,
-                    bh_rate_pt45_low_40pc,
-                    bw_rate_pt45_low_40pc,
-                    sc_rate_pt45_low_40pc,
-                    DuneCrestMin_pt45_low_40pc,
-                    DuneCrestMax_pt45_low_40pc,
-                    shoreline_position_pt45_low_40pc,
-                    shoreface_slope_pt45_low_40pc,
-                    beach_width_pt45_low_40pc,
-                    overwash_pt45_low_40pc,
-                    dune_toe_pt45_low_40pc,
-                    cascade_pt45_low_40pc,
+                    BarrierWidth_pt45_high_40pc,
+                    DuneCrestMean_pt45_high_40pc,
+                    BarrierHeight_pt45_high_40pc,
+                    bh_rate_pt45_high_40pc,
+                    bw_rate_pt45_high_40pc,
+                    sc_rate_pt45_high_40pc,
+                    DuneCrestMin_pt45_high_40pc,
+                    DuneCrestMax_pt45_high_40pc,
+                    shoreline_position_pt45_high_40pc,
+                    shoreface_slope_pt45_high_40pc,
+                    beach_width_pt45_high_40pc,
+                    overwash_pt45_high_40pc,
+                    dune_toe_pt45_high_40pc,
+                    cascade_pt45_high_40pc,
                 ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
-                    name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_residential",
-                    tmax_management=496,  # drowned at 496
-                    tmax_sim=500,
-                    plot_name="b3d_pt45_Nourishment_2mDune_lowEle_residential",
+                    name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_highEle_residential_rebuildpt3m",
+                    tmax_management=648,  # Community reached minimum width, drowned at 648 years
+                    tmax_sim=710,  # Barrier has HEIGHT DROWNED at t = 710 years
+                    plot_name="b3d_pt45_Nourishment_2mDune_highEle_residential_rebuildpt3m",
                 )
 
                 (
-                    BarrierWidth_pt45_low_90pc,
-                    DuneCrestMean_pt45_low_90pc,
-                    BarrierHeight_pt45_low_90pc,
-                    bh_rate_pt45_low_90pc,
-                    bw_rate_pt45_low_90pc,
-                    sc_rate_pt45_low_90pc,
-                    DuneCrestMin_pt45_low_90pc,
-                    DuneCrestMax_pt45_low_90pc,
-                    shoreline_position_pt45_low_90pc,
-                    shoreface_slope_pt45_low_90pc,
-                    beach_width_pt45_low_90pc,
-                    overwash_pt45_low_90pc,
-                    dune_toe_pt45_low_90pc,
-                    cascade_pt45_low_90pc,
+                    BarrierWidth_pt45_high_90pc,
+                    DuneCrestMean_pt45_high_90pc,
+                    BarrierHeight_pt45_high_90pc,
+                    bh_rate_pt45_high_90pc,
+                    bw_rate_pt45_high_90pc,
+                    sc_rate_pt45_high_90pc,
+                    DuneCrestMin_pt45_high_90pc,
+                    DuneCrestMax_pt45_high_90pc,
+                    shoreline_position_pt45_high_90pc,
+                    shoreface_slope_pt45_high_90pc,
+                    beach_width_pt45_high_90pc,
+                    overwash_pt45_high_90pc,
+                    dune_toe_pt45_high_90pc,
+                    cascade_pt45_high_90pc,
                 ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
-                    name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial",
-                    tmax_management=421,  # community drowned at 421
-                    tmax_sim=458,  # barrier height drowned at 458
-                    plot_name="b3d_pt45_Nourishment_2mDune_lowEle_commercial",
+                    name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_highEle_commercial_rebuildpt3m",
+                    tmax_management=426,  # Community reached minimum width, drowned at 426 years
+                    tmax_sim=452,  # Barrier has HEIGHT DROWNED at t = 452 years
+                    plot_name="b3d_pt45_Nourishment_2mDune_highEle_commercial_rebuildpt3m",
                 )
 
-                (
-                    BarrierWidth_pt45_low_90pc_backerosion_pt25m,
-                    DuneCrestMean_pt45_low_90pc_backerosion_pt25m,
-                    BarrierHeight_pt45_low_90pc_backerosion_pt25m,
-                    bh_rate_pt45_low_90pc_backerosion_pt25m,
-                    bw_rate_pt45_low_90pc_backerosion_pt25m,
-                    sc_rate_pt45_low_90pc_backerosion_pt25m,
-                    DuneCrestMin_pt45_low_90pc_backerosion_pt25m,
-                    DuneCrestMax_pt45_low_90pc_backerosion_pt25m,
-                    shoreline_position_pt45_low_90pc_backerosion_pt25m,
-                    shoreface_slope_pt45_low_90pc_backerosion_pt25m,
-                    beach_width_pt45_low_90pc_backerosion_pt25m,
-                    overwash_pt45_low_90pc_backerosion_pt25m,
-                    dune_toe_pt45_low_90pc_backerosion_pt25m,
-                    cascade_pt45_low_90pc_backerosion_pt25m,
-                ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
-                    name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial_backerosion_pt25m",
-                    tmax_management=421,  # community drowned at 421
-                    tmax_sim=454,  # barrier height drowned at 454
-                    plot_name="b3d_pt45_Nourishment_2mDune_lowEle_commercial_backerosion_pt25m",
-                )
+                # (
+                #     BarrierWidth_pt45_high_90pc_backerosion_pt25m,
+                #     DuneCrestMean_pt45_high_90pc_backerosion_pt25m,
+                #     BarrierHeight_pt45_high_90pc_backerosion_pt25m,
+                #     bh_rate_pt45_high_90pc_backerosion_pt25m,
+                #     bw_rate_pt45_high_90pc_backerosion_pt25m,
+                #     sc_rate_pt45_high_90pc_backerosion_pt25m,
+                #     DuneCrestMin_pt45_high_90pc_backerosion_pt25m,
+                #     DuneCrestMax_pt45_high_90pc_backerosion_pt25m,
+                #     shoreline_position_pt45_high_90pc_backerosion_pt25m,
+                #     shoreface_slope_pt45_high_90pc_backerosion_pt25m,
+                #     beach_width_pt45_high_90pc_backerosion_pt25m,
+                #     overwash_pt45_high_90pc_backerosion_pt25m,
+                #     dune_toe_pt45_high_90pc_backerosion_pt25m,
+                #     cascade_pt45_high_90pc_backerosion_pt25m,
+                # ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+                #     name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_highEle_commercial_backerosion_pt25m",
+                #     tmax_management=426,  # Community reached minimum width, drowned at 426 years
+                #     tmax_sim=800,
+                #     plot_name="b3d_pt45_Nourishment_2mDune_highEle_commercial_backerosion_pt25m",
+                # )
 
                 (
-                    BarrierWidth_pt45_low_90pc_backerosion_1m,
-                    DuneCrestMean_pt45_low_90pc_backerosion_1m,
-                    BarrierHeight_pt45_low_90pc_backerosion_1m,
-                    bh_rate_pt45_low_90pc_backerosion_1m,
-                    bw_rate_pt45_low_90pc_backerosion_1m,
-                    sc_rate_pt45_low_90pc_backerosion_1m,
-                    DuneCrestMin_pt45_low_90pc_backerosion_1m,
-                    DuneCrestMax_pt45_low_90pc_backerosion_1m,
-                    shoreline_position_pt45_low_90pc_backerosion_1m,
-                    shoreface_slope_pt45_low_90pc_backerosion_1m,
-                    beach_width_pt45_low_90pc_backerosion_1m,
-                    overwash_pt45_low_90pc_backerosion_1m,
-                    dune_toe_pt45_low_90pc_backerosion_1m,
-                    cascade_pt45_low_90pc_backerosion_1m,
+                    BarrierWidth_pt45_high_90pc_backerosion_1m,
+                    DuneCrestMean_pt45_high_90pc_backerosion_1m,
+                    BarrierHeight_pt45_high_90pc_backerosion_1m,
+                    bh_rate_pt45_high_90pc_backerosion_1m,
+                    bw_rate_pt45_high_90pc_backerosion_1m,
+                    sc_rate_pt45_high_90pc_backerosion_1m,
+                    DuneCrestMin_pt45_high_90pc_backerosion_1m,
+                    DuneCrestMax_pt45_high_90pc_backerosion_1m,
+                    shoreline_position_pt45_high_90pc_backerosion_1m,
+                    shoreface_slope_pt45_high_90pc_backerosion_1m,
+                    beach_width_pt45_high_90pc_backerosion_1m,
+                    overwash_pt45_high_90pc_backerosion_1m,
+                    dune_toe_pt45_high_90pc_backerosion_1m,
+                    cascade_pt45_high_90pc_backerosion_1m,
                 ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
-                    name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial_backerosion_1m",
-                    tmax_management=421,  # community drowned at 421
-                    tmax_sim=500,
-                    plot_name="b3d_pt45_Nourishment_2mDune_lowEle_commercial_backerosion_1m",
+                    name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_highEle_commercial_backerosion1m_rebuildpt3m",
+                    tmax_management=426,  # Community reached minimum width, drowned at 426 years
+                    tmax_sim=800,
+                    plot_name="b3d_pt45_Nourishment_2mDune_highEle_commercial_backerosion_1m_rebuildpt3m",
+                    gif_on=False,
+                    # cross_sections=[28, 29, 30],
                 )
 
                 rebuild_threshold = 0.3 + (
-                    cascade_pt45_low_40pc.barrier3d[0].BermEl * 10
+                    cascade_pt45_high_40pc.barrier3d[0].BermEl * 10
                 )
 
                 def version1_residential():
                     CASCADEplt.plot_nonlinear_stats_mgmt_array4(
                         cascade=[
                             cascade_pt45_nat,
-                            cascade_pt45_low_40pc,  # only residential here
-                            cascade_pt45_low_90pc,
-                            # cascade_pt45_low_90pc_backerosion_pt25m,
-                            cascade_pt45_low_90pc_backerosion_1m,
+                            cascade_pt45_high_40pc,  # only residential here
+                            cascade_pt45_high_90pc,
+                            # cascade_pt45_high_90pc_backerosion_pt25m,
+                            cascade_pt45_high_90pc_backerosion_1m,
                         ],
                         DuneCrestMin=[
                             DuneCrestMin_pt45_nat,
-                            DuneCrestMin_pt45_low_40pc,
-                            DuneCrestMin_pt45_low_90pc,
-                            # DuneCrestMin_pt45_low_90pc_backerosion_pt25m,
-                            DuneCrestMin_pt45_low_90pc_backerosion_1m,
+                            DuneCrestMin_pt45_high_40pc,
+                            DuneCrestMin_pt45_high_90pc,
+                            # DuneCrestMin_pt45_high_90pc_backerosion_pt25m,
+                            DuneCrestMin_pt45_high_90pc_backerosion_1m,
                         ],
                         DuneCrestMax=[
                             DuneCrestMax_pt45_nat,
-                            DuneCrestMax_pt45_low_40pc,
-                            DuneCrestMax_pt45_low_90pc,
-                            # DuneCrestMax_pt45_low_90pc_backerosion_pt25m,
-                            DuneCrestMax_pt45_low_90pc_backerosion_1m,
+                            DuneCrestMax_pt45_high_40pc,
+                            DuneCrestMax_pt45_high_90pc,
+                            # DuneCrestMax_pt45_high_90pc_backerosion_pt25m,
+                            DuneCrestMax_pt45_high_90pc_backerosion_1m,
                         ],
                         BarrierHeight=[
                             BarrierHeight_pt45_nat,
-                            BarrierHeight_pt45_low_40pc,
-                            BarrierHeight_pt45_low_90pc,
-                            # BarrierHeight_pt45_low_90pc_backerosion_pt25m,
-                            BarrierHeight_pt45_low_90pc_backerosion_1m,
+                            BarrierHeight_pt45_high_40pc,
+                            BarrierHeight_pt45_high_90pc,
+                            # BarrierHeight_pt45_high_90pc_backerosion_pt25m,
+                            BarrierHeight_pt45_high_90pc_backerosion_1m,
                         ],
                         BarrierWidth=[
                             BarrierWidth_pt45_nat,
-                            BarrierWidth_pt45_low_40pc,
-                            BarrierWidth_pt45_low_90pc,
-                            # BarrierWidth_pt45_low_90pc_backerosion_pt25m,
-                            BarrierWidth_pt45_low_90pc_backerosion_1m,
+                            BarrierWidth_pt45_high_40pc,
+                            BarrierWidth_pt45_high_90pc,
+                            # BarrierWidth_pt45_high_90pc_backerosion_pt25m,
+                            BarrierWidth_pt45_high_90pc_backerosion_1m,
                         ],
                         DuneCrestMean=[
                             DuneCrestMean_pt45_nat,
-                            DuneCrestMean_pt45_low_40pc,
-                            DuneCrestMean_pt45_low_90pc,
-                            # DuneCrestMean_pt45_low_90pc_backerosion_pt25m,
-                            DuneCrestMean_pt45_low_90pc_backerosion_1m,
+                            DuneCrestMean_pt45_high_40pc,
+                            DuneCrestMean_pt45_high_90pc,
+                            # DuneCrestMean_pt45_high_90pc_backerosion_pt25m,
+                            DuneCrestMean_pt45_high_90pc_backerosion_1m,
                         ],
                         shoreline_position=[
                             cascade_pt45_nat.barrier3d[
                                 0
                             ].x_s_TS,  # wasn't saved yet in roadways, update later
-                            shoreline_position_pt45_low_40pc,
-                            shoreline_position_pt45_low_90pc,
-                            # shoreline_position_pt45_low_90pc_backerosion_pt25m,
-                            shoreline_position_pt45_low_90pc_backerosion_1m,
+                            shoreline_position_pt45_high_40pc,
+                            shoreline_position_pt45_high_90pc,
+                            # shoreline_position_pt45_high_90pc_backerosion_pt25m,
+                            shoreline_position_pt45_high_90pc_backerosion_1m,
                         ],
                         overwash=[
                             cascade_pt45_nat.barrier3d[
                                 0
                             ].QowTS,  # wasn't saved yet in roadways, update later
-                            overwash_pt45_low_40pc,
-                            overwash_pt45_low_90pc,
-                            # overwash_pt45_low_90pc_backerosion_pt25m,
-                            overwash_pt45_low_90pc_backerosion_1m,
+                            overwash_pt45_high_40pc,
+                            overwash_pt45_high_90pc,
+                            # overwash_pt45_high_90pc_backerosion_pt25m,
+                            overwash_pt45_high_90pc_backerosion_1m,
                         ],
                         dune_toe=[
                             [0],  # dummy
-                            dune_toe_pt45_low_40pc,
-                            dune_toe_pt45_low_90pc,
-                            # dune_toe_pt45_low_90pc_backerosion_pt25m,
-                            dune_toe_pt45_low_90pc_backerosion_1m,
+                            dune_toe_pt45_high_40pc,
+                            dune_toe_pt45_high_90pc,
+                            # dune_toe_pt45_high_90pc_backerosion_pt25m,
+                            dune_toe_pt45_high_90pc_backerosion_1m,
                         ],
                         TMAX=[
-                            500,
-                            500,
-                            458,
-                            # 454,
-                            500,
+                            750,  # was 800, switched to 750 to match roadways
+                            710,
+                            452,
+                            # 750,
+                            750,
                         ],
                         tmax_management=[
-                            500,  # dummy
-                            496,
-                            421,
-                            # 421,
-                            421,
+                            750,  # dummy
+                            648,
+                            426,
+                            # 426,
+                            426,
                         ],
                         roadways_on=False,
                         nourishment_on=True,
@@ -5650,84 +5217,301 @@ def human_plots():
                     CASCADEplt.plot_nonlinear_stats_mgmt_array4(
                         cascade=[
                             cascade_pt45_nat,
-                            # cascade_pt45_low_40pc,  # only residential here
-                            cascade_pt45_low_90pc,
-                            cascade_pt45_low_90pc_backerosion_pt25m,
-                            cascade_pt45_low_90pc_backerosion_1m,
+                            # cascade_pt45_high_40pc,  # only residential here
+                            cascade_pt45_high_90pc,
+                            cascade_pt45_high_90pc_backerosion_pt25m,
+                            cascade_pt45_high_90pc_backerosion_1m,
                         ],
                         DuneCrestMin=[
                             DuneCrestMin_pt45_nat,
-                            # DuneCrestMin_pt45_low_40pc,
-                            DuneCrestMin_pt45_low_90pc,
-                            DuneCrestMin_pt45_low_90pc_backerosion_pt25m,
-                            DuneCrestMin_pt45_low_90pc_backerosion_1m,
+                            # DuneCrestMin_pt45_high_40pc,
+                            DuneCrestMin_pt45_high_90pc,
+                            DuneCrestMin_pt45_high_90pc_backerosion_pt25m,
+                            DuneCrestMin_pt45_high_90pc_backerosion_1m,
                         ],
                         DuneCrestMax=[
                             DuneCrestMax_pt45_nat,
-                            # DuneCrestMax_pt45_low_40pc,
-                            DuneCrestMax_pt45_low_90pc,
-                            DuneCrestMax_pt45_low_90pc_backerosion_pt25m,
-                            DuneCrestMax_pt45_low_90pc_backerosion_1m,
+                            # DuneCrestMax_pt45_high_40pc,
+                            DuneCrestMax_pt45_high_90pc,
+                            DuneCrestMax_pt45_high_90pc_backerosion_pt25m,
+                            DuneCrestMax_pt45_high_90pc_backerosion_1m,
                         ],
                         BarrierHeight=[
                             BarrierHeight_pt45_nat,
-                            # BarrierHeight_pt45_low_40pc,
-                            BarrierHeight_pt45_low_90pc,
-                            BarrierHeight_pt45_low_90pc_backerosion_pt25m,
-                            BarrierHeight_pt45_low_90pc_backerosion_1m,
+                            # BarrierHeight_pt45_high_40pc,
+                            BarrierHeight_pt45_high_90pc,
+                            BarrierHeight_pt45_high_90pc_backerosion_pt25m,
+                            BarrierHeight_pt45_high_90pc_backerosion_1m,
                         ],
                         BarrierWidth=[
                             BarrierWidth_pt45_nat,
-                            # BarrierWidth_pt45_low_40pc,
-                            BarrierWidth_pt45_low_90pc,
-                            BarrierWidth_pt45_low_90pc_backerosion_pt25m,
-                            BarrierWidth_pt45_low_90pc_backerosion_1m,
+                            # BarrierWidth_pt45_high_40pc,
+                            BarrierWidth_pt45_high_90pc,
+                            BarrierWidth_pt45_high_90pc_backerosion_pt25m,
+                            BarrierWidth_pt45_high_90pc_backerosion_1m,
                         ],
                         DuneCrestMean=[
                             DuneCrestMean_pt45_nat,
-                            # DuneCrestMean_pt45_low_40pc,
-                            DuneCrestMean_pt45_low_90pc,
-                            DuneCrestMean_pt45_low_90pc_backerosion_pt25m,
-                            DuneCrestMean_pt45_low_90pc_backerosion_1m,
+                            # DuneCrestMean_pt45_high_40pc,
+                            DuneCrestMean_pt45_high_90pc,
+                            DuneCrestMean_pt45_high_90pc_backerosion_pt25m,
+                            DuneCrestMean_pt45_high_90pc_backerosion_1m,
                         ],
                         shoreline_position=[
                             cascade_pt45_nat.barrier3d[
                                 0
                             ].x_s_TS,  # wasn't saved yet in roadways, update later
-                            # shoreline_position_pt45_low_40pc,
-                            shoreline_position_pt45_low_90pc,
-                            shoreline_position_pt45_low_90pc_backerosion_pt25m,
-                            shoreline_position_pt45_low_90pc_backerosion_1m,
+                            # shoreline_position_pt45_high_40pc,
+                            shoreline_position_pt45_high_90pc,
+                            shoreline_position_pt45_high_90pc_backerosion_pt25m,
+                            shoreline_position_pt45_high_90pc_backerosion_1m,
                         ],
                         overwash=[
                             cascade_pt45_nat.barrier3d[
                                 0
                             ].QowTS,  # wasn't saved yet in roadways, update later
-                            # overwash_pt45_low_40pc,
-                            overwash_pt45_low_90pc,
-                            overwash_pt45_low_90pc_backerosion_pt25m,
-                            overwash_pt45_low_90pc_backerosion_1m,
+                            # overwash_pt45_high_40pc,
+                            overwash_pt45_high_90pc,
+                            overwash_pt45_high_90pc_backerosion_pt25m,
+                            overwash_pt45_high_90pc_backerosion_1m,
                         ],
                         dune_toe=[
                             [0],  # dummy
-                            # dune_toe_pt45_low_40pc,
-                            dune_toe_pt45_low_90pc,
-                            dune_toe_pt45_low_90pc_backerosion_pt25m,
-                            dune_toe_pt45_low_90pc_backerosion_1m,
+                            # dune_toe_pt45_high_40pc,
+                            dune_toe_pt45_high_90pc,
+                            dune_toe_pt45_high_90pc_backerosion_pt25m,
+                            dune_toe_pt45_high_90pc_backerosion_1m,
                         ],
                         TMAX=[
                             500,
                             # 500,
-                            458,
-                            454,
+                            452,
+                            500,
                             500,
                         ],
                         tmax_management=[
                             500,  # dummy
-                            # 496,
-                            421,
-                            421,
-                            421,
+                            # 500,
+                            426,
+                            426,
+                            426,
+                        ],
+                        roadways_on=False,
+                        nourishment_on=True,
+                        rebuild_threshold=rebuild_threshold,
+                        # min dune height above the berm [m MHW], same as in RoadwayManager
+                        scenarios=[
+                            "natural",
+                            "commercial",
+                            "comm, 0.25 m/yr",
+                            "comm, 1 m/yr",
+                        ],
+                    )
+
+            def pt75_low():
+                (
+                    BarrierWidth_pt75_nat,
+                    DuneCrestMean_pt75_nat,
+                    BarrierHeight_pt75_nat,
+                    bw_rate_pt75_nat,
+                    bh_rate_pt75_nat,
+                    sc_rate_pt75_nat,
+                    DuneCrestMin_pt75_nat,
+                    DuneCrestMax_pt75_nat,
+                    cascade_pt75_nat,
+                ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                    name_prefix="6-B3D_Rave_pt75_Natural_low",
+                    tmin=0,
+                    tmax_roadways=1000,  # dummy
+                    tmax_sim=1000,
+                    plot_name="b3d_pt75_plots_low",
+                    run_road_mgmt=False,
+                )
+
+                (
+                    BarrierWidth_pt75_low_40pc,
+                    DuneCrestMean_pt75_low_40pc,
+                    BarrierHeight_pt75_low_40pc,
+                    bh_rate_pt75_low_40pc,
+                    bw_rate_pt75_low_40pc,
+                    sc_rate_pt75_low_40pc,
+                    DuneCrestMin_pt75_low_40pc,
+                    DuneCrestMax_pt75_low_40pc,
+                    shoreline_position_pt75_low_40pc,
+                    shoreface_slope_pt75_low_40pc,
+                    beach_width_pt75_low_40pc,
+                    overwash_pt75_low_40pc,
+                    dune_toe_pt75_low_40pc,
+                    cascade_pt75_low_40pc,
+                ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+                    name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_residential_rebuildpt3m",
+                    tmax_management=178,  # drowned at 178
+                    tmax_sim=800,
+                    plot_name="b3d_pt75_Nourishment_2mDune_lowEle_residential_rebuildpt3m",
+                )
+
+                (
+                    BarrierWidth_pt75_low_90pc,
+                    DuneCrestMean_pt75_low_90pc,
+                    BarrierHeight_pt75_low_90pc,
+                    bh_rate_pt75_low_90pc,
+                    bw_rate_pt75_low_90pc,
+                    sc_rate_pt75_low_90pc,
+                    DuneCrestMin_pt75_low_90pc,
+                    DuneCrestMax_pt75_low_90pc,
+                    shoreline_position_pt75_low_90pc,
+                    shoreface_slope_pt75_low_90pc,
+                    beach_width_pt75_low_90pc,
+                    overwash_pt75_low_90pc,
+                    dune_toe_pt75_low_90pc,
+                    cascade_pt75_low_90pc,
+                ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+                    name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial_rebuildpt3m",
+                    tmax_management=80,  # community drowned at 80 years
+                    tmax_sim=800,
+                    plot_name="b3d_pt75_Nourishment_2mDune_lowEle_commercial_rebuildpt3m",
+                    gif_on=False,
+                    # cross_sections=[
+                    #     0,
+                    #     1,
+                    # ],
+                )
+
+                # (
+                #     BarrierWidth_pt75_low_90pc_backerosion_pt25m,
+                #     DuneCrestMean_pt75_low_90pc_backerosion_pt25m,
+                #     BarrierHeight_pt75_low_90pc_backerosion_pt25m,
+                #     bh_rate_pt75_low_90pc_backerosion_pt25m,
+                #     bw_rate_pt75_low_90pc_backerosion_pt25m,
+                #     sc_rate_pt75_low_90pc_backerosion_pt25m,
+                #     DuneCrestMin_pt75_low_90pc_backerosion_pt25m,
+                #     DuneCrestMax_pt75_low_90pc_backerosion_pt25m,
+                #     shoreline_position_pt75_low_90pc_backerosion_pt25m,
+                #     shoreface_slope_pt75_low_90pc_backerosion_pt25m,
+                #     beach_width_pt75_low_90pc_backerosion_pt25m,
+                #     overwash_pt75_low_90pc_backerosion_pt25m,
+                #     dune_toe_pt75_low_90pc_backerosion_pt25m,
+                #     cascade_pt75_low_90pc_backerosion_pt25m,
+                # ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+                #     name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial_backerosion_pt25m",
+                #     tmax_management=80,  # community drowned at 80 years
+                #     tmax_sim=800,
+                #     plot_name="b3d_pt75_Nourishment_2mDune_lowEle_commercial_backerosion_pt25m_rebuildpt3m",
+                # )
+
+                (
+                    BarrierWidth_pt75_low_90pc_backerosion_1m,
+                    DuneCrestMean_pt75_low_90pc_backerosion_1m,
+                    BarrierHeight_pt75_low_90pc_backerosion_1m,
+                    bh_rate_pt75_low_90pc_backerosion_1m,
+                    bw_rate_pt75_low_90pc_backerosion_1m,
+                    sc_rate_pt75_low_90pc_backerosion_1m,
+                    DuneCrestMin_pt75_low_90pc_backerosion_1m,
+                    DuneCrestMax_pt75_low_90pc_backerosion_1m,
+                    shoreline_position_pt75_low_90pc_backerosion_1m,
+                    shoreface_slope_pt75_low_90pc_backerosion_1m,
+                    beach_width_pt75_low_90pc_backerosion_1m,
+                    overwash_pt75_low_90pc_backerosion_1m,
+                    dune_toe_pt75_low_90pc_backerosion_1m,
+                    cascade_pt75_low_90pc_backerosion_1m,
+                ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+                    name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial_backerosion1m_rebuildpt3m",
+                    tmax_management=80,  # community drowned at 80 years
+                    tmax_sim=800,
+                    plot_name="b3d_pt75_Nourishment_2mDune_lowEle_commercial_backerosion_1m_rebuildpt3m",
+                    gif_on=False,
+                    # cross_sections=[
+                    #     0,
+                    #     1,
+                    # ],
+                )
+
+                rebuild_threshold = 0.3 + (
+                    cascade_pt75_low_40pc.barrier3d[0].BermEl * 10
+                )
+
+                def version2_background_erosion():
+                    CASCADEplt.plot_nonlinear_stats_mgmt_array4(
+                        cascade=[
+                            cascade_pt75_nat,
+                            # cascade_pt75_low_40pc,  # only residential here
+                            cascade_pt75_low_90pc,
+                            cascade_pt75_low_90pc_backerosion_pt25m,
+                            cascade_pt75_low_90pc_backerosion_1m,
+                        ],
+                        DuneCrestMin=[
+                            DuneCrestMin_pt75_nat,
+                            # DuneCrestMin_pt75_low_40pc,
+                            DuneCrestMin_pt75_low_90pc,
+                            DuneCrestMin_pt75_low_90pc_backerosion_pt25m,
+                            DuneCrestMin_pt75_low_90pc_backerosion_1m,
+                        ],
+                        DuneCrestMax=[
+                            DuneCrestMax_pt75_nat,
+                            # DuneCrestMax_pt75_low_40pc,
+                            DuneCrestMax_pt75_low_90pc,
+                            DuneCrestMax_pt75_low_90pc_backerosion_pt25m,
+                            DuneCrestMax_pt75_low_90pc_backerosion_1m,
+                        ],
+                        BarrierHeight=[
+                            BarrierHeight_pt75_nat,
+                            # BarrierHeight_pt75_low_40pc,
+                            BarrierHeight_pt75_low_90pc,
+                            BarrierHeight_pt75_low_90pc_backerosion_pt25m,
+                            BarrierHeight_pt75_low_90pc_backerosion_1m,
+                        ],
+                        BarrierWidth=[
+                            BarrierWidth_pt75_nat,
+                            # BarrierWidth_pt75_low_40pc,
+                            BarrierWidth_pt75_low_90pc,
+                            BarrierWidth_pt75_low_90pc_backerosion_pt25m,
+                            BarrierWidth_pt75_low_90pc_backerosion_1m,
+                        ],
+                        DuneCrestMean=[
+                            DuneCrestMean_pt75_nat,
+                            # DuneCrestMean_pt75_low_40pc,
+                            DuneCrestMean_pt75_low_90pc,
+                            DuneCrestMean_pt75_low_90pc_backerosion_pt25m,
+                            DuneCrestMean_pt75_low_90pc_backerosion_1m,
+                        ],
+                        shoreline_position=[
+                            cascade_pt75_nat.barrier3d[
+                                0
+                            ].x_s_TS,  # wasn't saved yet in roadways, update later
+                            # shoreline_position_pt75_low_40pc,
+                            shoreline_position_pt75_low_90pc,
+                            shoreline_position_pt75_low_90pc_backerosion_pt25m,
+                            shoreline_position_pt75_low_90pc_backerosion_1m,
+                        ],
+                        overwash=[
+                            cascade_pt75_nat.barrier3d[
+                                0
+                            ].QowTS,  # wasn't saved yet in roadways, update later
+                            # overwash_pt75_low_40pc,
+                            overwash_pt75_low_90pc,
+                            overwash_pt75_low_90pc_backerosion_pt25m,
+                            overwash_pt75_low_90pc_backerosion_1m,
+                        ],
+                        dune_toe=[
+                            [0],  # dummy
+                            # dune_toe_pt75_low_40pc,
+                            dune_toe_pt75_low_90pc,
+                            dune_toe_pt75_low_90pc_backerosion_pt25m,
+                            dune_toe_pt75_low_90pc_backerosion_1m,
+                        ],
+                        TMAX=[
+                            750,
+                            # 750,
+                            750,
+                            750,
+                            750,
+                        ],
+                        tmax_management=[
+                            750,  # dummy
+                            # 178,
+                            80,
+                            80,
+                            80,
                         ],
                         roadways_on=False,
                         nourishment_on=True,
@@ -5736,6 +5520,751 @@ def human_plots():
                             "natural",
                             "commercial",
                             "comm, 0.25 m/yr",
+                            "comm, 1 m/yr",
+                        ],
+                    )
+
+                def version1_res_vs_commercial():
+                    CASCADEplt.plot_nonlinear_stats_mgmt_array4(
+                        cascade=[
+                            cascade_pt75_nat,
+                            cascade_pt75_low_40pc,  # only residential here
+                            cascade_pt75_low_90pc,
+                            # cascade_pt75_low_90pc_backerosion_pt25m,
+                            cascade_pt75_low_90pc_backerosion_1m,
+                        ],
+                        DuneCrestMin=[
+                            DuneCrestMin_pt75_nat,
+                            DuneCrestMin_pt75_low_40pc,
+                            DuneCrestMin_pt75_low_90pc,
+                            # DuneCrestMin_pt75_low_90pc_backerosion_pt25m,
+                            DuneCrestMin_pt75_low_90pc_backerosion_1m,
+                        ],
+                        DuneCrestMax=[
+                            DuneCrestMax_pt75_nat,
+                            DuneCrestMax_pt75_low_40pc,
+                            DuneCrestMax_pt75_low_90pc,
+                            # DuneCrestMax_pt75_low_90pc_backerosion_pt25m,
+                            DuneCrestMax_pt75_low_90pc_backerosion_1m,
+                        ],
+                        BarrierHeight=[
+                            BarrierHeight_pt75_nat,
+                            BarrierHeight_pt75_low_40pc,
+                            BarrierHeight_pt75_low_90pc,
+                            # BarrierHeight_pt75_low_90pc_backerosion_pt25m,
+                            BarrierHeight_pt75_low_90pc_backerosion_1m,
+                        ],
+                        BarrierWidth=[
+                            BarrierWidth_pt75_nat,
+                            BarrierWidth_pt75_low_40pc,
+                            BarrierWidth_pt75_low_90pc,
+                            # BarrierWidth_pt75_low_90pc_backerosion_pt25m,
+                            BarrierWidth_pt75_low_90pc_backerosion_1m,
+                        ],
+                        DuneCrestMean=[
+                            DuneCrestMean_pt75_nat,
+                            DuneCrestMean_pt75_low_40pc,
+                            DuneCrestMean_pt75_low_90pc,
+                            # DuneCrestMean_pt75_low_90pc_backerosion_pt25m,
+                            DuneCrestMean_pt75_low_90pc_backerosion_1m,
+                        ],
+                        shoreline_position=[
+                            cascade_pt75_nat.barrier3d[
+                                0
+                            ].x_s_TS,  # wasn't saved yet in roadways, update later
+                            shoreline_position_pt75_low_40pc,
+                            shoreline_position_pt75_low_90pc,
+                            # shoreline_position_pt75_low_90pc_backerosion_pt25m,
+                            shoreline_position_pt75_low_90pc_backerosion_1m,
+                        ],
+                        overwash=[
+                            cascade_pt75_nat.barrier3d[
+                                0
+                            ].QowTS,  # wasn't saved yet in roadways, update later
+                            overwash_pt75_low_40pc,
+                            overwash_pt75_low_90pc,
+                            # overwash_pt75_low_90pc_backerosion_pt25m,
+                            overwash_pt75_low_90pc_backerosion_1m,
+                        ],
+                        dune_toe=[
+                            [0],  # dummy
+                            dune_toe_pt75_low_40pc,
+                            dune_toe_pt75_low_90pc,
+                            # dune_toe_pt75_low_90pc_backerosion_pt25m,
+                            dune_toe_pt75_low_90pc_backerosion_1m,
+                        ],
+                        TMAX=[
+                            750,
+                            750,
+                            750,
+                            # 750,
+                            750,
+                        ],
+                        tmax_management=[
+                            750,  # dummy
+                            178,
+                            80,
+                            # 80,
+                            80,
+                        ],
+                        roadways_on=False,
+                        nourishment_on=True,
+                        rebuild_threshold=rebuild_threshold,  # min dune height above the berm [m MHW], same as in RoadwayManager
+                        scenarios=[
+                            "natural",
+                            "residential",
+                            "commercial",
+                            "comm, 1 m/yr",
+                        ],
+                    )
+
+            def old():
+                def pt45_low():
+                    (
+                        BarrierWidth_pt45_nat,
+                        DuneCrestMean_pt45_nat,
+                        BarrierHeight_pt45_nat,
+                        bw_rate_pt45_nat,
+                        bh_rate_pt45_nat,
+                        sc_rate_pt45_nat,
+                        DuneCrestMin_pt45_nat,
+                        DuneCrestMax_pt45_nat,
+                        cascade_pt45_nat,
+                    ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                        name_prefix="6-B3D_Rave_pt45_Natural_low",
+                        tmin=0,
+                        tmax_roadways=1000,
+                        tmax_sim=1000,
+                        plot_name="b3d_pt45_plots_low",
+                        run_road_mgmt=False,
+                    )
+
+                    (
+                        BarrierWidth_pt45_low_40pc,
+                        DuneCrestMean_pt45_low_40pc,
+                        BarrierHeight_pt45_low_40pc,
+                        bh_rate_pt45_low_40pc,
+                        bw_rate_pt45_low_40pc,
+                        sc_rate_pt45_low_40pc,
+                        DuneCrestMin_pt45_low_40pc,
+                        DuneCrestMax_pt45_low_40pc,
+                        shoreline_position_pt45_low_40pc,
+                        shoreface_slope_pt45_low_40pc,
+                        beach_width_pt45_low_40pc,
+                        overwash_pt45_low_40pc,
+                        dune_toe_pt45_low_40pc,
+                        cascade_pt45_low_40pc,
+                    ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+                        name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_residential",
+                        tmax_management=496,  # drowned at 496
+                        tmax_sim=500,
+                        plot_name="b3d_pt45_Nourishment_2mDune_lowEle_residential",
+                    )
+
+                    (
+                        BarrierWidth_pt45_low_90pc,
+                        DuneCrestMean_pt45_low_90pc,
+                        BarrierHeight_pt45_low_90pc,
+                        bh_rate_pt45_low_90pc,
+                        bw_rate_pt45_low_90pc,
+                        sc_rate_pt45_low_90pc,
+                        DuneCrestMin_pt45_low_90pc,
+                        DuneCrestMax_pt45_low_90pc,
+                        shoreline_position_pt45_low_90pc,
+                        shoreface_slope_pt45_low_90pc,
+                        beach_width_pt45_low_90pc,
+                        overwash_pt45_low_90pc,
+                        dune_toe_pt45_low_90pc,
+                        cascade_pt45_low_90pc,
+                    ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+                        name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial",
+                        tmax_management=421,  # community drowned at 421
+                        tmax_sim=458,  # barrier height drowned at 458
+                        plot_name="b3d_pt45_Nourishment_2mDune_lowEle_commercial",
+                    )
+
+                    (
+                        BarrierWidth_pt45_low_90pc_backerosion_pt25m,
+                        DuneCrestMean_pt45_low_90pc_backerosion_pt25m,
+                        BarrierHeight_pt45_low_90pc_backerosion_pt25m,
+                        bh_rate_pt45_low_90pc_backerosion_pt25m,
+                        bw_rate_pt45_low_90pc_backerosion_pt25m,
+                        sc_rate_pt45_low_90pc_backerosion_pt25m,
+                        DuneCrestMin_pt45_low_90pc_backerosion_pt25m,
+                        DuneCrestMax_pt45_low_90pc_backerosion_pt25m,
+                        shoreline_position_pt45_low_90pc_backerosion_pt25m,
+                        shoreface_slope_pt45_low_90pc_backerosion_pt25m,
+                        beach_width_pt45_low_90pc_backerosion_pt25m,
+                        overwash_pt45_low_90pc_backerosion_pt25m,
+                        dune_toe_pt45_low_90pc_backerosion_pt25m,
+                        cascade_pt45_low_90pc_backerosion_pt25m,
+                    ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+                        name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial_backerosion_pt25m",
+                        tmax_management=421,  # community drowned at 421
+                        tmax_sim=454,  # barrier height drowned at 454
+                        plot_name="b3d_pt45_Nourishment_2mDune_lowEle_commercial_backerosion_pt25m",
+                    )
+
+                    (
+                        BarrierWidth_pt45_low_90pc_backerosion_1m,
+                        DuneCrestMean_pt45_low_90pc_backerosion_1m,
+                        BarrierHeight_pt45_low_90pc_backerosion_1m,
+                        bh_rate_pt45_low_90pc_backerosion_1m,
+                        bw_rate_pt45_low_90pc_backerosion_1m,
+                        sc_rate_pt45_low_90pc_backerosion_1m,
+                        DuneCrestMin_pt45_low_90pc_backerosion_1m,
+                        DuneCrestMax_pt45_low_90pc_backerosion_1m,
+                        shoreline_position_pt45_low_90pc_backerosion_1m,
+                        shoreface_slope_pt45_low_90pc_backerosion_1m,
+                        beach_width_pt45_low_90pc_backerosion_1m,
+                        overwash_pt45_low_90pc_backerosion_1m,
+                        dune_toe_pt45_low_90pc_backerosion_1m,
+                        cascade_pt45_low_90pc_backerosion_1m,
+                    ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+                        name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial_backerosion_1m",
+                        tmax_management=421,  # community drowned at 421
+                        tmax_sim=500,
+                        plot_name="b3d_pt45_Nourishment_2mDune_lowEle_commercial_backerosion_1m",
+                    )
+
+                    rebuild_threshold = 0.3 + (
+                        cascade_pt45_low_40pc.barrier3d[0].BermEl * 10
+                    )
+
+                    def version1_residential():
+                        CASCADEplt.plot_nonlinear_stats_mgmt_array4(
+                            cascade=[
+                                cascade_pt45_nat,
+                                cascade_pt45_low_40pc,  # only residential here
+                                cascade_pt45_low_90pc,
+                                # cascade_pt45_low_90pc_backerosion_pt25m,
+                                cascade_pt45_low_90pc_backerosion_1m,
+                            ],
+                            DuneCrestMin=[
+                                DuneCrestMin_pt45_nat,
+                                DuneCrestMin_pt45_low_40pc,
+                                DuneCrestMin_pt45_low_90pc,
+                                # DuneCrestMin_pt45_low_90pc_backerosion_pt25m,
+                                DuneCrestMin_pt45_low_90pc_backerosion_1m,
+                            ],
+                            DuneCrestMax=[
+                                DuneCrestMax_pt45_nat,
+                                DuneCrestMax_pt45_low_40pc,
+                                DuneCrestMax_pt45_low_90pc,
+                                # DuneCrestMax_pt45_low_90pc_backerosion_pt25m,
+                                DuneCrestMax_pt45_low_90pc_backerosion_1m,
+                            ],
+                            BarrierHeight=[
+                                BarrierHeight_pt45_nat,
+                                BarrierHeight_pt45_low_40pc,
+                                BarrierHeight_pt45_low_90pc,
+                                # BarrierHeight_pt45_low_90pc_backerosion_pt25m,
+                                BarrierHeight_pt45_low_90pc_backerosion_1m,
+                            ],
+                            BarrierWidth=[
+                                BarrierWidth_pt45_nat,
+                                BarrierWidth_pt45_low_40pc,
+                                BarrierWidth_pt45_low_90pc,
+                                # BarrierWidth_pt45_low_90pc_backerosion_pt25m,
+                                BarrierWidth_pt45_low_90pc_backerosion_1m,
+                            ],
+                            DuneCrestMean=[
+                                DuneCrestMean_pt45_nat,
+                                DuneCrestMean_pt45_low_40pc,
+                                DuneCrestMean_pt45_low_90pc,
+                                # DuneCrestMean_pt45_low_90pc_backerosion_pt25m,
+                                DuneCrestMean_pt45_low_90pc_backerosion_1m,
+                            ],
+                            shoreline_position=[
+                                cascade_pt45_nat.barrier3d[
+                                    0
+                                ].x_s_TS,  # wasn't saved yet in roadways, update later
+                                shoreline_position_pt45_low_40pc,
+                                shoreline_position_pt45_low_90pc,
+                                # shoreline_position_pt45_low_90pc_backerosion_pt25m,
+                                shoreline_position_pt45_low_90pc_backerosion_1m,
+                            ],
+                            overwash=[
+                                cascade_pt45_nat.barrier3d[
+                                    0
+                                ].QowTS,  # wasn't saved yet in roadways, update later
+                                overwash_pt45_low_40pc,
+                                overwash_pt45_low_90pc,
+                                # overwash_pt45_low_90pc_backerosion_pt25m,
+                                overwash_pt45_low_90pc_backerosion_1m,
+                            ],
+                            dune_toe=[
+                                [0],  # dummy
+                                dune_toe_pt45_low_40pc,
+                                dune_toe_pt45_low_90pc,
+                                # dune_toe_pt45_low_90pc_backerosion_pt25m,
+                                dune_toe_pt45_low_90pc_backerosion_1m,
+                            ],
+                            TMAX=[
+                                500,
+                                500,
+                                458,
+                                # 454,
+                                500,
+                            ],
+                            tmax_management=[
+                                500,  # dummy
+                                496,
+                                421,
+                                # 421,
+                                421,
+                            ],
+                            roadways_on=False,
+                            nourishment_on=True,
+                            rebuild_threshold=rebuild_threshold,
+                            # min dune height above the berm [m MHW], same as in RoadwayManager
+                            scenarios=[
+                                "natural",
+                                "residential",
+                                "commercial",
+                                "comm, 1 m/yr",
+                            ],
+                        )
+
+                    def version2_background_erosion():
+                        CASCADEplt.plot_nonlinear_stats_mgmt_array4(
+                            cascade=[
+                                cascade_pt45_nat,
+                                # cascade_pt45_low_40pc,  # only residential here
+                                cascade_pt45_low_90pc,
+                                cascade_pt45_low_90pc_backerosion_pt25m,
+                                cascade_pt45_low_90pc_backerosion_1m,
+                            ],
+                            DuneCrestMin=[
+                                DuneCrestMin_pt45_nat,
+                                # DuneCrestMin_pt45_low_40pc,
+                                DuneCrestMin_pt45_low_90pc,
+                                DuneCrestMin_pt45_low_90pc_backerosion_pt25m,
+                                DuneCrestMin_pt45_low_90pc_backerosion_1m,
+                            ],
+                            DuneCrestMax=[
+                                DuneCrestMax_pt45_nat,
+                                # DuneCrestMax_pt45_low_40pc,
+                                DuneCrestMax_pt45_low_90pc,
+                                DuneCrestMax_pt45_low_90pc_backerosion_pt25m,
+                                DuneCrestMax_pt45_low_90pc_backerosion_1m,
+                            ],
+                            BarrierHeight=[
+                                BarrierHeight_pt45_nat,
+                                # BarrierHeight_pt45_low_40pc,
+                                BarrierHeight_pt45_low_90pc,
+                                BarrierHeight_pt45_low_90pc_backerosion_pt25m,
+                                BarrierHeight_pt45_low_90pc_backerosion_1m,
+                            ],
+                            BarrierWidth=[
+                                BarrierWidth_pt45_nat,
+                                # BarrierWidth_pt45_low_40pc,
+                                BarrierWidth_pt45_low_90pc,
+                                BarrierWidth_pt45_low_90pc_backerosion_pt25m,
+                                BarrierWidth_pt45_low_90pc_backerosion_1m,
+                            ],
+                            DuneCrestMean=[
+                                DuneCrestMean_pt45_nat,
+                                # DuneCrestMean_pt45_low_40pc,
+                                DuneCrestMean_pt45_low_90pc,
+                                DuneCrestMean_pt45_low_90pc_backerosion_pt25m,
+                                DuneCrestMean_pt45_low_90pc_backerosion_1m,
+                            ],
+                            shoreline_position=[
+                                cascade_pt45_nat.barrier3d[
+                                    0
+                                ].x_s_TS,  # wasn't saved yet in roadways, update later
+                                # shoreline_position_pt45_low_40pc,
+                                shoreline_position_pt45_low_90pc,
+                                shoreline_position_pt45_low_90pc_backerosion_pt25m,
+                                shoreline_position_pt45_low_90pc_backerosion_1m,
+                            ],
+                            overwash=[
+                                cascade_pt45_nat.barrier3d[
+                                    0
+                                ].QowTS,  # wasn't saved yet in roadways, update later
+                                # overwash_pt45_low_40pc,
+                                overwash_pt45_low_90pc,
+                                overwash_pt45_low_90pc_backerosion_pt25m,
+                                overwash_pt45_low_90pc_backerosion_1m,
+                            ],
+                            dune_toe=[
+                                [0],  # dummy
+                                # dune_toe_pt45_low_40pc,
+                                dune_toe_pt45_low_90pc,
+                                dune_toe_pt45_low_90pc_backerosion_pt25m,
+                                dune_toe_pt45_low_90pc_backerosion_1m,
+                            ],
+                            TMAX=[
+                                500,
+                                # 500,
+                                458,
+                                454,
+                                500,
+                            ],
+                            tmax_management=[
+                                500,  # dummy
+                                # 496,
+                                421,
+                                421,
+                                421,
+                            ],
+                            roadways_on=False,
+                            nourishment_on=True,
+                            rebuild_threshold=rebuild_threshold,  # min dune height above the berm [m MHW], same as in RoadwayManager
+                            scenarios=[
+                                "natural",
+                                "commercial",
+                                "comm, 0.25 m/yr",
+                                "comm, 1 m/yr",
+                            ],
+                        )
+
+        def rebuild_threshold_1m():
+            def pt45_high():
+                (
+                    BarrierWidth_pt45_nat,
+                    DuneCrestMean_pt45_nat,
+                    BarrierHeight_pt45_nat,
+                    bw_rate_pt45_nat,
+                    bh_rate_pt45_nat,
+                    sc_rate_pt45_nat,
+                    DuneCrestMin_pt45_nat,
+                    DuneCrestMax_pt45_nat,
+                    cascade_pt45_nat,
+                ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                    name_prefix="6-B3D_Rave_pt45_Natural_high",
+                    tmin=0,
+                    tmax_roadways=500,
+                    tmax_sim=800,
+                    plot_name="b3d_pt45_plots_high",
+                    run_road_mgmt=False,
+                )
+
+                (
+                    BarrierWidth_pt45_high_40pc,
+                    DuneCrestMean_pt45_high_40pc,
+                    BarrierHeight_pt45_high_40pc,
+                    bh_rate_pt45_high_40pc,
+                    bw_rate_pt45_high_40pc,
+                    sc_rate_pt45_high_40pc,
+                    DuneCrestMin_pt45_high_40pc,
+                    DuneCrestMax_pt45_high_40pc,
+                    shoreline_position_pt45_high_40pc,
+                    shoreface_slope_pt45_high_40pc,
+                    beach_width_pt45_high_40pc,
+                    overwash_pt45_high_40pc,
+                    dune_toe_pt45_high_40pc,
+                    cascade_pt45_high_40pc,
+                ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+                    name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_highEle_residential_rebuild1m",
+                    tmax_management=579,
+                    tmax_sim=800,
+                    plot_name="b3d_pt45_Nourishment_2mDune_highEle_residential_rebuild1m",
+                )
+
+                (
+                    BarrierWidth_pt45_high_90pc,
+                    DuneCrestMean_pt45_high_90pc,
+                    BarrierHeight_pt45_high_90pc,
+                    bh_rate_pt45_high_90pc,
+                    bw_rate_pt45_high_90pc,
+                    sc_rate_pt45_high_90pc,
+                    DuneCrestMin_pt45_high_90pc,
+                    DuneCrestMax_pt45_high_90pc,
+                    shoreline_position_pt45_high_90pc,
+                    shoreface_slope_pt45_high_90pc,
+                    beach_width_pt45_high_90pc,
+                    overwash_pt45_high_90pc,
+                    dune_toe_pt45_high_90pc,
+                    cascade_pt45_high_90pc,
+                ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+                    name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_highEle_commercial_rebuild1m",
+                    tmax_management=421,
+                    tmax_sim=800,
+                    plot_name="b3d_pt45_Nourishment_2mDune_highEle_commercial_rebuild1m",
+                )
+
+                (
+                    BarrierWidth_pt45_high_90pc_backerosion_1m,
+                    DuneCrestMean_pt45_high_90pc_backerosion_1m,
+                    BarrierHeight_pt45_high_90pc_backerosion_1m,
+                    bh_rate_pt45_high_90pc_backerosion_1m,
+                    bw_rate_pt45_high_90pc_backerosion_1m,
+                    sc_rate_pt45_high_90pc_backerosion_1m,
+                    DuneCrestMin_pt45_high_90pc_backerosion_1m,
+                    DuneCrestMax_pt45_high_90pc_backerosion_1m,
+                    shoreline_position_pt45_high_90pc_backerosion_1m,
+                    shoreface_slope_pt45_high_90pc_backerosion_1m,
+                    beach_width_pt45_high_90pc_backerosion_1m,
+                    overwash_pt45_high_90pc_backerosion_1m,
+                    dune_toe_pt45_high_90pc_backerosion_1m,
+                    cascade_pt45_high_90pc_backerosion_1m,
+                ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+                    name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_highEle_commercial_backerosion1m_rebuild1m",
+                    tmax_management=421,
+                    tmax_sim=800,
+                    plot_name="b3d_pt45_Nourishment_2mDune_highEle_commercial_backerosion_1m_rebuild1m",
+                    gif_on=False,
+                )
+
+                rebuild_threshold = 1 + (
+                    cascade_pt45_high_40pc.barrier3d[0].BermEl * 10
+                )
+
+                def version1_residential():
+                    CASCADEplt.plot_nonlinear_stats_mgmt_array4(
+                        cascade=[
+                            cascade_pt45_nat,
+                            cascade_pt45_high_40pc,  # only residential here
+                            cascade_pt45_high_90pc,
+                            cascade_pt45_high_90pc_backerosion_1m,
+                        ],
+                        DuneCrestMin=[
+                            DuneCrestMin_pt45_nat,
+                            DuneCrestMin_pt45_high_40pc,
+                            DuneCrestMin_pt45_high_90pc,
+                            DuneCrestMin_pt45_high_90pc_backerosion_1m,
+                        ],
+                        DuneCrestMax=[
+                            DuneCrestMax_pt45_nat,
+                            DuneCrestMax_pt45_high_40pc,
+                            DuneCrestMax_pt45_high_90pc,
+                            DuneCrestMax_pt45_high_90pc_backerosion_1m,
+                        ],
+                        BarrierHeight=[
+                            BarrierHeight_pt45_nat,
+                            BarrierHeight_pt45_high_40pc,
+                            BarrierHeight_pt45_high_90pc,
+                            BarrierHeight_pt45_high_90pc_backerosion_1m,
+                        ],
+                        BarrierWidth=[
+                            BarrierWidth_pt45_nat,
+                            BarrierWidth_pt45_high_40pc,
+                            BarrierWidth_pt45_high_90pc,
+                            BarrierWidth_pt45_high_90pc_backerosion_1m,
+                        ],
+                        DuneCrestMean=[
+                            DuneCrestMean_pt45_nat,
+                            DuneCrestMean_pt45_high_40pc,
+                            DuneCrestMean_pt45_high_90pc,
+                            DuneCrestMean_pt45_high_90pc_backerosion_1m,
+                        ],
+                        shoreline_position=[
+                            cascade_pt45_nat.barrier3d[
+                                0
+                            ].x_s_TS,  # wasn't saved yet in roadways, update later
+                            shoreline_position_pt45_high_40pc,
+                            shoreline_position_pt45_high_90pc,
+                            shoreline_position_pt45_high_90pc_backerosion_1m,
+                        ],
+                        overwash=[
+                            cascade_pt45_nat.barrier3d[
+                                0
+                            ].QowTS,  # wasn't saved yet in roadways, update later
+                            overwash_pt45_high_40pc,
+                            overwash_pt45_high_90pc,
+                            overwash_pt45_high_90pc_backerosion_1m,
+                        ],
+                        dune_toe=[
+                            [0],  # dummy
+                            dune_toe_pt45_high_40pc,
+                            dune_toe_pt45_high_90pc,
+                            dune_toe_pt45_high_90pc_backerosion_1m,
+                        ],
+                        TMAX=[
+                            750,  # was 800, switched to 750 to match roadways
+                            750,
+                            750,
+                            750,
+                        ],
+                        tmax_management=[
+                            750,  # dummy
+                            579,
+                            421,
+                            421,
+                        ],
+                        roadways_on=False,
+                        nourishment_on=True,
+                        rebuild_threshold=rebuild_threshold,
+                        # min dune height above the berm [m MHW], same as in RoadwayManager
+                        scenarios=[
+                            "natural",
+                            "residential",
+                            "commercial",
+                            "comm, 1 m/yr",
+                        ],
+                    )
+
+            def pt75_low():
+                (
+                    BarrierWidth_pt75_nat,
+                    DuneCrestMean_pt75_nat,
+                    BarrierHeight_pt75_nat,
+                    bw_rate_pt75_nat,
+                    bh_rate_pt75_nat,
+                    sc_rate_pt75_nat,
+                    DuneCrestMin_pt75_nat,
+                    DuneCrestMax_pt75_nat,
+                    cascade_pt75_nat,
+                ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+                    name_prefix="6-B3D_Rave_pt75_Natural_low",
+                    tmin=0,
+                    tmax_roadways=1000,  # dummy
+                    tmax_sim=1000,
+                    plot_name="b3d_pt75_plots_low",
+                    run_road_mgmt=False,
+                )
+
+                (
+                    BarrierWidth_pt75_low_40pc,
+                    DuneCrestMean_pt75_low_40pc,
+                    BarrierHeight_pt75_low_40pc,
+                    bh_rate_pt75_low_40pc,
+                    bw_rate_pt75_low_40pc,
+                    sc_rate_pt75_low_40pc,
+                    DuneCrestMin_pt75_low_40pc,
+                    DuneCrestMax_pt75_low_40pc,
+                    shoreline_position_pt75_low_40pc,
+                    shoreface_slope_pt75_low_40pc,
+                    beach_width_pt75_low_40pc,
+                    overwash_pt75_low_40pc,
+                    dune_toe_pt75_low_40pc,
+                    cascade_pt75_low_40pc,
+                ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+                    name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_residential_rebuild1m",
+                    tmax_management=149,  # drowned at 149
+                    tmax_sim=800,
+                    plot_name="b3d_pt75_Nourishment_2mDune_lowEle_residential_rebuild1m",
+                )
+
+                (
+                    BarrierWidth_pt75_low_90pc,
+                    DuneCrestMean_pt75_low_90pc,
+                    BarrierHeight_pt75_low_90pc,
+                    bh_rate_pt75_low_90pc,
+                    bw_rate_pt75_low_90pc,
+                    sc_rate_pt75_low_90pc,
+                    DuneCrestMin_pt75_low_90pc,
+                    DuneCrestMax_pt75_low_90pc,
+                    shoreline_position_pt75_low_90pc,
+                    shoreface_slope_pt75_low_90pc,
+                    beach_width_pt75_low_90pc,
+                    overwash_pt75_low_90pc,
+                    dune_toe_pt75_low_90pc,
+                    cascade_pt75_low_90pc,
+                ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+                    name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial_rebuild1m",
+                    tmax_management=80,  # community drowned at 80 years
+                    tmax_sim=800,
+                    plot_name="b3d_pt75_Nourishment_2mDune_lowEle_commercial_rebuild1m",
+                    gif_on=False,
+                )
+
+                (
+                    BarrierWidth_pt75_low_90pc_backerosion_1m,
+                    DuneCrestMean_pt75_low_90pc_backerosion_1m,
+                    BarrierHeight_pt75_low_90pc_backerosion_1m,
+                    bh_rate_pt75_low_90pc_backerosion_1m,
+                    bw_rate_pt75_low_90pc_backerosion_1m,
+                    sc_rate_pt75_low_90pc_backerosion_1m,
+                    DuneCrestMin_pt75_low_90pc_backerosion_1m,
+                    DuneCrestMax_pt75_low_90pc_backerosion_1m,
+                    shoreline_position_pt75_low_90pc_backerosion_1m,
+                    shoreface_slope_pt75_low_90pc_backerosion_1m,
+                    beach_width_pt75_low_90pc_backerosion_1m,
+                    overwash_pt75_low_90pc_backerosion_1m,
+                    dune_toe_pt75_low_90pc_backerosion_1m,
+                    cascade_pt75_low_90pc_backerosion_1m,
+                ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
+                    name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial_backerosion1m_rebuild1m",
+                    tmax_management=80,  # community drowned at 80 years
+                    tmax_sim=800,
+                    plot_name="b3d_pt75_Nourishment_2mDune_lowEle_commercial_backerosion_1m_rebuild1m",
+                    gif_on=False,
+                )
+
+                rebuild_threshold = 1 + (cascade_pt75_low_40pc.barrier3d[0].BermEl * 10)
+
+                def version1_res_vs_commercial():
+                    CASCADEplt.plot_nonlinear_stats_mgmt_array4(
+                        cascade=[
+                            cascade_pt75_nat,
+                            cascade_pt75_low_40pc,  # only residential here
+                            cascade_pt75_low_90pc,
+                            cascade_pt75_low_90pc_backerosion_1m,
+                        ],
+                        DuneCrestMin=[
+                            DuneCrestMin_pt75_nat,
+                            DuneCrestMin_pt75_low_40pc,
+                            DuneCrestMin_pt75_low_90pc,
+                            DuneCrestMin_pt75_low_90pc_backerosion_1m,
+                        ],
+                        DuneCrestMax=[
+                            DuneCrestMax_pt75_nat,
+                            DuneCrestMax_pt75_low_40pc,
+                            DuneCrestMax_pt75_low_90pc,
+                            DuneCrestMax_pt75_low_90pc_backerosion_1m,
+                        ],
+                        BarrierHeight=[
+                            BarrierHeight_pt75_nat,
+                            BarrierHeight_pt75_low_40pc,
+                            BarrierHeight_pt75_low_90pc,
+                            BarrierHeight_pt75_low_90pc_backerosion_1m,
+                        ],
+                        BarrierWidth=[
+                            BarrierWidth_pt75_nat,
+                            BarrierWidth_pt75_low_40pc,
+                            BarrierWidth_pt75_low_90pc,
+                            BarrierWidth_pt75_low_90pc_backerosion_1m,
+                        ],
+                        DuneCrestMean=[
+                            DuneCrestMean_pt75_nat,
+                            DuneCrestMean_pt75_low_40pc,
+                            DuneCrestMean_pt75_low_90pc,
+                            DuneCrestMean_pt75_low_90pc_backerosion_1m,
+                        ],
+                        shoreline_position=[
+                            cascade_pt75_nat.barrier3d[
+                                0
+                            ].x_s_TS,  # wasn't saved yet in roadways, update later
+                            shoreline_position_pt75_low_40pc,
+                            shoreline_position_pt75_low_90pc,
+                            shoreline_position_pt75_low_90pc_backerosion_1m,
+                        ],
+                        overwash=[
+                            cascade_pt75_nat.barrier3d[
+                                0
+                            ].QowTS,  # wasn't saved yet in roadways, update later
+                            overwash_pt75_low_40pc,
+                            overwash_pt75_low_90pc,
+                            overwash_pt75_low_90pc_backerosion_1m,
+                        ],
+                        dune_toe=[
+                            [0],  # dummy
+                            dune_toe_pt75_low_40pc,
+                            dune_toe_pt75_low_90pc,
+                            dune_toe_pt75_low_90pc_backerosion_1m,
+                        ],
+                        TMAX=[
+                            750,
+                            750,
+                            750,
+                            750,
+                        ],
+                        tmax_management=[
+                            750,  # dummy
+                            149,
+                            80,
+                            80,
+                        ],
+                        roadways_on=False,
+                        nourishment_on=True,
+                        rebuild_threshold=rebuild_threshold,  # min dune height above the berm [m MHW], same as in RoadwayManager
+                        scenarios=[
+                            "natural",
+                            "residential",
+                            "commercial",
                             "comm, 1 m/yr",
                         ],
                     )
@@ -5749,4 +6278,27 @@ def human_plots():
                 "8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial",
                 "8-B3D_Rave_pt75_Nourishment_2mDune_highEle_commercial",
             ]
+        )
+
+    def ast_connections():
+        # half nourishment, half roadways
+        PLOT_9_Nonlinear_Dynamics_CASCADE_AST(
+            name_prefix="9-CASCADE_Rave_pt75_Nourish_2mDune_lowEle_comm_BE1m_RT1m_6AST_3roads",
+            tmax_management=[
+                80,
+                80,
+                80,
+                99,
+                99,
+                99,
+            ],  # an array, CAN'T BE 100 OR THE ALGORITHM BREAKS
+            tmax_sim=100,  # not an array
+            plot_name="test_roads",
+            beach_management_ny=[1, 1, 1, 0, 0, 0],
+            roadway_management_ny=[0, 0, 0, 1, 1, 1],
+            cross_sections=None,
+            text_out=False,
+            gif_on=True,
+            y_lim=[150, 200],
+            fig_size=(12, 5),
         )
