@@ -2,17 +2,17 @@ import numpy as np
 import math
 from barrier3d import Barrier3d
 
-b3d = Barrier3d.from_yaml("tests/test_params/")
+b3d = Barrier3d.from_yaml("C:\\Users\\Lexi\\PycharmProjects\\Barrier3d\\tests\\test_params\\")
 
 # --------------------------------------------------------------------------------------------------------------------
 #  set discharge- currently set to the Qdune value?
 Qo = 0.5  # dam^3/hr function of time and full domain (3D array fun t, x, y)
 
-# from the Barrier3D flow routing. Instead of having DuneCrestDomain, using interior
-interior_crest = Barrier3d._InteriorDomain[Barrier3d.time_index, :, :].max(
+# from the Barrier3D flow routing. Instead of having DuneCrestDomain, using interior (BUT its 2d not 3d)
+interior_crest = b3d._InteriorDomain[:, :].max(
     axis=1
 )  # Maximum height of each row in InteriorDomain
-interior_crest[interior_crest < Barrier3d.DuneRestart] = Barrier3d.DuneRestart
+interior_crest[interior_crest < b3d._DuneRestart] = b3d._DuneRestart
 
 # Barrier3d.Hd_AverageTS.append(
 #     np.mean(interior_crest)
@@ -22,9 +22,9 @@ OWloss = 0
 DuneLoss = 0
 numstorm = 0
 
-if Barrier3d.time_index >= Barrier3d.StormStart:
+if b3d._time_index >= b3d.StormStart:
     # Select number of storms for this time step from normal distribution
-    TSloc = np.argwhere(Barrier3d.StormSeries[:, 0] == Barrier3d.time_index)
+    TSloc = np.argwhere(b3d.StormSeries[:, 0] == b3d._time_index)
     numstorm = int(len(TSloc))  # analysis:ignore
 
     if numstorm > 0:
@@ -46,7 +46,7 @@ if Barrier3d.time_index >= Barrier3d.StormStart:
                 for index, value in enumerate((interior_crest + b3d._BermEl))
                 if value < Rhigh[n]
             ]
-            gaps = Barrier3d.DuneGaps(
+            gaps = b3d.DuneGaps(
                 interior_crest, Dow, b3d._BermEl, Rhigh[n]
             )  # Finds location and Rexcess of continuous gaps in dune ridge
 
@@ -81,7 +81,7 @@ if Barrier3d.time_index >= Barrier3d.StormStart:
             # Set Domain
             duration = dur[n] * substep
             add = 10
-            interior_domain = Barrier3d.InteriorDomain  # elevation cell
+            interior_domain = b3d.InteriorDomain  # elevation cell
             bay_domain = np.ones([add, b3d._BarrierLength]) * - b3d._BayDepth
             beach_domain = np.ones([add, b3d._BarrierLength]) * b3d._BermEl
             full_domain = beach_domain.append(interior_domain, 0)
@@ -297,7 +297,7 @@ if Barrier3d.time_index >= Barrier3d.StormStart:
 
 
                             # ### Calculate Sed Movement
-                            fluxLimit = Barrier3d.Dmax
+                            fluxLimit = b3d.Dmax
                             if Q1 > b3d.Qs_min:
                                 Qs1 = b3d.Ki * (Q1 * (S1 + C)) ** b3d.mm
                                 if Qs1 < 0:
@@ -330,8 +330,8 @@ if Barrier3d.time_index >= Barrier3d.StormStart:
                             Qs3 = np.nan_to_num(Qs3)
 
                             # ### Calculate Net Erosion/Accretion
-                            if Elevation[TS, d, i] > Barrier3d._SL or any(
-                                z > Barrier3d._SL
+                            if Elevation[TS, d, i] > b3d._SL or any(
+                                z > b3d._SL
                                 for z in Elevation[TS, d + 1: d + 10, i]
                             ):  # If cell is subaerial, elevation change is determined by difference between
                                 # flux in vs. flux out
@@ -419,4 +419,4 @@ if Barrier3d.time_index >= Barrier3d.StormStart:
                     check = 0
 
             # Update interior domain
-            Barrier3d._InteriorDomain = InteriorUpdate
+            b3d._InteriorDomain = InteriorUpdate
