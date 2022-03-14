@@ -173,10 +173,10 @@ def test_shoreface_nourishment():
 
 def test_overwash_filter():
     """
-    check that overwash removal volumes are correct and that only overwash is removed (i.e., eroded areas do not
-    become deeper)
+    check overwash volumes removed (includes negative values, which can happen)
     """
 
+    # CASE 1: uniform positive overwash
     barrier_overwash_removed = np.zeros(3)
     new_dunes = []
     expected_dunes = []
@@ -213,7 +213,7 @@ def test_overwash_filter():
     new_dunes.append(new_yxz_dune_domain)
     expected_dunes.append(np.zeros([20, 10]))
 
-    # check that it only removes overwash, doesn't deepen areas where there wasn't overwash or eroded
+    # CASE 2: overwash only deposited in some areas
     post_xyz_interior_grid = (
         np.zeros([100, 20]) + 3.0
     )  # units of meters in X (cross-shore) Y (alongshore) Z (vertical)
@@ -249,21 +249,20 @@ def test_overwash_filter():
     new_dunes.append(new_yxz_dune_domain)
     expected_dunes.append(np.zeros([20, 10]))
 
+    # CASE 3: first row is eroded (channelized) due to overwash, the rest of the grid sees deposition
     post_xyz_interior_grid = (
         np.zeros([100, 20]) + 3.0
     )  # units of meters in X (cross-shore) Y (alongshore) Z (vertical)
     pre_xyz_interior_grid = post_xyz_interior_grid - 1.0
-    post_xyz_interior_grid[
-        0, :
-    ] = 1.0  # now make it so some places are eroded --> result should be same as above
+    post_xyz_interior_grid[0, :] = 1.0
     yxz_dune_grid = np.zeros([20, 10])  # dune domain is 10 cells (m) wide
-    # remove 40% of 1 m^3 of overwash in each cell,
+    # remove 50% total of 1 m^3 of overwash in each cell with deposition, and add 50% of 1 m^3 for the row eroded
+    # total overwash removed = (0.5 m^3 * 20 cells/row * 99 rows) - (0.5 m^3 * 20 cells/row * 1 row) = 980 m^3
+    # to dune, only 1/5 of that volume == 196 m^3 / (10 * 20) added to each cell == 0.98 m
     (
-        new_yxz_dune_domain,  # [m], should be 0.1 m x 99 * 20 = 198 m^3 / (10 * 20) added to each cell (0.99 m)
-        new_xyz_interior_domain,  # [m], should be 2.6 m depth in each cell except for row 0, which should be 1.0 m
-        barrier_overwash_removed[
-            2
-        ],  # [m^3], should be 0.4 m^3 * 99 * 20 (792 m^3) + 198 m^3 bulldozed to dunes
+        new_yxz_dune_domain,
+        new_xyz_interior_domain,
+        barrier_overwash_removed[2],
         new_ave_interior_height,  # [m] for the rest
         beach_width_new,
         x_s_new,
@@ -284,9 +283,9 @@ def test_overwash_filter():
         dune_spread_equal=False,
     )
     new_dunes.append(new_yxz_dune_domain)
-    expected_dunes.append(np.zeros([20, 10]) + 0.99)  # m
+    expected_dunes.append(np.zeros([20, 10]) + 0.98)  # m
 
-    assert (np.round(barrier_overwash_removed) == [800, 792, 990]).all()
+    assert (np.round(barrier_overwash_removed) == [800, 792, 980]).all()
     assert all([a == b] for a, b in zip(new_dunes, expected_dunes))
     # assert_array_almost_equal(barrier_overwash_removed, [800, 792, 990])
 

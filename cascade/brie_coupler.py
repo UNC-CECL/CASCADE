@@ -78,6 +78,7 @@ def initialize_equal(
     for iB3D in range(brie.ny):
 
         fid = datadir + parameter_file
+        parameter_file_prefix = parameter_file.replace("-parameters.yaml", "")
 
         # update yaml file (these are the only variables that I'm like to change from default)
         set_yaml("Shrub_ON", 0, fid)  # make sure that shrubs are turned off
@@ -96,13 +97,9 @@ def initialize_equal(
         set_yaml(
             "ShorefaceToe", float(brie.x_t[iB3D]), fid
         )  # [m] Start location of shoreface toe
-        # set_yaml('BermEl', 1.9 , datadir) # [m] Static elevation of berm
-        # (NOTE: if BermEl is changed, the MSSM storm list and storm time series needs to be remade)
         set_yaml(
             "BayDepth", brie._bb_depth, fid
         )  # [m] Depth of bay behind island segment (set to brie bay depth)
-        # set_yaml('MHW', 0.46, datadir)  # [m] Elevation of Mean High Water
-        # (NOTE: if MHW is changed, the storm time series needs to be remade)
         set_yaml(
             "DuneParamStart", True, fid
         )  # Dune height will come from external file
@@ -117,7 +114,6 @@ def initialize_equal(
         set_yaml(
             "RSLR_const", brie._slr[0], fid
         )  # [m / y] Relative sea-level rise rate; initialized in brie, but saved as time series, so we use index 0
-        # set_yaml('beta', 0.04, datadir)  # Beach slope for runup calculations
         set_yaml(
             "k_sf", float(brie.k_sf), fid
         )  # [m^3 / m / y] Shoreface flux rate constant (function of wave parameters from brie)
@@ -151,7 +147,14 @@ def initialize_equal(
         else:
             set_yaml("elevation_file", elevation_file, fid)
 
-        barrier3d.append(Barrier3d.from_yaml(datadir))
+        # the following parameters CANNOT be changed or else the MSSM storm list & storm time series needs to be remade
+        set_yaml("MHW", 0.46, fid)  # [m] Elevation of Mean High Water
+        set_yaml("beta", 0.04, fid)  # Beach slope for runup calculations
+        set_yaml(
+            "BermEl", float(brie._h_b_crit), fid
+        )  # [m] Static elevation of berm, needs to be 1.9 m
+
+        barrier3d.append(Barrier3d.from_yaml(datadir, prefix=parameter_file_prefix))
 
         # now update brie back barrier position, height of barrier, and SLRR time series with that from B3D so all
         # the initial conditions are the same! The rate of slr can only be constant in brie, whereas it can accelerate
@@ -193,6 +196,7 @@ class BrieCoupler:
         wave_asymmetry=0.8,
         wave_angle_high_fraction=0.2,
         sea_level_rise_rate=0.004,
+        back_barrier_depth=3.0,
         ny=1,
         nt=200,
     ):
@@ -212,6 +216,8 @@ class BrieCoupler:
             Fraction of waves approaching from angles higher than 45 degrees.
         sea_level_rise_rate: float, optional
             Rate of sea_level rise [m/yr].
+        back_barrier_depth: float, optional
+            Depth of back-barrier bay [m]
         ny: int, optional
             The number of alongshore Barrier3D domains for simulation in BRIE
         nt: int, optional
@@ -232,10 +238,10 @@ class BrieCoupler:
         # barrier model parameters (the following are needed for other calculations even if the barrier model is off)
         s_background = 0.001  # background slope (for shoreface toe position, back-barrier & inlet calculations)
         z = 10.0  # initial sea level (for tracking SL, Eulerian reference frame)
-        bb_depth = 3.0  # back-barrier depth
+        bb_depth = back_barrier_depth  # back-barrier depth, in barrier3d, typically 3 m
         h_b_crit = 1.9  # critical barrier height for overwash, used also to calculate shoreline diffusivity;
-        # we set equal to the static elevation of berm (NOTE: if the berm elevation is changed, the MSSM storm list and
-        # storm time series needs to be remade)
+        # we set equal to the static elevation of berm in B3D (NOTE: if the berm elevation is changed, the MSSM storm
+        # list and storm time series needs to be remade)
 
         # inlet parameters (use default; these are here to remind me later that they are important and I can change)
         Jmin = 10000  # minimum inlet spacing [m]
@@ -243,9 +249,9 @@ class BrieCoupler:
         marsh_cover = 0.5  # % of backbarrier covered by marsh and therefore does not contribute to tidal prism
 
         # grid and time step params
-        dy = 500  # m, length of alongshore section (same as B3D)
-        dt = 1  # yr, timestep (same as B3D)
-        dtsave = 1  # save spacing (every year)
+        dy = 500  # m, length of alongshore section (same as B3D) -- do not change
+        dt = 1  # yr, timestep (same as B3D) -- do not change
+        dtsave = 1  # save spacing (every year) -- do not change
 
         # start by initializing BRIE b/c it has parameters related to wave climate that we use to initialize B3D
         self._brie = Brie(
@@ -274,7 +280,20 @@ class BrieCoupler:
         )  # initialize class
 
     def update_ast(self, barrier3d, x_t_dt, x_s_dt, h_b_dt):
-        # pass shoreline and shoreface values from B3D subdomains to brie for use in second time step
+        """Pass shoreline and shoreface values from B3D subdomains to brie for use in second time step
+
+        Parameters
+        ----------
+        barrier3d: list
+            Barrier3D classes
+        x_t_dt: list of floats
+            Change in shoreface toe [m]
+        x_s_dt: list of floats
+            Change in shoreline position [m]
+        h_b_dt: list of floats
+            Change in barrier height [m]
+
+        """
         self._brie.x_t_dt = x_t_dt  # this accounts for RSLR
         self._brie.x_s_dt = x_s_dt
         self._brie.x_b_dt = 0  # we set x_b below
@@ -292,8 +311,41 @@ class BrieCoupler:
             barrier3d[iB3D].update_dune_domain()
 
             # update back-barrier shoreline location in BRIE based on new shoreline + average interior width in B3D
+            # NOTE: all of these positions also get updated at the end of the human management time loop
             self._brie.x_b[iB3D] = barrier3d[iB3D].x_b_TS[-1] * 10
             self._brie.x_b_save[iB3D, self._brie.time_index - 1] = self._brie.x_b[iB3D]
+
+    def update_brie_for_human_modifications(self, x_t, x_s, x_b, h_b, s_sf):
+        """Reset all of the save variables and current variables for the barrier geometry to account for human
+        modifications in the cascade modules
+
+        Parameters
+        ----------
+        x_t: list of floats
+            Shoreface toe [dam]
+        x_s: list of floats
+            Shoreline [dam]
+        x_b: list of floats
+            Back-barrier shoreline [dam]
+        h_b: list of floats
+            Height of barrier [dam]
+        s_sf: list of floats
+            Slope of shoreface
+
+        """
+        for iB3D in range(self._brie.ny):
+            self._brie.x_s[iB3D] = x_s[iB3D] * 10  # convert from dam to meters
+            self._brie.x_b[iB3D] = x_b[iB3D] * 10
+            self._brie.x_t[iB3D] = x_t[iB3D] * 10
+            self._brie.h_b[iB3D] = h_b[iB3D] * 10
+
+            self._brie.x_s_save[iB3D, self._brie.time_index - 1] = self._brie.x_s[iB3D]
+            self._brie.x_b_save[iB3D, self._brie.time_index - 1] = self._brie.x_b[iB3D]
+            self._brie.x_t_save[iB3D, self._brie.time_index - 1] = self._brie.x_t[iB3D]
+            self._brie.h_b_save[iB3D, self._brie.time_index - 1] = self._brie.h_b[iB3D]
+            self._brie.s_sf_save[iB3D, self._brie.time_index - 1] = s_sf[
+                iB3D
+            ]  # slope, so no unit change
 
     @property
     def brie(self):

@@ -31,7 +31,7 @@ Qs_min: 1.0
 Qshrub_max: 0.15
 RSLR_Constant: true
 RSLR_const: 0.004
-Rat: -1.0
+Rat: 0.0
 Rin_i: 0.1
 Rin_r: 2.0
 SalineLimit: 5
@@ -45,7 +45,7 @@ Shrub_ON: 0
 SprayDist: 170
 StormSeries: []
 StormStart: 2
-TMAX: 1000
+TMAX: 5
 TideAmp: 1.2
 TimeFruit: 5.0
 UprootLimit: -0.2
@@ -59,7 +59,7 @@ k_sf: 19324.753176079226
 mm: 2.0
 nn: 0.5
 rmax: 0.95
-rmin: 0.55
+rmin: 0.45
 s_sf_eq: 0.01698590034494604
 storm_file: StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy
 threshold_in: 0.25
