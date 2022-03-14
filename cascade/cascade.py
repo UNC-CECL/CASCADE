@@ -108,6 +108,7 @@ class Cascade:
         wave_period=7,
         wave_asymmetry=0.8,
         wave_angle_high_fraction=0.2,
+        bay_depth=3.0,
         sea_level_rise_rate=0.004,
         sea_level_rise_constant=True,
         background_erosion=0.0,
@@ -155,6 +156,8 @@ class Cascade:
             Fraction of waves approaching from left (looking onshore).
         wave_angle_high_fraction: float, optional
             Fraction of waves approaching from angles higher than 45 degrees.
+        bay_depth: float, optional
+            Depth of back-barrier bay [m]
         sea_level_rise_rate: float, optional
             Rate of sea_level rise [m/yr].
         sea_level_rise_constant: boolean, optional
@@ -264,6 +267,7 @@ class Cascade:
             wave_asymmetry=self._wave_asymmetry,
             wave_angle_high_fraction=self._wave_angle_high_fraction,
             sea_level_rise_rate=self._sea_level_rise_rate,
+            back_barrier_depth=bay_depth,
             ny=self._ny,
             nt=self._nt,
         )
@@ -498,7 +502,9 @@ class Cascade:
         # use brie to connect B3D subgrids with alongshore sediment transport; otherwise, just update (erode/prograde)
         # dune domain
         if self._alongshore_transport_module:
-            self._brie_coupler.update_ast(self._barrier3d, x_t_dt, x_s_dt, h_b_dt)
+            self._brie_coupler.update_ast(
+                self._barrier3d, x_t_dt, x_s_dt, h_b_dt
+            )  # also updates dune domain
         else:
             for iB3D in range(self._ny):
                 self._barrier3d[iB3D].update_dune_domain()
@@ -520,11 +526,10 @@ class Cascade:
 
             if self._roadway_management_module[iB3D]:
 
-                # if roadway has already been abandoned, do nothing
-                if self._road_break[iB3D]:
-                    pass
                 # if the roadway drowned or was too narrow for the road to be relocated, stop managing the road!
-                elif (
+                # NOTE: dune heights must drop below Dmax before reset, so while calling reset_dune_growth rates seems
+                # redundant, it doesn't slow us down computationally, so just do it
+                if (
                     self._roadways[iB3D].drown_break
                     or self._roadways[iB3D].relocation_break
                 ):
@@ -567,12 +572,8 @@ class Cascade:
 
             for iB3D in range(self._ny):
 
-                # if community has already been abandoned, do nothing
-                if self._community_break[iB3D]:
-                    pass
-
                 # if barrier was too narrow to sustain a community in the last time step, stop managing beach and dunes!
-                elif self._nourishments[iB3D].narrow_break:
+                if self._nourishments[iB3D].narrow_break:
                     self._community_break[iB3D] = 1
 
                     # KA: dune growth rate code blurb probably needs to go here, see code in nourishment module below
@@ -597,11 +598,10 @@ class Cascade:
         for iB3D in range(self._ny):
 
             if self._beach_nourishment_module[iB3D]:
-                # if community has already been abandoned, do nothing
-                if self._community_break[iB3D]:
-                    pass
                 # if barrier was too narrow to sustain a community in the last time step, stop managing beach and dunes!
-                elif self._nourishments[iB3D].narrow_break:
+                # NOTE: dune heights must drop below Dmax before reset, so while calling reset_dune_growth rates seems
+                # redundant, it doesn't slow us down computationally, so just do it
+                if self._nourishments[iB3D].narrow_break:
                     self._community_break[iB3D] = 1
 
                     # set dune growth rates back to original only when dune elevation is less than equilibrium
@@ -611,6 +611,7 @@ class Cascade:
                         ]._original_growth_param,
                         iB3D=iB3D,
                     )
+
                 # else manage that community!
                 else:
                     self._nourishments[
@@ -648,10 +649,21 @@ class Cascade:
                     )  # dam
                 )
 
-        # # ~~~~~~~~~~~~~~~~ LexiMakesOutwash ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        # for iB3D in range(self._ny):
-        #
-        #     # call your update function
+        ###############################################################################
+        # update brie for any human modifications to the barrier
+        ###############################################################################
+        [x_t, x_s, x_b, h_b, s_sf] = [np.zeros(self._ny) for _ in range(5)]
+
+        for iB3D in range(self._ny):
+            # make lists of the barrier geometry variables that have been changed (and needed to calculate shoreline
+            # diffusivity in brie)
+            x_t[iB3D] = self._barrier3d[iB3D].x_t_TS[-1]
+            x_s[iB3D] = self._barrier3d[iB3D].x_s_TS[-1]
+            x_b[iB3D] = self._barrier3d[iB3D].x_b_TS[-1]
+            h_b[iB3D] = self._barrier3d[iB3D].h_b_TS[-1]
+            s_sf[iB3D] = self._barrier3d[iB3D].s_sf_TS[-1]
+
+        self._brie_coupler.update_brie_for_human_modifications(x_t, x_s, x_b, h_b, s_sf)
 
     ###############################################################################
     # save data
