@@ -6,23 +6,30 @@ import matplotlib.pyplot as plt
 
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
 # b3d.update()
-#  create synthetic storm series
-
-storm_series = [[1, 0.1, 40], [1, 0.2, 57], [1, 0.05, 65]]
 
 # -------------------------------------------------------------------------------------------------------------------
 # nothing happens when there are no storms
 # when there are storms, go into loop
 # we will have a different storm series for outwash flow
 
-def outwasher(b3d):
-    # Set Domain
+#  create synthetic storm series
+#  first position is year, second is bayhigh level (dam), third is duration (hours?)
+storm_series = [[1, 0.1, 40], [1, 0.2, 57], [1, 0.05, 65]]
+
+def outwasher(b3d, storm_series):
+    ### Set Domain
     add = 10
-    interior_domain = np.flip(b3d._InteriorDomain, 0)  # elevation cell
+    # interior domain in b3d is ocean to bay, so flip this for outwash flow:
+    interior_domain = np.flip(b3d._InteriorDomain, 0)
+    # bay domain is 10 rows set to a specified depth from barrier3d:
     bay_domain = np.ones([add, b3d._BarrierLength]) * - b3d._BayDepth
+    # new domain that we are adding after the interior domain set to the berm elevation in b3d:
     beach_domain = np.ones([add, b3d._BarrierLength]) * b3d._BermEl
+    # combining the bay and interior domain:
     bayint_domain = np.append(bay_domain, interior_domain, 0)
+    # getting the full domain (bay, interior, beach):
     full_domain = np.append(bayint_domain, beach_domain, 0)
+    # width is the number of rows in the full domain
     width = np.shape(full_domain)[0]
 
     # check b3d interior domain
@@ -35,6 +42,7 @@ def outwasher(b3d):
     )
     plt.colorbar()
 
+    # check our full domain
     plt.matshow(
         full_domain * 10,
         # np.flip(full_domain, 0) * 10,
@@ -46,77 +54,26 @@ def outwasher(b3d):
     plt.colorbar()
 
     # Set other variables
-    # qo = 0.5  # dam^3/hr function of time and full domain (3D array fun t, x, y)
-    # from the Barrier3D flow routing. Instead of having DuneCrestDomain, using interior (BUT its 2d not 3d)
-    # interior_crest = full_domain[:, :].max(
-    #     axis=1
-    # )  # Maximum height of each row in InteriorDomain
-    # interior_crest[interior_crest < b3d._DuneRestart] = b3d._DuneRestart
     OWloss = 0
     numstorm = int(len(storm_series))
 
-    # Select number of storms for this time step from normal distribution
-    # TSloc = np.argwhere(b3d._StormSeries[:, 0] == b3d._time_index)
-    # numstorm = int(len(TSloc))  # analysis:ignore
-
-    # loop through each storm
+    # If we have storms, then we will alter the full domain
     if numstorm > 0:
-        # start = TSloc[0, 0]
-        # stop = TSloc[-1, 0] + 1
-        # Rhigh = b3d._StormSeries[start:stop, 1]
-        # dur = np.array(b3d._StormSeries[start:stop, 4], dtype="int")
 
         # ### Individual Storm Impacts
-        for n in range(numstorm):  # Loop through each individual storm
+        for n in range(numstorm):
             bayhigh = storm_series[n][1]
             dur = storm_series[n][2]
 
-            # ###########################################
-            # ### Dune Erosion
-
-            # Find overwashed dunes and gaps
-            # Dow = [
-            #     index
-            #     for index, value in enumerate((interior_crest + b3d._BermEl))
-            #     if value < Rhigh[n]
-            # ]
-            # gaps = b3d.DuneGaps(
-            #     interior_crest, Dow, b3d._BermEl, Rhigh[n]
-            # )  # Finds location and Rexcess of continuous gaps in dune ridge
-
-            # ###########################################
-            # ### Overwash
-
-            # Iow = 0  # Count of dune gaps in inundation regime
-            # interior_prestorm = interior_crest
-            # for q in range(len(gaps)):
-            #     start = gaps[q][0]
-            #     stop = gaps[q][1]
-            #     gapwidth = stop - start + 1
-            #     meandune = (
-            #         sum(interior_prestorm[start : stop + 1]) / gapwidth
-            #     ) + b3d._BermEl  # Average elevation of dune gap
-            #
-            #     # Determine number of gaps in inundation regime
-            #     Iow += 1
-            #     # if Rlow[n] > meandune:
-            #     #     Iow += 1
-
             # Determine Sediment And Water Routing Rules
-            inundation = 1  # for inundation regime
-            substep = b3d._OWss_i
+            # we have decided to always do inundation regime which is 1 in barrier3d code
+            inundation = 1
+            substep = b3d._OWss_i  # OWss for inundation
 
-            # inundation_count = 0
-            # if (
-            #     len(gaps) > 0 #and Iow / len(gaps) >= Barrier3d._threshold_in
-            # ):  # If greater than threshold % of dune gaps are inunundation regime, use inun. regime routing
-            #     # we changed this to only use inundation regime rules
-            #     inundation = 1
-            #     inundation_count += 1
-
-            # Set Domain
-            duration = dur * substep
+            ### Set Domain
+            duration = dur * substep  # from previous code
             Elevation = np.zeros([duration, width, b3d._BarrierLength])
+            # elevation at the first time step is set to the full domain
             Elevation[0, :, :] = full_domain
 
 
@@ -125,73 +82,41 @@ def outwasher(b3d):
             SedFluxIn = np.zeros([duration, width, b3d._BarrierLength])
             SedFluxOut = np.zeros([duration, width, b3d._BarrierLength])
 
-            Rin = 0  # (dam^3/t) Infiltration Rate, volume of overwash flow lost per m cross-shore per time
+            # get the average slope of the inerior using first and last rows of just the interior domain
+            # should be negative because the first row is close to bay and last row close to "dunes"
             Si = np.mean((interior_domain[-1, :] - interior_domain[0, :]) / 20)
 
-
-            # Set Water at Dune Crest
-            # these equations may need to be changed
+            # ### Set Water at Dune Crest
+            # these equations will probably need to be changed
             Rexcess = bayhigh
-            top_vel = np.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
-            Qdune = top_vel * Rexcess * 3600  # (dam^3/hr)
-            Discharge[:, 0, :] = Qdune
-            Rin = b3d._Rin_i
-            C = b3d._Cx * Si  # 10 x the avg slope
-
-            # for q in range(len(gaps)):
-            #     start = gaps[q][0]
-            #     stop = gaps[q][1]
-            #     Rexcess = gaps[q][2]  # (m)
-            #
-            #     # Calculate discharge through each dune cell
-            #     Vdune = np.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
-            #     Qdune = Vdune * Rexcess * 3600  # (dam^3/hr)
-            #
-            #     # Set discharge at dune gap
-            #     Discharge[:, 0, start:stop] = Qdune
-            #
-            #     if inundation == 1:  # Inundation regime
-            #         Rin = b3d.Rin_i
-            #
-            #         # # Find average slope of interior
-            #         Si = np.mean((interior_domain[-1, :]-interior_domain[0, :])/20)
-            #         #Si = 0.007  # directional slope positive bc uphill
-            #         Slim = b3d.MaxUpSlope
-            #         C = b3d.Cx * Si  # 10 x the avg slope
-            #
-            # plt.matshow(
-            #     # b3d.InteriorDomain * 10,
-            #     full_domain * 10,
-            #     origin="lower",
-            #     cmap="terrain",
-            #     # vmin=-1.1,
-            #     # vmax=4.0,
-            # )
-            #
-            # plt.colorbar()
+            overtop_vel = np.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
+            overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
+            # our initial discharge amount starts at the first row and is later distributed down the rows/cols
+            Discharge[:, 0, :] = overtop_flow
+            C = b3d._Cx * Si  # 10 x the avg slope (from Murray)
 
             # ### Run Flow Routing Algorithm
             for TS in range(duration):
+                # Begin with elevation from previous timestep
                 if TS > 0:
                     Elevation[TS, 1:, :] = Elevation[
                         TS - 1, 1:, :
-                    ]  # Begin timestep with elevation from end of last
-                    # Elevation[TS, :, :] = Elevation[
-                    #     TS - 1, :, :
-                    # ]  # Begin timestep with elevation from end of last
+                    ]
 
+                # Loop through the rows, excluding the last one (because there is nowhere for the water/sed to go)
                 for d in range(width - 1):
-                    # Reduce discharge across row via infiltration
-                    # if d > 0:
-                    #      Discharge[TS, d, :][Discharge[TS, d, :] > 0] -= Rin
+                    # if any of the discharge values are less than 0, set them equal to 0
                     Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
-                    for i in range(b3d._BarrierLength):
-                        if Discharge[TS, d, i] > 0:
 
+                    # Loop through each col of the specified row
+                    for i in range(b3d._BarrierLength):
+                        # if we have discharge, set Qo equal to that value
+                        if Discharge[TS, d, i] > 0:
                             Q0 = Discharge[TS, d, i]
 
                             # ### Calculate Slopes
-                            if i > 0:
+                            # see drawing for more conceptual understanding of this
+                            if i > 0:  # i = 0 means there are no cols to the left
                                 S1 = (
                                     Elevation[TS, d, i]
                                     - Elevation[TS, d + 1, i - 1]
@@ -203,7 +128,7 @@ def outwasher(b3d):
                             S2 = Elevation[TS, d, i] - Elevation[TS, d + 1, i]
                             S2 = np.nan_to_num(S2)
 
-                            if i < (b3d._BarrierLength - 1):
+                            if i < (b3d._BarrierLength - 1):  # i at the end length means there are no cols to the right
                                 S3 = (
                                     Elevation[TS, d, i]
                                     - Elevation[TS, d + 1, i + 1]
@@ -213,9 +138,10 @@ def outwasher(b3d):
                                 S3 = 0
 
                             # ### Calculate Discharge To Downflow Neighbors
-                            # One or more slopes positive
+                            # One or more slopes positive (we have downhill flow)
                             if S1 > 0 or S2 > 0 or S3 > 0:
 
+                                # flow does not go uphill (when theres a downhill option)
                                 if S1 < 0:
                                     S1 = 0
                                 if S2 < 0:
@@ -256,17 +182,20 @@ def outwasher(b3d):
                                 Q3 = np.nan_to_num(Q3)
 
                             # No slopes positive, one or more equal to zero
+                            # np downhill slopes, but some that are 0
                             elif S1 == 0 or S2 == 0 or S3 == 0:
 
-                                pos = 0
+                                # start by counting the number (1, 2, or 3) of slopes that are 0
+                                s_zero = 0
                                 if S1 == 0:
-                                    pos += 1
+                                    s_zero += 1
                                 if S2 == 0:
-                                    pos += 1
+                                    s_zero += 1
                                 if S3 == 0:
-                                    pos += 1
+                                    s_zero += 1
 
-                                Qx = Q0 / pos
+                                # dividing the initial discharge equally among the 0 slopes
+                                Qx = Q0 / s_zero
                                 Qx = np.nan_to_num(Qx)
 
                                 if S1 == 0 and i > 0:
@@ -283,6 +212,7 @@ def outwasher(b3d):
                                     Q3 = 0
 
                             # All slopes negative
+                            # all uphill options (likely our case for outwasher)
                             else:
 
                                 Q1 = (
@@ -317,7 +247,7 @@ def outwasher(b3d):
                                 Q2 = np.nan_to_num(Q2)
                                 Q3 = np.nan_to_num(Q3)
 
-                                # MaxUpSlope = 0.25  # dam
+                                # we set a maximum uphill slope that sediment can still be transported to
                                 Slim = b3d._MaxUpSlope
 
                                 if S1 > Slim:
@@ -338,7 +268,12 @@ def outwasher(b3d):
 
                             # ### Calculate Sed Movement
                             # fluxLimit = b3d._Dmax
-                            fluxLimit = b3d._Dmaxel # Dmax not showing up as a b3d attribute
+                            fluxLimit = b3d._Dmaxel  # Dmax not showing up as a b3d attribute
+                            # the Q values must be between limits set by barrier 3d
+                            # if the flow is greater than the min value required for sed movement, then sed movement
+                            # will be calculated. Then, if sed flow < 0, it's set to 0, and if it's greater than the
+                            # flux limit, it is set to the flux limit
+
                             if Q1 > b3d._Qs_min:
                                 Qs1 = b3d._Ki * (Q1 * (S1 + C)) ** b3d._mm
                                 if Qs1 < 0:
@@ -393,6 +328,7 @@ def outwasher(b3d):
                                 else:
                                     Cbb = b3d._Cbb_i
 
+                                # this seems like it will always be 0 because sedfluxin is all zeros?
                                 Qs0 = SedFluxIn[TS, d, i] * Cbb
 
                                 Qs1 = Qs0 * Q1 / (Q1 + Q2 + Q3)
@@ -426,7 +362,7 @@ def outwasher(b3d):
 
                                 Qs_out = Qs1 + Qs2 + Qs3
                                 SedFluxOut[TS, d, i] = Qs_out
-
+                                # END OF DOMAIN LOOPS
 
                 # ### Update Elevation After Every Storm Hour
                 if inundation == 1:
@@ -446,8 +382,8 @@ def outwasher(b3d):
                 # OWloss = OWloss + np.sum(SedFluxIn[TS,1,:]) / substep
                 OWloss = OWloss + np.sum(SedFluxOut[TS, 0, :]) / substep
 
-
             # ### Update Interior Domain After Every Storm
+            # use the last TS, not including the first (0th) row
             InteriorUpdate = Elevation[-1, 1:, :]
 
             # Remove all rows of bay without any deposition from the domain
@@ -461,7 +397,6 @@ def outwasher(b3d):
             # Update interior domain
             full_domain[1:, :] = InteriorUpdate
 
-
     # plots
     plt.matshow(
         #b3d.InteriorDomain * 10,
@@ -474,4 +409,4 @@ def outwasher(b3d):
     plt.colorbar()
 
 
-outwasher(b3d)
+outwasher(b3d, storm_series)
