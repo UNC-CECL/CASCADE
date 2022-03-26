@@ -18,19 +18,6 @@ storm_series = [[1, 0.1, 40], [1, 0.2, 57], [1, 0.05, 65]]
 
 def outwasher(b3d, storm_series):
     ### Set Domain
-    add = 10
-    # interior domain in b3d is ocean to bay, so flip this for outwash flow:
-    interior_domain = np.flip(b3d._InteriorDomain, 0)
-    # bay domain is 10 rows set to a specified depth from barrier3d:
-    bay_domain = np.ones([add, b3d._BarrierLength]) * - b3d._BayDepth
-    # new domain that we are adding after the interior domain set to the berm elevation in b3d:
-    beach_domain = np.ones([add, b3d._BarrierLength]) * b3d._BermEl
-    # combining the bay and interior domain:
-    bayint_domain = np.append(bay_domain, interior_domain, 0)
-    # getting the full domain (bay, interior, beach):
-    full_domain = np.append(bayint_domain, beach_domain, 0)
-    # width is the number of rows in the full domain
-    width = np.shape(full_domain)[0]
 
     # check b3d interior domain
     plt.matshow(
@@ -43,15 +30,15 @@ def outwasher(b3d, storm_series):
     plt.colorbar()
 
     # check our full domain
-    plt.matshow(
-        full_domain * 10,
-        # np.flip(full_domain, 0) * 10,
-        origin="upper",
-        cmap="terrain",
-        # vmin=-1.1,
-        # vmax=4.0,
-    )
-    plt.colorbar()
+    # plt.matshow(
+    #     full_domain * 10,
+    #     # np.flip(full_domain, 0) * 10,
+    #     origin="upper",
+    #     cmap="terrain",
+    #     # vmin=-1.1,
+    #     # vmax=4.0,
+    # )
+    # plt.colorbar()
 
     # Set other variables
     OWloss = 0
@@ -71,11 +58,26 @@ def outwasher(b3d, storm_series):
             substep = b3d._OWss_i  # OWss for inundation
 
             ### Set Domain
+            add = 10
+            interior_domain = np.flip(b3d._InteriorDomain, 0)
+            beach_domain = np.ones([add, b3d._BarrierLength]) * b3d._BermEl
+            full_domain = np.append(interior_domain, beach_domain, 0)
+            # # interior domain in b3d is ocean to bay, so flip this for outwash flow:
+            # interior_domain = np.flip(b3d._InteriorDomain, 0)
+            # # bay domain is 10 rows set to a specified depth from barrier3d:
+            # bay_domain = np.ones([add, b3d._BarrierLength]) * - b3d._BayDepth
+            # # new domain that we are adding after the interior domain set to the berm elevation in b3d:
+            # beach_domain = np.ones([add, b3d._BarrierLength]) * b3d._BermEl
+            # # combining the bay and interior domain:
+            # bayint_domain = np.append(bay_domain, interior_domain, 0)
+            # # getting the full domain (bay, interior, beach):
+            # full_domain = np.append(bayint_domain, beach_domain, 0)
+            # # width is the number of rows in the full domain
+            width = np.shape(full_domain)[0]
             duration = dur * substep  # from previous code
             Elevation = np.zeros([duration, width, b3d._BarrierLength])
             # elevation at the first time step is set to the full domain
             Elevation[0, :, :] = full_domain
-
 
             # Initialize Memory Storage Arrays
             Discharge = np.zeros([duration, width, b3d._BarrierLength])
@@ -268,7 +270,8 @@ def outwasher(b3d, storm_series):
 
                             # ### Calculate Sed Movement
                             # fluxLimit = b3d._Dmax
-                            fluxLimit = b3d._Dmaxel  # Dmax not showing up as a b3d attribute
+                            # typically max sediment comes from dune, but bay sediment probably negligible
+                            fluxLimit = b3d._Dmaxel/10  # play with this number
                             # the Q values must be between limits set by barrier 3d
                             # if the flow is greater than the min value required for sed movement, then sed movement
                             # will be calculated. Then, if sed flow < 0, it's set to 0, and if it's greater than the
@@ -306,6 +309,12 @@ def outwasher(b3d, storm_series):
                             Qs3 = np.nan_to_num(Qs3)
 
                             # ### Calculate Net Erosion/Accretion
+
+                            # check if bay
+                            # once we get to land check the 10
+                            # if it is less than 10 exponential decay all of it
+                            # use same exp decay for beach
+
                             if Elevation[TS, d, i] > b3d._SL or any(
                                 z > b3d._SL for z in Elevation[TS, d + 1: d + 10, i]
                             ):  # If cell is subaerial, elevation change is determined by difference between
@@ -328,7 +337,7 @@ def outwasher(b3d, storm_series):
                                 else:
                                     Cbb = b3d._Cbb_i
 
-                                # this seems like it will always be 0 because sedfluxin is all zeros?
+                                # when is this nonzero
                                 Qs0 = SedFluxIn[TS, d, i] * Cbb
 
                                 Qs1 = Qs0 * Q1 / (Q1 + Q2 + Q3)
