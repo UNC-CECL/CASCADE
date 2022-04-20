@@ -10,8 +10,8 @@ b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_pa
 # -------------------------------------------------------------------------------------------------------------------
 
 #  create synthetic storm series
-#  first position is year, second is bayhigh level (dam), third is duration (hours?)
-storm_series = [[1, 2, 40], [1, 0.2, 57], [1, 0.05, 65]]
+#  first position is year, second is bayhigh level (dam), third is duration (hours)
+storm_series = [[1, 0.03, 40], [1, 0.01, 57], [1, 0.05, 65]]
 
 def outwasher(b3d, storm_series):
     ### Set Domain
@@ -28,6 +28,7 @@ def outwasher(b3d, storm_series):
     OWloss = 0
     numstorm = int(len(storm_series))
 
+
     # If we have storms, then we will alter the full domain
     if numstorm > 0:
 
@@ -39,7 +40,7 @@ def outwasher(b3d, storm_series):
             # Determine Sediment And Water Routing Rules
             # we have decided to always do inundation regime which is 1 in barrier3d code
             inundation = 1
-            substep = b3d._OWss_i  # OWss for inundation
+            substep = b3d._OWss_i  # equals 2 for inundation
 
             ### Set Domain
             add = 10
@@ -57,6 +58,9 @@ def outwasher(b3d, storm_series):
             Discharge = np.zeros([duration, width, b3d._BarrierLength])
             SedFluxIn = np.zeros([duration, width, b3d._BarrierLength])
             SedFluxOut = np.zeros([duration, width, b3d._BarrierLength])
+            Q1_list = np.zeros([duration, width-1, b3d._BarrierLength])
+            Q2_list = np.zeros([duration, width-1, b3d._BarrierLength])
+            Q3_list = np.zeros([duration, width-1, b3d._BarrierLength])
 
             # get the average slope of the inerior using first and last rows of just the interior domain
             # should be negative because the first row is close to bay and last row close to "dunes"
@@ -66,7 +70,7 @@ def outwasher(b3d, storm_series):
             # these equations will probably need to be changed
             Rexcess = bayhigh
             overtop_vel = np.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
-            overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
+            overtop_flow = overtop_vel * Rexcess * 3600  # (dam^2/hr)
             # our initial discharge amount starts at the first row and is later distributed down the rows/cols
             Discharge[:, 0, :] = overtop_flow
             C = b3d._Cx * Si  # 10 x the avg slope (from Murray)
@@ -87,6 +91,7 @@ def outwasher(b3d, storm_series):
                     # Loop through each col of the specified row
                     for i in range(b3d._BarrierLength):
                         # if we have discharge, set Qo equal to that value
+                        # currently discharge is only set for row 1 and never updated
                         if Discharge[TS, d, i] > 0:
                             Q0 = Discharge[TS, d, i]
 
@@ -241,11 +246,27 @@ def outwasher(b3d, storm_series):
                                 else:
                                     Q3 = Q3 * (1 - (abs(S3) / Slim))
 
+                            Q1_list[TS, d, i] = Q1
+                            Q2_list[TS, d, i] = Q2
+                            Q3_list[TS, d, i] = Q3
+
+                            ### Update discharge
+                            # Cell 1
+                            if i > 0:
+                                Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
+
+                            # Cell 2
+                            Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
+
+                            # Cell 3
+                            if i < (b3d._BarrierLength - 1):
+                                Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
+
 
                             # ### Calculate Sed Movement
                             # fluxLimit = b3d._Dmax
                             # typically max sediment comes from dune, but bay sediment probably negligible
-                            fluxLimit = 0.0001  # play with this number
+                            fluxLimit = 0.0001
                             # the Q values must be between limits set by barrier 3d
                             # if the flow is greater than the min value required for sed movement, then sed movement
                             # will be calculated. Then, if sed flow < 0, it's set to 0, and if it's greater than the
@@ -354,6 +375,8 @@ def outwasher(b3d, storm_series):
                                 SedFluxOut[TS, d, i] = Qs_out
                                 # END OF DOMAIN LOOPS
 
+
+
                 # ### Update Elevation After Every Storm Hour
                 if inundation == 1:
                     ElevationChange = (
@@ -386,6 +409,15 @@ def outwasher(b3d, storm_series):
 
             # Update interior domain
             full_domain[1:, :] = InteriorUpdate
+            # plt.figure()
+            # plt.scatter(range(width - 1), Q1_list[1, :, 0])
+            # plt.scatter(range(width - 1), Q2_list[1, :, 0], marker='x')
+            # plt.scatter(range(width - 1), Q3_list[1, :, 0], marker='_')
+            # plt.xlabel('barrier width (dam)')
+            # plt.ylabel('Q (dam^2/hr)')
+            # plt.legend(["Q1", "Q2", "Q3"])
+            # plt.title("storm {0}".format(n))
+
 
     # plots
     plt.matshow(
@@ -393,6 +425,12 @@ def outwasher(b3d, storm_series):
         origin="upper",
         cmap="terrain",
     )
+    plt.colorbar()
+
+    plt.matshow(Discharge[0, :, :], origin="upper")
+    plt.xlabel('barrier length (dam)')
+    plt.ylabel('barrier width (dam)')
+    plt.title("total discharge after storm {0}".format(n))
     plt.colorbar()
 
 
