@@ -3087,7 +3087,7 @@ def plot_nonlinear_stats_ast_array3(
         axs[1].axvline(x=tmax_management_roadways[i], color=color[i])
 
     axs[0].set(xlabel="time (yr)")
-    axs[0].set_xlim([0, np.max(tmax_management_nourishments)+2])
+    axs[0].set_xlim([0, np.max(tmax_management_nourishments) + 2])
     axs[1].set(xlabel="time (yr)")
     axs[1].set_xlim([0, np.max(TMAX)])
 
