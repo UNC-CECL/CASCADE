@@ -218,7 +218,9 @@ def plot_ElevAnimation_CASCADE(
     beach_management_ny=None,  # list of booleans
     roadway_management_ny=None,
     y_lim=None,
+    z_lim=3.5,
     fig_size=None,
+    fig_eps=True,
 ):
     """
     NOTE THAT THE BEACH REPRESENTATION IS BASED ON A MODEL SPECIFIED BEACH WIDTH. We set the beach width for the
@@ -358,14 +360,14 @@ def plot_ElevAnimation_CASCADE(
                 AnimateDomain,
                 cmap="terrain",
                 vmin=-1.1,
-                vmax=3.5,
+                vmax=z_lim,
                 # edgecolors="w",  # for debugging
                 # linewidth=0.01,
             )
             cbar = elevFig1.colorbar(cax)
-            cbar.set_label("Elevation (m MHW)", rotation=270)
-            plt.xlabel("Alongshore Distance (dam)")
-            plt.ylabel("Cross-Shore Distance (dam)")
+            cbar.set_label("elevation (m MHW)", rotation=270)
+            plt.xlabel("alongshore distance (dam)")
+            plt.ylabel("cross-shore distance (dam)")
             timestr = (
                 "Time = " + str(t - 0.5) + " yrs"
             )  # we are letting the post-storm output represent 0.5 years
@@ -376,10 +378,14 @@ def plot_ElevAnimation_CASCADE(
                 plt.ylim(bottom=OriginY - 35)
                 plt.text(1, OriginY - 33, timestr)
             plt.tight_layout()
-            plt.rcParams.update({"font.size": 16})
-            name = "elev_" + str(t - 1) + "pt5"
+            plt.rcParams.update({"font.size": 11})
             # elevFig1.tight_layout()
-            elevFig1.savefig(name)  # dpi=200
+            if fig_eps:
+                name = "elev_" + str(t - 1) + "pt5.eps"
+                elevFig1.savefig(name, format="eps")
+            else:
+                name = "elev_" + str(t - 1) + "pt5"
+                elevFig1.savefig(name)  # dpi=200
             plt.close(elevFig1)
 
     for t in range(TMAX_SIM):
@@ -396,6 +402,11 @@ def plot_ElevAnimation_CASCADE(
             else:
                 # both roadways and natural scenario
                 beach_width = cascade._initial_beach_width[iB3D] / 10
+
+            if beach_management_ny[iB3D] and np.isnan(beach_width):
+                beach_width = (
+                    cascade.nourishments[iB3D].beach_width[t - 1] / 10
+                )  # this can happen if the barrier height drowns
 
             cellular_dune_toe_post_humans = np.floor(
                 actual_shoreline_post_humans[t] + beach_width
@@ -455,14 +466,14 @@ def plot_ElevAnimation_CASCADE(
             AnimateDomain,
             cmap="terrain",
             vmin=-1.1,
-            vmax=3.5,
+            vmax=z_lim,
             # edgecolors="w",  # for debugging
             # linewidth=0.01,
         )
         cbar = elevFig2.colorbar(cax)
-        cbar.set_label("Elevation (m MHW)", rotation=270)
-        plt.xlabel("Alongshore Distance (dam)")
-        plt.ylabel("Cross-Shore Distance (dam)")
+        cbar.set_label("elevation (m MHW)", rotation=270)
+        plt.xlabel("alongshore distance (dam)")
+        plt.ylabel("cross-shore distance (dam)")
         timestr = "Time = " + str(t) + " yrs"
         if y_lim is not None:
             plt.ylim(y_lim)
@@ -471,16 +482,23 @@ def plot_ElevAnimation_CASCADE(
             plt.ylim(bottom=OriginY - 35)
             plt.text(1, OriginY - 33, timestr)
         plt.tight_layout()
-        plt.rcParams.update({"font.size": 16})
-        name = "elev_" + str(t)
+        plt.rcParams.update({"font.size": 11})
         # elevFig2.tight_layout()
-        elevFig2.savefig(name)  # dpi=200
+        if fig_eps:
+            name = "elev_" + str(t) + ".eps"
+            elevFig2.savefig(name, format="eps")
+        else:
+            name = "elev_" + str(t)
+            elevFig2.savefig(name)  # dpi=200
         plt.close(elevFig2)
 
     frames = []
 
     for filenum in range(TMAX_SIM):
-        filename = "elev_" + str(filenum) + ".png"
+        if fig_eps:
+            filename = "elev_" + str(filenum) + ".eps"
+        else:
+            filename = "elev_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
 
         if (
@@ -488,7 +506,10 @@ def plot_ElevAnimation_CASCADE(
             < TMAX_MGMT[iB3D]
             # and cascade.nourishments[iB3D]._post_storm_interior[TMAX_MGMT] is not None
         ):
-            filename = "elev_" + str(filenum) + "pt5" ".png"
+            if fig_eps:
+                filename = "elev_" + str(filenum) + "pt5" ".eps"
+            else:
+                filename = "elev_" + str(filenum) + "pt5" ".png"
             frames.append(imageio.imread(filename))
 
     imageio.mimsave("elev.gif", frames, "GIF-FI")
@@ -2603,7 +2624,8 @@ def plot_nonlinear_stats_BeachDuneManager(
     plt.subplot(2, 2, 1)
     # plt.subplot(4, 3, 7)
     if post_storm_beach_width is not None:
-        plt.plot(full_time, combined_beach_width, "m")
+        mask = np.isfinite(combined_beach_width)
+        plt.plot(full_time[mask], combined_beach_width[mask], "m")
         plt.plot(beach_width, "k")
         # plt.legend(["includes post-storm", "mgmt only"])
     else:
@@ -3023,6 +3045,53 @@ def plot_nonlinear_stats_mgmt_array4(
     # axs3[1].set(ylabel="barrier width (m)")
     # # axs3[1].legend(["natural", "1-m dune", "2-m dune", "3-m dune"])
     # plt.tight_layout()
+
+
+def plot_nonlinear_stats_ast_array3(
+    shoreline_position,
+    beach_width,
+    TMAX,
+    tmax_management_nourishments,
+    tmax_management_roadways,
+    scenarios_beach_width,
+    scenarios_shoreline_position,
+):
+
+    fig, axs = plt.subplots(1, 2, figsize=(10, 3))
+    color = ["b", "r", "m"]
+
+    for i in range(len(TMAX)):
+        time = np.arange(0, TMAX[i] - 0.5, 0.5)
+        yearly_time = np.arange(0, TMAX[i], 1)
+
+        # includes post-storm beach width, before human modifications
+        mask = np.isfinite(beach_width[i])
+        axs[0].plot(time[mask], beach_width[i][mask], color[i])
+
+        # shoreline position relative to 0 starting position
+        scts = [
+            (x - shoreline_position[i][0]) for x in shoreline_position[i][0 : TMAX[i]]
+        ]
+        axs[1].plot(yearly_time, scts, color[i])
+
+    axs[0].set(ylabel="beach width (m)")
+    # axs2[0].set_ylim([-0.03, 1.75])
+    axs[1].set(ylabel="shoreline position (m)")
+    # axs2[1].set_ylim([-6, 425])
+    axs[0].legend(scenarios_beach_width)
+    axs[1].legend(scenarios_shoreline_position)
+
+    # plot when management ceased
+    for i in range(len(TMAX)):
+        axs[0].axvline(x=tmax_management_nourishments[i], color=color[i])
+        axs[1].axvline(x=tmax_management_roadways[i], color=color[i])
+
+    axs[0].set(xlabel="time (yr)")
+    axs[0].set_xlim([0, np.max(tmax_management_nourishments)+2])
+    axs[1].set(xlabel="time (yr)")
+    axs[1].set_xlim([0, np.max(TMAX)])
+
+    plt.tight_layout()
 
 
 def plot_nonlinear_stats_low_high_sensitivity(
