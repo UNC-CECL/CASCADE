@@ -1,41 +1,48 @@
 import numpy as np
 import math
+import os
 from barrier3d import Barrier3d
-from scripts import CASCADE_plotters as cplots
 import matplotlib.pyplot as plt
+import imageio
 
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
 # b3d.update()
 
+# see what happens if i remove bay
+# create a constriction in one of the elevation rows
+
 # -------------------------------------------------------------------------------------------------------------------
+
+# plot hydrograph for one storm
+# have a storm that starts at 4 m (bay is -3)
 
 #  create synthetic storm series
 #  first position is year, second is bayhigh level (dam), third is duration (hours)
-storm_series = [[1, 0.03, 40], [1, 0.01, 57], [1, 0.05, 65]]
+# storm_series = [[1, 0.4, 40], [1, 0.4, 57], [1, 0.6, 65]]
+storm_series = [[1, 0.6, 65]]
 
 def outwasher(b3d, storm_series):
     ### Set Domain
 
     # check b3d interior domain
-    plt.matshow(
-        b3d._InteriorDomain * 10,
-        origin="lower",
-        cmap="terrain",
-    )
-    plt.colorbar()
+    # plt.matshow(
+    #     b3d._InteriorDomain,
+    #     origin="lower",
+    #     cmap="terrain",
+    # )
+    # plt.colorbar()
 
     # Set other variables
     OWloss = 0
     numstorm = int(len(storm_series))
-
 
     # If we have storms, then we will alter the full domain
     if numstorm > 0:
 
         # ### Individual Storm Impacts
         for n in range(numstorm):
-            bayhigh = storm_series[n][1]
-            dur = storm_series[n][2]
+            bayhigh = storm_series[n][1]  # dam
+            dur = storm_series[n][2]  # hr
 
             # Determine Sediment And Water Routing Rules
             # we have decided to always do inundation regime which is 1 in barrier3d code
@@ -44,35 +51,41 @@ def outwasher(b3d, storm_series):
 
             ### Set Domain
             add = 10
-            interior_domain = np.flip(b3d._InteriorDomain, 0)
-            beach_domain = np.ones([add, b3d._BarrierLength]) * b3d._BermEl
-            full_domain = np.append(interior_domain, beach_domain, 0)
-            # # width is the number of rows in the full domain
-            width = np.shape(full_domain)[0]
+            interior_domain = np.flip(b3d._InteriorDomain, 0)  # dam MHW
+            beach_domain = np.ones([add, b3d._BarrierLength]) * b3d._BermEl  # dam MHW
+            full_domain = np.append(interior_domain, beach_domain, 0)  # dam MHW
+            # # testing wall scenario
+            # full_domain[15, :] = 0.7
+            # full_domain[15, 25:30] = 0
+            # full_domain = full_domain[5:, :]  # testing removing the bay
+
+            width = np.shape(full_domain)[0]  # width is the number of rows in the full domain
             duration = dur * substep  # from previous code
             Elevation = np.zeros([duration, width, b3d._BarrierLength])
             # elevation at the first time step is set to the full domain
-            Elevation[0, :, :] = full_domain
+            Elevation[0, :, :] = full_domain  #
 
             # Initialize Memory Storage Arrays
             Discharge = np.zeros([duration, width, b3d._BarrierLength])
             SedFluxIn = np.zeros([duration, width, b3d._BarrierLength])
             SedFluxOut = np.zeros([duration, width, b3d._BarrierLength])
-            Q1_list = np.zeros([duration, width-1, b3d._BarrierLength])
-            Q2_list = np.zeros([duration, width-1, b3d._BarrierLength])
-            Q3_list = np.zeros([duration, width-1, b3d._BarrierLength])
+            Q1_list = np.zeros([duration, width - 1, b3d._BarrierLength])
+            Q2_list = np.zeros([duration, width - 1, b3d._BarrierLength])
+            Q3_list = np.zeros([duration, width - 1, b3d._BarrierLength])
 
             # get the average slope of the inerior using first and last rows of just the interior domain
             # should be negative because the first row is close to bay and last row close to "dunes"
             Si = np.mean((interior_domain[-1, :] - interior_domain[0, :]) / 20)
 
             # ### Set Water at Dune Crest
-            # these equations will probably need to be changed
-            Rexcess = bayhigh
+            # the velocity here assumes dune overtopping (Larson 2004), probably need to change
+            # also, we think there is an error in units
+            Rexcess = bayhigh  # dam
             overtop_vel = np.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
-            overtop_flow = overtop_vel * Rexcess * 3600  # (dam^2/hr)
+            overtop_flow = overtop_vel * Rexcess * 3600  # (dam^2/hr), do I need to multiply by 1 dam?
+            # overtop_flow can be dam^3 because we are multiplying by 1 to convert
             # our initial discharge amount starts at the first row and is later distributed down the rows/cols
-            Discharge[:, 0, :] = overtop_flow
+            Discharge[:, 0, :] = overtop_flow  # (dam^3/hr)
             C = b3d._Cx * Si  # 10 x the avg slope (from Murray)
 
             # ### Run Flow Routing Algorithm
@@ -80,8 +93,8 @@ def outwasher(b3d, storm_series):
                 # Begin with elevation from previous timestep
                 if TS > 0:
                     Elevation[TS, 1:, :] = Elevation[
-                        TS - 1, 1:, :
-                    ]
+                                           TS - 1, 1:, :
+                                           ]
 
                 # Loop through the rows, excluding the last one (because there is nowhere for the water/sed to go)
                 for d in range(width - 1):
@@ -93,15 +106,15 @@ def outwasher(b3d, storm_series):
                         # if we have discharge, set Qo equal to that value
                         # currently discharge is only set for row 1 and never updated
                         if Discharge[TS, d, i] > 0:
-                            Q0 = Discharge[TS, d, i]
+                            Q0 = Discharge[TS, d, i]  # (dam^3/hr)
 
                             # ### Calculate Slopes
                             # see drawing for more conceptual understanding of this
                             if i > 0:  # i = 0 means there are no cols to the left
                                 S1 = (
-                                    Elevation[TS, d, i]
-                                    - Elevation[TS, d + 1, i - 1]
-                                ) / (math.sqrt(2))
+                                             Elevation[TS, d, i]
+                                             - Elevation[TS, d + 1, i - 1]
+                                     ) / (math.sqrt(2))
                                 S1 = np.nan_to_num(S1)
                             else:
                                 S1 = 0
@@ -111,9 +124,9 @@ def outwasher(b3d, storm_series):
 
                             if i < (b3d._BarrierLength - 1):  # i at the end length means there are no cols to the right
                                 S3 = (
-                                    Elevation[TS, d, i]
-                                    - Elevation[TS, d + 1, i + 1]
-                                ) / (math.sqrt(2))
+                                             Elevation[TS, d, i]
+                                             - Elevation[TS, d + 1, i + 1]
+                                     ) / (math.sqrt(2))
                                 S3 = np.nan_to_num(S3)
                             else:
                                 S3 = 0
@@ -131,31 +144,31 @@ def outwasher(b3d, storm_series):
                                     S3 = 0
 
                                 Q1 = (
-                                    Q0
-                                    * S1 ** b3d._nn
-                                    / (
-                                        S1 ** b3d._nn
-                                        + S2 ** b3d._nn
-                                        + S3 ** b3d._nn
-                                    )
+                                        Q0
+                                        * S1 ** b3d._nn
+                                        / (
+                                                S1 ** b3d._nn
+                                                + S2 ** b3d._nn
+                                                + S3 ** b3d._nn
+                                        )
                                 )
                                 Q2 = (
-                                    Q0
-                                    * S2 ** b3d._nn
-                                    / (
-                                        S1 ** b3d._nn
-                                        + S2 ** b3d._nn
-                                        + S3 ** b3d._nn
-                                    )
+                                        Q0
+                                        * S2 ** b3d._nn
+                                        / (
+                                                S1 ** b3d._nn
+                                                + S2 ** b3d._nn
+                                                + S3 ** b3d._nn
+                                        )
                                 )
                                 Q3 = (
-                                    Q0
-                                    * S3 ** b3d._nn
-                                    / (
-                                        S1 ** b3d._nn
-                                        + S2 ** b3d._nn
-                                        + S3 ** b3d._nn
-                                    )
+                                        Q0
+                                        * S3 ** b3d._nn
+                                        / (
+                                                S1 ** b3d._nn
+                                                + S2 ** b3d._nn
+                                                + S3 ** b3d._nn
+                                        )
                                 )
 
                                 Q1 = np.nan_to_num(Q1)
@@ -197,31 +210,31 @@ def outwasher(b3d, storm_series):
                             else:
 
                                 Q1 = (
-                                    Q0
-                                    * abs(S1) ** (-b3d._nn)
-                                    / (
-                                        abs(S1) ** (-b3d._nn)
-                                        + abs(S2) ** (-b3d._nn)
-                                        + abs(S3) ** (-b3d._nn)
-                                    )
+                                        Q0
+                                        * abs(S1) ** (-b3d._nn)
+                                        / (
+                                                abs(S1) ** (-b3d._nn)
+                                                + abs(S2) ** (-b3d._nn)
+                                                + abs(S3) ** (-b3d._nn)
+                                        )
                                 )
                                 Q2 = (
-                                    Q0
-                                    * abs(S2) ** (-b3d._nn)
-                                    / (
-                                        abs(S1) ** (-b3d._nn)
-                                        + abs(S2) ** (-b3d._nn)
-                                        + abs(S3) ** (-b3d._nn)
-                                    )
+                                        Q0
+                                        * abs(S2) ** (-b3d._nn)
+                                        / (
+                                                abs(S1) ** (-b3d._nn)
+                                                + abs(S2) ** (-b3d._nn)
+                                                + abs(S3) ** (-b3d._nn)
+                                        )
                                 )
                                 Q3 = (
-                                    Q0
-                                    * abs(S3) ** (-b3d._nn)
-                                    / (
-                                        abs(S1) ** (-b3d._nn)
-                                        + abs(S2) ** (-b3d._nn)
-                                        + abs(S3) ** (-b3d._nn)
-                                    )
+                                        Q0
+                                        * abs(S3) ** (-b3d._nn)
+                                        / (
+                                                abs(S1) ** (-b3d._nn)
+                                                + abs(S2) ** (-b3d._nn)
+                                                + abs(S3) ** (-b3d._nn)
+                                        )
                                 )
 
                                 Q1 = np.nan_to_num(Q1)
@@ -262,11 +275,10 @@ def outwasher(b3d, storm_series):
                             if i < (b3d._BarrierLength - 1):
                                 Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
 
-
                             # ### Calculate Sed Movement
                             # fluxLimit = b3d._Dmax
                             # typically max sediment comes from dune, but bay sediment probably negligible
-                            fluxLimit = 0.0001
+                            fluxLimit = 1
                             # the Q values must be between limits set by barrier 3d
                             # if the flow is greater than the min value required for sed movement, then sed movement
                             # will be calculated. Then, if sed flow < 0, it's set to 0, and if it's greater than the
@@ -313,12 +325,12 @@ def outwasher(b3d, storm_series):
                             # interior elevation starts at bay, so if we are at the bay, or any of the next 10 are at
                             # the bay, we should not be moving sediment (?)
                             if Elevation[TS, d, i] > b3d._SL or any(
-                                z > b3d._SL for z in Elevation[TS, d + 1: d + 10, i]
+                                    z > b3d._SL for z in Elevation[TS, d + 1: d + 10, i]
                             ):
                                 Elevation[TS, d, i] = Elevation[TS, d, i]
                             # currently the beach elevation is set to b3d._BermEl so using that here
                             elif Elevation[TS, d, i] > b3d._BermEl or any(
-                                z > b3d._BermEl for z in Elevation[TS, d + 1: d + 10, i]
+                                    z > b3d._BermEl for z in Elevation[TS, d + 1: d + 10, i]
                             ):  # If cell is subaerial, elevation change is determined by difference between
                                 # flux in vs. flux out
                                 if i > 0:
@@ -375,17 +387,15 @@ def outwasher(b3d, storm_series):
                                 SedFluxOut[TS, d, i] = Qs_out
                                 # END OF DOMAIN LOOPS
 
-
-
                 # ### Update Elevation After Every Storm Hour
                 if inundation == 1:
                     ElevationChange = (
-                        SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]
-                    ) / substep
+                                              SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]
+                                      ) / substep
                 else:
                     ElevationChange = (
-                        SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]
-                    ) / substep
+                                              SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]
+                                      ) / substep
                 Elevation[TS, :, :] = Elevation[TS, :, :] + ElevationChange
 
                 # Calculate and save volume of sediment deposited on/behind the island for every hour
@@ -408,30 +418,87 @@ def outwasher(b3d, storm_series):
                     check = 0
 
             # Update interior domain
+            # b3d._InteriorDomain = InteriorUpdate
             full_domain[1:, :] = InteriorUpdate
-            # plt.figure()
-            # plt.scatter(range(width - 1), Q1_list[1, :, 0])
-            # plt.scatter(range(width - 1), Q2_list[1, :, 0], marker='x')
-            # plt.scatter(range(width - 1), Q3_list[1, :, 0], marker='_')
-            # plt.xlabel('barrier width (dam)')
-            # plt.ylabel('Q (dam^2/hr)')
-            # plt.legend(["Q1", "Q2", "Q3"])
-            # plt.title("storm {0}".format(n))
-
+            # Update Domain widths
+            # DomainWidth = np.shape(b3d._InteriorDomain)[0]
 
     # plots
     plt.matshow(
-        full_domain * 10,
+        full_domain,
         origin="upper",
         cmap="terrain",
     )
     plt.colorbar()
 
-    plt.matshow(Discharge[0, :, :], origin="upper")
+    plt.matshow(Discharge[0, :, :],
+                origin="upper",
+                cmap='jet_r')
     plt.xlabel('barrier length (dam)')
     plt.ylabel('barrier width (dam)')
-    plt.title("total discharge after storm {0}".format(n))
+    plt.title("total discharge in dam$^3$/hr \n TS=0".format(n))
     plt.colorbar()
 
+    # Record storm data
+    b3d._StormCount.append(numstorm)
+    return Discharge
 
-outwasher(b3d, storm_series)
+
+discharge = outwasher(b3d, storm_series)
+
+
+def plot_ElevAnimation(discharge, directory, TMAX, name):
+    # length = b3d[0]._BarrierLength
+
+    # BeachWidth = 6
+    # OriginY = int(b3d[0]._x_s_TS[0] - b3d[0]._x_t_TS[0])
+    # AniDomainWidth = int(
+    #     np.amax(b3d[0]._InteriorWidth_AvgTS)
+    #     + BeachWidth
+    #     + np.abs(b3d[0]._ShorelineChange)
+    #     + OriginY
+    #     + 35
+    # )
+
+    os.chdir(directory)
+    newpath = "Output/" + name + "/SimFrames/"
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+    os.chdir(newpath)
+
+    # for t in range(TMAX - 1):
+    for t in range(TMAX):
+        AnimateDomain = discharge[t]
+
+        # Plot and save
+        elevFig1 = plt.figure(figsize=(15, 7))
+        ax = elevFig1.add_subplot(111)
+        cax = ax.matshow(
+            AnimateDomain, origin="upper", cmap="jet_r"
+        )  # , interpolation='gaussian') # analysis:ignore
+        ax.xaxis.set_ticks_position("bottom")
+        elevFig1.colorbar(cax)
+        plt.xlabel("Alongshore Distance (dam)")
+        plt.ylabel("Cross-Shore Distance (dam)")
+        plt.title("Interior Elevation")
+        plt.tight_layout()
+        timestr = "Time = " + str(t) + " yrs"
+        plt.text(1, 1, timestr)
+        plt.rcParams.update({"font.size": 20})
+        name = "elev_" + str(t)
+        elevFig1.savefig(name)  # dpi=200
+        plt.close(elevFig1)
+
+    frames = []
+
+    for filenum in range(TMAX - 1):
+        filename = "elev_" + str(filenum) + ".png"
+        frames.append(imageio.imread(filename))
+    imageio.mimsave("elev.gif", frames, "GIF-FI")
+    print()
+    print("[ * GIF successfully generated * ]")
+
+
+TMAX = storm_series[0][2]
+name = "discharge"
+plot_ElevAnimation(discharge, r"C:\Users\Lexi\Documents\Research\Barrier3D", TMAX, name)
