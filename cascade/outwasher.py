@@ -55,9 +55,9 @@ def outwasher(b3d, storm_series):
             beach_domain = np.ones([add, b3d._BarrierLength]) * b3d._BermEl  # dam MHW
             full_domain = np.append(interior_domain, beach_domain, 0)  # dam MHW
             # # testing wall scenario
-            # full_domain[15, :] = 0.7
-            # full_domain[15, 25:30] = 0
-            # full_domain = full_domain[5:, :]  # testing removing the bay
+            full_domain[15, :] = 0.7
+            full_domain[15, 25:30] = 0
+            full_domain = full_domain[5:, :]  # testing removing the bay
 
             width = np.shape(full_domain)[0]  # width is the number of rows in the full domain
             duration = dur * substep  # from previous code
@@ -436,69 +436,68 @@ def outwasher(b3d, storm_series):
                 cmap='jet_r')
     plt.xlabel('barrier length (dam)')
     plt.ylabel('barrier width (dam)')
-    plt.title("total discharge in dam$^3$/hr \n TS=0".format(n))
+    plt.title("total discharge in dam$^3$/hr \n TS=0 \n bayhigh = {0} dam".format(bayhigh))
     plt.colorbar()
 
     # Record storm data
     b3d._StormCount.append(numstorm)
     return Discharge
 
-
 discharge = outwasher(b3d, storm_series)
 
 
-def plot_ElevAnimation(discharge, directory, TMAX, name):
-    # length = b3d[0]._BarrierLength
-
-    # BeachWidth = 6
-    # OriginY = int(b3d[0]._x_s_TS[0] - b3d[0]._x_t_TS[0])
-    # AniDomainWidth = int(
-    #     np.amax(b3d[0]._InteriorWidth_AvgTS)
-    #     + BeachWidth
-    #     + np.abs(b3d[0]._ShorelineChange)
-    #     + OriginY
-    #     + 35
-    # )
-
-    os.chdir(directory)
-    newpath = "Output/" + name + "/SimFrames/"
-    if not os.path.exists(newpath):
-        os.makedirs(newpath)
-    os.chdir(newpath)
-
-    # for t in range(TMAX - 1):
-    for t in range(TMAX):
-        AnimateDomain = discharge[t]
-
-        # Plot and save
-        elevFig1 = plt.figure(figsize=(15, 7))
-        ax = elevFig1.add_subplot(111)
-        cax = ax.matshow(
-            AnimateDomain, origin="upper", cmap="jet_r"
-        )  # , interpolation='gaussian') # analysis:ignore
-        ax.xaxis.set_ticks_position("bottom")
-        elevFig1.colorbar(cax)
-        plt.xlabel("Alongshore Distance (dam)")
-        plt.ylabel("Cross-Shore Distance (dam)")
-        plt.title("Interior Elevation")
-        plt.tight_layout()
-        timestr = "Time = " + str(t) + " yrs"
-        plt.text(1, 1, timestr)
-        plt.rcParams.update({"font.size": 20})
-        name = "elev_" + str(t)
-        elevFig1.savefig(name)  # dpi=200
-        plt.close(elevFig1)
-
-    frames = []
-
-    for filenum in range(TMAX - 1):
-        filename = "elev_" + str(filenum) + ".png"
-        frames.append(imageio.imread(filename))
-    imageio.mimsave("elev.gif", frames, "GIF-FI")
-    print()
-    print("[ * GIF successfully generated * ]")
-
-
-TMAX = storm_series[0][2]
-name = "discharge"
-plot_ElevAnimation(discharge, r"C:\Users\Lexi\Documents\Research\Barrier3D", TMAX, name)
+# def plot_ElevAnimation(discharge, directory, TMAX, name):
+#     # length = b3d[0]._BarrierLength
+#
+#     # BeachWidth = 6
+#     # OriginY = int(b3d[0]._x_s_TS[0] - b3d[0]._x_t_TS[0])
+#     # AniDomainWidth = int(
+#     #     np.amax(b3d[0]._InteriorWidth_AvgTS)
+#     #     + BeachWidth
+#     #     + np.abs(b3d[0]._ShorelineChange)
+#     #     + OriginY
+#     #     + 35
+#     # )
+#
+#     os.chdir(directory)
+#     newpath = "Output/" + name + "/SimFrames/"
+#     if not os.path.exists(newpath):
+#         os.makedirs(newpath)
+#     os.chdir(newpath)
+#
+#     # for t in range(TMAX - 1):
+#     for t in range(TMAX):
+#         AnimateDomain = discharge[t]
+#
+#         # Plot and save
+#         elevFig1 = plt.figure(figsize=(15, 7))
+#         ax = elevFig1.add_subplot(111)
+#         cax = ax.matshow(
+#             AnimateDomain, origin="upper", cmap="jet_r"
+#         )  # , interpolation='gaussian') # analysis:ignore
+#         ax.xaxis.set_ticks_position("bottom")
+#         elevFig1.colorbar(cax)
+#         plt.xlabel("Alongshore Distance (dam)")
+#         plt.ylabel("Cross-Shore Distance (dam)")
+#         plt.title("Interior Elevation")
+#         plt.tight_layout()
+#         timestr = "Time = " + str(t) + " yrs"
+#         plt.text(1, 1, timestr)
+#         plt.rcParams.update({"font.size": 20})
+#         name = "elev_" + str(t)
+#         elevFig1.savefig(name)  # dpi=200
+#         plt.close(elevFig1)
+#
+#     frames = []
+#
+#     for filenum in range(TMAX - 1):
+#         filename = "elev_" + str(filenum) + ".png"
+#         frames.append(imageio.imread(filename))
+#     imageio.mimsave("elev.gif", frames, "GIF-FI")
+#     print()
+#     print("[ * GIF successfully generated * ]")
+#
+#
+# TMAX = storm_series[0][2]
+# name = "discharge"
+# plot_ElevAnimation(discharge, r"C:\Users\Lexi\Documents\Research\Barrier3D", TMAX, name)
