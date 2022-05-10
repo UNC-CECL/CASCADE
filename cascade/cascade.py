@@ -138,7 +138,8 @@ class Cascade:
         fixed_cost_beach_nourishment=2e6,
         fixed_cost_dune_nourishment=2e5,
         nourishment_cost_subsidy=10e6,
-        house_footprint=15,
+        house_footprint_x=15,
+        house_footprint_y=20,
     ):
         """initialize models (Barrier3D, BRIE, CHOME) and human dynamics modules
 
@@ -216,6 +217,7 @@ class Cascade:
             Fixed cost of building dunes once
         nourishment_cost_subsidy: int, optional
             Subsidy on cost of entire nourishment plan
+
 
         Examples
         --------
@@ -325,7 +327,8 @@ class Cascade:
                     fixed_cost_beach_nourishment=fixed_cost_beach_nourishment,
                     fixed_cost_dune_nourishment=fixed_cost_dune_nourishment,
                     nourishment_cost_subsidy=nourishment_cost_subsidy,
-                    house_footprint=house_footprint,
+                    house_footprint_x=house_footprint_x,
+                    house_footprint_y=house_footprint_y,
                 )  # contains the CHOME model instances, one per community
 
         # initialize RoadwayManager and BeachDuneManager modules
@@ -565,14 +568,13 @@ class Cascade:
 
             for iB3D in range(self._ny):
 
-                # if barrier was too narrow to sustain a community in the last time step, stop managing beach and dunes!
+                # if barrier was too narrow to sustain a community in the last time step (from the BeachDuneManager),
+                # stop the coupling with CHOME (i.e., end human mangement); dune growth rates are reset below in the
+                # BeachDuneManager loop
                 if self._nourishments[iB3D].narrow_break:
                     self._community_break[iB3D] = 1
 
-                    # KA: dune growth rate code blurb probably needs to go here, see code in nourishment module below
-                    # return
-
-            # otherwise, update chome using all barrier3d grids
+            # update chome using all barrier3d grids, even if some have stopped being managed
             self._chome_coupler.dune_design_elevation = self._dune_design_elevation
             [
                 self._nourish_now,
@@ -581,6 +583,7 @@ class Cascade:
             ] = self._chome_coupler.update(
                 barrier3d=self._barrier3d,
                 nourishments=self._nourishments,
+                community_break=self._community_break,
             )
 
         # ~~~~~~~~~~~~~~ BeachDuneManager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
