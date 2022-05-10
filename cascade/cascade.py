@@ -365,15 +365,8 @@ class Cascade:
 
             # call for lexi's bay side breach module
             # self._breaches.append(
-            #     LexiBreacher(
-            #         nourishment_interval=self._nourishment_interval[iB3D],
-            #         nourishment_volume=self._nourishment_volume[iB3D],
-            #         initial_beach_width=self._initial_beach_width[iB3D],
-            #         dune_design_elevation=self._dune_design_elevation[iB3D],
-            #         time_step_count=self._nt,
-            #         original_growth_param=self._barrier3d[iB3D].growthparam,
-            #         overwash_filter=self._overwash_filter[iB3D],
-            #         overwash_to_dune=self._overwash_to_dune[iB3D],
+            #     Outwasher(
+            #         variables will go here,
             #     )
             # )
 

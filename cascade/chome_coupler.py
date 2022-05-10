@@ -139,7 +139,7 @@ class ChomeCoupler:
 
                 avg_dune_width.append(barrier3d[iB3D]._DuneWidth * 10)
 
-            # initialize chome model instance
+            # initialize chome model instance -- ZACHK, are these still correct or are there more?
             self._chome.append(
                 Chome(
                     name=name,
@@ -170,7 +170,9 @@ class ChomeCoupler:
         # time is updated at the end of the chome and barrier3d model loop
         time_index_b3d = barrier3d[0].time_index
         time_index_chome = self._chome[0].time_index
-        nourish_now, rebuild_dune_now, nourishment_volume = [[] for _ in range(3)]
+        nourish_now, rebuild_dune_now, nourishment_volume = [
+            [] for _ in range(3)
+        ]  # empty
 
         # calculate physical variables needed to update CHOME for each Barrier3D cell, then group by community
         for iCommunity in range(self._number_of_communities):
