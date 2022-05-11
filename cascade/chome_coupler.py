@@ -25,6 +25,78 @@ from .roadway_manager import rebuild_dunes
 dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
 
 
+def create_communities(ny, number_of_communities):
+
+    community_index_initial = np.arange(ny)
+    alongshore_community_length = int(np.ceil(ny / number_of_communities))
+    community_index = [
+        community_index_initial[x : x + alongshore_community_length]
+        for x in range(0, len(community_index_initial), alongshore_community_length)
+    ]
+
+    if len(community_index) < number_of_communities:
+        number_of_communities = len(community_index)
+        print(
+            "Number of communities simulated in CHOME updated based on number of Barrier3D domains"
+        )
+
+    return number_of_communities, community_index
+
+
+def community_environmental_statistics(
+    community_indices, barrier3d, dune_design_elevation
+):
+
+    avg_beach_width = []
+    avg_barrier_height = []
+    avg_shoreface_depth = []
+    avg_dune_design_height = []
+    avg_interior_width = []
+    avg_dune_height = []
+    avg_dune_width = []
+
+    for iB3D in community_indices:
+        # Barrier3D in decameters --> convert to meters for CHOME
+        bh_array = np.array(barrier3d[iB3D].DomainTS[0]) * 10
+        avg_barrier_height.append(bh_array[bh_array > 0].mean())
+
+        interior_width = np.array(barrier3d[iB3D].InteriorWidth_AvgTS[0]) * 10
+        avg_interior_width.append(interior_width)
+
+        avg_shoreface_depth.append(barrier3d[iB3D].DShoreface * 10)
+        avg_dune_design_height.append(
+            dune_design_elevation[iB3D] - (barrier3d[iB3D].BermEl * 10)
+        )
+        initial_beach_width = (
+            int(barrier3d[iB3D].BermEl / barrier3d[iB3D]._beta) * 10
+        )  # m
+        avg_beach_width.append(initial_beach_width)
+
+        # maximum height of each (alongshore) row in DuneDomain (the largest foredune height), then average
+        dune_height = barrier3d[iB3D].DuneDomain[0, :, :].max(axis=1)
+        avg_dune_height.append(np.mean(dune_height) * 10)
+
+        avg_dune_width.append(barrier3d[iB3D]._DuneWidth * 10)
+
+    avg_beach_width = np.mean(avg_beach_width)
+    avg_barrier_height = np.mean(avg_barrier_height)
+    avg_shoreface_depth = np.mean(avg_shoreface_depth)
+    avg_dune_design_height = np.mean(avg_dune_design_height)
+    avg_interior_width = np.mean(avg_interior_width)
+    avg_dune_height = np.mean(avg_dune_height)
+    avg_dune_width = np.mean(avg_dune_width)
+
+    return (
+        avg_beach_width,
+        avg_barrier_height,
+        avg_shoreface_depth,
+        avg_dune_design_height,
+        avg_interior_width,
+        avg_dune_height,
+        avg_dune_width,
+    )
+
+
 class ChomeCoupler:
     """Couple Barrier3d with CHOME to simulate community dynamics
 
@@ -50,7 +122,8 @@ class ChomeCoupler:
         fixed_cost_beach_nourishment=2e6,
         fixed_cost_dune_nourishment=2e5,
         nourishment_cost_subsidy=10e6,
-        house_footprint=15,
+        house_footprint_x=15,
+        house_footprint_y=20,
     ):
         """The ChomeCoupler module.
 
@@ -82,75 +155,56 @@ class ChomeCoupler:
             Fixed cost of building dunes once
         nourishment_cost_subsidy: int, optional
             Subsidy on cost of entire nourishment plan
+        house_footprint_x: int, optional
+            Length of house footprint in the cross-shore (meters)
+        house_footprint_y: int, optional
+            Length of house footprint in the alongshore (meters)
 
         """
-        self._number_of_communities = number_of_communities
         self._dune_design_elevation = dune_design_elevation
         self._chome = []
         ny = len(barrier3d)
 
         # create groups of barrier3d indices for each community
-        self._community_index = np.arange(ny)
-        alongshore_community_length = int(np.ceil(ny / self._number_of_communities))
-        self._community_index = [
-            self._community_index[x : x + alongshore_community_length]
-            for x in range(0, len(self._community_index), alongshore_community_length)
-        ]
+        [self._number_of_communities, self._community_index] = create_communities(
+            ny, number_of_communities
+        )
 
-        if len(self._community_index) < self._number_of_communities:
-            self._number_of_communities = len(self._community_index)
-            print(
-                "Number of communities simulated in CHOME updated based on number of Barrier3D domains"
-            )
-
+        # find the average statistics for each community and then initialize CHOME models
         for iCommunity in range(self._number_of_communities):
+
             # community length is the Barrier3D discretization * # of Barrier3D domains describing community
             self._alongshore_community_length = (
                 len(self._community_index[iCommunity]) * alongshore_length_b3d
             )
-            avg_beach_width = []
-            avg_barrier_height = []
-            avg_shoreface_depth = []
-            avg_dune_design_height = []
-            avg_interior_width = []
-            avg_dune_height = []
-            avg_dune_width = []
 
-            for iB3D in self._community_index[iCommunity]:
-                # Barrier3D in decameters --> convert to meters for CHOME
-                bh_array = np.array(barrier3d[iB3D].DomainTS[0]) * 10
-                avg_barrier_height.append(bh_array[bh_array > 0].mean())
+            # calculate the average environmental statistics for each community
+            [
+                avg_beach_width,
+                avg_barrier_height,
+                avg_shoreface_depth,
+                avg_dune_design_height,
+                avg_interior_width,
+                avg_dune_height,
+                avg_dune_width,
+            ] = community_environmental_statistics(
+                community_indices=self._community_index[iCommunity],
+                barrier3d=barrier3d,
+                dune_design_elevation=dune_design_elevation,
+            )
 
-                interior_width = np.array(barrier3d[iB3D].InteriorWidth_AvgTS[0]) * 10
-                avg_interior_width.append(interior_width)
-
-                avg_shoreface_depth.append(barrier3d[iB3D].DShoreface * 10)
-                avg_dune_design_height.append(
-                    self._dune_design_elevation[iB3D] - (barrier3d[iB3D].BermEl * 10)
-                )
-                initial_beach_width = (
-                    int(barrier3d[iB3D].BermEl / barrier3d[iB3D]._beta) * 10
-                )  # m
-                avg_beach_width.append(initial_beach_width)
-
-                # maximum height of each row in DuneDomain, then average
-                dune_height = barrier3d[iB3D].DuneDomain[0, :, :].max(axis=1)
-                avg_dune_height.append(np.mean(dune_height) * 10)
-
-                avg_dune_width.append(barrier3d[iB3D]._DuneWidth * 10)
-
-            # initialize chome model instance
+            # initialize chome model instance -- ZACHK, are these still correct or are there more?
             self._chome.append(
                 Chome(
                     name=name,
                     total_time=total_time,
-                    average_interior_width=np.mean(avg_interior_width),
-                    barrier_island_height=np.mean(avg_barrier_height),
-                    beach_width=np.mean(avg_beach_width),
-                    dune_height=np.mean(avg_dune_height),
-                    shoreface_depth=np.mean(avg_shoreface_depth),
-                    dune_width=np.mean(avg_dune_width),
-                    dune_height_build=np.mean(avg_dune_design_height),
+                    average_interior_width=avg_interior_width,
+                    barrier_island_height=avg_barrier_height,
+                    beach_width=avg_beach_width,
+                    dune_height=avg_dune_height,
+                    shoreface_depth=avg_shoreface_depth,
+                    dune_width=avg_dune_width,
+                    dune_height_build=avg_dune_design_height,
                     alongshore_domain_extent=self._alongshore_community_length,
                     shoreline_retreat_rate=0,  # no knowledge of shoreline retreat rate at t=0
                     sand_cost=sand_cost,
@@ -160,17 +214,21 @@ class ChomeCoupler:
                     fixed_cost_beach_nourishment=fixed_cost_beach_nourishment,
                     fixed_cost_dune_nourishment=fixed_cost_dune_nourishment,
                     nourishment_cost_subsidy=nourishment_cost_subsidy,
-                    house_footprint=house_footprint,
+                    house_footprint_x=house_footprint_x,
+                    house_footprint_y=house_footprint_y,
                 )
             )
 
-    def update(self, barrier3d, nourishments):
+    def update(self, barrier3d, nourishments, community_break):
+        ## LEFT OFF HERE -- need to insert community break somewhere (i.e., if one commmunity is lost, don't update)
         # NOTE: dune design ele can not yet be updated at each time step in CHOME -- potential future functionality
 
-        # time is updated at the end of the chome and barrier3d model loop
+        # time is updated at the end of the CHOME and Barrier3d model loop
         time_index_b3d = barrier3d[0].time_index
         time_index_chome = self._chome[0].time_index
-        nourish_now, rebuild_dune_now, nourishment_volume = [[] for _ in range(3)]
+        nourish_now, rebuild_dune_now, nourishment_volume = [
+            [] for _ in range(3)
+        ]
 
         # calculate physical variables needed to update CHOME for each Barrier3D cell, then group by community
         for iCommunity in range(self._number_of_communities):
