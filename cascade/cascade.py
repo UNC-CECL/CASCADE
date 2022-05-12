@@ -140,6 +140,7 @@ class Cascade:
         nourishment_cost_subsidy=10e6,
         house_footprint_x=15,
         house_footprint_y=20,
+        beach_full_cross_shore=70,
     ):
         """initialize models (Barrier3D, BRIE, CHOME) and human dynamics modules
 
@@ -217,6 +218,8 @@ class Cascade:
             Fixed cost of building dunes once
         nourishment_cost_subsidy: int, optional
             Subsidy on cost of entire nourishment plan
+        beach_full_cross_shore: int, optional
+            The cross-shore extent (meters) of fully nourished beach (i.e., the community desired beach width) [m]
 
 
         Examples
@@ -308,7 +311,7 @@ class Cascade:
         )
 
         if self._community_dynamics_module:
-            if (self._beach_nourishment_module == False).any():
+            if not any(self._beach_nourishment_module):
                 CascadeError(
                     "Beach nourishment module must be set to `TRUE` to couple with CHOME"
                 )
@@ -329,6 +332,7 @@ class Cascade:
                     nourishment_cost_subsidy=nourishment_cost_subsidy,
                     house_footprint_x=house_footprint_x,
                     house_footprint_y=house_footprint_y,
+                    beach_full_cross_shore=beach_full_cross_shore,
                 )  # contains the CHOME model instances, one per community
 
         # initialize RoadwayManager and BeachDuneManager modules
