@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import os
+import imageio
 from barrier3d import Barrier3d
 import matplotlib.pyplot as plt
 import imageio
@@ -13,32 +14,42 @@ b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_pa
 
 # -------------------------------------------------------------------------------------------------------------------
 
+# Next step is work on hydrograph for the storm?
+    # For each time step, the first row of discharge will be different
+    # based on storm duration?
+    # give the same shape distributed slightly differently based on the duration
 # plot hydrograph for one storm
 # have a storm that starts at 4 m (bay is -3)
 
 #  create synthetic storm series
 #  first position is year, second is bayhigh level (dam), third is duration (hours)
-# storm_series = [[1, 0.4, 40], [1, 0.4, 57], [1, 0.6, 65]]
-storm_series = [[1, 0.6, 65]]
+storm_series = [[1, 0.6, 65], [1, 0.8, 57], [1, 0.5, 80]]
+# storm_series = [[1, 0.6, 65]]
 
 def outwasher(b3d, storm_series):
-    ### Set Domain
-
-    # check b3d interior domain
-    # plt.matshow(
-    #     b3d._InteriorDomain,
-    #     origin="lower",
-    #     cmap="terrain",
-    # )
-    # plt.colorbar()
-
     # Set other variables
     OWloss = 0
     numstorm = int(len(storm_series))
 
     # If we have storms, then we will alter the full domain
     if numstorm > 0:
+        ### Set Domain
+        add = 10
+        interior_domain = np.flip(b3d._InteriorDomain, 0)  # dam MHW
+        beach_domain = np.ones([add, b3d._BarrierLength]) * b3d._BermEl  # dam MHW
+        full_domain = np.append(interior_domain, beach_domain, 0)  # dam MHW
 
+        plt.matshow(
+            full_domain,
+            origin="upper",
+            cmap="terrain",
+            vmin=-0.5, vmax=0.5,
+        )
+        plt.xlabel('barrier length (dam)')
+        plt.ylabel('barrier width (dam)')
+        plt.title("Initial Elevation $(dam)$")
+        plt.colorbar()
+        plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/0_domain")
         # ### Individual Storm Impacts
         for n in range(numstorm):
             bayhigh = storm_series[n][1]  # dam
@@ -48,12 +59,23 @@ def outwasher(b3d, storm_series):
             # we have decided to always do inundation regime which is 1 in barrier3d code
             inundation = 1
             substep = b3d._OWss_i  # equals 2 for inundation
-
-            ### Set Domain
-            add = 10
-            interior_domain = np.flip(b3d._InteriorDomain, 0)  # dam MHW
-            beach_domain = np.ones([add, b3d._BarrierLength]) * b3d._BermEl  # dam MHW
-            full_domain = np.append(interior_domain, beach_domain, 0)  # dam MHW
+            # ### Set Domain
+            # add = 10
+            # interior_domain = np.flip(b3d._InteriorDomain, 0)  # dam MHW
+            # beach_domain = np.ones([add, b3d._BarrierLength]) * b3d._BermEl  # dam MHW
+            # full_domain = np.append(interior_domain, beach_domain, 0)  # dam MHW
+            #
+            # plt.matshow(
+            #     full_domain,
+            #     origin="upper",
+            #     cmap="terrain",
+            #     vmin=-0.5, vmax=0.5,
+            # )
+            # plt.xlabel('barrier length (dam)')
+            # plt.ylabel('barrier width (dam)')
+            # plt.title("Initial Elevation $(dam)$")
+            # plt.colorbar()
+            # plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/0_domain")
             # testing scenarios
             # full_domain[15, :] = 0.7  # testing wall scenario
             # full_domain[15, 25:30] = 0  # testing wall scenario
@@ -92,24 +114,22 @@ def outwasher(b3d, storm_series):
             for TS in range(duration):
                 # Begin with elevation from previous timestep
                 if TS > 0:
-                    Elevation[TS, 1:, :] = Elevation[
-                                           TS - 1, 1:, :
-                                           ]
+                    Elevation[TS, 1:, :] = Elevation[TS - 1, 1:, :]
 
                 # Loop through the rows, excluding the last one (because there is nowhere for the water/sed to go)
                 for d in range(width - 1):
-                    # if any of the discharge values are less than 0, set them equal to 0
+                    # Discharge for each TS, row 1, and all cols set above
                     Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
 
                     # Loop through each col of the specified row
                     for i in range(b3d._BarrierLength):
                         # if we have discharge, set Qo equal to that value
-                        # currently discharge is only set for row 1 and never updated
                         if Discharge[TS, d, i] > 0:
                             Q0 = Discharge[TS, d, i]  # (dam^3/hr)
 
                             # ### Calculate Slopes
                             # see drawing for more conceptual understanding of this
+                            #
                             if i > 0:  # i = 0 means there are no cols to the left
                                 S1 = (
                                              Elevation[TS, d, i]
@@ -275,6 +295,7 @@ def outwasher(b3d, storm_series):
                             if i < (b3d._BarrierLength - 1):
                                 Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
 
+# --------------------------------------------------Clear until here----------------------------------------------------
                             # ### Calculate Sed Movement
                             # fluxLimit = b3d._Dmax
                             # typically max sediment comes from dune, but bay sediment probably negligible
@@ -283,6 +304,8 @@ def outwasher(b3d, storm_series):
                             # if the flow is greater than the min value required for sed movement, then sed movement
                             # will be calculated. Then, if sed flow < 0, it's set to 0, and if it's greater than the
                             # flux limit, it is set to the flux limit
+
+                            # all Qs in dam^3/hr
 
                             if Q1 > b3d._Qs_min:
                                 Qs1 = b3d._Ki * (Q1 * (S1 + C)) ** b3d._mm
@@ -316,22 +339,18 @@ def outwasher(b3d, storm_series):
                             Qs3 = np.nan_to_num(Qs3)
 
                             # ### Calculate Net Erosion/Accretion
-
-                            # check if bay
-                            # once we get to land check the 10
-                            # if it is less than 10 exponential decay all of it
-                            # use same exp decay for beach
-
-                            # interior elevation starts at bay, so if we are at the bay, or any of the next 10 are at
-                            # the bay, we should not be moving sediment (?)
-                            if Elevation[TS, d, i] > b3d._SL or any(
-                                    z > b3d._SL for z in Elevation[TS, d + 1: d + 10, i]
+                            # if we are at the bay, or any of the next 10 are at the bay, we should not be moving sediment
+                            if Elevation[TS, d, i] <= b3d._SL or any(
+                                    z < b3d._SL for z in Elevation[TS, d + 1: d + 10, i]
                             ):
                                 Elevation[TS, d, i] = Elevation[TS, d, i]
                             # currently the beach elevation is set to b3d._BermEl so using that here
-                            elif Elevation[TS, d, i] > b3d._BermEl or any(
-                                    z > b3d._BermEl for z in Elevation[TS, d + 1: d + 10, i]
-                            ):  # If cell is subaerial, elevation change is determined by difference between
+                            # determine interior sediment distribution by flux in and out
+                            # otherwise, at the beach, sediment distributed by exponential decay
+                            # elif Elevation[TS, d, i] != b3d._BermEl or any(
+                            #         z != b3d._BermEl for z in Elevation[TS, d + 1: d + 10, i]):
+                            elif d < 45:
+                                # If cell is interior, elevation change is determined by difference between
                                 # flux in vs. flux out
                                 if i > 0:
                                     SedFluxIn[TS, d + 1, i - 1] += Qs1
@@ -344,14 +363,14 @@ def outwasher(b3d, storm_series):
                                 Qs_out = Qs1 + Qs2 + Qs3
                                 SedFluxOut[TS, d, i] = Qs_out
 
-                            else:  # If cell is subaqeous, exponentially decay dep. of remaining sed across bay
+                            else:  # If beach cell, exponentially decay dep. of remaining sed across beach
+                                #
+                                # if inundation == 0:
+                                #     Cbb = b3d._Cbb_r
+                                # else:
+                                Cbb = b3d._Cbb_i
 
-                                if inundation == 0:
-                                    Cbb = b3d._Cbb_r
-                                else:
-                                    Cbb = b3d._Cbb_i
-
-                                # when is this nonzero
+                                # this should be nonzero after first row i think
                                 Qs0 = SedFluxIn[TS, d, i] * Cbb
 
                                 Qs1 = Qs0 * Q1 / (Q1 + Q2 + Q3)
@@ -388,14 +407,7 @@ def outwasher(b3d, storm_series):
                                 # END OF DOMAIN LOOPS
 
                 # ### Update Elevation After Every Storm Hour
-                if inundation == 1:
-                    ElevationChange = (
-                                              SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]
-                                      ) / substep
-                else:
-                    ElevationChange = (
-                                              SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]
-                                      ) / substep
+                ElevationChange = (SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]) / substep
                 Elevation[TS, :, :] = Elevation[TS, :, :] + ElevationChange
 
                 # Calculate and save volume of sediment deposited on/behind the island for every hour
@@ -418,36 +430,39 @@ def outwasher(b3d, storm_series):
                     check = 0
 
             # Update interior domain
-            # b3d._InteriorDomain = InteriorUpdate
+            b3d._InteriorDomain = np.flip(InteriorUpdate)
             full_domain[1:, :] = InteriorUpdate
             # Update Domain widths
             # DomainWidth = np.shape(b3d._InteriorDomain)[0]
 
-    # plots
-    plt.matshow(
-        full_domain,
-        origin="upper",
-        cmap="terrain",
-    )
-    plt.xlabel('barrier length (dam)')
-    plt.ylabel('barrier width (dam)')
-    plt.colorbar()
-
-    plt.matshow(Discharge[0, :, :],
+            # plots
+            plt.matshow(
+                full_domain,
                 origin="upper",
-                cmap='jet_r')
-    # plt.xlabel('barrier length (dam)')
-    # plt.ylabel('barrier width (dam)')
-    avg = np.mean(full_domain[0, :])
-    h_water = round(avg + bayhigh, 2)
-    plt.title("total discharge in dam$^3$/hr \n TS=0 \n height of water = {0} dam".format(h_water))
-    plt.colorbar()
+                cmap="terrain",
+                vmin=-0.5, vmax=0.5,
+            )
+            plt.xlabel('barrier length (dam)')
+            plt.ylabel('barrier width (dam)')
+            plt.title("Elevation after storm {0} $(dam)$".format(n+1))
+            plt.colorbar()
+            plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/{0}_domain".format(n+1))
+
+    # plt.matshow(Discharge[0, :, :],
+    #             origin="upper",
+    #             cmap='jet_r')
+    # # plt.xlabel('barrier length (dam)')
+    # # plt.ylabel('barrier width (dam)')
+    # avg = np.mean(full_domain[0, :])
+    # h_water = round(avg + bayhigh, 2)
+    # plt.title("total discharge in dam$^3$/hr \n TS=0 \n height of water = {0} dam".format(h_water))
+    # plt.colorbar()
 
     # Record storm data
     b3d._StormCount.append(numstorm)
-    return Discharge
+    return Discharge, ElevationChange, full_domain
 
-discharge = outwasher(b3d, storm_series)
+discharge, elev_change, domain = outwasher(b3d, storm_series)
 
 
 def plot_ElevAnimation(discharge, directory, TMAX, name):
@@ -504,3 +519,9 @@ def plot_ElevAnimation(discharge, directory, TMAX, name):
 # TMAX = storm_series[0][2]
 # name = "no_bay"
 # plot_ElevAnimation(discharge, r"C:\Users\Lexi\Documents\Research\Barrier3D", TMAX, name)
+
+frames = []
+for i in range(4):
+    filename = "C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/" + str(i) +"_domain.png"
+    frames.append(imageio.imread(filename))
+imageio.mimwrite("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/test.gif", frames, format= '.gif', fps = 1)
