@@ -9,22 +9,16 @@ import imageio
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
 # b3d.update()
 
-# see what happens if i remove bay
-# create a constriction in one of the elevation rows
-
 # -------------------------------------------------------------------------------------------------------------------
 
-# Next step is work on hydrograph for the storm?
-    # For each time step, the first row of discharge will be different
-    # based on storm duration?
-    # give the same shape distributed slightly differently based on the duration
-# plot hydrograph for one storm
+# Next step is work on hydrograph for the storm
+    # currently have triangle bayhigh
 # have a storm that starts at 4 m (bay is -3)
 
 #  create synthetic storm series
-#  first position is year, second is bayhigh level (dam), third is duration (hours)
+#  first position is year, second is max bayhigh level (dam), third is duration (hours)
 storm_series = [[1, 0.6, 65], [1, 0.8, 57], [1, 0.5, 80]]
-# storm_series = [[1, 0.6, 65]]
+# storm_series = [[1, 0.7, 65]]
 
 def outwasher(b3d, storm_series):
     # Set other variables
@@ -33,23 +27,7 @@ def outwasher(b3d, storm_series):
 
     # If we have storms, then we will alter the full domain
     if numstorm > 0:
-        ### Set Domain
-        add = 10
-        interior_domain = np.flip(b3d._InteriorDomain, 0)  # dam MHW
-        beach_domain = np.ones([add, b3d._BarrierLength]) * b3d._BermEl  # dam MHW
-        full_domain = np.append(interior_domain, beach_domain, 0)  # dam MHW
 
-        plt.matshow(
-            full_domain,
-            origin="upper",
-            cmap="terrain",
-            vmin=-0.5, vmax=0.5,
-        )
-        plt.xlabel('barrier length (dam)')
-        plt.ylabel('barrier width (dam)')
-        plt.title("Initial Elevation $(dam)$")
-        plt.colorbar()
-        plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/0_domain")
         # ### Individual Storm Impacts
         for n in range(numstorm):
             bayhigh = storm_series[n][1]  # dam
@@ -60,32 +38,32 @@ def outwasher(b3d, storm_series):
             inundation = 1
             substep = b3d._OWss_i  # equals 2 for inundation
             # ### Set Domain
-            # add = 10
-            # interior_domain = np.flip(b3d._InteriorDomain, 0)  # dam MHW
-            # beach_domain = np.ones([add, b3d._BarrierLength]) * b3d._BermEl  # dam MHW
-            # full_domain = np.append(interior_domain, beach_domain, 0)  # dam MHW
-            #
-            # plt.matshow(
-            #     full_domain,
-            #     origin="upper",
-            #     cmap="terrain",
-            #     vmin=-0.5, vmax=0.5,
-            # )
-            # plt.xlabel('barrier length (dam)')
-            # plt.ylabel('barrier width (dam)')
-            # plt.title("Initial Elevation $(dam)$")
-            # plt.colorbar()
-            # plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/0_domain")
+            add = 10
+            interior_domain = np.flip(b3d._InteriorDomain, 0)  # dam MHW
+            if n == 0:
+                beach_domain = np.ones([add, b3d._BarrierLength]) * b3d._BermEl  # dam MHW
+                full_domain = np.append(interior_domain, beach_domain, 0)  # dam MHW
+                plt.matshow(
+                    full_domain,
+                    origin="upper",
+                    cmap="seismic",
+                    vmin=-0.5, vmax=0.5,
+                )
+                plt.xlabel('barrier length (dam)')
+                plt.ylabel('barrier width (dam)')
+                plt.title("Initial Elevation $(dam)$")
+                plt.colorbar()
+                plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/0_domain_hydro")
             # testing scenarios
             # full_domain[15, :] = 0.7  # testing wall scenario
             # full_domain[15, 25:30] = 0  # testing wall scenario
             # full_domain = full_domain[5:, :]  # testing removing the bay
 
-            width = np.shape(full_domain)[0]  # width is the number of rows in the full domain
+            width = np.shape(full_domain)[0] # width is the number of rows in the full domain
             duration = dur * substep  # from previous code
             Elevation = np.zeros([duration, width, b3d._BarrierLength])
             # elevation at the first time step is set to the full domain
-            Elevation[0, :, :] = full_domain  #
+            Elevation[0, :, :] = full_domain
 
             # Initialize Memory Storage Arrays
             Discharge = np.zeros([duration, width, b3d._BarrierLength])
@@ -102,16 +80,36 @@ def outwasher(b3d, storm_series):
             # ### Set Water at Dune Crest
             # the velocity here assumes dune overtopping (Larson 2004), probably need to change
             # also, we think there is an error in units
-            Rexcess = bayhigh  # dam
-            overtop_vel = np.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
-            overtop_flow = overtop_vel * Rexcess * 3600  # (dam^2/hr), do I need to multiply by 1 dam?
+            bayhigh_TS = []
+            for q in range(duration):
+                if q <= duration/2:
+                    m = bayhigh/(duration/2)
+                    bayhigh_TS.append(m*q + 0.3)
+                else:
+                    m = -bayhigh/(duration/2)
+                    b = -m*duration
+                    bayhigh_TS.append(m*q + b + 0.3)
+            plt.figure(2)
+            plt.plot(range(duration), bayhigh_TS)
+            plt.title("bayhigh over the course of the storm")
+            if n == 0:
+                leg = []
+            leg.append(n+1)
+            plt.legend(leg)
+            C = b3d._Cx * Si  # 10 x the avg slope (from Murray)
             # overtop_flow can be dam^3 because we are multiplying by 1 to convert
             # our initial discharge amount starts at the first row and is later distributed down the rows/cols
-            Discharge[:, 0, :] = overtop_flow  # (dam^3/hr)
-            C = b3d._Cx * Si  # 10 x the avg slope (from Murray)
+            # Discharge[:, 0, :] = overtop_flow  # (dam^3/hr)
+            # C = b3d._Cx * Si  # 10 x the avg slope (from Murray)
 
             # ### Run Flow Routing Algorithm
             for TS in range(duration):
+                Rexcess = bayhigh_TS[TS]  # dam
+                overtop_vel = np.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
+                overtop_flow = overtop_vel * Rexcess * 3600  # (dam^2/hr), do I need to multiply by 1 dam?
+                Discharge[TS, 0, :] = overtop_flow  # (dam^3/hr)
+
+
                 # Begin with elevation from previous timestep
                 if TS > 0:
                     Elevation[TS, 1:, :] = Elevation[TS - 1, 1:, :]
@@ -437,16 +435,16 @@ def outwasher(b3d, storm_series):
 
             # plots
             plt.matshow(
-                full_domain,
+                full_domain[:, :],
                 origin="upper",
-                cmap="terrain",
+                cmap="seismic",
                 vmin=-0.5, vmax=0.5,
             )
             plt.xlabel('barrier length (dam)')
             plt.ylabel('barrier width (dam)')
             plt.title("Elevation after storm {0} $(dam)$".format(n+1))
             plt.colorbar()
-            plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/{0}_domain".format(n+1))
+            plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/{0}_domain_hydro".format(n+1))
 
     # plt.matshow(Discharge[0, :, :],
     #             origin="upper",
@@ -462,66 +460,71 @@ def outwasher(b3d, storm_series):
     b3d._StormCount.append(numstorm)
     return Discharge, ElevationChange, full_domain
 
-discharge, elev_change, domain = outwasher(b3d, storm_series)
+# ----------------------------------------------------------------------------------------------------------------------
+# running outwasher
+discharge_hydro, elev_change, domain = outwasher(b3d, storm_series)
 
-
-def plot_ElevAnimation(discharge, directory, TMAX, name):
-    # length = b3d[0]._BarrierLength
-
-    # BeachWidth = 6
-    # OriginY = int(b3d[0]._x_s_TS[0] - b3d[0]._x_t_TS[0])
-    # AniDomainWidth = int(
-    #     np.amax(b3d[0]._InteriorWidth_AvgTS)
-    #     + BeachWidth
-    #     + np.abs(b3d[0]._ShorelineChange)
-    #     + OriginY
-    #     + 35
-    # )
-
-    os.chdir(directory)
-    newpath = "Output/" + name + "/SimFrames/"
-    if not os.path.exists(newpath):
-        os.makedirs(newpath)
-    os.chdir(newpath)
-
-    # for t in range(TMAX - 1):
-    for t in range(TMAX):
-        AnimateDomain = discharge[t]
-
-        # Plot and save
-        elevFig1 = plt.figure(figsize=(15, 7))
-        ax = elevFig1.add_subplot(111)
-        cax = ax.matshow(
-            AnimateDomain, origin="upper", cmap="jet_r"
-        )  # , interpolation='gaussian') # analysis:ignore
-        ax.xaxis.set_ticks_position("bottom")
-        elevFig1.colorbar(cax)
-        plt.xlabel("Alongshore Distance (dam)")
-        plt.ylabel("Cross-Shore Distance (dam)")
-        plt.title("Interior Elevation")
-        plt.tight_layout()
-        timestr = "Time = " + str(t) + " yrs"
-        plt.text(1, 1, timestr)
-        plt.rcParams.update({"font.size": 20})
-        name = "elev_" + str(t)
-        elevFig1.savefig(name)  # dpi=200
-        plt.close(elevFig1)
-
-    frames = []
-
-    for filenum in range(TMAX - 1):
-        filename = "elev_" + str(filenum) + ".png"
-        frames.append(imageio.imread(filename))
-    imageio.mimsave("elev.gif", frames, "GIF-FI")
-    print()
-    print("[ * GIF successfully generated * ]")
-
-# TMAX = storm_series[0][2]
-# name = "no_bay"
-# plot_ElevAnimation(discharge, r"C:\Users\Lexi\Documents\Research\Barrier3D", TMAX, name)
-
+# making the elevation gif
 frames = []
 for i in range(4):
-    filename = "C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/" + str(i) +"_domain.png"
+    filename = "C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/" + str(i) +"_domain_hydro.png"
     frames.append(imageio.imread(filename))
-imageio.mimwrite("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/test.gif", frames, format= '.gif', fps = 1)
+imageio.mimwrite("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/test_hydro.gif", frames, format= '.gif', fps = 1)
+
+# ----------------------------------------------------------------------------------------------------------------------
+# # discharge gif
+# def plot_ElevAnimation(discharge, directory, TMAX, name):
+#     # length = b3d[0]._BarrierLength
+#
+#     # BeachWidth = 6
+#     # OriginY = int(b3d[0]._x_s_TS[0] - b3d[0]._x_t_TS[0])
+#     # AniDomainWidth = int(
+#     #     np.amax(b3d[0]._InteriorWidth_AvgTS)
+#     #     + BeachWidth
+#     #     + np.abs(b3d[0]._ShorelineChange)
+#     #     + OriginY
+#     #     + 35
+#     # )
+#
+#     os.chdir(directory)
+#     newpath = "Output/" + name + "/SimFrames/"
+#     if not os.path.exists(newpath):
+#         os.makedirs(newpath)
+#     os.chdir(newpath)
+#
+#     # for t in range(TMAX - 1):
+#     for t in range(TMAX):
+#         AnimateDomain = discharge[t]
+#
+#         # Plot and save
+#         elevFig1 = plt.figure(figsize=(15, 7))
+#         ax = elevFig1.add_subplot(111)
+#         cax = ax.matshow(
+#             AnimateDomain, origin="upper", cmap="jet_r", vmin=0, vmax=12000,
+#         )  # , interpolation='gaussian') # analysis:ignore
+#         ax.xaxis.set_ticks_position("bottom")
+#         elevFig1.colorbar(cax)
+#         plt.xlabel("Alongshore Distance (dam)")
+#         plt.ylabel("Cross-Shore Distance (dam)")
+#         plt.title("Discharge (dam^3/hr)")
+#         plt.tight_layout()
+#         timestr = "Time = " + str(t) + " yrs"
+#         plt.text(1, 1, timestr)
+#         plt.rcParams.update({"font.size": 20})
+#         name = "dis_" + str(t)
+#         elevFig1.savefig(name)  # dpi=200
+#         plt.close(elevFig1)
+#
+#     frames = []
+#
+#     for filenum in range(TMAX - 1):
+#         filename = "dis_" + str(filenum) + ".png"
+#         frames.append(imageio.imread(filename))
+#     imageio.mimsave("dis.gif", frames, "GIF-FI")
+#     print()
+#     print("[ * GIF successfully generated * ]")
+#
+# TMAX = storm_series[0][2]
+# name = "discharge_hydro"
+# plot_ElevAnimation(discharge_hydro, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
+
