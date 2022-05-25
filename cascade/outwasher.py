@@ -10,9 +10,14 @@ b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_pa
 # b3d.update()
 
 # -------------------------------------------------------------------------------------------------------------------
-
-# Next step is work on hydrograph for the storm
+# Next steps
     # currently have triangle bayhigh
+    # add dunes back in?
+    # find better velocity: derive something from the pressure/surface water gradient (Bernoulli)?
+        # each bayhigh level has an associated gradient which drives velocity
+    # check flux limit ~line 300
+    # backwater effects?
+
 # have a storm that starts at 4 m (bay is -3)
 
 #  create synthetic storm series
@@ -91,10 +96,10 @@ def outwasher(b3d, storm_series):
                     bayhigh_TS.append(m*q + b + 0.3)
             plt.figure(2)
             plt.plot(range(duration), bayhigh_TS)
-            plt.title("bayhigh over the course of the storm")
+            plt.title("bayhigh over the course of each storm")
             if n == 0:
                 leg = []
-            leg.append(n+1)
+            leg.append("storm {0}".format(n+1))
             plt.legend(leg)
             C = b3d._Cx * Si  # 10 x the avg slope (from Murray)
             # overtop_flow can be dam^3 because we are multiplying by 1 to convert
