@@ -24,21 +24,25 @@ storm_series = [[1, 0.6, 65], [1, 0.8, 57], [1, 0.5, 80]]
 # storm_series = [[1, 0.7, 20]]
 
 # description of the run for figure names
-runID = "5dune_losing_sed_highflux_lowbeach"
+runID = "5rdune_losing_sed_lowflux_highbeach"
 
 def dunes(b3d, n_rows=1, n_gaps=2, dune_height=0.3, gap_height=0):
     length = b3d._BarrierLength
     width = n_rows
     dune_domain = np.zeros([width, length])
     dune_domain[0, :] = dune_height
-    gap = 1
-    gap1 = 1 / n_gaps * 0.5 * length
+    # gap = 1
+    # gap1 = 1 / n_gaps * 0.5 * length
     gap_locations = np.zeros(n_gaps)
-    gap_locations[0] = gap1
-    while gap <= n_gaps-1:
-        gap_locations[gap] = gap_locations[gap-1]+1/n_gaps*length
-        gap += 1
-    gap_locations = np.round(gap_locations, decimals=1)
+    # gap_locations[0] = gap1
+    # while gap <= n_gaps-1:
+    #     gap_locations[gap] = gap_locations[gap-1]+1/n_gaps*length
+    #     gap += 1
+    # gap_locations = np.round(gap_locations, decimals=1)
+    # gap_locations = gap_locations.astype(int)
+    # random gaps
+    for g in range(n_gaps):
+        gap_locations[g] = np.random.randint(0, length-1)
     gap_locations = gap_locations.astype(int)
     for loc in gap_locations:
         dune_domain[0, loc] = gap_height
@@ -53,8 +57,8 @@ dune_domain, dune_height = dunes(b3d, n_gaps=5)
 def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
     # set Barrier3D variables
     cx = b3d._Cx                                        # multiplier with the average slope of the interior for constant "C" in inundation transport rule
-    # beach_elev = b3d._BermEl                            # [dam MHW]
-    beach_elev = 0.02                                   # [dam MHW]
+    beach_elev = b3d._BermEl                            # [dam MHW]
+    # beach_elev = 0.02                                   # [dam MHW]
     length = b3d._BarrierLength                         # [dam] length of barrier
     substep = b3d._OWss_i                               # 2 for inundation
     interior_domain = np.flip(b3d._InteriorDomain, 0)   # [dam MHW] flipped because we are routing water from bay to ocean
@@ -97,6 +101,7 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
                 plt.title("Initial Elevation $(dam)$")
                 plt.colorbar()
                 plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/0_domain_{0}".format(runID))
+                # plt.close()
 
             # testing scenarios
             # full_domain[15, :] = 0.7  # testing wall scenario
@@ -152,6 +157,7 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
                 plt.xlabel("storm duration")
                 plt.ylabel("dam MHW")
                 plt.title("bay elevation over the course of each storm")
+                plt.close(2)
 
 
             # overtop_flow can be dam^3 because we are multiplying by 1 to convert
@@ -363,8 +369,8 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
                             # ### Calculate Sed Movement
                             # fluxLimit = b3d._Dmax
                             # typically max sediment comes from dune, but bay sediment probably negligible
-                            # fluxLimit = 0.001  # [dam^3/hr]
-                            fluxLimit = 1  # [dam^3/hr]
+                            fluxLimit = 0.001  # [dam^3/hr]
+                            # fluxLimit = 1  # [dam^3/hr]
                             # the Q values must be between limits set by barrier 3d
                             # if the flow is greater than the min value required for sed movement, then sed movement
                             # will be calculated. Then, if sed flow < 0, it's set to 0, and if it's greater than the
@@ -437,6 +443,13 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
                 qs_lost = qs_lost + sum(SedFluxOut[TS, width-1, :]) / substep  # [dam^3] previously OWloss
                 qs_lost_total = qs_lost_total + sum(SedFluxOut[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
 
+            with open('C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/sediment_tracking.txt', 'a') as f:
+                if n == numstorm - 1:
+                    f.write(runID)
+                    f.write('\n')
+                    f.write("The total sediment volume lost was {0} dam^3".format(round(qs_lost_total, 3)))
+                    f.write('\n')
+
             print("The sediment volume lost in storm {0} was {1} dam^3".format(n+1, round(qs_lost, 3)))
             if n == numstorm-1:
                 print("The total sediment volume lost was {0} dam^3".format(round(qs_lost_total, 3)))
@@ -472,6 +485,7 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
             plt.title("Elevation after storm {0} $(dam)$".format(n+1))
             plt.colorbar()
             plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/{0}_domain_{1}".format(n+1, runID))
+            plt.close()
 
     # plt.matshow(Discharge[0, :, :],
     #             origin="upper",
