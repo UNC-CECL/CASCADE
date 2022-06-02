@@ -24,7 +24,7 @@ storm_series = [[1, 0.6, 65], [1, 0.8, 57], [1, 0.5, 80]]
 # storm_series = [[1, 0.7, 20]]
 
 # description of the run for figure names
-runID = "5rdune_losing_sed_lowflux_highbeach"
+# runID = "15rdune4_highflux_highbeach"
 
 def dunes(b3d, n_rows=1, n_gaps=2, dune_height=0.3, gap_height=0):
     length = b3d._BarrierLength
@@ -46,12 +46,12 @@ def dunes(b3d, n_rows=1, n_gaps=2, dune_height=0.3, gap_height=0):
     gap_locations = gap_locations.astype(int)
     for loc in gap_locations:
         dune_domain[0, loc] = gap_height
-        dune_domain[0, loc-1] = gap_height
-        dune_domain[0, loc+1] = gap_height
+        # dune_domain[0, loc-1] = gap_height
+        # dune_domain[0, loc+1] = gap_height
     dune_domain[:, :] = dune_domain[0, :]
     return dune_domain, dune_height
 
-dune_domain, dune_height = dunes(b3d, n_gaps=5)
+# dune_domain, dune_height = dunes(b3d, n_gaps=15)
 
 
 def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
@@ -90,17 +90,17 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
                 beach_domain = np.ones([add, length]) * beach_elev  # [dam MHW] 10 rows
                 full_domain = np.append(interior_domain, dune_domain, 0)  # [dam MHW]
                 full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
-                plt.matshow(
-                    full_domain,
-                    origin="upper",
-                    cmap="seismic",
-                    vmin=-0.5, vmax=0.5,
-                )
-                plt.xlabel('barrier length (dam)')
-                plt.ylabel('barrier width (dam)')
-                plt.title("Initial Elevation $(dam)$")
-                plt.colorbar()
-                plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/0_domain_{0}".format(runID))
+                # plt.matshow(
+                #     full_domain,
+                #     origin="upper",
+                #     cmap="seismic",
+                #     vmin=-0.5, vmax=0.5,
+                # )
+                # plt.xlabel('barrier length (dam)')
+                # plt.ylabel('barrier width (dam)')
+                # plt.title("Initial Elevation $(dam)$")
+                # plt.colorbar()
+                # plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/0_domain_{0}".format(runID))
                 # plt.close()
 
             # testing scenarios
@@ -142,22 +142,22 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
                     y = m2*q + b
                     bay_elev_TS.append(y)
             # plot the bay elevation throughout each storm with sea level and beach elevation references
-            plt.figure(2)
-            x = range(duration+1)
-            sea_level_line = sea_level*np.ones(len(x))
-            beach_elev_line = beach_elev*np.ones(len(x))
-            dune_elev_line = dune_height*np.ones(len(x))
-            plt.plot(x, bay_elev_TS, label='storm {0}'.format(n+1))
-            if n == numstorm-1:
+            # plt.figure(2)
+            # x = range(duration+1)
+            # sea_level_line = sea_level*np.ones(len(x))
+            # beach_elev_line = beach_elev*np.ones(len(x))
+            # dune_elev_line = dune_height*np.ones(len(x))
+            # plt.plot(x, bay_elev_TS, label='storm {0}'.format(n+1))
+            # if n == numstorm-1:
                 # only need to plot these once
-                plt.plot(x, sea_level_line, 'k', linestyle='dashed', label='sea level')
-                plt.plot(x, beach_elev_line, 'k', linestyle='dotted', label='beach elevation')
-                plt.plot(x, dune_elev_line, 'k', linestyle='dashdot', label='dune elevation')
-                plt.legend()
-                plt.xlabel("storm duration")
-                plt.ylabel("dam MHW")
-                plt.title("bay elevation over the course of each storm")
-                plt.close(2)
+                # plt.plot(x, sea_level_line, 'k', linestyle='dashed', label='sea level')
+                # plt.plot(x, beach_elev_line, 'k', linestyle='dotted', label='beach elevation')
+                # plt.plot(x, dune_elev_line, 'k', linestyle='dashdot', label='dune elevation')
+                # plt.legend()
+                # plt.xlabel("storm duration")
+                # plt.ylabel("dam MHW")
+                # plt.title("bay elevation over the course of each storm")
+                # plt.close(2)
 
 
             # overtop_flow can be dam^3 because we are multiplying by 1 to convert
@@ -369,8 +369,8 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
                             # ### Calculate Sed Movement
                             # fluxLimit = b3d._Dmax
                             # typically max sediment comes from dune, but bay sediment probably negligible
-                            fluxLimit = 0.001  # [dam^3/hr]
-                            # fluxLimit = 1  # [dam^3/hr]
+                            # fluxLimit = 0.001  # [dam^3/hr]
+                            fluxLimit = 1  # [dam^3/hr]
                             # the Q values must be between limits set by barrier 3d
                             # if the flow is greater than the min value required for sed movement, then sed movement
                             # will be calculated. Then, if sed flow < 0, it's set to 0, and if it's greater than the
@@ -474,18 +474,18 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
             # DomainWidth = np.shape(b3d._InteriorDomain)[0]
 
             # plots
-            plt.matshow(
-                full_domain[:, :],
-                origin="upper",
-                cmap="seismic",
-                vmin=-0.5, vmax=0.5,
-            )
-            plt.xlabel('barrier length (dam)')
-            plt.ylabel('barrier width (dam)')
-            plt.title("Elevation after storm {0} $(dam)$".format(n+1))
-            plt.colorbar()
-            plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/{0}_domain_{1}".format(n+1, runID))
-            plt.close()
+            # plt.matshow(
+            #     full_domain[:, :],
+            #     origin="upper",
+            #     cmap="seismic",
+            #     vmin=-0.5, vmax=0.5,
+            # )
+            # plt.xlabel('barrier length (dam)')
+            # plt.ylabel('barrier width (dam)')
+            # plt.title("Elevation after storm {0} $(dam)$".format(n+1))
+            # plt.colorbar()
+            # plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/{0}_domain_{1}".format(n+1, runID))
+            # plt.close()
 
     # plt.matshow(Discharge[0, :, :],
     #             origin="upper",
@@ -503,14 +503,42 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
 
 # ----------------------------------------------------------------------------------------------------------------------
 # running outwasher
+b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
+runID = "2rdune5_highflux_highbeach"
+dune_domain, dune_height = dunes(b3d, n_gaps=2)
+discharge_hydro, elev_change, domain, qs_out = outwasher(b3d, storm_series, runID, dune_domain, dune_height)
+
+b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
+runID = "2rdune6_highflux_highbeach"
+dune_domain, dune_height = dunes(b3d, n_gaps=2)
+discharge_hydro, elev_change, domain, qs_out = outwasher(b3d, storm_series, runID, dune_domain, dune_height)
+
+b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
+runID = "2rdune7_highflux_highbeach"
+dune_domain, dune_height = dunes(b3d, n_gaps=2)
+discharge_hydro, elev_change, domain, qs_out = outwasher(b3d, storm_series, runID, dune_domain, dune_height)
+
+b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
+runID = "2rdune8_highflux_highbeach"
+dune_domain, dune_height = dunes(b3d, n_gaps=2)
+discharge_hydro, elev_change, domain, qs_out = outwasher(b3d, storm_series, runID, dune_domain, dune_height)
+
+b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
+runID = "2rdune9_highflux_highbeach"
+dune_domain, dune_height = dunes(b3d, n_gaps=2)
+discharge_hydro, elev_change, domain, qs_out = outwasher(b3d, storm_series, runID, dune_domain, dune_height)
+
+b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
+runID = "2rdune10_highflux_highbeach"
+dune_domain, dune_height = dunes(b3d, n_gaps=2)
 discharge_hydro, elev_change, domain, qs_out = outwasher(b3d, storm_series, runID, dune_domain, dune_height)
 
 # making the elevation gif
-frames = []
-for i in range(4):
-    filename = "C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/" + str(i) +"_domain_{0}.png".format(runID)
-    frames.append(imageio.imread(filename))
-imageio.mimwrite("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/test_{0}.gif".format(runID), frames, format= '.gif', fps = 1)
+# frames = []
+# for i in range(4):
+#     filename = "C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/" + str(i) +"_domain_{0}.png".format(runID)
+#     frames.append(imageio.imread(filename))
+# imageio.mimwrite("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/test_{0}.gif".format(runID), frames, format= '.gif', fps = 1)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # # discharge gif
