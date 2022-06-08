@@ -54,6 +54,10 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
     sea_level = b3d._SL                                 # equal to 0 dam
     q_min = b3d._Qs_min                                 # [m^3 / hr]? Minimum discharge needed for sediment transport (0.001)
     # bay_depth = -b3d._BayDepth                          # [dam MHW] Depth of bay behind island segment, currently set to 0.3
+    Si = (np.mean(b3d.InteriorDomain[-10, :]) - np.mean(b3d.InteriorDomain[5, :])) / len(b3d.InteriorDomain)
+    # Si = (np.mean(b3d.InteriorDomain[-1, :]) - np.mean(b3d.InteriorDomain[0, :])) / len(b3d.InteriorDomain)
+    avg_slope = b3d._BermEl / 20                        # how it is defined in barrier 3D which is much smaller than when
+                                                        # you calculate the slope using the avg of the first and last rows
 
     # Set other variables
     qs_lost_total = 0  # previously OWloss
@@ -63,9 +67,10 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
     interior_domain = np.empty([30, length])
     for row in range(len(interior_domain)):
         if row == 0:
-            interior_domain[row, :] = bay_depth
+            interior_domain[row, :] = 0
         else:
-            interior_domain[row, :] = interior_domain[row-1, :] + 0.005  # giving the back barrier an equal slope
+            # interior_domain[row, :] = interior_domain[row-1, :] + avg_slope  # giving the back barrier an equal slope
+            interior_domain[row, :] = interior_domain[row-1, :] + -Si  # giving the back barrier an equal slope
 
     if numstorm > 0:
         # ### Individual Storm Impacts
@@ -74,11 +79,8 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
 
             # Determine Sediment And Water Routing Rules
             # ### Set Domain
-            add = 10
-
-            # output the initial full domain before sediment movement
             if n == 0:
-                beach_domain = np.ones([add, length]) * beach_elev  # [dam MHW] 10 rows
+                beach_domain = np.ones([7, length]) * beach_elev  # [dam MHW] 10 rows
                 # we actually want the beach to have a slope, but keep the first few rows the berm elevation
                 # we want the beach slope to be 0.004 m = 0.0004 dam
                 for b in range(len(beach_domain)):
@@ -86,7 +88,7 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
                         beach_domain[b, :] = beach_domain[b-1, :] - 0.0004
                 full_domain = np.append(interior_domain, dune_domain, 0)  # [dam MHW]
                 full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
-                # plotting initial domain elevations
+                # plot the initial full domain before sediment movement
                 fig1 = plt.figure()
                 ax1 = fig1.add_subplot(111)
                 mat = ax1.matshow(
@@ -104,12 +106,16 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
 
                 # plotting cross section
                 cross_section = np.mean(full_domain, 1)
+                cross_section = np.flip(cross_section)
+                b3d_cross = np.mean(b3d.InteriorDomain, 1)
                 fig4 = plt.figure()
                 ax4 = fig4.add_subplot(111)
-                ax4.plot(range(len(full_domain)), cross_section)
-                ax4.set_xlabel("barrier width from bay to ocean (dam)")
+                ax4.plot(range(len(full_domain)), cross_section, label="Outwasher")
+                ax4.plot(range(len(b3d.InteriorDomain)), b3d_cross, label="B3D")
+                ax4.set_xlabel("barrier width from ocean to bay (dam)")
                 ax4.set_ylabel("average alongshore elevation (dam)")
                 ax4.set_title("Cross shore elevation profile")
+                ax4.legend()
                 plt.savefig(
                     "C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/cross_shore_{0}".format(runID))
 
@@ -133,7 +139,7 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
 
             # get the average slope of the inerior using first and last rows of just the interior domain
             # should be negative because the first row is close to bay and last row close to "dunes"
-            Si = np.mean((interior_domain[-1, :] - interior_domain[0, :]) / 20)
+            # Si = np.mean((interior_domain[-1, :] - interior_domain[0, :]) / 20)
 
             # plot the bay elevation throughout each storm with sea level and beach elevation references
             x = range(0, duration)
@@ -434,6 +440,8 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
                 # ### Update Elevation After Every Storm Hour
                 ElevationChange = (SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]) / substep
                 Elevation[TS, :, :] = Elevation[TS, :, :] + ElevationChange
+                elev_change_array = np.zeros([duration, width, length])
+                elev_change_array[TS] = ElevationChange
 
                 # Calculate and save volume of sediment leaving the island for every hour
                 qs_lost = qs_lost + sum(SedFluxOut[TS, width-1, :]) / substep  # [dam^3] previously OWloss
@@ -486,47 +494,88 @@ def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
 
     # Record storm data
     b3d._StormCount.append(numstorm)
-    return Discharge, ElevationChange, full_domain, qs_lost_total
+    return Discharge, elev_change_array, full_domain, qs_lost_total
 
 
-# ----------------------------------------------------------------------------------------------------------------------
-# running outwasher
-
+# --------------------------------------------running outwasher---------------------------------------------------------
 # importing Chris' bay data
 with open(r"C:\Users\Lexi\Documents\Research\Outwasher\chris stuff\sound_data.txt", newline='') as csvfile:
     sound_data = list(csv.reader(csvfile))[0]
-sound_data = [float(s)/10 for s in sound_data]  # [dam MSL] Chris' sound elevations were in m MSL, so converted to dam
+sound_data = [float(s)/10-0.054 for s in sound_data]  # [dam MHW] Chris' sound elevations were in m MSL,
+                                                        # so converted to NAVD88 then MHW and dam
+sound_data = [s+0.05 for s in sound_data]  # [dam MHW] just increasing the values
+# setting all negative values to 0
+sound_data = sound_data[20:]
+sound_data[0] = 0
 
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
-runID = "simplified_domain"
-# print(storm_series[1])
-# print(len(storm_series[1]))
-# plt.plot(range(len(storm_series[1])), storm_series[1])
+runID = "simplified_domain2"
 
 dune_domain, dune_height = dunes(b3d, n_gaps=10)
-discharge_hydro, elev_change, domain, qs_out = outwasher(b3d, storm_series, runID, dune_domain, dune_height)
+discharge, elev_change, domain, qs_out = outwasher(b3d, storm_series, runID, dune_domain, dune_height)
 
-# making the elevation gif
+
+# ----------------------------------making the elevation gif------------------------------------------------------------
 frames = []
 for i in range(2):
     filename = "C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/" + str(i) +"_domain_{0}.png".format(runID)
     frames.append(imageio.imread(filename))
 imageio.mimwrite("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/test_{0}.gif".format(runID), frames, format= '.gif', fps = 1)
 
-# ----------------------------------------------------------------------------------------------------------------------
-# discharge gif
-def plot_ElevAnimation(discharge, directory, TMAX, name):
+
+# -------------------------------------------discharge gif--------------------------------------------------------------
+def plot_ElevAnimation(elev, directory, TMAX, name):
     os.chdir(directory)
-    newpath = "Output/" + name + "/SimFrames/"
+    newpath = "Output/Elevations/" + name + "/SimFrames/"
     if not os.path.exists(newpath):
         os.makedirs(newpath)
     os.chdir(newpath)
 
     # for t in range(TMAX - 1):
     for t in range(TMAX):
-        AnimateDomain = discharge[t]
+        AnimateDomain = elev[t]
+
+        # Plot and save
+        elevFig1 = plt.figure(figsize=(15, 7))
+        ax = elevFig1.add_subplot(111)
+        cax = ax.matshow(
+            # AnimateDomain, origin="upper", cmap="jet_r", vmin=0, vmax=0.5,
+            AnimateDomain, origin="upper", cmap="jet_r",
+        )  # , interpolation='gaussian') # analysis:ignore
+        ax.xaxis.set_ticks_position("bottom")
+        elevFig1.colorbar(cax)
+        plt.xlabel("Alongshore Distance (dam)")
+        plt.ylabel("Cross-Shore Distance (dam)")
+        plt.title("Elevation change (dam^3)")
+        plt.tight_layout()
+        timestr = "Time = " + str(t) + " hrs"
+        plt.text(1, 1, timestr)
+        plt.rcParams.update({"font.size": 20})
+        name = "elev_" + str(t)
+        elevFig1.savefig(name)  # dpi=200
+        plt.close(elevFig1)
+
+    frames = []
+
+    for filenum in range(TMAX - 1):
+        filename = "elev_" + str(filenum) + ".png"
+        frames.append(imageio.imread(filename))
+    imageio.mimsave("elev.gif", frames, "GIF-FI")
+    print()
+    print("[ * elevation GIF successfully generated * ]")
+
+def plot_DischargeAnimation(dis, directory, TMAX, name):
+    os.chdir(directory)
+    newpath = "Output/Discharges/" + name + "/SimFrames/"
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+    os.chdir(newpath)
+
+    # for t in range(TMAX - 1):
+    for t in range(TMAX):
+        AnimateDomain = dis[t]
 
         # Plot and save
         elevFig1 = plt.figure(figsize=(15, 7))
@@ -554,9 +603,9 @@ def plot_ElevAnimation(discharge, directory, TMAX, name):
         frames.append(imageio.imread(filename))
     imageio.mimsave("dis.gif", frames, "GIF-FI")
     print()
-    print("[ * GIF successfully generated * ]")
+    print("[ * dishcarge GIF successfully generated * ]")
 
 TMAX = storm_series[2]
 name = runID
-plot_ElevAnimation(discharge_hydro, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
-
+plot_ElevAnimation(elev_change, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
+plot_DischargeAnimation(discharge, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
