@@ -612,21 +612,8 @@ class BeachDuneManager:
         # overwash and place back on dunes
         if self._overwash_removal:
 
-            # barrier3d doesn't save the pre-storm interior for each time step: therefore, use the output from the
-            # previous time step [-2] and subtract SLR to obtain the pre-storm interior (SLR is updated at the start
-            # of the time step). Bay can't be deeper than BayDepth (roughly equivalent to constant back-barrier slope),
-            # so update.
+            # barrier3d saves the pre-storm interior for each time step
             pre_storm_interior = barrier3d.PreStorm_InteriorDomain
-
-            # pre_storm_interior = (
-            #     barrier3d.DomainTS[self._time_index - 2]
-            #     - barrier3d.RSLR[self._time_index - 1]
-            # )
-            # pre_storm_interior[
-            #     pre_storm_interior < -barrier3d.BayDepth
-            # ] = -barrier3d.BayDepth
-            #
-            # print(np.all(pre_storm_interior_2 == pre_storm_interior))  # for debugging
 
             pre_storm_interior, post_storm_interior = resize_interior_domain(
                 pre_storm_interior=pre_storm_interior,
