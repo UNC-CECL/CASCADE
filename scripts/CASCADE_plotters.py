@@ -2071,8 +2071,8 @@ def plot_nonlinear_stats_RoadwayManager(
         mask2 = np.isfinite(combined_DuneCrestMax)
         plt.plot(full_time[mask1], combined_DuneCrestMin[mask1])
         plt.plot(full_time[mask2], combined_DuneCrestMax[mask2])
-        plt.plot(time_mgmt, rebuild_threshold[0:tmax_roadways], colors="green")
-        plt.plot(time_mgmt, design_height[0:tmax_roadways], colors="red")
+        plt.plot(time_mgmt, rebuild_threshold[0:tmax_roadways], color="green")
+        plt.plot(time_mgmt, design_height[0:tmax_roadways], color="red")
         plt.hlines(
             CASCADE_b3d[ib3d]._Dmaxel * 10, full_time[0], full_time[-1], colors="black"
         )
