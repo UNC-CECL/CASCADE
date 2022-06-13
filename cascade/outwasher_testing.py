@@ -14,7 +14,6 @@ import imageio
 import csv
 
 # -------------------------------------------------------------------------------------------------------------------
-# def outwasher(b3d, storm_series, runID, dune_domain, dune_height):
 def outwasher(b3d, storm_series, runID):
     # set Barrier3D variables
     cx = b3d._Cx                                        # multiplier with the average slope of the interior for constant "C" in inundation transport rule
@@ -57,7 +56,7 @@ def outwasher(b3d, storm_series, runID):
     qs_lost_total = 0  # previously OWloss
     # numstorm = int(len(storm_series))
     numstorm = 1
-    bay_depth = storm_series[1][0]  # should be the first bay elevation
+    bay_depth = storm_series[1][0]  # should be the first bay elevation which is 0
     interior_domain = np.empty([30, length])
     for row in range(len(interior_domain)):
         if row == 0:
@@ -79,11 +78,8 @@ def outwasher(b3d, storm_series, runID):
             # Find overwashed dunes and gaps
             # currently changed Rhigh[n] to max of the bay depth in the storm series, but this might have to go into the
             # TS loop so that Rhigh is set to whatever the hydrograph is at for that time step
-            Dow = [
-                index
-                for index, value in enumerate((dune_crest + berm_el))
-                if value < Rhigh  # baydepth used to be Rhigh[n]
-            ]
+            Dow = [index for index, value in enumerate((dune_crest + berm_el))
+                if value < Rhigh]  # bay depth used to be Rhigh[n]
             gaps = b3d.DuneGaps(
                 dune_crest, Dow, berm_el, Rhigh
             )  # Finds location and Rexcess of continuous gaps in dune ridge, baydepth used to be Rhigh[n]
@@ -93,8 +89,7 @@ def outwasher(b3d, storm_series, runID):
 
                     # Calculate dune elevation loss
                     Rnorm = Rhigh / (
-                            dune_domain[time_b3d, Dow[d], w]
-                            + berm_el
+                            dune_domain[time_b3d, Dow[d], w] + berm_el
                     )  # Rhigh relative to pre-storm dune elevation
                     Dloss = Rnorm / (
                             c1 + (Rnorm * (Rnorm - c2))
@@ -103,12 +98,9 @@ def outwasher(b3d, storm_series, runID):
 
                     # Set new dune height
                     InitDElev = (
-                            dune_domain[time_b3d, Dow[d], w]
-                            + berm_el
+                            dune_domain[time_b3d, Dow[d], w] + berm_el
                     )
-                    NewDElev = InitDElev * (
-                            1 - Dloss
-                    )  # Calculate new dune elevation from storm lowering
+                    NewDElev = InitDElev * (1 - Dloss)  # Calculate new dune elevation from storm lowering
                     if NewDElev < berm_el:
                         NewDElev = berm_el
                     dune_domain[time_b3d, Dow[d], w] = (
@@ -118,35 +110,21 @@ def outwasher(b3d, storm_series, runID):
                     DuneChange[Dow[d], w] = InitDElev - NewDElev
 
                     # If dune is lowered to ~ zero, allow for chance of regrowth by raising dune height to 5 cm
-                    if (
-                            dune_domain[time_b3d, Dow[d], w]
-                            < dune_restart
-                    ):
+                    if dune_domain[time_b3d, Dow[d], w] < dune_restart:
                         if dune_restart < max_dune:
-                            dune_domain[
-                                time_b3d, Dow[d], w
-                            ] = dune_restart
+                            dune_domain[time_b3d, Dow[d], w] = dune_restart
                         else:
-                            dune_domain[
-                                time_b3d, Dow[d], w
-                            ] = (
-                                max_dune
-                            )  # Restart height can't be greater than Dmax
+                            dune_domain[time_b3d, Dow[d], w] = (max_dune)  # Restart height can't be greater than Dmax
 
             # Dune Height Diffusion
-            dune_domain = b3d.DiffuseDunes(
-                dune_domain, time_b3d
-            )
+            dune_domain = b3d.DiffuseDunes(dune_domain, time_b3d)
             dune_domain[dune_domain < sea_level] = dune_restart
 
             DuneLoss = np.sum(DuneChange) / length
-            Hd_TSloss = (
-                    DuneChange.max(axis=1) / dur
+            Hd_TSloss = (DuneChange.max(axis=1) / dur
             )  # Average height of dune loss for each substep during storm
+            Hd_loss_TS[time_b3d, :] = Hd_loss_TS[time_b3d, :] + DuneChange.max(axis=1)
 
-            Hd_loss_TS[time_b3d, :] = Hd_loss_TS[
-                                                    time_b3d, :
-                                                    ] + DuneChange.max(axis=1)
             # ### Overwash
             Iow = 0  # Count of dune gaps in inundation regime
             dunes_prestorm = dune_crest
@@ -154,9 +132,7 @@ def outwasher(b3d, storm_series, runID):
                 start = gaps[q][0]
                 stop = gaps[q][1]
                 gapwidth = stop - start + 1
-                # meandune = (
-                #                    sum(dunes_prestorm[start: stop + 1]) / gapwidth
-                #            ) + berm_el  # Average elevation of dune gap
+                meandune = (sum(dunes_prestorm[start: stop + 1]) / gapwidth) + berm_el  # Average elevation of dune gap
                 # Determine number of gaps in inundation regime
                 # if Rlow[n] > meandune:
                 #     Iow += 1
@@ -173,6 +149,7 @@ def outwasher(b3d, storm_series, runID):
                 dune_domain_full = np.transpose(dune_domain[0]) + berm_el
                 full_domain = np.append(interior_domain, dune_domain_full, 0)  # [dam MHW]
                 full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
+                # Elevation[0, :, :] = np.vstack([Dunes, self._InteriorDomain, Bay])
                 np.save("C:/Users/Lexi/Documents/Research/Outwasher/full_domain", full_domain)
                 # plot the initial full domain before sediment movement
                 fig1 = plt.figure()
@@ -258,6 +235,7 @@ def outwasher(b3d, storm_series, runID):
                 # overtop_flow can be dam^3 because we are multiplying by 1 to convert
                 # our initial discharge amount starts at the first row and is later distributed down the rows/cols
                 Rexcess = storm_series[1][TS]  # [dam]
+                # Rexcess = gaps[q][2]  # (m) i think this is actually dam for us
                 if Rexcess < 0:
                     overtop_vel = 0
                 else:
@@ -268,12 +246,14 @@ def outwasher(b3d, storm_series, runID):
                 # Begin with elevation from previous timestep
                 if TS > 0:
                     Elevation[TS, 1:, :] = Elevation[TS - 1, 1:, :]
-                    Elevation[TS, 0, :] = dunes - (Hd_TSloss / substep * TS
+                    Elevation[TS, 0, :] = dunes - \
+                                          (Hd_TSloss / substep * TS
                         )  # Reduce dune in height linearly over course of storm
 
                 # Loop through the rows, excluding the last one (because there is nowhere for the water/sed to go)
                 # need to include the last row to keep track of how much is leaving the system
-                for d in range(width):
+                for d in range(width-1):
+                # for d in range(width): uncomment if we are letting sedimnet out the last row
                     # Discharge for each TS, row 1, and all cols set above
                     Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
 
@@ -285,37 +265,37 @@ def outwasher(b3d, storm_series, runID):
 
                             # ### Calculate Slopes
                             # if we are not at the last row, do normal calculations
-                            if d != width-1:
-                                if i > 0:  # i = 0 means there are no cols to the left
-                                    S1 = (Elevation[TS, d, i] - Elevation[TS, d + 1, i - 1]) / (math.sqrt(2))
-                                    S1 = np.nan_to_num(S1)
-                                else:
-                                    S1 = 0
-
-                                S2 = Elevation[TS, d, i] - Elevation[TS, d + 1, i]
-                                S2 = np.nan_to_num(S2)
-
-                                if i < (length - 1):  # i at the end length means there are no cols to the right
-                                    S3 = (Elevation[TS, d, i] - Elevation[TS, d + 1, i + 1]) / (math.sqrt(2))
-                                    S3 = np.nan_to_num(S3)
-                                else:
-                                    S3 = 0
-                            # if at the last row, apply the same slope that the beach slope has
+                            # if d != width-1: uncomment if we are letting sed out the last row
+                            if i > 0:  # i = 0 means there are no cols to the left
+                                S1 = (Elevation[TS, d, i] - Elevation[TS, d + 1, i - 1]) / (math.sqrt(2))
+                                S1 = np.nan_to_num(S1)
                             else:
-                                if i > 0:
-                                    S1 = 0.0004 / (math.sqrt(2))
-                                    S1 = np.nan_to_num(S1)
-                                else:
-                                    S1 = 0
+                                S1 = 0
 
-                                S2 = 0.0004
-                                S2 = np.nan_to_num(S2)
+                            S2 = Elevation[TS, d, i] - Elevation[TS, d + 1, i]
+                            S2 = np.nan_to_num(S2)
 
-                                if i < (length - 1):  # i at the end length means there are no cols to the right
-                                    S3 = 0.0004 / (math.sqrt(2))
-                                    S3 = np.nan_to_num(S3)
-                                else:
-                                    S3 = 0
+                            if i < (length - 1):  # i at the end length means there are no cols to the right
+                                S3 = (Elevation[TS, d, i] - Elevation[TS, d + 1, i + 1]) / (math.sqrt(2))
+                                S3 = np.nan_to_num(S3)
+                            else:
+                                S3 = 0
+                            # if at the last row, apply the same slope that the beach slope has
+                            # else:
+                            #     if i > 0:
+                            #         S1 = 0.0004 / (math.sqrt(2))
+                            #         S1 = np.nan_to_num(S1)
+                            #     else:
+                            #         S1 = 0
+                            #
+                            #     S2 = 0.0004
+                            #     S2 = np.nan_to_num(S2)
+                            #
+                            #     if i < (length - 1):  # i at the end length means there are no cols to the right
+                            #         S3 = 0.0004 / (math.sqrt(2))
+                            #         S3 = np.nan_to_num(S3)
+                            #     else:
+                            #         S3 = 0
 
                             # ### Calculate Discharge To Downflow Neighbors
                             # One or more slopes positive (we have downhill flow)
@@ -446,17 +426,17 @@ def outwasher(b3d, storm_series, runID):
                             ### Update discharge
                             # discharge is defined for the next row, so we do not need to include the last row
                             # the first row of discharge was already defined
-                            if d != width-1:
-                                # Cell 1
-                                if i > 0:
-                                    Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
+                            # if d != width-1: # uncomment
+                            # Cell 1
+                            if i > 0:
+                                Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
 
-                                # Cell 2
-                                Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
+                            # Cell 2
+                            Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
 
-                                # Cell 3
-                                if i < (length - 1):
-                                    Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
+                            # Cell 3
+                            if i < (length - 1):
+                                Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
 
                             # ### Calculate Sed Movement
                             # fluxLimit = b3d._Dmax
@@ -464,10 +444,6 @@ def outwasher(b3d, storm_series, runID):
                             # fluxLimit = 0.001  # [dam^3/hr]
                             fluxLimit = 1  # [dam^3/hr]
                             # the Q values must be between limits set by barrier 3d
-                            # if the flow is greater than the min value required for sed movement, then sed movement
-                            # will be calculated. Then, if sed flow < 0, it's set to 0, and if it's greater than the
-                            # flux limit, it is set to the flux limit
-
                             # all Qs in [dam^3/hr]
                             C = cx * Si  # 10 x the avg slope (from Murray)
                             if Q1 > q_min:
@@ -513,14 +489,14 @@ def outwasher(b3d, storm_series, runID):
                                 # flux in vs. flux out
                                 # sed flux in goes to the next row, and is used for determing flux out at current row
                                 # so we need a flux in for the last row, which will be its own variable
-                                if d != width - 1:
-                                    if i > 0:
-                                        SedFluxIn[TS, d + 1, i - 1] += Qs1
+                                # if d != width - 1:
+                                if i > 0:
+                                    SedFluxIn[TS, d + 1, i - 1] += Qs1
 
-                                    SedFluxIn[TS, d + 1, i] += Qs2
+                                SedFluxIn[TS, d + 1, i] += Qs2
 
-                                    if i < (length - 1):
-                                        SedFluxIn[TS, d + 1, i + 1] += Qs3
+                                if i < (length - 1):
+                                    SedFluxIn[TS, d + 1, i + 1] += Qs3
                                 # Qs1,2,3 calculated for current row
                                 Qs_out = Qs1 + Qs2 + Qs3
                                 SedFluxOut[TS, d, i] = Qs_out
@@ -533,8 +509,12 @@ def outwasher(b3d, storm_series, runID):
                 elev_change_array[TS] = ElevationChange
 
                 # Calculate and save volume of sediment leaving the island for every hour
-                qs_lost = qs_lost + sum(SedFluxOut[TS, width-1, :]) / substep  # [dam^3] previously OWloss
-                qs_lost_total = qs_lost_total + sum(SedFluxOut[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
+                # the last row is the accumulation cell for keeping track of sed out
+                qs_lost = qs_lost + sum(SedFluxIn[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
+                qs_lost_total = qs_lost_total + sum(SedFluxIn[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
+                # if we are just letting it go out of the cell
+                # qs_lost = qs_lost + sum(SedFluxOut[TS, width-1, :]) / substep  # [dam^3] previously OWloss
+                # qs_lost_total = qs_lost_total + sum(SedFluxOut[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
 
             with open('C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/sediment_tracking.txt', 'a') as f:
                 if n == numstorm - 1:
@@ -604,10 +584,8 @@ np.save("C:/Users/Lexi/Documents/Research/Outwasher/sound_data", sound_data)
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
-runID = "simplified_domain2"
+runID = "last_row_sums"
 
-# dune_domain, dune_height = dunes(b3d, n_gaps=10)
-# discharge, elev_change, domain, qs_out = outwasher(b3d, storm_series, runID, dune_domain, dune_height)
 discharge, elev_change, domain, qs_out = outwasher(b3d, storm_series, runID)
 np.save("C:/Users/Lexi/Documents/Research/Outwasher/discharge", discharge)
 
@@ -657,7 +635,6 @@ def plot_ElevAnimation(elev, directory, TMAX, name):
         filename = "elev_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
     imageio.mimsave("elev.gif", frames, fps=2)
-    print()
     print("[ * elevation GIF successfully generated * ]")
 
 def plot_DischargeAnimation(dis, directory, TMAX, name):
@@ -701,5 +678,5 @@ def plot_DischargeAnimation(dis, directory, TMAX, name):
 
 TMAX = storm_series[2]
 name = runID
-# plot_ElevAnimation(elev_change, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
-# plot_DischargeAnimation(discharge, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
+plot_ElevAnimation(elev_change, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
+plot_DischargeAnimation(discharge, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
