@@ -2490,314 +2490,314 @@ def human_runs():
 
     def roadways():
         def pt75():
+            def low():
+                cascade_pt75_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.55,
+                    rmax=0.95,  # rave = 0.75
+                    name="6-B3D_Rave_pt75_Natural_low",
+                    run_road_mgmt=False,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
-            cascade_pt75_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.55,
-                rmax=0.95,  # rave = 0.75
-                name="6-B3D_Rave_pt75_Natural_low",
-                run_road_mgmt=False,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
+                # Roadway width drowned at 178 years, 20.0% of road borders water
+                cascade_pt75_h2m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.55,
+                    rmax=0.95,  # rave = 0.75
+                    name="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low",
+                    road_ele=1.2,  # m MHW, average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m MHW (1.9 m NAVD88)
+                    road_width=20,  # m
+                    road_setback=20,  # m
+                    dune_design_elevation=3.2,  # m MHW, rebuild to 2 m dune above the roadway
+                    dune_minimum_elevation=1.7,  # m MHW, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
+                    run_road_mgmt=True,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
-            # Roadway width drowned at 162 years, 20.0% of road borders water
-            # lower initial roadway for "low" case vs "high" case
-            cascade_pt75_h2m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.55,
-                rmax=0.95,  # rave = 0.75
-                name="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low",
-                road_ele=1.2,  # m MHW, average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m MHW (1.9 m NAVD88)
-                road_width=20,  # m
-                road_setback=20,  # m
-                dune_design_elevation=3.2,  # m MHW, rebuild to 2 m dune above the roadway
-                dune_minimum_elevation=1.7,  # m MHW, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
-                run_road_mgmt=True,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
+                # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 114 years
+                cascade_pt75_h2m_low_BE1m = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.55,
+                    rmax=0.95,  # rave = 0.75
+                    name="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low_BE1m",
+                    road_ele=1.2,  # m MHW, average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m MHW (1.9 m NAVD88)
+                    road_width=20,  # m
+                    road_setback=20,  # m
+                    dune_design_elevation=3.2,  # m MHW, rebuild to 2 m dune above the roadway
+                    dune_minimum_elevation=1.7,  # m MHW, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
+                    run_road_mgmt=True,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=-1,
+                )
 
-            # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 114 years
-            cascade_pt75_h2m_low_BE1m = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.55,
-                rmax=0.95,  # rave = 0.75
-                name="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low_BE1m",
-                road_ele=1.2,  # m MHW, average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m MHW (1.9 m NAVD88)
-                road_width=20,  # m
-                road_setback=20,  # m
-                dune_design_elevation=3.2,  # m MHW, rebuild to 2 m dune above the roadway
-                dune_minimum_elevation=1.7,  # m MHW, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
-                run_road_mgmt=True,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=-1,
-            )
+                # Roadway width drowned at 59 years, 20.0% of road borders water
+                cascade_pt75_h3m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.55,
+                    rmax=0.95,  # rave = 0.75
+                    name="6-B3D_Rave_pt75_Roadways_3mDune_20mSetback_20mWidth_low",
+                    road_ele=1.2,
+                    road_width=20,  # m
+                    road_setback=20,  # m
+                    dune_design_elevation=4.2,  # m MHW, rebuild to 3 m dune above the roadway
+                    dune_minimum_elevation=1.7,  # m MHW, allow dune to erode down to 0.5 m above the roadway, so really COMPLETELY erode before rebuilding (this is essentially the dune toe)
+                    run_road_mgmt=True,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
-            # Roadway width drowned at 78 years, 20.0% of road borders water
-            cascade_pt75_h3m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.55,
-                rmax=0.95,  # rave = 0.75
-                name="6-B3D_Rave_pt75_Roadways_3mDune_20mSetback_20mWidth_low",
-                road_ele=1.2,
-                road_width=20,  # m
-                road_setback=20,  # m
-                dune_design_elevation=4.2,  # m MHW, rebuild to 3 m dune above the roadway
-                dune_minimum_elevation=1.7,  # m MHW, allow dune to erode down to 0.5 m above the roadway, so really COMPLETELY erode before rebuilding (this is essentially the dune toe)
-                run_road_mgmt=True,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
+                # Roadway width drowned at 314 years, 20.0% of road borders water
+                cascade_pt75_h1m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.55,
+                    rmax=0.95,  # rave = 0.75
+                    name="6-B3D_Rave_pt75_Roadways_1mDune_20mSetback_20mWidth_low",
+                    road_ele=1.2,
+                    road_width=20,  # m
+                    road_setback=20,  # m
+                    dune_design_elevation=2.2,  # m MHW, rebuild to 1 m dune above the roadway
+                    dune_minimum_elevation=1.7,  # m MHW, allow dune to erode down to 0.5 m above the roadway
+                    run_road_mgmt=True,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
-            # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 301 years
-            cascade_pt75_h1m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.55,
-                rmax=0.95,  # rave = 0.75
-                name="6-B3D_Rave_pt75_Roadways_1mDune_20mSetback_20mWidth_low",
-                road_ele=1.2,
-                road_width=20,  # m
-                road_setback=20,  # m
-                dune_design_elevation=2.2,  # m MHW, rebuild to 1 m dune above the roadway
-                dune_minimum_elevation=1.7,  # m MHW, allow dune to erode down to 0.5 m above the roadway
-                run_road_mgmt=True,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
+            def high():
+                cascade_pt75_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.55,
+                    rmax=0.95,  # rave = 0.75
+                    name="6-B3D_Rave_pt75_Natural_high",
+                    run_road_mgmt=False,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt75_829yrs_high-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
-            cascade_pt75_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.55,
-                rmax=0.95,  # rave = 0.75
-                name="6-B3D_Rave_pt75_Natural_high",
-                run_road_mgmt=False,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
+                # able to set the highway slightly higher
+                # Roadway width drowned at 538 years, 20.0% of road borders water
+                # Barrier has HEIGHT DROWNED at t = 580 years
+                cascade_pt75_h2m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.55,
+                    rmax=0.95,  # rave = 0.75
+                    name="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_high",
+                    road_ele=2.0,  # 1.7,
+                    road_width=20,  # m
+                    road_setback=20,  # m
+                    dune_design_elevation=4.0,  # 3.7,  # m MHW, rebuild to 2 m dune above the roadway
+                    dune_minimum_elevation=2.5,  # 2.2,  # m MHW, allow dune to erode down to 0.5 m above the roadway
+                    run_road_mgmt=True,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt75_829yrs_high-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
-            # able to set the highway slightly higher
-            # Roadway width drowned at 531 years, 20.0% of road borders water
-            # Barrier has HEIGHT DROWNED at t = 582 years
-            cascade_pt75_h2m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.55,
-                rmax=0.95,  # rave = 0.75
-                name="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_high",
-                road_ele=2.0,  # 1.7,
-                road_width=20,  # m
-                road_setback=20,  # m
-                dune_design_elevation=4.0,  # 3.7,  # m MHW, rebuild to 2 m dune above the roadway
-                dune_minimum_elevation=2.5,  # 2.2,  # m MHW, allow dune to erode down to 0.5 m above the roadway
-                run_road_mgmt=True,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
+                # Roadway width drowned at 428 years, 20.0% of road borders water
+                cascade_pt75_h3m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.55,
+                    rmax=0.95,  # rave = 0.75
+                    name="6-B3D_Rave_pt75_Roadways_3mDune_20mSetback_20mWidth_high",
+                    road_ele=2.0,
+                    road_width=20,  # m
+                    road_setback=20,  # m
+                    dune_design_elevation=5.0,  # m MHW, rebuild to 3 m dune above the roadway
+                    dune_minimum_elevation=2.5,  # m MHW, allow dune to erode down to 0.5 m above the roadway
+                    run_road_mgmt=True,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt75_829yrs_high-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
-            # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 417 years
-            cascade_pt75_h3m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.55,
-                rmax=0.95,  # rave = 0.75
-                name="6-B3D_Rave_pt75_Roadways_3mDune_20mSetback_20mWidth_high",
-                road_ele=2.0,
-                road_width=20,  # m
-                road_setback=20,  # m
-                dune_design_elevation=5.0,  # m MHW, rebuild to 3 m dune above the roadway
-                dune_minimum_elevation=2.5,  # m MHW, allow dune to erode down to 0.5 m above the roadway
-                run_road_mgmt=True,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
-
-            # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 537 years
-            cascade_pt75_h1m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.55,
-                rmax=0.95,  # rave = 0.75
-                name="6-B3D_Rave_pt75_Roadways_1mDune_20mSetback_20mWidth_high",
-                road_ele=2.0,
-                road_width=20,  # m
-                road_setback=20,  # m
-                dune_design_elevation=3.0,  # m MHW, rebuild to 1 m dune above the roadway
-                dune_minimum_elevation=2.5,  # m MHW, allow dune to erode down to 0.5 m above the roadway
-                run_road_mgmt=True,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
+                # Roadway width drowned at 536 years, 20.0% of road borders water
+                cascade_pt75_h1m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.55,
+                    rmax=0.95,  # rave = 0.75
+                    name="6-B3D_Rave_pt75_Roadways_1mDune_20mSetback_20mWidth_high",
+                    road_ele=2.0,
+                    road_width=20,  # m
+                    road_setback=20,  # m
+                    dune_design_elevation=3.0,  # m MHW, rebuild to 1 m dune above the roadway
+                    dune_minimum_elevation=2.5,  # m MHW, allow dune to erode down to 0.5 m above the roadway
+                    run_road_mgmt=True,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt75_829yrs_high-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
         def pt45():
+            def low():
+                cascade_pt45_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.25,
+                    rmax=0.65,  # rave = 0.45
+                    name="6-B3D_Rave_pt45_Natural_low",
+                    run_road_mgmt=False,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
-            cascade_pt45_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.25,
-                rmax=0.65,  # rave = 0.45
-                name="6-B3D_Rave_pt45_Natural_low",
-                run_road_mgmt=False,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
+                # Roadway width drowned at 617 years, 20.0% of road borders water
+                cascade_pt45_h1m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.25,
+                    rmax=0.65,  # rave = 0.45
+                    name="6-B3D_Rave_pt45_Roadways_1mDune_20mSetback_20mWidth_low",
+                    road_ele=1.7,
+                    road_width=20,  # m
+                    road_setback=20,  # m
+                    dune_design_elevation=2.7,  # m MHW, rebuild to 1 m dune above the roadway
+                    dune_minimum_elevation=2.2,  # m MHW, allow dune to erode down to 0.5 m above the roadway
+                    run_road_mgmt=True,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
-            # note that this roadway is higher than the pt75 "low" scenario (1.2 m)
-            # Roadway width drowned at 580 years, 20.0% of road borders water
-            cascade_pt45_h2m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.25,
-                rmax=0.65,  # rave = 0.45
-                name="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_low",
-                road_ele=1.7,
-                road_width=20,  # m
-                road_setback=20,  # m
-                dune_design_elevation=3.7,  # m MHW, rebuild to 2 m dune above the roadway
-                dune_minimum_elevation=2.2,  # m MHW, allow dune to erode down to 0.5 m above the roadway
-                run_road_mgmt=True,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
+                # note that this roadway is higher than the pt75 "low" scenario (1.2 m)
+                # Roadway width drowned at 572 years, 20.0% of road borders water
+                cascade_pt45_h2m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.25,
+                    rmax=0.65,  # rave = 0.45
+                    name="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_low",
+                    road_ele=1.7,
+                    road_width=20,  # m
+                    road_setback=20,  # m
+                    dune_design_elevation=3.7,  # m MHW, rebuild to 2 m dune above the roadway
+                    dune_minimum_elevation=2.2,  # m MHW, allow dune to erode down to 0.5 m above the roadway
+                    run_road_mgmt=True,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
-            # Roadway width drowned at 181 years, 20.0% of road borders water
-            cascade_pt45_h2m_low_BE1m = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.25,
-                rmax=0.65,  # rave = 0.45
-                name="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_low_BE1m",
-                road_ele=1.7,
-                road_width=20,  # m
-                road_setback=20,  # m
-                dune_design_elevation=3.7,  # m MHW, rebuild to 2 m dune above the roadway
-                dune_minimum_elevation=2.2,  # m MHW, allow dune to erode down to 0.5 m above the roadway
-                run_road_mgmt=True,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=-1,
-            )
+                # Roadway width drowned at 181 years, 20.0% of road borders water
+                cascade_pt45_h2m_low_BE1m = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.25,
+                    rmax=0.65,  # rave = 0.45
+                    name="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_low_BE1m",
+                    road_ele=1.7,
+                    road_width=20,  # m
+                    road_setback=20,  # m
+                    dune_design_elevation=3.7,  # m MHW, rebuild to 2 m dune above the roadway
+                    dune_minimum_elevation=2.2,  # m MHW, allow dune to erode down to 0.5 m above the roadway
+                    run_road_mgmt=True,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=-1,
+                )
 
-            # Roadway width drowned at 430 years, 20.0% of road borders water
-            # Barrier has HEIGHT DROWNED at t = 442 years
-            cascade_pt45_h3m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.25,
-                rmax=0.65,  # rave = 0.45
-                name="6-B3D_Rave_pt45_Roadways_3mDune_20mSetback_20mWidth_low",
-                road_ele=1.7,
-                road_width=20,  # m
-                road_setback=20,  # m
-                dune_design_elevation=4.7,  # m MHW, rebuild to 3 m dune above the roadway
-                dune_minimum_elevation=2.2,  # m MHW, allow dune to erode down to 0.5 m above the roadway
-                run_road_mgmt=True,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
+                # Roadway width drowned at 427 years, 20.0% of road borders water
+                # Barrier has HEIGHT DROWNED at t = 435 years
+                cascade_pt45_h3m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.25,
+                    rmax=0.65,  # rave = 0.45
+                    name="6-B3D_Rave_pt45_Roadways_3mDune_20mSetback_20mWidth_low",
+                    road_ele=1.7,
+                    road_width=20,  # m
+                    road_setback=20,  # m
+                    dune_design_elevation=4.7,  # m MHW, rebuild to 3 m dune above the roadway
+                    dune_minimum_elevation=2.2,  # m MHW, allow dune to erode down to 0.5 m above the roadway
+                    run_road_mgmt=True,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
-            # Roadway width drowned at 595 years, 20.0% of road borders water
-            cascade_pt45_h1m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.25,
-                rmax=0.65,  # rave = 0.45
-                name="6-B3D_Rave_pt45_Roadways_1mDune_20mSetback_20mWidth_low",
-                road_ele=1.7,
-                road_width=20,  # m
-                road_setback=20,  # m
-                dune_design_elevation=2.7,  # m MHW, rebuild to 1 m dune above the roadway
-                dune_minimum_elevation=2.2,  # m MHW, allow dune to erode down to 0.5 m above the roadway
-                run_road_mgmt=True,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
+            def high():
+                cascade_pt45_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.25,
+                    rmax=0.65,  # rave = 0.45
+                    name="6-B3D_Rave_pt45_Natural_high",
+                    run_road_mgmt=False,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt45_802yrs_high-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
-            cascade_pt45_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.25,
-                rmax=0.65,  # rave = 0.45
-                name="6-B3D_Rave_pt45_Natural_high",
-                run_road_mgmt=False,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
+                # Roadway width drowned at 647 years, 20.0% of road borders water
+                cascade_pt45_h1m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.25,
+                    rmax=0.65,  # rave = 0.45
+                    name="6-B3D_Rave_pt45_Roadways_1mDune_20mSetback_20mWidth_high",
+                    road_ele=2.0,
+                    road_width=20,  # m
+                    road_setback=20,  # m
+                    dune_design_elevation=3.0,  # m MHW, rebuild to 1 m dune above the roadway
+                    dune_minimum_elevation=2.5,  # m MHW, allow dune to erode down to 0.5 m above the roadway
+                    run_road_mgmt=True,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt45_802yrs_high-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
-            # Roadway width drowned at 631 years, 20.0% of road borders water
-            cascade_pt45_h2m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.25,
-                rmax=0.65,  # rave = 0.45
-                name="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_high",
-                road_ele=2.0,
-                road_width=20,  # m
-                road_setback=20,  # m
-                dune_design_elevation=4.0,  # m MHW, rebuild to 2 m dune above the roadway
-                dune_minimum_elevation=2.5,  # m MHW, allow dune to erode down to 0.5 m above the roadway
-                run_road_mgmt=True,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
+                # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 595 years
+                cascade_pt45_h2m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.25,
+                    rmax=0.65,  # rave = 0.45
+                    name="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_high",
+                    road_ele=2.0,
+                    road_width=20,  # m
+                    road_setback=20,  # m
+                    dune_design_elevation=4.0,  # m MHW, rebuild to 2 m dune above the roadway
+                    dune_minimum_elevation=2.5,  # m MHW, allow dune to erode down to 0.5 m above the roadway
+                    run_road_mgmt=True,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt45_802yrs_high-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
-            # Roadway width drowned at 522 years, 20.0% of road borders water
-            # Barrier has HEIGHT DROWNED at t = 532 years
-            cascade_pt45_h3m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.25,
-                rmax=0.65,  # rave = 0.45
-                name="6-B3D_Rave_pt45_Roadways_3mDune_20mSetback_20mWidth_high",
-                road_ele=2.0,
-                road_width=20,  # m
-                road_setback=20,  # m
-                dune_design_elevation=5.0,  # m MHW, rebuild to 3 m dune above the roadway
-                dune_minimum_elevation=2.5,  # m MHW, allow dune to erode down to 0.5 m above the roadway
-                run_road_mgmt=True,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
-
-            # Roadway width drowned at 731 years, 20.0% of road borders water
-            cascade_pt45_h1m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                nt=1000,
-                rmin=0.25,
-                rmax=0.65,  # rave = 0.45
-                name="6-B3D_Rave_pt45_Roadways_1mDune_20mSetback_20mWidth_high",
-                road_ele=2.0,
-                road_width=20,  # m
-                road_setback=20,  # m
-                dune_design_elevation=3.0,  # m MHW, rebuild to 1 m dune above the roadway
-                dune_minimum_elevation=2.5,  # m MHW, allow dune to erode down to 0.5 m above the roadway
-                run_road_mgmt=True,
-                storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
-                background_erosion=0.0,
-            )
+                # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 519 years
+                cascade_pt45_h3m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                    nt=1000,
+                    rmin=0.25,
+                    rmax=0.65,  # rave = 0.45
+                    name="6-B3D_Rave_pt45_Roadways_3mDune_20mSetback_20mWidth_high",
+                    road_ele=2.0,
+                    road_width=20,  # m
+                    road_setback=20,  # m
+                    dune_design_elevation=5.0,  # m MHW, rebuild to 3 m dune above the roadway
+                    dune_minimum_elevation=2.5,  # m MHW, allow dune to erode down to 0.5 m above the roadway
+                    run_road_mgmt=True,
+                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                    elevation_file="b3d_pt45_802yrs_high-elevations.csv",
+                    dune_file="barrier3d-default-dunes.npy",
+                    background_erosion=0.0,
+                )
 
         def roadway_sensitivity_abandonment_criteria():
 
@@ -5234,6 +5234,28 @@ def human_plots():
                 run_road_mgmt=True,
             )
 
+            # (
+            #     BarrierWidth_h3m,
+            #     DuneCrestMean_h3m,
+            #     BarrierHeight_h3m,
+            #     bh_rate_h3m,
+            #     bw_rate_h3m,
+            #     sc_rate_h3m,
+            #     DuneCrestMin_h3m,
+            #     DuneCrestMax_h3m,
+            #     shoreline_position_h3m,
+            #     shoreface_slope_h3m,
+            #     overwash_h3m,
+            #     cascade_h3m,
+            # ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
+            #     name_prefix="6-B3D_Rave_pt45_Roadways_3mDune_20mSetback_20mWidth_high",
+            #     tmin=0,
+            #     tmax_roadways=521,
+            #     tmax_sim=532,
+            #     plot_name="b3d_pt45_h3m_plots_high",
+            #     run_road_mgmt=True,
+            # )
+
             (
                 BarrierWidth_h3m,
                 DuneCrestMean_h3m,
@@ -5248,10 +5270,10 @@ def human_plots():
                 overwash_h3m,
                 cascade_h3m,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-                name_prefix="6-B3D_Rave_pt45_Roadways_3mDune_20mSetback_20mWidth_high",
+                name_prefix="6-B3D_Rave_pt45_Roadways_3mDune_20mSetback_20mWidth_high_v2",
                 tmin=0,
-                tmax_roadways=521,
-                tmax_sim=532,
+                tmax_roadways=519,
+                tmax_sim=1000,
                 plot_name="b3d_pt45_h3m_plots_high",
                 run_road_mgmt=True,
             )
