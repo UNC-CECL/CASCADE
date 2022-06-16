@@ -1072,6 +1072,13 @@ def plot_ModelTransects_b3d_brie(b3d, brieLTA, time_step, iB3D):
 
 
 def plot_ModelTransects(cascade, time_step, iB3D):
+    """
+    Function plots model transects over time. Note that the barrier interior narrows due to SLR, but also when the
+    shoreline erodes one or more full dam cells and the dunes are forced to migrate into the interior (i.e., one or more
+    barrier interior cells become the dune line). Hence, because this plotter shows the migration of the shoreline for
+    each time step (non-integer multiples) and always two rows of dunes, it appears that the barrier island is moving
+    landward when really it is eroding the dune line.
+    """
     plt.figure(figsize=(10, 5))
     fig = plt.subplot(1, 1, 1)
     legend_t = []
@@ -1079,43 +1086,50 @@ def plot_ModelTransects(cascade, time_step, iB3D):
     for t in time_step:
 
         # Sea level
-        sea_level = cascade.barrier3d[iB3D]._SL + (t * cascade.barrier3d[iB3D]._RSLR[t])
+        sea_level = cascade.barrier3d[iB3D]._SL + (
+            t * cascade.barrier3d[iB3D]._RSLR[t]
+        )  # dam
 
         # Create data points
-        shoreface_toe_x = (
-            cascade.barrier3d[iB3D].x_t_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
-        )
+        # shoreface_toe_x = (
+        #     cascade.barrier3d[iB3D].x_t_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
+        # )
+        shoreface_toe_x = cascade.barrier3d[iB3D].x_t_TS[t]  # dam
         shoreface_toe_y = (sea_level - cascade.barrier3d[iB3D].DShoreface) * 10  # m
-        shoreline_x = (
-            cascade.barrier3d[iB3D].x_s_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
-        )
+        # shoreline_x = (
+        #     cascade.barrier3d[iB3D].x_s_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
+        # )  # dam
+        shoreline_x = cascade.barrier3d[iB3D].x_s_TS[t]  # dam
         shoreline_y = sea_level * 10  # m
         bay_y = (sea_level - cascade.barrier3d[iB3D]._BayDepth) * 10  # m
         end_of_bay_y = bay_y
 
-        if cascade.nourishments[iB3D].beach_width[t] is not None:
-            berm_x = shoreline_x + (
-                cascade.nourishments[iB3D].beach_width[t] / 10
-            )  # beach width (in dam)
-        else:
+        # if cascade.nourishments[iB3D].beach_width[t] is None:
+        if np.isnan(cascade.nourishments[iB3D].beach_width[t]):
             berm_x = shoreline_x + (
                 int(cascade.barrier3d[iB3D].BermEl / cascade.barrier3d[iB3D]._beta)
             )  # initial beach width (in dam)
+        else:
+            berm_x = shoreline_x + (
+                cascade.nourishments[iB3D].beach_width[t] / 10
+            )  # beach width (in dam)
         berm_y = (
             cascade.barrier3d[iB3D]._BermEl * 10
         ) + shoreline_y  # convert to meters
         dune_toe_x = berm_x
         dune_toe_y = berm_y
 
-        v = 10  # just use 10th first transect
-        interior_y = cascade.barrier3d[iB3D]._DomainTS[t]
+        v = 10  # just use 10th transect
+        interior_y = cascade.barrier3d[iB3D]._DomainTS[t]  # dam MHW
         interior_y = interior_y[:, v]
         dunes_y = (
             cascade.barrier3d[iB3D]._DuneDomain[t, v, :]
             + cascade.barrier3d[iB3D]._BermEl
-        )
+        )  # dam MHW
         cross_barrier_y = np.insert(interior_y, 0, dunes_y)
-        cross_barrier_y = (cross_barrier_y * 10) + shoreline_y  # Convert to meters
+        cross_barrier_y = (
+            cross_barrier_y * 10
+        ) + shoreline_y  # Convert to meters, with SLR included
         cross_barrier_x = np.arange(0, len(cross_barrier_y), 1) + dune_toe_x
 
         end_of_bay_x = (
@@ -2122,7 +2136,7 @@ def plot_nonlinear_stats_RoadwayManager(
 
     # barrier height
     plt.subplot(2, 2, 1)
-    if post_storm_BarrierHeight is not None:
+    if post_storm_ave_interior_height is not None:
         mask = np.isfinite(combined_BarrierHeight)
         plt.plot(full_time[mask], combined_BarrierHeight[mask], "m")
         # plt.legend(["includes post-storm", "mgmt only"])
@@ -2155,7 +2169,7 @@ def plot_nonlinear_stats_RoadwayManager(
         DuneCrestMin = combined_DuneCrestMin
         DuneCrestMax = combined_DuneCrestMax
 
-    if post_storm_BarrierHeight is not None:
+    if post_storm_ave_interior_height is not None:
         BarrierHeight = combined_BarrierHeight
 
     return (
