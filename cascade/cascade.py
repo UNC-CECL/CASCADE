@@ -121,7 +121,7 @@ class Cascade:
         alongshore_transport_module=True,
         beach_nourishment_module=True,
         community_dynamics_module=False,
-        road_ele=1.7,
+        road_ele=1.7,  # ---------- the rest of these variables are for the human dynamics modules --------------- #
         road_width=30,
         road_setback=30,
         dune_design_elevation=3.7,
@@ -652,18 +652,21 @@ class Cascade:
         ###############################################################################
         # update brie for any human modifications to the barrier
         ###############################################################################
-        [x_t, x_s, x_b, h_b, s_sf] = [np.zeros(self._ny) for _ in range(5)]
+        if self._alongshore_transport_module:
+            [x_t, x_s, x_b, h_b, s_sf] = [np.zeros(self._ny) for _ in range(5)]
 
-        for iB3D in range(self._ny):
-            # make lists of the barrier geometry variables that have been changed (and needed to calculate shoreline
-            # diffusivity in brie)
-            x_t[iB3D] = self._barrier3d[iB3D].x_t_TS[-1]
-            x_s[iB3D] = self._barrier3d[iB3D].x_s_TS[-1]
-            x_b[iB3D] = self._barrier3d[iB3D].x_b_TS[-1]
-            h_b[iB3D] = self._barrier3d[iB3D].h_b_TS[-1]
-            s_sf[iB3D] = self._barrier3d[iB3D].s_sf_TS[-1]
+            for iB3D in range(self._ny):
+                # make lists of the barrier geometry variables that have been changed (and needed to calculate shoreline
+                # diffusivity in brie)
+                x_t[iB3D] = self._barrier3d[iB3D].x_t_TS[-1]
+                x_s[iB3D] = self._barrier3d[iB3D].x_s_TS[-1]
+                x_b[iB3D] = self._barrier3d[iB3D].x_b_TS[-1]
+                h_b[iB3D] = self._barrier3d[iB3D].h_b_TS[-1]
+                s_sf[iB3D] = self._barrier3d[iB3D].s_sf_TS[-1]
 
-        self._brie_coupler.update_brie_for_human_modifications(x_t, x_s, x_b, h_b, s_sf)
+            self._brie_coupler.update_brie_for_human_modifications(
+                x_t, x_s, x_b, h_b, s_sf
+            )
 
     ###############################################################################
     # save data
