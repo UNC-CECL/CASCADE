@@ -1,14 +1,12 @@
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 from pathlib import Path
-from tqdm import tqdm
 
 from cascade.roadway_manager import bulldoze, rebuild_dunes, set_growth_parameters
 from cascade.beach_dune_manager import shoreface_nourishment, filter_overwash
 from cascade import Cascade
 
-datadir = "../Cascade/B3D_Inputs/"
-Path(datadir)
+BMI_DATA_DIR = Path(__file__).parent / "cascade_test_versions_inputs"
 
 
 def test_bulldoze_volume():
@@ -303,8 +301,8 @@ def test_shoreline_migration():
     total_time = 100
 
     cascade = Cascade(
-        datadir,
-        name="test",
+        str(BMI_DATA_DIR) + "/",
+        name="test_shoreline_erosion",
         sea_level_rise_rate=0.007,
         alongshore_section_count=1,
         time_step_count=total_time,
@@ -322,9 +320,9 @@ def test_shoreline_migration():
 
     # Loop for 50 years at a 10 year interval, 100 m^3/m and then 50 years at a 20 year interval with 300 m^3/m
     nt = 50
-    for _ in tqdm(range(nt - 1)):
+    for time_step in range(nt - 1):
         cascade.update()
-        if cascade.road_break or cascade.b3d_break:
+        if cascade.b3d_break:
             break
 
     # during the CASCADE initialization, the nourishment interval and volume is specified individually for each
@@ -333,9 +331,9 @@ def test_shoreline_migration():
     cascade.nourishment_interval[iB3D] = 20  # increase to 20 years
     cascade.nourishment_volume[iB3D] = 300  # increase to 300 m^3/m
 
-    for _ in tqdm(range(nt)):
+    for time_step in range(nt):
         cascade.update()
-        if cascade.road_break or cascade.b3d_break:
+        if cascade.b3d_break:
             break
 
     frac_grid_cell = np.array(cascade.barrier3d[iB3D]._x_s_TS) % 1
