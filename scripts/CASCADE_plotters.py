@@ -1072,6 +1072,13 @@ def plot_ModelTransects_b3d_brie(b3d, brieLTA, time_step, iB3D):
 
 
 def plot_ModelTransects(cascade, time_step, iB3D):
+    """
+    Function plots model transects over time. Note that the barrier interior narrows due to SLR, but also when the
+    shoreline erodes one or more full dam cells and the dunes are forced to migrate into the interior (i.e., one or more
+    barrier interior cells become the dune line). Hence, because this plotter shows the migration of the shoreline for
+    each time step (non-integer multiples) and always two rows of dunes, it appears that the barrier island is moving
+    landward when really it is eroding the dune line.
+    """
     plt.figure(figsize=(10, 5))
     fig = plt.subplot(1, 1, 1)
     legend_t = []
@@ -1079,43 +1086,50 @@ def plot_ModelTransects(cascade, time_step, iB3D):
     for t in time_step:
 
         # Sea level
-        sea_level = cascade.barrier3d[iB3D]._SL + (t * cascade.barrier3d[iB3D]._RSLR[t])
+        sea_level = cascade.barrier3d[iB3D]._SL + (
+            t * cascade.barrier3d[iB3D]._RSLR[t]
+        )  # dam
 
         # Create data points
-        shoreface_toe_x = (
-            cascade.barrier3d[iB3D].x_t_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
-        )
+        # shoreface_toe_x = (
+        #     cascade.barrier3d[iB3D].x_t_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
+        # )
+        shoreface_toe_x = cascade.barrier3d[iB3D].x_t_TS[t]  # dam
         shoreface_toe_y = (sea_level - cascade.barrier3d[iB3D].DShoreface) * 10  # m
-        shoreline_x = (
-            cascade.barrier3d[iB3D].x_s_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
-        )
+        # shoreline_x = (
+        #     cascade.barrier3d[iB3D].x_s_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
+        # )  # dam
+        shoreline_x = cascade.barrier3d[iB3D].x_s_TS[t]  # dam
         shoreline_y = sea_level * 10  # m
         bay_y = (sea_level - cascade.barrier3d[iB3D]._BayDepth) * 10  # m
         end_of_bay_y = bay_y
 
-        if cascade.nourishments[iB3D].beach_width[t] is not None:
-            berm_x = shoreline_x + (
-                cascade.nourishments[iB3D].beach_width[t] / 10
-            )  # beach width (in dam)
-        else:
+        # if cascade.nourishments[iB3D].beach_width[t] is None:
+        if np.isnan(cascade.nourishments[iB3D].beach_width[t]):
             berm_x = shoreline_x + (
                 int(cascade.barrier3d[iB3D].BermEl / cascade.barrier3d[iB3D]._beta)
             )  # initial beach width (in dam)
+        else:
+            berm_x = shoreline_x + (
+                cascade.nourishments[iB3D].beach_width[t] / 10
+            )  # beach width (in dam)
         berm_y = (
             cascade.barrier3d[iB3D]._BermEl * 10
         ) + shoreline_y  # convert to meters
         dune_toe_x = berm_x
         dune_toe_y = berm_y
 
-        v = 10  # just use 10th first transect
-        interior_y = cascade.barrier3d[iB3D]._DomainTS[t]
+        v = 10  # just use 10th transect
+        interior_y = cascade.barrier3d[iB3D]._DomainTS[t]  # dam MHW
         interior_y = interior_y[:, v]
         dunes_y = (
             cascade.barrier3d[iB3D]._DuneDomain[t, v, :]
             + cascade.barrier3d[iB3D]._BermEl
-        )
+        )  # dam MHW
         cross_barrier_y = np.insert(interior_y, 0, dunes_y)
-        cross_barrier_y = (cross_barrier_y * 10) + shoreline_y  # Convert to meters
+        cross_barrier_y = (
+            cross_barrier_y * 10
+        ) + shoreline_y  # Convert to meters, with SLR included
         cross_barrier_x = np.arange(0, len(cross_barrier_y), 1) + dune_toe_x
 
         end_of_bay_x = (
@@ -1935,7 +1949,7 @@ def plot_nonlinear_stats_RoadwayManager(
     tmax_roadways,
     tmax_sim,
     post_storm_dunes=None,
-    post_storm_interior=None,
+    post_storm_ave_interior_height=None,
     design_height=None,
     rebuild_threshold=None,
     road_elevation=None,
@@ -1943,9 +1957,14 @@ def plot_nonlinear_stats_RoadwayManager(
     road_relocated=None,
 ):
 
-    # variables that need to be combined and plotted: dune height (min, max) and barrier height
+    # if the post-storm variables are not supplied (essentially a 0.5 year time step), then only the human-modified
+    # statistics are plotted (the 1 year time step)
 
-    # mean dune height (using both dune domain columns) ---------
+    # variables that need to be combined and plotted: dune height, barrier width, barrier height/interior
+    empty_nans = np.empty(tmax_sim - tmax_roadways)
+    empty_nans[:] = np.nan
+
+    # dune height (using both dune domain columns) --------------------------------------------------
 
     # Maximum height of each row in DuneDomain
     DuneDomainCrest = CASCADE_b3d[ib3d].DuneDomain[0:tmax_sim, :, :].max(axis=2)
@@ -1961,12 +1980,11 @@ def plot_nonlinear_stats_RoadwayManager(
         np.max(DuneDomainCrest, axis=1) + CASCADE_b3d[ib3d].BermEl
     ) * 10  # m MHW
 
-    # these are the dune dynamics saved prior to human modifications (essentially a 0.5 year time step); create
-    # a combined time series of pre- and post-human modifications to the dune line
+    # these are the dune dynamics saved prior to human modifications (essentially a 0.5 year time step)
     if post_storm_dunes is not None:
-        post_DuneCrestMean = [None]
-        post_DuneCrestMin = [None]
-        post_DuneCrestMax = [None]
+
+        post_storm_DuneCrestMin = [None]
+        post_storm_DuneCrestMax = [None]
 
         # same calculation as Hd_AverageTS, but here average post-storm dune-height for each time step
         for t in range(1, tmax_roadways):
@@ -1981,144 +1999,98 @@ def plot_nonlinear_stats_RoadwayManager(
             DuneDomainCrest[
                 DuneDomainCrest < CASCADE_b3d[ib3d].DuneRestart
             ] = CASCADE_b3d[ib3d].DuneRestart
-            post_DuneCrestMean.append(
-                (np.mean(DuneDomainCrest) + CASCADE_b3d[ib3d].BermEl) * 10
-            )  # relative to MHW
-            post_DuneCrestMax.append(
+            post_storm_DuneCrestMax.append(
                 (np.max(DuneDomainCrest) + CASCADE_b3d[ib3d].BermEl) * 10
             )  # relative to MHW
-            post_DuneCrestMin.append(
+            post_storm_DuneCrestMin.append(
                 (np.min(DuneDomainCrest) + CASCADE_b3d[ib3d].BermEl) * 10
             )  # relative to MHW
 
-        # now, append NaNs to the rest of the 0.5 year time step arrays
-        empty_nans = np.empty(tmax_sim - tmax_roadways)
-        empty_nans[:] = np.nan
         # post_DuneCrestMean = np.concatenate((post_DuneCrestMean, empty_nans))
-        post_DuneCrestMax = np.concatenate((post_DuneCrestMax, empty_nans))
-        post_DuneCrestMin = np.concatenate((post_DuneCrestMin, empty_nans))
+        post_storm_DuneCrestMax = np.concatenate((post_storm_DuneCrestMax, empty_nans))
+        post_storm_DuneCrestMin = np.concatenate((post_storm_DuneCrestMin, empty_nans))
 
-        time = np.arange(0, tmax_sim - 0.5, 0.5)
-        combined_DuneCrestMin = [None] * (len(time))
-        combined_DuneCrestMin[::2] = DuneCrestMin
-        combined_DuneCrestMin[1::2] = post_DuneCrestMin[1:]  # post_DuneCrestMean[1:]
-        combined_DuneCrestMin = np.array(combined_DuneCrestMin)
+        combined_DuneCrestMin = combine_post_storm_human_time_series(
+            tmax_sim, post_storm_DuneCrestMin, DuneCrestMin
+        )
+        combined_DuneCrestMax = combine_post_storm_human_time_series(
+            tmax_sim, post_storm_DuneCrestMax, DuneCrestMax
+        )
 
-        combined_DuneCrestMax = [None] * (len(time))
-        combined_DuneCrestMax[::2] = DuneCrestMax
-        combined_DuneCrestMax[1::2] = post_DuneCrestMax[1:]
-        combined_DuneCrestMax = np.array(combined_DuneCrestMax)
-
-    # barrier width
+    # barrier width --------------------------------------------------
+    # note that here, and everywhere in the drowning paper, barrier width refers to the average interior width, and
+    # not x_b - x_s, which incorporates changes in beach width and the dune line in the nourishment module
     BarrierWidth = (
-        np.array(CASCADE_b3d[ib3d].x_b_TS[0:tmax_sim])
-        - np.array(CASCADE_b3d[ib3d].x_s_TS[0:tmax_sim])
-    ) * 10
+        np.array(CASCADE_b3d[ib3d].InteriorWidth_AvgTS[0:tmax_sim])
+    ) * 10  # m
 
     # change in barrier width
     bwts = [(x - BarrierWidth[0]) for x in BarrierWidth[0:tmax_sim]]
     rate = [0]
     for k in range(1, len(bwts)):
         rate.append(bwts[k] - bwts[k - 1])
-    bw_rate = (
-        rate  # note, np.diff doesn't start with zero rate of change, so we do this calc
-    )
+    bw_rate = rate  # note, np.diff doesn't start with zero rate of change, so we do this calc  # m/yr
 
-    # average interior height
-    BarrierHeight = []
-    for t in range(0, tmax_sim):
-        bh_array = np.array(CASCADE_b3d[ib3d].DomainTS[t]) * 10
-        BarrierHeight.append(bh_array[bh_array > 0].mean())
+    # barrier height --------------------------------------------------
+    BarrierHeight = (np.array(CASCADE_b3d[ib3d].h_b_TS[0:tmax_sim])) * 10  # m
 
-    # average interior height post-storm; create a combined time series of pre- and post-human modifications to the
-    # barrier interior (changes are going to be small because just affecting the road)
-    if post_storm_interior is not None:
-        post_BarrierHeight = [None]
+    # before human modifications
+    if post_storm_ave_interior_height is not None:
 
-        for t in range(1, tmax_roadways):
-            bh_array = np.array(post_storm_interior[t]) * 10
-            post_BarrierHeight.append(bh_array[bh_array > 0].mean())
+        post_storm_ave_interior_height[0] = np.nan
+        post_storm_BarrierHeight = (
+            np.array(post_storm_ave_interior_height[0:tmax_roadways])
+        ) * 10  # m
 
-        time = np.arange(0, tmax_sim - 0.5, 0.5)
-
-        empty_nans = np.empty(tmax_sim - tmax_roadways)
-        empty_nans[:] = np.nan
-        post_BarrierHeight = np.concatenate((post_BarrierHeight, empty_nans))
-
-        combined_BarrierHeight = [None] * (len(time))
-        combined_BarrierHeight[::2] = BarrierHeight
-        combined_BarrierHeight[1::2] = post_BarrierHeight[1:]
-        combined_BarrierHeight = np.array(combined_BarrierHeight)
+        post_storm_BarrierHeight = np.concatenate(
+            (post_storm_BarrierHeight, empty_nans)
+        )
+        combined_BarrierHeight = combine_post_storm_human_time_series(
+            tmax_sim, post_storm_BarrierHeight, BarrierHeight
+        )  # m
 
     # change in barrier height
     bhts = [(x - BarrierHeight[0]) for x in BarrierHeight[0:tmax_sim]]
     rate = [0]
     for k in range(1, len(bhts)):
         rate.append(bhts[k] - bhts[k - 1])
-    bh_rate = (
-        rate  # note, np.diff doesn't start with zero rate of change, so we do this calc
-    )
-    if post_storm_interior is not None:
+    bh_rate = rate  # note, np.diff doesn't start with zero rate of change, so we do this calc  # m/yr
 
-        time_mgmt = np.arange(0, tmax_roadways - 0.5, 0.5)
-        bhts = [
-            (x - combined_BarrierHeight[0])
-            for x in combined_BarrierHeight[0 : len(time_mgmt)]
-        ]
-        rate = [0]
-        for k in range(1, len(bhts)):
-            rate.append(bhts[k] - bhts[k - 1])
-        management_bh_rate = rate
-
-        time_sim = np.arange(0, tmax_sim - 0.5, 0.5)
-
-        empty_nans = np.empty(len(time_sim) - len(time_mgmt))
-        empty_nans[:] = np.nan
-        management_bh_rate = np.concatenate((management_bh_rate, empty_nans))
-
-        combined_bh_rate = management_bh_rate
-        combined_bh_rate[
-            ::2
-        ] = bh_rate  # populate the nans later with the yearly bh rate
-        combined_bh_rate[0 : len(time_mgmt)] = management_bh_rate[
-            0 : len(time_mgmt)
-        ]  # just replace the bh_rate during management with the mgmt_bh_rate
-        combined_bh_rate = np.array(combined_bh_rate)
-
-    # # shoreline change rate
-    scts = [
-        (x - CASCADE_b3d[ib3d].x_s_TS[0]) * 10
-        for x in CASCADE_b3d[ib3d].x_s_TS[0:tmax_sim]
-    ]
+    # shoreline position and change rate --------------------------------------------------
+    shoreline_position = np.array(CASCADE_b3d[ib3d].x_s_TS[0:tmax_sim]) * 10  # m
+    scts = [(x - shoreline_position[0]) for x in shoreline_position]
     rate = [0]
     for k in range(1, len(scts)):
         rate.append(scts[k] - scts[k - 1])
-    sc_rate = rate
+    sc_rate = rate  # m/yr
 
-    # overwash flux
-    Qoverwash = CASCADE_b3d[ib3d].QowTS[0:tmax_sim]
+    # overwash flux --------------------------------------------------
+    overwash = np.array(CASCADE_b3d[ib3d].QowTS[0:tmax_sim])  # m^3/m
 
-    # individual time series
-    plt.figure(figsize=(10, 5))
-    plt.subplot(3, 3, 1)
+    # shoreface slope -----------------------------------------
+    shoreface_slope = CASCADE_b3d[ib3d].s_sf_TS[0:tmax_sim]
+    equilibrium_slope = CASCADE_b3d[ib3d]._s_sf_eq
 
+    # individual time series ------------------------------------
+    plt.figure(figsize=(10, 8))
+    # plt.subplot(4, 3, 1)
+
+    full_time = np.arange(0, tmax_sim - 0.5, 0.5)
+
+    # dunes
+    plt.subplot(2, 2, 1)
     if post_storm_dunes is not None:
-        time = np.arange(0, tmax_sim - 0.5, 0.5)
-        yearly_time = np.arange(0, tmax_sim, 1)
+        time_mgmt = np.arange(0, tmax_roadways, 1)
         mask1 = np.isfinite(combined_DuneCrestMin)
         mask2 = np.isfinite(combined_DuneCrestMax)
-        plt.plot(time[mask1], combined_DuneCrestMin[mask1])
-        plt.plot(time[mask2], combined_DuneCrestMax[mask2])
-        plt.hlines(CASCADE_b3d[ib3d]._Dmaxel * 10, time[0], time[-1], colors="black")
-        plt.plot(
-            yearly_time[0:tmax_roadways], rebuild_threshold[0:tmax_roadways]
-        )  # , color="red")
-        plt.plot(
-            yearly_time[0:tmax_roadways], design_height[0:tmax_roadways]
-        )  # , color="black")
-        plt.plot(
-            yearly_time[0:tmax_roadways], road_elevation[0:tmax_roadways]
-        )  # , color="gray")
+        plt.plot(full_time[mask1], combined_DuneCrestMin[mask1])
+        plt.plot(full_time[mask2], combined_DuneCrestMax[mask2])
+        plt.plot(time_mgmt, rebuild_threshold[0:tmax_roadways], color="green")
+        plt.plot(time_mgmt, design_height[0:tmax_roadways], color="red")
+        plt.hlines(
+            CASCADE_b3d[ib3d]._Dmaxel * 10, full_time[0], full_time[-1], colors="black"
+        )
+        plt.plot(time_mgmt, road_elevation[0:tmax_roadways], color="purple")
         plt.legend(["min", "max", "rebuild", "design", "road", "max-equil"])
 
     else:
@@ -2128,204 +2100,68 @@ def plot_nonlinear_stats_RoadwayManager(
     plt.ylabel("dune elevation (m MHW)")
     plt.xlabel("Time (yr)")
 
-    plt.subplot(3, 3, 2)
-    if post_storm_interior is not None:
-        time = np.arange(0, tmax_sim - 0.5, 0.5)
-        mask = np.isfinite(combined_BarrierHeight)
-        plt.plot(time[mask], combined_BarrierHeight[mask], "m")
-    else:
-        plt.plot(BarrierHeight, "m")
-    plt.ylabel("Ave interior elevation (m MHW)")
-    plt.xlabel("Time (yr)")
-
-    plt.subplot(3, 3, 3)
-    plt.plot(BarrierWidth, "m")
-    plt.ylabel("Barrier width (m)")
-    plt.xlabel("Time (yr)")
-
     # when are dunes rebuilt
-    plt.subplot(3, 3, 4)
+    plt.subplot(2, 2, 2)
     if dunes_rebuilt is not None:
-        plt.plot(dunes_rebuilt[0:tmax_sim], "m")
+        plt.plot(dunes_rebuilt[0:tmax_sim], "k")
         plt.ylabel("Dunes Rebuilt")
         plt.xlabel("Time (yr)")
 
     # road relocated
-    plt.subplot(3, 3, 5)
+    plt.subplot(2, 2, 3)
     if road_relocated is not None:
-        plt.plot(road_relocated[0:tmax_sim], "m")
+        plt.plot(road_relocated[0:tmax_sim], "k")
         plt.ylabel("Road Relocated")
         plt.xlabel("Time (yr)")
 
-    # # dune height vs barrier height
-    # plt.subplot(3, 3, 4)
-    # plt.scatter(
-    #     DuneCrestMean,
-    #     BarrierHeight,
-    #     c=np.arange(0, np.size(DuneCrestMean), 1),
-    #     cmap=cm.viridis,
-    # )
-    # plt.xlabel("Ave dune ele (m MHW)")
-    # plt.ylabel("Ave interior ele (m MHW)")
+    plt.tight_layout()
 
-    # # dune height vs barrier width
-    # plt.subplot(3, 3, 5)
-    # plt.scatter(
-    #     DuneCrestMean,
-    #     BarrierWidth,
-    #     c=np.arange(0, np.size(DuneCrestMean), 1),
-    #     cmap=cm.viridis,
-    # )
-    # plt.xlabel("Ave dune ele (m MHW)")
-    # plt.ylabel("Barrier width (m)")
+    plt.figure(figsize=(10, 8))
 
-    plt.subplot(3, 3, 6)
-    plt.plot(sc_rate, "m")
+    # shoreline position
+    plt.subplot(2, 2, 1)
+    plt.plot(shoreline_position, "k")
+    plt.ylabel("Cross-shore position (m)")
+    plt.xlabel("Time (yr)")
+
+    # shoreline change rate
+    plt.subplot(2, 2, 2)
+    plt.plot(sc_rate, "k")
     plt.ylabel("Shoreline change rate (m/yr)")
     plt.xlabel("Time (yr)")
 
-    plt.subplot(3, 3, 7)
-    plt.plot(Qoverwash, "m")
+    plt.tight_layout()
+
+    plt.figure(figsize=(10, 8))
+
+    # barrier height
+    plt.subplot(2, 2, 1)
+    if post_storm_ave_interior_height is not None:
+        mask = np.isfinite(combined_BarrierHeight)
+        plt.plot(full_time[mask], combined_BarrierHeight[mask], "m")
+        # plt.legend(["includes post-storm", "mgmt only"])
+    plt.plot(BarrierHeight, "k")
+    plt.ylabel("barrier height (m MHW)")
+    plt.xlabel("Time (yr)")
+
+    # barrier width
+    plt.subplot(2, 2, 2)
+    plt.plot(BarrierWidth, "k")
+    plt.ylabel("barrier width (m)")
+    plt.xlabel("Time (yr)")
+
+    # overwash flux
+    plt.subplot(2, 2, 3)
+    plt.plot(overwash, "k")
     plt.ylabel("Overwash flux ($m^3/m$)")
     plt.xlabel("Time (yr)")
 
-    # plt.plot(bh_rate)
-    # plt.ylabel("Interior elevation change rate (m MHW/yr)")
-    # plt.xlabel("Time (yr)")
-
-    # plt.plot(bw_rate)
-    # plt.ylabel("Barrier width change rate (m/yr)")
-    # plt.xlabel("Time (yr)")
-
-    plt.subplot(3, 3, 8)
-    plt.plot(np.array(CASCADE_b3d[ib3d].x_s_TS[0:tmax_sim]) * 10, "m")
-    plt.ylabel("Shoreline position (m)")
-    plt.xlabel("Time (yr)")
-
-    plt.subplot(3, 3, 9)
-    time = np.arange(0, tmax_sim - 0.5, 0.5)
-    plt.plot(CASCADE_b3d[ib3d].s_sf_TS[0:tmax_sim], "m")
-    plt.hlines(CASCADE_b3d[ib3d]._s_sf_eq, time[0], time[-1], colors="black")
+    # shoreface slope
+    plt.subplot(2, 2, 4)
+    plt.plot(shoreface_slope, "k")
+    plt.hlines(equilibrium_slope, full_time[0], full_time[-1], colors="green")
     plt.ylabel("shoreface slope")
     plt.xlabel("Time (yr)")
-
-    # dune height vs shoreline position
-    # plt.plot(DuneCrestMean, np.array(CASCADE_b3d[ib3d]._x_s_TS) * 10)
-    # plt.plot(
-    #     DuneCrestMean[0:tmax],
-    #     np.array(CASCADE_b3d[ib3d]._x_s_TS[0:tmax]) * 10,
-    #     "m",
-    # )
-    # plt.scatter(
-    #     DuneCrestMean,
-    #     np.array(CASCADE_b3d[ib3d]._x_s_TS) * 10,
-    #     c=np.arange(0, np.size(DuneCrestMean), 1),
-    #     cmap="Greens",
-    # )
-    # plt.xlabel("Ave Dune Height (m)")
-    # plt.ylabel("Shoreline position (m)")
-
-    # dune height vs shoreline change rate
-    # plt.scatter(DuneCrestMean, sc_rate)
-    # plt.plot(DuneCrestMean[0:tmax], sc_rate[0:tmax], "m")
-    # plt.scatter(
-    #     DuneCrestMean,
-    #     sc_rate,
-    #     c=np.arange(0, np.size(DuneCrestMean), 1),
-    #     cmap=cm.viridis,  # "Greens"
-    # )
-    # plt.xlabel("Ave Dune Height (m)")
-    # plt.ylabel("Shoreline change rate (m/yr)")
-
-    # dune height vs overwash flux
-    # plt.scatter(DuneCrestMean, Qoverwash)
-    # plt.plot(DuneCrestMean[0:tmax], Qoverwash[0:tmax], "m")
-    # plt.scatter(
-    #     DuneCrestMean,
-    #     Qoverwash,
-    #     c=np.arange(0, np.size(DuneCrestMean), 1),
-    #     cmap=cm.viridis,
-    # )
-    # plt.xlabel("Ave Dune Height (m)")
-    # plt.ylabel("Qoverwash ($m^3/m$)")
-
-    # # dune height vs barrier width change rate
-    # plt.subplot(2, 5, 6)
-    # # plt.subplot(5, 2, 2)
-    # plt.scatter(
-    #     DuneCrestMean,
-    #     np.array(bw_rate),
-    #     c=np.arange(0, np.size(DuneCrestMean), 1),
-    #     cmap=cm.viridis,
-    # )
-    # plt.xlabel("Ave Dune Height (m)")
-    # plt.ylabel("Change in barrier width (m/yr)")
-
-    # # now try my hand at a 3d plot
-    # from mpl_toolkits import mplot3d
-    #
-    # plt.figure()
-    # ax = plt.axes(projection="3d")
-    #
-    # # three-dimensional line
-    # # ax.plot3D(DuneCrestMean, BarrierWidth, sc_rate, "gray")
-    # ax.plot3D(
-    #     DuneCrestMean[0:tmax], BarrierWidth[0:tmax], sc_rate[0:tmax], "gray"
-    # )
-    #
-    # # three-dimensional scattered points
-    # ax.scatter3D(
-    #     DuneCrestMean[0:tmax],
-    #     BarrierWidth[0:tmax],
-    #     sc_rate[0:tmax],
-    #     c=sc_rate[0:tmax],
-    #     cmap="Greens",
-    # )
-    # ax.set_title(str(0) + "-" + str(tmax) + " yrs")
-    # ax.set_xlabel("Dune height (m)")
-    # ax.set_ylabel("Barrier width (m)")
-    # ax.set_zlabel("Shoreline change rate (m/yr)")
-    #
-    # # try Qoverwash as the x axis instead of dune height
-    # fig = plt.figure()
-    # ax = plt.axes(projection="3d")
-    #
-    # # three-dimensional line
-    # # ax.plot3D(DuneCrestMean, BarrierWidth, sc_rate, "gray")
-    # ax.plot3D(Qoverwash[0:tmax], BarrierWidth[0:tmax], sc_rate[0:tmax], "gray")
-    #
-    # ax.scatter3D(
-    #     Qoverwash[0:tmax],
-    #     BarrierWidth[0:tmax],
-    #     sc_rate[0:tmax],
-    #     c=sc_rate[0:tmax],
-    #     cmap="Greens",
-    # )
-    # ax.set_title(str(0) + "-" + str(tmax) + " yrs")
-    # ax.set_xlabel("Overwash flux ($m^3/m$)")
-    # ax.set_ylabel("Barrier width (m)")
-    # ax.set_zlabel("Shoreline change rate (m/yr)")
-    #
-    # # try Qoverwash, dune height, and barrier width change
-    # fig = plt.figure()
-    # ax = plt.axes(projection="3d")
-    #
-    # ax.plot3D(
-    #     DuneCrestMean[0:tmax], Qoverwash[0:tmax], bw_rate[0:tmax], "gray"
-    # )
-    #
-    # # three-dimensional scattered points
-    # ax.scatter3D(
-    #     DuneCrestMean[0:tmax],
-    #     Qoverwash[0:tmax],
-    #     bw_rate[0:tmax],
-    #     c=bw_rate[0:tmax],
-    #     cmap="Greens",
-    # )
-    # ax.set_title(str(0) + "-" + str(tmax) + " yrs")
-    # ax.set_xlabel("Dune height (m)")
-    # ax.set_ylabel("Overwash flux ($m^3/m$)")
-    # ax.set_zlabel("Barrier width change rate (m/yr)")
 
     plt.tight_layout()
 
@@ -2333,19 +2169,21 @@ def plot_nonlinear_stats_RoadwayManager(
         DuneCrestMin = combined_DuneCrestMin
         DuneCrestMax = combined_DuneCrestMax
 
-    if post_storm_interior is not None:
+    if post_storm_ave_interior_height is not None:
         BarrierHeight = combined_BarrierHeight
-        bh_rate = combined_bh_rate
 
     return (
         BarrierWidth,
         DuneCrestMean,
         BarrierHeight,
-        bw_rate,
         bh_rate,
+        bw_rate,
         sc_rate,
         DuneCrestMin,
         DuneCrestMax,
+        shoreline_position,
+        shoreface_slope,
+        overwash,
     )
 
 
@@ -2544,12 +2382,13 @@ def plot_nonlinear_stats_BeachDuneManager(
             tmax_sim, post_storm_beach_width, beach_width
         )
 
-    # individual time series
+    # individual time series ------------------------------------
     plt.figure(figsize=(10, 8))
     # plt.subplot(4, 3, 1)
 
     full_time = np.arange(0, tmax_sim - 0.5, 0.5)
 
+    # dunes
     plt.subplot(2, 2, 1)
     if post_storm_dunes is not None:
         full_time = np.arange(0, tmax_sim - 0.5, 0.5)
@@ -2576,7 +2415,6 @@ def plot_nonlinear_stats_BeachDuneManager(
     plt.xlabel("Time (yr)")
 
     # when are dunes rebuilt
-    # plt.subplot(4, 3, 4)
     plt.subplot(2, 2, 2)
     if dunes_rebuilt is not None:
         plt.plot(dunes_rebuilt, "k")
@@ -2584,7 +2422,6 @@ def plot_nonlinear_stats_BeachDuneManager(
         plt.xlabel("Time (yr)")
 
     # nourishment volumes
-    # plt.subplot(4, 3, 5)
     plt.subplot(2, 2, 3)
     barrier_length = CASCADE_b3d[ib3d].BarrierLength * 10
     plt.plot(nourishments[ib3d].nourishment_volume_TS, "k")
@@ -2597,7 +2434,6 @@ def plot_nonlinear_stats_BeachDuneManager(
 
     # shoreface slope
     plt.subplot(2, 2, 4)
-    # plt.subplot(4, 3, 10)
     if post_storm_s_sf is not None:
         mask = np.isfinite(combined_shoreface_slope)
         plt.plot(full_time[mask], combined_shoreface_slope[mask], "m")
@@ -2613,16 +2449,8 @@ def plot_nonlinear_stats_BeachDuneManager(
 
     plt.figure(figsize=(10, 8))
 
-    # shoreline change rate
-    plt.subplot(2, 2, 3)
-    # plt.subplot(4, 3, 6)
-    plt.plot(sc_rate, "k")
-    plt.ylabel("Shoreline change rate (m/yr)")
-    plt.xlabel("Time (yr)")
-
     # beach width
     plt.subplot(2, 2, 1)
-    # plt.subplot(4, 3, 7)
     if post_storm_beach_width is not None:
         mask = np.isfinite(combined_beach_width)
         plt.plot(full_time[mask], combined_beach_width[mask], "m")
@@ -2636,7 +2464,6 @@ def plot_nonlinear_stats_BeachDuneManager(
 
     # shoreline position
     plt.subplot(2, 2, 2)
-    # plt.subplot(4, 3, 9)
     if post_storm_x_s is not None:
         mask = np.isfinite(combined_shoreline_position)
         plt.plot(full_time[mask], combined_shoreline_position[mask], "m")
@@ -2654,12 +2481,17 @@ def plot_nonlinear_stats_BeachDuneManager(
     plt.xlabel("Time (yr)")
     # plt.legend(["shoreline", "dune toe"])
 
+    # shoreline change rate
+    plt.subplot(2, 2, 3)
+    plt.plot(sc_rate, "k")
+    plt.ylabel("Shoreline change rate (m/yr)")
+    plt.xlabel("Time (yr)")
+
     plt.tight_layout()
 
     plt.figure(figsize=(10, 8))
 
     # barrier height
-    # plt.subplot(4, 3, 2)
     plt.subplot(2, 2, 1)
     if post_storm_BarrierHeight is not None:
         mask = np.isfinite(combined_BarrierHeight)
@@ -2671,7 +2503,6 @@ def plot_nonlinear_stats_BeachDuneManager(
 
     # barrier width
     plt.subplot(2, 2, 2)
-    # plt.subplot(4, 3, 3)
     if post_storm_BarrierWidth is not None:
         mask = np.isfinite(combined_BarrierWidth)
         plt.plot(full_time[mask], combined_BarrierWidth[mask], "m")
@@ -2681,7 +2512,6 @@ def plot_nonlinear_stats_BeachDuneManager(
     plt.xlabel("Time (yr)")
 
     # overwash flux
-    # plt.subplot(4, 3, 8)
     plt.subplot(2, 2, 3)
     if post_storm_Qow is not None:
         plt.plot(full_time, combined_overwash, "m")
@@ -2745,9 +2575,9 @@ def plot_nonlinear_stats_mgmt_array4(
     DuneCrestMean,
     shoreline_position,
     overwash,
-    dune_toe,
     TMAX,
     tmax_management,
+    dune_toe=None,
     roadways_on=True,
     nourishment_on=False,
     rebuild_threshold=None,
@@ -2828,7 +2658,8 @@ def plot_nonlinear_stats_mgmt_array4(
             )
         axs[i].set(xlabel="time (yr)")
         if roadways_on:
-            axs[i].set_xlim([-15, 765])
+            # axs[i].set_xlim([-15, 765])
+            axs[i].set_xlim([-15, 1015])
             axs[i].set_ylim([0, 5.2])
         if nourishment_on:
             # axs[i].set_xlim([-15, 515])
@@ -2943,7 +2774,8 @@ def plot_nonlinear_stats_mgmt_array4(
 
         axs2[i].set(xlabel="time (yr)")
         if roadways_on:
-            axs2[i].set_xlim([-15, 765])
+            # axs2[i].set_xlim([-15, 765])
+            axs[i].set_xlim([-15, 1015])
         if nourishment_on:
             # axs2[i].set_xlim([-15, 515])
             axs2[i].set_xlim([-15, 765])
@@ -2968,7 +2800,7 @@ def plot_nonlinear_stats_mgmt_array4(
         axs2[2].legend(scenarios)
     plt.tight_layout()
 
-    # plot a zoom in of nourishments
+    # plot a zoom in of nourishments -- this is the only place we plot the dune toe
     if nourishment_on:
         fig3, axs3 = plt.subplots(1, 2, figsize=(10, 3), sharex=True)
 

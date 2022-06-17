@@ -534,6 +534,7 @@ class RoadwayManager:
         # also keep track of post-storm dune and interior impacts before human modifications
         self._post_storm_dunes = [None] * self._nt
         self._post_storm_interior = [None] * self._nt
+        self._post_storm_ave_interior_height = [None] * self._nt
 
     def update(
         self,
@@ -551,6 +552,9 @@ class RoadwayManager:
         )
         self._post_storm_dunes[self._time_index - 1] = copy.deepcopy(
             barrier3d.DuneDomain[self._time_index - 1, :, :]
+        )
+        self._post_storm_ave_interior_height[self._time_index - 1] = copy.deepcopy(
+            barrier3d.h_b_TS[-1]
         )
 
         ###############################################################################
@@ -690,6 +694,14 @@ class RoadwayManager:
         )  # convert from dam^3 to m^3
 
         # update Barrier3D class variables
+        new_ave_interior_height = np.average(
+            new_xyz_interior_domain[
+                new_xyz_interior_domain >= barrier3d.SL
+            ]  # all in dam MHW
+        )
+        barrier3d.h_b_TS[
+            -1
+        ] = new_ave_interior_height  # slightly altered due to roadway
         barrier3d.InteriorDomain = new_xyz_interior_domain
         barrier3d.DomainTS[self._time_index - 1] = new_xyz_interior_domain
 
@@ -770,6 +782,10 @@ class RoadwayManager:
     @property
     def drown_break(self):
         return self._drown_break
+
+    @property
+    def time_index(self):
+        return self._time_index
 
     @drown_break.setter
     def drown_break(self, value):

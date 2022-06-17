@@ -6,7 +6,7 @@ import os
 from .roadway_manager import RoadwayManager, set_growth_parameters
 from .beach_dune_manager import BeachDuneManager
 from .brie_coupler import BrieCoupler, initialize_equal, batchB3D
-from .chome_coupler import ChomeCoupler
+from .chom_coupler import ChomCoupler
 
 
 class CascadeError(Exception):
@@ -121,7 +121,7 @@ class Cascade:
         alongshore_transport_module=True,
         beach_nourishment_module=True,
         community_dynamics_module=False,
-        road_ele=1.7,
+        road_ele=1.7,  # ---------- the rest of these variables are for the human dynamics modules --------------- #
         road_width=30,
         road_setback=30,
         dune_design_elevation=3.7,
@@ -140,8 +140,14 @@ class Cascade:
         nourishment_cost_subsidy=10e6,
         house_footprint_x=15,
         house_footprint_y=20,
+        beach_full_cross_shore=70,
     ):
-        """initialize models (Barrier3D, BRIE, CHOME) and human dynamics modules
+        """
+
+        CASCADE: The CoAStal Community-lAnDscape Evolution model
+
+        Couples Barrier3D (Reeves et al., 2019), the Barrier Inlet Model (BRIE; Nienhuis and Lorenzo Trueba, 2019), &
+        C-HOM (Williams et al., in prep)
 
         Parameters
         ----------
@@ -180,7 +186,7 @@ class Cascade:
         alongshore_transport_module: boolean, optional
             If True, couple Barrier3D with BRIE to use diffusive model for AST
         community_dynamics_module: boolean, optional
-            If True, couple with CHOME, a community decision making model; requires nourishment module
+            If True, couple with CHOM, a community decision making model; requires nourishment module
         beach_nourishment_module: boolean or list of booleans, optional
             If True, use nourishment module (nourish shoreface, rebuild dunes)
         road_ele: float or list of floats, optional
@@ -202,7 +208,7 @@ class Cascade:
         overwash_to_dune: float or list of floats,
             Percent overwash removed from barrier interior to dunes [%, overwash_filter+overwash_to_dune <=100]
         number_of_communities: int, optional
-            Number of communities (CHOME model instances) described by the alongshore section count (Barrier3D grids)
+            Number of communities (CHOM model instances) described by the alongshore section count (Barrier3D grids)
         sand_cost: int, optional
             Unit cost of sand $/m^3
         taxratio_oceanfront: float, optional
@@ -217,6 +223,8 @@ class Cascade:
             Fixed cost of building dunes once
         nourishment_cost_subsidy: int, optional
             Subsidy on cost of entire nourishment plan
+        beach_full_cross_shore: int, optional
+            The cross-shore extent (meters) of fully nourished beach (i.e., the community desired beach width) [m]
 
 
         Examples
@@ -308,12 +316,12 @@ class Cascade:
         )
 
         if self._community_dynamics_module:
-            if (self._beach_nourishment_module == False).any():
+            if not any(self._beach_nourishment_module):
                 CascadeError(
-                    "Beach nourishment module must be set to `TRUE` to couple with CHOME"
+                    "Beach nourishment module must be set to `TRUE` to couple with CHOM"
                 )
             else:
-                self._chome_coupler = ChomeCoupler(
+                self._chom_coupler = ChomeCoupler(
                     barrier3d=self._barrier3d,
                     total_time=self._nt,
                     alongshore_length_b3d=self._brie_coupler._brie._dy,  # this is the barrier3d default, 500 m
@@ -329,7 +337,8 @@ class Cascade:
                     nourishment_cost_subsidy=nourishment_cost_subsidy,
                     house_footprint_x=house_footprint_x,
                     house_footprint_y=house_footprint_y,
-                )  # contains the CHOME model instances, one per community
+                    beach_full_cross_shore=beach_full_cross_shore,
+                )  # contains the CHOM model instances, one per community
 
         # initialize RoadwayManager and BeachDuneManager modules
         # (always, just in case we want to add a road or start nourishing during the simulation)
@@ -406,8 +415,8 @@ class Cascade:
         return self._roadways
 
     @property
-    def chome(self):
-        return self._chome_coupler.chome
+    def chom(self):
+        return self._chom_coupler.chom
 
     @property
     def brie(self):
@@ -560,8 +569,8 @@ class Cascade:
                     + (self._initial_beach_width[iB3D] / 10)  # dam
                 )
 
-        # ~~~~~~~~~~~~~~ CHOME coupler ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        # provide agents in the Coastal Home Ownership Model (CHOME) with variables describing the physical environment
+        # ~~~~~~~~~~~~~~ CHOM coupler ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # provide agents in the Coastal Home Ownership Model (CHOM) with variables describing the physical environment
         # -- including barrier elevation, beach width, dune height, shoreline erosion rate -- who then decide if it is
         # a nourishment year, the corresponding nourishment volume, and whether or not the dune should be rebuilt
         if self._community_dynamics_module:
@@ -569,18 +578,18 @@ class Cascade:
             for iB3D in range(self._ny):
 
                 # if barrier was too narrow to sustain a community in the last time step (from the BeachDuneManager),
-                # stop the coupling with CHOME (i.e., end human mangement); dune growth rates are reset below in the
+                # stop the coupling with CHOM (i.e., end human mangement); dune growth rates are reset below in the
                 # BeachDuneManager loop
                 if self._nourishments[iB3D].narrow_break:
                     self._community_break[iB3D] = 1
 
-            # update chome using all barrier3d grids, even if some have stopped being managed
-            self._chome_coupler.dune_design_elevation = self._dune_design_elevation
+            # update chom using all barrier3d grids, even if some have stopped being managed
+            self._chom_coupler.dune_design_elevation = self._dune_design_elevation
             [
                 self._nourish_now,
                 self._rebuild_dune_now,
                 self._nourishment_volume,
-            ] = self._chome_coupler.update(
+            ] = self._chom_coupler.update(
                 barrier3d=self._barrier3d,
                 nourishments=self._nourishments,
                 community_break=self._community_break,
@@ -648,18 +657,21 @@ class Cascade:
         ###############################################################################
         # update brie for any human modifications to the barrier
         ###############################################################################
-        [x_t, x_s, x_b, h_b, s_sf] = [np.zeros(self._ny) for _ in range(5)]
+        if self._alongshore_transport_module:
+            [x_t, x_s, x_b, h_b, s_sf] = [np.zeros(self._ny) for _ in range(5)]
 
-        for iB3D in range(self._ny):
-            # make lists of the barrier geometry variables that have been changed (and needed to calculate shoreline
-            # diffusivity in brie)
-            x_t[iB3D] = self._barrier3d[iB3D].x_t_TS[-1]
-            x_s[iB3D] = self._barrier3d[iB3D].x_s_TS[-1]
-            x_b[iB3D] = self._barrier3d[iB3D].x_b_TS[-1]
-            h_b[iB3D] = self._barrier3d[iB3D].h_b_TS[-1]
-            s_sf[iB3D] = self._barrier3d[iB3D].s_sf_TS[-1]
+            for iB3D in range(self._ny):
+                # make lists of the barrier geometry variables that have been changed (and needed to calculate shoreline
+                # diffusivity in brie)
+                x_t[iB3D] = self._barrier3d[iB3D].x_t_TS[-1]
+                x_s[iB3D] = self._barrier3d[iB3D].x_s_TS[-1]
+                x_b[iB3D] = self._barrier3d[iB3D].x_b_TS[-1]
+                h_b[iB3D] = self._barrier3d[iB3D].h_b_TS[-1]
+                s_sf[iB3D] = self._barrier3d[iB3D].s_sf_TS[-1]
 
-        self._brie_coupler.update_brie_for_human_modifications(x_t, x_s, x_b, h_b, s_sf)
+            self._brie_coupler.update_brie_for_human_modifications(
+                x_t, x_s, x_b, h_b, s_sf
+            )
 
     ###############################################################################
     # save data
