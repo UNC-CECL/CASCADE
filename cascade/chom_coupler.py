@@ -1,8 +1,8 @@
-"""Chome Coupler
+"""C-HOM Coupler
 
-This module couples Barrier3d with CHOM to simulate community dynamics. Longer explanation with references go here.
+This module couples Barrier3d with C-HOM to simulate community dynamics. Longer explanation with references go here.
 User specifies the number of communities to be described by the Barrier3D model instances, and the initialization of the
-coupler determines the (sequential) Barrier3d indices that are associated with each CHOM model instance. For example,
+coupler determines the (sequential) Barrier3d indices that are associated with each C-HOM model instance. For example,
 if 6 Barrier3D models are used to describe the alongshore domain (each 500 m long), and 2 communities are specified,
 then indices [0,1,2] and [3,4,5] are associated with each community. Barrier3D variables for coupling with CHOM are
 then averaged for each set of indices before passing to CHOM.
@@ -19,7 +19,7 @@ Notes
 """
 import numpy as np
 
-from chom import Chome
+from chom import Chom
 from .roadway_manager import rebuild_dunes
 
 dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
@@ -166,13 +166,13 @@ def community_update_statistics(
     )
 
 
-class ChomeCoupler:
-    """Couple Barrier3d with CHOM to simulate community dynamics
+class ChomCoupler:
+    """Couple Barrier3d with C-HOM to simulate community dynamics
 
     Examples
     --------
-    # >>> from cascade.chom_coupler import ChomeCoupler
-    # >>> chom_coupler = ChomeCoupler(barrier3d=, dune_design_elevation=)
+    # >>> from cascade.chom_coupler import ChomCoupler
+    # >>> chom_coupler = ChomCoupler(barrier3d=, dune_design_elevation=)
     # >>> chom_coupler.update()
     """
 
@@ -195,7 +195,7 @@ class ChomeCoupler:
         house_footprint_y=20,
         beach_full_cross_shore=70,
     ):
-        """The ChomeCoupler module.
+        """The ChomCoupler module.
 
         Parameters
         ----------
@@ -264,7 +264,7 @@ class ChomeCoupler:
 
             # initialize CHOM model instance -- ZACHK, are these still correct or are there more?
             self._chom.append(
-                Chome(
+                Chom(
                     name=name,
                     total_time=total_time,
                     average_interior_width=avg_interior_width,

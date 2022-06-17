@@ -6,7 +6,7 @@ import os
 from .roadway_manager import RoadwayManager, set_growth_parameters
 from .beach_dune_manager import BeachDuneManager
 from .brie_coupler import BrieCoupler, initialize_equal, batchB3D
-from .chome_coupler import ChomeCoupler
+from .chom_coupler import ChomCoupler
 
 
 class CascadeError(Exception):
@@ -142,7 +142,12 @@ class Cascade:
         house_footprint_y=20,
         beach_full_cross_shore=70,
     ):
-        """initialize models (Barrier3D, BRIE, CHOME) and human dynamics modules
+        """
+
+        CASCADE: The CoAStal Community-lAnDscape Evolution model
+
+        Couples Barrier3D (Reeves et al., 2019), the Barrier Inlet Model (BRIE; Nienhuis and Lorenzo Trueba, 2019), &
+        C-HOM (Williams et al., in prep)
 
         Parameters
         ----------
@@ -181,7 +186,7 @@ class Cascade:
         alongshore_transport_module: boolean, optional
             If True, couple Barrier3D with BRIE to use diffusive model for AST
         community_dynamics_module: boolean, optional
-            If True, couple with CHOME, a community decision making model; requires nourishment module
+            If True, couple with CHOM, a community decision making model; requires nourishment module
         beach_nourishment_module: boolean or list of booleans, optional
             If True, use nourishment module (nourish shoreface, rebuild dunes)
         road_ele: float or list of floats, optional
@@ -203,7 +208,7 @@ class Cascade:
         overwash_to_dune: float or list of floats,
             Percent overwash removed from barrier interior to dunes [%, overwash_filter+overwash_to_dune <=100]
         number_of_communities: int, optional
-            Number of communities (CHOME model instances) described by the alongshore section count (Barrier3D grids)
+            Number of communities (CHOM model instances) described by the alongshore section count (Barrier3D grids)
         sand_cost: int, optional
             Unit cost of sand $/m^3
         taxratio_oceanfront: float, optional
@@ -313,10 +318,10 @@ class Cascade:
         if self._community_dynamics_module:
             if not any(self._beach_nourishment_module):
                 CascadeError(
-                    "Beach nourishment module must be set to `TRUE` to couple with CHOME"
+                    "Beach nourishment module must be set to `TRUE` to couple with CHOM"
                 )
             else:
-                self._chome_coupler = ChomeCoupler(
+                self._chom_coupler = ChomeCoupler(
                     barrier3d=self._barrier3d,
                     total_time=self._nt,
                     alongshore_length_b3d=self._brie_coupler._brie._dy,  # this is the barrier3d default, 500 m
@@ -333,7 +338,7 @@ class Cascade:
                     house_footprint_x=house_footprint_x,
                     house_footprint_y=house_footprint_y,
                     beach_full_cross_shore=beach_full_cross_shore,
-                )  # contains the CHOME model instances, one per community
+                )  # contains the CHOM model instances, one per community
 
         # initialize RoadwayManager and BeachDuneManager modules
         # (always, just in case we want to add a road or start nourishing during the simulation)
@@ -410,8 +415,8 @@ class Cascade:
         return self._roadways
 
     @property
-    def chome(self):
-        return self._chome_coupler.chome
+    def chom(self):
+        return self._chom_coupler.chom
 
     @property
     def brie(self):
@@ -564,8 +569,8 @@ class Cascade:
                     + (self._initial_beach_width[iB3D] / 10)  # dam
                 )
 
-        # ~~~~~~~~~~~~~~ CHOME coupler ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        # provide agents in the Coastal Home Ownership Model (CHOME) with variables describing the physical environment
+        # ~~~~~~~~~~~~~~ CHOM coupler ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # provide agents in the Coastal Home Ownership Model (CHOM) with variables describing the physical environment
         # -- including barrier elevation, beach width, dune height, shoreline erosion rate -- who then decide if it is
         # a nourishment year, the corresponding nourishment volume, and whether or not the dune should be rebuilt
         if self._community_dynamics_module:
@@ -573,18 +578,18 @@ class Cascade:
             for iB3D in range(self._ny):
 
                 # if barrier was too narrow to sustain a community in the last time step (from the BeachDuneManager),
-                # stop the coupling with CHOME (i.e., end human mangement); dune growth rates are reset below in the
+                # stop the coupling with CHOM (i.e., end human mangement); dune growth rates are reset below in the
                 # BeachDuneManager loop
                 if self._nourishments[iB3D].narrow_break:
                     self._community_break[iB3D] = 1
 
-            # update chome using all barrier3d grids, even if some have stopped being managed
-            self._chome_coupler.dune_design_elevation = self._dune_design_elevation
+            # update chom using all barrier3d grids, even if some have stopped being managed
+            self._chom_coupler.dune_design_elevation = self._dune_design_elevation
             [
                 self._nourish_now,
                 self._rebuild_dune_now,
                 self._nourishment_volume,
-            ] = self._chome_coupler.update(
+            ] = self._chom_coupler.update(
                 barrier3d=self._barrier3d,
                 nourishments=self._nourishments,
                 community_break=self._community_break,
