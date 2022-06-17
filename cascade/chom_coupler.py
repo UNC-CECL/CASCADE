@@ -1,11 +1,11 @@
 """Chome Coupler
 
-This module couples Barrier3d with CHOME to simulate community dynamics. Longer explanation with references go here.
+This module couples Barrier3d with CHOM to simulate community dynamics. Longer explanation with references go here.
 User specifies the number of communities to be described by the Barrier3D model instances, and the initialization of the
-coupler determines the (sequential) Barrier3d indices that are associated with each CHOME model instance. For example,
+coupler determines the (sequential) Barrier3d indices that are associated with each CHOM model instance. For example,
 if 6 Barrier3D models are used to describe the alongshore domain (each 500 m long), and 2 communities are specified,
-then indices [0,1,2] and [3,4,5] are associated with each community. Barrier3D variables for coupling with CHOME are
-then averaged for each set of indices before passing to CHOME.
+then indices [0,1,2] and [3,4,5] are associated with each community. Barrier3D variables for coupling with CHOM are
+then averaged for each set of indices before passing to CHOM.
 
 References
 ----------
@@ -19,7 +19,7 @@ Notes
 """
 import numpy as np
 
-from chome import Chome
+from chom import Chome
 from .roadway_manager import rebuild_dunes
 
 dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
@@ -37,7 +37,7 @@ def create_communities(ny, number_of_communities):
     if len(community_index) < number_of_communities:
         number_of_communities = len(community_index)
         print(
-            "Number of communities simulated in CHOME updated based on number of Barrier3D domains"
+            "Number of communities simulated in CHOM updated based on number of Barrier3D domains"
         )
 
     return number_of_communities, community_index
@@ -56,7 +56,7 @@ def community_initial_statistics(
     avg_dune_width = []
 
     for iB3D in community_indices:
-        # Barrier3D in decameters --> convert to meters for CHOME
+        # Barrier3D in decameters --> convert to meters for CHOM
         bh_array = np.array(barrier3d[iB3D].DomainTS[0]) * 10
         avg_barrier_height.append(bh_array[bh_array > 0].mean())
 
@@ -104,7 +104,7 @@ def community_initial_statistics(
 def community_update_statistics(
     community_indices, barrier3d, time_index_b3d, nourishments, dune_design_elevation
 ):
-    # once averaged, these are saved as a time series in CHOME
+    # once averaged, these are saved as a time series in CHOM
     (
         avg_barrier_height_msl,
         avg_change_shoreline_position,
@@ -114,8 +114,8 @@ def community_update_statistics(
     ) = [[] for _ in range(5)]
 
     for iB3D in community_indices:
-        # Barrier3D in dam MHW --> convert to m MSL for CHOME; b/c time_index in B3D is updated at the end
-        # of the time loop, time_index-1 is the current time step for passing variable to CHOME
+        # Barrier3D in dam MHW --> convert to m MSL for CHOM; b/c time_index in B3D is updated at the end
+        # of the time loop, time_index-1 is the current time step for passing variable to CHOM
         bh_array = np.array(barrier3d[iB3D].DomainTS[time_index_b3d - 1]) * 10  # m MHW
         avg_barrier_height = bh_array[bh_array > 0].mean()
         avg_barrier_height_msl.append(
@@ -127,7 +127,7 @@ def community_update_statistics(
         ) * 10  # meters
         avg_change_shoreline_position.append(change_in_shoreline_position)
 
-        # nourishments.beach_width not updated until we call nourishments (after chome_coupler), so just calculate here
+        # nourishments.beach_width not updated until we call nourishments (after chom_coupler), so just calculate here
         beach_width = (
             nourishments[iB3D].beach_width[time_index_b3d - 2]
             - change_in_shoreline_position
@@ -167,13 +167,13 @@ def community_update_statistics(
 
 
 class ChomeCoupler:
-    """Couple Barrier3d with CHOME to simulate community dynamics
+    """Couple Barrier3d with CHOM to simulate community dynamics
 
     Examples
     --------
-    # >>> from cascade.chome_coupler import ChomeCoupler
-    # >>> chome_coupler = ChomeCoupler(barrier3d=, dune_design_elevation=)
-    # >>> chome_coupler.update()
+    # >>> from cascade.chom_coupler import ChomeCoupler
+    # >>> chom_coupler = ChomeCoupler(barrier3d=, dune_design_elevation=)
+    # >>> chom_coupler.update()
     """
 
     def __init__(
@@ -210,7 +210,7 @@ class ChomeCoupler:
         alongshore_length_b3d: int, optional
             Static length of island segment in Barrier3D (comprised of 10x10 cells)
         number_of_communities: int, optional
-            Number of communities (CHOME model instances) described by the alongshore section count (Barrier3D grids)
+            Number of communities (CHOM model instances) described by the alongshore section count (Barrier3D grids)
         sand_cost: int, optional
             Unit cost of sand $/m^3
         taxratio_oceanfront: float, optional
@@ -234,7 +234,7 @@ class ChomeCoupler:
 
         """
         self._dune_design_elevation = dune_design_elevation
-        self._chome = []
+        self._chom = []
         ny = len(barrier3d)
 
         # create groups of barrier3d indices for each community
@@ -242,7 +242,7 @@ class ChomeCoupler:
             ny, number_of_communities
         )
 
-        # find the average statistics for each community and then initialize CHOME models
+        # find the average statistics for each community and then initialize CHOM models
         for iCommunity in range(self._number_of_communities):
 
             # calculate the average environmental statistics for each community
@@ -262,8 +262,8 @@ class ChomeCoupler:
                 alongshore_length_b3d=alongshore_length_b3d,
             )
 
-            # initialize CHOME model instance -- ZACHK, are these still correct or are there more?
-            self._chome.append(
+            # initialize CHOM model instance -- ZACHK, are these still correct or are there more?
+            self._chom.append(
                 Chome(
                     name=name,
                     total_time=total_time,
@@ -291,14 +291,14 @@ class ChomeCoupler:
 
     def update(self, barrier3d, nourishments, community_break):
 
-        # time is updated at the end of the CHOME and Barrier3d model loop
+        # time is updated at the end of the CHOM and Barrier3d model loop
         time_index_b3d = barrier3d[0].time_index
-        time_index_chome = self._chome[0].time_index
+        time_index_chom = self._chom[0].time_index
         nourish_now, rebuild_dune_now, nourishment_volume = [
             np.zeros(len(barrier3d)) for _ in range(3)
         ]
 
-        # calculate physical variables needed to update CHOME for each Barrier3D model, then group by community
+        # calculate physical variables needed to update CHOM for each Barrier3D model, then group by community
         for iCommunity in range(self._number_of_communities):
 
             community_indices = self._community_index[iCommunity]
@@ -317,43 +317,43 @@ class ChomeCoupler:
                 dune_design_elevation=self.dune_design_elevation,
             )
 
-            # update CHOME model variables before advancing one time step (but only if the community hasn't
+            # update CHOM model variables before advancing one time step (but only if the community hasn't
             # been abandoned)
             if any(community_break[community_indices[0] : community_indices[-1] + 1]):
                 pass
             else:
-                self._chome[
+                self._chom[
                     iCommunity
                 ].height_above_msl = avg_barrier_height_msl  # m MSL
-                self._chome[iCommunity].bw_erosion_rate[
-                    time_index_chome
+                self._chom[iCommunity].bw_erosion_rate[
+                    time_index_chom
                 ] = avg_change_shoreline_position
-                self._chome[iCommunity].beach_width[time_index_chome] = avg_beach_width
-                self._chome[iCommunity].dune_height[time_index_chome] = avg_dune_height
-                self._chome[iCommunity].dune_sand_volume[
-                    time_index_chome
+                self._chom[iCommunity].beach_width[time_index_chom] = avg_beach_width
+                self._chom[iCommunity].dune_height[time_index_chom] = avg_dune_height
+                self._chom[iCommunity].dune_sand_volume[
+                    time_index_chom
                 ] = total_dune_sand_volume_rebuild
-                # NOTE: dune design ele cannot yet be updated at each time step in CHOME -- potential future update
+                # NOTE: dune design ele cannot yet be updated at each time step in CHOM -- potential future update
 
-                self._chome[iCommunity].update()
+                self._chom[iCommunity].update()
 
                 # specify for each community, and iB3D cell, if it is a nourishment and/or dune rebuilding year
-                nourish_now[community_indices] = self._chome[iCommunity].nourish_now[
-                    time_index_chome
+                nourish_now[community_indices] = self._chom[iCommunity].nourish_now[
+                    time_index_chom
                 ]
-                rebuild_dune_now[community_indices] = self._chome[
+                rebuild_dune_now[community_indices] = self._chom[
                     iCommunity
-                ].rebuild_dune_now[time_index_chome]
+                ].rebuild_dune_now[time_index_chom]
                 nourishment_volume[community_indices] = (
-                    self._chome[iCommunity].nourishment_volume[time_index_chome]
-                    / self._chome[iCommunity].lLength
-                )  # this is in m^3 in CHOME, divide by the length of the community to get m^3/m
+                    self._chom[iCommunity].nourishment_volume[time_index_chom]
+                    / self._chom[iCommunity].lLength
+                )  # this is in m^3 in CHOM, divide by the length of the community to get m^3/m
 
         return (nourish_now, rebuild_dune_now, nourishment_volume)
 
     @property
-    def chome(self):
-        return self._chome
+    def chom(self):
+        return self._chom
 
     @property
     def dune_design_elevation(self):
