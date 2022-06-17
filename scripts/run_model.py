@@ -6,7 +6,7 @@
 Copyright (C) 2020 Katherine Anarde
 ----------------------------------------------------"""
 
-# remember if I move to a different computer to $ pip install -e . in the brie, B3D, and CHOME directories
+# remember if I move to a different computer to $ pip install -e . in the brie, B3D, and CHOM directories
 
 import numpy as np
 import os
