@@ -4,7 +4,7 @@ from scipy.io import loadmat
 import matplotlib.pyplot as plt
 
 
-def get_statistics_4_chome(iB3D, tmax_mgmt, name_prefix):
+def get_statistics_4_chom(iB3D, tmax_mgmt, name_prefix):
 
     os.chdir(
         "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
@@ -15,7 +15,7 @@ def get_statistics_4_chome(iB3D, tmax_mgmt, name_prefix):
     cascade = cascade[0]
     barrier3d = cascade.barrier3d
 
-    # Barrier3D in decameters --> convert to meters for CHOME
+    # Barrier3D in decameters --> convert to meters for CHOM
     barrier_height = []
     for t in range(0, tmax_mgmt):
         bh_array = np.array(barrier3d[iB3D].DomainTS[t]) * 10  # m MHW
@@ -57,7 +57,7 @@ name = "scenario_Rodanthe_acceratedSLR"
 name = "scenario_subsidy_50p"
 
 
-def plot_chome_output(name_prefix):
+def plot_chom_output(name_prefix):
 
     os.chdir(
         "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
@@ -115,7 +115,7 @@ name_prefix = "9-CASCADE_Rave_pt75_Nourish_2mDune_lowEle_comm_BE1m_RT1m_6AST_3ro
 iB3D = 1  # middle community
 tmax_mgmt = 80  # stopped community management at 80 years
 
-[barrier_width, dune_crest_mean, sc_rate, barrier_height] = get_statistics_4_chome(
+[barrier_width, dune_crest_mean, sc_rate, barrier_height] = get_statistics_4_chom(
     iB3D, tmax_mgmt, name_prefix
 )
 
@@ -135,7 +135,7 @@ name_prefix = name = "9-CASCADE_AST_3domains_BE1m"
 iB3D = 1  # middle community
 tmax_mgmt = 199  # never stopped community management
 
-[barrier_width, dune_crest_mean, sc_rate, barrier_height] = get_statistics_4_chome(
+[barrier_width, dune_crest_mean, sc_rate, barrier_height] = get_statistics_4_chom(
     iB3D, tmax_mgmt, name_prefix
 )
 
@@ -155,7 +155,7 @@ name_prefix = name = "9-CASCADE_AST_3domains_BE1m_AccSLR"
 iB3D = 1  # middle community
 tmax_mgmt = 88  # middle roadway drowned
 
-[barrier_width, dune_crest_mean, sc_rate, barrier_height] = get_statistics_4_chome(
+[barrier_width, dune_crest_mean, sc_rate, barrier_height] = get_statistics_4_chom(
     iB3D, tmax_mgmt, name_prefix
 )
 
