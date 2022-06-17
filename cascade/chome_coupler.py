@@ -106,7 +106,7 @@ def community_update_statistics(
 ):
     # once averaged, these are saved as a time series in CHOME
     (
-        avg_barrier_height,
+        avg_barrier_height_msl,
         avg_change_shoreline_position,
         avg_beach_width,
         avg_dune_height,
@@ -114,10 +114,13 @@ def community_update_statistics(
     ) = [[] for _ in range(5)]
 
     for iB3D in community_indices:
-        # Barrier3D in decameters --> convert to meters for CHOME; b/c time_index in B3D is updated at the end
+        # Barrier3D in dam MHW --> convert to m MSL for CHOME; b/c time_index in B3D is updated at the end
         # of the time loop, time_index-1 is the current time step for passing variable to CHOME
-        bh_array = np.array(barrier3d[iB3D].DomainTS[time_index_b3d - 1]) * 10  # meters
-        avg_barrier_height.append(bh_array[bh_array > 0].mean())
+        bh_array = np.array(barrier3d[iB3D].DomainTS[time_index_b3d - 1]) * 10  # m MHW
+        avg_barrier_height = bh_array[bh_array > 0].mean()
+        avg_barrier_height_msl.append(
+            avg_barrier_height + barrier3d[iB3D]._MHW
+        )  # m NAVD88 (~MSL)
 
         change_in_shoreline_position = (
             barrier3d[iB3D].x_s_TS[-1] - barrier3d[iB3D].x_s_TS[-2]
@@ -149,14 +152,14 @@ def community_update_statistics(
         total_dune_sand_volume_rebuild.append(rebuild_dune_volume * dm3_to_m3)
 
     avg_beach_width = np.mean(avg_beach_width)
-    avg_barrier_height = np.mean(avg_barrier_height)
+    avg_barrier_height_msl = np.mean(avg_barrier_height_msl)
     avg_dune_height = np.mean(avg_dune_height)
     avg_change_shoreline_position = np.mean(avg_change_shoreline_position)
     total_dune_sand_volume_rebuild = np.sum(total_dune_sand_volume_rebuild)
 
     return (
         avg_beach_width,
-        avg_barrier_height,
+        avg_barrier_height_msl,
         avg_dune_height,
         avg_change_shoreline_position,
         total_dune_sand_volume_rebuild,
@@ -245,7 +248,7 @@ class ChomeCoupler:
             # calculate the average environmental statistics for each community
             [
                 avg_beach_width,
-                avg_barrier_height,
+                avg_barrier_height_msl,
                 avg_shoreface_depth,
                 avg_dune_design_height,
                 avg_interior_width,
@@ -265,7 +268,7 @@ class ChomeCoupler:
                     name=name,
                     total_time=total_time,
                     average_interior_width=avg_interior_width,
-                    barrier_island_height=avg_barrier_height,
+                    barrier_island_height=avg_barrier_height_msl,
                     beach_width=avg_beach_width,
                     dune_height=avg_dune_height,
                     shoreface_depth=avg_shoreface_depth,
@@ -302,7 +305,7 @@ class ChomeCoupler:
 
             [
                 avg_beach_width,
-                avg_barrier_height,
+                avg_barrier_height_msl,
                 avg_dune_height,
                 avg_change_shoreline_position,
                 total_dune_sand_volume_rebuild,
@@ -319,7 +322,9 @@ class ChomeCoupler:
             if any(community_break[community_indices[0] : community_indices[-1] + 1]):
                 pass
             else:
-                self._chome[iCommunity].barr_elev[time_index_chome] = avg_barrier_height
+                self._chome[
+                    iCommunity
+                ].height_above_msl = avg_barrier_height_msl  # m MSL
                 self._chome[iCommunity].bw_erosion_rate[
                     time_index_chome
                 ] = avg_change_shoreline_position
