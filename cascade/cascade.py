@@ -321,7 +321,7 @@ class Cascade:
                     "Beach nourishment module must be set to `TRUE` to couple with CHOM"
                 )
             else:
-                self._chom_coupler = ChomeCoupler(
+                self._chom_coupler = ChomCoupler(
                     barrier3d=self._barrier3d,
                     total_time=self._nt,
                     alongshore_length_b3d=self._brie_coupler._brie._dy,  # this is the barrier3d default, 500 m
