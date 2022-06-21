@@ -63,4 +63,3 @@ rmin: 0.55
 s_sf_eq: 0.01698590034494604
 storm_file: StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy
 threshold_in: 0.25
-

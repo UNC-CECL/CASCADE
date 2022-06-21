@@ -6,11 +6,112 @@ from cascade.roadway_manager import bulldoze, rebuild_dunes, set_growth_paramete
 from cascade.beach_dune_manager import shoreface_nourishment, filter_overwash
 from cascade import Cascade
 
-BMI_DATA_DIR = Path(__file__).parent / "cascade_test_versions_inputs"
+BMI_DATA_DIR = Path(__file__).parent / "cascade_test_human_inputs"
+NT = 180
+# datadir = "../Cascade/tests/cascade_test_human_inputs/"
+
+
+def run_cascade_roadway_dynamics():
+    # Roadway width drowned at 178 years, 20.0% of road borders water
+    cascade = Cascade(
+        str(BMI_DATA_DIR) + "/",
+        # datadir,
+        name="test_roadway_relocation",
+        storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+        elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
+        dune_file="barrier3d-default-dunes.npy",
+        parameter_file="roadway-parameters.yaml",
+        wave_height=1,
+        wave_period=7,
+        wave_asymmetry=0.8,
+        wave_angle_high_fraction=0.2,
+        sea_level_rise_rate=0.004,
+        sea_level_rise_constant=True,
+        background_erosion=0.0,
+        alongshore_section_count=1,
+        time_step_count=NT,
+        min_dune_growth_rate=0.55,
+        max_dune_growth_rate=0.95,  # rave = 0.75
+        num_cores=1,
+        roadway_management_module=True,
+        alongshore_transport_module=False,
+        beach_nourishment_module=False,
+        community_dynamics_module=False,  # no community dynamics
+        road_ele=1.2,  # m MHW, average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m MHW (1.9 m NAVD88)
+        road_width=20,  # m
+        road_setback=20,  # m
+        dune_design_elevation=3.2,  # m MHW, rebuild to 2 m dune above the roadway
+        dune_minimum_elevation=1.7,  # m MHW, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
+    )
+
+    for time_step in range(NT - 1):
+        cascade.update()
+        if cascade.b3d_break:
+            break
+
+    return cascade
+
+
+def run_cascade_nourishment_dynamics():
+    iB3D = 0
+    total_time = 100
+
+    cascade = Cascade(
+        str(BMI_DATA_DIR) + "/",
+        name="test_shoreline_erosion",
+        storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+        elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
+        dune_file="barrier3d-default-dunes.npy",
+        parameter_file="nourishment-parameters.yaml",
+        wave_height=1,
+        wave_period=7,
+        wave_asymmetry=0.8,
+        wave_angle_high_fraction=0.2,
+        sea_level_rise_rate=0.007,
+        sea_level_rise_constant=True,
+        background_erosion=-1.0,  # m/yr
+        alongshore_section_count=1,
+        time_step_count=total_time,
+        min_dune_growth_rate=0.25,  # average is 0.45, a low dune growth rate
+        max_dune_growth_rate=0.65,
+        dune_design_elevation=3.7,  # m MHW, rebuild to 2 m dune above the berm
+        num_cores=1,
+        roadway_management_module=False,
+        alongshore_transport_module=False,
+        beach_nourishment_module=True,
+        community_dynamics_module=False,  # no community dynamics
+        nourishment_interval=10,  # yrs
+        nourishment_volume=100,
+        overwash_filter=40,
+        overwash_to_dune=10,
+    )
+
+    # Loop for 50 years at a 10 year interval, 100 m^3/m and then 50 years at a 20 year interval with 300 m^3/m
+    nt = 50
+    for time_step in range(nt - 1):
+        cascade.update()
+        if cascade.b3d_break:
+            break
+
+    # during the CASCADE initialization, the nourishment interval and volume is specified individually for each
+    # barrier3d alongshore cell; so to update these values, we need to specify which barrier3d cell we want to modify
+    # (here, we only have one cell)
+    cascade.nourishment_interval[iB3D] = 20  # increase to 20 years
+    cascade.nourishment_volume[iB3D] = 300  # increase to 300 m^3/m
+
+    for time_step in range(nt):
+        cascade.update()
+        if cascade.b3d_break:
+            break
+
+    return cascade
+
+
+CASCADE_ROADWAY_OUTPUT = run_cascade_roadway_dynamics()
+CASCADE_NOURISHMENT_OUTPUT = run_cascade_nourishment_dynamics()
 
 
 def test_bulldoze_volume():
-
     # bulldoze 1 vertical m of sand from a 20 m wide roadway
     xyz_interior_grid = (
         np.zeros([100, 20]) + 3.0
@@ -83,7 +184,6 @@ def test_rebuild_dunes_interpolation():
 
 
 def test_growth_params():
-
     # growth parameter should only change when yxz_dune_grid is greater than Dmax
     yxz_dune_grid = np.zeros([20, 11]) + 2
     Dmax = 3
@@ -146,7 +246,6 @@ def test_growth_params():
 
 
 def test_shoreface_nourishment():
-
     nourishment_volume = [0, 100, 300]
     new_beach_width = np.zeros(3)
     x_t = 0  # m
@@ -156,7 +255,6 @@ def test_shoreface_nourishment():
     beach_width = 0  # m
 
     for i in range(3):
-
         [new_x_s, s_sf, new_beach_width[i]] = shoreface_nourishment(
             x_s,
             x_t,
@@ -292,54 +390,36 @@ def test_shoreline_migration():
     """
     As a check on the dynamics in Barrier3D, here we want to see if the dunes migrate when the beach width goes to zero
     and the shoreline surpasses a full cell width (10 m). Indeed, dunes only migrate when humans allow them to
-    (beach width = 0), and when the shoreline moves a full cell width -- in year 57 and 65. Note that if one was to
-    check the `post_storm_x_s`, they would find that the dunes actually migrated at 56.5 since dune migration
+    (beach width = 0), and when the shoreline moves a full cell width -- in year 58 and 65. Note that if one was to
+    check the `post_storm_x_s`, they would find that the dunes actually migrated at 57.5 since dune migration
     occurs prior to any human modifications.
     """
 
     iB3D = 0
-    total_time = 100
 
-    cascade = Cascade(
-        str(BMI_DATA_DIR) + "/",
-        name="test_shoreline_erosion",
-        sea_level_rise_rate=0.007,
-        alongshore_section_count=1,
-        time_step_count=total_time,
-        num_cores=1,
-        roadway_management_module=False,
-        alongshore_transport_module=False,
-        beach_nourishment_module=True,
-        community_dynamics_module=False,
-        dune_design_elevation=3.7,
-        nourishment_interval=10,  # yrs
-        nourishment_volume=100,
-        background_erosion=-1.0,  # m/yr
-        overwash_filter=40,
-    )
-
-    # Loop for 50 years at a 10 year interval, 100 m^3/m and then 50 years at a 20 year interval with 300 m^3/m
-    nt = 50
-    for time_step in range(nt - 1):
-        cascade.update()
-        if cascade.b3d_break:
-            break
-
-    # during the CASCADE initialization, the nourishment interval and volume is specified individually for each
-    # barrier3d alongshore cell; so to update these values, we need to specify which barrier3d cell we want to modify
-    # (here, we only have one cell)
-    cascade.nourishment_interval[iB3D] = 20  # increase to 20 years
-    cascade.nourishment_volume[iB3D] = 300  # increase to 300 m^3/m
-
-    for time_step in range(nt):
-        cascade.update()
-        if cascade.b3d_break:
-            break
-
-    frac_grid_cell = np.array(cascade.barrier3d[iB3D]._x_s_TS) % 1
+    frac_grid_cell = np.array(CASCADE_NOURISHMENT_OUTPUT.barrier3d[iB3D]._x_s_TS) % 1
     diff = np.hstack([0, np.diff(frac_grid_cell)])
-    diff[~np.array(cascade.nourishments[iB3D]._dune_migration_on)] = 0
+    diff[
+        ~np.array(CASCADE_NOURISHMENT_OUTPUT.nourishments[iB3D]._dune_migration_on)
+    ] = 0
     shoreline_transgressed = diff < 0
-    dunes_migrated = cascade.barrier3d[iB3D]._ShorelineChangeTS < 0
+    dunes_migrated = CASCADE_NOURISHMENT_OUTPUT.barrier3d[iB3D]._ShorelineChangeTS < 0
 
     assert np.all(shoreline_transgressed == dunes_migrated)
+
+
+def test_shoreline_road_relocation():
+    """
+    Does the roadway relocate when the shoreline eats up the dune?
+    """
+    iB3D = 0
+
+    dunes_migrated = CASCADE_ROADWAY_OUTPUT.barrier3d[iB3D]._ShorelineChangeTS < 0
+    road_relocated = CASCADE_ROADWAY_OUTPUT.roadways[iB3D]._road_relocated_TS > 0
+    road_setback_TS = CASCADE_ROADWAY_OUTPUT.roadways[iB3D]._road_setback_TS
+
+    diff_road_setback = np.hstack([0, np.diff(road_setback_TS)])
+    road_relocated_based_on_setback = diff_road_setback > 0
+
+    assert np.all(road_relocated_based_on_setback == road_relocated)
+    assert np.all(dunes_migrated[road_relocated] == True)
