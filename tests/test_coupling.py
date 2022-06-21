@@ -148,6 +148,3 @@ def test_barrier3d_versions():
         barrier3d._model._s_sf_TS == CASCADE_OUTPUT._barrier3d[0]._s_sf_TS
     )  # shoreface slope time series
     assert np.all(barrier3d._model._QowTS == CASCADE_OUTPUT._barrier3d[0]._QowTS)
-
-
-# other checks on the AST model?????

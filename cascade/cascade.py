@@ -321,7 +321,7 @@ class Cascade:
                     "Beach nourishment module must be set to `TRUE` to couple with CHOM"
                 )
             else:
-                self._chom_coupler = ChomeCoupler(
+                self._chom_coupler = ChomCoupler(
                     barrier3d=self._barrier3d,
                     total_time=self._nt,
                     alongshore_length_b3d=self._brie_coupler._brie._dy,  # this is the barrier3d default, 500 m
@@ -374,13 +374,6 @@ class Cascade:
                     overwash_to_dune=self._overwash_to_dune[iB3D],
                 )
             )
-
-            # call for lexi's bay side breach module
-            # self._breaches.append(
-            #     Outwasher(
-            #         variables will go here,
-            #     )
-            # )
 
         # use the initial beach width as a check on the barrier3d user input for mulitple domains; the beach width
         # must be the same for all domains because there is only one storm file, which is made for a set berm
