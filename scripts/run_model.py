@@ -2053,14 +2053,16 @@ def cascade_10kyr_sensitivity():
         )
 
         # manually changed the berm elevation to 2.0 in the yaml
-        cascade_10kyr_pt75_old_storms_BermEl2 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
-            nt=10000,
-            rmin=0.55,  # rave = 0.75
-            rmax=0.95,
-            name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_OLD_STORMS_BermEl2",
-            storm_file="Default_StormTimeSeries_10k-yr.npy",
-            elevation_file="InitElevHog.npy",
-            dune_file="DuneStart_1000dam.npy",
+        cascade_10kyr_pt75_old_storms_BermEl2 = (
+            RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
+                nt=10000,
+                rmin=0.55,  # rave = 0.75
+                rmax=0.95,
+                name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_OLD_STORMS_BermEl2",
+                storm_file="Default_StormTimeSeries_10k-yr.npy",
+                elevation_file="InitElevHog.npy",
+                dune_file="DuneStart_1000dam.npy",
+            )
         )
 
 
