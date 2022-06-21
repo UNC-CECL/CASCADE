@@ -30,8 +30,8 @@ Qs_bb_min: 1
 Qs_min: 1.0
 Qshrub_max: 0.15
 RSLR_Constant: true
-RSLR_const: 0.004
-Rat: 0.0
+RSLR_const: 0.007
+Rat: -1.0
 Rin_i: 0.1
 Rin_r: 2.0
 SalineLimit: 5
@@ -45,7 +45,7 @@ Shrub_ON: 0
 SprayDist: 170
 StormSeries: []
 StormStart: 2
-TMAX: 30
+TMAX: 100
 TideAmp: 1.2
 TimeFruit: 5.0
 UprootLimit: -0.2
@@ -53,13 +53,13 @@ beta: 0.04
 disp_mu: -0.721891
 disp_sigma: 1.5
 dune_file: barrier3d-default-dunes.npy
-elevation_file: b3d_pt75_3284yrs_low-elevations.csv
+elevation_file: b3d_pt45_8750yrs_low-elevations.csv
 growth_param_file: growthparam_1000dam.npy
 k_sf: 19324.753176079226
 mm: 2.0
 nn: 0.5
-rmax: 0.95
-rmin: 0.55
+rmax: 0.65
+rmin: 0.25
 s_sf_eq: 0.01698590034494604
 storm_file: StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy
 threshold_in: 0.25
