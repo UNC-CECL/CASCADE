@@ -375,13 +375,6 @@ class Cascade:
                 )
             )
 
-            # call for lexi's bay side breach module
-            # self._breaches.append(
-            #     Outwasher(
-            #         variables will go here,
-            #     )
-            # )
-
         # use the initial beach width as a check on the barrier3d user input for mulitple domains; the beach width
         # must be the same for all domains because there is only one storm file, which is made for a set berm
         # elevation and beach slope
