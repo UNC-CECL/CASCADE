@@ -256,6 +256,7 @@ def outwasher(b3d, storm_series, runID):
             elev_change_array = np.zeros([duration, width, length])
             slopes_array = np.zeros([duration, width, length])
             rexcess_dict = {}
+            qs2_array = np.zeros([duration, width, length])
             qs_lost = 0  # the array for storing the sediment leaving the last row
             # currently reset every storm, but could do full cumulative
 
@@ -507,7 +508,8 @@ def outwasher(b3d, storm_series, runID):
                             # fluxLimit = 1  # [dam^3/hr]
                             # the Q values must be between limits set by barrier 3d
                             # all Qs in [dam^3/hr]
-                            C = cx * Si  # 10 x the avg slope (from Murray)
+                            # C = cx * Si  # 10 x the avg slope (from Murray)
+                            C = 0.72  # directly from barrier3d
                             if Q1 > q_min:
                                 Qs1 = ki * (Q1 * (S1 + C)) ** mm
                                 if Qs1 < 0:
@@ -538,6 +540,8 @@ def outwasher(b3d, storm_series, runID):
                             Qs1 = np.nan_to_num(Qs1)
                             Qs2 = np.nan_to_num(Qs2)
                             Qs3 = np.nan_to_num(Qs3)
+
+                            qs2_array[TS, d, i] = Qs2
 
                             # ### Calculate Net Erosion/Accretion
                             # if we are at the bay, or any of the next 10 are at the bay, we should not be moving sediment
@@ -645,7 +649,7 @@ def outwasher(b3d, storm_series, runID):
 
     # Record storm data
     b3d._StormCount.append(numstorm)
-    return Discharge, elev_change_array, full_domain, qs_lost_total, slopes_array, rexcess_dict
+    return Discharge, elev_change_array, full_domain, qs_lost_total, slopes_array, rexcess_dict, qs2_array
 
 
 # --------------------------------------------running outwasher---------------------------------------------------------
@@ -663,9 +667,9 @@ sound_data[0] = 0
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
-runID = "lowered_rexcess"
+runID = "lowered_rexcess_b3d_C"
 
-discharge, elev_change, domain, qs_out, slopes2, dictionary = outwasher(b3d, storm_series, runID)
+discharge, elev_change, domain, qs_out, slopes2, dictionary, qs2 = outwasher(b3d, storm_series, runID)
 
 # np.save("C:/Users/Lexi/Documents/Research/Outwasher/discharge", discharge)
 # plt.matshow(slopes2[1], cmap="jet_r")
@@ -690,7 +694,6 @@ def plot_ElevAnimation(elev, directory, TMAX, name):
         os.makedirs(newpath)
     os.chdir(newpath)
 
-    # for t in range(TMAX - 1):
     for t in range(TMAX):
         AnimateDomain = elev[t]
 
@@ -700,7 +703,7 @@ def plot_ElevAnimation(elev, directory, TMAX, name):
         cax = ax.matshow(
             # AnimateDomain, origin="upper", cmap="jet_r", vmin=0, vmax=0.5,
             AnimateDomain, origin="upper", cmap="seismic",
-            vmin=-0.00005, vmax=0.00005
+            # vmin=-0.00005, vmax=0.00005
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -774,7 +777,6 @@ def plot_SlopeAnimation(slope, directory, TMAX, name):
         os.makedirs(newpath)
     os.chdir(newpath)
 
-    # for t in range(TMAX - 1):
     for t in range(TMAX):
         AnimateDomain = slope[t]
 
@@ -807,6 +809,48 @@ def plot_SlopeAnimation(slope, directory, TMAX, name):
     imageio.mimsave("slopes.gif", frames, "GIF-FI")
     print()
     print("[ * slope GIF successfully generated * ]")
+
+# -------------------------------------------qs2 gif--------------------------------------------------------------------
+def plot_SlopeAnimation(qs2, directory, TMAX, name):
+    os.chdir(directory)
+    newpath = "Output/Qs2/" + name + "/"
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+    os.chdir(newpath)
+
+    # for t in range(TMAX - 1):
+    for t in range(TMAX):
+        AnimateDomain = qs2[t]
+
+        # Plot and save
+        elevFig1 = plt.figure(figsize=(15, 7))
+        ax = elevFig1.add_subplot(111)
+        cax = ax.matshow(
+            AnimateDomain, origin="upper", cmap="jet_r",
+            # vmin=-0.005, vmax=0.05,
+        )  # , interpolation='gaussian') # analysis:ignore
+        ax.xaxis.set_ticks_position("bottom")
+        elevFig1.colorbar(cax)
+        plt.xlabel("Alongshore Distance (dam)")
+        plt.ylabel("Cross-Shore Distance (dam)")
+        plt.title("Qs2 (dam^3)")
+        plt.tight_layout()
+        timestr = "Time = " + str(t) + " hrs"
+        plt.text(1, 1, timestr)
+        plt.rcParams.update({"font.size": 15})
+        name = "qs2_" + str(t)
+        elevFig1.savefig(name)  # dpi=200
+        plt.close(elevFig1)
+
+    frames = []
+
+    for filenum in range(TMAX):
+        filename = "qs2_" + str(filenum) + ".png"
+        frames.append(imageio.imread(filename))
+    # imageio.mimsave("dis.gif", frames, fps=2)
+    imageio.mimsave("qs2.gif", frames, "GIF-FI")
+    print()
+    print("[ * Qs2 GIF successfully generated * ]")
 
 # -------------------------------------------b3d domain plot------------------------------------------------------------
 def plot_ModelTransects(b3d, time_step):
@@ -903,8 +947,10 @@ def plot_ModelTransects(b3d, time_step):
 # TMAX = storm_series[2]
 TMAX = 2*storm_series[2]
 name = runID
-# plot_ElevAnimation(elev_change, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
-# plot_DischargeAnimation(discharge, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
-plot_SlopeAnimation(slopes2, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
+dir = r"C:\Users\Lexi\Documents\Research\Outwasher"
+plot_ElevAnimation(elev_change, dir, TMAX, name)
+plot_DischargeAnimation(discharge, dir, TMAX, name)
+plot_SlopeAnimation(slopes2, dir, TMAX, name)
+plot_SlopeAnimation(qs2, dir, TMAX, name)
 # time_step = [0]
 # plot_ModelTransects(b3d, time_step)
