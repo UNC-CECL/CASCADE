@@ -254,6 +254,8 @@ def outwasher(b3d, storm_series, runID):
             SedFluxIn = np.zeros([duration, width, length])
             SedFluxOut = np.zeros([duration, width, length])
             elev_change_array = np.zeros([duration, width, length])
+            slopes_array = np.zeros([duration, width, length])
+            rexcess_dict = {}
             qs_lost = 0  # the array for storing the sediment leaving the last row
             # currently reset every storm, but could do full cumulative
 
@@ -289,17 +291,20 @@ def outwasher(b3d, storm_series, runID):
                 # also, we think there is an error in units
                 # overtop_flow can be dam^3 because we are multiplying by 1 to convert
                 # our initial discharge amount starts at the first row and is later distributed down the rows/cols
-                Rexcess = storm_series[1][TS]  # [dam]
+                Rhigh1 = storm_series[1][TS]  # [dam]
+                # Rexcess = Rhigh1 - berm_el
+                Rexcess = Rhigh1 - np.mean(dune_domain_full)  # this was changed from: Rexcess = Rhigh - (Hmean + bermel)
                 # Rexcess = gaps[q][2]  # (m) i think this is actually dam for us
                 if Rexcess < 0:
                     overtop_vel = 0
                 else:
-                    overtop_vel = np.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
-                overtop_flow = overtop_vel * Rexcess * 3600  # (dam^2/hr), do I need to multiply by 1 dam?
+                    overtop_vel = np.sqrt(2 * (9.8/10) * Rexcess)  # (dam/s) previously Vdune
+                overtop_flow = overtop_vel * Rexcess * 3600  # (dam^2/hr), do I need to multiply by 1 dam? prev Qdune
                 Discharge[TS, 0, :] = overtop_flow  # (dam^3/hr)
-
+                rexcess_dict[round(Rexcess, 5)] = round(overtop_flow, 5)
                 # Begin with elevation from previous timestep
                 if TS > 0:
+                    # Elevation[TS, :, :] = Elevation[TS - 1, :, :]
                     Elevation[TS, 1:, :] = Elevation[TS - 1, 1:, :]
                     # Elevation[TS, 0, :] = dunes - \
                     #                       (Hd_TSloss / substep * TS
@@ -329,6 +334,7 @@ def outwasher(b3d, storm_series, runID):
 
                             S2 = Elevation[TS, d, i] - Elevation[TS, d + 1, i]
                             S2 = np.nan_to_num(S2)
+                            slopes_array[TS, d, i] = S2
 
                             if i < (length - 1):  # i at the end length means there are no cols to the right
                                 S3 = (Elevation[TS, d, i] - Elevation[TS, d + 1, i + 1]) / (math.sqrt(2))
@@ -568,7 +574,8 @@ def outwasher(b3d, storm_series, runID):
                 # the last row is the accumulation cell for keeping track of sed out
                 qs_lost = qs_lost + sum(SedFluxIn[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
                 qs_lost_total = qs_lost_total + sum(SedFluxIn[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
-                # if we are just letting it go out of the cell
+                # OWloss = OWloss + np.sum(SedFluxOut[TS, 0, :]) / substep
+                # if we are just letting it go out of the cell uncomment
                 # qs_lost = qs_lost + sum(SedFluxOut[TS, width-1, :]) / substep  # [dam^3] previously OWloss
                 # qs_lost_total = qs_lost_total + sum(SedFluxOut[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
 
@@ -638,7 +645,7 @@ def outwasher(b3d, storm_series, runID):
 
     # Record storm data
     b3d._StormCount.append(numstorm)
-    return Discharge, elev_change_array, full_domain, qs_lost_total
+    return Discharge, elev_change_array, full_domain, qs_lost_total, slopes_array, rexcess_dict
 
 
 # --------------------------------------------running outwasher---------------------------------------------------------
@@ -647,20 +654,26 @@ with open(r"C:\Users\Lexi\Documents\Research\Outwasher\chris stuff\sound_data.tx
     sound_data = list(csv.reader(csvfile))[0]
 sound_data = [float(s)/10-0.054 for s in sound_data]  # [dam MHW] Chris' sound elevations were in m MSL,
 # so converted to NAVD88 then MHW and dam
-# sound_data = [s+0.05 for s in sound_data]  # [dam MHW] just increasing the values
+sound_data = [s+0.05 for s in sound_data]  # [dam MHW] just increasing the values
 # setting all negative values to 0
 sound_data = sound_data[20:]
 sound_data[0] = 0
-np.save("C:/Users/Lexi/Documents/Research/Outwasher/sound_data", sound_data)
+# np.save("C:/Users/Lexi/Documents/Research/Outwasher/sound_data", sound_data)
 
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
-runID = "smaller_discharge"
+runID = "lowered_rexcess"
 
-discharge, elev_change, domain, qs_out = outwasher(b3d, storm_series, runID)
-np.save("C:/Users/Lexi/Documents/Research/Outwasher/discharge", discharge)
+discharge, elev_change, domain, qs_out, slopes2, dictionary = outwasher(b3d, storm_series, runID)
 
+# np.save("C:/Users/Lexi/Documents/Research/Outwasher/discharge", discharge)
+# plt.matshow(slopes2[1], cmap="jet_r")
+# plt.title('S2 Slopes')
+# plt.colorbar()
+# plt.matshow(discharge[1], cmap="jet_r")
+# plt.title('Discharge (dam^3/hr)')
+# plt.colorbar()
 # ----------------------------------making the elevation gif------------------------------------------------------------
 frames = []
 for i in range(2):
@@ -687,7 +700,7 @@ def plot_ElevAnimation(elev, directory, TMAX, name):
         cax = ax.matshow(
             # AnimateDomain, origin="upper", cmap="jet_r", vmin=0, vmax=0.5,
             AnimateDomain, origin="upper", cmap="seismic",
-            vmin=-0.0004, vmax=0.0004
+            vmin=-0.00005, vmax=0.00005
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -728,7 +741,7 @@ def plot_DischargeAnimation(dis, directory, TMAX, name):
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
             AnimateDomain, origin="upper", cmap="jet_r",
-            vmin=0, vmax=1500,
+            vmin=0, vmax=200,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -752,6 +765,48 @@ def plot_DischargeAnimation(dis, directory, TMAX, name):
     imageio.mimsave("dis.gif", frames, "GIF-FI")
     print()
     print("[ * dishcarge GIF successfully generated * ]")
+
+# ---------------------------------------------------slope gif----------------------------------------------------------
+def plot_SlopeAnimation(slope, directory, TMAX, name):
+    os.chdir(directory)
+    newpath = "Output/Slopes/" + name + "/"
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+    os.chdir(newpath)
+
+    # for t in range(TMAX - 1):
+    for t in range(TMAX):
+        AnimateDomain = slope[t]
+
+        # Plot and save
+        elevFig1 = plt.figure(figsize=(15, 7))
+        ax = elevFig1.add_subplot(111)
+        cax = ax.matshow(
+            AnimateDomain, origin="upper", cmap="jet_r",
+            # vmin=-0.005, vmax=0.05,
+        )  # , interpolation='gaussian') # analysis:ignore
+        ax.xaxis.set_ticks_position("bottom")
+        elevFig1.colorbar(cax)
+        plt.xlabel("Alongshore Distance (dam)")
+        plt.ylabel("Cross-Shore Distance (dam)")
+        plt.title("S2 Slopes")
+        plt.tight_layout()
+        timestr = "Time = " + str(t) + " hrs"
+        plt.text(1, 1, timestr)
+        plt.rcParams.update({"font.size": 15})
+        name = "slope_" + str(t)
+        elevFig1.savefig(name)  # dpi=200
+        plt.close(elevFig1)
+
+    frames = []
+
+    for filenum in range(TMAX):
+        filename = "slope_" + str(filenum) + ".png"
+        frames.append(imageio.imread(filename))
+    # imageio.mimsave("dis.gif", frames, fps=2)
+    imageio.mimsave("slopes.gif", frames, "GIF-FI")
+    print()
+    print("[ * slope GIF successfully generated * ]")
 
 # -------------------------------------------b3d domain plot------------------------------------------------------------
 def plot_ModelTransects(b3d, time_step):
@@ -848,7 +903,8 @@ def plot_ModelTransects(b3d, time_step):
 # TMAX = storm_series[2]
 TMAX = 2*storm_series[2]
 name = runID
-plot_ElevAnimation(elev_change, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
-plot_DischargeAnimation(discharge, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
+# plot_ElevAnimation(elev_change, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
+# plot_DischargeAnimation(discharge, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
+plot_SlopeAnimation(slopes2, r"C:\Users\Lexi\Documents\Research\Outwasher", TMAX, name)
 # time_step = [0]
 # plot_ModelTransects(b3d, time_step)
