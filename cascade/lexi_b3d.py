@@ -2,6 +2,7 @@ import math
 import numpy as np
 from barrier3d.load_input import load_inputs
 import random
+from matplotlib import pyplot as plt
 
 
 class Barrier3dError(Exception):
@@ -849,11 +850,13 @@ class Barrier3d:
             # Select number of storms for this time step from normal distribution
             TSloc = np.argwhere(self._StormSeries[:, 0] == self._time_index)
             numstorm = int(len(TSloc))  # analysis:ignore
+            print("\n total storms =", numstorm, "for time index =", self._time_index)
 
             if numstorm > 0:
                 start = TSloc[0, 0]
                 stop = TSloc[-1, 0] + 1
-                Rhigh = self._StormSeries[start:stop, 1]
+                Rhigh = self._StormSeries[start:stop, 1]  # this is an array of Rhighs for each storm (in dam?)
+                print("Rhigh for these storms is", Rhigh)
                 Rlow = self._StormSeries[start:stop, 2]
                 dur = np.array(self._StormSeries[start:stop, 4], dtype="int")
 
@@ -873,6 +876,7 @@ class Barrier3d:
                         for index, value in enumerate((DuneDomainCrest + self._BermEl))
                         if value < Rhigh[n]
                     ]
+                    print("Number of overwashed cells for storm {0} =".format(n), len(Dow))
                     gaps = self.DuneGaps(
                         DuneDomainCrest, Dow, self._BermEl, Rhigh[n]
                     )  # Finds location and Rexcess of continuous gaps in dune ridge
@@ -982,6 +986,9 @@ class Barrier3d:
                     Discharge = np.zeros([duration, width, self._BarrierLength])
                     SedFluxIn = np.zeros([duration, width, self._BarrierLength])
                     SedFluxOut = np.zeros([duration, width, self._BarrierLength])
+                    elev_change_array = np.zeros([duration, width, self._BarrierLength])
+                    slope2_array = np.zeros([duration, width, self._BarrierLength])
+                    rexcess_dict = {}
 
                     Rin = 0  # (dam^3/t) Infiltration Rate, volume of overwash flow lost per m cross-shore per time
 
@@ -989,17 +996,19 @@ class Barrier3d:
                     for q in range(len(gaps)):
                         start = gaps[q][0]
                         stop = gaps[q][1]
-                        Rexcess = gaps[q][2]  # (m)
-
+                        Rexcess = gaps[q][2]  # (dam)
+                        print("Rexcess for storm {0} =".format(n), round(Rexcess, 3))
                         # Calculate discharge through each dune cell
                         Vdune = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
                         Qdune = Vdune * Rexcess * 3600  # (dam^3/hr)
-
+                        rexcess_dict[Rexcess] = Qdune
                         # Set discharge at dune gap
-                        Discharge[:, 0, start:stop] = Qdune
+                        Discharge[:, 0, start:stop] = Qdune  # (dam^3/hr)
+                        # plt.matshow(Discharge[0])
+                        # plt.colorbar()
 
                         if inundation == 1:  # Inundation regime
-                            Rin = self._Rin_i
+                            Rin = self._Rin_i  # 0.1
 
                             # # Find average slope of interior
                             # AvgSlope = self._BermEl / InteriorWidth_Avg
@@ -1013,7 +1022,8 @@ class Barrier3d:
                             C = self._Cx * AvgSlope  # Momentum constant
 
                         else:  # Run-up regime
-                            Rin = self._Rin_r
+                            Rin = self._Rin_r  # 2
+                    # print("Rin =", Rin)
 
                     # ### Run Flow Routing Algorithm
                     for TS in range(duration):
@@ -1032,8 +1042,15 @@ class Barrier3d:
                         for d in range(width - 1):
                             # Reduce discharge across row via infiltration
                             if d > 0:
+                                # for the current row of discharge all columns that have values greater than 0,
+                                # subtract Rin
                                 Discharge[TS, d, :][Discharge[TS, d, :] > 0] -= Rin
+                            # then reset all discharge values less than 0 to 0
                             Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
+                            # just some testing code below
+                            # if TS == 0 and d == 1:
+                            #     plt.matshow(Discharge[0])
+                            #     plt.colorbar()
 
                             for i in range(self._BarrierLength):
                                 if Discharge[TS, d, i] > 0:
@@ -1052,6 +1069,7 @@ class Barrier3d:
 
                                     S2 = Elevation[TS, d, i] - Elevation[TS, d + 1, i]
                                     S2 = np.nan_to_num(S2)
+                                    slope2_array[TS, d, i] = S2
 
                                     if i < (self._BarrierLength - 1):
                                         S3 = (
@@ -1403,7 +1421,7 @@ class Barrier3d:
                                         i,
                                         Q0,
                                     )
-                        np.save("C:/Users/Lexi/Documents/Research/Outwasher/b3d_discharges_{0}_{1}".format(n, TS), Discharge)
+
                         # ### Update Elevation After Every Storm Hour
                         if inundation == 1:
                             ElevationChange = (
@@ -1414,6 +1432,7 @@ class Barrier3d:
                                 SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]
                             ) / substep
                         Elevation[TS, :, :] = Elevation[TS, :, :] + ElevationChange
+                        elev_change_array[TS] = ElevationChange
 
                         # Calculate and save volume of sediment deposited on/behind the island for every hour
                         # (all four methods below should equal the same!)
@@ -1431,6 +1450,18 @@ class Barrier3d:
                         )
 
                     # ### Update Interior Domain After Every Storm
+                    print(rexcess_dict)
+                    # np.save("C:/Users/Lexi/Documents/Research/Outwasher/b3d_discharges2/discharge_{0}".format(n), Discharge)
+                    # np.save("C:/Users/Lexi/Documents/Research/Outwasher/b3d_slopes/slope2_{0}".format(n), slope2_array)
+                    # plt.matshow(Elevation[0], cmap="terrain")
+                    # plt.title('Elevations')
+                    # plt.colorbar()
+                    # plt.matshow(slope2_array[0], cmap="jet_r")
+                    # plt.title('S2 Slopes')
+                    # plt.colorbar()
+                    # plt.matshow(Discharge[0], cmap='jet_r')
+                    # plt.colorbar()
+                    np.save("C:/Users/Lexi/Documents/Research/Outwasher/b3d_elev_changes/elev_change_{0}".format(n), elev_change_array)
                     InteriorUpdate = Elevation[-1, 1:, :]
 
                     # Remove all rows of bay without any deposition from the domain
