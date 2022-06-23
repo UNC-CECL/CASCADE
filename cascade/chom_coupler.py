@@ -78,8 +78,8 @@ def community_initial_statistics(
 
         avg_dune_width.append(barrier3d[iB3D]._DuneWidth * 10)
 
-        # community length is the Barrier3D discretization * # of Barrier3D domains describing community
-        alongshore_community_length = len(community_indices) * alongshore_length_b3d
+    # community length is the Barrier3D discretization * # of Barrier3D domains describing community
+    alongshore_community_length = len(community_indices) * alongshore_length_b3d
 
     avg_beach_width = np.mean(avg_beach_width)
     avg_barrier_height = np.mean(avg_barrier_height)
@@ -262,7 +262,7 @@ class ChomCoupler:
                 alongshore_length_b3d=alongshore_length_b3d,
             )
 
-            # initialize CHOM model instance -- ZACHK, are these still correct or are there more?
+            # initialize CHOM model instance -- ZACK, are these still correct or are there more?
             self._chom.append(
                 Chom(
                     name=name,
@@ -322,9 +322,9 @@ class ChomCoupler:
             if any(community_break[community_indices[0] : community_indices[-1] + 1]):
                 pass
             else:
-                self._chom[
-                    iCommunity
-                ].height_above_msl = avg_barrier_height_msl  # m MSL
+                self._chom[iCommunity].barr_height[
+                    time_index_chom
+                ] = avg_barrier_height_msl  # m MSL
                 self._chom[iCommunity].bw_erosion_rate[
                     time_index_chom
                 ] = avg_change_shoreline_position
@@ -349,7 +349,7 @@ class ChomCoupler:
                     / self._chom[iCommunity].lLength
                 )  # this is in m^3 in CHOM, divide by the length of the community to get m^3/m
 
-        return (nourish_now, rebuild_dune_now, nourishment_volume)
+        return nourish_now, rebuild_dune_now, nourishment_volume
 
     @property
     def chom(self):
