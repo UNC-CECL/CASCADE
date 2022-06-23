@@ -457,7 +457,8 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
     # 4 - CASCADE with only one B3D model and no human dynamics
     # ###############################################################################
     # Use the starting interior domain from the 10,000 yr runs for each dune growth rate and run for 1000 years
-    # or until the barrier drowns. All other modules (brie and human dymnamics modules) turned off.
+    # or until the barrier drowns. All other modules (brie and human dymnamics modules) turned off. Can also use this
+    # run script for the 10,000 year runs.
 
     # --------- INITIALIZE ---------
     datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"

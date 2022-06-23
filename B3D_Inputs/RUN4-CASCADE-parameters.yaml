@@ -45,7 +45,7 @@ Shrub_ON: 0
 SprayDist: 170
 StormSeries: []
 StormStart: 2
-TMAX: 1000
+TMAX: 10
 TideAmp: 1.2
 TimeFruit: 5.0
 UprootLimit: -0.2
