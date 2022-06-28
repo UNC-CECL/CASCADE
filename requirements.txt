@@ -18,3 +18,7 @@ brie~=0.1.0.dev0
 barrier3d~=0.1.0.dev0
 chom~=0.0.1.dev0
 plotly~=4.14.3
+
+pytest
+pytest-cov
+pytest-datadir
