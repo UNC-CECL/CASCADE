@@ -6,7 +6,7 @@
 Copyright (C) 2020 Katherine Anarde
 ----------------------------------------------------"""
 
-# remember if I move to a different computer to $ pip install -e . in the brie, B3D, and CHOME directories
+# remember if I move to a different computer to $ pip install -e . in the brie, B3D, and CHOM directories
 
 import numpy as np
 import os
@@ -454,15 +454,14 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
 ):
 
     # ###############################################################################
-    # 4 - check B3D dune growth parameters
+    # 4 - CASCADE with only one B3D model and no human dynamics
     # ###############################################################################
-    # GOAL: check which growth rate parameters in B3D undergo punctuated retreat (increased SLR to 0.004)
-    # later GOAL: look at the range of barrier behavior for different dune growth rates -- 10k runs
-    # AST turned off, and beach and dune management modules turned off
+    # Use the starting interior domain from the 10,000 yr runs for each dune growth rate and run for 1000 years
+    # or until the barrier drowns. All other modules (brie and human dymnamics modules) turned off. Can also use this
+    # run script for the 10,000 year runs.
 
     # --------- INITIALIZE ---------
-    # datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/"
-    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
+    datadir = "B3D_Inputs/"
     cascade = Cascade(
         datadir,
         name,
@@ -470,16 +469,16 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
         elevation_file=elevation_file,
         dune_file=dune_file,
         parameter_file="RUN4-CASCADE-parameters.yaml",
-        wave_height=1.0,
+        wave_height=1,
         wave_period=7,  # s (lowered from 10 s to reduce k_sf)
         wave_asymmetry=0.8,  # fraction approaching from left
         wave_angle_high_fraction=0.2,  # fraction of waves approaching from higher than 45 degrees
         sea_level_rise_rate=0.004,  # m/yr
-        sea_level_rise_constant=True,
+        sea_level_rise_constant=True,  # linear SLR
         background_erosion=0.0,
         alongshore_section_count=1,  # only one B3D domain
         time_step_count=nt,
-        min_dune_growth_rate=rmin,  # rave = [0.45, 0.55., 0.65, 0.75]  # to help me remember the average
+        min_dune_growth_rate=rmin,
         max_dune_growth_rate=rmax,
         num_cores=1,
         roadway_management_module=False,  # no roadway management
@@ -498,14 +497,8 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
         if cascade.b3d_break:
             break
 
-    SimDuration = time.time() - Time
-    print()
-    print("Elapsed Time: ", SimDuration, "sec")  # Print elapsed time of simulation
-
     # --------- SAVE ---------
-
-    # save_directory = "/Users/katherineanarde/RESEARCH/RUN_OUTPUT"
-    save_directory = "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
+    save_directory = "Run_Output/"
     cascade.save(save_directory)
 
     return cascade
@@ -516,11 +509,10 @@ def RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
     rmin,
     rmax,
     name,
-    run_road_mgmt,
     storm_file,
     elevation_file,
     dune_file,
-    road_ele=1.7,  # dummy values for the no management runs
+    road_ele=1.7,
     road_width=30,
     road_setback=30,
     dune_design_elevation=3.7,
@@ -530,9 +522,9 @@ def RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
 ):
 
     # ###############################################################################
-    # 6 - B3D with dune management (just the roadways module)
+    # 6 - CASCADE with only one B3D model and roadway management
     # ###############################################################################
-    # GOAL: Use the starting interior domain from the 10,000 yr runs for each dune growth rate and run for 1000 years
+    # Use the starting interior domain from the 10,000 yr runs for each dune growth rate and run for 1000 years
     # or until the barrier drowns. All other modules (beach nourishment, community dyanmics) turned off.
 
     # --------- INITIALIZE ---------
@@ -556,7 +548,7 @@ def RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
         min_dune_growth_rate=rmin,
         max_dune_growth_rate=rmax,
         num_cores=1,
-        roadway_management_module=run_road_mgmt,
+        roadway_management_module=True,
         alongshore_transport_module=False,  # no brie coupling
         beach_nourishment_module=False,  # no beach nourishment
         community_dynamics_module=False,  # no community dynamics
@@ -590,27 +582,20 @@ def RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
     return cascade
 
 
-def RUN_7_CASCADE_noAST_Rave_variableSLR_Roadways(
+def RUN_7_CASCADE_noAST_Rave_variableSLR_NoHumans(
     nt,
     rmin,
     rmax,
     name,
-    road_ele,
-    road_width,
-    road_setback,
-    dune_design_elevation,
-    dune_minimum_elevation,
-    run_road_mgmt,
     storm_file,
     elevation_file,
     dune_file,
     sea_level_rise_rate,
     sea_level_constant,
-    background_erosion,
 ):
 
     # ###############################################################################
-    # 7 - same as RUN 6 but with variable rates of SLR (i.e., no AST, no nourishment)
+    # 7 - same as RUN 4 but with variable rates of SLR (i.e., no AST, no human dynamics)
     # ###############################################################################
 
     # --------- INITIALIZE ---------
@@ -628,21 +613,16 @@ def RUN_7_CASCADE_noAST_Rave_variableSLR_Roadways(
         wave_angle_high_fraction=0.2,
         sea_level_rise_rate=sea_level_rise_rate,
         sea_level_rise_constant=sea_level_constant,
-        background_erosion=background_erosion,
+        background_erosion=0.0,
         alongshore_section_count=1,
         time_step_count=nt,
         min_dune_growth_rate=rmin,
         max_dune_growth_rate=rmax,
         num_cores=1,
-        roadway_management_module=run_road_mgmt,
+        roadway_management_module=False,  # no roadway dynamics
         alongshore_transport_module=False,  # no brie coupling
         beach_nourishment_module=False,  # no beach nourishment
         community_dynamics_module=False,  # no community dynamics
-        road_ele=road_ele,
-        road_width=road_width,
-        road_setback=road_setback,
-        dune_design_elevation=dune_design_elevation,
-        dune_minimum_elevation=dune_minimum_elevation,
     )
 
     # --------- LOOP ---------
@@ -1773,10 +1753,10 @@ def get_roadway_statistics(
 
 
 # # ###############################################################################
-# # runs
+# # record of runs and plots
 # # ###############################################################################
 
-# record of non-human runs -------------------------------------------------------------------------------------
+# record of old runs and plots not used in paper or earlier versions during development -------------------------
 def old_versions_cascade_runs():
     RUN_1_CASCADE_LTA_COMPARISON(
         ny=6, nt=3000, name="1-CASCADE_LTA_COMPARISON_3km_3000yr"
@@ -1897,6 +1877,47 @@ def old_versions_cascade_runs():
     )
 
 
+def old_versions_cascade_plots():
+
+    PLOT_5_AlongshoreVarGrowthParam_half(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs_6km",
+        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+        ny=12,
+    )
+
+    PLOT_5_AlongshoreVarGrowthParam_half(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs_1km",
+        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+        ny=2,
+    )
+
+    PLOT_5_AlongshoreVarGrowthParam_half(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs_3km",
+        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+        ny=6,
+    )
+
+    PLOT_5_AlongshoreVarGrowthParam_half(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs_12km",
+        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+        ny=24,
+    )
+
+    PLOT_3_AlongshoreVarGrowthParam_gradient(
+        name="3-VarGrowthParam_grad_pt2HAF_pt4SLR_1500yrs",
+        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+    )
+
+    # these plots actually don't use run 5, just the individual B3D runs
+    PLOT_5_Nonlinear_Dynamics(
+        name="5-VarGrowthParam_half_pt4SLR_1500yrs",
+        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+    )
+
+
+# 10,000 year simulations -- only one B3D model (AST off) -------------------------------------------------------
+
+
 def cascade_10kyr_sensitivity():
 
     cascade_10kyr_pt45_01 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -1999,87 +2020,51 @@ def cascade_10kyr_sensitivity():
         dune_file="DuneStart_1000dam.npy",
     )
 
-    cascade_10kyr_pt75_Cbbr0pt5 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
-        nt=10000,
-        rmin=0.55,  # rave = 0.75
-        rmax=0.95,
-        name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_Cbb0pt5",
-        storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04.npy",
-        elevation_file="InitElevHog.npy",
-        dune_file="DuneStart_1000dam.npy",
-    )
-
-    cascade_10kyr_pt75_old_storms = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
-        nt=10000,
-        rmin=0.55,  # rave = 0.75
-        rmax=0.95,
-        name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_OLD_STORMS",
-        storm_file="Default_StormTimeSeries_10k-yr.npy",
-        elevation_file="InitElevHog.npy",
-        dune_file="DuneStart_1000dam.npy",
-    )
-
-    cascade_10kyr_pt75_old_storms_Cbbr0pt5 = (
-        RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
+    def sensitivity_tests_Ian_model():
+        cascade_10kyr_pt75_Cbbr0pt5 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
             nt=10000,
             rmin=0.55,  # rave = 0.75
             rmax=0.95,
-            name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_OLD_STORMS_Cbb0pt5",
+            name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_Cbb0pt5",
+            storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04.npy",
+            elevation_file="InitElevHog.npy",
+            dune_file="DuneStart_1000dam.npy",
+        )
+
+        cascade_10kyr_pt75_old_storms = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
+            nt=10000,
+            rmin=0.55,  # rave = 0.75
+            rmax=0.95,
+            name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_OLD_STORMS",
             storm_file="Default_StormTimeSeries_10k-yr.npy",
             elevation_file="InitElevHog.npy",
             dune_file="DuneStart_1000dam.npy",
         )
-    )
 
-    # manually changed the berm elevation to 2.0 in the yaml
-    cascade_10kyr_pt75_old_storms_BermEl2 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
-        nt=10000,
-        rmin=0.55,  # rave = 0.75
-        rmax=0.95,
-        name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_OLD_STORMS_BermEl2",
-        storm_file="Default_StormTimeSeries_10k-yr.npy",
-        elevation_file="InitElevHog.npy",
-        dune_file="DuneStart_1000dam.npy",
-    )
+        cascade_10kyr_pt75_old_storms_Cbbr0pt5 = (
+            RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
+                nt=10000,
+                rmin=0.55,  # rave = 0.75
+                rmax=0.95,
+                name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_OLD_STORMS_Cbb0pt5",
+                storm_file="Default_StormTimeSeries_10k-yr.npy",
+                elevation_file="InitElevHog.npy",
+                dune_file="DuneStart_1000dam.npy",
+            )
+        )
 
-
-# record of non-human plots -------------------------------------------------------------------------------------
-def old_versions_cascade_plots():
-
-    PLOT_5_AlongshoreVarGrowthParam_half(
-        name="5-VarGrowthParam_half_pt4SLR_1500yrs_6km",
-        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
-        ny=12,
-    )
-
-    PLOT_5_AlongshoreVarGrowthParam_half(
-        name="5-VarGrowthParam_half_pt4SLR_1500yrs_1km",
-        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
-        ny=2,
-    )
-
-    PLOT_5_AlongshoreVarGrowthParam_half(
-        name="5-VarGrowthParam_half_pt4SLR_1500yrs_3km",
-        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
-        ny=6,
-    )
-
-    PLOT_5_AlongshoreVarGrowthParam_half(
-        name="5-VarGrowthParam_half_pt4SLR_1500yrs_12km",
-        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
-        ny=24,
-    )
-
-    PLOT_3_AlongshoreVarGrowthParam_gradient(
-        name="3-VarGrowthParam_grad_pt2HAF_pt4SLR_1500yrs",
-        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
-    )
-
-    # these plots actually don't use run 5, just the individual B3D runs
-    PLOT_5_Nonlinear_Dynamics(
-        name="5-VarGrowthParam_half_pt4SLR_1500yrs",
-        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
-    )
+        # manually changed the berm elevation to 2.0 in the yaml
+        cascade_10kyr_pt75_old_storms_BermEl2 = (
+            RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
+                nt=10000,
+                rmin=0.55,  # rave = 0.75
+                rmax=0.95,
+                name="4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_OLD_STORMS_BermEl2",
+                storm_file="Default_StormTimeSeries_10k-yr.npy",
+                elevation_file="InitElevHog.npy",
+                dune_file="DuneStart_1000dam.npy",
+            )
+        )
 
 
 def cascade_10kyr_plots():
@@ -2088,7 +2073,7 @@ def cascade_10kyr_plots():
     CASCADEplt.supp_10kyr_timeseries()
 
 
-# record of B3D time series -------------------------------------------------------------------------------------
+# record of B3D time series initial conditions (storms, dune growth rates, growth parameters) -------------------
 def time_series():
 
     datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
@@ -2251,258 +2236,202 @@ def time_series():
     gen_alongshore_variable_rmin_rmax(datadir, name, rmin=0.35, rmax=0.85, ny=1000)
 
 
-# record of human runs -------------------------------------------------------------------------------------
-def human_runs():
+# record of 1,000 yr runs and plots for paper -------------------------------------------------------------------
+def cascade_1kyr_runs():
     def SLR_sensitivity():
 
-        # misnomer here: only running the natural scenario
-        cascade_pt75_low_SLR0pt008 = RUN_7_CASCADE_noAST_Rave_variableSLR_Roadways(
+        cascade_pt75_low_SLR0pt008 = RUN_7_CASCADE_noAST_Rave_variableSLR(
             nt=200,
             rmin=0.55,
             rmax=0.95,  # rave = 0.75
             name="6-B3D_Rave_pt75_Natural_low_0pt008SLR",
-            road_ele=None,
-            road_width=None,
-            road_setback=None,
-            dune_design_elevation=None,
-            dune_minimum_elevation=None,
-            run_road_mgmt=False,
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
             dune_file="barrier3d-default-dunes.npy",
             sea_level_rise_rate=0.008,  # m/yr
             sea_level_constant=True,
-            background_erosion=0.0,
         )
 
-        cascade_pt75_low_SLR0pt012 = RUN_7_CASCADE_noAST_Rave_variableSLR_Roadways(
+        cascade_pt75_low_SLR0pt012 = RUN_7_CASCADE_noAST_Rave_variableSLR(
             nt=200,
             rmin=0.55,
             rmax=0.95,  # rave = 0.75
             name="6-B3D_Rave_pt75_Natural_low_0pt012SLR",
-            road_ele=None,
-            road_width=None,
-            road_setback=None,
-            dune_design_elevation=None,
-            dune_minimum_elevation=None,
-            run_road_mgmt=False,
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
             dune_file="barrier3d-default-dunes.npy",
             sea_level_rise_rate=0.012,  # m/yr
             sea_level_constant=True,
-            background_erosion=0.0,
         )
 
-        cascade_pt75_high_SLR0pt008 = RUN_7_CASCADE_noAST_Rave_variableSLR_Roadways(
+        cascade_pt75_high_SLR0pt008 = RUN_7_CASCADE_noAST_Rave_variableSLR(
             nt=200,
             rmin=0.55,
             rmax=0.95,  # rave = 0.75
             name="6-B3D_Rave_pt75_Natural_high_0pt008SLR",
-            road_ele=None,
-            road_width=None,
-            road_setback=None,
-            dune_design_elevation=None,
-            dune_minimum_elevation=None,
-            run_road_mgmt=False,
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_829yrs_high-elevations.csv",
             dune_file="barrier3d-default-dunes.npy",
             sea_level_rise_rate=0.008,  # m/yr
             sea_level_constant=True,
-            background_erosion=0.0,
         )
 
-        cascade_pt75_high_SLR0pt012 = RUN_7_CASCADE_noAST_Rave_variableSLR_Roadways(
+        cascade_pt75_high_SLR0pt012 = RUN_7_CASCADE_noAST_Rave_variableSLR(
             nt=200,
             rmin=0.55,
             rmax=0.95,  # rave = 0.75
             name="6-B3D_Rave_pt75_Natural_high_0pt012SLR",
-            road_ele=None,
-            road_width=None,
-            road_setback=None,
-            dune_design_elevation=None,
-            dune_minimum_elevation=None,
-            run_road_mgmt=False,
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_829yrs_high-elevations.csv",
             dune_file="barrier3d-default-dunes.npy",
             sea_level_rise_rate=0.012,  # m/yr
             sea_level_constant=True,
-            background_erosion=0.0,
         )
 
-        cascade_pt45_low_SLR0pt008 = RUN_7_CASCADE_noAST_Rave_variableSLR_Roadways(
+        cascade_pt45_low_SLR0pt008 = RUN_7_CASCADE_noAST_Rave_variableSLR(
             nt=200,
             rmin=0.25,
             rmax=0.65,  # rave = 0.45
             name="6-B3D_Rave_pt45_Natural_low_0pt008SLR",
-            road_ele=None,
-            road_width=None,
-            road_setback=None,
-            dune_design_elevation=None,
-            dune_minimum_elevation=None,
-            run_road_mgmt=False,
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
             dune_file="barrier3d-default-dunes.npy",
             sea_level_rise_rate=0.008,  # m/yr
             sea_level_constant=True,
-            background_erosion=0.0,
         )
 
-        cascade_pt45_low_SLR0pt012 = RUN_7_CASCADE_noAST_Rave_variableSLR_Roadways(
+        cascade_pt45_low_SLR0pt012 = RUN_7_CASCADE_noAST_Rave_variableSLR(
             nt=200,
             rmin=0.25,
             rmax=0.65,  # rave = 0.45
             name="6-B3D_Rave_pt45_Natural_low_0pt012SLR",
-            road_ele=None,
-            road_width=None,
-            road_setback=None,
-            dune_design_elevation=None,
-            dune_minimum_elevation=None,
-            run_road_mgmt=False,
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
             dune_file="barrier3d-default-dunes.npy",
             sea_level_rise_rate=0.012,  # m/yr
             sea_level_constant=True,
-            background_erosion=0.0,
         )
 
-        cascade_pt45_high_SLR0pt008 = RUN_7_CASCADE_noAST_Rave_variableSLR_Roadways(
+        cascade_pt45_high_SLR0pt008 = RUN_7_CASCADE_noAST_Rave_variableSLR(
             nt=200,
             rmin=0.25,
             rmax=0.65,  # rave = 0.45
             name="6-B3D_Rave_pt45_Natural_high_0pt008SLR",
-            road_ele=None,
-            road_width=None,
-            road_setback=None,
-            dune_design_elevation=None,
-            dune_minimum_elevation=None,
-            run_road_mgmt=False,
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_802yrs_high-elevations.csv",
             dune_file="barrier3d-default-dunes.npy",
             sea_level_rise_rate=0.008,  # m/yr
             sea_level_constant=True,
-            background_erosion=0.0,
         )
 
-        cascade_pt45_high_SLR0pt012 = RUN_7_CASCADE_noAST_Rave_variableSLR_Roadways(
+        cascade_pt45_high_SLR0pt012 = RUN_7_CASCADE_noAST_Rave_variableSLR(
             nt=200,
             rmin=0.25,
             rmax=0.65,  # rave = 0.45
             name="6-B3D_Rave_pt45_Natural_high_0pt012SLR",
-            road_ele=None,
-            road_width=None,
-            road_setback=None,
-            dune_design_elevation=None,
-            dune_minimum_elevation=None,
-            run_road_mgmt=False,
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_802yrs_high-elevations.csv",
             dune_file="barrier3d-default-dunes.npy",
             sea_level_rise_rate=0.012,  # m/yr
             sea_level_constant=True,
-            background_erosion=0.0,
         )
 
         # start of accelerated SLR scenarios
         # for the accelerated SLR scenario, I had to hard code the parameters that correspond to the
         # Rohling et al. (2013) 68% upper bound for AD2000-2200. SLRR starts at 0.003 m/yr and ends at 0.022 m/yr;
         # matches with the bounds of RCP8.5 SLR by 2100 and 2200
-        cascade_pt75_low_SLRacc = RUN_7_CASCADE_noAST_Rave_variableSLR_Roadways(
+        cascade_pt75_low_SLRacc = RUN_7_CASCADE_noAST_Rave_variableSLR(
             nt=200,
             rmin=0.55,
             rmax=0.95,  # rave = 0.75
             name="6-B3D_Rave_pt75_Natural_low_AccSLR",
-            road_ele=None,
-            road_width=None,
-            road_setback=None,
-            dune_design_elevation=None,
-            dune_minimum_elevation=None,
-            run_road_mgmt=False,
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
             dune_file="barrier3d-default-dunes.npy",
             sea_level_rise_rate=0.008,  # dummy
             sea_level_constant=False,  # accelerated
-            background_erosion=0.0,
         )
 
-        cascade_pt75_high_SLRacc = RUN_7_CASCADE_noAST_Rave_variableSLR_Roadways(
+        cascade_pt75_high_SLRacc = RUN_7_CASCADE_noAST_Rave_variableSLR(
             nt=200,
             rmin=0.55,
             rmax=0.95,  # rave = 0.75
             name="6-B3D_Rave_pt75_Natural_high_AccSLR",
-            road_ele=None,
-            road_width=None,
-            road_setback=None,
-            dune_design_elevation=None,
-            dune_minimum_elevation=None,
-            run_road_mgmt=False,
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_829yrs_high-elevations.csv",
             dune_file="barrier3d-default-dunes.npy",
             sea_level_rise_rate=0.008,  # m/yr
             sea_level_constant=False,
-            background_erosion=0.0,
         )
 
-        cascade_pt45_low_SLRacc = RUN_7_CASCADE_noAST_Rave_variableSLR_Roadways(
+        cascade_pt45_low_SLRacc = RUN_7_CASCADE_noAST_Rave_variableSLR(
             nt=200,
             rmin=0.25,
             rmax=0.65,  # rave = 0.45
             name="6-B3D_Rave_pt45_Natural_low_AccSLR",
-            road_ele=None,
-            road_width=None,
-            road_setback=None,
-            dune_design_elevation=None,
-            dune_minimum_elevation=None,
-            run_road_mgmt=False,
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
             dune_file="barrier3d-default-dunes.npy",
             sea_level_rise_rate=0.012,  # m/yr
             sea_level_constant=False,
-            background_erosion=0.0,
         )
 
-        cascade_pt45_high_SLRacc = RUN_7_CASCADE_noAST_Rave_variableSLR_Roadways(
+        cascade_pt45_high_SLRacc = RUN_7_CASCADE_noAST_Rave_variableSLR(
             nt=200,
             rmin=0.25,
             rmax=0.65,  # rave = 0.45
             name="7-B3D_Rave_pt45_Natural_high_AccSLR",
-            road_ele=None,
-            road_width=None,
-            road_setback=None,
-            dune_design_elevation=None,
-            dune_minimum_elevation=None,
-            run_road_mgmt=False,
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_802yrs_high-elevations.csv",
             dune_file="barrier3d-default-dunes.npy",
             sea_level_rise_rate=0.008,  # m/yr
             sea_level_constant=False,
-            background_erosion=0.0,
+        )
+
+    def natural():
+        cascade_pt75_low = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
+            nt=1000,
+            rmin=0.55,
+            rmax=0.95,  # rave = 0.75
+            name="4-B3D_Rave_pt75_Natural_low",
+            storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+            elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
+            dune_file="barrier3d-default-dunes.npy",
+        )
+
+        cascade_pt75_high = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
+            nt=1000,
+            rmin=0.55,
+            rmax=0.95,  # rave = 0.75
+            name="4-B3D_Rave_pt75_Natural_high",
+            storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+            elevation_file="b3d_pt75_829yrs_high-elevations.csv",
+            dune_file="barrier3d-default-dunes.npy",
+        )
+
+        cascade_pt45_low = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
+            nt=1000,
+            rmin=0.25,
+            rmax=0.65,  # rave = 0.45
+            name="4-B3D_Rave_pt45_Natural_low",
+            storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+            elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
+            dune_file="barrier3d-default-dunes.npy",
+        )
+
+        cascade_pt45_high = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
+            nt=1000,
+            rmin=0.25,
+            rmax=0.65,  # rave = 0.45
+            name="4-B3D_Rave_pt45_Natural_high",
+            storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+            elevation_file="b3d_pt45_802yrs_high-elevations.csv",
+            dune_file="barrier3d-default-dunes.npy",
         )
 
     def roadways():
         def pt75():
             def low():
-                cascade_pt75_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                    nt=1000,
-                    rmin=0.55,
-                    rmax=0.95,  # rave = 0.75
-                    name="6-B3D_Rave_pt75_Natural_low",
-                    run_road_mgmt=False,
-                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                    elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
-                    background_erosion=0.0,
-                )
-
                 # Roadway width drowned at 178 years, 20.0% of road borders water
                 cascade_pt75_h2m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
@@ -2576,18 +2505,6 @@ def human_runs():
                 )
 
             def high():
-                cascade_pt75_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                    nt=1000,
-                    rmin=0.55,
-                    rmax=0.95,  # rave = 0.75
-                    name="6-B3D_Rave_pt75_Natural_high",
-                    run_road_mgmt=False,
-                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                    elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
-                    background_erosion=0.0,
-                )
-
                 # able to set the highway slightly higher
                 # Roadway width drowned at 538 years, 20.0% of road borders water
                 # Barrier has HEIGHT DROWNED at t = 580 years
@@ -2646,18 +2563,6 @@ def human_runs():
 
         def pt45():
             def low():
-                cascade_pt45_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                    nt=1000,
-                    rmin=0.25,
-                    rmax=0.65,  # rave = 0.45
-                    name="6-B3D_Rave_pt45_Natural_low",
-                    run_road_mgmt=False,
-                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                    elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
-                    background_erosion=0.0,
-                )
-
                 # Roadway width drowned at 617 years, 20.0% of road borders water
                 cascade_pt45_h1m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
@@ -2733,18 +2638,6 @@ def human_runs():
                 )
 
             def high():
-                cascade_pt45_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                    nt=1000,
-                    rmin=0.25,
-                    rmax=0.65,  # rave = 0.45
-                    name="6-B3D_Rave_pt45_Natural_high",
-                    run_road_mgmt=False,
-                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                    elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
-                    background_erosion=0.0,
-                )
-
                 # Roadway width drowned at 647 years, 20.0% of road borders water
                 cascade_pt45_h1m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
@@ -4229,8 +4122,7 @@ def human_runs():
             )
 
 
-# record of human plots -------------------------------------------------------------------------------------
-def human_plots():
+def cascade_1kyr_plots():
     def old_overwash_model():
 
         # NOTE: the plotter changed in new versions but I didn't update the output variables here (the calls below are
