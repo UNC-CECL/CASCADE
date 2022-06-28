@@ -461,7 +461,7 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
     # run script for the 10,000 year runs.
 
     # --------- INITIALIZE ---------
-    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
+    datadir = "B3D_Inputs/"
     cascade = Cascade(
         datadir,
         name,
@@ -498,7 +498,7 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
             break
 
     # --------- SAVE ---------
-    save_directory = "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
+    save_directory = "Run_Output/"
     cascade.save(save_directory)
 
     return cascade
