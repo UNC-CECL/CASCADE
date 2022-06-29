@@ -2069,8 +2069,19 @@ def cascade_10kyr_sensitivity():
 
 def cascade_10kyr_plots():
 
-    # didn't finish
-    CASCADEplt.supp_10kyr_timeseries()
+    datadir = "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output/"
+    tmax_pt45 = [10000, 10000, 10000, 10000, 10000]
+    name_prefix_45 = "4-CASCADE_noAST_Rave_pt45_SLR_pt004_10k-yrs_0"
+    tmax_pt75 = [5710, 10000, 2878, 10000, 10000]
+    # tmax_pt75_old = [5725, 992, 4870, 10000, 6669]
+    name_prefix_75 = "4-CASCADE_noAST_Rave_pt75_SLR_pt004_10k-yrs_0"
+
+    CASCADEplt.supp_10kyr_timeseries(
+        datadir, tmax_pt45, name_prefix_45, vertical_line_1=8757, vertical_line_2=802
+    )
+    CASCADEplt.supp_10kyr_timeseries(
+        datadir, tmax_pt75, name_prefix_75, vertical_line_1=1353, vertical_line_2=829
+    )
 
 
 # record of B3D time series initial conditions (storms, dune growth rates, growth parameters) -------------------
