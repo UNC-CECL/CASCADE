@@ -15,6 +15,11 @@ import csv
 
 # -------------------------------------------------------------------------------------------------------------------
 def outwasher(b3d, storm_series, runID):
+    # make a folder where all graphs will be saved for that run
+    newpath = "C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/"
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+
     # set Barrier3D variables
     cx = b3d._Cx                                        # multiplier with the average slope of the interior for constant "C" in inundation transport rule
     berm_el = b3d._BermEl                               # [dam MHW]
@@ -187,7 +192,8 @@ def outwasher(b3d, storm_series, runID):
                 full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
                 full_domain = np.append(full_domain, shoreface_domain, 0)
                 # full_domain[0, :, :] = np.vstack([interior_domain, dune_domain_full, beach_domain, shoreface_domain])
-                np.save("C:/Users/Lexi/Documents/Research/Outwasher/full_domain", full_domain)
+                # np.save("C:/Users/Lexi/Documents/Research/Outwasher/full_domain", full_domain)
+                np.save(newpath + "full_domain", full_domain)
 
                 # testing scenarios
                 # full_domain[5:10, 20:25] = 0.5
@@ -220,10 +226,11 @@ def outwasher(b3d, storm_series, runID):
                 ax1.set_title("Initial Elevation $(dam)$")
                 ax1.set_ylabel("barrier width (dam)")
                 ax1.set_xlabel("barrier length (dam)")
-                plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/0_domain_{0}".format(runID))
+                # plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/0_domain_{0}".format(runID))
+                plt.savefig(newpath + "0_domain")
                 plt.show()
 
-                # plotting cross section
+                # plotting pre-storm cross section
                 cross_section = np.mean(full_domain, 1)
                 cross_section = np.flip(cross_section)
                 b3d_cross = np.mean(b3d.InteriorDomain, 1)
@@ -238,6 +245,7 @@ def outwasher(b3d, storm_series, runID):
                 # ax4.legend()
                 # plt.savefig(
                 #     "C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/cross_shore_{0}".format(runID))
+                # plt.savefig(newpath + "cross_shore")
 
 
             width = np.shape(full_domain)[0]  # width is the number of rows in the full domain
@@ -277,11 +285,13 @@ def outwasher(b3d, storm_series, runID):
             ax2.plot(x, sea_level_line, 'k', linestyle='dashed', label='sea level')
             ax2.plot(x, beach_elev_line, 'k', linestyle='dotted', label='beach elevation')
             ax2.plot(x, dune_elev_line, 'k', linestyle='dashdot', label='dune elevation')
-            ax2.legend()
             ax2.set_xlabel("storm duration")
             ax2.set_ylabel("dam MHW")
             ax2.set_title("bay elevation over the course of each storm")
-            plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/{0}_hydrograph".format(runID))
+            ax2.legend()
+            # plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/{0}_hydrograph".format(runID))
+            plt.savefig(newpath + "hydrograph")
+
 
 
             # ### Run Flow Routing Algorithm
@@ -292,9 +302,9 @@ def outwasher(b3d, storm_series, runID):
                 # also, we think there is an error in units
                 # overtop_flow can be dam^3 because we are multiplying by 1 to convert
                 # our initial discharge amount starts at the first row and is later distributed down the rows/cols
-                Rhigh1 = storm_series[1][TS]  # [dam]
-                # Rexcess = Rhigh1 - berm_el
-                Rexcess = Rhigh1 - np.mean(dune_domain_full)  # this was changed from: Rexcess = Rhigh - (Hmean + bermel)
+                # Rhigh1 = storm_series[1][TS]  # [dam]
+                Rexcess = Rhigh
+                # Rexcess = Rhigh1 - np.mean(dune_domain_full)  # this was changed from: Rexcess = Rhigh - (Hmean + bermel)
                 # Rexcess = gaps[q][2]  # (m) i think this is actually dam for us
                 if Rexcess < 0:
                     overtop_vel = 0
@@ -509,7 +519,8 @@ def outwasher(b3d, storm_series, runID):
                             # the Q values must be between limits set by barrier 3d
                             # all Qs in [dam^3/hr]
                             # C = cx * Si  # 10 x the avg slope (from Murray)
-                            C = 0.72  # directly from barrier3d
+                            # C = 0.72  # directly from barrier3d
+                            C = 0.3
                             if Q1 > q_min:
                                 Qs1 = ki * (Q1 * (S1 + C)) ** mm
                                 if Qs1 < 0:
@@ -583,7 +594,7 @@ def outwasher(b3d, storm_series, runID):
                 # qs_lost = qs_lost + sum(SedFluxOut[TS, width-1, :]) / substep  # [dam^3] previously OWloss
                 # qs_lost_total = qs_lost_total + sum(SedFluxOut[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
 
-            with open('C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/sediment_tracking.txt', 'a') as f:
+            with open('C:/Users/Lexi/Documents/Research/Outwasher/Output/sediment_tracking.txt', 'a') as f:
                 if n == numstorm - 1:
                     f.write(runID)
                     f.write('\n')
@@ -616,7 +627,7 @@ def outwasher(b3d, storm_series, runID):
             # not entirely sure how to update the dune domain at this moment
             # dune_domain = b3d.update_dune_domain()
 
-            # plotting cross section
+            # plotting post-storm cross section
             cross_section2 = np.mean(full_domain, 1)
             cross_section2 = np.flip(cross_section2)
             b3d_cross = np.mean(b3d.InteriorDomain, 1)
@@ -629,8 +640,10 @@ def outwasher(b3d, storm_series, runID):
             ax4.set_title("Cross shore elevation profile\n "
                           "shoreface slope = {0}, back barrier slope = {1}".format(round(m_shoreface, 3), round(Si, 3)))
             ax4.legend()
-            plt.savefig(
-                "C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/cross_shore_{0}".format(runID))
+            plt.savefig(newpath + "cross_shore")
+            # plt.savefig(
+            #     "C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/cross_shore_{0}".format(runID))
+
 
             # plot post storm elevation
             fig3 = plt.figure()
@@ -645,8 +658,8 @@ def outwasher(b3d, storm_series, runID):
             ax3.set_ylabel('barrier width (dam)')
             ax3.set_title("Elevation after storm {0} $(dam)$".format(n + 1))
             fig3.colorbar(mat2)
-            plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/{0}_domain_{1}".format(n + 1, runID))
-
+            # plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/{0}_domain_{1}".format(n + 1, runID))
+            plt.savefig(newpath + "{0}_domain".format(n + 1))
     # Record storm data
     b3d._StormCount.append(numstorm)
     return Discharge, elev_change_array, full_domain, qs_lost_total, slopes_array, rexcess_dict, qs2_array
@@ -661,17 +674,21 @@ sound_data = [float(s)/10-0.054 for s in sound_data]  # [dam MHW] Chris' sound e
 sound_data = [s+0.05 for s in sound_data]  # [dam MHW] just increasing the values
 # setting all negative values to 0
 sound_data = sound_data[20:]
+for index, value in enumerate(sound_data):
+    if value > 0.195:
+        sound_data[index] = 0.195
 sound_data[0] = 0
 # np.save("C:/Users/Lexi/Documents/Research/Outwasher/sound_data", sound_data)
 
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
-runID = "lowered_rexcess_b3d_C"
+runID = "30_C_new_ss"
 
 discharge, elev_change, domain, qs_out, slopes2, dictionary, qs2 = outwasher(b3d, storm_series, runID)
 
 # np.save("C:/Users/Lexi/Documents/Research/Outwasher/discharge", discharge)
+# np.save(newpath + "discharge", discharge)
 # plt.matshow(slopes2[1], cmap="jet_r")
 # plt.title('S2 Slopes')
 # plt.colorbar()
@@ -681,15 +698,15 @@ discharge, elev_change, domain, qs_out, slopes2, dictionary, qs2 = outwasher(b3d
 # ----------------------------------making the elevation gif------------------------------------------------------------
 frames = []
 for i in range(2):
-    filename = "C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/" + str(i) +"_domain_{0}.png".format(runID)
+    filename = "C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/" + str(i) + "_domain.png"
     frames.append(imageio.imread(filename))
-imageio.mimwrite("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/test_{0}.gif".format(runID), frames, format= '.gif', fps = 1)
+imageio.mimwrite("C:/Users/Lexi/Documents/Research/Outwasher/Output/{0}/test.gif".format(runID), frames, format='.gif', fps=1)
 
 
 # -------------------------------------------elevation gif--------------------------------------------------------------
 def plot_ElevAnimation(elev, directory, TMAX, name):
     os.chdir(directory)
-    newpath = "Output/Elevations/" + name + "//"
+    newpath = "Elevations/"
     if not os.path.exists(newpath):
         os.makedirs(newpath)
     os.chdir(newpath)
@@ -730,7 +747,7 @@ def plot_ElevAnimation(elev, directory, TMAX, name):
 # -------------------------------------------discharge gif--------------------------------------------------------------
 def plot_DischargeAnimation(dis, directory, TMAX, name):
     os.chdir(directory)
-    newpath = "Output/Discharges/" + name + "/"
+    newpath = "Discharges/"
     if not os.path.exists(newpath):
         os.makedirs(newpath)
     os.chdir(newpath)
@@ -744,7 +761,7 @@ def plot_DischargeAnimation(dis, directory, TMAX, name):
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
             AnimateDomain, origin="upper", cmap="jet_r",
-            vmin=0, vmax=200,
+            # vmin=0, vmax=200,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -772,7 +789,7 @@ def plot_DischargeAnimation(dis, directory, TMAX, name):
 # ---------------------------------------------------slope gif----------------------------------------------------------
 def plot_SlopeAnimation(slope, directory, TMAX, name):
     os.chdir(directory)
-    newpath = "Output/Slopes/" + name + "/"
+    newpath = "Slopes/"
     if not os.path.exists(newpath):
         os.makedirs(newpath)
     os.chdir(newpath)
@@ -811,9 +828,9 @@ def plot_SlopeAnimation(slope, directory, TMAX, name):
     print("[ * slope GIF successfully generated * ]")
 
 # -------------------------------------------qs2 gif--------------------------------------------------------------------
-def plot_SlopeAnimation(qs2, directory, TMAX, name):
+def plot_Qs2Animation(qs2, directory, TMAX, name):
     os.chdir(directory)
-    newpath = "Output/Qs2/" + name + "/"
+    newpath = "Qs2/"
     if not os.path.exists(newpath):
         os.makedirs(newpath)
     os.chdir(newpath)
@@ -947,10 +964,10 @@ def plot_ModelTransects(b3d, time_step):
 # TMAX = storm_series[2]
 TMAX = 2*storm_series[2]
 name = runID
-dir = r"C:\Users\Lexi\Documents\Research\Outwasher"
-plot_ElevAnimation(elev_change, dir, TMAX, name)
-plot_DischargeAnimation(discharge, dir, TMAX, name)
-plot_SlopeAnimation(slopes2, dir, TMAX, name)
-plot_SlopeAnimation(qs2, dir, TMAX, name)
+dir = "C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/"
+# plot_ElevAnimation(elev_change, dir, TMAX, name)
+# plot_DischargeAnimation(discharge, dir, TMAX, name)
+# plot_SlopeAnimation(slopes2, dir, TMAX, name)
+# plot_Qs2Animation(qs2, dir, TMAX, name)
 # time_step = [0]
 # plot_ModelTransects(b3d, time_step)
