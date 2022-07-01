@@ -167,4 +167,3 @@ def test_shoreline_variable_exchange_ast():
     )  # this isn't always zero; rounding error
 
     assert_array_almost_equal([dt, ds, db, dh], np.zeros([4, 6, 3]))
-
