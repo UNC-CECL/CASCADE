@@ -39,15 +39,15 @@ def outwasher(b3d, storm_series, runID):
     avg_slope = b3d._BermEl / 20                        # how it is defined in barrier 3D which is much smaller than when
                                                         # you calculate the slope using the avg of the first and last rows
     # setting up dune domain using b3d
-    dune_domain = b3d.DuneDomain
-    # dune_domain = np.zeros([100, 50, 2])
-    # dune_domain[0, :, :] = 0.06
-    # dune_domain[0, 0:3, :] = 0.04
-    # dune_domain[0, 11:14, :] = 0.04
-    # dune_domain[0, 20:24, :] = 0.04
-    # dune_domain[0, 31:35, :] = 0.04
-    # dune_domain[0, 39:41, :] = 0.04
-    # dune_domain[0, 48:50, :] = 0.04
+    # dune_domain = b3d.DuneDomain
+    dune_domain = np.zeros([100, 50, 2])
+    dune_domain[0, :, :] = 0.06
+    dune_domain[0, 0:3, :] = 0.04
+    dune_domain[0, 11:14, :] = 0.04
+    dune_domain[0, 20:24, :] = 0.04
+    dune_domain[0, 31:35, :] = 0.04
+    dune_domain[0, 39:41, :] = 0.04
+    dune_domain[0, 48:50, :] = 0.04
     dune_width = b3d._DuneWidth
     dune_crest = b3d._DuneDomain[b3d._time_index, :, :].max(axis=1)  # not sure about this it is 0.0075
     # dune_crest used to be DuneDomainCrest
@@ -362,7 +362,7 @@ def outwasher(b3d, storm_series, runID):
                                     S3 = np.nan_to_num(S3)
                                 else:
                                     S3 = 0
-                            # if at the last row, apply the same slope that the beach slope has
+                            # if at the last row, apply the same slope as the beach slope
                             else:
                                 if i > 0:
                                     S1 = m_shoreface / (math.sqrt(2))
@@ -530,7 +530,7 @@ def outwasher(b3d, storm_series, runID):
                             # all Qs in [dam^3/hr]
                             # C = cx * Si  # 10 x the avg slope (from Murray)
                             # C = 0.72  # directly from barrier3d
-                            C = 0.10
+                            C = 0.50
                             if Q1 > q_min:
                                 Qs1 = ki * (Q1 * (S1 + C)) ** mm
                                 if Qs1 < 0:
@@ -696,7 +696,7 @@ sound_data[0] = 0
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
-runID = "10_C_new_ss_sedout"
+runID = "50_C_new_ss_syndunes_sedout"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
