@@ -42,12 +42,12 @@ def outwasher(b3d, storm_series, runID):
     # dune_domain = b3d.DuneDomain
     dune_domain = np.zeros([100, 50, 2])
     dune_domain[0, :, :] = 0.06
-    dune_domain[0, 0:3, :] = 0.04
-    dune_domain[0, 11:14, :] = 0.04
-    dune_domain[0, 20:24, :] = 0.04
-    dune_domain[0, 31:35, :] = 0.04
-    dune_domain[0, 39:41, :] = 0.04
-    dune_domain[0, 48:50, :] = 0.04
+    dune_domain[0, 0:3, :] = 0
+    dune_domain[0, 11:14, :] = 0
+    dune_domain[0, 20:24, :] = 0
+    dune_domain[0, 31:35, :] = 0
+    dune_domain[0, 39:41, :] = 0
+    dune_domain[0, 48:50, :] = 0
     dune_width = b3d._DuneWidth
     dune_crest = b3d._DuneDomain[b3d._time_index, :, :].max(axis=1)  # not sure about this it is 0.0075
     # dune_crest used to be DuneDomainCrest
@@ -530,7 +530,7 @@ def outwasher(b3d, storm_series, runID):
                             # all Qs in [dam^3/hr]
                             # C = cx * Si  # 10 x the avg slope (from Murray)
                             # C = 0.72  # directly from barrier3d
-                            C = 0.50
+                            C = 0.72
                             if Q1 > q_min:
                                 Qs1 = ki * (Q1 * (S1 + C)) ** mm
                                 if Qs1 < 0:
@@ -688,15 +688,15 @@ sound_data = [s+0.05 for s in sound_data]  # [dam MHW] just increasing the value
 # setting all negative values to 0
 sound_data = sound_data[20:]
 for index, value in enumerate(sound_data):
-    if value > 0.195:
-        sound_data[index] = 0.195
+    if value > 0.05:
+        sound_data[index] = 0.05
 sound_data[0] = 0
 # np.save("C:/Users/Lexi/Documents/Research/Outwasher/sound_data", sound_data)
 
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
-runID = "50_C_new_ss_syndunes_sedout"
+runID = "72_C_smaller_ss_newsyndunes_sedout"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
