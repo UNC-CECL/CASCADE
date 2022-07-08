@@ -42,12 +42,12 @@ def outwasher(b3d, storm_series, runID):
     # dune_domain = b3d.DuneDomain
     dune_domain = np.zeros([100, 50, 2])
     dune_domain[0, :, :] = 0.06
-    dune_domain[0, 0:3, :] = 0
-    dune_domain[0, 11:14, :] = 0
-    dune_domain[0, 20:24, :] = 0
-    dune_domain[0, 31:35, :] = 0
-    dune_domain[0, 39:41, :] = 0
-    dune_domain[0, 48:50, :] = 0
+    dune_domain[0, 0:3, :] = 0.04
+    dune_domain[0, 11:14, :] = 0.04
+    dune_domain[0, 20:24, :] = 0.04
+    dune_domain[0, 31:35, :] = 0.04
+    dune_domain[0, 39:41, :] = 0.04
+    dune_domain[0, 48:50, :] = 0.04
     dune_width = b3d._DuneWidth
     dune_crest = b3d._DuneDomain[b3d._time_index, :, :].max(axis=1)  # not sure about this it is 0.0075
     # dune_crest used to be DuneDomainCrest
@@ -355,7 +355,7 @@ def outwasher(b3d, storm_series, runID):
 
                                 S2 = Elevation[TS, d, i] - Elevation[TS, d + 1, i]
                                 S2 = np.nan_to_num(S2)
-                                slopes_array[TS, d, i] = S2
+                                # slopes_array[TS, d, i] = S2
 
                                 if i < (length - 1):  # i at the end length means there are no cols to the right
                                     S3 = (Elevation[TS, d, i] - Elevation[TS, d + 1, i + 1]) / (math.sqrt(2))
@@ -378,12 +378,14 @@ def outwasher(b3d, storm_series, runID):
                                     S3 = np.nan_to_num(S3)
                                 else:
                                     S3 = 0
-
+                            slopes_array[TS, d, i] = S2
                             # ### Calculate Discharge To Downflow Neighbors
                             # One or more slopes positive (we have downhill flow)
                             if S1 > 0 or S2 > 0 or S3 > 0:
 
                                 # flow does not go uphill (when theres a downhill option)
+                                # and a zero slope yields a zero discharge with this equation
+
                                 if S1 < 0:
                                     S1 = 0
                                 if S2 < 0:
@@ -424,7 +426,7 @@ def outwasher(b3d, storm_series, runID):
                                 Q3 = np.nan_to_num(Q3)
 
                             # No slopes positive, one or more equal to zero
-                            # np downhill slopes, but some that are 0
+                            # no downhill slopes, but some that are 0
                             elif S1 == 0 or S2 == 0 or S3 == 0:
 
                                 # start by counting the number (1, 2, or 3) of slopes that are 0
@@ -508,7 +510,7 @@ def outwasher(b3d, storm_series, runID):
                             ### Update discharge
                             # discharge is defined for the next row, so we do not need to include the last row
                             # the first row of discharge was already defined
-                            if d != width-1:  # uncomment and tab util calculate sed movement
+                            if d != width-1:  # uncomment and tab until calculate sed movement
                                 # Cell 1
                                 if i > 0:
                                     Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
@@ -522,15 +524,10 @@ def outwasher(b3d, storm_series, runID):
 
                             # ### Calculate Sed Movement
                             fluxLimit = max_dune  # [dam MHW] dmaxel - bermel
-                            # typically max sediment comes from dune, but bay sediment probably negligible
-                            # there is a source of sediment at the dune tha can be distributed to the beach
-                            # fluxLimit = 0.001  # [dam^3/hr]
-                            # fluxLimit = 1  # [dam^3/hr]
-                            # the Q values must be between limits set by barrier 3d
                             # all Qs in [dam^3/hr]
                             # C = cx * Si  # 10 x the avg slope (from Murray)
                             # C = 0.72  # directly from barrier3d
-                            C = 0.72
+                            C = 0.90
                             if Q1 > q_min:
                                 Qs1 = ki * (Q1 * (S1 + C)) ** mm
                                 if Qs1 < 0:
@@ -688,15 +685,16 @@ sound_data = [s+0.05 for s in sound_data]  # [dam MHW] just increasing the value
 # setting all negative values to 0
 sound_data = sound_data[20:]
 for index, value in enumerate(sound_data):
-    if value > 0.05:
-        sound_data[index] = 0.05
+    # smaller used 0.05
+    if value > 0.195:
+        sound_data[index] = 0.195
 sound_data[0] = 0
 # np.save("C:/Users/Lexi/Documents/Research/Outwasher/sound_data", sound_data)
 
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
-runID = "72_C_smaller_ss_newsyndunes_sedout"
+runID = "90_C_new_ss_syndunes_sedout"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
@@ -710,7 +708,7 @@ cols = range(np.size(qs2, 1))
 for col in cols:
     line = qs2[0, :, col]
     ax5.plot(cols, line, label="column {0}".format(col))
-# ax5.legend()
+ax5.legend()
 ax5.set_ylabel("Qs2 (dam3/hr)")
 ax5.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
 ax5.set_title("{0} \n Qs2 at time 0".format(runID))
