@@ -410,7 +410,7 @@ def road_relocation_checks(
             ):
                 relocation_break = 1
                 print(
-                    "Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at {time} years".format(
+                    "Island is too narrow for roadway to be relocated. Roadway eaten up by dunes at {time} years".format(
                         time=time_index - 1
                     )  # -1 because B3D advances time step at end of dune_update
                 )
