@@ -141,6 +141,8 @@ class Cascade:
         house_footprint_x=15,
         house_footprint_y=20,
         beach_full_cross_shore=70,
+        enable_shoreline_offset = False,
+        shoreline_offset = [0],
     ):
         """
 
@@ -225,7 +227,10 @@ class Cascade:
             Subsidy on cost of entire nourishment plan
         beach_full_cross_shore: int, optional
             The cross-shore extent (meters) of fully nourished beach (i.e., the community desired beach width) [m]
-
+        enable_shoreline_offset: bool, optional
+            State whether you want a shoreline offset [True / False]
+        shoreline_offset: list, optional
+            The alongshore offset between different barrier 3d sections [m]
 
         Examples
         --------
@@ -264,6 +269,9 @@ class Cascade:
         self._nourish_now = [0] * self._ny  # triggers nourishment
         self._rebuild_dune_now = [0] * self._ny  # triggers dune rebuilding
         self._initial_beach_width = [0] * self._ny
+        # New offset shoreline additions
+        self._enable_shoreline_offset = enable_shoreline_offset
+        self._shoreline_offset = shoreline_offset
 
         ###############################################################################
         # initialize brie and barrier3d model classes
@@ -280,6 +288,8 @@ class Cascade:
             back_barrier_depth=bay_depth,
             ny=self._ny,
             nt=self._nt,
+            enable_shoreline_offset = self._enable_shoreline_offset,
+            shoreline_offset = self._shoreline_offset,
         )
 
         # initialize barrier3d models (number set by brie ny above) and make both brie and barrier3d classes equivalent
