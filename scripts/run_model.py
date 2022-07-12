@@ -462,6 +462,7 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
 
     # --------- INITIALIZE ---------
     datadir = "B3D_Inputs/"
+    # datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
     cascade = Cascade(
         datadir,
         name,
@@ -2192,7 +2193,30 @@ def time_series():
         output_filename="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_02",
     )
 
-    def BermEl_2m():
+    def one_hundered_ish_1kyr_storms():
+        number_storms = 100
+        datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs"
+
+        for iStorm in range(number_storms):
+
+            output_filename = "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_" + str(
+                iStorm
+            )
+            yearly_storms(
+                datadir=datadir,
+                storm_list_name="StormList_20k_VCR_Berm1pt9m_Slope0pt04.csv",  # can by .py or .csv
+                mean_yearly_storms=8.3,
+                SD_yearly_storms=5.9,
+                MHW=0.46,  # m NAVD88
+                StormStart=2,
+                BermEl=1.9,  # m NAVD88, just used for plotting
+                model_years=1000,
+                bPlot=False,
+                bSave=True,
+                output_filename=output_filename,
+            )
+
+    def BermEl_2m_sensitivity_test():
         name = "StormTimeSeries_10k-yr.npy"
         yearly_storms_from_MSSM(
             datadir=datadir,
@@ -2449,6 +2473,56 @@ def cascade_1kyr_runs():
             elevation_file="b3d_pt45_802yrs_high-elevations.csv",
             dune_file="barrier3d-default-dunes.npy",
         )
+
+        def averages():
+            def one_hundred_natural_runs(name_prefix, rmin, rmax, elevation_file):
+                number_storms = 100
+
+                for iStorm in range(number_storms):
+                    name = name_prefix + str(iStorm)
+                    storm_file = (
+                        "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_"
+                        + str(iStorm)
+                        + ".npy"
+                    )
+
+                    RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
+                        nt=1000,
+                        rmin=rmin,
+                        rmax=rmax,
+                        name=name,
+                        storm_file=storm_file,
+                        elevation_file=elevation_file,
+                        dune_file="barrier3d-default-dunes.npy",
+                    )
+
+            one_hundred_natural_runs(
+                name_prefix="4-B3D_Rave_pt45_Natural_low",
+                rmin=0.25,
+                rmax=0.65,
+                elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
+            )
+
+            one_hundred_natural_runs(
+                name_prefix="4-B3D_Rave_pt45_Natural_high",
+                rmin=0.25,
+                rmax=0.65,
+                elevation_file="b3d_pt45_802yrs_high-elevations.csv",
+            )
+
+            one_hundred_natural_runs(
+                name_prefix="4-B3D_Rave_pt75_Natural_low",
+                rmin=0.55,
+                rmax=0.95,  # rave = 0.75
+                elevation_file="b3d_pt75_1353yrs_low-elevations.csv",
+            )
+
+            one_hundred_natural_runs(
+                name_prefix="4-B3D_Rave_pt75_Natural_high",
+                rmin=0.55,
+                rmax=0.95,  # rave = 0.75
+                elevation_file="b3d_pt75_829yrs_high-elevations.csv",
+            )
 
     def roadways():
         def pt75():

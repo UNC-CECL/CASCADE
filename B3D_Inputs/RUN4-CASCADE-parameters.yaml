@@ -53,7 +53,7 @@ beta: 0.04
 disp_mu: -0.721891
 disp_sigma: 1.5
 dune_file: barrier3d-default-dunes.npy
-elevation_file: b3d_pt45_802yrs_high-elevations.csv
+elevation_file: b3d_pt45_8757yrs_low-elevations.csv
 growth_param_file: growthparam_1000dam.npy
 k_sf: 19324.753176079226
 mm: 2.0
@@ -61,5 +61,5 @@ nn: 0.5
 rmax: 0.65
 rmin: 0.25
 s_sf_eq: 0.01698590034494604
-storm_file: StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy
+storm_file: StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_0.npy
 threshold_in: 0.25
