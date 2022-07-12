@@ -14,6 +14,68 @@ import imageio
 import csv
 
 # -------------------------------------------------------------------------------------------------------------------
+# ### Dune Erosion
+def dune_erosion(length, berm_el, dune_domain, sea_level, dur):
+    time_b3d = b3d._time_index
+    dune_width = b3d._DuneWidth
+    print(b3d._DuneDomain[b3d._time_index, :, :])
+    dune_crest = b3d._DuneDomain[b3d._time_index, :, :].max(axis=1)  # not sure about this it is 0.0075
+    # compares the first value of each column in the dune domain at time index 1 and returns the row with the higher val
+    # dune_crest used to be DuneDomainCrest
+    dune_restart = b3d._DuneRestart  # currently set to 0.0075 also
+    max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
+    # max_dune_elev = b3d._Dmaxel
+    Hd_avgTS = b3d._Hd_AverageTS
+    dune_crest[dune_crest < dune_restart] = dune_restart
+    Hd_avgTS.append(np.mean(dune_crest))  # Store average pre-storm dune-height for time step
+    c1 = b3d._C1
+    c2 = b3d._C2
+    Hd_loss_TS = b3d._Hd_Loss_TS
+    Rhigh = max(storm_series[1])  # Highest elevation of the landward margin of runup? Just using max of storm series
+    DuneChange = np.zeros(
+        [length, dune_width]
+    )  # Vector storing dune height change for this storm
+    dune = dune_crest+berm_el
+    # Find overwashed dunes and gaps
+    # currently changed Rhigh[n] to max of the bay depth in the storm series
+    Dow = [index for index, value in enumerate((dune_crest + berm_el))
+        if value < Rhigh]  # bay depth used to be Rhigh[n]
+    gaps = b3d.DuneGaps(
+        dune_crest, Dow, berm_el, Rhigh
+    )  # Finds location and Rexcess of continuous gaps in dune ridge
+
+    for ow_cell in range(len(Dow)):  # Loop through each overwashed dune cell
+        for w in range(dune_width):
+            # Calculate dune elevation loss
+            ## dune domain at time index 1 is all zeros
+            Rnorm = Rhigh / (dune_domain[time_b3d, Dow[ow_cell], w] + berm_el)  # Rhigh relative to pre-storm dune elevation
+            Dloss = Rnorm / (c1 + (Rnorm * (Rnorm - c2)))  # Amount of dune crest elevation change normalized by pre-storm dune elevation
+            # (i.e. a percent change), from Goldstein and Moore (2016)
+
+            # Set new dune height
+            InitDElev = (dune_domain[time_b3d, Dow[ow_cell], w] + berm_el)
+            NewDElev = InitDElev * (1 - Dloss)  # Calculate new dune elevation from storm lowering
+            if NewDElev < berm_el:
+                NewDElev = berm_el
+            dune_domain[time_b3d, Dow[ow_cell], w] = (NewDElev - berm_el)  # Convert elevation to height above berm
+            row = Dow[ow_cell]
+            DuneChange[Dow[ow_cell], w] = InitDElev - NewDElev
+
+            # If dune is lowered to ~ zero, allow for chance of regrowth by raising dune height to 5 cm
+            if dune_domain[time_b3d, Dow[ow_cell], w] < dune_restart:
+                if dune_restart < max_dune:
+                    dune_domain[time_b3d, Dow[ow_cell], w] = dune_restart
+                else:
+                    dune_domain[time_b3d, Dow[ow_cell], w] = (max_dune)  # Restart height can't be greater than Dmax
+
+    # Dune Height Diffusion
+    dune_domain = b3d.DiffuseDunes(dune_domain, time_b3d)
+    dune_domain[dune_domain < sea_level] = dune_restart
+    DuneLoss = np.sum(DuneChange) / length
+    Hd_TSloss = (DuneChange.max(axis=1) / dur)  # Average height of dune loss for each substep during storm
+    Hd_loss_TS[time_b3d, :] = Hd_loss_TS[time_b3d, :] + DuneChange.max(axis=1)
+    return gaps
+
 def outwasher(b3d, storm_series, runID):
     # make a folder where all graphs will be saved for that run
     newpath = "C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/"
@@ -22,12 +84,10 @@ def outwasher(b3d, storm_series, runID):
 
     # set Barrier3D variables
     cx = b3d._Cx                                        # multiplier with the average slope of the interior for constant "C" in inundation transport rule
-    time_b3d = b3d._time_index
     berm_el = b3d._BermEl                               # [dam MHW]
     beach_elev = b3d._BermEl                            # [dam MHW]
     length = b3d._BarrierLength                         # [dam] length of barrier
     substep = b3d._OWss_i                               # 2 for inundation
-    # substep = 1
     nn = b3d._nn                                        # flow routing constant
     max_slope = -b3d._MaxUpSlope                         # max slope that sediment can go uphill, previously Slim (0.25)
     ki = b3d._Ki                                        # sediment transport coefficient
@@ -39,15 +99,15 @@ def outwasher(b3d, storm_series, runID):
     avg_slope = b3d._BermEl / 20                        # how it is defined in barrier 3D which is much smaller than when
                                                         # you calculate the slope using the avg of the first and last rows
     # setting up dune domain using b3d
-    # dune_domain = b3d.DuneDomain
-    dune_domain = np.zeros([100, 50, 2])
-    dune_domain[0, :, :] = 0.06
-    dune_domain[0, 0:3, :] = 0.04
-    dune_domain[0, 11:14, :] = 0.04
-    dune_domain[0, 20:24, :] = 0.04
-    dune_domain[0, 31:35, :] = 0.04
-    dune_domain[0, 39:41, :] = 0.04
-    dune_domain[0, 48:50, :] = 0.04
+    dune_domain = b3d.DuneDomain
+    # dune_domain = np.zeros([100, 50, 2])
+    # dune_domain[0, :, :] = 0.06
+    # dune_domain[0, 0:3, :] = 0.04
+    # dune_domain[0, 11:14, :] = 0.04
+    # dune_domain[0, 20:24, :] = 0.04
+    # dune_domain[0, 31:35, :] = 0.04
+    # dune_domain[0, 39:41, :] = 0.04
+    # dune_domain[0, 48:50, :] = 0.04
     dune_width = b3d._DuneWidth
     dune_crest = b3d._DuneDomain[b3d._time_index, :, :].max(axis=1)  # not sure about this it is 0.0075
     # dune_crest used to be DuneDomainCrest
@@ -60,10 +120,6 @@ def outwasher(b3d, storm_series, runID):
         np.mean(dune_crest)
     )  # Store average pre-storm dune-height for time step
 
-    c1 = b3d._C1
-    c2 = b3d._C2
-    Hd_loss_TS = b3d._Hd_Loss_TS
-    Rhigh = max(storm_series[1])
 
     # Set other variables
     qs_lost_total = 0  # previously OWloss
@@ -111,73 +167,21 @@ def outwasher(b3d, storm_series, runID):
             else:
                 dur = storm_series[2]  # [hr] duration of the storm
 
-            # ### Dune Erosion
-            DuneChange = np.zeros(
-                [length, dune_width]
-            )  # Vector storing dune height change for this storm
-
-            # Find overwashed dunes and gaps
-            # currently changed Rhigh[n] to max of the bay depth in the storm series, but this might have to go into the
-            # TS loop so that Rhigh is set to whatever the hydrograph is at for that time step
-            Dow = [index for index, value in enumerate((dune_crest + berm_el))
-                if value < Rhigh]  # bay depth used to be Rhigh[n]
-            gaps = b3d.DuneGaps(
-                dune_crest, Dow, berm_el, Rhigh
-            )  # Finds location and Rexcess of continuous gaps in dune ridge, baydepth used to be Rhigh[n]
-
-            for d in range(len(Dow)):  # Loop through each overwashed dune cell
-                for w in range(dune_width):
-
-                    # Calculate dune elevation loss
-                    Rnorm = Rhigh / (
-                            dune_domain[time_b3d, Dow[d], w] + berm_el
-                    )  # Rhigh relative to pre-storm dune elevation
-                    Dloss = Rnorm / (
-                            c1 + (Rnorm * (Rnorm - c2))
-                    )  # Amount of dune crest elevation change normalized by pre-storm dune elevation
-                    # (i.e. a percent change), from Goldstein and Moore (2016)
-
-                    # Set new dune height
-                    InitDElev = (
-                            dune_domain[time_b3d, Dow[d], w] + berm_el
-                    )
-                    NewDElev = InitDElev * (1 - Dloss)  # Calculate new dune elevation from storm lowering
-                    if NewDElev < berm_el:
-                        NewDElev = berm_el
-                    dune_domain[time_b3d, Dow[d], w] = (
-                            NewDElev - berm_el
-                    )  # Convert elevation to height above berm
-
-                    DuneChange[Dow[d], w] = InitDElev - NewDElev
-
-                    # If dune is lowered to ~ zero, allow for chance of regrowth by raising dune height to 5 cm
-                    if dune_domain[time_b3d, Dow[d], w] < dune_restart:
-                        if dune_restart < max_dune:
-                            dune_domain[time_b3d, Dow[d], w] = dune_restart
-                        else:
-                            dune_domain[time_b3d, Dow[d], w] = (max_dune)  # Restart height can't be greater than Dmax
-
-            # Dune Height Diffusion
-            dune_domain = b3d.DiffuseDunes(dune_domain, time_b3d)
-            dune_domain[dune_domain < sea_level] = dune_restart
-
-            DuneLoss = np.sum(DuneChange) / length
-            Hd_TSloss = (DuneChange.max(axis=1) / dur
-            )  # Average height of dune loss for each substep during storm
-            Hd_loss_TS[time_b3d, :] = Hd_loss_TS[time_b3d, :] + DuneChange.max(axis=1)
+            ## DUNES
+            gaps = dune_erosion(length, berm_el, dune_domain, sea_level, dur)
 
             # ### Overwash
             Iow = 0  # Count of dune gaps in inundation regime
             dunes_prestorm = dune_crest
             for q in range(len(gaps)):
-                start = gaps[q][0]
-                stop = gaps[q][1]
-                gapwidth = stop - start + 1
-                meandune = (sum(dunes_prestorm[start: stop + 1]) / gapwidth) + berm_el  # Average elevation of dune gap
+                Iow += 1  # all inundation regime for us
+                # start = gaps[q][0]
+                # stop = gaps[q][1]
+                # gapwidth = stop - start + 1
+                # meandune = (sum(dunes_prestorm[start: stop + 1]) / gapwidth) + berm_el  # Average elevation of dune gap
                 # Determine number of gaps in inundation regime
                 # if Rlow[n] > meandune:
                 #     Iow += 1
-                Iow += 1  # all inundation regime fo rus
 
             # Determine Sediment And Water Routing Rules
             # ### Set Domain
@@ -235,26 +239,15 @@ def outwasher(b3d, storm_series, runID):
                 ax1.set_title("Initial Elevation $(dam)$")
                 ax1.set_ylabel("barrier width (dam)")
                 ax1.set_xlabel("barrier length (dam)")
-                # plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/0_domain_{0}".format(runID))
                 plt.savefig(newpath + "0_domain")
                 plt.show()
 
                 # plotting pre-storm cross section
                 cross_section = np.mean(full_domain, 1)
                 cross_section = np.flip(cross_section)
-                b3d_cross = np.mean(b3d.InteriorDomain, 1)
                 fig4 = plt.figure()
                 ax4 = fig4.add_subplot(111)
                 ax4.plot(range(len(full_domain)), cross_section, label="pre-storm")
-                # ax4.plot(range(len(b3d.InteriorDomain)), b3d_cross, label="B3D")
-                # ax4.set_xlabel("barrier width from ocean to bay (dam)")
-                # ax4.set_ylabel("average alongshore elevation (dam)")
-                # ax4.set_title("Cross shore elevation profile\n "
-                #               "shoreface slope = {0}, back barrier slope = {1}".format(round(m_shoreface,3), round(Si,3)))
-                # ax4.legend()
-                # plt.savefig(
-                #     "C:/Users/Lexi/Documents/Research/Outwasher/Output/Test_years/cross_shore_{0}".format(runID))
-                # plt.savefig(newpath + "cross_shore")
 
 
             width = np.shape(full_domain)[0]  # width is the number of rows in the full domain
@@ -311,17 +304,14 @@ def outwasher(b3d, storm_series, runID):
                 # also, we think there is an error in units
                 # overtop_flow can be dam^3 because we are multiplying by 1 to convert
                 # our initial discharge amount starts at the first row and is later distributed down the rows/cols
-                # Rhigh1 = storm_series[1][TS]  # [dam]
-                Rexcess = Rhigh
-                # Rexcess = Rhigh1 - np.mean(dune_domain_full)  # this was changed from: Rexcess = Rhigh - (Hmean + bermel)
-                # Rexcess = gaps[q][2]  # (m) i think this is actually dam for us
-                if Rexcess < 0:
-                    overtop_vel = 0
+                bayhigh = storm_series[1][TS]  # [dam]
+                if bayhigh < 0:
+                    water_vel = 0
                 else:
-                    overtop_vel = np.sqrt(2 * (9.8/10) * Rexcess)  # (dam/s) previously Vdune
-                overtop_flow = overtop_vel * Rexcess * 3600  # (dam^2/hr), do I need to multiply by 1 dam? prev Qdune
-                Discharge[TS, 0, :] = overtop_flow  # (dam^3/hr)
-                rexcess_dict[round(Rexcess, 5)] = round(overtop_flow, 5)
+                    water_vel = np.sqrt(2 * (9.8/10) * bayhigh)  # (dam/s) previously Vdune
+                water_flow = water_vel * bayhigh * 3600/10  # (dam^2/hr), do I need to multiply by 1 dam? prev Qdune
+                Discharge[TS, 0, :] = water_flow  # (dam^3/hr)
+                rexcess_dict[round(bayhigh, 5)] = round(water_flow, 5)
                 # Begin with elevation from previous timestep
                 if TS > 0:
                     # Elevation[TS, :, :] = Elevation[TS - 1, :, :]
@@ -378,6 +368,13 @@ def outwasher(b3d, storm_series, runID):
                                     S3 = np.nan_to_num(S3)
                                 else:
                                     S3 = 0
+
+                            if i == 0 and S2 < 0 and S3 < 0:
+                                # this is greater than the max slope, so no sediment will go to outside
+                                S1 = -999
+                            if i == length-1 and S2 < 0 and S1 < 0:
+                                S3 = -999
+
                             slopes_array[TS, d, i] = S2
                             # ### Calculate Discharge To Downflow Neighbors
                             # One or more slopes positive (we have downhill flow)
@@ -527,7 +524,7 @@ def outwasher(b3d, storm_series, runID):
                             # all Qs in [dam^3/hr]
                             # C = cx * Si  # 10 x the avg slope (from Murray)
                             # C = 0.72  # directly from barrier3d
-                            C = 0.90
+                            C = 0.10
                             if Q1 > q_min:
                                 Qs1 = ki * (Q1 * (S1 + C)) ** mm
                                 if Qs1 < 0:
@@ -684,21 +681,22 @@ sound_data = [float(s)/10-0.054 for s in sound_data]  # [dam MHW] Chris' sound e
 sound_data = [s+0.05 for s in sound_data]  # [dam MHW] just increasing the values
 # setting all negative values to 0
 sound_data = sound_data[20:]
-for index, value in enumerate(sound_data):
-    # smaller used 0.05
-    if value > 0.195:
-        sound_data[index] = 0.195
+# for index, value in enumerate(sound_data):
+#     # smaller used 0.05
+#     if value > 0.195:
+#         sound_data[index] = 0.195
 sound_data[0] = 0
 # np.save("C:/Users/Lexi/Documents/Research/Outwasher/sound_data", sound_data)
 
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
-runID = "90_C_new_ss_syndunes_sedout"
+runID = "10_C_new_ss_updated_rhigh_smaller"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
 # sedout = sediment fully leaves the system offshore
+## NOW USING REGULAR SOUND DATA, SED OUT AND EDITED EDGES
 
 discharge, elev_change, domain, qs_out, slopes2, dictionary, qs2 = outwasher(b3d, storm_series, runID)
 
@@ -706,12 +704,12 @@ fig5 = plt.figure()
 ax5 = fig5.add_subplot(111)
 cols = range(np.size(qs2, 1))
 for col in cols:
-    line = qs2[0, :, col]
+    line = qs2[1, :, col]
     ax5.plot(cols, line, label="column {0}".format(col))
 ax5.legend()
 ax5.set_ylabel("Qs2 (dam3/hr)")
 ax5.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
-ax5.set_title("{0} \n Qs2 at time 0".format(runID))
+ax5.set_title("{0} \n Qs2 at time 1".format(runID))
 plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/cross_shore_qs2".format(runID))
 # np.save("C:/Users/Lexi/Documents/Research/Outwasher/discharge", discharge)
 # np.save(newpath + "discharge", discharge)
@@ -993,7 +991,7 @@ name = runID
 dir = "C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/"
 plot_ElevAnimation(elev_change, dir, TMAX, name)
 plot_DischargeAnimation(discharge, dir, TMAX, name)
-plot_SlopeAnimation(slopes2, dir, TMAX, name)
-plot_Qs2Animation(qs2, dir, TMAX, name)
+# plot_SlopeAnimation(slopes2, dir, TMAX, name)
+# plot_Qs2Animation(qs2, dir, TMAX, name)
 # time_step = [0]
 # plot_ModelTransects(b3d, time_step)
