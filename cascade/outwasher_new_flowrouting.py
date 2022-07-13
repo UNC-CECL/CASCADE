@@ -272,6 +272,10 @@ def outwasher(b3d, storm_series, runID):
 
             # ### Run Flow Routing Algorithm
             for TS in range(duration):
+                # Begin with elevation from previous timestep
+                if TS > 0:
+                    # Elevation[TS, :, :] = Elevation[TS - 1, :, :]
+                    Elevation[TS, 1:, :] = Elevation[TS - 1, 1:, :]
                 print(TS)
                 bayhigh = storm_series[1][TS]  # [dam]
                 dune_gap = np.min(dune_domain_full)
@@ -281,16 +285,19 @@ def outwasher(b3d, storm_series, runID):
                     # sediment suspension stuff
                 else:
                     # ### DUNES
+                    int_width = np.shape(interior_domain)[0]
                     max_dune, Hd_TSloss, dune_domain, dune_crest, gaps = dune_erosion(
                         length, berm_el, dune_domain, sea_level, dur, bayhigh)
                     dunes_prestorm = dune_crest
-                    dunes = dunes_prestorm + berm_el # can be used later for reducing dune height with storm
+                    dunes = dunes_prestorm + berm_el  # can be used later for reducing dune height with storm
+                    Elevation[TS, int_width:(int_width+2), :] = dunes - \
+                                                  (Hd_TSloss / substep * TS)
+                    # Reduce dune in height linearly over course of storm
 
                     # ### Set Water Flow at Bay
                     # the velocity here assumes dune overtopping (Larson 2004), probably need to change
                     # overtop_flow can be dam^3 because we are multiplying by 1 to convert
                     # our initial discharge amount starts at the first row and is later distributed down the rows/cols
-                    int_width = np.shape(interior_domain)[0]
                     for q in range(len(gaps)):
                         start = gaps[q][0]
                         stop = gaps[q][1]
@@ -299,28 +306,6 @@ def outwasher(b3d, storm_series, runID):
                         water_flow = water_vel * Rexcess * 3600  # (dam^2/hr), do I need to multiply by 1 dam? prev Qdune
                         Discharge[TS, int_width, start:stop] = water_flow  # (dam^3/hr)
                         rexcess_dict[round(Rexcess, 5)] = round(water_flow, 5)
-
-                    # fig7 = plt.figure()
-                    # ax7 = fig7.add_subplot(111)
-                    # mat = ax7.matshow(
-                    #     Discharge[TS, :, :],
-                    #     origin="upper",
-                    #     cmap="jet_r",
-                    #     # vmin=0, vmax=0.25,
-                    # )
-                    # fig7.colorbar(mat)
-                    # ax7.set_title("Discharge at TS {0} $(dam3/hr)$".format(TS))
-                    # ax7.set_ylabel("barrier width (dam)")
-                    # ax7.set_xlabel("barrier length (dam)")
-                    # # plt.savefig(newpath + "0_domain")
-                    # plt.show()
-
-                    # Begin with elevation from previous timestep
-                    if TS > 0:
-                        # Elevation[TS, :, :] = Elevation[TS - 1, :, :]
-                        Elevation[TS, 1:, :] = Elevation[TS - 1, 1:, :]
-                        # Elevation[TS, 0, :] = dunes - \(Hd_TSloss / substep * TS)
-                        # Reduce dune in height linearly over course of storm
 
                     # Loop through the rows, starting with the dunes and excluding the last one
                     # (because there is nowhere for the water/sed to go)
@@ -565,9 +550,7 @@ def outwasher(b3d, storm_series, runID):
                                 # if we are at the bay, or any of the next 10 are at the bay, we should not be moving sediment
                                 if Elevation[TS, d, i] <= sea_level:
                                         #or any(z < sea_level for z in Elevation[TS, d + 1: d + 10, i]):
-
                                     Elevation[TS, d, i] = Elevation[TS, d, i]
-
                                 else:
                                     # If cell is interior, elevation change is determined by difference between
                                     # flux in vs. flux out
@@ -587,21 +570,21 @@ def outwasher(b3d, storm_series, runID):
 
                                     # END OF DOMAIN LOOPS
 
-                # ### Update Elevation After Every Storm Hour
-                ElevationChange = (SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]) / substep
-                Elevation[TS, :, :] = Elevation[TS, :, :] + ElevationChange
-                elev_change_array[TS] = ElevationChange
+                    # ### Update Elevation After Every Storm Hour
+                    ElevationChange = (SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]) / substep
+                    Elevation[TS, :, :] = Elevation[TS, :, :] + ElevationChange
+                    elev_change_array[TS] = ElevationChange
 
-                # Calculate and save volume of sediment leaving the island for every hour
-                # the last row is the accumulation cell for keeping track of sed out
-                # qs_lost = qs_lost + sum(SedFluxIn[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
-                # qs_lost_total = qs_lost_total + sum(SedFluxIn[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
+                    # Calculate and save volume of sediment leaving the island for every hour
+                    # the last row is the accumulation cell for keeping track of sed out
+                    # qs_lost = qs_lost + sum(SedFluxIn[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
+                    # qs_lost_total = qs_lost_total + sum(SedFluxIn[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
 
-                # OWloss = OWloss + np.sum(SedFluxOut[TS, 0, :]) / substep
+                    # OWloss = OWloss + np.sum(SedFluxOut[TS, 0, :]) / substep
 
-                # if we are just letting it go out of the cell uncomment
-                qs_lost = qs_lost + sum(SedFluxOut[TS, width-1, :]) / substep  # [dam^3] previously OWloss
-                qs_lost_total = qs_lost_total + sum(SedFluxOut[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
+                    # if we are just letting it go out of the cell uncomment
+                    qs_lost = qs_lost + sum(SedFluxOut[TS, width-1, :]) / substep  # [dam^3] previously OWloss
+                    qs_lost_total = qs_lost_total + sum(SedFluxOut[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
 
             with open('C:/Users/Lexi/Documents/Research/Outwasher/Output/sediment_tracking.txt', 'a') as f:
                 if n == numstorm - 1:
@@ -662,7 +645,7 @@ def outwasher(b3d, storm_series, runID):
 
     # Record storm data
     b3d._StormCount.append(numstorm)
-    return Discharge, elev_change_array, full_domain, qs_lost_total, slopes_array, rexcess_dict, qs2_array
+    return Discharge, elev_change_array, full_domain, qs_lost_total, slopes_array, rexcess_dict, qs2_array, cross_section, storm_series[1]
 
 
 # --------------------------------------------running outwasher---------------------------------------------------------
@@ -675,7 +658,7 @@ sound_data = [s+0.05 for s in sound_data]  # [dam MHW] just increasing the value
 # setting all negative values to 0
 sound_data = sound_data[20:]
 for index, value in enumerate(sound_data):
-    # smaller used 0.05
+#     # smaller used 0.05
     if value > 0.195:
         sound_data[index] = 0.195
 sound_data[0] = 0
@@ -684,14 +667,14 @@ sound_data[0] = 0
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
-runID = "10_C_newflowroute_195sound"
+runID = "10_C_newflowroute_195sound_lowerdunes"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
 # sedout = sediment fully leaves the system offshore
 ## NOW USING REGULAR SOUND DATA, SED OUT AND EDITED EDGES
 
-discharge, elev_change, domain, qs_out, slopes2, dictionary, qs2 = outwasher(b3d, storm_series, runID)
+discharge, elev_change, domain, qs_out, slopes2, dictionary, qs2, avg_initial_cross, storm_elev = outwasher(b3d, storm_series, runID)
 
 fig5 = plt.figure()
 ax5 = fig5.add_subplot(111)
@@ -704,6 +687,19 @@ ax5.set_ylabel("Qs2 (dam3/hr)")
 ax5.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
 ax5.set_title("{0} \n Qs2 at time 1".format(runID))
 plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/cross_shore_qs2".format(runID))
+
+fig6 = plt.figure()
+ax6 = fig6.add_subplot(111)
+ax6.plot(avg_initial_cross)
+x = len(avg_initial_cross)
+for index, value in enumerate(storm_elev):
+    if index < 7:
+        ax6.plot(range(x), np.ones(x)*value, linestyle="dashed", label="TS = {0}".format(index))
+ax6.set_title("sound level for first 7 TS")
+ax6.legend()
+ax5.set_ylabel("Elevation (dam)")
+ax5.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
+plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/baylevels".format(runID))
 # np.save("C:/Users/Lexi/Documents/Research/Outwasher/discharge", discharge)
 # np.save(newpath + "discharge", discharge)
 # plt.matshow(slopes2[1], cmap="jet_r")
