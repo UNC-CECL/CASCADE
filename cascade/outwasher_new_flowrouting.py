@@ -15,22 +15,22 @@ import csv
 
 # -------------------------------------------------------------------------------------------------------------------
 # ### Dune Erosion
-def dune_erosion(length, berm_el, dune_domain, sea_level, dur, bayhigh):
+def dune_erosion(length, berm_el, dune_domain, dune_crest, bayhigh):
     dune_width = b3d._DuneWidth
+    time = b3d._time_index - 1
     # print(b3d._DuneDomain[b3d._time_index, :, :])
-    dune_crest = b3d._DuneDomain[0, :, :].max(axis=1)  # not sure about this it is 0.0075
     # compares the first value of each column in the dune domain at time index 1 and returns the row with the higher val
     # but at time index 1, all the values are 0 in the dune domain
     # they are set to 0.0075 at line 30
     # dune_crest used to be DuneDomainCrest
-    dune_restart = b3d._DuneRestart  # currently set to 0.0075 also
+    dune_restart = b3d._DuneRestart  # currently set to 0.0075
     max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
     Hd_avgTS = b3d._Hd_AverageTS
     dune_crest[dune_crest < dune_restart] = dune_restart
     Hd_avgTS.append(np.mean(dune_crest))  # Store average pre-storm dune-height for time step
     c1 = b3d._C1
     c2 = b3d._C2
-    Hd_loss_TS = b3d._Hd_Loss_TS
+    # Hd_loss_TS = b3d._Hd_Loss_TS
     # Rhigh = max(storm_series[1])  # Highest elevation of the landward margin of runup. Just using max of storm series
     DuneChange = np.zeros([length, dune_width])  # Vector storing dune height change for this storm
     # dune = dune_crest+berm_el
@@ -38,44 +38,44 @@ def dune_erosion(length, berm_el, dune_domain, sea_level, dur, bayhigh):
     # Find overwashed dunes and gaps
     # currently changed Rhigh to current bay depth in the storm series
     dune_elev = dune_crest + berm_el
-    Dow = [index for index, value in enumerate((dune_elev)) if value < bayhigh]  # bayhigh used to be Rhigh
+    Dow = [index for index, value in enumerate(dune_elev) if value < bayhigh]  # bayhigh used to be Rhigh
     gaps = b3d.DuneGaps(dune_crest, Dow, berm_el, bayhigh)
     # Finds location and Rexcess of continuous gaps in dune ridge
     for ow_cell in range(len(Dow)):  # Loop through each overwashed dune cell
         for w in range(dune_width):
             # Calculate dune elevation loss
             ## dune domain at time index 1 is all zeros
-            Rnorm = bayhigh / (dune_domain[0, Dow[ow_cell], w] + berm_el)  # bayhigh relative to pre-storm dune elevation
+            Rnorm = bayhigh / (dune_domain[Dow[ow_cell], w] + berm_el)  # bayhigh relative to pre-storm dune elevation
             Dloss = Rnorm / (c1 + (Rnorm * (Rnorm - c2)))  # Amount of dune crest elevation change normalized by pre-storm dune elevation
             # (i.e. a percent change), from Goldstein and Moore (2016)
             # Set new dune height
-            InitDElev = (dune_domain[0, Dow[ow_cell], w] + berm_el)
+            InitDElev = (dune_domain[Dow[ow_cell], w] + berm_el)
             NewDElev = InitDElev * (1 - Dloss)  # Calculate new dune elevation from storm lowering
             if NewDElev < berm_el:
                 NewDElev = berm_el
-            dune_domain[0, Dow[ow_cell], w] = (NewDElev - berm_el)  # Convert elevation to height above berm
+            dune_domain[Dow[ow_cell], w] = (NewDElev - berm_el)  # Convert elevation to height above berm
             row = Dow[ow_cell]
             DuneChange[Dow[ow_cell], w] = InitDElev - NewDElev
 
             # If dune is lowered to ~ zero, allow for chance of regrowth by raising dune height to 5 cm
-            if dune_domain[0, Dow[ow_cell], w] < dune_restart:
+            if dune_domain[Dow[ow_cell], w] < dune_restart:
                 if dune_restart < max_dune:
-                    dune_domain[0, Dow[ow_cell], w] = dune_restart
+                    dune_domain[Dow[ow_cell], w] = dune_restart
                 else:
-                    dune_domain[0, Dow[ow_cell], w] = (max_dune)  # Restart height can't be greater than Dmax
+                    dune_domain[Dow[ow_cell], w] = (max_dune)  # Restart height can't be greater than Dmax
 
     # Dune Height Diffusion
-    dune_domain = b3d.DiffuseDunes(dune_domain, 0)
-    dune_domain[dune_domain < sea_level] = dune_restart
-    # DuneLoss = np.sum(DuneChange) / length  # I think duneloss is only used for shoreline change
-    # Hd_TSloss = (DuneChange.max(axis=1) / dur)  # Average height of dune loss for each substep during storm
-    Hd_TSloss = (DuneChange.max(axis=1) / 1)  # Average height of dune loss for each substep during storm
-    # I think we should change dur to 1 because this will change with each TS now
-    # it was previously calculated one time and then each TS would have the same value
-    # this is usually used to reduce dune height lineraly over the course of the storm
-    # but I think it was super high, so I stopped using it
-    Hd_loss_TS[0, :] = Hd_loss_TS[0, :] + DuneChange.max(axis=1)
-    return max_dune, Hd_TSloss, dune_domain, dune_crest, gaps
+    # dune_domain = b3d.DiffuseDunes(dune_domain, 0)
+    # dune_domain[dune_domain < sea_level] = dune_restart
+    # # DuneLoss = np.sum(DuneChange) / length  # I think duneloss is only used for shoreline change
+    # # Hd_TSloss = (DuneChange.max(axis=1) / dur)  # Average height of dune loss for each substep during storm
+    # Hd_TSloss = (DuneChange.max(axis=1) / 1)  # Average height of dune loss for each substep during storm
+    # # I think we should change dur to 1 because this will change with each TS now
+    # # it was previously calculated one time and then each TS would have the same value
+    # # this is usually used to reduce dune height lineraly over the course of the storm
+    # # but I think it was super high, so I stopped using it
+    # Hd_loss_TS[0, :] = Hd_loss_TS[0, :] + DuneChange.max(axis=1)
+    return max_dune, dune_domain, dune_crest, gaps
 
 def outwasher(b3d, storm_series, runID):
     # make a folder where all graphs will be saved for that run
@@ -100,7 +100,8 @@ def outwasher(b3d, storm_series, runID):
     # avg_slope = b3d._BermEl / 20                        # how it is defined in barrier 3D which is much smaller than when
                                                         # you calculate the slope using the avg of the first and last rows
     # setting up dune domain using b3d
-    dune_domain = b3d.DuneDomain
+    dune_domain = b3d.DuneDomain[b3d._time_index-1, :, :]
+    dune_crest = dune_domain.max(axis=1)
     # dune_domain = np.zeros([100, 50, 2])
     # dune_domain[0, :, :] = 0.06
     # dune_domain[0, 0:3, :] = 0.04
@@ -176,7 +177,7 @@ def outwasher(b3d, storm_series, runID):
                         shoreface_domain[s, :] = beach_domain[-1, 0] - m_shoreface  # slope of shoreface in b3d
                     else:
                         shoreface_domain[s, :] = shoreface_domain[s-1, :] - m_shoreface
-                dune_domain_full = np.transpose(dune_domain[0]) + berm_el
+                dune_domain_full = np.transpose(dune_domain) + berm_el
 
                 full_domain = np.append(interior_domain, dune_domain_full, 0)  # [dam MHW]
                 full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
@@ -252,7 +253,7 @@ def outwasher(b3d, storm_series, runID):
             x = range(0, duration)
             sea_level_line = sea_level * np.ones(len(x))
             beach_elev_line = beach_elev * np.ones(len(x))
-            dune_elev_line = max(dune_domain_full[0]) * np.ones(len(x))
+            dune_elev_line = max(dune_crest+berm_el) * np.ones(len(x))
 
             fig2 = plt.figure()
             ax2 = fig2.add_subplot(111)
@@ -276,8 +277,11 @@ def outwasher(b3d, storm_series, runID):
                     # Elevation[TS, :, :] = Elevation[TS - 1, :, :]
                     Elevation[TS, 1:, :] = Elevation[TS - 1, 1:, :]
                 print(TS)
+                # get dune crest out here first
+
+
                 bayhigh = storm_series[1][TS]  # [dam]
-                dune_gap = np.min(dune_domain_full)
+                dune_gap = np.min(dune_crest+berm_el)
                 if bayhigh <= dune_gap:
                     bayhigh= bayhigh
                     # ax1.plot(range(length), np.ones(length)*bayhigh)
@@ -285,8 +289,8 @@ def outwasher(b3d, storm_series, runID):
                 else:
                     # ### DUNES
                     int_width = np.shape(interior_domain)[0]
-                    max_dune, Hd_TSloss, dune_domain, dune_crest, gaps = dune_erosion(
-                        length, berm_el, dune_domain, sea_level, dur, bayhigh)
+                    max_dune, dune_domain, dune_crest, gaps = dune_erosion(
+                        length, berm_el, dune_domain, dune_crest, bayhigh)
                     dunes_prestorm = dune_crest
                     dunes = dunes_prestorm + berm_el  # can be used later for reducing dune height with storm
                     # Elevation[TS, int_width:(int_width+2), :] = dunes - \
@@ -305,6 +309,256 @@ def outwasher(b3d, storm_series, runID):
                         water_flow = water_vel * Rexcess * 3600  # (dam^2/hr), do I need to multiply by 1 dam? prev Qdune
                         Discharge[TS, int_width, start:stop] = water_flow  # (dam^3/hr)
                         rexcess_dict[round(Rexcess, 5)] = round(water_flow, 5)
+
+                    # Back barrier velocity
+                    # conservation of volumetric flow rate?
+                    total_flow = sum(Discharge[TS, int_width, :])  # sum all discharges
+                    Discharge[TS, 0:int_width, :] = total_flow/length
+                    for d in range(int_width):
+                        Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
+                        for i in range(length):
+                            # no need for d != bc we are not at the last row
+                            # no longer need to calculate discharge to neighbors, every cell has same value
+                            # just need to calculate slopes same way
+                            # might be able to leave the Qs the same as well
+
+                            # ### Calculate Slopes
+                            if i > 0:  # i = 0 means there are no cols to the left
+                                S1 = (Elevation[TS, d, i] - Elevation[TS, d + 1, i - 1]) / (math.sqrt(2))
+                                S1 = np.nan_to_num(S1)
+                            else:
+                                S1 = 0
+
+                            S2 = Elevation[TS, d, i] - Elevation[TS, d + 1, i]
+                            S2 = np.nan_to_num(S2)
+                            # slopes_array[TS, d, i] = S2
+
+                            if i < (length - 1):  # i at the end length means there are no cols to the right
+                                S3 = (Elevation[TS, d, i] - Elevation[TS, d + 1, i + 1]) / (math.sqrt(2))
+                                S3 = np.nan_to_num(S3)
+                            else:
+                                S3 = 0
+
+                            # side modifications
+                            if i == 0 and S2 < 0 and S3 < 0:
+                                # this is greater than the max slope, so no sediment will go to outside
+                                S1 = -999
+                            if i == length - 1 and S2 < 0 and S1 < 0:
+                                S3 = -999
+
+                            slopes_array[TS, d, i] = S2
+                            # ### Calculate Discharge To Downflow Neighbors
+                            # applying the same discharge everywhere
+                            # this is not going to be added/stored, just used for sed flux calcs
+                            if i == 0:  # at first col
+                                Q1 = 0
+                                Q2 = Q3 = Discharge[TS, d, i] / 2
+                            elif i == length - 1:  # at the last col
+                                Q3 = 0
+                                Q1 = Q2 = Discharge[TS, d, i] / 2
+                            else:
+                                Q1 = Q2 = Q3 = Discharge[TS, d, i] / 3
+
+                            # # One or more slopes positive (we have downhill flow)
+                            # if S1 > 0 or S2 > 0 or S3 > 0:
+                            #
+                            #     # flow does not go uphill (when theres a downhill option)
+                            #     # and a zero slope yields a zero discharge with this equation
+                            #
+                            #     if S1 < 0:
+                            #         S1 = 0
+                            #     if S2 < 0:
+                            #         S2 = 0
+                            #     if S3 < 0:
+                            #         S3 = 0
+                            #
+                            #     Q1 = (
+                            #             Q0
+                            #             * S1 ** nn
+                            #             / (
+                            #                     S1 ** nn
+                            #                     + S2 ** nn
+                            #                     + S3 ** nn
+                            #             )
+                            #     )
+                            #     Q2 = (
+                            #             Q0
+                            #             * S2 ** nn
+                            #             / (
+                            #                     S1 ** nn
+                            #                     + S2 ** nn
+                            #                     + S3 ** nn
+                            #             )
+                            #     )
+                            #     Q3 = (
+                            #             Q0
+                            #             * S3 ** nn
+                            #             / (
+                            #                     S1 ** nn
+                            #                     + S2 ** nn
+                            #                     + S3 ** nn
+                            #             )
+                            #     )
+                            #
+                            #     Q1 = np.nan_to_num(Q1)
+                            #     Q2 = np.nan_to_num(Q2)
+                            #     Q3 = np.nan_to_num(Q3)
+                            #
+                            # # No slopes positive, one or more equal to zero
+                            # # no downhill slopes, but some that are 0
+                            # elif S1 == 0 or S2 == 0 or S3 == 0:
+                            #
+                            #     # start by counting the number (1, 2, or 3) of slopes that are 0
+                            #     s_zero = 0
+                            #     if S1 == 0:
+                            #         s_zero += 1
+                            #     if S2 == 0:
+                            #         s_zero += 1
+                            #     if S3 == 0:
+                            #         s_zero += 1
+                            #
+                            #     # dividing the initial discharge equally among the 0 slopes
+                            #     Qx = Q0 / s_zero
+                            #     Qx = np.nan_to_num(Qx)
+                            #
+                            #     if S1 == 0 and i > 0:
+                            #         Q1 = Qx
+                            #     else:
+                            #         Q1 = 0
+                            #     if S2 == 0:
+                            #         Q2 = Qx
+                            #     else:
+                            #         Q2 = 0
+                            #     if S3 == 0 and i < (length - 1):
+                            #         Q3 = Qx
+                            #     else:
+                            #         Q3 = 0
+                            #
+                            # # All slopes negative
+                            # # all uphill options (likely our case for outwasher)
+                            # else:
+                            #
+                            #     Q1 = (
+                            #             Q0
+                            #             * abs(S1) ** (-nn)
+                            #             / (
+                            #                     abs(S1) ** (-nn)
+                            #                     + abs(S2) ** (-nn)
+                            #                     + abs(S3) ** (-nn)
+                            #             )
+                            #     )
+                            #     Q2 = (
+                            #             Q0
+                            #             * abs(S2) ** (-nn)
+                            #             / (
+                            #                     abs(S1) ** (-nn)
+                            #                     + abs(S2) ** (-nn)
+                            #                     + abs(S3) ** (-nn)
+                            #             )
+                            #     )
+                            #     Q3 = (
+                            #             Q0
+                            #             * abs(S3) ** (-nn)
+                            #             / (
+                            #                     abs(S1) ** (-nn)
+                            #                     + abs(S2) ** (-nn)
+                            #                     + abs(S3) ** (-nn)
+                            #             )
+                            #     )
+                            #
+                            #     Q1 = np.nan_to_num(Q1)
+                            #     Q2 = np.nan_to_num(Q2)
+                            #     Q3 = np.nan_to_num(Q3)
+                            #
+                            #     # we set a maximum uphill slope that sediment can still be transported to
+                            #     if S1 < max_slope:
+                            #         Q1 = 0
+                            #     else:
+                            #         Q1 = Q1 * (1 - (abs(S1) / abs(max_slope)))
+                            #
+                            #     if S2 < max_slope:
+                            #         Q2 = 0
+                            #     else:
+                            #         Q2 = Q2 * (1 - (abs(S2) / abs(max_slope)))
+                            #
+                            #     if S3 < max_slope:
+                            #         Q3 = 0
+                            #     else:
+                            #         Q3 = Q3 * (1 - (abs(S3) / abs(max_slope)))
+                            # ### Update discharge
+                            # # discharge is defined for the next row, so we do not need to include the last row
+                            # # the first row of discharge was already defined
+                            # # Cell 1
+                            # if i > 0:
+                            #     Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
+                            #
+                            # # Cell 2
+                            # Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
+                            #
+                            # # Cell 3
+                            # if i < (length - 1):
+                            #     Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
+
+                            # ### Calculate Sed Movement
+                            fluxLimit = max_dune  # [dam MHW] dmaxel - bermel
+                            # all Qs in [dam^3/hr]
+                            # C = cx * Si  # 10 x the avg slope (from Murray)
+                            # C = 0.72  # directly from barrier3d
+                            C = 0.10
+                            if Q1 > q_min:
+                                Qs1 = ki * (Q1 * (S1 + C)) ** mm
+                                if Qs1 < 0:
+                                    Qs1 = 0
+                                elif Qs1 > fluxLimit:
+                                    Qs1 = fluxLimit
+                            else:
+                                Qs1 = 0
+
+                            if Q2 > q_min:
+                                Qs2 = ki * (Q2 * (S2 + C)) ** mm
+                                if Qs2 < 0:
+                                    Qs2 = 0
+                                elif Qs2 > fluxLimit:
+                                    Qs2 = fluxLimit
+                            else:
+                                Qs2 = 0
+
+                            if Q3 > q_min:
+                                Qs3 = ki * (Q3 * (S3 + C)) ** mm
+                                if Qs3 < 0:
+                                    Qs3 = 0
+                                elif Qs3 > fluxLimit:
+                                    Qs3 = fluxLimit
+                            else:
+                                Qs3 = 0
+
+                            Qs1 = np.nan_to_num(Qs1)
+                            Qs2 = np.nan_to_num(Qs2)
+                            Qs3 = np.nan_to_num(Qs3)
+
+                            qs2_array[TS, d, i] = Qs2
+
+                            # ### Calculate Net Erosion/Accretion
+                            # if we are at the bay, or any of the next 10 are at the bay, we should not be moving sediment
+                            if Elevation[TS, d, i] <= sea_level:
+                                # or any(z < sea_level for z in Elevation[TS, d + 1: d + 10, i]):
+                                Elevation[TS, d, i] = Elevation[TS, d, i]
+                            else:
+                                # If cell is interior, elevation change is determined by difference between
+                                # flux in vs. flux out
+                                # sed flux in goes to the next row, and is used for determing flux out at current row
+                                # so we need a flux in for the last row, which will be its own variable
+                                if d != width - 1:  # uncomment, tab next two ifs
+                                    if i > 0:
+                                        SedFluxIn[TS, d + 1, i - 1] += Qs1
+
+                                    SedFluxIn[TS, d + 1, i] += Qs2
+
+                                    if i < (length - 1):
+                                        SedFluxIn[TS, d + 1, i + 1] += Qs3
+                                # Qs1,2,3 calculated for current row
+                                Qs_out = Qs1 + Qs2 + Qs3
+                                SedFluxOut[TS, d, i] = Qs_out
 
                     # Loop through the rows, starting with the dunes and excluding the last one
                     # (because there is nowhere for the water/sed to go)
@@ -658,21 +912,22 @@ sound_data = [s+0.05 for s in sound_data]  # [dam MHW] just increasing the value
 sound_data = sound_data[20:]
 for index, value in enumerate(sound_data):
 #     # smaller used 0.05
-    if value > 0.195:
-        sound_data[index] = 0.195
+    if value > 0.220:
+        sound_data[index] = 0.220
 sound_data[0] = 0
 # np.save("C:/Users/Lexi/Documents/Research/Outwasher/sound_data", sound_data)
 
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
-runID = "10_C_newflowroute_195sound_2"
+runID = "10_C_newflowroute_220sound_backbayflow"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
 # sedout = sediment fully leaves the system offshore
 ## NOW USING REGULAR SOUND DATA, SED OUT AND EDITED EDGES
-
+b3d.update()
+b3d.update_dune_domain()
 discharge, elev_change, domain, qs_out, slopes2, dictionary, qs2, avg_initial_cross, storm_elev = outwasher(b3d, storm_series, runID)
 
 fig5 = plt.figure()
@@ -692,9 +947,9 @@ ax6 = fig6.add_subplot(111)
 ax6.plot(avg_initial_cross)
 x = len(avg_initial_cross)
 for index, value in enumerate(storm_elev):
-    if index < 7:
+    if index < 8:
         ax6.plot(range(x), np.ones(x)*value, linestyle="dashed", label="TS = {0}".format(index))
-ax6.set_title("sound level for first 7 TS")
+ax6.set_title("sound level for first 8 TS")
 ax6.legend()
 ax5.set_ylabel("Elevation (dam)")
 ax5.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
@@ -773,7 +1028,7 @@ def plot_DischargeAnimation(dis, directory, TMAX, name):
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
             AnimateDomain, origin="upper", cmap="jet_r",
-            vmin=0, vmax=140,
+            # vmin=0, vmax=140,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
