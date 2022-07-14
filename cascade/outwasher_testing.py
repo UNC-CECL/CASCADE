@@ -18,8 +18,8 @@ import csv
 def dune_erosion(length, berm_el, dune_domain, sea_level, dur, bayhigh):
     time_b3d = b3d._time_index
     dune_width = b3d._DuneWidth
-    # print(b3d._DuneDomain[b3d._time_index, :, :])
-    dune_crest = b3d._DuneDomain[b3d._time_index, :, :].max(axis=1)  # not sure about this it is 0.0075
+    # print(b3d._DuneDomain[time_b3d, :, :])
+    dune_crest = b3d._DuneDomain[time_b3d, :, :].max(axis=1)  # not sure about this it is 0.0075
     # compares the first value of each column in the dune domain at time index 1 and returns the row with the higher val
     # but at time index 1, all the values are 0 in the dune domain
     # they are set to 0.0075 at line 30
