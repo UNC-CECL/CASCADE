@@ -114,7 +114,6 @@ def outwasher(b3d, storm_series, runID):
     qs_lost_total = 0  # previously OWloss
     # numstorm = int(len(storm_series))
     numstorm = 1
-    bay_depth = storm_series[1][0]  # should be the first bay elevation which is 0
 
     # initializing our barrier interior
     interior_domain = np.zeros([30, length])
@@ -122,8 +121,8 @@ def outwasher(b3d, storm_series, runID):
         if row == 0:
             interior_domain[row, :] = 0
         else:
-            # interior_domain[row, :] = interior_domain[row-1, :] + avg_slope  # giving the back barrier an equal slope
             interior_domain[row, :] = interior_domain[row-1, :] + -Si  # giving the back barrier an equal slope
+            # (Si is negative, so have to get an increasing domain, we have to add the neg of the already neg slope)
 
     if numstorm > 0:
         # ### Individual Storm Impacts
@@ -290,8 +289,8 @@ def outwasher(b3d, storm_series, runID):
                         length, berm_el, dune_domain, sea_level, dur, bayhigh)
                     dunes_prestorm = dune_crest
                     dunes = dunes_prestorm + berm_el  # can be used later for reducing dune height with storm
-                    Elevation[TS, int_width:(int_width+2), :] = dunes - \
-                                                  (Hd_TSloss / substep * TS)
+                    # Elevation[TS, int_width:(int_width+2), :] = dunes - \
+                    #                               (Hd_TSloss / substep * TS)
                     # Reduce dune in height linearly over course of storm
 
                     # ### Set Water Flow at Bay
@@ -667,7 +666,7 @@ sound_data[0] = 0
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
-runID = "10_C_newflowroute_195sound_lowerdunes"
+runID = "10_C_newflowroute_195sound_2"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
@@ -774,7 +773,7 @@ def plot_DischargeAnimation(dis, directory, TMAX, name):
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
             AnimateDomain, origin="upper", cmap="jet_r",
-            # vmin=0, vmax=200,
+            vmin=0, vmax=140,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -978,7 +977,7 @@ def plot_ModelTransects(b3d, time_step):
 TMAX = 2*storm_series[2]
 name = runID
 dir = "C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/"
-plot_ElevAnimation(elev_change, dir, TMAX, name)
+# plot_ElevAnimation(elev_change, dir, TMAX, name)
 plot_DischargeAnimation(discharge, dir, TMAX, name)
 # plot_SlopeAnimation(slopes2, dir, TMAX, name)
 # plot_Qs2Animation(qs2, dir, TMAX, name)
