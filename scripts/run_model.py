@@ -2538,7 +2538,7 @@ def cascade_1kyr_runs():
     def roadways():
         def pt75():
             def low():
-                # Roadway width drowned at 313 years, 20.0% of road borders water
+                # Roadway width drowned at 318 years, 20.0% of road borders water
                 cascade_pt75_h1m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
                     rmin=0.55,
@@ -2555,7 +2555,7 @@ def cascade_1kyr_runs():
                     background_erosion=0.0,
                 )
 
-                # Roadway width drowned at 182 years, 20.0% of road borders water
+                # Roadway width drowned at 187 years, 20.0% of road borders water
                 cascade_pt75_h2m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
                     rmin=0.55,
@@ -2572,7 +2572,7 @@ def cascade_1kyr_runs():
                     background_erosion=0.0,
                 )
 
-                # Island is too narrow for roadway to be relocated. Roadway eaten up by dunes at 115 years
+                # Island is too narrow for roadway to be relocated. Roadway eaten up by dunes at 114 years
                 cascade_pt75_h2m_low_BE1m = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
                     rmin=0.55,
@@ -2589,7 +2589,7 @@ def cascade_1kyr_runs():
                     background_erosion=-1,
                 )
 
-                # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 104 years
+                # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 113 years
                 cascade_pt75_h3m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
                     rmin=0.55,
@@ -2607,7 +2607,7 @@ def cascade_1kyr_runs():
                 )
 
             def high():
-                # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 535 years
+                # Roadway width drowned at 535 years, 20.0% of road borders water
                 cascade_pt75_h1m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
                     rmin=0.55,
@@ -2624,8 +2624,8 @@ def cascade_1kyr_runs():
                     background_erosion=0.0,
                 )
 
-                # Roadway width drowned at 534 years, 20.0% of road borders water
-                # Barrier has HEIGHT DROWNED at t = 573 years
+                # Roadway width drowned at 520 years, 20.0% of road borders water
+                # Barrier has HEIGHT DROWNED at t = 571 years
                 cascade_pt75_h2m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
                     rmin=0.55,
@@ -2661,7 +2661,7 @@ def cascade_1kyr_runs():
 
         def pt45():
             def low():
-                # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 542 years
+                # Roadway width drowned at 544 years, 20.0% of road borders water
                 cascade_pt45_h1m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
                     rmin=0.25,
@@ -2678,8 +2678,7 @@ def cascade_1kyr_runs():
                     background_erosion=0.0,
                 )
 
-                # note that this roadway is higher than the pt75 "low" scenario (1.2 m)
-                # Roadway width drowned at 558 years, 20.0% of road borders water
+                # Roadway width drowned at 533 years, 20.0% of road borders water
                 cascade_pt45_h2m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
                     rmin=0.25,
@@ -2696,7 +2695,7 @@ def cascade_1kyr_runs():
                     background_erosion=0.0,
                 )
 
-                # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 187 years
+                # Island is too narrow for roadway to be relocated. Roadway eaten up by dunes at 187 years
                 cascade_pt45_h2m_low_BE1m = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
                     rmin=0.25,
@@ -2713,7 +2712,7 @@ def cascade_1kyr_runs():
                     background_erosion=-1,
                 )
 
-                # Roadway width drowned at 321 years, 20.0% of road borders water
+                # Roadway width drowned at 322 years, 20.0% of road borders water
                 cascade_pt45_h3m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
                     rmin=0.25,
@@ -2731,7 +2730,7 @@ def cascade_1kyr_runs():
                 )
 
             def high():
-                # Roadway width drowned at 656 years, 20.0% of road borders water
+                # Island is too narrow for roadway to be relocated. Roadway eaten up by dunes at 650 years
                 cascade_pt45_h1m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
                     rmin=0.25,
@@ -2748,7 +2747,7 @@ def cascade_1kyr_runs():
                     background_erosion=0.0,
                 )
 
-                # Roadway width drowned at 626 years, 20.0% of road borders water
+                # Roadway width drowned at 628 years, 20.0% of road borders water
                 cascade_pt45_h2m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
                     rmin=0.25,
@@ -2765,7 +2764,7 @@ def cascade_1kyr_runs():
                     background_erosion=0.0,
                 )
 
-                # Roadway width drowned at 523 years, 20.0% of road borders water
+                # Roadway width drowned at 522 years, 20.0% of road borders water
                 cascade_pt45_h3m_high = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
                     rmin=0.25,
@@ -2787,7 +2786,7 @@ def cascade_1kyr_runs():
             # test the sensitivity of varying the number of water cells that border the roadway as a metric to stop
             # managing the road for the most extreme barrier trajectory (high dune growth rate, low barrier)
 
-            # Roadway width drowned at 181 years, 10.0% of road borders water
+            # Roadway width drowned at 185 years, 10.0% of road borders water
             cascade_pt75_h2m_low_10percent = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                 nt=500,
                 rmin=0.55,
@@ -2805,7 +2804,7 @@ def cascade_1kyr_runs():
                 percent_water_cells_sensitivity=0.1,
             )
 
-            # Roadway width drowned at 182 years, 20.0% of road borders water
+            # Roadway width drowned at 187 years, 20.0% of road borders water
             cascade_pt75_h2m_low_20percent = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                 nt=500,
                 rmin=0.55,
@@ -2823,7 +2822,7 @@ def cascade_1kyr_runs():
                 percent_water_cells_sensitivity=0.2,
             )
 
-            # Roadway width drowned at 183 years, 30.0% of road borders water
+            # Roadway width drowned at 320 years, 30.0% of road borders water
             cascade_pt75_h2m_low_30percent = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                 nt=500,
                 rmin=0.55,
@@ -2841,7 +2840,7 @@ def cascade_1kyr_runs():
                 percent_water_cells_sensitivity=0.3,
             )
 
-            # Roadway width drowned at 184 years, 40.0% of road borders water
+            # Roadway width drowned at 322 years, 40.0% of road borders water
             cascade_pt75_h2m_low_40percent = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                 nt=500,
                 rmin=0.55,
@@ -2859,7 +2858,7 @@ def cascade_1kyr_runs():
                 percent_water_cells_sensitivity=0.4,
             )
 
-            # Roadway width drowned at 186 years, 50.0% of road borders water
+            # Roadway width drowned at 325 years, 50.0% of road borders water
             cascade_pt75_h2m_low_50percent = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                 nt=500,
                 rmin=0.55,
@@ -3927,7 +3926,7 @@ def cascade_1kyr_runs():
             sea_level_rise_rate = 0.004
             sea_level_constant = True  # linear
 
-            # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 115 years
+            # Island is too narrow for roadway to be relocated. Roadway eaten up by dunes at 114 years (all 6)
             roadways_6AST_low_pt75_BE1m = (
                 RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
                     nt=200,
@@ -3963,7 +3962,7 @@ def cascade_1kyr_runs():
             sea_level_rise_rate = 0.004
             sea_level_constant = True  # linear
 
-            # Community reached minimum width, drowned at 113 years
+            # Community reached minimum width, drowned at 113 years (all 6)
             roadways_6AST_low_pt75_BE1m = RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
                 nt=200,
                 name="9-CASCADE_Rave_pt75_2mDune_lowEle_comm_BE1m_RT1m_6AST_6nourish",
@@ -3998,9 +3997,9 @@ def cascade_1kyr_runs():
             sea_level_constant = True  # linear
 
             # All 3: Community reached minimum width, drowned at 113 years
-            # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 160 years
-            # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 160 years
-            # Roadway width drowned at 162 years, 20.0% of road borders water
+            # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 172 years
+            # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 172 years
+            # Roadway width drowned at 186 years, 20.0% of road borders water
             nourishment_roadways_6AST_low_pt75_comm_BE1m_RT1m = RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
                 nt=200,
                 name="9-CASCADE_Rave_pt75_Nourish_2mDune_lowEle_comm_BE1m_RT1m_6AST_3roads",
@@ -4035,9 +4034,10 @@ def cascade_1kyr_runs():
             sea_level_constant = False  # accelerated
 
             # All 3: Community reached minimum width, drowned at 77 years;
-            # Roadway width drowned at 162 years, 20.0% of road borders water
-            # Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at 97 years
-            # Roadway width drowned at 97 years, 20.0% of road borders water
+            # Island is too narrow for roadway to be relocated. Roadway eaten up by dunes at 107 years
+            # Island is too narrow for roadway to be relocated. Roadway eaten up by dunes at 107 years
+            # Island is too narrow for roadway to be relocated. Roadway eaten up by dunes at 108 years
+            # Barrier has HEIGHT DROWNED at t = 109 years
             nourishment_roadways_6AST_low_pt75_comm_BE1m_RT1m = RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
                 nt=200,
                 name="9-CASCADE_Rave_pt75_Nourish_2mDune_lowEle_comm_BE1m_RT1m_6AST_3roads_AccSLR",
