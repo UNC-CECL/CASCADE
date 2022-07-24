@@ -324,18 +324,17 @@ def plot_ElevAnimation_CASCADE(
             filename = "elev_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
 
-        # this might break on AST runs: need to test it (don't know if I need the first part
-        for iB3D in range(ny):
-            if (beach_management_ny[iB3D] or roadway_management_ny[iB3D]) and (
-                filenum
-                < TMAX_MGMT[iB3D]
-                # and cascade.nourishments[iB3D]._post_storm_interior[TMAX_MGMT] is not None
-            ):
-                if fig_eps:
-                    filename = "elev_" + str(filenum) + "pt5" ".eps"
-                else:
-                    filename = "elev_" + str(filenum) + "pt5" ".png"
-                frames.append(imageio.imread(filename))
+        # find the maximum 0.5 year
+        tmax_management = np.array(TMAX_MGMT)
+        max_pt5_year = np.max(tmax_management[tmax_management < TMAX_SIM - 1])
+        if (np.any(beach_management_ny) or np.any(roadway_management_ny)) and (
+            filenum < max_pt5_year
+        ):
+            if fig_eps:
+                filename = "elev_" + str(filenum) + "pt5" ".eps"
+            else:
+                filename = "elev_" + str(filenum) + "pt5" ".png"
+            frames.append(imageio.imread(filename))
 
     imageio.mimsave("elev.gif", frames, "GIF-FI")
     print()
