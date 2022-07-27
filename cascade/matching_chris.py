@@ -218,6 +218,8 @@ def outwasher(b3d, storm_series, runID):
                 fig4 = plt.figure()
                 ax4 = fig4.add_subplot(111)
                 ax4.plot(range(len(full_domain)), cross_section, label="pre-storm")
+                dune_gap_el = np.flip(full_domain[:, 21])
+                ax4.plot(range(len(full_domain)), dune_gap_el, label="dune gap pre", linestyle="dashed")
 
 
             width = np.shape(full_domain)[0]  # width is the number of rows in the full domain
@@ -268,7 +270,7 @@ def outwasher(b3d, storm_series, runID):
                 # Begin with elevation from previous timestep
                 if TS > 0:
                     # Elevation[TS, :, :] = Elevation[TS - 1, :, :]
-                    Elevation[TS, 1:, :] = Elevation[TS - 1, 1:, :]
+                    Elevation[TS, 1:, :] = Elevation[TS - 1, 1:, :]  # start at 1 so first row is always 0?
                 print(TS)
                 # get dune crest out here first
                 bayhigh = storm_series[1][TS]  # [dam]
@@ -293,258 +295,9 @@ def outwasher(b3d, storm_series, runID):
                     # overtop_flow can be dam^3 because we are multiplying by 1 to convert
                     # our initial discharge amount starts at the first row and is later distributed down the rows/cols
 
-                    # this is moved for this particular attempt at flow routing
-                    # for q in range(len(gaps)):
-                    #     start = gaps[q][0]
-                    #     stop = gaps[q][1]
-                    #     Rexcess = gaps[q][2]
-                    #     water_vel = np.sqrt(2 * (9.8/10) * Rexcess)  # (dam/s) previously Vdune
-                    #     water_flow = water_vel * Rexcess * 3600  # (dam^2/hr), do I need to multiply by 1 dam? prev Qdune
-                    #     Discharge[TS, int_width, start:stop] = water_flow  # (dam^3/hr)
-                    #     rexcess_dict[round(Rexcess, 5)] = round(water_flow, 5)
 
                     # Back barrier flow starts randomly
                     Discharge[TS, 0, :] = 15
-                    # for d in range(int_width):
-                    #     Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
-                    #     for i in range(length):
-                    #         # ### Calculate Slopes
-                    #         if i > 0:  # i = 0 means there are no cols to the left
-                    #             S1 = (Elevation[TS, d, i] - Elevation[TS, d + 1, i - 1]) / (math.sqrt(2))
-                    #             S1 = np.nan_to_num(S1)
-                    #         else:
-                    #             S1 = 0
-                    #
-                    #         S2 = Elevation[TS, d, i] - Elevation[TS, d + 1, i]
-                    #         S2 = np.nan_to_num(S2)
-                    #         # slopes_array[TS, d, i] = S2
-                    #
-                    #         if i < (length - 1):  # i at the end length means there are no cols to the right
-                    #             S3 = (Elevation[TS, d, i] - Elevation[TS, d + 1, i + 1]) / (math.sqrt(2))
-                    #             S3 = np.nan_to_num(S3)
-                    #         else:
-                    #             S3 = 0
-                    #
-                    #         # side modifications
-                    #         if i == 0 and S2 < 0 and S3 < 0:
-                    #             # this is greater than the max slope, so no sediment will go to outside
-                    #             S1 = -999
-                    #         if i == length - 1 and S2 < 0 and S1 < 0:
-                    #             S3 = -999
-                    #
-                    #         slopes_array[TS, d, i] = S2
-                    #         # ### Calculate Discharge To Downflow Neighbors
-                    #         # applying the same discharge everywhere
-                    #         # this is not going to be added/stored, just used for sed flux calcs
-                    #         if i == 0:  # at first col
-                    #             Q1 = 0
-                    #             Q2 = Q3 = Discharge[TS, d, i] / 2
-                    #         elif i == length - 1:  # at the last col
-                    #             Q3 = 0
-                    #             Q1 = Q2 = Discharge[TS, d, i] / 2
-                    #         else:
-                    #             Q1 = Q2 = Q3 = Discharge[TS, d, i] / 3
-                    #
-                    #         # # One or more slopes positive (we have downhill flow)
-                    #         # if S1 > 0 or S2 > 0 or S3 > 0:
-                    #         #
-                    #         #     # flow does not go uphill (when theres a downhill option)
-                    #         #     # and a zero slope yields a zero discharge with this equation
-                    #         #
-                    #         #     if S1 < 0:
-                    #         #         S1 = 0
-                    #         #     if S2 < 0:
-                    #         #         S2 = 0
-                    #         #     if S3 < 0:
-                    #         #         S3 = 0
-                    #         #
-                    #         #     Q1 = (
-                    #         #             Q0
-                    #         #             * S1 ** nn
-                    #         #             / (
-                    #         #                     S1 ** nn
-                    #         #                     + S2 ** nn
-                    #         #                     + S3 ** nn
-                    #         #             )
-                    #         #     )
-                    #         #     Q2 = (
-                    #         #             Q0
-                    #         #             * S2 ** nn
-                    #         #             / (
-                    #         #                     S1 ** nn
-                    #         #                     + S2 ** nn
-                    #         #                     + S3 ** nn
-                    #         #             )
-                    #         #     )
-                    #         #     Q3 = (
-                    #         #             Q0
-                    #         #             * S3 ** nn
-                    #         #             / (
-                    #         #                     S1 ** nn
-                    #         #                     + S2 ** nn
-                    #         #                     + S3 ** nn
-                    #         #             )
-                    #         #     )
-                    #         #
-                    #         #     Q1 = np.nan_to_num(Q1)
-                    #         #     Q2 = np.nan_to_num(Q2)
-                    #         #     Q3 = np.nan_to_num(Q3)
-                    #         #
-                    #         # # No slopes positive, one or more equal to zero
-                    #         # # no downhill slopes, but some that are 0
-                    #         # elif S1 == 0 or S2 == 0 or S3 == 0:
-                    #         #
-                    #         #     # start by counting the number (1, 2, or 3) of slopes that are 0
-                    #         #     s_zero = 0
-                    #         #     if S1 == 0:
-                    #         #         s_zero += 1
-                    #         #     if S2 == 0:
-                    #         #         s_zero += 1
-                    #         #     if S3 == 0:
-                    #         #         s_zero += 1
-                    #         #
-                    #         #     # dividing the initial discharge equally among the 0 slopes
-                    #         #     Qx = Q0 / s_zero
-                    #         #     Qx = np.nan_to_num(Qx)
-                    #         #
-                    #         #     if S1 == 0 and i > 0:
-                    #         #         Q1 = Qx
-                    #         #     else:
-                    #         #         Q1 = 0
-                    #         #     if S2 == 0:
-                    #         #         Q2 = Qx
-                    #         #     else:
-                    #         #         Q2 = 0
-                    #         #     if S3 == 0 and i < (length - 1):
-                    #         #         Q3 = Qx
-                    #         #     else:
-                    #         #         Q3 = 0
-                    #         #
-                    #         # # All slopes negative
-                    #         # # all uphill options (likely our case for outwasher)
-                    #         # else:
-                    #         #
-                    #         #     Q1 = (
-                    #         #             Q0
-                    #         #             * abs(S1) ** (-nn)
-                    #         #             / (
-                    #         #                     abs(S1) ** (-nn)
-                    #         #                     + abs(S2) ** (-nn)
-                    #         #                     + abs(S3) ** (-nn)
-                    #         #             )
-                    #         #     )
-                    #         #     Q2 = (
-                    #         #             Q0
-                    #         #             * abs(S2) ** (-nn)
-                    #         #             / (
-                    #         #                     abs(S1) ** (-nn)
-                    #         #                     + abs(S2) ** (-nn)
-                    #         #                     + abs(S3) ** (-nn)
-                    #         #             )
-                    #         #     )
-                    #         #     Q3 = (
-                    #         #             Q0
-                    #         #             * abs(S3) ** (-nn)
-                    #         #             / (
-                    #         #                     abs(S1) ** (-nn)
-                    #         #                     + abs(S2) ** (-nn)
-                    #         #                     + abs(S3) ** (-nn)
-                    #         #             )
-                    #         #     )
-                    #         #
-                    #         #     Q1 = np.nan_to_num(Q1)
-                    #         #     Q2 = np.nan_to_num(Q2)
-                    #         #     Q3 = np.nan_to_num(Q3)
-                    #         #
-                    #         #     # we set a maximum uphill slope that sediment can still be transported to
-                    #         #     if S1 < max_slope:
-                    #         #         Q1 = 0
-                    #         #     else:
-                    #         #         Q1 = Q1 * (1 - (abs(S1) / abs(max_slope)))
-                    #         #
-                    #         #     if S2 < max_slope:
-                    #         #         Q2 = 0
-                    #         #     else:
-                    #         #         Q2 = Q2 * (1 - (abs(S2) / abs(max_slope)))
-                    #         #
-                    #         #     if S3 < max_slope:
-                    #         #         Q3 = 0
-                    #         #     else:
-                    #         #         Q3 = Q3 * (1 - (abs(S3) / abs(max_slope)))
-                    #         # ### Update discharge
-                    #         # # discharge is defined for the next row, so we do not need to include the last row
-                    #         # # the first row of discharge was already defined
-                    #         # # Cell 1
-                    #         # if i > 0:
-                    #         #     Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
-                    #         #
-                    #         # # Cell 2
-                    #         # Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
-                    #         #
-                    #         # # Cell 3
-                    #         # if i < (length - 1):
-                    #         #     Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
-                    #
-                    #         # ### Calculate Sed Movement
-                    #         fluxLimit = max_dune  # [dam MHW] dmaxel - bermel
-                    #         # all Qs in [dam^3/hr]
-                    #         # C = cx * Si  # 10 x the avg slope (from Murray)
-                    #         # C = 0.72  # directly from barrier3d
-                    #         C = 0.72
-                    #         if Q1 > q_min:
-                    #             Qs1 = ki * (Q1 * (S1 + C)) ** mm
-                    #             if Qs1 < 0:
-                    #                 Qs1 = 0
-                    #             elif Qs1 > fluxLimit:
-                    #                 Qs1 = fluxLimit
-                    #         else:
-                    #             Qs1 = 0
-                    #
-                    #         if Q2 > q_min:
-                    #             Qs2 = ki * (Q2 * (S2 + C)) ** mm
-                    #             if Qs2 < 0:
-                    #                 Qs2 = 0
-                    #             elif Qs2 > fluxLimit:
-                    #                 Qs2 = fluxLimit
-                    #         else:
-                    #             Qs2 = 0
-                    #
-                    #         if Q3 > q_min:
-                    #             Qs3 = ki * (Q3 * (S3 + C)) ** mm
-                    #             if Qs3 < 0:
-                    #                 Qs3 = 0
-                    #             elif Qs3 > fluxLimit:
-                    #                 Qs3 = fluxLimit
-                    #         else:
-                    #             Qs3 = 0
-                    #
-                    #         Qs1 = np.nan_to_num(Qs1)
-                    #         Qs2 = np.nan_to_num(Qs2)
-                    #         Qs3 = np.nan_to_num(Qs3)
-                    #
-                    #         qs2_array[TS, d, i] = Qs2
-                    #
-                    #         # ### Calculate Net Erosion/Accretion
-                    #         # if we are at the bay, or any of the next 10 are at the bay, we should not be moving sediment
-                    #         if Elevation[TS, d, i] <= sea_level:
-                    #             # or any(z < sea_level for z in Elevation[TS, d + 1: d + 10, i]):
-                    #             Elevation[TS, d, i] = Elevation[TS, d, i]
-                    #         else:
-                    #             # If cell is interior, elevation change is determined by difference between
-                    #             # flux in vs. flux out
-                    #             # sed flux in goes to the next row, and is used for determing flux out at current row
-                    #             # so we need a flux in for the last row, which will be its own variable
-                    #             if d != width - 1:  # uncomment, tab next two ifs
-                    #                 if i > 0:
-                    #                     SedFluxIn[TS, d + 1, i - 1] += Qs1
-                    #
-                    #                 SedFluxIn[TS, d + 1, i] += Qs2
-                    #
-                    #                 if i < (length - 1):
-                    #                     SedFluxIn[TS, d + 1, i + 1] += Qs3
-                    #             # Qs1,2,3 calculated for current row
-                    #             Qs_out = Qs1 + Qs2 + Qs3
-                    #             SedFluxOut[TS, d, i] = Qs_out
 
                     # Loop through the rows, starting with the dunes and excluding the last one
                     # (because there is nowhere for the water/sed to go)
@@ -784,17 +537,28 @@ def outwasher(b3d, storm_series, runID):
                                 else:
                                     Qs3 = 0
 
-                                Qs1 = np.nan_to_num(Qs1)
-                                Qs2 = np.nan_to_num(Qs2)
-                                Qs3 = np.nan_to_num(Qs3)
+                                Qs1 = np.nan_to_num(Qs1) * 8000
+                                Qs2 = np.nan_to_num(Qs2) * 8000
+                                Qs3 = np.nan_to_num(Qs3) * 8000
 
                                 qs2_array[TS, d, i] = Qs2
 
                                 # ### Calculate Net Erosion/Accretion
                                 # if we are at the bay, or any of the next 10 are at the bay, we should not be moving sediment
-                                if Elevation[TS, d, i] <= sea_level:
+                                # Changed this to allow sediment to leave the system
+                                # if Elevation[TS, d, i] <= sea_level:
+                                if d == 0:
                                         #or any(z < sea_level for z in Elevation[TS, d + 1: d + 10, i]):
                                     Elevation[TS, d, i] = Elevation[TS, d, i]
+                                    # even though it does not make sense to keep elevation the same while having sed
+                                        # leave, we are going to try it for now
+                                    if i > 0:
+                                        SedFluxIn[TS, d + 1, i - 1] += Qs1
+
+                                    SedFluxIn[TS, d + 1, i] += Qs2
+
+                                    if i < (length - 1):
+                                        SedFluxIn[TS, d + 1, i + 1] += Qs3
                                 else:
                                     # If cell is interior, elevation change is determined by difference between
                                     # flux in vs. flux out
@@ -866,6 +630,8 @@ def outwasher(b3d, storm_series, runID):
             cross_section2 = np.mean(full_domain, 1)
             cross_section2 = np.flip(cross_section2)
             ax4.plot(range(len(full_domain)), cross_section2, label="post storm")
+            dune_gap_el = np.flip(full_domain[:, 21])
+            ax4.plot(range(len(full_domain)), dune_gap_el, label="dune gap post", linestyle="dashed")
             ax4.set_xlabel("barrier width from ocean to bay (dam)")
             ax4.set_ylabel("average alongshore elevation (dam)")
             ax4.set_title("Cross shore elevation profile\n "
@@ -891,7 +657,7 @@ def outwasher(b3d, storm_series, runID):
 
     # Record storm data
     b3d._StormCount.append(numstorm)
-    return Discharge, elev_change_array, full_domain, qs_lost_total, slopes_array, rexcess_dict, qs2_array, cross_section, storm_series[1]
+    return Discharge, elev_change_array, full_domain, qs_lost_total, slopes_array, rexcess_dict, qs2_array, cross_section, storm_series[1], SedFluxOut, SedFluxIn
 
 
 # --------------------------------------------running outwasher---------------------------------------------------------
@@ -912,16 +678,17 @@ sound_data[0] = 0
 
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
-runID = "10_C_backbayflow_chris"
+runID = "10_C_backbayflow_chris_sedfluxes_TOTHEMAX"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
 # sedout = sediment fully leaves the system offshore
+# see flux notes for changes to sediment fluxes (around lines 555 in code)
 ## NOW USING REGULAR SOUND DATA, SED OUT AND EDITED EDGES
 b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
 b3d.update()
 b3d.update_dune_domain()
-discharge, elev_change, domain, qs_out, slopes2, dictionary, qs2, avg_initial_cross, storm_elev = outwasher(b3d, storm_series, runID)
+discharge, elev_change, domain, qs_out, slopes2, dictionary, qs2, avg_initial_cross, storm_elev, sedout, sedin = outwasher(b3d, storm_series, runID)
 
 fig5 = plt.figure()
 ax5 = fig5.add_subplot(111)
@@ -980,7 +747,7 @@ def plot_ElevAnimation(elev, directory, TMAX, name):
         cax = ax.matshow(
             # AnimateDomain, origin="upper", cmap="jet_r", vmin=0, vmax=0.5,
             AnimateDomain, origin="upper", cmap="seismic",
-            # vmin=-0.00005, vmax=0.00005
+            # vmin=-0.000002, vmax=0.000002
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -1000,8 +767,8 @@ def plot_ElevAnimation(elev, directory, TMAX, name):
     for filenum in range(TMAX):
         filename = "elev_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
-    # imageio.mimsave("elev.gif", frames, fps=2)
-    imageio.mimsave("elev.gif", frames, "GIF-FI")
+    imageio.mimsave("elev.gif", frames, fps=2)
+    # imageio.mimsave("elev.gif", frames, "GIF-FI")
     print("[ * elevation GIF successfully generated * ]")
 
 # -------------------------------------------discharge gif--------------------------------------------------------------
@@ -1021,7 +788,7 @@ def plot_DischargeAnimation(dis, directory, TMAX, name):
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
             AnimateDomain, origin="upper", cmap="jet_r",
-            # vmin=0, vmax=140,
+            vmin=0, vmax=20,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -1041,8 +808,8 @@ def plot_DischargeAnimation(dis, directory, TMAX, name):
     for filenum in range(TMAX):
         filename = "dis_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
-    # imageio.mimsave("dis.gif", frames, fps=2)
-    imageio.mimsave("dis.gif", frames, "GIF-FI")
+    imageio.mimsave("dis.gif", frames, fps=2)
+    # imageio.mimsave("dis.gif", frames, "GIF-FI")
     print()
     print("[ * dishcarge GIF successfully generated * ]")
 
@@ -1062,7 +829,7 @@ def plot_SlopeAnimation(slope, directory, TMAX, name):
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
             AnimateDomain, origin="upper", cmap="jet_r",
-            # vmin=-0.005, vmax=0.05,
+            vmin=-0.1, vmax=0.1,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -1082,8 +849,8 @@ def plot_SlopeAnimation(slope, directory, TMAX, name):
     for filenum in range(TMAX):
         filename = "slope_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
-    # imageio.mimsave("dis.gif", frames, fps=2)
-    imageio.mimsave("slopes.gif", frames, "GIF-FI")
+    imageio.mimsave("dis.gif", frames, fps=2)
+    # imageio.mimsave("slopes.gif", frames, "GIF-FI")
     print()
     print("[ * slope GIF successfully generated * ]")
 
@@ -1124,10 +891,94 @@ def plot_Qs2Animation(qs2, directory, TMAX, name):
     for filenum in range(TMAX):
         filename = "qs2_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
-    # imageio.mimsave("dis.gif", frames, fps=2)
-    imageio.mimsave("qs2.gif", frames, "GIF-FI")
+    imageio.mimsave("dis.gif", frames, fps=2)
+    # imageio.mimsave("qs2.gif", frames, "GIF-FI")
     print()
     print("[ * Qs2 GIF successfully generated * ]")
+
+#---------------------- Sed out array ----------------------------------------------------------------------------------
+def plot_SedOutAnimation(sedout, directory, TMAX, name):
+    os.chdir(directory)
+    newpath = "SedOut/"
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+    os.chdir(newpath)
+
+    # for t in range(TMAX - 1):
+    for t in range(TMAX):
+        AnimateDomain = sedout[t]
+
+        # Plot and save
+        elevFig1 = plt.figure(figsize=(15, 7))
+        ax = elevFig1.add_subplot(111)
+        cax = ax.matshow(
+            AnimateDomain, origin="upper", cmap="jet_r",
+            # vmin=-0.005, vmax=0.05,
+        )  # , interpolation='gaussian') # analysis:ignore
+        ax.xaxis.set_ticks_position("bottom")
+        elevFig1.colorbar(cax)
+        plt.xlabel("Alongshore Distance (dam)")
+        plt.ylabel("Cross-Shore Distance (dam)")
+        plt.title("Sed Flux Out (dam^3)")
+        plt.tight_layout()
+        timestr = "Time = " + str(t) + " hrs"
+        plt.text(1, 1, timestr)
+        plt.rcParams.update({"font.size": 15})
+        name = "sedout_" + str(t)
+        elevFig1.savefig(name)  # dpi=200
+        plt.close(elevFig1)
+
+    frames = []
+
+    for filenum in range(TMAX):
+        filename = "sedout_" + str(filenum) + ".png"
+        frames.append(imageio.imread(filename))
+    imageio.mimsave("dis.gif", frames, fps=2)
+    # imageio.mimsave("sedout.gif", frames, "GIF-FI")
+    print()
+    print("[ * SedOut GIF successfully generated * ]")
+
+#---------------------- Sed out array ----------------------------------------------------------------------------------
+def plot_SedInAnimation(sedin, directory, TMAX, name):
+    os.chdir(directory)
+    newpath = "SedIn/"
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+    os.chdir(newpath)
+
+    # for t in range(TMAX - 1):
+    for t in range(TMAX):
+        AnimateDomain = sedin[t]
+
+        # Plot and save
+        elevFig1 = plt.figure(figsize=(15, 7))
+        ax = elevFig1.add_subplot(111)
+        cax = ax.matshow(
+            AnimateDomain, origin="upper", cmap="jet_r",
+            # vmin=-0.005, vmax=0.05,
+        )  # , interpolation='gaussian') # analysis:ignore
+        ax.xaxis.set_ticks_position("bottom")
+        elevFig1.colorbar(cax)
+        plt.xlabel("Alongshore Distance (dam)")
+        plt.ylabel("Cross-Shore Distance (dam)")
+        plt.title("Sed Flux In (dam^3)")
+        plt.tight_layout()
+        timestr = "Time = " + str(t) + " hrs"
+        plt.text(1, 1, timestr)
+        plt.rcParams.update({"font.size": 15})
+        name = "sedin_" + str(t)
+        elevFig1.savefig(name)  # dpi=200
+        plt.close(elevFig1)
+
+    frames = []
+
+    for filenum in range(TMAX):
+        filename = "sedin_" + str(filenum) + ".png"
+        frames.append(imageio.imread(filename))
+    imageio.mimsave("dis.gif", frames, fps=2)
+    # imageio.mimsave("sedin.gif", frames, "GIF-FI")
+    print()
+    print("[ * SedIn GIF successfully generated * ]")
 
 # -------------------------------------------b3d domain plot------------------------------------------------------------
 def plot_ModelTransects(b3d, time_step):
@@ -1222,12 +1073,15 @@ def plot_ModelTransects(b3d, time_step):
 
 # change if substep is 2
 # TMAX = storm_series[2]
-TMAX = 2*storm_series[2]
+# TMAX = 2*storm_series[2]
+TMAX = 20
 name = runID
 dir = "C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/"
 plot_ElevAnimation(elev_change, dir, TMAX, name)
 plot_DischargeAnimation(discharge, dir, TMAX, name)
-# plot_SlopeAnimation(slopes2, dir, TMAX, name)
-# plot_Qs2Animation(qs2, dir, TMAX, name)
+plot_SlopeAnimation(slopes2, dir, TMAX, name)
+plot_Qs2Animation(qs2, dir, TMAX, name)
+plot_SedOutAnimation(sedout, dir, TMAX, name)
+plot_SedInAnimation(sedin, dir, TMAX, name)
 # time_step = [0]
 # plot_ModelTransects(b3d, time_step)
