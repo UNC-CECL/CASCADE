@@ -88,7 +88,7 @@ def outwasher(b3d, storm_series, runID):
     mm = b3d._mm                                        # inundation overwash coefficient
     sea_level = b3d._SL                                 # equal to 0 dam
     q_min = b3d._Qs_min                                 # [m^3 / hr]? Minimum discharge needed for sediment transport (0.001)
-    # bay_depth = -b3d._BayDepth                          # [dam MHW] Depth of bay behind island segment, currently set to 0.3
+    bay_depth = -b3d._BayDepth                          # [dam MHW] Depth of bay behind island segment, currently set to 0.3
     Si = (np.mean(b3d.InteriorDomain[-10, :]) - np.mean(b3d.InteriorDomain[0, :])) / len(b3d.InteriorDomain)
     # avg_slope = b3d._BermEl / 20                        # how it is defined in barrier 3D which is much smaller than when
                                                         # you calculate the slope using the avg of the first and last rows
@@ -547,11 +547,24 @@ def outwasher(b3d, storm_series, runID):
                                 # if we are at the bay, or any of the next 10 are at the bay, we should not be moving sediment
                                 # Changed this to allow sediment to leave the system
                                 # if Elevation[TS, d, i] <= sea_level:
-                                if d == 0:
-                                        #or any(z < sea_level for z in Elevation[TS, d + 1: d + 10, i]):
-                                    Elevation[TS, d, i] = Elevation[TS, d, i]
-                                    # even though it does not make sense to keep elevation the same while having sed
-                                        # leave, we are going to try it for now
+                                # if d == 0:
+                                #         #or any(z < sea_level for z in Elevation[TS, d + 1: d + 10, i]):
+                                #     Elevation[TS, d, i] = Elevation[TS, d, i]
+                                #     # even though it does not make sense to keep elevation the same while having sed
+                                #         # leave, we are going to try it for now
+                                #     if i > 0:
+                                #         SedFluxIn[TS, d + 1, i - 1] += Qs1
+                                #
+                                #     SedFluxIn[TS, d + 1, i] += Qs2
+                                #
+                                #     if i < (length - 1):
+                                #         SedFluxIn[TS, d + 1, i + 1] += Qs3
+                                # else:
+                                    # If cell is interior, elevation change is determined by difference between
+                                    # flux in vs. flux out
+                                    # sed flux in goes to the next row, and is used for determing flux out at current row
+                                    # so we need a flux in for the last row, which will be its own variable
+                                if d != width - 1:  # uncomment, tab next two ifs
                                     if i > 0:
                                         SedFluxIn[TS, d + 1, i - 1] += Qs1
 
@@ -559,22 +572,9 @@ def outwasher(b3d, storm_series, runID):
 
                                     if i < (length - 1):
                                         SedFluxIn[TS, d + 1, i + 1] += Qs3
-                                else:
-                                    # If cell is interior, elevation change is determined by difference between
-                                    # flux in vs. flux out
-                                    # sed flux in goes to the next row, and is used for determing flux out at current row
-                                    # so we need a flux in for the last row, which will be its own variable
-                                    if d != width - 1:  # uncomment, tab next two ifs
-                                        if i > 0:
-                                            SedFluxIn[TS, d + 1, i - 1] += Qs1
-
-                                        SedFluxIn[TS, d + 1, i] += Qs2
-
-                                        if i < (length - 1):
-                                            SedFluxIn[TS, d + 1, i + 1] += Qs3
-                                    # Qs1,2,3 calculated for current row
-                                    Qs_out = Qs1 + Qs2 + Qs3
-                                    SedFluxOut[TS, d, i] = Qs_out
+                                # Qs1,2,3 calculated for current row
+                                Qs_out = Qs1 + Qs2 + Qs3
+                                SedFluxOut[TS, d, i] = Qs_out
 
                                     # END OF DOMAIN LOOPS
 
@@ -613,12 +613,12 @@ def outwasher(b3d, storm_series, runID):
             InteriorUpdate = Elevation[-1, 1:, :]
 
             # Remove all rows of bay without any deposition from the domain
-            # check = 1
-            # while check == 1:
-            #     if all(x <= bay_depth for x in InteriorUpdate[-1, :]):
-            #         InteriorUpdate = np.delete(InteriorUpdate, (-1), axis=0)
-            #     else:
-            #         check = 0
+            check = 1
+            while check == 1:
+                if all(x <= bay_depth for x in InteriorUpdate[-1, :]):
+                    InteriorUpdate = np.delete(InteriorUpdate, (-1), axis=0)
+                else:
+                    check = 0
 
             # Update interior domain
             # b3d._InteriorDomain = np.flip(InteriorUpdate)
@@ -678,7 +678,7 @@ sound_data[0] = 0
 
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
-runID = "10_C_backbayflow_chris_sedfluxes_TOTHEMAX"
+runID = "10_C_backbayflow_chris_sedfluxes_TOTHEMAX_fluxchanges"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
