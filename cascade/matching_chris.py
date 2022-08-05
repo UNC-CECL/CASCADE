@@ -509,7 +509,7 @@ def outwasher(b3d, storm_series, runID):
                                 # all Qs in [dam^3/hr]
                                 # C = cx * Si  # 10 x the avg slope (from Murray)
                                 # C = 0.72  # directly from barrier3d
-                                C = 0.10
+                                C = 0.20
                                 if Q1 > q_min:
                                     Qs1 = ki * (Q1 * (S1 + C)) ** mm
                                     if Qs1 < 0:
@@ -537,9 +537,9 @@ def outwasher(b3d, storm_series, runID):
                                 else:
                                     Qs3 = 0
 
-                                Qs1 = np.nan_to_num(Qs1) * 8000
-                                Qs2 = np.nan_to_num(Qs2) * 8000
-                                Qs3 = np.nan_to_num(Qs3) * 8000
+                                Qs1 = np.nan_to_num(Qs1) * 2000
+                                Qs2 = np.nan_to_num(Qs2) * 2000
+                                Qs3 = np.nan_to_num(Qs3) * 2000
 
                                 qs2_array[TS, d, i] = Qs2
 
@@ -678,7 +678,7 @@ sound_data[0] = 0
 
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
-runID = "10_C_backbayflow_chris_sedfluxes_TOTHEMAX_fluxchanges"
+runID = "20_C_backbayflow_chris_sedfluxes2000_fluxchanges"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
