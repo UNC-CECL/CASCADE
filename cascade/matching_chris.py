@@ -39,7 +39,8 @@ def dune_erosion(length, berm_el, dune_domain, dune_crest, bayhigh):
             # Calculate dune elevation loss
             ## dune domain at time index 1 is all zeros
             Rnorm = bayhigh / (dune_domain[Dow[ow_cell], w] + berm_el)  # bayhigh relative to pre-storm dune elevation
-            Dloss = Rnorm / (c1 + (Rnorm * (Rnorm - c2)))  # Amount of dune crest elevation change normalized by pre-storm dune elevation
+            Dloss = Rnorm / (c1 + (Rnorm * (Rnorm - c2)))  # Amount of dune crest elevation change normalized by
+            # pre-storm dune elevation (increased by a factor by LVB)
             # (i.e. a percent change), from Goldstein and Moore (2016)
             # Set new dune height
             InitDElev = (dune_domain[Dow[ow_cell], w] + berm_el)
@@ -161,9 +162,10 @@ def outwasher(b3d, storm_series, runID):
                 shoreface_domain = np.zeros([6, length])
                 # we actually want the beach to have a slope, but keep the first few rows the berm elevation
                 # we want the beach slope to be 0.004 m = 0.0004 dam
+                m_beach = -0.001
                 for b in range(len(beach_domain)):
                     if b >= 3:
-                        beach_domain[b, :] = beach_domain[b-1, :] - 0.0004
+                        beach_domain[b, :] = beach_domain[b-1, :] + m_beach  # m_beach is negative (downhill)
                 m_shoreface = beach_domain[-1, 0]/len(shoreface_domain)
                 for s in range(len(shoreface_domain)):
                     if s == 0:
@@ -219,7 +221,7 @@ def outwasher(b3d, storm_series, runID):
                 ax4 = fig4.add_subplot(111)
                 ax4.plot(range(len(full_domain)), cross_section, label="pre-storm")
                 dune_gap_el = np.flip(full_domain[:, 21])
-                ax4.plot(range(len(full_domain)), dune_gap_el, label="dune gap pre", linestyle="dashed")
+                ax4.plot(range(len(full_domain)), dune_gap_el, label="dune gap (21) pre", linestyle="dashed")
 
 
             width = np.shape(full_domain)[0]  # width is the number of rows in the full domain
@@ -284,6 +286,13 @@ def outwasher(b3d, storm_series, runID):
                     int_width = np.shape(interior_domain)[0]
                     max_dune, dune_domain, dune_crest, gaps, D_not_ow = dune_erosion(
                         length, berm_el, dune_domain, dune_crest, bayhigh)
+
+                    dune_domain_full = np.transpose(dune_domain) + berm_el
+                    full_domain[int_width, :] = dune_domain_full[0, :]
+                    full_domain[int_width+1] = dune_domain_full[1, :]
+                    Elevation[TS, int_width, :] = dune_domain_full[0, :]
+                    Elevation[TS, int_width+1, :] = dune_domain_full[1, :]
+
                     dunes_prestorm = dune_crest
                     dunes = dunes_prestorm + berm_el  # can be used later for reducing dune height with storm
                     # Elevation[TS, int_width:(int_width+2), :] = dunes - \
@@ -509,7 +518,7 @@ def outwasher(b3d, storm_series, runID):
                                 # all Qs in [dam^3/hr]
                                 # C = cx * Si  # 10 x the avg slope (from Murray)
                                 # C = 0.72  # directly from barrier3d
-                                C = 0.20
+                                C = 0.10
                                 if Q1 > q_min:
                                     Qs1 = ki * (Q1 * (S1 + C)) ** mm
                                     if Qs1 < 0:
@@ -537,9 +546,9 @@ def outwasher(b3d, storm_series, runID):
                                 else:
                                     Qs3 = 0
 
-                                Qs1 = np.nan_to_num(Qs1) * 2000
-                                Qs2 = np.nan_to_num(Qs2) * 2000
-                                Qs3 = np.nan_to_num(Qs3) * 2000
+                                Qs1 = np.nan_to_num(Qs1) * 8000
+                                Qs2 = np.nan_to_num(Qs2) * 8000
+                                Qs3 = np.nan_to_num(Qs3) * 8000
 
                                 qs2_array[TS, d, i] = Qs2
 
@@ -631,14 +640,14 @@ def outwasher(b3d, storm_series, runID):
             cross_section2 = np.flip(cross_section2)
             ax4.plot(range(len(full_domain)), cross_section2, label="post storm")
             dune_gap_el = np.flip(full_domain[:, 21])
-            ax4.plot(range(len(full_domain)), dune_gap_el, label="dune gap post", linestyle="dashed")
+            ax4.plot(range(len(full_domain)), dune_gap_el, label="dune gap (21) post", linestyle="dashed")
             ax4.set_xlabel("barrier width from ocean to bay (dam)")
             ax4.set_ylabel("average alongshore elevation (dam)")
-            ax4.set_title("Cross shore elevation profile\n "
+            ax4.set_title("Cross shore elevation profile for col 21\n "
                           "shoreface slope = {0}, back barrier slope = {1}".format(round(m_shoreface, 3), round(Si, 3)))
             ax4.legend()
             plt.show()
-            plt.savefig(newpath + "cross_shore")
+            plt.savefig(newpath + "cross_shore_21")
 
             # plot post storm elevation
             fig3 = plt.figure()
@@ -678,7 +687,7 @@ sound_data[0] = 0
 
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
-runID = "20_C_backbayflow_chris_sedfluxes2000_fluxchanges"
+runID = "10_C_backbayflow_chris_sedfluxes8000_fluxchanges_erode_dune_steeper_beach"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
@@ -690,29 +699,29 @@ b3d.update()
 b3d.update_dune_domain()
 discharge, elev_change, domain, qs_out, slopes2, dictionary, qs2, avg_initial_cross, storm_elev, sedout, sedin = outwasher(b3d, storm_series, runID)
 
-fig5 = plt.figure()
-ax5 = fig5.add_subplot(111)
-cols = range(np.size(qs2, 1))
-for col in cols:
-    line = qs2[7, :, col]
-    ax5.plot(cols, line, label="column {0}".format(col))
-ax5.legend()
-ax5.set_ylabel("Qs2 (dam3/hr)")
-ax5.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
-ax5.set_title("{0} \n Qs2 at time 7".format(runID))
-plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/cross_shore_qs2".format(runID))
+# fig5 = plt.figure()
+# ax5 = fig5.add_subplot(111)
+# cols = range(np.size(qs2, 1))
+# for col in cols:
+#     line = qs2[7, :, col]
+#     ax5.plot(cols, line, label="column {0}".format(col))
+# ax5.legend()
+# ax5.set_ylabel("Qs2 (dam3/hr)")
+# ax5.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
+# ax5.set_title("{0} \n Qs2 at time 7".format(runID))
+# plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/cross_shore_qs2".format(runID))
 
 fig6 = plt.figure()
 ax6 = fig6.add_subplot(111)
 ax6.plot(avg_initial_cross)
 x = len(avg_initial_cross)
 for index, value in enumerate(storm_elev):
-    if index < 8:
+    if index < 12:
         ax6.plot(range(x), np.ones(x)*value, linestyle="dashed", label="TS = {0}".format(index))
-ax6.set_title("sound level for first 8 TS")
+ax6.set_title("sound level for first 12 TS")
 ax6.legend()
-ax5.set_ylabel("Elevation (dam)")
-ax5.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
+ax6.set_ylabel("Elevation (dam)")
+ax6.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
 plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/baylevels".format(runID))
 # np.save("C:/Users/Lexi/Documents/Research/Outwasher/discharge", discharge)
 # np.save(newpath + "discharge", discharge)
@@ -913,7 +922,7 @@ def plot_SedOutAnimation(sedout, directory, TMAX, name):
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
             AnimateDomain, origin="upper", cmap="jet_r",
-            # vmin=-0.005, vmax=0.05,
+            vmin=0, vmax=0.2,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -955,7 +964,7 @@ def plot_SedInAnimation(sedin, directory, TMAX, name):
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
             AnimateDomain, origin="upper", cmap="jet_r",
-            # vmin=-0.005, vmax=0.05,
+            vmin=0, vmax=0.2,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
