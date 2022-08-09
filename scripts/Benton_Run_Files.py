@@ -26,7 +26,7 @@ from barrier3d.tools.input_files import (
 
 # Get WD
 os.getcwd()
-os.chdir('/Users/ceclmac/PycharmProjects/CASCADE')
+os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")
 
 # Single Plot 1
 # Function to run 1 instance of Cascade with no alongshore sediment transport (AST) or human activities
@@ -40,14 +40,15 @@ os.chdir('/Users/ceclmac/PycharmProjects/CASCADE')
 # dune_file = .NPY file that includes the initial  dune elevations
 # data_input_dir = String listing the name of the input folder
 
+
 def Single_Plot_1(
-        nt,
-        rmin,
-        rmax,
-        name,
-        storm_file,
-        elevation_file,
-        dune_file,
+    nt,
+    rmin,
+    rmax,
+    name,
+    storm_file,
+    elevation_file,
+    dune_file,
 ):
     # ###############################################################################
     # 4 - CASCADE with only one B3D model and no human dynamics
@@ -106,18 +107,18 @@ def Single_Plot_1(
 
 # Specify variables to use in calling function
 # Elevation file path name
-e_file = '/Users/ceclmac/PycharmProjects/TestPhython/CP4.npy'
+e_file = "/Users/ceclmac/PycharmProjects/TestPhython/CP4.npy"
 # Dune height path name
-d_file ='/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/DuneStart_1000dam.npy'
+d_file = "/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/DuneStart_1000dam.npy"
 # Storm file path name
-s_file ='/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy'
+s_file = "/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy"
 
 # Call function
 Single_Plot_1(
     nt=50,
-    rmin=.25,
-    rmax=.65,
-    name='New_Script_Test',
+    rmin=0.25,
+    rmax=0.65,
+    name="New_Script_Test",
     storm_file=s_file,
     elevation_file=e_file,
     dune_file=d_file,
@@ -126,6 +127,7 @@ Single_Plot_1(
 # ###############################################################################
 # Set #2 looking at alongshore sediment transport
 # ###############################################################################
+
 
 def Test_Alongshore_Runs(
     nt,
@@ -140,8 +142,8 @@ def Test_Alongshore_Runs(
     background_erosion,
     sea_level_rise_rate=0.004,  # not an array
     sea_level_constant=True,  # not an array
-    enable_shoreline_offset = False,
-    shoreline_offset = [0],
+    enable_shoreline_offset=False,
+    shoreline_offset=[0],
 ):
 
     # ###############################################################################
@@ -173,8 +175,8 @@ def Test_Alongshore_Runs(
         alongshore_transport_module=True,  # Is there brie coupling?
         beach_nourishment_module=False,  # no beach nourishment
         community_dynamics_module=False,  # no community dynamics
-        enable_shoreline_offset = enable_shoreline_offset, # Bool
-        shoreline_offset = shoreline_offset,
+        enable_shoreline_offset=enable_shoreline_offset,  # Bool
+        shoreline_offset=shoreline_offset,
     )
     # --------- LOOP ---------
     for time_step in range(nt - 1):
@@ -195,40 +197,49 @@ def Test_Alongshore_Runs(
 # ###############################################################################
 # New test values
 # ###############################################################################
+os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")
 
-number_barrier3d_models = 3
+number_barrier3d_models = 9
 rmin = [0.55] * number_barrier3d_models
 rmax = [0.95] * number_barrier3d_models
 elevation_file = [
-                     "Wreck_Elevation_0.npy","Wreck_Elevation_1.npy","Wreck_Elevation_2.npy"]
-                        #,"Wreck_Elevation_3.npy","Wreck_Elevation_4.npy",
-                        #"Wreck_Elevation_5.npy","Wreck_Elevation_6.npy","Wreck_Elevation_7.npy","Wreck_Elevation_8.npy"
-                 #]
+    "Wreck_Elevation_8.npy",
+    "Wreck_Elevation_7.npy",
+    "Wreck_Elevation_6.npy",
+    "Wreck_Elevation_5.npy",
+    "Wreck_Elevation_4.npy",
+    "Wreck_Elevation_3.npy",
+    "Wreck_Elevation_2.npy",
+    "Wreck_Elevation_1.npy",
+    "Wreck_Elevation_0.npy",
+]
 dune_file = ["barrier3d-default-dunes.npy"] * number_barrier3d_models
-s_file ='/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy'
+s_file = "/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy"
 
 Test_Alongshore_Runs(
-    nt = 5,
-    name = 'No_Offset_Wreck_Test',
-    storm_file = s_file,
-    alongshore_section_count = 9,
-    num_cores = 1,
-    rmin = rmin,
-    rmax = rmax,
-    elevation_file = elevation_file,
-    dune_file = dune_file,
-    background_erosion = -1.00,
+    nt=5,
+    name="Testing_New_Offsets",
+    storm_file=s_file,
+    alongshore_section_count=9,
+    num_cores=3,
+    rmin=rmin,
+    rmax=rmax,
+    elevation_file=elevation_file,
+    dune_file=dune_file,
+    background_erosion=-1.00,
     sea_level_rise_rate=0.004,  # not an array
     sea_level_constant=True,  # not an array
     enable_shoreline_offset=True,
-    shoreline_offset = [1,1,5],
+    shoreline_offset=[0, 155, 253, 303, 360, 359, 329, 309, 234],
 )
 
+os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")
 # ###############################################################################
 # Plot Functions for tests
 # ###############################################################################
 
 # Load initial function
+
 
 def plot_ElevAnimation_CASCADE(
     cascade,
@@ -549,8 +560,8 @@ def plot_ElevAnimation_CASCADE(
 # ###############################################################################
 
 
-os.chdir('/Users/ceclmac/PycharmProjects/CASCADE/Run_output')
-name_prefix = 'No_Offset_Wreck_Test'
+os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/Run_output")
+name_prefix = "Testing_New_Offsets"
 
 # --------- plot ---------
 output = np.load(name_prefix + ".npz", allow_pickle=True)
@@ -562,7 +573,7 @@ ny = np.size(b3d)
 directory = "/Users/ceclmac/PycharmProjects/CASCADE/"
 # TMax_MGMT = Needed 0
 # TMAX_Sim = Last simulation year of the model 99
-TMax_Sim = 199 # Give length of simulation
+TMax_Sim = 2  # Give length of simulation
 TMax_MGMT = [0] * ny
 beach_management_ny = [False] * ny
 roadway_management_ny = [False] * ny
@@ -572,7 +583,7 @@ plot_ElevAnimation_CASCADE(
     ny=ny,
     directory=directory,
     TMAX_MGMT=TMax_MGMT,  # an array
-    name='Multi_Test',
+    name="Offset_Test",
     TMAX_SIM=TMax_Sim,  # not an array
     beach_management_ny=beach_management_ny,
     roadway_management_ny=roadway_management_ny,

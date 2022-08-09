@@ -37,9 +37,9 @@ def plot_ElevAnimation_CASCADE(
     name,
     TMAX_SIM,
     ny=1,
-    beach_management_ny=[False],  # list of booleans the length of ny
-    roadway_management_ny=[False],
-    y_lim=[150, 250],
+    beach_management_ny=None,  # list of booleans the length of ny
+    roadway_management_ny=None,
+    y_lim=None,
     z_lim=3.5,
     fig_size=None,
     fig_eps=False,
@@ -56,11 +56,13 @@ def plot_ElevAnimation_CASCADE(
     if np.any(beach_management_ny):
         indices = [i for i in range(ny) if beach_management_ny[i] == 1]
         iB3D = indices[0]
+        print(1)
         MaxBeachWidth = (
             np.max(cascade.nourishments[iB3D].beach_width[0 : TMAX_MGMT[iB3D]]) / 10
         )  # dam
     else:
         MaxBeachWidth = cascade._initial_beach_width[0]
+        print(2)
     OriginY = int(barrier3d[0].x_s_TS[0])
     AniDomainWidth = int(
         np.amax(barrier3d[0].InteriorWidth_AvgTS)

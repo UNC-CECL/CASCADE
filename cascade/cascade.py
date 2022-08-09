@@ -141,8 +141,8 @@ class Cascade:
         house_footprint_x=15,
         house_footprint_y=20,
         beach_full_cross_shore=70,
-        enable_shoreline_offset = False,
-        shoreline_offset = [0],
+        enable_shoreline_offset=False,
+        shoreline_offset=[0],
     ):
         """
 
@@ -230,7 +230,7 @@ class Cascade:
         enable_shoreline_offset: bool, optional
             State whether you want a shoreline offset [True / False]
         shoreline_offset: list, optional
-            The alongshore offset between different barrier 3d sections [m]
+            The alongshore offset between different Barrier3d sections [m]
 
         Examples
         --------
@@ -288,8 +288,14 @@ class Cascade:
             back_barrier_depth=bay_depth,
             ny=self._ny,
             nt=self._nt,
-            enable_shoreline_offset = self._enable_shoreline_offset,
-            shoreline_offset = self._shoreline_offset,
+            enable_shoreline_offset=self._enable_shoreline_offset,
+            shoreline_offset=self._shoreline_offset,
+        )
+
+        self._brie_coupler.offset_shoreline(
+            enable_shoreline_offset=self._enable_shoreline_offset,
+            offset_values=self._shoreline_offset,
+            ny=self._ny,
         )
 
         # initialize barrier3d models (number set by brie ny above) and make both brie and barrier3d classes equivalent

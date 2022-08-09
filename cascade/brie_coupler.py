@@ -43,16 +43,16 @@ def batchB3D(subB3D):
 
 
 def initialize_equal(
-        datadir,
-        brie,
-        slr_constant,
-        rmin,
-        rmax,
-        background_erosion,
-        parameter_file,
-        storm_file,
-        dune_file,
-        elevation_file,
+    datadir,
+    brie,
+    slr_constant,
+    rmin,
+    rmax,
+    background_erosion,
+    parameter_file,
+    storm_file,
+    dune_file,
+    elevation_file,
 ):
     """
     for each B3D subgrid, set the initial shoreface geometry equal to what is set in brie (some random
@@ -161,16 +161,16 @@ def initialize_equal(
         # NOTE: interestingly here we don't need to have a "setter" in the property class for x_b, h_b, etc. because
         # we are only replacing certain indices but added for completeness
         brie.x_b[iB3D] = (
-                barrier3d[iB3D].x_b_TS[0] * 10
+            barrier3d[iB3D].x_b_TS[0] * 10
         )  # the shoreline position + average interior width
         brie.h_b[iB3D] = (
-                barrier3d[iB3D].h_b_TS[0] * 10
+            barrier3d[iB3D].h_b_TS[0] * 10
         )  # average height of the interior domain
         brie.x_b_save[iB3D, 0] = brie.x_b[iB3D]
         brie.h_b_save[iB3D, 0] = brie.h_b[iB3D]
 
     brie.slr = (
-            np.array(barrier3d[0].RSLR) * 10
+        np.array(barrier3d[0].RSLR) * 10
     )  # same for all b3d domains, just use first
 
     return barrier3d
@@ -188,18 +188,18 @@ class BrieCoupler:
     """
 
     def __init__(
-            self,
-            name="default",
-            wave_height=1,
-            wave_period=7,
-            wave_asymmetry=0.8,
-            wave_angle_high_fraction=0.2,
-            sea_level_rise_rate=0.004,
-            back_barrier_depth=3.0,
-            ny=1,
-            nt=200,
-            enable_shoreline_offset=False,
-            shoreline_offset=[0],
+        self,
+        name="default",
+        wave_height=1,
+        wave_period=7,
+        wave_asymmetry=0.8,
+        wave_angle_high_fraction=0.2,
+        sea_level_rise_rate=0.004,
+        back_barrier_depth=3.0,
+        ny=1,
+        nt=200,
+        enable_shoreline_offset=False,
+        shoreline_offset=[0],
     ):
         """The AlongshoreCoupler module.
 
@@ -282,21 +282,27 @@ class BrieCoupler:
             time_step=dt,
             time_step_count=nt,
             save_spacing=dtsave,
-            enable_shoreline_offset=enable_shoreline_offset,
-            shoreline_offset=shoreline_offset,
-
+            # enable_shoreline_offset=enable_shoreline_offset,
+            # shoreline_offset=shoreline_offset,
         )  # initialize class
 
-        # Test variables reach the system
+    def offset_shoreline(self, enable_shoreline_offset, offset_values, ny):
         if enable_shoreline_offset == True:
-            print("Shoreline offset is activated!")
-        else:
-            print('No shoreline offset detected')
+            # print("Shoreline offset is activated!")
+            # print("Beginning Offset")
+            # print(self._brie.x_t)
+            # print(self._brie.x_s)
+            for i in range(ny):
+                self._brie.x_t[i] = self._brie.x_t[i] + offset_values[i]
+                self._brie.x_s[i] = self._brie.x_s[i] + offset_values[i]
+            # print(self._brie.x_t)
+            # print(self._brie.x_s)
+            # print('Adjusted offset')
 
-        # if alongshore offset is not none call {
-        # for i in segment length(brie)
-        # add offset from index of offsets
-        # add value[i] to x_s and x_t
+    # if alongshore offset is not none call {
+    # for i in segment length(brie)
+    # add offset from index of offsets
+    # add value[i] to x_s and x_t
 
     def update_ast(self, barrier3d, x_t_dt, x_s_dt, h_b_dt):
         """Pass shoreline and shoreface values from B3D subdomains to brie for use in second time step

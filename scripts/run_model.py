@@ -50,9 +50,7 @@ def old_versions_cascade_runners():
 
         # --------- INITIALIZE ---------
         # datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/" # iMAC
-        datadir = (
-            "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"  # laptop
-        )
+        datadir = "/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/"  # laptop
         brie, barrier3d = CASCADE.initialize(
             datadir,
             name,
@@ -95,7 +93,7 @@ def old_versions_cascade_runners():
 
         # --------- SAVE ---------
         # #datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/"
-        save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
+        save_directory = "/Users/ceclmac/PycharmProjects/CASCADE/"
         CASCADE.save(
             brie, barrier3d, save_directory, name
         )  # this returns the barrier3d model without the BMI
@@ -139,7 +137,7 @@ def old_versions_cascade_runners():
 
         # --------- INITIALIZE ---------
         # #datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/"
-        datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
+        datadir = "/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/"
         brie, barrier3d = CASCADE.initialize(
             datadir,
             name,
@@ -159,7 +157,7 @@ def old_versions_cascade_runners():
 
         # --------- SAVE ---------
         # #datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/"
-        save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
+        save_directory = "/Users/ceclmac/PycharmProjects/CASCADE/"
         b3d = CASCADE.save(
             brie, barrier3d, save_directory, name
         )  # this returns the barrier3d model without the BMI
@@ -210,9 +208,7 @@ def old_versions_cascade_runners():
 
         # --------- INITIALIZE ---------
         # datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/" # iMAC
-        datadir = (
-            "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"  # laptop
-        )
+        datadir = "/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/"  # laptop
         brie, barrier3d = CASCADE.initialize(
             datadir,
             name,
@@ -232,9 +228,7 @@ def old_versions_cascade_runners():
 
         # --------- SAVE ---------
         # save_directory = "/Users/katherineanarde/PycharmProjects/CASCADE/Run_Output"
-        save_directory = (
-            "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output"
-        )
+        save_directory = "/Users/ceclmac/PycharmProjects/CASCADE/Run_Output"
         CASCADE.save(
             brie, barrier3d, save_directory, name
         )  # this returns the barrier3d model without the BMI
@@ -258,7 +252,7 @@ def old_versions_cascade_runners():
 
         # --------- INITIALIZE ---------
         # datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/"
-        datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
+        datadir = "/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/"
         brie, barrier3d = CASCADE.initialize(
             datadir,
             name,
@@ -290,9 +284,7 @@ def old_versions_cascade_runners():
 
         # --------- SAVE ---------
         # save_directory = "/Users/katherineanarde/PycharmProjects/CASCADE/Run_Output"
-        save_directory = (
-            "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output"
-        )
+        save_directory = "/Users/ceclmac/PycharmProjects/CASCADE/Run_Output"
         CASCADE.save(
             brie, barrier3d, save_directory, name
         )  # this returns the barrier3d model without the BMI
@@ -368,7 +360,7 @@ def old_versions_cascade_runners():
 
         # --------- INITIALIZE ---------
         # datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/"
-        datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
+        datadir = "/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/"
         brie, barrier3d = CASCADE.initialize(
             datadir,
             name,
@@ -399,9 +391,7 @@ def old_versions_cascade_runners():
 
         # --------- SAVE ---------
         # save_directory = "/Users/katherineanarde/PycharmProjects/CASCADE/Run_Output"
-        save_directory = (
-            "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output"
-        )
+        save_directory = "/Users/ceclmac/PycharmProjects/CASCADE/Run_Output"
         CASCADE.save(
             brie, barrier3d, save_directory, name
         )  # this returns the barrier3d model without the BMI
@@ -429,7 +419,7 @@ def old_versions_cascade_runners():
         #
         #     # --------- INITIALIZE ---------
         #     datadir = "/Users/katherineanarde/PycharmProjects/CASCADE/B3D_Inputs/"  # iMAC
-        #     # datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"  # laptop
+        #     # datadir = "/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/"  # laptop
         #     brie, barrier3d = CASCADE.initialize(name, wave_height, wave_period, asym_frac, high_ang_frac, slr, ny, nt,
         #                                          rmin,
         #                                          rmax, datadir)
@@ -439,7 +429,7 @@ def old_versions_cascade_runners():
         #
         #     # --------- SAVE ---------
         #     save_directory = "/Users/katherineanarde/PycharmProjects/CASCADE"
-        #     # save_directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output"
+        #     # save_directory = "/Users/ceclmac/PycharmProjects/CASCADE/Run_Output"
         #     CASCADE.save(brie, barrier3d, save_directory, name)  # this returns the barrier3d model without the BMI
 
 
@@ -1036,9 +1026,7 @@ def old_versions_cascade_plotters():
 
         # --------- plot ---------
         # filename = name + ".npz"
-        os.chdir(
-            "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
-        )
+        os.chdir("/Users/ceclmac/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output")
         # output = np.load(filename, allow_pickle=True)
         # CASCADE_b3d = output["barrier3d"]  # CASCADE run: with AST
         output = np.load(
@@ -1186,7 +1174,7 @@ def old_versions_cascade_plotters():
 
     def PLOT_5_Nonlinear_Dynamics_B3D_CNH(name_prefix, tmin, tmax, plot_name):
 
-        os.chdir("/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output")
+        os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/Run_Output")
 
         # --------- plot ---------
         output = np.load(name_prefix + ".npz", allow_pickle=True)
@@ -1211,7 +1199,7 @@ def old_versions_cascade_plotters():
         )
 
         # also make the gif
-        directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
+        directory = "/Users/ceclmac/PycharmProjects/CASCADE/"
         CASCADEplt.plot_ElevAnimation(b3d, 1, directory, TMAX=tmax, name=plot_name)
 
 
@@ -1227,9 +1215,7 @@ def PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
     gif_on=False,
 ):
 
-    os.chdir(
-        "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
-    )
+    os.chdir("/Users/ceclmac/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output")
 
     # --------- plot ---------
     output = np.load(name_prefix + ".npz", allow_pickle=True)
@@ -1298,7 +1284,7 @@ def PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
 
     if gif_on:
         # also make the gif
-        directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
+        directory = "/Users/ceclmac/PycharmProjects/CASCADE/"
         # CASCADEplt.plot_ElevAnimation(b3d, 1, directory, TMAX=tmax, name=plot_name)
         if cascade.roadways is not None:  # added the roadways class
             CASCADEplt.plot_ElevAnimation_Humans_Roadways(
@@ -1346,9 +1332,7 @@ def PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
     gif_on=False,
 ):
 
-    os.chdir(
-        "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
-    )
+    os.chdir("/Users/ceclmac/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output")
 
     # --------- plot ---------
     output = np.load(name_prefix + ".npz", allow_pickle=True)
@@ -1398,7 +1382,7 @@ def PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
     )
 
     if gif_on:
-        directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
+        directory = "/Users/ceclmac/PycharmProjects/CASCADE/"
         CASCADEplt.plot_ElevAnimation_Humans_BeachDuneManager(
             cascade,
             1,
@@ -1433,9 +1417,7 @@ def PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
 
 def PLOT_7_Initial_CNH_Topographies(name_prefix_list):
 
-    os.chdir(
-        "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
-    )
+    os.chdir("/Users/ceclmac/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output")
 
     cascade = []
 
@@ -1465,7 +1447,7 @@ def PLOT_9_Nonlinear_Dynamics_CASCADE_AST(
 ):
 
     os.chdir(
-        "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
+        "/Users/Ceclmac/Onedrive - University of North Carolina at Chapel Hill/Cascade_Runs"
     )
 
     # --------- plot ---------
@@ -1592,7 +1574,7 @@ def PLOT_9_Nonlinear_Dynamics_CASCADE_AST(
             dune_toe.append(DuneToePosition),
 
     if gif_on:
-        directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/"
+        directory = "/Users/ceclmac/PycharmProjects/CASCADE/"
         CASCADEplt.plot_ElevAnimation_CASCADE(
             cascade,
             ny=ny,
@@ -1641,7 +1623,7 @@ def get_roadway_statistics(
 
     # folder_prefix = "Roadway_100sims_1m_lowGR_lowEle"
     folder_path = (
-        "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output/"
+        "/Users/ceclmac/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output/"
         + folder_prefix
     )
     os.chdir(folder_path)
@@ -1881,37 +1863,37 @@ def old_versions_cascade_plots():
 
     PLOT_5_AlongshoreVarGrowthParam_half(
         name="5-VarGrowthParam_half_pt4SLR_1500yrs_6km",
-        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+        save_directory="/Users/ceclmac/PycharmProjects/CASCADE/Run_Output",
         ny=12,
     )
 
     PLOT_5_AlongshoreVarGrowthParam_half(
         name="5-VarGrowthParam_half_pt4SLR_1500yrs_1km",
-        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+        save_directory="/Users/ceclmac/PycharmProjects/CASCADE/Run_Output",
         ny=2,
     )
 
     PLOT_5_AlongshoreVarGrowthParam_half(
         name="5-VarGrowthParam_half_pt4SLR_1500yrs_3km",
-        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+        save_directory="/Users/ceclmac/PycharmProjects/CASCADE/Run_Output",
         ny=6,
     )
 
     PLOT_5_AlongshoreVarGrowthParam_half(
         name="5-VarGrowthParam_half_pt4SLR_1500yrs_12km",
-        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+        save_directory="/Users/ceclmac/PycharmProjects/CASCADE/Run_Output",
         ny=24,
     )
 
     PLOT_3_AlongshoreVarGrowthParam_gradient(
         name="3-VarGrowthParam_grad_pt2HAF_pt4SLR_1500yrs",
-        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+        save_directory="/Users/ceclmac/PycharmProjects/CASCADE/Run_Output",
     )
 
     # these plots actually don't use run 5, just the individual B3D runs
     PLOT_5_Nonlinear_Dynamics(
         name="5-VarGrowthParam_half_pt4SLR_1500yrs",
-        save_directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/Run_Output",
+        save_directory="/Users/ceclmac/PycharmProjects/CASCADE/Run_Output",
     )
 
 
@@ -2069,7 +2051,7 @@ def cascade_10kyr_sensitivity():
 
 def cascade_10kyr_plots():
 
-    datadir = "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output/"
+    datadir = "/Users/ceclmac/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output/"
     tmax_pt45 = [10000, 10000, 10000, 10000, 10000]
     name_prefix_45 = "4-CASCADE_noAST_Rave_pt45_SLR_pt004_10k-yrs_0"
     tmax_pt75 = [5710, 10000, 2878, 10000, 10000]
@@ -2087,7 +2069,7 @@ def cascade_10kyr_plots():
 # record of B3D time series initial conditions (storms, dune growth rates, growth parameters) -------------------
 def time_series():
 
-    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
+    datadir = "/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/"
 
     StormSeries_NormDist_10kyrs_01 = yearly_storms_from_MSSM(
         datadir=datadir,
