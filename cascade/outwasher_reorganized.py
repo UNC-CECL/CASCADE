@@ -304,7 +304,6 @@ def outwasher(b3d, storm_series, runID):
     newpath = "C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/"
     if not os.path.exists(newpath):
         os.makedirs(newpath)
-
     # set Barrier3D variables
     cx = b3d._Cx  # multiplier with the average slope of the interior for constant "C" in inundation transport rule
     berm_el = b3d._BermEl  # [dam MHW]
@@ -314,6 +313,7 @@ def outwasher(b3d, storm_series, runID):
     nn = b3d._nn  # flow routing constant
     max_slope = -b3d._MaxUpSlope  # max slope that sediment can go uphill, previously Slim (0.25)
     ki = b3d._Ki  # sediment transport coefficient
+    ki = 7.5E-1
     mm = b3d._mm  # inundation overwash coefficient
     sea_level = b3d._SL  # equal to 0 dam
     q_min = b3d._Qs_min  # [m^3 / hr]? Minimum discharge needed for sediment transport (0.001)
@@ -360,7 +360,7 @@ def outwasher(b3d, storm_series, runID):
                 shoreface_domain = np.zeros([6, length])
                 # we actually want the beach to have a slope, but keep the first few rows the berm elevation
                 # we want the beach slope to be 0.004 m = 0.0004 dam
-                m_beach = -0.001
+                m_beach = -0.0004
                 for b in range(len(beach_domain)):
                     if b >= 3:
                         beach_domain[b, :] = beach_domain[b - 1, :] + m_beach  # m_beach is negative (downhill)
@@ -377,24 +377,6 @@ def outwasher(b3d, storm_series, runID):
                 full_domain = np.append(full_domain, shoreface_domain, 0)
                 # full_domain[0, :, :] = np.vstack([interior_domain, dune_domain_full, beach_domain, shoreface_domain])
                 np.save(newpath + "full_domain", full_domain)
-
-                # testing scenarios
-                # full_domain[5:10, 20:25] = 0.5
-                # full_domain[15:25, 30:40] = 0.5
-                # full_domain[25:30, 5:10] = 0.5
-                # full_domain[:, 20:22] = 0
-                # full_domain[:, 0:2] = 0
-                # full_domain[:, 38:40] = 0
-                # full_domain[15, :] = 0.7  # testing wall scenario
-                # full_domain[15, 25:30] = 0  # testing wall scenario
-                # full_domain = full_domain[5:, :]  # testing removing the bay
-
-                # plt.plot(range(length), dune_domain_full[0])
-                # plt.title("Dune Domain")
-                # plt.ylim(0, 0.25)
-                # plt.ylabel("dam MHW")
-                # plt.xlabel("alongshore distance (dam)")
-                # plt.show()
 
                 # plot the initial full domain before sediment movement
                 fig1 = plt.figure()
@@ -417,7 +399,7 @@ def outwasher(b3d, storm_series, runID):
                 cross_section = np.flip(cross_section)
                 fig4 = plt.figure()
                 ax4 = fig4.add_subplot(111)
-                ax4.plot(range(len(full_domain)), cross_section, label="pre-storm")
+                # ax4.plot(range(len(full_domain)), cross_section, label="pre-storm")
                 dune_gap_el = np.flip(full_domain[:, 21])
                 ax4.plot(range(len(full_domain)), dune_gap_el, label="dune gap (21) pre", linestyle="dashed")
 
@@ -496,18 +478,12 @@ def outwasher(b3d, storm_series, runID):
                     #                               (Hd_TSloss / substep * TS)
                     # Reduce dune in height linearly over course of storm
 
-                    # ### Set Water Flow at Bay
-                    # the velocity here assumes dune overtopping (Larson 2004), probably need to change
-                    # overtop_flow can be dam^3 because we are multiplying by 1 to convert
-                    # our initial discharge amount starts at the first row and is later distributed down the rows/cols
-
                     # Back barrier flow starts randomly
                     Discharge[TS, 0, :] = 15
-                    # Loop through the rows, starting with the dunes and excluding the last one
-                    # (because there is nowhere for the water/sed to go)
+                    # Loop through the rows
                     # need to include the last row to keep track of how much is leaving the system
                     # for d in range(width-1):
-                    # for d in range(int_width, width):  # uncomment if we are letting sediment out the last row
+                    # uncomment if we are letting sediment out the last row
                     for d in range(width):
                         # Discharge for each TS, row 1, and all cols set above
                         Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
@@ -570,16 +546,15 @@ def outwasher(b3d, storm_series, runID):
                                 else:
                                     Qs3 = 0
 
-                                Qs1 = np.nan_to_num(Qs1) * 8000
-                                Qs2 = np.nan_to_num(Qs2) * 8000
-                                Qs3 = np.nan_to_num(Qs3) * 8000
+                                Qs1 = np.nan_to_num(Qs1)
+                                Qs2 = np.nan_to_num(Qs2)
+                                Qs3 = np.nan_to_num(Qs3)
 
                                 qs2_array[TS, d, i] = Qs2
 
                                 # ### Calculate Net Erosion/Accretion
-                                # If cell is interior, elevation change is determined by difference between
                                 # flux in vs. flux out
-                                # sed flux in goes to the next row, and is used for determing flux out at current row
+                                # sed flux in goes to the next row, and is used for determining flux out at current row
                                 # so we need a flux in for the last row, which will be its own variable
                                 if d != width - 1:  # uncomment, tab next two ifs
                                     if i > 0:
@@ -605,10 +580,10 @@ def outwasher(b3d, storm_series, runID):
 
                     # if we are just letting it go out of the cell uncomment
                     qs_lost = qs_lost + sum(SedFluxOut[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
-                    # reset to zero within the storm loop
+                    # qs_lost is reset to zero within the storm loop
                     qs_lost_total = qs_lost_total + sum(
                         SedFluxOut[TS, width - 1, :]) / substep  # [dam^3] previously OWloss
-                    # initialized to zero outside all loops
+                    # qs_lost_total is initialized to zero outside all loops
 
             with open('C:/Users/Lexi/Documents/Research/Outwasher/Output/sediment_tracking.txt', 'a') as f:
                 if n == numstorm - 1:
@@ -634,7 +609,8 @@ def outwasher(b3d, storm_series, runID):
                     check = 0
 
             # Update interior domain
-            # b3d._InteriorDomain = np.flip(InteriorUpdate)
+            int_update_b3d = InteriorUpdate[0:int_width, :]
+            b3d._InteriorDomain = np.flip(int_update_b3d)
             full_domain[1:, :] = InteriorUpdate
             # Update Domain widths
             # DomainWidth = np.shape(b3d._InteriorDomain)[0]
@@ -642,7 +618,7 @@ def outwasher(b3d, storm_series, runID):
             # plotting post-storm cross section
             cross_section2 = np.mean(full_domain, 1)
             cross_section2 = np.flip(cross_section2)
-            ax4.plot(range(len(full_domain)), cross_section2, label="post storm")
+            # ax4.plot(range(len(full_domain)), cross_section2, label="post storm")
             dune_gap_el = np.flip(full_domain[:, 21])
             ax4.plot(range(len(full_domain)), dune_gap_el, label="dune gap (21) post", linestyle="dashed")
             ax4.set_xlabel("barrier width from ocean to bay (dam)")
@@ -692,7 +668,7 @@ sound_data[0] = 0
 
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
-runID = "10_C_backbayflow_chris_sedfluxes8000_fluxchanges_erode_dune_steeper_beach_reorganized"
+runID = "1sedfluxes_erode_dune_10_C_bbflow_chris_kie-1"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
@@ -917,7 +893,7 @@ def plot_Qs2Animation(qs2, directory, TMAX, name):
 
 
 # ---------------------- Sed out array ----------------------------------------------------------------------------------
-def plot_SedOutAnimation(sedout, directory, TMAX, name):
+def plot_SedOutAnimation(sedout, directory, TMAX, name, min_v, max_v):
     os.chdir(directory)
     newpath = "SedOut/"
     if not os.path.exists(newpath):
@@ -933,7 +909,7 @@ def plot_SedOutAnimation(sedout, directory, TMAX, name):
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
             AnimateDomain, origin="upper", cmap="jet_r",
-            vmin=0, vmax=0.2,
+            vmin=min_v, vmax=max_v,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -960,7 +936,7 @@ def plot_SedOutAnimation(sedout, directory, TMAX, name):
 
 
 # ---------------------- Sed out array ----------------------------------------------------------------------------------
-def plot_SedInAnimation(sedin, directory, TMAX, name):
+def plot_SedInAnimation(sedin, directory, TMAX, name, min_v, max_v):
     os.chdir(directory)
     newpath = "SedIn/"
     if not os.path.exists(newpath):
@@ -976,7 +952,7 @@ def plot_SedInAnimation(sedin, directory, TMAX, name):
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
             AnimateDomain, origin="upper", cmap="jet_r",
-            vmin=0, vmax=0.2,
+            vmin=min_v, vmax=max_v,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -1101,7 +1077,7 @@ plot_ElevAnimation(elev_change, dir, TMAX, name)
 plot_DischargeAnimation(discharge, dir, TMAX, name)
 plot_SlopeAnimation(slopes2, dir, TMAX, name)
 plot_Qs2Animation(qs2, dir, TMAX, name)
-plot_SedOutAnimation(sedout, dir, TMAX, name)
-plot_SedInAnimation(sedin, dir, TMAX, name)
+plot_SedOutAnimation(sedout, dir, TMAX, name, 0, 0.125)
+plot_SedInAnimation(sedin, dir, TMAX, name, 0, 0.125)
 # time_step = [0]
 # plot_ModelTransects(b3d, time_step)
