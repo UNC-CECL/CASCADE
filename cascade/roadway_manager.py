@@ -536,10 +536,7 @@ class RoadwayManager:
         self._post_storm_interior = [None] * self._nt
         self._post_storm_ave_interior_height = [None] * self._nt
 
-    def update(
-        self,
-        barrier3d,
-    ):
+    def update(self, barrier3d, trigger_dune_knockdown):
 
         self._time_index = barrier3d.time_index
 
@@ -581,6 +578,13 @@ class RoadwayManager:
 
         # if road can't be relocated, no longer manage and exit; dune growth parameters reset to original in CASCADE
         if self._relocation_break == 1:
+
+            # an adaptation solution may be to knock down the dunes so that they are small and can easily be overwashed
+            if trigger_dune_knockdown:
+                barrier3d.DuneDomain[self._time_index - 1, :, :] = barrier3d.DuneDomain[
+                    0, :, :
+                ]
+
             return
 
         # if road is relocated, get the new road elevation (built at grade) and update dune elevations which are
@@ -632,8 +636,22 @@ class RoadwayManager:
                     time=self._time_index - 1
                 )
             )
+
+            # an adaptation solution may be to knock down the dunes so that they are small and can easily be overwashed
+            if trigger_dune_knockdown:
+                barrier3d.DuneDomain[self._time_index - 1, :, :] = barrier3d.DuneDomain[
+                    0, :, :
+                ]
+
             return
         elif self._drown_break == 1:  # if road drowned from road relocation above
+
+            # an adaptation solution may be to knock down the dunes so that they are small and can easily be overwashed
+            if trigger_dune_knockdown:
+                barrier3d.DuneDomain[self._time_index - 1, :, :] = barrier3d.DuneDomain[
+                    0, :, :
+                ]
+
             return
 
         # when the roadway gets really low in elevation, the dune_design_elevation may not be above the berm; when this
@@ -686,7 +704,13 @@ class RoadwayManager:
             percent_water_cells_touching_road=self._percent_water_cells_touching_road,  # fraction cells<drown_threshold
         )
         if self._drown_break == 1:
-            # barrier3d.growthparam = self._original_growth_param  # now reset in CASCADE
+
+            # an adaptation solution may be to knock down the dunes so that they are small and can easily be overwashed
+            if trigger_dune_knockdown:
+                barrier3d.DuneDomain[self._time_index - 1, :, :] = barrier3d.DuneDomain[
+                    0, :, :
+                ]
+
             return  # exit program
 
         self._road_overwash_volume[self._time_index - 1] = (
@@ -798,3 +822,12 @@ class RoadwayManager:
     @relocation_break.setter
     def relocation_break(self, value):
         self._relocation_break = value
+
+    @property
+    def percent_water_cells_touching_road(self):
+        return self._percent_water_cells_touching_road
+
+    @percent_water_cells_touching_road.setter
+    def percent_water_cells_touching_roadk(self, value):
+        self._percent_water_cells_touching_road = value
+
