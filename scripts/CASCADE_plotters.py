@@ -962,7 +962,7 @@ def plot_nonlinear_stats_RoadwayManager(
     # if the post-storm variables are not supplied (essentially a 0.5 year time step), then only the human-modified
     # statistics are plotted (the 1 year time step)
 
-    # variables that need to be combined and plotted: dune height, barrier width, barrier height/interior
+    # variables that need to be combined and plotted: dune height, barrier height/interior
     empty_nans = np.empty(tmax_sim - tmax_roadways)
     empty_nans[:] = np.nan
 
@@ -1691,17 +1691,19 @@ def plot_nonlinear_stats_mgmt_array4(
         )
     plt.tight_layout()
 
-    # interior height and width -------------------------------------------------------------------------------------- #
+    # interior height, width, and overwash --------------------------------------------------------------------------- #
     fig2, axs2 = plt.subplots(1, 4, figsize=(10, 3), sharex=True)
     color = ["b", "r", "g", "m"]
     for i in range(len(cascade)):
 
         if i > 0:
-            time = np.arange(0, TMAX[i] - 0.5, 0.5)
+            # time = np.arange(0, TMAX[i] - 0.5, 0.5)
             yearly_time = np.arange(0, TMAX[i], 1)
 
-            barrier_height = BarrierHeight[i][0 : len(time)]
-            mask_bh = np.isfinite(barrier_height)
+            # NOTE: I decided I didn't want to plot the 0.5 year time step (post storm), just the final after mgmt
+            # barrier_height = BarrierHeight[i][0 : len(time)]
+            # mask_bh = np.isfinite(barrier_height)
+            barrier_height = np.array(cascade[i].barrier3d[0].h_b_TS[0 : TMAX[i]]) * 10
 
             scts = [
                 (x - shoreline_position[i][0])
@@ -1710,9 +1712,11 @@ def plot_nonlinear_stats_mgmt_array4(
             axs2[2].plot(yearly_time, scts, color[i])
 
             if roadways_on:
-                axs2[0].plot(time[mask_bh], barrier_height[mask_bh], color[i])
+                axs2[0].plot(yearly_time, barrier_height, color[i])
                 axs2[1].plot(yearly_time, BarrierWidth[i][0 : TMAX[i]], color[i])
-                axs2[3].plot(yearly_time, overwash[0 : TMAX[i]], color[i])
+                axs2[3].plot(
+                    yearly_time, overwash[i][0 : TMAX[i]], color[i]
+                )  # this is just net overwash
 
             if nourishment_on:
                 # plot interannual time steps for barrier width and height
@@ -1725,7 +1729,7 @@ def plot_nonlinear_stats_mgmt_array4(
                     color[i],
                 )
 
-                barrier_width = BarrierWidth[i][0 : len(time)]
+                # barrier_width = BarrierWidth[i][0 : len(time)]
                 # mask_bw = np.isfinite(barrier_width)
                 # axs2[1].plot(time[mask_bw], barrier_width[mask_bw], color[i], alpha=0.3)
                 axs2[1].plot(
@@ -1909,21 +1913,24 @@ def plot_nonlinear_stats_ast_array3(
         axs[1].plot(yearly_time, scts, color[i])
 
     axs[0].set(ylabel="beach width (m)")
-    # axs2[0].set_ylim([-0.03, 1.75])
+    axs[0].set_ylim([8, 52])
     axs[1].set(ylabel="shoreline position (m)")
     # axs2[1].set_ylim([-6, 425])
     axs[0].legend(scenarios_beach_width)
     axs[1].legend(scenarios_shoreline_position)
 
-    # plot when management ceased
+    # plot when both roadway and nourishment management ceased
     for i in range(len(TMAX)):
+        axs[0].axvline(x=tmax_management_roadways[i], color=color[i])
         axs[0].axvline(x=tmax_management_nourishments[i], color=color[i])
         axs[1].axvline(x=tmax_management_roadways[i], color=color[i])
+        axs[1].axvline(x=tmax_management_nourishments[i], color=color[i])
 
     axs[0].set(xlabel="time (yr)")
-    axs[0].set_xlim([0, np.max(tmax_management_nourishments) + 2])
+    # axs[0].set_xlim([0, np.max(tmax_management_nourishments) + 2])
+    axs[0].set_xlim([0, np.max(TMAX[0])])
     axs[1].set(xlabel="time (yr)")
-    axs[1].set_xlim([0, np.max(TMAX)])
+    axs[1].set_xlim([0, np.max(TMAX[0])])
 
     plt.tight_layout()
 
