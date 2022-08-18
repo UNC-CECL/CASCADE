@@ -126,6 +126,8 @@ class Cascade:
         road_setback=30,
         dune_design_elevation=3.7,
         dune_minimum_elevation=2.2,
+        trigger_dune_knockdown=False,
+        group_roadway_abandonment=None,
         nourishment_interval=None,
         nourishment_volume=300.0,
         overwash_filter=40,
@@ -199,6 +201,10 @@ class Cascade:
             Elevation to which dune is initially rebuilt to [m MHW] and after road relocations
         dune_minimum_elevation: float or list of floats, optional
             Elevation threshold which triggers rebuilding of dune [m MHW]
+        trigger_dune_knockdown: boolean, optional
+            Resets the dune elevation to the initial condition (time zero) after roadway abandonment
+        group_roadway_abandonment: list of ints greater than zero, optional
+            Groups roadways together into segments for abandonment (i.e., if one roadway is abandoned they all are)
         nourishment_interval: int or list of ints, optional
              Interval that nourishment occurs [yrs]
         nourishment_volume: float or list of float, optional
@@ -264,6 +270,10 @@ class Cascade:
         self._nourish_now = [0] * self._ny  # triggers nourishment
         self._rebuild_dune_now = [0] * self._ny  # triggers dune rebuilding
         self._initial_beach_width = [0] * self._ny
+        self._trigger_dune_knockdown = (
+            trigger_dune_knockdown  # triggers knocking down dune
+        )
+        self._group_roadway_abandonment = group_roadway_abandonment  # groups roadways
 
         ###############################################################################
         # initialize brie and barrier3d model classes
@@ -531,15 +541,48 @@ class Cascade:
                     self._roadways[iB3D].drown_break
                     or self._roadways[iB3D].relocation_break
                 ):
-                    self._road_break[iB3D] = 1
+                    # if it was specified that roadways are abandonded in groups, abandon the group
+                    if self._group_roadway_abandonment is not None:
 
-                    # set dune growth rates back to original only when dune elevation is less than equilibrium
-                    self._barrier3d[iB3D].growthparam = self.reset_dune_growth_rates(
-                        original_growth_param=self._roadways[
+                        # find the group indices
+                        group_roadways = np.where(
+                            np.array(self._group_roadway_abandonment)
+                            == self._group_roadway_abandonment[iB3D]
+                        )[0]
+                        self._road_break[group_roadways[0] : group_roadways[-1] + 1] = [
+                            1
+                        ] * len(group_roadways)
+
+                        # label the other group indices as broken
+                        for iRoad in group_roadways:
+                            if self._roadways[iB3D].drown_break:
+                                self._roadways[iRoad].drown_break = 1
+                            else:
+                                self._roadways[iRoad].relocation_break = 1
+
+                            # set dune growth rates back to original only when dune elevation is less than equilibrium
+                            self._barrier3d[
+                                iRoad
+                            ].growthparam = self.reset_dune_growth_rates(
+                                original_growth_param=self._roadways[
+                                    iRoad
+                                ]._original_growth_param,
+                                iB3D=iRoad,
+                            )
+
+                    else:
+                        self._road_break[iB3D] = 1
+
+                        # set dune growth rates back to original only when dune elevation is less than equilibrium
+                        self._barrier3d[
                             iB3D
-                        ]._original_growth_param,
-                        iB3D=iB3D,
-                    )
+                        ].growthparam = self.reset_dune_growth_rates(
+                            original_growth_param=self._roadways[
+                                iB3D
+                            ]._original_growth_param,
+                            iB3D=iB3D,
+                        )
+
                 else:
                     # manage that road!
                     self._roadways[iB3D].road_relocation_width = self._road_width[
@@ -548,7 +591,9 @@ class Cascade:
                     self._roadways[iB3D].road_relocation_setback = self._road_setback[
                         iB3D
                     ]
-                    self._roadways[iB3D].update(self._barrier3d[iB3D])
+                    self._roadways[iB3D].update(
+                        self._barrier3d[iB3D], self._trigger_dune_knockdown
+                    )
 
                 # update x_b to include a fake beach width and the dune line; we add a fake beach width for coupling
                 # with the beach nourishment module below (i.e., if half the domain is initialized with roadways and
