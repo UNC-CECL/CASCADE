@@ -15,6 +15,7 @@ Notes
 
 """
 import numpy as np
+import math
 
 from yaml import full_load, dump
 from brie import Brie
@@ -313,7 +314,14 @@ class BrieCoupler:
             # update back-barrier shoreline location in BRIE based on new shoreline + average interior width in B3D
             # NOTE: all of these positions also get updated at the end of the human management time loop
             self._brie.x_b[iB3D] = barrier3d[iB3D].x_b_TS[-1] * 10
-            self._brie.x_b_save[iB3D, self._brie.time_index - 1] = self._brie.x_b[iB3D]
+
+            # this (I think) prevents a Barrier3D drowning error
+            if math.isnan(self._brie.x_b[iB3D]):
+                pass
+            else:
+                self._brie.x_b_save[iB3D, self._brie.time_index - 1] = self._brie.x_b[
+                    iB3D
+                ]
 
     def update_brie_for_human_modifications(self, x_t, x_s, x_b, h_b, s_sf):
         """Reset all of the save variables and current variables for the barrier geometry to account for human
