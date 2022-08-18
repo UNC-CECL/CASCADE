@@ -5828,22 +5828,22 @@ def cascade_1kyr_plots():
             )
 
             # same as above, but with accelerated SLR and 1m background erosion
-            # Barrier has HEIGHT DRWNED at t = 71 years (#5 B3D) - 4261
+            # Barrier has HEIGHT DROWNED at t = 71 years (#5 B3D) - 4261
             (
-                barrier_width_acc,
-                dune_crest_mean_acc,
-                barrier_height_acc,
-                bh_rate_acc,
-                bw_rate_acc,
-                sc_rate_acc,
-                dune_crest_min_acc,
-                dune_crest_max_acc,
-                shoreline_position_acc,
-                shoreface_slope_acc,
-                beach_width_acc,
-                overwash_acc,
-                dune_toe_acc,
-                cascade_acc,
+                barrier_width_thirds_acc,
+                dune_crest_mean_thirds_acc,
+                barrier_height_thirds_acc,
+                bh_rate_thirds_acc,
+                bw_rate_thirds_acc,
+                sc_rate_thirds_acc,
+                dune_crest_min_thirds_acc,
+                dune_crest_max_thirds_acc,
+                shoreline_position_thirds_acc,
+                shoreface_slope_thirds_acc,
+                beach_width_thirds_acc,
+                overwash_thirds_acc,
+                dune_toe_thirds_acc,
+                cascade_thirds_acc,
             ) = PLOT_9_Nonlinear_Dynamics_CASCADE_AST(
                 name_prefix="9-CASCADE_AST_3domains_BE1m_AccSLR",
                 tmax_management=[
@@ -5955,14 +5955,14 @@ def cascade_1kyr_plots():
                         shoreline_position_allroads_pt75low[
                             iB3D_roadways
                         ],  # this is a dummy
-                        shoreline_position_acc[iB3D_roadways],
+                        shoreline_position_thirds_acc[iB3D_roadways],
                         shoreline_position_acc_nat[iB3D_roadways],
                     ],
                     beach_width=[
                         beach_width_allnourish_pt45low[
                             iB3D_community
                         ],  # this is a dummy
-                        beach_width_acc[iB3D_community],
+                        beach_width_thirds_acc[iB3D_community],
                         beach_width_acc_nat[iB3D_community],
                     ],
                     TMAX=[
@@ -5992,37 +5992,55 @@ def cascade_1kyr_plots():
                     ],
                 )
 
-        def misc_stats():
-            def nourishment_stats(cascade, cutoff, iB3D, nourishment_volume):
-                # nourishment statistics
-                nourishments = (
-                    cascade.nourishments[iB3D].nourishment_volume_TS[:cutoff]
-                    == nourishment_volume
+            def misc_stats():
+                def nourishment_stats(cascade, cutoff, iB3D, nourishment_volume):
+                    # nourishment statistics
+                    nourishments = (
+                        cascade.nourishments[iB3D].nourishment_volume_TS[:cutoff]
+                        == nourishment_volume
+                    )
+                    nourishment_frequency = [i for i, x in enumerate(nourishments) if x]
+                    nourishment_frequency_pre = [
+                        y - x
+                        for x, y in zip(
+                            nourishment_frequency, nourishment_frequency[1:]
+                        )
+                    ]
+                    mean_pre = np.mean(nourishment_frequency_pre)
+
+                    nourishments = (
+                        cascade.nourishments[iB3D].nourishment_volume_TS[cutoff:]
+                        == nourishment_volume
+                    )
+                    nourishment_frequency = [i for i, x in enumerate(nourishments) if x]
+                    nourishment_frequency_post = [
+                        y - x
+                        for x, y in zip(
+                            nourishment_frequency, nourishment_frequency[1:]
+                        )
+                    ]
+                    mean_post = np.mean(nourishment_frequency_post)
+
+                    return mean_pre, mean_post
+
+                mean_pre_pt45_linSLR, mean_post_pt45_linSLR = nourishment_stats(
+                    cascade_pt45nourish_linSLR,
+                    cutoff=132,
+                    iB3D=0,
+                    nourishment_volume=100,
                 )
-                nourishment_frequency = [i for i, x in enumerate(nourishments) if x]
-                nourishment_frequency_pre = [
-                    y - x
-                    for x, y in zip(nourishment_frequency, nourishment_frequency[1:])
-                ]
-                mean_pre = np.mean(nourishment_frequency_pre)
 
-                nourishments = (
-                    cascade.nourishments[iB3D].nourishment_volume_TS[cutoff:]
-                    == nourishment_volume
+                mean_pre_thirds_linSLR, mean_post_thirds_linSLR = nourishment_stats(
+                    cascade_thirds_linSLR, cutoff=99, iB3D=0, nourishment_volume=100
                 )
-                nourishment_frequency = [i for i, x in enumerate(nourishments) if x]
-                nourishment_frequency_post = [
-                    y - x
-                    for x, y in zip(nourishment_frequency, nourishment_frequency[1:])
-                ]
-                mean_post = np.mean(nourishment_frequency_post)
 
-                return mean_pre, mean_post
+                mean_pre_thirds_accSLR, mean_post_thirds_accSLR = nourishment_stats(
+                    cascade_thirds_acc, cutoff=71, iB3D=0, nourishment_volume=100
+                )
 
-            mean_pre_pt45_linSLR, mean_post_pt45_linSLR = nourishment_stats(
-                cascade_pt45nourish_linSLR, cutoff=132, iB3D=0, nourishment_volume=100
-            )
-
-            mean_pre_thirds_linSLR, mean_post_thirds_linSLR = nourishment_stats(
-                cascade_thirds_linSLR, cutoff=99, iB3D=0, nourishment_volume=100
-            )
+                (
+                    mean_pre_thirds_nat_accSLR,
+                    mean_post_thirds_nat_accSLR,
+                ) = nourishment_stats(
+                    cascade_acc_nat, cutoff=71, iB3D=0, nourishment_volume=100
+                )
