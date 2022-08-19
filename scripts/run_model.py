@@ -3568,19 +3568,19 @@ def cascade_1kyr_runs():
                 rmin = [0.25] * 3 + [0.55] * 3 + [0.25] * 3
                 rmax = [0.65] * 3 + [0.95] * 3 + [0.65] * 3
                 elevation_file = (
-                        ["b3d_pt45_8757yrs_low-elevations.csv"] * 3
-                        + ["b3d_pt75_4261yrs_low-elevations.csv"] * 3
-                        + ["b3d_pt45_8757yrs_low-elevations.csv"] * 3
+                    ["b3d_pt45_8757yrs_low-elevations.csv"] * 3
+                    + ["b3d_pt75_4261yrs_low-elevations.csv"] * 3
+                    + ["b3d_pt45_8757yrs_low-elevations.csv"] * 3
                 )
                 dune_file = ["barrier3d-default-dunes.npy"] * number_barrier3d_models
                 dune_design_elevation = (
-                        [3.6] * 3 + [2.6] * 3 + [3.6] * 3
+                    [3.6] * 3 + [2.6] * 3 + [3.6] * 3
                 )  # 2 m above the original roadway
                 dune_minimum_elevation = (
-                        [2.1] * 3 + [1.1] * 3 + [2.1] * 3
+                    [2.1] * 3 + [1.1] * 3 + [2.1] * 3
                 )  # m MHW, allow dune to erode down to 0.5 m above the roadway, roadways only (others dummy)
                 road_ele = (
-                        [1.6] * 3 + [0.6] * 3 + [1.6] * 3
+                    [1.6] * 3 + [0.6] * 3 + [1.6] * 3
                 )  # first 3 are dummys since we are only doing nourishment there
                 num_cores = 9
                 road_width = 20  # m
@@ -3606,7 +3606,7 @@ def cascade_1kyr_runs():
                 sea_level_constant = False  # accelerated
 
                 for iStorm in range(year_start, year_end):
-                    name_prefix = "9-CASCADE_AST_3domains_BE1m_AccSLR",
+                    name_prefix = ("9-CASCADE_AST_3domains_BE1m_AccSLR",)
                     name = name_prefix + str(iStorm)
                     storm_file = (
                         "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_"
@@ -3645,7 +3645,17 @@ def cascade_1kyr_runs():
                     )
 
                     # set middle to no management and lets see what happens
-                    roads_on = [False, False, False, False, False, False, True, True, True]
+                    roads_on = [
+                        False,
+                        False,
+                        False,
+                        False,
+                        False,
+                        False,
+                        True,
+                        True,
+                        True,
+                    ]
 
                     name_prefix = "9-CASCADE_AST_3domains_BE1m_AccSLR_nat_middle"
                     name = name_prefix + str(iStorm)
