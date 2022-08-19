@@ -1661,12 +1661,14 @@ def plot_nonlinear_stats_mgmt_array4(
         axs[i].set(xlabel="time (yr)")
         if roadways_on:
             # axs[i].set_xlim([-15, 765])
-            axs[i].set_xlim([-15, 1015])
-            axs[i].set_ylim([0, 5.2])
+            axs[i].set_xlim([-15, 715])
+            # axs[i].set_xlim([-15, 1015])
+            axs[i].set_ylim([0, 5.25])
         if nourishment_on:
-            # axs[i].set_xlim([-15, 515])
-            axs[i].set_xlim([-15, 765])
-            axs[i].set_ylim([0, 5.2])
+            # axs[i].set_xlim([-15, 1015])
+            # axs[i].set_xlim([-15, 765])
+            axs[i].set_xlim([-15, 715])
+            axs[i].set_ylim([0, 5.25])
     axs[0].set(ylabel="elevation (m MHW)")
     if roadways_on:
         axs[3].legend(
@@ -1781,20 +1783,20 @@ def plot_nonlinear_stats_mgmt_array4(
         axs2[i].set(xlabel="time (yr)")
         if roadways_on:
             # axs2[i].set_xlim([-15, 765])
-            axs[i].set_xlim([-15, 1015])
+            axs2[i].set_xlim([-15, 1015])
         if nourishment_on:
-            # axs2[i].set_xlim([-15, 515])
-            axs2[i].set_xlim([-15, 765])
+            axs2[i].set_xlim([-15, 1015])
+            # axs2[i].set_xlim([-15, 765])
 
     axs2[0].set(ylabel="barrier elevation (m MHW)")
     axs2[0].set_ylim([-0.03, 1.75])
     axs2[1].set(ylabel="barrier width (m)")
-    axs2[1].set_ylim([-6, 425])
+    axs2[1].set_ylim([-6, 450])
     if roadways_on:
-        axs2[2].set_ylim([-10, 615])
+        axs2[2].set_ylim([-10, 900])
         axs2[2].set(ylabel="shoreline position (m)")
     if nourishment_on:
-        axs2[2].set_ylim([-30, 615])
+        axs2[2].set_ylim([-30, 900])
         axs2[2].set(ylabel="cross-shore position (m)")
         axs2[2].legend(["shoreline", "dune toe"])
     axs2[3].set(ylabel="overwash flux (m$^3$/m)")
