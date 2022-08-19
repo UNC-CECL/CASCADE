@@ -3467,6 +3467,7 @@ def cascade_1kyr_runs():
                     road_ele=road_ele,
                     road_width=road_width,
                     road_setback=road_setback,
+                    group_roadway_abandonment=[0, 0, 0, 1, 1, 1, 2, 2, 2],
                     overwash_filter=overwash_filter,
                     overwash_to_dune=overwash_to_dune,
                     nourishment_volume=nourishment_volume,
@@ -3502,6 +3503,7 @@ def cascade_1kyr_runs():
                     road_ele=road_ele,
                     road_width=road_width,
                     road_setback=road_setback,
+                    group_roadway_abandonment=[0, 0, 0, 1, 1, 1, 2, 2, 2],
                     overwash_filter=overwash_filter,
                     overwash_to_dune=overwash_to_dune,
                     nourishment_volume=nourishment_volume,
@@ -3555,6 +3557,126 @@ def cascade_1kyr_runs():
                     sea_level_constant=sea_level_constant,
                 )
             )
+
+        def averages():
+            def one_hundred_thirds_acc_BE1m_ast_runs(year_start=0, year_end=100):
+
+                # variables that DO NOT change among runs
+                # (NOTE: these variables the same as above -- we maintain a 2 m dune)
+                number_barrier3d_models = 9
+                beach_width_threshold = [30] * number_barrier3d_models
+                rmin = [0.25] * 3 + [0.55] * 3 + [0.25] * 3
+                rmax = [0.65] * 3 + [0.95] * 3 + [0.65] * 3
+                elevation_file = (
+                        ["b3d_pt45_8757yrs_low-elevations.csv"] * 3
+                        + ["b3d_pt75_4261yrs_low-elevations.csv"] * 3
+                        + ["b3d_pt45_8757yrs_low-elevations.csv"] * 3
+                )
+                dune_file = ["barrier3d-default-dunes.npy"] * number_barrier3d_models
+                dune_design_elevation = (
+                        [3.6] * 3 + [2.6] * 3 + [3.6] * 3
+                )  # 2 m above the original roadway
+                dune_minimum_elevation = (
+                        [2.1] * 3 + [1.1] * 3 + [2.1] * 3
+                )  # m MHW, allow dune to erode down to 0.5 m above the roadway, roadways only (others dummy)
+                road_ele = (
+                        [1.6] * 3 + [0.6] * 3 + [1.6] * 3
+                )  # first 3 are dummys since we are only doing nourishment there
+                num_cores = 9
+                road_width = 20  # m
+                road_setback = 20  # m
+                overwash_filter = 90  # commercial
+                overwash_to_dune = 9
+                nourishment_volume = 100  # m^3/m
+                background_erosion = -1.0  # m/yr, background shoreline erosion
+                rebuild_dune_threshold = 1  # m
+                nourishments_on = [
+                    True,
+                    True,
+                    True,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                ]
+
+                sea_level_rise_rate = 0.004  # dummy
+                sea_level_constant = False  # accelerated
+
+                for iStorm in range(year_start, year_end):
+                    name_prefix = "9-CASCADE_AST_3domains_BE1m_AccSLR",
+                    name = name_prefix + str(iStorm)
+                    storm_file = (
+                        "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_"
+                        + str(iStorm)
+                        + ".npy"
+                    )
+
+                    roads_on = [False, False, False, True, True, True, True, True, True]
+
+                    RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
+                        nt=200,
+                        name=name,
+                        storm_file=storm_file,
+                        alongshore_section_count=number_barrier3d_models,
+                        num_cores=num_cores,
+                        beach_width_threshold=beach_width_threshold,
+                        rmin=rmin,
+                        rmax=rmax,
+                        elevation_file=elevation_file,
+                        dune_file=dune_file,
+                        dune_design_elevation=dune_design_elevation,
+                        dune_minimum_elevation=dune_minimum_elevation,
+                        road_ele=road_ele,
+                        road_width=road_width,
+                        road_setback=road_setback,
+                        group_roadway_abandonment=[0, 0, 0, 1, 1, 1, 2, 2, 2],
+                        overwash_filter=overwash_filter,
+                        overwash_to_dune=overwash_to_dune,
+                        nourishment_volume=nourishment_volume,
+                        background_erosion=background_erosion,
+                        rebuild_dune_threshold=rebuild_dune_threshold,
+                        roadway_management_on=roads_on,
+                        beach_dune_manager_on=nourishments_on,
+                        sea_level_rise_rate=sea_level_rise_rate,
+                        sea_level_constant=sea_level_constant,
+                    )
+
+                    # set middle to no management and lets see what happens
+                    roads_on = [False, False, False, False, False, False, True, True, True]
+
+                    name_prefix = "9-CASCADE_AST_3domains_BE1m_AccSLR_nat_middle"
+                    name = name_prefix + str(iStorm)
+
+                    RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
+                        nt=200,
+                        name=name,
+                        storm_file=storm_file,
+                        alongshore_section_count=number_barrier3d_models,
+                        num_cores=num_cores,
+                        beach_width_threshold=beach_width_threshold,
+                        rmin=rmin,
+                        rmax=rmax,
+                        elevation_file=elevation_file,
+                        dune_file=dune_file,
+                        dune_design_elevation=dune_design_elevation,
+                        dune_minimum_elevation=dune_minimum_elevation,
+                        road_ele=road_ele,
+                        road_width=road_width,
+                        road_setback=road_setback,
+                        group_roadway_abandonment=[0, 0, 0, 0, 0, 0, 1, 1, 1],
+                        overwash_filter=overwash_filter,
+                        overwash_to_dune=overwash_to_dune,
+                        nourishment_volume=nourishment_volume,
+                        background_erosion=background_erosion,
+                        rebuild_dune_threshold=rebuild_dune_threshold,
+                        roadway_management_on=roads_on,
+                        beach_dune_manager_on=nourishments_on,
+                        sea_level_rise_rate=sea_level_rise_rate,
+                        sea_level_constant=sea_level_constant,
+                    )
 
 
 def cascade_1kyr_plots():
