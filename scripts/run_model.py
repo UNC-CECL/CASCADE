@@ -3714,7 +3714,7 @@ def cascade_1kyr_plots():
                 plot_name="b3d_pt75_plots_low",
                 run_road_mgmt=False,
                 gif_on=False,
-                cross_sections=[28, 29, 30],
+                # cross_sections=[28, 29, 30],
             )
 
             (
@@ -3758,7 +3758,7 @@ def cascade_1kyr_plots():
                 plot_name="b3d_pt75_h2m_plots_low",
                 run_road_mgmt=True,
                 gif_on=False,
-                cross_sections=[0, 1, 45, 46],
+                # cross_sections=[0, 1, 45, 46],
             )
 
             (
@@ -4036,7 +4036,7 @@ def cascade_1kyr_plots():
                 plot_name="b3d_pt45_plots_low",
                 run_road_mgmt=False,
                 gif_on=False,
-                cross_sections=[0, 1, 2, 3, 4],
+                # cross_sections=[0, 1, 2, 3, 4],
             )
 
             (
@@ -4182,7 +4182,7 @@ def cascade_1kyr_plots():
                 plot_name="b3d_pt45_plots_high",
                 run_road_mgmt=False,
                 gif_on=False,
-                cross_sections=[0, 1, 2, 3, 4],
+                # cross_sections=[0, 1, 2, 3, 4],
             )
 
             (
@@ -4862,11 +4862,12 @@ def cascade_1kyr_plots():
                     overwash_pt45_nat,
                     cascade_pt45_nat,
                 ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-                    name_prefix="6-B3D_Rave_pt45_Natural_low",
-                    tmax_roadways=500,
-                    tmax_sim=800,
+                    name_prefix="4-B3D_Rave_pt45_Natural_low",
+                    tmax_roadways=1000,
+                    tmax_sim=1000,
                     plot_name="b3d_pt45_plots_low",
                     run_road_mgmt=False,
+                    gif_on=False,
                 )
 
                 (
@@ -4886,9 +4887,10 @@ def cascade_1kyr_plots():
                     cascade_pt45_low_40pc,
                 ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
                     name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_residential_rebuild1m",
-                    tmax_management=461,
-                    tmax_sim=800,
+                    tmax_management=407,  # Community reached minimum width, drowned at 407 years
+                    tmax_sim=1000,
                     plot_name="b3d_pt45_Nourishment_2mDune_lowEle_residential_rebuild1m",
+                    rebuild_dune_threshold=1,
                 )
 
                 (
@@ -4908,9 +4910,10 @@ def cascade_1kyr_plots():
                     cascade_pt45_low_90pc,
                 ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
                     name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial_rebuild1m",
-                    tmax_management=390,  # Community reached minimum width, drowned at 390 years
-                    tmax_sim=423,  # Barrier has HEIGHT DROWNED at t = 423 years
+                    tmax_management=302,  # Community reached minimum width, drowned at 302 years
+                    tmax_sim=1000,
                     plot_name="b3d_pt45_Nourishment_2mDune_lowEle_commercial_rebuild1m",
+                    rebuild_dune_threshold=1,
                 )
 
                 (
@@ -4930,9 +4933,10 @@ def cascade_1kyr_plots():
                     cascade_pt45_low_90pc_backerosion_1m,
                 ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
                     name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial_backerosion1m_rebuild1m",
-                    tmax_management=390,
-                    tmax_sim=800,
+                    tmax_management=302,  # Community reached minimum width, drowned at 302 years
+                    tmax_sim=1000,
                     plot_name="b3d_pt45_Nourishment_2mDune_lowEle_commercial_backerosion_1m_rebuild1m",
+                    rebuild_dune_threshold=1,
                 )
 
                 rebuild_threshold = 1 + (cascade_pt45_low_40pc.barrier3d[0].BermEl * 10)
@@ -4994,16 +4998,16 @@ def cascade_1kyr_plots():
                             dune_toe_pt45_low_90pc_backerosion_1m,
                         ],
                         TMAX=[
-                            750,  # was 800, switched to 750 to match roadways
-                            750,
-                            423,
-                            750,
+                            1000,
+                            1000,
+                            1000,
+                            1000,
                         ],
                         tmax_management=[
-                            750,  # dummy
-                            461,
-                            390,
-                            390,
+                            1000,  # dummy
+                            407,
+                            302,
+                            302,
                         ],
                         roadways_on=False,
                         nourishment_on=True,
@@ -5032,11 +5036,12 @@ def cascade_1kyr_plots():
                     overwash_pt45_nat,
                     cascade_pt45_nat,
                 ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-                    name_prefix="6-B3D_Rave_pt45_Natural_high",
-                    tmax_roadways=500,
-                    tmax_sim=800,
+                    name_prefix="4-B3D_Rave_pt45_Natural_high",
+                    tmax_roadways=1000,
+                    tmax_sim=1000,
                     plot_name="b3d_pt45_plots_high",
                     run_road_mgmt=False,
+                    gif_on=False,
                 )
 
                 (
@@ -5056,9 +5061,11 @@ def cascade_1kyr_plots():
                     cascade_pt45_high_40pc,
                 ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
                     name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_highEle_residential_rebuild1m",
-                    tmax_management=565,  # Community reached minimum width, drowned at 565 years
-                    tmax_sim=616,  # Barrier has HEIGHT DROWNED at t = 616 years
+                    tmax_management=544,  # Community reached minimum width, drowned at 544 years
+                    tmax_sim=574,  # Barrier has HEIGHT DROWNED at t = 574 years
                     plot_name="b3d_pt45_Nourishment_2mDune_highEle_residential_rebuild1m",
+                    gif_on=False,
+                    rebuild_dune_threshold=1,
                 )
 
                 (
@@ -5078,9 +5085,11 @@ def cascade_1kyr_plots():
                     cascade_pt45_high_90pc,
                 ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
                     name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_highEle_commercial_rebuild1m",
-                    tmax_management=421,
-                    tmax_sim=800,
+                    tmax_management=429,  # Community reached minimum width, drowned at 429 years
+                    tmax_sim=1000,
                     plot_name="b3d_pt45_Nourishment_2mDune_highEle_commercial_rebuild1m",
+                    gif_on=False,
+                    rebuild_dune_threshold=1,
                 )
 
                 (
@@ -5100,10 +5109,11 @@ def cascade_1kyr_plots():
                     cascade_pt45_high_90pc_backerosion_1m,
                 ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
                     name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_highEle_commercial_backerosion1m_rebuild1m",
-                    tmax_management=421,
-                    tmax_sim=800,
+                    tmax_management=429,
+                    tmax_sim=1000,
                     plot_name="b3d_pt45_Nourishment_2mDune_highEle_commercial_backerosion_1m_rebuild1m",
                     gif_on=False,
+                    rebuild_dune_threshold=1,
                 )
 
                 rebuild_threshold = 1 + (
@@ -5167,16 +5177,16 @@ def cascade_1kyr_plots():
                             dune_toe_pt45_high_90pc_backerosion_1m,
                         ],
                         TMAX=[
-                            750,  # was 800, switched to 750 to match roadways
-                            616,
-                            750,
-                            750,
+                            1000,  # was 800, switched to 750 to match roadways
+                            574,
+                            1000,
+                            1000,
                         ],
                         tmax_management=[
-                            750,  # dummy
-                            565,
-                            421,
-                            421,
+                            1000,  # dummy
+                            544,
+                            429,
+                            429,
                         ],
                         roadways_on=False,
                         nourishment_on=True,
@@ -5205,11 +5215,12 @@ def cascade_1kyr_plots():
                     overwash_pt75_nat,
                     cascade_pt75_nat,
                 ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-                    name_prefix="6-B3D_Rave_pt75_Natural_low",
+                    name_prefix="4-B3D_Rave_pt75_Natural_low",
                     tmax_roadways=1000,  # dummy
                     tmax_sim=1000,
                     plot_name="b3d_pt75_plots_low",
                     run_road_mgmt=False,
+                    gif_on=False,
                 )
 
                 (
@@ -5229,9 +5240,11 @@ def cascade_1kyr_plots():
                     cascade_pt75_low_40pc,
                 ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
                     name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_residential_rebuild1m",
-                    tmax_management=149,  # drowned at 149
-                    tmax_sim=800,
+                    tmax_management=160,  # Community reached minimum width, drowned at 160 years
+                    tmax_sim=1000,
                     plot_name="b3d_pt75_Nourishment_2mDune_lowEle_residential_rebuild1m",
+                    gif_on=False,
+                    rebuild_dune_threshold=1,
                 )
 
                 (
@@ -5251,10 +5264,11 @@ def cascade_1kyr_plots():
                     cascade_pt75_low_90pc,
                 ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
                     name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial_rebuild1m",
-                    tmax_management=80,  # community drowned at 80 years
-                    tmax_sim=800,
+                    tmax_management=83,  # Community reached minimum width, drowned at 83 years
+                    tmax_sim=1000,
                     plot_name="b3d_pt75_Nourishment_2mDune_lowEle_commercial_rebuild1m",
                     gif_on=False,
+                    rebuild_dune_threshold=1,
                 )
 
                 (
@@ -5274,10 +5288,11 @@ def cascade_1kyr_plots():
                     cascade_pt75_low_90pc_backerosion_1m,
                 ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
                     name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_lowEle_commercial_backerosion1m_rebuild1m",
-                    tmax_management=80,  # community drowned at 80 years
-                    tmax_sim=800,
+                    tmax_management=83,  # Community reached minimum width, drowned at 83 years
+                    tmax_sim=1000,
                     plot_name="b3d_pt75_Nourishment_2mDune_lowEle_commercial_backerosion_1m_rebuild1m",
                     gif_on=False,
+                    rebuild_dune_threshold=1,
                 )
 
                 rebuild_threshold = 1 + (cascade_pt75_low_40pc.barrier3d[0].BermEl * 10)
@@ -5339,16 +5354,16 @@ def cascade_1kyr_plots():
                             dune_toe_pt75_low_90pc_backerosion_1m,
                         ],
                         TMAX=[
-                            750,
-                            750,
-                            750,
-                            750,
+                            1000,
+                            1000,
+                            1000,
+                            1000,
                         ],
                         tmax_management=[
-                            750,  # dummy
-                            149,
-                            80,
-                            80,
+                            1000,  # dummy
+                            160,
+                            83,
+                            83,
                         ],
                         roadways_on=False,
                         nourishment_on=True,
@@ -5376,11 +5391,12 @@ def cascade_1kyr_plots():
                     overwash_pt75_nat,
                     cascade_pt75_nat,
                 ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-                    name_prefix="6-B3D_Rave_pt75_Natural_high",
-                    tmax_roadways=500,  # dummy
-                    tmax_sim=800,
+                    name_prefix="4-B3D_Rave_pt75_Natural_high",
+                    tmax_roadways=1000,  # dummy
+                    tmax_sim=1000,
                     plot_name="b3d_pt75_plots_high",
                     run_road_mgmt=False,
+                    gif_on=False,
                 )
 
                 (
@@ -5400,9 +5416,11 @@ def cascade_1kyr_plots():
                     cascade_pt75_high_40pc,
                 ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
                     name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_highEle_residential_rebuild1m",
-                    tmax_management=564,  # Community reached minimum width, drowned at 564 years
-                    tmax_sim=630,  # Barrier has HEIGHT DROWNED at t = 630 years
+                    tmax_management=550,  # Community reached minimum width, drowned at 550
+                    tmax_sim=1000,
                     plot_name="b3d_pt75_Nourishment_2mDune_highEle_residential_rebuild1m",
+                    gif_on=False,
+                    rebuild_dune_threshold=1,
                 )
 
                 (
@@ -5422,10 +5440,11 @@ def cascade_1kyr_plots():
                     cascade_pt75_high_90pc,
                 ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
                     name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_highEle_commercial_rebuild1m",
-                    tmax_management=529,  # Community reached minimum width, drowned at 529 years
-                    tmax_sim=564,  # Barrier has HEIGHT DROWNED at t = 564 years
+                    tmax_management=518,  # Community reached minimum width, drowned at 518
+                    tmax_sim=580,  # Barrier has HEIGHT DROWNED at t = 580 years
                     plot_name="b3d_pt75_Nourishment_2mDune_highEle_commercial_rebuild1m",
                     gif_on=False,
+                    rebuild_dune_threshold=1,
                 )
 
                 (
@@ -5445,10 +5464,11 @@ def cascade_1kyr_plots():
                     cascade_pt75_high_90pc_backerosion_1m,
                 ) = PLOT_6_Nonlinear_Dynamics_CASCADE_B3Donly_Nourishments(
                     name_prefix="8-B3D_Rave_pt75_Nourishment_2mDune_highEle_commercial_backerosion1m_rebuild1m",
-                    tmax_management=529,  # community drowned at 529
-                    tmax_sim=800,
+                    tmax_management=518,  # Community reached minimum width, drowned at 518 years
+                    tmax_sim=1000,
                     plot_name="b3d_pt75_Nourishment_2mDune_highEle_commercial_backerosion_1m_rebuild1m",
                     gif_on=False,
+                    rebuild_dune_threshold=1,
                 )
 
                 rebuild_threshold = 1 + (
@@ -5512,16 +5532,16 @@ def cascade_1kyr_plots():
                             dune_toe_pt75_high_90pc_backerosion_1m,
                         ],
                         TMAX=[
-                            750,
-                            630,
-                            564,
-                            750,
+                            1000,
+                            1000,
+                            580,
+                            1000,
                         ],
                         tmax_management=[
-                            750,  # dummy
-                            564,
-                            529,
-                            529,
+                            1000,  # dummy
+                            550,
+                            518,
+                            1000,
                         ],
                         roadways_on=False,
                         nourishment_on=True,
