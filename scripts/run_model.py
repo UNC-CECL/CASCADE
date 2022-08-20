@@ -20,6 +20,7 @@ from barrier3d.tools.input_files import (
     gen_dune_height_start,
     gen_alongshore_variable_rmin_rmax,
 )
+from itertools import compress
 
 # for laptop and desktop, use all but one core; on supercomputer, use all cores; KA Macbook has 15
 # num_cores = multiprocessing.cpu_count() - 1
@@ -945,10 +946,11 @@ def PLOT_9_Nonlinear_Dynamics_CASCADE_AST(
 
 def get_roadway_statistics(
     folder_prefix,
-    natural_barrier_elev,
-    natural_barrier_width,
+    natural_barrier_elev=None,
+    natural_barrier_width=None,
     individual_fid=None,
     tmax=None,
+    iB3D=0,
 ):
 
     # folder_prefix = "Roadway_100sims_1m_lowGR_lowEle"
@@ -960,7 +962,6 @@ def get_roadway_statistics(
 
     year_abandoned = []
     sim_max = []  # total length of simulation
-    drown = []  # from above, drown? (yes, no)
     road_bulldozed = []  # overwash removal -- number of times?
     overwash_removed = []  # total m^3 of overwash
     dune_rebuilt = []  # rebuild dune -- total number
@@ -972,9 +973,9 @@ def get_roadway_statistics(
         output = np.load(individual_fid + ".npz", allow_pickle=True)
         cascade = output["cascade"]
         cascade = cascade[0]
-        b3d = cascade.barrier3d[0]
+        b3d = cascade.barrier3d[iB3D]
 
-        tmax_sim = b3d.time_index
+        tmax_sim = b3d.time_index - 1
         sim_max.append(tmax_sim)
 
         # if user specified a window for statistics, then just set tmax to that window
@@ -986,30 +987,33 @@ def get_roadway_statistics(
         ) * 10  # m
         final_domain = np.array(b3d.DomainTS[tmax_sim - 1]) * 10
         final_barrier_elev = final_domain[final_domain > 0].mean()  # m MHW
-        diff_barrier_width.append(natural_barrier_width - final_barrier_width)
-        diff_barrier_elev.append(natural_barrier_elev - final_barrier_elev)
+        if natural_barrier_width is not None:
+            diff_barrier_width.append(natural_barrier_width - final_barrier_width)
+        if natural_barrier_elev is not None:
+            diff_barrier_elev.append(natural_barrier_elev - final_barrier_elev)
 
-        year_abandoned.append(cascade.roadways[0]._time_index - 1)
-        drown.append(b3d.drown_break)
+        year_abandoned.append(cascade.roadways[iB3D]._time_index - 1)
         road_bulldozed.append(
-            sum(cascade.roadways[0]._road_overwash_volume[0:tmax_sim] > 0)
+            sum(cascade.roadways[iB3D]._road_overwash_volume[0:tmax_sim] > 0)
         )  # only counts true elements
         overwash_removed.append(
-            sum(cascade.roadways[0]._road_overwash_volume[0:tmax_sim])
+            sum(cascade.roadways[iB3D]._road_overwash_volume[0:tmax_sim])
         )  # m^3
-        dune_rebuilt.append(int(sum(cascade.roadways[0]._dunes_rebuilt_TS[0:tmax_sim])))
+        dune_rebuilt.append(
+            int(sum(cascade.roadways[iB3D]._dunes_rebuilt_TS[0:tmax_sim]))
+        )
         road_relocated.append(
-            int(sum(cascade.roadways[0]._road_relocated_TS[0:tmax_sim]))
+            int(sum(cascade.roadways[iB3D]._road_relocated_TS[0:tmax_sim]))
         )
 
     else:
         for filenum in range(100):
-            output = np.load(folder_prefix + filenum + ".npz", allow_pickle=True)
+            output = np.load(folder_prefix + str(filenum) + ".npz", allow_pickle=True)
             cascade = output["cascade"]
             cascade = cascade[0]
-            b3d = cascade.barrier3d
+            b3d = cascade.barrier3d[iB3D]
 
-            tmax_sim = b3d.time_index
+            tmax_sim = b3d.time_index - 1
             sim_max.append(tmax_sim)
 
             # if user specified a window for statistics, then just set tmax to that window
@@ -1021,28 +1025,27 @@ def get_roadway_statistics(
             ) * 10  # m
             final_domain = np.array(b3d.DomainTS[tmax_sim - 1]) * 10
             final_barrier_elev = final_domain[final_domain > 0].mean()  # m MHW
-            diff_barrier_width.append(natural_barrier_width - final_barrier_width)
-            diff_barrier_elev.append(natural_barrier_elev - final_barrier_elev)
-
-            year_abandoned.append(cascade.roadways[0]._time_index - 1)
-            drown.append(b3d.drown_break)
+            if natural_barrier_width is not None:
+                diff_barrier_width.append(natural_barrier_width - final_barrier_width)
+            if natural_barrier_elev is not None:
+                diff_barrier_elev.append(natural_barrier_elev - final_barrier_elev)
+            year_abandoned.append(cascade.roadways[iB3D]._time_index - 1)
             road_bulldozed.append(
-                sum(cascade.roadways[0]._road_overwash_volume[0:tmax_sim] > 0)
+                sum(cascade.roadways[iB3D]._road_overwash_volume[0:tmax_sim] > 0)
             )  # only counts true elements
             overwash_removed.append(
-                sum(cascade.roadways[0]._road_overwash_volume[0:tmax_sim])
+                sum(cascade.roadways[iB3D]._road_overwash_volume[0:tmax_sim])
             )  # m^3
             dune_rebuilt.append(
-                int(sum(cascade.roadways[0]._dunes_rebuilt_TS[0:tmax_sim]))
+                int(sum(cascade.roadways[iB3D]._dunes_rebuilt_TS[0:tmax_sim]))
             )
             road_relocated.append(
-                int(sum(cascade.roadways[0]._road_relocated_TS[0:tmax_sim]))
+                int(sum(cascade.roadways[iB3D]._road_relocated_TS[0:tmax_sim]))
             )
 
     return (
         year_abandoned,
         sim_max,
-        drown,
         road_bulldozed,
         overwash_removed,
         dune_rebuilt,
@@ -1052,16 +1055,105 @@ def get_roadway_statistics(
     )
 
 
-# def get_nourishment_statistics(folder_path, individual_fid=None):
-#
-#     # year abandonded
-#     # total length of simulation (yr)
-#     # from above, drown? (yes, no)
-#     # overwash removal -- number of times?
-#     # total m^3 of overwash
-#     # rebuild dune -- total number
-#     # nourishments -- total number
-#     # difference between natural barrier height and width at the end of the simulation
+def get_nourishment_statistics(
+    folder_prefix,
+    natural_barrier_elev=None,
+    natural_barrier_width=None,
+    individual_fid=None,
+    tmax=None,
+    iB3D=0,
+):
+
+    folder_path = (
+        "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output/"
+        + folder_prefix
+    )
+    os.chdir(folder_path)
+
+    year_abandoned = []
+    sim_max = []  # total length of simulation
+    dune_rebuilt = []  # rebuild dune -- total number
+    overwash_filtered_removed = []  # m^3
+    beach_nourished = []  # beach nourishments -- total number
+    diff_barrier_width = []  # diff between natural barrier height and width at end
+    diff_barrier_elev = []
+
+    if individual_fid is not None:
+        output = np.load(individual_fid + ".npz", allow_pickle=True)
+        cascade = output["cascade"]
+        cascade = cascade[0]
+        b3d = cascade.barrier3d[iB3D]
+
+        tmax_sim = b3d.time_index - 1
+        sim_max.append(tmax_sim)
+
+        # if user specified a window for statistics, then just set tmax to that window
+        if tmax is not None:
+            tmax_sim = tmax
+
+        final_barrier_width = (
+            np.array(b3d.x_b_TS[tmax_sim - 1]) - np.array(b3d.x_s_TS[tmax_sim - 1])
+        ) * 10  # m
+        final_domain = np.array(b3d.DomainTS[tmax_sim - 1]) * 10
+        final_barrier_elev = final_domain[final_domain > 0].mean()  # m MHW
+        if natural_barrier_width is not None:
+            diff_barrier_width.append(natural_barrier_width - final_barrier_width)
+        if natural_barrier_elev is not None:
+            diff_barrier_elev.append(natural_barrier_elev - final_barrier_elev)
+        year_abandoned.append(cascade.nourishments[iB3D]._time_index - 1)
+        overwash_filtered_removed.append(
+            sum(cascade.nourishments[iB3D]._overwash_volume_removed[0:tmax_sim])
+        )  # m^3
+        dune_rebuilt.append(
+            int(sum(cascade.nourishments[iB3D]._dunes_rebuilt_TS[0:tmax_sim]))
+        )
+        beach_nourished.append(
+            int(sum(cascade.nourishments[iB3D]._nourishment_TS[0:tmax_sim]))
+        )
+
+    else:
+        for filenum in range(100):
+            output = np.load(folder_prefix + str(filenum) + ".npz", allow_pickle=True)
+            cascade = output["cascade"]
+            cascade = cascade[0]
+            b3d = cascade.barrier3d[iB3D]
+
+            tmax_sim = b3d.time_index - 1
+            sim_max.append(tmax_sim)
+
+            # if user specified a window for statistics, then just set tmax to that window
+            if tmax is not None:
+                tmax_sim = tmax
+
+            final_barrier_width = (
+                np.array(b3d.x_b_TS[tmax_sim - 1]) - np.array(b3d.x_s_TS[tmax_sim - 1])
+            ) * 10  # m
+            final_domain = np.array(b3d.DomainTS[tmax_sim - 1]) * 10
+            final_barrier_elev = final_domain[final_domain > 0].mean()  # m MHW
+            if natural_barrier_width is not None:
+                diff_barrier_width.append(natural_barrier_width - final_barrier_width)
+            if natural_barrier_elev is not None:
+                diff_barrier_elev.append(natural_barrier_elev - final_barrier_elev)
+            year_abandoned.append(cascade.nourishments[iB3D]._time_index - 1)
+            overwash_filtered_removed.append(
+                sum(cascade.nourishments[iB3D]._overwash_volume_removed[0:tmax_sim])
+            )  # m^3
+            dune_rebuilt.append(
+                int(sum(cascade.nourishments[iB3D]._dunes_rebuilt_TS[0:tmax_sim]))
+            )
+            beach_nourished.append(
+                int(sum(cascade.nourishments[iB3D]._nourishment_TS[0:tmax_sim]))
+            )
+
+    return (
+        year_abandoned,
+        sim_max,
+        overwash_filtered_removed,
+        dune_rebuilt,
+        beach_nourished,
+        diff_barrier_width,
+        diff_barrier_elev,
+    )
 
 
 # # ###############################################################################
@@ -1806,6 +1898,56 @@ def cascade_1kyr_runs():
 
         def pt45():
             def low():
+                def averages():
+                    def one_hundred_roadway_runs(
+                        name_prefix, year_start, year_end, dune_design_elevation
+                    ):
+                        for iStorm in range(year_start, year_end):
+                            name = name_prefix + str(iStorm)
+                            storm_file = (
+                                "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_"
+                                + str(iStorm)
+                                + ".npy"
+                            )
+
+                            RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                                nt=1000,
+                                rmin=0.25,
+                                rmax=0.65,  # rave = 0.45
+                                name=name,
+                                road_ele=1.6,  # average initial elevation 1.64 m MHW
+                                road_width=20,  # m
+                                road_setback=20,  # m
+                                dune_design_elevation=dune_design_elevation,  # m MHW, rebuild to 1 m dune above the roadway
+                                dune_minimum_elevation=2.1,
+                                # m MHW, allow dune to erode down to 0.5 m above the roadway
+                                storm_file=storm_file,
+                                elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
+                                dune_file="barrier3d-default-dunes.npy",
+                                background_erosion=0.0,
+                            )
+
+                    one_hundred_roadway_runs(
+                        name_prefix="6-B3D_Rave_pt45_Roadways_1mDune_20mSetback_20mWidth_low",
+                        year_start=0,
+                        year_end=100,
+                        dune_design_elevation=2.6,
+                    )
+
+                    one_hundred_roadway_runs(
+                        name_prefix="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_low",
+                        year_start=0,
+                        year_end=100,
+                        dune_design_elevation=3.6,
+                    )
+
+                    one_hundred_roadway_runs(
+                        name_prefix="6-B3D_Rave_pt45_Roadways_3mDune_20mSetback_20mWidth_low",
+                        year_start=0,
+                        year_end=100,
+                        dune_design_elevation=4.6,
+                    )
+
                 # Roadway width drowned at 544 years, 20.0% of road borders water
                 cascade_pt45_h1m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
                     nt=1000,
@@ -1840,22 +1982,22 @@ def cascade_1kyr_runs():
                     background_erosion=0.0,
                 )
 
-                # Island is too narrow for roadway to be relocated. Roadway eaten up by dunes at 187 years
-                cascade_pt45_h2m_low_BE1m = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
-                    nt=1000,
-                    rmin=0.25,
-                    rmax=0.65,  # rave = 0.45
-                    name="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_low_BE1m",
-                    road_ele=1.6,
-                    road_width=20,  # m
-                    road_setback=20,  # m
-                    dune_design_elevation=3.6,  # m MHW, rebuild to 2 m dune above the roadway
-                    dune_minimum_elevation=2.1,  # m MHW, allow dune to erode down to 0.5 m above the roadway
-                    storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-                    elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
-                    background_erosion=-1,
-                )
+                # # Island is too narrow for roadway to be relocated. Roadway eaten up by dunes at 187 years
+                # cascade_pt45_h2m_low_BE1m = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
+                #     nt=1000,
+                #     rmin=0.25,
+                #     rmax=0.65,  # rave = 0.45
+                #     name="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_low_BE1m",
+                #     road_ele=1.6,
+                #     road_width=20,  # m
+                #     road_setback=20,  # m
+                #     dune_design_elevation=3.6,  # m MHW, rebuild to 2 m dune above the roadway
+                #     dune_minimum_elevation=2.1,  # m MHW, allow dune to erode down to 0.5 m above the roadway
+                #     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+                #     elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
+                #     dune_file="barrier3d-default-dunes.npy",
+                #     background_erosion=-1,
+                # )
 
                 # Roadway width drowned at 322 years, 20.0% of road borders water
                 cascade_pt45_h3m_low = RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
@@ -2520,6 +2662,64 @@ def cascade_1kyr_runs():
                 )
 
             def pt45_low():
+                def averages():
+                    def one_hundred_nourishment_runs(
+                        name_prefix,
+                        year_start,
+                        year_end,
+                        overwash_filter,
+                        background_erosion,
+                    ):
+                        for iStorm in range(year_start, year_end):
+                            name = name_prefix + str(iStorm)
+                            storm_file = (
+                                "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_"
+                                + str(iStorm)
+                                + ".npy"
+                            )
+
+                            RUN_8_CASCADE_noAST_Rave_SLR_pt004_Nourishment(
+                                nt=1000,
+                                rmin=0.25,
+                                rmax=0.65,  # rave = 0.45
+                                name=name,
+                                dune_design_elevation=3.6,
+                                # m MHW, keep dune design height the same as 2 m dune above the "roadway"
+                                storm_file=storm_file,
+                                elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
+                                dune_file="barrier3d-default-dunes.npy",
+                                overwash_filter=overwash_filter,
+                                overwash_to_dune=9,
+                                nourishment_volume=100,  # m^3/m
+                                beach_width_threshold=30,  # m
+                                background_erosion=background_erosion,
+                                rebuild_dune_threshold=1,  # m above the berm elevation
+                            )
+
+                    one_hundred_nourishment_runs(
+                        name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_residential_rebuild1m",
+                        year_start=0,
+                        year_end=100,
+                        overwash_filter=40,
+                        background_erosion=0.0,
+                    )
+
+                    one_hundred_nourishment_runs(
+                        name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial_rebuild1m",
+                        year_start=0,
+                        year_end=100,
+                        overwash_filter=90,
+                        background_erosion=0.0,
+                    )
+
+                    one_hundred_nourishment_runs(
+                        name_prefix="8-B3D_Rave_pt45_Nourishment_2mDune_lowEle_commercial_backerosion1m_rebuild1m",
+                        year_start=0,
+                        year_end=100,
+                        overwash_filter=90,
+                        background_erosion=-1.0,
+                    )
+
                 # Community reached minimum width, drowned at 407 years
                 cascade_pt45_h2m_low_nourishment_residential_RT1m = RUN_8_CASCADE_noAST_Rave_SLR_pt004_Nourishment(
                     nt=1000,
@@ -6196,3 +6396,178 @@ def cascade_1kyr_plots():
                 ) = nourishment_stats(
                     cascade_acc_nat, cutoff=71, iB3D=0, nourishment_volume=100
                 )
+
+            # roadway and nourishment statistics for 100 simulations -- thirds acc SLR
+            (
+                year_abandoned_middle_roadway,
+                sim_max_middle_roadway,
+                road_bulldozed_middle_roadway,
+                overwash_removed_middle_roadway,
+                dune_rebuilt_middle_roadway,
+                road_relocated_middle_roadway,
+                _,
+                _,
+            ) = get_roadway_statistics(
+                folder_prefix="9-CASCADE_AST_3domains_BE1m_AccSLR",
+                iB3D=3,  # the middle roadway section
+            )
+
+            drowned = np.array(sim_max_middle_roadway) < 199
+            percent_drown = sum(drowned)  # 81
+            min_drown = np.min(list(compress(sim_max_middle_roadway, drowned)))
+            max_drown = np.max(list(compress(sim_max_middle_roadway, drowned)))
+            mean_drown = np.mean(list(compress(sim_max_middle_roadway, drowned)))
+
+            abandoned = ~(
+                np.array(year_abandoned_middle_roadway)
+                == np.array(sim_max_middle_roadway) - 1
+            )  # if b3d drowned before the roadway was abandoned, the last roadway TS would be one behind; filter out
+            total_abandoned = sum(abandoned)
+            min_abandonment = np.min(
+                list(compress(year_abandoned_middle_roadway, abandoned))
+            )  # 46
+            max_abandonment = np.max(
+                list(compress(year_abandoned_middle_roadway, abandoned))
+            )  # 82
+            mean_abandonment = np.mean(
+                list(compress(year_abandoned_middle_roadway, abandoned))
+            )  # 57
+
+            (
+                year_abandoned_far_roadway,
+                sim_max_far_roadway,
+                road_bulldozed_far_roadway,
+                overwash_removed_far_roadway,
+                dune_rebuilt_far_roadway,
+                road_relocated_far_roadway,
+                _,
+                _,
+            ) = get_roadway_statistics(
+                folder_prefix="9-CASCADE_AST_3domains_BE1m_AccSLR",
+                iB3D=6,  # the far roadway section
+            )
+
+            drowned = np.array(sim_max_far_roadway) < 199
+            percent_drown = sum(drowned)  # 81
+            min_drown = np.min(list(compress(sim_max_far_roadway, drowned)))
+            max_drown = np.max(list(compress(sim_max_far_roadway, drowned)))
+            mean_drown = np.mean(list(compress(sim_max_far_roadway, drowned)))
+
+            abandoned = ~(
+                np.array(year_abandoned_far_roadway)
+                == np.array(sim_max_far_roadway) - 1
+            )  # if b3d drowned before the roadway was abandoned, the last roadway TS would be one behind; filter out
+            total_abandoned = sum(abandoned)
+            min_abandonment = np.min(
+                list(compress(year_abandoned_far_roadway, abandoned))
+            )
+            max_abandonment = np.max(
+                list(compress(year_abandoned_far_roadway, abandoned))
+            )
+            mean_abandonment = np.mean(
+                list(compress(year_abandoned_far_roadway, abandoned))
+            )
+
+            (
+                year_abandoned_community,
+                sim_max_community,
+                overwash_filtered_removed_community,
+                dune_rebuilt_community,
+                beach_nourished_community,
+                _,
+                _,
+            ) = get_nourishment_statistics(
+                folder_prefix="9-CASCADE_AST_3domains_BE1m_AccSLR",
+                iB3D=0,  # community
+            )
+
+            # NOTE: in some cases the last simulation time step will be different because of drowning of diff segments
+            drowned = np.array(sim_max_community) < 199
+            percent_drown = sum(drowned)  # 81
+            min_drown = np.min(list(compress(sim_max_community, drowned)))
+            max_drown = np.max(list(compress(sim_max_community, drowned)))
+            mean_drown = np.mean(list(compress(sim_max_community, drowned)))
+
+            abandoned = ~(
+                np.array(year_abandoned_community) == np.array(sim_max_community) - 1
+            )  # if b3d drowned before the community was abandoned, the last community TS would be one behind; filter out
+            total_abandoned = sum(abandoned)  # 26
+            min_abandonment = np.min(
+                list(compress(year_abandoned_community, abandoned))
+            )  # 132
+            max_abandonment = np.max(
+                list(compress(year_abandoned_community, abandoned))
+            )  # 138
+            mean_abandonment = np.mean(
+                list(compress(year_abandoned_community, abandoned))
+            )  # 137
+
+            # roadway and nourishment statistics for 100 simulations -- nat acc SLR
+            (
+                year_abandoned_community,
+                sim_max_community,
+                overwash_filtered_removed_community,
+                dune_rebuilt_community,
+                beach_nourished_community,
+                _,
+                _,
+            ) = get_nourishment_statistics(
+                folder_prefix="9-CASCADE_AST_3domains_BE1m_AccSLR_nat_middle",
+                iB3D=0,  # community
+            )
+
+            # NOTE: in some cases the last simulation time step will be different because of drowning of diff segments
+            drowned = np.array(sim_max_community) < 199
+            percent_drown = sum(drowned)  # 54
+            min_drown = np.min(list(compress(sim_max_community, drowned)))  # 85
+            max_drown = np.max(list(compress(sim_max_community, drowned)))  # 153
+            mean_drown = np.mean(list(compress(sim_max_community, drowned)))  # 127
+
+            abandoned = ~(
+                np.array(year_abandoned_community) == np.array(sim_max_community) - 1
+            )  # if b3d drowned before the community was abandoned, the last community TS would be one behind; filter out
+            total_abandoned = sum(abandoned)  #
+            min_abandonment = np.min(
+                list(compress(year_abandoned_community, abandoned))
+            )  # 132
+            max_abandonment = np.max(
+                list(compress(year_abandoned_community, abandoned))
+            )  # 138
+            mean_abandonment = np.mean(
+                list(compress(year_abandoned_community, abandoned))
+            )  # 137
+
+            (
+                year_abandoned_far_roadway,
+                sim_max_far_roadway,
+                road_bulldozed_far_roadway,
+                overwash_removed_far_roadway,
+                dune_rebuilt_far_roadway,
+                road_relocated_far_roadway,
+                _,
+                _,
+            ) = get_roadway_statistics(
+                folder_prefix="9-CASCADE_AST_3domains_BE1m_AccSLR_nat_middle",
+                iB3D=6,  # the far roadway section
+            )
+
+            drowned = np.array(sim_max_far_roadway) < 199
+            percent_drown = sum(drowned)  # 54
+            min_drown = np.min(list(compress(sim_max_far_roadway, drowned)))
+            max_drown = np.max(list(compress(sim_max_far_roadway, drowned)))
+            mean_drown = np.mean(list(compress(sim_max_far_roadway, drowned)))
+
+            abandoned = ~(
+                np.array(year_abandoned_far_roadway)
+                == np.array(sim_max_far_roadway) - 1
+            )  # if b3d drowned before the roadway was abandoned, the last roadway TS would be one behind; filter out
+            total_abandoned = sum(abandoned)
+            min_abandonment = np.min(
+                list(compress(year_abandoned_far_roadway, abandoned))
+            )  # 109
+            max_abandonment = np.max(
+                list(compress(year_abandoned_far_roadway, abandoned))
+            )  # 161
+            mean_abandonment = np.mean(
+                list(compress(year_abandoned_far_roadway, abandoned))
+            )
