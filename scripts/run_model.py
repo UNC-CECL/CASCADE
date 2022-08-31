@@ -3786,8 +3786,8 @@ def cascade_1kyr_runs():
 
         def averages():
             def one_hundred_thirds_acc_BE1m_ast_runs(
-                year_start=0,
-                year_end=100,
+                storm_start=0,
+                storm_end=100,
                 name_prefix="9-CASCADE_AST_3domains_BE1m_AccSLR",
                 storm_prefix="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_",
             ):
@@ -3836,7 +3836,7 @@ def cascade_1kyr_runs():
                 sea_level_rise_rate = 0.004  # dummy
                 sea_level_constant = False  # accelerated
 
-                for iStorm in range(year_start, year_end):
+                for iStorm in range(storm_start, storm_end):
                     name = name_prefix + str(iStorm)
                     storm_file = storm_prefix + str(iStorm) + ".npy"
 
@@ -3915,15 +3915,15 @@ def cascade_1kyr_runs():
                     )
 
             one_hundred_thirds_acc_BE1m_ast_runs(
-                year_start=0,
-                year_end=100,
+                storm_start=0,
+                storm_end=100,
                 name_prefix="9-CASCADE_AST_3domains_BE1m_AccSLR",
                 storm_prefix="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_",
             )
 
             one_hundred_thirds_acc_BE1m_ast_runs(
-                year_start=0,
-                year_end=100,
+                storm_start=0,
+                storm_end=100,
                 name_prefix="9-CASCADE_AST_3domains_BE1m_AccSLR_AdaptationScenario_",
                 storm_prefix="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_FutureScenario",
             )
