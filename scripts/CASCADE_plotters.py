@@ -1605,7 +1605,8 @@ def plot_nonlinear_stats_mgmt_array4(
                     ._ShorelineChangeTS[0 : tmax_management[i]]
                 )
                 < 0
-            )
+            )  # so really this is just shoreline change; I have to go in and manually delete occurences where it does
+            # not coincide with the dune height min (and double check with dune_rebuild_TS)
             indices = [
                 i for i, x in enumerate(dunes_rebuilt_cellular_shoreline_change) if x
             ]  # for nourishment this is typically zero
@@ -1673,12 +1674,12 @@ def plot_nonlinear_stats_mgmt_array4(
     if roadways_on:
         axs[3].legend(
             [
-                "dune along. min",
-                "dune along. max",
+                "dune alongshore min",
+                "dune alongshore max",
                 "dune rebuild",
                 "dune design",
                 "road",
-                "dune max-equil",
+                "dune max-equilibrium",
             ]
         )
     if nourishment_on:
