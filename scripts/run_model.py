@@ -19,6 +19,7 @@ from barrier3d.tools.input_files import (
     yearly_storms,
     gen_dune_height_start,
     gen_alongshore_variable_rmin_rmax,
+    shift_storm_intensity,
 )
 from itertools import compress
 
@@ -1431,6 +1432,31 @@ def time_series():
         bSave=True,
         output_filename="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_02",
     )
+
+    def one_hundred_increase_storm_intensity_and_frequency():
+        number_storms = 100
+        datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs"
+
+        for iStorm in range(number_storms):
+
+            output_filename = (
+                "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_FutureScenario"
+                + str(iStorm)
+            )
+            shift_storm_intensity(
+                datadir=datadir,
+                storm_list_name="StormList_20k_VCR_Berm1pt9m_Slope0pt04.csv",  # can by .py or .csv
+                mean_yearly_storms=12,
+                SD_yearly_storms=5.9,
+                shift=0.15,  # shift the TWL distribution to change intensity, m NAVD88; [-0.15, 0.15] for Reeves et al., 2021
+                MHW=0.46,  # m NAVD88
+                StormStart=2,
+                BermEl=1.9,  # m NAVD88, just used for plotting
+                model_years=1000,
+                bPlot=False,
+                bSave=True,
+                output_filename=output_filename,
+            )
 
     def one_hundered_ish_1kyr_storms():
         number_storms = 100
@@ -3759,7 +3785,12 @@ def cascade_1kyr_runs():
             )
 
         def averages():
-            def one_hundred_thirds_acc_BE1m_ast_runs(year_start=0, year_end=100):
+            def one_hundred_thirds_acc_BE1m_ast_runs(
+                year_start=0,
+                year_end=100,
+                name_prefix="9-CASCADE_AST_3domains_BE1m_AccSLR",
+                storm_prefix="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_",
+            ):
 
                 # variables that DO NOT change among runs
                 # (NOTE: these variables the same as above -- we maintain a 2 m dune)
@@ -3806,13 +3837,8 @@ def cascade_1kyr_runs():
                 sea_level_constant = False  # accelerated
 
                 for iStorm in range(year_start, year_end):
-                    name_prefix = ("9-CASCADE_AST_3domains_BE1m_AccSLR",)
                     name = name_prefix + str(iStorm)
-                    storm_file = (
-                        "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_"
-                        + str(iStorm)
-                        + ".npy"
-                    )
+                    storm_file = storm_prefix + str(iStorm) + ".npy"
 
                     roads_on = [False, False, False, True, True, True, True, True, True]
 
@@ -3887,6 +3913,20 @@ def cascade_1kyr_runs():
                         sea_level_rise_rate=sea_level_rise_rate,
                         sea_level_constant=sea_level_constant,
                     )
+
+            one_hundred_thirds_acc_BE1m_ast_runs(
+                year_start=0,
+                year_end=100,
+                name_prefix="9-CASCADE_AST_3domains_BE1m_AccSLR",
+                storm_prefix="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_",
+            )
+
+            one_hundred_thirds_acc_BE1m_ast_runs(
+                year_start=0,
+                year_end=100,
+                name_prefix="9-CASCADE_AST_3domains_BE1m_AccSLR_AdaptationScenario_",
+                storm_prefix="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_FutureScenario",
+            )
 
 
 def cascade_1kyr_plots():
@@ -4049,7 +4089,6 @@ def cascade_1kyr_plots():
             (
                 year_abandoned,
                 sim_max,
-                drown,
                 road_bulldozed,
                 overwash_removed,
                 dune_rebuilt,
@@ -4532,7 +4571,6 @@ def cascade_1kyr_plots():
             (
                 year_abandoned,
                 sim_max,
-                drown,
                 road_bulldozed,
                 overwash_removed,
                 dune_rebuilt,
@@ -4541,11 +4579,12 @@ def cascade_1kyr_plots():
                 diff_barrier_elev,
             ) = get_roadway_statistics(
                 folder_prefix="",
-                natural_barrier_elev=BarrierHeight_nat[-1],
-                natural_barrier_width=BarrierWidth_nat[-1],
+                # natural_barrier_elev=BarrierHeight_nat[-1],
+                # natural_barrier_width=BarrierWidth_nat[-1],
                 # individual_fid="6-B3D_Rave_pt45_Roadways_3mDune_20mSetback_20mWidth_high",
                 # individual_fid="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_high",
                 individual_fid="6-B3D_Rave_pt45_Roadways_1mDune_20mSetback_20mWidth_high",
+                tmax=100,
             )
 
         # supplementary material
