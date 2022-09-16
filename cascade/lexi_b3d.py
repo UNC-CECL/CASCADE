@@ -1441,6 +1441,8 @@ class Barrier3d:
                         # OWloss = OWloss + np.sum(SedFluxIn[TS,1,:]) / substep
                         OWloss = OWloss + np.sum(SedFluxOut[TS, 0, :]) / substep
 
+                        print("OWloss is: ", OWloss)
+
                         # Update amount of burial/erosion for each shrub
                         self._BurialDomain = self.UpdateBurial(
                             self._BurialDomain,
