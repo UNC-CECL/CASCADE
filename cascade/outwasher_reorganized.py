@@ -170,6 +170,8 @@ def calculate_discharges(col, S1, S2, S3, Q0, nn, domain_length, max_slope):
     :param max_slope: maximum slope that sediment can be transported up
     :return: Q1, Q2, Q3
     """
+
+
     # One or more slopes positive (we have downhill flow)
     if S1 > 0 or S2 > 0 or S3 > 0:
 
@@ -301,11 +303,12 @@ def calculate_discharges(col, S1, S2, S3, Q0, nn, domain_length, max_slope):
 
 def outwasher(b3d, storm_series, runID):
     # make a folder where all graphs will be saved for that run
-    newpath = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited" + runID + "/"
+    newpath = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/"
     if not os.path.exists(newpath):
         os.makedirs(newpath)
     # set Barrier3D variables
     cx = b3d._Cx  # multiplier with the average slope of the interior for constant "C" in inundation transport rule
+    # cx = 50
     berm_el = b3d._BermEl  # [dam MHW]
     beach_elev = b3d._BermEl  # [dam MHW]
     length = b3d._BarrierLength  # [dam] length of barrier
@@ -313,8 +316,9 @@ def outwasher(b3d, storm_series, runID):
     nn = b3d._nn  # flow routing constant
     max_slope = -b3d._MaxUpSlope  # max slope that sediment can go uphill, previously Slim (0.25)
     ki = b3d._Ki  # sediment transport coefficient
-    # ki = 7.5E-1
+    # ki = 7.5E-4
     mm = b3d._mm  # inundation overwash coefficient
+    # mm = 4
     sea_level = b3d._SL  # equal to 0 dam
     q_min = b3d._Qs_min  # [m^3 / hr]? Minimum discharge needed for sediment transport (0.001)
     bay_depth = -b3d._BayDepth  # [dam MHW] Depth of bay behind island segment, currently set to 0.3
@@ -406,9 +410,9 @@ def outwasher(b3d, storm_series, runID):
                 cross_section = np.flip(cross_section)
                 fig4 = plt.figure()
                 ax4 = fig4.add_subplot(111)
-                # ax4.plot(range(len(full_domain)), cross_section, label="pre-storm")
-                dune_gap_el = np.flip(full_domain[:, 21])
-                ax4.plot(range(len(full_domain)), dune_gap_el, label="dune gap (21) pre", linestyle="dashed")
+                ax4.plot(range(len(full_domain)), cross_section, label="pre-storm")
+                # dune_gap_el = np.flip(full_domain[:, 21])
+                # ax4.plot(range(len(full_domain)), dune_gap_el, label="dune gap (21) pre", linestyle="dashed")
 
             width = np.shape(full_domain)[0]  # width is the number of rows in the full domain
             # duration = dur * substep  # from previous code
@@ -490,7 +494,7 @@ def outwasher(b3d, storm_series, runID):
                     # Reduce dune in height linearly over course of storm
 
                     # Back barrier flow starts at a specified value to see another value at the dune gaps based on B3D (CHECK)
-                    Discharge[TS, 0, :] = 15
+                    Discharge[TS, 0, :] = 150
                     # Loop through the rows
                     # need to include the last row to keep track of how much is leaving the system
                     # for d in range(width-1):
@@ -507,7 +511,14 @@ def outwasher(b3d, storm_series, runID):
                                 S1, S2, S3, slopes_array = calculate_slopes(d, i, width, Elevation, length, TS,
                                                                             slopes_array, m_shoreface)
                                 # ### Calculate Discharge To Downflow Neighbors
+                                # do we want water only routed through dune gaps?
+                                Discharge[TS, int_width, D_not_ow] = 0  # (dam^3/hr)
+                                Discharge[TS, int_width + 1, D_not_ow] = 0  # (dam^3/hr)
+                                if Discharge[TS, d, i] == 0:
+                                    Q0 = 0
+
                                 Q1, Q2, Q3 = calculate_discharges(i, S1, S2, S3, Q0, nn, length, max_slope)
+
                                 ### Update Discharge
                                 # discharge is defined for the next row, so we do not need to include the last row
                                 # the first row of discharge was already defined
@@ -520,10 +531,7 @@ def outwasher(b3d, storm_series, runID):
                                     # Cell 3
                                     if i < (length - 1):
                                         Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
-                                # do we want water only routed through dune gaps?
-                                if d == int_width:
-                                    Discharge[TS, int_width, D_not_ow] = 0  # (dam^3/hr)
-                                    Discharge[TS, int_width + 1, D_not_ow] = 0  # (dam^3/hr)
+
 
                                 # ### Calculate Sed Movement
                                 fluxLimit = max_dune  # [dam MHW] dmaxel - bermel
@@ -557,9 +565,10 @@ def outwasher(b3d, storm_series, runID):
                                 else:
                                     Qs3 = 0
 
-                                Qs1 = np.nan_to_num(Qs1)
-                                Qs2 = np.nan_to_num(Qs2)
-                                Qs3 = np.nan_to_num(Qs3)
+                                multi = 500
+                                Qs1 = np.nan_to_num(Qs1)*multi
+                                Qs2 = np.nan_to_num(Qs2)*multi
+                                Qs3 = np.nan_to_num(Qs3)*multi
 
                                 qs2_array[TS, d, i] = Qs2
 
@@ -629,16 +638,19 @@ def outwasher(b3d, storm_series, runID):
             # plotting post-storm cross section
             cross_section2 = np.mean(full_domain, 1)
             cross_section2 = np.flip(cross_section2)
-            # ax4.plot(range(len(full_domain)), cross_section2, label="post storm")
-            dune_gap_el = np.flip(full_domain[:, 21])
-            ax4.plot(range(len(full_domain)), dune_gap_el, label="dune gap (21) post", linestyle="dashed")
+            ax4.plot(range(len(full_domain)), cross_section2, label="post storm", linestyle="dashed")
+            # dune_gap_el = np.flip(full_domain[:, 21])
+            # ax4.plot(range(len(full_domain)), dune_gap_el, label="dune gap (21) post", linestyle="dashed")
             ax4.set_xlabel("barrier width from ocean to bay (dam)")
             ax4.set_ylabel("average alongshore elevation (dam)")
-            ax4.set_title("Cross shore elevation profile for col 21\n "
+            # ax4.set_title("Cross shore elevation profile for col 21\n "
+            #               "shoreface slope = {0}, back barrier slope = {1}".format(round(m_shoreface, 3), round(Si, 3)))
+            ax4.set_title("Average cross shore elevation profile\n "
                           "shoreface slope = {0}, back barrier slope = {1}".format(round(m_shoreface, 3), round(Si, 3)))
             ax4.legend()
             plt.show()
-            plt.savefig(newpath + "cross_shore_21")
+            # plt.savefig(newpath + "cross_shore_21")
+            plt.savefig(newpath + "avg_cross_shore")
 
             # plot post storm elevation
             fig3 = plt.figure()
@@ -679,7 +691,7 @@ sound_data[0] = 0
 
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
-runID = "test_run_new_edits"
+runID = "sedflux_x500"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
@@ -715,7 +727,7 @@ ax6.set_title("sound level for first 12 TS")
 ax6.legend()
 ax6.set_ylabel("Elevation (dam)")
 ax6.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
-plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited" + runID + "/baylevels".format(runID))
+plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/baylevels".format(runID))
 # np.save("C:/Users/Lexi/Documents/Research/Outwasher/discharge", discharge)
 # np.save(newpath + "discharge", discharge)
 # plt.matshow(slopes2[1], cmap="jet_r")
@@ -727,9 +739,9 @@ plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay22
 # ----------------------------------making the elevation gif------------------------------------------------------------
 frames = []
 for i in range(2):
-    filename = "C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/" + str(i) + "_domain.png"
+    filename = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/" + str(i) + "_domain.png"
     frames.append(imageio.imread(filename))
-imageio.mimwrite("C:/Users/Lexi/Documents/Research/Outwasher/Output/{0}/test.gif".format(runID), frames, format='.gif',
+imageio.mimwrite("C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/{0}/test.gif".format(runID), frames, format='.gif',
                  fps=1)
 
 
@@ -792,7 +804,7 @@ def plot_DischargeAnimation(dis, directory, TMAX):
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
             AnimateDomain, origin="upper", cmap="jet_r",
-            vmin=0, vmax=20,
+            # vmin=0, vmax=20,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -834,7 +846,7 @@ def plot_SlopeAnimation(slope, directory, TMAX):
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
             AnimateDomain, origin="upper", cmap="jet_r",
-            vmin=-0.1, vmax=0.1,
+            # vmin=-0.1, vmax=0.1,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -904,7 +916,7 @@ def plot_Qs2Animation(qs2, directory, TMAX):
 
 
 # ---------------------- Sed out array ----------------------------------------------------------------------------------
-def plot_SedOutAnimation(sedout, directory, TMAX, min_v, max_v):
+def plot_SedOutAnimation(sedout, directory, TMAX):
     os.chdir(directory)
     newpath = "SedOut/"
     if not os.path.exists(newpath):
@@ -920,7 +932,7 @@ def plot_SedOutAnimation(sedout, directory, TMAX, min_v, max_v):
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
             AnimateDomain, origin="upper", cmap="jet_r",
-            vmin=min_v, vmax=max_v,
+            # vmin=min_v, vmax=max_v,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -947,7 +959,7 @@ def plot_SedOutAnimation(sedout, directory, TMAX, min_v, max_v):
 
 
 # ---------------------- Sed out array ----------------------------------------------------------------------------------
-def plot_SedInAnimation(sedin, directory, TMAX, min_v, max_v):
+def plot_SedInAnimation(sedin, directory, TMAX):
     os.chdir(directory)
     newpath = "SedIn/"
     if not os.path.exists(newpath):
@@ -963,7 +975,7 @@ def plot_SedInAnimation(sedin, directory, TMAX, min_v, max_v):
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
             AnimateDomain, origin="upper", cmap="jet_r",
-            vmin=min_v, vmax=max_v,
+            # vmin=min_v, vmax=max_v,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -1082,12 +1094,12 @@ def plot_ModelTransects(b3d, time_step):
 # TMAX = storm_series[2]
 # TMAX = 2*storm_series[2]
 TMAX = 20
-dir = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited" + runID + "/"
+dir = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/"
 plot_ElevAnimation(elev_change, dir, TMAX)
 plot_DischargeAnimation(discharge, dir, TMAX)
 plot_SlopeAnimation(slopes2, dir, TMAX)
-plot_Qs2Animation(qs2, dir, TMAX)
-plot_SedOutAnimation(sedout, dir, TMAX, 0, 0.125)
-plot_SedInAnimation(sedin, dir, TMAX, 0, 0.125)
+# plot_Qs2Animation(qs2, dir, TMAX)
+plot_SedOutAnimation(sedout, dir, TMAX)
+plot_SedInAnimation(sedin, dir, TMAX)
 # time_step = [0]
 # plot_ModelTransects(b3d, time_step)
