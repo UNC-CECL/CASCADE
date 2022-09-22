@@ -316,9 +316,9 @@ def outwasher(b3d, storm_series, runID):
     nn = b3d._nn  # flow routing constant
     max_slope = -b3d._MaxUpSlope  # max slope that sediment can go uphill, previously Slim (0.25)
     ki = b3d._Ki  # sediment transport coefficient
-    # ki = 7.5E-4
+    # ki = 7.5E-3
     mm = b3d._mm  # inundation overwash coefficient
-    # mm = 4
+    # mm = 6
     sea_level = b3d._SL  # equal to 0 dam
     q_min = b3d._Qs_min  # [m^3 / hr]? Minimum discharge needed for sediment transport (0.001)
     bay_depth = -b3d._BayDepth  # [dam MHW] Depth of bay behind island segment, currently set to 0.3
@@ -617,8 +617,8 @@ def outwasher(b3d, storm_series, runID):
                 print("The total sediment volume lost was {0} dam^3".format(round(qs_lost_total, 3)))
 
             # ### Update Interior Domain After Every Storm
-            # use the last TS, not including the first (0th) row
-            InteriorUpdate = Elevation[-1, 1:, :]
+            # use the last TS
+            InteriorUpdate = Elevation[-1, :, :]
 
             # Remove all rows of bay without any deposition from the domain
             check = 1
@@ -631,7 +631,7 @@ def outwasher(b3d, storm_series, runID):
             # Update interior domain
             int_update_b3d = InteriorUpdate[0:int_width, :]
             b3d._InteriorDomain = np.flip(int_update_b3d)
-            full_domain[1:, :] = InteriorUpdate
+            full_domain[:, :] = InteriorUpdate
             # Update Domain widths
             # DomainWidth = np.shape(b3d._InteriorDomain)[0]
 
@@ -659,7 +659,7 @@ def outwasher(b3d, storm_series, runID):
                 full_domain[:, :],
                 origin="upper",
                 cmap="Greens",
-                vmin=0, vmax=0.25,
+                # vmin=-0.2, vmax=0.4,
             )
             ax3.set_xlabel('barrier length (dam)')
             ax3.set_ylabel('barrier width (dam)')
@@ -1095,11 +1095,11 @@ def plot_ModelTransects(b3d, time_step):
 # TMAX = 2*storm_series[2]
 TMAX = 20
 dir = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/"
-plot_ElevAnimation(elev_change, dir, TMAX)
-plot_DischargeAnimation(discharge, dir, TMAX)
-plot_SlopeAnimation(slopes2, dir, TMAX)
-# plot_Qs2Animation(qs2, dir, TMAX)
-plot_SedOutAnimation(sedout, dir, TMAX)
-plot_SedInAnimation(sedin, dir, TMAX)
+# plot_ElevAnimation(elev_change, dir, TMAX)
+# plot_DischargeAnimation(discharge, dir, TMAX)
+# plot_SlopeAnimation(slopes2, dir, TMAX)
+# # plot_Qs2Animation(qs2, dir, TMAX)
+# plot_SedOutAnimation(sedout, dir, TMAX)
+# plot_SedInAnimation(sedin, dir, TMAX)
 # time_step = [0]
 # plot_ModelTransects(b3d, time_step)
