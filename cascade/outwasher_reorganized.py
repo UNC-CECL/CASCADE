@@ -315,8 +315,8 @@ def outwasher(b3d, storm_series, runID):
     substep = b3d._OWss_i  # 2 for inundation
     nn = b3d._nn  # flow routing constant
     max_slope = -b3d._MaxUpSlope  # max slope that sediment can go uphill, previously Slim (0.25)
-    ki = b3d._Ki  # sediment transport coefficient
-    # ki = 7.5E-3
+    # ki = b3d._Ki  # sediment transport coefficient
+    ki = 7.5E-1
     mm = b3d._mm  # inundation overwash coefficient
     # mm = 6
     sea_level = b3d._SL  # equal to 0 dam
@@ -493,13 +493,31 @@ def outwasher(b3d, storm_series, runID):
                     #                               (Hd_TSloss / substep * TS)
                     # Reduce dune in height linearly over course of storm
 
+                    # setting discharge at the dune gaps
+                    for q in range(len(gaps)):
+                        start = gaps[q][0]
+                        stop = gaps[q][1]
+                        Rexcess = gaps[q][2]  # (dam)
+                        # print("Rexcess is: ", Rexcess)
+                        # Calculate discharge through each dune cell
+                        overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
+                        overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
+                        # print("Qdune =", overtop_flow)
+                        # rexcess_dict[Rexcess] = overtop_flow
+                        # Set discharge at dune gap
+                        # Discharge[:, 0, start:stop] = overtop_flow  # (dam^3/hr)
+                        Discharge[TS, int_width, start:stop] = overtop_flow  # (dam^3/hr)
+                        Discharge[TS, int_width + 1, start:stop] = overtop_flow  # (dam^3/hr)
+                    avg_discharge = sum(Discharge[TS, int_width, :])/length
+                    Discharge[TS, 0:int_width, :] = avg_discharge  # (dam^3/hr)
+
                     # Back barrier flow starts at a specified value to see another value at the dune gaps based on B3D (CHECK)
-                    Discharge[TS, 0, :] = 150
+                    # Discharge[TS, 0, :] = 150
                     # Loop through the rows
                     # need to include the last row to keep track of how much is leaving the system
                     # for d in range(width-1):
                     # uncomment if we are letting sediment out the last row
-                    for d in range(width):
+                    for d in range(int_width + 1, width):  # changed for updated discharges
                         # Discharge for each TS, row 1, and all cols set above
                         Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
                         # Loop through each col of the specified row
@@ -512,10 +530,10 @@ def outwasher(b3d, storm_series, runID):
                                                                             slopes_array, m_shoreface)
                                 # ### Calculate Discharge To Downflow Neighbors
                                 # do we want water only routed through dune gaps?
-                                Discharge[TS, int_width, D_not_ow] = 0  # (dam^3/hr)
-                                Discharge[TS, int_width + 1, D_not_ow] = 0  # (dam^3/hr)
-                                if Discharge[TS, d, i] == 0:
-                                    Q0 = 0
+                                # Discharge[TS, int_width, D_not_ow] = 0  # (dam^3/hr)
+                                # Discharge[TS, int_width + 1, D_not_ow] = 0  # (dam^3/hr)
+                                # if Discharge[TS, d, i] == 0:
+                                #     Q0 = 0
 
                                 Q1, Q2, Q3 = calculate_discharges(i, S1, S2, S3, Q0, nn, length, max_slope)
 
@@ -565,7 +583,7 @@ def outwasher(b3d, storm_series, runID):
                                 else:
                                     Qs3 = 0
 
-                                multi = 500
+                                multi = 1
                                 Qs1 = np.nan_to_num(Qs1)*multi
                                 Qs2 = np.nan_to_num(Qs2)*multi
                                 Qs3 = np.nan_to_num(Qs3)*multi
@@ -691,7 +709,7 @@ sound_data[0] = 0
 
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
-runID = "sedflux_x500"
+runID = "dynamic_discharge_Kie-1"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
@@ -1095,11 +1113,11 @@ def plot_ModelTransects(b3d, time_step):
 # TMAX = 2*storm_series[2]
 TMAX = 20
 dir = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/"
-# plot_ElevAnimation(elev_change, dir, TMAX)
-# plot_DischargeAnimation(discharge, dir, TMAX)
-# plot_SlopeAnimation(slopes2, dir, TMAX)
-# # plot_Qs2Animation(qs2, dir, TMAX)
-# plot_SedOutAnimation(sedout, dir, TMAX)
-# plot_SedInAnimation(sedin, dir, TMAX)
+plot_ElevAnimation(elev_change, dir, TMAX)
+plot_DischargeAnimation(discharge, dir, TMAX)
+plot_SlopeAnimation(slopes2, dir, TMAX)
+# plot_Qs2Animation(qs2, dir, TMAX)
+plot_SedOutAnimation(sedout, dir, TMAX)
+plot_SedInAnimation(sedin, dir, TMAX)
 # time_step = [0]
 # plot_ModelTransects(b3d, time_step)
