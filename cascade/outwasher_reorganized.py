@@ -316,7 +316,7 @@ def outwasher(b3d, storm_series, runID):
     nn = b3d._nn  # flow routing constant
     max_slope = -b3d._MaxUpSlope  # max slope that sediment can go uphill, previously Slim (0.25)
     # ki = b3d._Ki  # sediment transport coefficient
-    ki = 7.5E-1
+    ki = 7.5E-3
     mm = b3d._mm  # inundation overwash coefficient
     # mm = 6
     sea_level = b3d._SL  # equal to 0 dam
@@ -493,31 +493,50 @@ def outwasher(b3d, storm_series, runID):
                     #                               (Hd_TSloss / substep * TS)
                     # Reduce dune in height linearly over course of storm
 
-                    # setting discharge at the dune gaps
+                    # ---------------------------- using Rexcess to set discharge levels--------------------------------
+                    # loops through each of the gaps and get their starting and stopping index, as well as the Rexcess
+                    rexcess_tot = 0
                     for q in range(len(gaps)):
                         start = gaps[q][0]
                         stop = gaps[q][1]
                         Rexcess = gaps[q][2]  # (dam)
-                        # print("Rexcess is: ", Rexcess)
+                        rexcess_tot += Rexcess
                         # Calculate discharge through each dune cell
                         overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
-                        overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
-                        # print("Qdune =", overtop_flow)
-                        # rexcess_dict[Rexcess] = overtop_flow
+                        factor = 15
+                        overtop_flow = overtop_vel * Rexcess * 3600 * factor  # (dam^3/hr)
                         # Set discharge at dune gap
-                        # Discharge[:, 0, start:stop] = overtop_flow  # (dam^3/hr)
+                        # Discharge[:, 0, start:stop] = overtop_flow  # (dam^3/hr) in B3D, no dunes so start at row 0
+                        # in Outwasher, dunes located in the 2 rows after interior domain
+                        # (cells 0-29, but int_width = 30)
                         Discharge[TS, int_width, start:stop] = overtop_flow  # (dam^3/hr)
                         Discharge[TS, int_width + 1, start:stop] = overtop_flow  # (dam^3/hr)
+                    # --------------------------------------------------------------------------------------------------
+                    # 1. method of setting discharge through the interior: conservation
+                    # we evenly distribute over each cell the total discharge through the dune gaps
                     avg_discharge = sum(Discharge[TS, int_width, :])/length
                     Discharge[TS, 0:int_width, :] = avg_discharge  # (dam^3/hr)
+                    # --------------------------------------------------------------------------------------------------
+                    # 2. method of setting discharge through the interior: fudge factor
+                    # we take the known discharge through the dune gaps, and multiply it by a factor for initial
+                    # discharge at the first row
+                    # we will then ultimately overwrite the dune gap values
+                    # factor = 10
+                    # avg_rexcess = rexcess_tot/len(gaps)
+                    # overtop_vel = math.sqrt(2 * 9.8 * (avg_rexcess * 10)) / 10  # (dam/s)
+                    # overtop_flow = overtop_vel * avg_rexcess * 3600  # (dam^3/hr)
+                    # Discharge[TS, 0, :] = overtop_flow*factor  # (dam^3/hr)
+                    # --------------------------------------------------------------------------------------------------
+                    # 3. just setting the discharge arbitrarily at the first row
+                    # Discharge[TS, 0, :] = 150
 
                     # Back barrier flow starts at a specified value to see another value at the dune gaps based on B3D (CHECK)
-                    # Discharge[TS, 0, :] = 150
                     # Loop through the rows
                     # need to include the last row to keep track of how much is leaving the system
                     # for d in range(width-1):
                     # uncomment if we are letting sediment out the last row
-                    for d in range(int_width + 1, width):  # changed for updated discharges
+                    for d in range(width):  # for letting sediment out, discharge scenarios 2 and 3
+                    # for d in range(int_width + 1, width):  # if we are using scenario 1 discharge
                         # Discharge for each TS, row 1, and all cols set above
                         Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
                         # Loop through each col of the specified row
@@ -535,27 +554,55 @@ def outwasher(b3d, storm_series, runID):
                                 # if Discharge[TS, d, i] == 0:
                                 #     Q0 = 0
 
+                                # --------------------------------------------------------------------------------------
                                 Q1, Q2, Q3 = calculate_discharges(i, S1, S2, S3, Q0, nn, length, max_slope)
-
-                                ### Update Discharge
-                                # discharge is defined for the next row, so we do not need to include the last row
-                                # the first row of discharge was already defined
-                                if d != width - 1:  # uncomment and tab until calculate sed movement
-                                    # Cell 1
-                                    if i > 0:
-                                        Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
-                                    # Cell 2
-                                    Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
-                                    # Cell 3
-                                    if i < (length - 1):
-                                        Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
-
+                                # if we are using scenario 1, we do not want to re-assign discharges for the back barrier
+                                if d > int_width:
+                                    ### Update Discharge
+                                    # discharge is defined for the next row, so we do not need to include the last row
+                                    # the first row of discharge was already defined
+                                    if d != width - 1:  # uncomment and tab until calculate sed movement
+                                        # Cell 1
+                                        if i > 0:
+                                            Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
+                                        # Cell 2
+                                        Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
+                                        # Cell 3
+                                        if i < (length - 1):
+                                            Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
+                                # --------------------------------------------------------------------------------------
+                                # For scenarios 2 and 3, we want to calc Q throughout entire domain
+                                # ### Update Discharge
+                                # # discharge is defined for the next row, so we do not need to include the last row
+                                # # the first row of discharge was already defined
+                                # if d != width - 1:  # uncomment and tab until calculate sed movement
+                                #     # Cell 1
+                                #     if i > 0:
+                                #         Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
+                                #     # Cell 2
+                                #     Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
+                                #     # Cell 3
+                                #     if i < (length - 1):
+                                #         Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
+                                # --------------------------------------------------------------------------------------
 
                                 # ### Calculate Sed Movement
                                 fluxLimit = max_dune  # [dam MHW] dmaxel - bermel
                                 # all Qs in [dam^3/hr]
-
-                                C = cx * abs(Si)  # 10 x the avg slope (from Murray)
+                                # C = cx * abs(Si)  # 10 x the avg slope (from Murray) normal way
+                                # -------------setting different regimes for sed flux momentum (C)----------------------
+                                if d < int_width:  # in the back barrier with uphill slopes (include dunes)
+                                    # we would have slower velocities with deeper water = less sed flux
+                                    depth = bayhigh - Elevation[TS, d, i]  # dimensionless although its tech. dam
+                                    C = 1/depth*3E-3  # dimensionless although tech. 1/dam
+                                    # C = Elevation[TS, d, i]
+                                else:
+                                    # avg_slope = np.mean(Elevation[TS, int_width+2, :] - Elevation[TS, -1, :]) \
+                                    #             / (width-int_width)
+                                    avg_slope = berm_el/(width-int_width)
+                                    # we could change this to just be the berm elevation - final elevation
+                                    C = cx * avg_slope
+                                # --------------------------------------------------------------------------------------
                                 if Q1 > q_min:
                                     Qs1 = ki * (Q1 * (S1 + C)) ** mm
                                     if Qs1 < 0:
@@ -709,7 +756,7 @@ sound_data[0] = 0
 
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
-runID = "dynamic_discharge_Kie-1"
+runID = "dynamic_discharge_AVG_FACTOR15_Kie-3_editedC3E-3_nodunes"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
