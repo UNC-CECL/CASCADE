@@ -12,8 +12,7 @@ import time
 import matplotlib.pyplot as plt
 
 # specify data directories with initial conditions
-# datadir = "B3D_Inputs/"
-datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"
+datadir = "cascade/data/pathways_data/"
 
 nt = 100
 cascade = Cascade(

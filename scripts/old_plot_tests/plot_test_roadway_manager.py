@@ -1,10 +1,10 @@
 from cascade.cascade import Cascade
 import matplotlib.pyplot as plt
-from scripts import CASCADE_plotters as CASCADE_Plt
+from scripts import plotters as CASCADE_Plt
 
 name = "bulldozer"
 ny = 3
-datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"  # laptop
+datadir = "cascade/data/pathways_data/"
 num_cores = ny
 nt = 100
 
