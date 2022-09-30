@@ -414,8 +414,7 @@ def plot_ModelTransects(cascade, time_step, iB3D):
     each time step (non-integer multiples) and always two rows of dunes, it appears that the barrier island is moving
     landward when really it is eroding the dune line.
     """
-    plt.figure(figsize=(10, 5))
-    fig = plt.subplot(1, 1, 1)
+    fig, axs = plt.subplots(1, 1, figsize=(5, 3), sharey=True, sharex=True)
     legend_t = []
 
     for t in time_step:
@@ -426,15 +425,15 @@ def plot_ModelTransects(cascade, time_step, iB3D):
         )  # dam
 
         # Create data points
-        # shoreface_toe_x = (
-        #     cascade.barrier3d[iB3D].x_t_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
-        # )
-        shoreface_toe_x = cascade.barrier3d[iB3D].x_t_TS[t]  # dam
+        shoreface_toe_x = (
+            cascade.barrier3d[iB3D].x_t_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
+        )
+        # shoreface_toe_x = cascade.barrier3d[iB3D].x_t_TS[t]  # dam
         shoreface_toe_y = (sea_level - cascade.barrier3d[iB3D].DShoreface) * 10  # m
-        # shoreline_x = (
-        #     cascade.barrier3d[iB3D].x_s_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
-        # )  # dam
-        shoreline_x = cascade.barrier3d[iB3D].x_s_TS[t]  # dam
+        shoreline_x = (
+            cascade.barrier3d[iB3D].x_s_TS[t] - cascade.barrier3d[iB3D].x_t_TS[0]
+        )  # dam
+        # shoreline_x = cascade.barrier3d[iB3D].x_s_TS[t]  # dam
         shoreline_y = sea_level * 10  # m
         bay_y = (sea_level - cascade.barrier3d[iB3D]._BayDepth) * 10  # m
         end_of_bay_y = bay_y
@@ -497,13 +496,12 @@ def plot_ModelTransects(cascade, time_step, iB3D):
         plt.hlines(sea_level * 10, shoreface_toe_x, end_of_bay_x, colors="black")
         # NOTE: the berm elevation is relative to the MHW, so everything that relies on it is m MHW; confirmed with Ian
         # that the InteriorDomain is m MHW (i.e., m NAVD88 - MHW [in NAVD88])
-        plt.rcParams.update({"font.size": 20})
-        legend_t.append(str(t))
+        legend_t.append("year " + str(t))
 
-    plt.xlabel("Cross-shore position (dam)")
-    plt.ylabel("Elevation (m MHW)")
-    plt.title("Profile Evolution")
+    plt.xlabel("cross-shore distance (dam)")
+    plt.ylabel("elevation (m MHW)")
     plt.legend(legend_t)
+    plt.tight_layout()
 
     return fig
 
@@ -1798,8 +1796,7 @@ def plot_nonlinear_stats_mgmt_array4(
         axs2[2].set(ylabel="shoreline position (m)")
     if nourishment_on:
         axs2[2].set_ylim([-30, 900])
-        axs2[2].set(ylabel="cross-shore position (m)")
-        axs2[2].legend(["shoreline", "dune toe"])
+        axs2[2].set(ylabel="shoreline position (m)")
     axs2[3].set(ylabel="overwash flux (m$^3$/m)")
     axs2[3].set_ylim([-3, 225])
     if roadways_on:
@@ -2165,7 +2162,7 @@ def nonlinear_comparison(
 
 
 def fig2_initialCNH_topo(
-    cascade_model_list,  # must be from a nourishments simulation (i.e., have a beach width)
+    cascade_model_list,  # must be from a nourishment simulation (i.e., have a beach width)
 ):
 
     fig, axs = plt.subplots(1, 4, figsize=(10, 3), sharey=True, sharex=True)
@@ -2186,7 +2183,7 @@ def fig2_initialCNH_topo(
         # Build beach elevation domain, we only show beach width decreasing in increments of 10 m and we don't
         # illustrate a berm, just a sloping beach up to the elevation of the berm
         BeachWidth = math.floor(
-            cascade.nourishments[iB3D]._post_storm_beach_width[0] / 10
+            cascade.nourishments[iB3D].beach_width[0] / 10
         )  # switched from ceil
         BeachDomain = np.zeros(
             [
@@ -2220,15 +2217,15 @@ def fig2_initialCNH_topo(
         # plot
         print(np.max(AnimateDomain))
         cax = axs[iCascade].matshow(
-            AnimateDomain, origin="lower", cmap="terrain", vmin=-1.1, vmax=3.0
+            AnimateDomain, origin="lower", cmap="terrain", vmin=-1, vmax=3.0
         )  # , interpolation='gaussian') # analysis:ignore
         axs[iCascade].xaxis.set_ticks_position("bottom")
         axs[iCascade].set(xlabel="alongshore distance (dam)")
         axs[iCascade].set_ylim([40, 110])
 
     axs[0].set(ylabel="cross-shore distance (dam)")
-    cbar = fig.colorbar(cax)
-    cbar.set_label("elevation (m MHW)", rotation=270)
+    # cbar = fig.colorbar(cax)
+    # cbar.set_label("elevation (m MHW)", rotation=270)
     # plt.tight_layout()
 
     # now make the cross-section; stole this from the cross-section code above and modified
@@ -2305,7 +2302,7 @@ def fig2_initialCNH_topo(
             axs[0].hlines(
                 sea_level * 10, shoreface_toe_x, end_of_bay_x, colors="dodgerblue"
             )
-            axs[0].set_xlim([0, 110])
+            # axs[0].set_xlim([0, 110])
             axs[0].set(xlabel="cross-shore distance (dam)")
             axs[0].set(ylabel="elevation (m MHW)")
         else:  # 0.75 cases
@@ -2313,7 +2310,7 @@ def fig2_initialCNH_topo(
             axs[1].hlines(
                 sea_level * 10, shoreface_toe_x, end_of_bay_x, colors="dodgerblue"
             )
-            axs[1].set_xlim([0, 110])
+            # axs[1].set_xlim([0, 110])
             axs[1].set(xlabel="cross-shore distance (dam)")
     # plt.tight_layout()
 
@@ -2325,6 +2322,7 @@ def fig3_slr_sensitivity(
     # col 1 - barrier height (4 different SLR)
     # col 2 - barrier width (4 different SLR)
     # col 3 - shoreline position (4 different SLR)
+    # col 4 - overwash flux (4 diff SLR)
 
     fig1, axs1 = plt.subplots(1, 4, figsize=(10, 3), sharex=True)
     for i in range(len(cascade)):
@@ -2337,44 +2335,44 @@ def fig3_slr_sensitivity(
 
     axs1[0].set(ylabel="sea level (m)")
     axs1[0].set(xlabel="time (yr)")
-    axs1[0].legend(["0.004 m/yr", "0.008", "0.012", "Acc"])
+    axs1[0].legend(["4 mm/yr", "8 mm/yr", "12 mm/yr", "Acc"])
     plt.tight_layout()
 
     fig2, axs2 = plt.subplots(1, 4, figsize=(10, 3), sharex=True)
     for i in range(len(cascade)):
         time = np.arange(0, TMAX[i], 1)
 
-        BarrierWidth = (
+        barrier_width = (
             np.array(cascade[i].barrier3d[0].x_b_TS[0 : TMAX[i]])
             - np.array(cascade[i].barrier3d[0].x_s_TS[0 : TMAX[i]])
         ) * 10
 
-        # average interior height
-        BarrierHeight = []
-        for t in range(0, TMAX[i]):
-            bh_array = np.array(cascade[i].barrier3d[0]._DomainTS[t]) * 10  # dam to m
-            BarrierHeight.append(bh_array[bh_array > 0].mean())
+        barrier_height = np.array(cascade[i].barrier3d[0].h_b_TS[0: TMAX[i]]) * 10
 
         scts = [
             (x - cascade[i].barrier3d[0].x_s_TS[0]) * 10
             for x in cascade[i].barrier3d[0].x_s_TS[0 : TMAX[i]]
         ]
 
-        axs2[0].plot(time, BarrierHeight)
-        axs2[1].plot(time, BarrierWidth)
+        overwash_flux = cascade[i].barrier3d[0].QowTS[0: TMAX[i]]
+
+        axs2[0].plot(time, barrier_height)
+        axs2[1].plot(time, barrier_width)
         axs2[2].plot(time, scts)
+        axs2[3].plot(time, overwash_flux)
 
         axs2[i].set(xlabel="time (yr)")
 
-    axs2[0].set(ylabel="barrier height (m MHW)")
-    axs2[0].set_ylim([0.15, 1.75])
+    axs2[0].set(ylabel="barrier elevation (m MHW)")
+    axs2[0].set_ylim([-0.03, 1.75])
     axs2[1].set(ylabel="barrier width (m)")
-    axs2[1].set_ylim([50, 425])
+    axs2[1].set_ylim([-6, 450])
     axs2[2].set(ylabel="shoreline position (m)")
-    axs2[2].set_ylim([-10, 480])
-    axs2[2].legend(["0.004 m/yr", "0.008", "0.012", "Acc"])
+    axs2[2].set_ylim([-10, 900])
+    axs2[2].legend(["4 mm/yr", "8 mm/yr", "12 mm/yr", "Acc"])
+    axs2[3].set(ylabel="overwash flux (m$^3$/m)")
+    axs2[3].set_ylim([-3, 225])
     plt.tight_layout()
-
 
 def supp_10kyr_timeseries(datadir, tmax, name_prefix, vertical_line_1, vertical_line_2):
 
