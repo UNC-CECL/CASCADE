@@ -100,10 +100,11 @@ class Cascade:
         self,
         datadir,
         name="default",
-        storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-        elevation_file="b3d_pt45_8750yrs_low-elevations.csv",  # associated with average dune growth rate of 0.45
+        # elevation_file="b3d_pt45_8750yrs_low-elevations.csv",  # associated with average dune growth rate of 0.45
+        elevation_file="barrier3d-default-elevation.npy",  # associated with average dune growth rate of 0.45
         dune_file="barrier3d-default-dunes.npy",
         parameter_file="barrier3d-parameters.yaml",
+        storm_file="barrier3d-default-storms.npy",  # same as "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy"
         wave_height=1,
         wave_period=7,
         wave_asymmetry=0.8,
@@ -236,7 +237,7 @@ class Cascade:
         Examples
         --------
         >>> from cascade.cascade import Cascade
-        >>> datadir = "./B3D_Inputs/"
+        >>> datadir = "./cascade/data/"
         >>> cascade = Cascade(datadir)
         """
 
