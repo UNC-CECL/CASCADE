@@ -828,6 +828,6 @@ class RoadwayManager:
         return self._percent_water_cells_touching_road
 
     @percent_water_cells_touching_road.setter
-    def percent_water_cells_touching_roadk(self, value):
+    def percent_water_cells_touching_road(self, value):
         self._percent_water_cells_touching_road = value
 
