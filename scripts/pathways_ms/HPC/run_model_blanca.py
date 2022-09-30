@@ -27,7 +27,7 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
     # run script for the 10,000 year runs.
 
     # --------- INITIALIZE ---------
-    datadir = "B3D_Inputs/"
+    datadir = "cascade/data/pathways_data/"
     cascade = Cascade(
         datadir,
         name,
