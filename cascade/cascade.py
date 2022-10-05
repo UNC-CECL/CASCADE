@@ -110,6 +110,10 @@ class Cascade:
         wave_asymmetry=0.8,
         wave_angle_high_fraction=0.2,
         bay_depth=3.0,
+        s_background=0.001,
+        berm_elevation=1.9,
+        MHW=0.46,
+        beta=0.04,
         sea_level_rise_rate=0.004,
         sea_level_rise_constant=True,
         background_erosion=0.0,
@@ -168,6 +172,14 @@ class Cascade:
             Fraction of waves approaching from angles higher than 45 degrees.
         bay_depth: float, optional
             Depth of back-barrier bay [m]
+        s_background: float, optional
+            background slope (for shoreface toe position, back-barrier & inlet calculations)
+        berm_elevation: float, optional
+            static elevation of berm [m], needs to be 1.9 m if using the default storm list, time series
+        MHW: float, optional
+            elevation of mean high water [m NAVD88], needs to be 0.46 m NAVD88 if using default storm list, time series
+        beta: float, optional
+            beach slope for runup calculations, needs to be 0.04 if using the default storm list, time series
         sea_level_rise_rate: float, optional
             Rate of sea_level rise [m/yr].
         sea_level_rise_constant: boolean, optional
@@ -276,6 +288,13 @@ class Cascade:
         )
         self._group_roadway_abandonment = group_roadway_abandonment  # groups roadways
 
+        if (berm_elevation != 1.9 or MHW !=0.46 or beta !=0.04) and storm_file=="barrier3d-default-storms.npy":
+            # if the berm elevation, MHW, or beach slope is changed, the defualt MSSM storm list and storm time series
+            # is no longer valid
+            raise CascadeError(
+                "The default storms only apply for a berm elevation=1.9 m NAVD88, MHW=0.46 m NAVD88 & beach slope=0.04."
+            )
+
         ###############################################################################
         # initialize brie and barrier3d model classes
         ###############################################################################
@@ -289,6 +308,7 @@ class Cascade:
             wave_angle_high_fraction=self._wave_angle_high_fraction,
             sea_level_rise_rate=self._sea_level_rise_rate,
             back_barrier_depth=bay_depth,
+            s_background=s_background,
             ny=self._ny,
             nt=self._nt,
         )
@@ -301,6 +321,8 @@ class Cascade:
             rmin=self._rmin,  # can be array
             rmax=self._rmax,  # can be array
             background_erosion=self._background_erosion,  # can be array
+            MHW=MHW,
+            beta=beta,
             parameter_file=self._parameter_file,
             storm_file=self._storm_file,
             dune_file=self._dune_file,  # can be array
@@ -328,7 +350,7 @@ class Cascade:
 
         if self._community_dynamics_module:
             if not any(self._beach_nourishment_module):
-                CascadeError(
+                raise CascadeError(
                     "Beach nourishment module must be set to `TRUE` to couple with CHOM"
                 )
             else:
@@ -394,7 +416,7 @@ class Cascade:
         ):
             pass
         else:
-            CascadeError(
+            raise CascadeError(
                 "Berm elevation and beach slope must be equivalent for all Barrier3D domains"
             )
 

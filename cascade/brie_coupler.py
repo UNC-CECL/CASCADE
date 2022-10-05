@@ -55,6 +55,8 @@ def initialize_equal(
     storm_file,
     dune_file,
     elevation_file,
+    MHW=0.46,
+    beta=0.04
 ):
     """
     for each B3D subgrid, set the initial shoreface geometry equal to what is set in brie (some random
@@ -70,6 +72,8 @@ def initialize_equal(
     :param storm_file: name of the Barrier3D storms file
     :param dune_file: name of the Barrier3D dunes file
     :param elevation_file: name of the Barrier3D elevation file
+    :param MHW: elevation of mean high water [m NAVD88]
+    :param beta: beach slope for runup calculations
 
     :return: barrier3d
 
@@ -149,11 +153,11 @@ def initialize_equal(
             set_yaml("elevation_file", elevation_file, fid)
 
         # the following parameters CANNOT be changed or else the MSSM storm list & storm time series needs to be remade
-        set_yaml("MHW", 0.46, fid)  # [m] Elevation of Mean High Water
-        set_yaml("beta", 0.04, fid)  # Beach slope for runup calculations
+        set_yaml("MHW", MHW, fid)  # [m] Elevation of Mean High Water
+        set_yaml("beta", beta, fid)  # Beach slope for runup calculations
         set_yaml(
             "BermEl", float(brie._h_b_crit), fid
-        )  # [m] Static elevation of berm, needs to be 1.9 m
+        )  # [m] Static elevation of berm
 
         barrier3d.append(Barrier3d.from_yaml(datadir, prefix=parameter_file_prefix))
 
@@ -198,6 +202,8 @@ class BrieCoupler:
         wave_angle_high_fraction=0.2,
         sea_level_rise_rate=0.004,
         back_barrier_depth=3.0,
+        s_background=0.001,
+        h_b_crit=1.9,
         ny=1,
         nt=200,
     ):
@@ -223,6 +229,10 @@ class BrieCoupler:
             The number of alongshore Barrier3D domains for simulation in BRIE
         nt: int, optional
             Number of time steps.
+        s_background: float, optional
+            background slope (for shoreface toe position, back-barrier & inlet calculations)
+        h_b_crit: float, optional
+            critical barrier height for overwash [m], used also to calc shoreline diffusivity; we set = to B3D berm ele
 
         """
         ###############################################################################
@@ -233,16 +243,9 @@ class BrieCoupler:
         # modifying often (or ever) for CASCADE
         brie_ast_model = True  # shoreface formulations on
         brie_barrier_model = False  # LTA14 overwash model off
-        brie_inlet_model = False  # inlet model off
+        brie_inlet_model = False  # inlet model off -- once coupled, will make this more functional
         b3d_barrier_model = True  # B3d overwash model on
-
-        # barrier model parameters (the following are needed for other calculations even if the barrier model is off)
-        s_background = 0.001  # background slope (for shoreface toe position, back-barrier & inlet calculations)
         z = 10.0  # initial sea level (for tracking SL, Eulerian reference frame)
-        bb_depth = back_barrier_depth  # back-barrier depth, in barrier3d, typically 3 m
-        h_b_crit = 1.9  # critical barrier height for overwash, used also to calculate shoreline diffusivity;
-        # we set equal to the static elevation of berm in B3D (NOTE: if the berm elevation is changed, the MSSM storm
-        # list and storm time series needs to be remade)
 
         # inlet parameters (use default; these are here to remind me later that they are important and I can change)
         Jmin = 10000  # minimum inlet spacing [m]
@@ -270,7 +273,7 @@ class BrieCoupler:
             barrier_height_critical=h_b_crit,
             tide_amplitude=a0,
             back_barrier_marsh_fraction=marsh_cover,
-            back_barrier_depth=bb_depth,
+            back_barrier_depth=back_barrier_depth,
             xshore_slope=s_background,
             inlet_min_spacing=Jmin,
             alongshore_section_length=dy,
