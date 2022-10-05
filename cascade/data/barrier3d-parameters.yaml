@@ -20,7 +20,7 @@ GrowthParamStart: false
 HdDiffu: 0.75
 Ki: 7.5e-06
 Kr: 7.5e-05
-LShoreface: 524.236278118052
+LShoreface: 524.3969226015213
 MHW: 0.46
 MaxShrubHeight: 5.3
 MaxUpSlope: 0.25
@@ -54,7 +54,7 @@ disp_mu: -0.721891
 disp_sigma: 1.5
 dune_file: barrier3d-default-dunes.npy
 elevation_file: barrier3d-default-elevation.npy
-growth_param_file: growthparam_1000dam.npy
+growth_param_file: barrier3d-default-growthparam.npy
 k_sf: 19324.753176079226
 mm: 2.0
 nn: 0.5
