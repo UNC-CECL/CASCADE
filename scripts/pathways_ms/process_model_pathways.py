@@ -1413,9 +1413,9 @@ def roadways():
                 overwash_nat,
                 cascade_nat,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-                name_prefix="6-B3D_Rave_pt75_Natural_low",
-                tmax_roadways=500,  # dummy
-                tmax_sim=500,
+                name_prefix="4-B3D_Rave_pt45_Natural_low",
+                tmax_roadways=1000,  # dummy
+                tmax_sim=1000,
                 plot_name="b3d_pt75_plots_low",
                 run_road_mgmt=False,
             )
@@ -1434,10 +1434,10 @@ def roadways():
                 overwash_10,
                 cascade_10,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-                name_prefix="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low_10percent",
-                tmax_roadways=158,
-                tmax_sim=500,
-                plot_name="b3d_pt75_h2m_plots_low_10percent",
+                name_prefix="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_low_10percent",
+                tmax_roadways=462,
+                tmax_sim=700,
+                plot_name="b3d_pt45_h2m_plots_low_10percent",
                 run_road_mgmt=True,
             )
 
@@ -1455,10 +1455,10 @@ def roadways():
                 overwash_20,
                 cascade_20,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-                name_prefix="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low_20percent",
-                tmax_roadways=161,  # drowned at 162
-                tmax_sim=500,
-                plot_name="b3d_pt75_h2m_plots_low_20percent",
+                name_prefix="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_low_20percent",
+                tmax_roadways=533,
+                tmax_sim=700,
+                plot_name="b3d_pt45_h2m_plots_low_20percent",
                 run_road_mgmt=True,
             )
 
@@ -1476,10 +1476,10 @@ def roadways():
                 overwash_30,
                 cascade_30,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-                name_prefix="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low_30percent",
-                tmax_roadways=164,  # drowned at 165
-                tmax_sim=500,
-                plot_name="b3d_pt75_h2m_plots_low_30percent",
+                name_prefix="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_low_30percent",
+                tmax_roadways=545,
+                tmax_sim=700,
+                plot_name="b3d_pt45_h2m_plots_low_30percent",
                 run_road_mgmt=True,
             )
 
@@ -1497,9 +1497,9 @@ def roadways():
                 overwash_40,
                 cascade_40,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-                name_prefix="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low_40percent",
-                tmax_roadways=172,  # drowned at 173
-                tmax_sim=500,
+                name_prefix="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_low_40percent",
+                tmax_roadways=548,
+                tmax_sim=700,
                 plot_name="b3d_pt75_h2m_plots_low_40percent",
                 run_road_mgmt=True,
             )
@@ -1518,10 +1518,10 @@ def roadways():
                 overwash_50,
                 cascade_50,
             ) = PLOT_5_Nonlinear_Dynamics_CASCADE_B3Donly_RoadwayManager(
-                name_prefix="6-B3D_Rave_pt75_Roadways_2mDune_20mSetback_20mWidth_low_50percent",
-                tmax_roadways=181,  # drowned at 182
-                tmax_sim=500,
-                plot_name="b3d_pt75_h2m_plots_low_50percent",
+                name_prefix="6-B3D_Rave_pt45_Roadways_2mDune_20mSetback_20mWidth_low_50percent",
+                tmax_roadways=553,
+                tmax_sim=700,
+                plot_name="b3d_pt45_h2m_plots_low_50percent",
                 run_road_mgmt=True,
             )
 
@@ -1547,8 +1547,8 @@ def roadways():
                     BarrierWidth_40,
                     BarrierWidth_50,
                 ],
-                TMAX=[500, 500, 500, 500, 500],
-                tmax_roadways=[158, 161, 164, 172, 181],
+                TMAX=[600, 600, 600, 600, 600],
+                tmax_roadways=[462, 533, 545, 548, 553],
             )
 
         # roadway statistics
