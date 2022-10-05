@@ -50,7 +50,7 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
     # run script for the 10,000 year runs.
 
     # --------- INITIALIZE ---------
-    datadir = "cascade/data/pathways_data/"
+    datadir = "./cascade/data/pathways_data/"
     cascade = Cascade(
         datadir,
         name,
@@ -117,7 +117,7 @@ def RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
     # or until the barrier drowns. All other modules (beach nourishment, community dyanmics) turned off.
 
     # --------- INITIALIZE ---------
-    datadir = "cascade/data/pathways_data/"
+    datadir = "./cascade/data/pathways_data/"
     cascade = Cascade(
         datadir,
         name,
@@ -188,7 +188,7 @@ def RUN_7_CASCADE_noAST_Rave_variableSLR_NoHumans(
     # ###############################################################################
 
     # --------- INITIALIZE ---------
-    datadir = "cascade/data/pathways_data/"
+    datadir = "./cascade/data/pathways_data/"
     cascade = Cascade(
         datadir,
         name,
@@ -253,7 +253,7 @@ def RUN_8_CASCADE_noAST_Rave_SLR_pt004_Nourishment(
     # ###############################################################################
 
     # --------- INITIALIZE ---------
-    datadir = "cascade/data/pathways_data/"
+    datadir = "./cascade/data/pathways_data/"
     cascade = Cascade(
         datadir,
         name,
@@ -365,7 +365,7 @@ def RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
     # ###############################################################################
 
     # --------- INITIALIZE ---------
-    datadir = "cascade/data/pathways_data/"
+    datadir = "./cascade/data/pathways_data/"
     cascade = Cascade(
         datadir,
         name,
@@ -467,11 +467,11 @@ def RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
 # record of B3D time series initial conditions (storms, dune growth rates, growth parameters) -------------------
 def time_series():
 
-    datadir = "cascade/data/pathways_data/"
+    datadir = "./cascade/data/pathways_data/"
 
     StormSeries_NormDist_10kyrs_01 = yearly_storms(
         datadir=datadir,
-        storm_list_name="StormList_20k_VCR_Berm1pt9m_Slope0pt04.csv",  # can by .py or .csv
+        storm_list_name="StormList_20k_VCR_Berm1pt9m_Slope0pt04.csv",  # this is == "default_storm_list.csv"
         mean_yearly_storms=8.3,
         SD_yearly_storms=5.9,
         MHW=0.46,  # m NAVD88
@@ -683,9 +683,9 @@ def cascade_10kyr_sensitivity():
         rmin=0.25,  # rave = 0.45 (but not 0.5 spaced like in Reeves et al., 2021 -- arbitrary)
         rmax=0.65,
         name="4-B3D_noAST_Rave_pt45_SLR_pt004_10k-yrs_01",
-        storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-        elevation_file="InitElevHog.npy",
-        dune_file="DuneStart_1000dam.npy",
+        storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",  # used default storm list
+        elevation_file="barrier3d-default-elevation.npy",
+        dune_file="barrier3d-default-dunes.npy",
     )
 
     cascade_10kyr_pt45_02 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -694,8 +694,8 @@ def cascade_10kyr_sensitivity():
         rmax=0.65,
         name="4-B3D_noAST_Rave_pt45_SLR_pt004_10k-yrs_02",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_02.npy",
-        elevation_file="InitElevHog.npy",
-        dune_file="DuneStart_1000dam.npy",
+        elevation_file="barrier3d-default-elevation.npy",
+        dune_file="barrier3d-default-dunes.npy",
     )
 
     cascade_10kyr_pt45_03 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -704,8 +704,8 @@ def cascade_10kyr_sensitivity():
         rmax=0.65,
         name="4-B3D_noAST_Rave_pt45_SLR_pt004_10k-yrs_03",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_03.npy",
-        elevation_file="InitElevHog.npy",
-        dune_file="DuneStart_1000dam.npy",
+        elevation_file="barrier3d-default-elevation.npy",
+        dune_file="barrier3d-default-dunes.npy",
     )
 
     cascade_10kyr_pt45_04 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -714,8 +714,8 @@ def cascade_10kyr_sensitivity():
         rmax=0.65,
         name="4-B3D_noAST_Rave_pt45_SLR_pt004_10k-yrs_04",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_04.npy",
-        elevation_file="InitElevHog.npy",
-        dune_file="DuneStart_1000dam.npy",
+        elevation_file="barrier3d-default-elevation.npy",
+        dune_file="barrier3d-default-dunes.npy",
     )
 
     cascade_10kyr_pt45_05 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -724,8 +724,8 @@ def cascade_10kyr_sensitivity():
         rmax=0.65,
         name="4-B3D_noAST_Rave_pt45_SLR_pt004_10k-yrs_05",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_05.npy",
-        elevation_file="InitElevHog.npy",
-        dune_file="DuneStart_1000dam.npy",
+        elevation_file="barrier3d-default-elevation.npy",
+        dune_file="barrier3d-default-dunes.npy",
     )
 
     cascade_10kyr_pt75_01 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -734,8 +734,8 @@ def cascade_10kyr_sensitivity():
         rmax=0.95,
         name="4-B3D_noAST_Rave_pt75_SLR_pt004_10k-yrs_01",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
-        elevation_file="InitElevHog.npy",
-        dune_file="DuneStart_1000dam.npy",
+        elevation_file="barrier3d-default-elevation.npy",
+        dune_file="barrier3d-default-dunes.npy",
     )
 
     cascade_10kyr_pt75_02 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -744,8 +744,8 @@ def cascade_10kyr_sensitivity():
         rmax=0.95,
         name="4-B3D_noAST_Rave_pt75_SLR_pt004_10k-yrs_02",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_02.npy",
-        elevation_file="InitElevHog.npy",
-        dune_file="DuneStart_1000dam.npy",
+        elevation_file="barrier3d-default-elevation.npy",
+        dune_file="barrier3d-default-dunes.npy",
     )
 
     cascade_10kyr_pt75_03 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -754,8 +754,8 @@ def cascade_10kyr_sensitivity():
         rmax=0.95,
         name="4-B3D_noAST_Rave_pt75_SLR_pt004_10k-yrs_03",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_03.npy",
-        elevation_file="InitElevHog.npy",
-        dune_file="DuneStart_1000dam.npy",
+        elevation_file="barrier3d-default-elevation.npy",
+        dune_file="barrier3d-default-dunes.npy",
     )
 
     cascade_10kyr_pt75_04 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -764,8 +764,8 @@ def cascade_10kyr_sensitivity():
         rmax=0.95,
         name="4-B3D_noAST_Rave_pt75_SLR_pt004_10k-yrs_04",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_04.npy",
-        elevation_file="InitElevHog.npy",
-        dune_file="DuneStart_1000dam.npy",
+        elevation_file="barrier3d-default-elevation.npy",
+        dune_file="barrier3d-default-dunes.npy",
     )
 
     cascade_10kyr_pt75_05 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -774,8 +774,8 @@ def cascade_10kyr_sensitivity():
         rmax=0.95,
         name="4-B3D_noAST_Rave_pt75_SLR_pt004_10k-yrs_05",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_05.npy",
-        elevation_file="InitElevHog.npy",
-        dune_file="DuneStart_1000dam.npy",
+        elevation_file="barrier3d-default-elevation.npy",
+        dune_file="barrier3d-default-dunes.npy",
     )
 
     def sensitivity_tests_Ian_model():
