@@ -13,32 +13,49 @@ import csv
 
 # -------------------------------------------------------------------------------------------------------------------
 # ### Storm Series Converter
-def storm_converter(storm_series):
-    dur = 2 * storm_series[2]
-    sound_level = np.zeros(dur)  # initializing the new bay level array
-    avgs = []
-    # we need to double the duration of the storm with the same magnitudes as before
-    # making the avg water level array
-    count = 0
-    for time in range(len(storm_series[1]) - 1):
-        avg_level = (storm_series[1][time] + storm_series[1][time + 1]) / 2
-        avgs.append(avg_level)
-    # for the new time series, if the time step is even, we keep the value from the original time series
-    # if the time step is odd, we take the value from the avgs array
-    for time2 in range(dur):
-        if time2 % 2 == 0:
-            sound_level[time2] = storm_series[1][int(time2 / 2)]
-        elif time2 == dur - 1:
-            sound_level[time2] = avgs[-1]
-        else:
-            count += 1
-            sound_level[time2] = avgs[time2 - count]
-            # if we are at time 1, need to access avgs time 0 (time - 1)
-            # if we are at time 3, need to access avgs time 1 (time - 2)
-            # if we are at time 5, need to access avgs time 2 (time - 3)
-    storm_series[1] = sound_level
-    return storm_series, dur
+# def storm_converter(storm_series):
+#     dur = 2 * storm_series[2]
+#     sound_level = np.zeros(dur)  # initializing the new bay level array
+#     avgs = []
+#     # we need to double the duration of the storm with the same magnitudes as before
+#     # making the avg water level array
+#     count = 0
+#     for time in range(len(storm_series[1]) - 1):
+#         avg_level = (storm_series[1][time] + storm_series[1][time + 1]) / 2
+#         avgs.append(avg_level)
+#     # for the new time series, if the time step is even, we keep the value from the original time series
+#     # if the time step is odd, we take the value from the avgs array
+#     for time2 in range(dur):
+#         if time2 % 2 == 0:
+#             sound_level[time2] = storm_series[1][int(time2 / 2)]
+#         elif time2 == dur - 1:
+#             sound_level[time2] = avgs[-1]
+#         else:
+#             count += 1
+#             sound_level[time2] = avgs[time2 - count]
+#             # if we are at time 1, need to access avgs time 0 (time - 1)
+#             # if we are at time 3, need to access avgs time 1 (time - 2)
+#             # if we are at time 5, need to access avgs time 2 (time - 3)
+#     storm_series[1] = sound_level
+#     return storm_series, dur
 
+# ### Storm Series Converter
+def bay_converter(storms, substep):
+    # storms will be the sound data, so storm_series[1]
+    new_ss = []
+    num_new_vals = substep - 1  # number of values we are adding between existing values
+    for s in range(len(storms)-1):
+        new_ss.append(storms[s])  # add the starting value back in
+        inc = (storms[s+1]-storms[s])/substep  # increment for the substeps
+        for a in range(num_new_vals):
+            new_ss.append(storms[s]+(a+1)*inc)
+            # example, we want to do a substep of 3, so we are adding 2 new values
+            # if our original storm series is [0, 0.15], then the increment will be 0.05
+            # we will add 0 into the new storm series, then 0+1*0.05 = 0.05
+            # then 0+2*0.05 = 0.1
+            # the next iteration will start with 0.15, and that will be appended as well
+    new_ss.append(storms[-1])  # make sure to include our last value
+    return new_ss
 
 # ### Dune Erosion
 def dune_erosion(dune_length, berm_el, dune_domain, dune_crest, bayhigh):
@@ -101,7 +118,7 @@ def dune_erosion(dune_length, berm_el, dune_domain, dune_crest, bayhigh):
 
 
 # ### Calculate Slopes
-def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_step, slopes_array, m_shoreface):
+def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_step, slopes_array, beachface):
     """
     :param d: incremental width (row)
     :param domain_width: width of the input domain
@@ -109,7 +126,7 @@ def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_ste
     :param domain_length: length of the input domain
     :param time_step: time step of the storm
     :param slopes_array: array storing the S2 slopes
-    :param m_shoreface: slope of the shoreface
+    :param m_beachface: slope of the beachface
     :return: S1, S2, S3, slopes_array
     """
     # ### Calculate Slopes
@@ -131,19 +148,19 @@ def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_ste
             S3 = np.nan_to_num(S3)
         else:
             S3 = 0
-    # if at the last row, apply the same slope as the shoreface slope
+    # if at the last row, apply the same slope as the beachface slope
     else:
         if col > 0:
-            S1 = m_shoreface / (math.sqrt(2))
+            S1 = beachface / (math.sqrt(2))
             S1 = np.nan_to_num(S1)
         else:
             S1 = 0
 
-        S2 = m_shoreface
+        S2 = beachface
         S2 = np.nan_to_num(S2)
 
         if col < (domain_length - 1):  # i at the end length means there are no cols to the right
-            S3 = m_shoreface / (math.sqrt(2))
+            S3 = beachface / (math.sqrt(2))
             S3 = np.nan_to_num(S3)
         else:
             S3 = 0
@@ -349,9 +366,13 @@ def outwasher(b3d, storm_series, runID):
         # ### Individual Storm Impacts
         for n in range(numstorm):
             # setting up the storm series for substep of 2
-            if substep == 2:
-                storm_series, dur = storm_converter(storm_series)  # this has been written specifically for this storm
-                # series to double its length. It would need to be edited for a storm series of a different length
+            if substep != 1:
+                updated_bay_levels = bay_converter(storm_series[1], substep=2)
+                dur = len(updated_bay_levels)
+                storm_series[1] = updated_bay_levels
+                storm_series[2] = dur
+                # this has been updated to hopefully be used on any storm series for any substep
+
             else:
                 dur = storm_series[2]  # [hr] duration of the storm
 
@@ -364,29 +385,29 @@ def outwasher(b3d, storm_series, runID):
             # ### Set Domain
             if n == 0:  # we only need to initialize the domain for the first storm because we want the effects of
                 # storm 1 to stay through the remaining storms
-                # we added a beach (and "shoreface") to the domain with a width of 7 dam based on general beach widths
+                # we added a beach (and "beachface") to the domain with a width of 7 dam based on general beach widths
                 beach_domain = np.ones([7, length]) * beach_elev  # [dam MHW] 7 rows
-                shoreface_domain = np.zeros([6, length])
+                beachface_domain = np.zeros([6, length])
                 # we actually want the beach to have a slope, but keep the first few rows the berm elevation
                 # we give the beach slope to be 0.004 m = 0.0004 dam
                 m_beach = 0.0004
                 for b in range(len(beach_domain)):
                     if b >= 3:
                         beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
-                m_shoreface = beach_domain[-1, 0] / len(shoreface_domain)  # positive (downhill)
-                for s in range(len(shoreface_domain)):
+                m_beachface = beach_domain[-1, 0] / len(beachface_domain)  # positive (downhill)
+                for s in range(len(beachface_domain)):
                     if s == 0:
-                        shoreface_domain[s, :] = beach_domain[-1, 0] - m_shoreface  # slope of shoreface
+                        beachface_domain[s, :] = beach_domain[-1, 0] - m_beachface  # slope of beachface
                     else:
-                        shoreface_domain[s, :] = shoreface_domain[s - 1, :] - m_shoreface
+                        beachface_domain[s, :] = beachface_domain[s - 1, :] - m_beachface
                 # the dune domain is being taken from B3D, but has 2 rows with length rows, so it needs to be transposed
                 # I believe each row starts off exactly the same, but now I am not sure
                 dune_domain_full = np.transpose(dune_domain) + berm_el
-                # the full domain of outwasher starts with the interior domain, then the dune, beach, and shoreface
+                # the full domain of outwasher starts with the interior domain, then the dune, beach, and beachface
                 full_domain = np.append(interior_domain, dune_domain_full, 0)  # [dam MHW]
                 full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
-                full_domain = np.append(full_domain, shoreface_domain, 0)
-                # full_domain[0, :, :] = np.vstack([interior_domain, dune_domain_full, beach_domain, shoreface_domain])
+                full_domain = np.append(full_domain, beachface_domain, 0)
+                # full_domain[0, :, :] = np.vstack([interior_domain, dune_domain_full, beach_domain, beachface_domain])
                 np.save(newpath + "full_domain", full_domain)
 
                 # plot the initial full domain before sediment movement
@@ -546,7 +567,7 @@ def outwasher(b3d, storm_series, runID):
                                 Q0 = Discharge[TS, d, i]  # (dam^3/hr)
                                 # ### Calculate Slopes
                                 S1, S2, S3, slopes_array = calculate_slopes(d, i, width, Elevation, length, TS,
-                                                                            slopes_array, m_shoreface)
+                                                                            slopes_array, m_beachface)
                                 # ### Calculate Discharge To Downflow Neighbors
                                 # do we want water only routed through dune gaps?
                                 # Discharge[TS, int_width, D_not_ow] = 0  # (dam^3/hr)
@@ -709,9 +730,9 @@ def outwasher(b3d, storm_series, runID):
             ax4.set_xlabel("barrier width from ocean to bay (dam)")
             ax4.set_ylabel("average alongshore elevation (dam)")
             # ax4.set_title("Cross shore elevation profile for col 21\n "
-            #               "shoreface slope = {0}, back barrier slope = {1}".format(round(m_shoreface, 3), round(Si, 3)))
+            #               "beachface slope = {0}, back barrier slope = {1}".format(round(m_beachface, 3), round(Si, 3)))
             ax4.set_title("Average cross shore elevation profile\n "
-                          "shoreface slope = {0}, back barrier slope = {1}".format(round(m_shoreface, 3), round(Si, 3)))
+                          "beachface slope = {0}, back barrier slope = {1}".format(round(m_beachface, 3), round(Si, 3)))
             ax4.legend()
             plt.show()
             # plt.savefig(newpath + "cross_shore_21")
