@@ -438,7 +438,7 @@ class Outwasher:
                     ax1 = fig1.add_subplot(111)
                     mat = ax1.matshow(
                         full_domain,
-                        origin="upper",
+                        # origin="upper",
                         cmap="Greens",
                         vmin=0, vmax=0.25,
                     )
@@ -446,6 +446,7 @@ class Outwasher:
                     ax1.set_title("Initial Elevation $(dam)$")
                     ax1.set_ylabel("barrier width (dam)")
                     ax1.set_xlabel("barrier length (dam)")
+                    plt.gca().xaxis.tick_bottom()
                     plt.savefig(self._newpath + "0_domain")
                     plt.show()
 
@@ -773,13 +774,14 @@ class Outwasher:
                 ax3 = fig3.add_subplot(111)
                 mat2 = ax3.matshow(
                     full_domain[:, :],
-                    origin="upper",
+                    # origin="upper",
                     cmap="Greens",
                     # vmin=-0.2, vmax=0.4,
                 )
                 ax3.set_xlabel('barrier length (dam)')
                 ax3.set_ylabel('barrier width (dam)')
                 ax3.set_title("Elevation after storm {0} $(dam)$".format(n + 1))
+                plt.gca().xaxis.tick_bottom()
                 fig3.colorbar(mat2)
                 plt.savefig(self._newpath + "{0}_domain".format(n + 1))
 
@@ -1234,6 +1236,9 @@ class Outwasher:
 
 # --------------------------------------------running outwasher---------------------------------------------------------
 # importing Chris' bay data
+
+# ### start of the actual code
+
 with open(r"C:\Users\Lexi\Documents\Research\Outwasher\chris stuff\sound_data.txt", newline='') as csvfile:
     sound_data = list(csv.reader(csvfile))[0]
 sound_data = [float(s) / 10 - 0.054 for s in sound_data]  # [dam MHW] Chris' sound elevations were in m MSL,
@@ -1251,8 +1256,8 @@ sound_data[0] = 0
 # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
 storm_series = [1, sound_data, len(sound_data)]
 path = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/"
-runID = "test"
-# runID = "dynamic_discharge_AVG_FACTOR15_Kie-3"
+# runID = "test"
+runID = "dynamic_discharge_AVG_FACTOR15_Kie-3_substep4"
 # the number in runID is 0.__
 # ss in runID stands for storm series
 # syndunes = synthetic dunes
@@ -1263,7 +1268,7 @@ b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_pa
 b3d.update()
 b3d.update_dune_domain()
 # from cascade.outwasher_reorganized import Outwasher
-outwash = Outwasher(b3d, runID, path, substep=2, Cx=10, Ki=7.5E-3,)
+outwash = Outwasher(b3d, runID, path, substep=4, Cx=10, Ki=7.5E-3,)
 discharge, elev_change, domain, qs_lost, slopes2, dictionary, qs2, avg_initial_cross, storm_elev, sedout, sedin, domain_array \
     = outwash.update(storm_series)
 
@@ -1272,13 +1277,14 @@ fig5 = plt.figure()
 ax5 = fig5.add_subplot(111)
 mat5 = ax5.matshow(
     domain_change,
-    origin="upper",
-    cmap="Greens",
-    # vmin=-0.2, vmax=0.2,
+    # origin="upper",
+    cmap="seismic",
+    vmin=-0.2, vmax=0.2,
 )
 ax5.set_xlabel('barrier length (dam)')
 ax5.set_ylabel('barrier width (dam)')
 ax5.set_title("Elevation Change")
+plt.gca().xaxis.tick_bottom()
 fig5.colorbar(mat5)
 plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/elev_change_domain")
 
@@ -1339,8 +1345,9 @@ def plot_ElevAnimation(elev, directory, TMAX):
         elevFig1 = plt.figure(figsize=(15, 7))
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
-            # AnimateDomain, origin="upper", cmap="jet_r", vmin=0, vmax=0.5,
-            AnimateDomain, origin="upper", cmap="seismic",
+            AnimateDomain,
+            # origin="upper",
+            cmap="seismic",
             # vmin=-0.000002, vmax=0.000002
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
@@ -1382,7 +1389,9 @@ def plot_DischargeAnimation(dis, directory, TMAX):
         elevFig1 = plt.figure(figsize=(15, 7))
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
-            AnimateDomain, origin="upper", cmap="jet_r",
+            AnimateDomain,
+            # origin="upper",
+            cmap="jet_r",
             # vmin=0, vmax=20,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
@@ -1424,7 +1433,9 @@ def plot_SlopeAnimation(slope, directory, TMAX):
         elevFig1 = plt.figure(figsize=(15, 7))
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
-            AnimateDomain, origin="upper", cmap="jet_r",
+            AnimateDomain,
+            # origin="upper",
+            # cmap="jet_r",
             # vmin=-0.1, vmax=0.1,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
@@ -1467,7 +1478,9 @@ def plot_Qs2Animation(qs2, directory, TMAX):
         elevFig1 = plt.figure(figsize=(15, 7))
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
-            AnimateDomain, origin="upper", cmap="jet_r",
+            AnimateDomain,
+            # origin="upper",
+            cmap="jet_r",
             # vmin=-0.005, vmax=0.05,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
@@ -1510,7 +1523,9 @@ def plot_SedOutAnimation(sedout, directory, TMAX):
         elevFig1 = plt.figure(figsize=(15, 7))
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
-            AnimateDomain, origin="upper", cmap="jet_r",
+            AnimateDomain,
+            # origin="upper",
+            cmap="jet_r",
             # vmin=min_v, vmax=max_v,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
@@ -1553,7 +1568,9 @@ def plot_SedInAnimation(sedin, directory, TMAX):
         elevFig1 = plt.figure(figsize=(15, 7))
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
-            AnimateDomain, origin="upper", cmap="jet_r",
+            AnimateDomain,
+            # origin="upper",
+            cmap="jet_r",
             # vmin=min_v, vmax=max_v,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
