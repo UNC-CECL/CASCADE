@@ -378,8 +378,7 @@ class Outwasher:
     def update(
             self,
             storm_series,
-            b3d,
-            sed_dep_cell=1
+            b3d
     ):
         ### Set other variables
         q_min = b3d._Qs_min  # [m^3 / hr]? Minimum discharge needed for sediment transport (0.001)
@@ -698,10 +697,8 @@ class Outwasher:
                                     if d != width - 1:  # uncomment, tab next two ifs
                                         if i > 0:
                                             SedFluxIn[TS, d + 1, i - 1] += Qs1
-                                        if d >= int_width:
-                                            SedFluxIn[TS, d + sed_dep_cell, i] += Qs2
-                                        else:
-                                            SedFluxIn[TS, d + 1, i] += Qs2
+
+                                        SedFluxIn[TS, d + 1, i] += Qs2
 
                                         if i < (self._length - 1):
                                             SedFluxIn[TS, d + 1, i + 1] += Qs3
