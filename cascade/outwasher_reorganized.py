@@ -127,7 +127,7 @@ def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_ste
     :param domain_length: length of the input domain
     :param time_step: time step of the storm
     :param slopes_array: array storing the S2 slopes
-    :param m_beachface: slope of the beachface
+    :param beachface: slope of the beachface
     :return: S1, S2, S3, slopes_array
     """
     # ### Calculate Slopes
@@ -378,7 +378,8 @@ class Outwasher:
     def update(
             self,
             storm_series,
-            b3d
+            b3d,
+            sed_dep_cell=1
     ):
         ### Set other variables
         q_min = b3d._Qs_min  # [m^3 / hr]? Minimum discharge needed for sediment transport (0.001)
@@ -695,8 +696,10 @@ class Outwasher:
                                     if d != width - 1:  # uncomment, tab next two ifs
                                         if i > 0:
                                             SedFluxIn[TS, d + 1, i - 1] += Qs1
-
-                                        SedFluxIn[TS, d + 1, i] += Qs2
+                                        if d >= int_width:
+                                            SedFluxIn[TS, d + sed_dep_cell, i] += Qs2
+                                        else:
+                                            SedFluxIn[TS, d + 1, i] += Qs2
 
                                         if i < (self._length - 1):
                                             SedFluxIn[TS, d + 1, i + 1] += Qs3
