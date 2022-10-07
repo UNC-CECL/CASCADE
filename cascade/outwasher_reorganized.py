@@ -469,6 +469,7 @@ class Outwasher:
                 Elevation = np.zeros([duration, width, self._length])
                 # elevation at the first time step is set to the full domain
                 Elevation[0, :, :] = full_domain
+                OW_TS = []
 
                 # Initialize Memory Storage Arrays
                 Discharge = np.zeros([duration, width, self._length])
@@ -525,6 +526,7 @@ class Outwasher:
                         # sediment suspension stuff?
                     else:
                         # ### DUNES
+                        OW_TS.append(TS)
                         int_width = np.shape(self._interior_domain)[0]
                         max_dune, self._dune_domain, self._dune_crest, gaps, D_not_ow = dune_erosion(b3d,
                             self._length, self._berm_el, self._dune_domain, self._dune_crest,
@@ -792,7 +794,7 @@ class Outwasher:
         # Record storm data
         b3d._StormCount.append(numstorm)
         return Discharge, elev_change_array, full_domain, qs_lost_total, slopes_array, rexcess_dict, qs2_array, \
-               storm_series, SedFluxOut, SedFluxIn, domain_array
+               storm_series, SedFluxOut, SedFluxIn, domain_array, OW_TS
 
 #def outwasher(b3d, storm_series, runID):
     # make a folder where all graphs will be saved for that run
@@ -1335,14 +1337,14 @@ class Outwasher:
 
 
 # -------------------------------------------elevation gif--------------------------------------------------------------
-def plot_ElevAnimation(elev, directory, TMAX):
+def plot_ElevAnimation(elev, directory, start, stop):
     os.chdir(directory)
     newpath = "Elevations/"
     if not os.path.exists(newpath):
         os.makedirs(newpath)
     os.chdir(newpath)
 
-    for t in range(TMAX):
+    for t in range(start, stop+1):
         AnimateDomain = elev[t]
 
         # Plot and save
@@ -1369,7 +1371,7 @@ def plot_ElevAnimation(elev, directory, TMAX):
 
     frames = []
 
-    for filenum in range(TMAX):
+    for filenum in range(start, stop+1):
         filename = "elev_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
     imageio.mimsave("elev.gif", frames, fps=2)
@@ -1378,7 +1380,7 @@ def plot_ElevAnimation(elev, directory, TMAX):
 
 
 # -------------------------------------------discharge gif--------------------------------------------------------------
-def plot_DischargeAnimation(dis, directory, TMAX):
+def plot_DischargeAnimation(dis, directory, start, stop):
     os.chdir(directory)
     newpath = "Discharges/"
     if not os.path.exists(newpath):
@@ -1386,7 +1388,7 @@ def plot_DischargeAnimation(dis, directory, TMAX):
     os.chdir(newpath)
 
     # for t in range(TMAX - 1):
-    for t in range(TMAX):
+    for t in range(start, stop+1):
         AnimateDomain = dis[t]
 
         # Plot and save
@@ -1413,7 +1415,7 @@ def plot_DischargeAnimation(dis, directory, TMAX):
 
     frames = []
 
-    for filenum in range(TMAX):
+    for filenum in range(start, stop+1):
         filename = "dis_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
     imageio.mimsave("dis.gif", frames, fps=2)
@@ -1423,14 +1425,14 @@ def plot_DischargeAnimation(dis, directory, TMAX):
 
 
 # ---------------------------------------------------slope gif----------------------------------------------------------
-def plot_SlopeAnimation(slope, directory, TMAX):
+def plot_SlopeAnimation(slope, directory, start, stop):
     os.chdir(directory)
     newpath = "Slopes/"
     if not os.path.exists(newpath):
         os.makedirs(newpath)
     os.chdir(newpath)
 
-    for t in range(TMAX):
+    for t in range(start, stop+1):
         AnimateDomain = slope[t]
 
         # Plot and save
@@ -1457,7 +1459,7 @@ def plot_SlopeAnimation(slope, directory, TMAX):
 
     frames = []
 
-    for filenum in range(TMAX):
+    for filenum in range(start, stop+1):
         filename = "slope_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
     imageio.mimsave("dis.gif", frames, fps=2)
@@ -1467,7 +1469,7 @@ def plot_SlopeAnimation(slope, directory, TMAX):
 
 
 # -------------------------------------------qs2 gif--------------------------------------------------------------------
-def plot_Qs2Animation(qs2, directory, TMAX):
+def plot_Qs2Animation(qs2, directory, start, stop):
     os.chdir(directory)
     newpath = "Qs2/"
     if not os.path.exists(newpath):
@@ -1475,7 +1477,7 @@ def plot_Qs2Animation(qs2, directory, TMAX):
     os.chdir(newpath)
 
     # for t in range(TMAX - 1):
-    for t in range(TMAX):
+    for t in range(start, stop+1):
         AnimateDomain = qs2[t]
 
         # Plot and save
@@ -1502,7 +1504,7 @@ def plot_Qs2Animation(qs2, directory, TMAX):
 
     frames = []
 
-    for filenum in range(TMAX):
+    for filenum in range(start, stop+1):
         filename = "qs2_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
     imageio.mimsave("dis.gif", frames, fps=2)
@@ -1512,7 +1514,7 @@ def plot_Qs2Animation(qs2, directory, TMAX):
 
 
 # ---------------------- Sed out array ----------------------------------------------------------------------------------
-def plot_SedOutAnimation(sedout, directory, TMAX):
+def plot_SedOutAnimation(sedout, directory, start, stop):
     os.chdir(directory)
     newpath = "SedOut/"
     if not os.path.exists(newpath):
@@ -1520,7 +1522,7 @@ def plot_SedOutAnimation(sedout, directory, TMAX):
     os.chdir(newpath)
 
     # for t in range(TMAX - 1):
-    for t in range(TMAX):
+    for t in range(start, stop+1):
         AnimateDomain = sedout[t]
 
         # Plot and save
@@ -1547,7 +1549,7 @@ def plot_SedOutAnimation(sedout, directory, TMAX):
 
     frames = []
 
-    for filenum in range(TMAX):
+    for filenum in range(start, stop+1):
         filename = "sedout_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
     imageio.mimsave("dis.gif", frames, fps=2)
@@ -1557,7 +1559,7 @@ def plot_SedOutAnimation(sedout, directory, TMAX):
 
 
 # ---------------------- Sed out array ----------------------------------------------------------------------------------
-def plot_SedInAnimation(sedin, directory, TMAX):
+def plot_SedInAnimation(sedin, directory, start, stop):
     os.chdir(directory)
     newpath = "SedIn/"
     if not os.path.exists(newpath):
@@ -1565,7 +1567,7 @@ def plot_SedInAnimation(sedin, directory, TMAX):
     os.chdir(newpath)
 
     # for t in range(TMAX - 1):
-    for t in range(TMAX):
+    for t in range(start, stop+1):
         AnimateDomain = sedin[t]
 
         # Plot and save
@@ -1592,7 +1594,7 @@ def plot_SedInAnimation(sedin, directory, TMAX):
 
     frames = []
 
-    for filenum in range(TMAX):
+    for filenum in range(start, stop+1):
         filename = "sedin_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
     imageio.mimsave("dis.gif", frames, fps=2)
