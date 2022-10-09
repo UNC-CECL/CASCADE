@@ -378,7 +378,8 @@ class Outwasher:
     def update(
             self,
             storm_series,
-            b3d
+            b3d,
+            m_beach
     ):
         ### Set other variables
         q_min = b3d._Qs_min  # [m^3 / hr]? Minimum discharge needed for sediment transport (0.001)
@@ -414,7 +415,7 @@ class Outwasher:
                     beachface_domain = np.zeros([6, self._length])
                     # we actually want the beach to have a slope, but keep the first few rows the berm elevation
                     # we give the beach slope to be 0.004 m = 0.0004 dam
-                    m_beach = 0.0004
+                    # m_beach = 0.0004
                     for b in range(len(beach_domain)):
                         if b >= 3:
                             beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
