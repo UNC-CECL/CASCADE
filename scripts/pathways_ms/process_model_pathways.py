@@ -15,7 +15,7 @@ Copyright (C) 2022 Katherine Anarde
 import numpy as np
 import os
 
-from scripts import plotters as cascade_plt
+from cascade.tools import plotters as cascade_plt
 from scripts.pathways_ms import plotters_pathways as pathways_plt
 
 from itertools import compress
@@ -2688,6 +2688,11 @@ def nourishments():
                             "comm, 1 m/yr",
                         ],
                     )
+
+        # thresholds_supplement
+        pathways_plt.supp_nourishment_thresholds(
+            directory="/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/scripts/pathways_ms/data/Nags_Head"
+        )
 
 def initial_topos():
 

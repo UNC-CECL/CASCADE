@@ -17,6 +17,9 @@ import numpy as np
 import os
 import imageio
 import math
+import pandas as pd
+import glob
+import seaborn
 
 # # ###############################################################################
 # # plotters for ms
@@ -428,6 +431,44 @@ def supp_sensitivity_road_abandonment(
     axs2[2].legend(["10%", "20%", "30%", "40%", "50%"])
     plt.tight_layout()
 
+
+def supp_nourishment_thresholds(
+    directory,  # directory containing csv files
+):
+    #directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/scripts/pathways_ms/data/Nags_Head"
+
+    # use glob to get all the csv files
+    csv_files = glob.glob(os.path.join(directory, "*.csv"))
+    beach_width = []
+    dune_height = []
+    labels = [1997, 1998, 1999, 2000, 2001, 2004, 2005, 2008, 2009, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]
+
+    # loop over the list of csv files
+    for f in csv_files:
+        # read the csv file
+        df = pd.read_csv(f)
+        bw = df["Beach Width"]
+        filter = bw < 9000  # there seem to be some erroneus values
+        beach_width.append(bw[filter])
+        dune_height.append(df["Dune Height"])
+
+    # plot beach width
+    fig1 = plt.subplots(1, 1, figsize=(10, 3))
+    ax = seaborn.boxplot(data=beach_width, flierprops={"marker": "o"})
+    ax.set_xticklabels(labels)
+    ax.set(ylabel="beach width (m)")
+    ax.set(xlabel="time (yr)")
+
+    # plot dune height
+    fig2 = plt.subplots(1, 1, figsize=(10, 3))
+    ax = seaborn.boxplot(data=dune_height, flierprops={"marker": "o"})
+    ax.set_xticklabels(labels)
+    ax.set(ylabel="dune height (m)")
+    ax.set(xlabel="time (yr)")
+
+    return fig1, fig2
+
+
 def fig3_initialCNH_topo(
     cascade_model_list,  # must be from a nourishment simulation (i.e., have a beach width)
 ):
@@ -640,6 +681,7 @@ def fig4_slr_sensitivity(
     axs2[3].set(ylabel="overwash flux (m$^3$/m)")
     axs2[3].set_ylim([-3, 225])
     plt.tight_layout()
+
 
 def fig2_10kyr_timeseries(datadir, tmax, name_prefix, vertical_line_1, vertical_line_2):
 
