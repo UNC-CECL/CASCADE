@@ -1,19 +1,30 @@
-"""BRIE Coupler
+"""Couple BRIE with Barrier3D
 
-This module couples barrier3d with brie via alongshore sediment transport
+If specified by the user, CASCADE can initialize a series of Barrier3D models [1]. This module connects individual
+Barrier3D models in the alongshore through a diffusive wave-driven sediment transport model housed within BRIE [2].
+Functionally, this coupling of Barrier3D’s cross-shore morphodynamics with BRIE’s alongshore transport model requires
+1) initializing both models with equivalent barrier geometry and environmental parameters, 2) separating dune migration
+within Barrier3D from the other model processes in the one-year time step (main CASCADE code), and 3) turning off all
+other model processes within BRIE (i.e., cross-shore barrier model and tidal inlet model).
 
 References
 ----------
 
-.. [1] Jaap H. Nienhuis, Jorge Lorenzo Trueba; Simulating barrier island response to sea level rise with the barrier
+.. [1] Reeves, I. R. B., Moore, L. J., Murray, A. B., Anarde, K. A., & Goldstein, E. B. (2021).
+    Dune dynamics drive discontinuous barrier retreat. Geophysical Research Letters, 48(13), e2021GL092958.
+    https://doi.org/10.1029/2021GL092958
+.. [2] Jaap H. Nienhuis, Jorge Lorenzo Trueba; Simulating barrier island response to sea level rise with the barrier
     island and inlet environment (BRIE) model v1.0 ; Geosci. Model Dev., 12, 4013–4030, 2019;
     https://doi.org/10.5194/gmd-12-4013-2019
 
 
 Notes
 ---------
+In future versions, the coupled model will incorporate tidal inlet dynamics within BRIE (i.e., the inlet model will be
+turned on).
 
 """
+
 import numpy as np
 import math
 
@@ -32,7 +43,8 @@ def set_yaml(var_name, new_vals, file_name):
 
 def batchB3D(subB3D):
 
-    """parallelize update function for each B3D sub-grid (spread overwash routing algorithms to different cores)"""
+    """Parallelize the update function for each B3D domain so the (computationally expensive) flow routing algorithm
+     operates on separate cores -- i.e., overwash doesn't need to be simulated sequentially for each domain"""
 
     subB3D.update()
 
@@ -59,15 +71,16 @@ def initialize_equal(
     beta=0.04
 ):
     """
-    for each B3D subgrid, set the initial shoreface geometry equal to what is set in brie (some random
-    # perturbations); all other B3D variables are set equal
+    For each B3D domain, modify the default parameters to match the shoreface configuration in BRIE, which depends on
+    local wave and sediment characteristics as well as the offshore wave climate (Hallermeier, 1980;
+    Ferguson & Church, 2004; Lorenzo-Trueba & Ashton, 2014; Ortiz & Ashton, 2016).
 
-    :param datadir: the directory containing the Barrier3D parameter file
+    :param datadir: directory containing the Barrier3D parameter file
     :param brie: the brie class
     :param slr_constant: specifies whether SLR will be constant
-    :param rmin: the minimum dune growth rate
-    :param rmax: the maximum dune growth rate
-    :param background_erosion: Rate of shoreline retreat attributed to gradients in alongshore transport
+    :param rmin: the minimum dune growth rate [unitless]
+    :param rmax: the maximum dune growth rate [unitless]
+    :param background_erosion: rate of shoreline retreat attributed to gradients in alongshore transport
     :param parameter_file: name of the Barrier3D parameter file
     :param storm_file: name of the Barrier3D storms file
     :param dune_file: name of the Barrier3D dunes file
@@ -85,61 +98,67 @@ def initialize_equal(
         fid = datadir + parameter_file
         parameter_file_prefix = parameter_file.replace("-parameters.yaml", "")
 
-        # update yaml file (these are the only variables that I'm like to change from default)
+        # update variables in Barrier3D yaml file (the remaining variables are set to default) ---------
+        # barrier and shoreface geometry, simulation parameters
         set_yaml("Shrub_ON", 0, fid)  # make sure that shrubs are turned off
         set_yaml(
             "TMAX", brie.nt, fid
-        )  # [yrs] Duration of simulation (if brie._dt = 1 yr, set to ._nt)
+        )  # [yrs] duration of simulation (if brie._dt = 1 yr, set to ._nt)
         set_yaml(
             "BarrierLength", brie._dy, fid
-        )  # [m] Static length of island segment (comprised of 10x10 cells)
+        )  # [m] dtatic length of island segment (comprised of 10x10 cells)
         set_yaml(
             "DShoreface", brie.d_sf, fid
-        )  # [m] Depth of shoreface (set to brie depth, function of wave height)
+        )  # [m] depth of shoreface (set to brie depth, function of wave height)
         set_yaml(
             "LShoreface", float(brie.x_s[iB3D] - brie.x_t[iB3D]), fid
-        )  # [m] Length of shoreface (calculate from brie variables, shoreline - shoreface toe)
+        )  # [m] length of shoreface (calculate from brie variables, shoreline - shoreface toe)
         set_yaml(
             "ShorefaceToe", float(brie.x_t[iB3D]), fid
-        )  # [m] Start location of shoreface toe
+        )  # [m] start location of shoreface toe
+        set_yaml(
+            "k_sf", float(brie.k_sf), fid
+        )  # [m^3/m/y] shoreface flux rate constant (function of wave parameters from brie)
+        set_yaml(
+            "s_sf_eq", float(brie.s_sf_eq), fid
+        )  # equilibrium shoreface slope (function of wave and sediment parameters from brie)
         set_yaml(
             "BayDepth", brie._bb_depth, fid
-        )  # [m] Depth of bay behind island segment (set to brie bay depth)
+        )  # [m] depth of bay behind island segment (set to brie bay depth)
+
+        # sea level rise variables
+        set_yaml(
+            "RSLR_Constant", slr_constant, fid
+        )  # relative sea-level rise rate will be constant, otherwise logistic growth function used for acc SLR
+        set_yaml(
+            "RSLR_const", brie._slr[0], fid
+        )  # [m/y] relative sea-level rise rate; initialized in brie, but saved as time series, so we use index 0
+
+        # dune variables
         set_yaml(
             "DuneParamStart", True, fid
-        )  # Dune height will come from external file
-        # Rate of shoreline retreat attributed to gradients in alongshore transport; (-) = erosion, (+) = acc [m / y]
+        )  # dune height will come from external file
+        set_yaml(
+            "GrowthParamStart", False, fid
+        )  # dune growth parameter WILL NOT come from external file
+        if np.size(rmin) > 1:
+            set_yaml(
+                "rmin", rmin[iB3D], fid
+            )  # minimum growth rate for logistic dune growth
+        else:
+            set_yaml("rmin", rmin, fid)  # minimum growth rate for logistic dune growth
+        if np.size(rmax) > 1:
+            set_yaml(
+                "rmax", rmax[iB3D], fid
+            )  # maximum growth rate for logistic dune growth
+        else:
+            set_yaml("rmax", rmax, fid)  # Maximum growth rate for logistic dune growth
+
+        # rate of shoreline retreat attributed to gradients in alongshore transport; (-) = erosion, (+) = acc [m / y]
         if np.size(background_erosion) > 1:
             set_yaml("Rat", background_erosion[iB3D], fid)
         else:
             set_yaml("Rat", background_erosion, fid)
-        set_yaml(
-            "RSLR_Constant", slr_constant, fid
-        )  # Relative sea-level rise rate will be constant, otherwise logistic growth function used
-        set_yaml(
-            "RSLR_const", brie._slr[0], fid
-        )  # [m / y] Relative sea-level rise rate; initialized in brie, but saved as time series, so we use index 0
-        set_yaml(
-            "k_sf", float(brie.k_sf), fid
-        )  # [m^3 / m / y] Shoreface flux rate constant (function of wave parameters from brie)
-        set_yaml(
-            "s_sf_eq", float(brie.s_sf_eq), fid
-        )  # Equilibrium shoreface slope (function of wave and sediment parameters from brie)
-        set_yaml(
-            "GrowthParamStart", False, fid
-        )  # Dune growth parameter WILL NOT come from external file
-        if np.size(rmin) > 1:
-            set_yaml(
-                "rmin", rmin[iB3D], fid
-            )  # Minimum growth rate for logistic dune growth
-        else:
-            set_yaml("rmin", rmin, fid)  # Minimum growth rate for logistic dune growth
-        if np.size(rmax) > 1:
-            set_yaml(
-                "rmax", rmax[iB3D], fid
-            )  # Maximum growth rate for logistic dune growth
-        else:
-            set_yaml("rmax", rmax, fid)  # Maximum growth rate for logistic dune growth
 
         # external file names used for initialization
         set_yaml("storm_file", storm_file, fid)
@@ -153,17 +172,17 @@ def initialize_equal(
             set_yaml("elevation_file", elevation_file, fid)
 
         # the following parameters CANNOT be changed or else the MSSM storm list & storm time series needs to be remade
-        set_yaml("MHW", MHW, fid)  # [m] Elevation of Mean High Water
-        set_yaml("beta", beta, fid)  # Beach slope for runup calculations
+        set_yaml("MHW", MHW, fid)  # [m] elevation of Mean High Water
+        set_yaml("beta", beta, fid)  # beach slope for runup calculations
         set_yaml(
             "BermEl", float(brie._h_b_crit), fid
-        )  # [m] Static elevation of berm
+        )  # [m] static elevation of berm
 
         barrier3d.append(Barrier3d.from_yaml(datadir, prefix=parameter_file_prefix))
 
-        # now update brie back barrier position, height of barrier, and SLRR time series with that from B3D so all
-        # the initial conditions are the same! The rate of slr can only be constant in brie, whereas it can accelerate
-        # in barrier3d, so by replacing the slr time series in brie we enable new functionality!
+        # now update the BRIE barrier geometry and SLR variables from Barrier3D so that all the initial conditions are
+        # the same! The rate of SLR can only be constant in brie, whereas it can accelerate in Barrier3D, so by
+        # replacing the SLR time series in BRIE with that from Barrier3D we enable new functionality!
         # NOTE: interestingly here we don't need to have a "setter" in the property class for x_b, h_b, etc. because
         # we are only replacing certain indices but added for completeness
         brie.x_b[iB3D] = (
@@ -183,14 +202,15 @@ def initialize_equal(
 
 
 class BrieCoupler:
-    """Couple brie and barrier3d
+    """Couple Barrier3D with BRIE
 
     Examples
     --------
     # >>> from cascade.brie_coupler import BrieCoupler
     # >>> brie_coupler = BrieCoupler()
-    # >>> brie_coupler.update_inlets(brie, barrier3d)
-    # >>> brie_coupler.update_ast(brie, barrier3d)
+    # >>> brie_coupler.update_ast(barrier3d, x_t_dt, x_s_dt, h_b_dt)
+    # ------- do human stuff in cascade -------
+    # >>> brie_coupler.update_brie_for_human_modifications(x_t, x_s, x_b, h_b, s_sf)
     """
 
     def __init__(
@@ -207,18 +227,18 @@ class BrieCoupler:
         ny=1,
         nt=200,
     ):
-        """The AlongshoreCoupler module.
+        """
 
         Parameters
         ----------
         name: string, optional
             Name of simulation
         wave_height: float, optional
-            Mean offshore significant wave height [m].
+            Mean offshore significant wave height [m]
         wave_period: float, optional
             Mean wave period [s].
         wave_asymmetry: float, optional
-            Fraction of waves approaching from left (looking onshore).
+            Fraction of waves approaching from left (looking onshore)
         wave_angle_high_fraction: float, optional
             Fraction of waves approaching from angles higher than 45 degrees.
         sea_level_rise_rate: float, optional
@@ -230,9 +250,9 @@ class BrieCoupler:
         nt: int, optional
             Number of time steps.
         s_background: float, optional
-            background slope (for shoreface toe position, back-barrier & inlet calculations)
+            Background slope (for shoreface toe position, back-barrier & inlet calculations)
         h_b_crit: float, optional
-            critical barrier height for overwash [m], used also to calc shoreline diffusivity; we set = to B3D berm ele
+            Critical barrier height for overwash [m], used also to calc shoreline diffusivity; we set = to B3D berm ele
 
         """
         ###############################################################################
@@ -327,8 +347,8 @@ class BrieCoupler:
                 ]
 
     def update_brie_for_human_modifications(self, x_t, x_s, x_b, h_b, s_sf):
-        """Reset all of the save variables and current variables for the barrier geometry to account for human
-        modifications in the cascade modules
+        """Reset all the save variables and current variables for barrier geometry to account for human modifications
+        in the cascade modules
 
         Parameters
         ----------
@@ -362,6 +382,6 @@ class BrieCoupler:
     def brie(self):
         return self._brie
 
-    # def update_tidal_inlets(self):
+    # def update_tidal_inlets(self): -- in development --
     #     # just a reminder that when we couple inlets, we're going to have to reconcile the sloping back-barrier
     #     # (vs not sloping in barrier3d) for basin_width -- maybe replace basin_width in the coupled version?

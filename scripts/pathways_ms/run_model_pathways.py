@@ -10,7 +10,7 @@
 Copyright (C) 2022 Katherine Anarde
 ----------------------------------------------------"""
 
-# please following the instructions at https://github.com/UNC-CECL/CASCADE for installing CASCADE
+# please follow the instructions at https://github.com/UNC-CECL/CASCADE for installing CASCADE
 
 import numpy as np
 import os

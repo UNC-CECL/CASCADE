@@ -1,20 +1,22 @@
-"""C-HOM Coupler
+"""Couple CHOM with Barrier3D (in development)
 
-This module couples Barrier3d with C-HOM to simulate community dynamics. Longer explanation with references go here.
-User specifies the number of communities to be described by the Barrier3D model instances, and the initialization of the
-coupler determines the (sequential) Barrier3d indices that are associated with each C-HOM model instance. For example,
-if 6 Barrier3D models are used to describe the alongshore domain (each 500 m long), and 2 communities are specified,
-then indices [0,1,2] and [3,4,5] are associated with each community. Barrier3D variables for coupling with CHOM are
-then averaged for each set of indices before passing to CHOM.
+This module couples Barrier3D with the Coastal Home Ownership Model (CHOM), an agent-based model for coastal real estate
+markets.
 
 References
 ----------
 
-.. [1] Zachary Williams citation
+.. [1]
 
 
 Notes
 ---------
+The user specifies the number of communities to be described by the Barrier3D models, and the initialization of
+the coupler determines the (sequential) Barrier3d indices that are associated with each CHOM model instance. For
+example, if 6 Barrier3D models are used to describe the alongshore domain (each 500 m long), and 2 communities are
+specified, then indices [0,1,2] and [3,4,5] are associated with each community. Barrier3D variables for coupling with
+CHOM are then averaged for each set of indices before passing to CHOM.
+
 
 """
 import numpy as np

@@ -1,4 +1,4 @@
-# process model results -- including plotting and statistics -- for
+# process model results -- including plotting and calculating statistics -- for
 #
 # ~******* CASCADE ********~
 #
@@ -10,7 +10,7 @@
 Copyright (C) 2022 Katherine Anarde
 ----------------------------------------------------"""
 
-# please following the instructions at https://github.com/UNC-CECL/CASCADE for installing CASCADE
+# please follow the instructions at https://github.com/UNC-CECL/CASCADE for installing CASCADE
 
 import numpy as np
 import os

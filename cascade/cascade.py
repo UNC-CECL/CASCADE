@@ -28,7 +28,7 @@ class Cascade:
         roadway_management_module,
         beach_nourishment_module,
     ):
-        """Configures lists to account for multiple barrier3d domains from single input variables; used in modules"""
+        """Configures lists to account for multiple Barrier3D domains from single input variables; used in modules"""
 
         if np.size(dune_design_elevation) > 1:
             self._dune_design_elevation = dune_design_elevation  # list of floats option
@@ -82,7 +82,7 @@ class Cascade:
         original_growth_param,
         iB3D,
     ):
-        """Reset dune growth paramerters to original values after human abandonment; dune heights must drop below Dmax
+        """Reset dune growth parameters to original values after human abandonment; dune heights must drop below Dmax
         before reset"""
 
         time_index = self._barrier3d[iB3D].time_index
@@ -100,12 +100,18 @@ class Cascade:
         self,
         datadir,
         name="default",
-        # elevation_file="b3d_pt45_8750yrs_low-elevations.csv",  # associated with average dune growth rate of 0.45
-        elevation_file="barrier3d-default-elevation.npy",  # associated with average dune growth rate of 0.45
+        elevation_file="barrier3d-default-elevation.npy",
         dune_file="barrier3d-default-dunes.npy",
         parameter_file="barrier3d-parameters.yaml",
         storm_file="barrier3d-default-storms.npy",  # same as "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy"
-        wave_height=1,
+        num_cores=1,
+        roadway_management_module=False,
+        alongshore_transport_module=True,
+        beach_nourishment_module=True,
+        community_economics_module=False,
+        alongshore_section_count=6,
+        time_step_count=200,
+        wave_height=1, # ---------- for BRIE and Barrier3D --------------- #
         wave_period=7,
         wave_asymmetry=0.8,
         wave_angle_high_fraction=0.2,
@@ -117,27 +123,20 @@ class Cascade:
         sea_level_rise_rate=0.004,
         sea_level_rise_constant=True,
         background_erosion=0.0,
-        alongshore_section_count=6,
-        time_step_count=200,
-        min_dune_growth_rate=0.25,  # average is 0.45, a low dune growth rate
+        min_dune_growth_rate=0.25,
         max_dune_growth_rate=0.65,
-        num_cores=1,
-        roadway_management_module=False,
-        alongshore_transport_module=True,
-        beach_nourishment_module=True,
-        community_economics_module=False,
-        road_ele=1.7,  # ---------- the rest of these variables are for the human dynamics modules --------------- #
+        road_ele=1.7,  # ---------- roadway management --------------- #
         road_width=30,
         road_setback=30,
         dune_design_elevation=3.7,
         dune_minimum_elevation=2.2,
         trigger_dune_knockdown=False,
         group_roadway_abandonment=None,
-        nourishment_interval=None,
+        nourishment_interval=None, # ---------- beach and dune ("community") management --------------- #
         nourishment_volume=300.0,
         overwash_filter=40,
         overwash_to_dune=10,
-        number_of_communities=1,
+        number_of_communities=1, # ---------- coastal real estate markets (in development) --------------- #
         sand_cost=10,
         taxratio_oceanfront=1,
         external_housing_market_value_oceanfront=6e5,
@@ -153,8 +152,9 @@ class Cascade:
 
         CASCADE: The CoAStal Community-lAnDscape Evolution model
 
-        Couples Barrier3D (Reeves et al., 2019), the Barrier Inlet Model (BRIE; Nienhuis and Lorenzo Trueba, 2019), &
-        C-HOM (Williams et al., in prep)
+        Couples Barrier3D (Reeves et al., 2019) with the Barrier Inlet Environment Model (BRIE; Nienhuis and Lorenzo
+        Trueba, 2019) & the Coastal Home Ownership Model (CHOM), an agent-based model for coastal real estate markets
+        (Williams et al., in prep)
 
         Parameters
         ----------
@@ -163,57 +163,57 @@ class Cascade:
         name: string, optional
             Name of simulation
         wave_height: float, optional
-            Mean offshore significant wave height [m].
+            Deepwater significant wave height [m]
         wave_period: float, optional
-            Mean wave period [s].
+            Peak wave period [s]
         wave_asymmetry: float, optional
-            Fraction of waves approaching from left (looking onshore).
+            Fraction of waves approaching from left (looking onshore)
         wave_angle_high_fraction: float, optional
-            Fraction of waves approaching from angles higher than 45 degrees.
+            Fraction of waves approaching from angles higher than 45 degrees
         bay_depth: float, optional
             Depth of back-barrier bay [m]
         s_background: float, optional
-            background slope (for shoreface toe position, back-barrier & inlet calculations)
+            Background slope (for shoreface toe position, back-barrier & inlet calculations)
         berm_elevation: float, optional
-            static elevation of berm [m], needs to be 1.9 m if using the default storm list, time series
+            Static elevation of berm [m]; needs to be 1.9 m if using the default storm list, time series
         MHW: float, optional
-            elevation of mean high water [m NAVD88], needs to be 0.46 m NAVD88 if using default storm list, time series
+            Elevation of mean high water [m NAVD88]; needs to be 0.46 m NAVD88 if using default storm list, time series
         beta: float, optional
-            beach slope for runup calculations, needs to be 0.04 if using the default storm list, time series
+            Beach slope for runup calculations, needs to be 0.04 if using the default storm list, time series
         sea_level_rise_rate: float, optional
-            Rate of sea_level rise [m/yr].
+            Rate of sea_level rise (SLR) [m/yr]
         sea_level_rise_constant: boolean, optional
-            Rate of sea_level rise is constant if True, otherwise a logistic growth function is used.
+            If True, linear SLR; otherwise a logistic growth function is used for acc SLR (max 200 year simulations)
         background_erosion: float,
             Rate of shoreline retreat attributed to gradients in alongshore transport; (-) = erosion, (+) = acc [m / y]
         alongshore_section_count: int, optional
-            Number of alongshore sections.
+            Number of alongshore sections
         time_step_count: int, optional
-            Number of time steps.
+            Number of time steps
         min_dune_growth_rate: float or list of floats, optional
-            Minimum dune growth rate [unitless, for Houser growth rate formulation]
+            Minimum dune growth rate [unitless]; for Houser et al., (2015) growth rate formulation
         max_dune_growth_rate: float or list of floats, optional
-            Maximum dune growth rate [unitless, for Houser growth rate formulation]
+            Maximum dune growth rate [unitless]; for Houser et al., (2015) growth rate formulation
         num_cores: int, optional
-            Number of (parallel) processing cores to be used
+            Number of (parallel) processing cores to be used; helpful to have >1 for multiple Barrier3D segments
         roadway_management_module: boolean or list of booleans, optional
             If True, use roadway management module (overwash removal, road relocation, dune management)
-        alongshore_transport_module: boolean, optional
-            If True, couple Barrier3D with BRIE to use diffusive model for AST
-        community_economics_module: boolean, optional
-            If True, couple with CHOM, a community decision making model; requires nourishment module
+        alongshore_transport_module: boolean or list of booleans, optional
+            If True, couple Barrier3D with BRIE to use diffusive alongshore sediment transport module
+        community_economics_module: boolean or list of booleans, optional
+            If True, couple with CHOM, a community decision making model; requires nourishment module (in development)
         beach_nourishment_module: boolean or list of booleans, optional
             If True, use nourishment module (nourish shoreface, rebuild dunes)
         road_ele: float or list of floats, optional
-            Elevation of the initial roadway [m MHW] and after road relocations
+            Elevation of the initial roadway [m MHW]
         road_width: int or list of int, optional
-            Width of initial roadway [m] and road relocations
+            Width of roadway [m]
         road_setback: int or list of int, optional
-            Setback of initial roadway from the inital dune line [m] and after road relocations
+            Setback of roadway from the inital dune line and after road relocations [m]
         dune_design_elevation: float or list of floats, optional
-            Elevation to which dune is initially rebuilt to [m MHW] and after road relocations
+            Elevation to which dune is initially rebuilt [m MHW]
         dune_minimum_elevation: float or list of floats, optional
-            Elevation threshold which triggers rebuilding of dune [m MHW]
+            Elevation threshold which triggers rebuilding of dune for roadway management [m MHW]
         trigger_dune_knockdown: boolean, optional
             Resets the dune elevation to the initial condition (time zero) after roadway abandonment
         group_roadway_abandonment: list of ints greater than zero, optional
@@ -225,16 +225,16 @@ class Cascade:
         overwash_filter: float or list of floats,
             Percent overwash removed from barrier interior [40-90% (residential-->commercial) from Rogers et al., 2015]
         overwash_to_dune: float or list of floats,
-            Percent overwash removed from barrier interior to dunes [%, overwash_filter+overwash_to_dune <=100]
+            Percent overwash removed from barrier interior to dunes [%]; overwash_filter+overwash_to_dune <=100
         number_of_communities: int, optional
-            Number of communities (CHOM model instances) described by the alongshore section count (Barrier3D grids)
+            Number of communities (CHOM model instances) described by the alongshore section count (Barrier3D models)
         sand_cost: int, optional
             Unit cost of sand $/m^3
         taxratio_oceanfront: float, optional
             The proportion of tax burden placed on oceanfront row for beach management
-        external_housing_market_value_oceanfront:  , optional
+        external_housing_market_value_oceanfront: float, optional
             Value of comparable housing option outside the coastal system
-        external_housing_market_value_nonoceanfront:  , optional
+        external_housing_market_value_nonoceanfront: float, optional
             Value of comparable housing option outside the coastal system
         fixed_cost_beach_nourishment: int, optional
             Fixed cost of 1 nourishment project
@@ -273,33 +273,37 @@ class Cascade:
         self._dune_file = dune_file
         self._parameter_file = parameter_file
         self._number_of_communities = number_of_communities
-        self._b3d_break = 0  # true if barrier in barrier3d height or width drowns -- if this happens, entire sim stops
+        self._b3d_break = 0
         self._road_break = [
             0
-        ] * self._ny  # true if roadway drowns from bay reaching roadway
+        ] * self._ny
         self._community_break = [
             0
-        ] * self._ny  # true if community breaks due to minimum barrier width
-        self._nourish_now = [0] * self._ny  # triggers nourishment
-        self._rebuild_dune_now = [0] * self._ny  # triggers dune rebuilding
-        self._initial_beach_width = [0] * self._ny
+        ] * self._ny
+        self._nourish_now = [0] * self._ny  # user can trigger nourishment in time loop
+        self._rebuild_dune_now = [0] * self._ny  # user can trigger the dune to be rebuilt in time loop
         self._trigger_dune_knockdown = (
-            trigger_dune_knockdown  # triggers knocking down dune
+            trigger_dune_knockdown  # user can force the dunes to be knocked down in time loop
         )
-        self._group_roadway_abandonment = group_roadway_abandonment  # groups roadways
+        self._initial_beach_width = [0] * self._ny
+        self._group_roadway_abandonment = group_roadway_abandonment
 
+        # initialization errors
         if (berm_elevation != 1.9 or MHW !=0.46 or beta !=0.04) and storm_file=="barrier3d-default-storms.npy":
-            # if the berm elevation, MHW, or beach slope is changed, the defualt MSSM storm list and storm time series
-            # is no longer valid
             raise CascadeError(
                 "The default storms only apply for a berm elevation=1.9 m NAVD88, MHW=0.46 m NAVD88 & beach slope=0.04."
             )
+        if (sea_level_rise_constant is False) and (time_step_count > 200):
+            raise CascadeError(
+                "The sigmoidal accelerated SLR formulation used in this model by Rohling et al., (2013) should not be"
+                "extended beyond 200 years"
+            )
 
         ###############################################################################
-        # initialize brie and barrier3d model classes
+        # initialize BRIE and Barrier3D model classes
         ###############################################################################
 
-        # initialize brie: used for initial shoreface calculations, AST (optional), tidal inlets (eventually)
+        # initialize BRIE: used for initial shoreface calculations, AST (optional), tidal inlets (eventually)
         self._brie_coupler = BrieCoupler(
             name=name,
             wave_height=self._wave_height,
@@ -313,7 +317,7 @@ class Cascade:
             nt=self._nt,
         )
 
-        # initialize barrier3d models (number set by brie ny above) and make both brie and barrier3d classes equivalent
+        # initialize Barrier3D models (number set by brie_ny) and make both "brie" and "barrier3d" classes equivalent
         self._barrier3d = initialize_equal(
             datadir=datadir,
             brie=self._brie_coupler._brie,
@@ -357,7 +361,7 @@ class Cascade:
                 self._chom_coupler = ChomCoupler(
                     barrier3d=self._barrier3d,
                     total_time=self._nt,
-                    alongshore_length_b3d=self._brie_coupler._brie._dy,  # this is the barrier3d default, 500 m
+                    alongshore_length_b3d=self._brie_coupler._brie._dy,  # this is the Barrier3D default, 500 m
                     dune_design_elevation=self._dune_design_elevation,
                     number_of_communities=self._number_of_communities,
                     name=self._filename,
@@ -374,10 +378,9 @@ class Cascade:
                 )  # contains the CHOM model instances, one per community
 
         # initialize RoadwayManager and BeachDuneManager modules
-        # (always, just in case we want to add a road or start nourishing during the simulation)
+        # (always initialize just in case we want to add a road or start nourishing during the simulation)
         self._roadways = []
         self._nourishments = []
-        self._bay_side_breaches = []
 
         for iB3D in range(self._ny):
             self._roadways.append(
@@ -408,7 +411,7 @@ class Cascade:
                 )
             )
 
-        # use the initial beach width as a check on the barrier3d user input for mulitple domains; the beach width
+        # use the initial beach width as a check on the Barrier3D user input for mulitple domains; the beach width
         # must be the same for all domains because there is only one storm file, which is made for a set berm
         # elevation and beach slope
         if all(
@@ -509,19 +512,18 @@ class Cascade:
     ###############################################################################
 
     def update(self):
-        """Update Cascade by a single time step"""
+        """Update cascade by a single time step"""
 
-        # Check for drowning here from the last time step in brie. Note that this will stay false if brie is not used
-        # for AST (i.e., a B3D only run).
+        # check for drowning from the last time step in brie. Note that this will stay false if brie is not used for AST
         if self._brie_coupler._brie.drown == True:
             return
 
-        # Advance B3D by one time step; NOTE: B3D initializes at time_index = 1 and then updates the time_index
-        # after update_dune_domain
+        # advance B3D by one time step (B3D initializes at time_index = 1 and then updates the time_index after
+        # update_dune_domain). Set n_jobs=1 for no parallel processing (debugging) and -2 for all but 1 CPU;
+        # note that joblib uses a threshold on the size of arrays passed to the workers
         batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
             delayed(batchB3D)(self._barrier3d[iB3D]) for iB3D in range(self._ny)
-        )  # set n_jobs=1 for no parallel processing (debugging) and -2 for all but 1 CPU; note that joblib uses a
-        # threshold on the size of arrays passed to the workers; we use 'None' to disable memory mapping of large arrays
+        )
 
         # reshape output from parallel processing and convert from tuple to list
         x_t_dt, x_s_dt, h_b_dt, b3d = zip(*batch_output)
@@ -530,8 +532,7 @@ class Cascade:
         h_b_dt = list(h_b_dt)
         self._barrier3d = list(b3d)
 
-        # use brie to connect B3D subgrids with alongshore sediment transport; otherwise, just update (erode/prograde)
-        # dune domain
+        # use brie to connect B3D models with AST; otherwise, just update (erode/prograde) dune domain
         if self._alongshore_transport_module:
             self._brie_coupler.update_ast(
                 self._barrier3d, x_t_dt, x_s_dt, h_b_dt
@@ -552,7 +553,7 @@ class Cascade:
 
         # ~~~~~~~~~~~~~~ RoadwayManager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Remove overwash from roadway after each model year, place on the dune, rebuild dunes if
-        # fall below height threshold, and check if dunes should grow naturally
+        # fall below height threshold, and check if dunes should grow naturally.
         for iB3D in range(self._ny):
 
             if self._roadway_management_module[iB3D]:
@@ -630,8 +631,8 @@ class Cascade:
                     + (self._initial_beach_width[iB3D] / 10)  # dam
                 )
 
-        # ~~~~~~~~~~~~~~ CHOM coupler ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        # provide agents in the Coastal Home Ownership Model (CHOM) with variables describing the physical environment
+        # ~~~~~~~~~~~~~~ CHOM coupler (in development) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Provide agents in the Coastal Home Ownership Model (CHOM) with variables describing the physical environment
         # -- including barrier elevation, beach width, dune height, shoreline erosion rate -- who then decide if it is
         # a nourishment year, the corresponding nourishment volume, and whether or not the dune should be rebuilt
         if self._community_economics_module:
@@ -716,14 +717,14 @@ class Cascade:
                 )
 
         ###############################################################################
-        # update brie for any human modifications to the barrier
+        # update BRIE for any human modifications to the barrier
         ###############################################################################
         if self._alongshore_transport_module:
             [x_t, x_s, x_b, h_b, s_sf] = [np.zeros(self._ny) for _ in range(5)]
 
             for iB3D in range(self._ny):
                 # make lists of the barrier geometry variables that have been changed (and needed to calculate shoreline
-                # diffusivity in brie)
+                # diffusivity in BRIE)
                 x_t[iB3D] = self._barrier3d[iB3D].x_t_TS[-1]
                 x_s[iB3D] = self._barrier3d[iB3D].x_s_TS[-1]
                 x_b[iB3D] = self._barrier3d[iB3D].x_b_TS[-1]
