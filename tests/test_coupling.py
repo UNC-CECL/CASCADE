@@ -33,7 +33,7 @@ def run_cascade_no_human_dynamics():
         roadway_management_module=False,
         alongshore_transport_module=False,
         beach_nourishment_module=False,
-        community_dynamics_module=False,  # no community dynamics
+        community_economics_module=False,  # no community dynamics
     )
 
     for time_step in range(NT - 1):
@@ -67,7 +67,7 @@ def initialize_cascade_no_human_dynamics_ast():
         roadway_management_module=False,
         alongshore_transport_module=True,
         beach_nourishment_module=False,
-        community_dynamics_module=False,
+        community_economics_module=False,
     )
 
     return cascade
