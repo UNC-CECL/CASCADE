@@ -125,7 +125,7 @@ class Cascade:
         roadway_management_module=False,
         alongshore_transport_module=True,
         beach_nourishment_module=True,
-        community_dynamics_module=False,
+        community_economics_module=False,
         road_ele=1.7,  # ---------- the rest of these variables are for the human dynamics modules --------------- #
         road_width=30,
         road_setback=30,
@@ -200,7 +200,7 @@ class Cascade:
             If True, use roadway management module (overwash removal, road relocation, dune management)
         alongshore_transport_module: boolean, optional
             If True, couple Barrier3D with BRIE to use diffusive model for AST
-        community_dynamics_module: boolean, optional
+        community_economics_module: boolean, optional
             If True, couple with CHOM, a community decision making model; requires nourishment module
         beach_nourishment_module: boolean or list of booleans, optional
             If True, use nourishment module (nourish shoreface, rebuild dunes)
@@ -266,7 +266,7 @@ class Cascade:
         self._background_erosion = background_erosion
         self._num_cores = num_cores
         self._alongshore_transport_module = alongshore_transport_module
-        self._community_dynamics_module = community_dynamics_module
+        self._community_economics_module = community_economics_module
         self._filename = name
         self._storm_file = storm_file
         self._elevation_file = elevation_file
@@ -348,7 +348,7 @@ class Cascade:
             beach_nourishment_module=beach_nourishment_module,
         )
 
-        if self._community_dynamics_module:
+        if self._community_economics_module:
             if not any(self._beach_nourishment_module):
                 raise CascadeError(
                     "Beach nourishment module must be set to `TRUE` to couple with CHOM"
@@ -634,7 +634,7 @@ class Cascade:
         # provide agents in the Coastal Home Ownership Model (CHOM) with variables describing the physical environment
         # -- including barrier elevation, beach width, dune height, shoreline erosion rate -- who then decide if it is
         # a nourishment year, the corresponding nourishment volume, and whether or not the dune should be rebuilt
-        if self._community_dynamics_module:
+        if self._community_economics_module:
 
             for iB3D in range(self._ny):
 
