@@ -411,27 +411,33 @@ class Outwasher:
                 if n == 0:  # we only need to initialize the domain for the first storm because we want the effects of
                     # storm 1 to stay through the remaining storms
                     # we added a beach (and "beachface") to the domain with a width of 7 dam based on general beach widths
-                    beach_domain = np.ones([7, self._length]) * self._beach_elev  # [dam MHW] 7 rows
-                    beachface_domain = np.zeros([6, self._length])
-                    # we actually want the beach to have a slope, but keep the first few rows the berm elevation
-                    # we give the beach slope to be 0.004 m = 0.0004 dam
+                    # beach_domain = np.ones([7, self._length]) * self._beach_elev  # [dam MHW] 7 rows
+                    # beachface_domain = np.zeros([6, self._length])
+                    # # we actually want the beach to have a slope, but keep the first few rows the berm elevation
+                    # # we give the beach slope to be 0.004 m = 0.0004 dam
                     # m_beach = 0.0004
+                    # for b in range(len(beach_domain)):
+                    #     if b >= 3:
+                    #         beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
+                    #     beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
+                    # self._m_beachface = beach_domain[-1, 0] / len(beachface_domain)  # positive (downhill)
+                    # for s in range(len(beachface_domain)):
+                    #     if s == 0:
+                    #         beachface_domain[s, :] = beach_domain[-1, 0] - self._m_beachface  # slope of beachface
+                    #     else:
+                    #         beachface_domain[s, :] = beachface_domain[s - 1, :] - self._m_beachface
+                    # ### ------------edited for just a beach with same slope as beachface------------------------------
+                    beach_domain = np.ones([12, self._length]) * self._beach_elev  # [dam MHW] 7 rows
                     for b in range(len(beach_domain)):
-                        if b >= 3:
-                            beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
-                    self._m_beachface = beach_domain[-1, 0] / len(beachface_domain)  # positive (downhill)
-                    for s in range(len(beachface_domain)):
-                        if s == 0:
-                            beachface_domain[s, :] = beach_domain[-1, 0] - self._m_beachface  # slope of beachface
-                        else:
-                            beachface_domain[s, :] = beachface_domain[s - 1, :] - self._m_beachface
+                        beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
+
                     # the dune domain is being taken from B3D, but has 2 rows with length rows, so it needs to be transposed
                     # I believe each row starts off exactly the same, but now I am not sure
                     dune_domain_full = np.transpose(self._dune_domain) + self._berm_el
                     # the full domain of outwasher starts with the interior domain, then the dune, beach, and beachface
                     full_domain = np.append(self._interior_domain, dune_domain_full, 0)  # [dam MHW]
                     full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
-                    full_domain = np.append(full_domain, beachface_domain, 0)
+                    # full_domain = np.append(full_domain, beachface_domain, 0)
                     # full_domain[0, :, :] = np.vstack([interior_domain, dune_domain_full, beach_domain, beachface_domain])
                     np.save(self._newpath + "full_domain", full_domain)
 
@@ -599,7 +605,7 @@ class Outwasher:
                                     # ### Calculate Slopes
                                     S1, S2, S3, slopes_array = calculate_slopes(d, i, width,
                                                                                 Elevation, self._length, TS,
-                                                                                slopes_array, self._m_beachface)
+                                                                                slopes_array, m_beach)
                                     # ### Calculate Discharge To Downflow Neighbors
                                     # do we want water only routed through dune gaps?
                                     # Discharge[TS, int_width, D_not_ow] = 0  # (dam^3/hr)
@@ -926,7 +932,7 @@ def plot_ElevAnimation(elev, directory, start, stop):
 
     frames = []
 
-    for filenum in range(start, stop+1):
+    for filenum in range(start, stop):
         filename = "elev_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
     imageio.mimsave("elev.gif", frames, fps=2)
@@ -970,7 +976,7 @@ def plot_DischargeAnimation(dis, directory, start, stop):
 
     frames = []
 
-    for filenum in range(start, stop+1):
+    for filenum in range(start, stop):
         filename = "dis_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
     imageio.mimsave("dis.gif", frames, fps=2)
@@ -1014,7 +1020,7 @@ def plot_SlopeAnimation(slope, directory, start, stop):
 
     frames = []
 
-    for filenum in range(start, stop+1):
+    for filenum in range(start, stop):
         filename = "slope_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
     imageio.mimsave("dis.gif", frames, fps=2)
@@ -1059,7 +1065,7 @@ def plot_Qs2Animation(qs2, directory, start, stop):
 
     frames = []
 
-    for filenum in range(start, stop+1):
+    for filenum in range(start, stop):
         filename = "qs2_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
     imageio.mimsave("dis.gif", frames, fps=2)
@@ -1104,7 +1110,7 @@ def plot_SedOutAnimation(sedout, directory, start, stop):
 
     frames = []
 
-    for filenum in range(start, stop+1):
+    for filenum in range(start, stop):
         filename = "sedout_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
     imageio.mimsave("dis.gif", frames, fps=2)
@@ -1149,7 +1155,7 @@ def plot_SedInAnimation(sedin, directory, start, stop):
 
     frames = []
 
-    for filenum in range(start, stop+1):
+    for filenum in range(start, stop):
         filename = "sedin_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
     imageio.mimsave("dis.gif", frames, fps=2)
