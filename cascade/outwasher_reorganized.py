@@ -411,25 +411,20 @@ class Outwasher:
                 if n == 0:  # we only need to initialize the domain for the first storm because we want the effects of
                     # storm 1 to stay through the remaining storms
                     # we added a beach (and "beachface") to the domain with a width of 7 dam based on general beach widths
-                    # beach_domain = np.ones([7, self._length]) * self._beach_elev  # [dam MHW] 7 rows
-                    # beachface_domain = np.zeros([6, self._length])
-                    # # we actually want the beach to have a slope, but keep the first few rows the berm elevation
-                    # # we give the beach slope to be 0.004 m = 0.0004 dam
-                    # m_beach = 0.0004
-                    # for b in range(len(beach_domain)):
-                    #     if b >= 3:
-                    #         beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
-                    #     beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
-                    # self._m_beachface = beach_domain[-1, 0] / len(beachface_domain)  # positive (downhill)
-                    # for s in range(len(beachface_domain)):
-                    #     if s == 0:
-                    #         beachface_domain[s, :] = beach_domain[-1, 0] - self._m_beachface  # slope of beachface
-                    #     else:
-                    #         beachface_domain[s, :] = beachface_domain[s - 1, :] - self._m_beachface
-                    # ### ------------edited for just a beach with same slope as beachface------------------------------
-                    beach_domain = np.ones([12, self._length]) * self._beach_elev  # [dam MHW] 7 rows
+                    beach_domain = np.ones([7, self._length]) * self._beach_elev  # [dam MHW] 7 rows
+                    beachface_domain = np.zeros([6, self._length])
+                    # we actually want the beach to have a slope, but keep the first few rows the berm elevation
+                    # we give the beach slope to be 0.004 m = 0.0004 dam
+                    m_beach = 0.0004
                     for b in range(len(beach_domain)):
-                        beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
+                        if b >= 3:
+                            beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
+                    self._m_beachface = beach_domain[-1, 0] / len(beachface_domain)  # positive (downhill)
+                    for s in range(len(beachface_domain)):
+                        if s == 0:
+                            beachface_domain[s, :] = beach_domain[-1, 0] - self._m_beachface  # slope of beachface
+                        else:
+                            beachface_domain[s, :] = beachface_domain[s - 1, :] - self._m_beachface
 
                     # the dune domain is being taken from B3D, but has 2 rows with length rows, so it needs to be transposed
                     # I believe each row starts off exactly the same, but now I am not sure
@@ -437,9 +432,17 @@ class Outwasher:
                     # the full domain of outwasher starts with the interior domain, then the dune, beach, and beachface
                     full_domain = np.append(self._interior_domain, dune_domain_full, 0)  # [dam MHW]
                     full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
-                    # full_domain = np.append(full_domain, beachface_domain, 0)
-                    # full_domain[0, :, :] = np.vstack([interior_domain, dune_domain_full, beach_domain, beachface_domain])
+                    full_domain = np.append(full_domain, beachface_domain, 0)
                     np.save(self._newpath + "full_domain", full_domain)
+
+                    # ### ------------edited for just a beach with same slope as beachface------------------------------
+                    # beach_domain = np.ones([12, self._length]) * self._beach_elev  # [dam MHW] 7 rows
+                    # for b in range(len(beach_domain)):
+                    #     beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
+                    # dune_domain_full = np.transpose(self._dune_domain) + self._berm_el
+                    # full_domain = np.append(self._interior_domain, dune_domain_full, 0)  # [dam MHW]
+                    # full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
+                    # np.save(self._newpath + "full_domain", full_domain)
 
                     # plot the initial full domain before sediment movement
                     # fig1 = plt.figure()
@@ -605,7 +608,7 @@ class Outwasher:
                                     # ### Calculate Slopes
                                     S1, S2, S3, slopes_array = calculate_slopes(d, i, width,
                                                                                 Elevation, self._length, TS,
-                                                                                slopes_array, m_beach)
+                                                                                slopes_array, self._m_beachface)
                                     # ### Calculate Discharge To Downflow Neighbors
                                     # do we want water only routed through dune gaps?
                                     # Discharge[TS, int_width, D_not_ow] = 0  # (dam^3/hr)
