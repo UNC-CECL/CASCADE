@@ -58,64 +58,64 @@ def bay_converter(storms, substep):
     return new_ss
 
 # ### Dune Erosion
-def dune_erosion(b3d, dune_length, berm_el, dune_domain, dune_crest, bayhigh):
-    dune_width = b3d._DuneWidth
-    dune_restart = b3d._DuneRestart  # currently set to 0.0075
-    max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
-    Hd_avgTS = b3d._Hd_AverageTS
-    dune_crest[dune_crest < dune_restart] = dune_restart
-    Hd_avgTS.append(np.mean(dune_crest))  # Store average pre-storm dune-height for time step
-    c1 = b3d._C1
-    c2 = b3d._C2
-    # Hd_loss_TS = b3d._Hd_Loss_TS
-    # Rhigh = max(storm_series[1])  # Highest elevation of the landward margin of runup. Just using max of storm series
-    DuneChange = np.zeros([dune_length, dune_width])  # Vector storing dune height change for this storm
-    # dune = dune_crest+berm_el
-
-    # Find overwashed dunes and gaps
-    # currently changed Rhigh to current bay depth in the storm series
-    dune_elev = dune_crest + berm_el
-    Dow = [index for index, value in enumerate(dune_elev) if value < bayhigh]  # bayhigh used to be Rhigh
-    D_not_ow = [index for index, value in enumerate(dune_elev) if value > bayhigh]
-    gaps = b3d.DuneGaps(dune_crest, Dow, berm_el, bayhigh)
-    # Finds location and Rexcess of continuous gaps in dune ridge
-    for ow_cell in range(len(Dow)):  # Loop through each overwashed dune cell
-        for w in range(dune_width):
-            # Calculate dune elevation loss
-            ## dune domain at time index 1 is all zeros
-            Rnorm = bayhigh / (dune_domain[Dow[ow_cell], w] + berm_el)  # bayhigh relative to pre-storm dune elevation
-            Dloss = Rnorm / (c1 + (Rnorm * (Rnorm - c2)))  # Amount of dune crest elevation change normalized by
-            # pre-storm dune elevation (increased by a factor by LVB) not sure this is still true
-            # (i.e. a percent change), from Goldstein and Moore (2016)
-            # Set new dune height
-            InitDElev = (dune_domain[Dow[ow_cell], w] + berm_el)
-            NewDElev = InitDElev * (1 - Dloss)  # Calculate new dune elevation from storm lowering
-            if NewDElev < berm_el:
-                NewDElev = berm_el
-            dune_domain[Dow[ow_cell], w] = (NewDElev[0] - berm_el[0])  # Convert elevation to height above berm
-            # LVB got rid of parenthesis around NewDElev - berm_el
-            row = Dow[ow_cell]
-            DuneChange[Dow[ow_cell], w] = InitDElev - NewDElev
-
-            # If dune is lowered to ~ zero, allow for chance of regrowth by raising dune height to 5 cm
-            if dune_domain[Dow[ow_cell], w] < dune_restart:
-                if dune_restart < max_dune:
-                    dune_domain[Dow[ow_cell], w] = dune_restart
-                else:
-                    dune_domain[Dow[ow_cell], w] = (max_dune)  # Restart height can't be greater than Dmax
-
-    # Dune Height Diffusion
-    # dune_domain = b3d.DiffuseDunes(dune_domain, 0)
-    # dune_domain[dune_domain < sea_level] = dune_restart
-    # # DuneLoss = np.sum(DuneChange) / length  # I think duneloss is only used for shoreline change
-    # # Hd_TSloss = (DuneChange.max(axis=1) / dur)  # Average height of dune loss for each substep during storm
-    # Hd_TSloss = (DuneChange.max(axis=1) / 1)  # Average height of dune loss for each substep during storm
-    # # I think we should change dur to 1 because this will change with each TS now
-    # # it was previously calculated one time and then each TS would have the same value
-    # # this is usually used to reduce dune height lineraly over the course of the storm
-    # # but I think it was super high, so I stopped using it
-    # Hd_loss_TS[0, :] = Hd_loss_TS[0, :] + DuneChange.max(axis=1)
-    return max_dune, dune_domain, dune_crest, gaps, D_not_ow
+# def dune_erosion(b3d, dune_length, berm_el, dune_domain, dune_crest, bayhigh):
+#     dune_width = b3d._DuneWidth
+#     dune_restart = b3d._DuneRestart  # currently set to 0.0075
+#     max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
+#     Hd_avgTS = b3d._Hd_AverageTS
+#     dune_crest[dune_crest < dune_restart] = dune_restart
+#     Hd_avgTS.append(np.mean(dune_crest))  # Store average pre-storm dune-height for time step
+#     c1 = b3d._C1
+#     c2 = b3d._C2
+#     # Hd_loss_TS = b3d._Hd_Loss_TS
+#     # Rhigh = max(storm_series[1])  # Highest elevation of the landward margin of runup. Just using max of storm series
+#     DuneChange = np.zeros([dune_length, dune_width])  # Vector storing dune height change for this storm
+#     # dune = dune_crest+berm_el
+#
+#     # Find overwashed dunes and gaps
+#     # currently changed Rhigh to current bay depth in the storm series
+#     dune_elev = dune_crest + berm_el
+#     Dow = [index for index, value in enumerate(dune_elev) if value < bayhigh]  # bayhigh used to be Rhigh
+#     D_not_ow = [index for index, value in enumerate(dune_elev) if value > bayhigh]
+#     gaps = b3d.DuneGaps(dune_crest, Dow, berm_el, bayhigh)
+#     # Finds location and Rexcess of continuous gaps in dune ridge
+#     # for ow_cell in range(len(Dow)):  # Loop through each overwashed dune cell
+#     #     for w in range(dune_width):
+#     #         # Calculate dune elevation loss
+#     #         ## dune domain at time index 1 is all zeros
+#     #         Rnorm = bayhigh / (dune_domain[Dow[ow_cell], w] + berm_el)  # bayhigh relative to pre-storm dune elevation
+#     #         Dloss = Rnorm / (c1 + (Rnorm * (Rnorm - c2)))  # Amount of dune crest elevation change normalized by
+#     #         # pre-storm dune elevation (increased by a factor by LVB) not sure this is still true
+#     #         # (i.e. a percent change), from Goldstein and Moore (2016)
+#     #         # Set new dune height
+#     #         InitDElev = (dune_domain[Dow[ow_cell], w] + berm_el)
+#     #         NewDElev = InitDElev * (1 - Dloss)  # Calculate new dune elevation from storm lowering
+#     #         if NewDElev < berm_el:
+#     #             NewDElev = berm_el
+#     #         dune_domain[Dow[ow_cell], w] = (NewDElev[0] - berm_el[0])  # Convert elevation to height above berm
+#     #         # LVB got rid of parenthesis around NewDElev - berm_el
+#     #         row = Dow[ow_cell]
+#     #         DuneChange[Dow[ow_cell], w] = InitDElev - NewDElev
+#     #
+#     #         # If dune is lowered to ~ zero, allow for chance of regrowth by raising dune height to 5 cm
+#     #         if dune_domain[Dow[ow_cell], w] < dune_restart:
+#     #             if dune_restart < max_dune:
+#     #                 dune_domain[Dow[ow_cell], w] = dune_restart
+#     #             else:
+#     #                 dune_domain[Dow[ow_cell], w] = (max_dune)  # Restart height can't be greater than Dmax
+#
+#     # Dune Height Diffusion
+#     # dune_domain = b3d.DiffuseDunes(dune_domain, 0)
+#     # dune_domain[dune_domain < sea_level] = dune_restart
+#     # # DuneLoss = np.sum(DuneChange) / length  # I think duneloss is only used for shoreline change
+#     # # Hd_TSloss = (DuneChange.max(axis=1) / dur)  # Average height of dune loss for each substep during storm
+#     # Hd_TSloss = (DuneChange.max(axis=1) / 1)  # Average height of dune loss for each substep during storm
+#     # # I think we should change dur to 1 because this will change with each TS now
+#     # # it was previously calculated one time and then each TS would have the same value
+#     # # this is usually used to reduce dune height lineraly over the course of the storm
+#     # # but I think it was super high, so I stopped using it
+#     # Hd_loss_TS[0, :] = Hd_loss_TS[0, :] + DuneChange.max(axis=1)
+#     return max_dune, dune_domain, dune_crest, gaps, D_not_ow
 
 
 # ### Calculate Slopes
@@ -127,7 +127,7 @@ def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_ste
     :param domain_length: length of the input domain
     :param time_step: time step of the storm
     :param slopes_array: array storing the S2 slopes
-    :param beachface: slope of the beachface
+    :param beachface: slope of the beachface, used to calc the last row slope, so this must be the beachface slope
     :return: S1, S2, S3, slopes_array
     """
     # ### Calculate Slopes
@@ -379,7 +379,7 @@ class Outwasher:
             self,
             storm_series,
             b3d,
-            m_beach
+            fudge_fac=1
     ):
         ### Set other variables
         q_min = b3d._Qs_min  # [m^3 / hr]? Minimum discharge needed for sediment transport (0.001)
@@ -526,7 +526,7 @@ class Outwasher:
                     print(TS)
                     # get dune crest out here first (dont remember what this means 9/16/2022)
                     bayhigh = storm_series[1][TS]  # [dam]
-                    dune_gap = np.min(self._dune_crest + self._berm_el)  # elevation of the dune gap
+                    dune_gap = np.min(self._dune_crest + self._berm_el)  # elevation of the lowest dune gap
                     # we only want discharge and sediment transport if the bay level is high enough to move through the dune
                     # gaps. If it is not, nothing happens.
                     if bayhigh <= dune_gap:
@@ -537,19 +537,28 @@ class Outwasher:
                         # ### DUNES
                         OW_TS.append(TS)
                         int_width = np.shape(self._interior_domain)[0]
-                        max_dune, self._dune_domain, self._dune_crest, gaps, D_not_ow = dune_erosion(b3d,
-                            self._length, self._berm_el, self._dune_domain, self._dune_crest,
-                            bayhigh)  # fines the overwashed dune segments, dune
+                        # max_dune, self._dune_domain, self._dune_crest, gaps, D_not_ow = dune_erosion(b3d,
+                        #     self._length, self._berm_el, self._dune_domain, self._dune_crest,
+                        #     bayhigh)  # fines the overwashed dune segments, dune
+
+                        # ### finding the OW cells --------------------------------------------------------------------
+                        dune_elev = self._dune_crest + self._berm_el
+                        Dow = [index for index, value in enumerate(dune_elev) if
+                               value < bayhigh]  # bayhigh used to be Rhigh
+                        # D_not_ow = [index for index, value in enumerate(dune_elev) if value > bayhigh]
+                        gaps = b3d.DuneGaps(self._dune_crest, Dow, self._berm_el, bayhigh)
+                        max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
+                        # ----------------------------------------------------------------------------------------------
                         # gaps, and lowers dunes (gaps only?) based on the excess water height
                         # returns the new dune domain values, so we need to update that in the full domain
-                        dune_domain_full = np.transpose(self._dune_domain) + self._berm_el
-                        full_domain[int_width, :] = dune_domain_full[0, :]
-                        full_domain[int_width + 1] = dune_domain_full[1, :]
-                        Elevation[TS, int_width, :] = dune_domain_full[0, :]
-                        Elevation[TS, int_width + 1, :] = dune_domain_full[1, :]
+                        # dune_domain_full = np.transpose(self._dune_domain) + self._berm_el
+                        # full_domain[int_width, :] = dune_domain_full[0, :]
+                        # full_domain[int_width + 1] = dune_domain_full[1, :]
+                        # Elevation[TS, int_width, :] = dune_domain_full[0, :]
+                        # Elevation[TS, int_width + 1, :] = dune_domain_full[1, :]
 
-                        dunes_prestorm = self._dune_crest
-                        dunes = dunes_prestorm + self._berm_el  # can be used later for reducing dune height with storm
+                        # dunes_prestorm = self._dune_crest
+                        # dunes = dunes_prestorm + self._berm_el  # can be used later for reducing dune height with storm
                         # Elevation[TS, int_width:(int_width+2), :] = dunes - \
                         #                               (Hd_TSloss / substep * TS)
                         # Reduce dune in height linearly over course of storm
@@ -564,7 +573,8 @@ class Outwasher:
                             rexcess_tot += Rexcess
                             # Calculate discharge through each dune cell
                             overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
-                            factor = 15
+                            # factor = 15
+                            factor = 1
                             overtop_flow = overtop_vel * Rexcess * 3600 * factor  # (dam^3/hr)
                             # Set discharge at dune gap
                             # Discharge[:, 0, start:stop] = overtop_flow  # (dam^3/hr) in B3D, no dunes so start at row 0
@@ -572,6 +582,8 @@ class Outwasher:
                             # (cells 0-29, but int_width = 30)
                             Discharge[TS, int_width, start:stop] = overtop_flow  # (dam^3/hr)
                             Discharge[TS, int_width + 1, start:stop] = overtop_flow  # (dam^3/hr)
+                            # print("discharge through gap:", overtop_flow)
+
                         # ----------------------------------------------------------------------------------------------
                         # 1. method of setting discharge through the interior: conservation
                         # we evenly distribute over each cell the total discharge through the dune gaps
@@ -582,11 +594,12 @@ class Outwasher:
                         # we take the known discharge through the dune gaps, and multiply it by a factor for initial
                         # discharge at the first row
                         # we will then ultimately overwrite the dune gap values
-                        # factor = 10
+                        # ff = fudge_fac
                         # avg_rexcess = rexcess_tot/len(gaps)
                         # overtop_vel = math.sqrt(2 * 9.8 * (avg_rexcess * 10)) / 10  # (dam/s)
                         # overtop_flow = overtop_vel * avg_rexcess * 3600  # (dam^3/hr)
-                        # Discharge[TS, 0, :] = overtop_flow*factor  # (dam^3/hr)
+                        # print("avg first row discharge", overtop_flow)
+                        # Discharge[TS, 0, :] = overtop_flow*ff  # (dam^3/hr)
                         # --------------------------------------------------------------------------------------------------
                         # 3. just setting the discharge arbitrarily at the first row
                         # Discharge[TS, 0, :] = 150
@@ -616,37 +629,52 @@ class Outwasher:
                                     # if Discharge[TS, d, i] == 0:
                                     #     Q0 = 0
 
-                                    # --------------------------------------------------------------------------------------
+                                    # ---------for all scenarios calc Qs------------------------------------------------
                                     Q1, Q2, Q3 = calculate_discharges(i, S1, S2, S3, Q0,
                                                                       self._nn, self._length, self._max_slope)
-                                    # if we are using scenario 1, we do not want to re-assign discharges for the back barrier
-                                    if d > int_width:
-                                        ### Update Discharge
-                                        # discharge is defined for the next row, so we do not need to include the last row
-                                        # the first row of discharge was already defined
-                                        if d != width - 1:  # uncomment and tab until calculate sed movement
-                                            # Cell 1
-                                            if i > 0:
-                                                Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
-                                            # Cell 2
-                                            Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
-                                            # Cell 3
-                                            if i < (self._length - 1):
-                                                Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
+
+                                    # ----------------------------------------------------------------------------------
+                                    # FOR method 1, we want to evenly distribute no matter the slope to try to keep the
+                                    # overall discharges the same for every cell
+                                    # overrides previous Q calcs for the back barrier
+                                    if d < int_width:
+                                        if i == 0:
+                                            Q1 = 0
+                                            Q2 = Q3 = avg_discharge / 2
+                                        elif i == self._length-1:
+                                            Q3 = 0
+                                            Q2 = Q1 = avg_discharge / 2
+                                        else:
+                                            Q1 = Q2 = Q3 = avg_discharge / 3
+                                    # --------------------------------------------------------------------------------------
+                                    # NOT USED ANYMORE
+                                    # if d > int_width:
+                                    #     ### Update Discharge
+                                    #     # discharge is defined for the next row, so we do not need to include the last row
+                                    #     # the first row of discharge was already defined
+                                    #     if d != width - 1:  # uncomment and tab until calculate sed movement
+                                    #         # Cell 1
+                                    #         if i > 0:
+                                    #             Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
+                                    #         # Cell 2
+                                    #         Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
+                                    #         # Cell 3
+                                    #         if i < (self._length - 1):
+                                    #             Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
                                     # --------------------------------------------------------------------------------------
                                     # For scenarios 2 and 3, we want to calc Q throughout entire domain
-                                    # ### Update Discharge
-                                    # # discharge is defined for the next row, so we do not need to include the last row
-                                    # # the first row of discharge was already defined
-                                    # if d != width - 1:  # uncomment and tab until calculate sed movement
-                                    #     # Cell 1
-                                    #     if i > 0:
-                                    #         Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
-                                    #     # Cell 2
-                                    #     Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
-                                    #     # Cell 3
-                                    #     if i < (self._length - 1):
-                                    #         Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
+                                    ### Update Discharge
+                                    # discharge is defined for the next row, so we do not need to include the last row
+                                    # the first row of discharge was already defined
+                                    if d != width - 1:  # uncomment and tab until calculate sed movement
+                                        # Cell 1
+                                        if i > 0:
+                                            Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
+                                        # Cell 2
+                                        Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
+                                        # Cell 3
+                                        if i < (self._length - 1):
+                                            Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
                                     # --------------------------------------------------------------------------------------
 
                                     # ### Calculate Sed Movement
@@ -718,6 +746,7 @@ class Outwasher:
 
                                     # END OF DOMAIN LOOPS
 
+                        # print("discharge at dune gaps after flow routing:", Discharge[TS, int_width, :])
                         # ### Update Elevation After Every Storm Hour
                         ElevationChange = (SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]) / self._substep
                         Elevation[TS, :, :] = Elevation[TS, :, :] + ElevationChange
@@ -757,10 +786,10 @@ class Outwasher:
                         check = 0
 
                 # Update interior domain
-                int_update_b3d = InteriorUpdate[0:int_width, :]
-                b3d._InteriorDomain = np.flip(int_update_b3d)
-                full_domain[:, :] = InteriorUpdate
-                domain_array[1, :, :] = full_domain
+                # int_update_b3d = InteriorUpdate[0:int_width, :]
+                # b3d._InteriorDomain = np.flip(int_update_b3d)
+                # full_domain[:, :] = InteriorUpdate
+                domain_array[1, :, :] = InteriorUpdate
                 # Update Domain widths
                 # DomainWidth = np.shape(b3d._InteriorDomain)[0]
 
@@ -930,7 +959,7 @@ def plot_ElevAnimation(elev, directory, start, stop):
         plt.text(1, 1, timestr)
         plt.rcParams.update({"font.size": 15})
         name = "elev_" + str(t)
-        elevFig1.savefig(name)  # dpi=200
+        elevFig1.savefig(name, facecolor='w')  # dpi=200
         plt.close(elevFig1)
 
     frames = []
@@ -974,7 +1003,7 @@ def plot_DischargeAnimation(dis, directory, start, stop):
         plt.text(1, 1, timestr)
         plt.rcParams.update({"font.size": 15})
         name = "dis_" + str(t)
-        elevFig1.savefig(name)  # dpi=200
+        elevFig1.savefig(name, facecolor='w')  # dpi=200
         plt.close(elevFig1)
 
     frames = []
@@ -1018,7 +1047,7 @@ def plot_SlopeAnimation(slope, directory, start, stop):
         plt.text(1, 1, timestr)
         plt.rcParams.update({"font.size": 15})
         name = "slope_" + str(t)
-        elevFig1.savefig(name)  # dpi=200
+        elevFig1.savefig(name, facecolor='w')  # dpi=200
         plt.close(elevFig1)
 
     frames = []
@@ -1063,7 +1092,7 @@ def plot_Qs2Animation(qs2, directory, start, stop):
         plt.text(1, 1, timestr)
         plt.rcParams.update({"font.size": 15})
         name = "qs2_" + str(t)
-        elevFig1.savefig(name)  # dpi=200
+        elevFig1.savefig(name, facecolor='w')  # dpi=200
         plt.close(elevFig1)
 
     frames = []
@@ -1108,7 +1137,7 @@ def plot_SedOutAnimation(sedout, directory, start, stop):
         plt.text(1, 1, timestr)
         plt.rcParams.update({"font.size": 15})
         name = "sedout_" + str(t)
-        elevFig1.savefig(name)  # dpi=200
+        elevFig1.savefig(name, facecolor='w')  # dpi=200
         plt.close(elevFig1)
 
     frames = []
@@ -1153,7 +1182,7 @@ def plot_SedInAnimation(sedin, directory, start, stop):
         plt.text(1, 1, timestr)
         plt.rcParams.update({"font.size": 15})
         name = "sedin_" + str(t)
-        elevFig1.savefig(name)  # dpi=200
+        elevFig1.savefig(name, facecolor='w')  # dpi=200
         plt.close(elevFig1)
 
     frames = []

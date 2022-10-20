@@ -379,7 +379,8 @@ class Outwasher:
             self,
             storm_series,
             b3d,
-            m_beach
+            m_beach,
+            fudge_fac=1,
     ):
         ### Set other variables
         q_min = b3d._Qs_min  # [m^3 / hr]? Minimum discharge needed for sediment transport (0.001)
@@ -537,19 +538,28 @@ class Outwasher:
                         # ### DUNES
                         OW_TS.append(TS)
                         int_width = np.shape(self._interior_domain)[0]
-                        max_dune, self._dune_domain, self._dune_crest, gaps, D_not_ow = dune_erosion(b3d,
-                            self._length, self._berm_el, self._dune_domain, self._dune_crest,
-                            bayhigh)  # fines the overwashed dune segments, dune
+                        # max_dune, self._dune_domain, self._dune_crest, gaps, D_not_ow = dune_erosion(b3d,
+                        #     self._length, self._berm_el, self._dune_domain, self._dune_crest,
+                        #     bayhigh)  # fines the overwashed dune segments, dune
+
+                        # ### finding the OW cells --------------------------------------------------------------------
+                        dune_elev = self._dune_crest + self._berm_el
+                        Dow = [index for index, value in enumerate(dune_elev) if
+                               value < bayhigh]  # bayhigh used to be Rhigh
+                        # D_not_ow = [index for index, value in enumerate(dune_elev) if value > bayhigh]
+                        gaps = b3d.DuneGaps(self._dune_crest, Dow, self._berm_el, bayhigh)
+                        max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
+                        # ----------------------------------------------------------------------------------------------
                         # gaps, and lowers dunes (gaps only?) based on the excess water height
                         # returns the new dune domain values, so we need to update that in the full domain
-                        dune_domain_full = np.transpose(self._dune_domain) + self._berm_el
-                        full_domain[int_width, :] = dune_domain_full[0, :]
-                        full_domain[int_width + 1] = dune_domain_full[1, :]
-                        Elevation[TS, int_width, :] = dune_domain_full[0, :]
-                        Elevation[TS, int_width + 1, :] = dune_domain_full[1, :]
+                        # dune_domain_full = np.transpose(self._dune_domain) + self._berm_el
+                        # full_domain[int_width, :] = dune_domain_full[0, :]
+                        # full_domain[int_width + 1] = dune_domain_full[1, :]
+                        # Elevation[TS, int_width, :] = dune_domain_full[0, :]
+                        # Elevation[TS, int_width + 1, :] = dune_domain_full[1, :]
 
-                        dunes_prestorm = self._dune_crest
-                        dunes = dunes_prestorm + self._berm_el  # can be used later for reducing dune height with storm
+                        # dunes_prestorm = self._dune_crest
+                        # dunes = dunes_prestorm + self._berm_el  # can be used later for reducing dune height with storm
                         # Elevation[TS, int_width:(int_width+2), :] = dunes - \
                         #                               (Hd_TSloss / substep * TS)
                         # Reduce dune in height linearly over course of storm
@@ -564,7 +574,8 @@ class Outwasher:
                             rexcess_tot += Rexcess
                             # Calculate discharge through each dune cell
                             overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
-                            factor = 15
+                            # factor = 15
+                            factor = 1
                             overtop_flow = overtop_vel * Rexcess * 3600 * factor  # (dam^3/hr)
                             # Set discharge at dune gap
                             # Discharge[:, 0, start:stop] = overtop_flow  # (dam^3/hr) in B3D, no dunes so start at row 0
@@ -572,21 +583,23 @@ class Outwasher:
                             # (cells 0-29, but int_width = 30)
                             Discharge[TS, int_width, start:stop] = overtop_flow  # (dam^3/hr)
                             Discharge[TS, int_width + 1, start:stop] = overtop_flow  # (dam^3/hr)
+                            # print(overtop_flow)
+
                         # ----------------------------------------------------------------------------------------------
                         # 1. method of setting discharge through the interior: conservation
                         # we evenly distribute over each cell the total discharge through the dune gaps
-                        avg_discharge = sum(Discharge[TS, int_width, :]) / self._length
-                        Discharge[TS, 0:int_width, :] = avg_discharge  # (dam^3/hr)
+                        # avg_discharge = sum(Discharge[TS, int_width, :]) / self._length
+                        # Discharge[TS, 0:int_width, :] = avg_discharge  # (dam^3/hr)
                         # ----------------------------------------------------------------------------------------------
                         # 2. method of setting discharge through the interior: fudge factor
                         # we take the known discharge through the dune gaps, and multiply it by a factor for initial
                         # discharge at the first row
                         # we will then ultimately overwrite the dune gap values
-                        # factor = 10
-                        # avg_rexcess = rexcess_tot/len(gaps)
-                        # overtop_vel = math.sqrt(2 * 9.8 * (avg_rexcess * 10)) / 10  # (dam/s)
-                        # overtop_flow = overtop_vel * avg_rexcess * 3600  # (dam^3/hr)
-                        # Discharge[TS, 0, :] = overtop_flow*factor  # (dam^3/hr)
+                        ff = fudge_fac
+                        avg_rexcess = rexcess_tot/len(gaps)
+                        overtop_vel = math.sqrt(2 * 9.8 * (avg_rexcess * 10)) / 10  # (dam/s)
+                        overtop_flow = overtop_vel * avg_rexcess * 3600  # (dam^3/hr)
+                        Discharge[TS, 0, :] = overtop_flow*ff  # (dam^3/hr)
                         # --------------------------------------------------------------------------------------------------
                         # 3. just setting the discharge arbitrarily at the first row
                         # Discharge[TS, 0, :] = 150
@@ -619,34 +632,47 @@ class Outwasher:
                                     # --------------------------------------------------------------------------------------
                                     Q1, Q2, Q3 = calculate_discharges(i, S1, S2, S3, Q0,
                                                                       self._nn, self._length, self._max_slope)
-                                    # if we are using scenario 1, we do not want to re-assign discharges for the back barrier
-                                    if d > int_width:
-                                        ### Update Discharge
-                                        # discharge is defined for the next row, so we do not need to include the last row
-                                        # the first row of discharge was already defined
-                                        if d != width - 1:  # uncomment and tab until calculate sed movement
-                                            # Cell 1
-                                            if i > 0:
-                                                Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
-                                            # Cell 2
-                                            Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
-                                            # Cell 3
-                                            if i < (self._length - 1):
-                                                Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
+
+                                    # --------------------------------------------------------------------------------------
+                                    # # if we are using scenario 1, we do not want to re-assign discharges for the back barrier
+                                    # if d < int_width:
+                                    #     if i == 0:
+                                    #         Q1 = 0
+                                    #         Q2 = Q3 = avg_discharge / 2
+                                    #     elif i == self._length-1:
+                                    #         Q3 = 0
+                                    #         Q2 = Q1 = avg_discharge / 2
+                                    #     else:
+                                    #         Q1 = Q2 = Q3 = avg_discharge / 3
+                                    # --------------------------------------------------------------------------------------
+                                    # NOT USED ANYMORE
+                                    # if d > int_width:
+                                    #     ### Update Discharge
+                                    #     # discharge is defined for the next row, so we do not need to include the last row
+                                    #     # the first row of discharge was already defined
+                                    #     if d != width - 1:  # uncomment and tab until calculate sed movement
+                                    #         # Cell 1
+                                    #         if i > 0:
+                                    #             Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
+                                    #         # Cell 2
+                                    #         Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
+                                    #         # Cell 3
+                                    #         if i < (self._length - 1):
+                                    #             Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
                                     # --------------------------------------------------------------------------------------
                                     # For scenarios 2 and 3, we want to calc Q throughout entire domain
-                                    # ### Update Discharge
-                                    # # discharge is defined for the next row, so we do not need to include the last row
-                                    # # the first row of discharge was already defined
-                                    # if d != width - 1:  # uncomment and tab until calculate sed movement
-                                    #     # Cell 1
-                                    #     if i > 0:
-                                    #         Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
-                                    #     # Cell 2
-                                    #     Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
-                                    #     # Cell 3
-                                    #     if i < (self._length - 1):
-                                    #         Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
+                                    ### Update Discharge
+                                    # discharge is defined for the next row, so we do not need to include the last row
+                                    # the first row of discharge was already defined
+                                    if d != width - 1:  # uncomment and tab until calculate sed movement
+                                        # Cell 1
+                                        if i > 0:
+                                            Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
+                                        # Cell 2
+                                        Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
+                                        # Cell 3
+                                        if i < (self._length - 1):
+                                            Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
                                     # --------------------------------------------------------------------------------------
 
                                     # ### Calculate Sed Movement
@@ -718,6 +744,7 @@ class Outwasher:
 
                                     # END OF DOMAIN LOOPS
 
+                        # print(Discharge[TS, int_width, :])
                         # ### Update Elevation After Every Storm Hour
                         ElevationChange = (SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]) / self._substep
                         Elevation[TS, :, :] = Elevation[TS, :, :] + ElevationChange
@@ -757,10 +784,10 @@ class Outwasher:
                         check = 0
 
                 # Update interior domain
-                int_update_b3d = InteriorUpdate[0:int_width, :]
-                b3d._InteriorDomain = np.flip(int_update_b3d)
-                full_domain[:, :] = InteriorUpdate
-                domain_array[1, :, :] = full_domain
+                # int_update_b3d = InteriorUpdate[0:int_width, :]
+                # b3d._InteriorDomain = np.flip(int_update_b3d)
+                # full_domain[:, :] = InteriorUpdate
+                domain_array[1, :, :] = InteriorUpdate
                 # Update Domain widths
                 # DomainWidth = np.shape(b3d._InteriorDomain)[0]
 
@@ -1254,18 +1281,3 @@ def plot_ModelTransects(b3d, time_step):
     # plt.legend(legend_t)
 
     return fig
-
-
-# # change if substep is 2
-# # TMAX = storm_series[2]
-# # TMAX = 2*storm_series[2]
-# TMAX = 20
-# dir = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/"
-# plot_ElevAnimation(elev_change, dir, TMAX)
-# plot_DischargeAnimation(discharge, dir, TMAX)
-# plot_SlopeAnimation(slopes2, dir, TMAX)
-# # plot_Qs2Animation(qs2, dir, TMAX)
-# plot_SedOutAnimation(sedout, dir, TMAX)
-# plot_SedInAnimation(sedin, dir, TMAX)
-# # time_step = [0]
-# # plot_ModelTransects(b3d, time_step)
