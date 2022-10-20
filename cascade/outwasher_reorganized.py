@@ -585,21 +585,21 @@ class Outwasher:
                             # print("discharge through gap:", overtop_flow)
 
                         # ----------------------------------------------------------------------------------------------
-                        # 1. method of setting discharge through the interior: conservation
-                        # we evenly distribute over each cell the total discharge through the dune gaps
-                        avg_discharge = sum(Discharge[TS, int_width, :]) / self._length
-                        Discharge[TS, 0:int_width, :] = avg_discharge  # (dam^3/hr)
+                        # # 1. method of setting discharge through the interior: conservation
+                        # # we evenly distribute over each cell the total discharge through the dune gaps
+                        # avg_discharge = sum(Discharge[TS, int_width, :]) / self._length
+                        # Discharge[TS, 0:int_width, :] = avg_discharge  # (dam^3/hr)
                         # ----------------------------------------------------------------------------------------------
                         # 2. method of setting discharge through the interior: fudge factor
                         # we take the known discharge through the dune gaps, and multiply it by a factor for initial
                         # discharge at the first row
                         # we will then ultimately overwrite the dune gap values
-                        # ff = fudge_fac
-                        # avg_rexcess = rexcess_tot/len(gaps)
-                        # overtop_vel = math.sqrt(2 * 9.8 * (avg_rexcess * 10)) / 10  # (dam/s)
-                        # overtop_flow = overtop_vel * avg_rexcess * 3600  # (dam^3/hr)
-                        # print("avg first row discharge", overtop_flow)
-                        # Discharge[TS, 0, :] = overtop_flow*ff  # (dam^3/hr)
+                        ff = fudge_fac
+                        avg_rexcess = rexcess_tot/len(gaps)
+                        overtop_vel = math.sqrt(2 * 9.8 * (avg_rexcess * 10)) / 10  # (dam/s)
+                        overtop_flow = overtop_vel * avg_rexcess * 3600  # (dam^3/hr)
+                        print("avg first row discharge", overtop_flow)
+                        Discharge[TS, 0, :] = overtop_flow*ff  # (dam^3/hr)
                         # --------------------------------------------------------------------------------------------------
                         # 3. just setting the discharge arbitrarily at the first row
                         # Discharge[TS, 0, :] = 150
@@ -634,18 +634,18 @@ class Outwasher:
                                                                       self._nn, self._length, self._max_slope)
 
                                     # ----------------------------------------------------------------------------------
-                                    # FOR method 1, we want to evenly distribute no matter the slope to try to keep the
-                                    # overall discharges the same for every cell
-                                    # overrides previous Q calcs for the back barrier
-                                    if d < int_width:
-                                        if i == 0:
-                                            Q1 = 0
-                                            Q2 = Q3 = avg_discharge / 2
-                                        elif i == self._length-1:
-                                            Q3 = 0
-                                            Q2 = Q1 = avg_discharge / 2
-                                        else:
-                                            Q1 = Q2 = Q3 = avg_discharge / 3
+                                    # # FOR method 1, we want to evenly distribute no matter the slope to try to keep the
+                                    # # overall discharges the same for every cell
+                                    # # overrides previous Q calcs for the back barrier
+                                    # if d < int_width:
+                                    #     if i == 0:
+                                    #         Q1 = 0
+                                    #         Q2 = Q3 = avg_discharge / 2
+                                    #     elif i == self._length-1:
+                                    #         Q3 = 0
+                                    #         Q2 = Q1 = avg_discharge / 2
+                                    #     else:
+                                    #         Q1 = Q2 = Q3 = avg_discharge / 3
                                     # --------------------------------------------------------------------------------------
                                     # NOT USED ANYMORE
                                     # if d > int_width:
@@ -662,7 +662,7 @@ class Outwasher:
                                     #         if i < (self._length - 1):
                                     #             Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
                                     # --------------------------------------------------------------------------------------
-                                    # For scenarios 2 and 3, we want to calc Q throughout entire domain
+
                                     ### Update Discharge
                                     # discharge is defined for the next row, so we do not need to include the last row
                                     # the first row of discharge was already defined
