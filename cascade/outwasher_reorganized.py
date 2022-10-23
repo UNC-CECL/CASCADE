@@ -435,6 +435,9 @@ class Outwasher:
                     full_domain = np.append(full_domain, beachface_domain, 0)
                     np.save(self._newpath + "full_domain", full_domain)
 
+                    int_width = np.shape(self._interior_domain)[0]
+                    front_Si = (np.mean(full_domain[int_width+3, :]) - np.mean(full_domain[-1, :])) / len(full_domain[int_width+3:-1])
+
                     # ### ------------edited for just a beach with same slope as beachface------------------------------
                     # beach_domain = np.ones([12, self._length]) * self._beach_elev  # [dam MHW] 7 rows
                     # for b in range(len(beach_domain)):
@@ -536,7 +539,6 @@ class Outwasher:
                     else:
                         # ### DUNES
                         OW_TS.append(TS)
-                        int_width = np.shape(self._interior_domain)[0]
                         # max_dune, self._dune_domain, self._dune_crest, gaps, D_not_ow = dune_erosion(b3d,
                         #     self._length, self._berm_el, self._dune_domain, self._dune_crest,
                         #     bayhigh)  # fines the overwashed dune segments, dune
@@ -680,7 +682,10 @@ class Outwasher:
                                     # ### Calculate Sed Movement
                                     fluxLimit = max_dune  # [dam MHW] dmaxel - bermel
                                     # all Qs in [dam^3/hr]
-                                    C = self._cx * abs(self._Si)  # 10 x the avg slope (from Murray) normal way
+                                    if d < int_width:
+                                        C = self._cx * abs(self._Si)  # 10 x the avg slope (from Murray) normal way
+                                    else:
+                                        C = self._cx * abs(front_Si)
                                     # -------------setting different regimes for sed flux momentum (C)----------------------
                                     # if d < int_width:  # in the back barrier with uphill slopes (include dunes)
                                     #     # we would have slower velocities with deeper water = less sed flux
