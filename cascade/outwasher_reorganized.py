@@ -436,7 +436,7 @@ class Outwasher:
                     np.save(self._newpath + "full_domain", full_domain)
 
                     int_width = np.shape(self._interior_domain)[0]
-                    front_Si = (np.mean(full_domain[int_width+3, :]) - np.mean(full_domain[-1, :])) / len(full_domain[int_width+3:-1])
+                    front_Si = (self._berm_el - np.mean(full_domain[-1, :])) / len(full_domain[int_width+2:-1])
 
                     # ### ------------edited for just a beach with same slope as beachface------------------------------
                     # beach_domain = np.ones([12, self._length]) * self._beach_elev  # [dam MHW] 7 rows
@@ -489,6 +489,7 @@ class Outwasher:
                 SedFluxOut = np.zeros([duration, width, self._length])
                 elev_change_array = np.zeros([duration, width, self._length])
                 slopes_array = np.zeros([duration, width, self._length])
+                dis_comp_array = np.zeros([duration, 2, self._length])
                 rexcess_dict = {}
                 qs2_array = np.zeros([duration, width, self._length])
                 qs_lost = 0  # the array for storing the sediment leaving the last row
@@ -568,6 +569,7 @@ class Outwasher:
                         # -------------------------using Rexcess to set discharge levels--------------------------------
                         # loops through each of the gaps and get their starts/stop index, as well as the Rexcess
                         rexcess_tot = 0
+                        expected_discharge = np.zeros(self._length)
                         for q in range(len(gaps)):
                             start = gaps[q][0]
                             stop = gaps[q][1]
@@ -575,16 +577,16 @@ class Outwasher:
                             rexcess_tot += Rexcess
                             # Calculate discharge through each dune cell
                             overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
-                            # factor = 15
-                            factor = 1
-                            overtop_flow = overtop_vel * Rexcess * 3600 * factor  # (dam^3/hr)
+                            overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
+                            expected_discharge[start:stop] = overtop_flow
+                            dis_comp_array[TS, 0, start:stop] = overtop_flow[0]
                             # Set discharge at dune gap
                             # Discharge[:, 0, start:stop] = overtop_flow  # (dam^3/hr) in B3D, no dunes so start at row 0
                             # in Outwasher, dunes located in the 2 rows after interior domain
                             # (cells 0-29, but int_width = 30)
-                            Discharge[TS, int_width, start:stop] = overtop_flow  # (dam^3/hr)
-                            Discharge[TS, int_width + 1, start:stop] = overtop_flow  # (dam^3/hr)
-                            # print("discharge through gap:", overtop_flow)
+                            # Discharge[TS, int_width, start:stop] = overtop_flow  # (dam^3/hr)
+                            # Discharge[TS, int_width + 1, start:stop] = overtop_flow  # (dam^3/hr)
+                        print("calculated discharge through gaps:", expected_discharge)
 
                         # ----------------------------------------------------------------------------------------------
                         # # 1. method of setting discharge through the interior: conservation
@@ -596,12 +598,14 @@ class Outwasher:
                         # we take the known discharge through the dune gaps, and multiply it by a factor for initial
                         # discharge at the first row
                         # we will then ultimately overwrite the dune gap values
+                        # avg_overtop = sum(Discharge[TS, int_width, :])/self._length
                         ff = fudge_fac
                         avg_rexcess = rexcess_tot/len(gaps)
                         overtop_vel = math.sqrt(2 * 9.8 * (avg_rexcess * 10)) / 10  # (dam/s)
                         overtop_flow = overtop_vel * avg_rexcess * 3600  # (dam^3/hr)
-                        print("avg first row discharge", overtop_flow)
+                        # print("calculated discharge for dune gap {0}".format(), overtop_flow)
                         Discharge[TS, 0, :] = overtop_flow*ff  # (dam^3/hr)
+
                         # --------------------------------------------------------------------------------------------------
                         # 3. just setting the discharge arbitrarily at the first row
                         # Discharge[TS, 0, :] = 150
@@ -631,7 +635,7 @@ class Outwasher:
                                     # if Discharge[TS, d, i] == 0:
                                     #     Q0 = 0
 
-                                    # ---------for all scenarios calc Qs------------------------------------------------
+                                    # ---------for all scenarios calc Q vals--------------------------------------------
                                     Q1, Q2, Q3 = calculate_discharges(i, S1, S2, S3, Q0,
                                                                       self._nn, self._length, self._max_slope)
 
@@ -685,7 +689,7 @@ class Outwasher:
                                     if d < int_width:
                                         C = self._cx * abs(self._Si)  # 10 x the avg slope (from Murray) normal way
                                     else:
-                                        C = self._cx * abs(front_Si)
+                                        C = self._cx * abs(front_Si[0])
                                     # -------------setting different regimes for sed flux momentum (C)----------------------
                                     # if d < int_width:  # in the back barrier with uphill slopes (include dunes)
                                     #     # we would have slower velocities with deeper water = less sed flux
@@ -707,7 +711,6 @@ class Outwasher:
                                             Qs1 = fluxLimit
                                     else:
                                         Qs1 = 0
-
                                     if Q2 > q_min:
                                         Qs2 = self._ki * (Q2 * (S2 + C)) ** self._mm
                                         if Qs2 < 0:
@@ -751,7 +754,8 @@ class Outwasher:
 
                                     # END OF DOMAIN LOOPS
 
-                        # print("discharge at dune gaps after flow routing:", Discharge[TS, int_width, :])
+                        print("discharge at dune gaps after flow routing:", Discharge[TS, int_width, :])
+                        dis_comp_array[TS, 1, :] = Discharge[TS, int_width, :]
                         # ### Update Elevation After Every Storm Hour
                         ElevationChange = (SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]) / self._substep
                         Elevation[TS, :, :] = Elevation[TS, :, :] + ElevationChange
@@ -831,11 +835,10 @@ class Outwasher:
                 # plt.gca().xaxis.tick_bottom()
                 # fig3.colorbar(mat2)
                 # plt.savefig(self._newpath + "{0}_domain".format(n + 1))
-
         # Record storm data
         b3d._StormCount.append(numstorm)
         return Discharge, elev_change_array, full_domain, qs_lost_total, slopes_array, rexcess_dict, qs2_array, \
-               storm_series, SedFluxOut, SedFluxIn, domain_array, OW_TS
+               storm_series, SedFluxOut, SedFluxIn, domain_array, OW_TS, dis_comp_array
 
 
 # --------------------------------------------running outwasher---------------------------------------------------------
@@ -1199,6 +1202,42 @@ def plot_SedInAnimation(sedin, directory, start, stop):
     # imageio.mimsave("sedin.gif", frames, "GIF-FI")
     print()
     print("[ * SedIn GIF successfully generated * ]")
+
+def plot_dischargeComp(discharge_array, directory, start, stop):
+    os.chdir(directory)
+    newpath = "dis_comparison/"
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+    os.chdir(newpath)
+
+    # for t in range(TMAX - 1):
+    for t in range(start, stop):
+        # Plot and save
+        elevFig1 = plt.figure(figsize=(15, 7))
+        ax = elevFig1.add_subplot(111)
+        ax.plot(discharge_array[t, 0, :], label="expected discharge")
+        ax.plot(discharge_array[t, 1, :], label="actual discharge", linestyle="dashed")
+        ax.xaxis.set_ticks_position("bottom")
+        plt.xlabel("Alongshore Distance (dam)")
+        plt.ylabel("Discharge (dam^3/hr)")
+        plt.title("Discharge Comparison at the First Dune Line (dam^3/hr)")
+        plt.tight_layout()
+        timestr = "Time = " + str(t) + " hrs"
+        plt.text(1, 1, timestr)
+        plt.rcParams.update({"font.size": 15})
+        name = "dis_comparison_" + str(t)
+        elevFig1.savefig(name, facecolor='w')  # dpi=200
+        plt.close(elevFig1)
+
+    frames = []
+
+    for filenum in range(start, stop):
+        filename = "dis_comparison_" + str(filenum) + ".png"
+        frames.append(imageio.imread(filename))
+    imageio.mimsave("discomp.gif", frames, fps=2)
+    # imageio.mimsave("sedin.gif", frames, "GIF-FI")
+    print()
+    print("[ * Discharge comparison GIF successfully generated * ]")
 
 
 # -------------------------------------------b3d domain plot------------------------------------------------------------
