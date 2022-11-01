@@ -57,6 +57,40 @@ def bay_converter(storms, substep):
     new_ss.append(storms[-1])  # make sure to include our last value
     return new_ss
 
+
+def DuneGaps(DuneDomain, Dow, Rhigh):
+    """Returns tuple of [gap start index, stop index, avg Rexcess of each gap,
+    alpha: ratio of TWL / dune height]"""
+    gaps = []
+    start = 0
+    #        stop = 0
+    i = start
+    while i < (len(Dow) - 1):
+        adjacent = Dow[i + 1] - Dow[i]
+        if adjacent == 1:
+            i = i + 1
+        else:
+            stop = i
+            x = DuneDomain[Dow[start]: (Dow[stop] + 1)]
+            Hmean = sum(x) / float(len(x))
+            Rexcess = Rhigh - Hmean
+            # alpha = Rhigh / (Hmean + bermel)
+            gaps.append([Dow[start], Dow[stop], Rexcess])
+
+            start = stop + 1
+            i = start
+    # if i > 0:
+        # stop = i - 1
+    stop = i
+
+    x = DuneDomain[Dow[start]: (Dow[stop] + 1)]
+    if len(x) > 0:
+        Hmean = sum(x) / float(len(x))
+        Rexcess = Rhigh - Hmean
+        # alpha = Rhigh / (Hmean + bermel)
+        gaps.append([Dow[start], Dow[stop], Rexcess])
+    return gaps
+
 # ### Dune Erosion
 # def dune_erosion(b3d, dune_length, berm_el, dune_domain, dune_crest, bayhigh):
 #     dune_width = b3d._DuneWidth
@@ -151,20 +185,36 @@ def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_ste
             S3 = 0
     # if at the last row, apply the same slope as the beachface slope
     else:
-        if col > 0:
-            S1 = beachface / (math.sqrt(2))
+        if col > 0:  # i = 0 means there are no cols to the left
+            S1 = (elev_array[time_step, row-1, col] - elev_array[time_step, row, col - 1]) / (math.sqrt(2))
             S1 = np.nan_to_num(S1)
         else:
             S1 = 0
 
-        S2 = beachface
+        S2 = elev_array[time_step, row-1, col] - elev_array[time_step, row, col]
         S2 = np.nan_to_num(S2)
+        # slopes_array[TS, d, i] = S2
 
         if col < (domain_length - 1):  # i at the end length means there are no cols to the right
-            S3 = beachface / (math.sqrt(2))
+            S3 = (elev_array[time_step, row-1, col] - elev_array[time_step, row, col + 1]) / (math.sqrt(2))
             S3 = np.nan_to_num(S3)
         else:
             S3 = 0
+
+        # if col > 0:
+        #     S1 = beachface / (math.sqrt(2))
+        #     S1 = np.nan_to_num(S1)
+        # else:
+        #     S1 = 0
+        #
+        # S2 = beachface
+        # S2 = np.nan_to_num(S2)
+        #
+        # if col < (domain_length - 1):  # i at the end length means there are no cols to the right
+        #     S3 = beachface / (math.sqrt(2))
+        #     S3 = np.nan_to_num(S3)
+        # else:
+        #     S3 = 0
 
     if col == 0 and S2 < 0 and S3 < 0:
         # this is greater than the max slope, so no sediment will go to outside
@@ -530,7 +580,7 @@ class Outwasher:
                     print(TS)
                     # get dune crest out here first (dont remember what this means 9/16/2022)
                     bayhigh = storm_series[1][TS]  # [dam]
-                    dune_gap = np.min(self._dune_crest + self._berm_el)  # elevation of the lowest dune gap
+                    dune_gap = np.min(Elevation[TS, int_width, :])  # elevation of the lowest dune gap
                     # we only want discharge and sediment transport if the bay level is high enough to move through the dune
                     # gaps. If it is not, nothing happens.
                     if bayhigh <= dune_gap:
@@ -545,11 +595,12 @@ class Outwasher:
                         #     bayhigh)  # fines the overwashed dune segments, dune
 
                         # ### finding the OW cells --------------------------------------------------------------------
-                        dune_elev = self._dune_crest + self._berm_el
+                        # dune_elev = self._dune_crest + self._berm_el
+                        dune_elev = Elevation[TS, int_width, :]
                         Dow = [index for index, value in enumerate(dune_elev) if
                                value < bayhigh]  # bayhigh used to be Rhigh
                         # D_not_ow = [index for index, value in enumerate(dune_elev) if value > bayhigh]
-                        gaps = b3d.DuneGaps(self._dune_crest, Dow, self._berm_el, bayhigh)
+                        gaps = DuneGaps(dune_elev, Dow, bayhigh)
                         max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
                         # ----------------------------------------------------------------------------------------------
                         # gaps, and lowers dunes (gaps only?) based on the excess water height
@@ -568,25 +619,25 @@ class Outwasher:
 
                         # -------------------------using Rexcess to set discharge levels--------------------------------
                         # loops through each of the gaps and get their starts/stop index, as well as the Rexcess
-                        rexcess_tot = 0
+                        # rexcess_tot = 0
                         expected_discharge = np.zeros(self._length)
                         for q in range(len(gaps)):
                             start = gaps[q][0]
                             stop = gaps[q][1]
                             Rexcess = gaps[q][2]  # (dam)
-                            rexcess_tot += Rexcess
+                            # rexcess_tot += Rexcess
                             # Calculate discharge through each dune cell
                             overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
                             overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
-                            expected_discharge[start:stop] = overtop_flow
-                            dis_comp_array[TS, 0, start:stop] = overtop_flow[0]
+                            expected_discharge[start:stop+1] = overtop_flow
+                            dis_comp_array[TS, 0, start:stop+1] = overtop_flow
                             # Set discharge at dune gap
                             # Discharge[:, 0, start:stop] = overtop_flow  # (dam^3/hr) in B3D, no dunes so start at row 0
                             # in Outwasher, dunes located in the 2 rows after interior domain
                             # (cells 0-29, but int_width = 30)
                             # Discharge[TS, int_width, start:stop] = overtop_flow  # (dam^3/hr)
                             # Discharge[TS, int_width + 1, start:stop] = overtop_flow  # (dam^3/hr)
-                        print("calculated discharge through gaps:", expected_discharge)
+                        # print("calculated discharge through gaps:", expected_discharge)
 
                         # ----------------------------------------------------------------------------------------------
                         # # 1. method of setting discharge through the interior: conservation
@@ -600,11 +651,12 @@ class Outwasher:
                         # we will then ultimately overwrite the dune gap values
                         # avg_overtop = sum(Discharge[TS, int_width, :])/self._length
                         ff = fudge_fac
-                        avg_rexcess = rexcess_tot/len(gaps)
-                        overtop_vel = math.sqrt(2 * 9.8 * (avg_rexcess * 10)) / 10  # (dam/s)
-                        overtop_flow = overtop_vel * avg_rexcess * 3600  # (dam^3/hr)
+                        # avg_rexcess = rexcess_tot/len(gaps)
+                        # overtop_vel = math.sqrt(2 * 9.8 * (avg_rexcess * 10)) / 10  # (dam/s)
+                        # overtop_flow = overtop_vel * avg_rexcess * 3600  # (dam^3/hr)
+                        avg_discharge = sum(expected_discharge) / self._length
                         # print("calculated discharge for dune gap {0}".format(), overtop_flow)
-                        Discharge[TS, 0, :] = overtop_flow*ff  # (dam^3/hr)
+                        Discharge[TS, 0, :] = avg_discharge*ff  # (dam^3/hr)
 
                         # --------------------------------------------------------------------------------------------------
                         # 3. just setting the discharge arbitrarily at the first row
@@ -690,6 +742,11 @@ class Outwasher:
                                         C = self._cx * abs(self._Si)  # 10 x the avg slope (from Murray) normal way
                                     else:
                                         C = self._cx * abs(front_Si[0])
+                                    # ### attempting to change the amount of sed
+                                    # if d < int_width:
+                                    #     self._ki = 7.5E-4
+                                    # else:
+                                    #     self._ki = 7.5E-3
                                     # -------------setting different regimes for sed flux momentum (C)----------------------
                                     # if d < int_width:  # in the back barrier with uphill slopes (include dunes)
                                     #     # we would have slower velocities with deeper water = less sed flux
@@ -754,7 +811,7 @@ class Outwasher:
 
                                     # END OF DOMAIN LOOPS
 
-                        print("discharge at dune gaps after flow routing:", Discharge[TS, int_width, :])
+                        # print("discharge at dune gaps after flow routing:", Discharge[TS, int_width, :])
                         dis_comp_array[TS, 1, :] = Discharge[TS, int_width, :]
                         # ### Update Elevation After Every Storm Hour
                         ElevationChange = (SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]) / self._substep
@@ -1114,7 +1171,7 @@ def plot_Qs2Animation(qs2, directory, start, stop):
     print("[ * Qs2 GIF successfully generated * ]")
 
 
-# ---------------------- Sed out array ----------------------------------------------------------------------------------
+# ---------------------- Sed out array ---------------------------------------------------------------------------------
 def plot_SedOutAnimation(sedout, directory, start, stop):
     os.chdir(directory)
     newpath = "SedOut/"
@@ -1159,7 +1216,7 @@ def plot_SedOutAnimation(sedout, directory, start, stop):
     print("[ * SedOut GIF successfully generated * ]")
 
 
-# ---------------------- Sed out array ----------------------------------------------------------------------------------
+# ---------------------- Sed out array ---------------------------------------------------------------------------------
 def plot_SedInAnimation(sedin, directory, start, stop):
     os.chdir(directory)
     newpath = "SedIn/"
@@ -1203,7 +1260,8 @@ def plot_SedInAnimation(sedin, directory, start, stop):
     print()
     print("[ * SedIn GIF successfully generated * ]")
 
-def plot_dischargeComp(discharge_array, directory, start, stop):
+
+def plot_dischargeComp(discharge_array, directory, start, stop, bay_level):
     os.chdir(directory)
     newpath = "dis_comparison/"
     if not os.path.exists(newpath):
@@ -1221,9 +1279,11 @@ def plot_dischargeComp(discharge_array, directory, start, stop):
         plt.xlabel("Alongshore Distance (dam)")
         plt.ylabel("Discharge (dam^3/hr)")
         plt.title("Discharge Comparison at the First Dune Line (dam^3/hr)")
+        ax.legend(loc="upper left")
         plt.tight_layout()
-        timestr = "Time = " + str(t) + " hrs"
-        plt.text(1, 1, timestr)
+        full_text = "Time = " + str(t) + " hrs" + "; Bay level = " + str(round(bay_level[t], 3)) + " dam"
+        plt.text(0.5, 0.99, full_text, horizontalalignment='center',
+        verticalalignment='top', transform=ax.transAxes)
         plt.rcParams.update({"font.size": 15})
         name = "dis_comparison_" + str(t)
         elevFig1.savefig(name, facecolor='w')  # dpi=200

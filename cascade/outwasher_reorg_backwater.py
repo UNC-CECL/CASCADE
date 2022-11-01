@@ -28,6 +28,39 @@ def bay_converter(storms, substep):
     return new_ss
 
 
+def DuneGaps(DuneDomain, Dow, Rhigh):
+    """Returns tuple of [gap start index, stop index, avg Rexcess of each gap,
+    alpha: ratio of TWL / dune height]"""
+    gaps = []
+    start = 0
+    #        stop = 0
+    i = start
+    while i < (len(Dow) - 1):
+        adjacent = Dow[i + 1] - Dow[i]
+        if adjacent == 1:
+            i = i + 1
+        else:
+            stop = i
+            x = DuneDomain[Dow[start]: (Dow[stop] + 1)]
+            Hmean = sum(x) / float(len(x))
+            Rexcess = Rhigh - Hmean
+            # alpha = Rhigh / (Hmean + bermel)
+            gaps.append([Dow[start], Dow[stop], Rexcess])
+
+            start = stop + 1
+            i = start
+    # if i > 0:
+        # stop = i - 1
+    stop = i
+
+    x = DuneDomain[Dow[start]: (Dow[stop] + 1)]
+    if len(x) > 0:
+        Hmean = sum(x) / float(len(x))
+        Rexcess = Rhigh - Hmean
+        # alpha = Rhigh / (Hmean + bermel)
+        gaps.append([Dow[start], Dow[stop], Rexcess])
+    return gaps
+
 # ### Calculate Slopes
 def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_step, slopes_array, beachface):
     """
@@ -380,7 +413,7 @@ class Outwasher:
                     print(TS)
                     # get dune crest out here first (dont remember what this means 9/16/2022)
                     bayhigh = storm_series[1][TS]  # [dam]
-                    dune_gap = np.min(self._dune_crest + self._berm_el)  # elevation of the lowest dune gap
+                    dune_gap = np.min(Elevation[TS, int_width, :])  # elevation of the lowest dune gap
                     # we only want discharge and sediment transport if the bay level is high enough to move through the dune
                     # gaps. If it is not, nothing happens.
                     if bayhigh <= dune_gap:
@@ -392,11 +425,11 @@ class Outwasher:
                         OW_TS.append(TS)
 
                         # ### finding the OW cells --------------------------------------------------------------------
-                        dune_elev = self._dune_crest + self._berm_el
+                        dune_elev = Elevation[TS, int_width, :]
                         Dow = [index for index, value in enumerate(dune_elev) if
                                value < bayhigh]  # bayhigh used to be Rhigh
                         # D_not_ow = [index for index, value in enumerate(dune_elev) if value > bayhigh]
-                        gaps = b3d.DuneGaps(self._dune_crest, Dow, self._berm_el, bayhigh)
+                        gaps = DuneGaps(dune_elev, Dow, bayhigh)
                         max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
 
                         for q in range(len(gaps)):
@@ -832,6 +865,7 @@ def plot_SedInAnimation(sedin, directory, start, stop):
     print()
     print("[ * SedIn GIF successfully generated * ]")
 
+
 # ----------------------- discharge comparison -------------------------------------------------------------------------
 def plot_dischargeComp(discharge_array, directory, start, stop):
     os.chdir(directory)
@@ -851,6 +885,7 @@ def plot_dischargeComp(discharge_array, directory, start, stop):
         plt.xlabel("Alongshore Distance (dam)")
         plt.ylabel("Discharge (dam^3/hr)")
         plt.title("Discharge Comparison at the First Dune Line (dam^3/hr)")
+        ax.legend()
         plt.tight_layout()
         timestr = "Time = " + str(t) + " hrs"
         plt.text(1, 1, timestr)
@@ -868,6 +903,7 @@ def plot_dischargeComp(discharge_array, directory, start, stop):
     # imageio.mimsave("sedin.gif", frames, "GIF-FI")
     print()
     print("[ * Discharge comparison GIF successfully generated * ]")
+
 
 # -------------------------------------------b3d domain plot------------------------------------------------------------
 def plot_ModelTransects(b3d, time_step):
