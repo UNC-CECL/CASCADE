@@ -121,6 +121,9 @@ class Cascade:
         alongshore_transport_module=True,
         beach_nourishment_module=True,
         community_dynamics_module=False,
+        marsh_dynamics = False,
+        enable_shoreline_offset=False,
+        shoreline_offset=[0],
         road_ele=1.7,  # ---------- the rest of these variables are for the human dynamics modules --------------- #
         road_width=30,
         road_setback=30,
@@ -141,8 +144,6 @@ class Cascade:
         house_footprint_x=15,
         house_footprint_y=20,
         beach_full_cross_shore=70,
-        enable_shoreline_offset=False,
-        shoreline_offset=[0],
     ):
         """
 
@@ -191,6 +192,12 @@ class Cascade:
             If True, couple with CHOM, a community decision making model; requires nourishment module
         beach_nourishment_module: boolean or list of booleans, optional
             If True, use nourishment module (nourish shoreface, rebuild dunes)
+        marsh_dynamics: boolean, optional
+            If True, use the PyBMFT module to represent marsh and bay dynamics
+        enable_shoreline_offset: bool, optional
+            State whether you want a shoreline offset [True / False]
+        shoreline_offset: list, optional
+            The alongshore offset between different Barrier3d sections [m]
         road_ele: float or list of floats, optional
             Elevation of the initial roadway [m MHW] and after road relocations
         road_width: int or list of int, optional
@@ -227,10 +234,7 @@ class Cascade:
             Subsidy on cost of entire nourishment plan
         beach_full_cross_shore: int, optional
             The cross-shore extent (meters) of fully nourished beach (i.e., the community desired beach width) [m]
-        enable_shoreline_offset: bool, optional
-            State whether you want a shoreline offset [True / False]
-        shoreline_offset: list, optional
-            The alongshore offset between different Barrier3d sections [m]
+
 
         Examples
         --------
@@ -272,6 +276,7 @@ class Cascade:
         # New offset shoreline additions
         self._enable_shoreline_offset = enable_shoreline_offset
         self._shoreline_offset = shoreline_offset
+        self._marsh_dynamics = marsh_dynamics
 
         ###############################################################################
         # initialize brie and barrier3d model classes
@@ -288,10 +293,9 @@ class Cascade:
             back_barrier_depth=bay_depth,
             ny=self._ny,
             nt=self._nt,
-            enable_shoreline_offset=self._enable_shoreline_offset,
-            shoreline_offset=self._shoreline_offset,
         )
 
+        # Create offset shorelines in BRIE
         self._brie_coupler.offset_shoreline(
             enable_shoreline_offset=self._enable_shoreline_offset,
             offset_values=self._shoreline_offset,
@@ -311,6 +315,28 @@ class Cascade:
             dune_file=self._dune_file,  # can be array
             elevation_file=self._elevation_file,  # can be array
         )
+
+        ###############################################################################
+        # initialize marsh dynamic modules
+        ###############################################################################
+        #if self._marsh_dynamics:
+            #self.bmftc = Bmftc(
+            #    name="back-barrier",
+            #    time_step_count=time_step_count,
+            #    relative_sea_level_rise=relative_sea_level_rise,
+            #    reference_concentration=reference_concentration,
+            #    slope_upland=slope_upland,
+            #    bay_fetch_initial=5000,
+            #    forest_width_initial_fixed=False,
+            #    forest_width_initial=5000,  # 5000 accomodates 250 yrs at R=15 and S=0.001
+            #    wind_speed=6,
+            #    forest_on=False,
+            #    filename_equilbaydepth="Input/PyBMFT-C/Equilibrium Bay Depth.mat",  # "Input/PyBMFT-C/EquilibriumBayDepth_f3000_w5.mat",
+            #    filename_marshspinup="Input/PyBMFT-C/MarshStrat_all_RSLR1_CO50_width500.mat",  # "Input/PyBMFT-C/MarshStrat_all_RSLR1_CO50.mat",
+            #    marsh_width_initial=500,
+            #)
+
+        # initialize PyBMFT models (number set by brie ny above) and make both PyBMFT and barrier3d classes equivalent
 
         ###############################################################################
         # initialize human dynamics modules
@@ -528,6 +554,25 @@ class Cascade:
             if self._barrier3d[iB3D].drown_break == 1:
                 self._b3d_break = 1
                 return
+
+        ###############################################################################
+        # Backbarrier marsh module
+        ###############################################################################
+        # ~~~~~~~~~~~~~~ PyBMFT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Run PyBMFT module to represent marsh growth and erosion from the back-bay
+        # fall below height threshold, and check if dunes should grow naturally
+
+            if self._marsh_dynamics:
+                 print('Run PyBMFT')
+                 print('Update Marsh Transects')
+                 print('Feed information back to Barrier3D')
+                 print('Update Brie based on Barrier3D')
+
+#
+#            for iB3D in range(self._ny):
+#               need to calculate one step of change in PYBMFT from Barrier3D
+#               need to update Barrier3D to reflect changes in PYBMFT
+#               need to equalize new back-barrier values in BRIE based on changes in
 
         ###############################################################################
         # human dynamics modules

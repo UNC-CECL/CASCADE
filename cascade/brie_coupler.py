@@ -198,8 +198,6 @@ class BrieCoupler:
         back_barrier_depth=3.0,
         ny=1,
         nt=200,
-        enable_shoreline_offset=False,
-        shoreline_offset=[0],
     ):
         """The AlongshoreCoupler module.
 
@@ -223,10 +221,6 @@ class BrieCoupler:
             The number of alongshore Barrier3D domains for simulation in BRIE
         nt: int, optional
             Number of time steps.
-        enable_shoreline_offset: bool, optional
-            State whether you want a shoreline offset [True / False]
-        shoreline_offset: list, optional
-            The alongshore offset between different barrier 3d sections [m]
 
         """
         ###############################################################################
@@ -282,8 +276,6 @@ class BrieCoupler:
             time_step=dt,
             time_step_count=nt,
             save_spacing=dtsave,
-            # enable_shoreline_offset=enable_shoreline_offset,
-            # shoreline_offset=shoreline_offset,
         )  # initialize class
 
     def offset_shoreline(self, enable_shoreline_offset, offset_values, ny):
@@ -299,10 +291,6 @@ class BrieCoupler:
             # print(self._brie.x_s)
             # print('Adjusted offset')
 
-    # if alongshore offset is not none call {
-    # for i in segment length(brie)
-    # add offset from index of offsets
-    # add value[i] to x_s and x_t
 
     def update_ast(self, barrier3d, x_t_dt, x_s_dt, h_b_dt):
         """Pass shoreline and shoreface values from B3D subdomains to brie for use in second time step
