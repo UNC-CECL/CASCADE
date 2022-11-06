@@ -279,6 +279,7 @@ class Outwasher:
             substep=2,
             Cx=10,
             Ki=7.5E-3,
+            max_slope=-0.25
     ):
         # make a folder where all graphs will be saved for that run
         self._runID = runID

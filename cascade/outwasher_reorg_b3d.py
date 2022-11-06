@@ -384,6 +384,7 @@ class Outwasher:
             substep=2,
             Cx=10,
             Ki=7.5E-3,
+            max_slope=-0.25
     ):
         # make a folder where all graphs will be saved for that run
         self._runID = runID
@@ -412,8 +413,9 @@ class Outwasher:
         self._dune_domain = b3d.DuneDomain[b3d._time_index - 1, :, :]
         self._dune_crest = self._dune_domain.max(axis=1)  # dune_crest used to be DuneDomainCrest
 
+        int_domain = np.flip(b3d.InteriorDomain)
         # initializing our barrier interior
-        self._interior_domain = b3d.InteriorDomain
+        self._interior_domain = int_domain[5:-1, :]
         # give it an arbitrary width of 30 dam
         # self._interior_domain = np.zeros([30, self._length])
         # # setting the elevations of each row in the domain
@@ -554,7 +556,7 @@ class Outwasher:
                             overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
                             expected_discharge[start:stop+1] = overtop_flow
                             dis_comp_array[TS, 0, start:stop+1] = overtop_flow
-                        # Set initial discharge 
+                        # Set initial discharge
                         # print("calculated discharge through gaps:", expected_discharge)
 
                         # ----------------------------------------------------------------------------------------------
@@ -812,7 +814,7 @@ class Outwasher:
                 # plt.savefig(self._newpath + "{0}_domain".format(n + 1))
         # Record storm data
         b3d._StormCount.append(numstorm)
-        return Discharge, elev_change_array, full_domain, qs_lost_total, slopes_array, rexcess_dict, qs2_array, \
+        return Discharge, elev_change_array, Elevation, qs_lost_total, slopes_array, rexcess_dict, qs2_array, \
                storm_series, SedFluxOut, SedFluxIn, domain_array, OW_TS, dis_comp_array
 
 
@@ -1191,8 +1193,13 @@ def plot_dischargeComp(discharge_array, directory, start, stop, bay_level):
         # Plot and save
         elevFig1 = plt.figure(figsize=(15, 7))
         ax = elevFig1.add_subplot(111)
+        x = range(len(discharge_array[0, 0, :]))
+        y = np.ones(len(x)) * np.mean(discharge_array[t, 0, :])
+        y2 = np.ones(len(x)) * np.mean(discharge_array[t, 1, :])
         ax.plot(discharge_array[t, 0, :], label="expected discharge")
-        ax.plot(discharge_array[t, 1, :], label="actual discharge", linestyle="dashed")
+        ax.plot(discharge_array[t, 1, :], label="actual discharge")
+        ax.plot(x, y, label="average expected discharge", color="k", linestyle="dashed")
+        ax.plot(x, y2, label="average actual discharge", linestyle="dashed")
         ax.xaxis.set_ticks_position("bottom")
         plt.xlabel("Alongshore Distance (dam)")
         plt.ylabel("Discharge (dam^3/hr)")
@@ -1201,7 +1208,7 @@ def plot_dischargeComp(discharge_array, directory, start, stop, bay_level):
         plt.tight_layout()
         full_text = "Time = " + str(t) + " hrs" + "; Bay level = " + str(round(bay_level[t], 3)) + " dam"
         plt.text(0.5, 0.99, full_text, horizontalalignment='center',
-        verticalalignment='top', transform=ax.transAxes)
+                 verticalalignment='top', transform=ax.transAxes)
         plt.rcParams.update({"font.size": 15})
         name = "dis_comparison_" + str(t)
         elevFig1.savefig(name, facecolor='w')  # dpi=200

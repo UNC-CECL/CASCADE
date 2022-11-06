@@ -386,6 +386,7 @@ class Outwasher:
             substep=2,
             Cx=10,
             Ki=7.5E-3,
+            max_slope=-0.25
     ):
         # make a folder where all graphs will be saved for that run
         self._runID = runID
@@ -399,7 +400,8 @@ class Outwasher:
         self._length = b3d._BarrierLength  # [dam] length of barrier
         self._substep = substep
         self._nn = b3d._nn  # flow routing constant
-        self._max_slope = -b3d._MaxUpSlope  # max slope that sediment can go uphill, previously Slim (0.25)
+        self._max_slope = max_slope
+        # self._max_slope = -b3d._MaxUpSlope  # max slope that sediment can go uphill, previously Slim (0.25)
         # ki = b3d._Ki  # sediment transport coefficient
         self._ki = Ki
         self._cx = Cx
@@ -859,42 +861,9 @@ class Outwasher:
                 # Update Domain widths
                 # DomainWidth = np.shape(b3d._InteriorDomain)[0]
 
-                # # plotting post-storm cross section
-                # cross_section2 = np.mean(full_domain, 1)
-                # cross_section2 = np.flip(cross_section2)
-                # ax4.plot(range(len(full_domain)), cross_section2, label="post storm", linestyle="dashed")
-                # # dune_gap_el = np.flip(full_domain[:, 21])
-                # # ax4.plot(range(len(full_domain)), dune_gap_el, label="dune gap (21) post", linestyle="dashed")
-                # ax4.set_xlabel("barrier width from ocean to bay (dam)")
-                # ax4.set_ylabel("average alongshore elevation (dam)")
-                # # ax4.set_title("Cross shore elevation profile for col 21\n "
-                # #               "beachface slope = {0}, back barrier slope = {1}".format(round(m_beachface, 3), round(Si, 3)))
-                # ax4.set_title("Average cross shore elevation profile\n "
-                #               "beachface slope = {0}, back barrier slope = {1}".format(round(m_beachface, 3),
-                #                                                                        round(self._Si, 3)))
-                # ax4.legend()
-                # plt.show()
-                # # plt.savefig(newpath + "cross_shore_21")
-                # plt.savefig(self._newpath + "avg_cross_shore")
-
-                # # plot post storm elevation
-                # fig3 = plt.figure()
-                # ax3 = fig3.add_subplot(111)
-                # mat2 = ax3.matshow(
-                #     full_domain[:, :],
-                #     # origin="upper",
-                #     cmap="Greens",
-                #     # vmin=-0.2, vmax=0.4,
-                # )
-                # ax3.set_xlabel('barrier length (dam)')
-                # ax3.set_ylabel('barrier width (dam)')
-                # ax3.set_title("Elevation after storm {0} $(dam)$".format(n + 1))
-                # plt.gca().xaxis.tick_bottom()
-                # fig3.colorbar(mat2)
-                # plt.savefig(self._newpath + "{0}_domain".format(n + 1))
         # Record storm data
         b3d._StormCount.append(numstorm)
-        return Discharge, elev_change_array, full_domain, qs_lost_total, slopes_array, rexcess_dict, qs2_array, \
+        return Discharge, elev_change_array, Elevation, qs_lost_total, slopes_array, rexcess_dict, qs2_array, \
                storm_series, SedFluxOut, SedFluxIn, domain_array, OW_TS, dis_comp_array
 
 
@@ -1273,8 +1242,13 @@ def plot_dischargeComp(discharge_array, directory, start, stop, bay_level):
         # Plot and save
         elevFig1 = plt.figure(figsize=(15, 7))
         ax = elevFig1.add_subplot(111)
+        x = range(len(discharge_array[0, 0, :]))
+        y = np.ones(len(x))*np.mean(discharge_array[t, 0, :])
+        y2 = np.ones(len(x))*np.mean(discharge_array[t, 1, :])
         ax.plot(discharge_array[t, 0, :], label="expected discharge")
-        ax.plot(discharge_array[t, 1, :], label="actual discharge", linestyle="dashed")
+        ax.plot(discharge_array[t, 1, :], label="actual discharge")
+        ax.plot(x, y, label="average expected discharge", color="k", linestyle="dashed")
+        ax.plot(x, y2, label="average actual discharge", linestyle="dashed")
         ax.xaxis.set_ticks_position("bottom")
         plt.xlabel("Alongshore Distance (dam)")
         plt.ylabel("Discharge (dam^3/hr)")
