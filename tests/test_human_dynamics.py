@@ -36,7 +36,7 @@ def run_cascade_roadway_dynamics():
         roadway_management_module=True,
         alongshore_transport_module=False,
         beach_nourishment_module=False,
-        community_dynamics_module=False,  # no community dynamics
+        community_economics_module=False,  # no community dynamics
         road_ele=1.2,  # m MHW, average of NC-12 is 1.3 m NAVD88, berm ele is 1.4 m MHW (1.9 m NAVD88)
         road_width=20,  # m
         road_setback=20,  # m
@@ -79,7 +79,7 @@ def run_cascade_nourishment_dynamics():
         roadway_management_module=False,
         alongshore_transport_module=False,
         beach_nourishment_module=True,
-        community_dynamics_module=False,  # no community dynamics
+        community_economics_module=False,  # no community dynamics
         nourishment_interval=10,  # yrs
         nourishment_volume=100,
         overwash_filter=40,

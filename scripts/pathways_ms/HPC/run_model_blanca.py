@@ -27,7 +27,7 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
     # run script for the 10,000 year runs.
 
     # --------- INITIALIZE ---------
-    datadir = "B3D_Inputs/"
+    datadir = "cascade/data/pathways_data/"
     cascade = Cascade(
         datadir,
         name,
@@ -50,7 +50,7 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
         roadway_management_module=False,  # no roadway management
         alongshore_transport_module=False,  # no brie coupling
         beach_nourishment_module=False,  # no beach nourishment
-        community_dynamics_module=False,  # no community dynamics
+        community_economics_module=False,  # no community dynamics
     )
 
     # --------- LOOP ---------
