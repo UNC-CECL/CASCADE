@@ -7,6 +7,7 @@ from .roadway_manager import RoadwayManager, set_growth_parameters
 from .beach_dune_manager import BeachDuneManager
 from .brie_coupler import BrieCoupler, initialize_equal, batchB3D
 from .chom_coupler import ChomCoupler
+from bmftc import Bmftc
 
 
 class CascadeError(Exception):
@@ -123,7 +124,7 @@ class Cascade:
         community_dynamics_module=False,
         marsh_dynamics = False,
         enable_shoreline_offset=False,
-        shoreline_offset=[0],
+        shoreline_offset=[],
         road_ele=1.7,  # ---------- the rest of these variables are for the human dynamics modules --------------- #
         road_width=30,
         road_setback=30,
@@ -319,25 +320,42 @@ class Cascade:
         ###############################################################################
         # initialize marsh dynamic modules
         ###############################################################################
-        #if self._marsh_dynamics:
-            #self.bmftc = Bmftc(
-            #    name="back-barrier",
-            #    time_step_count=time_step_count,
-            #    relative_sea_level_rise=relative_sea_level_rise,
-            #    reference_concentration=reference_concentration,
-            #    slope_upland=slope_upland,
-            #    bay_fetch_initial=5000,
-            #    forest_width_initial_fixed=False,
-            #    forest_width_initial=5000,  # 5000 accomodates 250 yrs at R=15 and S=0.001
-            #    wind_speed=6,
-            #    forest_on=False,
-            #    filename_equilbaydepth="Input/PyBMFT-C/Equilibrium Bay Depth.mat",  # "Input/PyBMFT-C/EquilibriumBayDepth_f3000_w5.mat",
-            #    filename_marshspinup="Input/PyBMFT-C/MarshStrat_all_RSLR1_CO50_width500.mat",  # "Input/PyBMFT-C/MarshStrat_all_RSLR1_CO50.mat",
-            #    marsh_width_initial=500,
-            #)
+        if self._marsh_dynamics:
+            self._bmftc = []
+            for iB3D in range(self._ny):
+                self._bmftc.append(
+                    Bmftc(
+                        name="back-barrier",
+                        time_step_count=time_step_count,
+                        relative_sea_level_rise=12,
+                        reference_concentration=60,
+                        slope_upland=0.005,
+                        bay_fetch_initial=5000,
+                        forest_width_initial_fixed=False,
+                        forest_width_initial=5000,  # 5000 accomodates 250 yrs at R=15 and S=0.001
+                        wind_speed=6,
+                        forest_on=False,
+                        filename_equilbaydepth="/Users/ceclmac/PycharmProjects/PyBMFT-C/Input/PyBMFT-C/Equilibrium Bay Depth.mat",
+                        filename_marshspinup="/Users/ceclmac/PycharmProjects/PyBMFT-C/Input/PyBMFT-C/MarshStrat_all_RSLR1_CO50_width500.mat",
+                        marsh_width_initial=500,
+                    )
+                )
 
         # initialize PyBMFT models (number set by brie ny above) and make both PyBMFT and barrier3d classes equivalent
+        # equalize values between PyBMFT and Barrier3D
+        #
+        # Equalize Barrier3D/PyBMFT-C Values of Identical Parameters
+        for iB3D in range(self._ny):
+            self._bmftc[iB3D]._dur =(self._barrier3d[iB3D]._TMAX + 1)
+            self._bmftc[iB3D]._RSLRi = (self._barrier3d[iB3D]._RSLR[1]*1000)
+            self._barrier3d[iB3D]._BayDepth = self._bmftc[iB3D].Bay_depth[self._bmftc[iB3D].startyear - 1] / 10
+        #print(self._brie_coupler._brie._bb_depth/10)
+            #bmftc._dur = _barrier3d._model._TMAX - 1  # [yrs] Duration of simulation
+            #bmftc._RSLRi = (_barrier3d._model._RSLR[1]*1000)
+            #barrier3d._model._BayDepth = bmftc_BB.Bay_depth[bmftc_BB.startyear - 1] / 10  # [yrs] Initial depth of bay
+            #BRIE._back_barrier_depth = _barrier3d._model._BayDepth
 
+        #
         ###############################################################################
         # initialize human dynamics modules
         ###############################################################################
@@ -562,11 +580,11 @@ class Cascade:
         # Run PyBMFT module to represent marsh growth and erosion from the back-bay
         # fall below height threshold, and check if dunes should grow naturally
 
-            if self._marsh_dynamics:
-                 print('Run PyBMFT')
-                 print('Update Marsh Transects')
-                 print('Feed information back to Barrier3D')
-                 print('Update Brie based on Barrier3D')
+            #if self._marsh_dynamics:
+                 #print('Run PyBMFT')
+                 #print('Update Marsh Transects')
+                 #print('Feed information back to Barrier3D')
+                 #print('Update Brie based on Barrier3D')
 
 #
 #            for iB3D in range(self._ny):

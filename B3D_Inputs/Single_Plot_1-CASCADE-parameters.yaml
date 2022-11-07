@@ -45,14 +45,14 @@ Shrub_ON: 0
 SprayDist: 170
 StormSeries: []
 StormStart: 2
-TMAX: 50
+TMAX: 10
 TideAmp: 1.2
 TimeFruit: 5.0
 UprootLimit: -0.2
 beta: 0.04
 disp_mu: -0.721891
 disp_sigma: 1.5
-dune_file: /Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/DuneStart_1000dam.npy
+dune_file: /Users/ceclmac/PycharmProjects/TestPhython/barrier3d-dunes.npy
 elevation_file: /Users/ceclmac/PycharmProjects/TestPhython/CP4.npy
 growth_param_file: growthparam_1000dam.npy
 k_sf: 19324.753176079226
@@ -61,5 +61,5 @@ nn: 0.5
 rmax: 0.65
 rmin: 0.25
 s_sf_eq: 0.01698590034494604
-storm_file: /Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy
+storm_file: /Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/Default_StormTimeSeries_1000yr.npy
 threshold_in: 0.25
