@@ -398,7 +398,7 @@ class Outwasher:
         self._length = b3d._BarrierLength  # [dam] length of barrier
         self._substep = substep
         self._nn = b3d._nn  # flow routing constant
-        self._max_slope = -b3d._MaxUpSlope  # max slope that sediment can go uphill, previously Slim (0.25)
+        self._max_slope = max_slope
         # ki = b3d._Ki  # sediment transport coefficient
         self._ki = Ki
         self._cx = Cx
@@ -415,7 +415,8 @@ class Outwasher:
 
         int_domain = np.flip(b3d.InteriorDomain)
         # initializing our barrier interior
-        self._interior_domain = int_domain[5:-1, :]
+        # self._interior_domain = int_domain[5:-1, :]
+        self._interior_domain = int_domain[10:-1, :]
         # give it an arbitrary width of 30 dam
         # self._interior_domain = np.zeros([30, self._length])
         # # setting the elevations of each row in the domain
