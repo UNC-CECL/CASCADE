@@ -60,7 +60,7 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
         time_step_count=nt,
         min_dune_growth_rate=rmin,
         max_dune_growth_rate=rmax,
-        num_cores=1,
+        num_cores=3,
         roadway_management_module=False,  # no roadway management
         alongshore_transport_module=False,  # no brie coupling
         beach_nourishment_module=False,  # no beach nourishment
@@ -70,11 +70,10 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
 
     # --------- LOOP ---------
     Time = time.time()
-
     for time_step in range(nt - 1):
         # Print time step to screen (NOTE: time_index in each model is time_step+1)
         print("\r", "Time Step: ", time_step, end="")
-        cascade.update()
+        cascade.update(Time_step = time_step)
         if cascade.b3d_break:
             break
 
@@ -91,18 +90,20 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
 
 # Specify variables to use in calling function
 # Elevation file path name
-e_file = "/Users/ceclmac/PycharmProjects/TestPhython/CP4.npy"
+e_file = "/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/InitElevHog.npy"
 # Dune height path name
 d_file = "/Users/ceclmac/PycharmProjects/TestPhython/barrier3d-dunes.npy"
 # Storm file path name
 s_file = "/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/Default_StormTimeSeries_1000yr.npy"
+nt_run = 50 # Number of years model will run
+run_name = 'PyBMFT Marsh Test 7'
 
 # Call function
 RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
-    nt=10,
+    nt=nt_run,
     rmin=0.25,
     rmax=0.65,
-    name="Marsh_Tests",
+    name=run_name,
     storm_file=s_file,
     elevation_file=e_file,
     dune_file=d_file,
@@ -429,7 +430,7 @@ def plot_ElevAnimation_CASCADE(
 
 
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/Run_output")
-name_prefix = "Marsh_Tests"
+name_prefix = run_name
 
 # --------- plot ---------
 output = np.load(name_prefix + ".npz", allow_pickle=True)
@@ -441,7 +442,7 @@ ny = np.size(b3d)
 directory = "/Users/ceclmac/PycharmProjects/CASCADE/"
 # TMax_MGMT = Needed 0
 # TMAX_Sim = Last simulation year of the model 99
-TMax_Sim = 10  # Give length of simulation
+TMax_Sim = nt_run  # Give length of simulation
 TMax_MGMT = [0] * ny
 beach_management_ny = [False] * ny
 roadway_management_ny = [False] * ny
@@ -451,7 +452,7 @@ plot_ElevAnimation_CASCADE(
     ny=ny,
     directory=directory,
     TMAX_MGMT=TMax_MGMT,  # an array
-    name="Offset_Test",
+    name=run_name,
     TMAX_SIM=TMax_Sim,  # not an array
     beach_management_ny=beach_management_ny,
     roadway_management_ny=roadway_management_ny,
@@ -460,3 +461,20 @@ plot_ElevAnimation_CASCADE(
     fig_size=None,
     fig_eps=False,
 )
+plt.figure()
+fig = plt.gcf()
+fig.set_size_inches(7, 16)
+plt.subplot(3, 1, 1)
+marsh_width_TS = cascade._bmftc[0].Forest_edge[cascade._bmftc[0].startyear: cascade._bmftc[0].endyear] - cascade._bmftc[0].Marsh_edge[cascade._bmftc[0].startyear: cascade._bmftc[0].endyear]
+plt.plot(marsh_width_TS)
+plt.xlabel("Time [yr]")
+plt.ylabel("Back-Barrier Marsh Width [m]")
+plt.subplot(3, 1, 2)
+plt.plot(cascade._bmftc[0].Marsh_edge[cascade._bmftc[0].startyear: cascade._bmftc[0].endyear])
+plt.xlabel("Time [yr]")
+plt.ylabel("Back-Barrier Marsh Edge Location [m]")
+plt.subplot(3, 1, 3)
+plt.plot(cascade._bmftc[0].Forest_edge[cascade._bmftc[0].startyear: cascade._bmftc[0].endyear])
+plt.xlabel("Time [yr]")
+plt.ylabel("PyBMFT-C Back-Barrier Forest Edge Location [m]")
+plt.show()
