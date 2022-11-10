@@ -90,13 +90,15 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
 
 # Specify variables to use in calling function
 # Elevation file path name
-e_file = "/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/InitElevHog.npy"
+e_file = "/B3D_Inputs/Marsh_Test_Inputs/InitElevHog.npy"
 # Dune height path name
-d_file = "/Users/ceclmac/PycharmProjects/TestPhython/barrier3d-dunes.npy"
+d_file = "/B3D_Inputs/Marsh_Test_Inputs/barrier3d-dunes.npy"
 # Storm file path name
-s_file = "/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/Default_StormTimeSeries_1000yr.npy"
-nt_run = 50 # Number of years model will run
-run_name = 'PyBMFT Marsh Test 7'
+s_file = "/B3D_Inputs/Default_StormTimeSeries_1000yr.npy"
+#s_file = "/Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/Default_StormTimeSeries_1000yr.npy"
+c_wd = os.getcwd()
+nt_run = 5 # Number of years model will run
+run_name = 'PyBMFT Marsh Test 9'
 
 # Call function
 RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -104,9 +106,9 @@ RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
     rmin=0.25,
     rmax=0.65,
     name=run_name,
-    storm_file=s_file,
-    elevation_file=e_file,
-    dune_file=d_file,
+    storm_file=c_wd+s_file,
+    elevation_file=c_wd+e_file,
+    dune_file=c_wd+d_file,
     marsh_dynamics=True,
 )
 
@@ -352,7 +354,7 @@ def plot_ElevAnimation_CASCADE(
             Dunes = np.flipud(Dunes)
             Beach = BeachDomain * 10
             Domain = np.vstack([Beach, Dunes, Domain])
-            Domain[Domain < 0] = -1
+            Domain[Domain < -3] = -3
             widthTS = len(Domain)
             OriginTstart = int(cellular_shoreline_post_humans)
             OriginTstop = OriginTstart + widthTS
@@ -446,6 +448,8 @@ TMax_Sim = nt_run  # Give length of simulation
 TMax_MGMT = [0] * ny
 beach_management_ny = [False] * ny
 roadway_management_ny = [False] * ny
+
+
 
 plot_ElevAnimation_CASCADE(
     cascade,

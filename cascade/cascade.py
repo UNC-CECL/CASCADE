@@ -630,7 +630,6 @@ class Cascade:
         # Run PyBMFT module to represent marsh growth and erosion from the back-bay
         if self._marsh_dynamics:
             for iB3D in range(self._ny):
-                print('Run PyBMFT ' +str(iB3D))
                 """Update BarrierBMFT by one time step"""
 
                 # ===================================================================================================================================================================================================================================
