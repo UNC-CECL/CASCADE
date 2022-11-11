@@ -119,67 +119,6 @@ def DuneGaps(DuneDomain, Dow, Rhigh):
         gaps.append([Dow[start], Dow[stop], Rexcess])
     return gaps
 
-# ### Dune Erosion
-# def dune_erosion(b3d, dune_length, berm_el, dune_domain, dune_crest, bayhigh):
-#     dune_width = b3d._DuneWidth
-#     dune_restart = b3d._DuneRestart  # currently set to 0.0075
-#     max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
-#     Hd_avgTS = b3d._Hd_AverageTS
-#     dune_crest[dune_crest < dune_restart] = dune_restart
-#     Hd_avgTS.append(np.mean(dune_crest))  # Store average pre-storm dune-height for time step
-#     c1 = b3d._C1
-#     c2 = b3d._C2
-#     # Hd_loss_TS = b3d._Hd_Loss_TS
-#     # Rhigh = max(storm_series[1])  # Highest elevation of the landward margin of runup. Just using max of storm series
-#     DuneChange = np.zeros([dune_length, dune_width])  # Vector storing dune height change for this storm
-#     # dune = dune_crest+berm_el
-#
-#     # Find overwashed dunes and gaps
-#     # currently changed Rhigh to current bay depth in the storm series
-#     dune_elev = dune_crest + berm_el
-#     Dow = [index for index, value in enumerate(dune_elev) if value < bayhigh]  # bayhigh used to be Rhigh
-#     D_not_ow = [index for index, value in enumerate(dune_elev) if value > bayhigh]
-#     gaps = b3d.DuneGaps(dune_crest, Dow, berm_el, bayhigh)
-#     # Finds location and Rexcess of continuous gaps in dune ridge
-#     # for ow_cell in range(len(Dow)):  # Loop through each overwashed dune cell
-#     #     for w in range(dune_width):
-#     #         # Calculate dune elevation loss
-#     #         ## dune domain at time index 1 is all zeros
-#     #         Rnorm = bayhigh / (dune_domain[Dow[ow_cell], w] + berm_el)  # bayhigh relative to pre-storm dune elevation
-#     #         Dloss = Rnorm / (c1 + (Rnorm * (Rnorm - c2)))  # Amount of dune crest elevation change normalized by
-#     #         # pre-storm dune elevation (increased by a factor by LVB) not sure this is still true
-#     #         # (i.e. a percent change), from Goldstein and Moore (2016)
-#     #         # Set new dune height
-#     #         InitDElev = (dune_domain[Dow[ow_cell], w] + berm_el)
-#     #         NewDElev = InitDElev * (1 - Dloss)  # Calculate new dune elevation from storm lowering
-#     #         if NewDElev < berm_el:
-#     #             NewDElev = berm_el
-#     #         dune_domain[Dow[ow_cell], w] = (NewDElev[0] - berm_el[0])  # Convert elevation to height above berm
-#     #         # LVB got rid of parenthesis around NewDElev - berm_el
-#     #         row = Dow[ow_cell]
-#     #         DuneChange[Dow[ow_cell], w] = InitDElev - NewDElev
-#     #
-#     #         # If dune is lowered to ~ zero, allow for chance of regrowth by raising dune height to 5 cm
-#     #         if dune_domain[Dow[ow_cell], w] < dune_restart:
-#     #             if dune_restart < max_dune:
-#     #                 dune_domain[Dow[ow_cell], w] = dune_restart
-#     #             else:
-#     #                 dune_domain[Dow[ow_cell], w] = (max_dune)  # Restart height can't be greater than Dmax
-#
-#     # Dune Height Diffusion
-#     # dune_domain = b3d.DiffuseDunes(dune_domain, 0)
-#     # dune_domain[dune_domain < sea_level] = dune_restart
-#     # # DuneLoss = np.sum(DuneChange) / length  # I think duneloss is only used for shoreline change
-#     # # Hd_TSloss = (DuneChange.max(axis=1) / dur)  # Average height of dune loss for each substep during storm
-#     # Hd_TSloss = (DuneChange.max(axis=1) / 1)  # Average height of dune loss for each substep during storm
-#     # # I think we should change dur to 1 because this will change with each TS now
-#     # # it was previously calculated one time and then each TS would have the same value
-#     # # this is usually used to reduce dune height lineraly over the course of the storm
-#     # # but I think it was super high, so I stopped using it
-#     # Hd_loss_TS[0, :] = Hd_loss_TS[0, :] + DuneChange.max(axis=1)
-#     return max_dune, dune_domain, dune_crest, gaps, D_not_ow
-
-
 # ### Calculate Slopes
 def FR_slopes(truth_array, domain, width, length, duration, time_step):
     """
@@ -462,7 +401,8 @@ class Outwasher:
             substep=2,
             Cx=10,
             Ki=7.5E-3,
-            max_slope=-0.25
+            max_slope=-0.25,
+            dune_height=0.5
     ):
         # make a folder where all graphs will be saved for that run
         self._runID = runID
@@ -489,8 +429,10 @@ class Outwasher:
         # avg_slope = b3d._BermEl / 20                        # how it is defined in barrier 3D which is much smaller than when
         # you calculate the slope using the avg of the first and last rows
         # setting up dune domain using b3d
-        self._dune_domain = b3d.DuneDomain[b3d._time_index - 1, :, :]
-        self._dune_crest = self._dune_domain.max(axis=1)  # dune_crest used to be DuneDomainCrest
+        self._dune_height = dune_height
+        self._dune_domain = dunes(self._length, self._berm_el, n_rows=2, n_gaps=2, dune_height=self._dune_height)
+        # self._dune_domain = b3d.DuneDomain[b3d._time_index - 1, :, :]
+        # self._dune_crest = self._dune_domain.max(axis=1)  # dune_crest used to be DuneDomainCrest
         # self._dune_domain = dunes(self._length, self._berm_el, n_rows=2, n_gaps=1, dune_height=0.25)
         # initializing our barrier interior
         # give it an arbitrary width of 30 dam
@@ -556,7 +498,7 @@ class Outwasher:
 
                     # the dune domain is being taken from B3D, but has 2 rows with length rows, so it needs to be transposed
                     # I believe each row starts off exactly the same, but now I am not sure
-                    dune_domain_full = np.transpose(self._dune_domain) + self._berm_el
+                    dune_domain_full = self._dune_domain
                     # the full domain of outwasher starts with the interior domain, then the dune, beach, and beachface
                     full_domain = np.append(self._interior_domain, dune_domain_full, 0)  # [dam MHW]
                     full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
@@ -1201,7 +1143,7 @@ def plot_FRarray(FR_array, directory, start, stop):
         cax = ax.matshow(
             AnimateDomain,
             # origin="upper",
-            cmap="jet_r",
+            cmap="binary",
             # vmin=min_v, vmax=max_v,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")

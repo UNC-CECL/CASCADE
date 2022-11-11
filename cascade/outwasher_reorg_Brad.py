@@ -1201,7 +1201,7 @@ def plot_FRarray(FR_array, directory, start, stop):
         cax = ax.matshow(
             AnimateDomain,
             # origin="upper",
-            cmap="jet_r",
+            cmap="binary",
             # vmin=min_v, vmax=max_v,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
