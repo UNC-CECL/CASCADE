@@ -444,7 +444,7 @@ class Outwasher:
         # setting up dune domain using b3d
         # self._dune_domain = b3d.DuneDomain[b3d._time_index - 1, :, :]
         # self._dune_crest = self._dune_domain.max(axis=1)  # dune_crest used to be DuneDomainCrest
-        self._dune_domain = dunes(self._length, self._berm_el, n_rows=2, n_gaps=2, dune_height=self._dune_height)
+        self._dune_domain = dunes(self._length, self._berm_el, n_rows=2, n_gaps=1, dune_height=self._dune_height)
         # initializing our barrier interior
         # give it an arbitrary width of 30 dam
         self._interior_domain = np.zeros([30, self._length])

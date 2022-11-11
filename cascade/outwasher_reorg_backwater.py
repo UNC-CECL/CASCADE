@@ -931,7 +931,7 @@ def plot_dischargeComp(discharge_array, directory, start, stop, bay_level):
         plt.title("Discharge Comparison at the First Dune Line (dam^3/hr)")
         ax.legend(loc="upper left")
         plt.tight_layout()
-        full_text = "Time = " + str(t) + " hrs" + "; Bay level = " + str(round(bay_level[t], 3)) + " dam"
+        full_text = "Time = " + str(t) + "; Bay level = " + str(round(bay_level[t], 3)) + " dam"
         plt.text(0.5, 0.99, full_text, horizontalalignment='center',
         verticalalignment='top', transform=ax.transAxes)
         plt.rcParams.update({"font.size": 15})

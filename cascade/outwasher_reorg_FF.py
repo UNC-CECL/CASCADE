@@ -57,6 +57,33 @@ def bay_converter(storms, substep):
     new_ss.append(storms[-1])  # make sure to include our last value
     return new_ss
 
+def dunes(length, berm_el, n_rows, n_gaps, dune_height=0.25):
+    width = n_rows
+    gap_height = berm_el[0]
+    dune_domain = np.zeros([width, length])
+    dune_domain[0, :] = dune_height
+    # centered evenly-spaced gaps
+    gap = 1
+    gap1 = 1 / n_gaps * 0.5 * length
+    gap_locations = np.zeros(n_gaps)
+    gap_locations[0] = gap1
+    while gap <= n_gaps-1:
+        gap_locations[gap] = gap_locations[gap-1]+1/n_gaps*length
+        gap += 1
+    gap_locations = np.round(gap_locations, decimals=1)
+    gap_locations = gap_locations.astype(int)
+    # random gaps
+    # for g in range(n_gaps):
+    #     gap_locations[g] = np.random.randint(0, length-1)
+    # gap_locations = gap_locations.astype(int)
+    # for both methods:
+    for loc in gap_locations:
+        dune_domain[0, loc] = gap_height
+        dune_domain[0, loc-1] = gap_height
+        dune_domain[0, loc+1] = gap_height
+    dune_domain[:, :] = dune_domain[0, :]
+    return dune_domain
+
 
 def DuneGaps(DuneDomain, Dow, Rhigh):
     """Returns tuple of [gap start index, stop index, avg Rexcess of each gap,
@@ -414,8 +441,8 @@ class Outwasher:
         # you calculate the slope using the avg of the first and last rows
         # setting up dune domain using b3d
         self._dune_domain = b3d.DuneDomain[b3d._time_index - 1, :, :]
-        self._dune_crest = self._dune_domain.max(axis=1)  # dune_crest used to be DuneDomainCrest
-
+        # self._dune_crest = self._dune_domain.max(axis=1)  # dune_crest used to be DuneDomainCrest
+        # self._dune_domain = dunes(self._length, self._berm_el, n_rows=2, n_gaps=1, dune_height=0.25)
         # initializing our barrier interior
         # give it an arbitrary width of 30 dam
         self._interior_domain = np.zeros([30, self._length])
@@ -830,7 +857,7 @@ class Outwasher:
                             SedFluxOut[TS, width - 1, :]) / self._substep  # [dam^3] previously OWloss
                         # qs_lost_total is initialized to zero outside all loops
 
-                with open('C:/Users/Lexi/Documents/Research/Outwasher/Output/sediment_tracking.txt', 'a') as f:
+                with open('D:/NC State/Outwasher/Output/sediment_tracking.txt', 'a') as f:
                     if n == numstorm - 1:
                         f.write(self._runID)
                         f.write('\n')
@@ -987,7 +1014,7 @@ def plot_ElevAnimation(elev, directory, start, stop):
         elevFig1.colorbar(cax)
         plt.xlabel("Alongshore Distance (dam)")
         plt.ylabel("Cross-Shore Distance (dam)")
-        plt.title("Elevation change (dam^3)")
+        plt.title("Elevation change (dam)")
         plt.tight_layout()
         timestr = "Time = " + str(t) + " hrs"
         plt.text(1, 1, timestr)
@@ -1255,7 +1282,7 @@ def plot_dischargeComp(discharge_array, directory, start, stop, bay_level):
         plt.title("Discharge Comparison at the First Dune Line (dam^3/hr)")
         ax.legend(loc="upper left")
         plt.tight_layout()
-        full_text = "Time = " + str(t) + " hrs" + "; Bay level = " + str(round(bay_level[t], 3)) + " dam"
+        full_text = "Time = " + str(t) + "; Bay level = " + str(round(bay_level[t], 3)) + " dam"
         plt.text(0.5, 0.99, full_text, horizontalalignment='center',
         verticalalignment='top', transform=ax.transAxes)
         plt.rcParams.update({"font.size": 15})
