@@ -110,7 +110,6 @@ def DuneGaps(DuneDomain, Dow, Rhigh):
     # if i > 0:
         # stop = i - 1
     stop = i
-
     x = DuneDomain[Dow[start]: (Dow[stop] + 1)]
     if len(x) > 0:
         Hmean = sum(x) / float(len(x))
@@ -608,13 +607,14 @@ class Outwasher:
                     row = 0
                     start_row = 0
                     while stop == 0:
-                        if max(FR_array[TS, row, :]) > 0:
+                        if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row+1, :]) > 0:
                             start_row = row
                             stop = 1
                         else:
                             row += 1
 
                     gap_row = Elevation[TS, start_row, :]
+                    dune_row = Elevation[TS, int_width, :]
                     if bayhigh <= min(gap_row):
                         Discharge[TS, :, :] = 0
                     else:
@@ -623,7 +623,9 @@ class Outwasher:
                         # ### finding the OW cells --------------------------------------------------------------------
                         Dow = [index for index, value in enumerate(gap_row) if
                                value < bayhigh]  # bayhigh used to be Rhigh
+                        # if len(Dow) > 0:
                         gaps = DuneGaps(gap_row, Dow, bayhigh)
+                        # gaps = DuneGaps(dune_row, Dow, bayhigh)
                         max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
 
                         for q in range(len(gaps)):
@@ -635,6 +637,11 @@ class Outwasher:
                             overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
                             # Set discharge at dune gap
                             Discharge[TS, start_row, start:stop+1] = overtop_flow  # (dam^3/hr)
+                        # correction of discharge
+                        # for cell in range(self._length):
+                        #     if FR_array[TS, start_row+1, cell] == 0:
+                        #         Discharge[TS, start_row, cell] = 0
+                        #         Discharge[TS, start_row, cell] = 0
 
                         for d in range(start_row, width):  # for letting sediment out, discharge scenarios 2 and 3
                             # for d in range(int_width + 1, width):  # if we are using scenario 1 discharge
@@ -670,10 +677,10 @@ class Outwasher:
                                     # ### Calculate Sed Movement
                                     fluxLimit = max_dune  # [dam MHW] dmaxel - bermel
                                     # all Qs in [dam^3/hr]
-                                    # if d < int_width:
-                                    #     C = self._cx * abs(self._Si)  # 10 x the avg slope (from Murray) normal way
-                                    # else:
-                                    C = self._cx * abs(front_Si[0])
+                                    if d < int_width:
+                                        C = self._cx * abs(self._Si)  # 10 x the avg slope (from Murray) normal way
+                                    else:
+                                        C = self._cx * abs(front_Si[0])
 
                                     if Q1 > q_min:
                                         Qs1 = self._ki * (Q1 * (S1 + C)) ** self._mm

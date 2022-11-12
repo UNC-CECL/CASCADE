@@ -58,7 +58,7 @@ def bay_converter(storms, substep):
     return new_ss
 
 
-def dunes(length, berm_el, n_rows, n_gaps, dune_height=0.25):
+def dunes(length, berm_el, n_rows, n_gaps, dune_height=0.5):
     width = n_rows
     gap_height = berm_el[0]
     dune_domain = np.zeros([width, length])
@@ -550,7 +550,7 @@ class Outwasher:
                     row = 0
                     start_row = 0
                     while stop == 0:
-                        if max(FR_array[TS, row, :]) > 0:
+                        if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row+1, :]) > 0:
                             start_row = row
                             stop = 1
                         else:
@@ -612,10 +612,10 @@ class Outwasher:
                                     # ### Calculate Sed Movement
                                     fluxLimit = max_dune  # [dam MHW] dmaxel - bermel
                                     # all Qs in [dam^3/hr]
-                                    # if d < int_width:
-                                    #     C = self._cx * abs(self._Si)  # 10 x the avg slope (from Murray) normal way
-                                    # else:
-                                    C = self._cx * abs(front_Si[0])
+                                    if d < int_width:
+                                        C = self._cx * abs(self._Si)  # 10 x the avg slope (from Murray) normal way
+                                    else:
+                                        C = self._cx * abs(front_Si[0])
 
                                     if Q1 > q_min:
                                         Qs1 = self._ki * (Q1 * (S1 + C)) ** self._mm
@@ -720,103 +720,6 @@ class Outwasher:
                storm_series, SedFluxOut, SedFluxIn, domain_array, OW_TS, dis_comp_array, FR_array
 
 
-# --------------------------------------------running outwasher---------------------------------------------------------
-# importing Chris' bay data
-
-# ### start of the actual code
-
-# with open(r"C:\Users\Lexi\Documents\Research\Outwasher\chris stuff\sound_data.txt", newline='') as csvfile:
-#     sound_data = list(csv.reader(csvfile))[0]
-# sound_data = [float(s) / 10 - 0.054 for s in sound_data]  # [dam MHW] Chris' sound elevations were in m MSL,
-# # so converted to NAVD88 then MHW and dam
-# sound_data = [s + 0.05 for s in sound_data]  # [dam MHW] just increasing the values
-# # setting all negative values to 0
-# sound_data = sound_data[20:]
-# for index, value in enumerate(sound_data):
-#     #     # smaller used 0.05
-#     if value > 0.220:
-#         sound_data[index] = 0.220
-# sound_data[0] = 0
-# # np.save("C:/Users/Lexi/Documents/Research/Outwasher/sound_data", sound_data)
-#
-# # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
-# storm_series = [1, sound_data, len(sound_data)]
-# path = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/"
-# # runID = "test"
-# runID = "dynamic_discharge_AVG_FACTOR15_Kie-3_substep4"
-# # the number in runID is 0.__
-# # ss in runID stands for storm series
-# # syndunes = synthetic dunes
-# # sedout = sediment fully leaves the system offshore
-# # see flux notes for changes to sediment fluxes (around lines 555 in code)
-# ## NOW USING REGULAR SOUND DATA, SED OUT AND EDITED EDGES
-# b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
-# b3d.update()
-# b3d.update_dune_domain()
-# # from cascade.outwasher_reorganized import Outwasher
-# outwash = Outwasher(b3d, runID, path, substep=4, Cx=10, Ki=7.5E-3,)
-# discharge, elev_change, domain, qs_lost, slopes2, dictionary, qs2, avg_initial_cross, storm_elev, sedout, sedin, domain_array \
-#     = outwash.update(storm_series)
-
-# domain_change = domain_array[1] - domain_array[0]
-# fig5 = plt.figure()
-# ax5 = fig5.add_subplot(111)
-# mat5 = ax5.matshow(
-#     domain_change,
-#     # origin="upper",
-#     cmap="seismic",
-#     vmin=-0.2, vmax=0.2,
-# )
-# ax5.set_xlabel('barrier length (dam)')
-# ax5.set_ylabel('barrier width (dam)')
-# ax5.set_title("Elevation Change")
-# plt.gca().xaxis.tick_bottom()
-# fig5.colorbar(mat5)
-# plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/elev_change_domain")
-
-
-# fig5 = plt.figure()
-# ax5 = fig5.add_subplot(111)
-# cols = range(np.size(qs2, 1))
-# for col in cols:
-#     line = qs2[7, :, col]
-#     ax5.plot(cols, line, label="column {0}".format(col))
-# ax5.legend()
-# ax5.set_ylabel("Qs2 (dam3/hr)")
-# ax5.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
-# ax5.set_title("{0} \n Qs2 at time 7".format(runID))
-# plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/cross_shore_qs2".format(runID))
-
-# fig6 = plt.figure()
-# ax6 = fig6.add_subplot(111)
-# ax6.plot(avg_initial_cross)
-# x = len(avg_initial_cross)
-# for index, value in enumerate(storm_elev):
-#     if index < 12:
-#         ax6.plot(range(x), np.ones(x) * value, linestyle="dashed", label="TS = {0}".format(index))
-# ax6.set_title("sound level for first 12 TS")
-# ax6.legend()
-# ax6.set_ylabel("Elevation (dam)")
-# ax6.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
-# plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/baylevels")
-# np.save("C:/Users/Lexi/Documents/Research/Outwasher/discharge", discharge)
-# np.save(newpath + "discharge", discharge)
-# plt.matshow(slopes2[1], cmap="jet_r")
-# plt.title('S2 Slopes')
-# plt.colorbar()
-# plt.matshow(discharge[1], cmap="jet_r")
-# plt.title('Discharge (dam^3/hr)')
-# plt.colorbar()
-# ----------------------------------making the elevation gif------------------------------------------------------------
-# frames = []
-# for i in range(2):
-#     filename = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/" + str(i) + "_domain.png"
-#     frames.append(imageio.imread(filename))
-# imageio.mimwrite("C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/{0}/test.gif".format(runID), frames, format='.gif',
-#                  fps=1)
-
-
-# -------------------------------------------elevation gif--------------------------------------------------------------
 def plot_ElevAnimation(elev, directory, start, stop):
     os.chdir(directory)
     newpath = "Elevations/"
