@@ -11,35 +11,7 @@ import matplotlib.pyplot as plt
 import imageio
 import csv
 
-# -------------------------------------------------------------------------------------------------------------------
-# ### Storm Series Converter
-# def storm_converter(storm_series):
-#     dur = 2 * storm_series[2]
-#     sound_level = np.zeros(dur)  # initializing the new bay level array
-#     avgs = []
-#     # we need to double the duration of the storm with the same magnitudes as before
-#     # making the avg water level array
-#     count = 0
-#     for time in range(len(storm_series[1]) - 1):
-#         avg_level = (storm_series[1][time] + storm_series[1][time + 1]) / 2
-#         avgs.append(avg_level)
-#     # for the new time series, if the time step is even, we keep the value from the original time series
-#     # if the time step is odd, we take the value from the avgs array
-#     for time2 in range(dur):
-#         if time2 % 2 == 0:
-#             sound_level[time2] = storm_series[1][int(time2 / 2)]
-#         elif time2 == dur - 1:
-#             sound_level[time2] = avgs[-1]
-#         else:
-#             count += 1
-#             sound_level[time2] = avgs[time2 - count]
-#             # if we are at time 1, need to access avgs time 0 (time - 1)
-#             # if we are at time 3, need to access avgs time 1 (time - 2)
-#             # if we are at time 5, need to access avgs time 2 (time - 3)
-#     storm_series[1] = sound_level
-#     return storm_series, dur
 
-# ### Storm Series Converter
 def bay_converter(storms, substep):
     # storms will be the sound data, so storm_series[1]
     new_ss = []
@@ -58,7 +30,7 @@ def bay_converter(storms, substep):
     return new_ss
 
 
-def dunes(length, berm_el, n_rows, n_gaps, dune_height=0.5):
+def dunes(length, berm_el, n_rows, n_gaps, dune_height=0.25):
     width = n_rows
     gap_height = berm_el[0]
     dune_domain = np.zeros([width, length])
@@ -110,7 +82,6 @@ def DuneGaps(DuneDomain, Dow, Rhigh):
     # if i > 0:
         # stop = i - 1
     stop = i
-
     x = DuneDomain[Dow[start]: (Dow[stop] + 1)]
     if len(x) > 0:
         Hmean = sum(x) / float(len(x))
@@ -119,7 +90,7 @@ def DuneGaps(DuneDomain, Dow, Rhigh):
         gaps.append([Dow[start], Dow[stop], Rexcess])
     return gaps
 
-# ### Calculate Slopes
+
 def FR_slopes(truth_array, domain, width, length, duration, time_step):
     """
     :param d: incremental width (row)
@@ -401,8 +372,7 @@ class Outwasher:
             substep=2,
             Cx=10,
             Ki=7.5E-3,
-            max_slope=-0.25,
-            dune_height=0.5
+            max_slope=-0.25
     ):
         # make a folder where all graphs will be saved for that run
         self._runID = runID
@@ -429,21 +399,16 @@ class Outwasher:
         # avg_slope = b3d._BermEl / 20                        # how it is defined in barrier 3D which is much smaller than when
         # you calculate the slope using the avg of the first and last rows
         # setting up dune domain using b3d
-        self._dune_height = dune_height
-        self._dune_domain = dunes(self._length, self._berm_el, n_rows=2, n_gaps=2, dune_height=self._dune_height)
-        # self._dune_domain = b3d.DuneDomain[b3d._time_index - 1, :, :]
-        # self._dune_crest = self._dune_domain.max(axis=1)  # dune_crest used to be DuneDomainCrest
+        self._dune_domain = b3d.DuneDomain[b3d._time_index - 1, :, :]
+        self._dune_crest = self._dune_domain.max(axis=1)  # dune_crest used to be DuneDomainCrest
         # self._dune_domain = dunes(self._length, self._berm_el, n_rows=2, n_gaps=1, dune_height=0.25)
         # initializing our barrier interior
         # give it an arbitrary width of 30 dam
-        self._interior_domain = np.zeros([30, self._length])
-        # setting the elevations of each row in the domain
-        for row in range(len(self._interior_domain)):
-            if row == 0:
-                self._interior_domain[row, :] = 0  # the domain (bay) starts at an elevation of 0 as opposed to -0.3 dam in B3D
-            else:
-                self._interior_domain[row, :] = self._interior_domain[row - 1, :] - self._Si  # giving the back barrier an equal slope
-                # (Si is negative, so when we subtract the negative value, we are increasing the elevation)
+        # self._interior_domain = np.zeros([30, self._length])
+        int_domain = np.flip(b3d.InteriorDomain)
+        # initializing our barrier interior
+        self._interior_domain = int_domain[5:-1, :]
+        # self._interior_domain = int_domain[10:-1, :]
 
     def update(
             self,
@@ -498,7 +463,7 @@ class Outwasher:
 
                     # the dune domain is being taken from B3D, but has 2 rows with length rows, so it needs to be transposed
                     # I believe each row starts off exactly the same, but now I am not sure
-                    dune_domain_full = self._dune_domain
+                    dune_domain_full = np.transpose(self._dune_domain) + self._berm_el
                     # the full domain of outwasher starts with the interior domain, then the dune, beach, and beachface
                     full_domain = np.append(self._interior_domain, dune_domain_full, 0)  # [dam MHW]
                     full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
@@ -546,12 +511,14 @@ class Outwasher:
                     # get dune crest out here first (dont remember what this means 9/16/2022)
                     bayhigh = storm_series[1][TS]  # [dam]
 
+
                     start_row = 0
                     for row in np.arange(int_width, -1, -1):
                         if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row+1, :]) > 0:
                             start_row = row
 
                     gap_row = Elevation[TS, start_row, :]
+                    dune_row = Elevation[TS, int_width, :]
                     if bayhigh <= min(gap_row):
                         Discharge[TS, :, :] = 0
                     else:
@@ -560,7 +527,9 @@ class Outwasher:
                         # ### finding the OW cells --------------------------------------------------------------------
                         Dow = [index for index, value in enumerate(gap_row) if
                                value < bayhigh]  # bayhigh used to be Rhigh
+                        # if len(Dow) > 0:
                         gaps = DuneGaps(gap_row, Dow, bayhigh)
+                        # gaps = DuneGaps(dune_row, Dow, bayhigh)
                         max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
 
                         for q in range(len(gaps)):
@@ -572,6 +541,11 @@ class Outwasher:
                             overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
                             # Set discharge at dune gap
                             Discharge[TS, start_row, start:stop+1] = overtop_flow  # (dam^3/hr)
+                        # correction of discharge
+                        # for cell in range(self._length):
+                        #     if FR_array[TS, start_row+1, cell] == 0:
+                        #         Discharge[TS, start_row, cell] = 0
+                        #         Discharge[TS, start_row, cell] = 0
 
                         for d in range(start_row, width):  # for letting sediment out, discharge scenarios 2 and 3
                             # for d in range(int_width + 1, width):  # if we are using scenario 1 discharge
@@ -716,6 +690,103 @@ class Outwasher:
                storm_series, SedFluxOut, SedFluxIn, domain_array, OW_TS, dis_comp_array, FR_array
 
 
+# --------------------------------------------running outwasher---------------------------------------------------------
+# importing Chris' bay data
+
+# ### start of the actual code
+
+# with open(r"C:\Users\Lexi\Documents\Research\Outwasher\chris stuff\sound_data.txt", newline='') as csvfile:
+#     sound_data = list(csv.reader(csvfile))[0]
+# sound_data = [float(s) / 10 - 0.054 for s in sound_data]  # [dam MHW] Chris' sound elevations were in m MSL,
+# # so converted to NAVD88 then MHW and dam
+# sound_data = [s + 0.05 for s in sound_data]  # [dam MHW] just increasing the values
+# # setting all negative values to 0
+# sound_data = sound_data[20:]
+# for index, value in enumerate(sound_data):
+#     #     # smaller used 0.05
+#     if value > 0.220:
+#         sound_data[index] = 0.220
+# sound_data[0] = 0
+# # np.save("C:/Users/Lexi/Documents/Research/Outwasher/sound_data", sound_data)
+#
+# # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
+# storm_series = [1, sound_data, len(sound_data)]
+# path = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/"
+# # runID = "test"
+# runID = "dynamic_discharge_AVG_FACTOR15_Kie-3_substep4"
+# # the number in runID is 0.__
+# # ss in runID stands for storm series
+# # syndunes = synthetic dunes
+# # sedout = sediment fully leaves the system offshore
+# # see flux notes for changes to sediment fluxes (around lines 555 in code)
+# ## NOW USING REGULAR SOUND DATA, SED OUT AND EDITED EDGES
+# b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
+# b3d.update()
+# b3d.update_dune_domain()
+# # from cascade.outwasher_reorganized import Outwasher
+# outwash = Outwasher(b3d, runID, path, substep=4, Cx=10, Ki=7.5E-3,)
+# discharge, elev_change, domain, qs_lost, slopes2, dictionary, qs2, avg_initial_cross, storm_elev, sedout, sedin, domain_array \
+#     = outwash.update(storm_series)
+
+# domain_change = domain_array[1] - domain_array[0]
+# fig5 = plt.figure()
+# ax5 = fig5.add_subplot(111)
+# mat5 = ax5.matshow(
+#     domain_change,
+#     # origin="upper",
+#     cmap="seismic",
+#     vmin=-0.2, vmax=0.2,
+# )
+# ax5.set_xlabel('barrier length (dam)')
+# ax5.set_ylabel('barrier width (dam)')
+# ax5.set_title("Elevation Change")
+# plt.gca().xaxis.tick_bottom()
+# fig5.colorbar(mat5)
+# plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/elev_change_domain")
+
+
+# fig5 = plt.figure()
+# ax5 = fig5.add_subplot(111)
+# cols = range(np.size(qs2, 1))
+# for col in cols:
+#     line = qs2[7, :, col]
+#     ax5.plot(cols, line, label="column {0}".format(col))
+# ax5.legend()
+# ax5.set_ylabel("Qs2 (dam3/hr)")
+# ax5.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
+# ax5.set_title("{0} \n Qs2 at time 7".format(runID))
+# plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/cross_shore_qs2".format(runID))
+
+# fig6 = plt.figure()
+# ax6 = fig6.add_subplot(111)
+# ax6.plot(avg_initial_cross)
+# x = len(avg_initial_cross)
+# for index, value in enumerate(storm_elev):
+#     if index < 12:
+#         ax6.plot(range(x), np.ones(x) * value, linestyle="dashed", label="TS = {0}".format(index))
+# ax6.set_title("sound level for first 12 TS")
+# ax6.legend()
+# ax6.set_ylabel("Elevation (dam)")
+# ax6.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
+# plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/baylevels")
+# np.save("C:/Users/Lexi/Documents/Research/Outwasher/discharge", discharge)
+# np.save(newpath + "discharge", discharge)
+# plt.matshow(slopes2[1], cmap="jet_r")
+# plt.title('S2 Slopes')
+# plt.colorbar()
+# plt.matshow(discharge[1], cmap="jet_r")
+# plt.title('Discharge (dam^3/hr)')
+# plt.colorbar()
+# ----------------------------------making the elevation gif------------------------------------------------------------
+# frames = []
+# for i in range(2):
+#     filename = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/" + str(i) + "_domain.png"
+#     frames.append(imageio.imread(filename))
+# imageio.mimwrite("C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/{0}/test.gif".format(runID), frames, format='.gif',
+#                  fps=1)
+
+
+# -------------------------------------------elevation gif--------------------------------------------------------------
 def plot_ElevAnimation(elev, directory, start, stop):
     os.chdir(directory)
     newpath = "Elevations/"

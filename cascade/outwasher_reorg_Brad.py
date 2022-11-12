@@ -603,17 +603,15 @@ class Outwasher:
                     # get dune crest out here first (dont remember what this means 9/16/2022)
                     bayhigh = storm_series[1][TS]  # [dam]
 
-                    stop = 0
-                    row = 0
-                    start_row = 0
-                    while stop == 0:
+                    if TS == 0:
+                        start_row_ind = int_width
+                    start_row_ind = 0
+                    for row in np.arange(int_width, -1, -1):
                         if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row+1, :]) > 0:
                             start_row = row
-                            stop = 1
-                        else:
-                            row += 1
 
-                    gap_row = Elevation[TS, start_row, :]
+
+                    gap_row = Elevation[TS, start_row_ind, :]
                     dune_row = Elevation[TS, int_width, :]
                     if bayhigh <= min(gap_row):
                         Discharge[TS, :, :] = 0
@@ -636,14 +634,14 @@ class Outwasher:
                             overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
                             overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
                             # Set discharge at dune gap
-                            Discharge[TS, start_row, start:stop+1] = overtop_flow  # (dam^3/hr)
+                            Discharge[TS, start_row_ind, start:stop+1] = overtop_flow  # (dam^3/hr)
                         # correction of discharge
                         # for cell in range(self._length):
                         #     if FR_array[TS, start_row+1, cell] == 0:
                         #         Discharge[TS, start_row, cell] = 0
                         #         Discharge[TS, start_row, cell] = 0
 
-                        for d in range(start_row, width):  # for letting sediment out, discharge scenarios 2 and 3
+                        for d in range(start_row_ind, width):  # for letting sediment out, discharge scenarios 2 and 3
                             # for d in range(int_width + 1, width):  # if we are using scenario 1 discharge
                             # Discharge for each TS, row 1, and all cols set above
                             Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
@@ -678,7 +676,8 @@ class Outwasher:
                                     fluxLimit = max_dune  # [dam MHW] dmaxel - bermel
                                     # all Qs in [dam^3/hr]
                                     if d < int_width:
-                                        C = self._cx * abs(self._Si)  # 10 x the avg slope (from Murray) normal way
+                                        # C = self._cx * abs(self._Si)  # 10 x the avg slope (from Murray) normal way
+                                        C = 0
                                     else:
                                         C = self._cx * abs(front_Si[0])
 
