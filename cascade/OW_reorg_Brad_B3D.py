@@ -147,7 +147,7 @@ def FR_slopes(truth_array, domain, width, length, duration, time_step):
             if col == length - 1 and S2 < 0 and S1 < 0:
                 S3 = -999
 
-            if S1 < 0 and S2 < 0 and S3 < 0:
+            if S1 <= 0 and S2 <= 0 and S3 <= 0:
                 truth_array[time_step, row, col] = 0
             else:
                 truth_array[time_step, row, col] = 1
@@ -512,13 +512,17 @@ class Outwasher:
                     bayhigh = storm_series[1][TS]  # [dam]
 
 
-                    start_row = 0
-                    for row in np.arange(int_width, -1, -1):
-                        if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row+1, :]) > 0:
-                            start_row = row
+                    dune_row = Elevation[TS, int_width, :]
+                    start_row = int_width
+                    # if TS == 0:
+                    #     start_row = int_width
+                    # else:
+                    #     # for row in np.arange(int_width, -1, -1):
+                    #     for row in np.arange(int_width, 29, -1):
+                    #         if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row+1, :]) > 0:
+                    #             start_row = row
 
                     gap_row = Elevation[TS, start_row, :]
-                    dune_row = Elevation[TS, int_width, :]
                     if bayhigh <= min(gap_row):
                         Discharge[TS, :, :] = 0
                     else:
