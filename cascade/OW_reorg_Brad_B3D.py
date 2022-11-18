@@ -91,7 +91,7 @@ def DuneGaps(DuneDomain, Dow, Rhigh):
     return gaps
 
 
-def FR_slopes(truth_array, domain, width, length, duration, time_step):
+def FR_slopes(truth_array, avg_slope_array, domain, width, length, duration, time_step):
     """
     :param d: incremental width (row)
     :param domain_width: width of the input domain
@@ -146,13 +146,16 @@ def FR_slopes(truth_array, domain, width, length, duration, time_step):
                 S1 = -999
             if col == length - 1 and S2 < 0 and S1 < 0:
                 S3 = -999
-
-            if S1 <= 0 and S2 <= 0 and S3 <= 0:
+# ----------------------------for singular cell slope analysis----------------------------------------------------------
+            if S1 < 0 and S2 < 0 and S3 < 0:
                 truth_array[time_step, row, col] = 0
             else:
                 truth_array[time_step, row, col] = 1
+# ----------------------- group cell slope analysis --------------------------------------------------------------------
+            avg_slope_array[time_step, row, col] = (S1+S2+S3)/3
+            # do something with modulus operator
 
-    return truth_array
+    return truth_array, avg_slope_array
 
 
 def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_step):
@@ -491,6 +494,7 @@ class Outwasher:
                 slopes_array = np.zeros([duration, width, self._length])
                 dis_comp_array = np.zeros([duration, 2, self._length])
                 truth_array = np.zeros([duration, width, self._length])
+                avg_slope_array = np.zeros([duration, width, self._length])
                 rexcess_dict = {}
                 qs2_array = np.zeros([duration, width, self._length])
                 qs_lost = 0  # the array for storing the sediment leaving the last row
@@ -506,21 +510,21 @@ class Outwasher:
                     print(TS)
 
                     # Need to calculate slopes immediately
-                    FR_array = FR_slopes(truth_array, Elevation[TS], width, self._length, duration, TS)
+                    FR_array = FR_slopes(truth_array, avg_slope_array, Elevation[TS], width, self._length, duration, TS)
 
                     # get dune crest out here first (dont remember what this means 9/16/2022)
                     bayhigh = storm_series[1][TS]  # [dam]
 
 
-                    dune_row = Elevation[TS, int_width, :]
-                    start_row = int_width
+                    # dune_row = Elevation[TS, int_width, :]
+                    # start_row = int_width
                     # if TS == 0:
                     #     start_row = int_width
                     # else:
                     #     # for row in np.arange(int_width, -1, -1):
-                    #     for row in np.arange(int_width, 29, -1):
-                    #         if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row+1, :]) > 0:
-                    #             start_row = row
+                    for row in np.arange(int_width, 29, -1):
+                        if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row+1, :]) > 0:
+                            start_row = row
 
                     gap_row = Elevation[TS, start_row, :]
                     if bayhigh <= min(gap_row):
