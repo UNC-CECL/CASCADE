@@ -147,13 +147,50 @@ def FR_slopes(truth_array, avg_slope_array, domain, width, length, duration, tim
             if col == length - 1 and S2 < 0 and S1 < 0:
                 S3 = -999
 # ----------------------------for singular cell slope analysis----------------------------------------------------------
-            if S1 < 0 and S2 < 0 and S3 < 0:
-                truth_array[time_step, row, col] = 0
-            else:
-                truth_array[time_step, row, col] = 1
+#             if S1 < 0 and S2 < 0 and S3 < 0:
+#                 truth_array[time_step, row, col] = 0
+#             else:
+#                 truth_array[time_step, row, col] = 1
 # ----------------------- group cell slope analysis --------------------------------------------------------------------
-            avg_slope_array[time_step, row, col] = (S1+S2+S3)/3
+            if col == 0:
+                avg_slope_array[time_step, row, col] = (S2 + S3) / 2
+            elif col == length-1:
+                avg_slope_array[time_step, row, col] = (S1 + S2) / 2
+            else:
+                avg_slope_array[time_step, row, col] = (S1 + S2 + S3) / 3
+
             # do something with modulus operator
+    b_size = 10
+    extra_vert_cells = width % b_size
+    extra_lat_cells = length % b_size
+    if extra_vert_cells == 0:
+        n_shifts_vert = int((width - extra_vert_cells) / b_size)
+    else:
+        n_shifts_vert = int((width - extra_vert_cells) / b_size) + 1
+    if extra_lat_cells == 0:
+        n_shifts_lat = int((length - extra_lat_cells) / b_size)
+    else:
+        n_shifts_lat = int((length - extra_lat_cells) / b_size) + 1
+
+    for v in range(n_shifts_vert):
+        if v == n_shifts_vert-1 and extra_vert_cells != 0:
+            start_row = end_row
+            end_row = start_row + extra_vert_cells + 1
+        else:
+            start_row = v*b_size
+            end_row = v*b_size + b_size
+        for l in range(n_shifts_lat):
+            if l == n_shifts_lat-1 and extra_lat_cells != 0:
+                start_col = end_col
+                end_col = start_col + extra_lat_cells + 1
+            else:
+                start_col = l*b_size
+                end_col = l*b_size + b_size
+            S = np.mean(avg_slope_array[time_step, start_row:end_row, start_col:end_col])
+            if S < 0:
+                truth_array[time_step, start_row:end_row, start_col:end_col] = 0
+            else:
+                truth_array[time_step, start_row:end_row, start_col:end_col] = 1
 
     return truth_array, avg_slope_array
 
@@ -510,22 +547,23 @@ class Outwasher:
                     print(TS)
 
                     # Need to calculate slopes immediately
-                    FR_array = FR_slopes(truth_array, avg_slope_array, Elevation[TS], width, self._length, duration, TS)
+                    FR_array, avg_slope_array = FR_slopes(truth_array, avg_slope_array, Elevation[TS], width, self._length, duration, TS)
 
                     # get dune crest out here first (dont remember what this means 9/16/2022)
                     bayhigh = storm_series[1][TS]  # [dam]
 
-
-                    # dune_row = Elevation[TS, int_width, :]
-                    # start_row = int_width
-                    # if TS == 0:
-                    #     start_row = int_width
-                    # else:
-                    #     # for row in np.arange(int_width, -1, -1):
-                    for row in np.arange(int_width, 29, -1):
-                        if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row+1, :]) > 0:
-                            start_row = row
-
+                    row = int_width
+                    # for row in np.arange(int_width, -1, -1):
+                    #     if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row + 1, :]) > 0:
+                    #         start_row = row
+                    #         counter = 0
+                    counter = 0
+                    while counter == 0 and row >= 0:
+                        if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row + 1, :]) > 0:
+                            row = row - 1
+                        else:
+                            counter = 1
+                    start_row = row + 1
                     gap_row = Elevation[TS, start_row, :]
                     if bayhigh <= min(gap_row):
                         Discharge[TS, :, :] = 0
@@ -535,9 +573,7 @@ class Outwasher:
                         # ### finding the OW cells --------------------------------------------------------------------
                         Dow = [index for index, value in enumerate(gap_row) if
                                value < bayhigh]  # bayhigh used to be Rhigh
-                        # if len(Dow) > 0:
                         gaps = DuneGaps(gap_row, Dow, bayhigh)
-                        # gaps = DuneGaps(dune_row, Dow, bayhigh)
                         max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
 
                         for q in range(len(gaps)):
@@ -548,12 +584,7 @@ class Outwasher:
                             overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
                             overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
                             # Set discharge at dune gap
-                            Discharge[TS, start_row, start:stop+1] = overtop_flow  # (dam^3/hr)
-                        # correction of discharge
-                        # for cell in range(self._length):
-                        #     if FR_array[TS, start_row+1, cell] == 0:
-                        #         Discharge[TS, start_row, cell] = 0
-                        #         Discharge[TS, start_row, cell] = 0
+                            Discharge[TS, start_row, start:stop + 1] = overtop_flow  # (dam^3/hr)
 
                         for d in range(start_row, width):  # for letting sediment out, discharge scenarios 2 and 3
                             # for d in range(int_width + 1, width):  # if we are using scenario 1 discharge
@@ -1130,7 +1161,7 @@ def plot_FRarray(FR_array, directory, start, stop):
         plt.ylabel("Cross-Shore Distance (dam)")
         plt.title("Cells where flow routing occurs")
         plt.tight_layout()
-        timestr = "Time = " + str(t) + " hrs"
+        timestr = "Time = " + str(t)
         plt.text(1, 1, timestr)
         plt.rcParams.update({"font.size": 15})
         name = "FR_array_" + str(t)

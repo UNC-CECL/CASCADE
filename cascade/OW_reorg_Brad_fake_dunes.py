@@ -220,16 +220,6 @@ def FR_slopes(truth_array, avg_slope_array, domain, width, length, duration, tim
                 truth_array[time_step, start_row:end_row, start_col:end_col] = 0
             else:
                 truth_array[time_step, start_row:end_row, start_col:end_col] = 1
-    # if extra_vert_cells != 0:
-    #     start_row = end_row
-    #     end_row = start_row + extra_vert_cells + 1
-    #     for l in range(n_shifts_lat + 1):
-    #
-    #         S = np.mean(avg_slope_array[time_step, start_row:end_row, start_col:end_col])
-    #         if S < 0:
-    #             truth_array[time_step, start_row:end_row, start_col:end_col] = 0
-    #         else:
-    #             truth_array[time_step, start_row:end_row, start_col:end_col] = 1
 
     return truth_array, avg_slope_array
 
@@ -597,7 +587,7 @@ class Outwasher:
                     # get dune crest out here first (dont remember what this means 9/16/2022)
                     bayhigh = storm_series[1][TS]  # [dam]
 
-                    start_row = 0
+                    start_row = int_width
                     for row in np.arange(int_width, -1, -1):
                         if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row+1, :]) > 0:
                             start_row = row
