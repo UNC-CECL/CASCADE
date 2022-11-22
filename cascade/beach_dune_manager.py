@@ -1,11 +1,13 @@
-"""Beach and Dune Manager
+"""Manage beaches and dunes to maintain a community
 
-This module provides functions for modifying a barrier segment from Barrier3D -- consisting of 1+ rows of dune cells
-and a separate interior grid -- for beach and dune management decisions to protect a community, including:
+This module provides functions for modifying a barrier segment from Barrier3D -- consisting of 1+ rows of dune cells, a
+separate interior grid, and an idealized shoreface -- for beach and dune management decisions to protect a community,
+including:
     1) beach and shoreface nourishment at intervals or when user specified,
-    2) filtering of overwash deposition for development and placement of overwash on dunes,
-    3) dune rebuilding when beach nourished or user specified,
-    4) limiting dune migration into the community.
+    2) filtering of overwash deposition for development (volumes placed back on the shoreface),
+    3) removal of a % of the remaining overwash deposit to account for bulldozing,
+    4) rebuilding of dunes when beach is nourished or when user specified,
+    5) keeping dunes fixed in place (no migration into the community)
 
 References
 ----------
@@ -19,18 +21,15 @@ References
 Notes
 ---------
 The alongshore length of the barrier segment in Barrier3D is time-invariant, whereas the barrier interior
-width -- and number of cross-shore cells -- varies dynamically due to storm impacts and RSLR.
+width -- and number of cross-shore cells -- varies dynamically due to storm impacts and SLR.
 
 In this module, we do not reduce the dune design elevation by SLR -- as in the RoadwayManager -- because here the
 dune design height is always relative to mean sea level, and not the elevation of the roadway (which decreases with
-RSLR). Note that dune elevations are decreased by SLR.
+SLR). Note that dune elevations are decreased by SLR.
 
 Barrier3D does not resolve the beach. To simulate a changing beach width with nourishment and subsequent shoreline
-change, we establish a beach width based on the initial configuration of the beach (based on its slope) from Barrier3D
-or user input. This beach width is then modified dynamically by nourishment and shoreface dynamics. We also turn dune
-migration off in Barrier3D to keep the barrier location fixed, only allowing shoreline change to affect the beach width
-and not seaward progradation of the dune line with each nourishment and or landward migration of the dune line with
-shoreline erosion.
+change, we establish a beach width based on the initial beach slope defined in Barrier3D to develop the storm series.
+This beach width is then modified dynamically via nourishment and shoreface dynamics.
 
 """
 import numpy as np
@@ -124,7 +123,7 @@ def resize_interior_domain(
     # if pre-storm domain is larger than post-storm...
     if np.size(pre_storm_interior, 0) > np.size(post_storm_interior, 0):
 
-        # check first if the dunes migrated this past time step, this will make the interior domain smaller
+        # check first if the dunes migrated this last time step --> this will make the interior domain smaller
         if dune_migration != 0:
             # if yes, remove the number rows corresponding to the number of cells the dunes migrated from the pre-storm
             # domain (really the last time step); this happens if the user allows the beach width to fall below a min
@@ -306,7 +305,7 @@ def width_drown_checks(
     average_barrier_width,
     minimum_community_width=50,
 ):
-    r"""Checks on whether a community -- specified by a minimum width -- is eaten up by the back-barrier. If it is,
+    r"""Checks whether a community -- specified by a minimum width -- is eaten up by the back-barrier. If it is,
     cease management.
 
     Parameters
@@ -348,6 +347,11 @@ def beach_width_dune_dynamics(
     barrier3d,
     time_index,
 ):
+    """
+    Turn dune migration off when managing the beach to keep the barrier location fixed in the cross-shore, only
+    allowing shoreline change to affect the beach width and not seaward progradation of the dune line with each
+    nourishment and or landward migration of the dune line with shoreline erosion.
+    """
 
     if current_beach_width <= beach_width_threshold:
         barrier3d.dune_migration_on = (
@@ -365,7 +369,7 @@ def beach_width_dune_dynamics(
             )  # make dam
 
             if cellular_shoreline_change >= 1:
-                # migrate dunes for this past time step; this sets SCRagg to remainder and ShorelineChangeTS to -1
+                # migrate dunes for this last time step; this sets SCRagg to remainder and ShorelineChangeTS to -1
                 barrier3d.SCRagg[time_index - 1] = (
                     (barrier3d.x_s_TS[-1] % 1) + cellular_shoreline_change
                 ) * -1  # the fraction, make negative for erosion
@@ -399,13 +403,13 @@ def beach_width_dune_dynamics(
 
 
 class BeachDuneManager:
-    """Manage those beaches and dunes to sustain a community!
+    """Manage the beach and dunes to sustain a community!
 
     Examples
     --------
     # >>> from cascade.beach_dune_manager import BeachDuneManager
     # >>> nourish = BeachDuneManager()
-    # >>> nourish.update(barrier3d, nourish_now, nourishment_interval)
+    # >>> nourish.update(barrier3d, nourish_now, rebuild_dune_now, nourishment_interval)
     """
 
     def save_post_storm_variables(
@@ -488,7 +492,7 @@ class BeachDuneManager:
         overwash_filter=40,
         overwash_to_dune=5,
     ):
-        """The BeachDuneManager module.
+        """The BeachDuneManager module
 
          Parameters
          ----------
@@ -612,16 +616,8 @@ class BeachDuneManager:
         # overwash and place back on dunes
         if self._overwash_removal:
 
-            # barrier3d doesn't save the pre-storm interior for each time step: therefore, use the output from the
-            # previous time step [-2] and subtract SLR to obtain the pre-storm interior. Bay can't be deeper than
-            # BayDepth (roughly equivalent to constant back-barrier slope), so update.
-            pre_storm_interior = (
-                barrier3d.DomainTS[self._time_index - 2]
-                - barrier3d.RSLR[self._time_index - 1]
-            )
-            pre_storm_interior[
-                pre_storm_interior < -barrier3d.BayDepth
-            ] = -barrier3d.BayDepth
+            # barrier3d saves the pre-storm interior for each time step
+            pre_storm_interior = barrier3d.PreStorm_InteriorDomain
 
             pre_storm_interior, post_storm_interior = resize_interior_domain(
                 pre_storm_interior=pre_storm_interior,

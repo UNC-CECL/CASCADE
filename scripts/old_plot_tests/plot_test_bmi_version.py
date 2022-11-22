@@ -38,7 +38,7 @@ def run_1_100years(name=new_100_version):
 
     # all but 1 core
     num_cores = multiprocessing.cpu_count() - 1
-    datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/barrier3d-parameters.yaml"  # laptop
+    datadir = "cascade/data/pathways_data/barrier3d-parameters.yaml"  # laptop
     brie, barrier3d_15cores = CASCADE.initialize(
         name,
         wave_height,
@@ -100,9 +100,7 @@ def run_3_500years(name=new_500_version):
 
     # all but 1 core
     num_cores = multiprocessing.cpu_count() - 1
-    datadir = (
-        "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/B3D_Inputs/"  # laptop
-    )
+    datadir = "cascade/data/pathways_data/"
     brie, barrier3d_3_15cores = CASCADE.initialize(
         name,
         wave_height,

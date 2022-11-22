@@ -1,27 +1,29 @@
-"""Roadway Manager
+"""Manage roadways
 
-This module provides functions for modifying a barrier segment from Barrier3D -- consisting of 1+ rows of dune cells
-and a separate interior grid -- for roadway management decisions, including:
-    1) overwash removal from the roadway and placement on dune line,
+This module provides functions for modifying a barrier segment from Barrier3D -- consisting of 1+ rows of dune cells, a
+separate interior grid, and an idealized shoreface -- for roadway management decisions, including:
+    1) overwash removal from the roadway after storms and placement on the dune line,
     2) road relocation landward when the dunes migrate over the roadway,
     3) dune rebuilding when the dunes fall below a minimum height.
 
 References
 ----------
 
-.. [1] NCDOT (North Carolina Department of Transportation), 2008. NC 12 Transportation Improvements.
-http://www.ncdot.org/projects/NC12/ (accessed October 24, 2007).
-.. [2] Velasquez-Montoya, L., Sciaudone, E. J., Smyre, E., & Overton, M. F. (2021). Vulnerability Indicators for
-Coastal Roadways Based on Barrier Island Morphology and Shoreline Change Predictions. Natural Hazards Review, 22(2),
-04021003.
-...[3] Vinent, O. D., & Moore, L. J. (2015). Barrier island bistability induced by biophysical interactions.
-Nature Climate Change, 5(2), 158-162.
+.. [1] Velasquez-Montoya, L., Sciaudone, E. J., Smyre, E., & Overton, M. F. (2021). Vulnerability Indicators for
+    Coastal Roadways Based on Barrier Island Morphology and Shoreline Change Predictions. Natural Hazards Review, 22(2),
+    04021003.
+.. [2] Sciaudone, E. J., Velasquez-Montoya, L., Smyre, E. A., & Overton, M. F. (2016). Pea Island, North Carolina. Shore
+    & Beach, 84(2), 10.
+.. [3] Vinent, O. D., & Moore, L. J. (2015). Barrier island bistability induced by biophysical interactions.
+    Nature Climate Change, 5(2), 158-162.
 
 Notes
 ---------
-The alongshore length of the barrier segment in Barrier3D is time-invariant, whereas the barrier interior
-width -- and number of cross-shore cells -- varies dynamically due to storm impacts and RSLR. Because RSLR is simulated
-using a Lagrangian reference frame in Barrier3D, the roadway and dune elevations are reduced by RSLR for each time step.
+The alongshore length of a barrier segment in Barrier3D is time-invariant, whereas the barrier interior
+width -- and number of cross-shore cells -- varies dynamically due to storm impacts and SLR.
+
+Because SLR is simulated using a Lagrangian reference frame in Barrier3D, the roadway and dune elevations are reduced
+by SLR for each time step.
 
 """
 import numpy as np
@@ -47,7 +49,7 @@ def bulldoze(
     r"""
     Remove overwash from roadway and put it back on the adjacent dune. Spreads sand evenly across adjacent dune cells.
 
-    Check for width drowning of roadway (i.e., when a water cell touches the roadway)
+    Check for width drowning of roadway (i.e., when a water cell touches the roadway).
 
     Parameters
     ----------
@@ -173,14 +175,14 @@ def rebuild_dunes(
     If the min and max dune heights differ, a linear gradient is applied from the first to last dune row, with small
     random perturbations.
 
-    From Valasquez et al., 2020, the average elevation of the road along NC-12 is 1.3 m (NAVD88); they find that in
+    From Valasquez et al., (2020), the average elevation of the road along NC-12 is 1.3 m (NAVD88); they find that in
     order for the road to not be vulnerable to overwash, the dune crest must be higher than 4.3 m (NAVD88), so here the
     default max_dune_height is 3 m. Note that dune height in Barrier3D is measured as the height above the dune toe.
 
     Parameters
     ----------
     yxz_dune_grid:
-        Dune topography [z units specified by dz; for Barrier3d, dz=10, decameters above the berm elevation]
+        Dune topography [z units specified by dz; for Barrier3D, dz=10, decameters above the berm elevation]
     max_dune_height: float
         Maximum dune height for dune rebuilding [m]
     min_dune_height: float
@@ -242,9 +244,12 @@ def set_growth_parameters(
     rmax=0.85,
 ):
     r"""Set dune growth rate to zero for next time step if the dune elevation (front row) is larger than the natural eq.
-    dune height (Dmax) -- we know from modeling work (Duran and Moore 2015) that the dune will not grow above
-    the natural equilibrium height because of interactions between the wind field and the dune: too high and no sand
-    flux.
+    dune height (Dmax).
+
+    We understand from modeling work (Duran and Moore, 2013) and from empirical evidence (Houser et al., 2015)
+    that dunes can reach a maximum height due to negative feedacks between the (cross-shore) wind field and the dune.
+    For non-normal wind incidence, it has been suggested that dunes may continue to grow in height, albeit
+    at a very slow rate (Davidson Arnott et al., 2018).
 
     Parameters
     ----------
@@ -410,7 +415,7 @@ def road_relocation_checks(
             ):
                 relocation_break = 1
                 print(
-                    "Island is to narrow for roadway to be relocated. Roadway eaten up by dunes at {time} years".format(
+                    "Island is too narrow for roadway to be relocated. Roadway eaten up by dunes at {time} years".format(
                         time=time_index - 1
                     )  # -1 because B3D advances time step at end of dune_update
                 )
@@ -421,13 +426,13 @@ def road_relocation_checks(
 
 
 class RoadwayManager:
-    """Manage the road.
+    """ Manage the road!
 
     Examples
     --------
     # >>> from cascade.roadway_manager import RoadwayManager
     # >>> roadways = RoadwayManager()
-    # >>> roadways.update(barrier3d)
+    # >>> roadways.update(barrier3d, trigger_dune_knockdown)
     """
 
     def __init__(
@@ -440,7 +445,7 @@ class RoadwayManager:
         time_step_count=500,
         original_growth_param=None,
     ):
-        """The RoadwayManager module.
+        """The RoadwayManager module
 
         Parameters
         ----------
@@ -534,11 +539,9 @@ class RoadwayManager:
         # also keep track of post-storm dune and interior impacts before human modifications
         self._post_storm_dunes = [None] * self._nt
         self._post_storm_interior = [None] * self._nt
+        self._post_storm_ave_interior_height = [None] * self._nt
 
-    def update(
-        self,
-        barrier3d,
-    ):
+    def update(self, barrier3d, trigger_dune_knockdown):
 
         self._time_index = barrier3d.time_index
 
@@ -552,9 +555,12 @@ class RoadwayManager:
         self._post_storm_dunes[self._time_index - 1] = copy.deepcopy(
             barrier3d.DuneDomain[self._time_index - 1, :, :]
         )
+        self._post_storm_ave_interior_height[self._time_index - 1] = copy.deepcopy(
+            barrier3d.h_b_TS[-1]
+        )
 
         ###############################################################################
-        # roadway checks for relocation, drowning; update for RSLR
+        # roadway checks for relocation, drowning; update for SLR
         ###############################################################################
 
         # check if road relocation is needed
@@ -577,10 +583,17 @@ class RoadwayManager:
 
         # if road can't be relocated, no longer manage and exit; dune growth parameters reset to original in CASCADE
         if self._relocation_break == 1:
+
+            # an adaptation solution may be to knock down the dunes so that they are small and can easily be overwashed
+            if trigger_dune_knockdown:
+                barrier3d.DuneDomain[self._time_index - 1, :, :] = barrier3d.DuneDomain[
+                    0, :, :
+                ]
+
             return
 
         # if road is relocated, get the new road elevation (built at grade) and update dune elevations which are
-        # dependent on the road elevation; otherwise, decrease all elevations (m MHW) this year by the RSLR increment
+        # dependent on the road elevation; otherwise, decrease all elevations (m MHW) this year by the SLR increment
         if road_relocated:
             self._road_width = self._road_relocation_width
             self._road_ele, self._drown_break = get_road_relocation_elevation(
@@ -628,8 +641,22 @@ class RoadwayManager:
                     time=self._time_index - 1
                 )
             )
+
+            # an adaptation solution may be to knock down the dunes so that they are small and can easily be overwashed
+            if trigger_dune_knockdown:
+                barrier3d.DuneDomain[self._time_index - 1, :, :] = barrier3d.DuneDomain[
+                    0, :, :
+                ]
+
             return
         elif self._drown_break == 1:  # if road drowned from road relocation above
+
+            # an adaptation solution may be to knock down the dunes so that they are small and can easily be overwashed
+            if trigger_dune_knockdown:
+                barrier3d.DuneDomain[self._time_index - 1, :, :] = barrier3d.DuneDomain[
+                    0, :, :
+                ]
+
             return
 
         # when the roadway gets really low in elevation, the dune_design_elevation may not be above the berm; when this
@@ -682,7 +709,13 @@ class RoadwayManager:
             percent_water_cells_touching_road=self._percent_water_cells_touching_road,  # fraction cells<drown_threshold
         )
         if self._drown_break == 1:
-            # barrier3d.growthparam = self._original_growth_param  # now reset in CASCADE
+
+            # an adaptation solution may be to knock down the dunes so that they are small and can easily be overwashed
+            if trigger_dune_knockdown:
+                barrier3d.DuneDomain[self._time_index - 1, :, :] = barrier3d.DuneDomain[
+                    0, :, :
+                ]
+
             return  # exit program
 
         self._road_overwash_volume[self._time_index - 1] = (
@@ -690,6 +723,14 @@ class RoadwayManager:
         )  # convert from dam^3 to m^3
 
         # update Barrier3D class variables
+        new_ave_interior_height = np.average(
+            new_xyz_interior_domain[
+                new_xyz_interior_domain >= barrier3d.SL
+            ]  # all in dam MHW
+        )
+        barrier3d.h_b_TS[
+            -1
+        ] = new_ave_interior_height  # slightly altered due to roadway
         barrier3d.InteriorDomain = new_xyz_interior_domain
         barrier3d.DomainTS[self._time_index - 1] = new_xyz_interior_domain
 
@@ -771,6 +812,10 @@ class RoadwayManager:
     def drown_break(self):
         return self._drown_break
 
+    @property
+    def time_index(self):
+        return self._time_index
+
     @drown_break.setter
     def drown_break(self, value):
         self._drown_break = value
@@ -782,3 +827,12 @@ class RoadwayManager:
     @relocation_break.setter
     def relocation_break(self, value):
         self._relocation_break = value
+
+    @property
+    def percent_water_cells_touching_road(self):
+        return self._percent_water_cells_touching_road
+
+    @percent_water_cells_touching_road.setter
+    def percent_water_cells_touching_road(self, value):
+        self._percent_water_cells_touching_road = value
+
