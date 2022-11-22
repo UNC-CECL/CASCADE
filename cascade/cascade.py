@@ -351,8 +351,8 @@ class Cascade:
                         wind_speed=6,
                         forest_on=False,
                         filename_equilbaydepth="/Users/ceclmac/PycharmProjects/PyBMFT-C/Input/PyBMFT-C/Equilibrium Bay Depth.mat",
-                        filename_marshspinup="/Users/ceclmac/PycharmProjects/PyBMFT-C/Input/PyBMFT-C/MarshStrat_all_RSLR1_CO50_width500.mat",
-                        marsh_width_initial=500,
+                        filename_marshspinup="/Users/ceclmac/PycharmProjects/PyBMFT-C/Input/PyBMFT-C/MarshStrat_all_RSLR1_CO50_width250.mat",
+                        marsh_width_initial=250,
                     )
                 )
 
@@ -584,44 +584,43 @@ class Cascade:
 
     def update(self, Time_step):
         self._time_step = Time_step
-        if self._marsh_dynamics ==False:
-            """Update Cascade by a single time step"""
-            self._time_step = Time_step
+        """Update Cascade by a single time step"""
+        self._time_step = Time_step
 
-            # Check for drowning here from the last time step in brie. Note that this will stay false if brie is not used
-            # for AST (i.e., a B3D only run).
-            if self._brie_coupler._brie.drown == True:
-                return
+        # Check for drowning here from the last time step in brie. Note that this will stay false if brie is not used
+        # for AST (i.e., a B3D only run).
+        if self._brie_coupler._brie.drown == True:
+            return
 
-            # Advance B3D by one time step; NOTE: B3D initializes at time_index = 1 and then updates the time_index
-            # after update_dune_domain
-            batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
+        # Advance B3D by one time step; NOTE: B3D initializes at time_index = 1 and then updates the time_index
+        # after update_dune_domain
+        batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
                 delayed(batchB3D)(self._barrier3d[iB3D]) for iB3D in range(self._ny)
-            )  # set n_jobs=1 for no parallel processing (debugging) and -2 for all but 1 CPU; note that joblib uses a
-            # threshold on the size of arrays passed to the workers; we use 'None' to disable memory mapping of large arrays
+        )  # set n_jobs=1 for no parallel processing (debugging) and -2 for all but 1 CPU; note that joblib uses a
+        # threshold on the size of arrays passed to the workers; we use 'None' to disable memory mapping of large arrays
 
-            # reshape output from parallel processing and convert from tuple to list
-            x_t_dt, x_s_dt, h_b_dt, b3d = zip(*batch_output)
-            x_t_dt = list(x_t_dt)
-            x_s_dt = list(x_s_dt)
-            h_b_dt = list(h_b_dt)
-            self._barrier3d = list(b3d)
+        # reshape output from parallel processing and convert from tuple to list
+        x_t_dt, x_s_dt, h_b_dt, b3d = zip(*batch_output)
+        x_t_dt = list(x_t_dt)
+        x_s_dt = list(x_s_dt)
+        h_b_dt = list(h_b_dt)
+        self._barrier3d = list(b3d)
 
-            # use brie to connect B3D subgrids with alongshore sediment transport; otherwise, just update (erode/prograde)
-            # dune domain
-            if self._alongshore_transport_module:
-                self._brie_coupler.update_ast(
-                    self._barrier3d, x_t_dt, x_s_dt, h_b_dt
+        # use brie to connect B3D subgrids with alongshore sediment transport; otherwise, just update (erode/prograde)
+        # dune domain
+        if self._alongshore_transport_module:
+            self._brie_coupler.update_ast(
+                self._barrier3d, x_t_dt, x_s_dt, h_b_dt
                 )  # also updates dune domain
-            else:
-                for iB3D in range(self._ny):
-                    self._barrier3d[iB3D].update_dune_domain()
-
-            # check also for width/height drowning in B3D (would occur in update_dune_domain)
+        else:
             for iB3D in range(self._ny):
-                if self._barrier3d[iB3D].drown_break == 1:
-                    self._b3d_break = 1
-                    return
+                self._barrier3d[iB3D].update_dune_domain()
+
+        # check also for width/height drowning in B3D (would occur in update_dune_domain)
+        for iB3D in range(self._ny):
+            if self._barrier3d[iB3D].drown_break == 1:
+                self._b3d_break = 1
+                return
 
         ###############################################################################
         # Backbarrier marsh module
@@ -757,47 +756,6 @@ class Cascade:
 
                 self._barrier3d[iB3D].InteriorDomain = NewDomain
                 # ===================================================================================================================================================================================================================================
-                # ===================================================================================================================================================================================================================================
-                # Advance Barrier3D
-                """Update Cascade by a single time step"""
-
-                # Check for drowning here from the last time step in brie. Note that this will stay false if brie is not used
-                # for AST (i.e., a B3D only run).
-                if self._brie_coupler._brie.drown == True:
-                    return
-
-                # Advance B3D by one time step; NOTE: B3D initializes at time_index = 1 and then updates the time_index
-                # after update_dune_domain
-                batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
-                    delayed(batchB3D)(self._barrier3d[iB3D]) for iB3D in range(self._ny)
-                )  # set n_jobs=1 for no parallel processing (debugging) and -2 for all but 1 CPU; note that joblib uses a
-                # threshold on the size of arrays passed to the workers; we use 'None' to disable memory mapping of large arrays
-
-                # reshape output from parallel processing and convert from tuple to list
-                x_t_dt, x_s_dt, h_b_dt, b3d = zip(*batch_output)
-                x_t_dt = list(x_t_dt)
-                x_s_dt = list(x_s_dt)
-                h_b_dt = list(h_b_dt)
-                self._barrier3d = list(b3d)
-
-                # use brie to connect B3D subgrids with alongshore sediment transport; otherwise, just update (erode/prograde)
-                # dune domain
-                if self._alongshore_transport_module:
-                    self._brie_coupler.update_ast(
-                        self._barrier3d, x_t_dt, x_s_dt, h_b_dt
-                    )  # also updates dune domain
-                else:
-                    for iB3D in range(self._ny):
-                        self._barrier3d[iB3D].update_dune_domain()
-
-                # check also for width/height drowning in B3D (would occur in update_dune_domain)
-                for iB3D in range(self._ny):
-                    if self._barrier3d[iB3D].drown_break == 1:
-                        self._b3d_break = 1
-                        return
-
-                # ===================================================================================================================================================================================================================================
-                # ===================================================================================================================================================================================================================================
                 # Update PyBMFT-C transect elevation based on Barrier3D elevation change
 
                 shoreline_change = self._barrier3d[iB3D].x_s_TS[-1] - self._barrier3d[iB3D].x_s_TS[-2]
@@ -850,10 +808,11 @@ class Cascade:
 
                     # Calculate height of deposition needed to bring bay bottom up to avg marsh elevation
                     new_marsh_height = self._bmftc[iB3D].db
-
                     # Determine distance of marsh progradation from overwash deposition
                     progradation_actual = sum_marsh_dep / new_marsh_height  # [m] Amount of marsh progradation, in which all overwash dep in bay fills first bay cell, then second, and so on until no more sediment. Assumes overwash is not spread out over bay.
-                    progradation = int(max(math.floor(progradation_actual), 0))  # Round to nearest FULL meter
+                    #print('')
+                    #print(progradation_actual)
+                    progradation = int(max(math.floor(progradation_actual[iB3D]), 0))  # Round to nearest FULL meter
                     self._bay_overwash_carryover = (progradation_actual - progradation) * new_marsh_height  # Save leftover volume of sediment to be added to sum_bay_dep in following time step
 
                     if progradation > 0:
@@ -896,7 +855,7 @@ class Cascade:
 
                     # Determine distance of marsh progradation from overwash deposition
                     progradation_actual = sum_marsh_dep / new_marsh_height  # [m] Amount of marsh progradation, in which all overwash dep in bay fills first bay cell, then second, and so on until no more sediment. Assumes overwash is not spread out over bay.
-                    progradation = int(max(math.floor(progradation_actual), 0))  # Round to nearest FULL meter
+                    progradation = int(max(math.floor(progradation_actual[iB3D]), 0))  # Round to nearest FULL meter
                     self._bay_overwash_carryover = ( progradation_actual - progradation) * new_marsh_height  # Save leftover volume of sediment to be added to sum_bay_dep in following time step
 
                     if progradation > 0:
@@ -939,7 +898,7 @@ class Cascade:
 
                     # Determine distance of marsh progradation from overwash deposition
                     progradation_actual = sum_marsh_dep / new_marsh_height  # [m] Amount of marsh progradation, in which all overwash dep in bay fills first bay cell, then second, and so on until no more sediment. Assumes overwash is not spread out over bay.
-                    progradation = int(max(math.floor(progradation_actual), 0))  # Round to nearest FULL meter
+                    progradation = int(max(math.floor(progradation_actual[iB3D]), 0))  # Round to nearest FULL meter
                     self._bay_overwash_carryover = (progradation_actual - progradation) * new_marsh_height  # Save leftover volume of sediment to be added to sum_bay_dep in following time step
 
                     if progradation > 0:
