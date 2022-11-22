@@ -6,7 +6,6 @@ import numpy as np
 import math
 import os
 import imageio
-from barrier3d import Barrier3d
 import matplotlib.pyplot as plt
 import imageio
 import csv
@@ -93,6 +92,9 @@ def DuneGaps(DuneDomain, Dow, Rhigh):
 
 def FR_slopes(truth_array, avg_slope_array, domain, width, length, duration, time_step):
     """
+
+    Defines slopes (starting at the first row) as positive or negative, relative to the preceding row
+
     :param d: incremental width (row)
     :param domain_width: width of the input domain
     :param elev_array: array storing the elevations

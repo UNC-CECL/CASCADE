@@ -1,13 +1,12 @@
-from pathlib import Path
 from joblib import Parallel, delayed
 import numpy as np
 import os
 
 from .roadway_manager import RoadwayManager, set_growth_parameters
 from .beach_dune_manager import BeachDuneManager
+from .outwasher_reorg_Brad import Outwasher
 from .brie_coupler import BrieCoupler, initialize_equal, batchB3D
 from .chom_coupler import ChomCoupler
-
 
 class CascadeError(Exception):
     pass
