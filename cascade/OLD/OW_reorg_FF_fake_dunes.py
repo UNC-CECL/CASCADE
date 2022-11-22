@@ -182,6 +182,7 @@ def DuneGaps(DuneDomain, Dow, Rhigh):
 # ### Calculate Slopes
 def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_step, slopes_array, beachface):
     """
+
     :param d: incremental width (row)
     :param domain_width: width of the input domain
     :param elev_array: array storing the elevations

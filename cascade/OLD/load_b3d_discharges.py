@@ -2,7 +2,7 @@ import numpy as np
 import imageio
 from matplotlib import pyplot as plt
 import os
-from cascade.lexi_b3d import Barrier3d
+from cascade.OLD.lexi_b3d import Barrier3d
 
 # ---------------------------------------------run lexi b3d-------------------------------------------------------------
 datadir = "tests/test_params/"
