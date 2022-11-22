@@ -8,7 +8,7 @@ import os
 import imageio
 import matplotlib.pyplot as plt
 import imageio
-import csv
+import copy
 
 
 def bay_converter(storms, substep):
@@ -408,327 +408,353 @@ class Outwasher:
 
     def __init__(
             self,
-            b3d,
-            runID,
-            path,
-            substep=2,
-            Cx=10,
-            Ki=7.5E-3,
+            datadir,
+            time_step_count,
+            berm_elev,
+            barrier_length,
+            sea_level,
+            bay_depth,
+            interior_domain,
+            dune_domain,
+            outwash_storm_series,
+            # runID,  # eventually this will go away
+            # path,  # eventually this will go away
+            substep=20,
+            sediment_flux_coefficient_Cx=10,
+            sediment_flux_coefficient_Ki=2E-3,  # b3d = 7.5E-6 for inundation
             max_slope=-0.25
     ):
-        # make a folder where all graphs will be saved for that run
-        self._runID = runID
-        self._newpath = path + self._runID + "/"
-        if not os.path.exists(self._newpath):
-            os.makedirs(self._newpath)
 
-        ### Set Barrier3D variables
-        self._berm_el = b3d._BermEl,  # [dam MHW]
-        self._beach_elev = b3d._BermEl  # [dam MHW]
-        self._length = b3d._BarrierLength  # [dam] length of barrier
+        # initial variables
+        self._berm_el = berm_elev,  # [dam MHW]
+        self._beach_elev = self._berm_el  # [dam MHW]
+        self._length = barrier_length  # [dam] length of barrier
         self._substep = substep
-        self._nn = b3d._nn  # flow routing constant
         self._max_slope = max_slope
-        # self._max_slope = -b3d._MaxUpSlope  # max slope that sediment can go uphill, previously Slim (0.25)
-        # ki = b3d._Ki  # sediment transport coefficient
-        self._ki = Ki
-        self._cx = Cx
-        self._mm = b3d._mm  # inundation overwash coefficient
-        # mm = 6
-        self._sea_level = b3d._SL  # equal to 0 dam
-        self._bay_depth = -b3d._BayDepth  # [dam MHW] Depth of bay behind island segment, currently set to 0.3
-        self._Si = (np.mean(b3d.InteriorDomain[-10, :]) - np.mean(b3d.InteriorDomain[0, :])) / len(b3d.InteriorDomain)
-        # avg_slope = b3d._BermEl / 20                        # how it is defined in barrier 3D which is much smaller than when
+        self._ki = sediment_flux_coefficient_Ki
+        self._cx = sediment_flux_coefficient_Cx
+        self._sea_level = sea_level  # equal to 0 dam
+        self._bay_depth = -bay_depth  # [dam MHW] Depth of bay behind island segment, currently set to 0.3
+        self._Si = (np.mean(interior_domain[-10, :]) - np.mean(interior_domain[0, :])) / len(interior_domain)
+        # avg_slope = b3d._BermEl / 20    # how it is defined in barrier 3D which is much smaller than when
         # you calculate the slope using the avg of the first and last rows
         # setting up dune domain using b3d
-        self._dune_domain = b3d.DuneDomain[b3d._time_index - 1, :, :]
+        self._dune_domain = dune_domain
         self._dune_crest = self._dune_domain.max(axis=1)  # dune_crest used to be DuneDomainCrest
         # self._dune_domain = dunes(self._length, self._berm_el, n_rows=2, n_gaps=1, dune_height=0.25)
         # initializing our barrier interior
         # give it an arbitrary width of 30 dam
         # self._interior_domain = np.zeros([30, self._length])
-        int_domain = np.flip(b3d.InteriorDomain)
+        int_domain = np.flip(interior_domain)
         # initializing our barrier interior
         self._interior_domain = int_domain[5:-1, :]
         # self._interior_domain = int_domain[10:-1, :]
+        self._initial_storm_series = np.load(datadir + outwash_storm_series)
+        self._final_storm_series = np.load(datadir + outwash_storm_series)  # will be modified 4 substeps, if specified above
+
+        # post-storm (overwash) variables, before outwash modifications
+        self._post_b3d_interior_domain = [None] * time_step_count
+        self._post_b3d_ave_interior_height = [None] * time_step_count
+        self._post_b3d_dunes = [None] * time_step_count
+        self._post_storm_x_s = [None] * time_step_count
+        self._post_storm_s_sf = [None] * time_step_count
+
+        # output variables
+        self._m_beachface = []  # slope of the beach face
+        self._Qs_shoreface = np.zeros(time_step_count)
 
     def update(
             self,
-            storm_series,
             b3d,
             fudge_fac=1
     ):
-        ### Set other variables
+
+        # initialize tracking and other b3d variables
+        self._time_index = b3d._time_index
         q_min = b3d._Qs_min  # [m^3 / hr]? Minimum discharge needed for sediment transport (0.001)
         qs_lost_total = 0  # previously OWloss
-        # numstorm = int(len(storm_series))
-        numstorm = 1
+
+        # save post-storm dune, interior, shoreline, shoreface params before outwash modifications (a 0.5 yr time step)
+        self._post_b3d_interior[self._time_index - 1] = copy.deepcopy(
+            b3d.InteriorDomain
+        )
+        self._post_b3d_dunes[self._time_index - 1] = copy.deepcopy(
+            b3d.DuneDomain[self._time_index - 1, :, :]
+        )
+        self._post_b3d_ave_interior_height[self._time_index - 1] = copy.deepcopy(
+            b3d.h_b_TS[-1]
+        )
+        self._post_storm_x_s[self._time_index - 1] = copy.deepcopy(b3d.x_s)
+        self._post_storm_s_sf[self._time_index - 1] = copy.deepcopy(
+            b3d.s_sf_TS[-1]
+        )
+
+        # only simulate on outwash years (max of one outwash event per model year)
+        storm_index = np.argwhere(self._initial_storm_series[:, 0, 0] == self._time_index - 1)
+        numstorm = int(len(storm_index))  # we will always only have one storm per year (if that)
 
         if numstorm > 0:
-            # ### Individual Storm Impacts
-            for n in range(numstorm):
-                # setting up the storm series for substep of 2
-                if self._substep != 1:
-                    updated_bay_levels = bay_converter(storm_series[1], substep=self._substep)
-                    dur = len(updated_bay_levels)
-                    storm_series[1] = updated_bay_levels
-                    storm_series[2] = dur
-                    # this has been updated to hopefully be used on any storm series for any substep
 
+            # get the hydrograph and duration for this time step
+            storm_series = self._initial_storm_series[storm_index]
+
+            # allow for substeps to better simulate morphodynamics (subset=20 equates to 3 min intervals)
+            # NOTE: this has been updated to hopefully be used on any storm series for any substep
+            # NOTE: LEXI YOU NEED TO MAKE A NEW VARIABLE FOR THE SUBSTEP STORM
+            if self._substep != 1:
+                updated_bay_levels = bay_converter(storm_series[1], substep=self._substep)
+                dur = len(updated_bay_levels)
+                storm_series[1] = updated_bay_levels
+                storm_series[2] = dur
+                self._final_storm_series[storm_index] = storm_series  # save substep version
+
+            else:
+                dur = storm_series[2]  # [hr] duration of the storm
+
+            # merge the interior domain, dunes, and create a beach --------------------------------------------------
+            # we added a beach (and "beachface") to the domain with a width of 7 dam based on general beach widths
+            beach_domain = np.ones([7, self._length]) * self._beach_elev  # [dam MHW] 7 rows
+            beachface_domain = np.zeros([6, self._length])
+            # we actually want the beach to have a slope, but keep the first few rows the berm elevation
+            # we give the beach slope to be 0.004 m = 0.0004 dam
+            m_beach = 0.0004
+            for b in range(len(beach_domain)):
+                if b >= 3:
+                    beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
+            self._m_beachface = beach_domain[-1, 0] / len(beachface_domain)  # positive (downhill)
+            for s in range(len(beachface_domain)):
+                if s == 0:
+                    beachface_domain[s, :] = beach_domain[-1, 0] - self._m_beachface  # slope of beachface
                 else:
-                    dur = storm_series[2]  # [hr] duration of the storm
+                    beachface_domain[s, :] = beachface_domain[s - 1, :] - self._m_beachface
 
-                # ### Overwash
-                # Iow = 0  # Count of dune gaps in inundation regime
-                # for q in range(len(gaps)):
-                #     Iow += 1  # all inundation regime for us
+            # the dune domain is being taken from B3D, but has 2 rows with length rows, so it needs to be transposed
+            # I believe each row starts off exactly the same, but now I am not sure
+            dune_domain_full = np.transpose(self._dune_domain) + self._berm_el
+            # the full domain of outwasher starts with the interior domain, then the dune, beach, and beachface
+            full_domain = np.append(self._interior_domain, dune_domain_full, 0)  # [dam MHW]
+            full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
+            full_domain = np.append(full_domain, beachface_domain, 0)
 
-                # Determine Sediment And Water Routing Rules
-                # ### Set Domain
-                if n == 0:  # we only need to initialize the domain for the first storm because we want the effects of
-                    # storm 1 to stay through the remaining storms
-                    # we added a beach (and "beachface") to the domain with a width of 7 dam based on general beach widths
-                    beach_domain = np.ones([7, self._length]) * self._beach_elev  # [dam MHW] 7 rows
-                    beachface_domain = np.zeros([6, self._length])
-                    # we actually want the beach to have a slope, but keep the first few rows the berm elevation
-                    # we give the beach slope to be 0.004 m = 0.0004 dam
-                    m_beach = 0.0004
-                    for b in range(len(beach_domain)):
-                        if b >= 3:
-                            beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
-                    self._m_beachface = beach_domain[-1, 0] / len(beachface_domain)  # positive (downhill)
-                    for s in range(len(beachface_domain)):
-                        if s == 0:
-                            beachface_domain[s, :] = beach_domain[-1, 0] - self._m_beachface  # slope of beachface
-                        else:
-                            beachface_domain[s, :] = beachface_domain[s - 1, :] - self._m_beachface
+            # flow routing --------------------------------------------------
+            # initialize domain variables
+            int_width = np.shape(self._interior_domain)[0]
+            front_Si = (self._berm_el - np.mean(full_domain[-1, :])) / len(full_domain[int_width+2:-1])
+            width = np.shape(full_domain)[0]  # width is the number of rows in the full domain
+            domain_array = np.zeros([2, width, self._length])
+            domain_array[0, :, :] = full_domain
+            # duration = dur * substep  # from previous code
+            duration = dur  # we already multiplied dur by the substep above
+            Elevation = np.zeros([duration, width, self._length])
+            # elevation at the first time step is set to the full domain
+            Elevation[0, :, :] = full_domain
+            OW_TS = []
 
-                    # the dune domain is being taken from B3D, but has 2 rows with length rows, so it needs to be transposed
-                    # I believe each row starts off exactly the same, but now I am not sure
-                    dune_domain_full = np.transpose(self._dune_domain) + self._berm_el
-                    # the full domain of outwasher starts with the interior domain, then the dune, beach, and beachface
-                    full_domain = np.append(self._interior_domain, dune_domain_full, 0)  # [dam MHW]
-                    full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
-                    full_domain = np.append(full_domain, beachface_domain, 0)
-                    np.save(self._newpath + "full_domain", full_domain)
+            # initialize arrays for flow routing
+            Discharge = np.zeros([duration, width, self._length])
+            SedFluxIn = np.zeros([duration, width, self._length])
+            SedFluxOut = np.zeros([duration, width, self._length])
+            elev_change_array = np.zeros([duration, width, self._length])
+            truth_array = np.zeros([duration, width, self._length])
+            avg_slope_array = np.zeros([duration, width, self._length])
+            qs2_array = np.zeros([duration, width, self._length])
 
-                    int_width = np.shape(self._interior_domain)[0]
-                    front_Si = (self._berm_el - np.mean(full_domain[-1, :])) / len(full_domain[int_width+2:-1])
+            # route the flow
+            for TS in range(duration):
+                # Begin with elevation from previous timestep
+                if TS > 0:
+                    Elevation[TS, :, :] = Elevation[TS - 1, :, :]
+                    # Elevation[TS, 1:, :] = Elevation[TS - 1, 1:, :]  # in B3D, the first row is dunes, so that is
+                    # updated from teh dune domain (I think, line 983 in lexi_b3d)
+                print(TS)
 
-                width = np.shape(full_domain)[0]  # width is the number of rows in the full domain
-                domain_array = np.zeros([2, width, self._length])
-                domain_array[0, :, :] = full_domain
-                # duration = dur * substep  # from previous code
-                duration = dur  # we already multiplied dur by the substep above
-                Elevation = np.zeros([duration, width, self._length])
-                # elevation at the first time step is set to the full domain
-                Elevation[0, :, :] = full_domain
-                OW_TS = []
+                # Need to calculate slopes immediately
+                FR_array, avg_slope_array = FR_slopes(truth_array, avg_slope_array, Elevation[TS], width, self._length, duration, TS)
 
-                # Initialize Memory Storage Arrays
-                Discharge = np.zeros([duration, width, self._length])
-                SedFluxIn = np.zeros([duration, width, self._length])
-                SedFluxOut = np.zeros([duration, width, self._length])
-                elev_change_array = np.zeros([duration, width, self._length])
-                slopes_array = np.zeros([duration, width, self._length])
-                dis_comp_array = np.zeros([duration, 2, self._length])
-                truth_array = np.zeros([duration, width, self._length])
-                avg_slope_array = np.zeros([duration, width, self._length])
-                rexcess_dict = {}
-                qs2_array = np.zeros([duration, width, self._length])
-                qs_lost = 0  # the array for storing the sediment leaving the last row
-                # qs_lost is reset every storm, but qs_lost_total is cumulative through all the storms
+                # get dune crest out here first (dont remember what this means 9/16/2022)
+                bayhigh = storm_series[1][TS]  # [dam]
 
-                # ### Run Flow Routing Algorithm
-                for TS in range(duration):
-                    # Begin with elevation from previous timestep
-                    if TS > 0:
-                        Elevation[TS, :, :] = Elevation[TS - 1, :, :]
-                        # Elevation[TS, 1:, :] = Elevation[TS - 1, 1:, :]  # in B3D, the first row is dunes, so that is
-                        # updated from teh dune domain (I think, line 983 in lexi_b3d)
-                    print(TS)
-
-                    # Need to calculate slopes immediately
-                    FR_array, avg_slope_array = FR_slopes(truth_array, avg_slope_array, Elevation[TS], width, self._length, duration, TS)
-
-                    # get dune crest out here first (dont remember what this means 9/16/2022)
-                    bayhigh = storm_series[1][TS]  # [dam]
-
-                    row = int_width
-                    # for row in np.arange(int_width, -1, -1):
-                    #     if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row + 1, :]) > 0:
-                    #         start_row = row
-                    #         counter = 0
-                    counter = 0
-                    while counter == 0 and row >= 0:
-                        if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row + 1, :]) > 0:
-                            row = row - 1
-                        else:
-                            counter = 1
-                    start_row = row + 1
-                    gap_row = Elevation[TS, start_row, :]
-                    if bayhigh <= min(gap_row):
-                        Discharge[TS, :, :] = 0
+                row = int_width
+                # for row in np.arange(int_width, -1, -1):
+                #     if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row + 1, :]) > 0:
+                #         start_row = row
+                #         counter = 0
+                counter = 0
+                while counter == 0 and row >= 0:
+                    if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row + 1, :]) > 0:
+                        row = row - 1
                     else:
-                        # ### DUNES
-                        OW_TS.append(TS)
-                        # ### finding the OW cells --------------------------------------------------------------------
-                        Dow = [index for index, value in enumerate(gap_row) if
-                               value < bayhigh]  # bayhigh used to be Rhigh
-                        gaps = DuneGaps(gap_row, Dow, bayhigh)
-                        max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
+                        counter = 1
+                start_row = row + 1
+                gap_row = Elevation[TS, start_row, :]
+                if bayhigh <= min(gap_row):
+                    Discharge[TS, :, :] = 0
+                else:
+                    # ### DUNES
+                    OW_TS.append(TS)
+                    # ### finding the OW cells --------------------------------------------------------------------
+                    Dow = [index for index, value in enumerate(gap_row) if
+                           value < bayhigh]  # bayhigh used to be Rhigh
+                    gaps = DuneGaps(gap_row, Dow, bayhigh)
+                    max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
 
-                        for q in range(len(gaps)):
-                            start = gaps[q][0]
-                            stop = gaps[q][1]
-                            Rexcess = gaps[q][2]  # (dam)
-                            # Calculate discharge through each dune cell
-                            overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
-                            overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
-                            # Set discharge at dune gap
-                            Discharge[TS, start_row, start:stop + 1] = overtop_flow  # (dam^3/hr)
+                    for q in range(len(gaps)):
+                        start = gaps[q][0]
+                        stop = gaps[q][1]
+                        Rexcess = gaps[q][2]  # (dam)
+                        # Calculate discharge through each dune cell
+                        overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
+                        overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
+                        # Set discharge at dune gap
+                        Discharge[TS, start_row, start:stop + 1] = overtop_flow  # (dam^3/hr)
 
-                        for d in range(start_row, width):  # for letting sediment out, discharge scenarios 2 and 3
-                            # for d in range(int_width + 1, width):  # if we are using scenario 1 discharge
-                            # Discharge for each TS, row 1, and all cols set above
-                            Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
-                            # Loop through each col of the specified row
-                            for i in range(self._length):
-                                # ### Calculate Slopes
-                                S1, S2, S3 = calculate_slopes(d, i, width, Elevation, self._length, TS)
+                    for d in range(start_row, width):  # for letting sediment out, discharge scenarios 2 and 3
+                        # for d in range(int_width + 1, width):  # if we are using scenario 1 discharge
+                        # Discharge for each TS, row 1, and all cols set above
+                        Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
+                        # Loop through each col of the specified row
+                        for i in range(self._length):
+                            # ### Calculate Slopes
+                            S1, S2, S3 = calculate_slopes(d, i, width, Elevation, self._length, TS)
 
-                                # if we have discharge, set Qo equal to that value
-                                if Discharge[TS, d, i] > 0:
-                                    Q0 = Discharge[TS, d, i]  # (dam^3/hr)
+                            # if we have discharge, set Qo equal to that value
+                            if Discharge[TS, d, i] > 0:
+                                Q0 = Discharge[TS, d, i]  # (dam^3/hr)
 
-                                    # ---------for all scenarios calc Q vals--------------------------------------------
-                                    Q1, Q2, Q3 = calculate_discharges(i, S1, S2, S3, Q0,
-                                                                      self._nn, self._length, self._max_slope)
+                                # ---------for all scenarios calc Q vals--------------------------------------------
+                                Q1, Q2, Q3 = calculate_discharges(i, S1, S2, S3, Q0,
+                                                                  b3d._nn, self._length, self._max_slope)
 
-                                    ### Update Discharge
-                                    # discharge is defined for the next row, so we do not need to include the last row
-                                    # the first row of discharge was already defined
-                                    if d != width - 1:  # uncomment and tab until calculate sed movement
-                                        # Cell 1
-                                        if i > 0:
-                                            Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
-                                        # Cell 2
-                                        Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
-                                        # Cell 3
-                                        if i < (self._length - 1):
-                                            Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
-                                    # --------------------------------------------------------------------------------------
+                                ### Update Discharge
+                                # discharge is defined for the next row, so we do not need to include the last row
+                                # the first row of discharge was already defined
+                                if d != width - 1:  # uncomment and tab until calculate sed movement
+                                    # Cell 1
+                                    if i > 0:
+                                        Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
+                                    # Cell 2
+                                    Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
+                                    # Cell 3
+                                    if i < (self._length - 1):
+                                        Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
+                                # --------------------------------------------------------------------------------------
 
-                                    # ### Calculate Sed Movement
-                                    fluxLimit = max_dune  # [dam MHW] dmaxel - bermel
-                                    # all Qs in [dam^3/hr]
-                                    if d < int_width:
-                                        # C = self._cx * abs(self._Si)  # 10 x the avg slope (from Murray) normal way
-                                        C = 0
-                                    else:
-                                        C = self._cx * abs(front_Si[0])
+                                # ### Calculate Sed Movement
+                                fluxLimit = max_dune  # [dam MHW] dmaxel - bermel
+                                # all Qs in [dam^3/hr]
+                                if d < int_width:
+                                    # C = self._cx * abs(self._Si)  # 10 x the avg slope (from Murray) normal way
+                                    C = 0
+                                else:
+                                    C = self._cx * abs(front_Si[0])
 
-                                    if Q1 > q_min:
-                                        Qs1 = self._ki * (Q1 * (S1 + C)) ** self._mm
-                                        if Qs1 < 0:
-                                            Qs1 = 0
-                                        elif Qs1 > fluxLimit:
-                                            Qs1 = fluxLimit
-                                    else:
+                                if Q1 > q_min:
+                                    Qs1 = self._ki * (Q1 * (S1 + C)) ** b3d._mm
+                                    if Qs1 < 0:
                                         Qs1 = 0
-                                    if Q2 > q_min:
-                                        Qs2 = self._ki * (Q2 * (S2 + C)) ** self._mm
-                                        if Qs2 < 0:
-                                            Qs2 = 0
-                                        elif Qs2 > fluxLimit:
-                                            Qs2 = fluxLimit
-                                    else:
+                                    elif Qs1 > fluxLimit:
+                                        Qs1 = fluxLimit
+                                else:
+                                    Qs1 = 0
+                                if Q2 > q_min:
+                                    Qs2 = self._ki * (Q2 * (S2 + C)) ** b3d._mm
+                                    if Qs2 < 0:
                                         Qs2 = 0
+                                    elif Qs2 > fluxLimit:
+                                        Qs2 = fluxLimit
+                                else:
+                                    Qs2 = 0
 
-                                    if Q3 > q_min:
-                                        Qs3 = self._ki * (Q3 * (S3 + C)) ** self._mm
-                                        if Qs3 < 0:
-                                            Qs3 = 0
-                                        elif Qs3 > fluxLimit:
-                                            Qs3 = fluxLimit
-                                    else:
+                                if Q3 > q_min:
+                                    Qs3 = self._ki * (Q3 * (S3 + C)) ** b3d._mm
+                                    if Qs3 < 0:
                                         Qs3 = 0
+                                    elif Qs3 > fluxLimit:
+                                        Qs3 = fluxLimit
+                                else:
+                                    Qs3 = 0
 
-                                    multi = 1
-                                    Qs1 = np.nan_to_num(Qs1) * multi
-                                    Qs2 = np.nan_to_num(Qs2) * multi
-                                    Qs3 = np.nan_to_num(Qs3) * multi
+                                multi = 1
+                                Qs1 = np.nan_to_num(Qs1) * multi
+                                Qs2 = np.nan_to_num(Qs2) * multi
+                                Qs3 = np.nan_to_num(Qs3) * multi
 
-                                    qs2_array[TS, d, i] = Qs2
+                                qs2_array[TS, d, i] = Qs2
 
-                                    # ### Calculate Net Erosion/Accretion
-                                    # flux in vs. flux out
-                                    # sed flux in goes to the next row, and is used for determining flux out at current row
-                                    # so we need a flux in for the last row, which will be its own variable
-                                    if d != width - 1:  # uncomment, tab next two ifs
-                                        if i > 0:
-                                            SedFluxIn[TS, d + 1, i - 1] += Qs1
+                                # ### Calculate Net Erosion/Accretion
+                                # flux in vs. flux out
+                                # sed flux in goes to the next row, and is used for determining flux out at current row
+                                # so we need a flux in for the last row, which will be its own variable
+                                if d != width - 1:  # uncomment, tab next two ifs
+                                    if i > 0:
+                                        SedFluxIn[TS, d + 1, i - 1] += Qs1
 
-                                        SedFluxIn[TS, d + 1, i] += Qs2
+                                    SedFluxIn[TS, d + 1, i] += Qs2
 
-                                        if i < (self._length - 1):
-                                            SedFluxIn[TS, d + 1, i + 1] += Qs3
-                                    # Qs1,2,3 calculated for current row
-                                    Qs_out = Qs1 + Qs2 + Qs3
-                                    SedFluxOut[TS, d, i] = Qs_out
+                                    if i < (self._length - 1):
+                                        SedFluxIn[TS, d + 1, i + 1] += Qs3
+                                # Qs1,2,3 calculated for current row
+                                Qs_out = Qs1 + Qs2 + Qs3
+                                SedFluxOut[TS, d, i] = Qs_out
 
-                                    # END OF DOMAIN LOOPS
+                                # END OF DOMAIN LOOPS
 
-                        # ### Update Elevation After Every Storm Hour
-                        ElevationChange = (SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]) / self._substep
-                        Elevation[TS, :, :] = Elevation[TS, :, :] + ElevationChange
-                        elev_change_array[TS] = ElevationChange
+                    # ### Update Elevation After Every Storm Hour
+                    ElevationChange = (SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]) / self._substep
+                    Elevation[TS, :, :] = Elevation[TS, :, :] + ElevationChange
+                    elev_change_array[TS] = ElevationChange
 
-                        # Calculate and save volume of sediment leaving the island for every hour
-                        # OWloss = OWloss + np.sum(SedFluxOut[TS, 0, :]) / substep
+                    # Calculate and save volume of sediment leaving the island for every hour
+                    # OWloss = OWloss + np.sum(SedFluxOut[TS, 0, :]) / substep
 
-                        # if we are just letting it go out of the cell uncomment
-                        qs_lost = qs_lost + sum(SedFluxOut[TS, width - 1, :]) / self._substep  # [dam^3] previously OWloss
-                        # qs_lost is reset to zero within the storm loop
-                        qs_lost_total = qs_lost_total + sum(
-                            SedFluxOut[TS, width - 1, :]) / self._substep  # [dam^3] previously OWloss
-                        # qs_lost_total is initialized to zero outside all loops
+                    # if we are just letting it go out of the cell uncomment
+                    qs_lost = sum(SedFluxOut[TS, width - 1, :]) / self._substep  # [dam^3] previously OWloss
+                    # qs_lost is reset to zero within the storm loop
+                    qs_lost_total = qs_lost_total + sum(
+                        SedFluxOut[TS, width - 1, :]) / self._substep  # [dam^3] previously OWloss
+                    # qs_lost_total is initialized to zero outside all loops
 
-                with open('D:/NC State/Outwasher/Output/sediment_tracking.txt', 'a') as f:
-                    if n == numstorm - 1:
-                        f.write(self._runID)
-                        f.write('\n')
-                        f.write("The total sediment volume lost was {0} dam^3".format(round(qs_lost_total, 3)))
-                        f.write('\n')
+            # output variables --------------------------------------------------
+            self._Qs_shoreface = qs_lost_total
+            print("The sediment volume lost in storm {0} was {1} dam^3".format(self._time_index-1, round(qs_lost, 3)))
 
-                print("The sediment volume lost in storm {0} was {1} dam^3".format(n + 1, round(qs_lost, 3)))
-                if n == numstorm - 1:
-                    print("The total sediment volume lost was {0} dam^3".format(round(qs_lost_total, 3)))
+            # WE LEFT OFF HERE: updating barrier3d variables based on the flow routing algorithm
+            # # update Barrier3D class variables
+            # new_ave_interior_height = np.average(
+            #     new_xyz_interior_domain[
+            #         new_xyz_interior_domain >= barrier3d.SL
+            #         ]  # all in dam MHW
+            # )
+            # barrier3d.h_b_TS[
+            #     -1
+            # ] = new_ave_interior_height  # slightly altered due to roadway
+            # barrier3d.InteriorDomain = new_xyz_interior_domain
+            # barrier3d.DomainTS[self._time_index - 1] = new_xyz_interior_domain
 
-                # ### Update Interior Domain After Every Storm
-                # use the last TS
-                InteriorUpdate = Elevation[-1, :, :]
+            # ### Update Interior Domain After Every Storm
+            # use the last TS
+            InteriorUpdate = Elevation[-1, :, :]
 
-                # Remove all rows of bay without any deposition from the domain
-                check = 1
-                while check == 1:
-                    if all(x <= self._bay_depth for x in InteriorUpdate[-1, :]):
-                        InteriorUpdate = np.delete(InteriorUpdate, (-1), axis=0)
-                    else:
-                        check = 0
+            # Remove all rows of bay without any deposition from the domain
+            check = 1
+            while check == 1:
+                if all(x <= self._bay_depth for x in InteriorUpdate[-1, :]):
+                    InteriorUpdate = np.delete(InteriorUpdate, (-1), axis=0)
+                else:
+                    check = 0
 
-                # Update interior domain
-                # int_update_b3d = InteriorUpdate[0:int_width, :]
-                # b3d._InteriorDomain = np.flip(int_update_b3d)
-                # full_domain[:, :] = InteriorUpdate
-                domain_array[1, :, :] = InteriorUpdate
-                # Update Domain widths
-                # DomainWidth = np.shape(b3d._InteriorDomain)[0]
+            # Update interior domain
+            # int_update_b3d = InteriorUpdate[0:int_width, :]
+            # b3d._InteriorDomain = np.flip(int_update_b3d)
+            # full_domain[:, :] = InteriorUpdate
+            domain_array[1, :, :] = InteriorUpdate
+            # Update Domain widths
+            # DomainWidth = np.shape(b3d._InteriorDomain)[0]
 
         # Record storm data
         b3d._StormCount.append(numstorm)
-        return Discharge, elev_change_array, Elevation, qs_lost_total, slopes_array, rexcess_dict, qs2_array, \
-               storm_series, SedFluxOut, SedFluxIn, domain_array, OW_TS, dis_comp_array, FR_array
+        # return Discharge, elev_change_array, Elevation, qs_lost_total, slopes_array, rexcess_dict, qs2_array, \
+        #        self._storm_series, SedFluxOut, SedFluxIn, domain_array, OW_TS, dis_comp_array, FR_array
 
 
 # --------------------------------------------running outwasher---------------------------------------------------------

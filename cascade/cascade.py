@@ -26,6 +26,7 @@ class Cascade:
         overwash_to_dune,
         roadway_management_module,
         beach_nourishment_module,
+        outwash_module
     ):
         """Configures lists to account for multiple Barrier3D domains from single input variables; used in modules"""
 
@@ -73,6 +74,10 @@ class Cascade:
             self._beach_nourishment_module = beach_nourishment_module
         else:
             self._beach_nourishment_module = [beach_nourishment_module] * self._ny
+        if np.size(outwash_module) > 1:
+            self._outwash_module = outwash_module
+        else:
+            self._outwash_module = [outwash_module] * self._ny
 
         return
 
@@ -108,6 +113,7 @@ class Cascade:
         alongshore_transport_module=True,
         beach_nourishment_module=True,
         community_economics_module=False,
+        outwash_module=True,
         alongshore_section_count=6,
         time_step_count=200,
         wave_height=1, # ---------- for BRIE and Barrier3D --------------- #
@@ -146,6 +152,7 @@ class Cascade:
         house_footprint_x=15,
         house_footprint_y=20,
         beach_full_cross_shore=70,
+        outwash_storm_series="outwash_storm_series_Dorian.npy",  # --------- outwasher (in development) ------------ #
     ):
         """
 
@@ -243,7 +250,10 @@ class Cascade:
             Subsidy on cost of entire nourishment plan
         beach_full_cross_shore: int, optional
             The cross-shore extent (meters) of fully nourished beach (i.e., the community desired beach width) [m]
-
+        outwash_storm_series: string, optional
+            Filename of outwash storm series (npy) with year, hydrograph (dam MHW), and duration
+        outwash_module: boolean or list of booleans, optional
+            If True, use outwash module (force a bayside surge event)
 
         Examples
         --------
@@ -349,6 +359,7 @@ class Cascade:
             overwash_to_dune=overwash_to_dune,
             roadway_management_module=roadway_management_module,
             beach_nourishment_module=beach_nourishment_module,
+            outwash_module=outwash_module,
         )
 
         if self._community_economics_module:
@@ -420,6 +431,27 @@ class Cascade:
         else:
             raise CascadeError(
                 "Berm elevation and beach slope must be equivalent for all Barrier3D domains"
+            )
+
+        ###############################################################################
+        # initialize outwasher
+        ###############################################################################
+        # (always initialize just in case...)
+        self._outwash = []
+
+        for iB3D in range(self._ny):
+            self._outwash.append(
+                Outwasher(
+                    datadir=datadir,
+                    time_step_count=self._nt,
+                    berm_elev=self._barrier3d[iB3D].BermEl,
+                    barrier_length=self._barrier3d[iB3D].BarrierLength,
+                    sea_level=self._barrier3d[iB3D].SL,
+                    bay_depth=self._barrier3d[iB3D].BayDepth,
+                    interior_domain=self._barrier3d[iB3D].InteriorDomain,
+                    dune_domain=self._barrier3d[iB3D].DuneDomain[0, :, :],
+                    outwash_storm_series=outwash_storm_series,
+                )
             )
 
     @property
@@ -713,6 +745,23 @@ class Cascade:
                         ]
                         / 10
                     )  # dam
+                )
+
+        ###############################################################################
+        # outwash module
+        ###############################################################################
+        # Lexi needs to provide a description here of what Outwasher does
+        for iB3D in range(self._ny):
+
+            if self._outwash_module[iB3D]:
+                [
+                    self._nourish_now[iB3D],
+                    self._rebuild_dune_now[iB3D],
+                ] = self._outwash[iB3D].update(
+                    barrier3d=self._barrier3d[iB3D],
+                    nourish_now=self._nourish_now[iB3D],
+                    rebuild_dune_now=self._rebuild_dune_now[iB3D],
+                    nourishment_interval=self._nourishment_interval[iB3D],
                 )
 
         ###############################################################################
