@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import imageio
 import copy
 
+from beach_dune_manager import shoreface_nourishment
+
 
 def bay_converter(storms, substep):
     """ takes a hydrograph and linearly interpolates a specified number of additional points based on the substep value
@@ -469,7 +471,8 @@ class Outwasher:
         self._interior_domain = int_domain[5:-1, :]
         # self._interior_domain = int_domain[10:-1, :]
         self._initial_storm_series = np.load(datadir + outwash_storm_series)
-        self._final_storm_series = np.load(datadir + outwash_storm_series)  # will be modified 4 substeps, if specified above
+        self._final_storm_series = np.load(datadir + outwash_storm_series)  # will be modified 4 substeps, if specified
+        self._time_index = 0
 
         # post-storm (overwash) variables, before outwash modifications
         self._post_b3d_interior_domain = [None] * time_step_count
@@ -480,7 +483,11 @@ class Outwasher:
 
         # output variables
         self._m_beachface = []  # slope of the beach face
-        self._Qs_shoreface = np.zeros(time_step_count)
+        self._Qs_shoreface = np.zeros(time_step_count)  # dam^3
+        self._Qs_shoreface_per_length = np.zeros(time_step_count)  # dam^3/dam
+        self._discharge = np.zeroes(time_step_count)  # dam^3/substep
+        self._flow_routing_cellular_array = np.zeroes(time_step_count)
+        self._post_outwash_beach_domain = np.zeros(time_step_count)
 
     def update(
             self,
@@ -488,12 +495,12 @@ class Outwasher:
     ):
 
         # initialize tracking and other b3d variables
-        self._time_index = b3d._time_index
+        self._time_index = b3d.time_index
         q_min = b3d._Qs_min  # [m^3 / hr]? Minimum discharge needed for sediment transport (0.001)
         qs_lost_total = 0  # previously OWloss
 
         # save post-storm dune, interior, shoreline, shoreface params before outwash modifications (a 0.5 yr time step)
-        self._post_b3d_interior[self._time_index - 1] = copy.deepcopy(
+        self._post_b3d_interior_domain[self._time_index - 1] = copy.deepcopy(
             b3d.InteriorDomain
         )
         self._post_b3d_dunes[self._time_index - 1] = copy.deepcopy(
@@ -567,6 +574,7 @@ class Outwasher:
             # elevation at the first time step is set to the full domain
             Elevation[0, :, :] = full_domain
             OW_TS = []
+            FR_array = []
 
             # initialize arrays for flow routing
             Discharge = np.zeros([duration, width, self._length])
@@ -587,9 +595,16 @@ class Outwasher:
                 print(TS)
 
                 # Need to calculate slopes immediately
-                FR_array, avg_slope_array = FR_slopes(truth_array, avg_slope_array, Elevation[TS], width, self._length, TS)
+                FR_array, avg_slope_array = FR_slopes(
+                    truth_array,
+                    avg_slope_array,
+                    Elevation[TS],
+                    width,
+                    self._length,
+                    TS
+                )
 
-                # get dune crest out here first (dont remember what this means 9/16/2022)
+                # get dune crest out here first (don't remember what this means 9/16/2022)
                 bayhigh = storm_series[1][TS]  # [dam]
 
                 row = int_width
@@ -727,600 +742,57 @@ class Outwasher:
                     qs_lost_total = qs_lost_total + sum(
                         SedFluxOut[TS, width - 1, :]) / self._substep  # [dam^3]
 
-            # output variables --------------------------------------------------
-            self._Qs_shoreface = qs_lost_total
-            print("The sediment volume lost in storm was {0} dam^3".format(round(qs_lost_total, 3)))
+            # update barrier3d interior and dune domain class variables ---------------------------------------
 
-            # WE LEFT OFF HERE: updating barrier3d variables based on the flow routing algorithm
-            # # update Barrier3D class variables
-            # new_ave_interior_height = np.average(
-            #     new_xyz_interior_domain[
-            #         new_xyz_interior_domain >= barrier3d.SL
-            #         ]  # all in dam MHW
-            # )
-            # barrier3d.h_b_TS[
-            #     -1
-            # ] = new_ave_interior_height  # slightly altered due to roadway
-            # barrier3d.InteriorDomain = new_xyz_interior_domain
-            # barrier3d.DomainTS[self._time_index - 1] = new_xyz_interior_domain
-
-            # ### Update Interior Domain After Every Storm
-            # use the last TS
-            InteriorUpdate = Elevation[-1, :, :]
-
-            # Remove all rows of bay without any deposition from the domain
+            # interior domain: remove all rows of bay without any deposition from the domain
+            post_outwash_full_domain = Elevation[-1, :, :]  # use the last TS
             check = 1
             while check == 1:
-                if all(x <= self._bay_depth for x in InteriorUpdate[-1, :]):
-                    InteriorUpdate = np.delete(InteriorUpdate, (-1), axis=0)
+                if all(x <= self._bay_depth for x in post_outwash_full_domain[-1, :]):
+                    post_outwash_full_domain = np.delete(post_outwash_full_domain, (-1), axis=0)
                 else:
                     check = 0
 
-            # Update interior domain
-            # int_update_b3d = InteriorUpdate[0:int_width, :]
-            # b3d._InteriorDomain = np.flip(int_update_b3d)
-            # full_domain[:, :] = InteriorUpdate
-            domain_array[1, :, :] = InteriorUpdate
-            # Update Domain widths
-            # DomainWidth = np.shape(b3d._InteriorDomain)[0]
-
-        # Record storm data
-        b3d._StormCount.append(numstorm)
-        # return Discharge, elev_change_array, Elevation, qs_lost_total, slopes_array, rexcess_dict, qs2_array, \
-        #        self._storm_series, SedFluxOut, SedFluxIn, domain_array, OW_TS, dis_comp_array, FR_array
-
-
-# --------------------------------------------running outwasher---------------------------------------------------------
-# importing Chris' bay data
-
-# ### start of the actual code
-
-# with open(r"C:\Users\Lexi\Documents\Research\Outwasher\chris stuff\sound_data.txt", newline='') as csvfile:
-#     sound_data = list(csv.reader(csvfile))[0]
-# sound_data = [float(s) / 10 - 0.054 for s in sound_data]  # [dam MHW] Chris' sound elevations were in m MSL,
-# # so converted to NAVD88 then MHW and dam
-# sound_data = [s + 0.05 for s in sound_data]  # [dam MHW] just increasing the values
-# # setting all negative values to 0
-# sound_data = sound_data[20:]
-# for index, value in enumerate(sound_data):
-#     #     # smaller used 0.05
-#     if value > 0.220:
-#         sound_data[index] = 0.220
-# sound_data[0] = 0
-# # np.save("C:/Users/Lexi/Documents/Research/Outwasher/sound_data", sound_data)
-#
-# # storm series is year the storm occured, the bay elevation for every time step, and the duration of the storm
-# storm_series = [1, sound_data, len(sound_data)]
-# path = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/"
-# # runID = "test"
-# runID = "dynamic_discharge_AVG_FACTOR15_Kie-3_substep4"
-# # the number in runID is 0.__
-# # ss in runID stands for storm series
-# # syndunes = synthetic dunes
-# # sedout = sediment fully leaves the system offshore
-# # see flux notes for changes to sediment fluxes (around lines 555 in code)
-# ## NOW USING REGULAR SOUND DATA, SED OUT AND EDITED EDGES
-# b3d = Barrier3d.from_yaml("C:/Users/Lexi/PycharmProjects/Barrier3d/tests/test_params/")
-# b3d.update()
-# b3d.update_dune_domain()
-# # from cascade.outwasher_reorganized import Outwasher
-# outwash = Outwasher(b3d, runID, path, substep=4, Cx=10, Ki=7.5E-3,)
-# discharge, elev_change, domain, qs_lost, slopes2, dictionary, qs2, avg_initial_cross, storm_elev, sedout, sedin, domain_array \
-#     = outwash.update(storm_series)
-
-# domain_change = domain_array[1] - domain_array[0]
-# fig5 = plt.figure()
-# ax5 = fig5.add_subplot(111)
-# mat5 = ax5.matshow(
-#     domain_change,
-#     # origin="upper",
-#     cmap="seismic",
-#     vmin=-0.2, vmax=0.2,
-# )
-# ax5.set_xlabel('barrier length (dam)')
-# ax5.set_ylabel('barrier width (dam)')
-# ax5.set_title("Elevation Change")
-# plt.gca().xaxis.tick_bottom()
-# fig5.colorbar(mat5)
-# plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/elev_change_domain")
-
-
-# fig5 = plt.figure()
-# ax5 = fig5.add_subplot(111)
-# cols = range(np.size(qs2, 1))
-# for col in cols:
-#     line = qs2[7, :, col]
-#     ax5.plot(cols, line, label="column {0}".format(col))
-# ax5.legend()
-# ax5.set_ylabel("Qs2 (dam3/hr)")
-# ax5.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
-# ax5.set_title("{0} \n Qs2 at time 7".format(runID))
-# plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/" + runID + "/cross_shore_qs2".format(runID))
-
-# fig6 = plt.figure()
-# ax6 = fig6.add_subplot(111)
-# ax6.plot(avg_initial_cross)
-# x = len(avg_initial_cross)
-# for index, value in enumerate(storm_elev):
-#     if index < 12:
-#         ax6.plot(range(x), np.ones(x) * value, linestyle="dashed", label="TS = {0}".format(index))
-# ax6.set_title("sound level for first 12 TS")
-# ax6.legend()
-# ax6.set_ylabel("Elevation (dam)")
-# ax6.set_xlabel("Cross-shore Distance from Bay to Ocean (dam)")
-# plt.savefig("C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/baylevels")
-# np.save("C:/Users/Lexi/Documents/Research/Outwasher/discharge", discharge)
-# np.save(newpath + "discharge", discharge)
-# plt.matshow(slopes2[1], cmap="jet_r")
-# plt.title('S2 Slopes')
-# plt.colorbar()
-# plt.matshow(discharge[1], cmap="jet_r")
-# plt.title('Discharge (dam^3/hr)')
-# plt.colorbar()
-# ----------------------------------making the elevation gif------------------------------------------------------------
-# frames = []
-# for i in range(2):
-#     filename = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/" + str(i) + "_domain.png"
-#     frames.append(imageio.imread(filename))
-# imageio.mimwrite("C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/{0}/test.gif".format(runID), frames, format='.gif',
-#                  fps=1)
-
-
-# -------------------------------------------elevation gif--------------------------------------------------------------
-def plot_ElevAnimation(elev, directory, start, stop):
-    os.chdir(directory)
-    newpath = "Elevations/"
-    if not os.path.exists(newpath):
-        os.makedirs(newpath)
-    os.chdir(newpath)
-
-    for t in range(start, stop):
-        AnimateDomain = elev[t]
-
-        # Plot and save
-        elevFig1 = plt.figure(figsize=(15, 7))
-        ax = elevFig1.add_subplot(111)
-        cax = ax.matshow(
-            AnimateDomain,
-            # origin="upper",
-            cmap="seismic",
-            # vmin=-0.000002, vmax=0.000002
-        )  # , interpolation='gaussian') # analysis:ignore
-        ax.xaxis.set_ticks_position("bottom")
-        elevFig1.colorbar(cax)
-        plt.xlabel("Alongshore Distance (dam)")
-        plt.ylabel("Cross-Shore Distance (dam)")
-        plt.title("Elevation change (dam)")
-        plt.tight_layout()
-        timestr = "Time = " + str(t) + " hrs"
-        plt.text(1, 1, timestr)
-        plt.rcParams.update({"font.size": 15})
-        name = "elev_" + str(t)
-        elevFig1.savefig(name, facecolor='w')  # dpi=200
-        plt.close(elevFig1)
-
-    frames = []
-
-    for filenum in range(start, stop):
-        filename = "elev_" + str(filenum) + ".png"
-        frames.append(imageio.imread(filename))
-    imageio.mimsave("elev.gif", frames, fps=2)
-    # imageio.mimsave("elev.gif", frames, "GIF-FI")
-    print("[ * elevation GIF successfully generated * ]")
-
-
-# -------------------------------------------discharge gif--------------------------------------------------------------
-def plot_DischargeAnimation(dis, directory, start, stop):
-    os.chdir(directory)
-    newpath = "Discharges/"
-    if not os.path.exists(newpath):
-        os.makedirs(newpath)
-    os.chdir(newpath)
-
-    # for t in range(TMAX - 1):
-    for t in range(start, stop):
-        AnimateDomain = dis[t]
-
-        # Plot and save
-        elevFig1 = plt.figure(figsize=(15, 7))
-        ax = elevFig1.add_subplot(111)
-        cax = ax.matshow(
-            AnimateDomain,
-            # origin="upper",
-            cmap="jet_r",
-            # vmin=0, vmax=20,
-        )  # , interpolation='gaussian') # analysis:ignore
-        ax.xaxis.set_ticks_position("bottom")
-        elevFig1.colorbar(cax)
-        plt.xlabel("Alongshore Distance (dam)")
-        plt.ylabel("Cross-Shore Distance (dam)")
-        plt.title("Discharge (dam^3/hr)")
-        plt.tight_layout()
-        timestr = "Time = " + str(t) + " hrs"
-        plt.text(1, 1, timestr)
-        plt.rcParams.update({"font.size": 15})
-        name = "dis_" + str(t)
-        elevFig1.savefig(name, facecolor='w')  # dpi=200
-        plt.close(elevFig1)
-
-    frames = []
-
-    for filenum in range(start, stop):
-        filename = "dis_" + str(filenum) + ".png"
-        frames.append(imageio.imread(filename))
-    imageio.mimsave("dis.gif", frames, fps=2)
-    # imageio.mimsave("dis.gif", frames, "GIF-FI")
-    print()
-    print("[ * discharge GIF successfully generated * ]")
-
-
-# ---------------------------------------------------slope gif----------------------------------------------------------
-def plot_SlopeAnimation(slope, directory, start, stop):
-    os.chdir(directory)
-    newpath = "Slopes/"
-    if not os.path.exists(newpath):
-        os.makedirs(newpath)
-    os.chdir(newpath)
-
-    for t in range(start, stop):
-        AnimateDomain = slope[t]
-
-        # Plot and save
-        elevFig1 = plt.figure(figsize=(15, 7))
-        ax = elevFig1.add_subplot(111)
-        cax = ax.matshow(
-            AnimateDomain,
-            # origin="upper",
-            # cmap="jet_r",
-            # vmin=-0.1, vmax=0.1,
-        )  # , interpolation='gaussian') # analysis:ignore
-        ax.xaxis.set_ticks_position("bottom")
-        elevFig1.colorbar(cax)
-        plt.xlabel("Alongshore Distance (dam)")
-        plt.ylabel("Cross-Shore Distance (dam)")
-        plt.title("S2 Slopes")
-        plt.tight_layout()
-        timestr = "Time = " + str(t) + " hrs"
-        plt.text(1, 1, timestr)
-        plt.rcParams.update({"font.size": 15})
-        name = "slope_" + str(t)
-        elevFig1.savefig(name, facecolor='w')  # dpi=200
-        plt.close(elevFig1)
-
-    frames = []
-
-    for filenum in range(start, stop):
-        filename = "slope_" + str(filenum) + ".png"
-        frames.append(imageio.imread(filename))
-    imageio.mimsave("dis.gif", frames, fps=2)
-    # imageio.mimsave("slopes.gif", frames, "GIF-FI")
-    print()
-    print("[ * slope GIF successfully generated * ]")
-
-
-# -------------------------------------------qs2 gif--------------------------------------------------------------------
-def plot_Qs2Animation(qs2, directory, start, stop):
-    os.chdir(directory)
-    newpath = "Qs2/"
-    if not os.path.exists(newpath):
-        os.makedirs(newpath)
-    os.chdir(newpath)
-
-    # for t in range(TMAX - 1):
-    for t in range(start, stop):
-        AnimateDomain = qs2[t]
-
-        # Plot and save
-        elevFig1 = plt.figure(figsize=(15, 7))
-        ax = elevFig1.add_subplot(111)
-        cax = ax.matshow(
-            AnimateDomain,
-            # origin="upper",
-            cmap="jet_r",
-            # vmin=-0.005, vmax=0.05,
-        )  # , interpolation='gaussian') # analysis:ignore
-        ax.xaxis.set_ticks_position("bottom")
-        elevFig1.colorbar(cax)
-        plt.xlabel("Alongshore Distance (dam)")
-        plt.ylabel("Cross-Shore Distance (dam)")
-        plt.title("Qs2 (dam^3)")
-        plt.tight_layout()
-        timestr = "Time = " + str(t) + " hrs"
-        plt.text(1, 1, timestr)
-        plt.rcParams.update({"font.size": 15})
-        name = "qs2_" + str(t)
-        elevFig1.savefig(name, facecolor='w')  # dpi=200
-        plt.close(elevFig1)
-
-    frames = []
-
-    for filenum in range(start, stop):
-        filename = "qs2_" + str(filenum) + ".png"
-        frames.append(imageio.imread(filename))
-    imageio.mimsave("dis.gif", frames, fps=2)
-    # imageio.mimsave("qs2.gif", frames, "GIF-FI")
-    print()
-    print("[ * Qs2 GIF successfully generated * ]")
-
-
-# ---------------------- Sed out array ---------------------------------------------------------------------------------
-def plot_SedOutAnimation(sedout, directory, start, stop):
-    os.chdir(directory)
-    newpath = "SedOut/"
-    if not os.path.exists(newpath):
-        os.makedirs(newpath)
-    os.chdir(newpath)
-
-    # for t in range(TMAX - 1):
-    for t in range(start, stop):
-        AnimateDomain = sedout[t]
-
-        # Plot and save
-        elevFig1 = plt.figure(figsize=(15, 7))
-        ax = elevFig1.add_subplot(111)
-        cax = ax.matshow(
-            AnimateDomain,
-            # origin="upper",
-            cmap="jet_r",
-            # vmin=min_v, vmax=max_v,
-        )  # , interpolation='gaussian') # analysis:ignore
-        ax.xaxis.set_ticks_position("bottom")
-        elevFig1.colorbar(cax)
-        plt.xlabel("Alongshore Distance (dam)")
-        plt.ylabel("Cross-Shore Distance (dam)")
-        plt.title("Sed Flux Out (dam^3)")
-        plt.tight_layout()
-        timestr = "Time = " + str(t) + " hrs"
-        plt.text(1, 1, timestr)
-        plt.rcParams.update({"font.size": 15})
-        name = "sedout_" + str(t)
-        elevFig1.savefig(name, facecolor='w')  # dpi=200
-        plt.close(elevFig1)
-
-    frames = []
-
-    for filenum in range(start, stop):
-        filename = "sedout_" + str(filenum) + ".png"
-        frames.append(imageio.imread(filename))
-    imageio.mimsave("dis.gif", frames, fps=2)
-    # imageio.mimsave("sedout.gif", frames, "GIF-FI")
-    print()
-    print("[ * SedOut GIF successfully generated * ]")
-
-
-# ---------------------- Sed out array ---------------------------------------------------------------------------------
-def plot_SedInAnimation(sedin, directory, start, stop):
-    os.chdir(directory)
-    newpath = "SedIn/"
-    if not os.path.exists(newpath):
-        os.makedirs(newpath)
-    os.chdir(newpath)
-
-    # for t in range(TMAX - 1):
-    for t in range(start, stop):
-        AnimateDomain = sedin[t]
-
-        # Plot and save
-        elevFig1 = plt.figure(figsize=(15, 7))
-        ax = elevFig1.add_subplot(111)
-        cax = ax.matshow(
-            AnimateDomain,
-            # origin="upper",
-            cmap="jet_r",
-            # vmin=min_v, vmax=max_v,
-        )  # , interpolation='gaussian') # analysis:ignore
-        ax.xaxis.set_ticks_position("bottom")
-        elevFig1.colorbar(cax)
-        plt.xlabel("Alongshore Distance (dam)")
-        plt.ylabel("Cross-Shore Distance (dam)")
-        plt.title("Sed Flux In (dam^3)")
-        plt.tight_layout()
-        timestr = "Time = " + str(t) + " hrs"
-        plt.text(1, 1, timestr)
-        plt.rcParams.update({"font.size": 15})
-        name = "sedin_" + str(t)
-        elevFig1.savefig(name, facecolor='w')  # dpi=200
-        plt.close(elevFig1)
-
-    frames = []
-
-    for filenum in range(start, stop):
-        filename = "sedin_" + str(filenum) + ".png"
-        frames.append(imageio.imread(filename))
-    imageio.mimsave("dis.gif", frames, fps=2)
-    # imageio.mimsave("sedin.gif", frames, "GIF-FI")
-    print()
-    print("[ * SedIn GIF successfully generated * ]")
-
-
-def plot_dischargeComp(discharge_array, directory, start, stop, bay_level):
-    os.chdir(directory)
-    newpath = "dis_comparison/"
-    if not os.path.exists(newpath):
-        os.makedirs(newpath)
-    os.chdir(newpath)
-
-    # for t in range(TMAX - 1):
-    for t in range(start, stop):
-        # Plot and save
-        elevFig1 = plt.figure(figsize=(15, 7))
-        ax = elevFig1.add_subplot(111)
-        x = range(len(discharge_array[0, 0, :]))
-        y = np.ones(len(x))*np.mean(discharge_array[t, 0, :])
-        y2 = np.ones(len(x))*np.mean(discharge_array[t, 1, :])
-        ax.plot(discharge_array[t, 0, :], label="expected discharge")
-        ax.plot(discharge_array[t, 1, :], label="actual discharge")
-        ax.plot(x, y, label="average expected discharge", color="k", linestyle="dashed")
-        ax.plot(x, y2, label="average actual discharge", linestyle="dashed")
-        ax.xaxis.set_ticks_position("bottom")
-        plt.xlabel("Alongshore Distance (dam)")
-        plt.ylabel("Discharge (dam^3/hr)")
-        plt.title("Discharge Comparison at the First Dune Line (dam^3/hr)")
-        ax.legend(loc="upper left")
-        plt.tight_layout()
-        full_text = "Time = " + str(t) + "; Bay level = " + str(round(bay_level[t], 3)) + " dam"
-        plt.text(0.5, 0.99, full_text, horizontalalignment='center',
-        verticalalignment='top', transform=ax.transAxes)
-        plt.rcParams.update({"font.size": 15})
-        name = "dis_comparison_" + str(t)
-        elevFig1.savefig(name, facecolor='w')  # dpi=200
-        plt.close(elevFig1)
-
-    frames = []
-
-    for filenum in range(start, stop):
-        filename = "dis_comparison_" + str(filenum) + ".png"
-        frames.append(imageio.imread(filename))
-    imageio.mimsave("discomp.gif", frames, fps=2)
-    # imageio.mimsave("sedin.gif", frames, "GIF-FI")
-    print()
-    print("[ * Discharge comparison GIF successfully generated * ]")
-
-
-def plot_FRarray(FR_array, directory, start, stop):
-    os.chdir(directory)
-    newpath = "FRA_cells/"
-    if not os.path.exists(newpath):
-        os.makedirs(newpath)
-    os.chdir(newpath)
-
-    # for t in range(TMAX - 1):
-    for t in range(start, stop):
-        AnimateDomain = FR_array[t]
-
-        # Plot and save
-        elevFig1 = plt.figure(figsize=(15, 7))
-        ax = elevFig1.add_subplot(111)
-        cax = ax.matshow(
-            AnimateDomain,
-            # origin="upper",
-            cmap="binary",
-            # vmin=min_v, vmax=max_v,
-        )  # , interpolation='gaussian') # analysis:ignore
-        ax.xaxis.set_ticks_position("bottom")
-        elevFig1.colorbar(cax)
-        plt.xlabel("Alongshore Distance (dam)")
-        plt.ylabel("Cross-Shore Distance (dam)")
-        plt.title("Cells where flow routing occurs")
-        plt.tight_layout()
-        timestr = "Time = " + str(t)
-        plt.text(1, 1, timestr)
-        plt.rcParams.update({"font.size": 15})
-        name = "FR_array_" + str(t)
-        elevFig1.savefig(name, facecolor='w')  # dpi=200
-        plt.close(elevFig1)
-
-    frames = []
-
-    for filenum in range(start, stop):
-        filename = "FR_array_" + str(filenum) + ".png"
-        frames.append(imageio.imread(filename))
-    imageio.mimsave("FR_arrays.gif", frames, fps=2)
-    # imageio.mimsave("sedin.gif", frames, "GIF-FI")
-    print()
-    print("[ * FRA array GIF successfully generated * ]")
-
-
-
-# -------------------------------------------b3d domain plot------------------------------------------------------------
-def plot_ModelTransects(b3d, time_step):
-    plt.figure(figsize=(10, 5))
-    fig = plt.subplot(1, 1, 1)
-    legend_t = []
-
-    for t in time_step:
-        # Sea level
-        sea_level = b3d._SL + (t * b3d._RSLR[t])
-
-        # Create data points
-        shoreface_toe_x = (b3d.x_t_TS[t] - b3d.x_t_TS[0])
-        shoreface_toe_y = (sea_level - b3d.DShoreface) * 10  # m
-        shoreline_x = (b3d.x_s_TS[t] - b3d.x_t_TS[0])
-        shoreline_y = sea_level * 10  # m
-        bay_y = (sea_level - b3d._BayDepth) * 10  # m
-        end_of_bay_y = bay_y
-
-        # if cascade.nourishments[iB3D].beach_width[t] is not None:
-        #     berm_x = shoreline_x + (
-        #         cascade.nourishments[iB3D].beach_width[t] / 10
-        #     )  # beach width (in dam)
-        # else:
-        berm_x = shoreline_x + (
-            int(b3d.BermEl / b3d._beta)
-        )  # initial beach width (in dam)
-        # end of un-shifted
-        berm_y = (
-                         b3d._BermEl * 10
-                 ) + shoreline_y  # convert to meters
-        dune_toe_x = berm_x
-        dune_toe_y = berm_y
-
-        v = 10  # just use 10th transect
-        interior_y = b3d._DomainTS[t]  # dam MHW
-        interior_y = interior_y[:, v]
-        dunes_y = (b3d._DuneDomain[t, v, :] + b3d._BermEl)  # dam MHW
-        cross_barrier_y = np.insert(interior_y, 0, dunes_y)
-        cross_barrier_y = (cross_barrier_y * 10) + shoreline_y  # Convert to meters with sea level rise included
-        cross_barrier_x = np.arange(0, len(cross_barrier_y), 1) + dune_toe_x
-
-        end_of_bay_x = (
-                cross_barrier_x[-1] + 20
-        )  # just add a buffer to the end of the plt
-
-        x = np.hstack(
-            [
-                shoreface_toe_x,
-                shoreline_x,
-                berm_x,
-                dune_toe_x,
-                cross_barrier_x,
-                end_of_bay_x,
-            ]
-        )
-        y = np.hstack(
-            [
-                shoreface_toe_y,
-                shoreline_y,
-                berm_y,
-                dune_toe_y,
-                cross_barrier_y,
-                end_of_bay_y,
-            ]
-        )
-
-        # Plot
-        plt.plot(x, y)
-        plt.hlines(sea_level * 10, shoreface_toe_x, end_of_bay_x, colors="black")
-        # NOTE: the berm elevation is relative to the MHW, so everything that relies on it is m MHW; confirmed with Ian
-        # that the InteriorDomain is m MHW (i.e., m NAVD88 - MHW [in NAVD88])
-        # plt.rcParams.update({"font.size": 20})
-        # legend_t.append(str(t))
-        plt.plot(shoreface_toe_x, shoreface_toe_y, 'r-o', label='shoreface toe')
-        plt.plot(shoreline_x, shoreline_y, 'g-o', label='shoreline')
-        plt.plot(berm_x, berm_y, 'b-o', label='berm')
-        plt.plot(dune_toe_x, dune_toe_y, 'c-o', label='dune toe')
-        plt.plot(cross_barrier_x, cross_barrier_y, 'm', label='cross barrier')
-        plt.plot(end_of_bay_x, end_of_bay_y, 'k-o', label='end of bay')
-        plt.legend(loc='lower right')
-
-    plt.xlabel("Cross-shore position (dam)")
-    plt.ylabel("Elevation (m MHW)")
-    plt.title("Profile Evolution")
-    # plt.legend(legend_t)
-
-    return fig
-
-
-# # change if substep is 2
-# # TMAX = storm_series[2]
-# # TMAX = 2*storm_series[2]
-# TMAX = 20
-# dir = "C:/Users/Lexi/Documents/Research/Outwasher/Output/edgesedited_bay220limited/" + runID + "/"
-# plot_ElevAnimation(elev_change, dir, TMAX)
-# plot_DischargeAnimation(discharge, dir, TMAX)
-# plot_SlopeAnimation(slopes2, dir, TMAX)
-# # plot_Qs2Animation(qs2, dir, TMAX)
-# plot_SedOutAnimation(sedout, dir, TMAX)
-# plot_SedInAnimation(sedin, dir, TMAX)
-# # time_step = [0]
-# # plot_ModelTransects(b3d, time_step)
+            # NOTE FOR LEXI: before this code, you need to 1) isolate the dune domain, beach domain, and interior domain
+            # into separate variables, and 2) flip the dune domain back
+            post_outwash_interior_domain = []
+            post_outwash_dune_domain = []
+            post_outwash_beach_domain = []
+            self._post_outwash_beach_domain[self._time_index - 1] = post_outwash_beach_domain
+
+            new_ave_interior_height = np.average(
+                post_outwash_interior_domain[
+                    post_outwash_interior_domain >= b3d.SL
+                    ]  # all in dam MHW
+            )
+            b3d.h_b_TS[-1] = new_ave_interior_height
+            b3d.InteriorDomain = post_outwash_interior_domain
+            b3d.DomainTS[self._time_index - 1] = post_outwash_interior_domain
+            b3d.DuneDomain[self._time_index - 1, :, :] = copy.deepcopy(
+                post_outwash_dune_domain
+            )
+
+            # "nourish" the shoreface with the washout ----------------------------------------------------
+            self._Qs_shoreface[self._time_index - 1] = qs_lost_total * 100  # m^3
+            self._Qs_shoreface_per_length[self._time_index - 1] = (qs_lost_total / self._length) * 100  # m^3/m
+            dummy_beach_width = 0
+
+            (
+                b3d.x_s,  # save over class variables
+                b3d.s_sf_TS[-1],
+                _,  # this is just the change in shoreline position
+            ) = shoreface_nourishment(
+                b3d.x_s,  # in dam
+                b3d.x_t,  # in dam
+                self._Qs_shoreface_per_length[self._time_index - 1] / 100,  # convert m^3/m to dam^3/dam
+                b3d.h_b_TS[-1],  # in dam
+                b3d.DShoreface,  # in dam
+                dummy_beach_width,  # in dam
+            )
+            b3d.x_s_TS[-1] = b3d.x_s
+
+            # other class variables that we want to save
+            self._discharge[self._time_index - 1] = Discharge
+            self._flow_routing_cellular_array[self._time_index - 1] = FR_array
+
+        return

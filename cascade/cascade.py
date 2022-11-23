@@ -750,19 +750,11 @@ class Cascade:
         ###############################################################################
         # outwash module
         ###############################################################################
-        # Lexi needs to provide a description here of what Outwasher does
+        # NOTE FOR LEXI: needs to provide a description here of what Outwasher does
         for iB3D in range(self._ny):
 
             if self._outwash_module[iB3D]:
-                [
-                    self._nourish_now[iB3D],
-                    self._rebuild_dune_now[iB3D],
-                ] = self._outwash[iB3D].update(
-                    barrier3d=self._barrier3d[iB3D],
-                    nourish_now=self._nourish_now[iB3D],
-                    rebuild_dune_now=self._rebuild_dune_now[iB3D],
-                    nourishment_interval=self._nourishment_interval[iB3D],
-                )
+                self._outwash[iB3D].update(barrier3d=self._barrier3d[iB3D])
 
         ###############################################################################
         # update BRIE for any human modifications to the barrier
