@@ -4,10 +4,6 @@
 
 import numpy as np
 import math
-import os
-import imageio
-import matplotlib.pyplot as plt
-import imageio
 import copy
 
 from beach_dune_manager import shoreface_nourishment
@@ -755,9 +751,9 @@ class Outwasher:
 
             # NOTE FOR LEXI: before this code, you need to 1) isolate the dune domain, beach domain, and interior domain
             # into separate variables, and 2) flip the dune domain back
-            post_outwash_interior_domain = []
-            post_outwash_dune_domain = []
-            post_outwash_beach_domain = []
+            post_outwash_interior_domain = Elevation[-1, 0:int_width, :]
+            post_outwash_dune_domain = Elevation[-1, int_width:int_width+2, :]
+            post_outwash_beach_domain = Elevation[-1, int_width+2:-1, :]
             self._post_outwash_beach_domain[self._time_index - 1] = post_outwash_beach_domain
 
             new_ave_interior_height = np.average(
@@ -766,8 +762,8 @@ class Outwasher:
                     ]  # all in dam MHW
             )
             b3d.h_b_TS[-1] = new_ave_interior_height
-            b3d.InteriorDomain = post_outwash_interior_domain
-            b3d.DomainTS[self._time_index - 1] = post_outwash_interior_domain
+            b3d.InteriorDomain = np.flip(post_outwash_interior_domain)[0]
+            b3d.DomainTS[self._time_index - 1] = np.flip(post_outwash_interior_domain)[0]
             b3d.DuneDomain[self._time_index - 1, :, :] = copy.deepcopy(
                 post_outwash_dune_domain
             )
