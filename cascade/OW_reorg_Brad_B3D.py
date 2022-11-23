@@ -12,6 +12,12 @@ import copy
 
 
 def bay_converter(storms, substep):
+    """ takes a hydrograph and linearly interpolates a specified number of additional points based on the substep value
+    :param storms: list or array of bay level
+    :param substep: number of extra points you want
+    :returns new list of bay levels
+    (ex, substep 2 = flow route every 30 minutes by interpolating one extra value)
+    """
     # storms will be the sound data, so storm_series[1]
     new_ss = []
     num_new_vals = substep - 1  # number of values we are adding between existing values
@@ -30,6 +36,15 @@ def bay_converter(storms, substep):
 
 
 def dunes(length, berm_el, n_rows, n_gaps, dune_height=0.25):
+    """
+    creates a dune line with gaps
+    :param length: alongshore length of the barrier, int
+    :param berm_el: height of the berm [dam MHW], float
+    :param n_rows: number of dune rows (width of dunes), int
+    :param n_gaps: number of dune gaps, int
+    :param dune_height: desired height of dune gaps, float
+    :return: dune domain, numpy array
+    """
     width = n_rows
     gap_height = berm_el[0]
     dune_domain = np.zeros([width, length])
@@ -59,7 +74,11 @@ def dunes(length, berm_el, n_rows, n_gaps, dune_height=0.25):
 
 def DuneGaps(DuneDomain, Dow, Rhigh):
     """Returns tuple of [gap start index, stop index, avg Rexcess of each gap,
-    alpha: ratio of TWL / dune height]"""
+    alpha: ratio of TWL / dune height]
+    :param DuneDomain: numpy array with dune elevations [dam MHW]
+    :param Dow: list of cell indices where outwash occurs
+    :param Rhigh: current bay level [dam MHW]
+    """
     gaps = []
     start = 0
     #        stop = 0
@@ -90,19 +109,18 @@ def DuneGaps(DuneDomain, Dow, Rhigh):
     return gaps
 
 
-def FR_slopes(truth_array, avg_slope_array, domain, width, length, duration, time_step):
+def FR_slopes(truth_array, avg_slope_array, domain, width, length, time_step):
     """
-
-    Defines slopes (starting at the first row) as positive or negative, relative to the preceding row
-
-    :param d: incremental width (row)
-    :param domain_width: width of the input domain
-    :param elev_array: array storing the elevations
-    :param domain_length: length of the input domain
-    :param time_step: time step of the storm
-    :param slopes_array: array storing the S2 slopes
-    :param beachface: slope of the beachface, used to calc the last row slope, so this must be the beachface slope
-    :return: S1, S2, S3, slopes_array
+    takes the elevations and differentiates uphill and downhill regions based on an average slope of
+    a block of cells
+    :param truth_array: empty array that is filled with 1s and 0s based on uphill versus downhill slopes
+    :param avg_slope_array: currently empty, for each cell, stores the average value of the S1, S2, and S3 values
+    :param domain: elevation array
+    :param width: cross-shore barrier width
+    :param length: alongshore barrier length
+    :param time_step: current time step of the storm
+    :return truth_array: array of 1s and 0s indicating downhill and uphill (respectively) slopes for future flow
+            routing determination
     """
     # ### Calculate Slopes
     for row in range(width):  # for letting sediment out, discharge scenarios 2 and 3
@@ -199,14 +217,14 @@ def FR_slopes(truth_array, avg_slope_array, domain, width, length, duration, tim
 
 def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_step):
     """
-    :param d: incremental width (row)
-    :param domain_width: width of the input domain
+    calculates the slopes at each cell
+    :param row: current row of the domain, int
+    :param col: current column of the domain, int
+    :param domain_width: cross-shore barrier width, int
     :param elev_array: array storing the elevations
-    :param domain_length: length of the input domain
-    :param time_step: time step of the storm
-    :param slopes_array: array storing the S2 slopes
-    :param beachface: slope of the beachface, used to calc the last row slope, so this must be the beachface slope
-    :return: S1, S2, S3, slopes_array
+    :param domain_length: alongshore barrier length, int
+    :param time_step: current time step of the storm
+    :return: S1, S2, S3 (floats)
     """
     # ### Calculate Slopes
     # if we are not at the last row, do normal calculations
@@ -257,16 +275,17 @@ def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_ste
 # ### Calculate Discharges
 def calculate_discharges(col, S1, S2, S3, Q0, nn, domain_length, max_slope):
     """
+    calculates the discharge at each cell
+    :param col: current column of the domain
     :param S1: slope to bottom left cell
     :param S2: slope to bottom cell
     :param S3: slope to bottom right cell
     :param Q0: initial discharge
-    :param nn: parameter
-    :param domain_length: length in the alongshore
-    :param max_slope: maximum slope that sediment can be transported up
-    :return: Q1, Q2, Q3
+    :param nn: parameter for flow routing
+    :param domain_length: alongshore length of the barrier
+    :param max_slope: maximum slope that sediment can be transported uphill
+    :return: Q1, Q2, Q3 (floats)
     """
-
 
     # One or more slopes positive (we have downhill flow)
     if S1 > 0 or S2 > 0 or S3 > 0:
@@ -569,7 +588,7 @@ class Outwasher:
                 print(TS)
 
                 # Need to calculate slopes immediately
-                FR_array, avg_slope_array = FR_slopes(truth_array, avg_slope_array, Elevation[TS], width, self._length, duration, TS)
+                FR_array, avg_slope_array = FR_slopes(truth_array, avg_slope_array, Elevation[TS], width, self._length, TS)
 
                 # get dune crest out here first (dont remember what this means 9/16/2022)
                 bayhigh = storm_series[1][TS]  # [dam]
@@ -706,17 +725,12 @@ class Outwasher:
 
                     # Calculate and save volume of sediment leaving the island for every hour
                     # OWloss = OWloss + np.sum(SedFluxOut[TS, 0, :]) / substep
-
-                    # if we are just letting it go out of the cell uncomment
-                    qs_lost = sum(SedFluxOut[TS, width - 1, :]) / self._substep  # [dam^3] previously OWloss
-                    # qs_lost is reset to zero within the storm loop
                     qs_lost_total = qs_lost_total + sum(
-                        SedFluxOut[TS, width - 1, :]) / self._substep  # [dam^3] previously OWloss
-                    # qs_lost_total is initialized to zero outside all loops
+                        SedFluxOut[TS, width - 1, :]) / self._substep  # [dam^3]
 
             # output variables --------------------------------------------------
             self._Qs_shoreface = qs_lost_total
-            print("The sediment volume lost in storm {0} was {1} dam^3".format(self._time_index-1, round(qs_lost, 3)))
+            print("The sediment volume lost in storm was {0} dam^3".format(round(qs_lost_total, 3)))
 
             # WE LEFT OFF HERE: updating barrier3d variables based on the flow routing algorithm
             # # update Barrier3D class variables
@@ -1162,6 +1176,7 @@ def plot_dischargeComp(discharge_array, directory, start, stop, bay_level):
     # imageio.mimsave("sedin.gif", frames, "GIF-FI")
     print()
     print("[ * Discharge comparison GIF successfully generated * ]")
+
 
 def plot_FRarray(FR_array, directory, start, stop):
     os.chdir(directory)
