@@ -484,8 +484,7 @@ class Outwasher:
 
     def update(
             self,
-            b3d,
-            fudge_fac=1
+            b3d
     ):
 
         # initialize tracking and other b3d variables
