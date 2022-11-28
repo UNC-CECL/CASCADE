@@ -1,12 +1,8 @@
-# moving boundary conditions for flow routing
-# uphill = no flow routing
-# downhill = flow routing
-
 import numpy as np
 import math
 import copy
 
-from beach_dune_manager import shoreface_nourishment
+from .beach_dune_manager import shoreface_nourishment
 
 
 def bay_converter(storms, substep):
@@ -418,14 +414,15 @@ class Outwasher:
 
         Examples
         --------
-        # >>> from cascade.outwasher_reorganized import Outwasher
+        # >>> from cascade.outwasher import Outwasher
         # >>> outwash = Outwasher()
-        # >>> outwash.update(barrier3d, storm_series, runID)
+        # >>> outwash.update(barrier3d)
         """
 
     def __init__(
             self,
             datadir,
+            outwash_storm_series,
             time_step_count,
             berm_elev,
             barrier_length,
@@ -433,9 +430,6 @@ class Outwasher:
             bay_depth,
             interior_domain,
             dune_domain,
-            outwash_storm_series,
-            # runID,  # eventually this will go away
-            # path,  # eventually this will go away
             substep=20,
             sediment_flux_coefficient_Cx=10,
             sediment_flux_coefficient_Ki=2E-3,  # b3d = 7.5E-6 for inundation
@@ -482,6 +476,7 @@ class Outwasher:
         self._Qs_shoreface = np.zeros(time_step_count)  # dam^3
         self._Qs_shoreface_per_length = np.zeros(time_step_count)  # dam^3/dam
         self._discharge = np.zeroes(time_step_count)  # dam^3/substep
+        self._elevation_change = np.zeroes(time_step_count)
         self._flow_routing_cellular_array = np.zeroes(time_step_count)
         self._post_outwash_beach_domain = np.zeros(time_step_count)
 
@@ -571,15 +566,14 @@ class Outwasher:
             Elevation[0, :, :] = full_domain
             OW_TS = []
             FR_array = []
+            ElevationChange = 0
 
             # initialize arrays for flow routing
             Discharge = np.zeros([duration, width, self._length])
             SedFluxIn = np.zeros([duration, width, self._length])
             SedFluxOut = np.zeros([duration, width, self._length])
-            elev_change_array = np.zeros([duration, width, self._length])
             truth_array = np.zeros([duration, width, self._length])
             avg_slope_array = np.zeros([duration, width, self._length])
-            qs2_array = np.zeros([duration, width, self._length])
 
             # route the flow
             for TS in range(duration):
@@ -708,7 +702,6 @@ class Outwasher:
                                 Qs2 = np.nan_to_num(Qs2) * multi
                                 Qs3 = np.nan_to_num(Qs3) * multi
 
-                                qs2_array[TS, d, i] = Qs2
 
                                 # ### Calculate Net Erosion/Accretion
                                 # flux in vs. flux out
@@ -731,7 +724,6 @@ class Outwasher:
                     # ### Update Elevation After Every Storm Hour
                     ElevationChange = (SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]) / self._substep
                     Elevation[TS, :, :] = Elevation[TS, :, :] + ElevationChange
-                    elev_change_array[TS] = ElevationChange
 
                     # Calculate and save volume of sediment leaving the island for every hour
                     # OWloss = OWloss + np.sum(SedFluxOut[TS, 0, :]) / substep
@@ -790,5 +782,6 @@ class Outwasher:
             # other class variables that we want to save
             self._discharge[self._time_index - 1] = Discharge
             self._flow_routing_cellular_array[self._time_index - 1] = FR_array
+            self._elevation_change[self._time_index - 1] = ElevationChange
 
-        return
+        # return
