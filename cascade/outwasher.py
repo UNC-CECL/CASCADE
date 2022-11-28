@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import copy
+import csv
 
 from .beach_dune_manager import shoreface_nourishment
 
@@ -460,8 +461,8 @@ class Outwasher:
         # initializing our barrier interior
         self._interior_domain = int_domain[5:-1, :]
         # self._interior_domain = int_domain[10:-1, :]
-        self._initial_storm_series = np.load(datadir + outwash_storm_series)
-        self._final_storm_series = np.load(datadir + outwash_storm_series)  # will be modified 4 substeps, if specified
+        self._initial_storm_series = csv.reader(datadir + outwash_storm_series)
+        self._final_storm_series = csv.reader(datadir + outwash_storm_series)  # will be modified 4 substeps, if specified
         self._time_index = 0
 
         # post-storm (overwash) variables, before outwash modifications
