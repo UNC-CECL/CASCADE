@@ -1,7 +1,7 @@
 import numpy as np
 import math
 import copy
-import csv
+# import csv
 
 from .beach_dune_manager import shoreface_nourishment
 
@@ -423,7 +423,8 @@ class Outwasher:
     def __init__(
             self,
             datadir,
-            outwash_storm_series,
+            outwash_years,
+            outwash_bay_levels,
             time_step_count,
             berm_elev,
             barrier_length,
@@ -459,10 +460,19 @@ class Outwasher:
         # self._interior_domain = np.zeros([30, self._length])
         int_domain = np.flip(interior_domain)
         # initializing our barrier interior
-        self._interior_domain = int_domain[5:-1, :]
-        # self._interior_domain = int_domain[10:-1, :]
-        self._initial_storm_series = csv.reader(datadir + outwash_storm_series)
-        self._final_storm_series = csv.reader(datadir + outwash_storm_series)  # will be modified 4 substeps, if specified
+        self._interior_domain = int_domain
+        # sound_data = np.loadtxt(datadir + outwash_storm_series, delimiter=",")
+        # sound_data = [float(s) / 10 - 0.054 for s in sound_data]  # [dam MHW] Chris' sound elevations were in m MSL,
+        # # so converted to NAVD88 then MHW and dam
+        # sound_data = [s + 0.05 for s in sound_data]  # [dam MHW] just increasing the values
+        # # setting all negative values to 0
+        # sound_data = np.asarray(sound_data[20:44])
+        # sound_data[0] = 0
+        self._outwash_years = np.load(datadir + outwash_years)
+        self._initial_bay_levels = np.load(datadir + outwash_bay_levels)
+        self._final_bay_levels = []
+        # self._initial_storm_series = np.load(datadir + outwash_storm_series, allow_pickle=True)
+        # self._final_storm_series = np.load(datadir + outwash_storm_series, allow_pickle=True)  # will be modified 4 substeps, if specified
         self._time_index = 0
 
         # post-storm (overwash) variables, before outwash modifications
@@ -476,10 +486,10 @@ class Outwasher:
         self._m_beachface = []  # slope of the beach face
         self._Qs_shoreface = np.zeros(time_step_count)  # dam^3
         self._Qs_shoreface_per_length = np.zeros(time_step_count)  # dam^3/dam
-        self._discharge = np.zeroes(time_step_count)  # dam^3/substep
-        self._elevation_change = np.zeroes(time_step_count)
-        self._flow_routing_cellular_array = np.zeroes(time_step_count)
-        self._post_outwash_beach_domain = np.zeros(time_step_count)
+        self._discharge = np.zeros(time_step_count, dtype=object)  # dam^3/substep
+        self._elevation_change = np.zeros(time_step_count, dtype=object)
+        self._flow_routing_cellular_array = np.zeros(time_step_count, dtype=object)
+        self._post_outwash_beach_domain = np.zeros(time_step_count, dtype=object)
 
     def update(
             self,
@@ -507,26 +517,26 @@ class Outwasher:
         )
 
         # only simulate on outwash years (max of one outwash event per model year)
-        storm_index = np.argwhere(self._initial_storm_series[:, 0, 0] == self._time_index - 1)
+        # storm_index = np.argwhere(self._initial_storm_series[:, 0, 0] == self._time_index - 1)
+        storm_index = [np.argwhere(self._outwash_years[:] == self._time_index - 1)[0][0]]
+        # storm_index = np.where(self._outwash_years[:] == self._time_index - 1)
         numstorm = int(len(storm_index))  # we will always only have one storm per year (if that)
 
         if numstorm > 0:
 
             # get the hydrograph and duration for this time step
-            storm_series = self._initial_storm_series[storm_index]
+            storm_series = self._initial_bay_levels[storm_index[0]]  # just the bay levels for this outwash year
 
             # allow for substeps to better simulate morphodynamics (subset=20 equates to 3 min intervals)
             # NOTE: this has been updated to hopefully be used on any storm series for any substep
             # NOTE: LEXI YOU NEED TO MAKE A NEW VARIABLE FOR THE SUBSTEP STORM
             if self._substep != 1:
-                updated_bay_levels = bay_converter(storm_series[1], substep=self._substep)
-                dur = len(updated_bay_levels)
-                storm_series[1] = updated_bay_levels
-                storm_series[2] = dur
-                self._final_storm_series[storm_index] = storm_series  # save substep version
-
-            else:
-                dur = storm_series[2]  # [hr] duration of the storm
+                updated_bay_levels = bay_converter(storm_series, substep=self._substep)
+                storm_series = np.asarray(updated_bay_levels)
+                self._final_bay_levels.append(storm_series)
+                self._final_bay_levels = self._final_bay_levels[0]  # save substep version
+            # else:
+            dur = len(storm_series)  # [hr] duration of the storm
 
             # merge the interior domain, dunes, and create a beach --------------------------------------------------
             # we added a beach (and "beachface") to the domain with a width of 7 dam based on general beach widths
@@ -596,7 +606,7 @@ class Outwasher:
                 )
 
                 # get dune crest out here first (don't remember what this means 9/16/2022)
-                bayhigh = storm_series[1][TS]  # [dam]
+                bayhigh = storm_series[TS]  # [dam]
 
                 row = int_width
                 # for row in np.arange(int_width, -1, -1):
@@ -745,20 +755,20 @@ class Outwasher:
             # NOTE FOR LEXI: before this code, you need to 1) isolate the dune domain, beach domain, and interior domain
             # into separate variables, and 2) flip the dune domain back
             post_outwash_interior_domain = Elevation[-1, 0:int_width, :]
-            post_outwash_dune_domain = Elevation[-1, int_width:int_width+2, :]
+            post_outwash_dune_domain = Elevation[-1, int_width:int_width+2, :] - self._berm_el
             post_outwash_beach_domain = Elevation[-1, int_width+2:-1, :]
             self._post_outwash_beach_domain[self._time_index - 1] = post_outwash_beach_domain
 
             new_ave_interior_height = np.average(
                 post_outwash_interior_domain[
-                    post_outwash_interior_domain >= b3d.SL
+                    post_outwash_interior_domain >= b3d._SL
                     ]  # all in dam MHW
             )
             b3d.h_b_TS[-1] = new_ave_interior_height
             b3d.InteriorDomain = np.flip(post_outwash_interior_domain)[0]
             b3d.DomainTS[self._time_index - 1] = np.flip(post_outwash_interior_domain)[0]
             b3d.DuneDomain[self._time_index - 1, :, :] = copy.deepcopy(
-                post_outwash_dune_domain
+               np.transpose(post_outwash_dune_domain)
             )
 
             # "nourish" the shoreface with the washout ----------------------------------------------------
