@@ -456,8 +456,6 @@ class Outwasher:
         self._dune_crest = self._dune_domain.max(axis=1)  # dune_crest used to be DuneDomainCrest
         # self._dune_domain = dunes(self._length, self._berm_el, n_rows=2, n_gaps=1, dune_height=0.25)
         # initializing our barrier interior
-        # give it an arbitrary width of 30 dam
-        # self._interior_domain = np.zeros([30, self._length])
         int_domain = np.flip(interior_domain)
         # initializing our barrier interior
         self._interior_domain = int_domain
@@ -484,6 +482,10 @@ class Outwasher:
 
         # output variables
         self._m_beachface = []  # slope of the beach face
+        self._OW_TS = []  # array for storing overwashed time steps
+        self._initial_full_domain = []
+        self._full_dunes = []
+        self._full_domain = []
         self._Qs_shoreface = np.zeros(time_step_count)  # dam^3
         self._Qs_shoreface_per_length = np.zeros(time_step_count)  # dam^3/dam
         self._discharge = np.zeros(time_step_count, dtype=object)  # dam^3/substep
@@ -533,8 +535,7 @@ class Outwasher:
             if self._substep != 1:
                 updated_bay_levels = bay_converter(storm_series, substep=self._substep)
                 storm_series = np.asarray(updated_bay_levels)
-                self._final_bay_levels.append(storm_series)
-                self._final_bay_levels = self._final_bay_levels[0]  # save substep version
+                # self._final_bay_levels = storm_series
             # else:
             dur = len(storm_series)  # [hr] duration of the storm
 
@@ -558,10 +559,12 @@ class Outwasher:
             # the dune domain is being taken from B3D, but has 2 rows with length rows, so it needs to be transposed
             # I believe each row starts off exactly the same, but now I am not sure
             dune_domain_full = np.transpose(self._dune_domain) + self._berm_el
+            self._full_dunes = copy.deepcopy(dune_domain_full)
             # the full domain of outwasher starts with the interior domain, then the dune, beach, and beachface
             full_domain = np.append(self._interior_domain, dune_domain_full, 0)  # [dam MHW]
             full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
             full_domain = np.append(full_domain, beachface_domain, 0)
+            self._initial_full_domain = copy.deepcopy(full_domain)
 
             # flow routing --------------------------------------------------
             # initialize domain variables
@@ -575,7 +578,6 @@ class Outwasher:
             Elevation = np.zeros([duration, width, self._length])
             # elevation at the first time step is set to the full domain
             Elevation[0, :, :] = full_domain
-            OW_TS = []
             FR_array = []
             ElevationChange = 0
 
@@ -625,7 +627,7 @@ class Outwasher:
                     Discharge[TS, :, :] = 0
                 else:
                     # ### DUNES
-                    OW_TS.append(TS)
+                    self._OW_TS.append(TS)
                     # ### finding the OW cells --------------------------------------------------------------------
                     Dow = [index for index, value in enumerate(gap_row) if
                            value < bayhigh]  # bayhigh used to be Rhigh
@@ -754,6 +756,7 @@ class Outwasher:
 
             # NOTE FOR LEXI: before this code, you need to 1) isolate the dune domain, beach domain, and interior domain
             # into separate variables, and 2) flip the dune domain back
+            self._full_domain = Elevation[-1]
             post_outwash_interior_domain = Elevation[-1, 0:int_width, :]
             post_outwash_dune_domain = Elevation[-1, int_width:int_width+2, :] - self._berm_el
             post_outwash_beach_domain = Elevation[-1, int_width+2:-1, :]
@@ -791,8 +794,10 @@ class Outwasher:
             b3d.x_s_TS[-1] = b3d.x_s
 
             # other class variables that we want to save
+            self._final_bay_levels = storm_series
             self._discharge[self._time_index - 1] = Discharge
             self._flow_routing_cellular_array[self._time_index - 1] = FR_array
             self._elevation_change[self._time_index - 1] = ElevationChange
+            print("The outwash storm has ended.")
 
         # return
