@@ -19,7 +19,11 @@ import imageio
 
 # -------------------------------------------elevation gif--------------------------------------------------------------
 def plot_ElevAnimation(elev, directory, start, stop):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     os.chdir(directory)
+
+    # os.chdir(directory)
     newpath = "Elevations/"
     if not os.path.exists(newpath):
         os.makedirs(newpath)
@@ -62,7 +66,10 @@ def plot_ElevAnimation(elev, directory, start, stop):
 
 # -------------------------------------------discharge gif--------------------------------------------------------------
 def plot_DischargeAnimation(dis, directory, start, stop):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     os.chdir(directory)
+
     newpath = "Discharges/"
     if not os.path.exists(newpath):
         os.makedirs(newpath)
@@ -329,7 +336,10 @@ def plot_dischargeComp(discharge_array, directory, start, stop, bay_level):
 
 
 def plot_FRarray(FR_array, directory, start, stop):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     os.chdir(directory)
+
     newpath = "FRA_cells/"
     if not os.path.exists(newpath):
         os.makedirs(newpath)
