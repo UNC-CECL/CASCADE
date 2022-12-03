@@ -340,7 +340,7 @@ def plot_FRarray(FR_array, directory, start, stop):
         os.makedirs(directory)
     os.chdir(directory)
 
-    newpath = "FRA_cells/"
+    newpath = "new_FRA_cells/"
     if not os.path.exists(newpath):
         os.makedirs(newpath)
     os.chdir(newpath)
@@ -356,7 +356,7 @@ def plot_FRarray(FR_array, directory, start, stop):
             AnimateDomain,
             # origin="upper",
             cmap="binary",
-            # vmin=min_v, vmax=max_v,
+            vmin=0, vmax=1,
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         elevFig1.colorbar(cax)
@@ -379,8 +379,54 @@ def plot_FRarray(FR_array, directory, start, stop):
     imageio.mimsave("FR_arrays.gif", frames, fps=2)
     # imageio.mimsave("sedin.gif", frames, "GIF-FI")
     print()
-    print("[ * FRA array GIF successfully generated * ]")
+    print("[ * FR array GIF successfully generated * ]")
 
+
+def plot_FR_slopesarray(FR_slopes_array, directory, start, stop):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    os.chdir(directory)
+
+    newpath = "FRA_slope_cells/"
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+    os.chdir(newpath)
+
+    # for t in range(TMAX - 1):
+    for t in range(start, stop):
+        AnimateDomain = FR_slopes_array[t]
+
+        # Plot and save
+        elevFig1 = plt.figure(figsize=(15, 7))
+        ax = elevFig1.add_subplot(111)
+        cax = ax.matshow(
+            AnimateDomain,
+            # origin="upper",
+            cmap="binary",
+            # vmin=min_v, vmax=max_v,
+        )  # , interpolation='gaussian') # analysis:ignore
+        ax.xaxis.set_ticks_position("bottom")
+        elevFig1.colorbar(cax)
+        plt.xlabel("Alongshore Distance (dam)")
+        plt.ylabel("Cross-Shore Distance (dam)")
+        plt.title("Cells where flow routing occurs")
+        plt.tight_layout()
+        timestr = "Time = " + str(t)
+        plt.text(1, 1, timestr)
+        plt.rcParams.update({"font.size": 15})
+        name = "FR_slopes_array_" + str(t)
+        elevFig1.savefig(name, facecolor='w')  # dpi=200
+        plt.close(elevFig1)
+
+    frames = []
+
+    for filenum in range(start, stop):
+        filename = "FR_slopes_array_" + str(filenum) + ".png"
+        frames.append(imageio.imread(filename))
+    imageio.mimsave("FR_slopes_arrays.gif", frames, fps=2)
+    # imageio.mimsave("sedin.gif", frames, "GIF-FI")
+    print()
+    print("[ * FR slopes array GIF successfully generated * ]")
 
 
 # -------------------------------------------b3d domain plot------------------------------------------------------------
