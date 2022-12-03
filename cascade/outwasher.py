@@ -104,7 +104,7 @@ def DuneGaps(DuneDomain, Dow, Rhigh):
     return gaps
 
 
-def FR_slopes(truth_array, avg_slope_array, domain, width, length, time_step):
+def FR_slopes(truth_array, avg_slope_array, domain, width, length, time_step, block_size):
     """
     takes the elevations and differentiates uphill and downhill regions based on an average slope of
     a block of cells
@@ -131,7 +131,6 @@ def FR_slopes(truth_array, avg_slope_array, domain, width, length, time_step):
 
                 S2 = domain[row, col] - domain[row + 1, col]
                 S2 = np.nan_to_num(S2)
-                # slopes_array[TS, d, i] = S2
 
                 if col < (length - 1):  # i at the end length means there are no cols to the right
                     S3 = (domain[row, col] - domain[row + 1, col + 1]) / (math.sqrt(2))
@@ -148,7 +147,6 @@ def FR_slopes(truth_array, avg_slope_array, domain, width, length, time_step):
 
                 S2 = domain[row-1, col] - domain[row, col]
                 S2 = np.nan_to_num(S2)
-                # slopes_array[TS, d, i] = S2
 
                 if col < (length - 1):  # i at the end length means there are no cols to the right
                     S3 = (domain[row-1, col] - domain[row, col + 1]) / (math.sqrt(2))
@@ -175,7 +173,7 @@ def FR_slopes(truth_array, avg_slope_array, domain, width, length, time_step):
                 avg_slope_array[time_step, row, col] = (S1 + S2 + S3) / 3
 
             # do something with modulus operator
-    b_size = 10
+    b_size = block_size
     extra_vert_cells = width % b_size
     extra_lat_cells = length % b_size
     if extra_vert_cells == 0:
@@ -210,6 +208,37 @@ def FR_slopes(truth_array, avg_slope_array, domain, width, length, time_step):
     return truth_array, avg_slope_array
 
 
+def flow_routing_corrections(truth_array, width, length, time_step):
+    """
+    Removes the disconnected downhill cells from the flow routing slopes array.
+    :param truth_array: array of 1s and 0s differentiating uphill and downhill slopes
+    :param width: cross-shore barrier width
+    :param length: alongshore barrier length
+    :param time_step: current time step of the storm
+    :return: new_truth_array
+    """
+    row = width
+    for w in range(width, -1, -1):
+        if np.array_equal(truth_array[time_step, w-1, :], np.ones(length)) == True:
+            row = row - 1
+
+    for w in range(row, -1, -1):
+        for l in range(length):
+            # possibly change this to look at all 3 cells
+            if truth_array[time_step, w+1, l] == 0:
+                truth_array[time_step, w, l] = 0
+
+    counter = 0
+    while counter == 0 and row >= 0:
+        if max(truth_array[time_step, row, :]) > 0 and max(truth_array[time_step, row + 1, :]) > 0:
+            row = row - 1
+        else:
+            counter = 1
+    start_row = row + 1
+
+    return truth_array, start_row
+
+
 def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_step):
     """
     calculates the slopes at each cell
@@ -233,7 +262,6 @@ def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_ste
 
         S2 = elev_array[time_step, row, col] - elev_array[time_step, row + 1, col]
         S2 = np.nan_to_num(S2)
-        # slopes_array[TS, d, i] = S2
 
         if col < (domain_length - 1):  # i at the end length means there are no cols to the right
             S3 = (elev_array[time_step, row, col] - elev_array[time_step, row + 1, col + 1]) / (math.sqrt(2))
@@ -250,7 +278,6 @@ def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_ste
 
         S2 = elev_array[time_step, row-1, col] - elev_array[time_step, row, col]
         S2 = np.nan_to_num(S2)
-        # slopes_array[TS, d, i] = S2
 
         if col < (domain_length - 1):  # i at the end length means there are no cols to the right
             S3 = (elev_array[time_step, row-1, col] - elev_array[time_step, row, col + 1]) / (math.sqrt(2))
@@ -432,6 +459,7 @@ class Outwasher:
             bay_depth,
             interior_domain,
             dune_domain,
+            block_size,
             substep=20,
             sediment_flux_coefficient_Cx=10,
             sediment_flux_coefficient_Ki=2E-3,  # b3d = 7.5E-6 for inundation
@@ -439,6 +467,7 @@ class Outwasher:
     ):
 
         # initial variables
+        self._block_size = block_size
         self._berm_el = berm_elev,  # [dam MHW]
         self._beach_elev = self._berm_el  # [dam MHW]
         self._length = barrier_length  # [dam] length of barrier
@@ -491,6 +520,7 @@ class Outwasher:
         self._discharge = np.zeros(time_step_count, dtype=object)  # dam^3/substep
         self._elevation_change = np.zeros(time_step_count, dtype=object)
         self._flow_routing_cellular_array = np.zeros(time_step_count, dtype=object)
+        # self._flow_routing_slopes_array = np.zeros(time_step_count, dtype=object)
         self._post_outwash_beach_domain = np.zeros(time_step_count, dtype=object)
 
     def update(
@@ -578,6 +608,7 @@ class Outwasher:
             Elevation = np.zeros([duration, width, self._length])
             # elevation at the first time step is set to the full domain
             Elevation[0, :, :] = full_domain
+            FR_slopes_array = []
             FR_array = []
             ElevationChange = 0
 
@@ -604,24 +635,14 @@ class Outwasher:
                     Elevation[TS],
                     width,
                     self._length,
-                    TS
+                    TS,
+                    block_size=self._block_size
                 )
+
+                FR_array, start_row = flow_routing_corrections(FR_array, width, self._length, TS)
 
                 # get dune crest out here first (don't remember what this means 9/16/2022)
                 bayhigh = storm_series[TS]  # [dam]
-
-                row = int_width
-                # for row in np.arange(int_width, -1, -1):
-                #     if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row + 1, :]) > 0:
-                #         start_row = row
-                #         counter = 0
-                counter = 0
-                while counter == 0 and row >= 0:
-                    if max(FR_array[TS, row, :]) > 0 and max(FR_array[TS, row + 1, :]) > 0:
-                        row = row - 1
-                    else:
-                        counter = 1
-                start_row = row + 1
                 gap_row = Elevation[TS, start_row, :]
                 if bayhigh <= min(gap_row):
                     Discharge[TS, :, :] = 0
@@ -643,6 +664,9 @@ class Outwasher:
                         overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
                         # Set discharge at dune gap
                         Discharge[TS, start_row, start:stop + 1] = overtop_flow  # (dam^3/hr)
+                    for l in range(self._length):
+                        if FR_array[TS, start_row, l] == 0:
+                            Discharge[TS, start_row, l] = 0
 
                     for d in range(start_row, width):  # for letting sediment out, discharge scenarios 2 and 3
                         # for d in range(int_width + 1, width):  # if we are using scenario 1 discharge
@@ -749,8 +773,8 @@ class Outwasher:
             post_outwash_full_domain = Elevation[-1, :, :]  # use the last TS
             check = 1
             while check == 1:
-                if all(x <= self._bay_depth for x in post_outwash_full_domain[-1, :]):
-                    post_outwash_full_domain = np.delete(post_outwash_full_domain, (-1), axis=0)
+                if all(x <= -self._bay_depth for x in post_outwash_full_domain[0, :]):
+                    post_outwash_full_domain = np.delete(post_outwash_full_domain, 0, axis=0)
                 else:
                     check = 0
 
@@ -796,6 +820,7 @@ class Outwasher:
             # other class variables that we want to save
             self._final_bay_levels = storm_series
             self._discharge[self._time_index - 1] = Discharge
+            # self._flow_routing_slopes_array[self._time_index - 1] = FR_slopes_array
             self._flow_routing_cellular_array[self._time_index - 1] = FR_array
             self._elevation_change[self._time_index - 1] = ElevationChange
             print("The outwash storm has ended.")
