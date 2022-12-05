@@ -552,12 +552,13 @@ class Outwasher:
         # storm_index = np.argwhere(self._initial_storm_series[:, 0, 0] == self._time_index - 1)
         storm_index = [np.argwhere(self._outwash_years[:] == self._time_index - 1)[0][0]]
         # storm_index = np.where(self._outwash_years[:] == self._time_index - 1)
+        storm_index = np.argwhere(self._outwash_years[:] == self._time_index - 1)
         numstorm = int(len(storm_index))  # we will always only have one storm per year (if that)
 
         if numstorm > 0:
-
+            bay_index = storm_index[0, 0]
             # get the hydrograph and duration for this time step
-            storm_series = self._initial_bay_levels[storm_index[0]]  # just the bay levels for this outwash year
+            storm_series = self._initial_bay_levels[bay_index]  # just the bay levels for this outwash year
 
             # allow for substeps to better simulate morphodynamics (subset=20 equates to 3 min intervals)
             # NOTE: this has been updated to hopefully be used on any storm series for any substep
@@ -734,10 +735,9 @@ class Outwasher:
                                 else:
                                     Qs3 = 0
 
-                                multi = 1
-                                Qs1 = np.nan_to_num(Qs1) * multi
-                                Qs2 = np.nan_to_num(Qs2) * multi
-                                Qs3 = np.nan_to_num(Qs3) * multi
+                                Qs1 = np.nan_to_num(Qs1)
+                                Qs2 = np.nan_to_num(Qs2)
+                                Qs3 = np.nan_to_num(Qs3)
 
 
                                 # ### Calculate Net Erosion/Accretion
@@ -799,7 +799,7 @@ class Outwasher:
             )
 
             # "nourish" the shoreface with the washout ----------------------------------------------------
-            self._Qs_shoreface[self._time_index - 1] = qs_lost_total * 100  # m^3
+            self._Qs_shoreface[self._time_index - 1] = qs_lost_total * 1000  # m^3
             self._Qs_shoreface_per_length[self._time_index - 1] = (qs_lost_total / self._length) * 100  # m^3/m
             dummy_beach_width = 0
 
