@@ -152,7 +152,8 @@ class Cascade:
         house_footprint_x=15,
         house_footprint_y=20,
         beach_full_cross_shore=70,
-        outwash_storm_series="outwash_storm_series_Dorian.npy",  # --------- outwasher (in development) ------------ #
+        outwash_storm_years="outwash_years.npy",  # --------- outwasher (in development) ------------ #
+        outwash_hydrograph="outwash_bay_levels.npy"
     ):
         """
 
@@ -443,6 +444,8 @@ class Cascade:
             self._outwash.append(
                 Outwasher(
                     datadir=datadir,
+                    outwash_years=outwash_storm_years,
+                    outwash_bay_levels=outwash_hydrograph,
                     time_step_count=self._nt,
                     berm_elev=self._barrier3d[iB3D].BermEl,
                     barrier_length=self._barrier3d[iB3D].BarrierLength,
@@ -450,7 +453,11 @@ class Cascade:
                     bay_depth=self._barrier3d[iB3D].BayDepth,
                     interior_domain=self._barrier3d[iB3D].InteriorDomain,
                     dune_domain=self._barrier3d[iB3D].DuneDomain[0, :, :],
-                    outwash_storm_series=outwash_storm_series,
+                    block_size=5,
+                    substep=20,
+                    sediment_flux_coefficient_Cx=10,
+                    sediment_flux_coefficient_Ki=7.5E-3,  # b3d = 7.5E-6 for inundation
+                    max_slope=-0.25
                 )
             )
 
@@ -751,10 +758,12 @@ class Cascade:
         # outwash module
         ###############################################################################
         # NOTE FOR LEXI: needs to provide a description here of what Outwasher does
+        # Simulates bay-to-ocean flow for one storm. This modifies the B3D interior domain and adjusts the shoreline
+        # position.
         for iB3D in range(self._ny):
 
             if self._outwash_module[iB3D]:
-                self._outwash[iB3D].update(barrier3d=self._barrier3d[iB3D])
+                self._outwash[iB3D].update(b3d=self._barrier3d[iB3D])
 
         ###############################################################################
         # update BRIE for any human modifications to the barrier
