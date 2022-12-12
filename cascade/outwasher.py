@@ -1,7 +1,6 @@
 import numpy as np
 import math
 import copy
-# import csv
 
 from .beach_dune_manager import shoreface_nourishment
 
@@ -463,10 +462,12 @@ class Outwasher:
             substep=20,
             sediment_flux_coefficient_Cx=10,
             sediment_flux_coefficient_Ki=2E-3,  # b3d = 7.5E-6 for inundation
-            max_slope=-0.25
+            max_slope=-0.25,
+            shoreface_on=True
     ):
 
         # initial variables
+        self._shoreface_on = shoreface_on
         self._block_size = block_size
         self._berm_el = berm_elev,  # [dam MHW]
         self._beach_elev = self._berm_el  # [dam MHW]
@@ -483,7 +484,6 @@ class Outwasher:
         # setting up dune domain using b3d
         self._dune_domain = dune_domain
         self._dune_crest = self._dune_domain.max(axis=1)  # dune_crest used to be DuneDomainCrest
-        # self._dune_domain = dunes(self._length, self._berm_el, n_rows=2, n_gaps=1, dune_height=0.25)
         # initializing our barrier interior
         int_domain = np.flip(interior_domain)
         # initializing our barrier interior
@@ -498,8 +498,6 @@ class Outwasher:
         self._outwash_years = np.load(datadir + outwash_years)
         self._initial_bay_levels = np.load(datadir + outwash_bay_levels)
         self._final_bay_levels = []
-        # self._initial_storm_series = np.load(datadir + outwash_storm_series, allow_pickle=True)
-        # self._final_storm_series = np.load(datadir + outwash_storm_series, allow_pickle=True)  # will be modified 4 substeps, if specified
         self._time_index = 0
 
         # post-storm (overwash) variables, before outwash modifications
@@ -520,7 +518,6 @@ class Outwasher:
         self._discharge = np.zeros(time_step_count, dtype=object)  # dam^3/substep
         self._elevation_change = np.zeros(time_step_count, dtype=object)
         self._flow_routing_cellular_array = np.zeros(time_step_count, dtype=object)
-        # self._flow_routing_slopes_array = np.zeros(time_step_count, dtype=object)
         self._post_outwash_beach_domain = np.zeros(time_step_count, dtype=object)
 
     def update(
@@ -549,9 +546,6 @@ class Outwasher:
         )
 
         # only simulate on outwash years (max of one outwash event per model year)
-        # storm_index = np.argwhere(self._initial_storm_series[:, 0, 0] == self._time_index - 1)
-        storm_index = [np.argwhere(self._outwash_years[:] == self._time_index - 1)[0][0]]
-        # storm_index = np.where(self._outwash_years[:] == self._time_index - 1)
         storm_index = np.argwhere(self._outwash_years[:] == self._time_index - 1)
         numstorm = int(len(storm_index))  # we will always only have one storm per year (if that)
 
@@ -589,7 +583,7 @@ class Outwasher:
 
             # the dune domain is being taken from B3D, but has 2 rows with length rows, so it needs to be transposed
             # I believe each row starts off exactly the same, but now I am not sure
-            dune_domain_full = np.transpose(self._dune_domain) + self._berm_el
+            dune_domain_full = np.flip(np.transpose(self._dune_domain) + self._berm_el)
             self._full_dunes = copy.deepcopy(dune_domain_full)
             # the full domain of outwasher starts with the interior domain, then the dune, beach, and beachface
             full_domain = np.append(self._interior_domain, dune_domain_full, 0)  # [dam MHW]
@@ -604,12 +598,10 @@ class Outwasher:
             width = np.shape(full_domain)[0]  # width is the number of rows in the full domain
             domain_array = np.zeros([2, width, self._length])
             domain_array[0, :, :] = full_domain
-            # duration = dur * substep  # from previous code
             duration = dur  # we already multiplied dur by the substep above
             Elevation = np.zeros([duration, width, self._length])
             # elevation at the first time step is set to the full domain
             Elevation[0, :, :] = full_domain
-            FR_slopes_array = []
             FR_array = []
             ElevationChange = 0
 
@@ -704,11 +696,10 @@ class Outwasher:
                                 fluxLimit = max_dune  # [dam MHW] dmaxel - bermel
                                 # all Qs in [dam^3/hr]
                                 if d < int_width:
-                                    # C = self._cx * abs(self._Si)  # 10 x the avg slope (from Murray) normal way
                                     C = 0
                                 else:
                                     C = self._cx * abs(front_Si[0])
-
+                                # C = self._cx * abs(front_Si[0])
                                 if Q1 > q_min:
                                     Qs1 = self._ki * (Q1 * (S1 + C)) ** b3d._mm
                                     if Qs1 < 0:
@@ -792,15 +783,19 @@ class Outwasher:
                     ]  # all in dam MHW
             )
             b3d.h_b_TS[-1] = new_ave_interior_height
-            b3d.InteriorDomain = np.flip(post_outwash_interior_domain)[0]
-            b3d.DomainTS[self._time_index - 1] = np.flip(post_outwash_interior_domain)[0]
+            b3d.InteriorDomain = np.flip(post_outwash_interior_domain, 0)
+            b3d.DomainTS[self._time_index - 1] = np.flip(post_outwash_interior_domain, 0)
             b3d.DuneDomain[self._time_index - 1, :, :] = copy.deepcopy(
-               np.transpose(post_outwash_dune_domain)
+               np.flip(np.transpose(post_outwash_dune_domain), 1)
             )
 
             # "nourish" the shoreface with the washout ----------------------------------------------------
-            self._Qs_shoreface[self._time_index - 1] = qs_lost_total * 1000  # m^3
-            self._Qs_shoreface_per_length[self._time_index - 1] = (qs_lost_total / self._length) * 100  # m^3/m
+            if self._shoreface_on:
+                self._Qs_shoreface[self._time_index - 1] = qs_lost_total * 1000  # m^3
+                self._Qs_shoreface_per_length[self._time_index - 1] = (qs_lost_total / self._length) * 100  # m^3/m
+            else:
+                self._Qs_shoreface[self._time_index - 1] = 0
+                self._Qs_shoreface_per_length[self._time_index - 1] = 0
             dummy_beach_width = 0
 
             (
