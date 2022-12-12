@@ -153,7 +153,8 @@ class Cascade:
         house_footprint_y=20,
         beach_full_cross_shore=70,
         outwash_storm_years="outwash_years.npy",  # --------- outwasher (in development) ------------ #
-        outwash_hydrograph="outwash_bay_levels.npy"
+        outwash_hydrograph="outwash_bay_levels.npy",
+        washout_to_shoreface=True,
     ):
         """
 
@@ -457,7 +458,8 @@ class Cascade:
                     substep=20,
                     sediment_flux_coefficient_Cx=10,
                     sediment_flux_coefficient_Ki=7.5E-3,  # b3d = 7.5E-6 for inundation
-                    max_slope=-0.25
+                    max_slope=-0.25,
+                    shoreface_on=washout_to_shoreface
                 )
             )
 
