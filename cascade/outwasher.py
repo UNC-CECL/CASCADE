@@ -6,28 +6,19 @@ from .beach_dune_manager import shoreface_nourishment
 
 
 def bay_converter(storms, substep):
-    """ takes a hydrograph and linearly interpolates a specified number of additional points based on the substep value
+    """ repeats the hydrograph value for a specific number of specified times (substep)
     :param storms: list or array of bay level
     :param substep: number of extra points you want
     :returns new list of bay levels
-    (ex, substep 2 = flow route every 30 minutes by interpolating one extra value)
     """
     # storms will be the sound data, so storm_series[1]
     new_ss = []
     num_new_vals = substep - 1  # number of values we are adding between existing values
-    for s in range(len(storms)-1):
+    for s in range(len(storms)):
         new_ss.append(storms[s])  # add the starting value back in
-        inc = (storms[s+1]-storms[s])/substep  # increment for the substeps
         for a in range(num_new_vals):
-            new_ss.append(storms[s]+(a+1)*inc)
-            # example, we want to do a substep of 3, so we are adding 2 new values
-            # if our original storm series is [0, 0.15], then the increment will be 0.05
-            # we will add 0 into the new storm series, then 0+1*0.05 = 0.05
-            # then 0+2*0.05 = 0.1
-            # the next iteration will start with 0.15, and that will be appended as well
-    new_ss.append(storms[-1])  # make sure to include our last value
+            new_ss.append(storms[s])
     return new_ss
-
 
 def dunes(length, berm_el, n_rows, n_gaps, dune_height=0.25):
     """
