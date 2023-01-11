@@ -103,6 +103,7 @@ class Cascade:
     def __init__(
         self,
         datadir,
+        outwash_datadir,
         name="default",
         elevation_file="barrier3d-default-elevation.npy",
         dune_file="barrier3d-default-dunes.npy",
@@ -152,8 +153,8 @@ class Cascade:
         house_footprint_x=15,
         house_footprint_y=20,
         beach_full_cross_shore=70,
-        outwash_storm_years="outwash_years.npy",  # --------- outwasher (in development) ------------ #
-        outwash_hydrograph="outwash_bay_levels.npy",
+        outwash_storm_years="outwash_years10.npy",  # --------- outwasher (in development) ------------ #
+        outwash_hydrograph="outwash_bay_levels10.npy",
         washout_to_shoreface=True,
     ):
         """
@@ -167,6 +168,8 @@ class Cascade:
         Parameters
         ----------
         datadir: string
+            Name of directory where Barrier3D input file is located
+        outwash_datadir: string
             Name of directory where Barrier3D input file is located
         name: string, optional
             Name of simulation
@@ -252,16 +255,21 @@ class Cascade:
             Subsidy on cost of entire nourishment plan
         beach_full_cross_shore: int, optional
             The cross-shore extent (meters) of fully nourished beach (i.e., the community desired beach width) [m]
-        outwash_storm_series: string, optional
-            Filename of outwash storm series (npy) with year, hydrograph (dam MHW), and duration
+        outwash_storm_years: string, optional
+            Filename of outwash storm series years (npy file)
+        outwash_hydrograph: string, optional
+            Filename of outwash storm series hydrograph in dam MHW (npy file)
+        washout_to_shoreface: bool
+            if True, washout is used to nourish the shoreface
         outwash_module: boolean or list of booleans, optional
-            If True, use outwash module (force a bayside surge event)
+            If True, use outwash module (force a bay-side surge event)
 
         Examples
         --------
         >>> from cascade.cascade import Cascade
-        >>> datadir = "./cascade/data/"
-        >>> cascade = Cascade(datadir)
+        >>> datadir = "./cascade/data/pathways_data/"
+        >>> outwash_datadir = "./cascade/data/outwash_data/"
+        >>> cascade = Cascade(datadir, outwash_datadir)
         """
 
         self._ny = alongshore_section_count
@@ -444,7 +452,7 @@ class Cascade:
         for iB3D in range(self._ny):
             self._outwash.append(
                 Outwasher(
-                    datadir=datadir,
+                    datadir=outwash_datadir,
                     outwash_years=outwash_storm_years,
                     outwash_bay_levels=outwash_hydrograph,
                     time_step_count=self._nt,
@@ -453,7 +461,7 @@ class Cascade:
                     sea_level=self._barrier3d[iB3D].SL,
                     bay_depth=self._barrier3d[iB3D].BayDepth,
                     interior_domain=self._barrier3d[iB3D].InteriorDomain,
-                    dune_domain=self._barrier3d[iB3D].DuneDomain[0, :, :],
+                    dune_domain=self._barrier3d[iB3D].DuneDomain[self._barrier3d[iB3D]._time_index - 1, :, :],
                     block_size=5,
                     substep=20,
                     sediment_flux_coefficient_Cx=10,
@@ -759,7 +767,6 @@ class Cascade:
         ###############################################################################
         # outwash module
         ###############################################################################
-        # NOTE FOR LEXI: needs to provide a description here of what Outwasher does
         # Simulates bay-to-ocean flow for one storm. This modifies the B3D interior domain and adjusts the shoreline
         # position.
         for iB3D in range(self._ny):
