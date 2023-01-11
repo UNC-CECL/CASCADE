@@ -404,7 +404,7 @@ class Outwasher:
             bay_depth,
             interior_domain,
             dune_domain,
-            block_size,
+            block_size=5,
             substep=20,
             sediment_flux_coefficient_Cx=10,
             sediment_flux_coefficient_Ki=2E-3,  # b3d = 7.5E-6 for inundation
