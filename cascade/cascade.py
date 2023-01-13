@@ -154,7 +154,7 @@ class Cascade:
         house_footprint_y=20,
         beach_full_cross_shore=70,
         outwash_storm_years="outwash_years10.npy",  # --------- outwasher (in development) ------------ #
-        outwash_hydrograph="outwash_bay_levels10.npy",
+        outwash_hydrograph="outwash_baylevels10.npy",
         washout_to_shoreface=True,
     ):
         """
@@ -267,7 +267,7 @@ class Cascade:
         Examples
         --------
         >>> from cascade.cascade import Cascade
-        >>> datadir = "./cascade/data/pathways_data/"
+        >>> datadir = "./cascade/data/"
         >>> outwash_datadir = "./cascade/data/outwash_data/"
         >>> cascade = Cascade(datadir, outwash_datadir)
         """
@@ -461,7 +461,7 @@ class Cascade:
                     sea_level=self._barrier3d[iB3D].SL,
                     bay_depth=self._barrier3d[iB3D].BayDepth,
                     interior_domain=self._barrier3d[iB3D].InteriorDomain,
-                    dune_domain=self._barrier3d[iB3D].DuneDomain[self._barrier3d[iB3D]._time_index - 1, :, :],
+                    dune_domain=self._barrier3d[iB3D].DuneDomain[self._barrier3d[iB3D].time_index - 1, :, :],
                     block_size=5,
                     substep=20,
                     sediment_flux_coefficient_Cx=10,
