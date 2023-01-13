@@ -549,7 +549,7 @@ class Outwasher:
                 # Begin with elevation from previous timestep
                 if TS > 0:
                     Elevation[TS, :, :] = Elevation[TS - 1, :, :]  # initial elevation is same as previous TS domain
-                print(TS)
+                print("Outwasher time step: ", TS)
 
                 # need to calculate grouped averaged slopes over the domain
                 FR_array, avg_slope_array = FR_slopes(
@@ -704,7 +704,7 @@ class Outwasher:
 
             new_ave_interior_height = np.average(
                 post_outwash_interior_domain[
-                    post_outwash_interior_domain >= b3d._SL
+                    post_outwash_interior_domain >= b3d.SL
                     ]  # all in dam MHW
             )
             b3d.h_b_TS[-1] = new_ave_interior_height
