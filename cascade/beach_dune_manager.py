@@ -617,8 +617,8 @@ class BeachDuneManager:
         if self._overwash_removal:
 
             # barrier3d saves the pre-storm interior for each time step
-            pre_storm_interior = barrier3d.PreStorm_InteriorDomain
-
+            # pre_storm_interior = barrier3d.PreStorm_InteriorDomain
+            pre_storm_interior = barrier3d.InteriorDomain
             pre_storm_interior, post_storm_interior = resize_interior_domain(
                 pre_storm_interior=pre_storm_interior,
                 post_storm_interior=barrier3d.DomainTS[self._time_index - 1],
