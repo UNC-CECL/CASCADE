@@ -54,7 +54,17 @@ def DuneGaps(DuneDomain, Dow, Rhigh):
     return gaps
 
 
-def FR_slopes(truth_array, avg_slope_array, domain, width, length, time_step, block_size):
+def calculate_slopes(
+        truth_array,
+        avg_slope_array,
+        domain,
+        width,
+        length,
+        time_step,
+        s1_vals,
+        s2_vals,
+        s3_vals,
+        block_size):
     """
     takes the elevations and differentiates uphill and downhill regions based on an average slope of
     a block of cells
@@ -64,6 +74,9 @@ def FR_slopes(truth_array, avg_slope_array, domain, width, length, time_step, bl
     :param width: cross-shore barrier width
     :param length: alongshore barrier length
     :param time_step: current time step of the storm
+    :param s1_vals: array used to store the S1 slope values for each time step, row, and column
+    :param s2_vals: array used to store the S2 slope values for each time step, row, and column
+    :param s3_vals: array used to store the S3 slope values for each time step, row, and column
     :return truth_array: array of 1s and 0s indicating downhill and uphill (respectively) slopes for future flow
             routing determination
     """
@@ -110,6 +123,10 @@ def FR_slopes(truth_array, avg_slope_array, domain, width, length, time_step, bl
             if col == length - 1 and S2 < 0 and S1 < 0:
                 S3 = -999
 
+            s1_vals[time_step, row, col] = S1
+            s2_vals[time_step, row, col] = S2
+            s3_vals[time_step, row, col] = S3
+
             # averaging
             if col == 0:
                 avg_slope_array[time_step, row, col] = (S2 + S3) / 2
@@ -118,7 +135,7 @@ def FR_slopes(truth_array, avg_slope_array, domain, width, length, time_step, bl
             else:
                 avg_slope_array[time_step, row, col] = (S1 + S2 + S3) / 3
 
-            # do something with modulus operator
+    # adjusting for a block size that does not divide evenly into the domain
     b_size = block_size
     extra_vert_cells = width % b_size
     extra_lat_cells = length % b_size
@@ -151,7 +168,7 @@ def FR_slopes(truth_array, avg_slope_array, domain, width, length, time_step, bl
             else:
                 truth_array[time_step, start_row:end_row, start_col:end_col] = 1
 
-    return truth_array, avg_slope_array
+    return truth_array, avg_slope_array, s1_vals, s2_vals, s3_vals
 
 
 def flow_routing_corrections(truth_array, width, length, time_step):
@@ -183,61 +200,6 @@ def flow_routing_corrections(truth_array, width, length, time_step):
     start_row = row + 1
 
     return truth_array, start_row
-
-
-def calculate_slopes(row, col, domain_width, elev_array, domain_length, time_step):
-    """
-    calculates the slopes at each cell
-    :param row: current row of the domain, int
-    :param col: current column of the domain, int
-    :param domain_width: cross-shore barrier width, int
-    :param elev_array: array storing the elevations
-    :param domain_length: alongshore barrier length, int
-    :param time_step: current time step of the storm
-    :return: S1, S2, S3 (floats)
-    """
-    # ### Calculate Slopes
-    # if we are not at the last row, do normal calculations
-    if row != domain_width - 1:  # uncomment if we are letting sed out the last row
-        # tab everything until else statement
-        if col > 0:  # i = 0 means there are no cols to the left
-            S1 = (elev_array[time_step, row, col] - elev_array[time_step, row + 1, col - 1]) / (math.sqrt(2))
-            S1 = np.nan_to_num(S1)
-        else:
-            S1 = 0
-
-        S2 = elev_array[time_step, row, col] - elev_array[time_step, row + 1, col]
-        S2 = np.nan_to_num(S2)
-
-        if col < (domain_length - 1):  # i at the end length means there are no cols to the right
-            S3 = (elev_array[time_step, row, col] - elev_array[time_step, row + 1, col + 1]) / (math.sqrt(2))
-            S3 = np.nan_to_num(S3)
-        else:
-            S3 = 0
-    # if at the last row, apply the same slope as the beachface slope
-    else:
-        if col > 0:  # i = 0 means there are no cols to the left
-            S1 = (elev_array[time_step, row-1, col] - elev_array[time_step, row, col - 1]) / (math.sqrt(2))
-            S1 = np.nan_to_num(S1)
-        else:
-            S1 = 0
-
-        S2 = elev_array[time_step, row-1, col] - elev_array[time_step, row, col]
-        S2 = np.nan_to_num(S2)
-
-        if col < (domain_length - 1):  # i at the end length means there are no cols to the right
-            S3 = (elev_array[time_step, row-1, col] - elev_array[time_step, row, col + 1]) / (math.sqrt(2))
-            S3 = np.nan_to_num(S3)
-        else:
-            S3 = 0
-
-    if col == 0 and S2 < 0 and S3 < 0:
-        # this is greater than the max slope, so no sediment will go to outside
-        S1 = -999
-    if col == domain_length - 1 and S2 < 0 and S1 < 0:
-        S3 = -999
-
-    return S1, S2, S3
 
 
 def calculate_discharges(col, S1, S2, S3, Q0, nn, domain_length, max_slope):
@@ -459,6 +421,8 @@ class Outwasher:
         self._elevation_change = np.zeros(time_step_count, dtype=object)
         self._flow_routing_cellular_array = np.zeros(time_step_count, dtype=object)
         self._post_outwash_beach_domain = np.zeros(time_step_count, dtype=object)
+        self.velocities = []
+        self.flows = []
 
     def update(
             self,
@@ -543,6 +507,9 @@ class Outwasher:
             SedFluxOut = np.zeros([duration, width, self._length])
             truth_array = np.zeros([duration, width, self._length])
             avg_slope_array = np.zeros([duration, width, self._length])
+            s1_array = np.zeros([duration, width, self._length])
+            s2_array = np.zeros([duration, width, self._length])
+            s3_array = np.zeros([duration, width, self._length])
 
             # route the flow
             for TS in range(duration):
@@ -550,15 +517,18 @@ class Outwasher:
                 if TS > 0:
                     Elevation[TS, :, :] = Elevation[TS - 1, :, :]  # initial elevation is same as previous TS domain
                 print("Outwasher time step: ", TS)
-
+                # print(TS)
                 # need to calculate grouped averaged slopes over the domain
-                FR_array, avg_slope_array = FR_slopes(
+                FR_array, avg_slope_array, s1_array, s2_array, s3_array = calculate_slopes(
                     truth_array,
                     avg_slope_array,
                     Elevation[TS],
                     width,
                     self._length,
                     TS,
+                    s1_array,
+                    s2_array,
+                    s3_array,
                     block_size=self._block_size
                 )
 
@@ -584,7 +554,12 @@ class Outwasher:
                         Rexcess = gaps[q][2]  # (dam)
                         # Calculate discharge through each dune cell
                         overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
+                        overtop_vel_mps = overtop_vel*10  # m/s
                         overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
+                        overtop_flow_cms = overtop_flow / 3600 * 1000  # (m^3/s)
+                        self.velocities.append(overtop_vel_mps)
+                        self.flows.append(overtop_flow_cms)
+
                         # Set discharge at dune gap
                         Discharge[TS, start_row, start:stop + 1] = overtop_flow  # (dam^3/hr)
                     for l in range(self._length):
@@ -597,7 +572,9 @@ class Outwasher:
                         # Loop through each col of the specified row
                         for i in range(self._length):
                             # ### Calculate Slopes
-                            S1, S2, S3 = calculate_slopes(d, i, width, Elevation, self._length, TS)
+                            S1 = s1_array[TS, d, i]
+                            S2 = s2_array[TS, d, i]
+                            S3 = s3_array[TS, d, i]
 
                             # if we have discharge, set Qo equal to that value
                             if Discharge[TS, d, i] > 0:
