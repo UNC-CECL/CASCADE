@@ -103,7 +103,6 @@ class Cascade:
     def __init__(
         self,
         datadir,
-        outwash_datadir,
         name="default",
         elevation_file="barrier3d-default-elevation.npy",
         dune_file="barrier3d-default-dunes.npy",
@@ -168,9 +167,7 @@ class Cascade:
         Parameters
         ----------
         datadir: string
-            Name of directory where Barrier3D input file is located
-        outwash_datadir: string
-            Name of directory where Barrier3D input file is located
+            Name of directory where Barrier3D and Outwasher input file is located
         name: string, optional
             Name of simulation
         wave_height: float, optional
@@ -452,7 +449,7 @@ class Cascade:
         for iB3D in range(self._ny):
             self._outwash.append(
                 Outwasher(
-                    datadir=outwash_datadir,
+                    datadir=datadir,
                     outwash_years=outwash_storm_years,
                     outwash_bay_levels=outwash_hydrograph,
                     time_step_count=self._nt,
@@ -462,12 +459,7 @@ class Cascade:
                     bay_depth=self._barrier3d[iB3D].BayDepth,
                     interior_domain=self._barrier3d[iB3D].InteriorDomain,
                     dune_domain=self._barrier3d[iB3D].DuneDomain[self._barrier3d[iB3D].time_index - 1, :, :],
-                    block_size=5,
-                    substep=20,
-                    sediment_flux_coefficient_Cx=10,
-                    sediment_flux_coefficient_Ki=7.5E-3,  # b3d = 7.5E-6 for inundation
-                    max_slope=-0.25,
-                    shoreface_on=washout_to_shoreface
+                    washout_to_shoreface=washout_to_shoreface
                 )
             )
 
