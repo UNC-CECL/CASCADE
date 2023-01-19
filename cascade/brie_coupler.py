@@ -178,8 +178,7 @@ def initialize_equal(
             "BermEl", float(brie._h_b_crit), fid
         )  # [m] static elevation of berm
 
-        # barrier3d.append(Barrier3d.from_yaml(datadir, prefix=parameter_file_prefix))
-        barrier3d.append(Barrier3d.from_yaml(path_to_yaml=datadir))
+        barrier3d.append(Barrier3d.from_yaml(datadir, prefix=parameter_file_prefix))
 
         # now update the BRIE barrier geometry and SLR variables from Barrier3D so that all the initial conditions are
         # the same! The rate of SLR can only be constant in brie, whereas it can accelerate in Barrier3D, so by
