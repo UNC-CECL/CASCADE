@@ -265,8 +265,7 @@ class Cascade:
         --------
         >>> from cascade.cascade import Cascade
         >>> datadir = "./cascade/data/"
-        >>> outwash_datadir = "./cascade/data/outwash_data/"
-        >>> cascade = Cascade(datadir, outwash_datadir)
+        >>> cascade = Cascade(datadir)
         """
 
         self._ny = alongshore_section_count
@@ -474,6 +473,10 @@ class Cascade:
     @property
     def barrier3d(self):
         return self._barrier3d
+
+    @property
+    def outwash(self):
+        return self._outwash
 
     @barrier3d.setter
     def barrier3d(self, value):
