@@ -516,7 +516,7 @@ class Outwasher:
                     # Begin with elevation from previous timestep
                     if TS > 0:
                         Elevation[TS, :, :] = Elevation[TS - 1, :, :]  # initial elevation is same as previous TS domain
-                    print("\r", "Outwasher time Step: ", TS, end="")
+                    print("\r", "Outwasher Time Step: ", TS, end="")
                     # print(TS)
                     # need to calculate grouped averaged slopes over the domain
                     FR_array, avg_slope_array, s1_array, s2_array, s3_array = calculate_slopes(
