@@ -365,7 +365,7 @@ class Outwasher:
             bay_depth,
             interior_domain,
             dune_domain,
-            substep=60,
+            substep=120,
             sediment_flux_coefficient_Ki=7.5E-3,  # b3d = 7.5E-6 for inundation
             washout_to_shoreface=True
     ):
@@ -514,7 +514,7 @@ class Outwasher:
                     # Begin with elevation from previous timestep
                     if TS > 0:
                         Elevation[TS, :, :] = Elevation[TS - 1, :, :]  # initial elevation is same as previous TS domain
-                    print("\r", "Outwasher Time Step: ", TS, end="")
+                    print("Outwasher Time Step: ", TS)
                     # need to calculate grouped averaged slopes over the domain
                     FR_array, avg_slope_array, s1_array, s2_array, s3_array = calculate_slopes(
                         truth_array,
