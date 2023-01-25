@@ -152,8 +152,7 @@ class Cascade:
         house_footprint_x=15,
         house_footprint_y=20,
         beach_full_cross_shore=70,
-        outwash_storm_years="outwash_years10.npy",  # --------- outwasher (in development) ------------ #
-        outwash_hydrograph="outwash_baylevels10.npy",
+        outwash_storms="outwash_storms10.npy",  # --------- outwasher (in development) ------------ #
         washout_to_shoreface=True,
     ):
         """
@@ -252,10 +251,8 @@ class Cascade:
             Subsidy on cost of entire nourishment plan
         beach_full_cross_shore: int, optional
             The cross-shore extent (meters) of fully nourished beach (i.e., the community desired beach width) [m]
-        outwash_storm_years: string, optional
-            Filename of outwash storm series years (npy file)
-        outwash_hydrograph: string, optional
-            Filename of outwash storm series hydrograph in dam MHW (npy file)
+        outwash_storms: string, optional
+            Filename of outwash storm series (npy file)
         washout_to_shoreface: bool
             if True, washout is used to nourish the shoreface
         outwash_module: boolean or list of booleans, optional
@@ -449,8 +446,7 @@ class Cascade:
             self._outwash.append(
                 Outwasher(
                     datadir=datadir,
-                    outwash_years=outwash_storm_years,
-                    outwash_bay_levels=outwash_hydrograph,
+                    outwash_storms=outwash_storms,
                     time_step_count=self._nt,
                     berm_elev=self._barrier3d[iB3D].BermEl,
                     barrier_length=self._barrier3d[iB3D].BarrierLength,
@@ -767,6 +763,8 @@ class Cascade:
         for iB3D in range(self._ny):
 
             if self._outwash_module[iB3D]:
+                self._outwash[iB3D]._interior_domain = self._barrier3d[iB3D].InteriorDomain
+                self._outwash[iB3D]._dune_domain = self._barrier3d[iB3D].DuneDomain[self._barrier3d[iB3D].time_index - 1]
                 self._outwash[iB3D].update(b3d=self._barrier3d[iB3D])
 
         ###############################################################################

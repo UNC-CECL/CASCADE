@@ -357,8 +357,7 @@ class Outwasher:
     def __init__(
             self,
             datadir,
-            outwash_years,
-            outwash_bay_levels,
+            outwash_storms,
             time_step_count,
             berm_elev,
             barrier_length,
@@ -366,7 +365,7 @@ class Outwasher:
             bay_depth,
             interior_domain,
             dune_domain,
-            substep=1,
+            substep=60,
             sediment_flux_coefficient_Ki=7.5E-3,  # b3d = 7.5E-6 for inundation
             washout_to_shoreface=True
     ):
@@ -390,12 +389,11 @@ class Outwasher:
         self._dune_domain = dune_domain
         self._dune_crest = self._dune_domain.max(axis=1)  # dune_crest used to be DuneDomainCrest
         # initializing our barrier interior
-        int_domain = np.flip(interior_domain)
+        # int_domain = np.flip(interior_domain)
         # initializing our barrier interior
-        self._interior_domain = int_domain
+        self._interior_domain = interior_domain
         # loading the bay levels for each time step
-        self._outwash_years = np.load(datadir + outwash_years)
-        self._initial_bay_levels = np.load(datadir + outwash_bay_levels)
+        self._outwash_storms = np.load(datadir + outwash_storms, allow_pickle=True)
         self._final_bay_levels = []
         self._time_index = 0
 
@@ -427,7 +425,7 @@ class Outwasher:
     ):
 
         ## ADD CHECK FOR OUTWASHER YEAR
-        if b3d._time_index - 1 in self._outwash_years:
+        if b3d._time_index - 1 in self._outwash_storms[:, 0]:
 
             # initialize tracking and other b3d variables
             self._time_index = b3d.time_index
@@ -449,13 +447,12 @@ class Outwasher:
                 b3d.s_sf_TS[-1]
             )
 
-            # only simulate on outwash years (max of one outwash event per model year)
-            storm_index = np.argwhere(self._outwash_years[:] == self._time_index - 1)
+            storm_index = np.argwhere(self._outwash_storms[:, 0] == self._time_index - 1)
             numstorm = int(len(storm_index))
 
             if numstorm > 0:
                 bay_index = storm_index[0, 0]
-                storm_series = self._initial_bay_levels[bay_index]  # just the bay levels for this outwash year
+                storm_series = self._outwash_storms[bay_index, 1]  # just the bay levels for this outwash year
                 # allow for substeps (run the same bay level X times with proportional sed transport)
                 # to better simulate morphodynamics
                 if self._substep != 1:
@@ -484,6 +481,7 @@ class Outwasher:
                 dune_domain_full = np.flip(np.transpose(self._dune_domain) + self._berm_el)
                 self._full_dunes = copy.deepcopy(dune_domain_full)
                 # the full domain of outwasher starts with the interior domain, then the dune, beach, and beachface
+                self._interior_domain = np.flip(self._interior_domain)
                 full_domain = np.append(self._interior_domain, dune_domain_full, 0)  # [dam MHW]
                 full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
                 full_domain = np.append(full_domain, beachface_domain, 0)
@@ -517,7 +515,6 @@ class Outwasher:
                     if TS > 0:
                         Elevation[TS, :, :] = Elevation[TS - 1, :, :]  # initial elevation is same as previous TS domain
                     print("\r", "Outwasher Time Step: ", TS, end="")
-                    # print(TS)
                     # need to calculate grouped averaged slopes over the domain
                     FR_array, avg_slope_array, s1_array, s2_array, s3_array = calculate_slopes(
                         truth_array,
@@ -667,7 +664,7 @@ class Outwasher:
                 post_outwash_full_domain = Elevation[-1, :, :]  # use the last TS
                 check = 1
                 while check == 1:
-                    if all(x <= -self._bay_depth for x in post_outwash_full_domain[0, :]):
+                    if all(x <= self._bay_depth for x in post_outwash_full_domain[0, :]):
                         post_outwash_full_domain = np.delete(post_outwash_full_domain, 0, axis=0)
                     else:
                         check = 0
@@ -721,4 +718,5 @@ class Outwasher:
                 self._flow_routing_cellular_array[self._time_index - 1] = FR_array
                 self._elevation_change[self._time_index - 1] = ElevationChange
 
-            # return
+
+
