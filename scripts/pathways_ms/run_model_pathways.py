@@ -102,8 +102,8 @@ def RUN_6_CASCADE_noAST_Rave_SLR_pt004_Roadways(
     elevation_file,
     dune_file,
     road_ele=1.7,
-    road_width=30,
-    road_setback=30,
+    road_width=20,
+    road_setback=20,
     dune_design_elevation=3.7,
     dune_minimum_elevation=2.2,
     percent_water_cells_sensitivity=None,
@@ -471,7 +471,7 @@ def time_series():
 
     StormSeries_NormDist_10kyrs_01 = yearly_storms(
         datadir=datadir,
-        storm_list_name="StormList_20k_VCR_Berm1pt9m_Slope0pt04.csv",  # this is == "default_storm_list.csv"
+        storm_list_name="StormList_20k_VCR_Berm1pt9m_Slope0pt04.csv",  # this is == "cascade_default_storm_list.csv"
         mean_yearly_storms=8.3,
         SD_yearly_storms=5.9,
         MHW=0.46,  # m NAVD88
@@ -683,9 +683,9 @@ def cascade_10kyr_sensitivity():
         rmin=0.25,  # rave = 0.45 (but not 0.5 spaced like in Reeves et al., 2021 -- arbitrary)
         rmax=0.65,
         name="4-B3D_noAST_Rave_pt45_SLR_pt004_10k-yrs_01",
-        storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",  # used default storm list
+        storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",  # used cascade_default_storm_list.csv
         elevation_file="barrier3d-default-elevation.npy",
-        dune_file="barrier3d-default-dunes.npy",
+        dune_file="pathways-dunes.npy",
     )
 
     cascade_10kyr_pt45_02 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -695,7 +695,7 @@ def cascade_10kyr_sensitivity():
         name="4-B3D_noAST_Rave_pt45_SLR_pt004_10k-yrs_02",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_02.npy",
         elevation_file="barrier3d-default-elevation.npy",
-        dune_file="barrier3d-default-dunes.npy",
+        dune_file="pathways-dunes.npy",
     )
 
     cascade_10kyr_pt45_03 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -705,7 +705,7 @@ def cascade_10kyr_sensitivity():
         name="4-B3D_noAST_Rave_pt45_SLR_pt004_10k-yrs_03",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_03.npy",
         elevation_file="barrier3d-default-elevation.npy",
-        dune_file="barrier3d-default-dunes.npy",
+        dune_file="pathways-dunes.npy",
     )
 
     cascade_10kyr_pt45_04 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -715,7 +715,7 @@ def cascade_10kyr_sensitivity():
         name="4-B3D_noAST_Rave_pt45_SLR_pt004_10k-yrs_04",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_04.npy",
         elevation_file="barrier3d-default-elevation.npy",
-        dune_file="barrier3d-default-dunes.npy",
+        dune_file="pathways-dunes.npy",
     )
 
     cascade_10kyr_pt45_05 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -725,7 +725,7 @@ def cascade_10kyr_sensitivity():
         name="4-B3D_noAST_Rave_pt45_SLR_pt004_10k-yrs_05",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_05.npy",
         elevation_file="barrier3d-default-elevation.npy",
-        dune_file="barrier3d-default-dunes.npy",
+        dune_file="pathways-dunes.npy",
     )
 
     cascade_10kyr_pt75_01 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -735,7 +735,7 @@ def cascade_10kyr_sensitivity():
         name="4-B3D_noAST_Rave_pt75_SLR_pt004_10k-yrs_01",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
         elevation_file="barrier3d-default-elevation.npy",
-        dune_file="barrier3d-default-dunes.npy",
+        dune_file="pathways-dunes.npy",
     )
 
     cascade_10kyr_pt75_02 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -745,7 +745,7 @@ def cascade_10kyr_sensitivity():
         name="4-B3D_noAST_Rave_pt75_SLR_pt004_10k-yrs_02",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_02.npy",
         elevation_file="barrier3d-default-elevation.npy",
-        dune_file="barrier3d-default-dunes.npy",
+        dune_file="pathways-dunes.npy",
     )
 
     cascade_10kyr_pt75_03 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -755,7 +755,7 @@ def cascade_10kyr_sensitivity():
         name="4-B3D_noAST_Rave_pt75_SLR_pt004_10k-yrs_03",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_03.npy",
         elevation_file="barrier3d-default-elevation.npy",
-        dune_file="barrier3d-default-dunes.npy",
+        dune_file="pathways-dunes.npy",
     )
 
     cascade_10kyr_pt75_04 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -765,7 +765,7 @@ def cascade_10kyr_sensitivity():
         name="4-B3D_noAST_Rave_pt75_SLR_pt004_10k-yrs_04",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_04.npy",
         elevation_file="barrier3d-default-elevation.npy",
-        dune_file="barrier3d-default-dunes.npy",
+        dune_file="pathways-dunes.npy",
     )
 
     cascade_10kyr_pt75_05 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -775,7 +775,7 @@ def cascade_10kyr_sensitivity():
         name="4-B3D_noAST_Rave_pt75_SLR_pt004_10k-yrs_05",
         storm_file="StormSeries_10kyrs_VCR_Berm1pt9m_Slope0pt04_05.npy",
         elevation_file="barrier3d-default-elevation.npy",
-        dune_file="barrier3d-default-dunes.npy",
+        dune_file="pathways-dunes.npy",
     )
 
     def sensitivity_tests_Ian_model():
@@ -836,7 +836,7 @@ def SLR_sensitivity():
             name="7-B3D_Rave_pt75_Natural_low_0pt008SLR",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_4261yrs_low-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
             sea_level_rise_rate=0.008,  # m/yr
             sea_level_constant=True,
         )
@@ -848,7 +848,7 @@ def SLR_sensitivity():
             name="7-B3D_Rave_pt75_Natural_low_0pt012SLR",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_4261yrs_low-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
             sea_level_rise_rate=0.012,  # m/yr
             sea_level_constant=True,
         )
@@ -860,7 +860,7 @@ def SLR_sensitivity():
             name="7-B3D_Rave_pt75_Natural_high_0pt008SLR",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
             sea_level_rise_rate=0.008,  # m/yr
             sea_level_constant=True,
         )
@@ -872,7 +872,7 @@ def SLR_sensitivity():
             name="7-B3D_Rave_pt75_Natural_high_0pt012SLR",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
             sea_level_rise_rate=0.012,  # m/yr
             sea_level_constant=True,
         )
@@ -884,7 +884,7 @@ def SLR_sensitivity():
             name="7-B3D_Rave_pt45_Natural_low_0pt008SLR",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
             sea_level_rise_rate=0.008,  # m/yr
             sea_level_constant=True,
         )
@@ -896,7 +896,7 @@ def SLR_sensitivity():
             name="7-B3D_Rave_pt45_Natural_low_0pt012SLR",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
             sea_level_rise_rate=0.012,  # m/yr
             sea_level_constant=True,
         )
@@ -908,7 +908,7 @@ def SLR_sensitivity():
             name="7-B3D_Rave_pt45_Natural_high_0pt008SLR",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
             sea_level_rise_rate=0.008,  # m/yr
             sea_level_constant=True,
         )
@@ -920,7 +920,7 @@ def SLR_sensitivity():
             name="7-B3D_Rave_pt45_Natural_high_0pt012SLR",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
             sea_level_rise_rate=0.012,  # m/yr
             sea_level_constant=True,
         )
@@ -936,7 +936,7 @@ def SLR_sensitivity():
             name="7-B3D_Rave_pt75_Natural_low_AccSLR",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_4261yrs_low-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
             sea_level_rise_rate=0.008,  # dummy
             sea_level_constant=False,  # accelerated
         )
@@ -948,7 +948,7 @@ def SLR_sensitivity():
             name="7-B3D_Rave_pt75_Natural_high_AccSLR",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
             sea_level_rise_rate=0.008,  # m/yr
             sea_level_constant=False,
         )
@@ -960,7 +960,7 @@ def SLR_sensitivity():
             name="7-B3D_Rave_pt45_Natural_low_AccSLR",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
             sea_level_rise_rate=0.012,  # m/yr
             sea_level_constant=False,
         )
@@ -972,7 +972,7 @@ def SLR_sensitivity():
             name="7-B3D_Rave_pt45_Natural_high_AccSLR",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
             sea_level_rise_rate=0.008,  # m/yr
             sea_level_constant=False,
         )
@@ -988,7 +988,7 @@ def natural():
             name="4-B3D_Rave_pt75_Natural_low",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_4261yrs_low-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
         )
 
         cascade_pt75_high = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -998,7 +998,7 @@ def natural():
             name="4-B3D_Rave_pt75_Natural_high",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
         )
 
         cascade_pt45_low = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -1008,7 +1008,7 @@ def natural():
             name="4-B3D_Rave_pt45_Natural_low",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
         )
 
         cascade_pt45_high = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
@@ -1018,7 +1018,7 @@ def natural():
             name="4-B3D_Rave_pt45_Natural_high",
             storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
             elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-            dune_file="barrier3d-default-dunes.npy",
+            dune_file="pathways-dunes.npy",
         )
 
         def averages():
@@ -1041,7 +1041,7 @@ def natural():
                         name=name,
                         storm_file=storm_file,
                         elevation_file=elevation_file,
-                        dune_file="barrier3d-default-dunes.npy",
+                        dune_file="pathways-dunes.npy",
                     )
 
             one_hundred_natural_runs(
@@ -1096,7 +1096,7 @@ def roadways():
                     dune_minimum_elevation=1.1,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_4261yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     background_erosion=0.0,
                 )
 
@@ -1113,7 +1113,7 @@ def roadways():
                     dune_minimum_elevation=1.1,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_4261yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     background_erosion=0.0,
                 )
 
@@ -1130,7 +1130,7 @@ def roadways():
                     dune_minimum_elevation=1.1,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_4261yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     background_erosion=-1,
                 )
 
@@ -1147,7 +1147,7 @@ def roadways():
                     dune_minimum_elevation=1.1,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_4261yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     background_erosion=0.0,
                 )
 
@@ -1165,7 +1165,7 @@ def roadways():
                     dune_minimum_elevation=2.6,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     background_erosion=0.0,
                 )
 
@@ -1183,7 +1183,7 @@ def roadways():
                     dune_minimum_elevation=2.6,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     background_erosion=0.0,
                 )
 
@@ -1200,7 +1200,7 @@ def roadways():
                     dune_minimum_elevation=2.6,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     background_erosion=0.0,
                 )
 
@@ -1231,7 +1231,7 @@ def roadways():
                                 # m MHW, allow dune to erode down to 0.5 m above the roadway
                                 storm_file=storm_file,
                                 elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-                                dune_file="barrier3d-default-dunes.npy",
+                                dune_file="pathways-dunes.npy",
                                 background_erosion=0.0,
                             )
 
@@ -1269,7 +1269,7 @@ def roadways():
                     dune_minimum_elevation=2.1,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     background_erosion=0.0,
                 )
 
@@ -1286,7 +1286,7 @@ def roadways():
                     dune_minimum_elevation=2.1,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     background_erosion=0.0,
                 )
 
@@ -1303,7 +1303,7 @@ def roadways():
                 #     dune_minimum_elevation=2.1,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                 #     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                 #     elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-                #     dune_file="barrier3d-default-dunes.npy",
+                #     dune_file="pathways-dunes.npy",
                 #     background_erosion=-1,
                 # )
 
@@ -1320,7 +1320,7 @@ def roadways():
                     dune_minimum_elevation=2.1,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     background_erosion=0.0,
                 )
 
@@ -1338,7 +1338,7 @@ def roadways():
                     dune_minimum_elevation=2.3,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     background_erosion=0.0,
                 )
 
@@ -1355,7 +1355,7 @@ def roadways():
                     dune_minimum_elevation=2.3,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     background_erosion=0.0,
                 )
 
@@ -1372,7 +1372,7 @@ def roadways():
                     dune_minimum_elevation=2.3,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     background_erosion=0.0,
                 )
 
@@ -1394,7 +1394,7 @@ def roadways():
                 dune_minimum_elevation=2.1,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                 storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                 elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
+                dune_file="pathways-dunes.npy",
                 background_erosion=0.0,
                 percent_water_cells_sensitivity=0.1,
             )
@@ -1412,7 +1412,7 @@ def roadways():
                 dune_minimum_elevation=2.1,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                 storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                 elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
+                dune_file="pathways-dunes.npy",
                 background_erosion=0.0,
                 percent_water_cells_sensitivity=0.2,
             )
@@ -1430,7 +1430,7 @@ def roadways():
                 dune_minimum_elevation=2.1,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                 storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                 elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
+                dune_file="pathways-dunes.npy",
                 background_erosion=0.0,
                 percent_water_cells_sensitivity=0.3,
             )
@@ -1448,7 +1448,7 @@ def roadways():
                 dune_minimum_elevation=2.1,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                 storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                 elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
+                dune_file="pathways-dunes.npy",
                 background_erosion=0.0,
                 percent_water_cells_sensitivity=0.4,
             )
@@ -1466,7 +1466,7 @@ def roadways():
                 dune_minimum_elevation=2.1,  # m MHW, allow dune to erode down to 0.5 m above the roadway
                 storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                 elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
+                dune_file="pathways-dunes.npy",
                 background_erosion=0.0,
                 percent_water_cells_sensitivity=0.5,
             )
@@ -1488,7 +1488,7 @@ def nourishments():
                     # m MHW, keep dune design height the same as 2m dune above the initial "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_4261yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=40,  # corresponds with residential
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1506,7 +1506,7 @@ def nourishments():
                     dune_design_elevation=2.6,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_4261yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=90,  # corresponds with commercial
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1524,7 +1524,7 @@ def nourishments():
                     dune_design_elevation=2.6,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_4261yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=90,  # corresponds with commercial
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1544,7 +1544,7 @@ def nourishments():
                     # m MHW, keep dune design height the same as 2m dune above the initial "roadway" for comparison
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=40,  # corresponds with residential
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1563,7 +1563,7 @@ def nourishments():
                     # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=90,  # corresponds with commercial
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1582,7 +1582,7 @@ def nourishments():
                     # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=90,  # corresponds with commercial
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1617,7 +1617,7 @@ def nourishments():
                                 # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                                 storm_file=storm_file,
                                 elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-                                dune_file="barrier3d-default-dunes.npy",
+                                dune_file="pathways-dunes.npy",
                                 overwash_filter=overwash_filter,
                                 overwash_to_dune=9,
                                 nourishment_volume=100,  # m^3/m
@@ -1659,7 +1659,7 @@ def nourishments():
                     dune_design_elevation=3.6,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=40,
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1677,7 +1677,7 @@ def nourishments():
                     dune_design_elevation=3.6,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=90,  # corresponds with commercial
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1695,7 +1695,7 @@ def nourishments():
                     dune_design_elevation=3.6,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt45_8757yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=90,  # corresponds with commercial
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1714,7 +1714,7 @@ def nourishments():
                     dune_design_elevation=3.8,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=40,
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1732,7 +1732,7 @@ def nourishments():
                     dune_design_elevation=3.8,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=90,  # corresponds with commercial
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1750,7 +1750,7 @@ def nourishments():
                     dune_design_elevation=3.8,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=90,  # corresponds with commercial
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1770,7 +1770,7 @@ def nourishments():
                 dune_design_elevation=3.8,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                 storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                 elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
+                dune_file="pathways-dunes.npy",
                 overwash_filter=90,  # corresponds with commercial
                 overwash_to_dune=9,
                 nourishment_volume=100,  # m^3/m
@@ -1787,7 +1787,7 @@ def nourishments():
                 dune_design_elevation=4.1,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                 storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                 elevation_file="b3d_pt75_829yrs_high-elevations.csv",
-                dune_file="barrier3d-default-dunes.npy",
+                dune_file="pathways-dunes.npy",
                 overwash_filter=90,  # corresponds with commercial
                 overwash_to_dune=9,
                 nourishment_volume=100,  # m^3/m
@@ -1813,7 +1813,7 @@ def nourishments():
                     # m MHW, keep dune design height the same as 2m dune above the initial "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=40,  # corresponds with residential
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1832,7 +1832,7 @@ def nourishments():
                     # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=90,  # corresponds with commercial
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1851,7 +1851,7 @@ def nourishments():
                     # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=90,  # corresponds with commercial
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1871,7 +1871,7 @@ def nourishments():
                     # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=40,
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1890,7 +1890,7 @@ def nourishments():
                     # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=90,  # corresponds with commercial
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1908,7 +1908,7 @@ def nourishments():
                 #     dune_design_elevation=3.7,  # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                 #     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                 #     elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                #     dune_file="barrier3d-default-dunes.npy",
+                #     dune_file="pathways-dunes.npy",
                 #     overwash_filter=90,  # corresponds with commercial
                 #     overwash_to_dune=9,
                 #     nourishment_volume=100,  # m^3/m
@@ -1927,7 +1927,7 @@ def nourishments():
                     # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                     elevation_file="b3d_pt45_802yrs_high-elevations.csv",
-                    dune_file="barrier3d-default-dunes.npy",
+                    dune_file="pathways-dunes.npy",
                     overwash_filter=90,  # corresponds with commercial
                     overwash_to_dune=9,
                     nourishment_volume=100,  # m^3/m
@@ -1948,7 +1948,7 @@ def nourishments():
                         # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                         storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                         elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
-                        dune_file="barrier3d-default-dunes.npy",
+                        dune_file="pathways-dunes.npy",
                         overwash_filter=40,  # corresponds with commercial
                         nourishment_volume=100,  # m^3/m
                         beach_width_threshold=30,  # m
@@ -1966,7 +1966,7 @@ def nourishments():
                         # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                         storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                         elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
-                        dune_file="barrier3d-default-dunes.npy",
+                        dune_file="pathways-dunes.npy",
                         overwash_filter=90,  # corresponds with commercial
                         nourishment_volume=100,  # m^3/m
                         beach_width_threshold=30,  # m
@@ -1984,7 +1984,7 @@ def nourishments():
                         # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                         storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                         elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
-                        dune_file="barrier3d-default-dunes.npy",
+                        dune_file="pathways-dunes.npy",
                         overwash_filter=90,  # corresponds with commercial
                         nourishment_volume=100,  # m^3/m
                         beach_width_threshold=30,  # m
@@ -2001,7 +2001,7 @@ def nourishments():
                         # m MHW, keep dune design height the same as 2 m dune above the "roadway"
                         storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
                         elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
-                        dune_file="barrier3d-default-dunes.npy",
+                        dune_file="pathways-dunes.npy",
                         overwash_filter=90,  # corresponds with commercial
                         nourishment_volume=100,  # m^3/m
                         beach_width_threshold=30,  # m
@@ -2019,7 +2019,7 @@ def alongshore_variable_management():
                 elevation_file = [
                     "b3d_pt75_3284yrs_low-elevations.csv"
                 ] * number_barrier3d_models
-                dune_file = ["barrier3d-default-dunes.npy"] * number_barrier3d_models
+                dune_file = ["pathways-dunes.npy"] * number_barrier3d_models
                 dune_design_elevation = [3.2] * number_barrier3d_models
                 roads_on = [False] * number_barrier3d_models
                 nourishments_on = [True] * number_barrier3d_models
@@ -2058,7 +2058,7 @@ def alongshore_variable_management():
                 elevation_file = [
                     "b3d_pt45_802yrs_high-elevations.csv"
                 ] * number_barrier3d_models
-                dune_file = ["barrier3d-default-dunes.npy"] * number_barrier3d_models
+                dune_file = ["pathways-dunes.npy"] * number_barrier3d_models
                 dune_design_elevation = [3.2] * number_barrier3d_models
                 roads_on = [False] * number_barrier3d_models
                 nourishments_on = [True] * number_barrier3d_models
@@ -2097,7 +2097,7 @@ def alongshore_variable_management():
                 elevation_file = [
                     "b3d_pt45_802yrs_high-elevations.csv"
                 ] * number_barrier3d_models
-                dune_file = ["barrier3d-default-dunes.npy"] * number_barrier3d_models
+                dune_file = ["pathways-dunes.npy"] * number_barrier3d_models
                 dune_design_elevation = [3.2] * number_barrier3d_models
                 roads_on = [False] * number_barrier3d_models
                 nourishments_on = [True] * number_barrier3d_models
@@ -2137,7 +2137,7 @@ def alongshore_variable_management():
                 elevation_file = [
                     "b3d_pt75_3284yrs_low-elevations.csv"
                 ] * number_barrier3d_models
-                dune_file = ["barrier3d-default-dunes.npy"] * number_barrier3d_models
+                dune_file = ["pathways-dunes.npy"] * number_barrier3d_models
                 dune_design_elevation = [3.2] * number_barrier3d_models
                 roads_on = [False] * number_barrier3d_models
                 nourishments_on = [True, True, True, False, False, False]
@@ -2178,7 +2178,7 @@ def alongshore_variable_management():
             elevation_file = [
                 "b3d_pt75_4261yrs_low-elevations.csv"
             ] * number_barrier3d_models
-            dune_file = ["barrier3d-default-dunes.npy"] * number_barrier3d_models
+            dune_file = ["pathways-dunes.npy"] * number_barrier3d_models
             storm_file = "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy"
             dune_design_elevation = [2.6] * number_barrier3d_models  # 2 m scenario
             num_cores = 6  # for my laptop, max is 15
@@ -2342,7 +2342,7 @@ def alongshore_variable_management():
             elevation_file = ["b3d_pt45_8757yrs_low-elevations.csv"] * 3 + [
                 "b3d_pt75_4261yrs_low-elevations.csv"
             ] * 3
-            dune_file = ["barrier3d-default-dunes.npy"] * number_barrier3d_models
+            dune_file = ["pathways-dunes.npy"] * number_barrier3d_models
             storm_file = "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy"
             dune_design_elevation = [3.6] * 3 + [2.6] * 3  # 2 m above the roadway
             dune_minimum_elevation = [2.1] * 3 + [
@@ -2438,7 +2438,7 @@ def alongshore_variable_management():
             elevation_file = [
                 "b3d_pt45_8757yrs_low-elevations.csv"
             ] * number_barrier3d_models
-            dune_file = ["barrier3d-default-dunes.npy"] * number_barrier3d_models
+            dune_file = ["pathways-dunes.npy"] * number_barrier3d_models
             storm_file = "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy"
             dune_design_elevation = [
                 3.6
@@ -2504,7 +2504,7 @@ def alongshore_variable_management():
                 + ["b3d_pt75_4261yrs_low-elevations.csv"] * 3
                 + ["b3d_pt45_8757yrs_low-elevations.csv"] * 3
             )
-            dune_file = ["barrier3d-default-dunes.npy"] * number_barrier3d_models
+            dune_file = ["pathways-dunes.npy"] * number_barrier3d_models
             storm_file = "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy"
             dune_design_elevation = (
                 [3.6] * 3 + [2.6] * 3 + [3.6] * 3
@@ -2540,9 +2540,9 @@ def alongshore_variable_management():
             sea_level_rise_rate = 0.004
             sea_level_constant = True  # linear
 
-            # 1353, Barrier has HEIGHT DROWNED at t = 132
-            # 6490, Barrier has HEIGHT DROWNED at t = 147 years
-            # 3284 is wider and higher (190 m wide vs. 144 m for 4261): no roadway drowned
+            # 1353 config, Barrier has HEIGHT DROWNED at t = 132
+            # 6490 config, Barrier has HEIGHT DROWNED at t = 147 years
+            # 3284 config is wider and higher (190 m wide vs. 144 m for 4261): no roadway drowned
             # *** 4261, Roadway drowned at 99, 115, 131 due to SLR, road cannot be below 0 m MHW -- created curved shape
             # After I grouped roadway abandonment, all three in the middle are abandoned at 99 years
             AST_3domains_BE1m = RUN_9_CASCADE_Rave_SLR_pt004_AlongshoreVariableManagement(
@@ -2646,11 +2646,11 @@ def alongshore_variable_management():
                 )
             )
 
-            # 1 m background erosion and accelerated SLR, middle natural scenario --------------------------------------
+            # 1 m background erosion and accelerated SLR, middle natural scenario (adaptation scenario) ---------------
             sea_level_rise_rate = 0.004  # dummy
             sea_level_constant = False  # accelerated
 
-            # set middle to no management and lets see what happens
+            # set middle to no management and let's see what happens
             roads_on = [False, False, False, False, False, False, True, True, True]
 
             # Roadway width drowned at 137 years, 20.0% of road borders water
@@ -2708,7 +2708,7 @@ def alongshore_variable_management():
                     + ["b3d_pt75_4261yrs_low-elevations.csv"] * 3
                     + ["b3d_pt45_8757yrs_low-elevations.csv"] * 3
                 )
-                dune_file = ["barrier3d-default-dunes.npy"] * number_barrier3d_models
+                dune_file = ["pathways-dunes.npy"] * number_barrier3d_models
                 dune_design_elevation = (
                     [3.6] * 3 + [2.6] * 3 + [3.6] * 3
                 )  # 2 m above the original roadway
