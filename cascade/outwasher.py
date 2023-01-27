@@ -367,11 +367,11 @@ class Outwasher:
             dune_domain,
             substep=120,
             sediment_flux_coefficient_Ki=7.5E-3,  # b3d = 7.5E-6 for inundation
-            washout_to_shoreface=True
+            percent_washout_to_shoreface=100
     ):
 
         # initial variables
-        self._shoreface_on = washout_to_shoreface
+        self._percent_washout_to_shoreface = percent_washout_to_shoreface
         self._block_size = 5
         self._berm_el = berm_elev,  # [dam MHW]
         self._beach_elev = self._berm_el  # [dam MHW]
@@ -689,9 +689,11 @@ class Outwasher:
                 )
 
                 # "nourish" the shoreface with the washout ----------------------------------------------------
-                if self._shoreface_on:
-                    self._Qs_shoreface[self._time_index - 1] = qs_lost_total * 1000  # m^3
-                    self._Qs_shoreface_per_length[self._time_index - 1] = (qs_lost_total / self._length) * 100  # m^3/m
+                if self._percent_washout_to_shoreface > 0:
+                    self._Qs_shoreface[self._time_index - 1] = qs_lost_total * 1000 \
+                                                * self._percent_washout_to_shoreface/100  # m^3
+                    self._Qs_shoreface_per_length[self._time_index - 1] = (qs_lost_total / self._length) * 100 \
+                                                * self._percent_washout_to_shoreface/100  # m^3/m
                 else:
                     self._Qs_shoreface[self._time_index - 1] = 0
                     self._Qs_shoreface_per_length[self._time_index - 1] = 0

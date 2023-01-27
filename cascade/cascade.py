@@ -153,7 +153,7 @@ class Cascade:
         house_footprint_y=20,
         beach_full_cross_shore=70,
         outwash_storms="outwash_storms10.npy",  # --------- outwasher (in development) ------------ #
-        washout_to_shoreface=True,
+        percent_washout_to_shoreface=True,
     ):
         """
 
@@ -444,18 +444,12 @@ class Cascade:
 
         for iB3D in range(self._ny):
             self._outwash.append(
-                Outwasher(
-                    datadir=datadir,
-                    outwash_storms=outwash_storms,
-                    time_step_count=self._nt,
-                    berm_elev=self._barrier3d[iB3D].BermEl,
-                    barrier_length=self._barrier3d[iB3D].BarrierLength,
-                    sea_level=self._barrier3d[iB3D].SL,
-                    bay_depth=self._barrier3d[iB3D].BayDepth,
-                    interior_domain=self._barrier3d[iB3D].InteriorDomain,
-                    dune_domain=self._barrier3d[iB3D].DuneDomain[self._barrier3d[iB3D].time_index - 1, :, :],
-                    washout_to_shoreface=washout_to_shoreface
-                )
+                Outwasher(datadir=datadir, outwash_storms=outwash_storms, time_step_count=self._nt,
+                          berm_elev=self._barrier3d[iB3D].BermEl, barrier_length=self._barrier3d[iB3D].BarrierLength,
+                          sea_level=self._barrier3d[iB3D].SL, bay_depth=self._barrier3d[iB3D].BayDepth,
+                          interior_domain=self._barrier3d[iB3D].InteriorDomain,
+                          dune_domain=self._barrier3d[iB3D].DuneDomain[self._barrier3d[iB3D].time_index - 1, :, :],
+                          percent_washout_to_shoreface=percent_washout_to_shoreface)
             )
 
     @property
