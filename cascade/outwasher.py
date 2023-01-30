@@ -365,7 +365,7 @@ class Outwasher:
             bay_depth,
             interior_domain,
             dune_domain,
-            substep=120,
+            substep=20,
             sediment_flux_coefficient_Ki=7.5E-3,  # b3d = 7.5E-6 for inundation
             percent_washout_to_shoreface=100
     ):
@@ -664,10 +664,15 @@ class Outwasher:
                 post_outwash_full_domain = Elevation[-1, :, :]  # use the last TS
                 check = 1
                 while check == 1:
-                    if all(x <= self._bay_depth for x in post_outwash_full_domain[0, :]):
+                    if all(x <= -0.3 for x in post_outwash_full_domain[0, :]):
                         post_outwash_full_domain = np.delete(post_outwash_full_domain, 0, axis=0)
                     else:
                         check = 0
+                # while check == 1:
+                #     if all(x <= self._bay_depth for x in post_outwash_full_domain[0, :]):
+                #         post_outwash_full_domain = np.delete(post_outwash_full_domain, 0, axis=0)
+                #     else:
+                #         check = 0
 
                 # domain variables we want to save
                 self._full_domain = Elevation[-1]
