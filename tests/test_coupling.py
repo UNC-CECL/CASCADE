@@ -17,7 +17,7 @@ def run_cascade_no_human_dynamics():
         storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
         elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
         dune_file="pathways-dunes.npy",
-        parameter_file="barrier3d-parameters.yaml",
+        parameter_file="barrier3d-default-parameters.yaml",
         wave_height=1,
         wave_period=7,
         wave_asymmetry=0.8,
@@ -84,7 +84,7 @@ def test_barrier3d_versions():
 
     # Barrier3D BMI Version (2.0 and beyond): create an instance of the new BMI class, which is the model
     barrier3d = Barrier3dBmi()
-    input_file = "barrier3d-parameters.yaml"
+    input_file = "barrier3d-default-parameters.yaml"
     barrier3d.initialize(str(BMI_DATA_DIR / input_file))
 
     # increase time step

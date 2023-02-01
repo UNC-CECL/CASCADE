@@ -20,7 +20,7 @@ GrowthParamStart: false
 HdDiffu: 0.75
 Ki: 7.5e-06
 Kr: 7.5e-05
-LShoreface: 524.3969226015213
+LShoreface: 524.236278118052
 MHW: 0.46
 MaxShrubHeight: 5.3
 MaxUpSlope: 0.25
@@ -61,5 +61,5 @@ nn: 0.5
 rmax: 0.65
 rmin: 0.25
 s_sf_eq: 0.01698590034494604
-storm_file: barrier3d-default-storms.npy
+storm_file: cascade-default-storms.npy
 threshold_in: 0.25
