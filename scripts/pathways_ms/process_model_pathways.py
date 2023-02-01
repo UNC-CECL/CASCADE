@@ -2990,8 +2990,12 @@ def ast_connections():
 
         def ast_time_series(
                 shoreline_position_allroads_pt75low,
+                shoreline_position_linSLR_pt75low,
+                shoreline_position_accSLR_pt75low,
                 beach_width_allnourish_pt75low,
-                beach_width_allnourish_pt45low
+                beach_width_allnourish_pt45low,
+                beach_width_linSLR_pt75low,
+                beach_width_accSLR_pt75low
         ):
             iB3D_roadways = 4
             iB3D_community = 1
@@ -3024,14 +3028,14 @@ def ast_connections():
                     85,
                 ],
                 scenarios_beach_width=[
-                    "comm +1 m/yr",
-                    "split mgmt +1 m/yr",
-                    "split mgmt +1 m/yr, acc SLR",
+                    "baseline-comm, configuration C",
+                    "road+comm, along uniform",
+                    "road+comm, along uniform, acc SLR",
                 ],
                 scenarios_shoreline_position=[
-                    "roads +1 m/yr",
-                    "split mgmt +1 m/yr",
-                    "split mgmt +1 m/yr, acc SLR",
+                    "baseline-road, configuration C",
+                    "road+comm, along uniform",
+                    "road+comm, along uniform, acc SLR",
                 ],
             )
 
@@ -3067,14 +3071,14 @@ def ast_connections():
                     85,
                 ],
                 scenarios_beach_width=[
-                    "comm +1 m/yr",
-                    "split mgmt +1 m/yr",
-                    "split mgmt +1 m/yr, acc SLR",
+                    "baseline-comm, configuration A",
+                    "road+comm, along variable",
+                    "road+comm, along variable, acc SLR",
                 ],
                 scenarios_shoreline_position=[
-                    "roads +1 m/yr",
-                    "split mgmt +1 m/yr",
-                    "split mgmt +1 m/yr, acc SLR",
+                    "baseline-road, configuration C",
+                    "road+comm, along variable",
+                    "road+comm, along variable, acc SLR",
                 ],
             )
 
@@ -3169,30 +3173,30 @@ def ast_connections():
         # same as above, but with accelerated SLR and no background erosion
         # Barrier has HEIGHT DROWNED at t = 92 years
         # NOT USED
-        PLOT_9_Nonlinear_Dynamics_CASCADE_AST(
-            name_prefix="9-CASCADE_AST_3domains_AccSLR",
-            tmax_management=[
-                91,
-                91,
-                91,
-                91,
-                91,
-                91,  # drowned
-                91,
-                91,
-                91,
-            ],  # an array, CAN'T BE 100 OR THE ALGORITHM BREAKS
-            tmax_sim=92,  # not an array
-            plot_name="9-CASCADE_AST_3domains_AccSLR",
-            rebuild_dune_threshold=1,
-            beach_management_ny=[1, 1, 1, 0, 0, 0, 0, 0, 0],
-            roadway_management_ny=[0, 0, 0, 1, 1, 1, 1, 1, 1],
-            gif_on=True,
-            z_lim=4,
-            y_lim=[150, 220],
-            fig_size=(6, 2.5),
-            time_series_on=False,
-        )
+        # PLOT_9_Nonlinear_Dynamics_CASCADE_AST(
+        #     name_prefix="9-CASCADE_AST_3domains_AccSLR",
+        #     tmax_management=[
+        #         91,
+        #         91,
+        #         91,
+        #         91,
+        #         91,
+        #         91,  # drowned
+        #         91,
+        #         91,
+        #         91,
+        #     ],  # an array, CAN'T BE 100 OR THE ALGORITHM BREAKS
+        #     tmax_sim=92,  # not an array
+        #     plot_name="9-CASCADE_AST_3domains_AccSLR",
+        #     rebuild_dune_threshold=1,
+        #     beach_management_ny=[1, 1, 1, 0, 0, 0, 0, 0, 0],
+        #     roadway_management_ny=[0, 0, 0, 1, 1, 1, 1, 1, 1],
+        #     gif_on=True,
+        #     z_lim=4,
+        #     y_lim=[150, 220],
+        #     fig_size=(6, 2.5),
+        #     time_series_on=False,
+        # )
 
         # natural case in the middle
         # Roadway width drowned at 137 years, 20.0% of road borders water
@@ -3247,7 +3251,9 @@ def ast_connections():
                 shoreline_position_acc_nat,
                 beach_width_allnourish_pt45low,
                 beach_width_thirds_acc,
-                beach_width_acc_nat
+                beach_width_acc_nat,
+                shoreline_position_pt45nourish_accSLR,
+                beach_width_pt45nourish_accSLR
         ):
             iB3D_roadways = 4
             iB3D_community = 1
@@ -3255,43 +3261,39 @@ def ast_connections():
             # pt45 and pt75 low
             pathways_plt.fig11_14_stats_ast_array3(
                 shoreline_position=[
-                    shoreline_position_allroads_pt75low[
-                        iB3D_roadways
-                    ],  # this is a dummy
+                    shoreline_position_pt45nourish_accSLR[iB3D_roadways],  # this is a dummy
                     shoreline_position_thirds_acc[iB3D_roadways],
                     shoreline_position_acc_nat[iB3D_roadways],
                 ],
                 beach_width=[
-                    beach_width_allnourish_pt45low[
-                        iB3D_community
-                    ],  # this is a dummy
+                    beach_width_pt45nourish_accSLR[iB3D_community],
                     beach_width_thirds_acc[iB3D_community],
                     beach_width_acc_nat[iB3D_community],
                 ],
                 TMAX=[
-                    200,
+                    141,
                     71,
                     200,
                 ],
                 tmax_management_nourishments=[
-                    199,
+                    137,
                     70,
                     137,
                 ],
                 tmax_management_roadways=[
-                    73,
+                    85,
                     70,
                     137,
                 ],
                 scenarios_beach_width=[
-                    "comm +1 m/yr",
-                    "variable mgmt +1 m/yr, acc SLR",
-                    "retreat +1 m/yr, acc SLR",
+                    "road+comm, along variable, acc SLR",
+                    "inc complexity, status quo, acc SLR",
+                    "inc complexity, road removal, acc SLR",
                 ],
                 scenarios_shoreline_position=[
-                    "roads +1 m/yr",
-                    "variable mgmt +1 m/yr, acc SLR",
-                    "retreat +1 m/yr, acc SLR",
+                    "road+comm, along variable, acc SLR",
+                    "inc complexity, status quo, acc SLR",
+                    "inc complexity, road removal, acc SLR",
                 ],
             )
 
@@ -3392,6 +3394,10 @@ def ast_connections():
                 mean_abandonment = np.mean(
                     list(compress(year_abandoned_middle_roadway, abandoned))
                 )  # 57
+                drowned_before_abandoned = sum(
+                    np.array(year_abandoned_middle_roadway)
+                    == np.array(sim_max_middle_roadway) - 1
+                )  # if b3d drowned before the roadway was abandoned, the last roadway TS would be one behind; filter out
 
                 (
                     year_abandoned_far_roadway,
@@ -3427,6 +3433,10 @@ def ast_connections():
                 mean_abandonment = np.mean(
                     list(compress(year_abandoned_far_roadway, abandoned))
                 )
+                drowned_before_abandoned = sum(
+                    np.array(year_abandoned_far_roadway)
+                    == np.array(sim_max_far_roadway) - 1
+                )  # if b3d drowned before the roadway was abandoned, the last roadway TS would be one behind; filter out
 
                 (
                     year_abandoned_community,
@@ -3462,6 +3472,11 @@ def ast_connections():
                 mean_abandonment = np.mean(
                     list(compress(year_abandoned_community, abandoned))
                 )  # 137
+                drowned_before_abandoned = sum(
+                    np.array(year_abandoned_community)
+                    == np.array(sim_max_community) - 1
+                )  # if b3d drowned before the community was abandoned, the last community TS would be one behind; filter out
+                nourish_frequency = np.mean(np.array(year_abandoned_community) / np.array(beach_nourished_community))
 
                 # roadway and nourishment statistics for 100 simulations -- nat acc SLR
                 (
@@ -3492,7 +3507,7 @@ def ast_connections():
                     np.array(year_abandoned_community)
                     == np.array(sim_max_community) - 1
                 )  # if b3d drowned before the community was abandoned, the last community TS would be one behind; filter out
-                total_abandoned = sum(abandoned)  #
+                total_abandoned = sum(abandoned)  # 71
                 min_abandonment = np.min(
                     list(compress(year_abandoned_community, abandoned))
                 )  # 132
@@ -3502,6 +3517,11 @@ def ast_connections():
                 mean_abandonment = np.mean(
                     list(compress(year_abandoned_community, abandoned))
                 )  # 137
+                drowned_before_abandoned = sum(
+                    np.array(year_abandoned_community)
+                    == np.array(sim_max_community) - 1
+                )  # if b3d drowned before the community was abandoned, the last community TS would be one behind; filter out
+                nourish_frequency = np.mean(np.array(year_abandoned_community) / np.array(beach_nourished_community))
 
                 (
                     year_abandoned_far_roadway,
@@ -3537,6 +3557,10 @@ def ast_connections():
                 mean_abandonment = np.mean(
                     list(compress(year_abandoned_far_roadway, abandoned))
                 )
+                drowned_before_abandoned = sum(
+                    np.array(year_abandoned_far_roadway)
+                    == np.array(sim_max_far_roadway) - 1
+                )  # if b3d drowned before the roadway was abandoned, the last roadway TS would be one behind; filter out
 
             def thirds_acc_slr_storminess():
                 # same as above, but increase in storminess
@@ -3580,6 +3604,10 @@ def ast_connections():
                 mean_abandonment = np.mean(
                     list(compress(year_abandoned_middle_roadway, abandoned))
                 )  # 81
+                drowned_before_abandoned = sum(
+                    np.array(year_abandoned_middle_roadway)
+                    == np.array(sim_max_middle_roadway) - 1
+                )  # if b3d drowned before the roadway was abandoned, the last roadway TS would be one behind; filter out
 
                 (
                     year_abandoned_far_roadway,
@@ -3621,6 +3649,10 @@ def ast_connections():
                 mean_abandonment = np.mean(
                     list(compress(year_abandoned_far_roadway, abandoned))
                 )  # 155
+                drowned_before_abandoned = sum(
+                    np.array(year_abandoned_far_roadway)
+                    == np.array(sim_max_far_roadway) - 1
+                )  # if b3d drowned before the roadway was abandoned, the last roadway TS would be one behind; filter out
 
                 (
                     year_abandoned_community,
@@ -3660,6 +3692,11 @@ def ast_connections():
                 mean_abandonment = np.mean(
                     list(compress(year_abandoned_community, abandoned))
                 )  # 136
+                drowned_before_abandoned = sum(
+                        np.array(year_abandoned_community)
+                        == np.array(sim_max_community) - 1
+                )  # if b3d drowned before the community was abandoned, the last community TS would be one behind; filter out
+                nourish_frequency = np.mean(np.array(year_abandoned_community) / np.array(beach_nourished_community))
 
                 # -------------------------
                 # roadway and nourishment statistics for 100 simulations -- nat acc SLR, increased storminess
@@ -3703,6 +3740,11 @@ def ast_connections():
                 mean_abandonment = np.mean(
                     list(compress(year_abandoned_community, abandoned))
                 )  # 135
+                drowned_before_abandoned = sum(
+                    np.array(year_abandoned_community)
+                    == np.array(sim_max_community) - 1
+                )
+                nourish_frequency = np.mean(np.array(year_abandoned_community) / np.array(beach_nourished_community))
 
                 (
                     year_abandoned_far_roadway,
@@ -3730,17 +3772,21 @@ def ast_connections():
                     list(compress(sim_max_far_roadway, drowned))
                 )  # 144
 
+                # there are some simulations that don't result in roadway abandonment (2)
+                year_abandoned_far_roadway = np.array(year_abandoned_far_roadway)
+                sim_max_far_roadway = np.array(sim_max_far_roadway)
+                filter_no_abandonment = year_abandoned_far_roadway < 199
                 abandoned = ~(
-                    np.array(year_abandoned_far_roadway)
-                    == np.array(sim_max_far_roadway) - 1
+                    year_abandoned_far_roadway[filter_no_abandonment]
+                    == np.array(sim_max_far_roadway[filter_no_abandonment]) - 1
                 )  # if b3d drowned before the roadway was abandoned, the last roadway TS would be one behind; filter out
-                total_abandoned = sum(abandoned)  # 93
+                total_abandoned = sum(abandoned)  # 91
                 min_abandonment = np.min(
-                    list(compress(year_abandoned_far_roadway, abandoned))
+                    list(compress(year_abandoned_far_roadway[filter_no_abandonment], abandoned))
                 )  # 110
                 max_abandonment = np.max(
-                    list(compress(year_abandoned_far_roadway, abandoned))
-                )  # 199
+                    list(compress(year_abandoned_far_roadway[filter_no_abandonment], abandoned))
+                )  # 193
                 mean_abandonment = np.mean(
-                    list(compress(year_abandoned_far_roadway, abandoned))
-                )  # 159
+                    list(compress(year_abandoned_far_roadway[filter_no_abandonment], abandoned))
+                )  # 158

@@ -15,6 +15,7 @@ import os
 import imageio
 import math
 from scipy import signal
+from matplotlib.ticker import AutoMinorLocator
 
 # # ###############################################################################
 # # modified from barrier3d
@@ -613,6 +614,7 @@ def plot_ElevAnimation_CASCADE(
         z_lim=3.5,
         fig_size=None,
         fig_eps=False,
+        km_on=True
 ):
     """
     :param cascade: a cascade model object
@@ -781,6 +783,14 @@ def plot_ElevAnimation_CASCADE(
                 timestr = (
                         "Time = " + str(t - 0.5) + " yrs"
                 )  # we are letting the post-storm output represent 0.5 years
+                if km_on:
+                    locs, _ = plt.yticks()
+                    plt.yticks(locs, locs / 100)
+                    locs, _ = plt.xticks()
+                    plt.xticks(locs[0:-1], locs[0:-1] / 100)
+                    plt.xlabel("alongshore distance (km)")
+                    plt.ylabel("cross-shore distance (km)")
+                    ax.yaxis.set_minor_locator(AutoMinorLocator())
                 if y_lim is not None:
                     plt.ylim(y_lim)
                     plt.text(3, y_lim[0] + 3, timestr, color="w")
@@ -885,6 +895,14 @@ def plot_ElevAnimation_CASCADE(
         plt.xlabel("alongshore distance (dam)")
         plt.ylabel("cross-shore distance (dam)")
         timestr = "Time = " + str(t) + " yrs"
+        if km_on:
+            locs, _ = plt.yticks()
+            plt.yticks(locs, locs / 100)
+            locs, _ = plt.xticks()
+            plt.xticks(locs[0:-1], locs[0:-1] / 100)
+            plt.xlabel("alongshore distance (km)")
+            plt.ylabel("cross-shore distance (km)")
+            ax.yaxis.set_minor_locator(AutoMinorLocator())
         if y_lim is not None:
             plt.ylim(y_lim)
             plt.text(3, y_lim[0] + 3, timestr, color="w")
