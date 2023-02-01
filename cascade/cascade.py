@@ -106,7 +106,7 @@ class Cascade:
         name="default",
         elevation_file="barrier3d-default-elevation.npy",
         dune_file="barrier3d-default-dunes.npy",
-        parameter_file="barrier3d-parameters.yaml",
+        parameter_file="barrier3d-default-parameters.yaml",
         storm_file="cascade-default-storms.npy",  # same as "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy"
         num_cores=1,
         roadway_management_module=False,

@@ -24,7 +24,7 @@ cascade = Cascade(
     storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
     elevation_file="barrier3d-default-elevation.npy",
     dune_file="barrier3d-default-dunes.npy",
-    parameter_file="barrier3d-parameters.yaml",
+    parameter_file="barrier3d-default-parameters.yaml",
     wave_height=1,
     wave_period=7,
     wave_asymmetry=0.8,
@@ -45,7 +45,7 @@ for time_step in range(nt - 1):
 # Barrier3D Version 2.0 ------------------------------
 # create an instance of the new BMI class, which is the model
 barrier3d = Barrier3dBmi()
-input_file = "barrier3d-parameters.yaml"
+input_file = "barrier3d-default-parameters.yaml"
 barrier3d.initialize(datadir + input_file)
 
 # increase time step
