@@ -153,7 +153,7 @@ class Cascade:
         house_footprint_y=20,
         beach_full_cross_shore=70,
         outwash_storms="outwash_storms10.npy",  # --------- outwasher (in development) ------------ #
-        percent_washout_to_shoreface=True,
+        percent_washout_to_shoreface=100,
     ):
         """
 
