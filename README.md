@@ -5,9 +5,45 @@ The CoAStal Community-lAnDscape Evolution (CASCADE) model is a coupled landscape
 
 
 ## Installation (work in progress, my rough notes for now)
+This is the version of *cascade* used for the simulations in "The Future of Developed Barrier Systems: Pathways Toward Uninhabitability, Drowning, and Rebound" by Anarde et al., (in review). 
+
 - requires Python 3.8 (you can download directly here)
 - we suggest using a virtual environment for the following steps:
 - requires Barrier3D, brie, CHOM: each must be installed using "pip install -e ." in command line in the top of each directory
 - then "pip install -e ." in CASCADE directory
 - if you're not using something like PyCharm, extend your system paths to brie, CHOM, Barrier3D
 - run model from CASCADE directory
+
+- within the README, make sure to explain that in CASCADE, the user is forced to specify a growth rate (input growth parameter files are not used)
+- 
+3. Install your local copy into a conda environment. Assuming you have conda
+   installed, this is how you set up your fork for local development::
+
+    $ conda create -n cascade python
+    $ conda activate cascade
+    $ cd cascade/
+    $ conda install --file=requirements.txt
+
+    $ pip install -e .
+
+4. Create a branch for local development::
+
+    $ git checkout -b name-of-your-bugfix-or-feature
+
+   Now you can make your changes locally.
+
+5. When you're done making changes, check that your changes pass flake8 and the
+   tests::
+
+    $ flake8 cascade
+    $ pytest
+
+   To get flake8, just conda install it into your environment.
+
+6. Commit your changes and push your branch to GitHub::
+
+    $ git add .
+    $ git commit -m "Your detailed description of your changes."
+    $ git push origin name-of-your-bugfix-or-feature
+
+7. Submit a pull request through the GitHub website.
