@@ -47,3 +47,10 @@ This is the version of *cascade* used for the simulations in "The Future of Deve
     $ git push origin name-of-your-bugfix-or-feature
 
 7. Submit a pull request through the GitHub website.
+
+## Example run 
+
+## Notes on functionality of Barrier3D and BRIE within CASCADE
+- mention dune growth rate
+- turn off overwash model in brie
+
