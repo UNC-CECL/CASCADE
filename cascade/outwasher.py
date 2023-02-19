@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import copy
+from matplotlib import pyplot as plt
 
 from .beach_dune_manager import shoreface_nourishment
 
@@ -292,7 +293,7 @@ def calculate_discharges(col, S1, S2, S3, Q0, nn, domain_length, max_slope):
             Q3 = 0
 
     # All slopes negative
-    # all uphill options (likely our case for outwasher)
+    # all uphill options
     else:
 
         Q1 = (
@@ -372,7 +373,6 @@ class Outwasher:
 
         # initial variables
         self._percent_washout_to_shoreface = percent_washout_to_shoreface
-        self._block_size = 5
         self._berm_el = berm_elev,  # [dam MHW]
         self._beach_elev = self._berm_el  # [dam MHW]
         self._length = barrier_length  # [dam] length of barrier
@@ -472,6 +472,7 @@ class Outwasher:
                         beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
                 self._m_beachface = beach_domain[-1, 0] / len(beachface_domain)  # positive (downhill)
                 for s in range(len(beachface_domain)):
+                    # the first row of the beach face depends on the last row of the beach
                     if s == 0:
                         beachface_domain[s, :] = beach_domain[-1, 0] - self._m_beachface  # slope of beachface
                     else:
@@ -515,6 +516,25 @@ class Outwasher:
                     if TS > 0:
                         Elevation[TS, :, :] = Elevation[TS - 1, :, :]  # initial elevation is same as previous TS domain
                     print("Outwasher Time Step: ", TS)
+
+                    if TS == 0:
+                        plt.rcParams['figure.figsize'] = (8, 6)
+                        plt.rcParams.update({"font.size": 15})
+                        fig1 = plt.figure()
+                        ax1 = fig1.add_subplot(111)
+                        mat = ax1.matshow(
+                            Elevation[TS] * 10,
+                            cmap="terrain",
+                            vmin=-3.0, vmax=3.0,
+                        )
+                        cbar = fig1.colorbar(mat)
+                        cbar.set_label('m MHW', rotation=270, labelpad=15)
+                        ax1.set_title("Initial Elevation")
+                        ax1.set_ylabel("barrier width (dam)")
+                        ax1.set_xlabel("barrier length (dam)")
+                        plt.gca().xaxis.tick_bottom()
+
+
                     # need to calculate grouped averaged slopes over the domain
                     FR_array, avg_slope_array, s1_array, s2_array, s3_array = calculate_slopes(
                         truth_array,
@@ -526,11 +546,44 @@ class Outwasher:
                         s1_array,
                         s2_array,
                         s3_array,
-                        block_size=self._block_size
+                        block_size=3
                     )
+
+                    if TS == 0 or TS == 100:
+                        fig2 = plt.figure()
+                        ax2 = fig2.add_subplot(111)
+                        mat = ax2.matshow(
+                            FR_array[TS],
+                            cmap="binary",
+                            # vmin=-3.0, vmax=3.0,
+                        )
+                        # cbar = fig2.colorbar(mat)
+                        # cbar.set_label('m MHW', rotation=270, labelpad=15)
+                        ax2.set_title("Averaged blocks of slopes")
+                        ax2.set_ylabel("barrier width (dam)")
+                        ax2.set_xlabel("barrier length (dam)")
+                        ax2.text(2, 7, 'black = downhill \n white = uphill',
+                                 bbox={'facecolor': 'white', 'pad': 1, 'edgecolor' : 'none'})
+                        plt.gca().xaxis.tick_bottom()
 
                     # remove any isolated pockets of downhill slopes
                     FR_array, start_row = flow_routing_corrections(FR_array, width, self._length, TS)
+                    if TS == 0 or TS == 100:
+                        fig3 = plt.figure()
+                        ax3 = fig3.add_subplot(111)
+                        mat = ax3.matshow(
+                            FR_array[TS],
+                            cmap="binary",
+                            # vmin=-3.0, vmax=3.0,
+                        )
+                        # cbar = fig3.colorbar(mat)
+                        # cbar.set_label('m MHW', rotation=270, labelpad=15)
+                        ax3.set_title("Refined blocks of slopes")
+                        ax3.set_ylabel("barrier width (dam)")
+                        ax3.set_xlabel("barrier length (dam)")
+                        ax3.text(2, 7, 'black = downhill \n white = uphill',
+                                 bbox={'facecolor': 'white', 'pad': 1, 'edgecolor' : 'none'})
+                        plt.gca().xaxis.tick_bottom()
 
                     # determine the initial discharge (for each TS, a start row, and all cols) location and flow value
                     bayhigh = storm_series[TS]  # [dam]
