@@ -4,20 +4,26 @@ import os
 from matplotlib import pyplot as plt
 
 os.chdir('C:/Users/Lexi/Documents/Research/ArcPro/')
-df = pd.read_csv("raster_points_table.csv")
+df = pd.read_csv("back_barrier_points.csv")
 # df = pd.read_csv("big_raster_points.csv")
 # df = pd.read_csv("big_poly2_points.csv")
 # df = pd.read_csv("biggest_poly_points.csv")
 elevations = df['grid_code']
+elevs_numpy = np.zeros(len(elevations))
 
-num_cols_domain = 100
-num_rows_domain = len(elevations)/num_cols_domain
+num_cols_domain = 300
+num_rows_domain = int(len(elevations)/num_cols_domain)
+
+for index, val in enumerate(elevations):
+    elevs_numpy[index] = val
+    if val < -0.1:
+        elevs_numpy[index] = -3
 
 elev_array = np.zeros([num_rows_domain, num_cols_domain])
 start = 0
 end = start + num_cols_domain
 for row in range(num_rows_domain):
-    elev_array[row, :] = elevations[start:end] - 0.46
+    elev_array[row, :] = elevs_numpy[start:end] - 0.46
     start += num_cols_domain
     end += num_cols_domain
 
