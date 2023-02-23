@@ -20,39 +20,39 @@ def bay_converter(storms, substep):
     return new_ss
 
 
-def DuneGaps(DuneDomain, Dow, Rhigh):
-    """Returns tuple of [gap start index, stop index, avg Rexcess of each gap,
-    alpha: ratio of TWL / dune height]
-    :param DuneDomain: numpy array with dune elevations [dam MHW]
-    :param Dow: list of cell indices where outwash occurs
-    :param Rhigh: current bay level [dam MHW]
-    """
-    gaps = []
-    start = 0
-    i = start
-    while i < (len(Dow) - 1):
-        adjacent = Dow[i + 1] - Dow[i]
-        if adjacent == 1:
-            i = i + 1
-        else:
-            stop = i
-            x = DuneDomain[Dow[start]: (Dow[stop] + 1)]
-            Hmean = sum(x) / float(len(x))
-            Rexcess = Rhigh - Hmean
-            # alpha = Rhigh / (Hmean + bermel)
-            gaps.append([Dow[start], Dow[stop], Rexcess])
-
-            start = stop + 1
-            i = start
-
-    stop = i
-    x = DuneDomain[Dow[start]: (Dow[stop] + 1)]
-    if len(x) > 0:
-        Hmean = sum(x) / float(len(x))
-        Rexcess = Rhigh - Hmean
-        # alpha = Rhigh / (Hmean + bermel)
-        gaps.append([Dow[start], Dow[stop], Rexcess])
-    return gaps
+# def DuneGaps(DuneDomain, Dow, Rhigh):
+#     """Returns tuple of [gap start index, stop index, avg Rexcess of each gap,
+#     alpha: ratio of TWL / dune height]
+#     :param DuneDomain: numpy array with dune elevations [dam MHW]
+#     :param Dow: list of cell indices where outwash occurs
+#     :param Rhigh: current bay level [dam MHW]
+#     """
+#     gaps = []
+#     start = 0
+#     i = start
+#     while i < (len(Dow) - 1):
+#         adjacent = Dow[i + 1] - Dow[i]
+#         if adjacent == 1:
+#             i = i + 1
+#         else:
+#             stop = i
+#             x = DuneDomain[Dow[start]: (Dow[stop] + 1)]
+#             Hmean = sum(x) / float(len(x))
+#             Rexcess = Rhigh - Hmean
+#             # alpha = Rhigh / (Hmean + bermel)
+#             gaps.append([Dow[start], Dow[stop], Rexcess])
+#
+#             start = stop + 1
+#             i = start
+#
+#     stop = i
+#     x = DuneDomain[Dow[start]: (Dow[stop] + 1)]
+#     if len(x) > 0:
+#         Hmean = sum(x) / float(len(x))
+#         Rexcess = Rhigh - Hmean
+#         # alpha = Rhigh / (Hmean + bermel)
+#         gaps.append([Dow[start], Dow[stop], Rexcess])
+#     return gaps
 
 
 def calculate_slopes(
@@ -60,6 +60,7 @@ def calculate_slopes(
         avg_slope_array,
         domain,
         width,
+        int_width,
         length,
         time_step,
         s1_vals,
@@ -118,17 +119,19 @@ def calculate_slopes(
                 else:
                     S3 = 0
 
-            if col == 0 and S2 < 0 and S3 < 0:
+            # if col == 0 and S2 < 0 and S3 < 0:
+            if col == 0:
                 # this is greater than the max slope, so no sediment will go to outside
                 S1 = -999
-            if col == length - 1 and S2 < 0 and S1 < 0:
+            # if col == length - 1 and S2 < 0 and S1 < 0:
+            if col == length - 1:
                 S3 = -999
 
             s1_vals[time_step, row, col] = S1
             s2_vals[time_step, row, col] = S2
             s3_vals[time_step, row, col] = S3
 
-            # averaging
+            # averaging S1, S2, and S3 for each cell
             if col == 0:
                 avg_slope_array[time_step, row, col] = (S2 + S3) / 2
             elif col == length-1:
@@ -137,25 +140,33 @@ def calculate_slopes(
                 avg_slope_array[time_step, row, col] = (S1 + S2 + S3) / 3
 
     # adjusting for a block size that does not divide evenly into the domain
+    # start at the bay side dune line and move toward the bay
     b_size = block_size
-    extra_vert_cells = width % b_size
-    extra_lat_cells = length % b_size
+    extra_vert_cells = int_width % b_size  # gives the extra row cells
+    extra_lat_cells = length % b_size  # gives the extra column cells
+
+    # calculating how many times we will shift the block to calculate blocks of average slopes
     if extra_vert_cells == 0:
-        n_shifts_vert = int((width - extra_vert_cells) / b_size)
+        n_shifts_vert = int(int_width / b_size)
     else:
-        n_shifts_vert = int((width - extra_vert_cells) / b_size) + 1
+        n_shifts_vert = int((int_width - extra_vert_cells) / b_size) + 1
     if extra_lat_cells == 0:
-        n_shifts_lat = int((length - extra_lat_cells) / b_size)
+        n_shifts_lat = int(length / b_size)
     else:
         n_shifts_lat = int((length - extra_lat_cells) / b_size) + 1
 
+    # Shift through the entire column and then move block up to the next row
+    # start right before the dune line
     for v in range(n_shifts_vert):
-        if v == n_shifts_vert-1 and extra_vert_cells != 0:
-            start_row = end_row
-            end_row = start_row + extra_vert_cells + 1
+        if v == 0:
+            bot_row = int_width - 1
+            top_row = bot_row - b_size
+        elif v == n_shifts_vert-1 and extra_vert_cells != 0:  # this is the last shift
+            bot_row = top_row
+            top_row = bot_row - extra_vert_cells
         else:
-            start_row = v*b_size
-            end_row = v*b_size + b_size
+            bot_row = top_row
+            top_row = bot_row - b_size
         for l in range(n_shifts_lat):
             if l == n_shifts_lat-1 and extra_lat_cells != 0:
                 start_col = end_col
@@ -163,44 +174,162 @@ def calculate_slopes(
             else:
                 start_col = l*b_size
                 end_col = l*b_size + b_size
-            S = np.mean(avg_slope_array[time_step, start_row:end_row, start_col:end_col])
+            S = np.mean(avg_slope_array[time_step, (top_row+1):(bot_row+1), start_col:end_col])
             if S < 0:
-                truth_array[time_step, start_row:end_row, start_col:end_col] = 0
+                truth_array[time_step, (top_row+1):(bot_row+1), start_col:end_col] = 0
             else:
-                truth_array[time_step, start_row:end_row, start_col:end_col] = 1
+                truth_array[time_step, (top_row+1):(bot_row+1), start_col:end_col] = 1
 
     return truth_array, avg_slope_array, s1_vals, s2_vals, s3_vals
 
 
-def flow_routing_corrections(truth_array, width, length, time_step):
+def flow_routing_corrections(truth_array, width, length, time_step, elevation, bayhigh):
     """
     Removes the disconnected downhill cells from the flow routing slopes array.
     :param truth_array: array of 1s and 0s differentiating uphill and downhill slopes
-    :param width: cross-shore barrier width
+    :param width: cross-shore interior width
     :param length: alongshore barrier length
     :param time_step: current time step of the storm
     :return: new_truth_array
     """
-    row = width
-    for w in range(width, -1, -1):
-        if np.array_equal(truth_array[time_step, w-1, :], np.ones(length)) == True:
-            row = row - 1
+    start_row = width - 1
+    fr_col_array = []
+    fr_row_array = []
 
-    for w in range(row, -1, -1):
+    # for w in range(start_row, -1, -1):
+    #     for l in range(length):
+    #         if truth_array[time_step, w+1, l] == 0:
+    #             truth_array[time_step, w, l] = 0
+    for w in range(start_row, -1, -1):
         for l in range(length):
-            # possibly change this to look at all 3 cells
-            if truth_array[time_step, w+1, l] == 0:
+            if truth_array[time_step, w+1, l] == 0 or elevation[time_step, w, l] > bayhigh:
                 truth_array[time_step, w, l] = 0
 
-    counter = 0
-    while counter == 0 and row >= 0:
-        if max(truth_array[time_step, row, :]) > 0 and max(truth_array[time_step, row + 1, :]) > 0:
-            row = row - 1
-        else:
-            counter = 1
-    start_row = row + 1
+    # for w in range(row, -1, -1):
+    #     downhill_cols = np.nonzero(truth_array[time_step, row])
+    #     if np.size(downhill_cols) > 0:
+    #         counter += 1
+    #         for cell_index in downhill_cols:
+    #             if cell_index not in dune_gaps:
+    #                 truth_array[time_step, row, cell_index] = 0
+    #     else:
+    #         # check = 1
+    #         start_row = width - counter
+        # row = row - 1
 
-    return truth_array, start_row
+    # now that we have our domain, we are going to find the first flow routing row in each column
+    for l in range(length):
+        if np.max(truth_array[time_step, :, l]) == 1:  # determine if there is flow routing in this column
+            fr_row = np.min(np.where(truth_array[time_step, :, l] == 1))  # find the row flow routing starts in the col
+            fr_col = l
+            # save the row and columns where fow routing begins
+            fr_row_array.append(fr_row)
+            fr_col_array.append(fr_col)
+
+
+    # row = width-1
+    # check = 0
+    # while check == 0:
+    #     for w in range(width-1, -1, -1):
+    #         if np.array_equal(truth_array[time_step, w, :], np.ones(length)) == True:
+    #             row = row - 1
+    #         else:
+    #             check = 1
+    #
+    # for w in range(row, -1, -1):
+    #     for l in range(length):
+    #         # possibly change this to look at all 3 cells
+    #         if truth_array[time_step, w+1, l] == 0:
+    #             truth_array[time_step, w, l] = 0
+
+    # counter = 0
+    # while counter == 0 and row >= 0:
+    #     if max(truth_array[time_step, row, :]) > 0 and max(truth_array[time_step, row + 1, :]) > 0:
+    #         row = row - 1
+    #     else:
+    #         counter = 1
+    # start_row = row + 1
+
+    return truth_array, fr_row_array, fr_col_array
+
+
+def initialize_flow_routing(fr_rows, fr_cols, timestep, elevation, bayhigh, discharge_array, dow, intwidth):
+    start = 0
+    i = start
+
+    velocities = []
+    flows = []
+
+    # while i < (len(dow) - 1):
+    #     adjacent = dow[i + 1] - dow[i]
+    #     if adjacent == 1:
+    #         i = i + 1
+    #     else:
+    #         stop = i
+    #         x = elevation[timestep, intwidth, dow[start]: (dow[stop] + 1)]
+    #         Hmean = sum(x) / float(len(x))
+    #         Rexcess = bayhigh - Hmean
+    #         overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
+    #         overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
+    #         discharge_array[timestep, fr_rows[i], fr_cols[start]:(fr_cols[stop] + 1)] = overtop_flow  # (dam^3/hr)
+    #         overtop_vel_mps = overtop_vel * 10  # m/s
+    #         overtop_flow_cms = overtop_flow / 3600 * 1000  # (m^3/s)
+    #         velocities.append(overtop_vel_mps)
+    #         flows.append(overtop_flow_cms)
+    #
+    #         start = stop + 1
+    #         i = start
+    #
+    # # for the last item in the domain
+    # stop = i
+    # x = elevation[timestep, intwidth, dow[start]: (dow[stop] + 1)]
+    # if len(x) > 0:
+    #     Hmean = sum(x) / float(len(x))
+    #     Rexcess = bayhigh - Hmean
+    #     overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
+    #     overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
+    #     discharge_array[timestep, fr_rows[i], fr_cols[start]:(fr_cols[stop] + 1)] = overtop_flow  # (dam^3/hr)
+    #
+    #     overtop_vel_mps = overtop_vel * 10  # m/s
+    #     overtop_flow_cms = overtop_flow / 3600 * 1000  # (m^3/s)
+    #     velocities.append(overtop_vel_mps)
+    #     flows.append(overtop_flow_cms)
+
+    while i < (len(fr_cols) - 1):
+        adjacent = fr_cols[i + 1] - fr_cols[i]
+        if adjacent == 1 and fr_rows[i] == fr_rows[i+1]:
+            i = i + 1
+        else:
+            stop = i
+            x = elevation[timestep, fr_rows[i], fr_cols[start]: (fr_cols[stop] + 1)]
+            Hmean = sum(x) / float(len(x))
+            Rexcess = bayhigh - Hmean
+            overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
+            overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
+            discharge_array[timestep, fr_rows[i], fr_cols[start]:(fr_cols[stop] + 1)] = overtop_flow  # (dam^3/hr)
+            overtop_vel_mps = overtop_vel * 10  # m/s
+            overtop_flow_cms = overtop_flow / 3600 * 1000  # (m^3/s)
+            velocities.append(overtop_vel_mps)
+            flows.append(overtop_flow_cms)
+
+            start = stop + 1
+            i = start
+
+    # for the last item in the domain
+    stop = i
+    x = elevation[timestep, fr_rows[i], fr_cols[start]: (fr_cols[stop] + 1)]
+    if len(x) > 0:
+        Hmean = sum(x) / float(len(x))
+        Rexcess = bayhigh - Hmean
+        overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
+        overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
+        discharge_array[timestep, fr_rows[i], fr_cols[start]:(fr_cols[stop] + 1)] = overtop_flow  # (dam^3/hr)
+        overtop_vel_mps = overtop_vel * 10  # m/s
+        overtop_flow_cms = overtop_flow / 3600 * 1000  # (m^3/s)
+        velocities.append(overtop_vel_mps)
+        flows.append(overtop_flow_cms)
+
+    return discharge_array, velocities, flows
 
 
 def calculate_discharges(col, S1, S2, S3, Q0, nn, domain_length, max_slope):
@@ -541,83 +670,104 @@ class Outwasher:
                         avg_slope_array,
                         Elevation[TS],
                         width,
+                        int_width,
                         self._length,
                         TS,
                         s1_array,
                         s2_array,
                         s3_array,
-                        block_size=3
+                        block_size=5
                     )
-
-                    if TS == 0 or TS == 100:
-                        fig2 = plt.figure()
-                        ax2 = fig2.add_subplot(111)
-                        mat = ax2.matshow(
-                            FR_array[TS],
-                            cmap="binary",
-                            # vmin=-3.0, vmax=3.0,
-                        )
-                        # cbar = fig2.colorbar(mat)
-                        # cbar.set_label('m MHW', rotation=270, labelpad=15)
-                        ax2.set_title("Averaged blocks of slopes")
-                        ax2.set_ylabel("barrier width (dam)")
-                        ax2.set_xlabel("barrier length (dam)")
-                        ax2.text(2, 7, 'black = downhill \n white = uphill',
-                                 bbox={'facecolor': 'white', 'pad': 1, 'edgecolor' : 'none'})
-                        plt.gca().xaxis.tick_bottom()
-
-                    # remove any isolated pockets of downhill slopes
-                    FR_array, start_row = flow_routing_corrections(FR_array, width, self._length, TS)
-                    if TS == 0 or TS == 100:
-                        fig3 = plt.figure()
-                        ax3 = fig3.add_subplot(111)
-                        mat = ax3.matshow(
-                            FR_array[TS],
-                            cmap="binary",
-                            # vmin=-3.0, vmax=3.0,
-                        )
-                        # cbar = fig3.colorbar(mat)
-                        # cbar.set_label('m MHW', rotation=270, labelpad=15)
-                        ax3.set_title("Refined blocks of slopes")
-                        ax3.set_ylabel("barrier width (dam)")
-                        ax3.set_xlabel("barrier length (dam)")
-                        ax3.text(2, 7, 'black = downhill \n white = uphill',
-                                 bbox={'facecolor': 'white', 'pad': 1, 'edgecolor' : 'none'})
-                        plt.gca().xaxis.tick_bottom()
 
                     # determine the initial discharge (for each TS, a start row, and all cols) location and flow value
                     bayhigh = storm_series[TS]  # [dam]
-                    gap_row = Elevation[TS, start_row, :]
-                    if bayhigh <= min(gap_row):
+                    dune_elevs = Elevation[TS, int_width, :]
+                    if bayhigh <= min(dune_elevs):
                         Discharge[TS, :, :] = 0
                     else:
                         self._OW_TS.append(TS)
                         # find overwashed cells
-                        Dow = [index for index, value in enumerate(gap_row) if
+                        Dow = [index for index, value in enumerate(dune_elevs) if
                                value < bayhigh]  # bayhigh used to be Rhigh
-                        gaps = DuneGaps(gap_row, Dow, bayhigh)
+
+                        # remove any isolated pockets of downhill slopes
+                        # MAKE IF STATEMENT FOR HAVING VALS OTHER THAN 0
+                        # if len(Dow) > 0:
+                        for val in Dow:
+                            FR_array[TS, int_width, val] = 1
+
+                        if TS == 0 or TS == 100:
+                            fig2 = plt.figure()
+                            ax2 = fig2.add_subplot(111)
+                            mat = ax2.matshow(
+                                FR_array[TS, 0:int_width+1, :],
+                                cmap="binary",
+                                # vmin=-3.0, vmax=3.0,
+                            )
+                            # cbar = fig2.colorbar(mat)
+                            # cbar.set_label('m MHW', rotation=270, labelpad=15)
+                            ax2.set_title("Averaged blocks of slopes")
+                            ax2.set_ylabel("barrier width (dam)")
+                            ax2.set_xlabel("barrier length (dam)")
+                            ax2.text(2, 7, 'black = downhill \n white = uphill',
+                                     bbox={'facecolor': 'white', 'pad': 1, 'edgecolor': 'none'})
+                            plt.gca().xaxis.tick_bottom()
+
+                        FR_array, flow_rows, flow_cols = flow_routing_corrections(FR_array, int_width, self._length, TS, Elevation, bayhigh)
+                        # gap_row = start_row
+
+                        if TS == 0 or TS == 100:
+                            fig3 = plt.figure()
+                            ax3 = fig3.add_subplot(111)
+                            mat = ax3.matshow(
+                                FR_array[TS, 0:int_width+1, :],
+                                cmap="binary",
+                                # vmin=-3.0, vmax=3.0,
+                            )
+                            # cbar = fig3.colorbar(mat)
+                            # cbar.set_label('m MHW', rotation=270, labelpad=15)
+                            ax3.set_title("Refined blocks of slopes")
+                            ax3.set_ylabel("barrier width (dam)")
+                            ax3.set_xlabel("barrier length (dam)")
+                            ax3.text(2, 7, 'black = downhill \n white = uphill',
+                                     bbox={'facecolor': 'white', 'pad': 1, 'edgecolor': 'none'})
+                            plt.gca().xaxis.tick_bottom()
+
+                        # gaps = DuneGaps(gap_row, Dow, bayhigh)
                         max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
 
-                        for q in range(len(gaps)):
-                            start = gaps[q][0]
-                            stop = gaps[q][1]
-                            Rexcess = gaps[q][2]  # (dam)
-                            # Calculate discharge through each dune cell
-                            overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
-                            overtop_vel_mps = overtop_vel*10  # m/s
-                            overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
-                            overtop_flow_cms = overtop_flow / 3600 * 1000  # (m^3/s)
-                            self.velocities.append(overtop_vel_mps)
-                            self.flows.append(overtop_flow_cms)
+                        # for q in range(len(gaps)):
+                        #     start = gaps[q][0]
+                        #     stop = gaps[q][1]
+                        #     Rexcess = gaps[q][2]  # (dam)
+                        #     # Calculate discharge through each dune cell
+                        #     overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
+                        #     overtop_vel_mps = overtop_vel*10  # m/s
+                        #     overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
+                        #     overtop_flow_cms = overtop_flow / 3600 * 1000  # (m^3/s)
+                        #     self.velocities.append(overtop_vel_mps)
+                        #     self.flows.append(overtop_flow_cms)
 
-                            # Set discharge at dune gap
-                            Discharge[TS, start_row, start:stop + 1] = overtop_flow  # (dam^3/hr)
-                        for l in range(self._length):
-                            if FR_array[TS, start_row, l] == 0:
-                                Discharge[TS, start_row, l] = 0
+                        # Set discharge at dune gap
+                        Discharge, self.velocities, self.flows = initialize_flow_routing(
+                            flow_rows,
+                            flow_cols,
+                            TS,
+                            Elevation,
+                            bayhigh,
+                            Discharge,
+                            Dow,
+                            int_width
+                        )
+
+
+                        #     Discharge[TS, start_row, start:stop + 1] = overtop_flow  # (dam^3/hr)
+                        # for l in range(self._length):
+                        #     if FR_array[TS, start_row, l] == 0:
+                        #         Discharge[TS, start_row, l] = 0
 
                         # begin flow routing algorithm
-                        for d in range(start_row, width):
+                        for d in range(width):
                             Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
                             # Loop through each col of the specified row
                             for i in range(self._length):
