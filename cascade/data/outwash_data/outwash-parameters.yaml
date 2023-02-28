@@ -13,7 +13,7 @@ Dshrub: 2.75
 Dstart: 0.5
 DuneParamStart: true
 DuneRestart: 0.075
-DuneWidth: 20.0
+DuneWidth: 30.0
 Female: 0.5
 GermRate: 0.6
 GrowthParamStart: false
@@ -45,15 +45,15 @@ Shrub_ON: 0
 SprayDist: 170
 StormSeries: []
 StormStart: 2
-TMAX: 65
+TMAX: 200
 TideAmp: 1.2
 TimeFruit: 5.0
 UprootLimit: -0.2
 beta: 0.04
 disp_mu: -0.721891
 disp_sigma: 1.5
-dune_file: barrier3d-default-dunes.npy
-elevation_file: barrier3d-default-elevation.npy
+dune_file: NCB-default-dunes.npy
+elevation_file: NCB-default-elevation.npy
 growth_param_file: barrier3d-default-growthparam.npy
 k_sf: 19324.753176079226
 mm: 2.0
@@ -61,5 +61,5 @@ nn: 0.5
 rmax: 0.65
 rmin: 0.25
 s_sf_eq: 0.01698590034494604
-storm_file: barrier3d-default-storms.npy
+storm_file: cascade-default-storms.npy
 threshold_in: 0.25
