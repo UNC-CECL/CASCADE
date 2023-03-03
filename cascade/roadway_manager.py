@@ -177,7 +177,8 @@ def rebuild_dunes(
 
     From Valasquez et al., (2020), the average elevation of the road along NC-12 is 1.3 m (NAVD88); they find that in
     order for the road to not be vulnerable to overwash, the dune crest must be higher than 4.3 m (NAVD88), so here the
-    default max_dune_height is 3 m. Note that dune height in Barrier3D is measured as the height above the dune toe.
+    default max_dune_height is 3 m. Note that dune height in Barrier3D is measured as the height above the dune toe
+    (berm elevation).
 
     Parameters
     ----------
@@ -665,7 +666,8 @@ class RoadwayManager:
         self._dune_design_elevation = max(
             self._dune_design_elevation, (barrier3d.BermEl * 10) + 1.0
         )
-        # note, Barrier3D adds a proto dune starter, so we need to overcome this (chose 30 over 20 cm)
+        # note, Barrier3D adds a random seeded height for the proto/new dune line (20 cm); here we allow the user to
+        # specify
         self._dune_minimum_elevation = max(
             self._dune_minimum_elevation,
             (barrier3d.BermEl * 10) + self._absolute_minimum_dune_height,
