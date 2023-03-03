@@ -2,6 +2,7 @@ import numpy as np
 import math
 import copy
 from matplotlib import pyplot as plt
+from collections import Counter
 
 from .beach_dune_manager import shoreface_nourishment
 
@@ -18,41 +19,6 @@ def bay_converter(storms, substep):
         for a in range(num_new_vals):
             new_ss.append(storms[s])
     return new_ss
-
-
-# def DuneGaps(DuneDomain, Dow, Rhigh):
-#     """Returns tuple of [gap start index, stop index, avg Rexcess of each gap,
-#     alpha: ratio of TWL / dune height]
-#     :param DuneDomain: numpy array with dune elevations [dam MHW]
-#     :param Dow: list of cell indices where outwash occurs
-#     :param Rhigh: current bay level [dam MHW]
-#     """
-#     gaps = []
-#     start = 0
-#     i = start
-#     while i < (len(Dow) - 1):
-#         adjacent = Dow[i + 1] - Dow[i]
-#         if adjacent == 1:
-#             i = i + 1
-#         else:
-#             stop = i
-#             x = DuneDomain[Dow[start]: (Dow[stop] + 1)]
-#             Hmean = sum(x) / float(len(x))
-#             Rexcess = Rhigh - Hmean
-#             # alpha = Rhigh / (Hmean + bermel)
-#             gaps.append([Dow[start], Dow[stop], Rexcess])
-#
-#             start = stop + 1
-#             i = start
-#
-#     stop = i
-#     x = DuneDomain[Dow[start]: (Dow[stop] + 1)]
-#     if len(x) > 0:
-#         Hmean = sum(x) / float(len(x))
-#         Rexcess = Rhigh - Hmean
-#         # alpha = Rhigh / (Hmean + bermel)
-#         gaps.append([Dow[start], Dow[stop], Rexcess])
-#     return gaps
 
 
 def calculate_slopes(
@@ -140,7 +106,6 @@ def calculate_slopes(
                 avg_slope_array[time_step, row, col] = (S1 + S2 + S3) / 3
 
     # adjusting for a block size that does not divide evenly into the domain
-    # start at the bay side dune line and move toward the bay
     b_size = block_size
     extra_vert_cells = int_width % b_size  # gives the extra row cells
     extra_lat_cells = length % b_size  # gives the extra column cells
@@ -159,7 +124,7 @@ def calculate_slopes(
     # start right before the dune line
     for v in range(n_shifts_vert):
         if v == 0:
-            bot_row = int_width - 1
+            bot_row = int_width - 1  # start at the bay side dune line and move toward the bay
             top_row = bot_row - b_size
         elif v == n_shifts_vert-1 and extra_vert_cells != 0:  # this is the last shift
             bot_row = top_row
@@ -183,39 +148,70 @@ def calculate_slopes(
     return truth_array, avg_slope_array, s1_vals, s2_vals, s3_vals
 
 
+def dune_bay_comparison(dune_flow_type, dune_domain, elev_array, time_step, int_width):
+    # determine how we will initiate flow routing with the dunes
+    # we will either compare the bay level to the highest dune line or the first dune line
+    if dune_flow_type.lower() == "full":
+        # find the highest elevation dune row to determine if the bay level is high enough for outwash
+        max_dunes_indeces = np.argmax(dune_domain, axis=0)  # returns the max row index for each column
+        max_dunes_index = Counter(max_dunes_indeces).most_common(1)[0][0]  # returns most frequent max row
+        max_dunes_row = int_width + max_dunes_index  # tells you the row with respect to the whole domain
+        max_dune_elevs = elev_array[time_step, max_dunes_row, :]  # gives you the elevation of that row
+    else:
+        # use the first row of the dune gaps
+        max_dune_elevs = elev_array[time_step, int_width, :]
+
+    return max_dune_elevs
+
+
+def dune_flow_routing_gaps(dune_flow_type, n_dunes, elev_array, time_step, int_width, FR_array, bayhigh):
+    if dune_flow_type.lower() == "full":
+        for dune in range(n_dunes):
+            dune_gap_row = elev_array[time_step, int_width + dune, :]
+            Dow = [index for index, value in enumerate(dune_gap_row) if
+                   value < bayhigh]  # bayhigh used to be Rhigh
+            # assign the dune gaps to the flow routing array
+            for val in Dow:
+                FR_array[time_step, int_width + dune, val] = 1
+
+        # identify which row we start comparing dune gaps to downhill slopes within the domain
+        start_row_connectivity = int_width + n_dunes - 2
+        # if the interior is 150 m it extends from row 0 to 149, and row 150 is the first dune row
+        # if we add the number of dunes, for example 3 rows of dunes, we are saying the start row is 153, which is
+        # none row past the end of the dune line so we need to subtract 1 to get to oceanside dunes (152), BUT
+        # we base the rest of the flow routing connectivity to that row, so we start flow routing connectivity one row
+        # before that at row 151
+    else:
+        dune_gap_row = elev_array[time_step, int_width, :]
+        Dow = [index for index, value in enumerate(dune_gap_row) if
+               value < bayhigh]  # bayhigh used to be Rhigh
+        # assign the dune gaps to the flow routing array
+        for val in Dow:
+            FR_array[time_step, int_width, val] = 1
+
+        # when looking at the first dune line, we will always start one row in front of the dune line
+        start_row_connectivity = int_width - 1
+
+    return FR_array, start_row_connectivity
+
+
 def flow_routing_corrections(truth_array, width, length, time_step, elevation, bayhigh):
     """
     Removes the disconnected downhill cells from the flow routing slopes array.
     :param truth_array: array of 1s and 0s differentiating uphill and downhill slopes
-    :param width: cross-shore interior width
+    :param width: the first row that we compare to a sample row
     :param length: alongshore barrier length
     :param time_step: current time step of the storm
     :return: new_truth_array
     """
-    start_row = width - 1
+    start_row = width
     fr_col_array = []
     fr_row_array = []
 
-    # for w in range(start_row, -1, -1):
-    #     for l in range(length):
-    #         if truth_array[time_step, w+1, l] == 0:
-    #             truth_array[time_step, w, l] = 0
     for w in range(start_row, -1, -1):
         for l in range(length):
             if truth_array[time_step, w+1, l] == 0 or elevation[time_step, w, l] > bayhigh:
                 truth_array[time_step, w, l] = 0
-
-    # for w in range(row, -1, -1):
-    #     downhill_cols = np.nonzero(truth_array[time_step, row])
-    #     if np.size(downhill_cols) > 0:
-    #         counter += 1
-    #         for cell_index in downhill_cols:
-    #             if cell_index not in dune_gaps:
-    #                 truth_array[time_step, row, cell_index] = 0
-    #     else:
-    #         # check = 1
-    #         start_row = width - counter
-        # row = row - 1
 
     # now that we have our domain, we are going to find the first flow routing row in each column
     for l in range(length):
@@ -226,74 +222,16 @@ def flow_routing_corrections(truth_array, width, length, time_step, elevation, b
             fr_row_array.append(fr_row)
             fr_col_array.append(fr_col)
 
-
-    # row = width-1
-    # check = 0
-    # while check == 0:
-    #     for w in range(width-1, -1, -1):
-    #         if np.array_equal(truth_array[time_step, w, :], np.ones(length)) == True:
-    #             row = row - 1
-    #         else:
-    #             check = 1
-    #
-    # for w in range(row, -1, -1):
-    #     for l in range(length):
-    #         # possibly change this to look at all 3 cells
-    #         if truth_array[time_step, w+1, l] == 0:
-    #             truth_array[time_step, w, l] = 0
-
-    # counter = 0
-    # while counter == 0 and row >= 0:
-    #     if max(truth_array[time_step, row, :]) > 0 and max(truth_array[time_step, row + 1, :]) > 0:
-    #         row = row - 1
-    #     else:
-    #         counter = 1
-    # start_row = row + 1
-
     return truth_array, fr_row_array, fr_col_array
 
 
-def initialize_flow_routing(fr_rows, fr_cols, timestep, elevation, bayhigh, discharge_array, dow, intwidth):
+def initialize_flow_routing(fr_rows, fr_cols, timestep, elevation, bayhigh, discharge_array):
     start = 0
     i = start
 
     velocities = []
     flows = []
 
-    # while i < (len(dow) - 1):
-    #     adjacent = dow[i + 1] - dow[i]
-    #     if adjacent == 1:
-    #         i = i + 1
-    #     else:
-    #         stop = i
-    #         x = elevation[timestep, intwidth, dow[start]: (dow[stop] + 1)]
-    #         Hmean = sum(x) / float(len(x))
-    #         Rexcess = bayhigh - Hmean
-    #         overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
-    #         overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
-    #         discharge_array[timestep, fr_rows[i], fr_cols[start]:(fr_cols[stop] + 1)] = overtop_flow  # (dam^3/hr)
-    #         overtop_vel_mps = overtop_vel * 10  # m/s
-    #         overtop_flow_cms = overtop_flow / 3600 * 1000  # (m^3/s)
-    #         velocities.append(overtop_vel_mps)
-    #         flows.append(overtop_flow_cms)
-    #
-    #         start = stop + 1
-    #         i = start
-    #
-    # # for the last item in the domain
-    # stop = i
-    # x = elevation[timestep, intwidth, dow[start]: (dow[stop] + 1)]
-    # if len(x) > 0:
-    #     Hmean = sum(x) / float(len(x))
-    #     Rexcess = bayhigh - Hmean
-    #     overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
-    #     overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
-    #     discharge_array[timestep, fr_rows[i], fr_cols[start]:(fr_cols[stop] + 1)] = overtop_flow  # (dam^3/hr)
-    #
-    #     overtop_vel_mps = overtop_vel * 10  # m/s
-    #     overtop_flow_cms = overtop_flow / 3600 * 1000  # (m^3/s)
-    #     velocities.append(overtop_vel_mps)
-    #     flows.append(overtop_flow_cms)
 
     while i < (len(fr_cols) - 1):
         adjacent = fr_cols[i + 1] - fr_cols[i]
@@ -487,7 +425,7 @@ class Outwasher:
     def __init__(
             self,
             datadir,
-            outwash_storms,
+            outwash_storms_file,
             time_step_count,
             berm_elev,
             barrier_length,
@@ -497,7 +435,9 @@ class Outwasher:
             dune_domain,
             substep=20,
             sediment_flux_coefficient_Ki=7.5E-3,  # b3d = 7.5E-6 for inundation
-            percent_washout_to_shoreface=100
+            percent_washout_to_shoreface=100,
+            outwash_beach_file=None,
+            dune_flow_dynamics="full",
     ):
 
         # initial variables
@@ -511,20 +451,18 @@ class Outwasher:
         self._cx = 10
         self._sea_level = sea_level  # equal to 0 dam
         self._bay_depth = -bay_depth  # [dam MHW] Depth of bay behind island segment, currently set to 0.3
-        self._Si = (np.mean(interior_domain[-10, :]) - np.mean(interior_domain[0, :])) / len(interior_domain)
-        # avg_slope = b3d._BermEl / 20    # how it is defined in barrier 3D which is much smaller than when
-        # you calculate the slope using the avg of the first and last rows
+        self._dune_flow_dynamics = dune_flow_dynamics
+
         # setting up dune domain using b3d
         self._dune_domain = dune_domain
         self._dune_crest = self._dune_domain.max(axis=1)  # dune_crest used to be DuneDomainCrest
         # initializing our barrier interior
-        # int_domain = np.flip(interior_domain)
-        # initializing our barrier interior
         self._interior_domain = interior_domain
         # loading the bay levels for each time step
-        self._outwash_storms = np.load(datadir + outwash_storms, allow_pickle=True)
+        self._outwash_storms = np.load(datadir + outwash_storms_file, allow_pickle=True)
         self._final_bay_levels = []
         self._time_index = 0
+        self._outwash_beach = np.load(datadir + outwash_beach_file, allow_pickle=True)
 
         # post-storm (overwash) variables, before outwash modifications
         self._post_b3d_interior_domain = [None] * time_step_count
@@ -589,38 +527,45 @@ class Outwasher:
                     storm_series = np.asarray(updated_bay_levels)
                 dur = len(storm_series)  # [hr] duration of the storm
 
-                # merge the interior domain, dunes, and create a beach --------------------------------------------------
-                # we added a beach (and "beachface") to the domain with a width of 7 dam based on general beach widths
-                beach_domain = np.ones([7, self._length]) * self._beach_elev  # [dam MHW] 7 rows
-                beachface_domain = np.zeros([6, self._length])
-                # we give the beach slope to be 0.004 m = 0.0004 dam
-                m_beach = 0.0004
-                # we want the beach to have a slope, but keep the first few rows the berm elevation
-                for b in range(len(beach_domain)):
-                    if b >= 3:
-                        beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
-                self._m_beachface = beach_domain[-1, 0] / len(beachface_domain)  # positive (downhill)
-                for s in range(len(beachface_domain)):
-                    # the first row of the beach face depends on the last row of the beach
-                    if s == 0:
-                        beachface_domain[s, :] = beach_domain[-1, 0] - self._m_beachface  # slope of beachface
-                    else:
-                        beachface_domain[s, :] = beachface_domain[s - 1, :] - self._m_beachface
+                # merge the interior domain, dunes, and create a beach -------------------------------------------------
+                if self._outwash_beach is None:
+                    # we added a beach (and "beachface") to the domain with a width of 7 dam based on general beach widths
+                    beach_domain = np.ones([7, self._length]) * self._beach_elev  # [dam MHW] 7 rows
+                    beachface_domain = np.zeros([6, self._length])
+                    # we give the beach slope to be 0.004 m = 0.0004 dam
+                    m_beach = 0.0004
+                    # we want the beach to have a slope, but keep the first few rows the berm elevation
+                    for b in range(len(beach_domain)):
+                        if b >= 3:
+                            beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
+                    self._m_beachface = beach_domain[-1, 0] / len(beachface_domain)  # positive (downhill)
+                    for s in range(len(beachface_domain)):
+                        # the first row of the beach face depends on the last row of the beach
+                        if s == 0:
+                            beachface_domain[s, :] = beach_domain[-1, 0] - self._m_beachface  # slope of beachface
+                        else:
+                            beachface_domain[s, :] = beachface_domain[s - 1, :] - self._m_beachface
+                else:
+                    beach_domain = self._outwash_beach
+                    m_beach = np.mean(beach_domain[0, 0] - beach_domain[-1, 0]) / len(beach_domain)
 
                 # the dune domain is being taken from B3D, but is a set of tuples, so it needs to be transposed
                 dune_domain_full = np.flip(np.transpose(self._dune_domain) + self._berm_el)
+                n_dune_rows = np.shape(dune_domain_full)[0]
                 self._full_dunes = copy.deepcopy(dune_domain_full)
+
                 # the full domain of outwasher starts with the interior domain, then the dune, beach, and beachface
                 self._interior_domain = np.flip(self._interior_domain)
                 full_domain = np.append(self._interior_domain, dune_domain_full, 0)  # [dam MHW]
                 full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
-                full_domain = np.append(full_domain, beachface_domain, 0)
+                if self._outwash_beach is None:
+                    full_domain = np.append(full_domain, beachface_domain, 0)
                 self._initial_full_domain = copy.deepcopy(full_domain)
 
                 # flow routing --------------------------------------------------
                 # initialize domain variables
                 int_width = np.shape(self._interior_domain)[0]
-                front_Si = (self._berm_el - np.mean(full_domain[-1, :])) / len(full_domain[int_width+2:-1])  # slope of the back barrier
+
                 width = np.shape(full_domain)[0]  # width is the number of rows in the full domain
                 duration = dur  # we already multiplied dur by the substep above
                 Elevation = np.zeros([duration, width, self._length])
@@ -679,74 +624,59 @@ class Outwasher:
                         block_size=5
                     )
 
-                    # determine the initial discharge (for each TS, a start row, and all cols) location and flow value
+                    # get the hydrograph for this time step
                     bayhigh = storm_series[TS]  # [dam]
-                    dune_elevs = Elevation[TS, int_width, :]
-                    if bayhigh <= min(dune_elevs):
+
+                    # determine how we will initiate flow routing with the dunes
+                    # we will either compare the bay level to the highest dune line or the first dune line
+                    max_dune_elevs = dune_bay_comparison(
+                        dune_flow_type=self._dune_flow_dynamics,
+                        dune_domain=dune_domain_full,
+                        elev_array=Elevation,
+                        time_step=TS,
+                        int_width=int_width)
+
+
+                    # determine if the bay level is high enough to overtop the dune gaps
+                    if bayhigh <= min(max_dune_elevs):
                         Discharge[TS, :, :] = 0
                     else:
                         self._OW_TS.append(TS)
-                        # find overwashed cells
-                        Dow = [index for index, value in enumerate(dune_elevs) if
-                               value < bayhigh]  # bayhigh used to be Rhigh
 
-                        # remove any isolated pockets of downhill slopes
-                        # MAKE IF STATEMENT FOR HAVING VALS OTHER THAN 0
-                        # if len(Dow) > 0:
-                        for val in Dow:
-                            FR_array[TS, int_width, val] = 1
+                        # initialize the flow routing array based on all the dunes or just the first row
+                        FR_array, start_row = dune_flow_routing_gaps(
+                            dune_flow_type=self._dune_flow_dynamics,
+                            n_dunes=n_dune_rows,
+                            elev_array=Elevation,
+                            time_step=TS,
+                            int_width=int_width,
+                            FR_array=FR_array,
+                            bayhigh=bayhigh)
 
-                        if TS == 0 or TS == 100:
-                            fig2 = plt.figure()
-                            ax2 = fig2.add_subplot(111)
-                            mat = ax2.matshow(
-                                FR_array[TS, 0:int_width+1, :],
-                                cmap="binary",
-                                # vmin=-3.0, vmax=3.0,
-                            )
-                            # cbar = fig2.colorbar(mat)
-                            # cbar.set_label('m MHW', rotation=270, labelpad=15)
-                            ax2.set_title("Averaged blocks of slopes")
-                            ax2.set_ylabel("barrier width (dam)")
-                            ax2.set_xlabel("barrier length (dam)")
-                            ax2.text(2, 7, 'black = downhill \n white = uphill',
-                                     bbox={'facecolor': 'white', 'pad': 1, 'edgecolor': 'none'})
-                            plt.gca().xaxis.tick_bottom()
 
-                        FR_array, flow_rows, flow_cols = flow_routing_corrections(FR_array, int_width, self._length, TS, Elevation, bayhigh)
-                        # gap_row = start_row
+                        # if TS == 0 or TS == 100:
+                        #     fig2 = plt.figure()
+                        #     ax2 = fig2.add_subplot(111)
+                        #     mat = ax2.matshow(
+                        #         FR_array[TS, 0:int_width+n_dune_rows-1, :],
+                        #         cmap="binary",
+                        #         # vmin=-3.0, vmax=3.0,
+                        #     )
+                        #     # cbar = fig2.colorbar(mat)
+                        #     # cbar.set_label('m MHW', rotation=270, labelpad=15)
+                        #     ax2.set_title("Averaged blocks of slopes")
+                        #     ax2.set_ylabel("barrier width (dam)")
+                        #     ax2.set_xlabel("barrier length (dam)")
+                        #     ax2.text(2, 7, 'black = downhill \n white = uphill',
+                        #              bbox={'facecolor': 'white', 'pad': 1, 'edgecolor': 'none'})
+                        #     plt.gca().xaxis.tick_bottom()
 
-                        if TS == 0 or TS == 100:
-                            fig3 = plt.figure()
-                            ax3 = fig3.add_subplot(111)
-                            mat = ax3.matshow(
-                                FR_array[TS, 0:int_width+1, :],
-                                cmap="binary",
-                                # vmin=-3.0, vmax=3.0,
-                            )
-                            # cbar = fig3.colorbar(mat)
-                            # cbar.set_label('m MHW', rotation=270, labelpad=15)
-                            ax3.set_title("Refined blocks of slopes")
-                            ax3.set_ylabel("barrier width (dam)")
-                            ax3.set_xlabel("barrier length (dam)")
-                            ax3.text(2, 7, 'black = downhill \n white = uphill',
-                                     bbox={'facecolor': 'white', 'pad': 1, 'edgecolor': 'none'})
-                            plt.gca().xaxis.tick_bottom()
+                        # connect the dune gaps to the areas of downhill flow
+                        # start at the dune line closest to the ocean
+                        FR_array, flow_rows, flow_cols = flow_routing_corrections(
+                            FR_array, start_row, self._length, TS, Elevation, bayhigh)
 
-                        # gaps = DuneGaps(gap_row, Dow, bayhigh)
                         max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
-
-                        # for q in range(len(gaps)):
-                        #     start = gaps[q][0]
-                        #     stop = gaps[q][1]
-                        #     Rexcess = gaps[q][2]  # (dam)
-                        #     # Calculate discharge through each dune cell
-                        #     overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
-                        #     overtop_vel_mps = overtop_vel*10  # m/s
-                        #     overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
-                        #     overtop_flow_cms = overtop_flow / 3600 * 1000  # (m^3/s)
-                        #     self.velocities.append(overtop_vel_mps)
-                        #     self.flows.append(overtop_flow_cms)
 
                         # Set discharge at dune gap
                         Discharge, self.velocities, self.flows = initialize_flow_routing(
@@ -756,18 +686,12 @@ class Outwasher:
                             Elevation,
                             bayhigh,
                             Discharge,
-                            Dow,
-                            int_width
                         )
 
-
-                        #     Discharge[TS, start_row, start:stop + 1] = overtop_flow  # (dam^3/hr)
-                        # for l in range(self._length):
-                        #     if FR_array[TS, start_row, l] == 0:
-                        #         Discharge[TS, start_row, l] = 0
-
                         # begin flow routing algorithm
-                        for d in range(width):
+                        # this should be min of the flow_rows
+                        start_flow_route = min(flow_rows)
+                        for d in range(start_flow_route, width):
                             Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
                             # Loop through each col of the specified row
                             for i in range(self._length):
@@ -801,7 +725,7 @@ class Outwasher:
                                     if d < int_width:
                                         C = 0
                                     else:
-                                        C = self._cx * abs(front_Si[0])
+                                        C = self._cx * m_beach
 
                                     # bottom left cell
                                     if Q1 > q_min:
@@ -880,8 +804,8 @@ class Outwasher:
                 # domain variables we want to save
                 self._full_domain = Elevation[-1]
                 post_outwash_interior_domain = Elevation[-1, 0:int_width, :]
-                post_outwash_dune_domain = Elevation[-1, int_width:int_width+2, :] - self._berm_el
-                post_outwash_beach_domain = Elevation[-1, int_width+2:-1, :]
+                post_outwash_dune_domain = Elevation[-1, int_width:int_width+n_dune_rows, :] - self._berm_el
+                post_outwash_beach_domain = Elevation[-1, int_width+n_dune_rows:-1, :]
                 self._post_outwash_beach_domain[self._time_index - 1] = post_outwash_beach_domain
 
                 new_ave_interior_height = np.average(
@@ -924,7 +848,7 @@ class Outwasher:
                 # other class variables that we want to save
                 self._final_bay_levels = storm_series
                 self._discharge[self._time_index - 1] = Discharge
-                # self._flow_routing_slopes_array[self._time_index - 1] = FR_slopes_array
+                # self._flow_routing_slopes_array[self._time_index - 1] = FR_s
                 self._flow_routing_cellular_array[self._time_index - 1] = FR_array
                 self._elevation_change[self._time_index - 1] = ElevationChange
 
