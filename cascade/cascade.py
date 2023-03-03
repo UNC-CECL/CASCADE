@@ -507,6 +507,10 @@ class Cascade:
     def community_break(self):
         return self._community_break
 
+    @property
+    def time_step_count(self):
+        return self._nt
+
     ###############################################################################
     # time loop
     ###############################################################################
