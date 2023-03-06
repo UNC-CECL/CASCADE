@@ -156,6 +156,7 @@ class Cascade:
         outwash_beach_file="NCB-default_beach.npy",
         percent_washout_to_shoreface=100,
         dune_flow_dynamics="full",
+        outwasher_substep=20,
     ):
         """
 
@@ -457,7 +458,8 @@ class Cascade:
                           dune_domain=self._barrier3d[iB3D].DuneDomain[self._barrier3d[iB3D].time_index - 1, :, :],
                           percent_washout_to_shoreface=percent_washout_to_shoreface,
                           outwash_beach_file=outwash_beach_file,
-                          dune_flow_dynamics=dune_flow_dynamics)
+                          dune_flow_dynamics=dune_flow_dynamics,
+                          substep=outwasher_substep)
             )
 
     @property
