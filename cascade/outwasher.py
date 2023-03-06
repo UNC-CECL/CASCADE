@@ -591,24 +591,6 @@ class Outwasher:
                         Elevation[TS, :, :] = Elevation[TS - 1, :, :]  # initial elevation is same as previous TS domain
                     print("Outwasher Time Step: ", TS)
 
-                    if TS == 0:
-                        plt.rcParams['figure.figsize'] = (8, 6)
-                        plt.rcParams.update({"font.size": 15})
-                        fig1 = plt.figure()
-                        ax1 = fig1.add_subplot(111)
-                        mat = ax1.matshow(
-                            Elevation[TS] * 10,
-                            cmap="terrain",
-                            vmin=-3.0, vmax=3.0,
-                        )
-                        cbar = fig1.colorbar(mat)
-                        cbar.set_label('m MHW', rotation=270, labelpad=15)
-                        ax1.set_title("Initial Elevation")
-                        ax1.set_ylabel("barrier width (dam)")
-                        ax1.set_xlabel("barrier length (dam)")
-                        plt.gca().xaxis.tick_bottom()
-
-
                     # need to calculate grouped averaged slopes over the domain
                     FR_array, avg_slope_array, s1_array, s2_array, s3_array = calculate_slopes(
                         truth_array,
@@ -653,26 +635,7 @@ class Outwasher:
                             FR_array=FR_array,
                             bayhigh=bayhigh)
 
-
-                        # if TS == 0 or TS == 100:
-                        #     fig2 = plt.figure()
-                        #     ax2 = fig2.add_subplot(111)
-                        #     mat = ax2.matshow(
-                        #         FR_array[TS, 0:int_width+n_dune_rows-1, :],
-                        #         cmap="binary",
-                        #         # vmin=-3.0, vmax=3.0,
-                        #     )
-                        #     # cbar = fig2.colorbar(mat)
-                        #     # cbar.set_label('m MHW', rotation=270, labelpad=15)
-                        #     ax2.set_title("Averaged blocks of slopes")
-                        #     ax2.set_ylabel("barrier width (dam)")
-                        #     ax2.set_xlabel("barrier length (dam)")
-                        #     ax2.text(2, 7, 'black = downhill \n white = uphill',
-                        #              bbox={'facecolor': 'white', 'pad': 1, 'edgecolor': 'none'})
-                        #     plt.gca().xaxis.tick_bottom()
-
-                        # connect the dune gaps to the areas of downhill flow
-                        # start at the dune line closest to the ocean
+                        # remove any downhill cells that are unconnected to the dune gaps
                         FR_array, flow_rows, flow_cols = flow_routing_corrections(
                             FR_array, start_row, self._length, TS, Elevation, bayhigh)
 
