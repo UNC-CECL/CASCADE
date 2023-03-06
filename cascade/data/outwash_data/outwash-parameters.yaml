@@ -13,7 +13,7 @@ Dshrub: 2.75
 Dstart: 0.5
 DuneParamStart: true
 DuneRestart: 0.075
-DuneWidth: 30.0
+DuneWidth: 20.0
 Female: 0.5
 GermRate: 0.6
 GrowthParamStart: false
@@ -21,7 +21,7 @@ HdDiffu: 0.75
 Ki: 7.5e-06
 Kr: 7.5e-05
 LShoreface: 524.3969226015213
-MHW: 0.46
+MHW: 0.36
 MaxShrubHeight: 5.3
 MaxUpSlope: 0.25
 OWss_i: 2
@@ -45,7 +45,7 @@ Shrub_ON: 0
 SprayDist: 170
 StormSeries: []
 StormStart: 2
-TMAX: 200
+TMAX: 11
 TideAmp: 1.2
 TimeFruit: 5.0
 UprootLimit: -0.2
