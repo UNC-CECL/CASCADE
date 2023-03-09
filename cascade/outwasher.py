@@ -147,6 +147,50 @@ def calculate_slopes(
 
     return truth_array, avg_slope_array, s1_vals, s2_vals, s3_vals
 
+def initialize_FR_array(block_size, int_width, length, time_step, elev, bay, truth_array):
+    # adjusting for a block size that does not divide evenly into the domain
+    b_size = block_size
+    extra_vert_cells = int_width % b_size  # gives the extra row cells
+    extra_lat_cells = length % b_size  # gives the extra column cells
+
+    # calculating how many times we will shift the block to calculate blocks of average slopes
+    if extra_vert_cells == 0:
+        n_shifts_vert = int(int_width / b_size)
+    else:
+        n_shifts_vert = int((int_width - extra_vert_cells) / b_size) + 1
+    if extra_lat_cells == 0:
+        n_shifts_lat = int(length / b_size)
+    else:
+        n_shifts_lat = int((length - extra_lat_cells) / b_size) + 1
+
+    # using avg elevation compared to the bay high
+    # Shift through the entire column and then move block up to the next row
+    # start right before the dune line
+    for v in range(n_shifts_vert):
+        if v == 0:
+            bot_row = int_width - 1  # start at the bay side dune line and move toward the bay
+            top_row = bot_row - b_size
+        elif v == n_shifts_vert - 1 and extra_vert_cells != 0:  # this is the last shift
+            bot_row = top_row
+            top_row = bot_row - extra_vert_cells
+        else:
+            bot_row = top_row
+            top_row = bot_row - b_size
+        for l in range(n_shifts_lat):
+            if l == n_shifts_lat - 1 and extra_lat_cells != 0:
+                start_col = end_col
+                end_col = start_col + extra_lat_cells + 1
+            else:
+                start_col = l * b_size
+                end_col = l * b_size + b_size
+            S = np.mean(elev[time_step, (top_row + 1):(bot_row + 1), start_col:end_col])
+            if S < bay:
+                truth_array[time_step, (top_row + 1):(bot_row + 1), start_col:end_col] = 1
+            else:
+                truth_array[time_step, (top_row + 1):(bot_row + 1), start_col:end_col] = 0
+
+    return truth_array
+
 
 def dune_bay_comparison(dune_flow_type, dune_domain, elev_array, time_step, int_width):
     # determine how we will initiate flow routing with the dunes
@@ -161,7 +205,7 @@ def dune_bay_comparison(dune_flow_type, dune_domain, elev_array, time_step, int_
         # use the first row of the dune gaps
         max_dune_elevs = elev_array[time_step, int_width, :]
 
-    return max_dune_elevs
+    return max_dune_elevs, max_dunes_row
 
 
 def dune_flow_routing_gaps(dune_flow_type, n_dunes, elev_array, time_step, int_width, FR_array, bayhigh):
@@ -174,11 +218,11 @@ def dune_flow_routing_gaps(dune_flow_type, n_dunes, elev_array, time_step, int_w
             for val in Dow:
                 FR_array[time_step, int_width + dune, val] = 1
 
-        # identify which row we start comparing dune gaps to downhill slopes within the domain
+        # we want to use the dune row closest to the ocean as the reference row, so start checking one row before that
         start_row_connectivity = int_width + n_dunes - 2
         # if the interior is 150 m it extends from row 0 to 149, and row 150 is the first dune row
         # if we add the number of dunes, for example 3 rows of dunes, we are saying the start row is 153, which is
-        # none row past the end of the dune line so we need to subtract 1 to get to oceanside dunes (152), BUT
+        # one row past the end of the dune line so we need to subtract 1 to get to oceanside dunes (152), BUT
         # we base the rest of the flow routing connectivity to that row, so we start flow routing connectivity one row
         # before that at row 151
     else:
@@ -192,10 +236,10 @@ def dune_flow_routing_gaps(dune_flow_type, n_dunes, elev_array, time_step, int_w
         # when looking at the first dune line, we will always start one row in front of the dune line
         start_row_connectivity = int_width - 1
 
-    return FR_array, start_row_connectivity
+    return FR_array, start_row_connectivity, Dow
 
 
-def flow_routing_corrections(truth_array, width, length, time_step, elevation, bayhigh):
+def flow_routing_corrections(truth_array, width, length, time_step, elevation, bayhigh, pre_FR_array):
     """
     Removes the disconnected downhill cells from the flow routing slopes array.
     :param truth_array: array of 1s and 0s differentiating uphill and downhill slopes
@@ -205,13 +249,59 @@ def flow_routing_corrections(truth_array, width, length, time_step, elevation, b
     :return: new_truth_array
     """
     start_row = width
+    pre_FR_array[time_step] = copy.deepcopy(truth_array[time_step])
     fr_col_array = []
     fr_row_array = []
 
+    # for w in range(start_row, -1, -1):
+    #     for l in range(length):
+    #         if truth_array[time_step, w+1, l] == 0 or elevation[time_step, w, l] > bayhigh:
+    #             truth_array[time_step, w, l] = 0
+
     for w in range(start_row, -1, -1):
-        for l in range(length):
-            if truth_array[time_step, w+1, l] == 0 or elevation[time_step, w, l] > bayhigh:
-                truth_array[time_step, w, l] = 0
+        index_list = []
+        ones = np.argwhere(truth_array[time_step, w])
+        for i in range(len(ones)):
+            if elevation[time_step, w, ones[i][0]] < bayhigh:
+                index_list.append(ones[i][0])
+            else:
+                truth_array[time_step, w, (ones[i][0])] = 0
+        if len(index_list) > 0:
+            index_list = np.asarray(index_list)
+            start = 0
+            l = start
+
+            while l < len(index_list)-1:
+                adjacent = index_list[l + 1] - index_list[l]
+                if adjacent == 1:
+                    l = l + 1
+                else:
+                    stop = l
+                    if np.any(truth_array[time_step, w + 1, index_list[start]:index_list[stop]+1] == 1):
+                        truth_array[time_step, w, index_list[start]:index_list[stop]+1] = 1
+                    else:
+                        truth_array[time_step, w, index_list[start]:index_list[stop]+1] = 0
+                    start = stop + 1
+                    l = start
+            # for the last item in the domain
+            stop = l
+            # start = stop + 1
+            if np.any(truth_array[time_step, w + 1, index_list[start]:index_list[stop]+1] == 1):
+                truth_array[time_step, w, index_list[start]:index_list[stop]+1] = 1
+            else:
+                truth_array[time_step, w, index_list[start]:index_list[stop]+1] = 0
+
+    # # lateral cells
+    # for w in range(start_row, -1, -1):
+    #     for l in range(length):
+    #         if elevation[time_step, w, l] > bayhigh:
+    #             truth_array[time_step, w, l] = 0
+    #         elif l == 0 and truth_array[time_step, w+1, l] == 0 and truth_array[time_step, w+1, l+1] == 0:
+    #             truth_array[time_step, w, l] = 0
+    #         elif l == length-1 and truth_array[time_step, w+1, l] == 0 and truth_array[time_step, w+1, l-1] == 0:
+    #             truth_array[time_step, w, l] = 0
+    #         elif truth_array[time_step, w+1, l-1] == 0 and truth_array[time_step, w+1, l] == 0 and truth_array[time_step, w+1, l+1] == 0:
+    #             truth_array[time_step, w, l] = 0
 
     # now that we have our domain, we are going to find the first flow routing row in each column
     for l in range(length):
@@ -222,17 +312,17 @@ def flow_routing_corrections(truth_array, width, length, time_step, elevation, b
             fr_row_array.append(fr_row)
             fr_col_array.append(fr_col)
 
-    return truth_array, fr_row_array, fr_col_array
+    return truth_array, fr_row_array, fr_col_array, pre_FR_array
 
 
-def initialize_flow_routing(fr_rows, fr_cols, timestep, elevation, bayhigh, discharge_array):
+def initialize_flow_routing(fr_rows, fr_cols, timestep, elevation, bayhigh, discharge_array, max_dunes, Dow):
     start = 0
     i = start
 
     velocities = []
     flows = []
 
-
+    # using starting cell elevations
     while i < (len(fr_cols) - 1):
         adjacent = fr_cols[i + 1] - fr_cols[i]
         if adjacent == 1 and fr_rows[i] == fr_rows[i+1]:
@@ -266,6 +356,41 @@ def initialize_flow_routing(fr_rows, fr_cols, timestep, elevation, bayhigh, disc
         overtop_flow_cms = overtop_flow / 3600 * 1000  # (m^3/s)
         velocities.append(overtop_vel_mps)
         flows.append(overtop_flow_cms)
+
+    # # using dune gap elevations
+    # while i < (len(Dow) - 1):
+    #     adjacent = Dow[i + 1] - Dow[i]
+    #     if adjacent == 1 and fr_rows[i] == fr_rows[i+1]:
+    #         i = i + 1
+    #     else:
+    #         stop = i
+    #         x = elevation[timestep, max_dunes[i], Dow[start]: (Dow[stop] + 1)]
+    #         Hmean = sum(x) / float(len(x))
+    #         Rexcess = bayhigh - Hmean
+    #         overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
+    #         overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
+    #         discharge_array[timestep, fr_rows[i], fr_cols[start]:(fr_cols[stop] + 1)] = overtop_flow  # (dam^3/hr)
+    #         overtop_vel_mps = overtop_vel * 10  # m/s
+    #         overtop_flow_cms = overtop_flow / 3600 * 1000  # (m^3/s)
+    #         velocities.append(overtop_vel_mps)
+    #         flows.append(overtop_flow_cms)
+    #
+    #         start = stop + 1
+    #         i = start
+    #
+    # # for the last item in the domain
+    # stop = i
+    # x = elevation[timestep, fr_rows[i], fr_cols[start]: (fr_cols[stop] + 1)]
+    # if len(x) > 0:
+    #     Hmean = sum(x) / float(len(x))
+    #     Rexcess = bayhigh - Hmean
+    #     overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
+    #     overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
+    #     discharge_array[timestep, fr_rows[i], fr_cols[start]:(fr_cols[stop] + 1)] = overtop_flow  # (dam^3/hr)
+    #     overtop_vel_mps = overtop_vel * 10  # m/s
+    #     overtop_flow_cms = overtop_flow / 3600 * 1000  # (m^3/s)
+    #     velocities.append(overtop_vel_mps)
+    #     flows.append(overtop_flow_cms)
 
     return discharge_array, velocities, flows
 
@@ -572,7 +697,7 @@ class Outwasher:
                 # elevation at the first time step is set to the full domain
                 Elevation[0, :, :] = full_domain
                 FR_array = []
-                ElevationChange = 0
+                # ElevationChange = 0
 
                 # initialize arrays for flow routing
                 Discharge = np.zeros([duration, width, self._length])
@@ -583,6 +708,8 @@ class Outwasher:
                 s1_array = np.zeros([duration, width, self._length])
                 s2_array = np.zeros([duration, width, self._length])
                 s3_array = np.zeros([duration, width, self._length])
+                elev_change_array = np.zeros([duration, width, self._length])
+                pre_FR_array = np.zeros([duration, width, self._length])
 
                 # route the flow
                 for TS in range(duration):
@@ -611,7 +738,7 @@ class Outwasher:
 
                     # determine how we will initiate flow routing with the dunes
                     # we will either compare the bay level to the highest dune line or the first dune line
-                    max_dune_elevs = dune_bay_comparison(
+                    max_dune_elevs, max_dunes_row = dune_bay_comparison(
                         dune_flow_type=self._dune_flow_dynamics,
                         dune_domain=dune_domain_full,
                         elev_array=Elevation,
@@ -625,8 +752,18 @@ class Outwasher:
                     else:
                         self._OW_TS.append(TS)
 
+                        # # use elevation and bay levels to intialize back barrier FR array
+                        # FR_array = initialize_FR_array(
+                        #     block_size=5,
+                        #     int_width=int_width,
+                        #     length=self._length,
+                        #     time_step=TS,
+                        #     elev=Elevation,
+                        #     bay=bayhigh,
+                        #     truth_array=FR_array)
+
                         # initialize the flow routing array based on all the dunes or just the first row
-                        FR_array, start_row = dune_flow_routing_gaps(
+                        FR_array, start_row, Dow = dune_flow_routing_gaps(
                             dune_flow_type=self._dune_flow_dynamics,
                             n_dunes=n_dune_rows,
                             elev_array=Elevation,
@@ -636,8 +773,15 @@ class Outwasher:
                             bayhigh=bayhigh)
 
                         # remove any downhill cells that are unconnected to the dune gaps
-                        FR_array, flow_rows, flow_cols = flow_routing_corrections(
-                            FR_array, start_row, self._length, TS, Elevation, bayhigh)
+                        FR_array, flow_rows, flow_cols, pre_FR_array = flow_routing_corrections(
+                            FR_array,
+                            start_row,
+                            self._length,
+                            TS,
+                            Elevation,
+                            bayhigh,
+                            pre_FR_array
+                        )
 
                         max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
 
@@ -649,6 +793,8 @@ class Outwasher:
                             Elevation,
                             bayhigh,
                             Discharge,
+                            max_dunes_row,
+                            Dow
                         )
 
                         # begin flow routing algorithm
@@ -744,6 +890,7 @@ class Outwasher:
                         # ### Update Elevation After Every Storm Hour
                         ElevationChange = (SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]) / self._substep
                         Elevation[TS, :, :] = Elevation[TS, :, :] + ElevationChange
+                        elev_change_array[TS] = ElevationChange
 
                         # Calculate and save volume of sediment leaving the island for every hour
                         qs_lost_total = qs_lost_total + sum(
@@ -813,7 +960,7 @@ class Outwasher:
                 self._discharge[self._time_index - 1] = Discharge
                 # self._flow_routing_slopes_array[self._time_index - 1] = FR_s
                 self._flow_routing_cellular_array[self._time_index - 1] = FR_array
-                self._elevation_change[self._time_index - 1] = ElevationChange
+                self._elevation_change[self._time_index - 1] = elev_change_array
 
 
 
