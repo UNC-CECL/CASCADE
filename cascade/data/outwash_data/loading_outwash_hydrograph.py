@@ -30,8 +30,12 @@ ax2.set_ylim(-1, 3)
 sound_levels = sound_levels[21:45]
 sound_levels[0] = 0
 plt.figure(3)
-plt.plot(sound_levels)
-
+x = range(len(sound_levels))
+plt.scatter(x, sound_levels*10, color="r")
+plt.plot(sound_levels*10)
+plt.xlabel("hours")
+plt.ylabel("m MHW")
+plt.title("Bay Hydrograph")
 
 num_years = 100
 num_storms = 10
