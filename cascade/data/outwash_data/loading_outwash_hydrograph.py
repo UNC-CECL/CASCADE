@@ -29,10 +29,31 @@ ax2.set_ylim(-1, 3)
 
 sound_levels = sound_levels[21:45]
 sound_levels[0] = 0
+
+
+freq_increase = 10
+# storms will be the sound data, so storm_series[1]
+new_ss = []
+num_new_vals = freq_increase - 1  # number of values we are adding between existing values
+for s in range(len(sound_levels) - 1):
+    new_ss.append(sound_levels[s])  # add the starting value back in
+    inc = (sound_levels[s + 1] - sound_levels[s]) / freq_increase  # increment for the substeps
+    for a in range(num_new_vals):
+        new_ss.append(sound_levels[s] + (a + 1) * inc)
+        # example, we want to do a substep of 3, so we are adding 2 new values
+        # if our original storm series is [0, 0.15], then the increment will be 0.05
+        # we will add 0 into the new storm series, then 0+1*0.05 = 0.05
+        # then 0+2*0.05 = 0.1
+        # the next iteration will start with 0.15, and that will be appended as well
+new_ss.append(sound_levels[-1])  # make sure to include our last value
+new_ss = np.asarray(new_ss)
+
+
+
 plt.figure(3)
-x = range(len(sound_levels))
-plt.scatter(x, sound_levels*10, color="r")
-plt.plot(sound_levels*10)
+x = range(len(new_ss))
+plt.scatter(x, new_ss*10, color="r")
+plt.plot(new_ss*10)
 plt.xlabel("hours")
 plt.ylabel("m MHW")
 plt.title("Bay Hydrograph")
@@ -43,8 +64,12 @@ outwash_storms = np.empty([num_storms, 2], dtype=object)
 
 interval = int(num_years/num_storms)
 
+year1 = np.zeros([1,2], dtype=object)
+year1[0, 0] = 1
+year1[0, 1] = new_ss
+
 for i in range(num_storms):
     outwash_storms[i, 0] = (i+1)*interval
-    outwash_storms[i, 1] = sound_levels
+    outwash_storms[i, 1] = new_ss
 
-# np.save(datadir+"outwash_storms.npy", outwash_storms)
+np.save(datadir+"outwash_storms_6min.npy", year1)
