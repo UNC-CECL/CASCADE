@@ -14,8 +14,8 @@ scipy~=1.5.4
 setuptools~=50.3.2
 distfit~=1.4.0
 joblib~=0.17.0
-brie~=0.1.0.dev0
-barrier3d~=0.1.0.dev0
+baked-brie~=1.0.1.dev0
+barrier3d~=2.0.2.dev0
 chom~=0.0.1.dev0
 plotly~=4.14.3
 
