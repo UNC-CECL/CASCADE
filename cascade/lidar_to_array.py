@@ -207,20 +207,45 @@ ax3.set_xlabel("barrier length (dam)")
 plt.gca().xaxis.tick_bottom()
 
 ## break up the domain
-section1_pre_int = pre[0:29]
-section1_pre_dunes = section1_pre[67:73]
-section1_pre_beach = section1_pre[73:78]
+section1_pre_int = pre[0:30]
+section1_pre_int[24:, 24:26] = 0.085
+section1_pre_int[28, 37] = 0.085
+section1_pre_int[29, 39] = 0.085
+section1_pre_dunes = pre[30:35]
+section1_pre_dunes = section1_pre_dunes[1:3]
+section1_pre_dunes[0:2, 24] = 0.085
+section1_pre_beach = pre[35:]
 section1_pre_beach2 = section1_pre[73:77]
 
+full = np.append(section1_pre_int, section1_pre_dunes, 0)
+full = np.append(full, section1_pre_beach, 0)
+
+fig2 = plt.figure()
+ax2 = fig2.add_subplot(111)
+mat = ax2.matshow(
+    full*10,
+    cmap="terrain",
+    vmin=-3.0,
+    vmax=6.0,
+)
+cbar = fig2.colorbar(mat)
+cbar.set_label('m MHW', rotation=270, labelpad=15)
+ax2.set_title("Pre-Storm Elevation")
+ax2.set_ylabel("barrier width (dam)")
+ax2.set_xlabel("barrier length (dam)")
+plt.gca().xaxis.tick_bottom()
+
 interior_b3d_input = np.flip(section1_pre_int)
-# np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-elevation", interior_b3d_input)
+# np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-elevation2", interior_b3d_input)
 
 # berm_el = np.mean(section1_pre_beach[0:2])
-#
+berm_el = 0.11
 # max_dunes = np.append(section1_pre_dunes[3, 0:24], section1_pre_dunes[1, 24:])
 # dunes_b3d = np.flip(max_dunes) - berm_el
-# np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-dunes", dunes_b3d)
+dunes_b3d = np.flip(section1_pre_dunes) - berm_el
+dunes_input = np.append(dunes_b3d[0], dunes_b3d[1], 0)
+np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-dunes2", dunes_input)
 #
 # # the beach should be loaded in with the ocean on the bottom
-# np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-beach2", section1_pre_beach2)
+# np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-beach2", section1_pre_beach)
 # beach_slope = np.mean(section1_pre_beach[0, :] - section1_pre_beach[-1, :])/len(section1_pre_beach)
