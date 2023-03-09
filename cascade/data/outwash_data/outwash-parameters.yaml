@@ -11,7 +11,10 @@ DShoreface: 8.9
 Dmaxel: 3.4
 Dshrub: 2.75
 Dstart: 0.5
-DuneParamStart: true
+# Dune crest heights will come from external file; copied for each sequential dune row
+DuneParamStart: True
+# if DuneParamStart = True, use dune crest heights to populate multiple dune rows with different crest heights
+DuneParamMultipleRows: True
 DuneRestart: 0.075
 DuneWidth: 20.0
 Female: 0.5
@@ -45,7 +48,7 @@ Shrub_ON: 0
 SprayDist: 170
 StormSeries: []
 StormStart: 2
-TMAX: 11
+TMAX: 2
 TideAmp: 1.2
 TimeFruit: 5.0
 UprootLimit: -0.2
