@@ -37,7 +37,7 @@ requires-python = ">=3.8"
 dependencies = [
 "numpy",
 "pyyaml",
-"brie",
+"baked-brie",
 "barrier3d",
 ]
 dynamic = ["readme", "version"]
