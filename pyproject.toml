@@ -1,6 +1,64 @@
 [build-system]
 requires = ["setuptools"]
 
+[project]
+name = "coastal-cascade"
+description="The CoAStal Community-lAnDscape Evolution (CASCADE) model"
+authors = [
+    {name = "Katherine Anarde"},
+    {email = "kanarde@ncsu.edu"},
+]
+maintainers = [
+    {name = "Katherine Anarde"},
+    {email = "kanarde@ncsu.edu"},
+]
+keywords = [
+  "barrier islands",
+  "coastal management",
+  "economics",
+  "overwash",
+  "sea level rise",
+]
+license = {file = "LICENSE.md"}
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+requires-python = ">=3.8"
+dependencies = [
+"numpy",
+"pyyaml",
+"brie",
+"barrier3d",
+]
+dynamic = ["readme", "version"]
+
+[project.urls]
+homepage = "https://github.com/UNC-CECL/cascade"
+documentation = "https://github.com/UNC-CECL/cascade"
+repository = "https://github.com/UNC-CECL/cascade"
+changelog = "https://raw.githubusercontent.com/UNC-CECL/cascade/master/CHANGES.rst"
+
+[project.optional-dependencies]
+dev = ["nox"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cascade*"]
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md", "AUTHORS.md", "CHANGES.md"]}
+version = {attr = "cascade._version.__version__"}
+
 [tool.pytest.ini_options]
 minversion = "6.0"
 testpaths = ["cascade", "tests"]
