@@ -111,7 +111,7 @@ def clean(session):
     """Remove all .venv's, build files and caches in the directory."""
     root_folders = (
         [
-            "cascade.egg-info",
+            "coastal_cascade.egg-info",
             ".pytest_cache",
             ".venv",
             "build",
