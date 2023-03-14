@@ -56,7 +56,7 @@ where = ["."]
 include = ["cascade*"]
 
 [tool.setuptools.dynamic]
-readme = {file = ["README.md", "AUTHORS.md", "CHANGES.md"]}
+readme = {file = ["README.md", "AUTHORS.md", "CHANGES.md"], content-type = "text/markdown"}
 version = {attr = "cascade._version.__version__"}
 
 [tool.pytest.ini_options]
