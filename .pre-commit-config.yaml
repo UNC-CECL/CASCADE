@@ -39,6 +39,11 @@ repos:
     - flake8-bugbear
     - flake8-comprehensions
     - flake8-simplify
+    exclude: |
+      (?x)^(
+        scripts/old_plot_tests/|
+        scripts/pathways_ms/
+      )
 
 - repo: https://github.com/kynan/nbstripout
   rev: 0.6.1
