@@ -20,15 +20,14 @@ CHOM are then averaged for each set of indices before passing to CHOM.
 
 """
 import numpy as np
-
 from chom import Chom
+
 from .roadway_manager import rebuild_dunes
 
 dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
 
 
 def create_communities(ny, number_of_communities):
-
     community_index_initial = np.arange(ny)
     alongshore_community_length = int(np.ceil(ny / number_of_communities))
     community_index = [
@@ -48,7 +47,6 @@ def create_communities(ny, number_of_communities):
 def community_initial_statistics(
     community_indices, barrier3d, dune_design_elevation, alongshore_length_b3d
 ):
-
     avg_beach_width = []
     avg_barrier_height = []
     avg_shoreface_depth = []
@@ -113,7 +111,7 @@ def community_update_statistics(
         avg_beach_width,
         avg_dune_height,
         total_dune_sand_volume_rebuild,
-    ) = [[] for _ in range(5)]
+    ) = ([] for _ in range(5))
 
     for iB3D in community_indices:
         # Barrier3D in dam MHW --> convert to m MSL for CHOM; b/c time_index in B3D is updated at the end
@@ -246,7 +244,6 @@ class ChomCoupler:
 
         # find the average statistics for each community and then initialize CHOM models
         for iCommunity in range(self._number_of_communities):
-
             # calculate the average environmental statistics for each community
             [
                 avg_beach_width,
@@ -292,17 +289,15 @@ class ChomCoupler:
             )
 
     def update(self, barrier3d, nourishments, community_break):
-
         # time is updated at the end of the CHOM and Barrier3d model loop
         time_index_b3d = barrier3d[0].time_index
         time_index_chom = self._chom[0].time_index
-        nourish_now, rebuild_dune_now, nourishment_volume = [
+        nourish_now, rebuild_dune_now, nourishment_volume = (
             np.zeros(len(barrier3d)) for _ in range(3)
-        ]
+        )
 
         # calculate physical variables needed to update CHOM for each Barrier3D model, then group by community
         for iCommunity in range(self._number_of_communities):
-
             community_indices = self._community_index[iCommunity]
 
             [

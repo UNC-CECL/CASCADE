@@ -25,12 +25,12 @@ turned on).
 
 """
 
-import numpy as np
 import math
 
-from yaml import full_load, dump
-from brie import Brie
+import numpy as np
 from barrier3d import Barrier3d
+from brie import Brie
+from yaml import dump, full_load
 
 
 def set_yaml(var_name, new_vals, file_name):
@@ -42,9 +42,9 @@ def set_yaml(var_name, new_vals, file_name):
 
 
 def batchB3D(subB3D):
-
     """Parallelize the update function for each B3D domain so the (computationally expensive) flow routing algorithm
-     operates on separate cores -- i.e., overwash doesn't need to be simulated sequentially for each domain"""
+    operates on separate cores -- i.e., overwash doesn't need to be simulated sequentially for each domain
+    """
 
     subB3D.update()
 
@@ -68,7 +68,7 @@ def initialize_equal(
     dune_file,
     elevation_file,
     MHW=0.46,
-    beta=0.04
+    beta=0.04,
 ):
     """
     For each B3D domain, modify the default parameters to match the shoreface configuration in BRIE, which depends on
@@ -94,7 +94,6 @@ def initialize_equal(
     barrier3d = []
 
     for iB3D in range(brie.ny):
-
         fid = datadir + parameter_file
         parameter_file_prefix = parameter_file.replace("-parameters.yaml", "")
 
@@ -174,9 +173,7 @@ def initialize_equal(
         # the following parameters CANNOT be changed or else the MSSM storm list & storm time series needs to be remade
         set_yaml("MHW", MHW, fid)  # [m] elevation of Mean High Water
         set_yaml("beta", beta, fid)  # beach slope for runup calculations
-        set_yaml(
-            "BermEl", float(brie._h_b_crit), fid
-        )  # [m] static elevation of berm
+        set_yaml("BermEl", float(brie._h_b_crit), fid)  # [m] static elevation of berm
 
         barrier3d.append(Barrier3d.from_yaml(datadir, prefix=parameter_file_prefix))
 
@@ -263,7 +260,9 @@ class BrieCoupler:
         # modifying often (or ever) for CASCADE
         brie_ast_model = True  # shoreface formulations on
         brie_barrier_model = False  # LTA14 overwash model off
-        brie_inlet_model = False  # inlet model off -- once coupled, will make this more functional
+        brie_inlet_model = (
+            False  # inlet model off -- once coupled, will make this more functional
+        )
         b3d_barrier_model = True  # B3d overwash model on
         z = 10.0  # initial sea level (for tracking SL, Eulerian reference frame)
 

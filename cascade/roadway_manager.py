@@ -26,9 +26,10 @@ Because SLR is simulated using a Lagrangian reference frame in Barrier3D, the ro
 by SLR for each time step.
 
 """
+import copy
+
 import numpy as np
 from scipy.interpolate import interp2d
-import copy
 
 dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
 
@@ -279,7 +280,6 @@ def set_growth_parameters(
     rng = np.random.default_rng(seed=1973)
 
     for idune in range(ny):
-
         if yxz_dune_grid[idune, 0] > Dmax:  # if dune height above dmax, don't grow
             new_growth_param[0, idune] = 0
 
@@ -427,7 +427,7 @@ def road_relocation_checks(
 
 
 class RoadwayManager:
-    """ Manage the road!
+    """Manage the road!
 
     Examples
     --------
@@ -543,7 +543,6 @@ class RoadwayManager:
         self._post_storm_ave_interior_height = [None] * self._nt
 
     def update(self, barrier3d, trigger_dune_knockdown):
-
         self._time_index = barrier3d.time_index
 
         if self._original_growth_param is None:
@@ -584,7 +583,6 @@ class RoadwayManager:
 
         # if road can't be relocated, no longer manage and exit; dune growth parameters reset to original in CASCADE
         if self._relocation_break == 1:
-
             # an adaptation solution may be to knock down the dunes so that they are small and can easily be overwashed
             if trigger_dune_knockdown:
                 barrier3d.DuneDomain[self._time_index - 1, :, :] = barrier3d.DuneDomain[
@@ -651,7 +649,6 @@ class RoadwayManager:
 
             return
         elif self._drown_break == 1:  # if road drowned from road relocation above
-
             # an adaptation solution may be to knock down the dunes so that they are small and can easily be overwashed
             if trigger_dune_knockdown:
                 barrier3d.DuneDomain[self._time_index - 1, :, :] = barrier3d.DuneDomain[
@@ -711,7 +708,6 @@ class RoadwayManager:
             percent_water_cells_touching_road=self._percent_water_cells_touching_road,  # fraction cells<drown_threshold
         )
         if self._drown_break == 1:
-
             # an adaptation solution may be to knock down the dunes so that they are small and can easily be overwashed
             if trigger_dune_knockdown:
                 barrier3d.DuneDomain[self._time_index - 1, :, :] = barrier3d.DuneDomain[
@@ -751,7 +747,6 @@ class RoadwayManager:
             # if any dune cell in the front row of dunes is less than a minimum threshold -- as measured above the
             # berm crest -- then rebuild the dune (all rows up to dune_design_elevation)
             if np.min(new_dune_domain[:, 0]) < (min_dune_height / 10):  # in dam
-
                 # first document what percentage of the dune field is below this minimum
                 dune_cells_below_threshold = np.sum(
                     new_dune_domain < (min_dune_height / 10)
@@ -837,4 +832,3 @@ class RoadwayManager:
     @percent_water_cells_touching_road.setter
     def percent_water_cells_touching_road(self, value):
         self._percent_water_cells_touching_road = value
-

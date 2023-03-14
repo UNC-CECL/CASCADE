@@ -1,12 +1,13 @@
-from pathlib import Path
-from joblib import Parallel, delayed
-import numpy as np
 import os
+from pathlib import Path
 
-from .roadway_manager import RoadwayManager, set_growth_parameters
+import numpy as np
+from joblib import Parallel, delayed
+
 from .beach_dune_manager import BeachDuneManager
-from .brie_coupler import BrieCoupler, initialize_equal, batchB3D
+from .brie_coupler import BrieCoupler, batchB3D, initialize_equal
 from .chom_coupler import ChomCoupler
+from .roadway_manager import RoadwayManager, set_growth_parameters
 
 
 class CascadeError(Exception):
@@ -111,7 +112,7 @@ class Cascade:
         community_economics_module=False,
         alongshore_section_count=6,
         time_step_count=200,
-        wave_height=1, # ---------- for BRIE and Barrier3D --------------- #
+        wave_height=1,  # ---------- for BRIE and Barrier3D --------------- #
         wave_period=7,
         wave_asymmetry=0.8,
         wave_angle_high_fraction=0.2,
@@ -132,11 +133,11 @@ class Cascade:
         dune_minimum_elevation=2.2,
         trigger_dune_knockdown=False,
         group_roadway_abandonment=None,
-        nourishment_interval=None, # ---------- beach and dune ("community") management --------------- #
+        nourishment_interval=None,  # ---------- beach and dune ("community") management --------------- #
         nourishment_volume=300.0,
         overwash_filter=40,
         overwash_to_dune=10,
-        number_of_communities=1, # ---------- coastal real estate markets (in development) --------------- #
+        number_of_communities=1,  # ---------- coastal real estate markets (in development) --------------- #
         sand_cost=10,
         taxratio_oceanfront=1,
         external_housing_market_value_oceanfront=6e5,
@@ -274,22 +275,20 @@ class Cascade:
         self._parameter_file = parameter_file
         self._number_of_communities = number_of_communities
         self._b3d_break = 0
-        self._road_break = [
-            0
-        ] * self._ny
-        self._community_break = [
-            0
-        ] * self._ny
+        self._road_break = [0] * self._ny
+        self._community_break = [0] * self._ny
         self._nourish_now = [0] * self._ny  # user can trigger nourishment in time loop
-        self._rebuild_dune_now = [0] * self._ny  # user can trigger the dune to be rebuilt in time loop
-        self._trigger_dune_knockdown = (
-            trigger_dune_knockdown  # user can force the dunes to be knocked down in time loop
-        )
+        self._rebuild_dune_now = [
+            0
+        ] * self._ny  # user can trigger the dune to be rebuilt in time loop
+        self._trigger_dune_knockdown = trigger_dune_knockdown  # user can force the dunes to be knocked down in time loop
         self._initial_beach_width = [0] * self._ny
         self._group_roadway_abandonment = group_roadway_abandonment
 
         # initialization errors
-        if (berm_elevation != 1.9 or MHW !=0.46 or beta !=0.04) and storm_file=="barrier3d-default-storms.npy":
+        if (
+            berm_elevation != 1.9 or MHW != 0.46 or beta != 0.04
+        ) and storm_file == "barrier3d-default-storms.npy":
             raise CascadeError(
                 "The default storms only apply for a berm elevation=1.9 m NAVD88, MHW=0.46 m NAVD88 & beach slope=0.04."
             )
@@ -559,9 +558,7 @@ class Cascade:
         # Remove overwash from roadway after each model year, place on the dune, rebuild dunes if
         # fall below height threshold, and check if dunes should grow naturally.
         for iB3D in range(self._ny):
-
             if self._roadway_management_module[iB3D]:
-
                 # if the roadway drowned or was too narrow for the road to be relocated, stop managing the road!
                 # NOTE: dune heights must drop below Dmax before reset, so while calling reset_dune_growth rates seems
                 # redundant, it doesn't slow us down computationally, so just do it
@@ -571,7 +568,6 @@ class Cascade:
                 ):
                     # if it was specified that roadways are abandonded in groups, abandon the group
                     if self._group_roadway_abandonment is not None:
-
                         # find the group indices
                         group_roadways = np.where(
                             np.array(self._group_roadway_abandonment)
@@ -640,9 +636,7 @@ class Cascade:
         # -- including barrier elevation, beach width, dune height, shoreline erosion rate -- who then decide if it is
         # a nourishment year, the corresponding nourishment volume, and whether or not the dune should be rebuilt
         if self._community_economics_module:
-
             for iB3D in range(self._ny):
-
                 # if barrier was too narrow to sustain a community in the last time step (from the BeachDuneManager),
                 # stop the coupling with CHOM (i.e., end human mangement); dune growth rates are reset below in the
                 # BeachDuneManager loop
@@ -667,7 +661,6 @@ class Cascade:
         # also filters overwash deposition for residential or commercial communities (user specified) and bulldozes
         # some of remaining overwash to dunes.
         for iB3D in range(self._ny):
-
             if self._beach_nourishment_module[iB3D]:
                 # if barrier was too narrow to sustain a community in the last time step, stop managing beach and dunes!
                 # NOTE: dune heights must drop below Dmax before reset, so while calling reset_dune_growth rates seems
@@ -744,7 +737,6 @@ class Cascade:
     ###############################################################################
 
     def save(self, directory):
-
         filename = self._filename + ".npz"
 
         csc8d = []

@@ -1,10 +1,11 @@
-import numpy as np
-from numpy.testing import assert_array_almost_equal
 from pathlib import Path
 
-from cascade.roadway_manager import bulldoze, rebuild_dunes, set_growth_parameters
-from cascade.beach_dune_manager import shoreface_nourishment, filter_overwash
+import numpy as np
+from numpy.testing import assert_array_almost_equal
+
 from cascade import Cascade
+from cascade.beach_dune_manager import filter_overwash, shoreface_nourishment
+from cascade.roadway_manager import bulldoze, rebuild_dunes, set_growth_parameters
 
 BMI_DATA_DIR = Path(__file__).parent / "cascade_test_human_inputs"
 NT = 180

@@ -3,8 +3,9 @@
 
 # remember if I move to a different computer to $ pip install -e . in the brie, CHOM, and B3D directories
 
-import numpy as np
 import time
+
+import numpy as np
 
 from cascade.cascade import Cascade  # the new class
 
@@ -18,7 +19,6 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
     elevation_file,
     dune_file,
 ):
-
     # ###############################################################################
     # 4 - CASCADE with only one B3D model and no human dynamics
     # ###############################################################################

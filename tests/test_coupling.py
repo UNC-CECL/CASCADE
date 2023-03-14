@@ -1,8 +1,10 @@
-import numpy as np
-from numpy.testing import assert_array_almost_equal
 from pathlib import Path
-from cascade.cascade import Cascade
+
+import numpy as np
 from barrier3d import Barrier3dBmi
+from numpy.testing import assert_array_almost_equal
+
+from cascade.cascade import Cascade
 
 BMI_DATA_DIR = Path(__file__).parent / "cascade_test_versions_inputs"
 # datadir = "../Cascade/tests/cascade_test_versions_inputs/"
@@ -129,7 +131,7 @@ def test_initialize():
     model with 6 barrier3d domains
     """
 
-    x_t_TS, x_s_TS, x_b_TS, h_b_TS = [[] for _ in range(4)]
+    x_t_TS, x_s_TS, x_b_TS, h_b_TS = ([] for _ in range(4))
     for iB3D in range(CASCADE_AST_MODEL.brie.ny):
         x_t_TS.append(CASCADE_AST_MODEL.barrier3d[iB3D].x_t_TS[0] * 10)
         x_s_TS.append(CASCADE_AST_MODEL.barrier3d[iB3D].x_s_TS[0] * 10)
@@ -152,7 +154,7 @@ def test_shoreline_variable_exchange_ast():
     CASCADE_AST_MODEL.update()
     CASCADE_AST_MODEL.update()
 
-    x_t_TS, x_s_TS, x_b_TS, h_b_TS = [[] for _ in range(4)]
+    x_t_TS, x_s_TS, x_b_TS, h_b_TS = ([] for _ in range(4))
     for iB3D in range(CASCADE_AST_MODEL.brie.ny):
         x_t_TS.append(np.array(CASCADE_AST_MODEL.barrier3d[iB3D].x_t_TS) * 10)
         x_s_TS.append(np.array(CASCADE_AST_MODEL.barrier3d[iB3D].x_s_TS) * 10)

@@ -1,11 +1,11 @@
-import numpy as np
 import os
-from scipy.io import loadmat
+
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy.io import loadmat
 
 
 def get_statistics_4_chom(iB3D, tmax_mgmt, name_prefix):
-
     os.chdir(
         "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
     )
@@ -58,7 +58,6 @@ name = "scenario_subsidy_50p"
 
 
 def plot_chom_output(name_prefix):
-
     os.chdir(
         "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
     )

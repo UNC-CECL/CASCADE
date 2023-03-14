@@ -10,21 +10,23 @@
 Copyright (C) 2022 Katherine Anarde
 ----------------------------------------------------"""
 
-import matplotlib.pyplot as plt
+import glob
+import math
+import os
+
+import imageio
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn
 from matplotlib import cm
 from matplotlib.ticker import AutoMinorLocator
-import numpy as np
-import os
-import imageio
-import math
-import pandas as pd
-import glob
-import seaborn
 
 # # ###############################################################################
 # # plotters for ms
 # # ###############################################################################
+
 
 def fig5_8_plot_human_dynamics_stats_array4(
     cascade,  # these are lists
@@ -48,7 +50,6 @@ def fig5_8_plot_human_dynamics_stats_array4(
     # dunes ---------------------------------------------------------------------------------------------------------- #
     fig, axs = plt.subplots(1, 4, figsize=(10, 3), sharey=True, sharex=True)
     for i in range(len(cascade)):
-
         if i > 0:
             time = np.arange(0, TMAX[i] - 0.5, 0.5)
             yearly_time = np.arange(0, TMAX[i], 1)
@@ -158,7 +159,6 @@ def fig5_8_plot_human_dynamics_stats_array4(
     fig2, axs2 = plt.subplots(1, 4, figsize=(10, 3), sharex=True)
     color = ["b", "r", "g", "m"]
     for i in range(len(cascade)):
-
         if i > 0:
             # time = np.arange(0, TMAX[i] - 0.5, 0.5)
             yearly_time = np.arange(0, TMAX[i], 1)
@@ -265,7 +265,14 @@ def fig5_8_plot_human_dynamics_stats_array4(
     axs2[3].set(ylabel="overwash flux (m$^3$/m)")
     axs2[3].set_ylim([-3, 225])
     if roadways_on:
-        scenarios = ["natural", "1-m dune", "2-m dune", "3-m dune", "end mgmt", "drowned"]
+        scenarios = [
+            "natural",
+            "1-m dune",
+            "2-m dune",
+            "3-m dune",
+            "end mgmt",
+            "drowned",
+        ]
         axs2[2].legend(scenarios)
     if nourishment_on:
         axs2[2].legend(scenarios)
@@ -277,7 +284,6 @@ def fig5_8_plot_human_dynamics_stats_array4(
 
         color = ["b", "r", "g", "m"]
         for i in range(len(cascade)):
-
             if i > 0:
                 time = np.arange(0, TMAX[i] - 0.5, 0.5)
                 yearly_time = np.arange(0, TMAX[i], 1)
@@ -359,7 +365,6 @@ def fig11_14_stats_ast_array3(
     scenarios_beach_width,
     scenarios_shoreline_position,
 ):
-
     fig, axs = plt.subplots(1, 2, figsize=(10, 3))
     color = ["b", "r", "m"]
 
@@ -407,12 +412,10 @@ def supp_sensitivity_road_abandonment(
     TMAX,
     tmax_roadways,
 ):
-
     # interior height and width
     fig2, axs2 = plt.subplots(1, 3, figsize=(10, 3), sharex=True)
     color = mpl.cm.inferno_r(np.linspace(0, 1, 5))
     for i in range(len(cascade)):
-
         time = np.arange(0, TMAX[i] - 0.5, 0.5)
         yearly_time = np.arange(0, TMAX[i], 1)
         barrier_height = BarrierHeight[i][0 : len(time)]
@@ -441,13 +444,31 @@ def supp_sensitivity_road_abandonment(
 def supp_nourishment_thresholds(
     directory,  # directory containing csv files
 ):
-    #directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/scripts/pathways_ms/data/Nags_Head"
+    # directory = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/scripts/pathways_ms/data/Nags_Head"
 
     # use glob to get all the csv files
     csv_files = glob.glob(os.path.join(directory, "*.csv"))
     beach_width = []
     dune_height = []
-    labels = [1997, 1998, 1999, 2000, 2001, 2004, 2005, 2008, 2009, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]
+    labels = [
+        1997,
+        1998,
+        1999,
+        2000,
+        2001,
+        2004,
+        2005,
+        2008,
+        2009,
+        2012,
+        2013,
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+    ]
 
     # loop over the list of csv files
     for f in csv_files:
@@ -477,9 +498,8 @@ def supp_nourishment_thresholds(
 
 def fig3_initialCNH_topo(
     cascade_model_list,  # must be from a nourishment simulation (i.e., have a beach width)
-    km_on=True
+    km_on=True,
 ):
-
     fig, axs = plt.subplots(1, 4, figsize=(10, 3), sharey=True, sharex=True)
 
     # make the mat image of the beach to the back-barrier; stole this code from the animation plots above
@@ -648,6 +668,7 @@ def fig3_initialCNH_topo(
         axs[0].legend(["profile A", "profile B"])
         axs[1].legend(["profile C", "profile D"])
 
+
 def fig4_slr_sensitivity(
     cascade,  # lists
     TMAX,
@@ -680,14 +701,14 @@ def fig4_slr_sensitivity(
             - np.array(cascade[i].barrier3d[0].x_s_TS[0 : TMAX[i]])
         ) * 10
 
-        barrier_height = np.array(cascade[i].barrier3d[0].h_b_TS[0: TMAX[i]]) * 10
+        barrier_height = np.array(cascade[i].barrier3d[0].h_b_TS[0 : TMAX[i]]) * 10
 
         scts = [
             (x - cascade[i].barrier3d[0].x_s_TS[0]) * 10
             for x in cascade[i].barrier3d[0].x_s_TS[0 : TMAX[i]]
         ]
 
-        overwash_flux = cascade[i].barrier3d[0].QowTS[0: TMAX[i]]
+        overwash_flux = cascade[i].barrier3d[0].QowTS[0 : TMAX[i]]
 
         axs2[0].plot(time, barrier_height)
         axs2[1].plot(time, barrier_width)
@@ -709,7 +730,6 @@ def fig4_slr_sensitivity(
 
 
 def fig2_10kyr_timeseries(datadir, tmax, name_prefix, vertical_line_1, vertical_line_2):
-
     b3d = []
     bw = []
     bh = []
@@ -788,9 +808,11 @@ def fig2_10kyr_timeseries(datadir, tmax, name_prefix, vertical_line_1, vertical_
     axs1[2].set(xlabel="years")
     axs1[2].set_xlim([tlow, thigh])
 
+
 # # ###############################################################################
 # # old plotters when exploring nonlinear dynamics
 # # ###############################################################################
+
 
 def nonlinear_animated(CASCADE_b3d, ib3d, tmin, tmax, name):
     # mean dune height ---------
@@ -888,6 +910,7 @@ def nonlinear_animated(CASCADE_b3d, ib3d, tmin, tmax, name):
 
     # export text files for mtm psd plots and coherence
 
+
 def nonlinear_comparison(
     DuneCrestMean_45,
     BarrierWidth_45,
@@ -965,4 +988,3 @@ def nonlinear_comparison(
     # plt.hist(BarrierWidth_45[9000:9999], density=True, bins=30)
     # plt.xlabel("Barrier Width - low dune growth rate")
     # plt.xlim([320, 460])
-

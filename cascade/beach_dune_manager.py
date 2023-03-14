@@ -32,9 +32,11 @@ change, we establish a beach width based on the initial beach slope defined in B
 This beach width is then modified dynamically via nourishment and shoreface dynamics.
 
 """
-import numpy as np
-import math
 import copy
+import math
+
+import numpy as np
+
 from .roadway_manager import rebuild_dunes, set_growth_parameters
 
 dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
@@ -122,7 +124,6 @@ def resize_interior_domain(
 
     # if pre-storm domain is larger than post-storm...
     if np.size(pre_storm_interior, 0) > np.size(post_storm_interior, 0):
-
         # check first if the dunes migrated this last time step --> this will make the interior domain smaller
         if dune_migration != 0:
             # if yes, remove the number rows corresponding to the number of cells the dunes migrated from the pre-storm
@@ -568,7 +569,6 @@ class BeachDuneManager:
         rebuild_dune_now,
         nourishment_interval,
     ):
-
         self._time_index = barrier3d.time_index
 
         # if nourishment interval was updated in cascade, update here; otherwise just update the counter if it exists
@@ -615,7 +615,6 @@ class BeachDuneManager:
         # community filtering overwash from reaching the interior with infrastructure; also bulldoze a percentage of
         # overwash and place back on dunes
         if self._overwash_removal:
-
             # barrier3d saves the pre-storm interior for each time step
             pre_storm_interior = barrier3d.PreStorm_InteriorDomain
 
@@ -694,7 +693,6 @@ class BeachDuneManager:
 
         # if specified, rebuild dune (if using nourishment counter option, nourishes dune automatically)
         if rebuild_dune_now or self._nourishment_counter == 0:
-
             # in B3D, dune height is the height above the berm crest
             dune_design_height = self._dune_design_elevation - (barrier3d.BermEl * 10)
             new_dune_domain, rebuild_dune_volume = rebuild_dunes(
