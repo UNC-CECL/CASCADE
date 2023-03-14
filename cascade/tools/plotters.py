@@ -14,7 +14,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib import cm
 from matplotlib.ticker import AutoMinorLocator
 from scipy import signal
 
@@ -616,9 +615,9 @@ def plot_ElevAnimation_CASCADE(
     name,
     TMAX_SIM,
     ny=1,
-    beach_management_ny=[False],  # list of booleans the length of ny
-    roadway_management_ny=[False],
-    y_lim=[150, 250],
+    beach_management_ny=None,  # list of booleans the length of ny, or None for all False
+    roadway_management_ny=None,
+    y_lim=(150, 250),
     z_lim=3.5,
     fig_size=None,
     fig_eps=False,
@@ -646,6 +645,11 @@ def plot_ElevAnimation_CASCADE(
     huge jump in the back-barrier position in Barrier3D. OTHERWISE, it is meaningless to the dynamics Barrier3D.
 
     """
+    if beach_management_ny is None:
+        beach_management_ny = [False] * ny
+    if roadway_management_ny is None:
+        roadway_management_ny = [False] * ny
+
     barrier3d = cascade.barrier3d
 
     # set up the domain; here we just use the first grid, but that could break in future runs

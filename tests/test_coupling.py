@@ -38,7 +38,7 @@ def run_cascade_no_human_dynamics():
         community_economics_module=False,  # no community dynamics
     )
 
-    for time_step in range(NT - 1):
+    for _ in range(NT - 1):
         cascade.update()
         if cascade.b3d_break:
             break
@@ -90,7 +90,7 @@ def test_barrier3d_versions():
     barrier3d.initialize(str(BMI_DATA_DIR / input_file))
 
     # increase time step
-    for time_step in range(NT - 1):
+    for _ in range(NT - 1):
         barrier3d.update()
 
     assert np.all(

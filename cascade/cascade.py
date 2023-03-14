@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 import numpy as np
 from joblib import Parallel, delayed
@@ -518,7 +517,7 @@ class Cascade:
         """Update cascade by a single time step"""
 
         # check for drowning from the last time step in brie. Note that this will stay false if brie is not used for AST
-        if self._brie_coupler._brie.drown == True:
+        if self._brie_coupler._brie.drown:
             return
 
         # advance B3D by one time step (B3D initializes at time_index = 1 and then updates the time_index after

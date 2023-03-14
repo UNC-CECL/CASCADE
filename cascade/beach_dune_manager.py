@@ -129,7 +129,7 @@ def resize_interior_domain(
             # if yes, remove the number rows corresponding to the number of cells the dunes migrated from the pre-storm
             # domain (really the last time step); this happens if the user allows the beach width to fall below a min
             # threshold, which turns dune migration back on and allows for dune erosion in the post-storm domain
-            for i in range(0, abs(int(dune_migration))):
+            for _ in range(0, abs(int(dune_migration))):
                 pre_storm_interior = np.delete(pre_storm_interior, 0, axis=0)
                 if dune_migration > 0:
                     break  # break if the dune line aggrades, not set up for this

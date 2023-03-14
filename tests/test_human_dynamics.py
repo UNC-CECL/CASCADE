@@ -45,7 +45,7 @@ def run_cascade_roadway_dynamics():
         dune_minimum_elevation=1.7,  # m MHW, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
     )
 
-    for time_step in range(NT - 1):
+    for _ in range(NT - 1):
         cascade.update()
         if cascade.b3d_break:
             break
@@ -89,7 +89,7 @@ def run_cascade_nourishment_dynamics():
 
     # Loop for 50 years at a 10 year interval, 100 m^3/m and then 50 years at a 20 year interval with 300 m^3/m
     nt = 50
-    for time_step in range(nt - 1):
+    for _ in range(nt - 1):
         cascade.update()
         if cascade.b3d_break:
             break
@@ -100,7 +100,7 @@ def run_cascade_nourishment_dynamics():
     cascade.nourishment_interval[iB3D] = 20  # increase to 20 years
     cascade.nourishment_volume[iB3D] = 300  # increase to 300 m^3/m
 
-    for time_step in range(nt):
+    for _ in range(nt):
         cascade.update()
         if cascade.b3d_break:
             break
@@ -423,4 +423,4 @@ def test_shoreline_road_relocation():
     road_relocated_based_on_setback = diff_road_setback > 0
 
     assert np.all(road_relocated_based_on_setback == road_relocated)
-    assert np.all(dunes_migrated[road_relocated] == True)
+    assert np.all(dunes_migrated[road_relocated])
