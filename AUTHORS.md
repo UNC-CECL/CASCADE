@@ -1,13 +1,10 @@
-Credits
-=======
+# Credits
 
-Development Leads
------------------
+## Development Leads
 
 * Katherine Anarde <kanarde@ncsu.edu>
 
-Contributors
-------------
+## Contributors
 
 * Eric Hutton <mcflugen@gmail.com>
 * Zachary Williams <zachary.c.williams@duke.edu>
