@@ -61,7 +61,8 @@ def initialize_cascade_no_human_dynamics_ast():
         sea_level_rise_rate=0.004,
         sea_level_rise_constant=True,
         background_erosion=0.0,
-        alongshore_section_count=6,  # 6 barrier 3d models connected with alongshore sediment transport
+        # 6 barrier 3d models connected with alongshore sediment transport
+        alongshore_section_count=6,
         time_step_count=3,
         min_dune_growth_rate=0.55,
         max_dune_growth_rate=0.95,  # rave = 0.75
@@ -84,7 +85,8 @@ def test_barrier3d_versions():
     Check that the barrier3d output in cascade matches the bmi version(s)
     """
 
-    # Barrier3D BMI Version (2.0 and beyond): create an instance of the new BMI class, which is the model
+    # Barrier3D BMI Version (2.0 and beyond): create an instance of the new BMI
+    # class, which is the model
     barrier3d = Barrier3dBmi()
     input_file = "barrier3d-default-parameters.yaml"
     barrier3d.initialize(str(BMI_DATA_DIR / input_file))
@@ -111,10 +113,12 @@ def test_barrier3d_versions():
 
 def test_shoreline_dune_migration():
     """
-    As a check on the dynamics in Barrier3D, here we want to see if the dunes migrate correctly for natural simulations,
-    when the shoreline surpasses a full cell width (10 m). Barrier3D was originally written for a shoreface toe to start
-    at x=0 dam. When coupled with BRIE, the shoreface starts at a non-integer value, so I had to modify the dune
-    migration algorithmn within Barrier3D to account for this.
+    As a check on the dynamics in Barrier3D, here we want to see if the dunes
+    migrate correctly for natural simulations, when the shoreline surpasses a
+    full cell width (10 m). Barrier3D was originally written for a shoreface toe
+    to start at x=0 dam. When coupled with BRIE, the shoreface starts at a non-integer
+    value, so I had to modify the dune migration algorithmn within Barrier3D to
+    account for this.
     """
     iB3D = 0
     frac_grid_cell = np.array(CASCADE_OUTPUT.barrier3d[iB3D]._x_s_TS) % 1
@@ -127,8 +131,8 @@ def test_shoreline_dune_migration():
 
 def test_initialize():
     """
-    check that the initial shoreface toe and shoreline are correct between the barrier3d and brie models for a cascade
-    model with 6 barrier3d domains
+    check that the initial shoreface toe and shoreline are correct between the
+    barrier3d and brie models for a cascade model with 6 barrier3d domains
     """
 
     x_t_TS, x_s_TS, x_b_TS, h_b_TS = ([] for _ in range(4))
@@ -148,8 +152,8 @@ def test_initialize():
 
 def test_shoreline_variable_exchange_ast():
     """
-    check that the brie and barrier3d shoreline, shoreface toe, and back-barrier shorelines are equivalent with each
-    update
+    check that the brie and barrier3d shoreline, shoreface toe, and back-barrier
+    shorelines are equivalent with each update
     """
     CASCADE_AST_MODEL.update()
     CASCADE_AST_MODEL.update()
