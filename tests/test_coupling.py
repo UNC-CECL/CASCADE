@@ -1,5 +1,4 @@
 import shutil
-from pathlib import Path
 
 import numpy as np
 from barrier3d import Barrier3dBmi
