@@ -45,49 +45,59 @@ Community Surface Dynamics Modeling System. The repositories for the models coup
 - *chom*: [GitHub Python Repository - Version 0.0.1.dev0 (BMI)](https://github.com/UNC-CECL/CHOM)
 
 ## Installation
-This ReadMe corresponds to the development version of *cascade* (version = 0.0.1.dev0) used for the simulations detailed in
-"The Future of Developed Barrier Systems: Pathways Toward Uninhabitability, Drowning, and Rebound" by Anarde et al.,
-(in review). Prior to publication, *cascade* will be made available for easy download on `conda` and the following
-instructions will be updated. Reviewers can follow the instructions provided below for installation of *cascade* (version = 0.0.1.dev0).
 
-[PLACEHOLDER FOR NEW INSTRUCTIONS FROM ERIC]
+This ReadMe corresponds to the development version of *cascade* used for the
+simulations detailed in *"The Future of Developed Barrier Systems: Pathways Toward
+Uninhabitability, Drowning, and Rebound" by Anarde et al., (in review)*. Prior
+to publication, *cascade* will be made available for easy installation using either
+`pip` or `conda`. Reviewers can follow the instructions provided below for installation
+of *cascade*.
 
-1. Fork the *cascade*, *brie*, *chom*, and *barrier3d* repos on GitHub.
-2. Clone your fork locally. As an example, for *cascade*::
+To install the latest release of *cascade* using *pip*, simply run the following
+in your terminal of choice:
 
-    $ git clone git@github.com:your_name_here/cascade.git
+      pip install coastal-cascade
 
-3. Install your local copy into a conda environment. Assuming you have conda
-   installed, this is how you set up your fork for local development::
+You can also use `conda`:
 
-    $ conda create -n cascade python
-    $ conda activate cascade
-    $ cd cascade/
-    $ conda install --file=requirements.txt
+      conda install coastal-cascade
 
-    $ pip install -e .
+### From Source
 
-4. Create a branch for local development::
+*Cascade* is actively being developed on GitHub, where the code is freely available.
+If you would like to modifying code or contributing new code to *cascade*, you will first
+need to get *cascade*'s source code, and then install *cascade* from that code.
 
-    $ git checkout -b name-of-your-bugfix-or-feature
+To get the source code you can either clone the repository with *git*:
 
-   Now you can make your changes locally.
+      git clone git@github.com/UNC-CECL/cascade
 
-5. When you're done making changes, check that your changes pass flake8 and the
-   tests::
+or download a [zip file](https://github.com/UNC-CECL/CASCADE/archive/refs/heads/main.zip):
 
-    $ flake8 cascade
-    $ pytest
+      curl -OL https://github.com/UNC-CECL/CASCADE/archive/refs/heads/main.zip
 
-   To get flake8, just conda install it into your environment.
+Once you have a copy of the source code, you can install it into your current
+environment,
 
-6. Commit your changes and push your branch to GitHub::
+      pip install -e .
 
-    $ git add .
-    $ git commit -m "Your detailed description of your changes."
-    $ git push origin name-of-your-bugfix-or-feature
+We use [nox] to automate routine maintenance tasks like running the tests,
+removing lint, etc. Install [nox] with *pip*::
 
-7. Submit a pull request through the GitHub website.
+      pip install nox
+
+When you're done making changes, you can now run [nox] to check that the tests
+pass and that there isn't any lint:
+
+      nox -s test  # run the unit tests
+      nox -s test-notebooks  # test that the notebooks run successfully
+      nox -s lint  # find and, where possible, remove lint (black, flake8, etc.)
+
+To run all of the above in a single command:
+
+      nox
+
+[nox]: https://nox.thea.codes/
 
 ## Example simulations
 For a more complete set of example model runs and description of module functionality, we direct the use to the examples
