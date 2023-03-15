@@ -20,7 +20,6 @@ Barrier3D variables for coupling with CHOM are then averaged for each set of
 indices before passing to CHOM.
 """
 import numpy as np
-from chom import Chom
 
 from .roadway_manager import rebuild_dunes
 
@@ -239,6 +238,8 @@ class ChomCoupler:
             The cross-shore extent (meters) of fully nourished beach (i.e., the
             community desired beach width) [m]
         """
+        chom = self.load_chom()
+
         self._dune_design_elevation = dune_design_elevation
         self._chom = []
         ny = len(barrier3d)
@@ -270,7 +271,7 @@ class ChomCoupler:
             # initialize CHOM model instance -- ZACHK, are these still correct or
             # are there more?
             self._chom.append(
-                Chom(
+                chom.Chom(
                     name=name,
                     total_time=total_time,
                     average_interior_width=avg_interior_width,
@@ -294,6 +295,18 @@ class ChomCoupler:
                     beach_full_cross_shore=beach_full_cross_shore,
                 )
             )
+
+    @staticmethod
+    def load_chom():
+        try:
+            import chom
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "ChomCoupler requires chom but chom is not installed. "
+                "You can install chom from source at"
+                "https://github.com/UNC-CECL/CHOM"
+            ) from exc
+        return chom
 
     def update(self, barrier3d, nourishments, community_break):
         # time is updated at the end of the CHOM and Barrier3d model loop
