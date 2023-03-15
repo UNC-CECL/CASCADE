@@ -1,0 +1,14 @@
+include .pre-commit-config.yaml
+include AUTHORS.md
+include CHANGES.md
+include CONTRIBUTING.rst
+include LICENSE.md
+include README.md
+include noxfile.py
+include requirements*.txt
+
+recursive-include tests *csv *npy *py *yaml
+
+recursive-exclude data *
+recursive-exclude notebooks *
+recursive-exclude scripts *

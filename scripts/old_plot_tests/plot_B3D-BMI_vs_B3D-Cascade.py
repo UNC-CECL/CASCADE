@@ -5,11 +5,13 @@
         - if using Barrier3D for the first time, remember to $ pip install -e .
 """
 
+import time
+
+import matplotlib.pyplot as plt
 from barrier3d import Barrier3dBmi
 from barrier3d.tools import plot as B3Dfunc
+
 from cascade.cascade import Cascade
-import time
-import matplotlib.pyplot as plt
 
 # specify data directories with initial conditions
 datadir = "cascade/data/pathways_data/"

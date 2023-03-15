@@ -1,11 +1,11 @@
-import numpy as np
 import os
-from scipy.io import loadmat
+
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy.io import loadmat
 
 
 def get_statistics_4_chom(iB3D, tmax_mgmt, name_prefix):
-
     os.chdir(
         "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
     )
@@ -58,7 +58,6 @@ name = "scenario_subsidy_50p"
 
 
 def plot_chom_output(name_prefix):
-
     os.chdir(
         "/Users/KatherineAnardeWheels/Research/BARis/UNC/CNH/CASCADE_save_dir/Run_Output"
     )
@@ -80,11 +79,22 @@ def plot_chom_output(name_prefix):
     plt.xlabel("time (yr))")
     plt.ylabel("property value (USD))")
 
-    # if it’s 60% then 60% of residents are renters (and the other 40% is homeowners who live in the home)
+    # if it’s 60% then 60% of residents are renters (and the other 40% is homeowners
+    # who live in the home)
     plt.plot(oceanfront_marketshare[100:-1])
     plt.plot(nonoceanfront_marketshare[100:-1])
     plt.legend(["oceanfront", "non-oceanfront"])
-    # plt.legend(["oceanfront", "non-oceanfront", "OF - acc SLR", "NOF - acc SLR", "OF - 50% subsidy", "NOF - 50% subsidy"])
+    # plt.legend(
+    #     [
+    #         "oceanfront",
+    #         "non-oceanfront",
+    #         "OF - acc SLR",
+    #         "NOF - acc SLR",
+    #         "OF - 50% subsidy",
+    #         "NOF - 50% subsidy",
+    #     ]
+    # )
+
     plt.xlabel("time (yr))")
     plt.ylabel("investor market share (% renters)")
 
@@ -110,7 +120,7 @@ def plot_chom_output(name_prefix):
     # plot(NOFtauR) % nonoceanfront renter average income
 
 
-# split management - 1 m background erosion and 0.004 m/yr SLR ----------------------------------------
+# split management - 1 m background erosion and 0.004 m/yr SLR ---------------------
 name_prefix = "9-CASCADE_Rave_pt75_Nourish_2mDune_lowEle_comm_BE1m_RT1m_6AST_3roads"
 iB3D = 1  # middle community
 tmax_mgmt = 80  # stopped community management at 80 years
@@ -130,7 +140,7 @@ np.savetxt(
     ),
 )
 
-# Rodanthe scenario - 1 m background erosion and 0.004 m/yr SLR ----------------------------------------
+# Rodanthe scenario - 1 m background erosion and 0.004 m/yr SLR -------------------
 name_prefix = name = "9-CASCADE_AST_3domains_BE1m"
 iB3D = 1  # middle community
 tmax_mgmt = 199  # never stopped community management
@@ -150,7 +160,7 @@ np.savetxt(
     ),
 )
 
-# Rodanthe scenario -  # 1 m background erosion and accelerated SLR ----------------------------------------
+# Rodanthe scenario -  # 1 m background erosion and accelerated SLR --------------
 name_prefix = name = "9-CASCADE_AST_3domains_BE1m_AccSLR"
 iB3D = 1  # middle community
 tmax_mgmt = 88  # middle roadway drowned

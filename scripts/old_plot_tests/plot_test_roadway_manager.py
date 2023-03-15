@@ -1,5 +1,6 @@
-from cascade.cascade import Cascade
 import matplotlib.pyplot as plt
+
+from cascade.cascade import Cascade
 from cascade.tools import plotters as CASCADE_Plt
 
 name = "bulldozer"
