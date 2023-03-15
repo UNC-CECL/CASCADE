@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -7,16 +8,16 @@ from cascade import Cascade
 from cascade.beach_dune_manager import filter_overwash, shoreface_nourishment
 from cascade.roadway_manager import bulldoze, rebuild_dunes, set_growth_parameters
 
-BMI_DATA_DIR = Path(__file__).parent / "cascade_test_human_inputs"
 NT = 180
-# datadir = "../Cascade/tests/cascade_test_human_inputs/"
 
 
-def run_cascade_roadway_dynamics():
+def run_cascade_roadway_dynamics(datadir):
+    for data_file in datadir.iterdir():
+        shutil.copy(data_file, ".")
+
     # Roadway width drowned at 178 years, 20.0% of road borders water
     cascade = Cascade(
-        str(BMI_DATA_DIR) + "/",
-        # datadir,
+        ".",
         name="test_roadway_relocation",
         storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
         elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
@@ -55,12 +56,15 @@ def run_cascade_roadway_dynamics():
     return cascade
 
 
-def run_cascade_nourishment_dynamics():
+def run_cascade_nourishment_dynamics(datadir):
+    for data_file in datadir.iterdir():
+        shutil.copy(data_file, ".")
+
     iB3D = 0
     total_time = 100
 
     cascade = Cascade(
-        str(BMI_DATA_DIR) + "/",
+        ".",
         name="test_shoreline_erosion",
         storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
         elevation_file="b3d_pt45_8750yrs_low-elevations.csv",
@@ -110,10 +114,6 @@ def run_cascade_nourishment_dynamics():
             break
 
     return cascade
-
-
-CASCADE_ROADWAY_OUTPUT = run_cascade_roadway_dynamics()
-CASCADE_NOURISHMENT_OUTPUT = run_cascade_nourishment_dynamics()
 
 
 def test_bulldoze_volume():
@@ -401,7 +401,7 @@ def test_overwash_filter():
     # assert_array_almost_equal(barrier_overwash_removed, [800, 792, 990])
 
 
-def test_shoreline_migration():
+def test_shoreline_migration(tmp_path, datadir, monkeypatch):
     """
     As a check on the dynamics in Barrier3D, here we want to see if the dunes
     migrate when the beach width goes to zero and the shoreline surpasses a full
@@ -411,6 +411,8 @@ def test_shoreline_migration():
     that the dunes actually migrated at 57.5 since dune migration occurs prior
     to any human modifications.
     """
+    monkeypatch.chdir(tmp_path)
+    CASCADE_NOURISHMENT_OUTPUT = run_cascade_nourishment_dynamics(datadir)
 
     iB3D = 0
 
@@ -425,10 +427,13 @@ def test_shoreline_migration():
     assert np.all(shoreline_transgressed == dunes_migrated)
 
 
-def test_shoreline_road_relocation():
+def test_shoreline_road_relocation(tmp_path, datadir, monkeypatch):
     """
     Does the roadway relocate when the shoreline eats up the dune?
     """
+    monkeypatch.chdir(tmp_path)
+    CASCADE_ROADWAY_OUTPUT = run_cascade_roadway_dynamics(datadir)
+
     iB3D = 0
 
     dunes_migrated = CASCADE_ROADWAY_OUTPUT.barrier3d[iB3D]._ShorelineChangeTS < 0
