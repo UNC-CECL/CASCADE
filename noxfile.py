@@ -48,7 +48,7 @@ def test_notebooks(session: nox.Session) -> None:
 
     session.install("-r", "requirements-testing.txt")
     session.install("nbmake")
-    session.install("-r", "notebooks/requirements.txt")
+    session.install("-r", "notebooks/requirements.in")
     session.install(".")
 
     session.run(*args)
