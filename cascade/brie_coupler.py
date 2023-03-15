@@ -27,8 +27,8 @@ Notes
 In future versions, the coupled model will incorporate tidal inlet dynamics
 within BRIE (i.e., the inlet model will be turned on).
 """
-
 import math
+import pathlib
 
 import numpy as np
 from barrier3d import Barrier3d
@@ -97,10 +97,13 @@ def initialize_equal(
     :return: barrier3d
 
     """
+    datadir = pathlib.Path(datadir)
+    parameter_file = str(parameter_file)
+
     barrier3d = []
 
     for iB3D in range(brie.ny):
-        fid = datadir + parameter_file
+        fid = datadir / parameter_file
         parameter_file_prefix = parameter_file.replace("-parameters.yaml", "")
 
         # update variables in Barrier3D yaml file (the remaining variables are set
