@@ -35,10 +35,12 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-"numpy",
-"pyyaml",
-"baked-brie",
-"barrier3d",
+  "baked-brie",
+  "barrier3d",
+  "imageio",
+  "joblib",
+  "numpy",
+  "pyyaml",
 ]
 dynamic = ["readme", "version"]
 
