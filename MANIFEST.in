@@ -1,3 +1,5 @@
+exclude tests/4-B3D_Rave_pt45_Natural_high.npz
+
 include .pre-commit-config.yaml
 include AUTHORS.md
 include CHANGES.md
