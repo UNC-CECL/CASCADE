@@ -237,21 +237,12 @@ def rebuild_dunes(
         dune_start_min = np.ones([ny]) * min_height
 
     # linearly interpolate from front row (max height) to back row (min height)
-    x = [0, nx - 1]
-    y = [np.arange(0, ny, 1)]
-    z = np.transpose([dune_start_max, dune_start_min])
-
-    f = interp2d(x, y, z)
-    new_dune_domain = f(np.arange(0, nx, 1), np.arange(0, ny, 1))
-
-    x_coarse, y_coarse = [0, nx - 1], np.arange(ny)
-    interp = RegularGridInterpolator(
-        (x_coarse, y_coarse), [dune_start_max, dune_start_min]
+    interpolate = RegularGridInterpolator(
+        ([0, nx - 1], np.arange(ny)), [dune_start_max, dune_start_min]
     )
-    x_fine, y_fine = np.meshgrid(np.arange(nx), np.arange(ny), indexing="ij")
-    z_interp = interp((x_fine, y_fine)).transpose()
-
-    assert_array_almost_equal(z_interp, new_dune_domain)
+    new_dune_domain = interpolate(
+        np.meshgrid(np.arange(nx), np.arange(ny), indexing="ij")
+    ).transpose()
 
     rebuild_dune_volume = np.sum(new_dune_domain - old_dune_domain)
 
