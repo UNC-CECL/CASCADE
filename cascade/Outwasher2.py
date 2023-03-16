@@ -684,7 +684,7 @@ class Outwasher:
         self._Qs_shoreface_per_length = np.zeros(time_step_count)  # dam^3/dam
         self._discharge = np.zeros(time_step_count, dtype=object)  # dam^3/substep
         self._elevation_change = np.zeros(time_step_count, dtype=object)
-        self._flow_routing_cellular_array = np.zeros(time_step_count, dtype=object)
+        self._bay_array = np.zeros(time_step_count, dtype=object)
         self._post_outwash_beach_domain = np.zeros(time_step_count, dtype=object)
         self.velocities = []
         self.flows = []
@@ -903,40 +903,40 @@ class Outwasher:
 
                         # if this is the first flow routing time step, start flow routing at the dune gaps
                         # otherwise, start at a pre-determined row
-                        if len(self._OW_TS) != 1:
+                        # if len(self._OW_TS) != 1:
 
-                            # check to see if the bay level is high enough to reach the dune gaps through the entire
-                            # domain (check if we route any flow)
-                            bay_sufficient = check_underwater(
+                        # check to see if the bay level is high enough to reach the dune gaps through the entire
+                        # domain (check if we route any flow)
+                        bay_sufficient = check_underwater(
+                            start_row=int_width,
+                            timestep=TS,
+                            elev_array=Elevation,
+                            bayhigh=bayhigh,
+                            length=self._length,
+                            bay_array=bay_array
+                        )
+
+                        # look for downhill cells connected to the dune gaps
+                        if bay_sufficient is True:
+                            Discharge, new_start_row, Q0_array, Q1_array, Q2_array, Q3_array = check_upstream_erosion(
                                 start_row=int_width,
                                 timestep=TS,
                                 elev_array=Elevation,
+                                discharge=Discharge,
+                                s1_array=s1_array,
+                                s2_array=s2_array,
+                                s3_array=s3_array,
                                 bayhigh=bayhigh,
+                                Q0_array=Q0_array,
+                                Q1_array=Q1_array,
+                                Q2_array=Q2_array,
+                                Q3_array=Q3_array,
+                                nn=b3d._nn,
+                                max_slope=self._max_slope,
                                 length=self._length,
-                                bay_array=bay_array
                             )
-
-                            # look for downhill cells connected to the dune gaps
-                            if bay_sufficient is True:
-                                Discharge, new_start_row, Q0_array, Q1_array, Q2_array, Q3_array = check_upstream_erosion(
-                                    start_row=int_width,
-                                    timestep=TS,
-                                    elev_array=Elevation,
-                                    discharge=Discharge,
-                                    s1_array=s1_array,
-                                    s2_array=s2_array,
-                                    s3_array=s3_array,
-                                    bayhigh=bayhigh,
-                                    Q0_array=Q0_array,
-                                    Q1_array=Q1_array,
-                                    Q2_array=Q2_array,
-                                    Q3_array=Q3_array,
-                                    nn=b3d._nn,
-                                    max_slope=self._max_slope,
-                                    length=self._length,
-                                )
-                            else:
-                                Discharge[TS] = 0
+                        else:
+                            Discharge[TS] = 0
 
                         max_dune = b3d._Dmaxel - b3d._BermEl  # [dam MHW]
 
@@ -951,12 +951,14 @@ class Outwasher:
                             # sediment distribution
                             start_sed_route = min(start_sed_row)
                             for d in range(start_sed_route, width):
+                                # if d < int_width + n_dune_rows - 1:  # we want to include the dunes
                                 if d < int_width:
                                     # ki = 3E-4
                                     ki = self._ki
                                     C = 0
                                 else:
                                     ki = self._ki
+                                    # ki = 5E-3
                                     C = self._cx * m_beach
 
                                 for i in range(self._length):
@@ -1014,12 +1016,13 @@ class Outwasher:
                                         # SED OUT CURRENT ROW CELL
                                         Qs_out = Qs1 + Qs2 + Qs3
 
-                                        if Elevation[TS, d, i] - Qs_out < 0:
-                                            new_loss = Elevation[TS, d, i]
+                                        # limit = 0
+                                        limit = -0.3
+                                        if Elevation[TS, d, i] - Qs_out < limit:  # dam
+                                            new_loss = Elevation[TS, d, i] + abs(limit)  # dam
                                             Qs1 = (Qs1 / Qs_out) * new_loss
                                             Qs2 = (Qs2 / Qs_out) * new_loss
                                             Qs3 = (Qs3 / Qs_out) * new_loss
-
                                             Qs_out = Qs1 + Qs2 + Qs3
 
                                         SedFluxOut[TS, d, i] = Qs_out
@@ -1107,10 +1110,8 @@ class Outwasher:
                 # other class variables that we want to save
                 self._final_bay_levels = storm_series
                 self._discharge[self._time_index - 1] = Discharge
-                # self._flow_routing_slopes_array[self._time_index - 1] = FR_s
-                # self._flow_routing_cellular_array[self._time_index - 1] = FR_array
                 self._elevation_change[self._time_index - 1] = elev_change_array
-                # self._pre_FR_array = pre_FR_array
+                self._bay_array[self._time_index - 1] = bay_array
 
 
 
