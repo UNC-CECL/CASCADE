@@ -208,17 +208,20 @@ plt.gca().xaxis.tick_bottom()
 
 ## break up the domain
 section1_pre_int = pre[0:30]
-section1_pre_int[24:, 24:26] = 0.085
+section1_pre_int[24:, 24:27] = 0.085
+section1_pre_int[27, 37] = 0.085
 section1_pre_int[28, 37] = 0.085
 section1_pre_int[29, 39] = 0.085
+section1_pre_int[28, 38:40] = 0.085
 section1_pre_dunes = pre[30:35]
 section1_pre_dunes = section1_pre_dunes[1:3]
 section1_pre_dunes[0:2, 24] = 0.085
 section1_pre_beach = pre[35:]
 section1_pre_beach2 = section1_pre[73:77]
+section1_pre_beach3 = section1_pre[73:78]
 
 full = np.append(section1_pre_int, section1_pre_dunes, 0)
-full = np.append(full, section1_pre_beach, 0)
+full = np.append(full, section1_pre_beach3, 0)
 
 fig2 = plt.figure()
 ax2 = fig2.add_subplot(111)
@@ -236,7 +239,7 @@ ax2.set_xlabel("barrier length (dam)")
 plt.gca().xaxis.tick_bottom()
 
 interior_b3d_input = np.flip(section1_pre_int)
-# np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-elevation2", interior_b3d_input)
+np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-elevation_mod", interior_b3d_input)
 
 # berm_el = np.mean(section1_pre_beach[0:2])
 berm_el = 0.11
@@ -244,8 +247,8 @@ berm_el = 0.11
 # dunes_b3d = np.flip(max_dunes) - berm_el
 dunes_b3d = np.flip(section1_pre_dunes) - berm_el
 dunes_input = np.append(dunes_b3d[0], dunes_b3d[1], 0)
-np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-dunes2", dunes_input)
+# np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-dunes2", dunes_input)
 #
 # # the beach should be loaded in with the ocean on the bottom
-# np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-beach2", section1_pre_beach)
+# np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-beach4", section1_pre_beach3)
 # beach_slope = np.mean(section1_pre_beach[0, :] - section1_pre_beach[-1, :])/len(section1_pre_beach)

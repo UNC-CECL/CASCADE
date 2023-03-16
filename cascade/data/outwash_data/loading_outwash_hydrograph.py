@@ -12,6 +12,7 @@ file_name = "sound_data.txt"
 hydrograph = np.loadtxt(datadir+file_name, delimiter=",")  # this hydrograph is in m MSL
 # using Beaufort, Duke Marine Lab NC datums to convert to dam MHW
 sound_levels = np.asarray([(float(s) - 0.470)/10 for s in hydrograph])
+# sound_levels = np.asarray([float(s)/10 for s in hydrograph])
 
 fig, ax1 = plt.subplots()
 
@@ -27,7 +28,8 @@ ax2.plot(sound_levels*10, color='blue', linestyle="dashed")
 ax2.tick_params(axis='y', labelcolor='blue')
 ax2.set_ylim(-1, 3)
 
-sound_levels = sound_levels[21:45]
+# sound_levels = sound_levels[21:45]
+sound_levels = sound_levels[21:33]
 sound_levels[0] = 0
 
 
@@ -47,7 +49,6 @@ for s in range(len(sound_levels) - 1):
         # the next iteration will start with 0.15, and that will be appended as well
 new_ss.append(sound_levels[-1])  # make sure to include our last value
 new_ss = np.asarray(new_ss)
-
 
 
 plt.figure(3)
@@ -72,4 +73,4 @@ for i in range(num_storms):
     outwash_storms[i, 0] = (i+1)*interval
     outwash_storms[i, 1] = new_ss
 
-np.save(datadir+"outwash_storms_6min.npy", year1)
+np.save(datadir+"outwash_storms_6min_short.npy", year1)
