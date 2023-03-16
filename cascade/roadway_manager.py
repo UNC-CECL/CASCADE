@@ -240,7 +240,7 @@ def rebuild_dunes(
         ([0, nx - 1], np.arange(ny)), [dune_start_max, dune_start_min]
     )
     new_dune_domain = interpolate(
-        np.meshgrid(np.arange(nx), np.arange(ny), indexing="ij")
+        tuple(np.meshgrid(np.arange(nx), np.arange(ny), indexing="ij"))
     ).transpose()
 
     rebuild_dune_volume = np.sum(new_dune_domain - old_dune_domain)
