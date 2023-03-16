@@ -32,8 +32,7 @@ roadway and dune elevations are reduced by SLR for each time step.
 import copy
 
 import numpy as np
-from numpy.testing import assert_array_almost_equal
-from scipy.interpolate import RegularGridInterpolator, interp2d
+from scipy.interpolate import RegularGridInterpolator
 
 dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
 
