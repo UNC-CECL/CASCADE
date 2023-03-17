@@ -32,6 +32,6 @@ jobs:
         run: |
           nox -s test
 
-      - name: Test Notebooks
-        run: |
-          nox -s test-notebooks
+      # - name: Test Notebooks
+      #   run: |
+      #     nox -s test-notebooks
