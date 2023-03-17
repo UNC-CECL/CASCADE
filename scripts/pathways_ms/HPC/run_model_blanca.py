@@ -34,7 +34,7 @@ def natural_1segment_pt004SLR(
         storm_file=storm_file,
         elevation_file=elevation_file,
         dune_file=dune_file,
-        parameter_file="RUN4-CASCADE-parameters.yaml",
+        parameter_file="natural_1segment_pt004SLR-CASCADE-parameters.yaml",
         wave_height=1,
         wave_period=7,  # s (lowered from 10 s to reduce k_sf)
         wave_asymmetry=0.8,  # fraction approaching from left
