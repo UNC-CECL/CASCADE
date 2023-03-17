@@ -10,7 +10,7 @@ import numpy as np
 from cascade.cascade import Cascade  # the new class
 
 
-def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
+def natural_1segment_pt004SLR(
     nt,
     rmin,
     rmax,
@@ -27,7 +27,7 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
     # run script for the 10,000 year runs.
 
     # --------- INITIALIZE ---------
-    datadir = "cascade/data/pathways_data/"
+    datadir = "data/pathways_data/"
     cascade = Cascade(
         datadir,
         name,
@@ -70,7 +70,7 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
     return cascade
 
 
-cascade_10kyr_pt45_01 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
+cascade_10kyr_pt45_01 = natural_1segment_pt004SLR(
     nt=10,
     rmin=0.25,  # rave = 0.45 (but not 0.5 spaced like in Reeves et al., 2021 -- arbitrary)
     rmax=0.65,

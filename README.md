@@ -107,7 +107,7 @@ Example (default) data inputs for cascade are provided in the `data` directory:
 ```
 from cascade.cascade import Cascade
 
-datadir = "cascade/data/"
+datadir = "data/"
 ```
 To initialize an instance of *cascade* with no human dynamics, 3 barrier segments (each 500-m long), and
 default *barrier3d* and *brie* parameters:

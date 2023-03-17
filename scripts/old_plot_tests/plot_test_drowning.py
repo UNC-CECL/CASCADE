@@ -45,7 +45,7 @@ rmax = [
 # rave = [0.45, 0.45, 0.45, 0.55, 0.55, 0.55, 0.65, 0.65, 0.65, 0.75, 0.75, 0.75]  # to help me remember the average
 
 # --------- INITIALIZE ---------
-datadir = "cascade/data/pathways_data/"
+datadir = "data/pathways_data/"
 brie, barrier3d = CASCADE.initialize(
     name,
     wave_height,

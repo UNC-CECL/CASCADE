@@ -121,7 +121,7 @@ def plot_chom_output(name_prefix):
 
 
 # split management - 1 m background erosion and 0.004 m/yr SLR ---------------------
-name_prefix = "9-CASCADE_Rave_pt75_Nourish_2mDune_lowEle_comm_BE1m_RT1m_6AST_3roads"
+name_prefix = "alongshore_uniform_linearSLR"
 iB3D = 1  # middle community
 tmax_mgmt = 80  # stopped community management at 80 years
 
@@ -141,7 +141,7 @@ np.savetxt(
 )
 
 # Rodanthe scenario - 1 m background erosion and 0.004 m/yr SLR -------------------
-name_prefix = name = "9-CASCADE_AST_3domains_BE1m"
+name_prefix = name = "status_quo_linearSLR"
 iB3D = 1  # middle community
 tmax_mgmt = 199  # never stopped community management
 
@@ -161,7 +161,7 @@ np.savetxt(
 )
 
 # Rodanthe scenario -  # 1 m background erosion and accelerated SLR --------------
-name_prefix = name = "9-CASCADE_AST_3domains_BE1m_AccSLR"
+name_prefix = name = "status_quo_accSLR"
 iB3D = 1  # middle community
 tmax_mgmt = 88  # middle roadway drowned
 

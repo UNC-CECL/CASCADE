@@ -5,7 +5,7 @@ from cascade.tools import plotters as CASCADE_Plt
 
 name = "bulldozer"
 ny = 3
-datadir = "cascade/data/pathways_data/"
+datadir = "data/pathways_data/"
 num_cores = ny
 nt = 100
 

@@ -272,7 +272,7 @@ class Cascade:
         Examples
         --------
         >>> from cascade.cascade import Cascade
-        >>> cascade = Cascade("./cascade/data/")  # doctest: +SKIP
+        >>> cascade = Cascade("./data/")  # doctest: +SKIP
         """
 
         self._ny = alongshore_section_count

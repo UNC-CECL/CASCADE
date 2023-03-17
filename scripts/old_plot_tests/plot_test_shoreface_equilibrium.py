@@ -31,7 +31,7 @@ rmin = 0.35  # minimum growth rate for logistic dune growth (can be a list)
 rmax = 0.85  # maximum growth rate for logistic dune growth (can be a list)
 
 # --------- INITIALIZE ---------
-datadir = "cascade/data/pathways_data/barrier3d-default-parameters.yaml"  # laptop
+datadir = "data/pathways_data/barrier3d-default-parameters.yaml"  # laptop
 brie, barrier3d = CASCADE.initialize(
     name,
     wave_height,
