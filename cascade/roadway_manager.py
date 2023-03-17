@@ -32,7 +32,7 @@ roadway and dune elevations are reduced by SLR for each time step.
 import copy
 
 import numpy as np
-from scipy.interpolate import interp2d
+from scipy.interpolate import RegularGridInterpolator
 
 dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
 
@@ -236,11 +236,13 @@ def rebuild_dunes(
         dune_start_min = np.ones([ny]) * min_height
 
     # linearly interpolate from front row (max height) to back row (min height)
-    x = [0, nx - 1]
-    y = [np.arange(0, ny, 1)]
-    z = np.transpose([dune_start_max, dune_start_min])
-    f = interp2d(x, y, z)
-    new_dune_domain = f(np.arange(0, nx, 1), np.arange(0, ny, 1))
+    interpolate = RegularGridInterpolator(
+        ([0, nx - 1], np.arange(ny)), [dune_start_max, dune_start_min]
+    )
+    new_dune_domain = interpolate(
+        tuple(np.meshgrid(np.arange(nx), np.arange(ny), indexing="ij"))
+    ).transpose()
+
     rebuild_dune_volume = np.sum(new_dune_domain - old_dune_domain)
 
     return new_dune_domain, rebuild_dune_volume
