@@ -138,6 +138,6 @@ brie_venv
 Output/
 Run_Output/
 /brie_venv/
-/data/pathways_data/1kyr_100 simulations/
-/data/pathways_data/Alt_pt75low/
-/data/pathways_data/OLD/
+/data/pathways_init_data/1kyr_100 simulations/
+/data/pathways_init_data/Alt_pt75low/
+/data/pathways_init_data/OLD/

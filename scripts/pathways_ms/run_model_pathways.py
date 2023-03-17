@@ -49,7 +49,7 @@ def natural_1segment_pt004SLR(
     # run script for the 10,000 year runs.
 
     # --------- INITIALIZE ---------
-    datadir = "./data/pathways_data/"
+    datadir = "./data/pathways_init_data/"
     cascade = Cascade(
         datadir,
         name,
@@ -115,7 +115,7 @@ def roadways_1segment_4mmyrSLR(
     # or until the barrier drowns. All other modules (beach nourishment, community dyanmics) turned off.
 
     # --------- INITIALIZE ---------
-    datadir = "./data/pathways_data/"
+    datadir = "./data/pathways_init_data/"
     cascade = Cascade(
         datadir,
         name,
@@ -185,7 +185,7 @@ def natural_1segment_variableSLR(
     # ###############################################################################
 
     # --------- INITIALIZE ---------
-    datadir = "./data/pathways_data/"
+    datadir = "./data/pathways_init_data/"
     cascade = Cascade(
         datadir,
         name,
@@ -249,7 +249,7 @@ def community_1segment_4mmyrSLR(
     # ###############################################################################
 
     # --------- INITIALIZE ---------
-    datadir = "./data/pathways_data/"
+    datadir = "./data/pathways_init_data/"
     cascade = Cascade(
         datadir,
         name,
@@ -359,7 +359,7 @@ def alongshore_connected(
     # ###############################################################################
 
     # --------- INITIALIZE ---------
-    datadir = "./data/pathways_data/"
+    datadir = "./data/pathways_init_data/"
     cascade = Cascade(
         datadir,
         name,
@@ -460,7 +460,7 @@ def alongshore_connected(
 
 # record of B3D time series initial conditions (storms, dune growth rates, growth parameters) -------------------
 def time_series():
-    datadir = "./data/pathways_data/"
+    datadir = "./data/pathways_init_data/"
 
     yearly_storms(
         datadir=datadir,
@@ -562,7 +562,7 @@ def time_series():
 
     def one_hundred_increase_storm_intensity_and_frequency():
         number_storms = 105
-        datadir = "data/pathways_data/"
+        datadir = "data/pathways_init_data/"
 
         # for iStorm in range(number_storms):
         for iStorm in range(100, 105):
@@ -587,7 +587,7 @@ def time_series():
 
     def one_hundred_ish_1kyr_storms():
         number_storms = 100
-        datadir = "data/pathways_data/"
+        datadir = "data/pathways_init_data/"
 
         for iStorm in range(number_storms):
             output_filename = "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_" + str(

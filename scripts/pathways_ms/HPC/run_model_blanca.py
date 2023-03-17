@@ -27,7 +27,7 @@ def natural_1segment_pt004SLR(
     # run script for the 10,000 year runs.
 
     # --------- INITIALIZE ---------
-    datadir = "data/pathways_data/"
+    datadir = "data/pathways_init_data/"
     cascade = Cascade(
         datadir,
         name,

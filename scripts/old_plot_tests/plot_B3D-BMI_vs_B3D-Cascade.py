@@ -14,7 +14,7 @@ from barrier3d.tools import plot as B3Dfunc
 from cascade.cascade import Cascade
 
 # specify data directories with initial conditions
-datadir = "data/pathways_data/"
+datadir = "data/pathways_init_data/"
 
 nt = 100
 cascade = Cascade(

@@ -27,7 +27,7 @@ rmax = 0.85  # maximum growth rate for logistic dune growth (can be a list)
 # --------- INITIALIZE ---------
 name = "1-CASCADE_Parallel_6cores"
 num_cores = 6
-datadir = "data/pathways_data/barrier3d-default-parameters.yaml"  # laptop
+datadir = "data/pathways_init_data/barrier3d-default-parameters.yaml"  # laptop
 brie, barrier3d_6cores = CASCADE.initialize(
     name,
     wave_height,
@@ -47,7 +47,7 @@ brie, barrier3d_6cores = CASCADE.time_loop(brie, barrier3d_6cores, num_cores)
 # all but 1 core
 name = "1-CASCADE_LTA_COMPARISON_3km_100yr_Parallel_15cores"
 num_cores = multiprocessing.cpu_count() - 1
-datadir = "data/pathways_data/barrier3d-default-parameters.yaml"  # laptop
+datadir = "data/pathways_init_data/barrier3d-default-parameters.yaml"  # laptop
 brie, barrier3d_15cores = CASCADE.initialize(
     name,
     wave_height,
@@ -71,7 +71,7 @@ b3d_1_15cores = CASCADE.save(
 # only 1 core (not in parallel)
 name = "1-CASCADE_NoParallel"
 num_cores = 1
-datadir = "data/pathways_data/barrier3d-default-parameters.yaml"  # laptop
+datadir = "data/pathways_init_data/barrier3d-default-parameters.yaml"  # laptop
 brie, barrier3d_1cores = CASCADE.initialize(
     name,
     wave_height,
