@@ -192,6 +192,7 @@ def test_rebuild_dunes_interpolation():
 @pytest.mark.parametrize("dz", [0.5, 1.0, 2.0])
 @pytest.mark.parametrize("min_height,max_height", [(1.0, 3.0), (3.0, 1.0), (2.0, 2.0)])
 def test_rebuild_dunes_interpolation_with_dz(dz, min_height, max_height):
+    """Check values for dz and min and max dune heights."""
     dune_height = np.ones((4, 3))
 
     expected = np.full_like(dune_height, 1.0 / dz)
@@ -211,6 +212,7 @@ def test_rebuild_dunes_interpolation_with_dz(dz, min_height, max_height):
 @pytest.mark.parametrize("ny", [1, 2, 3, 1000])
 @pytest.mark.parametrize("nx", [2, 3, 1000])
 def test_rebuild_dunes_interpolation_sizes(ny, nx):
+    """Check using various array sizes for the inital dune height."""
     dune_height = np.ones((ny, nx))
 
     new_dune_height, volume_change = rebuild_dunes(
@@ -231,6 +233,7 @@ def test_rebuild_dunes_interpolation_sizes(ny, nx):
     "rng", [True, False, np.random, np.random.default_rng(seed=1945)]
 )
 def test_rebuild_dunes_interpolation_volume_change(fill, rng):
+    """Check the change in volume with different initial heights and rngs."""
     dune_height = np.full((4, 3), fill)
 
     new_dune_height, volume_change = rebuild_dunes(
@@ -242,6 +245,19 @@ def test_rebuild_dunes_interpolation_volume_change(fill, rng):
     )
 
     assert volume_change == pytest.approx(new_dune_height.sum() - dune_height.sum())
+
+
+def test_rebuild_dunes_interpolation_rng():
+    """Check that the random number generators give different values."""
+    rngs = [False, True, np.random, np.random.default_rng(seed=42)]
+
+    volumes = []
+    for rng in (False, True, np.random, np.random.default_rng(seed=42)):
+        _, volume = rebuild_dunes(np.zeros((4, 3)), rng=rng)
+        volumes.append(volume)
+
+    assert len(np.unique(volumes)) == len(rngs)
+    assert np.all(np.diff(np.unique(volumes)) > 1e-9)
 
 
 def test_growth_params():
