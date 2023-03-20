@@ -1,8 +1,6 @@
 import numpy as np
 import math
 import copy
-# from matplotlib import pyplot as plt
-# from collections import Counter
 
 from .beach_dune_manager import shoreface_nourishment
 
@@ -22,22 +20,17 @@ def bay_converter(storms, substep):
 
 
 def calculate_slopes(
-        avg_slope_array,
         domain,
         width,
-        int_width,
         length,
         time_step,
         s1_vals,
         s2_vals,
         s3_vals,
-        block_size,
-        bay_level,
         ):
     """
     takes the elevations and differentiates uphill and downhill regions based on an average slope of
     a block of cells
-    :param avg_slope_array: currently empty, for each cell, stores the average value of the S1, S2, and S3 values
     :param domain: elevation array
     :param width: cross-shore barrier width
     :param length: alongshore barrier length
@@ -97,56 +90,7 @@ def calculate_slopes(
             s2_vals[time_step, row, col] = S2
             s3_vals[time_step, row, col] = S3
 
-            # averaging S1, S2, and S3 for each cell
-            if col == 0:
-                avg_slope_array[time_step, row, col] = (S2 + S3) / 2
-            elif col == length-1:
-                avg_slope_array[time_step, row, col] = (S1 + S2) / 2
-            else:
-                avg_slope_array[time_step, row, col] = (S1 + S2 + S3) / 3
-
-
-    # # adjusting for a block size that does not divide evenly into the domain
-    # b_size = block_size
-    # extra_vert_cells = int_width % b_size  # gives the extra row cells
-    # extra_lat_cells = length % b_size  # gives the extra column cells
-    #
-    # # calculating how many times we will shift the block to calculate blocks of average slopes
-    # if extra_vert_cells == 0:
-    #     n_shifts_vert = int(int_width / b_size)
-    # else:
-    #     n_shifts_vert = int((int_width - extra_vert_cells) / b_size) + 1
-    # if extra_lat_cells == 0:
-    #     n_shifts_lat = int(length / b_size)
-    # else:
-    #     n_shifts_lat = int((length - extra_lat_cells) / b_size) + 1
-    #
-    # # Shift through the entire column and then move block up to the next row
-    # # start right before the dune line
-    # for v in range(n_shifts_vert):
-    #     if v == 0:
-    #         bot_row = int_width - 1  # start at the bay side dune line and move toward the bay
-    #         top_row = bot_row - b_size
-    #     elif v == n_shifts_vert-1 and extra_vert_cells != 0:  # this is the last shift
-    #         bot_row = top_row
-    #         top_row = bot_row - extra_vert_cells
-    #     else:
-    #         bot_row = top_row
-    #         top_row = bot_row - b_size
-    #     for l in range(n_shifts_lat):
-    #         if l == n_shifts_lat-1 and extra_lat_cells != 0:
-    #             start_col = end_col
-    #             end_col = start_col + extra_lat_cells + 1
-    #         else:
-    #             start_col = l*b_size
-    #             end_col = l*b_size + b_size
-    #         S = np.mean(avg_slope_array[time_step, (top_row+1):(bot_row+1), start_col:end_col])
-    #         if S < 0:
-    #             truth_array[time_step, (top_row+1):(bot_row+1), start_col:end_col] = 0
-    #         else:
-    #             truth_array[time_step, (top_row+1):(bot_row+1), start_col:end_col] = 1
-    #
-    return avg_slope_array, s1_vals, s2_vals, s3_vals,
+    return s1_vals, s2_vals, s3_vals,
 
 
 def dune_bay_comparison(dune_flow_type, n_dunes, elev_array, time_step, int_width, bayhigh):
@@ -419,7 +363,7 @@ def check_upstream_erosion(
             start_row = start_row
             cont = 0
 
-    return discharge, start_row, Q0_array, Q1_array, Q2_array, Q3_array
+    return discharge, Q0_array, Q1_array, Q2_array, Q3_array
 
 def check_underwater(
         start_row,
@@ -652,6 +596,7 @@ class Outwasher:
         self._max_slope = -0.25
         self._ki = sediment_flux_coefficient_Ki
         self._cx = 10
+        self._mm = 2
         self._sea_level = sea_level  # equal to 0 dam
         self._bay_depth = -bay_depth  # [dam MHW] Depth of bay behind island segment, currently set to 0.3
         self._dune_flow_dynamics = dune_flow_dynamics
@@ -782,8 +727,6 @@ class Outwasher:
                 Discharge = np.zeros([duration, width, self._length])
                 SedFluxIn = np.zeros([duration, width, self._length])
                 SedFluxOut = np.zeros([duration, width, self._length])
-                truth_array = np.zeros([duration, width, self._length])
-                avg_slope_array = np.zeros([duration, width, self._length])
                 s1_array = np.zeros([duration, width, self._length])
                 s2_array = np.zeros([duration, width, self._length])
                 s3_array = np.zeros([duration, width, self._length])
@@ -792,9 +735,7 @@ class Outwasher:
                 Q2_array = np.zeros([duration, width, self._length])
                 Q3_array = np.zeros([duration, width, self._length])
                 elev_change_array = np.zeros([duration, width, self._length])
-                # pre_FR_array = np.zeros([duration, width, self._length])
                 bay_array = np.zeros([duration, width, self._length])
-
 
                 # route the flow
                 for TS in range(duration):
@@ -805,21 +746,6 @@ class Outwasher:
 
                     # get the hydrograph for this time step
                     bayhigh = storm_series[TS]  # [dam]
-
-                    # need to calculate grouped averaged slopes over the domain
-                    avg_slope_array, s1_array, s2_array, s3_array, = calculate_slopes(
-                        avg_slope_array=avg_slope_array,
-                        domain=Elevation[TS],
-                        width=width,
-                        int_width=int_width,
-                        length=self._length,
-                        time_step=TS,
-                        s1_vals=s1_array,
-                        s2_vals=s2_array,
-                        s3_vals=s3_array,
-                        block_size=5,
-                        bay_level=bayhigh
-                    )
 
                     # determine how we will initiate flow routing with the dunes
                     # we will either compare the bay level to the highest dune line or the first dune line
@@ -836,6 +762,18 @@ class Outwasher:
                         Discharge[TS, :, :] = 0
                     else:
                         self._OW_TS.append(TS)
+
+                        # need to calculate and store slopes over the domain
+                        s1_array, s2_array, s3_array, = calculate_slopes(
+                            domain=Elevation[TS],
+                            width=width,
+                            length=self._length,
+                            time_step=TS,
+                            s1_vals=s1_array,
+                            s2_vals=s2_array,
+                            s3_vals=s3_array,
+                        )
+
                         # initialize the flow routing array based on all the dunes or just the first row
                         Discharge, self.velocities, self.flows, Q0_array, Q1_array, Q2_array, Q3_array, bay_array = \
                             dune_flow_routing_gaps(
@@ -870,41 +808,6 @@ class Outwasher:
                         else:  # we will route flow through the dunes
                             start_flow_route = int_width
 
-                        # route through the rest of the domain
-                        for d in range(start_flow_route, width):
-                            Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
-                            # Loop through each col of the specified row
-                            for i in range(self._length):
-                                # ### Calculate Slopes
-                                S1 = s1_array[TS, d, i]
-                                S2 = s2_array[TS, d, i]
-                                S3 = s3_array[TS, d, i]
-
-                                # if we have discharge, set Qo equal to that value
-                                if Discharge[TS, d, i] > 0:
-                                    bay_array[TS, d, i] = 1
-                                    Q0_array[TS, d, i] = Discharge[TS, d, i]
-                                    Q0 = Q0_array[TS, d, i]  # (dam^3/hr)
-                                    Q1_array[TS, d, i], Q2_array[TS, d, i], Q3_array[TS, d, i] = calculate_discharges(
-                                        i, S1, S2, S3, Q0, b3d._nn, self._length, self._max_slope)
-
-                                    ### Update Discharge
-                                    # discharge is defined for the next row, so we do not need to include the last row
-                                    # the first row of discharge was already defined
-                                    if d != width - 1:
-                                        # Cell 1
-                                        if i > 0:
-                                            Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1_array[TS, d, i]
-                                        # Cell 2
-                                        Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2_array[TS, d, i]
-                                        # Cell 3
-                                        if i < (self._length - 1):
-                                            Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3_array[TS, d, i]
-
-                        # if this is the first flow routing time step, start flow routing at the dune gaps
-                        # otherwise, start at a pre-determined row
-                        # if len(self._OW_TS) != 1:
-
                         # check to see if the bay level is high enough to reach the dune gaps through the entire
                         # domain (check if we route any flow)
                         bay_sufficient = check_underwater(
@@ -918,23 +821,61 @@ class Outwasher:
 
                         # look for downhill cells connected to the dune gaps
                         if bay_sufficient is True:
-                            Discharge, new_start_row, Q0_array, Q1_array, Q2_array, Q3_array = check_upstream_erosion(
-                                start_row=int_width,
-                                timestep=TS,
-                                elev_array=Elevation,
-                                discharge=Discharge,
-                                s1_array=s1_array,
-                                s2_array=s2_array,
-                                s3_array=s3_array,
-                                bayhigh=bayhigh,
-                                Q0_array=Q0_array,
-                                Q1_array=Q1_array,
-                                Q2_array=Q2_array,
-                                Q3_array=Q3_array,
-                                nn=b3d._nn,
-                                max_slope=self._max_slope,
-                                length=self._length,
-                            )
+
+                            # route water from dunes down to ocean
+                            for d in range(start_flow_route, width):
+                                Discharge[TS, d, :][Discharge[TS, d, :] < 0] = 0
+                                # Loop through each col of the specified row
+                                for i in range(self._length):
+                                    # ### Calculate Slopes
+                                    S1 = s1_array[TS, d, i]
+                                    S2 = s2_array[TS, d, i]
+                                    S3 = s3_array[TS, d, i]
+
+                                    # if we have discharge, set Qo equal to that value
+                                    if Discharge[TS, d, i] > 0:
+                                        bay_array[TS, d, i] = 1
+                                        Q0_array[TS, d, i] = Discharge[TS, d, i]
+                                        Q0 = Q0_array[TS, d, i]  # (dam^3/hr)
+                                        Q1_array[TS, d, i], Q2_array[TS, d, i], Q3_array[
+                                            TS, d, i] = calculate_discharges(
+                                            i, S1, S2, S3, Q0, b3d._nn, self._length, self._max_slope)
+
+                                        ### Update Discharge
+                                        # discharge is defined for the next row, so we do not need to include the last row
+                                        # the first row of discharge was already defined
+                                        if d != width - 1:
+                                            # Cell 1
+                                            if i > 0:
+                                                Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1_array[
+                                                    TS, d, i]
+                                            # Cell 2
+                                            Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2_array[TS, d, i]
+                                            # Cell 3
+                                            if i < (self._length - 1):
+                                                Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3_array[
+                                                    TS, d, i]
+
+                            # if this is the first flow routing time step, start flow routing at the dune gaps
+                            # otherwise, backtrack through the back barrier
+                            if len(self._OW_TS) > 0:
+                                Discharge, Q0_array, Q1_array, Q2_array, Q3_array = check_upstream_erosion(
+                                    start_row=int_width,
+                                    timestep=TS,
+                                    elev_array=Elevation,
+                                    discharge=Discharge,
+                                    s1_array=s1_array,
+                                    s2_array=s2_array,
+                                    s3_array=s3_array,
+                                    bayhigh=bayhigh,
+                                    Q0_array=Q0_array,
+                                    Q1_array=Q1_array,
+                                    Q2_array=Q2_array,
+                                    Q3_array=Q3_array,
+                                    nn=b3d._nn,
+                                    max_slope=self._max_slope,
+                                    length=self._length,
+                                )
                         else:
                             Discharge[TS] = 0
 
@@ -955,7 +896,8 @@ class Outwasher:
                                 if d < int_width:
                                     # ki = 3E-4
                                     ki = self._ki
-                                    C = 0
+                                    C = self._cx * m_beach
+                                    # C = 0
                                 else:
                                     ki = self._ki
                                     # ki = 5E-3
@@ -979,7 +921,7 @@ class Outwasher:
                                         # all Qs in [dam^3/hr]
                                         # bottom left cell
                                         if Q1 > q_min:
-                                            Qs1 = ki * (Q1 * (S1 + C)) ** b3d._mm
+                                            Qs1 = ki * (Q1 * (S1 + C)) ** self._mm
                                             if Qs1 < 0:
                                                 Qs1 = 0
                                             elif Qs1 > fluxLimit:
@@ -988,7 +930,7 @@ class Outwasher:
                                             Qs1 = 0
                                         # bottom center cell
                                         if Q2 > q_min:
-                                            Qs2 = ki * (Q2 * (S2 + C)) ** b3d._mm
+                                            Qs2 = ki * (Q2 * (S2 + C)) ** self._mm
                                             if Qs2 < 0:
                                                 Qs2 = 0
                                             elif Qs2 > fluxLimit:
@@ -997,7 +939,7 @@ class Outwasher:
                                             Qs2 = 0
                                         # bottom right cell
                                         if Q3 > q_min:
-                                            Qs3 = ki * (Q3 * (S3 + C)) ** b3d._mm
+                                            Qs3 = ki * (Q3 * (S3 + C)) ** self._mm
                                             if Qs3 < 0:
                                                 Qs3 = 0
                                             elif Qs3 > fluxLimit:
@@ -1009,14 +951,11 @@ class Outwasher:
                                         Qs2 = np.nan_to_num(Qs2)
                                         Qs3 = np.nan_to_num(Qs3)
 
-
                                         # ### Calculate Net Erosion/Accretion
                                         # flux in vs. flux out
-
                                         # SED OUT CURRENT ROW CELL
                                         Qs_out = Qs1 + Qs2 + Qs3
 
-                                        # limit = 0
                                         limit = -0.3
                                         if Elevation[TS, d, i] - Qs_out < limit:  # dam
                                             new_loss = Elevation[TS, d, i] + abs(limit)  # dam
