@@ -2,8 +2,9 @@
 
 ## 0.1.1 (unreleased)
 
-
-- Nothing changed yet.
+- Added additional tests for the ``rebuild_dunes`` function that uses that new
+  *numpy* interpolator, ``RegularGridInterpolator``.
+  (`#36 <https://github.com/UNC-CECL/cascade/issues/36>`_)
 
 
 ## 0.1.0 (2023-03-17)
