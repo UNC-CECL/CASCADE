@@ -14,8 +14,7 @@ pavement damage during overwashing events, including rebuilding roadways at suff
 burial by overwash, constructing large dunes, and relocating the road into the barrier interior. The second module
 incorporates management strategies for maintaining a coastal community, including beach nourishment, dune construction,
 and overwash removal. For a full description of model dynamics, please see the pre-print of "The Future of Developed
-Barrier Systems: Pathways Toward Uninhabitability, Drowning, and Rebound" by Anarde et al., (in review) at Earth's Future 
-([Earth ArXiv preprint](https://doi.org/10.31223/X5P947)).
+Barrier Systems: Pathways Toward Uninhabitability, Drowning, and Rebound" by Anarde et al., (in review, [Earth ArXiv preprint](https://doi.org/10.31223/X5P947)).
 
 ![ModelTimeLoop-01](https://user-images.githubusercontent.com/57640439/226623608-d0c58437-d44f-4dca-8f43-0b92623fcda6.png)
 
@@ -49,7 +48,7 @@ Community Surface Dynamics Modeling System. The repositories for the models coup
 
 This ReadMe corresponds to the development version of *cascade* used for the
 simulations detailed in *"The Future of Developed Barrier Systems: Pathways Toward
-Uninhabitability, Drowning, and Rebound" by Anarde et al., (in review)*. Prior
+Uninhabitability, Drowning, and Rebound" by Anarde et al., (in review, [Earth ArXiv preprint](https://doi.org/10.31223/X5P947))*. Prior
 to publication, *cascade* will be made available for easy installation using either
 `pip` or `conda`. Reviewers can follow the instructions provided below for installation
 of *cascade*.
