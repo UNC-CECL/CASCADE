@@ -4,10 +4,10 @@
 The CoAStal Community-lAnDscape Evolution (*cascade*) model is a coupled landscape and human-dynamics modeling framework.
 *cascade* combines elements of two exploratory morphodynamic models of barrier evolution -- *barrier3d*
 (Reeves et al., 2021) and the BarrierR Inlet Environment (*brie*) model (Nienhuis & Lorenzo-Trueba, 2019) -- into a
-single model framework (Figure 1). *barrier3d*, a spatially-explicit cellular exploratory model, is the core of *cascade*.
+single model framework (figure below). *barrier3d*, a spatially-explicit cellular exploratory model, is the core of *cascade*.
 It is used within the *cascade* framework to simulate the effects of individual storm events and SLR on shoreface
 evolution; dune dynamics, including dune growth, erosion, and migration; and overwash deposition by individual storms.
-BRIE is used to simulate large-scale coastline evolution arising from alongshore sediment transport processes; this is
+*brie* is used to simulate large-scale coastline evolution arising from alongshore sediment transport processes; this is
 accomplished by connecting individual *barrier3d* models through diffusive alongshore sediment transport. Human dynamics
 are incorporated in *cascade* in two separate modules. The first module simulates strategies for preventing roadway
 pavement damage during overwashing events, including rebuilding roadways at sufficiently low elevations to allow for
@@ -65,7 +65,7 @@ You can also use `conda`:
 
 ### From Source
 
-*Cascade* is actively being developed on GitHub, where the code is freely available.
+*cascade* is actively being developed on GitHub, where the code is freely available.
 If you would like to modifying code or contributing new code to *cascade*, you will first
 need to get *cascade*'s source code, and then install *cascade* from that code.
 
