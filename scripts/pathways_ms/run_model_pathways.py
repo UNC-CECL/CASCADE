@@ -616,7 +616,6 @@ def time_series():
 
 # 10,000 year simulations -------------------------------------------------------
 def cascade_10kyr_sensitivity():
-    
     natural_1segment_pt004SLR(
         nt=10000,
         rmin=0.25,  # rave = 0.45 (but not 0.5 spaced like in Reeves et al., 2021 -- arbitrary)
@@ -720,7 +719,6 @@ def cascade_10kyr_sensitivity():
 
 # 200 year simulations ----------------------------------------------------------
 def SLR_sensitivity():
-
     # linear SLR scenarios
     natural_1segment_variableSLR(
         nt=200,
@@ -873,7 +871,6 @@ def SLR_sensitivity():
 
 # 1,000 year simulations ----------------------------------------------------------
 def natural():
-
     natural_1segment_pt004SLR(
         nt=1000,
         rmin=0.25,
@@ -893,7 +890,7 @@ def natural():
         elevation_file="b3d_pt45_802yrs_high-elevations.csv",
         dune_file="pathways-dunes.npy",
     )
-    
+
     natural_1segment_pt004SLR(
         nt=1000,
         rmin=0.55,
@@ -916,10 +913,8 @@ def natural():
 
 
 def roadways():
-
     def low_dune_growth_rate():
         def low_elevation():
-
             # Roadway width drowned at 544 years, 20.0% of road borders water
             roadways_1segment_4mmyrSLR(
                 nt=1000,
@@ -1128,7 +1123,7 @@ def roadways():
                 dune_file="pathways-dunes.npy",
                 background_erosion=0.0,
             )
-            
+
     def roadway_sensitivity_abandonment_criteria():
         # test the sensitivity of varying the number of water cells that border the roadway as a metric to stop
         # managing the road for the most extreme barrier trajectory (high dune growth rate, low barrier)
@@ -1359,7 +1354,7 @@ def community():
                 background_erosion=0.0,
                 rebuild_dune_threshold=1,  # m above the berm elevation
             )
-    
+
             # Community reached minimum width, drowned at 83 years
             community_1segment_4mmyrSLR(
                 nt=1000,
@@ -1377,7 +1372,7 @@ def community():
                 background_erosion=0.0,
                 rebuild_dune_threshold=1,  # m above the berm elevation
             )
-    
+
             # Community reached minimum width, drowned at 83 years
             community_1segment_4mmyrSLR(
                 nt=1000,
@@ -1415,7 +1410,7 @@ def community():
                 background_erosion=0.0,
                 rebuild_dune_threshold=1,  # m above the berm elevation
             )
-    
+
             # Community reached minimum width, drowned at 518; Barrier has HEIGHT DROWNED at t = 580 years
             community_1segment_4mmyrSLR(
                 nt=1000,
@@ -1434,7 +1429,7 @@ def community():
                 background_erosion=0.0,
                 rebuild_dune_threshold=1,  # m above the berm elevation
             )
-    
+
             # Community reached minimum width, drowned at 518 years
             community_1segment_4mmyrSLR(
                 nt=1000,
@@ -1456,7 +1451,6 @@ def community():
 
 
 def roadway_plus_community():
-
     def alongshore_uniform():
         # variables that DO NOT change among runs
         number_barrier3d_models = 6
@@ -1934,7 +1928,6 @@ def increased_alongshore_complexity():
         )
 
     def one_hundred_storm_sequences():
-
         def one_hundred_thirds_acc_BE1m_ast_runs(
             storm_start=0,
             storm_end=100,
