@@ -192,58 +192,48 @@ def rebuild_dunes(
 
     Parameters
     ----------
-    yxz_dune_grid:
+    yxz_dune_grid: ndarray, shape (ny, nx)
         Dune topography [z units specified by dz; for Barrier3D, dz=10, decameters
         above the berm elevation]
-    max_dune_height: float
+    max_dune_height: float, optional
         Maximum dune height for dune rebuilding [m]
-    min_dune_height: float
+    min_dune_height: float, optional
         Minimum dune height for dune rebuilding [m]
-    dz: int
+    dz: int, optional
         Vertical discretization of z [default is dz=10, dam]
-    rng: boolean
-        If True, add random perturbations alongshore to dune height
+    rng: bool or np.random.Generator, optional
+        If `True`, add random perturbations alongshore to dune height. `rng`
+        can also be an object that provides a `uniform` method, like `numpy.random`
+        or `numpy.random.Generator`.
 
     Returns
     -------
-    new_dune_domain: float or array of float
+    new_dune_domain: ndarray, shape (ny, nx)
         New yxz dune domain in new_road_domain: in units of dx, dy, dz
     rebuild_dune_volume: float
         Volume of sand for dune rebuild, in units of dx*dy*dz
     """
+    if rng and isinstance(rng, bool):
+        rng = np.random.default_rng(seed=1973)
 
-    # old_dune_domain = copy.deepcopy(yxz_dune_grid)
-    old_dune_domain = yxz_dune_grid
+    ny, nx = yxz_dune_grid.shape
 
     # convert from m to grid z discretization
-    max_height = max_dune_height / dz
-    min_height = min_dune_height / dz
-    ny = np.size(yxz_dune_grid, 0)
-    nx = np.size(yxz_dune_grid, 1)
+    dune_height = np.empty((ny, 2), dtype=float)
+    dune_height[:, 0] = max_dune_height / dz
+    dune_height[:, 1] = min_dune_height / dz
 
+    # add some random perturbations to dune heights
     if rng:
-        # add some random perturbations to dune heights
-        RNG = np.random.default_rng(seed=1973)
+        dune_height += rng.uniform(high=0.01, size=dune_height.size).reshape((ny, 2))
 
-        dune_start_max = np.ones([ny]) * (
-            max_height + (-0.01 + (0.01 - (-0.01)) * RNG.random(ny))
-        )
-        dune_start_min = np.ones([ny]) * (
-            min_height + (-0.01 + (0.01 - (-0.01)) * RNG.random(ny))
-        )
-    else:
-        dune_start_max = np.ones([ny]) * max_height
-        dune_start_min = np.ones([ny]) * min_height
+    interpolate = RegularGridInterpolator((np.arange(ny), [0, nx - 1]), dune_height)
 
-    # linearly interpolate from front row (max height) to back row (min height)
-    interpolate = RegularGridInterpolator(
-        ([0, nx - 1], np.arange(ny)), [dune_start_max, dune_start_min]
-    )
     new_dune_domain = interpolate(
-        tuple(np.meshgrid(np.arange(nx), np.arange(ny), indexing="ij"))
-    ).transpose()
+        tuple(np.meshgrid(np.arange(ny), np.arange(nx), indexing="ij"))
+    )
 
-    rebuild_dune_volume = np.sum(new_dune_domain - old_dune_domain)
+    rebuild_dune_volume = np.sum(new_dune_domain - yxz_dune_grid)
 
     return new_dune_domain, rebuild_dune_volume
 
