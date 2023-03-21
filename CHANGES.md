@@ -1,6 +1,6 @@
 # Changelog for CASCADE
 
-## 0.1.1 (unreleased)
+## 0.1.1 (2023-03-21)
 
 - Added additional tests for the ``rebuild_dunes`` function that uses that new
   *numpy* interpolator, ``RegularGridInterpolator``.
