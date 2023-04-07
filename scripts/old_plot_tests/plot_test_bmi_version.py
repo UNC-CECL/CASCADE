@@ -6,11 +6,11 @@ v2 - Jan 26, updates to CASCADE, B3D, and Brie
 
 """
 
-import numpy as np
-import os
 import multiprocessing
+import os
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 from CASCADE import Cascade
 
@@ -24,7 +24,6 @@ new_500_version = "3-AlongshoreVarGrowthParam_pt2HAF_gradient_500yrs_15cores_v3"
 
 
 def run_1_100years(name=new_100_version):
-
     # --------- INITIAL CONDITIONS ---------
     wave_height = 1.0  # m
     wave_period = 7  # s (lowered from 10 s to reduce k_sf)
@@ -38,7 +37,7 @@ def run_1_100years(name=new_100_version):
 
     # all but 1 core
     num_cores = multiprocessing.cpu_count() - 1
-    datadir = "cascade/data/pathways_data/barrier3d-default-parameters.yaml"  # laptop
+    datadir = "data/pathways_init_data/barrier3d-default-parameters.yaml"  # laptop
     brie, barrier3d_15cores = CASCADE.initialize(
         name,
         wave_height,
@@ -59,7 +58,6 @@ def run_1_100years(name=new_100_version):
 
 
 def run_3_500years(name=new_500_version):
-
     # --------- INITIAL CONDITIONS ---------
     wave_height = 1.0  # m
     wave_period = 7  # s (lowered from 10 s to reduce k_sf)
@@ -100,7 +98,7 @@ def run_3_500years(name=new_500_version):
 
     # all but 1 core
     num_cores = multiprocessing.cpu_count() - 1
-    datadir = "cascade/data/pathways_data/"
+    datadir = "data/pathways_init_data/"
     brie, barrier3d_3_15cores = CASCADE.initialize(
         name,
         wave_height,
@@ -122,7 +120,6 @@ def run_3_500years(name=new_500_version):
 
 
 def plot_500_diff(filename_old=v1_500yr, filename_new=new_500_version):
-
     # load new version
     os.chdir("/Run_Output/BMI_Version_Tests")
     output = np.load(filename_new, allow_pickle=True)
@@ -156,7 +153,6 @@ def plot_500_diff(filename_old=v1_500yr, filename_new=new_500_version):
 
 
 def plot_100_diff(filename_old=v2_100yr, filename_new=new_100_version):
-
     # load new version
     os.chdir("/Run_Output/BMI_Version_Tests")
     output = np.load(filename_new, allow_pickle=True)

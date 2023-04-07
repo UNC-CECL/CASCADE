@@ -1,18 +1,20 @@
-import numpy as np
-from numpy.testing import assert_array_almost_equal
-from pathlib import Path
-from cascade.cascade import Cascade
-from barrier3d import Barrier3dBmi
+import shutil
 
-BMI_DATA_DIR = Path(__file__).parent / "cascade_test_versions_inputs"
-# datadir = "../Cascade/tests/cascade_test_versions_inputs/"
+import numpy as np
+from barrier3d import Barrier3dBmi
+from numpy.testing import assert_array_almost_equal
+
+from cascade.cascade import Cascade
+
 NT = 30
 
 
-def run_cascade_no_human_dynamics():
+def run_cascade_no_human_dynamics(datadir):
+    for data_file in datadir.iterdir():
+        shutil.copy(data_file, ".")
+
     cascade = Cascade(
-        str(BMI_DATA_DIR) + "/",
-        # datadir,
+        ".",
         name="test_coupled_dune_migration",
         storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
         elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
@@ -36,7 +38,7 @@ def run_cascade_no_human_dynamics():
         community_economics_module=False,  # no community dynamics
     )
 
-    for time_step in range(NT - 1):
+    for _ in range(NT - 1):
         cascade.update()
         if cascade.b3d_break:
             break
@@ -44,10 +46,13 @@ def run_cascade_no_human_dynamics():
     return cascade
 
 
-def initialize_cascade_no_human_dynamics_ast():
+def initialize_cascade_no_human_dynamics_ast(datadir):
+    for data_file in datadir.iterdir():
+        shutil.copy(data_file, ".")
+
     cascade = Cascade(
         name="test_initialize",
-        datadir=str(BMI_DATA_DIR) + "/",
+        datadir=".",
         storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
         elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
         dune_file="pathways-dunes.npy",
@@ -59,7 +64,8 @@ def initialize_cascade_no_human_dynamics_ast():
         sea_level_rise_rate=0.004,
         sea_level_rise_constant=True,
         background_erosion=0.0,
-        alongshore_section_count=6,  # 6 barrier 3d models connected with alongshore sediment transport
+        # 6 barrier 3d models connected with alongshore sediment transport
+        alongshore_section_count=6,
         time_step_count=3,
         min_dune_growth_rate=0.55,
         max_dune_growth_rate=0.95,  # rave = 0.75
@@ -73,22 +79,21 @@ def initialize_cascade_no_human_dynamics_ast():
     return cascade
 
 
-CASCADE_OUTPUT = run_cascade_no_human_dynamics()
-CASCADE_AST_MODEL = initialize_cascade_no_human_dynamics_ast()
-
-
-def test_barrier3d_versions():
+def test_barrier3d_versions(tmp_path, datadir, monkeypatch):
     """
     Check that the barrier3d output in cascade matches the bmi version(s)
     """
+    monkeypatch.chdir(tmp_path)
+    CASCADE_OUTPUT = run_cascade_no_human_dynamics(datadir)
 
-    # Barrier3D BMI Version (2.0 and beyond): create an instance of the new BMI class, which is the model
+    # Barrier3D BMI Version (2.0 and beyond): create an instance of the new BMI
+    # class, which is the model
     barrier3d = Barrier3dBmi()
     input_file = "barrier3d-default-parameters.yaml"
-    barrier3d.initialize(str(BMI_DATA_DIR / input_file))
+    barrier3d.initialize(input_file)
 
     # increase time step
-    for time_step in range(NT - 1):
+    for _ in range(NT - 1):
         barrier3d.update()
 
     assert np.all(
@@ -107,13 +112,18 @@ def test_barrier3d_versions():
     assert np.all(barrier3d._model._QowTS == CASCADE_OUTPUT._barrier3d[0]._QowTS)
 
 
-def test_shoreline_dune_migration():
+def test_shoreline_dune_migration(tmp_path, datadir, monkeypatch):
     """
-    As a check on the dynamics in Barrier3D, here we want to see if the dunes migrate correctly for natural simulations,
-    when the shoreline surpasses a full cell width (10 m). Barrier3D was originally written for a shoreface toe to start
-    at x=0 dam. When coupled with BRIE, the shoreface starts at a non-integer value, so I had to modify the dune
-    migration algorithmn within Barrier3D to account for this.
+    As a check on the dynamics in Barrier3D, here we want to see if the dunes
+    migrate correctly for natural simulations, when the shoreline surpasses a
+    full cell width (10 m). Barrier3D was originally written for a shoreface toe
+    to start at x=0 dam. When coupled with BRIE, the shoreface starts at a non-integer
+    value, so I had to modify the dune migration algorithmn within Barrier3D to
+    account for this.
     """
+    monkeypatch.chdir(tmp_path)
+    CASCADE_OUTPUT = run_cascade_no_human_dynamics(datadir)
+
     iB3D = 0
     frac_grid_cell = np.array(CASCADE_OUTPUT.barrier3d[iB3D]._x_s_TS) % 1
     diff = np.hstack([0, np.diff(frac_grid_cell)])
@@ -123,13 +133,15 @@ def test_shoreline_dune_migration():
     assert np.all(shoreline_transgressed == dunes_migrated)
 
 
-def test_initialize():
+def test_initialize(tmp_path, datadir, monkeypatch):
     """
-    check that the initial shoreface toe and shoreline are correct between the barrier3d and brie models for a cascade
-    model with 6 barrier3d domains
+    check that the initial shoreface toe and shoreline are correct between the
+    barrier3d and brie models for a cascade model with 6 barrier3d domains
     """
+    monkeypatch.chdir(tmp_path)
+    CASCADE_AST_MODEL = initialize_cascade_no_human_dynamics_ast(datadir)
 
-    x_t_TS, x_s_TS, x_b_TS, h_b_TS = [[] for _ in range(4)]
+    x_t_TS, x_s_TS, x_b_TS, h_b_TS = ([] for _ in range(4))
     for iB3D in range(CASCADE_AST_MODEL.brie.ny):
         x_t_TS.append(CASCADE_AST_MODEL.barrier3d[iB3D].x_t_TS[0] * 10)
         x_s_TS.append(CASCADE_AST_MODEL.barrier3d[iB3D].x_s_TS[0] * 10)
@@ -144,15 +156,18 @@ def test_initialize():
     assert_array_almost_equal([dt, ds, db, dh], np.zeros([4, 6]))
 
 
-def test_shoreline_variable_exchange_ast():
+def test_shoreline_variable_exchange_ast(tmp_path, datadir, monkeypatch):
     """
-    check that the brie and barrier3d shoreline, shoreface toe, and back-barrier shorelines are equivalent with each
-    update
+    check that the brie and barrier3d shoreline, shoreface toe, and back-barrier
+    shorelines are equivalent with each update
     """
+    monkeypatch.chdir(tmp_path)
+    CASCADE_AST_MODEL = initialize_cascade_no_human_dynamics_ast(datadir)
+
     CASCADE_AST_MODEL.update()
     CASCADE_AST_MODEL.update()
 
-    x_t_TS, x_s_TS, x_b_TS, h_b_TS = [[] for _ in range(4)]
+    x_t_TS, x_s_TS, x_b_TS, h_b_TS = ([] for _ in range(4))
     for iB3D in range(CASCADE_AST_MODEL.brie.ny):
         x_t_TS.append(np.array(CASCADE_AST_MODEL.barrier3d[iB3D].x_t_TS) * 10)
         x_s_TS.append(np.array(CASCADE_AST_MODEL.barrier3d[iB3D].x_s_TS) * 10)
@@ -162,8 +177,7 @@ def test_shoreline_variable_exchange_ast():
     dt = CASCADE_AST_MODEL.brie._x_t_save - np.array(x_t_TS).astype(int)
     db = CASCADE_AST_MODEL.brie._x_b_save - np.array(x_b_TS).astype(int)
     ds = CASCADE_AST_MODEL.brie._x_s_save - np.array(x_s_TS).astype(int)
-    dh = CASCADE_AST_MODEL.brie._h_b_save - np.array(
-        h_b_TS
-    )  # this isn't always zero; rounding error
+    # this isn't always zero; rounding error
+    dh = CASCADE_AST_MODEL.brie._h_b_save - np.array(h_b_TS)
 
     assert_array_almost_equal([dt, ds, db, dh], np.zeros([4, 6, 3]))

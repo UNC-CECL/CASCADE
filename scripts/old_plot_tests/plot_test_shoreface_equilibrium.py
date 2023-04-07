@@ -1,10 +1,10 @@
 import multiprocessing
+import time
 
 import matplotlib.pyplot as plt
+from barrier3d import Barrier3dBmi
 
 import CASCADE as CASCADE
-from barrier3d import Barrier3dBmi
-import time
 
 # Someone asked a question during AGU about whether or not I start the shoreface out of equilibrium.
 # When I went back and checked, B3D (both V1 and the BMI) start in equilibrium, but CASCADE starts
@@ -31,7 +31,7 @@ rmin = 0.35  # minimum growth rate for logistic dune growth (can be a list)
 rmax = 0.85  # maximum growth rate for logistic dune growth (can be a list)
 
 # --------- INITIALIZE ---------
-datadir = "cascade/data/pathways_data/barrier3d-default-parameters.yaml"  # laptop
+datadir = "data/pathways_init_data/barrier3d-default-parameters.yaml"  # laptop
 brie, barrier3d = CASCADE.initialize(
     name,
     wave_height,

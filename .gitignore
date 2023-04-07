@@ -103,6 +103,7 @@ celerybeat.pid
 
 # Environments
 .env
+.nox
 .venv
 env/
 venv/
@@ -137,5 +138,3 @@ brie_venv
 Output/
 Run_Output/
 /brie_venv/
-/cascade/data/pathways_data/1kyr_100 simulations/
-/cascade/data/pathways_data/OLD/
