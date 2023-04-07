@@ -29,7 +29,7 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.8",
     ],
-    keywords=["coastal", "economics"],
+    keywords=["barrier islands", "coastal management", "sea level rise", "overwash", "economics"],
     install_requires=open("requirements.txt", "r").read().splitlines(),
     packages=find_packages(),
     python_requires=">=3.6,<3.9",  # because of copulas

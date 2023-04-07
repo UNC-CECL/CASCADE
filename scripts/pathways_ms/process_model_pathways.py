@@ -3301,7 +3301,8 @@ def ast_connections():
                 cascade_pt45nourish_linSLR,
                 cascade_thirds_linSLR,
                 cascade_thirds_acc,
-                cascade_acc_nat
+                cascade_acc_nat,
+                cascade_pt45nourish_accSLR
         ):
             def nourishment_stats(cascade, cutoff, iB3D, nourishment_volume):
                 # nourishment statistics
@@ -3340,12 +3341,19 @@ def ast_connections():
                 nourishment_volume=100,
             )
 
+            mean_pre_pt45_accSLR, mean_post_pt45_accSLR = nourishment_stats(
+                cascade_pt45nourish_accSLR,
+                cutoff=70,
+                iB3D=0,
+                nourishment_volume=100,
+            )
+
             mean_pre_thirds_linSLR, mean_post_thirds_linSLR = nourishment_stats(
                 cascade_thirds_linSLR, cutoff=99, iB3D=0, nourishment_volume=100
             )
 
             mean_pre_thirds_accSLR, mean_post_thirds_accSLR = nourishment_stats(
-                cascade_thirds_acc, cutoff=71, iB3D=0, nourishment_volume=100
+                cascade_thirds_acc, cutoff=70, iB3D=0, nourishment_volume=100
             )
 
             (
