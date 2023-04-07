@@ -108,11 +108,6 @@ def dune_bay_comparison(dune_flow_type, n_dunes, elev_array, time_step, int_widt
         else:
             start_bay = False
 
-        # find the highest elevation dune row to determine if the bay level is high enough for outwash
-        # max_dunes_indeces = np.argmax(dune_domain, axis=0)  # returns the max row index for each column
-        # max_dunes_index = Counter(max_dunes_indeces).most_common(1)[0][0]  # returns most frequent max row
-        # max_dunes_row = int_width + max_dunes_index  # tells you the row with respect to the whole domain
-        # max_dune_elevs = elev_array[time_step, max_dunes_row, :]  # gives you the elevation of that row
     else:
         # use the first row of the dune gaps
         dune_elevs = elev_array[time_step, int_width, :]
@@ -292,12 +287,6 @@ def check_upstream_discharge(
         s2_array,
         s3_array,
         bayhigh,
-        Q0_array,
-        Q1_array,
-        Q2_array,
-        Q3_array,
-        nn,
-        max_slope,
         length,
         bay_array,
         int_width
@@ -384,16 +373,7 @@ def check_upstream_discharge(
                 # save the row and columns where fow routing begins
                 fr_row_array.append(fr_row)
                 fr_col_array.append(fr_col)
-        # for l in range(length):
-        #     if np.max(downhill_array[timestep, :, l]) == 1:  # determine if there is flow routing in this column
-        #         fr_row = np.min(np.where(downhill_array[timestep, :, l] == 1))
-        #         fr_col = l
-        #         if fr_row != int_width and downhill_array[timestep, fr_row-1, l-1] == 0 and \
-        #                 downhill_array[timestep, fr_row-1, l] == 0 and \
-        #                 downhill_array[timestep, fr_row-1, l+1] == 0:
-        #             # save the row and columns where fow routing begins
-        #             fr_row_array.append(fr_row)
-        #             fr_col_array.append(fr_col)
+
     end_cells = len(fr_row_array)
     if end_cells > 0:
         new_dis = sum(discharge[timestep, int_width, :]) / end_cells
@@ -441,18 +421,6 @@ def check_underwater(
 
         # if there are underwater cells, continue to backtrack through the rows
         new_total_cells = len(underwater_cells_list)
-        # if new_total_cells > max_len:
-        #     extra_cells = new_total_cells - max_len
-        #     if extra_cells % 2 == 0:
-        #         remove_from_each_side = extra_cells // 2
-        #         # bay_array[timestep, start_row - 1, c] = 1
-        #         underwater_cells_list = underwater_cells_list[remove_from_each_side:-remove_from_each_side]
-        #     else:
-        #         remove_left = round(extra_cells/2)
-        #         remove_right = extra_cells-remove_left
-        #         underwater_cells_list = underwater_cells_list[remove_left:-remove_right]
-        #
-        # new_total_cells = len(underwater_cells_list)
         bay_array[timestep, start_row - 1, underwater_cells_list] = 1
 
         if new_total_cells > 0:
@@ -650,14 +618,14 @@ class Outwasher:
         self._cx = cx
         self._mm = 2
         self._sea_level = sea_level  # equal to 0 dam
-        self._bay_depth = -bay_depth  # [dam MHW] Depth of bay behind island segment, currently set to 0.3
+        self._bay_depth = bay_depth  # [dam MHW] Depth of bay behind island segment, currently set to 0.3
         self._dune_flow_dynamics = dune_flow_dynamics
 
         # setting up dune domain using b3d
-        self._dune_domain = dune_domain
+        self._dune_domain = dune_domain  # [dam above berm elevation]
         self._dune_crest = self._dune_domain.max(axis=1)  # dune_crest used to be DuneDomainCrest
         # initializing our barrier interior
-        self._interior_domain = interior_domain
+        self._interior_domain = interior_domain  # [dam MHW]
         # loading the bay levels for each time step
         self._outwash_storms = np.load(datadir + outwash_storms_file, allow_pickle=True)
         self._final_bay_levels = []
@@ -673,7 +641,9 @@ class Outwasher:
 
         # output variables
         self._m_beachface = []  # slope of the beach face
-        self._OW_TS = []  # array for storing overwashed time steps
+        self._OW_TS = []  # array for storing outwashed time steps
+        self._outwash_TS = []  # array for storing outwash volume (m^3)
+        self._outwash_flux_TS = []  # array for storing outwash flux (m^3/m)
         self._initial_full_domain = []
         self._full_dunes = []
         self._full_domain = []
@@ -929,12 +899,6 @@ class Outwasher:
                                 s2_array=s2_array,
                                 s3_array=s3_array,
                                 bayhigh=bayhigh,
-                                Q0_array=Q0_array,
-                                Q1_array=Q1_array,
-                                Q2_array=Q2_array,
-                                Q3_array=Q3_array,
-                                nn=b3d._nn,
-                                max_slope=self._max_slope,
                                 length=self._length,
                                 bay_array=bay_array,
                                 int_width=int_width
@@ -1066,7 +1030,7 @@ class Outwasher:
                 post_outwash_full_domain = Elevation[-1, :, :]  # use the last TS
                 check = 1
                 while check == 1:
-                    if all(x <= -0.3 for x in post_outwash_full_domain[0, :]):
+                    if all(x <= -self._bay_depth for x in post_outwash_full_domain[0, :]):
                         post_outwash_full_domain = np.delete(post_outwash_full_domain, 0, axis=0)
                     else:
                         check = 0
@@ -1120,8 +1084,21 @@ class Outwasher:
                 )
                 b3d.x_s_TS[-1] = b3d.x_s
 
+                # saving erosion volumes and fluxes
+                initial_domain = self._initial_full_domain
+                final_domain = self._full_domain
+                elev_dif = final_domain - initial_domain
+                elev_dif_meters = elev_dif * 10
+                volume_change = np.sum(elev_dif_meters[0:int_width])*10*10  # each cell is 10m x 10m and we dont want
+                # the beach or dune erosion
+                flux = volume_change/self._length
+
+                self._outwash_TS.append(volume_change)  # array for storing outwash volume (m^3)
+                self._outwash_flux_TS.append(flux)  # array for storing outwash flux (m^3/m)
+
                 # other class variables that we want to save
                 self._final_bay_levels = storm_series
                 self._discharge[self._time_index - 1] = Discharge
                 self._elevation_change[self._time_index - 1] = elev_change_array
                 self._bay_array[self._time_index - 1] = bay_array
+
