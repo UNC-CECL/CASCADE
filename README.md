@@ -4,19 +4,19 @@
 The CoAStal Community-lAnDscape Evolution (*cascade*) model is a coupled landscape and human-dynamics modeling framework.
 *cascade* combines elements of two exploratory morphodynamic models of barrier evolution -- *barrier3d*
 (Reeves et al., 2021) and the BarrierR Inlet Environment (*brie*) model (Nienhuis & Lorenzo-Trueba, 2019) -- into a
-single model framework (Figure 1). *barrier3d*, a spatially-explicit cellular exploratory model, is the core of *cascade*.
+single model framework (figure below). *barrier3d*, a spatially-explicit cellular exploratory model, is the core of *cascade*.
 It is used within the *cascade* framework to simulate the effects of individual storm events and SLR on shoreface
 evolution; dune dynamics, including dune growth, erosion, and migration; and overwash deposition by individual storms.
-BRIE is used to simulate large-scale coastline evolution arising from alongshore sediment transport processes; this is
+*brie* is used to simulate large-scale coastline evolution arising from alongshore sediment transport processes; this is
 accomplished by connecting individual *barrier3d* models through diffusive alongshore sediment transport. Human dynamics
 are incorporated in *cascade* in two separate modules. The first module simulates strategies for preventing roadway
 pavement damage during overwashing events, including rebuilding roadways at sufficiently low elevations to allow for
 burial by overwash, constructing large dunes, and relocating the road into the barrier interior. The second module
 incorporates management strategies for maintaining a coastal community, including beach nourishment, dune construction,
 and overwash removal. For a full description of model dynamics, please see the pre-print of "The Future of Developed
-Barrier Systems: Pathways Toward Uninhabitability, Drowning, and Rebound" by Anarde et al., (in review) at _____.
+Barrier Systems: Pathways Toward Uninhabitability, Drowning, and Rebound" by Anarde et al., (in review, [Earth ArXiv preprint](https://doi.org/10.31223/X5P947)).
 
-[PLACEHOLDER FOR FIGURE 1]
+![ModelTimeLoop-01](https://user-images.githubusercontent.com/57640439/226623608-d0c58437-d44f-4dca-8f43-0b92623fcda6.png)
 
 In development: *cascade* represents decisions about coastal land-use (e.g., housing markets) and community-level
 mitigation measures using an empirically-grounded agent-based real estate model – the Coastal Home Ownership Model (*chom*).
@@ -48,7 +48,7 @@ Community Surface Dynamics Modeling System. The repositories for the models coup
 
 This ReadMe corresponds to the development version of *cascade* used for the
 simulations detailed in *"The Future of Developed Barrier Systems: Pathways Toward
-Uninhabitability, Drowning, and Rebound" by Anarde et al., (in review)*. Prior
+Uninhabitability, Drowning, and Rebound" by Anarde et al., (in review, [Earth ArXiv preprint](https://doi.org/10.31223/X5P947))*. Prior
 to publication, *cascade* will be made available for easy installation using either
 `pip` or `conda`. Reviewers can follow the instructions provided below for installation
 of *cascade*.
@@ -64,7 +64,7 @@ You can also use `conda`:
 
 ### From Source
 
-*Cascade* is actively being developed on GitHub, where the code is freely available.
+*cascade* is actively being developed on GitHub, where the code is freely available.
 If you would like to modifying code or contributing new code to *cascade*, you will first
 need to get *cascade*'s source code, and then install *cascade* from that code.
 
