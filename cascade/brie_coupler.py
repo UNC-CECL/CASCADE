@@ -72,6 +72,7 @@ def initialize_equal(
     dune_file,
     elevation_file,
     MHW=0.46,
+    berm_elevation=1.9,
     beta=0.04,
 ):
     """
@@ -92,6 +93,7 @@ def initialize_equal(
     :param dune_file: name of the Barrier3D dunes file
     :param elevation_file: name of the Barrier3D elevation file
     :param MHW: elevation of mean high water [m NAVD88]
+    :param berm_elevation: elevation of the berm [m NAVD88]
     :param beta: beach slope for runup calculations
 
     :return: barrier3d
@@ -171,9 +173,9 @@ def initialize_equal(
 
         # the following parameters CANNOT be changed or else the MSSM storm list &
         # storm time series needs to be remade
-        set_yaml("MHW", MHW, fid)  # [m] elevation of Mean High Water
+        set_yaml("MHW", MHW, fid)  # [m NAVD88] elevation of Mean High Water
         set_yaml("beta", beta, fid)  # beach slope for runup calculations
-        set_yaml("BermEl", float(brie._h_b_crit), fid)  # [m] static elevation of berm
+        set_yaml("BermEl", berm_elevation, fid)  # [m NAVD88] static elevation of berm
 
         barrier3d.append(Barrier3d.from_yaml(datadir, prefix=parameter_file_prefix))
 
@@ -220,7 +222,7 @@ class BrieCoupler:
         sea_level_rise_rate=0.004,
         back_barrier_depth=3.0,
         s_background=0.001,
-        h_b_crit=1.9,
+        h_b_crit=1.44,
         ny=1,
         nt=200,
     ):
@@ -251,7 +253,7 @@ class BrieCoupler:
             calculations)
         h_b_crit: float, optional
             Critical barrier height for overwash [m], used also to calc shoreline
-            diffusivity; we set = to B3D berm ele
+            diffusivity; we set = to B3D berm ele [m MHW]
         """
         ###############################################################################
         # initial conditions for BRIE

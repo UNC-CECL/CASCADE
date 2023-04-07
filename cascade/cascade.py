@@ -309,7 +309,7 @@ class Cascade:
         # initialization errors
         if (
             berm_elevation != 1.9 or MHW != 0.46 or beta != 0.04
-        ) and storm_file == "barrier3d-default-storms.npy":
+        ) and storm_file == "cascade-default-storms.npy":
             raise CascadeError(
                 "The default storms only apply for a berm elevation=1.9 m NAVD88, "
                 "MHW=0.46 m NAVD88 & beach slope=0.04."
@@ -335,6 +335,7 @@ class Cascade:
             sea_level_rise_rate=self._sea_level_rise_rate,
             back_barrier_depth=bay_depth,
             s_background=s_background,
+            h_b_crit=(berm_elevation-MHW),
             ny=self._ny,
             nt=self._nt,
         )
@@ -349,6 +350,7 @@ class Cascade:
             rmax=self._rmax,  # can be array
             background_erosion=self._background_erosion,  # can be array
             MHW=MHW,
+            berm_elevation=berm_elevation,
             beta=beta,
             parameter_file=self._parameter_file,
             storm_file=self._storm_file,
