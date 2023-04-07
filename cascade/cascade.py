@@ -4,7 +4,7 @@ import os
 
 from .roadway_manager import RoadwayManager, set_growth_parameters
 from .beach_dune_manager import BeachDuneManager
-from .Outwasher2 import Outwasher
+from .outwasher import Outwasher
 from .brie_coupler import BrieCoupler, initialize_equal, batchB3D
 from .chom_coupler import ChomCoupler
 
@@ -158,6 +158,7 @@ class Cascade:
         dune_flow_dynamics="full",
         outwasher_substep=20,
         ki_value=7.5E-3,
+        cx=10,
     ):
         """
 
@@ -186,7 +187,7 @@ class Cascade:
         s_background: float, optional
             Background slope (for shoreface toe position, back-barrier & inlet calculations)
         berm_elevation: float, optional
-            Static elevation of berm [m]; needs to be 1.9 m if using the default storm list, time series
+            Static elevation of berm [m NAVD88]; needs to be 1.9 m if using the default storm list, time series
         MHW: float, optional
             Elevation of mean high water [m NAVD88]; needs to be 0.46 m NAVD88 if using default storm list, time series
         beta: float, optional
@@ -461,7 +462,8 @@ class Cascade:
                           outwash_beach_file=outwash_beach_file,
                           dune_flow_dynamics=dune_flow_dynamics,
                           substep=outwasher_substep,
-                          sediment_flux_coefficient_Ki=ki_value)
+                          sediment_flux_coefficient_Ki=ki_value,
+                          cx=cx)
             )
 
     @property
