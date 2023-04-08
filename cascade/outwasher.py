@@ -449,6 +449,41 @@ def check_underwater(
     return bay_sufficient, bay_array, downhill_array, endcell_array
 
 
+def underwater_corrections(
+        underwater_array,
+        downhill_array,
+        endcell_array,
+        width,
+        TS,
+        length
+):
+    # starting at the second row, check to make sure all bay cells touch a previous bay cell, if not, set cell to 0
+    for row in range(1, width):
+        gaps = np.argwhere(underwater_array[TS, row])
+        gap_index = []
+        for i in range(len(gaps)):
+            gap_index.append(gaps[i][0])
+        if len(gap_index) > 0:
+            for g in gap_index:
+                if g == 0:
+                    if underwater_array[TS, row - 1, g] == 0 and underwater_array[TS, row - 1, g + 1] == 0:
+                        underwater_array[TS, row, g] = 0
+                        downhill_array[TS, row, g] = 0
+                        endcell_array[TS, row, g] = 0
+                elif g == length - 1:
+                    if underwater_array[TS, row - 1, g] == 0 and underwater_array[TS, row - 1, g - 1] == 0:
+                        underwater_array[TS, row, g] = 0
+                        downhill_array[TS, row, g] = 0
+                        endcell_array[TS, row, g] = 0
+                else:
+                    if underwater_array[TS, row - 1, g + 1] == 0 and underwater_array[TS, row - 1, g] == 0 and \
+                            underwater_array[TS, row - 1, g - 1] == 0:
+                        underwater_array[TS, row, g] = 0
+                        downhill_array[TS, row, g] = 0
+                        endcell_array[TS, row, g] = 0
+    return underwater_array, downhill_array, endcell_array
+
+
 def calculate_discharges(col, S1, S2, S3, Q0, nn, domain_length, max_slope):
     """
     calculates the discharge at each cell
@@ -874,28 +909,36 @@ class Outwasher:
                         if bay_sufficient is True:
                             self._OW_TS.append(TS)
                             start_row = int_width
-                            # check if the dune gaps are connected to underwater cells
+
                             # first remove any dune gaps not connected to the bay cells
-                            gaps = np.argwhere(underwater_array[TS, start_row])
-                            gap_index = []
-                            for i in range(len(gaps)):
-                                gap_index.append(gaps[i][0])
-                            for g in gap_index:
-                                if g == 0 and underwater_array[TS, start_row - 1, g] == 0 and \
-                                        underwater_array[TS, start_row - 1, g + 1] == 0:
-                                    underwater_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                                    downhill_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                                    endcell_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                                elif g == self._length -1 and underwater_array[TS, start_row - 1, g] == 0 and \
-                                        underwater_array[TS, start_row - 1, g - 1] == 0:
-                                    underwater_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                                    downhill_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                                    endcell_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                                elif underwater_array[TS, start_row - 1, g + 1] == 0 and underwater_array[TS, start_row - 1, g] == 0 and \
-                                        underwater_array[TS, start_row - 1, g - 1] == 0:
-                                    underwater_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                                    downhill_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                                    endcell_array[TS, int_width:(int_width + n_dune_rows), g] = 0
+                            underwater_array, downhill_array, endcell_array = underwater_corrections(
+                                underwater_array=underwater_array,
+                                downhill_array=downhill_array,
+                                endcell_array=endcell_array,
+                                width=width,
+                                TS=TS,
+                                length=self._length
+                            )
+                            # gaps = np.argwhere(underwater_array[TS, start_row])
+                            # gap_index = []
+                            # for i in range(len(gaps)):
+                            #     gap_index.append(gaps[i][0])
+                            # for g in gap_index:
+                            #     if g == 0 and underwater_array[TS, start_row - 1, g] == 0 and \
+                            #             underwater_array[TS, start_row - 1, g + 1] == 0:
+                            #         underwater_array[TS, int_width:(int_width + n_dune_rows), g] = 0
+                            #         downhill_array[TS, int_width:(int_width + n_dune_rows), g] = 0
+                            #         endcell_array[TS, int_width:(int_width + n_dune_rows), g] = 0
+                            #     elif g == self._length -1 and underwater_array[TS, start_row - 1, g] == 0 and \
+                            #             underwater_array[TS, start_row - 1, g - 1] == 0:
+                            #         underwater_array[TS, int_width:(int_width + n_dune_rows), g] = 0
+                            #         downhill_array[TS, int_width:(int_width + n_dune_rows), g] = 0
+                            #         endcell_array[TS, int_width:(int_width + n_dune_rows), g] = 0
+                            #     elif underwater_array[TS, start_row - 1, g + 1] == 0 and underwater_array[TS, start_row - 1, g] == 0 and \
+                            #             underwater_array[TS, start_row - 1, g - 1] == 0:
+                            #         underwater_array[TS, int_width:(int_width + n_dune_rows), g] = 0
+                            #         downhill_array[TS, int_width:(int_width + n_dune_rows), g] = 0
+                            #         endcell_array[TS, int_width:(int_width + n_dune_rows), g] = 0
 
                             Discharge, downhill_array, endcell_array, init_discharge_array = check_upstream_discharge(
                                 start_row=start_row,
@@ -952,14 +995,6 @@ class Outwasher:
                                             # Cell 3
                                             if i < (self._length - 1):
                                                 Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
-
-                                        # if d < int_width:
-                                        #     C = self._cx * m_beach
-                                        #     # C = 2 * m_beach
-                                        #     # C = 0
-                                        # else:
-                                        #     C = self._cx * m_beach
-                                        #     # C = 3 * m_beach
 
                                         # ### Calculate Sed Movement
                                         ki = self._ki
