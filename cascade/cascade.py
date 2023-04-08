@@ -330,6 +330,7 @@ class Cascade:
             sea_level_rise_rate=self._sea_level_rise_rate,
             back_barrier_depth=bay_depth,
             s_background=s_background,
+            h_b_crit=(berm_elevation - MHW),
             ny=self._ny,
             nt=self._nt,
         )
@@ -343,6 +344,7 @@ class Cascade:
             rmax=self._rmax,  # can be array
             background_erosion=self._background_erosion,  # can be array
             MHW=MHW,
+            berm_elevation=berm_elevation,
             beta=beta,
             parameter_file=self._parameter_file,
             storm_file=self._storm_file,
