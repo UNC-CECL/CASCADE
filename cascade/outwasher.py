@@ -690,9 +690,9 @@ class Outwasher:
 
         # output variables
         self._m_beachface = []  # slope of the beach face
-        self._OW_TS = []  # array for storing outwashed time steps
-        self._outwash_TS = []  # array for storing outwash volume (m^3)
-        self._outwash_flux_TS = []  # array for storing outwash flux (m^3/m)
+        self._OW_TS = [] # array for storing outwashed time steps
+        self._outwash_TS = np.zeros(time_step_count, dtype=object)  # array for storing outwash volume (m^3)
+        self._outwash_flux_TS = np.zeros(time_step_count, dtype=object)  # array for storing outwash flux (m^3/m)
         self._initial_full_domain = []
         self._full_dunes = []
         self._full_domain = []
@@ -1138,8 +1138,8 @@ class Outwasher:
                 # the beach or dune erosion
                 flux = volume_change / self._length
 
-                self._outwash_TS.append(volume_change)  # array for storing outwash volume (m^3)
-                self._outwash_flux_TS.append(flux)  # array for storing outwash flux (m^3/m)
+                self._outwash_TS[self._time_index - 1] = volume_change  # array for storing outwash volume (m^3)
+                self._outwash_flux_TS[self._time_index - 1] = flux  # array for storing outwash flux (m^3/m)
 
                 # other class variables that we want to save
                 self._final_bay_levels = storm_series
