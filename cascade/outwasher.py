@@ -1129,16 +1129,18 @@ class Outwasher:
                 b3d.x_s_TS[-1] = b3d.x_s
 
                 # saving erosion volumes and fluxes
-                initial_domain = self._initial_full_domain
-                final_domain = self._full_domain
-                elev_dif = final_domain - initial_domain
-                elev_dif_meters = elev_dif * 10
-                volume_change = np.sum(
-                    elev_dif_meters[0:int_width]) * 10 * 10  # each cell is 10m x 10m and we dont want
-                # the beach or dune erosion
-                flux = volume_change / self._length
+                vol_m = qs_lost_total*1000  # dam3 to m3
+                flux = qs_lost_total / self._length * 100  # dam3/dam to m3/m
+                # initial_domain = self._initial_full_domain
+                # final_domain = self._full_domain
+                # elev_dif = final_domain - initial_domain
+                # elev_dif_meters = elev_dif * 10
+                # volume_change = np.sum(
+                #     elev_dif_meters[0:int_width]) * 10 * 10  # each cell is 10m x 10m and we dont want
+                # # the beach or dune erosion
+                # flux = volume_change / self._length
 
-                self._outwash_TS[self._time_index - 1] = volume_change  # array for storing outwash volume (m^3)
+                self._outwash_TS[self._time_index - 1] = vol_m  # array for storing outwash volume (m^3)
                 self._outwash_flux_TS[self._time_index - 1] = flux  # array for storing outwash flux (m^3/m)
 
                 # other class variables that we want to save
