@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import copy
+from matplotlib import pyplot as plt
 
 from .beach_dune_manager import shoreface_nourishment
 
@@ -955,6 +956,7 @@ class Outwasher:
                                 int_width=int_width,
                                 init_dis=init_discharge_array,
                             )
+
                         else:
                             Discharge[TS] = 0
 
@@ -1070,20 +1072,8 @@ class Outwasher:
                                 SedFluxOut[TS, width - 1, :]) / self._substep  # [dam^3]
 
                 # update barrier3d interior and dune domain class variables ---------------------------------------
-                # interior domain: remove all rows of bay without any deposition from the domain
-                post_outwash_full_domain = Elevation[-1, :, :]  # use the last TS
-                check = 1
-                while check == 1:
-                    if all(x <= -self._bay_depth for x in post_outwash_full_domain[0, :]):
-                        post_outwash_full_domain = np.delete(post_outwash_full_domain, 0, axis=0)
-                    else:
-                        check = 0
-                # while check == 1:
-                #     if all(x <= self._bay_depth for x in post_outwash_full_domain[0, :]):
-                #         post_outwash_full_domain = np.delete(post_outwash_full_domain, 0, axis=0)
-                #     else:
-                #         check = 0
 
+                # in barrier3d the elevation array is just the interior domain, here it is the full domain
                 # domain variables we want to save
                 self._full_domain = Elevation[-1]
                 post_outwash_interior_domain = Elevation[-1, 0:int_width, :]
@@ -1091,17 +1081,29 @@ class Outwasher:
                 post_outwash_beach_domain = Elevation[-1, int_width + n_dune_rows:-1, :]
                 self._post_outwash_beach_domain[self._time_index - 1] = post_outwash_beach_domain
 
+                # interior domain: remove all rows of bay without any deposition from the domain
+                # we check the first row rather than the last row (which is used in B3D) because we have not flipped
+                # the domain yet
+                check = 1
+                while check == 1:
+                    if all(x <= -self._bay_depth for x in post_outwash_interior_domain[0, :]):  # bay_depth = 0.3
+                        post_outwash_interior_domain = np.delete(post_outwash_interior_domain, 0, axis=0)
+                    else:
+                        check = 0
+
                 new_ave_interior_height = np.average(
                     post_outwash_interior_domain[
                         post_outwash_interior_domain >= b3d.SL
                         ]  # all in dam MHW
                 )
                 b3d.h_b_TS[-1] = new_ave_interior_height
+                # flip the Interior and Dune Domains to put back into Barrier3D
                 b3d.InteriorDomain = np.flip(post_outwash_interior_domain)
                 b3d.DomainTS[self._time_index - 1] = np.flip(post_outwash_interior_domain)
-                b3d.DuneDomain[self._time_index - 1, :, :] = copy.deepcopy(
-                    np.flip(np.transpose(post_outwash_dune_domain))
-                )
+                # b3d.DuneDomain[self._time_index - 1, :, :] = copy.deepcopy(
+                #     np.flip(np.transpose(post_outwash_dune_domain))
+                # )
+                b3d.DuneDomain[self._time_index - 1, :, :] = np.flip(np.transpose(post_outwash_dune_domain))
 
                 # "nourish" the shoreface with the washout ----------------------------------------------------
                 if self._percent_washout_to_shoreface > 0:
@@ -1128,18 +1130,18 @@ class Outwasher:
                 )
                 b3d.x_s_TS[-1] = b3d.x_s
 
+                # ### Recalculate and save DomainWidth and InteriorWidth
+                _, _, new_ave_interior_width = b3d.FindWidths(
+                    b3d.InteriorDomain, b3d.SL
+                )
+                b3d.InteriorWidth_AvgTS[-1] = new_ave_interior_width
+
+                # replace value of x_b_TS with new InteriorWidth_Avg
+                b3d.x_b_TS[-1] = b3d.x_s_TS[-1] + new_ave_interior_width
+
                 # saving erosion volumes and fluxes
                 vol_m = qs_lost_total*1000  # dam3 to m3
                 flux = qs_lost_total / self._length * 100  # dam3/dam to m3/m
-                # initial_domain = self._initial_full_domain
-                # final_domain = self._full_domain
-                # elev_dif = final_domain - initial_domain
-                # elev_dif_meters = elev_dif * 10
-                # volume_change = np.sum(
-                #     elev_dif_meters[0:int_width]) * 10 * 10  # each cell is 10m x 10m and we dont want
-                # # the beach or dune erosion
-                # flux = volume_change / self._length
-
                 self._outwash_TS[self._time_index - 1] = vol_m  # array for storing outwash volume (m^3)
                 self._outwash_flux_TS[self._time_index - 1] = flux  # array for storing outwash flux (m^3/m)
 
