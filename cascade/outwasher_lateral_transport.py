@@ -94,7 +94,9 @@ def calculate_slopes(
             # sL_right is coming from the right cell into the center cell
             if col == 0:
                 sL_left = 0
+                sL_right = domain[row, col + 1] - domain[row, col]
             elif col == length - 1:
+                sL_left = domain[row, col - 1] - domain[row, col]
                 sL_right = 0
             else:
                 sL_left = domain[row, col - 1] - domain[row, col]
@@ -670,6 +672,7 @@ class Outwasher:
             outwash_beach_file=None,
             dune_flow_dynamics="full",
             cx=10,
+            lateral_trans_coeff_kL = 1,
     ):
 
         # initial variables
@@ -680,6 +683,7 @@ class Outwasher:
         self._substep = substep
         self._max_slope = -0.25
         self._ki = sediment_flux_coefficient_Ki
+        self._k_lat = lateral_trans_coeff_kL
         self._cx = cx
         self._mm = 2
         self._sea_level = sea_level  # equal to 0 dam
@@ -720,8 +724,8 @@ class Outwasher:
         self._downhill_array = np.zeros(time_step_count, dtype=object)
         self._endcell_array = np.zeros(time_step_count, dtype=object)
         self._post_outwash_beach_domain = np.zeros(time_step_count, dtype=object)
-        self.velocities = []
-        self.flows = []
+        # self.velocities = np.zeros(time_step_count, dtype=object)
+        # self.flows = np.zeros(time_step_count, dtype=object)
         self._initial_discharge = np.zeros(time_step_count, dtype=object)
 
     def update(
@@ -834,6 +838,8 @@ class Outwasher:
                 downhill_array = np.zeros([duration, width, self._length])
                 endcell_array = np.zeros([duration, width, self._length])
                 init_discharge_array = np.zeros([duration, width, self._length])
+                self.velocities = np.zeros(duration, dtype=object)
+                self.flows = np.zeros(duration, dtype=object)
 
                 # route the flow
                 for TS in range(duration):
@@ -875,7 +881,7 @@ class Outwasher:
 
 
                         # initialize the flow routing array based on all the dunes or just the first row
-                        Discharge, self.velocities, self.flows, Q0_array, Q1_array, Q2_array, Q3_array, \
+                        Discharge, self.velocities[TS], self.flows[TS], Q0_array, Q1_array, Q2_array, Q3_array, \
                         underwater_array, downhill_array, endcell_array = dune_flow_routing_gaps(
                             dune_flow_type=self._dune_flow_dynamics,
                             n_dunes=n_dune_rows,
@@ -1074,16 +1080,16 @@ class Outwasher:
                                         SedFluxOut[TS, d, i] = Qs_out
 
                                         # LATERAL TRANSPORT: still need to add end column constraints
-                                        k_lat = 1E-6  # from one of the runs in Paola and Murray 1997
+                                        k_lat = self._k_lat  # from one of the runs in Paola and Murray 1997
 
                                         if sL_left_array[TS, d, i] > 0:
-                                            QsL_left_in[TS, d, i] = k_lat * Qs_out[TS, d, i] * sL_left_array[TS, d, i]
+                                            QsL_left_in[TS, d, i] = k_lat * Qs_out * sL_left_array[TS, d, i]
                                             SedFluxOut[TS, d, i - 1] += QsL_left_in[TS, d, i]
                                         else:
                                             QsL_left_in[TS, d, i] = 0
 
                                         if sL_right_array[TS, d, i] > 0:
-                                            QsL_right_in[TS, d, i] = k_lat * Qs_out[TS, d, i] * sL_right_array[TS, d, i]
+                                            QsL_right_in[TS, d, i] = k_lat * Qs_out * sL_right_array[TS, d, i]
                                             SedFluxOut[TS, d, i + 1] += QsL_right_in[TS, d, i]
                                         else:
                                             QsL_right_in[TS, d, i] = 0

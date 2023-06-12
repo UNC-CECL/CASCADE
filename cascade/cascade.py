@@ -4,7 +4,7 @@ import os
 
 from .roadway_manager import RoadwayManager, set_growth_parameters
 from .beach_dune_manager import BeachDuneManager
-from .outwasher import Outwasher
+from .outwasher_lateral_transport import Outwasher
 from .brie_coupler import BrieCoupler, initialize_equal, batchB3D
 from .chom_coupler import ChomCoupler
 
@@ -159,6 +159,7 @@ class Cascade:
         outwasher_substep=20,
         ki_value=7.5E-3,
         cx=10,
+        kL=1,
     ):
         """
 
@@ -465,6 +466,7 @@ class Cascade:
                           dune_flow_dynamics=dune_flow_dynamics,
                           substep=outwasher_substep,
                           sediment_flux_coefficient_Ki=ki_value,
+                          lateral_trans_coeff_kL=kL,
                           cx=cx)
             )
 
