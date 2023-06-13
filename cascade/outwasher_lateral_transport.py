@@ -1070,13 +1070,16 @@ class Outwasher:
                                         Qs_out = Qs1 + Qs2 + Qs3
 
                                         limit = -0.3
-                                        if Elevation[TS, d, i] - Qs_out < limit:  # dam
+                                        if Elevation[TS, d, i] - Qs_out < limit and Qs_out > 0:  # dam
                                             new_loss = Elevation[TS, d, i] + abs(limit)  # dam
                                             Qs1 = (Qs1 / Qs_out) * new_loss
                                             Qs2 = (Qs2 / Qs_out) * new_loss
                                             Qs3 = (Qs3 / Qs_out) * new_loss
                                             Qs_out = Qs1 + Qs2 + Qs3
 
+                                        Qs1 = np.nan_to_num(Qs1)
+                                        Qs2 = np.nan_to_num(Qs2)
+                                        Qs3 = np.nan_to_num(Qs3)
                                         SedFluxOut[TS, d, i] = Qs_out
 
                                         # LATERAL TRANSPORT: still need to add end column constraints
