@@ -459,6 +459,7 @@ class Cascade:
                           barrier_length=self._barrier3d[iB3D].BarrierLength,
                           sea_level=self._barrier3d[iB3D].SL,
                           bay_depth=self._barrier3d[iB3D].BayDepth,
+                          beta=beta,
                           interior_domain=self._barrier3d[iB3D].InteriorDomain,
                           dune_domain=self._barrier3d[iB3D].DuneDomain[self._barrier3d[iB3D].time_index - 1, :, :],
                           percent_washout_to_shoreface=percent_washout_to_shoreface,

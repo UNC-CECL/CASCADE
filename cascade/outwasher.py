@@ -644,6 +644,7 @@ class Outwasher:
             outwash_storms_file,
             time_step_count,
             berm_elev,
+            beta,
             barrier_length,
             sea_level,
             bay_depth,
@@ -659,7 +660,8 @@ class Outwasher:
 
         # initial variables
         self._percent_washout_to_shoreface = percent_washout_to_shoreface
-        self._berm_el = berm_elev,  # [dam MHW]
+        self._berm_el = berm_elev  # [dam MHW]
+        self._beach_slope = beta
         self._beach_elev = self._berm_el  # [dam MHW]
         self._length = barrier_length  # [dam] length of barrier
         self._substep = substep
@@ -756,7 +758,7 @@ class Outwasher:
                     beach_domain = np.ones([7, self._length]) * self._beach_elev  # [dam MHW] 7 rows
                     beachface_domain = np.zeros([6, self._length])
                     # we give the beach slope to be 0.004 m = 0.0004 dam
-                    m_beach = 0.0004
+                    m_beach = 0.0004  # might need to update this in the future, currently not used
                     # we want the beach to have a slope, but keep the first few rows the berm elevation
                     for b in range(len(beach_domain)):
                         if b >= 3:
@@ -770,8 +772,7 @@ class Outwasher:
                             beachface_domain[s, :] = beachface_domain[s - 1, :] - self._m_beachface
                 else:
                     beach_domain = self._outwash_beach
-                    # m_beach = np.mean(beach_domain[0, 0] - beach_domain[-1, 0]) / len(beach_domain)
-                    m_beach = 0.03
+                    m_beach = self._beach_slope
 
                 # the dune domain is being taken from B3D, but is a set of tuples, so it needs to be transposed
                 dune_domain_full = np.flip(np.transpose(self._dune_domain) + self._berm_el)
@@ -1041,7 +1042,7 @@ class Outwasher:
                                         Qs_out = Qs1 + Qs2 + Qs3
 
                                         limit = -0.3
-                                        if Elevation[TS, d, i] - Qs_out < limit:  # dam
+                                        if Elevation[TS, d, i] - Qs_out < limit and Qs_out > 0:  # dam
                                             new_loss = Elevation[TS, d, i] + abs(limit)  # dam
                                             Qs1 = (Qs1 / Qs_out) * new_loss
                                             Qs2 = (Qs2 / Qs_out) * new_loss
@@ -1049,6 +1050,9 @@ class Outwasher:
                                             Qs_out = Qs1 + Qs2 + Qs3
 
                                         SedFluxOut[TS, d, i] = Qs_out
+
+                                        # LATERAL TRANSPORT
+                                        # Qs_lat = k_lat * Qs_out * s_lat
 
                                         # SED INTO NEXT ROW CELLS
                                         if d != width - 1:

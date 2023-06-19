@@ -664,6 +664,7 @@ class Outwasher:
             barrier_length,
             sea_level,
             bay_depth,
+            beta,
             interior_domain,
             dune_domain,
             substep=20,
@@ -677,7 +678,8 @@ class Outwasher:
 
         # initial variables
         self._percent_washout_to_shoreface = percent_washout_to_shoreface
-        self._berm_el = berm_elev,  # [dam MHW]
+        self._berm_el = berm_elev  # [dam MHW]
+        self._beach_slope = beta
         self._beach_elev = self._berm_el  # [dam MHW]
         self._length = barrier_length  # [dam] length of barrier
         self._substep = substep
@@ -789,8 +791,7 @@ class Outwasher:
                             beachface_domain[s, :] = beachface_domain[s - 1, :] - self._m_beachface
                 else:
                     beach_domain = self._outwash_beach
-                    # m_beach = np.mean(beach_domain[0, 0] - beach_domain[-1, 0]) / len(beach_domain)
-                    m_beach = 0.03
+                    m_beach = self._beach_slope
 
                 # the dune domain is being taken from B3D, but is a set of tuples, so it needs to be transposed
                 dune_domain_full = np.flip(np.transpose(self._dune_domain) + self._berm_el)
@@ -949,26 +950,7 @@ class Outwasher:
                                 TS=TS,
                                 length=self._length
                             )
-                            # gaps = np.argwhere(underwater_array[TS, start_row])
-                            # gap_index = []
-                            # for i in range(len(gaps)):
-                            #     gap_index.append(gaps[i][0])
-                            # for g in gap_index:
-                            #     if g == 0 and underwater_array[TS, start_row - 1, g] == 0 and \
-                            #             underwater_array[TS, start_row - 1, g + 1] == 0:
-                            #         underwater_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #         downhill_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #         endcell_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #     elif g == self._length -1 and underwater_array[TS, start_row - 1, g] == 0 and \
-                            #             underwater_array[TS, start_row - 1, g - 1] == 0:
-                            #         underwater_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #         downhill_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #         endcell_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #     elif underwater_array[TS, start_row - 1, g + 1] == 0 and underwater_array[TS, start_row - 1, g] == 0 and \
-                            #             underwater_array[TS, start_row - 1, g - 1] == 0:
-                            #         underwater_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #         downhill_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #         endcell_array[TS, int_width:(int_width + n_dune_rows), g] = 0
+
 
                             Discharge, downhill_array, endcell_array, init_discharge_array = check_upstream_discharge(
                                 start_row=start_row,
