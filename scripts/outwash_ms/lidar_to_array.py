@@ -2,19 +2,19 @@
 # some changes have been made to the original code to better suit North Core Banks
 # Lexi Van Blunk
 # 2/16/23, updated 4/8/23
-import matplotlib.patches
+# import matplotlib.patches
 import numpy as np
 import pandas as pd
 import os
 from matplotlib import pyplot as plt
-import heapq
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+# import heapq
 
-# plt.rcParams['figure.figsize'] = (10, 6)
 plt.rcParams.update({"font.size": 15})
 # plt.rcParams['figure.constrained_layout.use'] = True
 
-# load the data as a dataframe
+
+# ### load the data as a dataframe--------------------------------------------------------------------------------------
+
 # os.chdir('C:/Users/Lexi/Documents/Research/Outwasher/GIS')
 # prestorm_points_df = pd.read_csv("prestorm_points.csv")  # this data is in NAVD88
 
@@ -247,6 +247,8 @@ plt.yticks(y_ticks, y_tick_labels)
 
 dif3 = section3_post - section3_pre
 total_erosion_3 = np.sum(dif3)*10*100  # cubic meters
+back_barrier_erosion_3 = np.sum(dif3[0:23, :])*10*100  # cubic meters
+back_barrier_erosion_3_smaller = np.sum(dif3[7:23, :])*10*100  # cubic meters
 
 # plot difference
 fig2 = plt.figure()
@@ -274,6 +276,8 @@ y_tick_labels = y_ticks * 10
 plt.xticks(x_ticks, x_tick_labels)
 plt.yticks(y_ticks, y_tick_labels)
 
+
+# ### breaking up the domain -------------------------------------------------------------------------------------------
 
 # break up the domain into interior, dunes, and beach
 # will likely take some manipulating with the dunes
@@ -338,6 +342,7 @@ y_tick_labels = y_ticks * 10
 plt.xticks(x_ticks, x_tick_labels)
 plt.yticks(y_ticks, y_tick_labels)
 
+# ### save the domains -------------------------------------------------------------------------------------------------
 # interior_b3d_input = np.flip(section3_int)
 # np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-elevation-config3-damMHW", interior_b3d_input)
 #
