@@ -6,11 +6,11 @@ from matplotlib import pyplot as plt
 
 datadir = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/"
 file_name = "sound_data.txt"  # the ADCIRC generated hydrograph from USGS
-plt.rcParams.update({"font.size": 15})
 hydro_mMSL = np.loadtxt(datadir+file_name, delimiter=",")
 # use Beaufort, Duke Marine Lab NC datums to convert to dam MHW: MHW is 0.47 m MSL, dam = m / 10
 hydro_damMHW = np.asarray([(float(s) - 0.470)/10 for s in hydro_mMSL])
 
+plt.rcParams.update({"font.size": 15})
 # plotting the original hydrograph in m MSL
 # points are every hour
 fig, ax1 = plt.subplots()
