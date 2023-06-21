@@ -28,6 +28,8 @@ def calculate_slopes(
         s1_vals,
         s2_vals,
         s3_vals,
+        sL_left_vals,
+        sL_right_vals
 ):
     """
     takes the elevations and differentiates uphill and downhill regions based on an average slope of
@@ -43,11 +45,10 @@ def calculate_slopes(
             routing determination
     """
     # ### Calculate Slopes
-    for row in range(width):  # for letting sediment out, discharge scenarios 2 and 3
+    for row in range(width):
         for col in range(length):
             # if we are not at the last row, do normal calculations
-            if row != width - 1:  # uncomment if we are letting sed out the last row
-                # tab everything until else statement
+            if row != width - 1:
                 if col > 0:  # i = 0 means there are no cols to the left
                     S1 = (domain[row, col] - domain[row + 1, col - 1]) / (math.sqrt(2))
                     S1 = np.nan_to_num(S1)
@@ -62,7 +63,7 @@ def calculate_slopes(
                     S3 = np.nan_to_num(S3)
                 else:
                     S3 = 0
-            # if at the last row, apply the same slope as the beachface slope
+            # if at the last row, apply the same slope as the previous row slopes
             else:
                 if col > 0:  # i = 0 means there are no cols to the left
                     S1 = (domain[row - 1, col] - domain[row, col - 1]) / (math.sqrt(2))
@@ -87,11 +88,27 @@ def calculate_slopes(
             if col == length - 1:
                 S3 = -999
 
+            # lateral transport going INTO cells
+            # where sL is positive (downhill) into the center cell from the left or right
+            # sL_left is coming from the left cell into the center cell
+            # sL_right is coming from the right cell into the center cell
+            if col == 0:
+                sL_left = 0
+                sL_right = domain[row, col + 1] - domain[row, col]
+            elif col == length - 1:
+                sL_left = domain[row, col - 1] - domain[row, col]
+                sL_right = 0
+            else:
+                sL_left = domain[row, col - 1] - domain[row, col]
+                sL_right = domain[row, col + 1] - domain[row, col]
+
             s1_vals[time_step, row, col] = S1
             s2_vals[time_step, row, col] = S2
             s3_vals[time_step, row, col] = S3
+            sL_left_vals[time_step, row, col] = sL_left
+            sL_right_vals[time_step, row, col] = sL_right
 
-    return s1_vals, s2_vals, s3_vals,
+    return s1_vals, s2_vals, s3_vals, sL_left_vals, sL_right_vals
 
 
 def dune_bay_comparison(dune_flow_type, n_dunes, elev_array, time_step, int_width, bayhigh):
@@ -644,10 +661,10 @@ class Outwasher:
             outwash_storms_file,
             time_step_count,
             berm_elev,
-            beta,
             barrier_length,
             sea_level,
             bay_depth,
+            beta,
             interior_domain,
             dune_domain,
             substep=20,
@@ -656,6 +673,7 @@ class Outwasher:
             outwash_beach_file=None,
             dune_flow_dynamics="full",
             cx=10,
+            lateral_trans_coeff_kL = 1,
     ):
 
         # initial variables
@@ -667,6 +685,7 @@ class Outwasher:
         self._substep = substep
         self._max_slope = -0.25
         self._ki = sediment_flux_coefficient_Ki
+        self._k_lat = lateral_trans_coeff_kL
         self._cx = cx
         self._mm = 2
         self._sea_level = sea_level  # equal to 0 dam
@@ -707,8 +726,8 @@ class Outwasher:
         self._downhill_array = np.zeros(time_step_count, dtype=object)
         self._endcell_array = np.zeros(time_step_count, dtype=object)
         self._post_outwash_beach_domain = np.zeros(time_step_count, dtype=object)
-        self.velocities = []
-        self.flows = []
+        # self.velocities = np.zeros(time_step_count, dtype=object)
+        # self.flows = np.zeros(time_step_count, dtype=object)
         self._initial_discharge = np.zeros(time_step_count, dtype=object)
 
     def update(
@@ -758,7 +777,7 @@ class Outwasher:
                     beach_domain = np.ones([7, self._length]) * self._beach_elev  # [dam MHW] 7 rows
                     beachface_domain = np.zeros([6, self._length])
                     # we give the beach slope to be 0.004 m = 0.0004 dam
-                    m_beach = 0.0004  # might need to update this in the future, currently not used
+                    m_beach = 0.0004
                     # we want the beach to have a slope, but keep the first few rows the berm elevation
                     for b in range(len(beach_domain)):
                         if b >= 3:
@@ -806,15 +825,22 @@ class Outwasher:
                 s1_array = np.zeros([duration, width, self._length])
                 s2_array = np.zeros([duration, width, self._length])
                 s3_array = np.zeros([duration, width, self._length])
+                sL_left_array = np.zeros([duration, width, self._length])
+                sL_right_array = np.zeros([duration, width, self._length])
                 Q0_array = np.zeros([duration, width, self._length])
                 Q1_array = np.zeros([duration, width, self._length])
                 Q2_array = np.zeros([duration, width, self._length])
                 Q3_array = np.zeros([duration, width, self._length])
+                QsL_left_in = np.zeros([duration, width, self._length])
+                QsL_right_in = np.zeros([duration, width, self._length])
+                QsL_total = np.zeros([duration, width, self._length])
                 elev_change_array = np.zeros([duration, width, self._length])
                 underwater_array = np.zeros([duration, width, self._length])
                 downhill_array = np.zeros([duration, width, self._length])
                 endcell_array = np.zeros([duration, width, self._length])
                 init_discharge_array = np.zeros([duration, width, self._length])
+                self.velocities = np.zeros(duration, dtype=object)
+                self.flows = np.zeros(duration, dtype=object)
 
                 # route the flow
                 for TS in range(duration):
@@ -842,7 +868,7 @@ class Outwasher:
                     else:
 
                         # need to calculate and store slopes over the domain
-                        s1_array, s2_array, s3_array, = calculate_slopes(
+                        s1_array, s2_array, s3_array, sL_left_array, sL_right_array = calculate_slopes(
                             domain=Elevation[TS],
                             width=width,
                             length=self._length,
@@ -850,10 +876,13 @@ class Outwasher:
                             s1_vals=s1_array,
                             s2_vals=s2_array,
                             s3_vals=s3_array,
+                            sL_left_vals=sL_left_array,
+                            sL_right_vals=sL_right_array
                         )
 
+
                         # initialize the flow routing array based on all the dunes or just the first row
-                        Discharge, self.velocities, self.flows, Q0_array, Q1_array, Q2_array, Q3_array, \
+                        Discharge, self.velocities[TS], self.flows[TS], Q0_array, Q1_array, Q2_array, Q3_array, \
                         underwater_array, downhill_array, endcell_array = dune_flow_routing_gaps(
                             dune_flow_type=self._dune_flow_dynamics,
                             n_dunes=n_dune_rows,
@@ -921,26 +950,7 @@ class Outwasher:
                                 TS=TS,
                                 length=self._length
                             )
-                            # gaps = np.argwhere(underwater_array[TS, start_row])
-                            # gap_index = []
-                            # for i in range(len(gaps)):
-                            #     gap_index.append(gaps[i][0])
-                            # for g in gap_index:
-                            #     if g == 0 and underwater_array[TS, start_row - 1, g] == 0 and \
-                            #             underwater_array[TS, start_row - 1, g + 1] == 0:
-                            #         underwater_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #         downhill_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #         endcell_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #     elif g == self._length -1 and underwater_array[TS, start_row - 1, g] == 0 and \
-                            #             underwater_array[TS, start_row - 1, g - 1] == 0:
-                            #         underwater_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #         downhill_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #         endcell_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #     elif underwater_array[TS, start_row - 1, g + 1] == 0 and underwater_array[TS, start_row - 1, g] == 0 and \
-                            #             underwater_array[TS, start_row - 1, g - 1] == 0:
-                            #         underwater_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #         downhill_array[TS, int_width:(int_width + n_dune_rows), g] = 0
-                            #         endcell_array[TS, int_width:(int_width + n_dune_rows), g] = 0
+
 
                             Discharge, downhill_array, endcell_array, init_discharge_array = check_upstream_discharge(
                                 start_row=start_row,
@@ -1049,10 +1059,27 @@ class Outwasher:
                                             Qs3 = (Qs3 / Qs_out) * new_loss
                                             Qs_out = Qs1 + Qs2 + Qs3
 
+                                        Qs1 = np.nan_to_num(Qs1)
+                                        Qs2 = np.nan_to_num(Qs2)
+                                        Qs3 = np.nan_to_num(Qs3)
                                         SedFluxOut[TS, d, i] = Qs_out
 
-                                        # LATERAL TRANSPORT
-                                        # Qs_lat = k_lat * Qs_out * s_lat
+                                        # LATERAL TRANSPORT: still need to add end column constraints
+                                        k_lat = self._k_lat  # from one of the runs in Paola and Murray 1997
+
+                                        if sL_left_array[TS, d, i] > 0:
+                                            QsL_left_in[TS, d, i] = k_lat * Qs_out * sL_left_array[TS, d, i]
+                                            SedFluxOut[TS, d, i - 1] += QsL_left_in[TS, d, i]
+                                        else:
+                                            QsL_left_in[TS, d, i] = 0
+
+                                        if sL_right_array[TS, d, i] > 0:
+                                            QsL_right_in[TS, d, i] = k_lat * Qs_out * sL_right_array[TS, d, i]
+                                            SedFluxOut[TS, d, i + 1] += QsL_right_in[TS, d, i]
+                                        else:
+                                            QsL_right_in[TS, d, i] = 0
+
+                                        QsL_total[TS, d, i] = QsL_left_in[TS, d, i] + QsL_right_in[TS, d, i]
 
                                         # SED INTO NEXT ROW CELLS
                                         if d != width - 1:
@@ -1067,8 +1094,8 @@ class Outwasher:
                                         # END OF DOMAIN LOOPS
 
                             # ### Update Elevation After Every Storm Hour
-                            ElevationChange = (SedFluxIn[TS, :, :] - SedFluxOut[TS, :, :]) / self._substep
-                            Elevation[TS, :, :] = Elevation[TS, :, :] + ElevationChange
+                            ElevationChange = (SedFluxIn[TS] - SedFluxOut[TS] + QsL_total[TS]) / self._substep
+                            Elevation[TS] = Elevation[TS] + ElevationChange
                             elev_change_array[TS] = ElevationChange
 
                             # Calculate and save volume of sediment leaving the island for every hour
