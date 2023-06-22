@@ -1170,7 +1170,7 @@ class Outwasher:
                     storm_series,
                     n_dune_rows,
                     self._dune_flow_dynamics,
-                    b3d.nn,
+                    b3d._nn,
                     self._max_slope,
                     self._OW_TS,
                     b3d._Dmaxel,
