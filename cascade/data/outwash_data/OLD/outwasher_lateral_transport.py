@@ -63,7 +63,7 @@ def calculate_slopes(
                     S3 = np.nan_to_num(S3)
                 else:
                     S3 = 0
-            # if at the last row, apply the same slope as the beachface slope
+            # if at the last row, apply the same slope as the previous row slopes
             else:
                 if col > 0:  # i = 0 means there are no cols to the left
                     S1 = (domain[row - 1, col] - domain[row, col - 1]) / (math.sqrt(2))
