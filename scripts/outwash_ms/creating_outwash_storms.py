@@ -128,24 +128,31 @@ if save_hydro:
 
 # creating the full storm series (years in column 1 and hydrograph in column 2)
 num_simulation_years = 100
-num_storms = 5
+num_storms = 10
 outwash_storms = np.empty([num_storms, 2], dtype=object)  # has to be object bc we are adding an array to the second col
-interval = int(num_simulation_years/num_storms)  # the years the storms occur
+interval = int(num_simulation_years/num_storms)  # the interval years between the storms
+
+start_year = 10
 
 for i in range(num_storms):
-    outwash_storms[i, 0] = (i+1)*interval
+    outwash_storms[i, 0] = (i*interval) + start_year
     outwash_storms[i, 1] = hydro_damMHW_freq_increase
 
-# add an additional outwash storm immediately (not included in n_storms)
-storm_at_year_1 = True
-if storm_at_year_1:
-    year1 = np.zeros([1,2], dtype=object)
-    year1[0, 0] = 1
-    year1[0, 1] = hydro_damMHW_freq_increase
-    outwash_storms = np.vstack((year1, outwash_storms))
+
+# for i in range(num_storms):
+#     outwash_storms[i, 0] = (i+1)*interval
+#     outwash_storms[i, 1] = hydro_damMHW_freq_increase
+#
+# # add an additional outwash storm immediately (not included in n_storms)
+# storm_at_year_1 = True
+# if storm_at_year_1:
+#     year1 = np.zeros([1,2], dtype=object)
+#     year1[0, 0] = 1
+#     year1[0, 1] = hydro_damMHW_freq_increase
+#     outwash_storms = np.vstack((year1, outwash_storms))
 
 save_storm_series = False
 if save_storm_series:
-    name = "outwash_storms_20yrs_early"
+    name = "outwash_storms_startyr_10_interval_10yrs"
     np.save(datadir + name, outwash_storms)
 
