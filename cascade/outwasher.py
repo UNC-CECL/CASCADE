@@ -659,8 +659,7 @@ def flow_routing_with_lateral_transport(
         OW_TS,
         Dmaxel,
         BermEl,
-        cx,
-        m_beach,
+        C,
         q_min,
         ki,
         mm,
@@ -697,7 +696,11 @@ def flow_routing_with_lateral_transport(
         # Begin with elevation from previous timestep
         if TS > 0:
             elevation[TS, :, :] = elevation[TS - 1, :, :]  # initial elevation is same as previous TS domain
-        print("Outwasher Time Step: ", TS)
+        # print("Outwasher Time Step: ", TS)
+        # print('\r                                                                      ', end='')
+        print("\r", "Outwasher Time Step: ", TS, end="")
+        if TS == duration - 1:
+            print("\n")
 
         # get the hydrograph for this time step
         bayhigh = storm_series[TS]  # [dam]
@@ -859,7 +862,7 @@ def flow_routing_with_lateral_transport(
 
                             # ### Calculate Sed Movement
                             # ki = self._ki
-                            C = cx * m_beach
+                            # C = cx * m_beach
                             fluxLimit = max_dune  # [dam MHW] dmaxel - bermel
                             # all Qs in [dam^3/hr]
                             # bottom left cell
@@ -981,8 +984,7 @@ class Outwasher:
             percent_washout_to_shoreface=100,
             outwash_beach_file=None,
             dune_flow_dynamics="full",
-            cx=10,
-            lateral_trans_coeff_kL=1,
+            C=0.0134,
             initial_beach_width=0
     ):
         """
@@ -1002,8 +1004,9 @@ class Outwasher:
         self._substep = substep
         self._max_slope = -0.25
         self._ki = sediment_flux_coefficient_Ki
-        self._k_lat = lateral_trans_coeff_kL
-        self._cx = cx
+        self._k_lat = 0.5
+        # self._cx = cx
+        self._C = C
         self._mm = 2
         self._sea_level = sea_level  # equal to 0 dam
         self._bay_depth = bay_depth  # [dam MHW] Depth of bay behind island segment, currently set to 0.3
@@ -1063,6 +1066,8 @@ class Outwasher:
         # beach width reaches zero, turn dune migration in B3D back on -- otherwise
         # keep it off (we don't want the dune line to prograde
         # because we have fake houses there!)
+        self._time_index = b3d.time_index
+
         change_in_shoreline = (b3d.x_s_TS[-1] - b3d.x_s_TS[-2]) * 10  # m
         self._beach_width[self._time_index - 1] = (
             self._beach_width[self._time_index - 2] - change_in_shoreline
@@ -1075,11 +1080,14 @@ class Outwasher:
             time_index=self._time_index,
         )
 
+        # keep track of dune migration
+        self._dune_migration_on[self._time_index - 1] = b3d.dune_migration_on
+
         # CHECK FOR WHETHER IT IS AN OUTWASHER YEAR
-        if b3d._time_index - 1 in self._outwash_storms[:, 0]:
+        if self._time_index - 1 in self._outwash_storms[:, 0]:
 
             # initialize tracking and other b3d variables
-            self._time_index = b3d.time_index
+            # self._time_index = b3d.time_index
             q_min = b3d._Qs_min  # [m^3 / hr]? Minimum discharge needed for sediment transport (0.001)
             qs_lost_total = 0  # previously OWloss
 
@@ -1099,174 +1107,170 @@ class Outwasher:
             )
 
             storm_index = np.argwhere(self._outwash_storms[:, 0] == self._time_index - 1)
-            numstorm = int(len(storm_index))
+            bay_index = storm_index[0, 0]
+            storm_series = self._outwash_storms[bay_index, 1]  # just the bay levels for this outwash year
+            # allow for substeps (run the same bay level X times with proportional sed transport)
+            # to better simulate morphodynamics
+            if self._substep != 1:
+                updated_bay_levels = bay_converter(storm_series, substep=self._substep)
+                storm_series = np.asarray(updated_bay_levels)
+            dur = len(storm_series)  # [hr] duration of the storm
 
-            if numstorm > 0:
-                bay_index = storm_index[0, 0]
-                storm_series = self._outwash_storms[bay_index, 1]  # just the bay levels for this outwash year
-                # allow for substeps (run the same bay level X times with proportional sed transport)
-                # to better simulate morphodynamics
-                if self._substep != 1:
-                    updated_bay_levels = bay_converter(storm_series, substep=self._substep)
-                    storm_series = np.asarray(updated_bay_levels)
-                dur = len(storm_series)  # [hr] duration of the storm
-
-                # merge the interior domain, dunes, and create a beach -------------------------------------------------
-                if self._outwash_beach is None:
-                    # we added a beach (and "beachface") to domain with a width of 7 dam based on general beach widths
-                    beach_domain = np.ones([7, self._length]) * self._beach_elev  # [dam MHW] 7 rows
-                    beachface_domain = np.zeros([6, self._length])
-                    # we give the beach slope to be 0.004 m = 0.0004 dam
-                    m_beach = 0.0004
-                    # we want the beach to have a slope, but keep the first few rows the berm elevation
-                    for b in range(len(beach_domain)):
-                        if b >= 3:
-                            beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
-                    self._m_beachface = beach_domain[-1, 0] / len(beachface_domain)  # positive (downhill)
-                    for s in range(len(beachface_domain)):
-                        # the first row of the beach face depends on the last row of the beach
-                        if s == 0:
-                            beachface_domain[s, :] = beach_domain[-1, 0] - self._m_beachface  # slope of beachface
-                        else:
-                            beachface_domain[s, :] = beachface_domain[s - 1, :] - self._m_beachface
-                else:
-                    beach_domain = self._outwash_beach
-                    m_beach = self._beach_slope
-
-                # the dune domain is being taken from B3D, but is a set of tuples, so it needs to be transposed
-                dune_domain_full = np.flip(np.transpose(self._dune_domain) + self._berm_el)
-                n_dune_rows = np.shape(dune_domain_full)[0]
-                self._full_dunes = copy.deepcopy(dune_domain_full)
-
-                # the full domain of outwasher starts with the interior domain, then the dune, beach, and beachface
-                self._interior_domain = np.flip(self._interior_domain)
-                full_domain = np.append(self._interior_domain, dune_domain_full, 0)  # [dam MHW]
-                full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
-                if self._outwash_beach is None:
-                    full_domain = np.append(full_domain, beachface_domain, 0)
-                self._initial_full_domain = copy.deepcopy(full_domain)
-
-                # flow routing ----------------------------------------------------------------------------------------
-                # initialize domain variables
-                int_width = np.shape(self._interior_domain)[0]
-
-                width = np.shape(full_domain)[0]  # width is the number of rows in the full domain
-                duration = dur  # we already multiplied dur by the substep above
-                Elevation = np.zeros([duration, width, self._length])
-                # elevation at the first time step is set to the full domain
-                Elevation[0, :, :] = full_domain
-                # FR_array = []
-                # ElevationChange = 0
-
-                (Elevation, qs_lost_total, Discharge, elev_change_array, underwater_array, downhill_array,
-                 endcell_array, init_discharge_array, self._OW_TS, self._velocities[self._time_index - 1],
-                 self._flows[self._time_index - 1],
-                 ) = flow_routing_with_lateral_transport(
-                    duration,
-                    width,
-                    int_width,
-                    self._length,
-                    Elevation,
-                    storm_series,
-                    n_dune_rows,
-                    self._dune_flow_dynamics,
-                    b3d._nn,
-                    self._max_slope,
-                    self._OW_TS,
-                    b3d._Dmaxel,
-                    b3d._BermEl,
-                    self._cx,
-                    m_beach,
-                    q_min,
-                    self._ki,
-                    self._mm,
-                    self._k_lat,
-                    self._substep,
-                    qs_lost_total)
-
-                # update barrier3d interior and dune domain class variables for outwash modifications -----------------
-
-                # in barrier3d the elevation array is just the interior domain, here it is the full domain
-                # domain variables we want to save
-                self._full_domain = Elevation[-1]
-                post_outwash_interior_domain = Elevation[-1, 0:int_width, :]
-                post_outwash_dune_domain = Elevation[-1, int_width:int_width + n_dune_rows, :] - self._berm_el
-                post_outwash_beach_domain = Elevation[-1, int_width + n_dune_rows:-1, :]
-                self._post_outwash_beach_domain[self._time_index - 1] = post_outwash_beach_domain
-
-                # interior domain: remove all rows of bay without any deposition from the domain
-                # we check the first row rather than the last row (which is used in B3D) because we have not flipped
-                # the domain yet
-                check = 1
-                while check == 1:
-                    if all(x <= -self._bay_depth for x in post_outwash_interior_domain[0, :]):  # bay_depth = 0.3
-                        post_outwash_interior_domain = np.delete(post_outwash_interior_domain, 0, axis=0)
+            # merge the interior domain, dunes, and create a beach -------------------------------------------------
+            if self._outwash_beach is None:
+                # we added a beach (and "beachface") to domain with a width of 7 dam based on general beach widths
+                beach_domain = np.ones([7, self._length]) * self._beach_elev  # [dam MHW] 7 rows
+                beachface_domain = np.zeros([6, self._length])
+                # we give the beach slope to be 0.004 m = 0.0004 dam
+                m_beach = 0.0004
+                # we want the beach to have a slope, but keep the first few rows the berm elevation
+                for b in range(len(beach_domain)):
+                    if b >= 3:
+                        beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
+                self._m_beachface = beach_domain[-1, 0] / len(beachface_domain)  # positive (downhill)
+                for s in range(len(beachface_domain)):
+                    # the first row of the beach face depends on the last row of the beach
+                    if s == 0:
+                        beachface_domain[s, :] = beach_domain[-1, 0] - self._m_beachface  # slope of beachface
                     else:
-                        check = 0
+                        beachface_domain[s, :] = beachface_domain[s - 1, :] - self._m_beachface
+            else:
+                beach_domain = self._outwash_beach
+                m_beach = self._beach_slope
 
-                new_ave_interior_height = np.average(
-                    post_outwash_interior_domain[
-                        post_outwash_interior_domain >= b3d.SL
-                        ]  # all in dam MHW
+            # the dune domain is being taken from B3D, but is a set of tuples, so it needs to be transposed
+            dune_domain_full = np.flip(np.transpose(self._dune_domain) + self._berm_el)
+            n_dune_rows = np.shape(dune_domain_full)[0]
+            self._full_dunes = copy.deepcopy(dune_domain_full)
+
+            # the full domain of outwasher starts with the interior domain, then the dune, beach, and beachface
+            self._interior_domain = np.flip(self._interior_domain)
+            full_domain = np.append(self._interior_domain, dune_domain_full, 0)  # [dam MHW]
+            full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
+            if self._outwash_beach is None:
+                full_domain = np.append(full_domain, beachface_domain, 0)
+            self._initial_full_domain = copy.deepcopy(full_domain)
+
+            # flow routing ----------------------------------------------------------------------------------------
+            # initialize domain variables
+            int_width = np.shape(self._interior_domain)[0]
+
+            width = np.shape(full_domain)[0]  # width is the number of rows in the full domain
+            duration = dur  # we already multiplied dur by the substep above
+            Elevation = np.zeros([duration, width, self._length])
+            # elevation at the first time step is set to the full domain
+            Elevation[0, :, :] = full_domain
+            # FR_array = []
+            # ElevationChange = 0
+
+            (Elevation, qs_lost_total, Discharge, elev_change_array, underwater_array, downhill_array,
+             endcell_array, init_discharge_array, self._OW_TS, self._velocities[self._time_index - 1],
+             self._flows[self._time_index - 1],
+             ) = flow_routing_with_lateral_transport(
+                duration=duration,
+                width=width,
+                int_width=int_width,
+                length=self._length,
+                elevation=Elevation,
+                storm_series=storm_series,
+                n_dune_rows=n_dune_rows,
+                dune_flow_dynamics=self._dune_flow_dynamics,
+                nn=b3d._nn,
+                max_slope=self._max_slope,
+                OW_TS=self._OW_TS,
+                Dmaxel=b3d._Dmaxel,
+                BermEl=b3d._BermEl,
+                C=self._C,
+                q_min=q_min,
+                ki=self._ki,
+                mm=self._mm,
+                k_lat=self._k_lat,
+                substep=self._substep,
+                qs_lost_total=qs_lost_total)
+
+            # update barrier3d interior and dune domain class variables for outwash modifications -----------------
+
+            # in barrier3d the elevation array is just the interior domain, here it is the full domain
+            # domain variables we want to save
+            self._full_domain = Elevation[-1]
+            post_outwash_interior_domain = Elevation[-1, 0:int_width, :]
+            post_outwash_dune_domain = Elevation[-1, int_width:int_width + n_dune_rows, :] - self._berm_el
+            post_outwash_beach_domain = Elevation[-1, int_width + n_dune_rows:-1, :]
+            self._post_outwash_beach_domain[self._time_index - 1] = post_outwash_beach_domain
+
+            # interior domain: remove all rows of bay without any deposition from the domain
+            # we check the first row rather than the last row (which is used in B3D) because we have not flipped
+            # the domain yet
+            check = 1
+            while check == 1:
+                if all(x <= -self._bay_depth for x in post_outwash_interior_domain[0, :]):  # bay_depth = 0.3
+                    post_outwash_interior_domain = np.delete(post_outwash_interior_domain, 0, axis=0)
+                else:
+                    check = 0
+
+            new_ave_interior_height = np.average(
+                post_outwash_interior_domain[
+                    post_outwash_interior_domain >= b3d.SL
+                    ]  # all in dam MHW
+            )
+            b3d.h_b_TS[-1] = new_ave_interior_height
+            # flip the Interior and Dune Domains to put back into Barrier3D
+            b3d.InteriorDomain = np.flip(post_outwash_interior_domain)
+            b3d.DomainTS[self._time_index - 1] = np.flip(post_outwash_interior_domain)
+            # b3d.DuneDomain[self._time_index - 1, :, :] = copy.deepcopy(
+            #     np.flip(np.transpose(post_outwash_dune_domain))
+            # )
+            b3d.DuneDomain[self._time_index - 1, :, :] = np.flip(np.transpose(post_outwash_dune_domain))
+
+            # "nourish" the shoreface with the washout ------------------------------------------------------------
+            if self._percent_washout_to_shoreface > 0:
+                self._Qs_shoreface[self._time_index - 1] = qs_lost_total * 1000 \
+                                                           * self._percent_washout_to_shoreface / 100  # m^3
+                self._Qs_shoreface_per_length[self._time_index - 1] = (qs_lost_total / self._length) * 100 \
+                                                            * self._percent_washout_to_shoreface / 100  # m^3/m
+                (
+                    b3d.x_s,  # save over class variables
+                    b3d.s_sf_TS[-1],
+                    self._beach_width[self._time_index - 1],  # this is just the change in shoreline position
+                ) = shoreface_nourishment(
+                    b3d.x_s,  # in dam
+                    b3d.x_t,  # in dam
+                    self._Qs_shoreface_per_length[self._time_index - 1] / 100,  # convert m^3/m to dam^3/dam
+                    b3d.h_b_TS[-1],  # in dam
+                    b3d.DShoreface,  # in dam
+                    self._beach_width[self._time_index - 1] / 10,  # convert m to dam
                 )
-                b3d.h_b_TS[-1] = new_ave_interior_height
-                # flip the Interior and Dune Domains to put back into Barrier3D
-                b3d.InteriorDomain = np.flip(post_outwash_interior_domain)
-                b3d.DomainTS[self._time_index - 1] = np.flip(post_outwash_interior_domain)
-                # b3d.DuneDomain[self._time_index - 1, :, :] = copy.deepcopy(
-                #     np.flip(np.transpose(post_outwash_dune_domain))
-                # )
-                b3d.DuneDomain[self._time_index - 1, :, :] = np.flip(np.transpose(post_outwash_dune_domain))
+                self._beach_width[self._time_index - 1] *= 10  # convert dam back to m
+                b3d.x_s_TS[-1] = b3d.x_s
 
-                # "nourish" the shoreface with the washout ------------------------------------------------------------
-                if self._percent_washout_to_shoreface > 0:
-                    self._Qs_shoreface[self._time_index - 1] = qs_lost_total * 1000 \
-                                                               * self._percent_washout_to_shoreface / 100  # m^3
-                    self._Qs_shoreface_per_length[self._time_index - 1] = (qs_lost_total / self._length) * 100 \
-                                                                * self._percent_washout_to_shoreface / 100  # m^3/m
-                    (
-                        b3d.x_s,  # save over class variables
-                        b3d.s_sf_TS[-1],
-                        self._beach_width[self._time_index - 1],  # this is just the change in shoreline position
-                    ) = shoreface_nourishment(
-                        b3d.x_s,  # in dam
-                        b3d.x_t,  # in dam
-                        self._Qs_shoreface_per_length[self._time_index - 1] / 100,  # convert m^3/m to dam^3/dam
-                        b3d.h_b_TS[-1],  # in dam
-                        b3d.DShoreface,  # in dam
-                        self._beach_width[self._time_index - 1] / 10,  # convert m to dam
-                    )
-                    self._beach_width[self._time_index - 1] *= 10  # convert dam back to m
-                    b3d.x_s_TS[-1] = b3d.x_s
+                # set dune migration off after nourishment (we don't want the dune line
+                # to prograde if the beach width was previously less than threshold)
+                b3d.dune_migration_on = False
 
-                    # set dune migration off after nourishment (we don't want the dune line
-                    # to prograde if the beach width was previously less than threshold)
-                    b3d.dune_migration_on = False
+            # keep track of dune migration
+            self._dune_migration_on[self._time_index - 1] = b3d.dune_migration_on
 
-                # keep track of dune migration
-                self._dune_migration_on[self._time_index - 1] = b3d.dune_migration_on
+            # final update to outwash and domain variables --------------------------------------------------------
+            # recalculate and save DomainWidth and InteriorWidth
+            _, _, new_ave_interior_width = b3d.FindWidths(
+                b3d.InteriorDomain, b3d.SL
+            )
+            b3d.InteriorWidth_AvgTS[-1] = new_ave_interior_width
 
-                # final update to outwash and domain variables --------------------------------------------------------
-                # recalculate and save DomainWidth and InteriorWidth
-                _, _, new_ave_interior_width = b3d.FindWidths(
-                    b3d.InteriorDomain, b3d.SL
-                )
-                b3d.InteriorWidth_AvgTS[-1] = new_ave_interior_width
+            # replace value of x_b_TS with new InteriorWidth_Avg
+            b3d.x_b_TS[-1] = b3d.x_s_TS[-1] + new_ave_interior_width
 
-                # replace value of x_b_TS with new InteriorWidth_Avg
-                b3d.x_b_TS[-1] = b3d.x_s_TS[-1] + new_ave_interior_width
+            # save erosion volumes and fluxes
+            vol_m = qs_lost_total * 1000  # dam3 to m3
+            flux = qs_lost_total / self._length * 100  # dam3/dam to m3/m
+            self._outwash_TS[self._time_index - 1] = vol_m  # array for storing outwash volume (m^3)
+            self._outwash_flux_TS[self._time_index - 1] = flux  # array for storing outwash flux (m^3/m)
 
-                # save erosion volumes and fluxes
-                vol_m = qs_lost_total * 1000  # dam3 to m3
-                flux = qs_lost_total / self._length * 100  # dam3/dam to m3/m
-                self._outwash_TS[self._time_index - 1] = vol_m  # array for storing outwash volume (m^3)
-                self._outwash_flux_TS[self._time_index - 1] = flux  # array for storing outwash flux (m^3/m)
-
-                # other class variables that we want to save
-                self._final_bay_levels = storm_series
-                self._discharge[self._time_index - 1] = Discharge
-                self._elevation_change[self._time_index - 1] = elev_change_array
-                self._underwater_array[self._time_index - 1] = underwater_array
-                self._downhill_array[self._time_index - 1] = downhill_array
-                self._endcell_array[self._time_index - 1] = endcell_array
-                self._initial_discharge[self._time_index - 1] = init_discharge_array
+            # other class variables that we want to save
+            self._final_bay_levels = storm_series
+            self._discharge[self._time_index - 1] = Discharge
+            self._elevation_change[self._time_index - 1] = elev_change_array
+            self._underwater_array[self._time_index - 1] = underwater_array
+            self._downhill_array[self._time_index - 1] = downhill_array
+            self._endcell_array[self._time_index - 1] = endcell_array
+            self._initial_discharge[self._time_index - 1] = init_discharge_array
