@@ -158,8 +158,7 @@ class Cascade:
         dune_flow_dynamics="full",
         outwasher_substep=20,
         ki_value=7.5E-3,
-        cx=10,
-        kL=1,
+        c=0.0134,
     ):
         """
 
@@ -467,8 +466,10 @@ class Cascade:
                           dune_flow_dynamics=dune_flow_dynamics,
                           substep=outwasher_substep,
                           sediment_flux_coefficient_Ki=ki_value,
-                          lateral_trans_coeff_kL=kL,
-                          cx=cx)
+                          C=c,
+                          initial_beach_width=0,
+                          # cx=cx,
+                          )
             )
 
     @property
