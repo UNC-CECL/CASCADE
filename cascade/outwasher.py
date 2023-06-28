@@ -698,9 +698,9 @@ def flow_routing_with_lateral_transport(
             elevation[TS, :, :] = elevation[TS - 1, :, :]  # initial elevation is same as previous TS domain
         # print("Outwasher Time Step: ", TS)
         # print('\r                                                                      ', end='')
-        print("\r", "Outwasher Time Step: ", TS, end="")
-        if TS == duration - 1:
-            print("\n")
+        # print("\r", "Outwasher Time Step: ", TS, end="")
+        # if TS == duration - 1:
+        #     print("\n")
 
         # get the hydrograph for this time step
         bayhigh = storm_series[TS]  # [dam]
@@ -1085,6 +1085,7 @@ class Outwasher:
 
         # CHECK FOR WHETHER IT IS AN OUTWASHER YEAR
         if self._time_index - 1 in self._outwash_storms[:, 0]:
+            print("\n start outwash storm")
 
             # initialize tracking and other b3d variables
             # self._time_index = b3d.time_index
@@ -1274,3 +1275,5 @@ class Outwasher:
             self._downhill_array[self._time_index - 1] = downhill_array
             self._endcell_array[self._time_index - 1] = endcell_array
             self._initial_discharge[self._time_index - 1] = init_discharge_array
+
+            print(" end outwash storm \n", end="")
