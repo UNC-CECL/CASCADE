@@ -1,8 +1,4 @@
-import pkg_resources
-
+from ._version import __version__
 from .cascade import Cascade
 
-__version__ = pkg_resources.get_distribution("cascade").version
-__all__ = ["Cascade"]
-
-del pkg_resources
+__all__ = ["__version__", "Cascade"]

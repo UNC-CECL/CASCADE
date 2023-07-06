@@ -3,13 +3,14 @@
 
 # remember if I move to a different computer to $ pip install -e . in the brie, CHOM, and B3D directories
 
-import numpy as np
 import time
+
+import numpy as np
 
 from cascade.cascade import Cascade  # the new class
 
 
-def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
+def natural_1segment_pt004SLR(
     nt,
     rmin,
     rmax,
@@ -18,7 +19,6 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
     elevation_file,
     dune_file,
 ):
-
     # ###############################################################################
     # 4 - CASCADE with only one B3D model and no human dynamics
     # ###############################################################################
@@ -27,14 +27,14 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
     # run script for the 10,000 year runs.
 
     # --------- INITIALIZE ---------
-    datadir = "cascade/data/pathways_data/"
+    datadir = "data/pathways_init_data/"
     cascade = Cascade(
         datadir,
         name,
         storm_file=storm_file,
         elevation_file=elevation_file,
         dune_file=dune_file,
-        parameter_file="RUN4-CASCADE-parameters.yaml",
+        parameter_file="natural_1segment_pt004SLR-CASCADE-parameters.yaml",
         wave_height=1,
         wave_period=7,  # s (lowered from 10 s to reduce k_sf)
         wave_asymmetry=0.8,  # fraction approaching from left
@@ -70,7 +70,7 @@ def RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
     return cascade
 
 
-cascade_10kyr_pt45_01 = RUN_4_CASCADE_noAST_Rave_SLR_pt004_NoHumans(
+cascade_10kyr_pt45_01 = natural_1segment_pt004SLR(
     nt=10,
     rmin=0.25,  # rave = 0.45 (but not 0.5 spaced like in Reeves et al., 2021 -- arbitrary)
     rmax=0.65,
