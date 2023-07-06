@@ -197,7 +197,7 @@ def plot_ElevAnimation_CASCADE(
     )
 
     os.chdir(directory)
-    newpath = name + "/SimFrames/"
+    newpath = name
     if not os.path.exists(newpath):
         os.makedirs(newpath)
     os.chdir(newpath)
