@@ -64,6 +64,7 @@ ax1.set_title("Pre-Storm Elevation")
 ax1.set_ylabel("barrier width (m)")
 ax1.set_xlabel("barrier length (m)")
 plt.gca().xaxis.tick_bottom()
+
 # ax1.add_patch(plt.Rectangle((20,175), 50, -40, lw=2, ec="k", fc="none"))  # (x,y), length, width (up = neg)
 # ax1.add_patch(plt.Rectangle((70,175), 50, -40, lw=2, ec="m", fc="none"))
 ax1.add_patch(plt.Rectangle((98,187), 50, -40, lw=2, ec="k", fc="none"))  # (x,y), length, width (up = neg)
@@ -89,9 +90,10 @@ elev_array = elev_array / 10
 # elev_array = elev_array[100:-1]
 # section1_pre = elev_array[:, 20:70]
 # section2_pre = elev_array[:, 70:120]
-section3_pre = elev_array[147:188, 248:298]
+# section3_pre = elev_array[147:188, 248:298]
+section4_pre = elev_array[147:188, 198:248]
 
-print(np.max(elev_array))
+# print(np.max(elev_array))
 
 # # plot section 1
 # fig1 = plt.figure()
@@ -126,10 +128,37 @@ print(np.max(elev_array))
 # plt.gca().xaxis.tick_bottom()
 
 # plot section 3
+# fig1 = plt.figure()
+# ax1 = fig1.add_subplot(111)
+# mat = ax1.matshow(
+#     section3_pre * 10,
+#     cmap="terrain",
+#     vmin=-3.0,
+#     vmax=6.0,
+# )
+# cbar = fig1.colorbar(mat)
+# cbar.set_label('m MHW', rotation=270, labelpad=15)
+# ax1.set_title("Pre-Storm Elevation")
+# ax1.set_ylabel("barrier width (m)")
+# ax1.set_xlabel("barrier length (m)")
+# plt.gca().xaxis.tick_bottom()
+#
+# plt.hlines(21.5, -0.5, 49.5, color="k", linestyles='solid', linewidth=3)
+#
+# xtick_max = np.shape(section3_pre)[1]  # n_cols = x
+# x_ticks = np.array(range(0, xtick_max, 5))
+# x_tick_labels = x_ticks * 10
+# ytick_max = np.shape(section3_pre)[0]  # n_rows = y
+# y_ticks = np.array(range(0, ytick_max, 5))
+# y_tick_labels = y_ticks * 10
+# plt.xticks(x_ticks, x_tick_labels)
+# plt.yticks(y_ticks, y_tick_labels)
+
+# plot section 4
 fig1 = plt.figure()
 ax1 = fig1.add_subplot(111)
 mat = ax1.matshow(
-    section3_pre * 10,
+    section4_pre * 10,
     cmap="terrain",
     vmin=-3.0,
     vmax=6.0,
@@ -141,15 +170,16 @@ ax1.set_ylabel("barrier width (m)")
 ax1.set_xlabel("barrier length (m)")
 plt.gca().xaxis.tick_bottom()
 
-xtick_max = np.shape(section3_pre)[1]  # n_cols = x
+# plt.hlines(21.5, -0.5, 49.5, color="k", linestyles='solid', linewidth=3)
+
+xtick_max = np.shape(section4_pre)[1]  # n_cols = x
 x_ticks = np.array(range(0, xtick_max, 5))
 x_tick_labels = x_ticks * 10
-ytick_max = np.shape(section3_pre)[0]  # n_rows = y
+ytick_max = np.shape(section4_pre)[0]  # n_rows = y
 y_ticks = np.array(range(0, ytick_max, 5))
 y_tick_labels = y_ticks * 10
 plt.xticks(x_ticks, x_tick_labels)
 plt.yticks(y_ticks, y_tick_labels)
-fig1.subplots_adjust(wspace=0.25)
 
 
 ### plotting the post storm
@@ -216,14 +246,15 @@ post_elev_array = post_elev_array / 10
 # post_elev_array = post_elev_array[100:-1]
 # section1_post = post_elev_array[:, 19:69]
 # section2_post = post_elev_array[:, 69:119]
-section3_post = post_elev_array[147:188, 248:298]
+# section3_post = post_elev_array[147:188, 248:298]
+section4_post = post_elev_array[147:188, 198:248]
 #
 # plot post section
 fig2 = plt.figure()
 ax2 = fig2.add_subplot(111)
 mat = ax2.matshow(
     # post_elev_array[120:-1]*10,
-    section3_post*10,
+    section4_post*10,
     cmap="terrain",
     vmin=-3.0,
     vmax=6.0,
@@ -235,27 +266,35 @@ ax2.set_ylabel("barrier width (m)")
 ax2.set_xlabel("barrier length (m)")
 plt.gca().xaxis.tick_bottom()
 
-xtick_max = np.shape(section3_post)[1]  # n_cols = x
+# plt.hlines(21.5, -0.5, 49.5, color="k", linestyles='solid', linewidth=3)
+
+xtick_max = np.shape(section4_post)[1]  # n_cols = x
 x_ticks = np.array(range(0, xtick_max, 5))
 x_tick_labels = x_ticks * 10
-ytick_max = np.shape(section3_post)[0]  # n_rows = y
+ytick_max = np.shape(section4_post)[0]  # n_rows = y
 y_ticks = np.array(range(0, ytick_max, 5))
 y_tick_labels = y_ticks * 10
 plt.xticks(x_ticks, x_tick_labels)
 plt.yticks(y_ticks, y_tick_labels)
 # fig2.subplots_adjust(wspace=0.25)
 
-dif3 = section3_post - section3_pre
-total_erosion_3 = np.sum(dif3)*10*100  # cubic meters
-back_barrier_erosion_3 = np.sum(dif3[0:23, :])*10*100  # cubic meters
-back_barrier_erosion_3_smaller = np.sum(dif3[7:23, :])*10*100  # cubic meters
+dif4 = section4_post - section4_pre
+total_erosion_4 = np.sum(dif4)*10*100  # cubic meters
+left_channel_erosion4 = np.sum(dif4[5:29, 2:21])*10*100  # cubic meters
+right_channel_erosion4 = np.sum(dif4[10:29, 22:39])*10*100  # cubic meters
+one_box_erosion4 = np.sum(dif4[5:29, 2:39])*10*100  # cubic meters
+# back_barrier_erosion_3 = np.sum(dif3[0:23, :])*10*100  # cubic meters
+# back_barrier_erosion_3_withdunes = np.sum(dif3[0:25, :])*10*100  # cubic meters
+# better representation of back-barrier and dune line erosion
+# back_barrier_erosion_3 = np.sum(dif3[0:22, :])*10*100  # cubic meters
+# back_barrier_erosion_3_withdunes = np.sum(dif3[0:29, :])*10*100  # cubic meters
 
 # plot difference
 fig2 = plt.figure()
 ax2 = fig2.add_subplot(111)
 mat = ax2.matshow(
     # post_elev_array[120:-1]*10,
-    dif3*10,
+    dif4*10,
     cmap="seismic",
     vmin=-5,
     vmax=5,
@@ -266,11 +305,15 @@ ax2.set_title("Elevation Change")
 ax2.set_ylabel("barrier width (m)")
 ax2.set_xlabel("barrier length (m)")
 plt.gca().xaxis.tick_bottom()
+# plt.hlines(21.5, -0.5, 49.5, color="k", linestyles='solid', linewidth=3)
+ax2.add_patch(plt.Rectangle((1, 29), 38, -25, lw=3, ec="k", fc="none"))
+# ax2.add_patch(plt.Rectangle((1,29), 19, -25, lw=3, ec="k", fc="none"))
+# ax2.add_patch(plt.Rectangle((21,29), 18, -20, lw=3, ec="k", fc="none"))
 
-xtick_max = np.shape(dif3)[1]  # n_cols = x
+xtick_max = np.shape(dif4)[1]  # n_cols = x
 x_ticks = np.array(range(0, xtick_max, 5))
 x_tick_labels = x_ticks * 10
-ytick_max = np.shape(dif3)[0]  # n_rows = y
+ytick_max = np.shape(dif4)[0]  # n_rows = y
 y_ticks = np.array(range(0, ytick_max, 5))
 y_tick_labels = y_ticks * 10
 plt.xticks(x_ticks, x_tick_labels)
@@ -281,44 +324,51 @@ plt.yticks(y_ticks, y_tick_labels)
 
 # break up the domain into interior, dunes, and beach
 # will likely take some manipulating with the dunes
-section3_int = section3_pre[:23, :]
-section3_dunes = section3_pre[23:28, :]
-# section3_new_dunes = np.zeros([2, np.shape(section3_dunes)[1]])
-section3_beach = section3_pre[28:, :]
+section4_int = section4_pre[:26]
+section4_beach = section4_pre[31:]
+# section4_dunes = section4_pre[26:31]
+section4_dunes = section4_pre[28:30]
+full4 = np.append(section4_int, section4_dunes, 0)
+full4 = np.append(full4, section4_beach, 0)
 
-extra_beach = np.zeros([3, np.shape(section3_dunes)[1]])
-extra_beach[:, 22:end] = section3_pre[25:28, 22:end]
-extra_beach[:, 0:4] = section3_pre[28:31, 0:4]
-extra_beach[:, 4:9] = section3_pre[27:30, 4:9]
-extra_beach[:, 9:22] = section3_pre[26:29, 9:22]
-
-section3_beach[0:2, 0:9] = section3_pre[30:32, 0:9]
-
-section3_beach = np.append(extra_beach, section3_beach, 0)
-
-# # dune manipulation
-# for c in range(np.shape(section3_dunes)[1]):
-#     max_dune1, max_dune2 = heapq.nlargest(2, section3_dunes[:, c])
-#     section3_new_dunes[0, c] = max_dune2
-#     section3_new_dunes[1, c] = max_dune1
-
-# second option
-section3_stitched_dunes = np.zeros([2, np.shape(section3_dunes)[1]])
-section3_stitched_dunes[:, 0:4] = section3_pre[26:28, 0:4]
-section3_stitched_dunes[:, 4:9] = section3_pre[25:27, 4:9]
-section3_stitched_dunes[:, 9:22] = section3_pre[24:26, 9:22]
-section3_stitched_dunes[:, 22:] = section3_pre[23:25, 22:]
-
-# full3_option1 = np.append(section3_int, section3_new_dunes, 0)
-# full3_option1 = np.append(full3_option1, section3_beach, 0)
-
-full3_option2 = np.append(section3_int, section3_stitched_dunes, 0)
-full3_option2 = np.append(full3_option2, section3_beach, 0)
+# section3_int = section3_pre[:23, :]
+# section3_dunes = section3_pre[23:28, :]
+# # section3_new_dunes = np.zeros([2, np.shape(section3_dunes)[1]])
+# section3_beach = section3_pre[28:, :]
+#
+# extra_beach = np.zeros([3, np.shape(section3_dunes)[1]])
+# extra_beach[:, 22:end] = section3_pre[25:28, 22:end]
+# extra_beach[:, 0:4] = section3_pre[28:31, 0:4]
+# extra_beach[:, 4:9] = section3_pre[27:30, 4:9]
+# extra_beach[:, 9:22] = section3_pre[26:29, 9:22]
+#
+# section3_beach[0:2, 0:9] = section3_pre[30:32, 0:9]
+#
+# section3_beach = np.append(extra_beach, section3_beach, 0)
+#
+# # # dune manipulation
+# # for c in range(np.shape(section3_dunes)[1]):
+# #     max_dune1, max_dune2 = heapq.nlargest(2, section3_dunes[:, c])
+# #     section3_new_dunes[0, c] = max_dune2
+# #     section3_new_dunes[1, c] = max_dune1
+#
+# # second option
+# section3_stitched_dunes = np.zeros([2, np.shape(section3_dunes)[1]])
+# section3_stitched_dunes[:, 0:4] = section3_pre[26:28, 0:4]
+# section3_stitched_dunes[:, 4:9] = section3_pre[25:27, 4:9]
+# section3_stitched_dunes[:, 9:22] = section3_pre[24:26, 9:22]
+# section3_stitched_dunes[:, 22:] = section3_pre[23:25, 22:]
+#
+# # full3_option1 = np.append(section3_int, section3_new_dunes, 0)
+# # full3_option1 = np.append(full3_option1, section3_beach, 0)
+#
+# full3_option2 = np.append(section3_int, section3_stitched_dunes, 0)
+# full3_option2 = np.append(full3_option2, section3_beach, 0)
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot(111)
 mat = ax1.matshow(
-    full3_option2 * 10,
+    full4 * 10,
     cmap="terrain",
     vmin=-3.0,
     vmax=6.0,
@@ -330,17 +380,33 @@ ax1.set_ylabel("barrier width (m)")
 ax1.set_xlabel("barrier length (m)")
 plt.gca().xaxis.tick_bottom()
 
-plt.hlines(22.5, -0.5, 49.5, color="k", linestyles='solid', linewidth=3)
-plt.hlines(24.5, -0.5, 49.5, color="k", linestyles='solid', linewidth=3)
+# plt.hlines(25.5, -0.5, 49.5, color="k", linestyles='solid', linewidth=3)
+# plt.hlines(27.5, -0.5, 49.5, color="k", linestyles='solid', linewidth=3)
 
-xtick_max = np.shape(full3_option2)[1]  # n_cols = x
+xtick_max = np.shape(full4)[1]  # n_cols = x
 x_ticks = np.array(range(0, xtick_max, 5))
 x_tick_labels = x_ticks * 10
-ytick_max = np.shape(full3_option2)[0]  # n_rows = y
+ytick_max = np.shape(full4)[0]  # n_rows = y
 y_ticks = np.array(range(0, ytick_max, 5))
 y_tick_labels = y_ticks * 10
 plt.xticks(x_ticks, x_tick_labels)
 plt.yticks(y_ticks, y_tick_labels)
+
+beach4_slope = (np.mean(section4_beach[0, :]) - np.mean(section4_beach[8, :])) / 9
+
+
+# ### save the domains -------------------------------------------------------------------------------------------------
+# interior_b3d_input = np.flip(section4_int)
+# np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-elevation-config4-damMHW", interior_b3d_input)
+#
+# berm_el = 0.11
+# dunes_b3d = np.flip(section4_dunes) - berm_el
+# dunes_input = np.append(dunes_b3d[0], dunes_b3d[1], 0)
+# np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-dunes-config4-dam", dunes_input)
+#
+# # the beach should be loaded in with the ocean on the bottom
+# np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/NCB-default-beach-config4-damMHW", section4_beach)
+
 
 # ### save the domains -------------------------------------------------------------------------------------------------
 # interior_b3d_input = np.flip(section3_int)
