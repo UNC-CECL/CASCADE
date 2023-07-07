@@ -360,6 +360,7 @@ def plot_ElevAnimation_CASCADE(
             else:
                 # both roadways and natural scenario
                 beach_width = cascade._initial_beach_width[iB3D] / 10
+                # beach_width = cascade.outwash[iB3D]._beach_width[t] / 10
 
             if beach_management_ny[iB3D] and np.isnan(beach_width):
                 beach_width = (
@@ -404,7 +405,7 @@ def plot_ElevAnimation_CASCADE(
             Dunes = np.rot90(Dunes)
             Dunes = np.flipud(Dunes)
             Beach = BeachDomain * 10
-            Domain = np.vstack([Beach, Dunes, Domain])
+            Domain = np.flip(np.vstack([Beach, Dunes, Domain]),1)
             Domain[Domain < 0] = -1
             widthTS = len(Domain)
             OriginTstart = int(cellular_shoreline_post_humans)
