@@ -5,9 +5,8 @@ import pandas as pd
 datadir = r"C:\Users\Lexi\PycharmProjects\CASCADE\cascade\data\outwash_data/"
 
 cascade_storms_file = "cascade-default-storms.npy"
-slope_03_file = "StormSeries_100yrs_NCB_Berm1pt46m_Slope0pt03_01.npy"
-slope_002_file = "StormSeries_100yrs_NCB_Berm1pt46m_Slope0pt002_01.npy"
-
+slope_03_file = "storms/slope0pt03/StormSeries_100yrs_inclusive_NCB_Berm1pt46m_Slope0pt03_1.npy"
+slope_002_file = "storms/slope0pt002/StormSeries_100yrs_inclusive_NCB_Berm1pt46m_Slope0pt002_1.npy"
 
 # reminder that the arrays are storm year, rhigh (dam), rlow (dam), alpha, duration (hrs)
 cascade_storm_series = np.load(datadir+cascade_storms_file)[0:864, :]
@@ -77,7 +76,7 @@ data_array[2, 3] = np.mean(slope_002_dur)
 df = pd.DataFrame(data=data_array, index=rows, columns=cols)
 
 # plotting the data
-plotters = False
+plotters = True
 if plotters:
     # figure 1: histograms of n storms per year
     fig1 = plt.figure()
@@ -87,7 +86,7 @@ if plotters:
     ax1.set_ylim(0,42)
     ax1.set_ylabel("number of storms", weight='bold')
     # ax1.set_xlabel("storm year", weight='bold')
-    plt.legend()
+    plt.legend(loc="upper right")
 
     ax2 = fig1.add_subplot(312)
     ax2.bar(slope_03_unique_years, slope_03_storms_per_year, label="slope 0.03", color="orange")
@@ -95,7 +94,7 @@ if plotters:
     ax2.set_ylim(0,42)
     ax2.set_ylabel("number of storms", weight='bold')
     # ax2.set_xlabel("storm year", weight='bold')
-    plt.legend()
+    plt.legend(loc="upper right")
 
     ax3 = fig1.add_subplot(313)
     ax3.bar(slope_002_unique_years, slope_002_storms_per_year, label="slope 0.002", color="green")
@@ -103,15 +102,16 @@ if plotters:
     ax3.set_ylim(0,42)
     ax3.set_ylabel("number of storms", weight='bold')
     ax3.set_xlabel("storm year", weight='bold')
-    plt.legend()
+    plt.legend(loc="upper right")
 
     # figure 2: n storms per year line plots
+    plt.rcParams.update({"font.size": 15})
     plt.figure(2)
     plt.plot(cascade_unique_years, cascade_storms_per_year, label="cascade")
     plt.plot(slope_03_unique_years, slope_03_storms_per_year, label="slope 0.03", color="orange")
     plt.plot(slope_002_unique_years, slope_002_storms_per_year, label="slope 0.002", color="green")
     plt.xticks(np.arange(0,100,5))
-    plt.legend()
+    plt.legend(loc="upper right")
     plt.scatter(cascade_unique_years, cascade_storms_per_year, label="cascade")
     plt.scatter(slope_03_unique_years, slope_03_storms_per_year, label="slope 0.03", color="orange")
     plt.scatter(slope_002_unique_years, slope_002_storms_per_year, label="slope 0.002", color="green")
@@ -127,7 +127,7 @@ if plotters:
     plt.ylabel("R-high (m)", weight='bold')
     plt.xlabel("storm year", weight='bold')
     plt.xticks(np.arange(0,100,5))
-    plt.legend()
+    plt.legend(loc="upper right")
 
     # figure 4: R low plots
     plt.figure(4)
@@ -137,7 +137,7 @@ if plotters:
     plt.ylabel("R-low (m)", weight='bold')
     plt.xlabel("storm year", weight='bold')
     plt.xticks(np.arange(0,100,5))
-    plt.legend()
+    plt.legend(loc="upper right")
 
     # figure 5: duration plots
     plt.figure(5)
@@ -147,4 +147,4 @@ if plotters:
     plt.ylabel("Duration (hrs)", weight='bold')
     plt.xlabel("storm year", weight='bold')
     plt.xticks(np.arange(0,100,5))
-    plt.legend()
+    plt.legend(loc="upper right")
