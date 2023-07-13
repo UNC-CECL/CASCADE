@@ -93,7 +93,6 @@ def Single_Plot_1(
         cascade.update()
         if cascade.b3d_break:
             break
-
     # --------- SAVE ---------
     save_directory = "Run_Output/"
     cascade.save(save_directory)

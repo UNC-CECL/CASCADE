@@ -320,14 +320,14 @@ def plot_ElevAnimation_CASCADE(
     print("[ * GIF successfully generated * ]")
 
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/Run_output")
-#run_name='Wreck_S10_3' # 5 Length
-run_name='Metompkin_No_Marsh_S10_3' # 4 length
+#run_name='Wreck_ACC_RSLR3_S3' # 5 Length
+run_name='New_Couple_Test' # 4 length
 #run_name='Metompkin_Marsh_S10_3'
 #run_name='Smith_S10_3' # 5
 
 name_prefix = run_name
-nt_run = 500
-number_barrier3d_models = 5
+nt_run = 19
+number_barrier3d_models = 1
 
 # --------- plot ---------
 output = np.load(run_name + ".npz", allow_pickle=True)

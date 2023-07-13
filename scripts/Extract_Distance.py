@@ -3,23 +3,25 @@ import os
 
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/Run_output")
 
+Metompkin_Bay_Names = ['Metompkin_Bay_ACC_RSLR1_S1', 'Metompkin_Bay_ACC_RSLR2_S1', 'Metompkin_Bay_ACC_RSLR3_S1',
+                       'Metompkin_Bay_ACC_RSLR1_S2', 'Metompkin_Bay_ACC_RSLR2_S2', 'Metompkin_Bay_ACC_RSLR3_S2',
+                       'Metompkin_Bay_ACC_RSLR1_S3', 'Metompkin_Bay_ACC_RSLR2_S3', 'Metompkin_Bay_ACC_RSLR3_S3']
 
-Smith_Run_Name = ['Smith_Marsh_Low_S_1','Smith_Marsh_Low_S_2','Smith_Marsh_Low_S_3',
-                  'Smith_S10_1','Smith_S10_2','Smith_S10_3',
-                  'Smith_Marsh_S25_1','Smith_Marsh_S25_2','Smith_Marsh_S25_3']
-Metompkin_Marsh_Run_Name = ['Metompkin_Marsh_On_Low_S_1','Metompkin_Marsh_On_Low_S_2','Metompkin_Marsh_On_Low_S_3',
-                            'Metompkin_Marsh_S10_1','Metompkin_Marsh_S10_2','Metompkin_Marsh_S10_3',
-                            'Metompkin_Marsh_On_Low_S25_1','Metompkin_Marsh_On_Low_S25_2','Metompkin_Marsh_On_Low_S25_3'
-                            ]
-Metompkin_Bay_Run_Name = ['Metompkin_Bay_Low_S_1','Metompkin_Bay_Low_S_2','Metompkin_Bay_Low_S_3',
-                            'Metompkin_No_Marsh_S10_1','Metompkin_No_Marsh_S10_2','Metompkin_No_Marsh_S10_3',
-                            'Metompkin_No_Marsh_S25_1','Metompkin_No_Marsh_S25_2','Metompkin_No_Marsh_S25_3'
-                            ]
-Wreck_Run_Name = ['Wreck_Low_S_1','Wreck_Low_S_2','Wreck_Low_S_3',
-                  'Wreck_S10_1','Wreck_S10_2','Wreck_S10_3',
-                  'Wreck_Low_S25_1','Wreck_Low_S25_2','Wreck_Low_S25_3'
-                  ]
-name_prefix = Metompkin_Bay_Run_Name
+Smith_Names = ['Smith_ACC_RSLR1_S1', 'Smith_ACC_RSLR2_S1', 'Smith_ACC_RSLR3_S1',
+               'Smith_ACC_RSLR1_S2', 'Smith_ACC_RSLR2_S2', 'Smith_ACC_RSLR3_S2',
+               'Smith_ACC_RSLR1_S3', 'Smith_ACC_RSLR2_S3', 'Smith_ACC_RSLR3_S3']
+
+Wreck_Names = ['Wreck_ACC_RSLR1_S1', 'Wreck_ACC_RSLR2_S1', 'Wreck_ACC_RSLR3_S1',
+               'Wreck_ACC_RSLR1_S2', 'Wreck_ACC_RSLR2_S2', 'Wreck_ACC_RSLR3_S2',
+               'Wreck_ACC_RSLR1_S3', 'Wreck_ACC_RSLR2_S3', 'Wreck_ACC_RSLR3_S3']
+
+Metompkin_Marsh_Names = ['Metompkin_Marsh_ACC_RSLR1_S1', 'Metompkin_Marsh_ACC_RSLR2_S1', 'Metompkin_Marsh_ACC_RSLR3_S1',
+                         'Metompkin_Marsh_ACC_RSLR1_S2', 'Metompkin_Marsh_ACC_RSLR2_S2', 'Metompkin_Marsh_ACC_RSLR3_S2',
+                         'Metompkin_Marsh_ACC_RSLR1_S3', 'Metompkin_Marsh_ACC_RSLR2_S3', 'Metompkin_Marsh_ACC_RSLR3_S3']
+name_prefix = Metompkin_Bay_Names
+#name_prefix =Metompkin_Marsh_Names
+#name_prefix = Metompkin_Bay_Names
+#name_prefix = Wreck_Names
 DistanceTraveled = []
 Toe_To_Shoreline = []
 
@@ -29,15 +31,26 @@ for i in range(len(name_prefix)):
     cascade = cascade[0]
     b3d = cascade.barrier3d
     ny = np.size(b3d)
-    place_holder_distance_traveled = [name_prefix[i]]
-    place_holder_toe_to_shoreline = [name_prefix[i]]
-    for i2 in range(len(b3d)):
-        place_holder_distance_traveled.append(b3d[i2].x_s_TS[-1] - b3d[i2].x_s_TS[0])
-        place_holder_toe_to_shoreline.append(-b3d[i2].x_s_TS[-1] + b3d[i2].x_b_TS[-1])
-    DistanceTraveled.append(place_holder_distance_traveled)
-    Toe_To_Shoreline.append(place_holder_toe_to_shoreline)
+    if ny == 4:
+        mean_x_s_TS = [b3d[0].x_s_TS,b3d[1].x_s_TS,b3d[2].x_s_TS,b3d[3].x_s_TS]
+        arrays = [np.array(x) for x in mean_x_s_TS]
+        mean_list =[np.mean(k) for k in zip(*arrays)]
+    elif ny == 5:
+        mean_x_s_TS = [b3d[0].x_s_TS, b3d[1].x_s_TS, b3d[2].x_s_TS, b3d[3].x_s_TS]
+        arrays = [np.array(x) for x in mean_x_s_TS]
+        mean_list = [np.mean(k) for k in zip(*arrays)]
+    place_holder_distance_traveled = []
+    for i2 in range(len(mean_list)):
+        place_holder_distance_traveled.append(mean_list[i2]-mean_list[0])
 
-np.savetxt('/Users/ceclmac/OneDrive - University of North Carolina at Chapel Hill/VCR Blue Carbon/Distance Traveled/Metompkin_Bay_Distance_Traveled.csv',
+    for i3 in range(1,len(place_holder_distance_traveled)):
+        if (place_holder_distance_traveled[i3] - place_holder_distance_traveled[i3-1])<0:
+            place_holder_distance_traveled[i3] = place_holder_distance_traveled[i3-1]
+
+    place_holder_distance_traveled.insert(0,name_prefix[i])
+    DistanceTraveled.append(place_holder_distance_traveled)
+
+
+
+np.savetxt('/Users/ceclmac/OneDrive - University of North Carolina at Chapel Hill/VCR Blue Carbon/Distance Traveled/Metompkin_Bay_Names_VRSLR_TS_Distance_Traveled.csv',
            DistanceTraveled, delimiter=', ', fmt='% s')
-np.savetxt('/Users/ceclmac/OneDrive - University of North Carolina at Chapel Hill/VCR Blue Carbon/Distance Traveled/Metompkin_Bay_Toe_Shoreline.csv',
-           Toe_To_Shoreline, delimiter=', ', fmt='% s')
