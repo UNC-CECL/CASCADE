@@ -39,7 +39,7 @@ rmax = 0.95
 elevation_file = c_wd + "/B3D_Inputs/barrier3d-default-elevation.npy"
 
 dune_file = c_wd + "/B3D_Inputs/barrier3d-dunes.npy"
-storm_file = c_wd+'/B3D_Inputs/Default_StormTimeSeries_1000yr.npy'
+storm_file = c_wd+'/B3D_Inputs/cascade-default-storms.npy'
 
 # Call function
 
@@ -115,7 +115,7 @@ Batch_Runs(
     nt=nt_run,
     name=run_name,
     storm_file=storm_file,
-    alongshore_section_count=number_barrier3d_models,
+    alongshore_section_count=1,
     num_cores=3,
     rmin=rmin,
     rmax=rmax,

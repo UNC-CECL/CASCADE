@@ -327,7 +327,7 @@ run_name='New_Couple_Test' # 4 length
 
 name_prefix = run_name
 nt_run = 19
-number_barrier3d_models = 1
+number_barrier3d_models = 2
 
 # --------- plot ---------
 output = np.load(run_name + ".npz", allow_pickle=True)

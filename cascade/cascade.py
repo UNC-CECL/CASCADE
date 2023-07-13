@@ -445,10 +445,6 @@ class Cascade:
                 name = self._filename
             )
 
-            self._bmft_coupler.testInitalization(nt =self._nt,barrier3d=self._barrier3d,ny=self._ny, name = self._filename)
-            print("Barrier3d will be changed to reflect new initial geometry")
-
-
     @property
     def road_break(self):
         return self._road_break
@@ -736,7 +732,6 @@ class Cascade:
             self._bmft_coupler.updateMarsh(ny=self._ny,time_step=self._barrier3d[0].time_index,barrier3d=self._barrier3d)
             # Change barrier3d object to reflect new initalized changes
             self._barrier3d = self._bmft_coupler._barrier3d
-            print("Barrier3d will be changed to reflect new altered geometry")
 
     ###############################################################################
     # save data

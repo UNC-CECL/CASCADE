@@ -61,5 +61,5 @@ nn: 0.5
 rmax: 0.95
 rmin: 0.55
 s_sf_eq: 0.01698590034494604
-storm_file: /Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/Default_StormTimeSeries_1000yr.npy
+storm_file: /Users/ceclmac/PycharmProjects/CASCADE/B3D_Inputs/cascade-default-storms.npy
 threshold_in: 0.25

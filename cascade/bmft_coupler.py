@@ -141,7 +141,6 @@ class BMFTCoupler:
             # ===================================================================================================================================================================================================================================
             # Advance PyBMFT-C back-barrier marshes
             # Update RSLR rate from Barrier3D
-            print(self._bmftc[iB3D]._RSLRi)
             self._bmftc[iB3D]._RSLRi = self._barrier3d[iB3D].RSLR[time_step] * 10
             self._bmftc[iB3D]._RSLR = self._bmftc[iB3D].RSLRi * 10 ** (-3) / (
                         3600 * 24 * 365)  # Convert from mm/yr to m/s
