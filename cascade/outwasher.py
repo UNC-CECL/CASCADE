@@ -979,7 +979,6 @@ class Outwasher:
             beta,
             interior_domain,
             dune_domain,
-            substep=20,
             sediment_flux_coefficient_Ki=7.5E-3,  # b3d = 7.5E-6 for inundation
             percent_washout_to_shoreface=100,
             outwash_beach_file=None,
@@ -1001,7 +1000,7 @@ class Outwasher:
         self._beach_slope = beta
         self._beach_elev = self._berm_el  # [dam MHW]
         self._length = barrier_length  # [dam] length of barrier
-        self._substep = substep
+        self._substep = 100
         self._max_slope = -0.25
         self._ki = sediment_flux_coefficient_Ki
         self._k_lat = 0.5

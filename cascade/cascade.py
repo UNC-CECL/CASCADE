@@ -464,7 +464,6 @@ class Cascade:
                           percent_washout_to_shoreface=percent_washout_to_shoreface,
                           outwash_beach_file=outwash_beach_file,
                           dune_flow_dynamics=dune_flow_dynamics,
-                          substep=outwasher_substep,
                           sediment_flux_coefficient_Ki=ki_value,
                           C=c,
                           initial_beach_width=0,
