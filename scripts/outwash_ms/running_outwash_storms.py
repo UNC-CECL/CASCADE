@@ -11,7 +11,7 @@ from cascade.cascade import Cascade
 # ---------------------------------- set model parameters that change per run ------------------------------------------
 storm_interval = 20   # 20 or 10 years
 r_dune_growth = 0.25  # 0.25 or 0.35
-config = 1            # 1, 2, 3, or 4
+config = 4            # 1, 2, 3, or 4
 
 # automatically set min and max r values based on dune growth rate selection
 if r_dune_growth == 0.25:
@@ -41,11 +41,9 @@ else:
 
 save_dir = "C:/Users/Lexi/Documents/Research/Outwasher Paper/run_output/NCB_overwash_storms/{0}/config{1}/".format(rname, config)
 
-
 # -------------------- model parameters that are constant throughout the runs ------------------------------------------
 ki = 8.75E-3
 C = 0.0134
-
 
 # --------------------------- running all 4 outwash scenarios with all 100 storms --------------------------------------
 for storm_num in range(1, 101):
@@ -127,8 +125,11 @@ for storm_num in range(1, 101):
     t_total_minutes = t_total_seconds / 60
     t_total_hours = t_total_seconds / 3600
 
+    print("\n")
     print(round(t_total_minutes))
+    print("\n")
     print(round(t_total_hours, 1))
+    print("\n")
 
     # save variables
     cascade_b3d_only.save(save_dir)
@@ -208,8 +209,10 @@ for storm_num in range(1, 101):
     t_total_minutes = t_total_seconds / 60
     t_total_hours = t_total_seconds / 3600
 
+    print("\n")
     print(round(t_total_minutes))
     print(round(t_total_hours, 1))
+    print("\n")
 
     # save variables
     cascade_outwash100.save(save_dir)
