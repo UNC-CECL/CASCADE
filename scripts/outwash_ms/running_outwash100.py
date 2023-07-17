@@ -124,10 +124,5 @@ for storm_num in range(1, 101):
     t_total_minutes = t_total_seconds / 60
     t_total_hours = t_total_seconds / 3600
 
-    print("\n")
-    print(round(t_total_minutes))
-    print(round(t_total_hours, 1))
-    print("\n")
-
     # save variables
     cascade_outwash100.save(save_dir100)

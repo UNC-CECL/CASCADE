@@ -124,8 +124,5 @@ for storm_num in range(1, 101):
     t_total_minutes = t_total_seconds / 60
     t_total_hours = t_total_seconds / 3600
 
-    print("\n", round(t_total_minutes))
-    print(round(t_total_hours, 1))
-
     # save variables
     cascade_b3d_only.save(save_dir_b3d)
