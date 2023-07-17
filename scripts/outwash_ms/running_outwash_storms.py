@@ -8,6 +8,9 @@
 import time
 from cascade.cascade import Cascade
 
+# input datadir where the 100 storms are located
+datadir = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/"
+
 # ---------------------------------- set model parameters that change per run ------------------------------------------
 storm_interval = 20   # 20 or 10 years
 r_dune_growth = 0.25  # 0.25 or 0.35
@@ -39,7 +42,19 @@ else:
     print("Not a defined configuration")
     quit()
 
-save_dir = "C:/Users/Lexi/Documents/Research/Outwasher Paper/run_output/NCB_overwash_storms/{0}/config{1}/".format(rname, config)
+# save directories for pycharm
+save_dir0 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/{0}/outwash0/".format(rname)
+save_dir50 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/{0}/outwash50/".format(rname)
+save_dir100 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/{0}/outwash100/".format(rname)
+save_dir_b3d = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/{0}/overwash_only/".format(rname)
+
+# save directories for local computer
+save_dir0_local = "C:/Users/Lexi/Documents/Research/Outwasher Paper/run_output/NCB_overwash_storms/config4_runs/{0}/outwash0/".format(rname)
+save_dir50_local = "C:/Users/Lexi/Documents/Research/Outwasher Paper/run_output/NCB_overwash_storms/config4_runs/{0}/outwash50/".format(rname)
+save_dir100_local = "C:/Users/Lexi/Documents/Research/Outwasher Paper/run_output/NCB_overwash_storms/config4_runs/{0}/outwash100/".format(rname)
+save_dir_b3d_local = "C:/Users/Lexi/Documents/Research/Outwasher Paper/run_output/NCB_overwash_storms/config4_runs/{0}/overwash_only/".format(rname)
+
+
 
 # -------------------- model parameters that are constant throughout the runs ------------------------------------------
 ki = 8.75E-3
@@ -48,7 +63,6 @@ C = 0.0134
 # --------------------------- running all 4 outwash scenarios with all 100 storms --------------------------------------
 for storm_num in range(1, 101):
     overwash_storm = "StormSeries_100yrs_inclusive_NCB_Berm1pt46m_Slope0pt03_{0}.npy".format(storm_num)
-    datadir = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/"  # input datadir, add the default b3d files here
 
     # ### barrier3D only, outwash module set to false ------------------------------------------------------------------
     # initialize class
@@ -125,14 +139,12 @@ for storm_num in range(1, 101):
     t_total_minutes = t_total_seconds / 60
     t_total_hours = t_total_seconds / 3600
 
-    print("\n")
-    print(round(t_total_minutes))
-    print("\n")
-    print(round(t_total_hours, 1))
-    print("\n")
+    print("\n", "run time in minutes: ", round(t_total_minutes))
+    print("run time in hours: ", round(t_total_hours, 1))
 
     # save variables
-    cascade_b3d_only.save(save_dir)
+    cascade_b3d_only.save(save_dir_b3d)
+    cascade_b3d_only.save(save_dir_b3d_local)
 
     # ### 100% washout to shoreface ------------------------------------------------------------------------------------
     # initialize class
@@ -209,13 +221,12 @@ for storm_num in range(1, 101):
     t_total_minutes = t_total_seconds / 60
     t_total_hours = t_total_seconds / 3600
 
-    print("\n")
-    print(round(t_total_minutes))
-    print(round(t_total_hours, 1))
-    print("\n")
+    print("\n", "run time in minutes: ", round(t_total_minutes))
+    print("run time in hours: ", round(t_total_hours, 1))
 
     # save variables
-    cascade_outwash100.save(save_dir)
+    cascade_outwash100.save(save_dir100)
+    cascade_outwash100.save(save_dir100_local)
 
     # ### 50% washout to shoreface -------------------------------------------------------------------------------------
     # initialize class
@@ -292,11 +303,12 @@ for storm_num in range(1, 101):
     t_total_minutes = t_total_seconds / 60
     t_total_hours = t_total_seconds / 3600
 
-    print(round(t_total_minutes))
-    print(round(t_total_hours, 1))
+    print("\n", "run time in minutes: ", round(t_total_minutes))
+    print("run time in hours: ", round(t_total_hours, 1))
 
     # save variables
-    cascade_outwash50.save(save_dir)
+    cascade_outwash50.save(save_dir50)
+    cascade_outwash50.save(save_dir50_local)
 
     # ### 0% washout to shoreface --------------------------------------------------------------------------------------
     # initialize class
@@ -375,8 +387,9 @@ for storm_num in range(1, 101):
     t_total_minutes = t_total_seconds / 60
     t_total_hours = t_total_seconds / 3600
 
-    print(round(t_total_minutes))
-    print(round(t_total_hours, 1))
+    print("\n", "run time in minutes: ", round(t_total_minutes))
+    print("run time in hours: ", round(t_total_hours, 1))
 
     # save variables
-    cascade_outwash0.save(save_dir)
+    cascade_outwash0.save(save_dir0)
+    cascade_outwash50.save(save_dir0_local)
