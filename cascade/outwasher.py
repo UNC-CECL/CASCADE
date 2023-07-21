@@ -1041,9 +1041,9 @@ class Outwasher:
         self._Qs_shoreface_per_length = np.zeros(time_step_count)  # dam^3/dam
         # self._discharge = np.zeros(time_step_count, dtype=object)  # dam^3/substep
         self._elevation_change = np.zeros(time_step_count, dtype=object)
-        self._underwater_array = np.zeros(time_step_count, dtype=object)
-        self._downhill_array = np.zeros(time_step_count, dtype=object)
-        self._endcell_array = np.zeros(time_step_count, dtype=object)
+        # self._underwater_array = np.zeros(time_step_count, dtype=object)
+        # self._downhill_array = np.zeros(time_step_count, dtype=object)
+        # self._endcell_array = np.zeros(time_step_count, dtype=object)
         self._post_outwash_beach_domain = np.zeros(time_step_count, dtype=object)
 
 
@@ -1259,10 +1259,10 @@ class Outwasher:
             # other class variables that we want to save
             # self._final_bay_levels = storm_series
             # self._discharge[self._time_index - 1] = Discharge
-            self._elevation_change[self._time_index - 1] = elev_change_array
-            self._underwater_array[self._time_index - 1] = underwater_array
-            self._downhill_array[self._time_index - 1] = downhill_array
-            self._endcell_array[self._time_index - 1] = endcell_array
+            # self._elevation_change[self._time_index - 1] = elev_change_array
+            # self._underwater_array[self._time_index - 1] = underwater_array
+            # self._downhill_array[self._time_index - 1] = downhill_array
+            # self._endcell_array[self._time_index - 1] = endcell_array
             # self._initial_discharge[self._time_index - 1] = init_discharge_array
 
             print(" end outwash storm \n", end="")
