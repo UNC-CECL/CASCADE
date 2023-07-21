@@ -1,10 +1,8 @@
 import numpy as np
 import math
 import copy
-from matplotlib import pyplot as plt
 
 from .beach_dune_manager import shoreface_nourishment, beach_width_dune_dynamics
-
 
 def bay_converter(storms, substep):
     """ repeats the hydrograph value for a specific number of specified times (substep)
@@ -298,7 +296,7 @@ def dune_flow_routing_gaps(
             Q3_array[time_step, dune_gap_row, ow] = calculate_discharges(
                 ow, S1, S2, S3, Q0, nn, length, max_slope)
 
-    return discharge_array, velocities, flows, Q0_array, Q1_array, Q2_array, Q3_array, bay_array, downhill_array, \
+    return discharge_array, Q0_array, Q1_array, Q2_array, Q3_array, bay_array, downhill_array, \
            endcell_array
 
 
@@ -696,11 +694,6 @@ def flow_routing_with_lateral_transport(
         # Begin with elevation from previous timestep
         if TS > 0:
             elevation[TS, :, :] = elevation[TS - 1, :, :]  # initial elevation is same as previous TS domain
-        # print("Outwasher Time Step: ", TS)
-        # print('\r                                                                      ', end='')
-        # print("\r", "Outwasher Time Step: ", TS, end="")
-        # if TS == duration - 1:
-        #     print("\n")
 
         # get the hydrograph for this time step
         bayhigh = storm_series[TS]  # [dam]
@@ -734,7 +727,7 @@ def flow_routing_with_lateral_transport(
             )
 
             # initialize the flow routing array based on all the dunes or just the first row
-            [Discharge, velocities[TS], flows[TS], Q0_array, Q1_array, Q2_array, Q3_array,
+            [Discharge, Q0_array, Q1_array, Q2_array, Q3_array,
              underwater_array, downhill_array, endcell_array] = dune_flow_routing_gaps(
                 dune_flow_type=dune_flow_dynamics,
                 n_dunes=n_dune_rows,
@@ -954,7 +947,7 @@ def flow_routing_with_lateral_transport(
                     SedFluxOut[TS, width - 1, :]) / substep  # [dam^3]
 
     return (elevation, qs_lost_total, Discharge, elev_change_array, underwater_array, downhill_array, endcell_array,
-            init_discharge_array, OW_TS, velocities, flows)
+            init_discharge_array, OW_TS)
 
 
 class Outwasher:
@@ -1018,7 +1011,7 @@ class Outwasher:
         self._interior_domain = interior_domain  # [dam MHW]
         # loading the bay levels for each time step
         self._outwash_storms = np.load(datadir + outwash_storms_file, allow_pickle=True)
-        self._final_bay_levels = []
+        # self._final_bay_levels = []
         self._time_index = 0
         self._outwash_beach = np.load(datadir + outwash_beach_file, allow_pickle=True)
 
@@ -1038,7 +1031,7 @@ class Outwasher:
 
         # output variables
         self._m_beachface = []  # slope of the beach face
-        self._OW_TS = []  # array for storing outwashed time steps
+        # self._OW_TS = []  # array for storing outwashed time steps
         self._outwash_TS = np.zeros(time_step_count, dtype=object)  # array for storing outwash volume (m^3)
         self._outwash_flux_TS = np.zeros(time_step_count, dtype=object)  # array for storing outwash flux (m^3/m)
         self._initial_full_domain = []
@@ -1046,15 +1039,13 @@ class Outwasher:
         self._full_domain = []
         self._Qs_shoreface = np.zeros(time_step_count)  # dam^3
         self._Qs_shoreface_per_length = np.zeros(time_step_count)  # dam^3/dam
-        self._discharge = np.zeros(time_step_count, dtype=object)  # dam^3/substep
+        # self._discharge = np.zeros(time_step_count, dtype=object)  # dam^3/substep
         self._elevation_change = np.zeros(time_step_count, dtype=object)
         self._underwater_array = np.zeros(time_step_count, dtype=object)
         self._downhill_array = np.zeros(time_step_count, dtype=object)
         self._endcell_array = np.zeros(time_step_count, dtype=object)
         self._post_outwash_beach_domain = np.zeros(time_step_count, dtype=object)
-        self._velocities = np.zeros(time_step_count, dtype=object)
-        self._flows = np.zeros(time_step_count, dtype=object)
-        self._initial_discharge = np.zeros(time_step_count, dtype=object)
+
 
     def update(
             self,
@@ -1066,6 +1057,7 @@ class Outwasher:
         # keep it off (we don't want the dune line to prograde
         # because we have fake houses there!)
         self._time_index = b3d.time_index
+        OW_TS = []
 
         change_in_shoreline = (b3d.x_s_TS[-1] - b3d.x_s_TS[-2]) * 10  # m
         self._beach_width[self._time_index - 1] = (
@@ -1164,9 +1156,7 @@ class Outwasher:
             # ElevationChange = 0
 
             (Elevation, qs_lost_total, Discharge, elev_change_array, underwater_array, downhill_array,
-             endcell_array, init_discharge_array, self._OW_TS, self._velocities[self._time_index - 1],
-             self._flows[self._time_index - 1],
-             ) = flow_routing_with_lateral_transport(
+             endcell_array, init_discharge_array, OW_TS) = flow_routing_with_lateral_transport(
                 duration=duration,
                 width=width,
                 int_width=int_width,
@@ -1177,7 +1167,7 @@ class Outwasher:
                 dune_flow_dynamics=self._dune_flow_dynamics,
                 nn=b3d._nn,
                 max_slope=self._max_slope,
-                OW_TS=self._OW_TS,
+                OW_TS=OW_TS,
                 Dmaxel=b3d._Dmaxel,
                 BermEl=b3d._BermEl,
                 C=self._C,
@@ -1267,12 +1257,12 @@ class Outwasher:
             self._outwash_flux_TS[self._time_index - 1] = flux  # array for storing outwash flux (m^3/m)
 
             # other class variables that we want to save
-            self._final_bay_levels = storm_series
-            self._discharge[self._time_index - 1] = Discharge
+            # self._final_bay_levels = storm_series
+            # self._discharge[self._time_index - 1] = Discharge
             self._elevation_change[self._time_index - 1] = elev_change_array
             self._underwater_array[self._time_index - 1] = underwater_array
             self._downhill_array[self._time_index - 1] = downhill_array
             self._endcell_array[self._time_index - 1] = endcell_array
-            self._initial_discharge[self._time_index - 1] = init_discharge_array
+            # self._initial_discharge[self._time_index - 1] = init_discharge_array
 
             print(" end outwash storm \n", end="")
