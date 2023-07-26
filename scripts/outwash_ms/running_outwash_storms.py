@@ -43,10 +43,10 @@ else:
     quit()
 
 # save directories for pycharm
-save_dir0 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/{0}/outwash0/".format(rname)
-save_dir50 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/{0}/outwash50/".format(rname)
-save_dir100 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/{0}/outwash100/".format(rname)
-save_dir_b3d = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/{0}/overwash_only/".format(rname)
+save_dir0 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/outwash0/".format(rname)
+save_dir50 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/outwash50/".format(rname)
+save_dir100 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/outwash100/".format(rname)
+save_dir_b3d = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/overwash_only/".format(rname)
 
 # save directories for local computer
 save_dir0_local = "C:/Users/Lexi/Documents/Research/Outwasher Paper/run_output/NCB_overwash_storms/config4_runs/{0}/outwash0/".format(rname)
@@ -144,7 +144,7 @@ for storm_num in range(1, 101):
 
     # save variables
     cascade_b3d_only.save(save_dir_b3d)
-    cascade_b3d_only.save(save_dir_b3d_local)
+    print("variables have been saved")
 
     # ### 100% washout to shoreface ------------------------------------------------------------------------------------
     # initialize class
@@ -226,7 +226,7 @@ for storm_num in range(1, 101):
 
     # save variables
     cascade_outwash100.save(save_dir100)
-    cascade_outwash100.save(save_dir100_local)
+    print("variables have been saved")
 
     # ### 50% washout to shoreface -------------------------------------------------------------------------------------
     # initialize class
@@ -308,7 +308,7 @@ for storm_num in range(1, 101):
 
     # save variables
     cascade_outwash50.save(save_dir50)
-    cascade_outwash50.save(save_dir50_local)
+    print("variables have been saved")
 
     # ### 0% washout to shoreface --------------------------------------------------------------------------------------
     # initialize class
@@ -392,4 +392,4 @@ for storm_num in range(1, 101):
 
     # save variables
     cascade_outwash0.save(save_dir0)
-    cascade_outwash50.save(save_dir0_local)
+    print("variables have been saved")
