@@ -1185,7 +1185,7 @@ class Outwasher:
             self._full_domain = Elevation[-1]
             post_outwash_interior_domain = Elevation[-1, 0:int_width, :]
             post_outwash_dune_domain = Elevation[-1, int_width:int_width + n_dune_rows, :] - self._berm_el
-            post_outwash_beach_domain = Elevation[-1, int_width + n_dune_rows:-1, :]
+            post_outwash_beach_domain = Elevation[-1, int_width + n_dune_rows:, :]
             self._post_outwash_beach_domain[self._time_index - 1] = post_outwash_beach_domain
 
             # interior domain: remove all rows of bay without any deposition from the domain
