@@ -438,13 +438,15 @@ class Cascade:
         # initialize marsh dynamics module
         ###############################################################################
         if self._marsh_dynamics:
+            #Initalize BMFT module
             self._bmft_coupler = BMFTCoupler(
                 nt =self._nt,
                 barrier3d=self._barrier3d,
                 ny=self._ny,
                 name = self._filename
             )
-
+            # Make sure B3D and PyBMFT have same values
+            self._barrier3d =  self._bmft_coupler.B3d_PyBMFT_equal(ny = self._ny,barrier3d=self._barrier3d)
     @property
     def road_break(self):
         return self._road_break

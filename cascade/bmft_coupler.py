@@ -18,7 +18,6 @@ Notes
 # initialize marsh dynamic modules
 ###############################################################################
 
-
 class BMFTCoupler:
 
     def __init__(
@@ -65,7 +64,8 @@ class BMFTCoupler:
                 Bmftc(
                     name="back-barrier",
                     time_step_count=self._nt,
-                    relative_sea_level_rise=barrier3d[iB3D]._RSLR[1] * 1000,
+                    #relative_sea_level_rise=barrier3d[iB3D]._RSLR[1] * 1000,
+                    relative_sea_level_rise=12,
                     reference_concentration=60,
                     slope_upland=0.005,
                     bay_fetch_initial=5000,
@@ -106,8 +106,7 @@ class BMFTCoupler:
                 b3d_transect = np.append(b3d_transect, add)
 
         # Replace initial subaerial elevation in PyBMFT-C with Barrier3D initial barrier elevation
-            self._bmftc[iB3D].elevation[self._bmftc[iB3D].startyear - 1,
-            self._bmftc[iB3D].x_f:] = b3d_transect  # Replace!
+            self._bmftc[iB3D].elevation[self._bmftc[iB3D].startyear - 1,self._bmftc[iB3D].x_f:] = b3d_transect  # Replace!
 
             # ===========================================
             # Populate blank PyBMFT list variables
@@ -116,11 +115,11 @@ class BMFTCoupler:
             self._LandscapeTypeWidth_TS.append(np.zeros([self._bmftc[iB3D].dur, 4]))
             self._bay_overwash_carryover.append(0)  # [m^3] Volume of overwash deposition into back-barrier bay from previous year that did not fill new cell up to sea level; is added to overwash bay dep in following year
             initial_subaerial_width = self._bmftc[iB3D].B - self._bmftc[iB3D].x_f
-            self._x_s_offset.append(initial_subaerial_width - (self._barrier3d[iB3D].InteriorWidth_AvgTS[
-                                                               -1] * 10))  # Initial location of B in PyBMFT-C relative to x_s_initial in Barrier3D
+            self._x_s_offset.append(initial_subaerial_width - (self._barrier3d[iB3D].InteriorWidth_AvgTS[-1] * 10))  # Initial location of B in PyBMFT-C relative to x_s_initial in Barrier3D
             self._cumul_len_change.append([0])
             # self._OWspread.append(0)  # [%] Percentage of overwash past marsh edge that is spread across bay
             self._delta_fetch_TS.append([])
+            #self._OWspread.append([0])
 
     ###############################################################################
     # Backbarrier marsh module
@@ -131,7 +130,7 @@ class BMFTCoupler:
                     barrier3d):
         # Get new Barrier3D geometry
         self._barrier3d = barrier3d
-        time_step = time_step-1
+        time_step = time_step-2
 
         # ~~~~~~~~~~~~~~ PyBMFT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Run PyBMFT module to represent marsh growth and erosion from the back-bay
@@ -153,7 +152,6 @@ class BMFTCoupler:
                 self._BMFTC_Break = True
                 print("PyBMFT-C Simulation Break: marsh has completely drowned or basin is completely full")
                 return  # If so, end simulation
-
             # ===================================================================================================================================================================================================================================
             # ===================================================================================================================================================================================================================================
             # Update fetch and marsh point locations from PyBMFT-C bay erosion/deposition processes
@@ -282,8 +280,7 @@ class BMFTCoupler:
                               axis=1) * 10  # Barrier3D domain after update, averaged across alongshore dimension, converted to m (vertical dimension)
 
             # Update start domain size to match end domain
-            sc_b3d = self._barrier3d[iB3D].ShorelineChangeTS[
-                1]  # Shoreline change [dam] from Barrier3D model update (this timestep)
+            sc_b3d = self._barrier3d[iB3D].ShorelineChangeTS[1]  # Shoreline change [dam] from Barrier3D model update (this timestep)
             if sc_b3d < 0:  # Shoreline erosion
                 start_b3d = start_b3d[abs(sc_b3d):]  # Trim off front
             elif sc_b3d > 0:  # Shoreline progradation
@@ -298,8 +295,7 @@ class BMFTCoupler:
                 start_b3d = start_b3d[:subtract]
 
             # Calculate change in elevation from Barrier3D update
-            end_b3d = end_b3d + (self._barrier3d[iB3D].RSLR[
-                                     time_step] * 10)  # Offset sea-level rise from Barrier3D so that it isn't counted twice (i.e. RSLR already taken into account in PyBMFT-C)
+            end_b3d = end_b3d + (self._barrier3d[iB3D].RSLR[time_step] * 10)  # Offset sea-level rise from Barrier3D so that it isn't counted twice (i.e. RSLR already taken into account in PyBMFT-C)
             elevation_change_b3d = end_b3d - start_b3d  # Change in elevation across transect after Barrier3d update; [dam] horizontal dimension, [m] vertical dimentsion
 
             # Interpolate from dam to m (horizontal dimension)
@@ -308,6 +304,7 @@ class BMFTCoupler:
             xp = xp - 5
             elevation_change_b3d = np.interp(x, xp, elevation_change_b3d)
             off = int(abs(math.floor(self._x_s_offset[iB3D])))  # [m] Offset of barrier shoreline and B
+
             # Incorporate elevation change from Barrier3D into back-barrier instance of PyBMFT-C
             if int(math.floor(self._x_s_offset[iB3D])) < 0:
                 elevation_change_b3d = np.flip(elevation_change_b3d[off:])  # Flip orientation
@@ -392,8 +389,7 @@ class BMFTCoupler:
                 # Determine distance of marsh progradation from overwash deposition
                 progradation_actual = sum_marsh_dep / new_marsh_height  # [m] Amount of marsh progradation, in which all overwash dep in bay fills first bay cell, then second, and so on until no more sediment. Assumes overwash is not spread out over bay.
                 progradation = int(max(math.floor(progradation_actual[iB3D]), 0))  # Round to nearest FULL meter
-                self._bay_overwash_carryover = (
-                                                           progradation_actual - progradation) * new_marsh_height  # Save leftover volume of sediment to be added to sum_bay_dep in following time step
+                self._bay_overwash_carryover = (progradation_actual - progradation) * new_marsh_height  # Save leftover volume of sediment to be added to sum_bay_dep in following time step
 
                 if progradation > 0:
                     # Add subaqueous elevation change
@@ -444,8 +440,7 @@ class BMFTCoupler:
                 # Determine distance of marsh progradation from overwash deposition
                 progradation_actual = sum_marsh_dep / new_marsh_height  # [m] Amount of marsh progradation, in which all overwash dep in bay fills first bay cell, then second, and so on until no more sediment. Assumes overwash is not spread out over bay.
                 progradation = int(max(math.floor(progradation_actual[iB3D]), 0))  # Round to nearest FULL meter
-                self._bay_overwash_carryover = (
-                                                           progradation_actual - progradation) * new_marsh_height  # Save leftover volume of sediment to be added to sum_bay_dep in following time step
+                self._bay_overwash_carryover = (progradation_actual - progradation) * new_marsh_height  # Save leftover volume of sediment to be added to sum_bay_dep in following time step
 
                 if progradation > 0:
                     # Add subaqueous elevation change
@@ -463,12 +458,9 @@ class BMFTCoupler:
 
             # Calculate new marsh and "forest" edge positions after overwash
             self._bmftc[iB3D]._x_m = self._bmftc[iB3D].x_m - progradation
+
             try:
-                self._bmftc[iB3D]._x_f = max(self._bmftc[iB3D].x_m + 1, np.where(
-                    self._bmftc[iB3D].elevation[self._bmftc[iB3D].startyear + time_step, :] >
-                    self._bmftc[iB3D].msl[
-                        self._bmftc[iB3D].startyear + time_step] + self._bmftc[iB3D].amp - self._bmftc[
-                        iB3D].Dmin + 0.03)[0][0])
+                self._bmftc[iB3D]._x_f = max(self._bmftc[iB3D].x_m + 1, np.where(self._bmftc[iB3D].elevation[self._bmftc[iB3D].startyear + time_step, :] > self._bmftc[iB3D].msl[self._bmftc[iB3D].startyear + time_step] + self._bmftc[iB3D].amp - self._bmftc[iB3D].Dmin + 0.03)[0][0])
             except IndexError:
                 self._bmftc[iB3D]._x_f = self._bmftc[iB3D].B
                 # If x_f can't be found, barrier has drowned
@@ -542,3 +534,10 @@ class BMFTCoupler:
         print(time_step)
         print(self._bmftc[0]._RSLRi)
         return ()
+
+    def B3d_PyBMFT_equal(self,barrier3d,ny):
+        for iB3D in range(ny):
+            barrier3d[iB3D]._TMAX = self._bmftc[iB3D].dur + 1  # [yrs] Duration of simulation
+            barrier3d[iB3D]._RSLR = np.ones([len(barrier3d[iB3D].RSLR) + 1]) * (self._bmftc[iB3D].RSLRi / 1000) / 10  # [m/yr] Relative sea-level rise rate, converted units
+            barrier3d[iB3D]._BayDepth = self._bmftc[iB3D].Bay_depth[self._bmftc[iB3D].startyear - 1] / 10  # [yrs] Initial depth of bay
+        return barrier3d

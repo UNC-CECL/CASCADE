@@ -321,13 +321,13 @@ def plot_ElevAnimation_CASCADE(
 
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/Run_output")
 #run_name='Wreck_ACC_RSLR3_S3' # 5 Length
-run_name='New_Couple_Test' # 4 length
+run_name='100_Marsh_Transect_Sensitivity_Test' # 4 length
 #run_name='Metompkin_Marsh_S10_3'
 #run_name='Smith_S10_3' # 5
 
 name_prefix = run_name
-nt_run = 19
-number_barrier3d_models = 2
+nt_run = 100
+number_barrier3d_models = 1
 
 # --------- plot ---------
 output = np.load(run_name + ".npz", allow_pickle=True)
@@ -335,6 +335,7 @@ cascade = output["cascade"]
 cascade = cascade[0]
 b3d = cascade.barrier3d
 ny = np.size(b3d)
+Run_Marsh_Dynamics = True
 
 directory = "/Users/ceclmac/PycharmProjects/CASCADE/"
 # TMax_MGMT = Needed 0
@@ -358,3 +359,43 @@ plot_ElevAnimation_CASCADE(
     fig_size=None,
     fig_eps=False,
 )
+
+if Run_Marsh_Dynamics:
+
+    for t in range(nt_run-1):
+#for t in range(int(41)):
+
+
+        BB_transect = np.flip(cascade._bmft_coupler._bmftc[0].elevation[cascade._bmft_coupler._bmftc[0].startyear + t - 1,
+                      int(cascade._bmft_coupler._bmftc[0].Marsh_edge[cascade._bmft_coupler._bmftc[0].startyear + t]):])
+
+        x_forest = [cascade._bmft_coupler._bmftc[0].B - int(cascade._bmft_coupler._bmftc[0].Forest_edge[cascade._bmft_coupler._bmftc[0].startyear + t])]
+        x_marsh = [len(BB_transect) - 1]
+
+        y_forest = BB_transect[x_forest]
+        y_marsh = BB_transect[x_marsh]
+
+        # Plot and save
+        transectFig = plt.figure(figsize=(15, 7))
+        plt.rcParams.update({"font.size": 11})
+        plt.plot(BB_transect, c="black")
+        plt.scatter(x_forest, y_forest, c="green")
+        plt.scatter(x_marsh, y_marsh, c="brown")
+        plt.ylim(-2.1, 4)
+        plt.xlabel("Cross-shore Distance (m)")
+        plt.ylabel("Elevation (m)")
+        plt.tight_layout()
+        timestr = "Time = " + str(t) + " yrs"
+
+        plt.text(0, 0, timestr)
+        name = "transect_" + str(t)
+        transectFig.savefig(name)  # dpi=200
+        plt.close(transectFig)
+
+    frames = []
+    for filenum in range(nt_run-1):
+        filename = "transect_" + str(filenum) + ".png"
+        frames.append(imageio.imread(filename))
+    imageio.mimsave("transect.gif", frames, "GIF-FI")
+    print()
+    print("[ * Transect GIF successfully generated * ]")
