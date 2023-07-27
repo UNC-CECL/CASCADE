@@ -155,10 +155,6 @@ class Cascade:
         outwash_storms_file="outwash_storms10.npy",  # --------- outwasher (in development) ------------ #
         outwash_beach_file="NCB-default_beach.npy",
         percent_washout_to_shoreface=100,
-        dune_flow_dynamics="full",
-        outwasher_substep=20,
-        ki_value=7.5E-3,
-        c=0.0134,
     ):
         """
 
@@ -256,10 +252,12 @@ class Cascade:
             Subsidy on cost of entire nourishment plan
         beach_full_cross_shore: int, optional
             The cross-shore extent (meters) of fully nourished beach (i.e., the community desired beach width) [m]
-        outwash_storms: string, optional
+        outwash_storms_file: string, optional
             Filename of outwash storm series (npy file)
-        washout_to_shoreface: bool
-            if True, washout is used to nourish the shoreface
+        outwash_beach_file: string, optional
+            Filename of the outwash beach domain (npy file)
+        percent_washout_to_shoreface: int
+            The percent of washed out sediment that will be placed on the shoreface
         outwash_module: boolean or list of booleans, optional
             If True, use outwash module (force a bay-side surge event)
 
@@ -463,11 +461,7 @@ class Cascade:
                           dune_domain=self._barrier3d[iB3D].DuneDomain[self._barrier3d[iB3D].time_index - 1, :, :],
                           percent_washout_to_shoreface=percent_washout_to_shoreface,
                           outwash_beach_file=outwash_beach_file,
-                          dune_flow_dynamics=dune_flow_dynamics,
-                          sediment_flux_coefficient_Ki=ki_value,
-                          C=c,
                           initial_beach_width=0,
-                          # cx=cx,
                           )
             )
 
