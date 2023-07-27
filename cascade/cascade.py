@@ -289,6 +289,7 @@ class Cascade:
         self._enable_shoreline_offset = enable_shoreline_offset
         self._shoreline_offset = shoreline_offset
         self._marsh_dynamics = marsh_dynamics
+        self._pybmft_failure = [False] * self._ny # Tracks whether barrier drowns
 
         # initialization errors
         if (
@@ -447,6 +448,7 @@ class Cascade:
             )
             # Make sure B3D and PyBMFT have same values
             self._barrier3d =  self._bmft_coupler.B3d_PyBMFT_equal(ny = self._ny,barrier3d=self._barrier3d)
+
     @property
     def road_break(self):
         return self._road_break
@@ -729,11 +731,13 @@ class Cascade:
         ###############################################################################
         # Update B3d elevation based on changes in marsh dynamics
         ###############################################################################
-        if self._marsh_dynamics:
+        if self._marsh_dynamics and self._pybmft_failure[iB3D] == False:
             #self._bmft_coupler.testRun(time_step = self._barrier3d[0].time_index)
             self._bmft_coupler.updateMarsh(ny=self._ny,time_step=self._barrier3d[0].time_index,barrier3d=self._barrier3d)
             # Change barrier3d object to reflect new initalized changes
             self._barrier3d = self._bmft_coupler._barrier3d
+            # Check if marsh section has failed and prevent from updating in the future if so
+            self._pybmft_failure[iB3D] = self._bmft_coupler._BMFTC_Break
 
     ###############################################################################
     # save data
