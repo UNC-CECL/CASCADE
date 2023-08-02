@@ -839,21 +839,23 @@ def flow_routing_with_lateral_transport(
     start_cell_array, init_discharge_array, OW_TS
     """
     # initialize arrays for flow routing
-    Discharge = np.zeros([n_time_steps, width, length])
-    SedFluxIn = np.zeros([n_time_steps, width, length])
-    SedFluxOut = np.zeros([n_time_steps, width, length])
-    s1_array = np.zeros([n_time_steps, width, length])
-    s2_array = np.zeros([n_time_steps, width, length])
-    s3_array = np.zeros([n_time_steps, width, length])
-    sL_left_array = np.zeros([n_time_steps, width, length])
-    sL_right_array = np.zeros([n_time_steps, width, length])
-    QsL_left_in = np.zeros([n_time_steps, width, length])
-    QsL_right_in = np.zeros([n_time_steps, width, length])
-    QsL_total = np.zeros([n_time_steps, width, length])
+    Discharge = np.zeros([n_time_steps, width, length])  # discharge at each cell (sum of Q1, Q2, and Q3)
+    SedFluxIn = np.zeros([n_time_steps, width, length])  # sediment flux into a cell
+    SedFluxOut = np.zeros([n_time_steps, width, length])  # sediment flux out of each cell
+    s1_array = np.zeros([n_time_steps, width, length])  # S1 slopes of each cell
+    s2_array = np.zeros([n_time_steps, width, length])  # S2 slopes of each cell
+    s3_array = np.zeros([n_time_steps, width, length])  # S3 slopes of each cell
+    sL_left_array = np.zeros([n_time_steps, width, length])  # slope of the adjacent left cell into a cell
+    sL_right_array = np.zeros([n_time_steps, width, length])  # slope of the adjacent right cell into a cell
+    QsL_left_in = np.zeros([n_time_steps, width, length])  # lateral transport coming from the left cell into a cell
+    QsL_right_in = np.zeros([n_time_steps, width, length])  # lateral transport coming from the right cell into a cell
+    QsL_total = np.zeros([n_time_steps, width, length])  # sum of left and right lateral transport into a cell
+
     # next three arrays are separate solely for plotting purposes, future versions only actually need 1
     underwater_array = np.zeros([n_time_steps, width, length])  # will only ever contain 1s
     downhill_array = np.zeros([n_time_steps, width, length])  # will contain 1s and 2s
     start_cell_array = np.zeros([n_time_steps, width, length])  # will contain 1s, 2s, and 3s
+
     # used for plotting, not needed in the future
     elev_change_array = np.zeros([n_time_steps, width, length])
     init_discharge_array = np.zeros([n_time_steps, width, length])
@@ -1072,6 +1074,8 @@ def flow_routing_with_lateral_transport(
 
                             # CALCULATE LATERAL TRANSPORT
                             # dependent on Qs_out, so must occur after calculation
+                            # track the sediment being added to a cell from its neighbors (QsL_total)
+                            # we also must track the sediment leaving the neighbor cells (SedFluxOut)
                             if sL_left_array[TS, d, i] > 0:
                                 QsL_left_in[TS, d, i] = k_lat * Qs_out * sL_left_array[TS, d, i]
                                 SedFluxOut[TS, d, i - 1] += QsL_left_in[TS, d, i]
