@@ -143,10 +143,10 @@ section2_pre = elev_array[147:188, 148:198]
 section3_pre = elev_array[147:188, 248:298]
 section4_pre = elev_array[147:188, 198:248]  # validation configuration
 
-np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config1_observed_pre.npy", section1_pre)
-np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config2_observed_pre.npy", section2_pre)
-np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config3_observed_pre.npy", section3_pre)
-np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config4_observed_pre.npy", section4_pre)
+np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config1\config1_observed_pre.npy", section1_pre)
+np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config2\config2_observed_pre.npy", section2_pre)
+np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config3\config3_observed_pre.npy", section3_pre)
+np.save(r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config4\config4_observed_pre.npy", section4_pre)
 
 post_elev_array = post_elev_array / 10
 section1_post = post_elev_array[147:188, 98:148]
