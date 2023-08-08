@@ -104,10 +104,7 @@ for storm_num in range(1, 101):
         beach_full_cross_shore=70,
         outwash_storms_file="outwash_storms_startyr_1_interval_{0}yrs.npy".format(storm_interval),  # --------- outwasher (in development) ------------ #
         percent_washout_to_shoreface=100,
-        outwash_beach_file="NCB-default-beach-config{0}-damMHW.npy".format(config),
-        dune_flow_dynamics="full",
-        ki_value=ki,
-        c=C,
+        outwash_beach_file="NCB-default-beach-config{0}-damMHW.npy".format(config)
     )
 
     # run the time loop/update function
