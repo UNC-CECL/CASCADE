@@ -271,6 +271,7 @@ class BMFTCoupler:
             self._barrier3d[iB3D].InteriorDomain = NewDomain
             # ===================================================================================================================================================================================================================================
             # Update PyBMFT-C transect elevation based on Barrier3D elevation change
+            # In need of update - PyBMFT forest interior not updating
 
             shoreline_change = self._barrier3d[iB3D].x_s_TS[-1] - self._barrier3d[iB3D].x_s_TS[-2]
             self._x_s_offset[iB3D] = self._x_s_offset[iB3D] + (shoreline_change * 10)
