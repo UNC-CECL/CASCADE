@@ -27,8 +27,8 @@ s_file1 = "/B3D_Inputs/Default_StormTimeSeries_1000yr.npy"
 s_file3 = "/B3D_Inputs/Altered_Twenty_Five_StormTimeSeries_1000.npy"
 s_file=s_file1
 c_wd = os.getcwd()
-nt_run = 50 # Number of years model will run
-run_name = '50_Year_Marsh_Test'
+nt_run = 150 # Number of years model will run
+run_name = '150_Year_Tests'
 num_of_batches = 1
 #rslr_index = [0.0053,.0147,0.026]
 #rslr_index = [.0147,0.026]
@@ -36,9 +36,15 @@ num_of_batches = 1
 number_barrier3d_models = 1
 rmin = 0.55
 rmax = 0.95
-elevation_file = c_wd + "/B3D_Inputs/barrier3d-default-elevation.npy"
 
-dune_file = c_wd + "/B3D_Inputs/barrier3d-dunes.npy"
+if number_barrier3d_models > 1:
+    elevation_file = [c_wd + "/B3D_Inputs/barrier3d-default-elevation.npy"]*number_barrier3d_models
+    dune_file = [c_wd + "/B3D_Inputs/barrier3d-dunes.npy"]*number_barrier3d_models
+else:
+    elevation_file = c_wd + "/B3D_Inputs/barrier3d-default-elevation.npy"
+    dune_file = c_wd + "/B3D_Inputs/barrier3d-dunes.npy"
+
+
 storm_file = c_wd+'/B3D_Inputs/cascade-default-storms.npy'
 
 # Call function
@@ -115,7 +121,7 @@ Batch_Runs(
     nt=nt_run,
     name=run_name,
     storm_file=storm_file,
-    alongshore_section_count=1,
+    alongshore_section_count=number_barrier3d_models,
     num_cores=3,
     rmin=rmin,
     rmax=rmax,

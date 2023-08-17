@@ -245,7 +245,7 @@ class Cascade:
             Subsidy on cost of entire nourishment plan
         beach_full_cross_shore: int, optional
             The cross-shore extent (meters) of fully nourished beach (i.e., the community desired beach width) [m]
-
+        write comments for each variable
 
         Examples
         --------
@@ -285,11 +285,11 @@ class Cascade:
         self._rebuild_dune_now = [0] * self._ny  # triggers dune rebuilding
         self._initial_beach_width = [0] * self._ny
 
-        # New BF branch shoreline additions
+        # PyBMFT and complex shoreline variables
         self._enable_shoreline_offset = enable_shoreline_offset
         self._shoreline_offset = shoreline_offset
         self._marsh_dynamics = marsh_dynamics
-        self._pybmft_failure = [False] * self._ny # Tracks whether barrier drowns
+        self._pybmft_failure = [False] * self._ny # Tracks whether marsh drowns / exists and whether PybMFT coupling runs
 
         # initialization errors
         if (
@@ -434,6 +434,9 @@ class Cascade:
             CascadeError(
                 "Berm elevation and beach slope must be equivalent for all Barrier3D domains"
             )
+        ###############################################################################
+        # Outwasher Module
+        ###############################################################################
 
         ###############################################################################
         # initialize marsh dynamics module
@@ -444,10 +447,8 @@ class Cascade:
                 nt =self._nt,
                 barrier3d=self._barrier3d,
                 ny=self._ny,
-                name = self._filename
+                name = self._filename # Name of the model run for file outputs
             )
-            # Make sure B3D and PyBMFT have same values
-            self._barrier3d =  self._bmft_coupler.B3d_PyBMFT_equal(ny = self._ny,barrier3d=self._barrier3d)
 
     @property
     def road_break(self):
@@ -533,6 +534,8 @@ class Cascade:
     def community_break(self):
         return self._community_break
 
+    # BMFT property make one
+
     ###############################################################################
     # time loop
     ###############################################################################
@@ -545,6 +548,7 @@ class Cascade:
         if self._brie_coupler._brie.drown == True:
             return
 
+        #print('previous elev is '+str(previous_B3D_Interior[0]))
         # Advance B3D by one time step; NOTE: B3D initializes at time_index = 1 and then updates the time_index
         # after update_dune_domain
         batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
@@ -710,6 +714,25 @@ class Cascade:
                 )
 
         ###############################################################################
+        # update outwasher
+        ###############################################################################
+
+        ###############################################################################
+        # Update B3d elevation based on changes in marsh dynamics
+        ###############################################################################
+        if self._marsh_dynamics and self._pybmft_failure[iB3D] == False:
+            self._bmft_coupler.updateMarsh(ny=self._ny,
+                                           time_step=self._barrier3d[0].time_index,
+                                           barrier3d=self._barrier3d
+                                           )
+            # Just update values for variables you
+            # Change barrier3d object to reflect new initalized changes
+            #self._barrier3d = self._bmft_coupler._barrier3d # Remove
+            # Check if marsh section has failed and prevent from updating in the future if so
+            self._pybmft_failure[iB3D] = self._bmft_coupler._BMFTC_Break
+
+
+        ###############################################################################
         # update brie for any human modifications to the barrier
         ###############################################################################
         if self._alongshore_transport_module:
@@ -728,16 +751,6 @@ class Cascade:
                 x_t, x_s, x_b, h_b, s_sf
             )
 
-        ###############################################################################
-        # Update B3d elevation based on changes in marsh dynamics
-        ###############################################################################
-        if self._marsh_dynamics and self._pybmft_failure[iB3D] == False:
-            #self._bmft_coupler.testRun(time_step = self._barrier3d[0].time_index)
-            self._bmft_coupler.updateMarsh(ny=self._ny,time_step=self._barrier3d[0].time_index,barrier3d=self._barrier3d)
-            # Change barrier3d object to reflect new initalized changes
-            self._barrier3d = self._bmft_coupler._barrier3d
-            # Check if marsh section has failed and prevent from updating in the future if so
-            self._pybmft_failure[iB3D] = self._bmft_coupler._BMFTC_Break
 
     ###############################################################################
     # save data
