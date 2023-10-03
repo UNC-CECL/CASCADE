@@ -14,7 +14,7 @@ import imageio
 
 from cascade.cascade import Cascade
 
-os.chdir('/Users/ceclmac/PycharmProjects/CASCADE/')
+os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/")
 
 
 def Test_Alongshore_Runs(
@@ -32,14 +32,14 @@ def Test_Alongshore_Runs(
     sea_level_constant=True,  # not an array
     enable_shoreline_offset=False,
     shoreline_offset=[0],
-    marsh_dynamics = False,
+    marsh_dynamics=False,
 ):
 
     # ###############################################################################
     # 9 - connect cascade domains (human management) with AST
     # ###############################################################################
-    print('')
-    print('Nt is ')
+    print("")
+    print("Nt is ")
     print(nt)
     # --------- INITIALIZE ---------
     datadir = "B3D_Inputs/"
@@ -75,7 +75,7 @@ def Test_Alongshore_Runs(
 
         # Print time step to screen (NOTE: time_index in each model is time_step+1)
         print("\r", "Time Step: ", time_step, end="")
-        cascade.update(Time_step = time_step)
+        cascade.update(Time_step=time_step)
         if cascade.b3d_break:
             break
 
@@ -84,6 +84,7 @@ def Test_Alongshore_Runs(
     cascade.save(save_directory)
 
     return cascade
+
 
 # ###############################################################################
 # New test values
@@ -97,8 +98,8 @@ d_file = "/B3D_Inputs/Marsh_Test_Inputs/barrier3d-dunes.npy"
 # Storm file path name
 s_file = "/B3D_Inputs/Default_StormTimeSeries_1000yr.npy"
 c_wd = os.getcwd()
-nt_run = 10 # Number of years model will run
-run_name = 'Smith_Test_Elev'
+nt_run = 10  # Number of years model will run
+run_name = "Smith_Test_Elev"
 
 
 number_barrier3d_models = 5
@@ -111,7 +112,7 @@ elevation_file = [
     c_wd + "/B3D_Inputs/Smith/S_M_2.npy",
     c_wd + "/B3D_Inputs/Smith/S_M_1.npy",
 ]
-#dune_file = [c_wd+d_file] * number_barrier3d_models
+# dune_file = [c_wd+d_file] * number_barrier3d_models
 
 dune_file = [
     c_wd + "/B3D_Inputs/Smith/S_M_D_6.npy",
@@ -119,14 +120,14 @@ dune_file = [
     c_wd + "/B3D_Inputs/Smith/S_M_D_3.npy",
     c_wd + "/B3D_Inputs/Smith/S_M_D_2.npy",
     c_wd + "/B3D_Inputs/Smith/S_M_D_1.npy",
-             ]
+]
 
-storm_file = c_wd+s_file
+storm_file = c_wd + s_file
 
 Test_Alongshore_Runs(
     nt=nt_run,
     name=run_name,
-    storm_file=c_wd+s_file,
+    storm_file=c_wd + s_file,
     alongshore_section_count=number_barrier3d_models,
     num_cores=3,
     rmin=rmin,
@@ -139,6 +140,7 @@ Test_Alongshore_Runs(
     enable_shoreline_offset=False,
     marsh_dynamics=True,
 )
+
 
 def plot_ElevAnimation_CASCADE(
     cascade,
@@ -453,6 +455,7 @@ def plot_ElevAnimation_CASCADE(
     print()
     print("[ * GIF successfully generated * ]")
 
+
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/Run_output")
 name_prefix = run_name
 
@@ -485,4 +488,3 @@ plot_ElevAnimation_CASCADE(
     fig_size=None,
     fig_eps=False,
 )
-

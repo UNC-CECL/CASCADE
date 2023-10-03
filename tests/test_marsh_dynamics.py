@@ -6,14 +6,14 @@ from numpy.testing import assert_array_almost_equal
 
 from cascade import Cascade
 
-os.chdir('/Users/ceclmac/PycharmProjects/CASCADE')
+os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")
 
 
 NT = 180
 
 # test to make sure Marsh_Dynamics can be run
 def run_cascade_marsh_dynamics(datadir):
-    #for data_file in datadir.iterdir():
+    # for data_file in datadir.iterdir():
     #    shutil.copy(data_file, ".")
     cascade = Cascade(
         datadir,
@@ -50,6 +50,7 @@ def run_cascade_marsh_dynamics(datadir):
 
 
 # test to make sure B3D has topography replaced by PyBMFT
+
 
 def check_b3d_topography_replacement_from_PYBMFT(datadir):
     """
@@ -89,18 +90,34 @@ def check_b3d_topography_replacement_from_PYBMFT(datadir):
         for iB3D in range(cascade._ny):
             if cascade._ny < 2:
                 BB_transect = np.flip(
-                    cascade._bmft_coupler._bmftc[0].elevation[cascade._bmft_coupler._bmftc[0].startyear + i - 1,
-                    int(cascade._bmft_coupler._bmftc[0].Marsh_edge[cascade._bmft_coupler._bmftc[0].startyear + i]):])
+                    cascade._bmft_coupler._bmftc[0].elevation[
+                        cascade._bmft_coupler._bmftc[0].startyear + i - 1,
+                        int(
+                            cascade._bmft_coupler._bmftc[0].Marsh_edge[
+                                cascade._bmft_coupler._bmftc[0].startyear + i
+                            ]
+                        ) :,
+                    ]
+                )
                 PyBMFT_elevation.append(BB_transect)
-                b3d_topography.append(np.mean(cascade.barrier3d[iB3D].DomainTS[i], axis=1) * 10)
+                b3d_topography.append(
+                    np.mean(cascade.barrier3d[iB3D].DomainTS[i], axis=1) * 10
+                )
             else:
                 BB_transect = np.flip(
-                    cascade._bmft_coupler._bmftc[0].elevation[cascade._bmft_coupler._bmftc[iB3D].startyear + i - 1,
-                    int(cascade._bmft_coupler._bmftc[0].Marsh_edge[cascade._bmft_coupler._bmftc[iB3D].startyear + i]):])
+                    cascade._bmft_coupler._bmftc[0].elevation[
+                        cascade._bmft_coupler._bmftc[iB3D].startyear + i - 1,
+                        int(
+                            cascade._bmft_coupler._bmftc[0].Marsh_edge[
+                                cascade._bmft_coupler._bmftc[iB3D].startyear + i
+                            ]
+                        ) :,
+                    ]
+                )
                 PyBMFT_elevation[iB3D].append(BB_transect)
                 b3d_topography[iB3D].append(cascade.barrier3d[iB3D].DomainTS[i])
 
-    return (b3d_topography)
+    return b3d_topography
 
 
 def check_PYBMFT_topography_replacement_from_B3D(datadir):
@@ -141,18 +158,35 @@ def check_PYBMFT_topography_replacement_from_B3D(datadir):
         for iB3D in range(cascade._ny):
             if cascade._ny < 2:
                 BB_transect = np.flip(
-                    cascade._bmft_coupler._bmftc[0].elevation[cascade._bmft_coupler._bmftc[0].startyear + i - 1,
-                    int(cascade._bmft_coupler._bmftc[0].Marsh_edge[cascade._bmft_coupler._bmftc[0].startyear + i]):])
+                    cascade._bmft_coupler._bmftc[0].elevation[
+                        cascade._bmft_coupler._bmftc[0].startyear + i - 1,
+                        int(
+                            cascade._bmft_coupler._bmftc[0].Marsh_edge[
+                                cascade._bmft_coupler._bmftc[0].startyear + i
+                            ]
+                        ) :,
+                    ]
+                )
                 PyBMFT_elevation.append(BB_transect)
-                b3d_topography.append(np.mean(cascade.barrier3d[iB3D].DomainTS[i], axis=1) * 10)
+                b3d_topography.append(
+                    np.mean(cascade.barrier3d[iB3D].DomainTS[i], axis=1) * 10
+                )
             else:
                 BB_transect = np.flip(
-                    cascade._bmft_coupler._bmftc[0].elevation[cascade._bmft_coupler._bmftc[iB3D].startyear + i - 1,
-                    int(cascade._bmft_coupler._bmftc[0].Marsh_edge[cascade._bmft_coupler._bmftc[iB3D].startyear + i]):])
+                    cascade._bmft_coupler._bmftc[0].elevation[
+                        cascade._bmft_coupler._bmftc[iB3D].startyear + i - 1,
+                        int(
+                            cascade._bmft_coupler._bmftc[0].Marsh_edge[
+                                cascade._bmft_coupler._bmftc[iB3D].startyear + i
+                            ]
+                        ) :,
+                    ]
+                )
                 PyBMFT_elevation[iB3D].append(BB_transect)
                 b3d_topography[iB3D].append(cascade.barrier3d[iB3D].DomainTS[i])
 
     return (PyBMFT_elevation, b3d_topography)
+
 
 def changing_B3D_elevs_on_PyBMFT(datadir):
     """
@@ -190,21 +224,40 @@ def changing_B3D_elevs_on_PyBMFT(datadir):
     for i in range(7):
         cascade.update()
         for iB3D in range(cascade._ny):
-            cascade.barrier3d[iB3D].DomainTS[i] = cascade.barrier3d[iB3D].DomainTS[i] -0.05
+            cascade.barrier3d[iB3D].DomainTS[i] = (
+                cascade.barrier3d[iB3D].DomainTS[i] - 0.05
+            )
             if cascade._ny < 2:
                 BB_transect = np.flip(
-                    cascade._bmft_coupler._bmftc[0].elevation[cascade._bmft_coupler._bmftc[0].startyear + i - 1,
-                    int(cascade._bmft_coupler._bmftc[0].Marsh_edge[cascade._bmft_coupler._bmftc[0].startyear + i]):])
+                    cascade._bmft_coupler._bmftc[0].elevation[
+                        cascade._bmft_coupler._bmftc[0].startyear + i - 1,
+                        int(
+                            cascade._bmft_coupler._bmftc[0].Marsh_edge[
+                                cascade._bmft_coupler._bmftc[0].startyear + i
+                            ]
+                        ) :,
+                    ]
+                )
                 PyBMFT_elevation.append(BB_transect)
-                b3d_topography.append(np.mean(cascade.barrier3d[iB3D].DomainTS[i], axis =1)*10)
+                b3d_topography.append(
+                    np.mean(cascade.barrier3d[iB3D].DomainTS[i], axis=1) * 10
+                )
             else:
                 BB_transect = np.flip(
-                    cascade._bmft_coupler._bmftc[0].elevation[cascade._bmft_coupler._bmftc[iB3D].startyear + i - 1,
-                    int(cascade._bmft_coupler._bmftc[0].Marsh_edge[cascade._bmft_coupler._bmftc[iB3D].startyear + i]):])
+                    cascade._bmft_coupler._bmftc[0].elevation[
+                        cascade._bmft_coupler._bmftc[iB3D].startyear + i - 1,
+                        int(
+                            cascade._bmft_coupler._bmftc[0].Marsh_edge[
+                                cascade._bmft_coupler._bmftc[iB3D].startyear + i
+                            ]
+                        ) :,
+                    ]
+                )
                 PyBMFT_elevation[iB3D].append(BB_transect)
                 b3d_topography[iB3D].append(cascade.barrier3d[iB3D].DomainTS[i])
 
-    return (PyBMFT_elevation,b3d_topography)
+    return (PyBMFT_elevation, b3d_topography)
+
 
 def changing_PyBMFT_elevs_on_B3d(datadir):
     """
@@ -242,20 +295,42 @@ def changing_PyBMFT_elevs_on_B3d(datadir):
     for i in range(6):
         cascade.update()
         for iB3D in range(cascade._ny):
-            cascade._bmft_coupler._bmftc[0].elevation[cascade._bmft_coupler._bmftc[0].startyear + i - 1,
-            int(cascade._bmft_coupler._bmftc[0].Marsh_edge[cascade._bmft_coupler._bmftc[0].startyear + i]):] += 1.75
+            cascade._bmft_coupler._bmftc[0].elevation[
+                cascade._bmft_coupler._bmftc[0].startyear + i - 1,
+                int(
+                    cascade._bmft_coupler._bmftc[0].Marsh_edge[
+                        cascade._bmft_coupler._bmftc[0].startyear + i
+                    ]
+                ) :,
+            ] += 1.75
 
             if cascade._ny < 2:
                 BB_transect = np.flip(
-                    cascade._bmft_coupler._bmftc[0].elevation[cascade._bmft_coupler._bmftc[0].startyear + i - 1,
-                    int(cascade._bmft_coupler._bmftc[0].Marsh_edge[cascade._bmft_coupler._bmftc[0].startyear + i]):])
+                    cascade._bmft_coupler._bmftc[0].elevation[
+                        cascade._bmft_coupler._bmftc[0].startyear + i - 1,
+                        int(
+                            cascade._bmft_coupler._bmftc[0].Marsh_edge[
+                                cascade._bmft_coupler._bmftc[0].startyear + i
+                            ]
+                        ) :,
+                    ]
+                )
                 PyBMFT_elevation.append(BB_transect)
-                b3d_topography.append(np.mean(cascade.barrier3d[iB3D].DomainTS[i], axis =1)*10)
+                b3d_topography.append(
+                    np.mean(cascade.barrier3d[iB3D].DomainTS[i], axis=1) * 10
+                )
             else:
                 BB_transect = np.flip(
-                    cascade._bmft_coupler._bmftc[0].elevation[cascade._bmft_coupler._bmftc[iB3D].startyear + i - 1,
-                    int(cascade._bmft_coupler._bmftc[0].Marsh_edge[cascade._bmft_coupler._bmftc[iB3D].startyear + i]):])
+                    cascade._bmft_coupler._bmftc[0].elevation[
+                        cascade._bmft_coupler._bmftc[iB3D].startyear + i - 1,
+                        int(
+                            cascade._bmft_coupler._bmftc[0].Marsh_edge[
+                                cascade._bmft_coupler._bmftc[iB3D].startyear + i
+                            ]
+                        ) :,
+                    ]
+                )
                 PyBMFT_elevation[iB3D].append(BB_transect)
                 b3d_topography[iB3D].append(cascade.barrier3d[iB3D].DomainTS[i])
 
-    return (PyBMFT_elevation,b3d_topography)
+    return (PyBMFT_elevation, b3d_topography)

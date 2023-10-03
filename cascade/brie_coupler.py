@@ -354,7 +354,6 @@ class BrieCoupler:
             # print(self._brie.x_s)
             # print('Adjusted offset')
 
-
     def update_ast(self, barrier3d, x_t_dt, x_s_dt, h_b_dt):
         """Pass shoreline and shoreface values from B3D subdomains to brie for use
         in second time step

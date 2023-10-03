@@ -152,7 +152,7 @@ class Cascade:
         house_footprint_x=15,
         house_footprint_y=20,
         beach_full_cross_shore=70,
-        marsh_dynamics=False, # --- Marsh and island offset modules --- #
+        marsh_dynamics=False,  # --- Marsh and island offset modules --- #
         enable_shoreline_offset=False,
         shoreline_offset=[],
     ):
@@ -289,7 +289,9 @@ class Cascade:
         self._enable_shoreline_offset = enable_shoreline_offset
         self._shoreline_offset = shoreline_offset
         self._marsh_dynamics = marsh_dynamics
-        self._pybmft_failure = [False] * self._ny # Tracks whether marsh drowns / exists and whether PybMFT coupling runs
+        self._pybmft_failure = [
+            False
+        ] * self._ny  # Tracks whether marsh drowns / exists and whether PybMFT coupling runs
 
         # initialization errors
         if (
@@ -304,7 +306,6 @@ class Cascade:
                 "The sigmoidal accelerated SLR formulation used in this model by "
                 "Rohling et al., (2013) should not be extended beyond 200 years"
             )
-
 
         ###############################################################################
         # initialize brie and barrier3d model classes
@@ -442,12 +443,12 @@ class Cascade:
         # initialize marsh dynamics module
         ###############################################################################
         if self._marsh_dynamics:
-            #Initalize BMFT module
+            # Initalize BMFT module
             self._bmft_coupler = BMFTCoupler(
-                nt =self._nt,
+                nt=self._nt,
                 barrier3d=self._barrier3d,
                 ny=self._ny,
-                name = self._filename # Name of the model run for file outputs
+                name=self._filename,  # Name of the model run for file outputs
             )
 
     @property
@@ -551,7 +552,7 @@ class Cascade:
         # Advance B3D by one time step; NOTE: B3D initializes at time_index = 1 and then updates the time_index
         # after update_dune_domain
         batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
-                delayed(batchB3D)(self._barrier3d[iB3D]) for iB3D in range(self._ny)
+            delayed(batchB3D)(self._barrier3d[iB3D]) for iB3D in range(self._ny)
         )
 
         # reshape output from parallel processing and convert from tuple to list
@@ -566,7 +567,7 @@ class Cascade:
         if self._alongshore_transport_module:
             self._brie_coupler.update_ast(
                 self._barrier3d, x_t_dt, x_s_dt, h_b_dt
-                )  # also updates dune domain
+            )  # also updates dune domain
         else:
             for iB3D in range(self._ny):
                 self._barrier3d[iB3D].update_dune_domain()
@@ -720,16 +721,16 @@ class Cascade:
         # Update B3d elevation based on changes in marsh dynamics
         ###############################################################################
         if self._marsh_dynamics and self._pybmft_failure[iB3D] == False:
-            self._bmft_coupler.updateMarsh(ny=self._ny,
-                                           time_step=self._barrier3d[0].time_index,
-                                           barrier3d=self._barrier3d
-                                           )
+            self._bmft_coupler.updateMarsh(
+                ny=self._ny,
+                time_step=self._barrier3d[0].time_index,
+                barrier3d=self._barrier3d,
+            )
             # Just update values for variables you
             # Change barrier3d object to reflect new initalized changes
-            #self._barrier3d = self._bmft_coupler._barrier3d # Remove
+            # self._barrier3d = self._bmft_coupler._barrier3d # Remove
             # Check if marsh section has failed and prevent from updating in the future if so
             self._pybmft_failure[iB3D] = self._bmft_coupler._BMFTC_Break
-
 
         ###############################################################################
         # update brie for any human modifications to the barrier
@@ -749,7 +750,6 @@ class Cascade:
             self._brie_coupler.update_brie_for_human_modifications(
                 x_t, x_s, x_b, h_b, s_sf
             )
-
 
     ###############################################################################
     # save data

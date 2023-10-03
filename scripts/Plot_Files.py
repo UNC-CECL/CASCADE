@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import os
 import imageio
 
+
 def plot_ElevAnimation_CASCADE(
     cascade,
     directory,
@@ -319,11 +320,12 @@ def plot_ElevAnimation_CASCADE(
     print()
     print("[ * GIF successfully generated * ]")
 
+
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/Run_output")
-#run_name='Wreck_ACC_RSLR3_S3' # 5 Length
-run_name='RSLR_Update_150_DIF_RSLR_1' # 4 length
-#run_name='Metompkin_Marsh_S10_3'
-#run_name='Smith_S10_3' # 5
+# run_name='Wreck_ACC_RSLR3_S3' # 5 Length
+run_name = "RSLR_Update_150_DIF_RSLR_1"  # 4 length
+# run_name='Metompkin_Marsh_S10_3'
+# run_name='Smith_S10_3' # 5
 
 name_prefix = run_name
 nt_run = 150
@@ -364,16 +366,30 @@ bmdata = cascade._bmft_coupler._bmftc[0]
 
 if Run_Marsh_Dynamics:
 
-    for t in range(nt_run-1):
-#for t in range(int(41)):
+    for t in range(nt_run - 1):
+        # for t in range(int(41)):
 
+        BB_transect = np.flip(
+            cascade._bmft_coupler._bmftc[0].elevation[
+                cascade._bmft_coupler._bmftc[0].startyear + t - 1,
+                int(
+                    cascade._bmft_coupler._bmftc[0].Marsh_edge[
+                        cascade._bmft_coupler._bmftc[0].startyear + t
+                    ]
+                ) :,
+            ]
+        )
 
-        BB_transect = np.flip(cascade._bmft_coupler._bmftc[0].elevation[cascade._bmft_coupler._bmftc[0].startyear + t - 1,
-                      int(cascade._bmft_coupler._bmftc[0].Marsh_edge[cascade._bmft_coupler._bmftc[0].startyear + t]):])
+        # print(BB_transect)
 
-        #print(BB_transect)
-
-        x_forest = [cascade._bmft_coupler._bmftc[0].B - int(cascade._bmft_coupler._bmftc[0].Forest_edge[cascade._bmft_coupler._bmftc[0].startyear + t])]
+        x_forest = [
+            cascade._bmft_coupler._bmftc[0].B
+            - int(
+                cascade._bmft_coupler._bmftc[0].Forest_edge[
+                    cascade._bmft_coupler._bmftc[0].startyear + t
+                ]
+            )
+        ]
         x_marsh = [len(BB_transect) - 1]
 
         y_forest = BB_transect[x_forest]
@@ -397,7 +413,7 @@ if Run_Marsh_Dynamics:
         plt.close(transectFig)
 
     frames = []
-    for filenum in range(nt_run-1):
+    for filenum in range(nt_run - 1):
         filename = "transect_" + str(filenum) + ".png"
         frames.append(imageio.imread(filename))
     imageio.mimsave("transect.gif", frames, "GIF-FI")
