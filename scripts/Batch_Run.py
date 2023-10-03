@@ -15,7 +15,7 @@ from cascade.cascade import Cascade
 # ###############################################################################
 # Example of Running Function 1
 # ###############################################################################
-os.chdir('/Users/ceclmac/PycharmProjects/CASCADE')
+os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")
 # Specify variables to use in calling function
 # Elevation file path name
 e_file = "/B3D_Inputs/Marsh_Test_Inputs/InitElevHog.npy"
@@ -25,29 +25,32 @@ d_file = "/B3D_Inputs/Marsh_Test_Inputs/barrier3d-dunes.npy"
 s_file2 = "/B3D_Inputs/StormTimeSeries_1000_10.npy"
 s_file1 = "/B3D_Inputs/Default_StormTimeSeries_1000yr.npy"
 s_file3 = "/B3D_Inputs/Altered_Twenty_Five_StormTimeSeries_1000.npy"
-s_file=s_file1
+s_file = s_file1
 c_wd = os.getcwd()
-nt_run = 150 # Number of years model will run
-run_name = '150_Year_Tests'
+nt_run = 15  # Number of years model will run
+run_name = "Print_Test_Runs"
 num_of_batches = 1
-#rslr_index = [0.0053,.0147,0.026]
-#rslr_index = [.0147,0.026]
+# rslr_index = [0.0053,.0147,0.026]
+# rslr_index = [.0147,0.026]
 
 number_barrier3d_models = 1
 rmin = 0.55
 rmax = 0.95
 
 if number_barrier3d_models > 1:
-    elevation_file = [c_wd + "/B3D_Inputs/barrier3d-default-elevation.npy"]*number_barrier3d_models
-    dune_file = [c_wd + "/B3D_Inputs/barrier3d-dunes.npy"]*number_barrier3d_models
+    elevation_file = [
+        c_wd + "/B3D_Inputs/barrier3d-default-elevation.npy"
+    ] * number_barrier3d_models
+    dune_file = [c_wd + "/B3D_Inputs/barrier3d-dunes.npy"] * number_barrier3d_models
 else:
     elevation_file = c_wd + "/B3D_Inputs/barrier3d-default-elevation.npy"
     dune_file = c_wd + "/B3D_Inputs/barrier3d-dunes.npy"
 
 
-storm_file = c_wd+'/B3D_Inputs/cascade-default-storms.npy'
+storm_file = c_wd + "/B3D_Inputs/cascade-default-storms.npy"
 
 # Call function
+
 
 def Batch_Runs(
     nt,
@@ -64,7 +67,7 @@ def Batch_Runs(
     sea_level_constant=True,  # not an array
     enable_shoreline_offset=False,
     shoreline_offset=[0],
-    marsh_dynamics = True,
+    marsh_dynamics=True,
 ):
 
     # ###############################################################################
@@ -105,7 +108,7 @@ def Batch_Runs(
 
         # Print time step to screen (NOTE: time_index in each model is time_step+1)
         print("\r", "Time Step: ", time_step, end="")
-        #print('First Loop')
+        # print('First Loop')
         cascade.update()
         if cascade.b3d_break:
             break
@@ -131,8 +134,6 @@ Batch_Runs(
     sea_level_constant=True,  # not an array
     enable_shoreline_offset=False,
     marsh_dynamics=True,
-    sea_level_rise_rate = .01,
-    )
-os.chdir('/Users/ceclmac/PycharmProjects/CASCADE')
-
-
+    sea_level_rise_rate=0.01,
+)
+os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")

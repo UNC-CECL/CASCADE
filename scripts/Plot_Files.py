@@ -321,7 +321,7 @@ def plot_ElevAnimation_CASCADE(
 
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/Run_output")
 #run_name='Wreck_ACC_RSLR3_S3' # 5 Length
-run_name='150_Year_Tests' # 4 length
+run_name='RSLR_Update_150_DIF_RSLR_1' # 4 length
 #run_name='Metompkin_Marsh_S10_3'
 #run_name='Smith_S10_3' # 5
 
@@ -370,6 +370,8 @@ if Run_Marsh_Dynamics:
 
         BB_transect = np.flip(cascade._bmft_coupler._bmftc[0].elevation[cascade._bmft_coupler._bmftc[0].startyear + t - 1,
                       int(cascade._bmft_coupler._bmftc[0].Marsh_edge[cascade._bmft_coupler._bmftc[0].startyear + t]):])
+
+        #print(BB_transect)
 
         x_forest = [cascade._bmft_coupler._bmftc[0].B - int(cascade._bmft_coupler._bmftc[0].Forest_edge[cascade._bmft_coupler._bmftc[0].startyear + t])]
         x_marsh = [len(BB_transect) - 1]

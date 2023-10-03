@@ -548,7 +548,6 @@ class Cascade:
         if self._brie_coupler._brie.drown == True:
             return
 
-        #print('previous elev is '+str(previous_B3D_Interior[0]))
         # Advance B3D by one time step; NOTE: B3D initializes at time_index = 1 and then updates the time_index
         # after update_dune_domain
         batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(

@@ -65,6 +65,7 @@ class BMFTCoupler:
         self._cumul_len_change = []
         self._delta_fetch_TS = []
         self._OWspread = 0  # [%] Percentage of overwash past marsh edge that is spread across bay
+        self._b3d_transect_difs = []
 
         # initialize PyBMFT models (number set by brie ny above)
         for iB3D in range(self._ny):
@@ -184,6 +185,7 @@ class BMFTCoupler:
             # ===================================================================================================================================================================================================================================
             # ===================================================================================================================================================================================================================================
             # Add marsh from PyBMFT-C to Barrier3D
+            previous_elevation = barrier3d[iB3D].DomainTS[time_step]
 
             # Extract and convert marsh elevation from PyBMFT-C
             marsh_transect = self._bmftc[iB3D].elevation[self._bmftc[iB3D].startyear + time_step,
@@ -198,7 +200,7 @@ class BMFTCoupler:
                 marsh_transect = np.interp(x, xp,
                                            marsh_transect)  # Interpolate marsh elevation from m to dam in the horizontal dimension
                 marsh_transect = marsh_transect - (
-                            self._bmftc[iB3D].msl[self._bmftc[iB3D].startyear + time_step - 1] + self._bmftc[
+                            self._bmftc[iB3D].msl[self._bmftc[iB3D].startyear + time_step] + self._bmftc[
                         iB3D].amp)  # Make marsh elevation relative to MHW datum
                 marsh_transect = marsh_transect / 10  # Convert from m to dam in the vertial dimension
                 marsh_transect = np.flip(marsh_transect)
@@ -228,6 +230,8 @@ class BMFTCoupler:
                     iB3D]._BayDepth
                 Zero_Addition = np.zeros([addRows, barrier3d[iB3D].BarrierLength])
                 NewDomain = np.vstack([barrier3d[iB3D].InteriorDomain, Marsh_Addition])
+                previous_elevation = np.append(np.mean(barrier3d[iB3D].DomainTS[time_step], axis=1),
+                                                np.mean(Marsh_Addition, axis=1))
                 # Update size of shrub domains, too
                 barrier3d[iB3D]._ShrubDomainFemale = np.vstack(
                     [barrier3d[iB3D]._ShrubDomainFemale, Zero_Addition])
@@ -246,6 +250,7 @@ class BMFTCoupler:
             elif addRows < 0:
                 # Update interior domain size
                 NewDomain = barrier3d[iB3D].InteriorDomain[:addRows, :]
+                previous_elevation = previous_elevation[:addRows]
                 # Update size of shrub domains, too
                 barrier3d[iB3D]._ShrubDomainFemale = barrier3d[iB3D]._ShrubDomainFemale[:addRows, :]
                 barrier3d[iB3D]._ShrubDomainMale = barrier3d[iB3D]._ShrubDomainMale[:addRows, :]
@@ -279,40 +284,27 @@ class BMFTCoupler:
                     NewDomain[len(BarrierMarshTransect):, w] = (barrier3d[iB3D].SL - np.mean(
                         [self._bmftc[iB3D].db])) / 10
 
+
             barrier3d[iB3D].InteriorDomain = NewDomain
             # ===================================================================================================================================================================================================================================
             # Update PyBMFT-C transect elevation based on Barrier3D elevation change
-            # In need of update - PyBMFT forest interior not updating
-            # You will be able to get at this using the barrier3d[iB3D].DomainTS[X] variable
-            #print('DomainTS '+str(barrier3d[iB3D].DomainTS[time_step]))
-            old_elev = np.mean(barrier3d[iB3D].DomainTS[time_step], axis=1) * 10
-            #print('Time step is '+str(time_step))
-            print('Old elev is '+str(old_elev))
-            print('Length of Old Elev is '+str(len(old_elev)))
+            old_elev = previous_elevation* 10
 
             shoreline_change = barrier3d[iB3D].x_s_TS[-1] - barrier3d[iB3D].x_s_TS[-2]
             self._x_s_offset[iB3D] = self._x_s_offset[iB3D] + (shoreline_change * 10)
-            start_b3d = np.mean(NewDomain,
-                                axis=1) * 10  # Barrier3D domain before update, averaged across alongshore dimension, converted to m (vertical dimension)
-           # flat_B3D = np.mean(previous_B3D_Interior,
-           #                    axis=1) * 10
-            #print('flat_B3D is '+str(flat_B3D))
-            if len(old_elev) < len(start_b3d):
-                for i in range(len(old_elev)):
-                    if old_elev[i] > 0:
-                        start_b3d[i] = old_elev[i]
+            if time_step < 3:
+                start_b3d = np.mean(NewDomain,axis=1) * 10  # Barrier3D domain before update, averaged across alongshore dimension, converted to m (vertical dimension)
+                start_b3d = start_b3d+(barrier3d[iB3D].RSLR[time_step] * 10)
             else:
-                for i in range(len(start_b3d)):
-                    if old_elev[i] > 0:
-                        start_b3d[i] = old_elev[i]
-            end_b3d = np.mean(barrier3d[iB3D].InteriorDomain,
-                          axis=1) * 10  # Barrier3D domain after update, averaged across alongshore dimension, converted to m (vertical dimension)
-           # print('Start_b3d is '+str(len(start_b3d)))
-           # print('End_B3d is '+str(len(end_b3d)))
-           # x3 = start_b3d - end_b3d
-           # print('x3 change is '+str(x3))
+                start_b3d = np.mean(barrier3d[iB3D].DomainTS[time_step-1], axis =1)*10
+
+            if time_step < 3:
+                end_b3d = np.mean(barrier3d[iB3D].InteriorDomain,axis=1) * 10  # Barrier3D domain after update, averaged across alongshore dimension, converted to m (vertical dimension)
+            else:
+                end_b3d = np.mean(barrier3d[iB3D].DomainTS[time_step], axis=1) * 10
+
             # Update start domain size to match end domain
-            sc_b3d = barrier3d[iB3D].ShorelineChangeTS[1]  # Shoreline change [dam] from Barrier3D model update (this timestep)
+            sc_b3d = int(barrier3d[iB3D].ShorelineChangeTS[time_step])  # Shoreline change [dam] from Barrier3D model update (this timestep)
             if sc_b3d < 0:  # Shoreline erosion
                 start_b3d = start_b3d[abs(sc_b3d):]  # Trim off front
             elif sc_b3d > 0:  # Shoreline progradation
@@ -320,16 +312,20 @@ class BMFTCoupler:
                 start_b3d = np.append(add, start_b3d)  # Add zeros to front
 
             if len(start_b3d) < len(end_b3d):
-                add = np.ones([len(end_b3d) - len(start_b3d)]) * np.mean([self._bmftc[iB3D].db]) * -1  # Add bay cells
+                #add = np.ones([len(end_b3d) - len(start_b3d)]) * np.mean([self._bmftc[iB3D].db]) * -1  # Add bay cells
+                #add = np.ones([len(end_b3d) - len(start_b3d)]) * end_b3d[-1]  # Add marsh cells
+                add = end_b3d[-(len(end_b3d) - len(start_b3d)):] +(barrier3d[iB3D].RSLR[time_step] * 10)
                 start_b3d = np.append(start_b3d, add)
             elif len(start_b3d) > len(end_b3d):
                 subtract = len(end_b3d) - len(start_b3d)
                 start_b3d = start_b3d[:subtract]
 
             # Calculate change in elevation from Barrier3D update
-            end_b3d = end_b3d + (barrier3d[iB3D].RSLR[time_step] * 10)  # Offset sea-level rise from Barrier3D so that it isn't counted twice (i.e. RSLR already taken into account in PyBMFT-C)
+
+            start_b3d = start_b3d - (barrier3d[iB3D].RSLR[time_step] * 10)  # Offset sea-level rise from Barrier3D so that it isn't counted twice (i.e. RSLR already taken into account in PyBMFT-C)
+            end_b3d = end_b3d #+ (barrier3d[iB3D].RSLR[time_step] * 10)  # Offset sea-level rise from Barrier3D so that it isn't counted twice (i.e. RSLR already taken into account in PyBMFT-C)
             elevation_change_b3d = end_b3d - start_b3d  # Change in elevation across transect after Barrier3d update; [dam] horizontal dimension, [m] vertical dimentsion
-            print('B3D elevation change is '+str(elevation_change_b3d))
+            self._b3d_transect_difs.append(elevation_change_b3d)
             # Interpolate from dam to m (horizontal dimension)
             x = np.linspace(1, len(elevation_change_b3d) * 10, num=len(elevation_change_b3d) * 10)
             xp = np.linspace(1, len(elevation_change_b3d), num=len(elevation_change_b3d)) * 10
@@ -369,8 +365,7 @@ class BMFTCoupler:
                 progradation_actual = sum_marsh_dep / new_marsh_height  # [m] Amount of marsh progradation, in which all overwash dep in bay fills first bay cell, then second, and so on until no more sediment. Assumes overwash is not spread out over bay.
 
                 progradation = int(max(math.floor(progradation_actual[iB3D]), 0))  # Round to nearest FULL meter
-                self._bay_overwash_carryover = (
-                                                           progradation_actual - progradation) * new_marsh_height  # Save leftover volume of sediment to be added to sum_bay_dep in following time step
+                self._bay_overwash_carryover = (progradation_actual - progradation) * new_marsh_height  # Save leftover volume of sediment to be added to sum_bay_dep in following time step
 
                 if progradation > 0:
                     # Add subaqueous elevation change
