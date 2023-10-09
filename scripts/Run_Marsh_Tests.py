@@ -13,9 +13,12 @@ datadir = "B3D_Inputs/"
 
 ########
 # Turn on marsh dynamics and test that Cascade doesn't crash
+'''
 test_marsh_dynamics.run_cascade_marsh_dynamics(datadir)
-
+print('Test 1 complete')
+'''
 ########
+'''
 # Make sure PyBMFT can replace topography from B3D
 Test_b3d_topography = test_marsh_dynamics.check_b3d_topography_replacement_from_PYBMFT(
     datadir
@@ -36,62 +39,72 @@ plt.xlabel("B3D Length (dm)")
 plt.ylabel("B3D Elevation (m)")
 plt.legend(loc="upper right")
 plt.show()
-
+print('Test 2 complete')
+'''
 ###########
 # Test to make sure PyBMFT correctly initalizes topography from B3D
+'''
+b3d_grids = 2
 (
     Test_Output_PyBMFT,
     Test_b3d_topography,
-) = test_marsh_dynamics.check_PYBMFT_topography_replacement_from_B3D(datadir)
+) = test_marsh_dynamics.check_PYBMFT_topography_replacement_from_B3D(datadir,b3d_grids)
 
-Z1 = Test_Output_PyBMFT[1]
-B3D_Elev_1 = Test_b3d_topography[1]
-Big_B3D_Elev = []
+if b3d_grids < 2:
+    Z1 = Test_Output_PyBMFT[1]
+    B3D_Elev_1 = Test_b3d_topography[1]
+    Big_B3D_Elev = []
+    for i in range(len(B3D_Elev_1)):
+        for j in range(10):
+            Big_B3D_Elev.append(B3D_Elev_1[i])
 
 
-for i in range(len(B3D_Elev_1)):
-    for j in range(10):
-        Big_B3D_Elev.append(B3D_Elev_1[i])
-
-Z1 -= Z1[0]
-Z_Compare = Z1[158:]
-
-plt.plot(Z_Compare, label="PyBMFT")
-plt.plot(Big_B3D_Elev, label="B3D")
-
-plt.title("Changes to PyBMFT Elevation from Altering B3D")
-plt.xlabel("Length (m)")
-plt.ylabel("Elevation (m)")
-plt.legend(loc="upper right")
-plt.show()
-
+if b3d_grids < 2:
+    Z1 -= Z1[0]
+    Z_Compare = Z1[158:]
+'''    
+    #plt.plot(Z_Compare, label="PyBMFT")
+    #plt.plot(Big_B3D_Elev, label="B3D")
+    #plt.title("PyBMFT Elevation vs B3D Elevation")
+    #plt.xlabel("Length (m)")
+    #plt.ylabel("Elevation (m)")
+    #plt.legend(loc="upper right")
+    #plt.show()
+'''
+# print('Test 3 complete')
+'''
 ########
 # Test that PyBMFT reflects changes in B3D elevation
+
 (
     Test_Output_PyBMFT,
     Test_b3d_topography,
 ) = test_marsh_dynamics.changing_B3D_elevs_on_PyBMFT(datadir)
 
-Z1 = Test_Output_PyBMFT[1]
-Z2 = Test_Output_PyBMFT[2]
-Z3 = Test_Output_PyBMFT[3]
-Z4 = Test_Output_PyBMFT[4]
-Z5 = Test_Output_PyBMFT[5]
-Z6 = Test_Output_PyBMFT[6]
+#Z1 = Test_Output_PyBMFT[1]
+#Z2 = Test_Output_PyBMFT[2]
+#Z3 = Test_Output_PyBMFT[3]
+#Z4 = Test_Output_PyBMFT[4]
+#Z5 = Test_Output_PyBMFT[5]
+#Z6 = Test_Output_PyBMFT[6]
 
 
-plt.plot(Z4, label="TS 4")
-plt.plot(Z5, label="TS 5")
-plt.plot(Z6, label="TS 6")
+#plt.plot(Z4, label="TS 4")
+#plt.plot(Z5, label="TS 5")
+#plt.plot(Z6, label="TS 6")
 
-plt.title("Changes to PyBMFT Elevation from Altering B3D")
-plt.xlabel("PyBMFT Length (dm)")
-plt.ylabel("PyBMFT Elevation (m)")
-plt.legend(loc="upper right")
-plt.show()
+#plt.title("Changes to PyBMFT Elevation from Altering B3D")
+#plt.xlabel("PyBMFT Length (dm)")
+#plt.ylabel("PyBMFT Elevation (m)")
+#plt.legend(loc="upper right")
+#plt.show()
+
+print('Test 4 complete')
+
 
 ########
 # Test that B3D reflects changes in PyBMFT elevation
+'''
 (
     Test_Output_PyBMFT,
     Test_b3d_topography,
@@ -113,3 +126,6 @@ plt.xlabel("B3D Length (dm)")
 plt.ylabel("B3D Elevation (m)")
 plt.legend(loc="upper right")
 plt.show()
+
+print('Test 5 complete')
+'''

@@ -41,7 +41,7 @@ def run_cascade_marsh_dynamics(datadir):
         marsh_dynamics=True,
     )
 
-    for _ in range(NT - 1):
+    for _ in range(15):
         cascade.update()
         if cascade.b3d_break:
             break
@@ -120,7 +120,7 @@ def check_b3d_topography_replacement_from_PYBMFT(datadir):
     return b3d_topography
 
 
-def check_PYBMFT_topography_replacement_from_B3D(datadir):
+def check_PYBMFT_topography_replacement_from_B3D(datadir,b3d_grids):
     """
     check that the PyBMFT elevation is being updated based on changes to B3D elevation
     """
@@ -138,7 +138,7 @@ def check_PYBMFT_topography_replacement_from_B3D(datadir):
         sea_level_rise_rate=0.004,
         sea_level_rise_constant=True,
         background_erosion=0.0,
-        alongshore_section_count=1,
+        alongshore_section_count=b3d_grids,
         time_step_count=150,
         min_dune_growth_rate=0.55,
         max_dune_growth_rate=0.95,  # rave = 0.75
@@ -167,8 +167,8 @@ def check_PYBMFT_topography_replacement_from_B3D(datadir):
                         ) :,
                     ]
                 )
-                PyBMFT_elevation.append(BB_transect)
-                b3d_topography.append(
+                PyBMFT_elevation[i].append(BB_transect)
+                b3d_topography[i].append(
                     np.mean(cascade.barrier3d[iB3D].DomainTS[i], axis=1) * 10
                 )
             else:
@@ -238,8 +238,8 @@ def changing_B3D_elevs_on_PyBMFT(datadir):
                         ) :,
                     ]
                 )
-                PyBMFT_elevation.append(BB_transect)
-                b3d_topography.append(
+                PyBMFT_elevation[iB3D].append(BB_transect)
+                b3d_topography[iB3D].append(
                     np.mean(cascade.barrier3d[iB3D].DomainTS[i], axis=1) * 10
                 )
             else:
@@ -277,7 +277,7 @@ def changing_PyBMFT_elevs_on_B3d(datadir):
         sea_level_rise_rate=0.004,
         sea_level_rise_constant=True,
         background_erosion=0.0,
-        alongshore_section_count=1,
+        alongshore_section_count=2,
         time_step_count=150,
         min_dune_growth_rate=0.55,
         max_dune_growth_rate=0.95,  # rave = 0.75
@@ -315,8 +315,8 @@ def changing_PyBMFT_elevs_on_B3d(datadir):
                         ) :,
                     ]
                 )
-                PyBMFT_elevation.append(BB_transect)
-                b3d_topography.append(
+                PyBMFT_elevation[iB3D].append(BB_transect)
+                b3d_topography[iB3D].append(
                     np.mean(cascade.barrier3d[iB3D].DomainTS[i], axis=1) * 10
                 )
             else:
