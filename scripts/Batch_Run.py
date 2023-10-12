@@ -28,8 +28,9 @@ s_file3 = "/B3D_Inputs/Altered_Twenty_Five_StormTimeSeries_1000.npy"
 s_file = s_file1
 c_wd = os.getcwd()
 nt_run = 15  # Number of years model will run
-run_name = "Print_Test_Runs"
+run_name = "Shoreline_Movement"
 num_of_batches = 1
+marsh_dynamics_on = True
 # rslr_index = [0.0053,.0147,0.026]
 # rslr_index = [.0147,0.026]
 
@@ -63,11 +64,11 @@ def Batch_Runs(
     elevation_file,
     dune_file,
     background_erosion,
-    sea_level_rise_rate=0.004,  # not an array
+    sea_level_rise_rate=0.008,  # not an array
     sea_level_constant=True,  # not an array
     enable_shoreline_offset=False,
     shoreline_offset=[0],
-    marsh_dynamics=True,
+    marsh_dynamics=False,
 ):
 
     # ###############################################################################
@@ -133,7 +134,7 @@ Batch_Runs(
     background_erosion=-1.00,
     sea_level_constant=True,  # not an array
     enable_shoreline_offset=False,
-    marsh_dynamics=True,
+    marsh_dynamics=marsh_dynamics_on,
     sea_level_rise_rate=0.01,
 )
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")

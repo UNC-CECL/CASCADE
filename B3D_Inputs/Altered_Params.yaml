@@ -1,4 +1,4 @@
-BarrierLength: 500
+BarrierLength: 50
 BayDepth: 3.0
 BermEl: 1.9
 BurialLimit: 0.75
@@ -45,7 +45,7 @@ Shrub_ON: 0
 SprayDist: 170
 StormSeries: []
 StormStart: 2
-TMAX: 15
+TMAX: 150
 TideAmp: 1.2
 TimeFruit: 5.0
 UprootLimit: -0.2

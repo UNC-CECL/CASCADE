@@ -393,7 +393,8 @@ class BMFTCoupler:
 
             # Update start domain size to match end domain
             sc_b3d = int(
-                barrier3d[iB3D].ShorelineChangeTS[time_step]
+                barrier3d[iB3D].ShorelineChangeTS[time_step] # NEW
+                #barrier3d[iB3D].ShorelineChangeTS[-1] # OLD
             )  # Shoreline change [dam] from Barrier3D model update (this timestep)
             if sc_b3d < 0:  # Shoreline erosion
                 start_b3d = start_b3d[abs(sc_b3d) :]  # Trim off front
@@ -402,25 +403,79 @@ class BMFTCoupler:
                 start_b3d = np.append(add, start_b3d)  # Add zeros to front
 
             if len(start_b3d) < len(end_b3d):
-                # add = np.ones([len(end_b3d) - len(start_b3d)]) * np.mean([self._bmftc[iB3D].db]) * -1  # Add bay cells
-                # add = np.ones([len(end_b3d) - len(start_b3d)]) * end_b3d[-1]  # Add marsh cells
+                #add = np.ones([len(end_b3d) - len(start_b3d)]) * np.mean([self._bmftc[iB3D].db]) * -1  # Add bay cells OLD
+                #add = np.ones([len(end_b3d) - len(start_b3d)]) * end_b3d[-1]  # Add marsh cells OLD
                 add = end_b3d[-(len(end_b3d) - len(start_b3d)) :] + (
                     barrier3d[iB3D].RSLR[time_step] * 10
-                )
+                ) # NEW
                 start_b3d = np.append(start_b3d, add)
             elif len(start_b3d) > len(end_b3d):
                 subtract = len(end_b3d) - len(start_b3d)
                 start_b3d = start_b3d[:subtract]
 
             # Calculate change in elevation from Barrier3D update
+            '''
+            Find total amount of movement
+            '''
+            # Calculate the amount of total shoreline change
+            if time_step>2:
+                Current_B3D_Shoreline_Change = int(sum(barrier3d[iB3D].ShorelineChangeTS[:time_step]))
+                Previous_B3D_Shoreline_Change = int(sum(barrier3d[iB3D].ShorelineChangeTS[:time_step]))
 
-            start_b3d = start_b3d - (
-                barrier3d[iB3D].RSLR[time_step] * 10
-            )  # Offset sea-level rise from Barrier3D so that it isn't counted twice (i.e. RSLR already taken into account in PyBMFT-C)
-            end_b3d = end_b3d  # + (barrier3d[iB3D].RSLR[time_step] * 10)  # Offset sea-level rise from Barrier3D so that it isn't counted twice (i.e. RSLR already taken into account in PyBMFT-C)
+                # Add amount of shoreline erosion to the front of islands
+                Current_Offset_B3D_Elevations = np.zeros(int(abs(Current_B3D_Shoreline_Change)))
+                Previous_Offset_B3D_Elevations = np.zeros(int(abs(Previous_B3D_Shoreline_Change)))
+
+                B3D_Elev_Current = np.mean(barrier3d[iB3D].DomainTS[time_step], axis=1)*10
+                B3D_Elev_Previous = np.mean(barrier3d[iB3D].DomainTS[time_step-1], axis=1)*10
+
+                # Convert to list
+                Current_Offset_B3D_Elevations = Current_Offset_B3D_Elevations.tolist()
+                Previous_Offset_B3D_Elevations = Previous_Offset_B3D_Elevations.tolist()
+                B3D_Elev_Current = B3D_Elev_Current.tolist()
+                B3D_Elev_Previous = B3D_Elev_Previous.tolist()
+
+                # Combine
+                Current_Offset_B3D_Elevations.extend(B3D_Elev_Current)
+                Previous_Offset_B3D_Elevations.extend(B3D_Elev_Previous)
+
+                if len(Current_Offset_B3D_Elevations) > len(Previous_Offset_B3D_Elevations):
+                    Dif_Len = len(Current_Offset_B3D_Elevations) - len(Previous_Offset_B3D_Elevations)
+                    Zeros_to_back = np.zeros(Dif_Len)
+                    Zeros_to_back = Zeros_to_back.tolist()
+                    Previous_Offset_B3D_Elevations.extend(Zeros_to_back)
+                elif len(Current_Offset_B3D_Elevations) < len(Previous_Offset_B3D_Elevations):
+                    Dif_Len = len(Previous_Offset_B3D_Elevations) - len(Current_Offset_B3D_Elevations)
+                    Zeros_to_back = np.zeros(Dif_Len)
+                    Zeros_to_back = Zeros_to_back.tolist()
+                    Current_Offset_B3D_Elevations.extend(Zeros_to_back)
+
+                # Return to NP.array for math
+                Current_Offset_B3D_Elevations = np.array(Current_Offset_B3D_Elevations)
+                Previous_Offset_B3D_Elevations = np.array(Previous_Offset_B3D_Elevations)
+
+
+
+
+            start_b3d = start_b3d #- (
+                #barrier3d[iB3D].RSLR[time_step] * 10
+            #)  # Offset sea-level rise from Barrier3D so that it isn't counted twice (i.e. RSLR already taken into account in PyBMFT-C)
+            end_b3d = end_b3d # + (barrier3d[iB3D].RSLR[time_step] * 10)  # Offset sea-level rise from Barrier3D so that it isn't counted twice (i.e. RSLR already taken into account in PyBMFT-C)
             elevation_change_b3d = (
                 end_b3d - start_b3d
-            )  # Change in elevation across transect after Barrier3d update; [dam] horizontal dimension, [m] vertical dimentsion
+            )
+            #print('')
+            #print('Method 1 '+str(elevation_change_b3d))
+
+            # Checking methods are the same
+            if time_step > 2:
+                dif_elev_change = Current_Offset_B3D_Elevations - Previous_Offset_B3D_Elevations
+                #Any_Actual_Diffence = elevation_change_b3d - dif_elev_change
+                #print('')
+                #print('Difference method 2 '+str(dif_elev_change))
+
+            # Change in elevation across transect after Barrier3d update; [dam] horizontal dimension, [m] vertical dimentsion
+            #print('Elevation Change is '+str(elevation_change_b3d))
             self._b3d_transect_difs.append(elevation_change_b3d)
             # Interpolate from dam to m (horizontal dimension)
             x = np.linspace(

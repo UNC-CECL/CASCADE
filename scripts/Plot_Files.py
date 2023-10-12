@@ -323,13 +323,15 @@ def plot_ElevAnimation_CASCADE(
 
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/Run_output")
 # run_name='Wreck_ACC_RSLR3_S3' # 5 Length
-run_name = "RSLR_Update_150_DIF_RSLR_1"  # 4 length
+run_name = "IR_150"  # 4 length
 # run_name='Metompkin_Marsh_S10_3'
 # run_name='Smith_S10_3' # 5
 
 name_prefix = run_name
 nt_run = 150
 number_barrier3d_models = 1
+Run_Marsh_Dynamics = True
+
 
 # --------- plot ---------
 output = np.load(run_name + ".npz", allow_pickle=True)
@@ -337,7 +339,6 @@ cascade = output["cascade"]
 cascade = cascade[0]
 b3d = cascade.barrier3d
 ny = np.size(b3d)
-Run_Marsh_Dynamics = True
 
 directory = "/Users/ceclmac/PycharmProjects/CASCADE/"
 # TMax_MGMT = Needed 0

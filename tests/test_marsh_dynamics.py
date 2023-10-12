@@ -9,7 +9,7 @@ from cascade import Cascade
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")
 
 
-NT = 180
+NT = 150
 
 # test to make sure Marsh_Dynamics can be run
 def run_cascade_marsh_dynamics(datadir):
@@ -120,7 +120,7 @@ def check_b3d_topography_replacement_from_PYBMFT(datadir):
     return b3d_topography
 
 
-def check_PYBMFT_topography_replacement_from_B3D(datadir,b3d_grids):
+def check_PYBMFT_topography_replacement_from_B3D(datadir,b3d_grids=1):
     """
     check that the PyBMFT elevation is being updated based on changes to B3D elevation
     """
@@ -139,7 +139,7 @@ def check_PYBMFT_topography_replacement_from_B3D(datadir,b3d_grids):
         sea_level_rise_constant=True,
         background_erosion=0.0,
         alongshore_section_count=b3d_grids,
-        time_step_count=150,
+        time_step_count=NT,
         min_dune_growth_rate=0.55,
         max_dune_growth_rate=0.95,  # rave = 0.75
         num_cores=1,
@@ -153,7 +153,7 @@ def check_PYBMFT_topography_replacement_from_B3D(datadir,b3d_grids):
     PyBMFT_elevation = [[] for i in range(cascade._ny)]
     b3d_topography = [[] for i in range(cascade._ny)]
 
-    for i in range(7):
+    for i in range(20):
         cascade.update()
         for iB3D in range(cascade._ny):
             if cascade._ny < 2:
@@ -167,8 +167,8 @@ def check_PYBMFT_topography_replacement_from_B3D(datadir,b3d_grids):
                         ) :,
                     ]
                 )
-                PyBMFT_elevation[i].append(BB_transect)
-                b3d_topography[i].append(
+                PyBMFT_elevation.append(BB_transect)
+                b3d_topography.append(
                     np.mean(cascade.barrier3d[iB3D].DomainTS[i], axis=1) * 10
                 )
             else:
@@ -207,7 +207,7 @@ def changing_B3D_elevs_on_PyBMFT(datadir):
         sea_level_rise_constant=True,
         background_erosion=0.0,
         alongshore_section_count=1,
-        time_step_count=150,
+        time_step_count=NT,
         min_dune_growth_rate=0.55,
         max_dune_growth_rate=0.95,  # rave = 0.75
         num_cores=1,
