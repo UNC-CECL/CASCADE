@@ -34,7 +34,7 @@ def B3d_PyBMFT_equal(barrier3d, ny, bmftc):
 class BMFTCoupler:
     def __init__(self, ny, nt, barrier3d, name):
 
-        """The AlongshoreCoupler module.
+        """The BMFTCoupler module.
 
         Parameters
         ----------
