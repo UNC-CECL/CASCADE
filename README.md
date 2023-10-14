@@ -1,4 +1,4 @@
-DOI: 10.5281/zenodo.10003562
+[![DOI](https://zenodo.org/badge/310435424.svg)](https://zenodo.org/doi/10.5281/zenodo.10003561)
 
 🌀 🌊 🏄‍♀️ 🏚️ 🌀 🌊 🏄‍♀️ 🏚️ 🌀 🌊 🏄‍♀️ 🏚️ 🌀 🌊 🏄‍♀️ 🏚️
 # cascade
