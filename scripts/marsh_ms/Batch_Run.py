@@ -18,17 +18,17 @@ from cascade.cascade import Cascade
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")
 # Specify variables to use in calling function
 # Elevation file path name
-e_file = "/B3D_Inputs/Marsh_Test_Inputs/InitElevHog.npy"
+e_file = "/data/barrier3d-default-dunes.npy"
 # Dune height path name
-d_file = "/B3D_Inputs/Marsh_Test_Inputs/barrier3d-dunes.npy"
+d_file = "/data/barrier3d-dunes.npy"
 # Storm file path name
-s_file2 = "/B3D_Inputs/StormTimeSeries_1000_10.npy"
-s_file1 = "/B3D_Inputs/Default_StormTimeSeries_1000yr.npy"
-s_file3 = "/B3D_Inputs/Altered_Twenty_Five_StormTimeSeries_1000.npy"
+#s_file2 = "/B3D_Inputs/StormTimeSeries_1000_10.npy"
+s_file1 = "/data/cascade-default-storms.npy"
+#s_file3 = "/B3D_Inputs/Altered_Twenty_Five_StormTimeSeries_1000.npy"
 s_file = s_file1
 c_wd = os.getcwd()
-nt_run = 15  # Number of years model will run
-run_name = "Shoreline_Movement"
+nt_run = 150  # Number of years model will run
+run_name = "Different_Flow_150"
 num_of_batches = 1
 marsh_dynamics_on = True
 # rslr_index = [0.0053,.0147,0.026]
@@ -40,15 +40,15 @@ rmax = 0.95
 
 if number_barrier3d_models > 1:
     elevation_file = [
-        c_wd + "/B3D_Inputs/barrier3d-default-elevation.npy"
+        c_wd + "/data/barrier3d-default-elevation.npy"
     ] * number_barrier3d_models
-    dune_file = [c_wd + "/B3D_Inputs/barrier3d-dunes.npy"] * number_barrier3d_models
+    dune_file = [c_wd + "/data/barrier3d-dunes.npy"] * number_barrier3d_models
 else:
-    elevation_file = c_wd + "/B3D_Inputs/barrier3d-default-elevation.npy"
-    dune_file = c_wd + "/B3D_Inputs/barrier3d-dunes.npy"
+    elevation_file = c_wd + "/data/barrier3d-default-elevation.npy"
+    dune_file = c_wd + "/data/barrier3d-default-dunes.npy"
 
 
-storm_file = c_wd + "/B3D_Inputs/cascade-default-storms.npy"
+storm_file = c_wd + "/data/cascade-default-storms.npy"
 
 # Call function
 
@@ -76,7 +76,7 @@ def Batch_Runs(
     # ###############################################################################
 
     # --------- INITIALIZE ---------
-    datadir = "B3D_Inputs/"
+    datadir = "data/"
     cascade = Cascade(
         datadir,
         name,

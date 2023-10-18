@@ -6,7 +6,7 @@ import os
 
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/Run_output")
 # run_name='Wreck_ACC_RSLR3_S3' # 5 Length
-run_name = "c_level_150"  # 4 length
+run_name = "different_flow_150"  # 4 length
 # run_name='Metompkin_Marsh_S10_3'
 # run_name='Smith_S10_3' # 5
 
@@ -24,6 +24,7 @@ bmft = cascade._bmft_coupler
 BMFT_Landscape = bmft._LandscapeTypeWidth_TS[0]
 Islandward_Marsh_Edge = bmft._bmftc[0]._Forest_edge[49:]
 Bay_Marsh_Edge = bmft._bmftc[0]._Marsh_edge[49:]
+Marsh_Boundary = Islandward_Marsh_Edge - Bay_Marsh_Edge
 Shoreline_Change_TS = cascade.barrier3d[0].ShorelineChangeTS
 BB_Transect_TS = []
 B3D_Transect_TS = []
@@ -97,7 +98,7 @@ plt.plot(BB_Transect_TS[50], label ='50')
 plt.plot(BB_Transect_TS[75], label = '75')
 plt.plot(BB_Transect_TS[100], label = '100')
 plt.plot(BB_Transect_TS[125], label = '125')
-plt.plot(BB_Transect_TS[149], label = '147')
+plt.plot(BB_Transect_TS[148], label = '147')
 plt.legend(loc="upper right")
 plt.show()
 
@@ -114,24 +115,143 @@ plt.show()
 plt.plot(B3D_Transect_TS[25])
 plt.show()
 
-plt.plot(BB_Transect_TS[50], label ='0')
+plt.plot(BB_Transect_TS[148], label ='0')
 plt.show()
 
-plt.plot(B3D_Transect_TS[50])
+plt.plot(B3D_Transect_TS[148])
 plt.show()
 
-Marsh_1 = 500
-Corrected_Location_1 = abs(Islandward_Marsh_Edge[0]-Bay_Marsh_Edge[0])
+#####
+# Interpolate
+
+B3D_Interp_TS = []
+for l in range(0,149):
+    print(l)
+    x = np.linspace(
+        1, len(B3D_Transect_TS[l]) * 10, num=len(B3D_Transect_TS[l]) * 10
+    )
+    xp = (
+            np.linspace(1, len(B3D_Transect_TS[l]), num=len(B3D_Transect_TS[l]))
+            * 10
+    )
+    xp = xp - 5
+    Converted_B3D = np.interp(x, xp, B3D_Transect_TS[l])
+    B3D_Interp_TS.append(Converted_B3D)
 
 
 
-Marsh_2 = 500 - 8
-Corrected_Location_2 = abs(5500 - Islandward_Marsh_Edge[1])
+max_index = np.argmax(BB_Transect_TS[148])
+
+len(B3D_Interp_TS[148])
+
+bmft_transect = BB_Transect_TS[148][max_index:]
+
+plt.plot(bmft_transect)
+plt.plot(Converted_B3D)
+plt.show()
+
+RSLR = (cascade.barrier3d[0].RSLR[0])*10
+RSLR_TS = []
+for i in range(0,len(cascade.barrier3d[0].RSLR)):
+    RSLR_i = (cascade.barrier3d[0].RSLR[i]*i)*10
+    RSLR_TS.append(RSLR_i)
+
+max_index_TS = []
+for k in range(0,len(BB_Transect_TS)):
+    max_index = np.argmax(BB_Transect_TS[k])
+    max_index_TS.append(max_index)
+
+x_forest_TS = []
+x_marsh_TS = []
+
+for t in range(0,len(BB_Transect_TS)):
+    BB_transect = np.flip(
+        cascade._bmft_coupler._bmftc[0].elevation[
+        cascade._bmft_coupler._bmftc[0].startyear + t - 1,
+        int(
+            cascade._bmft_coupler._bmftc[0].Marsh_edge[
+                cascade._bmft_coupler._bmftc[0].startyear + t
+                ]
+        ):,
+        ]
+    )
+
+    x_forest = [cascade._bmft_coupler._bmftc[0].B- int(
+        cascade._bmft_coupler._bmftc[0].Forest_edge[
+            cascade._bmft_coupler._bmftc[0].startyear + t])]
+    x_marsh = [len(BB_transect) - 1]
+    x_forest_TS.append(x_forest)
+    x_marsh_TS.append(x_marsh)
+
+BMFT_Marsh_TS = []
+for k in range(len(BB_Transect_TS)):
+    Temp_BMFT_Marsh = BB_Transect_TS[k][int(x_forest_TS[k][0]):int(x_marsh_TS[k][0])]
+    BMFT_Marsh_TS.append(Temp_BMFT_Marsh)
+
+B3D_Marsh_TS = []
+for l in range(1,len(B3D_Interp_TS)):
+    temp_B3D_Marsh = B3D_Interp_TS[l][-int(Marsh_Boundary[l]):]
+    B3D_Marsh_TS.append(temp_B3D_Marsh)
+
+Cum_RSLR = (59*RSLR) + RSLR_TS
+
+#################
+BMFT_Minus_RSLR = []
+for i in range(len(BMFT_Marsh_TS)):
+    temp_BMFT_Minus_RSLR = BMFT_Marsh_TS[i] - Cum_RSLR[i]
+    BMFT_Minus_RSLR.append(temp_BMFT_Minus_RSLR)
+
+plt.plot(B3D_Marsh_TS[0])
+plt.plot(BMFT_Minus_RSLR[0])
+plt.show()
 
 
-Marsh_100
+plt.plot(B3D_Marsh_TS[140],label='B3D 140')
+plt.plot(BMFT_Minus_RSLR[140], label='BMFT 140')
+plt.plot(B3D_Marsh_TS[141],label='B3D 141')
+plt.plot(BMFT_Minus_RSLR[141], label='BMFT 141')
+#plt.legend(loc='upper right')
+#plt.show()
 
-Corrected_Location_100 = abs(5500 - Islandward_Marsh_Edge[100])
+
+
+plt.plot(B3D_Marsh_TS[142],label='B3D 142')
+plt.plot(BMFT_Minus_RSLR[143], label='BMFT 142')
+plt.legend(loc='upper right')
+plt.show()
+
+plt.plot(B3D_Marsh_TS[146],label='B3D 148')
+plt.plot(BMFT_Minus_RSLR[147], label='BMFT 148')
+plt.legend(loc='upper right')
+plt.show()
+
+plt.plot(B3D_Interp_TS[1])
+plt.plot(BB_Transect_TS[1][max_index_TS[1]:])
+plt.show()
+
+max_B3D = max(B3D_Interp_TS[100])
+max_pyBMFT = max(BB_Transect_TS[100])
+
+dif = RSLR_TS[60]+RSLR_TS[148]
+
+plot_B3D = B3D_Interp_TS[100] + dif
+plt.plot(plot_B3D, label= 'B3D')
+plt.plot(BB_Transect_TS[100][max_index_TS[100]:], label = 'PyBMFT')
+plt.legend(loc="upper right")
+plt.show()
+
+plot_B3D = B3D_Interp_TS[147] + dif
+plt.plot(plot_B3D, label= 'B3D')
+plt.plot(BB_Transect_TS[148][-len(B3D_Interp_TS[147]):], label = 'PyBMFT')
+plt.legend(loc="upper right")
+plt.show()
+
+
+Max_B3D_148 = max(B3D_Interp_TS[148])
+max_pyBMFT_148 = max(BB_Transect_TS[148])
+
+dif_148 = max_pyBMFT_148 - Max_B3D_148
+
 
 # For 5
 
@@ -141,8 +261,9 @@ Location_in_B3D = round(Corrected_Location_5/10)
 Len_TS = len(B3D_Transect_TS[5])
 Xs = list(range(0,Len_TS,1))
 
-plt.plot(Xs[:-Location_in_B3D],B3D_Transect_TS[5][:-Location_in_B3D])
-plt.plot(Xs[-Location_in_B3D:],B3D_Transect_TS[5][-Location_in_B3D:])
+plt.plot(Xs[:-Location_in_B3D+1],B3D_Transect_TS[5][:-Location_in_B3D+1],label = 'Barrier Island')
+plt.plot(Xs[-Location_in_B3D:],B3D_Transect_TS[5][-Location_in_B3D:], label= 'Marsh')
+plt.legend(loc="upper right")
 plt.show()
 
 # For 100
@@ -153,8 +274,8 @@ Location_in_B3D = round(Corrected_Location_100/10)
 Len_TS = len(B3D_Transect_TS[100])
 Xs = list(range(0,Len_TS,1))
 
-plt.plot(Xs[:-Location_in_B3D],B3D_Transect_TS[100][:-Location_in_B3D])
-plt.plot(Xs[-Location_in_B3D:],B3D_Transect_TS[100][-Location_in_B3D:])
+plt.plot(Xs[:-Location_in_B3D+1],B3D_Transect_TS[100][:-Location_in_B3D+1],label='Barrier Island')
+plt.plot(Xs[-Location_in_B3D:],B3D_Transect_TS[100][-Location_in_B3D:],label ='Marsh')
 plt.show()
 
 # For 25
@@ -228,4 +349,22 @@ Xs = list(range(0,Len_TS,1))
 plt.plot(Xs[:-Location_in_B3D],B3D_Transect_TS[95][:-Location_in_B3D])
 plt.plot(Xs[-Location_in_B3D:],B3D_Transect_TS[95][-Location_in_B3D:])
 plt.show()
+
+# For 145
+
+Corrected_Location_145 = abs(Islandward_Marsh_Edge[145]-Bay_Marsh_Edge[145])
+Location_in_B3D = round(Corrected_Location_95/10)
+
+Len_TS = len(B3D_Transect_TS[145])
+Xs = list(range(0,Len_TS,1))
+
+plt.plot(Xs[:-Location_in_B3D],B3D_Transect_TS[145][:-Location_in_B3D])
+plt.plot(Xs[-Location_in_B3D:],B3D_Transect_TS[145][-Location_in_B3D:])
+plt.show()
+
+############
+# Compare Marsh between B3D and PyBMFT
+
+# For 50
+
 

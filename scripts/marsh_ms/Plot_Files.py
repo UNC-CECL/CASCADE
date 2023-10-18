@@ -323,7 +323,7 @@ def plot_ElevAnimation_CASCADE(
 
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/Run_output")
 # run_name='Wreck_ACC_RSLR3_S3' # 5 Length
-run_name = "IR_150"  # 4 length
+run_name = "Different_Flow_150"  # 4 length
 # run_name='Metompkin_Marsh_S10_3'
 # run_name='Smith_S10_3' # 5
 

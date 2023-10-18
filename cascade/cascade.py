@@ -549,6 +549,14 @@ class Cascade:
         if self._brie_coupler._brie.drown == True:
             return
 
+        # Alter initial Barrier3D topography to include marshes if activated
+        if self._marsh_dynamics and self._pybmft_failure[0] == False:
+            self._bmft_coupler.update_B3D_from_BMFT(
+                ny=self._ny,
+                time_step=self._barrier3d[0].time_index,
+                barrier3d=self._barrier3d,
+            )
+
         # Advance B3D by one time step; NOTE: B3D initializes at time_index = 1 and then updates the time_index
         # after update_dune_domain
         batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
@@ -721,14 +729,17 @@ class Cascade:
         # Update B3d elevation based on changes in marsh dynamics
         ###############################################################################
         if self._marsh_dynamics and self._pybmft_failure[iB3D] == False:
-            self._bmft_coupler.updateMarsh(
+            #self._bmft_coupler.updateMarsh(
+            #    ny=self._ny,
+            #    time_step=self._barrier3d[0].time_index,
+            #    barrier3d=self._barrier3d,
+            #)
+            self._bmft_coupler.update_Marsh(
                 ny=self._ny,
                 time_step=self._barrier3d[0].time_index,
                 barrier3d=self._barrier3d,
             )
-            # Just update values for variables you
-            # Change barrier3d object to reflect new initalized changes
-            # self._barrier3d = self._bmft_coupler._barrier3d # Remove
+
             # Check if marsh section has failed and prevent from updating in the future if so
             self._pybmft_failure[iB3D] = self._bmft_coupler._BMFTC_Break
 
