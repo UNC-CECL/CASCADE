@@ -17,22 +17,19 @@ from cascade.cascade import Cascade
 # ###############################################################################
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")
 # Specify variables to use in calling function
-# Elevation file path name
-e_file = "/data/barrier3d-default-dunes.npy"
 # Dune height path name
 d_file = "/data/barrier3d-dunes.npy"
 # Storm file path name
 #s_file2 = "/B3D_Inputs/StormTimeSeries_1000_10.npy"
 s_file1 = "/data/cascade-default-storms.npy"
+RSLR_File = '/data/marsh_init_data/Int_SLR.npy'
 #s_file3 = "/B3D_Inputs/Altered_Twenty_Five_StormTimeSeries_1000.npy"
 s_file = s_file1
 c_wd = os.getcwd()
-nt_run = 150  # Number of years model will run
-run_name = "Different_Flow_150"
+nt_run = 20  # Number of years model will run
+run_name = "Compare Test 100"
 num_of_batches = 1
 marsh_dynamics_on = True
-# rslr_index = [0.0053,.0147,0.026]
-# rslr_index = [.0147,0.026]
 
 number_barrier3d_models = 1
 rmin = 0.55
@@ -40,11 +37,11 @@ rmax = 0.95
 
 if number_barrier3d_models > 1:
     elevation_file = [
-        c_wd + "/data/barrier3d-default-elevation.npy"
+        c_wd + "/data/Hog_Topo.npy"
     ] * number_barrier3d_models
     dune_file = [c_wd + "/data/barrier3d-dunes.npy"] * number_barrier3d_models
 else:
-    elevation_file = c_wd + "/data/barrier3d-default-elevation.npy"
+    elevation_file = c_wd + "/data/Simple_Hog_backshore.npy"
     dune_file = c_wd + "/data/barrier3d-default-dunes.npy"
 
 
@@ -132,9 +129,10 @@ Batch_Runs(
     elevation_file=elevation_file,
     dune_file=dune_file,
     background_erosion=-1.00,
-    sea_level_constant=True,  # not an array
+    sea_level_constant=False,  # not an array
     enable_shoreline_offset=False,
     marsh_dynamics=marsh_dynamics_on,
-    sea_level_rise_rate=0.01,
+    sea_level_rise_rate=0.004,
+
 )
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")

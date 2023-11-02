@@ -323,12 +323,12 @@ def plot_ElevAnimation_CASCADE(
 
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/Run_output")
 # run_name='Wreck_ACC_RSLR3_S3' # 5 Length
-run_name = "Different_Flow_150"  # 4 length
+run_name = "Replace 100"  # 4 length
 # run_name='Metompkin_Marsh_S10_3'
 # run_name='Smith_S10_3' # 5
 
 name_prefix = run_name
-nt_run = 150
+nt_run = 100
 number_barrier3d_models = 1
 Run_Marsh_Dynamics = True
 
@@ -372,7 +372,7 @@ if Run_Marsh_Dynamics:
 
         BB_transect = np.flip(
             cascade._bmft_coupler._bmftc[0].elevation[
-                cascade._bmft_coupler._bmftc[0].startyear + t - 1,
+                cascade._bmft_coupler._bmftc[0].startyear + t,
                 int(
                     cascade._bmft_coupler._bmftc[0].Marsh_edge[
                         cascade._bmft_coupler._bmftc[0].startyear + t

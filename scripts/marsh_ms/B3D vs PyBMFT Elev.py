@@ -6,12 +6,12 @@ import os
 
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/Run_output")
 # run_name='Wreck_ACC_RSLR3_S3' # 5 Length
-run_name = "Replace 250"  # 4 length
+run_name = "Compare Test 100"  # 4 length
 # run_name='Metompkin_Marsh_S10_3'
 # run_name='Smith_S10_3' # 5
 
 name_prefix = run_name
-nt_run = 250
+nt_run = 100
 number_barrier3d_models = 1
 
 # --------- plot ---------
@@ -115,6 +115,11 @@ for i in range(len(bmft._x_s_offset_TS[0])):
     round_temp = round(int(bmft._x_s_offset_TS[0][i])+1)
     Rounded_Offset_TS.append(round_temp)
 
+#Rounded_Offset_TS =+ Rounded_Offset_TS[0]
+
+#Islandward_Marsh_Edge
+# Calculate forest location
+
 
 ######
 # RSLR Calculations
@@ -138,7 +143,7 @@ for t in range(0,len(BB_Transect_TS)):
         cascade._bmft_coupler._bmftc[0].startyear + t - 1,
         int(
             cascade._bmft_coupler._bmftc[0].Marsh_edge[
-                cascade._bmft_coupler._bmftc[0].startyear + t
+                cascade._bmft_coupler._bmftc[0].startyear + t -1
                 ]
         ):,
         ]
@@ -161,7 +166,7 @@ for l in range(1,len(B3D_Interp_TS)):
     temp_B3D_Marsh = B3D_Interp_TS[l][-int(Marsh_Boundary[l]):]
     B3D_Marsh_TS.append(temp_B3D_Marsh)
 
-Cum_RSLR = (bmft._bmftc[0].msl[bmft._bmftc[0].startyear - 1] + bmft._bmftc[0].amp + (bmft._bmftc[0].RSLRi / 1000)) + RSLR_TS #- RSLR #- 0.008
+Cum_RSLR = (bmft._bmftc[0].msl[bmft._bmftc[0].startyear - 1] + bmft._bmftc[0].amp + (bmft._bmftc[0].RSLRi / 1000)) + RSLR_TS
 
 
 
@@ -172,7 +177,7 @@ for i in range(len(BMFT_Marsh_TS)):
     temp_BMFT_Minus_RSLR[:int(x_forest_TS[i][0])] -=RSLR
     BMFT_Minus_RSLR.append(temp_BMFT_Minus_RSLR)
 
-'''
+
 Rel_RSLR = BB_Transect_TS[0]-Cum_RSLR[1]
 start_index= np.argmax(Rel_RSLR)
 Forest_Index_TS = x_forest_TS - start_index
@@ -184,7 +189,7 @@ for i in range(len(BB_Transect_TS)):
     temp_BMFT_Minus_RSLR = BB_Transect_TS[i] - Cum_RSLR[i]
     temp_BMFT_Minus_RSLR[:int(Forest_Index_TS[i])] -= RSLR
     BMFT_TS.append(temp_BMFT_Minus_RSLR[np.argmax(temp_BMFT_Minus_RSLR):])
-'''
+
 
 #########
 # Test
@@ -194,82 +199,38 @@ t1 = BMFT_Minus_RSLR[0][Rounded_Offset_TS[1]:]
 t2 = Conv_Post_Change_Transect_TS[1][:len(t1)]
 assert_array_almost_equal(x= t1, y=t2, decimal = 3)
 
+dif = abs(t1-t2)
 
-t1 = BMFT_Minus_RSLR[150][Rounded_Offset_TS[151]:]
-t2 = Conv_Post_Change_Transect_TS[151][:len(t1)]
-assert_array_almost_equal(x= t1, y=t2, decimal = 3)
-
-t1 = BMFT_Minus_RSLR[200][Rounded_Offset_TS[201]:]
-t2 = Conv_Post_Change_Transect_TS[201][:len(t1)]
-assert_array_almost_equal(x= t1, y=t2, decimal = 3)
-
-t1 = BMFT_Minus_RSLR[200][Rounded_Offset_TS[201]:]
-t2 = Conv_Post_Change_Transect_TS[201][:len(t1)]
-assert_array_almost_equal(x= t1, y=t2, decimal = 3)
-
-t1 = BMFT_Minus_RSLR[240][Rounded_Offset_TS[241]:]
-t2 = Conv_Post_Change_Transect_TS[241][:len(t1)]
-
-B3D_Forest_Location_TS = []
-for i in range(len(Rounded_Offset_TS)):
-    Forest_Temp = int(len(bmft_elev[0]) - Rounded_Offset_TS[i] - bmft._bmftc[0]._Forest_edge[50 + i])
-    B3D_Forest_Location_TS.append(Forest_Temp)
+ bmft._bmftc[0].amp - bmft._bmftc[0].Dmin + 0.03 - bmft._bmftc._msl[50]
 
 
-#plt.plot(Conv_Post_Change_Transect_TS[0][:B3D_Forest_Location_TS[0]+1], label ='Forest')
-plt.plot(Conv_Post_Change_Transect_TS[0][B3D_Forest_Location_TS[0]:], label ='Marsh 0')
-plt.plot(Conv_Post_Change_Transect_TS[1][B3D_Forest_Location_TS[1]:], label ='Marsh 1')
-#plt.plot(BMFT_TS[0],label='BMFT 0')
-plt.legend(loc='upper right')
-plt.show()
-
-Marsh_Elev_Change = [list(np.zeros(10000))]
-for i in range(len(BB_Transect_TS)-1):
-    Dummy_Elev_Change = np.zeros(10000)
-    Orginal_Elev = BB_Transect_TS[i]
-    New_Elev = BB_Transect_TS[i + 1]
-    Dif_Len = len(New_Elev) - len(Orginal_Elev)
-    if len(New_Elev) > len(Orginal_Elev):
-        add_zeros = np.zeros(Dif_Len)
-        Orginal_Elev = np.append(Orginal_Elev, add_zeros)
-    elif len(New_Elev) < len(Orginal_Elev):
-        Orginal_Elev = Orginal_Elev[:Dif_Len]
-
-    Dif = New_Elev - Orginal_Elev
-    Dummy_Elev_Change[x_forest_TS[i][0]:x_marsh_TS[i][0]] = Dif[x_forest_TS[i][0]:x_marsh_TS[i][0]]
-    Marsh_Elev_Change.append(list(Dummy_Elev_Change))
-Marsh_Elev_Change = np.array(Marsh_Elev_Change)
+b1 = BMFT_Minus_RSLR[27][Rounded_Offset_TS[28]:]
+b2 = Conv_Post_Change_Transect_TS[28][:len(b1)]
+dif = abs(b1-b2)
+max(dif)
+Difference_Values = np.zeros(len(dif))
 
 
-Total_Marsh_Accretion_TS = [list(Marsh_Elev_Change[0])]
-for j in range(1,len(Marsh_Elev_Change)):
-    Sum_Marsh = Total_Marsh_Accretion_TS[(j-1)] + Marsh_Elev_Change[j]
-    Total_Marsh_Accretion_TS.append(Sum_Marsh)
+temp_BMFT_Minus_RSLR = BB_Transect - RSLR
+temp_BMFT_Minus_RSLR[:int(x_forest_TS[i][0])] -=RSLR
 
+i = 0
 
-plt.plot(Total_Marsh_Accretion_TS[0][Rounded_Offset_TS[0]:1350],label='TS 0')
-plt.plot(Total_Marsh_Accretion_TS[10][Rounded_Offset_TS[0]:1350],label='TS 10')
-plt.plot(Total_Marsh_Accretion_TS[20][Rounded_Offset_TS[0]:1350],label='TS 20')
-plt.plot(Total_Marsh_Accretion_TS[40][Rounded_Offset_TS[0]:1350],label='TS 40')
-plt.plot(Total_Marsh_Accretion_TS[60][Rounded_Offset_TS[0]:1350],label='TS 60')
-plt.plot(Total_Marsh_Accretion_TS[80][Rounded_Offset_TS[0]:1350],label='TS 80')
-plt.plot(Total_Marsh_Accretion_TS[100][Rounded_Offset_TS[0]:1350],label='TS 100')
-plt.plot(Total_Marsh_Accretion_TS[120][Rounded_Offset_TS[0]:1350],label='TS 120')
-plt.plot(Total_Marsh_Accretion_TS[140][Rounded_Offset_TS[0]:1350],label='TS 140')
-plt.legend(loc='upper left')
-plt.show()
+BB_transect = np.flip(
+    cascade._bmft_coupler._bmftc[0].elevation[
+    cascade._bmft_coupler._bmftc[0].startyear + i - 1,
+    int(
+        cascade._bmft_coupler._bmftc[0].Marsh_edge[
+            cascade._bmft_coupler._bmftc[0].startyear + i
+            ]
+    ):,
+    ]
+)
+#offset = round(cascade._bmft_coupler._x_s_offset[0])
+bmft_elev = cascade._bmft_coupler._bmftc[0].elevation[50]
+forest_edge = cascade._bmft_coupler._bmftc[0]._Forest_edge[50 + i]
 
-''''''
-Dif = BB_Transect_TS[1] - BB_Transect_TS[0]
+Ocean_Forest_Edge = int(len(bmft_elev) - forest_edge)
+ocean_edge = np.where(BB_transect != BB_transect[0])
+ocean_edge = ocean_edge[0][0]
 
-Orginal_Elev = BB_Transect_TS[i]
-New_Elev = BB_Transect_TS[i+1]
-Dif_Len = len(New_Elev) - len(Orginal_Elev)
-if len(New_Elev) > len(Orginal_Elev):
-    add_zeros = np.zeros(Dif_Len)
-    Orginal_Elev = np.append(Orginal_Elev,add_zeros)
-elif len(New_Elev) < len(Orginal_Elev):
-    New_Elev = New_Elev[:Dif_Len]
-
-Dif = New_Elev- Orginal_Elev
-Dummy_Elev_Change[x_forest_TS[i][0]:x_marsh_TS[i][0]] = Dif[x_forest_TS[i][0]:x_marsh_TS[i][0]]
