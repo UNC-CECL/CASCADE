@@ -224,6 +224,16 @@ def initialize_equal(
 
     return barrier3d
 
+def set_specified_variable_RSLR(
+        barrier3d,
+        brie,
+        RSLR_Rates,
+        ny,
+    ):
+    brie.slr = RSLR_Rates
+    for i in range(ny):
+        barrier3d[i].RSLR = RSLR_Rates/10
+
 
 class BrieCoupler:
     """Couple brie and barrier3d
@@ -343,16 +353,9 @@ class BrieCoupler:
 
     def offset_shoreline(self, enable_shoreline_offset, offset_values, ny):
         if enable_shoreline_offset == True:
-            # print("Shoreline offset is activated!")
-            # print("Beginning Offset")
-            # print(self._brie.x_t)
-            # print(self._brie.x_s)
             for i in range(ny):
                 self._brie.x_t[i] = self._brie.x_t[i] + offset_values[i]
                 self._brie.x_s[i] = self._brie.x_s[i] + offset_values[i]
-            # print(self._brie.x_t)
-            # print(self._brie.x_s)
-            # print('Adjusted offset')
 
     def update_ast(self, barrier3d, x_t_dt, x_s_dt, h_b_dt):
         """Pass shoreline and shoreface values from B3D subdomains to brie for use

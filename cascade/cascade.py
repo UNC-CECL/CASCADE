@@ -7,7 +7,7 @@ import math
 
 from .roadway_manager import RoadwayManager, set_growth_parameters
 from .beach_dune_manager import BeachDuneManager
-from .brie_coupler import BrieCoupler, initialize_equal, batchB3D
+from .brie_coupler import BrieCoupler, initialize_equal, batchB3D, set_specified_variable_RSLR
 from .chom_coupler import ChomCoupler
 from .bmft_coupler import BMFTCoupler
 from bmftc import Bmftc
@@ -155,6 +155,8 @@ class Cascade:
         marsh_dynamics=False,  # --- Marsh and island offset modules --- #
         enable_shoreline_offset=False,
         shoreline_offset=[],
+        user_inputed_RSLR=False,
+        user_inputed_RSLR_rate = [],
     ):
         """
 
@@ -246,6 +248,11 @@ class Cascade:
         beach_full_cross_shore: int, optional
             The cross-shore extent (meters) of fully nourished beach (i.e., the community desired beach width) [m]
         write comments for each variable
+        user_inputed_RSLR: bool, optional
+            Whether the user will be inputing their own generated RSLR rates
+        user_inputed_RSLR_rates: list, optional
+            Time series of RSLR rates for Cascade to use, RSLR rates must be floats and be in m/yr.
+
 
         Examples
         --------
@@ -292,6 +299,8 @@ class Cascade:
         self._pybmft_failure = [
             False
         ] * self._ny  # Tracks whether marsh drowns / exists and whether PybMFT coupling runs
+        self._user_inputed_RSLR = user_inputed_RSLR
+        self._user_inputed_RSLR_rate = user_inputed_RSLR_rate
 
         # initialization errors
         if (
@@ -344,6 +353,15 @@ class Cascade:
             dune_file=self._dune_file,  # can be array
             elevation_file=self._elevation_file,  # can be array
         )
+
+        # Alter RSLR to set sequence
+        if self._user_inputed_RSLR == True:
+            set_specified_variable_RSLR(
+                barrier3d=self._barrier3d,
+                brie=self._brie_coupler._brie,
+                RSLR_Rates=self._user_inputed_RSLR_rate,
+                ny = self._ny
+            )
 
         ###############################################################################
         # initialize human dynamics modules
@@ -729,11 +747,6 @@ class Cascade:
         # Update B3d elevation based on changes in marsh dynamics
         ###############################################################################
         if self._marsh_dynamics and self._pybmft_failure[iB3D] == False:
-            #self._bmft_coupler.updateMarsh(
-            #    ny=self._ny,
-            #    time_step=self._barrier3d[0].time_index,
-            #    barrier3d=self._barrier3d,
-            #)
             self._bmft_coupler.update_Marsh(
                 ny=self._ny,
                 time_step=self._barrier3d[0].time_index,

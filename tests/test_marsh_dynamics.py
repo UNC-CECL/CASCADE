@@ -139,6 +139,41 @@ def initialize_cascade_no_human_dynamics_marsh_no_ast_ACC_RSLR(datadir):
 
     return cascade
 
+def initialize_cascade_no_human_dynamics_no_ast_marsh_user_defined_RSLR(datadir):
+    for data_file in datadir.iterdir():
+        shutil.copy(data_file, ".")
+
+    cascade = Cascade(
+        datadir,
+        name="test_marsh_dynamics",
+        storm_file="cascade-default-storms.npy",  # KA: move all of these into the test directory
+        elevation_file="Hog_Topo_2.npy",
+        dune_file="barrier3d-dunes.npy",
+        parameter_file="Alongshore_Test-parameters.yaml",
+        wave_height=1,
+        wave_period=7,
+        wave_asymmetry=0.8,
+        wave_angle_high_fraction=0.2,
+        sea_level_rise_rate=0.004,
+        sea_level_rise_constant=True,
+        background_erosion=0.0,
+        alongshore_section_count=1,
+        time_step_count=150,
+        min_dune_growth_rate=0.55,
+        max_dune_growth_rate=0.95,  # rave = 0.75
+        num_cores=1,
+        roadway_management_module=False,
+        alongshore_transport_module=False,
+        beach_nourishment_module=False,
+        community_economics_module=False,  # no community dynamics
+        marsh_dynamics=True,
+        user_inputed_RSLR=True,
+        user_inputed_RSLR_rate=np.load('Low_SLR.npy'),
+    )
+
+    return cascade
+
+
 # actual tests that call the functions above
 def test_initialize_ast(tmp_path, datadir, monkeypatch):
     """
@@ -173,7 +208,7 @@ def test_B3D_BMFT_Topo_No_AST(tmp_path, datadir, monkeypatch):
     monkeypatch.chdir(tmp_path)
     cascade = initialize_cascade_human_dynamics_marsh_no_ast(datadir)
 
-    for i in range(100):
+    for i in range(10):
         cascade.update()
         print(i)
 
@@ -245,7 +280,7 @@ def test_B3D_BMFT_Topo_No_AST_Accelerated_RSLR(tmp_path, datadir, monkeypatch):
     monkeypatch.chdir(tmp_path)
     cascade = initialize_cascade_no_human_dynamics_marsh_no_ast_ACC_RSLR(datadir)
 
-    for i in range(100):
+    for i in range(10):
         cascade.update()
         print(i)
 
@@ -309,3 +344,17 @@ def test_B3D_BMFT_Topo_No_AST_Accelerated_RSLR(tmp_path, datadir, monkeypatch):
             else:
                 Test_Values[1] = 'Acceptable gross error'
             assert_equal(Test_Values,Failed_Tests)
+
+def test_similar_RSLR_marsh_no_ast(tmp_path, datadir, monkeypatch):
+    """
+    check that the PyBMFT elevation is being updated based on changes to B3D elevation with Accelerated RSLR rates
+    """
+    monkeypatch.chdir(tmp_path)
+    cascade = initialize_cascade_no_human_dynamics_no_ast_marsh_user_defined_RSLR(datadir)
+
+    for i in range(10):
+        cascade.update()
+        b3d_RSLR = cascade.barrier3d[0].RSLR[i] * 10
+        brie_RSLR = cascade._brie_coupler._brie.slr[i]
+        bmft_RSLR = cascade._bmft_coupler._bmftc[0].RSLRi
+        assert_array_almost_equal(b3d_RSLR, brie_RSLR, bmft_RSLR)

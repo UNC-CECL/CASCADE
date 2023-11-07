@@ -18,18 +18,31 @@ from cascade.cascade import Cascade
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")
 # Specify variables to use in calling function
 # Dune height path name
-d_file = "/data/barrier3d-dunes.npy"
+d_file = "/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Smith_Dune.npy"
+e_file = "/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Smith_Topo.npy"
 # Storm file path name
-#s_file2 = "/B3D_Inputs/StormTimeSeries_1000_10.npy"
-s_file1 = "/data/cascade-default-storms.npy"
-RSLR_File = '/data/marsh_init_data/Int_SLR.npy'
-#s_file3 = "/B3D_Inputs/Altered_Twenty_Five_StormTimeSeries_1000.npy"
-s_file = s_file1
+RSLR_File = '/data/marsh_init_data/High_SLR.npy'
+Num_Storms = 50
 c_wd = os.getcwd()
-nt_run = 20  # Number of years model will run
-run_name = "Compare Test 100"
+nt_run = 150  # Number of years model will run
+run_name = []
+storm_name = []
+for i in range(0,Num_Storms):
+    run_name.append('Smith_Baseline_Storms_High_RSLR_'+str(i))
+    storm_name.append('/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Baseline/StormList_'+
+                       str(i)+'_baseline.npy')
 num_of_batches = 1
 marsh_dynamics_on = True
+run_set_RSLR = True
+
+# Name storms
+
+
+if run_set_RSLR == True:
+    set_RSLR = np.load('/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Low_SLR.npy')
+else:
+    set_RSLR = []
+
 
 number_barrier3d_models = 1
 rmin = 0.55
@@ -66,6 +79,8 @@ def Batch_Runs(
     enable_shoreline_offset=False,
     shoreline_offset=[0],
     marsh_dynamics=False,
+    user_inputed_RSLR=False,
+    user_inputed_RSLR_rate=[],
 ):
 
     # ###############################################################################
@@ -100,6 +115,9 @@ def Batch_Runs(
         enable_shoreline_offset=enable_shoreline_offset,  # Bool
         shoreline_offset=shoreline_offset,
         marsh_dynamics=marsh_dynamics,
+        user_inputed_RSLR = user_inputed_RSLR,
+        user_inputed_RSLR_rate = user_inputed_RSLR_rate,
+
     )
     # --------- LOOP ---------
     for time_step in range(nt - 1):
@@ -117,22 +135,25 @@ def Batch_Runs(
 
     return cascade
 
+for j in range(0,Num_Storms):
 
-Batch_Runs(
-    nt=nt_run,
-    name=run_name,
-    storm_file=storm_file,
-    alongshore_section_count=number_barrier3d_models,
-    num_cores=3,
-    rmin=rmin,
-    rmax=rmax,
-    elevation_file=elevation_file,
-    dune_file=dune_file,
-    background_erosion=-1.00,
-    sea_level_constant=False,  # not an array
-    enable_shoreline_offset=False,
-    marsh_dynamics=marsh_dynamics_on,
-    sea_level_rise_rate=0.004,
-
-)
-os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")
+    Batch_Runs(
+        nt=nt_run,
+        name=run_name[j],
+        storm_file=storm_name[j],
+        alongshore_section_count=number_barrier3d_models,
+        num_cores=3,
+        rmin=rmin,
+        rmax=rmax,
+        elevation_file=e_file,
+        dune_file=d_file,
+        background_erosion=-1.00,
+        sea_level_constant=False,  # not an array
+        enable_shoreline_offset=False,
+        marsh_dynamics=marsh_dynamics_on,
+        sea_level_rise_rate=0.004,
+        user_inputed_RSLR=run_set_RSLR,
+        user_inputed_RSLR_rate=set_RSLR,
+    )
+    os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")
+    print('Finished '+str(run_name[j]))
