@@ -61,5 +61,5 @@ nn: 0.5
 rmax: 0.95
 rmin: 0.55
 s_sf_eq: 0.01698590034494604
-storm_file: /Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Baseline/StormList_2_baseline.npy
+storm_file: /Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Ten_Percent_Increase/StormList_49_10_percent_increase.npy
 threshold_in: 0.25

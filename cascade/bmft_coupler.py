@@ -733,7 +733,7 @@ class BMFTCoupler:
                 x_f = int(len(self._bmftc[iB3D].elevation[0]) - self._x_s_offset[iB3D] - self._bmftc[iB3D]._Forest_edge[
                     self._bmftc[iB3D].startyear + bmft_time_step])
 
-                B3D_Elev_Marsh =  self._bmftc[iB3D].amp - self._bmftc[iB3D].Dmin + 0.03 - bmft._bmftc._msl[self._bmftc[iB3D].startyear]
+                B3D_Elev_Marsh =  self._bmftc[iB3D].amp - self._bmftc[iB3D].Dmin + 0.03 - self._bmftc[iB3D]._msl[self._bmftc[iB3D].startyear]
 
                 b3d_transect = b3d_transect[:x_f]
                 b3d_transect = np.flip(b3d_transect)
