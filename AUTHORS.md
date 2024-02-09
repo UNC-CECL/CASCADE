@@ -2,9 +2,10 @@
 
 ## Development Leads
 
-* Katherine Anarde <kanarde@ncsu.edu>
+* [Katherine Anarde](https://github.com/anardek)
+* [Eric Hutton](https://github.com/mcflugen)
 
 ## Contributors
 
-* Eric Hutton <mcflugen@gmail.com>
 * Zachary Williams <zachary.c.williams@duke.edu>
+* [Ian Reeves](https://github.com/irbreeves)
