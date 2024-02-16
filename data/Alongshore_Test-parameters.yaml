@@ -52,8 +52,8 @@ UprootLimit: -0.2
 beta: 0.04
 disp_mu: -0.721891
 disp_sigma: 1.5
-dune_file: /Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Smith_Dune.npy
-elevation_file: /Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Smith_Topo.npy
+dune_file: /Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Metompkin_Bay_Dune.npy
+elevation_file: /Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Metompkin_Bay_Topo.npy
 growth_param_file: growthparam_1000dam.npy
 k_sf: 19324.753176079226
 mm: 2.0
@@ -61,5 +61,5 @@ nn: 0.5
 rmax: 0.95
 rmin: 0.55
 s_sf_eq: 0.01698590034494604
-storm_file: /Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Ten_Percent_Increase/StormList_49_10_percent_increase.npy
+storm_file: /Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Five_Percent_Increase/StormList_49_5_percent_increase.npy
 threshold_in: 0.25
