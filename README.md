@@ -110,9 +110,9 @@ nox
 [nox]: https://nox.thea.codes/
 
 ## Example simulations
-This ReadMe corresponds to the version of *cascade* used for the simulations detailed in 
-*"The Future of Developed Barrier Systems - Part I: Pathways Toward Uninhabitability, Drowning, and Rebound" by 
-Anarde et al., (2024, [Earth ArXiv preprint](https://doi.org/10.31223/X5P947))* -- namely, v1.0.0. For a more complete 
+This ReadMe corresponds to the version of *cascade* used for the simulations detailed in
+*"The Future of Developed Barrier Systems - Part I: Pathways Toward Uninhabitability, Drowning, and Rebound" by
+Anarde et al., (2024, [Earth ArXiv preprint](https://doi.org/10.31223/X5P947))* -- namely, v1.0.0. For a more complete
 set of example model runs and description of module functionality, we direct the use to the examples
 provided in `notebooks`.
 
