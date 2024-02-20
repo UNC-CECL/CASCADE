@@ -56,11 +56,15 @@ of *cascade*.
 To install the latest release of *cascade* using *pip*, simply run the following
 in your terminal of choice:
 
-      pip install coastal-cascade
+```bash
+pip install coastal-cascade
+```
 
 You can also use `conda`:
 
-      conda install coastal-cascade
+```bash
+conda install coastal-cascade
+```
 
 ### From Source
 
@@ -70,32 +74,44 @@ need to get *cascade*'s source code, and then install *cascade* from that code.
 
 To get the source code you can either clone the repository with *git*:
 
-      git clone git@github.com/UNC-CECL/cascade
+```bash
+git clone git@github.com/UNC-CECL/cascade
+```
 
 or download a [zip file](https://github.com/UNC-CECL/CASCADE/archive/refs/heads/main.zip):
 
-      curl -OL https://github.com/UNC-CECL/CASCADE/archive/refs/heads/main.zip
+```bash
+curl -OL https://github.com/UNC-CECL/CASCADE/archive/refs/heads/main.zip
+```
 
 Once you have a copy of the source code, you can install it into your current
 environment,
 
-      pip install -e .
+```bash
+pip install -e .
+```
 
 We use [nox] to automate routine maintenance tasks like running the tests,
 removing lint, etc. Install [nox] with *pip*::
 
-      pip install nox
+```bash
+pip install nox
+```
 
 When you're done making changes, you can now run [nox] to check that the tests
 pass and that there isn't any lint:
 
-      nox -s test  # run the unit tests
-      nox -s test-notebooks  # test that the notebooks run successfully
-      nox -s lint  # find and, where possible, remove lint (black, flake8, etc.)
+```bash
+nox -s test  # run the unit tests
+nox -s test-notebooks  # test that the notebooks run successfully
+nox -s lint  # find and, where possible, remove lint (black, flake8, etc.)
+```
 
 To run all of the above in a single command:
 
-      nox
+```bash
+nox
+```
 
 [nox]: https://nox.thea.codes/
 
@@ -104,14 +120,14 @@ For a more complete set of example model runs and description of module function
 provided in `notebooks`.
 
 Example (default) data inputs for cascade are provided in the `data` directory:
-```
+```python
 from cascade.cascade import Cascade
 
 datadir = "data/"
 ```
 To initialize an instance of *cascade* with no human dynamics, 3 barrier segments (each 500-m long), and
 default *barrier3d* and *brie* parameters:
-```
+```python
 cascade = Cascade(
     datadir,
     name="no_human_dynamics_3_barrier_segments",
@@ -123,7 +139,7 @@ cascade = Cascade(
 )
 ```
 To initialize an instance of *cascade* with roadway barrier management on 1 barrier segment:
-```
+```python
 cascade = Cascade(
     datadir,
     name="roadway_mgmt_1_barrier_segments",
@@ -135,7 +151,7 @@ cascade = Cascade(
 )
 ```
 To initialize *cascade* with community barrier management on 1 barrier segment:
-```
+```python
 cascade = Cascade(
     datadir,
     name="community_mgmt_1_barrier_segments",
@@ -147,7 +163,7 @@ cascade = Cascade(
 )
 ```
 Once initialized, a *cascade* time loop can be completed as follows:
-```
+```python
 for time_step in range(cascade.time_step_count - 1):
     cascade.update()
     if cascade.b3d_break:
