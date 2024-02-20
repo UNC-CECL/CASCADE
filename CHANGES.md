@@ -1,5 +1,11 @@
 # Changelog for CASCADE
 
+## 1.0.0 (2024-02-09)
+
+
+- Finalized for publication. No changes to the code, but finalized to version 1.0.0
+
+
 ## 0.1.1 (2023-03-21)
 
 - Added additional tests for the ``rebuild_dunes`` function that uses that new

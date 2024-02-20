@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 
-Copyright (c) `2023` `Katherine Anarde`
+Copyright (c) `2024` `Katherine Anarde`
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation

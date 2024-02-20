@@ -1,5 +1,5 @@
-elevation_file: barrier3d-default-elevation.npy # File that contains initial elevations [m MHW]
-dune_file: barrier3d-default-dunes.npy  # File that contains initial dune height values [m]
+elevation_file: barrier3d-default-elevation.npy # File with initial elevations in decameters [dam x dam x dam MHW]
+dune_file: barrier3d-default-dunes.npy  # File with initial dune height values in decameters [dam x dam x dam]
 growth_param_file: barrier3d-default-growthparam.npy # File that contains initial growth parameters
 storm_file: barrier3d-default-storms.npy # File that contains storm data
 TMAX: 51                        # [y] Duration of simulation

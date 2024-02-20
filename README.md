@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/310435424.svg)](https://zenodo.org/doi/10.5281/zenodo.10003561)
+
 🌀 🌊 🏄‍♀️ 🏚️ 🌀 🌊 🏄‍♀️ 🏚️ 🌀 🌊 🏄‍♀️ 🏚️ 🌀 🌊 🏄‍♀️ 🏚️
 # cascade
 
@@ -13,8 +15,8 @@ are incorporated in *cascade* in two separate modules. The first module simulate
 pavement damage during overwashing events, including rebuilding roadways at sufficiently low elevations to allow for
 burial by overwash, constructing large dunes, and relocating the road into the barrier interior. The second module
 incorporates management strategies for maintaining a coastal community, including beach nourishment, dune construction,
-and overwash removal. For a full description of model dynamics, please see the pre-print of "The Future of Developed
-Barrier Systems: Pathways Toward Uninhabitability, Drowning, and Rebound" by Anarde et al., (in review, [Earth ArXiv preprint](https://doi.org/10.31223/X5P947)).
+and overwash removal. For a full description of model dynamics, please see "The Future of Developed
+Barrier Systems - Part I: Pathways Toward Uninhabitability, Drowning, and Rebound" by Anarde et al., (2024, [Earth ArXiv preprint](https://doi.org/10.31223/X5P947)).
 
 ![ModelTimeLoop-01](https://user-images.githubusercontent.com/57640439/226623608-d0c58437-d44f-4dca-8f43-0b92623fcda6.png)
 
@@ -46,15 +48,7 @@ Community Surface Dynamics Modeling System. The repositories for the models coup
 
 ## Installation
 
-This ReadMe corresponds to the development version of *cascade* used for the
-simulations detailed in *"The Future of Developed Barrier Systems: Pathways Toward
-Uninhabitability, Drowning, and Rebound" by Anarde et al., (in review, [Earth ArXiv preprint](https://doi.org/10.31223/X5P947))*. Prior
-to publication, *cascade* will be made available for easy installation using either
-`pip` or `conda`. Reviewers can follow the instructions provided below for installation
-of *cascade*.
-
-To install the latest release of *cascade* using *pip*, simply run the following
-in your terminal of choice:
+To install the latest release of *cascade* using *pip*, simply run the following in your terminal of choice:
 
 ```bash
 pip install coastal-cascade
@@ -69,7 +63,7 @@ conda install coastal-cascade
 ### From Source
 
 *cascade* is actively being developed on GitHub, where the code is freely available.
-If you would like to modifying code or contributing new code to *cascade*, you will first
+If you would like to modify code or contribute new code to *cascade*, you will first
 need to get *cascade*'s source code, and then install *cascade* from that code.
 
 To get the source code you can either clone the repository with *git*:
@@ -116,7 +110,10 @@ nox
 [nox]: https://nox.thea.codes/
 
 ## Example simulations
-For a more complete set of example model runs and description of module functionality, we direct the use to the examples
+This ReadMe corresponds to the version of *cascade* used for the simulations detailed in 
+*"The Future of Developed Barrier Systems - Part I: Pathways Toward Uninhabitability, Drowning, and Rebound" by 
+Anarde et al., (2024, [Earth ArXiv preprint](https://doi.org/10.31223/X5P947))* -- namely, v1.0.0. For a more complete 
+set of example model runs and description of module functionality, we direct the use to the examples
 provided in `notebooks`.
 
 Example (default) data inputs for cascade are provided in the `data` directory:
