@@ -5,8 +5,11 @@ import pytest
 from numpy.testing import assert_array_almost_equal
 
 from cascade import Cascade
-from cascade.beach_dune_manager import filter_overwash, shoreface_nourishment
-from cascade.roadway_manager import bulldoze, rebuild_dunes, set_growth_parameters
+from cascade.beach_dune_manager import filter_overwash
+from cascade.beach_dune_manager import shoreface_nourishment
+from cascade.roadway_manager import bulldoze
+from cascade.roadway_manager import rebuild_dunes
+from cascade.roadway_manager import set_growth_parameters
 
 NT = 180
 
@@ -394,9 +397,9 @@ def test_overwash_filter():
         np.zeros([100, 20]) + 3.0
     )  # units of meters in X (cross-shore) Y (alongshore) Z (vertical)
     pre_xyz_interior_grid = post_xyz_interior_grid - 1.0
-    post_xyz_interior_grid[
-        0, :
-    ] = 2.0  # now make it so overwash wasn't deposited in some areas
+    post_xyz_interior_grid[0, :] = (
+        2.0  # now make it so overwash wasn't deposited in some areas
+    )
     yxz_dune_grid = np.zeros([20, 10])  # dune domain is 10 cells (m) wide
     # remove 40% of 1 m^3 of overwash in each cell,
     (

@@ -39,12 +39,14 @@ nourishment and subsequent shoreline change, we establish a beach width based on
 initial beach slope defined in Barrier3D to develop the storm series. This beach
 width is then modified dynamically via nourishment and shoreface dynamics.
 """
+
 import copy
 import math
 
 import numpy as np
 
-from .roadway_manager import rebuild_dunes, set_growth_parameters
+from .roadway_manager import rebuild_dunes
+from .roadway_manager import set_growth_parameters
 
 dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
 
@@ -292,9 +294,9 @@ def filter_overwash(
     else:
         # spread overwash removed from roadway equally over the adjacent dune cells
         total_overwash_removal_dune_volume = sum(overwash_removal_dune)  # array of dam
-        total_overwash_removal_dune_volume[
-            total_overwash_removal_dune_volume < 0
-        ] = 0  # don't let it erode a dune
+        total_overwash_removal_dune_volume[total_overwash_removal_dune_volume < 0] = (
+            0  # don't let it erode a dune
+        )
         number_dune_cells = np.size(post_storm_yxz_dune_grid, 1)
         overwash_volume_to_dune = np.transpose(
             [total_overwash_removal_dune_volume / number_dune_cells] * number_dune_cells
@@ -304,9 +306,9 @@ def filter_overwash(
 
     # don't allow dunes to exceed a maximum height (limits 10-m dunes after big
     # storms...yikes!); assume the rest of the sand disappears
-    new_dune_domain[
-        new_dune_domain > artificial_maximum_dune_height
-    ] = artificial_maximum_dune_height
+    new_dune_domain[new_dune_domain > artificial_maximum_dune_height] = (
+        artificial_maximum_dune_height
+    )
 
     # dam^3
     total_overwash_removal = (
@@ -499,9 +501,9 @@ class BeachDuneManager:
 
         # turn dune migration back on
         barrier3d.dune_migration_on = True
-        self._dune_migration_on[
-            self._time_index - 1
-        ] = barrier3d.dune_migration_on  # keep track!
+        self._dune_migration_on[self._time_index - 1] = (
+            barrier3d.dune_migration_on
+        )  # keep track!
 
         # set the shoreline change aggregate to the dam (cell) fraction
         barrier3d.SCRagg[self._time_index - 1] = (barrier3d.x_s % 1) * -1

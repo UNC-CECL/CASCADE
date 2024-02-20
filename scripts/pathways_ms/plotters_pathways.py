@@ -545,9 +545,9 @@ def fig3_initialCNH_topo(
         OriginTstart = OriginY + math.floor(scts)  # ceil
         OriginTstop = OriginTstart + widthTS
         xOrigin = iB3D * BarrierLength
-        AnimateDomain[
-            OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
-        ] = Domain
+        AnimateDomain[OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength] = (
+            Domain
+        )
 
         # plot
         print(np.max(AnimateDomain))
