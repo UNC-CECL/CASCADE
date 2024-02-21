@@ -114,3 +114,7 @@ doctest_optionflags = [
     "IGNORE_EXCEPTION_DETAIL",
     "ALLOW_UNICODE",
 ]
+
+[tool.zest-releaser]
+tag-format = "v{version}"
+python-file-with-version = "cascade/_version.py"
