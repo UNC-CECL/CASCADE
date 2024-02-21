@@ -55,6 +55,12 @@ repository = "https://github.com/UNC-CECL/cascade"
 dev = [
     "nox",
 ]
+testing = [
+    "pytest",
+    "pytest-cov",
+    "pytest-datadir",
+    "pytest-xdist",
+]
 
 [build-system]
 requires = [
@@ -78,6 +84,10 @@ include = [
 
 [tool.isort]
 profile = "black"
+known_first_party = [
+    "cascade",
+    "CASCADE",
+]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
