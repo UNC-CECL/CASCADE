@@ -11,7 +11,6 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 from CASCADE import Cascade
 
 # NOTE: I saved the 100 year (15 core) simulation for #1 and 500 year simulation for #3 for debugging comparison for V2

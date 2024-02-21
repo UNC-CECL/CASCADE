@@ -1,10 +1,9 @@
 import multiprocessing
 import time
 
+import CASCADE as CASCADE
 import matplotlib.pyplot as plt
 from barrier3d import Barrier3dBmi
-
-import CASCADE as CASCADE
 
 # Someone asked a question during AGU about whether or not I start the shoreface out of equilibrium.
 # When I went back and checked, B3D (both V1 and the BMI) start in equilibrium, but CASCADE starts
