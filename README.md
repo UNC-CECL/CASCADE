@@ -1,4 +1,16 @@
-[![DOI](https://zenodo.org/badge/310435424.svg)](https://zenodo.org/doi/10.5281/zenodo.10003561)
+![[DOI][doi-link]][doi-badge]
+
+
+[barrier3d-github]:https://github.com/UNC-CECL/Barrier3D
+[brie-github]: https://github.com/UNC-CECL/brie
+[cascade-figure]: https://user-images.githubusercontent.com/57640439/226623608-d0c58437-d44f-4dca-8f43-0b92623fcda6.png
+[chom-github]: https://github.com/UNC-CECL/CHOM
+[doi-badge]: https://zenodo.org/badge/310435424.svg
+[doi-link]: https://zenodo.org/doi/10.5281/zenodo.10003561
+[nox-docs]: https://nox.thea.codes/
+[preprint-doi]: https://doi.org/10.31223/X5P947
+[zip-download]: https://github.com/UNC-CECL/CASCADE/archive/refs/heads/main.zip
+
 
 🌀 🌊 🏄‍♀️ 🏚️ 🌀 🌊 🏄‍♀️ 🏚️ 🌀 🌊 🏄‍♀️ 🏚️ 🌀 🌊 🏄‍♀️ 🏚️
 # cascade
@@ -15,10 +27,10 @@ are incorporated in *cascade* in two separate modules. The first module simulate
 pavement damage during overwashing events, including rebuilding roadways at sufficiently low elevations to allow for
 burial by overwash, constructing large dunes, and relocating the road into the barrier interior. The second module
 incorporates management strategies for maintaining a coastal community, including beach nourishment, dune construction,
-and overwash removal. For a full description of model dynamics, please see "The Future of Developed
-Barrier Systems - Part I: Pathways Toward Uninhabitability, Drowning, and Rebound" by Anarde et al., (2024, [Earth ArXiv preprint](https://doi.org/10.31223/X5P947)).
+and overwash removal. For a full description of model dynamics, please see *"The Future of Developed
+Barrier Systems - Part I: Pathways Toward Uninhabitability, Drowning, and Rebound" by Anarde et al., (2024, [Earth ArXiv preprint][preprint-doi])*.
 
-![ModelTimeLoop-01](https://user-images.githubusercontent.com/57640439/226623608-d0c58437-d44f-4dca-8f43-0b92623fcda6.png)
+![ModelTimeLoop-01][cascade-figure]
 
 In development: *cascade* represents decisions about coastal land-use (e.g., housing markets) and community-level
 mitigation measures using an empirically-grounded agent-based real estate model – the Coastal Home Ownership Model (*chom*).
@@ -42,19 +54,23 @@ on local wave and sediment characteristics as well as the offshore wave climate 
 Lorenzo-Trueba & Ashton, 2014; Ortiz & Ashton, 2016). For ease of model coupling, *brie* and *chom* were rewritten in Python
 and all models (*barrier3d*, *brie*, *chom*) were appended with a basic-model interface with the help of the
 Community Surface Dynamics Modeling System. The repositories for the models coupled within *cascade* are noted here:
-- *barrier3d*: [GitHub Python Repository - Version 2.0 (BMI)](https://github.com/UNC-CECL/Barrier3D)
-- *brie*: [GitHub Python Repository - Version 1.0 (BMI)](https://github.com/UNC-CECL/brie)
-- *chom*: [GitHub Python Repository - Version 0.0.1.dev0 (BMI)](https://github.com/UNC-CECL/CHOM)
+- *barrier3d*: [GitHub Python Repository - Version 2.0 (BMI)][barrier3d-github]
+- *brie*: [GitHub Python Repository - Version 1.0 (BMI)][brie-github]
+- *chom*: [GitHub Python Repository - Version 0.0.1.dev0 (BMI)][chom-github]
 
 ## Installation
 
 To install the latest release of *cascade* using *pip*, simply run the following in your terminal of choice:
 
-      pip install coastal-cascade
+```bash
+pip install coastal-cascade
+```
 
 You can also use `conda`:
 
-      conda install coastal-cascade
+```bash
+conda install coastal-cascade
+```
 
 ### From Source
 
@@ -64,51 +80,61 @@ need to get *cascade*'s source code, and then install *cascade* from that code.
 
 To get the source code you can either clone the repository with *git*:
 
-      git clone git@github.com/UNC-CECL/cascade
+```bash
+git clone git@github.com:UNC-CECL/cascade
+```
 
-or download a [zip file](https://github.com/UNC-CECL/CASCADE/archive/refs/heads/main.zip):
+or download a [zip file][zip-download]:
 
-      curl -OL https://github.com/UNC-CECL/CASCADE/archive/refs/heads/main.zip
+```bash
+curl -OL https://github.com/UNC-CECL/CASCADE/archive/refs/heads/main.zip
+```
 
 Once you have a copy of the source code, you can install it into your current
 environment,
 
-      pip install -e .
+```bash
+pip install -e .
+```
 
-We use [nox] to automate routine maintenance tasks like running the tests,
-removing lint, etc. Install [nox] with *pip*::
+We use [nox-docs] to automate routine maintenance tasks like running the tests,
+removing lint, etc. Install [nox-docs] with *pip*::
 
-      pip install nox
+```bash
+pip install nox
+```
 
-When you're done making changes, you can now run [nox] to check that the tests
+When you're done making changes, you can now run [nox-docs] to check that the tests
 pass and that there isn't any lint:
 
-      nox -s test  # run the unit tests
-      nox -s test-notebooks  # test that the notebooks run successfully
-      nox -s lint  # find and, where possible, remove lint (black, flake8, etc.)
+```bash
+nox -s test  # run the unit tests
+nox -s test-notebooks  # test that the notebooks run successfully
+nox -s lint  # find and, where possible, remove lint (black, flake8, etc.)
+```
 
 To run all of the above in a single command:
 
-      nox
-
-[nox]: https://nox.thea.codes/
+```bash
+nox
+```
 
 ## Example simulations
-This ReadMe corresponds to the version of *cascade* used for the simulations detailed in 
-*"The Future of Developed Barrier Systems - Part I: Pathways Toward Uninhabitability, Drowning, and Rebound" by 
-Anarde et al., (2024, [Earth ArXiv preprint](https://doi.org/10.31223/X5P947))* -- namely, v1.0.0. For a more complete 
+This ReadMe corresponds to the version of *cascade* used for the simulations detailed in
+*"The Future of Developed Barrier Systems - Part I: Pathways Toward Uninhabitability, Drowning, and Rebound" by
+Anarde et al., (2024, [Earth ArXiv preprint][preprint-doi])* -- namely, v1.0.0. For a more complete
 set of example model runs and description of module functionality, we direct the use to the examples
 provided in `notebooks`.
 
 Example (default) data inputs for cascade are provided in the `data` directory:
-```
+```python
 from cascade.cascade import Cascade
 
 datadir = "data/"
 ```
 To initialize an instance of *cascade* with no human dynamics, 3 barrier segments (each 500-m long), and
 default *barrier3d* and *brie* parameters:
-```
+```python
 cascade = Cascade(
     datadir,
     name="no_human_dynamics_3_barrier_segments",
@@ -120,7 +146,7 @@ cascade = Cascade(
 )
 ```
 To initialize an instance of *cascade* with roadway barrier management on 1 barrier segment:
-```
+```python
 cascade = Cascade(
     datadir,
     name="roadway_mgmt_1_barrier_segments",
@@ -132,7 +158,7 @@ cascade = Cascade(
 )
 ```
 To initialize *cascade* with community barrier management on 1 barrier segment:
-```
+```python
 cascade = Cascade(
     datadir,
     name="community_mgmt_1_barrier_segments",
@@ -144,7 +170,7 @@ cascade = Cascade(
 )
 ```
 Once initialized, a *cascade* time loop can be completed as follows:
-```
+```python
 for time_step in range(cascade.time_step_count - 1):
     cascade.update()
     if cascade.b3d_break:
