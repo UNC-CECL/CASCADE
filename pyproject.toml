@@ -34,8 +34,11 @@ dependencies = [
     "barrier3d",
     "imageio",
     "joblib",
+    "matplotlib",
     "numpy",
+    "pandas",
     "pyyaml",
+    "scipy",
 ]
 dynamic = [
     "readme",
