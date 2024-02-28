@@ -77,7 +77,6 @@ class BMFTCoupler:
         self._x_s_offset_TS = []
         # initialize PyBMFT models (number set by brie ny above)
 
-        #x = barrier3d[0].RSLR[0] *10000
         for iB3D in range(self._ny):
             self._bmftc.append(
                 Bmftc(
@@ -91,8 +90,8 @@ class BMFTCoupler:
                     forest_width_initial=5000,  # 5000 accomodates 250 yrs at R=15 and S=0.001
                     wind_speed=6,
                     forest_on=False,
-                    filename_equilbaydepth="/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Equilibrium Bay Depth.mat",
-                    filename_marshspinup="/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/BMFT_Marsh_Width_500.mat",
+                    filename_equilbaydepth="C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\Equilibrium Bay Depth.mat",
+                    filename_marshspinup="C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\BMFT_Marsh_Width_500.mat",
                     marsh_width_initial=500,
                 )
             )

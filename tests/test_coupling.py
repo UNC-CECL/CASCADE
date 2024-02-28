@@ -79,7 +79,7 @@ def initialize_cascade_no_human_dynamics_ast(datadir):
     return cascade
 
 
-def test_barrier3d_versions(tmp_path, datadir, monkeypatch):
+def test_barrier3d_versions(tmp_path,datadir,monkeypatch):
     """
     Check that the barrier3d output in cascade matches the bmi version(s)
     """
@@ -112,7 +112,7 @@ def test_barrier3d_versions(tmp_path, datadir, monkeypatch):
     assert np.all(barrier3d._model._QowTS == CASCADE_OUTPUT._barrier3d[0]._QowTS)
 
 
-def test_shoreline_dune_migration(tmp_path, datadir, monkeypatch):
+def test_shoreline_dune_migration(tmp_path,datadir, monkeypatch):
     """
     As a check on the dynamics in Barrier3D, here we want to see if the dunes
     migrate correctly for natural simulations, when the shoreline surpasses a
@@ -133,7 +133,7 @@ def test_shoreline_dune_migration(tmp_path, datadir, monkeypatch):
     assert np.all(shoreline_transgressed == dunes_migrated)
 
 
-def test_initialize(tmp_path, datadir, monkeypatch):
+def test_initialize(tmp_path,datadir, monkeypatch):
     """
     check that the initial shoreface toe and shoreline are correct between the
     barrier3d and brie models for a cascade model with 6 barrier3d domains
@@ -156,7 +156,7 @@ def test_initialize(tmp_path, datadir, monkeypatch):
     assert_array_almost_equal([dt, ds, db, dh], np.zeros([4, 6]))
 
 
-def test_shoreline_variable_exchange_ast(tmp_path, datadir, monkeypatch):
+def test_shoreline_variable_exchange_ast(tmp_path,datadir, monkeypatch):
     """
     check that the brie and barrier3d shoreline, shoreface toe, and back-barrier
     shorelines are equivalent with each update
