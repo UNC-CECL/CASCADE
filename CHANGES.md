@@ -1,9 +1,9 @@
 # Changelog for CASCADE
 
-## 0.1.2 (unreleased)
+## 1.0.0 (2024-02-09)
 
 
-- Nothing changed yet.
+- Finalized for publication. No changes to the code, but finalized to version 1.0.0
 
 
 ## 0.1.1 (2023-03-21)

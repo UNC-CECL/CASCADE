@@ -18,8 +18,8 @@ from cascade.cascade import Cascade
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")
 # Specify variables to use in calling function
 # Dune height path name
-d_file = "/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Smith_Dune.npy"
-e_file = "/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Smith_Topo.npy"
+d_file = "/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Metompkin_Bay_Dune.npy"
+e_file = "/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Metompkin_Bay_Topo.npy"
 # Storm file path name
 #RSLR_File = '/data/marsh_init_data/Low_SLR.npy'
 Num_Storms = 50
@@ -28,9 +28,9 @@ nt_run = 150  # Number of years model will run
 run_name = []
 storm_name = []
 for i in range(0,Num_Storms):
-    run_name.append('Hog_10_Percent_High_RSLR_'+str(i))
-    storm_name.append('/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Ten_Percent_Increase/StormList_'+
-                       str(i)+'_10_percent_increase.npy')
+    run_name.append('Metompkin_Bay_5_Percent_Low_RSLR_'+str(i))
+    storm_name.append('/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Five_Percent_Increase/StormList_'+
+                       str(i)+'_5_percent_increase.npy')
 num_of_batches = 1
 marsh_dynamics_on = True
 run_set_RSLR = True
@@ -123,7 +123,7 @@ def Batch_Runs(
 
     return cascade
 
-for j in range(0,num_storms):
+for j in range(0,Num_Storms):
 
     Batch_Runs(
         nt=nt_run,
@@ -138,7 +138,7 @@ for j in range(0,num_storms):
         background_erosion=-1.00,
         sea_level_constant=False,  # not an array
         enable_shoreline_offset=False,
-        marsh_dynamics=True,
+        marsh_dynamics=False,
         sea_level_rise_rate=0.004,
         user_inputed_RSLR=run_set_RSLR,
         user_inputed_RSLR_rate=set_RSLR,
