@@ -1,0 +1,105 @@
+# running outwash_plotters to make dune and elevation figures
+
+# Lexi Van Blunk
+# 2/23/2024
+
+import os
+import copy
+from matplotlib import pyplot as plt
+from cascade.cascade import Cascade
+import numpy as np
+import math
+from cascade.tools import outwash_plotters as out_plt
+from cascade.tools import plotters as cascade_plt
+
+rname_array = ["r025", "r035"]
+
+for rname in rname_array:
+    storm_interval = 20        # 20 or 10 years
+    config = 4                 # 1, 2, 3, or 4
+    storm_num = 1
+
+    # location of the npz files
+    datadir_b3d = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/overwash_only/".format(rname)
+    datadir_100 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/outwash100/".format(rname)
+    datadir_50 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/outwash50/".format(rname)
+    datadir_0 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/outwash0/".format(rname)
+
+
+    # Barrier3d only
+    filename_b3d = "config{0}_b3d_startyr1_interval{1}yrs_Slope0pt03_{2}.npz".format(config, storm_interval, storm_num)
+    file_b3d = datadir_b3d + filename_b3d
+    b3d_numpy_obj = np.load(file_b3d, allow_pickle=True)
+    b3d_obj = b3d_numpy_obj["cascade"][0]
+    b3d = b3d_obj.barrier3d
+
+    # 100% variables
+    filename_100 = "config{0}_outwash100_startyr1_interval{1}yrs_Slope0pt03_{2}.npz".format(config, storm_interval, storm_num)
+    file_100 = datadir_100 + filename_100
+    outwash100_numyp_obj = np.load(file_100, allow_pickle=True)
+    outwash100_obj = outwash100_numyp_obj["cascade"][0]
+    outwash100 = outwash100_obj.barrier3d
+
+    # 50% variables
+    filename_50 = "config{0}_outwash50_startyr1_interval{1}yrs_Slope0pt03_{2}.npz".format(config, storm_interval, storm_num)
+    file_50 = datadir_50 + filename_50
+    outwash50_numyp_obj = np.load(file_50, allow_pickle=True)
+    outwash50_obj = outwash50_numyp_obj["cascade"][0]
+    outwash50 = outwash50_obj.barrier3d
+
+    # 0% variables
+    filename_0 = "config{0}_outwash0_startyr1_interval{1}yrs_Slope0pt03_{2}.npz".format(config, storm_interval, storm_num)
+    file_0 = datadir_0 + filename_0
+    outwash0_numpy_obj = np.load(file_0, allow_pickle=True)
+    outwash0_obj = outwash0_numpy_obj["cascade"][0]
+    outwash0 = outwash0_obj.barrier3d
+
+    TMAX = 101
+    vmin = 0
+    vmax = 6
+    fontsize = 12
+
+    shrink = 0.5
+
+    fig1 = plt.figure()
+    # fig1.tight_layout()
+    fig1.suptitle('Overwash Only, {0}'.format(rname), weight="bold")
+    # text is distance along the horizontal axis (left to right), then distance on the vertical axis (bottom to top)
+    fig1.text(0.5, 0.42, 'barrier length (m)', ha='center', va='center', fontsize=12)  # x label
+    fig1.text(0.08, 0.72, 'barrier width (m)', ha='center', va='center', rotation='vertical', fontsize=12)  # y label
+
+    years = [0, 1, 20, 21, 40, 41, 60, 61, 80, 81, 100]
+    n_plots = len(years)
+    plot_num = 1
+    n_rows = 2
+    n_cols = int(math.ceil(n_plots/2))
+
+    for year in years:
+        # domain
+        dunes = np.transpose(b3d[0]._DuneDomain[year]) + b3d[0].BermEl
+        interior = b3d[0]._DomainTS[year]
+        domain = np.vstack([dunes, interior])
+
+        ax1 = fig1.add_subplot(n_rows, n_cols, plot_num)
+        mat = ax1.matshow(
+            np.flip(domain) * 10,
+            cmap="terrain",
+            vmin=-3.0,
+            vmax=6.0,
+        )
+        # cbar = fig1.colorbar(mat, shrink=shrink)
+        # cbar.set_label('m MHW', rotation=270, labelpad=5)
+        ax1.set_title(year)
+        plt.gca().xaxis.tick_bottom()
+        xtick_max = np.shape(domain)[1]  # n_cols = x
+        x_ticks = np.array(range(0, xtick_max, 10))
+        x_tick_labels = x_ticks * 10
+        ytick_max = np.shape(domain)[0]  # n_rows = y
+        y_ticks = np.array(range(0, ytick_max, 10))
+        y_tick_labels = y_ticks * 10
+        plt.xticks(x_ticks, x_tick_labels)
+        plt.yticks(y_ticks, y_tick_labels)
+
+        plot_num += 1
+
+    fig1.subplots_adjust(top=1.3, hspace=-0.75, wspace=0.5)
