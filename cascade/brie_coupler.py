@@ -357,6 +357,13 @@ class BrieCoupler:
                     iB3D
                 ]
 
+
+    def offset_shoreline(self, enable_shoreline_offset, offset_values, ny):
+        if enable_shoreline_offset == True:
+            for i in range(ny):
+                self._brie.x_t[i] = self._brie.x_t[i] + offset_values[i]
+                self._brie.x_s[i] = self._brie.x_s[i] + offset_values[i]
+
     def update_brie_for_human_modifications(self, x_t, x_s, x_b, h_b, s_sf):
         """Reset all the save variables and current variables for barrier geometry
         to account for human modifications in the cascade modules

@@ -363,7 +363,6 @@ def get_road_relocation_elevation(
 
     return road_ele, roadway_drown
 
-
 def road_relocation_checks(
     time_index,
     dune_migrated,
@@ -403,7 +402,6 @@ def road_relocation_checks(
     # initialize the break booleans as False
     relocation_break = 0
     road_relocated = 0
-
     # if dune line eroded or prograded, subtract (erode) or add (prograde) to
     # the setback to keep road in the same place
     if dune_migrated != 0:
@@ -411,8 +409,10 @@ def road_relocation_checks(
 
         # with this shoreline change and dune migration, check if the roadway needs
         # to be relocated
+
         if road_setback < 0:
             road_relocated = 1
+            print('Roadway relocated')
 
             # relocate the road only if the width of the island allows it
             if (

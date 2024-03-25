@@ -3,7 +3,7 @@ import os
 import numpy as np
 from joblib import Parallel, delayed
 
-from .beach_dune_manager import BeachDuneManager
+from .beach_dune_manager import BeachDuneManager, check_sandbag_need
 from .brie_coupler import BrieCoupler, batchB3D, initialize_equal
 from .chom_coupler import ChomCoupler
 from .roadway_manager import RoadwayManager, set_growth_parameters
@@ -152,6 +152,8 @@ class Cascade:
         house_footprint_x=15,
         house_footprint_y=20,
         beach_full_cross_shore=70,
+        sandbag_management_on = False,
+        sandbag_elevation = 1.5,
     ):
         """
         CASCADE: The CoAStal Community-lAnDscape Evolution model
@@ -305,6 +307,9 @@ class Cascade:
         self._trigger_dune_knockdown = trigger_dune_knockdown
         self._initial_beach_width = [0] * self._ny
         self._group_roadway_abandonment = group_roadway_abandonment
+        self._sandbag_management_on = sandbag_management_on
+        self._sandbag_elevation = sandbag_elevation
+        self._sandbag_need = [False] * self._ny
 
         # initialization errors
         if (
@@ -356,6 +361,7 @@ class Cascade:
             storm_file=self._storm_file,
             dune_file=self._dune_file,  # can be array
             elevation_file=self._elevation_file,  # can be array
+            sandbag_elevation = self._sandbag_elevation,
         )
 
         ###############################################################################
@@ -557,6 +563,7 @@ class Cascade:
         # updates the time_index after update_dune_domain). Set n_jobs=1 for no
         # parallel processing (debugging) and -2 for all but 1 CPU; note that
         # joblib uses a threshold on the size of arrays passed to the workers
+
         batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
             delayed(batchB3D)(self._barrier3d[iB3D]) for iB3D in range(self._ny)
         )
@@ -636,6 +643,7 @@ class Cascade:
 
                     else:
                         self._road_break[iB3D] = 1
+                        self._sandbag_need[iB3D] = False
 
                         # set dune growth rates back to original only when dune
                         # elevation is less than equilibrium
@@ -650,6 +658,17 @@ class Cascade:
 
                 else:
                     # manage that road!
+                    if self._sandbag_management_on[iB3D] == True: # Check if sandbags are needed() returning TRUE / FALSE given distance between dunes and roadway
+                        self._sandbag_need[iB3D] = check_sandbag_need(dune_road_distance = self._roadways[iB3D]._road_setback)
+
+                        if self._sandbag_need[iB3D] == True:
+                            self._barrier3d[iB3D]._sandbag_need = True
+                            print('Sandbags are needed in Section '+str(iB3D))
+                        elif self._sandbag_need[iB3D] == False:
+                            print('Sandbags are not needed in Section '+str(iB3D))
+                            self._barrier3d[iB3D]._sandbag_need = False
+
+
                     self._roadways[iB3D].road_relocation_width = self._road_width[
                         iB3D
                     ]  # type: float
