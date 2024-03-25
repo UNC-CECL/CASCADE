@@ -487,7 +487,7 @@ def road_relocation_checks(
 
         if road_setback < 0:
             road_relocated = 1
-            #print('Roadway relocated')
+            print('Roadway relocated')
 
             # relocate the road only if the width of the island allows it
             if (

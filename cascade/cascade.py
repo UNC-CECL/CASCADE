@@ -419,6 +419,7 @@ class Cascade:
             storm_file=self._storm_file,
             dune_file=self._dune_file,  # can be array
             elevation_file=self._elevation_file,  # can be array
+            sandbag_elevation = self._sandbag_elevation,
         )
 
         # Alter RSLR to set sequence
@@ -448,7 +449,7 @@ class Cascade:
             overwash_to_dune=overwash_to_dune,
             roadway_management_module=roadway_management_module,
             beach_nourishment_module=beach_nourishment_module,
-            allow_causeway=allow_causeway
+            allow_causeway=allow_causeway,
             outwash_module=outwash_module,
         )
 
@@ -812,12 +813,6 @@ class Cascade:
         # width, dune height, shoreline erosion rate -- who then decide if it is
         # a nourishment year, the corresponding nourishment volume, and whether
         # or not the dune should be rebuilt
-        # ~~~~~~~~~~~~~~ CHOM coupler (in development) ~~~~~~~~~~~~~~~~~~~~~~~~
-        # Provide agents in the Coastal Home Ownership Model (CHOM) with
-        # variables describing the physical environment -- including barrier
-        # elevation, beach width, dune height, shoreline erosion rate -- who
-        # then decide if it is a nourishment year, the corresponding nourishment
-        # volume, and whether or not the dune should be rebuilt
         if self._community_economics_module:
 
             for iB3D in range(self._ny):
