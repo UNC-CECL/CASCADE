@@ -59,6 +59,26 @@ def batchB3D(subB3D):
 
     return sub_x_t_dt, sub_x_s_dt, sub_h_b_dt, subB3D
 
+def splitbatchB3D(subB3D,iB3D,sandbag_need):
+    """Parallelize the update function for each B3D domain so the (computationally
+    expensive) flow routing algorithm operates on separate cores -- i.e., overwash
+    doesn't need to be simulated sequentially for each domain
+    """
+
+    DomainWidth, InteriorWidth, InteriorWidth_Avg, Qdg, DuneDomainCrest, OWloss, DuneLoss, numstorm, start, stop, Rhigh, Rlow, dur, = subB3D.update_set_variables()
+    for i in range(numstorm):
+        DuneLoss, Hd_TSloss, gaps = subB3D.update_dune_erosion(storm_num = i, DuneDomainCrest = DuneDomainCrest, dur = dur)
+        # if sandbag_need[iB3D] == True:
+            #run_sandbags
+        OWloss = subB3D.update_flow_routing(storm_num = i, DuneDomainCrest = DuneDomainCrest, gaps = gaps, Rlow = Rlow, dur = dur, Hd_TSloss = Hd_TSloss)
+    subB3D.save_update_information(numstorm = numstorm, InteriorWidth = InteriorWidth, OWloss = OWloss, Qdg = Qdg, DuneLoss = DuneLoss, InteriorWidth_Avg = InteriorWidth_Avg)
+
+    # calculate the diff in shoreface toe, shoreline, and height of barrier (dam)
+    sub_x_t_dt = (subB3D.x_t_TS[-1] - subB3D.x_t_TS[-2]) * 10
+    sub_x_s_dt = (subB3D.x_s_TS[-1] - subB3D.x_s_TS[-2]) * 10
+    sub_h_b_dt = (subB3D.h_b_TS[-1] - subB3D.h_b_TS[-2]) * 10
+
+    return sub_x_t_dt, sub_x_s_dt, sub_h_b_dt, subB3D
 
 def initialize_equal(
     datadir,
@@ -74,6 +94,8 @@ def initialize_equal(
     MHW=0.46,
     berm_elevation=1.9,
     beta=0.04,
+    sandbag_elevation = 1.9,
+    enable_sandbags = False,
 ):
     """
     For each B3D domain, modify the default parameters to match the shoreface
@@ -170,6 +192,10 @@ def initialize_equal(
             set_yaml("elevation_file", elevation_file[iB3D], fid)
         else:
             set_yaml("elevation_file", elevation_file, fid)
+
+        # Set sandbag_elevation
+        set_yaml('Sandbag_elevation',sandbag_elevation,fid)
+        set_yaml('enable_sandbags',enable_sandbags,fid)
 
         # the following parameters CANNOT be changed or else the MSSM storm list &
         # storm time series needs to be remade
