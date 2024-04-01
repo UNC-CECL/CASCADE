@@ -327,6 +327,11 @@ class Cascade:
         self._trigger_dune_knockdown = trigger_dune_knockdown
         self._initial_beach_width = [0] * self._ny
         self._group_roadway_abandonment = group_roadway_abandonment
+        self._sandbag_management_on = sandbag_management_on
+        self._sandbag_elevation = sandbag_elevation
+        self._sandbag_need = [False] * self._ny
+        self._enable_shoreline_offset = enable_shoreline_offset
+        self._shoreline_offset = shoreline_offset
 
         # initialization errors
         if (
@@ -378,6 +383,14 @@ class Cascade:
             storm_file=self._storm_file,
             dune_file=self._dune_file,  # can be array
             elevation_file=self._elevation_file,  # can be array
+            #sandbag_elevation = self._sandbag_elevation,
+        )
+
+        # Create offset shorelines in BRIE
+        self._brie_coupler.offset_shoreline(
+            enable_shoreline_offset=self._enable_shoreline_offset,
+            offset_values=self._shoreline_offset,
+            ny=self._ny,
         )
 
         ###############################################################################
@@ -590,6 +603,10 @@ class Cascade:
     def community_break(self):
         return self._community_break
 
+    @property
+    def time_step_count(self):
+        return self._nt
+
     ###############################################################################
     # time loop
     ###############################################################################
@@ -677,31 +694,42 @@ class Cascade:
 
                             # set dune growth rates back to original only when dune
                             # elevation is less than equilibrium
-                            self._barrier3d[iRoad].growthparam = (
-                                self.reset_dune_growth_rates(
-                                    original_growth_param=self._roadways[
-                                        iRoad
-                                    ]._original_growth_param,
-                                    iB3D=iRoad,
-                                )
+                            self._barrier3d[
+                                iRoad
+                            ].growthparam = self.reset_dune_growth_rates(
+                                original_growth_param=self._roadways[
+                                    iRoad
+                                ]._original_growth_param,
+                                iB3D=iRoad,
                             )
 
                     else:
                         self._road_break[iB3D] = 1
+                        self._sandbag_need[iB3D] = False
 
                         # set dune growth rates back to original only when dune
                         # elevation is less than equilibrium
-                        self._barrier3d[iB3D].growthparam = (
-                            self.reset_dune_growth_rates(
-                                original_growth_param=self._roadways[
-                                    iB3D
-                                ]._original_growth_param,
-                                iB3D=iB3D,
-                            )
+                        self._barrier3d[
+                            iB3D
+                        ].growthparam = self.reset_dune_growth_rates(
+                            original_growth_param=self._roadways[
+                                iB3D
+                            ]._original_growth_param,
+                            iB3D=iB3D,
                         )
 
                 else:
                     # manage that road!
+                    if self._sandbag_management_on[iB3D] == True: # Check if sandbags are needed() returning TRUE / FALSE given distance between dunes and roadway
+                        self._sandbag_need[iB3D] = check_sandbag_need(dune_road_distance = self._roadways[iB3D]._road_setback)
+
+                        if self._sandbag_need[iB3D] == True:
+                            print('Sandbags are needed in Section '+str(iB3D))
+                        elif self._sandbag_need[iB3D] == False:
+                            print('Sandbags are not needed in Section '+str(iB3D))
+                            self._barrier3d[iB3D]._sandbag_need = False
+
+
                     self._roadways[iB3D].road_relocation_width = self._road_width[
                         iB3D
                     ]  # type: float
