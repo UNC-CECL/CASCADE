@@ -254,6 +254,13 @@ def plot_ElevAnimation_CASCADE(
             OriginTstart = int(cellular_shoreline_post_humans)
             OriginTstop = OriginTstart + widthTS
             xOrigin = iB3D * BarrierLength
+            print('OriginTstart is '+str(OriginTstart))
+            print('OriginTstop is '+str(OriginTstop))
+            print('OriginTstop is '+str(OriginTstop))
+            print('xOrigin is '+str(xOrigin))
+            print('BarrierLength is '+str(BarrierLength))
+
+
             AnimateDomain[
                 OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
             ] = Domain
@@ -323,13 +330,13 @@ def plot_ElevAnimation_CASCADE(
 
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output')
 # run_name='Wreck_ACC_RSLR3_S3' # 5 Length
-run_name = "Offset_Test_5"  # 4 length
+run_name = "Offset_Test_5_4"  # 4 length
 # run_name='Metompkin_Marsh_S10_3'
 # run_name='Smith_S10_3' # 5
 
 name_prefix = run_name
 nt_run = 5
-number_barrier3d_models = 6
+number_barrier3d_models = 3
 Run_Marsh_Dynamics = False
 
 
