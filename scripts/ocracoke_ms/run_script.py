@@ -14,12 +14,12 @@ os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
 s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\S1.npy'
 #d_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\b3d_high-elevations.csv'
 #s_file = 'StormList_0_baseline.npy'
-run_name = 'Offset_Test_5'
+run_name = 'Offset_Test_5_4'
 
 e_file = []
 d_file = []
 
-for i in range(1,51):
+for i in range(1,6):
     dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Sample_'+str(i)+'_dune.npy'
     elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Sample_'+str(i)+'_topography.npy'
     d_file.append(dune_name)
@@ -162,7 +162,7 @@ def alongshore_connected(
 
 def alongshore_uniform():
     # variables that DO NOT change among runs
-    number_barrier3d_models = 50
+    number_barrier3d_models = 5
     beach_width_threshold = [30] * number_barrier3d_models
     rmin = [0.55] * number_barrier3d_models
     rmax = [0.95] * number_barrier3d_models
@@ -178,7 +178,7 @@ def alongshore_uniform():
     overwash_filter = 90  # commercial
     overwash_to_dune = 9
     nourishment_volume = 100  # m^3/m
-    background_erosion = -1.0  # m/yr, background shoreline erosion
+    background_erosion = -1.0 #[10.0,-1.0,-1.0,-1.0,-1.0] #* number_barrier3d_models  # m/yr, background shoreline erosion
     rebuild_dune_threshold = 1  # m
     sandbag_management_on = [False] * number_barrier3d_models
     sandbag_elevation = 1.8 # m
@@ -190,12 +190,12 @@ def alongshore_uniform():
     sea_level_constant = True  # linear
 
     # Island offsets
-    shoreline_offset_enabled = False
-    shoreline_offset = [0,100,200,300,200,100]
+    shoreline_offset_enabled = True
+    shoreline_offset = [0,100,200,300,200]
 
     # Island is too narrow for roadway to be relocated. Roadway eaten up by dunes at 73 years
     alongshore_connected(
-        nt=50,
+        nt=5,
         name=run_name,
         storm_file=storm_file,
         alongshore_section_count=number_barrier3d_models,
