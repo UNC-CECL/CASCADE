@@ -774,6 +774,31 @@ class Cascade:
                 self._outwash[iB3D]._dune_domain = self._barrier3d[iB3D].DuneDomain[self._barrier3d[iB3D].time_index - 1]
                 self._outwash[iB3D].update(b3d=self._barrier3d[iB3D])
 
+                # after an outwash event, check for barrier drowning
+                if np.shape(self._barrier3d[iB3D].InteriorDomain)[0] <= 0:
+                    self._barrier3d[iB3D]._drown_break = 1
+                if self._barrier3d[iB3D]._drown_break == 1:
+                    self._barrier3d[iB3D]._TMAX = self._barrier3d[iB3D].time_index - 1
+                    print(
+                        "Barrier has WIDTH DROWNED at t = {time} years".format(
+                            time=self._barrier3d[iB3D].time_index - 1
+                        )
+                    )
+
+                elif all(j <= self._barrier3d[iB3D].SL for j in self._barrier3d[iB3D].InteriorDomain[0, :]):
+                    self._barrier3d[iB3D]._TMAX = self._barrier3d[iB3D].time_index - 1
+                    print(
+                        "Barrier has HEIGHT DROWNED at t = {time} years".format(
+                            time=self._barrier3d[iB3D].time_index - 1
+                        )
+                    )
+                    self._barrier3d[iB3D]._drown_break = 1
+
+                # update cascade's drown break
+                if self._barrier3d[iB3D].drown_break == 1:
+                    self._b3d_break = 1
+                    return
+
         ###############################################################################
         # update BRIE for any human modifications to the barrier
         ###############################################################################
