@@ -11,13 +11,13 @@ import time
 from cascade.cascade import Cascade
 
 # input datadir where the 100 storms are located
-datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/"
+datadir = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/"
 
 # ---------------------------------- set model parameters that change per run ------------------------------------------
 storm_interval = 20   # 20 or 10 years
-r_dune_growth = 0.35  # 0.25 or 0.35
+r_dune_growth = 0.25  # 0.25 or 0.35
 config = 4            # 1, 2, 3, or 4
-percent_washout_to_shoreface = 50
+percent_washout_to_shoreface = 100
 
 # automatically set min and max r values based on dune growth rate selection
 if r_dune_growth == 0.25:
@@ -40,7 +40,8 @@ elif config == 4:
     beach_slope = 0.006
 
 # save to pycharm folder
-save_dir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/outwash{1}".format(rname, percent_washout_to_shoreface)
+save_dir = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/outwash{" \
+           "1}/".format(rname, percent_washout_to_shoreface)
 
 # -------------------- model parameters that are constant throughout the runs ------------------------------------------
 ki = 8.75E-3
