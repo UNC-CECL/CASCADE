@@ -3,7 +3,7 @@
 
 # ### Katherine will need to change the datadir on line 14 and save_dir on line 43
 
-# code for running CASCADE for the 100% outwash to shoreface scenario, 100 storm series
+# code for running CASCADE for the 0%, 50%, and 100% outwash to shoreface scenario, 100 storm series
 # change the storm interval, dune growth rate, and configuration below
 # names of files will update automatically with the changes to the specified variables
 
@@ -11,12 +11,13 @@ import time
 from cascade.cascade import Cascade
 
 # input datadir where the 100 storms are located
-datadir = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/"
+datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/"
 
 # ---------------------------------- set model parameters that change per run ------------------------------------------
 storm_interval = 20   # 20 or 10 years
 r_dune_growth = 0.35  # 0.25 or 0.35
 config = 4            # 1, 2, 3, or 4
+percent_washout_to_shoreface = 50
 
 # automatically set min and max r values based on dune growth rate selection
 if r_dune_growth == 0.25:
@@ -39,21 +40,22 @@ elif config == 4:
     beach_slope = 0.006
 
 # save to pycharm folder
-save_dir100 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/{0}/outwash100/".format(rname)
+save_dir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/outwash{1}".format(rname, percent_washout_to_shoreface)
 
 # -------------------- model parameters that are constant throughout the runs ------------------------------------------
 ki = 8.75E-3
 C = 0.0134
 
 # --------------------------------- running overwash scenario with all 100 storms --------------------------------------
-for storm_num in range(1, 101):
+# for storm_num in range(1, 101):
+for storm_num in range(1, 10):
     overwash_storm = "StormSeries_100yrs_inclusive_NCB_Berm1pt46m_Slope0pt03_{0}.npy".format(storm_num)
 
-    # ### 100% washout to shoreface ------------------------------------------------------------------------------------
+    ### 0%, 50%, or 100% washout to shoreface ------------------------------------------------------------------------------------
     # initialize class
-    cascade_outwash100 = Cascade(
+    cascade_outwash = Cascade(
         datadir,
-        name="config{0}_outwash100_startyr1_interval{1}yrs_Slope0pt03_{2}".format(config, storm_interval, storm_num),
+        name="config{0}_outwash{1}_startyr1_interval{2}yrs_Slope0pt03_{3}".format(config, percent_washout_to_shoreface, storm_interval, storm_num),
         elevation_file="NCB-default-elevation-config{0}-damMHW.npy".format(config),
         dune_file="NCB-default-dunes-config{0}-dam.npy".format(config),
         parameter_file="outwash-parameters.yaml",
@@ -103,17 +105,18 @@ for storm_num in range(1, 101):
         house_footprint_y=20,
         beach_full_cross_shore=70,
         outwash_storms_file="outwash_storms_startyr_1_interval_{0}yrs.npy".format(storm_interval),  # --------- outwasher (in development) ------------ #
-        percent_washout_to_shoreface=100,
+        # percent_washout_to_shoreface=100,
+        percent_washout_to_shoreface=percent_washout_to_shoreface,
         outwash_beach_file="NCB-default-beach-config{0}-damMHW.npy".format(config)
     )
 
     # run the time loop/update function
     t0 = time.time()
 
-    for time_step in range(cascade_outwash100._nt - 1):
+    for time_step in range(cascade_outwash._nt - 1):
         print("\r", "Time Step: ", time_step + 1, end="")
-        cascade_outwash100.update()
-        if cascade_outwash100.b3d_break:
+        cascade_outwash.update()
+        if cascade_outwash.b3d_break:
             break
 
     t1 = time.time()
@@ -122,4 +125,6 @@ for storm_num in range(1, 101):
     t_total_hours = t_total_seconds / 3600
 
     # save variables
-    cascade_outwash100.save(save_dir100)
+    cascade_outwash.save(save_dir)
+
+    print("\r", "Storm Number: ", storm_num, end="")

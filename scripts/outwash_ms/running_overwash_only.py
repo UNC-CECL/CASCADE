@@ -11,7 +11,8 @@ import time
 from cascade.cascade import Cascade
 
 # input datadir where the 100 storms are located
-datadir = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/"
+# datadir = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/"
+datadir = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/"
 
 # ---------------------------------- set model parameters that change per run ------------------------------------------
 storm_interval = 20   # 20 or 10 years
@@ -39,14 +40,16 @@ elif config == 4:
     beach_slope = 0.006
 
 # save to pycharm folder
-save_dir_b3d = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/overwash_only/".format(rname)
+# save_dir_b3d = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/overwash_only/".format(rname)
+save_dir_b3d = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/overwash_only".format(rname)
 
 # -------------------- model parameters that are constant throughout the runs ------------------------------------------
 ki = 8.75E-3
 C = 0.0134
 
 # --------------------------------- running overwash scenario with all 100 storms --------------------------------------
-for storm_num in range(1, 101):
+for storm_num in range(75, 100):
+# for storm_num in range(1, 101):
     overwash_storm = "StormSeries_100yrs_inclusive_NCB_Berm1pt46m_Slope0pt03_{0}.npy".format(storm_num)
 
     # ### barrier3D only, outwash module set to false ------------------------------------------------------------------
@@ -126,3 +129,5 @@ for storm_num in range(1, 101):
 
     # save variables
     cascade_b3d_only.save(save_dir_b3d)
+
+    print("\r", "Storm Number: ", storm_num, end="")
