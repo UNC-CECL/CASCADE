@@ -212,3 +212,133 @@ for rname in rname_array:
     cbar.set_label('m MHW', rotation=270, labelpad=5)
     fig4.subplots_adjust(top=1.25, hspace=-0.75, wspace=0.5)
 
+
+    ### ----------------------------------- Dune Crest Figures ---------------------------------------
+    TMAX = 101
+    vmin = 0
+    vmax = 6
+
+    # Barrier3d only
+    DuneCrest = []
+
+    for iB3D in range(len(b3d)):
+        sub_domain = b3d[iB3D]._DuneDomain[0:TMAX, :, :]
+        DuneCrest.append(sub_domain.max(axis=2))
+
+    DuneCrest = np.hstack(DuneCrest).astype(float)
+
+    duneFig = plt.figure(figsize=(15, 10))
+    duneFig.suptitle('{0}'.format(rname), weight="bold")
+    plt.rcParams.update({"font.size": 12})
+    ax = duneFig.add_subplot(221)
+    cax = ax.matshow(
+        np.flip(DuneCrest, 1) * 10,
+        origin="lower",
+        cmap="bwr",
+        aspect="auto",
+        vmin=vmin,
+        vmax=vmax,
+    )
+    ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
+    # cax = ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
+    cbar = duneFig.colorbar(cax)
+    cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270, labelpad=25, fontsize=10)
+    plt.xlabel("Alongshore Distance (m)")
+    plt.ylabel("Year")
+    plt.title("overwash only", weight="bold")
+    # plt.hlines(20, -0.5, 49.5, color="k", linestyles='dashed', linewidth=1)
+
+    xtick_max = np.shape(DuneCrest)[1]  # n_cols = x
+    x_ticks = np.array(range(0, xtick_max, 10))
+    x_tick_labels = x_ticks * 10
+    plt.xticks(x_ticks, x_tick_labels)
+
+    # cascade 100%
+    DuneCrest = []
+
+    for iB3D in range(len(b3d)):
+        sub_domain = outwash100[iB3D]._DuneDomain[0:TMAX, :, :]
+        DuneCrest.append(sub_domain.max(axis=2))
+
+    DuneCrest = np.hstack(DuneCrest).astype(float)
+
+    plt.rcParams.update({"font.size": 12})
+    ax = duneFig.add_subplot(222)
+    cax = ax.matshow(
+        np.flip(DuneCrest, 1) * 10,
+        origin="lower",
+        cmap="bwr",
+        aspect="auto",
+        vmin=vmin,
+        vmax=vmax,
+    )
+    ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
+    # cax = ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
+    cbar = duneFig.colorbar(cax)
+    cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270, labelpad=25, fontsize=10)
+    plt.xlabel("Alongshore Distance (m)")
+    plt.ylabel("Year")
+    plt.title("100% washout to shoreface", weight="bold")
+    plt.xticks(x_ticks, x_tick_labels)
+    plt.hlines([1, 21, 41, 61, 81], -0.5, 49.5, colors="magenta", linestyles='solid')
+
+    # cascade 50%
+    DuneCrest = []
+
+    for iB3D in range(len(b3d)):
+        sub_domain = outwash50[iB3D]._DuneDomain[0:TMAX, :, :]
+        DuneCrest.append(sub_domain.max(axis=2))
+
+    DuneCrest = np.hstack(DuneCrest).astype(float)
+
+    plt.rcParams.update({"font.size": 12})
+    ax = duneFig.add_subplot(223)
+    cax = ax.matshow(
+        np.flip((DuneCrest), 1) * 10,
+        origin="lower",
+        cmap="bwr",
+        aspect="auto",
+        vmin=vmin,
+        vmax=vmax,
+    )
+    ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
+    # cax = ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
+    cbar = duneFig.colorbar(cax)
+    cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270, labelpad=25, fontsize=10)
+    plt.xlabel("Alongshore Distance (m)")
+    plt.ylabel("Year")
+    plt.title("50% washout to shoreface", weight="bold")
+    plt.xticks(x_ticks, x_tick_labels)
+    plt.hlines([1, 21, 41, 61, 81], -0.5, 49.5, colors="magenta", linestyles='solid')
+
+    # cascade 0%
+    DuneCrest = []
+
+    for iB3D in range(len(b3d)):
+        sub_domain = outwash0[iB3D]._DuneDomain[0:TMAX, :, :]
+        DuneCrest.append(sub_domain.max(axis=2))
+
+    DuneCrest = np.hstack(DuneCrest).astype(float)
+
+    plt.rcParams.update({"font.size": 12})
+    ax = duneFig.add_subplot(224)
+    cax = ax.matshow(
+        np.flip(DuneCrest, 1) * 10,
+        origin="lower",
+        cmap="bwr",
+        aspect="auto",
+        vmin=vmin,
+        vmax=vmax,
+    )
+    ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
+    # cax = ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
+    cbar = duneFig.colorbar(cax)
+    cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270, labelpad=25, fontsize=10)
+    plt.xlabel("Alongshore Distance (m)")
+    plt.ylabel("Year")
+    plt.title("0% washout to shoreface", weight="bold")
+    plt.xticks(x_ticks, x_tick_labels)
+    plt.hlines([1, 21, 41, 61, 81], -0.5, 49.5, colors="magenta", linestyles='solid')
+    # plt.hlines(20, -0.5, 49.5, color="k", linestyles='dashed', linewidth=1)
+
+    plt.subplots_adjust(hspace=0.5, wspace=0.3)
