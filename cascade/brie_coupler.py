@@ -69,7 +69,8 @@ def splitbatchB3D(subB3D,iB3D,sandbag_need):
     for i in range(numstorm):
         DuneLoss, Hd_TSloss, gaps = subB3D.update_dune_erosion(storm_num = i, DuneDomainCrest = DuneDomainCrest, dur = dur)
         # if sandbag_need[iB3D] == True:
-            #run_sandbags
+            # run_sandbags (rebuild dunes to minimum height before conducting overwash)
+            # run sandbags will be a function stored in the roadway manager function
         OWloss = subB3D.update_flow_routing(storm_num = i, DuneDomainCrest = DuneDomainCrest, gaps = gaps, Rlow = Rlow, dur = dur, Hd_TSloss = Hd_TSloss)
     subB3D.save_update_information(numstorm = numstorm, InteriorWidth = InteriorWidth, OWloss = OWloss, Qdg = Qdg, DuneLoss = DuneLoss, InteriorWidth_Avg = InteriorWidth_Avg)
 

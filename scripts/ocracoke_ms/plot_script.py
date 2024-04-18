@@ -35,6 +35,7 @@ def plot_ElevAnimation_CASCADE(
         iB3D = indices[0]
         print(1)
         MaxBeachWidth = (
+
             np.max(cascade.nourishments[iB3D].beach_width[0 : TMAX_MGMT[iB3D]]) / 10
         )  # dam
     else:
@@ -46,7 +47,7 @@ def plot_ElevAnimation_CASCADE(
         + MaxBeachWidth
         + np.abs(barrier3d[0]._ShorelineChange)
         + OriginY
-        + 35
+        + 110 #500 #important
     )
 
     os.chdir(directory)
@@ -250,16 +251,11 @@ def plot_ElevAnimation_CASCADE(
             Beach = BeachDomain * 10
             Domain = np.vstack([Beach, Dunes, Domain])
             Domain[Domain < -3] = -3
+            Domain[Domain > 6] = 6
             widthTS = len(Domain)
             OriginTstart = int(cellular_shoreline_post_humans)
             OriginTstop = OriginTstart + widthTS
             xOrigin = iB3D * BarrierLength
-            print('OriginTstart is '+str(OriginTstart))
-            print('OriginTstop is '+str(OriginTstop))
-            print('OriginTstop is '+str(OriginTstop))
-            print('xOrigin is '+str(xOrigin))
-            print('BarrierLength is '+str(BarrierLength))
-
 
             AnimateDomain[
                 OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
@@ -330,13 +326,13 @@ def plot_ElevAnimation_CASCADE(
 
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output')
 # run_name='Wreck_ACC_RSLR3_S3' # 5 Length
-run_name = "Offset_Test_5_4"  # 4 length
+run_name = "Ocracoke_35_Offset_1"  # 4 length
 # run_name='Metompkin_Marsh_S10_3'
 # run_name='Smith_S10_3' # 5
 
 name_prefix = run_name
 nt_run = 5
-number_barrier3d_models = 3
+number_barrier3d_models = 48
 Run_Marsh_Dynamics = False
 
 
