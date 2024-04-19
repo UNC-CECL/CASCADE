@@ -59,28 +59,6 @@ def batchB3D(subB3D):
 
     return sub_x_t_dt, sub_x_s_dt, sub_h_b_dt, subB3D
 
-def splitbatchB3D(subB3D,iB3D,sandbag_need):
-    """Parallelize the update function for each B3D domain so the (computationally
-    expensive) flow routing algorithm operates on separate cores -- i.e., overwash
-    doesn't need to be simulated sequentially for each domain
-    """
-
-    DomainWidth, InteriorWidth, InteriorWidth_Avg, Qdg, DuneDomainCrest, OWloss, DuneLoss, numstorm, start, stop, Rhigh, Rlow, dur, = subB3D.update_set_variables()
-    for i in range(numstorm):
-        DuneLoss, Hd_TSloss, gaps = subB3D.update_dune_erosion(storm_num = i, DuneDomainCrest = DuneDomainCrest, dur = dur)
-        # if sandbag_need[iB3D] == True:
-            # run_sandbags (rebuild dunes to minimum height before conducting overwash)
-            # run sandbags will be a function stored in the roadway manager function
-        OWloss = subB3D.update_flow_routing(storm_num = i, DuneDomainCrest = DuneDomainCrest, gaps = gaps, Rlow = Rlow, dur = dur, Hd_TSloss = Hd_TSloss)
-    subB3D.save_update_information(numstorm = numstorm, InteriorWidth = InteriorWidth, OWloss = OWloss, Qdg = Qdg, DuneLoss = DuneLoss, InteriorWidth_Avg = InteriorWidth_Avg)
-
-    # calculate the diff in shoreface toe, shoreline, and height of barrier (dam)
-    sub_x_t_dt = (subB3D.x_t_TS[-1] - subB3D.x_t_TS[-2]) * 10
-    sub_x_s_dt = (subB3D.x_s_TS[-1] - subB3D.x_s_TS[-2]) * 10
-    sub_h_b_dt = (subB3D.h_b_TS[-1] - subB3D.h_b_TS[-2]) * 10
-
-    return sub_x_t_dt, sub_x_s_dt, sub_h_b_dt, subB3D
-
 def initialize_equal(
     datadir,
     brie,

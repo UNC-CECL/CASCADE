@@ -3,10 +3,10 @@ import os
 import numpy as np
 from joblib import Parallel, delayed
 
-from .beach_dune_manager import BeachDuneManager#, check_sandbag_need
+from .beach_dune_manager import BeachDuneManager
 from .brie_coupler import BrieCoupler, batchB3D, initialize_equal
 from .chom_coupler import ChomCoupler
-from .roadway_manager import RoadwayManager, set_growth_parameters
+from .roadway_manager import RoadwayManager, set_growth_parameters, check_sandbag_need
 
 
 class CascadeError(Exception):
@@ -576,14 +576,10 @@ class Cascade:
         # parallel processing (debugging) and -2 for all but 1 CPU; note that
         # joblib uses a threshold on the size of arrays passed to the workers
 
-        # if sandbags are disabled and not needed update regulary
         batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
             delayed(batchB3D)(self._barrier3d[iB3D]) for iB3D in range(self._ny)
         )
-        # elif if sandbags are enabled run a different version instead
-        #batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
-        #    delayed(splitbatchB3D)(subB3D = self._barrier3d[iB3D],iB3D = iB3D, sandbag_need = self._sandbag_need) for iB3D in range(self._ny)
-        #)
+
 
 
         # reshape output from parallel processing and convert from tuple to list
@@ -676,16 +672,6 @@ class Cascade:
 
                 else:
                     # manage that road!
-                    if self._sandbag_management_on[iB3D] == True: # Check if sandbags are needed() returning TRUE / FALSE given distance between dunes and roadway
-                        self._sandbag_need[iB3D] = check_sandbag_need(dune_road_distance = self._roadways[iB3D]._road_setback)
-
-                        if self._sandbag_need[iB3D] == True:
-                            print('Sandbags are needed in Section '+str(iB3D))
-                        elif self._sandbag_need[iB3D] == False:
-                            print('Sandbags are not needed in Section '+str(iB3D))
-                            self._barrier3d[iB3D]._sandbag_need = False
-
-
                     self._roadways[iB3D].road_relocation_width = self._road_width[
                         iB3D
                     ]  # type: float
@@ -709,6 +695,24 @@ class Cascade:
                     )  # dune domain width in dam
                     + (self._initial_beach_width[iB3D] / 10)  # dam
                 )
+
+        # ~~~~~~~~~~~~~~ SandbagManager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # If sandbag dynamics are enabled check if conditions are met for sandbag
+        # emplacement. When sandbag conditions are met, SandbagManager will rebuild
+        # dunes if they fall below a user defined threshold.
+        print('Sandbag management is '+str(self._sandbag_management_on))
+        for iB3D in range(self._ny):
+            if self._sandbag_management_on[iB3D] == True:
+                check_sandbag_need(dune_road_distance=self._roadways[iB3D]._road_setback,
+                                                              b3d_dune_domain=self._barrier3d[iB3D].DuneDomain,
+                                                              time_index = self._barrier3d[iB3D]._time_index,
+                                                              b3d_dune_width = self._barrier3d[iB3D].DuneWidth,
+                                                              design_elevation = self._sandbag_elevation,
+                                                              barrier3d = self._barrier3d[iB3D],
+                                                              )
+
+
+            # Check sandbag need
 
         # ~~~ CHOM coupler (in development) ~~~
         # Provide agents in the Coastal Home Ownership Model (CHOM) with variables
@@ -800,6 +804,9 @@ class Cascade:
                         / 10
                     )  # dam
                 )
+
+
+
 
         ###############################################################################
         # update BRIE for any human modifications to the barrier

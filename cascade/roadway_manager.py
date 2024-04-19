@@ -433,6 +433,24 @@ def road_relocation_checks(
 
     return road_relocated, road_setback, relocation_break
 
+def check_sandbag_need(
+        dune_road_distance,
+        b3d_dune_domain,
+        b3d_dune_width,
+        time_index,
+        design_elevation,
+        barrier3d,
+        threshold_elevation = 0.01,
+):
+    if dune_road_distance == 0:
+        print('Road close enough for sandbags')
+        for width in range(0,barrier3d.DuneWidth):
+            for cell in range(0,len(barrier3d.DuneDomain[barrier3d.time_index,:,width])):
+                if b3d_dune_domain[time_index,cell,width] < threshold_elevation:
+                    print('Sandbags would be added in cell ',str(cell),str(width))
+    elif dune_road_distance != 0:
+        print('Road far enough away')
+        # If road is too far away reset to initial threshold rebuild value
 
 class RoadwayManager:
     """Manage the road!
