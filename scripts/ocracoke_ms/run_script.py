@@ -14,18 +14,19 @@ os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
 s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\S1.npy'
 #d_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\b3d_high-elevations.csv'
 #s_file = 'StormList_0_baseline.npy'
-run_name = 'Ocracoke_35_Offset_1'
+run_name = 'Dune_Test_80'
 
-offsets = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\mod_offset.npy')
-offsets = offsets[2:]
-offsets = offsets - offsets[0]
+#offsets = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\mod_offset.npy')
+#offsets = offsets[2:]
+#offsets = offsets - offsets[0]
 
-offsets = np.negative(offsets)
+#offsets = np.negative(offsets)
+offsets = [100]
 
 e_file = []
 d_file = []
 
-for i in range(3,51):
+for i in range(20,22):
     dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Sample_'+str(i)+'_dune.npy'
     elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Sample_'+str(i)+'_topography.npy'
     d_file.append(dune_name)
@@ -168,7 +169,7 @@ def alongshore_connected(
 
 def alongshore_uniform():
     # variables that DO NOT change among runs
-    number_barrier3d_models = 48
+    number_barrier3d_models = 2
     beach_width_threshold = [30] * number_barrier3d_models
     rmin = [0.55] * number_barrier3d_models
     rmax = [0.95] * number_barrier3d_models
@@ -186,22 +187,22 @@ def alongshore_uniform():
     nourishment_volume = 100  # m^3/m
     background_erosion = -1.0 #[10.0,-1.0,-1.0,-1.0,-1.0] #* number_barrier3d_models  # m/yr, background shoreline erosion
     rebuild_dune_threshold = 1  # m
-    sandbag_management_on = [False] * number_barrier3d_models
+    sandbag_management_on = [True] * number_barrier3d_models
     sandbag_elevation = 1.8 # m
 
     # baseline models for comparison -- all roadways ----------------------------------------
-    roads_on = [False] * number_barrier3d_models
+    roads_on = [True] * number_barrier3d_models
     nourishments_on = [False] * number_barrier3d_models
     sea_level_rise_rate = 0.004
     sea_level_constant = True  # linear
 
     # Island offsets
-    shoreline_offset_enabled = True
+    shoreline_offset_enabled = False
     shoreline_offset = offsets
 
     # Island is too narrow for roadway to be relocated. Roadway eaten up by dunes at 73 years
     alongshore_connected(
-        nt=5,
+        nt=80,
         name=run_name,
         storm_file=storm_file,
         alongshore_section_count=number_barrier3d_models,
