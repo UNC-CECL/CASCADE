@@ -314,6 +314,7 @@ class Cascade:
         self._sandbag_need = [False] * self._ny
         self._enable_shoreline_offset = enable_shoreline_offset
         self._shoreline_offset = shoreline_offset
+        self._sandbag_Need_TS = [False] * self._ny
 
         # initialization errors
         if (
@@ -372,7 +373,6 @@ class Cascade:
             storm_file=self._storm_file,
             dune_file=self._dune_file,  # can be array
             elevation_file=self._elevation_file,  # can be array
-            #sandbag_elevation = self._sandbag_elevation,
         )
 
 
@@ -700,17 +700,13 @@ class Cascade:
         # If sandbag dynamics are enabled check if conditions are met for sandbag
         # emplacement. When sandbag conditions are met, SandbagManager will rebuild
         # dunes if they fall below a user defined threshold.
-        print('Sandbag management is '+str(self._sandbag_management_on))
         for iB3D in range(self._ny):
             if self._sandbag_management_on[iB3D] == True:
-                check_sandbag_need(dune_road_distance=self._roadways[iB3D]._road_setback,
-                                                              b3d_dune_domain=self._barrier3d[iB3D].DuneDomain,
-                                                              time_index = self._barrier3d[iB3D]._time_index,
-                                                              b3d_dune_width = self._barrier3d[iB3D].DuneWidth,
+                sandbag_emplacement = check_sandbag_need(dune_road_distance=self._roadways[iB3D]._road_setback,
                                                               design_elevation = self._sandbag_elevation,
                                                               barrier3d = self._barrier3d[iB3D],
                                                               )
-
+                self._sandbag_Need_TS[iB3D] = np.append(self._sandbag_Need_TS[iB3D],sandbag_emplacement)
 
             # Check sandbag need
 
