@@ -435,22 +435,38 @@ def road_relocation_checks(
 
 def check_sandbag_need(
         dune_road_distance,
-        b3d_dune_domain,
-        b3d_dune_width,
-        time_index,
         design_elevation,
         barrier3d,
-        threshold_elevation = 0.01,
+        threshold_elevation = 0.25,
 ):
+    time_index = barrier3d.time_index -1
+    print('Time index is '+str(time_index))
     if dune_road_distance == 0:
         print('Road close enough for sandbags')
-        for width in range(0,barrier3d.DuneWidth):
-            for cell in range(0,len(barrier3d.DuneDomain[barrier3d.time_index,:,width])):
-                if b3d_dune_domain[time_index,cell,width] < threshold_elevation:
-                    print('Sandbags would be added in cell ',str(cell),str(width))
+        exceeds_min_dune_threshold = np.any(barrier3d.DuneDomain[time_index,:,:] > threshold_elevation)
+        if exceeds_min_dune_threshold == False:
+            print('Elevation is low enough for sandbags')
+            for width in range(0, barrier3d.DuneWidth):
+                for cell in range(0, len(barrier3d.DuneDomain[time_index, :, width])):
+                    if barrier3d.DuneDomain[time_index, cell, width] < threshold_elevation:
+                        #print('Sandbags would be added in cell ', str(cell), str(width))
+                        barrier3d._DuneRestart[width][cell] = design_elevation / 10
+        else:
+            print('Dune elevation is too high for sandbags')
+
+        if exceeds_min_dune_threshold == False:
+            sandbag_need = True
+        else:
+            sandbag_need = False
     elif dune_road_distance != 0:
         print('Road far enough away')
         # If road is too far away reset to initial threshold rebuild value
+        for width in range(0,barrier3d.DuneWidth):
+            for cell in range(0,len(barrier3d.DuneDomain[time_index,:,width])):
+                barrier3d._DuneRestart[width][cell] = 0.075
+        sandbag_need = False
+
+    return sandbag_need
 
 class RoadwayManager:
     """Manage the road!

@@ -14,7 +14,7 @@ os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
 s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\S1.npy'
 #d_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\b3d_high-elevations.csv'
 #s_file = 'StormList_0_baseline.npy'
-run_name = 'Dune_Test_80'
+run_name = 'Sandbag_Change_80'
 
 #offsets = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\mod_offset.npy')
 #offsets = offsets[2:]
@@ -181,14 +181,14 @@ def alongshore_uniform():
     dune_minimum_elevation = 1.1  # m MHW, allow dune to erode down to 0.5 m above the roadway, for roadways only
     road_ele = 0.6  # m MHW
     road_width = 40  # m
-    road_setback = 40  # m
+    road_setback = 10  # m
     overwash_filter = 10  # residental
     overwash_to_dune = 9
     nourishment_volume = 100  # m^3/m
     background_erosion = -1.0 #[10.0,-1.0,-1.0,-1.0,-1.0] #* number_barrier3d_models  # m/yr, background shoreline erosion
     rebuild_dune_threshold = 1  # m
     sandbag_management_on = [True] * number_barrier3d_models
-    sandbag_elevation = 1.8 # m
+    sandbag_elevation = 4 # m
 
     # baseline models for comparison -- all roadways ----------------------------------------
     roads_on = [True] * number_barrier3d_models
