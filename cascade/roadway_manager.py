@@ -524,6 +524,7 @@ def check_sandbag_need(
             for width in range(0, barrier3d.DuneWidth):
                 for cell in range(0, len(barrier3d.DuneDomain[time_index, :, width])):
                     if barrier3d.DuneDomain[time_index, cell, width] < threshold_elevation:
+                        #print('Sandbags would be added in cell ', str(cell), str(width))
                         barrier3d._DuneRestart[width][cell] = design_elevation / 10
                         c = 10
 
