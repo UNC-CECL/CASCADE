@@ -14,7 +14,7 @@ os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
 s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\S1.npy'
 #d_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\b3d_high-elevations.csv'
 #s_file = 'StormList_0_baseline.npy'
-run_name = 'Sandbag_Change_80'
+run_name = 'Sandbag_80'
 
 #offsets = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\mod_offset.npy')
 #offsets = offsets[2:]
