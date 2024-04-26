@@ -437,7 +437,7 @@ def check_sandbag_need(
         dune_road_distance,
         design_elevation,
         barrier3d,
-        threshold_elevation = 0.25,
+        threshold_elevation = 0.05,
 ):
     time_index = barrier3d.time_index -1
     print('Time index is '+str(time_index))
