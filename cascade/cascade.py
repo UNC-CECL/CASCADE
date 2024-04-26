@@ -314,7 +314,7 @@ class Cascade:
         self._sandbag_need = [False] * self._ny
         self._enable_shoreline_offset = enable_shoreline_offset
         self._shoreline_offset = shoreline_offset
-        self._sandbag_Need_TS = [False] * self._ny
+        self._sandbag_Need_TS = [[False]] * self._ny
 
         # initialization errors
         if (
@@ -610,21 +610,6 @@ class Cascade:
         # human dynamics modules
         ###############################################################################
 
-        # ~~~~~~~~~~~~~~ SandbagManager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        # If sandbag dynamics are enabled check if conditions are met for sandbag
-        # emplacement. When sandbag conditions are met, SandbagManager will rebuild
-        # dunes if they fall below a user defined threshold.
-        for iB3D in range(self._ny):
-            if self._sandbag_management_on[iB3D] == True:
-                sandbag_emplacement = check_sandbag_need(dune_road_distance=self._roadways[iB3D]._road_setback,
-                                                              design_elevation = self._sandbag_elevation,
-                                                              barrier3d = self._barrier3d[iB3D],
-                                                              )
-                self._sandbag_Need_TS[iB3D] = np.append(self._sandbag_Need_TS[iB3D],sandbag_emplacement)
-
-            # Check sandbag need
-
-
         # ~~~~~~~~~~~~~~ RoadwayManager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Remove overwash from roadway after each model year, place on the dune,
         # rebuild dunes if fall below height threshold, and check if dunes should
@@ -711,6 +696,18 @@ class Cascade:
                     + (self._initial_beach_width[iB3D] / 10)  # dam
                 )
 
+        # ~~~~~~~~~~~~~~ SandbagManager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # If sandbag dynamics are enabled check if conditions are met for sandbag
+        # emplacement. When sandbag conditions are met, SandbagManager will rebuild
+        # dunes if they fall below a user defined threshold.
+        for iB3D in range(self._ny):
+            if self._sandbag_management_on[iB3D] == True:
+                sandbag_emplacement = check_sandbag_need(dune_road_distance=self._roadways[iB3D]._road_setback,
+                                                              design_elevation = self._sandbag_elevation,
+                                                              barrier3d = self._barrier3d[iB3D],
+                                                         sandbag_status = self._sandbag_Need_TS[iB3D][-1],
+                                                              )
+                self._sandbag_Need_TS[iB3D] = np.append(self._sandbag_Need_TS[iB3D],sandbag_emplacement)
 
         # ~~~ CHOM coupler (in development) ~~~
         # Provide agents in the Coastal Home Ownership Model (CHOM) with variables
