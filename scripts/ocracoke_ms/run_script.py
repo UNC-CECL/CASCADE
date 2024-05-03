@@ -10,25 +10,55 @@ from cascade.cascade import Cascade
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
 # Specify variables to use in calling function
 # Dune height path name
-#e_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\b3d_high-elevations.csv'
-s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\S1.npy'
-#d_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\b3d_high-elevations.csv'
-#s_file = 'StormList_0_baseline.npy'
-run_name = 'Sandbag_80_A'
+s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Ocracoke_StormList_0_baseline.npy'
+run_name = 'Hindcast_Test_88'
 
-#offsets = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\mod_offset.npy')
-#offsets = offsets[2:]
-#offsets = offsets - offsets[0]
+road_load_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Revised_Offshore_Datum\\Corrected_Road_Offsets.csv'
+dune_load_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Revised_Offshore_Datum\\Dune_Offsets.csv'
 
-#offsets = np.negative(offsets)
-offsets = [100]
+road_setbacks = np.loadtxt(road_load_name,skiprows=1,delimiter=',')
+dune_offset = np.loadtxt(dune_load_name,skiprows=1,delimiter=',')
+
+road_setbacks = road_setbacks[:,0]*10
+dune_offset = dune_offset[:,0]*10
+
+'''background_threhold_list = [15.0,55.0,20,5,-2,
+                            -2,-2,-2,-0,-0,
+                            -0,-0,-0,-0,-0,
+                            -0,-0,-0,-0,-0,
+                            -2,-2,-2,-2,-2,
+                            -1,-1,-1,-1,-1,
+                            -2,-2,-2,-2,3,
+                            3,3,2,0] #* number_barrier3d_models'''
+# Okay Values
+
+background_threhold_list = [-2.5,85.0,15,5,0,
+                            -2,-2,-2,-0,-0,
+                            -0,-0,-0,-0,-0,
+                            -1,-0,-0,-0,-0,
+                            -2,-2,-5,-2,-2,
+                            -1,-1,-1,-1,-1,
+                            -2,-2,-2,-2,4,
+                            10,15,5,-5]
+
+
+background_threhold_list = [-2.5,85.0,15,5,0,
+                            -0,-0,-0,-0,-0,
+                            -0,-0,-0,-0,-0,
+                            -5,-5,-5,-5,-5,
+                            -5,-5,-5,-5,-5,
+                            -0,-0,-0,-0,-0,
+                            -2,-2,-2,-2,4,
+                            10,15,5,-5] #* number_barrier3d_models
+
+
 
 e_file = []
 d_file = []
 
-for i in range(20,22):
+for i in range(11,50):
     dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Sample_'+str(i)+'_dune.npy'
-    elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Sample_'+str(i)+'_topography.npy'
+    elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Ocracoke_Revised_Topography_1988_Grid_'+str(i)+'.npy'
     d_file.append(dune_name)
     e_file.append(elev_name)
 
@@ -55,7 +85,7 @@ def alongshore_connected(
     rebuild_dune_threshold,
     roadway_management_on,
     beach_dune_manager_on,
-    sea_level_rise_rate=0.004,  # not an array
+    sea_level_rise_rate=0.0037,  # not an array
     sea_level_constant=True,  # not an array
     trigger_dune_knockdown=False,
     group_roadway_abandonment=None,
@@ -169,7 +199,7 @@ def alongshore_connected(
 
 def alongshore_uniform():
     # variables that DO NOT change among runs
-    number_barrier3d_models = 2
+    number_barrier3d_models = 39
     beach_width_threshold = [30] * number_barrier3d_models
     rmin = [0.55] * number_barrier3d_models
     rmax = [0.95] * number_barrier3d_models
@@ -179,13 +209,13 @@ def alongshore_uniform():
     dune_design_elevation = [2.6] * number_barrier3d_models  # 2 m scenario
     num_cores = 4  # for my laptop, max is 15
     dune_minimum_elevation = 1.1  # m MHW, allow dune to erode down to 0.5 m above the roadway, for roadways only
-    road_ele = 0.6  # m MHW
-    road_width = 40  # m
-    road_setback = 10  # m
+    road_ele = 1.45  # m MHW (Based on 1997 LIDAR)
+    road_width = 20  # m (2 lane road on Ocracoke)
+    road_setback = road_setbacks  # m
     overwash_filter = 10  # residental
     overwash_to_dune = 9
     nourishment_volume = 100  # m^3/m
-    background_erosion = -1.0 #[10.0,-1.0,-1.0,-1.0,-1.0] #* number_barrier3d_models  # m/yr, background shoreline erosion
+    background_erosion = background_threhold_list # m/yr, background shoreline erosion
     rebuild_dune_threshold = 1  # m
     sandbag_management_on = [True] * number_barrier3d_models
     sandbag_elevation = 4 # m
@@ -197,12 +227,12 @@ def alongshore_uniform():
     sea_level_constant = True  # linear
 
     # Island offsets
-    shoreline_offset_enabled = False
-    shoreline_offset = offsets
+    shoreline_offset_enabled = True
+    shoreline_offset = dune_offset
 
     # Island is too narrow for roadway to be relocated. Roadway eaten up by dunes at 73 years
     alongshore_connected(
-        nt=80,
+        nt=32,
         name=run_name,
         storm_file=storm_file,
         alongshore_section_count=number_barrier3d_models,

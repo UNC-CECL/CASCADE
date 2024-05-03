@@ -521,6 +521,7 @@ def check_sandbag_need(
         exceeds_min_dune_threshold = np.min(barrier3d.DuneDomain[time_index,:,0]) < threshold_elevation
 
         if exceeds_min_dune_threshold == True:
+            #print('Elevation is low enough for sandbags')
             for width in range(0, barrier3d.DuneWidth):
                 for cell in range(0, len(barrier3d.DuneDomain[time_index, :, width])):
                     if barrier3d.DuneDomain[time_index, cell, width] < threshold_elevation:
