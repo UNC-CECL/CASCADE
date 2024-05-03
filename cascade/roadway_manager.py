@@ -442,20 +442,18 @@ def check_sandbag_need(
 ):
     time_index = barrier3d.time_index -1
     if dune_road_distance == 0:
-        #print('Road close enough for sandbags')
+        print('Road close enough for sandbags')
         exceeds_min_dune_threshold = np.min(barrier3d.DuneDomain[time_index,:,:]) < threshold_elevation
         #print("Theshold value is "+str(exceeds_min_dune_threshold))
         #print("Smallest value is "+str(np.min(barrier3d.DuneDomain[time_index,:,:])))
 
         if exceeds_min_dune_threshold == True:
-            #print('Elevation is low enough for sandbags')
+            print('Elevation is low enough for sandbags')
             for width in range(0, barrier3d.DuneWidth):
                 for cell in range(0, len(barrier3d.DuneDomain[time_index, :, width])):
                     if barrier3d.DuneDomain[time_index, cell, width] < threshold_elevation:
-                        #print('Sandbags would be added in cell ', str(cell), str(width),' elevation was ',barrier3d.DuneDomain[time_index, cell, width])
+                        print('Sandbags would be added in cell ', str(cell), str(width),' elevation was ',barrier3d.DuneDomain[time_index, cell, width])
                         barrier3d._DuneRestart[width][cell] = design_elevation / 10
-        else:
-            #print('Dune elevation is too high for sandbags')
 
         if exceeds_min_dune_threshold == True:
             sandbag_need = True
@@ -464,7 +462,7 @@ def check_sandbag_need(
         else:
             sandbag_need = False
     elif dune_road_distance != 0:
-        #print('Road far enough away')
+        print('Road far enough away')
         # If road is too far away reset to initial threshold rebuild value
         for width in range(0,barrier3d.DuneWidth):
             for cell in range(0,len(barrier3d.DuneDomain[time_index,:,width])):

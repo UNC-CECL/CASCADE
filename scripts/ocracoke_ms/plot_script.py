@@ -325,14 +325,12 @@ def plot_ElevAnimation_CASCADE(
 
 
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output')
-# run_name='Wreck_ACC_RSLR3_S3' # 5 Length
-run_name = "Sandbag_80_A"  # 4 length
-# run_name='Metompkin_Marsh_S10_3'
-# run_name='Smith_S10_3' # 5
+run_name = "Hindcast_Test_7"
+
 
 name_prefix = run_name
-nt_run = 80
-number_barrier3d_models = 2
+nt_run = 46
+number_barrier3d_models = 39
 Run_Marsh_Dynamics = False
 
 
