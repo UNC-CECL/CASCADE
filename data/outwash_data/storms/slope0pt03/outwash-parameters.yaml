@@ -62,5 +62,5 @@ nn: 0.5
 rmax: 0.45
 rmin: 0.05
 s_sf_eq: 0.01698590034494604
-storm_file: StormSeries_100yrs_inclusive_NCB_Berm1pt46m_Slope0pt03_84.npy
+storm_file: StormSeries_100yrs_inclusive_NCB_Berm1pt46m_Slope0pt03_3.npy
 threshold_in: 0.25
