@@ -278,7 +278,7 @@ for rname in rname_array:
     cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270, labelpad=25, fontsize=10)
     plt.xlabel("Alongshore Distance (m)")
     plt.ylabel("Year")
-    plt.title("100% washout to shoreface", weight="bold")
+    plt.title("100% outwash to shoreface", weight="bold")
     plt.xticks(x_ticks, x_tick_labels)
     plt.hlines([1, 21, 41, 61, 81], -0.5, 49.5, colors="magenta", linestyles='solid')
 
@@ -307,7 +307,7 @@ for rname in rname_array:
     cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270, labelpad=25, fontsize=10)
     plt.xlabel("Alongshore Distance (m)")
     plt.ylabel("Year")
-    plt.title("50% washout to shoreface", weight="bold")
+    plt.title("50% outwash to shoreface", weight="bold")
     plt.xticks(x_ticks, x_tick_labels)
     plt.hlines([1, 21, 41, 61, 81], -0.5, 49.5, colors="magenta", linestyles='solid')
 
@@ -336,7 +336,7 @@ for rname in rname_array:
     cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270, labelpad=25, fontsize=10)
     plt.xlabel("Alongshore Distance (m)")
     plt.ylabel("Year")
-    plt.title("0% washout to shoreface", weight="bold")
+    plt.title("0% outwash to shoreface", weight="bold")
     plt.xticks(x_ticks, x_tick_labels)
     plt.hlines([1, 21, 41, 61, 81], -0.5, 49.5, colors="magenta", linestyles='solid')
     # plt.hlines(20, -0.5, 49.5, color="k", linestyles='dashed', linewidth=1)
