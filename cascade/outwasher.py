@@ -800,7 +800,6 @@ def flow_routing_with_lateral_transport(
         dune_flow_dynamics,
         nn,
         max_slope,
-        OW_TS,
         Dmaxel,
         BermEl,
         C,
@@ -925,7 +924,6 @@ def flow_routing_with_lateral_transport(
             # if we have a hydraulic connection, we will route flow through the domain
             # the next step is to identify the cells where we will start flow
             if bay_sufficient is True:
-                OW_TS.append(TS)
                 start_row = int_width
 
                 # set the first (most landward) row of dunes as downhill (2 in our arrays)
@@ -1112,7 +1110,7 @@ def flow_routing_with_lateral_transport(
                     SedFluxOut[TS, width - 1, :]) / substep  # [dam^3]
 
     return (elevation, qs_lost_total, Discharge, elev_change_array, underwater_array, downhill_array, start_cell_array,
-            init_discharge_array, OW_TS)
+            init_discharge_array)
 
 
 class Outwasher:
@@ -1222,7 +1220,6 @@ class Outwasher:
     ):
 
         self._time_index = b3d.time_index
-        OW_TS = []
 
         # reduce beach width by the amount of post-storm shoreline change; if the
         # beach width reaches zero, turn dune migration in B3D back on -- otherwise
@@ -1324,7 +1321,7 @@ class Outwasher:
             Elevation[0, :, :] = full_domain
 
             (Elevation, qs_lost_total, Discharge, elev_change_array, underwater_array, downhill_array,
-             start_cell_array, init_discharge_array, OW_TS) = flow_routing_with_lateral_transport(
+             start_cell_array, init_discharge_array) = flow_routing_with_lateral_transport(
                 n_time_steps=duration,
                 width=width,
                 int_width=int_width,
@@ -1335,7 +1332,6 @@ class Outwasher:
                 dune_flow_dynamics=self._dune_flow_dynamics,
                 nn=b3d._nn,
                 max_slope=self._max_slope,
-                OW_TS=OW_TS,
                 Dmaxel=b3d._Dmaxel,
                 BermEl=b3d._BermEl,
                 C=self._C,
