@@ -11,21 +11,22 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 # ---------------------------------- set model parameters that change per run ------------------------------------------
-rname_array = ["r025", "r035"]
+# rname_array = ["r025", "r035"]
+rname_array = ["r025"]
 for rname in rname_array:
     storm_interval = 20        # 20 or 10 years
     config = 4                 # 1, 2, 3, or 4
 
     # Display stats on console/show plots
     migration_stats = False
-    plotters = True
-    geomoetry_stats = True
+    plotters = False
+    geomoetry_stats = False
 
     # location of the npz files
-    datadir_b3d = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/overwash_only/".format(rname)
-    datadir_100 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/outwash100/".format(rname)
-    datadir_50 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/outwash50/".format(rname)
-    datadir_0 = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/outwash0/".format(rname)
+    datadir_b3d = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{0}/overwash_only/".format(rname)
+    datadir_100 = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{0}/outwash100/".format(rname)
+    datadir_50 = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{0}/outwash50/".format(rname)
+    datadir_0 = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{0}/outwash0/".format(rname)
 
     # initialize empty arrays
     tmax_array_b3d = []
@@ -315,30 +316,6 @@ for rname in rname_array:
         QoutTS0 = outwash0_obj.outwash[0]._outwash_flux_TS
         outwash_array_0[storm_num - 1] = QoutTS0
 
-    DuneCrest_b3d = np.average(np.vstack(avg_dune_crest_array_b3d).astype(float), axis=0) * 10
-    print("average dune crest height overwash only: {0}".format(np.average(DuneCrest_b3d)))
-    DuneCrest_100 = np.average(np.vstack(avg_dune_crest_array_100).astype(float), axis=0) * 10
-    print("average dune crest height 100% outwash: {0}".format(np.average(DuneCrest_100)))
-    DuneCrest_50 = np.average(np.vstack(avg_dune_crest_array_50).astype(float), axis=0) * 10
-    print("average dune crest height 50% outwash: {0}".format(np.average(DuneCrest_50)))
-    DuneCrest_0 = np.average(np.vstack(avg_dune_crest_array_0).astype(float), axis=0) * 10
-    print("average dune crest height 0% outwash: {0}".format(np.average(DuneCrest_0)))
-
-    fig1 = plt.figure()
-    plt.title("{0}".format(rname))
-    plt.plot(DuneCrest_b3d, label="overwash only")
-    plt.plot(DuneCrest_100, label="100% outwash")
-    plt.plot(DuneCrest_50, label="50% outwash")
-    plt.plot(DuneCrest_0, label="0% outwash")
-    plt.ylim(bottom=0, top=5)
-    plt.xlabel("Alongshore Barrier Length (m)")
-    plt.ylabel("Average Dune Crest Elevation (m)")
-    xtick_max = np.shape(DuneCrest_0)[0]
-    x_ticks = np.array(range(0, xtick_max, 10))
-    x_tick_labels = x_ticks * 10
-    plt.xticks(x_ticks, x_tick_labels)
-    plt.legend()
-
     # because we have 100 storms and drowns = 1, the sum of the array is the percent that drown
     percent_drown_b3d = np.sum(drowning_array_b3d)
     print("{0}% of barriers drown for the overwash only scenario".format(int(percent_drown_b3d)))
@@ -419,6 +396,59 @@ for rname in rname_array:
     unique_drown_years_strings = []
     for year in unique_drown_years:
         unique_drown_years_strings.append(str(year))
+
+    # dune crest avg elevations and plots
+    DuneCrest_b3d = np.average(np.vstack(avg_dune_crest_array_b3d).astype(float), axis=0) * 10
+    print("average dune crest height overwash only: {0}".format(np.average(DuneCrest_b3d)))
+    DuneCrest_100 = np.average(np.vstack(avg_dune_crest_array_100).astype(float), axis=0) * 10
+    print("average dune crest height 100% outwash: {0}".format(np.average(DuneCrest_100)))
+    DuneCrest_50 = np.average(np.vstack(avg_dune_crest_array_50).astype(float), axis=0) * 10
+    print("average dune crest height 50% outwash: {0}".format(np.average(DuneCrest_50)))
+    DuneCrest_0 = np.average(np.vstack(avg_dune_crest_array_0).astype(float), axis=0) * 10
+    print("average dune crest height 0% outwash: {0}".format(np.average(DuneCrest_0)))
+
+    fig1 = plt.figure()
+    plt.title("{0}".format(rname))
+    plt.plot(DuneCrest_b3d, label="overwash only")
+    plt.plot(DuneCrest_100, label="100% outwash")
+    plt.plot(DuneCrest_50, label="50% outwash")
+    plt.plot(DuneCrest_0, label="0% outwash")
+    plt.ylim(bottom=0, top=5)
+    plt.xlabel("Alongshore Barrier Length (m)")
+    plt.ylabel("Average Dune Crest Elevation (m)")
+    xtick_max = np.shape(DuneCrest_0)[0]
+    x_ticks = np.array(range(0, xtick_max, 10))
+    x_tick_labels = x_ticks * 10
+    plt.xticks(x_ticks, x_tick_labels)
+    plt.legend()
+
+    # average overwash and outwash normalized by the number of events (avg per event)
+    overwash_avg_b3d = []
+    overwash_avg_100 = []
+    overwash_avg_50 = []
+    overwash_avg_0 = []
+
+    outwash_avg_100 = []
+    outwash_avg_50 = []
+    outwash_avg_0 = []
+    for storm in range(100):
+        overwash_avg_b3d.append(np.sum(overwash_array_b3d[storm]) / np.count_nonzero(overwash_array_b3d[storm]))
+        overwash_avg_100.append(np.sum(overwash_array_100[storm])/np.count_nonzero(overwash_array_100[storm]))
+        overwash_avg_50.append(np.sum(overwash_array_50[storm])/np.count_nonzero(overwash_array_50[storm]))
+        overwash_avg_0.append(np.sum(overwash_array_0[storm])/np.count_nonzero(overwash_array_0[storm]))
+
+        outwash_avg_100.append(np.sum(outwash_array_100[storm])/np.count_nonzero(outwash_array_100[storm]))
+        outwash_avg_50.append(np.sum(outwash_array_50[storm])/np.count_nonzero(outwash_array_50[storm]))
+        outwash_avg_0.append(np.sum(outwash_array_0[storm])/np.count_nonzero(outwash_array_0[storm]))
+
+    print("average overwash per event overwash only: {0}".format(np.average(overwash_avg_b3d)))
+    print("average overwash per event 100%: {0}".format(np.average(overwash_avg_100)))
+    print("average overwash per event 50%: {0}".format(np.average(overwash_avg_50)))
+    print("average overwash per event 0%: {0}".format(np.average(overwash_avg_0)))
+
+    print("average outwash per event 100%: {0}".format(np.average(outwash_avg_100)))
+    print("average outwash per event 50%: {0}".format(np.average(outwash_avg_50)))
+    print("average outwash per event 0%: {0}".format(np.average(outwash_avg_0)))
 
     # printing migration stats
     if migration_stats:
@@ -539,7 +569,7 @@ for rname in rname_array:
         plt.xlabel("Drown Year")
         plt.ylabel("Number of Barriers that Drown")
         plt.legend()
-        plt.ylim(top=65)
+        plt.ylim(top=80)
         plt.title('{0}'.format(rname), weight="bold")
 
         # plotting shoreline position for all 100 storms, each scenario on separate plot
