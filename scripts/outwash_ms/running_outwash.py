@@ -17,7 +17,7 @@ datadir = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0
 storm_interval = 20   # 20 or 10 years
 r_dune_growth = 0.25  # 0.25 or 0.35
 config = 4            # 1, 2, 3, or 4
-percent_washout_to_shoreface = 0
+percent_washout_to_shoreface = 100
 
 # automatically set min and max r values based on dune growth rate selection
 if r_dune_growth == 0.25:
@@ -44,8 +44,7 @@ save_dir = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope
            "outwash{1}/".format(rname, percent_washout_to_shoreface)
 
 # --------------------------------- running overwash scenario with all 100 storms --------------------------------------
-# for storm_num in range(1, 101):
-for storm_num in range(41, 61):
+for storm_num in range(1, 101):
     print("\r", "Storm Number: ", storm_num, end="")
     overwash_storm = "StormSeries_100yrs_inclusive_NCB_Berm1pt46m_Slope0pt03_{0}.npy".format(storm_num)
 
