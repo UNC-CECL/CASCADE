@@ -13,16 +13,16 @@ os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
 # Dune height path name
 s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Ocracoke_Bigger_Storms_5_m.npy'
 #run_name = 'Run_1997_2020_with_1974_1997_ss'
-run_name = 'New_Flow_Routing_Test_2'
+run_name = 'Buffer_1997_Test'
 
 
 
-buffer_enabled = False
+buffer_enabled = True
 island_grid_number = 39
-
+Total_B3D_Number = 70
 
 road_load_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Revised_Offshore_Datum\\Corrected_Road_Offsets.csv'
-dune_load_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Revised_Offshore_Datum\\Dune_Offsets.csv'
+dune_load_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Revised_Offshore_Datum\\Buffer_Shoreline_Offsets.csv'
 
 road_setbacks = np.loadtxt(road_load_name,skiprows=1,delimiter=',')
 dune_offset = np.loadtxt(dune_load_name,skiprows=1,delimiter=',')
@@ -36,31 +36,15 @@ elif start_year == 1988:
 else:
     year = 2
 
-print(year)
-
 road_setbacks = road_setbacks[:,0]*10
 dune_offset = dune_offset[:,year]*10
 
-if buffer_enabled == True:
-    r_s = [0]*44
-    r_s[2:42] = copy.deepcopy(road_setbacks)
-    road_setbacks = r_s
-    d_s = [0]*44
-    d_s[2:42] = copy.deepcopy(dune_offset)
-    d_s[-2] = 800
-    d_s[-1] = 800
-    dune_offset = d_s
+r_s = [0]*Total_B3D_Number
+r_s[15:55] = copy.deepcopy(road_setbacks)
+road_setbacks = r_s
 
-road_cells = [True] * island_grid_number
-
-if buffer_enabled == True:
-    road_cells = [True] * (island_grid_number+4)
-    road_cells[0] = False
-    road_cells[1] = False
-    road_cells[-2] = False
-    road_cells[-1] = False
-
-
+road_cells = [False] * Total_B3D_Number
+road_cells[15:55] = [True]*39
 
 run_years = 23
 
@@ -96,33 +80,27 @@ background_threhold_list = [5,60,30,-5,-5,
 # Only alter the closest cells to inlet
 # Best 1 middle cell alteration
 
-background_threhold_list = [250,8,0,0,0,
+background_threhold_list = [0,0,0,0,0,
+                            0,0,0,0,0,
+                            0,0,0,0,0,
+                            60,0,0,0,0,
                             -0,0,0,0,0,
                             -0,-0,0,0,0,
                             0,0,-0,0,-0,
                             0,0,0,0,0,
                             -14,0,0,0,0,
                             -10,0,0,0,0,
-                            0,-0,0,-12]
+                            0,-0,0,-30,
+                            0,0,0,0,0,
+                            0,0,0,0,0,
+                            0,0,0,0,0]
 
-if buffer_enabled == True:
-    background_threhold_list = [0, 0, 250, 8, 0, 0, 0,
-                                -0, 0, 0, 0, 0,
-                                -0, -0, 0, 0, 0,
-                                0, 0, -0, 0, -0,
-                                0, 0, 0, 0, 0,
-                                -14, 0, 0, 0, 0,
-                                -10, 0, 0, 0, 0,
-                                0, -0, 5, 12, 0, 0]
 
 e_file = []
 d_file = []
-
-if buffer_enabled == True:
+for i in range(0,15):
     dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Sample_1_dune.npy'
     elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Sample_1_topography.npy'
-    d_file.append(dune_name)
-    e_file.append(elev_name)
     d_file.append(dune_name)
     e_file.append(elev_name)
 
@@ -133,11 +111,9 @@ for i in range(11,50):
     d_file.append(dune_name)
     e_file.append(elev_name)
 
-if buffer_enabled == True:
+for i in range(0,15):
     dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Sample_1_dune.npy'
     elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Sample_1_topography.npy'
-    d_file.append(dune_name)
-    e_file.append(elev_name)
     d_file.append(dune_name)
     e_file.append(elev_name)
 
@@ -278,7 +254,7 @@ def alongshore_connected(
 
 def alongshore_uniform():
     # variables that DO NOT change among runs
-    number_barrier3d_models = 39
+    number_barrier3d_models = 69
     beach_width_threshold = [30] * number_barrier3d_models
     rmin = [0.55] * number_barrier3d_models
     rmax = [0.95] * number_barrier3d_models
