@@ -47,7 +47,7 @@ def plot_ElevAnimation_CASCADE(
         + MaxBeachWidth
         + np.abs(barrier3d[0]._ShorelineChange)
         + OriginY
-        + 110 #500 #important
+        + 170 #500 #important
     )
 
     os.chdir(directory)
@@ -179,7 +179,7 @@ def plot_ElevAnimation_CASCADE(
                     plt.text(3, y_lim[0] + 3, timestr, color="w")
                 else:
                     plt.ylim(bottom=OriginY - 35)
-                    plt.text(1, OriginY - 33, timestr)
+                    plt.text(1, OriginY - 33, timestr, color='w')
                 plt.tight_layout()
                 plt.rcParams.update({"font.size": 11})
                 # elevFig1.tight_layout()
@@ -285,7 +285,7 @@ def plot_ElevAnimation_CASCADE(
             plt.text(3, y_lim[0] + 3, timestr, color="w")
         else:
             plt.ylim(bottom=OriginY - 35)
-            plt.text(1, OriginY - 33, timestr)
+            plt.text(1, OriginY - 33, timestr, color ='w')
         plt.tight_layout()
         plt.rcParams.update({"font.size": 11})
         # elevFig2.tight_layout()
@@ -319,17 +319,17 @@ def plot_ElevAnimation_CASCADE(
                     filename = "elev_" + str(filenum) + "pt5" ".png"
                 frames.append(imageio.imread(filename))
 
-    imageio.mimsave("elev.gif", frames, "GIF-FI")
+    imageio.mimsave("elev.gif", frames, "GIF-FI",fps =2)
     print()
     print("[ * GIF successfully generated * ]")
 
 
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output')
-run_name = "Hindcast_Test_7"
+run_name = "Ocracoke_Bigger_Storms_5_m_1974_1997_middle_sinks"
 
 
 name_prefix = run_name
-nt_run = 46
+nt_run = 23
 number_barrier3d_models = 39
 Run_Marsh_Dynamics = False
 
