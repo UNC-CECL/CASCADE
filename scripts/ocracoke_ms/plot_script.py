@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 import os
 import imageio
+import copy
 
 
 def plot_ElevAnimation_CASCADE(
@@ -13,6 +14,7 @@ def plot_ElevAnimation_CASCADE(
     TMAX_MGMT,
     name,
     TMAX_SIM,
+    Model_Grids_Of_Interest,
     ny=1,
     beach_management_ny=None,  # list of booleans the length of ny
     roadway_management_ny=None,
@@ -27,6 +29,11 @@ def plot_ElevAnimation_CASCADE(
     huge jump in the back-barrier position in Barrier3D. OTHERWISE, it is meaningless to the dynamics Barrier3D.
     """
     barrier3d = cascade.barrier3d
+
+    Focused_B3D = []
+    for focus in Model_Grids_Of_Interest:
+        Focused_B3D.append(copy.deepcopy(barrier3d[focus]))
+    barrier3d = copy.deepcopy(Focused_B3D)
 
     # set up the domain; here we just use the first grid, but that could break in future runs
     BarrierLength = barrier3d[0].BarrierLength
@@ -277,8 +284,12 @@ def plot_ElevAnimation_CASCADE(
         )
         cbar = elevFig2.colorbar(cax)
         cbar.set_label("elevation (m MHW)", rotation=270)
-        plt.xlabel("alongshore distance (dam)")
-        plt.ylabel("cross-shore distance (dam)")
+
+
+
+
+        plt.xlabel("alongshore distance (km)")
+        plt.ylabel("cross-shore distance (km)")
         timestr = "Time = " + str(t) + " yrs"
         if y_lim is not None:
             plt.ylim(y_lim)
@@ -286,6 +297,44 @@ def plot_ElevAnimation_CASCADE(
         else:
             plt.ylim(bottom=OriginY - 35)
             plt.text(1, OriginY - 33, timestr, color ='w')
+
+        # Convert decameter lables to kilometers
+        xticks = plt.xticks()
+        yticks = plt.yticks()
+
+        xtick_loc = copy.deepcopy(xticks[0])
+        ytick_loc = copy.deepcopy(yticks[0])
+
+
+        # Find the max and min lengths for cross-shore length
+        xmin = 0
+        xmax = len(AnimateDomain[0])
+
+        focused_x_tick_location = []
+
+        for k in range(len(xtick_loc)):
+            if xtick_loc[k] >= xmin and xtick_loc[k] <= xmax:
+                focused_x_tick_location.append(copy.deepcopy(xtick_loc[k]))
+
+        New_X_Labels = np.divide(copy.deepcopy(focused_x_tick_location), 100)
+
+        plt.xticks(focused_x_tick_location,labels=New_X_Labels)
+        # Alter Y labels
+
+        Y_vals = plt.ylim()
+        Y_min = min(Y_vals)
+        Y_max = max(Y_vals)
+
+        focused_y_tick_location = []
+
+        for l in range(len(ytick_loc)):
+            if ytick_loc[l] >= Y_min and ytick_loc[l] <= Y_max:
+                focused_y_tick_location.append(copy.deepcopy(ytick_loc[l]))
+
+        New_Y_Labels = np.divide(copy.deepcopy(focused_y_tick_location), 100)
+
+        plt.yticks(focused_y_tick_location,labels=New_Y_Labels)
+
         plt.tight_layout()
         plt.rcParams.update({"font.size": 11})
         # elevFig2.tight_layout()
@@ -319,20 +368,21 @@ def plot_ElevAnimation_CASCADE(
                     filename = "elev_" + str(filenum) + "pt5" ".png"
                 frames.append(imageio.imread(filename))
 
-    imageio.mimsave("elev.gif", frames, "GIF-FI",fps =2)
+    imageio.mimsave("elev.gif", frames, "GIF",fps =2)
     print()
     print("[ * GIF successfully generated * ]")
 
 
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output')
-run_name = "Ocracoke_Bigger_Storms_5_m_1974_1997_middle_sinks"
+run_name = "NCB_Test_Center_Sinks_S15"
 
 
 name_prefix = run_name
 nt_run = 23
-number_barrier3d_models = 39
+number_barrier3d_models = 5
 Run_Marsh_Dynamics = False
 
+Model_Grids_Of_Interest = range(40,45)
 
 # --------- plot ---------
 output = np.load(run_name + ".npz", allow_pickle=True)
@@ -362,4 +412,5 @@ plot_ElevAnimation_CASCADE(
     z_lim=None,
     fig_size=None,
     fig_eps=False,
+    Model_Grids_Of_Interest = Model_Grids_Of_Interest,
 )

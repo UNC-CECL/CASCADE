@@ -11,90 +11,117 @@ from cascade.cascade import Cascade
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
 # Specify variables to use in calling function
 # Dune height path name
-s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Ocracoke_Bigger_Storms_5_m.npy'
-#run_name = 'Run_1997_2020_with_1974_1997_ss'
-run_name = 'Buffer_1997_Test'
+#s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Duck_Bigger_Storms_5_m.npy'
+#s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Core_Banks_1974_1997.npy'
 
-
+#s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Core_Banks_1997_2021.npy'
+#s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1974_1997.npy'
+#s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1997_2021.npy'
+#run_name = 'NCB_Test_Center_Sinks_S0_No_Road_1997'
 
 buffer_enabled = True
 island_grid_number = 39
 Total_B3D_Number = 70
 
-road_load_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Revised_Offshore_Datum\\Corrected_Road_Offsets.csv'
-dune_load_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Revised_Offshore_Datum\\Buffer_Shoreline_Offsets.csv'
+dune_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Buffer_Shoreline_Offsets.csv'
+
+start_year = 1997
+if start_year == 1974:
+    year = 0
+    run_name = ['OCR_S32_SR_NR_NS_1974_0_01_D_S',
+                'OCR_S32_SR_NR_NS_1974_0_1_D_S',
+                'OCR_S32_SR_NR_NS_1974_0_5_D_S',
+                'OCR_S32_SR_NR_NS_1974_0_75_D_S',
+                'OCR_S32_SR_NR_NS_1974_1_0_D_S'
+                ]
+    s_file = ['C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1974_1997.npy',
+        'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1974_1997.npy',
+              'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1974_1997.npy',
+              'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1974_1997.npy',
+              'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1974_1997.npy'
+              ]
+else:
+    year = 2
+    run_name = ['OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_01',
+                'OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_1',
+                'OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_5',
+                'OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_75',
+                'OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_1_0'
+                ]
+    s_file = ['C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1997_2021.npy',
+        'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1997_2021.npy',
+              'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1997_2021.npy',
+              'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1997_2021.npy',
+              'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1997_2021.npy']
+
+
+
+if start_year == 1974:
+    road_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Road_Dune_Distance_1974.csv'
+else:
+    road_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Corrected_Road_Offsets.csv'
 
 road_setbacks = np.loadtxt(road_load_name,skiprows=1,delimiter=',')
 dune_offset = np.loadtxt(dune_load_name,skiprows=1,delimiter=',')
 dune_offset_c = copy.deepcopy(dune_offset)
 
-start_year = 1997
-if start_year == 1974:
-    year = 0
-elif start_year == 1988:
-    year = 1
-else:
-    year = 2
+#rebuild_elev_threshold = [0.01,0.01,0.01,0.01,0.01,0.01]
 
-road_setbacks = road_setbacks[:,0]*10
+rebuild_elev_threshold = [0.01, 0.1,0.5,0.75,1]
+#rebuild_elev_threshold = 1
+Dune_Rebuilding_Height = 3
+#Dune_Rebuilding_Height = 1
+
+
+road_setbacks = road_setbacks*10
 dune_offset = dune_offset[:,year]*10
 
 r_s = [0]*Total_B3D_Number
 r_s[15:55] = copy.deepcopy(road_setbacks)
 road_setbacks = r_s
 
+# Define which B3D island models have
 road_cells = [False] * Total_B3D_Number
 road_cells[15:55] = [True]*39
 
+sandbag_cells = [False] * Total_B3D_Number
+sandbag_cells[15:55] = [True]*39
+
+
 run_years = 23
 
-'''background_threhold_list = [15.0,55.0,20,5,-2,
-                            -2,-2,-2,-0,-0,
-                            -0,-0,-0,-0,-0,
-                            -0,-0,-0,-0,-0,
-                            -2,-2,-2,-2,-2,
-                            -1,-1,-1,-1,-1,
-                            -2,-2,-2,-2,3,
-                            3,3,2,0] #* number_barrier3d_models'''
-# Okay Values
-
-'''background_threhold_list = [100,85.0,15,5,0,
-                            -2,-2,-2,-0,-0,
-                            -0,-0,-0,-0,-0,
-                            -1,-0,-0,-0,-0,
-                            -2,-2,-5,-2,-2,
-                            -1,-1,-1,-1,-1,
-                            -2,-2,-2,-2,4,
-                            10,15,5,-5]
-
-# okay
-background_threhold_list = [5,60,30,-5,-5,
-                            -1,-1,-1,-1,-0,
-                            -0,-0,-0,-0,-0,
-                            -2,-2,-2,-2,-2,
-                            -1,-1,-1,-1,-1,
-                            -0,-0,-0,-0,-0,
-                            -2,-2,-2,-2,-2,
-                            10,15,15,-5] #* number_barrier3d_models'''
-
 # Only alter the closest cells to inlet
-# Best 1 middle cell alteration
 
-background_threhold_list = [0,0,0,0,0,
+if start_year == 1974:
+    background_threhold_list = [0,0,0,0,0,
                             0,0,0,0,0,
                             0,0,0,0,0,
-                            60,0,0,0,0,
-                            -0,0,0,0,0,
-                            -0,-0,0,0,0,
-                            0,0,-0,0,-0,
+                            45,0,0,0,0,
                             0,0,0,0,0,
-                            -14,0,0,0,0,
-                            -10,0,0,0,0,
-                            0,-0,0,-30,
+                            0,0,0,0,0,
+                            0,0,0,0,0,
+                            -1.0,-1.1,-1.2,-1.3,-1.4,
+                            -1.5,-1.6,-1.7,-1.8,-1.9,
+                            -2.0,-2.1,-2.2,-2.3,-2.4,
+                            -0,-0,-0,40,
                             0,0,0,0,0,
                             0,0,0,0,0,
                             0,0,0,0,0]
-
+else:
+    background_threhold_list = [0, 0, 0, 0, 0,
+                                0, 0, 0, 0, 0,
+                                0, 0, 0, 0, 0,
+                                33, 0, 0, 0, 0,
+                                0, 0, 0, 0, 0,
+                                0, 0, 0, 0, 0,
+                                0, 0, 0, 0, 0,
+                                -1.0, -1.1, -1.2, -1.3, -1.4,
+                                -1.5, -1.6, -1.7, -1.8, -1.9,
+                                -2.0, -2.1, -2.2, -2.3, -2.4,
+                                -0, -0, -0, -20,
+                                0, 0, 0, 0, 0,
+                                0, 0, 0, 0, 0,
+                                0, 0, 0, 0, 0]
 
 e_file = []
 d_file = []
@@ -106,8 +133,10 @@ for i in range(0,15):
 
 for i in range(11,50):
     dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Sample_'+str(i)+'_dune.npy'
-    elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Sample_'+str(i)+'_topography.npy'
-    #elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Ocracoke_Revised_Topography_1974_Grid_'+str(i)+'.npy'
+    if start_year == 1974:
+        elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Ocracoke_Revised_Topography_1974_Grid_'+str(i)+'.npy'
+    else:
+        elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Sample_'+str(i)+'_topography.npy'
     d_file.append(dune_name)
     e_file.append(elev_name)
 
@@ -252,7 +281,7 @@ def alongshore_connected(
     return cascade
 
 
-def alongshore_uniform():
+def alongshore_uniform(run_name, s_file, rebuild_elev_threshold):
     # variables that DO NOT change among runs
     number_barrier3d_models = 69
     beach_width_threshold = [30] * number_barrier3d_models
@@ -261,9 +290,9 @@ def alongshore_uniform():
     elevation_file = e_file #[e_file] * number_barrier3d_models
     dune_file = d_file #[d_file] * number_barrier3d_models
     storm_file = s_file
-    dune_design_elevation = [1.5] * number_barrier3d_models  # 2 m scenario [2.6]
+    dune_design_elevation = [Dune_Rebuilding_Height] * number_barrier3d_models  # 2 m scenario [2.6]
     num_cores = 4  # for my laptop, max is 15
-    dune_minimum_elevation = 1.0  # m MHW, allow dune to erode down to 0.5 m above the roadway, for roadways only [.75]
+    dune_minimum_elevation = rebuild_elev_threshold  # m MHW, allow dune to erode down to 0.5 m above the roadway, for roadways only [.75]
     road_ele = 1.45  # m MHW (Based on 1997 LIDAR)
     road_width = 20  # m (2 lane road on Ocracoke)
     road_setback = road_setbacks  # m
@@ -272,7 +301,7 @@ def alongshore_uniform():
     nourishment_volume = 100  # m^3/m
     background_erosion = background_threhold_list # m/yr, background shoreline erosion
     rebuild_dune_threshold = 1  # m
-    sandbag_management_on = road_cells
+    sandbag_management_on = sandbag_cells
     sandbag_elevation = 4 # m
 
     # baseline models for comparison -- all roadways ----------------------------------------
@@ -317,4 +346,6 @@ def alongshore_uniform():
         enable_shoreline_offset=shoreline_offset_enabled,
     )
 
-alongshore_uniform()
+for k in range(0,len(run_name)):
+    alongshore_uniform(run_name=run_name[k],s_file=s_file[k],rebuild_elev_threshold = rebuild_elev_threshold[k])
+    os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')

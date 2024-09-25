@@ -22,7 +22,7 @@ os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
 e_file = []
 d_file = []
 
-for i in range(11,50):
+for i in range(11,13):
     dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Sample_'+str(i)+'_dune.npy'
     elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Ocracoke_Revised_Topography_1974_Grid_'+str(i)+'.npy'
     d_file.append(dune_name)
@@ -32,7 +32,7 @@ c_wd = os.getcwd()
 nt_run = 46  # Number of years model will run
 run_name = []
 s_file = []
-for i in range(10,Num_Storms):
+for i in range(10,12):
     run_name.append('O_Hindcast_1974_S_'+str(i))
     s_file.append('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Ocracoke_StormList_'+
                        str(i)+'_baseline.npy')
@@ -42,21 +42,14 @@ road_load_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at C
 dune_load_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Revised_Offshore_Datum\\Dune_Offsets.csv'
 
 
-road_setbacks = np.loadtxt(road_load_name,skiprows=1,delimiter=',')
-dune_offset = np.loadtxt(dune_load_name,skiprows=1,delimiter=',')
+#road_setbacks = np.loadtxt(road_load_name,skiprows=1,delimiter=',')
+#dune_offset = np.loadtxt(dune_load_name,skiprows=1,delimiter=',')
 
-road_setbacks = road_setbacks[:,0]*10
-dune_offset = dune_offset[:,0]*10
+road_setbacks =[0,0] #road_setbacks[0,0]*10
+dune_offset = [0,0]#dune_offset[0,0]*10
 
 # Start with 1974 shoreline shape
-background_threhold_list = [325,0,0,0,0,
-                            -0,0,0,0,0,
-                            -0,-0,0,0,0,
-                            0,0,-0,0,-0,
-                            0,0,0,0,0,
-                            -14,0,0,0,0,
-                            -10,0,0,0,0,
-                            0,-0,65,-0.5]
+background_threhold_list = [0,0]
 
 # Name storms
 
@@ -201,7 +194,7 @@ def alongshore_connected(
 for j in range(0,Num_Storms):
     def alongshore_uniform():
         # variables that DO NOT change among runs
-        number_barrier3d_models = 39
+        number_barrier3d_models = 2
         beach_width_threshold = [30] * number_barrier3d_models
         rmin = [0.55] * number_barrier3d_models
         rmax = [0.95] * number_barrier3d_models
@@ -219,11 +212,11 @@ for j in range(0,Num_Storms):
         nourishment_volume = 100  # m^3/m
         background_erosion = background_threhold_list  # m/yr, background shoreline erosion
         rebuild_dune_threshold = 1  # m
-        sandbag_management_on = [True] * number_barrier3d_models
+        sandbag_management_on = [False] * number_barrier3d_models
         sandbag_elevation = 4  # m
 
         # baseline models for comparison -- all roadways ----------------------------------------
-        roads_on = [True] * number_barrier3d_models
+        roads_on = [False] * number_barrier3d_models
         nourishments_on = [False] * number_barrier3d_models
         sea_level_rise_rate = 0.0056
         sea_level_constant = True  # linear
