@@ -8,8 +8,7 @@ import matplotlib.pyplot as plt
 import os
 import imageio
 
-
-
+# Set color palette
 Change_Rates = np.loadtxt('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Revised_Offshore_Datum\\All_Shoreline_Change_Rates.csv',skiprows=1,delimiter=',')
 Subset_Change_Rates = np.loadtxt('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Revised_Offshore_Datum\\All_Annual_Change_Rates.csv',skiprows=1,delimiter=',')
 
@@ -29,52 +28,48 @@ EP_97_20 = Subset_Change_Rates[:,5]
 LRR_74_97 = Subset_Change_Rates[:,6]
 LRR_97_20 = Subset_Change_Rates[:,7]
 
-
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output')
 
 run_name_batch = []
+'''
+# Changed Value
+run_name_batch.append('NCB_S32_SR_NR_1974_F')
+run_name_batch.append('OCR_S32_SR_NR_1974_F')
+run_name_batch.append('Duck_S32_SR_NR_1974_F')
 
-#run_name_batch.append('Hindcast_High_Complexity_Erosion_Values_1974')
-#run_name_batch.append('Hindcast_Complex_Background_Erosion_Values_1988')
-#run_name_batch.append('Hindcast_Medium_Complexity_Erosion_Values_1988')
-#run_name_batch.append('Hindcast_Only_Endpoint_Erosion_Values_1988')
-#run_name_batch.append('Hindcast_High_Complexity_Erosion_Values_from_1988_in_1974')
-#run_name_batch.append('Hindcast_Low_Complexity_Erosion_Values_from_1988_in_1974')
-#run_name_batch.append('Hindcast_Medium_Complexity_Erosion_Values_from_1988_in_1974')
-#run_name_batch.append('Hindcast_High_Complexity_Erosion_Values_from_1974_in_1988')
-#run_name_batch.append('Hindcast_High_Complexity_Erosion_Values_from_1974_to_1997')
-#run_name_batch.append('Hindcast_High_Complexity_Erosion_Values_from_1974_model_1997_2020')
-#run_name_batch.append('Hindcast_High_Complexity_Erosion_Values_from_1988_model_1997_2020')
-#run_name_batch.append('Duck_Hindcast_S_0')
-#run_name_batch.append('Run_1997_2020_with_1974_1997_ss')
-#run_name_batch.append('Run_1997_2020_with_altered_1974_1997_ss')
-#run_name_batch.append('Buffer_Revised_Test')
-#run_name_batch.append('Ocracoke_Bigger_Storms_5_m_1974_1997') # No sink
-#run_name_batch.append('Ocracoke_Bigger_Storms_5_m_1974_1997_middle_sinks') # sinks
-#run_name_batch.append('Ocracoke_Bigger_Storms_5_m_1997_2020_Unaltered_Inlet_Edge_Erosion')
-#run_name_batch.append('Ocracoke_Bigger_Storms_5_m_1997_2020_altered_Inlet_Edge_Erosion')
-#run_name_batch.append('Ocracoke_Bigger_Storms_5_m_1997_2020_unaltered_inlet_edge_middle_sinks')
-#run_name_batch.append('Ocracoke_Bigger_Storms_5_m_1997_2020_altered_inlet_edge_middle_sinks')
-#run_name_batch.append('Ocracoke_Bigger_Storms_5_m_1997_2020_altered_inlet_edge_middle_sinks_Overwash_Filter_90')
-#run_name_batch.append('Ocracoke_Bigger_Storms_5_m_1997_2020_altered_inlet_edge_middle_sinks_Overwash_Filter_0')
-#run_name_batch.append('Ocracoke_Bigger_Storms_5_m_1997_2020_altered_inlet_edge_middle_sinks_Overwash_Filter_90')
-#run_name_batch.append('Big_Storm_Test_No_Middle_Threshold')
-#run_name_batch.append('Ocracoke_Bigger_Storms_5_m_1974_1997_middle_sinks')
-run_name_batch.append('Buffer_1997_Test')
+# Original Value
+run_name_batch.append('NCB_S32_MR_OR_1974')
+run_name_batch.append('OCR_1_0_S32_MR_OR_1974')
+run_name_batch.append('Duck_S32_SR_OR_1974')
 
+'''
+run_name_batch.append('OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_01')
+run_name_batch.append('OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_1')
+run_name_batch.append('OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_5')
+run_name_batch.append('OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_75')
+run_name_batch.append('OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_1_0')
 
-'''for i in range(0,10):
-   run_name_batch.append('O_Hindcast_S_'+str(i))'''
-
-
-
-name_prefix = run_name_batch
 #nt_run = 46
 #nt_run = 32
 nt_run = 23
 number_barrier3d_models = 70
 buffer_length = 15
 All_EP_Change = []
+b3d_list = []
+mean_change = []
+All_OV_Flux = []
+All_OV_Flux_m3 = []
+All_Dune_Rebuilding_TS = []
+All_Sandbag_Building_TS = []
+All_Road_Relocation_TS = []
+All_OW_Year_TS = []
+All_OW_Years_Dict = {}
+All_OW_Unique_Years_TS = {}
+Road_Relocation_Years_Dict = {}
+Sandbag_Presence_Years_Dict = {}
+Dune_Rebuilding_TS_Dict = {}
+Interior_Dune_Construction_TS_Dict = {}
+Combined_Dune_Construction_TS_Dict = {}
 
 for k in range(0,len(run_name_batch)):
     # --------- plot ---------
@@ -84,22 +79,15 @@ for k in range(0,len(run_name_batch)):
     b3d = cascade.barrier3d
     ny = np.size(b3d)
 
+    b3d_list.append(copy.deepcopy(b3d))
     directory = "C:\\Users\\frank\\PycharmProjects\\CASCADE\\"
     # TMax_MGMT = Needed 0
     # TMAX_Sim = Last simulation year of the model 99
     TMax_Sim = nt_run  # Give length of simulation
     roadway_management_ny = [True] * ny
 
-
-
-
-    """
-    NOTE THAT THE BEACH REPRESENTATION IS BASED ON A MODEL SPECIFIED BEACH WIDTH. We set the beach width for the
-    remaining time steps after the community has been abandoned to the last managed beach width in order to not have a
-    huge jump in the back-barrier position in Barrier3D. OTHERWISE, it is meaningless to the dynamics Barrier3D.
-    """
     barrier3d = cascade.barrier3d
-
+    # Need to convert to be lists
     # set up the domain; here we just use the first grid, but that could break in future runs
     BarrierLength = barrier3d[0].BarrierLength
     OriginY = int(barrier3d[0].x_s_TS[0])
@@ -115,254 +103,249 @@ for k in range(0,len(run_name_batch)):
     EP_Change = ((Year_44_Shoreline_Positions - Year_1_Shoreline_Positions)*-1)/nt_run
 
     All_EP_Change.append(copy.deepcopy(EP_Change))
-    mean_change = np.mean(All_EP_Change, axis=0)
+    mean_change.append(copy.deepcopy(np.mean(All_EP_Change, axis=0)))
 
-All_OV_Flux = []
-for l in range(buffer_length, (number_barrier3d_models - buffer_length-1)):
-    total_sum = np.sum(b3d[l]._QowTS)
-    All_OV_Flux.append(copy.deepcopy(total_sum))
+    All_OV_Flux_s = []
+    for l in range(buffer_length, (number_barrier3d_models - buffer_length-1)):
+        total_sum = np.sum(b3d[l]._QowTS)
+        All_OV_Flux_s.append(copy.deepcopy(total_sum))
+    All_OV_Flux.append(copy.deepcopy(All_OV_Flux_s))
 
+    # Filter the Overwash flux to only focus on the grids of interest and copy to a time series list
+    All_OV_Flux_m3_s = []
+    for klm in range(buffer_length, (number_barrier3d_models - buffer_length-1)):
+        total_sum = (np.sum(b3d[klm]._QowTS))
+        x = total_sum * int(BarrierLength)
+        All_OV_Flux_m3_s.append(copy.deepcopy(x))
+    All_OV_Flux_m3.append(copy.deepcopy(All_OV_Flux_m3_s))
 
-
-'''
-# For comp with 2nd year
-output_2 = np.load('New_Flow_Routing_Test.npz', allow_pickle=True)
-
-cascade_2 = output_2["cascade"]
-cascade_2 = cascade_2[0]
-b3d_2 = cascade_2.barrier3d
-
-All_OV_Flux_2 = []
-for l in range(0,39):
-    total_sum_2 = np.sum(b3d_2[l]._QowTS)
-    All_OV_Flux_2.append(copy.deepcopy(total_sum_2))
-
-# set up the domain; here we just use the first grid, but that could break in future runs
-total_shoreline_change_2 = cascade_2._brie_coupler.brie.x_s_dt
-all_shoreline_change_2 = cascade_2._brie_coupler.brie.x_s_save
-
-Year_1_Shoreline_Positions_2 = all_shoreline_change_2[:,1]
-Year_1_Shoreline_Positions_2[0] = 1624
-Year_44_Shoreline_Positions_2 = all_shoreline_change_2[:,-1]
-EP_Change_2 = ((Year_44_Shoreline_Positions_2 - Year_1_Shoreline_Positions_2)*-1)/nt_run
-All_Change_2 = np.array(EP_Change_2)
-mean_change_2 = np.mean(All_Change_2,axis=0)
-
-
-# Old vs New
-
-OV_Flux_Dif = np.subtract(All_OV_Flux,All_OV_Flux_2)
-[29][30][31][35]
-
-OV_29 = (OV_Flux_Dif[29]/All_OV_Flux[29])*100
-OV_30 = (OV_Flux_Dif[30]/All_OV_Flux[30])*100
-OV_31 = (OV_Flux_Dif[31]/All_OV_Flux[31])*100
-OV_35 = (OV_Flux_Dif[35]/All_OV_Flux[35])*100
-
-Change_OV = [OV_29,OV_30,OV_31,OV_35]
-
-
-Shoreline_dif = np.subtract(mean_change,All_Change_2)
-[28],[30],[31]
-sdif_28 =Shoreline_dif[28]/mean_change[28]
-sdif_30 =Shoreline_dif[30]/mean_change[30]
-sdif_31 =Shoreline_dif[31]/mean_change[31]
+    # Filter the roadbuilding TS to only show B3D grids of interest and copy to final index
+    All_Dune_Rebuilding_TS_Temp = []
+    Interior_Dune_Building_TS_Temp = []
+    Combined_Dune_Building_TS_Temp = []
+    Dune_Interior_Building_Years = {}
+    Dune_Rebuilding_Years = {}
+    Combined_Dune_building_years = {}
+    for m in range(buffer_length, (number_barrier3d_models - buffer_length-1)):
+        Temp_Years = []
+        Temp_Years_Interior = []
+        Combined_Temp_Years = []
+        All_Dune_Rebuilding = cascade.roadways[m]._dunes_rebuilt_TS
+        Interior_Dune_Building = cascade.roadways[m]._interior_dunes_built_TS
+        for years in range(len(All_Dune_Rebuilding)):
+            if All_Dune_Rebuilding[years] ==1:
+                Temp_Years.append(copy.deepcopy(years))
+            if Interior_Dune_Building[years] == 1:
+                Temp_Years_Interior.append(copy.deepcopy(years))
+        if len(Temp_Years) > 0:
+            Dune_Rebuilding_Years[str(m-4)] = copy.deepcopy(Temp_Years)
+        if len(Temp_Years_Interior) > 0:
+            Dune_Interior_Building_Years[str(m-4)] = copy.deepcopy(Temp_Years_Interior)
+        if len(Temp_Years) > 0 and len(Temp_Years_Interior) == 0:
+            Combined_Dune_building_years[str(m-4)] = (copy.deepcopy(Temp_Years))
+        elif len(Temp_Years) == 0 and len(Temp_Years_Interior) > 0:
+            Combined_Dune_building_years[str(m-4)] = copy.deepcopy(Temp_Years_Interior)
+        elif len(Temp_Years) > 0 and len(Temp_Years_Interior) > 0:
+            Combined_Dune_building_years[str(m-4)] = copy.deepcopy(np.sort(np.append(Temp_Years,Temp_Years_Interior)))
 
 
-# Positive means observed is changing faster than modeled
-# Negative means model is overpredicting change on Ocracoke
+        All_Dune_Rebuilding_TS_Temp.append(copy.deepcopy(All_Dune_Rebuilding))
+    Combined_Dune_Construction_TS_Dict[str(run_name_batch[k])] = copy.deepcopy(Combined_Dune_building_years)
+    Dune_Rebuilding_TS_Dict[str(run_name_batch[k])] = copy.deepcopy(Dune_Rebuilding_Years)
+    All_Dune_Rebuilding_TS.append(copy.deepcopy(All_Dune_Rebuilding_TS_Temp))
+    Interior_Dune_Construction_TS_Dict[str(run_name_batch[k])] = copy.deepcopy(Dune_Interior_Building_Years)
 
-'''
+    # Filter the road relocation TS to only show B3D grids of interest and save to final index for plotting
+    All_Road_Relocation_TS_Temp = []
+    Road_Relocation_Years = {}
+    for m in range(buffer_length, (number_barrier3d_models - buffer_length-1)):
+        Temp_Years = []
+        All_Road_Relocation = cascade.roadways[m]._road_relocated_TS
+        for years in range(len(All_Road_Relocation)):
+            if All_Road_Relocation[years] == 1:
+                Temp_Years.append(copy.deepcopy(years))
+        if len(Temp_Years) > 0:
+            Road_Relocation_Years[str(m-4)] = (copy.deepcopy(Temp_Years))
+        All_Road_Relocation_TS_Temp.append(copy.deepcopy(All_Road_Relocation))
+    All_Road_Relocation_TS.append(copy.deepcopy(All_Road_Relocation_TS_Temp))
+    Road_Relocation_Years_Dict[str(run_name_batch[k])] = copy.deepcopy(Road_Relocation_Years)
+
+    All_OW_Year_TS_Temp = []
+    Years_OW_Unique = []
+    OW_Years_Dict = {}
+    for klm in range(buffer_length, (number_barrier3d_models - buffer_length-1)):
+        Years_OW = []
+        for years in range(len(b3d[klm]._QowTS)):
+            OW_flux = b3d[klm]._QowTS[years]
+            if OW_flux > 0:
+                Years_OW.append(copy.deepcopy(years))
+                Years_OW_Unique.append(copy.deepcopy(years))
+        if len(Years_OW) > 0:
+            OW_Years_Dict[str(klm-4)] = (copy.deepcopy(Years_OW))
+
+
+        Years_OW_Sort = np.sort(np.unique(Years_OW))
+        All_OW_Year_TS_Temp.append(copy.deepcopy(Years_OW_Unique))
+    All_OW_Year_TS.append(copy.deepcopy(All_OW_Year_TS_Temp))
+    All_OW_Years_Dict[str(run_name_batch[k])] = copy.deepcopy(OW_Years_Dict)
+    All_OW_Unique_Years_TS[str(run_name_batch[k])] =copy.deepcopy(Years_OW_Sort)
+
+    # Filter the road relocation TS to only show B3D grids of interest and save to final index for plotting
+    All_Sandbag_Building_TS_Temp = []
+    Sandbag_Years = {}
+    for n in range(buffer_length, (number_barrier3d_models - buffer_length-1)):
+        Temp_Years = []
+        All_Sandbag_Building = cascade._sandbag_Need_TS[n]
+        for years in range(len(All_Sandbag_Building)):
+            if All_Sandbag_Building[years] == 1:
+                Temp_Years.append(copy.deepcopy(years))
+        if len(Temp_Years) > 0:
+            Sandbag_Years[str(n-4)] = (copy.deepcopy(Temp_Years))
+        All_Sandbag_Building_TS_Temp.append(copy.deepcopy(All_Sandbag_Building))
+    All_Sandbag_Building_TS.append(copy.deepcopy(All_Sandbag_Building_TS_Temp))
+    Sandbag_Presence_Years_Dict[str(run_name_batch[k])] = copy.deepcopy(Sandbag_Years)
+
+
 domain_nums = range(11,50)
 
-#plt.plot(domain_nums, Linear_1988, label = '1988 - 2020 (LRR)')
-#plt.plot(domain_nums, Linear_1974, label = '1974 - 2020 (LRR)')
-#plt.plot(domain_nums, LRR_74_97, label = '1974 - 1997 (LRR)')
-plt.plot(domain_nums, LRR_97_20, label = '1997 - 2020 (LRR)')
+# Set Font
 
-#plt.plot(domain_nums, Endpoint_1974, label = '1974 - 2020 (EP)')
+SMALL_SIZE = 8
+MEDIUM_SIZE = 10
+BIGGER_SIZE = 16
+
+plt.rc('font', size=BIGGER_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=16)     # fontsize of the axes title
+plt.rc('axes', labelsize=16)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=BIGGER_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=BIGGER_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=12)    # legend fontsize
+plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
+# Plot all the different OCR storm intensities
+
+#plt.plot(domain_nums, LRR_74_97, label = 'Historic Change',color='grey')
+plt.plot(domain_nums, LRR_97_20, label = 'Historic Change',color='grey')
+
 plt.axhline(y = 0, color = 'k', linestyle = '--')
-plt.plot(domain_nums, mean_change, label= 'Modeled Change Rates')
-#plt.plot(domain_nums, All_Change_2, label ='Old FLow Routing')
+plt.plot(domain_nums, All_EP_Change[0], label= 'OCR: 0% Increase')
+plt.plot(domain_nums, All_EP_Change[1], label= 'OCR: 10% Increase')
+plt.plot(domain_nums, All_EP_Change[2], label= 'OCR: 20% Increase')
+plt.plot(domain_nums, All_EP_Change[3], label= 'OCR: 30% Increase')
+plt.plot(domain_nums, All_EP_Change[4], label= 'OCR: 40% Increase')
+#plt.plot(domain_nums, All_EP_Change[5], label= 'OCR: 50% Increase')
 plt.legend()
+#plt.title('Historic vs Modeled Change: 1997-2021')
+plt.title('Historic vs Modeled Change: 1974-1997')
 plt.ylabel('Shoreline Change Rate (m/yr)')
-plt.xlabel('Model Grid')
+plt.xlabel('B3D Domain')
 plt.show()
 
-plt.plot(domain_nums,All_OV_Flux)#, label = 'New Flow Routing')
-#plt.plot(domain_nums,All_OV_Flux_2, label ='Old Flow Routing')
+# Plot overwash
+
+plt.plot(domain_nums,All_OV_Flux_m3[0], label = 'OCR: 0%')
+plt.plot(domain_nums,All_OV_Flux_m3[1], label = 'OCR: 10%')
+plt.plot(domain_nums,All_OV_Flux_m3[2], label = 'OCR: 20%')
+plt.plot(domain_nums,All_OV_Flux_m3[3], label = 'OCR: 30%')
+plt.plot(domain_nums,All_OV_Flux_m3[4], label = 'OCR: 40%')
+#plt.plot(domain_nums,All_OV_Flux_m3[5], label = 'OCR: 50%')
+
+
 plt.axvline(x = 40, color = 'k', linestyle = '--')
 plt.axvline(x = 46, color = 'k', linestyle = '--')
 plt.legend()
 
-plt.ylabel('Cum Overwash Amount (m^3/yr)')
-plt.xlabel('Model Grid')
+plt.title('Overwash Volume (m^3)')
+plt.ylabel('Cum Overwash Amount Per B3D Domain (m^3)')
+plt.xlabel('B3D Domain')
 plt.show()
-'''
-EP_74_88
-EP_88_97
-EP_97_09
-EP_09_20
-M_EP_Change_74_88
-M_EP_Change_88_97
-M_EP_Change_97_09
-M_EP_Change_09_20
-
-
-plt.plot(domain_nums, EP_74_88, label = '1974 - 1988 (EP)')
-
-#plt.plot(Endpoint_1988, label = 'Endpoint')
-plt.axhline(y = 0, color = 'k', linestyle = '--')
-plt.plot(domain_nums, M_EP_Change_74_88, label= 'Modeled (1974 - 1988)')
-plt.legend()
-plt.ylabel('Shoreline Change Rate (m/yr)')
-plt.xlabel('Grid')
-plt.show()
-
-plt.plot(domain_nums, EP_88_97, label = '1988 - 1997 (EP)')
-plt.axhline(y = 0, color = 'k', linestyle = '--')
-plt.plot(domain_nums, M_EP_Change_88_97, label= 'Modeled (1988 - 1997)')
-plt.legend()
-plt.ylabel('Shoreline Change Rate (m/yr)')
-plt.xlabel('Grid')
-plt.show()
-
-plt.plot(domain_nums, EP_97_09, label = '1997 - 2009 (EP)')
-plt.axhline(y = 0, color = 'k', linestyle = '--')
-plt.plot(domain_nums, M_EP_Change_97_09, label= 'Modeled (1997 - 2009)')
-plt.legend()
-plt.ylabel('Shoreline Change Rate (m/yr)')
-plt.xlabel('Grid')
-plt.show()
-
-plt.plot(domain_nums, EP_09_20, label = '2009 - 2020 (EP)')
-plt.axhline(y = 0, color = 'k', linestyle = '--')
-plt.plot(domain_nums, M_EP_Change_09_20, label= 'Modeled (2009 - 2020)')
-plt.legend()
-plt.ylabel('Shoreline Change Rate (m/yr)')
-plt.xlabel('Grid')
-plt.show()
-
-
-plt.plot(domain_nums, Endpoint_1974, label = '1974 - 2020 (EP)')
-plt.plot(domain_nums, Endpoint_1988, label = '1988 - 2020 (EP)')
-plt.plot(domain_nums,EP_74_97, label = '1974-1997 (EP)')
-plt.axhline(y = 0, color = 'k', linestyle = '--')
-#plt.plot(domain_nums, mean_change, label= 'Modeled')
-plt.legend()
-plt.ylabel('Shoreline Change Rate (m/yr)')
-plt.xlabel('Grid')
-plt.show()
-
-
-plt.plot(domain_nums, Linear_1974, label = '1974 - 2020 (LRR)')
-plt.plot(domain_nums, Linear_1988, label = '1988 - 2020 (LRR)')
-plt.plot(domain_nums, LRR_74_97, label = '1974 - 1997 (LRR)')
-
-#plt.plot(Endpoint_1988, label = 'Endpoint')
-plt.axhline(y = 0, color = 'k', linestyle = '--')
-#plt.plot(domain_nums, mean_change, label= 'Modeled')
-plt.legend()
-plt.ylabel('Shoreline Change Rate (m/yr)')
-plt.xlabel('Grid')
-plt.show()'''
-'''
-#plt.plot(domain_nums, Linear_1988, label = '1988 - 2020 (LRR)')
-plt.plot(domain_nums, LRR_74_97, label = '1974 - 1997 (LRR)')
-plt.plot(domain_nums, LRR_97_20, label = '1997 - 2020 (LRR)')
-plt.plot(domain_nums, Linear_1974, label = '1974 - 2020 (LRR)')
-plt.axhline(y = 0, color = 'k', linestyle = '--')
-plt.legend()
-plt.ylabel('Shoreline Change Rate (m/yr)')
-plt.xlabel('Grid')
-plt.show()'''
 
 '''
-#plt.plot(domain_nums, Endpoint_1974, label = '1974 - 2020 (EP)')
+# Plot Ocracoke Storms
+#plt.plot(domain_nums, LRR_74_97, label = 'Historic Change',color='grey')
+plt.plot(domain_nums, LRR_97_20, label = 'Historic Change',color='grey')
+
 plt.axhline(y = 0, color = 'k', linestyle = '--')
-plt.plot(domain_nums, All_EP_Change[0], label= 'Storm Sequence 0')
-plt.plot(domain_nums, All_EP_Change[1], label= 'Storm Sequence 1')
-plt.plot(domain_nums, All_EP_Change[2], label= 'Storm Sequence 2')
-plt.plot(domain_nums, All_EP_Change[3], label= 'Storm Sequence 3', color = 'r')
-plt.plot(domain_nums, All_EP_Change[4], label= 'Storm Sequence 4')
-plt.plot(domain_nums, All_EP_Change[5], label= 'Storm Sequence 5')
-plt.plot(domain_nums, All_EP_Change[6], label= 'Storm Sequence 6')
-plt.plot(domain_nums, All_EP_Change[7], label= 'Storm Sequence 7')
-plt.plot(domain_nums, All_EP_Change[8], label= 'Storm Sequence 8')
-plt.plot(domain_nums, All_EP_Change[9], label= 'Storm Sequence 9')
-
+plt.plot(domain_nums, All_EP_Change[1], label= 'OCR: Modified', color='purple')
+plt.plot(domain_nums, All_EP_Change[4], label= 'OCR: Baseline', color = 'dodgerblue')
 
 plt.legend()
+plt.title('Historic vs Modeled Change: 1997-2021')
+#plt.title('Historic vs Modeled Change: 1974-1997')
 plt.ylabel('Shoreline Change Rate (m/yr)')
-plt.xlabel('Grid')
+plt.xlabel('B3D Domain')
 plt.show()
 
-plt.plot(domain_nums, LRR_74_97)
-plt.show()'''
 
-'''plt.plot(b3d[0]._QowTS, label= 'Grid 11')
-plt.plot(b3d[1]._QowTS, label= 'Grid 12')
-plt.plot(b3d[2]._QowTS, label= 'Grid 13')
-plt.plot(b3d[3]._QowTS, label= 'Grid 14')
-plt.plot(b3d[4]._QowTS, label= 'Grid 15')
-plt.plot(b3d[5]._QowTS, label= 'Grid 16')
-plt.plot(b3d[6]._QowTS, label= 'Grid 17')
-plt.plot(b3d[7]._QowTS, label= 'Grid 18')
-plt.plot(b3d[8]._QowTS, label= 'Grid 19')
-plt.plot(b3d[9]._QowTS, label= 'Grid 20')
+# Plot Duck Storms
+plt.plot(domain_nums, LRR_74_97, label = 'Historic Change',color='grey')
+#plt.plot(domain_nums, LRR_97_20, label = 'Historic Change',color='grey')
+plt.axhline(y = 0, color = 'k', linestyle = '--')
+plt.plot(domain_nums, All_EP_Change[2], label= 'Duck: Modified',color='orange')
+plt.plot(domain_nums, All_EP_Change[5], label= 'Duck: Baseline',color = 'saddlebrown')
 
 plt.legend()
-plt.ylabel('Qty Overwash')
-plt.xlabel('Year')
+#plt.title('Historic vs Modeled Change: 1997-2021')
+plt.title('Historic vs Modeled Change: 1974-1997')
+plt.ylabel('Shoreline Change Rate (m/yr)')
+plt.xlabel('B3D Domain')
 plt.show()
 
-plt.plot(domain_nums, LRR_74_97)
-plt.show()
 
+# Plot NCB derived
+plt.plot(domain_nums, LRR_74_97, label = 'Historic Change',color='grey')
+#plt.plot(domain_nums, LRR_97_20, label = 'Historic Change',color='grey')
+plt.axhline(y = 0, color = 'k', linestyle = '--')
 
-plt.plot(b3d[10]._QowTS, label= 'Grid 21')
-plt.plot(b3d[11]._QowTS, label= 'Grid 22')
-plt.plot(b3d[12]._QowTS, label= 'Grid 23')
-plt.plot(b3d[13]._QowTS, label= 'Grid 24')
-plt.plot(b3d[14]._QowTS, label= 'Grid 25')
-plt.plot(b3d[15]._QowTS, label= 'Grid 26')
-plt.plot(b3d[16]._QowTS, label= 'Grid 27')
-plt.plot(b3d[17]._QowTS, label= 'Grid 28')
-plt.plot(b3d[18]._QowTS, label= 'Grid 29')
-plt.plot(b3d[19]._QowTS, label= 'Grid 30')
+plt.plot(domain_nums, All_EP_Change[0], label= 'NCB Modified',color='green')
+plt.plot(domain_nums, All_EP_Change[3], label= 'NCB: Baseline', color ='lime')
 
 plt.legend()
-plt.ylabel('Qty Overwash')
-plt.xlabel('Year')
+#plt.title('Historic vs Modeled Change: 1997-2021')
+plt.title('Historic vs Modeled Change: 1974-1997')
+plt.ylabel('Shoreline Change Rate (m/yr)')
+plt.xlabel('B3D Domain')
 plt.show()
 
-plt.plot(b3d[20]._QowTS, label= 'Grid 31')
-plt.plot(b3d[21]._QowTS, label= 'Grid 32')
-plt.plot(b3d[22]._QowTS, label= 'Grid 33')
-plt.plot(b3d[23]._QowTS, label= 'Grid 34')
-plt.plot(b3d[24]._QowTS, label= 'Grid 35')
-plt.plot(b3d[25]._QowTS, label= 'Grid 36')
-plt.plot(b3d[26]._QowTS, label= 'Grid 37')
-plt.plot(b3d[27]._QowTS, label= 'Grid 38')
-plt.plot(b3d[28]._QowTS, label= 'Grid 39')
-plt.plot(b3d[29]._QowTS, label= 'Grid 40')
 
+# Plot Overwash values
+# Plot Duck
+plt.plot(domain_nums,All_OV_Flux_m3[2], label = 'Duck: Modified',color='orange')
+plt.plot(domain_nums,All_OV_Flux_m3[5], label = 'Duck: Baseline',color='saddlebrown')
+
+plt.axvline(x = 40, color = 'k', linestyle = '--')
+plt.axvline(x = 46, color = 'k', linestyle = '--')
 plt.legend()
-plt.ylabel('Qty Overwash')
-plt.xlabel('Year')
+
+plt.title('Overwash Volume (m^3)')
+plt.ylabel('Cum Overwash Amount Per B3D Domain (m^3)')
+plt.xlabel('B3D Domain')
 plt.show()
 
-plt.plot(b3d[30]._QowTS, label= 'Grid 41')
-plt.plot(b3d[31]._QowTS, label= 'Grid 42')
-plt.plot(b3d[32]._QowTS, label= 'Grid 43')
-plt.plot(b3d[33]._QowTS, label= 'Grid 44')
-plt.plot(b3d[34]._QowTS, label= 'Grid 45')
-plt.plot(b3d[35]._QowTS, label= 'Grid 46')
-plt.plot(b3d[36]._QowTS, label= 'Grid 47')
-plt.plot(b3d[37]._QowTS, label= 'Grid 48')
-plt.plot(b3d[38]._QowTS, label= 'Grid 49')
 
+# Plot OCR
+plt.plot(domain_nums,All_OV_Flux_m3[1], label = 'OCR: Modified',color='purple')
+plt.plot(domain_nums,All_OV_Flux_m3[4], label = 'OCR: Baseline',color='dodgerblue')
+
+plt.axvline(x = 40, color = 'k', linestyle = '--')
+plt.axvline(x = 46, color = 'k', linestyle = '--')
 plt.legend()
-plt.ylabel('Qty Overwash')
-plt.xlabel('Year')
-plt.show()'''
+
+plt.title('Overwash Volume (m^3)')
+plt.ylabel('Cum Overwash Amount Per B3D Domain (m^3)')
+plt.xlabel('B3D Domain')
+plt.show()
+
+# Plot NCB
+plt.plot(domain_nums,All_OV_Flux_m3[0], label = 'NCB: Modified',color='green')
+plt.plot(domain_nums,All_OV_Flux_m3[3], label = 'NCB: Baseline',color='lime')
+
+plt.axvline(x = 40, color = 'k', linestyle = '--')
+plt.axvline(x = 46, color = 'k', linestyle = '--')
+plt.legend()
+
+plt.title('Overwash Volume (m^3)')
+plt.ylabel('Cum Overwash Amount Per B3D Domain (m^3)')
+plt.xlabel('B3D Domain')
+plt.show()
+'''

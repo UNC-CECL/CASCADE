@@ -133,6 +133,7 @@ class Cascade:
         road_ele=1.7,  # ---------- roadway management --------------- #
         road_width=30,
         road_setback=30,
+        road_relocation_setback = 30,
         dune_design_elevation=3.7,
         dune_minimum_elevation=2.2,
         trigger_dune_knockdown=False,
@@ -231,6 +232,8 @@ class Cascade:
             Width of roadway [m]
         road_setback: int or list of int, optional
             Setback of roadway from the inital dune line and after road relocations [m]
+        road_relocation_setback: int or list of int, optional
+            Setback length for roadway for road relocations [m]
         dune_design_elevation: float or list of floats, optional
             Elevation to which dune is initially rebuilt [m MHW]
         dune_minimum_elevation: float or list of floats, optional
@@ -315,6 +318,7 @@ class Cascade:
         self._enable_shoreline_offset = enable_shoreline_offset
         self._shoreline_offset = shoreline_offset
         self._sandbag_Need_TS = [[False]] * self._ny
+        self._road_relocation_setback = road_relocation_setback
 
         # initialization errors
         if (
@@ -675,9 +679,10 @@ class Cascade:
                     self._roadways[iB3D].road_relocation_width = self._road_width[
                         iB3D
                     ]  # type: float
-                    self._roadways[iB3D].road_relocation_setback = self._road_setback[
-                        iB3D
-                    ]
+                    self._roadways[iB3D].road_relocation_setback = self._road_relocation_setback
+
+                    #self._road_setback[iB3D]
+                    # Update to send info about road distance
                     self._roadways[iB3D].update(
                         self._barrier3d[iB3D], self._trigger_dune_knockdown
                     )

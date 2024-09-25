@@ -65,5 +65,4 @@ rmin: 0.55
 s_sf_eq: 0.01698590034494604
 sandbag_elevation: 1.8
 sandbag_need: false
-storm_file: C:\Users\frank\PycharmProjects\CASCADE\data\Ocracoke_init_data\Ocracoke_Bigger_Storms_5_m.npy
-threshold_in: 0.25
+storm_file: C:\Users\frank\PycharmProjects\CASCADE\data\Ocracoke_init_data\OCR_1997_2021.npy
