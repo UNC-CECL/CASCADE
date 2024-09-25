@@ -11,7 +11,7 @@ from cascade.cascade import Cascade
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
 # Specify variables to use in calling function
 # Dune height path name
-s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Ocracoke_Bigger_Storms_5_m.npy'
+s_file = '/data/Ocracoke_init_data/Duck_Bigger_Storms_5_m.npy'
 #run_name = 'Run_1997_2020_with_1974_1997_ss'
 run_name = 'New_Flow_Routing_Test_2'
 
