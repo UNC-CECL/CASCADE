@@ -1,6 +1,6 @@
 repos:
 - repo: https://github.com/psf/black
-  rev: 24.2.0
+  rev: 24.10.0
   hooks:
   - id: black
     name: black
@@ -23,7 +23,7 @@ repos:
     additional_dependencies: [".[jupyter]"]
 
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.7.1
+  rev: 1.8.7
   hooks:
     - id: nbqa-pyupgrade
       args: ["--py310-plus"]
@@ -32,7 +32,7 @@ repos:
       args: ["--extend-ignore=E402"]
 
 - repo: https://github.com/pycqa/flake8
-  rev: 7.0.0
+  rev: 7.1.1
   hooks:
   - id: flake8
     additional_dependencies:
@@ -53,7 +53,7 @@ repos:
       args: [--drop-empty-cells]
 
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.15.1
+  rev: v3.18.0
   hooks:
   - id: pyupgrade
     args: [--py310-plus]
@@ -65,7 +65,7 @@ repos:
     args: ["--force-single-line-imports"]
 
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.5.0
+  rev: v5.0.0
   hooks:
     - id: check-builtin-literals
     - id: check-added-large-files
