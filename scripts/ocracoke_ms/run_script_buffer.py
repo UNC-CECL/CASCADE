@@ -34,7 +34,7 @@ if start_year == 1974:
                 'OCR_S32_SR_NR_NS_1974_0_75_D_S',
                 'OCR_S32_SR_NR_NS_1974_1_0_D_S'
                 ]
-    s_file = ['C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1974_1997.npy',
+    s_file = ['C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\OCR_1974_1997.npy',
         'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1974_1997.npy',
               'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1974_1997.npy',
               'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1974_1997.npy',
@@ -48,7 +48,7 @@ else:
                 'OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_75',
                 'OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_1_0'
                 ]
-    s_file = ['C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1997_2021.npy',
+    s_file = ['C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Hindcast_Storms\\OCR_1997_2021.npy',
         'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1997_2021.npy',
               'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1997_2021.npy',
               'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1997_2021.npy',

@@ -204,6 +204,16 @@ def initialize_equal(
 
     return barrier3d
 
+def set_specified_variable_RSLR(
+        barrier3d,
+        brie,
+        RSLR_Rates,
+        ny,
+    ):
+    brie.slr = RSLR_Rates
+    for i in range(ny):
+        barrier3d[i].RSLR = RSLR_Rates/10
+
 
 class BrieCoupler:
     """Couple Barrier3D with BRIE

@@ -695,7 +695,7 @@ class RoadwayManager:
         [
             road_relocated,
             self._road_setback,
-            self._relocation_break,
+            self._relocation_break
         ] = road_relocation_checks(
             self._time_index,
             dune_migration,

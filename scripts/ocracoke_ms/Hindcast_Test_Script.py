@@ -42,12 +42,32 @@ run_name_batch.append('NCB_S32_MR_OR_1974')
 run_name_batch.append('OCR_1_0_S32_MR_OR_1974')
 run_name_batch.append('Duck_S32_SR_OR_1974')
 
+run_name_batch.append('OCR_30_S38_SR_NR_NS_1974_Final')
+run_name_batch.append('OCR_30_S38_SR_NR_NS_1997_Final')
+
+run_name_batch.append('OCR_S32_SR_NR_NS_1974_Final')
+run_name_batch.append('OCR_S32_SR_NR_NS_1997_Final')
+
+run_name_batch.append('OCR_40_S38_SR_NR_NS_1974_Final')
+run_name_batch.append('OCR_40_S38_SR_NR_NS_1997_Final')
+
+run_name_batch.append('OCR_40_S39_SR_NR_NS_1974_Final')
+run_name_batch.append('OCR_40_S39_SR_NR_NS_1997_Final')
 '''
-run_name_batch.append('OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_01')
-run_name_batch.append('OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_1')
-run_name_batch.append('OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_5')
-run_name_batch.append('OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_75')
-run_name_batch.append('OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_1_0')
+
+run_name_batch.append('OCR_S32_SR_NR_NS_1974_Threshold_1_75_1_0')
+run_name_batch.append('OCR_S32_SR_NR_NS_1974_Threshold_1_75_1_1')
+run_name_batch.append('OCR_S32_SR_NR_NS_1974_Threshold_1_75_1_2')
+run_name_batch.append('OCR_S32_SR_NR_NS_1974_Threshold_1_75_1_3')
+run_name_batch.append('OCR_S32_SR_NR_NS_1974_Threshold_1_75_1_4')
+run_name_batch.append('OCR_S32_SR_NR_NS_1974_Threshold_1_75_1_5')
+
+run_name_batch.append('OCR_S32_SR_NR_NS_1997_Threshold_1_75_1_0')
+run_name_batch.append('OCR_S32_SR_NR_NS_1997_Threshold_1_75_1_1')
+run_name_batch.append('OCR_S32_SR_NR_NS_1997_Threshold_1_75_1_2')
+run_name_batch.append('OCR_S32_SR_NR_NS_1997_Threshold_1_75_1_3')
+run_name_batch.append('OCR_S32_SR_NR_NS_1997_Threshold_1_75_1_4')
+run_name_batch.append('OCR_S32_SR_NR_NS_1997_Threshold_1_75_1_5')
 
 #nt_run = 46
 #nt_run = 32
@@ -224,38 +244,74 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 # Plot all the different OCR storm intensities
 
-#plt.plot(domain_nums, LRR_74_97, label = 'Historic Change',color='grey')
-plt.plot(domain_nums, LRR_97_20, label = 'Historic Change',color='grey')
+plt.plot(domain_nums, LRR_74_97, label = 'Historic Change',color='grey')
+#plt.plot(domain_nums, LRR_97_20, label = 'Historic Change',color='grey')
 
 plt.axhline(y = 0, color = 'k', linestyle = '--')
-plt.plot(domain_nums, All_EP_Change[0], label= 'OCR: 0% Increase')
-plt.plot(domain_nums, All_EP_Change[1], label= 'OCR: 10% Increase')
-plt.plot(domain_nums, All_EP_Change[2], label= 'OCR: 20% Increase')
-plt.plot(domain_nums, All_EP_Change[3], label= 'OCR: 30% Increase')
-plt.plot(domain_nums, All_EP_Change[4], label= 'OCR: 40% Increase')
-#plt.plot(domain_nums, All_EP_Change[5], label= 'OCR: 50% Increase')
+#plt.plot(domain_nums, All_EP_Change[0], label= '0%',color='#1f77b4')
+#plt.plot(domain_nums, All_EP_Change[1], label= '10%',color='#ff7f0e')
+plt.plot(domain_nums,All_EP_Change[2], label = '20%', color = '#2ca02c')
+#plt.plot(domain_nums,All_EP_Change[3], label = '30%', color = '#d62728')
+#plt.plot(domain_nums,All_EP_Change[4], label = '40%', color = '#9467bd')
+#plt.plot(domain_nums,All_EP_Change[5], label = '50%', color = '#8c564b')
+
 plt.legend()
-#plt.title('Historic vs Modeled Change: 1997-2021')
 plt.title('Historic vs Modeled Change: 1974-1997')
 plt.ylabel('Shoreline Change Rate (m/yr)')
 plt.xlabel('B3D Domain')
 plt.show()
 
-# Plot overwash
+plt.plot(domain_nums, LRR_97_20, label = 'Historic Change',color='grey')
 
-plt.plot(domain_nums,All_OV_Flux_m3[0], label = 'OCR: 0%')
-plt.plot(domain_nums,All_OV_Flux_m3[1], label = 'OCR: 10%')
-plt.plot(domain_nums,All_OV_Flux_m3[2], label = 'OCR: 20%')
-plt.plot(domain_nums,All_OV_Flux_m3[3], label = 'OCR: 30%')
-plt.plot(domain_nums,All_OV_Flux_m3[4], label = 'OCR: 40%')
-#plt.plot(domain_nums,All_OV_Flux_m3[5], label = 'OCR: 50%')
+plt.axhline(y = 0, color = 'k', linestyle = '--')
+#plt.plot(domain_nums, All_EP_Change[6], label= '0%',color='#1f77b4')
+#plt.plot(domain_nums, All_EP_Change[7], label= '10%',color='#ff7f0e')
+plt.plot(domain_nums,All_EP_Change[8], label = '20%', color = '#2ca02c')
+#plt.plot(domain_nums,All_EP_Change[9], label = '30%', color = '#d62728')
+#plt.plot(domain_nums,All_EP_Change[10], label = '40%', color = '#9467bd')
+#plt.plot(domain_nums,All_EP_Change[11], label = '50%', color = '#8c564b')
+#plt.plot(domain_nums,All_EP_Change[13], label = '2.0')#, color = '#1f77b4')
+
+plt.legend()
+plt.title('Historic vs Modeled Change: 1997-2020')
+plt.ylabel('Shoreline Change Rate (m/yr)')
+plt.xlabel('B3D Domain')
+plt.show()
+
+
+# Plot overwash
+#plt.plot(domain_nums,All_OV_Flux_m3[0], label = '0%',color='#1f77b4')
+#plt.plot(domain_nums,All_OV_Flux_m3[1], label = '10%',color='#ff7f0e')
+plt.plot(domain_nums,All_OV_Flux_m3[2], label = '20%', color = '#2ca02c')
+#plt.plot(domain_nums,All_OV_Flux_m3[3], label = '30%', color = '#d62728')
+#plt.plot(domain_nums,All_OV_Flux_m3[4], label = '40%', color = '#9467bd')
+#plt.plot(domain_nums,All_OV_Flux_m3[5], label = '50%', color = '#8c564b')
 
 
 plt.axvline(x = 40, color = 'k', linestyle = '--')
 plt.axvline(x = 46, color = 'k', linestyle = '--')
 plt.legend()
 
-plt.title('Overwash Volume (m^3)')
+plt.title('Overwash Volume (m^3) (1974-1997)')
+plt.ylabel('Cum Overwash Amount Per B3D Domain (m^3)')
+plt.xlabel('B3D Domain')
+plt.show()
+
+# Plot overwash
+#plt.plot(domain_nums,All_OV_Flux_m3[6], label = '0%',color='#1f77b4')
+#plt.plot(domain_nums,All_OV_Flux_m3[7], label = '10%',color='#ff7f0e')
+plt.plot(domain_nums,All_OV_Flux_m3[8], label = '20%',color = '#2ca02c')
+#plt.plot(domain_nums,All_OV_Flux_m3[9], label = '30%', color = '#d62728')
+#plt.plot(domain_nums,All_OV_Flux_m3[10], label = '40%', color = '#9467bd')
+#plt.plot(domain_nums,All_OV_Flux_m3[11], label = '50%', color = '#8c564b')
+#plt.plot(domain_nums,All_OV_Flux_m3[13], label = '2.0')
+
+
+plt.axvline(x = 40, color = 'k', linestyle = '--')
+plt.axvline(x = 46, color = 'k', linestyle = '--')
+plt.legend()
+
+plt.title('Overwash Volume (m^3) (1997-2021)')
 plt.ylabel('Cum Overwash Amount Per B3D Domain (m^3)')
 plt.xlabel('B3D Domain')
 plt.show()
