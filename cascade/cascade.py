@@ -5,9 +5,7 @@ from joblib import Parallel
 from joblib import delayed
 
 from .beach_dune_manager import BeachDuneManager
-from .brie_coupler import BrieCoupler
-from .brie_coupler import batchB3D
-from .brie_coupler import initialize_equal
+from .brie_coupler import BrieCoupler, batchB3D, initialize_equal, set_specified_variable_RSLR
 from .chom_coupler import ChomCoupler
 from .roadway_manager import RoadwayManager, set_growth_parameters, check_sandbag_need
 
@@ -162,10 +160,17 @@ class Cascade:
         house_footprint_x=15,
         house_footprint_y=20,
         beach_full_cross_shore=70,
+        sandbag_management_on = False,
+        sandbag_elevation = 1.5,
+        enable_shoreline_offset = False,
+        shoreline_offset = [],
+        user_inputed_RSLR=False,
+        user_inputed_RSLR_rate=[],
         # --------- outwasher (in development) ------------ #
         outwash_storms_file="outwash_storms_startyr_1_interval_20yrs.npy",
         outwash_beach_file="NCB-default_beach.npy",
         percent_washout_to_shoreface=100,
+
     ):
         """CASCADE: The CoAStal Community-lAnDscape Evolution model
 
@@ -283,6 +288,10 @@ class Cascade:
         beach_full_cross_shore: int, optional
             The cross-shore extent (meters) of fully nourished beach (i.e., the
             community desired beach width) [m]
+        user_inputed_RSLR: bool, optional
+            Whether the user will be inputing their own generated RSLR rates
+        user_inputed_RSLR_rates: list, optional
+            Time series of RSLR rates for Cascade to use, RSLR rates must be floats and be in m/yr.
         outwash_storms_file: string, optional
             Filename of outwash storm series (npy file)
         outwash_beach_file: string, optional
@@ -291,7 +300,6 @@ class Cascade:
             The percent of washed out sediment that will be placed on the shoreface
         outwash_module: boolean or list of booleans, optional
             If True, use outwash module (force a bay-side surge event)
-
         Examples
         --------
         >>> from cascade.cascade import Cascade
@@ -335,6 +343,8 @@ class Cascade:
         self._shoreline_offset = shoreline_offset
         self._sandbag_Need_TS = [[False]] * self._ny
         self._road_relocation_setback = road_relocation_setback
+        self._user_inputed_RSLR = user_inputed_RSLR
+        self._user_inputed_RSLR_rate = user_inputed_RSLR_rate
 
         # initialization errors
         if (
@@ -395,6 +405,14 @@ class Cascade:
             elevation_file=self._elevation_file,  # can be array
         )
 
+        # Alter RSLR to set sequence
+        if self._user_inputed_RSLR == True:
+            set_specified_variable_RSLR(
+                barrier3d=self._barrier3d,
+                brie=self._brie_coupler._brie,
+                RSLR_Rates=self._user_inputed_RSLR_rate,
+                ny = self._ny
+            )
 
         ###############################################################################
         # initialize human dynamics modules
