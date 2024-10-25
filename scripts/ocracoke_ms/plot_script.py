@@ -374,15 +374,14 @@ def plot_ElevAnimation_CASCADE(
 
 
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output')
-run_name = "NCB_Test_Center_Sinks_S15"
-
+run_name = "OCR_S32_2024_S1_Test_Erosional"
 
 name_prefix = run_name
-nt_run = 23
-number_barrier3d_models = 5
+nt_run = 77
+number_barrier3d_models = 39
 Run_Marsh_Dynamics = False
 
-Model_Grids_Of_Interest = range(40,45)
+Model_Grids_Of_Interest = range(50,54)
 
 # --------- plot ---------
 output = np.load(run_name + ".npz", allow_pickle=True)
