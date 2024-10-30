@@ -11,7 +11,7 @@ from cascade.cascade import Cascade
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
 
 # Set the number of years to simulate
-run_years = 100
+run_years = 126
 
 # Set the start year
 start_year = 2024
@@ -24,9 +24,8 @@ if status_quo == True:
 else:
     Management_name = '_Natural_'
 
-
 # RSLR Data
-RSLR_Type = 'IH'
+RSLR_Type = 'IL'
 
 if RSLR_Type == 'IL':
     RSLR_Data = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\RSLR\\Int_Low_SLR.npy')
@@ -49,17 +48,19 @@ source_sink = np.loadtxt(source_sink_load_name,skiprows=1,delimiter=',')
 
 dune_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Buffer_Shoreline_Offsets_2019.csv'
 
+Sink_Options = ['Accretional_Sink','Erosional_Sink']
+
 run_name = []
-for snames in range(0,2):
-    name_base = 'OCR_'+str(RSLR_Type)+str(Management_name)+'ST'+str(snames)
+for snames in range(49,100):
+    name_base = 'OCR_'+str(RSLR_Type)+str(Management_name)+'S'+str(snames)
     Temp_Name = []
-    for sinks in range(len(source_sink[0])):
-        full_name = name_base+'_Sink'+str(sinks)
+    for sinks in range(0,2):
+        full_name = name_base+'_'+str(Sink_Options[sinks])
         Temp_Name.append(copy.deepcopy(full_name))
     run_name.append(copy.deepcopy(Temp_Name))
 
 s_file = []
-for storm_num in range(0,2):
+for storm_num in range(49,100):
     s_file.append(copy.deepcopy('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Synthetic_Storms\\OCR_Future_StormList_'+str(storm_num)+'_baseline.npy'))
 
 '''s_file = [
@@ -89,10 +90,15 @@ road_setbacks = r_s
 road_cells = [False] * Total_B3D_Number
 if status_quo == True:
     road_cells[15:55] = [True]*39
+else:
+    road_cells[15:31] = [True]*len(range(15,31))
+
 
 sandbag_cells = [False] * Total_B3D_Number
 if status_quo == True:
     sandbag_cells[15:55] = [True]*39
+else:
+    sandbag_cells[15:31] = [True]*len(range(15,31))
 
 e_file = []
 d_file = []
@@ -124,20 +130,6 @@ background_threshold_list = [[0,0,0,0,0,
                             -1.0,-1.1,-1.2,-1.3,-1.4,
                             -1.5,-1.6,-1.7,-1.8,-1.9,
                             -2.0,-2.1,-2.2,-2.3,-2.4,
-                            -0,-0,-0,40,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0],\
-    [0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            33,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            -1.0,-1.1,-1.2,-1.3,-1.4,
-                            -1.5,-1.6,-1.7,-1.8,-1.9,
-                            -2.0,-2.1,-2.2,-2.3,-2.4,
                             -0,-0,-0,20,
                             0,0,0,0,0,
                             0,0,0,0,0,
@@ -152,35 +144,7 @@ background_threshold_list = [[0,0,0,0,0,
                             -1.0,-1.1,-1.2,-1.3,-1.4,
                             -1.5,-1.6,-1.7,-1.8,-1.9,
                             -2.0,-2.1,-2.2,-2.3,-2.4,
-                            -0,-0,-0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0],\
-    [0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            33,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            -1.0,-1.1,-1.2,-1.3,-1.4,
-                            -1.5,-1.6,-1.7,-1.8,-1.9,
-                            -2.0,-2.1,-2.2,-2.3,-2.4,
                             -0,-0,-0,-10,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0],\
-    [0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            33,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            -1.0,-1.1,-1.2,-1.3,-1.4,
-                            -1.5,-1.6,-1.7,-1.8,-1.9,
-                            -2.0,-2.1,-2.2,-2.3,-2.4,
-                            -0,-0,-0,-20,
                             0,0,0,0,0,
                             0,0,0,0,0,
                             0,0,0,0,0]]
@@ -395,7 +359,7 @@ def alongshore_uniform(run_name, s_file,background_erosion_list):
         user_inputed_RSLR_rate=RSLR_Rates,
     )
 
-for k in range(0,1):#len(run_name)):
-    for l in range(3,len(background_threshold_list)):
+for k in range(len(run_name)):
+    for l in range(0,len(background_threshold_list)):
         alongshore_uniform(run_name=run_name[k][l], s_file=s_file[k], background_erosion_list=background_threshold_list[l])
         os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
