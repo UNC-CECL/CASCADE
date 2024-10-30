@@ -46,15 +46,15 @@ Shrub_ON: 0
 SprayDist: 170
 StormSeries: []
 StormStart: 2
-TMAX: 100
+TMAX: 126
 TideAmp: 1.2
 TimeFruit: 5.0
 UprootLimit: -0.2
 beta: 0.04
 disp_mu: -0.721891
 disp_sigma: 1.5
-dune_file: /Users/ceclmac/PycharmProjects/CASCADE/data/Ocracoke_init_data/dunes/Sample_1_dune.npy
-elevation_file: /Users/ceclmac/PycharmProjects/CASCADE/data/Ocracoke_init_data/elevations/Topography_2019/Domain_49_topography_2019.npy
+dune_file: C:\Users\frank\PycharmProjects\CASCADE\data\Ocracoke_init_data\dunes\Sample_1_dune.npy
+elevation_file: C:\Users\frank\PycharmProjects\CASCADE\data\Ocracoke_init_data\elevations\Topography_2019\Domain_49_topography_2019.npy
 enable_sandbags: false
 growth_param_file: growthparam_1000dam.npy
 k_sf: 19324.753176079226
@@ -65,4 +65,4 @@ rmin: 0.55
 s_sf_eq: 0.01698590034494604
 sandbag_elevation: 1.8
 sandbag_need: false
-storm_file: /Users/ceclmac/PycharmProjects/CASCADE/data/Ocracoke_init_data/storms/Synthetic_Storms/OCR_Future_StormList_0_baseline.npy
+storm_file: C:\Users\frank\PycharmProjects\CASCADE\data\Ocracoke_init_data\storms\Synthetic_Storms\OCR_Future_StormList_9_baseline.npy
