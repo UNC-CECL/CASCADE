@@ -16,18 +16,42 @@ run_years = 126
 # Set the start year
 start_year = 2024
 
-# Set scenario type
-status_quo = False
+# Set the nourishment values
+Nourishment_Num = 5
 
-if status_quo == True:
+# Set scenario type
+status_quo = True
+nourishment = True
+
+if nourishment == True:
+    Management_name = '_Nourishment_'
+    nourish_beach = True
+    nourishment_time = None
+    if Nourishment_Num ==1:
+        nourishment_volume = 234.67
+    elif Nourishment_Num ==2:
+        nourishment_volume = 147.32
+    elif Nourishment_Num ==3:
+        nourishment_volume = 190.32
+    elif Nourishment_Num ==4:
+        nourishment_volume = 100
+    elif Nourishment_Num ==5:
+        nourishment_volume = 120 #120
+    elif Nourishment_Num ==6:
+        nourishment_volume = 80
+elif status_quo == True:
     Management_name = "_Status_Quo_"
+    nourishment_time = None
+    nourish_beach = False
+    nourishment_volume = 100
 else:
     Management_name = '_Natural_'
-
-Storms = 'Ten'
+    nourishment_time = None
+    nourish_beach = False
+    nourishment_volume = 100
 
 # RSLR Data
-RSLR_Type = 'IL'
+RSLR_Type = 'I'
 
 if RSLR_Type == 'IL':
     RSLR_Data = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\RSLR\\Int_Low_SLR.npy')
@@ -53,31 +77,18 @@ dune_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_ini
 Sink_Options = ['Accretional_Sink','Erosional_Sink']
 
 run_name = []
-for snames in range(0,100):
-    if Storms == 'Baseline':
-        name_base = 'OCR_'+str(RSLR_Type)+str(Management_name)+'S'+str(snames)
-    else:
-        name_base = 'OCR_'+str(RSLR_Type)+str(Management_name)+'S'+str(snames)+'_10'
+for snames in range(1,5):
+    name_base = 'OCR_'+str(RSLR_Type)+str(Management_name)+'S'+str(snames)
     Temp_Name = []
     for sinks in range(0,2):
-        full_name = name_base+'_'+str(Sink_Options[sinks])
+        full_name = name_base+'_'+str(Sink_Options[sinks])+'_Test_N'+str(Nourishment_Num)+'_Fixed_Beach_T6'
         Temp_Name.append(copy.deepcopy(full_name))
     run_name.append(copy.deepcopy(Temp_Name))
 
 s_file = []
-if Storms == 'Baseline':
-    for storm_num in range(0,100):
-        s_file.append(copy.deepcopy('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Synthetic_Storms\\OCR_Future_StormList_'+str(storm_num)+'_baseline.npy'))
-else:
-    for storm_num in range(0, 100):
-        s_file.append(copy.deepcopy(
-            'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Synthetic_Storms\\Ten_Percent_Storms\\OCR_Future_StormList_' + str(
-                storm_num) + '_10.npy'))
+for storm_num in range(1,5):
+    s_file.append(copy.deepcopy('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Synthetic_Storms\\OCR_Future_StormList_'+str(storm_num)+'_baseline.npy'))
 
-'''s_file = [
-        'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Synthetic_Storms\\OCR_Future_StormList_0_baseline.npy',
-    'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Synthetic_Storms\\OCR_Future_StormList_1_baseline.npy'
-]'''
 
 road_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Road_Dune_Distance_2019_2.csv'
 
@@ -110,6 +121,10 @@ if status_quo == True:
     sandbag_cells[15:54] = [True]*len(range(15,54))
 else:
     sandbag_cells[15:35] = [True]*len(range(15,35))
+
+nourishment_cells = [False] * Total_B3D_Number
+if nourishment == True:
+    nourishment_cells[35:54] = [True]*len(range(35,54))
 
 e_file = []
 d_file = []
@@ -181,6 +196,7 @@ def alongshore_connected(
     nourishment_volume,
     background_erosion,
     rebuild_dune_threshold,
+    nourishment_interval,
     roadway_management_on,
     beach_dune_manager_on,
     sea_level_rise_rate=0.0037,  # not an array
@@ -230,7 +246,7 @@ def alongshore_connected(
         dune_minimum_elevation=dune_minimum_elevation,
         trigger_dune_knockdown=trigger_dune_knockdown,
         group_roadway_abandonment=group_roadway_abandonment,
-        nourishment_interval=None,  # yrs
+        nourishment_interval=nourishment_interval,  # yrs
         nourishment_volume=nourishment_volume,  # m^3/m
         overwash_filter=overwash_filter,  # % overwash removed
         overwash_to_dune=overwash_to_dune,
@@ -285,10 +301,13 @@ def alongshore_connected(
                     # cascade.rebuild_dune_now[iB3D] = 1
                     tmp_rebuild_dune[iB3D] = 1
 
-        # only nourish or rebuild dune if all segments fall below threshold (more realistic)
-        if np.all(tmp_nourish_now[beach_dune_manager_on]) == 1:
+        # only nourish or rebuild dune if 60% of segments fall below threshold (more realistic)
+
+        if np.sum(tmp_nourish_now[beach_dune_manager_on]) > (len(tmp_nourish_now[beach_dune_manager_on]) * .6):
+        #if np.all(tmp_nourish_now[beach_dune_manager_on]) == 1:
             cascade.nourish_now = tmp_nourish_now
-        if np.all(tmp_rebuild_dune[beach_dune_manager_on]) == 1:
+        if np.sum(tmp_rebuild_dune[beach_dune_manager_on]) > (len(tmp_nourish_now[beach_dune_manager_on]) * .6):
+        #if np.all(tmp_rebuild_dune[beach_dune_manager_on]) == 1:
             cascade.rebuild_dune_now = tmp_rebuild_dune
 
     # --------- SAVE ---------
@@ -299,7 +318,12 @@ def alongshore_connected(
     return cascade
 
 
-def alongshore_uniform(run_name, s_file,background_erosion_list):
+def alongshore_uniform(run_name,
+                       s_file,
+                       background_erosion_list,
+                       nourishment_volume,
+                       nourish_beach,
+                       nourishment_interval):
     # variables that DO NOT change among runs
     number_barrier3d_models = 69
     beach_width_threshold = [30] * number_barrier3d_models
@@ -316,7 +340,7 @@ def alongshore_uniform(run_name, s_file,background_erosion_list):
     road_setback = road_setbacks  # m
     overwash_filter = 0  # residental
     overwash_to_dune = 9
-    nourishment_volume = 100  # m^3/m
+    nourishment_volume = nourishment_volume  # m^3/m
     background_erosion = background_erosion_list #list(background_erosion_list) # m/yr, background shoreline erosion
     rebuild_dune_threshold = 1  # m
     sandbag_management_on = sandbag_cells
@@ -324,7 +348,7 @@ def alongshore_uniform(run_name, s_file,background_erosion_list):
 
     # baseline models for comparison -- all roadways ----------------------------------------
     roads_on = road_cells
-    nourishments_on = [False] * number_barrier3d_models
+    nourishments_on = nourish_beach
     sea_level_rise_rate = 0.0056
     sea_level_constant = True  # linear
 
@@ -358,6 +382,7 @@ def alongshore_uniform(run_name, s_file,background_erosion_list):
         nourishment_volume=nourishment_volume,
         background_erosion=background_erosion,
         rebuild_dune_threshold=rebuild_dune_threshold,
+        nourishment_interval = nourishment_interval,
         roadway_management_on=roads_on,
         beach_dune_manager_on=nourishments_on,
         sea_level_rise_rate=sea_level_rise_rate,
@@ -372,5 +397,10 @@ def alongshore_uniform(run_name, s_file,background_erosion_list):
 
 for k in range(len(run_name)):
     for l in range(0,len(background_threshold_list)):
-        alongshore_uniform(run_name=run_name[k][l], s_file=s_file[k], background_erosion_list=background_threshold_list[l])
+        alongshore_uniform(run_name=run_name[k][l],
+                           s_file=s_file[k],
+                           background_erosion_list=background_threshold_list[l],
+                           nourish_beach=nourishment_cells,
+                           nourishment_volume=nourishment_volume,
+                           nourishment_interval = nourishment_time)
         os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
