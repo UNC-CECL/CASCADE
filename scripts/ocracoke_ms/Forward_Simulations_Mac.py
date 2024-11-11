@@ -11,7 +11,7 @@ from cascade.cascade import Cascade
 os.chdir('/Users/ceclmac/PycharmProjects/CASCADE')
 
 # Set the number of years to simulate
-run_years = 100
+run_years = 126
 
 # Set the start year
 start_year = 2024
@@ -41,7 +41,7 @@ RSLR_Rates = RSLR_Data[Start_Index:]
 # Specify the number of B3D domains and control the number of domains
 buffer_enabled = True
 island_grid_number = 39
-Total_B3D_Number = 70
+Total_B3D_Number = 69
 
 # Set whether inlet is accretional or erosional:
 source_sink_load_name = '/Users/ceclmac/PycharmProjects/CASCADE/data/Ocracoke_init_data/Source_Sink/S32.csv'
