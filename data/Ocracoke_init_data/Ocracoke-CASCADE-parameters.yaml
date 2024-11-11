@@ -20,7 +20,7 @@ GrowthParamStart: false
 HdDiffu: 0.75
 Ki: 7.5e-06
 Kr: 7.5e-05
-LShoreface: 523.9734307609483
+LShoreface: 524.8348346135758
 MHW: 0.46
 MaxShrubHeight: 5.3
 MaxUpSlope: 0.25
@@ -31,7 +31,7 @@ Qs_min: 1.0
 Qshrub_max: 0.15
 RSLR_Constant: true
 RSLR_const: 0.0056
-Rat: 0
+Rat: -2.0
 Rin_i: 0.1
 Rin_r: 2.0
 SalineLimit: 5
@@ -39,7 +39,7 @@ Sandbag_elevation: 1.9
 SeededRNG: true
 Seedmax: 1000.0
 Seedmin: 100.0
-ShorefaceToe: 1560.3448275999995
+ShorefaceToe: 2099.9999999999995
 ShrubEl_max: 2.3
 ShrubEl_min: 1.2
 Shrub_ON: 0
@@ -53,8 +53,8 @@ UprootLimit: -0.2
 beta: 0.04
 disp_mu: -0.721891
 disp_sigma: 1.5
-dune_file: C:\Users\frank\PycharmProjects\CASCADE\data\Ocracoke_init_data\dunes\Sample_1_dune.npy
-elevation_file: C:\Users\frank\PycharmProjects\CASCADE\data\Ocracoke_init_data\elevations\Topography_2019\Domain_49_topography_2019.npy
+dune_file: C:\Users\frank\PycharmProjects\CASCADE\data\Ocracoke_init_data\dunes\Dunes_2019\Domain_41_dune_2019.npy
+elevation_file: C:\Users\frank\PycharmProjects\CASCADE\data\Ocracoke_init_data\elevations\Topography_2019\Domain_41_topography_2019.npy
 enable_sandbags: false
 growth_param_file: growthparam_1000dam.npy
 k_sf: 19324.753176079226
@@ -65,4 +65,4 @@ rmin: 0.55
 s_sf_eq: 0.01698590034494604
 sandbag_elevation: 1.8
 sandbag_need: false
-storm_file: C:\Users\frank\PycharmProjects\CASCADE\data\Ocracoke_init_data\storms\Synthetic_Storms\OCR_Future_StormList_9_baseline.npy
+storm_file: C:\Users\frank\PycharmProjects\CASCADE\data\Ocracoke_init_data\storms\Synthetic_Storms\OCR_Future_StormList_2_baseline.npy
