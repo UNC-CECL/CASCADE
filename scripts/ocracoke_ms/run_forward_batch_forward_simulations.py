@@ -53,7 +53,7 @@ dune_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_ini
 Sink_Options = ['Accretional_Sink','Erosional_Sink']
 
 run_name = []
-for snames in range(0,100):
+for snames in range(4,100):
     if Storms == 'Baseline':
         name_base = 'OCR_'+str(RSLR_Type)+str(Management_name)+'S'+str(snames)
     else:
@@ -66,10 +66,10 @@ for snames in range(0,100):
 
 s_file = []
 if Storms == 'Baseline':
-    for storm_num in range(0,100):
+    for storm_num in range(4,100):
         s_file.append(copy.deepcopy('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Synthetic_Storms\\OCR_Future_StormList_'+str(storm_num)+'_baseline.npy'))
 else:
-    for storm_num in range(0, 100):
+    for storm_num in range(4, 100):
         s_file.append(copy.deepcopy(
             'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Synthetic_Storms\\Ten_Percent_Storms\\OCR_Future_StormList_' + str(
                 storm_num) + '_10.npy'))

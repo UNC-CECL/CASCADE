@@ -1,18 +1,16 @@
 import copy
 
 import numpy as np
-import time
-import matplotlib.pyplot as plt
 import pandas as pd
 from scipy import stats as st
 import os
-import imageio
 
-# Set color palette
 Change_Rates = np.loadtxt('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Revised_Offshore_Datum\\All_Shoreline_Change_Rates.csv',skiprows=1,delimiter=',')
 Subset_Change_Rates = np.loadtxt('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Revised_Offshore_Datum\\All_Annual_Change_Rates.csv',skiprows=1,delimiter=',')
 
-os.chdir('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Model Runs\\Future Runs')
+#os.chdir('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Model Runs\\Future Runs')
+os.chdir('E:\\Model_Runs')
+
 
 Save_Path = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Model Runs\\Summary_Values\\'
 
@@ -37,7 +35,7 @@ def Process_Batch(Base_Name,
     name_list = []
 
     # IL
-    for runs in range(0,5):
+    for runs in range(0,100):
         name_list.append(str(Base_Name)+'_S'+str(runs)+'_'+str(Sink_Name))
 
     nt_run = 126
@@ -100,9 +98,24 @@ def Process_Batch(Base_Name,
     Mean_Island_Interior_Change = np.mean(island_width_change_TS, axis=0)
 
 
-    Break_Section,Break_Domain_Location = Find_Most_Common_Drowning_Area(Drowned_Domains=Drowning_Domain_Locations)
+    Break_Section,Break_Domain_Location, Section_Nums = Find_Most_Common_Drowning_Area(Drowned_Domains=Drowning_Domain_Locations)
 
     Avg_Break_Year = np.mean(Model_Run_Years)
+
+    # Collate all data from 100 model runs
+    All_Values_Dict = {'All_EP_Change':All_EP_Change,
+                       'All_Roadway_Abandonment':All_Roadway_Abandonment,
+                       'Relocation_TS':Relocation_TS,
+                       'Frequency_TS':Frequency_TS,
+                       'Sandbag_Duration_TS':sandbag_duration_TS,
+                       'Number_Sandbags_TS':number_sandbags_TS,
+                       'Island_Width_Change_TS':island_width_change_TS,
+                       'Model_Run_Years':Model_Run_Years,
+                       #'Break_Domain_Locations':Section_Nums
+                       }
+
+    All_Values_Data_Frame = pd.DataFrame(All_Values_Dict)
+
 
     Export_Values_Dict = {
         'Mean_Shoreline_Change_Rate':Mean_Shoreline_Change_Rate,
@@ -121,7 +134,12 @@ def Process_Batch(Base_Name,
 
     Full_Save_Path = Save_Path+Base_Name+'_'+Sink_Name+'.csv'
 
-    Export_DF.to_csv(Full_Save_Path)
+    #Export_DF.to_csv(Full_Save_Path)
+
+    # Save yearly data as .pkl
+    Full_Save_Path_PKL = Save_Path+Base_Name+'_'+Sink_Name+'.pkl'
+    All_Values_Data_Frame.to_pickle(Full_Save_Path_PKL)
+
 
     return(Export_DF)
 
@@ -129,6 +147,14 @@ def Find_Most_Common_Drowning_Area(Drowned_Domains):
     # Set the numbers that comprise the 6 groups
     Greatest_Len = -50
     Most_Common_Break = -50
+
+    All_Len = [0,
+               0,
+               0,
+               0,
+               0,
+               0]
+
     if len(Drowned_Domains) > 0:
         Section_1 = range(11,20)
         Section_2 = range(20,30)
@@ -189,7 +215,7 @@ def Find_Most_Common_Drowning_Area(Drowned_Domains):
                 Long_Len = copy.deepcopy(All_Len[most])
 
         Most_Common_Break = st.mode(All_Breaks[Greatest_Len-1])[0][0]
-    return(Greatest_Len,Most_Common_Break)
+    return(Greatest_Len,Most_Common_Break, All_Len)
 
 def Process_Data(run_name_batch):
     cascade_list = []
@@ -197,9 +223,9 @@ def Process_Data(run_name_batch):
     Years_Modeled_List = []
     for k in range(0,len(run_name_batch)):
         # --------- plot ---------
-        output = np.load(run_name_batch[k] + ".npz", allow_pickle=True)
-        cascade = output["cascade"]
-        cascade = cascade[0]
+        output = np.load(run_name_batch[k] + ".npz", allow_pickle=True)["cascade"]
+        cascade = output[0]
+        #cascade = cascade[0]
         cascade_list.append(copy.deepcopy(cascade))
         b3d = cascade.barrier3d
         ny = np.size(b3d)
@@ -215,7 +241,7 @@ def Process_Data(run_name_batch):
                     Island_Drowning_Location_List.append(copy.deepcopy(drown - 4))
             #Island_Drowning[run_name_batch[k]] = drowned_cells
         else:
-            years_modeled = nt_run
+            years_modeled = cascade._nt
             final_year_index = years_modeled-1
             #Island_Drowning[run_name_batch[k]] = False
         Years_Modeled_List.append(copy.deepcopy(years_modeled))
@@ -326,7 +352,7 @@ def Calculate_Sandbag_Years(cascade, years_modeled,buffer_length, number_barrier
         Mean_Sandbag_Length_List.append(copy.deepcopy(Mean_Sandbag_Length))
     return (Number_Sandbag_Emplacements_List,Mean_Sandbag_Length_List,Sandbag_Emplacement_Domains)
 
-Output_DF = Process_Batch(Base_Name = Base_Name_List[1],Sink_Name =Sink_Name[0],Save_Path = Save_Path)
+Output_DF = Process_Batch(Base_Name = Base_Name_List[3],Sink_Name =Sink_Name[1],Save_Path = Save_Path)
 
 print('Hello')
 

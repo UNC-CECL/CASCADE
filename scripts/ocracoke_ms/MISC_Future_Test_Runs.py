@@ -51,7 +51,7 @@ else:
     nourishment_volume = 100
 
 # RSLR Data
-RSLR_Type = 'I'
+RSLR_Type = 'IH'
 
 if RSLR_Type == 'IL':
     RSLR_Data = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\RSLR\\Int_Low_SLR.npy')
