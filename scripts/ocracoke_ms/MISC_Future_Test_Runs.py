@@ -11,7 +11,7 @@ from cascade.cascade import Cascade
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
 
 # Set the number of years to simulate
-run_years = 126
+run_years = 100
 
 # Set the start year
 start_year = 2024
@@ -77,16 +77,16 @@ dune_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_ini
 Sink_Options = ['Accretional_Sink','Erosional_Sink']
 
 run_name = []
-for snames in range(1,5):
+for snames in range(0,3):
     name_base = 'OCR_'+str(RSLR_Type)+str(Management_name)+'S'+str(snames)
     Temp_Name = []
     for sinks in range(0,2):
-        full_name = name_base+'_'+str(Sink_Options[sinks])+'_Test_N'+str(Nourishment_Num)+'_Fixed_Beach_T6'
+        full_name = name_base+'_'+str(Sink_Options[sinks])+'_Test_N_60P'
         Temp_Name.append(copy.deepcopy(full_name))
     run_name.append(copy.deepcopy(Temp_Name))
 
 s_file = []
-for storm_num in range(1,5):
+for storm_num in range(0,3):
     s_file.append(copy.deepcopy('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Synthetic_Storms\\OCR_Future_StormList_'+str(storm_num)+'_baseline.npy'))
 
 
@@ -301,13 +301,14 @@ def alongshore_connected(
                     # cascade.rebuild_dune_now[iB3D] = 1
                     tmp_rebuild_dune[iB3D] = 1
 
-        # only nourish or rebuild dune if 60% of segments fall below threshold (more realistic)
-
-        if np.sum(tmp_nourish_now[beach_dune_manager_on]) > (len(tmp_nourish_now[beach_dune_manager_on]) * .6):
-        #if np.all(tmp_nourish_now[beach_dune_manager_on]) == 1:
+        # only nourish or rebuild dune if at least 2 adajecent segments fall below threshold beach width
+        adajacent_nourishment_need = False
+        for nourishments in range(1,len(tmp_nourish_now[beach_dune_manager_on])):
+            if tmp_nourish_now[beach_dune_manager_on][nourishments] == tmp_nourish_now[beach_dune_manager_on][nourishments-1] and tmp_nourish_now[beach_dune_manager_on][nourishments] == 1:
+                adajacent_nourishment_need = True
+        if adajacent_nourishment_need == True:
             cascade.nourish_now = tmp_nourish_now
-        if np.sum(tmp_rebuild_dune[beach_dune_manager_on]) > (len(tmp_nourish_now[beach_dune_manager_on]) * .6):
-        #if np.all(tmp_rebuild_dune[beach_dune_manager_on]) == 1:
+        if adajacent_nourishment_need == True:
             cascade.rebuild_dune_now = tmp_rebuild_dune
 
     # --------- SAVE ---------

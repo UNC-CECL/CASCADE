@@ -19,14 +19,10 @@ os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output\\')
 Save_Path = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Model Runs\\Summary_Values\\'
 
 run_name_batch = []
-run_name_batch.append('OCR_IL_Nourishment_S0_Accretional_Sink_Test_N5_Fixed_Beach_T6')
-#run_name_batch.append('OCR_IL_Nourishment_S0_Erosional_Sink_Test_N5_Fixed_Beach_T6')
-#run_name_batch.append('OCR_IL_Nourishment_S1_Accretional_Sink_Test_N5_Fixed_Beach_T6')
-#run_name_batch.append('OCR_IL_Nourishment_S1_Erosional_Sink_Test_N5_Fixed_Beach_T6')
-#run_name_batch.append('OCR_IL_Nourishment_S2_Accretional_Sink_Test_N5_Fixed_Beach_T6')
-#run_name_batch.append('OCR_IL_Nourishment_S2_Erosional_Sink_Test_N5_Fixed_Beach_T6')
-#run_name_batch.append('OCR_IL_Nourishment_S3_Accretional_Sink_Test_N5_Fixed_Beach_T6')
-#run_name_batch.append('OCR_IL_Nourishment_S3_Erosional_Sink_Test_N5_Fixed_Beach_T6')
+run_name_batch.append('OCR_IH_Nourishment_S1_Erosional_Sink_Test_N_1_Cells')
+run_name_batch.append('OCR_IH_Nourishment_S1_Erosional_Sink_Test_N_2_Cells')
+run_name_batch.append('OCR_IH_Nourishment_S1_Erosional_Sink_Test_N_60P')
+run_name_batch.append('OCR_IH_Natural_S1_Erosional_Sink')
 #run_name_batch.append('OCR_IL_Nourishment_S4_Accretional_Sink_Test_N5_Fixed_Beach_T6')
 #run_name_batch.append('OCR_IL_Nourishment_S4_Erosional_Sink_Test_N5_Fixed_Beach_T6')
 #run_name_batch.append('OCR_IH_Nourishment_S0_Accretional_Sink_Test_N5')
@@ -61,6 +57,8 @@ def Process_Batch(Names,
     sandbag_duration_TS = []
     sandbag_areas_TS = []
     island_width_change_TS = []
+    Total_Volume_TS = []
+    Total_Overwash_TS = []
 
     Model_Run_Years,Drowning_Domain_Locations, Cascade_List = Process_Data(run_name_batch = name_list)
 
@@ -91,12 +89,26 @@ def Process_Batch(Names,
                                                                      years_modeled=Model_Run_Years[runs],
                                                                      buffer_length=buffer_length,
                                                                      number_barrier3d_models = number_barrier3d_models)
+
+        Total_Volume,Total_Nourishment_Per_Grid,All_Nourishment_TS = Calculate_Nourishment_Volume(cascade=Cascade_List[runs],
+                                                                                                  years_modeled=Model_Run_Years[runs],
+                                                                                                  buffer_length=buffer_length,
+                                                                                                  number_barrier3d_models=number_barrier3d_models
+                                                                                                  )
+        Total_OW_Volume = Calculate_Overwash_Volume(cascade = Cascade_List[runs],
+                                                       years_modeled=Model_Run_Years[runs],
+                                                       buffer_length=buffer_length,
+                                                       number_barrier3d_models=number_barrier3d_models)
+
+
         Relocation_TS.append(copy.deepcopy(roadway_relocation))
         Frequency_TS.append(copy.deepcopy(relocation_frequency))
         number_sandbags_TS.append(copy.deepcopy(number_sandbags))
         sandbag_duration_TS.append(copy.deepcopy(sandbag_duration))
         sandbag_areas_TS.append(copy.deepcopy(sandbag_areas))
         island_width_change_TS.append(copy.deepcopy(island_width_change))
+        Total_Volume_TS.append(copy.deepcopy(Total_Volume))
+        Total_Overwash_TS.append(copy.deepcopy(Total_OW_Volume))
 
     # Calculate the mean values for all runs
     Mean_Shoreline_Change_Rate = np.mean(All_EP_Change,axis=0)
@@ -108,7 +120,7 @@ def Process_Batch(Names,
     Mean_Island_Interior_Change = np.mean(island_width_change_TS, axis=0)
 
 
-    Break_Section,Break_Domain_Location = Find_Most_Common_Drowning_Area(Drowned_Domains=Drowning_Domain_Locations)
+    #Break_Section,Break_Domain_Location = Find_Most_Common_Drowning_Area(Drowned_Domains=Drowning_Domain_Locations)
 
     Avg_Break_Year = np.mean(Model_Run_Years)
 
@@ -121,8 +133,10 @@ def Process_Batch(Names,
         'Number_of_Sandbag_Emplacements':Mean_Number_Sandbags,
         'Island_Interior_Change':Mean_Island_Interior_Change,
         'Island_Drown_Year':Avg_Break_Year,
-        'Island_Drown_Domain':Break_Domain_Location,
-        'Island_Drown_Section':Break_Section
+        #'Island_Drown_Domain':Break_Domain_Location,
+        #'Island_Drown_Section':Break_Section,
+        'Nourishment_Volume':Total_Volume_TS[0],
+        'Overwash_Volume':Total_OW_Volume
     }
 
     Export_DF = pd.DataFrame(Export_Values_Dict)
@@ -246,6 +260,17 @@ def Calculate_Average_Shoreline_Change(cascade, years_modeled, buffer_length):
     EP_Change = ((Year_Final_Shoreline_Positions - Year_1_Shoreline_Positions) * -1) / years_modeled
     return(EP_Change)
 
+def Calculate_Nourishment_Volume(cascade,years_modeled,buffer_length,number_barrier3d_models):
+    final_year_index = years_modeled -1
+    Nourishment_Data = cascade.nourishments
+    All_Nourishment_TS = []
+    Total_Nourishment_Per_Grid = []
+    for l in range(buffer_length, (number_barrier3d_models - buffer_length)):
+        All_Nourishment_TS.append(copy.deepcopy(Nourishment_Data[l].nourishment_volume_TS))
+        Total_Nourishment_Per_Grid.append(np.sum(Nourishment_Data[l].nourishment_volume_TS))
+    Total_Volume = np.sum(Total_Nourishment_Per_Grid)
+    return (Total_Volume,Total_Nourishment_Per_Grid,All_Nourishment_TS)
+
 def Calculate_Island_Interior_Width_Change(cascade, years_modeled, buffer_length, number_barrier3d_models):
     final_year_index = years_modeled -1
     Width_TS = []
@@ -282,6 +307,14 @@ def Calculate_Roadway_Abandonmet(cascade, years_modeled, buffer_length, number_b
         else:
             Road_Drowning_Years.append(copy.deepcopy(years_modeled))
     return(Road_Drowning_Years)
+
+def Calculate_Overwash_Volume(cascade, years_modeled, buffer_length, number_barrier3d_models):
+    All_OW_Year_TS_Temp = []
+    for klm in range(buffer_length, (number_barrier3d_models - buffer_length)):
+        b3d = cascade.barrier3d[klm]
+        Total_OW = np.multiply(np.sum(b3d.QowTS),500)
+        All_OW_Year_TS_Temp.append(copy.deepcopy(Total_OW))
+    return(All_OW_Year_TS_Temp)
 
 def Calculate_Roadway_Relocation(cascade, years_modeled,buffer_length, number_barrier3d_models):
     Relocations = []
@@ -362,12 +395,13 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 #plt.plot(domain_nums, LRR_97_20, label = 'Historic Change',color='grey')
 
 plt.axhline(y = 0, color = 'k', linestyle = '--')
-plt.plot(domain_nums, (All_Values_List[0]['Mean_Shoreline_Change_Rate']), label= '1',color='#1f77b4')
-plt.plot(domain_nums, (All_Values_List[2]['Mean_Shoreline_Change_Rate']), label= '2',color='#ff7f0e')
-plt.plot(domain_nums, (All_Values_List[4]['Mean_Shoreline_Change_Rate']), label = '3', color = '#2ca02c')
-plt.plot(domain_nums, (All_Values_List[6]['Mean_Shoreline_Change_Rate']), label = '4', color = '#d62728')
-plt.plot(domain_nums, (All_Values_List[8]['Mean_Shoreline_Change_Rate']), label = '5', color = '#9467bd')
-#plt.plot(domain_nums, (All_Values_List[5]['Mean_Shoreline_Change_Rate']), label = 'B', color = 'black')
+plt.plot(domain_nums, (All_Values_List[0]['Mean_Shoreline_Change_Rate']), label= '1 Cell')#,color='#1f77b4')
+plt.plot(domain_nums, (All_Values_List[1]['Mean_Shoreline_Change_Rate']), label= '2 Cell')#,color='#ff7f0e')
+plt.plot(domain_nums, (All_Values_List[2]['Mean_Shoreline_Change_Rate']), label = '60%')#, color = '#2ca02c')
+
+plt.plot(domain_nums, (All_Values_List[3]['Mean_Shoreline_Change_Rate']), label = 'SQ')#, color = '#1f77b4',linestyle = 'dashed')
+#plt.plot(domain_nums, (All_Values_List[4]['Mean_Shoreline_Change_Rate']), label = 'SQ2', color = '#ff7f0e',linestyle = 'dashed')
+#plt.plot(domain_nums, (All_Values_List[5]['Mean_Shoreline_Change_Rate']), label = 'SQ3', color = '#2ca02c',linestyle = 'dashed')
 
 #plt.plot(domain_nums,All_EP_Change[3], label = '30%', color = '#d62728')
 #plt.plot(domain_nums,All_EP_Change[4], label = '40%', color = '#9467bd')
@@ -377,12 +411,12 @@ plt.legend()
 plt.tight_layout()
 ax = plt.gca()
 ax.set_ylim([-3,4])
-plt.title('Beach Nourishment Values: IH')
-plt.ylabel('')
+plt.title('Beach Nourishment Values Shoreline Change: IH')
+plt.ylabel('Shoreface Change (m/yr)')
 plt.xlabel('B3D Domain')
 plt.show()
 
-plt.axhline(y = 0, color = 'k', linestyle = '--')
+'''plt.axhline(y = 0, color = 'k', linestyle = '--')
 plt.plot(domain_nums, (All_Values_List[1]['Mean_Shoreline_Change_Rate']), label= '1',color='#1f77b4')
 plt.plot(domain_nums, (All_Values_List[3]['Mean_Shoreline_Change_Rate']), label= '2',color='#ff7f0e')
 plt.plot(domain_nums, (All_Values_List[5]['Mean_Shoreline_Change_Rate']), label = '3', color = '#2ca02c')
@@ -398,10 +432,31 @@ plt.legend()
 plt.tight_layout()
 ax = plt.gca()
 ax.set_ylim([-3,4])
-plt.title('Beach Nourishment Values: IH')
+plt.title('Beach Nourishment: IL')
 plt.ylabel('')
 plt.xlabel('B3D Domain')
+plt.show()'''
+
+All_Nourishment_Volume = []
+for runs in range(len(All_Values_List)):
+    All_Nourishment_Volume.append(copy.deepcopy(All_Values_List[runs]['Nourishment_Volume'][0]))
+
+
+plt.plot(domain_nums,(All_Values_List[0]['Overwash_Volume']), label = '1 Cell')
+plt.plot(domain_nums,(All_Values_List[1]['Overwash_Volume']), label = '2 Cell')
+plt.plot(domain_nums,(All_Values_List[2]['Overwash_Volume']), label = '60%')
+plt.plot(domain_nums,(All_Values_List[3]['Overwash_Volume']), label = 'SQ')
+
+plt.axvline(x = 40, color = 'k', linestyle = '--')
+plt.axvline(x = 46, color = 'k', linestyle = '--')
+plt.legend()
+
+plt.title('Overwash Volume (m^3)')
+plt.ylabel('Cum Overwash Amount Per B3D Domain (m^3)')
+plt.xlabel('B3D Domain')
 plt.show()
+
+
 
 #plt.plot(domain_nums, LRR_97_20, label = 'Historic Change',color='grey')
 plt.axhline(y = 0, color = 'k', linestyle = '--')
@@ -425,6 +480,9 @@ plt.title('Beach Nourishment Values: IH')
 plt.ylabel('')
 plt.xlabel('B3D Domain')
 plt.show()
+
+
+
 
 (All_Values_List[0]['Mean_Shoreline_Change_Rate'])
 
