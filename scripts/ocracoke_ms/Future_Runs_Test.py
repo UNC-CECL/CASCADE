@@ -17,6 +17,7 @@ Save_Path = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel
 Management_Name = ['Status_Quo','Natural']
 RSLR_Rate = ['IL','I','IH']
 Sink_Name = ['Erosional_Sink','Accretional_Sink']
+Storm_Level = '10'
 
 Base_Name_List = []
 
@@ -31,12 +32,17 @@ Base_Name = Base_Name_List[0]
 
 def Process_Batch(Base_Name,
                   Sink_Name,
-                  Save_Path):
+                  Save_Path,
+                  Storm_Scenario):
     name_list = []
 
     # IL
-    for runs in range(0,100):
-        name_list.append(str(Base_Name)+'_S'+str(runs)+'_'+str(Sink_Name))
+    if Storm_Scenario == 'Baseline':
+        for runs in range(0,100):
+            name_list.append(str(Base_Name)+'_S'+str(runs)+'_'+str(Sink_Name))
+    else:
+        for runs in range(0,100):
+            name_list.append(str(Base_Name)+'_S'+str(runs)+'_10_'+str(Sink_Name))
 
     nt_run = 126
     number_barrier3d_models = 70
@@ -51,42 +57,60 @@ def Process_Batch(Base_Name,
     sandbag_duration_TS = []
     sandbag_areas_TS = []
     island_width_change_TS = []
+    Model_Run_Years = []
+    Drowning_Domain_Locations = []
+    All_Shoreline_Positions = []
+    Total_Volume_TS = []
+    All_Nourishment_TS = []
 
-    Model_Run_Years,Drowning_Domain_Locations, Cascade_List = Process_Data(run_name_batch = name_list)
 
-    for runs in range(len(Cascade_List)):
+    for runs in range(len(name_list)):
+        #for runs in range(0,2):
+        Model_Run_Year,Drowning_Domain_Location, Cascade_List = Process_Data(run_name_batch = name_list, load_index = runs)
+
         # Calculate shoreline change values
-        shoreline_change = Calculate_Average_Shoreline_Change(cascade=Cascade_List[runs],
-                                                              years_modeled=Model_Run_Years[runs],
+        shoreline_change, all_shoreline_positions = Calculate_Average_Shoreline_Change(cascade=Cascade_List,
+                                                              years_modeled=Model_Run_Year,
                                                               buffer_length=buffer_length)
         All_EP_Change.append(copy.deepcopy(shoreline_change))
+        All_Shoreline_Positions.append(copy.deepcopy(all_shoreline_positions))
         # Calculate Roadway Abandonment metrics
-        roadway_abandonment = Calculate_Roadway_Abandonmet(cascade=Cascade_List[runs],
-                                                           years_modeled=Model_Run_Years[runs],
+        roadway_abandonment = Calculate_Roadway_Abandonmet(cascade=Cascade_List,
+                                                           years_modeled=Model_Run_Year,
                                                            buffer_length=buffer_length,
                                                            number_barrier3d_models = number_barrier3d_models)
         All_Roadway_Abandonment.append(copy.deepcopy(roadway_abandonment))
         # Calculate roadway relocation
-        roadway_relocation, relocation_frequency = Calculate_Roadway_Relocation(cascade=Cascade_List[runs],
-                                                                                years_modeled=Model_Run_Years[runs],
+        roadway_relocation, relocation_frequency = Calculate_Roadway_Relocation(cascade=Cascade_List,
+                                                                                years_modeled=Model_Run_Year,
                                                                                 buffer_length=buffer_length,
                                                                                 number_barrier3d_models = number_barrier3d_models)
 
-        number_sandbags, sandbag_duration, sandbag_areas = Calculate_Sandbag_Years(cascade=Cascade_List[runs],
-                                                                                   years_modeled=Model_Run_Years[runs],
+        number_sandbags, sandbag_duration, sandbag_areas = Calculate_Sandbag_Years(cascade=Cascade_List,
+                                                                                   years_modeled=Model_Run_Year,
                                                                                    buffer_length=buffer_length,
                                                                                    number_barrier3d_models = number_barrier3d_models)
 
-        island_width_change = Calculate_Island_Interior_Width_Change(cascade=Cascade_List[runs],
-                                                                     years_modeled=Model_Run_Years[runs],
+        island_width_change = Calculate_Island_Interior_Width_Change(cascade=Cascade_List,
+                                                                     years_modeled=Model_Run_Year,
                                                                      buffer_length=buffer_length,
                                                                      number_barrier3d_models = number_barrier3d_models)
+
+        Total_Volume,Total_Nourishment_Per_Grid,All_Nourishment = Calculate_Nourishment_Volume(cascade=Cascade_List,
+                                                                                                  years_modeled=Model_Run_Year,
+                                                                                                  buffer_length=buffer_length,
+                                                                                                  number_barrier3d_models=number_barrier3d_models
+                                                                                                  )
+        Total_Volume_TS.append(copy.deepcopy(Total_Volume))
+        All_Nourishment_TS.append(copy.deepcopy(All_Nourishment))
         Relocation_TS.append(copy.deepcopy(roadway_relocation))
         Frequency_TS.append(copy.deepcopy(relocation_frequency))
         number_sandbags_TS.append(copy.deepcopy(number_sandbags))
         sandbag_duration_TS.append(copy.deepcopy(sandbag_duration))
         sandbag_areas_TS.append(copy.deepcopy(sandbag_areas))
         island_width_change_TS.append(copy.deepcopy(island_width_change))
+        Model_Run_Years.append(copy.deepcopy(Model_Run_Year))
+        Drowning_Domain_Locations.append(copy.deepcopy(Drowning_Domain_Location))
 
     # Calculate the mean values for all runs
     Mean_Shoreline_Change_Rate = np.mean(All_EP_Change,axis=0)
@@ -111,7 +135,10 @@ def Process_Batch(Base_Name,
                        'Number_Sandbags_TS':number_sandbags_TS,
                        'Island_Width_Change_TS':island_width_change_TS,
                        'Model_Run_Years':Model_Run_Years,
-                       #'Break_Domain_Locations':Section_Nums
+                       'Break_Domain_Locations':Drowning_Domain_Locations,
+                       'All_Shoreline_Positions':All_Shoreline_Positions,
+                       'Total_Nourishment_Volume':Total_Volume_TS,
+                       'All_Nourishment_TS':All_Nourishment_TS
                        }
 
     All_Values_Data_Frame = pd.DataFrame(All_Values_Dict)
@@ -132,12 +159,12 @@ def Process_Batch(Base_Name,
 
     Export_DF = pd.DataFrame(Export_Values_Dict)
 
-    Full_Save_Path = Save_Path+Base_Name+'_'+Sink_Name+'.csv'
+    Full_Save_Path = Save_Path+Base_Name+'_'+Sink_Name+'_'+str(Storm_Scenario)+'.csv'
 
-    #Export_DF.to_csv(Full_Save_Path)
+    Export_DF.to_csv(Full_Save_Path)
 
     # Save yearly data as .pkl
-    Full_Save_Path_PKL = Save_Path+Base_Name+'_'+Sink_Name+'.pkl'
+    Full_Save_Path_PKL = Save_Path+Base_Name+'_'+Sink_Name+'_'+str(Storm_Scenario)+'.pkl'
     All_Values_Data_Frame.to_pickle(Full_Save_Path_PKL)
 
 
@@ -213,39 +240,52 @@ def Find_Most_Common_Drowning_Area(Drowned_Domains):
             if All_Len[most] > Long_Len:
                 Greatest_Len = copy.deepcopy(most+1)
                 Long_Len = copy.deepcopy(All_Len[most])
-
-        Most_Common_Break = st.mode(All_Breaks[Greatest_Len-1])[0][0]
+        if Greatest_Len < 0:
+            Most_Common_Break = -50
+        else:
+            Most_Common_Break = st.mode(All_Breaks[Greatest_Len-1])[0][0]
     return(Greatest_Len,Most_Common_Break, All_Len)
 
-def Process_Data(run_name_batch):
+def Process_Data(run_name_batch,load_index):
     cascade_list = []
     Island_Drowning_Location_List = []
     Years_Modeled_List = []
-    for k in range(0,len(run_name_batch)):
-        # --------- plot ---------
-        output = np.load(run_name_batch[k] + ".npz", allow_pickle=True)["cascade"]
-        cascade = output[0]
-        #cascade = cascade[0]
-        cascade_list.append(copy.deepcopy(cascade))
-        b3d = cascade.barrier3d
-        ny = np.size(b3d)
-        print(str(k)+' is loaded. Break is equal to '+str(cascade.b3d_break))
+    #for k in range(0,len(run_name_batch)):
+    # --------- plot ---------
+    output = np.load(run_name_batch[load_index] + ".npz", allow_pickle=True)["cascade"]
+    cascade = output[0]
+    #cascade = cascade[0]
+    #cascade_list.append(copy.deepcopy(cascade))
+    b3d = cascade.barrier3d
+    ny = np.size(b3d)
+    print(str(load_index)+' is loaded. Break is equal to '+str(cascade.b3d_break))
 
-        if cascade.b3d_break == 1:
-            drowned_cells = {}
-            for drown in range(len(b3d)):
-                if b3d[drown]._drown_break == 1:
-                    drowned_cells[str(drown-4)] = len(b3d[drown]._InteriorWidth_AvgTS)
-                    years_modeled = len(b3d[drown]._InteriorWidth_AvgTS)
-                    final_year_index = years_modeled - 1
-                    Island_Drowning_Location_List.append(copy.deepcopy(drown - 4))
-            #Island_Drowning[run_name_batch[k]] = drowned_cells
-        else:
-            years_modeled = cascade._nt
-            final_year_index = years_modeled-1
-            #Island_Drowning[run_name_batch[k]] = False
-        Years_Modeled_List.append(copy.deepcopy(years_modeled))
-    return(Years_Modeled_List,Island_Drowning_Location_List,cascade_list)
+    if cascade.b3d_break == 1:
+        drowned_cells = {}
+        for drown in range(len(b3d)):
+            if b3d[drown]._drown_break == 1:
+                drowned_cells[str(drown-4)] = len(b3d[drown]._InteriorWidth_AvgTS)
+                years_modeled = len(b3d[drown]._InteriorWidth_AvgTS)
+                final_year_index = years_modeled - 1
+                Island_Drowning_Location_List.append(copy.deepcopy(drown - 4))
+        #Island_Drowning[run_name_batch[k]] = drowned_cells
+    else:
+        years_modeled = cascade._nt
+        final_year_index = years_modeled-1
+        Island_Drowning_Location_List = [0]
+    Years_Modeled_List.append(copy.deepcopy(years_modeled))
+    return(Years_Modeled_List[0],Island_Drowning_Location_List[0],cascade)
+
+def Calculate_Nourishment_Volume(cascade,years_modeled,buffer_length,number_barrier3d_models):
+    final_year_index = years_modeled -1
+    Nourishment_Data = cascade.nourishments
+    All_Nourishment_TS = []
+    Total_Nourishment_Per_Grid = []
+    for l in range(buffer_length, (number_barrier3d_models - buffer_length)):
+        All_Nourishment_TS.append(copy.deepcopy(Nourishment_Data[l].nourishment_volume_TS))
+        Total_Nourishment_Per_Grid.append(np.sum(Nourishment_Data[l].nourishment_volume_TS))
+    Total_Volume = np.sum(Total_Nourishment_Per_Grid)
+    return (Total_Volume,Total_Nourishment_Per_Grid,All_Nourishment_TS)
 
 def Calculate_Average_Shoreline_Change(cascade, years_modeled, buffer_length):
     final_year_index = years_modeled -1
@@ -254,6 +294,7 @@ def Calculate_Average_Shoreline_Change(cascade, years_modeled, buffer_length):
     # set up the domain; here we just use the first grid, but that could break in future runs
     total_shoreline_change = cascade._brie_coupler.brie.x_s_dt
     all_shoreline_change = cascade._brie_coupler.brie.x_s_save
+    all_focused_shoreline_change = all_shoreline_change[buffer_length:-buffer_length,:]
 
     All_Year_1_Shoreline_Position = all_shoreline_change[:, 1]
     All_Final_Shoreline_Position = all_shoreline_change[:, final_year_index]
@@ -262,7 +303,7 @@ def Calculate_Average_Shoreline_Change(cascade, years_modeled, buffer_length):
     Year_1_Shoreline_Positions[0] = 1624
     Year_Final_Shoreline_Positions = All_Final_Shoreline_Position[buffer_length:-buffer_length]
     EP_Change = ((Year_Final_Shoreline_Positions - Year_1_Shoreline_Positions) * -1) / years_modeled
-    return(EP_Change)
+    return(EP_Change,all_focused_shoreline_change)
 
 def Calculate_Island_Interior_Width_Change(cascade, years_modeled, buffer_length, number_barrier3d_models):
     final_year_index = years_modeled -1
@@ -352,7 +393,18 @@ def Calculate_Sandbag_Years(cascade, years_modeled,buffer_length, number_barrier
         Mean_Sandbag_Length_List.append(copy.deepcopy(Mean_Sandbag_Length))
     return (Number_Sandbag_Emplacements_List,Mean_Sandbag_Length_List,Sandbag_Emplacement_Domains)
 
-Output_DF = Process_Batch(Base_Name = Base_Name_List[3],Sink_Name =Sink_Name[1],Save_Path = Save_Path)
+#for base in range(len(Base_Name_List)):
+for sinks in range(1,2): #len(Sink_Name)):
+    Output_DF = Process_Batch(Base_Name = Base_Name_List[0],
+                              Sink_Name =Sink_Name[sinks],
+                              Save_Path = Save_Path,
+                              Storm_Scenario=Storm_Level)
+
+for sinks in range(len(Sink_Name)):
+    Output_DF = Process_Batch(Base_Name = Base_Name_List[3],
+                              Sink_Name =Sink_Name[sinks],
+                              Save_Path = Save_Path,
+                              Storm_Scenario=Storm_Level)
 
 print('Hello')
 

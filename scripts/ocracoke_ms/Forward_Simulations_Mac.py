@@ -18,12 +18,25 @@ start_year = 2024
 
 # Set scenario type
 status_quo = False
+nourishment = True
 
-if status_quo == True:
+if nourishment == True:
+    Management_name = '_Nourishment_'
+    nourish_beach = True
+    nourishment_time = None
+    nourishment_volume = 120
+elif status_quo == True:
     Management_name = "_Status_Quo_"
+    nourishment_time = None
+    nourish_beach = False
+    nourishment_volume = 120
 else:
     Management_name = '_Natural_'
+    nourishment_time = None
+    nourish_beach = False
+    nourishment_volume = 120
 
+Storms = 'Baseline'
 
 # RSLR Data
 RSLR_Type = 'IH'
@@ -89,6 +102,10 @@ sandbag_cells = [False] * Total_B3D_Number
 if status_quo == True:
     sandbag_cells[15:55] = [True]*39
 
+nourishment_cells = [False] * Total_B3D_Number
+if nourishment == True:
+    nourishment_cells[35:54] = [True]*len(range(35,54))
+
 e_file = []
 d_file = []
 for i in range(0,15):
@@ -119,20 +136,6 @@ background_threshold_list = [[0,0,0,0,0,
                             -1.0,-1.1,-1.2,-1.3,-1.4,
                             -1.5,-1.6,-1.7,-1.8,-1.9,
                             -2.0,-2.1,-2.2,-2.3,-2.4,
-                            -0,-0,-0,40,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0],\
-    [0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            33,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            -1.0,-1.1,-1.2,-1.3,-1.4,
-                            -1.5,-1.6,-1.7,-1.8,-1.9,
-                            -2.0,-2.1,-2.2,-2.3,-2.4,
                             -0,-0,-0,20,
                             0,0,0,0,0,
                             0,0,0,0,0,
@@ -147,35 +150,7 @@ background_threshold_list = [[0,0,0,0,0,
                             -1.0,-1.1,-1.2,-1.3,-1.4,
                             -1.5,-1.6,-1.7,-1.8,-1.9,
                             -2.0,-2.1,-2.2,-2.3,-2.4,
-                            -0,-0,-0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0],\
-    [0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            33,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            -1.0,-1.1,-1.2,-1.3,-1.4,
-                            -1.5,-1.6,-1.7,-1.8,-1.9,
-                            -2.0,-2.1,-2.2,-2.3,-2.4,
                             -0,-0,-0,-10,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0],\
-    [0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            33,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            -1.0,-1.1,-1.2,-1.3,-1.4,
-                            -1.5,-1.6,-1.7,-1.8,-1.9,
-                            -2.0,-2.1,-2.2,-2.3,-2.4,
-                            -0,-0,-0,-20,
                             0,0,0,0,0,
                             0,0,0,0,0,
                             0,0,0,0,0]]
@@ -306,9 +281,13 @@ def alongshore_connected(
                     tmp_rebuild_dune[iB3D] = 1
 
         # only nourish or rebuild dune if all segments fall below threshold (more realistic)
-        if np.all(tmp_nourish_now[beach_dune_manager_on]) == 1:
+        adajacent_nourishment_need = False
+        for nourishments in range(1,len(tmp_nourish_now[beach_dune_manager_on])):
+            if tmp_nourish_now[beach_dune_manager_on][nourishments] == tmp_nourish_now[beach_dune_manager_on][nourishments-1] and tmp_nourish_now[beach_dune_manager_on][nourishments] == 1:
+                adajacent_nourishment_need = True
+        if adajacent_nourishment_need == True:
             cascade.nourish_now = tmp_nourish_now
-        if np.all(tmp_rebuild_dune[beach_dune_manager_on]) == 1:
+        if adajacent_nourishment_need == True:
             cascade.rebuild_dune_now = tmp_rebuild_dune
 
     # --------- SAVE ---------
@@ -319,7 +298,12 @@ def alongshore_connected(
     return cascade
 
 
-def alongshore_uniform(run_name, s_file,background_erosion_list):
+def alongshore_uniform(run_name,
+                       s_file,
+                       background_erosion_list,
+                       nourishment_volume,
+                       nourish_beach,
+                       nourishment_interval):
     # variables that DO NOT change among runs
     number_barrier3d_models = 69
     beach_width_threshold = [30] * number_barrier3d_models
@@ -344,7 +328,7 @@ def alongshore_uniform(run_name, s_file,background_erosion_list):
 
     # baseline models for comparison -- all roadways ----------------------------------------
     roads_on = road_cells
-    nourishments_on = [False] * number_barrier3d_models
+    nourishments_on = nourish_beach
     sea_level_rise_rate = 0.0056
     sea_level_constant = True  # linear
 
@@ -390,7 +374,13 @@ def alongshore_uniform(run_name, s_file,background_erosion_list):
         user_inputed_RSLR_rate=RSLR_Rates,
     )
 
-for k in range(0,1):#len(run_name)):
-    for l in range(3,len(background_threshold_list)):
-        alongshore_uniform(run_name=run_name[k][l], s_file=s_file[k], background_erosion_list=background_threshold_list[l])
+for k in range(len(run_name)):
+    for l in range(0,len(background_threshold_list)):
+        alongshore_uniform(run_name=run_name[k][l],
+                           s_file=s_file[k],
+                           background_erosion_list=background_threshold_list[l],
+                           nourish_beach=nourishment_cells,
+                           nourishment_volume=nourishment_volume,
+                           nourishment_interval=nourishment_time
+                           )
         os.chdir('/Users/ceclmac/PycharmProjects/CASCADE')

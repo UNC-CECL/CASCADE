@@ -65,4 +65,4 @@ rmin: 0.55
 s_sf_eq: 0.01698590034494604
 sandbag_elevation: 1.8
 sandbag_need: false
-storm_file: C:\Users\frank\PycharmProjects\CASCADE\data\Ocracoke_init_data\storms\Synthetic_Storms\Ten_Percent_Storms\OCR_Future_StormList_99_10.npy
+storm_file: C:\Users\frank\PycharmProjects\CASCADE\data\Ocracoke_init_data\storms\Synthetic_Storms\OCR_Future_StormList_1_baseline.npy
