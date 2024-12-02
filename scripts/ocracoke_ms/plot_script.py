@@ -54,7 +54,7 @@ def plot_ElevAnimation_CASCADE(
         + MaxBeachWidth
         + np.abs(barrier3d[0]._ShorelineChange)
         + OriginY
-        + 170 #500 #important
+        + 100 #170 #500 ######!!!!#important
     )
 
     os.chdir(directory)
@@ -374,14 +374,14 @@ def plot_ElevAnimation_CASCADE(
 
 
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output')
-run_name = "OCR_I_Nourishment_S0_Accretional_Sink_Test_N1"
+run_name = "OCR_IH_Status_Quo_S29_Erosional_Sink"
 
 name_prefix = run_name
-nt_run = 10
-number_barrier3d_models = 39
+nt_run = 67
+number_barrier3d_models = 5
 Run_Marsh_Dynamics = False
 
-Model_Grids_Of_Interest = range(16,50)
+Model_Grids_Of_Interest = range(40,47)
 
 # --------- plot ---------
 output = np.load(run_name + ".npz", allow_pickle=True)
@@ -395,7 +395,7 @@ directory = "C:\\Users\\frank\\PycharmProjects\\CASCADE\\"
 # TMAX_Sim = Last simulation year of the model 99
 TMax_Sim = nt_run  # Give length of simulation
 TMax_MGMT = [0] * ny
-beach_management_ny = [True] * ny
+beach_management_ny = [False] * ny
 roadway_management_ny = [True] * ny
 
 plot_ElevAnimation_CASCADE(

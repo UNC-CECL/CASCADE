@@ -85,7 +85,7 @@ def Process_Raw_Topo_Data(raw_data_path,
                 DuneElevation = 0.1
 
             DuneHeightsVector[i] = DuneElevation
-          
+
         # Convert to decameters
         ProccesedIslandElevationMatrix = ProccesedIslandElevationMatrix * .1
         DuneHeightsVector = DuneHeightsVector * .1
