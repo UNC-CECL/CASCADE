@@ -10,14 +10,6 @@ from cascade.cascade import Cascade
 # Set data paths
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
 # Specify variables to use in calling function
-# Dune height path name
-#s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Duck_Bigger_Storms_5_m.npy'
-#s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Core_Banks_1974_1997.npy'
-
-#s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Core_Banks_1997_2021.npy'
-#s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1974_1997.npy'
-#s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1997_2021.npy'
-#run_name = 'NCB_Test_Center_Sinks_S0_No_Road_1997'
 
 buffer_enabled = True
 island_grid_number = 39
@@ -25,34 +17,19 @@ Total_B3D_Number = 70
 
 dune_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Buffer_Shoreline_Offsets.csv'
 
-start_year = 1997
+start_year = 1974
+
 if start_year == 1974:
     year = 0
-    run_name = ['OCR_S32_SR_NR_NS_1974_0_01_D_S',
-                'OCR_S32_SR_NR_NS_1974_0_1_D_S',
-                'OCR_S32_SR_NR_NS_1974_0_5_D_S',
-                'OCR_S32_SR_NR_NS_1974_0_75_D_S',
-                'OCR_S32_SR_NR_NS_1974_1_0_D_S'
-                ]
-    s_file = ['C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\OCR_1974_1997.npy',
-        'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1974_1997.npy',
-              'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1974_1997.npy',
-              'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1974_1997.npy',
-              'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1974_1997.npy'
-              ]
+    run_name = 'OCR_1974_1997_Hindcast_Final'
+
+    s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Hindcast_Storms\\OCR_1974_2022_Final_Hindcast_Storms.npy'
+
 else:
     year = 2
-    run_name = ['OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_01',
-                'OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_1',
-                'OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_5',
-                'OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_0_75',
-                'OCR_S32_SR_NR_NS_1997_Sandbags_Revised_076_Sandbag_1_0'
-                ]
-    s_file = ['C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Hindcast_Storms\\OCR_1997_2021.npy',
-        'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1997_2021.npy',
-              'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1997_2021.npy',
-              'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1997_2021.npy',
-              'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\OCR_1997_2021.npy']
+    run_name = 'OCR_1997_2020_Hindcast_Final'
+    s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Hindcast_Storms\\OCR_1997_2022_Final_Hindcast_Storms.npy'
+
 
 
 
@@ -65,12 +42,9 @@ road_setbacks = np.loadtxt(road_load_name,skiprows=1,delimiter=',')
 dune_offset = np.loadtxt(dune_load_name,skiprows=1,delimiter=',')
 dune_offset_c = copy.deepcopy(dune_offset)
 
-#rebuild_elev_threshold = [0.01,0.01,0.01,0.01,0.01,0.01]
 
-rebuild_elev_threshold = [0.01, 0.1,0.5,0.75,1]
-#rebuild_elev_threshold = 1
+rebuild_elev_threshold = 0.01
 Dune_Rebuilding_Height = 3
-#Dune_Rebuilding_Height = 1
 
 
 road_setbacks = road_setbacks*10
@@ -346,6 +320,6 @@ def alongshore_uniform(run_name, s_file, rebuild_elev_threshold):
         enable_shoreline_offset=shoreline_offset_enabled,
     )
 
-for k in range(0,len(run_name)):
-    alongshore_uniform(run_name=run_name[k],s_file=s_file[k],rebuild_elev_threshold = rebuild_elev_threshold[k])
-    os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
+
+alongshore_uniform(run_name=run_name,s_file=s_file,rebuild_elev_threshold = rebuild_elev_threshold)
+os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')

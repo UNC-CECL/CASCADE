@@ -32,17 +32,10 @@ os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output')
 
 run_name_batch = []
 
-run_name_batch.append('OCR_I_No_Management_ST0_Sink2')
-run_name_batch.append('OCR_I_Status_Quo_ST0_Sink2')
-#run_name_batch.append('OCR_I_Nourishment_S0_Accretional_Sink_Test_N3')
+run_name_batch.append('OCR_1974_1997_Hindcast_Final')
+run_name_batch.append('OCR_1997_2020_Hindcast_Final')
 
-#run_name_batch.append('OCR_I_Nourishment_S0_Erosional_Sink_Test_N1')
-#run_name_batch.append('OCR_I_Nourishment_S0_Erosional_Sink_Test_N2')
-#run_name_batch.append('OCR_I_Nourishment_S0_Erosional_Sink_Test_N3')
-
-#nt_run = 46
-#nt_run = 32
-nt_run = 95
+nt_run = 23
 number_barrier3d_models = 70
 buffer_length = 15
 All_EP_Change = []
@@ -85,7 +78,7 @@ for k in range(0,len(run_name_batch)):
     all_shoreline_change = cascade._brie_coupler.brie.x_s_save
 
     All_Year_1_Shoreline_Position = all_shoreline_change[:,1]
-    All_Year_44_Shoreline_Position = all_shoreline_change[:,nt_run]
+    All_Year_44_Shoreline_Position = all_shoreline_change[:,-1]
 
     Year_1_Shoreline_Positions = All_Year_1_Shoreline_Position[buffer_length:-buffer_length]
     Year_1_Shoreline_Positions[0] = 1624
@@ -202,34 +195,52 @@ domain_nums = range(11,50)
 
 SMALL_SIZE = 8
 MEDIUM_SIZE = 10
-BIGGER_SIZE = 16
+BIGGER_SIZE = 15
 
 plt.rc('font', size=BIGGER_SIZE)          # controls default text sizes
-plt.rc('axes', titlesize=16)     # fontsize of the axes title
-plt.rc('axes', labelsize=16)    # fontsize of the x and y labels
+plt.rc('axes', titlesize=15)     # fontsize of the axes title
+plt.rc('axes', labelsize=15)    # fontsize of the x and y labels
 plt.rc('xtick', labelsize=BIGGER_SIZE)    # fontsize of the tick labels
 plt.rc('ytick', labelsize=BIGGER_SIZE)    # fontsize of the tick labels
 plt.rc('legend', fontsize=12)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 # Plot all the different OCR storm intensities
-
-#plt.plot(domain_nums, LRR_74_97, label = 'Historic Change',color='grey')
+ax = plt.gca()
+ax.set_ylim([-6, 6])
+plt.plot(domain_nums, LRR_74_97, label = 'Historic Change',color='grey')
 #plt.plot(domain_nums, LRR_97_20, label = 'Historic Change',color='grey')
 
 plt.axhline(y = 0, color = 'k', linestyle = '--')
-plt.plot(domain_nums, All_EP_Change[0], label= 'Natural',color='#1f77b4')
-plt.plot(domain_nums, All_EP_Change[1], label= 'Status Quo',color='#ff7f0e')
-#plt.plot(domain_nums, All_EP_Change[2], label = '3', color = '#2ca02c')
-#plt.plot(domain_nums,All_EP_Change[3], label = '30%', color = '#d62728')
-#plt.plot(domain_nums,All_EP_Change[4], label = '40%', color = '#9467bd')
-#plt.plot(domain_nums,All_EP_Change[5], label = '50%', color = '#8c564b')
-
-plt.legend()
-plt.tight_layout()
-plt.title('Beach Nourishment Values: I')
+plt.plot(domain_nums, All_EP_Change[0], label= 'Predicted Change',color='#1f77b4')
+#plt.plot(domain_nums, All_EP_Change[1], label= 'Status Quo',color='#ff7f0e')
+#plt.axvline(x = 40, color = 'k', linestyle = '--')
+#plt.axvline(x = 46, color = 'k', linestyle = '--')
+plt.legend(loc='lower left')
+plt.title('Shoreline Change: 1974-1997')
 plt.ylabel('Shoreline Change Rate (m/yr)')
-plt.xlabel('B3D Domain')
+plt.xlabel('Domain')
+plt.tight_layout()
+plt.savefig(fname=('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Figures\\Hindcast_Shoreline_1974_1997.png'))
+plt.show()
+
+# Plot all the different OCR storm intensities
+
+ax = plt.gca()
+ax.set_ylim([-6, 6])
+#plt.plot(domain_nums, LRR_74_97, label = 'Historic Change',color='grey')
+plt.plot(domain_nums, LRR_97_20, label = 'Historic Change',color='grey')
+plt.axhline(y = 0, color = 'k', linestyle = '--')
+#plt.plot(domain_nums, All_EP_Change[0], label= 'Predicted Change',color='#1f77b4')
+plt.plot(domain_nums, All_EP_Change[1], label= 'Predicted Change',color='#ff7f0e')
+#plt.axvline(x = 40, color = 'k', linestyle = '--')
+#plt.axvline(x = 46, color = 'k', linestyle = '--')
+plt.legend(loc='lower left')
+plt.title('Shoreline Change: 1997-2020')
+plt.ylabel('Shoreline Change Rate (m/yr)')
+plt.xlabel('Domain')
+plt.tight_layout()
+plt.savefig(fname=('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Figures\\Hindcast_Shoreline_1997_2020.png'))
 plt.show()
 
 print('Hello Purr')
