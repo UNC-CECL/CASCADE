@@ -17,7 +17,7 @@ run_years = 126
 start_year = 2024
 
 # Set scenario type
-status_quo = False
+status_quo = True
 nourishment = True
 
 if nourishment == True:
@@ -39,7 +39,7 @@ else:
 Storms = 'Baseline'
 
 # RSLR Data
-RSLR_Type = 'IL'
+RSLR_Type = 'IH'
 
 if RSLR_Type == 'IL':
     RSLR_Data = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\RSLR\\Int_Low_SLR.npy')
