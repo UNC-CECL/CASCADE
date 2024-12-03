@@ -8,16 +8,15 @@ import copy
 import os
 import numpy as np
 
-load_path_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Ocracoke_NPY_Arrays\\Topo_2019\\'
+load_path_name = 'C:\\Users\\frank\\Downloads\\Arrays-Roya\\Arrays\\'
 topo_save_path_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Processed Topography\\'
 dune_save_path_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Processed Dune Values\\Dune_2019\\'
-MHW = 0.026
+MHW = 0.026 # Decameters
 
 def Process_Raw_Topo_Data(raw_data_path,
                           dune_save_path,
                           topo_save_path,
-                          Transpose = False,
-                          MHW = .26,
+                          MHW = .026,
                           Seaward_Edge = 'Bottom'):
     # Find all Numpy Arrays in raw data folder
     file_names = os.listdir(raw_data_path)
@@ -58,7 +57,7 @@ def Process_Raw_Topo_Data(raw_data_path,
         ProccesedIslandElevationMatrix = np.full((100,50),fill_value=-3.0)
         DuneHeightsVector = np.full((50),fill_value=-3.0)
 
-        for i in range(0,len(Raw_Raster[0])):
+        for i in range(0,len(ProccesedIslandElevationMatrix[0])):
             R0 = Raw_Raster[:,i]
             R0 = np.flip(R0)
 
@@ -87,9 +86,12 @@ def Process_Raw_Topo_Data(raw_data_path,
 
         topo_save_name = topo_save_path+base_name+'_topography_2019.npy'
         dune_save_name = dune_save_path+base_name+'_dune_2019.npy'
-        #np.save(arr=ProccesedIslandElevationMatrix, file=topo_save_name)
-        #np.save(arr=DuneHeightsVector, file=dune_save_name)
+        np.save(arr=ProccesedIslandElevationMatrix, file=topo_save_name)
+        np.save(arr=DuneHeightsVector, file=dune_save_name)
 
 Process_Raw_Topo_Data(raw_data_path = load_path_name,
                           dune_save_path = dune_save_path_name,
-                          topo_save_path = topo_save_path_name)
+                          topo_save_path = topo_save_path_name,
+                          Seaward_Edge='Right',
+                           MHW = MHW
+                        )
