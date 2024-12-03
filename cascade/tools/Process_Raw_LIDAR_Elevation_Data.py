@@ -86,8 +86,9 @@ def Process_Raw_Topo_Data(raw_data_path,
 
         topo_save_name = topo_save_path+base_name+'_topography_2019.npy'
         dune_save_name = dune_save_path+base_name+'_dune_2019.npy'
-        np.save(arr=ProccesedIslandElevationMatrix, file=topo_save_name)
-        np.save(arr=DuneHeightsVector, file=dune_save_name)
+        #np.save(arr=ProccesedIslandElevationMatrix, file=topo_save_name)
+        #np.save(arr=DuneHeightsVector, file=dune_save_name)
+        print(str(j)+' is processed')
 
 Process_Raw_Topo_Data(raw_data_path = load_path_name,
                           dune_save_path = dune_save_path_name,
