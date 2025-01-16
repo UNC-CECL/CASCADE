@@ -374,10 +374,10 @@ def plot_ElevAnimation_CASCADE(
 
 
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output')
-run_name = "OCR_IH_Status_Quo_S29_Erosional_Sink"
+run_name = "OCR_IL_Natural_S42_10_Accretional_Sink"
 
 name_prefix = run_name
-nt_run = 67
+nt_run = 120
 number_barrier3d_models = 5
 Run_Marsh_Dynamics = False
 
@@ -408,7 +408,7 @@ plot_ElevAnimation_CASCADE(
     beach_management_ny=beach_management_ny,
     roadway_management_ny=roadway_management_ny,
     y_lim=None,
-    z_lim=None,
+    z_lim=6,
     fig_size=None,
     fig_eps=False,
     Model_Grids_Of_Interest = Model_Grids_Of_Interest,

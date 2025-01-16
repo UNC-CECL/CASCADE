@@ -219,9 +219,9 @@ plt.plot(domain_nums, All_EP_Change[0], label= 'Predicted Change',color='#1f77b4
 plt.legend(loc='lower left')
 plt.title('Shoreline Change: 1974-1997')
 plt.ylabel('Shoreline Change Rate (m/yr)')
-plt.xlabel('Domain')
+plt.xlabel('Model Domain')
 plt.tight_layout()
-plt.savefig(fname=('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Figures\\Hindcast_Shoreline_1974_1997.png'))
+plt.savefig(fname=('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Figures\\Hindcast_Shoreline_1974_1997.eps'),format='eps')
 plt.show()
 
 # Plot all the different OCR storm intensities
@@ -238,10 +238,27 @@ plt.plot(domain_nums, All_EP_Change[1], label= 'Predicted Change',color='#ff7f0e
 plt.legend(loc='lower left')
 plt.title('Shoreline Change: 1997-2020')
 plt.ylabel('Shoreline Change Rate (m/yr)')
-plt.xlabel('Domain')
+plt.xlabel('Model Domain')
 plt.tight_layout()
-plt.savefig(fname=('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Figures\\Hindcast_Shoreline_1997_2020.png'))
+plt.savefig(fname=('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Figures\\Hindcast_Shoreline_1997_2020.eps'),format='eps')
 plt.show()
+
+
+ax = plt.gca()
+ax.set_ylim([-10, 10])
+plt.plot(domain_nums, LRR_74_97, label = 'Calibration',color='#1f77b4')
+plt.plot(domain_nums, LRR_97_20, label = 'Test',color='#ff7f0e')
+plt.axhline(y = 0, color = 'k', linestyle = '--')
+plt.legend(loc='lower left')
+plt.title('Historic Shoreline Change: 1974-2020')
+plt.ylabel('Shoreline Change Rate (m/yr)')
+plt.xlabel('Model Domain')
+plt.tight_layout()
+plt.savefig(fname=('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Figures\\Hindcast_Shoreline_1974_2020.eps'),format='eps')
+plt.show()
+
+
+
 
 print('Hello Purr')
 '''
