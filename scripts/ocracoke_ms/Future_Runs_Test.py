@@ -5,18 +5,18 @@ import pandas as pd
 from scipy import stats as st
 import os
 
-Change_Rates = np.loadtxt('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Revised_Offshore_Datum\\All_Shoreline_Change_Rates.csv',skiprows=1,delimiter=',')
-Subset_Change_Rates = np.loadtxt('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Revised_Offshore_Datum\\All_Annual_Change_Rates.csv',skiprows=1,delimiter=',')
-
 #os.chdir('C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Model Runs\\Future Runs')
 os.chdir('E:\\Model_Runs')
 
 
 Save_Path = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Model Runs\\Summary_Values\\'
 
-Management_Name = ['Nourishment']#['Status_Quo','Natural', 'Nourishment']
-RSLR_Rate = ['IL','I','IH']
+Management_Name = ['Status_Quo','Natural', 'Nourishment']
+#RSLR_Rate = ['IL','I','IH']
+RSLR_Rate = ['IL','IH']
 Sink_Name = ['Erosional_Sink','Accretional_Sink']
+#Sink_Name = ['Accretional_Sink']
+
 Storm_Level = 'Baseline'
 
 Base_Name_List = []
@@ -49,6 +49,7 @@ def Process_Batch(Base_Name,
     buffer_length = 15
     All_EP_Change = []
     All_Roadway_Abandonment = []
+    All_Abandonment_Reason = []
     Island_Drowning = {}
     Years_Modeled_List = []
     Relocation_TS = []
@@ -76,11 +77,12 @@ def Process_Batch(Base_Name,
         All_EP_Change.append(copy.deepcopy(shoreline_change))
         All_Shoreline_Positions.append(copy.deepcopy(all_shoreline_positions))
         # Calculate Roadway Abandonment metrics
-        roadway_abandonment = Calculate_Roadway_Abandonmet(cascade=Cascade_List,
+        roadway_abandonment,abandonmet_reason = Calculate_Roadway_Abandonmet(cascade=Cascade_List,
                                                            years_modeled=Model_Run_Year,
                                                            buffer_length=buffer_length,
                                                            number_barrier3d_models = number_barrier3d_models)
         All_Roadway_Abandonment.append(copy.deepcopy(roadway_abandonment))
+        All_Abandonment_Reason.append(copy.deepcopy(abandonmet_reason))
         # Calculate roadway relocation
         roadway_relocation, relocation_frequency = Calculate_Roadway_Relocation(cascade=Cascade_List,
                                                                                 years_modeled=Model_Run_Year,
@@ -148,7 +150,8 @@ def Process_Batch(Base_Name,
                        'All_Shoreline_Positions':All_Shoreline_Positions,
                        'Total_Nourishment_Volume':Total_Volume_TS,
                        'All_Nourishment_TS':All_Nourishment_TS,
-                       'All_Overwash_volume':Total_Overwash_TS
+                       'All_Overwash_volume':Total_Overwash_TS,
+                       'Roadway_Abandonment_Reason':All_Abandonment_Reason,
                        }
 
     All_Values_Data_Frame = pd.DataFrame(All_Values_Dict)
@@ -291,6 +294,7 @@ def Calculate_Nourishment_Volume(cascade,years_modeled,buffer_length,number_barr
     Nourishment_Data = cascade.nourishments
     All_Nourishment_TS = []
     Total_Nourishment_Per_Grid = []
+    Nourishment_Event_Volume = cascade.nourishment_volume
     for l in range(buffer_length, (number_barrier3d_models - buffer_length)):
         All_Nourishment_TS.append(copy.deepcopy(Nourishment_Data[l].nourishment_volume_TS))
         Total_Nourishment_Per_Grid.append(np.sum(Nourishment_Data[l].nourishment_volume_TS))
@@ -342,15 +346,29 @@ def Calculate_Island_Interior_Width_Change(cascade, years_modeled, buffer_length
 def Calculate_Roadway_Abandonmet(cascade, years_modeled, buffer_length, number_barrier3d_models):
     # Find times the roadway broke and save the year that it did
     Road_Drowning_Years = []
+    Road_Drowning_Reason = []
     for m in range(buffer_length, (number_barrier3d_models - buffer_length - 1)):
         Road_Data = cascade.roadways[m]
+
+        # Record reason for road drowning
+        if Road_Data.relocation_break == 1:
+            Road_Drowning_Reason.append(copy.deepcopy('No relocation room'))
+        elif Road_Data.drown_break == True:
+            Road_Drowning_Reason.append(copy.deepcopy('Too much water'))
+        elif cascade.b3d_break == 1:
+            Road_Drowning_Reason.append(copy.deepcopy('Island Drowning'))
+        else:
+            Road_Drowning_Reason.append(copy.deepcopy('NA'))
+
+        # Record the year of roadway abandonment
         if Road_Data.relocation_break == 1 or Road_Data.drown_break == True:
             Road_Drowning_Years.append(copy.deepcopy(Road_Data.time_index))
         elif Road_Data.drown_break == int(0) and Road_Data.time_index == 1:
             Road_Drowning_Years.append(copy.deepcopy(1))
         else:
             Road_Drowning_Years.append(copy.deepcopy(years_modeled))
-    return(Road_Drowning_Years)
+        x = 10
+    return(Road_Drowning_Years,Road_Drowning_Reason)
 
 def Calculate_Roadway_Relocation(cascade, years_modeled,buffer_length, number_barrier3d_models):
     Relocations = []

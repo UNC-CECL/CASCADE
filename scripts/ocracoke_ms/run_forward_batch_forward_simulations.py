@@ -17,26 +17,26 @@ run_years = 126
 start_year = 2024
 
 # Set scenario type
-status_quo = True
+status_quo = False
 nourishment = True
 
 if nourishment == True:
     Management_name = '_Nourishment_'
     nourish_beach = True
     nourishment_time = None
-    nourishment_volume = 120
+    nourishment_volume = 100
 elif status_quo == True:
     Management_name = "_Status_Quo_"
     nourishment_time = None
     nourish_beach = False
-    nourishment_volume = 120
+    nourishment_volume = 100
 else:
     Management_name = '_Natural_'
     nourishment_time = None
     nourish_beach = False
-    nourishment_volume = 120
+    nourishment_volume = 100
 
-Storms = 'Baseline'
+Storms = '10'
 
 # RSLR Data
 RSLR_Type = 'IH'
@@ -64,8 +64,11 @@ dune_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_ini
 
 Sink_Options = ['Accretional_Sink','Erosional_Sink']
 
+start_num = 0
+end_num = 100
+
 run_name = []
-for snames in range(0,100):
+for snames in range(start_num,end_num):
     if Storms == 'Baseline':
         name_base = 'OCR_'+str(RSLR_Type)+str(Management_name)+'S'+str(snames)
     else:
@@ -78,10 +81,10 @@ for snames in range(0,100):
 
 s_file = []
 if Storms == 'Baseline':
-    for storm_num in range(0,100):
+    for storm_num in range(start_num,end_num):
         s_file.append(copy.deepcopy('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Synthetic_Storms\\OCR_Future_StormList_'+str(storm_num)+'_baseline.npy'))
 else:
-    for storm_num in range(0, 100):
+    for storm_num in range(start_num, end_num):
         s_file.append(copy.deepcopy(
             'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Synthetic_Storms\\Ten_Percent_Storms\\OCR_Future_StormList_' + str(
                 storm_num) + '_10.npy'))
