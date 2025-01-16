@@ -19,7 +19,7 @@ os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output\\')
 Save_Path = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Model Runs\\Summary_Values\\'
 
 run_name_batch = []
-run_name_batch.append('OCR_IH_Nourishment_S1_Erosional_Sink_Test_N_1_Cells')
+run_name_batch.append('OCR_IL_Nourishment_S1_10_Accretional_Sink')
 run_name_batch.append('OCR_IH_Nourishment_S1_Erosional_Sink_Test_N_2_Cells')
 run_name_batch.append('OCR_IH_Nourishment_S1_Erosional_Sink_Test_N_60P')
 run_name_batch.append('OCR_IH_Natural_S1_Erosional_Sink')
