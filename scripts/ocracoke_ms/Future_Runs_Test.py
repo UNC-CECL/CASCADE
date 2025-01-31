@@ -13,7 +13,7 @@ Save_Path = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel
 
 Management_Name = ['Status_Quo','Natural', 'Nourishment']
 #RSLR_Rate = ['IL','I','IH']
-RSLR_Rate = ['IL','IH']
+RSLR_Rate = ['IL','I','IH']
 Sink_Name = ['Erosional_Sink','Accretional_Sink']
 #Sink_Name = ['Accretional_Sink']
 
@@ -50,6 +50,9 @@ def Process_Batch(Base_Name,
     All_EP_Change = []
     All_Roadway_Abandonment = []
     All_Abandonment_Reason = []
+    All_Initial_Island_Elevations = []
+    All_Final_Island_Elevations = []
+    All_Elevation_Changes = []
     Island_Drowning = {}
     Years_Modeled_List = []
     Relocation_TS = []
@@ -110,6 +113,12 @@ def Process_Batch(Base_Name,
                                                        buffer_length=buffer_length,
                                                        number_barrier3d_models=number_barrier3d_models)
 
+        Elevation_Change_Output, Initial_Elevation_Output, Final_Elevation_Output = Calculate_Island_Elevation_Metrics(
+            cascade=Cascade_List,
+            buffer_length=buffer_length,
+            number_barrier3d_models=number_barrier3d_models)
+
+
         Total_Volume_TS.append(copy.deepcopy(Total_Volume))
         All_Nourishment_TS.append(copy.deepcopy(All_Nourishment))
         Relocation_TS.append(copy.deepcopy(roadway_relocation))
@@ -121,6 +130,11 @@ def Process_Batch(Base_Name,
         Model_Run_Years.append(copy.deepcopy(Model_Run_Year))
         Drowning_Domain_Locations.append(copy.deepcopy(Drowning_Domain_Location))
         Total_Overwash_TS.append(copy.deepcopy(Total_OW_Volume))
+        All_Initial_Island_Elevations.append(copy.deepcopy(Initial_Elevation_Output))
+        All_Final_Island_Elevations.append(copy.deepcopy(Final_Elevation_Output))
+        All_Elevation_Changes.append(copy.deepcopy(Elevation_Change_Output))
+
+        z = 10
 
 
     # Calculate the mean values for all runs
@@ -152,6 +166,9 @@ def Process_Batch(Base_Name,
                        'All_Nourishment_TS':All_Nourishment_TS,
                        'All_Overwash_volume':Total_Overwash_TS,
                        'Roadway_Abandonment_Reason':All_Abandonment_Reason,
+                       'Island_Initial_Elevation':All_Initial_Island_Elevations,
+                       'Island_Final_Elevation':All_Final_Island_Elevations,
+                       'Island_Elevation_Change':All_Elevation_Changes
                        }
 
     All_Values_Data_Frame = pd.DataFrame(All_Values_Dict)
@@ -369,6 +386,56 @@ def Calculate_Roadway_Abandonmet(cascade, years_modeled, buffer_length, number_b
             Road_Drowning_Years.append(copy.deepcopy(years_modeled))
         x = 10
     return(Road_Drowning_Years,Road_Drowning_Reason)
+
+def Calculate_Island_Elevation_Metrics(cascade, buffer_length, number_barrier3d_models):
+    Domains_of_Interest = range(buffer_length, (number_barrier3d_models - buffer_length))
+    b3d = cascade.barrier3d
+
+    Elevation_Change_TS = []
+    Initial_Elevation_TS = []
+    Final_Elevation_TS = []
+
+    for k in Domains_of_Interest:
+        Temp_B3D = b3d[k]
+        Shoreline_Change_TS = Temp_B3D._ShorelineChangeTS
+
+        # Find the initial and final island interior elevations
+        initial_elev = Temp_B3D.DomainTS[0]
+        final_elev = Temp_B3D.DomainTS[Temp_B3D.time_index-1]
+
+        # Find the initial dune crest elevation
+        initial_dune = Temp_B3D.DuneDomain[0]
+        final_dune_elev = Temp_B3D.DuneDomain[Temp_B3D.time_index-1]
+
+        # Rotate np arrays to concat with
+        initial_dune_elev_r = np.rot90(initial_dune,k=3)
+        final_dune_elev_r = np.rot90(final_dune_elev,k=3)
+
+        # Add dunes to front of initial elevation
+        combined_initial_elev = np.concatenate((initial_dune_elev_r,initial_elev),axis=0)
+
+        distance_traveled = int(abs(np.sum(Shoreline_Change_TS[0:int(Temp_B3D.time_index)])))
+
+        blank_cells = np.full((distance_traveled,int(Temp_B3D.BarrierLength)),-0.3)
+
+        updated_final_array = np.concatenate((np.concatenate((blank_cells,final_dune_elev_r),axis=0),final_elev),axis=0)
+
+        if len(combined_initial_elev) > len(updated_final_array):
+            len_difference = len(combined_initial_elev) - len(updated_final_array)
+            extra_cells = np.full((len_difference,int(Temp_B3D.BarrierLength)),-0.3)
+            updated_final_array = np.concatenate((updated_final_array,extra_cells),axis=0)
+        elif len(combined_initial_elev) < len(updated_final_array):
+            len_difference = len(updated_final_array) - len(combined_initial_elev)
+            extra_cells = np.full((len_difference,int(Temp_B3D.BarrierLength)),-0.3)
+            combined_initial_elev = np.concatenate((combined_initial_elev,extra_cells),axis=0)
+
+        elev_difference = np.subtract(updated_final_array,combined_initial_elev)
+
+        Elevation_Change_TS.append(copy.deepcopy(elev_difference))
+        Initial_Elevation_TS.append(copy.deepcopy(combined_initial_elev))
+        Final_Elevation_TS.append(copy.deepcopy(updated_final_array))
+
+    return (Elevation_Change_TS,Initial_Elevation_TS,Final_Elevation_TS)
 
 def Calculate_Roadway_Relocation(cascade, years_modeled,buffer_length, number_barrier3d_models):
     Relocations = []

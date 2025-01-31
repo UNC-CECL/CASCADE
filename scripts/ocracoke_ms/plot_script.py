@@ -54,7 +54,7 @@ def plot_ElevAnimation_CASCADE(
         + MaxBeachWidth
         + np.abs(barrier3d[0]._ShorelineChange)
         + OriginY
-        + 100 #170 #500 ######!!!!#important
+        + 50 #170 #500 ######!!!!#important
     )
 
     os.chdir(directory)
@@ -168,7 +168,7 @@ def plot_ElevAnimation_CASCADE(
                 ax = elevFig1.add_subplot(111)
                 cax = ax.pcolormesh(
                     AnimateDomain,
-                    cmap="terrain",
+                    cmap="gray",
                     vmin=-1.1,
                     vmax=z_lim,
                     # edgecolors="w",  # for debugging
@@ -276,7 +276,7 @@ def plot_ElevAnimation_CASCADE(
         ax = elevFig2.add_subplot(111)
         cax = ax.pcolormesh(
             AnimateDomain,
-            cmap="terrain",
+            cmap="gray",
             vmin=-1.1,
             vmax=z_lim,
             # edgecolors="w",  # for debugging
@@ -374,14 +374,15 @@ def plot_ElevAnimation_CASCADE(
 
 
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output')
-run_name = "OCR_IL_Natural_S42_10_Accretional_Sink"
-
+run_name = "OCR_IL_Natural_S42_Accretional_Sink"
+#run_name = 'OCR_IH_Status_Quo_S29_Erosional_Sink'
+#run_name = 'OCR_IH_Status_Quo_S14_Erosional_Sink'
 name_prefix = run_name
 nt_run = 120
-number_barrier3d_models = 5
+number_barrier3d_models = 1
 Run_Marsh_Dynamics = False
 
-Model_Grids_Of_Interest = range(40,47)
+Model_Grids_Of_Interest = [40] #range(41,42)
 
 # --------- plot ---------
 output = np.load(run_name + ".npz", allow_pickle=True)
@@ -408,7 +409,7 @@ plot_ElevAnimation_CASCADE(
     beach_management_ny=beach_management_ny,
     roadway_management_ny=roadway_management_ny,
     y_lim=None,
-    z_lim=6,
+    z_lim=3.5,
     fig_size=None,
     fig_eps=False,
     Model_Grids_Of_Interest = Model_Grids_Of_Interest,
