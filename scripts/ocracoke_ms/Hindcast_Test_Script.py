@@ -32,9 +32,9 @@ os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output')
 
 run_name_batch = []
 
-run_name_batch.append('OCR_1974_1997_Hindcast_Final')
-run_name_batch.append('OCR_1997_2020_Hindcast_Final')
-
+#run_name_batch.append('OCR_1974_1997_Hindcast_Final')
+#run_name_batch.append('OCR_1997_2020_Hindcast_Final')
+run_name_batch.append('OCR_IH_Status_Quo_S14_Erosional_Sink')
 nt_run = 23
 number_barrier3d_models = 70
 buffer_length = 15
@@ -121,15 +121,15 @@ for k in range(0,len(run_name_batch)):
             if Interior_Dune_Building[years] == 1:
                 Temp_Years_Interior.append(copy.deepcopy(years))
         if len(Temp_Years) > 0:
-            Dune_Rebuilding_Years[str(m-4)] = copy.deepcopy(Temp_Years)
+            Dune_Rebuilding_Years[str(m)] = copy.deepcopy(Temp_Years)
         if len(Temp_Years_Interior) > 0:
-            Dune_Interior_Building_Years[str(m-4)] = copy.deepcopy(Temp_Years_Interior)
+            Dune_Interior_Building_Years[str(m)] = copy.deepcopy(Temp_Years_Interior)
         if len(Temp_Years) > 0 and len(Temp_Years_Interior) == 0:
-            Combined_Dune_building_years[str(m-4)] = (copy.deepcopy(Temp_Years))
+            Combined_Dune_building_years[str(m)] = (copy.deepcopy(Temp_Years))
         elif len(Temp_Years) == 0 and len(Temp_Years_Interior) > 0:
-            Combined_Dune_building_years[str(m-4)] = copy.deepcopy(Temp_Years_Interior)
+            Combined_Dune_building_years[str(m)] = copy.deepcopy(Temp_Years_Interior)
         elif len(Temp_Years) > 0 and len(Temp_Years_Interior) > 0:
-            Combined_Dune_building_years[str(m-4)] = copy.deepcopy(np.sort(np.append(Temp_Years,Temp_Years_Interior)))
+            Combined_Dune_building_years[str(m)] = copy.deepcopy(np.sort(np.append(Temp_Years,Temp_Years_Interior)))
 
 
         All_Dune_Rebuilding_TS_Temp.append(copy.deepcopy(All_Dune_Rebuilding))
@@ -183,13 +183,23 @@ for k in range(0,len(run_name_batch)):
             if All_Sandbag_Building[years] == 1:
                 Temp_Years.append(copy.deepcopy(years))
         if len(Temp_Years) > 0:
-            Sandbag_Years[str(n-4)] = (copy.deepcopy(Temp_Years))
+            Sandbag_Years[str(n)] = (copy.deepcopy(Temp_Years))
         All_Sandbag_Building_TS_Temp.append(copy.deepcopy(All_Sandbag_Building))
     All_Sandbag_Building_TS.append(copy.deepcopy(All_Sandbag_Building_TS_Temp))
     Sandbag_Presence_Years_Dict[str(run_name_batch[k])] = copy.deepcopy(Sandbag_Years)
 
 
 domain_nums = range(11,50)
+
+# Look at the interior to show differences
+
+
+
+
+
+
+
+
 
 # Set Font
 

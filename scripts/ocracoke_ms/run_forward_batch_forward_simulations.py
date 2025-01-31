@@ -202,7 +202,7 @@ def alongshore_connected(
     trigger_dune_knockdown=False,
     group_roadway_abandonment=None,
     sandbag_management_on = False,
-    sandbag_elevation = 5,
+    sandbag_elevation = 2,
     enable_shoreline_offset = False,
     shoreline_offset = [0],
     user_inputed_RSLR=False,

@@ -17,17 +17,17 @@ Total_B3D_Number = 70
 
 dune_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Buffer_Shoreline_Offsets.csv'
 
-start_year = 1974
+start_year = 1997
 
 if start_year == 1974:
     year = 0
-    run_name = 'OCR_1974_1997_Hindcast_Final'
+    run_name = 'OCR_1974_1997_Hindcast_Final_3'
 
     s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Hindcast_Storms\\OCR_1974_2022_Final_Hindcast_Storms.npy'
 
 else:
     year = 2
-    run_name = 'OCR_1997_2020_Hindcast_Final'
+    run_name = 'OCR_1997_2020_Hindcast_Final_3'
     s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Hindcast_Storms\\OCR_1997_2022_Final_Hindcast_Storms.npy'
 
 
