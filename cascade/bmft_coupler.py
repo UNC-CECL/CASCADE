@@ -34,7 +34,13 @@ def B3d_PyBMFT_equal(barrier3d, ny, bmftc):
 
 
 class BMFTCoupler:
-    def __init__(self, ny, nt, barrier3d, name):
+    def __init__(self,
+                 ny,
+                 nt,
+                 barrier3d,
+                 name,
+                 marsh_width=500,
+                 marsh_path = "C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\BMFT_Marsh_Width_500.mat"):
 
         """The BMFTCoupler module.
 
@@ -91,8 +97,8 @@ class BMFTCoupler:
                     wind_speed=6,
                     forest_on=False,
                     filename_equilbaydepth="C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\Equilibrium Bay Depth.mat",
-                    filename_marshspinup="C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\BMFT_Marsh_Width_500.mat",
-                    marsh_width_initial=500,
+                    filename_marshspinup=marsh_path,
+                    marsh_width_initial=marsh_width,
                 )
             )
 

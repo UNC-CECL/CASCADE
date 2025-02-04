@@ -157,6 +157,8 @@ class Cascade:
         shoreline_offset=[],
         user_inputed_RSLR=False,
         user_inputed_RSLR_rate = [],
+        marsh_path = "C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\BMFT_Marsh_Width_500.mat",
+        marsh_width = 500
     ):
         """
 
@@ -252,6 +254,10 @@ class Cascade:
             Whether the user will be inputing their own generated RSLR rates
         user_inputed_RSLR_rates: list, optional
             Time series of RSLR rates for Cascade to use, RSLR rates must be floats and be in m/yr.
+        marsh_path: str, optional
+            Path to initial marsh topography for BMFT model. Only used if marsh dynamics are enabled
+        marsh_width: int, optional
+            Length of initial marsh width of BMFT model instance (m)
 
 
         Examples
@@ -301,6 +307,8 @@ class Cascade:
         ] * self._ny  # Tracks whether marsh drowns / exists and whether PybMFT coupling runs
         self._user_inputed_RSLR = user_inputed_RSLR
         self._user_inputed_RSLR_rate = user_inputed_RSLR_rate
+        self._marsh_width = marsh_width
+        self._marsh_path = marsh_path
 
         # initialization errors
         if (
@@ -467,6 +475,8 @@ class Cascade:
                 barrier3d=self._barrier3d,
                 ny=self._ny,
                 name=self._filename,  # Name of the model run for file outputs
+                marsh_width = self._marsh_width,
+                marsh_path=self._marsh_path,
             )
 
     @property
@@ -577,7 +587,7 @@ class Cascade:
 
         # Advance B3D by one time step; NOTE: B3D initializes at time_index = 1 and then updates the time_index
         # after update_dune_domain
-        batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
+        batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="50M")(
             delayed(batchB3D)(self._barrier3d[iB3D]) for iB3D in range(self._ny)
         )
 

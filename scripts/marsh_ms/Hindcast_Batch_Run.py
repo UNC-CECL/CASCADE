@@ -1,4 +1,5 @@
 # Run a batch of different Cascade Runs
+import copy
 
 import numpy as np
 import os
@@ -8,31 +9,62 @@ from cascade.cascade import Cascade
 # Input Variables
 # ###############################################################################
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
+data_base_path = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\'
 # Specify variables to use in calling function
 # Dune height path name
-d_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\Metompkin_Marsh_Dune.npy'
-e_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\Metompkin_Marsh_Topo.npy'
-# Storm file path name
-Num_Storms = 50
-c_wd = os.getcwd()
-nt_run = 20  # Number of years model will run
-run_name = []
-storm_name = []
-background_erosion_value = 0#-1
+d_file = []
+e_file = []
 
-for i in range(0,Num_Storms):
-    run_name.append('Metompkin_Marsh_Five_Percent_Storms_High_RSLR_'+str(i)+'_Hindcast_Test_0')
-    storm_name.append('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\Five_Percent_Increase\\StormList_'+
-                       str(i)+'_5_percent_increase.npy')
+e_names = ['Metompkin_Marsh_Topo.npy',
+           'Metompkin_Bay_Topo.npy',
+           'Hog_Topo.npy',
+           'Wreck_Topo.npy',
+           'Smith_Topo.npy']
+
+d_names = ['Metompkin_Marsh_Dune.npy',
+           'Metompkin_Bay_Dune.npy',
+           'Hog_Dune.npy',
+           'Wreck_Dune.npy',
+           'Smith_Dune.npy']
+
+Base_Name_List = ['Geom_1',
+                  'Geom_2',
+                  'Geom_3',
+                  'Geom_4',
+                  'Geom_5']
+
+for runs in range(len(e_names)):
+    d_file.append(copy.deepcopy(data_base_path+d_names[runs]))
+    e_file.append(copy.deepcopy(data_base_path+e_names[runs]))
+
+
+marsh_path_list = ["C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\BMFT_Marsh_Width_500.mat",
+                   "C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\BMFT_Marsh_Width_500.mat",
+                   "C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\BMFT_Marsh_Width_500.mat",
+                   "C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\Marsh_250.mat",
+                   "C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\BMFT_Marsh_Width_500.mat"]
+marsh_width_list = [500,500,500,250,500]
+
+
+# Storm file path name
+c_wd = os.getcwd()
+nt_run = 23  # Number of years model will run
+run_name = []
+storm_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\VCR_Storms_1994_2020.npy'
+background_erosion_value = [x / 10.0 for x in range(10,-55,-5)]
+
+for geos in range(len(Base_Name_List)):
+    temp_run_name = []
+    for i in range(0,len(background_erosion_value)):
+        temp_run_name.append(copy.deepcopy(Base_Name_List[geos]+'_'+str(background_erosion_value[i])))
+    run_name.append(copy.deepcopy(temp_run_name))
+
 num_of_batches = 1
 marsh_dynamics_on = True
-run_set_RSLR = True
+run_set_RSLR = False
 
 # Name storms
-if run_set_RSLR == True:
-    set_RSLR = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\High_SLR.npy')
-else:
-    set_RSLR = []
+set_RSLR = 0.00563
 
 
 number_barrier3d_models = 1
@@ -51,6 +83,8 @@ def Batch_Runs(
     elevation_file,
     dune_file,
     background_erosion,
+    marsh_width,
+    marsh_path,
     sea_level_rise_rate=0.008,  # not an array
     sea_level_constant=True,  # not an array
     enable_shoreline_offset=False,
@@ -94,6 +128,8 @@ def Batch_Runs(
         marsh_dynamics=marsh_dynamics,
         user_inputed_RSLR = user_inputed_RSLR,
         user_inputed_RSLR_rate = user_inputed_RSLR_rate,
+        marsh_path=marsh_path,
+        marsh_width=marsh_width,
 
     )
     # --------- LOOP ---------
@@ -113,25 +149,27 @@ def Batch_Runs(
     return cascade
 
 # Call a batch of functions
-for j in range(0,2):
-
-    Batch_Runs(
-        nt=nt_run,
-        name=run_name[j],
-        storm_file=storm_name[j],
-        alongshore_section_count=number_barrier3d_models,
-        num_cores=3,
-        rmin=rmin,
-        rmax=rmax,
-        elevation_file=e_file,
-        dune_file=d_file,
-        background_erosion=background_erosion_value,
-        sea_level_constant=False,  # not an array
-        enable_shoreline_offset=False,
-        marsh_dynamics=marsh_dynamics_on,
-        sea_level_rise_rate=0.004,
-        user_inputed_RSLR=run_set_RSLR,
-        user_inputed_RSLR_rate=set_RSLR,
-    )
-    os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
-    print('Finished '+str(run_name[j]))
+for j in range(len(run_name)):
+    for k in range(len(run_name[0])):
+        Batch_Runs(
+            nt=nt_run,
+            name=run_name[j][k],
+            storm_file=storm_name,
+            alongshore_section_count=number_barrier3d_models,
+            num_cores=3,
+            rmin=rmin,
+            rmax=rmax,
+            elevation_file=e_file[j],
+            dune_file=d_file[j],
+            background_erosion=background_erosion_value[k],
+            sea_level_constant=True,  # not an array
+            enable_shoreline_offset=False,
+            marsh_dynamics=marsh_dynamics_on,
+            sea_level_rise_rate=set_RSLR,
+            user_inputed_RSLR=run_set_RSLR,
+            user_inputed_RSLR_rate=set_RSLR,
+            marsh_path=marsh_path_list[j],
+            marsh_width=marsh_width_list[j]
+        )
+        os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
+        print('Finished '+str(run_name[j][k]))
