@@ -6,33 +6,38 @@ import copy
 
 os.chdir("C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output")
 
-#run_name = 'Metompkin_Marsh_Five_Percent_Storms_High_RSLR_0_Hindcast_Test.npz'
-run_name = 'Metompkin_Marsh_Five_Percent_Storms_High_RSLR_1_Hindcast_Test_0.npz'
-run_name = 'Hog_10_Percent_High_RSLR_0.npz'
+Base_Name_List = ['Geom_1',
+                  'Geom_2',
+                  'Geom_3',
+                  'Geom_4',
+                  'Geom_5']
 
-marsh_edge_TS = []
-forest_edge_TS = []
-bmft_elevation_TS = []
-marsh_offset_TS = []
-shoreline_TS = []
-shoreline_toe_TS = []
+background_erosion_value = [x / 10.0 for x in range(10,-55,-5)]
 
-output = np.load(run_name, allow_pickle=True)
-cascade = output["cascade"]
-cascade = cascade[0]
-b3d = cascade._barrier3d[0]
+Load_Name_List = []
+for geos in range(len(Base_Name_List)):
+    temp_run_name = []
+    for i in range(0,len(background_erosion_value)):
+        temp_run_name.append(copy.deepcopy(Base_Name_List[geos]+'_'+str(background_erosion_value[i])+'.npz'))
+    run_name.append(copy.deepcopy(temp_run_name))
 
-Shoreline_Change_Rate = cascade._brie_coupler.brie.x_s_dt
-all_shoreline_change = cascade._brie_coupler.brie.x_s_save
-all_shoreline_change_0 = cascade._brie_coupler.brie.x_s_save[0][0]
-all_shoreline_change_end = cascade._brie_coupler.brie.x_s_save[0][-1]
-Change_Rate = (all_shoreline_change_end - all_shoreline_change_0)/len(cascade._brie_coupler.brie.x_s_save[0])
 
-shoreline_TS.append(b3d.x_s_TS)
-shoreline_toe_TS.append(b3d.x_t_TS)
+Combined_Dict = {}
+for islands in range(len(Base_Name_List)):
+    Geom_Dict = {}
+    for sinks in range(len(background_erosion_value)):
+        output = np.load(run_name[islands][sinks], allow_pickle=True)
+        cascade = output["cascade"]
+        cascade = cascade[0]
+        b3d = cascade._barrier3d[0]
 
-Final_Shoreline_Distance = (shoreline_TS[0][-1]-shoreline_TS[0][0])
+        Shoreline_Change_Rate = cascade._brie_coupler.brie.x_s_dt
+        all_shoreline_change = cascade._brie_coupler.brie.x_s_save
+        all_shoreline_change_0 = cascade._brie_coupler.brie.x_s_save[0][0]
+        all_shoreline_change_end = cascade._brie_coupler.brie.x_s_save[0][-1]
+        Change_Rate = -(all_shoreline_change_end - all_shoreline_change_0)/len(cascade._brie_coupler.brie.x_s_save[0])
+        Geom_Dict[str(background_erosion_value[sinks])] = copy.deepcopy(Change_Rate)
+    Combined_Dict[str(Base_Name_List[islands])] = copy.deepcopy(Geom_Dict)
 
-Shoreline_change_Rate = Final_Shoreline_Distance/len(shoreline_TS[0])
 
 z = 20
