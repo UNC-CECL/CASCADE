@@ -1,8 +1,10 @@
 # Benton Franklin
+# 2/11/2025
 # Take .npy values exported from ARCGIS pro and identify the locations
 # of the dunes and the interior elevation for use in CASCADE
 # User will need to input the path locations of where to load and save data
 # as well as which edge of the NPY array corresponds to the ocean
+# User needs to know the MHW and island berm elevation of study location
 
 import copy
 import os
@@ -11,17 +13,18 @@ import numpy as np
 load_path_name = 'C:\\Users\\frank\\Downloads\\Arrays-Roya\\Arrays\\'
 topo_save_path_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Processed Topography\\'
 dune_save_path_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Processed Dune Values\\Dune_2019\\'
-MHW = 0.026 # Decameters
+MHW = 0.26 # Meters
+Beach_Berm_Elev = 1.7 # Meters
 
 def Process_Raw_Topo_Data(raw_data_path,
                           dune_save_path,
                           topo_save_path,
-                          MHW = .026,
+                          MHW = 0.26,
+                          Beach_Berm_Elevation = 1.7,
                           Seaward_Edge = 'Bottom'):
     # Find all Numpy Arrays in raw data folder
     file_names = os.listdir(raw_data_path)
     NPY_Files_Array = []
-    Base_Names = []
     for file in file_names:
         if file.endswith('.npy'):
             NPY_Files_Array.append(copy.deepcopy(file))
@@ -74,25 +77,29 @@ def Process_Raw_Topo_Data(raw_data_path,
             StartIsland = (DuneLocation + 1)
 
             UseElevation = R0[StartIsland:-1]
-            #UseElevation = np.flip(UseElevation)
 
             # Add values to larger matrix
             ProccesedIslandElevationMatrix[0:len(UseElevation),i] = UseElevation
-            DuneHeightsVector[i] = DuneElevation
+            DuneElevation = DuneElevation - Berm_Elev
+            if DuneElevation < 0:
+                DuneElevation = 0.1
 
+            DuneHeightsVector[i] = DuneElevation
+          
         # Convert to decameters
         ProccesedIslandElevationMatrix = ProccesedIslandElevationMatrix * .1
         DuneHeightsVector = DuneHeightsVector * .1
 
         topo_save_name = topo_save_path+base_name+'_topography_2019.npy'
         dune_save_name = dune_save_path+base_name+'_dune_2019.npy'
-        #np.save(arr=ProccesedIslandElevationMatrix, file=topo_save_name)
-        #np.save(arr=DuneHeightsVector, file=dune_save_name)
+        np.save(arr=ProccesedIslandElevationMatrix, file=topo_save_name)
+        np.save(arr=DuneHeightsVector, file=dune_save_name)
         print(str(j)+' is processed')
 
 Process_Raw_Topo_Data(raw_data_path = load_path_name,
                           dune_save_path = dune_save_path_name,
                           topo_save_path = topo_save_path_name,
+                          Beach_Berm_Elev = Beach_Berm_Elev,
                           Seaward_Edge='Right',
                            MHW = MHW
                         )
