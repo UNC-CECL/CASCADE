@@ -307,7 +307,7 @@ class BrieCoupler:
         s_background = 0.001  # background slope (for shoreface toe position, back-barrier & inlet calculations)
         z = 10.0  # initial sea level (for tracking SL, Eulerian reference frame)
         bb_depth = back_barrier_depth  # back-barrier depth, in barrier3d, typically 3 m
-        h_b_crit = 1.9  # critical barrier height for overwash, used also to calculate shoreline diffusivity;
+        h_b_crit = h_b_crit  # critical barrier height for overwash, used also to calculate shoreline diffusivity;
         # we set equal to the static elevation of berm in B3D (NOTE: if the berm elevation is changed, the MSSM storm
         # list and storm time series needs to be remade)
 

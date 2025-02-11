@@ -309,6 +309,7 @@ class Cascade:
         self._user_inputed_RSLR_rate = user_inputed_RSLR_rate
         self._marsh_width = marsh_width
         self._marsh_path = marsh_path
+        self._berm_elevation = berm_elevation
 
         # initialization errors
         if (
@@ -339,6 +340,7 @@ class Cascade:
             back_barrier_depth=bay_depth,
             ny=self._ny,
             nt=self._nt,
+            h_b_crit=self._berm_elevation,
         )
 
         # Create offset shorelines in BRIE

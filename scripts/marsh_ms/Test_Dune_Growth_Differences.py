@@ -15,23 +15,11 @@ data_base_path = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_d
 d_file = []
 e_file = []
 
-e_names = ['Metompkin_Marsh_Topo.npy',
-           'Metompkin_Bay_Topo.npy',
-           'Hog_Topo.npy',
-           'Wreck_Topo.npy',
-           'Smith_Topo.npy']
+e_names = ['Metompkin_Marsh_Topo.npy']
 
-d_names = ['Metompkin_Marsh_Dune.npy',
-           'Metompkin_Bay_Dune.npy',
-           'Hog_Dune.npy',
-           'Wreck_Dune.npy',
-           'Smith_Dune.npy']
+d_names = ['Metompkin_Marsh_Dune.npy']
 
-Base_Name_List = ['Geom_1',
-                  'Geom_2',
-                  'Geom_3',
-                  'Geom_4',
-                  'Geom_5']
+Base_Name_List = ['Geom_1']
 
 for runs in range(len(e_names)):
     d_file.append(copy.deepcopy(data_base_path+d_names[runs]))
@@ -55,9 +43,6 @@ storm_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\
 background_erosion_value = [0,0,0,0,0]
 
 
-for geos in range(len(Base_Name_List)):
-    temp_run_name =  copy.deepcopy(Base_Name_List[geos]+'_Calibrated_Hindcast')
-    run_name.append(copy.deepcopy(temp_run_name))
 
 num_of_batches = 1
 marsh_dynamics_on = True
@@ -70,6 +55,17 @@ set_RSLR = 0.00563
 number_barrier3d_models = 1
 rmin = 0.55
 rmax = 0.95
+
+rmin = [x / 10.0 for x in range(10,75,5)]
+rmax = [x / 10.0 for x in range(30,95,5)]
+
+
+
+for geos in range(len(rmin)):
+    temp_run_name =  copy.deepcopy(Base_Name_List[0]+'_Rmin_'+str(rmin[geos])+'_Hindcast')
+    run_name.append(copy.deepcopy(temp_run_name))
+
+
 
 # Define function
 def Batch_Runs(
@@ -156,19 +152,19 @@ for j in range(len(run_name)):
         storm_file=storm_name,
         alongshore_section_count=number_barrier3d_models,
         num_cores=3,
-        rmin=rmin,
-        rmax=rmax,
-        elevation_file=e_file[j],
-        dune_file=d_file[j],
-        background_erosion=background_erosion_value[j],
+        rmin=rmin[j],
+        rmax=rmax[j],
+        elevation_file=e_file[0],
+        dune_file=d_file[0],
+        background_erosion=background_erosion_value[0],
         sea_level_constant=True,  # not an array
         enable_shoreline_offset=False,
         marsh_dynamics=marsh_dynamics_on,
         sea_level_rise_rate=set_RSLR,
         user_inputed_RSLR=run_set_RSLR,
         user_inputed_RSLR_rate=set_RSLR,
-        marsh_path=marsh_path_list[j],
-        marsh_width=marsh_width_list[j]
+        marsh_path=marsh_path_list[0],
+        marsh_width=marsh_width_list[0]
     )
     os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
     print(' Finished '+str(run_name[j]))

@@ -27,6 +27,14 @@ d_names = ['Metompkin_Marsh_Dune.npy',
            'Wreck_Dune.npy',
            'Smith_Dune.npy']
 
+d_names = [
+    'GEOM_1_Dunes.npy',
+    'GEOM_2_Dunes.npy',
+    'GEOM_3_Dunes.npy',
+    'GEOM_4_Dunes.npy',
+    'GEOM_5_Dunes.npy'
+           ]
+
 Base_Name_List = ['Geom_1',
                   'Geom_2',
                   'Geom_3',
@@ -45,18 +53,42 @@ marsh_path_list = ["C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init
                    "C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\BMFT_Marsh_Width_500.mat"]
 marsh_width_list = [500,500,500,250,500]
 
+berm_elev_list = [1.27,
+                  1.17,
+                  1.14,
+                  0.87,
+                  0.87]
+
+'''berm_elev_list = [1.9,
+                  1.9,
+                  1.9,
+                  1.9,
+                  1.9]'''
+
 
 # Storm file path name
 c_wd = os.getcwd()
 nt_run = 23  # Number of years model will run
 run_name = []
-storm_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\VCR_Storms_1994_2020.npy'
-background_erosion_value = [x / 10.0 for x in range(10,-55,-5)]
+#storm_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\VCR_Storms_1994_2020.npy'
+
+storm_name = ['C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\VCR_Storms_Geom_1_1994_2020.npy',
+    'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\VCR_Storms_Geom_2_1994_2020.npy',
+    'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\VCR_Storms_Geom_3_1994_2020.npy',
+    'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\VCR_Storms_Geom_4_1994_2020.npy',
+    'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\VCR_Storms_Geom_5_1994_2020.npy'
+              ]
+
+background_erosion_value = [x / 10.0 for x in range(0,-100,-5)]
+
+
+rmin = [0.2]
+rmax = [0.75]
 
 for geos in range(len(Base_Name_List)):
     temp_run_name = []
     for i in range(0,len(background_erosion_value)):
-        temp_run_name.append(copy.deepcopy(Base_Name_List[geos]+'_'+str(background_erosion_value[i])))
+        temp_run_name.append(copy.deepcopy(Base_Name_List[geos]+'_'+str(background_erosion_value[i])+'_DGR.45'))
     run_name.append(copy.deepcopy(temp_run_name))
 
 num_of_batches = 1
@@ -68,8 +100,8 @@ set_RSLR = 0.00563
 
 
 number_barrier3d_models = 1
-rmin = 0.55
-rmax = 0.95
+#rmin = 0.55
+#rmax = 0.95
 
 # Define function
 def Batch_Runs(
@@ -85,6 +117,7 @@ def Batch_Runs(
     background_erosion,
     marsh_width,
     marsh_path,
+    berm_elevation,
     sea_level_rise_rate=0.008,  # not an array
     sea_level_constant=True,  # not an array
     enable_shoreline_offset=False,
@@ -130,6 +163,7 @@ def Batch_Runs(
         user_inputed_RSLR_rate = user_inputed_RSLR_rate,
         marsh_path=marsh_path,
         marsh_width=marsh_width,
+        berm_elevation=berm_elevation,
 
     )
     # --------- LOOP ---------
@@ -154,14 +188,14 @@ for j in range(len(run_name)):
         Batch_Runs(
             nt=nt_run,
             name=run_name[j][k],
-            storm_file=storm_name,
+            storm_file=storm_name[j],
             alongshore_section_count=number_barrier3d_models,
             num_cores=3,
-            rmin=rmin,
-            rmax=rmax,
+            rmin=rmin[k],
+            rmax=rmax[k],
             elevation_file=e_file[j],
             dune_file=d_file[j],
-            background_erosion=background_erosion_value[k],
+            background_erosion=background_erosion_value[0],
             sea_level_constant=True,  # not an array
             enable_shoreline_offset=False,
             marsh_dynamics=marsh_dynamics_on,
@@ -169,7 +203,8 @@ for j in range(len(run_name)):
             user_inputed_RSLR=run_set_RSLR,
             user_inputed_RSLR_rate=set_RSLR,
             marsh_path=marsh_path_list[j],
-            marsh_width=marsh_width_list[j]
+            marsh_width=marsh_width_list[j],
+            berm_elevation=berm_elev_list[j]
         )
         os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
         print('Finished '+str(run_name[j][k]))
