@@ -13,8 +13,8 @@ import numpy as np
 load_path_name = 'C:\\Users\\frank\\Downloads\\Arrays-Roya\\Arrays\\'
 topo_save_path_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Processed Topography\\'
 dune_save_path_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Processed Dune Values\\Dune_2019\\'
-MHW = 0.26 # Meters
-Beach_Berm_Elev = 1.7 # Meters
+MHW = 0.26 # Meters (NAVD 88)
+Beach_Berm_Elev = 1.7 # Meters (NAVD 88)
 
 def Process_Raw_Topo_Data(raw_data_path,
                           dune_save_path,
@@ -80,7 +80,7 @@ def Process_Raw_Topo_Data(raw_data_path,
 
             # Add values to larger matrix
             ProccesedIslandElevationMatrix[0:len(UseElevation),i] = UseElevation
-            DuneElevation = DuneElevation - Berm_Elev
+            DuneElevation = DuneElevation - (Berm_Elev-MHW)
             if DuneElevation < 0:
                 DuneElevation = 0.1
 
