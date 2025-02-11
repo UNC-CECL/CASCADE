@@ -80,7 +80,7 @@ def Process_Raw_Topo_Data(raw_data_path,
 
             # Add values to larger matrix
             ProccesedIslandElevationMatrix[0:len(UseElevation),i] = UseElevation
-            DuneElevation = DuneElevation - (Berm_Elev-MHW)
+            DuneElevation = DuneElevation - (Beach_Berm_Elevation-MHW)
             if DuneElevation < 0:
                 DuneElevation = 0.1
 
