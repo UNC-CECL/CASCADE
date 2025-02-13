@@ -10,11 +10,11 @@ import copy
 import os
 import numpy as np
 
-load_path_name = 'C:\\Users\\frank\\Downloads\\Arrays-Roya\\Arrays\\'
-topo_save_path_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Processed Topography\\'
-dune_save_path_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Processed Dune Values\\Dune_2019\\'
-MHW = 0.26 # Meters (NAVD 88)
-Beach_Berm_Elev = 1.7 # Meters (NAVD 88)
+load_path_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Processed Topography\\Test\\'
+topo_save_path_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Processed Topography\\Test\\Save\\'
+dune_save_path_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Processed Topography\\Test\\Save\\'
+MHW = 0.36 # Meters (NAVD 88)
+Beach_Berm_Elevation = 1.7 # Meters (NAVD 88)
 
 def Process_Raw_Topo_Data(raw_data_path,
                           dune_save_path,
@@ -99,7 +99,7 @@ def Process_Raw_Topo_Data(raw_data_path,
 Process_Raw_Topo_Data(raw_data_path = load_path_name,
                           dune_save_path = dune_save_path_name,
                           topo_save_path = topo_save_path_name,
-                          Beach_Berm_Elev = Beach_Berm_Elev,
+                          Beach_Berm_Elevation = Beach_Berm_Elevation,
                           Seaward_Edge='Right',
                            MHW = MHW
                         )
