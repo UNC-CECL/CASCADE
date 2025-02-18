@@ -1,3 +1,6 @@
+# Collate data from CASCADE runs and export as .pkl files
+# BF 2/16/25
+
 import copy
 
 import numpy as np
@@ -67,6 +70,8 @@ def Process_Batch(Base_Name,
     Total_Volume_TS = []
     All_Nourishment_TS = []
     Total_Overwash_TS = []
+    Yearly_Overwash_TS = []
+    All_Subaerial_Cells = []
 
 
     for runs in range(len(name_list)):
@@ -108,7 +113,7 @@ def Process_Batch(Base_Name,
                                                                                                   number_barrier3d_models=number_barrier3d_models
                                                                                                   )
 
-        Total_OW_Volume = Calculate_Overwash_Volume(cascade = Cascade_List,
+        Total_OW_Volume,Yearly_Total_OW_Volume = Calculate_Overwash_Volume(cascade = Cascade_List,
                                                        years_modeled=Model_Run_Years,
                                                        buffer_length=buffer_length,
                                                        number_barrier3d_models=number_barrier3d_models)
@@ -118,6 +123,10 @@ def Process_Batch(Base_Name,
             buffer_length=buffer_length,
             number_barrier3d_models=number_barrier3d_models)
 
+        Subaerial_TS = Calculate_Subaerial_Elevation(
+            cascade=Cascade_List,
+            buffer_length=buffer_length,
+            number_barrier3d_models=number_barrier3d_models)
 
         Total_Volume_TS.append(copy.deepcopy(Total_Volume))
         All_Nourishment_TS.append(copy.deepcopy(All_Nourishment))
@@ -130,9 +139,11 @@ def Process_Batch(Base_Name,
         Model_Run_Years.append(copy.deepcopy(Model_Run_Year))
         Drowning_Domain_Locations.append(copy.deepcopy(Drowning_Domain_Location))
         Total_Overwash_TS.append(copy.deepcopy(Total_OW_Volume))
+        Yearly_Overwash_TS.append(copy.deepcopy(Yearly_Total_OW_Volume))
         All_Initial_Island_Elevations.append(copy.deepcopy(Initial_Elevation_Output))
         All_Final_Island_Elevations.append(copy.deepcopy(Final_Elevation_Output))
         All_Elevation_Changes.append(copy.deepcopy(Elevation_Change_Output))
+        All_Subaerial_Cells.append(copy.deepcopy(Subaerial_TS))
 
         z = 10
 
@@ -165,13 +176,17 @@ def Process_Batch(Base_Name,
                        'Total_Nourishment_Volume':Total_Volume_TS,
                        'All_Nourishment_TS':All_Nourishment_TS,
                        'All_Overwash_volume':Total_Overwash_TS,
-                       'Roadway_Abandonment_Reason':All_Abandonment_Reason,
-                       'Island_Initial_Elevation':All_Initial_Island_Elevations,
-                       'Island_Final_Elevation':All_Final_Island_Elevations,
-                       'Island_Elevation_Change':All_Elevation_Changes
+                       'All_Yearly_OW_volume':Yearly_Overwash_TS,
+                       'Roadway_Abandonment_Reason':All_Abandonment_Reason
                        }
 
+    Elev_Values = {'Island_Initial_Elevation':All_Initial_Island_Elevations,
+                       'Island_Final_Elevation':All_Final_Island_Elevations,
+                       'Island_Elevation_Change':All_Elevation_Changes,
+                       'Subaerial_Elevation_Cells':All_Subaerial_Cells}
+
     All_Values_Data_Frame = pd.DataFrame(All_Values_Dict)
+    All_Elev_Values_DF = pd.DataFrame(Elev_Values)
 
 
     Export_Values_Dict = {
@@ -195,8 +210,10 @@ def Process_Batch(Base_Name,
 
     # Save yearly data as .pkl
     Full_Save_Path_PKL = Save_Path+Base_Name+'_'+Sink_Name+'_'+str(Storm_Scenario)+'.pkl'
-    All_Values_Data_Frame.to_pickle(Full_Save_Path_PKL)
+    Full_Save_Path_Elev = Save_Path+Base_Name+'_'+Sink_Name+'_'+str(Storm_Scenario)+'_elev.pkl'
 
+    All_Values_Data_Frame.to_pickle(Full_Save_Path_PKL)
+    All_Elev_Values_DF.to_pickle(Full_Save_Path_Elev)
 
     return(Export_DF)
 
@@ -437,6 +454,28 @@ def Calculate_Island_Elevation_Metrics(cascade, buffer_length, number_barrier3d_
 
     return (Elevation_Change_TS,Initial_Elevation_TS,Final_Elevation_TS)
 
+def Calculate_Subaerial_Elevation(cascade, buffer_length, number_barrier3d_models):
+    Domains_of_Interest = range(buffer_length, (number_barrier3d_models - buffer_length))
+    b3d = cascade.barrier3d
+
+    Subaerial_TS = []
+
+    for k in Domains_of_Interest:
+        Temp_B3D = b3d[k]
+        Domain_TS = Temp_B3D.DomainTS
+        Domain_All_Year_TS = []
+        for years in range(len(Domain_TS)):
+            Focus_Domain = Domain_TS[years]
+            if np.any(Focus_Domain):
+                Subaerial_Elevs_Year_X = np.round(Focus_Domain[np.where(Focus_Domain > 0)],decimals=4)
+                Domain_All_Year_TS.append(copy.deepcopy(Subaerial_Elevs_Year_X))
+        Subaerial_TS.append(copy.deepcopy(Domain_All_Year_TS))
+    z = 20
+    return (Subaerial_TS)
+
+
+
+
 def Calculate_Roadway_Relocation(cascade, years_modeled,buffer_length, number_barrier3d_models):
     Relocations = []
     Frequency = []
@@ -490,11 +529,14 @@ def Calculate_Sandbag_Years(cascade, years_modeled,buffer_length, number_barrier
 
 def Calculate_Overwash_Volume(cascade, years_modeled, buffer_length, number_barrier3d_models):
     All_OW_Year_TS_Temp = []
+    Yearly_OW_TS = []
     for klm in range(buffer_length, (number_barrier3d_models - buffer_length -1)):
         b3d = cascade.barrier3d[klm]
         Total_OW = np.multiply(np.sum(b3d.QowTS),500)
+        Overwash_TS = np.multiply((b3d.QowTS),500)
         All_OW_Year_TS_Temp.append(copy.deepcopy(Total_OW))
-    return(All_OW_Year_TS_Temp)
+        Yearly_OW_TS.append(copy.deepcopy(Overwash_TS))
+    return(All_OW_Year_TS_Temp,Yearly_OW_TS)
 '''
 for sinks in range(len(Sink_Name)):
     Output_DF = Process_Batch(Base_Name=Base_Name_List[7],
