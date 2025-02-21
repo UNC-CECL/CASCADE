@@ -27,6 +27,7 @@ class Cascade:
         overwash_to_dune,
         roadway_management_module,
         beach_nourishment_module,
+        allow_causeway,
     ):
         """Configures lists to account for multiple Barrier3D domains from single
         input variables; used in modules
@@ -76,6 +77,10 @@ class Cascade:
             self._beach_nourishment_module = beach_nourishment_module
         else:
             self._beach_nourishment_module = [beach_nourishment_module] * self._ny
+        if np.size(allow_causeway) >1:
+            self._allow_causeway = allow_causeway
+        else:
+            self._allow_causeway = [allow_causeway] * self._ny
 
         return
 
@@ -159,6 +164,7 @@ class Cascade:
         shoreline_offset = [],
         user_inputed_RSLR=False,
         user_inputed_RSLR_rate=[],
+        allow_causeway = False
     ):
         """
         CASCADE: The CoAStal Community-lAnDscape Evolution model
@@ -281,6 +287,8 @@ class Cascade:
             Whether the user will be inputing their own generated RSLR rates
         user_inputed_RSLR_rates: list, optional
             Time series of RSLR rates for Cascade to use, RSLR rates must be floats and be in m/yr.
+        allow_causeway: bool, optional
+            Whether roadways drowns when surrounded by water [default is allow_causeway=FALSE]
 
         Examples
         --------
@@ -414,6 +422,7 @@ class Cascade:
             overwash_to_dune=overwash_to_dune,
             roadway_management_module=roadway_management_module,
             beach_nourishment_module=beach_nourishment_module,
+            allow_causeway=allow_causeway
         )
 
         if self._community_economics_module:
@@ -458,6 +467,7 @@ class Cascade:
                     initial_dune_minimum_elevation=self._dune_minimum_elevation[iB3D],
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
+                    allow_causeway=self._allow_causeway[iB3D]
                 )
             )
 

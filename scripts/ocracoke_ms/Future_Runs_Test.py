@@ -72,6 +72,7 @@ def Process_Batch(Base_Name,
     Total_Overwash_TS = []
     Yearly_Overwash_TS = []
     All_Subaerial_Cells = []
+    Bay_Shoreline_TS = []
 
 
     for runs in range(len(name_list)):
@@ -118,15 +119,19 @@ def Process_Batch(Base_Name,
                                                        buffer_length=buffer_length,
                                                        number_barrier3d_models=number_barrier3d_models)
 
-        Elevation_Change_Output, Initial_Elevation_Output, Final_Elevation_Output = Calculate_Island_Elevation_Metrics(
-            cascade=Cascade_List,
-            buffer_length=buffer_length,
-            number_barrier3d_models=number_barrier3d_models)
+        Domain_Bay_Shoreline = Calculate_Bay_Distance(cascade=Cascade_List,
+                                                      buffer_length=buffer_length,
+                                                      number_barrier3d_models=number_barrier3d_models)
 
-        Subaerial_TS = Calculate_Subaerial_Elevation(
-            cascade=Cascade_List,
-            buffer_length=buffer_length,
-            number_barrier3d_models=number_barrier3d_models)
+        # Elevation_Change_Output, Initial_Elevation_Output, Final_Elevation_Output = Calculate_Island_Elevation_Metrics(
+        #     cascade=Cascade_List,
+        #     buffer_length=buffer_length,
+        #     number_barrier3d_models=number_barrier3d_models)
+        #
+        # Subaerial_TS = Calculate_Subaerial_Elevation(
+        #     cascade=Cascade_List,
+        #     buffer_length=buffer_length,
+        #     number_barrier3d_models=number_barrier3d_models)
 
         Total_Volume_TS.append(copy.deepcopy(Total_Volume))
         All_Nourishment_TS.append(copy.deepcopy(All_Nourishment))
@@ -140,10 +145,11 @@ def Process_Batch(Base_Name,
         Drowning_Domain_Locations.append(copy.deepcopy(Drowning_Domain_Location))
         Total_Overwash_TS.append(copy.deepcopy(Total_OW_Volume))
         Yearly_Overwash_TS.append(copy.deepcopy(Yearly_Total_OW_Volume))
-        All_Initial_Island_Elevations.append(copy.deepcopy(Initial_Elevation_Output))
-        All_Final_Island_Elevations.append(copy.deepcopy(Final_Elevation_Output))
-        All_Elevation_Changes.append(copy.deepcopy(Elevation_Change_Output))
-        All_Subaerial_Cells.append(copy.deepcopy(Subaerial_TS))
+        #All_Initial_Island_Elevations.append(copy.deepcopy(Initial_Elevation_Output))
+        #All_Final_Island_Elevations.append(copy.deepcopy(Final_Elevation_Output))
+        #All_Elevation_Changes.append(copy.deepcopy(Elevation_Change_Output))
+        #All_Subaerial_Cells.append(copy.deepcopy(Subaerial_TS))
+        Bay_Shoreline_TS.append(copy.deepcopy(Domain_Bay_Shoreline))
 
         z = 10
 
@@ -177,16 +183,17 @@ def Process_Batch(Base_Name,
                        'All_Nourishment_TS':All_Nourishment_TS,
                        'All_Overwash_volume':Total_Overwash_TS,
                        'All_Yearly_OW_volume':Yearly_Overwash_TS,
-                       'Roadway_Abandonment_Reason':All_Abandonment_Reason
+                       'Roadway_Abandonment_Reason':All_Abandonment_Reason,
+                       'Bay_Shoreline_TS':Bay_Shoreline_TS
                        }
 
-    Elev_Values = {'Island_Initial_Elevation':All_Initial_Island_Elevations,
-                       'Island_Final_Elevation':All_Final_Island_Elevations,
-                       'Island_Elevation_Change':All_Elevation_Changes,
-                       'Subaerial_Elevation_Cells':All_Subaerial_Cells}
+        #Elev_Values = {'Island_Initial_Elevation':All_Initial_Island_Elevations,
+         #              'Island_Final_Elevation':All_Final_Island_Elevations,
+          #             'Island_Elevation_Change':All_Elevation_Changes,
+           #            'Subaerial_Elevation_Cells':All_Subaerial_Cells}'''
 
     All_Values_Data_Frame = pd.DataFrame(All_Values_Dict)
-    All_Elev_Values_DF = pd.DataFrame(Elev_Values)
+    #All_Elev_Values_DF = pd.DataFrame(Elev_Values)
 
 
     Export_Values_Dict = {
@@ -210,10 +217,10 @@ def Process_Batch(Base_Name,
 
     # Save yearly data as .pkl
     Full_Save_Path_PKL = Save_Path+Base_Name+'_'+Sink_Name+'_'+str(Storm_Scenario)+'.pkl'
-    Full_Save_Path_Elev = Save_Path+Base_Name+'_'+Sink_Name+'_'+str(Storm_Scenario)+'_elev.pkl'
+    #Full_Save_Path_Elev = Save_Path+Base_Name+'_'+Sink_Name+'_'+str(Storm_Scenario)+'_elev.pkl'
 
     All_Values_Data_Frame.to_pickle(Full_Save_Path_PKL)
-    All_Elev_Values_DF.to_pickle(Full_Save_Path_Elev)
+    #All_Elev_Values_DF.to_pickle(Full_Save_Path_Elev)
 
     return(Export_DF)
 
@@ -473,7 +480,37 @@ def Calculate_Subaerial_Elevation(cascade, buffer_length, number_barrier3d_model
     z = 20
     return (Subaerial_TS)
 
+def Calculate_Bay_Distance(cascade, buffer_length, number_barrier3d_models):
+    Domains_of_Interest = range(buffer_length, (number_barrier3d_models - buffer_length))
+    b3d = cascade.barrier3d
 
+    Domain_TS = []
+
+    for k in Domains_of_Interest:
+        Temp_B3D = b3d[k]
+        Shoreline_Change_TS = Temp_B3D._ShorelineChangeTS
+        Mean_Distance = []
+        for years in range((Temp_B3D.time_index-1)):
+            Yearly_Vals = []
+            raw_elev = Temp_B3D.DomainTS[years]
+            flipped_array = copy.deepcopy(np.flip(raw_elev))
+            for cols in range((raw_elev.shape[1])):
+                Zero_Row_Data = (np.where(raw_elev[:,cols]>0)[0])
+                if np.any(Zero_Row_Data):
+                    Zero_Data_Index = Zero_Row_Data.max()
+                else:
+                    Zero_Data_Index = 0
+                if years == 0:
+                    Shoreline_Change_Dif = 0
+                else:
+                    Shoreline_Change_Dif = np.sum(Shoreline_Change_TS[:years])
+
+                Zero_Data_Index_Final = Zero_Data_Index - Shoreline_Change_Dif
+                Yearly_Vals.append(copy.deepcopy(Zero_Data_Index_Final))
+            Mean_Distance.append(copy.deepcopy(np.mean(Yearly_Vals)))
+        Domain_TS.append(copy.deepcopy(Mean_Distance))
+
+    return (Domain_TS)
 
 
 def Calculate_Roadway_Relocation(cascade, years_modeled,buffer_length, number_barrier3d_models):
