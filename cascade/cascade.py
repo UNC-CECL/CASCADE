@@ -28,6 +28,7 @@ class Cascade:
         overwash_to_dune,
         roadway_management_module,
         beach_nourishment_module,
+        allow_causeway,
         outwash_module,
     ):
         """Configures lists to account for multiple Barrier3D domains from single
@@ -78,6 +79,10 @@ class Cascade:
             self._beach_nourishment_module = beach_nourishment_module
         else:
             self._beach_nourishment_module = [beach_nourishment_module] * self._ny
+        if np.size(allow_causeway) >1:
+            self._allow_causeway = allow_causeway
+        else:
+            self._allow_causeway = [allow_causeway] * self._ny
         if np.size(outwash_module) > 1:
             self._outwash_module = outwash_module
         else:
@@ -170,7 +175,7 @@ class Cascade:
         outwash_storms_file="outwash_storms_startyr_1_interval_20yrs.npy",
         outwash_beach_file="NCB-default_beach.npy",
         percent_washout_to_shoreface=100,
-
+        allow_causeway = False
     ):
         """CASCADE: The CoAStal Community-lAnDscape Evolution model
 
@@ -300,6 +305,9 @@ class Cascade:
             The percent of washed out sediment that will be placed on the shoreface
         outwash_module: boolean or list of booleans, optional
             If True, use outwash module (force a bay-side surge event)
+        allow_causeway: bool, optional
+            Whether roadways drowns when surrounded by water [default is allow_causeway=FALSE]
+
         Examples
         --------
         >>> from cascade.cascade import Cascade
@@ -432,6 +440,7 @@ class Cascade:
             overwash_to_dune=overwash_to_dune,
             roadway_management_module=roadway_management_module,
             beach_nourishment_module=beach_nourishment_module,
+            allow_causeway=allow_causeway
             outwash_module=outwash_module,
         )
 
@@ -477,6 +486,7 @@ class Cascade:
                     initial_dune_minimum_elevation=self._dune_minimum_elevation[iB3D],
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
+                    allow_causeway=self._allow_causeway[iB3D]
                 )
             )
 

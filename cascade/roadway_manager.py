@@ -50,6 +50,7 @@ def bulldoze(
     dz=10,
     drown_threshold=0,
     percent_water_cells_touching_road=0.2,
+    allow_causeway=False,
 ):
     """
     Remove overwash from roadway and put it back on the adjacent dune. Spreads sand
@@ -85,6 +86,8 @@ def bulldoze(
         frame as xyz]
     percent_water_cells_touching_road: float
         Fraction of cells below drown_threshold
+    allow_causway: bool
+        Whether roadways drowns when surrounded by water [default is allow_causeway=FALSE]
 
     Returns
     -------
@@ -154,9 +157,8 @@ def bulldoze(
     #         )
     #     )
 
-    if (seaside_water_cells > percent_water_cells_touching_road) or (
-        bayside_water_cells > percent_water_cells_touching_road
-    ):
+    if ((seaside_water_cells > percent_water_cells_touching_road) or (
+        bayside_water_cells > percent_water_cells_touching_road)) and  allow_causeway==False:
         roadway_drown = True
         print(
             f"Roadway width drowned at {time_index - 1} years, "
@@ -560,6 +562,7 @@ class RoadwayManager:
         time_step_count=500,
         original_growth_param=None,
         road_relocation_setback=30,
+        allow_causeway=False,
     ):
         """The RoadwayManager module
 
@@ -586,6 +589,9 @@ class RoadwayManager:
             human modifications [unitless]
         road_relocation_setback: optional
             Distance from the duneline where the relocated road will be placed [m]
+        allow_causway: optional
+            Whether roadways drowns when surrounded by water [default is allow_causeway=FALSE]
+
         """
 
         self._road_width = road_width
@@ -601,6 +607,7 @@ class RoadwayManager:
         self._time_index = 1
         self._absolute_minimum_dune_height = 0.3
         self._percent_water_cells_touching_road = 0.2
+        self._allow_causeway = allow_causeway
 
         # set relocation parameters to original values
         self._road_relocation_width = (
@@ -841,6 +848,7 @@ class RoadwayManager:
             drown_threshold=0,  # 0 m MSL
             # fraction cells<drown_threshold
             percent_water_cells_touching_road=self._percent_water_cells_touching_road,
+            allow_causeway=self._allow_causeway
         )
         if self._drown_break == 1:
             # an adaptation solution may be to knock down the dunes so that they

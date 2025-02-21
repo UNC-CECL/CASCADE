@@ -57,6 +57,8 @@ def Calculate_Island_Elevation_Metrics(cascade, buffer_length, number_barrier3d_
         blank_cells = np.full((distance_traveled,int(Temp_B3D.BarrierLength)),-0.3)
 
         updated_final_array = np.concatenate((np.concatenate((blank_cells,final_dune_elev_r),axis=0),final_elev),axis=0)
+        flipped_final_array = copy.deepcopy(np.mirror(updated_final_array))
+
 
         if len(combined_initial_elev) > len(updated_final_array):
             print('Add Extra Cells to final array')

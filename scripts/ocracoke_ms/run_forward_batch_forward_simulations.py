@@ -16,30 +16,50 @@ run_years = 126
 # Set the start year
 start_year = 2024
 
-# Set scenario type
-status_quo = False
-nourishment = True
+# Specify the number of B3D domains and control the number of domains
+buffer_enabled = True
+island_grid_number = 39
+Total_B3D_Number = 69
 
-if nourishment == True:
+# Set scenario type
+preemptive_relocation = True
+status_quo = False
+nourishment = False
+
+if preemptive_relocation == True:
+    Management_name = '_Preemptive_Relocation_'
+    nourishment_time = None
+    nourish_beach = False
+    nourishment_volume = 100
+    allow_causeway = [False]*Total_B3D_Number
+    allow_causeway[35:54] = [True]*len(range(35,54))
+elif nourishment == True:
     Management_name = '_Nourishment_'
     nourish_beach = True
     nourishment_time = None
     nourishment_volume = 100
+    allow_causeway = False
+    road_elev = 1.45
 elif status_quo == True:
     Management_name = "_Status_Quo_"
     nourishment_time = None
     nourish_beach = False
     nourishment_volume = 100
+    allow_causeway = False
+    road_elev = 1.45
 else:
     Management_name = '_Natural_'
     nourishment_time = None
     nourish_beach = False
     nourishment_volume = 100
+    allow_causeway = False
+    road_elev = 1.45
 
-Storms = '10'
+
+Storms = 'Baseline'
 
 # RSLR Data
-RSLR_Type = 'IH'
+RSLR_Type = 'I'
 
 if RSLR_Type == 'IL':
     RSLR_Data = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\RSLR\\Int_Low_SLR.npy')
@@ -50,11 +70,6 @@ elif RSLR_Type == 'IH':
 
 Start_Index = start_year - 2000
 RSLR_Rates = RSLR_Data[Start_Index:]
-
-# Specify the number of B3D domains and control the number of domains
-buffer_enabled = True
-island_grid_number = 39
-Total_B3D_Number = 69
 
 # Set whether inlet is accretional or erosional:
 source_sink_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Source_Sink\\S32.csv'
@@ -107,6 +122,10 @@ r_s = [0]*Total_B3D_Number
 r_s[15:54] = copy.deepcopy(road_setbacks)
 road_setbacks = r_s
 
+if preemptive_relocation:
+    road_setbacks[35:54] = np.add(road_setbacks[35:54],30)
+
+
 # Define which B3D island models have
 road_cells = [False] * Total_B3D_Number
 if status_quo == True:
@@ -124,6 +143,10 @@ else:
 nourishment_cells = [False] * Total_B3D_Number
 if nourishment == True:
     nourishment_cells[35:54] = [True]*len(range(35,54))
+
+if preemptive_relocation == True:
+    road_elev = [1.45] * Total_B3D_Number
+    road_elev[35:54] = [3]*len(range(35,54))
 
 e_file = []
 d_file = []
@@ -207,6 +230,7 @@ def alongshore_connected(
     shoreline_offset = [0],
     user_inputed_RSLR=False,
     user_inputed_RSLR_rate = [],
+    allow_causeway = False,
 ):
     # ###############################################################################
     # 9 - connect cascade domains (human management) with AST
@@ -254,6 +278,7 @@ def alongshore_connected(
         shoreline_offset=shoreline_offset,
         user_inputed_RSLR = user_inputed_RSLR,
         user_inputed_RSLR_rate = user_inputed_RSLR_rate,
+        allow_causeway=allow_causeway
     )
 
     # --------- LOOP ---------
@@ -322,7 +347,10 @@ def alongshore_uniform(run_name,
                        background_erosion_list,
                        nourishment_volume,
                        nourish_beach,
-                       nourishment_interval):
+                       nourishment_interval,
+                       road_elev,
+                       allow_causeway,
+                       road_setbacks):
     # variables that DO NOT change among runs
     number_barrier3d_models = 69
     beach_width_threshold = [30] * number_barrier3d_models
@@ -334,7 +362,7 @@ def alongshore_uniform(run_name,
     dune_design_elevation = [Dune_Rebuilding_Height] * number_barrier3d_models  # 2 m scenario [2.6]
     num_cores = 4  # for my laptop, max is 15
     dune_minimum_elevation = rebuild_elev_threshold  # m MHW, allow dune to erode down to 0.5 m above the roadway, for roadways only [.75]
-    road_ele = 1.45  # m MHW (Based on 1997 LIDAR)
+    road_ele = road_elev  # m MHW (Based on 1997 LIDAR)
     road_width = 20  # m (2 lane road on Ocracoke)
     road_setback = road_setbacks  # m
     overwash_filter = 0  # residental
@@ -391,6 +419,7 @@ def alongshore_uniform(run_name,
         enable_shoreline_offset=shoreline_offset_enabled,
         user_inputed_RSLR=True,
         user_inputed_RSLR_rate=RSLR_Rates,
+        allow_causeway = allow_causeway
     )
 
 for k in range(len(run_name)):
@@ -400,6 +429,9 @@ for k in range(len(run_name)):
                            background_erosion_list=background_threshold_list[l],
                            nourish_beach=nourishment_cells,
                            nourishment_volume=nourishment_volume,
-                           nourishment_interval=nourishment_time
+                           nourishment_interval=nourishment_time,
+                           road_elev=road_elev,
+                           allow_causeway=allow_causeway,
+                           road_setbacks=road_setbacks
                            )
         os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
