@@ -73,6 +73,7 @@ def Process_Batch(Base_Name,
     Yearly_Overwash_TS = []
     All_Subaerial_Cells = []
     Bay_Shoreline_TS = []
+    Island_Width_TS = []
 
 
     for runs in range(len(name_list)):
@@ -103,7 +104,7 @@ def Process_Batch(Base_Name,
                                                                                    buffer_length=buffer_length,
                                                                                    number_barrier3d_models = number_barrier3d_models)
 
-        island_width_change = Calculate_Island_Interior_Width_Change(cascade=Cascade_List,
+        island_width_change,Island_Width_Vals = Calculate_Island_Interior_Width_Change(cascade=Cascade_List,
                                                                      years_modeled=Model_Run_Year,
                                                                      buffer_length=buffer_length,
                                                                      number_barrier3d_models = number_barrier3d_models)
@@ -145,6 +146,7 @@ def Process_Batch(Base_Name,
         Drowning_Domain_Locations.append(copy.deepcopy(Drowning_Domain_Location))
         Total_Overwash_TS.append(copy.deepcopy(Total_OW_Volume))
         Yearly_Overwash_TS.append(copy.deepcopy(Yearly_Total_OW_Volume))
+        Island_Width_TS.append(copy.deepcopy(Island_Width_Vals))
         #All_Initial_Island_Elevations.append(copy.deepcopy(Initial_Elevation_Output))
         #All_Final_Island_Elevations.append(copy.deepcopy(Final_Elevation_Output))
         #All_Elevation_Changes.append(copy.deepcopy(Elevation_Change_Output))
@@ -176,6 +178,7 @@ def Process_Batch(Base_Name,
                        'Sandbag_Duration_TS':sandbag_duration_TS,
                        'Number_Sandbags_TS':number_sandbags_TS,
                        'Island_Width_Change_TS':island_width_change_TS,
+                       'Island_Width_TS':Island_Width_TS,
                        'Model_Run_Years':Model_Run_Years,
                        'Break_Domain_Locations':Drowning_Domain_Locations,
                        'All_Shoreline_Positions':All_Shoreline_Positions,
@@ -365,9 +368,10 @@ def Calculate_Island_Interior_Width_Change(cascade, years_modeled, buffer_length
     Width_TS = []
     Width_Percent_Change = []
     Width_Change_Rate_TS = []
+    All_Focused_Domain_Width_TS = []
     for ww in range(buffer_length, (number_barrier3d_models - buffer_length - 1)):
         b3d = cascade.barrier3d[ww]
-
+        Domain_Width = b3d.InteriorWidth_AvgTS
         Year_1_Width = b3d.InteriorWidth_AvgTS[0]
         Final_Year_Width = b3d.InteriorWidth_AvgTS[final_year_index]
         Width_Change = Final_Year_Width - Year_1_Width
@@ -376,13 +380,14 @@ def Calculate_Island_Interior_Width_Change(cascade, years_modeled, buffer_length
         Width_TS.append(copy.deepcopy(Width_Change))
         Width_Percent_Change.append(copy.deepcopy(Percent_Change_Temp))
         Width_Change_Rate_TS.append(copy.deepcopy(Width_Change_Rate))
+        All_Focused_Domain_Width_TS.append(copy.deepcopy(Domain_Width))
 
     # Save model runs values
     #Total_Island_Width_Change.append(copy.deepcopy(Width_TS))
     #Rate_Island_Width_Change.append(copy.deepcopy(Width_Change_Rate_TS))
     #Percent_Island_Width_Change.append(copy.deepcopy(Width_Percent_Change))
-
-    return(Width_Percent_Change)
+    c = 20
+    return(Width_Percent_Change,All_Focused_Domain_Width_TS)
 
 def Calculate_Roadway_Abandonmet(cascade, years_modeled, buffer_length, number_barrier3d_models):
     # Find times the roadway broke and save the year that it did
