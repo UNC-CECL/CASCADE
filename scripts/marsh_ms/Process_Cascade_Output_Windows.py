@@ -5,7 +5,7 @@ import os
 os.chdir('E:\\Chapter 2')
 #island_names = ['Smith','Hog','Wreck','Metompkin_Marsh','Metompkin_Bay']
 island_names = ['Geom_1','Geom_2','Geom_3','Geom_4','Geom_5']
-island_names = ['Geom_5']
+#island_names = ['Geom_5']
 
 Storm_Intensity = ['_Baseline_','_5_','_10_']
 
@@ -21,7 +21,7 @@ for j in range(len(island_names)):
         shoreline_TS = []
         shoreline_toe_TS = []
         for i in range(0,50):
-            run_name = (str(island_names[j])+'_'+str(RSLR[k])+str(Storm_Intensity[k])+'S'+str(i)+'.npz')
+            run_name = (str(island_names[j])+'_'+str(RSLR[k])+str(Storm_Intensity[k])+'S'+str(i)+' RSD.npz')
             output = np.load(run_name, allow_pickle=True)
             cascade = output["cascade"]
             cascade = cascade[0]
@@ -35,7 +35,7 @@ for j in range(len(island_names)):
                 marsh_offset_TS.append(cascade._bmft_coupler._x_s_offset_TS[0][0])
                 z = 20
 
-        save_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 2\\Cascade_TS_Output\\'+str(island_names[j])+'_'+str(Save_RSLR[k])+str(Storm_Intensity[k])
+        save_name = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 2\\Cascade_TS_Output\\'+str(island_names[j])+'_'+str(Save_RSLR[k])+str(Storm_Intensity[k])+ 'RSD_'
         if cascade._marsh_dynamics == True:
             Output_info = [
                 shoreline_TS,
