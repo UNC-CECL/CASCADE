@@ -15,15 +15,25 @@ output = np.load(run_name + ".npz", allow_pickle=True)
 cascade = output["cascade"]
 cascade = cascade[0]
 b3d = cascade.barrier3d
+shoreface_ts = cascade._brie_coupler.brie.x_s_save
 ny = np.size(b3d)
 
 Buffer_Domains = 15
 
+run_name_m ='OCR_IL_Nourishment_S2_Erosional_Sink'
 
+output_n = np.load(run_name_m + ".npz", allow_pickle=True)
+cascade_n = output_n["cascade"]
+cascade_n = cascade_n[0]
+b3d_n = cascade_n.barrier3d
+ny = np.size(b3d)
+shoreface_ts_n = cascade_n._brie_coupler.brie.x_s_save
 
+focus_xs = shoreface_ts[50]
+focus_xn = shoreface_ts_n[50]
 
 Domains_of_Interest = range(Buffer_Domains,(len(b3d)-Buffer_Domains))
-
+x =20
 
 def Calculate_Bay_Distance(cascade, buffer_length, number_barrier3d_models):
     Domains_of_Interest = range(buffer_length, (number_barrier3d_models - buffer_length))
