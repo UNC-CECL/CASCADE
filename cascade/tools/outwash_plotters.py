@@ -6,6 +6,11 @@
 #
 # "Lexi's very cool outwash module"
 #
+
+# 3/16/2025 updated to include CASCADE Elevation plots
+# these ones hold the frame constant to better observe migration patterns
+# it has been updated from its original form in cascade/tools/plotters.py
+
 """----------------------------------------------------
 Copyright (C) 2022 Lexi Van Blunk
 ----------------------------------------------------"""
@@ -138,10 +143,11 @@ def plot_ElevAnimation_CASCADE(
     roadway_management_ny=None,
     y_lim=(150, 250),
     z_lim=6,
-    z_bot=0,
+    z_bot=-3,
     fig_size=None,
     fig_eps=False,
-    km_on=True,
+    km_on=False,
+    meters_on=True,
 ):
     """
     :param cascade: a cascade model object
@@ -168,6 +174,8 @@ def plot_ElevAnimation_CASCADE(
     been abandoned to the last managed beach width in order to not have a huge
     jump in the back-barrier position in Barrier3D. OTHERWISE, it is meaningless
     to the dynamics Barrier3D.
+
+    Updated so that beach width represented here is the outwasher beach width
     """
     if beach_management_ny is None:
         beach_management_ny = [False] * ny
@@ -175,6 +183,7 @@ def plot_ElevAnimation_CASCADE(
         roadway_management_ny = [False] * ny
 
     barrier3d = cascade.barrier3d
+    outwash = cascade.outwash
 
     # set up the domain; here we just use the first grid, but that could break in
     # future runs
@@ -196,6 +205,8 @@ def plot_ElevAnimation_CASCADE(
         + 35
     )
 
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     os.chdir(directory)
     newpath = name
     if not os.path.exists(newpath):
@@ -205,152 +216,160 @@ def plot_ElevAnimation_CASCADE(
     maxMGMT = np.max(TMAX_MGMT)
     plt.rcParams.update({"font.size": 15})
 
-    if np.any(beach_management_ny) or np.any(roadway_management_ny):
-        for t in range(maxMGMT + 1):
-            # start with plotting t=0, then plot post-storm dune, interior,
-            # shoreface, etc. before management, treating this as t=0.5 (i.e.,
-            # this is really the final configuration from storms at t=1,2,3,4,5,...
-            # but before human modifications); for the default dune inputs, we
-            # should be able to see natural dune growth at t=0.5 before rebuild
-            # and storms (i.e., t=0.5 and t=1 should not be the same)
-            if 0 < t < TMAX_SIM:
-                # post-storm variables in the BeachDuneManager are: interior,
-                # dune height, x_s, s_sf, beach width
-                AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -1
-
-                for iB3D in range(ny):
-                    # the nourishment scenario
-                    if beach_management_ny[iB3D] and (t < TMAX_MGMT[iB3D] + 1):
-                        actual_shoreline_post_storm = np.hstack(
-                            [
-                                0,
-                                cascade.nourishments[iB3D]._post_storm_x_s[
-                                    1 : TMAX_MGMT[iB3D] + 1
-                                ],
-                            ]
-                        )
-                        beach_width = (
-                            cascade.nourishments[iB3D]._post_storm_beach_width[t] / 10
-                        )
-                        Domain = cascade.nourishments[iB3D]._post_storm_interior[t] * 10
-                        Dunes = (
-                            cascade.nourishments[iB3D]._post_storm_dunes[t]
-                            + barrier3d[iB3D].BermEl
-                        ) * 10
-
-                    elif roadway_management_ny[iB3D] and (t < TMAX_MGMT[iB3D] + 1):
-                        # the roadways scenario
-                        actual_shoreline_post_storm = barrier3d[iB3D].x_s_TS[
-                            0 : TMAX_MGMT[iB3D] + 1
-                        ]
-                        beach_width = cascade._initial_beach_width[iB3D] / 10
-                        Domain = cascade.roadways[iB3D]._post_storm_interior[t] * 10
-                        Dunes = (
-                            cascade.roadways[iB3D]._post_storm_dunes[t]
-                            + barrier3d[iB3D].BermEl
-                        ) * 10
-
-                    else:
-                        # the natural scenario
-                        actual_shoreline_post_storm = barrier3d[iB3D].x_s_TS[0:TMAX_SIM]
-                        beach_width = cascade._initial_beach_width[iB3D] / 10
-                        Domain = barrier3d[iB3D].DomainTS[t] * 10
-                        Dunes = (
-                            barrier3d[iB3D].DuneDomain[t, :, :] + barrier3d[iB3D].BermEl
-                        ) * 10
-
-                    # Build beach elevation domain, we only show beach width decreasing
-                    # in increments of 10 m and we don't illustrate a berm, just a
-                    # sloping beach up to the elevation of the berm
-                    cellular_dune_toe_post_storm = np.floor(
-                        actual_shoreline_post_storm[t] + beach_width
-                    )
-                    cellular_shoreline_post_storm = np.floor(
-                        actual_shoreline_post_storm[t]
-                    )
-                    cellular_beach_width = int(
-                        cellular_dune_toe_post_storm - cellular_shoreline_post_storm
-                    )  # not actual bw
-
-                    BeachDomain = np.zeros(
-                        [
-                            cellular_beach_width,
-                            BarrierLength,
-                        ]
-                    )
-                    if cellular_beach_width == 0:
-                        pass
-                    else:
-                        add = (barrier3d[iB3D].BermEl - barrier3d[iB3D].SL) / (
-                            cellular_beach_width + 1
-                        )
-                        for i in range(0, cellular_beach_width):
-                            BeachDomain[i, :] = (barrier3d[iB3D].SL + add) * (i + 1)
-
-                    # Make animation frame domain
-                    Dunes = np.rot90(Dunes)
-                    Dunes = np.flipud(Dunes)
-                    Beach = BeachDomain * 10
-                    Domain = np.vstack([Beach, Dunes, Domain])
-                    Domain[Domain < 0] = -1
-                    widthTS = len(Domain)
-                    OriginTstart = int(cellular_shoreline_post_storm)
-                    OriginTstop = OriginTstart + widthTS
-                    xOrigin = iB3D * BarrierLength
-                    AnimateDomain[
-                        OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
-                    ] = Domain
-
-                # Plot and save
-                if fig_size is not None:
-                    elevFig1 = plt.figure(figsize=fig_size)
-                else:
-                    elevFig1 = plt.figure(figsize=(7, 7))
-                ax = elevFig1.add_subplot(111)
-                cax = ax.pcolormesh(
-                    AnimateDomain,
-                    cmap="terrain",
-                    vmin=z_bot,
-                    vmax=z_lim,
-                    # edgecolors="w",  # for debugging
-                    # linewidth=0.01,
-                )
-                cbar = elevFig1.colorbar(cax)
-                cbar.set_label("elevation (m MHW)", rotation=270)
-                plt.xlabel("alongshore distance (dam)")
-                plt.ylabel("cross-shore distance (dam)")
-                timestr = (
-                    "Time = " + str(t - 0.5) + " yrs"
-                )  # we are letting the post-storm output represent 0.5 years
-                if km_on:
-                    locs, _ = plt.yticks()
-                    plt.yticks(locs, locs / 100)
-                    locs, _ = plt.xticks()
-                    plt.xticks(locs[0:-1], locs[0:-1] / 100)
-                    plt.xlabel("alongshore distance (km)")
-                    plt.ylabel("cross-shore distance (km)")
-                    ax.yaxis.set_minor_locator(AutoMinorLocator())
-                if y_lim is not None:
-                    plt.ylim(y_lim)
-                    plt.text(3, y_lim[0] + 3, timestr, color="w")
-                else:
-                    plt.ylim(bottom=OriginY - 35)
-                    plt.text(1, OriginY - 33, timestr)
-                plt.tight_layout()
-                plt.rcParams.update({"font.size": 15})
-                # elevFig1.tight_layout()
-                if fig_eps:
-                    name = "elev_" + str(t - 1) + "pt5.eps"
-                    elevFig1.savefig(name, format="eps")
-                else:
-                    name = "elev_" + str(t - 1) + "pt5"
-                    elevFig1.savefig(name)  # dpi=200
-                plt.close(elevFig1)
+    # if np.any(beach_management_ny) or np.any(roadway_management_ny):
+    #     for t in range(maxMGMT + 1):
+    #         # start with plotting t=0, then plot post-storm dune, interior,
+    #         # shoreface, etc. before management, treating this as t=0.5 (i.e.,
+    #         # this is really the final configuration from storms at t=1,2,3,4,5,...
+    #         # but before human modifications); for the default dune inputs, we
+    #         # should be able to see natural dune growth at t=0.5 before rebuild
+    #         # and storms (i.e., t=0.5 and t=1 should not be the same)
+    #         if 0 < t < TMAX_SIM:
+    #             # post-storm variables in the BeachDuneManager are: interior,
+    #             # dune height, x_s, s_sf, beach width
+    #             AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -1
+    #
+    #             for iB3D in range(ny):
+    #                 # the nourishment scenario
+    #                 if beach_management_ny[iB3D] and (t < TMAX_MGMT[iB3D] + 1):
+    #                     actual_shoreline_post_storm = np.hstack(
+    #                         [
+    #                             0,
+    #                             cascade.nourishments[iB3D]._post_storm_x_s[
+    #                                 1 : TMAX_MGMT[iB3D] + 1
+    #                             ],
+    #                         ]
+    #                     )
+    #                     beach_width = (
+    #                         cascade.nourishments[iB3D]._post_storm_beach_width[t] / 10
+    #                     )
+    #                     Domain = cascade.nourishments[iB3D]._post_storm_interior[t] * 10
+    #                     Dunes = (
+    #                         cascade.nourishments[iB3D]._post_storm_dunes[t]
+    #                         + barrier3d[iB3D].BermEl
+    #                     ) * 10
+    #
+    #                 elif roadway_management_ny[iB3D] and (t < TMAX_MGMT[iB3D] + 1):
+    #                     # the roadways scenario
+    #                     actual_shoreline_post_storm = barrier3d[iB3D].x_s_TS[
+    #                         0 : TMAX_MGMT[iB3D] + 1
+    #                     ]
+    #                     beach_width = cascade._initial_beach_width[iB3D] / 10
+    #                     Domain = cascade.roadways[iB3D]._post_storm_interior[t] * 10
+    #                     Dunes = (
+    #                         cascade.roadways[iB3D]._post_storm_dunes[t]
+    #                         + barrier3d[iB3D].BermEl
+    #                     ) * 10
+    #
+    #                 else:
+    #                     # the natural scenario
+    #                     actual_shoreline_post_storm = barrier3d[iB3D].x_s_TS[0:TMAX_SIM]
+    #                     beach_width = cascade._initial_beach_width[iB3D] / 10
+    #                     Domain = barrier3d[iB3D].DomainTS[t] * 10
+    #                     Dunes = (
+    #                         barrier3d[iB3D].DuneDomain[t, :, :] + barrier3d[iB3D].BermEl
+    #                     ) * 10
+    #
+    #                 # Build beach elevation domain, we only show beach width decreasing
+    #                 # in increments of 10 m and we don't illustrate a berm, just a
+    #                 # sloping beach up to the elevation of the berm
+    #                 cellular_dune_toe_post_storm = np.floor(
+    #                     actual_shoreline_post_storm[t] + beach_width
+    #                 )
+    #                 cellular_shoreline_post_storm = np.floor(
+    #                     actual_shoreline_post_storm[t]
+    #                 )
+    #                 cellular_beach_width = int(
+    #                     cellular_dune_toe_post_storm - cellular_shoreline_post_storm
+    #                 )  # not actual bw
+    #
+    #                 BeachDomain = np.zeros(
+    #                     [
+    #                         cellular_beach_width,
+    #                         BarrierLength,
+    #                     ]
+    #                 )
+    #                 if cellular_beach_width == 0:
+    #                     pass
+    #                 else:
+    #                     add = (barrier3d[iB3D].BermEl - barrier3d[iB3D].SL) / (
+    #                         cellular_beach_width + 1
+    #                     )
+    #                     for i in range(0, cellular_beach_width):
+    #                         BeachDomain[i, :] = (barrier3d[iB3D].SL + add) * (i + 1)
+    #
+    #                 # Make animation frame domain
+    #                 Dunes = np.rot90(Dunes)
+    #                 Dunes = np.flipud(Dunes)
+    #                 Beach = BeachDomain * 10
+    #                 Domain = np.vstack([Beach, Dunes, Domain])
+    #                 Domain[Domain < 0] = -1
+    #                 widthTS = len(Domain)
+    #                 OriginTstart = int(cellular_shoreline_post_storm)
+    #                 OriginTstop = OriginTstart + widthTS
+    #                 xOrigin = iB3D * BarrierLength
+    #                 AnimateDomain[
+    #                     OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
+    #                 ] = Domain
+    #
+    #             # Plot and save
+    #             if fig_size is not None:
+    #                 elevFig1 = plt.figure(figsize=fig_size)
+    #             else:
+    #                 elevFig1 = plt.figure(figsize=(7, 7))
+    #             ax = elevFig1.add_subplot(111)
+    #             cax = ax.pcolormesh(
+    #                 AnimateDomain,
+    #                 cmap="terrain",
+    #                 vmin=z_bot,
+    #                 vmax=z_lim,
+    #                 # edgecolors="w",  # for debugging
+    #                 # linewidth=0.01,
+    #             )
+    #             cbar = elevFig1.colorbar(cax)
+    #             cbar.set_label("elevation (m MHW)", rotation=270, labelpad=20)
+    #             plt.xlabel("alongshore distance (dam)")
+    #             plt.ylabel("cross-shore distance (dam)")
+    #             timestr = (
+    #                 "Time = " + str(t - 0.5) + " yrs"
+    #             )  # we are letting the post-storm output represent 0.5 years
+    #             if km_on:
+    #                 locs, _ = plt.yticks()
+    #                 plt.yticks(locs, locs / 100)
+    #                 locs, _ = plt.xticks()
+    #                 plt.xticks(locs[0:-1], locs[0:-1] / 100)
+    #                 plt.xlabel("alongshore distance (km)")
+    #                 plt.ylabel("cross-shore distance (km)")
+    #                 ax.yaxis.set_minor_locator(AutoMinorLocator())
+    #             if meters_on:
+    #                 locs, _ = plt.yticks()
+    #                 plt.yticks(locs, locs / 10)
+    #                 locs, _ = plt.xticks()
+    #                 plt.xticks(locs[0:-1], locs[0:-1] / 10)
+    #                 plt.xlabel("alongshore distance (m)")
+    #                 plt.ylabel("cross-shore distance (m)")
+    #                 ax.yaxis.set_minor_locator(AutoMinorLocator())
+    #             if y_lim is not None:
+    #                 plt.ylim(y_lim)
+    #                 plt.text(3, y_lim[0] + 3, timestr, color="w")
+    #             else:
+    #                 plt.ylim(bottom=OriginY - 35)
+    #                 plt.text(1, OriginY - 33, timestr)
+    #             plt.tight_layout()
+    #             plt.rcParams.update({"font.size": 15})
+    #             # elevFig1.tight_layout()
+    #             if fig_eps:
+    #                 name = "elev_" + str(t - 1) + "pt5.eps"
+    #                 elevFig1.savefig(name, format="eps")
+    #             else:
+    #                 name = "elev_" + str(t - 1) + "pt5"
+    #                 elevFig1.savefig(name)  # dpi=200
+    #             plt.close(elevFig1)
 
     for t in range(TMAX_SIM):
         # ok, now the annual time step, which incorporates human modifications to
         # the shoreface, beach, dune, & interior
-        AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -1
+        AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -3
 
         for iB3D in range(ny):
             actual_shoreline_post_humans = barrier3d[iB3D].x_s_TS[0 : TMAX_SIM + 1]
@@ -359,8 +378,12 @@ def plot_ElevAnimation_CASCADE(
                 beach_width = cascade.nourishments[iB3D].beach_width[t] / 10
             else:
                 # both roadways and natural scenario
-                beach_width = cascade._initial_beach_width[iB3D] / 10
-                # beach_width = cascade.outwash[iB3D]._beach_width[t] / 10
+                # beach_width = cascade._initial_beach_width[iB3D] / 10
+
+                # CHANGED FOR THE OUTWASHER BEACH RATHER THAN THE CASCADE BEACH
+                beach_width = outwash[iB3D]._beach_width[t] / 10
+                if np.isnan(beach_width):
+                    beach_width = 0
 
             if beach_management_ny[iB3D] and np.isnan(beach_width):
                 beach_width = (
@@ -400,13 +423,14 @@ def plot_ElevAnimation_CASCADE(
                     BeachDomain[i, :] = (barrier3d[iB3D].SL + add) * (i + 1)
 
             # Make animation frame domain
+            # so this is now in meters?
             Domain = barrier3d[iB3D].DomainTS[t] * 10
             Dunes = (barrier3d[iB3D].DuneDomain[t, :, :] + barrier3d[iB3D].BermEl) * 10
             Dunes = np.rot90(Dunes)
             Dunes = np.flipud(Dunes)
             Beach = BeachDomain * 10
             Domain = np.flip(np.vstack([Beach, Dunes, Domain]),1)
-            Domain[Domain < 0] = -1
+            Domain[Domain < 0] = -3
             widthTS = len(Domain)
             OriginTstart = int(cellular_shoreline_post_humans)
             OriginTstop = OriginTstart + widthTS
@@ -430,7 +454,7 @@ def plot_ElevAnimation_CASCADE(
             # linewidth=0.01,
         )
         cbar = elevFig2.colorbar(cax)
-        cbar.set_label("elevation (m MHW)", rotation=270)
+        cbar.set_label("elevation (m MHW)", rotation=270, labelpad=25)
         plt.xlabel("alongshore distance (dam)")
         plt.ylabel("cross-shore distance (dam)")
         timestr = "Time = " + str(t) + " yrs"
@@ -442,6 +466,23 @@ def plot_ElevAnimation_CASCADE(
             plt.xlabel("alongshore distance (km)")
             plt.ylabel("cross-shore distance (km)")
             ax.yaxis.set_minor_locator(AutoMinorLocator())
+            # ax.xaxis.set_major_formatter('{x:.f}')
+            # ax.yaxis.set_major_formatter('{x:.f}')
+        if meters_on:
+            # locs, _ = plt.yticks()
+            # plt.yticks(locs, locs * 10)
+            # locs, _ = plt.xticks()
+            # plt.xticks(locs[0:-1], locs[0:-1] * 10)
+            plt.xlabel("alongshore distance (m)")
+            plt.ylabel("cross-shore distance (m)")
+            xtick_max = np.shape(AnimateDomain)[1]  # n_cols = x
+            x_ticks = np.array(range(0, xtick_max, 10))
+            x_tick_labels = x_ticks * 10
+            ytick_max = np.shape(AnimateDomain)[0]  # n_rows = y
+            y_ticks = np.array(range(0, ytick_max, 50))
+            y_tick_labels = y_ticks * 10
+            plt.xticks(x_ticks, x_tick_labels)
+            plt.yticks(y_ticks, y_tick_labels)
         if y_lim is not None:
             plt.ylim(y_lim)
             plt.text(3, y_lim[0] + 3, timestr, color="w")
