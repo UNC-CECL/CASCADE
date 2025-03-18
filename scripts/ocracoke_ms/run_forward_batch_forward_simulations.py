@@ -128,14 +128,14 @@ if preemptive_relocation:
 
 # Define which B3D island models have
 road_cells = [False] * Total_B3D_Number
-if status_quo == True:
+if status_quo == True or preemptive_relocation == True:
     road_cells[15:54] = [True]*len(range(15,54))
 else:
     road_cells[15:35] = [True]*len(range(15,35))
 
 
 sandbag_cells = [False] * Total_B3D_Number
-if status_quo == True:
+if status_quo == True or preemptive_relocation == True:
     sandbag_cells[15:54] = [True]*len(range(15,54))
 else:
     sandbag_cells[15:35] = [True]*len(range(15,35))
@@ -422,7 +422,7 @@ def alongshore_uniform(run_name,
         allow_causeway = allow_causeway
     )
 
-for k in range(len(run_name)):
+for k in range(68,len(run_name)):
     for l in range(0,len(background_threshold_list)):
         alongshore_uniform(run_name=run_name[k][l],
                            s_file=s_file[k],
