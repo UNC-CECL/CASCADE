@@ -118,7 +118,7 @@ for rname in rname_array:
     outwash_array_b3d = np.zeros(100, dtype=object)
     outwash_array_100 = np.zeros(100, dtype=object)
     outwash_array_50 = np.zeros(100, dtype=object)
-    outwash_array_0 = np.zeros(100, dtype=object)
+    outwash_array_0 = np.empty(100, dtype=object)
 
     avg_outwash_array_b3d = np.zeros(100, dtype=object)
     avg_outwash_array_100 = np.zeros(100, dtype=object)
@@ -583,211 +583,275 @@ for rname in rname_array:
                       np.round(np.average(avg_int_width_array_0))))
 
     if plotters:
-        # histogram of years that the barriers drown (three outwash scenarios only, each on separate plot)
-        plt.rcParams.update({"font.size": 12})
-        # bins = 100
-        # fig1 = plt.figure()
-        # fig1.suptitle('{0}'.format(rname), weight="bold")
-        # ax1 = fig1.add_subplot(131)
-        # ax1.hist(drown_year_array_100, bins=bins)
-        # ax1.set_title("100% washout")
-        # ax1.set_ylabel("number of barriers that drown")
-        # ax1.set_xlabel("drown year")
-        # plt.gca().xaxis.tick_bottom()
-        # ax1.set_xlim(left=1, right=100)
-        # ax1.set_ylim(bottom=0, top=40)
+        # # histogram of years that the barriers drown (three outwash scenarios only, each on separate plot)
+        # plt.rcParams.update({"font.size": 12})
+        # # bins = 100
+        # # fig1 = plt.figure()
+        # # fig1.suptitle('{0}'.format(rname), weight="bold")
+        # # ax1 = fig1.add_subplot(131)
+        # # ax1.hist(drown_year_array_100, bins=bins)
+        # # ax1.set_title("100% washout")
+        # # ax1.set_ylabel("number of barriers that drown")
+        # # ax1.set_xlabel("drown year")
+        # # plt.gca().xaxis.tick_bottom()
+        # # ax1.set_xlim(left=1, right=100)
+        # # ax1.set_ylim(bottom=0, top=40)
+        # #
+        # # ax1 = fig1.add_subplot(132)
+        # # ax1.hist(drown_year_array_50, bins=bins)
+        # # ax1.set_title("50% washout")
+        # # ax1.set_ylabel("frequency")
+        # # ax1.set_xlabel("drown year")
+        # # plt.gca().xaxis.tick_bottom()
+        # # ax1.set_xlim(left=1, right=100)
+        # # ax1.set_ylim(bottom=0, top=40)
+        # # ax1.set_ylabel(None)
+        # #
+        # # ax1 = fig1.add_subplot(133)
+        # # ax1.hist(drown_year_array_0, bins=bins)
+        # # ax1.set_title("0% washout")
+        # # ax1.set_ylabel("frequency")
+        # # ax1.set_xlabel("drown year")
+        # # plt.gca().xaxis.tick_bottom()
+        # # ax1.set_xlim(left=1, right=100)
+        # # ax1.set_ylim(bottom=0, top=40)
+        # # ax1.set_ylabel(None)
         #
-        # ax1 = fig1.add_subplot(132)
-        # ax1.hist(drown_year_array_50, bins=bins)
-        # ax1.set_title("50% washout")
-        # ax1.set_ylabel("frequency")
-        # ax1.set_xlabel("drown year")
-        # plt.gca().xaxis.tick_bottom()
-        # ax1.set_xlim(left=1, right=100)
-        # ax1.set_ylim(bottom=0, top=40)
-        # ax1.set_ylabel(None)
+        # # stacked bar charts showing same data as histograms
+        # fig2, ax = plt.subplots()
+        # # ax.bar(unique_drown_years_strings, bar_b3d, label="baseline")
+        # ax.bar(unique_drown_years_strings, bar_b3d)
+        # ax.bar(unique_drown_years_strings, bar_100, label="100% outwash", bottom=bar_b3d)
+        # ax.bar(unique_drown_years_strings, bar_50, label="50% outwash", bottom=bar_b3d+bar_100)
+        # ax.bar(unique_drown_years_strings, bar_0, label="0% outwash", bottom=bar_b3d+bar_100+bar_50)
+        # plt.xlabel("Drown Year")
+        # plt.ylabel("Number of Barriers that Drown")
+        # # plt.legend()
+        # plt.ylim(top=80)
+        # plt.title('{0}'.format(rname), weight="bold")
         #
-        # ax1 = fig1.add_subplot(133)
-        # ax1.hist(drown_year_array_0, bins=bins)
-        # ax1.set_title("0% washout")
-        # ax1.set_ylabel("frequency")
-        # ax1.set_xlabel("drown year")
-        # plt.gca().xaxis.tick_bottom()
-        # ax1.set_xlim(left=1, right=100)
-        # ax1.set_ylim(bottom=0, top=40)
-        # ax1.set_ylabel(None)
+        # # plotting shoreline position for all 100 storms, each scenario on separate plot
+        # # shoreline position: finding the extremes
+        # min_b3d_migration = min(end_net_migration_b3d)
+        # min_b3d_migration_index = end_net_migration_b3d.index(min_b3d_migration)
+        # min_b3d_shoreline_position_array = shoreline_pos_array_b3d[min_b3d_migration_index]
+        # max_b3d_migration = max(end_net_migration_b3d)
+        # max_b3d_migration_index = end_net_migration_b3d.index(max_b3d_migration)
+        # max_b3d_shoreline_position_array = shoreline_pos_array_b3d[max_b3d_migration_index]
+        #
+        # # for the outwash scenarios, we want to plot the min and maxes for those storms that do not drown
+        # # as well as some storms that drown
+        # min_100_migration = min(end_net_migration_no_drowns_100)
+        # min_100_migration_index = end_net_migration_100.index(min_100_migration)
+        # min_100_shoreline_position_array = shoreline_pos_array_100[min_100_migration_index]
+        # max_100_migration = max(end_net_migration_no_drowns_100)
+        # max_100_migration_index = end_net_migration_100.index(max_100_migration)
+        # max_100_shoreline_position_array = shoreline_pos_array_100[max_100_migration_index]
+        #
+        # min_50_migration = min(end_net_migration_no_drowns_50)
+        # min_50_migration_index = end_net_migration_50.index(min_50_migration)
+        # min_50_shoreline_position_array = shoreline_pos_array_50[min_50_migration_index]
+        # max_50_migration = max(end_net_migration_no_drowns_50)
+        # max_50_migration_index = end_net_migration_50.index(max_50_migration)
+        # max_50_shoreline_position_array = shoreline_pos_array_50[max_50_migration_index]
+        #
+        # min_0_migration = min(end_net_migration_no_drowns_0)
+        # min_0_migration_index = end_net_migration_0.index(min_0_migration)
+        # min_0_shoreline_position_array = shoreline_pos_array_0[min_0_migration_index]
+        # max_0_migration = max(end_net_migration_no_drowns_0)
+        # max_0_migration_index = end_net_migration_0.index(max_0_migration)
+        # max_0_shoreline_position_array = shoreline_pos_array_0[max_0_migration_index]
+        #
+        # bot = -225
+        # top = 425
+        # fig3 = plt.figure()
+        # fig3.suptitle('{0}'.format(rname), weight="bold")
+        # ax1 = fig3.add_subplot(221)
+        # ax1.set_title("baseline")
+        # ax1.set_ylim(bottom=bot, top=top)
+        # ax2 = fig3.add_subplot(222)
+        # ax2.set_title("100% outwash")
+        # ax2.set_ylim(bottom=bot, top=top)
+        # ax3 = fig3.add_subplot(223)
+        # ax3.set_title("50% outwash")
+        # ax3.set_ylim(bottom=bot, top=top)
+        # ax4 = fig3.add_subplot(224)
+        # ax4.set_title("0% outwash")
+        # ax4.set_ylim(bottom=bot, top=top)
+        #
+        # fig3.text(0.5, 0.04, 'Time (years)', ha='center')
+        # fig3.text(0.06, 0.5, 'Shoreline Position (m)', va='center', rotation='vertical')
+        # fig3.subplots_adjust(hspace=0.4)
+        #
+        # alpha = 0.1
+        #
+        # for x in range(100):
+        #     ax1.plot(shoreline_pos_array_b3d[x], alpha=alpha)
+        #     ax2.plot(shoreline_pos_array_100[x], alpha=alpha)
+        #     ax3.plot(shoreline_pos_array_50[x], alpha=alpha)
+        #     ax4.plot(shoreline_pos_array_0[x], alpha=alpha)
+        #
+        # min_color = "black"
+        # max_color = "red"
+        #
+        # ax1.plot(min_b3d_shoreline_position_array, label="min migration", color=min_color, zorder=0)
+        # ax1.plot(max_b3d_shoreline_position_array, label="max migration", color=max_color, zorder=0)
+        #
+        # ax2.plot(min_100_shoreline_position_array, label="min migration", color=min_color, zorder=0)
+        # ax2.plot(max_100_shoreline_position_array, label="max migration", color=max_color, zorder=0)
+        #
+        # ax3.plot(min_50_shoreline_position_array, label="min migration", color=min_color, zorder=0)
+        # ax3.plot(max_50_shoreline_position_array, label="max migration", color=max_color, zorder=0)
+        #
+        # ax4.plot(min_0_shoreline_position_array, label="min migration", color=min_color, zorder=0)
+        # ax4.plot(max_0_shoreline_position_array, label="max migration", color=max_color, zorder=0)
+        #
+        # plot_drown_year_array = [21, 41, 61, 81]
+        # colors = ["lime", "fuchsia", "blue", "blueviolet"]
+        # zorder_list = [3, 2, 1, 0]
+        # for plot_drown_year in plot_drown_year_array:
+        #     color_index = plot_drown_year_array.index(plot_drown_year)
+        #     color = colors[color_index]
+        #     zorders = zorder_list[plot_drown_year_array.index(plot_drown_year)]
+        #     if plot_drown_year in tmax_array_100:
+        #         index100 = tmax_array_100.index(plot_drown_year)
+        #         ax2.plot(shoreline_pos_array_100[index100], zorder=zorders, label="drown year: {0}".format(plot_drown_year), color=color)
+        #     if plot_drown_year in tmax_array_50:
+        #         index50 = tmax_array_50.index(plot_drown_year)
+        #         ax3.plot(shoreline_pos_array_50[index50], zorder=zorders, label="drown year: {0}".format(plot_drown_year), color=color)
+        #     if plot_drown_year in tmax_array_0:
+        #         index0 = tmax_array_0.index(plot_drown_year)
+        #         ax4.plot(shoreline_pos_array_0[index0], zorder=zorders, label="drown year: {0}".format(plot_drown_year), color=color)
+        #
+        # ax1.legend(fontsize=8, ncol=2, loc="upper center")
+        # ax2.legend(fontsize=8, ncol=3, loc="upper center")
+        # ax3.legend(fontsize=8, ncol=3, loc="upper center")
+        # ax4.legend(fontsize=8, ncol=3, loc="lower center")
+        #
+        # # plotting first storm shoreline position, shoreface slope, avg int. height and width,
+        # # overwash and outwash flux, all four scenarios on same plot
+        #
+        # storm_num = 1
+        # fig8 = plt.figure()
+        # fig8.suptitle('overwash storm {0} - {1}'.format(storm_num, rname), weight="bold")
+        # ax1 = fig8.add_subplot(231)
+        # ls = "dashed"
+        # ax1.plot(shoreline_pos_array_b3d[storm_num-1])
+        # ax1.plot(shoreline_pos_array_100[storm_num-1], linestyle=ls)
+        # ax1.plot(shoreline_pos_array_50[storm_num-1], linestyle=ls)
+        # ax1.plot(shoreline_pos_array_0[storm_num-1], linestyle=ls)
+        # ax1.legend(["baseline", "100%", "50%", "0%"], prop={'size': 9})
+        # ax1.set_ylabel("Shoreline Position (m)")
+        # ax1.set_xlabel("Simulation Years")
+        # ax1.set_ylim(bottom=-60, top=160)
+        #
+        # ax2 = fig8.add_subplot(232)
+        # ax2.plot(shoreface_slope_array_b3d[storm_num-1])
+        # ax2.plot(shoreface_slope_array_100[storm_num-1], linestyle=ls)
+        # ax2.plot(shoreface_slope_array_50[storm_num-1], linestyle=ls)
+        # ax2.plot(shoreface_slope_array_0[storm_num-1], linestyle=ls)
+        # ax2.set_ylabel("Shoreface Slope")
+        # ax2.set_xlabel("Simulation Years")
+        # ax2.set_ylim(top=0.02)
+        #
+        # ax3 = fig8.add_subplot(235)
+        # ax3.plot(int_height_array_b3d[storm_num-1])
+        # ax3.plot(int_height_array_100[storm_num-1], linestyle=ls)
+        # ax3.plot(int_height_array_50[storm_num-1], linestyle=ls)
+        # ax3.plot(int_height_array_0[storm_num-1], linestyle=ls)
+        # ax3.set_ylabel("Average Interior Elevation (m MHW)")
+        # ax3.set_xlabel("Simulation Years")
+        # ax3.set_ylim(top=1.6)
+        #
+        # ax4 = fig8.add_subplot(234)
+        # ax4.plot(int_width_array_b3d[storm_num-1])
+        # ax4.plot(int_width_array_100[storm_num-1], linestyle=ls)
+        # ax4.plot(int_width_array_50[storm_num-1], linestyle=ls)
+        # ax4.plot(int_width_array_0[storm_num-1], linestyle=ls)
+        # ax4.set_ylabel("Average Interior Width (m)")
+        # ax4.set_xlabel("Simulation Years")
+        # ax4.set_ylim(top=310)
+        #
+        # ax5 = fig8.add_subplot(233)
+        # ax5.plot(overwash_array_b3d[storm_num-1])
+        # ax5.plot(overwash_array_100[storm_num-1], linestyle=ls)
+        # ax5.plot(overwash_array_50[storm_num-1], linestyle=ls)
+        # ax5.plot(overwash_array_0[storm_num-1], linestyle=ls)
+        # ax5.set_ylabel("Overwash Flux (m3/m)")
+        # ax5.set_xlabel("Simulation Years")
+        # ax5.set_ylim(top=150)
+        #
+        # ax6 = fig8.add_subplot(236)
+        # ax6.plot(outwash_array_b3d[storm_num-1])
+        # ax6.plot(outwash_array_100[storm_num-1], linestyle=ls)
+        # ax6.plot(outwash_array_50[storm_num-1], linestyle=ls)
+        # ax6.plot(outwash_array_0[storm_num-1], linestyle=ls)
+        # ax6.set_ylabel("Outwash Flux (m3/m)")
+        # ax6.set_xlabel("Simulation Years")
+        # ax6.set_ylim(top=1200)
+        #
+        # fig8.subplots_adjust(hspace=0.3, wspace=0.3)
 
-        # stacked bar charts showing same data as historams
-        fig2, ax = plt.subplots()
-        # ax.bar(unique_drown_years_strings, bar_b3d, label="baseline")
-        ax.bar(unique_drown_years_strings, bar_b3d)
-        ax.bar(unique_drown_years_strings, bar_100, label="100% outwash", bottom=bar_b3d)
-        ax.bar(unique_drown_years_strings, bar_50, label="50% outwash", bottom=bar_b3d+bar_100)
-        ax.bar(unique_drown_years_strings, bar_0, label="0% outwash", bottom=bar_b3d+bar_100+bar_50)
-        plt.xlabel("Drown Year")
-        plt.ylabel("Number of Barriers that Drown")
-        # plt.legend()
-        plt.ylim(top=80)
-        plt.title('{0}'.format(rname), weight="bold")
-
-        # plotting shoreline position for all 100 storms, each scenario on separate plot
-        # shoreline position: finding the extremes
-        min_b3d_migration = min(end_net_migration_b3d)
-        min_b3d_migration_index = end_net_migration_b3d.index(min_b3d_migration)
-        min_b3d_shoreline_position_array = shoreline_pos_array_b3d[min_b3d_migration_index]
-        max_b3d_migration = max(end_net_migration_b3d)
-        max_b3d_migration_index = end_net_migration_b3d.index(max_b3d_migration)
-        max_b3d_shoreline_position_array = shoreline_pos_array_b3d[max_b3d_migration_index]
-
-        # for the outwash scenarios, we want to plot the min and maxes for those storms that do not drown
-        # as well as some storms that drown
-        min_100_migration = min(end_net_migration_no_drowns_100)
-        min_100_migration_index = end_net_migration_100.index(min_100_migration)
-        min_100_shoreline_position_array = shoreline_pos_array_100[min_100_migration_index]
-        max_100_migration = max(end_net_migration_no_drowns_100)
-        max_100_migration_index = end_net_migration_100.index(max_100_migration)
-        max_100_shoreline_position_array = shoreline_pos_array_100[max_100_migration_index]
-
-        min_50_migration = min(end_net_migration_no_drowns_50)
-        min_50_migration_index = end_net_migration_50.index(min_50_migration)
-        min_50_shoreline_position_array = shoreline_pos_array_50[min_50_migration_index]
-        max_50_migration = max(end_net_migration_no_drowns_50)
-        max_50_migration_index = end_net_migration_50.index(max_50_migration)
-        max_50_shoreline_position_array = shoreline_pos_array_50[max_50_migration_index]
-
-        min_0_migration = min(end_net_migration_no_drowns_0)
-        min_0_migration_index = end_net_migration_0.index(min_0_migration)
-        min_0_shoreline_position_array = shoreline_pos_array_0[min_0_migration_index]
-        max_0_migration = max(end_net_migration_no_drowns_0)
-        max_0_migration_index = end_net_migration_0.index(max_0_migration)
-        max_0_shoreline_position_array = shoreline_pos_array_0[max_0_migration_index]
-
-        bot = -225
-        top = 425
-        fig3 = plt.figure()
-        fig3.suptitle('{0}'.format(rname), weight="bold")
-        ax1 = fig3.add_subplot(221)
-        ax1.set_title("baseline")
-        ax1.set_ylim(bottom=bot, top=top)
-        ax2 = fig3.add_subplot(222)
-        ax2.set_title("100% outwash")
-        ax2.set_ylim(bottom=bot, top=top)
-        ax3 = fig3.add_subplot(223)
-        ax3.set_title("50% outwash")
-        ax3.set_ylim(bottom=bot, top=top)
-        ax4 = fig3.add_subplot(224)
-        ax4.set_title("0% outwash")
-        ax4.set_ylim(bottom=bot, top=top)
-
-        fig3.text(0.5, 0.04, 'Time (years)', ha='center')
-        fig3.text(0.06, 0.5, 'Shoreline Position (m)', va='center', rotation='vertical')
-        fig3.subplots_adjust(hspace=0.4)
-
-        alpha = 0.1
-
-        for x in range(100):
-            ax1.plot(shoreline_pos_array_b3d[x], alpha=alpha)
-            ax2.plot(shoreline_pos_array_100[x], alpha=alpha)
-            ax3.plot(shoreline_pos_array_50[x], alpha=alpha)
-            ax4.plot(shoreline_pos_array_0[x], alpha=alpha)
-
-        min_color = "black"
-        max_color = "red"
-
-        ax1.plot(min_b3d_shoreline_position_array, label="min migration", color=min_color, zorder=0)
-        ax1.plot(max_b3d_shoreline_position_array, label="max migration", color=max_color, zorder=0)
-
-        ax2.plot(min_100_shoreline_position_array, label="min migration", color=min_color, zorder=0)
-        ax2.plot(max_100_shoreline_position_array, label="max migration", color=max_color, zorder=0)
-
-        ax3.plot(min_50_shoreline_position_array, label="min migration", color=min_color, zorder=0)
-        ax3.plot(max_50_shoreline_position_array, label="max migration", color=max_color, zorder=0)
-
-        ax4.plot(min_0_shoreline_position_array, label="min migration", color=min_color, zorder=0)
-        ax4.plot(max_0_shoreline_position_array, label="max migration", color=max_color, zorder=0)
-
-        plot_drown_year_array = [21, 41, 61, 81]
-        colors = ["lime", "fuchsia", "blue", "blueviolet"]
-        zorder_list = [3, 2, 1, 0]
-        for plot_drown_year in plot_drown_year_array:
-            color_index = plot_drown_year_array.index(plot_drown_year)
-            color = colors[color_index]
-            zorders = zorder_list[plot_drown_year_array.index(plot_drown_year)]
-            if plot_drown_year in tmax_array_100:
-                index100 = tmax_array_100.index(plot_drown_year)
-                ax2.plot(shoreline_pos_array_100[index100], zorder=zorders, label="drown year: {0}".format(plot_drown_year), color=color)
-            if plot_drown_year in tmax_array_50:
-                index50 = tmax_array_50.index(plot_drown_year)
-                ax3.plot(shoreline_pos_array_50[index50], zorder=zorders, label="drown year: {0}".format(plot_drown_year), color=color)
-            if plot_drown_year in tmax_array_0:
-                index0 = tmax_array_0.index(plot_drown_year)
-                ax4.plot(shoreline_pos_array_0[index0], zorder=zorders, label="drown year: {0}".format(plot_drown_year), color=color)
-
-        ax1.legend(fontsize=8, ncol=2, loc="upper center")
-        ax2.legend(fontsize=8, ncol=3, loc="upper center")
-        ax3.legend(fontsize=8, ncol=3, loc="upper center")
-        ax4.legend(fontsize=8, ncol=3, loc="lower center")
-
-        # plotting first storm shoreline position, shoreface slope, avg int. height and width,
-        # overwash and outwash flux, all four scenarios on same plot
-
-        storm_num = 2
-        fig8 = plt.figure()
-        fig8.suptitle('overwash storm {0} - {1}'.format(storm_num, rname), weight="bold")
-        ax1 = fig8.add_subplot(231)
+        # plotting one plot of shoreline position
+        fig9 = plt.figure()
+        # fig9.suptitle('overwash storm {0} - {1}'.format(storm_num, rname), weight="bold")
+        # fig9.suptitle('{0}'.format(rname), weight="bold")
+        ax1 = fig9.add_subplot(111)
         ls = "dashed"
         ax1.plot(shoreline_pos_array_b3d[storm_num-1])
         ax1.plot(shoreline_pos_array_100[storm_num-1], linestyle=ls)
         ax1.plot(shoreline_pos_array_50[storm_num-1], linestyle=ls)
         ax1.plot(shoreline_pos_array_0[storm_num-1], linestyle=ls)
-        ax1.legend(["no outwash", "100%", "50%", "0%"], prop={'size': 9})
+        ax1.legend(["baseline", "100% outwash to shoreface", "50% outwash to shoreface", "0% outwash to shoreface"],
+                   prop={'size': 9}, loc="upper left")
         ax1.set_ylabel("Shoreline Position (m)")
         ax1.set_xlabel("Simulation Years")
         ax1.set_ylim(bottom=-60, top=160)
+        ax1.set_title('{0}'.format(rname), weight="bold")
+        fig9.subplots_adjust(hspace=0.3)
 
-        ax2 = fig8.add_subplot(232)
-        ax2.plot(shoreface_slope_array_b3d[storm_num-1])
-        ax2.plot(shoreface_slope_array_100[storm_num-1], linestyle=ls)
-        ax2.plot(shoreface_slope_array_50[storm_num-1], linestyle=ls)
-        ax2.plot(shoreface_slope_array_0[storm_num-1], linestyle=ls)
-        ax2.set_ylabel("Shoreface Slope")
+        # plotting one year of overwash and outwash flux
+        fig10 = plt.figure()
+        # fig9.suptitle('overwash storm {0} - {1}'.format(storm_num, rname), weight="bold")
+        # fig9.suptitle('{0}'.format(rname), weight="bold")
+        ax1 = fig10.add_subplot(211)
+        ls = "solid"
+        ax1.plot(overwash_array_b3d[storm_num-1])
+        ax1.plot(overwash_array_100[storm_num-1], linestyle=ls)
+        ax1.plot(overwash_array_50[storm_num-1], linestyle=ls)
+        ax1.plot(overwash_array_0[storm_num-1], linestyle=ls)
+        ax1.set_ylabel("Overwash Flux (m3/m)")
+        ax1.set_xlabel("Simulation Years")
+        ax1.set_ylim(top=150)
+        ax1.set_title(rname, weight="bold")
+        ax1.legend(["baseline", "100% outwash to shoreface", "50% outwash to shoreface", "0% outwash to shoreface"],
+                   prop={'size': 9}, loc="upper left")
+
+        max_t_b3d = tmax_array_b3d[storm_num-1]
+        max_t_100 = tmax_array_100[storm_num - 1]
+        max_t_50 = tmax_array_50[storm_num - 1]
+        max_t_0 = tmax_array_0[storm_num - 1]
+
+        outwash_array_b3d_storm = outwash_array_b3d[storm_num-1]
+        outwash_array_b3d_storm[max_t_b3d+1:] = np.nan
+        outwash_array_100_storm = outwash_array_100[storm_num - 1]
+        outwash_array_100_storm[max_t_100+1:] = np.nan
+        outwash_array_50_storm = outwash_array_50[storm_num - 1]
+        outwash_array_50_storm[max_t_50+1:] = np.nan
+        outwash_array_0_storm = outwash_array_0[storm_num - 1]
+        outwash_array_0_storm[max_t_0+1:] = np.nan
+
+        ax2 = fig10.add_subplot(212)
+        ax2.plot(outwash_array_b3d_storm)
+        ax2.plot(outwash_array_100_storm, linestyle=ls)
+        ax2.plot(outwash_array_50_storm, linestyle=ls)
+        ax2.plot(outwash_array_0_storm, linestyle=ls)
+        ax2.set_ylabel("Outwash Flux (m3/m)")
         ax2.set_xlabel("Simulation Years")
-        ax2.set_ylim(top=0.02)
+        ax2.set_ylim(top=1200)
+        fig10.subplots_adjust(hspace=0.3)
+        # ax2.legend(["baseline", "100% outwash to shoreface", "50% outwash to shoreface", "0% outwash to shoreface"],
+        #            prop={'size': 9}, loc="upper left")
 
-        ax3 = fig8.add_subplot(235)
-        ax3.plot(int_height_array_b3d[storm_num-1])
-        ax3.plot(int_height_array_100[storm_num-1], linestyle=ls)
-        ax3.plot(int_height_array_50[storm_num-1], linestyle=ls)
-        ax3.plot(int_height_array_0[storm_num-1], linestyle=ls)
-        ax3.set_ylabel("Average Interior Elevation (m MHW)")
-        ax3.set_xlabel("Simulation Years")
-        ax3.set_ylim(top=1.6)
 
-        ax4 = fig8.add_subplot(234)
-        ax4.plot(int_width_array_b3d[storm_num-1])
-        ax4.plot(int_width_array_100[storm_num-1], linestyle=ls)
-        ax4.plot(int_width_array_50[storm_num-1], linestyle=ls)
-        ax4.plot(int_width_array_0[storm_num-1], linestyle=ls)
-        ax4.set_ylabel("Average Interior Width (m)")
-        ax4.set_xlabel("Simulation Years")
-        ax4.set_ylim(top=310)
 
-        ax5 = fig8.add_subplot(233)
-        ax5.plot(overwash_array_b3d[storm_num-1])
-        ax5.plot(overwash_array_100[storm_num-1], linestyle=ls)
-        ax5.plot(overwash_array_50[storm_num-1], linestyle=ls)
-        ax5.plot(overwash_array_0[storm_num-1], linestyle=ls)
-        ax5.set_ylabel("Overwash Flux (m3/m)")
-        ax5.set_xlabel("Simulation Years")
-        ax5.set_ylim(top=150)
-
-        ax6 = fig8.add_subplot(236)
-        ax6.plot(outwash_array_b3d[storm_num-1])
-        ax6.plot(outwash_array_100[storm_num-1], linestyle=ls)
-        ax6.plot(outwash_array_50[storm_num-1], linestyle=ls)
-        ax6.plot(outwash_array_0[storm_num-1], linestyle=ls)
-        ax6.set_ylabel("Outwash Flux (m3/m)")
-        ax6.set_xlabel("Simulation Years")
-        ax6.set_ylim(top=1200)
-
-        fig8.subplots_adjust(hspace=0.3, wspace=0.3)
