@@ -775,12 +775,19 @@ def plot_Elev_CASCADE_subplots(
 
         timestr = "Year " + str(t)
         ax.set_title(timestr,fontsize=10)
+        outwash_flux = int(np.round(outwash[0]._outwash_flux_TS[t],decimals=0))
+        outwash_str = "Outwash = " + str(outwash_flux) + " $m^3/m$"
         if y_lim is not None:
             plt.ylim(y_lim)
-            # plt.text(3, y_lim[0] + 3, timestr, color="w")
+            if outwash_flux>0:
+                plt.text(1.5, y_lim[0] + 2, outwash_str, color="w", fontsize=10)  # for outwash only years
+                # plt.text(1.5, y_lim[0] + 2, outwash_str, color="w", fontsize=10)  # for less years
+                # plt.text(2.5, y_lim[0] + 3, outwash_str, color="w", fontsize=6)  # for all years
+                # plt.text(1.5, y_lim[0] + 2, outwash_str, color="w", fontsize=7)  # for rando years
         else:
             plt.ylim(bottom=OriginY - 35)
-            # plt.text(1, OriginY - 33, timestr)
+            if outwash_flux>0:
+                plt.text(1, OriginY - 33, outwash_str, fontsize=8)
         # plt.tight_layout()
         # plt.rcParams.update({"font.size": 10})
         plot_num += 1

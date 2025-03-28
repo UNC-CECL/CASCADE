@@ -444,14 +444,17 @@ for rname in rname_array:
     if CASCADE_elev_subplots_on:
         ymin = 150
         ymax = 210
-        plot_years = [0,1,20,21,40,41,60,61,80,81,100]
+        # plot_years = [0,1,20,21,40,41,60,61,80,81,100]
+        # plot_years = [0,1,20,21,40,41,100]
+        # plot_years = [0,1,21,25,41,50,61,81,100]
+        plot_years = [0, 1, 21, 41, 61, 81, 100]
 
         # Baseline
         subplts_CASCADE(
             cascade=b3d_obj,
             directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
             TMAX_MGMT=b3d[0].TMAX,
-            name="baseline",
+            name="baseline_outwashtext_outyrs",
             TMAX_SIM=b3d[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
             main_plot_title="baseline",
@@ -472,7 +475,7 @@ for rname in rname_array:
             cascade=outwash100_obj,
             directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
             TMAX_MGMT=outwash100[0].TMAX,
-            name="outwash100",
+            name="outwash100_outwashtext_outyrs",
             TMAX_SIM=outwash100[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
             main_plot_title="100% outwash to shoreface",
@@ -493,7 +496,7 @@ for rname in rname_array:
             cascade=outwash50_obj,
             directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
             TMAX_MGMT=outwash50[0].TMAX,
-            name="outwash50",
+            name="outwash50_outwashtext_outyrs",
             TMAX_SIM=outwash50[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
             main_plot_title="50% outwash to shoreface",
@@ -514,7 +517,7 @@ for rname in rname_array:
             cascade=outwash0_obj,
             directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
             TMAX_MGMT=outwash0[0].TMAX,
-            name="outwash0",
+            name="outwash0_outwashtext_outyrs",
             TMAX_SIM=outwash0[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
             main_plot_title="0% outwash to shoreface",
