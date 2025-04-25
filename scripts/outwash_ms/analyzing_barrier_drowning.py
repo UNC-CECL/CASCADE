@@ -22,7 +22,7 @@ for rname in rname_array:
     plotters = True
     geomoetry_stats = False
     dune_crest_stats = False
-    flux_stats = True
+    flux_stats = False
 
     # location of the npz files
     datadir_b3d = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{0}/overwash_only/".format(rname)
@@ -172,7 +172,7 @@ for rname in rname_array:
         avg_dune_crest_array_b3d.append(np.average(dune_crest_array_b3d[storm_num-1], axis=0))
         # overwash
         QowTS = b3d_obj.barrier3d[0].QowTS
-        overwash_array_b3d[storm_num-1] = QowTS
+        overwash_array_b3d[storm_num-1] = np.array(QowTS)
         avg_overwash_array_b3d[storm_num-1] = np.mean(QowTS)
         # outwash
         QoutTS = b3d_obj.outwash[0]._outwash_flux_TS
@@ -243,12 +243,14 @@ for rname in rname_array:
         avg_dune_crest_array_100.append(np.average(dune_crest_array_100[storm_num-1], axis=0))
         # overwash
         QowTS100 = outwash100_obj.barrier3d[0].QowTS
-        overwash_array_100[storm_num-1] = QowTS100
+        overwash_array_100[storm_num-1] = np.array(QowTS100)
         avg_overwash_array_100[storm_num-1] = np.mean(QowTS100)
         # outwash
         QoutTS100 = outwash100_obj.outwash[0]._outwash_flux_TS
         outwash_array_100[storm_num-1] = QoutTS100
-        avg_outwash_array_100[storm_num-1] = np.mean(QoutTS100)
+        nonzero_QoutTS100 = np.nonzero(QoutTS100)
+        avg_outwash_array_100[storm_num - 1] = np.mean(QoutTS100[nonzero_QoutTS100])
+        # avg_outwash_array_100[storm_num-1] = np.mean(QoutTS100)
 
         # 50% variables
         filename_50 = "config{0}_outwash50_startyr1_interval{1}yrs_Slope0pt03_{2}.npz".format(config, storm_interval, storm_num)
@@ -296,12 +298,14 @@ for rname in rname_array:
         avg_int_width_array_50[storm_num - 1] = np.mean(avg_int_width_TS50)
         # overwash
         QowTS50 = outwash50_obj.barrier3d[0].QowTS
-        overwash_array_50[storm_num - 1] = QowTS50
+        overwash_array_50[storm_num - 1] = np.array(QowTS50)
         avg_overwash_array_50[storm_num - 1] = np.mean(QowTS50)
         # outwash
         QoutTS50 = outwash50_obj.outwash[0]._outwash_flux_TS
         outwash_array_50[storm_num - 1] = QoutTS50
-        avg_outwash_array_50[storm_num - 1] = np.mean(QoutTS50)
+        nonzero_QoutTS50 = np.nonzero(QoutTS50)
+        avg_outwash_array_50[storm_num - 1] = np.mean(QoutTS50[nonzero_QoutTS50])
+        # avg_outwash_array_50[storm_num - 1] = np.mean(QoutTS50)
 
         # 0% variables
         filename_0 = "config{0}_outwash0_startyr1_interval{1}yrs_Slope0pt03_{2}.npz".format(config, storm_interval, storm_num)
@@ -349,12 +353,14 @@ for rname in rname_array:
         avg_int_width_array_0[storm_num - 1] = np.mean(avg_int_width_TS0)
         # overwash
         QowTS0 = outwash0_obj.barrier3d[0].QowTS
-        overwash_array_0[storm_num - 1] = QowTS0
+        overwash_array_0[storm_num - 1] = np.array(QowTS0)
         avg_overwash_array_0[storm_num - 1] = np.mean(QowTS0)
         # outwash
         QoutTS0 = outwash0_obj.outwash[0]._outwash_flux_TS
         outwash_array_0[storm_num - 1] = QoutTS0
-        avg_outwash_array_0[storm_num - 1] = np.mean(QoutTS0)
+        nonzero_QoutTS0 = np.nonzero(QoutTS0)
+        avg_outwash_array_0[storm_num - 1] = np.mean(QoutTS0[nonzero_QoutTS0])
+        # avg_outwash_array_0[storm_num - 1] = np.mean(QoutTS0)
 
     # because we have 100 storms and drowns = 1, the sum of the array is the percent that drown
     percent_drown_b3d = np.sum(drowning_array_b3d)
@@ -470,14 +476,14 @@ for rname in rname_array:
     # average overwash and outwash normalized by the number of events (avg per event)
     if flux_stats:
         # for storm in range(100):
-        print("average overwash per event baseline: {0}".format(np.average(avg_overwash_array_b3d)))
-        print("average overwash per event 100%: {0}".format(np.average(avg_overwash_array_100)))
-        print("average overwash per event 50%: {0}".format(np.average(avg_overwash_array_50)))
-        print("average overwash per event 0%: {0}".format(np.average(avg_overwash_array_0)))
+        print("average overwash per event baseline: {0}".format(round(np.average(avg_overwash_array_b3d)),2))
+        print("average overwash per event 100%: {0}".format(round(np.average(avg_overwash_array_100)),1))
+        print("average overwash per event 50%: {0}".format(round(np.average(avg_overwash_array_50)),1))
+        print("average overwash per event 0%: {0}".format(round(np.average(avg_overwash_array_0)),1))
 
-        print("average outwash per event 100%: {0}".format(np.average(avg_outwash_array_100)))
-        print("average outwash per event 50%: {0}".format(np.average(avg_outwash_array_50)))
-        print("average outwash per event 0%: {0}".format(np.average(avg_outwash_array_0)))
+        print("average outwash per event 100%: {0}".format(round(np.average(avg_outwash_array_100)),1))
+        print("average outwash per event 50%: {0}".format(round(np.average(avg_outwash_array_50)),1))
+        print("average outwash per event 0%: {0}".format(round(np.average(avg_outwash_array_0)),1))
 
         # average overwash and outwash normalized by the number of events (avg per event)
         # overwash_avg_b3d = []
@@ -583,6 +589,7 @@ for rname in rname_array:
                       np.round(np.average(avg_int_width_array_0))))
 
     if plotters:
+        storm_num = 1
         # # histogram of years that the barriers drown (three outwash scenarios only, each on separate plot)
         # plt.rcParams.update({"font.size": 12})
         # # bins = 100
@@ -797,7 +804,7 @@ for rname in rname_array:
         # fig9.suptitle('overwash storm {0} - {1}'.format(storm_num, rname), weight="bold")
         # fig9.suptitle('{0}'.format(rname), weight="bold")
         ax1 = fig9.add_subplot(111)
-        ls = "dashed"
+        ls = "solid"
         ax1.plot(shoreline_pos_array_b3d[storm_num-1])
         ax1.plot(shoreline_pos_array_100[storm_num-1], linestyle=ls)
         ax1.plot(shoreline_pos_array_50[storm_num-1], linestyle=ls)
@@ -841,15 +848,15 @@ for rname in rname_array:
         outwash_array_0_storm = outwash_array_0[storm_num - 1]
         outwash_array_0_storm[max_t_0+1:] = np.nan
 
-        ax2 = fig10.add_subplot(212)
-        ax2.plot(outwash_array_b3d_storm)
-        ax2.plot(outwash_array_100_storm, linestyle=ls)
-        ax2.plot(outwash_array_50_storm, linestyle=ls)
-        ax2.plot(outwash_array_0_storm, linestyle=ls)
-        ax2.set_ylabel("Outwash Flux (m3/m)")
-        ax2.set_xlabel("Simulation Years")
-        ax2.set_ylim(top=1200)
-        fig10.subplots_adjust(hspace=0.3)
+        # ax2 = fig10.add_subplot(212)
+        # ax2.plot(outwash_array_b3d_storm)
+        # ax2.plot(outwash_array_100_storm, linestyle=ls)
+        # ax2.plot(outwash_array_50_storm, linestyle=ls)
+        # ax2.plot(outwash_array_0_storm, linestyle=ls)
+        # ax2.set_ylabel("Outwash Flux (m3/m)")
+        # ax2.set_xlabel("Simulation Years")
+        # ax2.set_ylim(top=1200)
+        # fig10.subplots_adjust(hspace=0.3)
         # ax2.legend(["baseline", "100% outwash to shoreface", "50% outwash to shoreface", "0% outwash to shoreface"],
         #            prop={'size': 9}, loc="upper left")
 
