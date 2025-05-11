@@ -11,9 +11,9 @@ from cascade.tools.outwash_plotters import plot_ElevAnimation_CASCADE as plt_CAS
 from cascade.tools.outwash_plotters import plot_Elev_CASCADE_subplots as subplts_CASCADE
 
 elevation_plots_on = False
-dune_plots_on = False
+dune_plots_on = True
 animated_plotters_on = False
-CASCADE_elev_subplots_on = True
+CASCADE_elev_subplots_on = False
 
 rname_array = ["r025", "r035"]
 
@@ -227,8 +227,9 @@ for rname in rname_array:
 
         TMAX = 101
         vmin = 0
-        vmax = 6
+        vmax = 5
         line_color = "white"  # line to mark outwash years
+        dune_cmap = "terrain"
 
         # Barrier3d only
         DuneCrest = []
@@ -246,7 +247,7 @@ for rname in rname_array:
         cax = ax.matshow(
             np.flip(DuneCrest, 1) * 10,
             origin="lower",
-            cmap="bwr",
+            cmap=dune_cmap,
             aspect="auto",
             vmin=vmin,
             vmax=vmax,
@@ -279,7 +280,7 @@ for rname in rname_array:
         cax = ax.matshow(
             np.flip(DuneCrest, 1) * 10,
             origin="lower",
-            cmap="bwr",
+            cmap=dune_cmap,
             aspect="auto",
             vmin=vmin,
             vmax=vmax,
@@ -308,7 +309,7 @@ for rname in rname_array:
         cax = ax.matshow(
             np.flip((DuneCrest), 1) * 10,
             origin="lower",
-            cmap="bwr",
+            cmap=dune_cmap,
             aspect="auto",
             vmin=vmin,
             vmax=vmax,
@@ -337,7 +338,7 @@ for rname in rname_array:
         cax = ax.matshow(
             np.flip(DuneCrest, 1) * 10,
             origin="lower",
-            cmap="bwr",
+            cmap=dune_cmap,
             aspect="auto",
             vmin=vmin,
             vmax=vmax,
@@ -454,7 +455,7 @@ for rname in rname_array:
             cascade=b3d_obj,
             directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
             TMAX_MGMT=b3d[0].TMAX,
-            name="baseline_outwashtext_outyrs",
+            name="baseline_outwash_yrs_yaxis0",
             TMAX_SIM=b3d[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
             main_plot_title="baseline",
@@ -475,7 +476,7 @@ for rname in rname_array:
             cascade=outwash100_obj,
             directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
             TMAX_MGMT=outwash100[0].TMAX,
-            name="outwash100_outwashtext_outyrs",
+            name="outwash100_outwash_yrs_yaxis0",
             TMAX_SIM=outwash100[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
             main_plot_title="100% outwash to shoreface",
@@ -496,7 +497,7 @@ for rname in rname_array:
             cascade=outwash50_obj,
             directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
             TMAX_MGMT=outwash50[0].TMAX,
-            name="outwash50_outwashtext_outyrs",
+            name="outwash50_outwash_yrs_yaxis0",
             TMAX_SIM=outwash50[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
             main_plot_title="50% outwash to shoreface",
@@ -517,7 +518,7 @@ for rname in rname_array:
             cascade=outwash0_obj,
             directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
             TMAX_MGMT=outwash0[0].TMAX,
-            name="outwash0_outwashtext_outyrs",
+            name="outwash0_outwash_yrs_yaxis0",
             TMAX_SIM=outwash0[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
             main_plot_title="0% outwash to shoreface",

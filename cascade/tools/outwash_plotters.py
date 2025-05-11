@@ -755,7 +755,7 @@ def plot_Elev_CASCADE_subplots(
                 x_tick_labels = x_ticks * 10
                 ytick_max = np.shape(AnimateDomain)[0]  # n_rows = y
                 y_ticks = np.array(range(0, ytick_max, 25))
-                y_tick_labels = y_ticks * 10
+                y_tick_labels = (y_ticks-y_lim[0]) * 10
                 plt.xticks(x_ticks, x_tick_labels)
                 plt.yticks(y_ticks, y_tick_labels)
         # we want the x-axis ticks for all the labels
