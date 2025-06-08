@@ -16,6 +16,7 @@ animated_plotters_on = False
 CASCADE_elev_subplots_on = False
 
 rname_array = ["r025", "r035"]
+# rname_array = ["r035"]
 
 for rname in rname_array:
     storm_interval = 20        # 20 or 10 years (we did not do 10 years)
@@ -226,10 +227,11 @@ for rname in rname_array:
     if dune_plots_on:
 
         TMAX = 101
-        vmin = 0
-        vmax = 5
+        vmin = -3
+        vmax = 6.0
         line_color = "white"  # line to mark outwash years
         dune_cmap = "terrain"
+        pad = 15
 
         # Barrier3d only
         DuneCrest = []
@@ -239,6 +241,12 @@ for rname in rname_array:
             DuneCrest.append(sub_domain.max(axis=2))
 
         DuneCrest = np.hstack(DuneCrest).astype(float)
+        berm_el = b3d[0].BermEl  # dam
+        DuneCrest = DuneCrest + berm_el
+
+        for row in range(np.shape(DuneCrest)[0]):
+            if np.all(DuneCrest[row] == berm_el) == True:
+                DuneCrest[row] = -0.3
 
         duneFig = plt.figure(figsize=(15, 10))
         duneFig.suptitle('{0}'.format(rname), weight="bold", fontsize=12)
@@ -255,7 +263,7 @@ for rname in rname_array:
         ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
         # cax = ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
         cbar = duneFig.colorbar(cax)
-        cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270, labelpad=25, fontsize=10)
+        cbar.set_label('Dune Elevation (m MHW)', rotation=270, labelpad=pad, fontsize=10)
         plt.xlabel("Alongshore Distance (m)")
         plt.ylabel("Year")
         plt.title("baseline", weight="bold")
@@ -274,6 +282,12 @@ for rname in rname_array:
             DuneCrest.append(sub_domain.max(axis=2))
 
         DuneCrest = np.hstack(DuneCrest).astype(float)
+        berm_el = b3d[0].BermEl  # dam
+        DuneCrest = DuneCrest + berm_el
+
+        for row in range(np.shape(DuneCrest)[0]):
+            if np.all(DuneCrest[row] == berm_el) == True:
+                DuneCrest[row] = -0.3
 
         plt.rcParams.update({"font.size": 12})
         ax = duneFig.add_subplot(222)
@@ -288,7 +302,7 @@ for rname in rname_array:
         ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
         # cax = ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
         cbar = duneFig.colorbar(cax)
-        cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270, labelpad=25, fontsize=10)
+        cbar.set_label('Dune Elevation (m MHW)', rotation=270, labelpad=pad, fontsize=10)
         plt.xlabel("Alongshore Distance (m)")
         plt.ylabel("Year")
         plt.title("100% outwash to shoreface", weight="bold")
@@ -303,6 +317,12 @@ for rname in rname_array:
             DuneCrest.append(sub_domain.max(axis=2))
 
         DuneCrest = np.hstack(DuneCrest).astype(float)
+        berm_el = b3d[0].BermEl  # dam
+        DuneCrest = DuneCrest + berm_el
+
+        for row in range(np.shape(DuneCrest)[0]):
+            if np.all(DuneCrest[row] == berm_el) == True:
+                DuneCrest[row] = -0.3
 
         plt.rcParams.update({"font.size": 12})
         ax = duneFig.add_subplot(223)
@@ -317,7 +337,7 @@ for rname in rname_array:
         ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
         # cax = ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
         cbar = duneFig.colorbar(cax)
-        cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270, labelpad=25, fontsize=10)
+        cbar.set_label('Dune Elevation (m MHW)', rotation=270, labelpad=pad, fontsize=10)
         plt.xlabel("Alongshore Distance (m)")
         plt.ylabel("Year")
         plt.title("50% outwash to shoreface", weight="bold")
@@ -332,6 +352,12 @@ for rname in rname_array:
             DuneCrest.append(sub_domain.max(axis=2))
 
         DuneCrest = np.hstack(DuneCrest).astype(float)
+        berm_el = b3d[0].BermEl  # dam
+        DuneCrest = DuneCrest + berm_el
+
+        for row in range(np.shape(DuneCrest)[0]):
+            if np.all(DuneCrest[row] == berm_el) == True:
+                DuneCrest[row] = -0.3
 
         plt.rcParams.update({"font.size": 12})
         ax = duneFig.add_subplot(224)
@@ -346,7 +372,7 @@ for rname in rname_array:
         ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
         # cax = ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
         cbar = duneFig.colorbar(cax)
-        cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270, labelpad=25, fontsize=10)
+        cbar.set_label('Dune Elevation (m MHW)', rotation=270, labelpad=pad, fontsize=10)
         plt.xlabel("Alongshore Distance (m)")
         plt.ylabel("Year")
         plt.title("0% outwash to shoreface", weight="bold")
