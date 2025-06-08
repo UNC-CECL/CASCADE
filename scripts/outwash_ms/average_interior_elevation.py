@@ -53,6 +53,17 @@ for rname in rname_array:
     avg_last_elev_50_array = np.zeros(100, dtype=object)
     avg_last_elev_0_array = np.zeros(100, dtype=object)
 
+    no_drowns_last_elev_b3d_array = np.zeros(100, dtype=object)
+    no_drowns_last_elev_100_array = np.zeros(100, dtype=object)
+    no_drowns_last_elev_50_array = np.zeros(100, dtype=object)
+    no_drowns_last_elev_0_array = np.zeros(100, dtype=object)
+
+    no_drowns_last_width_b3d = []
+    no_drowns_last_width_100 = []
+    no_drowns_last_width_50 = []
+    no_drowns_last_width_0 = []
+
+
     for storm_num in range(1, 101):
         # print(storm_num)
         # b3d variables
@@ -62,6 +73,7 @@ for rname in rname_array:
         b3d_obj = b3d["cascade"][0]
         tmax_b3d = b3d_obj.barrier3d[0].TMAX
         tmax_array_b3d.append(tmax_b3d)
+
 
         for t in range(0, tmax_b3d):
             # average elevation
@@ -73,6 +85,32 @@ for rname in rname_array:
         avg_elev_b3d = np.average(avg_elev_TS_array_b3d)
         avg_elev_b3d_array[storm_num-1] = avg_elev_b3d
         avg_last_elev_b3d_array[storm_num-1] = last_domain_TS_avg
+
+        # recalculate and save DomainWidth and InteriorWidth
+        _, int_width_array, new_ave_interior_width = b3d_obj.barrier3d[0].FindWidths(
+            domain_TS, b3d_obj.barrier3d[0].SL  # SL = 0
+        )
+
+        if tmax_b3d == 101:
+            # interior domain: remove a full row if all values are less than 0
+            check = 1
+            while check == 1:
+                if all(x <= 0 for x in domain_TS[-1, :]):  # bay_depth = -3 m
+                    domain_TS = np.delete(domain_TS, -1, axis=0)
+                else:
+                    check = 0
+
+            # new_ave_interior_height = np.average(
+            #     domain_TS[domain_TS >= 0])  # all in dam MHW
+            # no_drowns_last_elev_b3d_array[storm_num-1] = new_ave_interior_height
+            domain_TS[domain_TS<0] = 0  # set all values less than 0 to 0
+            new_ave_interior_height = np.average(domain_TS)  # all in m MHW
+            no_drowns_last_elev_b3d_array[storm_num-1] = new_ave_interior_height
+
+            # width
+            int_width_TS = np.array(b3d_obj.barrier3d[0].InteriorWidth_AvgTS) * 10  # meters
+            last_int_width = int_width_TS[tmax_b3d-1]
+            no_drowns_last_width_b3d.append(last_int_width)
 
         # 100% variables
         filename_100 = "config{0}_outwash100_startyr1_interval{1}yrs_Slope0pt03_{2}.npz".format(config, storm_interval, storm_num)
@@ -97,6 +135,26 @@ for rname in rname_array:
         avg_elev_100 = np.average(avg_elev_TS_array_100)
         avg_elev_100_array[storm_num-1] = avg_elev_100
         avg_last_elev_100_array[storm_num-1] = last_domain_TS_avg
+        if tmax_100 == 101:
+            # interior domain: remove a full row if all values are less than 0
+            check = 1
+            while check == 1:
+                if all(x <= 0 for x in domain_TS[-1, :]):  # bay_depth = -3 m
+                    domain_TS = np.delete(domain_TS, -1, axis=0)
+                else:
+                    check = 0
+
+            # new_ave_interior_height = np.average(
+            #     domain_TS[domain_TS >= 0])  # all in dam MHW
+            # no_drowns_last_elev_100_array[storm_num-1] = new_ave_interior_height
+            domain_TS[domain_TS < 0] = 0  # set all values less than 0 to 0
+            new_ave_interior_height = np.average(domain_TS)  # all in m MHW
+            no_drowns_last_elev_100_array[storm_num-1] = new_ave_interior_height
+
+            # width
+            int_width_TS = np.array(outwash100_obj.barrier3d[0].InteriorWidth_AvgTS) * 10  # meters
+            last_int_width = int_width_TS[tmax_100-1]
+            no_drowns_last_width_100.append(last_int_width)
 
         # 50% variables
         filename_50 = "config{0}_outwash50_startyr1_interval{1}yrs_Slope0pt03_{2}.npz".format(config, storm_interval, storm_num)
@@ -121,6 +179,25 @@ for rname in rname_array:
         avg_elev_50 = np.average(avg_elev_TS_array_50)
         avg_elev_50_array[storm_num-1] = avg_elev_50
         avg_last_elev_50_array[storm_num-1] = last_domain_TS_avg
+        if tmax_50 == 101:
+            # interior domain: remove a full row if all values are less than 0
+            check = 1
+            while check == 1:
+                if all(x <= 0 for x in domain_TS[-1, :]):  # bay_depth = -3 m
+                    domain_TS = np.delete(domain_TS, -1, axis=0)
+                else:
+                    check = 0
+            # new_ave_interior_height = np.average(
+            #     domain_TS[domain_TS >= 0])  # all in dam MHW
+            # no_drowns_last_elev_50_array[storm_num-1] = new_ave_interior_height
+            domain_TS[domain_TS < 0] = 0  # set all values less than 0 to 0
+            new_ave_interior_height = np.average(domain_TS)  # all in m MHW
+            no_drowns_last_elev_50_array[storm_num-1] = new_ave_interior_height
+
+            # width
+            int_width_TS = np.array(outwash50_obj.barrier3d[0].InteriorWidth_AvgTS) * 10  # meters
+            last_int_width = int_width_TS[tmax_50-1]
+            no_drowns_last_width_50.append(last_int_width)
 
         # 0% variables
         filename_0 = "config{0}_outwash0_startyr1_interval{1}yrs_Slope0pt03_{2}.npz".format(config, storm_interval, storm_num)
@@ -147,23 +224,76 @@ for rname in rname_array:
         avg_elev_0_array[storm_num-1] = avg_elev_0
         avg_last_elev_0_array[storm_num-1] = last_domain_TS_avg
 
+        if tmax_0 == 101:
+            # interior domain: remove a full row if all values are less than 0
+            check = 1
+            while check == 1:
+                if all(x <= 0 for x in domain_TS[-1, :]):  # bay_depth = -3 m
+                    domain_TS = np.delete(domain_TS, -1, axis=0)
+                else:
+                    check = 0
+            # new_ave_interior_height = np.average(
+            #     domain_TS[domain_TS >= 0])  # all in dam MHW
+            # no_drowns_last_elev_0_array[storm_num-1] = new_ave_interior_height
+            domain_TS[domain_TS < 0] = 0  # set all values less than 0 to 0
+            new_ave_interior_height = np.average(domain_TS)  # all in m MHW
+            no_drowns_last_elev_0_array[storm_num-1] = new_ave_interior_height
+
+            # width
+            int_width_TS = np.array(outwash0_obj.barrier3d[0].InteriorWidth_AvgTS) * 10  # meters
+            # last_int_width = int_width_TS[tmax_0-1]
+            last_int_width = int_width_TS[-1]
+            no_drowns_last_width_0.append(last_int_width)
+
+
+    avg_no_drowns_b3d = np.average(no_drowns_last_elev_b3d_array[np.nonzero(no_drowns_last_elev_b3d_array)])
+    avg_no_drowns_100 = np.average(no_drowns_last_elev_100_array[np.nonzero(no_drowns_last_elev_100_array)])
+    avg_no_drowns_50 = np.average(no_drowns_last_elev_50_array[np.nonzero(no_drowns_last_elev_50_array)])
+    avg_no_drowns_0 = np.average(no_drowns_last_elev_0_array[np.nonzero(no_drowns_last_elev_0_array)])
+
+    avg_no_drowns_last_width_b3d = np.average(no_drowns_last_width_b3d)
+    avg_no_drowns_last_width_100 = np.average(no_drowns_last_width_100)
+    avg_no_drowns_last_width_50 = np.average(no_drowns_last_width_50)
+    avg_no_drowns_last_width_0 = np.average(no_drowns_last_width_0)
+
 
     # printing geometry stats
     if geomoetry_stats:
-        # print avg height and width stats
+        # # print avg height and width stats
+        # print("avg geometry stats, {0}".format(rname))
+        # print("baseline \n avg interior height: {0} \n avg last interior height: {1}"
+        #       .format(np.round(np.average(avg_elev_b3d_array), 2),
+        #               np.round(np.average(avg_last_elev_b3d_array), 2)))
+        # print("100% outwash \n avg interior height: {0} \n avg last interior height: {1}"
+        #       .format(np.round(np.average(avg_elev_100_array), 2),
+        #               np.round(np.average(avg_last_elev_100_array), 2)))
+        # print("50% outwash \n avg interior height: {0} \n avg last interior height: {1}"
+        #       .format(np.round(np.average(avg_elev_50_array), 2),
+        #               np.round(np.average(avg_last_elev_50_array), 2)))
+        # print("0% outwash \n avg interior height: {0} \n avg last interior height: {1}"
+        #       .format(np.round(np.average(avg_elev_0_array), 2),
+        #               np.round(np.average(avg_last_elev_0_array), 2)))
+
+        # print non-drowning values
         print("avg geometry stats, {0}".format(rname))
-        print("baseline \n avg interior height: {0} \n avg last interior height: {1}"
-              .format(np.round(np.average(avg_elev_b3d_array), 2),
-                      np.round(np.average(avg_last_elev_b3d_array), 2)))
-        print("100% outwash \n avg interior height: {0} \n avg last interior height: {1}"
-              .format(np.round(np.average(avg_elev_100_array), 2),
-                      np.round(np.average(avg_last_elev_100_array), 2)))
-        print("50% outwash \n avg interior height: {0} \n avg last interior height: {1}"
-              .format(np.round(np.average(avg_elev_50_array), 2),
-                      np.round(np.average(avg_last_elev_50_array), 2)))
-        print("0% outwash \n avg interior height: {0} \n avg last interior height: {1}"
-              .format(np.round(np.average(avg_elev_0_array), 2),
-                      np.round(np.average(avg_last_elev_0_array), 2)))
+        print("baseline \n avg interior height: {0}"
+              .format(np.round(avg_no_drowns_b3d, 2)))
+        print("100% outwash \n avg interior height: {0}"
+              .format(np.round(avg_no_drowns_100, 2)))
+        print("50% outwash \n avg interior height: {0}"
+              .format(np.round(avg_no_drowns_50, 2)))
+        print("0% outwash \n avg interior height: {0}"
+              .format(np.round(avg_no_drowns_0, 2)))
+        # width
+        print("avg geometry stats, {0}".format(rname))
+        print("baseline \n avg interior width: {0}"
+              .format(np.round(avg_no_drowns_last_width_b3d, 2)))
+        print("100% outwash \n avg interior width: {0}"
+              .format(np.round(avg_no_drowns_last_width_100, 2)))
+        print("50% outwash \n avg interior width: {0}"
+              .format(np.round(avg_no_drowns_last_width_50, 2)))
+        print("0% outwash \n avg interior width: {0}"
+              .format(np.round(avg_no_drowns_last_width_0, 2)))
 
 
     # if plotters:
