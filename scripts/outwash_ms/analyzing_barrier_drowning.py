@@ -12,15 +12,15 @@ from matplotlib import pyplot as plt
 
 # ---------------------------------- set model parameters that change per run ------------------------------------------
 rname_array = ["r025", "r035"]
-# rname_array = ["r025"]
+# rname_array = ["r035"]
 for rname in rname_array:
     storm_interval = 20        # 20 or 10 years
     config = 4                 # 1, 2, 3, or 4
 
     # Display stats on console/show plots
     migration_stats = False
-    plotters = True
-    geomoetry_stats = False
+    plotters = False
+    geomoetry_stats = True
     dune_crest_stats = False
     flux_stats = False
 
@@ -125,7 +125,23 @@ for rname in rname_array:
     avg_outwash_array_50 = np.zeros(100, dtype=object)
     avg_outwash_array_0 = np.zeros(100, dtype=object)
 
+    avg__b3d = np.zeros(100, dtype=object)
+    avg_outwash_array_100 = np.zeros(100, dtype=object)
+    avg_outwash_array_50 = np.zeros(100, dtype=object)
+    avg_outwash_array_0 = np.zeros(100, dtype=object)
+
+    avg_height_last_TS_b3d = np.zeros(100, dtype=object)
+    avg_height_last_TS_100 = np.zeros(100, dtype=object)
+    avg_height_last_TS_50 = np.zeros(100, dtype=object)
+    avg_height_last_TS_0 = np.zeros(100, dtype=object)
+
+    avg_width_last_TS_b3d = np.zeros(100, dtype=object)
+    avg_width_last_TS_100 = np.zeros(100, dtype=object)
+    avg_width_last_TS_50 = np.zeros(100, dtype=object)
+    avg_width_last_TS_0 = np.zeros(100, dtype=object)
+
     for storm_num in range(1, 101):
+    # for storm_num in range(4, 5):
 
         # b3d variables
         filename_b3d = "config{0}_b3d_startyr1_interval{1}yrs_Slope0pt03_{2}.npz".format(config, storm_interval, storm_num)
@@ -161,10 +177,12 @@ for rname in rname_array:
         hbTS = np.array(b3d_obj.barrier3d[0].h_b_TS) * 10  # m MHW
         int_height_array_b3d[storm_num-1] = hbTS
         avg_int_height_array_b3d[storm_num-1] = np.mean(hbTS)
+        avg_height_last_TS_b3d[storm_num - 1] = hbTS[-1]
         # width
         int_width_TS = np.array(b3d_obj.barrier3d[0].InteriorWidth_AvgTS) * 10  # meters
         int_width_array_b3d[storm_num-1] = int_width_TS
         avg_int_width_array_b3d[storm_num-1] = np.mean(int_width_TS)
+        avg_width_last_TS_b3d[storm_num-1] = int_width_TS[-1]
         # dune crest
         # sub_domain = b3d_obj.barrier3d[0]._DuneDomain[0:tmax_array_b3d[storm_num-1], :, :]
         sub_domain = b3d_obj.barrier3d[0]._DuneDomain[0:tmax_b3d, :, :]
@@ -233,10 +251,12 @@ for rname in rname_array:
         hbTS100 = hbTS100[~np.isnan(hbTS100)]  # hbTS is the average elevation at each model time step
         int_height_array_100[storm_num-1] = hbTS100  # this is an array with array components
         avg_int_height_array_100[storm_num-1] = np.mean(hbTS100)
+        avg_height_last_TS_100[storm_num - 1] = hbTS100[-1]
         # width
         avg_int_width_TS100 = np.array(outwash100_obj.barrier3d[0].InteriorWidth_AvgTS) * 10  # meters
         int_width_array_100[storm_num-1] = avg_int_width_TS100
         avg_int_width_array_100[storm_num-1] = np.mean(avg_int_width_TS100)
+        avg_width_last_TS_100[storm_num - 1] = avg_int_width_TS100[-1]
         # dune crest
         sub_domain100 = outwash100_obj.barrier3d[0]._DuneDomain[0:tmax_100, :, :]
         dune_crest_array_100[storm_num-1] = sub_domain100.max(axis=2)
@@ -288,6 +308,7 @@ for rname in rname_array:
         hbTS50 = hbTS50[~np.isnan(hbTS50)]
         int_height_array_50[storm_num - 1] = hbTS50
         avg_int_height_array_50[storm_num - 1] = np.mean(hbTS50)
+        avg_height_last_TS_50[storm_num - 1] = hbTS50[-1]
         # dune crest
         sub_domain50 = outwash50_obj.barrier3d[0]._DuneDomain[0:tmax_array_50[storm_num - 1], :, :]
         dune_crest_array_50[storm_num - 1] = sub_domain50.max(axis=2)
@@ -296,6 +317,7 @@ for rname in rname_array:
         avg_int_width_TS50 = np.array(outwash50_obj.barrier3d[0].InteriorWidth_AvgTS) * 10  # meters
         int_width_array_50[storm_num - 1] = avg_int_width_TS50
         avg_int_width_array_50[storm_num - 1] = np.mean(avg_int_width_TS50)
+        avg_width_last_TS_50[storm_num - 1] = avg_int_width_TS50[-1]
         # overwash
         QowTS50 = outwash50_obj.barrier3d[0].QowTS
         overwash_array_50[storm_num - 1] = np.array(QowTS50)
@@ -343,6 +365,7 @@ for rname in rname_array:
         hbTS0 = hbTS0[~np.isnan(hbTS0)]
         int_height_array_0[storm_num - 1] = hbTS0
         avg_int_height_array_0[storm_num - 1] = np.mean(hbTS0)
+        avg_height_last_TS_0[storm_num - 1] = hbTS0[-1]
         # dune crest
         sub_domain0 = outwash0_obj.barrier3d[0]._DuneDomain[0:tmax_array_0[storm_num - 1], :, :]
         dune_crest_array_0[storm_num - 1] = sub_domain0.max(axis=2)
@@ -351,6 +374,7 @@ for rname in rname_array:
         avg_int_width_TS0 = np.array(outwash0_obj.barrier3d[0].InteriorWidth_AvgTS) * 10  # meters
         int_width_array_0[storm_num - 1] = avg_int_width_TS0
         avg_int_width_array_0[storm_num - 1] = np.mean(avg_int_width_TS0)
+        avg_width_last_TS_0[storm_num - 1] = avg_int_width_TS0[-1]
         # overwash
         QowTS0 = outwash0_obj.barrier3d[0].QowTS
         overwash_array_0[storm_num - 1] = np.array(QowTS0)
@@ -587,6 +611,20 @@ for rname in rname_array:
         print("0% outwash \n avg interior height: {0} \n avg interior width: {1}"
               .format(np.round(np.average(avg_int_height_array_0), 3),
                       np.round(np.average(avg_int_width_array_0))))
+        # print avg height and width stats using just the last domain for each storm
+        print("avg geometry stats LAST DOMAIN ONLY")
+        print("baseline \n avg interior height: {0} \n avg interior width: {1}"
+              .format(np.round(np.average(avg_height_last_TS_b3d), 3),
+                      np.round(np.average(avg_width_last_TS_b3d))))
+        print("100% outwash \n avg interior height: {0} \n avg interior width: {1}"
+              .format(np.round(np.average(avg_height_last_TS_100), 3),
+                      np.round(np.average(avg_width_last_TS_100))))
+        print("50% outwash \n avg interior height: {0} \n avg interior width: {1}"
+              .format(np.round(np.average(avg_height_last_TS_50), 3),
+                      np.round(np.average(avg_width_last_TS_50))))
+        print("0% outwash \n avg interior height: {0} \n avg interior width: {1}"
+              .format(np.round(np.average(avg_height_last_TS_0), 3),
+                      np.round(np.average(avg_width_last_TS_0[avg_width_last_TS_0>0]))))
 
     if plotters:
         storm_num = 1
