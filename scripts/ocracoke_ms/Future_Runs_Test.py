@@ -15,7 +15,7 @@ os.chdir('E:\\Model_Runs')
 Save_Path = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Model Runs\\Summary_Values\\'
 
 #Management_Name = ['Status_Quo','Natural', 'Nourishment']
-Management_Name = ['Preemptive_Relocation']
+Management_Name = ['Status_Quo']
 #RSLR_Rate = ['IL','I','IH']
 RSLR_Rate = ['I']
 Sink_Name = ['Erosional_Sink','Accretional_Sink']

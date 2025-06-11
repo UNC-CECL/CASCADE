@@ -160,10 +160,10 @@ def bulldoze(
     if ((seaside_water_cells > percent_water_cells_touching_road) or (
         bayside_water_cells > percent_water_cells_touching_road)) and  allow_causeway==False:
         roadway_drown = True
-        print(
-            f"Roadway width drowned at {time_index - 1} years, "
-            f"{percent_water_cells_touching_road * 100.0}% of road borders water"
-        )
+        # print(
+        #     f"Roadway width drowned at {time_index - 1} years, "
+        #     f"{percent_water_cells_touching_road * 100.0}% of road borders water"
+        # )
     else:
         roadway_drown = False
 
@@ -237,7 +237,7 @@ def rebuild_dunes(
     )
 
     rebuild_dune_volume = np.sum(new_dune_domain - yxz_dune_grid)
-
+    z = 20
     return new_dune_domain, rebuild_dune_volume
 
 def build_interior_dunes(
@@ -431,10 +431,10 @@ def get_road_relocation_elevation(
     # or relocated
     if road_ele <= 0:
         roadway_drown = 1
-        print(
-            f"Roadway cannot be relocated at {time_index - 1} years b/c the road "
-            "would be at or below MSL"
-        )
+        # print(
+        #     f"Roadway cannot be relocated at {time_index - 1} years b/c the road "
+        #     "would be at or below MSL"
+        # )
 
     return road_ele, roadway_drown
 
@@ -487,7 +487,7 @@ def road_relocation_checks(
 
         if road_setback < 0:
             road_relocated = 1
-            print('Roadway relocated')
+            #print('Roadway relocated')
 
             # relocate the road only if the width of the island allows it
             if (
@@ -499,10 +499,10 @@ def road_relocation_checks(
             ):
                 relocation_break = 1
                 # time_index - 1 because B3D advances time step at end of dune_update
-                print(
-                    "Island is too narrow for roadway to be relocated. Roadway "
-                    f"eaten up by dunes at {time_index - 1} years"
-                )
+                # print(
+                #     "Island is too narrow for roadway to be relocated. Roadway "
+                #     f"eaten up by dunes at {time_index - 1} years"
+                # )
             else:
                 road_setback = road_relocation_setback
 
@@ -525,6 +525,7 @@ def check_sandbag_need(
                 for cell in range(0, len(barrier3d.DuneDomain[time_index, :, width])):
                     if barrier3d.DuneDomain[time_index, cell, width] < threshold_elevation:
                         barrier3d._DuneRestart[width][cell] = design_elevation / 10
+                        c = 10
 
         if exceeds_min_dune_threshold == True:
             sandbag_need = True
@@ -772,10 +773,10 @@ class RoadwayManager:
         # road cannot be below 0 m MHW (sea level); stop managing!
         if self._road_ele < 0:
             self._drown_break = 1
-            print(
-                f"Roadway drowned in place at {self._time_index - 1} years due to "
-                "SLR - road cannot be below 0 m MHW"
-            )
+            # print(
+            #     f"Roadway drowned in place at {self._time_index - 1} years due to "
+            #     "SLR - road cannot be below 0 m MHW"
+            # )
 
             # an adaptation solution may be to knock down the dunes so that they
             # are small and can easily be overwashed
