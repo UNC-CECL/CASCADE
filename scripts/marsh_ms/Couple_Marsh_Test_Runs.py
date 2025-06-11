@@ -237,7 +237,7 @@ def initialize_cascade_no_human_dynamics_no_ast_marsh_user_defined_RSLR(datadir)
         community_economics_module=False,  # no community dynamics
         marsh_dynamics=True,
         user_inputed_RSLR=True,
-        user_inputed_RSLR_rate=np.load('/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Low_SLR.npy'),
+        user_inputed_RSLR_rate=np.load('/data/marsh_init_data/Old/Low_SLR.npy'),
     )
 
     for i in range(10):

@@ -6,21 +6,25 @@ import copy
 
 import pandas as pd
 
-os.chdir("C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output")
-save_path = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 2\\Cascade_CSV_Outputs\\Hindcasts\\'
+#os.chdir("C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output")
+os.chdir('/Users/ceclmac/PycharmProjects/CASCADE/Run_output')
+
+#save_path = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 2\\Cascade_CSV_Outputs\\Hindcasts\\'
+save_path = '/Users/ceclmac/OneDrive - University of North Carolina at Chapel Hill/Chapter 2/Cascade_CSV_Outputs/Hindcasts/'
 
 
-Base_Name_List = ['Geom_1',
-                  'Geom_2',
-                  'Geom_3',
-                  'Geom_4',
-                  'Geom_5']
+Base_Name_List = ['Geom_1_1994_2017_T5',
+        'Geom_2_1994_2017_T5',
+                  'Geom_3_1994_2017_T5',
+                  'Geom_4_1994_2017_T5',
+                  'Geom_5_1994_2017_T5']
 
-run_name = ['Geom_1_Calibrated_Hindcast.npz',
-            'Geom_2_Calibrated_Hindcast.npz',
-            'Geom_3_Calibrated_Hindcast.npz',
-            'Geom_4_Calibrated_Hindcast_2.npz',
-            'Geom_5_Calibrated_Hindcast_2.npz']
+run_name = ['Geom_1_Calibrated_Hindcast_1994_2017_T6.npz',
+            'Geom_2_Calibrated_Hindcast_1994_2017_T6.npz',
+            'Geom_3_Calibrated_Hindcast_1994_2017_T6.npz',
+            'Geom_4_Calibrated_Hindcast_1994_2017_T6.npz',
+            'Geom_5_Calibrated_Hindcast_1994_2017_T6.npz']
+
 #for geos in range(len(Base_Name_List)):
 #    temp_run_name = copy.deepcopy(Base_Name_List[geos]+'_Calibrated_Hindcast_2.npz')
 #    run_name.append(copy.deepcopy(temp_run_name))
@@ -28,7 +32,6 @@ run_name = ['Geom_1_Calibrated_Hindcast.npz',
 
 Combined_Dict = {}
 for islands in range(len(run_name)):
-    Geom_Dict = {}
     output = np.load(run_name[islands], allow_pickle=True)
     cascade = output["cascade"]
     cascade = cascade[0]
@@ -47,7 +50,7 @@ for islands in range(len(run_name)):
 
     Export_DF_Upper = pd.DataFrame(Export_Dict_Upper_Shoreface)
     Export_DF_Lower = pd.DataFrame(Export_Dict_Lower_Shoreface)
-    Export_DF_Upper.to_csv(save_path+Base_Name_List[islands]+'_Hindcast_US.csv')
-    Export_DF_Lower.to_csv(save_path+Base_Name_List[islands]+'_Hindcast_LS.csv')
+    Export_DF_Upper.to_csv(save_path+Base_Name_List[islands]+'_Hindcast_US.csv',index=False)
+    Export_DF_Lower.to_csv(save_path+Base_Name_List[islands]+'_Hindcast_LS.csv',index=False)
 
 z = 20
