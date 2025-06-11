@@ -11,7 +11,7 @@ from cascade.cascade import Cascade
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
 
 # Set the number of years to simulate
-run_years = 126
+run_years = 100
 
 # Set the start year
 start_year = 2024
@@ -22,8 +22,8 @@ island_grid_number = 39
 Total_B3D_Number = 69
 
 # Set scenario type
-preemptive_relocation = True
-status_quo = False
+preemptive_relocation = False
+status_quo = True
 nourishment = False
 
 if preemptive_relocation == True:
@@ -59,7 +59,7 @@ else:
 Storms = 'Baseline'
 
 # RSLR Data
-RSLR_Type = 'I'
+RSLR_Type = 'IH'
 
 if RSLR_Type == 'IL':
     RSLR_Data = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\RSLR\\Int_Low_SLR.npy')
@@ -85,7 +85,7 @@ end_num = 100
 run_name = []
 for snames in range(start_num,end_num):
     if Storms == 'Baseline':
-        name_base = 'OCR_'+str(RSLR_Type)+str(Management_name)+'S'+str(snames)
+        name_base = 'OCR_'+str(RSLR_Type)+str(Management_name)+'S'+str(snames)+'_T'
     else:
         name_base = 'OCR_'+str(RSLR_Type)+str(Management_name)+'S'+str(snames)+'_10'
     Temp_Name = []
@@ -371,7 +371,7 @@ def alongshore_uniform(run_name,
     background_erosion = background_erosion_list #list(background_erosion_list) # m/yr, background shoreline erosion
     rebuild_dune_threshold = 1  # m
     sandbag_management_on = sandbag_cells
-    sandbag_elevation = 4 # m
+    sandbag_elevation = 2 # m
 
     # baseline models for comparison -- all roadways ----------------------------------------
     roads_on = road_cells
@@ -422,7 +422,7 @@ def alongshore_uniform(run_name,
         allow_causeway = allow_causeway
     )
 
-for k in range(68,len(run_name)):
+for k in range(0,len(run_name)):
     for l in range(0,len(background_threshold_list)):
         alongshore_uniform(run_name=run_name[k][l],
                            s_file=s_file[k],

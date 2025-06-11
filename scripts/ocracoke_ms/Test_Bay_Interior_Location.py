@@ -9,7 +9,7 @@ import os
 
 os.chdir('E:\\Model_Runs')
 
-run_name ='OCR_IL_Status_Quo_S2_Erosional_Sink'
+run_name ='OCR_IL_Nourishment_S2_Erosional_Sink'
 
 output = np.load(run_name + ".npz", allow_pickle=True)
 cascade = output["cascade"]
