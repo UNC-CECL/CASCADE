@@ -19,8 +19,8 @@ for rname in rname_array:
 
     # Display stats on console/show plots
     migration_stats = False
-    plotters = False
-    geomoetry_stats = True
+    plotters = True
+    geomoetry_stats = False
     dune_crest_stats = False
     flux_stats = False
 
@@ -847,7 +847,7 @@ for rname in rname_array:
         ax1.plot(shoreline_pos_array_100[storm_num-1], linestyle=ls)
         ax1.plot(shoreline_pos_array_50[storm_num-1], linestyle=ls)
         ax1.plot(shoreline_pos_array_0[storm_num-1], linestyle=ls)
-        ax1.legend(["baseline", "100% outwash to shoreface", "50% outwash to shoreface", "0% outwash to shoreface"],
+        ax1.legend(["baseline", "100% washout to shoreface", "50% washout to shoreface", "0% washout to shoreface"],
                    prop={'size': 9}, loc="upper left")
         ax1.set_ylabel("Shoreline Position (m)")
         ax1.set_xlabel("Simulation Years")
@@ -869,7 +869,7 @@ for rname in rname_array:
         ax1.set_xlabel("Simulation Years")
         ax1.set_ylim(top=150)
         ax1.set_title(rname, weight="bold")
-        ax1.legend(["baseline", "100% outwash to shoreface", "50% outwash to shoreface", "0% outwash to shoreface"],
+        ax1.legend(["baseline", "100% washout to shoreface", "50% washout to shoreface", "0% washout to shoreface"],
                    prop={'size': 9}, loc="upper left")
 
         max_t_b3d = tmax_array_b3d[storm_num-1]
