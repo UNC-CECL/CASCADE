@@ -11,9 +11,9 @@ from cascade.tools.outwash_plotters import plot_ElevAnimation_CASCADE as plt_CAS
 from cascade.tools.outwash_plotters import plot_Elev_CASCADE_subplots as subplts_CASCADE
 
 elevation_plots_on = False
-dune_plots_on = True
+dune_plots_on = False
 animated_plotters_on = False
-CASCADE_elev_subplots_on = False
+CASCADE_elev_subplots_on = True
 
 rname_array = ["r025", "r035"]
 # rname_array = ["r035"]
@@ -238,6 +238,7 @@ for rname in rname_array:
 
         for iB3D in range(len(b3d)):
             sub_domain = b3d[iB3D]._DuneDomain[0:TMAX, :, :]
+            initial_gap_elev = np.min(sub_domain[0])
             DuneCrest.append(sub_domain.max(axis=2))
 
         DuneCrest = np.hstack(DuneCrest).astype(float)
@@ -247,6 +248,14 @@ for rname in rname_array:
         for row in range(np.shape(DuneCrest)[0]):
             if np.all(DuneCrest[row] == berm_el) == True:
                 DuneCrest[row] = -0.3
+
+        n_dune_gap_cells_array = np.zeros([np.shape(DuneCrest)[0],1])
+        # count the number of dune gap cells in each row (each row = a model year)
+        for year in range(np.shape(DuneCrest)[0]):
+            dune_gap_row = DuneCrest[year]
+            n_dune_gap_cells = len(dune_gap_row[dune_gap_row<=initial_gap_elev+berm_el])
+            n_dune_gap_cells_array[year] = n_dune_gap_cells
+        avg_dune_cells = np.average(n_dune_gap_cells_array)
 
         duneFig = plt.figure(figsize=(15, 10))
         duneFig.suptitle('{0}'.format(rname), weight="bold", fontsize=12)
@@ -289,6 +298,14 @@ for rname in rname_array:
             if np.all(DuneCrest[row] == berm_el) == True:
                 DuneCrest[row] = -0.3
 
+        n_dune_gap_cells_array = np.zeros([np.shape(DuneCrest)[0],1])
+        # count the number of dune gap cells in each row (each row = a model year)
+        for year in range(np.shape(DuneCrest)[0]):
+            dune_gap_row = DuneCrest[year]
+            n_dune_gap_cells = len(dune_gap_row[dune_gap_row<=initial_gap_elev+berm_el])
+            n_dune_gap_cells_array[year] = n_dune_gap_cells
+        avg_dune_cells = np.average(n_dune_gap_cells_array)
+
         plt.rcParams.update({"font.size": 12})
         ax = duneFig.add_subplot(222)
         cax = ax.matshow(
@@ -305,7 +322,7 @@ for rname in rname_array:
         cbar.set_label('Dune Elevation (m MHW)', rotation=270, labelpad=pad, fontsize=10)
         plt.xlabel("Alongshore Distance (m)")
         plt.ylabel("Year")
-        plt.title("100% outwash to shoreface", weight="bold")
+        plt.title("100% washout to shoreface", weight="bold")
         plt.xticks(x_ticks, x_tick_labels)
         plt.hlines([1, 21, 41, 61, 81], -0.5, 49.5, colors=line_color, linestyles='solid')
 
@@ -324,6 +341,14 @@ for rname in rname_array:
             if np.all(DuneCrest[row] == berm_el) == True:
                 DuneCrest[row] = -0.3
 
+        n_dune_gap_cells_array = np.zeros([np.shape(DuneCrest)[0],1])
+        # count the number of dune gap cells in each row (each row = a model year)
+        for year in range(np.shape(DuneCrest)[0]):
+            dune_gap_row = DuneCrest[year]
+            n_dune_gap_cells = len(dune_gap_row[dune_gap_row<=initial_gap_elev+berm_el])
+            n_dune_gap_cells_array[year] = n_dune_gap_cells
+        avg_dune_cells = np.average(n_dune_gap_cells_array)
+
         plt.rcParams.update({"font.size": 12})
         ax = duneFig.add_subplot(223)
         cax = ax.matshow(
@@ -340,7 +365,7 @@ for rname in rname_array:
         cbar.set_label('Dune Elevation (m MHW)', rotation=270, labelpad=pad, fontsize=10)
         plt.xlabel("Alongshore Distance (m)")
         plt.ylabel("Year")
-        plt.title("50% outwash to shoreface", weight="bold")
+        plt.title("50% washout to shoreface", weight="bold")
         plt.xticks(x_ticks, x_tick_labels)
         plt.hlines([1, 21, 41, 61, 81], -0.5, 49.5, colors=line_color, linestyles='solid')
 
@@ -355,9 +380,20 @@ for rname in rname_array:
         berm_el = b3d[0].BermEl  # dam
         DuneCrest = DuneCrest + berm_el
 
+        # this is for drowning only because the dune crest is initialized with all zeros, so the years that drown are
+        # all set to 0.0 (without berm) or berm elevation (with berm)
         for row in range(np.shape(DuneCrest)[0]):
             if np.all(DuneCrest[row] == berm_el) == True:
                 DuneCrest[row] = -0.3
+
+        n_dune_gap_cells_array = np.zeros([np.shape(DuneCrest)[0],1])
+        # count the number of dune gap cells in each row (each row = a model year)
+        for year in range(np.shape(DuneCrest)[0]):
+            dune_gap_row = DuneCrest[year]
+            n_dune_gap_cells = len(dune_gap_row[dune_gap_row<=initial_gap_elev+berm_el])
+            n_dune_gap_cells_array[year] = n_dune_gap_cells
+        avg_dune_cells = np.average(n_dune_gap_cells_array)
+        print("The average number of dune gap cells for the 0% scenario is: {0}".format(avg_dune_cells))
 
         plt.rcParams.update({"font.size": 12})
         ax = duneFig.add_subplot(224)
@@ -375,7 +411,7 @@ for rname in rname_array:
         cbar.set_label('Dune Elevation (m MHW)', rotation=270, labelpad=pad, fontsize=10)
         plt.xlabel("Alongshore Distance (m)")
         plt.ylabel("Year")
-        plt.title("0% outwash to shoreface", weight="bold")
+        plt.title("0% washout to shoreface", weight="bold")
         plt.xticks(x_ticks, x_tick_labels)
         if rname == "r025":
             plt.hlines([1, 21], -0.5, 49.5, colors=line_color, linestyles='solid')
@@ -505,7 +541,7 @@ for rname in rname_array:
             name="outwash100_outwash_yrs_yaxis0",
             TMAX_SIM=outwash100[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
-            main_plot_title="100% outwash to shoreface",
+            main_plot_title="100% washout to shoreface",
             ny=1,
             beach_management_ny=None,  # list of bool the length of ny, or None for all False
             roadway_management_ny=None,
@@ -526,7 +562,7 @@ for rname in rname_array:
             name="outwash50_outwash_yrs_yaxis0",
             TMAX_SIM=outwash50[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
-            main_plot_title="50% outwash to shoreface",
+            main_plot_title="50% washout to shoreface",
             ny=1,
             beach_management_ny=None,  # list of bool the length of ny, or None for all False
             roadway_management_ny=None,
@@ -547,7 +583,7 @@ for rname in rname_array:
             name="outwash0_outwash_yrs_yaxis0",
             TMAX_SIM=outwash0[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
-            main_plot_title="0% outwash to shoreface",
+            main_plot_title="0% washout to shoreface",
             ny=1,
             beach_management_ny=None,  # list of bool the length of ny, or None for all False
             roadway_management_ny=None,
