@@ -517,7 +517,7 @@ for rname in rname_array:
             cascade=b3d_obj,
             directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
             TMAX_MGMT=b3d[0].TMAX,
-            name="baseline_outwash_yrs_yaxis0",
+            name="baseline",
             TMAX_SIM=b3d[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
             main_plot_title="baseline",
@@ -538,7 +538,7 @@ for rname in rname_array:
             cascade=outwash100_obj,
             directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
             TMAX_MGMT=outwash100[0].TMAX,
-            name="outwash100_outwash_yrs_yaxis0",
+            name="outwash100",
             TMAX_SIM=outwash100[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
             main_plot_title="100% washout to shoreface",
@@ -559,7 +559,7 @@ for rname in rname_array:
             cascade=outwash50_obj,
             directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
             TMAX_MGMT=outwash50[0].TMAX,
-            name="outwash50_outwash_yrs_yaxis0",
+            name="outwash50",
             TMAX_SIM=outwash50[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
             main_plot_title="50% washout to shoreface",
@@ -580,7 +580,7 @@ for rname in rname_array:
             cascade=outwash0_obj,
             directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
             TMAX_MGMT=outwash0[0].TMAX,
-            name="outwash0_outwash_yrs_yaxis0",
+            name="outwash0",
             TMAX_SIM=outwash0[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
             main_plot_title="0% washout to shoreface",
