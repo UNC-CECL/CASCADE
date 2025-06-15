@@ -11,7 +11,7 @@ from cascade.cascade import Cascade
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
 
 # Set the number of years to simulate
-run_years = 100
+run_years = 103
 
 # Set the start year
 start_year = 2024
@@ -23,8 +23,8 @@ Total_B3D_Number = 69
 
 # Set scenario type
 preemptive_relocation = False
-status_quo = True
-nourishment = False
+status_quo = False
+nourishment = True
 
 if preemptive_relocation == True:
     Management_name = '_Preemptive_Relocation_'
@@ -59,7 +59,7 @@ else:
 Storms = 'Baseline'
 
 # RSLR Data
-RSLR_Type = 'IH'
+RSLR_Type = 'IL'
 
 if RSLR_Type == 'IL':
     RSLR_Data = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\RSLR\\Int_Low_SLR.npy')
@@ -110,7 +110,7 @@ road_setbacks = np.loadtxt(road_load_name,skiprows=1,delimiter=',')
 dune_offset = np.loadtxt(dune_load_name,skiprows=1,delimiter=',')
 dune_offset_c = copy.deepcopy(dune_offset)
 
-rebuild_elev_threshold = 0.01#,0.1,0.5,1.0,1.5,2.0,5]
+rebuild_elev_threshold = 1.75#,0.1,0.5,1.0,1.5,2.0,5]
 
 Dune_Rebuilding_Height = 3
 
@@ -128,7 +128,7 @@ if preemptive_relocation:
 
 # Define which B3D island models have
 road_cells = [False] * Total_B3D_Number
-if status_quo == True or preemptive_relocation == True:
+if status_quo == True or preemptive_relocation == True or nourishment == True:
     road_cells[15:54] = [True]*len(range(15,54))
 else:
     road_cells[15:35] = [True]*len(range(15,35))
@@ -225,7 +225,7 @@ def alongshore_connected(
     trigger_dune_knockdown=False,
     group_roadway_abandonment=None,
     sandbag_management_on = False,
-    sandbag_elevation = 2,
+    sandbag_elevation = 0.75,
     enable_shoreline_offset = False,
     shoreline_offset = [0],
     user_inputed_RSLR=False,
@@ -335,7 +335,9 @@ def alongshore_connected(
             cascade.rebuild_dune_now = tmp_rebuild_dune
 
     # --------- SAVE ---------
-    save_directory = "Run_Output/"
+    #save_directory = "Run_Output/"
+    save_directory = 'E:\\Model_Runs'
+
     cascade.save(save_directory)
     os.chdir("..")
 
@@ -371,7 +373,7 @@ def alongshore_uniform(run_name,
     background_erosion = background_erosion_list #list(background_erosion_list) # m/yr, background shoreline erosion
     rebuild_dune_threshold = 1  # m
     sandbag_management_on = sandbag_cells
-    sandbag_elevation = 2 # m
+    sandbag_elevation = 0.75 # m
 
     # baseline models for comparison -- all roadways ----------------------------------------
     roads_on = road_cells
