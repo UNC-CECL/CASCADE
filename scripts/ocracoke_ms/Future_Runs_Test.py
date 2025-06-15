@@ -15,9 +15,9 @@ os.chdir('E:\\Model_Runs')
 Save_Path = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Model Runs\\Summary_Values\\'
 
 #Management_Name = ['Status_Quo','Natural', 'Nourishment']
-Management_Name = ['Status_Quo']
-#RSLR_Rate = ['IL','I','IH']
-RSLR_Rate = ['I']
+Management_Name = ['Natural']
+RSLR_Rate = ['IL','I','IH']
+RSLR_Rate = ['IH']
 Sink_Name = ['Erosional_Sink','Accretional_Sink']
 #Sink_Name = ['Erosional_Sink']
 
@@ -43,12 +43,12 @@ def Process_Batch(Base_Name,
     # IL
     if Storm_Scenario == 'Baseline':
         for runs in range(0,100):
-            name_list.append(str(Base_Name)+'_S'+str(runs)+'_'+str(Sink_Name))
+            name_list.append(str(Base_Name)+'_S'+str(runs)+'_T_'+str(Sink_Name))
     else:
         for runs in range(0,100):
             name_list.append(str(Base_Name)+'_S'+str(runs)+'_10_'+str(Sink_Name))
 
-    nt_run = 126
+    nt_run = 100
     number_barrier3d_models = 70
     buffer_length = 15
     All_EP_Change = []
@@ -215,12 +215,12 @@ def Process_Batch(Base_Name,
 
     Export_DF = pd.DataFrame(Export_Values_Dict)
 
-    Full_Save_Path = Save_Path+Base_Name+'_'+Sink_Name+'_'+str(Storm_Scenario)+'.csv'
+    Full_Save_Path = Save_Path+Base_Name+'_T_'+Sink_Name+'_'+str(Storm_Scenario)+'.csv'
 
     Export_DF.to_csv(Full_Save_Path)
 
     # Save yearly data as .pkl
-    Full_Save_Path_PKL = Save_Path+Base_Name+'_'+Sink_Name+'_'+str(Storm_Scenario)+'.pkl'
+    Full_Save_Path_PKL = Save_Path+Base_Name+'_T_'+Sink_Name+'_'+str(Storm_Scenario)+'.pkl'
     #Full_Save_Path_Elev = Save_Path+Base_Name+'_'+Sink_Name+'_'+str(Storm_Scenario)+'_elev.pkl'
 
     All_Values_Data_Frame.to_pickle(Full_Save_Path_PKL)
