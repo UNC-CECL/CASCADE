@@ -8,8 +8,10 @@ from cascade.cascade import Cascade
 # ###############################################################################
 # Input Variables
 # ###############################################################################
-os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
-data_base_path = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\'
+#os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
+os.chdir('/Users/ceclmac/PycharmProjects/CASCADE')
+
+data_base_path = '/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/'
 # Specify variables to use in calling function
 # Dune height path name
 d_file = []
@@ -46,49 +48,43 @@ for runs in range(len(e_names)):
     e_file.append(copy.deepcopy(data_base_path+e_names[runs]))
 
 
-marsh_path_list = ["C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\BMFT_Marsh_Width_500.mat",
-                   "C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\BMFT_Marsh_Width_500.mat",
-                   "C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\BMFT_Marsh_Width_500.mat",
-                   "C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\Marsh_250.mat",
-                   "C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\BMFT_Marsh_Width_500.mat"]
+marsh_path_list = [data_base_path+"BMFT_Marsh_Width_500.mat",
+                   data_base_path+"BMFT_Marsh_Width_500.mat",
+                   data_base_path+"BMFT_Marsh_Width_500.mat",
+                   data_base_path+"Marsh_250.mat",
+                   data_base_path+"BMFT_Marsh_Width_500.mat"]
 marsh_width_list = [500,500,500,250,500]
 
-berm_elev_list = [1.27,
-                  1.17,
-                  1.14,
-                  0.87,
-                  0.87]
 
-'''berm_elev_list = [1.9,
-                  1.9,
-                  1.9,
-                  1.9,
-                  1.9]'''
+berm_elev_list = 1.03
 
 
 # Storm file path name
 c_wd = os.getcwd()
-nt_run = 23  # Number of years model will run
+nt_run = 125  # Number of years model will run
 run_name = []
 #storm_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\VCR_Storms_1994_2020.npy'
 
-storm_name = ['C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\VCR_Storms_Geom_1_1994_2020.npy',
-    'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\VCR_Storms_Geom_2_1994_2020.npy',
-    'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\VCR_Storms_Geom_3_1994_2020.npy',
-    'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\VCR_Storms_Geom_4_1994_2020.npy',
-    'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\VCR_Storms_Geom_5_1994_2020.npy'
-              ]
+#storm_name = data_base_path+'VCR_Storms_Combined_Time_1980_2006.npy'
+storm_name = data_base_path+'VCR_Storms_Combined_Time_1994_2020.npy'
+#storm_name = data_base_path+'VCR_Storms_Geom_1_2006_2020.npy'
 
-background_erosion_value = [x / 10.0 for x in range(0,-100,-5)]
+background_erosion_value = []
+
+load_path = '/Volumes/BF_Backup/Chapter_2_Runs'
 
 
-rmin = [0.2]
-rmax = [0.75]
+
+#rmin = [0.2]
+#rmax = [0.75]
+
+rmin = [0.05]
+rmax = [0.55]
 
 for geos in range(len(Base_Name_List)):
     temp_run_name = []
     for i in range(0,len(background_erosion_value)):
-        temp_run_name.append(copy.deepcopy(Base_Name_List[geos]+'_'+str(background_erosion_value[i])+'_DGR.45'))
+        temp_run_name.append(copy.deepcopy(Base_Name_List[geos]+'_'+str(background_erosion_value[i])+'_DGR.30_1994_2017_NS'))
     run_name.append(copy.deepcopy(temp_run_name))
 
 num_of_batches = 1
@@ -188,14 +184,14 @@ for j in range(len(run_name)):
         Batch_Runs(
             nt=nt_run,
             name=run_name[j][k],
-            storm_file=storm_name[j],
+            storm_file=storm_name,
             alongshore_section_count=number_barrier3d_models,
             num_cores=3,
-            rmin=rmin[k],
-            rmax=rmax[k],
+            rmin=rmin[0],
+            rmax=rmax[0],
             elevation_file=e_file[j],
             dune_file=d_file[j],
-            background_erosion=background_erosion_value[0],
+            background_erosion=background_erosion_value[k],
             sea_level_constant=True,  # not an array
             enable_shoreline_offset=False,
             marsh_dynamics=marsh_dynamics_on,
@@ -204,7 +200,9 @@ for j in range(len(run_name)):
             user_inputed_RSLR_rate=set_RSLR,
             marsh_path=marsh_path_list[j],
             marsh_width=marsh_width_list[j],
-            berm_elevation=berm_elev_list[j]
+            berm_elevation=berm_elev_list
         )
-        os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
-        print('Finished '+str(run_name[j][k]))
+        #os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
+        os.chdir('/Users/ceclmac/PycharmProjects/CASCADE')
+
+        print(' Finished '+str(run_name[j][k]))

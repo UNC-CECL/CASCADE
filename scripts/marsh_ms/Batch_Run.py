@@ -18,7 +18,7 @@ from cascade.cascade import Cascade
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE")
 # Specify variables to use in calling function
 # Dune height path name
-d_file = "/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Metompkin_Bay_Dune.npy"
+d_file = "/data/marsh_init_data/Old/Metompkin_Bay_Dune.npy"
 e_file = "/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Metompkin_Bay_Topo.npy"
 # Storm file path name
 #RSLR_File = '/data/marsh_init_data/Low_SLR.npy'
@@ -39,7 +39,7 @@ run_set_RSLR = True
 
 
 if run_set_RSLR == True:
-    set_RSLR = np.load('/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/Low_SLR.npy')
+    set_RSLR = np.load('/data/marsh_init_data/Old/Low_SLR.npy')
 else:
     set_RSLR = []
 

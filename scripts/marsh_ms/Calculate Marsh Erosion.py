@@ -5,7 +5,7 @@ import os
 # Set WD
 os.chdir("/Users/ceclmac/PycharmProjects/CASCADE/Run_output")
 
-Smith_Names = ['Smith_ACC_RSLR1_S1','Smith_ACC_RSLR2_S1','Smith_ACC_RSLR3_S1',
+'''Smith_Names = ['Smith_ACC_RSLR1_S1','Smith_ACC_RSLR2_S1','Smith_ACC_RSLR3_S1',
 'Smith_ACC_RSLR1_S2','Smith_ACC_RSLR2_S2','Smith_ACC_RSLR3_S2',
 'Smith_ACC_RSLR1_S3','Smith_ACC_RSLR2_S3','Smith_ACC_RSLR3_S3']
 
@@ -15,12 +15,19 @@ Wreck_Names = ['Wreck_ACC_RSLR1_S1', 'Wreck_ACC_RSLR2_S1', 'Wreck_ACC_RSLR3_S1',
 
 Metompkin_Marsh_Names = ['Metompkin_Marsh_ACC_RSLR1_S1', 'Metompkin_Marsh_ACC_RSLR2_S1', 'Metompkin_Marsh_ACC_RSLR3_S1',
                          'Metompkin_Marsh_ACC_RSLR1_S2', 'Metompkin_Marsh_ACC_RSLR2_S2', 'Metompkin_Marsh_ACC_RSLR3_S2',
-                         'Metompkin_Marsh_ACC_RSLR1_S3', 'Metompkin_Marsh_ACC_RSLR2_S3', 'Metompkin_Marsh_ACC_RSLR3_S3']
+                         'Metompkin_Marsh_ACC_RSLR1_S3', 'Metompkin_Marsh_ACC_RSLR2_S3', 'Metompkin_Marsh_ACC_RSLR3_S3']'''
+
+Metompkin_Marsh_Names = ['Geom_1_Calibrated_Hindcast_1980_2006_T2','Geom_1_Calibrated_Hindcast_2006_2020_T2']
+
+
+Smith_Names = ['Geom_5_Calibrated_Hindcast_1980_2006_T2','Geom_5_Calibrated_Hindcast_2006_2020_T2']
+
+Wreck_Names = ['Geom_4_Calibrated_Hindcast_1980_2006_T2','Geom_4_Calibrated_Hindcast_2006_2020_T2']
 
 All_Marsh_Erosion = []
 All_Marsh_Erosion_TS = []
 
-name_prefix =Wreck_Names
+name_prefix = Metompkin_Marsh_Names
 
 if name_prefix == Wreck_Names:
     barrier_width = 15
@@ -39,17 +46,17 @@ for i in range(len(name_prefix)):
     cascade = cascade[0]
     b3d = cascade.barrier3d
     ny = np.size(b3d)
-    barrierbmft = cascade._bmftc[2]
+    barrierbmft = cascade._bmft_coupler._bmftc[0]
 
-    marsh_edge_beginning = b3d[1].x_s_TS[1] + barrier_width
+    marsh_edge_beginning = b3d[0].x_s_TS[1] + barrier_width
     marsh_edge_end_TS = (barrierbmft.Marsh_edge[barrierbmft.startyear: barrierbmft.endyear] / 100) + b3d[0].x_s_TS[
         0] + barrier_width
     marsh_erosion_ts = []
-    for j in range(1, len(b3d[1].x_s_TS)):
-        if (b3d[1].x_s_TS[j] - marsh_edge_beginning) > 0 and (marsh_size > sum(marsh_erosion_ts)):
+    for j in range(1, len(b3d[0].x_s_TS)):
+        if (b3d[0].x_s_TS[j] - marsh_edge_beginning) > 0 and (marsh_size > sum(marsh_erosion_ts)):
         #if (b3d[1].x_s_TS[j] - marsh_edge_beginning) > 0 :
-            marsh_erosion = (b3d[1].x_s_TS[j] - marsh_edge_beginning)
-            marsh_edge_beginning = b3d[1].x_s_TS[j]
+            marsh_erosion = (b3d[0].x_s_TS[j] - marsh_edge_beginning)
+            marsh_edge_beginning = b3d[0].x_s_TS[j]
         else:
             marsh_erosion = 0
         marsh_erosion_ts.append(marsh_erosion)
