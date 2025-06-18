@@ -124,6 +124,7 @@ class Cascade:
         alongshore_transport_module=True,
         beach_nourishment_module=True,
         community_economics_module=False,
+        inlet_module=False,
         alongshore_section_count=6,
         time_step_count=200,
         wave_height=1,  # ---------- for BRIE and Barrier3D --------------- #
@@ -347,6 +348,8 @@ class Cascade:
             h_b_crit=(berm_elevation - MHW),
             ny=self._ny,
             nt=self._nt,
+            # NEW: Activate BRIE's inlet model if ANY segment has it enabled
+            inlet_model=any(self._inlet_module),
         )
 
         # initialize Barrier3D models (number set by brie_ny) and make both "brie"
@@ -385,6 +388,7 @@ class Cascade:
             overwash_to_dune=overwash_to_dune,
             roadway_management_module=roadway_management_module,
             beach_nourishment_module=beach_nourishment_module,
+            inlet_module=inlet_module,  # NEW
         )
 
         if self._community_economics_module:
