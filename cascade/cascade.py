@@ -3,6 +3,8 @@ import os
 import numpy as np
 from joblib import Parallel
 from joblib import delayed
+from typing import List
+from .barrier3d import Barrier3d
 
 from .beach_dune_manager import BeachDuneManager
 from .brie_coupler import BrieCoupler
@@ -574,18 +576,21 @@ class Cascade:
             delayed(batchB3D)(self._barrier3d[iB3D]) for iB3D in range(self._ny)
         )
 
+        #get the variables from barrier3d
         # reshape output from parallel processing and convert from tuple to list
-        x_t_dt, x_s_dt, h_b_dt, b3d = zip(*batch_output)
-        x_t_dt = list(x_t_dt)
-        x_s_dt = list(x_s_dt)
-        h_b_dt = list(h_b_dt)
-        self._barrier3d = list(b3d)
+
+        x_t_dt_b3d_m, x_s_dt_b3d_m, h_b_dt_b3d_m, drowned_barrier_b3d, b3d = zip(*batch_output)
+        x_t_dt_b3d_m = list(x_t_dt_b3d_m)
+        x_s_dt_b3d_m = list(x_s_dt_b3d_m)
+        h_b_dt_b3d_m = list(h_b_dt_b3d_m)
+        drowned_barrier_b3d = list(drowned_barrier_b3d)
+        self._barrier3d: List[Barrier3d] = list(b3d)
 
         # use brie to connect B3D models with AST; otherwise, just update
         # (erode/prograde) dune domain
         if self._alongshore_transport_module:
             self._brie_coupler.update_ast(
-                self._barrier3d, x_t_dt, x_s_dt, h_b_dt
+                self._barrier3d, x_t_dt_b3d_m, x_s_dt_b3d_m, h_b_dt_b3d_m
             )  # also updates dune domain
         else:
             for iB3D in range(self._ny):
