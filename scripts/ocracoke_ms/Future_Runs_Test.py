@@ -14,10 +14,10 @@ os.chdir('E:\\Model_Runs')
 
 Save_Path = 'C:\\Users\\frank\\OneDrive - University of North Carolina at Chapel Hill\\Chapter 3\\Model Runs\\Summary_Values\\'
 
-#Management_Name = ['Status_Quo','Natural', 'Nourishment']
+Management_Name = ['Status_Quo','Natural', 'Nourishment']
 Management_Name = ['Natural']
 RSLR_Rate = ['IL','I','IH']
-RSLR_Rate = ['IH']
+#RSLR_Rate = ['IL']
 Sink_Name = ['Erosional_Sink','Accretional_Sink']
 #Sink_Name = ['Erosional_Sink']
 
@@ -77,7 +77,7 @@ def Process_Batch(Base_Name,
     Island_Width_TS = []
 
 
-    for runs in range(len(name_list)):
+    for runs in range(40,len(name_list)):
         #for runs in range(0,2):
         Model_Run_Year,Drowning_Domain_Location, Cascade_List = Process_Data(run_name_batch = name_list, load_index = runs)
 
