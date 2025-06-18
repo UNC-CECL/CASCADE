@@ -31,6 +31,7 @@ class Cascade:
         overwash_to_dune,
         roadway_management_module,
         beach_nourishment_module,
+        inlet_module,
     ):
         """Configures lists to account for multiple Barrier3D domains from single
         input variables; used in modules
@@ -81,6 +82,11 @@ class Cascade:
         else:
             self._beach_nourishment_module = [beach_nourishment_module] * self._ny
 
+            # New block to handle the inlet_module parameter
+        if np.size(inlet_module) > 1:
+            self._inlet_module = inlet_module
+        else:
+            self._inlet_module = [inlet_module] * self._ny
         return
 
     def reset_dune_growth_rates(
@@ -309,7 +315,6 @@ class Cascade:
         self._trigger_dune_knockdown = trigger_dune_knockdown
         self._initial_beach_width = [0] * self._ny
         self._group_roadway_abandonment = group_roadway_abandonment
-
         # initialization errors
         if (
             berm_elevation != 1.9 or MHW != 0.46 or beta != 0.04
