@@ -29,7 +29,7 @@ if Base_Name == 'Geom_4':
 if Base_Name == 'Geom_5':
     Cascade_Offset = 160
 
-run_name = 'Geom_1_IL_Baseline_S20.npz' #'Geom_4_IL_10_S49_New_Sink.npz'
+run_name = 'Geom_1_IH_10_S1.npz' #'Geom_4_IL_10_S49_New_Sink.npz'
 #for geos in range(len(Base_Name_List)):
 #    temp_run_name = copy.deepcopy(Base_Name_List[geos]+'_Calibrated_Hindcast_2.npz')
 #    run_name.append(copy.deepcopy(temp_run_name))
@@ -63,7 +63,7 @@ All_Reletive_Shoreline = ((-Shoreline_location_TS+1624+90)+Forest_e[49])[0]
 
 
 # Start Year = [50]
-Start_Year = 50
+Start_Year = 49
 End_Year = Start_Year+125
 
 C_autoch = bmftc._organic_dep_autoch# Subtract eroded mass from depositional record
@@ -73,8 +73,10 @@ Total_Annual_C_Change = np.sum((C_alloch,C_autoch),axis=0)
 
 for years in range(Start_Year,End_Year):
     temp_sum = np.sum(Total_Annual_C_Change[Start_Year:years],axis=0)
-    marsh_accumulation = temp_sum[int(Marsh_e[years]):int(Forest_e[years])]
-    new_C_deposition_plus_C0 = np.sum((temp_sum,Initial_Transect_C_Value),axis=0)
+    marsh_accumulation = temp_sum[int(Marsh_e[years]):]
+    temp_total_marsh_C_Change = np.zeros(len(temp_sum))
+    temp_total_marsh_C_Change[int(Marsh_e[years]):] = marsh_accumulation
+    new_C_deposition_plus_C0 = np.sum((temp_total_marsh_C_Change,Initial_Transect_C_Value),axis=0)
     new_C_deposition_plus_C0[new_C_deposition_plus_C0 < 0] = 0
     Total_C_Deposited_TS.append(copy.deepcopy(new_C_deposition_plus_C0))
 
@@ -87,14 +89,20 @@ plt.plot(Total_C_Deposited_TS[74][0:], alpha=0.8)
 plt.plot(Total_C_Deposited_TS[99][0:], alpha=0.8)
 plt.plot(Total_C_Deposited_TS[124][0:],alpha=0.8)
 
-plt.axvline(x=All_Reletive_Shoreline[0])
-plt.axvline(x=All_Reletive_Shoreline[24])
-plt.axvline(x=All_Reletive_Shoreline[49])
-plt.axvline(x=All_Reletive_Shoreline[74])
-plt.axvline(x=All_Reletive_Shoreline[99])
-plt.axvline(x=All_Reletive_Shoreline[124])
+# plt.axvline(x=All_Reletive_Shoreline[0])
+# plt.axvline(x=Marsh_e[49])
+# #plt.axvline(x=All_Reletive_Shoreline[24])
+# plt.axvline(x=Marsh_e[74])
+# #plt.axvline(x=All_Reletive_Shoreline[49])
+# plt.axvline(x=Marsh_e[99])
+# plt.axvline(x=All_Reletive_Shoreline[74])
+# #plt.axvline(x=Marsh_e[124])
+# plt.axvline(x=All_Reletive_Shoreline[99])
+# #plt.axvline(x=Marsh_e[144],color = 'grey')
+# plt.axvline(x=All_Reletive_Shoreline[124])
+# #plt.axvline(x=Marsh_e[172],color='black')
 
-plt.xlim(3000,7000)
+plt.xlim(4500,7500)
 #plt.ylim(0,3000)
 plt.show()
 

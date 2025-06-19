@@ -20,8 +20,8 @@ Storm_List = ['Baseline',
               '5',
               '10']
 
-RSLR = [#'IL',
-        #'I',
+RSLR = ['IL',
+        'I',#,
         'IH']
 
 Base_Name_List = ['Geom_1',
@@ -29,13 +29,13 @@ Base_Name_List = ['Geom_1',
                   'Geom_4',
                   'Geom_5']
 
-Base_Name_List = ['Geom_3']
+#Base_Name_List = ['Geom_1']
 
 for Geometries in range(len(Base_Name_List)):
     Base_Name = Base_Name_List[Geometries]
 
     if Base_Name == 'Geom_1':
-        Cascade_Offset = 90
+        Cascade_Offset = 110
     if Base_Name == 'Geom_3':
         Cascade_Offset = 490
     if Base_Name == 'Geom_4':
@@ -93,9 +93,16 @@ for Geometries in range(len(Base_Name_List)):
                 Total_Annual_C_Change = np.sum((C_alloch,C_autoch),axis=0)
 
                 for years in range(Start_Year,End_Year):
-                    temp_sum = np.sum(Total_Annual_C_Change[Start_Year:years],axis=0)
-                    marsh_accumulation = temp_sum[int(Marsh_e[years]):int(Forest_e[years])]
-                    new_C_deposition_plus_C0 = np.sum((temp_sum,Initial_Transect_C_Value),axis=0)
+                    # temp_sum = np.sum(Total_Annual_C_Change[Start_Year:years],axis=0)
+                    # marsh_accumulation = temp_sum[int(Marsh_e[years]):int(Forest_e[years])]
+                    # new_C_deposition_plus_C0 = np.sum((temp_sum,Initial_Transect_C_Value),axis=0)
+                    # new_C_deposition_plus_C0[new_C_deposition_plus_C0 < 0] = 0
+                    # Total_C_Deposited_TS.append(copy.deepcopy(new_C_deposition_plus_C0))
+                    temp_sum = np.sum(Total_Annual_C_Change[Start_Year:years], axis=0)
+                    marsh_accumulation = temp_sum[int(Marsh_e[years]):]
+                    temp_total_marsh_C_Change = np.zeros(len(temp_sum))
+                    temp_total_marsh_C_Change[int(Marsh_e[years]):] = marsh_accumulation
+                    new_C_deposition_plus_C0 = np.sum((temp_total_marsh_C_Change, Initial_Transect_C_Value), axis=0)
                     new_C_deposition_plus_C0[new_C_deposition_plus_C0 < 0] = 0
                     Total_C_Deposited_TS.append(copy.deepcopy(new_C_deposition_plus_C0))
 
@@ -108,9 +115,9 @@ for Geometries in range(len(Base_Name_List)):
 
             Full_Save_Path = Base_Save_Path+Save_Name
             # Save each of the arrays including mean and full values
-            np.save(Full_Save_Path+'_Mean_C_Added.npy',Mean_C_Values)
-            np.save(Full_Save_Path+'_Mean_Shoreline_Location.npy',Mean_Shoreline_Location)
-            np.save(Full_Save_Path+'_All_Shoreline_Location.npy',All_Runs_Shoreline_Location)
-            np.save(Full_Save_Path+'_All_C_Added.npy',All_C_Values)
+            np.save(Full_Save_Path+'_Mean_C_Added_Marsh.npy',Mean_C_Values)
+            np.save(Full_Save_Path+'_Mean_Shoreline_Location_Marsh.npy',Mean_Shoreline_Location)
+            np.save(Full_Save_Path+'_All_Shoreline_Location_Marsh.npy',All_Runs_Shoreline_Location)
+            np.save(Full_Save_Path+'_All_C_Added_Marsh.npy',All_C_Values)
 
             x = 20
