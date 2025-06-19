@@ -80,7 +80,7 @@ for Geometries in range(len(Base_Name_List)):
                 #Bmftc._BayOM[yr]
 
                 Shoreline_location_TS = cascade.brie.x_s_save
-                All_Reletive_Shoreline = ((-Shoreline_location_TS+1624+90)+Forest_e[49])[0]
+                All_Reletive_Shoreline = ((-Shoreline_location_TS+1624+Cascade_Offset)+Forest_e[49])[0]
 
 
                 # Start Year = [50]
