@@ -23,7 +23,7 @@ Total_B3D_Number = 69
 
 # Set scenario type
 preemptive_relocation = False
-status_quo = False
+status_quo = True
 nourishment = False
 
 if preemptive_relocation == True:
@@ -59,7 +59,7 @@ else:
 Storms = 'Baseline'
 
 # RSLR Data
-RSLR_Type = 'I'
+RSLR_Type = 'IH'
 
 if RSLR_Type == 'IL':
     RSLR_Data = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\RSLR\\Int_Low_SLR.npy')
@@ -79,7 +79,7 @@ dune_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_ini
 
 Sink_Options = ['Accretional_Sink','Erosional_Sink']
 
-start_num = 1
+start_num = 21
 end_num = 100
 
 run_name = []
