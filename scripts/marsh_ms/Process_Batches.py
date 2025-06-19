@@ -20,8 +20,8 @@ Storm_List = ['Baseline',
               '5',
               '10']
 
-RSLR = ['IL',
-        'I',
+RSLR = [#'IL',
+        #'I',
         'IH']
 
 Base_Name_List = ['Geom_1',
@@ -29,7 +29,7 @@ Base_Name_List = ['Geom_1',
                   'Geom_4',
                   'Geom_5']
 
-Base_Name_List = ['Geom_4']
+Base_Name_List = ['Geom_3']
 
 for Geometries in range(len(Base_Name_List)):
     Base_Name = Base_Name_List[Geometries]
@@ -103,8 +103,8 @@ for Geometries in range(len(Base_Name_List)):
                 All_C_Values.append(copy.deepcopy(Total_C_Deposited_TS))
                 print(Save_Name+'_S'+str(S_Nums)+' loaded')
 
-            Mean_Shoreline_Location = np.mean(All_Runs_Shoreline_Location, axis=0)
-            Mean_C_Values = np.mean(All_C_Values, axis=0)
+            Mean_Shoreline_Location = np.nanmean(All_Runs_Shoreline_Location, axis=0)
+            Mean_C_Values = np.nanmean(All_C_Values, axis=0)
 
             Full_Save_Path = Base_Save_Path+Save_Name
             # Save each of the arrays including mean and full values
