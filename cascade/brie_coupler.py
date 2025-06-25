@@ -58,8 +58,9 @@ def batchB3D(subB3D):
     sub_x_t_dt = (subB3D.x_t_TS[-1] - subB3D.x_t_TS[-2]) * 10
     sub_x_s_dt = (subB3D.x_s_TS[-1] - subB3D.x_s_TS[-2]) * 10
     sub_h_b_dt = (subB3D.h_b_TS[-1] - subB3D.h_b_TS[-2]) * 10
+    drowned_barrier_dt = subB3D.drown_break == 1
 
-    return sub_x_t_dt, sub_x_s_dt, sub_h_b_dt, subB3D
+    return sub_x_t_dt, sub_x_s_dt, sub_h_b_dt, subB3D, drowned_barrier_dt
 
 
 def initialize_equal(
@@ -312,7 +313,7 @@ class BrieCoupler:
             save_spacing=dtsave,
         )  # initialize class
 
-    def update_ast(self, barrier3d, x_t_dt, x_s_dt, h_b_dt):
+    def update(self, barrier3d, x_t_dt, x_s_dt, h_b_dt, inlet_idx=None):
         """Pass shoreline and shoreface values from B3D subdomains to brie for use
         in second time step
 
@@ -334,7 +335,7 @@ class BrieCoupler:
         self._brie.h_b_dt = h_b_dt
 
         # update brie one time step (this is time_index = 2 at start of loop)
-        self._brie.update()
+        self._brie.update(inlet_idx)
 
         for iB3D in range(self._brie.ny):
             # pass shoreline position back to B3D from Brie (convert from m to dam)
