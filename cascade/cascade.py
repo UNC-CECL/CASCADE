@@ -563,10 +563,16 @@ class Cascade:
     def update(self):
         """Update cascade by a single time step"""
 
-        # check for drowning from the last time step in brie. Note that this will
-        # stay false if brie is not used for AST
-        if self._brie_coupler._brie.drown:
-            return
+        #*** RS: -- we no longer use this condition and instead we use barrier3d drowning conditions, so I commented it out****
+        ## check for drowning from the last time step in brie. Note that this will
+        ## stay false if brie is not used for AST
+        # if self._brie_coupler._brie.drown:
+        #     return
+        #********************
+        # if all domain are drowned, stop the model
+        if self._barrier3d[0].time_index > 1:
+            if all(model.drown_break for model in self._barrier3d):
+                return
 
         # advance B3D by one time step (B3D initializes at time_index = 1 and then
         # updates the time_index after update_dune_domain). Set n_jobs=1 for no
@@ -586,18 +592,37 @@ class Cascade:
         drowned_barrier_b3d = list(drowned_barrier_b3d)
         self._barrier3d: List[Barrier3d] = list(b3d)
 
+        # Pass drowned barrier info from B3D to BRIE
+        if any(self._inlet_module):
+            drowned_barriers = [
+                iB3D
+                for iB3D, drowned in enumerate(drowned_barrier_b3d)
+                if drowned == 1 and self._inlet_module[iB3D]
+            ]
+            if any(drowned_barriers):
+                self._brie_coupler.brie._inlet_idx.extend(drowned_barriers) #add the drowned barrier index to the list
+                self._brie_coupler.brie.h_b[drowned_barriers] = 0 #make the barrier height zero after drowning
+                # NEW: Record the time and location of new inlets
+
+
+
         # use brie to connect B3D models with AST; otherwise, just update
         # (erode/prograde) dune domain
         if self._alongshore_transport_module:
-            self._brie_coupler.update_ast(
+            self._brie_coupler.update(
                 self._barrier3d, x_t_dt_b3d_m, x_s_dt_b3d_m, h_b_dt_b3d_m
             )  # also updates dune domain
         else:
             for iB3D in range(self._ny):
+                self._barrier3d[iB3D].x_s_TS[-1] += x_s_dt_b3d_m[iB3D]
+                self._barrier3d[iB3D].x_t_TS[-1] += x_t_dt_b3d_m[iB3D]
                 self._barrier3d[iB3D].update_dune_domain()
 
         # check also for width/height drowning in B3D (would occur in
         # update_dune_domain)
+        #below code is useful: you can easily check cascade.b3d_break to see if any barrier drowned
+        # at any point during the simulation, without having to go back and check the
+        # status of every single Barrier3D model at every single time step.
         for iB3D in range(self._ny):
             if self._barrier3d[iB3D].drown_break == 1:
                 self._b3d_break = 1
