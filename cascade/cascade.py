@@ -126,7 +126,7 @@ class Cascade:
         alongshore_transport_module=True,
         beach_nourishment_module=True,
         community_economics_module=False,
-        inlet_module=False,
+        inlet_module= True, #RS: False to True
         alongshore_section_count=6,
         time_step_count=200,
         wave_height=1,  # ---------- for BRIE and Barrier3D --------------- #
@@ -610,12 +610,10 @@ class Cascade:
         # (erode/prograde) dune domain
         if self._alongshore_transport_module:
             self._brie_coupler.update(
-                self._barrier3d, x_t_dt_b3d_m, x_s_dt_b3d_m, h_b_dt_b3d_m
+                self._barrier3d, x_t_dt_b3d_m, x_s_dt_b3d_m, h_b_dt_b3d_m, drowned_barriers
             )  # also updates dune domain
         else:
             for iB3D in range(self._ny):
-                self._barrier3d[iB3D].x_s_TS[-1] += x_s_dt_b3d_m[iB3D]
-                self._barrier3d[iB3D].x_t_TS[-1] += x_t_dt_b3d_m[iB3D]
                 self._barrier3d[iB3D].update_dune_domain()
 
         # check also for width/height drowning in B3D (would occur in
