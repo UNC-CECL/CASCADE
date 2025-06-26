@@ -603,9 +603,7 @@ class Cascade:
                 self._brie_coupler.brie._inlet_idx.extend(drowned_barriers) #add the drowned barrier index to the list
                 self._brie_coupler.brie.h_b[drowned_barriers] = 0 #make the barrier height zero after drowning
                 # NEW: Record the time and location of new inlets
-
-
-
+                #in progress
         # use brie to connect B3D models with AST; otherwise, just update
         # (erode/prograde) dune domain
         if self._alongshore_transport_module:
@@ -624,7 +622,7 @@ class Cascade:
         for iB3D in range(self._ny):
             if self._barrier3d[iB3D].drown_break == 1:
                 self._b3d_break = 1
-                return
+                #return #remove "return" to avoid stopping the simulation after drowning a model
 
         ###############################################################################
         # human dynamics modules
