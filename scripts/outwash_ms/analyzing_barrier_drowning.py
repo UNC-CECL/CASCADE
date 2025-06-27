@@ -628,6 +628,10 @@ for rname in rname_array:
 
     if plotters:
         storm_num = 1
+        if rname == "r025":
+            title = "r = 0.25"
+        else:
+            title = "r = 0.35"
         # # histogram of years that the barriers drown (three outwash scenarios only, each on separate plot)
         # plt.rcParams.update({"font.size": 12})
         # # bins = 100
@@ -852,7 +856,7 @@ for rname in rname_array:
         ax1.set_ylabel("Shoreline Position (m)")
         ax1.set_xlabel("Simulation Years")
         ax1.set_ylim(bottom=-60, top=160)
-        ax1.set_title('{0}'.format(rname), weight="bold")
+        ax1.set_title(title, weight="bold")
         fig9.subplots_adjust(hspace=0.3)
 
         # plotting one year of overwash and outwash flux
@@ -865,10 +869,10 @@ for rname in rname_array:
         ax1.plot(overwash_array_100[storm_num-1], linestyle=ls)
         ax1.plot(overwash_array_50[storm_num-1], linestyle=ls)
         ax1.plot(overwash_array_0[storm_num-1], linestyle=ls)
-        ax1.set_ylabel("Overwash Flux (m3/m)")
+        ax1.set_ylabel("Overwash Flux (m$^3$/m)")
         ax1.set_xlabel("Simulation Years")
         ax1.set_ylim(top=150)
-        ax1.set_title(rname, weight="bold")
+        ax1.set_title(title, weight="bold")
         ax1.legend(["baseline", "100% washout to shoreface", "50% washout to shoreface", "0% washout to shoreface"],
                    prop={'size': 9}, loc="upper left")
 
