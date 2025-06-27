@@ -1209,6 +1209,7 @@ class Outwasher:
         self._initial_full_domain = []
         self._full_dunes = []
         self._full_domain = []
+        self._full_domain_TS = np.zeros(time_step_count, dtype=object)
         self._Qs_shoreface = np.zeros(time_step_count)  # dam^3
         self._Qs_shoreface_per_length = np.zeros(time_step_count)  # dam^3/dam
         self._elevation_change = np.zeros(time_step_count, dtype=object)
@@ -1347,6 +1348,7 @@ class Outwasher:
 
             # domain variables we want to save
             self._full_domain = Elevation[-1]
+            self._full_domain_TS[self._time_index - 1] = Elevation[-1]
             post_outwash_interior_domain = Elevation[-1, 0:int_width, :]
             post_outwash_dune_domain = Elevation[-1, int_width:int_width + n_dune_rows, :] - self._berm_el
             post_outwash_beach_domain = Elevation[-1, int_width + n_dune_rows:, :]
