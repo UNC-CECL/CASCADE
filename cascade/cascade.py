@@ -126,7 +126,7 @@ class Cascade:
         alongshore_transport_module=True,
         beach_nourishment_module=True,
         community_economics_module=False,
-        inlet_module= True, #RS: False to True
+        inlet_module= False, #False, if any inlet exist ---> do the process
         alongshore_section_count=6,
         time_step_count=200,
         wave_height=1,  # ---------- for BRIE and Barrier3D --------------- #
