@@ -228,6 +228,7 @@ class BrieCoupler:
         h_b_crit=1.44,
         ny=1,
         nt=200,
+        inlet_model=False,
     ):
         """
 
@@ -292,7 +293,7 @@ class BrieCoupler:
             name=name,
             ast_model=brie_ast_model,
             barrier_model=brie_barrier_model,
-            inlet_model=brie_inlet_model,
+            inlet_model=inlet_model, #new
             b3d=b3d_barrier_model,
             wave_height=wave_height,
             wave_period=wave_period,
@@ -313,7 +314,7 @@ class BrieCoupler:
             save_spacing=dtsave,
         )  # initialize class
 
-    def update(self, barrier3d, x_t_dt, x_s_dt, h_b_dt, inlet_idx=None):
+    def update(self, barrier3d, x_t_dt, x_s_dt, h_b_dt):
         """Pass shoreline and shoreface values from B3D subdomains to brie for use
         in second time step
 
@@ -335,7 +336,7 @@ class BrieCoupler:
         self._brie.h_b_dt = h_b_dt
 
         # update brie one time step (this is time_index = 2 at start of loop)
-        self._brie.update(inlet_idx)
+        self._brie.update()
 
         for iB3D in range(self._brie.ny):
             # pass shoreline position back to B3D from Brie (convert from m to dam)

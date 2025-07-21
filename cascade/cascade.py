@@ -600,7 +600,7 @@ class Cascade:
                 if drowned == 1 and self._inlet_module[iB3D]
             ]
             if any(drowned_barriers):
-                self._brie_coupler.brie._inlet_idx.extend(drowned_barriers) #add the drowned barrier index to the list
+                self._brie_coupler.brie._inlets._inlet_idx.extend(drowned_barriers) #add the drowned barrier index to the list
                 self._brie_coupler.brie.h_b[drowned_barriers] = 0 #make the barrier height zero after drowning
                 # NEW: Record the time and location of new inlets
                 #in progress
@@ -608,7 +608,7 @@ class Cascade:
         # (erode/prograde) dune domain
         if self._alongshore_transport_module:
             self._brie_coupler.update(
-                self._barrier3d, x_t_dt_b3d_m, x_s_dt_b3d_m, h_b_dt_b3d_m, drowned_barriers
+                self._barrier3d, x_t_dt_b3d_m, x_s_dt_b3d_m, h_b_dt_b3d_m
             )  # also updates dune domain
         else:
             for iB3D in range(self._ny):
