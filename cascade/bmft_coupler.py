@@ -89,11 +89,12 @@ class BMFTCoupler:
                     name="back-barrier",
                     time_step_count=self._nt+200, # might need to increase
                     relative_sea_level_rise= barrier3d[iB3D].RSLR[1] * 10000,
+                    RSLR_List = barrier3d[iB3D].RSLR[1:] *10000,
                     reference_concentration=60,
                     slope_upland=0.005,
                     bay_fetch_initial=5000,
                     forest_width_initial_fixed=False,
-                    forest_width_initial=5000,  # 5000 accomodates 250 yrs at R=15 and S=0.001
+                    forest_width_initial=8000,  # 5000 accomodates 250 yrs at R=15 and S=0.001
                     wind_speed=6,
                     forest_on=False,
                     filename_equilbaydepth="C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\marsh_init_data\\Equilibrium Bay Depth.mat",
@@ -247,6 +248,12 @@ class BMFTCoupler:
                 self._bmftc[iB3D].startyear + bmft_time_step,
                 self._bmftc[iB3D].x_m : self._bmftc[iB3D].x_f+1,
             ]  # Marsh elevation from PyBMFT-C
+            c = self._bmftc[iB3D].elevation[self._bmftc[iB3D].startyear + bmft_time_step]
+            # plt.plot(c)
+            # plt.xlim(4500,7000)
+            # plt.ylim(0,4.5)
+            # plt.show()
+            # z = 20
             if len(marsh_transect) >= 1:
                 len_marsh_transect = 10 * (
                     (len(marsh_transect) + 5) // 10
@@ -305,7 +312,6 @@ class BMFTCoupler:
             addRows = (
                 Target_width_barriermarsh - StartDomainWidth + 1
             )  # Number of rows to add (if positive) or subtract (if negative) from Barrier3D domain
-
             if addRows > 0:
                 # Update interior domain size
                 Marsh_Addition = (
@@ -384,7 +390,6 @@ class BMFTCoupler:
                         MarshTransect = np.append(marsh_transect, add)  # [dam]
                     else:
                         MarshTransect = marsh_transect  # [dam]
-
                     InteriorTransect = self.NewDomain[: InteriorWidth[w], w]  # [dam]
 
                     BarrierMarshTransect = np.append(
@@ -400,6 +405,12 @@ class BMFTCoupler:
 
             barrier3d[iB3D].InteriorDomain = self.NewDomain
             self._b3d_elev_after_PyBMFT_TS.append(barrier3d[iB3D].InteriorDomain)
+
+            # Test that topo was correctly replaced
+            # Old_Topo = barrier3d[iB3D].DomainTS[0]
+            # New_Topo = barrier3d[iB3D].InteriorDomain[:Old_Topo.shape[0],]
+            # Dif_Test = np.subtract(Old_Topo,New_Topo)
+
     def update_Marsh(self, ny, time_step, barrier3d):
         bmft_time_step = time_step - 2
         b3d_time_index = time_step
@@ -416,6 +427,9 @@ class BMFTCoupler:
             )
 
             end_b3d = np.mean(barrier3d[iB3D].InteriorDomain, axis=1) * 10
+            # plt.plot(start_b3d,color='red')
+            # plt.plot(end_b3d,color='blue')
+            # plt.show()
 
             # Update start domain size to match end domain
             sc_b3d = int(
@@ -441,6 +455,12 @@ class BMFTCoupler:
 
             # Calculate change in elevation from Barrier3D update
 
+            # plt.plot(start_b3d,color='black',alpha = 0.5,label='pre update',linestyle='dashed')
+            # plt.plot(end_b3d,color='blue',alpha = 0.5,label='post update')
+            # plt.legend()
+            # plt.ylim(-0.25,1.95)
+            # plt.show()
+
             end_b3d = end_b3d + (barrier3d[iB3D].RSLR[barrier3d[iB3D].time_index-1] * 10)  # Offset sea-level rise from Barrier3D so that it isn't counted twice (i.e. RSLR already taken into account in PyBMFT-C)
             elevation_change_b3d = (
                 end_b3d - start_b3d
@@ -462,6 +482,7 @@ class BMFTCoupler:
             )  # [m] Offset of barrier shoreline and B
 
             # Incorporate elevation change from Barrier3D into back-barrier instance of PyBMFT-C
+            c = 20
             if int(math.floor(self._x_s_offset[iB3D])) < 0:
                 elevation_change_b3d = np.flip(
                     elevation_change_b3d[off:]
@@ -477,7 +498,7 @@ class BMFTCoupler:
                     -len(elevation_change_b3d[x_m_change:]) :,
                 ] += elevation_change_b3d[
                     x_m_change:
-                ]
+                ] ####
 
                 '''Replace PyBMFT topography'''
                 # Replace subaerial elevation with elev from PyBMFT
@@ -506,6 +527,7 @@ class BMFTCoupler:
                     self._bmftc[iB3D].startyear + bmft_time_step, self._bmftc[iB3D].x_f:
                     ]
                 )
+                c = 20
                 if len(b3d_transect) > BB_forest_len:
                     subtract = len(b3d_transect) - BB_forest_len
                     b3d_transect = b3d_transect[:-subtract]
@@ -588,7 +610,7 @@ class BMFTCoupler:
                 x_m_change = abs(
                     math.floor(len(elevation_change_b3d) - (marsh_barrier_width - off))
                 )  # Location of marsh edge within elevation_change_b3d
-
+                c = 20
                 # Add subaerial elevation change
                 self._bmftc[iB3D].elevation[
                     self._bmftc[iB3D].startyear + bmft_time_step,
@@ -636,6 +658,7 @@ class BMFTCoupler:
                     b3d_transect = np.append(b3d_transect, add)
 
                 # Replace subaerial elevation in PyBMFT-C with Barrier3D barrier elevation
+                c = 20
                 self._bmftc[iB3D].elevation[
                 self._bmftc[iB3D].startyear + bmft_time_step, self._bmftc[iB3D].x_f:
                 ] = b3d_transect  # Replace!
@@ -675,6 +698,7 @@ class BMFTCoupler:
                 progradation_actual = (
                     sum_marsh_dep / new_marsh_height
                 )  # [m] Amount of marsh progradation, in which all overwash dep in bay fills first bay cell, then second, and so on until no more sediment. Assumes overwash is not spread out over bay.
+                c = 20
                 progradation = int(
                     max(math.floor(progradation_actual[iB3D]), 0)
                 )  # Round to nearest FULL meter

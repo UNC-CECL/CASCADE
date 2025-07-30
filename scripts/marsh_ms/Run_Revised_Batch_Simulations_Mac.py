@@ -5,113 +5,6 @@ import numpy as np
 import os
 from cascade.cascade import Cascade
 
-# ###############################################################################
-# Input Variables
-# ###############################################################################
-os.chdir('/Users/ceclmac/PycharmProjects/CASCADE')
-
-storm_intensity = '10%'
-RSLR_Rate = 'IL'
-
-data_base_path = '/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/'
-# Specify variables to use in calling function
-# Dune height path name
-d_file = []
-e_file = []
-
-e_names = ['Metompkin_Marsh_Topo.npy',
-           'Metompkin_Bay_Topo.npy',
-           'Hog_Topo.npy',
-           'Wreck_Topo.npy',
-           'Smith_Topo.npy']
-
-d_names = ['Metompkin_Marsh_Dune.npy',
-           'Metompkin_Bay_Dune.npy',
-           'Hog_Dune.npy',
-           'Wreck_Dune.npy',
-           'Smith_Dune.npy']
-
-d_names = [
-    'GEOM_1_Dunes.npy',
-    'GEOM_2_Dunes.npy',
-    'GEOM_3_Dunes.npy',
-    'GEOM_4_Dunes.npy',
-    'GEOM_5_Dunes.npy'
-           ]
-
-Base_Name_List = ['Geom_1',
-                  'Geom_2',
-                  'Geom_3',
-                  'Geom_4',
-                  'Geom_5']
-
-for runs in range(len(e_names)):
-    d_file.append(copy.deepcopy(data_base_path+d_names[runs]))
-    e_file.append(copy.deepcopy(data_base_path+e_names[runs]))
-
-
-marsh_path_list = [data_base_path+"BMFT_Marsh_Width_1500.mat",
-                   data_base_path+"BMFT_Marsh_Width_500.mat",
-                   data_base_path+"BMFT_Marsh_Width_500.mat",
-                   data_base_path+"Marsh_250.mat",
-                   data_base_path+"BMFT_Marsh_Width_500.mat"]
-marsh_width_list = [1500,500,500,250,500]
-
-
-berm_elev_list = 1.03
-
-# RSLR Data
-if RSLR_Rate == 'IL':
-    RSLR_Data = np.load(data_base_path+'Updated_2025_IL_SLR.npy')
-elif RSLR_Rate == 'I':
-    RSLR_Data = np.load(data_base_path+'Updated_2025_Int_SLR.npy')
-elif RSLR_Rate == 'IH':
-    RSLR_Data = np.load(data_base_path+'Updated_2025_High_SLR.npy')
-
-
-# Storm file path name
-c_wd = os.getcwd()
-nt_run = 125  # Number of years model will run
-storm_name = []
-
-if storm_intensity == 'Baseline':
-    for k in range(50,100):
-        storm_name.append(copy.deepcopy(data_base_path+'Baseline/StormList_'+str(k)+'_baseline_RSD.npy'))
-    #storm_name[32] = copy.deepcopy(data_base_path + 'Baseline/StormList_32_baseline_N.npy')
-    storm_add = '_Baseline'
-elif storm_intensity == '5%':
-    for k in range(0,50):
-        storm_name.append(copy.deepcopy(data_base_path+'Five_Percent_Increase/StormList_'+str(k)+'_5_percent_increase_RSD.npy'))
-    storm_add = '_5'
-
-elif storm_intensity == '10%':
-    for k in range(0,50):
-        storm_name.append(copy.deepcopy(data_base_path+'Ten_Percent_Increase/StormList_'+str(k)+'_10_percent_increase_RSD.npy'))
-    storm_add = '_10'
-
-background_erosion_value = [-9.1, -0.75, -5.2, -2.6, -3.25]
-
-rmin = [0.05]
-rmax = [0.55]
-
-run_name = []
-
-for geos in range(len(Base_Name_List)):
-    temp_run_name = []
-    for i in range(0,len(storm_name)):
-        temp_run_name.append(copy.deepcopy(Base_Name_List[geos]+'_'+str(RSLR_Rate)+str(storm_add)+'_S'+str(i)+'_New_Sink'))
-    run_name.append(copy.deepcopy(temp_run_name))
-
-num_of_batches = 1
-marsh_dynamics_on = [True,False,True,True,True]
-run_set_RSLR = True
-
-# Name storms
-set_RSLR = RSLR_Data
-number_barrier3d_models = 1
-
-
-# Define function
 def Batch_Runs(
     nt,
     name,
@@ -190,31 +83,141 @@ def Batch_Runs(
 
     return cascade
 
-# Call a batch of functions
-for j in range(3,4):#len(run_name)):
-    for k in range(0,50):#len(storm_name)):
-        Batch_Runs(
-            nt=nt_run,
-            name=run_name[j][k],
-            storm_file=storm_name[k],
-            alongshore_section_count=number_barrier3d_models,
-            num_cores=3,
-            rmin=rmin[0],
-            rmax=rmax[0],
-            elevation_file=e_file[j],
-            dune_file=d_file[j],
-            background_erosion=background_erosion_value[j],
-            sea_level_constant=False,  # not an array
-            enable_shoreline_offset=False,
-            marsh_dynamics=marsh_dynamics_on[j],
-            sea_level_rise_rate=0.01,
-            user_inputed_RSLR=run_set_RSLR,
-            user_inputed_RSLR_rate=set_RSLR,
-            marsh_path=marsh_path_list[j],
-            marsh_width=marsh_width_list[j],
-            berm_elevation=berm_elev_list
-        )
-        #os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
-        os.chdir('/Users/ceclmac/PycharmProjects/CASCADE')
 
-        print(' Finished '+str(run_name[j][k]))
+# ###############################################################################
+# Input Variables
+# ###############################################################################
+os.chdir('/Users/ceclmac/PycharmProjects/CASCADE')
+
+storm_list = ['Baseline','5%','10%']
+#storm_list = ['5%']
+RSLR_list = ['IL','I','IH']
+
+for RSLR in range(len(RSLR_list)):
+    for storm_intent_level in range(len(storm_list)):
+        storm_intensity = storm_list[RSLR]
+        RSLR_Rate = RSLR_list[storm_intent_level]
+
+        data_base_path = '/Users/ceclmac/PycharmProjects/CASCADE/data/marsh_init_data/'
+        # Specify variables to use in calling function
+        # Dune height path name
+        d_file = []
+        e_file = []
+
+        e_names = ['Geom_1_Revised_Topo.npy',
+                   'Geom_2_Revised_Topo.npy',
+                   'Geom_3_Revised_Topo.npy',
+                   'Geom_4_Revised_Topo.npy',
+                   'Geom_5_Revised_Topo.npy']
+
+        d_names = [
+            'GEOM_1_Dunes.npy',
+            'GEOM_2_Dunes.npy',
+            'GEOM_3_Dunes.npy',
+            'GEOM_4_Dunes.npy',
+            'GEOM_5_Dunes.npy'
+                   ]
+
+        Base_Name_List = ['Geom_1',
+                          'Geom_2',
+                          'Geom_3',
+                          'Geom_4',
+                          'Geom_5']
+
+        for runs in range(len(e_names)):
+            d_file.append(copy.deepcopy(data_base_path+d_names[runs]))
+            e_file.append(copy.deepcopy(data_base_path+e_names[runs]))
+
+
+        marsh_path_list = [data_base_path+"BMFT_Marsh_Width_1500.mat",
+                           data_base_path+"BMFT_Marsh_Width_500.mat",
+                           data_base_path+"BMFT_Marsh_Width_500.mat",
+                           data_base_path+"Marsh_250.mat",
+                           data_base_path+"BMFT_Marsh_Width_500.mat"]
+        marsh_width_list = [1500,500,500,250,500]
+
+
+        berm_elev_list = 1.03
+
+        # RSLR Data
+        if RSLR_Rate == 'IL':
+            RSLR_Data = np.load(data_base_path+'Updated_2025_IL_SLR.npy')
+        elif RSLR_Rate == 'I':
+            RSLR_Data = np.load(data_base_path+'Updated_2025_Int_SLR.npy')
+        elif RSLR_Rate == 'IH':
+            RSLR_Data = np.load(data_base_path+'Updated_2125_Int_High_SLR.npy')
+        elif RSLR_Rate == 'H':
+            RSLR_Data = np.load(data_base_path+'Updated_2025_High_SLR.npy')
+
+
+        # Storm file path name
+        c_wd = os.getcwd()
+        nt_run = 125  # Number of years model will run
+        storm_name = []
+
+        if storm_intensity == 'Baseline':
+            for k in range(0,50):
+                storm_name.append(copy.deepcopy(data_base_path+'Baseline/StormList_'+str(k)+'_baseline_RSD.npy'))
+            #storm_name[32] = copy.deepcopy(data_base_path + 'Baseline/StormList_32_baseline_N.npy')
+            storm_add = '_Baseline'
+        elif storm_intensity == '5%':
+            for k in range(0,50):
+                storm_name.append(copy.deepcopy(data_base_path+'Five_Percent_Increase/StormList_'+str(k)+'_5_percent_increase_RSD.npy'))
+            storm_add = '_5'
+
+        elif storm_intensity == '10%':
+            for k in range(0,50):
+                storm_name.append(copy.deepcopy(data_base_path+'Ten_Percent_Increase/StormList_'+str(k)+'_10_percent_increase_RSD.npy'))
+            storm_add = '_10'
+
+        background_erosion_value = [-9.1, -0.75, -5.2, -2.6, -3.25]
+
+        rmin = [0.05]
+        rmax = [0.55]
+
+        run_name = []
+
+        for geos in range(len(Base_Name_List)):
+            temp_run_name = []
+            for i in range(0,len(storm_name)):
+                temp_run_name.append(copy.deepcopy(Base_Name_List[geos]+'_'+str(RSLR_Rate)+str(storm_add)+'_S'+str(i)+'_N_RSLR_60_NS'))
+            run_name.append(copy.deepcopy(temp_run_name))
+
+        num_of_batches = 1
+        marsh_dynamics_on = [True,False,True,True,True]
+        run_set_RSLR = True
+
+        # Name storms
+        set_RSLR = RSLR_Data
+        number_barrier3d_models = 1
+
+
+        # Define function
+        # Call a batch of functions
+        for j in range(3,4):#len(run_name)):
+            for k in range(len(storm_name)):
+                Batch_Runs(
+                    nt=nt_run,
+                    name=run_name[j][k],
+                    storm_file=storm_name[k],
+                    alongshore_section_count=number_barrier3d_models,
+                    num_cores=3,
+                    rmin=rmin[0],
+                    rmax=rmax[0],
+                    elevation_file=e_file[j],
+                    dune_file=d_file[j],
+                    background_erosion=background_erosion_value[j],
+                    sea_level_constant=False,  # not an array
+                    enable_shoreline_offset=False,
+                    marsh_dynamics=marsh_dynamics_on[j],
+                    sea_level_rise_rate=0.01,
+                    user_inputed_RSLR=run_set_RSLR,
+                    user_inputed_RSLR_rate=set_RSLR,
+                    marsh_path=marsh_path_list[j],
+                    marsh_width=marsh_width_list[j],
+                    berm_elevation=berm_elev_list
+                )
+                #os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
+                os.chdir('/Users/ceclmac/PycharmProjects/CASCADE')
+
+                print(' Finished '+str(run_name[j][k]))
