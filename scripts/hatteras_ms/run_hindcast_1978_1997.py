@@ -9,7 +9,7 @@ on Hatteras Island, North Carolina, using the CASCADE (Coastal cAStal Community-
 The simulation spans from 1978 to 1997 and incorporates site-specific storm,
 topography, and management data to evaluate geomorphic change over time.
 
-This setup is adapted from an Ocracoke Island configuration by [Labmate Name],
+This setup is adapted from an Ocracoke Island configuration by Benton Franklin,
 and modified for Hatteras Island using updated input layers and domain parameters.
 
 Key outputs include shoreline position, dune evolution, road impacts, and
