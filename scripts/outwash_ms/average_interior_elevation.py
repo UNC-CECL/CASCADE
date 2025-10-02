@@ -63,7 +63,6 @@ for rname in rname_array:
     no_drowns_last_width_50 = []
     no_drowns_last_width_0 = []
 
-
     for storm_num in range(1, 101):
         # print(storm_num)
         # b3d variables
@@ -74,19 +73,18 @@ for rname in rname_array:
         tmax_b3d = b3d_obj.barrier3d[0].TMAX
         tmax_array_b3d.append(tmax_b3d)
 
-
         for t in range(0, tmax_b3d):
             # average elevation
-            domain_TS = b3d_obj.barrier3d[0].DomainTS[t] * 10
-            avg_elev_TS = np.average(domain_TS)
-            avg_elev_TS_array_b3d.append(avg_elev_TS)
+            domain_TS = b3d_obj.barrier3d[0].DomainTS[t] * 10  # domain for the current time step, t
+            avg_elev_TS = np.average(domain_TS)  # average value of the domain for this time step
+            avg_elev_TS_array_b3d.append(avg_elev_TS)  # array of the average elevations at each time step
 
-        last_domain_TS_avg = np.average(domain_TS)
+        last_domain_TS_avg = np.average(domain_TS)  # the current value of domain_TS is for the tmax
         avg_elev_b3d = np.average(avg_elev_TS_array_b3d)
         avg_elev_b3d_array[storm_num-1] = avg_elev_b3d
         avg_last_elev_b3d_array[storm_num-1] = last_domain_TS_avg
 
-        # recalculate and save DomainWidth and InteriorWidth
+        # recalculate and save DomainWidth and InteriorWidth for only the last time step
         _, int_width_array, new_ave_interior_width = b3d_obj.barrier3d[0].FindWidths(
             domain_TS, b3d_obj.barrier3d[0].SL  # SL = 0
         )
