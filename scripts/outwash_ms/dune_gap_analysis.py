@@ -8,7 +8,6 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 rname_array = ["r025", "r035"]
-# rname_array = ["r025"]
 
 for rname in rname_array:
     storm_interval = 20        # 20 or 10 years (we did not do 10 years)
@@ -115,7 +114,7 @@ for rname in rname_array:
 
         for iB3D in range(len(outwash50)):
             sub_domain = outwash50[iB3D]._DuneDomain[0:TMAX, :, :]
-            initial_gap_elev = np.min(sub_domain[0])
+            initial_gap_elev = np.min(sub_domain[0])  # dam
             DuneCrest.append(sub_domain.max(axis=2))
 
         DuneCrest = np.hstack(DuneCrest).astype(float)
