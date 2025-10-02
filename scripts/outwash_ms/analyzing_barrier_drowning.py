@@ -18,10 +18,10 @@ for rname in rname_array:
     config = 4                 # 1, 2, 3, or 4
 
     # Display stats on console/show plots
-    migration_stats = False
-    plotters = True
-    geomoetry_stats = False
-    dune_crest_stats = False
+    migration_stats = True
+    plotters = False
+    geomoetry_stats = True
+    dune_crest_stats = True
     flux_stats = False
 
     # location of the npz files
