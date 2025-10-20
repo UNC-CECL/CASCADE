@@ -152,7 +152,7 @@ class Cascade:
         house_footprint_x=15,
         house_footprint_y=20,
         beach_full_cross_shore=70,
-        outwash_storms_file="outwash_storms10.npy",  # --------- outwasher (in development) ------------ #
+        outwash_storms_file="outwash_storms_startyr_1_interval_20yrs.npy",  # --------- outwasher (in development) ------------ #
         outwash_beach_file="NCB-default_beach.npy",
         percent_washout_to_shoreface=100,
     ):
@@ -264,7 +264,7 @@ class Cascade:
         Examples
         --------
         >>> from cascade.cascade import Cascade
-        >>> datadir = "./cascade/data/"
+        >>> datadir = "./data/"
         >>> cascade = Cascade(datadir)
         """
 
