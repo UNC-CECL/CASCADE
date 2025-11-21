@@ -6,7 +6,7 @@
 #   - columns = cross-shore
 #   - ocean is on the RIGHT (land on the left)
 # Outputs (decameters):
-#   - topography: (N_ROWS x alongshore)
+#   - topography_dunes: (N_ROWS x alongshore)
 #   - dune:       (alongshore,)
 # ==============================================================================
 
@@ -44,7 +44,7 @@ print(f"  Bottom = {bottom_low:.2f}")
 
 LOAD_PATH = r'/data/hatteras_init/elevations/old_study_area_2009'
 BASE_OUT  = r'C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init'
-TOPO_SAVE_PATH = os.path.join(BASE_OUT, 'topography')
+TOPO_SAVE_PATH = os.path.join(BASE_OUT, 'topography_dunes')
 DUNE_SAVE_PATH = os.path.join(BASE_OUT, 'dunes')
 os.makedirs(TOPO_SAVE_PATH, exist_ok=True)
 os.makedirs(DUNE_SAVE_PATH, exist_ok=True)

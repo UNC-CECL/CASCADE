@@ -7,7 +7,7 @@ This script runs a historical hindcast simulation of barrier island evolution
 on Hatteras Island, North Carolina, using the CASCADE (Coastal cAStal Community-lAnDscape Evolution) model.
 
 The simulation spans from 1978 to 1997 and incorporates site-specific storm,
-topography, and management data to evaluate geomorphic change over time.
+topography_dunes, and management data to evaluate geomorphic change over time.
 
 This setup is adapted from an Ocracoke Island configuration by Benton Franklin,
 and modified for Hatteras Island using updated input layers and domain parameters.

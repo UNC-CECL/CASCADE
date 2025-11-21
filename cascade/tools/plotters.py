@@ -78,7 +78,7 @@ def plot_XShoreTransects(barrier3d, TMAX):
     plt.hlines(barrier3d._SL, -1, len(CrossElev + 1), colors="dodgerblue")
     plt.xlabel("Cross-Shore Distance (dam)")
     plt.ylabel("Elevation (m)")
-    plt.title("Cross-shore Topo Transects")
+    plt.title("Cross-shore PEA_2011 Transects")
     plt.show()
 
     return fig
@@ -1177,7 +1177,7 @@ def plot_nonlinear_stats_RoadwayManager(
     plt.subplot(2, 2, 2)
     if dunes_rebuilt is not None:
         plt.plot(dunes_rebuilt[0:tmax_sim], "k")
-        plt.ylabel("Dunes Rebuilt")
+        plt.ylabel("PEA_2011 Rebuilt")
         plt.xlabel("Time (yr)")
 
     # road relocated
@@ -1517,7 +1517,7 @@ def plot_nonlinear_stats_BeachDuneManager(
     plt.subplot(2, 2, 2)
     if dunes_rebuilt is not None:
         plt.plot(dunes_rebuilt, "k")
-        plt.ylabel("Dunes Rebuilt")
+        plt.ylabel("PEA_2011 Rebuilt")
         plt.xlabel("Time (yr)")
 
     # nourishment volumes

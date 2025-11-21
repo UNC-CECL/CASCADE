@@ -61,10 +61,10 @@ def bulldoze(
     time_index: int,
         Time index for drowning error message
     xyz_interior_grid: array
-        Interior barrier island topography [z units specified by dz; for Barrier3d,
+        Interior barrier island topography_dunes [z units specified by dz; for Barrier3d,
         dz=10, decameters MHW]
     yxz_dune_grid:
-        Dune topography [z units specified by dz; for Barrier3d, dz=10, decameters
+        Dune topography_dunes [z units specified by dz; for Barrier3d, dz=10, decameters
         above the berm elevation]
     road_ele: float
         Road elevation [m; needs to be in same reference frame as xyz; for Barrier3d,
@@ -193,7 +193,7 @@ def rebuild_dunes(
     Parameters
     ----------
     yxz_dune_grid: ndarray, shape (ny, nx)
-        Dune topography [z units specified by dz; for Barrier3D, dz=10, decameters
+        Dune topography_dunes [z units specified by dz; for Barrier3D, dz=10, decameters
         above the berm elevation]
     max_dune_height: float, optional
         Maximum dune height for dune rebuilding [m]
@@ -258,7 +258,7 @@ def set_growth_parameters(
     Parameters
     ----------
     yxz_dune_grid:
-        Dune topography [units must be the same as Dmax]
+        Dune topography_dunes [units must be the same as Dmax]
     Dmax: float
         Maximum natural equilibrium dune height [default in Barrier3D is decameters]
     growthparam:
@@ -318,7 +318,7 @@ def get_road_relocation_elevation(
     time_index: int,
         Time index for drowning error message
     xyz_interior_grid: array
-        Interior barrier island topography [z units specified by dz; for Barrier3d,
+        Interior barrier island topography_dunes [z units specified by dz; for Barrier3d,
         dz=10, decameters MHW]
     road_width: int
         Width of roadway [m]

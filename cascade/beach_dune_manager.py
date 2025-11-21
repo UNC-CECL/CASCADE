@@ -209,11 +209,11 @@ def filter_overwash(
         Percent overwash removed from barrier interior to dunes
         [%, overwash_filter+overwash_to_dune <=100]
     post_storm_xyz_interior_grid: grid,
-        Interior barrier island topography [for Barrier3d, decameters MHW]
+        Interior barrier island topography_dunes [for Barrier3d, decameters MHW]
     pre_storm_xyz_interior_grid: grid,
-        Interior barrier island topography [for Barrier3d, decameters MHW]
+        Interior barrier island topography_dunes [for Barrier3d, decameters MHW]
     post_storm_yxz_dune_grid: grid,
-        Dune topography [for Barrier3d, decameters above the berm elevation]
+        Dune topography_dunes [for Barrier3d, decameters above the berm elevation]
     artificial_maximum_dune_height: float,
         The maximum dune height than can be created by bulldozer after a storm
         [for Barrier3d, dam above berm elevation]

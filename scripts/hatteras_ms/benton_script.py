@@ -140,7 +140,7 @@ background_threhold_list = [0.0] * TOTAL_DOMAINS
 
 # --- 4. INPUT DATA: VERTICAL ELEVATION PROFILE FILE PATHS (.npy files) ---
 
-# Lists to store the file paths for dune and topography profiles for all 135 domains
+# Lists to store the file paths for dune and topography_dunes profiles for all 135 domains
 e_file = []  # Topography/Backbarrier elevation paths
 d_file = []  # Dune profile paths
 
@@ -166,7 +166,7 @@ for i_list in range(START_REAL_DOMAIN_INDEX, END_REAL_DOMAIN_INDEX):
     d_file.append(dune_path_template)
 
     # Topography Profile (2009 profiles for the backbarrier)
-    elev_path_template = os.path.join(HATTERAS_BASE, 'topography', '2009',
+    elev_path_template = os.path.join(HATTERAS_BASE, 'topography_dunes', '2009',
                                       f'domain_{file_num}_resampled_topography_2009.npy')
     e_file.append(elev_path_template)
 

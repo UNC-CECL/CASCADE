@@ -22,18 +22,18 @@ from cascade.cascade import Cascade
 # --- 1. PHYSICAL & DOMAIN CONSTANTS ---
 # =============================================================================
 
-# Total alongshore domains (15 Left Buffer + 105 Real + 15 Right Buffer)
-TOTAL_DOMAINS = 135
+# Total alongshore domains (15 Left Buffer + 42 Real + 15 Right Buffer)
+TOTAL_DOMAINS = 72
 NUMBER_BARRIER3D_MODELS = TOTAL_DOMAINS
 
 # Real domain indices for data loading (105 cells)
 START_REAL_DOMAIN_INDEX = 15
-END_REAL_DOMAIN_INDEX = 135 # Exclusive index
-START_FILE_NUMBER = 1      # Corresponds to the first domain file ID (e.g., domain_30...)
+END_REAL_DOMAIN_INDEX = 57  # Exclusive index
+START_FILE_NUMBER = 17      # Corresponds to the first domain file ID (e.g., domain_30...)
 
-# Road Affected Indices (Used for defining the extent of the road setback array)
-START_ROAD_INDEX = 7
-END_ROAD_INDEX = 105
+# Road Affected Indices (incorrect numbers)
+START_ROAD_INDEX = 17
+END_ROAD_INDEX = 58
 # The Road setback array must be TOTAL_DOMAINS long (135), but only the
 # section START_ROAD_INDEX to END_ROAD_INDEX is typically loaded with non-zero values.
 
@@ -44,13 +44,13 @@ END_ROAD_INDEX = 105
 # Base directory for the CASCADE project and data
 PROJECT_BASE_DIR = r'C:\Users\hanna\PycharmProjects\CASCADE'
 HATTERAS_DATA_BASE = os.path.join(PROJECT_BASE_DIR, 'data', 'hatteras_init')
-OUTPUT_BASE_DIR = os.path.join(PROJECT_BASE_DIR, 'output', 'raw_runs')
+OUTPUT_BASE_DIR = os.path.join(PROJECT_BASE_DIR, 'output')
 
 # Input data file paths
-DUNE_LOAD_ALL = os.path.join(HATTERAS_DATA_BASE, 'island_offset', 'Dune_Offsets_1978_1997_PADDED_135.csv')
+DUNE_LOAD_ALL = os.path.join(HATTERAS_DATA_BASE, 'island_offset', 'Dune_Offsets_1978_1997_PADDED_72.csv')
 STORM_FILE_1978_1997 = os.path.join(HATTERAS_DATA_BASE, 'storms', 'hindcast_storms', 'storms_1978_1997.npy')
 STORM_FILE_1997_2022 = os.path.join(HATTERAS_DATA_BASE, 'storms', 'hindcast_storms', 'storms_1997_2019.npy')
-ROAD_LOAD_FILE = os.path.join(HATTERAS_DATA_BASE, 'roads', 'offset', '1978_road_setback_2row_FINAL.csv')
+ROAD_LOAD_FILE = os.path.join(HATTERAS_DATA_BASE, 'roads', 'offset', 'PEA_1978_road_setback_2row_FINAL.csv')
 
 # =============================================================================
 # --- 3. SIMULATION CONFIGURATION ---
@@ -66,14 +66,14 @@ REBUILD_ELEV_THRESHOLD_DAM = 0.01  # (dam) Minimum dune elevation threshold
 # --- DYNAMIC CONFIGURATION (DEPENDENT ON START_YEAR) ---
 if START_YEAR == 1978:
     YEAR_COLUMN_INDEX = 0  # Column in Dune_Offsets file for 1978 data
-    RUN_NAME = 'HAT_1978_1997_Natural_State'
+    RUN_NAME = 'PEA_1978_1997_Natural_State'
     STORM_FILE = STORM_FILE_1978_1997
     # Note: ROAD_LOAD_FILE is used for both periods as per original script logic.
     ROAD_LOAD_NAME = ROAD_LOAD_FILE
 
 elif START_YEAR == 1997:
     YEAR_COLUMN_INDEX = 1  # Column in Dune_Offsets file for 1997 data
-    RUN_NAME = 'HAT_1997_2020_Natural_State'
+    RUN_NAME = 'PEA_1997_2019_Natural_State'
     STORM_FILE = STORM_FILE_1997_2022
     ROAD_LOAD_NAME = ROAD_LOAD_FILE
 
@@ -144,11 +144,11 @@ for i_list in range(START_REAL_DOMAIN_INDEX, END_REAL_DOMAIN_INDEX):
     # Calculate the file number ID (e.g., 30, 31, 32...)
     file_num = START_FILE_NUMBER + (i_list - START_REAL_DOMAIN_INDEX)
 
-    dune_path_template = os.path.join(HATTERAS_DATA_BASE, 'dunes', '2009', f'domain_{file_num}_dune_2009.npy')
+    dune_path_template = os.path.join(HATTERAS_DATA_BASE, 'dunes', 'PEA_2011', f'domain_{file_num}_dune.npy')
     DUNE_FILE_PATHS.append(dune_path_template)
 
-    elev_path_template = os.path.join(HATTERAS_DATA_BASE, 'topography_dunes', '2009',
-                                      f'domain_{file_num}_topography_2009.npy')
+    elev_path_template = os.path.join(HATTERAS_DATA_BASE, 'topography_dunes', 'PEA_2011',
+                                      f'domain_{file_num}_topography.npy')
     ELEVATION_FILE_PATHS.append(elev_path_template)
 
 # 3. Right Buffer Domains (15 domains: Index 120 to 134)

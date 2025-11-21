@@ -34,7 +34,7 @@ END_ROAD_INDEX = 128
 # Base directory for the CASCADE project and data
 PROJECT_BASE_DIR = r'C:\Users\hanna\PycharmProjects\CASCADE'
 HATTERAS_DATA_BASE = os.path.join(PROJECT_BASE_DIR, 'data', 'hatteras_init')
-OUTPUT_BASE_DIR = os.path.join(PROJECT_BASE_DIR, 'output')
+OUTPUT_BASE_DIR = os.path.join(PROJECT_BASE_DIR, 'output', 'raw_runs')
 
 # Input data file paths
 DUNE_LOAD_ALL = os.path.join(HATTERAS_DATA_BASE, 'island_offset', 'Dune_Offsets_1978_1997_PADDED_135.csv')
@@ -134,11 +134,11 @@ for i_list in range(START_REAL_DOMAIN_INDEX, END_REAL_DOMAIN_INDEX):
     # Calculate the file number ID (e.g., 30, 31, 32...)
     file_num = START_FILE_NUMBER + (i_list - START_REAL_DOMAIN_INDEX)
 
-    dune_path_template = os.path.join(HATTERAS_DATA_BASE, 'dunes', '2009', f'domain_{file_num}_resampled_dune_2009.npy')
+    dune_path_template = os.path.join(HATTERAS_DATA_BASE, 'dunes', '2009', f'domain_{file_num}_dune_2009.npy')
     DUNE_FILE_PATHS.append(dune_path_template)
 
-    elev_path_template = os.path.join(HATTERAS_DATA_BASE, 'topography', '2009',
-                                     f'domain_{file_num}_resampled_topography_2009.npy')
+    elev_path_template = os.path.join(HATTERAS_DATA_BASE, 'topography_dunes', '2009',
+                                     f'domain_{file_num}_topography_2009.npy')
     ELEVATION_FILE_PATHS.append(elev_path_template)
 
 # 3. Right Buffer Domains (15 domains: Index 120 to 134)

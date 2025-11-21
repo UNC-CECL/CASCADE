@@ -38,7 +38,7 @@ import numpy as np
 # === INPUT PATHS AND PARAMETERS ============================================
 
 LOAD_PATH = r'/data/hatteras_init/elevations/old_study_area_2009'
-TOPO_SAVE_PATH = r'/data/hatteras_init/topography'
+TOPO_SAVE_PATH = r'/data/hatteras_init/topography_dunes'
 DUNE_SAVE_PATH = r'/data/hatteras_init/dunes'
 
 os.makedirs(TOPO_SAVE_PATH, exist_ok=True)
