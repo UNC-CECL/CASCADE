@@ -1,11 +1,12 @@
-# plotting functions for
-#
-# ~******* CASCADE ********~
-#
+# plotting functions for animated cascade elevation plots. Will also save the individual elevation plots
+# this is a simplified version (less inputs required) of the outwash_plotters script
+
 # and for the manuscript titled:
 #
 # "Lexi's very cool outwash module"
 #
+
+
 """----------------------------------------------------
 Copyright (C) 2022 Lexi Van Blunk
 ----------------------------------------------------"""
