@@ -1,5 +1,5 @@
 # Lexi Van Blunk
-# 7/13/2023
+# 11/22/2025
 
 # ### Katherine will need to change the datadir on line 14 and save_dir on line 43
 
@@ -43,13 +43,9 @@ elif config == 4:
 # save_dir_b3d = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/overwash_only/".format(rname)
 save_dir_b3d = "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/cascade/data/outwash_data/storms/slope0pt03/run_output/{0}/overwash_only".format(rname)
 
-# -------------------- model parameters that are constant throughout the runs ------------------------------------------
-ki = 8.75E-3
-C = 0.0134
 
 # --------------------------------- running overwash scenario with all 100 storms --------------------------------------
-for storm_num in range(75, 100):
-# for storm_num in range(1, 101):
+for storm_num in range(1, 101):
     overwash_storm = "StormSeries_100yrs_inclusive_NCB_Berm1pt46m_Slope0pt03_{0}.npy".format(storm_num)
 
     # ### barrier3D only, outwash module set to false ------------------------------------------------------------------
@@ -108,9 +104,6 @@ for storm_num in range(75, 100):
         outwash_storms_file="outwash_storms_startyr_1_interval_{0}yrs.npy".format(storm_interval),  # --------- outwasher (in development) ------------ #
         percent_washout_to_shoreface=100,
         outwash_beach_file="NCB-default-beach-config{0}-damMHW.npy".format(config),
-        dune_flow_dynamics="full",
-        ki_value=ki,
-        c=C,
     )
 
     # run the time loop/update function
