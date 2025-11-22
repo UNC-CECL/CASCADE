@@ -1,7 +1,7 @@
 # Lexi Van Blunk
-# 7/13/2023
+# 11/22/2025
 
-# ### Katherine will need to change the datadir on line 14 and save_dir on line 43
+# ### Katherine will need to change the datadir on line 15 and save_dir on line 45
 
 # code for running CASCADE for the 0%, 50%, and 100% outwash to shoreface scenario, 100 storm series
 # change the storm interval, dune growth rate, and configuration below
@@ -46,7 +46,7 @@ for percent_washout_to_shoreface in washout_array:
                "outwash{1}/".format(rname, percent_washout_to_shoreface)
 
     # --------------------------------- running overwash scenario with all 100 storms --------------------------------------
-    for storm_num in range(1, 2):
+    for storm_num in range(1, 101):
         print("\r", "Storm Number: ", storm_num, end="")
         overwash_storm = "StormSeries_100yrs_inclusive_NCB_Berm1pt46m_Slope0pt03_{0}.npy".format(storm_num)
 
