@@ -3,14 +3,13 @@
 # Lexi Van Blunk
 # 5/15/2025
 # calculating the average interior elevation using DomainTS instead of the h_b_TS variable because I think it is
-# messed up
+# more clear
 
 import numpy as np
 from matplotlib import pyplot as plt
 
 # ---------------------------------- set model parameters that change per run ------------------------------------------
 rname_array = ["r025", "r035"]
-# rname_array = ["r035"]
 for rname in rname_array:
     storm_interval = 20        # 20 or 10 years
     config = 4                 # 1, 2, 3, or 4
@@ -84,11 +83,6 @@ for rname in rname_array:
         avg_elev_b3d_array[storm_num-1] = avg_elev_b3d
         avg_last_elev_b3d_array[storm_num-1] = last_domain_TS_avg
 
-        # recalculate and save DomainWidth and InteriorWidth for only the last time step
-        _, int_width_array, new_ave_interior_width = b3d_obj.barrier3d[0].FindWidths(
-            domain_TS, b3d_obj.barrier3d[0].SL  # SL = 0
-        )
-
         if tmax_b3d == 101:
             # interior domain: remove a full row if all values are less than 0
             check = 1
@@ -98,9 +92,6 @@ for rname in rname_array:
                 else:
                     check = 0
 
-            # new_ave_interior_height = np.average(
-            #     domain_TS[domain_TS >= 0])  # all in dam MHW
-            # no_drowns_last_elev_b3d_array[storm_num-1] = new_ave_interior_height
             domain_TS[domain_TS<0] = 0  # set all values less than 0 to 0
             new_ave_interior_height = np.average(domain_TS)  # all in m MHW
             no_drowns_last_elev_b3d_array[storm_num-1] = new_ave_interior_height
@@ -142,9 +133,6 @@ for rname in rname_array:
                 else:
                     check = 0
 
-            # new_ave_interior_height = np.average(
-            #     domain_TS[domain_TS >= 0])  # all in dam MHW
-            # no_drowns_last_elev_100_array[storm_num-1] = new_ave_interior_height
             domain_TS[domain_TS < 0] = 0  # set all values less than 0 to 0
             new_ave_interior_height = np.average(domain_TS)  # all in m MHW
             no_drowns_last_elev_100_array[storm_num-1] = new_ave_interior_height
@@ -185,9 +173,7 @@ for rname in rname_array:
                     domain_TS = np.delete(domain_TS, -1, axis=0)
                 else:
                     check = 0
-            # new_ave_interior_height = np.average(
-            #     domain_TS[domain_TS >= 0])  # all in dam MHW
-            # no_drowns_last_elev_50_array[storm_num-1] = new_ave_interior_height
+
             domain_TS[domain_TS < 0] = 0  # set all values less than 0 to 0
             new_ave_interior_height = np.average(domain_TS)  # all in m MHW
             no_drowns_last_elev_50_array[storm_num-1] = new_ave_interior_height
@@ -230,19 +216,14 @@ for rname in rname_array:
                     domain_TS = np.delete(domain_TS, -1, axis=0)
                 else:
                     check = 0
-            # new_ave_interior_height = np.average(
-            #     domain_TS[domain_TS >= 0])  # all in dam MHW
-            # no_drowns_last_elev_0_array[storm_num-1] = new_ave_interior_height
-            domain_TS[domain_TS < 0] = 0  # set all values less than 0 to 0
+
             new_ave_interior_height = np.average(domain_TS)  # all in m MHW
             no_drowns_last_elev_0_array[storm_num-1] = new_ave_interior_height
 
             # width
             int_width_TS = np.array(outwash0_obj.barrier3d[0].InteriorWidth_AvgTS) * 10  # meters
-            # last_int_width = int_width_TS[tmax_0-1]
             last_int_width = int_width_TS[-1]
             no_drowns_last_width_0.append(last_int_width)
-
 
     avg_no_drowns_b3d = np.average(no_drowns_last_elev_b3d_array[np.nonzero(no_drowns_last_elev_b3d_array)])
     avg_no_drowns_100 = np.average(no_drowns_last_elev_100_array[np.nonzero(no_drowns_last_elev_100_array)])
@@ -254,24 +235,8 @@ for rname in rname_array:
     avg_no_drowns_last_width_50 = np.average(no_drowns_last_width_50)
     avg_no_drowns_last_width_0 = np.average(no_drowns_last_width_0)
 
-
     # printing geometry stats
     if geomoetry_stats:
-        # # print avg height and width stats
-        # print("avg geometry stats, {0}".format(rname))
-        # print("baseline \n avg interior height: {0} \n avg last interior height: {1}"
-        #       .format(np.round(np.average(avg_elev_b3d_array), 2),
-        #               np.round(np.average(avg_last_elev_b3d_array), 2)))
-        # print("100% outwash \n avg interior height: {0} \n avg last interior height: {1}"
-        #       .format(np.round(np.average(avg_elev_100_array), 2),
-        #               np.round(np.average(avg_last_elev_100_array), 2)))
-        # print("50% outwash \n avg interior height: {0} \n avg last interior height: {1}"
-        #       .format(np.round(np.average(avg_elev_50_array), 2),
-        #               np.round(np.average(avg_last_elev_50_array), 2)))
-        # print("0% outwash \n avg interior height: {0} \n avg last interior height: {1}"
-        #       .format(np.round(np.average(avg_elev_0_array), 2),
-        #               np.round(np.average(avg_last_elev_0_array), 2)))
-
         # print non-drowning values
         print("avg geometry stats, {0}".format(rname))
         print("baseline \n avg interior height: {0}"
@@ -292,57 +257,6 @@ for rname in rname_array:
               .format(np.round(avg_no_drowns_last_width_50, 2)))
         print("0% outwash \n avg interior width: {0}"
               .format(np.round(avg_no_drowns_last_width_0, 2)))
-
-
-    # if plotters:
-    #     storm_num = 1
-    #     fig9 = plt.figure()
-    #     # fig9.suptitle('overwash storm {0} - {1}'.format(storm_num, rname), weight="bold")
-    #     # fig9.suptitle('{0}'.format(rname), weight="bold")
-    #     ax1 = fig9.add_subplot(111)
-    #     ls = "solid"
-    #     ax1.plot(shoreline_pos_array_b3d[storm_num-1])
-    #     ax1.plot(shoreline_pos_array_100[storm_num-1], linestyle=ls)
-    #     ax1.plot(shoreline_pos_array_50[storm_num-1], linestyle=ls)
-    #     ax1.plot(shoreline_pos_array_0[storm_num-1], linestyle=ls)
-    #     ax1.legend(["baseline", "100% outwash to shoreface", "50% outwash to shoreface", "0% outwash to shoreface"],
-    #                prop={'size': 9}, loc="upper left")
-    #     ax1.set_ylabel("Shoreline Position (m)")
-    #     ax1.set_xlabel("Simulation Years")
-    #     ax1.set_ylim(bottom=-60, top=160)
-    #     ax1.set_title('{0}'.format(rname), weight="bold")
-    #     fig9.subplots_adjust(hspace=0.3)
-    #
-    #     # plotting one year of overwash and outwash flux
-    #     fig10 = plt.figure()
-    #     # fig9.suptitle('overwash storm {0} - {1}'.format(storm_num, rname), weight="bold")
-    #     # fig9.suptitle('{0}'.format(rname), weight="bold")
-    #     ax1 = fig10.add_subplot(211)
-    #     ls = "solid"
-    #     ax1.plot(overwash_array_b3d[storm_num-1])
-    #     ax1.plot(overwash_array_100[storm_num-1], linestyle=ls)
-    #     ax1.plot(overwash_array_50[storm_num-1], linestyle=ls)
-    #     ax1.plot(overwash_array_0[storm_num-1], linestyle=ls)
-    #     ax1.set_ylabel("Overwash Flux (m3/m)")
-    #     ax1.set_xlabel("Simulation Years")
-    #     ax1.set_ylim(top=150)
-    #     ax1.set_title(rname, weight="bold")
-    #     ax1.legend(["baseline", "100% outwash to shoreface", "50% outwash to shoreface", "0% outwash to shoreface"],
-    #                prop={'size': 9}, loc="upper left")
-    #
-    #     max_t_b3d = tmax_array_b3d[storm_num-1]
-    #     max_t_100 = tmax_array_100[storm_num - 1]
-    #     max_t_50 = tmax_array_50[storm_num - 1]
-    #     max_t_0 = tmax_array_0[storm_num - 1]
-    #
-    #     outwash_array_b3d_storm = outwash_array_b3d[storm_num-1]
-    #     outwash_array_b3d_storm[max_t_b3d+1:] = np.nan
-    #     outwash_array_100_storm = outwash_array_100[storm_num - 1]
-    #     outwash_array_100_storm[max_t_100+1:] = np.nan
-    #     outwash_array_50_storm = outwash_array_50[storm_num - 1]
-    #     outwash_array_50_storm[max_t_50+1:] = np.nan
-    #     outwash_array_0_storm = outwash_array_0[storm_num - 1]
-    #     outwash_array_0_storm[max_t_0+1:] = np.nan
 
 
 
