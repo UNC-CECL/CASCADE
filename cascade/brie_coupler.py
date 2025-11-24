@@ -33,6 +33,8 @@ import pathlib
 
 import numpy as np
 from barrier3d import Barrier3d
+import sys
+sys.path.append("/Users/rsahrae/PycharmProjects/CASCADE_Coupling/brie")
 from brie import Brie
 from yaml import dump
 from yaml import full_load
@@ -58,6 +60,11 @@ def batchB3D(subB3D):
     sub_x_t_dt = (subB3D.x_t_TS[-1] - subB3D.x_t_TS[-2]) * 10
     sub_x_s_dt = (subB3D.x_s_TS[-1] - subB3D.x_s_TS[-2]) * 10
     sub_h_b_dt = (subB3D.h_b_TS[-1] - subB3D.h_b_TS[-2]) * 10
+
+    sub_x_t_dt = np.nan_to_num(sub_x_t_dt, nan=0.0)
+    sub_x_s_dt = np.nan_to_num(sub_x_s_dt, nan=0.0)
+    sub_h_b_dt = np.nan_to_num(sub_h_b_dt, nan=0.0)
+
     drowned_barrier_dt = subB3D.drown_break == 1
 
     return sub_x_t_dt, sub_x_s_dt, sub_h_b_dt, subB3D, drowned_barrier_dt
@@ -192,11 +199,16 @@ def initialize_equal(
         # but added for completeness
 
         # the shoreline position + average interior width
-        brie.x_b[iB3D] = barrier3d[iB3D].x_b_TS[0] * 10
+        brie._x_b[iB3D] = barrier3d[iB3D].x_b_TS[0] * 10
         # average height of the interior domain
-        brie.h_b[iB3D] = barrier3d[iB3D].h_b_TS[0] * 10
-        brie.x_b_save[iB3D, 0] = brie.x_b[iB3D]
-        brie.h_b_save[iB3D, 0] = brie.h_b[iB3D]
+        brie._h_b[iB3D] = barrier3d[iB3D].h_b_TS[0] * 10
+        brie._x_b_save[iB3D, 0] = brie.x_b[iB3D]
+        brie._h_b_save[iB3D, 0] = brie.h_b[iB3D]
+
+        brie._h_b[iB3D] = np.nan_to_num(barrier3d[iB3D].h_b_TS[0] * 10, nan=0.0)
+        brie._x_b_save[iB3D, 0] = np.nan_to_num(brie.x_b[iB3D], nan=0.0)
+        brie._h_b_save[iB3D, 0] = np.nan_to_num(brie.h_b[iB3D], nan=0.0)
+
     # same for all b3d domains, just use first
     brie.slr = np.array(barrier3d[0].RSLR) * 10
 
@@ -228,6 +240,7 @@ class BrieCoupler:
         h_b_crit=1.44,
         ny=1,
         nt=200,
+        inlet_model = True,
     ):
         """
 
@@ -266,11 +279,11 @@ class BrieCoupler:
         # necessarily default values), but I won't be modifying often (or ever)
         # for CASCADE
         brie_ast_model = True  # shoreface formulations on
-        brie_barrier_model = False  # LTA14 overwash model off
-        brie_inlet_model = (
-            False  # inlet model off -- once coupled, will make this more functional
+        brie_barrier_model = True  # LTA14 overwash model off
+        inlet_model = (
+            True  # inlet model off -- once coupled, will make this more functional
         )
-        b3d_barrier_model = True  # B3d overwash model on
+        b3d_barrier_model = False  # B3d overwash model on
         z = 10.0  # initial sea level (for tracking SL, Eulerian reference frame)
 
         # inlet parameters (use default; these are here to remind me later that they
@@ -292,7 +305,7 @@ class BrieCoupler:
             name=name,
             ast_model=brie_ast_model,
             barrier_model=brie_barrier_model,
-            inlet_model=brie_inlet_model,
+            inlet_model= inlet_model,
             b3d=b3d_barrier_model,
             wave_height=wave_height,
             wave_period=wave_period,
@@ -335,12 +348,12 @@ class BrieCoupler:
         self._brie.h_b_dt = h_b_dt
 
         # update brie one time step (this is time_index = 2 at start of loop)
-        self._brie.update(inlet_idx)
+        self._brie.update()
 
         for iB3D in range(self._brie.ny):
             # pass shoreline position back to B3D from Brie (convert from m to dam)
-            barrier3d[iB3D].x_s = self._brie.x_s[iB3D] / 10
-            barrier3d[iB3D].x_s_TS[-1] = self._brie.x_s[iB3D] / 10
+            barrier3d[iB3D].x_s = self._brie._x_s[iB3D] / 10
+            barrier3d[iB3D].x_s_TS[-1] = self._brie._x_s[iB3D] / 10
 
             # update dune domain in B3D (erode/prograde) based on shoreline change
             # from Brie
@@ -350,13 +363,13 @@ class BrieCoupler:
             # average interior width in B3D
             # NOTE: all of these positions also get updated at the end of the human
             # management time loop
-            self._brie.x_b[iB3D] = barrier3d[iB3D].x_b_TS[-1] * 10
+            self._brie._x_b[iB3D] = barrier3d[iB3D].x_b_TS[-1] * 10
 
             # this (I think) prevents a Barrier3D drowning error
             if math.isnan(self._brie.x_b[iB3D]):
                 pass
             else:
-                self._brie.x_b_save[iB3D, self._brie.time_index - 1] = self._brie.x_b[
+                self._brie._x_b_save[iB3D, self._brie.time_index - 1] = self._brie.x_b[
                     iB3D
                 ]
 
@@ -378,18 +391,17 @@ class BrieCoupler:
             Slope of shoreface
         """
         for iB3D in range(self._brie.ny):
-            self._brie.x_s[iB3D] = x_s[iB3D] * 10  # convert from dam to meters
-            self._brie.x_b[iB3D] = x_b[iB3D] * 10
-            self._brie.x_t[iB3D] = x_t[iB3D] * 10
-            self._brie.h_b[iB3D] = h_b[iB3D] * 10
+            if not np.isnan(x_s[iB3D]):
+                self._brie._x_s[iB3D] = x_s[iB3D] * 10  # convert from dam to meters
+                self._brie._x_b[iB3D] = x_b[iB3D] * 10
+                self._brie._x_t[iB3D] = x_t[iB3D] * 10
+                self._brie._h_b[iB3D] = h_b[iB3D] * 10
 
-            self._brie.x_s_save[iB3D, self._brie.time_index - 1] = self._brie.x_s[iB3D]
-            self._brie.x_b_save[iB3D, self._brie.time_index - 1] = self._brie.x_b[iB3D]
-            self._brie.x_t_save[iB3D, self._brie.time_index - 1] = self._brie.x_t[iB3D]
-            self._brie.h_b_save[iB3D, self._brie.time_index - 1] = self._brie.h_b[iB3D]
-            self._brie.s_sf_save[iB3D, self._brie.time_index - 1] = s_sf[
-                iB3D
-            ]  # slope, so no unit change
+                self._brie._x_s_save[iB3D, self._brie.time_index - 1] = self._brie._x_s[iB3D]
+                self._brie._x_b_save[iB3D, self._brie.time_index - 1] = self._brie._x_b[iB3D]
+                self._brie._x_t_save[iB3D, self._brie.time_index - 1] = self._brie._x_t[iB3D]
+                self._brie._h_b_save[iB3D, self._brie.time_index - 1] = self._brie._h_b[iB3D]
+                self._brie._s_sf_save[iB3D, self._brie.time_index - 1] = s_sf[iB3D]  # slope, so no unit change
 
     @property
     def brie(self):

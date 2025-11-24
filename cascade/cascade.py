@@ -4,7 +4,10 @@ import numpy as np
 from joblib import Parallel
 from joblib import delayed
 from typing import List
-from .barrier3d import Barrier3d
+
+import sys
+sys.path.append('/Users/rsahrae/PycharmProjects/CASCADE_Coupling/Barrier3D/barrier3d')
+from barrier3d import Barrier3d
 
 from .beach_dune_manager import BeachDuneManager
 from .brie_coupler import BrieCoupler
@@ -126,7 +129,7 @@ class Cascade:
         alongshore_transport_module=True,
         beach_nourishment_module=True,
         community_economics_module=False,
-        inlet_module= False, #False, if any inlet exist ---> do the process
+        inlet_module= True, #False, if any inlet exist ---> do the process
         alongshore_section_count=6,
         time_step_count=200,
         wave_height=1,  # ---------- for BRIE and Barrier3D --------------- #
@@ -335,7 +338,22 @@ class Cascade:
         ###############################################################################
         # initialize BRIE and Barrier3D model classes
         ###############################################################################
-
+            # configure `self` to create lists of these variables; time series of
+            # these variables are saved in modules
+        self.module_lists(
+            dune_design_elevation=dune_design_elevation,
+            dune_minimum_elevation=dune_minimum_elevation,
+            road_width=road_width,
+            road_ele=road_ele,
+            road_setback=road_setback,
+            nourishment_interval=nourishment_interval,
+            nourishment_volume=nourishment_volume,
+            overwash_filter=overwash_filter,
+            overwash_to_dune=overwash_to_dune,
+            roadway_management_module=roadway_management_module,
+            beach_nourishment_module=beach_nourishment_module,
+            inlet_module=inlet_module,  # NEW
+        )
         # initialize BRIE: used for initial shoreface calculations, AST (optional),
         # tidal inlets (eventually)
         self._brie_coupler = BrieCoupler(
@@ -352,6 +370,7 @@ class Cascade:
             nt=self._nt,
             # NEW: Activate BRIE's inlet model if ANY segment has it enabled
             inlet_model=any(self._inlet_module),
+
         )
 
         # initialize Barrier3D models (number set by brie_ny) and make both "brie"
@@ -376,22 +395,7 @@ class Cascade:
         # initialize human dynamics modules
         ###############################################################################
 
-        # configure `self` to create lists of these variables; time series of
-        # these variables are saved in modules
-        self.module_lists(
-            dune_design_elevation=dune_design_elevation,
-            dune_minimum_elevation=dune_minimum_elevation,
-            road_width=road_width,
-            road_ele=road_ele,
-            road_setback=road_setback,
-            nourishment_interval=nourishment_interval,
-            nourishment_volume=nourishment_volume,
-            overwash_filter=overwash_filter,
-            overwash_to_dune=overwash_to_dune,
-            roadway_management_module=roadway_management_module,
-            beach_nourishment_module=beach_nourishment_module,
-            inlet_module=inlet_module,  # NEW
-        )
+
 
         if self._community_economics_module:
             if not any(self._beach_nourishment_module):
@@ -559,6 +563,28 @@ class Cascade:
     ###############################################################################
     # time loop
     ###############################################################################
+    # ---- helpers to keep inlet indices clean and flat ----
+    def _flatten_int_indices(self, obj):
+        """Return a flat list[int] from ints / lists / tuples / ndarrays, ignoring junk."""
+        out = []
+        if obj is None:
+            return out
+        if isinstance(obj, (int, np.integer)):
+            return [int(obj)]
+        if isinstance(obj, (list, tuple, set)):
+            for x in obj:
+                out.extend(self._flatten_int_indices(x))
+            return out
+        if isinstance(obj, np.ndarray):
+            return self._flatten_int_indices(obj.tolist())
+        # ignore anything else
+        return out
+
+    def _normalize_inlet_idx(self, inlet_idx_raw):
+        """Coerce to sorted unique list[int] within domain bounds [0, self._ny)."""
+        flat = self._flatten_int_indices(inlet_idx_raw)
+        flat = [int(i) for i in flat if 0 <= int(i) < self._ny]
+        return sorted(set(flat))
 
     def update(self):
         """Update cascade by a single time step"""
@@ -572,6 +598,7 @@ class Cascade:
         # if all domain are drowned, stop the model
         if self._barrier3d[0].time_index > 1:
             if all(model.drown_break for model in self._barrier3d):
+                print('all barriers drowned')
                 return
 
         # advance B3D by one time step (B3D initializes at time_index = 1 and then
@@ -585,12 +612,20 @@ class Cascade:
         #get the variables from barrier3d
         # reshape output from parallel processing and convert from tuple to list
 
-        x_t_dt_b3d_m, x_s_dt_b3d_m, h_b_dt_b3d_m, drowned_barrier_b3d, b3d = zip(*batch_output)
+        x_t_dt_b3d_m, x_s_dt_b3d_m, h_b_dt_b3d_m, b3d, drowned_barrier_b3d  = zip(*batch_output)
         x_t_dt_b3d_m = list(x_t_dt_b3d_m)
         x_s_dt_b3d_m = list(x_s_dt_b3d_m)
         h_b_dt_b3d_m = list(h_b_dt_b3d_m)
+
+        x_t_dt_b3d_m = np.nan_to_num(x_t_dt_b3d_m, nan=0.0)
+        x_s_dt_b3d_m = np.nan_to_num(x_s_dt_b3d_m, nan=0.0)
+        h_b_dt_b3d_m = np.nan_to_num(h_b_dt_b3d_m, nan=0.0)
         drowned_barrier_b3d = list(drowned_barrier_b3d)
-        self._barrier3d: List[Barrier3d] = list(b3d)
+        print(f"drowned barriers - B3D: {drowned_barrier_b3d}")
+        # print(f"x_t - B3D: {x_t_dt_b3d_m}")
+        # print(f"x_s - B3D: {x_s_dt_b3d_m}")
+        # print(f"h_b - B3D: {h_b_dt_b3d_m}")
+        self._barrier3d: List[barrier3d] = list(b3d)
 
         # Pass drowned barrier info from B3D to BRIE
         if any(self._inlet_module):
@@ -600,7 +635,7 @@ class Cascade:
                 if drowned == 1 and self._inlet_module[iB3D]
             ]
             if any(drowned_barriers):
-                self._brie_coupler.brie._inlet_idx.extend(drowned_barriers) #add the drowned barrier index to the list
+                self._brie_coupler.brie._inlets._inlet_idx.extend(drowned_barriers) #add the drowned barrier index to the list
                 self._brie_coupler.brie.h_b[drowned_barriers] = 0 #make the barrier height zero after drowning
                 # NEW: Record the time and location of new inlets
                 #in progress
@@ -612,6 +647,8 @@ class Cascade:
             )  # also updates dune domain
         else:
             for iB3D in range(self._ny):
+                if drowned_barrier_b3d[iB3D] is True:
+                    continue
                 self._barrier3d[iB3D].update_dune_domain()
 
         # check also for width/height drowning in B3D (would occur in
@@ -633,6 +670,8 @@ class Cascade:
         # rebuild dunes if fall below height threshold, and check if dunes should
         # grow naturally.
         for iB3D in range(self._ny):
+            if drowned_barrier_b3d[iB3D] is True:
+                continue
             if self._roadway_management_module[iB3D]:
                 # if the roadway drowned or was too narrow for the road to be
                 # relocated, stop managing the road!
@@ -721,6 +760,8 @@ class Cascade:
         # or not the dune should be rebuilt
         if self._community_economics_module:
             for iB3D in range(self._ny):
+                if drowned_barrier_b3d[iB3D]  is True:
+                    continue
                 # if barrier was too narrow to sustain a community in the last time
                 # step (from the BeachDuneManager), stop the coupling with CHOM
                 # (i.e., end human mangement); dune growth rates are reset below in the
@@ -748,6 +789,8 @@ class Cascade:
         # overwash deposition for residential or commercial communities (user
         # specified) and bulldozes some of remaining overwash to dunes.
         for iB3D in range(self._ny):
+            if drowned_barrier_b3d[iB3D] is True:
+                continue
             if self._beach_nourishment_module[iB3D]:
                 # if barrier was too narrow to sustain a community in the last time
                 # step, stop managing beach and dunes!
@@ -817,9 +860,9 @@ class Cascade:
                 h_b[iB3D] = self._barrier3d[iB3D].h_b_TS[-1]
                 s_sf[iB3D] = self._barrier3d[iB3D].s_sf_TS[-1]
 
-            self._brie_coupler.update_brie_for_human_modifications(
-                x_t, x_s, x_b, h_b, s_sf
-            )
+            # self._brie_coupler.update_brie_for_human_modifications(
+            #     x_t, x_s, x_b, h_b, s_sf
+            # )
 
     ###############################################################################
     # save data
