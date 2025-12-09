@@ -40,12 +40,12 @@ YEAR = 1978
 RAW_ROAD_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\roads\offset\1978\1978_road_offset_raw.csv"
 RAW_DUNE_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\island_offset\1978\1978_duneline_offset_raw.csv"
 
-OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\roads\offset"
-FINAL_OUTPUT_NAME = f"CASCADE_RoadSetback_{YEAR}.csv"
+OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\roads\offset\1978"
+FINAL_OUTPUT_NAME = f"RoadSetback_{YEAR}.csv"
 
 # CASCADE domain window
-START_DOMAIN = 1
-END_DOMAIN   = 105
+START_DOMAIN = 9
+END_DOMAIN   = 90
 
 # Column names from ArcGIS exports
 ROAD_ID_COLUMN = "domain_id_1"

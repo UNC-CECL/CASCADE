@@ -11,6 +11,15 @@ Key Features:
 - Loads and processes elevation/shoreline offset data (converting meters to decameters).
 - Dynamically loads 135 vertical elevation profiles (105 real + 30 buffer domains).
 - The 'Natural State' configuration explicitly disables all management modules.
+
+DOMAIN NUMBERING:
+- Real domains: 1–90 (south to north)
+- Buffers: 15 domains on each side (total = 120 alongshore cells)
+
+ROAD DOMAINS:
+- Road present in real domains 9–90
+- Equivalent CASCADE indices (with buffers): 24–105
+
 """
 import copy
 import numpy as np
@@ -22,19 +31,19 @@ from cascade.cascade import Cascade
 # --- 1. PHYSICAL & DOMAIN CONSTANTS ---
 # =============================================================================
 
-# Total alongshore domains (15 Left Buffer + 105 Real + 15 Right Buffer)
-TOTAL_DOMAINS = 135
+# Total alongshore domains (15 Left Buffer + 90 Real + 15 Right Buffer)
+TOTAL_DOMAINS = 120
 NUMBER_BARRIER3D_MODELS = TOTAL_DOMAINS
 
 # Real domain indices for data loading (105 cells)
 START_REAL_DOMAIN_INDEX = 15
-END_REAL_DOMAIN_INDEX = 135 # Exclusive index
+END_REAL_DOMAIN_INDEX = 105 # Exclusive index
 START_FILE_NUMBER = 1      # Corresponds to the first domain file ID (e.g., domain_30...)
 
 # Road Affected Indices (Used for defining the extent of the road setback array)
-START_ROAD_INDEX = 7
+START_ROAD_INDEX = 23
 END_ROAD_INDEX = 105
-# The Road setback array must be TOTAL_DOMAINS long (135), but only the
+# The Road setback array must be TOTAL_DOMAINS long (120), but only the
 # section START_ROAD_INDEX to END_ROAD_INDEX is typically loaded with non-zero values.
 
 # =============================================================================
@@ -47,7 +56,7 @@ HATTERAS_DATA_BASE = os.path.join(PROJECT_BASE_DIR, 'data', 'hatteras_init')
 OUTPUT_BASE_DIR = os.path.join(PROJECT_BASE_DIR, 'output', 'raw_runs')
 
 # Input data file paths
-DUNE_LOAD_ALL = os.path.join(HATTERAS_DATA_BASE, 'island_offset', 'Dune_Offsets_1978_1997_PADDED_135.csv')
+DUNE_LOAD_ALL = os.path.join(HATTERAS_DATA_BASE, 'island_offset', 'hindcast_1978', 'Island_Dune_Offsets_1978_1997_PADDED_120.csv')
 STORM_FILE_1978_1997 = os.path.join(HATTERAS_DATA_BASE, 'storms', 'hindcast_storms', 'storms_1978_1997.npy')
 STORM_FILE_1997_2022 = os.path.join(HATTERAS_DATA_BASE, 'storms', 'hindcast_storms', 'storms_1997_2019.npy')
 ROAD_LOAD_FILE = os.path.join(HATTERAS_DATA_BASE, 'roads', 'offset', '1978_road_setback_2row_FINAL.csv')
@@ -73,7 +82,7 @@ if START_YEAR == 1978:
 
 elif START_YEAR == 1997:
     YEAR_COLUMN_INDEX = 1  # Column in Dune_Offsets file for 1997 data
-    RUN_NAME = 'HAT_1997_2020_Natural_State'
+    RUN_NAME = 'HAT_1997_2019_Natural_State'
     STORM_FILE = STORM_FILE_1997_2022
     ROAD_LOAD_NAME = ROAD_LOAD_FILE
 
