@@ -20,7 +20,7 @@ GrowthParamStart: false
 HdDiffu: 0.75
 Ki: 7.5e-06
 Kr: 7.5e-05
-LShoreface: 524.3969226015213
+LShoreface: 524.6532522894681
 MHW: 0.46
 MaxShrubHeight: 5.3
 MaxUpSlope: 0.25
@@ -39,14 +39,14 @@ Sandbag_elevation: 1.9
 SeededRNG: true
 Seedmax: 1000.0
 Seedmin: 100.0
-ShorefaceToe: 1699.3199999999995
+ShorefaceToe: 1452.7454838709673
 ShrubEl_max: 2.3
 ShrubEl_min: 1.2
 Shrub_ON: 0
 SprayDist: 170
 StormSeries: []
 StormStart: 2
-TMAX: 20
+TMAX: 19
 TideAmp: 1.2
 TimeFruit: 5.0
 UprootLimit: -0.2

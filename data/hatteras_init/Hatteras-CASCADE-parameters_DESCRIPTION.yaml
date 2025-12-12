@@ -1,0 +1,162 @@
+# =============================================================================
+# Hatteras CASCADE Parameters - (Mixed m and dam)
+# =============================================================================
+# CASCADE YAML uses MIXED units!
+# - Elevations/heights: METERS (CASCADE converts to dam internally)
+# - Horizontal distances: DECAMETERS (dam)
+# - Rates: Various (see comments)
+# =============================================================================
+
+# --- Barrier Geometry ---
+BarrierLength: 500              # dam - Cross-shore barrier length = 5000m
+BayDepth: 3.0                   # dam - Bay depth = 30m
+BermEl: 1.9                     # m - Berm elevation (MHW-relative) ← METERS!
+                                # CASCADE converts this internally
+
+# --- Shoreface Parameters ---
+DShoreface: 8.9                 # dam - Shoreface depth = 89m
+LShoreface: 524.6532522894681   # dam - Shoreface length
+ShorefaceToe: 1452.7454838709673 # dam - Shoreface toe distance
+k_sf: 19324.753176079226        # Shoreface diffusivity coefficient
+s_sf_eq: 0.01698590034494604    # dimensionless - Equilibrium shoreface slope
+
+# --- Dune Parameters ---
+Dmax: 5.0                       # m - Maximum dune HEIGHT above berm ← ADDED/CHANGED
+                                # Allows engineered dunes up to 5m tall
+                                # This is the CRITICAL parameter that was missing!
+
+Dmaxel: 3.4                     # m - Maximum dune ELEVATION (MHW-relative)
+                                # Keep original value for compatibility
+
+Dstart: 0.5                     # m - Initial dune height = 0.5m
+DuneWidth: 20.0                 # m - Dune width = 20m
+DuneRestart: 0.075              # m - Dune restart height = 0.075m
+HdDiffu: 0.75                   # Dune diffusion coefficient (dimensionless)
+DuneParamStart: true            # Use dune growth parameters at start
+
+# --- Dune Growth Parameters ---
+rmin: 0.55                      # dimensionless - Min dune growth rate (parabolic)
+rmax: 0.95                      # dimensionless - Max dune growth rate (parabolic)
+GrowthParamStart: false         # Don't use growth param file at start
+
+# --- Tidal Parameters ---
+MHW: 0.46                       # m - Mean High Water (NAVD88) ← METERS!
+TideAmp: 1.2                    # m - Tidal amplitude
+
+# --- Wave Parameters (set in Python script, not YAML) ---
+# wave_height: 1 (m)
+# wave_period: 7 (s)
+# wave_asymmetry: 0.8 (dimensionless)
+# wave_angle_high_fraction: 0.2 (dimensionless)
+
+# --- Overwash Parameters ---
+Rin_i: 0.1                      # dimensionless - Runup resistance (inundation)
+Rin_r: 2.0                      # dimensionless - Runup resistance (runup)
+OWss_i: 2                       # Overwash suspended sediment (inundation)
+OWss_r: 1                       # Overwash suspended sediment (runup)
+threshold_in: 0.25              # m - Inundation threshold
+
+# --- Backbarrier Parameters ---
+Cbb_i: 0.85                     # dimensionless - Backbarrier concentration (inundation)
+Cbb_r: 0.7                      # dimensionless - Backbarrier concentration (runup)
+Cx: 10.0                        # dimensionless - Cross-barrier concentration
+C1: 8.8                         # Overwash parameter 1
+C2: 4.6                         # Overwash parameter 2
+
+# --- Alongshore Transport ---
+Ki: 7.5e-06                     # Alongshore transport coefficient (inundation)
+Kr: 7.5e-05                     # Alongshore transport coefficient (runup)
+Qs_min: 1.0                     # Minimum alongshore transport
+Qs_bb_min: 1                    # Minimum backbarrier transport
+Rat: 0.0                        # Alongshore transport ratio
+
+# --- Vegetation Parameters ---
+Shrub_ON: 0                     # Shrubs disabled (0 = off, 1 = on)
+Dshrub: 2.75                    # m - Shrub rooting depth = 2.75m
+ShrubEl_min: 1.2                # m - Min elevation for shrubs = 1.2m
+ShrubEl_max: 2.3                # m - Max elevation for shrubs = 2.3m
+MaxShrubHeight: 5.3             # m - Max shrub height = 5.3m
+Qshrub_max: 0.15                # Max shrub sediment capture (dimensionless)
+SprayDist: 170                  # m - Salt spray distance = 170m
+SalineLimit: 5                  # Salinity limit (dimensionless)
+Female: 0.5                     # Female shrub fraction (0-1)
+GermRate: 0.6                   # Germination rate (0-1)
+Seedmin: 100.0                  # Min seeds
+Seedmax: 1000.0                 # Max seeds
+TimeFruit: 5.0                  # years - Time to fruit
+UprootLimit: -0.2               # m - Uprooting elevation limit = -0.2m
+BurialLimit: 0.75               # m - Burial limit = 0.75m
+
+# --- Slope Parameters ---
+MaxUpSlope: 0.25                # dimensionless - Maximum updrift slope
+beta: 0.04                      # dimensionless - Beach slope
+mm: 2.0                         # dimensionless - Slope parameter
+nn: 0.5                         # dimensionless - Slope parameter
+
+# --- Sea Level Rise ---
+RSLR_Constant: true             # Use constant SLR rate (true/false)
+RSLR_const: 0.0056              # m/yr - SLR rate = 5.6 mm/yr
+                                # NOTE: This is in METERS/year
+                                # Common values: 0.002-0.006 m/yr (2-6 mm/yr)
+
+# --- Management/Infrastructure ---
+Sandbag_elevation: 1.9          # m - Sandbag elevation ← METERS!
+enable_sandbags: false          # Sandbags disabled for natural state
+sandbag_need: false             # No sandbag need
+sandbag_elevation: 1.8          # m - Alternative sandbag elevation ← METERS!
+
+# --- Dispersal Parameters ---
+disp_mu: -0.721891              # dimensionless - Dispersal mu
+disp_sigma: 1.5                 # dimensionless - Dispersal sigma
+
+# --- Storm Parameters ---
+StormSeries: []                 # Empty, loaded from file in Python
+StormStart: 2                   # integer - Storm start year index
+TMAX: 19                        # integer - Total time steps (years)
+
+# --- Random Number Generation ---
+SeededRNG: true                 # Use seeded RNG for reproducibility
+
+# --- File Paths (overridden in Python script) ---
+storm_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\storms\hindcast_storms\storms_1978_1997.npy
+dune_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\buffer\sample_1_dune.npy
+elevation_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\buffer\sample_1_topography.npy
+growth_param_file: C:\Users\hanna\PycharmProjects\CASCADE\data\default_cascade_variables\growthparam_1000dam.npy
+
+# =============================================================================
+# UNIT SUMMARY - QUICK REFERENCE
+# =============================================================================
+#
+# METERS (m):
+#   - BermEl, MHW, TideAmp
+#   - Dmax (NEW - this is the critical one!)
+#   - Dmaxel, Dstart, DuneWidth, DuneRestart
+#   - threshold_in
+#   - Dshrub, ShrubEl_min, ShrubEl_max, MaxShrubHeight
+#   - SprayDist, UprootLimit, BurialLimit
+#   - Sandbag_elevation, sandbag_elevation
+#   - RSLR_const (m/yr)
+#
+# DECAMETERS (dam):
+#   - BarrierLength, BayDepth
+#   - DShoreface, LShoreface, ShorefaceToe
+#
+# DIMENSIONLESS:
+#   - rmin, rmax, HdDiffu
+#   - Rin_i, Rin_r, OWss_i, OWss_r
+#   - Cbb_i, Cbb_r, Cx, C1, C2
+#   - MaxUpSlope, beta, mm, nn
+#   - Female, GermRate
+#   - disp_mu, disp_sigma
+#
+# =============================================================================
+# CHANGES FROM LABMATE'S VERSION:
+# =============================================================================
+# 1. Added Dmax: 5.0 (m) - This is the KEY addition!
+#    Without this, CASCADE uses a default that's too restrictive
+#    for your engineered dunes.
+#
+# 2. All other values kept EXACTLY as your labmate had them
+#    (they were correct all along!)
+#
+# =============================================================================

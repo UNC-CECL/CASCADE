@@ -5,7 +5,7 @@ This script runs a hindcast simulation of barrier island evolution WITHOUT
 human management interventions (roads, nourishment, etc.).
 
 ============================================================================
-EASY CONFIGURATION GUIDE - MODIFY THESE NUMBERS FOR YOUR STUDY AREA
+MODIFY THESE NUMBERS FOR YOUR STUDY AREA
 ============================================================================
 
 To change your domain setup, update SECTION 1 below:
@@ -91,10 +91,10 @@ DUNE_OFFSET_FILE = os.path.join(
     HATTERAS_DATA_BASE,
     'island_offset',
     'hindcast_1978_1997',
-    f'Island_Dune_Offsets_1978_1997_PADDED_{TOTAL_DOMAINS}.csv'
+    f'Island_Dune_Offsets_1978_1997_PADDED_{TOTAL_DOMAINS}_ModStorms.csv'
 )
-STORM_FILE_1978_1997 = os.path.join(HATTERAS_DATA_BASE, 'storms', 'hindcast_storms', 'storms_1978_1997.npy')
-STORM_FILE_1997_2022 = os.path.join(HATTERAS_DATA_BASE, 'storms', 'hindcast_storms', 'storms_1997_2019.npy')
+STORM_FILE_1978_1997 = os.path.join(HATTERAS_DATA_BASE, 'storms', 'hindcast_storms', 'modified', 'storms_1978_1997_1.5x_intensity.npy')
+STORM_FILE_1997_2022 = os.path.join(HATTERAS_DATA_BASE, 'storms', 'hindcast_storms', 'storms_1997_2019.npy', 'storms_1978_1997_1.5x_intensity.npy')
 ROAD_SETBACK_FILE = os.path.join(HATTERAS_DATA_BASE, 'roads', 'offset', '1978', 'RoadSetback_1978.csv')
 
 # =============================================================================
