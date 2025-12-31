@@ -1,5 +1,6 @@
 # Collate data from CASCADE runs and export as .pkl files
-# BF 2/16/25
+# Takes CASCADE output .npz files and calculates summary statistics for later scripts
+# BF 12/30/25
 
 import copy
 
@@ -77,7 +78,7 @@ def Process_Batch(Base_Name,
     Island_Width_TS = []
 
 
-    for runs in range(40,len(name_list)):
+    for runs in range(0,len(name_list)):
         #for runs in range(0,2):
         Model_Run_Year,Drowning_Domain_Location, Cascade_List = Process_Data(run_name_batch = name_list, load_index = runs)
 
