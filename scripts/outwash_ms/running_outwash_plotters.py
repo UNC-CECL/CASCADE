@@ -11,9 +11,9 @@ from cascade.tools.outwash_plotters import plot_ElevAnimation_CASCADE as plt_CAS
 from cascade.tools.outwash_plotters import plot_Elev_CASCADE_subplots as subplts_CASCADE
 
 elevation_plots_on = False
-dune_plots_on = False
+dune_plots_on = True
 animated_plotters_on = False
-CASCADE_elev_subplots_on = True
+CASCADE_elev_subplots_on = False
 
 rname_array = ["r025", "r035"]
 # rname_array = ["r035"]
@@ -25,7 +25,7 @@ for rname in rname_array:
 
     # location of the npz files
     datadir_b3d = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{0}/overwash_only/".format(rname)
-    datadir_100 = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{0}/outwash100/".format(rname)
+    datadir_100 = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/one_storm/{0}/outwash100/".format(rname)
     datadir_50 = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{0}/outwash50/".format(rname)
     datadir_0 = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{0}/outwash0/".format(rname)
 
@@ -57,6 +57,12 @@ for rname in rname_array:
     outwash0_numpy_obj = np.load(file_0, allow_pickle=True)
     outwash0_obj = outwash0_numpy_obj["cascade"][0]
     outwash0 = outwash0_obj.barrier3d
+
+    # insert overwash flux code for figure here
+
+    # insert shoreline position code for figure here
+
+
 
     if elevation_plots_on:
         TMAX = 101
@@ -512,33 +518,33 @@ for rname in rname_array:
         # plot_years = [0,1,21,25,41,50,61,81,100]
         plot_years = [0, 1, 21, 41, 61, 81, 100]
 
-        # Baseline
-        subplts_CASCADE(
-            cascade=b3d_obj,
-            directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
-            TMAX_MGMT=b3d[0].TMAX,
-            name="baseline",
-            TMAX_SIM=b3d[0].TMAX,
-            plot_timesteps=plot_years,  # array with the timesteps you want to plot
-            main_plot_title="baseline",
-            ny=1,
-            beach_management_ny=None,  # list of bool the length of ny, or None for all False
-            roadway_management_ny=None,
-            y_lim=(ymin, ymax),
-            z_lim=6,
-            z_bot=-3,
-            fig_size=None,
-            fig_eps=False,
-            km_on=False,
-            meters_on=True,
-        )
+        # # Baseline
+        # subplts_CASCADE(
+        #     cascade=b3d_obj,
+        #     directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
+        #     TMAX_MGMT=b3d[0].TMAX,
+        #     name="baseline",
+        #     TMAX_SIM=b3d[0].TMAX,
+        #     plot_timesteps=plot_years,  # array with the timesteps you want to plot
+        #     main_plot_title="baseline",
+        #     ny=1,
+        #     beach_management_ny=None,  # list of bool the length of ny, or None for all False
+        #     roadway_management_ny=None,
+        #     y_lim=(ymin, ymax),
+        #     z_lim=6,
+        #     z_bot=-3,
+        #     fig_size=None,
+        #     fig_eps=False,
+        #     km_on=False,
+        #     meters_on=True,
+        # )
 
         # 100% outwash
         subplts_CASCADE(
             cascade=outwash100_obj,
             directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
             TMAX_MGMT=outwash100[0].TMAX,
-            name="outwash100",
+            name="outwash100_post_outwash_domains2",
             TMAX_SIM=outwash100[0].TMAX,
             plot_timesteps=plot_years,  # array with the timesteps you want to plot
             main_plot_title="100% washout to shoreface",
@@ -554,44 +560,44 @@ for rname in rname_array:
             meters_on=True,
         )
 
-        # 50% outwash
-        subplts_CASCADE(
-            cascade=outwash50_obj,
-            directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
-            TMAX_MGMT=outwash50[0].TMAX,
-            name="outwash50",
-            TMAX_SIM=outwash50[0].TMAX,
-            plot_timesteps=plot_years,  # array with the timesteps you want to plot
-            main_plot_title="50% washout to shoreface",
-            ny=1,
-            beach_management_ny=None,  # list of bool the length of ny, or None for all False
-            roadway_management_ny=None,
-            y_lim=(ymin, ymax),
-            z_lim=6,
-            z_bot=-3,
-            fig_size=None,
-            fig_eps=False,
-            km_on=False,
-            meters_on=True,
-        )
-
-        # 0%
-        subplts_CASCADE(
-            cascade=outwash0_obj,
-            directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
-            TMAX_MGMT=outwash0[0].TMAX,
-            name="outwash0",
-            TMAX_SIM=outwash0[0].TMAX,
-            plot_timesteps=plot_years,  # array with the timesteps you want to plot
-            main_plot_title="0% washout to shoreface",
-            ny=1,
-            beach_management_ny=None,  # list of bool the length of ny, or None for all False
-            roadway_management_ny=None,
-            y_lim=(ymin, ymax),
-            z_lim=6,
-            z_bot=-3,
-            fig_size=None,
-            fig_eps=False,
-            km_on=False,
-            meters_on=True,
-        )
+        # # 50% outwash
+        # subplts_CASCADE(
+        #     cascade=outwash50_obj,
+        #     directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
+        #     TMAX_MGMT=outwash50[0].TMAX,
+        #     name="outwash50_post_outwash_domains2",
+        #     TMAX_SIM=outwash50[0].TMAX,
+        #     plot_timesteps=plot_years,  # array with the timesteps you want to plot
+        #     main_plot_title="50% washout to shoreface",
+        #     ny=1,
+        #     beach_management_ny=None,  # list of bool the length of ny, or None for all False
+        #     roadway_management_ny=None,
+        #     y_lim=(ymin, ymax),
+        #     z_lim=6,
+        #     z_bot=-3,
+        #     fig_size=None,
+        #     fig_eps=False,
+        #     km_on=False,
+        #     meters_on=True,
+        # )
+        #
+        # # 0%
+        # subplts_CASCADE(
+        #     cascade=outwash0_obj,
+        #     directory=r"C:\Users\Lexi\Documents\Research\Outwasher Paper\figures\elev_subplots\{0}".format(rname),
+        #     TMAX_MGMT=outwash0[0].TMAX,
+        #     name="outwash0_post_outwash_domains2",
+        #     TMAX_SIM=outwash0[0].TMAX,
+        #     plot_timesteps=plot_years,  # array with the timesteps you want to plot
+        #     main_plot_title="0% washout to shoreface",
+        #     ny=1,
+        #     beach_management_ny=None,  # list of bool the length of ny, or None for all False
+        #     roadway_management_ny=None,
+        #     y_lim=(ymin, ymax),
+        #     z_lim=6,
+        #     z_bot=-3,
+        #     fig_size=None,
+        #     fig_eps=False,
+        #     km_on=False,
+        #     meters_on=True,
+        # )
