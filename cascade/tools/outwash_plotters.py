@@ -695,22 +695,40 @@ def plot_Elev_CASCADE_subplots(
                     for i in range(0, cellular_beach_width):
                         BeachDomain[i, :] = (barrier3d[iB3D].SL + add) * (i + 1)
 
-                # Make animation frame domain
-                # so this is now in meters?
-                Domain = barrier3d[iB3D].DomainTS[t] * 10
-                Dunes = (barrier3d[iB3D].DuneDomain[t, :, :] + barrier3d[iB3D].BermEl) * 10
-                Dunes = np.rot90(Dunes)
-                Dunes = np.flipud(Dunes)
-                Beach = BeachDomain * 10
-                Domain = np.flip(np.vstack([Beach, Dunes, Domain]),1)
-                Domain[Domain < 0] = -3
-                widthTS = len(Domain)
-                OriginTstart = int(cellular_shoreline_post_humans)
-                OriginTstop = OriginTstart + widthTS
-                xOrigin = iB3D * BarrierLength
-                AnimateDomain[
-                    OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
-                ] = Domain
+                outwash_years = [1, 21, 41, 61, 81]
+                if t not in outwash_years:
+                    # Make animation frame domain
+                    # so this is now in meters
+                    Domain = barrier3d[iB3D].DomainTS[t] * 10
+                    Dunes = (barrier3d[iB3D].DuneDomain[t, :, :] + barrier3d[iB3D].BermEl) * 10
+                    Dunes = np.rot90(Dunes)
+                    Dunes = np.flipud(Dunes)
+                    Beach = BeachDomain * 10
+                    Domain = np.flip(np.vstack([Beach, Dunes, Domain]),1)
+                    Domain[Domain < 0] = -3
+                    widthTS = len(Domain)
+                    OriginTstart = int(cellular_shoreline_post_humans)
+                    OriginTstop = OriginTstart + widthTS
+                    xOrigin = iB3D * BarrierLength
+                    AnimateDomain[
+                        OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
+                    ] = Domain
+                else:
+                    # use the outwash domains instead (these contain the beach and dunes already, need to flip?)
+                    Domain = np.flip(outwash[iB3D]._post_outwash_full_domain_TS[t] * 10)
+                    # Dunes = (barrier3d[iB3D].DuneDomain[t, :, :] + barrier3d[iB3D].BermEl) * 10
+                    # Dunes = np.rot90(Dunes)
+                    # Dunes = np.flipud(Dunes)
+                    # Beach = BeachDomain * 10
+                    # Domain = np.flip(np.vstack([Beach, Dunes, Domain]),1)
+                    # Domain[Domain < 0] = -3
+                    widthTS = len(Domain)
+                    OriginTstart = int(cellular_shoreline_post_humans)
+                    OriginTstop = OriginTstart + widthTS
+                    xOrigin = iB3D * BarrierLength
+                    AnimateDomain[
+                        OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
+                    ] = Domain
 
         # Plot to subplot and save final figure
         plt.rcParams.update({"font.size": 10})
@@ -800,9 +818,9 @@ def plot_Elev_CASCADE_subplots(
         figname = "elev_" + name + ".eps"
         elevFig2.savefig(figname, format="eps")
     else:
-        figname = "elev_" + name
+        figname = "elev_" + str(name) + ".png"
         elevFig2.savefig(figname)  # dpi=200
-    plt.close(elevFig2)
+    # plt.close(elevFig2)
 
     print()
     print("[ * figure successfully generated * ]")
