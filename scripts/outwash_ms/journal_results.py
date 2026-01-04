@@ -126,7 +126,6 @@ for rname in rname_array:
     avg_outwash_array_50 = np.zeros(100, dtype=object)
     avg_outwash_array_0 = np.empty(100, dtype=object)
 
-
     for storm_num in range(1, 101):
 
         # b3d variables ------------------------------------------------------------------------------------------------
@@ -525,20 +524,6 @@ for rname in rname_array:
         print("average dune crest height 100% outwash: {0}".format(avg_dune_crest_array_100))
         print("average dune crest height 50% outwash: {0}".format(avg_dune_crest_array_50))
         print("average dune crest height 0% outwash: {0}".format(avg_dune_crest_array_0))
-        # fig1 = plt.figure()
-        # plt.title("{0}".format(rname))
-        # plt.plot(DuneCrest_b3d, label="baseline")
-        # plt.plot(DuneCrest_100, label="100% outwash")
-        # plt.plot(DuneCrest_50, label="50% outwash")
-        # plt.plot(DuneCrest_0, label="0% outwash")
-        # plt.ylim(bottom=0, top=5)
-        # plt.xlabel("Alongshore Barrier Length (m)")
-        # plt.ylabel("Average Dune Crest Elevation (m)")
-        # xtick_max = np.shape(DuneCrest_0)[0]
-        # x_ticks = np.array(range(0, xtick_max, 10))
-        # x_tick_labels = x_ticks * 10
-        # plt.xticks(x_ticks, x_tick_labels)
-        # plt.legend()
 
         # dune gaps
         print("The average total length of dune gaps for the b3d scenario is: {0} m".format(avg_dune_cells_array_b3d))
@@ -558,59 +543,3 @@ for rname in rname_array:
         print("average outwash per event 50%: {0}".format(avg_outwash_array_50))
         print("average outwash per event 0%: {0}".format(avg_outwash_array_0))
         print()
-
-
-    # if plotters:
-    #     storm_num = 1
-    #     if rname == "r025":
-    #         title = "r = 0.25"
-    #     else:
-    #         title = "r = 0.35"
-    #
-    #     # plotting one plot of shoreline position
-    #     fig9 = plt.figure()
-    #     ax1 = fig9.add_subplot(111)
-    #     ls = "solid"
-    #     ax1.plot(shoreline_pos_array_b3d[storm_num-1])
-    #     ax1.plot(shoreline_pos_array_100[storm_num-1], linestyle=ls)
-    #     ax1.plot(shoreline_pos_array_50[storm_num-1], linestyle=ls)
-    #     ax1.plot(shoreline_pos_array_0[storm_num-1], linestyle=ls)
-    #     ax1.legend(["baseline", "100% washout to shoreface", "50% washout to shoreface", "0% washout to shoreface"],
-    #                prop={'size': 9}, loc="upper left")
-    #     ax1.set_ylabel("Shoreline Position (m)")
-    #     ax1.set_xlabel("Simulation Years")
-    #     ax1.set_ylim(bottom=-60, top=160)
-    #     ax1.set_title(title, weight="bold")
-    #     fig9.subplots_adjust(hspace=0.3)
-    #
-    #     # plotting one year of overwash and outwash flux
-    #     fig10 = plt.figure()
-    #     # fig9.suptitle('overwash storm {0} - {1}'.format(storm_num, rname), weight="bold")
-    #     # fig9.suptitle('{0}'.format(rname), weight="bold")
-    #     ax1 = fig10.add_subplot(211)
-    #     ls = "solid"
-    #     ax1.plot(overwash_array_b3d[storm_num-1])
-    #     ax1.plot(overwash_array_100[storm_num-1], linestyle=ls)
-    #     ax1.plot(overwash_array_50[storm_num-1], linestyle=ls)
-    #     ax1.plot(overwash_array_0[storm_num-1], linestyle=ls)
-    #     ax1.set_ylabel("Overwash Flux (m$^3$/m)")
-    #     ax1.set_xlabel("Simulation Years")
-    #     ax1.set_ylim(top=150)
-    #     ax1.set_title(title, weight="bold")
-    #     ax1.legend(["baseline", "100% washout to shoreface", "50% washout to shoreface", "0% washout to shoreface"],
-    #                prop={'size': 9}, loc="upper left")
-    #
-    #     max_t_b3d = tmax_array_b3d[storm_num-1]
-    #     max_t_100 = tmax_array_100[storm_num - 1]
-    #     max_t_50 = tmax_array_50[storm_num - 1]
-    #     max_t_0 = tmax_array_0[storm_num - 1]
-    #
-    #     outwash_array_b3d_storm = outwash_array_b3d[storm_num-1]
-    #     outwash_array_b3d_storm[max_t_b3d+1:] = np.nan
-    #     outwash_array_100_storm = outwash_array_100[storm_num - 1]
-    #     outwash_array_100_storm[max_t_100+1:] = np.nan
-    #     outwash_array_50_storm = outwash_array_50[storm_num - 1]
-    #     outwash_array_50_storm[max_t_50+1:] = np.nan
-    #     outwash_array_0_storm = outwash_array_0[storm_num - 1]
-    #     outwash_array_0_storm[max_t_0+1:] = np.nan
-    #
