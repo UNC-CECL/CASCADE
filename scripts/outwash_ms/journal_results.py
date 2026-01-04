@@ -81,59 +81,20 @@ for rname in rname_array:
     tmax_array_50 = []
     tmax_array_0 = []
 
-    tmax_first_drown_100 = []
-    tmax_first_drown_50 = []
-    tmax_first_drown_0 = []
-
     drowning_array_b3d = np.zeros(100)
     drowning_array_100 = np.zeros(100)
     drowning_array_50 = np.zeros(100)
     drowning_array_0 = np.zeros(100)
-
-    drown_year_array_b3d = []
-    drown_year_array_100 = []
-    drown_year_array_50 = []
-    drown_year_array_0 = []
-
-    shoreline_pos_array_b3d = np.zeros(100, dtype=object)
-    shoreline_pos_array_100 = np.zeros(100, dtype=object)
-    shoreline_pos_array_50 = np.zeros(100, dtype=object)
-    shoreline_pos_array_0 = np.zeros(100, dtype=object)
-
-    end_net_migration_b3d = []
-    end_net_migration_100 = []
-    end_net_migration_50 = []
-    end_net_migration_0 = []
 
     end_net_migration_no_drowns_b3d = []
     end_net_migration_no_drowns_100 = []
     end_net_migration_no_drowns_50 = []
     end_net_migration_no_drowns_0 = []
 
-    end_net_migration_only_drowns_b3d = []
-    end_net_migration_only_drowns_100 = []
-    end_net_migration_only_drowns_50 = []
-    end_net_migration_only_drowns_0 = []
-
-    shoreface_slope_array_b3d = np.zeros(100, dtype=object)
-    shoreface_slope_array_100 = np.zeros(100, dtype=object)
-    shoreface_slope_array_50 = np.zeros(100, dtype=object)
-    shoreface_slope_array_0 = np.zeros(100, dtype=object)
-
-    int_height_array_b3d = np.zeros(100, dtype=object)
-    int_height_array_100 = np.zeros(100, dtype=object)
-    int_height_array_50 = np.zeros(100, dtype=object)
-    int_height_array_0 = np.zeros(100, dtype=object)
-
     avg_int_height_array_b3d = np.zeros(100, dtype=object)
     avg_int_height_array_100 = np.zeros(100, dtype=object)
     avg_int_height_array_50 = np.zeros(100, dtype=object)
     avg_int_height_array_0 = np.zeros(100, dtype=object)
-
-    int_width_array_b3d = np.zeros(100, dtype=object)
-    int_width_array_100 = np.zeros(100, dtype=object)
-    int_width_array_50 = np.zeros(100, dtype=object)
-    int_width_array_0 = np.zeros(100, dtype=object)
 
     avg_int_width_array_b3d = np.zeros(100, dtype=object)
     avg_int_width_array_100 = np.zeros(100, dtype=object)
@@ -145,10 +106,10 @@ for rname in rname_array:
     dune_crest_array_50 = np.zeros(100, dtype=object)
     dune_crest_array_0 = np.zeros(100, dtype=object)
 
-    avg_dune_crest_array_b3d = []
-    avg_dune_crest_array_100 = []
-    avg_dune_crest_array_50 = []
-    avg_dune_crest_array_0 = []
+    avg_dune_cells_array_b3d = np.zeros(100)
+    avg_dune_cells_array_100 = np.zeros(100)
+    avg_dune_cells_array_50 = np.zeros(100)
+    avg_dune_cells_array_0 = np.zeros(100)
 
     overwash_array_b3d = np.zeros(100, dtype=object)
     overwash_array_100 = np.zeros(100, dtype=object)
@@ -160,25 +121,11 @@ for rname in rname_array:
     avg_overwash_array_50 = np.zeros(100, dtype=object)
     avg_overwash_array_0 = np.zeros(100, dtype=object)
 
-    outwash_array_b3d = np.zeros(100, dtype=object)
-    outwash_array_100 = np.zeros(100, dtype=object)
-    outwash_array_50 = np.zeros(100, dtype=object)
-    outwash_array_0 = np.empty(100, dtype=object)
-
     avg_outwash_array_b3d = np.zeros(100, dtype=object)
     avg_outwash_array_100 = np.zeros(100, dtype=object)
     avg_outwash_array_50 = np.zeros(100, dtype=object)
-    avg_outwash_array_0 = np.zeros(100, dtype=object)
+    avg_outwash_array_0 = np.empty(100, dtype=object)
 
-    avg_height_last_TS_b3d = np.zeros(100, dtype=object)
-    avg_height_last_TS_100 = np.zeros(100, dtype=object)
-    avg_height_last_TS_50 = np.zeros(100, dtype=object)
-    avg_height_last_TS_0 = np.zeros(100, dtype=object)
-
-    avg_width_last_TS_b3d = np.zeros(100, dtype=object)
-    avg_width_last_TS_100 = np.zeros(100, dtype=object)
-    avg_width_last_TS_50 = np.zeros(100, dtype=object)
-    avg_width_last_TS_0 = np.zeros(100, dtype=object)
 
     for storm_num in range(1, 101):
 
@@ -187,7 +134,7 @@ for rname in rname_array:
         file_b3d = datadir_b3d + filename_b3d
         b3d = np.load(file_b3d, allow_pickle=True)
         b3d_obj = b3d["cascade"][0]
-        tmax_b3d = b3d_obj.barrier3d[0].TMAX
+        tmax_b3d = b3d_obj.barrier3d[0].TMAX + 1
         tmax_array_b3d.append(tmax_b3d)
 
         # drowning variable
@@ -228,6 +175,25 @@ for rname in rname_array:
         # avg_dune_crest_array_b3d.append(np.average(dune_crest_array_b3d[storm_num-1], axis=0))  # for dune crest plots
 
         # dune gaps
+        initial_gap_height = np.min(sub_domain[0])  # get the lowest value of the dunes at year 0 without the berm elev
+        berm_el = b3d_obj.barrier3d[0].BermEl
+        dune_crest_elev = dune_crest + berm_el  # dam
+        # if a barrier drowns, all dune cells are at the berm elevation, so here, if all the dune crest cells for a
+        # single year are at the berm elevation, we change the elevation to -0.3 (water) for plotting purposes
+        for row in range(np.shape(dune_crest_elev)[0]):
+            if np.all(dune_crest_elev[row] == berm_el) == True:
+                dune_crest_elev[row] = -0.3  # dam
+
+        n_dune_gap_cells_array = np.zeros([np.shape(dune_crest_elev)[0],1])
+        # count the number of dune gap cells in each row (each row = a model year)
+        # here, a dune gap is defined as any cell less than or equal to the initial gap height + berm elevation
+        for year in range(np.shape(dune_crest_elev)[0]):
+            dune_gap_row = dune_crest_elev[year]
+            n_dune_gap_cells = len(dune_gap_row[dune_gap_row<=initial_gap_height+berm_el])
+            n_dune_gap_cells_array[year] = n_dune_gap_cells  # save the number of dune gap cells per model year
+        avg_dune_cells = np.average(n_dune_gap_cells_array)  # average the number dune gaps over all model years (for a single storm series)
+        avg_dune_cells_array_b3d[storm_num-1] = avg_dune_cells * 10  # each cell is 1 dam, so the total number of cells
+        # gives the total length of gaps, then multiply by 10 to convert to meters
 
         # overwash
         QowTS = b3d_obj.barrier3d[0].QowTS  # m^3/m, all model years for this storm sequence
@@ -240,7 +206,7 @@ for rname in rname_array:
         file_100 = datadir_100 + filename_100
         outwash100 = np.load(file_100, allow_pickle=True)
         outwash100_obj = outwash100["cascade"][0]
-        tmax_100 = outwash100_obj.barrier3d[0].TMAX
+        tmax_100 = outwash100_obj.barrier3d[0].TMAX + 1
 
         # drowning variable
         drowning_array_100[storm_num - 1] = outwash100_obj.barrier3d[0].drown_break
@@ -281,6 +247,25 @@ for rname in rname_array:
             storm_num - 1] = dune_crest_avg  # array of the average dune crests for all storm sequences
 
         # dune gaps
+        initial_gap_height = np.min(sub_domain[0])  # get the lowest value of the dunes at year 0 without the berm elev
+        berm_el = outwash100_obj.barrier3d[0].BermEl
+        dune_crest_elev = dune_crest + berm_el  # dam
+        # if a barrier drowns, all dune cells are at the berm elevation, so here, if all the dune crest cells for a
+        # single year are at the berm elevation, we change the elevation to -0.3 (water) for plotting purposes
+        for row in range(np.shape(dune_crest_elev)[0]):
+            if np.all(dune_crest_elev[row] == berm_el) == True:
+                dune_crest_elev[row] = -0.3  # dam
+
+        n_dune_gap_cells_array = np.zeros([np.shape(dune_crest_elev)[0],1])
+        # count the number of dune gap cells in each row (each row = a model year)
+        # here, a dune gap is defined as any cell less than or equal to the initial gap height + berm elevation
+        for year in range(np.shape(dune_crest_elev)[0]):
+            dune_gap_row = dune_crest_elev[year]
+            n_dune_gap_cells = len(dune_gap_row[dune_gap_row<=initial_gap_height+berm_el])
+            n_dune_gap_cells_array[year] = n_dune_gap_cells  # save the number of dune gap cells per model year
+        avg_dune_cells = np.average(n_dune_gap_cells_array)  # average the number dune gaps over all model years (for a single storm series)
+        avg_dune_cells_array_100[storm_num-1] = avg_dune_cells * 10  # each cell is 1 dam, so the total number of cells
+        # gives the total length of gaps, then multiply by 10 to convert to meters
 
         # overwash
         QowTS = outwash100_obj.barrier3d[0].QowTS  # m^3/m, all model years for this storm sequence
@@ -298,7 +283,7 @@ for rname in rname_array:
         file_50 = datadir_50 + filename_50
         outwash50 = np.load(file_50, allow_pickle=True)
         outwash50_obj = outwash50["cascade"][0]
-        tmax_50 = outwash50_obj.barrier3d[0].TMAX
+        tmax_50 = outwash50_obj.barrier3d[0].TMAX + 1
 
         # drowning variable
         drowning_array_50[storm_num-1] = outwash50_obj.barrier3d[0].drown_break
@@ -336,6 +321,25 @@ for rname in rname_array:
         dune_crest_array_50[storm_num-1] = dune_crest_avg  # array of the average dune crests for all storm sequences
 
         # dune gaps
+        initial_gap_height = np.min(sub_domain[0])  # get the lowest value of the dunes at year 0 without the berm elev
+        berm_el = outwash50_obj.barrier3d[0].BermEl
+        dune_crest_elev = dune_crest + berm_el  # dam
+        # if a barrier drowns, all dune cells are at the berm elevation, so here, if all the dune crest cells for a
+        # single year are at the berm elevation, we change the elevation to -0.3 (water) for plotting purposes
+        for row in range(np.shape(dune_crest_elev)[0]):
+            if np.all(dune_crest_elev[row] == berm_el) == True:
+                dune_crest_elev[row] = -0.3  # dam
+
+        n_dune_gap_cells_array = np.zeros([np.shape(dune_crest_elev)[0],1])
+        # count the number of dune gap cells in each row (each row = a model year)
+        # here, a dune gap is defined as any cell less than or equal to the initial gap height + berm elevation
+        for year in range(np.shape(dune_crest_elev)[0]):
+            dune_gap_row = dune_crest_elev[year]
+            n_dune_gap_cells = len(dune_gap_row[dune_gap_row<=initial_gap_height+berm_el])
+            n_dune_gap_cells_array[year] = n_dune_gap_cells  # save the number of dune gap cells per model year
+        avg_dune_cells = np.average(n_dune_gap_cells_array)  # average the number dune gaps over all model years (for a single storm series)
+        avg_dune_cells_array_50[storm_num-1] = avg_dune_cells * 10  # each cell is 1 dam, so the total number of cells
+        # gives the total length of gaps, then multiply by 10 to convert to meters
 
         # overwash
         QowTS = outwash50_obj.barrier3d[0].QowTS  # m^3/m, all model years for this storm sequence
@@ -353,7 +357,7 @@ for rname in rname_array:
         file_0 = datadir_0 + filename_0
         outwash0 = np.load(file_0, allow_pickle=True)
         outwash0_obj = outwash0["cascade"][0]
-        tmax_0 = outwash0_obj.barrier3d[0].TMAX
+        tmax_0 = outwash0_obj.barrier3d[0].TMAX + 1
 
         # drowning variable
         drowning_array_0[storm_num - 1] = outwash0_obj.barrier3d[0].drown_break
@@ -393,6 +397,25 @@ for rname in rname_array:
         dune_crest_array_0[storm_num - 1] = dune_crest_avg  # array of the average dune crests for all storm sequences
 
         # dune gaps
+        initial_gap_height = np.min(sub_domain[0])  # get the lowest value of the dunes at year 0 without the berm elev
+        berm_el = outwash0_obj.barrier3d[0].BermEl
+        dune_crest_elev = dune_crest + berm_el  # dam
+        # if a barrier drowns, all dune cells are at the berm elevation, so here, if all the dune crest cells for a
+        # single year are at the berm elevation, we change the elevation to -0.3 (water) for plotting purposes
+        for row in range(np.shape(dune_crest_elev)[0]):
+            if np.all(dune_crest_elev[row] == berm_el) == True:
+                dune_crest_elev[row] = -0.3  # dam
+
+        n_dune_gap_cells_array = np.zeros([np.shape(dune_crest_elev)[0],1])
+        # count the number of dune gap cells in each row (each row = a model year)
+        # here, a dune gap is defined as any cell less than or equal to the initial gap height + berm elevation
+        for year in range(np.shape(dune_crest_elev)[0]):
+            dune_gap_row = dune_crest_elev[year]
+            n_dune_gap_cells = len(dune_gap_row[dune_gap_row<=initial_gap_height+berm_el])
+            n_dune_gap_cells_array[year] = n_dune_gap_cells  # save the number of dune gap cells per model year
+        avg_dune_cells = np.average(n_dune_gap_cells_array)  # average the number dune gaps over all model years (for a single storm series)
+        avg_dune_cells_array_0[storm_num-1] = avg_dune_cells * 10  # each cell is 1 dam, so the total number of cells
+        # gives the total length of gaps, then multiply by 10 to convert to meters
 
         # overwash
         QowTS = outwash0_obj.barrier3d[0].QowTS  # m^3/m, all model years for this storm sequence
@@ -450,6 +473,10 @@ for rname in rname_array:
     avg_dune_crest_array_0 = round(np.average(dune_crest_array_0),2)
 
     # dune gap lengths
+    avg_dune_cells_array_b3d = round(np.average(avg_dune_cells_array_b3d),0)
+    avg_dune_cells_array_100 = round(np.average(avg_dune_cells_array_100),0)
+    avg_dune_cells_array_50 = round(np.average(avg_dune_cells_array_50),0)
+    avg_dune_cells_array_0 = round(np.average(avg_dune_cells_array_0),0)
 
     # overwash
     avg_overwash_array_b3d = round(np.average(avg_overwash_array_b3d),0)
@@ -463,17 +490,21 @@ for rname in rname_array:
     avg_outwash_array_0 = round(np.average(avg_outwash_array_0),0)
 
     # printing results to console
+    print("{0} \n".format(rname))
+
     if drowning_stats:
         print("{0}% of barriers drown for the baseline scenario".format(int(percent_drown_b3d)))
         print("{0}% of barriers drown for the 100% outwash to shoreface scenario".format(int(percent_drown_100)))
         print("{0}% of barriers drown for the 50% outwash to shoreface scenario".format(int(percent_drown_50)))
         print("{0}% of barriers drown for the 0% outwash to shoreface scenario".format(int(percent_drown_0)))
+        print()
 
     if migration_stats:
         print("baseline avg net migration excluding drown years: {0}".format(avg_shoreline_b3d))
         print("100% outwash avg net migration excluding drown years: {0}".format(avg_shoreline_100))
         print("50% outwash avg net migration excluding drown years: {0}".format(avg_shoreline_50))
         print("0% outwash avg net migration excluding drown years: {0}".format(avg_shoreline_0))
+        print()
 
     if geomoetry_stats:
         # elevation
@@ -486,8 +517,9 @@ for rname in rname_array:
         print("100% outwash avg interior width excluding drown years: {0}".format(avg_width_last_TS_100))
         print("50% outwash avg interior width excluding drown years: {0}".format(avg_width_last_TS_50))
         print("0% outwash avg interior width excluding drown years: {0}".format(avg_width_last_TS_0))
+        print()
 
-    # dune crest avg elevations and plots
+    # dune crest avg elevations and plots and dune gaps
     if dune_stats:
         print("average dune crest height baseline: {0}".format(avg_dune_crest_array_b3d))
         print("average dune crest height 100% outwash: {0}".format(avg_dune_crest_array_100))
@@ -508,6 +540,13 @@ for rname in rname_array:
         # plt.xticks(x_ticks, x_tick_labels)
         # plt.legend()
 
+        # dune gaps
+        print("The average total length of dune gaps for the b3d scenario is: {0} m".format(avg_dune_cells_array_b3d))
+        print("The average total length of dune gaps for the 100% scenario is: {0} m".format(avg_dune_cells_array_100))
+        print("The average total length of dune gaps for the 50% scenario is: {0} m".format(avg_dune_cells_array_50))
+        print("The average total length of dune gaps for the 0% scenario is: {0} m".format(avg_dune_cells_array_0))
+        print()
+
     # average overwash and outwash
     if flux_stats:
         print("average overwash per event baseline: {0}".format(avg_overwash_array_b3d))
@@ -518,59 +557,60 @@ for rname in rname_array:
         print("average outwash per event 100%: {0}".format(avg_outwash_array_100))
         print("average outwash per event 50%: {0}".format(avg_outwash_array_50))
         print("average outwash per event 0%: {0}".format(avg_outwash_array_0))
+        print()
 
 
-    if plotters:
-        storm_num = 1
-        if rname == "r025":
-            title = "r = 0.25"
-        else:
-            title = "r = 0.35"
-
-        # plotting one plot of shoreline position
-        fig9 = plt.figure()
-        ax1 = fig9.add_subplot(111)
-        ls = "solid"
-        ax1.plot(shoreline_pos_array_b3d[storm_num-1])
-        ax1.plot(shoreline_pos_array_100[storm_num-1], linestyle=ls)
-        ax1.plot(shoreline_pos_array_50[storm_num-1], linestyle=ls)
-        ax1.plot(shoreline_pos_array_0[storm_num-1], linestyle=ls)
-        ax1.legend(["baseline", "100% washout to shoreface", "50% washout to shoreface", "0% washout to shoreface"],
-                   prop={'size': 9}, loc="upper left")
-        ax1.set_ylabel("Shoreline Position (m)")
-        ax1.set_xlabel("Simulation Years")
-        ax1.set_ylim(bottom=-60, top=160)
-        ax1.set_title(title, weight="bold")
-        fig9.subplots_adjust(hspace=0.3)
-
-        # plotting one year of overwash and outwash flux
-        fig10 = plt.figure()
-        # fig9.suptitle('overwash storm {0} - {1}'.format(storm_num, rname), weight="bold")
-        # fig9.suptitle('{0}'.format(rname), weight="bold")
-        ax1 = fig10.add_subplot(211)
-        ls = "solid"
-        ax1.plot(overwash_array_b3d[storm_num-1])
-        ax1.plot(overwash_array_100[storm_num-1], linestyle=ls)
-        ax1.plot(overwash_array_50[storm_num-1], linestyle=ls)
-        ax1.plot(overwash_array_0[storm_num-1], linestyle=ls)
-        ax1.set_ylabel("Overwash Flux (m$^3$/m)")
-        ax1.set_xlabel("Simulation Years")
-        ax1.set_ylim(top=150)
-        ax1.set_title(title, weight="bold")
-        ax1.legend(["baseline", "100% washout to shoreface", "50% washout to shoreface", "0% washout to shoreface"],
-                   prop={'size': 9}, loc="upper left")
-
-        max_t_b3d = tmax_array_b3d[storm_num-1]
-        max_t_100 = tmax_array_100[storm_num - 1]
-        max_t_50 = tmax_array_50[storm_num - 1]
-        max_t_0 = tmax_array_0[storm_num - 1]
-
-        outwash_array_b3d_storm = outwash_array_b3d[storm_num-1]
-        outwash_array_b3d_storm[max_t_b3d+1:] = np.nan
-        outwash_array_100_storm = outwash_array_100[storm_num - 1]
-        outwash_array_100_storm[max_t_100+1:] = np.nan
-        outwash_array_50_storm = outwash_array_50[storm_num - 1]
-        outwash_array_50_storm[max_t_50+1:] = np.nan
-        outwash_array_0_storm = outwash_array_0[storm_num - 1]
-        outwash_array_0_storm[max_t_0+1:] = np.nan
-
+    # if plotters:
+    #     storm_num = 1
+    #     if rname == "r025":
+    #         title = "r = 0.25"
+    #     else:
+    #         title = "r = 0.35"
+    #
+    #     # plotting one plot of shoreline position
+    #     fig9 = plt.figure()
+    #     ax1 = fig9.add_subplot(111)
+    #     ls = "solid"
+    #     ax1.plot(shoreline_pos_array_b3d[storm_num-1])
+    #     ax1.plot(shoreline_pos_array_100[storm_num-1], linestyle=ls)
+    #     ax1.plot(shoreline_pos_array_50[storm_num-1], linestyle=ls)
+    #     ax1.plot(shoreline_pos_array_0[storm_num-1], linestyle=ls)
+    #     ax1.legend(["baseline", "100% washout to shoreface", "50% washout to shoreface", "0% washout to shoreface"],
+    #                prop={'size': 9}, loc="upper left")
+    #     ax1.set_ylabel("Shoreline Position (m)")
+    #     ax1.set_xlabel("Simulation Years")
+    #     ax1.set_ylim(bottom=-60, top=160)
+    #     ax1.set_title(title, weight="bold")
+    #     fig9.subplots_adjust(hspace=0.3)
+    #
+    #     # plotting one year of overwash and outwash flux
+    #     fig10 = plt.figure()
+    #     # fig9.suptitle('overwash storm {0} - {1}'.format(storm_num, rname), weight="bold")
+    #     # fig9.suptitle('{0}'.format(rname), weight="bold")
+    #     ax1 = fig10.add_subplot(211)
+    #     ls = "solid"
+    #     ax1.plot(overwash_array_b3d[storm_num-1])
+    #     ax1.plot(overwash_array_100[storm_num-1], linestyle=ls)
+    #     ax1.plot(overwash_array_50[storm_num-1], linestyle=ls)
+    #     ax1.plot(overwash_array_0[storm_num-1], linestyle=ls)
+    #     ax1.set_ylabel("Overwash Flux (m$^3$/m)")
+    #     ax1.set_xlabel("Simulation Years")
+    #     ax1.set_ylim(top=150)
+    #     ax1.set_title(title, weight="bold")
+    #     ax1.legend(["baseline", "100% washout to shoreface", "50% washout to shoreface", "0% washout to shoreface"],
+    #                prop={'size': 9}, loc="upper left")
+    #
+    #     max_t_b3d = tmax_array_b3d[storm_num-1]
+    #     max_t_100 = tmax_array_100[storm_num - 1]
+    #     max_t_50 = tmax_array_50[storm_num - 1]
+    #     max_t_0 = tmax_array_0[storm_num - 1]
+    #
+    #     outwash_array_b3d_storm = outwash_array_b3d[storm_num-1]
+    #     outwash_array_b3d_storm[max_t_b3d+1:] = np.nan
+    #     outwash_array_100_storm = outwash_array_100[storm_num - 1]
+    #     outwash_array_100_storm[max_t_100+1:] = np.nan
+    #     outwash_array_50_storm = outwash_array_50[storm_num - 1]
+    #     outwash_array_50_storm[max_t_50+1:] = np.nan
+    #     outwash_array_0_storm = outwash_array_0[storm_num - 1]
+    #     outwash_array_0_storm[max_t_0+1:] = np.nan
+    #
