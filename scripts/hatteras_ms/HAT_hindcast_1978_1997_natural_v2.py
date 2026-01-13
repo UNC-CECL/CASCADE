@@ -44,7 +44,7 @@ LAST_ROAD_DOMAIN = 90  # Last real domain number with road infrastructure
 FIRST_FILE_NUMBER = 1  # Starting file number for domain files (usually 1)
 
 # =============================================================================
-# AUTOMATIC CALCULATIONS - **DO NOT MODIFY** (unless you know what you're doing)
+# AUTOMATIC CALCULATIONS - **DO NOT MODIFY**
 # =============================================================================
 
 # Total domains including buffers
@@ -91,10 +91,10 @@ DUNE_OFFSET_FILE = os.path.join(
     HATTERAS_DATA_BASE,
     'island_offset',
     'hindcast_1978_1997',
-    f'Island_Dune_Offsets_1978_1997_PADDED_{TOTAL_DOMAINS}_ModStorms.csv'
+    f'Island_Dune_Offsets_1978_1997_PADDED_{TOTAL_DOMAINS}.csv'
 )
 STORM_FILE_1978_1997 = os.path.join(HATTERAS_DATA_BASE, 'storms', 'hindcast_storms', 'modified', 'storms_1978_1997_1.5x_intensity.npy')
-STORM_FILE_1997_2022 = os.path.join(HATTERAS_DATA_BASE, 'storms', 'hindcast_storms', 'storms_1997_2019.npy', 'storms_1978_1997_1.5x_intensity.npy')
+STORM_FILE_1997_2022 = os.path.join(HATTERAS_DATA_BASE, 'storms', 'hindcast_storms', 'modified', 'storms_1978_1997_1.5x_intensity.npy')
 ROAD_SETBACK_FILE = os.path.join(HATTERAS_DATA_BASE, 'roads', 'offset', '1978', 'RoadSetback_1978.csv')
 
 # =============================================================================
@@ -131,12 +131,12 @@ NUM_CORES = 4  # Number of CPU cores for parallel processing
 
 if START_YEAR == 1978:
     YEAR_COLUMN_INDEX = 0  # Column in dune offset CSV for 1978
-    RUN_NAME = f'HAT_{START_YEAR}_{START_YEAR + RUN_YEARS}_Natural_State'
+    RUN_NAME = f'HAT_{START_YEAR}_{START_YEAR + RUN_YEARS}_Natural_State_ModStorms.csv'
     STORM_FILE = STORM_FILE_1978_1997
 
 elif START_YEAR == 1997:
     YEAR_COLUMN_INDEX = 1  # Column in dune offset CSV for 1997
-    RUN_NAME = f'HAT_{START_YEAR}_{START_YEAR + RUN_YEARS}_Natural_State'
+    RUN_NAME = f'HAT_{START_YEAR}_{START_YEAR + RUN_YEARS}_Natural_State_ModStorms.csv'
     STORM_FILE = STORM_FILE_1997_2022
 
 else:
@@ -195,6 +195,32 @@ except Exception as e:
     print(f"❌ CRITICAL ERROR loading data: {e}")
     sys.exit(1)
 
+
+# Load in background erosion
+# Background erosion rates for CASCADE (m/yr)
+# Generated from: background_erosion_rates.csv
+# Domains 0-14: Left buffer (0.0)
+# Domains 15-104: Real island (calculated rates)
+# Domains 105-119: Right buffer (0.0)
+
+BACKGROUND_EROSION_RATES = [
+     0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  # Domains 0-9
+     0.0000,  0.0000,  0.0000,  0.0000,  0.0000, -3.2884, -3.0119, -2.5162, -1.9612, -1.5632,  # Domains 10-19
+    -1.3720, -1.1558, -0.9552, -0.8227, -0.8720, -0.8915, -0.8008, -0.7349, -0.5551, -0.3807,  # Domains 20-29
+    -0.1695,  0.1349,  0.3506,  0.6006,  0.8872,  1.0222,  1.1034,  0.9546,  0.6568,  0.4526,  # Domains 30-39
+     0.3258,  0.2976,  0.4798,  0.7602,  1.1394,  1.3809,  1.4697,  1.4649,  1.3327,  1.1318,  # Domains 40-49
+     0.6792,  0.4520,  0.4547,  0.4579,  0.4709,  0.3421,  0.1941,  0.2919,  0.2512,  0.0822,  # Domains 50-59
+    -0.0750, -0.3043, -0.3575, -0.2549, -0.3385, -0.4907, -0.5983, -0.6515, -0.3952, -0.0890,  # Domains 60-69
+    -0.0322,  0.2160,  0.5752,  1.0656,  1.6212,  1.9766,  2.2542,  2.4508,  2.3926,  2.2713,  # Domains 70-79
+     2.1079,  1.8709,  1.4682,  0.7792,  0.2942,  0.0617, -0.1797, -0.3183, -0.4725, -0.7303,  # Domains 80-89
+    -0.7855, -0.7876, -0.8179, -0.9331, -1.2856, -1.5036, -1.5090, -1.3423, -1.2655, -1.1068,  # Domains 90-99
+    -0.9534, -0.7435, -0.6522, -0.5225, -0.4795,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  # Domains 100-109
+     0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  # Domains 110-119
+]
+
+# FIX: CASCADE uses opposite sign convention
+BACKGROUND_EROSION_RATES = [-x for x in BACKGROUND_EROSION_RATES]
+
 # --- Initialize Road Setback Array ---
 # Create array of correct length for all domains
 road_setbacks_full = np.zeros(TOTAL_DOMAINS)
@@ -214,7 +240,6 @@ print(f"✓ Road setback array prepared ({TOTAL_DOMAINS} domains)")
 ROADWAY_MANAGEMENT_ON = [ENABLE_ROADWAY_MANAGEMENT] * TOTAL_DOMAINS
 SANDBAG_MANAGEMENT_ON = [ENABLE_SANDBAG_PLACEMENT] * TOTAL_DOMAINS
 NOURISHMENT_MANAGEMENT_ON = [ENABLE_NOURISHMENT] * TOTAL_DOMAINS
-BACKGROUND_EROSION_RATES = [0.0] * TOTAL_DOMAINS  # m/yr
 
 # Display management status
 management_status = "ENABLED" if any([ENABLE_ROADWAY_MANAGEMENT, ENABLE_NOURISHMENT,

@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 # ======= USER INPUT =======
-STORM_PATH = Path(r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\storms\hindcast_storms\OCR_1974_2022_Final_Hindcast_Storms.npy")
+STORM_PATH = Path(r"/data/hatteras_init/storms/hindcast_storms/OCR_1974_2022_Final_Hindcast_Storms.npy")
 YEARS_KNOWN = (1978, 2022)   # only used for per-year averages if no explicit year column
 
 # ======= LOADERS =======

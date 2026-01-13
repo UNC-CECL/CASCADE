@@ -20,10 +20,10 @@ TO_METERS = True  # True = convert dam → m by multiplying by 10
 LEFT_BUFFER_END = 14  # last left-buffer CASCADE domain index (0–14 = 15 left buffers)
 RIGHT_BUFFER_START = 105  # first right-buffer CASCADE domain index
 
-# Optional: cleaned DSAS per-domain CSV to overlay (set to None to skip)
-DSAS_DOMAIN_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\shoreline_change\dsas_1978_1997_CLEAN.csv"
+# *** UPDATED: DSAS file now contains annual rate (LRR), not total change ***
+DSAS_DOMAIN_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\shoreline_change\dsas_1978_1997_CLEAN_DETAILED.csv"
 DSAS_DOMAIN_COL = "domain_id"  # GIS domain ID field in CLEAN file (1–90)
-DSAS_CHANGE_COL = "obs_total_change_m"  # total shoreline change column in CLEAN file (m)
+DSAS_RATE_COL = "annual_rate_m_per_yr"  # *** CHANGED: Now using annual rate directly from LRR ***
 
 # NEW: Diagnostic settings
 FLIP_CASCADE_ALONGSHORE = False  # Set to True if CASCADE and GIS are indexed in opposite directions
@@ -83,9 +83,13 @@ def build_shoreline_matrix(cascade, to_meters=True, flip_alongshore=False):
     return shoreline
 
 
-def verify_data_alignment(shoreline_abs, obs_domains, obs_change,
+def verify_data_alignment(shoreline_abs, obs_domains, obs_rate,
                           left_buffer_end, right_buffer_start, start_year, end_year):
-    """Print comprehensive diagnostic info to verify units, alignment, and orientation."""
+    """
+    Print comprehensive diagnostic info to verify units, alignment, and orientation.
+    
+    *** UPDATED: Now expects obs_rate (annual rate in m/yr) instead of obs_change (total change) ***
+    """
     print("\n" + "=" * 70)
     print("DATA VERIFICATION DIAGNOSTICS")
     print("=" * 70)
@@ -147,19 +151,18 @@ def verify_data_alignment(shoreline_abs, obs_domains, obs_change,
     if abs(real_island_change.mean()) < 1:
         print("⚠️  WARNING: Mean change < 1m seems small. Check units conversion.")
 
-    # DSAS comparison
-    if obs_change is not None and obs_domains is not None:
-        # Convert DSAS total change to rate
-        obs_rate = obs_change / time_span_years
+    # *** UPDATED: DSAS comparison using rate (LRR) ***
+    if obs_rate is not None and obs_domains is not None:
+        # Calculate total change from observed rate for comparison
+        obs_total_change = obs_rate * time_span_years
 
-        print(f"\n--- OBSERVED DSAS DATA ---")
-        print(f"Number of DSAS observations: {len(obs_change)}")
-        print(f"DSAS change range: {obs_change.min():.1f} to {obs_change.max():.1f} m")
-        print(f"DSAS mean change: {obs_change.mean():.2f} m")
-        print(f"DSAS std dev: {obs_change.std():.2f} m")
-        print(f"\nDSAS rate range: {obs_rate.min():.2f} to {obs_rate.max():.2f} m/yr")
+        print(f"\n--- OBSERVED DSAS DATA (from LRR) ---")
+        print(f"Number of DSAS observations: {len(obs_rate)}")
+        print(f"DSAS rate range: {obs_rate.min():.2f} to {obs_rate.max():.2f} m/yr")
         print(f"DSAS mean rate: {obs_rate.mean():.2f} m/yr")
         print(f"DSAS rate std dev: {obs_rate.std():.2f} m/yr")
+        print(f"\nDSAS implied total change range: {obs_total_change.min():.1f} to {obs_total_change.max():.1f} m")
+        print(f"DSAS implied mean total change: {obs_total_change.mean():.2f} m")
         print(f"DSAS CASCADE domain range: {obs_domains.min()} to {obs_domains.max()}")
 
         # Get corresponding CASCADE values at observed locations
@@ -168,11 +171,11 @@ def verify_data_alignment(shoreline_abs, obs_domains, obs_change,
 
         print(f"\n--- MODEL vs OBSERVED COMPARISON ---")
         print(f"CASCADE at observed locations - mean change: {cascade_at_obs.mean():.2f} m")
-        print(f"DSAS observed - mean change: {obs_change.mean():.2f} m")
+        print(f"DSAS observed (implied) - mean change: {obs_total_change.mean():.2f} m")
         print(f"CASCADE at observed locations - mean rate: {cascade_rate_at_obs.mean():.2f} m/yr")
         print(f"DSAS observed - mean rate: {obs_rate.mean():.2f} m/yr")
 
-        ratio = cascade_at_obs.mean() / obs_change.mean() if obs_change.mean() != 0 else np.inf
+        ratio = cascade_at_obs.mean() / obs_total_change.mean() if obs_total_change.mean() != 0 else np.inf
         print(f"\nRatio (CASCADE/DSAS total change): {ratio:.3f}")
 
         ratio_rate = cascade_rate_at_obs.mean() / obs_rate.mean() if obs_rate.mean() != 0 else np.inf
@@ -187,9 +190,9 @@ def verify_data_alignment(shoreline_abs, obs_domains, obs_change,
         else:
             print("⚠️  WARNING: Unexpected ratio - check units and alignment")
 
-        # Correlation check
-        correlation = np.corrcoef(cascade_at_obs, obs_change)[0, 1]
-        print(f"\nCorrelation (CASCADE vs DSAS): {correlation:.3f}")
+        # Correlation check (using rates for better comparison)
+        correlation = np.corrcoef(cascade_rate_at_obs, obs_rate)[0, 1]
+        print(f"\nCorrelation (CASCADE vs DSAS rates): {correlation:.3f}")
 
         if correlation > 0.7:
             print("✓ GOOD: Strong positive correlation - spatial patterns align")
@@ -200,128 +203,107 @@ def verify_data_alignment(shoreline_abs, obs_domains, obs_change,
 
         # Sample comparison at a few points
         print(f"\n--- SAMPLE POINT COMPARISON ---")
-        print(f"{'GIS Domain':<12} {'CASCADE Idx':<14} {'CASCADE Δ (m)':<16} {'DSAS Δ (m)':<14} {'Difference':<12}")
+        print(f"{'GIS Domain':<12} {'CASCADE Idx':<14} {'CASCADE rate':<16} {'DSAS rate':<14} {'Difference':<12}")
         print("-" * 70)
-        sample_indices = [0, len(obs_domains) // 4, len(obs_domains) // 2, 3 * len(obs_domains) // 4, -1]
-        for idx in sample_indices:
-            gis_dom = obs_domains[idx] - left_buffer_end
-            print(f"{gis_dom:<12} {obs_domains[idx]:<14} {cascade_at_obs[idx]:<16.2f} "
-                  f"{obs_change[idx]:<14.2f} {cascade_at_obs[idx] - obs_change[idx]:<12.2f}")
+        sample_indices = np.linspace(0, len(obs_domains) - 1, min(10, len(obs_domains)), dtype=int)
+        for i in sample_indices:
+            gis_dom = obs_domains[i] - left_buffer_end
+            casc_idx = obs_domains[i]
+            casc_r = cascade_rate_at_obs[i]
+            obs_r = obs_rate[i]
+            diff = casc_r - obs_r
+            print(f"{gis_dom:<12.0f} {casc_idx:<14.0f} {casc_r:<16.2f} {obs_r:<14.2f} {diff:<12.2f}")
 
-        print("\n" + "=" * 70)
-        print("RECOMMENDATIONS:")
-        print("-" * 70)
-
-        if ratio > 5:
-            print("• Consider setting TO_METERS = False")
-        elif ratio < 0.2:
-            print("• Check if CASCADE units are actually in meters, not decameters")
-
-        if correlation < -0.5:
-            print("• Consider setting FLIP_CASCADE_ALONGSHORE = True")
-        elif 0.5 < correlation < 0.7:
-            print("• Moderate correlation - verify domain index mapping")
-
-    print("• Visually inspect the 'shoreline_change_rate_over_run.png' plot")
-    print("• Check if spatial patterns match known Hatteras geography")
-    print("=" * 70 + "\n")
+    print("=" * 70)
 
 
 def plot_shoreline_snapshots_by_domain(
         shoreline_abs,
-        run_name,
-        outdir,
-        start_year=0,
+        run_name="run",
+        outdir="output",
+        start_year=1978,
         relative=False,
         units="m",
 ):
-    """For each time step (year), plot shoreline vs domain number."""
+    """Plot each year's shoreline vs domain number."""
     os.makedirs(outdir, exist_ok=True)
 
     nt, ndom = shoreline_abs.shape
     domain_numbers = np.arange(ndom)
 
-    # For plotting, optionally convert to relative change
-    if relative:
-        shoreline = shoreline_abs - shoreline_abs[0, :]
-    else:
-        shoreline = shoreline_abs
-
     for t in range(nt):
         year = start_year + t
-
-        plt.figure(figsize=(12, 4))
-        plt.plot(domain_numbers, shoreline[t, :], marker="o", linewidth=1.2)
-
-        plt.xticks(domain_numbers[::10])
-        plt.xlabel("Domain number (alongshore index)")
-
         if relative:
-            plt.ylabel(f"Shoreline change ({units})")
-            plt.title(f"{run_name} – Shoreline Change Across Domains – Year {year}")
+            y_vals = shoreline_abs[t, :] - shoreline_abs[0, :]
+            ylabel = f"Shoreline change since t=0 [{units}]"
+            fname_base = f"shoreline_snapshot_relative_year{year}.png"
         else:
-            plt.ylabel(f"Shoreline position ({units})")
-            plt.title(f"{run_name} – Shoreline Position Across Domains – Year {year}")
+            y_vals = shoreline_abs[t, :]
+            ylabel = f"Shoreline position [{units}]"
+            fname_base = f"shoreline_snapshot_abs_year{year}.png"
 
-        plt.grid(alpha=0.3)
-        plt.tight_layout()
+        fig, ax = plt.subplots(figsize=(12, 4))
+        ax.plot(domain_numbers, y_vals, marker="o", linewidth=1.5)
+        ax.set_xlabel("Domain number (alongshore index)")
+        ax.set_ylabel(ylabel)
+        ax.set_title(f"{run_name} – Year {year}")
+        ax.grid(alpha=0.3)
+        fig.tight_layout()
 
-        fname = os.path.join(outdir, f"snapshot_year_{year}.png")
-        plt.savefig(fname, dpi=200)
-        plt.close()
+        fname = os.path.join(outdir, fname_base)
+        fig.savefig(fname, dpi=150)
+        plt.close(fig)
 
-        print(f"Saved: {fname}")
+    print(f"Created {nt} shoreline snapshots.")
 
 
 def plot_mean_shoreline_timeseries(
         shoreline_abs,
-        run_name,
-        outdir,
-        start_year=0,
+        run_name="run",
+        outdir="output",
+        start_year=1978,
         units="m",
 ):
-    """Plot the mean absolute shoreline (across all domains) as a time series."""
+    """Plot mean shoreline vs time."""
     os.makedirs(outdir, exist_ok=True)
 
-    nt, _ = shoreline_abs.shape
-    years = np.arange(nt) + start_year
-
+    nt, ndom = shoreline_abs.shape
     mean_shoreline = shoreline_abs.mean(axis=1)
+    years = np.arange(start_year, start_year + nt)
 
-    plt.figure(figsize=(8, 4))
-    plt.plot(years, mean_shoreline, linewidth=1.8)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.plot(years, mean_shoreline, marker="o", linewidth=1.5)
+    ax.set_xlabel("Year")
+    ax.set_ylabel(f"Mean shoreline position [{units}]")
+    ax.set_title(f"{run_name} – Mean Shoreline Over Time")
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
 
-    plt.xlabel("Year")
-    plt.ylabel(f"Mean shoreline position ({units})")
-    plt.title(f"{run_name} – Mean Shoreline Position Over Time")
-
-    plt.grid(alpha=0.3)
-    plt.tight_layout()
-
-    fname = os.path.join(outdir, "shoreline_mean_timeseries.png")
-    plt.savefig(fname, dpi=200)
-    plt.close()
-
+    fname = os.path.join(outdir, "mean_shoreline_timeseries.png")
+    fig.savefig(fname, dpi=150)
+    plt.close(fig)
     print(f"Saved mean shoreline time series: {fname}")
 
 
 def plot_total_shoreline_change_over_run(
         shoreline_abs,
-        run_name,
-        outdir,
+        run_name="run",
+        outdir="output",
         units="m",
         start_year=1978,
         end_year=1997,
         left_buffer_end=14,
         right_buffer_start=105,
         obs_domains=None,
-        obs_change=None,
+        obs_rate=None,  # *** CHANGED: Now expects obs_rate instead of obs_change ***
 ):
     """
     Plot shoreline change RATE over the whole run for each domain.
 
     Bottom x-axis: CASCADE domain index.
     Top x-axis:    GIS domain number (1–90) over the real-island portion.
+    
+    *** UPDATED: Now expects obs_rate (annual rate) instead of obs_change (total change) ***
     """
     os.makedirs(outdir, exist_ok=True)
 
@@ -368,9 +350,8 @@ def plot_total_shoreline_change_over_run(
                    domain_numbers[-1] + 0.5,
                    alpha=0.15, color='red')
 
-    # Overlay observed DSAS change rate if provided
-    if obs_domains is not None and obs_change is not None:
-        obs_rate = obs_change / time_span_years
+    # *** UPDATED: Overlay observed DSAS rate directly (no conversion needed) ***
+    if obs_domains is not None and obs_rate is not None:
         ax.plot(obs_domains, obs_rate, marker="x", linewidth=1.2,
                 label="Observed", markersize=6, linestyle='--')
 
@@ -435,9 +416,9 @@ def main():
 
     units = "m" if TO_METERS else "dam"
 
-    # Load observed per-domain DSAS change
+    # *** UPDATED: Load observed LRR (annual rate) instead of total change ***
     obs_domains = None
-    obs_change = None
+    obs_rate = None
     if DSAS_DOMAIN_CSV is not None:
         print(f"Loading DSAS observations from: {DSAS_DOMAIN_CSV}")
         dsas = pd.read_csv(DSAS_DOMAIN_CSV)
@@ -447,20 +428,20 @@ def main():
 
         # Map GIS domains (1–90) → CASCADE real domains (15–104)
         obs_domains_all = gis_domains + LEFT_BUFFER_END
-        obs_change_all = dsas[DSAS_CHANGE_COL].to_numpy()
+        obs_rate_all = dsas[DSAS_RATE_COL].to_numpy()  # *** CHANGED: Now loading rate directly ***
 
         # Keep only observed points that fall on real-island CASCADE domains
         mask = (obs_domains_all > LEFT_BUFFER_END) & (obs_domains_all < RIGHT_BUFFER_START)
         obs_domains = obs_domains_all[mask]
-        obs_change = obs_change_all[mask]
+        obs_rate = obs_rate_all[mask]  # *** CHANGED: Now using rate ***
 
-        print(f"Loaded {len(obs_change)} DSAS observations for real island domains\n")
+        print(f"Loaded {len(obs_rate)} DSAS observations (annual rates) for real island domains\n")
 
     # DIAGNOSTIC VERIFICATION
     verify_data_alignment(
         shoreline_abs,
         obs_domains,
-        obs_change,
+        obs_rate,  # *** CHANGED: Passing rate instead of change ***
         LEFT_BUFFER_END,
         RIGHT_BUFFER_START,
         START_YEAR,
@@ -505,7 +486,7 @@ def main():
         left_buffer_end=LEFT_BUFFER_END,
         right_buffer_start=RIGHT_BUFFER_START,
         obs_domains=obs_domains,
-        obs_change=obs_change,
+        obs_rate=obs_rate,  # *** CHANGED: Passing rate instead of change ***
     )
 
     print(f"\n{'=' * 70}")

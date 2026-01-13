@@ -21,7 +21,7 @@ import pandas as pd
 # ============================================================
 
 # 1) Clean DSAS file with total shoreline change per domain
-DSAS_FILE = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\shoreline_change\dsas_1978_1997_CLEAN.csv"
+DSAS_FILE = r"/data/hatteras_init/shoreline_change/dsas_1978_1997_CLEAN.csv"
 
 # 2) Column names in that DSAS file
 DOMAIN_COL = "domain_id"           # GIS domain ID field (1–90)
