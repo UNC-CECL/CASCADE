@@ -29,16 +29,20 @@ import os
 # ============================================================
 
 # Input file
-DSAS_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\shoreline_change\dsas_1978_1997_CLEAN_DETAILED.csv"
+DSAS_CSV = r"/Users/rsahrae/PycharmProjects/PeaIsland/CASCADE/data/PeaIsland_init/Shoreline_change/dsas_1978_1997_CLEAN_DETAILED.csv"
 
 # Output directory
-OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\output\background_rates"
+OUTPUT_DIR = r"/Users/rsahrae/PycharmProjects/PeaIsland/CASCADE/data/PeaIsland_init/background_erosion"
 
-# CASCADE domain structure
-TOTAL_DOMAINS = 120  # Total including buffers
-NUM_REAL_DOMAINS = 90  # Real island domains
-NUM_LEFT_BUFFER = 15  # Number of left buffer domains
-NUM_RIGHT_BUFFER = 15  # Number of right buffer domains
+# --- YOUR STUDY AREA ---
+GIS_DOMAIN_MIN = 80
+GIS_DOMAIN_MAX = 120
+
+NUM_LEFT_BUFFER = 15
+NUM_RIGHT_BUFFER = 15
+
+NUM_REAL_DOMAINS = GIS_DOMAIN_MAX - GIS_DOMAIN_MIN + 1   # 41
+TOTAL_DOMAINS = NUM_REAL_DOMAINS + NUM_LEFT_BUFFER + NUM_RIGHT_BUFFER  # 71
 
 # IMPORTANT: Domain numbering
 # Your DSAS file should contain only GIS domains 1-90 (your study area)
@@ -82,15 +86,12 @@ def load_dsas_data(csv_path, domain_col, rate_col):
     print(f"Mean rate: {df[rate_col].mean():.3f} m/yr")
     
     # Validate domain range
-    max_domain = df[domain_col].max()
-    if max_domain > 90:
-        print(f"\n⚠️  WARNING: Found domains up to {max_domain:.0f}")
-        print(f"   Expected only domains 1-90 for your study area.")
-        print(f"   Domains 91+ may be from collaborator's area.")
-        print(f"   Filtering to domains 1-90 only...")
-        df = df[df[domain_col] <= 90].copy()
-        print(f"   Filtered to {len(df)} records in domains 1-90")
-    
+    print(f"   Expected only domains 80-120 for your study area.")
+
+    df = df[(df[domain_col] >= GIS_DOMAIN_MIN) & (df[domain_col] <= GIS_DOMAIN_MAX)].copy()
+
+    print(f"   Filtered to {len(df)} records in domains 1-90")
+
     return df
 
 
@@ -112,7 +113,7 @@ def process_rates(df, domain_col, rate_col, num_real_domains,
     )
     
     # Create continuous domain array (1 to NUM_REAL_DOMAINS)
-    real_domains = np.arange(1, num_real_domains + 1)
+    real_domains = np.arange(GIS_DOMAIN_MIN, GIS_DOMAIN_MAX + 1)
     continuous_rates = interp_func(real_domains)
     
     print("\n" + "="*70)
@@ -218,7 +219,7 @@ def create_visualization(df, domain_col, rate_col, continuous_rates, smoothed_ra
     ax1.plot(df[domain_col], df[rate_col], 'o-', 
              color='orange', linewidth=2, markersize=4, label='Observed LRR')
     ax1.axhline(y=0, color='gray', linestyle='--', alpha=0.5)
-    ax1.set_xlabel('GIS Domain ID (1-90)')
+    ax1.set_xlabel('GIS Domain ID (80-120)')
     ax1.set_ylabel('Shoreline Change Rate (m/yr)')
     ax1.set_title('Original Observed Data (LRR from DSAS)')
     ax1.legend()
@@ -233,7 +234,7 @@ def create_visualization(df, domain_col, rate_col, continuous_rates, smoothed_ra
     ax2.plot(real_domains, final_rates, '-', color='green', 
              linewidth=2, label='Final (scaled & balanced)')
     ax2.axhline(y=0, color='gray', linestyle='--', alpha=0.5)
-    ax2.set_xlabel('GIS Domain (1-90)')
+    ax2.set_xlabel('GIS Domain (80-120)')
     ax2.set_ylabel('Shoreline Change Rate (m/yr)')
     ax2.set_title('Processing Steps')
     ax2.legend()
