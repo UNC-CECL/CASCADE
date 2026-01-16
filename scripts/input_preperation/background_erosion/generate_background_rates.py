@@ -47,8 +47,8 @@ NUM_RIGHT_BUFFER = 15  # Number of right buffer domains
 # GIS Domain 90 → CASCADE Domain 104 (north end)
 
 # Processing parameters
-SMOOTHING_WINDOW = 7  # Larger = more smoothing (removes more storm signal)
-SCALING_FACTOR = 0.85  # Reduce rates to partition background vs storm effects (0-1)
+SMOOTHING_WINDOW = 1  # Larger = more smoothing (removes more storm signal)
+SCALING_FACTOR = 0.9  # Reduce rates to partition background vs storm effects (0-1)
 FORCE_MASS_BALANCE = True  # Force net rate to zero (closed sediment budget)
 
 # Column names in input CSV

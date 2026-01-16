@@ -14,7 +14,7 @@ import numpy as np
 # CONFIGURATION
 # ========================================================================
 
-INPUT_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\data\background_erosion\background_erosion_rates.csv"
+INPUT_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\output\background_rates\background_erosion_rates.csv"
 OUTPUT_FILE = r"C:\Users\hanna\PycharmProjects\CASCADE\data\background_erosion\1978_1997_copy_paste_list.txt"
 
 # ========================================================================

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 NPZ_FILE = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_Natural_State_ModStorms.csv\HAT_1978_1997_Natural_State_ModStorms.csv.npz"
 
 # Root directory where all shoreline snapshot outputs will be stored.
-OUTPUT_ROOT_DIR = "HAT_78_97_Mod_Storm"
+OUTPUT_ROOT_DIR = "../HAT_78_97_Mod_Storm"
 
 START_YEAR = 1978  # Label for first time step
 END_YEAR = 1997  # Label for last time step

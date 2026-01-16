@@ -387,11 +387,25 @@ def _plot_frame(AnimateDomain, time_val, OriginY, z_lim, y_lim,
 
 
 # =============================================================================
+# DOMAIN SELECTION CONFIGURATION
+# =============================================================================
+
+# Choose ONE of these modes:
+plot_mode = "custom"  # Options: "all", "real_only", "custom"
+
+# Settings for each mode:
+n_buffer_each_side = 15          # Number of buffer domains on each end
+
+# For "custom" mode, specify your domains here:
+custom_domains_start = 27        # First domain to plot (inclusive)
+custom_domains_end = 33          # Last domain to plot (exclusive, so this plots 26-32)
+
+# =============================================================================
 # MAIN EXECUTION
 # =============================================================================
 
-os.chdir(r'C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_Natural_State_ModStorms.csv')
-run_name = "HAT_1978_1997_Natural_State_ModStorms.csv"
+os.chdir(r'C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_Natural_State')
+run_name = "HAT_1978_1997_Natural_State"
 name_prefix = run_name
 nt_run = 19  # Number of years to plot
 
@@ -402,22 +416,33 @@ b3d = cascade.barrier3d
 total_domains = len(b3d)
 print("Total domains in cascade:", total_domains)
 
-# === CONTROL THIS FLAG TO SHOW/HIDE BUFFERS ===
-include_buffers = False          # set False to hide buffers
-n_buffer_each_side = 15         # adjust if different
-
-if include_buffers:
+# === PROCESS DOMAIN SELECTION ===
+if plot_mode == "all":
     # Plot ALL domains (real + buffers)
-    Model_Grids_Of_Interest = range(26, 33) #range(total_domains)
+    Model_Grids_Of_Interest = range(total_domains)
     first_domain_index = 0
-else:
+    print(f"Plotting mode: ALL domains (0-{total_domains-1})")
+    
+elif plot_mode == "real_only":
     # Plot ONLY real domains (no buffers)
     start_real = n_buffer_each_side
-    end_real = total_domains - n_buffer_each_side   # exclusive
+    end_real = total_domains - n_buffer_each_side
     Model_Grids_Of_Interest = range(start_real, end_real)
-    first_domain_index = start_real                 # for domain labels
+    first_domain_index = start_real
+    print(f"Plotting mode: REAL domains only ({start_real}-{end_real-1})")
+    
+elif plot_mode == "custom":
+    # Plot custom range of domains
+    Model_Grids_Of_Interest = range(custom_domains_start, custom_domains_end)
+    first_domain_index = custom_domains_start
+    print(f"Plotting mode: CUSTOM domains ({custom_domains_start}-{custom_domains_end-1})")
+    
+else:
+    raise ValueError(f"Invalid plot_mode: {plot_mode}. Must be 'all', 'real_only', or 'custom'")
 
-ny = len(Model_Grids_Of_Interest)  # number of domains actually plotted
+ny = len(Model_Grids_Of_Interest)
+print(f"Number of domains to plot: {ny}")
+print()
 
 directory = r"C:\Users\hanna\PycharmProjects\CASCADE\output"
 TMax_Sim = nt_run
@@ -437,7 +462,7 @@ plot_ElevAnimation_CASCADE(
     roadway_management_ny=roadway_management_ny,
     y_lim=None,
     z_lim=3.5,
-    fig_size=None,
+    fig_size=(10, 7),  # Width, Height in inches fig_size=None,
     fig_eps=False,
     show_domain_labels=True,
     domain_label_interval=10,

@@ -94,7 +94,7 @@ DUNE_OFFSET_FILE = os.path.join(
     f'Island_Dune_Offsets_1978_1997_PADDED_{TOTAL_DOMAINS}.csv'
 )
 STORM_FILE_1978_1997 = os.path.join(HATTERAS_DATA_BASE, 'storms', 'hindcast_storms', 'modified', 'storms_1978_1997_1.5x_intensity.npy')
-STORM_FILE_1997_2022 = os.path.join(HATTERAS_DATA_BASE, 'storms', 'hindcast_storms', 'modified', 'storms_1978_1997_1.5x_intensity.npy')
+STORM_FILE_1997_2022 = os.path.join(HATTERAS_DATA_BASE, 'storms', 'hindcast_storms', 'modified', 'HAT_1978_2022_Final_Hindcast_Storms.npy')
 ROAD_SETBACK_FILE = os.path.join(HATTERAS_DATA_BASE, 'roads', 'offset', '1978', 'RoadSetback_1978.csv')
 
 # =============================================================================
@@ -131,12 +131,12 @@ NUM_CORES = 4  # Number of CPU cores for parallel processing
 
 if START_YEAR == 1978:
     YEAR_COLUMN_INDEX = 0  # Column in dune offset CSV for 1978
-    RUN_NAME = f'HAT_{START_YEAR}_{START_YEAR + RUN_YEARS}_Natural_State_ModStorms.csv'
+    RUN_NAME = f'HAT_{START_YEAR}_{START_YEAR + RUN_YEARS}_mod_storms_be1'
     STORM_FILE = STORM_FILE_1978_1997
 
 elif START_YEAR == 1997:
     YEAR_COLUMN_INDEX = 1  # Column in dune offset CSV for 1997
-    RUN_NAME = f'HAT_{START_YEAR}_{START_YEAR + RUN_YEARS}_Natural_State_ModStorms.csv'
+    RUN_NAME = f'HAT_{START_YEAR}_{START_YEAR + RUN_YEARS}_Natural_State'
     STORM_FILE = STORM_FILE_1997_2022
 
 else:
@@ -203,18 +203,19 @@ except Exception as e:
 # Domains 15-104: Real island (calculated rates)
 # Domains 105-119: Right buffer (0.0)
 
+# Using 90% and smoothing at 1
 BACKGROUND_EROSION_RATES = [
      0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  # Domains 0-9
-     0.0000,  0.0000,  0.0000,  0.0000,  0.0000, -3.2884, -3.0119, -2.5162, -1.9612, -1.5632,  # Domains 10-19
-    -1.3720, -1.1558, -0.9552, -0.8227, -0.8720, -0.8915, -0.8008, -0.7349, -0.5551, -0.3807,  # Domains 20-29
-    -0.1695,  0.1349,  0.3506,  0.6006,  0.8872,  1.0222,  1.1034,  0.9546,  0.6568,  0.4526,  # Domains 30-39
-     0.3258,  0.2976,  0.4798,  0.7602,  1.1394,  1.3809,  1.4697,  1.4649,  1.3327,  1.1318,  # Domains 40-49
-     0.6792,  0.4520,  0.4547,  0.4579,  0.4709,  0.3421,  0.1941,  0.2919,  0.2512,  0.0822,  # Domains 50-59
-    -0.0750, -0.3043, -0.3575, -0.2549, -0.3385, -0.4907, -0.5983, -0.6515, -0.3952, -0.0890,  # Domains 60-69
-    -0.0322,  0.2160,  0.5752,  1.0656,  1.6212,  1.9766,  2.2542,  2.4508,  2.3926,  2.2713,  # Domains 70-79
-     2.1079,  1.8709,  1.4682,  0.7792,  0.2942,  0.0617, -0.1797, -0.3183, -0.4725, -0.7303,  # Domains 80-89
-    -0.7855, -0.7876, -0.8179, -0.9331, -1.2856, -1.5036, -1.5090, -1.3423, -1.2655, -1.1068,  # Domains 90-99
-    -0.9534, -0.7435, -0.6522, -0.5225, -0.4795,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  # Domains 100-109
+     0.0000,  0.0000,  0.0000,  0.0000,  0.0000, -4.9427, -3.0023, -3.7637, -3.1265, -2.4542,  # Domains 10-19
+    -0.4817,  0.0523, -1.3607, -1.2815, -1.8179, -1.3211, -1.2617, -0.9251, -0.1232, -0.5447,  # Domains 20-29
+    -0.6880, -0.1997,  0.2485,  0.6391,  1.8145,  1.8181,  1.7047,  1.8919,  1.0153,  0.9793,  # Domains 30-39
+    -0.7001, -0.8657, -0.0197,  0.5635,  1.6381,  2.6551,  3.5029,  2.7127,  1.3078,  0.7795,  # Domains 40-49
+     0.5203,  0.4483,  0.8473, -0.5705,  0.6673,  1.3321,  0.8083,  0.6373, -0.7109, -0.4847,  # Domains 50-59
+     0.3103,  0.3007, -0.1889, -0.6065, -1.4267, -1.1897,  0.4393, -0.4427, -1.0691, -1.1573,  # Domains 60-69
+    -1.0853,  0.8803,  1.5661,  0.9505,  1.7911,  2.1637,  3.2563,  3.9151,  4.0789,  4.0645,  # Domains 70-79
+     2.7199,  1.2673,  1.0715,  1.7857,  1.7821,  0.4550, -2.1365, -1.6451, -0.8252, -1.1015,  # Domains 80-89
+     0.5383,  0.3943, -1.8647, -2.6333, -1.6645, -1.0975, -2.1383, -2.6342, -1.5677, -1.9133,  # Domains 90-99
+    -1.1327, -0.9737,  0.3313, -0.7577, -0.7457,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  # Domains 100-109
      0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  # Domains 110-119
 ]
 

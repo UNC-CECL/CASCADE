@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 # ============================================================
 # --- SETTINGS: Update these values only ---
 # ============================================================
-NPZ_FILE = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_Natural_State\HAT_1978_1997_Natural_State.npz"
+NPZ_FILE = r"/output/raw_runs/HAT_1978_1997_Natural_State/HAT_1978_1997_Natural_State.npz"
 
 # Root directory where all shoreline snapshot outputs will be stored.
 # A subfolder will be created inside this for each run, based on the .npz file name.
-OUTPUT_ROOT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\analyze_outputs\shoreline_analysis\AllShorelines_HAH_V1"
+OUTPUT_ROOT_DIR = r"/scripts/analyze_outputs/shoreline_analysis/AllShorelines_HAH_V1"
 
 START_YEAR = 0           # Label for first time step (e.g., 1978)
 RELATIVE_CHANGE = False  # True = plot shoreline change relative to t=0, False = absolute position

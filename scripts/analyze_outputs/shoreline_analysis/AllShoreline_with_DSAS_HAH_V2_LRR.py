@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 # ============================================================
 # --- SETTINGS: Update these values only ---
 # ============================================================
-NPZ_FILE = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_Natural_State_ModStorms.csv\HAT_1978_1997_Natural_State_ModStorms.csv.npz"
+NPZ_FILE = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_mod_storms_be1\HAT_1978_1997_mod_storms_be1.npz"
 
 # Root directory where all shoreline snapshot outputs will be stored.
-OUTPUT_ROOT_DIR = "HAT_78_97_Mod_Storm"
+OUTPUT_ROOT_DIR = "HAT_1978_1997_mod_storms_be1"
 
 START_YEAR = 1978  # Label for first time step
 END_YEAR = 1997  # Label for last time step
@@ -370,7 +370,7 @@ def plot_total_shoreline_change_over_run(
 
     # Labels and title
     ax.set_ylabel(f"Shoreline change rate (m/yr)")
-    ax.set_title(f"{run_name} – Shoreline Change Rate ({start_year}–{end_year})")
+    ax.set_title("Observed vs. Modeled Shoreline Change Rate (1978-1997)\nHatteras Island, North Carolina") #(f"{run_name} – Shoreline Change Rate ({start_year}–{end_year})")
 
     # Optional text labels for regions
     y_range = ax.get_ylim()[1] - ax.get_ylim()[0]
