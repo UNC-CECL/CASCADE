@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 # ============================================================
 # --- SETTINGS: Update these values only ---
 # ============================================================
-NPZ_FILE = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_mod_storms_be1\HAT_1978_1997_mod_storms_be1.npz"
+NPZ_FILE = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_natural\HAT_1978_1997_natural.npz"
 
 # Root directory where all shoreline snapshot outputs will be stored.
-OUTPUT_ROOT_DIR = "HAT_1978_1997_mod_storms_be1"
+OUTPUT_ROOT_DIR = "HAT_1978_1997_natural"
 
 START_YEAR = 1978  # Label for first time step
 END_YEAR = 1997  # Label for last time step

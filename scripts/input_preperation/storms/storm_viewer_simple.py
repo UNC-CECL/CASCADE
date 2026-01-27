@@ -20,7 +20,7 @@ from typing import Optional
 # =============================================================================
 
 # Path to your storm file
-STORM_PATH = Path(r"/data/hatteras_init/storms/hindcast_storms/storms_1978_1997.npy")
+STORM_PATH = Path(r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\storms\hindcast_storms\storms_1978_1997.npy")
 
 # Start year for converting Year_Index to Calendar_Year
 START_YEAR = 1978

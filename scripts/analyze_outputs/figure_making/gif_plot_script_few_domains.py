@@ -23,6 +23,7 @@ def plot_ElevAnimation_CASCADE(
         show_domain_labels=True,   # Control domain labeling
         domain_label_interval=10,  # Label every N domains
         first_domain_index=0,      # Index of first plotted domain in full cascade
+        n_buffer_each_side=15,     # Number of buffer domains on each side
 ):
     """
     Plot CASCADE elevation animations with proper scaling and domain labels.
@@ -31,6 +32,7 @@ def plot_ElevAnimation_CASCADE(
     - Ensures full island is visible (no cutoff)
     - Adds domain number labels at specified intervals
     - Allows plotting a subset of domains (e.g., hide buffers)
+    - Uses GIS-based numbering (excludes buffer domains from count)
     """
     barrier3d_full = cascade.barrier3d
 
@@ -161,6 +163,7 @@ def plot_ElevAnimation_CASCADE(
                     show_domain_labels, domain_label_interval,
                     is_post_storm=True,
                     first_domain_index=first_domain_index,
+                    n_buffer_each_side=n_buffer_each_side,
                 )
 
     # -------------------------------------------------------------------------
@@ -180,12 +183,12 @@ def plot_ElevAnimation_CASCADE(
             if beach_management_ny[iB3D] and np.isnan(beach_width):
                 beach_width = cascade.nourishments[iB3D].beach_width[t - 1] / 10
 
-            cellular_dune_toe_post_humans = np.floor(
+            cellular_dune_toe_post_humans = int(np.floor(
                 actual_shoreline_post_humans[t] + beach_width
-            )
-            cellular_shoreline_post_humans = np.floor(
+            ))
+            cellular_shoreline_post_humans = int(np.floor(
                 actual_shoreline_post_humans[t]
-            )
+            ))
             cellular_beach_width = int(
                 cellular_dune_toe_post_humans - cellular_shoreline_post_humans
             )
@@ -215,14 +218,11 @@ def plot_ElevAnimation_CASCADE(
             Dunes = np.flipud(Dunes)
             Beach = BeachDomain * 10
             Domain = np.vstack([Beach, Dunes, Domain])
-            Domain = np.fliplr(Domain)
-            Domain[Domain < -3] = -3
-            Domain[Domain > 6] = 6
+            Domain[Domain < 0] = -1
             widthTS = len(Domain)
-            OriginTstart = int(cellular_shoreline_post_humans)
+            OriginTstart = cellular_shoreline_post_humans
             OriginTstop = OriginTstart + widthTS
             xOrigin = iB3D * BarrierLength
-
             AnimateDomain[
             OriginTstart:OriginTstop, xOrigin: xOrigin + BarrierLength
             ] = Domain
@@ -234,27 +234,35 @@ def plot_ElevAnimation_CASCADE(
             show_domain_labels, domain_label_interval,
             is_post_storm=False,
             first_domain_index=first_domain_index,
+            n_buffer_each_side=n_buffer_each_side,
         )
 
     # -------------------------------------------------------------------------
-    # Create GIF
+    # Create GIF from saved frames
     # -------------------------------------------------------------------------
-    frames = []
-    for filenum in range(TMAX_SIM):
-        if fig_eps:
-            filename = "elev_" + str(filenum) + ".eps"
-        else:
-            filename = "elev_" + str(filenum) + ".png"
-        frames.append(imageio.imread(filename))
+    print()
+    print("Creating GIF... (this may take a minute)")
+    print()
 
-        for iB3D in range(ny):
-            if (beach_management_ny[iB3D] or roadway_management_ny[iB3D]) and (
-                    filenum < TMAX_MGMT[iB3D]
-            ):
-                if fig_eps:
-                    filename = "elev_" + str(filenum) + "pt5" ".eps"
-                else:
-                    filename = "elev_" + str(filenum) + "pt5" ".png"
+    os.chdir(directory + "/gif_output/" + name)
+    frames = []
+
+    if np.any(beach_management_ny) or np.any(roadway_management_ny):
+        for time_step in range(maxMGMT + 1):
+            if 0 < time_step <= TMAX_SIM:
+                filename = "SimFrames/elev_" + str(time_step - 1) + "pt5.png"
+                frames.append(imageio.imread(filename))
+                filename = "SimFrames/elev_" + str(time_step) + ".png"
+                frames.append(imageio.imread(filename))
+
+        for time_step in range(maxMGMT + 1, TMAX_SIM):
+            filename = "SimFrames/elev_" + str(time_step) + ".png"
+            frames.append(imageio.imread(filename))
+
+    else:
+        for time_step in range(TMAX_SIM):
+            filename = "SimFrames/elev_" + str(time_step) + ".png"
+            if os.path.exists(filename):
                 frames.append(imageio.imread(filename))
 
     imageio.mimsave("elev.gif", frames, "GIF", fps=2)
@@ -266,9 +274,11 @@ def _plot_frame(AnimateDomain, time_val, OriginY, z_lim, y_lim,
                 fig_size, fig_eps, run_name, BarrierLength, ny,
                 show_domain_labels, domain_label_interval,
                 is_post_storm=False,
-                first_domain_index=0):
+                first_domain_index=0,
+                n_buffer_each_side=15):
     """
     Helper function to plot and save individual frames with proper formatting.
+    Uses GIS-based domain numbering (excludes buffer domains).
     """
     if fig_size is not None:
         elevFig = plt.figure(figsize=fig_size)
@@ -339,14 +349,13 @@ def _plot_frame(AnimateDomain, time_val, OriginY, z_lim, y_lim,
     New_Y_Labels = np.divide(copy.deepcopy(focused_y_tick_location), 100)
     plt.yticks(focused_y_tick_location, labels=New_Y_Labels)
 
-    # Add domain number labels
+    # Add domain number labels using GIS-based numbering
     if show_domain_labels:
         # Add secondary x-axis for domain numbers
         ax2 = ax.twiny()
         ax2.set_xlim(ax.get_xlim())
 
         # Calculate domain label positions
-        # Assuming domains start at x=0 and each domain is BarrierLength wide
         domain_positions = []
         domain_numbers = []
 
@@ -355,16 +364,18 @@ def _plot_frame(AnimateDomain, time_val, OriginY, z_lim, y_lim,
             domain_center = i * BarrierLength + BarrierLength / 2
             if domain_center < xmax:
                 domain_positions.append(domain_center)
-                # Account for which domain index in the full cascade we're starting from
-                actual_domain_num = first_domain_index + i + 1
-                domain_numbers.append(f'D{actual_domain_num}')
+                
+                # Convert CASCADE index to GIS-based numbering
+                # Subtract buffer domains from the CASCADE index to get GIS domain number
+                gis_domain_num = (first_domain_index - n_buffer_each_side) + i + 1
+                domain_numbers.append(f'D{gis_domain_num}')
 
         ax2.set_xticks(domain_positions)
         ax2.set_xticklabels(domain_numbers, fontsize=9)
-        ax2.set_xlabel("Domain Number", fontsize=11)
+        ax2.set_xlabel("Domain Number (GIS-based)", fontsize=11)
 
     plt.tight_layout()
-    plt.subplots_adjust(right=1.12)
+    plt.subplots_adjust(right=1.12, top=0.93)  # Make room for domain labels at top
     plt.rcParams.update({"font.size": 11})
 
     # Save figure
@@ -397,8 +408,8 @@ plot_mode = "custom"  # Options: "all", "real_only", "custom"
 n_buffer_each_side = 15          # Number of buffer domains on each end
 
 # For "custom" mode, specify your domains here:
-custom_domains_start = 47        # First domain to plot (inclusive)
-custom_domains_end = 52          # Last domain to plot (exclusive)
+custom_domains_start = 32        # First domain to plot (inclusive)
+custom_domains_end = 36          # Last domain to plot (exclusive, so this plots 28-32)
 
 # =============================================================================
 # MAIN EXECUTION
@@ -421,7 +432,8 @@ if plot_mode == "all":
     # Plot ALL domains (real + buffers)
     Model_Grids_Of_Interest = range(total_domains)
     first_domain_index = 0
-    print(f"Plotting mode: ALL domains (0-{total_domains-1})")
+    print(f"Plotting mode: ALL domains (CASCADE indices 0-{total_domains-1})")
+    print(f"               GIS domain numbers: {-n_buffer_each_side+1} to {total_domains-n_buffer_each_side}")
     
 elif plot_mode == "real_only":
     # Plot ONLY real domains (no buffers)
@@ -429,13 +441,17 @@ elif plot_mode == "real_only":
     end_real = total_domains - n_buffer_each_side
     Model_Grids_Of_Interest = range(start_real, end_real)
     first_domain_index = start_real
-    print(f"Plotting mode: REAL domains only ({start_real}-{end_real-1})")
+    print(f"Plotting mode: REAL domains only (CASCADE indices {start_real}-{end_real-1})")
+    print(f"               GIS domain numbers: 1 to {end_real-start_real}")
     
 elif plot_mode == "custom":
     # Plot custom range of domains
     Model_Grids_Of_Interest = range(custom_domains_start, custom_domains_end)
     first_domain_index = custom_domains_start
-    print(f"Plotting mode: CUSTOM domains ({custom_domains_start}-{custom_domains_end-1})")
+    gis_start = custom_domains_start - n_buffer_each_side + 1
+    gis_end = custom_domains_end - n_buffer_each_side
+    print(f"Plotting mode: CUSTOM domains (CASCADE indices {custom_domains_start}-{custom_domains_end-1})")
+    print(f"               GIS domain numbers: {gis_start} to {gis_end}")
     
 else:
     raise ValueError(f"Invalid plot_mode: {plot_mode}. Must be 'all', 'real_only', or 'custom'")
@@ -462,9 +478,10 @@ plot_ElevAnimation_CASCADE(
     roadway_management_ny=roadway_management_ny,
     y_lim=None,
     z_lim=3.5,
-    fig_size=(9, 10),  # Width, Height in inches fig_size=None,
+    fig_size=(9, 10),  # Width, Height in inches
     fig_eps=False,
     show_domain_labels=True,
-    domain_label_interval=10,
+    domain_label_interval=1,  # Label every domain for your custom range
     first_domain_index=first_domain_index,
+    n_buffer_each_side=n_buffer_each_side,
 )

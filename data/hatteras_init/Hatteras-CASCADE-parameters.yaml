@@ -30,8 +30,8 @@ Qs_bb_min: 1
 Qs_min: 1.0
 Qshrub_max: 0.15
 RSLR_Constant: true
-RSLR_const: 0.0056
-Rat: -0.0
+RSLR_const: 0.005
+Rat: 0.0
 Rin_i: 0.1
 Rin_r: 2.0
 SalineLimit: 5
@@ -65,5 +65,5 @@ rmin: 0.55
 s_sf_eq: 0.01698590034494604
 sandbag_elevation: 1.8
 sandbag_need: false
-storm_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\storms\hindcast_storms\modified\storms_1978_1997_1.5x_intensity.npy
+storm_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\storms\hindcast_storms\storms_1978_1997.npy
 threshold_in: 0.25
