@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 # ============================================================
 # --- SETTINGS: Update these values only ---
 # ============================================================
-NPZ_FILE = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_natural\HAT_1978_1997_natural.npz"
+NPZ_FILE = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_wh2.5_wa0.1\HAT_1978_1997_wh2.5_wa0.1.npz"
 
 # Root directory where all shoreline snapshot outputs will be stored.
-OUTPUT_ROOT_DIR = "HAT_1978_1997_natural"
+OUTPUT_ROOT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\output\shoreline_analysis\HAT_1978_1997_wh2.5_wa0.1"
 
 START_YEAR = 1978  # Label for first time step
 END_YEAR = 1997  # Label for last time step
@@ -21,7 +21,7 @@ LEFT_BUFFER_END = 14  # last left-buffer CASCADE domain index (0–14 = 15 left 
 RIGHT_BUFFER_START = 105  # first right-buffer CASCADE domain index
 
 # *** UPDATED: DSAS file now contains annual rate (LRR), not total change ***
-DSAS_DOMAIN_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\shoreline_change\dsas_1978_1997_CLEAN_DETAILED.csv"
+DSAS_DOMAIN_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\shoreline_change\dsas_1978_1997_domain_means_SIMPLE.csv"
 DSAS_DOMAIN_COL = "domain_id"  # GIS domain ID field in CLEAN file (1–90)
 DSAS_RATE_COL = "annual_rate_m_per_yr"  # *** CHANGED: Now using annual rate directly from LRR ***
 

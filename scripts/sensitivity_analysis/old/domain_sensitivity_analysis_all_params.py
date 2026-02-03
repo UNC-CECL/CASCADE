@@ -19,7 +19,7 @@ import glob
 # CONFIGURATION
 # =============================================================================
 
-PROJECT_BASE_DIR = r'C:\Users\hanna\PycharmProjects\CASCADE'
+PROJECT_BASE_DIR = r'/'
 SENSITIVITY_RESULTS_DIR = os.path.join(PROJECT_BASE_DIR, 'output', 'sensitivity_analysis')
 OUTPUT_DIR = os.path.join(SENSITIVITY_RESULTS_DIR, 'domain_sensitivity_analysis')
 

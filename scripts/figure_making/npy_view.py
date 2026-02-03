@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Load a sample array
-array = np.load(r'C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\elevations\2009_npy_arrays\domain_1_resampled.npy')
+array = np.load(r'C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\topography\2009_FIXED\domain_1_topography_2009.npy')
 
 # Visualize it
 plt.imshow(array, cmap='terrain')

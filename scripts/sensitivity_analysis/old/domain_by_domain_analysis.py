@@ -20,7 +20,7 @@ import glob
 # CONFIGURATION
 # =============================================================================
 
-PROJECT_BASE_DIR = r'C:\Users\hanna\PycharmProjects\CASCADE'
+PROJECT_BASE_DIR = r'/'
 
 # Path to CASCADE output from your baseline run
 CASCADE_OUTPUT_DIR = os.path.join(
@@ -190,7 +190,7 @@ for zone in results['zone'].unique():
 # VISUALIZATIONS
 # =============================================================================
 
-print("\n5. Creating visualizations...")
+print("\n5. Creating gifs...")
 
 sns.set_style("whitegrid")
 

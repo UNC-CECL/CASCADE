@@ -645,43 +645,87 @@ def create_sensitivity_plots(results_df, timestamp, observed_rates=None):
     plt.rcParams['figure.figsize'] = (12, 8)
     
     # --- Plot 1: Parameter vs Mean Change ---
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig, axes = plt.subplots(2, 2, figsize=(16, 11))
     axes = axes.flatten()
+    
+    # Calculate observed mean for reference line
+    obs_mean = np.nanmean(observed_rates) if observed_rates is not None else None
     
     for idx, param in enumerate(parameters):
         if idx >= 4:
             break
         ax = axes[idx]
-        param_data = results_df[results_df['parameter'] == param]
+        param_data = results_df[results_df['parameter'] == param].sort_values('value')
         
-        ax.plot(param_data['value'], param_data['mean_change'], 'o-', linewidth=2, markersize=8)
-        ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5)
-        ax.set_xlabel(param.replace('_', ' ').title(), fontsize=12)
-        ax.set_ylabel('Mean Shoreline Change (m/yr)', fontsize=12)
-        ax.set_title(f'Sensitivity to {param.replace("_", " ").title()}', fontsize=13, fontweight='bold')
+        # Plot model mean
+        ax.plot(param_data['value'], param_data['mean_change'], 'o-', linewidth=2.5, markersize=10, 
+                color='steelblue', label='Model Mean', zorder=3)
+        
+        # Highlight current baseline value
+        baseline_val = BASELINE_PARAMS[param]
+        baseline_row = param_data[param_data['value'] == baseline_val]
+        if len(baseline_row) > 0:
+            ax.plot(baseline_val, baseline_row['mean_change'].values[0], 'r*', 
+                   markersize=20, label='Current Baseline', zorder=4)
+        
+        # Add zero line
+        ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5, linewidth=1.5, label='Zero Change')
+        
+        # Add observed mean line if available
+        if obs_mean is not None:
+            ax.axhline(y=obs_mean, color='green', linestyle=':', alpha=0.7, linewidth=2, 
+                      label=f'Observed Mean ({obs_mean:.2f} m/yr)')
+        
+        ax.set_xlabel(param.replace('_', ' ').title(), fontsize=13, fontweight='bold')
+        ax.set_ylabel('Mean Shoreline Change (m/yr)', fontsize=13, fontweight='bold')
+        ax.set_title(f'Sensitivity to {param.replace("_", " ").title()}', fontsize=14, fontweight='bold')
         ax.grid(True, alpha=0.3)
+        ax.legend(loc='best', fontsize=9)
     
+    plt.suptitle('Wave Parameter Sensitivity: Mean Shoreline Change', 
+                 fontsize=16, fontweight='bold', y=0.995)
     plt.tight_layout()
     plt.savefig(os.path.join(plots_dir, 'sensitivity_mean_change.png'), dpi=300, bbox_inches='tight')
     print(f"✓ Saved: sensitivity_mean_change.png")
     plt.close()
     
     # --- Plot 2: Parameter vs Spatial Variability (Std Dev) ---
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig, axes = plt.subplots(2, 2, figsize=(16, 11))
     axes = axes.flatten()
+    
+    # Calculate observed std dev for reference line
+    obs_std = np.nanstd(observed_rates) if observed_rates is not None else None
     
     for idx, param in enumerate(parameters):
         if idx >= 4:
             break
         ax = axes[idx]
-        param_data = results_df[results_df['parameter'] == param]
+        param_data = results_df[results_df['parameter'] == param].sort_values('value')
         
-        ax.plot(param_data['value'], param_data['std_dev'], 'o-', linewidth=2, markersize=8, color='orange')
-        ax.set_xlabel(param.replace('_', ' ').title(), fontsize=12)
-        ax.set_ylabel('Spatial Variability (Std Dev, m/yr)', fontsize=12)
-        ax.set_title(f'Spatial Variability vs {param.replace("_", " ").title()}', fontsize=13, fontweight='bold')
+        # Plot model std dev
+        ax.plot(param_data['value'], param_data['std_dev'], 'o-', linewidth=2.5, markersize=10, 
+                color='darkorange', label='Model Std Dev', zorder=3)
+        
+        # Highlight current baseline value
+        baseline_val = BASELINE_PARAMS[param]
+        baseline_row = param_data[param_data['value'] == baseline_val]
+        if len(baseline_row) > 0:
+            ax.plot(baseline_val, baseline_row['std_dev'].values[0], 'r*', 
+                   markersize=20, label='Current Baseline', zorder=4)
+        
+        # Add observed std dev line if available
+        if obs_std is not None:
+            ax.axhline(y=obs_std, color='green', linestyle=':', alpha=0.7, linewidth=2, 
+                      label=f'Observed Std Dev ({obs_std:.2f} m/yr)')
+        
+        ax.set_xlabel(param.replace('_', ' ').title(), fontsize=13, fontweight='bold')
+        ax.set_ylabel('Spatial Variability (Std Dev, m/yr)', fontsize=13, fontweight='bold')
+        ax.set_title(f'Spatial Variability vs {param.replace("_", " ").title()}', fontsize=14, fontweight='bold')
         ax.grid(True, alpha=0.3)
+        ax.legend(loc='best', fontsize=9)
     
+    plt.suptitle('Wave Parameter Sensitivity: Spatial Variability', 
+                 fontsize=16, fontweight='bold', y=0.995)
     plt.tight_layout()
     plt.savefig(os.path.join(plots_dir, 'sensitivity_spatial_variability.png'), dpi=300, bbox_inches='tight')
     print(f"✓ Saved: sensitivity_spatial_variability.png")
@@ -689,28 +733,132 @@ def create_sensitivity_plots(results_df, timestamp, observed_rates=None):
     
     # --- Plot 3: Parameter vs R² (if available) ---
     if 'r_squared' in results_df.columns and not results_df['r_squared'].isna().all():
-        fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+        fig, axes = plt.subplots(2, 2, figsize=(16, 11))
         axes = axes.flatten()
         
         for idx, param in enumerate(parameters):
             if idx >= 4:
                 break
             ax = axes[idx]
-            param_data = results_df[results_df['parameter'] == param]
+            param_data = results_df[results_df['parameter'] == param].sort_values('value')
             
-            ax.plot(param_data['value'], param_data['r_squared'], 'o-', linewidth=2, markersize=8, color='green')
-            ax.set_xlabel(param.replace('_', ' ').title(), fontsize=12)
-            ax.set_ylabel('R² with Observations', fontsize=12)
-            ax.set_title(f'Model Fit vs {param.replace("_", " ").title()}', fontsize=13, fontweight='bold')
-            ax.set_ylim([0, 1])
+            # Plot R²
+            ax.plot(param_data['value'], param_data['r_squared'], 'o-', linewidth=2.5, markersize=10, 
+                    color='forestgreen', label='R² (Model vs Observed)', zorder=3)
+            
+            # Highlight current baseline value
+            baseline_val = BASELINE_PARAMS[param]
+            baseline_row = param_data[param_data['value'] == baseline_val]
+            if len(baseline_row) > 0:
+                ax.plot(baseline_val, baseline_row['r_squared'].values[0], 'r*', 
+                       markersize=20, label='Current Baseline', zorder=4)
+            
+            # Add reference lines
+            ax.axhline(y=0, color='red', linestyle='--', alpha=0.7, linewidth=1.5, 
+                      label='R²=0 (No better than mean)')
+            ax.axhline(y=0.5, color='orange', linestyle=':', alpha=0.5, linewidth=1, 
+                      label='R²=0.5 (Moderate fit)')
+            ax.axhline(y=0.8, color='green', linestyle=':', alpha=0.5, linewidth=1, 
+                      label='R²=0.8 (Good fit)')
+            
+            ax.set_xlabel(param.replace('_', ' ').title(), fontsize=13, fontweight='bold')
+            ax.set_ylabel('R² with Observations', fontsize=13, fontweight='bold')
+            ax.set_title(f'Model Fit vs {param.replace("_", " ").title()}', fontsize=14, fontweight='bold')
+            
+            # Auto-scale y-axis to show negative values
+            y_min = min(param_data['r_squared'].min(), -0.5)
+            y_max = max(param_data['r_squared'].max(), 0.5)
+            ax.set_ylim([y_min - 0.1, y_max + 0.1])
+            
             ax.grid(True, alpha=0.3)
+            ax.legend(loc='best', fontsize=8)
         
+        plt.suptitle('Wave Parameter Sensitivity: Model Fit (R²)', 
+                     fontsize=16, fontweight='bold', y=0.995)
         plt.tight_layout()
         plt.savefig(os.path.join(plots_dir, 'sensitivity_r_squared.png'), dpi=300, bbox_inches='tight')
         print(f"✓ Saved: sensitivity_r_squared.png")
         plt.close()
     
-    # --- Plot 4: Tornado Diagram (Relative Sensitivity) ---
+    # --- Plot 4: Comprehensive Metrics Comparison ---
+    # Show mean, std dev, and R² together for easy comparison
+    if observed_rates is not None:
+        fig, axes = plt.subplots(3, 4, figsize=(20, 14))
+        
+        obs_mean = np.nanmean(observed_rates)
+        obs_std = np.nanstd(observed_rates)
+        
+        for col_idx, param in enumerate(parameters):
+            if col_idx >= 4:
+                break
+            param_data = results_df[results_df['parameter'] == param].sort_values('value')
+            baseline_val = BASELINE_PARAMS[param]
+            
+            # Row 1: Mean Change
+            ax1 = axes[0, col_idx]
+            ax1.plot(param_data['value'], param_data['mean_change'], 'o-', linewidth=2, markersize=8, color='steelblue')
+            baseline_row = param_data[param_data['value'] == baseline_val]
+            if len(baseline_row) > 0:
+                ax1.plot(baseline_val, baseline_row['mean_change'].values[0], 'r*', markersize=15)
+            ax1.axhline(y=obs_mean, color='green', linestyle=':', linewidth=2, alpha=0.7)
+            ax1.axhline(y=0, color='gray', linestyle='--', alpha=0.5)
+            ax1.set_ylabel('Mean Change\n(m/yr)', fontsize=11, fontweight='bold')
+            if col_idx == 0:
+                ax1.text(-0.3, 0.5, 'Model Output\nMean', transform=ax1.transAxes, 
+                        fontsize=12, fontweight='bold', va='center', rotation=90)
+            ax1.grid(alpha=0.3)
+            ax1.set_title(param.replace('_', ' ').title(), fontsize=12, fontweight='bold')
+            
+            # Row 2: Std Dev
+            ax2 = axes[1, col_idx]
+            ax2.plot(param_data['value'], param_data['std_dev'], 'o-', linewidth=2, markersize=8, color='darkorange')
+            baseline_row = param_data[param_data['value'] == baseline_val]
+            if len(baseline_row) > 0:
+                ax2.plot(baseline_val, baseline_row['std_dev'].values[0], 'r*', markersize=15)
+            ax2.axhline(y=obs_std, color='green', linestyle=':', linewidth=2, alpha=0.7)
+            ax2.set_ylabel('Spatial Variability\n(Std Dev, m/yr)', fontsize=11, fontweight='bold')
+            if col_idx == 0:
+                ax2.text(-0.3, 0.5, 'Model Variability', transform=ax2.transAxes, 
+                        fontsize=12, fontweight='bold', va='center', rotation=90)
+            ax2.grid(alpha=0.3)
+            
+            # Row 3: R²
+            ax3 = axes[2, col_idx]
+            if 'r_squared' in param_data.columns:
+                ax3.plot(param_data['value'], param_data['r_squared'], 'o-', linewidth=2, markersize=8, color='forestgreen')
+                baseline_row = param_data[param_data['value'] == baseline_val]
+                if len(baseline_row) > 0:
+                    ax3.plot(baseline_val, baseline_row['r_squared'].values[0], 'r*', markersize=15)
+                ax3.axhline(y=0, color='red', linestyle='--', linewidth=1.5, alpha=0.7)
+                y_min = min(param_data['r_squared'].min(), -0.5)
+                y_max = max(param_data['r_squared'].max(), 0.5)
+                ax3.set_ylim([y_min - 0.1, y_max + 0.1])
+            ax3.set_ylabel('Model Fit\n(R²)', fontsize=11, fontweight='bold')
+            ax3.set_xlabel('Parameter Value', fontsize=11, fontweight='bold')
+            if col_idx == 0:
+                ax3.text(-0.3, 0.5, 'vs Observations', transform=ax3.transAxes, 
+                        fontsize=12, fontweight='bold', va='center', rotation=90)
+            ax3.grid(alpha=0.3)
+        
+        # Add legend
+        from matplotlib.lines import Line2D
+        legend_elements = [
+            Line2D([0], [0], marker='o', color='steelblue', linewidth=2, markersize=8, label='Model Output'),
+            Line2D([0], [0], marker='*', color='red', linewidth=0, markersize=15, label='Current Baseline'),
+            Line2D([0], [0], color='green', linewidth=2, linestyle=':', label='Observed Value'),
+            Line2D([0], [0], color='red', linewidth=1.5, linestyle='--', label='R²=0 (Threshold)')
+        ]
+        fig.legend(handles=legend_elements, loc='upper center', ncol=4, fontsize=11, 
+                  bbox_to_anchor=(0.5, 0.98), frameon=True, fancybox=True, shadow=True)
+        
+        plt.suptitle('Comprehensive Sensitivity Analysis: All Metrics', 
+                     fontsize=18, fontweight='bold', y=0.995)
+        plt.tight_layout(rect=[0, 0, 1, 0.97])
+        plt.savefig(os.path.join(plots_dir, 'sensitivity_comprehensive.png'), dpi=300, bbox_inches='tight')
+        print(f"✓ Saved: sensitivity_comprehensive.png")
+        plt.close()
+    
+    # --- Plot 5: Tornado Diagram (Relative Sensitivity) ---
     # Calculate range of outputs for each parameter
     sensitivity_summary = []
     for param in parameters:

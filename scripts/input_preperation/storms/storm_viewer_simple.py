@@ -285,9 +285,9 @@ def main():
     if CHECK_YEAR is not None:
         check_year(df, CHECK_YEAR)
     
-    # Create visualizations
+    # Create gifs
     if SHOW_PLOTS or SAVE_PLOTS:
-        print("Creating visualizations...")
+        print("Creating gifs...")
         create_distribution_plots(df, OUTPUT_DIR if SAVE_PLOTS else None)
         create_timeseries_plot(df, OUTPUT_DIR if SAVE_PLOTS else None)
         print("✓ Plots complete")

@@ -19,7 +19,7 @@ import os
 # CONFIGURATION
 # =============================================================================
 
-PROJECT_BASE_DIR = r'C:\Users\hanna\PycharmProjects\CASCADE'
+PROJECT_BASE_DIR = r'/'
 
 # Input files
 DSAS_FILE = os.path.join(
@@ -216,7 +216,7 @@ print(f"   ✓ Saved: {detail_file}")
 # CREATE VISUALIZATIONS
 # =============================================================================
 
-print("\n4. Creating visualizations...")
+print("\n4. Creating gifs...")
 
 sns.set_style("whitegrid")
 
