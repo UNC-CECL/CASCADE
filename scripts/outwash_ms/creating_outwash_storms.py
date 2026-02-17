@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 
 # ---------------------- load the ADCIRC-generated storm data (text file) from Chris -----------------------------------
 
-datadir = "C:/Users/Lexi/PycharmProjects/CASCADE/cascade/data/outwash_data/"
+datadir = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/"
 file_name = "sound_data.txt"  # the ADCIRC generated hydrograph from USGS
 hydro_mMSL = np.loadtxt(datadir+file_name, delimiter=",")
 # use Beaufort, Duke Marine Lab NC datums to convert to dam MHW: MHW is 0.47 m MSL, dam = m / 10
