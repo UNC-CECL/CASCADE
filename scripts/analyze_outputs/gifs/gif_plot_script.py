@@ -390,8 +390,8 @@ def _plot_frame(AnimateDomain, time_val, OriginY, z_lim, y_lim,
 # MAIN EXECUTION
 # =============================================================================
 
-os.chdir(r'C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_mod_storms_be1')
-run_name = "HAT_1978_1997_mod_storms_be1"
+os.chdir(r'C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_constantbuffers')
+run_name = "HAT_1978_1997_constantbuffers"
 name_prefix = run_name
 nt_run = 19  # Number of years to plot
 

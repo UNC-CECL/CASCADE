@@ -391,7 +391,7 @@ def _plot_frame(AnimateDomain, time_val, OriginY, z_lim, y_lim,
 # =============================================================================
 
 # Choose ONE of these modes:
-plot_mode = "custom"  # Options: "all", "real_only", "custom"
+plot_mode = "real_only"  # Options: "all", "real_only", "custom"
 
 # Settings for each mode:
 n_buffer_each_side = 15          # Number of buffer domains on each end
@@ -404,8 +404,8 @@ custom_domains_end = 52          # Last domain to plot (exclusive)
 # MAIN EXECUTION
 # =============================================================================
 
-os.chdir(r'C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_natural')
-run_name = "HAT_1978_1997_natural"
+os.chdir(r'C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_constantbuffers')
+run_name = "HAT_1978_1997_constantbuffers"
 name_prefix = run_name
 nt_run = 19  # Number of years to plot
 

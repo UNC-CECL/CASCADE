@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 # ============================================================
 # --- SETTINGS: Update these values only ---
 # ============================================================
-NPZ_FILE = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_wh2.5_wa0.1\HAT_1978_1997_wh2.5_wa0.1.npz"
+NPZ_FILE = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1978_1997_constantbuffers\HAT_1978_1997_constantbuffers.npz"
 
 # Root directory where all shoreline snapshot outputs will be stored.
-OUTPUT_ROOT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\output\shoreline_analysis\HAT_1978_1997_wh2.5_wa0.1"
+OUTPUT_ROOT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\output\shoreline_analysis\HAT_1978_1997_constantbuffers"
 
 START_YEAR = 1978  # Label for first time step
 END_YEAR = 1997  # Label for last time step

@@ -120,7 +120,7 @@ BASELINE_WAVE_ANGLE_HIGH_FRACTION = 0.2
 
 SENSITIVITY_ANALYSES = {
     'wave_height': {
-        'values': [1.5, 2.0, 2.5],  # ← Focus on Murray's range
+        'values': [0.5, 1.0, 1.5, 2.0, 2.5],  # ← Focus on Murray's range
         'label': 'Wave Height',
         'units': 'm',
         'enabled': True,
@@ -129,19 +129,19 @@ SENSITIVITY_ANALYSES = {
         'values': [6, 7, 8, 10],  # ← Simplified
         'label': 'Wave Period',
         'units': 's',
-        'enabled': True,
+        'enabled': False,
     },
     'wave_asymmetry': {
         'values': [0.6, 0.7, 0.8],  # ← Simplified
         'label': 'Wave Asymmetry',
         'units': '',
-        'enabled': True,
+        'enabled': False,
     },
     'wave_angle_high_fraction': {
         'values': [0.1, 0.2, 0.4],  # ← Simplified
         'label': 'Wave Angle High Fraction',
         'units': '',
-        'enabled': True,
+        'enabled': False,
     },
 }
 

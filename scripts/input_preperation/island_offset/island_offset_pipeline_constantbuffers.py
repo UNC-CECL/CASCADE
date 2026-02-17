@@ -6,14 +6,16 @@ This script:
 1. Reads raw dune–baseline intersection CSVs (e.g., 1978, 1997).
 2. Calculates the relative dune offset per domain (meters, baseline = minimum).
 3. Merges multiple years into a single table (columns = years).
-4. Pads the merged table for CASCADE with 15 buffer domains on each side
-   by repeating the edge-domain values (no zero padding).
+4. Pads the merged table for CASCADE with 15 buffer domains on each side,
+   using a smooth linear transition between the last and first real domains
+   (i.e., the buffer domains "bridge" the edge-domain values for wrap-around
+   alongshore sediment transport).
 
 Inputs:
     - One raw CSV per year exported from ArcGIS, with at least:
         'domain_id' : integer domain ID
         'ORIG_LEN'  : distance from baseline to dune (m)
-        'LineID'    : transect ID within domain
+        'LineID'    : transect ID within each domain
 
 Outputs (in OUTPUT_DIR):
     - <OUTPUT_BASENAME>_CASCADE_Input_unpadded.csv
@@ -21,9 +23,9 @@ Outputs (in OUTPUT_DIR):
     - <OUTPUT_BASENAME>_CASCADE_Input.csv
         Year columns only (no Domain_ID), unpadded
     - <OUTPUT_BASENAME>_PADDED_<TARGET_LENGTH>.csv
-        Year columns only, padded with edge-domain values
+        Year columns only, padded with smooth edge-domain bridges
 
-Author: Hannah A. Henry (streamlined, edge-padded)
+Author: Hannah A. Henry (smooth wrap-around buffer version)
 """
 
 import os
@@ -31,7 +33,7 @@ import pandas as pd
 import numpy as np
 
 # =============================================================================
-# 1. USER CONFIGURATION - LAST RAN FOR WHOLE ISLAND, UPDATE BASED ON STUDY AREA
+# 1. USER CONFIGURATION
 # =============================================================================
 
 # Mapping: year → raw CSV path
@@ -41,23 +43,22 @@ RAW_FILES = {
 }
 
 # Output directory
-OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\island_offset\hindcast_1978_1997"
+OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\island_offset\hindcast_1978_1997_constant"
 
 # Base name for output files
-OUTPUT_BASENAME = "Hatteras_Dune_Offsets_1978_1997"
+OUTPUT_BASENAME = "Island_Dune_Offsets_1978_1997_constant"
 
 # -------------------------------------------------------------------------
-# Domain range for Hatteras (whole-island configuration)
+# Domain range for Hatteras (updated whole-island configuration)
 # -------------------------------------------------------------------------
-# Real domains included in this run. For the whole island we currently use
-# domains 1–118, which will then be padded with 15 buffer domains on each side.
+# Real domains included in this run. Updated to use domains 1–90.
 START_DOMAIN = 1
 END_DOMAIN = 90
 B3D_GRIDS = list(range(START_DOMAIN, END_DOMAIN + 1))
 
 # Buffer settings (15 left + 15 right)
-PADDING_ZEROS = 15   # number of buffer domains on each side (name kept for legacy)
-TARGET_LENGTH = 120
+PADDING_ZEROS = 15   # number of buffer domains on each side
+TARGET_LENGTH = (END_DOMAIN - START_DOMAIN + 1) + 2 * PADDING_ZEROS  # 90 + 30 = 120
 
 # Column mapping from raw CSV → standardized names
 COL_MAP = {
@@ -83,21 +84,6 @@ def calculate_relative_offset(file_path, year, col_map, grids):
            - Compute mean distance across transects.
         4. Compute relative offsets by subtracting the minimum mean distance.
         5. Return DataFrame with ['Domain_ID', '<year>'].
-
-    Parameters
-    ----------
-    file_path : str
-        Path to raw CSV for a single year.
-    year : int
-        Year label (used as column name).
-    col_map : dict
-        Mapping from logical names → raw column names.
-    grids : list of int
-        Domain IDs to process (e.g., 1–118).
-
-    Returns
-    -------
-    pd.DataFrame or None
     """
     print(f"\n--- Processing {year} ---")
     print(f"Input file: {file_path}")
@@ -216,19 +202,29 @@ def merge_years(offset_dfs):
 
 def pad_for_cascade(df, padding_zeros, target_length):
     """
-    Pad a DataFrame of year columns for CASCADE by repeating the edge values.
+    Pad a DataFrame of year columns for CASCADE using flat (constant) buffers.
 
-    Left buffers: copy the first real domain's row `padding_zeros` times.
-    Right buffers: copy the last real domain's row `padding_zeros` times.
+    Structure of the padded array (alongshore order):
+        [15 left buffers] + [real domains 1–N] + [15 right buffers]
+
+    Buffer construction:
+        - Left buffers (before Domain 1): all rows equal to Domain 1's values.
+        - Right buffers (after Domain N): all rows equal to Domain N's values.
+
+    This avoids artificial gradients in the buffer regions caused by the
+    large north-south morphological offset difference across Hatteras Island.
+    The buffer domains simply hold the edge-domain value constant, creating
+    a zero-gradient boundary condition at each end.
 
     Parameters
     ----------
     df : pd.DataFrame
-        Only year columns (e.g., ['1978', '1997']).
+        Only year columns (e.g., ['1978', '1997']) for real domains, ordered
+        from Domain 1 to Domain N.
     padding_zeros : int
-        Number of buffer rows to add at top and bottom.
+        Number of buffer rows to add at top and bottom (e.g., 15).
     target_length : int
-        Required length after padding.
+        Required length after padding (real + 2 * padding_zeros).
 
     Returns
     -------
@@ -253,23 +249,29 @@ def pad_for_cascade(df, padding_zeros, target_length):
 
     print(f"Unpadded length: {current_length} rows.")
     print(
-        f"Padding with {padding_zeros} rows copied from the first domain "
-        f"and {padding_zeros} rows copied from the last domain."
+        f"Padding with {padding_zeros} constant (flat) rows on the left "
+        f"and {padding_zeros} constant (flat) rows on the right."
     )
 
-    # Take first and last rows as arrays
-    first_row = df.iloc[0:1].to_numpy()   # shape (1, ncols)
-    last_row = df.iloc[-1:].to_numpy()    # shape (1, ncols)
+    # First and last real domains (as 1D arrays)
+    first_row = df.iloc[0].to_numpy(dtype=float)   # Domain 1
+    last_row = df.iloc[-1].to_numpy(dtype=float)   # Domain N
 
-    # Repeat them padding_zeros times
-    top_block_array = np.repeat(first_row, padding_zeros, axis=0)
-    bottom_block_array = np.repeat(last_row, padding_zeros, axis=0)
+    # Flat buffers: tile each edge domain's values across all buffer rows
+    # Left buffers hold Domain 1's value; right buffers hold Domain N's value
+    right_block = pd.DataFrame(
+        np.tile(last_row, (padding_zeros, 1)),
+        columns=data_columns,
+    )
+    left_block = pd.DataFrame(
+        np.tile(first_row, (padding_zeros, 1)),
+        columns=data_columns,
+    )
 
-    top_block = pd.DataFrame(top_block_array, columns=data_columns)
-    bottom_block = pd.DataFrame(bottom_block_array, columns=data_columns)
-
+    # Assemble full padded DataFrame:
+    #   [left buffers] + [real df] + [right buffers]
     padded = pd.concat(
-        [top_block, df[data_columns], bottom_block],
+        [left_block, df[data_columns], right_block],
         ignore_index=True,
     )
 
@@ -331,7 +333,7 @@ def main():
     cascade_df.to_csv(cascade_unpadded_path, index=False)
     print(f"Unpadded CASCADE-format file saved to:\n  {cascade_unpadded_path}")
 
-    # --- 3.3. Pad for CASCADE with edge-domain buffers ---
+    # --- 3.3. Pad for CASCADE with smooth edge-domain buffers ---
     padded_df = pad_for_cascade(
         df=cascade_df,
         padding_zeros=PADDING_ZEROS,
