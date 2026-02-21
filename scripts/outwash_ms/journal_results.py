@@ -62,12 +62,12 @@ for rname in rname_array:
     config = 4                 # 1, 2, 3, or 4
 
     # Display stats on console/show plots
-    drowning_stats = True
-    migration_stats = True
+    drowning_stats = False
+    migration_stats = False
     plotters = False
-    geomoetry_stats = True
+    geomoetry_stats = False
     dune_stats = True
-    flux_stats = True
+    flux_stats = False
 
     # location of the npz files
     datadir_b3d = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{0}/overwash_only/".format(rname)
@@ -177,6 +177,8 @@ for rname in rname_array:
         initial_gap_height = np.min(sub_domain[0])  # get the lowest value of the dunes at year 0 without the berm elev
         berm_el = b3d_obj.barrier3d[0].BermEl
         dune_crest_elev = dune_crest + berm_el  # dam
+        # here, a dune gap is defined as any cell less than or equal to the initial gap height + berm elevation
+        dune_gap_limit = initial_gap_height+berm_el  # the minimum elevation of a dune cell
         # if a barrier drowns, all dune cells are at the berm elevation, so here, if all the dune crest cells for a
         # single year are at the berm elevation, we change the elevation to -0.3 (water) for plotting purposes
         for row in range(np.shape(dune_crest_elev)[0]):
@@ -185,10 +187,9 @@ for rname in rname_array:
 
         n_dune_gap_cells_array = np.zeros([np.shape(dune_crest_elev)[0],1])
         # count the number of dune gap cells in each row (each row = a model year)
-        # here, a dune gap is defined as any cell less than or equal to the initial gap height + berm elevation
         for year in range(np.shape(dune_crest_elev)[0]):
             dune_gap_row = dune_crest_elev[year]
-            n_dune_gap_cells = len(dune_gap_row[dune_gap_row<=initial_gap_height+berm_el])
+            n_dune_gap_cells = len(dune_gap_row[dune_gap_row <= dune_gap_limit])
             n_dune_gap_cells_array[year] = n_dune_gap_cells  # save the number of dune gap cells per model year
         avg_dune_cells = np.average(n_dune_gap_cells_array)  # average the number dune gaps over all model years (for a single storm series)
         avg_dune_cells_array_b3d[storm_num-1] = avg_dune_cells * 10  # each cell is 1 dam, so the total number of cells
@@ -249,6 +250,8 @@ for rname in rname_array:
         initial_gap_height = np.min(sub_domain[0])  # get the lowest value of the dunes at year 0 without the berm elev
         berm_el = outwash100_obj.barrier3d[0].BermEl
         dune_crest_elev = dune_crest + berm_el  # dam
+        # here, a dune gap is defined as any cell less than or equal to the initial gap height + berm elevation
+        dune_gap_limit = initial_gap_height+berm_el  # the minimum elevation of a dune cell
         # if a barrier drowns, all dune cells are at the berm elevation, so here, if all the dune crest cells for a
         # single year are at the berm elevation, we change the elevation to -0.3 (water) for plotting purposes
         for row in range(np.shape(dune_crest_elev)[0]):
@@ -260,7 +263,7 @@ for rname in rname_array:
         # here, a dune gap is defined as any cell less than or equal to the initial gap height + berm elevation
         for year in range(np.shape(dune_crest_elev)[0]):
             dune_gap_row = dune_crest_elev[year]
-            n_dune_gap_cells = len(dune_gap_row[dune_gap_row<=initial_gap_height+berm_el])
+            n_dune_gap_cells = len(dune_gap_row[dune_gap_row <= dune_gap_limit])
             n_dune_gap_cells_array[year] = n_dune_gap_cells  # save the number of dune gap cells per model year
         avg_dune_cells = np.average(n_dune_gap_cells_array)  # average the number dune gaps over all model years (for a single storm series)
         avg_dune_cells_array_100[storm_num-1] = avg_dune_cells * 10  # each cell is 1 dam, so the total number of cells
@@ -323,6 +326,8 @@ for rname in rname_array:
         initial_gap_height = np.min(sub_domain[0])  # get the lowest value of the dunes at year 0 without the berm elev
         berm_el = outwash50_obj.barrier3d[0].BermEl
         dune_crest_elev = dune_crest + berm_el  # dam
+        # here, a dune gap is defined as any cell less than or equal to the initial gap height + berm elevation
+        dune_gap_limit = initial_gap_height+berm_el  # the minimum elevation of a dune cell
         # if a barrier drowns, all dune cells are at the berm elevation, so here, if all the dune crest cells for a
         # single year are at the berm elevation, we change the elevation to -0.3 (water) for plotting purposes
         for row in range(np.shape(dune_crest_elev)[0]):
@@ -334,7 +339,7 @@ for rname in rname_array:
         # here, a dune gap is defined as any cell less than or equal to the initial gap height + berm elevation
         for year in range(np.shape(dune_crest_elev)[0]):
             dune_gap_row = dune_crest_elev[year]
-            n_dune_gap_cells = len(dune_gap_row[dune_gap_row<=initial_gap_height+berm_el])
+            n_dune_gap_cells = len(dune_gap_row[dune_gap_row <= dune_gap_limit])
             n_dune_gap_cells_array[year] = n_dune_gap_cells  # save the number of dune gap cells per model year
         avg_dune_cells = np.average(n_dune_gap_cells_array)  # average the number dune gaps over all model years (for a single storm series)
         avg_dune_cells_array_50[storm_num-1] = avg_dune_cells * 10  # each cell is 1 dam, so the total number of cells
@@ -399,6 +404,8 @@ for rname in rname_array:
         initial_gap_height = np.min(sub_domain[0])  # get the lowest value of the dunes at year 0 without the berm elev
         berm_el = outwash0_obj.barrier3d[0].BermEl
         dune_crest_elev = dune_crest + berm_el  # dam
+        # here, a dune gap is defined as any cell less than or equal to the initial gap height + berm elevation
+        dune_gap_limit = initial_gap_height+berm_el  # the minimum elevation of a dune cell
         # if a barrier drowns, all dune cells are at the berm elevation, so here, if all the dune crest cells for a
         # single year are at the berm elevation, we change the elevation to -0.3 (water) for plotting purposes
         for row in range(np.shape(dune_crest_elev)[0]):
@@ -410,7 +417,7 @@ for rname in rname_array:
         # here, a dune gap is defined as any cell less than or equal to the initial gap height + berm elevation
         for year in range(np.shape(dune_crest_elev)[0]):
             dune_gap_row = dune_crest_elev[year]
-            n_dune_gap_cells = len(dune_gap_row[dune_gap_row<=initial_gap_height+berm_el])
+            n_dune_gap_cells = len(dune_gap_row[dune_gap_row <= dune_gap_limit])
             n_dune_gap_cells_array[year] = n_dune_gap_cells  # save the number of dune gap cells per model year
         avg_dune_cells = np.average(n_dune_gap_cells_array)  # average the number dune gaps over all model years (for a single storm series)
         avg_dune_cells_array_0[storm_num-1] = avg_dune_cells * 10  # each cell is 1 dam, so the total number of cells
