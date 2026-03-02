@@ -277,7 +277,7 @@ def filter_overwash(
 
     # dam^3/dam
     overwash_to_shoreface = total_overwash_removal_shoreface_volume / barrier_length
-    (x_s, s_sf, beach_width) = shoreface_nourishment(
+    x_s, s_sf, beach_width = shoreface_nourishment(
         x_s,  # dam
         x_t,  # dam
         overwash_to_shoreface,  # dam^3/dam
