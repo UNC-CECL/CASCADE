@@ -1,12 +1,18 @@
-from joblib import Parallel, delayed
-import numpy as np
 import os
 
-from .roadway_manager import RoadwayManager, set_growth_parameters
+import numpy as np
+from joblib import Parallel
+from joblib import delayed
+
 from .beach_dune_manager import BeachDuneManager
-from .outwasher import Outwasher
-from .brie_coupler import BrieCoupler, initialize_equal, batchB3D
+from .brie_coupler import BrieCoupler
+from .brie_coupler import batchB3D
+from .brie_coupler import initialize_equal
 from .chom_coupler import ChomCoupler
+from .outwasher import Outwasher
+from .roadway_manager import RoadwayManager
+from .roadway_manager import set_growth_parameters
+
 
 class CascadeError(Exception):
     pass
@@ -26,7 +32,7 @@ class Cascade:
         overwash_to_dune,
         roadway_management_module,
         beach_nourishment_module,
-        outwash_module
+        outwash_module,
     ):
         """Configures lists to account for multiple Barrier3D domains from single input variables; used in modules"""
 
@@ -116,7 +122,7 @@ class Cascade:
         outwash_module=True,
         alongshore_section_count=6,
         time_step_count=200,
-        wave_height=1, # ---------- for BRIE and Barrier3D --------------- #
+        wave_height=1,  # ---------- for BRIE and Barrier3D --------------- #
         wave_period=7,
         wave_asymmetry=0.8,
         wave_angle_high_fraction=0.2,
@@ -137,11 +143,11 @@ class Cascade:
         dune_minimum_elevation=2.2,
         trigger_dune_knockdown=False,
         group_roadway_abandonment=None,
-        nourishment_interval=None, # ---------- beach and dune ("community") management --------------- #
+        nourishment_interval=None,  # ---------- beach and dune ("community") management --------------- #
         nourishment_volume=300.0,
         overwash_filter=40,
         overwash_to_dune=10,
-        number_of_communities=1, # ---------- coastal real estate markets (in development) --------------- #
+        number_of_communities=1,  # ---------- coastal real estate markets (in development) --------------- #
         sand_cost=10,
         taxratio_oceanfront=1,
         external_housing_market_value_oceanfront=6e5,
@@ -289,22 +295,20 @@ class Cascade:
         self._parameter_file = parameter_file
         self._number_of_communities = number_of_communities
         self._b3d_break = 0
-        self._road_break = [
-            0
-        ] * self._ny
-        self._community_break = [
-            0
-        ] * self._ny
+        self._road_break = [0] * self._ny
+        self._community_break = [0] * self._ny
         self._nourish_now = [0] * self._ny  # user can trigger nourishment in time loop
-        self._rebuild_dune_now = [0] * self._ny  # user can trigger the dune to be rebuilt in time loop
-        self._trigger_dune_knockdown = (
-            trigger_dune_knockdown  # user can force the dunes to be knocked down in time loop
-        )
+        self._rebuild_dune_now = [
+            0
+        ] * self._ny  # user can trigger the dune to be rebuilt in time loop
+        self._trigger_dune_knockdown = trigger_dune_knockdown  # user can force the dunes to be knocked down in time loop
         self._initial_beach_width = [0] * self._ny
         self._group_roadway_abandonment = group_roadway_abandonment
 
         # initialization errors
-        if (berm_elevation != 1.9 or MHW !=0.46 or beta !=0.04) and storm_file=="barrier3d-default-storms.npy":
+        if (
+            berm_elevation != 1.9 or MHW != 0.46 or beta != 0.04
+        ) and storm_file == "barrier3d-default-storms.npy":
             raise CascadeError(
                 "The default storms only apply for a berm elevation=1.9 m NAVD88, MHW=0.46 m NAVD88 & beach slope=0.04."
             )
@@ -449,20 +453,23 @@ class Cascade:
 
         for iB3D in range(self._ny):
             self._outwash.append(
-                Outwasher(datadir=datadir,
-                          outwash_storms_file=outwash_storms_file,
-                          time_step_count=self._nt,
-                          berm_elev=self._barrier3d[iB3D].BermEl,
-                          barrier_length=self._barrier3d[iB3D].BarrierLength,
-                          sea_level=self._barrier3d[iB3D].SL,
-                          bay_depth=self._barrier3d[iB3D].BayDepth,
-                          beta=beta,
-                          interior_domain=self._barrier3d[iB3D].InteriorDomain,
-                          dune_domain=self._barrier3d[iB3D].DuneDomain[self._barrier3d[iB3D].time_index - 1, :, :],
-                          percent_washout_to_shoreface=percent_washout_to_shoreface,
-                          outwash_beach_file=outwash_beach_file,
-                          initial_beach_width=0,
-                          )
+                Outwasher(
+                    datadir=datadir,
+                    outwash_storms_file=outwash_storms_file,
+                    time_step_count=self._nt,
+                    berm_elev=self._barrier3d[iB3D].BermEl,
+                    barrier_length=self._barrier3d[iB3D].BarrierLength,
+                    sea_level=self._barrier3d[iB3D].SL,
+                    bay_depth=self._barrier3d[iB3D].BayDepth,
+                    beta=beta,
+                    interior_domain=self._barrier3d[iB3D].InteriorDomain,
+                    dune_domain=self._barrier3d[iB3D].DuneDomain[
+                        self._barrier3d[iB3D].time_index - 1, :, :
+                    ],
+                    percent_washout_to_shoreface=percent_washout_to_shoreface,
+                    outwash_beach_file=outwash_beach_file,
+                    initial_beach_width=0,
+                )
             )
 
     @property
@@ -770,8 +777,12 @@ class Cascade:
         for iB3D in range(self._ny):
 
             if self._outwash_module[iB3D]:
-                self._outwash[iB3D]._interior_domain = self._barrier3d[iB3D].InteriorDomain
-                self._outwash[iB3D]._dune_domain = self._barrier3d[iB3D].DuneDomain[self._barrier3d[iB3D].time_index - 1]
+                self._outwash[iB3D]._interior_domain = self._barrier3d[
+                    iB3D
+                ].InteriorDomain
+                self._outwash[iB3D]._dune_domain = self._barrier3d[iB3D].DuneDomain[
+                    self._barrier3d[iB3D].time_index - 1
+                ]
                 self._outwash[iB3D].update(b3d=self._barrier3d[iB3D])
 
                 # after an outwash event, check for barrier drowning
@@ -785,7 +796,10 @@ class Cascade:
                         )
                     )
 
-                elif all(j <= self._barrier3d[iB3D].SL for j in self._barrier3d[iB3D].InteriorDomain[0, :]):
+                elif all(
+                    j <= self._barrier3d[iB3D].SL
+                    for j in self._barrier3d[iB3D].InteriorDomain[0, :]
+                ):
                     self._barrier3d[iB3D]._TMAX = self._barrier3d[iB3D].time_index - 1
                     print(
                         "Barrier has HEIGHT DROWNED at t = {time} years".format(

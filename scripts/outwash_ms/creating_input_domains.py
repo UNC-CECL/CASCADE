@@ -15,10 +15,18 @@ save_now = False
 
 # ------------------------------------------------ load data -----------------------------------------------------------
 
-section1 = np.load(r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config1\config1_observed_pre.npy")
-section2 = np.load(r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config2\config2_observed_pre.npy")
-section3 = np.load(r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config3\config3_observed_pre.npy")
-section4 = np.load(r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config4\config4_observed_pre.npy")
+section1 = np.load(
+    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config1\config1_observed_pre.npy"
+)
+section2 = np.load(
+    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config2\config2_observed_pre.npy"
+)
+section3 = np.load(
+    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config3\config3_observed_pre.npy"
+)
+section4 = np.load(
+    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config4\config4_observed_pre.npy"
+)
 
 
 # --------------------------------------------- section 1 --------------------------------------------------------------
@@ -38,7 +46,9 @@ if save_now:
 
     # flip the interior for correct orientation in B3D
     interior_b3d_input_1 = np.flip(section1_int)
-    np.save(save_dir_1 + "NCB-default-elevation-config1-damMHW.npy", interior_b3d_input_1)
+    np.save(
+        save_dir_1 + "NCB-default-elevation-config1-damMHW.npy", interior_b3d_input_1
+    )
 
     # flip the dunes and put them into one long array
     dunes_b3d_1 = np.flip(section1_dunes) - berm_el
@@ -74,7 +84,9 @@ if save_now:
 
     # flip the interior for correct orientation in B3D
     interior_b3d_input_2 = np.flip(section2_int)
-    np.save(save_dir_2 + "NCB-default-elevation-config2-damMHW.npy", interior_b3d_input_2)
+    np.save(
+        save_dir_2 + "NCB-default-elevation-config2-damMHW.npy", interior_b3d_input_2
+    )
 
     # flip the dunes and put them into one long array
     dunes_b3d_2 = np.flip(section2_dunes) - berm_el
@@ -118,7 +130,9 @@ if save_now:
 
     # flip the interior for correct orientation in B3D
     interior_b3d_input_3 = np.flip(section3_int)
-    np.save(save_dir_3 + "NCB-default-elevation-config3-damMHW.npy", interior_b3d_input_3)
+    np.save(
+        save_dir_3 + "NCB-default-elevation-config3-damMHW.npy", interior_b3d_input_3
+    )
 
     # flip the dunes and put them into one long array
     dunes_b3d_3 = np.flip(section3_dunes) - berm_el
@@ -147,7 +161,9 @@ if save_now:
 
     # flip the interior for correct orientation in B3D
     interior_b3d_input_4 = np.flip(section4_int)
-    np.save(save_dir_4 + "NCB-default-elevation-config4-damMHW.npy", interior_b3d_input_4)
+    np.save(
+        save_dir_4 + "NCB-default-elevation-config4-damMHW.npy", interior_b3d_input_4
+    )
 
     # flip the dunes and put them into one long array
     dunes_b3d_4 = np.flip(section4_dunes) - berm_el

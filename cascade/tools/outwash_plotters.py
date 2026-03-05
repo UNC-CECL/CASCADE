@@ -15,11 +15,13 @@
 Copyright (C) 2022 Lexi Van Blunk
 ----------------------------------------------------"""
 
+import os
+
+import imageio
 import matplotlib.pyplot as plt
 import numpy as np
-import os
-import imageio
 from matplotlib.ticker import AutoMinorLocator
+
 
 # -------------------------------------------elevation gif--------------------------------------------------------------
 def plot_ElevAnimation(dunes, interior, directory, start, stop, freq, berm_el):
@@ -54,9 +56,7 @@ def plot_ElevAnimation(dunes, interior, directory, start, stop, freq, berm_el):
         elevFig1 = plt.figure(figsize=(15, 7))
         ax = elevFig1.add_subplot(111)
         cax = ax.matshow(
-            animate_domain * 10,
-            cmap="terrain",
-            vmin=-3, vmax=6
+            animate_domain * 10, cmap="terrain", vmin=-3, vmax=6
         )  # , interpolation='gaussian') # analysis:ignore
         ax.xaxis.set_ticks_position("bottom")
         xtick_max = np.shape(animate_domain)[1]  # n_cols = x
@@ -69,7 +69,7 @@ def plot_ElevAnimation(dunes, interior, directory, start, stop, freq, berm_el):
         plt.yticks(y_ticks, y_tick_labels)
 
         cbar = elevFig1.colorbar(cax)
-        cbar.set_label('m MHW', rotation=270, labelpad=15)
+        cbar.set_label("m MHW", rotation=270, labelpad=15)
         plt.xlabel("Alongshore Distance (m)")
         plt.ylabel("Cross-Shore Distance (m)")
         plt.title("Time = " + str(t) + " years")
@@ -77,7 +77,7 @@ def plot_ElevAnimation(dunes, interior, directory, start, stop, freq, berm_el):
         # timestr = "Time = " + str(t) + " hrs"
         # plt.text(1, 1, timestr)
         name = "elev_" + str(t)
-        elevFig1.savefig(name, facecolor='w')  # dpi=200
+        elevFig1.savefig(name, facecolor="w")  # dpi=200
         plt.close(elevFig1)
 
     frames = []
@@ -429,7 +429,7 @@ def plot_ElevAnimation_CASCADE(
             Dunes = np.rot90(Dunes)
             Dunes = np.flipud(Dunes)
             Beach = BeachDomain * 10
-            Domain = np.flip(np.vstack([Beach, Dunes, Domain]),1)
+            Domain = np.flip(np.vstack([Beach, Dunes, Domain]), 1)
             Domain[Domain < 0] = -3
             widthTS = len(Domain)
             OriginTstart = int(cellular_shoreline_post_humans)
@@ -619,7 +619,7 @@ def plot_Elev_CASCADE_subplots(
         elevFig2 = plt.figure(figsize=fig_size)
     else:
         elevFig2 = plt.figure(figsize=(25, 3))
-    elevFig2.suptitle('{0}'.format(main_plot_title), weight="bold", fontsize=12)
+    elevFig2.suptitle(f"{main_plot_title}", weight="bold", fontsize=12)
 
     if km_on:
         # elevFig2.supxlabel("alongshore distance (km)")
@@ -633,8 +633,12 @@ def plot_Elev_CASCADE_subplots(
         x_text = "alongshore distance (dam)"
         y_text = "cross-shore distance (dam)"
 
-    elevFig2.text(0.02, 0.5, y_text, fontsize=10, rotation="vertical", ha="center", va="center")
-    elevFig2.text(0.51, 0.05, x_text, fontsize=10, rotation="horizontal", ha="center", va="center")
+    elevFig2.text(
+        0.02, 0.5, y_text, fontsize=10, rotation="vertical", ha="center", va="center"
+    )
+    elevFig2.text(
+        0.51, 0.05, x_text, fontsize=10, rotation="horizontal", ha="center", va="center"
+    )
 
     # loop to make each domain and plot it as a subplot
     for t in plot_timesteps:
@@ -667,7 +671,9 @@ def plot_Elev_CASCADE_subplots(
                     actual_shoreline_post_humans[t] + beach_width
                 )
 
-                cellular_shoreline_post_humans = np.floor(actual_shoreline_post_humans[t])
+                cellular_shoreline_post_humans = np.floor(
+                    actual_shoreline_post_humans[t]
+                )
                 cellular_beach_width = int(
                     cellular_dune_toe_post_humans - cellular_shoreline_post_humans
                 )  # not actual bw
@@ -700,11 +706,13 @@ def plot_Elev_CASCADE_subplots(
                     # Make animation frame domain
                     # so this is now in meters
                     Domain = barrier3d[iB3D].DomainTS[t] * 10
-                    Dunes = (barrier3d[iB3D].DuneDomain[t, :, :] + barrier3d[iB3D].BermEl) * 10
+                    Dunes = (
+                        barrier3d[iB3D].DuneDomain[t, :, :] + barrier3d[iB3D].BermEl
+                    ) * 10
                     Dunes = np.rot90(Dunes)
                     Dunes = np.flipud(Dunes)
                     Beach = BeachDomain * 10
-                    Domain = np.flip(np.vstack([Beach, Dunes, Domain]),1)
+                    Domain = np.flip(np.vstack([Beach, Dunes, Domain]), 1)
                     Domain[Domain < 0] = -3
                     widthTS = len(Domain)
                     OriginTstart = int(cellular_shoreline_post_humans)
@@ -773,7 +781,7 @@ def plot_Elev_CASCADE_subplots(
                 x_tick_labels = x_ticks * 10
                 ytick_max = np.shape(AnimateDomain)[0]  # n_rows = y
                 y_ticks = np.array(range(0, ytick_max, 25))
-                y_tick_labels = (y_ticks-y_lim[0]) * 10
+                y_tick_labels = (y_ticks - y_lim[0]) * 10
                 plt.xticks(x_ticks, x_tick_labels)
                 plt.yticks(y_ticks, y_tick_labels)
         # we want the x-axis ticks for all the labels
@@ -792,19 +800,21 @@ def plot_Elev_CASCADE_subplots(
                 ax.set_yticks([])
 
         timestr = "Year " + str(t)
-        ax.set_title(timestr,fontsize=10)
-        outwash_flux = int(np.round(outwash[0]._outwash_flux_TS[t],decimals=0))
+        ax.set_title(timestr, fontsize=10)
+        outwash_flux = int(np.round(outwash[0]._outwash_flux_TS[t], decimals=0))
         outwash_str = "Outwash = " + str(outwash_flux) + " $m^3/m$"
         if y_lim is not None:
             plt.ylim(y_lim)
-            if outwash_flux>0:
-                plt.text(1.5, y_lim[0] + 2, outwash_str, color="w", fontsize=10)  # for outwash only years
+            if outwash_flux > 0:
+                plt.text(
+                    1.5, y_lim[0] + 2, outwash_str, color="w", fontsize=10
+                )  # for outwash only years
                 # plt.text(1.5, y_lim[0] + 2, outwash_str, color="w", fontsize=10)  # for less years
                 # plt.text(2.5, y_lim[0] + 3, outwash_str, color="w", fontsize=6)  # for all years
                 # plt.text(1.5, y_lim[0] + 2, outwash_str, color="w", fontsize=7)  # for rando years
         else:
             plt.ylim(bottom=OriginY - 35)
-            if outwash_flux>0:
+            if outwash_flux > 0:
                 plt.text(1, OriginY - 33, outwash_str, fontsize=8)
         # plt.tight_layout()
         # plt.rcParams.update({"font.size": 10})

@@ -7,17 +7,18 @@
 # change the storm interval, dune growth rate, and configuration below
 # names of files will update automatically with the changes to the specified variables
 
-import time
-from cascade.cascade import Cascade
 import os
+import time
+
+from cascade.cascade import Cascade
 
 # input datadir where the 100 storms are located
 datadir = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/"
 
 # ---------------------------------- set model parameters that change per run ------------------------------------------
-storm_interval = 20   # 20 or 10 years
+storm_interval = 20  # 20 or 10 years
 r_dune_growth = 0.35  # 0.25 or 0.35
-config = 4            # 1, 2, 3, or 4
+config = 4  # 1, 2, 3, or 4
 washout_array = [100, 50, 0]
 
 # automatically set min and max r values based on dune growth rate selection
@@ -42,21 +43,29 @@ elif config == 4:
 
 for percent_washout_to_shoreface in washout_array:
     # save to pycharm folder
-    save_dir = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/one_storm/{0}/" \
-               "outwash{1}/".format(rname, percent_washout_to_shoreface)
+    save_dir = (
+        "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/one_storm/{}/"
+        "outwash{}/".format(rname, percent_washout_to_shoreface)
+    )
 
     # --------------------------------- running overwash scenario with all 100 storms --------------------------------------
     for storm_num in range(1, 101):
         print("\r", "Storm Number: ", storm_num, end="")
-        overwash_storm = "StormSeries_100yrs_inclusive_NCB_Berm1pt46m_Slope0pt03_{0}.npy".format(storm_num)
+        overwash_storm = (
+            "StormSeries_100yrs_inclusive_NCB_Berm1pt46m_Slope0pt03_{}.npy".format(
+                storm_num
+            )
+        )
 
         ### 0%, 50%, or 100% washout to shoreface ------------------------------------------------------------------------------------
         # initialize class
         cascade_outwash = Cascade(
             datadir,
-            name="config{0}_outwash{1}_startyr1_interval{2}yrs_Slope0pt03_{3}".format(config, percent_washout_to_shoreface, storm_interval, storm_num),
-            elevation_file="NCB-default-elevation-config{0}-damMHW.npy".format(config),
-            dune_file="NCB-default-dunes-config{0}-dam.npy".format(config),
+            name="config{}_outwash{}_startyr1_interval{}yrs_Slope0pt03_{}".format(
+                config, percent_washout_to_shoreface, storm_interval, storm_num
+            ),
+            elevation_file=f"NCB-default-elevation-config{config}-damMHW.npy",
+            dune_file=f"NCB-default-dunes-config{config}-dam.npy",
             parameter_file="outwash-parameters.yaml",
             storm_file=overwash_storm,
             num_cores=1,  # cascade can run in parallel, can never specify more cores than that
@@ -67,7 +76,7 @@ for percent_washout_to_shoreface in washout_array:
             outwash_module=True,
             alongshore_section_count=1,
             time_step_count=101,
-            wave_height=1, # ---------- for BRIE and Barrier3D --------------- #
+            wave_height=1,  # ---------- for BRIE and Barrier3D --------------- #
             wave_period=7,
             wave_asymmetry=0.8,
             wave_angle_high_fraction=0.2,
@@ -88,11 +97,11 @@ for percent_washout_to_shoreface in washout_array:
             dune_minimum_elevation=2.2,
             trigger_dune_knockdown=False,
             group_roadway_abandonment=None,
-            nourishment_interval=None, # ---------- beach and dune ("community") management --------------- #
+            nourishment_interval=None,  # ---------- beach and dune ("community") management --------------- #
             nourishment_volume=300.0,
             overwash_filter=40,
             overwash_to_dune=10,
-            number_of_communities=1, # ---------- coastal real estate markets (in development) --------------- #
+            number_of_communities=1,  # ---------- coastal real estate markets (in development) --------------- #
             sand_cost=10,
             taxratio_oceanfront=1,
             external_housing_market_value_oceanfront=6e5,
@@ -103,9 +112,11 @@ for percent_washout_to_shoreface in washout_array:
             house_footprint_x=15,
             house_footprint_y=20,
             beach_full_cross_shore=70,
-            outwash_storms_file="outwash_storms_startyr_1_interval_{0}yrs.npy".format(storm_interval),  # --------- outwasher (in development) ------------ #
+            outwash_storms_file="outwash_storms_startyr_1_interval_{}yrs.npy".format(
+                storm_interval
+            ),  # --------- outwasher (in development) ------------ #
             percent_washout_to_shoreface=percent_washout_to_shoreface,
-            outwash_beach_file="NCB-default-beach-config{0}-damMHW.npy".format(config)
+            outwash_beach_file=f"NCB-default-beach-config{config}-damMHW.npy",
         )
 
         # run the time loop/update function
@@ -120,4 +131,3 @@ for percent_washout_to_shoreface in washout_array:
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         cascade_outwash.save(save_dir)
-

@@ -1,16 +1,18 @@
 import csv
+
 import numpy as np
 
+
 def generate_outwash_hydrographs(
-        directory="./data/outwash_data",
-        input_file="sound_data.txt",
-        output_file="outwash_storm_series_Dorian"
+    directory="./data/outwash_data",
+    input_file="sound_data.txt",
+    output_file="outwash_storm_series_Dorian",
 ):
     # directory = "D:/NC State/Outwasher/chris stuff/sound_data.txt"
     fid = directory + "/" + input_file
     output_fid = directory + "/" + output_file
 
-    with open(directory, newline='') as csvfile:
+    with open(directory, newline="") as csvfile:
         sound_data = list(csv.reader(csvfile))[0]
 
     # [dam MHW] Chris' sound elevations were in m MSL, so converted to NAVD88 then MHW and dam

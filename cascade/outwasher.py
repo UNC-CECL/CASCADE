@@ -34,16 +34,17 @@ via nourishment and shoreface dynamics, following the beach nourishment module.
 
 """
 
+import copy
+import math
 
 import numpy as np
-import math
-import copy
 
-from .beach_dune_manager import shoreface_nourishment, beach_width_dune_dynamics
+from .beach_dune_manager import beach_width_dune_dynamics
+from .beach_dune_manager import shoreface_nourishment
 
 
 def repeat_hydrograph_for_substep(storms, substep):
-    """ repeat each hydrograph value for the specified substep to ensure
+    """repeat each hydrograph value for the specified substep to ensure
     the hydrodynamic forcing is the same for the morphological substep
 
     :param storms: list or array of bay levels [dam MHW] for this year
@@ -59,12 +60,7 @@ def repeat_hydrograph_for_substep(storms, substep):
 
 
 def compare_bay_height_to_dune_gap_height(
-        dune_flow_type,
-        n_dunes,
-        elev_array,
-        time_step,
-        int_width,
-        bayhigh
+    dune_flow_type, n_dunes, elev_array, time_step, int_width, bayhigh
 ):
     """
     determine how we will initiate flow routing with the dunes
@@ -107,16 +103,16 @@ def compare_bay_height_to_dune_gap_height(
 
 
 def calculate_discharge_at_dune_gaps(
-        dune_flow_type,
-        n_dunes,
-        elev_array,
-        time_step,
-        int_width,
-        bayhigh,
-        discharge_array,
-        FR_rules_array,
-        downhill_array,
-        start_cell_array,
+    dune_flow_type,
+    n_dunes,
+    elev_array,
+    time_step,
+    int_width,
+    bayhigh,
+    discharge_array,
+    FR_rules_array,
+    downhill_array,
+    start_cell_array,
 ):
     """
     calculate the expected discharge at the dune gaps from gravity driven flow
@@ -142,8 +138,9 @@ def calculate_discharge_at_dune_gaps(
             dune_gap_row = int_width + dune
             dune_gap_elevs = elev_array[time_step, dune_gap_row, :]
             # find and return (Dow) the index of the dune cells that are lower than the bay elevation
-            Dow = [index for index, value in enumerate(dune_gap_elevs) if
-                   value < bayhigh]  # bayhigh used to be Rhigh
+            Dow = [
+                index for index, value in enumerate(dune_gap_elevs) if value < bayhigh
+            ]  # bayhigh used to be Rhigh
             if len(Dow) > 0:
                 start = 0
                 i = start
@@ -158,15 +155,21 @@ def calculate_discharge_at_dune_gaps(
                     else:
                         stop = i
                         # calculate the average elevation of the dune gap across all its cells
-                        x = elev_array[time_step, dune_gap_row, Dow[start]: (Dow[stop] + 1)]
+                        x = elev_array[
+                            time_step, dune_gap_row, Dow[start] : (Dow[stop] + 1)
+                        ]
                         Hmean = sum(x) / float(len(x))
                         # find the bay level above the average dune gap elevation
                         Rexcess = bayhigh - Hmean
                         # calculate the velocity (based on gravitational flow) and flows (Q=VA)
-                        overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
+                        overtop_vel = (
+                            math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10
+                        )  # (dam/s)
                         overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
                         # assign the flow to each cell in the dune gap
-                        discharge_array[time_step, dune_gap_row, Dow[start]:(Dow[stop] + 1)] = overtop_flow
+                        discharge_array[
+                            time_step, dune_gap_row, Dow[start] : (Dow[stop] + 1)
+                        ] = overtop_flow
 
                         # convert velocity to m/s and flow to cubic m/s
                         overtop_vel_mps = overtop_vel * 10  # m/s
@@ -180,13 +183,15 @@ def calculate_discharge_at_dune_gaps(
 
                 # for the last item in the domain
                 stop = i
-                x = elev_array[time_step, dune_gap_row, Dow[start]: (Dow[stop] + 1)]
+                x = elev_array[time_step, dune_gap_row, Dow[start] : (Dow[stop] + 1)]
                 if len(x) > 0:
                     Hmean = sum(x) / float(len(x))
                     Rexcess = bayhigh - Hmean
                     overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
                     overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
-                    discharge_array[time_step, dune_gap_row, Dow[start]:(Dow[stop] + 1)] = overtop_flow  # (dam^3/hr)
+                    discharge_array[
+                        time_step, dune_gap_row, Dow[start] : (Dow[stop] + 1)
+                    ] = overtop_flow  # (dam^3/hr)
 
                     # convert velocity to m/s and flow to cubic m/s
                     overtop_vel_mps = overtop_vel * 10  # m/s
@@ -207,8 +212,9 @@ def calculate_discharge_at_dune_gaps(
         # only base on the first (most landward) dune row
         dune_gap_row = int_width
         dune_gap_elevs = elev_array[time_step, int_width, :]
-        Dow = [index for index, value in enumerate(dune_gap_elevs) if
-               value < bayhigh]  # bayhigh used to be Rhigh
+        Dow = [
+            index for index, value in enumerate(dune_gap_elevs) if value < bayhigh
+        ]  # bayhigh used to be Rhigh
         if len(Dow) > 0:
             start = 0
             i = start
@@ -223,7 +229,9 @@ def calculate_discharge_at_dune_gaps(
                 else:
                     stop = i
                     # calculate the average elevation of the dune gap across all its cells
-                    x = elev_array[time_step, dune_gap_row, Dow[start]: (Dow[stop] + 1)]
+                    x = elev_array[
+                        time_step, dune_gap_row, Dow[start] : (Dow[stop] + 1)
+                    ]
                     Hmean = sum(x) / float(len(x))
                     # find the bay level above the average dune gap elevation
                     Rexcess = bayhigh - Hmean
@@ -231,7 +239,9 @@ def calculate_discharge_at_dune_gaps(
                     overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
                     overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
                     # assign the flow to each cell in the dune gap
-                    discharge_array[time_step, dune_gap_row, Dow[start]:(Dow[stop] + 1)] = overtop_flow
+                    discharge_array[
+                        time_step, dune_gap_row, Dow[start] : (Dow[stop] + 1)
+                    ] = overtop_flow
 
                     # convert velocity to m/s and flow to cubic m/s
                     overtop_vel_mps = overtop_vel * 10  # m/s
@@ -245,13 +255,15 @@ def calculate_discharge_at_dune_gaps(
 
             # for the last item in the domain
             stop = i
-            x = elev_array[time_step, dune_gap_row, Dow[start]: (Dow[stop] + 1)]
+            x = elev_array[time_step, dune_gap_row, Dow[start] : (Dow[stop] + 1)]
             if len(x) > 0:
                 Hmean = sum(x) / float(len(x))
                 Rexcess = bayhigh - Hmean
                 overtop_vel = math.sqrt(2 * 9.8 * (Rexcess * 10)) / 10  # (dam/s)
                 overtop_flow = overtop_vel * Rexcess * 3600  # (dam^3/hr)
-                discharge_array[time_step, dune_gap_row, Dow[start]:(Dow[stop] + 1)] = overtop_flow  # (dam^3/hr)
+                discharge_array[
+                    time_step, dune_gap_row, Dow[start] : (Dow[stop] + 1)
+                ] = overtop_flow  # (dam^3/hr)
 
                 # convert velocity to m/s and flow to cubic m/s
                 overtop_vel_mps = overtop_vel * 10  # m/s
@@ -268,14 +280,14 @@ def calculate_discharge_at_dune_gaps(
 
 
 def check_underwater(
-        start_row,
-        time_step,
-        elev_array,
-        bayhigh,
-        length,
-        FR_rules_array,
-        downhill_array,
-        start_cell_array,
+    start_row,
+    time_step,
+    elev_array,
+    bayhigh,
+    length,
+    FR_rules_array,
+    downhill_array,
+    start_cell_array,
 ):
     """
     check for hydraulic connection from the bay to the dune gaps: there must be a path of submerged cells
@@ -351,12 +363,7 @@ def check_underwater(
 
 
 def clear_floating_submerged_cells(
-        underwater_array,
-        downhill_array,
-        start_cell_array,
-        width,
-        time_step,
-        length
+    underwater_array, downhill_array, start_cell_array, width, time_step, length
 ):
     """
     remove any "floating" submerged cells. these are submerged cells that started at a dune gap, but did not reach the
@@ -385,20 +392,29 @@ def clear_floating_submerged_cells(
         for g in submerged_cells_index:
             if g == 0:
                 # at the left-most column, only check center and diagonal right cells
-                if underwater_array[time_step, row - 1, g] == 0 and underwater_array[time_step, row - 1, g + 1] == 0:
+                if (
+                    underwater_array[time_step, row - 1, g] == 0
+                    and underwater_array[time_step, row - 1, g + 1] == 0
+                ):
                     underwater_array[time_step, row, g] = 0
                     downhill_array[time_step, row, g] = 0
                     start_cell_array[time_step, row, g] = 0
             elif g == length - 1:
                 # at the right-most column, only check center and diagonal left cells
-                if underwater_array[time_step, row - 1, g] == 0 and underwater_array[time_step, row - 1, g - 1] == 0:
+                if (
+                    underwater_array[time_step, row - 1, g] == 0
+                    and underwater_array[time_step, row - 1, g - 1] == 0
+                ):
                     underwater_array[time_step, row, g] = 0
                     downhill_array[time_step, row, g] = 0
                     start_cell_array[time_step, row, g] = 0
             else:
                 # in middle columns, check diagonal left, center and diagonal right cells
-                if underwater_array[time_step, row - 1, g + 1] == 0 and underwater_array[time_step, row - 1, g] == 0 and \
-                        underwater_array[time_step, row - 1, g - 1] == 0:
+                if (
+                    underwater_array[time_step, row - 1, g + 1] == 0
+                    and underwater_array[time_step, row - 1, g] == 0
+                    and underwater_array[time_step, row - 1, g - 1] == 0
+                ):
                     underwater_array[time_step, row, g] = 0
                     downhill_array[time_step, row, g] = 0
                     start_cell_array[time_step, row, g] = 0
@@ -406,15 +422,15 @@ def clear_floating_submerged_cells(
 
 
 def calculate_slopes(
-        elev_array,
-        width,
-        length,
-        time_step,
-        s1_vals,
-        s2_vals,
-        s3_vals,
-        sL_left_vals,
-        sL_right_vals
+    elev_array,
+    width,
+    length,
+    time_step,
+    s1_vals,
+    s2_vals,
+    s3_vals,
+    sL_left_vals,
+    sL_right_vals,
 ):
     """
     calculate the slope from each cell to its downstream cells AND
@@ -437,7 +453,9 @@ def calculate_slopes(
             # if we are not at the last row, do normal calculations
             if row != width - 1:
                 if col > 0:  # col = 0 means there are no cols to the left
-                    S1 = (elev_array[row, col] - elev_array[row + 1, col - 1]) / (math.sqrt(2))
+                    S1 = (elev_array[row, col] - elev_array[row + 1, col - 1]) / (
+                        math.sqrt(2)
+                    )
                     S1 = np.nan_to_num(S1)
                 else:
                     # prevent the domain from losing sediment on its sides
@@ -447,8 +465,12 @@ def calculate_slopes(
                 S2 = elev_array[row, col] - elev_array[row + 1, col]
                 S2 = np.nan_to_num(S2)
 
-                if col < (length - 1):  # col = length-1 means there are no cols to the right
-                    S3 = (elev_array[row, col] - elev_array[row + 1, col + 1]) / (math.sqrt(2))
+                if col < (
+                    length - 1
+                ):  # col = length-1 means there are no cols to the right
+                    S3 = (elev_array[row, col] - elev_array[row + 1, col + 1]) / (
+                        math.sqrt(2)
+                    )
                     S3 = np.nan_to_num(S3)
                 else:
                     # prevent the domain from losing sediment on its sides
@@ -458,7 +480,9 @@ def calculate_slopes(
             # if at the last row, apply the same slope as the previous row slopes
             else:
                 if col > 0:
-                    S1 = (elev_array[row - 1, col] - elev_array[row, col - 1]) / (math.sqrt(2))
+                    S1 = (elev_array[row - 1, col] - elev_array[row, col - 1]) / (
+                        math.sqrt(2)
+                    )
                     S1 = np.nan_to_num(S1)
                 else:
                     S1 = -999
@@ -466,8 +490,12 @@ def calculate_slopes(
                 S2 = elev_array[row - 1, col] - elev_array[row, col]
                 S2 = np.nan_to_num(S2)
 
-                if col < (length - 1):  # i at the end length means there are no cols to the right
-                    S3 = (elev_array[row - 1, col] - elev_array[row, col + 1]) / (math.sqrt(2))
+                if col < (
+                    length - 1
+                ):  # i at the end length means there are no cols to the right
+                    S3 = (elev_array[row - 1, col] - elev_array[row, col + 1]) / (
+                        math.sqrt(2)
+                    )
                     S3 = np.nan_to_num(S3)
                 else:
                     S3 = -999
@@ -496,16 +524,7 @@ def calculate_slopes(
     return s1_vals, s2_vals, s3_vals, sL_left_vals, sL_right_vals
 
 
-def calculate_discharges(
-        col,
-        S1,
-        S2,
-        S3,
-        Q0,
-        nn,
-        domain_length,
-        max_slope
-):
+def calculate_discharges(col, S1, S2, S3, Q0, nn, domain_length, max_slope):
     """
     calculates the discharge at each cell following Murray and Paola (1994, 1997)
 
@@ -533,33 +552,9 @@ def calculate_discharges(
         if S3 < 0:
             S3 = 0
 
-        Q1 = (
-                Q0
-                * S1 ** nn
-                / (
-                        S1 ** nn
-                        + S2 ** nn
-                        + S3 ** nn
-                )
-        )
-        Q2 = (
-                Q0
-                * S2 ** nn
-                / (
-                        S1 ** nn
-                        + S2 ** nn
-                        + S3 ** nn
-                )
-        )
-        Q3 = (
-                Q0
-                * S3 ** nn
-                / (
-                        S1 ** nn
-                        + S2 ** nn
-                        + S3 ** nn
-                )
-        )
+        Q1 = Q0 * S1**nn / (S1**nn + S2**nn + S3**nn)
+        Q2 = Q0 * S2**nn / (S1**nn + S2**nn + S3**nn)
+        Q3 = Q0 * S3**nn / (S1**nn + S2**nn + S3**nn)
 
         Q1 = np.nan_to_num(Q1)
         Q2 = np.nan_to_num(Q2)
@@ -600,31 +595,19 @@ def calculate_discharges(
     else:
 
         Q1 = (
-                Q0
-                * abs(S1) ** (-nn)
-                / (
-                        abs(S1) ** (-nn)
-                        + abs(S2) ** (-nn)
-                        + abs(S3) ** (-nn)
-                )
+            Q0
+            * abs(S1) ** (-nn)
+            / (abs(S1) ** (-nn) + abs(S2) ** (-nn) + abs(S3) ** (-nn))
         )
         Q2 = (
-                Q0
-                * abs(S2) ** (-nn)
-                / (
-                        abs(S1) ** (-nn)
-                        + abs(S2) ** (-nn)
-                        + abs(S3) ** (-nn)
-                )
+            Q0
+            * abs(S2) ** (-nn)
+            / (abs(S1) ** (-nn) + abs(S2) ** (-nn) + abs(S3) ** (-nn))
         )
         Q3 = (
-                Q0
-                * abs(S3) ** (-nn)
-                / (
-                        abs(S1) ** (-nn)
-                        + abs(S2) ** (-nn)
-                        + abs(S3) ** (-nn)
-                )
+            Q0
+            * abs(S3) ** (-nn)
+            / (abs(S1) ** (-nn) + abs(S2) ** (-nn) + abs(S3) ** (-nn))
         )
 
         Q1 = np.nan_to_num(Q1)
@@ -650,17 +633,17 @@ def calculate_discharges(
 
 
 def initialize_discharge_at_start_cells(
-        start_row,
-        time_step,
-        discharge,
-        s1_array,
-        s2_array,
-        s3_array,
-        length,
-        FR_rules_array,
-        start_cell_array,
-        int_width,
-        init_dis
+    start_row,
+    time_step,
+    discharge,
+    s1_array,
+    s2_array,
+    s3_array,
+    length,
+    FR_rules_array,
+    start_cell_array,
+    int_width,
+    init_dis,
 ):
     """
     starting at the most landward dune line, find the cells that have downhill slopes toward the dune gaps, and
@@ -756,22 +739,34 @@ def initialize_discharge_at_start_cells(
     start_cell_row_array = []
     start_cell_col_array = []
     for l in range(length):
-        if np.max(FR_rules_array[time_step, :, l]) == 2:  # determine if there is a downhill cell in this column
-            start_cell_row = np.min(np.where(FR_rules_array[time_step, :, l] == 2))  # find the most landward cell row
+        if (
+            np.max(FR_rules_array[time_step, :, l]) == 2
+        ):  # determine if there is a downhill cell in this column
+            start_cell_row = np.min(
+                np.where(FR_rules_array[time_step, :, l] == 2)
+            )  # find the most landward cell row
             start_cell_col = l
             # if we are at the first column, just check if upstream diag right column is downhill
-            if start_cell_col == 0 and FR_rules_array[time_step, start_cell_row - 1, l + 1] != 2:
+            if (
+                start_cell_col == 0
+                and FR_rules_array[time_step, start_cell_row - 1, l + 1] != 2
+            ):
                 # save the row and column of the cell
                 start_cell_row_array.append(start_cell_row)
                 start_cell_col_array.append(start_cell_col)
             # if we are at the last column, just check if upstream diag left column is downhill
-            elif start_cell_col == length - 1 and FR_rules_array[time_step, start_cell_row - 1, l - 1] != 2:
+            elif (
+                start_cell_col == length - 1
+                and FR_rules_array[time_step, start_cell_row - 1, l - 1] != 2
+            ):
                 # save the row and column of the cell
                 start_cell_row_array.append(start_cell_row)
                 start_cell_col_array.append(start_cell_col)
             # otherwise, check both (diag left, diag right)
-            elif FR_rules_array[time_step, start_cell_row - 1, l - 1] != 2 and \
-                    FR_rules_array[time_step, start_cell_row - 1, l + 1] != 2:
+            elif (
+                FR_rules_array[time_step, start_cell_row - 1, l - 1] != 2
+                and FR_rules_array[time_step, start_cell_row - 1, l + 1] != 2
+            ):
                 # save the row and column of the cell
                 start_cell_row_array.append(start_cell_row)
                 start_cell_col_array.append(start_cell_col)
@@ -790,25 +785,25 @@ def initialize_discharge_at_start_cells(
 
 
 def flow_routing_with_lateral_transport(
-        n_time_steps,
-        width,
-        int_width,
-        length,
-        elevation,
-        storm_series,
-        n_dune_rows,
-        dune_flow_dynamics,
-        nn,
-        max_slope,
-        Dmaxel,
-        BermEl,
-        C,
-        q_min,
-        ki,
-        mm,
-        k_lat,
-        substep,
-        qs_lost_total
+    n_time_steps,
+    width,
+    int_width,
+    length,
+    elevation,
+    storm_series,
+    n_dune_rows,
+    dune_flow_dynamics,
+    nn,
+    max_slope,
+    Dmaxel,
+    BermEl,
+    C,
+    q_min,
+    ki,
+    mm,
+    k_lat,
+    substep,
+    qs_lost_total,
 ):
     """
     perform flow routing and sediment transport
@@ -838,22 +833,40 @@ def flow_routing_with_lateral_transport(
     start_cell_array, init_discharge_array, OW_TS
     """
     # initialize arrays for flow routing
-    Discharge = np.zeros([n_time_steps, width, length])  # discharge at each cell (sum of Q1, Q2, and Q3)
+    Discharge = np.zeros(
+        [n_time_steps, width, length]
+    )  # discharge at each cell (sum of Q1, Q2, and Q3)
     SedFluxIn = np.zeros([n_time_steps, width, length])  # sediment flux into a cell
-    SedFluxOut = np.zeros([n_time_steps, width, length])  # sediment flux out of each cell
+    SedFluxOut = np.zeros(
+        [n_time_steps, width, length]
+    )  # sediment flux out of each cell
     s1_array = np.zeros([n_time_steps, width, length])  # S1 slopes of each cell
     s2_array = np.zeros([n_time_steps, width, length])  # S2 slopes of each cell
     s3_array = np.zeros([n_time_steps, width, length])  # S3 slopes of each cell
-    sL_left_array = np.zeros([n_time_steps, width, length])  # slope of the adjacent left cell into a cell
-    sL_right_array = np.zeros([n_time_steps, width, length])  # slope of the adjacent right cell into a cell
-    QsL_left_in = np.zeros([n_time_steps, width, length])  # lateral transport coming from the left cell into a cell
-    QsL_right_in = np.zeros([n_time_steps, width, length])  # lateral transport coming from the right cell into a cell
-    QsL_total = np.zeros([n_time_steps, width, length])  # sum of left and right lateral transport into a cell
+    sL_left_array = np.zeros(
+        [n_time_steps, width, length]
+    )  # slope of the adjacent left cell into a cell
+    sL_right_array = np.zeros(
+        [n_time_steps, width, length]
+    )  # slope of the adjacent right cell into a cell
+    QsL_left_in = np.zeros(
+        [n_time_steps, width, length]
+    )  # lateral transport coming from the left cell into a cell
+    QsL_right_in = np.zeros(
+        [n_time_steps, width, length]
+    )  # lateral transport coming from the right cell into a cell
+    QsL_total = np.zeros(
+        [n_time_steps, width, length]
+    )  # sum of left and right lateral transport into a cell
 
     # next three arrays are separate solely for plotting purposes, future versions only actually need 1
-    underwater_array = np.zeros([n_time_steps, width, length])  # will only ever contain 1s
+    underwater_array = np.zeros(
+        [n_time_steps, width, length]
+    )  # will only ever contain 1s
     downhill_array = np.zeros([n_time_steps, width, length])  # will contain 1s and 2s
-    start_cell_array = np.zeros([n_time_steps, width, length])  # will contain 1s, 2s, and 3s
+    start_cell_array = np.zeros(
+        [n_time_steps, width, length]
+    )  # will contain 1s, 2s, and 3s
 
     # used for plotting, not needed in the future
     elev_change_array = np.zeros([n_time_steps, width, length])
@@ -875,7 +888,8 @@ def flow_routing_with_lateral_transport(
             elev_array=elevation,
             time_step=TS,
             int_width=int_width,
-            bayhigh=bayhigh)
+            bayhigh=bayhigh,
+        )
 
         # if the bay elevation does not exceed the dune gaps, we set discharge to 0
         if continue_flow_routing is False:
@@ -883,42 +897,56 @@ def flow_routing_with_lateral_transport(
         else:
             # GO THROUGH FLOW ROUTING RULES ----------------------------------------------------------------------------
             # initialize the flow routing array based on all the dunes or just the first (most landward) row
-            [Discharge, underwater_array, downhill_array, start_cell_array] = calculate_discharge_at_dune_gaps(
-                dune_flow_type=dune_flow_dynamics,
-                n_dunes=n_dune_rows,
-                elev_array=elevation,
-                time_step=TS,
-                int_width=int_width,
-                bayhigh=bayhigh,
-                discharge_array=Discharge,
-                FR_rules_array=underwater_array,
-                downhill_array=downhill_array,
-                start_cell_array=start_cell_array,
+            [Discharge, underwater_array, downhill_array, start_cell_array] = (
+                calculate_discharge_at_dune_gaps(
+                    dune_flow_type=dune_flow_dynamics,
+                    n_dunes=n_dune_rows,
+                    elev_array=elevation,
+                    time_step=TS,
+                    int_width=int_width,
+                    bayhigh=bayhigh,
+                    discharge_array=Discharge,
+                    FR_rules_array=underwater_array,
+                    downhill_array=downhill_array,
+                    start_cell_array=start_cell_array,
+                )
             )
 
             # we check to see if the dune gaps line up through the entire dune line, if not, we do not
             # consider it a dune gap
-            if dune_flow_dynamics.lower() == "full":  # we will not route flow through the dunes
+            if (
+                dune_flow_dynamics.lower() == "full"
+            ):  # we will not route flow through the dunes
                 for col in range(length):
                     # we check all the rows in each column and if there is a discharge value = 0
                     # in any column position, we set the entire column to 0
-                    if np.any(Discharge[TS, int_width:(int_width + n_dune_rows), col] == 0):
-                        Discharge[TS, int_width:(int_width + n_dune_rows), col] = 0
+                    if np.any(
+                        Discharge[TS, int_width : (int_width + n_dune_rows), col] == 0
+                    ):
+                        Discharge[TS, int_width : (int_width + n_dune_rows), col] = 0
                         # we also update our arrays as they will no longer be submerged at these locations
-                        underwater_array[TS, int_width:(int_width + n_dune_rows), col] = 0
-                        downhill_array[TS, int_width:(int_width + n_dune_rows), col] = 0
-                        start_cell_array[TS, int_width:(int_width + n_dune_rows), col] = 0
+                        underwater_array[
+                            TS, int_width : (int_width + n_dune_rows), col
+                        ] = 0
+                        downhill_array[
+                            TS, int_width : (int_width + n_dune_rows), col
+                        ] = 0
+                        start_cell_array[
+                            TS, int_width : (int_width + n_dune_rows), col
+                        ] = 0
 
             # check for hydraulic connection from the bay (first row) to the dune line
-            bay_sufficient, underwater_array, downhill_array, start_cell_array = check_underwater(
-                start_row=int_width,
-                time_step=TS,
-                elev_array=elevation,
-                bayhigh=bayhigh,
-                length=length,
-                FR_rules_array=underwater_array,
-                downhill_array=downhill_array,
-                start_cell_array=start_cell_array,
+            bay_sufficient, underwater_array, downhill_array, start_cell_array = (
+                check_underwater(
+                    start_row=int_width,
+                    time_step=TS,
+                    elev_array=elevation,
+                    bayhigh=bayhigh,
+                    length=length,
+                    FR_rules_array=underwater_array,
+                    downhill_array=downhill_array,
+                    start_cell_array=start_cell_array,
+                )
             )
 
             # if we have a hydraulic connection, we will route flow through the domain
@@ -933,43 +961,49 @@ def flow_routing_with_lateral_transport(
                         start_cell_array[TS, int_width, col] = 2
 
                 # remove any submerged cells not connected to the bay cells
-                underwater_array, downhill_array, start_cell_array = clear_floating_submerged_cells(
-                    underwater_array=underwater_array,
-                    downhill_array=downhill_array,
-                    start_cell_array=start_cell_array,
-                    width=width,
-                    time_step=TS,
-                    length=length
+                underwater_array, downhill_array, start_cell_array = (
+                    clear_floating_submerged_cells(
+                        underwater_array=underwater_array,
+                        downhill_array=downhill_array,
+                        start_cell_array=start_cell_array,
+                        width=width,
+                        time_step=TS,
+                        length=length,
+                    )
                 )
 
                 # need to calculate and store slopes over the domain
-                s1_array, s2_array, s3_array, sL_left_array, sL_right_array = calculate_slopes(
-                    elev_array=elevation[TS],
-                    width=width,
-                    length=length,
-                    time_step=TS,
-                    s1_vals=s1_array,
-                    s2_vals=s2_array,
-                    s3_vals=s3_array,
-                    sL_left_vals=sL_left_array,
-                    sL_right_vals=sL_right_array
+                s1_array, s2_array, s3_array, sL_left_array, sL_right_array = (
+                    calculate_slopes(
+                        elev_array=elevation[TS],
+                        width=width,
+                        length=length,
+                        time_step=TS,
+                        s1_vals=s1_array,
+                        s2_vals=s2_array,
+                        s3_vals=s3_array,
+                        sL_left_vals=sL_left_array,
+                        sL_right_vals=sL_right_array,
+                    )
                 )
 
                 # since we assume that bed slopes drive water slopes, we want to focus the flow on the downhill cells
                 # look for downhill cells connected to the dune gaps. then, we select the most landward cells not
                 # influenced by any adjacent cells as the start cells and initalize discharge
-                Discharge, downhill_array, start_cell_array, init_discharge_array = initialize_discharge_at_start_cells(
-                    start_row=start_row,
-                    time_step=TS,
-                    discharge=Discharge,
-                    s1_array=s1_array,
-                    s2_array=s2_array,
-                    s3_array=s3_array,
-                    length=length,
-                    FR_rules_array=downhill_array,
-                    start_cell_array=start_cell_array,
-                    int_width=int_width,
-                    init_dis=init_discharge_array,
+                Discharge, downhill_array, start_cell_array, init_discharge_array = (
+                    initialize_discharge_at_start_cells(
+                        start_row=start_row,
+                        time_step=TS,
+                        discharge=Discharge,
+                        s1_array=s1_array,
+                        s2_array=s2_array,
+                        s3_array=s3_array,
+                        length=length,
+                        FR_rules_array=downhill_array,
+                        start_cell_array=start_cell_array,
+                        int_width=int_width,
+                        init_dis=init_discharge_array,
+                    )
                 )
 
             else:
@@ -999,8 +1033,9 @@ def flow_routing_with_lateral_transport(
                         # if we have discharge, set Qo equal to that value
                         if Discharge[TS, d, i] > 0:
                             Q0 = Discharge[TS, d, i]  # (dam^3/hr)
-                            Q1, Q2, Q3 = calculate_discharges(i, S1, S2, S3, Q0,
-                                                              nn, length, max_slope)
+                            Q1, Q2, Q3 = calculate_discharges(
+                                i, S1, S2, S3, Q0, nn, length, max_slope
+                            )
 
                             # UPDATE DISCHARGE
                             # discharge is defined for the next row, so we do not need to include the last row and
@@ -1008,12 +1043,16 @@ def flow_routing_with_lateral_transport(
                             if d != width - 1:
                                 # Cell 1
                                 if i > 0:
-                                    Discharge[TS, d + 1, i - 1] = Discharge[TS, d + 1, i - 1] + Q1
+                                    Discharge[TS, d + 1, i - 1] = (
+                                        Discharge[TS, d + 1, i - 1] + Q1
+                                    )
                                 # Cell 2
                                 Discharge[TS, d + 1, i] = Discharge[TS, d + 1, i] + Q2
                                 # Cell 3
                                 if i < (length - 1):
-                                    Discharge[TS, d + 1, i + 1] = Discharge[TS, d + 1, i + 1] + Q3
+                                    Discharge[TS, d + 1, i + 1] = (
+                                        Discharge[TS, d + 1, i + 1] + Q3
+                                    )
 
                             # CALCULATE SEDIMENT TRANSPORT
                             fluxLimit = max_dune  # [dam^3]
@@ -1058,8 +1097,12 @@ def flow_routing_with_lateral_transport(
                             # if the Qs_out of the current cell will make that cell a lower elevation than 3 m,
                             # we will only move the amount of sediment up to -3 m (adjust Qs_out)
                             limit = -0.3
-                            if elevation[TS, d, i] - Qs_out < limit and Qs_out > 0:  # dam
-                                max_erosion_depth = elevation[TS, d, i] + abs(limit)  # dam
+                            if (
+                                elevation[TS, d, i] - Qs_out < limit and Qs_out > 0
+                            ):  # dam
+                                max_erosion_depth = elevation[TS, d, i] + abs(
+                                    limit
+                                )  # dam
                                 Qs1 = (Qs1 / Qs_out) * max_erosion_depth
                                 Qs2 = (Qs2 / Qs_out) * max_erosion_depth
                                 Qs3 = (Qs3 / Qs_out) * max_erosion_depth
@@ -1075,18 +1118,24 @@ def flow_routing_with_lateral_transport(
                             # track the sediment being added to a cell from its neighbors (QsL_total)
                             # we also must track the sediment leaving the neighbor cells (SedFluxOut)
                             if sL_left_array[TS, d, i] > 0:
-                                QsL_left_in[TS, d, i] = k_lat * Qs_out * sL_left_array[TS, d, i]
+                                QsL_left_in[TS, d, i] = (
+                                    k_lat * Qs_out * sL_left_array[TS, d, i]
+                                )
                                 SedFluxOut[TS, d, i - 1] += QsL_left_in[TS, d, i]
                             else:
                                 QsL_left_in[TS, d, i] = 0
 
                             if sL_right_array[TS, d, i] > 0:
-                                QsL_right_in[TS, d, i] = k_lat * Qs_out * sL_right_array[TS, d, i]
+                                QsL_right_in[TS, d, i] = (
+                                    k_lat * Qs_out * sL_right_array[TS, d, i]
+                                )
                                 SedFluxOut[TS, d, i + 1] += QsL_right_in[TS, d, i]
                             else:
                                 QsL_right_in[TS, d, i] = 0
 
-                            QsL_total[TS, d, i] = QsL_left_in[TS, d, i] + QsL_right_in[TS, d, i]
+                            QsL_total[TS, d, i] = (
+                                QsL_left_in[TS, d, i] + QsL_right_in[TS, d, i]
+                            )
 
                             # this is sediment going into the next row of cells
                             if d != width - 1:
@@ -1101,43 +1150,54 @@ def flow_routing_with_lateral_transport(
                             # END OF DOMAIN LOOPS
 
                 # Update Elevation After Every Outwasher Time Step
-                ElevationChange = (SedFluxIn[TS] - SedFluxOut[TS] + QsL_total[TS]) / substep
+                ElevationChange = (
+                    SedFluxIn[TS] - SedFluxOut[TS] + QsL_total[TS]
+                ) / substep
                 elevation[TS] = elevation[TS] + ElevationChange
                 elev_change_array[TS] = ElevationChange
 
                 # calculate and save volume of sediment leaving the island for every hour
-                qs_lost_total = qs_lost_total + sum(
-                    SedFluxOut[TS, width - 1, :]) / substep  # [dam^3]
+                qs_lost_total = (
+                    qs_lost_total + sum(SedFluxOut[TS, width - 1, :]) / substep
+                )  # [dam^3]
 
-    return (elevation, qs_lost_total, Discharge, elev_change_array, underwater_array, downhill_array, start_cell_array,
-            init_discharge_array)
+    return (
+        elevation,
+        qs_lost_total,
+        Discharge,
+        elev_change_array,
+        underwater_array,
+        downhill_array,
+        start_cell_array,
+        init_discharge_array,
+    )
 
 
 class Outwasher:
     """Start an outwash event
 
-        Examples
-        --------
-        # >>> from cascade.outwasher import Outwasher
-        # >>> outwash = Outwasher()
-        # >>> outwash.update(barrier3d)
-        """
+    Examples
+    --------
+    # >>> from cascade.outwasher import Outwasher
+    # >>> outwash = Outwasher()
+    # >>> outwash.update(barrier3d)
+    """
 
     def __init__(
-            self,
-            datadir,
-            outwash_storms_file,
-            time_step_count,
-            berm_elev,
-            barrier_length,
-            sea_level,
-            bay_depth,
-            beta,
-            interior_domain,
-            dune_domain,
-            percent_washout_to_shoreface=100,
-            outwash_beach_file=None,
-            initial_beach_width=0
+        self,
+        datadir,
+        outwash_storms_file,
+        time_step_count,
+        berm_elev,
+        barrier_length,
+        sea_level,
+        bay_depth,
+        beta,
+        interior_domain,
+        dune_domain,
+        percent_washout_to_shoreface=100,
+        outwash_beach_file=None,
+        initial_beach_width=0,
     ):
         """
         :param datadir: string, directory with storm and elevation files
@@ -1163,7 +1223,7 @@ class Outwasher:
         self._length = barrier_length
         self._substep = 100
         self._max_slope = -0.25
-        self._ki = 8.75E-3
+        self._ki = 8.75e-3
         self._k_lat = 0.5
         self._C = 0.0134
         self._mm = 2
@@ -1176,7 +1236,9 @@ class Outwasher:
 
         # setting up dune domain using b3d
         self._dune_domain = dune_domain  # [dam above berm elevation]
-        self._dune_crest = self._dune_domain.max(axis=1)  # dune_crest used to be DuneDomainCrest
+        self._dune_crest = self._dune_domain.max(
+            axis=1
+        )  # dune_crest used to be DuneDomainCrest
 
         # initializing our barrier interior
         self._interior_domain = interior_domain  # [dam MHW]
@@ -1204,8 +1266,12 @@ class Outwasher:
 
         # output variables
         self._m_beachface = []  # slope of the beach face
-        self._outwash_TS = np.zeros(time_step_count, dtype=object)  # array for storing outwash volume (m^3)
-        self._outwash_flux_TS = np.zeros(time_step_count, dtype=object)  # array for storing outwash flux (m^3/m)
+        self._outwash_TS = np.zeros(
+            time_step_count, dtype=object
+        )  # array for storing outwash volume (m^3)
+        self._outwash_flux_TS = np.zeros(
+            time_step_count, dtype=object
+        )  # array for storing outwash flux (m^3/m)
         self._initial_full_domain = []
         self._full_dunes = []
         self._full_domain = []
@@ -1215,10 +1281,7 @@ class Outwasher:
         self._elevation_change = np.zeros(time_step_count, dtype=object)
         self._post_outwash_beach_domain = np.zeros(time_step_count, dtype=object)
 
-    def update(
-            self,
-            b3d
-    ):
+    def update(self, b3d):
 
         self._time_index = b3d.time_index
 
@@ -1246,7 +1309,9 @@ class Outwasher:
             print("\n start outwash storm")
 
             # initialize tracking and other b3d variables --------------------------------------------------------------
-            q_min = b3d._Qs_min  # [dam^3 / hr]? Minimum discharge needed for sediment transport (0.001)
+            q_min = (
+                b3d._Qs_min
+            )  # [dam^3 / hr]? Minimum discharge needed for sediment transport (0.001)
             qs_lost_total = 0  # previously OWloss
 
             # save post-storm dune, interior, shoreline, shoreface params before outwash mods (a 0.5 yr time step)
@@ -1260,40 +1325,54 @@ class Outwasher:
                 b3d.h_b_TS[-1]
             )
             self._post_storm_x_s[self._time_index - 1] = copy.deepcopy(b3d.x_s)
-            self._post_storm_s_sf[self._time_index - 1] = copy.deepcopy(
-                b3d.s_sf_TS[-1]
-            )
+            self._post_storm_s_sf[self._time_index - 1] = copy.deepcopy(b3d.s_sf_TS[-1])
 
             # get the bay levels for this outwash year
-            storm_index = np.argwhere(self._outwash_storms[:, 0] == self._time_index - 1)
+            storm_index = np.argwhere(
+                self._outwash_storms[:, 0] == self._time_index - 1
+            )
             bay_index = storm_index[0, 0]
             storm_series = self._outwash_storms[bay_index, 1]
 
             # allow for substeps to better simulate morphodynamics
             # (run the same bay level 100 times with proportionally reduced sed transport)
             if self._substep != 1:
-                updated_bay_levels = repeat_hydrograph_for_substep(storm_series, substep=self._substep)
+                updated_bay_levels = repeat_hydrograph_for_substep(
+                    storm_series, substep=self._substep
+                )
                 storm_series = np.asarray(updated_bay_levels)
-            dur = len(storm_series)  # [hr] duration of the storm is 12 hours broken up into smaller increments
+            dur = len(
+                storm_series
+            )  # [hr] duration of the storm is 12 hours broken up into smaller increments
 
             # merge the interior domain, dunes, and beach -------------------------------------------------
             if self._outwash_beach is None:
                 # we added a beach (and "beachface") to domain with a width of 7 dam based on general beach widths
-                beach_domain = np.ones([7, self._length]) * self._beach_elev  # [dam MHW] 7 rows
+                beach_domain = (
+                    np.ones([7, self._length]) * self._beach_elev
+                )  # [dam MHW] 7 rows
                 beachface_domain = np.zeros([6, self._length])
                 # we give the beach slope to be 0.004 m = 0.0004 dam
                 m_beach = 0.0004
                 # we want the beach to have a slope, but keep the first few rows the berm elevation
                 for b in range(len(beach_domain)):
                     if b >= 3:
-                        beach_domain[b, :] = beach_domain[b - 1, :] - m_beach  # m_beach is positive (downhill)
-                self._m_beachface = beach_domain[-1, 0] / len(beachface_domain)  # positive (downhill)
+                        beach_domain[b, :] = (
+                            beach_domain[b - 1, :] - m_beach
+                        )  # m_beach is positive (downhill)
+                self._m_beachface = beach_domain[-1, 0] / len(
+                    beachface_domain
+                )  # positive (downhill)
                 for s in range(len(beachface_domain)):
                     # the first row of the beach face depends on the last row of the beach
                     if s == 0:
-                        beachface_domain[s, :] = beach_domain[-1, 0] - self._m_beachface  # slope of beachface
+                        beachface_domain[s, :] = (
+                            beach_domain[-1, 0] - self._m_beachface
+                        )  # slope of beachface
                     else:
-                        beachface_domain[s, :] = beachface_domain[s - 1, :] - self._m_beachface
+                        beachface_domain[s, :] = (
+                            beachface_domain[s - 1, :] - self._m_beachface
+                        )
             else:
                 beach_domain = self._outwash_beach
                 m_beach = self._beach_slope
@@ -1305,7 +1384,9 @@ class Outwasher:
 
             # the full domain of outwasher starts with the interior domain, then the dune, and beach
             self._interior_domain = np.flip(self._interior_domain)
-            full_domain = np.append(self._interior_domain, dune_domain_full, 0)  # [dam MHW]
+            full_domain = np.append(
+                self._interior_domain, dune_domain_full, 0
+            )  # [dam MHW]
             full_domain = np.append(full_domain, beach_domain, 0)  # [dam MHW]
             if self._outwash_beach is None:
                 full_domain = np.append(full_domain, beachface_domain, 0)
@@ -1315,14 +1396,24 @@ class Outwasher:
             # initialize domain variables
             int_width = np.shape(self._interior_domain)[0]
 
-            width = np.shape(full_domain)[0]  # width is the number of rows in the full domain
+            width = np.shape(full_domain)[
+                0
+            ]  # width is the number of rows in the full domain
             duration = dur  # we already multiplied dur by the substep above
             Elevation = np.zeros([duration, width, self._length])
             # elevation at the first time step is set to the full domain
             Elevation[0, :, :] = full_domain
 
-            (Elevation, qs_lost_total, Discharge, elev_change_array, underwater_array, downhill_array,
-             start_cell_array, init_discharge_array) = flow_routing_with_lateral_transport(
+            (
+                Elevation,
+                qs_lost_total,
+                Discharge,
+                elev_change_array,
+                underwater_array,
+                downhill_array,
+                start_cell_array,
+                init_discharge_array,
+            ) = flow_routing_with_lateral_transport(
                 n_time_steps=duration,
                 width=width,
                 int_width=int_width,
@@ -1341,7 +1432,8 @@ class Outwasher:
                 mm=self._mm,
                 k_lat=self._k_lat,
                 substep=self._substep,
-                qs_lost_total=qs_lost_total)
+                qs_lost_total=qs_lost_total,
+            )
 
             # update barrier3d interior and dune domain class variables for outwash modifications ----------------------
             # NOTE: in barrier3d the elevation array is just the interior domain, here it is the full domain
@@ -1350,24 +1442,32 @@ class Outwasher:
             self._full_domain = Elevation[-1]
             self._post_outwash_full_domain_TS[self._time_index - 1] = Elevation[-1]
             post_outwash_interior_domain = Elevation[-1, 0:int_width, :]
-            post_outwash_dune_domain = Elevation[-1, int_width:int_width + n_dune_rows, :] - self._berm_el
-            post_outwash_beach_domain = Elevation[-1, int_width + n_dune_rows:, :]
-            self._post_outwash_beach_domain[self._time_index - 1] = post_outwash_beach_domain
+            post_outwash_dune_domain = (
+                Elevation[-1, int_width : int_width + n_dune_rows, :] - self._berm_el
+            )
+            post_outwash_beach_domain = Elevation[-1, int_width + n_dune_rows :, :]
+            self._post_outwash_beach_domain[self._time_index - 1] = (
+                post_outwash_beach_domain
+            )
 
             # interior domain: remove all rows of bay without any deposition from the domain
             # we check the first row rather than the last row (which is used in B3D) because we have not flipped
             # the domain yet
             check = 1
             while check == 1:
-                if all(x <= -self._bay_depth for x in post_outwash_interior_domain[0, :]):  # bay_depth = 0.3
-                    post_outwash_interior_domain = np.delete(post_outwash_interior_domain, 0, axis=0)
+                if all(
+                    x <= -self._bay_depth for x in post_outwash_interior_domain[0, :]
+                ):  # bay_depth = 0.3
+                    post_outwash_interior_domain = np.delete(
+                        post_outwash_interior_domain, 0, axis=0
+                    )
                 else:
                     check = 0
 
             new_ave_interior_height = np.average(
                 post_outwash_interior_domain[
                     post_outwash_interior_domain >= b3d.SL
-                    ]  # all in dam MHW
+                ]  # all in dam MHW
             )
             b3d.h_b_TS[-1] = new_ave_interior_height
             # flip the Interior and Dune Domains to put back into Barrier3D
@@ -1376,22 +1476,32 @@ class Outwasher:
             # b3d.DuneDomain[self._time_index - 1, :, :] = copy.deepcopy(
             #     np.flip(np.transpose(post_outwash_dune_domain))
             # )
-            b3d.DuneDomain[self._time_index - 1, :, :] = np.flip(np.transpose(post_outwash_dune_domain))
+            b3d.DuneDomain[self._time_index - 1, :, :] = np.flip(
+                np.transpose(post_outwash_dune_domain)
+            )
 
             # "nourish" the shoreface with the washout -----------------------------------------------------------------
             if self._percent_washout_to_shoreface > 0:
-                self._Qs_shoreface[self._time_index - 1] = qs_lost_total * 1000 \
-                                                           * self._percent_washout_to_shoreface / 100  # m^3
-                self._Qs_shoreface_per_length[self._time_index - 1] = (qs_lost_total / self._length) * 100 \
-                                                            * self._percent_washout_to_shoreface / 100  # m^3/m
+                self._Qs_shoreface[self._time_index - 1] = (
+                    qs_lost_total * 1000 * self._percent_washout_to_shoreface / 100
+                )  # m^3
+                self._Qs_shoreface_per_length[self._time_index - 1] = (
+                    (qs_lost_total / self._length)
+                    * 100
+                    * self._percent_washout_to_shoreface
+                    / 100
+                )  # m^3/m
                 (
                     b3d.x_s,  # save over class variables
                     b3d.s_sf_TS[-1],
-                    self._beach_width[self._time_index - 1],  # this is just the change in shoreline position
+                    self._beach_width[
+                        self._time_index - 1
+                    ],  # this is just the change in shoreline position
                 ) = shoreface_nourishment(
                     b3d.x_s,  # in dam
                     b3d.x_t,  # in dam
-                    self._Qs_shoreface_per_length[self._time_index - 1] / 100,  # convert m^3/m to dam^3/dam
+                    self._Qs_shoreface_per_length[self._time_index - 1]
+                    / 100,  # convert m^3/m to dam^3/dam
                     b3d.h_b_TS[-1],  # in dam
                     b3d.DShoreface,  # in dam
                     self._beach_width[self._time_index - 1] / 10,  # convert m to dam
@@ -1408,9 +1518,7 @@ class Outwasher:
 
             # final update to outwash and domain variables -------------------------------------------------------------
             # recalculate and save DomainWidth and InteriorWidth
-            _, _, new_ave_interior_width = b3d.FindWidths(
-                b3d.InteriorDomain, b3d.SL
-            )
+            _, _, new_ave_interior_width = b3d.FindWidths(b3d.InteriorDomain, b3d.SL)
             b3d.InteriorWidth_AvgTS[-1] = new_ave_interior_width
 
             # replace value of x_b_TS with new InteriorWidth_Avg
@@ -1419,7 +1527,11 @@ class Outwasher:
             # save erosion volumes and fluxes
             vol_m = qs_lost_total * 1000  # dam3 to m3
             flux = qs_lost_total / self._length * 100  # dam3/dam to m3/m
-            self._outwash_TS[self._time_index - 1] = vol_m  # array for storing outwash volume (m^3)
-            self._outwash_flux_TS[self._time_index - 1] = flux  # array for storing outwash flux (m^3/m)
+            self._outwash_TS[self._time_index - 1] = (
+                vol_m  # array for storing outwash volume (m^3)
+            )
+            self._outwash_flux_TS[self._time_index - 1] = (
+                flux  # array for storing outwash flux (m^3/m)
+            )
 
             print(" end outwash storm \n", end="")

@@ -14,8 +14,8 @@ from matplotlib import pyplot as plt
 rname_array = ["r025", "r035"]
 # rname_array = ["r035"]
 for rname in rname_array:
-    storm_interval = 20        # 20 or 10 years
-    config = 4                 # 1, 2, 3, or 4
+    storm_interval = 20  # 20 or 10 years
+    config = 4  # 1, 2, 3, or 4
 
     # Display stats on console/show plots
     migration_stats = True
@@ -25,10 +25,18 @@ for rname in rname_array:
     flux_stats = False
 
     # location of the npz files
-    datadir_b3d = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{0}/overwash_only/".format(rname)
-    datadir_100 = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{0}/outwash100/".format(rname)
-    datadir_50 = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{0}/outwash50/".format(rname)
-    datadir_0 = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{0}/outwash0/".format(rname)
+    datadir_b3d = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{}/overwash_only/".format(
+        rname
+    )
+    datadir_100 = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{}/outwash100/".format(
+        rname
+    )
+    datadir_50 = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{}/outwash50/".format(
+        rname
+    )
+    datadir_0 = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/{}/outwash0/".format(
+        rname
+    )
 
     # initialize empty arrays
     tmax_array_b3d = []
@@ -141,10 +149,14 @@ for rname in rname_array:
     avg_width_last_TS_0 = np.zeros(100, dtype=object)
 
     for storm_num in range(1, 101):
-    # for storm_num in range(4, 5):
+        # for storm_num in range(4, 5):
 
         # b3d variables
-        filename_b3d = "config{0}_b3d_startyr1_interval{1}yrs_Slope0pt03_{2}.npz".format(config, storm_interval, storm_num)
+        filename_b3d = (
+            "config{}_b3d_startyr1_interval{}yrs_Slope0pt03_{}.npz".format(
+                config, storm_interval, storm_num
+            )
+        )
         file_b3d = datadir_b3d + filename_b3d
         b3d = np.load(file_b3d, allow_pickle=True)
         b3d_obj = b3d["cascade"][0]
@@ -152,63 +164,81 @@ for rname in rname_array:
         tmax_array_b3d.append(tmax_b3d)
         # for t_b3d in range(0, tmax_b3d-1):
         # drowning variable
-        drowning_array_b3d[storm_num-1] = b3d_obj.barrier3d[0].drown_break
-        if drowning_array_b3d[storm_num-1] == 1:
+        drowning_array_b3d[storm_num - 1] = b3d_obj.barrier3d[0].drown_break
+        if drowning_array_b3d[storm_num - 1] == 1:
             drown_year_array_b3d.append(b3d_obj.barrier3d[0].TMAX)
         # shoreline position
-        m_xsTS = np.subtract(b3d_obj.barrier3d[0].x_s_TS, b3d_obj.barrier3d[0].x_s_TS[0])
+        m_xsTS = np.subtract(
+            b3d_obj.barrier3d[0].x_s_TS, b3d_obj.barrier3d[0].x_s_TS[0]
+        )
         m_xsTS = np.multiply(m_xsTS, 10)
         m_xsTS = m_xsTS[~np.isnan(m_xsTS)]
-        shoreline_pos_array_b3d[storm_num-1] = m_xsTS
-        if len(shoreline_pos_array_b3d[storm_num-1]) < 100:
-            drowning_array_b3d[storm_num-1] = 1
+        shoreline_pos_array_b3d[storm_num - 1] = m_xsTS
+        if len(shoreline_pos_array_b3d[storm_num - 1]) < 100:
+            drowning_array_b3d[storm_num - 1] = 1
             drown_year_array_b3d.append(b3d_obj.barrier3d[0].TMAX)
         # average net migration including drownings
-        end_net_migration_b3d.append(shoreline_pos_array_b3d[storm_num-1][-1])
+        end_net_migration_b3d.append(shoreline_pos_array_b3d[storm_num - 1][-1])
         # average net migration excluding drownings
-        if drowning_array_b3d[storm_num-1] == 0:
-            end_net_migration_no_drowns_b3d.append(shoreline_pos_array_b3d[storm_num-1][-1])
+        if drowning_array_b3d[storm_num - 1] == 0:
+            end_net_migration_no_drowns_b3d.append(
+                shoreline_pos_array_b3d[storm_num - 1][-1]
+            )
         else:  # average net migration only including drownings
-            end_net_migration_only_drowns_b3d.append(shoreline_pos_array_b3d[storm_num-1][-1])
+            end_net_migration_only_drowns_b3d.append(
+                shoreline_pos_array_b3d[storm_num - 1][-1]
+            )
         # shoreface slope
         sfTS = b3d_obj.barrier3d[0].s_sf_TS
-        shoreface_slope_array_b3d[storm_num-1] = sfTS
+        shoreface_slope_array_b3d[storm_num - 1] = sfTS
         # average elevation
         hbTS = np.array(b3d_obj.barrier3d[0].h_b_TS) * 10  # m MHW
-        int_height_array_b3d[storm_num-1] = hbTS
-        avg_int_height_array_b3d[storm_num-1] = np.mean(hbTS)
+        int_height_array_b3d[storm_num - 1] = hbTS
+        avg_int_height_array_b3d[storm_num - 1] = np.mean(hbTS)
         avg_height_last_TS_b3d[storm_num - 1] = hbTS[-1]
         # width
         int_width_TS = np.array(b3d_obj.barrier3d[0].InteriorWidth_AvgTS) * 10  # meters
-        int_width_array_b3d[storm_num-1] = int_width_TS
-        avg_int_width_array_b3d[storm_num-1] = np.mean(int_width_TS)
-        avg_width_last_TS_b3d[storm_num-1] = int_width_TS[-1]
+        int_width_array_b3d[storm_num - 1] = int_width_TS
+        avg_int_width_array_b3d[storm_num - 1] = np.mean(int_width_TS)
+        avg_width_last_TS_b3d[storm_num - 1] = int_width_TS[-1]
         # dune crest
         # sub_domain = b3d_obj.barrier3d[0]._DuneDomain[0:tmax_array_b3d[storm_num-1], :, :]
         sub_domain = b3d_obj.barrier3d[0]._DuneDomain[0:tmax_b3d, :, :]
-        dune_crest_array_b3d[storm_num-1] = sub_domain.max(axis=2)
-        avg_dune_crest_array_b3d.append(np.average(dune_crest_array_b3d[storm_num-1], axis=0))
+        dune_crest_array_b3d[storm_num - 1] = sub_domain.max(axis=2)
+        avg_dune_crest_array_b3d.append(
+            np.average(dune_crest_array_b3d[storm_num - 1], axis=0)
+        )
         # overwash
         QowTS = b3d_obj.barrier3d[0].QowTS
-        overwash_array_b3d[storm_num-1] = np.array(QowTS)
-        avg_overwash_array_b3d[storm_num-1] = np.mean(QowTS)
+        overwash_array_b3d[storm_num - 1] = np.array(QowTS)
+        avg_overwash_array_b3d[storm_num - 1] = np.mean(QowTS)
         # outwash
         QoutTS = b3d_obj.outwash[0]._outwash_flux_TS
-        outwash_array_b3d[storm_num-1] = QoutTS
-        avg_outwash_array_b3d[storm_num-1] = np.mean(QoutTS)
+        outwash_array_b3d[storm_num - 1] = QoutTS
+        avg_outwash_array_b3d[storm_num - 1] = np.mean(QoutTS)
 
         # 100% variables
-        filename_100 = "config{0}_outwash100_startyr1_interval{1}yrs_Slope0pt03_{2}.npz".format(config, storm_interval, storm_num)
+        filename_100 = (
+            "config{}_outwash100_startyr1_interval{}yrs_Slope0pt03_{}.npz".format(
+                config, storm_interval, storm_num
+            )
+        )
         file_100 = datadir_100 + filename_100
         outwash100 = np.load(file_100, allow_pickle=True)
         outwash100_obj = outwash100["cascade"][0]
 
         # shoreline position - used to also inform us of barrier drowning stats
-        m_xsTS100 = np.subtract(outwash100_obj.barrier3d[0].x_s_TS, outwash100_obj.barrier3d[0].x_s_TS[0])
+        m_xsTS100 = np.subtract(
+            outwash100_obj.barrier3d[0].x_s_TS, outwash100_obj.barrier3d[0].x_s_TS[0]
+        )
         m_xsTS100 = np.multiply(m_xsTS100, 10)
-        m_xsTS100 = m_xsTS100[~np.isnan(m_xsTS100)]  # if the barrier drowns, it contains nans so the length is still 101
-        shoreline_pos_array_100[storm_num-1] = m_xsTS100
-        tmax_first_drown_100 = len(m_xsTS100)  # based on the first drowning event if there is one
+        m_xsTS100 = m_xsTS100[
+            ~np.isnan(m_xsTS100)
+        ]  # if the barrier drowns, it contains nans so the length is still 101
+        shoreline_pos_array_100[storm_num - 1] = m_xsTS100
+        tmax_first_drown_100 = len(
+            m_xsTS100
+        )  # based on the first drowning event if there is one
 
         # LEXI COME BACK TO THIS
         # NOTE ON SHORELINE POSITION ARRAYS
@@ -222,7 +252,7 @@ for rname in rname_array:
 
         if tmax_first_drown_100 < 101:
             # if the length of the array is less than 101, then the barrier drowned at some point
-            drowning_array_100[storm_num-1] = 1
+            drowning_array_100[storm_num - 1] = 1
             if tmax_first_drown_100 < outwash100_obj.barrier3d[0].TMAX:
                 drown_year_array_100.append(tmax_first_drown_100)
                 tmax_100 = tmax_first_drown_100
@@ -236,53 +266,73 @@ for rname in rname_array:
             tmax_100 = outwash100_obj.barrier3d[0].TMAX
 
         # average net migration
-        end_net_migration_100.append(shoreline_pos_array_100[storm_num-1][-1])
+        end_net_migration_100.append(shoreline_pos_array_100[storm_num - 1][-1])
         # average net migration excluding drownings
-        if drowning_array_100[storm_num-1] == 0:
-            end_net_migration_no_drowns_100.append(shoreline_pos_array_100[storm_num-1][-1])
+        if drowning_array_100[storm_num - 1] == 0:
+            end_net_migration_no_drowns_100.append(
+                shoreline_pos_array_100[storm_num - 1][-1]
+            )
         else:  # average net migration only including drownings
-            end_net_migration_only_drowns_100.append(shoreline_pos_array_100[storm_num-1][-1])
+            end_net_migration_only_drowns_100.append(
+                shoreline_pos_array_100[storm_num - 1][-1]
+            )
 
         # shoreface slope
         sfTS100 = outwash100_obj.barrier3d[0].s_sf_TS
-        shoreface_slope_array_100[storm_num-1] = sfTS100
+        shoreface_slope_array_100[storm_num - 1] = sfTS100
         # average elevation
         hbTS100 = np.array(outwash100_obj.barrier3d[0].h_b_TS) * 10  # m MHW
-        hbTS100 = hbTS100[~np.isnan(hbTS100)]  # hbTS is the average elevation at each model time step
-        int_height_array_100[storm_num-1] = hbTS100  # this is an array with array components
-        avg_int_height_array_100[storm_num-1] = np.mean(hbTS100)
+        hbTS100 = hbTS100[
+            ~np.isnan(hbTS100)
+        ]  # hbTS is the average elevation at each model time step
+        int_height_array_100[storm_num - 1] = (
+            hbTS100  # this is an array with array components
+        )
+        avg_int_height_array_100[storm_num - 1] = np.mean(hbTS100)
         avg_height_last_TS_100[storm_num - 1] = hbTS100[-1]
         # width
-        avg_int_width_TS100 = np.array(outwash100_obj.barrier3d[0].InteriorWidth_AvgTS) * 10  # meters
-        int_width_array_100[storm_num-1] = avg_int_width_TS100
-        avg_int_width_array_100[storm_num-1] = np.mean(avg_int_width_TS100)
+        avg_int_width_TS100 = (
+            np.array(outwash100_obj.barrier3d[0].InteriorWidth_AvgTS) * 10
+        )  # meters
+        int_width_array_100[storm_num - 1] = avg_int_width_TS100
+        avg_int_width_array_100[storm_num - 1] = np.mean(avg_int_width_TS100)
         avg_width_last_TS_100[storm_num - 1] = avg_int_width_TS100[-1]
         # dune crest
         sub_domain100 = outwash100_obj.barrier3d[0]._DuneDomain[0:tmax_100, :, :]
-        dune_crest_array_100[storm_num-1] = sub_domain100.max(axis=2)
-        avg_dune_crest_array_100.append(np.average(dune_crest_array_100[storm_num-1], axis=0))
+        dune_crest_array_100[storm_num - 1] = sub_domain100.max(axis=2)
+        avg_dune_crest_array_100.append(
+            np.average(dune_crest_array_100[storm_num - 1], axis=0)
+        )
         # overwash
         QowTS100 = outwash100_obj.barrier3d[0].QowTS
-        overwash_array_100[storm_num-1] = np.array(QowTS100)
-        avg_overwash_array_100[storm_num-1] = np.mean(QowTS100)
+        overwash_array_100[storm_num - 1] = np.array(QowTS100)
+        avg_overwash_array_100[storm_num - 1] = np.mean(QowTS100)
         # outwash
         QoutTS100 = outwash100_obj.outwash[0]._outwash_flux_TS
-        outwash_array_100[storm_num-1] = QoutTS100
+        outwash_array_100[storm_num - 1] = QoutTS100
         nonzero_QoutTS100 = np.nonzero(QoutTS100)
         avg_outwash_array_100[storm_num - 1] = np.mean(QoutTS100[nonzero_QoutTS100])
         # avg_outwash_array_100[storm_num-1] = np.mean(QoutTS100)
 
         # 50% variables
-        filename_50 = "config{0}_outwash50_startyr1_interval{1}yrs_Slope0pt03_{2}.npz".format(config, storm_interval, storm_num)
+        filename_50 = (
+            "config{}_outwash50_startyr1_interval{}yrs_Slope0pt03_{}.npz".format(
+                config, storm_interval, storm_num
+            )
+        )
         file_50 = datadir_50 + filename_50
         outwash50 = np.load(file_50, allow_pickle=True)
         outwash50_obj = outwash50["cascade"][0]
         # shoreline position
-        m_xsTS50 = np.subtract(outwash50_obj.barrier3d[0].x_s_TS, outwash50_obj.barrier3d[0].x_s_TS[0])
+        m_xsTS50 = np.subtract(
+            outwash50_obj.barrier3d[0].x_s_TS, outwash50_obj.barrier3d[0].x_s_TS[0]
+        )
         m_xsTS50 = np.multiply(m_xsTS50, 10)
         m_xsTS50 = m_xsTS50[~np.isnan(m_xsTS50)]
-        shoreline_pos_array_50[storm_num-1] = m_xsTS50
-        tmax_first_drown_50 = len(m_xsTS50)  # based on the first drowning event if there is one
+        shoreline_pos_array_50[storm_num - 1] = m_xsTS50
+        tmax_first_drown_50 = len(
+            m_xsTS50
+        )  # based on the first drowning event if there is one
         if tmax_first_drown_50 < 101:
             drowning_array_50[storm_num - 1] = 1
             if tmax_first_drown_50 < outwash50_obj.barrier3d[0].TMAX:
@@ -294,12 +344,16 @@ for rname in rname_array:
         else:
             tmax_array_50.append(outwash50_obj.barrier3d[0].TMAX)
         # average net migration
-        end_net_migration_50.append(shoreline_pos_array_50[storm_num-1][-1])
+        end_net_migration_50.append(shoreline_pos_array_50[storm_num - 1][-1])
         # average net migration excluding drownings
         if drowning_array_50[storm_num - 1] == 0:
-            end_net_migration_no_drowns_50.append(shoreline_pos_array_50[storm_num-1][-1])
+            end_net_migration_no_drowns_50.append(
+                shoreline_pos_array_50[storm_num - 1][-1]
+            )
         else:  # average net migration only including drownings
-            end_net_migration_only_drowns_50.append(shoreline_pos_array_50[storm_num - 1][-1])
+            end_net_migration_only_drowns_50.append(
+                shoreline_pos_array_50[storm_num - 1][-1]
+            )
         # shoreface slope
         sfTS50 = outwash50_obj.barrier3d[0].s_sf_TS
         shoreface_slope_array_50[storm_num - 1] = sfTS50
@@ -310,11 +364,17 @@ for rname in rname_array:
         avg_int_height_array_50[storm_num - 1] = np.mean(hbTS50)
         avg_height_last_TS_50[storm_num - 1] = hbTS50[-1]
         # dune crest
-        sub_domain50 = outwash50_obj.barrier3d[0]._DuneDomain[0:tmax_array_50[storm_num - 1], :, :]
+        sub_domain50 = outwash50_obj.barrier3d[0]._DuneDomain[
+            0 : tmax_array_50[storm_num - 1], :, :
+        ]
         dune_crest_array_50[storm_num - 1] = sub_domain50.max(axis=2)
-        avg_dune_crest_array_50.append(np.average(dune_crest_array_50[storm_num - 1], axis=0))
+        avg_dune_crest_array_50.append(
+            np.average(dune_crest_array_50[storm_num - 1], axis=0)
+        )
         # width
-        avg_int_width_TS50 = np.array(outwash50_obj.barrier3d[0].InteriorWidth_AvgTS) * 10  # meters
+        avg_int_width_TS50 = (
+            np.array(outwash50_obj.barrier3d[0].InteriorWidth_AvgTS) * 10
+        )  # meters
         int_width_array_50[storm_num - 1] = avg_int_width_TS50
         avg_int_width_array_50[storm_num - 1] = np.mean(avg_int_width_TS50)
         avg_width_last_TS_50[storm_num - 1] = avg_int_width_TS50[-1]
@@ -330,16 +390,24 @@ for rname in rname_array:
         # avg_outwash_array_50[storm_num - 1] = np.mean(QoutTS50)
 
         # 0% variables
-        filename_0 = "config{0}_outwash0_startyr1_interval{1}yrs_Slope0pt03_{2}.npz".format(config, storm_interval, storm_num)
+        filename_0 = (
+            "config{}_outwash0_startyr1_interval{}yrs_Slope0pt03_{}.npz".format(
+                config, storm_interval, storm_num
+            )
+        )
         file_0 = datadir_0 + filename_0
         outwash0 = np.load(file_0, allow_pickle=True)
         outwash0_obj = outwash0["cascade"][0]
         # shoreline position
-        m_xsTS0 = np.subtract(outwash0_obj.barrier3d[0].x_s_TS, outwash0_obj.barrier3d[0].x_s_TS[0])
+        m_xsTS0 = np.subtract(
+            outwash0_obj.barrier3d[0].x_s_TS, outwash0_obj.barrier3d[0].x_s_TS[0]
+        )
         m_xsTS0 = np.multiply(m_xsTS0, 10)
         m_xsTS0 = m_xsTS0[~np.isnan(m_xsTS0)]
-        shoreline_pos_array_0[storm_num-1] = m_xsTS0
-        tmax_first_drown_0 = len(m_xsTS0)  # based on the first drowning event if there is one
+        shoreline_pos_array_0[storm_num - 1] = m_xsTS0
+        tmax_first_drown_0 = len(
+            m_xsTS0
+        )  # based on the first drowning event if there is one
         if tmax_first_drown_0 < 101:
             drowning_array_0[storm_num - 1] = 1
             if tmax_first_drown_0 < outwash0_obj.barrier3d[0].TMAX:
@@ -351,12 +419,16 @@ for rname in rname_array:
         else:
             tmax_array_0.append(outwash0_obj.barrier3d[0].TMAX)
         # average net migration
-        end_net_migration_0.append(shoreline_pos_array_0[storm_num-1][-1])
+        end_net_migration_0.append(shoreline_pos_array_0[storm_num - 1][-1])
         # average net migration excluding drownings
         if drowning_array_0[storm_num - 1] == 0:
-            end_net_migration_no_drowns_0.append(shoreline_pos_array_0[storm_num - 1][-1])
+            end_net_migration_no_drowns_0.append(
+                shoreline_pos_array_0[storm_num - 1][-1]
+            )
         else:  # average net migration only including drownings
-            end_net_migration_only_drowns_0.append(shoreline_pos_array_0[storm_num - 1][-1])
+            end_net_migration_only_drowns_0.append(
+                shoreline_pos_array_0[storm_num - 1][-1]
+            )
         # shoreface slope
         sfTS0 = outwash0_obj.barrier3d[0].s_sf_TS
         shoreface_slope_array_0[storm_num - 1] = sfTS0
@@ -367,11 +439,17 @@ for rname in rname_array:
         avg_int_height_array_0[storm_num - 1] = np.mean(hbTS0)
         avg_height_last_TS_0[storm_num - 1] = hbTS0[-1]
         # dune crest
-        sub_domain0 = outwash0_obj.barrier3d[0]._DuneDomain[0:tmax_array_0[storm_num - 1], :, :]
+        sub_domain0 = outwash0_obj.barrier3d[0]._DuneDomain[
+            0 : tmax_array_0[storm_num - 1], :, :
+        ]
         dune_crest_array_0[storm_num - 1] = sub_domain0.max(axis=2)
-        avg_dune_crest_array_0.append(np.average(dune_crest_array_0[storm_num - 1], axis=0))
+        avg_dune_crest_array_0.append(
+            np.average(dune_crest_array_0[storm_num - 1], axis=0)
+        )
         # width
-        avg_int_width_TS0 = np.array(outwash0_obj.barrier3d[0].InteriorWidth_AvgTS) * 10  # meters
+        avg_int_width_TS0 = (
+            np.array(outwash0_obj.barrier3d[0].InteriorWidth_AvgTS) * 10
+        )  # meters
         int_width_array_0[storm_num - 1] = avg_int_width_TS0
         avg_int_width_array_0[storm_num - 1] = np.mean(avg_int_width_TS0)
         avg_width_last_TS_0[storm_num - 1] = avg_int_width_TS0[-1]
@@ -388,46 +466,91 @@ for rname in rname_array:
 
     # because we have 100 storms and drowns = 1, the sum of the array is the percent that drown
     percent_drown_b3d = np.sum(drowning_array_b3d)
-    print("{0}% of barriers drown for the baseline scenario".format(int(percent_drown_b3d)))
+    print(
+        "{}% of barriers drown for the baseline scenario".format(
+            int(percent_drown_b3d)
+        )
+    )
     percent_drown_100 = np.sum(drowning_array_100)
-    print("{0}% of barriers drown for the 100% outwash to shoreface scenario".format(int(percent_drown_100)))
+    print(
+        "{}% of barriers drown for the 100% outwash to shoreface scenario".format(
+            int(percent_drown_100)
+        )
+    )
     percent_drown_50 = np.sum(drowning_array_50)
-    print("{0}% of barriers drown for the 50% outwash to shoreface scenario".format(int(percent_drown_50)))
+    print(
+        "{}% of barriers drown for the 50% outwash to shoreface scenario".format(
+            int(percent_drown_50)
+        )
+    )
     percent_drown_0 = np.sum(drowning_array_0)
-    print("{0}% of barriers drown for the 0% outwash to shoreface scenario".format(int(percent_drown_0)))
+    print(
+        "{}% of barriers drown for the 0% outwash to shoreface scenario".format(
+            int(percent_drown_0)
+        )
+    )
 
     # average drown years
     if len(drown_year_array_b3d) > 0:
         avg_drown_year_b3d = np.average(drown_year_array_b3d)
         min_drown_year_b3d = np.min(drown_year_array_b3d)
         max_drown_year_b3d = np.max(drown_year_array_b3d)
-        print("baseline, n = {3} \n average drown year: {0} \n min drown year is: {1} \n max drown year is: {2}"
-              "".format(np.round(avg_drown_year_b3d, 0), np.round(min_drown_year_b3d, 0),
-                        np.round(max_drown_year_b3d, 0), len(drown_year_array_b3d)))
+        print(
+            "baseline, n = {3} \n average drown year: {0} \n min drown year is: {1} \n max drown year is: {2}"
+            "".format(
+                np.round(avg_drown_year_b3d, 0),
+                np.round(min_drown_year_b3d, 0),
+                np.round(max_drown_year_b3d, 0),
+                len(drown_year_array_b3d),
+            )
+        )
     if len(drown_year_array_100) > 0:
         avg_drown_year_100 = np.average(drown_year_array_100)
         min_drown_year_100 = np.min(drown_year_array_100)
         max_drown_year_100 = np.max(drown_year_array_100)
-        print("100% outwash, n = {3} \n average drown year: {0} \n min drown year is: {1} \n max drown year is: {2}"
-              "".format(np.round(avg_drown_year_100, 0), np.round(min_drown_year_100, 0),
-                        np.round(max_drown_year_100, 0), len(drown_year_array_100)))
+        print(
+            "100% outwash, n = {3} \n average drown year: {0} \n min drown year is: {1} \n max drown year is: {2}"
+            "".format(
+                np.round(avg_drown_year_100, 0),
+                np.round(min_drown_year_100, 0),
+                np.round(max_drown_year_100, 0),
+                len(drown_year_array_100),
+            )
+        )
     if len(drown_year_array_50) > 0:
         avg_drown_year_50 = np.average(drown_year_array_50)
         min_drown_year_50 = np.min(drown_year_array_50)
         max_drown_year_50 = np.max(drown_year_array_50)
-        print(" 50% outwash, n = {3} \n average drown year: {0} \n min drown year is: {1} \n max drown year is: {2}"
-              "".format(np.round(avg_drown_year_50, 0), np.round(min_drown_year_50, 0), np.round(max_drown_year_50, 0),
-                        len(drown_year_array_50)))
+        print(
+            " 50% outwash, n = {3} \n average drown year: {0} \n min drown year is: {1} \n max drown year is: {2}"
+            "".format(
+                np.round(avg_drown_year_50, 0),
+                np.round(min_drown_year_50, 0),
+                np.round(max_drown_year_50, 0),
+                len(drown_year_array_50),
+            )
+        )
     if len(drown_year_array_0) > 0:
         avg_drown_year_0 = np.average(drown_year_array_0)
         min_drown_year_0 = np.min(drown_year_array_0)
         max_drown_year_0 = np.max(drown_year_array_0)
-        print("0% outwash, n = {3} \n average drown year: {0} \n min drown year is: {1} \n max drown year is: {2}"
-              "".format(np.round(avg_drown_year_0, 0), np.round(min_drown_year_0, 0), np.round(max_drown_year_0, 0),
-                        len(drown_year_array_0)))
+        print(
+            "0% outwash, n = {3} \n average drown year: {0} \n min drown year is: {1} \n max drown year is: {2}"
+            "".format(
+                np.round(avg_drown_year_0, 0),
+                np.round(min_drown_year_0, 0),
+                np.round(max_drown_year_0, 0),
+                len(drown_year_array_0),
+            )
+        )
 
     total_drown_years = []
-    total_drown_years = drown_year_array_b3d + drown_year_array_100 + drown_year_array_50 + drown_year_array_0
+    total_drown_years = (
+        drown_year_array_b3d
+        + drown_year_array_100
+        + drown_year_array_50
+        + drown_year_array_0
+    )
     total_drown_years = np.array(total_drown_years)
     unique_drown_years = np.unique(total_drown_years)
     bar_b3d = []
@@ -464,7 +587,7 @@ for rname in rname_array:
 
     total_drown_by_year = [sum(x) for x in zip(bar_100, bar_50, bar_0)]
     total_drown = np.sum(total_drown_by_year)
-    percent_drown_by_year = np.round(total_drown_by_year/total_drown * 100)
+    percent_drown_by_year = np.round(total_drown_by_year / total_drown * 100)
 
     # change to a string so that the x axis only plots these years rather than all years between the min and max values
     unique_drown_years_strings = []
@@ -473,17 +596,37 @@ for rname in rname_array:
 
     # dune crest avg elevations and plots
     if dune_crest_stats:
-        DuneCrest_b3d = np.average(np.vstack(avg_dune_crest_array_b3d).astype(float), axis=0) * 10
-        print("average dune crest height baseline: {0}".format(np.average(DuneCrest_b3d)))
-        DuneCrest_100 = np.average(np.vstack(avg_dune_crest_array_100).astype(float), axis=0) * 10
-        print("average dune crest height 100% outwash: {0}".format(np.average(DuneCrest_100)))
-        DuneCrest_50 = np.average(np.vstack(avg_dune_crest_array_50).astype(float), axis=0) * 10
-        print("average dune crest height 50% outwash: {0}".format(np.average(DuneCrest_50)))
-        DuneCrest_0 = np.average(np.vstack(avg_dune_crest_array_0).astype(float), axis=0) * 10
-        print("average dune crest height 0% outwash: {0}".format(np.average(DuneCrest_0)))
+        DuneCrest_b3d = (
+            np.average(np.vstack(avg_dune_crest_array_b3d).astype(float), axis=0) * 10
+        )
+        print(
+            f"average dune crest height baseline: {np.average(DuneCrest_b3d)}"
+        )
+        DuneCrest_100 = (
+            np.average(np.vstack(avg_dune_crest_array_100).astype(float), axis=0) * 10
+        )
+        print(
+            "average dune crest height 100% outwash: {}".format(
+                np.average(DuneCrest_100)
+            )
+        )
+        DuneCrest_50 = (
+            np.average(np.vstack(avg_dune_crest_array_50).astype(float), axis=0) * 10
+        )
+        print(
+            "average dune crest height 50% outwash: {}".format(
+                np.average(DuneCrest_50)
+            )
+        )
+        DuneCrest_0 = (
+            np.average(np.vstack(avg_dune_crest_array_0).astype(float), axis=0) * 10
+        )
+        print(
+            f"average dune crest height 0% outwash: {np.average(DuneCrest_0)}"
+        )
 
         fig1 = plt.figure()
-        plt.title("{0}".format(rname))
+        plt.title(f"{rname}")
         plt.plot(DuneCrest_b3d, label="baseline")
         plt.plot(DuneCrest_100, label="100% outwash")
         plt.plot(DuneCrest_50, label="50% outwash")
@@ -500,14 +643,42 @@ for rname in rname_array:
     # average overwash and outwash normalized by the number of events (avg per event)
     if flux_stats:
         # for storm in range(100):
-        print("average overwash per event baseline: {0}".format(round(np.average(avg_overwash_array_b3d)),2))
-        print("average overwash per event 100%: {0}".format(round(np.average(avg_overwash_array_100)),1))
-        print("average overwash per event 50%: {0}".format(round(np.average(avg_overwash_array_50)),1))
-        print("average overwash per event 0%: {0}".format(round(np.average(avg_overwash_array_0)),1))
+        print(
+            "average overwash per event baseline: {}".format(
+                round(np.average(avg_overwash_array_b3d)), 2
+            )
+        )
+        print(
+            "average overwash per event 100%: {}".format(
+                round(np.average(avg_overwash_array_100)), 1
+            )
+        )
+        print(
+            "average overwash per event 50%: {}".format(
+                round(np.average(avg_overwash_array_50)), 1
+            )
+        )
+        print(
+            "average overwash per event 0%: {}".format(
+                round(np.average(avg_overwash_array_0)), 1
+            )
+        )
 
-        print("average outwash per event 100%: {0}".format(round(np.average(avg_outwash_array_100)),1))
-        print("average outwash per event 50%: {0}".format(round(np.average(avg_outwash_array_50)),1))
-        print("average outwash per event 0%: {0}".format(round(np.average(avg_outwash_array_0)),1))
+        print(
+            "average outwash per event 100%: {}".format(
+                round(np.average(avg_outwash_array_100)), 1
+            )
+        )
+        print(
+            "average outwash per event 50%: {}".format(
+                round(np.average(avg_outwash_array_50)), 1
+            )
+        )
+        print(
+            "average outwash per event 0%: {}".format(
+                round(np.average(avg_outwash_array_0)), 1
+            )
+        )
 
         # average overwash and outwash normalized by the number of events (avg per event)
         # overwash_avg_b3d = []
@@ -541,90 +712,174 @@ for rname in rname_array:
     if migration_stats:
         # print avg net migration stats
         print("avg outwash stats")
-        print("baseline \n avg net migration: {0} \n avg net migration excluding drown years: {1}"
-              .format(np.round(np.average(end_net_migration_b3d)), np.round(np.average(end_net_migration_no_drowns_b3d))))
+        print(
+            "baseline \n avg net migration: {} \n avg net migration excluding drown years: {}".format(
+                np.round(np.average(end_net_migration_b3d)),
+                np.round(np.average(end_net_migration_no_drowns_b3d)),
+            )
+        )
         if len(end_net_migration_only_drowns_b3d) > 0:
-            print("avg net migration of barriers that drown: {0}".format(np.average(end_net_migration_only_drowns_b3d)))
-        print("100% outwash \n avg net migration: {0} \n avg net migration excluding drown years: {1} "
-              "\n avg net migration of barriers that drown: {2}".format(np.round(np.average(end_net_migration_100)),
-                                                                    np.round(np.average(end_net_migration_no_drowns_100)),
-                                                                    np.round(np.average(end_net_migration_only_drowns_100))))
-        print("50% outwash \n avg net migration: {0} \n avg net migration excluding drown years: {1} "
-              "\n avg net migration of barriers that drown: {2}".format(np.round(np.average(end_net_migration_50)),
-                                                                    np.round(np.average(end_net_migration_no_drowns_50)),
-                                                                    np.round(np.average(end_net_migration_only_drowns_50))))
-        print("0% outwash \n avg net migration: {0} \n avg net migration excluding drown years: {1} "
-              "\n avg net migration of barriers that drown: {2}".format(np.round(np.average(end_net_migration_0)),
-                                                                    np.round(np.average(end_net_migration_no_drowns_0)),
-                                                                    np.round(np.average(end_net_migration_only_drowns_0))))
+            print(
+                "avg net migration of barriers that drown: {}".format(
+                    np.average(end_net_migration_only_drowns_b3d)
+                )
+            )
+        print(
+            "100% outwash \n avg net migration: {} \n avg net migration excluding drown years: {} "
+            "\n avg net migration of barriers that drown: {}".format(
+                np.round(np.average(end_net_migration_100)),
+                np.round(np.average(end_net_migration_no_drowns_100)),
+                np.round(np.average(end_net_migration_only_drowns_100)),
+            )
+        )
+        print(
+            "50% outwash \n avg net migration: {} \n avg net migration excluding drown years: {} "
+            "\n avg net migration of barriers that drown: {}".format(
+                np.round(np.average(end_net_migration_50)),
+                np.round(np.average(end_net_migration_no_drowns_50)),
+                np.round(np.average(end_net_migration_only_drowns_50)),
+            )
+        )
+        print(
+            "0% outwash \n avg net migration: {} \n avg net migration excluding drown years: {} "
+            "\n avg net migration of barriers that drown: {}".format(
+                np.round(np.average(end_net_migration_0)),
+                np.round(np.average(end_net_migration_no_drowns_0)),
+                np.round(np.average(end_net_migration_only_drowns_0)),
+            )
+        )
 
         # print max net migration stats
         print("max outwash stats")
-        print("baseline \n max net migration: {0} \n max net migration excluding drown years: {1}"
-              .format(np.round(np.max(end_net_migration_b3d)), np.round(np.max(end_net_migration_no_drowns_b3d))))
+        print(
+            "baseline \n max net migration: {} \n max net migration excluding drown years: {}".format(
+                np.round(np.max(end_net_migration_b3d)),
+                np.round(np.max(end_net_migration_no_drowns_b3d)),
+            )
+        )
         if len(end_net_migration_only_drowns_b3d) > 0:
-            print("max net migration of barriers that drown: {0}".format(np.max(end_net_migration_only_drowns_b3d)))
-        print("100% outwash \n max net migration: {0} \n max net migration excluding drown years: {1} "
-              "\n max net migration of barriers that drown: {2}".format(np.round(np.max(end_net_migration_100)),
-                                                                    np.round(np.max(end_net_migration_no_drowns_100)),
-                                                                    np.round(np.max(end_net_migration_only_drowns_100))))
-        print("50% outwash \n max net migration: {0} \n max net migration excluding drown years: {1} "
-              "\n max net migration of barriers that drown: {2}".format(np.round(np.max(end_net_migration_50)),
-                                                                    np.round(np.max(end_net_migration_no_drowns_50)),
-                                                                    np.round(np.max(end_net_migration_only_drowns_50))))
-        print("0% outwash \n max net migration: {0} \n max net migration excluding drown years: {1} "
-              "\n max net migration of barriers that drown: {2}".format(np.round(np.max(end_net_migration_0)),
-                                                                    np.round(np.max(end_net_migration_no_drowns_0)),
-                                                                    np.round(np.max(end_net_migration_only_drowns_0))))
+            print(
+                "max net migration of barriers that drown: {}".format(
+                    np.max(end_net_migration_only_drowns_b3d)
+                )
+            )
+        print(
+            "100% outwash \n max net migration: {} \n max net migration excluding drown years: {} "
+            "\n max net migration of barriers that drown: {}".format(
+                np.round(np.max(end_net_migration_100)),
+                np.round(np.max(end_net_migration_no_drowns_100)),
+                np.round(np.max(end_net_migration_only_drowns_100)),
+            )
+        )
+        print(
+            "50% outwash \n max net migration: {} \n max net migration excluding drown years: {} "
+            "\n max net migration of barriers that drown: {}".format(
+                np.round(np.max(end_net_migration_50)),
+                np.round(np.max(end_net_migration_no_drowns_50)),
+                np.round(np.max(end_net_migration_only_drowns_50)),
+            )
+        )
+        print(
+            "0% outwash \n max net migration: {} \n max net migration excluding drown years: {} "
+            "\n max net migration of barriers that drown: {}".format(
+                np.round(np.max(end_net_migration_0)),
+                np.round(np.max(end_net_migration_no_drowns_0)),
+                np.round(np.max(end_net_migration_only_drowns_0)),
+            )
+        )
         # print min net migration stats
         print("min outwash stats")
-        print("baseline \n min net migration: {0} \n min net migration excluding drown years: {1}"
-              .format(np.round(np.min(end_net_migration_b3d)), np.round(np.min(end_net_migration_no_drowns_b3d))))
+        print(
+            "baseline \n min net migration: {} \n min net migration excluding drown years: {}".format(
+                np.round(np.min(end_net_migration_b3d)),
+                np.round(np.min(end_net_migration_no_drowns_b3d)),
+            )
+        )
         if len(end_net_migration_only_drowns_b3d) > 0:
-            print("min net migration of barriers that drown: {0}".format(np.min(end_net_migration_only_drowns_b3d)))
-        print("100% outwash \n min net migration: {0} \n min net migration excluding drown years: {1} "
-              "\n min net migration of barriers that drown: {2}".format(np.round(np.min(end_net_migration_100)),
-                                                                    np.round(np.min(end_net_migration_no_drowns_100)),
-                                                                    np.round(np.min(end_net_migration_only_drowns_100))))
-        print("50% outwash \n min net migration: {0} \n min net migration excluding drown years: {1} "
-              "\n min net migration of barriers that drown: {2}".format(np.round(np.min(end_net_migration_50)),
-                                                                    np.round(np.min(end_net_migration_no_drowns_50)),
-                                                                    np.round(np.min(end_net_migration_only_drowns_50))))
-        print("0% outwash \n min net migration: {0} \n excluding drown years: {1} "
-              "\n min net migration of barriers that drown: {2}".format(np.round(np.min(end_net_migration_0)),
-                                                                    np.round(np.min(end_net_migration_no_drowns_0)),
-                                                                    np.round(np.min(end_net_migration_only_drowns_0))))
+            print(
+                "min net migration of barriers that drown: {}".format(
+                    np.min(end_net_migration_only_drowns_b3d)
+                )
+            )
+        print(
+            "100% outwash \n min net migration: {} \n min net migration excluding drown years: {} "
+            "\n min net migration of barriers that drown: {}".format(
+                np.round(np.min(end_net_migration_100)),
+                np.round(np.min(end_net_migration_no_drowns_100)),
+                np.round(np.min(end_net_migration_only_drowns_100)),
+            )
+        )
+        print(
+            "50% outwash \n min net migration: {} \n min net migration excluding drown years: {} "
+            "\n min net migration of barriers that drown: {}".format(
+                np.round(np.min(end_net_migration_50)),
+                np.round(np.min(end_net_migration_no_drowns_50)),
+                np.round(np.min(end_net_migration_only_drowns_50)),
+            )
+        )
+        print(
+            "0% outwash \n min net migration: {} \n excluding drown years: {} "
+            "\n min net migration of barriers that drown: {}".format(
+                np.round(np.min(end_net_migration_0)),
+                np.round(np.min(end_net_migration_no_drowns_0)),
+                np.round(np.min(end_net_migration_only_drowns_0)),
+            )
+        )
 
     # printing geometry stats
     if geomoetry_stats:
         # print avg height and width stats
         print("avg geometry stats")
-        print("baseline \n avg interior height: {0} \n avg interior width: {1}"
-              .format(np.round(np.average(avg_int_height_array_b3d), 3),
-                      np.round(np.average(avg_int_width_array_b3d))))
-        print("100% outwash \n avg interior height: {0} \n avg interior width: {1}"
-              .format(np.round(np.average(avg_int_height_array_100), 3),
-                      np.round(np.average(avg_int_width_array_100))))
-        print("50% outwash \n avg interior height: {0} \n avg interior width: {1}"
-              .format(np.round(np.average(avg_int_height_array_50), 3),
-                      np.round(np.average(avg_int_width_array_50))))
-        print("0% outwash \n avg interior height: {0} \n avg interior width: {1}"
-              .format(np.round(np.average(avg_int_height_array_0), 3),
-                      np.round(np.average(avg_int_width_array_0))))
+        print(
+            "baseline \n avg interior height: {} \n avg interior width: {}".format(
+                np.round(np.average(avg_int_height_array_b3d), 3),
+                np.round(np.average(avg_int_width_array_b3d)),
+            )
+        )
+        print(
+            "100% outwash \n avg interior height: {} \n avg interior width: {}".format(
+                np.round(np.average(avg_int_height_array_100), 3),
+                np.round(np.average(avg_int_width_array_100)),
+            )
+        )
+        print(
+            "50% outwash \n avg interior height: {} \n avg interior width: {}".format(
+                np.round(np.average(avg_int_height_array_50), 3),
+                np.round(np.average(avg_int_width_array_50)),
+            )
+        )
+        print(
+            "0% outwash \n avg interior height: {} \n avg interior width: {}".format(
+                np.round(np.average(avg_int_height_array_0), 3),
+                np.round(np.average(avg_int_width_array_0)),
+            )
+        )
         # print avg height and width stats using just the last domain for each storm
         print("avg geometry stats LAST DOMAIN ONLY")
-        print("baseline \n avg interior height: {0} \n avg interior width: {1}"
-              .format(np.round(np.average(avg_height_last_TS_b3d), 3),
-                      np.round(np.average(avg_width_last_TS_b3d))))
-        print("100% outwash \n avg interior height: {0} \n avg interior width: {1}"
-              .format(np.round(np.average(avg_height_last_TS_100), 3),
-                      np.round(np.average(avg_width_last_TS_100))))
-        print("50% outwash \n avg interior height: {0} \n avg interior width: {1}"
-              .format(np.round(np.average(avg_height_last_TS_50), 3),
-                      np.round(np.average(avg_width_last_TS_50))))
-        print("0% outwash \n avg interior height: {0} \n avg interior width: {1}"
-              .format(np.round(np.average(avg_height_last_TS_0), 3),
-                      np.round(np.average(avg_width_last_TS_0[avg_width_last_TS_0>0]))))
+        print(
+            "baseline \n avg interior height: {} \n avg interior width: {}".format(
+                np.round(np.average(avg_height_last_TS_b3d), 3),
+                np.round(np.average(avg_width_last_TS_b3d)),
+            )
+        )
+        print(
+            "100% outwash \n avg interior height: {} \n avg interior width: {}".format(
+                np.round(np.average(avg_height_last_TS_100), 3),
+                np.round(np.average(avg_width_last_TS_100)),
+            )
+        )
+        print(
+            "50% outwash \n avg interior height: {} \n avg interior width: {}".format(
+                np.round(np.average(avg_height_last_TS_50), 3),
+                np.round(np.average(avg_width_last_TS_50)),
+            )
+        )
+        print(
+            "0% outwash \n avg interior height: {} \n avg interior width: {}".format(
+                np.round(np.average(avg_height_last_TS_0), 3),
+                np.round(np.average(avg_width_last_TS_0[avg_width_last_TS_0 > 0])),
+            )
+        )
 
     if plotters:
         storm_num = 1
@@ -847,12 +1102,20 @@ for rname in rname_array:
         # fig9.suptitle('{0}'.format(rname), weight="bold")
         ax1 = fig9.add_subplot(111)
         ls = "solid"
-        ax1.plot(shoreline_pos_array_b3d[storm_num-1])
-        ax1.plot(shoreline_pos_array_100[storm_num-1], linestyle=ls)
-        ax1.plot(shoreline_pos_array_50[storm_num-1], linestyle=ls)
-        ax1.plot(shoreline_pos_array_0[storm_num-1], linestyle=ls)
-        ax1.legend(["baseline", "100% washout to shoreface", "50% washout to shoreface", "0% washout to shoreface"],
-                   prop={'size': 9}, loc="upper left")
+        ax1.plot(shoreline_pos_array_b3d[storm_num - 1])
+        ax1.plot(shoreline_pos_array_100[storm_num - 1], linestyle=ls)
+        ax1.plot(shoreline_pos_array_50[storm_num - 1], linestyle=ls)
+        ax1.plot(shoreline_pos_array_0[storm_num - 1], linestyle=ls)
+        ax1.legend(
+            [
+                "baseline",
+                "100% washout to shoreface",
+                "50% washout to shoreface",
+                "0% washout to shoreface",
+            ],
+            prop={"size": 9},
+            loc="upper left",
+        )
         ax1.set_ylabel("Shoreline Position (m)")
         ax1.set_xlabel("Simulation Years")
         ax1.set_ylim(bottom=-60, top=160)
@@ -865,30 +1128,38 @@ for rname in rname_array:
         # fig9.suptitle('{0}'.format(rname), weight="bold")
         ax1 = fig10.add_subplot(211)
         ls = "solid"
-        ax1.plot(overwash_array_b3d[storm_num-1])
-        ax1.plot(overwash_array_100[storm_num-1], linestyle=ls)
-        ax1.plot(overwash_array_50[storm_num-1], linestyle=ls)
-        ax1.plot(overwash_array_0[storm_num-1], linestyle=ls)
+        ax1.plot(overwash_array_b3d[storm_num - 1])
+        ax1.plot(overwash_array_100[storm_num - 1], linestyle=ls)
+        ax1.plot(overwash_array_50[storm_num - 1], linestyle=ls)
+        ax1.plot(overwash_array_0[storm_num - 1], linestyle=ls)
         ax1.set_ylabel("Overwash Flux (m$^3$/m)")
         ax1.set_xlabel("Simulation Years")
         ax1.set_ylim(top=150)
         ax1.set_title(title, weight="bold")
-        ax1.legend(["baseline", "100% washout to shoreface", "50% washout to shoreface", "0% washout to shoreface"],
-                   prop={'size': 9}, loc="upper left")
+        ax1.legend(
+            [
+                "baseline",
+                "100% washout to shoreface",
+                "50% washout to shoreface",
+                "0% washout to shoreface",
+            ],
+            prop={"size": 9},
+            loc="upper left",
+        )
 
-        max_t_b3d = tmax_array_b3d[storm_num-1]
+        max_t_b3d = tmax_array_b3d[storm_num - 1]
         max_t_100 = tmax_array_100[storm_num - 1]
         max_t_50 = tmax_array_50[storm_num - 1]
         max_t_0 = tmax_array_0[storm_num - 1]
 
-        outwash_array_b3d_storm = outwash_array_b3d[storm_num-1]
-        outwash_array_b3d_storm[max_t_b3d+1:] = np.nan
+        outwash_array_b3d_storm = outwash_array_b3d[storm_num - 1]
+        outwash_array_b3d_storm[max_t_b3d + 1 :] = np.nan
         outwash_array_100_storm = outwash_array_100[storm_num - 1]
-        outwash_array_100_storm[max_t_100+1:] = np.nan
+        outwash_array_100_storm[max_t_100 + 1 :] = np.nan
         outwash_array_50_storm = outwash_array_50[storm_num - 1]
-        outwash_array_50_storm[max_t_50+1:] = np.nan
+        outwash_array_50_storm[max_t_50 + 1 :] = np.nan
         outwash_array_0_storm = outwash_array_0[storm_num - 1]
-        outwash_array_0_storm[max_t_0+1:] = np.nan
+        outwash_array_0_storm[max_t_0 + 1 :] = np.nan
 
         # ax2 = fig10.add_subplot(212)
         # ax2.plot(outwash_array_b3d_storm)
@@ -901,6 +1172,3 @@ for rname in rname_array:
         # fig10.subplots_adjust(hspace=0.3)
         # ax2.legend(["baseline", "100% outwash to shoreface", "50% outwash to shoreface", "0% outwash to shoreface"],
         #            prop={'size': 9}, loc="upper left")
-
-
-
