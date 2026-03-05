@@ -15,12 +15,10 @@ Copyright (C) 2022 Katherine Anarde
 import os
 
 import numpy as np
-from barrier3d.tools.input_files import (
-    gen_alongshore_variable_rmin_rmax,
-    gen_dune_height_start,
-    shift_storm_intensity,
-    yearly_storms,
-)
+from barrier3d.tools.input_files import gen_alongshore_variable_rmin_rmax
+from barrier3d.tools.input_files import gen_dune_height_start
+from barrier3d.tools.input_files import shift_storm_intensity
+from barrier3d.tools.input_files import yearly_storms
 
 from cascade.cascade import Cascade
 
@@ -148,9 +146,9 @@ def roadways_1segment_4mmyrSLR(
 
     # for sensitivity testing
     if percent_water_cells_sensitivity is not None:
-        cascade.roadways[
-            0
-        ].percent_water_cells_touching_road = percent_water_cells_sensitivity
+        cascade.roadways[0].percent_water_cells_touching_road = (
+            percent_water_cells_sensitivity
+        )
 
     # --------- LOOP ---------
 

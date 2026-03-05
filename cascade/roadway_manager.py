@@ -29,6 +29,7 @@ due to storm impacts and SLR.
 Because SLR is simulated using a Lagrangian reference frame in Barrier3D, the
 roadway and dune elevations are reduced by SLR for each time step.
 """
+
 import copy
 
 import numpy as np
@@ -118,9 +119,9 @@ def bulldoze(
     )
     new_dune_domain = yxz_dune_grid + overwash_to_dune
 
-    xyz_interior_grid[
-        road_start:road_end, :
-    ] = new_road_domain  # update interior domain
+    xyz_interior_grid[road_start:road_end, :] = (
+        new_road_domain  # update interior domain
+    )
 
     # check if any water cells border the road on either side
     number_border_cells = np.size(xyz_interior_grid[road_end, :])
@@ -695,12 +696,12 @@ class RoadwayManager:
         self._road_setback_TS[self._time_index - 1] = self._road_setback
         self._road_width_TS[self._time_index - 1] = self._road_width
         self._road_ele_TS[self._time_index - 1] = self._road_ele
-        self._dune_design_elevation_TS[
-            self._time_index - 1
-        ] = self._dune_design_elevation
-        self._dune_minimum_elevation_TS[
-            self._time_index - 1
-        ] = self._dune_minimum_elevation
+        self._dune_design_elevation_TS[self._time_index - 1] = (
+            self._dune_design_elevation
+        )
+        self._dune_minimum_elevation_TS[self._time_index - 1] = (
+            self._dune_minimum_elevation
+        )
         self._road_relocated_TS[self._time_index - 1] = road_relocated
 
         ###############################################################################

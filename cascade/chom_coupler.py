@@ -19,6 +19,7 @@ specified, then indices [0,1,2] and [3,4,5] are associated with each community.
 Barrier3D variables for coupling with CHOM are then averaged for each set of
 indices before passing to CHOM.
 """
+
 import numpy as np
 
 from .roadway_manager import rebuild_dunes
@@ -340,9 +341,9 @@ class ChomCoupler:
             if any(community_break[community_indices[0] : community_indices[-1] + 1]):
                 pass
             else:
-                self._chom[
-                    iCommunity
-                ].height_above_msl = avg_barrier_height_msl  # m MSL
+                self._chom[iCommunity].height_above_msl = (
+                    avg_barrier_height_msl  # m MSL
+                )
                 self._chom[iCommunity].bw_erosion_rate[
                     time_index_chom
                 ] = avg_change_shoreline_position

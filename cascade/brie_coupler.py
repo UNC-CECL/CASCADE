@@ -27,13 +27,15 @@ Notes
 In future versions, the coupled model will incorporate tidal inlet dynamics
 within BRIE (i.e., the inlet model will be turned on).
 """
+
 import math
 import pathlib
 
 import numpy as np
 from barrier3d import Barrier3d
 from brie import Brie
-from yaml import dump, full_load
+from yaml import dump
+from yaml import full_load
 
 
 def set_yaml(var_name, new_vals, file_name):

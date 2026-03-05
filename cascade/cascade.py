@@ -630,27 +630,29 @@ class Cascade:
                             else:
                                 self._roadways[iRoad].relocation_break = 1
 
-                            # set dune growth rates back to original only when dune elevation is less than equilibrium
-                            self._barrier3d[
-                                iRoad
-                            ].growthparam = self.reset_dune_growth_rates(
-                                original_growth_param=self._roadways[
-                                    iRoad
-                                ]._original_growth_param,
-                                iB3D=iRoad,
+                            # set dune growth rates back to original only when dune
+                            # elevation is less than equilibrium
+                            self._barrier3d[iRoad].growthparam = (
+                                self.reset_dune_growth_rates(
+                                    original_growth_param=self._roadways[
+                                        iRoad
+                                    ]._original_growth_param,
+                                    iB3D=iRoad,
+                                )
                             )
 
                     else:
                         self._road_break[iB3D] = 1
 
-                        # set dune growth rates back to original only when dune elevation is less than equilibrium
-                        self._barrier3d[
-                            iB3D
-                        ].growthparam = self.reset_dune_growth_rates(
-                            original_growth_param=self._roadways[
-                                iB3D
-                            ]._original_growth_param,
-                            iB3D=iB3D,
+                        # set dune growth rates back to original only when dune
+                        # elevation is less than equilibrium
+                        self._barrier3d[iB3D].growthparam = (
+                            self.reset_dune_growth_rates(
+                                original_growth_param=self._roadways[
+                                    iB3D
+                                ]._original_growth_param,
+                                iB3D=iB3D,
+                            )
                         )
 
                 else:
@@ -727,14 +729,12 @@ class Cascade:
 
                 # else manage that community!
                 else:
-                    self._nourishments[
-                        iB3D
-                    ].dune_design_elevation = self._dune_design_elevation[
-                        iB3D
-                    ]  # m MHW
-                    self._nourishments[
-                        iB3D
-                    ].nourishment_volume = self._nourishment_volume[iB3D]
+                    self._nourishments[iB3D].dune_design_elevation = (
+                        self._dune_design_elevation[iB3D]
+                    )  # m MHW
+                    self._nourishments[iB3D].nourishment_volume = (
+                        self._nourishment_volume[iB3D]
+                    )
                     [
                         self._nourish_now[iB3D],
                         self._rebuild_dune_now[iB3D],

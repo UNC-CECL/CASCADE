@@ -109,41 +109,33 @@ def publish_pypi(session):
 @nox.session(python=False)
 def clean(session):
     """Remove all .venv's, build files and caches in the directory."""
-    root_folders = (
-        [
-            "coastal_cascade.egg-info",
-            ".pytest_cache",
-            ".venv",
-            "build",
-            "build/wheelhouse",
-        ]
-        if not session.posargs
-        else []
+    folders_to_remove = (
+        "coastal_cascade.egg-info",
+        ".pytest_cache",
+        ".venv",
+        "build",
+        "dist",
+    )
+    folders_to_clean = ("cascade", "notebooks", "tests")
+    patterns_to_clean = (
+        "*.py[co]",
+        "__pycache__",
+        "*.c",
+        "*.so",
+        "*-checkpoint.ipynb",
+        ".ipynb_checkpoints",
     )
 
     with session.chdir(ROOT):
-        for folder in root_folders:
+        for folder in folders_to_remove:
             session.log(f"rm -r {folder}")
             shutil.rmtree(folder, ignore_errors=True)
 
-    for folder in _args_to_folders(session.posargs):
-        with session.chdir(folder):
-            for pattern in ["*.py[co]", "__pycache__"]:
-                session.log(f"rm {pattern}")
-                _clean_rglob(pattern)
-
-
-@nox.session(python=False, name="clean-checkpoints")
-def clean_checkpoints(session):
-    """Remove jupyter notebook checkpoint files."""
-    for folder in _args_to_folders(session.posargs):
-        with session.chdir(folder):
-            _clean_rglob("*-checkpoint.ipynb")
-            _clean_rglob(".ipynb_checkpoints")
-
-
-def _args_to_folders(args):
-    return [ROOT] if not args else [pathlib.Path(f) for f in args]
+        for folder in folders_to_clean:
+            with session.chdir(folder):
+                for pattern in patterns_to_clean:
+                    session.log(f"rm -r {folder}/**/{pattern}")
+                    _clean_rglob(pattern)
 
 
 def _clean_rglob(pattern):
