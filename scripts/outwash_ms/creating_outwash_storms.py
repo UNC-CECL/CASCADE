@@ -119,5 +119,5 @@ for storm in range(num_storms):
 # option to save the storm series
 save_storm_series = False
 if save_storm_series:
-    name = "outwash_storms_{0}yr_interval".format(interval)
+    name = f"outwash_storms_{interval}yr_interval"
     np.save(datadir + name, outwash_storms)

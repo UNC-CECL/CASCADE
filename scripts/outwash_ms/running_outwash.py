@@ -36,7 +36,8 @@ for percent_washout_to_shoreface in washout_array:
     # save to pycharm folder
     save_dir = (
         "C:/Users/Lexi/PycharmProjects/CASCADE/data/results/{}/outwash{}/".format(
-            rname, percent_washout_to_shoreface)
+            rname, percent_washout_to_shoreface
+        )
     )
 
     # --------------------------------- running overwash scenario with all overwash storms --------------------------------------
@@ -44,11 +45,7 @@ for percent_washout_to_shoreface in washout_array:
     total_storms = len(list_storm_files)
     for storm_num in range(1, total_storms + 1):
         print("\r", "Storm Number: ", storm_num, end="")
-        overwash_storm = storm_dir + (
-            "storm_{}.npy".format(
-                storm_num
-            )
-        )
+        overwash_storm = storm_dir + (f"storm_{storm_num}.npy")
 
         ### 0%, 50%, or 100% washout to shoreface ------------------------------------------------------------------------------------
         # initialize class
