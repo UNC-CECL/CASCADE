@@ -1,8 +1,8 @@
 """
-    Plot check that barrier3d call in cascade matches bmi
+Plot check that barrier3d call in cascade matches bmi
 
-    NOTE to users:
-        - if using Barrier3D for the first time, remember to $ pip install -e .
+NOTE to users:
+    - if using Barrier3D for the first time, remember to $ pip install -e .
 """
 
 import time
