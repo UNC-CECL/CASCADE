@@ -138,3 +138,9 @@ brie_venv
 Output/
 Run_Output/
 /brie_venv/
+/data/outwash_data/storms/
+/data/outwash_data/OLD/
+/notebooks/for_thesis
+/notebooks/old_outwash_runs
+/notebooks/post-thesis
+scripts/outwash_ms/OLD
