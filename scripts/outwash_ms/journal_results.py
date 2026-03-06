@@ -137,10 +137,8 @@ for rname in rname_array:
     for storm_num in range(1, 101):
 
         # b3d variables ------------------------------------------------------------------------------------------------
-        filename_b3d = (
-            "config{}_b3d_startyr1_interval{}yrs_Slope0pt03_{}.npz".format(
-                config, storm_interval, storm_num
-            )
+        filename_b3d = "config{}_b3d_startyr1_interval{}yrs_Slope0pt03_{}.npz".format(
+            config, storm_interval, storm_num
         )
         file_b3d = datadir_b3d + filename_b3d
         b3d = np.load(file_b3d, allow_pickle=True)
@@ -766,20 +764,14 @@ for rname in rname_array:
 
     # dune crest avg elevations and plots and dune gaps
     if dune_stats:
-        print(
-            f"average dune crest height baseline: {avg_dune_crest_array_b3d}"
-        )
+        print(f"average dune crest height baseline: {avg_dune_crest_array_b3d}")
         print(
             "average dune crest height 100% outwash: {}".format(
                 avg_dune_crest_array_100
             )
         )
-        print(
-            f"average dune crest height 50% outwash: {avg_dune_crest_array_50}"
-        )
-        print(
-            f"average dune crest height 0% outwash: {avg_dune_crest_array_0}"
-        )
+        print(f"average dune crest height 50% outwash: {avg_dune_crest_array_50}")
+        print(f"average dune crest height 0% outwash: {avg_dune_crest_array_0}")
 
         # dune gaps
         print(

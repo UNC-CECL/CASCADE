@@ -73,10 +73,8 @@ for rname in rname_array:
     for storm_num in range(1, 101):
         # print(storm_num)
         # b3d variables
-        filename_b3d = (
-            "config{}_b3d_startyr1_interval{}yrs_Slope0pt03_{}.npz".format(
-                config, storm_interval, storm_num
-            )
+        filename_b3d = "config{}_b3d_startyr1_interval{}yrs_Slope0pt03_{}.npz".format(
+            config, storm_interval, storm_num
         )
         file_b3d = datadir_b3d + filename_b3d
         b3d = np.load(file_b3d, allow_pickle=True)
@@ -290,9 +288,7 @@ for rname in rname_array:
         # print non-drowning values
         print(f"avg geometry stats, {rname}")
         print(
-            "baseline \n avg interior height: {}".format(
-                np.round(avg_no_drowns_b3d, 2)
-            )
+            f"baseline \n avg interior height: {np.round(avg_no_drowns_b3d, 2)}"
         )
         print(
             "100% outwash \n avg interior height: {}".format(
@@ -305,9 +301,7 @@ for rname in rname_array:
             )
         )
         print(
-            "0% outwash \n avg interior height: {}".format(
-                np.round(avg_no_drowns_0, 2)
-            )
+            f"0% outwash \n avg interior height: {np.round(avg_no_drowns_0, 2)}"
         )
         # width
         print(f"avg geometry stats, {rname}")

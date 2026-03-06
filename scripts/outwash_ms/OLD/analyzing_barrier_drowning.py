@@ -152,10 +152,8 @@ for rname in rname_array:
         # for storm_num in range(4, 5):
 
         # b3d variables
-        filename_b3d = (
-            "config{}_b3d_startyr1_interval{}yrs_Slope0pt03_{}.npz".format(
-                config, storm_interval, storm_num
-            )
+        filename_b3d = "config{}_b3d_startyr1_interval{}yrs_Slope0pt03_{}.npz".format(
+            config, storm_interval, storm_num
         )
         file_b3d = datadir_b3d + filename_b3d
         b3d = np.load(file_b3d, allow_pickle=True)
@@ -467,9 +465,7 @@ for rname in rname_array:
     # because we have 100 storms and drowns = 1, the sum of the array is the percent that drown
     percent_drown_b3d = np.sum(drowning_array_b3d)
     print(
-        "{}% of barriers drown for the baseline scenario".format(
-            int(percent_drown_b3d)
-        )
+        f"{int(percent_drown_b3d)}% of barriers drown for the baseline scenario"
     )
     percent_drown_100 = np.sum(drowning_array_100)
     print(
@@ -599,9 +595,7 @@ for rname in rname_array:
         DuneCrest_b3d = (
             np.average(np.vstack(avg_dune_crest_array_b3d).astype(float), axis=0) * 10
         )
-        print(
-            f"average dune crest height baseline: {np.average(DuneCrest_b3d)}"
-        )
+        print(f"average dune crest height baseline: {np.average(DuneCrest_b3d)}")
         DuneCrest_100 = (
             np.average(np.vstack(avg_dune_crest_array_100).astype(float), axis=0) * 10
         )
@@ -614,16 +608,12 @@ for rname in rname_array:
             np.average(np.vstack(avg_dune_crest_array_50).astype(float), axis=0) * 10
         )
         print(
-            "average dune crest height 50% outwash: {}".format(
-                np.average(DuneCrest_50)
-            )
+            f"average dune crest height 50% outwash: {np.average(DuneCrest_50)}"
         )
         DuneCrest_0 = (
             np.average(np.vstack(avg_dune_crest_array_0).astype(float), axis=0) * 10
         )
-        print(
-            f"average dune crest height 0% outwash: {np.average(DuneCrest_0)}"
-        )
+        print(f"average dune crest height 0% outwash: {np.average(DuneCrest_0)}")
 
         fig1 = plt.figure()
         plt.title(f"{rname}")
