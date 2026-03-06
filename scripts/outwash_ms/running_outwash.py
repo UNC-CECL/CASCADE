@@ -1,10 +1,9 @@
 # Lexi Van Blunk
-# 11/22/2025
-
-# ### Katherine will need to change the datadir on line 15 and save_dir on line 45
+# 03/06/2026  updated for outwasher release
 
 # code for running CASCADE for the 0%, 50%, and 100% outwash to shoreface scenario, 100 storm series
-# change the storm interval, dune growth rate, and configuration below
+# change the dune growth rate
+# specify datadir folders
 # names of files will update automatically with the changes to the specified variables
 
 import os
@@ -13,12 +12,11 @@ import time
 from cascade.cascade import Cascade
 
 # input datadir where the 100 storms are located
-datadir = "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/"
+datadir = "C:/Users/Lexi/PycharmProjects/CASCADE/data/init_outwasher/"
+storm_dir = "C:/Users/Lexi/PycharmProjects/CASCADE/data/init_outwasher/overwash_storms/"  # overwash storms
 
 # ---------------------------------- set model parameters that change per run ------------------------------------------
-storm_interval = 20  # 20 or 10 years
 r_dune_growth = 0.35  # 0.25 or 0.35
-config = 4  # 1, 2, 3, or 4
 washout_array = [100, 50, 0]
 
 # automatically set min and max r values based on dune growth rate selection
@@ -31,28 +29,23 @@ elif r_dune_growth == 0.35:
     min_dune_r = 0.25
     max_dune_r = 0.45
 
-# automatically set beach slope based on configuration
-if config == 1:
-    beach_slope = 0.03
-elif config == 2:
-    beach_slope = 0.013
-elif config == 3:
-    beach_slope = 0.002
-elif config == 4:
-    beach_slope = 0.006
+# default beach slope
+beach_slope = 0.006
 
 for percent_washout_to_shoreface in washout_array:
     # save to pycharm folder
     save_dir = (
-        "C:/Users/Lexi/PycharmProjects/CASCADE/data/outwash_data/storms/slope0pt03/rerun_output/one_storm/{}/"
-        "outwash{}/".format(rname, percent_washout_to_shoreface)
+        "C:/Users/Lexi/PycharmProjects/CASCADE/data/results/{}/outwash{}/".format(
+            rname, percent_washout_to_shoreface)
     )
 
-    # --------------------------------- running overwash scenario with all 100 storms --------------------------------------
-    for storm_num in range(1, 101):
+    # --------------------------------- running overwash scenario with all overwash storms --------------------------------------
+    list_storm_files = os.listdir(storm_dir)
+    total_storms = len(list_storm_files)
+    for storm_num in range(1, total_storms + 1):
         print("\r", "Storm Number: ", storm_num, end="")
-        overwash_storm = (
-            "StormSeries_100yrs_inclusive_NCB_Berm1pt46m_Slope0pt03_{}.npy".format(
+        overwash_storm = storm_dir + (
+            "storm_{}.npy".format(
                 storm_num
             )
         )
@@ -61,11 +54,11 @@ for percent_washout_to_shoreface in washout_array:
         # initialize class
         cascade_outwash = Cascade(
             datadir,
-            name="config{}_outwash{}_startyr1_interval{}yrs_Slope0pt03_{}".format(
-                config, percent_washout_to_shoreface, storm_interval, storm_num
+            name="outwash{}_storm_num{}".format(
+                percent_washout_to_shoreface, storm_num
             ),
-            elevation_file=f"NCB-default-elevation-config{config}-damMHW.npy",
-            dune_file=f"NCB-default-dunes-config{config}-dam.npy",
+            elevation_file="outwash-default-elevation.npy",
+            dune_file="outwash-default-dunes.npy",
             parameter_file="outwash-parameters.yaml",
             storm_file=overwash_storm,
             num_cores=1,  # cascade can run in parallel, can never specify more cores than that
@@ -112,11 +105,9 @@ for percent_washout_to_shoreface in washout_array:
             house_footprint_x=15,
             house_footprint_y=20,
             beach_full_cross_shore=70,
-            outwash_storms_file="outwash_storms_startyr_1_interval_{}yrs.npy".format(
-                storm_interval
-            ),  # --------- outwasher (in development) ------------ #
+            outwash_storms_file="outwash-default-storms.npy",  # --------- outwasher (in development) ------------ #
             percent_washout_to_shoreface=percent_washout_to_shoreface,
-            outwash_beach_file=f"NCB-default-beach-config{config}-damMHW.npy",
+            outwash_beach_file="outwash-default-beach.npy",
         )
 
         # run the time loop/update function
