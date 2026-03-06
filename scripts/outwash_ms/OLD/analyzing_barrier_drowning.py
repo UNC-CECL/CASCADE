@@ -464,9 +464,7 @@ for rname in rname_array:
 
     # because we have 100 storms and drowns = 1, the sum of the array is the percent that drown
     percent_drown_b3d = np.sum(drowning_array_b3d)
-    print(
-        f"{int(percent_drown_b3d)}% of barriers drown for the baseline scenario"
-    )
+    print(f"{int(percent_drown_b3d)}% of barriers drown for the baseline scenario")
     percent_drown_100 = np.sum(drowning_array_100)
     print(
         "{}% of barriers drown for the 100% outwash to shoreface scenario".format(
@@ -607,9 +605,7 @@ for rname in rname_array:
         DuneCrest_50 = (
             np.average(np.vstack(avg_dune_crest_array_50).astype(float), axis=0) * 10
         )
-        print(
-            f"average dune crest height 50% outwash: {np.average(DuneCrest_50)}"
-        )
+        print(f"average dune crest height 50% outwash: {np.average(DuneCrest_50)}")
         DuneCrest_0 = (
             np.average(np.vstack(avg_dune_crest_array_0).astype(float), axis=0) * 10
         )

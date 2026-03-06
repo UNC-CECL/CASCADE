@@ -287,9 +287,7 @@ for rname in rname_array:
     if geomoetry_stats:
         # print non-drowning values
         print(f"avg geometry stats, {rname}")
-        print(
-            f"baseline \n avg interior height: {np.round(avg_no_drowns_b3d, 2)}"
-        )
+        print(f"baseline \n avg interior height: {np.round(avg_no_drowns_b3d, 2)}")
         print(
             "100% outwash \n avg interior height: {}".format(
                 np.round(avg_no_drowns_100, 2)
@@ -300,9 +298,7 @@ for rname in rname_array:
                 np.round(avg_no_drowns_50, 2)
             )
         )
-        print(
-            f"0% outwash \n avg interior height: {np.round(avg_no_drowns_0, 2)}"
-        )
+        print(f"0% outwash \n avg interior height: {np.round(avg_no_drowns_0, 2)}")
         # width
         print(f"avg geometry stats, {rname}")
         print(
