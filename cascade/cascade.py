@@ -171,11 +171,13 @@ class Cascade:
         shoreline_offset = [],
         user_inputed_RSLR=False,
         user_inputed_RSLR_rate=[],
+        allow_causeway = False,
+        use_defined_beach_width = False,
+        user_inputed_beach_width = 30,
         # --------- outwasher (in development) ------------ #
         outwash_storms_file="outwash_storms_startyr_1_interval_20yrs.npy",
         outwash_beach_file="NCB-default_beach.npy",
         percent_washout_to_shoreface=100,
-        allow_causeway = False
     ):
         """CASCADE: The CoAStal Community-lAnDscape Evolution model
 
@@ -307,6 +309,10 @@ class Cascade:
             If True, use outwash module (force a bay-side surge event)
         allow_causeway: bool, optional
             Whether roadways drowns when surrounded by water [default is allow_causeway=FALSE]
+        use_defined_beach_width: bool, optional
+            Whether the nourishment module will use a user defined initial beach width
+        user_inputed_beach_width: int, optional
+            User inputed initial beach width for nourishment module [m]
 
         Examples
         --------
@@ -345,7 +351,7 @@ class Cascade:
         self._initial_beach_width = [0] * self._ny
         self._group_roadway_abandonment = group_roadway_abandonment
         self._sandbag_management_on = sandbag_management_on
-        self._sandbag_elevation = sandbag_elevation
+        self._sandbag_elevation = sandbag_elevation - (berm_elevation-MHW)
         self._sandbag_need = [False] * self._ny
         self._enable_shoreline_offset = enable_shoreline_offset
         self._shoreline_offset = shoreline_offset
@@ -353,6 +359,8 @@ class Cascade:
         self._road_relocation_setback = road_relocation_setback
         self._user_inputed_RSLR = user_inputed_RSLR
         self._user_inputed_RSLR_rate = user_inputed_RSLR_rate
+        self._use_defined_beach_width = use_defined_beach_width
+        self._user_inputed_beach_width = user_inputed_beach_width
 
         # initialization errors
         if (
@@ -489,10 +497,14 @@ class Cascade:
                     allow_causeway=self._allow_causeway[iB3D]
                 )
             )
-
-            self._initial_beach_width[iB3D] = (
-                int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
-            )
+            if self._use_defined_beach_width == False:
+                self._initial_beach_width[iB3D] = (
+                    int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
+                )
+            elif self._use_defined_beach_width == True:
+                self._initial_beach_width[iB3D] = (
+                    self._user_inputed_beach_width
+                )
             self._nourishments.append(
                 BeachDuneManager(
                     nourishment_interval=self._nourishment_interval[iB3D],

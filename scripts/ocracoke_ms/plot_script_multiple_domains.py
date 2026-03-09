@@ -375,14 +375,10 @@ def plot_ElevAnimation_CASCADE(
 
 os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE\\Run_output')
 run_name = "OCR_IL_Natural_S42_Accretional_Sink"
-#run_name = 'OCR_IH_Status_Quo_S29_Erosional_Sink'
-#run_name = 'OCR_IH_Status_Quo_S14_Erosional_Sink'
 name_prefix = run_name
-nt_run = 120
-number_barrier3d_models = 1
-Run_Marsh_Dynamics = False
-
-Model_Grids_Of_Interest = [40] #range(41,42)
+nt_run = 120 # Number of years to plot
+number_barrier3d_models = 10 # Number of B3D domains to plot
+Model_Grids_Of_Interest = range(20,30) # Specific B3D domains to plot
 
 # --------- plot ---------
 output = np.load(run_name + ".npz", allow_pickle=True)

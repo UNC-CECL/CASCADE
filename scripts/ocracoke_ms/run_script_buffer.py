@@ -1,4 +1,6 @@
-# Define model simulations to run for modeling Ocracoke
+# Script used for running hindcasts
+# By WBPF updated on 7/22/25
+
 import copy
 
 # import required functions
@@ -22,15 +24,11 @@ start_year = 1997
 if start_year == 1974:
     year = 0
     run_name = 'OCR_1974_1997_Hindcast_Final_3'
-
     s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Hindcast_Storms\\OCR_1974_2022_Final_Hindcast_Storms.npy'
-
 else:
     year = 2
     run_name = 'OCR_1997_2020_Hindcast_Final_3'
     s_file = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Hindcast_Storms\\OCR_1997_2022_Final_Hindcast_Storms.npy'
-
-
 
 
 if start_year == 1974:
@@ -102,8 +100,8 @@ d_file = []
 for i in range(0,15):
     dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Sample_1_dune.npy'
     elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Sample_1_topography.npy'
-    d_file.append(dune_name)
-    e_file.append(elev_name)
+    d_file.append(copy.deepcopy(dune_name))
+    e_file.append(copy.deepcopy(elev_name))
 
 for i in range(11,50):
     dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Sample_'+str(i)+'_dune.npy'
@@ -111,14 +109,14 @@ for i in range(11,50):
         elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Ocracoke_Revised_Topography_1974_Grid_'+str(i)+'.npy'
     else:
         elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Sample_'+str(i)+'_topography.npy'
-    d_file.append(dune_name)
-    e_file.append(elev_name)
+    d_file.append(copy.deepcopy(dune_name))
+    e_file.append(copy.deepcopy(elev_name))
 
 for i in range(0,15):
     dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Sample_1_dune.npy'
     elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Sample_1_topography.npy'
-    d_file.append(dune_name)
-    e_file.append(elev_name)
+    d_file.append(copy.deepcopy(dune_name))
+    e_file.append(copy.deepcopy(elev_name))
 
 def alongshore_connected(
     nt,
