@@ -1,6 +1,5 @@
 # Collate data from CASCADE runs and export as .pkl files
-# Takes CASCADE output .npz files and calculates summary statistics for later scripts
-# BF 12/30/25
+# BF 2/16/25
 
 import copy
 

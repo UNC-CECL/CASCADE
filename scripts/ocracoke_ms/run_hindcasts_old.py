@@ -1,4 +1,6 @@
 # Define model simulations to run for modeling Ocracoke
+# Script for running
+
 import copy
 
 # import required functions
