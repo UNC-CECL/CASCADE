@@ -23,8 +23,20 @@ Total_B3D_Number = 69
 
 # Set scenario type
 preemptive_relocation = False
-status_quo = True
+status_quo = False
 nourishment = False
+
+# Sandbag Elevation
+Sandbag_Elevation = 2.45 # (m) MHW
+
+# MHW
+MHW = 0.26 # (m) NAVD88
+
+# Berm Elevation
+Berm_Elev = 1.7 # (m) NAVD88
+
+# Slope
+Beach_Slope = 0.04
 
 if preemptive_relocation == True:
     Management_name = '_Preemptive_Relocation_'
@@ -58,144 +70,6 @@ else:
 
 Storms = 'Baseline'
 
-# RSLR Data
-RSLR_Type = 'IH'
-
-if RSLR_Type == 'IL':
-    RSLR_Data = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\RSLR\\Int_Low_SLR.npy')
-elif RSLR_Type == 'I':
-    RSLR_Data = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\RSLR\\Int_SLR.npy')
-elif RSLR_Type == 'IH':
-    RSLR_Data = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\RSLR\\Int_High_SLR.npy')
-
-Start_Index = start_year - 2000
-RSLR_Rates = RSLR_Data[Start_Index:]
-
-# Set whether inlet is accretional or erosional:
-source_sink_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Source_Sink\\S32.csv'
-source_sink = np.loadtxt(source_sink_load_name,skiprows=1,delimiter=',')
-
-dune_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Buffer_Shoreline_Offsets_2019.csv'
-
-Sink_Options = ['Accretional_Sink','Erosional_Sink']
-
-start_num = 21
-end_num = 100
-
-run_name = []
-for snames in range(start_num,end_num):
-    if Storms == 'Baseline':
-        name_base = 'OCR_'+str(RSLR_Type)+str(Management_name)+'S'+str(snames)+'_T'
-    else:
-        name_base = 'OCR_'+str(RSLR_Type)+str(Management_name)+'S'+str(snames)+'_10'
-    Temp_Name = []
-    for sinks in range(0,2):
-        full_name = name_base+'_'+str(Sink_Options[sinks])
-        Temp_Name.append(copy.deepcopy(full_name))
-    run_name.append(copy.deepcopy(Temp_Name))
-
-s_file = []
-if Storms == 'Baseline':
-    for storm_num in range(start_num,end_num):
-        s_file.append(copy.deepcopy('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Synthetic_Storms\\OCR_Future_StormList_'+str(storm_num)+'_baseline.npy'))
-else:
-    for storm_num in range(start_num, end_num):
-        s_file.append(copy.deepcopy(
-            'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Synthetic_Storms\\Ten_Percent_Storms\\OCR_Future_StormList_' + str(
-                storm_num) + '_10.npy'))
-
-road_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Road_Dune_Distance_2019_2.csv'
-
-road_setbacks = np.loadtxt(road_load_name,skiprows=1,delimiter=',')
-dune_offset = np.loadtxt(dune_load_name,skiprows=1,delimiter=',')
-dune_offset_c = copy.deepcopy(dune_offset)
-
-rebuild_elev_threshold = 1.75#,0.1,0.5,1.0,1.5,2.0,5]
-
-Dune_Rebuilding_Height = 3
-
-
-road_setbacks = road_setbacks*10
-dune_offset = dune_offset[:]*10
-
-r_s = [0]*Total_B3D_Number
-r_s[15:54] = copy.deepcopy(road_setbacks)
-road_setbacks = r_s
-
-if preemptive_relocation:
-    road_setbacks[35:54] = np.add(road_setbacks[35:54],30)
-
-
-# Define which B3D island models have
-road_cells = [False] * Total_B3D_Number
-if status_quo == True or preemptive_relocation == True or nourishment == True:
-    road_cells[15:54] = [True]*len(range(15,54))
-else:
-    road_cells[15:35] = [True]*len(range(15,35))
-
-
-sandbag_cells = [False] * Total_B3D_Number
-if status_quo == True or preemptive_relocation == True:
-    sandbag_cells[15:54] = [True]*len(range(15,54))
-else:
-    sandbag_cells[15:35] = [True]*len(range(15,35))
-
-nourishment_cells = [False] * Total_B3D_Number
-if nourishment == True:
-    nourishment_cells[35:54] = [True]*len(range(35,54))
-
-if preemptive_relocation == True:
-    road_elev = [1.45] * Total_B3D_Number
-    road_elev[35:54] = [3]*len(range(35,54))
-
-e_file = []
-d_file = []
-for i in range(0,15):
-    dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Sample_1_dune.npy'
-    elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Topography_2019\\Domain_49_topography_2019.npy'
-    d_file.append(dune_name)
-    e_file.append(elev_name)
-
-for i in range(11,50):
-    dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Dunes_2019\\Domain_'+str(i)+'_dune_2019.npy'
-    elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Topography_2019\\Domain_'+str(i)+'_topography_2019.npy'
-    d_file.append(dune_name)
-    e_file.append(elev_name)
-
-for i in range(0,15):
-    dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Sample_1_dune.npy'
-    elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Topography_2019\\Domain_49_topography_2019.npy'
-    d_file.append(dune_name)
-    e_file.append(elev_name)
-
-background_threshold_list = [[0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            33,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            -1.0,-1.1,-1.2,-1.3,-1.4,
-                            -1.5,-1.6,-1.7,-1.8,-1.9,
-                            -2.0,-2.1,-2.2,-2.3,-2.4,
-                            -0,-0,-0,20,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0],\
-    [0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            33,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            -1.0,-1.1,-1.2,-1.3,-1.4,
-                            -1.5,-1.6,-1.7,-1.8,-1.9,
-                            -2.0,-2.1,-2.2,-2.3,-2.4,
-                            -0,-0,-0,-10,
-                            0,0,0,0,0,
-                            0,0,0,0,0,
-                            0,0,0,0,0]]
 
 def alongshore_connected(
     nt,
@@ -220,6 +94,8 @@ def alongshore_connected(
     rebuild_dune_threshold,
     roadway_management_on,
     beach_dune_manager_on,
+    use_defined_beach_width=False,
+    initial_beach_width=30,
     sea_level_rise_rate=0.0037,  # not an array
     sea_level_constant=True,  # not an array
     trigger_dune_knockdown=False,
@@ -231,6 +107,9 @@ def alongshore_connected(
     user_inputed_RSLR=False,
     user_inputed_RSLR_rate = [],
     allow_causeway = False,
+    MHW = 0.26,
+    Berm_Elevation = 1.7,
+    Beach_Slope = 0.022,
 ):
     # ###############################################################################
     # 9 - connect cascade domains (human management) with AST
@@ -261,6 +140,9 @@ def alongshore_connected(
         alongshore_transport_module=True,  # couple brie
         beach_nourishment_module=beach_dune_manager_on,
         community_economics_module=False,  # no community dynamics
+        berm_elevation=Berm_Elevation,
+        MHW=MHW,
+        beta = Beach_Slope,
         road_ele=road_ele,
         road_width=road_width,
         road_setback=road_setback,
@@ -278,7 +160,9 @@ def alongshore_connected(
         shoreline_offset=shoreline_offset,
         user_inputed_RSLR = user_inputed_RSLR,
         user_inputed_RSLR_rate = user_inputed_RSLR_rate,
-        allow_causeway=allow_causeway
+        allow_causeway=allow_causeway,
+        user_inputed_beach_width = initial_beach_width,
+        use_defined_beach_width = use_defined_beach_width,
     )
 
     # --------- LOOP ---------
@@ -352,7 +236,10 @@ def alongshore_uniform(run_name,
                        nourishment_interval,
                        road_elev,
                        allow_causeway,
-                       road_setbacks):
+                       road_setbacks,
+                       sandbag_elevation,
+                       Berm_Elev,
+                       MHW):
     # variables that DO NOT change among runs
     number_barrier3d_models = 69
     beach_width_threshold = [30] * number_barrier3d_models
@@ -373,7 +260,11 @@ def alongshore_uniform(run_name,
     background_erosion = background_erosion_list #list(background_erosion_list) # m/yr, background shoreline erosion
     rebuild_dune_threshold = 1  # m
     sandbag_management_on = sandbag_cells
-    sandbag_elevation = 0.75 # m
+    # sandbag_elevation = 0.75 # m
+    # Berm_Elev = 1.7
+    # MHW = 0.26
+    use_defined_beach_width = True
+    initial_beach_width = 30
 
     # baseline models for comparison -- all roadways ----------------------------------------
     roads_on = road_cells
@@ -421,19 +312,166 @@ def alongshore_uniform(run_name,
         enable_shoreline_offset=shoreline_offset_enabled,
         user_inputed_RSLR=True,
         user_inputed_RSLR_rate=RSLR_Rates,
-        allow_causeway = allow_causeway
+        allow_causeway = allow_causeway,
+        use_defined_beach_width = use_defined_beach_width,
+        initial_beach_width = initial_beach_width
     )
 
-for k in range(0,len(run_name)):
-    for l in range(0,len(background_threshold_list)):
-        alongshore_uniform(run_name=run_name[k][l],
-                           s_file=s_file[k],
-                           background_erosion_list=background_threshold_list[l],
-                           nourish_beach=nourishment_cells,
-                           nourishment_volume=nourishment_volume,
-                           nourishment_interval=nourishment_time,
-                           road_elev=road_elev,
-                           allow_causeway=allow_causeway,
-                           road_setbacks=road_setbacks
-                           )
-        os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')
+
+# RSLR Data
+
+RSLR_List = ['IL','I','IH']
+#RSLR_List = ['IL',,'IH']
+
+for RSLR_Vals in range(len(RSLR_List)):
+    RSLR_Type = RSLR_List[RSLR_Vals]
+
+    if RSLR_Type == 'IL':
+        RSLR_Data = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\RSLR\\Int_Low_SLR.npy')
+    elif RSLR_Type == 'I':
+        RSLR_Data = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\RSLR\\Int_SLR.npy')
+    elif RSLR_Type == 'IH':
+        RSLR_Data = np.load('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\RSLR\\Int_High_SLR.npy')
+
+    Start_Index = start_year - 2000
+    RSLR_Rates = RSLR_Data[Start_Index:]
+
+    dune_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Buffer_Shoreline_Offsets_2019.csv'
+
+    Sink_Options = ['Accretional_Sink','Erosional_Sink']
+
+    start_num = 0
+    end_num = 100
+
+    run_name = []
+    for snames in range(start_num,end_num):
+        if Storms == 'Baseline':
+            name_base = 'OCR_'+str(RSLR_Type)+str(Management_name)+'S'+str(snames)+'_Test'
+        else:
+            name_base = 'OCR_'+str(RSLR_Type)+str(Management_name)+'S'+str(snames)+'_10'
+        Temp_Name = []
+        for sinks in range(0,2):
+            full_name = name_base+'_'+str(Sink_Options[sinks])
+            Temp_Name.append(copy.deepcopy(full_name))
+        run_name.append(copy.deepcopy(Temp_Name))
+
+    s_file = []
+    if Storms == 'Baseline':
+        for storm_num in range(start_num,end_num):
+            s_file.append(copy.deepcopy('C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Synthetic_Storms\\OCR_Future_StormList_'+str(storm_num)+'_baseline.npy'))
+    else:
+        for storm_num in range(start_num, end_num):
+            s_file.append(copy.deepcopy(
+                'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\storms\\Synthetic_Storms\\Ten_Percent_Storms\\OCR_Future_StormList_' + str(
+                    storm_num) + '_10.npy'))
+
+    road_load_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\Road_Dune_Distance_2019_2.csv'
+
+    road_setbacks = np.loadtxt(road_load_name,skiprows=1,delimiter=',')
+    dune_offset = np.loadtxt(dune_load_name,skiprows=1,delimiter=',')
+    dune_offset_c = copy.deepcopy(dune_offset)
+
+    rebuild_elev_threshold = 1.75
+
+    Dune_Rebuilding_Height = 3
+
+
+    road_setbacks = road_setbacks*10
+    dune_offset = dune_offset[:]*10
+
+    r_s = [0]*Total_B3D_Number
+    r_s[15:54] = copy.deepcopy(road_setbacks)
+    road_setbacks = r_s
+
+    if preemptive_relocation:
+        road_setbacks[35:54] = np.add(road_setbacks[35:54],30)
+
+
+    # Define which B3D island models have
+    road_cells = [False] * Total_B3D_Number
+    if status_quo == True or preemptive_relocation == True or nourishment == True:
+        road_cells[15:54] = [True]*len(range(15,54))
+    else:
+        road_cells[15:35] = [True]*len(range(15,35))
+
+
+    sandbag_cells = [False] * Total_B3D_Number
+    if status_quo == True or preemptive_relocation == True:
+        sandbag_cells[15:54] = [True]*len(range(15,54))
+    else:
+        sandbag_cells[15:35] = [True]*len(range(15,35))
+
+    nourishment_cells = [False] * Total_B3D_Number
+    if nourishment == True:
+        nourishment_cells[35:54] = [True]*len(range(35,54))
+
+    if preemptive_relocation == True:
+        road_elev = [1.45] * Total_B3D_Number
+        road_elev[35:54] = [3]*len(range(35,54))
+
+    e_file = []
+    d_file = []
+    for i in range(0,15):
+        dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Sample_1_dune.npy'
+        elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Topography_2019\\Domain_49_topography_2019.npy'
+        d_file.append(dune_name)
+        e_file.append(elev_name)
+
+    for i in range(11,50):
+        dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Dunes_2019\\Domain_'+str(i)+'_dune_2019.npy'
+        elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Topography_2019\\Domain_'+str(i)+'_topography_2019.npy'
+        d_file.append(dune_name)
+        e_file.append(elev_name)
+
+    for i in range(0,15):
+        dune_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\dunes\\Sample_1_dune.npy'
+        elev_name = 'C:\\Users\\frank\\PycharmProjects\\CASCADE\\data\\Ocracoke_init_data\\elevations\\Topography_2019\\Domain_49_topography_2019.npy'
+        d_file.append(dune_name)
+        e_file.append(elev_name)
+
+    background_threshold_list = [[0,0,0,0,0,
+                                0,0,0,0,0,
+                                0,0,0,0,0,
+                                33,0,0,0,0,
+                                0,0,0,0,0,
+                                0,0,0,0,0,
+                                0,0,0,0,0,
+                                -1.0,-1.1,-1.2,-1.3,-1.4,
+                                -1.5,-1.6,-1.7,-1.8,-1.9,
+                                -2.0,-2.1,-2.2,-2.3,-2.4,
+                                -0,-0,-0,20,
+                                0,0,0,0,0,
+                                0,0,0,0,0,
+                                0,0,0,0,0],\
+        [0,0,0,0,0,
+                                0,0,0,0,0,
+                                0,0,0,0,0,
+                                33,0,0,0,0,
+                                0,0,0,0,0,
+                                0,0,0,0,0,
+                                0,0,0,0,0,
+                                -1.0,-1.1,-1.2,-1.3,-1.4,
+                                -1.5,-1.6,-1.7,-1.8,-1.9,
+                                -2.0,-2.1,-2.2,-2.3,-2.4,
+                                -0,-0,-0,-10,
+                                0,0,0,0,0,
+                                0,0,0,0,0,
+                                0,0,0,0,0]]
+
+
+    for k in range(0,len(run_name)):
+        for l in range(0,len(background_threshold_list)):
+            alongshore_uniform(run_name=run_name[k][l],
+                               s_file=s_file[k],
+                               background_erosion_list=background_threshold_list[l],
+                               nourish_beach=nourishment_cells,
+                               nourishment_volume=nourishment_volume,
+                               nourishment_interval=nourishment_time,
+                               road_elev=road_elev,
+                               allow_causeway=allow_causeway,
+                               road_setbacks=road_setbacks,
+                               MHW = MHW,
+                               Berm_Elev = Berm_Elev,
+                               sandbag_elevation = Sandbag_Elevation,
+                               )
+            os.chdir('C:\\Users\\frank\\PycharmProjects\\CASCADE')

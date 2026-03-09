@@ -513,7 +513,7 @@ def check_sandbag_need(
         design_elevation,
         barrier3d,
         sandbag_status,
-        threshold_elevation = 0.076,
+        threshold_elevation = 0.101,
 ):
     time_index = barrier3d.time_index -1
     if dune_road_distance == 0:
