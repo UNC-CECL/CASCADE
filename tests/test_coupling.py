@@ -36,6 +36,7 @@ def run_cascade_no_human_dynamics(datadir):
         alongshore_transport_module=False,
         beach_nourishment_module=False,
         community_economics_module=False,  # no community dynamics
+        outwash_module=False,
     )
 
     for _ in range(NT - 1):
@@ -74,6 +75,7 @@ def initialize_cascade_no_human_dynamics_ast(datadir):
         alongshore_transport_module=True,
         beach_nourishment_module=False,
         community_economics_module=False,
+        outwash_module=False,
     )
 
     return cascade

@@ -49,6 +49,7 @@ def run_cascade_roadway_dynamics(datadir):
         dune_design_elevation=3.2,  # m MHW, rebuild to 2 m dune above the roadway
         # m MHW, allow dune to erode down to 0.5 m above the roadway, v1 = 2.7 m
         dune_minimum_elevation=1.7,
+        outwash_module=False,
     )
 
     for _ in range(NT - 1):
@@ -94,6 +95,7 @@ def run_cascade_nourishment_dynamics(datadir):
         nourishment_volume=100,
         overwash_filter=40,
         overwash_to_dune=10,
+        outwash_module=False,
     )
 
     # Loop for 50 years at a 10 year interval, 100 m^3/m and then 50 years at a 20
