@@ -1,35 +1,33 @@
 # Lexi Van Blunk
 # last updated 8/3/2023
 
-# this code breaks up the "observed" configurations into interior, dune, and beach domains for input into CASCADE
+# this code breaks up the "observed" configurations into interior, dune, and beach
+# domains for input into CASCADE
 
-# NOTE: configurations 1 and 2 vary slightly here because I was still using the domains from the thesis rather than
-# the ones from the new larger DEM. In the future, I would suggest using these newer domains since they are consistent
+# NOTE: configurations 1 and 2 vary slightly here because I was still using the
+# domains from the thesis rather than the ones from the new larger DEM. In the
+# future, I would suggest using these newer domains since they are consistent
 # with configurations 3 and 4
+import os
 
 import numpy as np
 
 berm_el = 0.11
-save_dir = "C:/Users/Lexi/PycharmProjects/CASCADE/scripts/outwash_ms/configurations/"
+cascade_dir = r"C:\Users\Lexi\PycharmProjects\CASCADE"
+save_dir = os.path.join(cascade_dir, r"scripts\outwash_ms\configurations")
 save_now = False
 
-# ------------------------------------------------ load data -----------------------------------------------------------
+# --- load data ---
 
-section1 = np.load(
-    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config1\config1_observed_pre.npy"
-)
-section2 = np.load(
-    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config2\config2_observed_pre.npy"
-)
-section3 = np.load(
-    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config3\config3_observed_pre.npy"
-)
-section4 = np.load(
-    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config4\config4_observed_pre.npy"
-)
+config_dir = os.path.join(cascade_dir, r"scripts\outwash_ms\configurations")
+
+section1 = np.load(os.path.join(save_dir, r"config1\config1_observed_pre.npy"))
+section2 = np.load(os.path.join(save_dir, r"config2\config2_observed_pre.npy"))
+section3 = np.load(os.path.join(save_dir, r"config3\config3_observed_pre.npy"))
+section4 = np.load(os.path.join(save_dir, r"config4\config4_observed_pre.npy"))
 
 
-# --------------------------------------------- section 1 --------------------------------------------------------------
+# ---  section 1 ---
 section1_int = section1[0:30]
 section1_dunes = section1[30:35]
 section1_beach = section1[35:]
@@ -62,7 +60,7 @@ if save_now:
     np.save(save_dir_1 + "NCB-default_full_config1-damMHW.npy", full_1)
 
 
-# --------------------------------------------- section 2 --------------------------------------------------------------
+# --- section 2 ---
 section2_int = section2[0:27]
 section2_dunes = section2[27:31]
 section2_beach = section2[31:]
@@ -99,7 +97,7 @@ if save_now:
     # save the full input just because
     np.save(save_dir_2 + "NCB-default_full_config2-damMHW.npy", full_2)
 
-# --------------------------------------------- section 3 --------------------------------------------------------------
+# --- section 3 ---
 
 section3_int = section3[:23, :]
 section3_dunes = section3[23:28, :]
@@ -145,7 +143,7 @@ if save_now:
     # save the full input just because
     np.save(save_dir_3 + "NCB-default_full_config3-damMHW.npy", full_3)
 
-# --------------------------------------------- section 4 --------------------------------------------------------------
+# --- section 4 ---
 
 section4_int = section4[:26]
 section4_dunes = section4[28:30]

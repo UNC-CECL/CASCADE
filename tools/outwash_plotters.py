@@ -23,12 +23,14 @@ import numpy as np
 from matplotlib.ticker import AutoMinorLocator
 
 
-# -------------------------------------------elevation gif--------------------------------------------------------------
+# --- elevation gif ---
 def plot_ElevAnimation(dunes, interior, directory, start, stop, freq, berm_el):
     """
 
-    :param dunes: dune domain array from cascade for example cascade_outwash50.barrier3d[0]._DuneDomain
-    :param interior: interior array from cascade for example cascade_outwash50.barrier3d[0]._DomainTS
+    :param dunes: dune domain array from cascade for example
+        cascade_outwash50.barrier3d[0]._DuneDomain
+    :param interior: interior array from cascade for example
+        cascade_outwash50.barrier3d[0]._DomainTS
     :param directory: folder where we will save outputs
     :param start: start time index
     :param stop: end time index
@@ -122,8 +124,8 @@ def plot_dune_domain(b3d, TMAX):
         # vmax=Dmax * 10,
     )
     ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
-    cax = ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
-    cbar = duneFig.colorbar()
+    ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
+    duneFig.colorbar()
     # cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270)
     plt.xlabel("Alongshore Distance (dam)")
     plt.ylabel("Year")
@@ -722,9 +724,12 @@ def plot_Elev_CASCADE_subplots(
                         OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
                     ] = Domain
                 else:
-                    # use the outwash domains instead (these contain the beach and dunes already, need to flip?)
+                    # use the outwash domains instead (these contain the beach
+                    # and dunes already, need to flip?)
                     Domain = np.flip(outwash[iB3D]._post_outwash_full_domain_TS[t] * 10)
-                    # Dunes = (barrier3d[iB3D].DuneDomain[t, :, :] + barrier3d[iB3D].BermEl) * 10
+                    # Dunes = (
+                    #     barrier3d[iB3D].DuneDomain[t, :, :] + barrier3d[iB3D].BermEl
+                    # ) * 10
                     # Dunes = np.rot90(Dunes)
                     # Dunes = np.flipud(Dunes)
                     # Beach = BeachDomain * 10
@@ -806,12 +811,14 @@ def plot_Elev_CASCADE_subplots(
         if y_lim is not None:
             plt.ylim(y_lim)
             if outwash_flux > 0:
-                plt.text(
-                    1.5, y_lim[0] + 2, outwash_str, color="w", fontsize=10
-                )  # for outwash only years
-                # plt.text(1.5, y_lim[0] + 2, outwash_str, color="w", fontsize=10)  # for less years
-                # plt.text(2.5, y_lim[0] + 3, outwash_str, color="w", fontsize=6)  # for all years
-                # plt.text(1.5, y_lim[0] + 2, outwash_str, color="w", fontsize=7)  # for rando years
+                # for outwash only years
+                plt.text(1.5, y_lim[0] + 2, outwash_str, color="w", fontsize=10)
+                # for less years
+                # plt.text(1.5, y_lim[0] + 2, outwash_str, color="w", fontsize=10)
+                # for all years
+                # plt.text(2.5, y_lim[0] + 3, outwash_str, color="w", fontsize=6)
+                # for rando years
+                # plt.text(1.5, y_lim[0] + 2, outwash_str, color="w", fontsize=7)
         else:
             plt.ylim(bottom=OriginY - 35)
             if outwash_flux > 0:

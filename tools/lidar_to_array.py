@@ -1,12 +1,13 @@
 # Lexi Van Blunk
 # last updated 8/3/2023
 
-# this code loads the csv file of elevation points from ArcGIS and organizes them into python arrays
-# we also break up the domains into the 4 "observed" configurations and save them to the
-# scripts/outwash_ms/configurations folder
+# this code loads the csv file of elevation points from ArcGIS and organizes
+# them into python arrays we also break up the domains into the 4 "observed"
+# configurations and save them to the scripts/outwash_ms/configurations folder
 
-# SEE NOTEBOOK: plotting observed configurations, which does the same thing but visualizes each configuration into
-# subplots displaying the prestorm, poststorm, and elevation change plots (and shows boxes where we calculate erosion)
+# SEE NOTEBOOK: plotting observed configurations, which does the same thing
+# but visualizes each configuration into subplots displaying the prestorm,
+# poststorm, and elevation change plots (and shows boxes where we calculate erosion)
 # we also calculate erosion in the notebook
 
 import os
@@ -18,7 +19,7 @@ from matplotlib import pyplot as plt
 plt.rcParams.update({"font.size": 15})
 
 
-# --------------------------------------- load the data as a dataframe ------------------------------------------------
+# --- load the data as a dataframe ---
 
 os.chdir("C:/Users/Lexi/Documents/Research/Outwasher Paper/GIS data/")
 
@@ -28,16 +29,14 @@ prestorm_points_df = pd.read_csv("raster_points.csv")
 # get the column from the csv that contains the elevations
 prestorm_elevations = prestorm_points_df["grid_code"]
 
-alongshore_length_feature_class = (
-    4000  # in meters, along-shore side of rectangle from GIS (barrier length)
-)
-num_cols_domain = int(
-    alongshore_length_feature_class / 10
-)  # we specified 10x10 m cells
-num_rows_domain = int(
-    len(prestorm_elevations) / num_cols_domain
-)  # this is the width of the island
-MHW = 0.36  # meters NAVD88? (subtract 0.36 m from NAVD88 elevations to get MHW elevations)
+# in meters, along-shore side of rectangle from GIS (barrier length)
+alongshore_length_feature_class = 4000
+# we specified 10x10 m cells
+num_cols_domain = int(alongshore_length_feature_class / 10)
+# this is the width of the island
+num_rows_domain = int(len(prestorm_elevations) / num_cols_domain)
+# meters NAVD88? (subtract 0.36 m from NAVD88 elevations to get MHW elevations)
+MHW = 0.36
 
 prestorm_elevations = prestorm_elevations - MHW  # convert elevations from NAVD88 to MHW
 
@@ -47,7 +46,7 @@ post_elevations = post_points_df["grid_code"]
 post_elevations = post_elevations - MHW  # convert elevations from NAVD88 to MHW
 
 
-# ---------------------------- organize the list of elevations into an array--------------------------------------------
+# --- organize the list of elevations into an array ---
 
 elev_array = np.zeros([num_rows_domain, num_cols_domain])
 start = 0
@@ -72,7 +71,7 @@ for r in range(150):
             post_elev_array[r, c] = -3
 
 
-# ------------------------------------------ plotting the domains ------------------------------------------------------
+# --- plotting the domains ---
 xlabel = "alongshore distance (m)"
 ylabel = "cross-shore distance (m)"
 
@@ -151,29 +150,20 @@ plt.xticks(x_ticks, x_tick_labels)
 plt.yticks(y_ticks, y_tick_labels)
 plt.tight_layout()
 
-# --------------------------- convert to dam and make the 4 configurations ---------------------------------------------
+# --- convert to dam and make the 4 configurations ---
 elev_array = elev_array / 10
 section1_pre = elev_array[147:188, 98:148]
 section2_pre = elev_array[147:188, 148:198]
 section3_pre = elev_array[147:188, 248:298]
 section4_pre = elev_array[147:188, 198:248]  # validation configuration
 
-np.save(
-    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config1\config1_observed_pre.npy",
-    section1_pre,
-)
-np.save(
-    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config2\config2_observed_pre.npy",
-    section2_pre,
-)
-np.save(
-    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config3\config3_observed_pre.npy",
-    section3_pre,
-)
-np.save(
-    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config4\config4_observed_pre.npy",
-    section4_pre,
-)
+cascade_dir = r"C:\Users\Lexi\PycharmProjects\CASCADE"
+save_dir = os.path.join(cascade_dir, r"\scripts\outwash_ms\configurations")
+
+np.save(os.path.join(save_dir, r"config1\config1_observed_pre.npy"), section1_pre)
+np.save(os.path.join(save_dir, r"config2\config2_observed_pre.npy"), section2_pre)
+np.save(os.path.join(save_dir, r"config3\config3_observed_pre.npy"), section3_pre)
+np.save(os.path.join(save_dir, r"config4\config4_observed_pre.npy"), section4_pre)
 
 post_elev_array = post_elev_array / 10
 section1_post = post_elev_array[147:188, 98:148]
@@ -181,19 +171,7 @@ section2_post = post_elev_array[147:188, 148:198]
 section3_post = post_elev_array[147:188, 248:298]
 section4_post = post_elev_array[147:188, 198:248]
 
-np.save(
-    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config1_observed_post.npy",
-    section1_post,
-)
-np.save(
-    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config2_observed_post.npy",
-    section2_post,
-)
-np.save(
-    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config3_observed_post.npy",
-    section3_post,
-)
-np.save(
-    r"C:\Users\Lexi\PycharmProjects\CASCADE\scripts\outwash_ms\configurations\config4_observed_post.npy",
-    section4_post,
-)
+np.save(os.path.join(save_dir, "config1_observed_post.npy"), section1_post)
+np.save(os.path.join(save_dir, "config2_observed_post.npy"), section2_post)
+np.save(os.path.join(save_dir, "config3_observed_post.npy"), section3_post)
+np.save(os.path.join(save_dir, "config4_observed_post.npy"), section4_post)
