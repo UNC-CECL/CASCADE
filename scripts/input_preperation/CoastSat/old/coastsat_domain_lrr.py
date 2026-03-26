@@ -6,7 +6,7 @@ Step 2 of 2 in the domain-level LRR workflow.
 Requires:
   1. transect_domain_lookup.csv   – from coastsat_domain_mapping.py
   2. CoastSat time-series CSVs    – one per transect
-  3. coastsat_lrr_analysis.py     – in the same directory (or on PYTHONPATH)
+  3. coastsat_lrr_analysis_old.py     – in the same directory (or on PYTHONPATH)
 
 Outputs:
   domain_lrr_summary.csv  –  one row per domain with aggregated LRR stats
@@ -29,7 +29,7 @@ LOOKUP_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\
 # Root folder containing all site subfolders (e.g. usa_NC_0032_timeseries, usa_NC_0033_timeseries, ...)
 # The script will automatically find every CSV in every subfolder one level down.
 # Example: r"C:/Users/hahenry/Downloads"
-ROOT_DATA_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\coastsat_timeseries"
+ROOT_DATA_DIR = r"/scripts/input_preperation/CoastSat/coastsat_timeseries"
 
 # Optional: only include subfolders whose names contain this string.
 # Set to "" to include ALL subfolders under ROOT_DATA_DIR.
@@ -43,7 +43,7 @@ END_DATE   = "1997-12-31"
 MIN_OBS = 3
 
 # Output directory
-OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1978_1997"
+OUTPUT_DIR = r"/scripts/input_preperation/CoastSat/1978_1997"
 
 # CASCADE buffer domains to EXCLUDE from summaries
 # (e.g., the 15 buffer domains on each end of your 90+30 setup)

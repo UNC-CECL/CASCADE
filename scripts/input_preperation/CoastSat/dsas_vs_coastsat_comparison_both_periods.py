@@ -38,7 +38,7 @@ Outputs (saved to OUTPUT_DIR)
 # ============================================================
 
 # --- DSAS CSVs (uploaded files) ---
-DSAS_CSV_1978_1997 = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\shoreline_change\dsas_1978_1997_rates.csv"
+DSAS_CSV_1978_1997 = None #r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\shoreline_change\dsas_1978_1997_rates.csv"
 DSAS_CSV_1997_2019 = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\shoreline_change\dsas_1997_2019_rates.csv"
 
 DSAS_DOMAIN_COL = "domain_id"   # domain number column
@@ -46,8 +46,8 @@ DSAS_LRR_COL    = "MEAN_LRR"    # mean LRR across transects per domain
 DSAS_STD_COL    = "STD_LRR"     # std across transects per domain
 
 # --- CoastSat CSVs (from coastsat_domain_lrr.py) ---
-COASTSAT_CSV_1978_1997 = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1978_1997\domain_lrr_summary.csv"
-COASTSAT_CSV_1997_2019 = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1997_2019\domain_lrr_summary.csv"
+COASTSAT_CSV_1978_1997 = None #r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1978_1997\domain_lrr_summary.csv"
+COASTSAT_CSV_1997_2019 = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1997_2019_specific_dates\domain_lrr_summary.csv"
 
 CS_DOMAIN_COL = "domain_number"
 CS_LRR_COL    = "mean_lrr"      # "mean_lrr" or "median_lrr"
@@ -58,7 +58,7 @@ DOMAIN_MIN = 1
 DOMAIN_MAX = 90
 
 # --- Output ---
-OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\dsas_coastsat_comparison_outputs"
+OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\dsas_coastsat_specific_dates"
 
 # ============================================================
 # IMPORTS

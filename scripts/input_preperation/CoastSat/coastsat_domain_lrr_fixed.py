@@ -6,7 +6,7 @@ Step 2 of 2 in the domain-level LRR workflow.
 Requires:
   1. transect_domain_lookup.csv   – from coastsat_domain_mapping.py
   2. CoastSat time-series CSVs    – one per transect
-  3. coastsat_lrr_analysis.py     – in the same directory (or on PYTHONPATH)
+  3. coastsat_lrr_analysis_old.py     – in the same directory (or on PYTHONPATH)
 
 Outputs:
   domain_lrr_summary.csv  –  one row per domain with aggregated LRR stats
@@ -61,7 +61,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.cm as cm
-from matplotlib.ticker import MultipleLocator
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -69,7 +68,7 @@ warnings.filterwarnings("ignore")
 # (assumes both scripts are in the same directory)
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, script_dir)
-from coastsat_lrr_analysis import (
+from scripts.input_preperation.CoastSat.old.coastsat_lrr_analysis_old import (
     load_timeseries, filter_dates, compute_lrr, _empty_lrr
 )
 

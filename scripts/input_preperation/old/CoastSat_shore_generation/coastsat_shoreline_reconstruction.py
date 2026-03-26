@@ -35,26 +35,26 @@ Dependencies
 # ============================================================
 
 # CoastSat transects GeoJSON - needed for origin coordinates and bearings
-TRANSECT_GEOM_PATH = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\CoastSat_transect_layer.geojson"
+TRANSECT_GEOM_PATH = r"/scripts/input_preperation/CoastSat/CoastSat_transect_layer.geojson"
 TRANSECT_ID_COL    = "id"
 
 # Time-series CSVs - same setup as coastsat_domain_lrr.py
-ROOT_DATA_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\coastsat_timeseries"
+ROOT_DATA_DIR = r"/scripts/input_preperation/CoastSat/coastsat_timeseries"
 SITE_FILTER   = "usa_NC"
 
 # Lookup table from coastsat_domain_mapping.py
 # Used to restrict to Hatteras transects and order them along-shore.
 # Set to None to use all transects found in ROOT_DATA_DIR.
-LOOKUP_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\transect_domain_lookup.csv"
+LOOKUP_CSV = None
 
 # Date range for shoreline generation (inclusive)
 START_DATE = "2024-01-01"
-END_DATE   = "2024-06-01"
+END_DATE   = "2024-02-01"
 
 # Time step between generated shorelines
 # "MS" = monthly, "SMS" = semi-monthly (~every 2 weeks), "YS" = yearly
 # SMS recommended for modern data (post-2015) given ~15 day median observation gap
-DATE_FREQ = "SMS"
+DATE_FREQ = "MS"
 
 # Maximum gap allowed between bracketing observations (days).
 # Recommended: 30 days for modern data (SMS), 365 days for early Landsat era
@@ -70,7 +70,7 @@ DOMAIN_MIN = 1
 DOMAIN_MAX = 90
 
 # Output directory
-OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat_shore_generation\CoastSat_shoreline_outputs"
+OUTPUT_DIR = r"/scripts/input_preperation/old/CoastSat_shore_generation/CoastSat_shoreline_outputs"
 
 # Coordinate Reference System for output shapefiles
 # UTM Zone 18N is appropriate for the NC Outer Banks
@@ -250,9 +250,41 @@ def chainage_to_point(origin_lon, origin_lat, bearing_deg, distance_m):
 # STEP 5: BUILD AND EXPORT SHORELINES
 # ============================================================
 
+def sort_points_along_shore(points):
+    """
+    Sort a list of (lon, lat) points into smooth along-shore order.
+
+    Projects the point cloud onto its principal axis (longest dimension)
+    using PCA, then sorts by position along that axis. This handles any
+    island orientation without needing to hard-code a direction, and
+    eliminates zigzagging caused by out-of-order transect IDs.
+    """
+    if len(points) < 2:
+        return points
+
+    arr = np.array(points)           # shape (N, 2): columns = [lon, lat]
+    centroid = arr.mean(axis=0)
+    arr_c    = arr - centroid        # centre the cloud
+
+    # Covariance matrix and principal eigenvector
+    cov  = np.cov(arr_c.T)
+    evals, evecs = np.linalg.eigh(cov)
+    principal_axis = evecs[:, np.argmax(evals)]   # unit vector along island
+
+    # Project each point onto the principal axis
+    projections = arr_c @ principal_axis
+
+    # Sort by projection distance
+    order  = np.argsort(projections)
+    return [points[i] for i in order]
+
+
 def build_shoreline_for_date(target_date, ordered_transects, ts_data,
                               geom_df, max_gap_days):
-    """Interpolate shoreline position for all transects at a target date."""
+    """
+    Interpolate shoreline position for all transects at a target date,
+    then sort points into smooth along-shore order before returning.
+    """
     points  = []
     n_valid = 0
     n_skip  = 0
@@ -271,6 +303,9 @@ def build_shoreline_for_date(target_date, ordered_transects, ts_data,
         )
         points.append((lon, lat))
         n_valid += 1
+
+    # Sort spatially along the island's principal axis to remove zigzags
+    points = sort_points_along_shore(points)
 
     return points, n_valid, n_skip
 

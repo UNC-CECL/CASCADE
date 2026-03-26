@@ -2,8 +2,8 @@
 CoastSat Transect LRR (Linear Regression Rate) Analysis
 ========================================================
 Loads CoastSat time-series CSVs from one or more folders,
-filters to a user-defined date range OR a set of specific years,
-and computes the Linear Regression Rate (LRR) for every transect.
+filters to a user-defined date range, and computes the
+Linear Regression Rate (LRR) for every transect.
 
 Expected file naming convention:
     <site>_<transect_id>.csv   e.g.  usa_NC_0033_0002.csv
@@ -15,7 +15,7 @@ Expected CSV format (CoastSat standard):
 Usage
 -----
 Edit the CONFIG section below, then run:
-    python coastsat_lrr_analysis.py
+    python coastsat_lrr_analysis_old.py
 """
 
 # ============================================================
@@ -23,15 +23,16 @@ Edit the CONFIG section below, then run:
 # ============================================================
 
 # List every folder that contains time-series CSVs.
+# All CSVs in these folders will be processed.
 DATA_FOLDERS = [
     r"C:/path/to/your/coastsat_data/site1",
     r"C:/path/to/your/coastsat_data/site2",
+    # add more as needed…
 ]
 
-# Date range filter (inclusive). Used when MATCH_YEARS is empty.
-# Set either to None to include all dates.
-START_DATE = "1984-01-01"
-END_DATE   = "2026-01-01"
+# Date range filter (inclusive).  Use None to include all dates.
+START_DATE = "1984-01-01"   # e.g. "1997-01-01"  or  None
+END_DATE   = "2026-01-01"   # e.g. "2019-12-31"  or  None
 
 # Minimum number of observations required to compute an LRR.
 MIN_OBS = 10
@@ -59,9 +60,9 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 # ============================================================
 
 def parse_transect_id(filepath: str) -> str:
-    """Extract transect ID from filename (stem, no extension)."""
+    """Extract transect ID from filename (everything after last '_')."""
     basename = os.path.splitext(os.path.basename(filepath))[0]
-    return basename
+    return basename  # keep full name; change if you need only suffix
 
 
 def load_timeseries(filepath: str) -> pd.DataFrame:
@@ -70,8 +71,8 @@ def load_timeseries(filepath: str) -> pd.DataFrame:
     Returns a DataFrame with columns ['date', 'chainage_m'].
     """
     df = pd.read_csv(filepath, header=0)
-    df.columns = [c.strip() for c in df.columns]
-    date_col     = df.columns[0]
+    df.columns = [c.strip() for c in df.columns]          # strip whitespace
+    date_col    = df.columns[0]
     chainage_col = df.columns[1]
 
     df = df.rename(columns={date_col: "date", chainage_col: "chainage_m"})
@@ -82,119 +83,12 @@ def load_timeseries(filepath: str) -> pd.DataFrame:
 
 
 def filter_dates(df: pd.DataFrame, start: str | None, end: str | None) -> pd.DataFrame:
-    """
-    Clip DataFrame to a continuous [start, end] date range (inclusive).
-
-    Use this when you want all CoastSat observations between two dates,
-    e.g. all imagery from 1997-01-01 to 2019-12-31.
-
-    For matching specific USGS shoreline years instead, use filter_to_years().
-    """
+    """Clip DataFrame to [start, end] date range (inclusive)."""
     if start:
         df = df[df["date"] >= pd.Timestamp(start, tz="UTC")]
     if end:
         df = df[df["date"] <= pd.Timestamp(end, tz="UTC")]
     return df.reset_index(drop=True)
-
-
-def filter_to_dates(df: pd.DataFrame,
-                    survey_dates: list[str],
-                    window_days: int = 30) -> pd.DataFrame:
-    """
-    Retain only CoastSat observations that fall within ±window_days of
-    one or more specific USGS shoreline survey dates.
-
-    This is the preferred filter for direct DSAS comparisons because it
-    anchors the CoastSat window to the actual survey date of each
-    digitized shoreline, not just the calendar year.  For example, if
-    your DSAS Period 1997–2019 uses shorelines digitized on
-    1997-09-15, 2008-04-22, and 2019-10-03, this function will collect
-    CoastSat imagery within ±30 days of each of those dates, ensuring
-    seasonal and tidal conditions are as comparable as possible.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Output of load_timeseries() — must have a tz-aware 'date' column.
-    survey_dates : list[str]
-        ISO-8601 date strings for each USGS shoreline used in DSAS,
-        e.g. ["1997-09-15", "2008-04-22", "2019-10-03"].
-    window_days : int, optional
-        Half-width of the search window in days around each survey date.
-        Default 30 (i.e. ±1 month).  Increase if CoastSat has sparse
-        coverage in your area (cloud cover, satellite gaps).
-
-    Returns
-    -------
-    pd.DataFrame
-        Filtered copy sorted by date, index reset.
-        Column 'survey_date' is added to show which anchor date each
-        observation was matched to (nearest anchor wins if windows overlap).
-
-    Notes
-    -----
-    If the windows for two survey dates overlap, an observation is
-    attributed to the nearest anchor date.  This avoids double-counting
-    a single image in the regression.
-
-    Examples
-    --------
-    # Period 1997–2019 with 3 USGS shorelines, ±30-day window
-    df_matched = filter_to_dates(
-        df_raw,
-        survey_dates = ["1997-09-15", "2008-04-22", "2019-10-03"],
-        window_days  = 30,
-    )
-
-    # Period 1978–1997 with 3 USGS shorelines, ±30-day window
-    df_matched = filter_to_dates(
-        df_raw,
-        survey_dates = ["1978-06-10", "1986-08-01", "1997-09-15"],
-        window_days  = 30,
-    )
-    """
-    if not survey_dates:
-        return df.copy()
-
-    anchors = [pd.Timestamp(d, tz="UTC") for d in survey_dates]
-
-    # For each observation find the nearest anchor and its distance in days
-    def nearest_anchor(obs_date):
-        diffs = [(abs((obs_date - a).total_seconds()) / 86400.0, a) for a in anchors]
-        return min(diffs, key=lambda x: x[0])
-
-    rows = []
-    for _, row in df.iterrows():
-        dist_days, anchor = nearest_anchor(row["date"])
-        if dist_days <= window_days:
-            rows.append({**row.to_dict(), "survey_date": anchor.strftime("%Y-%m-%d")})
-
-    if not rows:
-        empty = df.iloc[:0].copy()
-        empty["survey_date"] = pd.Series(dtype="str")
-        return empty
-
-    out = pd.DataFrame(rows)
-    return out.sort_values("date").reset_index(drop=True)
-
-
-# kept for backwards compatibility — wraps filter_to_dates using Jan 1 of each year
-def filter_to_years(df: pd.DataFrame,
-                    years: list[int],
-                    window_days: int = 0) -> pd.DataFrame:
-    """
-    Backwards-compatible wrapper.  Prefer filter_to_dates() for new runs.
-    If window_days > 0, anchors windows on Jan 1 of each year.
-    If window_days == 0, keeps any observation whose calendar year is in the list.
-    """
-    if not years:
-        return df.copy()
-    if window_days > 0:
-        survey_dates = [f"{yr}-01-01" for yr in years]
-        return filter_to_dates(df, survey_dates, window_days)
-    else:
-        filtered = df[df["date"].dt.year.isin(years)].copy()
-        return filtered.sort_values("date").reset_index(drop=True)
 
 
 def compute_lrr(df: pd.DataFrame) -> dict:
@@ -213,6 +107,7 @@ def compute_lrr(df: pd.DataFrame) -> dict:
     if len(df) < 2:
         return _empty_lrr(len(df))
 
+    # Convert dates to decimal years for regression
     t0   = df["date"].min()
     days = (df["date"] - t0).dt.total_seconds() / 86400.0
     yrs  = days / 365.25
@@ -222,6 +117,7 @@ def compute_lrr(df: pd.DataFrame) -> dict:
 
     slope, intercept, r, p, se = stats.linregress(x, y)
 
+    # 95 % CI half-width  (t * SE)
     from scipy.stats import t as t_dist
     dof = len(x) - 2
     t95 = t_dist.ppf(0.975, dof) if dof > 0 else np.nan
@@ -263,17 +159,21 @@ def plot_timeseries(df_raw: pd.DataFrame, df_filtered: pd.DataFrame,
     """Plot raw + filtered observations with the LRR trend line."""
     fig, ax = plt.subplots(figsize=(10, 4))
 
+    # All observations (faded)
     ax.scatter(df_raw["date"], df_raw["chainage_m"],
                color="lightgray", s=15, zorder=1, label="All obs.")
-    ax.scatter(df_filtered["date"], df_filtered["chainage_m"],
-               color="steelblue", s=20, zorder=2, label="Selected obs.")
 
+    # Filtered observations
+    ax.scatter(df_filtered["date"], df_filtered["chainage_m"],
+               color="steelblue", s=20, zorder=2, label="Selected period")
+
+    # LRR trend line
     if not np.isnan(lrr_result["lrr_m_yr"]) and len(df_filtered) >= 2:
         t0   = df_filtered["date"].min()
         days = (df_filtered["date"] - t0).dt.total_seconds() / 86400.0
         yrs  = days / 365.25
-        coeffs = np.polyfit(yrs.values, df_filtered["chainage_m"].values, 1)
-        y_hat  = np.polyval(coeffs, yrs)
+        y_hat = (np.polyfit(yrs.values, df_filtered["chainage_m"].values, 1)[0] * yrs +
+                 np.polyfit(yrs.values, df_filtered["chainage_m"].values, 1)[1])
         ax.plot(df_filtered["date"], y_hat, color="crimson", lw=2,
                 label=f"LRR = {lrr_result['lrr_m_yr']:+.2f} m/yr  (R²={lrr_result['r_squared']:.2f})")
 
@@ -338,6 +238,7 @@ def main():
 
     results_df = pd.DataFrame(records)
 
+    # ---- Summary stats ----
     valid = results_df.dropna(subset=["lrr_m_yr"])
     print(f"\n{'='*55}")
     print(f"  Transects processed : {len(results_df)}")
@@ -348,10 +249,12 @@ def main():
         print(f"  Min / Max LRR       : {valid['lrr_m_yr'].min():+.3f} / {valid['lrr_m_yr'].max():+.3f} m/yr")
     print(f"{'='*55}\n")
 
+    # ---- Save results ----
     if OUTPUT_CSV:
         results_df.to_csv(OUTPUT_CSV, index=False)
         print(f"Results saved to: {OUTPUT_CSV}")
 
+    # ---- Plots ----
     if len(valid) > 1:
         plot_lrr_summary(results_df)
 
@@ -360,39 +263,26 @@ def main():
 
 # ============================================================
 # SINGLE-TRANSECT INTERACTIVE MODE
+# (call this from a notebook or REPL to inspect one transect)
 # ============================================================
 
 def inspect_transect(filepath: str,
                      start: str | None = START_DATE,
-                     end: str | None   = END_DATE,
-                     match_years: list[int] | None = None,
-                     window_days: int = 0):
+                     end: str | None   = END_DATE):
     """
     Load, filter, compute LRR, and plot a single transect CSV.
 
-    Pass match_years to use year-matching instead of a continuous range.
-
-    Examples:
-        # Full date range
+    Example:
+        from coastsat_lrr_analysis import inspect_transect
         inspect_transect("data/usa_NC_0033_0002.csv", "1997-01-01", "2019-12-31")
-
-        # Year-matched (DSAS-comparable)
-        inspect_transect("data/usa_NC_0033_0002.csv", match_years=[1997, 2019])
     """
-    tid     = parse_transect_id(filepath)
-    df_raw  = load_timeseries(filepath)
-
-    if match_years:
-        df_filt = filter_to_years(df_raw, match_years, window_days)
-        period  = f"years={match_years}"
-    else:
-        df_filt = filter_dates(df_raw, start, end)
-        period  = f"{start} → {end}"
-
-    result = compute_lrr(df_filt)
+    tid        = parse_transect_id(filepath)
+    df_raw     = load_timeseries(filepath)
+    df_filt    = filter_dates(df_raw, start, end)
+    result     = compute_lrr(df_filt)
 
     print(f"\nTransect : {tid}")
-    print(f"Period   : {period}")
+    print(f"Period   : {start} → {end}")
     print(f"N obs    : {result['n_obs']}")
     print(f"LRR      : {result['lrr_m_yr']:+.4f} m/yr")
     print(f"95% CI   : ±{result['unc_m_yr']:.4f} m/yr")

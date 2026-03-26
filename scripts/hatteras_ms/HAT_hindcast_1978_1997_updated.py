@@ -176,7 +176,7 @@ _S   = 0.0   # GIS  1- 6  N. undeveloped
 _BUX = 0.0   # GIS  7- 8  Buxton
 _M   = 0.0   # GIS  9-20  Mid undeveloped
 _AVN = 3.0   # GIS 21-31  Avon
-_C   = 1.0   # GIS 32-67  Central undeveloped
+_C   = 0.5   # GIS 32-67  Central undeveloped
 _SWR = 0.0   # GIS 68-83  Salvo / Waves / Rodanthe
 _N   = 0.0   # GIS 84-90  S. undeveloped
 
