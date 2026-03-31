@@ -31,7 +31,7 @@ DATA_FOLDERS = [
 # Date range filter (inclusive). Used when MATCH_YEARS is empty.
 # Set either to None to include all dates.
 START_DATE = "1984-01-01"
-END_DATE   = "2026-01-01"
+END_DATE   = "2004-01-01"
 
 # Minimum number of observations required to compute an LRR.
 MIN_OBS = 10

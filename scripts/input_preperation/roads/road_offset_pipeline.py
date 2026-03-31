@@ -35,12 +35,12 @@ import pandas as pd
 # 1. USER CONFIGURATION
 # =============================================================================
 
-YEAR = 1978
+YEAR = 1984
 
 RAW_ROAD_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\roads\offset\1978\1978_road_offset_raw.csv"
 RAW_DUNE_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\island_offset\1978\1978_duneline_offset_raw.csv"
 
-OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\roads\offset\1978"
+OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\roads\offset\1984"
 FINAL_OUTPUT_NAME = f"RoadSetback_{YEAR}.csv"
 
 # CASCADE domain window

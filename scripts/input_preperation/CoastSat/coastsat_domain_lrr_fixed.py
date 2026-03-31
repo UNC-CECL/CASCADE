@@ -36,14 +36,14 @@ ROOT_DATA_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperati
 SITE_FILTER = "usa_NC"    # e.g. "usa_NC" to match usa_NC_0032_timeseries, usa_NC_0033_timeseries, etc.
 
 # Date range for LRR calculation
-START_DATE = "1997-01-01"
-END_DATE   = "2019-12-31"
+START_DATE = "2004-01-01"
+END_DATE   = "2024-12-31"
 
 # Minimum observations per transect to include it in domain summaries
 MIN_OBS = 3
 
 # Output directory
-OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1997_2019"
+OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\2004_2024"
 
 # CASCADE buffer domains to EXCLUDE from summaries
 # (e.g., the 15 buffer domains on each end of your 90+30 setup)
