@@ -17,9 +17,9 @@ import os
 MASTER_STORM_PATH = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\storms\hindcast_storms\HAT_1978_2022_Final_Hindcast_Storms.npy"
 
 # Configuration based on file name and user request
-START_YEAR = 1978
-SPLIT_YEAR = 1997
-END_YEAR_PERIOD_B = 2019
+START_YEAR = 1984
+SPLIT_YEAR = 2004
+END_YEAR_PERIOD_B = 2024
 
 # Column names confirmed by your labmate:
 # Note: The 'Year_Index' column is relative to START_YEAR

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors as mcolors
 
 # Load the calculated rates
-domain_rates = pd.read_csv('../domain_shoreline_change_rates.csv')
+domain_rates = pd.read_csv('../dsas_rates/domain_shoreline_change_rates.csv')
 
 # Get available time periods (exclude the 'Domain' column)
 rate_cols = [col for col in domain_rates.columns if 'EPR_' in col]

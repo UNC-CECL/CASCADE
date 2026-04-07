@@ -17,7 +17,7 @@ print("LOADING DATA")
 print("="*70)
 
 # Load the intersection data
-df = pd.read_csv('../All_Shoreline_Transect_Intersections.csv')
+df = pd.read_csv('../dsas_rates/All_Shoreline_Transect_Intersections.csv')
 
 # Define column names (these are from your actual file)
 TRANSECT_ID_COL = 'Transects_100m_LineID'

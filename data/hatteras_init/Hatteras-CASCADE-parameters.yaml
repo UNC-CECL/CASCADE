@@ -4,15 +4,15 @@ BermEl: 1.9
 DShoreface: 17.8
 DuneParamStart: true
 GrowthParamStart: false
-LShoreface: 1757.4442879602102
+LShoreface: 1757.444287960211
 MHW: 0.46
 RSLR_Constant: true
 RSLR_const: 0.003
 Rat: 0.0
 Sandbag_elevation: 1.9
-ShorefaceToe: -7447.254516129033
+ShorefaceToe: -7450.53870967742
 Shrub_ON: 0
-TMAX: 19
+TMAX: 20
 beta: 0.04
 dune_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\buffer\sample_1_dune.npy
 elevation_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\buffer\sample_1_topography.npy
@@ -21,4 +21,4 @@ k_sf: 64177.28163098347
 rmax: 0.95
 rmin: 0.55
 s_sf_eq: 0.010132317716796572
-storm_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\storms\hindcast_storms\storms_1978_1997.npy
+storm_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\storms\hindcast_storms\storms_1984_2004.npy

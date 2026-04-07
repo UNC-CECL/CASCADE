@@ -86,8 +86,8 @@ DUNE_OFFSET_FILE_1984 = os.path.join(
 DUNE_OFFSET_FILE_2004 = os.path.join(
     HATTERAS_DATA_BASE,
     "island_offset",
-    "hindcast_2004",
-    f"Island_Dune_Offsets_2004_ADDED_{TOTAL_DOMAINS}.csv",
+    "hindcast_1984",
+    f"Island_Dune_Offsets_1984_ADDED_{TOTAL_DOMAINS}.csv",
 )
 
 # --- Storm files ---
@@ -192,7 +192,7 @@ DOMAIN_TICK_STEP = 5
 #   N. undeveloped        pad 98-104  GIS 84-90
 #   Buffers               pad 105-119 (no GIS ID)
 # -----------------------------------------------------------------------------
-USE_BACKGROUND_EROSION = True   # ← flip to False to zero all background rates
+USE_BACKGROUND_EROSION = False  # ← flip to False to zero all background rates
 
 # Regional rate values (dam/yr) — only active when USE_BACKGROUND_EROSION = True
 _S_RATE     =  0.0   # GIS  1- 6  S. undeveloped
@@ -216,22 +216,26 @@ _C       = _C_RATE     * _scale
 _SWR     = _SWR_RATE   * _scale
 _N       = _N_RATE     * _scale
 
-#                         pad:  0     1     2     3     4     5     6     7     8     9
+#                         pad:  0      1      2      3      4      5      6      7      8      9
 BACKGROUND_EROSION_RATES = [
-    _B,   _B,   _B,   _B,   _B,   _B,   _B,   _B,   _B,   _B,   # buf   0- 9
-    _B,   _B,   _B,   _B,   _B,   _GIS1, _S,   _S,   _S,   _S,  # buf  10-14 | GIS  1- 5
-    _S,   _BUX, _BUX, _M,   _M,   _M,   _M,   _M,   _M,   _M,   # GIS  6 | 7-8 (Buxton) | 9-15
-    _M,   _M,   _M,   _M,   _M,   _AVN, _AVN, _AVN, _AVN, _AVN, # GIS 16-20 | 21-25 (Avon)
-    _AVN, _AVN, _AVN, _AVN, _AVN, _AVN, _AVN, _AVN, _C,   _C,   # GIS 26-31 (Avon) | 32-33 (Central)
-    _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   # GIS 34-43  (Central)
-    _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   # GIS 44-53  (Central)
-    _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   # GIS 54-63  (Central)
-    _C,   _C,   _C,   _C,   _C,   _C,   _C,   _SWR, _SWR, _SWR, # GIS 64-67 (Central) | 68-70 (SWR)
-    _SWR, _SWR, _SWR, _SWR, _SWR, _SWR, _SWR, _SWR, _SWR, _SWR, # GIS 71-80  (SWR)
-    _SWR, _SWR, _SWR, _N,   _N,   _N,   _N,   _N,   _N,   _N,   # GIS 81-83 (SWR) | 84-90 (N. undeveloped)
-    _B,   _B,   _B,   _B,   _B,   _B,   _B,   _B,   _B,   _B,   # buf 105-114
-    _B,   _B,   _B,   _B,   _B,                                   # buf 115-119
+    _B,   _B,   _B,   _B,   _B,   _B,   _B,   _B,   _B,   _B,   # pad   0- 9  | buf (left)
+    _B,   _B,   _B,   _B,   _B,   _GIS1,_S,   _S,   _S,   _S,   # pad  10-19  | buf 10-14 | GIS  1- 5
+    _S,   _BUX, _BUX, _M,   _M,   _M,   _M,   _M,   _M,   _M,   # pad  20-29  | GIS  6 | 7-8 (Buxton) | 9-15
+    _M,   _M,   _M,   _M,   _M,   _AVN, _AVN, _AVN, _AVN, _AVN, # pad  30-39  | GIS 16-20 (Mid) | 21-25 (Avon)
+    _AVN, _AVN, _AVN, _AVN, _AVN, _AVN, _C,   _C,   _C,   _C,   # pad  40-49  | GIS 26-31 (Avon) | 32-35 (Central)
+    _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   # pad  50-59  | GIS 36-45 (Central)
+    _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   # pad  60-69  | GIS 46-55 (Central)
+    _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   _C,   # pad  70-79  | GIS 56-65 (Central)
+    _C,   _C,   _SWR, _SWR, _SWR, _SWR, _SWR, _SWR, _SWR, _SWR, # pad  80-89  | GIS 66-67 (Central) | 68-75 (SWR)
+    _SWR, _SWR, _SWR, _SWR, _SWR, _SWR, _SWR, _SWR, _N,   _N,   # pad  90-99  | GIS 76-83 (SWR) | 84-85 (N. undev.)
+    _N,   _N,   _N,   _N,   _N,   _B,   _B,   _B,   _B,   _B,   # pad 100-109 | GIS 86-90 (N. undev.) | buf (right)
+    _B,   _B,   _B,   _B,   _B,   _B,   _B,   _B,   _B,   _B,   # pad 110-119 | buf (right)
 ]
+
+assert len(BACKGROUND_EROSION_RATES) == TOTAL_DOMAINS, (
+    f"BACKGROUND_EROSION_RATES has {len(BACKGROUND_EROSION_RATES)} entries "
+    f"but TOTAL_DOMAINS={TOTAL_DOMAINS}. Fix the list before running."
+)
 
 FLIP_SIGN_MODEL = True  # flips only the modeled sign (no alongshore reversal)
 
@@ -279,8 +283,11 @@ print("=" * 80 + "\n")
 print("Loading input data...")
 
 try:
-    dune_offset_all = np.loadtxt(DUNE_OFFSET_FILE, skiprows=1, delimiter=",")
-    dune_offset_dam = dune_offset_all[:, YEAR_COLUMN_INDEX] / 10.0  # m → dam
+    dune_offset_raw = np.loadtxt(DUNE_OFFSET_FILE, skiprows=1, delimiter=",")
+    # Single-column CSV returns 1D array; ensure 2D for consistent indexing
+    if dune_offset_raw.ndim == 1:
+        dune_offset_raw = dune_offset_raw[:, np.newaxis]
+    dune_offset_dam = dune_offset_raw[:, YEAR_COLUMN_INDEX] / 10.0  # m → dam
     print(f"✓ Loaded dune offsets: {dune_offset_dam.size} domains (dam)")
 
     road_setbacks_raw = np.loadtxt(ROAD_SETBACK_FILE, skiprows=1, delimiter=",")

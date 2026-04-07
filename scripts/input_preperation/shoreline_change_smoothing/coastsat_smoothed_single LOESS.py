@@ -36,7 +36,7 @@ DOMAIN_MAX = 90
 # 0.10 = ~9 domains  → more local, preserves more variation
 # 0.167 = ~15 domains → recommended default (1.5km smoothing window)
 # 0.20 = ~18 domains → smoother, loses finer spatial patterns
-LOESS_FRAC = 0.167
+LOESS_FRAC = 0.111
 
 # --- Town locations for reference lines ---
 TOWNS = {
@@ -48,7 +48,7 @@ TOWNS = {
 }
 
 # --- Output ---
-OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\shoreline_change_smoothing\coastsat_smoothing_1984_2024_i HAVEoutputs"
+OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\shoreline_change_smoothing\coastsat_smoothing_10domains"
 
 # ============================================================
 # IMPORTS
