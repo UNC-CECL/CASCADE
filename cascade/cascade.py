@@ -12,6 +12,7 @@ from .chom_coupler import ChomCoupler
 from .outwasher import Outwasher
 from .roadway_manager import RoadwayManager
 from .roadway_manager import set_growth_parameters
+from barrierbmft.barrierbmft_cascade import BarrierBMFT
 
 
 class CascadeError(Exception):
@@ -33,6 +34,7 @@ class Cascade:
         roadway_management_module,
         beach_nourishment_module,
         outwash_module,
+        marsh_module,
     ):
         """Configures lists to account for multiple Barrier3D domains from single
         input variables; used in modules
@@ -86,6 +88,10 @@ class Cascade:
             self._outwash_module = outwash_module
         else:
             self._outwash_module = [outwash_module] * self._ny
+        if np.size(marsh_module) > 1:
+            self._marsh_module = marsh_module
+        else:
+            self._marsh_module = [marsh_module] * self._ny
 
         return
 
@@ -125,6 +131,7 @@ class Cascade:
         beach_nourishment_module=True,
         community_economics_module=False,
         outwash_module=True,
+        marsh_module=True,
         alongshore_section_count=6,
         time_step_count=200,
         wave_height=1,  # ---------- for BRIE and Barrier3D --------------- #
@@ -290,6 +297,8 @@ class Cascade:
             The percent of washed out sediment that will be placed on the shoreface
         outwash_module: boolean or list of booleans, optional
             If True, use outwash module (force a bay-side surge event)
+        marsh_module: boolean or list of booleans, optional
+            If True, use BarrierBMFT to model marsh transects of mainland and barrier
 
         Examples
         --------
@@ -399,6 +408,7 @@ class Cascade:
             roadway_management_module=roadway_management_module,
             beach_nourishment_module=beach_nourishment_module,
             outwash_module=outwash_module,
+            marsh_module=marsh_module
         )
 
         if self._community_economics_module:
@@ -502,6 +512,25 @@ class Cascade:
                     )
                 )
 
+        ###############################################################################
+        # initialize BMFTC
+        ###############################################################################
+        self._barrierbmft = []
+        for iB3D in range(self._ny):
+            if self._marsh_module[iB3D]:
+                self._barrierbmft.append(
+                    BarrierBMFT(
+                        name="BarrierBMFT",
+                        time_step_count=self._nt,  # I think BMFT adds one to all the time steps...
+                        relative_sea_level_rise=sea_level_rise_rate * 1000,  # convert m/yr to mm/yr for BMFT
+                        reference_concentration=60,
+                        slope_upland=0.005,
+                        storm_file=self._storm_file,  # "StormSeries_VCR_Berm1pt9m_Slope0pt04.npy",
+                        parameter_file=self._parameter_file,
+                        b3d_instance=self._barrier3d[iB3D]
+                    )
+                )
+
     @property
     def road_break(self):
         return self._road_break
@@ -602,6 +631,13 @@ class Cascade:
         if self._brie_coupler._brie.drown:
             return
 
+        ###############################################################################
+        # run BMFT to generate transects BEFORE advancing B3D
+        ###############################################################################
+        for iB3D in range(self._ny):
+            if self._marsh_module[iB3D]:
+                pre_b3d_domain = self._barrierbmft[iB3D].update(b3d_instance=self._barrier3d[iB3D])
+
         # advance B3D by one time step (B3D initializes at time_index = 1 and then
         # updates the time_index after update_dune_domain). Set n_jobs=1 for no
         # parallel processing (debugging) and -2 for all but 1 CPU;
@@ -633,6 +669,22 @@ class Cascade:
             if self._barrier3d[iB3D].drown_break == 1:
                 self._b3d_break = 1
                 return
+
+        # ###############################################################################
+        # # update marsh variables based on new B3D variables
+        # ###############################################################################
+        # for iB3D in range(self._ny):
+        #     if self._marsh_module[iB3D]:
+        #         if self._barrier3d[iB3D].drown_break == 1:
+        #             self._barrierbmft[iB3D]._bmftc_ML._dur = self._nt
+        #             self._barrierbmft[iB3D]._bmftc_ML._endyear = self._barrierbmft[iB3D]._bmftc_ML.startyear + self._nt
+        #             self._barrierbmft[iB3D]._bmftc_BB._dur = self._barrierbmft[iB3D]._nt
+        #             self._barrierbmft[iB3D]._bmftc_BB._endyear = self._barrierbmft[iB3D]._bmftc_BB.startyear + self._nt
+        #             self._barrierbmft[iB3D]._Barrier3D_Break = True
+        #             print("Barrier3D Simulation Break: barrier drowned")
+        #             return  # If so, end simulation
+        #
+        #         self._barrierbmft[iB3D].update_marsh(new_domain=pre_b3d_domain, b3d_instance=self._barrier3d[iB3D])
 
         ###############################################################################
         # human dynamics modules
@@ -880,6 +932,22 @@ class Cascade:
             self._brie_coupler.update_brie_for_human_modifications(
                 x_t, x_s, x_b, h_b, s_sf
             )
+
+        ###############################################################################
+        # update marsh variables based on new B3D variables
+        ###############################################################################
+        for iB3D in range(self._ny):
+            if self._marsh_module[iB3D]:
+                if self._barrier3d[iB3D].drown_break == 1:
+                    self._barrierbmft[iB3D]._bmftc_ML._dur = self._nt
+                    self._barrierbmft[iB3D]._bmftc_ML._endyear = self._barrierbmft[iB3D]._bmftc_ML.startyear + self._nt
+                    self._barrierbmft[iB3D]._bmftc_BB._dur = self._barrierbmft[iB3D]._nt
+                    self._barrierbmft[iB3D]._bmftc_BB._endyear = self._barrierbmft[iB3D]._bmftc_BB.startyear + self._nt
+                    self._barrierbmft[iB3D]._Barrier3D_Break = True
+                    print("Barrier3D Simulation Break: barrier drowned")
+                    return  # If so, end simulation
+
+                self._barrierbmft[iB3D].update_marsh(new_domain=pre_b3d_domain, b3d_instance=self._barrier3d[iB3D])
 
     ###############################################################################
     # save data
