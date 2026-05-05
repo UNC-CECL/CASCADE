@@ -170,10 +170,25 @@ class Cascade:
         house_footprint_x=15,
         house_footprint_y=20,
         beach_full_cross_shore=70,
-        # --------- outwasher (in development) ------------ #
-        outwash_storms_file="outwash_storms_startyr_1_interval_20yrs.npy",
+        outwash_storms_file="outwash_storms_startyr_1_interval_20yrs.npy",  # ------------ outwasher ------------ #
         outwash_beach_file="NCB-default_beach.npy",
         percent_washout_to_shoreface=100,
+        barrierbmft_name="BarrierBMFT",  # ------------ marsh coupling (in development)------------#
+        reference_concentration=60,
+        slope_upland=0.005,
+        marsh_datadir=r"C:/Users/Lexi/PycharmProjects/BarrierBMFT/Input/PyBMFT-C",
+        bay_fetch_initial=5000,
+        forest_width_initial_fixed=False,
+        forest_width_initial=5000,
+        wind_speed=6,
+        filename_equilbaydepth=r"Equilibrium Bay Depth.mat",
+        filename_marshspinup=r"MarshStrat_all_RSLR1_CO50.mat",
+        marsh_width_initial=1000,
+        mainland_name="mainland",
+        backbarrier_name="backbarrier",
+        mainland_forest_on=True,
+        backbarrier_forest_on=False,
+
     ):
         """CASCADE: The CoAStal Community-lAnDscape Evolution model
 
@@ -299,6 +314,38 @@ class Cascade:
             If True, use outwash module (force a bay-side surge event)
         marsh_module: boolean or list of booleans, optional
             If True, use BarrierBMFT to model marsh transects of mainland and barrier
+        barrierbmft_name: string
+            Name of BarrierBMFT Class
+        reference_concentration: int or float
+            [mg/L]
+        slope_upland: int or float
+            slope from the bay to the forest
+        marsh_datadir: string
+            Name of directory where marsh input files are located
+        bay_fetch_initial: int or float?
+            Initial width of the bay [m]?
+        forest_width_initial_fixed: boolean
+            If True, starts forest width with fixed width [m]?
+            If False, simulation auto-calculates initial forest width based on RSLR/slope [m]?
+        forest_width_initial: int or float
+            Fixed initial width of forest, applied only if forest_width_initial_fixed = True [m]?
+        wind_speed: int or float?
+            reference wind speed [m/s]
+        filename_equilbaydepth: string
+
+        filename_marshspinup: string
+            file which initializes the marsh;
+            contents (elev_25, min_25, orgAT_25, orgAL_25) must have shape (_, marsh_width_initial)
+        marsh_width_initial: int or float
+            initial marsh width [m]
+        mainland_name: string
+            Name of Bmftc Class for the mainland
+        backbarrier_name: string
+            Name of Bmftc Class for the back-barrier
+        mainland_forest_on: boolean
+            if True, forest organic deposition/decomposition occurs
+        backbarrier_forest_on: boolean
+            if True, forest organic deposition/decomposition occurs
 
         Examples
         --------
@@ -521,7 +568,7 @@ class Cascade:
                 self._barrierbmft.append(
                     BarrierBMFT(
                         name="BarrierBMFT",
-                        time_step_count=self._nt,  # I think BMFT adds one to all the time steps...
+                        time_step_count=self._nt,
                         relative_sea_level_rise=sea_level_rise_rate * 1000,  # convert m/yr to mm/yr for BMFT
                         reference_concentration=60,
                         slope_upland=0.005,
