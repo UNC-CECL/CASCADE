@@ -230,7 +230,7 @@ barrierbmft_datadir = r"C:/Users/Lexi\Documents\UNC\BarrierBMFT\tests\orig_barri
 # enter classes to compare
 # ======================================================================================================================
 cascade_compl = os.path.join(cascade_datadir, "marsh_cascade_TS20_edit2.npz")  # this includes ALL classes (bmft and b3d)
-cascade_compl2 = os.path.join(cascade_datadir, "marsh_cascade_TS20_edit2_moved_marsh_update.npz")  # this includes ALL classes (bmft and b3d)
+cascade_compl2 = os.path.join(cascade_datadir, "marsh_cascade_final.npz")  # this includes ALL classes (bmft and b3d)
 # note: got an error when trying to save full Bmftc class, so had to save mainland/backbarrier bmftc and b3d classes
 # seperately instead of having them all in one Bmftc class
 bb_complete = os.path.join(barrierbmft_datadir, "backbarrier_orig_TS20_edit2.npz")
