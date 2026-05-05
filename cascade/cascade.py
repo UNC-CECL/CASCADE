@@ -567,14 +567,27 @@ class Cascade:
             if self._marsh_module[iB3D]:
                 self._barrierbmft.append(
                     BarrierBMFT(
-                        name="BarrierBMFT",
+                        name=barrierbmft_name,
                         time_step_count=self._nt,
                         relative_sea_level_rise=sea_level_rise_rate * 1000,  # convert m/yr to mm/yr for BMFT
-                        reference_concentration=60,
-                        slope_upland=0.005,
+                        reference_concentration=reference_concentration,
+                        slope_upland=slope_upland,
                         storm_file=self._storm_file,  # "StormSeries_VCR_Berm1pt9m_Slope0pt04.npy",
                         parameter_file=self._parameter_file,
-                        b3d_instance=self._barrier3d[iB3D]
+                        b3d_instance=self._barrier3d[iB3D],
+                        marsh_datadir=marsh_datadir,
+                        bay_fetch_initial=bay_fetch_initial,
+                        forest_width_initial_fixed=forest_width_initial_fixed,
+                        forest_width_initial=forest_width_initial,
+                        wind_speed=wind_speed,
+                        filename_equilbaydepth=filename_equilbaydepth,
+                        filename_marshspinup=filename_marshspinup,
+                        marsh_width_initial=marsh_width_initial,
+                        mainland_name=mainland_name,
+                        backbarrier_name=backbarrier_name,
+                        mainland_forest_on=mainland_forest_on,
+                        backbarrier_forest_on=backbarrier_forest_on,
+
                     )
                 )
 
