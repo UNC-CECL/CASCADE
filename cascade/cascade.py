@@ -679,6 +679,10 @@ class Cascade:
     def community_break(self):
         return self._community_break
 
+    @property
+    def barrierbmft(self):
+        return self._barrierbmft
+
     ###############################################################################
     # time loop
     ###############################################################################
