@@ -560,7 +560,7 @@ class Cascade:
                 )
 
         ###############################################################################
-        # initialize BMFTC
+        # initialize BarrierBMFT marshes
         ###############################################################################
         self._barrierbmft = []
         for iB3D in range(self._ny):
@@ -730,21 +730,6 @@ class Cascade:
                 self._b3d_break = 1
                 return
 
-        # ###############################################################################
-        # # update marsh variables based on new B3D variables
-        # ###############################################################################
-        # for iB3D in range(self._ny):
-        #     if self._marsh_module[iB3D]:
-        #         if self._barrier3d[iB3D].drown_break == 1:
-        #             self._barrierbmft[iB3D]._bmftc_ML._dur = self._nt
-        #             self._barrierbmft[iB3D]._bmftc_ML._endyear = self._barrierbmft[iB3D]._bmftc_ML.startyear + self._nt
-        #             self._barrierbmft[iB3D]._bmftc_BB._dur = self._barrierbmft[iB3D]._nt
-        #             self._barrierbmft[iB3D]._bmftc_BB._endyear = self._barrierbmft[iB3D]._bmftc_BB.startyear + self._nt
-        #             self._barrierbmft[iB3D]._Barrier3D_Break = True
-        #             print("Barrier3D Simulation Break: barrier drowned")
-        #             return  # If so, end simulation
-        #
-        #         self._barrierbmft[iB3D].update_marsh(new_domain=pre_b3d_domain, b3d_instance=self._barrier3d[iB3D])
 
         ###############################################################################
         # human dynamics modules
