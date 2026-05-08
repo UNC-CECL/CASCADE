@@ -572,7 +572,6 @@ class Cascade:
                         relative_sea_level_rise=sea_level_rise_rate * 1000,  # convert m/yr to mm/yr for BMFT
                         reference_concentration=reference_concentration,
                         slope_upland=slope_upland,
-                        storm_file=self._storm_file,  # "StormSeries_VCR_Berm1pt9m_Slope0pt04.npy",
                         parameter_file=self._parameter_file,
                         b3d_instance=self._barrier3d[iB3D],
                         marsh_datadir=marsh_datadir,
