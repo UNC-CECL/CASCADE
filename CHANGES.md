@@ -1,6 +1,6 @@
 # Changelog for CASCADE
 
-## 2.0.0 (2024-02-09)
+## 2.0.0 (2026-06-09)
 
 
 - Added outwash processes. This is the version of *cascade* used for the simulations in
