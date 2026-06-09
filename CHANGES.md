@@ -1,9 +1,17 @@
 # Changelog for CASCADE
 
+## 2.0.0 (2024-02-09)
+
+
+- Added outwash processes. This is the version of *cascade* used for the simulations in
+  "Barrier vulnerability following outwash: A balance of overwash and dune gap recovery"
+  by Van Blunk et al., (in review).
+
+
 ## 1.0.0 (2024-02-09)
 
 
-- Finalized for publication. No changes to the code, but finalized to version 1.0.0
+- Finalized for initial model publication. No changes to the code, but finalized to version 1.0.0.
 
 
 ## 0.1.1 (2023-03-21)
