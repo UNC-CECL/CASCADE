@@ -7,5 +7,6 @@
 
 ## Contributors
 
+* [Lexi Van Blunk (Fiegelist)](https://github.com/18vanblunk)
 * Zachary Williams <zachary.c.williams@duke.edu>
 * [Ian Reeves](https://github.com/irbreeves)
