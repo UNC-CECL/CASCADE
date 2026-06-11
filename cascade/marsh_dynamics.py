@@ -571,7 +571,10 @@ class Marsh:
         # re-flip the domain so it is oriented correctly for b3d (marsh/bay on bottomw, barrier/ocean on top)
         interior_domain = np.flip(interior_domain, axis=0)
         # convert back to dam MHW
-        interior_domain = interior_domain - (self._msl[model_year] + self._amp)  # convert to MHW
+        interior_domain = interior_domain - (self._msl[model_year] + self._amp + self._RSLR)  # convert to MHW
+        # in barrierbmft, Ian does not subtract RSLR and I think it is bc barrier3d lowers the elevation of the barrier
+        # by RLSR, so it is already going to be accounted for?
+
         interior_domain = interior_domain / 10  # convert to dam
         self._marsh_elevation[model_year] = copy.deepcopy(interior_domain)  # dam MHW
-        # we will update the b3d domain here
+        # in the future, we will update the b3d domain here
