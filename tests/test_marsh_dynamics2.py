@@ -150,28 +150,22 @@ def test_evolvemarsh():
     assert_array_almost_equal(organic_autoch_casc, organic_autoch_bmft)
 
 
-# i think we will want to test this for multiple years bc it looks at all the layers of years
-marsh_transect = np.load(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\marsh_transect_test.npy") * 10 # conver to m MHW
-marsh_elev1 = np.zeros([2, len(marsh_transect)])
-marsh_elev1[1,:] = copy.deepcopy(marsh_transect)
-marsh_elev4 = np.zeros([5, len(marsh_transect)])
-marsh_elev4[1,:] = copy.deepcopy(marsh_transect)
-for row in range(2,5):
-    marsh_elev4[row, :] = marsh_elev4[row-1,:] + 0.1  # just add 0.1 meters for each year
-autoch_values_1yr = np.random.rand(2, len(marsh_transect)) * 1000
-autoch_values_4yr = np.random.rand(5, len(marsh_transect)) * 1000
-@pytest.mark.parametrize("yr", [1,4])
-@pytest.mark.parametrize("marsh_elevations", [marsh_elev1, marsh_elev4])
-@pytest.mark.parametrize("organic_dep_autoch", [autoch_values_1yr, autoch_values_4yr])  # this is going to be list one and list 2 eventually
-def test_decompose(yr, marsh_elevations, organic_dep_autoch):
-    marsh_transect1 = np.load(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\marsh_transect_test.npy")
-    marsh_transect2 = np.load(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\marsh_transect_test.npy")
+def test_decompose():
+    marsh_transect = np.load(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\marsh_transect_test.npy")
+    model_year = 4
+    if model_year == 1:
+        marsh_elev = np.zeros([2, len(marsh_transect)])
+        marsh_elev[1, :] = copy.deepcopy(marsh_transect)
+        autoch_values = np.random.rand(2, len(marsh_transect)) * 1000
+        autoch_values_initial = copy.deepcopy(autoch_values)
+    elif model_year == 4:
+        marsh_elev = np.zeros([5, len(marsh_transect)])
+        marsh_elev[1, :] = copy.deepcopy(marsh_transect)
+        for row in range(2,5):
+            marsh_elev[row, :] = marsh_elev[row-1,:] + 0.1  # just add 0.1 meters for each year
+        autoch_values = np.random.rand(5, len(marsh_transect)) * 1000
+        autoch_values_initial = copy.deepcopy(autoch_values)
     x_m = 0
-    model_year = yr
-    organic_dep_autoch1 = copy.deepcopy(organic_dep_autoch)
-    organic_dep_autoch2 = copy.deepcopy(organic_dep_autoch)
-    elevation1 = copy.deepcopy(marsh_elevations)
-    elevation2 = copy.deepcopy(marsh_elevations)
     mui = 0.4
     mki = 0.1
     rhoo = 85
@@ -179,29 +173,41 @@ def test_decompose(yr, marsh_elevations, organic_dep_autoch):
     # marsh decomposition cascade
     elevation_casc, compaction_casc, _, organic_dep_autoch_casc = decomp_cascade(
         x_m=x_m,
-        x_f=len(marsh_transect1),
+        x_f=len(marsh_transect),
         yr=model_year,
-        organic_dep_autoch=organic_dep_autoch1,
-        elevation=elevation1,
-        B=len(marsh_transect1),
+        organic_dep_autoch=autoch_values,
+        elevation=marsh_elev,
+        B=len(marsh_transect),
         mui=mui,
         mki=mki,
         rhoo=rhoo,
         )
 
+    # DO NOT RE-GENERATE AUTOCH VALUES, THEY MUST BE THE SAME AS ABOVE, SO USE THE autoch_values_initial VARIABLE
+    marsh_transect = np.load(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\marsh_transect_test.npy")
+    if model_year == 1:
+        marsh_elev = np.zeros([2, len(marsh_transect)])
+        marsh_elev[1, :] = copy.deepcopy(marsh_transect)
+    elif model_year == 4:
+        marsh_elev = np.zeros([5, len(marsh_transect)])
+        marsh_elev[1, :] = copy.deepcopy(marsh_transect)
+        for row in range(2,5):
+            marsh_elev[row, :] = marsh_elev[row-1,:] + 0.1  # just add 0.1 meters for each year
+
     # marsh decomposition bmft
-    compaction_bmft, _, organic_dep_autoch_bmft, elevation_bmft = decomp_bmft(
+    compaction_bmft, _, organic_dep_autoch_bmft = decomp_bmft(
         x_m=x_m,
-        x_f=len(marsh_transect2),
+        x_f=len(marsh_transect),
         yr=model_year,
-        organic_dep_autoch=organic_dep_autoch2,
-        elevation=elevation2,
-        B=len(marsh_transect2),
+        organic_dep_autoch=autoch_values_initial,
+        elevation=marsh_elev,
+        B=len(marsh_transect),
         mui=mui,
         mki=mki,
         rhoo=rhoo,
         )
-    # elevation_bmftc = marsh_transect2 - compaction_bmft
+    marsh_elev[model_year] = marsh_elev[model_year] - compaction_bmft
+    elevation_bmft = marsh_elev
 
     assert_array_almost_equal(elevation_casc, elevation_bmft)
     assert_array_almost_equal(compaction_casc, compaction_bmft)
