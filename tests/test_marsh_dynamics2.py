@@ -26,29 +26,9 @@ from decompose import decompose as decomp_bmft
 test_domain = np.load(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\marsh_domain_test.npy")
 n_cols = np.shape(test_domain)[1]
 
-# variables used in tests
-RSLR = 0.012  # m/yr
-C_e = 0.05
-OCb = 0
-numiterations = 500
-P = 12.5 * 3600 * 1
-ws = 0.05 * 10 ** (-3)
-n_tidal_cycles = 365 * (24 / 12.5)
-Bmax = 2500
-Dmin = 0
-Dmax = 1
-rhoo = 85
-rhos = 2000
-mui = 0.4
-mki = 0.1
-m_min = -0.3  # dam MHW
-m_max = 0  # dam MHW
-time_step_count = 20
-alongshore_length = n_cols
-tidal_amplitude = 0.7
-tidal_range = tidal_amplitude * 2
 
-def run_marsh_dynamics(model_domain=test_domain, cols=n_cols):
+def run_marsh_dynamics(model_domain=test_domain, cols=n_cols, time=5):
+
     # initialize the class
     marsh_class = Marsh(
         RSLR=0.012,  # this will get replaced with cascade: self._sea_level_rise_rate which is in m/yr
@@ -67,7 +47,7 @@ def run_marsh_dynamics(model_domain=test_domain, cols=n_cols):
         mki=0.1,
         m_min=-0.3,
         m_max=0,
-        time_step_count=20,
+        time_step_count=time,
         alongshore_length=cols,
         tidal_amplitude=0.7,
         )
@@ -82,7 +62,7 @@ def run_marsh_dynamics(model_domain=test_domain, cols=n_cols):
             )
         model_domain = marsh_class._marsh_elevation[time_step]
 
-    return marsh_class
+    return marsh_class, model_domain
 
 
 def test_evolvemarsh():
@@ -212,3 +192,48 @@ def test_decompose():
     assert_array_almost_equal(elevation_casc, elevation_bmft)
     assert_array_almost_equal(compaction_casc, compaction_bmft)
 
+def test_domain_orientation():
+    """
+    we have to convert the domain from dam MHW to m MSL which requires many flips and edits
+    this test checks to make sure that the input domain orientation matches the output domain orientation
+    """
+    input_domain_values = np.linspace(0.5, 1, 5)  # dam MHW (high enough values that no accretion/erosion occurs)
+    input_domain = np.zeros([2, 5])
+    input_domain[0, :] = input_domain_values
+    input_domain[1, :] = input_domain_values + 0.5
+    n_cols = np.shape(input_domain)[1]
+    output_domain = copy.deepcopy(input_domain)  # what we expect it to be
+
+    model_duration = 1
+
+    # function includes class initialization and time loop
+    marsh_class, model_domain = run_marsh_dynamics(
+        model_domain=input_domain,
+        cols=n_cols,
+        time=model_duration)
+
+    assert_array_almost_equal(output_domain, model_domain)
+
+def test_marsh_accretion(domain=test_domain, cols=n_cols):
+    """
+    this test ensures that all cells above the water line never accrete AND therefore the elevation of those cells
+    should not change over time either
+    """
+
+    # domain = np.load(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\marsh_domain_test.npy")
+    # n_cols = np.shape(domain)[1]
+    model_duration = 2
+    high_cells = np.where(domain > 0.3, 1, 0)  # the maximum marsh elevation is defined as 0 dam MHW, so this gives a buffer
+
+    # function includes class initialization and time loop
+    marsh_class, model_domain = run_marsh_dynamics(
+        model_domain=domain,
+        cols=cols,
+        time=model_duration)
+
+    # loop through all accretion arrays and make sure high cells are 0
+    for t in range(len(marsh_class._accretion_TS)):
+        accretion_t = marsh_class._accretion_TS[t]
+        zero_cells = accretion_t[high_cells==1]
+        if np.count_nonzero(zero_cells) != 0:
+            "timestep = {0} failed".format(t)
