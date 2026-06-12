@@ -575,6 +575,10 @@ class Marsh:
         # in barrierbmft, Ian does not subtract RSLR and I think it is bc barrier3d lowers the elevation of the barrier
         # by RLSR, so it is already going to be accounted for?
 
+        # keep in same orientation as b3d domain for comparison
+        self._accretion_TS[model_year] = np.flip(self._accretion_TS[model_year], axis=0)
+        self._compaction_TS[model_year] = np.flip(self._compaction_TS[model_year], axis=0)
+
         interior_domain = interior_domain / 10  # convert to dam
         self._marsh_elevation[model_year] = copy.deepcopy(interior_domain)  # dam MHW
         # in the future, we will update the b3d domain here
