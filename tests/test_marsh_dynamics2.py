@@ -53,7 +53,7 @@ def run_marsh_dynamics(model_domain=test_domain, cols=n_cols, time=5):
         )
 
     # run the time loop/update function
-    for time_step in range(marsh_class._nt - 1):
+    for time_step in range(marsh_class._nt):
         print("\r", "Time Step: ", time_step + 1, end="")
         marsh_class.update(
             b3d=None,
@@ -220,10 +220,9 @@ def test_marsh_accretion(domain=test_domain, cols=n_cols):
     should not change over time either
     """
 
-    # domain = np.load(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\marsh_domain_test.npy")
-    # n_cols = np.shape(domain)[1]
-    model_duration = 2
-    high_cells = np.where(domain > 0.3, 1, 0)  # the maximum marsh elevation is defined as 0 dam MHW, so this gives a buffer
+    model_duration = 20
+    elev_limit = 0.3
+    high_cells = domain[domain > elev_limit]
 
     # function includes class initialization and time loop
     marsh_class, model_domain = run_marsh_dynamics(
@@ -231,9 +230,13 @@ def test_marsh_accretion(domain=test_domain, cols=n_cols):
         cols=cols,
         time=model_duration)
 
-    # loop through all accretion arrays and make sure high cells are 0
+    # are the high cells unchanged?
+    high_cells_post_update = model_domain[model_domain > elev_limit]
+    assert_array_almost_equal(high_cells, high_cells_post_update, decimal=5)
+
+    # loop through all accretion arrays and make sure high cells are approximately 0
     for t in range(len(marsh_class._accretion_TS)):
         accretion_t = marsh_class._accretion_TS[t]
-        zero_cells = accretion_t[high_cells==1]
-        if np.count_nonzero(zero_cells) != 0:
-            "timestep = {0} failed".format(t)
+        accretion_test = accretion_t[model_domain > elev_limit]
+        zero_array = np.zeros(np.shape(accretion_test))
+        assert_array_almost_equal(accretion_test, zero_array, decimal=5)
