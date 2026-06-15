@@ -23,7 +23,7 @@ from evolvemarsh import evolvemarsh as evolve_bmft
 from decompose import decompose as decomp_bmft
 
 # load a test domain and transect which is just an arbitrary segment of Masonboro Island
-test_domain = np.load(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\marsh_domain_test.npy")
+test_domain = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_domain_test.npy")
 n_cols = np.shape(test_domain)[1]
 
 
@@ -68,7 +68,7 @@ def run_marsh_dynamics(model_domain=test_domain, cols=n_cols, time=5):
 def test_evolvemarsh():
     # create deep copy of marsh transect because the function alters marsh_transect internally so we would initialize
     # the bmft with the results of the casc (I think)
-    marsh_transect = np.load(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\marsh_transect_test.npy")
+    marsh_transect = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_transect_test.npy")
     marsh_transect2 = copy.deepcopy(marsh_transect)
     msl = 0
     C_e = 0.05
@@ -131,7 +131,7 @@ def test_evolvemarsh():
 
 
 def test_decompose():
-    marsh_transect = np.load(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\marsh_transect_test.npy")
+    marsh_transect = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_transect_test.npy")
     model_year = 4
     if model_year == 1:
         marsh_elev = np.zeros([2, len(marsh_transect)])
@@ -164,7 +164,7 @@ def test_decompose():
         )
 
     # DO NOT RE-GENERATE AUTOCH VALUES, THEY MUST BE THE SAME AS ABOVE, SO USE THE autoch_values_initial VARIABLE
-    marsh_transect = np.load(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\marsh_transect_test.npy")
+    marsh_transect = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_transect_test.npy")
     if model_year == 1:
         marsh_elev = np.zeros([2, len(marsh_transect)])
         marsh_elev[1, :] = copy.deepcopy(marsh_transect)
