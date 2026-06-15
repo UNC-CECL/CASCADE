@@ -251,6 +251,16 @@ def test_marsh_accretion(domain=test_domain, cols=n_cols):
         assert_array_almost_equal(compaction_test, zero_array, decimal=5)  # mostly curious if this is 0
 
 
+def test_strat_compaction():
+    """
+    I ran two barrierbmft models, one with compaction caluclated normally (marsh_elev_full_strat) and one which only
+    uses the top layer to calculate compaction (marsh_elev_no_strat)
+    I just wanted to see how/if they differ
+    """
+    full_strat = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_elevation_full_strat.npy")
+    edited_strat = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_elevation_no_strat_5yrs.npy")
+    assert_array_almost_equal(full_strat, edited_strat, decimal=5)
+
 # ----------------------------------------------------------------------------------------------------------
 # --------------------------------------- test CASCADE incorporation ---------------------------------------
 # ----------------------------------------------------------------------------------------------------------
