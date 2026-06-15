@@ -226,8 +226,8 @@ def test_marsh_accretion(domain=test_domain, cols=n_cols):
     should not change over time either
     """
 
-    model_duration = 20
-    elev_limit = 0.3
+    model_duration = 100
+    elev_limit = 0.2
     high_cells = domain[domain > elev_limit]
 
     # function includes class initialization and time loop
@@ -243,9 +243,12 @@ def test_marsh_accretion(domain=test_domain, cols=n_cols):
     # loop through all accretion arrays and make sure high cells are approximately 0
     for t in range(len(marsh_class._accretion_TS)):
         accretion_t = marsh_class._accretion_TS[t]
+        compaction_t = marsh_class._compaction_TS[t]
         accretion_test = accretion_t[model_domain > elev_limit]
+        compaction_test = compaction_t[model_domain > elev_limit]
         zero_array = np.zeros(np.shape(accretion_test))
         assert_array_almost_equal(accretion_test, zero_array, decimal=5)
+        assert_array_almost_equal(compaction_test, zero_array, decimal=5)  # mostly curious if this is 0
 
 
 # ----------------------------------------------------------------------------------------------------------
