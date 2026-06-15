@@ -22,49 +22,10 @@ from cascade.marsh_dynamics import decompose2 as decomp_cascade
 from evolvemarsh import evolvemarsh as evolve_bmft
 from decompose import decompose as decomp_bmft
 
-# load a test domain and transect which is just an arbitrary segment of Masonboro Island
-test_domain = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_domain_test.npy")
-n_cols = np.shape(test_domain)[1]
 
-
-def run_marsh_dynamics(model_domain=test_domain, cols=n_cols, time=5):
-
-    # initialize the class
-    marsh_class = Marsh(
-        RSLR=0.012,  # this will get replaced with cascade: self._sea_level_rise_rate which is in m/yr
-        C_e=0.05,
-        OCb=0,
-        numiterations=500,
-        P=12.5 * 3600 * 1,
-        ws=0.05 * 10 ** (-3),
-        n_tidal_cycles=365 * (24 / 12.5),
-        Bmax=2500,
-        Dmin=0,
-        Dmax=1,
-        rhoo=85,
-        rhos=2000,
-        mui=0.4,
-        mki=0.1,
-        m_min=-0.3,
-        m_max=0,
-        time_step_count=time,
-        alongshore_length=cols,
-        tidal_amplitude=0.7,
-        )
-
-    # run the time loop/update function
-    for time_step in range(marsh_class._nt):
-        print("\r", "Time Step: ", time_step + 1, end="")
-        marsh_class.update(
-            b3d=None,
-            interior_domain=model_domain,  # this will be the b3d interior domain at the time step
-            model_year=time_step
-            )
-        model_domain = marsh_class._marsh_elevation[time_step]
-
-    return marsh_class, model_domain
-
-
+# -------------------------------------------------------------------------------------------------------------
+# --------------------------------------- test the individual functions ---------------------------------------
+# -------------------------------------------------------------------------------------------------------------
 def test_evolvemarsh():
     # create deep copy of marsh transect because the function alters marsh_transect internally so we would initialize
     # the bmft with the results of the casc (I think)
@@ -192,6 +153,51 @@ def test_decompose():
     assert_array_almost_equal(elevation_casc, elevation_bmft)
     assert_array_almost_equal(compaction_casc, compaction_bmft)
 
+
+# ----------------------------------------------------------------------------------------------------
+# --------------------------------------- test the marsh class ---------------------------------------
+# ----------------------------------------------------------------------------------------------------
+# load a test domain and transect which is just an arbitrary segment of Masonboro Island
+test_domain = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_domain_test.npy")
+n_cols = np.shape(test_domain)[1]
+def run_marsh_dynamics(model_domain=test_domain, cols=n_cols, time=5):
+
+    # initialize the class
+    marsh_class = Marsh(
+        RSLR=0.012,  # this will get replaced with cascade: self._sea_level_rise_rate which is in m/yr
+        C_e=0.05,
+        OCb=0,
+        numiterations=500,
+        P=12.5 * 3600 * 1,
+        ws=0.05 * 10 ** (-3),
+        n_tidal_cycles=365 * (24 / 12.5),
+        Bmax=2500,
+        Dmin=0,
+        Dmax=1,
+        rhoo=85,
+        rhos=2000,
+        mui=0.4,
+        mki=0.1,
+        m_min=-0.3,
+        m_max=0,
+        time_step_count=time,
+        alongshore_length=cols,
+        tidal_amplitude=0.7,
+        )
+
+    # run the time loop/update function
+    for time_step in range(marsh_class._nt):
+        print("\r", "Time Step: ", time_step + 1, end="")
+        marsh_class.update(
+            b3d=None,
+            interior_domain=model_domain,  # this will be the b3d interior domain at the time step
+            model_year=time_step
+            )
+        model_domain = marsh_class._marsh_elevation[time_step]
+
+    return marsh_class, model_domain
+
+
 def test_domain_orientation():
     """
     we have to convert the domain from dam MHW to m MSL which requires many flips and edits
@@ -240,3 +246,8 @@ def test_marsh_accretion(domain=test_domain, cols=n_cols):
         accretion_test = accretion_t[model_domain > elev_limit]
         zero_array = np.zeros(np.shape(accretion_test))
         assert_array_almost_equal(accretion_test, zero_array, decimal=5)
+
+
+# ----------------------------------------------------------------------------------------------------------
+# --------------------------------------- test CASCADE incorporation ---------------------------------------
+# ----------------------------------------------------------------------------------------------------------
