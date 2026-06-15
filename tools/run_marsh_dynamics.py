@@ -9,12 +9,12 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 # load a test domain and transect which is just an arbitrary segment of Masonboro Island
-test_domain = np.load(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\marsh_domain_test.npy")  # dam MHW
+test_domain = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_domain_test.npy")  # dam MHW
 n_cols = np.shape(test_domain)[1]
 initial_domain = copy.deepcopy(test_domain)
 
 # set model duration
-model_duration = 10  # yrs
+model_duration = 50  # yrs
 
 # initialize the class
 marsh_class = Marsh(
@@ -27,7 +27,7 @@ marsh_class = Marsh(
     n_tidal_cycles=365 * (24 / 12.5),
     Bmax=2500,
     Dmin=0,
-    Dmax=1,
+    Dmax=0.4,
     rhoo=85,
     rhos=2000,
     mui=0.4,
@@ -78,42 +78,23 @@ if plot_on:
     plot_width = (n-1)*10
 
     fig1 = plt.figure(figsize=[plot_width, 10])
-    # ax1 = fig1.add_subplot(1,n,plot_n)
-    # mat1 = ax1.matshow(
-    #     plot_years[0] * 10,
-    #     cmap="terrain",
-    #     vmin=minz,
-    #     vmax=maxz,
-    #     origin="lower"
-    # )
-    # cbar = fig1.colorbar(mat1)
-    # cbar.set_label('elevation (m MHW)', rotation=270, labelpad=15)
-    # ax1.set_ylabel(ylabel)
-    # ax1.set_xlabel(xlabel)
-    # ax1.set_title("t = 0")
-    # fig1.gca().xaxis.tick_bottom()
-    # plt.gca().invert_yaxis()
-
     for p in plot_years:
-        # plot_n += 1
-        # ax2 = fig1.add_subplot(1,n,plot_n, sharey=ax1)
-        ax2 = fig1.add_subplot(1,n,plot_n)
-
-        mat2 = ax2.matshow(
+        ax1 = fig1.add_subplot(1,n,plot_n)
+        mat1 = ax1.matshow(
             marsh_class._marsh_elevation[p] * 10,
             cmap="terrain",
             vmin=minz,
             vmax=maxz,
             origin="lower"
         )
-        cbar = fig1.colorbar(mat2)
+        cbar = fig1.colorbar(mat1)
         cbar.set_label('elevation (m MHW)', rotation=270, labelpad=15)
-        ax2.set_xlabel(xlabel)
-        ax2.set_title("t = {0}".format(p))
+        ax1.set_xlabel(xlabel)
+        ax1.set_title("t = {0}".format(p))
         fig1.gca().xaxis.tick_bottom()
         plt.gca().invert_yaxis()
         plot_n += 1
     fig1.tight_layout()
 
     if save_fig:
-        fig1.savefig(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\output_figures\marsh_t{0}_msl_conversion".format(marsh_class._nt))
+        fig1.savefig(r"C:\Users\Lexi\Documents\UNC\model\output_figures\marsh_t{0}_msl_conversion".format(marsh_class._nt))
