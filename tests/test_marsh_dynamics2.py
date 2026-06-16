@@ -22,6 +22,11 @@ from cascade.marsh_dynamics import decompose2 as decomp_cascade
 from evolvemarsh import evolvemarsh as evolve_bmft
 from decompose import decompose as decomp_bmft
 
+# cascade
+from cascade.cascade import Cascade
+
+# BarrierBMFT
+from barrierbmft.barrierbmft import BarrierBMFT
 
 # -------------------------------------------------------------------------------------------------------------
 # --------------------------------------- test the individual functions ---------------------------------------
@@ -264,3 +269,58 @@ def test_strat_compaction():
 # ----------------------------------------------------------------------------------------------------------
 # --------------------------------------- test CASCADE incorporation ---------------------------------------
 # ----------------------------------------------------------------------------------------------------------
+def test_initialization():
+    """
+    test to see if overlapping variables are initialized the same way
+    variables we care about (barrierbmft, cascade):
+    - msl
+    - RSLR
+    - duration
+    - tmax
+    - SL
+    """
+
+    model_duration = 10
+    slr_m_yr = 0.04
+    slr_mm_yr = slr_m_yr * 1000
+
+    # cascade init
+    casc = Cascade(
+        datadir=r"C:\Users\Lexi\Documents\UNC\scripts\basic_cascade_run",
+        time_step_count=model_duration,
+        sea_level_rise_rate=slr_m_yr,
+        parameter_file="barrier3d-default-parameters.yaml",
+        marsh_module=True,
+        alongshore_section_count=1
+        )
+    casc_RSLR = casc._sea_level_rise_rate   # m/yr
+    casc_b3d_RSLR = casc.barrier3d[0].RSLR  # dam/yr for barrier3d variables
+    casc_marsh_RSLR = casc.marsh[0]._RSLR   # m/yr but only one value, not an array. used to create marsh msl array
+    casc_marsh_msl = casc.marsh[0]._msl     # m
+    casc_b3d_tmax = casc.barrier3d[0].TMAX
+    casc_marsh_tmax = casc.marsh[0]._nt
+    casc_dur = casc._nt
+    casc_b3d_SL = casc.barrier3d[0].SL
+
+    # barrierbmft init
+    barrierbmft = BarrierBMFT(
+        time_step_count=model_duration,
+        relative_sea_level_rise=slr_mm_yr,  # mm/yr
+        parameter_file="barrier3d-parameters.yaml",
+        )
+    # barrierbmft creates historic data, so we only want to look at the sizes and values of the model duration
+    start = barrierbmft.bmftc.startyear
+    bmft_b3d_RSLR = barrierbmft.barrier3d.model.RSLR[0:-1]  # dam/yr, RSLR is initialized to dur + 1 for some reason...
+    bmft_msl = barrierbmft.bmftc.msl[start:]                # m
+    bmft_b3d_tmax = barrierbmft.barrier3d.model.TMAX
+    bmft_dur = barrierbmft.bmftc.dur
+    bmft_b3d_SL = barrierbmft.barrier3d.model.SL
+
+    # tests
+    assert_array_almost_equal(casc_RSLR, casc_marsh_RSLR)      # check that marsh is same as cascade
+    assert_array_almost_equal(casc_b3d_RSLR, bmft_b3d_RSLR)    # check that b3ds are equal
+    assert_array_almost_equal(casc_marsh_msl, bmft_msl)        # check that marsh msl is initialized the same as bmft msl
+    assert_array_almost_equal(casc_marsh_tmax, bmft_b3d_tmax)  # check to make sure durations are the same
+    assert_array_almost_equal(casc_b3d_tmax, bmft_b3d_tmax)    # check to make sure durations are the same
+    assert_array_almost_equal(casc_dur, bmft_dur)              # check to make sure durations are the same
+    assert_array_almost_equal(casc_b3d_SL, bmft_b3d_SL)        # check to make sure sea levels are the same (always 0)
