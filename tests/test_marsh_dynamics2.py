@@ -16,7 +16,7 @@ from numpy.testing import assert_array_almost_equal
 # marsh versions
 from cascade.marsh_dynamics import Marsh
 from cascade.marsh_dynamics import evolvemarsh as evolve_cascade
-from cascade.marsh_dynamics import decompose2 as decomp_cascade
+from cascade.marsh_dynamics import decompose as decomp_cascade
 
 # BMFTC versions
 from evolvemarsh import evolvemarsh as evolve_bmft
