@@ -587,7 +587,7 @@ class Cascade:
                         m_max=max_elev_marsh,
                         time_step_count=self._nt,
                         alongshore_length=np.shape(self._barrier3d[iB3D].InteriorDomain)[1],
-                        tidal_amplitude=0.7,
+                        tidal_amplitude=tidal_amplitude,
                     )
                 )
 
