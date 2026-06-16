@@ -319,43 +319,7 @@ def decompose(
     for x in range(x_m, x_f):  # Loop through each marsh cell in the domain
         decomp = np.zeros([yr + 1])
         for tempyr in range(yr, 0, -1):  # Loop through each layer of sediment in each cell, starting at the most recently deposited layer of sediment at the surface
-            # depth = elevation[yr, x] - elevation[tempyr, x]  # Depth of sediment layer below the surface
-            depth = elevation[yr][x] - elevation[tempyr][x]  # Depth of sediment layer below the surface
-            if depth > mui:  # Maximum depth at which decomposition occurs
-                decomp[tempyr] = 0
-                break
-            else:
-                # decomp[tempyr] = organic_dep_autoch[tempyr, x] * (mki * math.exp(-depth / mui))  # [g] Mass of organic material decomposed from a given "pocket" of sediment
-                decomp[tempyr] = organic_dep_autoch[tempyr][x] * (mki * math.exp(-depth / mui))  # [g] Mass of organic material decomposed from a given "pocket" of sediment
-                organic_dep_autoch[tempyr][x] -= decomp[tempyr]  # [g] Autochthanous organic material in a given "pocket" of sediment updated for deomposition
-        compaction[x] = np.sum(decomp) / 1000 / rhoo  # [m] Total compaction in a given cell is a result of the sum of all decomposition in that cell
-        Fd += np.sum(decomp)  # [kg] Flux of organic matter out of the marsh due to decomposition
-
-    # Update the elevation of only the most recent layer
-    elevation[-1] -= compaction
-
-    return elevation, compaction, Fd, organic_dep_autoch
-
-def decompose2(
-        x_m,  # marsh position
-        x_f,  # forest position
-        yr,   # current year
-        organic_dep_autoch,
-        elevation,  # elevation domain
-        B,  # transect width (marsh, bay, and forest)
-        mui,  # depth in marsh where decomp goes to 0 (m)
-        mki,  # decomp coefficient
-        rhoo,  # organic matter bulk density (kg/m3)
-):
-    """Decomposes all of the organic sediment within the marsh soil profile at a rate determined by depth."""
-
-    compaction = np.zeros([B])
-    Fd = 0
-
-    # Decompose the marsh sediment
-    for x in range(x_m, x_f):  # Loop through each marsh cell in the domain
-        decomp = np.zeros([yr + 1])
-        for tempyr in range(yr, 0, -1):  # Loop through each layer of sediment in each cell, starting at the most recently deposited layer of sediment at the surface
+            # but the most recent layer is actually on the "bottom" of the array because row number increases as you go down in the array
             # if yr==7:
             #     print(tempyr,x)
             depth = elevation[yr, x] - elevation[tempyr, x]  # Depth of sediment layer below the surface
@@ -370,7 +334,6 @@ def decompose2(
                 organic_dep_autoch[tempyr, x] -= decomp[tempyr]  # [g] Autochthanous organic material in a given "pocket" of sediment updated for deomposition
         compaction[x] = np.sum(decomp) / 1000 / rhoo  # [m] Total compaction in a given cell is a result of the sum of all decomposition in that cell
         Fd += np.sum(decomp)  # [kg] Flux of organic matter out of the marsh due to decomposition
-
 
     # Update the elevation of only the most recent layer
     elevation[yr] -= compaction
@@ -440,9 +403,7 @@ class Marsh:
 
         # initialize empty arrays to keep track of variables at each model time step
         self._marsh_elevation = [np.nan] * self._nt
-        # self._yearly_decomp_elev_TS = [[] for _ in range(alongshore_length)]
         self._yearly_decomp_elev_TS = [np.nan] * alongshore_length
-        # self._yearly_organic_autoch_TS = [[] for _ in range(alongshore_length)]
         self._yearly_organic_autoch_TS = [np.nan] * alongshore_length
         self._accretion_TS = [np.nan] * self._nt
         self._compaction_TS = [np.nan] * self._nt
@@ -476,8 +437,6 @@ class Marsh:
 
         for c in range(n_cols):
         # for c in range(2,3):
-            # if model_year==7:
-            #     print(c)
             transect = interior_domain[:, c]
             # identify the marsh cells
             marsh_cells = np.where((transect <= m_max_msl) & (transect > m_min_msl))[0]  # if none, all cells are too high or too low to be marsh
@@ -489,22 +448,11 @@ class Marsh:
                 marsh_transect = transect[start_marsh_cell:end_marsh_cell+1]
             # if marsh_transect is empty, there are no marsh cells and we skip the calcs
             if len(marsh_transect) != 0:
-                # evolve marsh assumes the transect starts at the marsh edge and ends at the higher elevation "forest", so we need
-                # to flip our transect so that 0 is the marsh edge
-                # marsh_transect = np.flip(marsh_transect)
-
                 # initialize decomp arrays so the number of rows equals the total model duration and columns are marsh
                 # transect length. NOTE: not sure what we do about changing marsh lengths throughout time...?
                 if model_year == 0:
                     self._yearly_decomp_elev_TS[c] = np.zeros([self._nt, barrier_width])
-                    # self._yearly_decomp_elev_TS[c][model_year] = copy.deepcopy(marsh_transect)
                     self._yearly_organic_autoch_TS[c] = np.zeros([self._nt, barrier_width])
-
-                # if self._yearly_decomp_elev_TS[c] == []:
-                #     self._yearly_decomp_elev_TS[c].append(copy.deepcopy(marsh_transect))  # if this is the first year, add the baseline elevation
-                # if self._yearly_organic_autoch_TS[c] == []:
-                #     yr0 = np.zeros(len(marsh_transect))
-                #     self._yearly_organic_autoch_TS[c].append(yr0)
 
                 # marsh accretion
                 marshelevation, accretion, organic_autoch = evolvemarsh(
@@ -529,29 +477,13 @@ class Marsh:
                 # currently oriented with marsh on top, dunes/ocean on bottom
                 self._accretion_TS[model_year][start_marsh_cell:end_marsh_cell+1, c] = accretion
 
-                # # add the most recent marsh transect to the marsh layers
-                # self._yearly_decomp_elev_TS[c].append(copy.deepcopy(marshelevation))  # without deep copy, it changes the
-                # # previous time periods as well as marshelevation updates
-                # self._yearly_organic_autoch_TS[c].append(organic_autoch)
-
+                # oriented marsh at column 0, barrier dunes at last column, newest elevation layer on bottom, olders on top
                 # add the most recent marsh transect to the marsh layers
-                self._yearly_decomp_elev_TS[c][model_year, start_marsh_cell:end_marsh_cell+1] = copy.deepcopy(marshelevation)
+                self._yearly_decomp_elev_TS[c][model_year, start_marsh_cell:end_marsh_cell+1] = copy.deepcopy(marshelevation)  # m MSL
                 # previous time periods as well as marshelevation updates
                 self._yearly_organic_autoch_TS[c][model_year, start_marsh_cell:end_marsh_cell+1] = organic_autoch
 
-                # marsh compaction
-                # marshelevation, compaction, Fd, organic_dep_autoch = decompose(
-                #         x_m=0,
-                #         x_f=len(marshelevation),
-                #         yr=model_year,
-                #         organic_dep_autoch=self._yearly_organic_autoch_TS[c],
-                #         elevation=self._yearly_decomp_elev_TS[c],
-                #         B=len(marshelevation),
-                #         mui=self._mui,
-                #         mki=self._mki,
-                #         rhoo=self._rhoo,
-                #     )
-                marshelevation, compaction, Fd, organic_dep_autoch = decompose2(
+                marshelevation, compaction, Fd, organic_dep_autoch = decompose(
                         x_m=start_marsh_cell,
                         x_f=end_marsh_cell+1,
                         yr=model_year,
