@@ -12,6 +12,7 @@ from .chom_coupler import ChomCoupler
 from .outwasher import Outwasher
 from .roadway_manager import RoadwayManager
 from .roadway_manager import set_growth_parameters
+from .marsh_dynamics import Marsh
 
 
 class CascadeError(Exception):
@@ -33,6 +34,7 @@ class Cascade:
         roadway_management_module,
         beach_nourishment_module,
         outwash_module,
+        marsh_module,
     ):
         """Configures lists to account for multiple Barrier3D domains from single
         input variables; used in modules
@@ -86,6 +88,10 @@ class Cascade:
             self._outwash_module = outwash_module
         else:
             self._outwash_module = [outwash_module] * self._ny
+        if np.size(marsh_module) > 1:
+            self._marsh_module = marsh_module
+        else:
+            self._marsh_module = [marsh_module] * self._ny
 
         return
 
@@ -121,10 +127,11 @@ class Cascade:
         storm_file="cascade-default-storms.npy",
         num_cores=1,
         roadway_management_module=False,
-        alongshore_transport_module=True,
-        beach_nourishment_module=True,
+        alongshore_transport_module=False,
+        beach_nourishment_module=False,
         community_economics_module=False,
-        outwash_module=True,
+        outwash_module=False,
+        marsh_module=False,
         alongshore_section_count=6,
         time_step_count=200,
         wave_height=1,  # ---------- for BRIE and Barrier3D --------------- #
@@ -167,6 +174,23 @@ class Cascade:
         outwash_storms_file="outwash_storms_startyr_1_interval_20yrs.npy",
         outwash_beach_file="NCB-default_beach.npy",
         percent_washout_to_shoreface=100,
+        # --------------- marsh dynamics -----------------------------------
+        SSCb=0.05,
+        organic_content_bay=0,
+        numiterations=500,
+        tidal_period=12.5 * 3600 * 1,
+        settling_velocity=0.05 * 10 ** (-3),
+        n_tidal_cycles=365 * (24 / 12.5),
+        max_biomass=2500,
+        min_depth_marsh_growth=0,
+        max_depth_marsh_growth=0.4,
+        density_organic_matter=85,
+        density_sediment=2000,
+        max_depth_decomp=0.4,
+        decomp_coeff=0.1,
+        min_elev_marsh=-0.3,
+        max_elev_marsh=0,
+        tidal_amplitude=0.7,
     ):
         """CASCADE: The CoAStal Community-lAnDscape Evolution model
 
@@ -290,6 +314,40 @@ class Cascade:
             The percent of washed out sediment that will be placed on the shoreface
         outwash_module: boolean or list of booleans, optional
             If True, use outwash module (force a bay-side surge event)
+        marsh_module: boolean or list of booleans, optional
+            If True, use marsh module (vertical growth/compaction of back-barrier marsh cells)
+        SSCb: float
+            suspended sediment concentration in the bay [kg/m3]
+        organic_content_bay: float
+            organic content of uppermost layer of bay sediment (%)
+        numiterations: int
+            tidal iterations
+        tidal_period: float
+            tidal period, 12.5 hours for semi-diurnal tide, converted to seconds [s]
+        settling_velocity: float
+            settling velocity of the marsh material [m/s]
+        n_tidal_cycles: float
+            number of tidal cycles per year, (1 tide/12.5 hr) * (24 hr/1 day) * (365 days)
+        max_biomass: float
+            maximum biomass productivity [g/m2]
+        min_depth_marsh_growth: float
+            minimum depth below high water that marsh vegetation can grow [m]
+        max_depth_marsh_growth: float
+            maximum depth below high water that marsh vegetation can grow [m]
+        density_organic_matter: int or float
+            organic matter bulk density [kg/m3]
+        density_sediment: int or float
+            sediment bulk density [kg/m3
+        max_depth_decomp: float
+            depth in marsh where decomp goes to 0 [m]
+        decomp_coeff: float
+            decomp coefficient
+        min_elev_marsh: float
+            minimum elev that is considered marsh [dam MHW]
+        max_elev_marsh: float
+            maximum elev that is considered marsh [dam MHW]
+        tidal_amplitude: float
+            tidal amplitude [m]
 
         Examples
         --------
@@ -399,6 +457,7 @@ class Cascade:
             roadway_management_module=roadway_management_module,
             beach_nourishment_module=beach_nourishment_module,
             outwash_module=outwash_module,
+            marsh_module=marsh_module
         )
 
         if self._community_economics_module:
