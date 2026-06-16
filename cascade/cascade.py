@@ -561,6 +561,36 @@ class Cascade:
                     )
                 )
 
+        ###############################################################################
+        # initialize marsh module
+        ###############################################################################
+        self._marsh = []
+        for iB3D in range(self._ny):
+            if self._marsh_module[iB3D]:
+                self._marsh.append(
+                    Marsh(
+                        RSLR=self._sea_level_rise_rate,
+                        C_e=SSCb,
+                        OCb=organic_content_bay,
+                        numiterations=numiterations,
+                        P=tidal_period,
+                        ws=settling_velocity,
+                        n_tidal_cycles=n_tidal_cycles,
+                        Bmax=max_biomass,
+                        Dmin=min_depth_marsh_growth,
+                        Dmax=max_depth_marsh_growth,
+                        rhoo=density_organic_matter,
+                        rhos=density_sediment,
+                        mui=max_depth_decomp,
+                        mki=decomp_coeff,
+                        m_min=min_elev_marsh,
+                        m_max=max_elev_marsh,
+                        time_step_count=self._nt,
+                        alongshore_length=np.shape(self._barrier3d[iB3D].InteriorDomain)[1],
+                        tidal_amplitude=0.7,
+                    )
+                )
+
     @property
     def road_break(self):
         return self._road_break
@@ -648,6 +678,10 @@ class Cascade:
     @property
     def community_break(self):
         return self._community_break
+
+    @property
+    def marsh(self):
+        return self._marsh
 
     ###############################################################################
     # time loop
