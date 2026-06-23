@@ -413,10 +413,9 @@ class Marsh:
         # initialize the time index variable (changed to b3d_time_step in the update function)
         self._time_index = 0
 
-    def update(self, b3d, interior_domain, model_year):
-        # interior domain and model year inputs will be removed once we combine with CASCADE
-        # self._time_index = b3d.time_index
-        # interior_domain = b3d.InteriorDomain
+    def update(self, interior_domain, model_year):
+
+        self._time_index = model_year
 
         # bmft assumes the domain starts at the marsh edge and ends at the higher elevation "forest", so we need
         # to flip our domain so that 0 is the marsh edge (top is marsh edge, bottom is barrier edge)
@@ -436,7 +435,6 @@ class Marsh:
         self._compaction_TS[model_year] = np.zeros(np.shape(interior_domain))
 
         for c in range(n_cols):
-        # for c in range(2,3):
             transect = interior_domain[:, c]
             # identify the marsh cells
             marsh_cells = np.where((transect <= m_max_msl) & (transect > m_min_msl))[0]  # if none, all cells are too high or too low to be marsh
@@ -513,4 +511,3 @@ class Marsh:
 
         interior_domain = interior_domain / 10  # convert to dam
         self._marsh_elevation[model_year] = copy.deepcopy(interior_domain)  # dam MHW
-        # in the future, we will update the b3d domain here
