@@ -1,3 +1,4 @@
+import copy
 import os
 
 import numpy as np
@@ -954,6 +955,18 @@ class Cascade:
                 if self._barrier3d[iB3D].drown_break == 1:
                     self._b3d_break = 1
                     return
+
+        ###############################################################################
+        # marsh module
+        ###############################################################################
+        # currently, the module only changes the elevation of cells and does not change
+        # the marsh edge position
+        for iB3D in range(self._ny):
+            if self._marsh_module[iB3D]:
+                self._marsh[iB3D].update(
+                    interior_domain=self._barrier3d[iB3D].InteriorDomain,  # we only need the interior domain
+                    model_year=self._barrier3d[iB3D].time_index - 1,  # b3d has already advanced
+                    )
 
         ###############################################################################
         # update BRIE for any human modifications to the barrier
