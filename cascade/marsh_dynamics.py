@@ -33,7 +33,7 @@ from matplotlib import pyplot as plt
 import copy
 
 def evolvemarsh(
-        marshelevation,     # elevation domain, here it is ONLY marsh cells (not anymore)
+        marshelevation,     # elevation domain, here it is ONLY marsh cells
         msl,                # msl in m
         C_e,                # SSC at marsh edge (kg/m3)
         OCb,                # organic content of uppermost layer of bay sediment (%), currently set to 0.05
@@ -320,10 +320,7 @@ def decompose(
         decomp = np.zeros([yr + 1])
         for tempyr in range(yr, 0, -1):  # Loop through each layer of sediment in each cell, starting at the most recently deposited layer of sediment at the surface
             # but the most recent layer is actually on the "bottom" of the array because row number increases as you go down in the array
-            # if yr==7:
-            #     print(tempyr,x)
             depth = elevation[yr, x] - elevation[tempyr, x]  # Depth of sediment layer below the surface
-            # depth = elevation[yr][x] - elevation[tempyr][x]  # Depth of sediment layer below the surface
             if depth > mui:  # Maximum depth at which decomposition occurs
                 decomp[tempyr] = 0
                 break
@@ -336,9 +333,9 @@ def decompose(
         Fd += np.sum(decomp)  # [kg] Flux of organic matter out of the marsh due to decomposition
 
     # Update the elevation of only the most recent layer
-    elevation[yr] -= compaction
+    elevation[yr, x_m:x_f] -= compaction[x_m:x_f]
 
-    return elevation, compaction, Fd, organic_dep_autoch
+    return elevation[yr, x_m:x_f], compaction, Fd, organic_dep_autoch
 
 
 class Marsh:
@@ -410,6 +407,15 @@ class Marsh:
         self._msl = np.linspace(
             1, self._nt, num=self._nt) * self._RSLR  # [m] Mean sea level over time relative to start
 
+        # initialize arrays for decomp so the rows are the total model duration and columns are barrier width
+        # NOTE: not sure what we do about changing barrier width throughout time, so I made these extra long and set
+        # the values to nans or maybe I will change to bay elevation?
+        initial_width = 500
+        for c in range(alongshore_length):
+            self._yearly_decomp_elev_TS[c] = np.ones([self._nt, initial_width]) * np.nan  # time is years and width is dam
+            self._yearly_organic_autoch_TS[c] = np.zeros([self._nt, initial_width])  # zeros are better for this array bc nothing
+            # happens when this value is zero
+
         # initialize the time index variable (changed to b3d_time_step in the update function)
         self._time_index = 0
 
@@ -435,7 +441,11 @@ class Marsh:
         self._compaction_TS[model_year] = np.zeros(np.shape(interior_domain))
 
         for c in range(n_cols):
+            # initial transect
             transect = interior_domain[:, c]
+            if model_year == 1:
+                self._yearly_decomp_elev_TS[c][0, 0:barrier_width] = copy.deepcopy(transect)  # set the first row to the initial transect elevation
+            self._yearly_decomp_elev_TS[c][model_year, 0:barrier_width] = copy.deepcopy(transect)  # m MSL, this model year's transect
             # identify the marsh cells
             marsh_cells = np.where((transect <= m_max_msl) & (transect > m_min_msl))[0]  # if none, all cells are too high or too low to be marsh
             if len(marsh_cells) == 0:
@@ -444,16 +454,11 @@ class Marsh:
                 start_marsh_cell = np.min(marsh_cells)
                 end_marsh_cell = np.max(marsh_cells)
                 marsh_transect = transect[start_marsh_cell:end_marsh_cell+1]
+
             # if marsh_transect is empty, there are no marsh cells and we skip the calcs
             if len(marsh_transect) != 0:
-                # initialize decomp arrays so the number of rows equals the total model duration and columns are marsh
-                # transect length. NOTE: not sure what we do about changing marsh lengths throughout time...?
-                if model_year == 0:
-                    self._yearly_decomp_elev_TS[c] = np.zeros([self._nt, barrier_width])
-                    self._yearly_organic_autoch_TS[c] = np.zeros([self._nt, barrier_width])
-
                 # marsh accretion
-                marshelevation, accretion, organic_autoch = evolvemarsh(
+                marsh_transect, accretion, organic_autoch = evolvemarsh(
                     marshelevation=marsh_transect,
                     msl=self._msl[model_year],
                     C_e=self._SSCb,
@@ -477,11 +482,11 @@ class Marsh:
 
                 # oriented marsh at column 0, barrier dunes at last column, newest elevation layer on bottom, olders on top
                 # add the most recent marsh transect to the marsh layers
-                self._yearly_decomp_elev_TS[c][model_year, start_marsh_cell:end_marsh_cell+1] = copy.deepcopy(marshelevation)  # m MSL
-                # previous time periods as well as marshelevation updates
+                self._yearly_decomp_elev_TS[c][model_year, start_marsh_cell:end_marsh_cell+1] = copy.deepcopy(marsh_transect)  # m MSL
+                # previous time periods as well as marsh_transect updates
                 self._yearly_organic_autoch_TS[c][model_year, start_marsh_cell:end_marsh_cell+1] = organic_autoch
 
-                marshelevation, compaction, Fd, organic_dep_autoch = decompose(
+                marsh_transect, compaction, Fd, organic_dep_autoch = decompose(
                         x_m=start_marsh_cell,
                         x_f=end_marsh_cell+1,
                         yr=model_year,
@@ -495,7 +500,6 @@ class Marsh:
 
                 # store compaction values
                 # currently oriented with marsh on top, dunes/ocean on bottom
-                # self._compaction_TS[model_year][start_marsh_cell:end_marsh_cell + 1, c] = compaction
                 self._compaction_TS[model_year][:, c] = compaction  # compaction is the full transect, not just marsh
 
         # re-flip the domain so it is oriented correctly for b3d (marsh/bay on bottomw, barrier/ocean on top)
