@@ -14,7 +14,7 @@ n_cols = np.shape(test_domain)[1]
 initial_domain = copy.deepcopy(test_domain)
 
 # set model duration
-model_duration = 50  # yrs
+model_duration = 30  # yrs
 
 # initialize the class
 marsh_class = Marsh(
@@ -46,7 +46,6 @@ t0 = time.time()
 for time_step in range(marsh_class._nt):
     print("\r", "Time Step: ", time_step + 1, end="")
     marsh_class.update(
-        b3d=None,
         interior_domain=test_domain,  # this will be the b3d interior domain at the time step
         model_year=time_step
         )
