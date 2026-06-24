@@ -117,7 +117,7 @@ def test_decompose():
     rhoo = 85
 
     # marsh decomposition cascade
-    elevation_casc, compaction_casc, _, organic_dep_autoch_casc = decomp_cascade(
+    marsh_transect, compaction_casc, _, organic_dep_autoch_casc = decomp_cascade(
         x_m=x_m,
         x_f=len(marsh_transect),
         yr=model_year,
@@ -128,6 +128,7 @@ def test_decompose():
         mki=mki,
         rhoo=rhoo,
         )
+    elevation_casc = copy.deepcopy(marsh_elev)
 
     # DO NOT RE-GENERATE AUTOCH VALUES, THEY MUST BE THE SAME AS ABOVE, SO USE THE autoch_values_initial VARIABLE
     marsh_transect = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_transect_test.npy")
@@ -194,7 +195,6 @@ def run_marsh_dynamics(model_domain=test_domain, cols=n_cols, time=5):
     for time_step in range(marsh_class._nt):
         print("\r", "Time Step: ", time_step + 1, end="")
         marsh_class.update(
-            b3d=None,
             interior_domain=model_domain,  # this will be the b3d interior domain at the time step
             model_year=time_step
             )
@@ -286,7 +286,7 @@ def test_initialization():
 
     # cascade init
     casc = Cascade(
-        datadir=r"C:\Users\Lexi\Documents\UNC\scripts\basic_cascade_run",
+        datadir=r"C:\Users\Lexi\Documents\UNC\model\scripts\basic_cascade_run",
         time_step_count=model_duration,
         sea_level_rise_rate=slr_m_yr,
         parameter_file="barrier3d-default-parameters.yaml",
@@ -324,3 +324,71 @@ def test_initialization():
     assert_array_almost_equal(casc_b3d_tmax, bmft_b3d_tmax)    # check to make sure durations are the same
     assert_array_almost_equal(casc_dur, bmft_dur)              # check to make sure durations are the same
     assert_array_almost_equal(casc_b3d_SL, bmft_b3d_SL)        # check to make sure sea levels are the same (always 0)
+
+def test_casc_run():
+
+    # input datadir where the 100 storms are located
+    datadir = r"C:\Users\Lexi\Documents\UNC\model\scripts\basic_cascade_run"
+    min_dune_r = 0.05
+    max_dune_r = 0.45
+    beach_slope = 0.006
+    storm_num = 1  # overwash
+    model_duration = 2
+    slr_m_yr = 0.04
+
+    overwash_storm = (
+        "StormSeries_100yrs_inclusive_NCB_Berm1pt46m_Slope0pt03_{}.npy".format(
+            storm_num
+            )
+    )
+
+    # ### barrier3D only, outwash module set to false ------------------------------------------------------------------
+    # initialize class
+    cascade_marsh = Cascade(
+        datadir,
+        name="overwash_only",
+        elevation_file=f"outwash-default-elevation.npy",
+        dune_file=f"outwash-default-dunes.npy",
+        parameter_file="outwash-parameters.yaml",
+        storm_file=overwash_storm,
+        num_cores=1,  # cascade can run in parallel, can never specify more cores than that
+        roadway_management_module=False,
+        alongshore_transport_module=False,
+        beach_nourishment_module=False,
+        community_economics_module=False,
+        outwash_module=False,
+        marsh_module=True,
+        alongshore_section_count=1,
+        time_step_count=model_duration,
+        # ---------- for BRIE and Barrier3D --------------- #
+        beta=beach_slope,
+        sea_level_rise_rate=slr_m_yr,
+        min_dune_growth_rate=min_dune_r,
+        max_dune_growth_rate=max_dune_r,
+        # --------------- marsh dynamics -----------------------------------
+        SSCb=0.05,
+        organic_content_bay=0,
+        numiterations=500,
+        tidal_period=12.5 * 3600 * 1,
+        settling_velocity=0.05 * 10 ** (-3),
+        n_tidal_cycles=365 * (24 / 12.5),
+        max_biomass=2500,
+        min_depth_marsh_growth=0,
+        max_depth_marsh_growth=0.4,
+        density_organic_matter=85,
+        density_sediment=2000,
+        max_depth_decomp=0.4,
+        decomp_coeff=0.1,
+        min_elev_marsh=-0.3,
+        max_elev_marsh=0,
+        tidal_amplitude=0.7,
+
+        )
+
+    # run the time loop/update function
+    for time_step in range(cascade_marsh._nt - 1):
+        print("\r", "Time Step: ", time_step + 1, end="")
+        cascade_marsh.update()
+        if cascade_marsh.b3d_break:
+            break
+
