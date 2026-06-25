@@ -206,6 +206,18 @@ class Cascade:
             Name of directory where Barrier3D and Outwasher input file is located
         name: string, optional
             Name of simulation
+        elevation_file: string, optional
+            .npy file with initial interior elevations [dam MHW]
+            Note: do not include dunes or beach. orientation must be ocean at top, bay on bottom
+        dune_file: string, optional
+            .npy file with initial dune heights [dam above berm elevation]
+            Note: array is a single row. if multiple dune rows, they should appear consecutively, starting with the row
+            closest to the ocean. they are automatically processed based on barrier length
+        parameter_file: string, optional
+            .yaml file that contains initial parameters
+        storm_file: string, optional
+            .npy file that contains the overwash storm series. columns should not have headers and should contain
+            [year, Rhigh, Rlow, wave period, storm duration] with units [n/a, dam MHW, dam MHW, s, hr]
         wave_height: float, optional
             Deepwater significant wave height [m]
         wave_period: float, optional
