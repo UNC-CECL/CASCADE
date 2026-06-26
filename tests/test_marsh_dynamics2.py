@@ -328,28 +328,23 @@ def test_initialization():
 def test_casc_run():
 
     # input datadir where the 100 storms are located
-    datadir = r"C:\Users\Lexi\Documents\UNC\model\scripts\basic_cascade_run"
+    datadir = r"C:\Users\Lexi\Documents\UNC\model\basic_cascade_run\marsh"
     min_dune_r = 0.05
     max_dune_r = 0.45
     beach_slope = 0.006
-    storm_num = 1  # overwash
-    model_duration = 2
+    storm_num = 1  # overwash storm
+    model_duration = 20
     slr_m_yr = 0.04
 
-    overwash_storm = (
-        "StormSeries_100yrs_inclusive_NCB_Berm1pt46m_Slope0pt03_{}.npy".format(
-            storm_num
-            )
-    )
+    overwash_storm = "cascade-default-storms.npy"
 
-    # ### barrier3D only, outwash module set to false ------------------------------------------------------------------
-    # initialize class
+    # marsh class on
     cascade_marsh = Cascade(
         datadir,
-        name="overwash_only",
-        elevation_file=f"outwash-default-elevation.npy",
-        dune_file=f"outwash-default-dunes.npy",
-        parameter_file="outwash-parameters.yaml",
+        name="marsh_run",
+        elevation_file=f"marsh_domain_test2.npy",
+        dune_file=f"marsh_dunes_test.npy",
+        parameter_file="marsh-default-parameters.yaml",
         storm_file=overwash_storm,
         num_cores=1,  # cascade can run in parallel, can never specify more cores than that
         roadway_management_module=False,
@@ -391,4 +386,41 @@ def test_casc_run():
         cascade_marsh.update()
         if cascade_marsh.b3d_break:
             break
+
+
+    # run normal - marsh class off
+    cascade = Cascade(
+        datadir,
+        name="overwash_only",
+        elevation_file=f"outwash-default-elevation.npy",
+        dune_file=f"outwash-default-dunes.npy",
+        parameter_file="outwash-parameters.yaml",
+        storm_file=overwash_storm,
+        num_cores=1,  # cascade can run in parallel, can never specify more cores than that
+        roadway_management_module=False,
+        alongshore_transport_module=False,
+        beach_nourishment_module=False,
+        community_economics_module=False,
+        outwash_module=False,
+        marsh_module=False,
+        alongshore_section_count=1,
+        time_step_count=model_duration,
+        # ---------- for BRIE and Barrier3D --------------- #
+        beta=beach_slope,
+        sea_level_rise_rate=slr_m_yr,
+        min_dune_growth_rate=min_dune_r,
+        max_dune_growth_rate=max_dune_r,
+        )
+
+    # run the time loop/update function
+    for time_step in range(cascade._nt - 1):
+        print("\r", "Time Step: ", time_step + 1, end="")
+        cascade.update()
+        if cascade.b3d_break:
+            break
+
+    # final domains should be different!
+    casc_marsh_domain = cascade_marsh.barrier3d[0].InteriorDomain
+    casc_domain = cascade.barrier3d[0].InteriorDomain
+    dif = casc_marsh_domain - casc_domain
 
