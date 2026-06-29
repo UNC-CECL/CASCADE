@@ -286,7 +286,7 @@ def test_initialization():
 
     # cascade init
     casc = Cascade(
-        datadir=r"C:\Users\Lexi\Documents\UNC\model\scripts\basic_cascade_run",
+        datadir=r"C:\Users\Lexi\Documents\UNC\model\basic_cascade_run",
         time_step_count=model_duration,
         sea_level_rise_rate=slr_m_yr,
         parameter_file="barrier3d-default-parameters.yaml",
@@ -326,14 +326,13 @@ def test_initialization():
     assert_array_almost_equal(casc_b3d_SL, bmft_b3d_SL)        # check to make sure sea levels are the same (always 0)
 
 def test_casc_run():
+    # from cascade.cascade import Cascade
 
-    # input datadir where the 100 storms are located
     datadir = r"C:\Users\Lexi\Documents\UNC\model\basic_cascade_run\marsh"
     min_dune_r = 0.05
     max_dune_r = 0.45
-    beach_slope = 0.006
-    storm_num = 1  # overwash storm
-    model_duration = 20
+    beach_slope = 0.06
+    model_duration = 3
     slr_m_yr = 0.04
 
     overwash_storm = "cascade-default-storms.npy"
@@ -392,9 +391,9 @@ def test_casc_run():
     cascade = Cascade(
         datadir,
         name="overwash_only",
-        elevation_file=f"outwash-default-elevation.npy",
-        dune_file=f"outwash-default-dunes.npy",
-        parameter_file="outwash-parameters.yaml",
+        elevation_file=f"marsh_domain_test2.npy",
+        dune_file=f"marsh_dunes_test.npy",
+        parameter_file="marsh-default-parameters.yaml",
         storm_file=overwash_storm,
         num_cores=1,  # cascade can run in parallel, can never specify more cores than that
         roadway_management_module=False,
@@ -423,4 +422,8 @@ def test_casc_run():
     casc_marsh_domain = cascade_marsh.barrier3d[0].InteriorDomain
     casc_domain = cascade.barrier3d[0].InteriorDomain
     dif = casc_marsh_domain - casc_domain
+    # they should be different!!
+    assert not np.array_equal(casc_marsh_domain, casc_domain)
+    assert np.any(dif)  # dif should have non-zero values
+
 
