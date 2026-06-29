@@ -975,7 +975,7 @@ class Cascade:
         # the marsh edge position
         for iB3D in range(self._ny):
             if self._marsh_module[iB3D]:
-                self._marsh[iB3D].update(
+                self._barrier3d[iB3D].InteriorDomain = self._marsh[iB3D].update(
                     interior_domain=self._barrier3d[iB3D].InteriorDomain,  # we only need the interior domain
                     model_year=self._barrier3d[iB3D].time_index - 1,  # b3d has already advanced
                     )

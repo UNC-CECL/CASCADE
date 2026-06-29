@@ -515,3 +515,5 @@ class Marsh:
 
         interior_domain = interior_domain / 10  # convert to dam
         self._marsh_elevation[model_year] = copy.deepcopy(interior_domain)  # dam MHW
+
+        return interior_domain
