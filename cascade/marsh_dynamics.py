@@ -370,6 +370,7 @@ class Marsh:
         time_step_count,    # total model time steps
         alongshore_length,  # alongshore length of the barrier (500 m or 50 cells)
         tidal_amplitude,    # tidal amplitude (m)
+        initial_width,      # initial width of the barrier
     ):
         """
 
@@ -395,6 +396,7 @@ class Marsh:
         self._nt = time_step_count
         self._amp = tidal_amplitude  # m
         self._tr = tidal_amplitude * 2  # m
+        self._initial_width = initial_width
 
         # initialize other variables that do not have inputs
         self._inundation_time = P / numiterations  # seconds
@@ -409,9 +411,7 @@ class Marsh:
             1, self._nt, num=self._nt) * self._RSLR  # [m] Mean sea level over time relative to start
 
         # initialize arrays for decomp so the rows are the total model duration and columns are barrier width
-        # NOTE: not sure what we do about changing barrier width throughout time, so I made these extra long and set
-        # the values to nans or maybe I will change to bay elevation?
-        initial_width = 500
+        # NOTE: I added code in the update function to account for varying barrier width through time
         for c in range(alongshore_length):
             self._yearly_decomp_elev_TS[c] = np.ones([self._nt, initial_width]) * np.nan  # time is years and width is dam
             self._yearly_organic_autoch_TS[c] = np.zeros([self._nt, initial_width])  # zeros are better for this array bc nothing
@@ -420,9 +420,10 @@ class Marsh:
         # initialize the time index variable (changed to b3d_time_step in the update function)
         self._time_index = 0
 
-    def update(self, interior_domain, model_year):
+    def update(self, interior_domain, model_year, shoreline_changeTS):
 
         self._time_index = model_year
+        shoreline_change = shoreline_changeTS[model_year]  # neg = landward movement (lose cells), pos = seaward movement (add cells)
 
         # bmft assumes the domain starts at the marsh edge and ends at the higher elevation "forest", so we need
         # to flip our domain so that 0 is the marsh edge (top is marsh edge, bottom is barrier edge)
@@ -437,6 +438,9 @@ class Marsh:
         n_cols = np.shape(interior_domain)[1]
         barrier_width = np.shape(interior_domain)[0]
 
+        # expected width due to shoreline changes
+        expected_width = self._initial_width + sum(shoreline_changeTS[0:model_year+1])
+
         # initialize accretion and compaction arrays
         self._accretion_TS[model_year] = np.zeros(np.shape(interior_domain))
         self._compaction_TS[model_year] = np.zeros(np.shape(interior_domain))
@@ -444,9 +448,27 @@ class Marsh:
         for c in range(n_cols):
             # initial transect
             transect = interior_domain[:, c]
+
+            # add year 0 elevation to yearly decomposition elevation array
             if model_year == 1:
                 self._yearly_decomp_elev_TS[c][0, 0:barrier_width] = copy.deepcopy(transect)  # set the first row to the initial transect elevation
             self._yearly_decomp_elev_TS[c][model_year, 0:barrier_width] = copy.deepcopy(transect)  # m MSL, this model year's transect
+
+            # if the shoreline has moved seaward, add cells to the end of the arrays
+            # Note: if the shoreline has moved landward, the transect is smaller and fits within the current array
+            if shoreline_change > 0:
+                new_cols = np.ones([self._nt, shoreline_change]) * np.nan
+                self._yearly_decomp_elev_TS[c] = np.append(self._yearly_decomp_elev_TS[c], new_cols, axis=1)
+                self._yearly_organic_autoch_TS[c] = np.append(self._yearly_organic_autoch_TS[c], new_cols, axis=1)
+            # # if the transect is not the expected size due to shoreline change, there has been a change on the marsh side
+            # # if less than the expected width, shift cells left
+            # transect_width = len(transect)
+            # length_dif = transect_width - expected_width
+            # if transect_width > expected_width:  # add new columns to the front
+            #     new_cols = np.ones([self._nt, length_dif]) * np.nan
+            #     self._yearly_decomp_elev_TS[c] = np.append(new_cols, self._yearly_decomp_elev_TS[c], axis=1)
+            #     self._yearly_organic_autoch_TS[c] = np.append(new_cols, self._yearly_organic_autoch_TS[c], axis=1)
+
             # identify the marsh cells
             marsh_cells = np.where((transect <= m_max_msl) & (transect > m_min_msl))[0]  # if none, all cells are too high or too low to be marsh
             if len(marsh_cells) == 0:
@@ -482,7 +504,7 @@ class Marsh:
                 self._accretion_TS[model_year][start_marsh_cell:end_marsh_cell+1, c] = accretion  # [m]
 
                 # oriented marsh at column 0, barrier dunes at last column, newest elevation layer on bottom, olders on top
-                # add the most recent marsh transect to the marsh layers
+                # add the most recent marsh transect to the marsh cells
                 self._yearly_decomp_elev_TS[c][model_year, start_marsh_cell:end_marsh_cell+1] = copy.deepcopy(marsh_transect)  # m MSL
                 # previous time periods as well as marsh_transect updates
                 self._yearly_organic_autoch_TS[c][model_year, start_marsh_cell:end_marsh_cell+1] = organic_autoch
