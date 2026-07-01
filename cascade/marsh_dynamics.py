@@ -120,7 +120,8 @@ def evolvemarsh(
             bgb[ii] = 0  # [g] Mudflat
             organic_autoch[ii] = 0  # [g] No autochthonous material stored in the soil; we do not multiply by lingin content (as in earlier version of the model) because we subtract mass due to decomposition in the 'decompose' function
         elif dm[ii] <= Dmin:  # If depth is below vegetation minimum, there is very little belowground productivity
-            bgb[ii] = 0.1  # [g] "Forest" - really high marsh
+            # bgb[ii] = 0.1  # [g] "Forest" - really high marsh
+            bgb[ii] = 0  # [g] "Forest" - really high marsh
             organic_autoch[ii] = bgb[ii]  # [g] Forest organic matter stored in soil
         else:
             bgb[ii] = Bmax * (dm[ii] - Dmax) * (dm[ii] - Dmin) / (0.25 * (-Dmin - Dmax) * (Dmax - 3 * Dmin))  # [g] Marsh
@@ -478,7 +479,7 @@ class Marsh:
 
                 # store accretion values
                 # currently oriented with marsh on top, dunes/ocean on bottom
-                self._accretion_TS[model_year][start_marsh_cell:end_marsh_cell+1, c] = accretion
+                self._accretion_TS[model_year][start_marsh_cell:end_marsh_cell+1, c] = accretion  # [m]
 
                 # oriented marsh at column 0, barrier dunes at last column, newest elevation layer on bottom, olders on top
                 # add the most recent marsh transect to the marsh layers
@@ -500,7 +501,7 @@ class Marsh:
 
                 # store compaction values
                 # currently oriented with marsh on top, dunes/ocean on bottom
-                self._compaction_TS[model_year][:, c] = compaction  # compaction is the full transect, not just marsh
+                self._compaction_TS[model_year][:, c] = compaction  # [m] compaction is the full transect, not just marsh
 
         # re-flip the domain so it is oriented correctly for b3d (marsh/bay on bottomw, barrier/ocean on top)
         interior_domain = np.flip(interior_domain, axis=0)
