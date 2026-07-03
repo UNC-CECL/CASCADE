@@ -166,7 +166,8 @@ def test_decompose():
 # load a test domain and transect which is just an arbitrary segment of Masonboro Island
 test_domain = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_domain_test.npy")
 n_cols = np.shape(test_domain)[1]
-def run_marsh_dynamics(model_domain=test_domain, cols=n_cols, time=5):
+initial_width=np.shape(test_domain)[0]
+def run_marsh_dynamics(model_domain=test_domain, cols=n_cols, time=5, width=initial_width):
 
     # initialize the class
     marsh_class = Marsh(
@@ -189,6 +190,7 @@ def run_marsh_dynamics(model_domain=test_domain, cols=n_cols, time=5):
         time_step_count=time,
         alongshore_length=cols,
         tidal_amplitude=0.7,
+        initial_width=width
         )
 
     # run the time loop/update function
@@ -196,7 +198,8 @@ def run_marsh_dynamics(model_domain=test_domain, cols=n_cols, time=5):
         print("\r", "Time Step: ", time_step + 1, end="")
         marsh_class.update(
             interior_domain=model_domain,  # this will be the b3d interior domain at the time step
-            model_year=time_step
+            model_year=time_step,
+            shoreline_changeTS=np.zeros(marsh_class._nt)  # there is no shoreline change since there is no cascade/b3d
             )
         model_domain = marsh_class._marsh_elevation[time_step]
 
@@ -213,6 +216,7 @@ def test_domain_orientation():
     input_domain[0, :] = input_domain_values
     input_domain[1, :] = input_domain_values + 0.5
     n_cols = np.shape(input_domain)[1]
+    init_width = np.shape(input_domain)[0]
     output_domain = copy.deepcopy(input_domain)  # what we expect it to be
 
     model_duration = 1
@@ -221,11 +225,13 @@ def test_domain_orientation():
     marsh_class, model_domain = run_marsh_dynamics(
         model_domain=input_domain,
         cols=n_cols,
-        time=model_duration)
+        time=model_duration,
+        width=init_width,
+        )
 
     assert_array_almost_equal(output_domain, model_domain)
 
-def test_marsh_accretion(domain=test_domain, cols=n_cols):
+def test_marsh_accretion(domain=test_domain, cols=n_cols, width=initial_width):
     """
     this test ensures that all cells above the water line never accrete AND therefore the elevation of those cells
     should not change over time either
@@ -239,7 +245,9 @@ def test_marsh_accretion(domain=test_domain, cols=n_cols):
     marsh_class, model_domain = run_marsh_dynamics(
         model_domain=domain,
         cols=cols,
-        time=model_duration)
+        time=model_duration,
+        width=width
+        )
 
     # are the high cells unchanged?
     high_cells_post_update = model_domain[model_domain > elev_limit]
