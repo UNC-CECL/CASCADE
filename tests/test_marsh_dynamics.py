@@ -10,7 +10,6 @@ Step 3. integrate into Cascade and test running cascade
 """
 import copy
 import numpy as np
-import pytest
 from numpy.testing import assert_array_almost_equal
 
 # marsh versions
@@ -32,6 +31,9 @@ from barrierbmft.barrierbmft import BarrierBMFT
 # --------------------------------------- test the individual functions ---------------------------------------
 # -------------------------------------------------------------------------------------------------------------
 def test_evolvemarsh():
+    """
+    test to make sure the marsh growth function behaves the same as the barrierbmft growth function
+    """
     # create deep copy of marsh transect because the function alters marsh_transect internally so we would initialize
     # the bmft with the results of the casc (I think)
     marsh_transect = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_transect_test.npy")
@@ -97,6 +99,9 @@ def test_evolvemarsh():
 
 
 def test_decompose():
+    """
+    test to make sure the marsh decomposition function behaves the same as the barrierbmft decompose function
+    """
     marsh_transect = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_transect_test.npy")
     model_year = 4
     if model_year == 1:
@@ -280,7 +285,7 @@ def test_strat_compaction():
 def test_initialization():
     """
     test to see if overlapping variables are initialized the same way
-    variables we care about (barrierbmft, cascade):
+    variables we care about:
     - msl
     - RSLR
     - duration
@@ -334,7 +339,10 @@ def test_initialization():
     assert_array_almost_equal(casc_b3d_SL, bmft_b3d_SL)        # check to make sure sea levels are the same (always 0)
 
 def test_casc_run():
-    # from cascade.cascade import Cascade
+    """
+    test to make sure the marsh is doing something!
+    run cascade with and without marsh and compare final elevations
+    """
 
     datadir = r"C:\Users\Lexi\Documents\UNC\model\basic_cascade_run\marsh"
     min_dune_r = 0.05
@@ -433,5 +441,82 @@ def test_casc_run():
     # they should be different!!
     assert not np.array_equal(casc_marsh_domain, casc_domain)
     assert np.any(dif)  # dif should have non-zero values
+
+def test_casc_accretion_erosion():
+    """
+    test to make sure we are still changing the correct cells
+    only cells identified as marsh should be changing elevation after applying marsh dynamics
+    """
+
+    datadir = r"C:\Users\Lexi\Documents\UNC\model\basic_cascade_run\marsh"
+    min_dune_r = 0.05
+    max_dune_r = 0.45
+    beach_slope = 0.06
+    model_duration = 15
+    slr_m_yr = 0.004
+    berm_elev = 1.95  # m NAVD88
+    MHW = 0.421
+
+    overwash_storm = "cascade-default-storms.npy"
+
+    # marsh class on
+    cascade_marsh = Cascade(
+        datadir,
+        name="marsh_run",
+        elevation_file=f"marsh_domain_test2_short.npy",
+        dune_file=f"marsh_dunes_test.npy",
+        parameter_file="marsh-default-parameters.yaml",
+        storm_file=overwash_storm,
+        num_cores=1,  # cascade can run in parallel, can never specify more cores than that
+        roadway_management_module=False,
+        alongshore_transport_module=False,
+        beach_nourishment_module=False,
+        community_economics_module=False,
+        outwash_module=False,
+        marsh_module=True,
+        alongshore_section_count=1,
+        time_step_count=model_duration,
+        # ---------- for BRIE and Barrier3D --------------- #
+        beta=beach_slope,
+        sea_level_rise_rate=slr_m_yr,
+        min_dune_growth_rate=min_dune_r,
+        max_dune_growth_rate=max_dune_r,
+        berm_elevation=berm_elev,
+        MHW=MHW,
+        # --------------- marsh dynamics -----------------------------------
+        SSCb=0.05,
+        organic_content_bay=0,
+        numiterations=500,
+        tidal_period=12.5 * 3600 * 1,
+        settling_velocity=0.05 * 10 ** (-3),
+        n_tidal_cycles=365 * (24 / 12.5),
+        max_biomass=2500,
+        min_depth_marsh_growth=0,
+        max_depth_marsh_growth=0.4,
+        density_organic_matter=85,
+        density_sediment=2000,
+        max_depth_decomp=0.4,
+        decomp_coeff=0.1,
+        min_elev_marsh=-0.3,
+        max_elev_marsh=0,
+        tidal_amplitude=0.7,
+        )
+
+    # run the time loop/update function
+    for time_step in range(cascade_marsh._nt - 1):
+        print("\r", "Time Step: ", time_step + 1, end="")
+        cascade_marsh.update()
+        if cascade_marsh.b3d_break:
+            break
+
+    # min and max marsh elevations in dam MHW
+    m_max_msl = cascade_marsh.marsh[0]._m_max
+    m_min_msl = cascade_marsh.marsh[0]._m_min
+    # marsh class stores pre and post marsh elevations in dam MHW
+    pre_elev = cascade_marsh.marsh[0]._pre_marsh_elev
+    post_elev = cascade_marsh.marsh[0]._marsh_elevation
+    for t in range(1, model_duration):
+        non_marsh_cells = np.where((pre_elev[t] > m_max_msl) | (pre_elev[t] < m_min_msl))  # | is or operator
+        assert_array_almost_equal(pre_elev[t][non_marsh_cells], post_elev[t][non_marsh_cells])
 
 
