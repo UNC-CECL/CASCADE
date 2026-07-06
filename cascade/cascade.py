@@ -179,9 +179,8 @@ class Cascade:
         SSCb=0.05,
         organic_content_bay=0,
         numiterations=500,
-        tidal_period=12.5 * 3600 * 1,
+        tidal_period=12.5,
         settling_velocity=0.05 * 10 ** (-3),
-        n_tidal_cycles=365 * (24 / 12.5),
         max_biomass=2500,
         min_depth_marsh_growth=0,
         max_depth_marsh_growth=0.4,
@@ -336,11 +335,9 @@ class Cascade:
         numiterations: int
             tidal iterations
         tidal_period: float
-            tidal period, 12.5 hours for semi-diurnal tide, converted to seconds [s]
+            tidal period, 12.5 hours for semi-diurnal tide
         settling_velocity: float
             settling velocity of the marsh material [m/s]
-        n_tidal_cycles: float
-            number of tidal cycles per year, (1 tide/12.5 hr) * (24 hr/1 day) * (365 days)
         max_biomass: float
             maximum biomass productivity [g/m2]
         min_depth_marsh_growth: float
@@ -398,6 +395,10 @@ class Cascade:
         self._trigger_dune_knockdown = trigger_dune_knockdown
         self._initial_beach_width = [0] * self._ny
         self._group_roadway_abandonment = group_roadway_abandonment
+
+        # for marsh dynamics
+        tidal_period_s = tidal_period * 3600 * 1  # tidal period in seconds
+        n_tidal_cycles = 365 * (24 / tidal_period)  # number of tidal cycles per year, (1 tide/X hrs) * (24 hr/1 day) * (365 days)
 
         # initialization errors
         if (
@@ -586,7 +587,7 @@ class Cascade:
                         C_e=SSCb,
                         OCb=organic_content_bay,
                         numiterations=numiterations,
-                        P=tidal_period,
+                        P=tidal_period_s,
                         ws=settling_velocity,
                         n_tidal_cycles=n_tidal_cycles,
                         Bmax=max_biomass,
