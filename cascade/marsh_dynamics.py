@@ -412,6 +412,7 @@ class Marsh:
         self._msl = np.linspace(
             1, self._nt, num=self._nt) * self._RSLR  # [m] Mean sea level over time relative to start
         self._marsh_offset = np.zeros(alongshore_length)
+        self._pre_marsh_elev = [np.nan] * self._nt
 
         # initialize arrays for decomp so the rows are the total model duration and columns are barrier width
         # NOTE: I added code in the update function to account for varying barrier width through time
@@ -426,6 +427,8 @@ class Marsh:
     def update(self, interior_domain, model_year, shoreline_changeTS):
 
         self._time_index = model_year
+        self._pre_marsh_elev[model_year] = copy.deepcopy(interior_domain)  # used for testing, dam MHW
+
         shoreline_change = shoreline_changeTS[model_year]  # neg = landward movement (lose cells), pos = seaward movement (add cells)
 
         # bmft assumes the domain starts at the marsh edge and ends at the higher elevation "forest", so we need
