@@ -367,8 +367,8 @@ class Marsh:
         rhos,               # sediment bulk density (kg/m3), set to 2000
         mui,                # depth in marsh where decomp goes to 0 (m)
         mki,                # decomp coefficient
-        m_min,              # minimum depth that is considered marsh (- 0.3 dam MHW)
-        m_max,              # maximum depth that is considered marsh (0 dam MHW)
+        m_min,              # minimum elevation that is considered marsh (dam MHW)
+        m_max,              # maximum elevation that is considered marsh (dam MHW)
         time_step_count,    # total model time steps
         alongshore_length,  # alongshore length of the barrier (500 m or 50 cells)
         tidal_amplitude,    # tidal amplitude (m)
