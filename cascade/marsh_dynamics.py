@@ -438,8 +438,13 @@ class Marsh:
         # we will need to convert the interior domain from dam MHW to m MSL
         interior_domain = interior_domain * 10  # convert to m
         interior_domain = interior_domain + self._msl[model_year] + self._amp + self._RSLR  # convert to MSL
-        m_max_msl = (self._m_max * 10) + self._msl[model_year] + self._amp + self._RSLR
-        m_min_msl = (self._m_min * 10) + self._msl[model_year] + self._amp + self._RSLR
+        # interior_domain + self._msl[model_year] resets the barrier back to initial reference SL
+        # self._amp + self._RSLR then converts MHW to MSL (I think)
+
+        # here, we classify marsh cells based on their elevation. since they are set elevations (they are not decreasing
+        # every year like the b3d domain), we do not need to add MSL[t], so we just convert from dam MHW to m MSL
+        m_max_msl = (self._m_max * 10) + self._amp + self._RSLR
+        m_min_msl = (self._m_min * 10) + self._amp + self._RSLR
 
         n_cols = np.shape(interior_domain)[1]
         barrier_width = int(np.shape(interior_domain)[0])
