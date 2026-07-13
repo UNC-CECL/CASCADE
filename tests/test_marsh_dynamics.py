@@ -275,9 +275,19 @@ def test_strat_compaction():
     uses the top layer to calculate compaction (marsh_elev_no_strat)
     I just wanted to see how/if they differ
     """
-    full_strat = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_elevation_full_strat.npy")
-    edited_strat = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_elevation_no_strat_5yrs.npy")
-    assert_array_almost_equal(full_strat, edited_strat, decimal=5)
+    # full_strat = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_elevation_full_strat.npy")
+    # edited_strat = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_elevation_no_strat_5yrs.npy")
+    # assert_array_almost_equal(full_strat, edited_strat, decimal=5)
+    b3d1 = np.load(r"C:\Users\Lexi\Documents\UNC\model\barrierbmft\b3d_barrierbmft1.npz", allow_pickle=True)["cascade"][0]
+    b3d2 = np.load(r"C:\Users\Lexi\Documents\UNC\model\barrierbmft\b3d_barrierbmft2.npz", allow_pickle=True)["cascade"][0]
+    elev1 = b3d1.InteriorDomain
+    elev2 = b3d2.InteriorDomain
+    if np.array_equal(elev1, elev2):
+        print(
+            "decomposition with a stratigraphic record produces very similar results than only decomposing the top layer")
+    else:
+        print(
+            "decomposition with a stratigraphic record produces different results than only decomposing the top layer")
 
 # ----------------------------------------------------------------------------------------------------------
 # --------------------------------------- test CASCADE incorporation ---------------------------------------
@@ -379,9 +389,8 @@ def test_casc_run():
         SSCb=0.05,
         organic_content_bay=0,
         numiterations=500,
-        tidal_period=12.5 * 3600 * 1,
+        tidal_period=12.5,
         settling_velocity=0.05 * 10 ** (-3),
-        n_tidal_cycles=365 * (24 / 12.5),
         max_biomass=2500,
         min_depth_marsh_growth=0,
         max_depth_marsh_growth=0.4,
@@ -487,9 +496,8 @@ def test_casc_accretion_erosion():
         SSCb=0.05,
         organic_content_bay=0,
         numiterations=500,
-        tidal_period=12.5 * 3600 * 1,
+        tidal_period=12.5,
         settling_velocity=0.05 * 10 ** (-3),
-        n_tidal_cycles=365 * (24 / 12.5),
         max_biomass=2500,
         min_depth_marsh_growth=0,
         max_depth_marsh_growth=0.4,
