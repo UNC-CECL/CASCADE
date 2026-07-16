@@ -10,66 +10,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-def plot_domain(domain, size, name, xlabel="alongshore distance (dam)", ylabel="cross-shore distance (dam)"):
-    # plot domains
-
-    minz = -3
-    maxz = 5
-
-    # initial
-    fig = plt.figure(figsize=size)
-    ax1 = fig.add_subplot(111)
-    mat1 = ax1.matshow(
-        domain,
-        cmap="terrain",
-        vmin=minz,
-        vmax=maxz,
-        )
-    cbar = fig.colorbar(mat1)
-    cbar.set_label('m MHW', rotation=270, labelpad=10)
-    ax1.set_title(name)
-    ax1.set_ylim([np.shape(domain)[0] - 1, 0])
-    ax1.set_ylabel(ylabel)
-    ax1.set_xlabel(xlabel)
-    ax1.xaxis.set_ticks_position("bottom")
-    plt.show()
-
-
-def plot_both_domains(gis_domain, casc_domain, size, xlabel="alongshore distance (dam)",
-                      ylabel="cross-shore distance (dam)"):
-    minz = -3
-    maxz = 5
-    # gis_domain = np.rot90(gis_domain)
-
-    fig1 = plt.figure(figsize=size)
-    ax1 = fig1.add_subplot(121)
-    mat1 = ax1.matshow(
-        gis_domain,
-        cmap="terrain",
-        vmin=minz,
-        vmax=maxz,
-        )
-    ax1.set_title("GIS domain")
-    ax1.set_ylabel(ylabel)
-
-    plt.gca().xaxis.tick_bottom()
-    ax2 = fig1.add_subplot(122)
-    mat2 = ax2.matshow(
-        casc_domain,
-        cmap="terrain",
-        vmin=minz,
-        vmax=maxz,
-        )
-    cbar = fig1.colorbar(mat2)
-    cbar.set_label('m MHW', rotation=270, labelpad=10)
-    ax2.set_title("cascade domain")
-    plt.gca().xaxis.tick_bottom()
-    fig1.text(0.5, 0.01, xlabel, ha='center', va='center')
-    fig1.tight_layout()
-    plt.show()
-
-
-def remove_water(domain_array, w_elev):
+def remove_water_cols(domain_array, w_elev):
     n_cols = np.shape(domain_array)[1]
     c_list = []
     for c in range(n_cols):
@@ -78,6 +19,18 @@ def remove_water(domain_array, w_elev):
     min_c = min(c_list)
     max_c = max(c_list)
     domain = domain_array[:, min_c:max_c + 1]
+
+    return domain
+
+def remove_water_rows(domain_array, w_elev):
+    n_rows = np.shape(domain_array)[0]
+    r_list = []
+    for r in range(n_rows):
+        if not np.all(domain_array[r, :] == w_elev):
+            r_list.append(r)
+    min_r = min(r_list)
+    max_r = max(r_list)
+    domain = domain_array[min_r:max_r + 1, :]
 
     return domain
 
@@ -94,6 +47,8 @@ def process_domain_file(
         TOPO_ROWS=200,
         ALONG_COLS=50,
         OCEAN_LOC="bottom",
+        SHIFT_CELLS=False,
+        use_const_interior=False,
         ) -> None:
     """Process a single domain elevation array and write topography and dune outputs."""
     arr = np.load(in_path).astype(float, copy=False)
@@ -115,11 +70,9 @@ def process_domain_file(
     arr = arr - MHW_M
     arr[arr < -3.0] = SENTINEL_WATER_M
     # remove columns that are all water (need to keep rows so that alongshore length is always 50)
-    arr = remove_water(arr, -3)
+    arr = remove_water_cols(arr, -3)
 
     n_along, n_cross = arr.shape
-    # note: lexi changed this bc she has variable barrier widths and wants to keep the full domain for now
-    ALONG_COLS = n_along  # should always be 50 anyway
     TOPO_ROWS = n_cross
 
     # Messages
@@ -151,48 +104,78 @@ def process_domain_file(
         # 1) First index where z > 0.5 m (MHW-relative)
         idx = np.where(prof > BEACH_START_THR_M)[0]
         if idx.size == 0:
-            continue
-        start_beach = int(idx[0])
+            # there are no cells above the beach threshold
+            dune_loc_array.append(np.nan)  # just make the dune cell the last cell
+        else:
+            start_beach = int(idx[0])
 
-        # 2) 8-pixel window landward of that point
-        end_beach = min(start_beach + DUNE_WINDOW_PX, prof.size)
-        if end_beach <= start_beach:
-            continue
+            # 2) 8-pixel window landward of that point
+            end_beach = min(start_beach + DUNE_WINDOW_PX, prof.size)
+            if end_beach <= start_beach:
+                continue
 
-        # 3) Dune elevation = max in the window
-        window = prof[start_beach:end_beach]
-        if window.size == 0:
-            continue
-        dune_elev = float(np.max(window))
+            # 3) Dune elevation = max in the window
+            window = prof[start_beach:end_beach]
+            if window.size == 0:
+                continue
 
-        # 4) Dune location = first index in ENTIRE profile equal to dune_elev
-        matches = np.where(prof == dune_elev)[0]
-        if matches.size == 0:
-            continue
-        dune_loc = int(matches[0])
-        dune_loc_array.append(dune_loc)
+            dune_elev = float(np.max(window))
 
-        # 5) Island interior starts immediately landward of the dune
-        start_island = dune_loc + 1
-        use_elev = (
-            prof[start_island:-1]
-            if start_island < (prof.size - 1)
-            else np.array([], dtype=float)
-        )
+            # 4) Dune location = first index in ENTIRE profile equal to dune_elev
+            matches = np.where(prof == dune_elev)[0]
+            if matches.size == 0:
+                continue
 
-        start_channel = len(use_elev)
+            dune_loc = int(matches[0])
+            dune_loc_array.append(dune_loc)
 
-        # 6) Write interior into rows (top-down); truncate/pad to TOPO_ROWS
-        if use_elev.size > 0:
-            rows_to_copy = min(TOPO_ROWS, use_elev.size, start_channel)
-            topo_m[0:rows_to_copy, i] = use_elev[:rows_to_copy]
-            # remaining rows stay as sentinel
+            # 5) Island interior starts immediately landward of the dune
+            start_island = dune_loc + 1
+            use_elev = (
+                prof[start_island:-1]
+                if start_island < (prof.size - 1)
+                else np.array([], dtype=float)
+            )
 
-        # 7) Dune height above berm, min 0.1 m
-        dune_h_m = dune_elev - (BERM_ELEV_NAVD_M - MHW_M)  # both MHW-relative
-        if dune_h_m < 0.0:
-            dune_h_m = 0.1
-        dune_m[i] = dune_h_m
+            # 6) Write interior into rows (top-down); truncate/pad to TOPO_ROWS
+            if use_elev.size > 0:
+                rows_to_copy = min(TOPO_ROWS, use_elev.size)
+                topo_m[0:rows_to_copy, i] = use_elev[:rows_to_copy]
+                # remaining rows stay as sentinel
+
+            # 7) Dune height above berm, min 0.1 m
+            dune_h_m = dune_elev - (BERM_ELEV_NAVD_M - MHW_M)  # both MHW-relative
+            if dune_h_m < 0.0:
+                dune_h_m = 0.1
+            dune_m[i] = dune_h_m
+
+    if SHIFT_CELLS:
+        # shift interior columns based on dune locations
+        dune_loc_array = np.array(dune_loc_array)
+        min_dune_loc = np.nanmin(dune_loc_array)  # this is the dune position that is closest to the ocean
+        dune_shift = dune_loc_array - min_dune_loc
+        avg_interior_per_row = np.mean(topo_m, axis=1)  # we are going to fill in cells with the average value of the ROW (alongshore direction)
+        # add extra water cells to the end of the interior domain to make sure we dont lose elevation cells
+        n_rows_to_add = max(dune_shift)
+        new_rows = np.ones([n_rows_to_add, np.shape(topo_m)[1]])*SENTINEL_WATER_M  # same number of cols as topo, new rows are just water
+        topo_m = np.vstack((topo_m, new_rows))
+        # add new cells to the top of the array, remove cells from the bottom (basically re-index)
+        for c in range(np.shape(topo_m)[1]-1):
+            current_col = topo_m[:,c]
+            shift = dune_shift[c]
+            if shift > 0:
+                new_cells = avg_interior_per_row[0:shift]
+                new_col = np.transpose(np.hstack((new_cells,current_col[0:-shift])))
+                topo_m[:,c] = new_col
+    if use_const_interior:
+        arr_ocean_top = np.rot90(arr)
+        dune_loc_array = np.array(dune_loc_array)
+        max_dune_loc = np.nanmax(dune_loc_array)
+        start_island = int(max_dune_loc + 1)
+        topo_m = arr_ocean_top[start_island:, :]
+
+    # remove rows that are all water cells
+    topo_m = remove_water_rows(topo_m, -3)
 
     topo_dm = topo_m * 0.1
     dune_dm = dune_m * 0.1
@@ -215,7 +198,7 @@ def process_domain_file(
 plt.rcParams["font.size"] = 14
 
 # --- PATHS --------------------------------------------------------------
-version = "v3"  # save version to append to folder name
+version = "v7"  # save version to append to folder name
 LOAD_PATH = r"C:\Users\Lexi\Documents\UNC\data\DEM\processed_domains\rotated_domains_npys"
 TOPO_SAVE_PATH = r"C:\Users\Lexi\Documents\UNC\data\DEM\processed_domains\cascade_domains\topography\rotated_domains_{0}".format(version)
 DUNE_SAVE_PATH = r"C:\Users\Lexi\Documents\UNC\data\DEM\processed_domains\cascade_domains\dunes\rotated_domains_{0}".format(version)
@@ -224,14 +207,16 @@ os.makedirs(TOPO_SAVE_PATH, exist_ok=True)
 os.makedirs(DUNE_SAVE_PATH, exist_ok=True)
 
 # --- CONSTANTS ----------------------------------------------------
-MHW_M = 0.421             # meters (NAVD88)
-BERM_ELEV_NAVD_M = 1.95   # meters (NAVD88)
-BEACH_START_THR_M = 0.50  # meters (MHW-relative), strict '>' comparison
-DUNE_WINDOW_PX = 30       # pixels
-SENTINEL_WATER_M = -3.0   # meters (MHW-relative)
-TOPO_ROWS = 200           # number of inland rows to write
-ALONG_COLS = 50           # number of alongshore profiles
-OCEAN_LOC = "bottom"      # "top", "bottom", "left", or "right"
+MHW_M = 0.421              # meters (NAVD88)
+BERM_ELEV_NAVD_M = 1.95    # meters (NAVD88)
+BEACH_START_THR_M = 0.5    # meters (MHW-relative), strict '>' comparison
+DUNE_WINDOW_PX = 10        # pixels
+SENTINEL_WATER_M = -3.0    # meters (MHW-relative)
+TOPO_ROWS = 200            # number of inland rows to write
+ALONG_COLS = 50            # number of alongshore profiles
+OCEAN_LOC = "bottom"       # "top", "bottom", "left", or "right"
+shift_interior = False     # add cells to the beginning of the interior domain to keep it aligned
+use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
 
 load_dir = Path(LOAD_PATH)
 topo_dir = Path(TOPO_SAVE_PATH)
@@ -261,6 +246,8 @@ for name in names:
         TOPO_ROWS=TOPO_ROWS,
         ALONG_COLS=ALONG_COLS,
         OCEAN_LOC=OCEAN_LOC,
+        SHIFT_CELLS=shift_interior,
+        use_const_interior=use_const_interior
         )
 
 
