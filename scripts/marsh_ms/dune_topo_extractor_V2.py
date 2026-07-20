@@ -156,16 +156,16 @@ def process_domain_file(
         dune_shift = dune_loc_array - min_dune_loc
         avg_interior_per_row = np.mean(topo_m, axis=1)  # we are going to fill in cells with the average value of the ROW (alongshore direction)
         # add extra water cells to the end of the interior domain to make sure we dont lose elevation cells
-        n_rows_to_add = max(dune_shift)
-        new_rows = np.ones([n_rows_to_add, np.shape(topo_m)[1]])*SENTINEL_WATER_M  # same number of cols as topo, new rows are just water
+        n_rows_to_add = np.nanmax(dune_shift)
+        new_rows = np.ones([int(n_rows_to_add), np.shape(topo_m)[1]])*SENTINEL_WATER_M  # same number of cols as topo, new rows are just water
         topo_m = np.vstack((topo_m, new_rows))
         # add new cells to the top of the array, remove cells from the bottom (basically re-index)
         for c in range(np.shape(topo_m)[1]-1):
             current_col = topo_m[:,c]
             shift = dune_shift[c]
-            if shift > 0:
-                new_cells = avg_interior_per_row[0:shift]
-                new_col = np.transpose(np.hstack((new_cells,current_col[0:-shift])))
+            if shift > 0 and not np.isnan(shift):
+                new_cells = avg_interior_per_row[0:int(shift)]
+                new_col = np.transpose(np.hstack((new_cells, current_col[0:-int(shift)])))
                 topo_m[:,c] = new_col
     if use_const_interior:
         arr_ocean_top = np.rot90(arr)
@@ -198,7 +198,7 @@ def process_domain_file(
 plt.rcParams["font.size"] = 14
 
 # --- PATHS --------------------------------------------------------------
-version = "v7"  # save version to append to folder name
+version = "v6"  # save version to append to folder name
 LOAD_PATH = r"C:\Users\Lexi\Documents\UNC\data\DEM\processed_domains\rotated_domains_npys"
 TOPO_SAVE_PATH = r"C:\Users\Lexi\Documents\UNC\data\DEM\processed_domains\cascade_domains\topography\rotated_domains_{0}".format(version)
 DUNE_SAVE_PATH = r"C:\Users\Lexi\Documents\UNC\data\DEM\processed_domains\cascade_domains\dunes\rotated_domains_{0}".format(version)
@@ -215,8 +215,8 @@ SENTINEL_WATER_M = -3.0    # meters (MHW-relative)
 TOPO_ROWS = 200            # number of inland rows to write
 ALONG_COLS = 50            # number of alongshore profiles
 OCEAN_LOC = "bottom"       # "top", "bottom", "left", or "right"
-shift_interior = False     # add cells to the beginning of the interior domain to keep it aligned
-use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+shift_interior = True     # add cells to the beginning of the interior domain to keep it aligned
+use_const_interior = False  # select a start row for the interior (most landward dune cell + 1)
 
 load_dir = Path(LOAD_PATH)
 topo_dir = Path(TOPO_SAVE_PATH)
