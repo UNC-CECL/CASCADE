@@ -9,16 +9,18 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 # load a test domain and transect which is just an arbitrary segment of Masonboro Island
-test_domain = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_domain_test.npy")  # dam MHW
+test_domain = np.load(r"C:\Users\Lexi\Documents\UNC\model\basic_cascade_run\marsh\marsh_domain_test3.npy")  # dam MHW
 n_cols = np.shape(test_domain)[1]
+width = np.shape(test_domain)[0]
 initial_domain = copy.deepcopy(test_domain)
 
 # set model duration
 model_duration = 30  # yrs
+shoreline_change = np.zeros(model_duration)
 
 # initialize the class
 marsh_class = Marsh(
-    RSLR=0.012,  # this will get replaced with cascade: self._sea_level_rise_rate which is in m/yr
+    RSLR=0.5,  # this will get replaced with cascade: self._sea_level_rise_rate which is in m/yr
     C_e=0.05,
     OCb=0,
     numiterations=500,
@@ -37,6 +39,7 @@ marsh_class = Marsh(
     time_step_count=model_duration,
     alongshore_length=n_cols,
     tidal_amplitude=0.7,
+    initial_width=width
     )
 
 
@@ -45,11 +48,12 @@ t0 = time.time()
 
 for time_step in range(marsh_class._nt):
     print("\r", "Time Step: ", time_step + 1, end="")
-    marsh_class.update(
+    test_domain = marsh_class.update(
         interior_domain=test_domain,  # this will be the b3d interior domain at the time step
-        model_year=time_step
+        model_year=time_step,
+        shoreline_changeTS=shoreline_change
         )
-    test_domain = marsh_class._marsh_elevation[time_step]
+    # test_domain = marsh_class._marsh_elevation[time_step]
 
 t1 = time.time()
 t_total_seconds = t1 - t0
