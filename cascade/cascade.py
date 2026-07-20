@@ -434,6 +434,12 @@ class Cascade:
             nt=self._nt,
         )
 
+        # self._brie_coupler.offset_shoreline(
+        #     enable_shoreline_offset=self._enable_shoreline_offset,
+        #     offset_values=self._shoreline_offset,
+        #     ny=self._ny,
+        #     )
+
         # initialize Barrier3D models (number set by brie_ny) and make both "brie"
         # and "barrier3d" classes equivalent
         self._barrier3d = initialize_equal(
