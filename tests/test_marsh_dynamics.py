@@ -36,7 +36,7 @@ def test_evolvemarsh():
     """
     # create deep copy of marsh transect because the function alters marsh_transect internally so we would initialize
     # the bmft with the results of the casc (I think)
-    marsh_transect = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_transect_test.npy")
+    marsh_transect = np.load(r"C:\Users\agfig\model\marsh_transect_test.npy")
     marsh_transect2 = copy.deepcopy(marsh_transect)
     msl = 0
     C_e = 0.05
@@ -102,7 +102,7 @@ def test_decompose():
     """
     test to make sure the marsh decomposition function behaves the same as the barrierbmft decompose function
     """
-    marsh_transect = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_transect_test.npy")
+    marsh_transect = np.load(r"C:\Users\agfig\model\marsh_transect_test.npy")
     model_year = 4
     if model_year == 1:
         marsh_elev = np.zeros([2, len(marsh_transect)])
@@ -136,7 +136,7 @@ def test_decompose():
     elevation_casc = copy.deepcopy(marsh_elev)
 
     # DO NOT RE-GENERATE AUTOCH VALUES, THEY MUST BE THE SAME AS ABOVE, SO USE THE autoch_values_initial VARIABLE
-    marsh_transect = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_transect_test.npy")
+    marsh_transect = np.load(r"C:\Users\agfig\model\marsh_transect_test.npy")
     if model_year == 1:
         marsh_elev = np.zeros([2, len(marsh_transect)])
         marsh_elev[1, :] = copy.deepcopy(marsh_transect)
@@ -169,7 +169,7 @@ def test_decompose():
 # --------------------------------------- test the marsh class ---------------------------------------
 # ----------------------------------------------------------------------------------------------------
 # load a test domain and transect which is just an arbitrary segment of Masonboro Island
-test_domain = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_domain_test.npy")
+test_domain = np.load(r"C:\Users\agfig\model\marsh_domain_test.npy")
 n_cols = np.shape(test_domain)[1]
 initial_width=np.shape(test_domain)[0]
 def run_marsh_dynamics(model_domain=test_domain, cols=n_cols, time=5, width=initial_width):
@@ -278,8 +278,8 @@ def test_strat_compaction():
     # full_strat = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_elevation_full_strat.npy")
     # edited_strat = np.load(r"C:\Users\Lexi\Documents\UNC\model\marsh_elevation_no_strat_5yrs.npy")
     # assert_array_almost_equal(full_strat, edited_strat, decimal=5)
-    b3d1 = np.load(r"C:\Users\Lexi\Documents\UNC\model\barrierbmft\b3d_barrierbmft1.npz", allow_pickle=True)["cascade"][0]
-    b3d2 = np.load(r"C:\Users\Lexi\Documents\UNC\model\barrierbmft\b3d_barrierbmft2.npz", allow_pickle=True)["cascade"][0]
+    b3d1 = np.load(r"C:\Users\agfig\model\barrierbmft\b3d_barrierbmft1.npz", allow_pickle=True)["cascade"][0]
+    b3d2 = np.load(r"C:\Users\agfig\model\barrierbmft\b3d_barrierbmft2.npz", allow_pickle=True)["cascade"][0]
     elev1 = b3d1.InteriorDomain
     elev2 = b3d2.InteriorDomain
     if np.array_equal(elev1, elev2):
@@ -309,7 +309,7 @@ def test_initialization():
 
     # cascade init
     casc = Cascade(
-        datadir=r"C:\Users\Lexi\Documents\UNC\model\basic_cascade_run",
+        datadir=r"C:\Users\agfig\model\basic_cascade_run",
         time_step_count=model_duration,
         sea_level_rise_rate=slr_m_yr,
         parameter_file="barrier3d-default-parameters.yaml",
@@ -354,7 +354,7 @@ def test_casc_run():
     run cascade with and without marsh and compare final elevations
     """
 
-    datadir = r"C:\Users\Lexi\Documents\UNC\model\basic_cascade_run\marsh"
+    datadir = r"C:\Users\agfig\model\basic_cascade_run\marsh"
     min_dune_r = 0.05
     max_dune_r = 0.45
     beach_slope = 0.06
@@ -367,8 +367,8 @@ def test_casc_run():
     cascade_marsh = Cascade(
         datadir,
         name="marsh_run",
-        elevation_file=f"marsh_domain_test2.npy",
-        dune_file=f"marsh_dunes_test.npy",
+        elevation_file=f"marsh_domain_test3.npy",
+        dune_file=f"marsh_dunes_test3.npy",
         parameter_file="marsh-default-parameters.yaml",
         storm_file=overwash_storm,
         num_cores=1,  # cascade can run in parallel, can never specify more cores than that
@@ -416,8 +416,8 @@ def test_casc_run():
     cascade = Cascade(
         datadir,
         name="overwash_only",
-        elevation_file=f"marsh_domain_test2.npy",
-        dune_file=f"marsh_dunes_test.npy",
+        elevation_file=f"marsh_domain_test3.npy",
+        dune_file=f"marsh_dunes_test3.npy",
         parameter_file="marsh-default-parameters.yaml",
         storm_file=overwash_storm,
         num_cores=1,  # cascade can run in parallel, can never specify more cores than that
@@ -457,7 +457,7 @@ def test_casc_accretion_erosion():
     only cells identified as marsh should be changing elevation after applying marsh dynamics
     """
 
-    datadir = r"C:\Users\Lexi\Documents\UNC\model\basic_cascade_run\marsh"
+    datadir = r"C:\Users\agfig\model\basic_cascade_run\marsh"
     min_dune_r = 0.05
     max_dune_r = 0.45
     beach_slope = 0.06
@@ -473,7 +473,7 @@ def test_casc_accretion_erosion():
         datadir,
         name="marsh_run",
         elevation_file=f"marsh_domain_test2_short.npy",
-        dune_file=f"marsh_dunes_test.npy",
+        dune_file=f"marsh_dunes_test3.npy",
         parameter_file="marsh-default-parameters.yaml",
         storm_file=overwash_storm,
         num_cores=1,  # cascade can run in parallel, can never specify more cores than that

@@ -9,7 +9,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 # load a test domain and transect which is just an arbitrary segment of Masonboro Island
-test_domain = np.load(r"C:\Users\Lexi\Documents\UNC\model\basic_cascade_run\marsh\marsh_domain_test3.npy")  # dam MHW
+test_domain = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\marsh_domain_test3.npy")  # dam MHW
 n_cols = np.shape(test_domain)[1]
 width = np.shape(test_domain)[0]
 initial_domain = copy.deepcopy(test_domain)
@@ -60,11 +60,14 @@ t_total_seconds = t1 - t0
 t_total_minutes = t_total_seconds / 60
 t_total_hours = t_total_seconds / 3600
 
+# save domains
+np.save(r"C:\Users\agfig\model\basic_cascade_run\marsh\results\work_comp_marsh2.npy",marsh_class._marsh_elevation)
+
 # # save variables
 # save_dir = r"C:/Users/Lexi\Documents\UNC\BarrierBMFT\tests\post_integration"
 # marsh_class.save(save_dir)
 
-plot_on = True
+plot_on = False
 save_fig = False
 # plot the results
 if plot_on:
