@@ -608,7 +608,8 @@ class Cascade:
                         time_step_count=self._nt,
                         alongshore_length=np.shape(self._barrier3d[iB3D].InteriorDomain)[1],
                         tidal_amplitude=tidal_amplitude,
-                        initial_width=np.shape(self._barrier3d[iB3D].InteriorDomain)[0]
+                        initial_width=np.shape(self._barrier3d[iB3D].InteriorDomain)[0],
+                        bay_depth=bay_depth,
                     )
                 )
 

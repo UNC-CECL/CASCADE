@@ -373,7 +373,7 @@ class Marsh:
         alongshore_length,  # alongshore length of the barrier (500 m or 50 cells)
         tidal_amplitude,    # tidal amplitude (m)
         initial_width,      # initial width of the barrier
-        bay_depth           # bay depth (m MHW)
+        bay_depth=3           # bay depth (m MHW)
     ):
         """
 
