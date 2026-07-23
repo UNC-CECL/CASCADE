@@ -525,6 +525,6 @@ def test_casc_accretion_erosion():
     post_elev = cascade_marsh.marsh[0]._marsh_elevation
     for t in range(1, model_duration):
         non_marsh_cells = np.where((pre_elev[t] > m_max_msl) | (pre_elev[t] < m_min_msl))  # | is or operator
-        assert_array_almost_equal(pre_elev[t][non_marsh_cells], post_elev[t][non_marsh_cells])
+        assert_array_almost_equal(post_elev[t][non_marsh_cells], pre_elev[t][non_marsh_cells])  # actual, desired
 
 
