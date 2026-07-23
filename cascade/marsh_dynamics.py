@@ -373,6 +373,7 @@ class Marsh:
         alongshore_length,  # alongshore length of the barrier (500 m or 50 cells)
         tidal_amplitude,    # tidal amplitude (m)
         initial_width,      # initial width of the barrier
+        bay_depth           # bay depth (m MHW)
     ):
         """
 
@@ -399,6 +400,7 @@ class Marsh:
         self._amp = tidal_amplitude  # m
         self._tr = tidal_amplitude * 2  # m
         self._initial_width = initial_width
+        self._bay_depth = bay_depth  # m MHW
 
         # initialize other variables that do not have inputs
         self._inundation_time = P / numiterations  # seconds
@@ -428,6 +430,8 @@ class Marsh:
 
         self._time_index = model_year
         self._pre_marsh_elev[model_year] = copy.deepcopy(interior_domain)  # used for testing, dam MHW
+        bay_depth_mMHW = -self._bay_depth
+        bay_depth_mMSL = bay_depth_mMHW + self._amp + self._RSLR
 
         shoreline_change = shoreline_changeTS[model_year]  # neg = landward movement (lose cells), pos = seaward movement (add cells)
 
@@ -437,7 +441,10 @@ class Marsh:
 
         # we will need to convert the interior domain from dam MHW to m MSL
         interior_domain = interior_domain * 10  # convert to m
-        interior_domain = interior_domain + self._msl[model_year] + self._amp + self._RSLR  # convert to MSL
+        # cells that are at -3 m are not changing over time, so we need to keep them constant here as well
+        interior_domain[interior_domain!=bay_depth_mMHW] = interior_domain[interior_domain!=bay_depth_mMHW] + self._msl[model_year] + self._amp + self._RSLR  # convert to MSL
+        # cells that are not at -3 have been lowered every year and need to be adjusted back up
+        interior_domain[interior_domain==bay_depth_mMHW] = interior_domain[interior_domain==bay_depth_mMHW] + self._amp + self._RSLR  # convert to MSL
         # interior_domain + self._msl[model_year] resets the barrier back to initial reference SL
         # self._amp + self._RSLR then converts MHW to MSL (I think)
 
@@ -554,9 +561,8 @@ class Marsh:
         # re-flip the domain so it is oriented correctly for b3d (marsh/bay on bottomw, barrier/ocean on top)
         interior_domain = np.flip(interior_domain, axis=0)
         # convert back to dam MHW
-        interior_domain = interior_domain - (self._msl[model_year] + self._amp + self._RSLR)  # convert to MHW
-        # in barrierbmft, Ian does not subtract RSLR and I think it is bc barrier3d lowers the elevation of the barrier
-        # by RLSR, so it is already going to be accounted for?
+        interior_domain[interior_domain!=bay_depth_mMSL] = interior_domain[interior_domain!=bay_depth_mMSL] - (self._msl[model_year] + self._amp + self._RSLR)  # convert to MSL
+        interior_domain[interior_domain==bay_depth_mMSL] = interior_domain[interior_domain==bay_depth_mMSL] - (self._amp + self._RSLR)  # convert to MSL
 
         # keep in same orientation as b3d domain for comparison
         self._accretion_TS[model_year] = np.flip(self._accretion_TS[model_year], axis=0)
