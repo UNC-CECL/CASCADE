@@ -191,6 +191,10 @@ class Cascade:
         min_elev_marsh=-0.3,
         max_elev_marsh=0,
         tidal_amplitude=0.7,
+        # ---------------------- offsets -------------------------
+        enable_shoreline_offset=False,
+        shoreline_offset=[],
+
     ):
         """CASCADE: The CoAStal Community-lAnDscape Evolution model
 
@@ -400,6 +404,10 @@ class Cascade:
         tidal_period_s = tidal_period * 3600 * 1  # tidal period in seconds
         n_tidal_cycles = 365 * (24 / tidal_period)  # number of tidal cycles per year, (1 tide/X hrs) * (24 hr/1 day) * (365 days)
 
+        # offsets
+        self._enable_shoreline_offset = enable_shoreline_offset
+        self._shoreline_offset = shoreline_offset
+
         # initialization errors
         if (
             berm_elevation != 1.9 or MHW != 0.46 or beta != 0.04
@@ -434,11 +442,11 @@ class Cascade:
             nt=self._nt,
         )
 
-        # self._brie_coupler.offset_shoreline(
-        #     enable_shoreline_offset=self._enable_shoreline_offset,
-        #     offset_values=self._shoreline_offset,
-        #     ny=self._ny,
-        #     )
+        self._brie_coupler.offset_shoreline(
+            enable_shoreline_offset=self._enable_shoreline_offset,
+            offset_values=self._shoreline_offset,
+            ny=self._ny,
+            )
 
         # initialize Barrier3D models (number set by brie_ny) and make both "brie"
         # and "barrier3d" classes equivalent
@@ -983,6 +991,7 @@ class Cascade:
         # currently, the module only changes the elevation of cells and does not change
         # the marsh edge position
         for iB3D in range(self._ny):
+            # print("\r", "iB3D", iB3D, end="")
             if self._marsh_module[iB3D]:
                 self._barrier3d[iB3D].InteriorDomain = self._marsh[iB3D].update(
                     interior_domain=self._barrier3d[iB3D].InteriorDomain,  # we only need the interior domain
