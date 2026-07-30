@@ -1,4 +1,4 @@
-import os
+import os, copy
 
 import numpy as np
 from joblib import Parallel
@@ -448,11 +448,12 @@ class Cascade:
                     original_growth_param=self._barrier3d[iB3D].growthparam,
                 )
             )
-
+            # set initial beach width
             self._initial_beach_width[iB3D] = (
                 int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
             )  # [m]
             self._beach_width[iB3D][0] = self._initial_beach_width[iB3D]
+            # initialize BeachDuneManager
             self._nourishments.append(
                 BeachDuneManager(
                     beach_width=self._beach_width[iB3D],
@@ -771,6 +772,9 @@ class Cascade:
         for iB3D in range(self._ny):
 
             if self._beach_nourishment_module[iB3D]:
+                # update fake beach variable
+                self._nourishments[iB3D]._beach_width = self._beach_width[iB3D]
+
                 # if barrier was too narrow to sustain a community in the last
                 # time step, stop managing beach and dunes!
                 # NOTE: dune heights must drop below Dmax before reset, so while
@@ -823,6 +827,8 @@ class Cascade:
                         / 10
                     )  # dam
                 )
+                # update fake beach variable
+                self._beach_width[iB3D] = copy.deepcopy(self._nourishments[iB3D].beach_width)
 
         ###############################################################################
         # outwash module
@@ -832,12 +838,17 @@ class Cascade:
         for iB3D in range(self._ny):
 
             if self._outwash_module[iB3D]:
+                # update domain variables
                 self._outwash[iB3D]._interior_domain = self._barrier3d[
                     iB3D
                 ].InteriorDomain
                 self._outwash[iB3D]._dune_domain = self._barrier3d[iB3D].DuneDomain[
                     self._barrier3d[iB3D].time_index - 1
                 ]
+                # update fake beach variable
+                self._outwash[iB3D]._beach_width = self._beach_width[iB3D]
+
+                # update loop
                 self._outwash[iB3D].update(b3d=self._barrier3d[iB3D])
 
                 # after an outwash event, check for barrier drowning
@@ -867,6 +878,9 @@ class Cascade:
                 if self._barrier3d[iB3D].drown_break == 1:
                     self._b3d_break = 1
                     return
+
+                # update fake beach variable
+                self._beach_width[iB3D] = copy.deepcopy(self._outwash[iB3D].beach_width)
 
         ###############################################################################
         # update BRIE for any human modifications to the barrier
