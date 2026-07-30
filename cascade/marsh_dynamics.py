@@ -433,7 +433,7 @@ class Marsh:
         bay_depth_mMHW = -self._bay_depth
         bay_depth_mMSL = bay_depth_mMHW + self._amp + self._RSLR
 
-        shoreline_change = shoreline_changeTS[model_year]  # neg = landward movement (lose cells), pos = seaward movement (add cells)
+        shoreline_change = int(shoreline_changeTS[model_year])  # neg = landward movement (lose cells), pos = seaward movement (add cells)
 
         # bmft assumes the domain starts at the marsh edge and ends at the higher elevation "forest", so we need
         # to flip our domain so that 0 is the marsh edge (top is marsh edge, bottom is barrier edge)

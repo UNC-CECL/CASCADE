@@ -516,15 +516,74 @@ def test_casc_accretion_erosion():
         cascade_marsh.update()
         if cascade_marsh.b3d_break:
             break
+        if time_step > 0:
+            m_max_msl = cascade_marsh.marsh[0]._m_max
+            m_min_msl = cascade_marsh.marsh[0]._m_min
+            # marsh class stores pre and post marsh elevations in dam MHW
+            pre_elev = cascade_marsh.marsh[0]._pre_marsh_elev[time_step]
+            post_elev = cascade_marsh.marsh[0]._marsh_elevation[time_step]
+            non_marsh_cells = np.where((pre_elev > m_max_msl) | (pre_elev < m_min_msl))  # | is or operator
+            assert_array_almost_equal(post_elev[non_marsh_cells], pre_elev[non_marsh_cells])  # actual, desired
 
+    # # min and max marsh elevations in dam MHW
+    # m_max_msl = cascade_marsh.marsh[0]._m_max
+    # m_min_msl = cascade_marsh.marsh[0]._m_min
+    # # marsh class stores pre and post marsh elevations in dam MHW
+    # pre_elev = cascade_marsh.marsh[0]._pre_marsh_elev
+    # post_elev = cascade_marsh.marsh[0]._marsh_elevation
+    # for t in range(1, model_duration):
+    #     non_marsh_cells = np.where((pre_elev[t] > m_max_msl) | (pre_elev[t] < m_min_msl))  # | is or operator
+    #     assert_array_almost_equal(post_elev[t][non_marsh_cells], pre_elev[t][non_marsh_cells])  # actual, desired
+
+
+def test_marsh_accretion_erosion():
     # min and max marsh elevations in dam MHW
-    m_max_msl = cascade_marsh.marsh[0]._m_max
-    m_min_msl = cascade_marsh.marsh[0]._m_min
-    # marsh class stores pre and post marsh elevations in dam MHW
-    pre_elev = cascade_marsh.marsh[0]._pre_marsh_elev
-    post_elev = cascade_marsh.marsh[0]._marsh_elevation
-    for t in range(1, model_duration):
-        non_marsh_cells = np.where((pre_elev[t] > m_max_msl) | (pre_elev[t] < m_min_msl))  # | is or operator
-        assert_array_almost_equal(post_elev[t][non_marsh_cells], pre_elev[t][non_marsh_cells])  # actual, desired
+    test_domain = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\marsh_domain_test2_short.npy")  # dam MHW
+    n_cols = np.shape(test_domain)[1]
+    width = np.shape(test_domain)[0]
+
+    # set model duration
+    model_duration = 15  # yrs
+    shoreline_change = np.zeros(model_duration)
+
+    # initialize the class
+    marsh_class = Marsh(
+        RSLR=0.05,  # this will get replaced with cascade: self._sea_level_rise_rate which is in m/yr
+        C_e=0.05,
+        OCb=0,
+        numiterations=500,
+        P=12.5 * 3600 * 1,
+        ws=0.05 * 10 ** (-3),
+        n_tidal_cycles=365 * (24 / 12.5),
+        Bmax=2500,
+        Dmin=0,
+        Dmax=0.4,
+        rhoo=85,
+        rhos=2000,
+        mui=0.4,
+        mki=0.1,
+        m_min=-0.3,
+        m_max=0,
+        time_step_count=model_duration,
+        alongshore_length=n_cols,
+        tidal_amplitude=0.7,
+        initial_width=width
+    )
+
+    # run the time loop/update function
+    for time_step in range(marsh_class._nt):
+        print("\r", "Time Step: ", time_step + 1, end="")
+        test_domain = marsh_class.update(
+            interior_domain=test_domain,  # this will be the b3d interior domain at the time step
+            model_year=time_step,
+            shoreline_changeTS=shoreline_change
+        )
+        m_max_msl = marsh_class._m_max
+        m_min_msl = marsh_class._m_min
+        # marsh class stores pre and post marsh elevations in dam MHW
+        pre_elev = marsh_class._pre_marsh_elev[time_step]
+        post_elev = marsh_class._marsh_elevation[time_step]
+        non_marsh_cells = np.where((pre_elev> m_max_msl) | (pre_elev < m_min_msl))  # | is or operator
+        assert_array_almost_equal(post_elev[non_marsh_cells], pre_elev[non_marsh_cells])  # actual, desired
 
 
