@@ -1361,8 +1361,7 @@ class Outwasher:
 
         # reduce beach width by the amount of post-storm shoreline change; if the
         # beach width reaches zero, turn dune migration in B3D back on -- otherwise
-        # keep it off (we don't want the dune line to prograde
-        # because we have fake houses there!)
+        # keep it off
         change_in_shoreline = (b3d.x_s_TS[-1] - b3d.x_s_TS[-2]) * 10  # m
         self._beach_width[self._time_index - 1] = (
             self._beach_width[self._time_index - 2] - change_in_shoreline
