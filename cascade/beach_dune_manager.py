@@ -518,19 +518,22 @@ class BeachDuneManager:
 
     def __init__(
         self,
+        beach_width,
         nourishment_interval=None,
         nourishment_volume=100,
-        initial_beach_width=30,
         dune_design_elevation=3.7,
         time_step_count=500,
         original_growth_param=None,
         overwash_filter=40,
         overwash_to_dune=5,
+        beach_width_threshold=0,
     ):
         """The BeachDuneManager module
 
          Parameters
          ----------
+        beach_width: list, required
+            List of beach widths, now initialized outside of BeachDuneManager
         nourishment_interval: optional
              Interval that nourishment occurs [yrs]
         nourishment_volume: optional
@@ -555,7 +558,8 @@ class BeachDuneManager:
         self._nourishment_volume = nourishment_volume
         self._nourishment_interval = nourishment_interval
         self._nourishment_counter = nourishment_interval
-        self._beach_width_threshold = 0  # m, triggers dune migration to turn back on
+        self._beach_width_threshold = beach_width_threshold  # m, triggers dune migration to turn back on
+        self._beach_width = beach_width
         self._dune_design_elevation = dune_design_elevation
         self._original_growth_param = original_growth_param
         self._nt = time_step_count
@@ -574,8 +578,6 @@ class BeachDuneManager:
         # (maximum dune height above the berm crest that can be built...period
 
         # time series
-        self._beach_width = [np.nan] * self._nt
-        self._beach_width[0] = initial_beach_width  # m
         self._nourishment_TS = np.zeros(self._nt)
         self._dunes_rebuilt_TS = np.zeros(self._nt)
         self._nourishment_volume_TS = np.zeros(self._nt)  # m^3/m

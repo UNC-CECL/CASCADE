@@ -327,6 +327,9 @@ class Cascade:
         self._trigger_dune_knockdown = trigger_dune_knockdown
         self._initial_beach_width = [0] * self._ny
         self._group_roadway_abandonment = group_roadway_abandonment
+        # initialize fake beach which is used to control dune migration when the beach/shoreface is nourished
+        self._beach_width = [[np.nan]*self._nt] * self._ny
+        self._beach_width_threshold = 0  # m, triggers dune migration to turn back on
 
         # initialization errors
         if (
@@ -448,17 +451,19 @@ class Cascade:
 
             self._initial_beach_width[iB3D] = (
                 int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
-            )
+            )  # [m]
+            self._beach_width[iB3D][0] = self._initial_beach_width[iB3D]
             self._nourishments.append(
                 BeachDuneManager(
+                    beach_width=self._beach_width[iB3D],
                     nourishment_interval=self._nourishment_interval[iB3D],
                     nourishment_volume=self._nourishment_volume[iB3D],
-                    initial_beach_width=self._initial_beach_width[iB3D],
                     dune_design_elevation=self._dune_design_elevation[iB3D],
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
                     overwash_filter=self._overwash_filter[iB3D],
                     overwash_to_dune=self._overwash_to_dune[iB3D],
+                    beach_width_threshold=self._beach_width_threshold,
                 )
             )
 
@@ -484,6 +489,7 @@ class Cascade:
             if self._outwash_module[iB3D]:
                 self._outwash.append(
                     Outwasher(
+                        beach_width=self._beach_width[iB3D],
                         datadir=datadir,
                         outwash_storms_file=outwash_storms_file,
                         time_step_count=self._nt,
@@ -498,7 +504,7 @@ class Cascade:
                         ],
                         percent_washout_to_shoreface=percent_washout_to_shoreface,
                         outwash_beach_file=outwash_beach_file,
-                        initial_beach_width=0,
+                        beach_width_threshold=self._beach_width_threshold,
                     )
                 )
 

@@ -1248,6 +1248,7 @@ class Outwasher:
 
     def __init__(
         self,
+        beach_width,
         datadir,
         outwash_storms_file,
         time_step_count,
@@ -1260,9 +1261,10 @@ class Outwasher:
         dune_domain,
         percent_washout_to_shoreface=100,
         outwash_beach_file=None,
-        initial_beach_width=0,
+        beach_width_threshold=0,
     ):
         """
+        :param beach_width: list, required, List of beach widths
         :param datadir: string, directory with storm and elevation files
         :param outwash_storms_file: string, npy storm file
         :param time_step_count: int, ultimate cascade model time step
@@ -1324,9 +1326,8 @@ class Outwasher:
         self._time_index = 0
 
         # beach/shoreface "nourishment" variables
-        self._beach_width_threshold = 0  # m, triggers dune migration to turn back on
-        self._beach_width = [np.nan] * time_step_count
-        self._beach_width[0] = initial_beach_width  # m
+        self._beach_width_threshold = beach_width_threshold  # m, triggers dune migration to turn back on
+        self._beach_width = beach_width
         self._dune_migration_on = [np.nan] * time_step_count
         self._dune_migration_on[0] = False
 
@@ -1373,9 +1374,6 @@ class Outwasher:
             barrier3d=b3d,
             time_index=self._time_index,
         )
-
-        # keep track of dune migration
-        self._dune_migration_on[self._time_index - 1] = b3d.dune_migration_on
 
         # check if this year is an outwash year
         if self._time_index - 1 in self._outwash_storms[:, 0]:
