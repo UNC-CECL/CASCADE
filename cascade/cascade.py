@@ -880,7 +880,7 @@ class Cascade:
                     return
 
                 # update fake beach variable
-                self._beach_width[iB3D] = copy.deepcopy(self._outwash[iB3D].beach_width)
+                self._beach_width[iB3D] = copy.deepcopy(self._outwash[iB3D]._beach_width)
 
         ###############################################################################
         # update BRIE for any human modifications to the barrier
