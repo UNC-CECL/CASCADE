@@ -1317,9 +1317,12 @@ class Outwasher:
         self._outwash_storms = np.load(
             os.path.join(datadir, outwash_storms_file), allow_pickle=True
         )
-        self._outwash_beach = np.load(
-            os.path.join(datadir, outwash_beach_file), allow_pickle=True
-        )
+        if outwash_beach_file is not None:
+            self._outwash_beach = np.load(
+                os.path.join(datadir, outwash_beach_file), allow_pickle=True
+            )
+        else:
+            self._outwash_beach = None
 
         # initialize the time index variable (changed to b3d_time_step in the update
         # function)
