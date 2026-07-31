@@ -80,6 +80,51 @@ def initialize_cascade_no_human_dynamics_ast(datadir):
 
     return cascade
 
+def run_cascade_noutishment_outwasher(datadir):
+    """
+    n domains = 3
+    outwasher: on
+    beach nourishment: on
+    time steps: 5 so we only have one outwash event
+    """
+
+    for data_file in datadir.iterdir():
+        shutil.copy(data_file, ".")
+
+    cascade = Cascade(
+        ".",
+        name="test_coupled_dune_migration",
+        storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
+        elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
+        dune_file="pathways-dunes.npy",
+        parameter_file="barrier3d-default-parameters.yaml",
+        wave_height=1,
+        wave_period=7,
+        wave_asymmetry=0.8,
+        wave_angle_high_fraction=0.2,
+        sea_level_rise_rate=0.004,
+        sea_level_rise_constant=True,
+        background_erosion=0.0,
+        alongshore_section_count=3, # test multi domains
+        time_step_count=NT,
+        min_dune_growth_rate=0.55,
+        max_dune_growth_rate=0.95,  # rave = 0.75
+        num_cores=1,
+        roadway_management_module=False,
+        alongshore_transport_module=False,
+        beach_nourishment_module=True,
+        community_economics_module=False,  # no community dynamics
+        outwash_module=True,
+        outwash_storms_file="short_outwash_storm.npy",
+        outwash_beach_file=None,
+    )
+
+    for _ in range(NT - 1):
+        cascade.update()
+        if cascade.b3d_break:
+            break
+
+    return cascade
 
 def test_barrier3d_versions(tmp_path, datadir, monkeypatch):
     """
@@ -183,3 +228,19 @@ def test_shoreline_variable_exchange_ast(tmp_path, datadir, monkeypatch):
     dh = CASCADE_AST_MODEL.brie._h_b_save - np.array(h_b_TS)
 
     assert_array_almost_equal([dt, ds, db, dh], np.zeros([4, 6, 3]))
+
+
+def test_beach_widths(tmp_path, datadir, monkeypatch):
+    """
+    test that all the fake beaches from nourishment events are equivalent
+    BeachDuneManager and Outwasher modules both adjust the "beach"
+    """
+    monkeypatch.chdir(tmp_path)
+    CASCADE_OUTPUT = run_cascade_noutishment_outwasher(datadir)
+
+    for n in range(CASCADE_OUTPUT._ny):
+        casc_beach = CASCADE_OUTPUT._beach_width[n]
+        nourish_beach = CASCADE_OUTPUT.nourishments[n]._beach_width
+        outwash_beach = CASCADE_OUTPUT.outwash[n]._beach_width
+        assert_array_almost_equal(casc_beach, nourish_beach)
+        assert_array_almost_equal(casc_beach, outwash_beach)
