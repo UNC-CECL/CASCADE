@@ -558,7 +558,9 @@ class BeachDuneManager:
         self._nourishment_volume = nourishment_volume
         self._nourishment_interval = nourishment_interval
         self._nourishment_counter = nourishment_interval
-        self._beach_width_threshold = beach_width_threshold  # m, triggers dune migration to turn back on
+        self._beach_width_threshold = (
+            beach_width_threshold  # m, triggers dune migration to turn back on
+        )
         self._beach_width = beach_width
         self._dune_design_elevation = dune_design_elevation
         self._original_growth_param = original_growth_param

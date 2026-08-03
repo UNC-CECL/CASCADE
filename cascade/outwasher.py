@@ -1329,7 +1329,9 @@ class Outwasher:
         self._time_index = 0
 
         # beach/shoreface "nourishment" variables
-        self._beach_width_threshold = beach_width_threshold  # m, triggers dune migration to turn back on
+        self._beach_width_threshold = (
+            beach_width_threshold  # m, triggers dune migration to turn back on
+        )
         self._beach_width = beach_width
         self._dune_migration_on = [np.nan] * time_step_count
         self._dune_migration_on[0] = False

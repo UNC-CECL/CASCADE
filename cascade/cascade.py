@@ -1,4 +1,5 @@
-import os, copy
+import copy
+import os
 
 import numpy as np
 from joblib import Parallel
@@ -328,7 +329,7 @@ class Cascade:
         self._initial_beach_width = [0] * self._ny
         self._group_roadway_abandonment = group_roadway_abandonment
         # initialize fake beach which is used to control dune migration when the beach/shoreface is nourished
-        self._beach_width = [[np.nan]*self._nt] * self._ny
+        self._beach_width = [[np.nan] * self._nt] * self._ny
         self._beach_width_threshold = 0  # m, triggers dune migration to turn back on
 
         # initialization errors
@@ -828,7 +829,9 @@ class Cascade:
                     )  # dam
                 )
                 # update fake beach variable
-                self._beach_width[iB3D] = copy.deepcopy(self._nourishments[iB3D].beach_width)
+                self._beach_width[iB3D] = copy.deepcopy(
+                    self._nourishments[iB3D].beach_width
+                )
 
         ###############################################################################
         # outwash module
@@ -880,7 +883,9 @@ class Cascade:
                     return
 
                 # update fake beach variable
-                self._beach_width[iB3D] = copy.deepcopy(self._outwash[iB3D]._beach_width)
+                self._beach_width[iB3D] = copy.deepcopy(
+                    self._outwash[iB3D]._beach_width
+                )
 
         ###############################################################################
         # update BRIE for any human modifications to the barrier

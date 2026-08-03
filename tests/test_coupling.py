@@ -80,6 +80,7 @@ def initialize_cascade_no_human_dynamics_ast(datadir):
 
     return cascade
 
+
 def run_cascade_noutishment_outwasher(datadir):
     """
     n domains = 3
@@ -105,7 +106,7 @@ def run_cascade_noutishment_outwasher(datadir):
         sea_level_rise_rate=0.004,
         sea_level_rise_constant=True,
         background_erosion=0.0,
-        alongshore_section_count=3, # test multi domains
+        alongshore_section_count=3,  # test multi domains
         time_step_count=NT,
         min_dune_growth_rate=0.55,
         max_dune_growth_rate=0.95,  # rave = 0.75
@@ -125,6 +126,7 @@ def run_cascade_noutishment_outwasher(datadir):
             break
 
     return cascade
+
 
 def test_barrier3d_versions(tmp_path, datadir, monkeypatch):
     """
