@@ -1420,14 +1420,14 @@ class Outwasher:
 
             # merge the interior domain, dunes, and beach ---
             if self._outwash_beach is None:
-                # we added a beach (and "beachface") to domain with a width of 7
+                # we add a beach (and "beachface") to domain with a width of 7
                 # dam based on general beach widths
                 beach_domain = (
                     np.ones([7, self._length]) * self._beach_elev
                 )  # [dam MHW] 7 rows
                 beachface_domain = np.zeros([6, self._length])
-                # we give the beach slope to be 0.004 m = 0.0004 dam
-                m_beach = 0.0004
+                # we make the beach slope equal to beta
+                m_beach = self._beach_slope
                 # we want the beach to have a slope, but keep the first few
                 # rows the berm elevation
                 for b in range(len(beach_domain)):
@@ -1451,7 +1451,6 @@ class Outwasher:
                         )
             else:
                 beach_domain = self._outwash_beach
-                m_beach = self._beach_slope
 
             # the dune domain is taken from B3D, which is a set of tuples, so
             # it needs to be transposed
