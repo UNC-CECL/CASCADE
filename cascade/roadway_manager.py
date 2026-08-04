@@ -445,66 +445,83 @@ def road_relocation_checks(
     road_relocation_setback,
     road_relocation_width,
     average_barrier_width,
+    relocate_now=False,
 ):
-    """Check if the roadway needs to be relocated due to dune migration, and if
-    there is room for roadway relocation.
+    """Check whether the roadway should be relocated and whether relocation is viable.
+
+    Relocation can be triggered in either of two ways:
+
+    1. automatically, when dune migration makes ``road_setback < 0``; or
+    2. explicitly, when ``relocate_now=True`` for a known historical relocation.
+
+    ``relocate_now=True`` represents an observed hindcast relocation and therefore
+    imposes the supplied setback even when the modeled barrier is too narrow. Automatic
+    forecast-style relocation still retains the normal width feasibility check.
 
     Parameters
     ----------
     time_index: int
-        Time index for drowning error message
-    dune_migrated: int
-        Number of meters dune migrated in Barrier3D; + if progrades, - if erodes [m]
+        Time index for relocation diagnostics.
+    dune_migrated: float
+        Number of meters the dune migrated in Barrier3D; positive for progradation
+        and negative for erosion/landward migration [m].
     road_setback: float
-        The setback distance of roadway from edge of interior domain from the last
-        time step [m]
+        Road setback from the edge of the interior domain at the previous time step
+        [m].
     road_relocation_setback: float
-        The setback distance specified for roadway relocation [m]
+        Target setback for the relocated roadway [m].
     road_relocation_width: float
-        The road width specified for roadway relocation [m]
+        Width of the relocated roadway [m].
     average_barrier_width: float
-        The average barrier width from the last time step [m]
-
+        Average barrier width at the current time step [m].
+    relocate_now: bool, optional
+        Request relocation during this time step, regardless of whether the modeled
+        dune has reached the roadway. Intended for prescribed historical relocation
+        years in a hindcast. Default is ``False``.
     Returns
     -------
-    bool
-        road_relocated: roadway was relocated due to dune migration
-        relocation_break: no room for relocation of the roadway
-    float
-        road_setback: updated setback distance for dune migration and road relocation
+    road_relocated: bool
+        ``True`` when a prescribed hindcast relocation is imposed or when an automatic
+        relocation request passes the normal width check.
+    road_setback: float
+        Updated setback after dune migration and, when successful, relocation.
+    relocation_break: bool
+        ``True`` when relocation was requested but the island is too narrow.
     """
 
-    # initialize the break booleans as False
-    relocation_break = 0
-    road_relocated = 0
-    # if dune line eroded or prograded, subtract (erode) or add (prograde) to
-    # the setback to keep road in the same place
-    if dune_migrated != 0:
-        road_setback = road_setback + dune_migrated
+    relocation_break = False
+    road_relocated = False
 
-        # with this shoreline change and dune migration, check if the roadway needs
-        # to be relocated
+    # Keep the road fixed in geographic space while the modeled dune line migrates.
+    # This update must occur every year, including a prescribed relocation year.
+    road_setback = road_setback + dune_migrated
 
-        if road_setback < 0:
-            road_relocated = 1
-            #print('Roadway relocated')
+    # Automatic relocation: dunes have migrated landward past the road.
+    # Hindcast relocation: the user prescribes that relocation occurred this year.
+    relocation_requested = bool(relocate_now) or (road_setback < 0)
 
-            # relocate the road only if the width of the island allows it
-            if (
-                road_relocation_setback
-                + (
-                    2 * road_relocation_width
-                )  # bay shoreline buffer of one roadway width
-                > average_barrier_width
-            ):
-                relocation_break = 1
-                # time_index - 1 because B3D advances time step at end of dune_update
-                # print(
-                #     "Island is too narrow for roadway to be relocated. Roadway "
-                #     f"eaten up by dunes at {time_index - 1} years"
-                # )
-            else:
-                road_setback = road_relocation_setback
+    if relocation_requested:
+        minimum_required_width = (
+            road_relocation_setback + 2 * road_relocation_width
+        )
+
+        # An explicit relocate_now request is an observed hindcast boundary
+        # condition, so impose the supplied road location. Automatic relocation
+        # caused by dune migration retains the normal width feasibility check.
+        if relocate_now:
+            road_relocated = True
+            road_setback = road_relocation_setback
+        elif minimum_required_width > average_barrier_width:
+            relocation_break = True
+            # time_index - 1 because Barrier3D advances the time step at the end of
+            # dune_update.
+            # print(
+            #     "Island is too narrow for roadway relocation at "
+            #     f"{time_index - 1} years"
+            # )
+        else:
+            road_relocated = True
+            road_setback = road_relocation_setback
 
     return road_relocated, road_setback, relocation_break
 
@@ -550,6 +567,7 @@ class RoadwayManager:
     --------
     # >>> from cascade.roadway_manager import RoadwayManager
     # >>> roadways = RoadwayManager()
+    # >>> roadways.request_relocation(100.0)
     # >>> roadways.update(barrier3d, trigger_dune_knockdown)
     """
 
@@ -618,6 +636,14 @@ class RoadwayManager:
             road_relocation_setback  # can be updated outside `update` within cascade
         )
 
+        # One-step prescribed relocation request used by hindcast simulations.
+        # These fields are deliberately separate from _road_relocation_setback
+        # because Cascade.update() may overwrite that normal relocation target
+        # immediately before calling this manager.
+        self._relocate_now = False
+        self._prescribed_relocation_setback = None
+        self._prescribed_relocation_elevation = None
+
         # user can specify that dune rebuilding is off with `None`: mostly for
         # debugging and sensitivity testing
         if (
@@ -674,8 +700,55 @@ class RoadwayManager:
         self._post_storm_interior = [None] * self._nt
         self._post_storm_ave_interior_height = [None] * self._nt
 
-    def update(self, barrier3d, trigger_dune_knockdown):
+    def update(
+        self,
+        barrier3d,
+        trigger_dune_knockdown,
+        relocate_now=None,
+    ):
+        """Apply roadway management for the current Barrier3D time step.
+
+        Parameters
+        ----------
+        barrier3d
+            Current Barrier3D model instance.
+        trigger_dune_knockdown: bool
+            Whether to reset dunes when roadway management terminates.
+        relocate_now: bool, optional
+            Impose a prescribed hindcast road relocation during the current time
+            step. When omitted, a one-step request queued with
+            :meth:`request_relocation` is used. The prescribed hindcast location
+            bypasses event-year width and drowning rejection.
+        """
         self._time_index = barrier3d.time_index
+
+        # Consume the queued hindcast request before any possible early return.
+        # Clearing it here guarantees that a historical event applies for only
+        # one model update.
+        queued_relocate_now = bool(self._relocate_now)
+        queued_relocation_setback = self._prescribed_relocation_setback
+        queued_relocation_elevation = self._prescribed_relocation_elevation
+        self._relocate_now = False
+        self._prescribed_relocation_setback = None
+        self._prescribed_relocation_elevation = None
+
+        if relocate_now is None:
+            relocate_now = queued_relocate_now
+        else:
+            # Keep compatibility with direct calls while allowing a queued request
+            # to survive Cascade.update(), which calls this method with two args.
+            relocate_now = bool(relocate_now) or queued_relocate_now
+
+        # A prescribed hindcast relocation reactivates roadway management before
+        # relocation is evaluated. The request is treated as an observed boundary
+        # condition for this one update.
+        if relocate_now:
+            self._drown_break = 0
+            self._relocation_break = 0
+
+        effective_relocation_setback = self._road_relocation_setback
+        if relocate_now and queued_relocation_setback is not None:
+            effective_relocation_setback = float(queued_relocation_setback)
 
         if self._original_growth_param is None:
             self._original_growth_param = barrier3d.growthparam
@@ -709,9 +782,10 @@ class RoadwayManager:
             self._time_index,
             dune_migration,
             self._road_setback,  # current road setback, m
-            self._road_relocation_setback,  # setback specified for relocation, m
+            effective_relocation_setback,  # normal or prescribed target setback, m
             self._road_relocation_width,  # width specified for relocation, m
             average_barrier_width,  # current width, m
+            relocate_now=relocate_now,  # enforced historical relocation trigger
         )
 
         # if road can't be relocated, no longer manage and exit; dune growth
@@ -731,7 +805,8 @@ class RoadwayManager:
         # otherwise, decrease all elevations (m MHW) this year by the SLR increment
         if road_relocated:
             self._road_width = self._road_relocation_width
-            self._road_ele, self._drown_break = get_road_relocation_elevation(
+            previous_road_elevation = float(self._road_ele)
+            grade_road_elevation, grade_drown = get_road_relocation_elevation(
                 self._time_index,
                 # interior domain from this last time step, dam
                 xyz_interior_grid=barrier3d.InteriorDomain,
@@ -741,6 +816,22 @@ class RoadwayManager:
                 dy=10,
                 dz=10,  # specifies interior is in dam
             )
+
+            if relocate_now:
+                # A prescribed hindcast relocation is imposed even when the modeled
+                # grade is at/below MHW. An explicitly prescribed elevation takes
+                # priority; otherwise retain the positive pre-relocation roadway
+                # elevation as construction fill.
+                if queued_relocation_elevation is not None:
+                    self._road_ele = float(queued_relocation_elevation)
+                elif np.isfinite(grade_road_elevation) and grade_road_elevation > 0:
+                    self._road_ele = float(grade_road_elevation)
+                else:
+                    self._road_ele = max(previous_road_elevation, 0.01)
+                self._drown_break = 0
+            else:
+                self._road_ele = grade_road_elevation
+                self._drown_break = grade_drown
 
             # user can specify that dune rebuilding is off with `None`
             if (
@@ -849,7 +940,10 @@ class RoadwayManager:
             drown_threshold=0,  # 0 m MSL
             # fraction cells<drown_threshold
             percent_water_cells_touching_road=self._percent_water_cells_touching_road,
-            allow_causeway=self._allow_causeway
+            # During the prescribed hindcast relocation year, permit construction
+            # fill/causeway so adjacent modeled water does not cancel the observed
+            # event.
+            allow_causeway=(self._allow_causeway or bool(relocate_now))
         )
         if self._drown_break == 1:
             # an adaptation solution may be to knock down the dunes so that they
@@ -950,6 +1044,70 @@ class RoadwayManager:
         barrier3d.growthparam = new_growth_parameters
 
         return
+
+    def request_relocation(
+        self,
+        road_setback,
+        road_elevation=None,
+    ):
+        """Queue one prescribed road relocation for the next update.
+
+        Parameters
+        ----------
+        road_setback: float
+            Post-relocation roadway setback from the current modeled dune/interior
+            boundary [m].
+        road_elevation: float, optional
+            Prescribed post-relocation roadway elevation [m MHW]. When omitted, the
+            manager uses modeled grade when positive; otherwise it retains the
+            positive pre-relocation road elevation as construction fill.
+
+        Notes
+        -----
+        The request is consumed and cleared the next time ``update`` is called.
+        Every queued request is treated as an observed hindcast boundary condition:
+        it resets prior roadway break flags and bypasses event-year width and
+        drowning rejection without modifying ``cascade.py``.
+        """
+        road_setback = float(road_setback)
+
+        if not np.isfinite(road_setback) or road_setback < 0:
+            raise ValueError(
+                "Prescribed road relocation setback must be a finite, "
+                f"non-negative value; received {road_setback}."
+            )
+
+        if road_elevation is not None:
+            road_elevation = float(road_elevation)
+            if not np.isfinite(road_elevation) or road_elevation <= 0:
+                raise ValueError(
+                    "Prescribed relocation road elevation must be finite and "
+                    f"greater than zero; received {road_elevation}."
+                )
+
+        self._prescribed_relocation_setback = road_setback
+        self._prescribed_relocation_elevation = road_elevation
+        self._relocate_now = True
+
+        # Reactivate roadway management for the observed historical event so the
+        # next normal Cascade.update() reaches and enforces this manager request.
+        self._drown_break = 0
+        self._relocation_break = 0
+
+    @property
+    def road_setback(self):
+        """Current modeled roadway setback [m]."""
+        return self._road_setback
+
+    @property
+    def relocate_now(self):
+        """Whether a prescribed relocation is queued for the next update."""
+        return self._relocate_now
+
+    @property
+    def prescribed_relocation_setback(self):
+        """Queued post-relocation setback [m], or ``None``."""
+        return self._prescribed_relocation_setback
 
     @property
     def road_relocation_width(self):
