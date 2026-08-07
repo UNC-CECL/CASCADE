@@ -490,10 +490,6 @@ class Marsh:
         bay_depth_mMHW = -self._bay_depth
         bay_depth_mMSL = bay_depth_mMHW + self._amp + self._RSLR
 
-        # shoreline_change = int(shoreline_changeTS[model_year])  # neg = landward movement (lose cells), pos = seaward movement (add cells)
-        # # expected width due to shoreline changes
-        # expected_width = self._initial_width + sum(shoreline_changeTS[0:model_year+1])
-
         # bmft assumes the domain starts at the marsh edge and ends at the higher elevation "forest", so we need
         # to flip our domain so that 0 is the marsh edge (top is marsh edge, bottom is barrier edge)
         interior_domain = np.flip(interior_domain, axis=0)
@@ -527,10 +523,8 @@ class Marsh:
             if model_year == 1:
                 self._yearly_decomp_elev_TS[c][0, 0:barrier_width] = copy.deepcopy(transect)  # set the first row to the initial transect elevation
 
-            # ---------------------------------------------------------------------------------------------------------
             # adjust the decomposition arrays that track marsh transects through time to account for shoreline and
             # marsh edge movements so they remain aligned properly
-            # ---------------------------------------------------------------------------------------------------------
             shift_marsh = adjust_decomp_array_size(
                 self=self,
                 interior_transect=transect,
@@ -538,35 +532,6 @@ class Marsh:
                 year=model_year,
                 c=c,
             )
-
-            # if the shoreline has moved seaward, add cells to the end of the arrays to account for wider interior
-            # Note: if the shoreline has moved landward, the transect is smaller and fits within the current array
-            # if shoreline_change > 0:
-            #     add_cells = sum(shoreline_changeTS[0:model_year+1]) - self._cols_added_barrier[c]  # check if we need to extend the array on the barrier side
-            #     if add_cells > 0:
-            #         new_cols = np.ones([self._nt, shoreline_change]) * np.nan
-            #         self._yearly_decomp_elev_TS[c] = np.append(self._yearly_decomp_elev_TS[c], new_cols, axis=1)
-            #         self._yearly_organic_autoch_TS[c] = np.append(self._yearly_organic_autoch_TS[c], new_cols, axis=1)
-            #         self._cols_added_barrier[c] += add_cells
-            # # if the transect is not the expected size due to shoreline change, there was a change on the marsh side
-            # transect_width = len(transect)
-            # width_dif = int(transect_width - expected_width)
-            # shift_marsh = 0
-            # # if the transect width is larger, we added cells to the marsh edge side
-            # if transect_width > expected_width:
-            #     if self._cols_added_marsh[c] < width_dif:  # check if we need to extend array on the marsh side
-            #         add_cells = int(width_dif - self._cols_added_marsh[c])
-            #         new_cols = np.ones([self._nt, add_cells]) * np.nan
-            #         self._yearly_decomp_elev_TS[c] = np.append(new_cols, self._yearly_decomp_elev_TS[c], axis=1)
-            #         new_cols_auto = np.zeros([self._nt, add_cells])
-            #         self._yearly_organic_autoch_TS[c] = np.append(new_cols_auto, self._yearly_organic_autoch_TS[c], axis=1)
-            #         self._cols_added_marsh[c] += add_cells
-            #     else:  # otherwise, we already have enough columns to contain the transect, but we need to adjust the start position of the marsh if it has lost a cell
-            #         shift_marsh = int(self._cols_added_marsh[c] - width_dif)
-            # # we lost a column from the marsh edge, (i.e. if all cells get to -3 m MHW, they may be removed)
-            # elif transect_width < expected_width:
-            #     shift_marsh = abs(width_dif) + self._cols_added_marsh[c] # adjust the start and stop position of the marsh cells
-            # ------------------------------------------------------------------------------------------------------
 
             # add this model year's transect, which should align correctly
             self._yearly_decomp_elev_TS[c][model_year, shift_marsh:barrier_width+shift_marsh] = copy.deepcopy(transect)  # m MSL
