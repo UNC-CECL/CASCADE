@@ -16,6 +16,7 @@ from numpy.testing import assert_array_almost_equal
 from cascade.marsh_dynamics import Marsh
 from cascade.marsh_dynamics import evolvemarsh as evolve_cascade
 from cascade.marsh_dynamics import decompose as decomp_cascade
+from cascade.marsh_dynamics import adjust_decomp_array_size
 
 # BMFTC versions
 from evolvemarsh import evolvemarsh as evolve_bmft
@@ -585,5 +586,62 @@ def test_marsh_accretion_erosion():
         post_elev = marsh_class._marsh_elevation[time_step]
         non_marsh_cells = np.where((pre_elev> m_max_msl) | (pre_elev < m_min_msl))  # | is or operator
         assert_array_almost_equal(post_elev[non_marsh_cells], pre_elev[non_marsh_cells])  # actual, desired
+
+
+def test_decomp_arrays():
+    # set parameters for testing
+    # test_array = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\test_decomp_sc.npy")  # this is what the array
+    test_array = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\test_decomp_marsh.npy")  # this is what the array
+
+    # should look like at the end, but we will only input the non-nan values into the function
+    model_duration = 7  # yrs
+    # shoreline_change = [0, -2, 1, 2, -2, 4, 0]
+    shoreline_change = [0, 0, 0, 0, 0, 0, 0]  # marsh changes
+    c=0
+
+    # initialize the class
+    marsh_class = Marsh(
+        RSLR=0.05,  # this will get replaced with cascade: self._sea_level_rise_rate which is in m/yr
+        C_e=0.05,
+        OCb=0,
+        numiterations=500,
+        P=12.5 * 3600 * 1,
+        ws=0.05 * 10 ** (-3),
+        n_tidal_cycles=365 * (24 / 12.5),
+        Bmax=2500,
+        Dmin=0,
+        Dmax=0.4,
+        rhoo=85,
+        rhos=2000,
+        mui=0.4,
+        mki=0.1,
+        m_min=-0.3,
+        m_max=0,
+        time_step_count=model_duration,
+        alongshore_length=1,
+        tidal_amplitude=0.7,
+        initial_width=10
+    )
+
+    for t in range(model_duration):
+        transect = test_array[t]
+        transect = transect[~np.isnan(transect)]
+        barrier_width = len(transect)
+        # add year 0 elevation to yearly decomposition elevation array
+        if t == 0:
+            marsh_class._yearly_decomp_elev_TS[c][0, 0:barrier_width] = copy.deepcopy(
+                transect)  # set the first row to the initial transect elevation
+        shift_marsh = adjust_decomp_array_size(
+            self=marsh_class,
+            interior_transect=transect,
+            sc_TS=shoreline_change,
+            year=t,
+            c=0)
+
+        # add this model year's transect, which should align correctly
+        marsh_class._yearly_decomp_elev_TS[c][t, shift_marsh:barrier_width + shift_marsh] = copy.deepcopy(
+            transect)  # m MSL
+
+    assert_array_almost_equal(marsh_class._yearly_decomp_elev_TS[c], test_array)
 
 

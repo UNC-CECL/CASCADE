@@ -61,9 +61,10 @@ def adjust_decomp_array_size(self, interior_transect, sc_TS, year, c):
         add_cells = sum(sc_TS[0:year + 1]) - self._cols_added_barrier[
             c]  # check if we need to extend the array on the barrier side
         if add_cells > 0:
-            new_cols = np.ones([self._nt, shoreline_change]) * np.nan
+            new_cols = np.ones([self._nt, add_cells]) * np.nan
             self._yearly_decomp_elev_TS[c] = np.append(self._yearly_decomp_elev_TS[c], new_cols, axis=1)
-            self._yearly_organic_autoch_TS[c] = np.append(self._yearly_organic_autoch_TS[c], new_cols, axis=1)
+            new_cols_auto = np.zeros([self._nt, add_cells])
+            self._yearly_organic_autoch_TS[c] = np.append(self._yearly_organic_autoch_TS[c], new_cols_auto, axis=1)
             self._cols_added_barrier[c] += add_cells
     # if the transect is not the expected size due to shoreline change, there was a change on the marsh side
     transect_width = len(interior_transect)
