@@ -1,0 +1,88 @@
+# the following parameters CANNOT be changed or else the MSSM storm list &
+# storm time series needs to be remade --> MHW, beta, and BermEl
+
+# Static length (alongshore) of island segment
+BarrierLength: 500 # [m]
+
+# Depth of bay behind island segment
+BayDepth: 3.0 # [m] - derived from Wells and Kim 1989
+
+# Static elevation of berm; berm elevation + dune height = dune elevation
+# (NOTE: if changed, need new MSSM and storms)
+BermEl: 1.7 # [m NAVD88] - provided by NC State team; derived from NCDOT data for pea island
+
+# Height of shoreface
+DShoreface: 8.9 # [m] #TODO: default? confirm
+
+# Dune crest heights will come from external file; copied for each sequential dune row
+DuneParamStart: true
+
+# Dune growth parameters will come from external file
+GrowthParamStart: false
+
+# Length of shoreface --> DShoreface / s_sf_eq
+LShoreface: 461.11362880210413 #TODO: default? confirm
+
+# Elevation of Mean High Water
+# (NOTE: if changed, need new storm time series)
+# Source: NOAA station 8651370, Duck NC
+# https://tidesandcurrents.noaa.gov/datums.html?datum=NAVD88&units=1&epoch=0&id=8651370&name=Duck&state=NC
+MHW: 0.36 # [m NAVD88]
+
+# Relative sea-level rise rate will be constant, otherwise logistic growth
+# function used for time series
+RSLR_Constant: true
+
+# Relative sea-level rise rate
+# Period 1 (1984_2004): +0.004 m/yr
+# Period 2 (2004-2024): +0.006 m/yr
+# Derived using: C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_prep\rslr\duck_rslr_analysis.py
+# Source: NOAA station 8651370, Duck NC
+# https://tidesandcurrents.noaa.gov/sltrends/sltrends_station.shtml?id=8651370
+RSLR_const: 0.004 # [m / y]
+
+# Rate of shoreline retreat attributed to alongshore transport
+# (-) = erosion, (+) = accretion
+Rat: 0.0 # [m / y] #TODO: default? confirm
+
+# Sandbag module
+Sandbag_elevation: 1.9
+
+# Start location of shoreface toe [m]
+ShorefaceToe: 1449.4612903225802 #TODO: default? confirm
+
+# 1 = shrubs on in simulation, 0 = shrubs off
+Shrub_ON: 0
+
+# Duration of simulation
+TMAX: 20
+
+# Beach slope for runup calculations
+# Barrier3D does not resolve beach processes and instead assumes a constant
+# beach slope for simulation of storm water level
+beta: 0.04
+
+# BUFFERS: File that contains initial dune height values in decameters [dam x dam x dam]
+dune_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\buffer\sample_1_dune.npy
+
+# BUFFERS: File that contains initial elevations in decameters [dam x dam x dam MHW]
+elevation_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\buffer\sample_1_topography.npy
+
+# Sandbag module
+enable_sandbags: false
+
+# Shoreface flux rate constant
+# (defines the speed at which a shoreface profile adjusts to equilibrium)
+k_sf: 26983.223032111026 # [m^3 / m / y] #TODO: default? confirm
+
+# Maximum growth rate for logistic dune growth
+rmax: 0.95 #TODO: default? confirm
+
+# Minimum growth rate for logistic dune growth
+rmin: 0.55 #TODO: default? confirm
+
+# Equilibrium shoreface slope
+s_sf_eq: 0.019329993766927633 #TODO: default? confirm
+
+# File that contains storm data
+storm_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\storms\hindcast_storms\storms_1984_2004.npy

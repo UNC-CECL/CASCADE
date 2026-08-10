@@ -1,0 +1,18 @@
+Jupyter notebook order
+- section 1: import libraries/packages
+- section 2: load in fixed domain configuration parameters (i.e. load in dunes/topo and include a plot to look through)
+- section 3: load in domain orientation, which varies by start year (set start year and then plot the initialization)
+- section 4: roadway_manager module defining: load in roadway locations, varies by year (plot)
+    --> roadway_manager only applied to domains where the roadway exists AND where there is not a community
+- section 5: beach_dune_manager module defining: load in comunity locations and what to apply
+    --> apply historical beach nourishmenet events, filter overwash in community locations, fix dune location
+- section 6: hard_structures module (IN PROGRESS) defining: load in groin definitions
+    --> Buxton groin
+- section 7: load in environmental forcings which vary by start year (i.e. storms and rslr) plot to show trend
+- section 8: load in source/sink terms, which varies by start year
+- section 9: load in coastsat scr for the time period to show target rates
+- section 10: plotting functions...both scr model vs coastsat and video/gif of shoreline position change over time
+- section 11: def alongshore_connected or uniform_connected?
+- section 12: initialize cascade
+- section 13: loop the function for the defined time steps 1984-2003 and 2004-2024
+

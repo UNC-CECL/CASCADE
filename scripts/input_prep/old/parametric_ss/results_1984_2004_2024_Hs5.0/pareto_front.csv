@@ -1,0 +1,3 @@
+ws_peak_dam_yr,rod_amplitude,rod_width_domains,avon_north_dam_yr,rmse_p1,rmse_p2,combined_score,pareto_optimal
+0.65,-0.6,7,0.05,0.3676,0.3938,0.3807,True
+0.05,-0.6,7,0.05,0.3549,0.4217,0.3883,True
