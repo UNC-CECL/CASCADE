@@ -590,13 +590,16 @@ def test_marsh_accretion_erosion():
 
 def test_decomp_arrays():
     # set parameters for testing
-    # test_array = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\test_decomp_sc.npy")  # this is what the array
-    test_array = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\test_decomp_marsh.npy")  # this is what the array
-
+    # test_array = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\test_decomp_sc.npy")
+    # test_array = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\test_decomp_marsh.npy")
+    test_array = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\test_decomp_both.npy")  # this is what the array
     # should look like at the end, but we will only input the non-nan values into the function
-    model_duration = 7  # yrs
-    # shoreline_change = [0, -2, 1, 2, -2, 4, 0]
-    shoreline_change = [0, 0, 0, 0, 0, 0, 0]  # marsh changes
+    # initial width
+    width = np.count_nonzero(~np.isnan(test_array[0]))
+    # remaining input variables
+    model_duration = np.shape(test_array)[0]  # yrs
+    shoreline_change = [0, -2, 1, 2, -2, 4, 0]  # shoreline change and both
+    # shoreline_change = [0, 0, 0, 0, 0, 0, 0]  # marsh changes
     c=0
 
     # initialize the class
@@ -620,7 +623,7 @@ def test_decomp_arrays():
         time_step_count=model_duration,
         alongshore_length=1,
         tidal_amplitude=0.7,
-        initial_width=10
+        initial_width=width
     )
 
     for t in range(model_duration):
