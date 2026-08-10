@@ -1,0 +1,41 @@
+HAT_groin_shoreline_analysis_v2.py — run metadata
+============================================================
+
+Run at: 2026-07-14 08:58:49
+
+--- CONFIG ---
+Pre-install year cutoff:  < 1970 (all shorelines before this year used)
+Groin geojson: C:\Users\hanna\PycharmProjects\CASCADE\scripts\groin_module\gis_analysis\gis_data\groins_hatteras.geojson
+Updrift direction: north
+Signal anomaly threshold: 1.0 m/yr
+Signal max search distance: 15.0 km
+Signal extent bin width: 500 m, max gap 1 bin(s), contiguous from groin
+Baseline method: connect-the-dots linear interpolation across per-transect pre-install rates (no binning/smoothing)
+Decadal bins: 10 yr, start 1960, min obs 5
+Breakpoint search: 1970–2020, min pts/segment 5
+Shoreline evolution GIF window: domain 1 to +30 km updrift, 0.15s/frame, mode=date
+CoastSat transect layer: C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\CoastSat_transect_layer.geojson
+Transect length: 800 m, chainage max abs 700 m
+CASCADE domain reference: C:\Users\hanna\PycharmProjects\CASCADE\scripts\groin_module\gis_analysis\gis_data\HAT_domains.json
+Plot x-axis clip: ±60 km
+Min obs per transect: 8
+
+--- STATS ---
+groin_reference_northing (northernmost groin): 3901781.2548061935
+groin_field_extent_min: 3901373.135706188
+groin_field_extent_max: 3901788.7855061935
+n_groin_features: 4
+n_coastsat_transects: 1255
+n_transects_analyzed: 1255
+n_total_observations: 904543
+n_wetdry_obs_updrift: 1314
+n_wetdry_obs_downdrift: 1557
+n_preinstall_transects: 925
+preinstall_years_used: [1849, 1852, 1860, 1946, 1949, 1967]
+n_piecewise_bp_found: 1255
+median_pre_install_LRR_m_yr: -0.6780449026449332
+median_full_period_LRR_m_yr: -0.559100012017036
+median_updrift_extent_km: 2.25
+median_downdrift_extent_km: 0.0
+max_updrift_peak_anomaly_m_yr: 10.822735960916145
+max_downdrift_peak_anomaly_m_yr: -7.760148723371748

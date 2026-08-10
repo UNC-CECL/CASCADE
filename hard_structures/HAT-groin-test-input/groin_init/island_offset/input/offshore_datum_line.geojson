@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","crs":{"type":"name","properties":{"name":"EPSG:3725"}},"features":[{"type":"Feature","id":1,"geometry":{"type":"LineString","coordinates":[[460198.4523,3897762.3268999998],[460198.4523,3943863.1534000002],[460198.45199999958,3959902.5953000002]]},"properties":{"OBJECTID":1,"Shape_Length":62140.268400000408}}]}

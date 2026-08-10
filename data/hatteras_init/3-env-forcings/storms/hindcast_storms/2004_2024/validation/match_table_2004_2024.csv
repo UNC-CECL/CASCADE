@@ -1,0 +1,23 @@
+label,name,year,cat,start,end,landfall,source,note,matched,matched_idx,matched_rhigh,offset_h,shared,n_candidates
+Alex 2004,Alex,2004,H3,2004-07-31,2004-08-06,True,noaa,"Sound-side flooding, $2.4M damage",False,,,,False,0
+Bonnie 2004,Bonnie,2004,TS,2004-08-03,2004-08-14,,noaa,,False,,,,False,0
+Ophelia 2005,Ophelia,2005,H1,2005-09-06,2005-09-23,True,noaa,Hatteras Island evacuated,True,21.0,2.7024202714924797,0.0,False,3
+Alberto 2006,Alberto,2006,TS,2006-06-10,2006-06-19,,noaa,,False,,,,False,0
+Barry 2007,Barry,2007,TS,2007-05-31,2007-06-05,,noaa,,False,,,,False,0
+Gabrielle 2007,Gabrielle,2007,TS,2007-09-08,2007-09-11,,noaa,,False,,,,False,0
+Cristobal 2008,Cristobal,2008,TS,2008-07-19,2008-07-23,,noaa,,False,,,,False,0
+Irene 2011,Irene,2011,H3,2011-08-21,2011-08-30,True,noaa,"Dare Co. evacuated; significant flooding, $54M damage",True,87.0,4.159544121765513,0.0,False,1
+Beryl 2012,Beryl,2012,TS,2012-05-25,2012-06-02,,noaa,,False,,,,False,0
+Arthur 2014,Arthur,2014,H2,2014-06-28,2014-07-09,True,noaa,Earliest hurricane on record; Hatteras evacuated,False,,,,False,0
+Claudette 2015,Claudette,2015,TS,2015-07-12,2015-07-15,,noaa,,False,,,,False,0
+Bonnie 2016,Bonnie,2016,TS,2016-05-27,2016-06-09,,noaa,,False,,,,False,0
+Colin 2016,Colin,2016,ET,2016-06-05,2016-06-08,,noaa,,False,,,,False,0
+Hermine 2016,Hermine,2016,H1,2016-08-28,2016-09-08,True,noaa,"Villages flooded; 4 ft surge, $5.4M damage",True,138.0,3.000791892464938,0.0,False,1
+Julia 2016,Julia,2016,TS,2016-09-13,2016-09-21,,noaa,,False,,,,False,0
+Matthew 2016,Matthew,2016,H5,2016-09-28,2016-10-10,False,noaa,Landfall SC; Dare Co. gusts to 94 mph,True,142.0,2.754585837736895,0.5,False,5
+Unnamed 2017,Unnamed,2017,ET,2017-08-27,2017-08-29,,noaa,,True,151.0,2.007615150534824,18.0,False,1
+Dorian 2019,Dorian,2019,H5,2019-08-24,2019-09-09,True,noaa,"Cat 1 landfall on Hatteras; 4–7 ft surge, $14.8M damage",True,178.0,3.382388511979393,0.0,False,2
+Arthur 2020,Arthur,2020,ET,2020-05-16,2020-05-21,,noaa,,True,190.0,2.554508334826835,0.0,False,1
+Fay 2020,Fay,2020,TS,2020-07-05,2020-07-11,,noaa,,False,,,,False,0
+Isaias 2020,Isaias,2020,H1,2020-07-30,2020-08-05,True,local,"72 mph in Avon; 1–3 ft surge, Zone A evacuated",False,,,,False,0
+Claudette 2021,Claudette,2021,TS,2021-06-17,2021-06-23,,noaa,,False,,,,False,0

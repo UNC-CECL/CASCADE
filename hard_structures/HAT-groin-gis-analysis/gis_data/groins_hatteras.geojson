@@ -1,0 +1,10 @@
+{
+  "type" : "FeatureCollection",
+  "crs" : {
+    "type" : "name",
+    "properties" : {
+      "name" : "EPSG:26918"
+    }
+  },
+  "features" : [{"type":"Feature","id":1,"geometry":{"type":"LineString","coordinates":[[452659.42399999965,3901401.0369000006],[452812.43290000036,3901373.1356000006]]},"properties":{"OBJECTID":1,"Shape_Length":155.53200963505847}},{"type":"Feature","id":2,"geometry":{"type":"LineString","coordinates":[[452729.46719999984,3901588.5287999995],[452842.00600000005,3901568.7683000006]]},"properties":{"OBJECTID":2,"Shape_Length":114.26048689593249}},{"type":"Feature","id":3,"geometry":{"type":"LineString","coordinates":[[452786.58000000007,3901788.7853999995],[452875.62299999967,3901773.7239999995]]},"properties":{"OBJECTID":3,"Shape_Length":90.307815934660553}},{"type":"Feature","id":4,"geometry":{"type":"LineString","coordinates":[[452778.86849999987,3901780.8330000006],[452884.78039999958,3901761.9157999996]]},"properties":{"OBJECTID":4,"Shape_Length":107.58806168635024}}]
+}
