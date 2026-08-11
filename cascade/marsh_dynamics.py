@@ -31,6 +31,9 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 import copy
+# import warnings
+#
+# warnings.filterwarnings("ignore", category=RuntimeWarning)  # supress divide by 0
 
 def adjust_decomp_array_size(self, interior_transect, sc_TS, year, c):
     """
@@ -320,11 +323,16 @@ def evolvemarsh(
     # Fm_org = np.sum(organic_alloch) / 1000  # [kg/yr] Flux of organic sediment from the bay
 
     # Calculate thickness of new sediment (mineral+organic) based off LOI and its effect on density
-    loi = (organic_autoch + organic_alloch) / (mineral + organic_autoch + organic_alloch)
+    total = (mineral + organic_autoch + organic_alloch)
+    # if all three are 0, get error message RuntimeWarning: invalid value encountered in divide, so set to nan instead
+    zero_vals = np.where(total==0)[0]
+    total[zero_vals] = np.nan
+    loi = (organic_autoch + organic_alloch) / total
     density = 1 / ((loi / rhoo) + ((1 - loi) / rhos)) * 1000  # [g/m3] Bulk density is calculated according to Morris et al. (2016)
     density[np.isnan(density)] = 1  # If there is zero deposition, loi calculation will divide by zero and make density nan. Set density equal to 1 in this case, so that accretion is zero, instead of nan.
 
-    accretion = (mineral + organic_autoch + organic_alloch) / density  # [m] accretion in a given year
+    accretion_volume = (mineral + organic_autoch + organic_alloch) / density  # [m3] accretion in a given year
+    accretion = accretion_volume / (10 * 10)  # [m] accretion in a given year, cell size is 10 m by 10 m
 
     if plot_on:
         # THIRD SUBPLOT
@@ -354,7 +362,7 @@ def evolvemarsh(
     # Update elevation
     marshelevation += accretion
 
-    return marshelevation, accretion, organic_autoch
+    return marshelevation, accretion, organic_autoch, accretion_volume
 
 
 def decompose(
@@ -368,10 +376,11 @@ def decompose(
         mki,  # decomp coefficient
         rhoo,  # organic matter bulk density (kg/m3)
 ):
-    """Decomposes all of the organic sediment within the marsh soil profile at a rate determined by depth."""
+    """Decomposes all the autochthonous organic sediment within the marsh soil profile at a rate determined by depth."""
 
     compaction = np.zeros([B])
-    Fd = 0
+    compaction_volume = np.zeros([B])
+    # Fd = 0
 
     # Decompose the marsh sediment
     for x in range(x_m, x_f):  # Loop through each marsh cell in the domain
@@ -387,15 +396,16 @@ def decompose(
             else:
                 decomp[tempyr] = organic_dep_autoch[tempyr, x] * (mki * math.exp(-depth / mui))  # [g] Mass of organic material decomposed from a given "pocket" of sediment
                 # decomp[tempyr] = organic_dep_autoch[tempyr][x] * (mki * math.exp(-depth / mui))  # [g] Mass of organic material decomposed from a given "pocket" of sediment
-                # organic_dep_autoch[tempyr][x] -= decomp[tempyr]  # [g] Autochthanous organic material in a given "pocket" of sediment updated for deomposition
-                organic_dep_autoch[tempyr, x] -= decomp[tempyr]  # [g] Autochthanous organic material in a given "pocket" of sediment updated for deomposition
-        compaction[x] = np.sum(decomp) / 1000 / rhoo  # [m] Total compaction in a given cell is a result of the sum of all decomposition in that cell
-        Fd += np.sum(decomp)  # [kg] Flux of organic matter out of the marsh due to decomposition
+                # organic_dep_autoch[tempyr][x] -= decomp[tempyr]  # [g] Autochthonous organic material in a given "pocket" of sediment updated for decomposition
+                organic_dep_autoch[tempyr, x] -= decomp[tempyr]  # [g] Autochthonous organic material in a given "pocket" of sediment updated for decomposition
+        compaction_volume[x] = np.sum(decomp) / 1000 / rhoo  # [m3] Total compaction in a given cell is a result of the sum of all decomposition in that cell
+        compaction[x] = compaction_volume[x] / (10 * 10)  # [m] Total compaction based on cell size is 10 m by 10 m
+        # Fd += np.sum(decomp)  # [kg] Flux of organic matter out of the marsh due to decomposition
 
     # Update the elevation of only the most recent layer
     elevation[yr, x_m:x_f] -= compaction[x_m:x_f]
 
-    return elevation[yr, x_m:x_f], compaction, Fd, organic_dep_autoch
+    return elevation[yr, x_m:x_f], compaction, organic_dep_autoch, compaction_volume
 
 
 class Marsh:
@@ -549,7 +559,7 @@ class Marsh:
             # if marsh_transect is empty, there are no marsh cells and we skip the calcs
             if len(marsh_transect) != 0:
                 # marsh accretion
-                marsh_transect, accretion, organic_autoch = evolvemarsh(
+                marsh_transect, accretion, organic_autoch, _ = evolvemarsh(
                     marshelevation=marsh_transect,
                     msl=self._msl[model_year],
                     C_e=self._SSCb,
@@ -577,7 +587,7 @@ class Marsh:
                 # previous time periods as well as marsh_transect updates
                 self._yearly_organic_autoch_TS[c][model_year, start_marsh_cell+shift_marsh:end_marsh_cell+shift_marsh+1] = organic_autoch
 
-                marsh_transect, compaction, Fd, organic_dep_autoch = decompose(
+                marsh_transect, compaction, organic_dep_autoch, _ = decompose(
                         x_m=start_marsh_cell+shift_marsh,
                         x_f=end_marsh_cell+shift_marsh+1,
                         yr=model_year,
