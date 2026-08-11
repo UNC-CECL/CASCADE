@@ -9,7 +9,7 @@ Copyright (C) 2022 Katherine Anarde
 import math
 import os
 
-import imageio
+import imageio.v2 as iio
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -679,7 +679,7 @@ def plot_ElevAnimation_CASCADE(
         + MaxBeachWidth
         + np.abs(barrier3d[0]._ShorelineChange)
         + OriginY
-        + 35
+        + 200
     )
 
     os.chdir(directory)
@@ -701,7 +701,7 @@ def plot_ElevAnimation_CASCADE(
             if 0 < t <= TMAX_SIM:
                 # post-storm variables in the BeachDuneManager are: interior,
                 # dune height, x_s, s_sf, beach width
-                AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -1
+                AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -3
 
                 for iB3D in range(ny):
                     # the nourishment scenario
@@ -777,14 +777,14 @@ def plot_ElevAnimation_CASCADE(
                     Dunes = np.flipud(Dunes)
                     Beach = BeachDomain * 10
                     Domain = np.vstack([Beach, Dunes, Domain])
-                    Domain[Domain < 0] = -1
+                    # Domain[Domain < 0] = -1
                     widthTS = len(Domain)
                     OriginTstart = int(cellular_shoreline_post_storm)
                     OriginTstop = OriginTstart + widthTS
                     xOrigin = iB3D * BarrierLength
                     AnimateDomain[
                         OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
-                    ] = Domain
+                    ] = np.fliplr(Domain)
 
                 # Plot and save
                 if fig_size is not None:
@@ -795,7 +795,7 @@ def plot_ElevAnimation_CASCADE(
                 cax = ax.pcolormesh(
                     AnimateDomain,
                     cmap="terrain",
-                    vmin=-1.1,
+                    vmin=-3,
                     vmax=z_lim,
                     # edgecolors="w",  # for debugging
                     # linewidth=0.01,
@@ -835,7 +835,7 @@ def plot_ElevAnimation_CASCADE(
     for t in range(TMAX_SIM):
         # ok, now the annual time step, which incorporates human modifications to
         # the shoreface, beach, dune, & interior
-        AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -1
+        AnimateDomain = np.ones([AniDomainWidth + 1, BarrierLength * ny]) * -3
 
         for iB3D in range(ny):
             actual_shoreline_post_humans = barrier3d[iB3D].x_s_TS[0 : TMAX_SIM + 1]
@@ -890,14 +890,14 @@ def plot_ElevAnimation_CASCADE(
             Dunes = np.flipud(Dunes)
             Beach = BeachDomain * 10
             Domain = np.vstack([Beach, Dunes, Domain])
-            Domain[Domain < 0] = -1
+            # Domain[Domain < 0] = -1
             widthTS = len(Domain)
             OriginTstart = int(cellular_shoreline_post_humans)
             OriginTstop = OriginTstart + widthTS
             xOrigin = iB3D * BarrierLength
             AnimateDomain[
                 OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
-            ] = Domain
+            ] = np.fliplr(Domain)
 
         # Plot and save
         if fig_size is not None:
@@ -908,7 +908,7 @@ def plot_ElevAnimation_CASCADE(
         cax = ax.pcolormesh(
             AnimateDomain,
             cmap="terrain",
-            vmin=-1.1,
+            vmin=-3,
             vmax=z_lim,
             # edgecolors="w",  # for debugging
             # linewidth=0.01,
@@ -950,7 +950,7 @@ def plot_ElevAnimation_CASCADE(
             filename = "elev_" + str(filenum) + ".eps"
         else:
             filename = "elev_" + str(filenum) + ".png"
-        frames.append(imageio.imread(filename))
+        frames.append(iio.imread(filename))
 
         # management simulations
         if np.any(beach_management_ny) or np.any(roadway_management_ny):
@@ -961,9 +961,9 @@ def plot_ElevAnimation_CASCADE(
                     filename = "elev_" + str(filenum) + "pt5" ".eps"
                 else:
                     filename = "elev_" + str(filenum) + "pt5" ".png"
-                frames.append(imageio.imread(filename))
+                frames.append(iio.imread(filename))
 
-    imageio.mimsave("elev.gif", frames, "GIF-FI")
+    iio.mimwrite("elev.gif", ims=frames, duration=500, loop=0)
     print()
     print("[ * GIF successfully generated * ]")
 
