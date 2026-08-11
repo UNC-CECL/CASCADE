@@ -26,8 +26,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import yaml
 import inspect
-import cascade.roadway_manager as roadway_module
-import cascade.cascade as cascade_module
+from cascade.cascade import Cascade
 import cascade.brie_coupler as brie_coupler
 
 
@@ -141,32 +140,6 @@ def check_barrier3d_orientation(
         print(f"\nRESULT: Matching transformation(s): {matched}")
 
     print("=" * 76)
-
-# Ensure Cascade constructs manager objects from the modified roadway module.
-cascade_module.RoadwayManager = roadway_module.RoadwayManager
-Cascade = cascade_module.Cascade
-
-print("\nCASCADE ROADWAY IMPORT CHECK")
-print("cascade.py:")
-print(cascade_module.__file__)
-print("roadway_manager.py:")
-print(inspect.getfile(roadway_module.RoadwayManager))
-print(
-    "Cascade uses modified RoadwayManager:",
-    cascade_module.RoadwayManager is roadway_module.RoadwayManager,
-)
-print(
-    "request_relocation available:",
-    hasattr(cascade_module.RoadwayManager, "request_relocation"),
-)
-print(
-    "request_relocation signature:",
-    inspect.signature(cascade_module.RoadwayManager.request_relocation)
-    if hasattr(cascade_module.RoadwayManager, "request_relocation")
-    else "MISSING",
-)
-print()
-
 
 # =============================================================================
 # CASCADE / BARRIER3D YAML-PATH COMPATIBILITY FIX
