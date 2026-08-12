@@ -11,6 +11,7 @@ Step 3. integrate into Cascade and test running cascade
 import copy
 import numpy as np
 from numpy.testing import assert_array_almost_equal
+import pytest
 
 # marsh versions
 from cascade.marsh_dynamics import Marsh
@@ -565,18 +566,18 @@ def test_marsh_accretion_erosion():
         assert_array_almost_equal(post_elev[non_marsh_cells], pre_elev[non_marsh_cells])  # actual, desired
 
 
-def test_decomp_arrays():
-    # set parameters for testing
-    # test_array = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\test_decomp_sc.npy")
-    # test_array = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\test_decomp_marsh.npy")
-    test_array = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\test_decomp_both.npy")  # this is what the array
-    # should look like at the end, but we will only input the non-nan values into the function
+test_array1 = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\test_decomp_sc.npy")
+test_array2 = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\test_decomp_marsh.npy")
+test_array3 = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\test_decomp_both.npy")
+sc1 = [0, -2, 1, 2, -2, 4, 0]  # shoreline change and both
+sc2 = [0, 0, 0, 0, 0, 0, 0]  # marsh changes
+@pytest.mark.parametrize("test_array, sc", [(test_array1, sc1), (test_array2, sc2), (test_array3, sc1)])
+def test_decomp_arrays(test_array, sc):
     # initial width
     width = np.count_nonzero(~np.isnan(test_array[0]))
     # remaining input variables
     model_duration = np.shape(test_array)[0]  # yrs
-    shoreline_change = [0, -2, 1, 2, -2, 4, 0]  # shoreline change and both
-    # shoreline_change = [0, 0, 0, 0, 0, 0, 0]  # marsh changes
+    shoreline_change=sc
     c=0
 
     # initialize the class
