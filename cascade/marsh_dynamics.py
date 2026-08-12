@@ -102,7 +102,7 @@ def evolvemarsh(
         P,                  # tidal period, 12.5 hours for semi-diurnal tide, converted to seconds
         ws,                 # settling velocity (m/s), currently set to 5 x 10-5
         timestep,           # 365 * (24 / 12.5)  # number of tidal cycles per year
-        Bmax,               # g/m2 (I think this is maximum biomass)
+        Bmax,               # maximum biomass (g)
         Dmin,               # minimum depth below high water that marsh vegetation can grow (m)
         Dmax,               # maximum depth below high water that marsh vegetation can grow (m)
         rhoo,               # organic matter bulk density (kg/m3), set to 85
@@ -306,9 +306,9 @@ def evolvemarsh(
     for i in range(1, numiterations):
         tempdepth = depth[i, :]
         tempy = np.zeros([L])
-        tempy[tempdepth > 0] = C[tempdepth > 0] * ws * dt  # [kg] mass of mineral sediment deposited, where depth > 0
+        tempy[tempdepth > 0] = C[tempdepth > 0] * ws * dt * (10*10)  # [kg] mass of mineral sediment deposited, where depth > 0
         # not entirely sure how tempy is in kg bc C is kg/m3, ws is m/s, and dt is s, so it seems like it is kg/m2
-        # except that it is a transect, so maybe assuming 1m x 1m?
+        # maybe assuming 1m x 1m cells? but our cells are 10m x 10m
         sedimentcycle[i, :] = tempy
 
     susp_dep = np.sum(sedimentcycle, axis=0) * timestep * 1000  # [g/yr] suspended sediment deposition in an entire year, in each cell
@@ -362,7 +362,7 @@ def evolvemarsh(
     # Update elevation
     marshelevation += accretion
 
-    return marshelevation, accretion, organic_autoch, accretion_volume
+    return marshelevation, accretion, organic_autoch
 
 
 def decompose(
@@ -405,7 +405,7 @@ def decompose(
     # Update the elevation of only the most recent layer
     elevation[yr, x_m:x_f] -= compaction[x_m:x_f]
 
-    return elevation[yr, x_m:x_f], compaction, organic_dep_autoch, compaction_volume
+    return elevation[yr, x_m:x_f], compaction, organic_dep_autoch
 
 
 class Marsh:
@@ -454,7 +454,7 @@ class Marsh:
         self._P = P  # seconds
         self._ws = ws  # m/s
         self._n_tides = n_tidal_cycles
-        self._Bmax = Bmax  # g/m2
+        self._Bmax = Bmax * (10*10)  # g - adjusted for a 10mx10m cell
         self._Dmin = Dmin  # m
         self._Dmax = Dmax  # m
         self._rhoo = rhoo  # kg/m3
@@ -559,7 +559,7 @@ class Marsh:
             # if marsh_transect is empty, there are no marsh cells and we skip the calcs
             if len(marsh_transect) != 0:
                 # marsh accretion
-                marsh_transect, accretion, organic_autoch, _ = evolvemarsh(
+                marsh_transect, accretion, organic_autoch = evolvemarsh(
                     marshelevation=marsh_transect,
                     msl=self._msl[model_year],
                     C_e=self._SSCb,
@@ -587,7 +587,7 @@ class Marsh:
                 # previous time periods as well as marsh_transect updates
                 self._yearly_organic_autoch_TS[c][model_year, start_marsh_cell+shift_marsh:end_marsh_cell+shift_marsh+1] = organic_autoch
 
-                marsh_transect, compaction, organic_dep_autoch, _ = decompose(
+                marsh_transect, compaction, organic_dep_autoch = decompose(
                         x_m=start_marsh_cell+shift_marsh,
                         x_f=end_marsh_cell+shift_marsh+1,
                         yr=model_year,
