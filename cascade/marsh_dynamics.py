@@ -91,7 +91,7 @@ def adjust_decomp_array_size(self, interior_transect, sc_TS, year, c):
 
 
 def evolvemarsh(
-        marshelevation,     # elevation domain, here it is ONLY marsh cells
+        marshelevation,     # elevation domain, here it is the range of marsh cells
         msl,                # msl in m
         C_e,                # SSC at marsh edge (kg/m3)
         OCb,                # organic content of uppermost layer of bay sediment (%), currently set to 0.05
@@ -105,6 +105,7 @@ def evolvemarsh(
         Dmax,               # maximum depth below high water that marsh vegetation can grow (m)
         rhoo,               # organic matter bulk density (kg/m3), set to 85
         rhos,               # sediment bulk density (kg/m3), set to 2000
+        min_dep_method,     # method for mineral deposition, see options below
         plot,
 ):
     """Calculates biomass and mineral and organic deposition for each cell in the marsh as a function of flooding
@@ -116,6 +117,12 @@ def evolvemarsh(
     # 2. we now have multiple transects that represent the marsh, so loop through all columns of the interior domain
     # 3. we need to identify the marsh cells
 
+    # min_dep_method: see options below
+    # 1 for original
+    # 2 for fixed marsh edge
+    # 2.5 for fixed marsh edge plus smoothing
+    # 3 for no pond
+
     dt = P/numiterations  # inundation time, seconds
 
     # np.save(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\marsh_elevation.npy", marshelevation)
@@ -124,11 +131,6 @@ def evolvemarsh(
     depth = np.zeros([numiterations, L])
     C = np.zeros([L])
 
-    min_dep_method = 1  # see options below
-    # 1 for original
-    # 2 for fixed marsh edge
-    # 2.5 for fixed marsh edge plus smoothing
-    # 3 for no pond
     plot_on = plot
 
     # Loop through a tidal cycle to determine flooding duration for each point in the marsh
@@ -438,7 +440,8 @@ class Marsh:
         alongshore_length,  # alongshore length of the barrier (500 m or 50 cells)
         tidal_amplitude,    # tidal amplitude (m)
         initial_width,      # initial width of the barrier
-        bay_depth=3           # bay depth (m MHW)
+        bay_depth=3,           # bay depth (m MHW)
+        accretion_method=1,  # method for mineral deposition
     ):
         """
 
@@ -466,6 +469,7 @@ class Marsh:
         self._tr = tidal_amplitude * 2  # m
         self._initial_width = initial_width
         self._bay_depth = bay_depth  # m MHW
+        self._accretion_method = accretion_method
 
         # initialize other variables that do not have inputs
         self._inundation_time = P / numiterations  # seconds
@@ -573,6 +577,7 @@ class Marsh:
                     rhoo=self._rhoo,
                     rhos=self._rhos,
                     plot=False,
+                    min_dep_method=self._accretion_method
                     )
 
                 # store accretion values
