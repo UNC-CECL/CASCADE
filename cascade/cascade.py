@@ -191,6 +191,7 @@ class Cascade:
         min_elev_marsh=-0.3,
         max_elev_marsh=0,
         tidal_amplitude=0.7,
+        accretion_method=1,
         # ---------------------- offsets -------------------------
         enable_shoreline_offset=False,
         shoreline_offset=[],
@@ -618,6 +619,7 @@ class Cascade:
                         tidal_amplitude=tidal_amplitude,
                         initial_width=np.shape(self._barrier3d[iB3D].InteriorDomain)[0],
                         bay_depth=bay_depth,
+                        accretion_method=accretion_method,
                     )
                 )
 
