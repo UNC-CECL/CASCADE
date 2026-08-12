@@ -31,9 +31,7 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 import copy
-# import warnings
-#
-# warnings.filterwarnings("ignore", category=RuntimeWarning)  # supress divide by 0
+
 
 def adjust_decomp_array_size(self, interior_transect, sc_TS, year, c):
     """
