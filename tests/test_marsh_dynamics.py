@@ -54,6 +54,7 @@ def test_evolvemarsh():
     tidal_amplitude = 0.7
     tidal_range = tidal_amplitude * 2
     plot=False
+    accretion_method = 1  # has to be 1 for this test to pass since that is the same method as barrierbmft
 
     # marsh accretion cascade version
     marshelevation_casc, accretion_casc, organic_autoch_casc = evolve_cascade(
@@ -72,6 +73,7 @@ def test_evolvemarsh():
         rhoo=rhoo,
         rhos=rhos,
         plot=plot,
+        min_dep_method=accretion_method,
         )
 
     # marsh accretion bmft version
@@ -461,10 +463,11 @@ def test_casc_accretion_erosion():
     min_dune_r = 0.05
     max_dune_r = 0.45
     beach_slope = 0.06
-    model_duration = 15
+    model_duration = 30
     slr_m_yr = 0.004
     berm_elev = 1.95  # m NAVD88
     MHW = 0.421
+    accretion_method = 3 # must be 3 so the pond is turned off
 
     overwash_storm = "cascade-default-storms.npy"
 
@@ -476,12 +479,6 @@ def test_casc_accretion_erosion():
         dune_file=f"marsh_dunes_test3.npy",
         parameter_file="marsh-default-parameters.yaml",
         storm_file=overwash_storm,
-        num_cores=1,  # cascade can run in parallel, can never specify more cores than that
-        roadway_management_module=False,
-        alongshore_transport_module=False,
-        beach_nourishment_module=False,
-        community_economics_module=False,
-        outwash_module=False,
         marsh_module=True,
         alongshore_section_count=1,
         time_step_count=model_duration,
@@ -493,21 +490,12 @@ def test_casc_accretion_erosion():
         berm_elevation=berm_elev,
         MHW=MHW,
         # --------------- marsh dynamics -----------------------------------
-        SSCb=0.05,
-        organic_content_bay=0,
-        numiterations=500,
-        tidal_period=12.5,
-        settling_velocity=0.05 * 10 ** (-3),
-        max_biomass=2500,
         min_depth_marsh_growth=0,
         max_depth_marsh_growth=0.4,
-        density_organic_matter=85,
-        density_sediment=2000,
         max_depth_decomp=0.4,
-        decomp_coeff=0.1,
         min_elev_marsh=-0.3,
         max_elev_marsh=0,
-        tidal_amplitude=0.7,
+        accretion_method=accretion_method
         )
 
     # run the time loop/update function
@@ -522,18 +510,8 @@ def test_casc_accretion_erosion():
             # marsh class stores pre and post marsh elevations in dam MHW
             pre_elev = cascade_marsh.marsh[0]._pre_marsh_elev[time_step]
             post_elev = cascade_marsh.marsh[0]._marsh_elevation[time_step]
-            non_marsh_cells = np.where((pre_elev > m_max_msl) | (pre_elev < m_min_msl))  # | is or operator
+            non_marsh_cells = np.where((pre_elev > m_max_msl) | (pre_elev <= m_min_msl))  # | is or operator
             assert_array_almost_equal(post_elev[non_marsh_cells], pre_elev[non_marsh_cells])  # actual, desired
-
-    # # min and max marsh elevations in dam MHW
-    # m_max_msl = cascade_marsh.marsh[0]._m_max
-    # m_min_msl = cascade_marsh.marsh[0]._m_min
-    # # marsh class stores pre and post marsh elevations in dam MHW
-    # pre_elev = cascade_marsh.marsh[0]._pre_marsh_elev
-    # post_elev = cascade_marsh.marsh[0]._marsh_elevation
-    # for t in range(1, model_duration):
-    #     non_marsh_cells = np.where((pre_elev[t] > m_max_msl) | (pre_elev[t] < m_min_msl))  # | is or operator
-    #     assert_array_almost_equal(post_elev[t][non_marsh_cells], pre_elev[t][non_marsh_cells])  # actual, desired
 
 
 def test_marsh_accretion_erosion():
@@ -583,7 +561,7 @@ def test_marsh_accretion_erosion():
         # marsh class stores pre and post marsh elevations in dam MHW
         pre_elev = marsh_class._pre_marsh_elev[time_step]
         post_elev = marsh_class._marsh_elevation[time_step]
-        non_marsh_cells = np.where((pre_elev> m_max_msl) | (pre_elev < m_min_msl))  # | is or operator
+        non_marsh_cells = np.where((pre_elev> m_max_msl) | (pre_elev <= m_min_msl))  # | is or operator
         assert_array_almost_equal(post_elev[non_marsh_cells], pre_elev[non_marsh_cells])  # actual, desired
 
 
