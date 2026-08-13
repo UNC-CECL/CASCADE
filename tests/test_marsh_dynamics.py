@@ -101,12 +101,12 @@ def test_evolvemarsh():
     assert_array_almost_equal(organic_autoch_casc/100, organic_autoch_bmft, decimal=2)
 
 
-def test_decompose():
+@pytest.mark.parametrize("model_year", [1, 4])
+def test_decompose(model_year):
     """
     test to make sure the marsh decomposition function behaves the same as the barrierbmft decompose function
     """
     marsh_transect = np.load(r"C:\Users\agfig\model\marsh_transect_test.npy")
-    model_year = 4
     if model_year == 1:
         marsh_elev = np.zeros([2, len(marsh_transect)])
         marsh_elev[1, :] = copy.deepcopy(marsh_transect)
