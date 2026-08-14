@@ -6,9 +6,10 @@
 # Important to note you will need your ARCGIS data to have tracked the B3D model domain, transect #, and distance from
 # datum. You will likely need to edit lines 28 - 31 as appropriate based on your ARCGIS naming convention
 
-import pandas as pd
-import numpy as np
 import copy
+
+import numpy as np
+import pandas as pd
 
 # Specify location of the wanted data
 

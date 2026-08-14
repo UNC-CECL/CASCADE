@@ -157,8 +157,10 @@ def bulldoze(
     #         )
     #     )
 
-    if ((seaside_water_cells > percent_water_cells_touching_road) or (
-        bayside_water_cells > percent_water_cells_touching_road)) and  allow_causeway==False:
+    if (
+        (seaside_water_cells > percent_water_cells_touching_road)
+        or (bayside_water_cells > percent_water_cells_touching_road)
+    ) and allow_causeway == False:
         roadway_drown = True
         # print(
         #     f"Roadway width drowned at {time_index - 1} years, "
@@ -240,8 +242,14 @@ def rebuild_dunes(
     z = 20
     return new_dune_domain, rebuild_dune_volume
 
+
 def build_interior_dunes(
-    b3d, dune_construction_distance =0, max_dune_height=3.0, min_dune_height=2.4, dz=10, rng=True
+    b3d,
+    dune_construction_distance=0,
+    max_dune_height=3.0,
+    min_dune_height=2.4,
+    dz=10,
+    rng=True,
 ):
     """Build dunes within the barrier island interior if B3D dunes are below specific minimum elevation.
     Constructing dunes within barrier island interior is based on NCDOT management practices on Ocracoke, as
@@ -288,7 +296,7 @@ def build_interior_dunes(
         rng = np.random.default_rng(seed=1973)
 
     # Find the elevation of dune construction area
-    dune_construction_area_elevation = b3d.InteriorDomain[dune_construction_distance,:]
+    dune_construction_area_elevation = b3d.InteriorDomain[dune_construction_distance, :]
 
     ny = len(dune_construction_area_elevation)
     nx = 1
@@ -301,16 +309,11 @@ def build_interior_dunes(
     if rng:
         dune_height += rng.uniform(high=0.01, size=dune_height.size).reshape((ny, 1))
 
-
-
     rebuild_dune_volume = np.sum(dune_height - dune_construction_area_elevation)
 
-    b3d.InteriorDomain[dune_construction_distance, :] = dune_height[:,0]
+    b3d.InteriorDomain[dune_construction_distance, :] = dune_height[:, 0]
 
     return dune_height, rebuild_dune_volume
-
-
-
 
 
 def set_growth_parameters(
@@ -438,6 +441,7 @@ def get_road_relocation_elevation(
 
     return road_ele, roadway_drown
 
+
 def road_relocation_checks(
     time_index,
     dune_migrated,
@@ -487,7 +491,7 @@ def road_relocation_checks(
 
         if road_setback < 0:
             road_relocated = 1
-            #print('Roadway relocated')
+            # print('Roadway relocated')
 
             # relocate the road only if the width of the island allows it
             if (
@@ -508,24 +512,30 @@ def road_relocation_checks(
 
     return road_relocated, road_setback, relocation_break
 
+
 def check_sandbag_need(
-        dune_road_distance,
-        design_elevation,
-        barrier3d,
-        sandbag_status,
-        threshold_elevation = 0.101,
+    dune_road_distance,
+    design_elevation,
+    barrier3d,
+    sandbag_status,
+    threshold_elevation=0.101,
 ):
-    time_index = barrier3d.time_index -1
+    time_index = barrier3d.time_index - 1
     if dune_road_distance == 0:
-        min_elev = np.min(barrier3d.DuneDomain[time_index,:,0])
-        exceeds_min_dune_threshold = np.min(barrier3d.DuneDomain[time_index,:,0]) < threshold_elevation
+        min_elev = np.min(barrier3d.DuneDomain[time_index, :, 0])
+        exceeds_min_dune_threshold = (
+            np.min(barrier3d.DuneDomain[time_index, :, 0]) < threshold_elevation
+        )
 
         if exceeds_min_dune_threshold == True:
-            #print('Elevation is low enough for sandbags')
+            # print('Elevation is low enough for sandbags')
             for width in range(0, barrier3d.DuneWidth):
                 for cell in range(0, len(barrier3d.DuneDomain[time_index, :, width])):
-                    if barrier3d.DuneDomain[time_index, cell, width] < threshold_elevation:
-                        #print('Sandbags would be added in cell ', str(cell), str(width))
+                    if (
+                        barrier3d.DuneDomain[time_index, cell, width]
+                        < threshold_elevation
+                    ):
+                        # print('Sandbags would be added in cell ', str(cell), str(width))
                         barrier3d._DuneRestart[width][cell] = design_elevation / 10
                         c = 10
 
@@ -535,15 +545,16 @@ def check_sandbag_need(
             sandbag_need = True
         else:
             sandbag_need = False
-        c = 'end'
+        c = "end"
     elif dune_road_distance != 0:
         # If road is too far away reset to initial threshold rebuild value
-        for width in range(0,barrier3d.DuneWidth):
-            for cell in range(0,len(barrier3d.DuneDomain[time_index,:,width])):
+        for width in range(0, barrier3d.DuneWidth):
+            for cell in range(0, len(barrier3d.DuneDomain[time_index, :, width])):
                 barrier3d._DuneRestart[width][cell] = 0.075
         sandbag_need = False
 
     return sandbag_need
+
 
 class RoadwayManager:
     """Manage the road!
@@ -659,8 +670,12 @@ class RoadwayManager:
         self._rebuild_dune_volume_TS = np.zeros(
             self._nt
         )  # sand for rebuilding dunes [m^3]
-        self._interior_dunes_built_TS = np.zeros(self._nt)  # when interior dunes are built (boolean)
-        self._interior_dunes_volume_TS = np.zeros(self._nt) # volume (m^3) of sediment used to construct interior dunes
+        self._interior_dunes_built_TS = np.zeros(
+            self._nt
+        )  # when interior dunes are built (boolean)
+        self._interior_dunes_volume_TS = np.zeros(
+            self._nt
+        )  # volume (m^3) of sediment used to construct interior dunes
         # total overwash removed from roadway [m^3]
         self._road_overwash_volume = np.zeros(self._nt)
         # keep track of what percent of the dune elevations fall below minimum threshold
@@ -703,17 +718,15 @@ class RoadwayManager:
         dune_migration = (
             barrier3d.ShorelineChangeTS[self._time_index - 1] * 10
         )  # if +, dune progrades; -, dune erodes into interior [m]
-        [
-            road_relocated,
-            self._road_setback,
-            self._relocation_break
-        ] = road_relocation_checks(
-            self._time_index,
-            dune_migration,
-            self._road_setback,  # current road setback, m
-            self._road_relocation_setback,  # setback specified for relocation, m
-            self._road_relocation_width,  # width specified for relocation, m
-            average_barrier_width,  # current width, m
+        [road_relocated, self._road_setback, self._relocation_break] = (
+            road_relocation_checks(
+                self._time_index,
+                dune_migration,
+                self._road_setback,  # current road setback, m
+                self._road_relocation_setback,  # setback specified for relocation, m
+                self._road_relocation_width,  # width specified for relocation, m
+                average_barrier_width,  # current width, m
+            )
         )
 
         # if road can't be relocated, no longer manage and exit; dune growth
@@ -770,7 +783,6 @@ class RoadwayManager:
                 self._dune_minimum_elevation = self._dune_minimum_elevation - (
                     barrier3d.RSLR[self._time_index - 1] * 10
                 )
-
 
         # road cannot be below 0 m MHW (sea level); stop managing!
         if self._road_ele < 0:
@@ -851,7 +863,7 @@ class RoadwayManager:
             drown_threshold=0,  # 0 m MSL
             # fraction cells<drown_threshold
             percent_water_cells_touching_road=self._percent_water_cells_touching_road,
-            allow_causeway=self._allow_causeway
+            allow_causeway=self._allow_causeway,
         )
         if self._drown_break == 1:
             # an adaptation solution may be to knock down the dunes so that they
@@ -893,7 +905,10 @@ class RoadwayManager:
             # if any dune cell in the front row of dunes is less than a minimum
             # threshold -- as measured above the berm crest -- then rebuild the
             # dune (all rows up to dune_design_elevation)
-            if np.min(new_dune_domain[:, 0]) < (min_dune_height / 10) and self._road_setback <= 10:  # in m
+            if (
+                np.min(new_dune_domain[:, 0]) < (min_dune_height / 10)
+                and self._road_setback <= 10
+            ):  # in m
                 # first document what percentage of the dune field is below this minimum
                 dune_cells_below_threshold = np.sum(
                     new_dune_domain < (min_dune_height / 10)
@@ -913,16 +928,19 @@ class RoadwayManager:
                 self._rebuild_dune_volume_TS[self._time_index - 1] = (
                     rebuild_dune_volume * dm3_to_m3
                 )
-            elif np.min(new_dune_domain[:, 0]) < (min_dune_height / 10) and self._road_setback <= 20:
-                Interior_Dune_Front = (self._road_setback/10)-2
-                Interior_Dune_Back = (self._road_setback/10)-1
+            elif (
+                np.min(new_dune_domain[:, 0]) < (min_dune_height / 10)
+                and self._road_setback <= 20
+            ):
+                Interior_Dune_Front = (self._road_setback / 10) - 2
+                Interior_Dune_Back = (self._road_setback / 10) - 1
                 new_dune_domain, rebuild_dune_volume = build_interior_dunes(
                     b3d=barrier3d,
                     dune_construction_distance=Interior_Dune_Front,
                     max_dune_height=dune_design_height,
                     min_dune_height=dune_design_height,
                     dz=10,
-                    rng=True
+                    rng=True,
                 )
 
                 self._interior_dunes_built_TS[self._time_index - 1] = 1
