@@ -24,9 +24,10 @@ transects = np.unique(df_2004["transectID"].values)
 berm_elevs = [1.5,1.4,1.5,1.5,1.5,2.1,2,2,2.2,2.2,2.1,2.2,2.2,2.3,2.1,2.3,2.3,2.2,2,2.3,2,2,2.3,1.9]
 
 plt.rcParams["font.size"] = 14
-save_on = True
+save_on = False
 save_slopes_on = False
 plot_grid = False
+save_berms_on = True
 d = 0
 beach_range = 15  # points which are spaced every 1 meter
 beach_slopes_2014 = []
@@ -149,4 +150,22 @@ plt.xticks(ticks=domains, labels=domains)
 plt.grid(visible=True, axis="x", color="lightgrey", linewidth=0.5, linestyle="dotted")
 if save_slopes_on:
     plt.savefig(os.path.join(savedir, "domain_beach_slopes_{0}.png".format(version)))
+plt.show()
+
+# plot the berm elevation per domain
+fig3 = plt.figure(figsize=(15, 6))
+# berm points
+plt.scatter(domains, berm_elevs, color="black")
+avg_elev = round(np.mean(berm_elevs),1)
+plt.hlines(y=avg_elev, xmin=min(domains), xmax=max(domains), linestyle="dashed", linewidth=0.75, color="darkgrey")
+# plot labels
+plt.ylabel("berm elevation (m NAVD88)")
+plt.xlabel("domain")
+plt.ylim(0, 4)
+# plt.legend()
+plt.text(min(domains)-0.75, 0.1, "average berm elev = {0} m NAVD88".format(avg_elev), color="black")
+plt.xticks(ticks=domains, labels=domains)
+plt.grid(visible=True, axis="x", color="lightgrey", linewidth=0.5, linestyle="dotted")
+if save_berms_on:
+    plt.savefig(os.path.join(savedir, "domain_berm_elevs_{0}.png".format(version)))
 plt.show()
