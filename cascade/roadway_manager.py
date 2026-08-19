@@ -6,7 +6,8 @@ shoreface -- for roadway management decisions, including:
 
 1. overwash removal from the roadway after storms and placement on the dune line,
 2. road relocation landward when the dunes migrate over the roadway,
-3. dune rebuilding when the dunes fall below a minimum height.
+3. dune rebuilding when the dunes fall below a minimum height,
+4. optional shoreface/beach nourishment without community dune management.
 
 References
 ----------
@@ -31,11 +32,116 @@ roadway and dune elevations are reduced by SLR for each time step.
 """
 
 import copy
+import math
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
 dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
+
+
+def shoreface_nourishment(
+    x_s,
+    x_t,
+    nourishment_volume,
+    average_barrier_height,
+    shoreface_depth,
+    beach_width,
+):
+    """Apply sand to the shoreface without managing or rebuilding the dunes.
+
+    This is the same shoreface-volume formulation used by BeachDuneManager. It is
+    included locally so RoadwayManager can nourish a roadway-managed domain without
+    turning on the community-management module (which would also filter overwash,
+    rebuild community dunes, and control dune migration).
+
+    All inputs must use one consistent length system. RoadwayManager calls this
+    function with decameters and ``dam^3/dam`` so it remains consistent with
+    Barrier3D.
+
+    Parameters
+    ----------
+    x_s: float
+        Current shoreline position.
+    x_t: float
+        Current shoreface-toe position.
+    nourishment_volume: float
+        Nourishment volume per unit alongshore length.
+    average_barrier_height: float
+        Current average barrier height.
+    shoreface_depth: float
+        Current shoreface depth.
+    beach_width: float
+        Current beach width.
+
+    Returns
+    -------
+    new_x_s: float
+        Shoreline position after nourishment.
+    new_shoreface_slope: float
+        Shoreface slope after nourishment.
+    new_beach_width: float
+        Beach width after nourishment.
+    """
+
+    new_x_s = x_s - (2 * nourishment_volume) / (
+        2 * average_barrier_height + shoreface_depth
+    )
+    new_shoreface_slope = shoreface_depth / (new_x_s - x_t)
+    new_beach_width = beach_width + (x_s - new_x_s)
+
+    return new_x_s, new_shoreface_slope, new_beach_width
+
+
+def beach_width_dune_dynamics(
+    current_beach_width,
+    beach_width_last_year,
+    beach_width_threshold,
+    barrier3d,
+    time_index,
+):
+    """Apply the BeachDuneManager beach-width/dune-migration rule.
+
+    Dune migration remains off while a positive managed beach separates the
+    shoreline from the dune line. Once beach width reaches the threshold (0 m),
+    Barrier3D dune migration turns back on. If erosion has already consumed one or
+    more complete 10-m cells, the missed dune migration is applied immediately.
+    """
+
+    if current_beach_width <= beach_width_threshold:
+        barrier3d.dune_migration_on = True
+
+        if beach_width_last_year > beach_width_threshold:
+            cellular_shoreline_change = int(
+                math.floor(current_beach_width) / -10
+            )
+
+            if cellular_shoreline_change >= 1:
+                barrier3d.SCRagg[time_index - 1] = (
+                    (barrier3d.x_s_TS[-1] % 1) + cellular_shoreline_change
+                ) * -1
+                barrier3d.migrate_dunes(
+                    shoreline_change_aggregate=barrier3d.SCRagg[time_index - 1],
+                    cellular_shoreline_change=cellular_shoreline_change,
+                    time_index=time_index - 1,
+                )
+
+                (
+                    _,
+                    _,
+                    interior_width_average,
+                ) = barrier3d.FindWidths(barrier3d.InteriorDomain, barrier3d.SL)
+                barrier3d.InteriorWidth_AvgTS[-1] = interior_width_average
+                barrier3d.DomainTS[time_index - 1] = barrier3d.InteriorDomain
+            else:
+                barrier3d.SCRagg[time_index - 1] = (barrier3d.x_s % 1) * -1
+
+        if current_beach_width < 0:
+            current_beach_width = 0
+    else:
+        barrier3d.dune_migration_on = False
+
+    return current_beach_width
 
 
 def bulldoze(
@@ -687,6 +793,12 @@ class RoadwayManager:
         self._interior_dunes_volume_TS = np.zeros(self._nt) # volume (m^3) of sediment used to construct interior dunes
         # total overwash removed from roadway [m^3]
         self._road_overwash_volume = np.zeros(self._nt)
+        # Shoreface-only nourishment performed while roadway management remains on.
+        # Beach width is supplied explicitly by the simulation and follows the same
+        # 0-m dune-migration threshold used by BeachDuneManager.
+        self._nourishment_TS = np.zeros(self._nt)
+        self._nourishment_volume_TS = np.zeros(self._nt)  # m^3/m
+        self._beach_width_TS = [np.nan] * self._nt  # m
         # keep track of what percent of the dune elevations fall below minimum threshold
         self._percent_below_min = [None] * self._nt
         self._growth_params = [
@@ -1045,6 +1157,148 @@ class RoadwayManager:
 
         return
 
+    def update_beach_width(
+        self,
+        barrier3d,
+        beach_width_last_year,
+    ):
+        """Update roadway-domain beach width and dune migration for one model year.
+
+        This duplicates the existing BeachDuneManager rule without applying any
+        community overwash filtering or community dune rebuilding. It must be called
+        once per simulated year for a roadway domain that is tracking beach width.
+
+        Parameters
+        ----------
+        barrier3d
+            Current Barrier3D instance after its annual physical update.
+        beach_width_last_year: float
+            Managed beach width from the preceding model year [m].
+
+        Returns
+        -------
+        float
+            Current beach width after annual shoreline change [m].
+        """
+
+        beach_width_last_year = float(beach_width_last_year)
+        if not np.isfinite(beach_width_last_year) or beach_width_last_year < 0:
+            raise ValueError(
+                "Previous roadway beach width must be finite and non-negative; "
+                f"received {beach_width_last_year}."
+            )
+
+        time_index = barrier3d.time_index
+        change_in_shoreline = (
+            barrier3d.x_s_TS[-1] - barrier3d.x_s_TS[-2]
+        ) * 10  # m
+        current_beach_width = beach_width_last_year - change_in_shoreline
+        current_beach_width = beach_width_dune_dynamics(
+            current_beach_width=current_beach_width,
+            beach_width_last_year=beach_width_last_year,
+            beach_width_threshold=0,
+            barrier3d=barrier3d,
+            time_index=time_index,
+        )
+
+        output_index = time_index - 1
+        if 0 <= output_index < self._nt:
+            self._beach_width_TS[output_index] = current_beach_width
+
+        return current_beach_width
+
+    def nourish_beach(
+        self,
+        barrier3d,
+        nourishment_volume,
+        beach_width,
+    ):
+        """Nourish a roadway-managed domain without community dune management.
+
+        This method applies only the shoreface/beach nourishment calculation used by
+        BeachDuneManager. It intentionally does not:
+
+        * rebuild or otherwise modify ``DuneDomain``;
+        * filter or bulldoze overwash;
+        * modify roadway dune design/minimum elevations;
+        * modify dune growth parameters; or
+        * use community dune-rebuilding or overwash-filtering rules.
+
+        Dune migration follows the existing BeachDuneManager beach-width rule:
+        migration is off while beach width is above 0 m and turns on when beach
+        width reaches 0 m. Nourishment widens the beach, so migration is turned off
+        again after a positive nourishment event.
+
+        The simulation script must explicitly choose the domain, year, nourishment
+        volume, and current beach width. The updated beach width is returned so the
+        script can retain it for the next nourishment event.
+
+        Parameters
+        ----------
+        barrier3d
+            Current Barrier3D model instance after its annual physical update.
+        nourishment_volume: float
+            Nourishment volume [m^3/m].
+        beach_width: float
+            Beach width immediately before nourishment [m].
+
+        Returns
+        -------
+        float
+            Updated beach width [m].
+        """
+
+        nourishment_volume = float(nourishment_volume)
+        beach_width = float(beach_width)
+
+        if not np.isfinite(nourishment_volume) or nourishment_volume < 0:
+            raise ValueError(
+                "Roadway nourishment volume must be finite and non-negative; "
+                f"received {nourishment_volume}."
+            )
+        if not np.isfinite(beach_width) or beach_width < 0:
+            raise ValueError(
+                "Roadway beach width must be finite and non-negative; "
+                f"received {beach_width}."
+            )
+
+        (
+            barrier3d.x_s,
+            barrier3d.s_sf_TS[-1],
+            new_beach_width,
+        ) = shoreface_nourishment(
+            x_s=barrier3d.x_s,  # dam
+            x_t=barrier3d.x_t,  # dam
+            nourishment_volume=nourishment_volume / 100,  # m^3/m to dam^3/dam
+            average_barrier_height=barrier3d.h_b_TS[-1],  # dam
+            shoreface_depth=barrier3d.DShoreface,  # dam
+            beach_width=beach_width / 10,  # m to dam
+        )
+
+        new_beach_width *= 10  # dam to m
+        barrier3d.x_s_TS[-1] = barrier3d.x_s
+
+        # Match BeachDuneManager: nourishment restores a positive beach buffer, so
+        # the dune line is pinned until annual erosion reduces beach width to 0 m.
+        barrier3d.dune_migration_on = new_beach_width <= 0
+
+        # Keep the full barrier-position bookkeeping internally consistent when this
+        # method is called directly from a simulation script.
+        barrier3d.x_b_TS[-1] = (
+            barrier3d.x_s
+            + barrier3d.InteriorWidth_AvgTS[-1]
+            + np.size(barrier3d.DuneDomain, 2)
+            + (new_beach_width / 10)
+        )
+
+        time_index = barrier3d.time_index - 1
+        if 0 <= time_index < self._nt:
+            self._nourishment_TS[time_index] = 1
+            self._nourishment_volume_TS[time_index] = nourishment_volume
+            self._beach_width_TS[time_index] = new_beach_width
+
+        return new_beach_width
+
     def request_relocation(
         self,
         road_setback,
@@ -1108,6 +1362,21 @@ class RoadwayManager:
     def prescribed_relocation_setback(self):
         """Queued post-relocation setback [m], or ``None``."""
         return self._prescribed_relocation_setback
+
+    @property
+    def nourishment_TS(self):
+        """Years in which roadway-domain beach nourishment was applied."""
+        return self._nourishment_TS
+
+    @property
+    def nourishment_volume_TS(self):
+        """Roadway-domain nourishment volume time series [m^3/m]."""
+        return self._nourishment_volume_TS
+
+    @property
+    def beach_width_TS(self):
+        """Post-nourishment roadway-domain beach widths [m]."""
+        return self._beach_width_TS
 
     @property
     def road_relocation_width(self):
