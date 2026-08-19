@@ -136,8 +136,10 @@ dmypy.json
 # project specific files
 brie_venv
 /brie_venv/
-output/
-output/raw_runs/
+# Ignored wholesale EXCEPT output/raw_runs/, whose small text products are
+# tracked -- see the CASCADE run outputs block at the bottom of this file.
+output/*
+!output/raw_runs/
 
 # large data / model output file types
 *.nc
@@ -163,7 +165,7 @@ data/hatteras_init/1-barrier3d-domains/
 data/hatteras_init/3-env-forcings/noaa_cache_8651370/
 data/hatteras_init/3-env-forcings/storms/WIS_raw_data/
 data/hatteras_init/3-env-forcings/storms/old/
-data/hatteras_init/4-mgmt-forcing/roads/raster/
+data/hatteras_init/4-mgmt-forcing/road_offset/raster/
 data/hatteras_init/5-scr/coastsat_timeseries/
 
 # unrelated init/reference data
@@ -183,5 +185,42 @@ scripts/input_prep/5-scr/CoastSat/CoastSat_transect_layer.geojson
 # unrelated projects / other manuscripts
 scripts/other_ms/
 
+# editing snapshots of the hindcast notebook and its headless .py mirror.
+# Written automatically before an edit, named for the edit that followed
+# (.prepatch, .preswitch, .prescenario, ...). Rollback points only -- nothing
+# in the pipeline reads them, and the notebook itself is the source of truth.
+*.bak
+*.prev
+*.prepatch
+*.preswitch
+*.prescenario
+*.preoutput
+
 # test fixtures (large binary files, not part of active Hatteras work)
 tests/
+# CASCADE run outputs: the bulk artifacts only.
+# A run directory is ~160 MB, almost all of it the .npz model pickle, and the
+# hindcast is run as a 12-scenario matrix. The small text products ARE tracked
+# -- the rate CSV, the road summary, the run metadata, and run_index.csv are
+# what the comparison figures and the cross-run index read. The .npz and the
+# animations are regenerable from those plus the code.
+#
+# Runs are filed under output/raw_runs/<start>_<end>/. Because output/ is
+# ignored wholesale above, the period directories and the index have to be
+# re-included by name. The subdirectories that predate the move
+# (groin_testing/, wrong/, ...) are left ignored -- that is what they already
+# were, and nothing in the pipeline reads them.
+output/raw_runs/*
+!output/raw_runs/[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]/
+!output/raw_runs/run_index.csv
+!output/raw_runs/show_runs.py
+output/raw_runs/**/*.npz
+output/raw_runs/**/*.gif
+output/raw_runs/**/*.png
+
+# ...but NOT the shoreline matrix. The global *.npy rule above exists for the
+# init domain arrays; this one is ~19 KB and is the paired baseline that the
+# groin extent check (12.3) and the difference GIFs read by run name. Ignoring
+# it would mean a fresh clone cannot evaluate a groin run without first
+# re-running its no-groin twin.
+!output/raw_runs/**/*_shoreline_matrix.npy

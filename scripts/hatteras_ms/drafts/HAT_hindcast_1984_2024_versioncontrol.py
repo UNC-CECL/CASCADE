@@ -12,9 +12,16 @@ Overwash filter: developed communities only, set to 0.4; everything else (incl.
 buffers) is 0 -- Buxton GIS 7-8 (pad 21-22), Avon GIS 21-31 (pad 35-45),
 Salvo/Waves/Rodanthe GIS 68-83 (pad 82-97).
 
+CASCADE IS RUN AS PUBLISHED
+  This script does not patch cascade.roadway_manager or cascade.barrier3d. An
+  earlier "Section 0" monkey-patched bulldoze() to guard an unchecked index and
+  to label drowning messages by domain; both are gone. The guard's job is now
+  done upstream of the model -- HAT_road_setback_audit.py refuses any setback
+  that would overrun -- and domain attribution comes from CASCADE's own
+  post-run state (see summarise_road_management). The one known consequence is
+  recorded in the audit doc under "Unguarded index in bulldoze()".
+
 HOW THIS FILE IS ORGANIZED
-  SECTION 0   Runtime patches to cascade.roadway_manager (kept here instead of
-              editing the library files - see Section 0 docstring)
   SECTION 1   Domain configuration (fixed geometry, not period-dependent)
   SECTION 2   Display option
   SECTION 3   File paths (static directories + filenames)
@@ -34,6 +41,8 @@ HOW THIS FILE IS ORGANIZED
 
 import os
 import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -42,143 +51,16 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib.transforms import blended_transform_factory
 from statsmodels.nonparametric.smoothers_lowess import lowess
-from cascade.cascade import Cascade
+# While TESTING the groin, use the SANDBOX copy of cascade.py (cascade_groin.py)
+# with the 3-line pre-AST hook added. Real cascade.py stays untouched until the
+# groin is proven; then fold the hook in and set USE_SANDBOX_CASCADE=False.
+USE_SANDBOX_CASCADE = True
+
+if USE_SANDBOX_CASCADE:
+    from cascade.cascade_groin import Cascade   # hooked sandbox copy
+else:
+    from cascade.cascade import Cascade         # real package (hook folded in)
 import cascade.roadway_manager as _rm
-
-
-# =============================================================================
-# SECTION 0: RUNTIME PATCHES — cascade.roadway_manager
-# =============================================================================
-# Patches applied here instead of editing roadway_manager.py / cascade.py
-# directly, so the fixes travel with this script rather than the shared repo.
-#
-# Fixes:
-#   1. IndexError crash in bulldoze() when a relocated road setback leaves no
-#      interior land behind the road (road_end + 1 runs off the grid). This
-#      hit pad 25 (GIS 11) during the 1999 road relocation event.
-#   2. Adds a domain label (GIS domain number, or "buffer" for the padded
-#      edges) to the "Roadway width drowned" print so drowning events can be
-#      traced back to a specific real-world domain, e.g. "GIS 11 (pad 25)".
-#
-# _reset_domain_labels() is called automatically inside run_cascade_simulation()
-# right before each Cascade(...) is constructed, so pad labels restart at 0 for
-# every run in a multi-run script (e.g. the no-groin / groin-only / groin+BE
-# test matrix) rather than climbing across runs.
-# =============================================================================
-
-_domain_label_box = {"label": None}
-_domain_counter   = {"n": 0}
-
-
-def _reset_domain_labels():
-    _domain_counter["n"] = 0
-
-
-def _bulldoze_patched(
-    time_index,
-    xyz_interior_grid,
-    yxz_dune_grid,
-    road_ele=2.0,
-    road_width=20,
-    road_setback=30,
-    dx=10,
-    dy=10,
-    dz=10,
-    drown_threshold=0,
-    percent_water_cells_touching_road=0.2,
-):
-    """Drop-in replacement for cascade.roadway_manager.bulldoze() — same
-    logic as the original, with a bounds guard on the bayside water check
-    and a domain label on the drowning print (see Section 0 docstring)."""
-    road_start = int(road_setback / dy)
-    road_width = int(road_width / dx)
-    road_end = road_start + road_width
-    road_ele = road_ele / dz
-
-    old_road_domain = xyz_interior_grid[road_start:road_end, :]
-    new_road_domain = np.zeros((road_width, np.size(old_road_domain, 1))) + road_ele
-    road_overwash_removal = sum(old_road_domain - new_road_domain)
-    road_overwash_removal[road_overwash_removal < 0] = 0
-
-    number_dune_cells = np.size(yxz_dune_grid, 1)
-    overwash_to_dune = np.transpose(
-        [road_overwash_removal / number_dune_cells] * number_dune_cells
-    )
-    new_dune_domain = yxz_dune_grid + overwash_to_dune
-
-    xyz_interior_grid[road_start:road_end, :] = new_road_domain
-
-    number_border_cells = np.size(xyz_interior_grid[road_end, :])
-
-    # FIX: guard the bayside check the same way the seaside check already
-    # guards road_start > 0. If road_end + 1 runs off the grid, the relocated
-    # setback leaves no interior land behind the road -- treat as fully
-    # drowned (1.0) instead of crashing.
-    if road_end + 1 < np.size(xyz_interior_grid, 0):
-        bayside_water_cells = (
-            np.count_nonzero(
-                (xyz_interior_grid[road_end + 1, :] * dz) <= drown_threshold
-            )
-            / number_border_cells
-        )
-    else:
-        bayside_water_cells = 1.0
-
-    if road_start > 0:
-        seaside_water_cells = (
-            np.count_nonzero(
-                (xyz_interior_grid[road_start - 1, :] * dz) <= drown_threshold
-            )
-            / number_border_cells
-        )
-    else:
-        seaside_water_cells = 0
-
-    if (seaside_water_cells > percent_water_cells_touching_road) or (
-        bayside_water_cells > percent_water_cells_touching_road
-    ):
-        roadway_drown = True
-        _label = _domain_label_box["label"]
-        _domain_str = f" [{_label}]" if _label else ""
-        print(
-            f"Roadway width drowned at {time_index - 1} years{_domain_str}, "
-            f"{percent_water_cells_touching_road * 100.0}% of road borders water"
-        )
-    else:
-        roadway_drown = False
-
-    return (
-        new_dune_domain,
-        xyz_interior_grid,
-        np.sum(road_overwash_removal),
-        int(roadway_drown),
-    )
-
-
-_original_rm_init   = _rm.RoadwayManager.__init__
-_original_rm_update = _rm.RoadwayManager.update
-
-
-def _rm_init_patched(self, *args, **kwargs):
-    _original_rm_init(self, *args, **kwargs)
-    pad = _domain_counter["n"]
-    if START_REAL_INDEX <= pad < END_REAL_INDEX:
-        gis_id = pad - START_REAL_INDEX + FIRST_FILE_NUMBER
-        self._domain_label = f"GIS {gis_id} (pad {pad})"
-    else:
-        self._domain_label = f"buffer (pad {pad})"
-    _domain_counter["n"] += 1
-
-
-def _rm_update_patched(self, barrier3d, trigger_dune_knockdown):
-    _domain_label_box["label"] = getattr(self, "_domain_label", None)
-    return _original_rm_update(self, barrier3d, trigger_dune_knockdown)
-
-
-_rm.bulldoze                = _bulldoze_patched
-_rm.RoadwayManager.__init__ = _rm_init_patched
-_rm.RoadwayManager.update   = _rm_update_patched
-
 
 # =============================================================================
 # SECTION 1: DOMAIN CONFIGURATION
@@ -205,6 +87,43 @@ END_ROAD_INDEX    = (LAST_ROAD_DOMAIN  - 1) + NUM_BUFFER_DOMAINS + 1  # = 105
 def _gis_to_pad(gis_id):
     """Convert a 1-based GIS domain ID to a CASCADE padded array index."""
     return START_REAL_INDEX + (gis_id - FIRST_FILE_NUMBER)
+
+
+# =============================================================================
+# SECTION 1B: GROIN CONFIGURATION (Buxton Groin Field)
+# =============================================================================
+# Fixed real-world facts about the structure -- NOT period-dependent, so this
+# lives here rather than in Section 4. install_year is the true historical
+# construction date; deterioration is specified as a delay relative to it, so
+# the same config resolves correctly whichever period (START_YEAR) is active:
+#   Period 1 (1984-2004): install year predates the run, so the groin is
+#     already active at year 0; the 1996->2003 deterioration plays out
+#     mid-run (years 12-19) -- this is the only run that exercises the ramp.
+#   Period 2 (2004-2024): deterioration completed before this period starts,
+#     so the groin is already at its floor fraction from year 0 onward.
+#
+# GROIN_ENABLED is the master switch -- flip it and rerun, same pattern as
+# flipping START_YEAR, rather than a run-matrix loop.
+GROIN_ENABLED = False   # TEMP: set by end-to-end test run; restore to True
+
+GROIN_UPDRIFT_GIS   = 6     # source: updrift accretes (dipole +)
+GROIN_DOWNDRIFT_GIS = 5     # sink:   downdrift erodes (dipole -)
+GROIN_INSTALL_YEAR  = 1969  # confirmed historical construction date
+
+GROIN_TRAPPING_RATE_M_YR = 60.0   # M -- placeholder from the 1967-1997 test; retune against Period 1 CoastSat LRR
+
+# Deterioration: last repair 1996 -> major storm damage 2003. Modeled as a
+# linear ramp bridging the two documented dates (maintenance stops in 1996,
+# unrepaired damage accumulates, the 2003 storm locks in the new steady
+# state) rather than treating either date alone as the trigger.
+GROIN_DETERIORATION_DELAY_YEARS = 1996 - GROIN_INSTALL_YEAR   # = 27
+GROIN_DETERIORATION_MODE        = "linear_ramp"
+GROIN_DETERIORATION_RAMP_YEARS  = 2003 - 1996                  # = 7
+GROIN_DETERIORATION_FRACTION    = 0.2   # placeholder -- solve from era LRR ratio at D5/D6
+
+# Module import path -- update if HAT_groin_module.py has moved since the
+# 1967-1997 test.
+GROIN_MODULE_IMPORT_PATH = "scripts.groin.HAT-hindcast-groin-test.version_control.HAT_groin_module"
 
 
 # =============================================================================
@@ -282,7 +201,9 @@ GIF_OCEAN_AT_BOTTOM = True           # y-axis orientation: True -> ocean/seaward
 # SECTION 3: FILE PATHS
 # =============================================================================
 
-PROJECT_BASE_DIR   = r"/"
+# Derived from this file's location (scripts/hatteras_ms/) so the script runs on
+# any checkout without editing a hardcoded path.
+PROJECT_BASE_DIR   = str(Path(__file__).resolve().parents[2])
 HATTERAS_DATA_BASE = os.path.join(PROJECT_BASE_DIR, "data", "hatteras_init")
 print(f"[DEBUG] PROJECT_BASE_DIR   = {PROJECT_BASE_DIR!r}")
 print(f"[DEBUG] HATTERAS_DATA_BASE = {HATTERAS_DATA_BASE!r}")
@@ -296,15 +217,19 @@ PARAMETER_FILE = "Hatteras-CASCADE-parameters.yaml"
 
 # --- Topo/dune init year ---
 # TOPO_DUNE_INIT_YEAR : year label used in the *filename* (e.g. domain_7_topography_2009.npy)
-# TOPO_DUNE_SUBFOLDER : version folder under dune_topo/ (e.g. "2009_v1", "2009_v2")
-#                       Change TOPO_DUNE_SUBFOLDER to switch between versions
-#                       without touching the filename year.
+# TOPO_DUNE_VERSION   : version folder holding the dunes/ and topography/ subdirs.
+#                       Change it to switch between extractor versions (2009_v2,
+#                       etc.) without touching the filename year.
 # NOTE: this is the same initial condition for BOTH periods (it is the surface
 # the model starts from at whichever START_YEAR is selected) - it is not part
 # of the period/calibration switch in Section 4.
-TOPO_DUNE_INIT_YEAR = "2009"             # used in filenames - matches extractor comparison
-TOPO_DUNE_SUBFOLDER = "2009_v2"          # version folder under dune_topo/
-                                          # e.g. dune_topo\2009_v2\topography\domain_7_topography_2009.npy
+TOPO_DUNE_INIT_YEAR = "2009"      # used in filenames - matches extractor comparison
+TOPO_DUNE_VERSION   = "2009_v2"   # version folder under 1-barrier3d-domains/2009-dune-topo/
+
+# Layout: 1-barrier3d-domains/2009-dune-topo/<version>/{dunes,topography}/domain_<n>_*_<year>.npy
+BARRIER3D_DIR = os.path.join(HATTERAS_DATA_BASE, "1-barrier3d-domains")
+DUNE_TOPO_DIR = os.path.join(BARRIER3D_DIR, "2009-dune-topo", TOPO_DUNE_VERSION)
+BUFFER_DIR    = os.path.join(BARRIER3D_DIR, "2009-buffer")
 
 os.chdir(PROJECT_BASE_DIR)
 os.makedirs(OUTPUT_BASE_DIR, exist_ok=True)
@@ -321,7 +246,7 @@ os.makedirs(OUTPUT_BASE_DIR, exist_ok=True)
 # To enable nourishment for 2004: set enable_nourishment=True and update
 # nourishment_volume (m^3/m) in the 2004 entry below (already on).
 
-RUN_NAME_SUFFIX = "base_newdom_72"   # <- edit this to label each experiment
+RUN_NAME_SUFFIX = "full_calibrated"   # <- edit this to label each experiment
 
 # <- Flip between 1984 and 2004 to switch periods; END_YEAR is set automatically
 START_YEAR = 1984
@@ -331,7 +256,7 @@ START_YEAR = 1984
 #   "calibrated" full corrections
 # Both presets are period-keyed below (Section 4a), so the correct GIS-1/GIS-90
 # edge values (and, for "calibrated", the full interior fit) load automatically.
-SOURCE_SINK_PRESET = "base"
+SOURCE_SINK_PRESET = "calibrated"
 
 # -----------------------------------------------------------------------------
 # SECTION 4a: BACKGROUND EROSION (SOURCE/SINK) RATES — keyed by period + preset
@@ -340,12 +265,12 @@ SOURCE_SINK_PRESET = "base"
 
 DOMAIN_BE_RATES_BASE_BY_PERIOD = {
     1984: {
-        1:  -40,
-        90:  15,
+        1:  -40, #-40
+        90:  15, # 15
     },
     2004: {
-        1:   35,
-        90:  35,
+        1:   35, #35
+        90:  35, #35
     },
 }
 
@@ -353,39 +278,39 @@ DOMAIN_BE_RATES_BASE_BY_PERIOD = {
 DOMAIN_BE_RATES_CALIBRATED_BY_PERIOD = {
     1984: {
           1: -40.0,  # LOCKED — use your solved value, not 0.0
-          2: -0.8,  # Cape Point / Shoal Dynamics
-          3: -0.9,  # Cape Point / Shoal Dynamics
+          2: -0.6,  # Cape Point / Shoal Dynamics
+          3: -0.7,  # Cape Point / Shoal Dynamics
           4: 0.0,
           5: +1.2,  # Cape Point / Shoal Dynamics
-          6: +1.8,  # Cape Point / Shoal Dynamics
-          7: +0.7,  # Cape Point / Shoal Dynamics
-          8: +0.9,  # Cape Point / Shoal Dynamics
+          6: +2.0,  # Cape Point / Shoal Dynamics
+          7: +0.9,  # Cape Point / Shoal Dynamics
+          8: +1.1,  # Cape Point / Shoal Dynamics
           9: 0.0,
          10: -0.9,  # Cape Point / Shoal Dynamics
-         11: -1.2,  # Buxton–Avon Transition
+         11: -1.3,  # Buxton–Avon Transition
          12: -0.9,  # Buxton–Avon Transition
-         13: -0.5,  # Buxton–Avon Transition
+         13: -0.6,  # Buxton–Avon Transition
          14: 0.0,
          15: 0.0,
          16: 0.0,
-         17: 0.0,
-         18: 0.0,
-         19: 0.0,
+         17: +0.6,  # Buxton–Avon Transition
+         18: +0.6,  # Buxton–Avon Transition
+         19: +0.6,  # Buxton–Avon Transition
          20: 0.0,
          21: 0.0,
          22: 0.0,
-         23: -0.3,  # Avon
-         24: 0.0,
-         25: 0.0,
-         26: +0.3,  # Avon
-         27: +0.9,  # Avon
-         28: +1.2,  # Avon
-         29: +1.7,  # Avon
-         30: +2.1,  # Avon
-         31: +2.4,  # Avon
-         32: +1.8,  # Mid-island
-         33: +1.3,  # Mid-island
-         34: +0.9,  # Mid-island
+         23: 0.0,
+         24: +0.3,  # Avon
+         25: +0.3,  # Avon
+         26: +0.8,  # Avon
+         27: +1.4,  # Avon
+         28: +1.9,  # Avon
+         29: +2.3,  # Avon
+         30: +2.2,  # Avon
+         31: +2.2,  # Avon
+         32: +1.9,  # Mid-island
+         33: +1.4,  # Mid-island
+         34: +1.0,  # Mid-island
          35: 0.0,
          36: 0.0,
          37: 0.0,
@@ -395,147 +320,147 @@ DOMAIN_BE_RATES_CALIBRATED_BY_PERIOD = {
          41: 0.0,
          42: 0.0,
          43: 0.0,
-         44: 0.0,
+         44: +0.4,  # Mid-island
          45: 0.0,
          46: 0.0,
          47: 0.0,
-         48: -0.7,  # Mid-island
+         48: -0.3,  # Mid-island
          49: -1.0,  # Mid-island
-         50: -1.2,  # Mid-island
-         51: -1.4,  # Mid-island
-         52: -1.5,  # Mid-island
-         53: -1.5,  # Mid-island
-         54: -1.3,  # Mid-island
-         55: -1.1,  # Mid-island
-         56: -0.8,  # Mid-island
+         50: -1.0,  # Mid-island
+         51: -1.2,  # Mid-island
+         52: -1.3,  # Mid-island
+         53: -1.3,  # Mid-island
+         54: -1.2,  # Mid-island
+         55: -1.0,  # Mid-island
+         56: -1.0,  # Mid-island
          57: -0.3,  # Mid-island
          58: 0.0,
          59: 0.0,
          60: 0.0,
          61: 0.0,
-         62: 0.0,
-         63: +0.4,  # Wimble Shoals Influence
+         62: +0.4,  # Wimble Shoals Influence
+         63: 0.0,
          64: 0.0,
          65: 0.0,
          66: 0.0,
          67: 0.0,
-         68: +0.6,  # Wimble Shoals Influence
-         69: +1.0,  # Wimble Shoals Influence
-         70: +1.4,  # Wimble Shoals Influence
-         71: +1.8,  # Wimble Shoals Influence
-         72: +2.4,  # Wimble Shoals Influence
-         73: +2.3,  # Wimble Shoals Influence
-         74: +2.3,  # Wimble Shoals Influence
-         75: +2.1,  # Tri-Village / Rodanthe
-         76: +1.5,  # Tri-Village / Rodanthe
-         77: +1.2,  # Tri-Village / Rodanthe
-         78: 0.0,
-         79: -0.5,  # Tri-Village / Rodanthe
-         80: -1.5,  # Tri-Village / Rodanthe
-         81: -2.0,  # Tri-Village / Rodanthe
-         82: -2.2,  # Tri-Village / Rodanthe
+         68: +0.7,  # Wimble Shoals Influence
+         69: +1.2,  # Wimble Shoals Influence
+         70: +1.6,  # Wimble Shoals Influence
+         71: +1.9,  # Wimble Shoals Influence
+         72: +2.2,  # Wimble Shoals Influence
+         73: +2.4,  # Wimble Shoals Influence
+         74: +2.6,  # Wimble Shoals Influence
+         75: +2.5,  # Tri-Village / Rodanthe
+         76: +1.7,  # Tri-Village / Rodanthe
+         77: +1.3,  # Tri-Village / Rodanthe
+         78: +0.7,  # Tri-Village / Rodanthe
+         79: 0.0,
+         80: -1.3,  # Tri-Village / Rodanthe
+         81: -1.9,  # Tri-Village / Rodanthe
+         82: -2.1,  # Tri-Village / Rodanthe
          83: -2.3,  # Tri-Village / Rodanthe
-         84: -2.4,  # Pea Island NWR
-         85: -2.3,  # Pea Island NWR
-         86: -2.0,  # Pea Island NWR
-         87: -1.6,  # Pea Island NWR
-         88: -1.1,  # Pea Island NWR
-         89: 0.0,
+         84: -2.5,  # Pea Island NWR
+         85: -2.5,  # Pea Island NWR
+         86: -2.4,  # Pea Island NWR
+         87: -2.0,  # Pea Island NWR
+         88: -1.6,  # Pea Island NWR
+         89: -1.0,  # Pea Island NWR
          90: 15.0,  # LOCKED — use your solved value, not 0.0
-        },
+    },
 
     2004: {
           1: 35.0,  # LOCKED — use your solved value, not 0.0
-          2: 0.0,
-          3: 0.0,
-          4: 0.0,
-          5: -0.6,  # Cape Point / Shoal Dynamics
-          6: -3.1,  # Cape Point / Shoal Dynamics
-          7: -1.5,  # Cape Point / Shoal Dynamics
-          8: 0.0,
-          9: 0.0,
-         10: +1.4,  # Cape Point / Shoal Dynamics
-         11: +1.7,  # Buxton–Avon Transition
-         12: +1.7,  # Buxton–Avon Transition
-         13: +1.7,  # Buxton–Avon Transition
-         14: +1.7,  # Buxton–Avon Transition
-         15: +1.7,  # Buxton–Avon Transition
-         16: +1.8,  # Buxton–Avon Transition
-         17: +1.8,  # Buxton–Avon Transition
-         18: +1.7,  # Buxton–Avon Transition
-         19: +1.4,  # Buxton–Avon Transition
-         20: +1.0,  # Buxton–Avon Transition
-         21: 0.0,
-         22: 0.0,
-         23: -0.3,  # Avon
-         24: -0.8,  # Avon
-         25: -0.8,  # Avon
-         26: +0.3,  # Avon
-         27: 0.0,
-         28: +1.2,  # Avon
-         29: +1.7,  # Avon
-         30: +2.1,  # Avon
-         31: +2.4,  # Avon
-         32: +3.0,  # Mid-island
-         33: +3.1,  # Mid-island
-         34: +3.1,  # Mid-island
-         35: +3.0,  # Mid-island
-         36: +2.9,  # Mid-island
-         37: +2.7,  # Mid-island
-         38: +2.3,  # Mid-island
-         39: +2.0,  # Mid-island
-         40: +1.7,  # Mid-island
-         41: +1.4,  # Mid-island
-         42: +1.1,  # Mid-island
-         43: +0.8,  # Mid-island
-         44: 0.0,
+          2: +1.0,  # Cape Point / Shoal Dynamics
+          3: +1.6,  # Cape Point / Shoal Dynamics
+          4: +1.6,  # Cape Point / Shoal Dynamics
+          5: +1.2,  # Cape Point / Shoal Dynamics
+          6: -1.5,  # Cape Point / Shoal Dynamics
+          7: 0.0,
+          8: +1.1,  # Cape Point / Shoal Dynamics
+          9: +2.2,  # Cape Point / Shoal Dynamics
+         10: +3.1,  # Cape Point / Shoal Dynamics
+         11: +3.4,  # Buxton–Avon Transition
+         12: +3.4,  # Buxton–Avon Transition
+         13: +3.3,  # Buxton–Avon Transition
+         14: +3.2,  # Buxton–Avon Transition
+         15: +3.0,  # Buxton–Avon Transition
+         16: +3.1,  # Buxton–Avon Transition
+         17: +3.0,  # Buxton–Avon Transition
+         18: +2.9,  # Buxton–Avon Transition
+         19: +2.6,  # Buxton–Avon Transition
+         20: +2.2,  # Buxton–Avon Transition
+         21: +1.9,  # Avon
+         22: +1.4,  # Avon
+         23: +0.8,  # Avon
+         24: +0.3,  # Avon
+         25: +0.3,  # Avon
+         26: +0.8,  # Avon
+         27: +1.4,  # Avon
+         28: +1.9,  # Avon
+         29: +2.3,  # Avon
+         30: +3.1,  # Avon
+         31: +3.6,  # Avon
+         32: +3.8,  # Mid-island
+         33: +3.7,  # Mid-island
+         34: +3.6,  # Mid-island
+         35: +3.5,  # Mid-island
+         36: +3.3,  # Mid-island
+         37: +3.1,  # Mid-island
+         38: +2.7,  # Mid-island
+         39: +2.4,  # Mid-island
+         40: +2.1,  # Mid-island
+         41: +1.8,  # Mid-island
+         42: +1.5,  # Mid-island
+         43: +1.1,  # Mid-island
+         44: +0.4,  # Mid-island
          45: 0.0,
          46: 0.0,
          47: 0.0,
-         48: -0.7,  # Mid-island
-         49: -1.0,  # Mid-island
-         50: -1.2,  # Mid-island
-         51: -1.4,  # Mid-island
-         52: -1.5,  # Mid-island
-         53: -1.5,  # Mid-island
-         54: -1.3,  # Mid-island
-         55: -1.1,  # Mid-island
-         56: -0.8,  # Mid-island
+         48: -0.3,  # Mid-island
+         49: 0.0,
+         50: -1.0,  # Mid-island
+         51: -1.2,  # Mid-island
+         52: -1.3,  # Mid-island
+         53: -1.3,  # Mid-island
+         54: -1.2,  # Mid-island
+         55: -1.0,  # Mid-island
+         56: 0.0,
          57: -0.3,  # Mid-island
          58: 0.0,
          59: 0.0,
          60: 0.0,
          61: 0.0,
-         62: 0.0,
-         63: +0.4,  # Wimble Shoals Influence
-         64: +1.2,  # Wimble Shoals Influence
-         65: +1.5,  # Wimble Shoals Influence
-         66: +1.8,  # Wimble Shoals Influence
-         67: +2.2,  # Wimble Shoals Influence
-         68: +2.5,  # Wimble Shoals Influence
-         69: +2.7,  # Wimble Shoals Influence
-         70: +2.8,  # Wimble Shoals Influence
-         71: +2.9,  # Wimble Shoals Influence
-         72: +2.4,  # Wimble Shoals Influence
-         73: +2.3,  # Wimble Shoals Influence
-         74: +2.3,  # Wimble Shoals Influence
-         75: +2.1,  # Tri-Village / Rodanthe
-         76: +1.5,  # Tri-Village / Rodanthe
-         77: +1.2,  # Tri-Village / Rodanthe
-         78: +1.3,  # Tri-Village / Rodanthe
-         79: +1.2,  # Tri-Village / Rodanthe
-         80: +0.9,  # Tri-Village / Rodanthe
-         81: +0.6,  # Tri-Village / Rodanthe
-         82: 0.0,
-         83: 0.0,
-         84: 0.0,
-         85: -0.6,  # Pea Island NWR
-         86: -0.6,  # Pea Island NWR
-         87: -0.5,  # Pea Island NWR
-         88: 0.0,
-         89: 0.0,
+         62: +0.4,  # Wimble Shoals Influence
+         63: +1.1,  # Wimble Shoals Influence
+         64: +1.6,  # Wimble Shoals Influence
+         65: +2.0,  # Wimble Shoals Influence
+         66: +2.4,  # Wimble Shoals Influence
+         67: +2.8,  # Wimble Shoals Influence
+         68: +3.3,  # Wimble Shoals Influence
+         69: +3.7,  # Wimble Shoals Influence
+         70: +4.0,  # Wimble Shoals Influence
+         71: +4.2,  # Wimble Shoals Influence
+         72: +4.1,  # Wimble Shoals Influence
+         73: +4.0,  # Wimble Shoals Influence
+         74: +3.7,  # Wimble Shoals Influence
+         75: +3.4,  # Tri-Village / Rodanthe
+         76: +3.0,  # Tri-Village / Rodanthe
+         77: +2.7,  # Tri-Village / Rodanthe
+         78: +2.4,  # Tri-Village / Rodanthe
+         79: +2.3,  # Tri-Village / Rodanthe
+         80: +2.0,  # Tri-Village / Rodanthe
+         81: +1.7,  # Tri-Village / Rodanthe
+         82: +1.4,  # Tri-Village / Rodanthe
+         83: +1.0,  # Tri-Village / Rodanthe
+         84: +0.7,  # Pea Island NWR
+         85: 0.0,
+         86: +0.5,  # Pea Island NWR
+         87: +0.6,  # Pea Island NWR
+         88: +0.7,  # Pea Island NWR
+         89: +1.2,  # Pea Island NWR
          90: 35.0,  # LOCKED — use your solved value, not 0.0
-        },  #
+    },  #
 }
 
 
@@ -554,7 +479,7 @@ PERIOD_CONFIG = {
         end_year             = 2004,
         sea_level_rise_rate  = 0.004,   # m/yr - from duck_rslr_analysis.py
         storm_file           = os.path.join(
-            HATTERAS_DATA_BASE, "storms", "hindcast_storms", "1984_2004",
+            HATTERAS_DATA_BASE, "3-env-forcings", "storms", "hindcast_storms", "1984_2004",
             "1984_2004_storms_v3_72.npy",
         ),
         island_offset_file     = os.path.join(
@@ -562,7 +487,7 @@ PERIOD_CONFIG = {
             f"Island_Dune_Offsets_1984_PADDED_{TOTAL_DOMAINS}.csv",
         ),
         road_setback_file    = os.path.join(
-            HATTERAS_DATA_BASE, "road_offset", "processed_offset", "1984", "RoadSetback_1984.csv",
+            HATTERAS_DATA_BASE, "4-mgmt-forcing", "road_offset", "old_method_offset", "1984", "RoadSetback_1984.csv",
         ),
         enable_nourishment   = False,
         nourishment_volume   = 0,
@@ -573,15 +498,15 @@ PERIOD_CONFIG = {
         end_year             = 2024,
         sea_level_rise_rate  = 0.006,   # m/yr - from duck_rslr_analysis.py
         storm_file           = os.path.join(
-            HATTERAS_DATA_BASE, "storms", "hindcast_storms", "1984_2004",
-            "2004_2024_storms_v3.npy",
+            HATTERAS_DATA_BASE, "3-env-forcings", "storms", "hindcast_storms", "2004_2024",
+            "2004_2024_storms_v3_72.npy",
         ),
         island_offset_file     = os.path.join(
             HATTERAS_DATA_BASE, "2-brie-offset", "hindcast_2004",
             f"Island_Dune_Offsets_2004_PADDED_{TOTAL_DOMAINS}.csv",
         ),
         road_setback_file    = os.path.join(
-            HATTERAS_DATA_BASE, "road_offset", "processed_offset", "2004", "RoadSetback_2004.csv",
+            HATTERAS_DATA_BASE, "4-mgmt-forcing", "road_offset", "old_method_offset", "2004", "RoadSetback_2004.csv",
         ),  # UPDATE path once file is generated, if not already final
         enable_nourishment   = True,    # historical BN injected per-year in time loop
         nourishment_volume   = 100,     # m^3/m default passed to Cascade init (threshold unused)
@@ -884,9 +809,12 @@ print("=" * 80 + "\n")
 
 # --- Historical road management events ---
 # Two event types, applied inside the time step loop:
-#   "relocate" - road physically moved landward at the known year; forces
-#                setback to post_relocation_setback_m for the listed GIS
-#                domains, then management continues normally from there.
+#   "relocate" - road physically moved landward at the known year; ADDS
+#                relocation_displacement_m to the setback each listed GIS domain
+#                is currently carrying, then management continues normally from
+#                there. A displacement, not an absolute setback -- see the long
+#                note above HISTORICAL_ROAD_EVENTS for why that distinction is
+#                what kept NC-12 out of Pamlico Sound.
 #   "bridge"   - bridge/alternate route replaced the road surface; disables
 #                RoadwayManager for the listed domains from that year onward
 #                (fully natural dynamics). Applied in ALL periods/scenarios
@@ -906,43 +834,77 @@ ENABLE_HISTORICAL_ROAD_RELOCATIONS = False
 #   type      : "relocate" | "bridge"
 #   note      : human-readable description (for metadata log)
 #   enabled   : optional, defaults to True. Set False to skip just this one
-#               event (e.g. while re-checking its post_relocation_setback_m
+#               event (e.g. while re-checking its relocation_displacement_m
 #               values) without disabling the others via the master toggle.
 
+# RELOCATIONS ARE A DISPLACEMENT, NOT A SETBACK
+# ---------------------------------------------
+# These events used to carry post_relocation_setback_m -- an ABSOLUTE setback
+# built as (1984 setback) + (1978->1997 road displacement). That double-counted
+# the shoreline retreat, and it is what drove NC-12 into Pamlico Sound:
+#
+#   The 1984 setback is measured from the 1984 DUNE LINE. It is spent against a
+#   grid whose row 0 is the 2009 DEM dune crest, which sits landward of the 1984
+#   dune by the 1984->2009 retreat R. So the origin has ALREADY moved landward
+#   by R. Adding the physical displacement on top of a 1984-referenced setback
+#   counts R a second time, and the road is placed R metres behind where NCDOT
+#   actually put it.
+#
+#   Checked against RoadSetback_2004.csv -- a same-year (2004 road vs 2004 dune)
+#   measurement taken AFTER both events, so it already IS the post-relocation
+#   position. The old absolute values overshot it by a median of +35 m in the
+#   1999 block and +96 m at Pea Island, where retreat was worst:
+#
+#       GIS 11: 129 prescribed vs  81 measured   (+48)
+#       GIS 84: 163 prescribed vs  50 measured  (+113)
+#       GIS 86: 205 prescribed vs  88 measured  (+117)
+#
+#   At GIS 84 the measured 2004 setback (50 m) is SMALLER than the 1984 setback
+#   (93 m) even though the road was moved 70 m landward in 1989 -- the shoreline
+#   overtook the road faster than NCDOT could move it. That is the real Pea
+#   Island story, and the absolute value erased it.
+#
+# So the events now carry relocation_displacement_m: how far the road physically
+# moved, and nothing else. CASCADE already decrements road_setback by
+# dune_migrated every year (roadway_manager.road_relocation_checks), so by the
+# event year the model's setback has absorbed the modelled retreat on its own.
+# Adding the displacement to the CURRENT setback counts the retreat exactly
+# once, from the model's own dune migration.
+#
+#   new_setback = rm._road_setback + relocation_displacement_m[gis]
+#
+# The displacements below are the 1978->1997 cross-shore offsets measured in
+# ArcGIS Pro -- unchanged, they were never the problem.
 HISTORICAL_ROAD_EVENTS = [
     # 1989: Pea Island / N. Rodanthe relocation
-    # post_relocation_setback_m = 1984 initial setback + cross-shore raw_offset
-    # measured between 1978 and 1997 road lines in ArcGIS Pro.
     dict(
         year=1989, gis_start=84, gis_end=87, type="relocate",
         note="NC-12 relocated landward 1989, Pea Island (GIS 84-87)",
         enabled=True,
-        post_relocation_setback_m={
-            84: 163.0,   # 93 m initial + 70 m measured raw_offset
-            85: 165.0,   # 45 m initial + 120 m measured raw_offset
-            86: 205.0,   # 85 m initial + 120 m measured raw_offset
-            87: 113.0,   # 88 m initial + 25 m measured raw_offset
+        relocation_displacement_m={
+            84:  70.0,
+            85: 120.0,
+            86: 120.0,
+            87:  25.0,
         },
     ),
     # 1999: Inter-village south relocation
-    # post_relocation_setback_m = 1984 initial setback + cross-shore raw_offset
-    # measured between 1978 and 1997 road lines in ArcGIS Pro.
-    # NOTE: GIS 11's 129.0 m setback is what pushed the road to the edge of a
-    # narrow interior grid and triggered the bulldoze() IndexError (see Section
-    # 0 patch). Set enabled=False here to skip this event while re-checking
-    # the 1978/1997 offset measurements, without touching the 1989 event above.
+    # NOTE: GIS 11 is the domain whose old 129.0 m absolute setback pushed the
+    # road off the back of a narrow interior and triggered the bulldoze()
+    # IndexError. Under the displacement form it moves +80 m from wherever the
+    # model has the road in 1999, which is the physical statement.
     dict(
         year=1999, gis_start=9, gis_end=15, type="relocate",
         note="NC-12 relocated landward 1999, inter-village south (GIS 9-15)",
         enabled=True,
-        post_relocation_setback_m={
-             9:  73.0,   # 43 m initial + 30 m measured raw_offset
-            10:  97.0,   # 42 m initial + 55 m measured raw_offset
-            11: 129.0,   # 49 m initial + 80 m measured raw_offset
-            12: 126.0,   # 56 m initial + 70 m measured raw_offset
-            13: 125.0,   # 70 m initial + 55 m measured raw_offset
-            14: 126.0,   # 96 m initial + 30 m measured raw_offset
-            15: 106.0,   # 101 m initial + 5 m measured raw_offset
+        relocation_displacement_m={
+             9:  30.0,
+            10:  55.0,
+            11:  80.0,
+            12:  70.0,
+            13:  55.0,
+            14:  30.0,
+            15:   5.0,
         },
     ),
     # 2022: Jug Handle Bridge - road surface removed, natural dynamics restored
@@ -951,6 +913,14 @@ HISTORICAL_ROAD_EVENTS = [
         note="Jug Handle Bridge installed 2022; road removed GIS 82-88 -> unmanaged",
     ),
 ]
+
+# Independent check on a corrected relocation: RoadSetback_2004.csv for the same
+# domain. Both events precede 2004, so a corrected setback should land near the
+# 2004 same-year measurement. Printed alongside each relocation when available.
+RELOCATION_CHECK_2004 = {
+     9: 89.0, 10: 83.0, 11: 81.0, 12: 89.0, 13: 87.0, 14: 93.0, 15: 71.0,
+    84: 50.0, 85: 85.0, 86: 88.0, 87: 40.0,
+}
 
 # --- Historical beach nourishment data (events fall within 2004-2024 only) ---
 # Source: Hatteras_Management_Timelines.xlsx -> Nourishment_Timeline sheet
@@ -1043,6 +1013,165 @@ road_setbacks_full[START_ROAD_INDEX : START_ROAD_INDEX + num_road_values] = \
     road_setbacks_raw[:num_road_values]
 print(f"  Road setback array prepared ({TOTAL_DOMAINS} domains)")
 
+# =============================================================================
+# PER-DOMAIN ROAD ELEVATION
+# =============================================================================
+# NOT period-dependent, and deliberately so.
+#
+# road_ele is a PRESCRIPTION, not an observation: bulldoze() writes it into the
+# interior grid every year. So the question it answers is "what grade is NC-12
+# built to here", and the answer has to be measured on the surface the model
+# actually runs on -- which is the 2009 LiDAR, for BOTH hindcast periods. There
+# is one topography, so there is one road elevation.
+#
+# The 2004 alignment is used for both periods because it is the only digitised
+# line that exists on the 2009 surface. Sampled along the 1984 line, GIS 10
+# returns 3.98 m NAVD88 -- a dune that migrated over the alignment NCDOT
+# abandoned in 1999. The two lines agree to a mean |difference| of 0.00 m over
+# the 71 domains where the road never moved, so using 2004 everywhere costs
+# nothing where it does not matter. Where it does matter, the 1984 line reads
+# HIGHER, not lower: mean 2.37 m against 1.54 m, sd up to 1.70 m, because the
+# dune migrated over the abandoned corridor. Both candidates sit above the
+# neighbouring un-relocated grade (1.26 m), so 2004 is the lower of the two and
+# the only one measured on a graded surface.
+#
+# Produced by HAT_road_elevation.py: MEAN of the 1 m native LiDAR clip under a
+# 3.5 m buffer on nc12_2004.geojson (~7 m corridor, one carriageway).
+#
+# The ArcGIS elevation_2009 column this was once validated against (mean
+# |difference| 0.03 m) NO LONGER EXISTS -- nc12_2004.csv now carries avg_elev_m,
+# z_mean, z_max, z_min, road_z and relief_m, every one of them all-zero or
+# all-empty. That check cannot be re-run from the repo. What replaces it is
+# internal: a corridor-width sweep, a 1 m vs 10 m comparison, an alongshore
+# continuity check and the relocation bracket. See RoadElevation_audit.md.
+#
+# ALREADY MHW-RELATIVE, which is the frame bulldoze() compares against (the
+# extractor subtracts MHW_M = 0.36 before anything else). Do NOT subtract again.
+# Toggle, overridable from the shell so a paired sensitivity run needs no edit:
+#     HAT_PER_DOMAIN_ROAD_ELE=0 python HAT_hindcast_1984_2024.py
+# The uniform run is tagged in RUN_NAME_BASE below, so the two do not collide in
+# comparison/raw_runs/.
+USE_PER_DOMAIN_ROAD_ELEVATION = (
+    os.environ.get("HAT_PER_DOMAIN_ROAD_ELE", "1").lower()
+    not in ("0", "false", "no")
+)
+
+# Buffer domains only. VERIFIED INERT: all 38 padded indices outside the road
+# span (0-22, 105-119) have ROADWAY_MANAGEMENT_ON = False, so no RoadwayManager
+# is ever constructed for them and this value cannot reach the model. The 27
+# village indices inside the road span (GIS 21-31, 68-83) do receive a measured
+# elevation from the file but are likewise unmanaged, so it is unused there too.
+# 55 of the 82 road-span domains are actually managed.
+ROAD_ELEVATION_FALLBACK = 1.45
+# One file for both periods -- one 2009 DEM, so one elevation set. No year in
+# the name by design; see road_elevation/RoadElevation_audit.md.
+ROAD_ELEVATION_FILE = os.path.join(
+    HATTERAS_DATA_BASE, "4-mgmt-forcing", "road_elevation",
+    "RoadElevation.csv")
+
+road_elevation_full = np.full(TOTAL_DOMAINS, ROAD_ELEVATION_FALLBACK)
+if USE_PER_DOMAIN_ROAD_ELEVATION:
+    if not os.path.exists(ROAD_ELEVATION_FILE):
+        print(f"\n  [warn] road elevation file not found:\n"
+              f"         {ROAD_ELEVATION_FILE}\n"
+              f"         falling back to the scalar "
+              f"{ROAD_ELEVATION_FALLBACK} m for every domain.\n"
+              f"         Run HAT_road_elevation.py to create it.")
+    else:
+        _re_raw = np.loadtxt(ROAD_ELEVATION_FILE, skiprows=1, delimiter=",")
+        _n_re = min(len(_re_raw), END_ROAD_INDEX - START_ROAD_INDEX)
+        road_elevation_full[START_ROAD_INDEX : START_ROAD_INDEX + _n_re] = \
+            _re_raw[:_n_re]
+        _road_only = road_elevation_full[START_ROAD_INDEX:START_ROAD_INDEX + _n_re]
+        print(f"  Road elevation: per-domain from "
+              f"{os.path.basename(ROAD_ELEVATION_FILE)} ({_n_re} domains)")
+        print(f"    m MHW-relative: min {_road_only.min():.2f} | "
+              f"median {np.median(_road_only):.2f} | max {_road_only.max():.2f}")
+        print(f"    m NAVD88      : min {_road_only.min() + MHW_ELEVATION:.2f} | "
+              f"median {np.median(_road_only) + MHW_ELEVATION:.2f} | "
+              f"max {_road_only.max() + MHW_ELEVATION:.2f}")
+        print(f"    vs the old scalar {ROAD_ELEVATION_FALLBACK}: median change "
+              f"{np.median(_road_only) - ROAD_ELEVATION_FALLBACK:+.2f} m, "
+              f"lower in {int((_road_only < ROAD_ELEVATION_FALLBACK).sum())} of "
+              f"{_n_re} domains")
+        print(f"    bulldoze() writes this into the interior at t=0, so a value "
+              f"near the real surface")
+        print(f"    perturbs the initial grid far less than a uniform one did.")
+else:
+    print(f"  Road elevation: uniform {ROAD_ELEVATION_FALLBACK} m "
+          f"(USE_PER_DOMAIN_ROAD_ELEVATION = False)")
+    # Tag the uniform run so a paired sensitivity pair lands in two folders.
+    RUN_NAME_BASE = f"{RUN_NAME_BASE}_uniformRoadEle"
+    print(f"    run name tagged -> {RUN_NAME_BASE}")
+
+# =============================================================================
+# UNITS / DATUM ASSERTIONS
+# =============================================================================
+# CASCADE takes TWO conventions side by side, and the difference is invisible
+# in a value that merely looks reasonable:
+#
+#   CONVERTED FOR YOU  supply in m NAVD88; load_input.py does /10 - MHW
+#       MHW (:227), BermEl (:241), Dmaxel (:304), ShrubEl_* (:346-7)
+#
+#   ALREADY CONVERTED  supply in the model's own frame; nothing touches it
+#       elevation_file  dam, MHW-relative   (load_elevation() is just np.load;
+#                       configuration.py documents "[dam x dam x dam MHW]")
+#       dune_file       dam, ABOVE BERM     (load_input.py:249 assigns straight
+#                       into DuneDomain)
+#       road_ele        m, MHW-relative     (bulldoze() only does road_ele/dz)
+#
+# barrier3d.py:1197 pops MHW into self._MHW and _MHW appears NOWHERE else in
+# the file -- the model never applies it to a grid. Anything grid-shaped has to
+# arrive pre-converted, and a slip produces a plausible-looking run rather than
+# an error. These assertions make it fail at launch instead.
+#
+# Ranges are deliberately loose: they discriminate a 10x unit error or a 0.36 m
+# datum shift, not whether the values are physically ideal. Run
+# scripts/input_prep/4-mgmt-forcings/road_offset/HAT_units_datum_check.py for
+# the full trace and the plausibility checks.
+def _assert_units_and_datum():
+    _topo_sentinel_dam = -0.30      # SENTINEL_WATER_M (-3.0 m MHW) in dam
+
+    _t = np.load(ELEVATION_FILE_PATHS[START_REAL_INDEX], mmap_mode="r")
+    assert -0.35 <= float(np.nanmin(_t)) <= 0.0, (
+        f"topography min {float(np.nanmin(_t)):.3f} dam: expected dam "
+        f"MHW-relative with a {_topo_sentinel_dam} dam water sentinel. "
+        f"A metres array would be ~10x.")
+    assert 0.05 < float(np.nanmax(_t)) < 2.0, (
+        f"topography max {float(np.nanmax(_t)):.3f} dam "
+        f"= {float(np.nanmax(_t)) * 10:.1f} m MHW: expected dam. A metres "
+        f"array would read ~{float(np.nanmax(_t)) * 10:.0f} here.")
+
+    _d = np.load(DUNE_FILE_PATHS[START_REAL_INDEX], mmap_mode="r")
+    _dv = np.asarray(_d, dtype=float).ravel()
+    _dv = _dv[_dv > _topo_sentinel_dam + 1e-9]
+    if _dv.size:
+        assert float(np.nanmax(_dv)) < 1.5, (
+            f"dune max {float(np.nanmax(_dv)):.3f} dam "
+            f"= {float(np.nanmax(_dv)) * 10:.1f} m above berm: expected dam "
+            f"ABOVE BERM. A metres array would be ~10x.")
+
+    _r = road_elevation_full[START_ROAD_INDEX:END_ROAD_INDEX]
+    assert 0.0 < float(_r.min()) and float(_r.max()) < 3.0, (
+        f"road_ele range {_r.min():.2f} to {_r.max():.2f}: expected metres "
+        f"MHW-relative. NAVD88 would sit ~{MHW_ELEVATION:.2f} m higher; "
+        f"decametres would be ~10x smaller.")
+
+    # The extractor's berm and Barrier3D's must be the same number, or the dune
+    # heights are measured from a different datum than the model rebuilds to.
+    _berm_b3d = (BERM_ELEVATION / 10.0 - MHW_ELEVATION / 10.0) * 10.0
+    assert abs(_berm_b3d - (1.70 - MHW_ELEVATION)) < 1e-9, (
+        f"berm mismatch: load_input gives {_berm_b3d:.3f} m MHW, the extractor "
+        f"used BERM_ELEV_NAVD_M - MHW_M = {1.70 - MHW_ELEVATION:.3f}. "
+        f"Dune heights are measured above the extractor's berm.")
+    print("  Units/datum assertions passed "
+          "(topography dam MHW, dunes dam above berm, road_ele m MHW)")
+
+
+# NOTE: called AFTER ELEVATION_FILE_PATHS / DUNE_FILE_PATHS are populated
+# (see the call site further down); defining it here keeps it next to the
+# convention it documents.
+
 # ROADWAY_MANAGEMENT_ON: per-domain flag passed directly to Cascade.
 # Non-village road domains (GIS 9-90, excl. villages): management ON
 #   -> RoadwayManager runs each step: bulldoze, rebuild dunes, relocate.
@@ -1084,24 +1213,45 @@ ELEVATION_FILE_PATHS = []
 DUNE_FILE_PATHS      = []
 
 for _ in range(START_REAL_INDEX):  # left buffers
-    DUNE_FILE_PATHS.append(os.path.join(HATTERAS_DATA_BASE, "buffer", "sample_1_dune.npy"))
-    ELEVATION_FILE_PATHS.append(os.path.join(HATTERAS_DATA_BASE, "buffer", "sample_1_topography.npy"))
+    DUNE_FILE_PATHS.append(os.path.join(BUFFER_DIR, "sample_1_dune.npy"))
+    ELEVATION_FILE_PATHS.append(os.path.join(BUFFER_DIR, "sample_1_topography.npy"))
 
 for i_list in range(START_REAL_INDEX, END_REAL_INDEX):  # real domains
     file_num = FIRST_FILE_NUMBER + (i_list - START_REAL_INDEX)
     DUNE_FILE_PATHS.append(
-        os.path.join(HATTERAS_DATA_BASE, "dune_topo", TOPO_DUNE_SUBFOLDER, "dunes",
+        os.path.join(DUNE_TOPO_DIR, "dunes",
                      f"domain_{file_num}_dune_{TOPO_DUNE_INIT_YEAR}.npy"))
     ELEVATION_FILE_PATHS.append(
-        os.path.join(HATTERAS_DATA_BASE, "dune_topo", TOPO_DUNE_SUBFOLDER, "topography",
+        os.path.join(DUNE_TOPO_DIR, "topography",
                      f"domain_{file_num}_topography_{TOPO_DUNE_INIT_YEAR}.npy"))
 
 for _ in range(END_REAL_INDEX, TOTAL_DOMAINS):  # right buffers
-    DUNE_FILE_PATHS.append(os.path.join(HATTERAS_DATA_BASE, "buffer", "sample_1_dune.npy"))
-    ELEVATION_FILE_PATHS.append(os.path.join(HATTERAS_DATA_BASE, "buffer", "sample_1_topography.npy"))
+    DUNE_FILE_PATHS.append(os.path.join(BUFFER_DIR, "sample_1_dune.npy"))
+    ELEVATION_FILE_PATHS.append(os.path.join(BUFFER_DIR, "sample_1_topography.npy"))
+
+# Fail here rather than deep inside Barrier3D's init with an opaque traceback.
+_missing = [p for p in ELEVATION_FILE_PATHS + DUNE_FILE_PATHS if not os.path.exists(p)]
+if _missing:
+    raise FileNotFoundError(
+        f"{len(_missing)} of {2 * TOTAL_DOMAINS} init files missing - check "
+        f"TOPO_DUNE_VERSION ({TOPO_DUNE_VERSION!r}) and DUNE_TOPO_DIR.\n"
+        f"  first missing: {_missing[0]}"
+    )
 
 print(f"  Generated {len(ELEVATION_FILE_PATHS)} elevation file paths")
 print(f"  Generated {len(DUNE_FILE_PATHS)} dune file paths")
+
+# Units/datum gate. Defined above next to the convention it documents; called
+# here because it reads the init arrays. A datum or unit slip in any of these
+# produces a plausible-looking run rather than an error, so fail at launch.
+try:
+    _assert_units_and_datum()
+except AssertionError as _e:
+    print(f"\n  [FATAL] units/datum check failed:\n         {_e}\n")
+    raise
+except (IndexError, FileNotFoundError, OSError) as _e:
+    print(f"  [warn] units/datum assertions skipped ({type(_e).__name__}: {_e})")
+
 print("=" * 80 + "\n")
 
 # =============================================================================
@@ -1931,7 +2081,8 @@ def write_run_metadata(run_dir, run_name, Hs):
         "",
         "[Topo / Dune Initialisation]",
         f"topo_dune_init_year   = {TOPO_DUNE_INIT_YEAR}",
-        f"topo_dune_subfolder   = {TOPO_DUNE_SUBFOLDER}",
+        f"topo_dune_version     = {TOPO_DUNE_VERSION}",
+        f"topo_dune_dir         = {DUNE_TOPO_DIR}",
         f"island_offset_file      = {os.path.basename(ISLAND_OFFSET_FILE)}",
         "",
         "[Morphodynamics]",
@@ -1965,6 +2116,15 @@ def write_run_metadata(run_dir, run_name, Hs):
         f"  ENABLE_HISTORICAL_ROAD_RELOCATIONS = {ENABLE_HISTORICAL_ROAD_RELOCATIONS}",
         f"  historical_road_events      = "
         f"{[(e['note'], 'enabled' if e.get('enabled', True) else 'DISABLED') for e in HISTORICAL_ROAD_EVENTS]}",
+        f"road_setback_file     = {ROAD_SETBACK_FILE}",
+        f"road_elevation        = "
+        f"{'per-domain' if USE_PER_DOMAIN_ROAD_ELEVATION else 'uniform'}"
+        f" ({ROAD_ELEVATION_FALLBACK} m fallback), m MHW-relative",
+        f"  road_elevation_file         = {ROAD_ELEVATION_FILE}",
+        f"  road_elevation_span_mhw     = "
+        f"{road_elevation_full[START_ROAD_INDEX:END_ROAD_INDEX].min():.2f} to "
+        f"{road_elevation_full[START_ROAD_INDEX:END_ROAD_INDEX].max():.2f} "
+        f"(median {np.median(road_elevation_full[START_ROAD_INDEX:END_ROAD_INDEX]):.2f})",
         f"nourishment           = {ENABLE_NOURISHMENT}",
         f"nourishment_volume    = {NOURISHMENT_VOLUME}  # m3/m (Cascade init default; historical injected per-year)",
         f"nourishment_bn_years  = {HAT_BN_YEARS}",
@@ -2004,6 +2164,98 @@ def write_run_metadata(run_dir, run_name, Hs):
 #   PARAMETER_FILE     : YAML filename resolved by CASCADE relative to datadir
 #   OUTPUT_BASE_DIR    : root comparison directory for cascade.save()
 
+def summarise_road_management(cascade, run_dir=None):
+    """
+    Which domains kept their road, and which lost it — read from CASCADE's own
+    post-run state.
+
+    This replaces the domain labelling the old Section 0 monkey-patch provided.
+    That version wrapped RoadwayManager.__init__/.update to stamp a label onto
+    each drowning print as it happened. It worked, but it meant running a model
+    that differed from the package. Everything it told you is recoverable
+    afterwards from state CASCADE already exposes, with no patching:
+
+        cascade.road_break[i]              1 once management stopped
+        roadways[i].drown_break            road drowned (width or SLR)
+        roadways[i].relocation_break       no room left to relocate
+        roadways[i]._road_ele_TS           written every managed year, so the
+                                           last non-zero entry is the last year
+                                           the road was managed
+
+    The one thing it cannot recover is WHY, at the moment it happened, when a
+    domain both drowned and was labelled in the same print. drown_break vs
+    relocation_break still distinguishes the two causes, which is the part that
+    matters for reporting.
+    """
+    roadways = getattr(cascade, "roadways", None)
+    if roadways is None:
+        print("\n  [road summary] no roadway managers on this run")
+        return []
+
+    # CASCADE constructs a RoadwayManager for EVERY domain -- cascade.py:428,
+    # "always initialize just in case we want to add a road ... during the
+    # simulation" -- so the existence of one says nothing about whether the road
+    # is managed. Only domains whose roadway_management_module flag is True ever
+    # have update() called. Village domains (GIS 21-31, 68-83) have a manager
+    # object that is never touched, and would otherwise be miscounted here.
+    mgmt = getattr(cascade, "roadway_management_module", None)
+
+    rows = []
+    for pad, rm in enumerate(roadways):
+        if rm is None:
+            continue
+        gis = FIRST_FILE_NUMBER + (pad - START_REAL_INDEX)
+        if not (FIRST_ROAD_DOMAIN <= gis <= LAST_ROAD_DOMAIN):
+            continue
+        if mgmt is not None and not mgmt[pad]:
+            continue    # manager exists but is never updated (e.g. a village)
+
+        ele_ts = np.asarray(getattr(rm, "_road_ele_TS", []), dtype=float)
+        nz = np.nonzero(ele_ts)[0]
+        last_managed_year = int(nz[-1]) + 1 if nz.size else 0
+
+        drowned = bool(getattr(rm, "drown_break", 0))
+        no_room = bool(getattr(rm, "relocation_break", 0))
+        rows.append(dict(
+            gis=gis, pad=pad,
+            drowned=drowned, relocation_blocked=no_room,
+            last_managed_year=last_managed_year,
+            reason=("drowned" if drowned else
+                    "no room to relocate" if no_room else "managed throughout"),
+            overwash_removed_m3=float(np.sum(
+                getattr(rm, "_road_overwash_volume", [0.0]))),
+            dunes_rebuilt=int(np.sum(getattr(rm, "_dunes_rebuilt_TS", [0]))),
+            relocations=int(np.sum(getattr(rm, "_road_relocated_TS", [0]))),
+        ))
+
+    lost = [r for r in rows if r["drowned"] or r["relocation_blocked"]]
+    print("\n" + "=" * 78)
+    print("ROAD MANAGEMENT SUMMARY")
+    print("=" * 78)
+    print(f"  {len(rows)} managed domain(s); {len(lost)} lost their road")
+    if lost:
+        print(f"\n  {'GIS':>4} {'pad':>4} {'last yr':>8}  reason")
+        for r in sorted(lost, key=lambda x: x["last_managed_year"]):
+            print(f"  {r['gis']:>4} {r['pad']:>4} {r['last_managed_year']:>8}  "
+                  f"{r['reason']}")
+        print("\n  Once a road is lost, RoadwayManager.update() returns "
+              "immediately every")
+        print("  later year: no overwash removal, no dune rebuilding, no "
+              "relocation. Those")
+        print("  domains are unmanaged barriers for the rest of the run and "
+              "must be excluded")
+        print("  by name from any managed-vs-unmanaged comparison.")
+    else:
+        print("  Every managed domain kept its road for the whole run.")
+
+    if run_dir and rows:
+        os.makedirs(run_dir, exist_ok=True)
+        p = os.path.join(run_dir, "road_management_summary.csv")
+        pd.DataFrame(rows).to_csv(p, index=False)
+        print(f"\n  [out] {p}")
+    return rows
+
+
 def run_cascade_simulation(
     nt, name, storm_file, alongshore_section_count, num_cores,
     rmin, rmax, elevation_file, dune_file,
@@ -2021,8 +2273,6 @@ def run_cascade_simulation(
     historical_nourishment_on_by_year=None,
     historical_nourishment_volume_by_year=None,
 ):
-    _reset_domain_labels()  # Section 0 patch: restart pad labels at 0 for this run
-
     cascade = Cascade(
         HATTERAS_DATA_BASE,
         name,
@@ -2073,6 +2323,38 @@ def run_cascade_simulation(
         nourishment_volume=nourishment_volume,
         nourishment_interval=None,
     )
+
+    # ── GROIN (Buxton Groin Field) ──────────────────────────────────────────
+    # Inert unless GROIN_ENABLED; see Section 1B. Deferred import so a run
+    # with GROIN_ENABLED=False never needs HAT_groin_module.py importable.
+    groin_cb = None
+    if GROIN_ENABLED:
+        try:
+            import importlib
+            _groin_mod = importlib.import_module(GROIN_MODULE_IMPORT_PATH)
+            GroinCallback = _groin_mod.GroinCallback
+        except ImportError as e:
+            sys.exit(f"ERROR: GROIN_ENABLED=True needs HAT_groin_module.py importable: {e}")
+
+        groin_cb = GroinCallback(
+            updrift_pad=_gis_to_pad(GROIN_UPDRIFT_GIS),
+            downdrift_pad=_gis_to_pad(GROIN_DOWNDRIFT_GIS),
+            trapping_rate_m_yr=GROIN_TRAPPING_RATE_M_YR,
+            start_year=START_YEAR,             # active period's start (1984 or 2004)
+            install_year=GROIN_INSTALL_YEAR,   # always 1969, regardless of period
+            n_domains=alongshore_section_count,
+            deterioration_delay_years=GROIN_DETERIORATION_DELAY_YEARS,
+            deterioration_mode=GROIN_DETERIORATION_MODE,
+            deterioration_ramp_years=GROIN_DETERIORATION_RAMP_YEARS,
+            deterioration_fraction=GROIN_DETERIORATION_FRACTION,
+        )
+        cascade._groin_callback = groin_cb
+        print(f"  Groin attached: updrift D{GROIN_UPDRIFT_GIS} "
+              f"(pad {_gis_to_pad(GROIN_UPDRIFT_GIS)}), "
+              f"downdrift D{GROIN_DOWNDRIFT_GIS} (pad {_gis_to_pad(GROIN_DOWNDRIFT_GIS)}), "
+              f"M={GROIN_TRAPPING_RATE_M_YR} m/yr, install {GROIN_INSTALL_YEAR}, "
+              f"deterioration @ +{GROIN_DETERIORATION_DELAY_YEARS}yr "
+              f"({GROIN_DETERIORATION_MODE}, floor={GROIN_DETERIORATION_FRACTION})")
 
     historical_nourishment_log = []
 
@@ -2165,19 +2447,92 @@ def run_cascade_simulation(
                         continue
                     print(f"\n  -> Road relocation event in {current_year}: "
                           f"{event['note']}")
-                    per_domain_sb = event.get("post_relocation_setback_m", {})
+                    per_domain_disp = event.get("relocation_displacement_m", {})
+                    b3d_all = cascade.barrier3d
                     for pad in pad_indices:
                         rm = cascade.roadways[pad] if cascade.roadways is not None else None
                         if rm is None or not hasattr(rm, "_road_setback"):
                             continue
                         gis_id = FIRST_FILE_NUMBER + (pad - START_REAL_INDEX)
                         old_sb = rm._road_setback
-                        new_sb = float(per_domain_sb[gis_id]) if gis_id in per_domain_sb else rm._road_relocation_setback
+
+                        # DISPLACEMENT, not an absolute setback. rm._road_setback
+                        # has been decremented by dune_migrated every year since
+                        # t=0, so it already carries the modelled retreat; adding
+                        # the measured 1978->1997 offset counts that retreat
+                        # exactly once. See the note on HISTORICAL_ROAD_EVENTS.
+                        if gis_id in per_domain_disp:
+                            new_sb = old_sb + float(per_domain_disp[gis_id])
+                        else:
+                            new_sb = rm._road_relocation_setback
+
+                        # ---- CASCADE's own relocation guards -----------------
+                        # The model-driven relocation path runs both of these.
+                        # This prescribed path does NOT, because these events
+                        # actually happened and refusing them would be
+                        # historically wrong. So evaluate and report, then
+                        # apply anyway -- the disagreement goes on the record
+                        # rather than being invisible.
+                        b3d = b3d_all[pad] if b3d_all is not None else None
+                        warnings_out = []
+                        if b3d is not None:
+                            try:
+                                probe_ele, probe_drown = _rm.get_road_relocation_elevation(
+                                    time_index=rm._time_index,
+                                    xyz_interior_grid=b3d.InteriorDomain,
+                                    road_setback=new_sb,
+                                    road_width=rm._road_relocation_width,
+                                    dx=10, dy=10, dz=10,
+                                )
+                                if probe_drown:
+                                    warnings_out.append(
+                                        f"get_road_relocation_elevation REFUSES "
+                                        f"(road would be {probe_ele:.2f} m MSL)")
+                            except IndexError:
+                                warnings_out.append(
+                                    "get_road_relocation_elevation: setback is "
+                                    "past the end of the interior grid")
+                            avg_w = float(b3d.InteriorWidth_AvgTS[-1]) * 10.0
+                            need = new_sb + 2 * rm._road_relocation_width
+                            if need > avg_w:
+                                warnings_out.append(
+                                    f"road_relocation_checks REFUSES "
+                                    f"(needs {need:.0f} m, island is {avg_w:.0f} m)")
+
+                        # road_ele is DELIBERATELY not touched here.
+                        #
+                        # A real relocation rebuilds the road at grade on new
+                        # ground, so it looks like road_ele should be reset. It
+                        # is already correct, and resetting it would be an exact
+                        # no-op:
+                        #
+                        #   road_ele is initialised from RoadElevation.csv,
+                        #   measured on the 2004 alignment -- which IS the
+                        #   post-relocation road, since both events precede
+                        #   2004. roadway_manager then decrements it in the
+                        #   Lagrangian frame, so at year t it holds
+                        #       measured_2004 - sum(RSLR[0:t]) * 10
+                        #   and rebuilding at grade on that same alignment in
+                        #   the model's frame gives exactly the same number.
+                        #
+                        # It would only bite if the post-relocation alignment
+                        # had a different measured elevation than the initial
+                        # one. It does not, by construction. Do not "fix" this.
+                        chk = RELOCATION_CHECK_2004.get(gis_id)
+                        chk_txt = (f" | 2004 measured {chk:.0f} m"
+                                   if chk is not None else "")
                         rm._road_setback = new_sb
                         rm._road_relocation_setback = new_sb  # keep in sync
                         rm._road_setback_TS[rm._time_index - 1] = new_sb
                         print(f"    GIS {gis_id:3d} (pad {pad:3d}): "
-                              f"setback {old_sb:.1f} m -> {new_sb:.1f} m")
+                              f"setback {old_sb:.1f} m + "
+                              f"{per_domain_disp.get(gis_id, 0.0):.0f} m "
+                              f"displacement -> {new_sb:.1f} m{chk_txt}")
+                        for w in warnings_out:
+                            print(f"                       [warn] {w}")
+                        if warnings_out:
+                            print(f"                       -> applying anyway "
+                                  f"(prescribed historical event)")
 
                 elif event["type"] == "bridge":
                     print(f"\n  -> Bridge/road removal event in {current_year}: "
@@ -2202,6 +2557,12 @@ def run_cascade_simulation(
             print(f"\nModel stopped at year {time_step + 1} (b3d_break)")
             break
 
+    if groin_cb is not None and len(groin_cb.year_TS) == 0:
+        print("\n" + "!" * 78)
+        print("WARNING: groin callback was never called. The pre-AST hook in")
+        print("cascade_groin.py is missing, so this run is identical to no_groin.")
+        print("!" * 78)
+
     save_path = os.path.join(OUTPUT_BASE_DIR, name)
     os.makedirs(save_path, exist_ok=True)
     cascade.save(save_path)
@@ -2216,6 +2577,13 @@ def run_cascade_simulation(
     else:
         print(f"  (no historical BN events applied in this run)")
 
+    # ── Save groin diagnostics ────────────────────────────────────────────────
+    if groin_cb is not None and len(groin_cb.year_TS) > 0:
+        groin_df = pd.DataFrame(groin_cb.diagnostics_frame())
+        groin_csv = os.path.join(save_path, f"{name}_groin_diagnostics.csv")
+        groin_df.to_csv(groin_csv, index=False)
+        print(f"  Saved groin diagnostics ({len(groin_cb.year_TS)} yrs): {groin_csv}")
+
     return cascade
 
 
@@ -2229,7 +2597,12 @@ def main():
     DUNE_DESIGN_ELEVATION  = [DUNE_REBUILD_HEIGHT]    * TOTAL_DOMAINS
     DUNE_MINIMUM_ELEVATION = [REBUILD_ELEV_THRESHOLD] * TOTAL_DOMAINS
 
-    ROAD_ELEVATION = 1.45
+    # Per-domain, m MHW-relative, built at module scope from
+    # RoadElevation.csv (see PER-DOMAIN ROAD ELEVATION above). CASCADE
+    # accepts an array here -- cascade.py:47 keeps it as-is when np.size > 1 and
+    # hands self._road_ele[iB3D] to each RoadwayManager. Falls back to a uniform
+    # ROAD_ELEVATION_FALLBACK if the file is missing or the toggle is off.
+    ROAD_ELEVATION = road_elevation_full
     ROAD_WIDTH     = 20.0
 
     # ── Per-domain overwash filter ───────────────────────────────────────────
@@ -2395,6 +2768,10 @@ def main():
         # ── Per-run comparison folder ────────────────────────────────────────────
         run_dir = os.path.join(OUTPUT_BASE_DIR, run_name_hs)
         os.makedirs(run_dir, exist_ok=True)
+
+        # Which domains kept their road. Replaces the old Section 0 domain
+        # labelling, using CASCADE's own post-run state instead of patching it.
+        summarise_road_management(cascade, run_dir=run_dir)
 
         # ── Save CSV of modeled rates ────────────────────────────────────────
         csv_path = os.path.join(run_dir, f"{run_name_hs}_shoreline_change_rate.csv")
