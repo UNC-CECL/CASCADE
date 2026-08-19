@@ -215,7 +215,14 @@ def plot_ElevAnimation_CASCADE(
             Dunes = np.flipud(Dunes)
             Beach = BeachDomain * 10
             Domain = np.vstack([Beach, Dunes, Domain])
-            Domain = np.fliplr(Domain)
+            # np.fliplr(Domain) REMOVED (2026-08-17). It reversed the alongshore
+            # cells within this one domain, inside the loop over iB3D that lays
+            # domains out at xOrigin = iB3D * BarrierLength -- so every 500 m
+            # block was drawn backwards against the domain order. It compensated
+            # for the extractor writing the within-domain alongshore order
+            # reversed, which ALONGSHORE_FLIP now fixes at the source. Measured
+            # seam/inner discontinuity on the plan-view canvas: 1.97 without the
+            # flip on corrected arrays, 21.15 with it.
             Domain[Domain < -3] = -3
             Domain[Domain > 6] = 6
             widthTS = len(Domain)

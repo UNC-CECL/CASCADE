@@ -3,44 +3,33 @@
 HATTERAS ISLAND — CASCADE hindcast runner (1984-2004 / 2004-2024)
 
 Modeled shoreline change rate:
-  total_change = shoreline_m[-1, :] - shoreline_m[0, :]
-  change_rate  = total_change / (END_YEAR - START_YEAR)   [m/yr]
+  change_rate = (shoreline_m[-1, :] - shoreline_m[0, :]) / (END_YEAR - START_YEAR)  [m/yr]
 
-CoastSat overlays:
-  - Reads mean_lrr annual rates (m/yr) from domain_lrr_summary.csv files
-  - Maps GIS domain IDs (1-90) to CASCADE padded indices (15-104)
-  - Two periods: 1984-2004 and 2004-2024
-  - Active period rendered with a solid line; secondary period rendered dashed/lighter
+CoastSat overlays: mean_lrr (m/yr) from domain_lrr_summary.csv, GIS 1-90 mapped to
+padded indices 15-104 (see Section 1). Active period solid line, secondary dashed.
 
-Overwash filter:
-  - Applied per-domain; only set for developed communities, set to 0.4
-  - Buxton:              GIS  7- 8 -> padded 21-22
-  - Avon:                GIS 21-31 -> padded 35-45
-  - Salvo/Waves/Rodanthe GIS 68-83 -> padded 82-97
-  - All other domains (undeveloped + buffers) remain at 0
+Overwash filter: developed communities only, set to 0.4; everything else (incl.
+buffers) is 0 -- Buxton GIS 7-8 (pad 21-22), Avon GIS 21-31 (pad 35-45),
+Salvo/Waves/Rodanthe GIS 68-83 (pad 82-97).
 
--------------------------------------------------------------------------------
 HOW THIS FILE IS ORGANIZED
--------------------------------------------------------------------------------
+  SECTION 0   Runtime patches to cascade.roadway_manager (kept here instead of
+              editing the library files - see Section 0 docstring)
   SECTION 1   Domain configuration (fixed geometry, not period-dependent)
   SECTION 2   Display option
   SECTION 3   File paths (static directories + filenames)
-  SECTION 4   PERIOD CONFIGURATION  <-- everything that changes between
-              1984-2004 and 2004-2024 lives here: SLR rate, storm file,
-              dune offsets, road setback file, nourishment flags, and the
-              background-erosion (source/sink) rates. Flip START_YEAR
+  SECTION 4   PERIOD CONFIGURATION <-- everything that changes between 1984-2004
+              and 2004-2024: SLR rate, storm file, dune offsets, road setback
+              file, nourishment flags, background-erosion rates. Flip START_YEAR
               below and every period-dependent value resolves automatically.
   SECTION 5   CoastSat datasets + LOESS smoothing config
   SECTION 6   Geographic annotation styling (publication figure)
   SECTION 7   Simulation parameters that do NOT vary by period
   SECTION 8   Historical management events (road relocations, bridges,
-              nourishment schedule) - calendar-year-keyed, period-filtered
-              automatically at use time
+              nourishment) - calendar-year-keyed, period-filtered automatically
   SECTION 9   Load input data (files resolved in Section 4/8)
   SECTION 10  Elevation + dune file lists
-  HELPER FUNCTIONS
-  CASCADE RUNNER
-  MAIN
+  HELPER FUNCTIONS / CASCADE RUNNER / MAIN
 """
 
 import os
@@ -54,6 +43,141 @@ from matplotlib.patches import Patch
 from matplotlib.transforms import blended_transform_factory
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from cascade.cascade import Cascade
+import cascade.roadway_manager as _rm
+
+
+# =============================================================================
+# SECTION 0: RUNTIME PATCHES — cascade.roadway_manager
+# =============================================================================
+# Patches applied here instead of editing roadway_manager.py / cascade.py
+# directly, so the fixes travel with this script rather than the shared repo.
+#
+# Fixes:
+#   1. IndexError crash in bulldoze() when a relocated road setback leaves no
+#      interior land behind the road (road_end + 1 runs off the grid). This
+#      hit pad 25 (GIS 11) during the 1999 road relocation event.
+#   2. Adds a domain label (GIS domain number, or "buffer" for the padded
+#      edges) to the "Roadway width drowned" print so drowning events can be
+#      traced back to a specific real-world domain, e.g. "GIS 11 (pad 25)".
+#
+# _reset_domain_labels() is called automatically inside run_cascade_simulation()
+# right before each Cascade(...) is constructed, so pad labels restart at 0 for
+# every run in a multi-run script (e.g. the no-groin / groin-only / groin+BE
+# test matrix) rather than climbing across runs.
+# =============================================================================
+
+_domain_label_box = {"label": None}
+_domain_counter   = {"n": 0}
+
+
+def _reset_domain_labels():
+    _domain_counter["n"] = 0
+
+
+def _bulldoze_patched(
+    time_index,
+    xyz_interior_grid,
+    yxz_dune_grid,
+    road_ele=2.0,
+    road_width=20,
+    road_setback=30,
+    dx=10,
+    dy=10,
+    dz=10,
+    drown_threshold=0,
+    percent_water_cells_touching_road=0.2,
+):
+    """Drop-in replacement for cascade.roadway_manager.bulldoze() — same
+    logic as the original, with a bounds guard on the bayside water check
+    and a domain label on the drowning print (see Section 0 docstring)."""
+    road_start = int(road_setback / dy)
+    road_width = int(road_width / dx)
+    road_end = road_start + road_width
+    road_ele = road_ele / dz
+
+    old_road_domain = xyz_interior_grid[road_start:road_end, :]
+    new_road_domain = np.zeros((road_width, np.size(old_road_domain, 1))) + road_ele
+    road_overwash_removal = sum(old_road_domain - new_road_domain)
+    road_overwash_removal[road_overwash_removal < 0] = 0
+
+    number_dune_cells = np.size(yxz_dune_grid, 1)
+    overwash_to_dune = np.transpose(
+        [road_overwash_removal / number_dune_cells] * number_dune_cells
+    )
+    new_dune_domain = yxz_dune_grid + overwash_to_dune
+
+    xyz_interior_grid[road_start:road_end, :] = new_road_domain
+
+    number_border_cells = np.size(xyz_interior_grid[road_end, :])
+
+    # FIX: guard the bayside check the same way the seaside check already
+    # guards road_start > 0. If road_end + 1 runs off the grid, the relocated
+    # setback leaves no interior land behind the road -- treat as fully
+    # drowned (1.0) instead of crashing.
+    if road_end + 1 < np.size(xyz_interior_grid, 0):
+        bayside_water_cells = (
+            np.count_nonzero(
+                (xyz_interior_grid[road_end + 1, :] * dz) <= drown_threshold
+            )
+            / number_border_cells
+        )
+    else:
+        bayside_water_cells = 1.0
+
+    if road_start > 0:
+        seaside_water_cells = (
+            np.count_nonzero(
+                (xyz_interior_grid[road_start - 1, :] * dz) <= drown_threshold
+            )
+            / number_border_cells
+        )
+    else:
+        seaside_water_cells = 0
+
+    if (seaside_water_cells > percent_water_cells_touching_road) or (
+        bayside_water_cells > percent_water_cells_touching_road
+    ):
+        roadway_drown = True
+        _label = _domain_label_box["label"]
+        _domain_str = f" [{_label}]" if _label else ""
+        print(
+            f"Roadway width drowned at {time_index - 1} years{_domain_str}, "
+            f"{percent_water_cells_touching_road * 100.0}% of road borders water"
+        )
+    else:
+        roadway_drown = False
+
+    return (
+        new_dune_domain,
+        xyz_interior_grid,
+        np.sum(road_overwash_removal),
+        int(roadway_drown),
+    )
+
+
+_original_rm_init   = _rm.RoadwayManager.__init__
+_original_rm_update = _rm.RoadwayManager.update
+
+
+def _rm_init_patched(self, *args, **kwargs):
+    _original_rm_init(self, *args, **kwargs)
+    pad = _domain_counter["n"]
+    if START_REAL_INDEX <= pad < END_REAL_INDEX:
+        gis_id = pad - START_REAL_INDEX + FIRST_FILE_NUMBER
+        self._domain_label = f"GIS {gis_id} (pad {pad})"
+    else:
+        self._domain_label = f"buffer (pad {pad})"
+    _domain_counter["n"] += 1
+
+
+def _rm_update_patched(self, barrier3d, trigger_dune_knockdown):
+    _domain_label_box["label"] = getattr(self, "_domain_label", None)
+    return _original_rm_update(self, barrier3d, trigger_dune_knockdown)
+
+
+_rm.bulldoze                = _bulldoze_patched
+_rm.RoadwayManager.__init__ = _rm_init_patched
+_rm.RoadwayManager.update   = _rm_update_patched
 
 
 # =============================================================================
@@ -91,59 +215,55 @@ def _gis_to_pad(gis_id):
 # Set to False -> x-axis shows all 120 padded domains (buffers shaded)
 PLOT_REAL_DOMAINS_ONLY = True
 
+# Pops up the annotated publication figure (*_annotated.png) at run end.
+# It's always saved to disk either way - this only controls the on-screen
+# plt.show() popup, so turning it off just quiets the run without losing
+# the file. Kept off by default so a run only pops up the main rate plot.
+SHOW_ANNOTATED_FIGURE = False
+
 # -----------------------------------------------------------------------------
 # SECTION 2a: SHORELINE ANIMATION (GIF)
 # -----------------------------------------------------------------------------
-# Renders a plan-view animation of the shoreline through the run, one frame per
-# model year, saved into the per-run comparison folder. Blue = seaward of the year-0
-# shoreline (accretion), red = landward of it (erosion).
+# Plan-view animation of the shoreline, one frame/model year, saved to the
+# run's comparison folder. Blue = seaward of year-0 shoreline (accretion), red =
+# landward (erosion). Each GIF_JOBS entry produces one GIF.
 #
-# Each entry in GIF_JOBS produces one GIF in the run folder.
+# "range":
+#   "real"       90 real GIS domains (1-90), full geographic annotation
+#   "all"        all 120 padded domains (buffers shaded, GIS ids on top axis)
+#   "groin"      auto-window around a groin (+/- job's "pad"), read from
+#                ANN_GROINS (Section 6). Fans out over every ANN_GROINS entry,
+#                so adding a structure there needs no GIF_JOBS change. Restrict
+#                with "which": a name, list of names, or "all" (default).
+#   "groin_span" one window enclosing every ANN_GROINS groin (+/- pad); use
+#                once structures are close enough to want a single frame.
+#   (lo, hi)     explicit inclusive GIS domain window, e.g. (1, 30)
 #
-# "range" accepts:
-#   "real"      -> the 90 real GIS domains (1-90), full geographic annotation
-#   "all"       -> all 120 padded domains (buffers shaded, GIS ids on a top axis)
-#   "groin"      -> auto-window around a groin, +/- the job's "pad" in domains,
-#                   read from ANN_GROINS (Section 6). ONE GIF PER GROIN: a single
-#                   "groin" job fans out over every entry in ANN_GROINS, so adding
-#                   a second structure there needs no change to GIF_JOBS. Restrict
-#                   with "which": a name, a list of names, or "all" (default).
-#   "groin_span" -> ONE window enclosing every groin in ANN_GROINS (+/- pad).
-#                   Use once structures are close enough to interact and you want
-#                   them in a single frame rather than separate zooms.
-#   (lo, hi)     -> an explicit inclusive GIS domain window, e.g. (1, 30)
+# "mode" (y-axis):
+#   "position"     cross-shore position relative to year-0 alongshore mean;
+#                  preserves planform shape, best at narrow ranges.
+#   "displacement" cumulative change from each domain's own year-0 position
+#                  (every domain starts at 0); preferred for "real"/"all".
+#   "difference"   this run minus a baseline run, in displacement terms:
+#                  (run - run_yr0) - (baseline - baseline_yr0). Blue = this
+#                  run seaward of baseline. Needs GIF_BASELINE_NPY, else skipped.
 #
-# "mode" controls what the y-axis shows:
-#   "position"     -> cross-shore position, plotted relative to the year-0
-#                     alongshore mean so the numbers stay readable. Preserves the
-#                     alongshore planform shape. Best at narrow ranges — you see
-#                     the fillet build against the actual shoreline shape.
-#   "displacement" -> cumulative change from each domain's OWN year-0 position.
-#                     Every domain starts at 0, so a few m/yr of change fills the
-#                     panel instead of being flattened by the planform. Preferred
-#                     for "real"/"all" — see the note in make_shoreline_gif.
-#   "difference"   -> THIS run minus a baseline run, in displacement terms:
-#                     (run - run_yr0) - (baseline - baseline_yr0).
-#                     Blue = this run's shoreline is seaward of the baseline's.
-#                     Requires GIF_BASELINE_NPY; skipped with a warning if unset.
-#
-# "pad" is only read by range="groin" / "groin_span".
-# "which" is only read by range="groin".
+# "pad" only read by "groin"/"groin_span"; "which" only by "groin".
 MAKE_SHORELINE_GIF = True
 GIF_JOBS = [
-    dict(range="real",  mode="displacement"),           # whole island overview
+    dict(range="real",  mode="displacement"),                       # whole island overview
+    dict(range="real",  mode="position", auto_open=True),           # whole island, planform position - shown at run end
     dict(range="groin", mode="position",   pad=9),      # zoom, one per groin
     dict(range="groin", mode="difference", pad=9),      # groin effect vs baseline
     # dict(range="groin_span", mode="difference", pad=9),   # all groins in one frame
     # dict(range="groin", mode="difference", pad=9, which="Buxton Groin"),  # just one
 ]
 
-# Path to a previous run's *_shoreline_matrix.npy to difference against — set
-# this to the NO-GROIN run when testing the groin module, and any "difference"
-# job above renders the groin's effect in isolation. Leave None to skip those
-# jobs. Must be the same domain count and run length as the current run.
-#   e.g. os.path.join(OUTPUT_BASE_DIR, "HAT_1984_2004_noGroin_Hs1.0",
-#                     "HAT_1984_2004_noGroin_Hs1.0_shoreline_matrix.npy")
+# Previous run's *_shoreline_matrix.npy to difference against (set to the
+# no-groin run when testing the groin module). None skips "difference" jobs.
+# Must match domain count + run length of the current run, e.g.:
+#   os.path.join(OUTPUT_BASE_DIR, "HAT_1984_2004_noGroin_Hs1.0",
+#                "HAT_1984_2004_noGroin_Hs1.0_shoreline_matrix.npy")
 GIF_BASELINE_NPY   = None
 GIF_BASELINE_LABEL = "no-groin baseline"   # shown in the difference-GIF title
 
@@ -153,6 +273,10 @@ GIF_ANNOTATE       = True            # geographic annotation layer (GIS-axis mod
 GIF_AUTO_OPEN      = False           # pop the GIF open in the default viewer when done
 GIF_KEEP_FRAMES    = False           # also write the individual frame PNGs to disk
 GIF_SAVE_MATRIX    = True            # save shoreline_m.npy (needed as a future baseline)
+GIF_OCEAN_AT_BOTTOM = True           # y-axis orientation: True -> ocean/seaward at the
+                                      # bottom of the plot, sound/landward at the top
+                                      # (matches Hatteras' real cross-shore layout).
+                                      # False -> original convention, seaward at the top.
 
 # =============================================================================
 # SECTION 3: FILE PATHS
@@ -189,29 +313,25 @@ os.makedirs(OUTPUT_BASE_DIR, exist_ok=True)
 # SECTION 4: PERIOD CONFIGURATION  <-- everything that changes with START_YEAR
 # =============================================================================
 # Flip START_YEAR below (1984 or 2004) and every period-dependent value
-# resolves automatically: end year, SLR rate, storm file, dune raw_offset file,
-# road setback file, nourishment on/off, nourishment volume default, AND the
-# background-erosion (source/sink) rates that get loaded into DOMAIN_BE_RATES.
+# resolves automatically: end year, SLR rate, storm file, island offset file,
+# road setback file, nourishment on/off + volume default, and the
+# background-erosion rates loaded into DOMAIN_BE_RATES.
+# First place to check "did I get 1984 vs 2004 right?"
 #
-# *** Everything in this section is the first place to look when checking ***
-# *** "did I get 1984 vs 2004 values right?"                              ***
-#
-# To enable nourishment for the 2004 period: set enable_nourishment=True and
-# update nourishment_volume (m^3/m) in the 2004 entry below (already on).
+# To enable nourishment for 2004: set enable_nourishment=True and update
+# nourishment_volume (m^3/m) in the 2004 entry below (already on).
 
-RUN_NAME_SUFFIX = "base_stormsv3"   # <- edit this to label each experiment
+RUN_NAME_SUFFIX = "full_calibrated"   # <- edit this to label each experiment
 
 # <- Flip between 1984 and 2004 to switch periods; END_YEAR is set automatically
 START_YEAR = 1984
 # ── SOURCE_SINK_PRESET ───────────────────────────────────────────────────────
-# Controls which background-erosion value set is used, independent of period:
-#   "base"       -> only edge boundary corrections (GIS 1 and 90); all interior
-#                  domains = 0.0.
-#   "calibrated" -> full corrections.
-# Both presets are period-keyed below (Section 4a) so the correct GIS-1 /
-# GIS-90 edge values (and, for "calibrated", the full interior fit) load
-# automatically for whichever START_YEAR is active.
-SOURCE_SINK_PRESET = "base"
+# Which background-erosion value set is used, independent of period:
+#   "base"       only edge boundary corrections (GIS 1 and 90); interior = 0.0
+#   "calibrated" full corrections
+# Both presets are period-keyed below (Section 4a), so the correct GIS-1/GIS-90
+# edge values (and, for "calibrated", the full interior fit) load automatically.
+SOURCE_SINK_PRESET = "calibrated"
 
 # -----------------------------------------------------------------------------
 # SECTION 4a: BACKGROUND EROSION (SOURCE/SINK) RATES — keyed by period + preset
@@ -220,12 +340,12 @@ SOURCE_SINK_PRESET = "base"
 
 DOMAIN_BE_RATES_BASE_BY_PERIOD = {
     1984: {
-        1:  -40,
-        90:  15,
+        1:  -40, #-40
+        90:  15, # 15
     },
     2004: {
-        1:   35,
-        90:  35,
+        1:   35, #35
+        90:  35, #35
     },
 }
 
@@ -233,39 +353,39 @@ DOMAIN_BE_RATES_BASE_BY_PERIOD = {
 DOMAIN_BE_RATES_CALIBRATED_BY_PERIOD = {
     1984: {
           1: -40.0,  # LOCKED — use your solved value, not 0.0
-          2: -0.8,  # Cape Point / Shoal Dynamics
-          3: -0.9,  # Cape Point / Shoal Dynamics
+          2: -0.6,  # Cape Point / Shoal Dynamics
+          3: -0.7,  # Cape Point / Shoal Dynamics
           4: 0.0,
           5: +1.2,  # Cape Point / Shoal Dynamics
-          6: +1.8,  # Cape Point / Shoal Dynamics
-          7: +0.7,  # Cape Point / Shoal Dynamics
-          8: +0.9,  # Cape Point / Shoal Dynamics
+          6: +2.0,  # Cape Point / Shoal Dynamics
+          7: +0.9,  # Cape Point / Shoal Dynamics
+          8: +1.1,  # Cape Point / Shoal Dynamics
           9: 0.0,
          10: -0.9,  # Cape Point / Shoal Dynamics
-         11: -1.2,  # Buxton–Avon Transition
+         11: -1.3,  # Buxton–Avon Transition
          12: -0.9,  # Buxton–Avon Transition
-         13: -0.5,  # Buxton–Avon Transition
+         13: -0.6,  # Buxton–Avon Transition
          14: 0.0,
          15: 0.0,
          16: 0.0,
-         17: 0.0,
-         18: 0.0,
-         19: 0.0,
+         17: +0.6,  # Buxton–Avon Transition
+         18: +0.6,  # Buxton–Avon Transition
+         19: +0.6,  # Buxton–Avon Transition
          20: 0.0,
          21: 0.0,
          22: 0.0,
-         23: -0.3,  # Avon
-         24: 0.0,
-         25: 0.0,
-         26: +0.3,  # Avon
-         27: +0.9,  # Avon
-         28: +1.2,  # Avon
-         29: +1.7,  # Avon
-         30: +2.1,  # Avon
-         31: +2.4,  # Avon
-         32: +1.8,  # Mid-island
-         33: +1.3,  # Mid-island
-         34: +0.9,  # Mid-island
+         23: 0.0,
+         24: +0.3,  # Avon
+         25: +0.3,  # Avon
+         26: +0.8,  # Avon
+         27: +1.4,  # Avon
+         28: +1.9,  # Avon
+         29: +2.3,  # Avon
+         30: +2.2,  # Avon
+         31: +2.2,  # Avon
+         32: +1.9,  # Mid-island
+         33: +1.4,  # Mid-island
+         34: +1.0,  # Mid-island
          35: 0.0,
          36: 0.0,
          37: 0.0,
@@ -275,147 +395,147 @@ DOMAIN_BE_RATES_CALIBRATED_BY_PERIOD = {
          41: 0.0,
          42: 0.0,
          43: 0.0,
-         44: 0.0,
+         44: +0.4,  # Mid-island
          45: 0.0,
          46: 0.0,
          47: 0.0,
-         48: -0.7,  # Mid-island
+         48: -0.3,  # Mid-island
          49: -1.0,  # Mid-island
-         50: -1.2,  # Mid-island
-         51: -1.4,  # Mid-island
-         52: -1.5,  # Mid-island
-         53: -1.5,  # Mid-island
-         54: -1.3,  # Mid-island
-         55: -1.1,  # Mid-island
-         56: -0.8,  # Mid-island
+         50: -1.0,  # Mid-island
+         51: -1.2,  # Mid-island
+         52: -1.3,  # Mid-island
+         53: -1.3,  # Mid-island
+         54: -1.2,  # Mid-island
+         55: -1.0,  # Mid-island
+         56: -1.0,  # Mid-island
          57: -0.3,  # Mid-island
          58: 0.0,
          59: 0.0,
          60: 0.0,
          61: 0.0,
-         62: 0.0,
-         63: +0.4,  # Wimble Shoals Influence
+         62: +0.4,  # Wimble Shoals Influence
+         63: 0.0,
          64: 0.0,
          65: 0.0,
          66: 0.0,
          67: 0.0,
-         68: +0.6,  # Wimble Shoals Influence
-         69: +1.0,  # Wimble Shoals Influence
-         70: +1.4,  # Wimble Shoals Influence
-         71: +1.8,  # Wimble Shoals Influence
-         72: +2.4,  # Wimble Shoals Influence
-         73: +2.3,  # Wimble Shoals Influence
-         74: +2.3,  # Wimble Shoals Influence
-         75: +2.1,  # Tri-Village / Rodanthe
-         76: +1.5,  # Tri-Village / Rodanthe
-         77: +1.2,  # Tri-Village / Rodanthe
-         78: 0.0,
-         79: -0.5,  # Tri-Village / Rodanthe
-         80: -1.5,  # Tri-Village / Rodanthe
-         81: -2.0,  # Tri-Village / Rodanthe
-         82: -2.2,  # Tri-Village / Rodanthe
+         68: +0.7,  # Wimble Shoals Influence
+         69: +1.2,  # Wimble Shoals Influence
+         70: +1.6,  # Wimble Shoals Influence
+         71: +1.9,  # Wimble Shoals Influence
+         72: +2.2,  # Wimble Shoals Influence
+         73: +2.4,  # Wimble Shoals Influence
+         74: +2.6,  # Wimble Shoals Influence
+         75: +2.5,  # Tri-Village / Rodanthe
+         76: +1.7,  # Tri-Village / Rodanthe
+         77: +1.3,  # Tri-Village / Rodanthe
+         78: +0.7,  # Tri-Village / Rodanthe
+         79: 0.0,
+         80: -1.3,  # Tri-Village / Rodanthe
+         81: -1.9,  # Tri-Village / Rodanthe
+         82: -2.1,  # Tri-Village / Rodanthe
          83: -2.3,  # Tri-Village / Rodanthe
-         84: -2.4,  # Pea Island NWR
-         85: -2.3,  # Pea Island NWR
-         86: -2.0,  # Pea Island NWR
-         87: -1.6,  # Pea Island NWR
-         88: -1.1,  # Pea Island NWR
-         89: 0.0,
+         84: -2.5,  # Pea Island NWR
+         85: -2.5,  # Pea Island NWR
+         86: -2.4,  # Pea Island NWR
+         87: -2.0,  # Pea Island NWR
+         88: -1.6,  # Pea Island NWR
+         89: -1.0,  # Pea Island NWR
          90: 15.0,  # LOCKED — use your solved value, not 0.0
-        },
+    },
 
     2004: {
           1: 35.0,  # LOCKED — use your solved value, not 0.0
-          2: 0.0,
-          3: 0.0,
-          4: 0.0,
-          5: -0.6,  # Cape Point / Shoal Dynamics
-          6: -3.1,  # Cape Point / Shoal Dynamics
-          7: -1.5,  # Cape Point / Shoal Dynamics
-          8: 0.0,
-          9: 0.0,
-         10: +1.4,  # Cape Point / Shoal Dynamics
-         11: +1.7,  # Buxton–Avon Transition
-         12: +1.7,  # Buxton–Avon Transition
-         13: +1.7,  # Buxton–Avon Transition
-         14: +1.7,  # Buxton–Avon Transition
-         15: +1.7,  # Buxton–Avon Transition
-         16: +1.8,  # Buxton–Avon Transition
-         17: +1.8,  # Buxton–Avon Transition
-         18: +1.7,  # Buxton–Avon Transition
-         19: +1.4,  # Buxton–Avon Transition
-         20: +1.0,  # Buxton–Avon Transition
-         21: 0.0,
-         22: 0.0,
-         23: -0.3,  # Avon
-         24: -0.8,  # Avon
-         25: -0.8,  # Avon
-         26: +0.3,  # Avon
-         27: 0.0,
-         28: +1.2,  # Avon
-         29: +1.7,  # Avon
-         30: +2.1,  # Avon
-         31: +2.4,  # Avon
-         32: +3.0,  # Mid-island
-         33: +3.1,  # Mid-island
-         34: +3.1,  # Mid-island
-         35: +3.0,  # Mid-island
-         36: +2.9,  # Mid-island
-         37: +2.7,  # Mid-island
-         38: +2.3,  # Mid-island
-         39: +2.0,  # Mid-island
-         40: +1.7,  # Mid-island
-         41: +1.4,  # Mid-island
-         42: +1.1,  # Mid-island
-         43: +0.8,  # Mid-island
-         44: 0.0,
+          2: +1.0,  # Cape Point / Shoal Dynamics
+          3: +1.6,  # Cape Point / Shoal Dynamics
+          4: +1.6,  # Cape Point / Shoal Dynamics
+          5: +1.2,  # Cape Point / Shoal Dynamics
+          6: -1.5,  # Cape Point / Shoal Dynamics
+          7: 0.0,
+          8: +1.1,  # Cape Point / Shoal Dynamics
+          9: +2.2,  # Cape Point / Shoal Dynamics
+         10: +3.1,  # Cape Point / Shoal Dynamics
+         11: +3.4,  # Buxton–Avon Transition
+         12: +3.4,  # Buxton–Avon Transition
+         13: +3.3,  # Buxton–Avon Transition
+         14: +3.2,  # Buxton–Avon Transition
+         15: +3.0,  # Buxton–Avon Transition
+         16: +3.1,  # Buxton–Avon Transition
+         17: +3.0,  # Buxton–Avon Transition
+         18: +2.9,  # Buxton–Avon Transition
+         19: +2.6,  # Buxton–Avon Transition
+         20: +2.2,  # Buxton–Avon Transition
+         21: +1.9,  # Avon
+         22: +1.4,  # Avon
+         23: +0.8,  # Avon
+         24: +0.3,  # Avon
+         25: +0.3,  # Avon
+         26: +0.8,  # Avon
+         27: +1.4,  # Avon
+         28: +1.9,  # Avon
+         29: +2.3,  # Avon
+         30: +3.1,  # Avon
+         31: +3.6,  # Avon
+         32: +3.8,  # Mid-island
+         33: +3.7,  # Mid-island
+         34: +3.6,  # Mid-island
+         35: +3.5,  # Mid-island
+         36: +3.3,  # Mid-island
+         37: +3.1,  # Mid-island
+         38: +2.7,  # Mid-island
+         39: +2.4,  # Mid-island
+         40: +2.1,  # Mid-island
+         41: +1.8,  # Mid-island
+         42: +1.5,  # Mid-island
+         43: +1.1,  # Mid-island
+         44: +0.4,  # Mid-island
          45: 0.0,
          46: 0.0,
          47: 0.0,
-         48: -0.7,  # Mid-island
-         49: -1.0,  # Mid-island
-         50: -1.2,  # Mid-island
-         51: -1.4,  # Mid-island
-         52: -1.5,  # Mid-island
-         53: -1.5,  # Mid-island
-         54: -1.3,  # Mid-island
-         55: -1.1,  # Mid-island
-         56: -0.8,  # Mid-island
+         48: -0.3,  # Mid-island
+         49: 0.0,
+         50: -1.0,  # Mid-island
+         51: -1.2,  # Mid-island
+         52: -1.3,  # Mid-island
+         53: -1.3,  # Mid-island
+         54: -1.2,  # Mid-island
+         55: -1.0,  # Mid-island
+         56: 0.0,
          57: -0.3,  # Mid-island
          58: 0.0,
          59: 0.0,
          60: 0.0,
          61: 0.0,
-         62: 0.0,
-         63: +0.4,  # Wimble Shoals Influence
-         64: +1.2,  # Wimble Shoals Influence
-         65: +1.5,  # Wimble Shoals Influence
-         66: +1.8,  # Wimble Shoals Influence
-         67: +2.2,  # Wimble Shoals Influence
-         68: +2.5,  # Wimble Shoals Influence
-         69: +2.7,  # Wimble Shoals Influence
-         70: +2.8,  # Wimble Shoals Influence
-         71: +2.9,  # Wimble Shoals Influence
-         72: +2.4,  # Wimble Shoals Influence
-         73: +2.3,  # Wimble Shoals Influence
-         74: +2.3,  # Wimble Shoals Influence
-         75: +2.1,  # Tri-Village / Rodanthe
-         76: +1.5,  # Tri-Village / Rodanthe
-         77: +1.2,  # Tri-Village / Rodanthe
-         78: +1.3,  # Tri-Village / Rodanthe
-         79: +1.2,  # Tri-Village / Rodanthe
-         80: +0.9,  # Tri-Village / Rodanthe
-         81: +0.6,  # Tri-Village / Rodanthe
-         82: 0.0,
-         83: 0.0,
-         84: 0.0,
-         85: -0.6,  # Pea Island NWR
-         86: -0.6,  # Pea Island NWR
-         87: -0.5,  # Pea Island NWR
-         88: 0.0,
-         89: 0.0,
+         62: +0.4,  # Wimble Shoals Influence
+         63: +1.1,  # Wimble Shoals Influence
+         64: +1.6,  # Wimble Shoals Influence
+         65: +2.0,  # Wimble Shoals Influence
+         66: +2.4,  # Wimble Shoals Influence
+         67: +2.8,  # Wimble Shoals Influence
+         68: +3.3,  # Wimble Shoals Influence
+         69: +3.7,  # Wimble Shoals Influence
+         70: +4.0,  # Wimble Shoals Influence
+         71: +4.2,  # Wimble Shoals Influence
+         72: +4.1,  # Wimble Shoals Influence
+         73: +4.0,  # Wimble Shoals Influence
+         74: +3.7,  # Wimble Shoals Influence
+         75: +3.4,  # Tri-Village / Rodanthe
+         76: +3.0,  # Tri-Village / Rodanthe
+         77: +2.7,  # Tri-Village / Rodanthe
+         78: +2.4,  # Tri-Village / Rodanthe
+         79: +2.3,  # Tri-Village / Rodanthe
+         80: +2.0,  # Tri-Village / Rodanthe
+         81: +1.7,  # Tri-Village / Rodanthe
+         82: +1.4,  # Tri-Village / Rodanthe
+         83: +1.0,  # Tri-Village / Rodanthe
+         84: +0.7,  # Pea Island NWR
+         85: 0.0,
+         86: +0.5,  # Pea Island NWR
+         87: +0.6,  # Pea Island NWR
+         88: +0.7,  # Pea Island NWR
+         89: +1.2,  # Pea Island NWR
          90: 35.0,  # LOCKED — use your solved value, not 0.0
-        },  #
+    },  #
 }
 
 
@@ -435,14 +555,14 @@ PERIOD_CONFIG = {
         sea_level_rise_rate  = 0.004,   # m/yr - from duck_rslr_analysis.py
         storm_file           = os.path.join(
             HATTERAS_DATA_BASE, "storms", "hindcast_storms", "1984_2004",
-            "1984_2004_storms_v3.npy",
+            "1984_2004_storms_v3_72.npy",
         ),
         island_offset_file     = os.path.join(
             HATTERAS_DATA_BASE, "2-brie-offset", "hindcast_1984",
             f"Island_Dune_Offsets_1984_PADDED_{TOTAL_DOMAINS}.csv",
         ),
         road_setback_file    = os.path.join(
-            HATTERAS_DATA_BASE, "roads", "processed_offset", "1984", "RoadSetback_1984.csv",
+            HATTERAS_DATA_BASE, "road_offset", "processed_offset", "1984", "RoadSetback_1984.csv",
         ),
         enable_nourishment   = False,
         nourishment_volume   = 0,
@@ -453,15 +573,15 @@ PERIOD_CONFIG = {
         end_year             = 2024,
         sea_level_rise_rate  = 0.006,   # m/yr - from duck_rslr_analysis.py
         storm_file           = os.path.join(
-            HATTERAS_DATA_BASE, "storms", "hindcast_storms", "1984_2004",
-            "2004_2024_storms_v3.npy",
+            HATTERAS_DATA_BASE, "storms", "hindcast_storms", "2004_2024",
+            "2004_2024_storms_v3_72.npy",
         ),
         island_offset_file     = os.path.join(
             HATTERAS_DATA_BASE, "2-brie-offset", "hindcast_2004",
             f"Island_Dune_Offsets_2004_PADDED_{TOTAL_DOMAINS}.csv",
         ),
         road_setback_file    = os.path.join(
-            HATTERAS_DATA_BASE, "roads", "processed_offset", "2004", "RoadSetback_2004.csv",
+            HATTERAS_DATA_BASE, "road_offset", "processed_offset", "2004", "RoadSetback_2004.csv",
         ),  # UPDATE path once file is generated, if not already final
         enable_nourishment   = True,    # historical BN injected per-year in time loop
         nourishment_volume   = 100,     # m^3/m default passed to Cascade init (threshold unused)
@@ -589,13 +709,12 @@ LOESS_WINDOW_STYLES = [
 # Must be one of the values in LOESS_WINDOW_DOMAINS.
 RESIDUALS_LOESS_WINDOW = 10
 
-# Number of southernmost GIS domains (1 through this value) for which raw
-# per-domain mean LRR is shown instead of LOESS smoothing. Oregon Inlet
-# boundary effects dominate this zone and LOESS smoothing there can obscure
-# the sharp gradient at the southern boundary.
-#   - For the WIDEST LOESS window: raw means (d1-N) are stitched onto the
-#     front of the LOESS line (d(N+1)-90), keeping the curve visually continuous.
-#   - For NARROWER windows: the line simply starts at domain N+1.
+# Southernmost GIS domains (1 through this value) shown as raw per-domain mean
+# LRR instead of LOESS-smoothed - Oregon Inlet boundary effects dominate this
+# zone and smoothing can obscure the sharp gradient there.
+#   - Widest LOESS window: raw means (d1-N) stitched onto the LOESS line
+#     (d(N+1)-90) so the curve stays visually continuous.
+#   - Narrower windows: the line simply starts at domain N+1.
 # Set to 0 to use LOESS for all domains.
 LOESS_SKIP_SOUTHERN_DOMAINS = 10
 
@@ -704,16 +823,10 @@ ENABLE_SANDBAG_PLACEMENT  = False
 # Note: ENABLE_NOURISHMENT and NOURISHMENT_VOLUME ARE period-specific -> Section 4
 
 # --- Road relocation domain control ---
-# Villages have fixed infrastructure (buildings, utilities) that prevent NC-12
-# from being relocated landward. In these domains the road manager still runs
-# overwash removal and dune rebuilding, but relocation is suppressed.
-#
-# GIS domain ranges where relocation IS BLOCKED (village infrastructure present):
-#   Buxton:              GIS  7- 8
-#   Avon:                GIS 21-31
-#   Salvo/Waves/Rodanthe GIS 68-83
-#
-# All other road domains (GIS 9-20, 32-67, 84-90) allow relocation.
+# Villages have fixed infrastructure that prevents NC-12 from relocating
+# landward; the manager still runs overwash removal + dune rebuild there, just
+# not relocation. Relocation BLOCKED in: Buxton (GIS 7-8), Avon (GIS 21-31),
+# Salvo/Waves/Rodanthe (GIS 68-83). Allowed everywhere else (GIS 9-20, 32-67, 84-90).
 VILLAGE_GIS_RANGES_NO_RELOCATION = [
     (7,  8),   # Buxton
     (21, 31),  # Avon
@@ -764,34 +877,37 @@ print("=" * 80 + "\n")
 # =============================================================================
 # SECTION 8: HISTORICAL MANAGEMENT EVENTS (road + nourishment)
 # =============================================================================
-# These are calendar-year-keyed rather than period-keyed: each event fires
-# only if its year falls inside [START_YEAR, END_YEAR], so the SAME event
-# list is safe to leave in place when switching periods - Period 1 (1984)
-# simply skips any event dated 2004 or later, and vice versa. That's why
-# these live in their own section rather than inside PERIOD_CONFIG.
+# Calendar-year-keyed rather than period-keyed: each event fires only if its
+# year falls inside [START_YEAR, END_YEAR], so the same event list is safe
+# across periods - Period 1 (1984) skips anything dated 2004+, and vice versa.
+# That's why these live here rather than inside PERIOD_CONFIG.
 
 # --- Historical road management events ---
-# Three event types, applied inside the time step loop:
+# Two event types, applied inside the time step loop:
+#   "relocate" - road physically moved landward at the known year; forces
+#                setback to post_relocation_setback_m for the listed GIS
+#                domains, then management continues normally from there.
+#   "bridge"   - bridge/alternate route replaced the road surface; disables
+#                RoadwayManager for the listed domains from that year onward
+#                (fully natural dynamics). Applied in ALL periods/scenarios
+#                as a fixed boundary condition (the bridge is already built).
 #
-#   "relocate"  - Road was physically moved landward at the known year.
-#                 Forces the setback to road_relocation_setback (default)
-#                 for the listed GIS domains. Management continues normally
-#                 from the new position. Only fires if the event year falls
-#                 within the active run period.
-#
-#   "bridge"    - A bridge/alternate route replaced the road surface,
-#                 removing the need for roadway management entirely.
-#                 Disables the RoadwayManager for the listed domains from
-#                 the event year onward -> fully natural dynamics.
-#                 Applied in ALL periods/scenarios as a fixed boundary
-#                 condition (the bridge is already built).
-#
+# Master toggle: set False to skip ALL "relocate"-type events below (e.g. if
+# a relocated setback crashes the run and you want to isolate whether that's
+# the cause, or run a no-relocation baseline). "bridge" events are unaffected
+# by this flag — Jug Handle Bridge is a fixed boundary condition, not a manual
+# relocation, and carries no setback value that could trigger the same issue.
+ENABLE_HISTORICAL_ROAD_RELOCATIONS = False
+
 # Format: list of dicts with keys:
 #   year      : calendar year the event occurs
 #   gis_start : first GIS domain affected (inclusive)
 #   gis_end   : last GIS domain affected (inclusive)
 #   type      : "relocate" | "bridge"
 #   note      : human-readable description (for metadata log)
+#   enabled   : optional, defaults to True. Set False to skip just this one
+#               event (e.g. while re-checking its post_relocation_setback_m
+#               values) without disabling the others via the master toggle.
 
 HISTORICAL_ROAD_EVENTS = [
     # 1989: Pea Island / N. Rodanthe relocation
@@ -800,6 +916,7 @@ HISTORICAL_ROAD_EVENTS = [
     dict(
         year=1989, gis_start=84, gis_end=87, type="relocate",
         note="NC-12 relocated landward 1989, Pea Island (GIS 84-87)",
+        enabled=True,
         post_relocation_setback_m={
             84: 163.0,   # 93 m initial + 70 m measured raw_offset
             85: 165.0,   # 45 m initial + 120 m measured raw_offset
@@ -810,9 +927,14 @@ HISTORICAL_ROAD_EVENTS = [
     # 1999: Inter-village south relocation
     # post_relocation_setback_m = 1984 initial setback + cross-shore raw_offset
     # measured between 1978 and 1997 road lines in ArcGIS Pro.
+    # NOTE: GIS 11's 129.0 m setback is what pushed the road to the edge of a
+    # narrow interior grid and triggered the bulldoze() IndexError (see Section
+    # 0 patch). Set enabled=False here to skip this event while re-checking
+    # the 1978/1997 offset measurements, without touching the 1989 event above.
     dict(
         year=1999, gis_start=9, gis_end=15, type="relocate",
         note="NC-12 relocated landward 1999, inter-village south (GIS 9-15)",
+        enabled=True,
         post_relocation_setback_m={
              9:  73.0,   # 43 m initial + 30 m measured raw_offset
             10:  97.0,   # 42 m initial + 55 m measured raw_offset
@@ -834,31 +956,18 @@ HISTORICAL_ROAD_EVENTS = [
 # Source: Hatteras_Management_Timelines.xlsx -> Nourishment_Timeline sheet
 #
 # Three nourishment projects fall within the 2004-2024 hindcast window:
-#
 #   2014: Rodanthe emergency fill  - GIS 85-88  (4 domains,  1,620,000 cy)
 #   2022: Avon shore protection    - GIS 23-26  (4 domains,  2,200,000 cy)
 #   2022: Buxton shore protection  - GIS  6-15  (10 domains, 1,200,000 cy)
 #
-# Volume conversion:
-#   1 cubic yard (cy) = 0.764555 m^3
-#   Per-domain total m^3 = (project cy / n_domains) x 0.764555
-#   Per-domain m^3/m     = per-domain m^3 / DOMAIN_LENGTH_M (500 m)
+# Volume conversion: 1 cy = 0.764555 m^3; per-domain m^3 = (project cy /
+# n_domains) x 0.764555 (computed inline below); per-domain m^3/m = that /
+# DOMAIN_LENGTH_M (500 m). GIS -> pad uses the Section 1 formula.
 #
-# Computed per-domain totals (m^3):
-#   Rodanthe 2014: 1,620,000 / 4  x 0.764555 =  309,644.8 m^3/domain
-#   Avon     2022: 2,200,000 / 4  x 0.764555 =  420,505.3 m^3/domain
-#   Buxton   2022: 1,200,000 / 10 x 0.764555 =   91,746.6 m^3/domain
-#
-# GIS domain -> padded index (NUM_BUFFER_DOMAINS = 15, raw_offset = GIS - 1 + 15):
-#   GIS  6 -> pad 20    GIS 15 -> pad 29   (Buxton + south undeveloped)
-#   GIS 23 -> pad 37    GIS 26 -> pad 40   (Avon)
-#   GIS 85 -> pad 99    GIS 88 -> pad 102  (Rodanthe)
-#
-# HAT_BN_YEARS must remain sorted chronologically. Every domain's volume list
-# must have exactly len(HAT_BN_YEARS) entries, using 0 for years in which that
-# domain was not nourished. The build function (see HELPER FUNCTIONS, below)
-# skips any year outside the active period, so Period 1 (1984) returns
-# all-zero arrays with no code change needed.
+# HAT_BN_YEARS must stay sorted chronologically. Every domain's volume list
+# needs exactly len(HAT_BN_YEARS) entries (0 = not nourished that year). The
+# build function (HELPER FUNCTIONS, below) skips years outside the active
+# period, so Period 1 (1984) returns all-zero arrays with no code change.
 
 _CY_TO_M3 = 0.764555   # cubic yards -> cubic metres
 
@@ -1001,20 +1110,15 @@ print("=" * 80 + "\n")
 
 def build_nourishment_arrays_from_manual_inputs():
     """
-    Build per-year nourishment-on and volume arrays for the CASCADE time loop.
-
-    Uses HAT_BN_YEARS + HAT_BN_VOLUME_BY_DOMAIN (Section 8) to construct two
-    dicts keyed by calendar year, each of length TOTAL_DOMAINS (padded).
-
-    Any event year outside [START_YEAR, END_YEAR] is silently skipped, so the
-    same data block works for both periods - Period 1 returns all-zero arrays.
+    Build per-year nourishment-on and volume arrays for the CASCADE time loop,
+    from HAT_BN_YEARS + HAT_BN_VOLUME_BY_DOMAIN (Section 8). Years outside
+    [START_YEAR, END_YEAR] are silently skipped, so Period 1 returns all-zero
+    arrays with no code change needed.
 
     Returns
     -------
-    nourishment_on_by_year     : dict {year: np.ndarray[TOTAL_DOMAINS]}
-                                 1 = nourish this domain this year, 0 = no
-    nourishment_volume_by_year : dict {year: list[TOTAL_DOMAINS]}
-                                 volume in m^3/m per domain per year
+    nourishment_on_by_year     : dict {year: np.ndarray[TOTAL_DOMAINS]}, 1/0
+    nourishment_volume_by_year : dict {year: list[TOTAL_DOMAINS]}, m^3/m
     """
     nourishment_on_by_year     = {}
     nourishment_volume_by_year = {}
@@ -1189,17 +1293,9 @@ def loess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_doma
 
 def compute_domain_means(domain_ids, lrr_values, gis_min, gis_max):
     """
-    Compute the mean LRR per GIS domain for domains in [gis_min, gis_max].
-
-    Used to substitute raw per-domain averages in place of LOESS smoothing
-    for the southernmost domains where boundary effects dominate.
-
-    Parameters
-    ----------
-    domain_ids : int array   - GIS domain ID for each transect
-    lrr_values : float array - LRR (m/yr) for each transect
-    gis_min    : int         - first GIS domain to include
-    gis_max    : int         - last GIS domain to include (inclusive)
+    Mean LRR per GIS domain for domains in [gis_min, gis_max]. Used to
+    substitute raw per-domain averages for LOESS smoothing in the
+    southernmost domains, where boundary effects dominate.
 
     Returns
     -------
@@ -1221,23 +1317,11 @@ def splice_loess_with_raw_south(win_gis_x, win_smoothed,
     """
     Return (plot_x, plot_y) for a single LOESS window with optional southern splice.
 
-    For the WIDEST window (is_widest_window=True) and when skip_n > 0:
-      - domains 1-skip_n  -> per-domain raw means (no smoothing)
-      - domains skip_n+1+ -> LOESS-smoothed values (unchanged)
-      The two segments are concatenated so the plotted line is continuous.
-
-    For narrower windows or skip_n == 0:
-      - domains 1-skip_n  -> omitted entirely (line starts at skip_n+1)
-      - domains skip_n+1+ -> LOESS-smoothed values
-
-    Parameters
-    ----------
-    win_gis_x            : int array   - GIS domain IDs from the LOESS result
-    win_smoothed         : float array - LOESS-smoothed LRR (m/yr)
-    transect_domain_ids  : int array   - per-transect GIS domain IDs
-    transect_lrr_values  : float array - per-transect LRR (m/yr)
-    skip_n               : int         - number of southern domains to handle as raw
-    is_widest_window     : bool        - True -> prepend raw means; False -> just mask
+    Widest window (is_widest_window=True) with skip_n > 0:
+      domains 1-skip_n -> per-domain raw means; domains skip_n+1+ -> LOESS,
+      concatenated so the plotted line is continuous.
+    Narrower windows or skip_n == 0:
+      domains 1-skip_n omitted entirely (line starts at skip_n+1).
 
     Returns
     -------
@@ -1264,18 +1348,15 @@ def splice_loess_with_raw_south(win_gis_x, win_smoothed,
 
 def add_geographic_annotations(ax):
     """
-    Add all geographic reference annotations to an axis.
+    Add all geographic reference annotations to an axis (bottom -> top):
+      1. Wimble Shoals influence zone (hatched amber fill, bottom label)
+      2. Community shaded spans       (steel-blue fill, top labels)
+      3. Village center lines         (dashed gray,  y=0.84)
+      4. Pier lines                   (dash-dot blue, y=0.76, rotated)
+      5. Groin lines                  (dotted red,    y=0.76, rotated)
 
-    Layer order (bottom -> top):
-      1. Wimble Shoals influence zone  (hatched amber fill, bottom label)
-      2. Community shaded spans        (steel-blue fill, top labels)
-      3. Village center lines          (dashed gray,  y=0.84)
-      4. Pier lines                    (dash-dot blue, y=0.76, rotated)
-      5. Groin lines                   (dotted red,    y=0.76, rotated)
-
-    All label y-positions use blended axes-fraction coordinates so they stay
-    fixed relative to the panel height regardless of data range.
-    X-axis must be in GIS domain IDs (1-90).
+    Label y-positions use blended axes-fraction coords (fixed regardless of
+    data range). X-axis must be in GIS domain IDs (1-90).
     """
     trans = blended_transform_factory(ax.transData, ax.transAxes)
 
@@ -1465,52 +1546,44 @@ def make_shoreline_gif(shoreline_m, run_dir, run_name, Hs=None,
                        fps=None, stride=None,
                        annotate=None, auto_open=None, keep_frames=None):
     """
-    Plan-view animation of the shoreline through the run, one frame per model year.
+    Plan-view animation of the shoreline, one frame per model year. Current
+    shoreline drawn over a year-0 reference (dashed grey); shaded blue where
+    seaward of the reference, red where landward. Axis orientation is set by
+    GIF_OCEAN_AT_BOTTOM (Section 2a): ocean at bottom / sound at top by default,
+    matching Hatteras' real cross-shore layout.
 
-    The current shoreline is drawn over a year-0 reference (dashed grey); the
-    area between them is shaded blue where the shoreline sits seaward of the
-    reference and red where it sits landward of it. Seaward is up.
+    SIGN CONVENTION: build_shoreline_matrix() returns raw x_s_TS (x10 for m),
+    NO sign flip applied -- in BRIE/Barrier3D, x_s_TS INCREASES as the shoreline
+    retreats landward. FLIP_SIGN_MODEL is applied internally here so larger =
+    more seaward, matching change_rate's sign handling in the runner. Do not
+    pre-flip shoreline_m before passing it in.
 
-    SIGN CONVENTION
-    ---------------
-    build_shoreline_matrix() returns raw x_s_TS (x10 for metres) with NO sign
-    flip applied — in BRIE/Barrier3D, x_s_TS INCREASES as the shoreline retreats
-    landward. This function applies FLIP_SIGN_MODEL internally so that larger =
-    more seaward on the plot, matching the sign handling used for change_rate in
-    the runner. Do not pre-flip shoreline_m before passing it in.
-
-    MODE
-    ----
-    "displacement" (default): each domain's change from its OWN year-0 position.
-        All domains start at 0, so the y-range is set purely by how much the
-        shoreline actually moved — a few m/yr stays legible across all 90 domains.
-    "position": cross-shore position relative to the year-0 alongshore mean.
-        Keeps the planform shape, but note that x_s_TS is referenced to each
-        domain's own local model grid, so across 90 domains the alongshore
-        "shape" is partly an artefact of how the initial DEMs were extracted, not
-        a true map-projected planform. Over a wide range this also compresses the
-        signal: ~80 m of 40-year change inside a planform range of several
-        hundred metres is nearly invisible. Fine for a narrow groin-zone window
-        like (1, 30); use "displacement" for the full island.
-    "difference": this run minus baseline_m, in displacement terms:
-        (run - run_yr0) - (base - base_yr0)
-        Differencing DISPLACEMENTS rather than raw positions means any per-domain
-        initial-condition raw_offset between the two runs cancels exactly, so year 0
-        is identically zero and every later frame is attributable to whatever
-        differs between the two runs. With a no-groin baseline, that is the
-        groin's effect in isolation: blue = this run sits seaward of the baseline
-        (the updrift fillet), red = landward (the downdrift notch).
+    MODE:
+      "displacement" (default) - each domain's change from its OWN year-0
+        position; all start at 0, so a few m/yr stays legible across all 90
+        domains. Use for the full island.
+      "position" - cross-shore position relative to year-0 alongshore mean.
+        Keeps planform shape, but x_s_TS is referenced to each domain's own
+        local grid, so the alongshore "shape" is partly an artefact of how the
+        initial DEMs were extracted, and ~80 m of 40-yr change can be nearly
+        invisible against a planform range of several hundred m. Fine for a
+        narrow groin-zone window like (1, 30); use "displacement" for the
+        full island.
+      "difference" - this run minus baseline_m, in displacement terms:
+        (run - run_yr0) - (base - base_yr0). Differencing displacements (not
+        raw positions) cancels any per-domain initial-condition offset between
+        runs, so year 0 is exactly zero. With a no-groin baseline this isolates
+        the groin's effect: blue = seaward of baseline (updrift fillet),
+        red = landward (downdrift notch).
 
     Parameters
     ----------
-    shoreline_m : 2-D array [n_years, TOTAL_DOMAINS], comparison of
-        build_shoreline_matrix(cascade, to_meters=True). Raw x_s_TS convention.
-    run_dir, run_name : per-run comparison folder and run label.
-    Hs : significant wave height for the title (optional).
+    shoreline_m : 2-D array [n_years, TOTAL_DOMAINS] from
+        build_shoreline_matrix(cascade, to_meters=True); raw x_s_TS convention.
     domain_range : "real" | "all" | "groin" | (gis_lo, gis_hi).
     pad : half-width in domains; only read when domain_range="groin".
-    baseline_m : same-shape matrix from a previous run, in the same raw x_s_TS
-        convention. Required for mode="difference".
+    baseline_m : same-shape matrix from a previous run (same raw x_s_TS
+        convention); required for mode="difference".
     Everything else defaults to the Section 2a config constants.
     """
     import io
@@ -1568,17 +1641,20 @@ def make_shoreline_gif(shoreline_m, run_dir, run_name, Hs=None,
         base_pos = (flip * base)[:, pad_lo:pad_hi]
         # Difference the DISPLACEMENTS so any initial-condition raw_offset cancels.
         series = (pos - init[None, :]) - (base_pos - base_pos[0][None, :])
-        ylabel = f"\u0394 shoreline vs {baseline_label} (m)\nseaward \u25b2"
+        _up_word = "landward" if GIF_OCEAN_AT_BOTTOM else "seaward"
+        ylabel = f"\u0394 shoreline vs {baseline_label} (m)\n{_up_word} \u25b2"
         lbl_up, lbl_dn = (f"Seaward of {baseline_label}", f"Landward of {baseline_label}")
         lbl_ref = "No difference"
     elif mode == "displacement":
         series = pos - init[None, :]
-        ylabel = "Shoreline displacement since year 0 (m)\nseaward \u25b2"
+        _up_word = "landward" if GIF_OCEAN_AT_BOTTOM else "seaward"
+        ylabel = f"Shoreline displacement since year 0 (m)\n{_up_word} \u25b2"
         lbl_up, lbl_dn = "Accretion (seaward of year 0)", "Erosion (landward of year 0)"
         lbl_ref = f"Year 0 ({START_YEAR}) shoreline"
     else:
         series = pos - np.nanmean(init)
-        ylabel = "Cross-shore position (m, rel. year-0 mean)\nseaward \u25b2"
+        _up_word = "landward" if GIF_OCEAN_AT_BOTTOM else "seaward"
+        ylabel = f"Cross-shore position (m, rel. year-0 mean)\n{_up_word} \u25b2"
         lbl_up, lbl_dn = "Accretion (seaward of year 0)", "Erosion (landward of year 0)"
         lbl_ref = f"Year 0 ({START_YEAR}) shoreline"
 
@@ -1587,7 +1663,15 @@ def make_shoreline_gif(shoreline_m, run_dir, run_name, Hs=None,
     # Fixed axes across all frames so the shoreline doesn't jitter frame-to-frame.
     ymin, ymax = float(np.nanmin(series)), float(np.nanmax(series))
     ypad = (ymax - ymin) * 0.10 or 1.0
-    ylim = (ymin - ypad, ymax + ypad)
+    # GIF_OCEAN_AT_BOTTOM reverses the (bottom, top) order passed to ax.set_ylim(),
+    # which is matplotlib's documented way to invert an axis - larger/seaward
+    # values then land at the bottom instead of the top. The underlying series,
+    # shading comparison (cur >= ref), and accretion/erosion colors are untouched;
+    # only the visual orientation changes.
+    if GIF_OCEAN_AT_BOTTOM:
+        ylim = (ymax + ypad, ymin - ypad)
+    else:
+        ylim = (ymin - ypad, ymax + ypad)
 
     n_dom   = len(x)
     figsize = (float(np.clip(6.0 + 0.115 * n_dom, 9.0, 18.0)), 5.0)
@@ -1797,14 +1881,10 @@ def make_all_shoreline_gifs(shoreline_m, run_dir, run_name, Hs=None):
 
 def write_run_metadata(run_dir, run_name, Hs):
     """
-    Write a complete record of all run parameters to {run_name}_run_metadata.txt.
-
-    This file is the single source of truth for what produced a given run folder.
-    It captures every parameter that affects model results so that runs can be
-    reproduced, compared, and documented without reading the script itself.
-
-    Call this immediately after run_dir is created (before or after the cascade
-    run itself - parameters are fixed at script launch time).
+    Write every run parameter to {run_name}_run_metadata.txt - the single
+    source of truth for reproducing/comparing a run without reading the
+    script itself. Call right after run_dir is created (params are fixed at
+    script launch, so timing relative to the cascade run doesn't matter).
     """
     import datetime
 
@@ -1882,7 +1962,9 @@ def write_run_metadata(run_dir, run_name, Hs):
         "[Management]",
         f"roadway_management    = {ENABLE_ROADWAY_MANAGEMENT}",
         f"  relocation_blocked_villages = {VILLAGE_GIS_RANGES_NO_RELOCATION}",
-        f"  historical_road_events      = {[e['note'] for e in HISTORICAL_ROAD_EVENTS]}",
+        f"  ENABLE_HISTORICAL_ROAD_RELOCATIONS = {ENABLE_HISTORICAL_ROAD_RELOCATIONS}",
+        f"  historical_road_events      = "
+        f"{[(e['note'], 'enabled' if e.get('enabled', True) else 'DISABLED') for e in HISTORICAL_ROAD_EVENTS]}",
         f"nourishment           = {ENABLE_NOURISHMENT}",
         f"nourishment_volume    = {NOURISHMENT_VOLUME}  # m3/m (Cascade init default; historical injected per-year)",
         f"nourishment_bn_years  = {HAT_BN_YEARS}",
@@ -1939,6 +2021,8 @@ def run_cascade_simulation(
     historical_nourishment_on_by_year=None,
     historical_nourishment_volume_by_year=None,
 ):
+    _reset_domain_labels()  # Section 0 patch: restart pad labels at 0 for this run
+
     cascade = Cascade(
         HATTERAS_DATA_BASE,
         name,
@@ -2064,18 +2148,7 @@ def run_cascade_simulation(
 
         print(f"\rYear {time_step + 1}/{nt}", end="", flush=True)
 
-        # ── HISTORICAL ROAD MANAGEMENT EVENTS ───────────────────────────────
-        # Apply prescribed relocation or bridge events at their known calendar
-        # years. Events outside the active run period are silently skipped.
-        #
-        # "relocate": force the RoadwayManager setback to the relocation
-        #   default for the affected domains. The manager continues running
-        #   (bulldoze + dune rebuild) from the new position.
-        #
-        # "bridge": disable the RoadwayManager entirely for affected domains
-        #   from this year onward. The barrier reverts to fully natural
-        #   dynamics - no bulldozing, no dune rebuild, no relocation.
-        #   This fires in every run period/scenario (bridge is already built).
+        # ── HISTORICAL ROAD MANAGEMENT EVENTS (see Section 8 for event types) ──
         if historical_road_events and hasattr(cascade, "roadways") and cascade.roadways is not None:
             for event in historical_road_events:
                 if current_year != event["year"]:
@@ -2086,6 +2159,10 @@ def run_cascade_simulation(
                                if 0 <= _gis_to_pad(g) < alongshore_section_count]
 
                 if event["type"] == "relocate":
+                    if not ENABLE_HISTORICAL_ROAD_RELOCATIONS or not event.get("enabled", True):
+                        print(f"\n  -> Road relocation event in {current_year} SKIPPED "
+                              f"(disabled by toggle): {event['note']}")
+                        continue
                     print(f"\n  -> Road relocation event in {current_year}: "
                           f"{event['note']}")
                     per_domain_sb = event.get("post_relocation_setback_m", {})
@@ -2709,7 +2786,8 @@ def main():
         fig2_out = os.path.join(run_dir, f"{run_name_hs}_annotated.png")
         fig2.savefig(fig2_out, dpi=300, bbox_inches="tight", facecolor="white")
         print(f"  Saved annotated plot: {fig2_out}")
-        plt.show()
+        if SHOW_ANNOTATED_FIGURE:
+            plt.show()
 
         # ====================================================================
         # SHORELINE ANIMATION (GIF)
