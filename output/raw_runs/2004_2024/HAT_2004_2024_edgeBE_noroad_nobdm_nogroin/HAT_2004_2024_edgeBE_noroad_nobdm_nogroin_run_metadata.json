@@ -1,0 +1,72 @@
+{
+  "identity": {
+    "run_name": "HAT_2004_2024_edgeBE_noroad_nobdm_nogroin",
+    "timestamp": "2026-08-18 01:43:18",
+    "generated_by": "HAT_hindcast_1984_2024.py",
+    "runtime_min": "3.0",
+    "use_sandbox_cascade": true,
+    "topo_dune_version": "2009_v3",
+    "parameter_file": "Hatteras-CASCADE-parameters.yaml",
+    "git_commit": "6b233bcc55695e140099c48210006cf5219bc760",
+    "git_branch": "hannahaline/hatteras-cascade",
+    "git_dirty": true
+  },
+  "scenario": {
+    "period": "2004-2024 (20 yr)",
+    "source/sink preset": "edgeBE",
+    "background erosion": true,
+    "roadway management": "off",
+    "historical relocations": false,
+    "beach/dune manager": "off",
+    "nourishment fills": "suppressed",
+    "groin": "off"
+  },
+  "period": {
+    "start_year": 2004,
+    "end_year": 2024,
+    "run_years": 20,
+    "annual_states": 21
+  },
+  "wave climate": {
+    "wave_height_m": 2.5,
+    "wave_period_s": 8,
+    "wave_asymmetry": 0.7,
+    "wave_angle_high_frac": 0.1,
+    "shoreface_depth_m": "22.25"
+  },
+  "sea level": {
+    "rslr_m_yr": 0.006,
+    "rslr_constant": true
+  },
+  "dunes and roadway": {
+    "rmin / rmax": "0.55 / 0.95",
+    "dune_design_ele_m_mhw": 3.0,
+    "dune_min_ele_m_mhw": 0.0,
+    "road_width_m": 20.0,
+    "relocations_enabled": false
+  },
+  "source/sink": {
+    "preset": "edgeBE",
+    "background_erosion_on": true,
+    "domains_specified": 2,
+    "nonzero_domains": 2,
+    "values_digest": "82b3588be6da",
+    "rate_gis1_m_yr": 35.0,
+    "rate_gis90_m_yr": 35.0
+  },
+  "groin": {
+    "enabled": false
+  },
+  "skill": {
+    "target": "CoastSat LOESS 10-domain",
+    "mean_bias_m_yr": "-3.2016",
+    "rmse_m_yr": "3.4839",
+    "mean_bias_interior_m_yr": "-3.2402",
+    "rmse_interior_m_yr": "3.5149"
+  },
+  "verification": {
+    "nourishment_ok": true,
+    "roads_drowned": 0,
+    "roads_reloc_blocked": 0
+  }
+}
