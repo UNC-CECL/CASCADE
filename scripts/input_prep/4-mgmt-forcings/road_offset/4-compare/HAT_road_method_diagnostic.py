@@ -76,7 +76,8 @@ PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 # Topography version resolved from the extractor, not hardcoded -- it was
 # "2009_v3" and silently survived the re-pick into 2009_v4. See hat_topo_version.py.
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# parents[4] IS scripts/ -- hat_topo_version.py moved there 2026-08-20.
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 from hat_topo_version import topo_dirs  # noqa: E402
 
 TOPO_DIR, DUNE_DIR, TOPO_RUN_NAME = topo_dirs()

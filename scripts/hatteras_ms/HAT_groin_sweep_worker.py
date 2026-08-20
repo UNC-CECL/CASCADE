@@ -177,10 +177,12 @@ def _parse_cli(argv):
 # =============================================================================
 
 TOPO_DUNE_INIT_YEAR = "2009"
-#   v1/v2 were moved to 2009-dune-topo/incorrect/ on 2026-08-17. v3 is also the
-#   extraction the dune-start road setbacks in HATTERAS_PERIODS are measured
-#   against, so this must stay in step with the hindcast runners.
-TOPO_DUNE_VERSION = "2009_v3"
+# Resolved from the extractor, not pinned -- the same source the hindcast
+# runner and the road setbacks use, so the sweep cannot drift out of step with
+# them. See scripts/hat_topo_version.py.
+from hat_topo_version import topo_dirs   # scripts/, on sys.path from above
+
+_TOPO_DIR, _DUNE_DIR, TOPO_DUNE_VERSION = topo_dirs()
 
 HATTERAS_DATA_BASE = PROJECT_BASE_DIR / "data" / "hatteras_init"
 PARAMETER_FILE = "Hatteras-CASCADE-parameters.yaml"   # resolved by CASCADE

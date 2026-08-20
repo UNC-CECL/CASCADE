@@ -170,21 +170,21 @@ ROADS_DIR = HATTERAS_DATA_BASE / "4-mgmt-forcing" / "road_offset" / "dunestart_o
 # HAT_groin_sweep_worker.py) still says 2009_v2, a path that does not exist, so
 # the mismatch with the runner remains REAL and is printed below rather than
 # hidden. Repointing the runner is a separate job.
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# parents[4] IS scripts/ -- hat_topo_version.py moved there 2026-08-20.
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 from hat_topo_version import topo_dirs  # noqa: E402
 
 TOPO_DIR, _DUNE_DIR, TOPO_DUNE_VERSION = topo_dirs()
 TOPO_DUNE_INIT_YEAR = "2009"
 
-# What the runner claims to spend, for the mismatch warning only. Update when
-# the runner is repointed.
-RUNNER_TOPO_DUNE_VERSION = "2009_v2"
-if RUNNER_TOPO_DUNE_VERSION != TOPO_DUNE_VERSION:
-    print(f"[version] auditing {TOPO_DUNE_VERSION} (from the extractor); the "
-          f"runner still says {RUNNER_TOPO_DUNE_VERSION}.")
-    if not (BARRIER3D_DIR / "2009-dune-topo" / RUNNER_TOPO_DUNE_VERSION).is_dir():
-        print(f"[version] and {RUNNER_TOPO_DUNE_VERSION} does not exist on disk "
-              f"-- the runner would fail before it could disagree.")
+# There is no longer a runner version to disagree with. Until 2026-08-20 the
+# runner carried its own hardcoded TOPO_DUNE_VERSION and this file kept a copy
+# of it so a mismatch could be warned about -- a copy that itself went stale
+# (it said 2009_v2 while the runner said 2009_v3 and the setbacks were built on
+# v5). Both now call topo_dirs(), so they resolve to the same extraction by
+# construction and the warning has nothing left to check.
+print(f"[version] auditing {TOPO_DUNE_VERSION}, resolved from the extractor "
+      f"-- the same source the runner uses.")
 
 OUT_DIR = ROADS_DIR
 

@@ -48,7 +48,12 @@ import re
 from pathlib import Path
 
 _HERE = Path(__file__).resolve()
-PROJECT_ROOT = _HERE.parents[4]
+# scripts/hat_topo_version.py -> repo root. MOVED here 2026-08-20 from
+# input_prep/4-mgmt-forcings/road_offset/, because the model runner now
+# resolves its topography through this too and a runner importing out of an
+# input-prep subfolder is backwards. It sits next to hatteras_site_config.py:
+# both answer "what does this site use", for every consumer.
+PROJECT_ROOT = _HERE.parents[1]
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 DUNE_TOPO_ROOT = INIT_ROOT / "1-barrier3d-domains" / "2009-dune-topo"
 

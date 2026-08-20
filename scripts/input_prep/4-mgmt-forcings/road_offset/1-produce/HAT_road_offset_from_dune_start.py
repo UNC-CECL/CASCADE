@@ -921,6 +921,14 @@ def report(s: dict, records: list[dict]) -> None:
 def write_audit(audit: dict, ext) -> None:
     OUT_ROOT.mkdir(parents=True, exist_ok=True)
     path = OUT_ROOT / "RoadOffset_dunestart_audit.md"
+
+    # Does anything actually drown on THIS extraction? The no-data explanation
+    # below is a measurement taken on 2009_v4, not a recomputation, so it must
+    # not be printed under a version where nothing drowns -- it would assert a
+    # cell count that was never measured on the arrays in front of it. The
+    # gap-filled DEM (2009_v5) is exactly that case: 0 drowns, both years.
+    total_drowned = sum(s["n_drowned"] for s in audit.values())
+
     lines = [
         "# NC-12 road offset measured from the extracted dune start",
         "",
@@ -975,20 +983,54 @@ def write_audit(audit: dict, ext) -> None:
         "",
         "### The assumption this rests on",
         "",
-        f"On the {ext.RUN_NAME} topography these domains **do not drown on measured "
-        "water -- they drown on LiDAR coverage gaps.** Across the six flanking "
-        "rows that fail at GIS 78/79/80 there are 106 wet cells, of which "
-        "**105 were never surveyed and 1 is genuinely measured wet.** The "
-        "extractor writes no-data back as the water sentinel because Barrier3D "
-        "has no representation for \"unknown\", and the drown test counts every "
-        "cell -- deliberately, so that what is reported is what the run does.",
-        "",
-        "So this is **not** \"the road was in water, we moved it out\". It is "
-        "\"the 2009 DEM has no data there, CASCADE reads no-data as water, so "
-        "the road is moved onto surveyed ground to keep the domain managed\". "
-        "Any managed-vs-unmanaged result at GIS 78-80 needs that sentence "
-        "attached to it.",
-        "",
+    ]
+
+    if total_drowned == 0:
+        lines += [
+            f"**Nothing drowns at initialisation on {ext.RUN_NAME}** -- 0 "
+            "domains in either year -- so no setback was moved and the rest of "
+            "this section does not apply to this run.",
+            "",
+            "That is the point of the gap-filled DEM. On `2009_v4` three "
+            "domains per year drowned, and the audit for that version showed "
+            "they drowned on **LiDAR coverage gaps, not measured water**: "
+            "across the six flanking rows failing at GIS 78/79/80 there were "
+            "106 wet cells, of which 105 had never been surveyed and 1 was "
+            "genuinely wet. The extractor writes no-data back as the water "
+            "sentinel because Barrier3D has no representation for \"unknown\", "
+            "so unsurveyed ground read as ocean and drowned the roadway. "
+            "Filling those holes from the 2014 NOAA Post-Sandy DEM removes the "
+            "cause, and the drown count goes to zero.",
+            "",
+            "Those figures are quoted from the `2009_v4` audit and were "
+            "measured there, not recomputed here -- see "
+            "`dunestart_offset_ARCHIVE_2009_v4/`.",
+            "",
+        ]
+    else:
+        lines += [
+            f"On the {ext.RUN_NAME} topography these domains **do not drown on "
+            "measured water -- they drown on LiDAR coverage gaps.** Across the "
+            "six flanking rows that fail at GIS 78/79/80 there are 106 wet "
+            "cells, of which **105 were never surveyed and 1 is genuinely "
+            "measured wet.** The extractor writes no-data back as the water "
+            "sentinel because Barrier3D has no representation for \"unknown\", "
+            "and the drown test counts every cell -- deliberately, so that what "
+            "is reported is what the run does.",
+            "",
+            "NOTE: that 106/105/1 split was measured on `2009_v4` and is not "
+            "recomputed per run. Confirm it still holds before quoting it on a "
+            "different extraction.",
+            "",
+            "So this is **not** \"the road was in water, we moved it out\". It "
+            "is \"the 2009 DEM has no data there, CASCADE reads no-data as "
+            "water, so the road is moved onto surveyed ground to keep the "
+            "domain managed\". Any managed-vs-unmanaged result at GIS 78-80 "
+            "needs that sentence attached to it.",
+            "",
+        ]
+
+    lines += [
         "A move that lands inside the domain's own per-profile spread is a "
         "re-pick of the alongshore statistic. A move beyond it is a position no "
         "profile showed -- a different claim, flagged `BEYOND_MEASURED`.",
