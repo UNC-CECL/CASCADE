@@ -127,9 +127,19 @@ SAVE_SETTINGS_SHEET = True   # per-domain settings/results sheet (csv + xlsx)
 # mode on the v3 windows reproduces the v3 arrays byte for byte -- what makes
 # v4 different is the WINDOWS, which is exactly why it gets its own folder and
 # its own picks file rather than overwriting v3.
-VERSION = "v4"             # bump this per settings variant, like Lexi's sheet
+VERSION = "v5"             # bump this per settings variant, like Lexi's sheet
 DEM_YEAR = "2009"
-DEM_NAME = "2009_pea_hatteras"
+# v5 reads the GAP-FILLED arrays: 2009 base with its gaps filled from the 2014
+# NOAA Post-Sandy DEM (see data/hatteras_init/0-elevation/figures/README.md).
+# 25,591,292 cells filled at 1 m, 254,760 at this 10 m grid, mostly landward of
+# NC-12. The un-filled set is still at "2009_pea_hatteras" with its v4 picks
+# intact, so both can be run and compared.
+#
+# PICKS ARE PER-VERSION and none exist for v5 yet - picks/ holds only
+# 2009_v4, 2009_pea_hatteras and ..._straight. This run needs a pick pass
+# (MODE includes "pick"). Re-picking is warranted, not a formality: the filled
+# interior differs materially from what v4 was picked against.
+DEM_NAME = "2009_pea_hatteras_filled"
 RUN_NAME = f"{DEM_YEAR}_{VERSION}"
 
 PROJECT_ROOT = Path(r"C:\Users\hanna\PycharmProjects\CASCADE")

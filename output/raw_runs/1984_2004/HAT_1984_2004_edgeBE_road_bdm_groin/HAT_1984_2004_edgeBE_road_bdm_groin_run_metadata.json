@@ -1,0 +1,79 @@
+{
+  "identity": {
+    "run_name": "HAT_1984_2004_edgeBE_road_bdm_groin",
+    "timestamp": "2026-08-18 02:06:44",
+    "generated_by": "HAT_hindcast_1984_2024.py",
+    "runtime_min": "1.0",
+    "use_sandbox_cascade": true,
+    "topo_dune_version": "2009_v3",
+    "parameter_file": "Hatteras-CASCADE-parameters.yaml",
+    "git_commit": "6b233bcc55695e140099c48210006cf5219bc760",
+    "git_branch": "hannahaline/hatteras-cascade",
+    "git_dirty": true
+  },
+  "scenario": {
+    "period": "1984-2004 (20 yr)",
+    "source/sink preset": "edgeBE",
+    "background erosion": true,
+    "roadway management": "55 domains",
+    "historical relocations": false,
+    "beach/dune manager": "29 domains",
+    "nourishment fills": "0 applied",
+    "groin": "on"
+  },
+  "period": {
+    "start_year": 1984,
+    "end_year": 2004,
+    "run_years": 20,
+    "annual_states": 21
+  },
+  "wave climate": {
+    "wave_height_m": 2.5,
+    "wave_period_s": 8,
+    "wave_asymmetry": 0.7,
+    "wave_angle_high_frac": 0.1,
+    "shoreface_depth_m": "22.25"
+  },
+  "sea level": {
+    "rslr_m_yr": 0.004,
+    "rslr_constant": true
+  },
+  "dunes and roadway": {
+    "rmin / rmax": "0.55 / 0.95",
+    "dune_design_ele_m_mhw": 3.0,
+    "dune_min_ele_m_mhw": 0.0,
+    "road_width_m": 20.0,
+    "relocations_enabled": false
+  },
+  "source/sink": {
+    "preset": "edgeBE",
+    "background_erosion_on": true,
+    "domains_specified": 2,
+    "nonzero_domains": 2,
+    "values_digest": "0aa8461cb824",
+    "rate_gis1_m_yr": -24.0,
+    "rate_gis90_m_yr": 10.0
+  },
+  "groin": {
+    "enabled": true,
+    "trapping_rate_m_yr": 50.0,
+    "updrift / downdrift": "GIS 6 / 5",
+    "install_year": 1969,
+    "deterioration": "linear_ramp, floor 0.9",
+    "r_ipl_t0": "1.0758",
+    "predicted_extent_m": "3280",
+    "measured_extent_m": "5000 updrift / 2500 downdrift"
+  },
+  "skill": {
+    "target": "CoastSat LOESS 10-domain",
+    "mean_bias_m_yr": "+0.2836",
+    "rmse_m_yr": "1.2054",
+    "mean_bias_interior_m_yr": "+0.2753",
+    "rmse_interior_m_yr": "1.2126"
+  },
+  "verification": {
+    "nourishment_ok": true,
+    "roads_drowned": 0,
+    "roads_reloc_blocked": 0
+  }
+}
