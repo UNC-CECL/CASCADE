@@ -162,10 +162,22 @@ print(f"HATTERAS_DOMAINS.total_domains = {HATTERAS_DOMAINS.total_domains}")
 # --- 2.1 project paths -------------------------------------------------------
 
 TOPO_DUNE_INIT_YEAR = "2009"     # year label inside the filenames
-TOPO_DUNE_VERSION = "2009_v3"    # extractor version folder
-#   v1/v2 were moved to 2009-dune-topo/incorrect/ on 2026-08-17, so pinning
-#   either fails the init-file check below. v3 is also the extraction the
-#   dune-start road setbacks are measured against -- keep the two in step.
+
+# WHICH EXTRACTION -- resolved, not pinned. topo_dirs() reads VERSION out of
+# HAT_dune_topo_extractor.py, so the runner, the dune-start road setbacks and
+# the audits always describe the same extraction, and a version missing from
+# disk is a loud error rather than a silently stale read.
+#
+# Pinning it by hand is what let this runner sit on 2009_v3 while the setbacks
+# were rebuilt on v4 (2026-08-19) and then v5 (2026-08-20). The setback is
+# measured from interior row 0, so that combination places the road against a
+# row that does not exist on the grid being run.
+#
+# To reproduce an older run deliberately: topo_dirs(override="2009_v3").
+from hat_topo_version import topo_dirs   # scripts/, on sys.path from above
+
+_TOPO_DIR, _DUNE_DIR, TOPO_DUNE_VERSION = topo_dirs()
+print(f"topography            {TOPO_DUNE_VERSION}  (resolved from the extractor)")
 
 HATTERAS_DATA_BASE = PROJECT_BASE_DIR / "data" / "hatteras_init"
 OUTPUT_ROOT = PROJECT_BASE_DIR / "output" / "raw_runs"

@@ -87,7 +87,8 @@ INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 # The topography version is NOT hardcoded here any more. It was "2009_v3", and
 # when the dune windows were re-picked into 2009_v4 this kept drawing v3
 # interiors under v4 setbacks without erroring. See hat_topo_version.py.
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# parents[4] IS scripts/ -- hat_topo_version.py moved there 2026-08-20.
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 from hat_topo_version import topo_dirs  # noqa: E402
 
 TOPO_DIR, DUNE_DIR, TOPO_RUN_NAME = topo_dirs()

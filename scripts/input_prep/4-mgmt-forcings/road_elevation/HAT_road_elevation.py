@@ -148,6 +148,36 @@ CLIP_ROOT = BARRIER3D_DIR / "2009-raw" / "2009-domain-clipresample"
 CLIP_GLOB = "clip_domain_*.tif"
 RESAMPLE_GLOB = "resampled_domain_*.tif"
 
+# --- WHICH SURFACE: raw 2009, or 2009 with its holes filled -------------
+# None    the original 2009 clips, LiDAR holes and all
+# "<tag>" 0-elevation/{1-gapfill-1m,2-resampled-10m}/<tag>/..._filled.tif
+#
+# ONLY GIS 78, 79 AND 80 CAN CHANGE. Every other domain on the 2004 alignment
+# has nodata_frac = 0 -- complete 2009 coverage under the road -- so filling is
+# a no-op there, and the unaffected neighbours 77 and 81 move by <= 0.002 m.
+# The three that do change are the same three that drowned on coverage gaps in
+# 2009_v4, and D79 is the reason this switch exists: its unfilled elevation is
+# a mean over 2287 corridor cells out of 3583, 36% of the corridor missing.
+#
+# WHY 2008 AND NOT 2014, when the v5 TOPOGRAPHY is filled from 2014:
+# this is a ROAD SURFACE, and the two questions have different answers. The
+# 2008 IOCM survey is one year from the 2009 base, so it measures the same
+# pavement. The 2014 Post-Sandy survey postdates Hurricane Irene (2011), the
+# Pea Island breach and the NC-12 reconstruction that followed -- at GIS 78-80
+# a 2014 surface under the corridor may be a REBUILT road, which is not what
+# "the 2009 road elevation" means. Topography has no such problem: there the
+# 2014 fill is simply the later and more complete survey of the same barrier.
+#
+# The choice is about provenance, not magnitude -- the two fills differ by
+# <= 0.015 m in the corridor. RELOCATION BRACKET and the QC flags re-measure
+# this every run; FILL_SOURCE is recorded in the audit.
+FILL_SOURCE = "2008_NOAA_IOCM"
+
+GAPFILL_1M_ROOT = HATTERAS_DATA_BASE / "0-elevation" / "1-gapfill-1m"
+GAPFILL_10M_ROOT = HATTERAS_DATA_BASE / "0-elevation" / "2-resampled-10m"
+FILL_CLIP_GLOB = "clip_domain_*_filled.tif"
+FILL_RESAMPLE_GLOB = "resampled_domain_*_filled.tif"
+
 # The single alignment. 2004, because it is the one that is contemporaneous with
 # the 2009 DEM everywhere on the island -- see the header.
 ROAD_LINE = (MGMT_DIR / "road_offset" / "raw_offset" / "2004" / "nc12_2004.geojson")
@@ -228,6 +258,48 @@ def find_clips(root: Path, pattern: str) -> dict:
         if m and tifs:
             out[int(m.group(1))] = tifs[0]
     return out
+
+
+def find_clips_flat(root: Path, pattern: str) -> dict:
+    """
+    domain id -> raster path, for the gap-fill tree.
+
+    The clipresample tree nests one folder per domain; the gap-fill tree is
+    flat and carries the id in the filename instead. Same contract, different
+    layout, so the caller does not have to care which surface it asked for.
+    """
+    out = {}
+    for tif in sorted(Path(root).glob(pattern)):
+        m = re.search(r"domain_(\d+)_", tif.name)
+        if m:
+            out[int(m.group(1))] = tif
+    return out
+
+
+def resolve_surfaces() -> tuple[dict, dict, str]:
+    """(1 m clips, 10 m resamples, a label for the audit) for FILL_SOURCE."""
+    if not FILL_SOURCE:
+        return (find_clips(CLIP_ROOT, CLIP_GLOB),
+                find_clips(CLIP_ROOT, RESAMPLE_GLOB),
+                "2009 clips, unfilled")
+
+    one_m = GAPFILL_1M_ROOT / FILL_SOURCE
+    ten_m = GAPFILL_10M_ROOT / FILL_SOURCE
+
+    for label, path in (("1 m gap-fill", one_m), ("10 m gap-fill", ten_m)):
+        if not path.is_dir():
+            avail = (sorted(p.name for p in GAPFILL_1M_ROOT.iterdir()
+                            if p.is_dir()) if GAPFILL_1M_ROOT.is_dir() else [])
+            raise SystemExit(
+                f"\n[stop] {label} directory for FILL_SOURCE={FILL_SOURCE!r} "
+                f"does not exist:\n    {path}\n"
+                f"sources present: {avail}\n")
+
+    # Both resolutions come from the SAME fill, so the 1 m vs 10 m agreement
+    # printed under INTERNAL CHECKS stays a like-for-like comparison.
+    return (find_clips_flat(one_m, FILL_CLIP_GLOB),
+            find_clips_flat(ten_m, FILL_RESAMPLE_GLOB),
+            f"2009 clips, holes filled from {FILL_SOURCE}")
 
 
 def load_line(path: Path):
@@ -774,7 +846,39 @@ def write_markdown(rows, sweep, resamp, bracket, path: Path):
     a("")
     a("| | |")
     a("|---|---|")
-    a("| Surface | `clip_domain_<N>.tif` — **1 m** native LiDAR, 2009 |")
+    if FILL_SOURCE:
+        a(f"| Surface | `clip_domain_<N>_filled.tif` — **1 m** native LiDAR, "
+          f"2009, holes filled from **{FILL_SOURCE}** |")
+        a("| Why that fill | 2008 is one year from the 2009 base, so it "
+          "measures the same pavement. The v5 *topography* is filled from "
+          "2014 Post-Sandy, which postdates Irene, the Pea Island breach and "
+          "the NC-12 rebuild — fine for a barrier surface, wrong for a road "
+          "surface at GIS 78–80. |")
+        _gaps = sorted((r for r in good if r["nodata_frac"] > 0),
+                       key=lambda r: -r["nodata_frac"])
+        a("| Domains materially affected | **GIS 78, 79, 80** — the only ones "
+          "with NoData under the road in the unfilled 2009 clips. Everywhere "
+          "else the corridor was already complete, and the change is "
+          "≤ 0.01 m: the fill pipeline rebuilds the raster rather than "
+          "patching the original, so the corridor mask lands on a few cells' "
+          "difference even where there was nothing to fill. Not a no-op, but "
+          "well inside the 0.07 m within-domain scatter. |")
+        if _gaps:
+            _worst = _gaps[0]
+            _each = ", ".join(
+                "GIS {}: {:.1%}".format(r["domain"], r["nodata_frac"])
+                for r in _gaps)
+            a("| Residual gaps | {} domain(s) still carry NoData in the "
+              "corridor after filling — worst **GIS {} at {:.1%}** ({}). The "
+              "2014 Post-Sandy fill would close these, at the provenance cost "
+              "above. All are below the {:.0%} flag threshold so they no "
+              "longer raise `NODATA`; recorded here so that is not mistaken "
+              "for complete coverage. |".format(
+                  len(_gaps), _worst["domain"], _worst["nodata_frac"],
+                  _each, MAX_NODATA_FRAC))
+    else:
+        a("| Surface | `clip_domain_<N>.tif` — **1 m** native LiDAR, 2009, "
+          "unfilled |")
     a(f"| Alignment | `{Path(ROAD_LINE).name}` — the **{ROAD_LINE_YEAR}** "
       f"digitised centreline |")
     a(f"| Corridor | {BUFFER_M:.1f} m buffer either side "
@@ -1106,17 +1210,18 @@ def write_markdown(rows, sweep, resamp, bracket, path: Path):
 # =============================================================================
 
 def main():
-    clips = find_clips(CLIP_ROOT, CLIP_GLOB)
-    resamples = find_clips(CLIP_ROOT, RESAMPLE_GLOB)
+    clips, resamples, surface_label = resolve_surfaces()
 
     print("=" * 92)
     print("NC-12 ROAD ELEVATION FROM THE 2009 LIDAR")
     print("one alignment, one surface, one file -- used for BOTH start periods")
     print("=" * 92)
-    print(f"  clips  : {CLIP_ROOT}")
+    print(f"  surface: {surface_label}")
+    print(f"  clips  : {Path(next(iter(clips.values()))).parent if clips else '-'}")
     print(f"  {len(clips)} clip(s) at 1 m | {len(resamples)} at 10 m")
     if not clips:
-        raise SystemExit(f"\n[stop] no {CLIP_GLOB} under {CLIP_ROOT}\n")
+        raise SystemExit(
+            f"\n[stop] no 1 m clips found for FILL_SOURCE={FILL_SOURCE!r}\n")
 
     line = load_line(ROAD_LINE)
     print(f"  line   : {Path(ROAD_LINE).name}  CRS {line.crs.to_string()}  "

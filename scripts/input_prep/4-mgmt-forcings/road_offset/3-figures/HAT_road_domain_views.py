@@ -85,7 +85,8 @@ ROADS_ROOT = DATA / "4-mgmt-forcing" / "road_offset"
 # Topography version resolved from the extractor, not hardcoded -- it was
 # "2009_v3" and kept drawing v3 interiors under v4 setbacks after the re-pick,
 # with no error. See hat_topo_version.py.
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# parents[4] IS scripts/ -- hat_topo_version.py moved there 2026-08-20.
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 from hat_topo_version import topo_dirs  # noqa: E402
 
 TOPO_DIR, DUNE_DIR, TOPO_RUN_NAME = topo_dirs()

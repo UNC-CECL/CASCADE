@@ -1,12 +1,12 @@
 # NC-12 road setback audit
 
-Generated 2026-08-19T13:35:33 by `HAT_road_setback_audit.py`.
+Generated 2026-08-20T12:43:19 by `HAT_road_setback_audit.py`.
 
 **Diagnostic record.** No setback was modified, no setback file was written, no topography was touched.
 
 | | |
 |---|---|
-| Topography | `C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\2009-dune-topo\2009_v4\topography` |
+| Topography | `C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\2009-dune-topo\2009_v5\topography` |
 | Road width | 20 m |
 | Width rule | `barrier3d.FindWidths` — first cell `<= SL`, verbatim |
 | Drown rule | `roadway_manager.bulldoze` — >20% of profiles bordering water |
@@ -90,10 +90,10 @@ No domain flagged.
 | GIS | Setback (m) | % of road's own cells in water | % of profiles fully submerged | % water at bayside border | Largest that fits (m) | Verdict | Narrowness |
 |---:|---:|---:|---:|---:|---:|---|---|
 | 11 | 129 | 89.0 | 88.0 | 92.0 | 50 | `DROWNS` **OFF-ISLAND** | `HOLED` |
-| 12 | 126 | 80.0 | 72.0 | 100.0 | 40 | `DROWNS` **OFF-ISLAND** | `TRUE_END` |
-| 13 | 125 | 71.0 | 62.0 | 98.0 | 70 | `DROWNS` **OFF-ISLAND** | `TRUE_END` |
-| 14 | 126 | 52.0 | 52.0 | 66.0 | 50 | `DROWNS` **OFF-ISLAND** | `TRUE_END` |
-| 15 | 106 | 38.0 | 22.0 | 64.0 | 60 | `DROWNS` **OFF-ISLAND** | `TRUE_END` |
+| 12 | 126 | 65.0 | 58.0 | 96.0 | 50 | `DROWNS` **OFF-ISLAND** | `TRUE_END` |
+| 13 | 125 | 46.0 | 38.0 | 94.0 | 70 | `DROWNS` **OFF-ISLAND** | `TRUE_END` |
+| 14 | 126 | 46.0 | 42.0 | 56.0 | 60 | `DROWNS` **OFF-ISLAND** | `TRUE_END` |
+| 15 | 106 | 41.0 | 28.0 | 66.0 | 60 | `DROWNS` **OFF-ISLAND** | `TRUE_END` |
 
 ### Guards the prescribed-relocation path skips
 
@@ -102,24 +102,24 @@ CASCADE has two guards on moving a road landward, and the runner's `HISTORICAL_R
 | GIS | Setback (m) | Rebuilt road elevation (m) | `get_road_relocation_elevation` | Average barrier width (m) | `road_relocation_checks` |
 |---:|---:|---:|---|---:|---|
 | 9 | 73 | 1.27 | allows | 199 | allows |
-| 10 | 97 | 0.49 | allows | 150 | allows |
-| 11 | 129 | -1.94 | **refuses** — road ≤ 0 m MSL | 95 | **refuses** — island too narrow |
-| 12 | 126 | -1.59 | **refuses** — road ≤ 0 m MSL | 97 | **refuses** — island too narrow |
-| 13 | 125 | -0.78 | **refuses** — road ≤ 0 m MSL | 112 | **refuses** — island too narrow |
-| 14 | 126 | -0.74 | **refuses** — road ≤ 0 m MSL | 123 | **refuses** — island too narrow |
-| 15 | 106 | 0.50 | allows | 115 | **refuses** — island too narrow |
+| 10 | 97 | 0.70 | allows | 133 | **refuses** — island too narrow |
+| 11 | 129 | -0.76 | **refuses** — road ≤ 0 m MSL | 95 | **refuses** — island too narrow |
+| 12 | 126 | -0.62 | **refuses** — road ≤ 0 m MSL | 107 | **refuses** — island too narrow |
+| 13 | 125 | 0.08 | allows | 120 | **refuses** — island too narrow |
+| 14 | 126 | 0.26 | allows | 132 | **refuses** — island too narrow |
+| 15 | 106 | 0.45 | allows | 112 | **refuses** — island too narrow |
 
-**5 of 7 prescribed relocations would be refused by CASCADE's own logic.** Evaluated on the t=0 interior; the real grid at the event year will have evolved, so treat these as the initialisation-time verdict.
+**6 of 7 prescribed relocations would be refused by CASCADE's own logic.** Evaluated on the t=0 interior; the real grid at the event year will have evolved, so treat these as the initialisation-time verdict.
 
 ## 1989 relocation (Pea Island, GIS 84-87) - zero-retreat bound
 
-4 domains — `DROWNS` 3, `FITS` 1. **2 with the road off the island.**
+4 domains — `DROWNS` 3, `FITS` 1. **0 with the road off the island.**
 
 | GIS | Setback (m) | % of road's own cells in water | % of profiles fully submerged | % water at bayside border | Largest that fits (m) | Verdict | Narrowness |
 |---:|---:|---:|---:|---:|---:|---|---|
-| 84 | 163 | 31.0 | 30.0 | 34.0 | 320 | `DROWNS` **OFF-ISLAND** | `HOLED` |
-| 86 | 205 | 22.0 | 18.0 | 38.0 | 170 | `DROWNS` **OFF-ISLAND** | `HOLED` |
-| 87 | 113 | 2.0 | 0.0 | 38.0 | 130 | `DROWNS` | `HOLED` |
+| 84 | 163 | 2.0 | 2.0 | 22.0 | 340 | `DROWNS` | `HOLED` |
+| 86 | 205 | 19.0 | 16.0 | 26.0 | 190 | `DROWNS` | `HOLED` |
+| 87 | 113 | 0.0 | 0.0 | 26.0 | 140 | `DROWNS` | `HOLED` |
 
 ### Guards the prescribed-relocation path skips
 
@@ -127,12 +127,12 @@ CASCADE has two guards on moving a road landward, and the runner's `HISTORICAL_R
 
 | GIS | Setback (m) | Rebuilt road elevation (m) | `get_road_relocation_elevation` | Average barrier width (m) | `road_relocation_checks` |
 |---:|---:|---:|---|---:|---|
-| 84 | 163 | 0.21 | allows | 202 | **refuses** — island too narrow |
-| 85 | 165 | 0.27 | allows | 300 | allows |
-| 86 | 205 | 0.17 | allows | 223 | **refuses** — island too narrow |
-| 87 | 113 | 0.38 | allows | 166 | allows |
+| 84 | 163 | 0.51 | allows | 229 | allows |
+| 85 | 165 | 0.40 | allows | 321 | allows |
+| 86 | 205 | 0.18 | allows | 243 | **refuses** — island too narrow |
+| 87 | 113 | 0.50 | allows | 176 | allows |
 
-**2 of 4 prescribed relocations would be refused by CASCADE's own logic.** Evaluated on the t=0 interior; the real grid at the event year will have evolved, so treat these as the initialisation-time verdict.
+**1 of 4 prescribed relocations would be refused by CASCADE's own logic.** Evaluated on the t=0 interior; the real grid at the event year will have evolved, so treat these as the initialisation-time verdict.
 
 ## Where Barrier3D's two guards disagree
 
@@ -147,14 +147,13 @@ So the road can be founded on ground the relocation logic believes is off the ba
 
 | Scenario | GIS | % of profiles where the road's border cell is land but `FindWidths` has already ended the island | Narrowness |
 |---|---:|---:|---|
-| 1984 initial | 73 | 24.0 | `MIXED` |
-| 2004 initial | 73 | 24.0 | `MIXED` |
-| 1984 initial | 74 | 20.0 | `MIXED` |
-| 2004 initial | 74 | 20.0 | `MIXED` |
+| 1989 relocation (Pea Island, GIS 84-87) - zero-retreat bound | 86 | 26.0 | `HOLED` |
+| 1984 initial | 73 | 22.0 | `HOLED` |
+| 2004 initial | 73 | 22.0 | `HOLED` |
+| 1984 initial | 74 | 20.0 | `HOLED` |
+| 2004 initial | 74 | 20.0 | `HOLED` |
 | 1984 initial | 77 | 18.0 | `MIXED` |
 | 2004 initial | 77 | 18.0 | `MIXED` |
-| 1989 relocation (Pea Island, GIS 84-87) - zero-retreat bound | 86 | 14.0 | `HOLED` |
-| 1989 relocation (Pea Island, GIS 84-87) - zero-retreat bound | 84 | 12.0 | `HOLED` |
 | 1984 initial | 78 | 10.0 | `MIXED` |
 | 2004 initial | 78 | 10.0 | `MIXED` |
 | 1984 initial | 26 | 8.0 | `HOLED` |
@@ -165,13 +164,12 @@ So the road can be founded on ground the relocation logic believes is off the ba
 | 2004 initial | 68 | 8.0 | `MIXED` |
 | 2004 initial | 71 | 8.0 | `HOLED` |
 | 2004 initial | 79 | 8.0 | `TRUE_END` |
+| 1999 relocation (inter-village south, GIS 9-15) - zero-retreat bound | 10 | 8.0 | `HOLED` |
 | 1984 initial | 19 | 4.0 | `HOLED` |
 | 2004 initial | 19 | 4.0 | `HOLED` |
+| 1989 relocation (Pea Island, GIS 84-87) - zero-retreat bound | 84 | 4.0 | `HOLED` |
 | 1984 initial | 35 | 2.0 | `MIXED` |
-| 1984 initial | 69 | 2.0 | `HOLED` |
 | 2004 initial | 35 | 2.0 | `MIXED` |
-| 2004 initial | 69 | 2.0 | `HOLED` |
-| 1989 relocation (Pea Island, GIS 84-87) - zero-retreat bound | 87 | 2.0 | `HOLED` |
 
 ## Narrowness labels, and what they do not tell you
 
@@ -237,178 +235,178 @@ The asymmetry reads as an oversight rather than a design choice: one edge of the
 
 | Scenario | GIS | Setback (m) | Verdict | Off-island | % road cells water | % bayside water | DomainWidth | IW min/p20/med/max | Largest fitting (m) | Narrowness |
 |---|---:|---:|---|---|---:|---:|---:|---|---:|---|
-| 1984 initial | 9 | 40 | `FITS` |  | 0.0 | 0.0 | 100 | 11/14/17/73 | 120 | `HOLED` |
-| 1984 initial | 10 | 20 | `FITS` |  | 10.0 | 10.0 | 64 | 0/14/16/21 | 110 | `HOLED` |
-| 1984 initial | 11 | 0 | `FITS` |  | 0.0 | 0.0 | 62 | 6/8/9/16 | 50 | `HOLED` |
-| 1984 initial | 12 | 0 | `FITS` |  | 0.0 | 0.0 | 58 | 6/7/10/14 | 40 | `TRUE_END` |
-| 1984 initial | 13 | 0 | `FITS` |  | 0.0 | 0.0 | 16 | 8/9/11/15 | 70 | `TRUE_END` |
-| 1984 initial | 14 | 30 | `FITS` |  | 0.0 | 0.0 | 22 | 7/8/11/19 | 50 | `TRUE_END` |
-| 1984 initial | 15 | 50 | `FITS` |  | 0.0 | 0.0 | 21 | 9/9/10/19 | 60 | `TRUE_END` |
-| 1984 initial | 16 | 75 | `FITS` |  | 0.0 | 0.0 | 25 | 17/19/21/24 | 170 | `TRUE_END` |
-| 1984 initial | 17 | 90 | `FITS` |  | 0.0 | 0.0 | 47 | 17/21/26/46 | 200 | `HOLED` |
-| 1984 initial | 18 | 120 | `FITS` |  | 0.0 | 0.0 | 62 | 16/29/35/54 | 390 | `HOLED` |
-| 1984 initial | 19 | 130 | `FITS` |  | 0.0 | 2.0 | 55 | 8/18/25/48 | 270 | `HOLED` |
-| 1984 initial | 20 | 80 | `FITS` |  | 0.0 | 0.0 | 58 | 29/33/45/55 | 390 | `MIXED` |
-| 1984 initial | 21 | 120 | `FITS` |  | 0.0 | 0.0 | 92 | 25/42/44/71 | 610 | `HOLED` |
-| 1984 initial | 22 | 185 | `FITS` |  | 0.0 | 0.0 | 100 | 33/38/43/97 | 870 | `HOLED` |
-| 1984 initial | 23 | 220 | `FITS` |  | 0.0 | 0.0 | 101 | 42/49/66/93 | 880 | `HOLED` |
-| 1984 initial | 24 | 170 | `FITS` |  | 0.0 | 0.0 | 99 | 46/56/86/97 | 920 | `HOLED` |
-| 1984 initial | 25 | 160 | `FITS` |  | 0.0 | 0.0 | 102 | 38/48/76/98 | 950 | `HOLED` |
-| 1984 initial | 26 | 205 | `FITS` |  | 2.0 | 0.0 | 102 | 17/45/67/100 | 950 | `HOLED` |
-| 1984 initial | 27 | 260 | `FITS` |  | 0.0 | 0.0 | 104 | 44/72/85/103 | 980 | `HOLED` |
-| 1984 initial | 28 | 270 | `FITS` |  | 0.0 | 0.0 | 107 | 46/48/79/105 | 1010 | `HOLED` |
-| 1984 initial | 29 | 260 | `FITS` |  | 0.0 | 0.0 | 110 | 38/47/87/108 | 990 | `HOLED` |
-| 1984 initial | 30 | 250 | `FITS` |  | 0.0 | 0.0 | 112 | 32/51/60/83 | 720 | `HOLED` |
-| 1984 initial | 31 | 250 | `FITS` |  | 0.0 | 0.0 | 69 | 32/34/43/67 | 320 | `HOLED` |
-| 1984 initial | 32 | 230 | `FITS` |  | 0.0 | 0.0 | 52 | 33/46/48/51 | 430 | `TRUE_END` |
-| 1984 initial | 33 | 260 | `FITS` |  | 0.0 | 0.0 | 57 | 31/45/48/53 | 450 | `MIXED` |
-| 1984 initial | 34 | 320 | `FITS` |  | 0.0 | 0.0 | 54 | 41/43/46/52 | 400 | `TRUE_END` |
-| 1984 initial | 35 | 320 | `FITS` |  | 0.0 | 2.0 | 54 | 33/43/44/52 | 400 | `MIXED` |
-| 1984 initial | 36 | 330 | `FITS` |  | 0.0 | 0.0 | 69 | 51/52/54/60 | 490 | `TRUE_END` |
-| 1984 initial | 37 | 320 | `FITS` |  | 0.0 | 0.0 | 88 | 53/57/78/86 | 740 | `HOLED` |
-| 1984 initial | 38 | 280 | `FITS` |  | 0.0 | 0.0 | 90 | 69/78/81/88 | 770 | `TRUE_END` |
-| 1984 initial | 39 | 230 | `FITS` |  | 0.0 | 0.0 | 78 | 68/69/71/77 | 660 | `TRUE_END` |
-| 1984 initial | 40 | 210 | `FITS` |  | 0.0 | 0.0 | 77 | 53/63/70/75 | 640 | `MIXED` |
-| 1984 initial | 41 | 190 | `FITS` |  | 0.0 | 0.0 | 65 | 43/52/54/58 | 490 | `HOLED` |
-| 1984 initial | 42 | 190 | `FITS` |  | 0.0 | 0.0 | 66 | 42/43/61/65 | 570 | `HOLED` |
-| 1984 initial | 43 | 170 | `FITS` |  | 0.0 | 0.0 | 68 | 53/61/63/66 | 590 | `TRUE_END` |
-| 1984 initial | 44 | 160 | `FITS` |  | 0.0 | 0.0 | 66 | 46/50/53/65 | 530 | `HOLED` |
-| 1984 initial | 45 | 150 | `FITS` |  | 0.0 | 0.0 | 64 | 31/38/41/56 | 370 | `HOLED` |
-| 1984 initial | 46 | 140 | `FITS` |  | 0.0 | 0.0 | 57 | 30/36/39/46 | 340 | `HOLED` |
-| 1984 initial | 47 | 140 | `FITS` |  | 0.0 | 0.0 | 50 | 29/32/34/41 | 300 | `HOLED` |
-| 1984 initial | 48 | 120 | `FITS` |  | 0.0 | 0.0 | 36 | 21/23/25/30 | 200 | `TRUE_END` |
-| 1984 initial | 49 | 130 | `FITS` |  | 0.0 | 0.0 | 29 | 20/22/23/27 | 190 | `TRUE_END` |
-| 1984 initial | 50 | 110 | `FITS` |  | 0.0 | 0.0 | 26 | 15/19/21/24 | 160 | `TRUE_END` |
-| 1984 initial | 51 | 120 | `FITS` |  | 0.0 | 0.0 | 30 | 18/22/24/28 | 190 | `TRUE_END` |
-| 1984 initial | 52 | 95 | `FITS` |  | 0.0 | 0.0 | 32 | 15/18/21/27 | 160 | `TRUE_END` |
-| 1984 initial | 53 | 140 | `FITS` |  | 0.0 | 0.0 | 37 | 21/24/26/33 | 210 | `MIXED` |
-| 1984 initial | 54 | 150 | `FITS` |  | 0.0 | 0.0 | 45 | 22/25/28/44 | 230 | `HOLED` |
-| 1984 initial | 55 | 160 | `FITS` |  | 0.0 | 0.0 | 52 | 23/33/36/49 | 310 | `HOLED` |
-| 1984 initial | 56 | 180 | `FITS` |  | 0.0 | 0.0 | 52 | 24/27/29/34 | 250 | `MIXED` |
-| 1984 initial | 57 | 200 | `FITS` |  | 0.0 | 0.0 | 47 | 25/29/36/45 | 270 | `TRUE_END` |
-| 1984 initial | 58 | 240 | `FITS` |  | 0.0 | 0.0 | 55 | 32/41/45/52 | 400 | `MIXED` |
-| 1984 initial | 59 | 270 | `FITS` |  | 0.0 | 0.0 | 58 | 42/44/48/57 | 430 | `HOLED` |
-| 1984 initial | 60 | 310 | `FITS` |  | 0.0 | 0.0 | 60 | 48/56/58/59 | 540 | `TRUE_END` |
-| 1984 initial | 61 | 330 | `FITS` |  | 0.0 | 0.0 | 63 | 48/53/59/62 | 560 | `MIXED` |
-| 1984 initial | 62 | 350 | `FITS` |  | 0.0 | 0.0 | 68 | 56/62/64/67 | 590 | `MIXED` |
-| 1984 initial | 63 | 350 | `FITS` |  | 0.0 | 0.0 | 70 | 60/63/65/69 | 620 | `MIXED` |
-| 1984 initial | 64 | 370 | `FITS` |  | 0.0 | 0.0 | 72 | 62/65/69/70 | 660 | `MIXED` |
-| 1984 initial | 65 | 370 | `FITS` |  | 0.0 | 0.0 | 71 | 60/67/68/70 | 640 | `TRUE_END` |
-| 1984 initial | 66 | 370 | `FITS` |  | 0.0 | 0.0 | 72 | 65/67/68/71 | 640 | `TRUE_END` |
-| 1984 initial | 67 | 420 | `FITS` |  | 0.0 | 0.0 | 74 | 46/66/68/71 | 640 | `TRUE_END` |
-| 1984 initial | 68 | 555 | `FITS` |  | 2.0 | 2.0 | 78 | 46/61/72/76 | 610 | `MIXED` |
-| 1984 initial | 69 | 560 | `FITS` |  | 0.0 | 0.0 | 82 | 37/70/75/79 | 720 | `HOLED` |
-| 1984 initial | 70 | 480 | `FITS` |  | 0.0 | 0.0 | 80 | 54/69/72/78 | 670 | `HOLED` |
-| 1984 initial | 71 | 410 | `FITS` |  | 2.0 | 2.0 | 83 | 39/55/73/82 | 670 | `HOLED` |
-| 1984 initial | 72 | 490 | `FITS` |  | 0.0 | 0.0 | 82 | 70/79/80/81 | 760 | `TRUE_END` |
-| 1984 initial | 73 | 550 | `FITS` |  | 0.0 | 0.0 | 80 | 22/25/77/79 | 730 | `MIXED` |
-| 1984 initial | 74 | 600 | `FITS` |  | 0.0 | 0.0 | 76 | 22/62/74/75 | 710 | `MIXED` |
-| 1984 initial | 75 | 540 | `FITS` |  | 0.0 | 0.0 | 74 | 68/69/71/73 | 670 | `TRUE_END` |
-| 1984 initial | 76 | 505 | `FITS` |  | 0.0 | 2.0 | 68 | 52/62/64/67 | 600 | `TRUE_END` |
-| 1984 initial | 77 | 500 | `FITS` |  | 3.0 | 6.0 | 63 | 35/52/55/62 | 520 | `MIXED` |
-| 1984 initial | 78 | 470 | `FITS` |  | 0.0 | 16.0 | 68 | 35/49/51/67 | 470 | `MIXED` |
-| 1984 initial | 79 | 400 | `FITS` |  | 0.0 | 20.0 | 67 | 18/42/62/66 | 400 | `TRUE_END` |
-| 1984 initial | 80 | 440 | `FITS` |  | 0.0 | 0.0 | 68 | 47/47/63/67 | 440 | `TRUE_END` |
-| 1984 initial | 81 | 350 | `FITS` |  | 0.0 | 0.0 | 58 | 50/50/51/57 | 470 | `TRUE_END` |
-| 1984 initial | 82 | 115 | `FITS` |  | 0.0 | 0.0 | 57 | 39/44/48/56 | 420 | `TRUE_END` |
-| 1984 initial | 83 | 60 | `FITS` |  | 0.0 | 0.0 | 52 | 39/45/46/51 | 420 | `TRUE_END` |
-| 1984 initial | 84 | 0 | `FITS` |  | 0.0 | 0.0 | 51 | 3/15/19/44 | 320 | `HOLED` |
-| 1984 initial | 85 | 0 | `FITS` |  | 0.0 | 0.0 | 50 | 18/20/30/47 | 290 | `HOLED` |
-| 1984 initial | 86 | 0 | `FITS` |  | 0.0 | 0.0 | 40 | 10/11/20/39 | 170 | `HOLED` |
-| 1984 initial | 87 | 20 | `FITS` |  | 0.0 | 0.0 | 40 | 11/12/18/23 | 130 | `HOLED` |
-| 1984 initial | 88 | 110 | `FITS` |  | 0.0 | 0.0 | 56 | 20/28/32/49 | 250 | `HOLED` |
-| 1984 initial | 89 | 160 | `FITS` |  | 0.0 | 0.0 | 73 | 47/55/58/69 | 540 | `MIXED` |
-| 1984 initial | 90 | 150 | `FITS` |  | 0.0 | 0.0 | 76 | 27/37/49/74 | 350 | `HOLED` |
-| 2004 initial | 9 | 50 | `FITS` |  | 0.0 | 0.0 | 100 | 11/14/17/73 | 120 | `HOLED` |
-| 2004 initial | 10 | 70 | `FITS` |  | 10.0 | 10.0 | 64 | 0/14/16/21 | 110 | `HOLED` |
-| 2004 initial | 11 | 20 | `FITS` |  | 0.0 | 0.0 | 62 | 6/8/9/16 | 50 | `HOLED` |
-| 2004 initial | 12 | 20 | `FITS` |  | 0.0 | 0.0 | 58 | 6/7/10/14 | 40 | `TRUE_END` |
-| 2004 initial | 13 | 40 | `FITS` |  | 0.0 | 0.0 | 16 | 8/9/11/15 | 70 | `TRUE_END` |
-| 2004 initial | 14 | 55 | `FITS` |  | 0.0 | 4.0 | 22 | 7/8/11/19 | 50 | `TRUE_END` |
-| 2004 initial | 15 | 50 | `FITS` |  | 0.0 | 0.0 | 21 | 9/9/10/19 | 60 | `TRUE_END` |
-| 2004 initial | 16 | 70 | `FITS` |  | 0.0 | 0.0 | 25 | 17/19/21/24 | 170 | `TRUE_END` |
-| 2004 initial | 17 | 90 | `FITS` |  | 0.0 | 0.0 | 47 | 17/21/26/46 | 200 | `HOLED` |
-| 2004 initial | 18 | 120 | `FITS` |  | 0.0 | 0.0 | 62 | 16/29/35/54 | 390 | `HOLED` |
-| 2004 initial | 19 | 130 | `FITS` |  | 0.0 | 2.0 | 55 | 8/18/25/48 | 270 | `HOLED` |
-| 2004 initial | 20 | 80 | `FITS` |  | 0.0 | 0.0 | 58 | 29/33/45/55 | 390 | `MIXED` |
-| 2004 initial | 21 | 125 | `FITS` |  | 0.0 | 0.0 | 92 | 25/42/44/71 | 610 | `HOLED` |
-| 2004 initial | 22 | 185 | `FITS` |  | 0.0 | 0.0 | 100 | 33/38/43/97 | 870 | `HOLED` |
-| 2004 initial | 23 | 220 | `FITS` |  | 0.0 | 0.0 | 101 | 42/49/66/93 | 880 | `HOLED` |
-| 2004 initial | 24 | 170 | `FITS` |  | 0.0 | 0.0 | 99 | 46/56/86/97 | 920 | `HOLED` |
-| 2004 initial | 25 | 160 | `FITS` |  | 0.0 | 0.0 | 102 | 38/48/76/98 | 950 | `HOLED` |
-| 2004 initial | 26 | 205 | `FITS` |  | 2.0 | 0.0 | 102 | 17/45/67/100 | 950 | `HOLED` |
-| 2004 initial | 27 | 260 | `FITS` |  | 0.0 | 0.0 | 104 | 44/72/85/103 | 980 | `HOLED` |
-| 2004 initial | 28 | 270 | `FITS` |  | 0.0 | 0.0 | 107 | 46/48/79/105 | 1010 | `HOLED` |
-| 2004 initial | 29 | 260 | `FITS` |  | 0.0 | 0.0 | 110 | 38/47/87/108 | 990 | `HOLED` |
-| 2004 initial | 30 | 250 | `FITS` |  | 0.0 | 0.0 | 112 | 32/51/60/83 | 720 | `HOLED` |
-| 2004 initial | 31 | 250 | `FITS` |  | 0.0 | 0.0 | 69 | 32/34/43/67 | 320 | `HOLED` |
-| 2004 initial | 32 | 230 | `FITS` |  | 0.0 | 0.0 | 52 | 33/46/48/51 | 430 | `TRUE_END` |
-| 2004 initial | 33 | 260 | `FITS` |  | 0.0 | 0.0 | 57 | 31/45/48/53 | 450 | `MIXED` |
-| 2004 initial | 34 | 320 | `FITS` |  | 0.0 | 0.0 | 54 | 41/43/46/52 | 400 | `TRUE_END` |
-| 2004 initial | 35 | 320 | `FITS` |  | 0.0 | 2.0 | 54 | 33/43/44/52 | 400 | `MIXED` |
-| 2004 initial | 36 | 330 | `FITS` |  | 0.0 | 0.0 | 69 | 51/52/54/60 | 490 | `TRUE_END` |
-| 2004 initial | 37 | 320 | `FITS` |  | 0.0 | 0.0 | 88 | 53/57/78/86 | 740 | `HOLED` |
-| 2004 initial | 38 | 280 | `FITS` |  | 0.0 | 0.0 | 90 | 69/78/81/88 | 770 | `TRUE_END` |
-| 2004 initial | 39 | 230 | `FITS` |  | 0.0 | 0.0 | 78 | 68/69/71/77 | 660 | `TRUE_END` |
-| 2004 initial | 40 | 210 | `FITS` |  | 0.0 | 0.0 | 77 | 53/63/70/75 | 640 | `MIXED` |
-| 2004 initial | 41 | 190 | `FITS` |  | 0.0 | 0.0 | 65 | 43/52/54/58 | 490 | `HOLED` |
-| 2004 initial | 42 | 190 | `FITS` |  | 0.0 | 0.0 | 66 | 42/43/61/65 | 570 | `HOLED` |
-| 2004 initial | 43 | 170 | `FITS` |  | 0.0 | 0.0 | 68 | 53/61/63/66 | 590 | `TRUE_END` |
-| 2004 initial | 44 | 160 | `FITS` |  | 0.0 | 0.0 | 66 | 46/50/53/65 | 530 | `HOLED` |
-| 2004 initial | 45 | 150 | `FITS` |  | 0.0 | 0.0 | 64 | 31/38/41/56 | 370 | `HOLED` |
-| 2004 initial | 46 | 140 | `FITS` |  | 0.0 | 0.0 | 57 | 30/36/39/46 | 340 | `HOLED` |
-| 2004 initial | 47 | 140 | `FITS` |  | 0.0 | 0.0 | 50 | 29/32/34/41 | 300 | `HOLED` |
-| 2004 initial | 48 | 120 | `FITS` |  | 0.0 | 0.0 | 36 | 21/23/25/30 | 200 | `TRUE_END` |
-| 2004 initial | 49 | 130 | `FITS` |  | 0.0 | 0.0 | 29 | 20/22/23/27 | 190 | `TRUE_END` |
-| 2004 initial | 50 | 110 | `FITS` |  | 0.0 | 0.0 | 26 | 15/19/21/24 | 160 | `TRUE_END` |
-| 2004 initial | 51 | 120 | `FITS` |  | 0.0 | 0.0 | 30 | 18/22/24/28 | 190 | `TRUE_END` |
-| 2004 initial | 52 | 95 | `FITS` |  | 0.0 | 0.0 | 32 | 15/18/21/27 | 160 | `TRUE_END` |
-| 2004 initial | 53 | 140 | `FITS` |  | 0.0 | 0.0 | 37 | 21/24/26/33 | 210 | `MIXED` |
-| 2004 initial | 54 | 150 | `FITS` |  | 0.0 | 0.0 | 45 | 22/25/28/44 | 230 | `HOLED` |
-| 2004 initial | 55 | 160 | `FITS` |  | 0.0 | 0.0 | 52 | 23/33/36/49 | 310 | `HOLED` |
-| 2004 initial | 56 | 180 | `FITS` |  | 0.0 | 0.0 | 52 | 24/27/29/34 | 250 | `MIXED` |
-| 2004 initial | 57 | 200 | `FITS` |  | 0.0 | 0.0 | 47 | 25/29/36/45 | 270 | `TRUE_END` |
-| 2004 initial | 58 | 240 | `FITS` |  | 0.0 | 0.0 | 55 | 32/41/45/52 | 400 | `MIXED` |
-| 2004 initial | 59 | 270 | `FITS` |  | 0.0 | 0.0 | 58 | 42/44/48/57 | 430 | `HOLED` |
-| 2004 initial | 60 | 310 | `FITS` |  | 0.0 | 0.0 | 60 | 48/56/58/59 | 540 | `TRUE_END` |
-| 2004 initial | 61 | 330 | `FITS` |  | 0.0 | 0.0 | 63 | 48/53/59/62 | 560 | `MIXED` |
-| 2004 initial | 62 | 350 | `FITS` |  | 0.0 | 0.0 | 68 | 56/62/64/67 | 590 | `MIXED` |
-| 2004 initial | 63 | 350 | `FITS` |  | 0.0 | 0.0 | 70 | 60/63/65/69 | 620 | `MIXED` |
-| 2004 initial | 64 | 370 | `FITS` |  | 0.0 | 0.0 | 72 | 62/65/69/70 | 660 | `MIXED` |
-| 2004 initial | 65 | 370 | `FITS` |  | 0.0 | 0.0 | 71 | 60/67/68/70 | 640 | `TRUE_END` |
-| 2004 initial | 66 | 370 | `FITS` |  | 0.0 | 0.0 | 72 | 65/67/68/71 | 640 | `TRUE_END` |
-| 2004 initial | 67 | 420 | `FITS` |  | 0.0 | 0.0 | 74 | 46/66/68/71 | 640 | `TRUE_END` |
-| 2004 initial | 68 | 555 | `FITS` |  | 2.0 | 2.0 | 78 | 46/61/72/76 | 610 | `MIXED` |
-| 2004 initial | 69 | 560 | `FITS` |  | 0.0 | 0.0 | 82 | 37/70/75/79 | 720 | `HOLED` |
-| 2004 initial | 70 | 480 | `FITS` |  | 0.0 | 0.0 | 80 | 54/69/72/78 | 670 | `HOLED` |
-| 2004 initial | 71 | 410 | `FITS` |  | 2.0 | 2.0 | 83 | 39/55/73/82 | 670 | `HOLED` |
-| 2004 initial | 72 | 490 | `FITS` |  | 0.0 | 0.0 | 82 | 70/79/80/81 | 760 | `TRUE_END` |
-| 2004 initial | 73 | 550 | `FITS` |  | 0.0 | 0.0 | 80 | 22/25/77/79 | 730 | `MIXED` |
-| 2004 initial | 74 | 600 | `FITS` |  | 0.0 | 0.0 | 76 | 22/62/74/75 | 710 | `MIXED` |
-| 2004 initial | 75 | 540 | `FITS` |  | 0.0 | 0.0 | 74 | 68/69/71/73 | 670 | `TRUE_END` |
-| 2004 initial | 76 | 505 | `FITS` |  | 0.0 | 2.0 | 68 | 52/62/64/67 | 600 | `TRUE_END` |
-| 2004 initial | 77 | 500 | `FITS` |  | 3.0 | 6.0 | 63 | 35/52/55/62 | 520 | `MIXED` |
-| 2004 initial | 78 | 470 | `FITS` |  | 0.0 | 16.0 | 68 | 35/49/51/67 | 470 | `MIXED` |
-| 2004 initial | 79 | 400 | `FITS` |  | 0.0 | 20.0 | 67 | 18/42/62/66 | 400 | `TRUE_END` |
-| 2004 initial | 80 | 440 | `FITS` |  | 0.0 | 0.0 | 68 | 47/47/63/67 | 440 | `TRUE_END` |
-| 2004 initial | 81 | 350 | `FITS` |  | 0.0 | 0.0 | 58 | 50/50/51/57 | 470 | `TRUE_END` |
-| 2004 initial | 82 | 115 | `FITS` |  | 0.0 | 0.0 | 57 | 39/44/48/56 | 420 | `TRUE_END` |
-| 2004 initial | 83 | 60 | `FITS` |  | 0.0 | 0.0 | 52 | 39/45/46/51 | 420 | `TRUE_END` |
-| 2004 initial | 84 | 0 | `FITS` |  | 0.0 | 0.0 | 51 | 3/15/19/44 | 320 | `HOLED` |
-| 2004 initial | 85 | 50 | `FITS` |  | 0.0 | 0.0 | 50 | 18/20/30/47 | 290 | `HOLED` |
-| 2004 initial | 86 | 30 | `FITS` |  | 0.0 | 0.0 | 40 | 10/11/20/39 | 170 | `HOLED` |
-| 2004 initial | 87 | 30 | `FITS` |  | 0.0 | 0.0 | 40 | 11/12/18/23 | 130 | `HOLED` |
-| 2004 initial | 88 | 110 | `FITS` |  | 0.0 | 0.0 | 56 | 20/28/32/49 | 250 | `HOLED` |
-| 2004 initial | 89 | 160 | `FITS` |  | 0.0 | 0.0 | 73 | 47/55/58/69 | 540 | `MIXED` |
-| 2004 initial | 90 | 150 | `FITS` |  | 0.0 | 0.0 | 76 | 27/37/49/74 | 350 | `HOLED` |
-| 1999 relocation (inter-village south, GIS 9-15) - zero-retreat bound | 9 | 73 | `FITS` |  | 0.0 | 0.0 | 100 | 11/14/17/73 | 120 | `HOLED` |
-| 1999 relocation (inter-village south, GIS 9-15) - zero-retreat bound | 10 | 97 | `FITS` |  | 10.0 | 10.0 | 64 | 0/14/16/21 | 110 | `HOLED` |
-| 1999 relocation (inter-village south, GIS 9-15) - zero-retreat bound | 11 | 129 | `DROWNS` | yes | 89.0 | 92.0 | 62 | 6/8/9/16 | 50 | `HOLED` |
-| 1999 relocation (inter-village south, GIS 9-15) - zero-retreat bound | 12 | 126 | `DROWNS` | yes | 80.0 | 100.0 | 58 | 6/7/10/14 | 40 | `TRUE_END` |
-| 1999 relocation (inter-village south, GIS 9-15) - zero-retreat bound | 13 | 125 | `DROWNS` | yes | 71.0 | 98.0 | 16 | 8/9/11/15 | 70 | `TRUE_END` |
-| 1999 relocation (inter-village south, GIS 9-15) - zero-retreat bound | 14 | 126 | `DROWNS` | yes | 52.0 | 66.0 | 22 | 7/8/11/19 | 50 | `TRUE_END` |
-| 1999 relocation (inter-village south, GIS 9-15) - zero-retreat bound | 15 | 106 | `DROWNS` | yes | 38.0 | 64.0 | 21 | 9/9/10/19 | 60 | `TRUE_END` |
-| 1989 relocation (Pea Island, GIS 84-87) - zero-retreat bound | 84 | 163 | `DROWNS` | yes | 31.0 | 34.0 | 51 | 3/15/19/44 | 320 | `HOLED` |
-| 1989 relocation (Pea Island, GIS 84-87) - zero-retreat bound | 85 | 165 | `FITS` |  | 0.0 | 4.0 | 50 | 18/20/30/47 | 290 | `HOLED` |
-| 1989 relocation (Pea Island, GIS 84-87) - zero-retreat bound | 86 | 205 | `DROWNS` | yes | 22.0 | 38.0 | 40 | 10/11/20/39 | 170 | `HOLED` |
-| 1989 relocation (Pea Island, GIS 84-87) - zero-retreat bound | 87 | 113 | `DROWNS` |  | 2.0 | 38.0 | 40 | 11/12/18/23 | 130 | `HOLED` |
+| 1984 initial | 9 | 40 | `FITS` |  | 0.0 | 0.0 | 162 | 11/14/17/73 | 1530 | `HOLED` |
+| 1984 initial | 10 | 0 | `FITS` |  | 0.0 | 0.0 | 151 | 10/11/14/18 | 90 | `HOLED` |
+| 1984 initial | 11 | 0 | `FITS` |  | 0.0 | 0.0 | 157 | 6/8/9/16 | 50 | `HOLED` |
+| 1984 initial | 12 | 0 | `FITS` |  | 0.0 | 0.0 | 165 | 7/8/11/15 | 50 | `TRUE_END` |
+| 1984 initial | 13 | 0 | `FITS` |  | 0.0 | 0.0 | 166 | 8/10/12/15 | 70 | `TRUE_END` |
+| 1984 initial | 14 | 40 | `FITS` |  | 0.0 | 0.0 | 34 | 8/9/12/20 | 60 | `TRUE_END` |
+| 1984 initial | 15 | 50 | `FITS` |  | 0.0 | 0.0 | 29 | 8/9/10/18 | 60 | `TRUE_END` |
+| 1984 initial | 16 | 60 | `FITS` |  | 0.0 | 0.0 | 64 | 15/18/20/22 | 150 | `TRUE_END` |
+| 1984 initial | 17 | 90 | `FITS` |  | 0.0 | 0.0 | 71 | 17/21/26/47 | 200 | `HOLED` |
+| 1984 initial | 18 | 120 | `FITS` |  | 0.0 | 0.0 | 87 | 16/29/35/54 | 390 | `HOLED` |
+| 1984 initial | 19 | 130 | `FITS` |  | 0.0 | 2.0 | 97 | 8/18/25/48 | 270 | `HOLED` |
+| 1984 initial | 20 | 80 | `FITS` |  | 0.0 | 0.0 | 106 | 30/33/45/55 | 350 | `MIXED` |
+| 1984 initial | 21 | 120 | `FITS` |  | 0.0 | 0.0 | 113 | 25/42/44/71 | 610 | `HOLED` |
+| 1984 initial | 22 | 190 | `FITS` |  | 0.0 | 0.0 | 128 | 34/38/44/100 | 890 | `HOLED` |
+| 1984 initial | 23 | 190 | `FITS` |  | 0.0 | 0.0 | 133 | 41/48/64/93 | 890 | `HOLED` |
+| 1984 initial | 24 | 170 | `FITS` |  | 0.0 | 0.0 | 137 | 46/55/86/106 | 920 | `HOLED` |
+| 1984 initial | 25 | 160 | `FITS` |  | 0.0 | 0.0 | 134 | 38/48/76/112 | 1010 | `HOLED` |
+| 1984 initial | 26 | 205 | `FITS` |  | 2.0 | 0.0 | 147 | 17/45/67/116 | 1050 | `HOLED` |
+| 1984 initial | 27 | 260 | `FITS` |  | 0.0 | 0.0 | 161 | 40/72/83/121 | 1080 | `HOLED` |
+| 1984 initial | 28 | 270 | `FITS` |  | 0.0 | 0.0 | 166 | 46/48/79/114 | 1150 | `HOLED` |
+| 1984 initial | 29 | 260 | `FITS` |  | 0.0 | 0.0 | 155 | 38/47/87/121 | 990 | `HOLED` |
+| 1984 initial | 30 | 270 | `FITS` |  | 0.0 | 0.0 | 142 | 33/52/62/83 | 740 | `HOLED` |
+| 1984 initial | 31 | 230 | `FITS` |  | 0.0 | 0.0 | 140 | 30/32/41/67 | 340 | `HOLED` |
+| 1984 initial | 32 | 210 | `FITS` |  | 0.0 | 0.0 | 144 | 32/44/46/50 | 420 | `TRUE_END` |
+| 1984 initial | 33 | 250 | `FITS` |  | 0.0 | 0.0 | 149 | 30/44/46/53 | 430 | `MIXED` |
+| 1984 initial | 34 | 320 | `FITS` |  | 0.0 | 0.0 | 150 | 41/43/46/52 | 400 | `TRUE_END` |
+| 1984 initial | 35 | 320 | `FITS` |  | 0.0 | 2.0 | 129 | 33/42/44/52 | 400 | `MIXED` |
+| 1984 initial | 36 | 330 | `FITS` |  | 0.0 | 0.0 | 133 | 51/52/54/60 | 490 | `TRUE_END` |
+| 1984 initial | 37 | 320 | `FITS` |  | 0.0 | 0.0 | 157 | 53/57/78/86 | 740 | `HOLED` |
+| 1984 initial | 38 | 280 | `FITS` |  | 0.0 | 0.0 | 165 | 69/78/81/88 | 770 | `TRUE_END` |
+| 1984 initial | 39 | 230 | `FITS` |  | 0.0 | 0.0 | 170 | 68/69/71/77 | 660 | `TRUE_END` |
+| 1984 initial | 40 | 210 | `FITS` |  | 0.0 | 0.0 | 172 | 53/63/70/75 | 640 | `MIXED` |
+| 1984 initial | 41 | 190 | `FITS` |  | 0.0 | 0.0 | 174 | 43/52/54/58 | 490 | `HOLED` |
+| 1984 initial | 42 | 180 | `FITS` |  | 0.0 | 0.0 | 176 | 41/42/60/65 | 560 | `HOLED` |
+| 1984 initial | 43 | 170 | `FITS` |  | 0.0 | 0.0 | 179 | 53/61/63/66 | 590 | `TRUE_END` |
+| 1984 initial | 44 | 160 | `FITS` |  | 0.0 | 0.0 | 169 | 46/50/53/66 | 530 | `HOLED` |
+| 1984 initial | 45 | 150 | `FITS` |  | 0.0 | 0.0 | 155 | 32/38/41/56 | 360 | `HOLED` |
+| 1984 initial | 46 | 140 | `FITS` |  | 0.0 | 0.0 | 140 | 33/38/40/46 | 360 | `HOLED` |
+| 1984 initial | 47 | 140 | `FITS` |  | 0.0 | 0.0 | 126 | 29/32/34/41 | 300 | `HOLED` |
+| 1984 initial | 48 | 120 | `FITS` |  | 0.0 | 0.0 | 116 | 21/23/25/30 | 200 | `TRUE_END` |
+| 1984 initial | 49 | 130 | `FITS` |  | 0.0 | 0.0 | 95 | 20/22/23/27 | 190 | `TRUE_END` |
+| 1984 initial | 50 | 110 | `FITS` |  | 0.0 | 0.0 | 86 | 15/19/21/24 | 160 | `TRUE_END` |
+| 1984 initial | 51 | 120 | `FITS` |  | 0.0 | 0.0 | 54 | 18/22/24/28 | 190 | `TRUE_END` |
+| 1984 initial | 52 | 95 | `FITS` |  | 0.0 | 0.0 | 59 | 15/18/21/27 | 160 | `TRUE_END` |
+| 1984 initial | 53 | 140 | `FITS` |  | 0.0 | 0.0 | 53 | 18/23/26/33 | 210 | `MIXED` |
+| 1984 initial | 54 | 150 | `FITS` |  | 0.0 | 0.0 | 111 | 22/25/28/45 | 230 | `HOLED` |
+| 1984 initial | 55 | 160 | `FITS` |  | 0.0 | 0.0 | 106 | 23/33/36/49 | 310 | `HOLED` |
+| 1984 initial | 56 | 180 | `FITS` |  | 0.0 | 0.0 | 77 | 24/26/29/34 | 240 | `MIXED` |
+| 1984 initial | 57 | 200 | `FITS` |  | 0.0 | 0.0 | 64 | 24/29/36/45 | 270 | `TRUE_END` |
+| 1984 initial | 58 | 240 | `FITS` |  | 0.0 | 0.0 | 68 | 32/40/45/52 | 390 | `MIXED` |
+| 1984 initial | 59 | 270 | `FITS` |  | 0.0 | 0.0 | 78 | 42/44/48/61 | 430 | `HOLED` |
+| 1984 initial | 60 | 310 | `FITS` |  | 0.0 | 0.0 | 102 | 48/56/62/73 | 590 | `HOLED` |
+| 1984 initial | 61 | 330 | `FITS` |  | 0.0 | 0.0 | 117 | 48/53/62/90 | 900 | `HOLED` |
+| 1984 initial | 62 | 330 | `FITS` |  | 0.0 | 0.0 | 136 | 56/62/70/103 | 650 | `HOLED` |
+| 1984 initial | 63 | 330 | `FITS` |  | 0.0 | 0.0 | 139 | 58/62/65/75 | 610 | `HOLED` |
+| 1984 initial | 64 | 370 | `FITS` |  | 0.0 | 0.0 | 138 | 62/65/70/94 | 910 | `HOLED` |
+| 1984 initial | 65 | 370 | `FITS` |  | 0.0 | 0.0 | 139 | 60/69/77/114 | 810 | `HOLED` |
+| 1984 initial | 66 | 380 | `FITS` |  | 0.0 | 0.0 | 131 | 67/70/72/85 | 670 | `HOLED` |
+| 1984 initial | 67 | 420 | `FITS` |  | 0.0 | 0.0 | 144 | 46/67/68/71 | 640 | `MIXED` |
+| 1984 initial | 68 | 555 | `FITS` |  | 2.0 | 2.0 | 99 | 46/61/72/90 | 610 | `MIXED` |
+| 1984 initial | 69 | 560 | `FITS` |  | 0.0 | 0.0 | 104 | 68/70/75/90 | 720 | `HOLED` |
+| 1984 initial | 70 | 480 | `FITS` |  | 0.0 | 0.0 | 140 | 54/69/72/78 | 670 | `HOLED` |
+| 1984 initial | 71 | 410 | `FITS` |  | 2.0 | 2.0 | 137 | 39/55/73/82 | 670 | `HOLED` |
+| 1984 initial | 72 | 490 | `FITS` |  | 0.0 | 0.0 | 123 | 70/79/82/93 | 760 | `MIXED` |
+| 1984 initial | 73 | 550 | `FITS` |  | 0.0 | 0.0 | 132 | 22/25/84/99 | 850 | `HOLED` |
+| 1984 initial | 74 | 600 | `FITS` |  | 0.0 | 0.0 | 132 | 23/62/74/88 | 710 | `HOLED` |
+| 1984 initial | 75 | 540 | `FITS` |  | 0.0 | 0.0 | 103 | 68/73/76/82 | 700 | `TRUE_END` |
+| 1984 initial | 76 | 505 | `FITS` |  | 0.0 | 2.0 | 140 | 52/62/65/74 | 600 | `TRUE_END` |
+| 1984 initial | 77 | 500 | `FITS` |  | 3.0 | 6.0 | 143 | 35/52/61/79 | 560 | `MIXED` |
+| 1984 initial | 78 | 490 | `FITS` |  | 1.0 | 2.0 | 130 | 35/52/61/67 | 570 | `MIXED` |
+| 1984 initial | 79 | 500 | `FITS` |  | 0.0 | 0.0 | 101 | 18/61/63/66 | 590 | `TRUE_END` |
+| 1984 initial | 80 | 490 | `FITS` |  | 0.0 | 0.0 | 90 | 62/63/64/72 | 600 | `TRUE_END` |
+| 1984 initial | 81 | 365 | `FITS` |  | 0.0 | 0.0 | 100 | 61/63/64/84 | 600 | `HOLED` |
+| 1984 initial | 82 | 120 | `FITS` |  | 0.0 | 0.0 | 104 | 39/44/48/61 | 420 | `TRUE_END` |
+| 1984 initial | 83 | 70 | `FITS` |  | 0.0 | 0.0 | 106 | 41/47/48/51 | 440 | `TRUE_END` |
+| 1984 initial | 84 | 0 | `FITS` |  | 0.0 | 0.0 | 147 | 5/18/21/48 | 340 | `HOLED` |
+| 1984 initial | 85 | 0 | `FITS` |  | 0.0 | 0.0 | 176 | 20/23/33/50 | 300 | `HOLED` |
+| 1984 initial | 86 | 0 | `FITS` |  | 0.0 | 0.0 | 185 | 12/13/22/40 | 190 | `HOLED` |
+| 1984 initial | 87 | 30 | `FITS` |  | 0.0 | 0.0 | 181 | 12/13/19/24 | 140 | `HOLED` |
+| 1984 initial | 88 | 120 | `FITS` |  | 0.0 | 0.0 | 174 | 20/28/32/49 | 250 | `HOLED` |
+| 1984 initial | 89 | 160 | `FITS` |  | 0.0 | 0.0 | 177 | 47/55/58/69 | 540 | `MIXED` |
+| 1984 initial | 90 | 150 | `FITS` |  | 0.0 | 0.0 | 181 | 26/37/49/81 | 350 | `HOLED` |
+| 2004 initial | 9 | 50 | `FITS` |  | 0.0 | 0.0 | 162 | 11/14/17/73 | 1530 | `HOLED` |
+| 2004 initial | 10 | 40 | `FITS` |  | 0.0 | 0.0 | 151 | 10/11/14/18 | 90 | `HOLED` |
+| 2004 initial | 11 | 20 | `FITS` |  | 0.0 | 0.0 | 157 | 6/8/9/16 | 50 | `HOLED` |
+| 2004 initial | 12 | 30 | `FITS` |  | 0.0 | 0.0 | 165 | 7/8/11/15 | 50 | `TRUE_END` |
+| 2004 initial | 13 | 50 | `FITS` |  | 0.0 | 0.0 | 166 | 8/10/12/15 | 70 | `TRUE_END` |
+| 2004 initial | 14 | 65 | `FITS` |  | 0.0 | 16.0 | 34 | 8/9/12/20 | 60 | `TRUE_END` |
+| 2004 initial | 15 | 50 | `FITS` |  | 0.0 | 0.0 | 29 | 8/9/10/18 | 60 | `TRUE_END` |
+| 2004 initial | 16 | 60 | `FITS` |  | 0.0 | 0.0 | 64 | 15/18/20/22 | 150 | `TRUE_END` |
+| 2004 initial | 17 | 90 | `FITS` |  | 0.0 | 0.0 | 71 | 17/21/26/47 | 200 | `HOLED` |
+| 2004 initial | 18 | 120 | `FITS` |  | 0.0 | 0.0 | 87 | 16/29/35/54 | 390 | `HOLED` |
+| 2004 initial | 19 | 130 | `FITS` |  | 0.0 | 2.0 | 97 | 8/18/25/48 | 270 | `HOLED` |
+| 2004 initial | 20 | 80 | `FITS` |  | 0.0 | 0.0 | 106 | 30/33/45/55 | 350 | `MIXED` |
+| 2004 initial | 21 | 125 | `FITS` |  | 0.0 | 0.0 | 113 | 25/42/44/71 | 610 | `HOLED` |
+| 2004 initial | 22 | 190 | `FITS` |  | 0.0 | 0.0 | 128 | 34/38/44/100 | 890 | `HOLED` |
+| 2004 initial | 23 | 190 | `FITS` |  | 0.0 | 0.0 | 133 | 41/48/64/93 | 890 | `HOLED` |
+| 2004 initial | 24 | 170 | `FITS` |  | 0.0 | 0.0 | 137 | 46/55/86/106 | 920 | `HOLED` |
+| 2004 initial | 25 | 160 | `FITS` |  | 0.0 | 0.0 | 134 | 38/48/76/112 | 1010 | `HOLED` |
+| 2004 initial | 26 | 205 | `FITS` |  | 2.0 | 0.0 | 147 | 17/45/67/116 | 1050 | `HOLED` |
+| 2004 initial | 27 | 260 | `FITS` |  | 0.0 | 0.0 | 161 | 40/72/83/121 | 1080 | `HOLED` |
+| 2004 initial | 28 | 270 | `FITS` |  | 0.0 | 0.0 | 166 | 46/48/79/114 | 1150 | `HOLED` |
+| 2004 initial | 29 | 260 | `FITS` |  | 0.0 | 0.0 | 155 | 38/47/87/121 | 990 | `HOLED` |
+| 2004 initial | 30 | 270 | `FITS` |  | 0.0 | 0.0 | 142 | 33/52/62/83 | 740 | `HOLED` |
+| 2004 initial | 31 | 230 | `FITS` |  | 0.0 | 0.0 | 140 | 30/32/41/67 | 340 | `HOLED` |
+| 2004 initial | 32 | 210 | `FITS` |  | 0.0 | 0.0 | 144 | 32/44/46/50 | 420 | `TRUE_END` |
+| 2004 initial | 33 | 250 | `FITS` |  | 0.0 | 0.0 | 149 | 30/44/46/53 | 430 | `MIXED` |
+| 2004 initial | 34 | 320 | `FITS` |  | 0.0 | 0.0 | 150 | 41/43/46/52 | 400 | `TRUE_END` |
+| 2004 initial | 35 | 320 | `FITS` |  | 0.0 | 2.0 | 129 | 33/42/44/52 | 400 | `MIXED` |
+| 2004 initial | 36 | 330 | `FITS` |  | 0.0 | 0.0 | 133 | 51/52/54/60 | 490 | `TRUE_END` |
+| 2004 initial | 37 | 320 | `FITS` |  | 0.0 | 0.0 | 157 | 53/57/78/86 | 740 | `HOLED` |
+| 2004 initial | 38 | 280 | `FITS` |  | 0.0 | 0.0 | 165 | 69/78/81/88 | 770 | `TRUE_END` |
+| 2004 initial | 39 | 230 | `FITS` |  | 0.0 | 0.0 | 170 | 68/69/71/77 | 660 | `TRUE_END` |
+| 2004 initial | 40 | 210 | `FITS` |  | 0.0 | 0.0 | 172 | 53/63/70/75 | 640 | `MIXED` |
+| 2004 initial | 41 | 190 | `FITS` |  | 0.0 | 0.0 | 174 | 43/52/54/58 | 490 | `HOLED` |
+| 2004 initial | 42 | 180 | `FITS` |  | 0.0 | 0.0 | 176 | 41/42/60/65 | 560 | `HOLED` |
+| 2004 initial | 43 | 170 | `FITS` |  | 0.0 | 0.0 | 179 | 53/61/63/66 | 590 | `TRUE_END` |
+| 2004 initial | 44 | 160 | `FITS` |  | 0.0 | 0.0 | 169 | 46/50/53/66 | 530 | `HOLED` |
+| 2004 initial | 45 | 150 | `FITS` |  | 0.0 | 0.0 | 155 | 32/38/41/56 | 360 | `HOLED` |
+| 2004 initial | 46 | 140 | `FITS` |  | 0.0 | 0.0 | 140 | 33/38/40/46 | 360 | `HOLED` |
+| 2004 initial | 47 | 140 | `FITS` |  | 0.0 | 0.0 | 126 | 29/32/34/41 | 300 | `HOLED` |
+| 2004 initial | 48 | 120 | `FITS` |  | 0.0 | 0.0 | 116 | 21/23/25/30 | 200 | `TRUE_END` |
+| 2004 initial | 49 | 130 | `FITS` |  | 0.0 | 0.0 | 95 | 20/22/23/27 | 190 | `TRUE_END` |
+| 2004 initial | 50 | 110 | `FITS` |  | 0.0 | 0.0 | 86 | 15/19/21/24 | 160 | `TRUE_END` |
+| 2004 initial | 51 | 120 | `FITS` |  | 0.0 | 0.0 | 54 | 18/22/24/28 | 190 | `TRUE_END` |
+| 2004 initial | 52 | 95 | `FITS` |  | 0.0 | 0.0 | 59 | 15/18/21/27 | 160 | `TRUE_END` |
+| 2004 initial | 53 | 140 | `FITS` |  | 0.0 | 0.0 | 53 | 18/23/26/33 | 210 | `MIXED` |
+| 2004 initial | 54 | 150 | `FITS` |  | 0.0 | 0.0 | 111 | 22/25/28/45 | 230 | `HOLED` |
+| 2004 initial | 55 | 160 | `FITS` |  | 0.0 | 0.0 | 106 | 23/33/36/49 | 310 | `HOLED` |
+| 2004 initial | 56 | 180 | `FITS` |  | 0.0 | 0.0 | 77 | 24/26/29/34 | 240 | `MIXED` |
+| 2004 initial | 57 | 200 | `FITS` |  | 0.0 | 0.0 | 64 | 24/29/36/45 | 270 | `TRUE_END` |
+| 2004 initial | 58 | 240 | `FITS` |  | 0.0 | 0.0 | 68 | 32/40/45/52 | 390 | `MIXED` |
+| 2004 initial | 59 | 270 | `FITS` |  | 0.0 | 0.0 | 78 | 42/44/48/61 | 430 | `HOLED` |
+| 2004 initial | 60 | 310 | `FITS` |  | 0.0 | 0.0 | 102 | 48/56/62/73 | 590 | `HOLED` |
+| 2004 initial | 61 | 330 | `FITS` |  | 0.0 | 0.0 | 117 | 48/53/62/90 | 900 | `HOLED` |
+| 2004 initial | 62 | 330 | `FITS` |  | 0.0 | 0.0 | 136 | 56/62/70/103 | 650 | `HOLED` |
+| 2004 initial | 63 | 330 | `FITS` |  | 0.0 | 0.0 | 139 | 58/62/65/75 | 610 | `HOLED` |
+| 2004 initial | 64 | 370 | `FITS` |  | 0.0 | 0.0 | 138 | 62/65/70/94 | 910 | `HOLED` |
+| 2004 initial | 65 | 370 | `FITS` |  | 0.0 | 0.0 | 139 | 60/69/77/114 | 810 | `HOLED` |
+| 2004 initial | 66 | 380 | `FITS` |  | 0.0 | 0.0 | 131 | 67/70/72/85 | 670 | `HOLED` |
+| 2004 initial | 67 | 420 | `FITS` |  | 0.0 | 0.0 | 144 | 46/67/68/71 | 640 | `MIXED` |
+| 2004 initial | 68 | 555 | `FITS` |  | 2.0 | 2.0 | 99 | 46/61/72/90 | 610 | `MIXED` |
+| 2004 initial | 69 | 560 | `FITS` |  | 0.0 | 0.0 | 104 | 68/70/75/90 | 720 | `HOLED` |
+| 2004 initial | 70 | 480 | `FITS` |  | 0.0 | 0.0 | 140 | 54/69/72/78 | 670 | `HOLED` |
+| 2004 initial | 71 | 410 | `FITS` |  | 2.0 | 2.0 | 137 | 39/55/73/82 | 670 | `HOLED` |
+| 2004 initial | 72 | 490 | `FITS` |  | 0.0 | 0.0 | 123 | 70/79/82/93 | 760 | `MIXED` |
+| 2004 initial | 73 | 550 | `FITS` |  | 0.0 | 0.0 | 132 | 22/25/84/99 | 850 | `HOLED` |
+| 2004 initial | 74 | 600 | `FITS` |  | 0.0 | 0.0 | 132 | 23/62/74/88 | 710 | `HOLED` |
+| 2004 initial | 75 | 540 | `FITS` |  | 0.0 | 0.0 | 103 | 68/73/76/82 | 700 | `TRUE_END` |
+| 2004 initial | 76 | 505 | `FITS` |  | 0.0 | 2.0 | 140 | 52/62/65/74 | 600 | `TRUE_END` |
+| 2004 initial | 77 | 500 | `FITS` |  | 3.0 | 6.0 | 143 | 35/52/61/79 | 560 | `MIXED` |
+| 2004 initial | 78 | 490 | `FITS` |  | 1.0 | 2.0 | 130 | 35/52/61/67 | 570 | `MIXED` |
+| 2004 initial | 79 | 500 | `FITS` |  | 0.0 | 0.0 | 101 | 18/61/63/66 | 590 | `TRUE_END` |
+| 2004 initial | 80 | 490 | `FITS` |  | 0.0 | 0.0 | 90 | 62/63/64/72 | 600 | `TRUE_END` |
+| 2004 initial | 81 | 365 | `FITS` |  | 0.0 | 0.0 | 100 | 61/63/64/84 | 600 | `HOLED` |
+| 2004 initial | 82 | 120 | `FITS` |  | 0.0 | 0.0 | 104 | 39/44/48/61 | 420 | `TRUE_END` |
+| 2004 initial | 83 | 70 | `FITS` |  | 0.0 | 0.0 | 106 | 41/47/48/51 | 440 | `TRUE_END` |
+| 2004 initial | 84 | 30 | `FITS` |  | 0.0 | 2.0 | 147 | 5/18/21/48 | 340 | `HOLED` |
+| 2004 initial | 85 | 70 | `FITS` |  | 0.0 | 0.0 | 176 | 20/23/33/50 | 300 | `HOLED` |
+| 2004 initial | 86 | 50 | `FITS` |  | 0.0 | 0.0 | 185 | 12/13/22/40 | 190 | `HOLED` |
+| 2004 initial | 87 | 40 | `FITS` |  | 0.0 | 0.0 | 181 | 12/13/19/24 | 140 | `HOLED` |
+| 2004 initial | 88 | 120 | `FITS` |  | 0.0 | 0.0 | 174 | 20/28/32/49 | 250 | `HOLED` |
+| 2004 initial | 89 | 160 | `FITS` |  | 0.0 | 0.0 | 177 | 47/55/58/69 | 540 | `MIXED` |
+| 2004 initial | 90 | 150 | `FITS` |  | 0.0 | 0.0 | 181 | 26/37/49/81 | 350 | `HOLED` |
+| 1999 relocation (inter-village south, GIS 9-15) - zero-retreat bound | 9 | 73 | `FITS` |  | 0.0 | 0.0 | 162 | 11/14/17/73 | 1530 | `HOLED` |
+| 1999 relocation (inter-village south, GIS 9-15) - zero-retreat bound | 10 | 97 | `FITS` |  | 0.0 | 16.0 | 151 | 10/11/14/18 | 90 | `HOLED` |
+| 1999 relocation (inter-village south, GIS 9-15) - zero-retreat bound | 11 | 129 | `DROWNS` | yes | 89.0 | 92.0 | 157 | 6/8/9/16 | 50 | `HOLED` |
+| 1999 relocation (inter-village south, GIS 9-15) - zero-retreat bound | 12 | 126 | `DROWNS` | yes | 65.0 | 96.0 | 165 | 7/8/11/15 | 50 | `TRUE_END` |
+| 1999 relocation (inter-village south, GIS 9-15) - zero-retreat bound | 13 | 125 | `DROWNS` | yes | 46.0 | 94.0 | 166 | 8/10/12/15 | 70 | `TRUE_END` |
+| 1999 relocation (inter-village south, GIS 9-15) - zero-retreat bound | 14 | 126 | `DROWNS` | yes | 46.0 | 56.0 | 34 | 8/9/12/20 | 60 | `TRUE_END` |
+| 1999 relocation (inter-village south, GIS 9-15) - zero-retreat bound | 15 | 106 | `DROWNS` | yes | 41.0 | 66.0 | 29 | 8/9/10/18 | 60 | `TRUE_END` |
+| 1989 relocation (Pea Island, GIS 84-87) - zero-retreat bound | 84 | 163 | `DROWNS` |  | 2.0 | 22.0 | 147 | 5/18/21/48 | 340 | `HOLED` |
+| 1989 relocation (Pea Island, GIS 84-87) - zero-retreat bound | 85 | 165 | `FITS` |  | 0.0 | 0.0 | 176 | 20/23/33/50 | 300 | `HOLED` |
+| 1989 relocation (Pea Island, GIS 84-87) - zero-retreat bound | 86 | 205 | `DROWNS` |  | 19.0 | 26.0 | 185 | 12/13/22/40 | 190 | `HOLED` |
+| 1989 relocation (Pea Island, GIS 84-87) - zero-retreat bound | 87 | 113 | `DROWNS` |  | 0.0 | 26.0 | 181 | 12/13/19/24 | 140 | `HOLED` |

@@ -32,15 +32,19 @@ output sound"; `4-compare/` asks "which method should we spend".
 | Statistic | `min(road) − min(dune)`, minima taken independently | per-profile difference, then median |
 | Obliquity | uncorrected | mask sheared with the same per-profile shear as the topography |
 | Output | `old_method_offset/<year>/` | `dunestart_offset/<year>/` |
-| Drowns at t=0 | 10 (1984), 11 (2004) | **3, both years** |
+| Drowns at t=0 | 7 (1984), 5 (2004) | **0, both years** |
 | vs the rasterized road | +40 m / +23 m median | 0 m *by construction* |
 
 Both are 2 rows × 82 cols, GIS IDs then metres, so switching is a drop-in.
 
-**What the runner spends today** (`scripts/hatteras_site_config.py:78,91`) is the
-**old** method. Switching means editing those two lines and changing the
-`--method` default in `3-figures/HAT_road_domain_views.py`, or the figures stop
-describing the model you run.
+**What the runner spends today** (`scripts/hatteras_site_config.py:96,110`) is
+the **dune-start** method, switched 2026-08-18. `3-figures/HAT_road_domain_views.py`
+defaults to `--method dunestart` to match; change both together, or the figures
+stop describing the model you run.
+
+Current outputs are built on **`2009_v5`** — the gap-filled DEM. See
+`hat_topo_version.py`: the version is resolved once, from the extractor, so
+bumping `VERSION` there moves this whole tree with it.
 
 ## The workflow
 
@@ -126,6 +130,33 @@ domain. If that file ever moves, fix the `_PLACEMENT` path — do not copy the
 functions across.
 
 ## Changelog
+
+**2026-08-20 — rebuilt on `2009_v5` (gap-filled DEM).** The previous tree was
+archived whole to `dunestart_offset_ARCHIVE_2009_v4/`, alongside the existing
+v3 archive.
+
+v5 is a **different DEM**, not just re-picked windows: `2009_pea_hatteras_filled`,
+the 2009 base with its LiDAR holes filled from the 2014 NOAA Post-Sandy DEM.
+**89 of 90 domains changed interior shape**, all deeper.
+
+* **Drowns at initialisation: 3 per year → 0.** This is the v4 audit's own
+  diagnosis acted on — those domains drowned on unsurveyed no-data read as
+  water, not on measured water. No setback is moved seaward any more.
+* 2004 negatives 0, 1984 negatives still 6 (GIS 10, 11, 12, 84, 85, 86).
+* Setbacks moved in 21 (1984) / 26 (2004) of 82 domains, median 0 m. Largest:
+  **GIS 79 400 → 500 m** and **GIS 80 440 → 490 m**, two of the three roadways
+  the relocation logic acts on.
+* **Masks were not re-burned and did not need to be.** They register to the
+  `resampled_*.tif` grids, which the fill did not touch — filled and unfilled
+  arrays have identical shapes in all 90 domains, the extractor ran with
+  `REQUIRE_ROAD_MASKS = True` without erroring, and `HAT_check_geojson_vs_mask.py`
+  re-confirms 100 % of centreline vertices inside the mask footprint.
+* Fixed in `HAT_road_offset_from_dune_start.py`: the audit's "106 wet cells, 105
+  never surveyed" paragraph was **hardcoded** and printed under whatever version
+  ran, so on v5 it asserted a v4 measurement in a run where nothing drowns. It
+  is now conditional on `n_drowned > 0`, and says where the number came from.
+* Also corrected in this README: it claimed the runner spends the **old** method.
+  It has spent dune-start since 2026-08-18 (`hatteras_site_config.py:96,110`).
 
 **2026-08-17 (third pass)** — Added `4-compare/` and moved the two cross-method
 scripts into it: `HAT_method_comparison_figures.py` (from `1-produce/`) and

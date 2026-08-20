@@ -75,9 +75,15 @@ HATTERAS_ANNOTATIONS = AnnotationConfig(
 # road actually rasterized onto the model grid, reaching 130 m.
 #
 # TWO THINGS THAT MUST MOVE TOGETHER WITH THIS:
-#   1. TOPO_DUNE_VERSION must be 2009_v3. These setbacks are measured against
-#      2009_v3's interior row 0; spend them on a different extraction and the
-#      reference they were measured from no longer exists.
+#   1. The topography must be the extraction these setbacks were measured
+#      against -- they are metres landward of ITS interior row 0, so spending
+#      them on another extraction measures from a row that does not exist.
+#      This no longer has to be remembered: the runner, the sweep worker and
+#      the road scripts all resolve the version through
+#      scripts/hat_topo_version.py, which reads VERSION out of the extractor.
+#      Bump it there and everything moves together. (This comment used to
+#      pin 2009_v3 by hand and went stale the day the setbacks moved to v4.)
+#      Current: 2009_v5, the gap-filled DEM.
 #   2. The legacy files are still on disk under old_method_offset/ for the
 #      method comparison. They are NOT interchangeable -- see
 #      scripts/input_prep/4-mgmt-forcings/road_offset/README.md.

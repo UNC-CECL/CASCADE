@@ -66,13 +66,20 @@ import numpy as np
 # CONFIG -- must mirror HAT_hindcast_1984_2024.py
 # =============================================================================
 
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
+# scripts/input_prep/HAT_units_datum_check.py -> repo root is parents[2].
+# This said parents[4], which resolved to C:\Users\hanna: every path below
+# pointed outside the repo and the script could not find one of its inputs.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA = PROJECT_ROOT / "data" / "hatteras_init"
 B3D = DATA / "1-barrier3d-domains"
 
-TOPO_DUNE_VERSION = "2009_v2"
-TOPO_DIR = B3D / "2009-dune-topo" / TOPO_DUNE_VERSION / "topography"
-DUNE_DIR = B3D / "2009-dune-topo" / TOPO_DUNE_VERSION / "dunes"
+# Resolved from the extractor rather than pinned, so this checks the units of
+# the arrays actually being run. It said "2009_v2", which has since been moved
+# to 2009-dune-topo/incorrect/.
+sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+from hat_topo_version import topo_dirs  # noqa: E402
+
+TOPO_DIR, DUNE_DIR, TOPO_DUNE_VERSION = topo_dirs()
 ROAD_ELEV_CSV = (DATA / "4-mgmt-forcing" / "road_elevation"
                  / "RoadElevation.csv")   # one file, both periods
 ROAD_SETBACK_CSV = (DATA / "4-mgmt-forcing" / "road_offset" / "old_method_offset"

@@ -1,12 +1,12 @@
 # NC-12 road offset measured from the extracted dune start
 
-Generated 2026-08-20T12:02:08 by `HAT_road_offset_from_dune_start.py`.
+Generated 2026-08-19T13:35:12 by `HAT_road_offset_from_dune_start.py`.
 
 | | |
 |---|---|
 | Extractor | `HAT_dune_topo_extractor.py` (ALONGSHORE_FLIP=True, STRAIGHTEN=True) |
-| DEMs | `C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\2009-raw\2009-npy-arrays\2009_pea_hatteras_filled` |
-| Picked windows | `HAT_dune_search_windows_2009_v5.json` |
+| DEMs | `C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\2009-raw\2009-npy-arrays\2009_pea_hatteras` |
+| Picked windows | `HAT_dune_search_windows_2009_v4.json` |
 | Reference | interior row 0 = picked dune crest + 1 cell |
 | Road reference | seaward-most road cell per profile |
 | Alongshore collapse | median over profiles with road |
@@ -27,11 +27,9 @@ The test transcribed here is bulldoze's: the rows checked are the NEIGHBOURS of 
 
 ### The assumption this rests on
 
-**Nothing drowns at initialisation on 2009_v5** -- 0 domains in either year -- so no setback was moved and the rest of this section does not apply to this run.
+On the 2009_v4 topography these domains **do not drown on measured water -- they drown on LiDAR coverage gaps.** Across the six flanking rows that fail at GIS 78/79/80 there are 106 wet cells, of which **105 were never surveyed and 1 is genuinely measured wet.** The extractor writes no-data back as the water sentinel because Barrier3D has no representation for "unknown", and the drown test counts every cell -- deliberately, so that what is reported is what the run does.
 
-That is the point of the gap-filled DEM. On `2009_v4` three domains per year drowned, and the audit for that version showed they drowned on **LiDAR coverage gaps, not measured water**: across the six flanking rows failing at GIS 78/79/80 there were 106 wet cells, of which 105 had never been surveyed and 1 was genuinely wet. The extractor writes no-data back as the water sentinel because Barrier3D has no representation for "unknown", so unsurveyed ground read as ocean and drowned the roadway. Filling those holes from the 2014 NOAA Post-Sandy DEM removes the cause, and the drown count goes to zero.
-
-Those figures are quoted from the `2009_v4` audit and were measured there, not recomputed here -- see `dunestart_offset_ARCHIVE_2009_v4/`.
+So this is **not** "the road was in water, we moved it out". It is "the 2009 DEM has no data there, CASCADE reads no-data as water, so the road is moved onto surveyed ground to keep the domain managed". Any managed-vs-unmanaged result at GIS 78-80 needs that sentence attached to it.
 
 A move that lands inside the domain's own per-profile spread is a re-pick of the alongshore statistic. A move beyond it is a position no profile showed -- a different claim, flagged `BEYOND_MEASURED`.
 
@@ -71,21 +69,27 @@ D8 is the one extreme outlier (-353 m in 1984). That is the Buxton bend, where N
 ## 1984
 
 - Road span: GIS 9-90 (82 with road, 7 without)
-- Setback vs 2009 dune: median 190 m, range -60 to 600 m
+- Setback vs 2009 dune: median 195 m, range -60 to 600 m
 - Delta vs the LEGACY `RoadSetback_1984.csv`: median 40 m, range -32 to 127 m
 - Offset-derived dune-line retreat 1984->2004: median 43 m
-- **corr(delta, retreat) = -0.585** -- see the caveat below.
+- **corr(delta, retreat) = -0.615** -- see the caveat below.
 - NEGATIVE, floored to 0: 6 domain(s)
 
 | GIS | true setback (m) |
 |---:|---:|
-| 10 | -10 |
 | 11 | -60 |
-| 12 | -40 |
-| 84 | -10 |
-| 85 | -30 |
-| 86 | -40 |
-- DROWNS at initialisation: 0 domain(s)
+| 12 | -50 |
+| 13 | -10 |
+| 84 | -30 |
+| 85 | -60 |
+| 86 | -60 |
+- DROWNS at initialisation: 3 domain(s)
+
+| GIS | measured (m) | written (m) | moved seaward (m) | inside the measured per-profile range? |
+|---:|---:|---:|---:|---|
+| 78 | 490 | 470 | 20 | yes |
+| 79 | 500 | 400 | 100 | **no -- beyond it** |
+| 80 | 490 | 440 | 50 | yes |
 
 ### Flags
 
@@ -98,18 +102,17 @@ D8 is the one extreme outlier (-353 m in 1984). That is the Buxton bend, where N
 | 5 | NO_ROAD |
 | 6 | NO_ROAD |
 | 7 | NO_ROAD |
-| 8 | SCATTER_SETBACK(166m),SCATTER_ELEV(0.71),WIDTH(750m),EXCLUDED_FROM_SPAN |
+| 8 | SCATTER_SETBACK(166m),SCATTER_ELEV(0.57),EXCLUDED_FROM_SPAN |
 | 9 | SCATTER_ELEV(1.59) |
-| 10 | NEGATIVE(-10->floored 0),SCATTER_ELEV(0.90) |
-| 11 | NEGATIVE(-60->floored 0),SCATTER_ELEV(0.82) |
-| 12 | NEGATIVE(-40->floored 0) |
-| 13 | SCATTER_ELEV(0.67) |
+| 10 | SCATTER_ELEV(0.90) |
+| 11 | NEGATIVE(-60->floored 0),SCATTER_ELEV(0.80) |
+| 12 | NEGATIVE(-50->floored 0) |
+| 13 | NEGATIVE(-10->floored 0),SCATTER_SETBACK(51m),SCATTER_ELEV(0.67) |
 | 21 | SCATTER_SETBACK(50m) |
+| 22 | SCATTER_SETBACK(41m) |
 | 26 | SCATTER_SETBACK(50m) |
-| 27 | SCATTER_SETBACK(70m) |
-| 33 | SCATTER_SETBACK(60m) |
-| 48 | SCATTER_SETBACK(51m) |
-| 63 | SCATTER_SETBACK(50m) |
+| 27 | SCATTER_SETBACK(50m) |
+| 48 | SCATTER_SETBACK(41m) |
 | 67 | SCATTER_SETBACK(70m) |
 | 68 | SCATTER_SETBACK(101m) |
 | 70 | SCATTER_SETBACK(91m) |
@@ -117,23 +120,30 @@ D8 is the one extreme outlier (-353 m in 1984). That is the Buxton bend, where N
 | 72 | SCATTER_SETBACK(50m) |
 | 73 | SCATTER_SETBACK(41m) |
 | 75 | SCATTER_SETBACK(60m) |
-| 80 | SCATTER_SETBACK(71m) |
-| 81 | SCATTER_SETBACK(151m) |
+| 78 | MOVED_SEAWARD(20m,sea0%,bay52%) |
+| 79 | IN_WATER(36%),MOVED_SEAWARD(100m,sea36%,bay36%),BEYOND_MEASURED(min 480m) |
+| 80 | SCATTER_SETBACK(80m),MOVED_SEAWARD(50m,sea22%,bay36%) |
+| 81 | SCATTER_SETBACK(171m) |
 | 82 | SCATTER_SETBACK(111m) |
 | 83 | SCATTER_SETBACK(80m) |
-| 84 | NEGATIVE(-10->floored 0),SCATTER_SETBACK(50m),SCATTER_ELEV(0.85) |
-| 85 | NEGATIVE(-30->floored 0),SCATTER_SETBACK(50m),SCATTER_ELEV(0.95) |
-| 86 | NEGATIVE(-40->floored 0),SCATTER_ELEV(0.69) |
-| 87 | SCATTER_SETBACK(81m),SCATTER_ELEV(1.21) |
-| 88 | SCATTER_SETBACK(70m) |
+| 84 | NEGATIVE(-30->floored 0),SCATTER_SETBACK(70m),SCATTER_ELEV(0.85) |
+| 85 | NEGATIVE(-60->floored 0),SCATTER_SETBACK(50m),SCATTER_ELEV(0.97) |
+| 86 | NEGATIVE(-60->floored 0),SCATTER_ELEV(0.69) |
+| 87 | SCATTER_SETBACK(90m),SCATTER_ELEV(1.21) |
 
 ## 2004
 
 - Road span: GIS 9-90 (82 with road, 7 without)
-- Setback vs 2009 dune: median 190 m, range 20 to 600 m
-- Delta vs the LEGACY `RoadSetback_2004.csv`: median 22 m, range -49 to 117 m
+- Setback vs 2009 dune: median 195 m, range 0 to 600 m
+- Delta vs the LEGACY `RoadSetback_2004.csv`: median 22 m, range -49 to 107 m
 - NEGATIVE, floored to 0: 0 domain(s)
-- DROWNS at initialisation: 0 domain(s)
+- DROWNS at initialisation: 3 domain(s)
+
+| GIS | measured (m) | written (m) | moved seaward (m) | inside the measured per-profile range? |
+|---:|---:|---:|---:|---|
+| 78 | 490 | 470 | 20 | yes |
+| 79 | 500 | 400 | 100 | **no -- beyond it** |
+| 80 | 490 | 440 | 50 | yes |
 
 ### Flags
 
@@ -146,13 +156,11 @@ D8 is the one extreme outlier (-353 m in 1984). That is the Buxton bend, where N
 | 5 | NO_ROAD |
 | 6 | NO_ROAD |
 | 7 | NO_ROAD |
-| 8 | SCATTER_SETBACK(166m),SCATTER_ELEV(0.71),EXCLUDED_FROM_SPAN |
+| 8 | SCATTER_SETBACK(166m),SCATTER_ELEV(0.58),EXCLUDED_FROM_SPAN |
 | 21 | SCATTER_SETBACK(50m) |
 | 26 | SCATTER_SETBACK(50m) |
-| 27 | SCATTER_SETBACK(70m) |
-| 33 | SCATTER_SETBACK(60m) |
-| 48 | SCATTER_SETBACK(51m) |
-| 63 | SCATTER_SETBACK(50m) |
+| 27 | SCATTER_SETBACK(50m) |
+| 48 | SCATTER_SETBACK(41m) |
 | 67 | SCATTER_SETBACK(70m) |
 | 68 | SCATTER_SETBACK(101m) |
 | 70 | SCATTER_SETBACK(91m) |
@@ -160,11 +168,12 @@ D8 is the one extreme outlier (-353 m in 1984). That is the Buxton bend, where N
 | 72 | SCATTER_SETBACK(50m) |
 | 73 | SCATTER_SETBACK(41m) |
 | 75 | SCATTER_SETBACK(60m) |
-| 80 | SCATTER_SETBACK(71m) |
-| 81 | SCATTER_SETBACK(151m) |
+| 78 | MOVED_SEAWARD(20m,sea0%,bay52%) |
+| 79 | IN_WATER(36%),MOVED_SEAWARD(100m,sea36%,bay36%),BEYOND_MEASURED(min 480m) |
+| 80 | SCATTER_SETBACK(80m),MOVED_SEAWARD(50m,sea22%,bay36%) |
+| 81 | SCATTER_SETBACK(171m) |
 | 82 | SCATTER_SETBACK(111m) |
 | 83 | SCATTER_SETBACK(80m) |
 | 84 | SCATTER_ELEV(0.54) |
-| 85 | SCATTER_SETBACK(51m) |
-| 87 | SCATTER_SETBACK(41m) |
-| 88 | SCATTER_SETBACK(70m) |
+| 85 | SCATTER_SETBACK(50m) |
+| 87 | SCATTER_SETBACK(50m) |
