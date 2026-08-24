@@ -331,7 +331,7 @@ def plot_dune_domain(b3d, TMAX):
     duneFig = plt.figure(figsize=(14, 8))
     plt.rcParams.update({"font.size": 13})
     ax = duneFig.add_subplot(111)
-    ax.matshow(
+    mat = ax.matshow(
         (DuneCrest) * 10,
         origin="lower",
         cmap="bwr",
@@ -340,12 +340,13 @@ def plot_dune_domain(b3d, TMAX):
         vmax=Dmax * 10,
     )
     ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
-    # cax = ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
-    # cbar = duneFig.colorbar(cax)
-    # cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270)
+    # ax.xaxis.set_ticks_position("bottom")  # analysis:ignore
+    cbar = duneFig.colorbar(mat)
+    cbar.set_label('Dune Height Above Berm Elevation (m)', rotation=270)
     plt.xlabel("Alongshore Distance (dam)")
     plt.ylabel("Year")
     plt.title("Dune Height (m)")
+    # plt.show()
 
     return duneFig
 
