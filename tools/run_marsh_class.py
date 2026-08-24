@@ -9,18 +9,19 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 # load a test domain and transect which is just an arbitrary segment of Masonboro Island
-test_domain = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\marsh_domain_test3.npy")  # dam MHW
+# test_domain = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\marsh_domain_test3.npy")  # dam MHW
+test_domain = np.load(r"C:\Users\agfig\model\marsh_domain_test.npy") - 0.07
 n_cols = np.shape(test_domain)[1]
 width = np.shape(test_domain)[0]
 initial_domain = copy.deepcopy(test_domain)
 
 # set model duration
-model_duration = 30  # yrs
+model_duration = 1  # yrs
 shoreline_change = np.zeros(model_duration)
 
 # initialize the class
 marsh_class = Marsh(
-    RSLR=0.5,  # this will get replaced with cascade: self._sea_level_rise_rate which is in m/yr
+    RSLR=0.004,  # this will get replaced with cascade: self._sea_level_rise_rate which is in m/yr
     C_e=0.05,
     OCb=0,
     numiterations=500,
@@ -29,7 +30,7 @@ marsh_class = Marsh(
     n_tidal_cycles=365 * (24 / 12.5),
     Bmax=2500,
     Dmin=0,
-    Dmax=0.4,
+    Dmax=1,
     rhoo=85,
     rhos=2000,
     mui=0.4,

@@ -180,8 +180,8 @@ def evolvemarsh(
             bgb[ii] = 0  # [g] Mudflat
             organic_autoch[ii] = 0  # [g] No autochthonous material stored in the soil; we do not multiply by lingin content (as in earlier version of the model) because we subtract mass due to decomposition in the 'decompose' function
         elif dm[ii] <= Dmin:  # If depth is below vegetation minimum, there is very little belowground productivity
-            # bgb[ii] = 0.1  # [g] "Forest" - really high marsh
-            bgb[ii] = 0  # [g] "Forest" - really high marsh
+            bgb[ii] = 0.1  # [g] "Forest" - really high marsh
+            # bgb[ii] = 0  # [g] "Forest" - really high marsh
             organic_autoch[ii] = bgb[ii]  # [g] Forest organic matter stored in soil
         else:
             bgb[ii] = Bmax * (dm[ii] - Dmax) * (dm[ii] - Dmin) / (0.25 * (-Dmin - Dmax) * (Dmax - 3 * Dmin))  # [g] Marsh
@@ -198,8 +198,8 @@ def evolvemarsh(
         ax1.tick_params(axis='y', labelcolor='r')
         # Create a second y-axis
         ax2 = ax1.twinx()
-        ax2.plot(x_values, bgb, 'b', label='bgb')
-        ax2.set_ylabel('biomass (g)', color='b')
+        ax2.plot(x_values, bgb/100, 'b', label='bgb')
+        ax2.set_ylabel('biomass', color='b')
         ax2.tick_params(axis='y', labelcolor='b')
         ax2.set_ylim([0, 2600])
 
@@ -288,7 +288,7 @@ def evolvemarsh(
     if plot_on:
         #-------------------------------------------------------
         # SECOND SUBPLOT
-        # plot marsh elevtion and Ce on same figure
+        # plot marsh elevation and Ce (SSCl) on same figure
         # Plot marsh elevation on the left y-axis
         ax3.plot(x_values, marshelevation, 'r', label='marsh')
         ax3.set_ylabel('marsh elevation (m MSL)', color='r')
@@ -296,7 +296,7 @@ def evolvemarsh(
         # Create a second y-axis
         ax4 = ax3.twinx()
         ax4.plot(x_values, C, 'b', label='SSC (kg/m3)')
-        ax4.set_ylabel('SSC (kg/m3)', color='b')
+        ax4.set_ylabel('SSCl (kg/m3)', color='b')
         ax4.tick_params(axis='y', labelcolor='b')
         ax4.set_ylim([0, 0.051])
         # plot the ponds as stars
@@ -314,6 +314,40 @@ def evolvemarsh(
     susp_dep = np.sum(sedimentcycle, axis=0) * timestep * 1000  # [g/yr] suspended sediment deposition in an entire year, in each cell
     mineral = susp_dep * (1 - OCb)  # [g] Mineral deposition of suspended sediment in a given year is equal determined by the organic content of the bay sediment
     organic_alloch = susp_dep * OCb  # [g] Organic deposition of suspended sediment is equal determined by the organic content of bay sed
+
+    # new plot for final SSC vs SSCl
+    if plot_on:
+        #-------------------------------------------------------
+        # plot marsh elevtion and Ce (SSCl) on same figure
+        # plot elevation and SSC on the same figure beneath
+        # Plot marsh elevation on the left y-axis
+        fig2, (ax1, ax3) = plt.subplots(2, 1, figsize=(10, 15), sharex="all")
+        x_values = np.arange(0, L, 1)
+        # Plot marsh elevation on the left y-axis
+        ax1.plot(x_values, marshelevation, 'r', label='marsh elevation')
+        ax1.set_ylabel('marsh elevation (m MSL)', color='r')
+        ax1.tick_params(axis='y', labelcolor='r')
+        # Create a second y-axis
+        ax2 = ax1.twinx()
+        ax2.plot(x_values, C, 'b', label='SSC (kg/m3)')
+        ax2.set_ylabel('SSCl (kg/m3)', color='b')
+        ax2.tick_params(axis='y', labelcolor='b')
+        ax2.set_ylim([0, 0.051])
+        # plot the ponds as stars
+        if min_dep_method != 3:
+            ax2.scatter(pond_index, pond_y, marker="*", c="b")
+        # Plot marsh elevation on the left y-axis
+        ax3.plot(x_values, marshelevation, 'r', label='marsh elevation')
+        ax3.set_ylabel('marsh elevation (m MSL)', color='r')
+        ax3.tick_params(axis='y', labelcolor='r')
+        # Create a second y-axis
+        ax4 = ax3.twinx()
+        ax4.plot(x_values, susp_dep/1000, 'b', label='SSC (kg/yr)')
+        # ax4.plot(x_values, tempy, 'b', label='SSC (kg/m3)')
+        ax4.set_ylabel('SSC (kg/yr)', color='b')
+        ax4.tick_params(axis='y', labelcolor='b')
+        ax4.set_ylim([0, 7500])
+
 
     # -------------------------
     # Calculations & Conversions
@@ -352,12 +386,12 @@ def evolvemarsh(
         fig.tight_layout()
         plt.show()
 
-        # save the figure
-        if min_dep_method == 2.5:
-            fig.savefig(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\output_figures\option_2pt5_dmax_{0}".format(Dmax))
-        else:
-            fig.savefig(
-                r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\output_figures\option_{0}_dmax_{1}".format(min_dep_method, Dmax))
+        # # save the figure
+        # if min_dep_method == 2.5:
+        #     fig.savefig(r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\output_figures\option_2pt5_dmax_{0}".format(Dmax))
+        # else:
+        #     fig.savefig(
+        #         r"C:\Users\Lexi\Documents\UNC\BarrierBMFT\output_figures\option_{0}_dmax_{1}".format(min_dep_method, Dmax))
 
     # Update elevation
     marshelevation += accretion
@@ -507,6 +541,9 @@ class Marsh:
         # to flip our domain so that 0 is the marsh edge (top is marsh edge, bottom is barrier edge)
         interior_domain = np.flip(interior_domain, axis=0)
 
+        # add optional function for thin-layer spreading?
+        # could either apply it here to the whole domain or make it first after determining the marsh cells
+
         # we will need to convert the interior domain from dam MHW to m MSL
         interior_domain = interior_domain * 10  # convert to m
         # cells that are at -3 m are not changing over time, so we need to keep them constant here as well
@@ -576,7 +613,7 @@ class Marsh:
                     Dmax=self._Dmax,
                     rhoo=self._rhoo,
                     rhos=self._rhos,
-                    plot=False,
+                    plot=True,
                     min_dep_method=self._accretion_method
                     )
 
