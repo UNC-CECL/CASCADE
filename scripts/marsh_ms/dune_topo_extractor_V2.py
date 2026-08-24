@@ -50,6 +50,7 @@ def process_domain_file(
         OCEAN_LOC="bottom",
         SHIFT_CELLS=False,
         use_const_interior=False,
+        year=2020,
         ) -> None:
     """Process a single domain elevation array and write topography and dune outputs."""
     arr = np.load(in_path).astype(float, copy=False)
@@ -176,7 +177,8 @@ def process_domain_file(
         mode_dune_loc = stats.mode(dune_loc_array).mode
         start_island = int(max_dune_loc + 1)
         if "domain_3" in str(in_path):
-            start_island = int(min_dune_loc + 1)
+            # start_island = int(min_dune_loc + 1)  # 2020 domain
+            start_island = int(mode_dune_loc + 1)  # 2014 domain
         elif "domain_19" in str(in_path):
             start_island = int(mode_dune_loc + 1)
         topo_m = arr_ocean_top[start_island:, :]
@@ -189,8 +191,8 @@ def process_domain_file(
 
     # Save
     stem = in_path.stem  # e.g., "domain_7"
-    topo_out = Path(topo_out_dir) / f"{stem}_interior_20192020.npy"
-    dune_out = Path(dune_out_dir) / f"{stem}_dunes_20192020.npy"
+    topo_out = Path(topo_out_dir) / f"{stem}_interior_{year}.npy"
+    dune_out = Path(dune_out_dir) / f"{stem}_dunes_{year}.npy"
     np.save(topo_out, topo_dm)
     np.save(dune_out, dune_dm)
     print(
@@ -207,10 +209,11 @@ def process_domain_file(
 plt.rcParams["font.size"] = 14
 
 # --- PATHS --------------------------------------------------------------
-version = "v7"  # save version to append to folder name
-LOAD_PATH = r"C:\Users\agfig\OneDrive - University of North Carolina at Chapel Hill\UNC\data\DEM\processed_domains\rotated_domains_npys"
-TOPO_SAVE_PATH = r"C:\Users\agfig\OneDrive - University of North Carolina at Chapel Hill\UNC\data\DEM\processed_domains\cascade_domains\topography\rotated_domains_{0}_edited".format(version)
-DUNE_SAVE_PATH = r"C:\Users\agfig\OneDrive - University of North Carolina at Chapel Hill\UNC\data\DEM\processed_domains\cascade_domains\dunes\rotated_domains_{0}_edited".format(version)
+version = "v2"  # save version to append to folder name
+year = 2004
+LOAD_PATH = r"C:\Users\agfig\model\final_domains\{0}_final_npys".format(year)
+TOPO_SAVE_PATH = r"C:\Users\agfig\model\final_domains\cascade_domains\domains_{0}_{1}".format(year, version)
+DUNE_SAVE_PATH = r"C:\Users\agfig\model\final_domains\cascade_domains\dunes_{0}_{1}".format(year, version)
 
 os.makedirs(TOPO_SAVE_PATH, exist_ok=True)
 os.makedirs(DUNE_SAVE_PATH, exist_ok=True)
@@ -219,13 +222,13 @@ os.makedirs(DUNE_SAVE_PATH, exist_ok=True)
 MHW_M = 0.421              # meters (NAVD88)
 BERM_ELEV_NAVD_M = 1.95    # meters (NAVD88)
 BEACH_START_THR_M = 0.5    # meters (MHW-relative), strict '>' comparison
-DUNE_WINDOW_PX = 5         # pixels
+# DUNE_WINDOW_PX = 5         # pixels
 SENTINEL_WATER_M = -3.0    # meters (MHW-relative)
 TOPO_ROWS = 200            # number of inland rows to write
 ALONG_COLS = 50            # number of alongshore profiles
 OCEAN_LOC = "bottom"       # "top", "bottom", "left", or "right"
 shift_interior = False     # add cells to the beginning of the interior domain to keep it aligned
-use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+# use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
 
 load_dir = Path(LOAD_PATH)
 topo_dir = Path(TOPO_SAVE_PATH)
@@ -237,12 +240,55 @@ dune_dir.mkdir(parents=True, exist_ok=True)
 names = sorted(
     [
         n for n in os.listdir(load_dir)
-        if n.endswith(".npy") and n.startswith("domain_21")
+        if n.endswith(".npy") and n.startswith("domain_2")
         ]
     )
 print(f"[info] Found {len(names)} domain file(s) in {load_dir}")
 topo_domain = []
 for name in names:
+    # # ----- 2020 ---------------------------------------------------------------------------------------------
+    # if "_23" in name or "_24" in name or "_25" in name:  # v5, original method, dune window 5
+    #     use_const_interior = False  # select a start row for the interior (most landward dune cell + 1)
+    #     DUNE_WINDOW_PX = 5
+    # elif "_20" in name or "_21" in name: # v7, dune window 5, constant interior TRUE (2020)
+    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+    #     DUNE_WINDOW_PX = 5
+    # elif "_11" in name or "_14" in name: # (2020)
+    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+    #     DUNE_WINDOW_PX = 3
+    # else:  # v7, dune window 10, constant interior TRUE
+    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+    #     DUNE_WINDOW_PX = 10
+    # # ----- 2014 ---------------------------------------------------------------------------------------------
+    # if "_23" in name or "_24" in name or "_25" in name:  # v5, original method, dune window 5
+    #     use_const_interior = False  # select a start row for the interior (most landward dune cell + 1)
+    #     DUNE_WINDOW_PX = 5
+    # elif "_3" in name:
+    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+    #     DUNE_WINDOW_PX = 6
+    # elif "_4" in name:
+    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+    #     DUNE_WINDOW_PX = 8
+    # elif "_6" in name or "_8" in name or "_9" in name or "_10" in name or "_17" in name or "_20" in name:
+    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+    #     DUNE_WINDOW_PX = 3
+    # else:  # v7, dune window 10, constant interior TRUE
+    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+    #     DUNE_WINDOW_PX = 5
+    # ----- 2004 ---------------------------------------------------------------------------------------------
+    if "_23" in name or "_25" in name:  # v5, original method, dune window 5
+        use_const_interior = False  # select a start row for the interior (most landward dune cell + 1)
+        DUNE_WINDOW_PX = 10
+    elif "_20" in name or "_21" in name or "_24" in name : # v7, dune window 5, constant interior TRUE (2020)
+        use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+        DUNE_WINDOW_PX = 5
+    elif "_11" in name or "_14" in name: # (2020)
+        use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+        DUNE_WINDOW_PX = 3
+    else:  # v7, dune window 10, constant interior TRUE
+        use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+        DUNE_WINDOW_PX = 10
+
     topo_domain, dune_domain = process_domain_file(
         load_dir / name,
         topo_dir,
@@ -256,24 +302,25 @@ for name in names:
         ALONG_COLS=ALONG_COLS,
         OCEAN_LOC=OCEAN_LOC,
         SHIFT_CELLS=shift_interior,
-        use_const_interior=use_const_interior
+        use_const_interior=use_const_interior,
+        year=year,
         )
 
-domain = np.vstack((dune_domain+(BERM_ELEV_NAVD_M - MHW_M), topo_domain))
-minz = -3
-maxz = 5
-xlabel = "alongshore distance (dam)"
-ylabel = "cross-shore distance (dam)"
-fig1 = plt.figure(figsize=[6,10])
-ax1 = fig1.add_subplot(111)
-mat1 = ax1.matshow(
-    domain,
-    cmap="terrain",
-    vmin=minz,
-    vmax=maxz,
-    )
-ax1.set_ylabel(ylabel)
-ax1.set_title("dune window: {0}".format(DUNE_WINDOW_PX))
-plt.gca().xaxis.tick_bottom()
-plt.show()
+# domain = np.vstack((dune_domain+(BERM_ELEV_NAVD_M - MHW_M), topo_domain))
+# minz = -3
+# maxz = 5
+# xlabel = "alongshore distance (dam)"
+# ylabel = "cross-shore distance (dam)"
+# fig1 = plt.figure(figsize=[6,10])
+# ax1 = fig1.add_subplot(111)
+# mat1 = ax1.matshow(
+#     domain,
+#     cmap="terrain",
+#     vmin=minz,
+#     vmax=maxz,
+#     )
+# ax1.set_ylabel(ylabel)
+# ax1.set_title("dune window: {0}".format(DUNE_WINDOW_PX))
+# plt.gca().xaxis.tick_bottom()
+# plt.show()
 
