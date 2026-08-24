@@ -355,7 +355,10 @@ class Cascade:
         self._trigger_dune_knockdown = trigger_dune_knockdown
         self._initial_beach_width = [0] * self._ny
         self._group_roadway_abandonment = group_roadway_abandonment
-        self._sandbag_management_on = sandbag_management_on
+        if type(sandbag_management_on) == bool:
+            self._sandbag_management_on = [sandbag_management_on] * self._ny
+        else:
+            self._sandbag_management_on = sandbag_management_on
         self._sandbag_elevation = sandbag_elevation - (berm_elevation - MHW)
         self._sandbag_need = [False] * self._ny
         self._enable_shoreline_offset = enable_shoreline_offset
