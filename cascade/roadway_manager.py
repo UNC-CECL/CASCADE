@@ -1200,14 +1200,19 @@ class RoadwayManager:
             barrier3d=barrier3d,
             time_index=time_index,
         )
-
+        barrier3d.x_b_TS[-1] = (
+                barrier3d.x_s
+                + barrier3d.InteriorWidth_AvgTS[-1]
+                + np.size(barrier3d.DuneDomain, 2)
+                + current_beach_width / 10
+        )
         output_index = time_index - 1
         if 0 <= output_index < self._nt:
             self._beach_width_TS[output_index] = current_beach_width
 
         return current_beach_width
 
-    def nourish_beach(
+    def nourish_now(
         self,
         barrier3d,
         nourishment_volume,
