@@ -1158,30 +1158,14 @@ class RoadwayManager:
         return
 
     def update_beach_width(
-        self,
-        barrier3d,
-        beach_width_last_year,
+            self,
+            barrier3d,
+            beach_width_last_year,
     ):
-        """Update roadway-domain beach width and dune migration for one model year.
-
-        This duplicates the existing BeachDuneManager rule without applying any
-        community overwash filtering or community dune rebuilding. It must be called
-        once per simulated year for a roadway domain that is tracking beach width.
-
-        Parameters
-        ----------
-        barrier3d
-            Current Barrier3D instance after its annual physical update.
-        beach_width_last_year: float
-            Managed beach width from the preceding model year [m].
-
-        Returns
-        -------
-        float
-            Current beach width after annual shoreline change [m].
-        """
+        """Update roadway-domain beach width and dune migration for one model year."""
 
         beach_width_last_year = float(beach_width_last_year)
+
         if not np.isfinite(beach_width_last_year) or beach_width_last_year < 0:
             raise ValueError(
                 "Previous roadway beach width must be finite and non-negative; "
@@ -1189,10 +1173,15 @@ class RoadwayManager:
             )
 
         time_index = barrier3d.time_index
+
         change_in_shoreline = (
-            barrier3d.x_s_TS[-1] - barrier3d.x_s_TS[-2]
-        ) * 10  # m
-        current_beach_width = beach_width_last_year - change_in_shoreline
+                                      barrier3d.x_s_TS[-1] - barrier3d.x_s_TS[-2]
+                              ) * 10  # dam to m
+
+        current_beach_width = (
+                beach_width_last_year - change_in_shoreline
+        )
+
         current_beach_width = beach_width_dune_dynamics(
             current_beach_width=current_beach_width,
             beach_width_last_year=beach_width_last_year,
@@ -1200,9 +1189,19 @@ class RoadwayManager:
             barrier3d=barrier3d,
             time_index=time_index,
         )
+
         output_index = time_index - 1
+
         if 0 <= output_index < self._nt:
             self._beach_width_TS[output_index] = current_beach_width
+
+        # Single annual roadway-domain back-barrier update
+        barrier3d.x_b_TS[-1] = (
+                barrier3d.x_s
+                + barrier3d.InteriorWidth_AvgTS[-1]
+                + np.size(barrier3d.DuneDomain, 2)
+                + current_beach_width / 10
+        )
 
         return current_beach_width
 
