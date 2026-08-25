@@ -1200,12 +1200,6 @@ class RoadwayManager:
             barrier3d=barrier3d,
             time_index=time_index,
         )
-        barrier3d.x_b_TS[-1] = (
-                barrier3d.x_s
-                + barrier3d.InteriorWidth_AvgTS[-1]
-                + np.size(barrier3d.DuneDomain, 2)
-                + current_beach_width / 10
-        )
         output_index = time_index - 1
         if 0 <= output_index < self._nt:
             self._beach_width_TS[output_index] = current_beach_width
@@ -1287,14 +1281,6 @@ class RoadwayManager:
         # the dune line is pinned until annual erosion reduces beach width to 0 m.
         barrier3d.dune_migration_on = new_beach_width <= 0
 
-        # Keep the full barrier-position bookkeeping internally consistent when this
-        # method is called directly from a simulation script.
-        barrier3d.x_b_TS[-1] = (
-            barrier3d.x_s
-            + barrier3d.InteriorWidth_AvgTS[-1]
-            + np.size(barrier3d.DuneDomain, 2)
-            + (new_beach_width / 10)
-        )
 
         time_index = barrier3d.time_index - 1
         if 0 <= time_index < self._nt:
