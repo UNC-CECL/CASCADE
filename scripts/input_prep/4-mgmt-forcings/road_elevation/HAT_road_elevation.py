@@ -144,7 +144,11 @@ MGMT_DIR = HATTERAS_DATA_BASE / "4-mgmt-forcing"
 # Native-resolution LiDAR clips, one folder per domain. NOT the 10 m resample.
 #   clip_domain_<N>.tif      1 m, native
 #   resampled_domain_<N>.tif 10 m, the Barrier3D grid
-CLIP_ROOT = BARRIER3D_DIR / "2009-raw" / "2009-domain-clipresample"
+# MOVED. Was BARRIER3D_DIR/"2009-raw"/"2009-domain-clipresample", a path the
+# 2026-08-25 restructure removed; the clips then sat under superseded/ and
+# were lifted out on 2026-08-26 because four scripts read them. Same files,
+# same per-domain layout - see 1-barrier3d-domains/LINEAGE.md.
+CLIP_ROOT = BARRIER3D_DIR / "domain-clips-1m"
 CLIP_GLOB = "clip_domain_*.tif"
 RESAMPLE_GLOB = "resampled_domain_*.tif"
 
@@ -171,10 +175,33 @@ RESAMPLE_GLOB = "resampled_domain_*.tif"
 # The choice is about provenance, not magnitude -- the two fills differ by
 # <= 0.015 m in the corridor. RELOCATION BRACKET and the QC flags re-measure
 # this every run; FILL_SOURCE is recorded in the audit.
+#
+# 2008 is SUPERSEDED as a TOPOGRAPHY fill (2014 replaced it) but remains the
+# right answer for a ROAD SURFACE, for the reason above. It therefore lived
+# under 0-elevation/superseded/, and this script reaches it through
+# scripts/hat_elevation_products.py rather than by joining strings - which is
+# exactly what broke on 2026-08-25, when 2008 was moved there and the
+# hand-built path stopped resolving.
+#
+# THIS SCRIPT CANNOT RE-RUN AS WRITTEN (2026-08-26). The 2008 product is gone:
+# its rasters were never tracked (*.tif is gitignored) and are no longer on
+# disk, its registry entry has been removed, and the point-cloud path that
+# built it has been removed from HAT_dem_gap_fill.py along with
+# HAT_laz_ground_classify.py. _elev_product() therefore raises immediately,
+# listing the products that do exist - which is the intended failure, not a
+# silent stale read.
+#
+# The PRODUCT it made is unaffected: RoadElevation_*.csv is committed and
+# every consumer reads the CSV, not this script. What is blocked is
+# REGENERATING it. Deciding what to regenerate it FROM is a provenance call
+# and is deliberately NOT taken here - the header above argues that a 2014
+# surface under the GIS 78-80 corridor may be a REBUILT road, and the two
+# fills differ by <= 0.015 m in the corridor anyway. Switching to "2009-2014"
+# is one line, and it is the user's call, not a maintenance detail.
 FILL_SOURCE = "2008_NOAA_IOCM"
 
-GAPFILL_1M_ROOT = HATTERAS_DATA_BASE / "0-elevation" / "1-gapfill-1m"
-GAPFILL_10M_ROOT = HATTERAS_DATA_BASE / "0-elevation" / "2-resampled-10m"
+sys.path.insert(0, str(HATTERAS_DATA_BASE.parents[1] / "scripts"))
+from hat_elevation_products import product as _elev_product  # noqa: E402
 FILL_CLIP_GLOB = "clip_domain_*_filled.tif"
 FILL_RESAMPLE_GLOB = "resampled_domain_*_filled.tif"
 
@@ -283,17 +310,11 @@ def resolve_surfaces() -> tuple[dict, dict, str]:
                 find_clips(CLIP_ROOT, RESAMPLE_GLOB),
                 "2009 clips, unfilled")
 
-    one_m = GAPFILL_1M_ROOT / FILL_SOURCE
-    ten_m = GAPFILL_10M_ROOT / FILL_SOURCE
-
-    for label, path in (("1 m gap-fill", one_m), ("10 m gap-fill", ten_m)):
-        if not path.is_dir():
-            avail = (sorted(p.name for p in GAPFILL_1M_ROOT.iterdir()
-                            if p.is_dir()) if GAPFILL_1M_ROOT.is_dir() else [])
-            raise SystemExit(
-                f"\n[stop] {label} directory for FILL_SOURCE={FILL_SOURCE!r} "
-                f"does not exist:\n    {path}\n"
-                f"sources present: {avail}\n")
+    # _elev_product raises with the known product names if FILL_SOURCE is not
+    # one of them, and again if it is known but not on disk - so the probes
+    # that used to be inlined here cannot go stale when the layout moves.
+    _p = _elev_product(FILL_SOURCE)
+    one_m, ten_m = _p.gapfill_1m, _p.resampled_10m
 
     # Both resolutions come from the SAME fill, so the 1 m vs 10 m agreement
     # printed under INTERNAL CHECKS stays a like-for-like comparison.

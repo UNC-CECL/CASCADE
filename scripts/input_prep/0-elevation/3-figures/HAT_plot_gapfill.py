@@ -18,26 +18,43 @@ locate a domain without hiding the data under it.
 
 COLOUR
 ------
-Elevation uses cividis - perceptually uniform, monotonic in lightness, and
-CVD-safe by construction. Deliberately not `terrain`, which is a rainbow ramp:
-its lightness is non-monotonic, so it invents visual edges where the elevation
-is smooth and hides real ones where it is not.
+Elevation uses `terrain`, and the reason is specific: it is built for
+topography, with a blue water band occupying the first 25% of the ramp. That
+only reads correctly if sea level lands exactly on that internal break, hence
+vmin is DERIVED - vmin = SEA_LEVEL_M - (vmax - SEA_LEVEL_M) / 3 - rather than
+taken from a percentile. Set vmin from a percentile and the blue/green boundary
+drifts to an arbitrary elevation, drawing dry ground as water.
 
-The categorical panel uses Okabe-Ito blue/vermillion, a palette designed for
-colour-vision deficiency. The dataviz validator could not be run here (no node
-on this machine), so a palette with published CVD separation was used rather
-than one checked by eye.
+The categorical panel's two colours are sampled from `terrain` itself,
+terrain(0.05) water blue for 2009 and terrain(0.30) low-land green for the
+fill, so it belongs to the same palette as the elevation maps. They carry a
+deliberate luminance ladder - 80 / 153 / 228 against the grey, spacing 73 and
+75 - because blue-vs-green is a weak colour-vision-deficiency axis and
+brightness has to carry what hue cannot.
 
 Nodata is neutral grey in every panel and never a step on the elevation ramp -
 "not surveyed" is not a low elevation, and the whole point of this work is that
 conflating those two drowned three roadways at t=0.
 
-INPUT   data/hatteras_init/0-elevation/2-resampled-10m/
+SOURCE SELECTION
+----------------
+Tag, fill year and long label live together in SOURCES, so a re-render cannot
+put one source's label on another's data - hand-editing the three constants
+separately already printed "cells the 2014 DEM measured" on the 2008 figures
+once.
+
+    python HAT_plot_gapfill.py                       # 2009-2014
+    python HAT_plot_gapfill.py --source <PRODUCT>
+
+INPUT   data/hatteras_init/0-elevation/<SOURCE_TAG>/2-resampled-10m/
             resampled_domain_<N>_filled.tif
             resampled_domain_<N>_survey.tif
-OUTPUT  data/hatteras_init/0-elevation/figures/
-            HAT_gapfill_island.png      whole island, 3 panels
-            HAT_gapfill_domains_78_80.png   zoom on the road-drowning domains
+OUTPUT  data/hatteras_init/0-elevation/<SOURCE_TAG>/figures/
+            HAT_gapfill_<SOURCE_TAG>_island.png         whole island, 3 panels
+            HAT_gapfill_<SOURCE_TAG>_domains_78_80.png  zoom on 78-80
+            HAT_gapfill_<SOURCE_TAG>_roads_78_80.png    the zoom, + NC-12
+        SOURCE_TAG is in the name, so a new source cannot overwrite the
+        existing figures.
 
 Requires: rasterio, geopandas, numpy, matplotlib
 """
@@ -57,7 +74,23 @@ from matplotlib.ticker import FuncFormatter, MaxNLocator
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+def _find_project_root(start: Path) -> Path:
+    """
+    Walk up until a directory holds data/hatteras_init.
+
+    NOT parents[N]. This file moved into 3-figures/ on 2026-08-25, and the
+    old parents[3] then resolved to input_prep/ rather than the project root.
+    That raises nothing - it just makes every path below it wrong, silently,
+    until some glob comes back empty. Same helper and same reason as
+    4-mgmt-forcings/road_offset/2-audit/HAT_road_setback_audit.py.
+    """
+    for p in [start, *start.parents]:
+        if (p / "data" / "hatteras_init").is_dir():
+            return p
+    raise SystemExit(f"cannot find data/hatteras_init above {start}")
+
+
+PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
 ELEVATION_DIR = PROJECT_ROOT / "data" / "hatteras_init" / "0-elevation"
 IN_DIR = None   # set from SOURCE_TAG below
 FIG_DIR = ELEVATION_DIR / "figures"
@@ -88,18 +121,22 @@ ROAD_ORDER = [2004, 1984]   # draw order: solid first, dashed on top
 # already put "cells the 2014 DEM measured" on the 2008 figures once.
 #
 #     python HAT_plot_gapfill.py                      # default (below)
-#     python HAT_plot_gapfill.py --source 2008_NOAA_IOCM
+#     python HAT_plot_gapfill.py --source <PRODUCT>
 #
+# Keyed by PRODUCT, not by fill source - the directories were renamed for
+# composition on 2026-08-25 (2014_NOAA_PostSandy -> 2009-2014).
+#
+# 2008_NOAA_IOCM was an entry here until 2026-08-26. Its rasters are gone from
+# disk (they were never tracked - *.tif is gitignored), and the point-cloud
+# path that produced them has been removed from HAT_dem_gap_fill.py, so
+# --source 2008_NOAA_IOCM could not have re-rendered anything. A dead option
+# that reads as a live one is worse than no option.
 SOURCES = {
-    "2014_NOAA_PostSandy": (
+    "2009-2014": (
         2014,
         "2014 NOAA Post-Sandy DEM (Job1076021), 1 m, EPSG:6347 + NAVD88"),
-    "2008_NOAA_IOCM": (
-        2008,
-        "2008 NOAA IOCM NC/VA (J1437738) point cloud, SMRF ground-classified"
-        " - SUPERSEDED"),
 }
-DEFAULT_SOURCE = "2014_NOAA_PostSandy"
+DEFAULT_SOURCE = "2009-2014"
 
 SOURCE_TAG = DEFAULT_SOURCE
 if "--source" in sys.argv:
@@ -115,7 +152,16 @@ SOURCE_NOTE = (f"Fill is limited to cells the {SURVEY_FILL} source measured, "
                f"No bias correction, no feathering - filled cells are the "
                f"{SURVEY_FILL} measurement unchanged.")
 
-IN_DIR = ELEVATION_DIR / "2-resampled-10m" / SOURCE_TAG
+# The superseded fallback that used to live here is gone: the resolver knows
+# which products are superseded and where they sit, so there is one place that
+# has to be right rather than a probe-two-paths-and-hope in every consumer.
+# A missing directory is reported there, not as an empty glob later.
+sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+from hat_elevation_products import product as _product  # noqa: E402
+
+_P = _product(SOURCE_TAG)
+IN_DIR = _P.resampled_10m
+FIG_DIR = _P.figures
 
 GRID = 10.0
 
@@ -135,6 +181,27 @@ ISLAND_PAD_M = 700.0
 # figure keeps lower-right - there the island runs bottom-left to top-right and
 # the bottom-right corner is the clear one.
 ZOOM_LEGEND_LOC = "upper left"
+
+# Road-overlay zooms: (domain ids, which NC-12 years, filename slug, title).
+#
+# 78-80 carries BOTH alignments - those are the domains the extractor names as
+# width-drowning at t=0, and seeing 1984 against 2004 there is the point.
+#
+# 8-15 carries BOTH as well. An earlier version drew only 2004 here, on the
+# grounds that it is the alignment contemporaneous with this DEM and that
+# putting the 1984 line over a 2009+2014 surface invites comparing a road to a
+# DEM holding no information from its era. That was overruled deliberately:
+# seeing where the road WAS against where it WENT is the point, and this view
+# is meant to be read as a pair with the 1984-start DEM's own 8-15 figure,
+# which now draws the same two lines.
+ROAD_ZOOMS = [
+    ([78, 79, 80], [2004, 1984], "roads_78_80",
+     "Domains 78-80 with NC-12 alignments"),
+    (list(range(8, 16)), [2004, 1984], "roads_8_15",
+     "Domains 8-15 with NC-12 alignments"),
+    (list(range(82, 89)), [2004, 1984], "roads_82_88",
+     "Domains 82-88 with NC-12 alignments"),
+]
 
 ZOOM_FIG_W = 15.0
 ZOOM_CHROME_IN = 1.0
@@ -458,12 +525,33 @@ def main():
         plt.close(fig)
         print(f"wrote {out2}")
 
-        # ---- third figure: the same zoom with both NC-12 alignments ----
-        # Drawn at the zoom rather than island scale on purpose: island-wide the
+        # ---- road-overlay zooms, one per entry in ROAD_ZOOMS ----
+        # Drawn at zoom rather than island scale on purpose: island-wide the
         # road is a ~1 px line over 45 km, where dashed and solid are
         # indistinguishable and the overlay would carry no information.
-        if roads:
-            fig, axes = plt.subplots(1, 3, figsize=(ZOOM_FIG_W, _fig_h),
+        def _road_zoom(dom_ids, years, slug, title):
+            """One A/B/C zoom with the named NC-12 alignments drawn over it.
+
+            `years` selects WHICH alignments, and every entry in ROAD_ZOOMS
+            currently asks for both. It stays a parameter rather than being
+            hardcoded because the restriction was tried and reversed once
+            already - see the note on ROAD_ZOOMS - and a future zoom may well
+            want one line only.
+            """
+            zsel = gdf[gdf["domain_id"].astype(int).isin(dom_ids)]
+            if zsel.empty:
+                print(f"  domains {dom_ids} not in the domain file - "
+                      f"{slug} skipped")
+                return
+            rsub = {y: g for y, g in roads.items() if y in years}
+            if not rsub:
+                print(f"  no road data for {years} - {slug} skipped")
+                return
+            zx0, zy0, zx1, zy1 = zsel.total_bounds
+            pad_ = 150
+            zw, zh = (zx1 + pad_) - (zx0 - pad_), (zy1 + pad_) - (zy0 - pad_)
+            fh = (ZOOM_FIG_W / 3.0) / (zw / zh) + ZOOM_CHROME_IN
+            fig, axes = plt.subplots(1, 3, figsize=(ZOOM_FIG_W, fh),
                                      constrained_layout=True)
             im = panel_elev(axes[0], only09, extent, vmin, vmax,
                             "A  2009 DEM only")
@@ -475,33 +563,35 @@ def main():
             axes[2].set_title("C  survey source", fontsize=11, pad=8)
             for ax in axes:
                 draw_domains(ax, gdf, lw=0.9)
-                draw_roads(ax, roads)
-                ax.set_xlim(zminx - pad, zmaxx + pad)
-                ax.set_ylim(zminy - pad, zmaxy + pad)
+                draw_roads(ax, rsub)
+                ax.set_xlim(zx0 - pad_, zx1 + pad_)
+                ax.set_ylim(zy0 - pad_, zy1 + pad_)
                 ax.set_aspect("equal")
                 km_axes(ax, nx=3, ny=5)
                 ax.set_xlabel("Easting (km)", fontsize=9)
             axes[0].set_ylabel("Northing (km)", fontsize=9)
-            road_handles = road_legend_handles(roads)
-            axes[0].legend(handles=road_handles, loc=ZOOM_LEGEND_LOC,
-                           fontsize=8, framealpha=0.9)
+            rh = road_legend_handles(rsub)
+            axes[0].legend(handles=rh, loc=ZOOM_LEGEND_LOC, fontsize=8,
+                           framealpha=0.9)
             axes[2].legend(
                 handles=[Patch(facecolor=C_2009, label="2009 measured"),
                          Patch(facecolor=C_FILL, label=f"{SURVEY_FILL} fill"),
-                         Patch(facecolor=C_NONE, label="never surveyed")]
-                + road_handles,
+                         Patch(facecolor=C_NONE, label="never surveyed")] + rh,
                 loc=ZOOM_LEGEND_LOC, fontsize=8, framealpha=0.9)
             cb = fig.colorbar(im, ax=list(axes), orientation="horizontal",
                               fraction=0.05, pad=0.02, aspect=40)
             cb.set_label("Elevation (m NAVD88)", fontsize=9)
-            fig.suptitle("Domains 78-80 with NC-12 alignments\n"
-                         f"fill source: {SOURCE_LONG}", fontsize=11)
+            fig.suptitle(f"{title}\nfill source: {SOURCE_LONG}", fontsize=11)
             fig.text(0.5, -0.02, SOURCE_NOTE, ha="center", va="top",
                      fontsize=8, wrap=True, color="#444444")
-            out3 = FIG_DIR / f"HAT_gapfill_{SOURCE_TAG}_roads_78_80.png"
-            fig.savefig(out3, dpi=170, bbox_inches="tight")
+            outp = FIG_DIR / f"HAT_gapfill_{SOURCE_TAG}_{slug}.png"
+            fig.savefig(outp, dpi=170, bbox_inches="tight")
             plt.close(fig)
-            print(f"wrote {out3}")
+            print(f"wrote {outp}")
+
+        if roads:
+            for _ids, _yrs, _slug, _title in ROAD_ZOOMS:
+                _road_zoom(_ids, _yrs, _slug, _title)
 
 
 if __name__ == "__main__":
