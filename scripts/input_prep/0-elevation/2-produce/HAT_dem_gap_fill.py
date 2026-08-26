@@ -110,6 +110,7 @@ Requires: rasterio, geopandas, numpy, scipy
 from __future__ import annotations
 
 import csv
+import sys
 import os
 from pathlib import Path
 
@@ -127,7 +128,23 @@ from scipy.ndimage import binary_dilation, distance_transform_edt, label
 # CONFIG
 # =============================================================================
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+def _find_project_root(start: Path) -> Path:
+    """
+    Walk up until a directory holds data/hatteras_init.
+
+    NOT parents[N]. This file moved into 2-produce/ on 2026-08-25, and the
+    old parents[3] then resolved to input_prep/ rather than the project root.
+    That raises nothing - it just makes every path below it wrong, silently,
+    until some glob comes back empty. Same helper and same reason as
+    4-mgmt-forcings/road_offset/2-audit/HAT_road_setback_audit.py.
+    """
+    for p in [start, *start.parents]:
+        if (p / "data" / "hatteras_init").is_dir():
+            return p
+    raise SystemExit(f"cannot find data/hatteras_init above {start}")
+
+
+PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
 ELEVATION_DIR = PROJECT_ROOT / "data" / "hatteras_init" / "0-elevation"
 GIS_ROOT = Path(r"D:\Hatteras_GIS")
 
@@ -153,30 +170,37 @@ BASE_DEM_PATH = (GIS_ROOT / "Elevation" / "Polygons" / "2009"
 # choice made on the developed reaches alone would have picked a dataset
 # covering less than a quarter of the island's gaps.
 #
-# It is a DEM, not a point cloud, so HAT_laz_ground_classify.py does not run for
-# it. Different CRS from the base (EPSG:6347 NAD83(2011) vs EPSG:3725
+# Different CRS from the base (EPSG:6347 NAD83(2011) vs EPSG:3725
 # NAD83(NSRS2007)); WarpedVRT reprojects on read.
 #
 # Superseded point-cloud attempts, kept for the record:
 #   2008 NOAA IOCM  topo-only, ~19% of the sound-side gap, 17/150 in the NC-12 strip
 #   2011 post-Irene topo-only, ~35%, 28/150
+# Neither is reproducible from this script any more - the point-cloud path was
+# removed on 2026-08-26 along with the classifier that fed it. A point-cloud
+# candidate now has to be gridded to a DEM before it gets here.
 FILL_DEM_PATH = (GIS_ROOT / "Elevation" / "Polygons" / "2014"
                  / "2014_NOAA_Post_Sandy_DEM_Job1076021" / "2014_full.tif")
 FILL_SOURCE_TAG = "2014_NOAA_PostSandy"
 FILL_SOURCE_YEAR = 2014
 
-# "dem" or "point_cloud". A DEM is read through WarpedVRT; a point cloud is
-# gridded to the base grid by MEDIAN of the returns in each 1 m cell (minimum
-# would take the water surface over wet marsh, and cells below 0 m MHW are
-# exactly what the drowning test counts).
-FILL_SOURCE_TYPE = "dem"
-FILL_POINTS_DIR = GIS_ROOT / "Elevation" / "Points" / "2008" / "ground_smrf"
-FILL_POINTS_GLOB = "*_ground_*.laz"
-
 DOMAIN_FILE = GIS_ROOT / "domains.geojson"
 DOMAIN_ID_FIELD = "domain_id"
 
-OUTPUT_DIR = ELEVATION_DIR / "1-gapfill-1m" / FILL_SOURCE_TAG
+# The product this script builds. Named for its COMPOSITION, not for the fill
+# source and not for a hindcast period - this DEM currently serves both the
+# 1984 and the 2004 period, so a period in the name would be a false claim.
+# FILL_SOURCE_TAG above still names the SOURCE, and appears in the console
+# output and the figure labels.
+PRODUCT_TAG = "2009-2014"
+# Paths come from scripts/hat_elevation_products.py, not from string
+# concatenation here. Six scripts used to build them by hand and that is how
+# HAT_road_elevation.py silently stopped finding its rasters - see the note at
+# the top of that module.
+sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+from hat_elevation_products import product as _product  # noqa: E402
+
+OUTPUT_DIR = _product(PRODUCT_TAG, check=False).gapfill_1m
 AUDIT_CSV = "gapfill_audit.csv"
 
 GRID_SIZE_M = 10.0    # the eventual Barrier3D cell; the clip must divide by it
@@ -343,70 +367,6 @@ def read_window(src, win, nodata_in):
 # =============================================================================
 # THE FILL SOURCE DEM
 # =============================================================================
-
-class PointCloudSource:
-    """
-    A ground-classified point cloud as a fill source, gridded to the base grid.
-
-    Kept alongside FillSource so a superseded point-cloud run can be reproduced
-    - which is the only way to re-render its figures after the rasters have been
-    deleted. Tiles are indexed by header bbox so each domain reads only the
-    cells it overlaps, and the last few are cached since consecutive domains
-    reuse them.
-    """
-
-    def __init__(self, points_dir, pattern, cache_size=4):
-        import laspy
-        self._laspy = laspy
-        self.tiles = []
-        for f in sorted(Path(points_dir).glob(pattern)):
-            with laspy.open(str(f)) as fh:
-                h = fh.header
-                if h.point_count == 0:
-                    continue
-                self.tiles.append((f, (h.mins[0], h.mins[1], h.maxs[0], h.maxs[1])))
-        if not self.tiles:
-            raise FileNotFoundError(f"no {pattern} in {points_dir}")
-        self.epsg, self.res, self.nodata = None, 1.0, None
-        self.cache, self.order, self.cache_size = {}, [], cache_size
-
-    def _load(self, f):
-        if f not in self.cache:
-            las = self._laspy.read(str(f))
-            self.cache[f] = (np.asarray(las.x), np.asarray(las.y), np.asarray(las.z))
-            self.order.append(f)
-            while len(self.order) > self.cache_size:
-                self.cache.pop(self.order.pop(0), None)
-        return self.cache[f]
-
-    def read_on_grid(self, bounds, shape):
-        import pandas as pd
-        bx0, by0, bx1, by1 = bounds
-        xs, ys, zs = [], [], []
-        for f, (tx0, ty0, tx1, ty1) in self.tiles:
-            if tx1 < bx0 or tx0 > bx1 or ty1 < by0 or ty0 > by1:
-                continue
-            x, y, z = self._load(f)
-            m = (x >= bx0) & (x < bx1) & (y >= by0) & (y < by1)
-            if m.any():
-                xs.append(x[m]); ys.append(y[m]); zs.append(z[m])
-        out = np.full(shape, np.nan, np.float32)
-        if not xs:
-            return out
-        x = np.concatenate(xs); y = np.concatenate(ys); z = np.concatenate(zs)
-        col = ((x - bx0) / self.res).astype(np.int64)
-        row = ((by1 - y) / self.res).astype(np.int64)
-        ok = (row >= 0) & (row < shape[0]) & (col >= 0) & (col < shape[1])
-        if not ok.any():
-            return out
-        flat = row[ok].astype(np.int64) * shape[1] + col[ok]
-        med = pd.Series(z[ok]).groupby(flat).median()
-        out.ravel()[med.index.to_numpy()] = med.to_numpy()
-        return out
-
-    def close(self):
-        self.cache.clear(); self.order.clear()
-
 
 class FillSource:
     """
@@ -611,10 +571,9 @@ def resolve_crs(src, gdf):
 # =============================================================================
 
 def main():
-    _src = FILL_POINTS_DIR if FILL_SOURCE_TYPE == "point_cloud" else FILL_DEM_PATH
     for label_, path in (("base DEM", BASE_DEM_PATH),
                          ("domain file", DOMAIN_FILE),
-                         ("fill source", _src)):
+                         ("fill source", FILL_DEM_PATH)):
         if not path.exists():
             raise FileNotFoundError(
                 f"{label_} not found: {path}\n"
@@ -632,20 +591,12 @@ def main():
     print(f"\n{len(gdf)} domains from {DOMAIN_FILE.name}")
     gdf = resolve_crs(src, gdf)
 
-    if FILL_SOURCE_TYPE == "point_cloud":
-        fill = PointCloudSource(FILL_POINTS_DIR, FILL_POINTS_GLOB)
-        print(f"\nfill source: {FILL_POINTS_DIR.name}  ({FILL_SOURCE_TAG})")
-        print(f"  {len(fill.tiles)} cell file(s), gridded to 1 m by median")
-    elif FILL_SOURCE_TYPE == "dem":
-        fill = FillSource(FILL_DEM_PATH, src.crs)
-        print(f"\nfill source: {FILL_DEM_PATH.name}  ({FILL_SOURCE_TAG})")
-        print(f"  EPSG:{fill.epsg}  {fill.res} m  nodata={fill.nodata}"
-              f"{'  -> reprojected on read' if fill.epsg else ''}")
-    else:
-        raise ValueError(f"FILL_SOURCE_TYPE must be 'dem' or 'point_cloud', "
-                         f"got {FILL_SOURCE_TYPE!r}")
+    fill = FillSource(FILL_DEM_PATH, src.crs)
+    print(f"\nfill source: {FILL_DEM_PATH.name}  ({FILL_SOURCE_TAG})")
+    print(f"  EPSG:{fill.epsg}  {fill.res} m  nodata={fill.nodata}"
+          f"{'  -> reprojected on read' if fill.epsg else ''}")
 
-    print(f"\nRules: coverage={FILL_SOURCE_YEAR} {FILL_SOURCE_TYPE} | "
+    print(f"\nRules: coverage={FILL_SOURCE_YEAR} DEM | "
           f"connectivity={REQUIRE_ISLAND_CONNECTION} (bridge {GAP_BRIDGE_M:g} m)"
           f" | floor={'%.2f m NAVD88' % FILL_MIN_ELEV_NAVD if APPLY_ELEV_FLOOR else 'off'}"
           f" | bias={APPLY_BIAS_CORRECTION} feather={APPLY_FEATHER}")
