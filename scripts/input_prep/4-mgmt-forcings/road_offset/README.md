@@ -6,8 +6,11 @@ is a result in its own right.
 
 Road *elevation* lives in a sibling folder,
 `scripts/input_prep/4-mgmt-forcings/road_elevation/`. It is not an offset
-product and carries no year: there is one DEM, so one elevation set serves both
-periods.
+product and carries no year — one elevation set serves both periods. That is
+*not* because there is one DEM; there are two, and under the road they differ by
+a median **+0.222 m**. That difference is the uncorrected 1996-vs-2009 survey
+offset rather than a roadbed, so it is kept out of the forcing. See the note at
+`HATTERAS_ROAD_ELEVATION_FILE` in `hatteras_site_config.py`.
 
 ```
 1-produce/     each method: its producer, and the figures about THAT method
@@ -32,8 +35,8 @@ output sound"; `4-compare/` asks "which method should we spend".
 | Statistic | `min(road) − min(dune)`, minima taken independently | per-profile difference, then median |
 | Obliquity | uncorrected | mask sheared with the same per-profile shear as the topography |
 | Output | `old_method_offset/<year>/` | `dunestart_offset/<year>/` |
-| Drowns at t=0 | 7 (1984), 5 (2004) | **0, both years** |
-| vs the rasterized road | +40 m / +23 m median | 0 m *by construction* |
+| Drowns at t=0 | **0 (1984)**, 5 (2004) | **0, both years** |
+| vs the rasterized road | +29 m / +22 m median | 0 m *by construction* |
 
 Both are 2 rows × 82 cols, GIS IDs then metres, so switching is a drop-in.
 
@@ -42,9 +45,12 @@ the **dune-start** method, switched 2026-08-18. `3-figures/HAT_road_domain_views
 defaults to `--method dunestart` to match; change both together, or the figures
 stop describing the model you run.
 
-Current outputs are built on **`2009_v5`** — the gap-filled DEM. See
-`hat_topo_version.py`: the version is resolved once, from the extractor, so
-bumping `VERSION` there moves this whole tree with it.
+**Each vintage is built on its OWN topography** — 1984 on `1984-start/v1`,
+2004 on `2004-start/v1`. They are different islands: all 90 domains differ and
+**65 differ in interior shape**. The pairing is defined once, as `YEAR_PRODUCT`
+in `scripts/hat_topo_version.py`, and every script here resolves through it.
+Nothing in this tree may call `topo_dirs()` without naming a product — that
+default is what gave both vintages the 2004-start island until 2026-08-26.
 
 ## The workflow
 
@@ -54,8 +60,15 @@ HAT_ROAD_YEAR=1984 python 1-produce/old_method/road_offset_pipeline.py
 HAT_ROAD_YEAR=2004 python 1-produce/old_method/road_offset_pipeline.py
 
 # dune-start method — masks first, then the measurement
+# The masks are SHARED by both periods (they register to the resampled_*.tif
+# grids, which no fill touches), so they are burnt once per road vintage.
 HAT_ROAD_YEAR=1984 python 1-produce/HAT_rasterize_road_to_domains.py
 HAT_ROAD_YEAR=2004 python 1-produce/HAT_rasterize_road_to_domains.py
+
+# ONE run does BOTH vintages. It configures a separate extractor module per
+# product, so you do not repoint HAT_dune_topo_extractor.py between them --
+# and must not: this rewrites ONE audit markdown for the whole tree, so a
+# half run publishes a document missing a period.
 python 1-produce/HAT_road_offset_from_dune_start.py
 
 # figures
@@ -107,6 +120,11 @@ One script, three modes:
 python 3-figures/HAT_road_domain_views.py --domains 52 --year 1984
 python 3-figures/HAT_road_domain_views.py --domains drowning --mode map
 python 3-figures/HAT_road_domain_views.py --browse --start 52
+
+`--year` picks the topography as well as the setback: 1984 draws on
+`1984-start`, 2004 on `2004-start`. It used to resolve one product at import,
+before the CLI was parsed, so one of the two years was always drawn on the
+other one's island.
 ```
 
 `--mode map` is the land/water plan view, `--mode section` runs the **real**
@@ -130,6 +148,60 @@ domain. If that file ever moves, fix the `_PLACEMENT` path — do not copy the
 functions across.
 
 ## Changelog
+
+**2026-08-26 — each vintage on its own topography.** `1-barrier3d-domains` went
+period-first on 2026-08-25 (`1984-start` / `2004-start`), and the setback
+producer and the setback audit were updated for it. Five other scripts were
+not. They looped over both years against a single module-level `topo_dirs()`
+with no argument — `DEFAULT_PRODUCT`, i.e. `2004-start` — so every 1984 panel,
+width and diagnostic was computed on the wrong island. Nothing errored.
+
+The scale of it: **all 90 domains differ between the two products and 65 differ
+in interior SHAPE** (GIS 11 is 165 rows on `1984-start`, 157 on `2004-start`).
+That is four times the v3→v4 incident these files already carry warnings about.
+
+* `YEAR_PRODUCT` is now defined **once**, in `scripts/hat_topo_version.py`, and
+  imported by `hatteras_site_config.py` and every script here. It had been
+  written out four times and omitted in three.
+* `load_interiors()` **requires a year**. That is what surfaced two further
+  scripts — `HAT_dunestart_modification_stages.py` and
+  `HAT_oceanfloor_offset_check.py` — which had the same defect and no symptom.
+* `HAT_road_domain_views.py` binds its topography from `--year` in `main()`
+  instead of at import.
+* The offset producer runs **both vintages in one invocation**, configuring a
+  separate extractor module per product. The previous guard skipped a
+  mismatched year, which made every run half a run — and since the audit
+  markdown is rewritten whole, the 14:04 run on 2026-08-26 published a
+  write-up with **no 2004 section at all** for a forcing that had not changed.
+* Column renamed `setback_2009_m` → `setback_dunestart_m` (and `_floored_m`).
+  Neither vintage is a 2009 measurement any more: `1984-start` is 2009+2014+1996
+  and `2004-start` is 2009+2014.
+* **2004 is byte-identical** after the rebuild — `2004-start/v1` is the renamed
+  `2009_v5`. The 1984 files moved; the 2004 forcing did not.
+
+**2026-08-26 (same day) — three stale `superseded/` clip paths.**
+`domain-clips-1m` moved *into* `superseded/` on 08-25 and back *out* on 08-26.
+Three scripts followed it in and not back out, each failing differently:
+
+* `HAT_road_offset_from_dune_start.py` — wrote blank `road_x`/`road_y` for
+  every profile, losing the shapely check that validates the index inversion.
+* `HAT_check_geojson_vs_mask.py` — reported **0 profiles compared**, a median
+  offset of `nan`, and then carried on and printed a report. This README calls
+  it the only guard against re-burning the wrong year; it had been passing
+  vacuously. It now exits non-zero rather than reporting on nothing. Repaired,
+  it puts **100 % of centreline vertices inside the mask footprint**, both
+  years, 4125 profiles each.
+* `HAT_road_geojson_map.py` — printed "no clip tifs found" and drew nothing.
+
+**2026-08-26 (same day) — road elevation is reproducible again.** `FILL_SOURCE`
+was `2008_NOAA_IOCM`, a product deleted from disk and not rebuildable from this
+repo, so the script raised on import. It now defaults to the live `2009-2014`
+baseline and takes `HAT_ROAD_ELEV_FILL` from the environment. Rebuilding moved
+**two domains** — GIS 78 by −0.006 m and GIS 79 by −0.015 m — which is the
+bound the script's own header predicted. The `2009-2014-1996` product was
+deliberately **not** used: it sits +0.222 m higher through the corridor, and
+that is the uncorrected survey offset, not a road.
+
 
 **2026-08-20 — rebuilt on `2009_v5` (gap-filled DEM).** The previous tree was
 archived whole to `dunestart_offset_ARCHIVE_2009_v4/`, alongside the existing

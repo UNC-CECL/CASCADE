@@ -52,11 +52,39 @@ Dependencies
   pip install pandas numpy matplotlib scipy statsmodels tqdm
 """
 
+import json
 import os
+import re
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from scipy import stats
 from statsmodels.nonparametric.smoothers_lowess import lowess
+
+# The pipeline's own code builds both inputs below. Imported, never copied:
+# this file used to reimplement the observed smoothing and the modelled LRR
+# extraction, and both had drifted from what the model is scored against.
+_HERE = Path(__file__).resolve()
+PROJECT_BASE_DIR = _HERE.parents[4]
+if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
+    raise RuntimeError(
+        f"CASCADE repo root not found: {PROJECT_BASE_DIR} has no "
+        f"pyproject.toml. This file expects to live in "
+        f"scripts/input_prep/7-source-sink/loess_smooth/.")
+SCRIPTS_DIR = PROJECT_BASE_DIR / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from cascade_pipeline.coastsat_loess import (        # noqa: E402
+    CoastSatDataset,
+    LoessConfig,
+    build_coastsat_series,
+    compute_domain_means,
+)
+from cascade_pipeline.hindcast import build_target_table   # noqa: E402
+from hatteras_site_config import HATTERAS_DOMAINS          # noqa: E402
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -68,15 +96,56 @@ from tqdm import tqdm
 # CONFIG — edit paths and thresholds here
 # ============================================================
 
-# CoastSat domain-averaged LRR CSVs
-P1_COASTSAT_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1984_2004\domain_lrr_1984_2004_summary.csv"
-P2_COASTSAT_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\2004_2024\domain_lrr_2004_2024_summary.csv"
+# CoastSat TRANSECT-level LRR. Not the domain-averaged summary: the target
+# is smoothed at transect resolution and only then averaged, and doing it in
+# the other order gives a measurably different curve.
+COASTSAT_BASE = SCRIPTS_DIR / "input_prep" / "5-scr" / "CoastSat"
+P1_COASTSAT_CSV = str(COASTSAT_BASE / "1984_2004" / "transect_lrr_full.csv")
+P2_COASTSAT_CSV = str(COASTSAT_BASE / "2004_2024" / "transect_lrr_full.csv")
 
-# CASCADE base run NPZs (management included, BE=0 throughout)
-P1_CASCADE_NPZ  = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1984_2004_edge_calibrated\HAT_1984_2004_edge_calibrated.npz"
-P2_CASCADE_NPZ  = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_2004_2024_edge_calibrated\HAT_2004_2024_edge_calibrated.npz"
+# The base run, per period. edgeBE is the preset that is ZERO at every domain
+# being solved (2-89) while carrying the independently solved values at the
+# locked ends -- so an interior residual is the whole correction rather than
+# an increment on an existing one, and the open-boundary artifact at GIS 1/90
+# is absorbed there instead of diffusing alongshore into interior terms.
+#
+# full_management because the observed CoastSat rate is from a real island
+# that WAS managed. nogroin because domains 1-10 are already excluded from
+# the LOESS fit for groin influence, and running the base with the groin on
+# would push its signal into the residual and double-count it against the
+# separate M/f sweep.
+# ITERATION. The calibration is a ONE-SHOT solve: it measures the residual of a
+# base run and imposes it as the BE field. That is exact only if imposing X m/yr
+# moves the domain's LRR by X m/yr, and it does not -- BRIE diffuses an imposed
+# rate alongshore, so a domain keeps only a fraction g of what it is given.
+# Measured on 2026-08-24, g is not a constant: a contiguous same-signed block of
+# corrections passes at g ~ 0.8-1.2, while a pattern that alternates sign at the
+# grid scale is damped to g ~ 0.1. One pass therefore closes 42% (P1) and 57%
+# (P2) of the misfit rather than all of it, and the shortfall is uneven.
+#
+# The fix is to iterate rather than to guess g: point this at the CURRENT
+# calibBE runs, measure what residual is left, and ADD it to the field already
+# in place (apply_be_fit.py --add). Each pass closes fraction g of whatever
+# remains, so it converges whatever g turns out to be, and it needs no estimate
+# of g at all. Amplifying by 1/g instead was rejected: g varies by an order of
+# magnitude with wavelength, so narrow features would be amplified ~10x into
+# rates that are indefensible read as sediment fluxes.
+#
+#   pass 0   HAT_BE_BASE_PRESET unset -> edgeBE   ->  apply_be_fit.py
+#   pass 1+  HAT_BE_BASE_PRESET=calibBE           ->  apply_be_fit.py --add
+#
+# Stop when no zone clears SIGNIFICANCE_THRESHOLD, which is then the tolerance
+# the field is converged to.
+BASE_PRESET   = os.environ.get("HAT_BE_BASE_PRESET", "edgeBE").strip() or "edgeBE"
+BASE_SCENARIO = "road_bdm_nogroin"
+RAW_RUNS_DIR  = PROJECT_BASE_DIR / "output" / "raw_runs"
 
-OUTPUT_DIR = r"/scripts/input_prep/loess_smooth\output"
+# The section 8 settings, matching the runner. TARGET_WINDOW is the widest
+# window; `rate_comparison` resolves the reference the same way.
+LOESS_CONFIG  = LoessConfig(window_domains=(7, 10), skip_southern_domains=10)
+TARGET_WINDOW = 10
+
+OUTPUT_DIR = str(_HERE.parent / "output")
 
 # ── Column names in CoastSat CSVs ─────────────────────────────────────────────
 LRR_COL    = "median_lrr"   # use median — more robust to outlier transects
@@ -96,6 +165,28 @@ SIGNIFICANCE_THRESHOLD = 0.5   # m/yr
 
 # Minimum number of adjacent domains with |residual| > threshold to form a zone.
 # Prevents correcting isolated noisy domains.
+# WHICH MODEL COLUMN THE RESIDUAL IS BUILT FROM. Must be the same
+# estimator as the observed target, which is a per-transect OLS slope;
+# see load_model_lrr. "change_rate_m_yr" reproduces a pre-2026-08-22
+# calibration and nothing else.
+RATE_COLUMN = "lrr_m_yr"
+
+# WHICH BASE RUN THE RESIDUAL IS DERIVED FROM.
+#   True   prefer the groin-ON base run carrying the joint fit's (M, f),
+#          so the source/sink carries only what the MODULES could not
+#          explain. Falls back to the no-groin run, loudly, when the
+#          joint fit has not run or no matching run exists.
+#   False  always the no-groin run. Reproduces every calibration before
+#          2026-08-22, and hands the source/sink the groin's D5/D6
+#          signal to absorb.
+#
+# ORDERING. Fit the groin against zeroBE/edgeBE, which impose nothing at
+# D5/D6, then recalibrate the source/sink against a run carrying the
+# fitted groin. Running this with the switch on BEFORE the joint fit is
+# harmless -- it warns and falls back -- but the result is a pre-groin
+# calibration and should not be quoted as a post-groin one.
+GROIN_AWARE_BASE_RUN = True
+
 MIN_ZONE_WIDTH = 3   # domains
 
 # If |P1_correction - P2_correction| exceeds this, the zone is "shifting"
@@ -143,6 +234,75 @@ MANUAL_OVERRIDES = {
 # significance/strategy calculation entirely — the script will not suggest a
 # correction for these domains, since you will always supply your own value.
 # Add a short note here for your own records of what each locked value is.
+# ── Frozen zone set ───────────────────────────────────────────────────────────
+# THE ZONES ARE THE SCIENCE; THE MAGNITUDE IS THE ARITHMETIC. Zone membership
+# says "this stretch of coast has a real sediment-budget deficit, and here is
+# the process". Magnitude says "deliver the amount you diagnosed, given that
+# BRIE diffuses roughly half of it away". Iterating BOTH lets the second
+# quietly rewrite the first: each pass re-derives zones from a NEW residual, so
+# as the coherent features are satisfied, progressively less coherent ones
+# cross the 0.5 m/yr threshold and get corrected. Worse, adding BE at a domain
+# pushes sediment into its neighbours and changes THEIR residuals -- so later
+# passes partly correct the alongshore spillover of earlier passes. That is
+# bookkeeping, not geomorphology, and it never terminates.
+#
+# Measured 2026-08-24: two unmasked passes corrected 19 domains in 1984-2004
+# and 12 in 2004-2024 that the pass-0 zone identification never selected --
+# including D5-D7 in period 2, the groin's own footprint.
+#
+# So zones are identified ONCE, from the edgeBE residual under the ordinary
+# significance and width rules, and then held fixed. Everything outside stays
+# at 0.0 no matter what its residual does; that residual remains in the results
+# as honest unexplained variance, which is the defensible number anyway.
+#
+# Regenerate ONLY by re-running pass 0 against edgeBE and re-deriving the set;
+# do not edit a domain in here to chase a residual.
+FROZEN_ZONE_DOMAINS = {
+    1984: (
+        5, 6, 7, 8, 9, 10, 11, 12, 13, 22, 27, 28, 29, 30, 31, 32, 33,
+        34, 44, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 62, 68, 69, 70,
+        71, 72, 73, 74, 75, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
+        89
+    ),
+    2004: (
+        8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 27,
+        28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43,
+        44, 48, 50, 51, 52, 53, 54, 55, 57, 62, 63, 64, 65, 66, 67, 68,
+        69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 83, 84, 85, 86, 87,
+        88, 89
+    ),
+}
+
+# ── Domains reserved for the groin module ─────────────────────────────────────
+# D5-D7 is the Buxton groin's own footprint, and the residual left there is the
+# GROIN's residual, not a source/sink term. Measured 2026-08-24, after two
+# iteration passes:
+#
+#     period 1   D6 = +1.72 m/yr   observed is more seaward than modelled --
+#                                  M = 60 does not build enough fillet
+#     period 2   D6 = -2.21 m/yr   modelled is more seaward than observed --
+#                                  the fillet does not release, which a module
+#                                  with trapping bounded at >= 0 CANNOT do
+#
+# Letting the BE field absorb those is exactly the double-count that
+# GROIN_AWARE_BASE_RUN exists to prevent: the source/sink term would quietly do
+# the groin's job and the groin would look better calibrated than it is.
+#
+# THIS WAS ALREADY HAPPENING, BY ACCIDENT. D5-D6 (period 1) and D6-D7 (period 2)
+# each form a significant run only 2 domains wide, and MIN_ZONE_WIDTH = 3 means
+# no zone forms, so no correction is ever applied. That is the right outcome
+# reached by a rule that knows nothing about the groin -- and it would silently
+# reverse if MIN_ZONE_WIDTH were ever retuned. Naming the domains here makes the
+# behaviour intentional and survives that.
+#
+# FREEZE, NOT ZERO. These emit 0.0, which under `apply_be_fit.py --add` means
+# "add nothing" -- the value already in the config is kept. That matters: at D5
+# only ~16% of the standing correction is the groin, the other ~84% being Cape
+# Point background measured with the groin switched OFF. Zeroing would discard
+# it. Under the pass-0 replace path 0.0 would zero them, so reserve domains only
+# once the field they should keep is already in place.
+GROIN_RESERVED_DOMAINS = (5, 6, 7)
+
 LOCKED_DOMAINS = {
     1:  "Solved directly via buffer-cell reproduction (see GIS 1 value)",
     90: "Solved directly via buffer-cell reproduction (see GIS 90 value)",
@@ -202,6 +362,222 @@ FONT_ANNOT    = 10   # small annotation text (town/pier/groin labels in annotate
 # ============================================================
 # CASCADE LOADER
 # ============================================================
+
+JOINT_FIT_JSON = (PROJECT_BASE_DIR / "output" / "groin_sweep"
+                  / "joint_fit.json")
+
+
+def _fitted_groin(preset=BASE_PRESET):
+    """The (M, fraction) the joint fit settled on, or None.
+
+    Args:
+        preset: Which preset's fit to read. The base run is BASE_PRESET,
+            so its own fit is the one that describes it.
+
+    Returns:
+        An (M, fraction) tuple, or None if the joint fit has not run or
+        holds no entry for this preset.
+    """
+    if not JOINT_FIT_JSON.exists():
+        return None
+    try:
+        fits = json.loads(JOINT_FIT_JSON.read_text())
+    except (OSError, ValueError):
+        return None
+    fit = fits.get(preset)
+    if not fit or "M" not in fit or "fraction" not in fit:
+        return None
+    return float(fit["M"]), float(fit["fraction"])
+
+
+def _groin_run_at(period_dir, stem, fitted, tolerance=1e-6):
+    """The groin base run carrying exactly the fitted (M, f), if present.
+
+    Matched on the run's own metadata rather than on its directory name:
+    the name records that a groin ran, not which one.
+
+    Args:
+        period_dir: <period>/<preset> directory to search.
+        stem: Invariant leading part of the run name.
+        fitted: (M, fraction) to match.
+        tolerance: Absolute tolerance on both values.
+
+    Returns:
+        The matching Path, or None.
+    """
+    if not period_dir.exists():
+        return None
+    want_m, want_f = fitted
+    for run in sorted(period_dir.glob(f"{stem}*_groin")):
+        if not run.is_dir() or run.name.endswith("_nogroin"):
+            continue
+        if "reloc" in run.name or "nonourish" in run.name:
+            continue
+        meta = run / f"{run.name}_run_metadata.json"
+        if not meta.exists():
+            continue
+        try:
+            groin = json.loads(meta.read_text()).get("groin", {})
+        except (OSError, ValueError):
+            continue
+        got_m = groin.get("trapping_rate_m_yr")
+        # The floor is not stored as its own field. The runner writes the
+        # deterioration as a HUMAN-READABLE STRING -- "linear_ramp, floor 0.6"
+        # -- so `deterioration_fraction` is always None and, before this,
+        # every candidate was skipped and the analysis fell back to the
+        # no-groin base while reporting "no groin base run at the fitted
+        # M, f". The runs were correct; only the lookup was wrong, and the
+        # fallback is a warning rather than an error, so it produced a
+        # complete pre-groin calibration that LOOKED like a post-groin one.
+        got_f = groin.get("deterioration_fraction")
+        if got_f is None:
+            match = re.search(r"floor\s*([\d.]+)", str(groin.get("deterioration", "")))
+            got_f = match.group(1) if match else None
+        if got_m is None or got_f is None:
+            continue
+        if (abs(float(got_m) - want_m) <= tolerance
+                and abs(float(got_f) - want_f) <= tolerance):
+            return run
+    return None
+
+
+def base_run_dir(period_start, period_end):
+    """The base run directory for one period, resolved from what is on disk.
+
+    The scenario tokens are NOT the same in both periods: period 2 has
+    nourishment scheduled, so its full_management run carries a `nourish`
+    token that period 1 has no reason to. Globbing the invariant part and
+    excluding the arms that must not be picked is what keeps this from
+    silently resolving to the wrong run when the token set changes again.
+
+    Raises:
+        FileNotFoundError: If no base run is present. Loud rather than
+            falling back to another preset -- a calibration silently derived
+            against the wrong base would look entirely normal downstream.
+        RuntimeError: If more than one candidate matches, rather than
+            guessing which run the calibration should rest on.
+    """
+    # Runs are filed <period>/<preset>/.
+    period_dir = (RAW_RUNS_DIR / f"{period_start}_{period_end}"
+                  / BASE_PRESET)
+    stem = f"HAT_{period_start}_{period_end}_{BASE_PRESET}_road_bdm"
+
+    # GROIN-ON BASE RUN, WHEN ONE EXISTS AT THE FITTED (M, f).
+    #
+    # The source/sink field is meant to carry what the MODULES could not
+    # explain. Deriving it from a groin-OFF run hands it the groin's whole
+    # signal at D5/D6, and a later calibBE-plus-groin run then applies both
+    # -- the double count section 7 of HAT_hindcast_methods.md warns about.
+    # It is not hypothetical: the 2026-08-22 calibration put -1.4 m/yr at
+    # D6 in 2004-2024, absorbing exactly the fillet relaxation the groin is
+    # now known to be able to produce.
+    #
+    # THE (M, f) MATCH IS THE POINT, not merely finding a groin run. A seed
+    # run exists at PROVISIONAL values (M = 50, f = 0.9) purely to give the
+    # sweep a drift-guard reference; calibrating against that would fit the
+    # source/sink to a groin nobody has fitted yet. So the run must carry
+    # the values in joint_fit.json, and until the joint fit has run there
+    # is nothing to match and this falls back -- loudly.
+    if GROIN_AWARE_BASE_RUN:
+        fitted = _fitted_groin()
+        if fitted is None:
+            print("  WARNING: GROIN_AWARE_BASE_RUN is on but "
+                  f"{JOINT_FIT_JSON.name} does not exist yet -- falling "
+                  "back to the no-groin base run. The source/sink field "
+                  "will absorb the groin's D5/D6 signal.")
+        else:
+            matched = _groin_run_at(period_dir, stem, fitted)
+            if matched is not None:
+                return matched
+            print(f"  WARNING: no groin base run at the fitted "
+                  f"M={fitted[0]:g}, f={fitted[1]:g} under {period_dir} "
+                  "-- falling back to the no-groin base run. Run stage 6 "
+                  "first if the source/sink should carry only what the "
+                  "groin could not.")
+
+    hits = sorted(
+        d for d in period_dir.glob(f"{stem}*_nogroin")
+        if d.is_dir()
+        and "reloc" not in d.name          # the prescribed-relocation arm
+        and "nonourish" not in d.name)     # the fills-off contrast
+    if len(hits) == 1:
+        return hits[0]
+    if not hits:
+        raise FileNotFoundError(
+            f"base run not found under {period_dir}\n"
+            f"  Expected the {BASE_PRESET} full_management run (groin off, "
+            f"relocations off) for {period_start}-{period_end}.\n"
+            f"  Run it with:\n"
+            f"    python scripts/hatteras_ms/HAT_run_all.py --stages 2 "
+            f"--presets {BASE_PRESET} --scenarios full_management")
+    raise RuntimeError(
+        f"{len(hits)} candidate base runs in {period_dir}: "
+        f"{[d.name for d in hits]}. Refusing to guess which one the "
+        f"calibration should rest on.")
+
+
+def load_model_lrr(period_start, period_end):
+    """Per-GIS-domain modelled LRR, m/yr, (+) seaward.
+
+    Read from the run's own `*_shoreline_change_rate.csv` rather than
+    re-derived from the .npz. The pipeline writes that file from the same
+    array section 12 scores, so this cannot disagree with the model about
+    sign, units, or padded-index alignment.
+
+    Takes `lrr_m_yr`, the OLS slope through the run's annual states --
+    NOT `change_rate_m_yr`, which is (x[-1] - x[0]) / span. The residual
+    this calibration turns into a background-erosion rate is model minus
+    observed, and the observed side is a per-transect OLS slope, so the
+    model side has to be the same estimator or the residual carries the
+    difference between two estimators as if it were a sediment budget.
+    Every BE preset before 2026-08-22 was fit on the endpoint column;
+    this function is the reason those values are not reproducible from
+    the current pipeline without setting RATE_COLUMN back.
+    """
+    run_dir = base_run_dir(period_start, period_end)
+    hits = sorted(run_dir.glob("*_shoreline_change_rate.csv"))
+    if not hits:
+        raise FileNotFoundError(
+            f"no *_shoreline_change_rate.csv in {run_dir}")
+    print(f"  model  {hits[0].parent.name}  [{RATE_COLUMN}]")
+    frame = pd.read_csv(hits[0])
+    if RATE_COLUMN not in frame.columns:
+        raise KeyError(
+            f"{hits[0].name} has no {RATE_COLUMN!r} column. It predates the "
+            f"LRR estimator; re-run the base run, or backfill it with "
+            f"scripts/input_prep/7-source-sink/backfill_lrr.py.")
+    return frame.set_index("gis_domain")[RATE_COLUMN]
+
+
+def load_observed(period_start, csv_path):
+    """(raw_per_domain_mean, target) for one period, m/yr, (+) seaward.
+
+    `target` is the curve the runner's section 8 builds and section 12 grades
+    against: LOESS at transect resolution over along-coast distance, averaged
+    to domains, with GIS 1..skip_southern_domains spliced in as raw means.
+    `raw` is the unsmoothed per-domain mean, kept for the diagnostic residual
+    only -- it drives nothing.
+    """
+    series = build_coastsat_series(
+        [CoastSatDataset(label=f"CoastSat {period_start}",
+                         period_start=period_start, csv_path=csv_path)],
+        period_start, LOESS_CONFIG)
+    if not series:
+        raise FileNotFoundError(f"CoastSat transects failed to load: "
+                                f"{csv_path}")
+    cs = series[0]
+    table = build_target_table(cs, LOESS_CONFIG, HATTERAS_DOMAINS,
+                               TARGET_WINDOW)
+    target = pd.Series(np.asarray(table["target_lrr_m_yr"], dtype=float),
+                       index=np.asarray(table["gis_domain"], dtype=int))
+
+    gis_x, means = compute_domain_means(
+        cs["transect_domains"], cs["transect_rates"],
+        HATTERAS_DOMAINS.first_gis_id, HATTERAS_DOMAINS.last_gis_id)
+    raw = pd.Series(np.asarray(means, dtype=float),
+                    index=np.asarray(gis_x, dtype=int))
+    return raw, target
+
 
 def load_cascade_lrr(npz_path, start_year, end_year):
     """Extract per-domain LRR (m/yr) from CASCADE base-run NPZ."""
@@ -349,6 +725,32 @@ def compute_be_rates(raw_p1, raw_p2, smooth_p1, smooth_p2):
         s1      = sig_p1[i]
         s2      = sig_p2[i]
 
+        # Groin-reserved domains: emit 0.0 and skip the strategy logic, so an
+        # iteration pass adds nothing here and the standing value is kept.
+        # See GROIN_RESERVED_DOMAINS for why this residual is not ours.
+        if dom in GROIN_RESERVED_DOMAINS:
+            zone = assign_physical_zone(dom)
+            rows.append({
+                "domain":               dom,
+                "raw_residual_p1":      r1_raw,
+                "raw_residual_p2":      r2_raw,
+                "smooth_residual_p1":   r1_sm,
+                "smooth_residual_p2":   r2_sm,
+                "correction_warranted_p1": False,
+                "correction_warranted_p2": False,
+                "strategy":             "groin-reserved",
+                "be_hindcast_p1":       0.0,
+                "be_hindcast_p2":       0.0,
+                "be_forecast_continue": 0.0,
+                "be_forecast_revert":   0.0,
+                "be_forecast_neutral":  0.0,
+                "physical_zone":        zone,
+                "mechanism":            "RESERVED — the Buxton groin's own "
+                                        "residual; absorbing it here would "
+                                        "double-count against the M/f fit",
+            })
+            continue
+
         # Locked domains: force to 0.0, skip all significance/strategy logic.
         # These domains already have an independently-solved BE rate that you
         # will always supply yourself — the script should not suggest a value.
@@ -449,7 +851,23 @@ def compute_be_rates(raw_p1, raw_p2, smooth_p1, smooth_p2):
             "mechanism":            mechanism,
         })
 
-    return pd.DataFrame(rows).set_index("domain")
+    frame = pd.DataFrame(rows).set_index("domain")
+
+    # Hold the zone set fixed -- see FROZEN_ZONE_DOMAINS. Applied here rather
+    # than inside the loop so the metrics CSV still records the residual and
+    # the significance verdict for every domain: the diagnosis stays visible,
+    # only the correction is withheld.
+    for period, column in ((1984, "be_hindcast_p1"), (2004, "be_hindcast_p2")):
+        outside = [d for d in frame.index if d not in FROZEN_ZONE_DOMAINS[period]]
+        frame.loc[outside, column] = 0.0
+    inside_either = set(FROZEN_ZONE_DOMAINS[1984]) | set(FROZEN_ZONE_DOMAINS[2004])
+    outside_both = [d for d in frame.index if d not in inside_either]
+    for column in ("be_forecast_continue", "be_forecast_revert",
+                   "be_forecast_neutral"):
+        frame.loc[outside_both, column] = 0.0
+    print(f"  Frozen zone set: {len(FROZEN_ZONE_DOMAINS[1984])} domains P1, "
+          f"{len(FROZEN_ZONE_DOMAINS[2004])} P2; corrections outside withheld")
+    return frame
 
 
 # ============================================================
@@ -588,13 +1006,22 @@ def plot_diagnostic(cs_p1, cs_p2, casc_p1, casc_p2,
            label="Raw residual (unsmoothed both sides)", zorder=2)
     ax.plot(domains, smooth_p1, "-", lw=2.0, color="#b2182b",
             label="Residual (from smoothed rate)", zorder=3)
-    # Shade warranted correction zones
+    # Shade warranted zones, distinguishing APPLIED from WITHHELD.
+    # correction_warranted_* is deliberately left unmasked so the metrics CSV
+    # keeps the diagnosis for every domain -- but a domain outside
+    # FROZEN_ZONE_DOMAINS is diagnosed and NOT corrected, and shading the two
+    # alike would tell the reader a correction was applied where none was.
     sig = results["correction_warranted_p1"].values
     for i, dom in enumerate(domains):
-        if sig[i]:
+        if not sig[i]:
+            continue
+        if dom in FROZEN_ZONE_DOMAINS[1984] and dom not in GROIN_RESERVED_DOMAINS:
             ax.axvspan(dom-0.5, dom+0.5, color="#b2182b", alpha=0.12, zorder=0)
+        else:
+            ax.axvspan(dom-0.5, dom+0.5, facecolor="none", edgecolor="#777777",
+                       hatch="///", linewidth=0.0, alpha=0.55, zorder=0)
     ax.set_ylabel("Residual  (m/yr)\nCoastSat − CASCADE", fontsize=FONT_LABEL)
-    ax.set_title(f"Period 1 residual  |  shaded = correction warranted  "
+    ax.set_title(f"Period 1 residual  |  solid = corrected;  hatched = diagnosed but WITHHELD (outside the frozen zone set, or reserved for the groin)  "
                  f"(|residual| > {SIGNIFICANCE_THRESHOLD} m/yr, ≥{MIN_ZONE_WIDTH} domains wide)",
                  fontsize=FONT_TITLE, loc="left", pad=3)
     all_vals = np.concatenate([raw_p1[~np.isnan(raw_p1)],
@@ -610,12 +1037,22 @@ def plot_diagnostic(cs_p1, cs_p2, casc_p1, casc_p2,
            label="Raw residual (unsmoothed both sides)", zorder=2)
     ax.plot(domains, smooth_p2, "-", lw=2.0, color="#2166ac",
             label="Residual (from smoothed rate)", zorder=3)
+    # Shade warranted zones, distinguishing APPLIED from WITHHELD.
+    # correction_warranted_* is deliberately left unmasked so the metrics CSV
+    # keeps the diagnosis for every domain -- but a domain outside
+    # FROZEN_ZONE_DOMAINS is diagnosed and NOT corrected, and shading the two
+    # alike would tell the reader a correction was applied where none was.
     sig = results["correction_warranted_p2"].values
     for i, dom in enumerate(domains):
-        if sig[i]:
+        if not sig[i]:
+            continue
+        if dom in FROZEN_ZONE_DOMAINS[2004] and dom not in GROIN_RESERVED_DOMAINS:
             ax.axvspan(dom-0.5, dom+0.5, color="#2166ac", alpha=0.12, zorder=0)
+        else:
+            ax.axvspan(dom-0.5, dom+0.5, facecolor="none", edgecolor="#777777",
+                       hatch="///", linewidth=0.0, alpha=0.55, zorder=0)
     ax.set_ylabel("Residual  (m/yr)\nCoastSat − CASCADE", fontsize=FONT_LABEL)
-    ax.set_title(f"Period 2 residual  |  shaded = correction warranted",
+    ax.set_title(f"Period 2 residual  |  solid = corrected;  hatched = diagnosed but WITHHELD (outside the frozen zone set, or reserved for the groin)",
                  fontsize=FONT_TITLE, loc="left", pad=3)
     all_vals = np.concatenate([raw_p2[~np.isnan(raw_p2)],
                                smooth_p2[~np.isnan(smooth_p2)]])
@@ -823,36 +1260,33 @@ def print_be_dicts(results, txt_path=None):
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # ── Load CoastSat LRRs ────────────────────────────────────────────────────
-    print("Loading CoastSat LRRs …")
-    cs_p1_ser = pd.read_csv(P1_COASTSAT_CSV).set_index(DOMAIN_COL)[LRR_COL]
-    cs_p2_ser = pd.read_csv(P2_COASTSAT_CSV).set_index(DOMAIN_COL)[LRR_COL]
-    cs_p1 = np.array([cs_p1_ser.get(d, np.nan) for d in range(1, NUM_REAL_DOMAINS+1)])
-    cs_p2 = np.array([cs_p2_ser.get(d, np.nan) for d in range(1, NUM_REAL_DOMAINS+1)])
-    print(f"  P1: {np.sum(~np.isnan(cs_p1))} valid domains")
-    print(f"  P2: {np.sum(~np.isnan(cs_p2))} valid domains")
+    def as_array(series):
+        return np.array([series.get(d, np.nan)
+                         for d in range(1, NUM_REAL_DOMAINS + 1)])
 
-    # ── Load CASCADE LRRs ─────────────────────────────────────────────────────
-    print("\nLoading CASCADE base-run LRRs …")
-    casc_p1_ser = load_cascade_lrr(P1_CASCADE_NPZ, P1_START, P1_END)
-    casc_p2_ser = load_cascade_lrr(P2_CASCADE_NPZ, P2_START, P2_END)
-    casc_p1 = np.array([casc_p1_ser.get(d, np.nan) for d in range(1, NUM_REAL_DOMAINS+1)])
-    casc_p2 = np.array([casc_p2_ser.get(d, np.nan) for d in range(1, NUM_REAL_DOMAINS+1)])
+    # ── Observed: the section 8 target, not the domain-averaged CSV ──────────
+    print("Loading CoastSat transects and building the section 8 target …")
+    raw_p1_ser, tgt_p1_ser = load_observed(P1_START, P1_COASTSAT_CSV)
+    raw_p2_ser, tgt_p2_ser = load_observed(P2_START, P2_COASTSAT_CSV)
+    cs_p1, cs_p2 = as_array(raw_p1_ser), as_array(raw_p2_ser)
+    cs_p1_smooth, cs_p2_smooth = as_array(tgt_p1_ser), as_array(tgt_p2_ser)
+    print(f"  P1: {np.sum(~np.isnan(cs_p1_smooth))} target domains")
+    print(f"  P2: {np.sum(~np.isnan(cs_p2_smooth))} target domains")
+
+    # ── Modelled: the base run's own rate CSV ───────────────────────────────
+    print(f"\nLoading {BASE_PRESET} base-run rates …")
+    casc_p1 = as_array(load_model_lrr(P1_START, P1_END))
+    casc_p2 = as_array(load_model_lrr(P2_START, P2_END))
 
     domains = np.arange(1, NUM_REAL_DOMAINS + 1)
     pd.DataFrame({"domain": domains, "casc_p1": casc_p1, "casc_p2": casc_p2}
                  ).to_csv(os.path.join(OUTPUT_DIR, "cascade_base_lrr.csv"), index=False)
 
-    # ── Smooth the OBSERVED shoreline change rate (not the residual) ─────────
-    # Updated methodology: LOESS smoothing is applied to the CoastSat rate
-    # itself, before differencing against CASCADE, rather than to the
-    # residual afterward. Domains 1-GROIN_EXCLUDE_THROUGH_DOMAIN (Buxton
-    # groin influence zone) are excluded from the fit and pass through with
-    # their raw, unsmoothed rate — see smooth_shoreline_rate().
-    print(f"\nSmoothing observed shoreline change rate "
-          f"(excluding groin zone D1-{GROIN_EXCLUDE_THROUGH_DOMAIN}) …")
-    cs_p1_smooth = smooth_shoreline_rate(cs_p1)
-    cs_p2_smooth = smooth_shoreline_rate(cs_p2)
+    # The observed curve is already smoothed -- `build_target_table` did it at
+    # transect resolution. `smooth_shoreline_rate` is deliberately NOT called
+    # here any more: running it would LOESS an already-LOESSed curve, and the
+    # second pass would flatten exactly the coherent zones this script exists
+    # to detect. The function is kept for reference by the diagnostic figure.
 
     # ── Raw residual — fully unsmoothed on both sides, kept for diagnostic
     # comparison only. It no longer drives any decision below. ────────────────

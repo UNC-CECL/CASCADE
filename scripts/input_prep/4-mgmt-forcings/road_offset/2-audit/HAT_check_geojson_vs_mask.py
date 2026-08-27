@@ -43,8 +43,11 @@ ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
 
 MASK_FMT = ROADS_ROOT / "raster" / "{year}" / "masks" / "domain_{d}_road_{year}.npy"
 GEOJSON_FMT = ROADS_ROOT / "raw_offset" / "{year}" / "nc12_{year}.geojson"
-TIF_FMT = (INIT_ROOT / "1-barrier3d-domains" / "2009-raw"
-           / "2009-domain-clipresample" / "domain_{d}" / "resampled_domain_{d}.tif")
+# MOVED 2026-08-25: 1-barrier3d-domains went period-first and the pre-90-domain
+# legacy went under superseded/. Path repointed so this script keeps reading
+# EXACTLY what it read before - no road number moves because of the reorg.
+TIF_FMT = (INIT_ROOT / "1-barrier3d-domains"
+           / "domain-clips-1m" / "domain_{d}" / "resampled_domain_{d}.tif")
 
 YEARS = [1984, 2004]
 DOMAINS = list(range(1, 91))
@@ -95,12 +98,24 @@ def check_year(year: int) -> dict:
     contained = miss = 0
     offsets = []
     geo_no_mask, mask_no_geo = [], []
+    missing_tif = []
     per_domain = {}
 
     for d in DOMAINS:
         tif = Path(str(TIF_FMT).format(d=d))
         mask_path = Path(str(MASK_FMT).format(year=year, d=d))
-        if not tif.is_file() or not mask_path.is_file():
+        # A MISSING TIF USED TO BE INDISTINGUISHABLE FROM "no road here".
+        # On 2026-08-26 domain-clips-1m moved out of superseded/ and TIF_FMT
+        # was not updated with it. Every domain took this branch, so the check
+        # reported "0 profiles with both line and mask" for BOTH years and a
+        # median offset of nan -- and then carried on to Check 4 and printed a
+        # result. This is the only guard against re-burning the wrong year;
+        # a guard that passes vacuously is worse than no guard, so the tif
+        # being absent is now counted and reported rather than skipped.
+        if not tif.is_file():
+            missing_tif.append(d)
+            continue
+        if not mask_path.is_file():
             continue
         mask = np.load(mask_path)
         mask = np.isfinite(mask) & (mask > 0)
@@ -140,7 +155,7 @@ def check_year(year: int) -> dict:
     return {
         "year": year, "contained": contained, "miss": miss,
         "offset": off, "geo_no_mask": geo_no_mask, "mask_no_geo": mask_no_geo,
-        "per_domain": per_domain,
+        "per_domain": per_domain, "missing_tif": missing_tif,
     }
 
 
@@ -202,7 +217,23 @@ def main() -> None:
         total = r["contained"] + r["miss"]
         off = r["offset"]
         print(f"\n--- {year}")
+        # A VACUOUS PASS IS NOT A PASS. When domain-clips-1m moved out of
+        # superseded/ on 2026-08-26 and TIF_FMT was not updated, every domain
+        # was skipped for want of a tif: this printed "0 profiles", a median
+        # offset of nan, then carried on to Check 4 and produced a report. The
+        # README calls this the only guard against re-burning the wrong year,
+        # so it has to fail loudly when it has compared nothing.
+        if r["missing_tif"]:
+            print(f"  [STOP] no resampled tif for {len(r['missing_tif'])} of "
+                  f"{len(DOMAINS)} domains -- this check cannot run.")
+            print(f"         first missing: "
+                  f"{Path(str(TIF_FMT).format(d=r['missing_tif'][0]))}")
+            print(f"         fix TIF_FMT; do not read the numbers below.")
+            raise SystemExit(1)
         print(f"  profiles with both line and mask   : {total}")
+        if not total:
+            print("  [STOP] nothing was compared, so nothing was checked.")
+            raise SystemExit(1)
         if total:
             print(f"  centerline INSIDE mask footprint   : {r['contained']} "
                   f"({r['contained'] / total:.2%})")

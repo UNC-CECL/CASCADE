@@ -1,0 +1,168 @@
+# =============================================================================
+# HATTERAS HINDCAST -- run settings
+# =============================================================================
+# Edit this file, save it, run the hindcast. Both
+# `HAT_hindcast_1984_2024.py` and `HAT_hindcast_1984_2024.ipynb` read it, so
+# the two cannot disagree about what a setting means.
+#
+# In the notebook you do NOT need to restart the kernel: section 3 calls
+# load_run_config(), which re-reads this file every time the cell is run.
+#
+# PRECEDENCE
+#     environment variable  >  this file  >  the default in HAT_hindcast_config
+#
+# WHAT DOES NOT READ THIS FILE
+#     `HAT_run_all.py` sets HAT_IGNORE_SETTINGS=1 on every run it launches, so
+#     a batch run is described entirely by the driver plus code defaults. A
+#     half-finished experiment left in this file can never reach the 344-cell
+#     sweep or the comparison matrix. The groin sweep does not read it either;
+#     its workers carry their own copy of the model code.
+#
+# UNKNOWN KEYS ARE FATAL
+#     A misspelled key raises rather than being ignored, because the silent
+#     failure is a run that quietly used the default under the name of the
+#     setting you thought you changed.
+#
+# VALID VALUES
+#     Listed in the comments below, but NOT enforced here -- the scenario
+#     table, the period table and the offset modes each have exactly one home
+#     in the code, and a second copy in this file is a second thing to drift.
+#     A bad value raises in section 3 with the valid list attached.
+# =============================================================================
+
+
+# --- which run --------------------------------------------------------------
+
+# 1984 (-> 1984-2004) or 2004 (-> 2004-2024). Selects run length, RSLR rate,
+# storm series, road-setback file and nourishment settings.
+start_year: 1984
+
+# Where the alongshore sediment budget is treated as unresolved:
+#   zeroBE    nothing imposed anywhere
+#   edgeBE    only the two end domains, absorbing the open-boundary artifact
+#   calibBE   the full per-domain fit against the CoastSat LRR
+source_sink: zeroBE
+
+# The management combination. Each name expands to four switches; see the
+# SCENARIOS table in section 3.
+#   natural           nothing human acts on the island: the counterfactual
+#   roadway_only      NC-12 defended, villages left to behave naturally
+#   beachdune_only    villages managed and nourished, the road passive
+#   full_management   everything: the status-quo hindcast
+#   full_no_fill      everything except the sand (2004-2024 only)
+scenario: full_management
+
+# Historical NC-12 relocation events (1989, 1999). THREE states, not two:
+#
+#   null    inherit from the scenario above. Every named scenario currently
+#           sets this False, so today null and false simulate the same run --
+#           but null follows the scenario if that ever changes, and false
+#           pins the answer regardless. This is the default because the
+#           scenario, not this line, is meant to decide.
+#   true    force the events ON, whatever the scenario says. Reported as a
+#           DEPARTURE from the named scenario and adds a `reloc` token to the
+#           run name, so an overridden run cannot be filed under the scenario
+#           it departed from. Read section 5.1 before using it.
+#   false   force them OFF. Same simulation as null today; the difference is
+#           only that the run log records it as your explicit choice rather
+#           than as inherited from the scenario.
+#
+# Relocations need roadway management to have a setback to move, so they are
+# inert under `natural` and `beachdune_only`, and no event falls in 2004-2024.
+relocations: null
+
+# Which shoreline_offset variant is built:
+#   asrun       reproduces the historical metres/10 unit error, so every
+#               previously published run stays reproducible. The default.
+#   metres      the correction
+#   detrended   the correction, with the island-scale tilt removed
+# Anything but "asrun" adds an `offset<mode>` token to the run name.
+offset_mode: asrun
+
+
+# --- the groin --------------------------------------------------------------
+# Not part of the scenario: it is a structure, not a management module. Every
+# scenario is run twice, groin off first, so section 12.3 has a paired
+# baseline identical in every other token.
+
+# WARNING, 2026-08-26: THE VALUES BELOW ARE NOT THE FITTED PAIR.
+#   output/groin_sweep/joint_fit.json pins M = 60, f = 0.6 (set 2026-08-24,
+#   superseding M = 50, which carried a 0.44 m RMSE penalty). HAT_run_all.py
+#   reads that file and passes the fitted pair to its stage-6 groin runs, so
+#   the MATRIX is unaffected. A single run driven from THIS file is not: it
+#   uses whatever is typed here, and f = 0.9 was never fitted at all.
+#   Left unchanged on purpose - the fit is about to be redone against the
+#   1984-start topography, so overwriting these with 60/0.6 would only pin
+#   values that are themselves about to move. Read joint_fit.json before
+#   running a groin case by hand.
+groin:
+  enabled: false
+  # M, the amplitude knob, m/yr. Fit JOINTLY across both periods -- neither
+  # window pins it alone.
+  trapping_M: 50.0
+  # f, the post-deterioration floor as a fraction of M.
+  deterioration_f: 0.9
+
+
+# --- physics ----------------------------------------------------------------
+# Forcing, as opposed to anything anyone decides. Changes what is SIMULATED,
+# not just what is emitted, so it reaches run_index.csv (column Hs_m) and a
+# changed value is recoverable from the index rather than only from this file.
+
+physics:
+  # Significant wave height, m. One value, no sweep -- a sweep over Hs is a
+  # separate script.
+  wave_height_Hs: 2.5
+
+
+# --- management -------------------------------------------------------------
+# Sandbag placement: a defence someone decides to build, not a property of the
+# coast, so it sits on its own rather than under physics. It is not part of
+# the `scenario` table above because no historical sandbag campaign is
+# reconstructed for either period -- this is an off switch for the hindcast
+# and a knob for a forward run, not a management arm of the run matrix.
+# Reaches run_index.csv as sandbags_on.
+sandbags: false
+
+
+# --- what the run emits -----------------------------------------------------
+# None of these change the simulation.
+
+output:
+  # True renders figures inline (the notebook default). A headless .py run
+  # cannot, and forces the Agg backend. The files written to disk are
+  # identical either way. Left null, the .py uses False and the notebook True.
+  show_figures: null
+  # The shoreline animations in section 9.2. Slow, and not needed to score a
+  # run -- turn off when iterating on rates.
+  make_gifs: true
+  # The model .npz is ~160 MB and is the only large artifact a run produces.
+  # It is what lets a figure be re-derived without re-running, so it defaults
+  # on; turn it off for a long batch that only needs the rate curves.
+  save_model_state: true
+  # False stops if the run directory already holds a result. True EMPTIES that
+  # directory and reuses it -- the previous trial is gone, and its row in
+  # run_index.csv is replaced. Section 12.3 resolves the groin baseline by
+  # directory name, so overwriting one run silently redefines the paired run's
+  # answer. Set back to false before running a matrix.
+  overwrite: false
+
+
+# --- not settable here ------------------------------------------------------
+# use_sandbox_cascade is deliberately NOT a line in this file. Every run uses
+# cascade.cascade_groin, always. Two reasons:
+#
+#   It is not a choice. That module is cascade.cascade plus one `if` that
+#   calls a callback when one is attached, and does nothing when none is.
+#   With the groin off the two are the same model; with it on, only this one
+#   has the hook -- attaching the callback to the other is a SILENT no-op
+#   that produces a valid-looking groin run in which the groin did nothing.
+#
+#   Deriving it from `groin.enabled` would be worse than fixing it. Section
+#   12.3 measures the groin against a no-groin baseline that must be
+#   identical in every other respect; letting the flag follow the groin would
+#   run the two halves of that pair through different module objects, which
+#   is the one asymmetry the pairing cannot tolerate.
+#
+# `HAT_USE_SANDBOX_CASCADE=0` still forces the installed package for a
+# one-off A/B, and the section 7 guard refuses to pair it with the groin.

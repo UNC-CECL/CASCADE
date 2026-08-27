@@ -102,7 +102,7 @@ INPUTS
 ------
   SCENARIOS below: 2-row RoadSetback_<year>.csv files and/or literal
   {domain: setback_m} maps taken from HISTORICAL_ROAD_EVENTS
-  TOPO_DIR/domain_<N>_topography_<year>.npy
+  TOPO_DIR/domain_<N>_topography.npy
 
 OUTPUTS
 -------
@@ -172,10 +172,76 @@ ROADS_DIR = HATTERAS_DATA_BASE / "4-mgmt-forcing" / "road_offset" / "dunestart_o
 # hidden. Repointing the runner is a separate job.
 # parents[4] IS scripts/ -- hat_topo_version.py moved there 2026-08-20.
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-from hat_topo_version import topo_dirs  # noqa: E402
+from hat_topo_version import topo_dirs, array_name  # noqa: E402
+from hatteras_site_config import HATTERAS_ROAD_EVENTS  # noqa: E402
 
-TOPO_DIR, _DUNE_DIR, TOPO_DUNE_VERSION = topo_dirs()
-TOPO_DUNE_INIT_YEAR = "2009"
+
+# --- the relocation bounds, DERIVED (2026-08-26) ----------------------------
+#
+# These were hardcoded literals - {9: 73.0, 10: 97.0, ...} - described as
+# "1984 setback + 1978->1997 displacement". They were computed from a 1984
+# setback file that has since been re-measured against 1984-start/v1, so they
+# silently stopped meaning what their own note said. Worse, they drove a
+# DROWNS verdict.
+#
+# They are now computed, from the two sources the MODEL uses:
+#
+#   * the current model-facing 1984 setback, RoadSetback_1984_dunestart.csv
+#   * HATTERAS_ROAD_EVENTS[].displacement_m, which hatteras_site_config reads
+#     from road_relocation_1984_2004.csv (mean_signed_landward_m) and which
+#     the runner applies as new_setback = rm._road_setback + displacement
+#
+# Evaluated at ZERO modelled retreat, so this stays the upper bound / worst
+# case it always claimed to be: any real retreat moves the road seaward of what
+# is audited here, and a domain clean at the bound is clean for every retreat.
+#
+# THE EVENT DOMAIN LISTS COME FROM THE CONFIG, NOT FROM HERE. The 1999 event
+# covers GIS 9-14, not 9-15: hatteras_site_config excludes GIS 15 because the
+# two digitised lines CROSS inside it, so its mean and median displacement
+# disagree in sign. The old scenario audited 15 at a literal 106.0 m, a number
+# the measurement cannot support. Deriving the list removes that by
+# construction.
+def _relocation_bounds(event):
+    """{gis: 1984 setback + measured displacement} for one relocation event."""
+    path = ROADS_DIR / "1984" / "RoadSetback_1984_dunestart.csv"
+    rows = list(csv.reader(open(path, newline="", encoding="utf-8")))
+    setback = {int(float(a)): float(b) for a, b in zip(rows[0], rows[1])}
+    missing = [g for g in event.displacement_m if g not in setback]
+    if missing:
+        raise SystemExit(
+            f"\n[stop] relocation domains {missing} are not in {path.name}\n")
+    return {g: round(setback[g] + d, 1)
+            for g, d in sorted(event.displacement_m.items())}
+
+
+RELOCATIONS = [e for e in HATTERAS_ROAD_EVENTS if hasattr(e, "displacement_m")]
+
+# EACH SCENARIO NAMES ITS OWN TOPOGRAPHY PRODUCT (2026-08-26).
+#
+# This used to be a single module-level topo_dirs() with no argument, i.e.
+# DEFAULT_PRODUCT, and EVERY scenario was audited against it. Since the tree
+# went period-first that is wrong by construction: the 1984 setbacks are
+# measured from row 0 of the 1984-start extraction and the 2004 setbacks from
+# row 0 of 2004-start, so auditing both against one product checks at least one
+# of them against interiors the model will never see.
+#
+# That is the SAME failure this file's header describes at v3/v4 - "18 domains
+# had different interiors and 10 a different SHAPE" - just with product in
+# place of version. Resolved per scenario, and both are printed and written to
+# the CSV so the pairing is on the record rather than assumed.
+def topo_for(product: str):
+    topo, _dune, ver = topo_dirs(product)
+    return topo, ver
+
+
+PRODUCT_DEFAULT = "2004-start"
+
+# Resolved from the product, not a literal. The tag became period-specific
+# on 2026-08-26 and was reverted the same day (see hat_topo_version.py); with
+# argument resolves the same DEFAULT_PRODUCT topo_dirs() just used, so the
+# directory and the filename can never disagree about which period this is.
+# array_name() is the single definition of these filenames - the same one
+# the extractor writes with. Nothing here spells a name.
 
 # There is no longer a runner version to disagree with. Until 2026-08-20 the
 # runner carried its own hardcoded TOPO_DUNE_VERSION and this file kept a copy
@@ -183,8 +249,9 @@ TOPO_DUNE_INIT_YEAR = "2009"
 # (it said 2009_v2 while the runner said 2009_v3 and the setbacks were built on
 # v5). Both now call topo_dirs(), so they resolve to the same extraction by
 # construction and the warning has nothing left to check.
-print(f"[version] auditing {TOPO_DUNE_VERSION}, resolved from the extractor "
-      f"-- the same source the runner uses.")
+# The resolved product/version pairs are printed by main(), after SCENARIOS
+# exists. There is no module-level banner any more: there is no longer a single
+# topography to name.
 
 OUT_DIR = ROADS_DIR
 
@@ -194,9 +261,9 @@ OUT_DIR = ROADS_DIR
 #              HAT_hindcast_1984_2024.py. Relocation scenarios also
 #              get the two model guards replicated.
 SCENARIOS = [
-    dict(label="1984 initial", kind="initial",
+    dict(label="1984 initial", kind="initial", product="1984-start",
          source=ROADS_DIR / "1984" / "RoadSetback_1984_dunestart.csv"),
-    dict(label="2004 initial", kind="initial",
+    dict(label="2004 initial", kind="initial", product="2004-start",
          source=ROADS_DIR / "2004" / "RoadSetback_2004_dunestart.csv"),
     # The relocation events now carry a DISPLACEMENT, applied to whatever
     # setback the model is carrying at the event year:
@@ -210,18 +277,18 @@ SCENARIOS = [
     # bound of the corrected form, and any real retreat moves the road seaward
     # of what is reported here. Audited at the bound deliberately: if a domain
     # is clean here it is clean for every retreat.
-    dict(label="1999 relocation (inter-village south, GIS 9-15) "
-               "- zero-retreat bound",
-         kind="relocation",
-         note="1984 setback + 1978->1997 displacement; upper bound of "
-              "current_setback + displacement",
-         setbacks={9: 73.0, 10: 97.0, 11: 129.0, 12: 126.0, 13: 125.0,
-                   14: 126.0, 15: 106.0}),
-    dict(label="1989 relocation (Pea Island, GIS 84-87) - zero-retreat bound",
-         kind="relocation",
-         note="1984 setback + 1978->1997 displacement; upper bound of "
-              "current_setback + displacement",
-         setbacks={84: 163.0, 85: 165.0, 86: 205.0, 87: 113.0}),
+    *[
+        dict(label=f"{e.year} relocation (GIS "
+                   f"{min(e.displacement_m)}-{max(e.displacement_m)}) "
+                   f"- zero-retreat bound",
+             kind="relocation", product="1984-start",
+             note=f"{e.note}. Current 1984 setback + measured displacement "
+                  f"(mean_signed_landward_m, road_relocation_1984_2004.csv), "
+                  f"evaluated at zero modelled retreat - the upper bound of "
+                  f"current_setback + displacement.",
+             setbacks=_relocation_bounds(e))
+        for e in RELOCATIONS
+    ],
 ]
 
 FIRST_ROAD_DOMAIN = 9
@@ -472,14 +539,16 @@ def load_setback_csv(path: Path):
     return ids, vals, problems
 
 
-def load_interior(domain: int):
-    p = TOPO_DIR / f"domain_{domain}_topography_{TOPO_DUNE_INIT_YEAR}.npy"
-    if not p.exists():
-        matches = sorted(TOPO_DIR.glob(f"domain_{domain}_topography_*.npy"))
-        if not matches:
-            return None
-        p = matches[0]
-    return np.load(p)
+def load_interior(domain: int, topo_dir=None):
+    # No glob fallback. It existed to tolerate whatever year tag the arrays
+    # happened to carry; there is no tag now, and a glob that matched more than
+    # one file would have picked arbitrarily. A missing file is a missing file.
+    if topo_dir is None:
+        raise ValueError("load_interior needs a topo_dir - there is no single "
+                         "module-level topography any more, each scenario "
+                         "names its own product")
+    p = topo_dir / array_name("topography", domain)
+    return np.load(p) if p.exists() else None
 
 
 def wet_fraction(row) -> float:
@@ -502,8 +571,8 @@ def wet_fraction(row) -> float:
 # =============================================================================
 
 def audit_domain(scenario_label: str, kind: str, domain: int,
-                 setback_m: float) -> dict:
-    interior = load_interior(domain)
+                 setback_m: float, topo_dir=None, product=None) -> dict:
+    interior = load_interior(domain, topo_dir)
     if interior is None:
         return dict(scenario=scenario_label, domain=domain,
                     setback_m=setback_m, verdict="NO_TOPOGRAPHY")
@@ -582,7 +651,13 @@ def run_scenario(sc: dict):
         pairs = list(zip(ids.tolist(), vals.tolist()))
     else:
         pairs = sorted(sc["setbacks"].items())
-    rows = [audit_domain(label, kind, int(d), float(s)) for d, s in pairs]
+    product = sc.get("product", PRODUCT_DEFAULT)
+    topo_dir, version = topo_for(product)
+    rows = [audit_domain(label, kind, int(d), float(s), topo_dir, product)
+            for d, s in pairs]
+    for r in rows:
+        r["topo_product"] = product
+        r["topo_version"] = version
     return rows, problems
 
 
@@ -678,7 +753,12 @@ def write_markdown(scen_rows, all_problems, path: Path):
     a("")
     a("| | |")
     a("|---|---|")
-    a(f"| Topography | `{TOPO_DIR}` |")
+    for _p in sorted({sc.get("product", PRODUCT_DEFAULT) for sc in SCENARIOS}):
+        try:
+            _d, _v = topo_for(_p)
+            a(f"| Topography ({_p}) | `{_d}` (version {_v}) |")
+        except SystemExit:
+            a(f"| Topography ({_p}) | UNRESOLVED |")
     a(f"| Road width | {ROAD_WIDTH_M:.0f} m |")
     a("| Width rule | `barrier3d.FindWidths` — first cell `<= SL`, verbatim |")
     a(f"| Drown rule | `roadway_manager.bulldoze` — "
@@ -1072,13 +1152,24 @@ def write_markdown(scen_rows, all_problems, path: Path):
 # =============================================================================
 
 def main():
-    if not TOPO_DIR.is_dir():
-        raise SystemExit(f"\n[stop] topography dir not found:\n    {TOPO_DIR}\n")
+    wanted = sorted({sc.get("product", PRODUCT_DEFAULT) for sc in SCENARIOS})
+    resolved = {}
+    for _p in wanted:
+        try:
+            _d, _v = topo_for(_p)
+        except SystemExit as _e:
+            raise SystemExit(f"\n[stop] scenario product {_p!r} does not "
+                             f"resolve:\n    {_e}\n")
+        if not _d.is_dir():
+            raise SystemExit(f"\n[stop] topography dir not found for "
+                             f"{_p}:\n    {_d}\n")
+        resolved[_p] = (_d, _v)
 
     print("=" * 104)
-    print(f"NC-12 SETBACK AUDIT  |  topography {TOPO_DUNE_VERSION}")
+    print("NC-12 SETBACK AUDIT  |  topography resolved PER SCENARIO")
     print("=" * 104)
-    print(f"  topography : {TOPO_DIR}")
+    for _p, (_d, _v) in resolved.items():
+        print(f"  {_p:<12} {_v:<6} {_d}")
     print(f"  width rule : barrier3d FindWidths (first cell <= SL), verbatim")
     print(f"  drown rule : bulldoze, >{PCT_WATER_TOUCHING_ROAD * 100:.0f}% of "
           f"profiles with water bordering the road")

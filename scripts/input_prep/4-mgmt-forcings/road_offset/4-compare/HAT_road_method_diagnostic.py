@@ -78,18 +78,45 @@ INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 # "2009_v3" and silently survived the re-pick into 2009_v4. See hat_topo_version.py.
 # parents[4] IS scripts/ -- hat_topo_version.py moved there 2026-08-20.
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-from hat_topo_version import topo_dirs  # noqa: E402
+from hat_topo_version import (topo_dirs, array_name,  # noqa: E402
+                             product_for_year)
 
-TOPO_DIR, DUNE_DIR, TOPO_RUN_NAME = topo_dirs()
+# PER VINTAGE, not once (2026-08-26). This was a module-level topo_dirs() with
+# no argument -- DEFAULT_PRODUCT -- and `island_width_m()` fed the SAME widths
+# into both years of the table, so `total_change_frac_width` normalised the
+# 1984 change by the 2004-start island. All 90 domains differ between the two
+# products and 65 differ in interior SHAPE, so that denominator was wrong for
+# every 1984 row. Same failure as the v3/v4 one above, in product form.
+_TOPO_CACHE: dict[int, tuple] = {}
+
+
+def topo_for_year(year: int):
+    if year not in _TOPO_CACHE:
+        _TOPO_CACHE[year] = topo_dirs(product_for_year(year))
+    return _TOPO_CACHE[year]
+
+
+def topo_label(year: int) -> str:
+    return f"{product_for_year(year)}/{topo_for_year(year)[2]}"
+
+
+# array_name() is the single definition of these filenames - the same one
+# the extractor writes with. Nothing here spells a name.
 ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
 OFFSET_ROOT = ROADS_ROOT / "dunestart_offset"
 LEGACY_SB_FMT = ROADS_ROOT / "old_method_offset" / "{year}" / "RoadSetback_{year}.csv"
 
-# Road elevation is NOT per-year any more. There is one 2009 DEM, so there is
-# one elevation set, and it is read for both years in YEARS. The old per-year
-# RoadElevation_<year>.csv pair no longer exists -- writing two files implied a
-# measured change in roadbed height between 1984 and 2004 that nothing supports.
-# See data/.../road_elevation/RoadElevation_audit.md.
+# Road elevation is NOT per-year, and it stays that way -- but the reason is no
+# longer "there is one 2009 DEM". There are two elevation products now, and in
+# the road corridor they disagree by a median +0.222 m (2009-2014-1996 minus
+# 2009-2014, 54 of 82 domains beyond 0.05 m). That difference is the
+# uncorrected island-wide 1996-vs-2009 survey offset, not a roadbed, so it is
+# kept OUT of the forcing: one set, sampled on the 2009-2014 baseline, read for
+# both years in YEARS. The old per-year RoadElevation_<year>.csv pair does not
+# exist -- writing two files implied a measured change in roadbed height
+# between 1984 and 2004 that nothing supports.
+# See data/.../road_elevation/RoadElevation_audit.md and the note beside
+# HATTERAS_ROAD_ELEVATION_FILE in hatteras_site_config.py.
 LEGACY_EL = (INIT_ROOT / "4-mgmt-forcing" / "road_elevation"
              / "RoadElevation.csv")
 
@@ -140,11 +167,16 @@ def to_float(v) -> float:
         return np.nan
 
 
-def island_width_m() -> dict[int, float]:
-    """Median land width per domain, from the interiors CASCADE will read."""
+def island_width_m(year: int) -> dict[int, float]:
+    """Median land width per domain, from the interiors CASCADE will read.
+
+    `year` is required: the two periods start from different extractions, so
+    "the island width" is not one number per domain.
+    """
+    topo_dir = topo_for_year(year)[0]
     out = {}
     for d in DOMAINS:
-        p = TOPO_DIR / f"domain_{d}_topography_2009.npy"
+        p = topo_dir / array_name("topography", d)
         if not p.is_file():
             continue
         topo = np.load(p)
@@ -154,9 +186,10 @@ def island_width_m() -> dict[int, float]:
 
 
 def build_table() -> list[dict]:
-    widths = island_width_m()
     rows = []
     for year in YEARS:
+        widths = island_width_m(year)
+        print(f"  {year}: island widths from {topo_label(year)}")
         new = read_domains_csv(year)
         raw = read_domains_csv(year, "_rawframe")
         leg_sb = read_two_row(Path(str(LEGACY_SB_FMT).format(year=year)))
@@ -172,8 +205,8 @@ def build_table() -> list[dict]:
             # the model-facing files are not part of the forcing being compared.
             if "EXCLUDED_FROM_SPAN" in (new[d].get("flags") or ""):
                 continue
-            n_s = to_float(new[d].get("setback_2009_m"))
-            n_r = (to_float(raw[d].get("setback_2009_m"))
+            n_s = to_float(new[d].get("setback_dunestart_m"))
+            n_r = (to_float(raw[d].get("setback_dunestart_m"))
                    if d in raw and int(raw[d]["n_road_profiles"] or 0) > 0
                    else np.nan)
             lg = leg_sb.get(d, np.nan)

@@ -140,6 +140,7 @@ class GroinCallback:
         deterioration_mode: str = "instant",
         deterioration_fraction: float = 1.0,
         deterioration_ramp_years: float = 0.0,
+        sink_fraction: float = 1.0,
     ) -> None:
         if abs(updrift_pad - downdrift_pad) != 1:
             raise ValueError(
@@ -201,6 +202,27 @@ class GroinCallback:
         self.deterioration_fraction: float = float(deterioration_fraction)
         self.deterioration_ramp_years: float = float(deterioration_ramp_years)
 
+        # ASYMMETRY. The original pair is strictly volume neutral: every metre
+        # of advance imposed updrift is a metre of retreat imposed downdrift.
+        # At Buxton that is falsified. The emergent extent measured on the
+        # 2026-08-24 sweep runs 2,000 m updrift (against 2,250 m observed --
+        # a good match) but 2,500 m DOWNDRIFT, where the observed extent is
+        # ZERO: the real structure accretes updrift without a measurable
+        # deficit on the other side.
+        #
+        # `sink_fraction` scales the downdrift sink only. 1.0 keeps the
+        # volume-neutral pair, so every run predating this is reproducible.
+        # 0.0 makes the groin a pure source, which is the physical statement
+        # that the trapped sand arrives from OUTSIDE the pair -- at this site,
+        # from Cape Point -- rather than from the downdrift beach.
+        #
+        # It is a MODEL FORM, not a fitted knob: the observed downdrift extent
+        # of zero picks 0.0 directly. Sweeping it would be fitting a parameter
+        # the data already determines.
+        if not (0.0 <= sink_fraction <= 1.0):
+            raise ValueError("sink_fraction must be in [0, 1].")
+        self.sink_fraction: float = float(sink_fraction)
+
         # Per-year diagnostics (appended on each call): the scientific record of
         # how much shoreline change the groin imposed, where, and when.
         self.year_TS: List[int] = []
@@ -234,7 +256,7 @@ class GroinCallback:
         active = year >= self.install_year
         M_eff = self._effective_trapping_rate(year) if active else 0.0
         dx_updrift = ACCRETION * M_eff
-        dx_downdrift = EROSION * M_eff
+        dx_downdrift = EROSION * M_eff * self.sink_fraction
 
         if active:
             x_s_dt[self.updrift_pad] += dx_updrift      # source: updrift accretes

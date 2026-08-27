@@ -5,17 +5,30 @@ The dune-start setback carries TWO modifications on top of the measurement, one
 at each edge of the island. This script draws the island BEFORE each of them, so
 the progression can be read stage by stage instead of taken on trust.
 
-    setback_2009_m           raw measurement            1984: 7 negative, 3 drown
+    setback_dunestart_m           raw measurement            1984: 1 negative, 1 drown
        |  OCEAN-SIDE MOVE -- negative setbacks floored to interior row 0
-    setback_2009_floored_m   ocean-side applied         1984: 0 negative, 3 drown
+    setback_dunestart_floored_m   ocean-side applied         1984: 0 negative, 0 drown
        |  BAY-SIDE MOVE -- roadways drowning on a wet bayside row moved seaward
     setback_model_m          both applied, MODEL-FACING 1984: 0 negative, 0 drown
+
+  Counts are from the run: 1984 on 1984-start/v1, 2004 on 2004-start/v1, and
+  2004 is 0 negative / 0 drown at every stage. They have moved twice. The
+  gap-filled DEM took the bayside drowns that the BAY-SIDE move existed for to
+  zero, leaving every stage-0 drown a negative being tested on its wrapped row;
+  then the 1984 vintage was re-measured on its OWN product (2026-08-26) and the
+  1984 negatives went 6 -> 1, GIS 85 alone. The bay-side move is therefore a
+  no-op under both topographies rather than a step with work to do -- a property
+  of the DEMs, so the figure counts it from the data rather than asserting it.
 
   stage 0  HAT_dunestart_stage0_raw.png          before BOTH moves
   stage 1  HAT_dunestart_stage1_ocean_floor.png  ocean-side only, before the
                                                  bay-side move
   stage 2  ../HAT_dunestart_road_on_domains.png  the existing figure, both
                                                  applied -- not redrawn here
+
+HOW FAR each ocean-side move actually is, cropped to the two stretches where it
+fires, is HAT_oceanfloor_offset_check.py -> HAT_dunestart_oceanfloor_check.png.
+At 90 domains these stage figures cannot show a 10 m move; that one can.
 
 WHY THIS IMPORTS RATHER THAN COPIES
 -----------------------------------
@@ -103,7 +116,7 @@ C_SAND = "#e8dcc0"
 C_WRAP = "#0b0b0b"
 
 STAGES = [
-    dict(key="stage0", column="setback_2009_m",
+    dict(key="stage0", column="setback_dunestart_m",
          png="HAT_dunestart_stage0_raw.png",
          title="Stage 0 — the raw measurement, before both moves",
          blurb="Nothing applied. Negative setbacks are drawn where they were "
@@ -114,7 +127,7 @@ STAGES = [
                "drown percentages below are computed from those wrapped rows.",
          nextfix="The OCEAN-SIDE move (stage 1) floors every negative to "
                  "interior row 0."),
-    dict(key="stage1", column="setback_2009_floored_m",
+    dict(key="stage1", column="setback_dunestart_floored_m",
          png="HAT_dunestart_stage1_ocean_floor.png",
          title="Stage 1 — ocean-side move applied, before the bay-side move",
          blurb="Negative setbacks have been floored to interior row 0. The "
@@ -321,7 +334,7 @@ def draw_drown_panel(ax, placed_by_year):
 # FIGURE
 # =============================================================================
 
-def build_figure(stage: dict, interiors, shown, crop_rows) -> dict:
+def build_figure(stage: dict, per, crop_rows) -> dict:
     print(f"\n{'=' * 84}")
     print(f"{stage['key'].upper()} -- {stage['column']}")
     print("=" * 84)
@@ -332,7 +345,7 @@ def build_figure(stage: dict, interiors, shown, crop_rows) -> dict:
         if not sb:
             print(f"  [skip] {year}: no {stage['column']} in the domains CSV")
             continue
-        placed[year] = place_stage(interiors, sb)
+        placed[year] = place_stage(per[year]["interiors"], sb)
 
     if not placed:
         print("  [skip] nothing to draw")
@@ -351,7 +364,8 @@ def build_figure(stage: dict, interiors, shown, crop_rows) -> dict:
 
     for ax, year, lab in ((axes[0], YEARS[0], True), (axes[1], YEARS[1], False)):
         if year in placed:
-            draw_island(ax, fig, shown, crop_rows, year, placed[year], lab,
+            draw_island(ax, fig, per[year]["shown"], crop_rows, year,
+                        placed[year], lab,
                         floor_m)
 
     draw_drown_panel(axes[2], placed)
@@ -359,7 +373,9 @@ def build_figure(stage: dict, interiors, shown, crop_rows) -> dict:
     fig.text(0.065, 0.985, f"NC-12, dune-start method — {stage['title']}",
              fontsize=14, va="top", weight="semibold")
     fig.text(0.065, 0.957,
-             f"{P.TOPO_RUN_NAME} topography; the SAME interiors back both road panels. "
+             "Each panel on its own period's topography — "
+             + ", ".join(f"{y} on {P.topo_label(y)}" for y in YEARS)
+             + ". They are different islands, not one island twice. "
              f"Road drawn where bulldoze puts it: road_start = "
              f"int(setback / 10 m).\n{stage['blurb']}\nNEXT: "
              f"{stage['nextfix']}",
@@ -403,15 +419,17 @@ def build_figure(stage: dict, interiors, shown, crop_rows) -> dict:
 
 
 def main() -> int:
-    interiors = P.load_interiors()
-    canvas, max_rows = P.build_canvas(interiors)
-    crop_rows = min(max_rows, int(P.DISPLAY_CROSS_SHORE_M / CELL))
-    shown = canvas[:crop_rows, :]
-    print(f"{len(interiors)} interiors | drown test imported from "
-          f"{PLACEMENT.name}")
+    # PER VINTAGE (2026-08-26). This called P.load_interiors() with no
+    # argument -- one island under both panels, which the caption used to state
+    # outright. load_interiors() now requires a year, so this could not survive
+    # the change silently.
+    per, crop_rows, _max_rows = P.load_years(YEARS)
+    for year in YEARS:
+        print(f"  {year}: {len(per[year]['interiors'])} interiors from "
+              f"{P.topo_label(year)}")
+    print(f"  drown test imported from {PLACEMENT.name}")
 
-    results = {s["key"]: build_figure(s, interiors, shown, crop_rows)
-               for s in STAGES}
+    results = {s["key"]: build_figure(s, per, crop_rows) for s in STAGES}
 
     print(f"\n{'=' * 84}")
     print("PROGRESSION -- domains failing at each stage")

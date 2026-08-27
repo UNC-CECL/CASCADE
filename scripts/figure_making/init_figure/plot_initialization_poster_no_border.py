@@ -43,12 +43,31 @@ OUTPUT_DIR         = str(Path(__file__).resolve().parent)
 # the same PADDED_120 files the hindcast run script initializes from.
 YEARS = (1984, 2004)
 
-# Layout: 1-barrier3d-domains/2009-dune-topo/<version>/topography/domain_<n>_topography_<year>.npy
-TOPO_DUNE_INIT_YEAR = '2009'      # year label in the filename
-TOPO_DUNE_VERSION   = '2009_v2'   # version folder; matches the hindcast run script
+# Layout: 1-barrier3d-domains/<product>/dune-topo/<version>/topography/
+#         domain_<n>_topography_<tag>.npy
+# The arrays carry no year tag; names come from array_name() - see below.
+
+# WHICH EXTRACTION -- resolved, not pinned, the same way the hindcast runner and
+# the groin sweep worker resolve it. This was hardcoded '2009_v2', a directory
+# that has since been moved into 2009-dune-topo/incorrect/, so the poster either
+# failed to load or drew arrays the run does not use. topo_dirs() reads VERSION
+# out of HAT_dune_topo_extractor.py, so the figure always shows the surface the
+# model is actually initialised from.
+from hat_topo_version import topo_dirs, array_name  # scripts/, on sys.path above
+
+# Paths come from what topo_dirs() RETURNED, not re-joined from parts - the
+# tree went period-first on 2026-08-25 and re-joining would have kept pointing
+# at a folder that no longer exists. topo_dirs() with no product resolves
+# 2004-start, which is the surface this poster showed before the restructure.
+from hat_topo_version import BUFFER_DIR as _BUFFER_DIR   # noqa: E402
+
+# array_name() is the single definition of these filenames - the same one
+# the extractor writes with. Nothing here spells a name.
+
+_TOPO_DIR, _DUNE_DIR, TOPO_DUNE_VERSION = topo_dirs()
 BARRIER3D_DIR       = os.path.join(HATTERAS_DATA_BASE, '1-barrier3d-domains')
-DUNE_TOPO_DIR       = os.path.join(BARRIER3D_DIR, '2009-dune-topo', TOPO_DUNE_VERSION)
-BUFFER_DIR          = os.path.join(BARRIER3D_DIR, '2009-buffer')
+DUNE_TOPO_DIR       = str(_TOPO_DIR.parent)
+BUFFER_DIR          = str(_BUFFER_DIR)
 
 NUM_REAL_DOMAINS   = 90
 NUM_BUFFER_DOMAINS = 15
@@ -100,7 +119,7 @@ for i_list in range(START_REAL_INDEX, END_REAL_INDEX):
     file_num = FIRST_FILE_NUMBER + (i_list - START_REAL_INDEX)
     ELEVATION_FILE_PATHS.append(os.path.join(
         DUNE_TOPO_DIR, 'topography',
-        f'domain_{file_num}_topography_{TOPO_DUNE_INIT_YEAR}.npy'))
+        array_name('topography', file_num)))
 
 for _ in range(END_REAL_INDEX, TOTAL_DOMAINS):
     ELEVATION_FILE_PATHS.append(os.path.join(BUFFER_DIR, 'sample_1_topography.npy'))

@@ -1,13 +1,13 @@
 # NC-12 road elevation from the 2009 LiDAR
 
-Generated 2026-08-20T12:42:09 by `HAT_road_elevation.py`.
+Generated 2026-08-26T17:00:04 by `HAT_road_elevation.py`.
 
 | | |
 |---|---|
-| Surface | `clip_domain_<N>_filled.tif` — **1 m** native LiDAR, 2009, holes filled from **2008_NOAA_IOCM** |
-| Why that fill | 2008 is one year from the 2009 base, so it measures the same pavement. The v5 *topography* is filled from 2014 Post-Sandy, which postdates Irene, the Pea Island breach and the NC-12 rebuild — fine for a barrier surface, wrong for a road surface at GIS 78–80. |
+| Surface | `clip_domain_<N>_filled.tif` — **1 m** native LiDAR, 2009, holes filled from **2009-2014** |
+| Why that fill | The 2008 NOAA IOCM survey was preferred here until 2026-08-26 — one year from the 2009 base, so the same pavement, where a 2014 Post-Sandy surface at GIS 78–80 may be a REBUILT road (post-Irene, post-breach). That product is deleted and not reproducible from this repo, so the baseline is used instead. The cost is bounded: only GIS 78–80 have NoData under the 2004 alignment, and the two fills differ by ≤ 0.015 m in the corridor. |
+| Why NOT the 1984 product | `2009-2014-1996` sits **+0.222 m** higher through this corridor (median; 54 of 82 domains beyond 0.05 m, cell counts identical, so ALACE REPLACED measured 2009 pavement). That is the uncorrected island-wide 1996-vs-2009 survey offset — `mosaic_1984_audit.csv` puts it at median +0.255 m — not a roadbed, and it is kept out of the forcing. One elevation set, on the baseline, for both periods. |
 | Domains materially affected | **GIS 78, 79, 80** — the only ones with NoData under the road in the unfilled 2009 clips. Everywhere else the corridor was already complete, and the change is ≤ 0.01 m: the fill pipeline rebuilds the raster rather than patching the original, so the corridor mask lands on a few cells' difference even where there was nothing to fill. Not a no-op, but well inside the 0.07 m within-domain scatter. |
-| Residual gaps | 3 domain(s) still carry NoData in the corridor after filling — worst **GIS 79 at 13.3%** (GIS 79: 13.3%, GIS 78: 2.1%, GIS 80: 0.1%). The 2014 Post-Sandy fill would close these, at the provenance cost above. All are below the 25% flag threshold so they no longer raise `NODATA`; recorded here so that is not mistaken for complete coverage. |
 | Alignment | `nc12_2004.geojson` — the **2004** digitised centreline |
 | Corridor | 3.5 m buffer either side (~7 m strip) |
 | Aggregation | **mean** of all valid 1 m cells in the corridor |
@@ -62,10 +62,10 @@ If the answer moved with the buffer, the buffer would be the measurement. It doe
 
 | Buffer | Strip | Island median (m NAVD88) | Median within-domain σ |
 |---:|---:|---:|---:|
-| 2.0 m | 4 m | 1.04 | 0.07 |
+| 2.0 m | 4 m | 1.04 | 0.06 |
 | 2.5 m | 5 m | 1.04 | 0.07 |
 | 3.5 m | 7 m | 1.03  ← **used** | 0.07 |
-| 5.0 m | 10 m | 1.02 | 0.08 |
+| 5.0 m | 10 m | 1.01 | 0.08 |
 | 8.0 m | 16 m | 0.97 | 0.11 |
 | 12.0 m | 24 m | 1.00 | 0.18 |
 
@@ -77,12 +77,12 @@ The same corridor sampled on `resampled_domain_<N>.tif`, the grid the model actu
 
 - median difference **-0.00 m** over 82 domains
 - mean |difference| **0.01 m**, max **0.06 m**
-- cells per domain in the corridor: **3532** at 1 m vs **35** at 10 m
+- cells per domain in the corridor: **3534** at 1 m vs **35** at 10 m
 - median within-domain σ: **0.07 m** at 1 m vs **0.07 m** at 10 m
 
 **This does not go the way the inherited rationale said it would, and the difference matters.** The 1 m clip was originally chosen because the 10 m grid gave GIS 9 a σ of 1.59 m — the foredune, not the roadbed. But that was measured on the **1984** line, which crosses a relocation scar. On the 2004 line the two resolutions agree to a couple of centimetres.
 
-So for this product the 1 m clip is a **precaution, not a rescue**. It is still the right surface — it rests on ~3532 cells per domain against ~35, and the near-equal σ at 10 m is a small-sample artefact rather than evidence of equal fidelity — but the honest statement is that switching to the resample would barely move these numbers.
+So for this product the 1 m clip is a **precaution, not a rescue**. It is still the right surface — it rests on ~3534 cells per domain against ~35, and the near-equal σ at 10 m is a small-sample artefact rather than evidence of equal fidelity — but the honest statement is that switching to the resample would barely move these numbers.
 
 ### Relocation bracket — what is under the 1984 line?
 
@@ -97,12 +97,12 @@ The case for using the 2004 alignment everywhere rests on a claim about the aban
 | 13 | 1.66 | 2.63 | +0.97 | 0.59 |
 | 14 | 1.68 | 1.98 | +0.30 | 0.14 |
 | 15 | 1.94 | 1.93 | -0.00 | 0.15 |
-| 84 | 1.24 | 1.41 | +0.17 | 0.97 |
-| 85 | 1.17 | 1.50 | +0.33 | 1.39 |
+| 84 | 1.24 | 1.56 | +0.32 | 0.87 |
+| 85 | 1.17 | 2.18 | +1.01 | 0.95 |
 | 86 | 1.05 | 1.72 | +0.67 | 0.62 |
 | 87 | 1.16 | 2.05 | +0.90 | 1.26 |
 
-Mean **1.54 m** on the line used against **2.29 m** on the 1984 line, whose within-domain σ reaches **1.70 m**. Un-relocated domains in the same named reaches sit at **1.26 m**.
+Mean **1.54 m** on the line used against **2.36 m** on the 1984 line, whose within-domain σ reaches **1.70 m**. Un-relocated domains in the same named reaches sit at **1.26 m**.
 
 **The two lines do not bracket the neighbouring grade — both are above it.** So the intuitive picture is wrong: the abandoned corridor is not overwashed, bulldozed flat, or bare sand. The dune migrated over it after the road left, and a σ of that size is a dune, not a graded surface.
 
@@ -243,9 +243,9 @@ The residual is bounded and worth stating rather than hiding. In 11 of 82 domain
 | 75 | 1.03 | 0.67 | 1.02 | 0.07 | 0.95–1.12 | 3580 |  |
 | 76 | 0.99 | 0.63 | 0.99 | 0.07 | 0.91–1.09 | 3509 |  |
 | 77 | 0.84 | 0.48 | 0.83 | 0.07 | 0.75–0.94 | 3500 |  |
-| 78 | 0.92 | 0.56 | 0.91 | 0.12 | 0.77–1.07 | 3428 |  |
-| 79 | 1.03 | 0.67 | 1.03 | 0.14 | 0.85–1.22 | 3106 |  |
-| 80 | 0.98 | 0.62 | 0.97 | 0.07 | 0.90–1.09 | 3510 |  |
+| 78 | 0.91 | 0.55 | 0.91 | 0.11 | 0.78–1.05 | 3501 |  |
+| 79 | 1.01 | 0.66 | 1.03 | 0.10 | 0.86–1.13 | 3583 |  |
+| 80 | 0.98 | 0.62 | 0.97 | 0.07 | 0.90–1.09 | 3512 |  |
 | 81 | 1.08 | 0.72 | 1.08 | 0.07 | 0.99–1.17 | 3662 |  |
 | 82 | 1.14 | 0.78 | 1.15 | 0.08 | 1.03–1.25 | 3572 |  |
 | 83 | 0.99 | 0.63 | 0.98 | 0.09 | 0.87–1.10 | 3500 |  |
