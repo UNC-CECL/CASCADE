@@ -67,13 +67,22 @@ Nothing is dropped from the CSV, but only `relocated` domains are summarised
 and drawn. Any island-wide average over the full table is meaningless -- it
 averages real movement against copy and re-tracing alike.
 
-WHAT THIS IS NOT
-----------------
-Not a CASCADE forcing. `road_setback` comes from
-../road_offset/, measured against interior row 0 of the model grid; this is a
-GIS-frame observation of two digitised lines and nothing reads it. Its use is
-to say whether an observed relocation happened, and where, so a modelled
-relocation can be checked against one.
+WHAT THIS IS, AND IS NOT
+------------------------
+Not a setback. `road_setback` comes from ../road_offset/, measured against
+interior row 0 of the model grid; this is a GIS-frame observation of how far
+apart two digitised lines lie.
+
+It IS a CASCADE forcing as of 2026-08-20. `HATTERAS_ROAD_EVENTS` in
+scripts/hatteras_site_config.py reads `mean_signed_landward_m` out of the
+1984_2004 CSV for the domains its two historical relocation events move -- GIS
+84-87 (1989) and GIS 9-15 (1999). It replaced eleven hand-entered literals
+attributed to a 1978->1997 ArcGIS measurement whose 1997 line is not in the
+repo. So re-running this script with those vintages CHANGES WHAT THE MODEL IS
+FORCED WITH; it is no longer a diagnostic that can be regenerated freely. The
+config refuses any domain this script classifies `no_edit` or `redigitized`,
+so a re-run that reclassifies one of those eleven raises at import rather than
+quietly forcing a number the lines do not support.
 
 A NOTE ON THE VINTAGES
 ----------------------

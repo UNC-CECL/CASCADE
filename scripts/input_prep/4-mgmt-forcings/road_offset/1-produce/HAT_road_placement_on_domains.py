@@ -5,9 +5,10 @@ Where each setback method actually puts NC-12 on the Barrier3D interiors CASCADE
 initialises with -- the road placed exactly where `roadway_manager.bulldoze`
 would put it from that method's model-facing RoadSetback CSV.
 
-  A  1984 road on the extracted interiors (version resolved at run time)
-  B  2004 road on the SAME interiors
-  C  setback against island width -- how much headroom each domain has
+  A  1984 road on the 1984-start interiors (product+version resolved at run time)
+  B  2004 road on the 2004-start interiors -- a DIFFERENT island, not the same
+     one twice: 65 of 90 domains differ in interior shape between the products
+  C  setback against island width, one band per period
   D  road movement between the two periods, under this method
   E  bulldoze's own drown test -- does CASCADE keep managing this roadway
 
@@ -26,8 +27,9 @@ folder.
 
 THE FRAME CAVEAT -- WHICH APPLIES TO ONE METHOD AND NOT THE OTHER
 ------------------------------------------------------------------
-This figure always draws the setback landward of INTERIOR ROW 0 of the 2009 DEM,
-because that is the reference CASCADE applies it against
+This figure always draws the setback landward of INTERIOR ROW 0 of that
+period's own extraction, because that is the reference CASCADE applies it
+against
 (`roadway_manager.py:99`):
 
     road_start = int(road_setback / dy)      rows landward of interior row 0
@@ -52,7 +54,7 @@ domain, so the road is a straight line across an island whose back edge is not.
 
 WHAT THE INTERIOR ARRAYS ARE
 ----------------------------
-domain_<d>_topography_2009.npy, shape (rows, 50), values in DECAMETRES relative
+domain_<d>_topography.npy, shape (rows, 50), values in DECAMETRES relative
 to MHW. -0.30 dam (= -3 m) is the extractor's water sentinel, not an elevation.
 Multiplied by 10 for display; masked, not ramped, where it is sentinel -- water
 is a state, not a small magnitude.
@@ -89,9 +91,43 @@ INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 # interiors under v4 setbacks without erroring. See hat_topo_version.py.
 # parents[4] IS scripts/ -- hat_topo_version.py moved there 2026-08-20.
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-from hat_topo_version import topo_dirs  # noqa: E402
+from hat_topo_version import (topo_dirs, array_name,  # noqa: E402
+                             product_for_year)
 
-TOPO_DIR, DUNE_DIR, TOPO_RUN_NAME = topo_dirs()
+# NOR IS THE PRODUCT (2026-08-26). Until today this line read
+#
+#     TOPO_DIR, DUNE_DIR, TOPO_RUN_NAME = topo_dirs()
+#
+# at module level -- one topography, resolved once, drawn under BOTH panels of
+# a two-vintage figure. That was correct while a single extraction served every
+# period. It stopped being correct when the tree went period-first, and the
+# figure said so in its own caption: "the SAME interiors back both road panels,
+# since one topography serves every period."
+#
+# They no longer do. All 90 domains differ between 1984-start and 2004-start
+# and 65 have a different interior SHAPE, so the 1984 panel was drawing a 1984
+# setback -- measured from row 0 of the 1984-start extraction -- against a
+# 2004-start island. Same class of error as the v3/v4 one above, and just as
+# silent: the picture is plausible, it is simply of somewhere else.
+#
+# Resolved per vintage now, through the one YEAR_PRODUCT mapping.
+_TOPO_CACHE: dict[int, tuple] = {}
+
+
+def topo_for_year(year: int):
+    """(topography dir, dunes dir, version) for one road vintage, cached."""
+    if year not in _TOPO_CACHE:
+        _TOPO_CACHE[year] = topo_dirs(product_for_year(year))
+    return _TOPO_CACHE[year]
+
+
+def topo_label(year: int) -> str:
+    """`1984-start/v1`, for captions and stdout."""
+    return f"{product_for_year(year)}/{topo_for_year(year)[2]}"
+
+
+# array_name() is the single definition of these filenames - the same one
+# the extractor writes with. Nothing here spells a name.
 ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
 
 # Each entry produces one figure, beside that method's own data.
@@ -183,22 +219,53 @@ def read_two_row(path: Path) -> dict:
     return {int(k): float(v) for k, v in zip(raw[0], raw[1])}
 
 
-def load_interiors() -> dict:
+def load_interiors(year: int) -> dict:
+    """The Barrier3D interiors THIS vintage's setbacks were measured against.
+
+    `year` is required. It used to be absent, and a caller that cannot name a
+    year is a caller drawing two vintages on one island -- see topo_for_year.
+    """
+    topo = topo_for_year(year)[0]
     out = {}
     for d in DOMAINS:
-        p = TOPO_DIR / f"domain_{d}_topography_2009.npy"
+        p = topo / array_name("topography", d)
         if p.is_file():
             out[d] = np.load(p)
     if not out:
-        raise SystemExit(f"no topography found in {TOPO_DIR}")
+        raise SystemExit(f"no topography found in {topo}")
     return out
+
+
+def load_years(years=YEARS) -> tuple[dict, int, int]:
+    """{year: {interiors, canvas, shown}}, plus the crop shared by all panels.
+
+    The panels are stacked and share an x axis, so they must share a y extent
+    too -- otherwise a taller 1984 island would read as a wider barrier rather
+    than a taller canvas. The crop is therefore the max over vintages, and a
+    shorter vintage's canvas is NaN-padded up to it rather than drawn shorter.
+    """
+    per = {}
+    for year in years:
+        interiors = load_interiors(year)
+        canvas, max_rows = build_canvas(interiors)
+        per[year] = dict(interiors=interiors, canvas=canvas, max_rows=max_rows)
+
+    max_rows = max(p["max_rows"] for p in per.values())
+    crop_rows = min(max_rows, int(DISPLAY_CROSS_SHORE_M / CELL_SIZE_M))
+    for p in per.values():
+        c = p["canvas"]
+        if c.shape[0] < crop_rows:
+            pad = np.full((crop_rows - c.shape[0], c.shape[1]), np.nan)
+            c = np.vstack([c, pad])
+        p["shown"] = c[:crop_rows, :]
+    return per, crop_rows, max_rows
 
 
 def _wet_fraction(row: np.ndarray) -> float:
     """
     Fraction of a border row at or below the threshold -- EVERY cell counted.
 
-    A no-data mask (domain_<d>_nodata_2009.npy) exists beside the topography and
+    A no-data mask (domain_<d>_nodata.npy) exists beside the topography and
     was briefly used here to drop never-surveyed cells from both the numerator
     and the denominator. That is not the test bulldoze runs. bulldoze reads the
     literal array, where the extractor has already written no-data back as the
@@ -337,7 +404,7 @@ def read_floored(spec: dict, year: int) -> set:
                 if "NEGATIVE" in (r.get("flags") or "")}
 
 
-def build_figure(name: str, spec: dict, interiors, shown, crop_rows,
+def build_figure(name: str, spec: dict, per: dict, crop_rows,
                  max_rows) -> None:
     print(f"\n{'=' * 88}")
     print(f"{name.upper()} -- where the road lands on the Barrier3D interiors")
@@ -349,8 +416,11 @@ def build_figure(name: str, spec: dict, interiors, shown, crop_rows,
         if not sb:
             print(f"  [skip] {year}: no RoadSetback CSV under {spec['root']}")
             continue
-        placed[year] = place_road(interiors, sb)
+        # Each vintage is placed on ITS OWN interiors. Passing one shared dict
+        # here is the bug this signature exists to make impossible.
+        placed[year] = place_road(per[year]["interiors"], sb)
         floored[year] = read_floored(spec, year)
+        print(f"  {year}: {topo_label(year)} interiors")
 
     if not placed:
         print(f"  [skip] {name}: no setback files found")
@@ -379,15 +449,27 @@ def build_figure(name: str, spec: dict, interiors, shown, crop_rows,
 
     for ax, year, lab in ((ax84, YEARS[0], True), (ax04, YEARS[1], False)):
         if year in placed:
-            draw_island(ax, fig, shown, crop_rows, year, placed[year], lab,
-                        spec['short'])
+            draw_island(ax, fig, per[year]["shown"], crop_rows, year,
+                        placed[year], lab, spec['short'])
 
     # --- (C) setback against the island it has to fit inside ----------------
-    width_x = sorted(interiors)
-    width_y = [interiors[d].shape[0] * CELL_SIZE_M for d in width_x]
-    ax_sb.fill_between(width_x, 0, width_y, color=INK_MUTED, alpha=0.16, lw=0,
-                       zorder=1, label="island width (interior rows)")
-    ax_sb.plot(width_x, width_y, color=INK_SECOND, lw=1.0, zorder=2)
+    # ONE BAND PER VINTAGE. This was a single shaded band, drawn from the one
+    # shared interiors dict, with both setback curves over it -- which read as
+    # "here is the island, here are two roads on it". There are two islands.
+    # The 1984 and 2004 widths differ by up to 80 m in places, and a setback
+    # that fits one can run off the other.
+    for year in YEARS:
+        if year not in per:
+            continue
+        interiors = per[year]["interiors"]
+        width_x = sorted(interiors)
+        width_y = [interiors[d].shape[0] * CELL_SIZE_M for d in width_x]
+        first = year == YEARS[0]
+        ax_sb.fill_between(width_x, 0, width_y, color=C_YEAR[year],
+                           alpha=0.10, lw=0, zorder=1,
+                           label=f"{year} island width ({topo_label(year)})")
+        ax_sb.plot(width_x, width_y, color=C_YEAR[year], lw=1.0,
+                   ls="-" if first else "--", alpha=0.75, zorder=2)
     for year, pl in placed.items():
         xs = sorted(pl)
         ax_sb.plot(xs, [pl[d]["setback_m"] for d in xs], color=C_YEAR[year],
@@ -475,8 +557,10 @@ def build_figure(name: str, spec: dict, interiors, shown, crop_rows,
              f"CASCADE initialises with",
              fontsize=14, va="top", weight="semibold")
     fig.text(0.065, 0.962,
-             f"{TOPO_RUN_NAME} topography; the SAME interiors back both road panels, "
-             "since one topography serves every period.\n"
+             "Each panel is drawn on ITS OWN period's topography — "
+             + ", ".join(f"{y} on {topo_label(y)}" for y in YEARS if y in per)
+             + ". The two are different islands: 65 of 90 domains differ in "
+               "interior shape.\n"
              "Road drawn where bulldoze puts it: road_start = int(setback / "
              "10 m). Crimson = the roadway WIDTH-DROWNS at initialisation — "
              f">{DROWN_PCT * 100:.0f}% of the cells bordering it sit at or "
@@ -537,17 +621,17 @@ def build_figure(name: str, spec: dict, interiors, shown, crop_rows,
 
 
 def main() -> int:
-    interiors = load_interiors()
-    canvas, max_rows = build_canvas(interiors)
-    crop_rows = min(max_rows, int(DISPLAY_CROSS_SHORE_M / CELL_SIZE_M))
-    shown = canvas[:crop_rows, :]
-    print(f"{len(interiors)} interiors from {TOPO_DIR.parent.name} | "
-          f"island width {min(a.shape[0] for a in interiors.values()) * 10}"
-          f"-{max_rows * 10} m")
+    per, crop_rows, max_rows = load_years()
+    for year in YEARS:
+        interiors = per[year]["interiors"]
+        print(f"{year}: {len(interiors)} interiors from {topo_label(year)} | "
+              f"island width "
+              f"{min(a.shape[0] for a in interiors.values()) * 10}"
+              f"-{per[year]['max_rows'] * 10} m")
 
     drowned = {}
     for name, spec in METHODS.items():
-        got = build_figure(name, spec, interiors, shown, crop_rows, max_rows)
+        got = build_figure(name, spec, per, crop_rows, max_rows)
         if got:
             drowned[name] = got
 

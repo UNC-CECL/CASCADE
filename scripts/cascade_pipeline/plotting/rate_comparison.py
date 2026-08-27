@@ -118,7 +118,42 @@ def _plot_coastsat_overlay(ax, cs_series, loess_config, config, x_transform, gis
                         alpha=0.40 * alpha_factor, zorder=3, label=lbl + " (ref)")
 
 
+ESTIMATOR_LABELS = {
+    "lrr": "LRR",
+    "endpoint": "endpoint difference",
+}
+
+
+def _rate_axis_label(estimator, title_case=False):
+    """Axis label naming the estimator the modelled curve was built with.
+
+    The observed curve is always an LRR -- CoastSat supplies a per-transect
+    OLS slope -- so a figure that does not say which estimator the MODEL
+    used is inviting the reader to assume they match. They only match when
+    estimator is "lrr".
+
+    Args:
+        estimator: "lrr", "endpoint", or None to leave the estimator
+            unnamed (the pre-2026-08-22 label, kept so an old figure can
+            be redrawn unchanged).
+        title_case: Match the annotated figure's title-case axis labels.
+
+    Returns:
+        The y-axis label string.
+    """
+    stem = ("Shoreline Change Rate" if title_case
+            else "Shoreline change rate")
+    if estimator is None:
+        return f"{stem} (m/yr)"
+    if estimator not in ESTIMATOR_LABELS:
+        raise ValueError(
+            f"unknown estimator {estimator!r}; expected one of "
+            f"{sorted(ESTIMATOR_LABELS)} or None")
+    return f"{stem}, {ESTIMATOR_LABELS[estimator]} (m/yr)"
+
+
 def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
+                          estimator=None,
                           domains=DEFAULT_DOMAINS,
                           annotations=DEFAULT_ANNOTATIONS,
                           loess_config=DEFAULT_LOESS,
@@ -141,6 +176,10 @@ def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
         cs_series: Output of build_coastsat_series.
         run: RunInfo for this run.
         real_domains_only: Selects the layout (see above).
+        estimator: Which estimator built change_rate -- "lrr", "endpoint",
+            or None to leave it unnamed. Names it on the y axis, since
+            the observed curve is always an LRR and a figure that does
+            not say invites the reader to assume the two match.
         sea_level_rise_rate_m_yr: Shown in the title if given.
         save_path: If given, fig.savefig(save_path, dpi=300, bbox_inches="tight").
         show: Call plt.show() before returning.
@@ -178,7 +217,7 @@ def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
         ax.set_xticklabels([str(i) for i in xticks], rotation=45, ha="right", fontsize=9)
 
         ax.set_xlabel(f"GIS Domain ID ({domains.first_gis_id}\u2013{domains.last_gis_id})")
-        ax.set_ylabel("Shoreline change rate (m/yr)")
+        ax.set_ylabel(_rate_axis_label(estimator))
         ax.set_title(
             f"Modeled vs {annotations.obs_source_name} Shoreline Change Rate \u2013 "
             f"{annotations.region_name} | "
@@ -236,7 +275,7 @@ def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
         top_ax.set_xticklabels(top_labels, fontsize=9)
         top_ax.set_xlabel(f"GIS Domain ID ({domains.first_gis_id}\u2013{domains.last_gis_id})")
 
-        ax.set_ylabel("Shoreline change rate (m/yr)")
+        ax.set_ylabel(_rate_axis_label(estimator))
         ax.set_title(
             f"Modeled vs {annotations.obs_source_name} Shoreline Change Rate \u2013 "
             f"{annotations.region_name} | "
@@ -258,6 +297,7 @@ def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
 
 
 def plot_annotated_rate_comparison(change_rate, cs_series, run,
+                                    estimator=None,
                                     domains=DEFAULT_DOMAINS,
                                     annotations=DEFAULT_ANNOTATIONS,
                                     loess_config=DEFAULT_LOESS,
@@ -274,6 +314,9 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
         change_rate: 1-D array, length domains.total_domains, m/yr.
         cs_series: Output of build_coastsat_series.
         run: RunInfo for this run.
+        estimator: Which estimator built change_rate -- "lrr",
+            "endpoint", or None to leave it unnamed. See
+            plot_rate_comparison.
         sea_level_rise_rate_m_yr: Shown in the caption if given.
         save_path: If given, fig.savefig(save_path, dpi=300,
             bbox_inches="tight", facecolor="white").
@@ -399,7 +442,8 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
 
     ax.set_xlabel(f"{run.model_name} Model Domain ({int(domains.domain_spacing_m)} m alongshore)",
                   fontsize=12, fontweight="bold", labelpad=4)
-    ax.set_ylabel("Shoreline Change Rate (m/yr)", fontsize=12, fontweight="bold", labelpad=8)
+    ax.set_ylabel(_rate_axis_label(estimator, title_case=True),
+                  fontsize=12, fontweight="bold", labelpad=8)
     ax.text(0.0, 1.01, f"\u2190 {annotations.low_end_label}", transform=ax.transAxes, fontsize=9,
             color="#444444", ha="left", va="bottom", style="italic", clip_on=False)
     ax.text(1.0, 1.01, f"{annotations.high_end_label} \u2192", transform=ax.transAxes, fontsize=9,

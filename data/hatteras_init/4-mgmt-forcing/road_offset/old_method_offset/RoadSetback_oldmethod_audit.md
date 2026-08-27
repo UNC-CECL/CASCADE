@@ -1,6 +1,6 @@
 # Old road-setback method — how it works and where it strains
 
-Generated 2026-08-20T11:53:20 by `HAT_old_method_figures.py`. Read-only: no forcing file is written here.
+Generated 2026-08-26T17:03:41 by `HAT_old_method_figures.py`. Read-only: no forcing file is written here.
 
 ## The calculation
 

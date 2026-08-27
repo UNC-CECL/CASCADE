@@ -87,11 +87,45 @@ ROADS_ROOT = DATA / "4-mgmt-forcing" / "road_offset"
 # with no error. See hat_topo_version.py.
 # parents[4] IS scripts/ -- hat_topo_version.py moved there 2026-08-20.
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-from hat_topo_version import topo_dirs  # noqa: E402
+from hat_topo_version import (topo_dirs, array_name,  # noqa: E402
+                             product_for_year)
 
-TOPO_DIR, DUNE_DIR, TOPO_RUN_NAME = topo_dirs()
-RUN = TOPO_DIR.parent
-# One file, both periods -- road elevation is a property of the 2009 surface.
+# BOUND FROM --year, NOT AT IMPORT (2026-08-26).
+#
+# This was `TOPO_DIR, DUNE_DIR, TOPO_RUN_NAME = topo_dirs()` at module level:
+# one topography, resolved before the CLI was parsed, so `--year 1984` drew a
+# 1984 setback on 2004-start interiors and `--year 2004` drew a 2004 setback on
+# the same ones. One of those two was always wrong, and after the tree went
+# period-first it was the 1984 one -- silently, since a plausible island is
+# still an island.
+#
+# Deferred to bind_topography(), called from main() once the year is known.
+# `SETBACK` is already rebound from --method the same way, so this follows the
+# pattern the file already uses rather than inventing one.
+TOPO_DIR = DUNE_DIR = TOPO_RUN_NAME = RUN = TOPO_PRODUCT = None
+
+
+def bind_topography(year: int) -> None:
+    """Point the module at the extraction THIS vintage's setbacks came from."""
+    global TOPO_DIR, DUNE_DIR, TOPO_RUN_NAME, RUN, TOPO_PRODUCT
+    TOPO_PRODUCT = product_for_year(year)
+    TOPO_DIR, DUNE_DIR, TOPO_RUN_NAME = topo_dirs(TOPO_PRODUCT)
+    RUN = TOPO_DIR.parent
+
+
+def _topo_dir() -> Path:
+    if TOPO_DIR is None:
+        raise SystemExit(
+            "\n[stop] topography not bound. Call bind_topography(year) before "
+            "loading any domain array -- there is one extraction per period "
+            "and this module cannot guess which.\n")
+    return TOPO_DIR
+
+
+# One file, both periods. NOT because there is one surface -- there are two,
+# and they differ by a median +0.222 m in the road corridor -- but because that
+# difference is the uncorrected 1996-vs-2009 survey offset rather than a
+# roadbed. See hatteras_site_config.py, HATTERAS_ROAD_ELEVATION_FILE.
 ROAD_ELEV_CSV = DATA / "4-mgmt-forcing" / "road_elevation" / "RoadElevation.csv"
 
 _SETBACK_SOURCES = {
@@ -143,8 +177,11 @@ def is_village(gis: int) -> bool:
 
 
 def load_interior(gis: int):
-    fs = sorted(TOPO_DIR.glob(f"domain_{gis}_topography_*.npy"))
-    return np.load(fs[0]) * DZ if fs else None      # dam -> m MHW
+    # Exact name, not a glob. The old "…_topography_*.npy" needed a year tag
+    # that no longer exists, and would have matched twice if one ever strayed
+    # in from the other period - picking arbitrarily.
+    f = _topo_dir() / array_name("topography", gis)
+    return np.load(f) * DZ if f.is_file() else None      # dam -> m MHW
 
 
 def load_setbacks(year: int) -> dict:
@@ -387,12 +424,12 @@ def plot_overview(year: int, setbacks: dict, out_dir: Path):
 # --- mode: section ---------------------------------------------------------
 
 def load_grid(gis: int):
-    t = sorted(TOPO_DIR.glob(f"domain_{gis}_topography_*.npy"))
-    d = sorted(DUNE_DIR.glob(f"domain_{gis}_dune_*.npy"))
-    if not t:
+    t = _topo_dir() / array_name("topography", gis)
+    d = DUNE_DIR / array_name("dune", gis)
+    if not t.is_file():
         return None
-    interior = np.load(t[0]) * DZ                       # dam -> m MHW
-    dune_h = np.load(d[0]) * DZ if d else None          # dam -> m ABOVE BERM
+    interior = np.load(t) * DZ                          # dam -> m MHW
+    dune_h = np.load(d) * DZ if d.is_file() else None    # dam -> m ABOVE BERM
     return interior, dune_h
 
 
@@ -804,6 +841,7 @@ def main() -> int:
     else:
         matplotlib.use("Agg")
 
+    bind_topography(a.year)
     setbacks = load_setbacks(a.year)
     domains = resolve_domains(a.domains, setbacks)
     out_dir = Path(a.out)
@@ -813,7 +851,7 @@ def main() -> int:
     print(f"NC-12 per-domain views  |  {a.year}  |  --method {a.method}")
     print("=" * 84)
     print(f"  setback file : {SETBACK[a.year]}")
-    print(f"  topography   : {RUN.name}")
+    print(f"  topography   : {TOPO_PRODUCT}/{TOPO_RUN_NAME}")
     shown = domains if len(domains) <= 20 else domains[:20] + ["..."]
     print(f"  domains      : {len(domains)} -> {shown}")
     if not domains:

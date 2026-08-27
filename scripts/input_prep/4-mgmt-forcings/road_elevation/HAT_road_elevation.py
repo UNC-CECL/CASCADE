@@ -110,6 +110,7 @@ REQUIREMENTS
 from __future__ import annotations
 
 import csv
+import os
 import re
 import sys
 import warnings
@@ -163,7 +164,12 @@ RESAMPLE_GLOB = "resampled_domain_*.tif"
 # 2009_v4, and D79 is the reason this switch exists: its unfilled elevation is
 # a mean over 2287 corridor cells out of 3583, 36% of the corridor missing.
 #
-# WHY 2008 AND NOT 2014, when the v5 TOPOGRAPHY is filled from 2014:
+# WHY 2008 AND NOT 2014 -- THE ARGUMENT, WHICH NO LONGER DECIDES THE SETTING.
+# Kept because it is still the right way to think about a road surface, and
+# because it is the cost of the 2026-08-26 change recorded below: 2008 is not
+# on disk any more, so this is now an argument about three domains and
+# centimetres rather than a live choice. Read it, then read that note.
+#
 # this is a ROAD SURFACE, and the two questions have different answers. The
 # 2008 IOCM survey is one year from the 2009 base, so it measures the same
 # pavement. The 2014 Post-Sandy survey postdates Hurricane Irene (2011), the
@@ -176,29 +182,64 @@ RESAMPLE_GLOB = "resampled_domain_*.tif"
 # <= 0.015 m in the corridor. RELOCATION BRACKET and the QC flags re-measure
 # this every run; FILL_SOURCE is recorded in the audit.
 #
-# 2008 is SUPERSEDED as a TOPOGRAPHY fill (2014 replaced it) but remains the
-# right answer for a ROAD SURFACE, for the reason above. It therefore lived
-# under 0-elevation/superseded/, and this script reaches it through
+# 2008 was SUPERSEDED as a TOPOGRAPHY fill (2014 replaced it) while remaining
+# the right answer for a ROAD SURFACE, for the reason above. It therefore lived
+# under 0-elevation/superseded/, and this script reaches its product through
 # scripts/hat_elevation_products.py rather than by joining strings - which is
 # exactly what broke on 2026-08-25, when 2008 was moved there and the
-# hand-built path stopped resolving.
+# hand-built path stopped resolving. It is now deleted rather than superseded;
+# resolving through the registry is why that reads as an error instead of as
+# "no fill available" in 90 domains.
 #
-# THIS SCRIPT CANNOT RE-RUN AS WRITTEN (2026-08-26). The 2008 product is gone:
-# its rasters were never tracked (*.tif is gitignored) and are no longer on
-# disk, its registry entry has been removed, and the point-cloud path that
-# built it has been removed from HAT_dem_gap_fill.py along with
-# HAT_laz_ground_classify.py. _elev_product() therefore raises immediately,
-# listing the products that do exist - which is the intended failure, not a
-# silent stale read.
+# THE PROVENANCE CALL, TAKEN 2026-08-26: FILL_SOURCE = "2009-2014".
 #
-# The PRODUCT it made is unaffected: RoadElevation_*.csv is committed and
-# every consumer reads the CSV, not this script. What is blocked is
-# REGENERATING it. Deciding what to regenerate it FROM is a provenance call
-# and is deliberately NOT taken here - the header above argues that a 2014
-# surface under the GIS 78-80 corridor may be a REBUILT road, and the two
-# fills differ by <= 0.015 m in the corridor anyway. Switching to "2009-2014"
-# is one line, and it is the user's call, not a maintenance detail.
-FILL_SOURCE = "2008_NOAA_IOCM"
+# This script could not re-run for one day. FILL_SOURCE was "2008_NOAA_IOCM"
+# and that product is gone: its rasters were never tracked (*.tif is
+# gitignored) and are not on disk, its registry entry was removed, and the
+# point-cloud path that built it was removed from HAT_dem_gap_fill.py along
+# with HAT_laz_ground_classify.py. _elev_product() raised immediately - the
+# intended failure, not a silent stale read, but a forcing you cannot
+# regenerate is a forcing you cannot check.
+#
+# WHY THE BASELINE AND NOT THE 1984 PRODUCT. There are two live products, and
+# under the road they are NOT interchangeable. Sampling this script's own 2004
+# alignment in the same 3.5 m corridor on both:
+#
+#     2009-2014-1996 minus 2009-2014, corridor mean:  median +0.222 m
+#     54 of 82 domains move more than 0.05 m
+#     cell counts IDENTICAL in every domain
+#
+# Identical counts means ALACE REPLACED measured 2009 pavement rather than
+# filling holes in it, and +0.222 m is not a roadbed: it is the island-wide
+# 1996-vs-2009 survey offset, which mosaic_1984_audit.csv reports per domain at
+# median +0.255 m (p10 +0.14, p90 +0.33) and HAT_dem_1984_mosaic.py leaves
+# UNCORRECTED by design ("bias correction OFF, feathering OFF"). Building a
+# 1984 road elevation from the 1984 DEM would push road_ele up ~0.22 m
+# island-wide and that increment would be the offset, not the road. A higher
+# road is buried by overwash less often, so it would reach the model.
+#
+# So: ONE elevation set, on the baseline, for both periods - see the note at
+# HATTERAS_ROAD_ELEVATION_FILE in hatteras_site_config.py.
+#
+# WHAT IS LOST BY NOT USING 2008. The 2008 IOCM survey was one year from the
+# 2009 base, so it measured the same pavement, and the header above argues a
+# 2014 surface under GIS 78-80 may be a REBUILT road (post-Irene, post-breach).
+# That argument still stands and is not resolved by this change - it is
+# bounded. Only GIS 78, 79 and 80 have any nodata under the 2004 alignment, so
+# only those three can move at all, and the two fills were measured to differ
+# by <= 0.015 m in the corridor. Three domains, centimetres, against a forcing
+# nobody could rebuild. The RELOCATION BRACKET check and the QC flags
+# re-measure it every run, and FILL_SOURCE is recorded in the audit.
+#
+# Override from the shell to compare products without editing this file:
+#     HAT_ROAD_ELEV_FILL=2009-2014-1996 python HAT_road_elevation.py
+#     HAT_ROAD_ELEV_FILL=none           python HAT_road_elevation.py
+# "none" samples the raw 2009 clips, holes and all. Whatever is used is written
+# into RoadElevation_audit.md, so a comparison run cannot be mistaken for the
+# shipped one afterwards.
+FILL_SOURCE = os.environ.get("HAT_ROAD_ELEV_FILL", "2009-2014")
+if FILL_SOURCE.lower() in ("none", ""):
+    FILL_SOURCE = None
 
 sys.path.insert(0, str(HATTERAS_DATA_BASE.parents[1] / "scripts"))
 from hat_elevation_products import product as _elev_product  # noqa: E402
@@ -588,7 +629,11 @@ def write_cascade_csv(rows, path: Path) -> bool:
     np.savetxt(path, np.vstack([ids, ev]), delimiter=",", fmt="%.3f")
     print(f"[out] {path}")
     print(f"      2 x {len(ids)}  (row 0 = GIS IDs, row 1 = m MHW-relative)")
-    print(f"      one file, both periods -- there is only one DEM")
+    print(f"      one file, both periods -- NOT because there is one DEM "
+          f"(there are two)")
+    print(f"      but because they differ under the road only by the "
+          f"uncorrected")
+    print(f"      1996-vs-2009 survey offset. See RoadElevation_audit.md.")
     return True
 
 
@@ -870,11 +915,21 @@ def write_markdown(rows, sweep, resamp, bracket, path: Path):
     if FILL_SOURCE:
         a(f"| Surface | `clip_domain_<N>_filled.tif` — **1 m** native LiDAR, "
           f"2009, holes filled from **{FILL_SOURCE}** |")
-        a("| Why that fill | 2008 is one year from the 2009 base, so it "
-          "measures the same pavement. The v5 *topography* is filled from "
-          "2014 Post-Sandy, which postdates Irene, the Pea Island breach and "
-          "the NC-12 rebuild — fine for a barrier surface, wrong for a road "
-          "surface at GIS 78–80. |")
+        a("| Why that fill | The 2008 NOAA IOCM survey was preferred here "
+          "until 2026-08-26 — one year from the 2009 base, so the same "
+          "pavement, where a 2014 Post-Sandy surface at GIS 78–80 may be a "
+          "REBUILT road (post-Irene, post-breach). That product is deleted "
+          "and not reproducible from this repo, so the baseline is used "
+          "instead. The cost is bounded: only GIS 78–80 have NoData under "
+          "the 2004 alignment, and the two fills differ by ≤ 0.015 m in the "
+          "corridor. |")
+        a("| Why NOT the 1984 product | `2009-2014-1996` sits **+0.222 m** "
+          "higher through this corridor (median; 54 of 82 domains beyond "
+          "0.05 m, cell counts identical, so ALACE REPLACED measured 2009 "
+          "pavement). That is the uncorrected island-wide 1996-vs-2009 "
+          "survey offset — `mosaic_1984_audit.csv` puts it at median "
+          "+0.255 m — not a roadbed, and it is kept out of the forcing. One "
+          "elevation set, on the baseline, for both periods. |")
         _gaps = sorted((r for r in good if r["nodata_frac"] > 0),
                        key=lambda r: -r["nodata_frac"])
         a("| Domains materially affected | **GIS 78, 79, 80** — the only ones "

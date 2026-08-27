@@ -4,7 +4,8 @@ HAT_method_comparison_figures.py
 The two setback methods against each other, and both against where NC-12
 actually is.
 
-  HAT_method_comparison_on_domains.png   both methods on the SAME interiors
+  HAT_method_comparison_on_domains.png   both methods, each period on its own
+                                         interiors
   HAT_method_vs_actual_road.png          both methods against the rasterized road
 
 Written to road_offset/ itself rather than into either method's folder, because
@@ -65,7 +66,7 @@ from matplotlib.patheffects import withStroke
 # =============================================================================
 # SHARED MACHINERY
 # =============================================================================
-# The placement script owns load_interiors / build_canvas / place_road and the
+# The placement script owns load_years / load_interiors / place_road and the
 # transcribed drown test. Importing it keeps ONE implementation: a second copy
 # would drift, and a drifted method comparison looks like a result.
 
@@ -135,8 +136,13 @@ def load_actual(year: int) -> dict:
     return out
 
 
-def load_placements(interiors: dict) -> dict:
-    """{method: {year: placed}} using the placement script's own logic."""
+def load_placements(per: dict) -> dict:
+    """{method: {year: placed}} using the placement script's own logic.
+
+    `per` is the placement script's per-VINTAGE bundle, not one interiors dict.
+    It used to be the latter, which placed the 1984 road on 2004-start
+    interiors -- see the note at the top of HAT_road_placement_on_domains.py.
+    """
     out = {}
     for name in METHOD_ORDER:
         spec = P.METHODS[name]
@@ -144,7 +150,7 @@ def load_placements(interiors: dict) -> dict:
         for year in YEARS:
             sb = P.read_two_row(spec["root"] / spec["setback"].format(year=year))
             if sb:
-                per_year[year] = P.place_road(interiors, sb)
+                per_year[year] = P.place_road(per[year]["interiors"], sb)
         if per_year:
             out[name] = per_year
     return out
@@ -199,10 +205,10 @@ def draw_method_line(ax, placed, colour, lw=2.4, zorder=6, halo=True):
 
 
 # =============================================================================
-# FIGURE 1 -- both methods on the same interiors
+# FIGURE 1 -- both methods, each period on its own interiors
 # =============================================================================
 
-def figure_methods(interiors, shown, crop_rows, placements, out_png: Path):
+def figure_methods(per, crop_rows, placements, out_png: Path):
     fig = plt.figure(figsize=(16.5, 13.4))
     gs = fig.add_gridspec(4, 1, height_ratios=[1.25, 1.25, 1.0, 0.62],
                           hspace=0.17, left=0.065, right=0.905,
@@ -212,7 +218,8 @@ def figure_methods(interiors, shown, crop_rows, placements, out_png: Path):
     ax84, ax04, ax_d, ax_s = axes
 
     for ax, year, lab in ((ax84, YEARS[0], True), (ax04, YEARS[1], False)):
-        base_panel(ax, fig, shown, crop_rows, f"{year} — both methods", lab)
+        base_panel(ax, fig, per[year]["shown"], crop_rows,
+                   f"{year} — both methods, on {P.topo_label(year)}", lab)
         for name in METHOD_ORDER:
             if year in placements.get(name, {}):
                 draw_method_line(ax, placements[name][year],
@@ -266,13 +273,16 @@ def figure_methods(interiors, shown, crop_rows, placements, out_png: Path):
     ax_s.set_axisbelow(True)
 
     fig.text(0.065, 0.985,
-             "The two setback methods on the SAME Barrier3D interiors — where "
-             "each one puts NC-12",
+             "The two setback methods on each period's own Barrier3D "
+             "interiors — where each one puts NC-12",
              fontsize=14, va="top", weight="semibold")
     fig.text(0.065, 0.958,
-             f"{P.TOPO_RUN_NAME} topography. HUE IS THE METHOD HERE, not the year — the "
-             "year is the panel. Road drawn where bulldoze puts it: "
-             "road_start = int(setback / 10 m).",
+             "Topography: "
+             + ", ".join(f"{y} on {P.topo_label(y)}" for y in YEARS)
+             + ". Each panel compares two METHODS on ONE island; the two "
+               "panels are different islands. HUE IS THE METHOD HERE, not "
+               "the year — the year is the panel. Road drawn where bulldoze "
+               "puts it: road_start = int(setback / 10 m).",
              fontsize=9, color=INK_SECOND, va="top", linespacing=1.5)
     fig.legend(handles=[
         Line2D([], [], color=C_OLD, lw=2.8, label="old method"),
@@ -292,7 +302,7 @@ def figure_methods(interiors, shown, crop_rows, placements, out_png: Path):
 # FIGURE 2 -- both methods against the rasterized road
 # =============================================================================
 
-def figure_actual(interiors, shown, crop_rows, placements, actual,
+def figure_actual(per, crop_rows, placements, actual,
                   out_png: Path):
     fig = plt.figure(figsize=(16.5, 13.4))
     gs = fig.add_gridspec(4, 1, height_ratios=[1.25, 1.25, 1.0, 0.85],
@@ -303,8 +313,9 @@ def figure_actual(interiors, shown, crop_rows, placements, actual,
     ax84, ax04, ax_e, ax_w = axes
 
     for ax, year, lab in ((ax84, YEARS[0], True), (ax04, YEARS[1], False)):
-        base_panel(ax, fig, shown, crop_rows,
-                   f"{year} — rasterized road, with both methods over it", lab)
+        base_panel(ax, fig, per[year]["shown"], crop_rows,
+                   f"{year} — rasterized road, with both methods over it "
+                   f"({P.topo_label(year)})", lab)
         act = actual.get(year, {})
         if act:
             xs, lo, hi = [], [], []
@@ -413,12 +424,11 @@ def main() -> int:
     print("METHOD COMPARISON -- old vs dune-start, and both vs the real road")
     print("=" * 88)
 
-    interiors = P.load_interiors()
-    canvas, max_rows = P.build_canvas(interiors)
-    crop_rows = min(max_rows, int(P.DISPLAY_CROSS_SHORE_M / CELL_SIZE_M))
-    shown = canvas[:crop_rows, :]
+    per, crop_rows, _max_rows = P.load_years(YEARS)
+    for year in YEARS:
+        print(f"  {year}: interiors from {P.topo_label(year)}")
 
-    placements = load_placements(interiors)
+    placements = load_placements(per)
     missing = [m for m in METHOD_ORDER if m not in placements]
     if missing:
         raise SystemExit(f"\n[stop] no setback files for: {missing}\n")
@@ -451,9 +461,9 @@ def main() -> int:
             print(f"    within-domain road spread (p10-p90): "
                   f"median {np.median(sp):.0f} m | max {sp.max():.0f} m")
 
-    figure_methods(interiors, shown, crop_rows, placements,
+    figure_methods(per, crop_rows, placements,
                    OUT_ROOT / "HAT_method_comparison_on_domains.png")
-    figure_actual(interiors, shown, crop_rows, placements, actual,
+    figure_actual(per, crop_rows, placements, actual,
                   OUT_ROOT / "HAT_method_vs_actual_road.png")
     return 0
 

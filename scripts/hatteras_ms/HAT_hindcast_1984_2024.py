@@ -30,18 +30,31 @@ THE TWO DELIBERATE DIFFERENCES FROM THE NOTEBOOK
     figures inline with `show=True`; a headless run cannot. The files written
     to disk are identical either way.
 
-WHERE THE SWITCHES LIVE  (same sections as the notebook)
+WHERE THE SWITCHES LIVE
 
-  section 1   USE_SANDBOX_CASCADE, SHOW_FIGURES
-  section 3   START_YEAR, SOURCE_SINK_PRESET, SCENARIO, GROIN_ENABLED
-  section 11  OVERWRITE
-              SCENARIO expands to ENABLE_ROADWAY_MANAGEMENT,
-              ENABLE_BEACH_DUNE_MANAGEMENT, ENABLE_NOURISHMENT_FILLS and
-              ENABLE_HISTORICAL_ROAD_RELOCATIONS; commented override lines
-              sit directly below the table
-  section 7   GROIN_TRAPPING_RATE_M_YR, deterioration settings
-  section 9   FLIP_SIGN_MODEL, PLOT_REAL_DOMAINS_ONLY, GIF_JOBS
-  section 11  Hs, dune thresholds, datums, ENABLE_SANDBAG_PLACEMENT
+  `hat_run.yaml`, beside this file. Edit it, save it, run. That file is the
+  interface; the sections below only read it, through HAT_hindcast_config:
+
+    section 1   output.show_figures -- read at import, because it selects a
+                matplotlib backend
+    section 3   start_year, source_sink, scenario, relocations, offset_mode
+                (scenario expands to ENABLE_ROADWAY_MANAGEMENT,
+                ENABLE_BEACH_DUNE_MANAGEMENT, ENABLE_NOURISHMENT_FILLS and
+                ENABLE_HISTORICAL_ROAD_RELOCATIONS; commented override lines
+                sit directly below the table)
+    section 7   groin.enabled, groin.trapping_M, groin.deterioration_f
+    section 9   output.make_gifs
+    section 11  physics.wave_height_Hs, sandbags, output.overwrite,
+                output.save_model_state
+
+  An environment variable beats the file, so `HAT_run_all.py` can drive a
+  matrix without editing anything; it also sets HAT_IGNORE_SETTINGS=1, so a
+  half-finished experiment left in the yaml cannot reach a batch run.
+
+  STILL TYPED IN THIS FILE, because they are properties of the study rather
+  than of a run: dune thresholds and datums (section 11), FLIP_SIGN_MODEL and
+  PLOT_REAL_DOMAINS_ONLY (section 9), the groin's geometry and deterioration
+  schedule (section 7), NUM_CORES (section 11).
 
 RUN_NAME is derived from those switches in section 7.5 -- it is not typed by
 hand, so the output directory cannot disagree with what was simulated.
@@ -75,29 +88,62 @@ for _path in (SCRIPTS_DIR, HATTERAS_MS_DIR):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+# --- the settings file, read before anything it selects ----------------------
+# `hat_run.yaml` is where a run is chosen; see HAT_hindcast_config for the
+# precedence rules. It is read HERE rather than in section 3 because two of
+# its values are settled at import time and cannot be changed afterwards:
+#
+#   use_sandbox_cascade  decides which Cascade class cascade_pipeline.hindcast
+#                        binds, which happens the moment it is imported below.
+#                        It is pinned True and has no line in the yaml -- see
+#                        the "not settable here" block at the foot of that
+#                        file for why it must not follow groin.enabled.
+#   show_figures         decides the matplotlib backend, which is fixed by the
+#                        first figure created.
+#
+# Everything else is re-read in section 3, so an interactive edit to the yaml
+# applies on a re-run of that cell without restarting the kernel. Section 3
+# also checks these two against the file as it stands then, and raises if they
+# have changed -- a stale sandbox flag is the failure where the groin silently
+# does nothing.
+from HAT_hindcast_config import load_run_config          # noqa: E402
+
+_BOOT_CONFIG = load_run_config()
+os.environ["CASCADE_USE_SANDBOX"] = (
+    "1" if _BOOT_CONFIG.use_sandbox_cascade else "0")
+
 import numpy as np
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
-import yaml
 
-# True: sandbox copy with the pre-AST groin hook. False: real package, hook
-# folded in.
-USE_SANDBOX_CASCADE = True
-if USE_SANDBOX_CASCADE:
-    from cascade.cascade_groin import Cascade
-else:
-    from cascade.cascade import Cascade
 
 from cascade.groin import GroinCallback, predict_fillet
 
 from cascade_pipeline import nourishment, roadway
-from cascade_pipeline import roadway as roadway_module
+from cascade_pipeline import reports
+from cascade_pipeline.hindcast import (
+    DAM_TO_M,
+    USE_SANDBOX_CASCADE,
+    brie_r_ipl,
+    build_background_erosion,
+    build_cascade,
+    build_domain_file_paths,
+    build_shoreline_target,
+    build_target_table,
+    load_barrier3d_contract,
+    build_island_offset,
+    island_offset_tilts,
+    load_island_offset_dam,
+    load_storm_series,
+    measure_groin_extent,
+    run_cascade_simulation,
+    scenario_run_name,
+)
 from cascade_pipeline.coastsat_loess import (
     CoastSatDataset,
     LoessConfig,
     build_coastsat_series,
-    compute_domain_means,
 )
 from cascade_pipeline.plotting.rate_comparison import (
     DEFAULT_RATE_COMPARISON,
@@ -117,7 +163,8 @@ from cascade_pipeline.run_registry import (
     RUN_INDEX_FILENAME,
     write_run_metadata,
 )
-from cascade_pipeline.shoreline import build_shoreline_matrix, compute_change_rate
+from cascade_pipeline.shoreline import (build_shoreline_matrix,
+                                        compute_change_rate, compute_lrr)
 
 from hatteras_site_config import (
     HATTERAS_ANNOTATIONS,
@@ -140,7 +187,12 @@ from hatteras_site_config import (
 # The notebook draws its final figures inline. A headless run cannot, so the
 # figures are saved and not shown. This is the only behavioural difference in
 # the output path; the files on disk are identical.
-SHOW_FIGURES = False
+#
+# `output.show_figures: null` in hat_run.yaml means "whichever file is being
+# run decides", which here is False. Setting it true in the yaml forces
+# figures open in a headless run, which is why it is not the default.
+SHOW_FIGURES = (False if _BOOT_CONFIG.show_figures is None
+                else _BOOT_CONFIG.show_figures)
 if not SHOW_FIGURES:
     matplotlib.use("Agg")
 
@@ -155,13 +207,24 @@ print(f"HATTERAS_DOMAINS.total_domains = {HATTERAS_DOMAINS.total_domains}")
 
 
 # =============================================================================
-# 2. FIXED DUNE/TOPO (period-independent)
+# 2. DUNE/TOPO -- PER PERIOD
 # =============================================================================
-# Same 2009 init surface for both periods, doesn't depend on START_YEAR.
+# NO LONGER period-independent (changed 2026-08-25). Until then both periods
+# read one topography and this section said so. They now start from different
+# DEMs, so the product is selected from HATTERAS_PERIODS:
+#
+#     1984  ->  1984-start   from DEM 2009-2014-1996
+#     2004  ->  2004-start   from DEM 2009-2014
+#
+# The VERSION within a product is still resolved, never pinned.
 
 # --- 2.1 project paths -------------------------------------------------------
 
-TOPO_DUNE_INIT_YEAR = "2009"     # year label inside the filenames
+# There is no TOPO_DUNE_INIT_YEAR any more. The arrays carry no year - the
+# period is the PRODUCT DIRECTORY - and this runner no longer builds their
+# names at all; build_domain_file_paths() delegates to the resolver. See the
+# note at the top of hat_topo_version.py for why a per-period tag was tried
+# and reverted.
 
 # WHICH EXTRACTION -- resolved, not pinned. topo_dirs() reads VERSION out of
 # HAT_dune_topo_extractor.py, so the runner, the dune-start road setbacks and
@@ -173,11 +236,21 @@ TOPO_DUNE_INIT_YEAR = "2009"     # year label inside the filenames
 # measured from interior row 0, so that combination places the road against a
 # row that does not exist on the grid being run.
 #
-# To reproduce an older run deliberately: topo_dirs(override="2009_v3").
-from hat_topo_version import topo_dirs   # scripts/, on sys.path from above
+# To reproduce an older run deliberately:
+#     topo_dirs("2004-start", override="v3").
+from hat_topo_version import topo_dirs  # scripts/, on sys.path above
+from hat_topo_version import BUFFER_DIR as _BUFFER_DIR
 
-_TOPO_DIR, _DUNE_DIR, TOPO_DUNE_VERSION = topo_dirs()
-print(f"topography            {TOPO_DUNE_VERSION}  (resolved from the extractor)")
+# _BOOT_CONFIG, not RUN_CONFIG: the period must be known HERE, and RUN_CONFIG is
+# not loaded until section 3. The two are compared a few lines below section 3's
+# reload, and section 3.0 re-asserts that this product matches the period that
+# actually ran, so a boot/run divergence cannot silently pick the wrong barrier.
+TOPO_PRODUCT = HATTERAS_PERIODS[_BOOT_CONFIG.start_year]["topo_product"]
+
+_TOPO_DIR, _DUNE_DIR, TOPO_DUNE_VERSION = topo_dirs(TOPO_PRODUCT)
+
+print(f"topography            {TOPO_PRODUCT} / {TOPO_DUNE_VERSION}  "
+      f"(product from the period, version resolved)")
 
 HATTERAS_DATA_BASE = PROJECT_BASE_DIR / "data" / "hatteras_init"
 OUTPUT_ROOT = PROJECT_BASE_DIR / "output" / "raw_runs"
@@ -186,8 +259,11 @@ COASTSAT_BASE_DIR = (PROJECT_BASE_DIR / "scripts" / "input_prep"
 PARAMETER_FILE = "Hatteras-CASCADE-parameters.yaml"  # resolved by CASCADE
 
 BARRIER3D_DIR = HATTERAS_DATA_BASE / "1-barrier3d-domains"
-DUNE_TOPO_DIR = BARRIER3D_DIR / "2009-dune-topo" / TOPO_DUNE_VERSION
-BUFFER_DIR = BARRIER3D_DIR / "2009-buffer"
+# Taken from what topo_dirs() RETURNED rather than re-joined from parts. The
+# old line rebuilt the path independently, which is how a resolver gets bypassed
+# without anyone noticing - the same failure mode as HAT_road_elevation.py.
+DUNE_TOPO_DIR = _TOPO_DIR.parent
+BUFFER_DIR = _BUFFER_DIR
 
 os.chdir(PROJECT_BASE_DIR)
 # Runs are filed per period: section 3 builds OUTPUT_BASE_DIR =
@@ -196,54 +272,24 @@ os.chdir(PROJECT_BASE_DIR)
 # each other. run_index.csv stays at the root, covering both periods.
 OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 
-for _name, _path in [
+reports.path_inventory([
     ("PROJECT_BASE_DIR", PROJECT_BASE_DIR),
     ("HATTERAS_DATA_BASE", HATTERAS_DATA_BASE),
     ("DUNE_TOPO_DIR", DUNE_TOPO_DIR),
     ("BUFFER_DIR", BUFFER_DIR),
     ("COASTSAT_BASE_DIR", COASTSAT_BASE_DIR),
     ("OUTPUT_ROOT", OUTPUT_ROOT),
-]:
-    print(f"{_name:<20} {'ok' if _path.exists() else 'MISSING':<8} {_path}")
+])
 
 
 # --- 2.2 build the padded file lists -----------------------------------------
 
-def build_domain_file_paths(geometry, dune_topo_dir, buffer_dir, init_year):
-    """Builds one elevation and one dune file path per padded domain.
 
-    Args:
-        geometry: DomainGeometry describing the padded domain array.
-        dune_topo_dir: Directory holding the topography/ and dunes/ subdirs.
-        buffer_dir: Directory holding the buffer sample profiles.
-        init_year: Year label embedded in the real-domain filenames.
-
-    Returns:
-        An (elevation_paths, dune_paths) tuple of string lists. Each list is
-        geometry.total_domains long and index-aligned with the padded array.
-    """
-    buffer_elevation = str(buffer_dir / "sample_1_topography.npy")
-    buffer_dune = str(buffer_dir / "sample_1_dune.npy")
-
-    elevation_paths = [buffer_elevation] * geometry.num_buffer_domains
-    dune_paths = [buffer_dune] * geometry.num_buffer_domains
-
-    for gis_id in range(geometry.first_gis_id, geometry.last_gis_id + 1):
-        elevation_paths.append(str(
-            dune_topo_dir / "topography"
-            / f"domain_{gis_id}_topography_{init_year}.npy"))
-        dune_paths.append(str(
-            dune_topo_dir / "dunes"
-            / f"domain_{gis_id}_dune_{init_year}.npy"))
-
-    elevation_paths += [buffer_elevation] * geometry.num_buffer_domains
-    dune_paths += [buffer_dune] * geometry.num_buffer_domains
-
-    return elevation_paths, dune_paths
-
-
+# The PRODUCT is passed, not the directories: build_domain_file_paths now
+# delegates to hat_topo_version.domain_arrays(), which resolves the directory
+# and the filename together. Nothing here spells an array name.
 ELEVATION_FILE_PATHS, DUNE_FILE_PATHS = build_domain_file_paths(
-    HATTERAS_DOMAINS, DUNE_TOPO_DIR, BUFFER_DIR, TOPO_DUNE_INIT_YEAR)
+    HATTERAS_DOMAINS, TOPO_PRODUCT)
 
 print(f"\n{len(ELEVATION_FILE_PATHS)} elevation + {len(DUNE_FILE_PATHS)} dune "
       f"paths (expect {HATTERAS_DOMAINS.total_domains} each)")
@@ -272,65 +318,6 @@ print(f"All {_expected_files} init files present.")
 # relative to MHW. A file written in metres would run without error and model an
 # island 10x too tall. Checked on the RAW arrays, before any DAM_TO_M scaling.
 
-DAM_TO_M = 10.0          # Barrier3D works in decameters
-WATER_CLAMP_DAM = -0.3   # SENTINEL_WATER_M / WATER_CLAMP_M from RUN_MANIFEST.txt
-MAX_PLAUSIBLE_DAM = 2.0  # 20 m; a barrier island in metres would blow past this
-
-
-def load_barrier3d_contract(parameter_path):
-    """Reads the unit-relevant Barrier3D parameters from the CASCADE YAML.
-
-    Mirrors the conversions in barrier3d/load_input.py so the values can be
-    compared against the raw arrays on disk.
-
-    Args:
-        parameter_path: Path to the CASCADE parameter YAML.
-
-    Returns:
-        A dict with barrier_length_cells, mhw_dam and berm_el_dam.
-    """
-    with open(parameter_path, encoding="utf-8") as handle:
-        params = yaml.safe_load(handle)
-
-    mhw_dam = params["MHW"] / 10.0
-    return {
-        "barrier_length_cells": int(params["BarrierLength"] / 10.0),
-        "mhw_dam": mhw_dam,
-        "berm_el_dam": params["BermEl"] / 10.0 - mhw_dam,
-    }
-
-
-def check_domain_units(elevation_dam, dune_dam, contract):
-    """Checks one domain's raw arrays against the Barrier3D input contract.
-
-    Args:
-        elevation_dam: Raw elevation array as stored on disk.
-        dune_dam: Raw dune array as stored on disk.
-        contract: Mapping from load_barrier3d_contract.
-
-    Returns:
-        A dict of check name -> bool, True when the array satisfies the check.
-    """
-    alongshore_cells = (elevation_dam.shape[1] if elevation_dam.ndim == 2
-                        else None)
-    return {
-        "elevation is 2-D (cross_shore, alongshore)": elevation_dam.ndim == 2,
-        "dune is 1-D (one crest per alongshore cell)": dune_dam.ndim == 1,
-        "alongshore cells match dune length":
-            alongshore_cells == dune_dam.size,
-        f"alongshore >= BarrierLength ({contract['barrier_length_cells']})":
-            alongshore_cells is not None
-            and alongshore_cells >= contract["barrier_length_cells"],
-        "dtype is floating point":
-            np.issubdtype(elevation_dam.dtype, np.floating)
-            and np.issubdtype(dune_dam.dtype, np.floating),
-        "magnitudes are decameters, not metres":
-            np.abs(elevation_dam).max() <= MAX_PLAUSIBLE_DAM,
-        f"seaward floor at water clamp ({WATER_CLAMP_DAM} dam)":
-            np.isclose(elevation_dam.min(), WATER_CLAMP_DAM),
-        "dune heights positive (above berm)": dune_dam.min() > 0,
-    }
-
 
 BARRIER3D_CONTRACT = load_barrier3d_contract(HATTERAS_DATA_BASE / PARAMETER_FILE)
 
@@ -341,28 +328,8 @@ print(f"  MHW           -> {BARRIER3D_CONTRACT['mhw_dam']:.3f} dam")
 print(f"  BermEl        -> {BARRIER3D_CONTRACT['berm_el_dam']:.3f} dam "
       f"above MHW\n")
 
-_results = {}
-for _gis_id in range(HATTERAS_DOMAINS.first_gis_id,
-                     HATTERAS_DOMAINS.last_gis_id + 1):
-    _pad = HATTERAS_DOMAINS.gis_to_pad(_gis_id)
-    _checks = check_domain_units(np.load(ELEVATION_FILE_PATHS[_pad]),
-                                 np.load(DUNE_FILE_PATHS[_pad]),
-                                 BARRIER3D_CONTRACT)
-    for _name, _passed in _checks.items():
-        _results.setdefault(_name, []).append((_gis_id, _passed))
-
-print(f"{'Check':<46} {'domains passing':>15}")
-_failed_any = False
-for _name, _outcomes in _results.items():
-    _failures = [gis_id for gis_id, passed in _outcomes if not passed]
-    _failed_any = _failed_any or bool(_failures)
-    print(f"  {_name:<44} {len(_outcomes) - len(_failures):>6}"
-          f"/{len(_outcomes)}"
-          + (f"   FAILED: {_failures[:8]}" if _failures else ""))
-
-print("\n" + ("SOME CHECKS FAILED - do not run the model on these arrays"
-               if _failed_any else
-               "All units and shapes match what Barrier3D expects."))
+reports.run_units_check(ELEVATION_FILE_PATHS, DUNE_FILE_PATHS,
+                        BARRIER3D_CONTRACT, HATTERAS_DOMAINS)
 
 
 # =============================================================================
@@ -372,13 +339,39 @@ print("\n" + ("SOME CHECKS FAILED - do not run the model on these arrays"
 # everything in section 4 follows from it: run length, RSLR rate, storm series,
 # background-erosion preset, road-setback file, nourishment settings.
 #
-# The run-selecting values in this section come from HAT_hindcast_config, so a
-# driver can set them through the environment without editing tracked source.
-# Interactively, type over any assignment below -- the imported value is only
-# the default, and the assignment is still the last word.
+# The run-selecting values in this section come from `hat_run.yaml`, read
+# through HAT_hindcast_config: edit that file, save it, run. A driver can also
+# set them through the environment without editing anything, and
+# interactively you can still type over any assignment below -- the loaded
+# value is only the default, and the assignment is still the last word.
+#
+# load_run_config() RE-READS the yaml on every call rather than reusing the
+# object section 1 built. In a notebook the module is cached by the import
+# system, so a fresh read is the only way an edit to the yaml applies without
+# restarting the kernel.
 
-from HAT_hindcast_config import RUN_CONFIG            # noqa: E402
-from HAT_hindcast_config import describe as _describe_run_config  # noqa: E402
+from HAT_hindcast_config import (                     # noqa: E402
+    load_run_config, describe as _describe_run_config, preflight as _preflight)
+
+RUN_CONFIG = load_run_config()
+
+# The two values section 1 already spent. They select an import and a
+# matplotlib backend, so a yaml edited after section 1 ran would be reported
+# in the block below while the process is still running the old choice --
+# and for the sandbox flag that means a groin-on run whose groin silently
+# does nothing. Raised, not warned.
+_BOOT_DRIFT = {
+    name: (getattr(_BOOT_CONFIG, name), getattr(RUN_CONFIG, name))
+    for name in ("use_sandbox_cascade", "show_figures")
+    if getattr(_BOOT_CONFIG, name) != getattr(RUN_CONFIG, name)
+}
+if _BOOT_DRIFT:
+    raise RuntimeError(
+        "hat_run.yaml changed after section 1 imported on the old values:\n"
+        + "\n".join(f"  {name}: section 1 used {was!r}, the file now says "
+                    f"{now!r}" for name, (was, now) in _BOOT_DRIFT.items())
+        + "\nThese are settled at import. Re-run section 1 (in a notebook, "
+          "restart the kernel and Run All).")
 
 START_YEAR = RUN_CONFIG.start_year   # 1984 or 2004
 
@@ -456,6 +449,11 @@ SCENARIOS = {
 
 SCENARIO = RUN_CONFIG.scenario
 
+# Read here rather than beside the offset load in section 4: the run-name
+# preview below needs it, and a value the name depends on must be settled
+# before the name is predicted.
+OFFSET_MODE = RUN_CONFIG.offset_mode
+
 # The groin is NOT part of the scenario, deliberately. 12.3 measures its effect
 # against a paired no-groin baseline identical in every other token, so every
 # scenario is run twice -- False first to create the baseline, then True.
@@ -472,7 +470,12 @@ _SCENARIO_PRESET = SCENARIOS[SCENARIO]
 ENABLE_ROADWAY_MANAGEMENT = _SCENARIO_PRESET["roadway"]
 ENABLE_BEACH_DUNE_MANAGEMENT = _SCENARIO_PRESET["beach_dune"]
 ENABLE_NOURISHMENT_FILLS = _SCENARIO_PRESET["fills"]
-ENABLE_HISTORICAL_ROAD_RELOCATIONS = _SCENARIO_PRESET["relocations"]
+# HAT_RELOCATIONS overrides the scenario when set; None leaves the preset
+# in charge. Either way the departure is detected just below and the
+# `reloc` token still comes from the switch, not from SCENARIO.
+ENABLE_HISTORICAL_ROAD_RELOCATIONS = (
+    _SCENARIO_PRESET["relocations"] if RUN_CONFIG.relocations is None
+    else RUN_CONFIG.relocations)
 
 # --- one-off overrides -------------------------------------------------------
 # Uncomment to depart from the named scenario for a single run. The departure
@@ -504,6 +507,19 @@ if START_YEAR not in HATTERAS_PERIODS:
 SOURCE_SINK_PRESET, _PRESET_BY_PERIOD = resolve_be_preset(SOURCE_SINK_PRESET)
 
 PERIOD = HATTERAS_PERIODS[START_YEAR]
+
+# Section 2 picked the topography from _BOOT_CONFIG.start_year, before
+# RUN_CONFIG existed. If those disagree the run would model the wrong barrier
+# entirely, so it is checked rather than assumed.
+if PERIOD["topo_product"] != TOPO_PRODUCT:
+    raise SystemExit(
+        f"\n[stop] topography product mismatch.\n"
+        f"  section 2 loaded : {TOPO_PRODUCT}  (from boot start_year "
+        f"{_BOOT_CONFIG.start_year})\n"
+        f"  this period wants: {PERIOD['topo_product']}  (START_YEAR "
+        f"{START_YEAR})\n"
+        f"The domain arrays already in memory are the wrong ones. Re-run "
+        f"with a consistent start_year.\n")
 END_YEAR = PERIOD["end_year"]
 RUN_YEARS = END_YEAR - START_YEAR
 
@@ -540,7 +556,12 @@ RUN_NAME_STEM = f"HAT_{START_YEAR}_{END_YEAR}"
 # all of them, and the baseline lookup can no longer resolve to a run
 # from the other period.
 PERIOD_TAG = f"{START_YEAR}_{END_YEAR}"
-OUTPUT_BASE_DIR = OUTPUT_ROOT / PERIOD_TAG
+# Filed by period, then by source/sink preset. The preset directory is
+# redundant with the preset token in RUN_NAME on purpose: the token is what
+# run_index.csv, the logs and the figure captions all key on, and the
+# directory is only there so the three presets of one period can be read
+# side by side instead of interleaved in one listing of thirty-odd runs.
+OUTPUT_BASE_DIR = OUTPUT_ROOT / PERIOD_TAG / SOURCE_SINK_PRESET
 OUTPUT_BASE_DIR.mkdir(parents=True, exist_ok=True)
 
 print(f"\nSTART_YEAR = {START_YEAR}  ->  {START_YEAR}-{END_YEAR}, "
@@ -562,6 +583,7 @@ _PERIOD_HAS_FILL = bool(nourishment.build_schedule(
     START_YEAR, END_YEAR).projects)
 _PREVIEW_TOKENS = [
     SOURCE_SINK_PRESET,
+    None if OFFSET_MODE == "asrun" else f"offset{OFFSET_MODE}",
     "road" if ENABLE_ROADWAY_MANAGEMENT else "noroad",
     "reloc" if ENABLE_HISTORICAL_ROAD_RELOCATIONS else None,
     "bdm" if ENABLE_BEACH_DUNE_MANAGEMENT else "nobdm",
@@ -573,84 +595,47 @@ _PREVIEW_TOKENS = [
 RUN_NAME_PREVIEW = (f"{RUN_NAME_STEM}_"
                     + "_".join(t for t in _PREVIEW_TOKENS if t))
 
-print(f"\nSCENARIO              {SCENARIO!r}"
-      + (f"   OVERRIDDEN: {', '.join(sorted(_SCENARIO_DEPARTURES))}"
-         if _SCENARIO_DEPARTURES else ""))
-for _key, _preset in SCENARIOS.items():
-    print(f"  {'->' if _key == SCENARIO else '  '} {_key:<18}"
-          f"road={str(_preset['roadway']):<5} "
-          f"bdm={str(_preset['beach_dune']):<5} "
-          f"fills={str(_preset['fills'])}")
-for _key, (_want, _got) in sorted(_SCENARIO_DEPARTURES.items()):
-    print(f"  override            {_key}: scenario says {_want}, "
-          f"this run uses {_got}")
+# What this run will be called, where it will land, whether something already
+# lives there, and roughly how long it will take -- reported HERE rather than
+# at the section 11 guard so a name collision is visible before sections 4-10
+# do their work. Advisory: `guard_run_dir` in 11 is still the authority on
+# what a collision does, and this does not duplicate that decision.
+print("\n" + _preflight(RUN_NAME_PREVIEW,
+                        OUTPUT_BASE_DIR / RUN_NAME_PREVIEW,
+                        config=RUN_CONFIG))
 
-print("\nMANAGEMENT            what the scenario above expands to")
-print(f"  roadway_manager     "
-      f"{'on' if ENABLE_ROADWAY_MANAGEMENT else 'OFF'}")
-print(f"    relocations       "
-      f"{'on' if ENABLE_HISTORICAL_ROAD_RELOCATIONS else 'off'}"
-      + ("   FORCED off: roadway_manager is off"
-         if _RELOCATIONS_FORCED_OFF else ""))
-print(f"  beach_dune_manager  "
-      f"{'on' if ENABLE_BEACH_DUNE_MANAGEMENT else 'OFF'}")
-print(f"    nourishment fills "
-      f"{'on' if ENABLE_NOURISHMENT_FILLS else 'off'}"
-      + ("   FORCED off: beach_dune_manager is off"
-         if _FILLS_FORCED_OFF else ""))
-# PERIOD["enable_nourishment"] describes the period; nothing reads it. It is
-# printed beside the switch that does reach the model so the two cannot quietly
-# disagree -- the volume there is a legacy default that section 6 overwrites.
-# Flagged in one direction only: a period that expects fill and is not getting
-# it is a scenario choice worth restating, whereas fills left on in a period
-# with no projects withholds nothing. 6.3 reports what was actually applied.
-print(f"    period expects    {ENABLE_NOURISHMENT}"
-      + ("   <- the period has fill and this run suppresses it"
-         if ENABLE_NOURISHMENT and not ENABLE_NOURISHMENT_FILLS else ""))
-print(f"  groin               {'on' if GROIN_ENABLED else 'off'}"
-      f"   (paired baseline: run each scenario with False first)")
-
-print(f"\nRUN_NAME (predicted)  {RUN_NAME_PREVIEW!r}")
-print(f"                      confirmed against the built modules in 7.5")
-print()
-for _name, _path in [("island offset", ISLAND_OFFSET_FILE),
-                     ("storms", STORM_FILE),
-                     ("road setback", ROAD_SETBACK_FILE)]:
-    print(f"  {_name:<14} {'ok' if _path.exists() else 'MISSING':<8} {_path.name}")
+reports.scenario_report(
+    scenario=SCENARIO, scenarios=SCENARIOS, departures=_SCENARIO_DEPARTURES,
+    roadway_on=ENABLE_ROADWAY_MANAGEMENT,
+    relocations_on=ENABLE_HISTORICAL_ROAD_RELOCATIONS,
+    relocations_forced_off=_RELOCATIONS_FORCED_OFF,
+    beach_dune_on=ENABLE_BEACH_DUNE_MANAGEMENT,
+    fills_on=ENABLE_NOURISHMENT_FILLS, fills_forced_off=_FILLS_FORCED_OFF,
+    period_expects_nourishment=ENABLE_NOURISHMENT,
+    groin_enabled=GROIN_ENABLED, run_name_preview=RUN_NAME_PREVIEW,
+    input_files=[("island offset", ISLAND_OFFSET_FILE),
+                 ("storms", STORM_FILE),
+                 ("road setback", ROAD_SETBACK_FILE)])
 
 
 # --- 3.1 island offsets ------------------------------------------------------
 # One value per padded domain giving that domain's cross-shore starting
 # position. Becomes `shoreline_offset` on the Cascade() call.
 
-def load_island_offset_dam(offset_path, geometry):
-    """Loads a padded BRIE island-offset file and converts it to decameters.
 
-    Args:
-        offset_path: Path to a single-column padded offset CSV, in meters.
-        geometry: DomainGeometry the file must match in length.
-
-    Returns:
-        A 1-D array of offsets in decameters, one per padded domain, ready to
-        pass to Cascade() as shoreline_offset.
-
-    Raises:
-        ValueError: If the file is not one value per padded domain.
-    """
-    offset_m = np.loadtxt(offset_path, skiprows=1, delimiter=",")
-    if offset_m.ndim != 1 or offset_m.size != geometry.total_domains:
-        raise ValueError(f"{offset_path.name}: expected "
-                         f"{geometry.total_domains} values, got shape "
-                         f"{offset_m.shape}")
-    return offset_m / DAM_TO_M
-
-
-island_offset_dam = load_island_offset_dam(ISLAND_OFFSET_FILE, HATTERAS_DOMAINS)
+# OFFSET_MODE selects which shoreline_offset variant is built; see
+# cascade_pipeline.hindcast.build_island_offset. The default, "asrun",
+# reproduces the historical unit error (the file is METRES and Cascade
+# wants metres, but load_island_offset_dam divided by 10), so previously
+# published runs stay reproducible until the correction is adopted.
+island_offset = build_island_offset(
+    ISLAND_OFFSET_FILE, HATTERAS_DOMAINS, mode=OFFSET_MODE)
+OFFSET_TILTS = island_offset_tilts(island_offset, HATTERAS_DOMAINS)
 
 _real = slice(HATTERAS_DOMAINS.start_real_index, HATTERAS_DOMAINS.end_real_index)
-print(f"\n{START_YEAR} offsets: {island_offset_dam.size} padded domains | "
-      f"real span {island_offset_dam[_real].min() * DAM_TO_M:.0f}-"
-      f"{island_offset_dam[_real].max() * DAM_TO_M:.0f} m")
+print(f"\n{START_YEAR} offsets: {island_offset.size} padded domains | "
+      f"real span {island_offset[_real].min() * DAM_TO_M:.0f}-"
+      f"{island_offset[_real].max() * DAM_TO_M:.0f} m")
 
 
 # =============================================================================
@@ -669,75 +654,17 @@ print(f"  over {RUN_YEARS} years -> "
 # One row per storm: time (1-based model step), Rhigh, Rlow (decameters),
 # period, duration (hours).
 
-STORM_COLUMNS = ("time", "Rhigh", "Rlow", "period", "duration")
-
-
-def load_storm_series(storm_path):
-    """Loads a Barrier3D storm series into a DataFrame.
-
-    Args:
-        storm_path: Path to the storm .npy file.
-
-    Returns:
-        A DataFrame with the raw columns plus Rhigh_m and Rlow_m in meters.
-
-    Raises:
-        ValueError: If the file does not have the expected column count.
-    """
-    storms = np.load(storm_path)
-    if storms.ndim != 2 or storms.shape[1] != len(STORM_COLUMNS):
-        raise ValueError(f"{storm_path.name}: expected "
-                         f"(n, {len(STORM_COLUMNS)}), got {storms.shape}")
-
-    series = pd.DataFrame(storms, columns=STORM_COLUMNS)
-    series["Rhigh_m"] = series["Rhigh"] * DAM_TO_M
-    series["Rlow_m"] = series["Rlow"] * DAM_TO_M
-    return series
-
 
 STORM_SERIES = load_storm_series(STORM_FILE)
 
-print(f"\n{STORM_FILE.name}: {len(STORM_SERIES)} storms")
-print(f"  time steps    {STORM_SERIES['time'].min():.0f} to "
-      f"{STORM_SERIES['time'].max():.0f}  (run is {RUN_YEARS} years)")
-print(f"  Rhigh         {STORM_SERIES['Rhigh_m'].min():.2f} to "
-      f"{STORM_SERIES['Rhigh_m'].max():.2f} m")
-print(f"  duration      {STORM_SERIES['duration'].min():.0f} to "
-      f"{STORM_SERIES['duration'].max():.0f} hours")
-print(f"  storms/year   {len(STORM_SERIES) / RUN_YEARS:.1f} mean")
-
-_beyond_run = (STORM_SERIES["time"] > RUN_YEARS + 1).sum()
-if _beyond_run:
-    print(f"  NOTE: {_beyond_run} storms land past model year {RUN_YEARS + 1}")
+reports.storm_report(storms=STORM_SERIES, storm_file=STORM_FILE,
+                     run_years=RUN_YEARS)
 
 
 # --- 4.3 source/sink (background erosion) ------------------------------------
 # Per-domain rate in m/yr, passed to Barrier3D as `Rat`. Sign convention from
 # cascade/brie_coupler.py: (-) = erosion, (+) = accretion. Presets are sparse --
 # a domain absent from a preset gets 0.0 m/yr.
-
-def build_background_erosion(be_rates, geometry):
-    """Expands sparse per-GIS background-erosion rates onto the padded array.
-
-    Args:
-        be_rates: Mapping of GIS domain ID to rate in m/yr. Domains absent
-            from the mapping get 0.0.
-        geometry: DomainGeometry describing the padded array.
-
-    Returns:
-        A list of geometry.total_domains rates, ready to pass to Cascade().
-
-    Raises:
-        ValueError: If a GIS ID falls outside the padded array.
-    """
-    rates = [0.0] * geometry.total_domains
-    for gis_id, rate in be_rates.items():
-        pad_index = geometry.gis_to_pad(gis_id)
-        if not 0 <= pad_index < geometry.total_domains:
-            raise ValueError(f"GIS {gis_id} -> pad index {pad_index}, outside "
-                             f"0-{geometry.total_domains - 1}")
-        rates[pad_index] = float(rate)
-    return rates
 
 
 DOMAIN_BE_RATES = HATTERAS_BE_PRESETS[SOURCE_SINK_PRESET][START_YEAR]
@@ -755,19 +682,11 @@ if USE_BACKGROUND_EROSION != _EXPECT_BE_ON:
         f"{USE_BACKGROUND_EROSION}. The preset in hatteras_site_config.py does "
         f"not match its name.")
 
-print(f"\npreset {SOURCE_SINK_PRESET!r}, period {START_YEAR}: "
-      f"{len(DOMAIN_BE_RATES)} domains specified, "
-      f"{sum(1 for r in BACKGROUND_EROSION_RATES if r != 0)} non-zero of "
-      f"{HATTERAS_DOMAINS.total_domains}")
-if DOMAIN_BE_RATES:
-    print(f"  rate range     {min(DOMAIN_BE_RATES.values()):+.1f} to "
-          f"{max(DOMAIN_BE_RATES.values()):+.1f} m/yr")
-else:
-    print("  rate range     no domains specified -- 0.0 m/yr everywhere")
-print(f"  USE_BACKGROUND_EROSION = {USE_BACKGROUND_EROSION}")
-if (START_YEAR == 2004 and SOURCE_SINK_PRESET == "calibBE"
-        and HATTERAS_BE_RATES_2004_IS_PLACEHOLDER):
-    print("  WARNING: 2004 calibrated rates are a copy of the 1984 fit")
+reports.background_erosion_report(
+    preset=SOURCE_SINK_PRESET, start_year=START_YEAR,
+    domain_rates=DOMAIN_BE_RATES, rates=BACKGROUND_EROSION_RATES,
+    use_background_erosion=USE_BACKGROUND_EROSION, geometry=HATTERAS_DOMAINS,
+    rates_2004_are_placeholder=HATTERAS_BE_RATES_2004_IS_PLACEHOLDER)
 
 
 # =============================================================================
@@ -809,29 +728,18 @@ ROADWAY_MANAGEMENT_ON = roadway.build_roadway_management_on(
 
 _road_slice = slice(HATTERAS_DOMAINS.gis_to_pad(HATTERAS_FIRST_ROAD_DOMAIN),
                     HATTERAS_DOMAINS.gis_to_pad(HATTERAS_LAST_ROAD_DOMAIN) + 1)
-print(f"\nsetback file    {ROAD_SETBACK_FILE.name}")
-print(f"  {road_setbacks_full[_road_slice].min():.0f}"
-      f"-{road_setbacks_full[_road_slice].max():.0f} m"
-      + (f"   MISSING {_missing_setbacks}" if _missing_setbacks else ""))
-print(f"elevation file  {ROAD_ELEVATION_FILE.name}  (period-independent)")
-print(f"  {road_elevation_full[_road_slice].min():.2f}"
-      f"-{road_elevation_full[_road_slice].max():.2f} m MHW"
-      f"   buffers {ROADWAY.elevation_fallback_m} m"
-      + (f"   MISSING {_missing_elevations}" if _missing_elevations else ""))
-if ENABLE_ROADWAY_MANAGEMENT:
-    print(f"managed         {sum(ROADWAY_MANAGEMENT_ON)} domains "
-          f"({HATTERAS_LAST_ROAD_DOMAIN - HATTERAS_FIRST_ROAD_DOMAIN + 1} "
-          f"carry road, minus community zones "
-          f"{list(HATTERAS_COMMUNITY_ZONES)})")
-else:
-    print(f"managed         0 domains -- ENABLE_ROADWAY_MANAGEMENT is False "
-          f"(section 3)")
-    print(f"                no bulldozing, no dune rebuild, no setback "
-          f"tracking, no road drowning")
-for _event in HATTERAS_ROAD_EVENTS:
-    print(f"event {_event.year}      {type(_event).__name__:<15} {_event.note}")
-print(f"ENABLE_HISTORICAL_ROAD_RELOCATIONS = "
-      f"{ENABLE_HISTORICAL_ROAD_RELOCATIONS}")
+reports.roadway_report(
+    setback_file=ROAD_SETBACK_FILE, setbacks=road_setbacks_full,
+    missing_setbacks=_missing_setbacks,
+    elevation_file=ROAD_ELEVATION_FILE, elevations=road_elevation_full,
+    missing_elevations=_missing_elevations, road_slice=_road_slice,
+    config=ROADWAY, roadway_on=ENABLE_ROADWAY_MANAGEMENT,
+    management_on=ROADWAY_MANAGEMENT_ON,
+    first_road_gis=HATTERAS_FIRST_ROAD_DOMAIN,
+    last_road_gis=HATTERAS_LAST_ROAD_DOMAIN,
+    community_zones=HATTERAS_COMMUNITY_ZONES,
+    road_events=HATTERAS_ROAD_EVENTS,
+    relocations_enabled=ENABLE_HISTORICAL_ROAD_RELOCATIONS)
 
 
 # --- 5.1 pre-flight audit: which road_offset will not survive year one -------------
@@ -845,27 +753,7 @@ road_audit = roadway.audit_setbacks(
     management_on=ROADWAY_MANAGEMENT_ON, config=ROADWAY)
 audit_summary = roadway.summarise_audit(road_audit)
 
-print(f"\n{audit_summary['n_domains']} road domains, "
-      f"{audit_summary['n_managed']} managed\n")
-if audit_summary["blocking"]:
-    print("BLOCKING - these would corrupt the run rather than drown it:")
-    for _gis, _wall in audit_summary["blocking"]:
-        print(f"  GIS {_gis}: {_wall}")
-    print()
-print(f"drowns at t=0, managed   : {audit_summary['drowning']}")
-print(f"drowns at t=0, unmanaged : {audit_summary['drowning_unmanaged']}"
-      f"   (community zones; no manager runs there)\n")
-
-_bad = [r for r in road_audit if r["drowns"] and r["managed"]]
-if _bad:
-    print(f"{'GIS':>4} {'setback':>9} {'road rows':>11} {'%sea':>6} "
-          f"{'%bay':>6} {'%road wet':>10} {'land ends min/med':>18}")
-    for _r in _bad:
-        _rows = f"{_r['road_start']}-{_r['road_end'] - 1}"
-        _ends = f"{_r['width_min']} / {_r['width_median']}"
-        print(f"{_r['gis']:>4} {_r['setback_m']:>8.0f}m {_rows:>11} "
-              f"{_r['sea_water'] * 100:>5.0f}% {_r['bay_water'] * 100:>5.0f}% "
-              f"{_r['road_cells_water'] * 100:>9.0f}% {_ends:>18}")
+reports.road_audit_report(audit=road_audit, summary=audit_summary)
 
 
 # =============================================================================
@@ -938,72 +826,21 @@ DOUBLE_MANAGED_GIS = nourishment.find_double_managed(
 BN_AUDIT = nourishment.audit_schedule(
     BN_SCHEDULE_APPLIED, BEACH_DUNE_MANAGEMENT_ON, config=HATTERAS_BEACH_DUNE)
 
-print(f"\nperiod                {START_YEAR}-{END_YEAR}")
-if ENABLE_BEACH_DUNE_MANAGEMENT:
-    print(f"overwash_filter       "
-          f"{HATTERAS_BEACH_DUNE.community_overwash_filter_pct:.0f}% in "
-          f"community zones, "
-          f"{HATTERAS_BEACH_DUNE.default_overwash_filter_pct:.0f}% "
-          f"elsewhere   (PERCENT, not a fraction)")
-    print(f"overwash_to_dune      {OVERWASH_TO_DUNE:.0f}%")
-    print(f"module on             {sum(BEACH_DUNE_MANAGEMENT_ON)} domains "
-          f"= community zones {list(HATTERAS_COMMUNITY_ZONES)} "
-          f"UNION nourished {list(BN_SCHEDULE.nourished_gis)}")
-    if not ENABLE_NOURISHMENT_FILLS and BN_SCHEDULE.projects:
-        print(f"                      the footprint still carries the project "
-              f"extents: the fills are off, the module is not")
-else:
-    print(f"module on             0 domains -- "
-          f"ENABLE_BEACH_DUNE_MANAGEMENT is False (section 3)")
-    print(f"                      no overwash filtering, no fixed dune line, "
-          f"no width-drowning check, no fill")
-    print(f"                      overwash_filter handed to CASCADE is all "
-          f"zero, so the array says what the run does")
-
-print(f"\nnourishment schedule  "
-      f"{len(BN_SCHEDULE_APPLIED.projects)} project(s) applied"
-      + (f"   {len(BN_SCHEDULE.projects)} in period SUPPRESSED by "
-         f"ENABLE_NOURISHMENT_FILLS=False"
-         if not ENABLE_NOURISHMENT_FILLS and BN_SCHEDULE.projects else ""))
-for _project in BN_SCHEDULE_APPLIED.projects:
-    _per_m = _project.volume_m3_per_m(HATTERAS_DOMAINS.domain_spacing_m)
-    print(f"  {_project.year}  {_project.name:<26} "
-          f"GIS {_project.gis_domains[0]}-{_project.gis_domains[-1]:<3} "
-          f"{_project.volume_cubic_yards:>9,.0f} cy -> "
-          f"{_per_m:>7.1f} m^3/m per domain   "
-          f"(TS index {BN_SCHEDULE_APPLIED.time_index(_project.year)})")
-for _project, _reason in BN_SCHEDULE.skipped:
-    print(f"  --    {_project.name:<26} skipped: {_reason}")
-
-print(f"\npre-flight audit      {'ok' if BN_AUDIT['ok'] else 'PROBLEMS'}")
-if BN_AUDIT["module_off"]:
-    print(f"  scheduled but module OFF (fill would be dropped): "
-          f"{BN_AUDIT['module_off']}")
-for _row in BN_AUDIT["implausible_volume"]:
-    print(f"  implausible volume: GIS {_row['gis']} {_row['year']} "
-          f"{_row['volume_m3_per_m']:.1f} m^3/m")
-for _note in BN_AUDIT["notes"]:
-    print(f"  note: {_note}")
-
-if DOUBLE_MANAGED_GIS:
-    print(f"\nBOTH MODULES ON       GIS {list(DOUBLE_MANAGED_GIS)} "
-          f"({len(DOUBLE_MANAGED_GIS)} domains)")
-    print("  Overwash is removed twice over: RoadwayManager bulldozes and")
-    print("  rewrites DomainTS, then BeachDuneManager filters what survived.")
-    print("  BeachDuneManager also holds dune_migration_on False, so")
-    print("  ShorelineChangeTS stays 0 -- the value RoadwayManager reads to")
-    print("  decrement the setback. NC-12 stops retreating here.")
-    print("  Run as published; verified against the finished run in section 12.")
-elif not (ENABLE_ROADWAY_MANAGEMENT and ENABLE_BEACH_DUNE_MANAGEMENT):
-    print("\nBOTH MODULES ON       none - at least one module is off, so the "
-          "overlap cannot arise")
-else:
-    print("\nBOTH MODULES ON       none - the two footprints are disjoint "
-          "this period")
+reports.beach_dune_report(
+    start_year=START_YEAR, end_year=END_YEAR,
+    beach_dune_enabled=ENABLE_BEACH_DUNE_MANAGEMENT,
+    fills_enabled=ENABLE_NOURISHMENT_FILLS,
+    roadway_enabled=ENABLE_ROADWAY_MANAGEMENT,
+    config=HATTERAS_BEACH_DUNE, management_on=BEACH_DUNE_MANAGEMENT_ON,
+    overwash_to_dune=OVERWASH_TO_DUNE,
+    community_zones=HATTERAS_COMMUNITY_ZONES,
+    schedule=BN_SCHEDULE, schedule_applied=BN_SCHEDULE_APPLIED,
+    audit=BN_AUDIT, double_managed=DOUBLE_MANAGED_GIS,
+    geometry=HATTERAS_DOMAINS)
 
 
 # =============================================================================
-# 7. hard_structures / GROIN -- BUXTON GROIN FIELD
+# 7. hard-structures / GROIN -- BUXTON GROIN FIELD
 # =============================================================================
 # cascade/groin.py attaches through cascade._groin_callback and is called once
 # per model year from inside Cascade.update(), immediately before the alongshore
@@ -1034,7 +871,10 @@ if GROIN_ENABLED and not USE_SANDBOX_CASCADE:
     raise RuntimeError(
         "GROIN_ENABLED=True requires USE_SANDBOX_CASCADE=True (section 1). "
         "cascade.cascade.Cascade.update() has no _groin_callback hook, so the "
-        "groin would silently do nothing.")
+        "groin would silently do nothing.\n"
+        "USE_SANDBOX_CASCADE is pinned True and has no line in hat_run.yaml, "
+        "so reaching this means HAT_USE_SANDBOX_CASCADE=0 is set in the "
+        "environment. Unset it, or turn the groin off.")
 
 # Net alongshore transport on Hatteras is southward, so updrift = north. The two
 # domains must be adjacent -- they share the blocked boundary at GIS 5.5.
@@ -1093,109 +933,24 @@ GROIN_CB = GroinCallback(
 GROIN_CALLBACK = GROIN_CB if GROIN_ENABLED else None
 
 
-# --- 7.3 diagnostics ----------------------------------------------------------
-
-def groin_trapping_schedule(callback, start_year, end_year):
-    """Effective trapping rate for every model year of a period.
-
-    Reads the callback's deterioration curve without running it.
-    `_effective_trapping_rate` is a pure function of the year -- it does not
-    touch `_call_count` -- so querying it here leaves the callback's year
-    counter at zero for the actual run.
-
-    Args:
-        callback: A GroinCallback.
-        start_year: First model year.
-        end_year: Last model year, exclusive.
-
-    Returns:
-        A (years, M_eff) tuple of 1-D arrays.
-    """
-    years = np.arange(start_year, end_year)
-    m_eff = np.array([callback._effective_trapping_rate(int(y)) for y in years])
-    return years, m_eff
-
-
-def implied_interception_m3_yr(m_per_yr, profile_height_m, geometry):
-    """Sediment volume the dipole transfers across the groin each year.
-
-    A shoreline displacement of `m_per_yr` over one domain implies a volume of
-    `m_per_yr * dy * (d_sf + h_b)`. The dipole moves that from the downdrift
-    side to the updrift side; the transfer is volume-neutral overall.
-
-    Args:
-        m_per_yr: Trapping rate M, in meters per year.
-        profile_height_m: Active profile height (d_sf + h_b), in meters.
-        geometry: DomainGeometry supplying the alongshore domain width.
-
-    Returns:
-        The implied transfer in cubic meters per year.
-    """
-    return m_per_yr * geometry.domain_spacing_m * profile_height_m
-
-
 # --- 7.4 report ---------------------------------------------------------------
 
-_up_pad = HATTERAS_DOMAINS.gis_to_pad(GROIN_UPDRIFT_GIS)
-_down_pad = HATTERAS_DOMAINS.gis_to_pad(GROIN_DOWNDRIFT_GIS)
-_years, _m_eff = groin_trapping_schedule(GROIN_CB, START_YEAR, END_YEAR)
-
-print(f"\ngroin                 {'ENABLED' if GROIN_ENABLED else 'disabled'}"
-      f"   (module cascade.groin, hook cascade_groin.py pre-AST)")
-print(f"structure             updrift GIS {GROIN_UPDRIFT_GIS} (pad {_up_pad}) "
-      f"/ downdrift GIS {GROIN_DOWNDRIFT_GIS} (pad {_down_pad}), "
-      f"installed {GROIN_INSTALL_YEAR}")
-print(f"trapping rate M       {GROIN_TRAPPING_RATE_M_YR:.0f} m/yr")
-print(f"  provenance          {GROIN_M_PROVENANCE}")
-print(f"deterioration         {GROIN_DETERIORATION_MODE}, "
-      f"onset {GROIN_CB.deterioration_year:.0f} "
-      f"(+{GROIN_DETERIORATION_DELAY_YEARS:.0f} yr), "
-      f"ramp {GROIN_DETERIORATION_RAMP_YEARS:.0f} yr, "
-      f"floor {GROIN_DETERIORATION_FRACTION:.2f}")
-print(f"  M over {START_YEAR}-{END_YEAR}    "
-      f"{_m_eff[0]:.1f} -> {_m_eff[-1]:.1f} m/yr   "
-      f"(mean {_m_eff.mean():.1f})")
-if GROIN_INSTALL_YEAR <= START_YEAR:
-    print(f"  note                install {GROIN_INSTALL_YEAR} predates the "
-          f"run: active every step, and {START_YEAR - GROIN_INSTALL_YEAR} yr "
-          f"of fillet is already in the initial shoreline")
-if GROIN_DETERIORATION_FRACTION >= 0.5:
-    print(f"  TENSION             floor {GROIN_DETERIORATION_FRACTION:.2f} "
-          f"leaves the structure at "
-          f"{GROIN_DETERIORATION_FRACTION * 100:.0f}% strength after failure; "
-          f"the 1996/2003 record does not support that")
-
-print(f"\nSEDIMENT BUDGET       reference {REACH_TRANSPORT_LOSS_M3_YR:,.0f} "
-      f"m3/yr")
-print(f"  source              {REACH_TRANSPORT_CITATION}")
-print(f"  CAVEAT              {REACH_TRANSPORT_CAVEAT}")
-print(f"  implied transfer at M = {GROIN_TRAPPING_RATE_M_YR:.0f} m/yr over "
-      f"dy = {HATTERAS_DOMAINS.domain_spacing_m:.0f} m:")
-for _h in GROIN_PROFILE_HEIGHT_CANDIDATES_M:
-    _vol = implied_interception_m3_yr(
-        GROIN_TRAPPING_RATE_M_YR, _h, HATTERAS_DOMAINS)
-    _pct = 100.0 * _vol / REACH_TRANSPORT_LOSS_M3_YR
-    print(f"    profile height {_h:5.1f} m ->  {_vol:>9,.0f} m3/yr "
-          f"= {_pct:5.1f}% of the reach budget"
-          + ("   BREACH" if _pct > 50 else ""))
-print("  Not corrected. Section 11 resolves the profile height from the "
-      "constructed model")
-print("  rather than the yaml, and section 12 reports the resulting misfit.")
-
-print(f"\nSOURCE/SINK OVERLAP   preset {SOURCE_SINK_PRESET!r}, "
-      f"period {START_YEAR}   ((-) erosion / (+) accretion)")
-for _label, _gis in (("updrift  ", GROIN_UPDRIFT_GIS),
-                     ("downdrift", GROIN_DOWNDRIFT_GIS)):
-    _be = DOMAIN_BE_RATES.get(_gis, 0.0)
-    _dipole = -GROIN_TRAPPING_RATE_M_YR if _gis == GROIN_UPDRIFT_GIS \
-        else +GROIN_TRAPPING_RATE_M_YR
-    print(f"  {_label} GIS {_gis:<3} BE {_be:+6.2f} m/yr    "
-          f"groin x_s_dt {_dipole:+7.1f} m/yr")
-print("  The calibrated BE rates were fit to observed CoastSat LRR spanning "
-      "the")
-print("  functional-groin era, so the groin's signature is plausibly counted "
-      "twice.")
-print("  Reported pending the source/sink re-analysis; not corrected here.")
+reports.groin_report(
+    enabled=GROIN_ENABLED, callback=GROIN_CB,
+    updrift_gis=GROIN_UPDRIFT_GIS, downdrift_gis=GROIN_DOWNDRIFT_GIS,
+    install_year=GROIN_INSTALL_YEAR, start_year=START_YEAR, end_year=END_YEAR,
+    geometry=HATTERAS_DOMAINS,
+    trapping_rate_m_yr=GROIN_TRAPPING_RATE_M_YR,
+    m_provenance=GROIN_M_PROVENANCE,
+    deterioration_mode=GROIN_DETERIORATION_MODE,
+    deterioration_delay_years=GROIN_DETERIORATION_DELAY_YEARS,
+    deterioration_ramp_years=GROIN_DETERIORATION_RAMP_YEARS,
+    deterioration_fraction=GROIN_DETERIORATION_FRACTION,
+    profile_height_candidates_m=GROIN_PROFILE_HEIGHT_CANDIDATES_M,
+    reach_transport_loss_m3_yr=REACH_TRANSPORT_LOSS_M3_YR,
+    reach_transport_citation=REACH_TRANSPORT_CITATION,
+    reach_transport_caveat=REACH_TRANSPORT_CAVEAT,
+    source_sink_preset=SOURCE_SINK_PRESET, domain_be_rates=DOMAIN_BE_RATES)
 
 
 # --- 7.5 scenario summary, and the run name derived from it ------------------
@@ -1206,6 +961,10 @@ print("  Reported pending the source/sink re-analysis; not corrected here.")
 SCENARIO_SWITCHES = [
     ("period", f"{START_YEAR}-{END_YEAR} ({RUN_YEARS} yr)", None),
     ("source/sink preset", SOURCE_SINK_PRESET, SOURCE_SINK_PRESET),
+    # No token when "asrun": every run predating the shoreline_offset
+    # unit finding used it, and adding a token would rename them all.
+    ("shoreline offset", OFFSET_MODE,
+     None if OFFSET_MODE == "asrun" else f"offset{OFFSET_MODE}"),
     # No token of its own: it is implied by the preset, and checked against it
     # in 4.3. Emitting both produced names like "..._base_noBE_..." that said
     # the same thing twice without saying which zero it was.
@@ -1248,25 +1007,13 @@ if RUN_NAME_BASE != RUN_NAME_PREVIEW:
         f"  section 7.5  {RUN_NAME_BASE}\n"
         f"The preview follows the switches; this follows the built modules.")
 
-print(f"\nSCENARIO              {SCENARIO!r}"
-      + (f"   OVERRIDDEN: {', '.join(sorted(_SCENARIO_DEPARTURES))}"
-         if _SCENARIO_DEPARTURES else ""))
-for _label, _value, _token in SCENARIO_SWITCHES:
-    print(f"  {_label:<24} {str(_value):<22} "
-          f"{'-> ' + _token if _token else ''}")
-print(f"\nRUN_NAME_BASE         {RUN_NAME_BASE!r}")
-print(f"                      matches the section 3 preview (asserted)")
-if DOUBLE_MANAGED_GIS:
-    print(f"  both managers on    GIS {list(DOUBLE_MANAGED_GIS)} "
-          f"-- see section 6")
-# Keyed on the module flag, not the schedule: dune_migration_on is held False
-# wherever beach_dune_manager runs, fill year or not.
-if GROIN_ENABLED and BEACH_DUNE_MANAGEMENT_ON[
-        HATTERAS_DOMAINS.gis_to_pad(GROIN_UPDRIFT_GIS)]:
-    print(f"  groin + beach/dune  updrift GIS {GROIN_UPDRIFT_GIS} is inside "
-          f"the beach_dune_manager footprint;")
-    print(f"                      beach_dune_manager holds dune_migration_on "
-          f"False there")
+reports.scenario_summary_report(
+    scenario=SCENARIO, departures=_SCENARIO_DEPARTURES,
+    switches=SCENARIO_SWITCHES, run_name_base=RUN_NAME_BASE,
+    double_managed=DOUBLE_MANAGED_GIS, groin_enabled=GROIN_ENABLED,
+    updrift_gis=GROIN_UPDRIFT_GIS,
+    beach_dune_on_updrift=BEACH_DUNE_MANAGEMENT_ON[
+        HATTERAS_DOMAINS.gis_to_pad(GROIN_UPDRIFT_GIS)])
 
 
 # =============================================================================
@@ -1332,81 +1079,6 @@ if CS_ACTIVE is None:
 
 # --- 8.2 the target, as a table ----------------------------------------------
 
-def build_target_table(cs, loess_config, geometry, window):
-    """Per-domain target rate, labelled with where each value came from.
-
-    The target is not one curve: GIS 1..skip_southern_domains are raw
-    per-domain means (LOESS is suppressed there), and the rest is the
-    LOESS-smoothed reference window. Every row records which.
-
-    Args:
-        cs: One entry from build_coastsat_series.
-        loess_config: LoessConfig used to build it.
-        geometry: DomainGeometry describing the real-domain span.
-        window: Reference window width, in domains.
-
-    Returns:
-        A DataFrame with gis_domain, target_lrr_m_yr, source, n_transects.
-
-    Raises:
-        ValueError: If `window` was not computed for this dataset.
-    """
-    match = [w for w in cs["windows"] if w["window"] == window]
-    if not match:
-        raise ValueError(
-            f"window {window} not in {[w['window'] for w in cs['windows']]}")
-    smoothed = dict(zip(match[0]["gis_x"], match[0]["smoothed"]))
-
-    skip = loess_config.skip_southern_domains
-    raw_x, raw_y = compute_domain_means(
-        cs["transect_domains"], cs["transect_rates"],
-        geometry.first_gis_id, skip)
-    raw = dict(zip(raw_x, raw_y))
-    counts = pd.Series(cs["transect_domains"]).value_counts()
-
-    rows = []
-    for gis in range(geometry.first_gis_id, geometry.last_gis_id + 1):
-        if gis <= skip:
-            value, source = raw.get(gis, np.nan), f"raw mean (D1-{skip})"
-        else:
-            value, source = smoothed.get(gis, np.nan), f"LOESS {window}-dom"
-        rows.append(dict(gis_domain=gis, target_lrr_m_yr=value, source=source,
-                         n_transects=int(counts.get(gis, 0))))
-    return pd.DataFrame(rows)
-
-
-def groin_differential(cs, updrift_gis, downdrift_gis):
-    """Observed updrift-minus-downdrift mean LRR for one CoastSat period.
-
-    The observational check on the dipole section 7 imposes: a positive
-    differential means the updrift domain is retreating more slowly (or
-    advancing faster) than the downdrift one, which is the signature a
-    functioning groin should leave.
-
-    Args:
-        cs: One entry from build_coastsat_series.
-        updrift_gis: GIS domain on the updrift side.
-        downdrift_gis: GIS domain on the downdrift side.
-
-    Returns:
-        A dict of label, updrift, downdrift, differential, and per-domain
-        transect counts. Rates are NaN where a domain has no transects.
-    """
-    lo, hi = min(updrift_gis, downdrift_gis), max(updrift_gis, downdrift_gis)
-    gis_x, means = compute_domain_means(
-        cs["transect_domains"], cs["transect_rates"], lo, hi)
-    by_domain = dict(zip(gis_x, means))
-    counts = pd.Series(cs["transect_domains"]).value_counts()
-    up = by_domain.get(updrift_gis, np.nan)
-    down = by_domain.get(downdrift_gis, np.nan)
-    return dict(
-        label=cs["label"], period_start=cs["period_start"],
-        active=cs["active"], updrift=up, downdrift=down,
-        differential=up - down,
-        n_updrift=int(counts.get(updrift_gis, 0)),
-        n_downdrift=int(counts.get(downdrift_gis, 0)),
-    )
-
 
 COASTSAT_TARGET = build_target_table(
     CS_ACTIVE, LOESS_CONFIG, HATTERAS_DOMAINS, TARGET_WINDOW)
@@ -1414,49 +1086,10 @@ COASTSAT_TARGET = build_target_table(
 
 # --- 8.4 report ---------------------------------------------------------------
 
-_n_loess = int((COASTSAT_TARGET["source"].str.startswith("LOESS")).sum())
-_n_raw = len(COASTSAT_TARGET) - _n_loess
-_missing = COASTSAT_TARGET["target_lrr_m_yr"].isna().sum()
-
-print(f"\nactive dataset        {CS_ACTIVE['label']}")
-print(f"target window         LOESS {TARGET_WINDOW}-domain "
-      f"({TARGET_WINDOW * HATTERAS_DOMAINS.domain_spacing_m / 1000:.1f} km)"
-      f"   -- rate_comparison uses max(window_domains), asserted above")
-print(f"COASTSAT_TARGET       {len(COASTSAT_TARGET)} domains: "
-      f"{_n_raw} raw mean (D1-{LOESS_CONFIG.skip_southern_domains}), "
-      f"{_n_loess} LOESS"
-      + (f", {_missing} with no transects" if _missing else ""))
-print(f"  range               "
-      f"{COASTSAT_TARGET['target_lrr_m_yr'].min():+.2f} to "
-      f"{COASTSAT_TARGET['target_lrr_m_yr'].max():+.2f} m/yr")
-print("  This is the curve the 'calibBE' source/sink preset was fit "
-      "against (section 4.3).")
-
-print(f"\nUNSMOOTHED ZONE       D1-{LOESS_CONFIG.skip_southern_domains}, "
-      f"raw per-domain means -- no LOESS line here")
-for _row in COASTSAT_TARGET[
-        COASTSAT_TARGET["gis_domain"]
-        <= LOESS_CONFIG.skip_southern_domains].itertuples():
-    _mark = ""
-    if _row.gis_domain == GROIN_UPDRIFT_GIS:
-        _mark = "  <- groin updrift"
-    elif _row.gis_domain == GROIN_DOWNDRIFT_GIS:
-        _mark = "  <- groin downdrift"
-    print(f"    D{_row.gis_domain:<3} {_row.target_lrr_m_yr:+7.2f} m/yr   "
-          f"n={_row.n_transects:<3}{_mark}")
-
-print(f"\nGROIN DIFFERENTIAL    observed updrift D{GROIN_UPDRIFT_GIS} minus "
-      f"downdrift D{GROIN_DOWNDRIFT_GIS}")
-print("  positive = updrift doing better than downdrift = groin-like")
-for _cs in cs_series:
-    _d = groin_differential(_cs, GROIN_UPDRIFT_GIS, GROIN_DOWNDRIFT_GIS)
-    _verdict = ("supports the dipole direction" if _d["differential"] > 0
-                else "OPPOSITE to the imposed dipole")
-    print(f"  {_d['label']:<28} {'(active)' if _d['active'] else '        '} "
-          f"up {_d['updrift']:+6.2f}  down {_d['downdrift']:+6.2f}  "
-          f"diff {_d['differential']:+6.2f} m/yr")
-    print(f"    {'':<28}          n = {_d['n_updrift']} / "
-          f"{_d['n_downdrift']} transects   {_verdict}")
+reports.coastsat_report(
+    target=COASTSAT_TARGET, active=CS_ACTIVE, target_window=TARGET_WINDOW,
+    loess_config=LOESS_CONFIG, geometry=HATTERAS_DOMAINS, cs_series=cs_series,
+    updrift_gis=GROIN_UPDRIFT_GIS, downdrift_gis=GROIN_DOWNDRIFT_GIS)
 
 
 # =============================================================================
@@ -1502,6 +1135,22 @@ GIF_KWARGS = dict(
 FLIP_SIGN_MODEL = True          # x_s_TS increases landward; flip so up = seaward
 PLOT_REAL_DOMAINS_ONLY = True   # GIS 1-90 axis; False adds the buffer domains
 
+# WHICH ESTIMATOR THE FIGURES DRAW. "lrr" is the OLS slope through every
+# annual state; "endpoint" is (x[-1] - x[0]) / RUN_YEARS. The observational
+# target is an LRR -- CoastSat's transect_lrr_full.csv is a per-transect OLS
+# slope with r_squared and unc_m_yr beside it -- so "lrr" is the only setting
+# that puts the same quantity on both sides of the comparison. "endpoint"
+# exists to redraw a pre-2026-08-22 figure, not as an alternative.
+RATE_ESTIMATOR = "lrr"
+if RATE_ESTIMATOR not in ("lrr", "endpoint"):
+    raise ValueError(f"RATE_ESTIMATOR must be 'lrr' or 'endpoint', "
+                     f"got {RATE_ESTIMATOR!r}")
+
+# Below this, a domain's LRR is reported as a poor summary of its trajectory
+# rather than passed over. 0.50 is a reporting threshold and nothing else --
+# no value is dropped, filtered, or flagged in the CSV on account of it.
+LRR_R2_FLOOR = 0.50
+
 
 # --- 9.2 animation jobs -------------------------------------------------------
 # range: "real" | "all" | "groin" | "groin_span" | (gis_lo, gis_hi)
@@ -1511,42 +1160,20 @@ PLOT_REAL_DOMAINS_ONLY = True   # GIS 1-90 axis; False adds the buffer domains
 # "groin" fans out into one GIF per structure in annotations.groins, so new
 # structures are picked up without editing this list.
 
+# `output.make_gifs: false` in hat_run.yaml empties this list rather than
+# skipping the section 12 call. The shoreline matrix .npy is written by that
+# same call, OUTSIDE the job loop, and section 12.3's paired groin baseline
+# and HAT_scenario_grid.py both read it -- so short-circuiting the call would
+# cost the run its matrix, while an empty job list costs only the animations.
 GIF_JOBS = [
     dict(range="real", mode="displacement"),
     dict(range="real", mode="position"),
     dict(range="groin", mode="position", pad=9),
     dict(range="groin", mode="difference", pad=9),
-]
+] if RUN_CONFIG.make_gifs else []
 
 
 # --- 9.3 baseline for difference jobs ----------------------------------------
-
-def scenario_run_name(switches, stem, **overrides):
-    """Run name for a variant of the current scenario.
-
-    Rebuilds the name from the same switch tokens section 7.5 used, with named
-    switches overridden. Built from the token list rather than by editing the
-    name string, so flipping "groin" cannot accidentally match inside "nogroin".
-
-    Args:
-        switches: SCENARIO_SWITCHES, as (label, value, token) triples.
-        stem: RUN_NAME_STEM, the period prefix.
-        **overrides: label -> replacement token. A token of None or "" drops
-            that switch from the name, matching how 7.5 omits default states.
-
-    Returns:
-        The run name for that variant.
-
-    Raises:
-        KeyError: If an override names a switch that does not exist -- a typo
-            would otherwise silently produce the unmodified name.
-    """
-    labels = {label for label, _, _ in switches}
-    unknown = set(overrides) - labels
-    if unknown:
-        raise KeyError(f"no such switch: {sorted(unknown)}; have {sorted(labels)}")
-    tokens = [overrides.get(label, token) for label, _, token in switches]
-    return f"{stem}_{'_'.join(t for t in tokens if t)}"
 
 
 GIF_BASELINE_NAME = None
@@ -1567,87 +1194,6 @@ if GROIN_ENABLED:
 # datum, so differencing them is a real shoreline change.
 RAW_OFFSET_DIR = HATTERAS_DATA_BASE / "2-brie-offset" / "raw_offsets"
 
-# Column names in the raw dune-line intersection CSVs, matching COL_MAP in
-# scripts/input_prep/2-brie-offset/island_offset_hybrid.py:50.
-RAW_OFFSET_COLUMNS = dict(domain="domain_id", distance="ORIG_LEN", transect="LineID")
-
-
-def load_absolute_dune_distance(year, geometry, raw_dir=RAW_OFFSET_DIR,
-                                columns=RAW_OFFSET_COLUMNS):
-    """Mean distance from the offshore datum to the dune line, per GIS domain.
-
-    The absolute quantity the padded offset files are built from, BEFORE
-    island_offset_hybrid.py subtracts that year's own minimum. Absolute
-    distances share a fixed datum across years, so differencing two of them is
-    a real shoreline change; differencing the padded files is not.
-
-    One row per transect (`LineID`) is kept before averaging, mirroring
-    island_offset_hybrid.py:108-113, so a transect sampled at many points does
-    not outweigh one sampled at few.
-
-    Args:
-        year: Survey year; reads <raw_dir>/<year>_duneline_offset_raw.csv.
-        geometry: DomainGeometry supplying the real-domain GIS range.
-        raw_dir: Directory holding the raw per-year CSVs.
-        columns: Mapping with "domain", "distance" and "transect" keys.
-
-    Returns:
-        1-D array of length geometry.num_real_domains, in meters, increasing
-        LANDWARD, indexed by GIS domain. NaN where a domain has no transects.
-
-    Raises:
-        FileNotFoundError: If that year has no raw file.
-        KeyError: If an expected column is missing.
-    """
-    path = raw_dir / f"{year}_duneline_offset_raw.csv"
-    raw = pd.read_csv(path)
-    missing = [c for c in columns.values() if c not in raw.columns]
-    if missing:
-        raise KeyError(f"{path.name}: missing column(s) {missing}; "
-                       f"have {list(raw.columns)[:12]}...")
-
-    per_transect = raw.drop_duplicates(
-        subset=[columns["domain"], columns["transect"]])
-    means = per_transect.groupby(columns["domain"])[columns["distance"]].mean()
-
-    gis_ids = np.arange(geometry.first_gis_id, geometry.last_gis_id + 1)
-    return means.reindex(gis_ids).to_numpy(dtype=float)
-
-
-def build_shoreline_target(model_year0_m, start_year, end_year, geometry):
-    """Surveyed end-year shoreline position, in the model's own x_s frame.
-
-    Takes the model's year-0 position and adds the OBSERVED start->end change,
-    so the two share a base and the gap between them is the model's misfit.
-    Returns positions rather than a change because that is what
-    make_shoreline_gif's `target_m` expects.
-
-    Args:
-        model_year0_m: shoreline_m[0], the run's year-0 position (raw x_s_TS
-            convention, meters, increasing landward), one value per PADDED
-            domain.
-        start_year: Run start year; must have a raw offset file.
-        end_year: Run end year; returns None if it has no raw offset file.
-        geometry: DomainGeometry.
-
-    Returns:
-        (target_m, observed_change_m):
-            target_m: padded array of target positions, NaN in the buffers.
-            observed_change_m: real-domain change, + = landward.
-        Both None if the end year was never surveyed.
-    """
-    if not (RAW_OFFSET_DIR / f"{end_year}_duneline_offset_raw.csv").exists():
-        return None, None
-
-    start_dist = load_absolute_dune_distance(start_year, geometry)
-    end_dist = load_absolute_dune_distance(end_year, geometry)
-    observed_change_m = end_dist - start_dist   # + = landward, as x_s_TS is
-
-    target_m = np.full(geometry.total_domains, np.nan)
-    real = slice(geometry.start_real_index, geometry.end_real_index)
-    target_m[real] = np.asarray(model_year0_m)[real] + observed_change_m
-    return target_m, observed_change_m
-
 
 # --- 9.5 report, and the annotation guard ------------------------------------
 # A swapped-in empty AnnotationConfig would strip every figure's geography
@@ -1663,310 +1209,28 @@ if not _ann_populated:
         "HATTERAS_ANNOTATIONS is empty -- every figure would render with no "
         "geographic layer and no error. Check the import in section 1.")
 
-print(f"\nannotations           "
-      f"{len(HATTERAS_ANNOTATIONS.town_spans)} towns, "
-      f"{len(HATTERAS_ANNOTATIONS.piers)} piers, "
-      f"{len(HATTERAS_ANNOTATIONS.groins)} groin(s), "
-      f"{len(HATTERAS_ANNOTATIONS.shoal_zones)} shoal zones")
-print(f"loess_config          windows {LOESS_CONFIG.window_domains}, "
-      f"skip D1-{LOESS_CONFIG.skip_southern_domains}   (section 8's)")
-print(f"gif_config            {gif_config.fps} fps, stride "
-      f"{gif_config.year_stride}, ocean at "
-      f"{'bottom' if gif_config.ocean_at_bottom else 'top'}, "
-      f"save_matrix={gif_config.save_matrix}")
-print(f"sign convention       flip_sign_model={FLIP_SIGN_MODEL} "
-      f"(up = seaward), real domains only={PLOT_REAL_DOMAINS_ONLY}")
-
-print(f"\nGIF_JOBS              {len(GIF_JOBS)} job(s)")
-_diff_jobs = [j for j in GIF_JOBS if j.get("mode") == "difference"]
-for _job in GIF_JOBS:
-    print(f"  {_job['range']:<11} {_job['mode']:<13}"
-          + (f" pad={_job['pad']}" if "pad" in _job else ""))
-
-print("\nbaseline              ", end="")
-if not GROIN_ENABLED:
-    print("n/a - this run has the groin off, so it IS the baseline")
-    if _diff_jobs:
-        print(f"  {len(_diff_jobs)} difference job(s) will be skipped by "
-              f"make_all_shoreline_gifs")
-elif GIF_BASELINE_NPY:
-    print(f"found\n  {GIF_BASELINE_NAME}\n  {GIF_BASELINE_NPY}")
-else:
-    print(f"NOT FOUND\n  looked for {GIF_BASELINE_NAME}")
-    print(f"  under {OUTPUT_BASE_DIR}")
-    if _diff_jobs:
-        print(f"  {len(_diff_jobs)} difference job(s) will be SKIPPED. "
-              f"Run once with GROIN_ENABLED=False to create it.")
+reports.figure_config_report(
+    annotations=HATTERAS_ANNOTATIONS, loess_config=LOESS_CONFIG,
+    gif_config=gif_config, gif_jobs=GIF_JOBS,
+    flip_sign_model=FLIP_SIGN_MODEL,
+    real_domains_only=PLOT_REAL_DOMAINS_ONLY,
+    groin_enabled=GROIN_ENABLED, baseline_npy=GIF_BASELINE_NPY,
+    baseline_name=GIF_BASELINE_NAME, output_base_dir=OUTPUT_BASE_DIR)
 
 
 # =============================================================================
 # 10. build_cascade + run_cascade_simulation
 # =============================================================================
-# The split is what lets section 11 hold a built-but-unstepped Cascade. BRIE's
+# Both live in cascade_pipeline/hindcast.py, imported in section 1, and are
+# shared with HAT_groin_sweep_worker.py -- which used to carry its own copy.
+#
+# The split is what lets section 11 hold a built-but-unstepped Cascade: BRIE's
 # diffusivity and the groin's fillet prediction are only meaningful as initial
 # conditions, and a prediction printed after the run is not one.
 #
-# `run_years` is TRANSITIONS, not states. Barrier3D seeds _x_s_TS = [x_s] at
-# init and appends one entry per update, so N updates produce N+1 annual states
-# spanning N years. The original signature took `nt` and looped `range(nt - 1)`
-# with `nt = END_YEAR - START_YEAR`, which ran 19 updates for a 20-year period
-# while dividing by 20 -- every rate came out low by 19/20, and storm years 20
-# and 21 were never applied. Here time_step_count = run_years + 1 and the loop
-# runs exactly run_years updates.
-#
-# Nourishment goes to cascade.nourishment_volume, which is where CASCADE reads
-# it. Writing it onto the manager instead hits the attribute CASCADE overwrites
-# one line before the manager reads it, so the fill spends the init default.
-
-
-def build_cascade(
-    run_years, name, storm_file, alongshore_section_count, num_cores,
-    rmin, rmax, elevation_file, dune_file,
-    dune_design_elevation, dune_minimum_elevation,
-    road_ele, road_width, road_setback,
-    overwash_filter, overwash_to_dune,
-    nourishment_volume, background_erosion,
-    roadway_management_on, beach_dune_manager_on,
-    sea_level_rise_rate, sea_level_constant,
-    sandbag_management_on, sandbag_elevation,
-    enable_shoreline_offset, shoreline_offset,
-    wave_height, wave_period, wave_asymmetry, wave_angle_high_fraction,
-    berm_elevation, MHW, groin_callback=None,
-):
-    """Constructs a Cascade and attaches the groin, without stepping it.
-
-    Separate from run_cascade_simulation so section 11 can inspect the model
-    before any time step runs: BRIE's diffusivity and the shoreface depth are
-    only meaningful as initial conditions, and the fillet prediction they feed
-    is only a prediction if it is printed before the run.
-
-    Args:
-        run_years: Annual transitions the run will simulate. The model is built
-            with time_step_count = run_years + 1, giving run_years + 1 annual
-            states. See the section 10 comment on why this is not run_years.
-        name: Run name, passed to Cascade.
-        storm_file, elevation_file, dune_file: Barrier3D input paths.
-        alongshore_section_count: Padded domain count.
-        num_cores: Cores for the parallel Barrier3D step.
-        rmin, rmax: Dune growth rate bounds, per domain.
-        dune_design_elevation: Rebuild target, m MHW. roadway_manager raises
-            this to berm + 1.0 m on the first step if it is lower.
-        dune_minimum_elevation: Rebuild trigger, m MHW. roadway_manager raises
-            this to berm + 0.3 m on the first step if it is lower.
-        road_ele, road_width, road_setback: Padded roadway forcing.
-        overwash_filter, overwash_to_dune: beach_dune_manager forcing.
-        nourishment_volume: Per-domain init volume. Every scheduled year
-            overwrites it via the schedule; see section 6.
-        background_erosion: Padded source/sink rates.
-        roadway_management_on, beach_dune_manager_on: Per-domain module flags.
-        sea_level_rise_rate, sea_level_constant: RSLR forcing.
-        sandbag_management_on, sandbag_elevation: Sandbag forcing.
-        enable_shoreline_offset, shoreline_offset: Island orientation, in dam.
-        wave_height, wave_period, wave_asymmetry, wave_angle_high_fraction:
-            Wave climate. wave_height also sets BRIE's shoreface depth,
-            d_sf = 8.9 * Hs (brie.py:270).
-        berm_elevation, MHW: Barrier3D datums.
-        groin_callback: A GroinCallback to attach, or None.
-
-    Returns:
-        The constructed Cascade, before any update().
-    """
-    cascade = Cascade(
-        HATTERAS_DATA_BASE,
-        name,
-        storm_file=storm_file,
-        elevation_file=elevation_file,
-        dune_file=dune_file,
-        parameter_file=PARAMETER_FILE,
-
-        berm_elevation=berm_elevation,
-        MHW=MHW,
-
-        wave_height=wave_height,
-        wave_period=wave_period,
-        wave_asymmetry=wave_asymmetry,
-        wave_angle_high_fraction=wave_angle_high_fraction,
-
-        sea_level_rise_rate=sea_level_rise_rate,
-        sea_level_rise_constant=sea_level_constant,
-
-        background_erosion=background_erosion,
-        alongshore_section_count=alongshore_section_count,
-
-        # run_years transitions need run_years + 1 states. TMAX is set from
-        # this (brie_coupler.py:117), and the loop runs exactly run_years
-        # updates, so the last write lands on the final valid index.
-        time_step_count=run_years + 1,
-
-        min_dune_growth_rate=rmin,
-        max_dune_growth_rate=rmax,
-        num_cores=num_cores,
-
-        roadway_management_module=roadway_management_on,
-        beach_nourishment_module=beach_dune_manager_on,
-        sandbag_management_on=sandbag_management_on,
-        alongshore_transport_module=True,
-        community_economics_module=False,
-
-        road_ele=road_ele,
-        road_width=road_width,
-        road_setback=road_setback,
-
-        dune_design_elevation=dune_design_elevation,
-        dune_minimum_elevation=dune_minimum_elevation,
-        sandbag_elevation=sandbag_elevation,
-
-        overwash_filter=overwash_filter,
-        overwash_to_dune=overwash_to_dune,
-
-        enable_shoreline_offset=enable_shoreline_offset,
-        shoreline_offset=shoreline_offset,
-
-        nourishment_volume=nourishment_volume,
-        nourishment_interval=None,
-    )
-
-    if groin_callback is not None:
-        cascade._groin_callback = groin_callback
-
-    return cascade
-
-
-def run_cascade_simulation(
-    cascade, run_years, name, run_dir, start_year, geometry,
-    alongshore_section_count,
-    historical_road_events=(), relocations_enabled=True, setback_check=None,
-    nourishment_schedule=None, groin_callback=None, progress=None,
-):
-    """Steps a built Cascade through its period and writes the run artifacts.
-
-    Args:
-        cascade: A Cascade from build_cascade, not yet stepped.
-        run_years: Annual transitions to simulate; the loop runs exactly this
-            many updates.
-        name: Run name, used for output filenames.
-        run_dir: Directory for the saved model and logs.
-        start_year: Calendar year of the run's first state.
-        geometry: DomainGeometry, for GIS <-> pad translation.
-        alongshore_section_count: Padded domain count.
-        historical_road_events: RelocationEvent / BridgeEvent sequence.
-        relocations_enabled: Global toggle for relocation events.
-        setback_check: {gis: measured_setback_m} reported beside relocations.
-        nourishment_schedule: A NourishmentSchedule, or None for no fills.
-        groin_callback: The attached GroinCallback, for diagnostics output.
-        progress: Optional tqdm-like object with update() and write().
-            When given, the year counter advances the bar and every event
-            message is written through it, so the messages scroll above a
-            live bar instead of shredding it. None falls back to a plain
-            carriage-return counter, so callers without tqdm still work.
-
-    Returns:
-        The same Cascade, after the run.
-    """
-    nourishment_log = []
-    # One emitter for everything the loop says, so the display mechanism is
-    # the caller's choice and this function does not care which it is.
-    emit = progress.write if progress is not None else print
-
-    for time_step in range(run_years):
-        current_year = start_year + time_step
-
-        # --- historical beach nourishment -----------------------------------
-        # apply_to_cascade rewrites BOTH nourish_now and nourishment_volume in
-        # full every year, so nothing carries over. It writes the volume to
-        # cascade.nourishment_volume, which stock Cascade.update() copies into
-        # each BeachDuneManager before calling it -- see section 6.
-        if nourishment_schedule is not None:
-            applied = nourishment_schedule.apply_to_cascade(
-                cascade, current_year)
-            if applied:
-                print(f"\n  -> nourishment {current_year}:")
-                for _row in applied:
-                    print(f"       GIS {_row['gis']:>3} (pad {_row['pad']:>3})  "
-                          f"{_row['volume_m3_per_m']:.1f} m^3/m")
-                    nourishment_log.append(dict(
-                        run_name=name, time_step=time_step, **_row))
-        else:
-            cascade.nourish_now = np.zeros(alongshore_section_count)
-
-        # --- historical roadway events --------------------------------------
-        for _event in historical_road_events or ():
-            if current_year != _event.year:
-                continue
-            rows = roadway_module.apply_historical_event(
-                cascade, _event, geometry,
-                relocations_enabled=relocations_enabled,
-                setback_check=setback_check)
-            if not rows:
-                print(f"\n  -> {current_year} event skipped: {_event.note}")
-                continue
-            print(f"\n  -> {current_year}: {_event.note}")
-            for _row in rows:
-                if _row["kind"] == "bridge":
-                    emit(f"       GIS {_row['gis']:>3} (pad {_row['pad']:>3})  "
-                         f"roadway management OFF")
-                    continue
-                _chk = (f" | 2004 measured {_row['check_m']:.0f} m"
-                        if _row["check_m"] is not None else "")
-                emit(f"       GIS {_row['gis']:>3} (pad {_row['pad']:>3})  "
-                     f"setback {_row['old_setback_m']:.1f} + "
-                     f"{_row['displacement_m']:.0f} -> "
-                     f"{_row['new_setback_m']:.1f} m{_chk}")
-                for _warn in _row["warnings"]:
-                    emit(f"                   [warn] {_warn}")
-                if _row["warnings"]:
-                    emit(f"                   -> applied anyway "
-                         f"(prescribed historical event)")
-
-        cascade.update()
-
-        if progress is not None:
-            progress.update(1)
-        else:
-            print(f"\rYear {time_step + 1}/{run_years}", end="", flush=True)
-
-        if getattr(cascade, "b3d_break", False):
-            print(f"\nModel stopped at year {time_step + 1} (b3d_break)")
-            break
-
-    # --- did the run do what it was configured to do? ------------------------
-    _states = len(cascade.barrier3d[0].x_s_TS)
-    if _states != run_years + 1:
-        print(f"\n  NOTE: {_states} annual states for {run_years} run_years "
-              f"(expected {run_years + 1}) -- the run ended early")
-    if groin_callback is not None and len(groin_callback.year_TS) == 0:
-        print("\n" + "!" * 74)
-        print("WARNING: the groin callback was never called. The pre-AST hook")
-        print("in cascade_groin.py is missing, so this run is identical to a")
-        print("no-groin run despite GROIN_ENABLED being True.")
-        print("!" * 74)
-
-    # --- artifacts -----------------------------------------------------------
-    os.makedirs(run_dir, exist_ok=True)
-    # The .npz model pickle is ~160 MB and is what lets a figure be re-derived
-    # without re-running, so it is written by default. Everything downstream
-    # (rate CSV, shoreline matrix, metadata) is written regardless, so a run
-    # skipped here is still a complete row in run_index.csv -- just one that
-    # cannot be re-plotted from state.
-    if RUN_CONFIG.save_model_state:
-        cascade.save(run_dir)
-        print(f"\n  saved: {run_dir}")
-    else:
-        print(f"\n  model state NOT saved (HAT_SAVE_MODEL_STATE=false)")
-
-    if nourishment_log:
-        _bn_csv = os.path.join(run_dir, f"{name}_nourishment_log.csv")
-        pd.DataFrame(nourishment_log).to_csv(_bn_csv, index=False)
-        print(f"  nourishment log ({len(nourishment_log)} events): {_bn_csv}")
-
-    if groin_callback is not None and groin_callback.year_TS:
-        _groin_csv = os.path.join(run_dir, f"{name}_groin_diagnostics.csv")
-        pd.DataFrame(groin_callback.diagnostics_frame()).to_csv(
-            _groin_csv, index=False)
-        print(f"  groin diagnostics ({len(groin_callback.year_TS)} yrs): "
-              f"{_groin_csv}")
-
-    return cascade
+# `run_years` is TRANSITIONS, not states. See the module comment there for the
+# off-by-one this replaced, which ran 19 updates for a 20-year period while
+# dividing by 20.
 
 
 print("\nbuild_cascade + run_cascade_simulation defined")
@@ -2008,7 +1272,9 @@ ROAD_WIDTH = 20.0
 
 # --- wave climate: one Hs, no sweep ------------------------------------------
 # A sweep over Hs is a separate script; this runs one configuration.
-Hs = 2.5                              # m, calibration value
+# From hat_run.yaml (physics.wave_height_Hs); reaches run_index.csv as Hs_m,
+# so a changed value is recoverable from the index and not only from the file.
+Hs = RUN_CONFIG.hs                    # m, calibration value 2.5
 FIXED_WAVE_PERIOD = 8                 # s
 FIXED_WAVE_ASYMMETRY = 0.7
 FIXED_WAVE_ANGLE_HIGH_FRACTION = 0.1
@@ -2018,7 +1284,9 @@ BERM_ELEVATION = 1.7    # m NAVD88, Hatteras Island, NCDOT-derived via NC State
 MHW_ELEVATION = 0.36    # m NAVD88, Duck NC gauge (NOAA 8651370)
 
 # --- sandbags: off for the hindcast ------------------------------------------
-ENABLE_SANDBAG_PLACEMENT = False
+# From hat_run.yaml (top-level `sandbags`: a management decision, not a
+# property of the coast); reaches run_index.csv as sandbags_on.
+ENABLE_SANDBAG_PLACEMENT = RUN_CONFIG.sandbags
 SANDBAG_MANAGEMENT_ON = [ENABLE_SANDBAG_PLACEMENT] * HATTERAS_DOMAINS.total_domains
 SANDBAG_ELEVATION = 0
 
@@ -2080,13 +1348,15 @@ cascade = build_cascade(
     sandbag_management_on=SANDBAG_MANAGEMENT_ON,
     sandbag_elevation=SANDBAG_ELEVATION,
     enable_shoreline_offset=True,
-    shoreline_offset=island_offset_dam,
+    shoreline_offset=island_offset,
     wave_height=Hs,
     wave_period=FIXED_WAVE_PERIOD,
     wave_asymmetry=FIXED_WAVE_ASYMMETRY,
     wave_angle_high_fraction=FIXED_WAVE_ANGLE_HIGH_FRACTION,
     berm_elevation=BERM_ELEVATION,
     MHW=MHW_ELEVATION,
+    data_base=HATTERAS_DATA_BASE,
+    parameter_file=PARAMETER_FILE,
     groin_callback=GROIN_CALLBACK,
 )
 
@@ -2097,31 +1367,6 @@ cascade = build_cascade(
 # extent are written down BEFORE the run; section 12 checks the emergent extent
 # against them. Amplitude was tuned, extent was not.
 
-def brie_r_ipl(cascade, theta_deg=0.0):
-    """BRIE's diffusion number at the freshly built model's initial state.
-
-    Reproduces `brie.py:1294`, which computes r_ipl as a local variable inside
-    update() and never stores it:
-
-        r_ipl = coast_diff[clip(round(90 - theta))] * dt / 2 / dy**2
-
-    `_coast_diff` is the wave-climate-averaged shoreline diffusivity, built once
-    in BRIE's __init__ and deleted by its finalize(). Nothing in CASCADE calls
-    finalize, but the angle-dependent index changes as the shoreline evolves, so
-    this is only the initial-condition value.
-
-    Args:
-        cascade: A built Cascade.
-        theta_deg: Shoreline angle to evaluate at. 0 is shore-normal, the
-            reference used for the fillet scaling.
-
-    Returns:
-        The dimensionless diffusion number.
-    """
-    brie = cascade._brie_coupler._brie
-    index = int(np.clip(round(90 - theta_deg), 1, brie._wave_climl))
-    return float(brie._coast_diff[index] * brie._dt / 2.0 / brie._dy ** 2)
-
 
 R_IPL = brie_r_ipl(cascade)
 _brie = cascade._brie_coupler._brie
@@ -2129,29 +1374,6 @@ _d_sf_m = float(_brie.d_sf)
 _h_b_m = float(cascade.barrier3d[0].h_b_TS[0]) * DAM_TO_M
 _profile_height_m = _d_sf_m + _h_b_m
 _berm_floor_m = float(cascade.barrier3d[0].BermEl) * DAM_TO_M
-
-print(f"\nbuilt                 {RUN_NAME}")
-print(f"  run_dir             {RUN_DIR}")
-print(f"  {RUN_YEARS} transitions -> {RUN_YEARS + 1} annual states "
-      f"({START_YEAR}-{END_YEAR})")
-print(f"  domains             {HATTERAS_DOMAINS.total_domains} padded, "
-      f"{sum(ROADWAY_MANAGEMENT_ON)} roadway, "
-      f"{sum(BEACH_DUNE_MANAGEMENT_ON)} beach/dune")
-
-print(f"\nSHOREFACE             Hs {Hs} m -> d_sf = 8.9*Hs = {_d_sf_m:.2f} m "
-      f"(brie.py:270)")
-print(f"  h_b at t=0          {_h_b_m:.2f} m")
-print(f"  active profile      {_profile_height_m:.2f} m  "
-      f"(resolves the section 7 volume diagnostic)")
-
-print(f"\nDUNE THRESHOLDS       passed -> floor roadway_manager will apply")
-print(f"  design              {DUNE_DESIGN_ELEVATION_M:.2f} -> "
-      f"{max(DUNE_DESIGN_ELEVATION_M, _berm_floor_m + 1.0):.2f} m MHW")
-print(f"  minimum             {DUNE_MINIMUM_ELEVATION_M:.2f} -> "
-      f"{max(DUNE_MINIMUM_ELEVATION_M, _berm_floor_m + 0.3):.2f} m MHW")
-print(f"  BermEl * 10         {_berm_floor_m:.2f} m   "
-      + ("(consistent with the metre reading)" if _berm_floor_m < 5
-         else "SUSPECT -- see the notebook markdown on BermEl units"))
 
 if GROIN_CALLBACK is not None:
     (GROIN_PREDICTED_AMPLITUDE_M,
@@ -2162,28 +1384,24 @@ if GROIN_CALLBACK is not None:
         run_years=RUN_YEARS,
         dy_m=HATTERAS_DOMAINS.domain_spacing_m,
     )
-    _vol = implied_interception_m3_yr(
-        GROIN_CALLBACK.M, _profile_height_m, HATTERAS_DOMAINS)
-    _pct = 100.0 * _vol / REACH_TRANSPORT_LOSS_M3_YR
-
-    print(f"\nGROIN                 attached, M = {GROIN_CALLBACK.M:.0f} m/yr, "
-          f"updrift pad {GROIN_CALLBACK.updrift_pad} / "
-          f"downdrift pad {GROIN_CALLBACK.downdrift_pad}")
-    print(f"  r_ipl (t=0)         {R_IPL:.4f}  (shore-normal, brie.py:1294)")
-    print(f"  PREDICTED amplitude {GROIN_PREDICTED_AMPLITUDE_M:.1f} m       = M / (4 * r_ipl)")
-    print(f"  PREDICTED extent    {GROIN_PREDICTED_EXTENT_DOMAINS:.1f} domains "
-          f"({GROIN_PREDICTED_EXTENT_M:.0f} m)   = dy * sqrt(2 * r_ipl * t)")
-    print(f"  Extent does not depend on M. Section 12 checks the emergent")
-    print(f"  extent against this number, written down before the run.")
-    print(f"  implied transfer    {_vol:,.0f} m3/yr = {_pct:.0f}% of the "
-          f"{REACH_TRANSPORT_LOSS_M3_YR:,.0f} m3/yr reach budget")
-    if _pct > 50:
-        print(f"                      BREACH, reported not corrected "
-              f"(section 7)")
 else:
-    print(f"\nGROIN                 not attached (GROIN_ENABLED = "
-          f"{GROIN_ENABLED})")
-    print(f"  r_ipl (t=0)         {R_IPL:.4f}")
+    GROIN_PREDICTED_AMPLITUDE_M = None
+    GROIN_PREDICTED_EXTENT_DOMAINS = None
+    GROIN_PREDICTED_EXTENT_M = None
+
+reports.pre_run_report(
+    run_name=RUN_NAME, run_dir=RUN_DIR, run_years=RUN_YEARS,
+    start_year=START_YEAR, end_year=END_YEAR, geometry=HATTERAS_DOMAINS,
+    roadway_on=ROADWAY_MANAGEMENT_ON, beach_dune_on=BEACH_DUNE_MANAGEMENT_ON,
+    wave_height=Hs, d_sf_m=_d_sf_m, h_b_m=_h_b_m,
+    profile_height_m=_profile_height_m, berm_floor_m=_berm_floor_m,
+    dune_design_elevation_m=DUNE_DESIGN_ELEVATION_M,
+    dune_minimum_elevation_m=DUNE_MINIMUM_ELEVATION_M,
+    groin_callback=GROIN_CALLBACK, groin_enabled=GROIN_ENABLED, r_ipl=R_IPL,
+    predicted_amplitude_m=GROIN_PREDICTED_AMPLITUDE_M,
+    predicted_extent_domains=GROIN_PREDICTED_EXTENT_DOMAINS,
+    predicted_extent_m=GROIN_PREDICTED_EXTENT_M,
+    reach_transport_loss_m3_yr=REACH_TRANSPORT_LOSS_M3_YR)
 
 
 # =============================================================================
@@ -2222,6 +1440,7 @@ _run_kwargs = dict(
     setback_check=HATTERAS_RELOCATION_CHECK_2004,
     nourishment_schedule=BN_SCHEDULE_APPLIED,
     groin_callback=GROIN_CALLBACK,
+    save_model_state=RUN_CONFIG.save_model_state,
 )
 if tqdm is not None:
     with tqdm(total=RUN_YEARS, desc=f"{RUN_NAME}", unit="yr") as _bar:
@@ -2238,116 +1457,64 @@ print(f"\nruntime               {RUN_SECONDS / 60:.1f} min "
 shoreline_m = build_shoreline_matrix(cascade)
 _states, _ = shoreline_m.shape
 
-print(f"\nRUN LENGTH            {_states} annual states for {RUN_YEARS} "
-      f"transitions")
-if _states != RUN_YEARS + 1:
-    print(f"  INCOMPLETE          expected {RUN_YEARS + 1}; the run stopped "
-          f"early (b3d_break or drowning)")
+reports.run_length_report(states=_states, run_years=RUN_YEARS)
 
 # The denominator that produced a 5% bias in every earlier run. Checked, not
-# trusted -- see the section 10 comment.
+# trusted -- see the run_years comment in cascade_pipeline/hindcast.py.
 assert _states - 1 == RUN_YEARS, (
     f"span mismatch: {_states} states implies {_states - 1} years elapsed, "
     f"but RUN_YEARS is {RUN_YEARS}")
+# TWO ESTIMATORS OF THE SAME THING, and they are not interchangeable.
+#
+#   change_rate  (x[-1] - x[0]) / RUN_YEARS. A net displacement over a span.
+#                Reads two of the RUN_YEARS+1 states, so a single-year
+#                excursion still present in the final state arrives at full
+#                amplitude. Kept because it is the only column that exactly
+#                conserves the period's net shoreline movement, and because
+#                every run before 2026-08-22 was scored on it.
+#   model_lrr    OLS slope through every state. This is what section 8's
+#                target IS -- CoastSat's transect_lrr_full.csv holds a
+#                per-transect OLS slope -- so this is the column the figures
+#                and the skill metrics use.
+#
+# The distinction is not cosmetic here. A nourishment fill enters as an
+# instantaneous step in x_s, and BRIE's Crank-Nicolson alongshore solve
+# answers a step with a grid-scale mode that alternates sign along the coast
+# and decays only ~39%/yr (see compute_lrr). The 2022 Avon and Buxton fills
+# are two years from the end of the 2004-2024 run, so an endpoint rate
+# reports that ringing as a +-1.7 m/yr sawtooth through GIS 6-15 and 22-28.
+# The LRR reports about a quarter of it, and the residue is the real fill
+# edge rather than the solver.
 change_rate = compute_change_rate(
     shoreline_m, span_years=RUN_YEARS, flip_sign=FLIP_SIGN_MODEL)
-print(f"  denominator         {RUN_YEARS} yr == states - 1   (asserted)")
+model_lrr, model_lrr_r2 = compute_lrr(
+    shoreline_m, span_years=RUN_YEARS, flip_sign=FLIP_SIGN_MODEL)
+
+# One name for whichever estimator section 12.5 draws, resolved once here so
+# no figure call picks its own.
+PLOTTED_RATE = model_lrr if RATE_ESTIMATOR == "lrr" else change_rate
 
 # --- nourishment: the model's own record, not the schedule's intent ---------
 BN_REPORT = nourishment.verify_nourishment(
     cascade, BN_SCHEDULE_APPLIED, BEACH_DUNE_MANAGEMENT_ON)
-print(f"\nNOURISHMENT           {'OK' if BN_REPORT['ok'] else 'FAILED'}   "
-      f"(read from each manager's _nourishment_volume_TS)")
-for _row in BN_REPORT["confirmed"]:
-    print(f"  ok       GIS {_row['gis']:>3} {_row['year']}  "
-          f"{_row['actual_m3_per_m']:>7.1f} m^3/m")
-for _row in BN_REPORT["wrong_volume"]:
-    print(f"  WRONG    GIS {_row['gis']:>3} {_row['year']}  expected "
-          f"{_row['expected_m3_per_m']:.1f}, got "
-          f"{_row['actual_m3_per_m']:.1f} m^3/m")
-for _row in BN_REPORT["missing"]:
-    print(f"  MISSING  GIS {_row['gis']:>3} {_row['year']}  expected "
-          f"{_row['expected_m3_per_m']:.1f} m^3/m, never applied")
-for _row in BN_REPORT["unexpected"]:
-    print(f"  EXTRA    GIS {_row['gis']:>3} {_row['year']}  "
-          f"{_row['volume_m3_per_m']:.1f} m^3/m, not scheduled")
-for _note in BN_REPORT["notes"]:
-    print(f"  note: {_note}")
+reports.nourishment_report(report=BN_REPORT, run_years=RUN_YEARS)
 assert BN_REPORT["ok"], "nourishment did not reach the model as scheduled"
 
 # --- the double-management consequence section 6 predicted ------------------
-if DOUBLE_MANAGED_GIS:
-    print(f"\nFROZEN SETBACKS       predicted in section 6 for GIS "
-          f"{list(DOUBLE_MANAGED_GIS)}")
-    for _row in nourishment.verify_setbacks_frozen(
-            cascade, DOUBLE_MANAGED_GIS, HATTERAS_DOMAINS):
-        print(f"  GIS {_row['gis']:>3}  {_row['setback_start_m']:.0f} -> "
-              f"{_row['setback_end_m']:.0f} m"
-              f"{'   FROZEN as predicted' if _row['frozen'] else ''}")
+reports.frozen_setbacks_report(
+    double_managed=DOUBLE_MANAGED_GIS,
+    rows=(nourishment.verify_setbacks_frozen(
+              cascade, DOUBLE_MANAGED_GIS, HATTERAS_DOMAINS)
+          if DOUBLE_MANAGED_GIS else ()))
 
-# --- which road_offset survived ----------------------------------------------------
+# --- which road_offset survived ---------------------------------------------
 ROAD_SUMMARY = roadway.summarise_road_management(
     cascade, HATTERAS_DOMAINS, HATTERAS_FIRST_ROAD_DOMAIN,
     HATTERAS_LAST_ROAD_DOMAIN)
-_drowned = [r for r in ROAD_SUMMARY if r["drowned"]]
-_blocked = [r for r in ROAD_SUMMARY if r["relocation_blocked"]]
-print(f"\nROADWAY               {len(ROAD_SUMMARY)} managed domains, "
-      f"{len(_drowned)} drowned, {len(_blocked)} relocation-blocked")
-for _row in _drowned[:10]:
-    print(f"  drowned  GIS {_row['gis']:>3}  last managed "
-          f"{_row['last_managed_year']}  {_row['reason']}")
-if len(_drowned) > 10:
-    print(f"  ... and {len(_drowned) - 10} more (full list in the CSV)")
+_drowned, _blocked = reports.roadway_outcome_report(summary=ROAD_SUMMARY)
 
 
 # --- 12.3 groin: the pre-registered extent check -----------------------------
-
-def measure_groin_extent(shoreline_m, baseline_m, geometry, updrift_gis,
-                         downdrift_gis, threshold_frac):
-    """Alongshore extent of the groin's effect, from a paired baseline run.
-
-    The effect is this run's final shoreline minus the no-groin baseline's,
-    sign-flipped so positive means seaward of the baseline. Extent is the
-    contiguous run of domains, outward from the groin, where the effect holds
-    at or above `threshold_frac` of its own peak magnitude.
-
-    Args:
-        shoreline_m: [time x domain] matrix from this run.
-        baseline_m: [time x domain] matrix from the no-groin run.
-        geometry: DomainGeometry describing the padded array.
-        updrift_gis, downdrift_gis: The groin's flanking domains.
-        threshold_frac: Fraction of the peak effect defining the edge.
-
-    Returns:
-        A dict with effect (padded array, m), peak_m, threshold_m, and the
-        updrift/downdrift extents in domains and meters.
-    """
-    effect = -(np.asarray(shoreline_m)[-1] - np.asarray(baseline_m)[-1])
-    peak = float(np.nanmax(np.abs(effect))) if effect.size else 0.0
-    threshold = threshold_frac * peak
-
-    def span(start_gis, step):
-        # A zero peak means the two runs are identical, so the threshold is
-        # also zero and every "abs(value) < 0" test is False -- the walk would
-        # run to the end of the grid and report the whole island as fillet.
-        if not np.isfinite(peak) or peak <= 0.0:
-            return 0
-        count, gis = 0, start_gis
-        while geometry.first_gis_id <= gis <= geometry.last_gis_id:
-            value = effect[geometry.gis_to_pad(gis)]
-            if not np.isfinite(value) or abs(value) < threshold:
-                break
-            count += 1
-            gis += step
-        return count
-
-    up = span(updrift_gis, +1)
-    down = span(downdrift_gis, -1)
-    return dict(
-        effect=effect, peak_m=peak, threshold_m=threshold,
-        updrift_domains=up, updrift_m=up * geometry.domain_spacing_m,
-        downdrift_domains=down, downdrift_m=down * geometry.domain_spacing_m,
-    )
 
 
 GROIN_EXTENT = None
@@ -2362,19 +1529,11 @@ else:
     GROIN_EXTENT = measure_groin_extent(
         shoreline_m, _baseline_m, HATTERAS_DOMAINS,
         GROIN_UPDRIFT_GIS, GROIN_DOWNDRIFT_GIS, GROIN_EXTENT_THRESHOLD_FRAC)
-    print(f"\nGROIN EXTENT          measured against {GIF_BASELINE_NAME}")
-    print(f"  peak effect         {GROIN_EXTENT['peak_m']:.1f} m   "
-          f"(threshold {GROIN_EXTENT_THRESHOLD_FRAC:.0%} = "
-          f"{GROIN_EXTENT['threshold_m']:.1f} m)")
-    print(f"  updrift             {GROIN_EXTENT['updrift_domains']} domains "
-          f"({GROIN_EXTENT['updrift_m']:.0f} m)")
-    print(f"  downdrift           {GROIN_EXTENT['downdrift_domains']} domains "
-          f"({GROIN_EXTENT['downdrift_m']:.0f} m)")
-    print(f"  PREDICTED (sec 11)  "
-          f"{GROIN_PREDICTED_EXTENT_DOMAINS:.1f} domains "
-          f"({GROIN_PREDICTED_EXTENT_M:.0f} m)")
-    print(f"  Amplitude was tuned; extent was not. This is the part that "
-          f"could have failed.")
+    reports.groin_extent_report(
+        extent=GROIN_EXTENT, threshold_frac=GROIN_EXTENT_THRESHOLD_FRAC,
+        baseline_name=GIF_BASELINE_NAME,
+        predicted_extent_domains=GROIN_PREDICTED_EXTENT_DOMAINS,
+        predicted_extent_m=GROIN_PREDICTED_EXTENT_M)
 
 
 # --- 12.4 write ---------------------------------------------------------------
@@ -2389,11 +1548,17 @@ run = RunInfo(
 )
 
 _rate_csv = os.path.join(RUN_DIR, f"{RUN_NAME}_shoreline_change_rate.csv")
+# Both estimators ship, so a consumer states which one it wants rather than
+# inheriting whichever the pipeline happened to write. lrr_r2 rides along
+# because a slope through a domain that stepped rather than trended is a
+# summary worth flagging at the point of use -- the nourished domains come
+# out near 0.00.
 pd.DataFrame({
     "gis_domain": np.arange(HATTERAS_DOMAINS.first_gis_id,
                             HATTERAS_DOMAINS.last_gis_id + 1),
-    "change_rate_m_yr": change_rate[HATTERAS_DOMAINS.start_real_index:
-                                    HATTERAS_DOMAINS.end_real_index],
+    "change_rate_m_yr": change_rate[_real],
+    "lrr_m_yr": model_lrr[_real],
+    "lrr_r2": model_lrr_r2[_real],
 }).to_csv(_rate_csv, index=False)
 print(f"\nwrote                 {os.path.basename(_rate_csv)}")
 
@@ -2408,13 +1573,45 @@ if ROAD_SUMMARY:
 # dominated by two domains that were pinned rather than predicted -- and a
 # zeroBE run has no such term. Ranking the presets on the island-wide number
 # alone would mostly rank their boundary treatment.
-SKILL = skill_vs_target(change_rate, COASTSAT_TARGET, HATTERAS_DOMAINS)
-print(f"\nSKILL vs CoastSat     model - target, m/yr")
+# SKILL is the LRR one: the target is an LRR, so this is the only pairing
+# that compares like with like. SKILL_ENDPOINT is kept beside it because
+# calibBE and the groin M were fit before this distinction was drawn, and a
+# preset's provenance is unreadable once the metric it was fit on stops being
+# recorded. Expect SKILL to be slightly WORSE than SKILL_ENDPOINT on most
+# runs -- modelled erosion decelerates across a period, so an all-years slope
+# is more erosive than an endpoint difference. That is the estimator changing,
+# not the model.
+SKILL = skill_vs_target(model_lrr, COASTSAT_TARGET, HATTERAS_DOMAINS)
+SKILL_ENDPOINT = skill_vs_target(change_rate, COASTSAT_TARGET,
+                                 HATTERAS_DOMAINS)
+print(f"\nSKILL vs CoastSat     model LRR - target LRR, m/yr")
 print(f"  island-wide         bias {SKILL['mean_bias_m_yr']:+.3f}   "
       f"RMSE {SKILL['rmse_m_yr']:.3f}   (n={SKILL['n_domains']})")
 print(f"  interior (GIS 2-89) bias {SKILL['mean_bias_interior_m_yr']:+.3f}   "
       f"RMSE {SKILL['rmse_interior_m_yr']:.3f}   "
       f"(n={SKILL['n_domains_interior']})")
+print(f"  endpoint estimator  bias "
+      f"{SKILL_ENDPOINT['mean_bias_interior_m_yr']:+.3f}   "
+      f"RMSE {SKILL_ENDPOINT['rmse_interior_m_yr']:.3f}   "
+      f"(interior; the pre-LRR metric)")
+
+# Where a straight line is a poor summary of the modelled trajectory, so the
+# LRR is read with that in mind rather than silently. A nourished domain sits
+# flat for most of the period and then steps, which no slope describes well.
+# r2 is a variance ratio, so a domain that barely moved lands here too -- the
+# two cases are told apart by whether the domain took a fill.
+_lrr_r2_real = model_lrr_r2[_real]
+_poor_fit = [int(_gis) for _gis, _r2 in zip(
+    range(HATTERAS_DOMAINS.first_gis_id, HATTERAS_DOMAINS.last_gis_id + 1),
+    _lrr_r2_real) if np.isfinite(_r2) and _r2 < LRR_R2_FLOOR]
+print(f"\nLRR FIT QUALITY       median r2 "
+      f"{np.nanmedian(_lrr_r2_real):.3f}   "
+      f"{len(_poor_fit)} of {_lrr_r2_real.size} domains below "
+      f"{LRR_R2_FLOOR:.2f}")
+if _poor_fit:
+    print(f"  a step, or no trend GIS "
+          f"{', '.join(str(_g) for _g in _poor_fit[:12])}"
+          f"{' ...' if len(_poor_fit) > 12 else ''}")
 
 # --- run metadata: the scenario, plus what distinguishes this run -----------
 # One structure renders both files: the .txt to read, the .json to parse.
@@ -2446,6 +1643,12 @@ _META = {
         # and which commit produced both.
         "use_sandbox_cascade": (USE_SANDBOX_CASCADE,
                                 "cascade.cascade_groin, not cascade.cascade"),
+        # BOTH are recorded, and the product is not optional. Version numbers
+        # restart at v1 per product (2026-08-26), so "v1" alone no longer
+        # identifies a topography - 1984-start/v1 and 2004-start/v1 are
+        # different surfaces. A run that logs only the version cannot be traced
+        # back to the arrays it read.
+        "topo_product": TOPO_PRODUCT,
         "topo_dune_version": TOPO_DUNE_VERSION,
         "parameter_file": PARAMETER_FILE,
         "git_commit": _GIT["commit"],
@@ -2495,12 +1698,24 @@ _META = {
         "target": (f"CoastSat LOESS {TARGET_WINDOW}-domain",
                    "raw means over GIS 1-"
                    f"{LOESS_CONFIG.skip_southern_domains}"),
+        "estimator": (RATE_ESTIMATOR,
+                      "OLS slope through every annual state, matching the "
+                      "target's own definition"),
         "mean_bias_m_yr": f"{SKILL['mean_bias_m_yr']:+.4f}",
         "rmse_m_yr": f"{SKILL['rmse_m_yr']:.4f}",
         "mean_bias_interior_m_yr": (
             f"{SKILL['mean_bias_interior_m_yr']:+.4f}",
             "GIS 2-89: the locked end domains excluded"),
         "rmse_interior_m_yr": f"{SKILL['rmse_interior_m_yr']:.4f}",
+        "lrr_r2_median": (f"{np.nanmedian(_lrr_r2_real):.4f}",
+                          "how well a line describes the modelled trajectory"),
+        "lrr_r2_below_floor": (f"{len(_poor_fit)}",
+                               f"domains under r2 {LRR_R2_FLOOR:.2f}"),
+        "endpoint_mean_bias_interior_m_yr": (
+            f"{SKILL_ENDPOINT['mean_bias_interior_m_yr']:+.4f}",
+            "the pre-LRR estimator; calibBE and groin M were fit on this"),
+        "endpoint_rmse_interior_m_yr":
+            f"{SKILL_ENDPOINT['rmse_interior_m_yr']:.4f}",
     },
     "verification": {
         "nourishment_ok": BN_REPORT["ok"],
@@ -2560,13 +1775,20 @@ _index_row = {
     "bdm_domains": int(sum(BEACH_DUNE_MANAGEMENT_ON)),
     "nourishment_projects": len(BN_SCHEDULE_APPLIED.projects),
     "Hs_m": Hs,
+    "sandbags_on": ENABLE_SANDBAG_PLACEMENT,
     "rslr_m_yr": SEA_LEVEL_RISE_RATE,
     "annual_states": _states,
     "run_complete": _states == RUN_YEARS + 1,
+    "rate_estimator": RATE_ESTIMATOR,
     "mean_bias_m_yr": SKILL["mean_bias_m_yr"],
     "rmse_m_yr": SKILL["rmse_m_yr"],
     "mean_bias_interior_m_yr": SKILL["mean_bias_interior_m_yr"],
     "rmse_interior_m_yr": SKILL["rmse_interior_m_yr"],
+    "lrr_r2_median": float(np.nanmedian(_lrr_r2_real)),
+    "lrr_r2_below_floor": len(_poor_fit),
+    "endpoint_mean_bias_interior_m_yr":
+        SKILL_ENDPOINT["mean_bias_interior_m_yr"],
+    "endpoint_rmse_interior_m_yr": SKILL_ENDPOINT["rmse_interior_m_yr"],
     "nourishment_ok": BN_REPORT["ok"],
     "roads_drowned": len(_drowned),
     "roads_reloc_blocked": len(_blocked),
@@ -2576,6 +1798,7 @@ _index_row = {
                                  if GROIN_EXTENT is not None else np.nan),
     "runtime_min": round(RUN_SECONDS / 60, 1),
     "use_sandbox_cascade": USE_SANDBOX_CASCADE,
+    "topo_product": TOPO_PRODUCT,          # see the note at the json write
     "topo_dune_version": TOPO_DUNE_VERSION,
     "git_commit": _GIT["commit"][:12],
     "git_dirty": _GIT["dirty"],
@@ -2590,8 +1813,8 @@ print(f"                      {RUN_INDEX_FILENAME}  "
 # strip the geographic layer (DEFAULT_ANNOTATIONS is empty).
 
 plot_rate_comparison(
-    change_rate, cs_series, run,
-    real_domains_only=PLOT_REAL_DOMAINS_ONLY,
+    PLOTTED_RATE, cs_series, run,
+    real_domains_only=PLOT_REAL_DOMAINS_ONLY, estimator=RATE_ESTIMATOR,
     sea_level_rise_rate_m_yr=SEA_LEVEL_RISE_RATE,
     save_path=os.path.join(
         RUN_DIR, f"{RUN_NAME}_shoreline_change_rate"
@@ -2599,7 +1822,8 @@ plot_rate_comparison(
     show=SHOW_FIGURES, **RATE_FIG_KWARGS)
 
 plot_annotated_rate_comparison(
-    change_rate, cs_series, run,
+    PLOTTED_RATE, cs_series, run,
+    estimator=RATE_ESTIMATOR,
     sea_level_rise_rate_m_yr=SEA_LEVEL_RISE_RATE,
     save_path=os.path.join(RUN_DIR, f"{RUN_NAME}_annotated.png"),
     show=SHOW_FIGURES, **RATE_FIG_KWARGS)
@@ -2607,25 +1831,12 @@ plot_annotated_rate_comparison(
 # Section 9.4's validation target, resolved now that the run has a year 0.
 # Buffers are NaN, so the comparison below is over the real domains only.
 SHORELINE_TARGET_M, OBSERVED_CHANGE_M = build_shoreline_target(
-    shoreline_m[0], START_YEAR, END_YEAR, HATTERAS_DOMAINS)
+    shoreline_m[0], START_YEAR, END_YEAR, HATTERAS_DOMAINS, RAW_OFFSET_DIR)
 
-print()
-if SHORELINE_TARGET_M is None:
-    print(f"target                none -- no {END_YEAR} dune-line survey in "
-          f"{RAW_OFFSET_DIR.name}/; GIFs draw the model alone")
-else:
-    _real = slice(HATTERAS_DOMAINS.start_real_index, HATTERAS_DOMAINS.end_real_index)
-    _modeled = (shoreline_m[-1] - shoreline_m[0])[_real]
-    _misfit = _modeled - OBSERVED_CHANGE_M
-    print(f"target                observed {END_YEAR} dune line "
-          f"({np.count_nonzero(~np.isnan(OBSERVED_CHANGE_M))} real domains)")
-    print(f"  observed change     mean {np.nanmean(OBSERVED_CHANGE_M):+7.1f} m   "
-          f"({np.nanmin(OBSERVED_CHANGE_M):+.1f} to "
-          f"{np.nanmax(OBSERVED_CHANGE_M):+.1f})   + = landward")
-    print(f"  modeled change      mean {_modeled.mean():+7.1f} m   "
-          f"({_modeled.min():+.1f} to {_modeled.max():+.1f})")
-    print(f"  misfit              mean {np.nanmean(_misfit):+7.1f} m   "
-          f"RMSE {np.sqrt(np.nanmean(_misfit ** 2)):.1f} m")
+reports.target_misfit_report(
+    target_m=SHORELINE_TARGET_M, observed_change_m=OBSERVED_CHANGE_M,
+    shoreline_m=shoreline_m, end_year=END_YEAR, geometry=HATTERAS_DOMAINS,
+    raw_offset_dir=RAW_OFFSET_DIR)
 
 GIF_PATHS = make_all_shoreline_gifs(
     shoreline_m, run, GIF_JOBS,

@@ -100,12 +100,36 @@ ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
 # Same root gis-export-npy.py walks: one subfolder per domain, each holding
 # a resampled_*.tif. The REPO copy, not the OneDrive original, so a run does
 # not need the network drive.
-CLIPRESAMPLE_ROOT = DOMAIN_ROOT / "2009-raw" / "2009-domain-clipresample"
+# MOVED 2026-08-25: 1-barrier3d-domains went period-first and the pre-90-domain
+# legacy went under superseded/. Path repointed so this script keeps reading
+# EXACTLY what it read before - no road number moves because of the reorg.
+# MOVED 2026-08-26 out of superseded/. These are LIVE INPUTS, not an
+# archive - four scripts read them, including the one that builds the
+# road masks the dune/topo extractor requires. Keeping them under a
+# directory called 'superseded' invited exactly the deletion this move
+# prevents.
+CLIPRESAMPLE_ROOT = DOMAIN_ROOT / "domain-clips-1m"
 TIF_GLOB = "resampled_*.tif"
 
-# The arrays HAT_dune_topo_extractor.py actually reads. This is the cross-check
-# that matters: the mask must align with THESE, not with an earlier copy.
-ELEV_NPY_DIR = DOMAIN_ROOT / "2009-raw" / "2009-npy-arrays" / "2009_pea_hatteras"
+# A GEOMETRY REFERENCE, NOT "THE ARRAYS THE EXTRACTOR READS" (corrected
+# 2026-08-26). That is what this comment used to claim, and it stopped being
+# true when 1-barrier3d-domains went period-first: the extractor now reads
+# <product>/npy-arrays, one per period, and nothing reads this directory as an
+# input to a forcing.
+#
+# What the cross-check needs is the GRID, not the elevations - the mask must
+# land on the same rows and columns the extractor will later shear and trim.
+# Every one of these arrays is (50, 200), identical in npy-arrays_2009_unfilled
+# and in both products, because all three are clipped from the same
+# resampled_*.tif boxes and the fills change values, never extents. So this
+# stays a valid alignment reference and is deliberately NOT repointed at a
+# product: doing that would make the road masks - which BOTH periods share -
+# depend on one period's DEM.
+#
+# It held 131 arrays against the live 90; the extras were pre-90-domain legacy
+# and were purged on 2026-08-26, leaving domains 1-90. find_elev_npy() looks
+# up by domain id, so the count never mattered here either way.
+ELEV_NPY_DIR = DOMAIN_ROOT / "npy-arrays_2009_unfilled"
 
 # --- ROAD ---------------------------------------------------------------
 # THE ONE LINE TO CHANGE PER VINTAGE. Edit it and re-run; do NOT save a

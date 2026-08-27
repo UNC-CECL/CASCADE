@@ -77,8 +77,14 @@ import rasterio
 PROJECT_ROOT = Path(__file__).resolve().parents[5]
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 
-DEM_DIR = (INIT_ROOT / "1-barrier3d-domains" / "2009-raw"
-           / "2009-domain-clipresample")
+# MOVED TWICE. 2026-08-25 it went under superseded/ with the pre-90-domain
+# legacy and this path followed it there. 2026-08-26 it moved back OUT -- it is
+# a live input read by four scripts -- and this path did NOT follow, so the
+# script printed "no clip tifs found" and produced nothing. Repointed
+# 2026-08-26; the same stale path was in the offset producer and in
+# 2-audit/HAT_check_geojson_vs_mask.py, where it silently zeroed the check.
+DEM_DIR = (INIT_ROOT / "1-barrier3d-domains"
+           / "domain-clips-1m")
 DEM_NAME = "domain_{d}/clip_domain_{d}.tif"          # 1 m, the full source grid
 
 ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
@@ -86,7 +92,7 @@ GEOJSON_FMT = ROADS_ROOT / "raw_offset" / "{year}" / "nc12_{year}.geojson"
 OUT_PNG = ROADS_ROOT / "raster" / "HAT_road_geojson_on_2009_dem.png"
 
 EXTRACTOR = (PROJECT_ROOT / "scripts" / "input_prep" / "1-barrier3d-domains"
-             / "topography_dunes" / "HAT_dune_topo_extractor.py")
+             / "HAT_dune_topo_extractor.py")
 PLACEMENT = (PROJECT_ROOT / "scripts" / "input_prep" / "4-mgmt-forcings"
              / "road_offset" / "1-produce" / "HAT_road_placement_on_domains.py")
 

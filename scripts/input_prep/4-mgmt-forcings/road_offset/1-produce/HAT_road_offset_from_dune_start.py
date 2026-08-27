@@ -29,7 +29,7 @@
 #   The topography is 2009; the road_offset are 1984 and 2004. Those disagree, and the
 #   disagreement is the subject of old_method_offset/RoadSetback_audit.md. This
 #   script does not pick a winner:
-#     * setback_2009_m   measured directly here, road-vs-2009-dune. Internally
+#     * setback_dunestart_m   measured directly here, road-vs-2009-dune. Internally
 #                        consistent with the grid CASCADE actually runs.
 #     * setback_sameyear_m  read from the EXISTING RoadSetback_<year>.csv, which
 #                        is a road-vs-same-year-dune measurement. No
@@ -46,7 +46,7 @@
 #   dunestart_offset\RoadOffset_dunestart_audit.md              the write-up
 #
 # WHERE THIS DEPARTS FROM "MEASURE, DON'T CORRECT" -- TWO PLACES, BOTH FLAGGED
-#   Both act ONLY on the model-facing CSV. `setback_2009_m` in the _domains.csv
+#   Both act ONLY on the model-facing CSV. `setback_dunestart_m` in the _domains.csv
 #   is always the measurement, and every adjusted domain carries a flag naming
 #   what was done to it. (1) is the negative floor, below. (2) is the seaward
 #   relocation of roadways that drown at initialisation, documented at
@@ -74,10 +74,16 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 
 import numpy as np
+
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from hat_topo_version import (array_name, topo_dirs,  # noqa: E402
+                             YEAR_PRODUCT)
 
 import matplotlib
 
@@ -91,13 +97,15 @@ matplotlib.use("Agg")
 PROJECT_ROOT = Path(r"C:\Users\hanna\PycharmProjects\CASCADE")
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 
-# IMPORTANT: the topography_dunes copy, NOT the sibling copy in this folder.
-# There are four copies of HAT_dune_topo_extractor.py in the repo and only this
-# one has ALONGSHORE_FLIP = True. Importing the local copy would measure the road
-# in the mirrored alongshore frame -- the exact mismatch this whole exercise is
-# meant to eliminate.
+# There is now exactly ONE copy of HAT_dune_topo_extractor.py in the repo, and
+# this is it. Until 2026-08-26 there were four, only one of which had
+# ALONGSHORE_FLIP = True; importing a wrong copy measured the road in the
+# mirrored alongshore frame -- the exact mismatch this whole exercise is meant
+# to eliminate. The duplicates are deleted, so that particular trap is gone,
+# but keep resolving the extractor by this single path rather than by a
+# relative one.
 EXTRACTOR = (PROJECT_ROOT / "scripts" / "input_prep" / "1-barrier3d-domains"
-             / "topography_dunes" / "HAT_dune_topo_extractor.py")
+             / "HAT_dune_topo_extractor.py")
 
 ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
 MASK_DIR_FMT = ROADS_ROOT / "raster" / "{year}" / "masks"
@@ -113,6 +121,28 @@ OFFSET_FMT = (INIT_ROOT / "2-brie-offset" / "hindcast_{year}"
 OUT_ROOT = ROADS_ROOT / "dunestart_offset"
 
 YEARS = [1984, 2004]
+
+# EACH YEAR BELONGS TO A TOPOGRAPHY PRODUCT (2026-08-26).
+#
+# The setback is measured from interior row 0, and row 0 is a property of the
+# EXTRACTION - which is now period-specific: 1984-start is built on the
+# 1996-grafted DEM, 2004-start on the plain 2009+2014 one. Measuring the 2004
+# road against 1984-start row 0 and writing it to dunestart_offset/2004/ with
+# nothing saying so is the class of error hat_topo_version.py exists to
+# prevent, and it is silent - the numbers look plausible.
+#
+# FIRST FIX, SAME DAY, AND WHY IT WAS NOT ENOUGH. The first version of this
+# guard SKIPPED any year whose product did not match the extractor's own
+# TOPO_PRODUCT literal, telling you to repoint the extractor and re-run. That
+# made every run half a run - and write_audit() rewrites ONE markdown for the
+# whole tree, so the 14:04 1984-only run published an audit with no 2004
+# section at all, for a forcing that had not changed.
+#
+# Now load_extractor(product) configures a SEPARATE extractor module per
+# product, so one invocation measures both vintages, each against its own row
+# 0, and the audit is whole. The year -> product mapping is imported from
+# hat_topo_version.YEAR_PRODUCT rather than spelled here; a local literal is
+# how the figure scripts came to disagree with this one.
 DOMAINS = list(range(1, 91))        # D1 = Cape Point (south) -> D90 = Rodanthe
 
 # --- ROAD SPAN ----------------------------------------------------------
@@ -158,8 +188,11 @@ ROAD_SPAN = (9, 90)
 # that multiset unchanged, so the flip cannot move the setback at all. It decides
 # where the road sits WITHIN a domain, which is a different question.
 CONTROL_UNSTRAIGHTENED = True
-CONTROL_WINDOW_JSON = (INIT_ROOT / "1-barrier3d-domains" / "2009-dune-topo"
-                       / "picks" / "HAT_dune_search_windows_2009_pea_hatteras.json")
+# MOVED 2026-08-25: 1-barrier3d-domains went period-first and the pre-90-domain
+# legacy went under superseded/. Path repointed so this script keeps reading
+# EXACTLY what it read before - no road number moves because of the reorg.
+CONTROL_WINDOW_JSON = (INIT_ROOT / "1-barrier3d-domains" / "control-picks"
+                       / "HAT_dune_search_windows_2009_pea_hatteras.json")
 CONTROL_SUFFIX = "_rawframe"
 
 # Assumed roadway width. RoadwayConfig.road_width_m is a single global 20.0
@@ -233,11 +266,63 @@ ROAD_WIDTH_CELLS = 2                # int(road_width 20 m / dx 10 m)
 # EXTRACTOR IMPORT
 # ==============================================================================
 
-def load_extractor():
-    """Import the corrected extractor and assert it is the flipped one."""
-    spec = importlib.util.spec_from_file_location("hat_extractor", EXTRACTOR)
+def load_extractor(product: str | None = None):
+    """Import the corrected extractor, configured for ONE topography product.
+
+    ONE RUN, BOTH VINTAGES (2026-08-26). This used to import the extractor once
+    and read TOPO_PRODUCT off it, so a year whose product did not match was
+    SKIPPED. That guard was right -- measuring 2004 against 1984-start row 0 is
+    silently wrong -- but it made a complete run impossible: whichever product
+    the extractor happened to sit on, the other year was skipped, and
+    `write_audit` rewrites ONE markdown file for the whole tree. A 1984-only run
+    on 2026-08-26 14:04 therefore published an audit with no 2004 section at
+    all, for a forcing that had not changed.
+
+    The extractor derives LOAD_PATH, PICKS_DIR, WINDOW_JSON and the save paths
+    from the TOPO_PRODUCT / VERSION literals at module level, so configuring it
+    means re-executing it with those two literals substituted. That is what this
+    does: the source is patched in memory, never on disk, and each product gets
+    its own module object. The alternative -- mutating TOPO_PRODUCT after import
+    -- would leave every derived path pointing at the old product, which is the
+    silent-wrong-row-0 failure again.
+
+    `product=None` keeps the file's own literals, which is what run_control's
+    unstraightened pass and any interactive import get.
+    """
+    src = EXTRACTOR.read_text(encoding="utf-8")
+    name = "hat_extractor"
+
+    if product is not None:
+        version = topo_dirs(product)[2]
+        # The whole assignment line is replaced, trailing comment and all --
+        # matching the quoted value would have to spell both quote styles, and
+        # the comment on VERSION ("bump this per settings variant") is not
+        # something this loader should try to preserve into a patched copy.
+        src, n_p = re.subn(r"^TOPO_PRODUCT\s*=.*$",
+                           f'TOPO_PRODUCT = "{product}"', src,
+                           count=1, flags=re.MULTILINE)
+        src, n_v = re.subn(r"^VERSION\s*=.*$",
+                           f'VERSION = "{version}"', src,
+                           count=1, flags=re.MULTILINE)
+        if not (n_p and n_v):
+            raise SystemExit(
+                f"\ncannot configure {EXTRACTOR.name} for product {product!r}: "
+                f"TOPO_PRODUCT matched {n_p} time(s), VERSION {n_v}.\n"
+                f"Those two module-level literals are how every path in the "
+                f"extractor is derived. If they were renamed or moved into a "
+                f"function, this loader has to be updated with them.\n")
+        name = f"hat_extractor_{product.replace('-', '_')}"
+
+    spec = importlib.util.spec_from_loader(name, loader=None)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module.__file__ = str(EXTRACTOR)
+    _sys.modules[name] = module
+    exec(compile(src, str(EXTRACTOR), "exec"), module.__dict__)
+
+    if product is not None and module.TOPO_PRODUCT != product:
+        raise SystemExit(
+            f"\nextractor configured for {product!r} but reports "
+            f"{module.TOPO_PRODUCT!r} after import.\n")
 
     if not module.ALONGSHORE_FLIP:
         raise SystemExit(
@@ -293,8 +378,21 @@ def load_extractor():
 # index chain is inverted exactly.
 # ==============================================================================
 
-TIF_FMT = (INIT_ROOT / "1-barrier3d-domains" / "2009-raw"
-           / "2009-domain-clipresample" / "domain_{domain}"
+# MOVED TWICE, AND THE SECOND MOVE WAS MISSED UNTIL 2026-08-26.
+# 2026-08-25: 1-barrier3d-domains went period-first and domain-clips-1m went
+# under superseded/ with the pre-90-domain legacy, so this path was repointed
+# there. 2026-08-26: it was moved back OUT - it is a LIVE input, read by four
+# scripts including the rasterizer that builds the road masks - and this path
+# was not updated with it.
+#
+# Nothing errored, because the coordinate write-back is optional: every profile
+# simply got a blank road_x/road_y and one "[coords] no resampled tif" line.
+# Those two columns are what the audit's independent check of the index
+# inversion rests on - shapely distance from the reconstructed road points to
+# the digitised geojson, 6.62-6.68 m median - so losing them quietly loses the
+# check that would catch an alongshore-flip error.
+TIF_FMT = (INIT_ROOT / "1-barrier3d-domains"
+           / "domain-clips-1m" / "domain_{domain}"
            / "resampled_domain_{domain}.tif")
 
 WRITE_PROFILE_COORDS = True
@@ -381,8 +479,8 @@ def measure_domain(ext, domain: int, year: int, windows: dict) -> tuple[dict, li
     record = {
         "year": year, "domain": domain,
         "section": ext.section_for(stem),
-        "setback_2009_m": np.nan,
-        "setback_2009_floored_m": 0.0,
+        "setback_dunestart_m": np.nan,
+        "setback_dunestart_floored_m": 0.0,
         # What the model-facing CSV actually carries, and why it differs.
         # Defaults live here rather than being added later so every record --
         # in-span, excluded, no-road, and the control pass -- has the same
@@ -511,8 +609,8 @@ def measure_domain(ext, domain: int, year: int, windows: dict) -> tuple[dict, li
 
     sb = np.asarray(setback_cells, dtype=float) * cell
     record["n_road_profiles"] = len(sb)
-    record["setback_2009_m"] = round(float(np.median(sb)), 1)
-    record["setback_2009_floored_m"] = round(max(float(np.median(sb)), 0.0), 1)
+    record["setback_dunestart_m"] = round(float(np.median(sb)), 1)
+    record["setback_dunestart_floored_m"] = round(max(float(np.median(sb)), 0.0), 1)
     record["setback_p10_m"] = round(float(np.percentile(sb, 10)), 1)
     record["setback_p90_m"] = round(float(np.percentile(sb, 90)), 1)
     record["setback_min_m"] = round(float(sb.min()), 1)
@@ -535,8 +633,8 @@ def measure_domain(ext, domain: int, year: int, windows: dict) -> tuple[dict, li
         flags.append("ALL_ROAD_CELLS_WET")
 
     # --- flags: labels only, no value is altered ---
-    if record["setback_2009_m"] < 0:
-        flags.append(f"NEGATIVE({record['setback_2009_m']:.0f}->floored 0)")
+    if record["setback_dunestart_m"] < 0:
+        flags.append(f"NEGATIVE({record['setback_dunestart_m']:.0f}->floored 0)")
     if record["n_road_profiles"] < MIN_ROAD_PROFILES:
         flags.append(f"PARTIAL({record['n_road_profiles']}/{n_along})")
     spread = record["setback_p90_m"] - record["setback_p10_m"]
@@ -568,7 +666,9 @@ def load_saved_interior(ext, domain: int) -> np.ndarray | None:
     which domains drown. Paths come off the extractor rather than being
     hardcoded, so bumping VERSION does not silently point this at stale arrays.
     """
-    p = Path(ext.TOPO_SAVE_PATH) / f"domain_{domain}_topography_{ext.TAG}.npy"
+    # ext.TAG is gone: the arrays carry no year tag since 2026-08-26. The name
+    # comes from the resolver, which is also what the extractor writes with.
+    p = Path(ext.TOPO_SAVE_PATH) / array_name("topography", domain)
     return np.load(p) if p.is_file() else None
 
 
@@ -615,12 +715,12 @@ def relocate_drowning(ext, in_span: list[dict], cell: float) -> None:
     """
     Fill `setback_model_m` for every in-span domain, moving the drowned ones.
 
-    Mutates the records in place. `setback_2009_m` is never touched -- the
+    Mutates the records in place. `setback_dunestart_m` is never touched -- the
     measurement stays recoverable from the _domains.csv, which is the whole
     point of doing this here rather than in the measurement.
     """
     for r in in_span:
-        floored = float(r["setback_2009_floored_m"])
+        floored = float(r["setback_dunestart_floored_m"])
         r["setback_model_m"] = round(floored, 1)
 
         interior = load_saved_interior(ext, r["domain"])
@@ -701,18 +801,74 @@ def load_offsets(year: int) -> np.ndarray | None:
 # MAIN
 # ==============================================================================
 
+def load_windows(ext) -> dict:
+    """The dune-search windows for the product/version an extractor is set to.
+
+    The picks are the one input to this script that cannot be regenerated, and
+    the path to them is DERIVED, not configured:
+
+        PICK_SET    = RUN_NAME = VERSION
+        WINDOW_JSON = PICKS_DIR / f"HAT_dune_search_windows_{PICK_SET}.json"
+
+    So any process that bumps VERSION without writing a matching pick file
+    leaves this script pointing at a path that does not exist. That happened on
+    2026-08-26: nodata_audit/HAT_bridge_dropouts.py created 1984-start v2 and
+    moved the VERSION literal, and every re-run here died on a bare
+    FileNotFoundError naming a file nobody had ever created. The setbacks on
+    disk were fine -- they simply could not be re-measured.
+
+    The bridge script now carries picks forward as part of the bump. This
+    guard is the backstop for anything else that bumps a version, and it names
+    the fix rather than the missing file.
+    """
+    if ext.WINDOW_JSON.is_file():
+        return json.load(open(ext.WINDOW_JSON))
+
+    picks_dir = ext.WINDOW_JSON.parent
+    present = (sorted(p.name for p in picks_dir.glob("HAT_dune_search_windows_*.json"))
+               if picks_dir.is_dir() else [])
+    raise SystemExit(
+        f"\nno dune-search picks for {ext.TOPO_PRODUCT}/{ext.VERSION}.\n"
+        f"  looked for : {ext.WINDOW_JSON}\n"
+        f"  present    : {', '.join(present) if present else '(none)'}\n\n"
+        f"The window file is named from the extractor's VERSION literal, so a\n"
+        f"version bump that did not write one lands here. The picks are the only\n"
+        f"input to this script that cannot be regenerated, so DO NOT re-pick to\n"
+        f"get past this -- seed the new version from the one it derives from:\n\n"
+        f"    python -c \"import importlib.util as u; "
+        f"s=u.spec_from_file_location('b', r'scripts/input_prep/"
+        f"1-barrier3d-domains/nodata_audit/HAT_bridge_dropouts.py'); "
+        f"m=u.module_from_spec(s); s.loader.exec_module(m); "
+        f"m.carry_picks_forward('<source version>', '{ext.VERSION}')\"\n\n"
+        f"That copies the source version's windows, stamps _meta.inherited_from\n"
+        f"so the copy is not mistaken for a re-pick, and leaves the source file\n"
+        f"untouched. Only correct when the new version did not move any dune --\n"
+        f"a bridged or otherwise value-only version. If the new version really\n"
+        f"was re-picked, run the extractor's pick pass for it instead.\n")
+
+
 def main() -> None:
-    ext = load_extractor()
-    windows = json.load(open(ext.WINDOW_JSON))
+    # ONE EXTRACTOR PER PRODUCT, both live for the whole run. Loading them up
+    # front means a missing product fails before any file is written, rather
+    # than after the first year has already been published.
+    exts = {year: load_extractor(YEAR_PRODUCT[year]) for year in YEARS}
+    # The picks are loaded up front for the SAME reason, and it is not
+    # hypothetical: they used to be read inside the per-year loop, so a missing
+    # 2004 pick set was only discovered after 1984 had already been published
+    # to the shared tree.
+    windows_by_year = {year: load_windows(exts[year]) for year in YEARS}
 
     print("=" * 84)
     print("NC-12 road offset measured from the extracted dune start")
     print("=" * 84)
-    print(f"  extractor      : {EXTRACTOR.name}  "
-          f"(ALONGSHORE_FLIP={ext.ALONGSHORE_FLIP}, STRAIGHTEN={ext.STRAIGHTEN})")
-    print(f"  DEMs           : {ext.LOAD_PATH}")
-    print(f"  picked windows : {ext.WINDOW_JSON.name} "
-          f"({sum(1 for k in windows if k != '_meta')} domains)")
+    print(f"  extractor      : {EXTRACTOR.name}")
+    for year in YEARS:
+        e = exts[year]
+        print(f"  {year} -> {e.TOPO_PRODUCT}/{e.VERSION}  "
+              f"(ALONGSHORE_FLIP={e.ALONGSHORE_FLIP}, "
+              f"STRAIGHTEN={e.STRAIGHTEN})")
+        print(f"       DEMs  : {e.LOAD_PATH}")
+        print(f"       picks : {e.WINDOW_JSON.name}")
     print(f"  reference      : interior row 0 = dune crest + 1 cell")
     print(f"  output root    : {OUT_ROOT}")
 
@@ -720,6 +876,10 @@ def main() -> None:
 
     for year in YEARS:
         print(f"\n--- {year} " + "-" * 68)
+        ext = exts[year]
+        windows = windows_by_year[year]
+        print(f"  {ext.TOPO_PRODUCT}/{ext.VERSION} | {ext.WINDOW_JSON.name} "
+              f"({sum(1 for k in windows if k != '_meta')} domains)")
         mask_dir = Path(str(MASK_DIR_FMT).format(year=year))
         if not mask_dir.is_dir():
             print(f"  [skip] no mask folder: {mask_dir}")
@@ -762,8 +922,8 @@ def main() -> None:
             same = existing.get(r["domain"], np.nan)
             r["setback_legacy_m"] = same
             r["delta_vs_legacy_m"] = (
-                round(same - r["setback_2009_m"], 1)
-                if np.isfinite(same) and np.isfinite(r["setback_2009_m"])
+                round(same - r["setback_dunestart_m"], 1)
+                if np.isfinite(same) and np.isfinite(r["setback_dunestart_m"])
                 else np.nan)
 
         out_dir = OUT_ROOT / str(year)
@@ -792,15 +952,21 @@ def main() -> None:
         report(audit[year], records)
 
     if CONTROL_UNSTRAIGHTENED:
-        run_control(ext)
+        run_control(exts)
 
     if audit:
-        write_audit(audit, ext)
+        write_audit(audit, exts)
         print(f"\n[audit] {OUT_ROOT / 'RoadOffset_dunestart_audit.md'}")
 
 
-def run_control(ext) -> None:
-    """Re-measure with STRAIGHTEN = False so the frame effect is separable."""
+def run_control(exts: dict) -> None:
+    """Re-measure with STRAIGHTEN = False so the frame effect is separable.
+
+    One control pass per vintage, each on that vintage's own extractor. The
+    flag is toggled and restored PER MODULE: there are two module objects now,
+    so a single saved/restored value would leave the other one unstraightened
+    for the rest of the process.
+    """
     if not CONTROL_WINDOW_JSON.is_file():
         print(f"\n[control] skipped: no unstraightened picks at "
               f"{CONTROL_WINDOW_JSON}")
@@ -810,10 +976,12 @@ def run_control(ext) -> None:
     print(f"  picks: {CONTROL_WINDOW_JSON.name}")
 
     windows = json.load(open(CONTROL_WINDOW_JSON))
-    saved = ext.STRAIGHTEN
-    ext.STRAIGHTEN = False
+    saved = {year: e.STRAIGHTEN for year, e in exts.items()}
+    for e in exts.values():
+        e.STRAIGHTEN = False
     try:
         for year in YEARS:
+            ext = exts[year]
             mask_dir = Path(str(MASK_DIR_FMT).format(year=year))
             if not mask_dir.is_dir():
                 continue
@@ -825,12 +993,13 @@ def run_control(ext) -> None:
                    / f"RoadOffset_{year}_domains{CONTROL_SUFFIX}.csv")
             write_csv(out, records)
             got = [r for r in records if r["n_road_profiles"] > 0]
-            sb = np.array([r["setback_2009_m"] for r in got], dtype=float)
+            sb = np.array([r["setback_dunestart_m"] for r in got], dtype=float)
             print(f"  {year}: {len(got)} domains, setback median "
                   f"{np.nanmedian(sb):.0f} m, range {np.nanmin(sb):.0f} to "
                   f"{np.nanmax(sb):.0f} m  ->  {out.name}")
     finally:
-        ext.STRAIGHTEN = saved
+        for year, was in saved.items():
+            exts[year].STRAIGHTEN = was
 
 
 def write_csv(path: Path, rows: list[dict]) -> None:
@@ -845,9 +1014,9 @@ def write_csv(path: Path, rows: list[dict]) -> None:
 
 
 def summarize(year, records, with_road, first_gis, last_gis) -> dict:
-    sb = np.array([r["setback_2009_m"] for r in with_road], dtype=float)
+    sb = np.array([r["setback_dunestart_m"] for r in with_road], dtype=float)
     delta = np.array([r["delta_vs_legacy_m"] for r in with_road], dtype=float)
-    negative = [r for r in with_road if r["setback_2009_m"] < 0]
+    negative = [r for r in with_road if r["setback_dunestart_m"] < 0]
 
     offsets_year = load_offsets(year)
     offsets_2004 = load_offsets(2004)
@@ -875,9 +1044,9 @@ def summarize(year, records, with_road, first_gis, last_gis) -> dict:
         "setback_min": float(np.nanmin(sb)), "setback_max": float(np.nanmax(sb)),
         "setback_median": float(np.nanmedian(sb)),
         "n_negative": len(negative),
-        "negative_domains": [(r["domain"], r["setback_2009_m"]) for r in negative],
+        "negative_domains": [(r["domain"], r["setback_dunestart_m"]) for r in negative],
         "n_drowned": sum(1 for r in with_road if r["drowns_at_init"] == "yes"),
-        "relocated": [(r["domain"], r["setback_2009_floored_m"],
+        "relocated": [(r["domain"], r["setback_dunestart_floored_m"],
                        r["setback_model_m"], r["relocated_seaward_m"],
                        "BEYOND_MEASURED" in r["flags"])
                       for r in with_road if r["relocated_seaward_m"]],
@@ -918,7 +1087,19 @@ def report(s: dict, records: list[dict]) -> None:
         print(f"  [warn] no viable row seaward, still drowning: {s['unfixable']}")
 
 
-def write_audit(audit: dict, ext) -> None:
+def write_audit(audit: dict, exts: dict) -> None:
+    """The one write-up for the whole tree, covering every year in `audit`.
+
+    PROVENANCE IS PER VINTAGE NOW. This took a single `ext` and printed one
+    DEM path and one picks file for a document describing both years -- true
+    while a single extraction served every period, false since the tree went
+    period-first. Worse, the years are no longer guaranteed to be measured in
+    the same run, and this file is rewritten whole: a run that produced only
+    1984 published an audit whose 2004 section had simply vanished.
+
+    So: one provenance ROW per vintage, and a loud line naming any year that is
+    absent, rather than a document that quietly describes less than it claims.
+    """
     OUT_ROOT.mkdir(parents=True, exist_ok=True)
     path = OUT_ROOT / "RoadOffset_dunestart_audit.md"
 
@@ -929,18 +1110,39 @@ def write_audit(audit: dict, ext) -> None:
     # gap-filled DEM (2009_v5) is exactly that case: 0 drowns, both years.
     total_drowned = sum(s["n_drowned"] for s in audit.values())
 
+    # Any vintage the run did not produce. The document is rewritten whole, so
+    # a silent omission here reads as "this forcing does not exist".
+    any_ext = exts[sorted(audit)[0]]
+    missing = [y for y in YEARS if y not in audit]
+    runs = ", ".join(f"{y} on {exts[y].TOPO_PRODUCT}/{exts[y].VERSION}"
+                     for y in sorted(audit))
+
     lines = [
         "# NC-12 road offset measured from the extracted dune start",
         "",
         f"Generated {datetime.now().isoformat(timespec='seconds')} by "
         "`HAT_road_offset_from_dune_start.py`.",
         "",
+        f"Covers {runs}. Each vintage is measured against interior row 0 of "
+        "**its own period's extraction** -- the two are different islands, and "
+        "65 of 90 domains differ in interior shape between them.",
+        "",
+        *([f"> **INCOMPLETE RUN.** {', '.join(str(y) for y in missing)} "
+           "produced nothing this run, so no section below describes it. The "
+           "files on disk for that year are from an earlier run and are NOT "
+           "documented here. Re-run to restore the section."]
+          if missing else []),
+        *([""] if missing else []),
         "| | |",
         "|---|---|",
         f"| Extractor | `{EXTRACTOR.name}` "
-        f"(ALONGSHORE_FLIP={ext.ALONGSHORE_FLIP}, STRAIGHTEN={ext.STRAIGHTEN}) |",
-        f"| DEMs | `{ext.LOAD_PATH}` |",
-        f"| Picked windows | `{ext.WINDOW_JSON.name}` |",
+        f"(ALONGSHORE_FLIP={any_ext.ALONGSHORE_FLIP}, "
+        f"STRAIGHTEN={any_ext.STRAIGHTEN}) |",
+        *[f"| {y} topography | `{exts[y].TOPO_PRODUCT}/{exts[y].VERSION}` |"
+          for y in sorted(audit)],
+        *[f"| {y} DEMs | `{exts[y].LOAD_PATH}` |" for y in sorted(audit)],
+        *[f"| {y} picked windows | `{exts[y].WINDOW_JSON.name}` |"
+          for y in sorted(audit)],
         f"| Reference | interior row 0 = picked dune crest + 1 cell |",
         f"| Road reference | seaward-most road cell per profile |",
         f"| Alongshore collapse | median over profiles with road |",
@@ -961,7 +1163,7 @@ def write_audit(audit: dict, ext) -> None:
         "\"no road\" sentinel either -- `build_roadway_management_on` uses the "
         "road span, not the value. The model-facing file therefore carries "
         "`max(setback, 0)`; the true signed value is in "
-        "`RoadOffset_<year>_domains.csv` under `setback_2009_m`.",
+        "`RoadOffset_<year>_domains.csv` under `setback_dunestart_m`.",
         "",
         "## Roadways that drown at initialisation are moved seaward",
         "",
@@ -977,7 +1179,7 @@ def write_audit(audit: dict, ext) -> None:
         "NEIGHBOURS of the bulldozed band (`road_start - 1`, `road_end + 1`), "
         "never the band itself, and every cell counts. There is **no cap** on "
         "the distance moved -- the nearest viable row is taken however far it "
-        "is. `setback_2009_m` is never altered; only "
+        "is. `setback_dunestart_m` is never altered; only "
         "`RoadSetback_<year>_dunestart.csv` carries the moved value, and every "
         "moved domain is flagged `MOVED_SEAWARD`.",
         "",
@@ -987,7 +1189,9 @@ def write_audit(audit: dict, ext) -> None:
 
     if total_drowned == 0:
         lines += [
-            f"**Nothing drowns at initialisation on {ext.RUN_NAME}** -- 0 "
+            f"**Nothing drowns at initialisation** on "
+            f"{', '.join(exts[y].TOPO_PRODUCT + '/' + exts[y].VERSION for y in sorted(audit))}"
+            " -- 0 "
             "domains in either year -- so no setback was moved and the rest of "
             "this section does not apply to this run.",
             "",
@@ -1004,12 +1208,13 @@ def write_audit(audit: dict, ext) -> None:
             "",
             "Those figures are quoted from the `2009_v4` audit and were "
             "measured there, not recomputed here -- see "
-            "`dunestart_offset_ARCHIVE_2009_v4/`.",
+            "`dunestart_offset_ARCHIVE_2009_v4/`, deleted 2026-08-26 - see "
+            "1-barrier3d-domains/archive_purge_20260826.csv.",
             "",
         ]
     else:
         lines += [
-            f"On the {ext.RUN_NAME} topography these domains **do not drown on "
+            f"On the topography measured here these domains **do not drown on "
             "measured water -- they drown on LiDAR coverage gaps.** Across the "
             "six flanking rows that fail at GIS 78/79/80 there are 106 wet "
             "cells, of which **105 were never surveyed and 1 is genuinely "

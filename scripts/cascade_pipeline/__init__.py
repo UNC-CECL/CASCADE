@@ -11,7 +11,7 @@ Import from submodules explicitly rather than from the package root, e.g.:
 
     from cascade_pipeline.domains import DomainGeometry
     from cascade_pipeline.run_info import RunInfo
-    from cascade_pipeline.shoreline import build_shoreline_matrix, compute_change_rate
+    from cascade_pipeline.shoreline import build_shoreline_matrix, compute_change_rate, compute_lrr
     from cascade_pipeline.coastsat_loess import CoastSatDataset, LoessConfig, build_coastsat_series
     from cascade_pipeline.plotting.shoreline_gif import GifConfig, make_all_shoreline_gifs
     from cascade_pipeline.plotting.rate_comparison import plot_rate_comparison, plot_annotated_rate_comparison

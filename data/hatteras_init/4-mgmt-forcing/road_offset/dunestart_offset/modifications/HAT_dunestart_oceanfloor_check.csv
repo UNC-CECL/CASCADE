@@ -1,0 +1,2 @@
+year,domain,section,raw_m,floored_m,model_m,delta_m,delta_rows,pct_seaward,n_profiles,prof_min,prof_max,island_m,wrap_row,wrap_m,wrap_seaside,wrap_bayside,wrap_drowned,floor_seaside,floor_bayside,floor_drowned
+1984,85,Pea Island / N. Rodanthe,-10.0,0.0,0.0,10.0,1,52.0,50,-40.0,30.0,1780.0,177,1770.0,1.0,0.0,True,0.0,0.0,False
