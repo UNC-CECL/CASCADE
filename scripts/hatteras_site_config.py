@@ -378,6 +378,64 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # whole field. Do not divide M by four for a per-structure value, and do not
 # read it as a flux.
 #
+# HOW FAR THE VALUE IS ACTUALLY CONSTRAINED -- ROBUSTNESS, 2026-08-30.
+# Everything below was scored from the existing period-1 cells at
+# be1 = -42.6; no new runs. Read it before quoting M = 60 as "the fitted value".
+#
+# WINDOW SENSITIVITY. D4-D8 is a CHOICE, and the answer moves with it:
+#
+#     window    best M    f     RMSE   no-groin   gain
+#     D4-D8         60   1.0    10.09     12.19    2.10   <- production
+#     D3-D9         60   1.0    13.93     15.98    2.05
+#     D4-D7         70   1.0    10.54     13.63    3.09
+#     D3-D8         95   0.8    12.91     16.80    3.89
+#     D4-D9         40   1.0    12.23     12.65    0.41
+#     D5-D7          0   0.0     6.18      6.18    0.00
+#     D5-D8          0   0.0     6.18      6.18    0.00
+#
+# THE SUPPORTING HALF: D3-D9, the one independent window that spans the
+# structure symmetrically, also returns M = 60 with the same gain (2.05 vs
+# 2.10). M = 60 is therefore not an artefact of picking D4-D8 specifically.
+#
+# THE QUALIFYING HALF: across defensible windows M ranges 40 to 95. The window
+# does real work in setting the answer. D4-D8 is justified by argument -- keep
+# D1's cape signal out, centre on the structure -- not forced by the data.
+#
+# AND THE SHARPEST RESULT: D5-D7 and D5-D8, the windows TIGHTEST on the groin,
+# return M = 0 with a gain of exactly 0.00. The groin changes nothing where it
+# stands. The 2.10 m gain at D4-D8 comes from D4 and D8, the window's OUTER
+# edges. This is consistent with HAT_fullperiod_windows.py's finding that
+# D6-D7 carries an erosion trough peaking one domain north of the structure
+# that the module cannot produce -- but it should be said plainly: the domains
+# closest to the groin are the ones the groin explains least.
+#
+# CONDITIONAL ON be1, NOT INDEPENDENT OF IT. The D4-D8 optimum trades off
+# monotonically with the edge rate: M = 50 at be1 = -46, 60 at -42.6, 80 at
+# -34, 125 at -10. Two things make this acceptable where the fillet's version
+# was not -- the surface is smooth and monotonic (the fillet swung 95 -> 160
+# non-monotonically between adjacent be1 values), and the GLOBAL minimum over
+# the whole (be1, M, f) space sits at be1 = -42.6, the independently calibrated
+# value. The groin fit prefers the same edge rate the source/sink fit arrived
+# at, which is a real if modest cross-check.
+#
+# NOT PRESET-INDEPENDENT. Under zeroBE the D4-D8 fit improves monotonically all
+# the way to the grid edge (no-groin 21.9 -> M=140: 12.4, M=160: 12.4). With no
+# edge forcing the groin simply absorbs the missing source/sink term. A zeroBE
+# groin fit is meaningless, and M = 60 exists only in the presence of edgeBE.
+#
+# PERIOD 2 CARRIES NO INFORMATION AT ALL. Scored on D4-D8, every M from 0 to
+# 160 gives RMSE 14.90 (edgeBE) or 22.42 (zeroBE) -- identical to four
+# significant figures, not merely "weakly preferring zero". Confirms the plan:
+# by period 2 the deterioration schedule has trapping at ~0, so running the
+# groin there is a timeline-consistency choice and not a fitted one.
+#
+# WHAT THIS ADDS UP TO. M = 60, f = 0.6 is the best-supported pair available:
+# two independent routes (production D4-D8 and the 1967 rig) agree on both
+# parameters, and a third window (D3-D9) reproduces M. But it is conditional
+# on be1 = -42.6, void without edgeBE, invisible in period 2, and it varies
+# 40-95 across defensible windows. Quote it as a calibrated parameter pair with
+# those conditions attached -- not as a measured property of the structure.
+#
 # THE 1967 WINDOW HAS ALREADY BEEN RUN -- IT IS THE 41-DOMAIN RIG.
 # GROIN_PLAN.md recommends "fit on the 1967 window; apply in the hindcast",
 # because the hindcast windows begin 15 years after installation and record the
