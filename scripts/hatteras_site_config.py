@@ -291,7 +291,10 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 #
 # M AND f ARE SET FROM DIFFERENT EVIDENCE, AND THAT IS DELIBERATE.
 # The authority for these values is hard-structures/groin/GROIN_PLAN.md
-# (2026-08-24); this note summarises it and must not diverge from it.
+# (2026-08-24); this note summarises it and must not diverge from it. The
+# figures testing it, and what each one showed, are described in
+# scripts/hatteras_ms/groin-sweep/CALIBRATION_FIGURES.md -- the PNGs themselves
+# land in output/groin_sweep/figures/, which .gitignore does not track.
 #
 #     M from PERIOD 1.  f from the 1967 rig and from period 2.
 #
