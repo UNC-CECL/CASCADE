@@ -26,13 +26,15 @@ WHAT EACH ONE SHOWS
                              "only the product M*f is identified" -- and it
                              refuted it: corr(RMSE, M*f) = -0.07 against
                              +0.61 for M and -0.49 for f, and equal-product
-                             cells score 10.4 to 12.5 m. What actually holds
-                             is a shallow basin at M = 40-70, f >= 0.6.
+                             cells score 10.4 to 12.5 m. But the REPLACEMENT
+                             claim ("M and f each weakly constrained") was
+                             also wrong: per GROIN_PLAN.md the invariant is
+                             period-1 cumulative trapping, M(15.5 + 4.5f).
     fig_top_profiles.png     the top cells and the no-groin baseline against
                              the observed change profile, fit window marked.
     fig_be_convergence.png   interior RMSE per calibration pass, both periods,
                              with the GIS 90 re-solve marked.
-    fig_period2_and_bug.png  why period 2 cannot be fitted, and what the
+    fig_period2_and_bug.png  why period 2 is not fitted, and what the
                              topography-product bug was worth.
 
 A CAVEAT CARRIED ON THE FIGURE, NOT JUST HERE
@@ -192,8 +194,8 @@ def fig_identifiability(d):
               facecolor="white", framealpha=0.85, frameon=True)
     ax.set_xlabel("Groin trapping M (m/yr)")
     ax.set_ylabel("Deterioration floor f")
-    ax.set_title("A shallow BASIN, not a product ridge — the iso-M·f curves "
-                 "cut across it", loc="left",
+    ax.set_title("Not a product ridge — the iso-M·f curves cut across it; "
+                 "the invariant is M(15.5+4.5f)", loc="left",
                  fontsize=12, fontweight="bold", color=INK, pad=8)
     fig.text(0.5, -0.05,
              "Equal-product cells are not interchangeable: at M·f ≈ 40 the "

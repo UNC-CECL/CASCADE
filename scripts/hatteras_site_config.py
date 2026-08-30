@@ -289,28 +289,34 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # production value is statistically indistinguishable from optimal, and the
 # topography bug moved it by less than the ridge it sits on.
 #
-# M AND f ARE WEAKLY CONSTRAINED, EACH IN ITS OWN RIGHT. The five top cells
-# span M = 40-60 and f = 0.6-1.0 and their profiles are visually superimposed
-# (output/groin_sweep/figures/period1_top_n_profiles.png), so quote them as a
-# PAIR that reproduces the observed change rather than as two independently
-# determined numbers.
+# M AND f ARE SET FROM DIFFERENT EVIDENCE, AND THAT IS DELIBERATE.
+# The authority for these values is hard-structures/groin/GROIN_PLAN.md
+# (2026-08-24); this note summarises it and must not diverge from it.
 #
-# NOT because "only the product M*f is identified". That claim appeared in
-# HAT_period1_top_n_figure.py's caption and was repeated here on 2026-08-30
-# without being checked. Tested on the 60 cells at be1 = -42.6 it is FALSE:
+#     M from PERIOD 1.  f from the 1967 rig and from period 2.
 #
-#     corr(RMSE, M*f)  -0.066      <- essentially none
-#     corr(RMSE, M)    +0.610
-#     corr(RMSE, f)    -0.493
+# WHY THEY CANNOT BOTH COME FROM PERIOD 1. Period-1 cumulative trapping is
+# M(15.5 + 4.5f), because period 1 mostly PRECEDES the 1996-2003 deterioration
+# ramp -- so f moves it by only 29% across its entire range. Period 2 is
+# 20*M*f, where f = 0 gives zero: total leverage. Period 1 therefore fixes M
+# and barely sees f; period 2 fixes f and cannot see M at all.
 #
-#     cells at M*f ~ 40:  M40/f1.0 = 10.4   M50/f0.8 = 10.7
-#                         M70/f0.6 = 11.2   M95/f0.4 = 12.5
-#     spread 2.1 m, larger than the 3.8 m the groin buys in total
+# THE RIDGE IS IN M(15.5 + 4.5f), NOT IN M*f. At f = 1.0 the best M is 50; at
+# f = 0.6 it is 70. So a poor score at M = 50, f = 0.6 is NOT evidence against
+# f = 0.6 -- it means M was set too low for that f.
 #
-# Equal-product cells are NOT interchangeable. The target responds to M and f
-# separately -- lower M and higher f each help on their own. What actually
-# makes the top cells cluster is a shallow BASIN around M = 40-70, f >= 0.6,
-# not a ridge along constant product. See fig_Mf_identifiability.png.
+# A CORRECTION TO A CORRECTION, 2026-08-30. This note briefly claimed "only the
+# product M*f is identified" (taken from HAT_period1_top_n_figure.py's caption
+# without checking), and then, having tested that and found corr(RMSE, M*f) =
+# -0.07, claimed instead that M and f are separately and weakly constrained.
+# BOTH were wrong. The product test was right that M*f is not the invariant and
+# wrong about what is: the invariant is period-1 cumulative trapping. Quote M
+# and f as a pair, and cite GROIN_PLAN.md for why.
+#
+# f = 0 IN THE PERIOD-2 SWEEPS IS THE RIGHT ANSWER, NOT A RAIL ARTEFACT. The
+# observations show the fillet declining after 2004, i.e. trapping ceased.
+# GROIN_PLAN.md records that considerable time was lost re-defining targets to
+# "fix" a result that was correct. Do not re-litigate it.
 #
 # THE GROIN DOES REAL WORK BUT DOES NOT REPRODUCE THE SHAPE. 15.20 -> 11.44 m
 # is a 25% reduction, and it comes from matching the overall D4-D8 slope. The
@@ -337,18 +343,41 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 #      demeaning removes the level offset the source/sink term owns and D1 is
 #      excluded (the cape's 81-104 m change is ~5x the groin's signal).
 #
-# PERIOD 2 CANNOT BE FITTED. Its observed D6-D5 differential is negative
-# (-3.85 +/- 0.76 m/yr) and a groin with trapping >= 0 can only widen the gap.
-# Period 1 is the only hindcast window where the observed gap WIDENS, which is
-# the only behaviour the module can produce. There is no joint fit; the
-# 2026-08-30 joint fit railed at M = 160 solely because period 2's unreachable
-# error (141.5 of a joint 142.6) dominated it.
+# PERIOD 2 IS NOT FITTED, BUT THE GROIN IS STILL ON FOR IT. GroinCallback
+# carries an ABSOLUTE CALENDAR timeline -- install 1969, deterioration onset
+# 1996, linear ramp to 2003, then hold at M*f -- so no period-specific
+# configuration exists or is wanted. Running it in period 2 is right for
+# consistency of the structure's timeline, not because it explains that
+# period's shoreline.
 #
-# AFFORDABILITY BOUNDS IT FROM ABOVE. M = 60 implies ~719,000 m3/yr against a
-# 5-7e5 m3/yr littoral drift -- already at the ceiling. The stability bounds an
-# earlier text cited ("M >= 70 unstable, M >= 100 drowns") were measured on the
-# 41-domain rig and do NOT transfer; every production cell through M = 160 ran
-# clean. Affordability, not stability, is what caps M here.
+# What period 2 records is a RELEASE the module cannot produce: -76 m, of which
+# GROIN_PLAN.md attributes ~85% to the UPDRIFT side eroding once the structure
+# failed, not to impounded sand draining downdrift. Trapping is bounded at >= 0,
+# so the groin can stop adding sand but cannot drain the fillet. That -76 m is
+# carried by the source/sink calibration together with the Cape Point dynamics
+# the dipole does not represent.
+#
+# WHAT THE GROIN EXPLAINS:  period 1  +17.2 m of an observed +52 m (33%).
+#                           period 2  ~0 of an observed -76 m.
+#
+# So the 2026-08-30 joint fit railing at M = 160 was not a fitting failure to
+# be repaired -- fitting period 2 is the wrong thing to attempt.
+#
+# AFFORDABILITY IS A SOFT BOUND, NOT A CEILING. M = 60 intercepts ~719,000
+# m3/yr against a 5-7e5 m3/yr littoral drift -- marginally above a LITERATURE
+# RANGE, which GROIN_PLAN.md is explicit is "not a hard limit". Earlier text
+# here treated it as one; it is a reason to prefer 60 over 70 (838k, ~1.3x the
+# drift), not a physical prohibition.
+#
+# M IS NOT A SEDIMENT FLUX. It is an effective, grid-specific, FIELD-AGGREGATE
+# rate: the real fillet is ~190 m wide against a 500 m domain, and the four
+# Buxton groins span northings entirely inside D6, so one dipole expresses the
+# whole field. Do not divide M by four for a per-structure value, and do not
+# read it as a flux.
+#
+# THE STABILITY BOUNDS DO NOT TRANSFER. "M >= 70 unstable, M >= 100 drowns" was
+# measured on the 41-domain rig. On the production 120-domain grid every cell
+# through M = 160 ran clean. Do not quote that ceiling for production.
 #
 # The groin sits at GIS 5/6 and does not reach GIS 90 at all (on the pre-refit
 # runs D90 was identical to the 3 dp reported, groin-on vs groin-off, in
