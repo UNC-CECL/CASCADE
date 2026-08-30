@@ -378,30 +378,40 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # whole field. Do not divide M by four for a per-structure value, and do not
 # read it as a flux.
 #
-# THE 1967 WINDOW WAS CONSIDERED AND RULED OUT, 2026-08-30. GROIN_PLAN.md
-# recommends "fit on the 1967 window; apply in the hindcast", because the
-# hindcast windows begin 15 years after installation and so record the fillet's
-# decay rather than its creation. That recommendation cannot be acted on:
+# THE 1967 WINDOW HAS ALREADY BEEN RUN -- IT IS THE 41-DOMAIN RIG.
+# GROIN_PLAN.md recommends "fit on the 1967 window; apply in the hindcast",
+# because the hindcast windows begin 15 years after installation and record the
+# fillet's decay rather than its creation. That was checked on 2026-08-30 and
+# the answer is that the window exists already:
 #
-#   * A rig fit does not transfer. The archived HAT_1967_2018_edge_calibrated_
-#     groin run is (51, 41) -- 41 domains, the rig. M is GRID-SPECIFIC: a
-#     confined array preserves dipole amplitude that an open one diffuses away.
-#     Re-running it would corroborate M = 60 (it already does) but would not
-#     produce a value that can be spent on the 120-domain production grid.
-#   * A 1967 run on PRODUCTION geometry has no inputs. There is no 1967-start
-#     topography product and no DEM to build one from -- the earliest elevation
-#     survey in the chain is the 1996 ALACE grafted into 1984-start. There is no
-#     pre-1984 storm series either; hindcast_storms/ starts at 1984. Only the
-#     island offset exists (raw_offsets/1967_duneline_offset_raw.csv).
+#     Change_from_wetdry_1967_D2_D12.csv covers D2-D12 -- ELEVEN real domains.
+#     11 real + 15 buffer + 15 buffer = 41, the rig's exact domain count.
 #
-# Synthesising a 1967 barrier would mean fitting trapping against a starting
-# shoreline that was invented rather than surveyed, and M would inherit those
-# assumptions. That is a worse-founded number than the one already in hand.
+# The rig was sized to the extent of the 1967 observations. Its sweep is at
+# hard-structures/groin/HAT-hindcast-groin-test/sensitivity_sweep/, and it is
+# where the independent M = 60 corroboration comes from.
 #
-# DECISION: keep M = 60, f = 0.6. It is supported by period-1 D4-D8 on
-# production geometry AND corroborated independently by the 1967 rig -- two
-# routes to the same value. Revisit only if a pre-1984 DEM or storm record
-# turns up outside this repo.
+# THE BLOCKER IS THE SHORELINE, NOT THE DEM. An earlier version of this note
+# said the 1967 window was impossible for want of a 1967 DEM. That was wrong:
+# the fillet is a SHORELINE quantity, so the 1984 DEM would serve perfectly
+# well for interior elevation. What does not exist is a 1967 SHORELINE for the
+# other 79 real domains -- the wet/dry table stops at D12.
+#
+# WHY IT CANNOT BE LIFTED TO PRODUCTION GEOMETRY. Reconstructing 1967 offsets
+# for D2-D12 and holding D13-D90 at their 1984 values plants a discontinuity at
+# D12/D13. BRIE's diffusion length is ~3.2 km over 20 years, about six domains;
+# D12 to D8 is four. The artefact reaches the fit window before the build phase
+# finishes, contaminating the signal the exercise exists to measure. The only
+# alternative is inventing a 1967 shoreline for 79 domains.
+#
+# M IS GRID-SPECIFIC, so the rig's value cannot be spent directly on the
+# 120-domain grid -- a confined array preserves dipole amplitude that an open
+# one diffuses away. But AGREEMENT between the two is still evidence, and the
+# two routes agree: production-geometry period 1 on D4-D8, and a confined 1967
+# rig covering the build phase, both land on M = 60.
+#
+# DECISION 2026-08-30: keep M = 60, f = 0.6. Revisit only if a pre-1984
+# shoreline record covering more than D2-D12 turns up outside this repo.
 #
 # THE STABILITY BOUNDS DO NOT TRANSFER. "M >= 70 unstable, M >= 100 drowns" was
 # measured on the 41-domain rig. On the production 120-domain grid every cell
