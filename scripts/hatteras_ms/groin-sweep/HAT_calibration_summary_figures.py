@@ -48,7 +48,8 @@ A CAVEAT CARRIED ON THE FIGURE, NOT JUST HERE
 Usage:
     python HAT_calibration_summary_figures.py
 
-Writes output/groin_sweep/figures/.
+Writes output/groin_sweep/figures/ (untracked).
+Reasoning and results: CALIBRATION_FIGURES.md, beside this file.
 """
 
 from __future__ import annotations
