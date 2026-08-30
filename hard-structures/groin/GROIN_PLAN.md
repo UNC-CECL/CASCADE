@@ -56,7 +56,7 @@ already reproduces the measured history. **No period-specific configuration.**
 | | value | where it comes from |
 |---|---|---|
 | `trapping_rate_m_yr` | **M = 60** | **fitted on PERIOD 1, window D4–D8, production geometry, be1 pinned at the production value, demeaned score.** RMSE 11.69 vs 15.58 with no groin — the groin closes **25%** of the shape misfit, and this is within 0.10 m of the global best. Corroborated by the 1967 rig (M=60). Intercepts ~719,000 m³/yr, marginally above the 5–7×10⁵ drift band (a literature range, not a hard limit) |
-| `deterioration_fraction` | **f = 0.6** | same fit; f is only weakly constrained by period 1 (which mostly precedes the 1996–2003 ramp), so it leans on the rig's f≈0.5 and on period 2 showing trapping ceased |
+| `deterioration_fraction` | **f = 0.6** | same fit; f is only weakly constrained by period 1 (which mostly precedes the 1996–2003 ramp), so it leans on the rig and on period 2 showing trapping ceased. **Updated 2026-08-30:** the rig, re-run on `1984-start/v1`, now returns **f = 0.6** itself (RMSE 23.78, against 27.24 and f = 0.5 on the pre-fix topography) — so the rig corroborates both parameters rather than only M |
 | `install_year` | 1969 | documented |
 | `deterioration_delay_years` | 27 (→ 1996) | last repair |
 | `deterioration_ramp_years` | 7 (→ 2003) | storm damage |
