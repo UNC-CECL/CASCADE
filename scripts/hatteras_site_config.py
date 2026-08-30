@@ -378,6 +378,31 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # whole field. Do not divide M by four for a per-structure value, and do not
 # read it as a flux.
 #
+# THE 1967 WINDOW WAS CONSIDERED AND RULED OUT, 2026-08-30. GROIN_PLAN.md
+# recommends "fit on the 1967 window; apply in the hindcast", because the
+# hindcast windows begin 15 years after installation and so record the fillet's
+# decay rather than its creation. That recommendation cannot be acted on:
+#
+#   * A rig fit does not transfer. The archived HAT_1967_2018_edge_calibrated_
+#     groin run is (51, 41) -- 41 domains, the rig. M is GRID-SPECIFIC: a
+#     confined array preserves dipole amplitude that an open one diffuses away.
+#     Re-running it would corroborate M = 60 (it already does) but would not
+#     produce a value that can be spent on the 120-domain production grid.
+#   * A 1967 run on PRODUCTION geometry has no inputs. There is no 1967-start
+#     topography product and no DEM to build one from -- the earliest elevation
+#     survey in the chain is the 1996 ALACE grafted into 1984-start. There is no
+#     pre-1984 storm series either; hindcast_storms/ starts at 1984. Only the
+#     island offset exists (raw_offsets/1967_duneline_offset_raw.csv).
+#
+# Synthesising a 1967 barrier would mean fitting trapping against a starting
+# shoreline that was invented rather than surveyed, and M would inherit those
+# assumptions. That is a worse-founded number than the one already in hand.
+#
+# DECISION: keep M = 60, f = 0.6. It is supported by period-1 D4-D8 on
+# production geometry AND corroborated independently by the 1967 rig -- two
+# routes to the same value. Revisit only if a pre-1984 DEM or storm record
+# turns up outside this repo.
+#
 # THE STABILITY BOUNDS DO NOT TRANSFER. "M >= 70 unstable, M >= 100 drowns" was
 # measured on the 41-domain rig. On the production 120-domain grid every cell
 # through M = 160 ran clean. Do not quote that ceiling for production.
