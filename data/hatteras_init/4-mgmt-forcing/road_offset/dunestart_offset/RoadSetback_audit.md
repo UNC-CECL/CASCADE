@@ -1,12 +1,12 @@
 # NC-12 road setback audit
 
-Generated 2026-08-27T08:13:33 by `HAT_road_setback_audit.py`.
+Generated 2026-08-28T11:19:29 by `HAT_road_setback_audit.py`.
 
 **Diagnostic record.** No setback was modified, no setback file was written, no topography was touched.
 
 | | |
 |---|---|
-| Topography (1984-start) | `C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\1984-start\dune-topo\v2\topography` (version v2) |
+| Topography (1984-start) | `C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\1984-start\dune-topo\v1\topography` (version v1) |
 | Topography (2004-start) | `C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\2004-start\dune-topo\v1\topography` (version v1) |
 | Road width | 20 m |
 | Width rule | `barrier3d.FindWidths` — first cell `<= SL`, verbatim |
@@ -96,7 +96,7 @@ CASCADE has two guards on moving a road landward, and the runner's `HISTORICAL_R
 
 | GIS | Setback (m) | Rebuilt road elevation (m) | `get_road_relocation_elevation` | Average barrier width (m) | `road_relocation_checks` |
 |---:|---:|---:|---|---:|---|
-| 84 | 70 | 1.29 | allows | 273 | allows |
+| 84 | 65 | 1.38 | allows | 263 | allows |
 | 85 | 109 | 1.06 | allows | 361 | allows |
 | 86 | 94 | 1.08 | allows | 286 | allows |
 | 87 | 78 | 1.21 | allows | 205 | allows |
@@ -116,11 +116,11 @@ CASCADE has two guards on moving a road landward, and the runner's `HISTORICAL_R
 | GIS | Setback (m) | Rebuilt road elevation (m) | `get_road_relocation_elevation` | Average barrier width (m) | `road_relocation_checks` |
 |---:|---:|---:|---|---:|---|
 | 9 | 58 | 1.50 | allows | 205 | allows |
-| 10 | 77 | 1.40 | allows | 180 | allows |
-| 11 | 107 | 1.22 | allows | 178 | allows |
-| 12 | 108 | 1.39 | allows | 186 | allows |
-| 13 | 91 | 1.41 | allows | 182 | allows |
-| 14 | 85 | 1.56 | allows | 169 | allows |
+| 10 | 67 | 1.44 | allows | 172 | allows |
+| 11 | 87 | 1.23 | allows | 161 | allows |
+| 12 | 88 | 1.39 | allows | 165 | allows |
+| 13 | 81 | 1.46 | allows | 179 | allows |
+| 14 | 85 | 1.52 | allows | 166 | allows |
 
 **0 of 6 prescribed relocations would be refused by CASCADE's own logic.** Evaluated on the t=0 interior; the real grid at the event year will have evolved, so treat these as the initialisation-time verdict.
 
@@ -156,6 +156,7 @@ So the road can be founded on ground the relocation logic believes is off the ba
 | 1984 initial | 26 | 4.0 | `HOLED` |
 | 1984 initial | 35 | 4.0 | `MIXED` |
 | 2004 initial | 19 | 4.0 | `HOLED` |
+| 1984 initial | 67 | 2.0 | `MIXED` |
 | 1984 initial | 81 | 2.0 | `HOLED` |
 | 2004 initial | 35 | 2.0 | `MIXED` |
 
@@ -224,31 +225,31 @@ The asymmetry reads as an oversight rather than a design choice: one edge of the
 | Scenario | GIS | Setback (m) | Verdict | Off-island | % road cells water | % bayside water | DomainWidth | IW min/p20/med/max | Largest fitting (m) | Narrowness |
 |---|---:|---:|---|---|---:|---:|---:|---|---:|---|
 | 1984 initial | 9 | 40 | `FITS` |  | 0.0 | 0.0 | 163 | 11/14/18/73 | 1540 | `HOLED` |
-| 1984 initial | 10 | 30 | `FITS` |  | 0.0 | 0.0 | 155 | 14/16/18/23 | 140 | `HOLED` |
-| 1984 initial | 11 | 30 | `FITS` |  | 0.0 | 0.0 | 165 | 15/16/18/24 | 130 | `HOLED` |
-| 1984 initial | 12 | 40 | `FITS` |  | 0.0 | 0.0 | 172 | 15/16/19/23 | 140 | `TRUE_END` |
-| 1984 initial | 13 | 40 | `FITS` |  | 0.0 | 0.0 | 170 | 15/17/18/20 | 140 | `TRUE_END` |
-| 1984 initial | 14 | 60 | `FITS` |  | 0.0 | 0.0 | 35 | 13/13/16/25 | 100 | `TRUE_END` |
-| 1984 initial | 15 | 60 | `FITS` |  | 0.0 | 0.0 | 32 | 12/13/14/20 | 100 | `TRUE_END` |
-| 1984 initial | 16 | 50 | `FITS` |  | 0.0 | 0.0 | 63 | 15/18/20/23 | 150 | `MIXED` |
+| 1984 initial | 10 | 20 | `FITS` |  | 0.0 | 0.0 | 154 | 14/15/17/22 | 130 | `HOLED` |
+| 1984 initial | 11 | 10 | `FITS` |  | 0.0 | 0.0 | 163 | 14/14/16/22 | 110 | `HOLED` |
+| 1984 initial | 12 | 20 | `FITS` |  | 0.0 | 0.0 | 170 | 13/14/17/21 | 110 | `TRUE_END` |
+| 1984 initial | 13 | 30 | `FITS` |  | 0.0 | 0.0 | 170 | 15/17/18/20 | 140 | `TRUE_END` |
+| 1984 initial | 14 | 60 | `FITS` |  | 0.0 | 0.0 | 35 | 10/13/16/25 | 100 | `TRUE_END` |
+| 1984 initial | 15 | 60 | `FITS` |  | 0.0 | 0.0 | 32 | 12/13/14/19 | 100 | `TRUE_END` |
+| 1984 initial | 16 | 40 | `FITS` |  | 0.0 | 0.0 | 63 | 13/17/20/23 | 140 | `MIXED` |
 | 1984 initial | 17 | 90 | `FITS` |  | 0.0 | 0.0 | 71 | 18/22/28/47 | 210 | `HOLED` |
-| 1984 initial | 18 | 120 | `FITS` |  | 0.0 | 0.0 | 87 | 16/30/35/54 | 350 | `HOLED` |
+| 1984 initial | 18 | 120 | `FITS` |  | 0.0 | 0.0 | 87 | 16/29/35/54 | 390 | `HOLED` |
 | 1984 initial | 19 | 130 | `FITS` |  | 0.0 | 2.0 | 97 | 8/18/26/47 | 270 | `HOLED` |
-| 1984 initial | 20 | 70 | `FITS` |  | 0.0 | 0.0 | 103 | 28/32/43/54 | 350 | `MIXED` |
-| 1984 initial | 21 | 120 | `FITS` |  | 0.0 | 0.0 | 113 | 25/42/44/71 | 600 | `HOLED` |
-| 1984 initial | 22 | 190 | `FITS` |  | 0.0 | 0.0 | 128 | 34/38/44/100 | 890 | `HOLED` |
+| 1984 initial | 20 | 60 | `FITS` |  | 0.0 | 0.0 | 103 | 28/32/43/51 | 350 | `MIXED` |
+| 1984 initial | 21 | 130 | `FITS` |  | 0.0 | 0.0 | 114 | 26/42/45/71 | 600 | `HOLED` |
+| 1984 initial | 22 | 190 | `FITS` |  | 0.0 | 0.0 | 128 | 34/38/43/100 | 880 | `HOLED` |
 | 1984 initial | 23 | 230 | `FITS` |  | 0.0 | 0.0 | 134 | 43/51/68/94 | 900 | `HOLED` |
-| 1984 initial | 24 | 210 | `FITS` |  | 0.0 | 0.0 | 141 | 50/59/90/111 | 980 | `HOLED` |
+| 1984 initial | 24 | 210 | `FITS` |  | 0.0 | 0.0 | 141 | 51/59/90/111 | 930 | `HOLED` |
 | 1984 initial | 25 | 200 | `FITS` |  | 0.0 | 0.0 | 138 | 42/52/80/116 | 1050 | `HOLED` |
-| 1984 initial | 26 | 230 | `FITS` |  | 0.0 | 0.0 | 148 | 17/45/70/117 | 1070 | `HOLED` |
-| 1984 initial | 27 | 260 | `FITS` |  | 0.0 | 0.0 | 161 | 40/71/82/121 | 1080 | `HOLED` |
+| 1984 initial | 26 | 230 | `FITS` |  | 0.0 | 0.0 | 148 | 18/47/71/117 | 1090 | `HOLED` |
+| 1984 initial | 27 | 260 | `FITS` |  | 0.0 | 0.0 | 161 | 40/71/81/121 | 1080 | `HOLED` |
 | 1984 initial | 28 | 270 | `FITS` |  | 0.0 | 0.0 | 168 | 46/48/79/114 | 1150 | `HOLED` |
 | 1984 initial | 29 | 260 | `FITS` |  | 0.0 | 0.0 | 154 | 37/47/87/121 | 1010 | `HOLED` |
 | 1984 initial | 30 | 250 | `FITS` |  | 0.0 | 0.0 | 140 | 29/50/59/81 | 720 | `HOLED` |
 | 1984 initial | 31 | 230 | `FITS` |  | 0.0 | 0.0 | 139 | 30/32/41/65 | 340 | `HOLED` |
-| 1984 initial | 32 | 210 | `FITS` |  | 0.0 | 0.0 | 141 | 32/43/45/48 | 410 | `TRUE_END` |
+| 1984 initial | 32 | 210 | `FITS` |  | 0.0 | 0.0 | 141 | 32/44/46/57 | 420 | `TRUE_END` |
 | 1984 initial | 33 | 250 | `FITS` |  | 0.0 | 0.0 | 148 | 30/43/46/52 | 430 | `MIXED` |
-| 1984 initial | 34 | 310 | `FITS` |  | 0.0 | 0.0 | 149 | 40/42/46/50 | 400 | `TRUE_END` |
+| 1984 initial | 34 | 310 | `FITS` |  | 0.0 | 0.0 | 149 | 41/43/46/50 | 400 | `TRUE_END` |
 | 1984 initial | 35 | 400 | `FITS` |  | 2.0 | 0.0 | 137 | 39/49/51/58 | 470 | `MIXED` |
 | 1984 initial | 36 | 370 | `FITS` |  | 0.0 | 0.0 | 136 | 56/57/58/63 | 540 | `TRUE_END` |
 | 1984 initial | 37 | 335 | `FITS` |  | 0.0 | 0.0 | 159 | 55/58/80/89 | 740 | `HOLED` |
@@ -256,14 +257,14 @@ The asymmetry reads as an oversight rather than a design choice: one edge of the
 | 1984 initial | 39 | 230 | `FITS` |  | 0.0 | 0.0 | 170 | 68/69/71/78 | 660 | `TRUE_END` |
 | 1984 initial | 40 | 210 | `FITS` |  | 0.0 | 0.0 | 172 | 54/63/71/77 | 640 | `MIXED` |
 | 1984 initial | 41 | 200 | `FITS` |  | 0.0 | 0.0 | 174 | 43/52/55/59 | 500 | `HOLED` |
-| 1984 initial | 42 | 180 | `FITS` |  | 0.0 | 0.0 | 176 | 41/43/60/65 | 560 | `HOLED` |
-| 1984 initial | 43 | 170 | `FITS` |  | 0.0 | 0.0 | 179 | 54/61/63/66 | 590 | `TRUE_END` |
+| 1984 initial | 42 | 180 | `FITS` |  | 0.0 | 0.0 | 180 | 42/43/60/67 | 560 | `HOLED` |
+| 1984 initial | 43 | 170 | `FITS` |  | 0.0 | 0.0 | 179 | 54/62/64/66 | 600 | `TRUE_END` |
 | 1984 initial | 44 | 160 | `FITS` |  | 0.0 | 0.0 | 169 | 46/50/53/66 | 530 | `HOLED` |
 | 1984 initial | 45 | 155 | `FITS` |  | 0.0 | 0.0 | 155 | 32/39/42/57 | 380 | `HOLED` |
 | 1984 initial | 46 | 150 | `FITS` |  | 0.0 | 0.0 | 142 | 35/39/40/49 | 360 | `HOLED` |
 | 1984 initial | 47 | 150 | `FITS` |  | 0.0 | 0.0 | 127 | 30/32/35/42 | 300 | `HOLED` |
 | 1984 initial | 48 | 150 | `FITS` |  | 0.0 | 0.0 | 118 | 25/27/29/31 | 240 | `TRUE_END` |
-| 1984 initial | 49 | 130 | `FITS` |  | 0.0 | 0.0 | 98 | 19/23/24/28 | 200 | `TRUE_END` |
+| 1984 initial | 49 | 130 | `FITS` |  | 0.0 | 0.0 | 98 | 20/23/25/28 | 200 | `TRUE_END` |
 | 1984 initial | 50 | 150 | `FITS` |  | 0.0 | 0.0 | 88 | 18/23/24/29 | 200 | `TRUE_END` |
 | 1984 initial | 51 | 160 | `FITS` |  | 0.0 | 0.0 | 58 | 19/25/27/34 | 230 | `TRUE_END` |
 | 1984 initial | 52 | 170 | `FITS` |  | 0.0 | 0.0 | 66 | 22/26/28/32 | 240 | `TRUE_END` |
@@ -271,22 +272,22 @@ The asymmetry reads as an oversight rather than a design choice: one edge of the
 | 1984 initial | 54 | 160 | `FITS` |  | 0.0 | 0.0 | 114 | 25/27/31/46 | 250 | `HOLED` |
 | 1984 initial | 55 | 170 | `FITS` |  | 0.0 | 0.0 | 107 | 24/34/37/49 | 340 | `HOLED` |
 | 1984 initial | 56 | 180 | `FITS` |  | 0.0 | 0.0 | 77 | 24/28/30/34 | 250 | `MIXED` |
-| 1984 initial | 57 | 210 | `FITS` |  | 0.0 | 0.0 | 69 | 27/30/37/45 | 280 | `TRUE_END` |
+| 1984 initial | 57 | 210 | `FITS` |  | 0.0 | 0.0 | 68 | 25/30/37/45 | 270 | `TRUE_END` |
 | 1984 initial | 58 | 240 | `FITS` |  | 0.0 | 0.0 | 69 | 32/41/45/53 | 400 | `MIXED` |
 | 1984 initial | 59 | 270 | `FITS` |  | 0.0 | 0.0 | 78 | 42/44/48/61 | 440 | `HOLED` |
-| 1984 initial | 60 | 320 | `FITS` |  | 0.0 | 0.0 | 102 | 48/56/63/79 | 590 | `HOLED` |
-| 1984 initial | 61 | 330 | `FITS` |  | 0.0 | 0.0 | 116 | 47/55/65/91 | 870 | `HOLED` |
-| 1984 initial | 62 | 330 | `FITS` |  | 0.0 | 0.0 | 136 | 56/62/70/103 | 660 | `HOLED` |
-| 1984 initial | 63 | 330 | `FITS` |  | 0.0 | 0.0 | 135 | 58/60/65/73 | 610 | `HOLED` |
-| 1984 initial | 64 | 320 | `FITS` |  | 0.0 | 0.0 | 138 | 57/62/66/92 | 920 | `HOLED` |
-| 1984 initial | 65 | 330 | `FITS` |  | 0.0 | 0.0 | 138 | 58/66/74/114 | 780 | `HOLED` |
+| 1984 initial | 60 | 310 | `FITS` |  | 0.0 | 0.0 | 102 | 47/56/62/79 | 590 | `HOLED` |
+| 1984 initial | 61 | 330 | `FITS` |  | 0.0 | 0.0 | 116 | 47/56/65/91 | 900 | `HOLED` |
+| 1984 initial | 62 | 320 | `FITS` |  | 0.0 | 0.0 | 135 | 55/61/69/103 | 650 | `HOLED` |
+| 1984 initial | 63 | 330 | `FITS` |  | 0.0 | 0.0 | 139 | 59/62/65/73 | 600 | `HOLED` |
+| 1984 initial | 64 | 320 | `FITS` |  | 0.0 | 0.0 | 133 | 57/60/64/92 | 880 | `HOLED` |
+| 1984 initial | 65 | 320 | `FITS` |  | 0.0 | 0.0 | 138 | 57/65/73/109 | 780 | `HOLED` |
 | 1984 initial | 66 | 340 | `FITS` |  | 0.0 | 0.0 | 131 | 64/66/69/86 | 630 | `HOLED` |
-| 1984 initial | 67 | 425 | `FITS` |  | 0.0 | 2.0 | 144 | 44/66/68/74 | 630 | `MIXED` |
-| 1984 initial | 68 | 565 | `FITS` |  | 2.0 | 2.0 | 103 | 45/62/73/90 | 610 | `MIXED` |
-| 1984 initial | 69 | 570 | `FITS` |  | 0.0 | 0.0 | 106 | 68/70/75/94 | 710 | `HOLED` |
+| 1984 initial | 67 | 430 | `FITS` |  | 0.0 | 0.0 | 148 | 44/66/69/76 | 640 | `MIXED` |
+| 1984 initial | 68 | 565 | `FITS` |  | 1.0 | 2.0 | 103 | 45/62/73/90 | 620 | `MIXED` |
+| 1984 initial | 69 | 570 | `FITS` |  | 0.0 | 0.0 | 106 | 66/70/74/90 | 700 | `HOLED` |
 | 1984 initial | 70 | 480 | `FITS` |  | 0.0 | 0.0 | 141 | 54/70/73/78 | 670 | `HOLED` |
 | 1984 initial | 71 | 420 | `FITS` |  | 5.0 | 0.0 | 137 | 39/55/73/83 | 680 | `HOLED` |
-| 1984 initial | 72 | 470 | `FITS` |  | 0.0 | 0.0 | 123 | 67/76/79/90 | 730 | `MIXED` |
+| 1984 initial | 72 | 485 | `FITS` |  | 0.0 | 0.0 | 123 | 68/77/81/93 | 740 | `MIXED` |
 | 1984 initial | 73 | 550 | `FITS` |  | 0.0 | 0.0 | 132 | 21/24/82/99 | 830 | `HOLED` |
 | 1984 initial | 74 | 590 | `FITS` |  | 0.0 | 0.0 | 131 | 22/61/74/87 | 700 | `HOLED` |
 | 1984 initial | 75 | 530 | `FITS` |  | 0.0 | 0.0 | 103 | 68/72/75/82 | 690 | `TRUE_END` |
@@ -294,16 +295,16 @@ The asymmetry reads as an oversight rather than a design choice: one edge of the
 | 1984 initial | 77 | 530 | `FITS` |  | 3.0 | 6.0 | 146 | 39/55/66/81 | 610 | `MIXED` |
 | 1984 initial | 78 | 550 | `FITS` |  | 0.0 | 2.0 | 137 | 0/59/68/73 | 650 | `MIXED` |
 | 1984 initial | 79 | 560 | `FITS` |  | 0.0 | 0.0 | 108 | 25/64/68/71 | 640 | `TRUE_END` |
-| 1984 initial | 80 | 565 | `FITS` |  | 0.0 | 0.0 | 99 | 69/70/71/81 | 680 | `TRUE_END` |
+| 1984 initial | 80 | 540 | `FITS` |  | 0.0 | 0.0 | 99 | 66/67/70/81 | 640 | `TRUE_END` |
 | 1984 initial | 81 | 410 | `FITS` |  | 0.0 | 0.0 | 105 | 1/66/68/92 | 630 | `HOLED` |
 | 1984 initial | 82 | 155 | `FITS` |  | 0.0 | 0.0 | 106 | 41/46/50/62 | 440 | `TRUE_END` |
-| 1984 initial | 83 | 90 | `FITS` |  | 0.0 | 0.0 | 108 | 42/49/50/54 | 460 | `TRUE_END` |
-| 1984 initial | 84 | 30 | `FITS` |  | 0.0 | 0.0 | 149 | 19/22/25/52 | 190 | `HOLED` |
+| 1984 initial | 83 | 90 | `FITS` |  | 0.0 | 0.0 | 108 | 42/48/50/54 | 450 | `TRUE_END` |
+| 1984 initial | 84 | 25 | `FITS` |  | 0.0 | 0.0 | 149 | 18/21/25/51 | 370 | `HOLED` |
 | 1984 initial | 85 | 0 | `FITS` |  | 0.0 | 0.0 | 178 | 23/27/37/53 | 360 | `HOLED` |
 | 1984 initial | 86 | 0 | `FITS` |  | 0.0 | 0.0 | 189 | 16/17/28/44 | 140 | `HOLED` |
 | 1984 initial | 87 | 60 | `FITS` |  | 0.0 | 0.0 | 185 | 15/17/22/26 | 180 | `HOLED` |
-| 1984 initial | 88 | 160 | `FITS` |  | 0.0 | 0.0 | 177 | 24/31/36/51 | 290 | `HOLED` |
-| 1984 initial | 89 | 170 | `FITS` |  | 0.0 | 0.0 | 179 | 49/56/59/70 | 550 | `MIXED` |
+| 1984 initial | 88 | 160 | `FITS` |  | 0.0 | 0.0 | 177 | 23/31/36/51 | 280 | `HOLED` |
+| 1984 initial | 89 | 160 | `FITS` |  | 0.0 | 0.0 | 179 | 49/56/59/70 | 550 | `MIXED` |
 | 1984 initial | 90 | 160 | `FITS` |  | 0.0 | 0.0 | 182 | 27/37/49/81 | 340 | `HOLED` |
 | 2004 initial | 9 | 50 | `FITS` |  | 0.0 | 0.0 | 162 | 11/14/17/73 | 1530 | `HOLED` |
 | 2004 initial | 10 | 40 | `FITS` |  | 0.0 | 0.0 | 151 | 10/11/14/18 | 90 | `HOLED` |
@@ -387,13 +388,13 @@ The asymmetry reads as an oversight rather than a design choice: one edge of the
 | 2004 initial | 88 | 120 | `FITS` |  | 0.0 | 0.0 | 174 | 20/28/32/49 | 250 | `HOLED` |
 | 2004 initial | 89 | 160 | `FITS` |  | 0.0 | 0.0 | 177 | 47/55/58/69 | 540 | `MIXED` |
 | 2004 initial | 90 | 150 | `FITS` |  | 0.0 | 0.0 | 181 | 26/37/49/81 | 350 | `HOLED` |
-| 1989 relocation (GIS 84-87) - zero-retreat bound | 84 | 70 | `FITS` |  | 0.0 | 0.0 | 149 | 19/22/25/52 | 190 | `HOLED` |
+| 1989 relocation (GIS 84-87) - zero-retreat bound | 84 | 65 | `FITS` |  | 0.0 | 0.0 | 149 | 18/21/25/51 | 370 | `HOLED` |
 | 1989 relocation (GIS 84-87) - zero-retreat bound | 85 | 109 | `FITS` |  | 0.0 | 0.0 | 178 | 23/27/37/53 | 360 | `HOLED` |
 | 1989 relocation (GIS 84-87) - zero-retreat bound | 86 | 94 | `FITS` |  | 0.0 | 0.0 | 189 | 16/17/28/44 | 140 | `HOLED` |
 | 1989 relocation (GIS 84-87) - zero-retreat bound | 87 | 78 | `FITS` |  | 0.0 | 0.0 | 185 | 15/17/22/26 | 180 | `HOLED` |
 | 1999 relocation (GIS 9-14) - zero-retreat bound | 9 | 58 | `FITS` |  | 0.0 | 0.0 | 163 | 11/14/18/73 | 1540 | `HOLED` |
-| 1999 relocation (GIS 9-14) - zero-retreat bound | 10 | 77 | `FITS` |  | 0.0 | 0.0 | 155 | 14/16/18/23 | 140 | `HOLED` |
-| 1999 relocation (GIS 9-14) - zero-retreat bound | 11 | 107 | `FITS` |  | 0.0 | 0.0 | 165 | 15/16/18/24 | 130 | `HOLED` |
-| 1999 relocation (GIS 9-14) - zero-retreat bound | 12 | 108 | `FITS` |  | 0.0 | 0.0 | 172 | 15/16/19/23 | 140 | `TRUE_END` |
-| 1999 relocation (GIS 9-14) - zero-retreat bound | 13 | 91 | `FITS` |  | 0.0 | 0.0 | 170 | 15/17/18/20 | 140 | `TRUE_END` |
-| 1999 relocation (GIS 9-14) - zero-retreat bound | 14 | 85 | `FITS` |  | 0.0 | 0.0 | 35 | 13/13/16/25 | 100 | `TRUE_END` |
+| 1999 relocation (GIS 9-14) - zero-retreat bound | 10 | 67 | `FITS` |  | 0.0 | 0.0 | 154 | 14/15/17/22 | 130 | `HOLED` |
+| 1999 relocation (GIS 9-14) - zero-retreat bound | 11 | 87 | `FITS` |  | 0.0 | 0.0 | 163 | 14/14/16/22 | 110 | `HOLED` |
+| 1999 relocation (GIS 9-14) - zero-retreat bound | 12 | 88 | `FITS` |  | 0.0 | 0.0 | 170 | 13/14/17/21 | 110 | `TRUE_END` |
+| 1999 relocation (GIS 9-14) - zero-retreat bound | 13 | 81 | `FITS` |  | 0.0 | 0.0 | 170 | 15/17/18/20 | 140 | `TRUE_END` |
+| 1999 relocation (GIS 9-14) - zero-retreat bound | 14 | 85 | `FITS` |  | 0.0 | 6.0 | 35 | 10/13/16/25 | 100 | `TRUE_END` |

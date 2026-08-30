@@ -58,6 +58,36 @@ import re
 import sys
 from pathlib import Path
 
+
+def _never_die_on_a_print():
+    """Stop a console encoding from killing a finished computation.
+
+    This script prints arrows, ellipses and plus-minus signs. A Windows
+    console is cp1252, which cannot encode any of them, so `print` raises
+    UnicodeEncodeError -- and on 2026-08-28 that happened at the very last
+    status line, AFTER the whole calibration had been computed and BEFORE
+    DOMAIN_BE_RATES.txt was written. The run looked like a crash, the numbers
+    were gone, and the stale file left behind still carried the previous
+    pass's date, so nothing downstream would have noticed it was old.
+
+    Reconfiguring is preferred to ASCII-ifying every print: the next arrow
+    someone types would reintroduce the bug, and the failure mode is silent
+    data loss rather than a wrong character. If UTF-8 cannot be set, fall
+    back to errors="replace" so an unencodable character degrades to "?"
+    instead of raising.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            try:
+                stream.reconfigure(errors="replace")
+            except Exception:
+                pass
+
+
+_never_die_on_a_print()
+
 import numpy as np
 import pandas as pd
 from scipy import stats

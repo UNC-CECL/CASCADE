@@ -120,8 +120,15 @@ LEGACY_SB_FMT = ROADS_ROOT / "old_method_offset" / "{year}" / "RoadSetback_{year
 LEGACY_EL = (INIT_ROOT / "4-mgmt-forcing" / "road_elevation"
              / "RoadElevation.csv")
 
-OUT_PNG = OFFSET_ROOT / "HAT_road_method_diagnostic.png"
-OUT_CSV = OFFSET_ROOT / "HAT_road_method_diagnostic.csv"
+# 4-compare output lands in method_comparison/, NOT inside either method's
+# folder -- this is a legacy-vs-dune-start comparison, so it belongs to neither.
+# It wrote into dunestart_offset/ until 2026-08-28, which put a cross-method
+# result under one of the methods it compares and contradicted the rule stated
+# in this folder's README. Its sibling, HAT_method_comparison_figures.py, was
+# always correct about that rule; only this one drifted.
+OUT_ROOT = ROADS_ROOT / "method_comparison"
+OUT_PNG = OUT_ROOT / "HAT_road_method_diagnostic.png"
+OUT_CSV = OUT_ROOT / "HAT_road_method_diagnostic.csv"
 
 YEARS = [1984, 2004]
 DOMAINS = list(range(1, 91))

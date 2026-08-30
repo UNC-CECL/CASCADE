@@ -439,12 +439,33 @@ def validate_against_matrix_run(period, workers):
     if worst > VALIDATION_TOLERANCE_M_YR:
         offender = merged.loc[delta.idxmax(), "gis_domain"]
         return False, (
-            f"DRIFT: the sweep's copy of build_cascade / "
-            f"run_cascade_simulation no longer reproduces {name}.\n"
+            f"DRIFT: the worker no longer reproduces {name}.\n"
             f"  max |difference| {worst:.6g} m/yr at D{offender:.0f} "
             f"(tolerance {VALIDATION_TOLERANCE_M_YR:g})\n"
-            f"  Re-sync HAT_groin_sweep_worker.py section 3 with "
-            f"HAT_hindcast_1984_2024.py before trusting any sweep result.")
+            f"  The worker builds a DIFFERENT MODEL from the runner. Check, "
+            f"in this order:\n"
+            f"    1. THE TOPOGRAPHY PRODUCT. HAT_groin_sweep_worker.py must "
+            f"pass TOPO_PRODUCT to\n"
+            f"       both topo_dirs() and build_domain_file_paths(). Omitting "
+            f"it selects\n"
+            f"       DEFAULT_PRODUCT (2004-start), so a 1984 sweep silently "
+            f"builds on the 2004\n"
+            f"       island -- all 90 domains differ, 65 in interior SHAPE. "
+            f"This was the cause\n"
+            f"       on 2026-08-29, at 0.126 m/yr.\n"
+            f"    2. The forcing assembled in the worker's section 2 -- "
+            f"setbacks, dunes,\n"
+            f"       island offset, background erosion -- against the "
+            f"reference run's\n"
+            f"       run_metadata.json.\n"
+            f"    3. Only then the duplicated code. NOTE that build_cascade is "
+            f"IMPORTED from\n"
+            f"       cascade_pipeline.hindcast, not copied, and "
+            f"run_cascade_simulation differs\n"
+            f"       from the shared one only in printing. Verified in sync "
+            f"2026-08-29 -- this\n"
+            f"       message used to send readers here first and it cost three "
+            f"dead ends.")
 
     return True, (f"reproduces {name} to {worst:.2g} m/yr "
                   f"(tolerance {VALIDATION_TOLERANCE_M_YR:g})")

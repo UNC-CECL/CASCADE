@@ -194,9 +194,23 @@ def _parse_cli(argv):
 # Resolved from the extractor, not pinned -- the same source the hindcast
 # runner and the road setbacks use, so the sweep cannot drift out of step with
 # them. See scripts/hat_topo_version.py.
-from hat_topo_version import topo_dirs   # scripts/, on sys.path above
+from hat_topo_version import topo_dirs, product_for_year  # scripts/, on path
 
-_TOPO_DIR, _DUNE_DIR, TOPO_DUNE_VERSION = topo_dirs()
+# THE PRODUCT MUST BE NAMED. topo_dirs() with no argument resolves
+# DEFAULT_PRODUCT, which is "2004-start" -- so a 1984 sweep built its model on
+# the 2004 island while its reference matrix run used 1984-start. All 90
+# domains differ between the two products and 65 differ in interior SHAPE, so
+# the sweep was fitting M and f against a different barrier. The orchestrator's
+# drift guard caught it on 2026-08-29 at 0.126 m/yr, 25x its tolerance, and
+# blamed "section 3" -- which was in sync all along.
+#
+# This line used to carry a comment saying the bare call "still resolves
+# 2004-start, which is what this sweep read before the 2026-08-25
+# restructure". That was true and it was the bug: preserving pre-restructure
+# behaviour is exactly wrong once the periods stopped sharing a topography.
+TOPO_PRODUCT = product_for_year(START_YEAR)
+
+_TOPO_DIR, _DUNE_DIR, TOPO_DUNE_VERSION = topo_dirs(TOPO_PRODUCT)
 
 # No array-name constant here any more - see build_domain_file_paths below.
 
@@ -205,8 +219,6 @@ PARAMETER_FILE = "Hatteras-CASCADE-parameters.yaml"   # resolved by CASCADE
 BARRIER3D_DIR = HATTERAS_DATA_BASE / "1-barrier3d-domains"
 # Taken from what topo_dirs() RETURNED rather than re-joined from parts -
 # re-joining is how a resolver gets bypassed without anyone noticing.
-# topo_dirs() with no product still resolves 2004-start, which is what this
-# sweep read before the 2026-08-25 restructure.
 from hat_topo_version import BUFFER_DIR   # noqa: E402
 DUNE_TOPO_DIR = _TOPO_DIR.parent
 
@@ -371,7 +383,10 @@ def assemble_forcing(be1):
     geometry = HATTERAS_DOMAINS
     # No product argument: this worker sweeps the DEFAULT_PRODUCT, the same one
     # topo_dirs() resolved above for DUNE_TOPO_DIR.
-    elevation_paths, dune_paths = build_domain_file_paths(geometry)
+    # The PRODUCT is passed, exactly as the runner does at its
+    # section 3. Omitting it silently selects DEFAULT_PRODUCT.
+    elevation_paths, dune_paths = build_domain_file_paths(
+        geometry, TOPO_PRODUCT)
 
     missing = [p for p in elevation_paths + dune_paths if not Path(p).exists()]
     if missing:

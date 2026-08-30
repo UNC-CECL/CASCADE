@@ -67,18 +67,36 @@ THE ORDER, AND WHY IT IS THIS ORDER
 RESUME
     Every finished job is appended to `driver_manifest.jsonl` the moment it
     lands, keyed by (stage, period, preset, scenario, groin, reloc) -- plus
-    (M, fraction) when the groin is on, so a revised fit invalidates the runs
-    made at the old values instead of silently reusing them. Re-invoking
-    skips anything already recorded complete and retries anything recorded
-    failed. The manifest -- not the run directory -- is the source of truth,
-    so this file never has to reimplement the runner's RUN_NAME construction,
-    which is derived in the runner's section 7.5 from what its modules
-    actually built and would drift if copied.
+    (M, fraction) when the groin is on, and plus the SOURCE/SINK DIGEST when
+    the preset imposes any, so a revised fit invalidates the runs made at the
+    old values instead of silently reusing them. Re-invoking skips anything
+    already recorded complete and retries anything recorded failed. The
+    manifest -- not the run directory -- is the source of truth, so this file
+    never has to reimplement the runner's RUN_NAME construction, which is
+    derived in the runner's section 7.5 from what its modules actually built
+    and would drift if copied.
+
+    THE KEY MUST NAME EVERY INPUT THAT CAN CHANGE UNDER A FIXED NAME. That
+    rule has now been learned three times: the reloc axis, then (M, fraction)
+    for groin runs on 2026-08-24, then the source/sink digest on 2026-08-28.
+    Each time the symptom was identical -- a run made at superseded values
+    matched an unchanged key and was reported "SKIP (done)" -- and each time
+    the skip happens BEFORE the collision guard, so --overwrite cannot reach
+    it. If a fourth quantity is ever edited between runs while its preset
+    keeps its name, put it in the key rather than remembering to clear the
+    manifest by hand.
 
     A manifest written before the M/f fields existed carries six-field groin
     keys that can never match the eight-field ones. Migrate it rather than
     letting every groin run repeat: the rows already RECORD M and fraction, so
     the new key can be rebuilt from each row exactly.
+
+    The digest is NOT retrofittable the same way: rows written before
+    2026-08-28 do not carry `be_digest`, and it cannot be recovered from the
+    row because the whole point is that the values have since changed. Those
+    rows simply stop matching, which re-runs them -- the safe direction. Only
+    zeroBE is unaffected, because an "empty" digest is never appended and
+    zeroBE imposes {} in every period.
 
 CONCURRENCY
     Matrix runs are SERIAL. Each one appends a row to run_index.csv, and
@@ -122,6 +140,7 @@ for _path in (SCRIPTS_DIR, _HERE.parent, GROIN_SWEEP_DIR):
 
 from cascade_pipeline import nourishment  # noqa: E402
 from cascade_pipeline.roadway import RelocationEvent  # noqa: E402
+from cascade_pipeline.run_registry import values_digest  # noqa: E402
 from hatteras_site_config import (  # noqa: E402
     HATTERAS_BE_PRESETS,
     HATTERAS_DOMAINS,
@@ -384,6 +403,22 @@ class DriverLock:
 # MANIFEST
 # =============================================================================
 
+def be_digest_for(period, preset):
+    """Fingerprint of the source/sink VALUES a (period, preset) pair imposes.
+
+    Not the preset name -- the numbers behind it. `values_digest` is imported
+    from the run registry rather than reimplemented so the manifest key and
+    the `be_values_digest` column in run_index.csv can never disagree about
+    what a run carried.
+
+    Returns "empty" for a preset that imposes nothing, and for the stages
+    (archive, sweep) whose keys carry no period/preset pair.
+    """
+    if period is None or preset is None:
+        return "empty"
+    return values_digest(HATTERAS_BE_PRESETS.get(preset, {}).get(period, {}))
+
+
 def job_key(stage, period=None, preset=None, scenario=None, groin=None,
             reloc=None, M=None, fraction=None):
     """Stable identity for one unit of work.
@@ -406,10 +441,29 @@ def job_key(stage, period=None, preset=None, scenario=None, groin=None,
     Only groin runs carry them: a no-groin cell has no M or f, and appending
     "None|None" to its key would invalidate every groin-off run already
     recorded for no reason.
+
+    THE SOURCE/SINK DIGEST JOINED THE KEY ON 2026-08-28, third instance of
+    the same failure. The key named the PRESET but not its VALUES, and the
+    source/sink table is edited between runs -- that is the whole shape of an
+    edge solve, where `edgeBE` keeps its name while GIS 1 and 90 move at every
+    Newton step. So a run made at the previous edge values still matched, and
+    was reported "SKIP (done)" into a matrix that was supposed to carry the
+    new ones. Caught before it corrupted anything only because the edgeBE leg
+    was killed and restarted by hand.
+
+    Derived here from (period, preset) rather than passed in, so a call site
+    cannot forget it. `values_digest` returns "empty" for a preset that
+    imposes nothing, and an "empty" digest is NOT appended -- that keeps every
+    zeroBE key byte-identical to what is already on disk, which is correct:
+    zeroBE imposes {} in every period and no edit to the calibrated table can
+    change what it ran.
     """
     parts = [stage, period, preset, scenario, groin, reloc]
     if groin:
         parts += [M, fraction]
+    digest = be_digest_for(period, preset)
+    if digest != "empty":
+        parts.append(digest)
     return "|".join(str(x) for x in parts)
 
 
@@ -583,7 +637,8 @@ def matrix_stage(stage, groin, manifest, args, fits=None):
                 # from "ran and succeeded".
                 record(dict(key=key, stage=stage, period=period,
                             preset=preset, scenario=scenario, groin=groin,
-                            reloc=reloc, ok=True, skipped=True, detail=reason,
+                            reloc=reloc, be_digest=be_digest_for(period, preset),
+                            ok=True, skipped=True, detail=reason,
                             at=datetime.now().isoformat(timespec="seconds")))
 
     for index, (period, preset, scenario, reloc) in enumerate(jobs, start=1):

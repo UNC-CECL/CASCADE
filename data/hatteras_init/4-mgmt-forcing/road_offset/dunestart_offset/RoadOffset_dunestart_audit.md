@@ -1,17 +1,17 @@
 # NC-12 road offset measured from the extracted dune start
 
-Generated 2026-08-27T08:13:03 by `HAT_road_offset_from_dune_start.py`.
+Generated 2026-08-28T11:17:55 by `HAT_road_offset_from_dune_start.py`.
 
-Covers 1984 on 1984-start/v2, 2004 on 2004-start/v1. Each vintage is measured against interior row 0 of **its own period's extraction** -- the two are different islands, and 65 of 90 domains differ in interior shape between them.
+Covers 1984 on 1984-start/v1, 2004 on 2004-start/v1. Each vintage is measured against interior row 0 of **its own period's extraction** -- the two are different islands, and 65 of 90 domains differ in interior shape between them.
 
 | | |
 |---|---|
 | Extractor | `HAT_dune_topo_extractor.py` (ALONGSHORE_FLIP=True, STRAIGHTEN=True) |
-| 1984 topography | `1984-start/v2` |
+| 1984 topography | `1984-start/v1` |
 | 2004 topography | `2004-start/v1` |
 | 1984 DEMs | `C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\1984-start\npy-arrays` |
 | 2004 DEMs | `C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\2004-start\npy-arrays` |
-| 1984 picked windows | `HAT_dune_search_windows_v2.json` |
+| 1984 picked windows | `HAT_dune_search_windows_v1.json` |
 | 2004 picked windows | `HAT_dune_search_windows_v1.json` |
 | Reference | interior row 0 = picked dune crest + 1 cell |
 | Road reference | seaward-most road cell per profile |
@@ -33,7 +33,7 @@ The test transcribed here is bulldoze's: the rows checked are the NEIGHBOURS of 
 
 ### The assumption this rests on
 
-**Nothing drowns at initialisation** on 1984-start/v2, 2004-start/v1 -- 0 domains in either year -- so no setback was moved and the rest of this section does not apply to this run.
+**Nothing drowns at initialisation** on 1984-start/v1, 2004-start/v1 -- 0 domains in either year -- so no setback was moved and the rest of this section does not apply to this run.
 
 That is the point of the gap-filled DEM. On `2009_v4` three domains per year drowned, and the audit for that version showed they drowned on **LiDAR coverage gaps, not measured water**: across the six flanking rows failing at GIS 78/79/80 there were 106 wet cells, of which 105 had never been surveyed and 1 was genuinely wet. The extractor writes no-data back as the water sentinel because Barrier3D has no representation for "unknown", so unsurveyed ground read as ocean and drowned the roadway. Filling those holes from the 2014 NOAA Post-Sandy DEM removes the cause, and the drown count goes to zero.
 
@@ -78,9 +78,9 @@ D8 is the one extreme outlier (-353 m in 1984). That is the Buxton bend, where N
 
 - Road span: GIS 9-90 (82 with road, 7 without)
 - Setback vs 2009 dune: median 210 m, range -10 to 590 m
-- Delta vs the LEGACY `RoadSetback_1984.csv`: median 29 m, range -46 to 112 m
+- Delta vs the LEGACY `RoadSetback_1984.csv`: median 30 m, range -46 to 97 m
 - Offset-derived dune-line retreat 1984->2004: median 43 m
-- **corr(delta, retreat) = -0.397** -- see the caveat below.
+- **corr(delta, retreat) = -0.419** -- see the caveat below.
 - NEGATIVE, floored to 0: 1 domain(s)
 
 | GIS | true setback (m) |
@@ -99,37 +99,37 @@ D8 is the one extreme outlier (-353 m in 1984). That is the Buxton bend, where N
 | 5 | NO_ROAD |
 | 6 | NO_ROAD |
 | 7 | NO_ROAD |
-| 8 | SCATTER_SETBACK(160m),SCATTER_ELEV(0.70),WIDTH(750m),EXCLUDED_FROM_SPAN |
+| 8 | SCATTER_SETBACK(166m),SCATTER_ELEV(0.70),WIDTH(750m),EXCLUDED_FROM_SPAN |
 | 11 | SCATTER_ELEV(0.57) |
-| 21 | SCATTER_SETBACK(51m) |
-| 22 | SCATTER_SETBACK(50m) |
-| 26 | SCATTER_SETBACK(60m) |
+| 21 | SCATTER_SETBACK(60m) |
+| 22 | SCATTER_SETBACK(60m) |
 | 27 | SCATTER_SETBACK(80m) |
 | 33 | SCATTER_SETBACK(60m) |
 | 35 | SCATTER_SETBACK(41m) |
 | 38 | SCATTER_SETBACK(50m) |
 | 46 | SCATTER_SETBACK(50m) |
-| 64 | SCATTER_SETBACK(51m) |
-| 65 | SCATTER_SETBACK(50m) |
+| 51 | SCATTER_SETBACK(50m) |
+| 63 | SCATTER_SETBACK(50m) |
 | 66 | SCATTER_SETBACK(70m) |
-| 67 | SCATTER_SETBACK(70m) |
-| 68 | SCATTER_SETBACK(102m) |
+| 67 | SCATTER_SETBACK(41m) |
+| 68 | SCATTER_SETBACK(100m) |
+| 69 | SCATTER_SETBACK(61m) |
 | 70 | SCATTER_SETBACK(100m) |
 | 71 | SCATTER_SETBACK(51m) |
-| 72 | SCATTER_SETBACK(51m) |
+| 72 | SCATTER_SETBACK(60m) |
 | 73 | SCATTER_SETBACK(51m) |
 | 75 | SCATTER_SETBACK(60m) |
 | 77 | SCATTER_SETBACK(50m) |
 | 79 | SCATTER_SETBACK(71m) |
-| 80 | SCATTER_SETBACK(41m) |
+| 80 | SCATTER_SETBACK(80m) |
 | 81 | SCATTER_SETBACK(163m) |
 | 82 | SCATTER_SETBACK(111m) |
 | 83 | SCATTER_SETBACK(50m) |
-| 84 | SCATTER_SETBACK(60m),SCATTER_ELEV(1.00) |
+| 84 | SCATTER_SETBACK(61m),SCATTER_ELEV(1.00) |
 | 85 | NEGATIVE(-10->floored 0),SCATTER_SETBACK(50m),SCATTER_ELEV(0.98) |
 | 86 | SCATTER_ELEV(0.94) |
 | 87 | SCATTER_SETBACK(80m) |
-| 88 | SCATTER_SETBACK(51m) |
+| 88 | SCATTER_SETBACK(60m) |
 
 ## 2004
 

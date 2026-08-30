@@ -27,11 +27,11 @@
 #
 # TWO REFERENCE FRAMES, BOTH REPORTED
 #   The topography is 2009; the road_offset are 1984 and 2004. Those disagree, and the
-#   disagreement is the subject of old_method_offset/RoadSetback_audit.md. This
-#   script does not pick a winner:
+#   disagreement is the subject of old_method_offset/RoadSetback_oldmethod_audit.md.
+#   This script does not pick a winner:
 #     * setback_dunestart_m   measured directly here, road-vs-2009-dune. Internally
 #                        consistent with the grid CASCADE actually runs.
-#     * setback_sameyear_m  read from the EXISTING RoadSetback_<year>.csv, which
+#     * setback_legacy_m  read from the EXISTING RoadSetback_<year>.csv, which
 #                        is a road-vs-same-year-dune measurement. No
 #                        extrapolation is performed to produce it.
 #     * delta_m          the difference, which should track the dune-line

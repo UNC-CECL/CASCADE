@@ -1,13 +1,14 @@
 {
   "identity": {
     "run_name": "HAT_2004_2024_zeroBE_noroad_bdm_nourish_nogroin",
-    "timestamp": "2026-08-22 15:23:47",
+    "timestamp": "2026-08-28 13:55:48",
     "generated_by": "HAT_hindcast_1984_2024.py",
-    "runtime_min": "2.9",
+    "runtime_min": "5.7",
     "use_sandbox_cascade": true,
-    "topo_dune_version": "2009_v5",
+    "topo_product": "2004-start",
+    "topo_dune_version": "v1",
     "parameter_file": "Hatteras-CASCADE-parameters.yaml",
-    "git_commit": "613d332b9c720843c6e4488b523ca5f7f2c84d50",
+    "git_commit": "5b26cb543fec464ae7a7d25cf9cb6d95bfb6a5ae",
     "git_branch": "hannahaline/hatteras-cascade",
     "git_dirty": true
   },
@@ -61,14 +62,14 @@
   "skill": {
     "target": "CoastSat LOESS 10-domain",
     "estimator": "lrr",
-    "mean_bias_m_yr": "-3.0112",
-    "rmse_m_yr": "3.2521",
-    "mean_bias_interior_m_yr": "-2.9600",
-    "rmse_interior_m_yr": "3.1915",
+    "mean_bias_m_yr": "-3.0107",
+    "rmse_m_yr": "3.2516",
+    "mean_bias_interior_m_yr": "-2.9595",
+    "rmse_interior_m_yr": "3.1910",
     "lrr_r2_median": "0.9394",
     "lrr_r2_below_floor": "0",
-    "endpoint_mean_bias_interior_m_yr": "-2.7843",
-    "endpoint_rmse_interior_m_yr": "3.0246"
+    "endpoint_mean_bias_interior_m_yr": "-2.7834",
+    "endpoint_rmse_interior_m_yr": "3.0234"
   },
   "verification": {
     "nourishment_ok": true,
