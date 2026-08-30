@@ -274,7 +274,12 @@ ISLAND_OFFSET_FILE = os.path.join(
     "Island_Dune_Offsets_1967_D2_D12_PADDED_41.csv",
 )
 
-TOPO_DUNE_INIT_YEAR = "2009"
+# The rig is a 1967-2017 window; 1984-start is the nearer product in time and
+# the one the production period-1 groin fit reads, so the two routes agree on a
+# surface. Chosen 2026-08-30; previously this resolved to 2004-start by default.
+RIG_TOPO_PRODUCT = "1984-start"
+
+TOPO_DUNE_INIT_YEAR = "2009"   # legacy label, no longer used to build filenames
 TOPO_DUNE_SUBFOLDER = "2009"
 
 # =============================================================================
@@ -340,12 +345,21 @@ def build_file_lists():
     _scripts = os.path.join(PROJECT_BASE_DIR, "scripts")
     if _scripts not in _sys.path:
         _sys.path.insert(0, _scripts)
-    from hat_topo_version import topo_dirs
-    topo_dir, dune_dir, _topo_run = topo_dirs()
-    buffer_dir = os.path.join(HATTERAS_DATA_BASE, "1-barrier3d-domains",
-                              "2009-buffer")
-    buf_dune = os.path.join(buffer_dir, "sample_1_dune.npy")
-    buf_elev = os.path.join(buffer_dir, "sample_1_topography.npy")
+    # REPOINTED 2026-08-30 for the period-first restructure of 2026-08-25.
+    # Three things here had gone stale and none of them errored:
+    #   1. topo_dirs() with no product resolves DEFAULT_PRODUCT ("2004-start").
+    #      The rig is a 1967 window, so it should read the 1984 product -- and
+    #      that is also what the production period-1 fit uses, so the two routes
+    #      share a surface. This is the same omission that put the production
+    #      groin sweep on the wrong island until 2026-08-30.
+    #   2. Array names lost their year suffix: domain_N_topography_2009.npy is
+    #      now domain_N_topography.npy. array_name() owns that spelling.
+    #   3. "2009-buffer" became "buffer"; BUFFER_DIR owns that path.
+    from hat_topo_version import topo_dirs, array_name, BUFFER_DIR
+    topo_dir, dune_dir, _topo_run = topo_dirs(RIG_TOPO_PRODUCT)
+    print(f"  topography: {RIG_TOPO_PRODUCT}/{_topo_run}")
+    buf_dune = os.path.join(str(BUFFER_DIR), "sample_1_dune.npy")
+    buf_elev = os.path.join(str(BUFFER_DIR), "sample_1_topography.npy")
 
     elev, dune = [], []
     for _ in range(START_REAL_INDEX):
@@ -354,9 +368,9 @@ def build_file_lists():
     for i_list in range(START_REAL_INDEX, END_REAL_INDEX):
         file_num = FIRST_FILE_NUMBER + (i_list - START_REAL_INDEX)
         dune.append(os.path.join(str(dune_dir),
-                                 f"domain_{file_num}_dune_{TOPO_DUNE_INIT_YEAR}.npy"))
+                                 array_name("dune", file_num)))
         elev.append(os.path.join(str(topo_dir),
-                                 f"domain_{file_num}_topography_{TOPO_DUNE_INIT_YEAR}.npy"))
+                                 array_name("topography", file_num)))
     for _ in range(END_REAL_INDEX, TOTAL_DOMAINS):
         dune.append(buf_dune)
         elev.append(buf_elev)
