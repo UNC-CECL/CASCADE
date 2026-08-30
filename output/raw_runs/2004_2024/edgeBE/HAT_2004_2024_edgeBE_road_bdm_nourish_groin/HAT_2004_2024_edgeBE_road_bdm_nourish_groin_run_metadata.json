@@ -1,13 +1,14 @@
 {
   "identity": {
     "run_name": "HAT_2004_2024_edgeBE_road_bdm_nourish_groin",
-    "timestamp": "2026-08-24 17:24:34",
+    "timestamp": "2026-08-28 18:21:24",
     "generated_by": "HAT_hindcast_1984_2024.py",
     "runtime_min": "2.8",
     "use_sandbox_cascade": true,
-    "topo_dune_version": "2009_v5",
+    "topo_product": "2004-start",
+    "topo_dune_version": "v1",
     "parameter_file": "Hatteras-CASCADE-parameters.yaml",
-    "git_commit": "613d332b9c720843c6e4488b523ca5f7f2c84d50",
+    "git_commit": "5b26cb543fec464ae7a7d25cf9cb6d95bfb6a5ae",
     "git_branch": "hannahaline/hatteras-cascade",
     "git_dirty": true
   },
@@ -57,10 +58,10 @@
   },
   "groin": {
     "enabled": true,
-    "trapping_rate_m_yr": 60.0,
+    "trapping_rate_m_yr": 50.0,
     "updrift / downdrift": "GIS 6 / 5",
     "install_year": 1969,
-    "deterioration": "linear_ramp, floor 0.6",
+    "deterioration": "linear_ramp, floor 0.9",
     "r_ipl_t0": "1.0758",
     "predicted_extent_m": "3280",
     "measured_extent_m": "6000 updrift / 2500 downdrift"
@@ -68,14 +69,14 @@
   "skill": {
     "target": "CoastSat LOESS 10-domain",
     "estimator": "lrr",
-    "mean_bias_m_yr": "-0.9748",
-    "rmse_m_yr": "1.7601",
-    "mean_bias_interior_m_yr": "-0.9941",
-    "rmse_interior_m_yr": "1.7798",
-    "lrr_r2_median": "0.8721",
+    "mean_bias_m_yr": "-0.9803",
+    "rmse_m_yr": "1.7585",
+    "mean_bias_interior_m_yr": "-0.9985",
+    "rmse_interior_m_yr": "1.7780",
+    "lrr_r2_median": "0.8555",
     "lrr_r2_below_floor": "18",
-    "endpoint_mean_bias_interior_m_yr": "-0.8720",
-    "endpoint_rmse_interior_m_yr": "1.6874"
+    "endpoint_mean_bias_interior_m_yr": "-0.8748",
+    "endpoint_rmse_interior_m_yr": "1.6867"
   },
   "verification": {
     "nourishment_ok": true,

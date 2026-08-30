@@ -83,7 +83,13 @@ sys.modules["hat_placement"] = P
 _SPEC.loader.exec_module(P)
 
 ROADS_ROOT = P.ROADS_ROOT
-OUT_ROOT = ROADS_ROOT
+
+# Cross-method output goes in its own folder, NOT at road_offset/ level and NOT
+# inside either method's folder. The rule this satisfies is unchanged -- a
+# legacy-vs-dune-start result belongs to neither method -- but the top level is
+# for the forcing, its source and its inputs, and four loose comparison files
+# sitting beside them read as though they were part of the product.
+OUT_ROOT = ROADS_ROOT / "method_comparison"
 YEARS = P.YEARS
 DOMAINS = P.DOMAINS
 CELL_SIZE_M = P.CELL_SIZE_M

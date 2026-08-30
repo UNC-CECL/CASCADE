@@ -194,7 +194,12 @@ F_VALUES = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 # railed. -16 and -10 were added on 2026-08-22 so the configured value is
 # bracketed on BOTH sides and a shallow optimum is a result rather than a
 # bound. They cost 2 x 43 = 86 extra cells in the 1984 edgeBE sweep.
-BE1_VALUES_1984 = [-10.0, -16.0, -22.0, -28.0, -34.0, -40.0, -46.0]
+# -42.6 IS THE CALIBRATED VALUE ITSELF, added 2026-08-30. The 2026-08-29
+# sweep bracketed it (-46, -40) but never evaluated it, and the two
+# brackets disagreed badly about M (95 vs 160), so interpolating across
+# them would have invented a number the grid never measured. Fixing be1
+# at the calibrated value turns M into a one-parameter question.
+BE1_VALUES_1984 = [-10.0, -16.0, -22.0, -28.0, -34.0, -40.0, -42.6, -46.0]
 
 
 def be1_values(period, preset):
@@ -524,6 +529,23 @@ def build_grid(period, preset):
 # the reach sediment budget and still 35% short. Rescored on size, the SAME 43
 # runs put the optimum at M = 50, f = 0.6 -- interior on both axes, 0.1 m
 # error, and an f consistent with the 1996 repair and 2003 storm damage.
+#
+# THE TOPOGRAPHY BUG, AND WHY THE VALUE SURVIVED IT. Until 2026-08-30 the
+# worker resolved its topography without naming a product, so DEFAULT_PRODUCT
+# ("2004-start") answered and every period-1 cell was built on the 2004
+# barrier. Fixed; the drift guard now reproduces its reference to 0 m/yr.
+# Re-scored on the corrected island at the calibrated be1 = -42.6, the D4-D8
+# demeaned profile puts the best cell at 11.44 m and M = 60 / f = 0.6 at
+# 11.58 m, against 15.20 m with no groin -- so the production pair is within
+# 0.14 m of optimal and the bug moved it less than the ridge it sits on.
+#
+# DO NOT RE-FIT ON THE FILLET. An attempt on 2026-08-30 returned M = 95 with f
+# railed at the grid bound and the best M swinging 95 -> 160 between adjacent
+# be1 values. No admissible M can match the fillet on this grid
+# (HAT_groin_timeseries_check.py:29); fitting it anyway produces a rail, not an
+# optimum. D4-D8 DEMEANED is the target that works, and only the PRODUCT M*f
+# is identified by it -- not M and f separately. See the groin note in
+# scripts/hatteras_site_config.py.
 
 
 def measure_fillet(shoreline_m, baseline_m, geometry,

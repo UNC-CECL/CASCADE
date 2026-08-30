@@ -259,16 +259,96 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # BASE RUN. edgeBE / road_bdm / groin off, per period -- the same run
 # HAT_be_zone_LOESS_analysis.py derives the interior residual from.
 #
-# WHY GROIN OFF. This USED to say "because output/groin_sweep/joint_fit.json
-# does not exist yet, so _fitted_groin() returns None and the analysis falls
-# back". THAT IS NO LONGER TRUE -- the joint fit landed 2026-08-24 and pins
-# M = 60, f = 0.6 for every preset (calibBE copies edgeBE's pair; the two that
-# were fitted independently both landed on it). So groin-off is now a CHOICE,
-# not a fallback, and it is the right one: the groin is a structure whose
+# WHY GROIN OFF. Groin-off is a CHOICE, and it is the right one: the groin is
+# a structure whose
 # trapping is fitted against the same period-1 shoreline these BE rates are
 # fitted against, and letting both absorb the same misfit makes neither
 # identifiable. The BE fit goes first, groin off; the sweep then pins be1 at
 # the production edgeBE value and fits the groin on top.
+#
+# THE GROIN FIT, RE-EXAMINED 2026-08-30. M = 60, f = 0.6 STANDS.
+#
+# It was briefly marked void earlier that day. That was an over-correction and
+# is withdrawn. The reason given was true -- every period-1 sweep cell behind
+# the original fit was computed on the WRONG ISLAND, because
+# HAT_groin_sweep_worker.py resolved topography without naming a product and
+# DEFAULT_PRODUCT ("2004-start") answered, so a 1984 sweep built on the 2004
+# barrier. That bug is real and was fixed 2026-08-30; the drift guard now
+# reproduces its reference to exactly 0 m/yr. But re-scoring on the CORRECTED
+# island, at the re-calibrated be1 = -42.6, barely moved the answer:
+#
+#     D4-D8 demeaned profile RMSE, period 1, be1 = -42.6
+#       no groin           15.20 m
+#       M=50  f=0.8        11.44   <- best cell
+#       M=40  f=1.0        11.44
+#       M=50  f=1.0        11.52
+#       M=60  f=0.8        11.58
+#       M=60  f=0.6        11.58   <- the production value
+#
+# 11.58 against a best of 11.44 is 0.14 m across a 3.76 m improvement. The
+# production value is statistically indistinguishable from optimal, and the
+# topography bug moved it by less than the ridge it sits on.
+#
+# M AND f ARE WEAKLY CONSTRAINED, EACH IN ITS OWN RIGHT. The five top cells
+# span M = 40-60 and f = 0.6-1.0 and their profiles are visually superimposed
+# (output/groin_sweep/figures/period1_top_n_profiles.png), so quote them as a
+# PAIR that reproduces the observed change rather than as two independently
+# determined numbers.
+#
+# NOT because "only the product M*f is identified". That claim appeared in
+# HAT_period1_top_n_figure.py's caption and was repeated here on 2026-08-30
+# without being checked. Tested on the 60 cells at be1 = -42.6 it is FALSE:
+#
+#     corr(RMSE, M*f)  -0.066      <- essentially none
+#     corr(RMSE, M)    +0.610
+#     corr(RMSE, f)    -0.493
+#
+#     cells at M*f ~ 40:  M40/f1.0 = 10.4   M50/f0.8 = 10.7
+#                         M70/f0.6 = 11.2   M95/f0.4 = 12.5
+#     spread 2.1 m, larger than the 3.8 m the groin buys in total
+#
+# Equal-product cells are NOT interchangeable. The target responds to M and f
+# separately -- lower M and higher f each help on their own. What actually
+# makes the top cells cluster is a shallow BASIN around M = 40-70, f >= 0.6,
+# not a ridge along constant product. See fig_Mf_identifiability.png.
+#
+# THE GROIN DOES REAL WORK BUT DOES NOT REPRODUCE THE SHAPE. 15.20 -> 11.44 m
+# is a 25% reduction, and it comes from matching the overall D4-D8 slope. The
+# observed profile has structure the model does not produce: a peak at D6
+# (+14 m observed, ~0 modelled), a dip at D7, a second peak at D8. Read the
+# residual as the split between what the groin explains and what the
+# source/sink calibration absorbs -- not as a successful shape fit.
+#
+# THREE TARGETS THAT DO NOT WORK, so they are not retried:
+#
+#   1. THE FILLET (D5-D6 scalar). No admissible M can match it on this grid --
+#      stated at HAT_groin_timeseries_check.py:29. Fitting it anyway on
+#      2026-08-30 gave M = 95 at be1 = -42.6, with f railed at the grid bound
+#      and the best M swinging 95 -> 160 between adjacent be1 values. Fitting
+#      an unmatchable target is what produced the rail, not a real optimum.
+#   2. THE FULL-PERIOD D1-D12 PROFILE. Ranks M = 0 best, monotonically. Not
+#      because there is no groin: D2-D4 is Cape Point accretion the
+#      parameterisation does not represent, and D6-D7 is an erosion trough
+#      peaking one domain NORTH of the structure, which a groin actively
+#      worsens by pushing D6 seaward. Together they swamp a ~17 m groin
+#      signal. See HAT_fullperiod_windows.py.
+#   3. NARROWING THAT WINDOW TO D5-D7 does not rescue it -- D6-D7 is inside
+#      the narrow window too. D4-D8 DEMEANED is the window that works, because
+#      demeaning removes the level offset the source/sink term owns and D1 is
+#      excluded (the cape's 81-104 m change is ~5x the groin's signal).
+#
+# PERIOD 2 CANNOT BE FITTED. Its observed D6-D5 differential is negative
+# (-3.85 +/- 0.76 m/yr) and a groin with trapping >= 0 can only widen the gap.
+# Period 1 is the only hindcast window where the observed gap WIDENS, which is
+# the only behaviour the module can produce. There is no joint fit; the
+# 2026-08-30 joint fit railed at M = 160 solely because period 2's unreachable
+# error (141.5 of a joint 142.6) dominated it.
+#
+# AFFORDABILITY BOUNDS IT FROM ABOVE. M = 60 implies ~719,000 m3/yr against a
+# 5-7e5 m3/yr littoral drift -- already at the ceiling. The stability bounds an
+# earlier text cited ("M >= 70 unstable, M >= 100 drowns") were measured on the
+# 41-domain rig and do NOT transfer; every production cell through M = 160 ran
+# clean. Affordability, not stability, is what caps M here.
 #
 # The groin sits at GIS 5/6 and does not reach GIS 90 at all (on the pre-refit
 # runs D90 was identical to the 3 dp reported, groin-on vs groin-off, in
@@ -285,21 +365,100 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # independently is safe: with 15 buffer domains a side they are 30
 # domains -- 15 km -- apart around the ring, against a BRIE diffusion
 # length of sqrt(D*t) ~ 3.2 km over a 20 year period.
+# ============================================================================
+# REFIT 2026-08-28 — BOTH PERIODS, FIVE PASSES, ON THE CURRENT TOPOGRAPHY
+# ============================================================================
+# Every value below was re-solved on 2026-08-28. The previous solution is in
+# git history and in output/archived_output_20260828/.
+#
+# WHY. The 2026-08-23 values were derived on a base run against the
+# pre-restructure shared topography. `1984-start` is now a different surface
+# (re-extracted 2026-08-27 from the same DEM against a new pick set) and its
+# road setbacks were re-measured the same morning, moving 15 of 83 road-bearing
+# domains by up to 25 m. Period 2 was refit alongside it even though its inputs
+# had not changed, because the stage-5 groin joint fit intersects BOTH periods'
+# surfaces — mixed calibration vintages would make M and f mean two things.
+# (Period 2's zeroBE base run reproduced the archived one to 2e-4 m/yr, so its
+# inputs were verified unchanged rather than assumed.)
+#
+# METHOD. Documented in HAT_be_zone_LOESS_analysis.py: solve the two locked
+# ends by Newton steps on a secant, and the interior by iterated additive
+# passes (`apply_be_fit.py --add`) so each pass closes fraction g of whatever
+# misfit remains and no estimate of g is ever needed.
+#
+#   pass 0   interior from the edgeBE base runs           replace
+#   pass 1-3 interior from the calibBE base runs          --add
+#   GIS 90   re-solved after the interior settled          Newton, +3.0 probe
+#   pass 4   final interior pass at the final edge values --add
+#
+# INTERIOR RMSE OF THE BASE RUN (road_bdm, groin off), m/yr:
+#
+#                        1984-2004   2004-2024
+#     zeroBE               1.422       2.124
+#     edgeBE               1.219       1.794
+#     calibBE pass 0       0.721       0.763
+#     calibBE pass 1       0.547       0.615
+#     calibBE pass 2       0.527       0.583
+#     + GIS 90 re-solve    0.556       0.603     <- edges gained, interior gave back
+#     calibBE final        0.517       0.563
+#
+# Final mean interior bias: +0.058 (P1), +0.120 (P2).
+#
+# STOPPING. `convergence_history.json` records the operative rule as "a pass
+# buys less than 5% of the standing RMSE". Interior passes hit that at pass 2->3
+# (3.8% P1, 5.3% P2). Note this is NOT the rule the LOESS script's header
+# states ("no zone clears SIGNIFICANCE_THRESHOLD"); that one is unreachable
+# here, because a handful of domains carry residuals of 2-3 m/yr that are
+# narrower than the LOESS window generating the correction and no smooth
+# alongshore field can close them. The 5% rule is the one that was met. The
+# residual it leaves — mean |smoothed residual| ~0.45 m/yr, with 19-28 domains
+# still above the 0.5 m/yr significance threshold — IS the tolerance this field
+# is converged to, and belongs in any methods paragraph built on it.
+#
+# THE END-DOMAIN GAIN, MEASURED NOT ASSUMED:
+#
+#     GIS  1  edgeBE   0.109 (P1)  0.096 (P2)
+#     GIS 90  edgeBE   0.104 (P1)  0.099 (P2)
+#     GIS 90  calibBE  0.103 (P1)  0.094 (P2)
+#
+# The last row settles a question this file used to leave open. The note below
+# says an isolated forced cell runs at g ~ 0.1, a forced ZONE at g ~ 1, and
+# that "GIS 90 sits on that join". Measured against a calibBE interior with a
+# coherent erosive zone at GIS 84-89 pressed against it, GIS 90's gain is
+# 0.103 / 0.094 — indistinguishable from its own edgeBE gain, where every
+# neighbour is unforced. So GIS 90 does NOT sit on the join in practice: it
+# behaves as an isolated cell under both presets. The adjacent zone changes
+# WHERE its solution sits (calibBE +32.8 vs edgeBE +13.0 in P1) but not how
+# hard the cell is to move.
+#
+# THE EDGES AND THE INTERIOR ARE WEAKLY COUPLED, and the loop contracts. GIS 90
+# drifted from converged (-0.06) to +0.62 over three interior passes as the
+# field at 84-89 grew, and re-solving it cost the interior 0.03 RMSE while
+# buying 0.61 at the edge — about 20:1, so it converges rather than oscillates.
+# The final interior pass was run AFTER the edge re-solve specifically so the
+# interior is fit against the final edge values and the table is self-consistent
+# as a set.
+#
+# WHAT WAS NOT RE-SOLVED. edgeBE's GIS 90 (HATTERAS_BE_EDGE_D90) measured
+# converged throughout at -0.06 / -0.01 against the LOESS target and was left
+# alone. GIS 1 in period 2 sits at -0.145 and was shrinking monotonically
+# (-0.231, -0.193, -0.145) but never cleared the threshold; it is a known small
+# residual, not an oversight.
 HATTERAS_BE_RATES_CALIBRATED = {
     1984: {
-          1: -41.8,  # LOCKED — end domain, LRR-solved; see the end-domain note above
+          1: -42.6,  # LOCKED — end domain, LRR-solved; see the end-domain note above
           2: +0.0,  # Cape Point / Shoal Dynamics
           3: +0.0,  # Cape Point / Shoal Dynamics
           4: +0.0,  # Cape Point / Shoal Dynamics
-          5: +1.5,  # Cape Point / Shoal Dynamics
-          6: +2.2,  # Cape Point / Shoal Dynamics
-          7: +0.8,  # Cape Point / Shoal Dynamics
-          8: +1.8,  # Cape Point / Shoal Dynamics
+          5: +0.0,  # Cape Point / Shoal Dynamics
+          6: +0.0,  # Cape Point / Shoal Dynamics
+          7: +0.0,  # Cape Point / Shoal Dynamics
+          8: +2.9,  # Cape Point / Shoal Dynamics
           9: +0.0,  # Cape Point / Shoal Dynamics
-         10: -2.4,  # Cape Point / Shoal Dynamics
-         11: -1.6,  # Buxton–Avon Transition
-         12: -1.7,  # Buxton–Avon Transition
-         13: -1.0,  # Buxton–Avon Transition
+         10: -2.0,  # Cape Point / Shoal Dynamics
+         11: -1.0,  # Buxton–Avon Transition
+         12: -1.0,  # Buxton–Avon Transition
+         13: -0.6,  # Buxton–Avon Transition
          14: +0.0,  # Buxton–Avon Transition
          15: +0.0,  # Buxton–Avon Transition
          16: +0.0,  # Buxton–Avon Transition
@@ -313,14 +472,14 @@ HATTERAS_BE_RATES_CALIBRATED = {
          24: +0.0,  # Avon
          25: +0.0,  # Avon
          26: +0.0,  # Avon
-         27: +0.9,  # Avon
+         27: +0.5,  # Avon
          28: +1.2,  # Avon
          29: +2.3,  # Avon
-         30: +3.3,  # Avon
-         31: +3.8,  # Avon
-         32: +3.3,  # Mid-island
-         33: +1.7,  # Mid-island
-         34: +1.2,  # Mid-island
+         30: +2.9,  # Avon
+         31: +3.7,  # Avon
+         32: +3.1,  # Mid-island
+         33: +2.0,  # Mid-island
+         34: +1.5,  # Mid-island
          35: +0.0,  # Mid-island
          36: +0.0,  # Mid-island
          37: +0.0,  # Mid-island
@@ -341,7 +500,7 @@ HATTERAS_BE_RATES_CALIBRATED = {
          52: -2.2,  # Mid-island
          53: -2.0,  # Mid-island
          54: -1.8,  # Mid-island
-         55: -1.0,  # Mid-island
+         55: -1.3,  # Mid-island
          56: -1.0,  # Mid-island
          57: -0.3,  # Mid-island
          58: +0.0,  # Mid-island
@@ -354,29 +513,29 @@ HATTERAS_BE_RATES_CALIBRATED = {
          65: +0.0,  # Wimble Shoals Influence
          66: +0.0,  # Wimble Shoals Influence
          67: +0.0,  # Wimble Shoals Influence
-         68: +0.6,  # Wimble Shoals Influence
-         69: +1.7,  # Wimble Shoals Influence
+         68: +0.5,  # Wimble Shoals Influence
+         69: +1.6,  # Wimble Shoals Influence
          70: +2.2,  # Wimble Shoals Influence
          71: +3.0,  # Wimble Shoals Influence
-         72: +3.7,  # Wimble Shoals Influence
-         73: +3.8,  # Wimble Shoals Influence
-         74: +3.4,  # Wimble Shoals Influence
+         72: +3.9,  # Wimble Shoals Influence
+         73: +4.3,  # Wimble Shoals Influence
+         74: +3.6,  # Wimble Shoals Influence
          75: +1.9,  # Tri-Village / Rodanthe
          76: +0.0,  # Tri-Village / Rodanthe
          77: +0.0,  # Tri-Village / Rodanthe
-         78: -1.1,  # Tri-Village / Rodanthe
-         79: -2.0,  # Tri-Village / Rodanthe
-         80: -3.2,  # Tri-Village / Rodanthe
-         81: -3.8,  # Tri-Village / Rodanthe
-         82: -4.2,  # Tri-Village / Rodanthe
-         83: -4.5,  # Tri-Village / Rodanthe
-         84: -4.6,  # Pea Island NWR
-         85: -4.5,  # Pea Island NWR
-         86: -3.8,  # Pea Island NWR
-         87: -2.9,  # Pea Island NWR
-         88: -2.2,  # Pea Island NWR
+         78: -1.2,  # Tri-Village / Rodanthe
+         79: -2.1,  # Tri-Village / Rodanthe
+         80: -3.7,  # Tri-Village / Rodanthe
+         81: -4.3,  # Tri-Village / Rodanthe
+         82: -4.6,  # Tri-Village / Rodanthe
+         83: -5.0,  # Tri-Village / Rodanthe
+         84: -5.5,  # Pea Island NWR
+         85: -5.4,  # Pea Island NWR
+         86: -4.8,  # Pea Island NWR
+         87: -3.6,  # Pea Island NWR
+         88: -2.8,  # Pea Island NWR
          89: -1.3,  # Pea Island NWR
-         90: +26.8,  # LOCKED — end domain, LRR-solved; see the end-domain note above
+         90: +32.8,  # LOCKED — end domain, LRR-solved; see the end-domain note above
     },
     2004: {
           1: +50.3,  # LOCKED — end domain, LRR-solved; see the end-domain note above
@@ -386,37 +545,37 @@ HATTERAS_BE_RATES_CALIBRATED = {
           5: +0.0,  # Cape Point / Shoal Dynamics
           6: +0.0,  # Cape Point / Shoal Dynamics
           7: +0.0,  # Cape Point / Shoal Dynamics
-          8: -2.7,  # Cape Point / Shoal Dynamics
-          9: +0.0,  # Cape Point / Shoal Dynamics
-         10: +1.5,  # Cape Point / Shoal Dynamics
-         11: +1.2,  # Buxton–Avon Transition
-         12: +1.5,  # Buxton–Avon Transition
-         13: +1.6,  # Buxton–Avon Transition
-         14: +2.0,  # Buxton–Avon Transition
-         15: +2.1,  # Buxton–Avon Transition
-         16: +2.6,  # Buxton–Avon Transition
-         17: +2.7,  # Buxton–Avon Transition
+          8: -2.6,  # Cape Point / Shoal Dynamics
+          9: +0.8,  # Cape Point / Shoal Dynamics
+         10: +1.6,  # Cape Point / Shoal Dynamics
+         11: +1.4,  # Buxton–Avon Transition
+         12: +1.6,  # Buxton–Avon Transition
+         13: +2.1,  # Buxton–Avon Transition
+         14: +2.1,  # Buxton–Avon Transition
+         15: +2.2,  # Buxton–Avon Transition
+         16: +2.7,  # Buxton–Avon Transition
+         17: +2.8,  # Buxton–Avon Transition
          18: +2.7,  # Buxton–Avon Transition
          19: +2.1,  # Buxton–Avon Transition
          20: +1.7,  # Buxton–Avon Transition
-         21: +0.7,  # Avon
-         22: -2.7,  # Avon
+         21: +0.3,  # Avon
+         22: -2.6,  # Avon
          23: +0.0,  # Avon
          24: +0.0,  # Avon
          25: +0.0,  # Avon
          26: +0.0,  # Avon
-         27: -1.8,  # Avon
+         27: -1.4,  # Avon
          28: +1.2,  # Avon
          29: +2.3,  # Avon
-         30: +3.2,  # Avon
-         31: +4.3,  # Avon
-         32: +4.5,  # Mid-island
+         30: +2.9,  # Avon
+         31: +3.9,  # Avon
+         32: +4.8,  # Mid-island
          33: +4.1,  # Mid-island
-         34: +3.8,  # Mid-island
-         35: +2.6,  # Mid-island
+         34: +4.1,  # Mid-island
+         35: +2.7,  # Mid-island
          36: +2.6,  # Mid-island
          37: +2.2,  # Mid-island
-         38: +1.6,  # Mid-island
+         38: +1.7,  # Mid-island
          39: +2.0,  # Mid-island
          40: +2.0,  # Mid-island
          41: +1.7,  # Mid-island
@@ -433,7 +592,7 @@ HATTERAS_BE_RATES_CALIBRATED = {
          52: -2.2,  # Mid-island
          53: -2.0,  # Mid-island
          54: -1.8,  # Mid-island
-         55: -1.0,  # Mid-island
+         55: -1.3,  # Mid-island
          56: +0.0,  # Mid-island
          57: -0.3,  # Mid-island
          58: +0.0,  # Mid-island
@@ -442,33 +601,33 @@ HATTERAS_BE_RATES_CALIBRATED = {
          61: +0.0,  # Wimble Shoals Influence
          62: +0.0,  # Wimble Shoals Influence
          63: +0.7,  # Wimble Shoals Influence
-         64: +0.9,  # Wimble Shoals Influence
+         64: +1.2,  # Wimble Shoals Influence
          65: +1.9,  # Wimble Shoals Influence
          66: +2.3,  # Wimble Shoals Influence
          67: +2.3,  # Wimble Shoals Influence
          68: +3.0,  # Wimble Shoals Influence
          69: +3.8,  # Wimble Shoals Influence
          70: +4.1,  # Wimble Shoals Influence
-         71: +4.6,  # Wimble Shoals Influence
+         71: +4.7,  # Wimble Shoals Influence
          72: +4.4,  # Wimble Shoals Influence
          73: +3.6,  # Wimble Shoals Influence
          74: +2.7,  # Wimble Shoals Influence
          75: +2.3,  # Tri-Village / Rodanthe
-         76: +1.8,  # Tri-Village / Rodanthe
+         76: +1.5,  # Tri-Village / Rodanthe
          77: +1.2,  # Tri-Village / Rodanthe
          78: +0.9,  # Tri-Village / Rodanthe
          79: +0.4,  # Tri-Village / Rodanthe
          80: +0.0,  # Tri-Village / Rodanthe
          81: +0.0,  # Tri-Village / Rodanthe
          82: +0.0,  # Tri-Village / Rodanthe
-         83: -2.7,  # Tri-Village / Rodanthe
-         84: -3.2,  # Pea Island NWR
-         85: -3.2,  # Pea Island NWR
-         86: -2.7,  # Pea Island NWR
-         87: -2.9,  # Pea Island NWR
-         88: -2.2,  # Pea Island NWR
+         83: -2.8,  # Tri-Village / Rodanthe
+         84: -3.7,  # Pea Island NWR
+         85: -4.0,  # Pea Island NWR
+         86: -3.7,  # Pea Island NWR
+         87: -3.6,  # Pea Island NWR
+         88: -2.8,  # Pea Island NWR
          89: -1.3,  # Pea Island NWR
-         90: +52.1,  # LOCKED — end domain, LRR-solved; see the end-domain note above
+         90: +57.9,  # LOCKED — end domain, LRR-solved; see the end-domain note above
     },
 }
 
@@ -533,6 +692,22 @@ for _period, _rates in HATTERAS_BE_RATES_EDGE.items():
             f"edgeBE {_period}: end domains {_absent} are not in the "
             f"calibrated preset, so the edge preset would silently model them "
             f"at 0.0 m/yr. Add them to HATTERAS_BE_RATES_CALIBRATED.")
+
+    # An edge domain present but ZERO is the same failure the check above
+    # exists to prevent, and the absence test does not catch it: edgeBE would
+    # be byte-identical to zeroBE at that domain, which makes the two presets
+    # indistinguishable there and collapses the edge secant to 0/0 with no
+    # error. Found on 2026-08-28 while zeroing the interior of the calibrated
+    # table -- GIS 1 is SLICED from that table, so emptying it would have
+    # silently disarmed the edge preset.
+    _zeroed = [gis for gis in HATTERAS_BE_EDGE_DOMAINS
+               if gis in _rates and _rates[gis] == 0.0]
+    if _zeroed:
+        raise ValueError(
+            f"edgeBE {_period}: end domains {_zeroed} are present but 0.0, so "
+            f"edgeBE is identical to zeroBE there and the edge secant has no "
+            f"second bracket. Give them a nonzero starting value, or run "
+            f"zeroBE if that is what you actually want.")
 
 # The split is only defensible while each side is actually solved against its
 # own preset. If a period ever gains an edgeBE D90 with no calibBE counterpart

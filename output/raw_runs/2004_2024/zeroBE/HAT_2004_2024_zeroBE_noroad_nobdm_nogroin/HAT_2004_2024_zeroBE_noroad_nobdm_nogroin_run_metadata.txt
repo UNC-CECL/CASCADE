@@ -3,13 +3,14 @@
 
 [identity]
 run_name                         = HAT_2004_2024_zeroBE_noroad_nobdm_nogroin
-timestamp                        = 2026-08-22 15:17:22
+timestamp                        = 2026-08-28 13:42:32
 generated_by                     = HAT_hindcast_1984_2024.py
-runtime_min                      = 3.3
+runtime_min                      = 5.9
 use_sandbox_cascade              = True   # cascade.cascade_groin, not cascade.cascade
-topo_dune_version                = 2009_v5
+topo_product                     = 2004-start
+topo_dune_version                = v1
 parameter_file                   = Hatteras-CASCADE-parameters.yaml
-git_commit                       = 613d332b9c720843c6e4488b523ca5f7f2c84d50
+git_commit                       = 5b26cb543fec464ae7a7d25cf9cb6d95bfb6a5ae
 git_branch                       = hannahaline/hatteras-cascade
 git_dirty                        = True   # True: the commit alone does not reproduce this run
 
@@ -63,14 +64,14 @@ enabled                          = False
 [skill]
 target                           = CoastSat LOESS 10-domain   # raw means over GIS 1-10
 estimator                        = lrr   # OLS slope through every annual state, matching the target's own definition
-mean_bias_m_yr                   = -3.7721
-rmse_m_yr                        = 4.0002
-mean_bias_interior_m_yr          = -3.7235   # GIS 2-89: the locked end domains excluded
-rmse_interior_m_yr               = 3.9443
-lrr_r2_median                    = 0.9642   # how well a line describes the modelled trajectory
+mean_bias_m_yr                   = -3.7697
+rmse_m_yr                        = 3.9973
+mean_bias_interior_m_yr          = -3.7212   # GIS 2-89: the locked end domains excluded
+rmse_interior_m_yr               = 3.9413
+lrr_r2_median                    = 0.9640   # how well a line describes the modelled trajectory
 lrr_r2_below_floor               = 0   # domains under r2 0.50
-endpoint_mean_bias_interior_m_yr = -3.5883   # the pre-LRR estimator; calibBE and groin M were fit on this
-endpoint_rmse_interior_m_yr      = 3.8135
+endpoint_mean_bias_interior_m_yr = -3.5877   # the pre-LRR estimator; calibBE and groin M were fit on this
+endpoint_rmse_interior_m_yr      = 3.8130
 
 [verification]
 nourishment_ok                   = True
