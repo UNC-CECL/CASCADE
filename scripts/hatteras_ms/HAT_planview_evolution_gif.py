@@ -66,7 +66,9 @@ for _path in (PROJECT_BASE_DIR / "scripts",):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from hatteras_site_config import HATTERAS_DOMAINS as GEOMETRY  # noqa: E402
+from hatteras_site_config import (  # noqa: E402
+    HATTERAS_DOMAINS as GEOMETRY,
+    HATTERAS_FIRST_ROAD_DOMAIN, HATTERAS_LAST_ROAD_DOMAIN)
 from cascade_pipeline.plotting.init_planview import (  # noqa: E402
     DEFAULT_PLAN_VIEW, build_canvas, pad_cross_shore, plot_canvas)
 from cascade_pipeline.plotting.road_planview import overlay_roadway  # noqa: E402
@@ -124,12 +126,53 @@ def load_history(run_dir):
             for model in inner])
         offsets_by_year.append(np.array(
             [float(model.x_s_TS[year]) - reference for model in inner]))
-        setbacks_by_year.append(np.array([
-            _setback_at(road, year) for road in roadways]
+        setbacks_by_year.append(_drawable_setbacks(
+            [_setback_at(road, year) for road in roadways]
             if roadways else [0.0] * len(inner)))
 
     start_year = int(getattr(cascade, "_start_year", 0)) or None
     return grids_by_year, offsets_by_year, setbacks_by_year, start_year
+
+
+# A setback of ZERO means the road sits ON the dune line, not that there is no
+# road. road_planview.road_rows() cannot tell those apart -- it returns NaN for
+# any setback <= 0 -- so a road whose setback decayed to zero vanished from the
+# animation and reappeared if it later relocated seaward.
+#
+# That is not rare and it is mostly NOT relocation: in the 1984-2004 calibBE
+# groin run, 31 of 90 domains cross zero during the run and only five ever
+# relocate (GIS 10, 11, 84, 85, 86). The rest are the dune line simply catching
+# up with a road that never moved -- GIS 9 decays 40 -> 30 -> 20 -> 10 -> 0 m
+# and stays there. Blanking it draws the road as absent exactly when it is most
+# exposed, which is backwards.
+#
+# The road's real extent is a site fact, not something to infer from a setback:
+# hatteras_site_config says GIS 9-90 carry NC-12 and "Domains 1-8 (Cape Point)
+# have no road in the modelled span". So presence comes from that, and a zero
+# setback inside the road reach is nudged just above zero -- floor(eps / 10 m)
+# is 0, so the bar lands exactly on the dune line, which is where the road is.
+# This keeps road_rows() as the single implementation of the geometry rather
+# than reimplementing it here where it could drift.
+_ZERO_SETBACK_EPS_M = 1e-6
+
+
+def _drawable_setbacks(setbacks_m):
+    """Setbacks with roadless domains blanked and on-dune roads kept visible.
+
+    Args:
+        setbacks_m: Padded per-domain setbacks in metres, one per domain.
+
+    Returns:
+        A float array: 0.0 outside the road reach so road_rows() blanks it, and
+        at least _ZERO_SETBACK_EPS_M inside it so a zero setback still draws.
+    """
+    values = np.asarray(setbacks_m, dtype=float)
+    drawable = np.zeros_like(values)
+    for gis in range(HATTERAS_FIRST_ROAD_DOMAIN, HATTERAS_LAST_ROAD_DOMAIN + 1):
+        pad = GEOMETRY.gis_to_pad(gis)
+        if 0 <= pad < values.size:
+            drawable[pad] = max(values[pad], _ZERO_SETBACK_EPS_M)
+    return drawable
 
 
 def _setback_at(roadway, year):
