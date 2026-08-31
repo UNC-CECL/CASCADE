@@ -67,14 +67,46 @@ for _path in (PROJECT_BASE_DIR / "scripts",):
         sys.path.insert(0, str(_path))
 
 from hatteras_site_config import (  # noqa: E402
-    HATTERAS_DOMAINS as GEOMETRY,
+    HATTERAS_DOMAINS as GEOMETRY, HATTERAS_PERIODS,
     HATTERAS_FIRST_ROAD_DOMAIN, HATTERAS_LAST_ROAD_DOMAIN)
+
+# Defined the same way HAT_hindcast_1984_2024.py:255 defines it. It is not
+# exported by the site config, and the period table's paths are relative to it.
+HATTERAS_DATA_BASE = PROJECT_BASE_DIR / "data" / "hatteras_init"
+from cascade_pipeline.hindcast import load_island_offset_dam  # noqa: E402
 from cascade_pipeline.plotting.init_planview import (  # noqa: E402
     DEFAULT_PLAN_VIEW, build_canvas, pad_cross_shore, plot_canvas)
 from cascade_pipeline.plotting.road_planview import overlay_roadway  # noqa: E402
 
 HOLD_FRAMES = 5      # frames held on the final year, so it can be read
 ARROW = chr(0x2192)  # a real arrow, not '->'
+
+
+def _period_start(run_dir, cascade):
+    """The hindcast period this run belongs to, for picking its offset file.
+
+    Read from the run NAME first: HATTERAS_PERIODS is keyed on the period start
+    year, the run name carries it, and a cascade attribute may not.
+
+    Args:
+        run_dir: The run directory, whose name carries the period.
+        cascade: The loaded Cascade, used only as a fallback.
+
+    Returns:
+        A key present in HATTERAS_PERIODS.
+
+    Raises:
+        SystemExit: If no period can be identified.
+    """
+    for token in Path(run_dir).name.split("_"):
+        if token.isdigit() and int(token) in HATTERAS_PERIODS:
+            return int(token)
+    attribute = getattr(cascade, "_start_year", None)
+    if attribute is not None and int(attribute) in HATTERAS_PERIODS:
+        return int(attribute)
+    raise SystemExit(
+        f"cannot tell which hindcast period {Path(run_dir).name} belongs to; "
+        f"known starts are {sorted(HATTERAS_PERIODS)}")
 
 
 def load_history(run_dir):
@@ -106,8 +138,22 @@ def load_history(run_dir):
     n_years = len(inner[0].DomainTS)
     config = DEFAULT_PLAN_VIEW
 
-    # ONE reference for the whole run, so the canvas does not breathe.
-    reference = min(float(model.x_s_TS[0]) for model in inner)
+    # THE CANVAS FRAME IS THE ISLAND OFFSET, NOT x_s. This was wrong until
+    # 2026-08-31 and the error was visible: x_s is Barrier3D's own shoreline
+    # coordinate, and because every domain is a separate Barrier3D it varies by
+    # only ~0.55 km across the island. The REAL alongshore geometry lives in
+    # the BRIE island-offset file and spans ~6.3 km. Using x_s as the frame
+    # compressed the island's diagonal about elevenfold, so the road sat far
+    # from the dune line it is measured against and the figure disagreed with
+    # HAT_road_island_planview_1984.png, which is built from the offsets.
+    #
+    # The offset is the STATIC frame; x_s supplies only its CHANGE, so the
+    # island is placed where the initialization figures place it and still
+    # migrates through the run.
+    offset_file = HATTERAS_DATA_BASE / HATTERAS_PERIODS[
+        _period_start(run_dir, cascade)]["island_offset_file"]
+    base_offset = load_island_offset_dam(offset_file, GEOMETRY)
+    x_s_initial = np.array([float(model.x_s_TS[0]) for model in inner])
 
     # THE ROAD MOVES TOO, and it is the reason to watch this rather than the
     # shoreline GIFs: a setback is measured from the dune line, so a road that
@@ -124,8 +170,8 @@ def load_history(run_dir):
             pad_cross_shore(np.asarray(model.DomainTS[year], dtype=float)
                             * config.dam_to_m, config)
             for model in inner])
-        offsets_by_year.append(np.array(
-            [float(model.x_s_TS[year]) - reference for model in inner]))
+        moved = np.array([float(model.x_s_TS[year]) for model in inner])
+        offsets_by_year.append(base_offset + (moved - x_s_initial))
         setbacks_by_year.append(_drawable_setbacks(
             [_setback_at(road, year) for road in roadways]
             if roadways else [0.0] * len(inner)))
