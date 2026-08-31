@@ -1768,6 +1768,14 @@ _index_row = {
     "groin_enabled": GROIN_ENABLED,
     "groin_trapping_m_yr": (GROIN_CALLBACK.M if GROIN_CALLBACK is not None
                             else np.nan),
+    # f was absent from this index until 2026-08-31, so no groin run before
+    # that date records which deterioration fraction it used -- and the pair
+    # is quoted as (M, f), not as M alone. The seed runs turned out to be
+    # f = 0.9, recoverable only from a comment in
+    # HAT_be_zone_LOESS_analysis.py. be1 needs no column: it is already here
+    # as be_rate_gis1_m_yr.
+    "groin_deterioration_f": (GROIN_CALLBACK.deterioration_fraction
+                              if GROIN_CALLBACK is not None else np.nan),
     "roadway_management": ENABLE_ROADWAY_MANAGEMENT,
     "relocations_enabled": ENABLE_HISTORICAL_ROAD_RELOCATIONS,
     "beach_dune_management": ENABLE_BEACH_DUNE_MANAGEMENT,
