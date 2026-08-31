@@ -82,7 +82,11 @@ from HAT_groin_sweep_config import (  # noqa: E402
 # (D5 -> 19, D6 -> 20) -- see HAT_groin_hindcast_1967_2017.py:76.
 RIG_BUFFER, RIG_FIRST_GIS, RIG_START_YEAR = 15, 2, 1967
 
-RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
+# The rig lives in output/rig_runs/, not output/raw_runs/ (moved 2026-08-31).
+# It is a DIFFERENT GRID -- 41 domains against production's 120 -- and M is
+# grid-specific, so mixing the two invited quoting a rig number as a
+# production one. raw_runs is production only, and run_index.csv covers it.
+RAW_RUNS = PROJECT_BASE_DIR / "output" / "rig_runs"
 RUN = "HAT_1967_2018_edge_calibrated_groin"
 DIAGNOSTICS = RAW_RUNS / RUN / f"{RUN}_groin_diagnostics.csv"
 SHORELINE = RAW_RUNS / RUN / f"{RUN}_shoreline_matrix.npy"

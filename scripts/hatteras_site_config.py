@@ -549,6 +549,46 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # M and no further runs. The 1967 window needs no new work -- the rig IS that
 # window (see below) and was re-run on the corrected topography that day.
 #
+# STALENESS AUDIT, 2026-08-31. NOTHING IS STALE, AND ONE WORRY WAS WRONG.
+# Run after the topography work, to check what the updated island invalidated.
+#
+#   55 production runs   topography CLEAN. Every 1984 run is on 1984-start/v1
+#       and every 2004 run on 2004-start/v1 -- what hat_topo_version.py
+#       resolves today. Zero mismatches.
+#   55 production runs   BE field CLEAN. Every be_values_digest matches the
+#       current config, including the 22 calibBE runs rebuilt that day.
+#   period-1 sweep       CLEAN, by re-running cells and diffing.
+#
+# THE WORRY THAT WAS WRONG. The period-1 edgeBE cells split across two dates --
+# 427 at be1 = -10..-46 on 08-29 20:31, and 61 at be1 = -42.6 on 08-30 08:21 --
+# with the sweep worker's topography fix committed between them (562c75c,
+# 08-30 13:01). Since result.json records NO topography, that looked like the
+# be1-sensitivity table above might be comparing two different islands, which
+# would have manufactured its own "global minimum sits at -42.6" result.
+#
+# It does not. Re-running one cell from EACH batch reproduces the stored
+# result to 0.00e+00 -- bit for bit, across differential_m_yr, rmse_window,
+# bias_window and rates D4-D8. Both batches are on today's topography; the two
+# dates were two sweep sessions. The be1-sensitivity table stands as written.
+#
+# PERIOD 2 IS NOT BIT-REPRODUCIBLE, AND PERIOD 1 IS. Re-running a period-2
+# cell twice gives two answers differing by 1.0e-04 -- MORE than either differs
+# from the stored value, which sits inside their spread. So the stored cell is
+# fine, but "re-run and compare" is only an exact staleness test for PERIOD 1.
+# For period 2 the tolerance is ~1e-4.
+#
+# Not an unseeded RNG: roadway_manager seeds at 1973 and nothing else in
+# cascade/ draws randomly. Floating-point summation order is the likely
+# source, and period 2 accumulates more of it through the nourishment events.
+# 1e-4 is five orders below anything that moves a ranking -- the RMSE
+# differences this calibration turns on are 0.1-4 m -- so it changes the TEST,
+# not any result.
+#
+# STILL UNVERIFIED, deliberately: the fullperiod_1984_2024 sweep, which
+# CALIBRATION_FIGURES.md already states ran on the PRE-FIX topography (its
+# figure caption discloses it), and the 1967 rig, which files no run_index row
+# at all.
+#
 # THE 1967 WINDOW HAS ALREADY BEEN RUN -- IT IS THE 41-DOMAIN RIG.
 # GROIN_PLAN.md recommends "fit on the 1967 window; apply in the hindcast",
 # because the hindcast windows begin 15 years after installation and record the
