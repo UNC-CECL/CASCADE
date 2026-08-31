@@ -108,11 +108,20 @@ fitting period 2 is the wrong thing to attempt.
 
 ## Two caveats on the figures themselves
 
-1. **Panel (b) of `fig_three_targets.png` is not a controlled comparison.** It
-   comes from the 40-year full-period rig on the PRE-FIX topography, while (a)
-   and (c) are period 1 on the corrected one. It is shown because the mechanism
-   it demonstrates — a wide window dominated by signal a groin cannot produce —
-   does not depend on which topography it ran on. The figure says so.
+1. **~~Panel (b) of `fig_three_targets.png` is not a controlled comparison.~~
+   WITHDRAWN 2026-08-31 — it is.** This said panel (b) came from the 40-year
+   window on the PRE-FIX topography while (a) and (c) were period 1 on the
+   corrected one. True when written; the note then outlived the problem. The
+   fullperiod sweep was re-run 2026-08-30 18:20, five hours **after** the
+   worker's topography fix (`562c75c`, 13:01), and the figure was rebuilt at
+   23:52 from those cells.
+
+   Verified rather than assumed: re-running cell `M60_f0.50` through the worker
+   reproduces its stored result to **8.3e-05** on rates of ~2.9 m/yr — the same
+   noise floor a period-2 cell shows against *itself* (1.0e-04 between two
+   re-runs), which the 1984–2024 window inherits because it contains period 2.
+   A wrong-island run would differ in the first or second decimal, not the
+   fifth. All three panels are on the same corrected topography.
 2. **Absolute RMSE here differs from `period1_top_n_profiles.png`** (10.1 vs
    11.4 m for the best cell). This script approximates change as
    `rate × 20 yr` from `sweep_results.jsonl`; the production script reads the

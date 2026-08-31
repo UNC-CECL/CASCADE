@@ -584,10 +584,17 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # differences this calibration turns on are 0.1-4 m -- so it changes the TEST,
 # not any result.
 #
-# STILL UNVERIFIED, deliberately: the fullperiod_1984_2024 sweep, which
-# CALIBRATION_FIGURES.md already states ran on the PRE-FIX topography (its
-# figure caption discloses it), and the 1967 rig, which files no run_index row
-# at all.
+# THE fullperiod_1984_2024 SWEEP IS ALSO CLEAN -- checked 2026-08-31, and the
+# note claiming otherwise is withdrawn. CALIBRATION_FIGURES.md said panel (b)
+# of fig_three_targets ran on the PRE-FIX topography. It did when that was
+# written, and then the sweep was re-run 08-30 18:20 -- five hours AFTER the
+# worker fix at 13:01 -- and the figure rebuilt at 23:52 from those cells. The
+# note outlived the problem. Re-running cell M60_f0.50 reproduces to 8.3e-05,
+# the period-2 noise floor the 40-year window inherits. All 43 cells present.
+#
+# STILL UNVERIFIED: only the 1967 rig, which files no run_index row at all.
+# Its two current runs were rebuilt 2026-08-31 at M = 60 / f = 0.6 and it now
+# lives in output/rig_runs/, away from production.
 #
 # THE 1967 WINDOW HAS ALREADY BEEN RUN -- IT IS THE 41-DOMAIN RIG.
 # GROIN_PLAN.md recommends "fit on the 1967 window; apply in the hindcast",

@@ -37,13 +37,22 @@ WHAT EACH ONE SHOWS
     fig_period2_and_bug.png  why period 2 is not fitted, and what the
                              topography-product bug was worth.
 
-A CAVEAT CARRIED ON THE FIGURE, NOT JUST HERE
-    The D1-D12 panel comes from the 40-year full-period rig on the PRE-FIX
-    topography; the other two are period 1 on the corrected one. They are not
-    a controlled comparison of targets on identical runs, and the panel says
-    so. It is shown because the MECHANISM it demonstrates -- a wide window
-    swamped by signal a groin cannot produce -- does not depend on which
-    topography it ran on.
+A CAVEAT THAT NO LONGER APPLIES, WITHDRAWN 2026-08-31
+    This said the D1-D12 panel came from the 40-year window on the PRE-FIX
+    topography while the other two were period 1 on the corrected one, so
+    the three were not a controlled comparison. True when written; not true
+    now. The fullperiod sweep was re-run 2026-08-30 18:20, five hours AFTER
+    the worker topography fix (562c75c, 13:01), and this figure was rebuilt
+    at 23:52 from those cells. The note outlived the problem.
+
+    VERIFIED, not assumed: re-running cell M60_f0.50 through the worker
+    reproduces its stored result to 8.3e-05 on rates of ~2.9 m/yr -- the
+    SAME noise floor a period-2 cell shows against itself (1.0e-04 between
+    two re-runs), which the 1984-2024 window inherits because it contains
+    period 2. A wrong-island run would differ in the first or second
+    decimal, not the fifth.
+
+    All three panels are on the same corrected topography.
 
 Usage:
     python HAT_calibration_summary_figures.py
@@ -155,10 +164,10 @@ def fig_three_targets(d):
                  fontsize=13, fontweight="bold", color=INK, y=1.02)
     fig.text(0.5, -0.30,
              "(a) and (c): period 1, be1 = −42.6, corrected topography, 61 "
-             "cells.   (b): 40-year full-period rig on the PRE-FIX topography "
-             "— not a controlled comparison,\nshown because the mechanism "
-             "(a wide window dominated by signal a groin cannot produce) does "
-             "not depend on which topography it ran on.",
+             "cells.   (b): the 40-year continuous window, on the SAME "
+             "corrected topography."
+             " Re-run 2026-08-30 after the worker's topography fix, and "
+             "verified 2026-08-31 to reproduce to 8e-05.",
              ha="center", fontsize=8.6, color=MUTED)
     p = OUT / "fig_three_targets.png"
     fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
