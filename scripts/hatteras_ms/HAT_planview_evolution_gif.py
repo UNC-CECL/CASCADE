@@ -56,6 +56,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
+from matplotlib.lines import Line2D
 
 _HERE = Path(__file__).resolve()
 PROJECT_BASE_DIR = _HERE.parents[2]
@@ -80,6 +81,9 @@ from cascade_pipeline.plotting.road_planview import overlay_roadway  # noqa: E40
 
 HOLD_FRAMES = 5      # frames held on the final year, so it can be read
 ARROW = chr(0x2192)  # a real arrow, not '->'
+# The relocated colour from road_planview's own style, so a relocation marker
+# here and a relocated road bar in the static figure read as the same thing.
+RELOCATION_COLOR = "#FF8C00"
 
 
 def _period_start(run_dir, cascade):
@@ -183,7 +187,7 @@ def load_history(run_dir):
             if 0 <= pad < managed.size:
                 managed[pad] = True
 
-    setbacks_by_year = []
+    setbacks_by_year, relocations_by_year = [], []
 
     grids_by_year, offsets_by_year = [], []
     for year in range(n_years):
@@ -196,9 +200,17 @@ def load_history(run_dir):
         setbacks_by_year.append(_drawable_setbacks(
             [_setback_at(road, year) for road in roadways]
             if roadways else [0.0] * len(inner), managed))
+        # RELOCATIONS ARE EVENTS, not a state: _road_relocated_TS is a 0/1 flag
+        # per domain per year, raised in the year the roadway manager moves the
+        # road. Kept per year rather than accumulated so a frame shows what
+        # happened THAT year.
+        relocations_by_year.append(np.array([
+            _relocated_at(road, year) for road in roadways]
+            if roadways else [False] * len(inner)) & managed)
 
     start_year = int(getattr(cascade, "_start_year", 0)) or None
-    return grids_by_year, offsets_by_year, setbacks_by_year, start_year
+    return (grids_by_year, offsets_by_year, setbacks_by_year,
+            relocations_by_year, start_year)
 
 
 # A setback of ZERO means the road sits ON the dune line, not that there is no
@@ -242,6 +254,17 @@ def _drawable_setbacks(setbacks_m, managed):
     return drawable
 
 
+def _relocated_at(roadway, year):
+    """Whether this domain's road was relocated in this model year."""
+    series = getattr(roadway, "_road_relocated_TS", None)
+    if series is None or len(series) == 0 or year >= len(series):
+        return False
+    try:
+        return bool(float(series[year]))
+    except (TypeError, ValueError):
+        return False
+
+
 def _setback_at(roadway, year):
     """One domain's road setback in metres at a given year, or 0 if roadless."""
     series = getattr(roadway, "_road_setback_TS", None)
@@ -264,8 +287,8 @@ def main():
     args = parser.parse_args()
 
     run_dir = Path(args.run_dir).resolve()
-    (grids_by_year, offsets_by_year,
-     setbacks_by_year, detected) = load_history(run_dir)
+    (grids_by_year, offsets_by_year, setbacks_by_year,
+     relocations_by_year, detected) = load_history(run_dir)
     n_years = len(grids_by_year)
 
     # The run name carries the period, so the calendar year is recoverable
@@ -323,6 +346,29 @@ def main():
                         offsets_by_year[year_index], GEOMETRY,
                         starts, per_domain, first_real)
 
+        # RELOCATIONS, marked in the year they happen. A relocation is the one
+        # thing in this animation the model DECIDES rather than suffers, so it
+        # is drawn as an event marker above the road rather than as a change of
+        # road colour, which would be invisible on a 1-cell bar.
+        moved = np.flatnonzero(relocations_by_year[year_index])
+        for pad in moved:
+            plotted = int(pad) - GEOMETRY.start_real_index
+            if not 0 <= plotted < len(starts):
+                continue
+            row = (offsets_by_year[year_index][pad]
+                   + np.floor(max(setbacks_by_year[year_index][pad], 0.0)
+                              / DEFAULT_PLAN_VIEW.cell_size_m))
+            axis.plot(starts[plotted] + per_domain[plotted] / 2,
+                      row + 14, marker="v", markersize=8,
+                      color=RELOCATION_COLOR, markeredgecolor="white",
+                      markeredgewidth=0.6, zorder=11, clip_on=False)
+        if moved.size:
+            axis.annotate(
+                f"{moved.size} relocation{'s' if moved.size > 1 else ''}",
+                xy=(0.992, 0.70), xycoords="axes fraction", ha="right",
+                va="top", fontsize=10, color=RELOCATION_COLOR,
+                fontweight="bold", zorder=12)
+
         axis.set_ylim(0, frame_rows)
         # Cells are an implementation detail; kilometres are what a reader
         # measures the island in.
@@ -356,6 +402,12 @@ def main():
     # it and it never lands on the barrier.
     road_handles = overlay_roadway(axis, setbacks_by_year[0], offsets_by_year[0],
                                    GEOMETRY, *canvases[0][1:])
+    total_moves = int(sum(int(r.sum()) for r in relocations_by_year))
+    if total_moves:
+        road_handles = list(road_handles) + [Line2D(
+            [], [], linestyle="none", marker="v", markersize=8,
+            color=RELOCATION_COLOR, markeredgecolor="white",
+            label="relocated this year")]
     if road_handles:
         figure.legend(handles=road_handles, loc="upper right",
                       bbox_to_anchor=(0.947, 0.962), fontsize=9,
