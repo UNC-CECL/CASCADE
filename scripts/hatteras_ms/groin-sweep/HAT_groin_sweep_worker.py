@@ -101,6 +101,7 @@ from cascade_pipeline import roadway as roadway_module
 # optional -- cascade_pipeline.hindcast makes that choice once, for the
 # notebook, the runner and this worker alike, via USE_SANDBOX_CASCADE.
 from cascade_pipeline.hindcast import build_cascade
+from cascade_pipeline.run_registry import git_provenance, values_digest
 from cascade_pipeline.shoreline import (build_shoreline_matrix,
                                         compute_change_rate, compute_lrr)
 
@@ -939,6 +940,28 @@ def run_combo(M, be1, fraction, out_dir):
               else float(be_gis90(START_YEAR))),
         period=int(START_YEAR),
         preset=SOURCE_SINK_PRESET,
+        # WHAT THIS CELL WAS BUILT ON. Added 2026-08-31, and the reason is
+        # specific: result.json recorded M, be1, f, period, preset and scores
+        # and NOTHING about its inputs, so a sweep cell could not be told apart
+        # from a cell of the same combination built on different topography.
+        #
+        # That is not hypothetical. The worker resolved topo_dirs() without
+        # naming a product until 2026-08-30, so DEFAULT_PRODUCT ("2004-start")
+        # answered and a 1984 sweep built on the 2004 barrier. When the
+        # question "are these cells stale?" was asked on 2026-08-31, the
+        # production runs answered in seconds from their own topo_product and
+        # be_values_digest columns; the sweep could only be answered by
+        # RE-RUNNING CELLS and diffing, at ~6 minutes each.
+        #
+        # These four fields are named to match run_index.csv exactly, so a
+        # sweep cell and a matrix run can be compared without a translation
+        # step.
+        topo_product=TOPO_PRODUCT,
+        topo_dune_version=TOPO_DUNE_VERSION,
+        be_values_digest=values_digest(forcing["be_rates"]),
+        **{f"git_{key}": value
+           for key, value in git_provenance(PROJECT_BASE_DIR).items()
+           if key in ("commit", "dirty")},
         # The effective rate the groin actually applied, summed over the run
         # and divided by its length. This is the quantity the two periods have
         # in common: period 1 delivers M*(16 + 4f)/20 and period 2 delivers
