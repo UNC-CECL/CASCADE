@@ -162,6 +162,27 @@ def load_history(run_dir):
     # domain carries no road the series is absent and its entry stays 0, which
     # road_rows() renders as NaN rather than as a road at the dune line.
     roadways = getattr(cascade, "_roadways", None) or []
+
+    # WHERE THE ROAD ACTUALLY IS, from this run rather than from a site-wide
+    # constant. cascade._roadway_management_module is a per-domain mask of the
+    # domains the roadway manager actually manages -- 55 of 90 in the 1984
+    # calibBE run, matching that run's own road_management_summary.csv exactly.
+    #
+    # HATTERAS_FIRST/LAST_ROAD_DOMAIN (9 and 90) is the REACH, not the road:
+    # NC-12 is present 9-20, 32-67 and 84-90, with real gaps at 21-31 and
+    # 68-83. Drawing the whole reach put road through both gaps. Using the
+    # run's own mask also means a scenario with roadway management off draws no
+    # road at all, which is correct and which a constant cannot express.
+    managed = np.asarray(
+        getattr(cascade, "_roadway_management_module", []), dtype=bool)
+    if managed.size != len(inner):
+        managed = np.zeros(len(inner), dtype=bool)
+        for gis in range(HATTERAS_FIRST_ROAD_DOMAIN,
+                         HATTERAS_LAST_ROAD_DOMAIN + 1):
+            pad = GEOMETRY.gis_to_pad(gis)
+            if 0 <= pad < managed.size:
+                managed[pad] = True
+
     setbacks_by_year = []
 
     grids_by_year, offsets_by_year = [], []
@@ -174,7 +195,7 @@ def load_history(run_dir):
         offsets_by_year.append(base_offset + (moved - x_s_initial))
         setbacks_by_year.append(_drawable_setbacks(
             [_setback_at(road, year) for road in roadways]
-            if roadways else [0.0] * len(inner)))
+            if roadways else [0.0] * len(inner), managed))
 
     start_year = int(getattr(cascade, "_start_year", 0)) or None
     return grids_by_year, offsets_by_year, setbacks_by_year, start_year
@@ -202,22 +223,22 @@ def load_history(run_dir):
 _ZERO_SETBACK_EPS_M = 1e-6
 
 
-def _drawable_setbacks(setbacks_m):
+def _drawable_setbacks(setbacks_m, managed):
     """Setbacks with roadless domains blanked and on-dune roads kept visible.
 
     Args:
         setbacks_m: Padded per-domain setbacks in metres, one per domain.
+        managed: Per-domain boolean mask of the domains carrying a road.
 
     Returns:
-        A float array: 0.0 outside the road reach so road_rows() blanks it, and
-        at least _ZERO_SETBACK_EPS_M inside it so a zero setback still draws.
+        A float array: 0.0 where there is no road, so road_rows() blanks it,
+        and at least _ZERO_SETBACK_EPS_M where there is one so a road whose
+        setback has decayed to zero still draws, on the dune line.
     """
     values = np.asarray(setbacks_m, dtype=float)
     drawable = np.zeros_like(values)
-    for gis in range(HATTERAS_FIRST_ROAD_DOMAIN, HATTERAS_LAST_ROAD_DOMAIN + 1):
-        pad = GEOMETRY.gis_to_pad(gis)
-        if 0 <= pad < values.size:
-            drawable[pad] = max(values[pad], _ZERO_SETBACK_EPS_M)
+    on = np.asarray(managed, dtype=bool)
+    drawable[on] = np.maximum(values[on], _ZERO_SETBACK_EPS_M)
     return drawable
 
 
