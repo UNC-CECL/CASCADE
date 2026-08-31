@@ -214,8 +214,13 @@ def fig_identifiability(d):
 
 def fig_top_profiles(d, obs_dm):
     """Top cells and the no-groin baseline against the observed profile."""
-    obs_full = np.array([observed_change_profile(1984, 2004, SHOW_DOMAINS)[k]
-                         for k in SHOW_DOMAINS])
+    # LANDWARD-POSITIVE, so erosion is UP and this panel reads as a plan view,
+    # matching the gifs and the other profile figures. Both sources are
+    # SEAWARD-positive, so both are negated -- at the PLOTTING layer only.
+    # score_d48 is computed upstream and is unaffected.
+    # fig_three_targets needs no flip: it plots error against M, not a profile.
+    obs_full = -np.array([observed_change_profile(1984, 2004, SHOW_DOMAINS)[k]
+                          for k in SHOW_DOMAINS])
     fit_idx = [SHOW_DOMAINS.index(k) for k in FIT_DOMAINS]
 
     def centred(v):
@@ -235,19 +240,19 @@ def fig_top_profiles(d, obs_dm):
     ax.plot(SHOW_DOMAINS, centred(obs_full), marker="s", ms=7, lw=2.2,
             ls="--", color=INK, label="observed 1984→2004", zorder=6)
     if len(nog):
-        v = [nog.iloc[0][f"rate_D{k}"] * PERIOD_YEARS for k in SHOW_DOMAINS]
+        v = [-nog.iloc[0][f"rate_D{k}"] * PERIOD_YEARS for k in SHOW_DOMAINS]
         ax.plot(SHOW_DOMAINS, centred(v), lw=1.6, ls=":", color=MUTED,
                 label=f"no groin  (RMSE {nog.score_d48.iloc[0]:.1f} m)", zorder=4)
     cmap = plt.cm.viridis(np.linspace(0.15, 0.8, len(top)))
     for colour, (_, r) in zip(cmap, top.iterrows()):
-        v = [r[f"rate_D{k}"] * PERIOD_YEARS for k in SHOW_DOMAINS]
+        v = [-r[f"rate_D{k}"] * PERIOD_YEARS for k in SHOW_DOMAINS]
         ax.plot(SHOW_DOMAINS, centred(v), lw=1.5, color=colour,
                 label=f"M={r.M:g}, f={r.fraction:g}  ({r.score_d48:.1f} m)",
                 zorder=5)
 
     ax.set_xlabel("GIS domain")
     ax.set_ylabel("Shoreline change 1984→2004 (m)\ndemeaned over the fit "
-                  "window   [+ = seaward]")
+                  "window   [+ = landward, erosion]")
     ax.set_xticks(SHOW_DOMAINS)
     ax.grid(axis="y", color=GRID, lw=0.6)
     ax.set_axisbelow(True)
