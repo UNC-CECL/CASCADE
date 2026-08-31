@@ -767,11 +767,11 @@ HATTERAS_BE_RATES_CALIBRATED = {
           5: +0.0,  # Cape Point / Shoal Dynamics
           6: +0.0,  # Cape Point / Shoal Dynamics
           7: +0.0,  # Cape Point / Shoal Dynamics
-          8: +2.3,  # Cape Point / Shoal Dynamics
-          9: +0.0,  # Cape Point / Shoal Dynamics
-         10: -2.1,  # Cape Point / Shoal Dynamics
-         11: -1.1,  # Buxton–Avon Transition
-         12: -1.2,  # Buxton–Avon Transition
+          8: +0.4,  # Cape Point / Shoal Dynamics
+          9: +0.3,  # Cape Point / Shoal Dynamics
+         10: -1.2,  # Cape Point / Shoal Dynamics
+         11: -0.8,  # Buxton–Avon Transition
+         12: -0.9,  # Buxton–Avon Transition
          13: -0.7,  # Buxton–Avon Transition
          14: +0.0,  # Buxton–Avon Transition
          15: +0.0,  # Buxton–Avon Transition
@@ -787,13 +787,13 @@ HATTERAS_BE_RATES_CALIBRATED = {
          25: +0.0,  # Avon
          26: +0.0,  # Avon
          27: +0.9,  # Avon
-         28: +1.2,  # Avon
-         29: +2.3,  # Avon
-         30: +2.9,  # Avon
-         31: +3.4,  # Avon
-         32: +3.1,  # Mid-island
-         33: +1.7,  # Mid-island
-         34: +1.2,  # Mid-island
+         28: +1.5,  # Avon
+         29: +2.0,  # Avon
+         30: +2.0,  # Avon
+         31: +2.1,  # Avon
+         32: +1.9,  # Mid-island
+         33: +1.4,  # Mid-island
+         34: +0.9,  # Mid-island
          35: +0.0,  # Mid-island
          36: +0.0,  # Mid-island
          37: +0.0,  # Mid-island
@@ -809,12 +809,12 @@ HATTERAS_BE_RATES_CALIBRATED = {
          47: +0.0,  # Mid-island
          48: -0.4,  # Mid-island
          49: -1.1,  # Mid-island
-         50: -2.1,  # Mid-island
-         51: -2.4,  # Mid-island
-         52: -2.2,  # Mid-island
-         53: -2.0,  # Mid-island
-         54: -1.8,  # Mid-island
-         55: -1.3,  # Mid-island
+         50: -1.5,  # Mid-island
+         51: -1.7,  # Mid-island
+         52: -1.4,  # Mid-island
+         53: -1.3,  # Mid-island
+         54: -1.2,  # Mid-island
+         55: -1.0,  # Mid-island
          56: -1.0,  # Mid-island
          57: -0.3,  # Mid-island
          58: +0.0,  # Mid-island
@@ -828,27 +828,27 @@ HATTERAS_BE_RATES_CALIBRATED = {
          66: +0.0,  # Wimble Shoals Influence
          67: +0.0,  # Wimble Shoals Influence
          68: +0.5,  # Wimble Shoals Influence
-         69: +1.6,  # Wimble Shoals Influence
-         70: +2.2,  # Wimble Shoals Influence
-         71: +3.0,  # Wimble Shoals Influence
-         72: +3.6,  # Wimble Shoals Influence
-         73: +3.9,  # Wimble Shoals Influence
-         74: +3.3,  # Wimble Shoals Influence
-         75: +1.8,  # Tri-Village / Rodanthe
+         69: +1.0,  # Wimble Shoals Influence
+         70: +1.4,  # Wimble Shoals Influence
+         71: +1.6,  # Wimble Shoals Influence
+         72: +1.7,  # Wimble Shoals Influence
+         73: +1.6,  # Wimble Shoals Influence
+         74: +1.2,  # Wimble Shoals Influence
+         75: +0.7,  # Tri-Village / Rodanthe
          76: +0.0,  # Tri-Village / Rodanthe
          77: +0.0,  # Tri-Village / Rodanthe
          78: -1.2,  # Tri-Village / Rodanthe
-         79: -2.1,  # Tri-Village / Rodanthe
-         80: -3.5,  # Tri-Village / Rodanthe
-         81: -3.8,  # Tri-Village / Rodanthe
-         82: -4.5,  # Tri-Village / Rodanthe
-         83: -4.8,  # Tri-Village / Rodanthe
-         84: -5.3,  # Pea Island NWR
-         85: -5.2,  # Pea Island NWR
-         86: -4.8,  # Pea Island NWR
-         87: -3.9,  # Pea Island NWR
-         88: -3.0,  # Pea Island NWR
-         89: -1.8,  # Pea Island NWR
+         79: -1.8,  # Tri-Village / Rodanthe
+         80: -2.4,  # Tri-Village / Rodanthe
+         81: -2.8,  # Tri-Village / Rodanthe
+         82: -3.0,  # Tri-Village / Rodanthe
+         83: -3.1,  # Tri-Village / Rodanthe
+         84: -3.1,  # Pea Island NWR
+         85: -2.9,  # Pea Island NWR
+         86: -2.5,  # Pea Island NWR
+         87: -1.7,  # Pea Island NWR
+         88: -1.3,  # Pea Island NWR
+         89: -0.7,  # Pea Island NWR
          90: +32.8,  # LOCKED — end domain, LRR-solved; see the end-domain note above
     },
     2004: {
@@ -859,11 +859,11 @@ HATTERAS_BE_RATES_CALIBRATED = {
           5: +0.0,  # Cape Point / Shoal Dynamics
           6: +0.0,  # Cape Point / Shoal Dynamics
           7: +0.0,  # Cape Point / Shoal Dynamics
-          8: -1.8,  # Cape Point / Shoal Dynamics
-          9: +0.0,  # Cape Point / Shoal Dynamics
+          8: +0.4,  # Cape Point / Shoal Dynamics
+          9: +0.3,  # Cape Point / Shoal Dynamics
          10: +1.5,  # Cape Point / Shoal Dynamics
-         11: +1.2,  # Buxton–Avon Transition
-         12: +1.5,  # Buxton–Avon Transition
+         11: +1.5,  # Buxton–Avon Transition
+         12: +1.8,  # Buxton–Avon Transition
          13: +1.9,  # Buxton–Avon Transition
          14: +2.0,  # Buxton–Avon Transition
          15: +2.1,  # Buxton–Avon Transition
@@ -872,24 +872,24 @@ HATTERAS_BE_RATES_CALIBRATED = {
          18: +2.4,  # Buxton–Avon Transition
          19: +2.1,  # Buxton–Avon Transition
          20: +1.7,  # Buxton–Avon Transition
-         21: +0.7,  # Avon
-         22: -1.9,  # Avon
+         21: +1.1,  # Avon
+         22: +0.3,  # Avon
          23: +0.0,  # Avon
          24: +0.0,  # Avon
          25: +0.0,  # Avon
          26: +0.0,  # Avon
-         27: -1.0,  # Avon
-         28: +1.2,  # Avon
-         29: +2.3,  # Avon
+         27: +0.9,  # Avon
+         28: +1.5,  # Avon
+         29: +2.0,  # Avon
          30: +2.9,  # Avon
-         31: +3.6,  # Avon
-         32: +4.0,  # Mid-island
-         33: +3.8,  # Mid-island
-         34: +3.8,  # Mid-island
-         35: +3.0,  # Mid-island
-         36: +2.6,  # Mid-island
-         37: +2.2,  # Mid-island
-         38: +2.0,  # Mid-island
+         31: +3.3,  # Avon
+         32: +3.6,  # Mid-island
+         33: +3.5,  # Mid-island
+         34: +3.5,  # Mid-island
+         35: +3.3,  # Mid-island
+         36: +3.2,  # Mid-island
+         37: +2.9,  # Mid-island
+         38: +2.6,  # Mid-island
          39: +2.3,  # Mid-island
          40: +2.0,  # Mid-island
          41: +1.7,  # Mid-island
@@ -901,12 +901,12 @@ HATTERAS_BE_RATES_CALIBRATED = {
          47: +0.0,  # Mid-island
          48: -0.4,  # Mid-island
          49: +0.0,  # Mid-island
-         50: -1.3,  # Mid-island
-         51: -1.6,  # Mid-island
-         52: -2.2,  # Mid-island
-         53: -2.0,  # Mid-island
-         54: -1.8,  # Mid-island
-         55: -1.3,  # Mid-island
+         50: -0.7,  # Mid-island
+         51: -0.9,  # Mid-island
+         52: -1.4,  # Mid-island
+         53: -1.3,  # Mid-island
+         54: -1.2,  # Mid-island
+         55: -1.0,  # Mid-island
          56: +0.0,  # Mid-island
          57: -0.3,  # Mid-island
          58: +0.0,  # Mid-island
@@ -918,29 +918,29 @@ HATTERAS_BE_RATES_CALIBRATED = {
          64: +1.5,  # Wimble Shoals Influence
          65: +1.9,  # Wimble Shoals Influence
          66: +2.3,  # Wimble Shoals Influence
-         67: +2.3,  # Wimble Shoals Influence
+         67: +2.6,  # Wimble Shoals Influence
          68: +3.0,  # Wimble Shoals Influence
-         69: +3.8,  # Wimble Shoals Influence
-         70: +4.1,  # Wimble Shoals Influence
-         71: +4.7,  # Wimble Shoals Influence
-         72: +4.1,  # Wimble Shoals Influence
+         69: +3.2,  # Wimble Shoals Influence
+         70: +3.3,  # Wimble Shoals Influence
+         71: +3.3,  # Wimble Shoals Influence
+         72: +3.1,  # Wimble Shoals Influence
          73: +2.8,  # Wimble Shoals Influence
          74: +2.4,  # Wimble Shoals Influence
-         75: +2.3,  # Tri-Village / Rodanthe
+         75: +2.0,  # Tri-Village / Rodanthe
          76: +1.5,  # Tri-Village / Rodanthe
          77: +1.2,  # Tri-Village / Rodanthe
          78: +0.9,  # Tri-Village / Rodanthe
-         79: +0.4,  # Tri-Village / Rodanthe
+         79: +0.7,  # Tri-Village / Rodanthe
          80: +0.0,  # Tri-Village / Rodanthe
          81: +0.0,  # Tri-Village / Rodanthe
          82: +0.0,  # Tri-Village / Rodanthe
-         83: -2.6,  # Tri-Village / Rodanthe
-         84: -3.5,  # Pea Island NWR
-         85: -3.8,  # Pea Island NWR
-         86: -3.7,  # Pea Island NWR
-         87: -3.9,  # Pea Island NWR
-         88: -3.0,  # Pea Island NWR
-         89: -1.8,  # Pea Island NWR
+         83: -0.9,  # Tri-Village / Rodanthe
+         84: -1.3,  # Pea Island NWR
+         85: -1.5,  # Pea Island NWR
+         86: -1.4,  # Pea Island NWR
+         87: -1.7,  # Pea Island NWR
+         88: -1.3,  # Pea Island NWR
+         89: -0.7,  # Pea Island NWR
          90: +57.9,  # LOCKED — end domain, LRR-solved; see the end-domain note above
     },
 }
