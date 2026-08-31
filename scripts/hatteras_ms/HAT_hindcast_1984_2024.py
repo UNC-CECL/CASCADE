@@ -1846,10 +1846,32 @@ reports.target_misfit_report(
     shoreline_m=shoreline_m, end_year=END_YEAR, geometry=HATTERAS_DOMAINS,
     raw_offset_dir=RAW_OFFSET_DIR)
 
+# Roadway relocations, so the shoreline GIFs mark the year the road moved.
+# Assembled here rather than inside the plotting module: the module takes an
+# array and should not know that a relocation lives on a RoadwayManager.
+# None when the run has no roadways, which draws no markers and leaves the
+# GIFs byte-for-byte as they were.
+_RELOCATION_EVENTS = None
+if getattr(cascade, "_roadways", None):
+    _RELOCATION_EVENTS = np.zeros(
+        (shoreline_m.shape[0], HATTERAS_DOMAINS.total_domains), dtype=bool)
+    for _pad, _roadway in enumerate(cascade._roadways):
+        # NOT `getattr(...) or []`: the attribute is a numpy array and
+        # `array or []` raises "truth value of an array is ambiguous".
+        _raw = getattr(_roadway, "_road_relocated_TS", None)
+        _series = (np.asarray([], dtype=float) if _raw is None
+                   else np.asarray(_raw, dtype=float))
+        if _series.size:
+            _n = min(_series.size, _RELOCATION_EVENTS.shape[0])
+            _RELOCATION_EVENTS[:_n, _pad] = _series[:_n] > 0
+    print(f"  roadway relocations   {int(_RELOCATION_EVENTS.sum())} events "
+          f"across {int(_RELOCATION_EVENTS.any(axis=0).sum())} domains")
+
 GIF_PATHS = make_all_shoreline_gifs(
     shoreline_m, run, GIF_JOBS,
     baseline_npy=GIF_BASELINE_NPY,
-    target_m=SHORELINE_TARGET_M, **GIF_KWARGS)
+    target_m=SHORELINE_TARGET_M,
+    relocations=_RELOCATION_EVENTS, **GIF_KWARGS)
 
 plt.close("all")
 print(f"\ndone                  {RUN_DIR}")
