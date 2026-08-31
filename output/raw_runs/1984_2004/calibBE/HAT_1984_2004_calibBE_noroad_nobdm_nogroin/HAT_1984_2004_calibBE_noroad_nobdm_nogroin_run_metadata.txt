@@ -3,14 +3,14 @@
 
 [identity]
 run_name                         = HAT_1984_2004_calibBE_noroad_nobdm_nogroin
-timestamp                        = 2026-08-28 17:39:26
+timestamp                        = 2026-08-31 10:50:07
 generated_by                     = HAT_hindcast_1984_2024.py
-runtime_min                      = 1.7
+runtime_min                      = 1.4
 use_sandbox_cascade              = True   # cascade.cascade_groin, not cascade.cascade
 topo_product                     = 1984-start
 topo_dune_version                = v1
 parameter_file                   = Hatteras-CASCADE-parameters.yaml
-git_commit                       = 5b26cb543fec464ae7a7d25cf9cb6d95bfb6a5ae
+git_commit                       = 734c0b54915d4070bfd9ce02db2643827eb407b7
 git_branch                       = hannahaline/hatteras-cascade
 git_dirty                        = True   # True: the commit alone does not reproduce this run
 
@@ -53,8 +53,8 @@ relocations_enabled              = False
 preset                           = calibBE
 background_erosion_on            = True   # implied by the preset, checked in 4.3
 domains_specified                = 90
-nonzero_domains                  = 47
-values_digest                    = 7e7a37fc6d5f   # changes if any rate changed, interior included
+nonzero_domains                  = 48
+values_digest                    = 7784350673d3   # changes if any rate changed, interior included
 rate_gis1_m_yr                   = -42.6
 rate_gis90_m_yr                  = 32.8
 
@@ -64,14 +64,14 @@ enabled                          = False
 [skill]
 target                           = CoastSat LOESS 10-domain   # raw means over GIS 1-10
 estimator                        = lrr   # OLS slope through every annual state, matching the target's own definition
-mean_bias_m_yr                   = -0.3117
-rmse_m_yr                        = 0.6401
-mean_bias_interior_m_yr          = -0.3086   # GIS 2-89: the locked end domains excluded
-rmse_interior_m_yr               = 0.6401
-lrr_r2_median                    = 0.9310   # how well a line describes the modelled trajectory
+mean_bias_m_yr                   = -0.3279
+rmse_m_yr                        = 0.6474
+mean_bias_interior_m_yr          = -0.3244   # GIS 2-89: the locked end domains excluded
+rmse_interior_m_yr               = 0.6470
+lrr_r2_median                    = 0.9347   # how well a line describes the modelled trajectory
 lrr_r2_below_floor               = 23   # domains under r2 0.50
-endpoint_mean_bias_interior_m_yr = -0.2322   # the pre-LRR estimator; calibBE and groin M were fit on this
-endpoint_rmse_interior_m_yr      = 0.5567
+endpoint_mean_bias_interior_m_yr = -0.2512   # the pre-LRR estimator; calibBE and groin M were fit on this
+endpoint_rmse_interior_m_yr      = 0.5626
 
 [verification]
 nourishment_ok                   = True
