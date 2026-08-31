@@ -33,7 +33,10 @@ WHAT TO LOOK FOR
 
     Watch also how tightly the top five bundle together. They span M = 40-95
     and f = 0.4-1.0 yet differ by under 0.5 m, which is the visual statement of
-    the M*f trade-off -- the metric identifies a product, not a pair.
+    the ridge in period-1 cumulative trapping, M(15.5 + 4.5f). An earlier
+    version of this caption said "the metric identifies a product, not a
+    pair"; fig_Mf_identifiability.png tested that and refuted it
+    (corr(RMSE, M*f) = -0.07). See CALIBRATION_FIGURES.md and GROIN_PLAN.md.
 
 Usage:
     python HAT_period1_top_n_figure.py [--top-n 5]
@@ -77,8 +80,13 @@ GROIN_COLOR = "#B71C1C"
 
 def load():
     """Cells at the pinned be1, with their profiles and D4-D8 demeaned score."""
-    show_obs = np.array([observed_change_profile(1984, 2004, SHOW_DOMAINS)[d]
-                         for d in SHOW_DOMAINS])
+    # LANDWARD-POSITIVE, so erosion is UP and the panel reads as a plan view,
+    # matching the gifs. observed_change_profile is SEAWARD-positive, so it is
+    # negated; x_s is landward-positive already, so the negation that used to
+    # sit on `change` below is gone. Both series flip together, so `score` is
+    # unchanged, and the scoring pipeline itself is untouched.
+    show_obs = -np.array([observed_change_profile(1984, 2004, SHOW_DOMAINS)[d]
+                          for d in SHOW_DOMAINS])
     fit_index = [SHOW_DOMAINS.index(d) for d in FIT_DOMAINS]
     fit_obs = show_obs[fit_index]
     fit_shape = fit_obs - fit_obs.mean()
@@ -92,7 +100,7 @@ def load():
         be1 = np.nan if "beNA" in name else float(name.split("_be")[1].split("_f")[0])
         if not (np.isnan(be1) or be1 == PINNED_BE1):
             continue
-        change = -(np.load(path)[-1] - np.load(path)[0])
+        change = np.load(path)[-1] - np.load(path)[0]
         profile = np.array([change[GEOMETRY.gis_to_pad(d)] for d in SHOW_DOMAINS])
         fit = profile[fit_index]
         rows.append(dict(
@@ -160,7 +168,7 @@ def main():
     axis.set_xticks(SHOW_DOMAINS)
     axis.set_xlabel("GIS Domain ID (D1-D12)")
     axis.set_ylabel("Shoreline change 1984->2004 (m), demeaned over the fit window\n"
-                    "[+ = seaward]")
+                    "[+ = landward, erosion]")
     spread = float(top.score.max() - top.score.min())
     axis.set_title(
         f"Top {len(top)} sweep results vs observed shoreline change -- "
@@ -169,7 +177,9 @@ def main():
         f"(M {top.M.min():g}-{top.M.max():g}, f {top.f.min():g}-{top.f.max():g})",
         fontsize=12)
     axis.grid(alpha=0.25)
-    axis.legend(loc="upper left", fontsize=9)
+    # Lower left: after the 2026-08-30 flip to landward-positive the observed
+    # curve occupies the upper left.
+    axis.legend(loc="lower left", fontsize=9)
 
     figure.tight_layout(rect=(0, 0.075, 1, 1))
     figure.text(
@@ -179,7 +189,8 @@ def main():
         "grid-specific, so a value fitted here transfers and one fitted on the rig does not), and a DEMEANED score over D4-D8 "
         "(a uniform level offset is absorbed by the source/sink calibration downstream; D1 is excluded because the cape's 81-104 m "
         "change swamps the groin's ~17 m signal). The top cells bundle tightly despite spanning a wide M and f range -- that is "
-        "the M*f trade-off: the metric identifies a product, not a pair.",
+        "the ridge in period-1 cumulative trapping, M(15.5 + 4.5f) -- NOT in "
+        "M*f, which was tested and refuted (corr = -0.07).",
         fontsize=7.5, color="#333333", wrap=True)
 
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
