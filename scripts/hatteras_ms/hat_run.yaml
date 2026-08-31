@@ -85,23 +85,38 @@ offset_mode: asrun
 # scenario is run twice, groin off first, so section 12.3 has a paired
 # baseline identical in every other token.
 
-# WARNING, 2026-08-26: THE VALUES BELOW ARE NOT THE FITTED PAIR.
-#   output/groin_sweep/joint_fit.json pins M = 60, f = 0.6 (set 2026-08-24,
-#   superseding M = 50, which carried a 0.44 m RMSE penalty). HAT_run_all.py
-#   reads that file and passes the fitted pair to its stage-6 groin runs, so
-#   the MATRIX is unaffected. A single run driven from THIS file is not: it
-#   uses whatever is typed here, and f = 0.9 was never fitted at all.
-#   Left unchanged on purpose - the fit is about to be redone against the
-#   1984-start topography, so overwriting these with 60/0.6 would only pin
-#   values that are themselves about to move. Read joint_fit.json before
-#   running a groin case by hand.
+# RESOLVED 2026-08-30: THESE ARE NOW THE DECIDED PAIR.
+#   The 2026-08-26 warning here said M = 50 / f = 0.9 were left stale on
+#   purpose, because the fit was about to be redone against the 1984-start
+#   topography. It has been, on the corrected island, and the answer did not
+#   move: M = 60, f = 0.6. So the placeholders are gone and this file now
+#   agrees with output/groin_sweep/joint_fit.json. f = 0.9 was never fitted at
+#   all and should not reappear.
+#
+#   NOT JOINTLY FITTED -- the old comment below said so and it was wrong.
+#   M and f come from DIFFERENT windows on purpose:
+#     M = 60  period-1 D4-D8 demeaned profile at be1 = -42.6 (11.58 m against
+#             15.20 no-groin), reproduced independently by D3-D9.
+#     f = 0.6 the 1967-2018 rig, the only window spanning the deterioration
+#             ramp, where 0.6 is bracketed both sides (0.5 -> 24.21,
+#             0.6 -> 23.78, 0.7 -> 25.06). The hindcast windows cannot see f.
+#   Conditional on be1 = -42.6 and on edgeBE; carries no information in
+#   period 2. hard-structures/groin/GROIN_PLAN.md is the authority.
+#
+#   TWO WAYS THIS DRIFTS BACK OUT OF AGREEMENT, both seen:
+#     1. HAT_run_all.py stage 6 reads joint_fit.json, NOT this file, so a
+#        matrix run ignores whatever is typed here. On 2026-08-30 that file
+#        held the joint ranking's railed M = 160 / f = 0.8 and would have run
+#        the whole matrix on it. It is now pinned; re-running stage 5
+#        overwrites it again.
+#     2. A single run driven from THIS file uses whatever is typed here.
+#   Check both before quoting a groin run's parameters.
 groin:
   enabled: false
-  # M, the amplitude knob, m/yr. Fit JOINTLY across both periods -- neither
-  # window pins it alone.
-  trapping_M: 50.0
-  # f, the post-deterioration floor as a fraction of M.
-  deterioration_f: 0.9
+  # M, the amplitude knob, m/yr. From period 1 (D4-D8 demeaned), not jointly.
+  trapping_M: 60.0
+  # f, the post-deterioration floor as a fraction of M. From the 1967 rig.
+  deterioration_f: 0.6
 
 
 # --- physics ----------------------------------------------------------------

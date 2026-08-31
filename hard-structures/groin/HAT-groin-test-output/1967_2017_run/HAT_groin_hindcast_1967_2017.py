@@ -88,7 +88,7 @@ def _gis_to_pad(gis_id):
 #   "groin"     -> HAT_1967_2018_M60_deterioration_groin      (dipole at D5/D6, WITH
 #                  deterioration; needs hook)
 #   "groin_be"  -> HAT_1967_2018_M60_deterioration_groin_be   (groin + background erosion)
-RUN_MATRIX = ["groin"]              # <- edit this line to choose the run(s)
+RUN_MATRIX = ["no_groin", "groin"]  # <- edit this line to choose the run(s)
 
 # Buxton groin: sits in D6 (source/accretion), starves D5 (sink/erosion).
 GROIN_UPDRIFT_GIS   = 6
@@ -110,7 +110,12 @@ GROIN_DETERIORATION_RAMP_YEARS  = 2003 - 1995                  # = 8
 # deterioration assumption. Still folded into the ramp itself (not run as a
 # separate standalone experiment) per the plan worked out with
 # Laura/Katherine for the Coastal Sediments 2027 abstract.
-GROIN_DETERIORATION_FRACTION    = 0.50
+GROIN_DETERIORATION_FRACTION    = 0.60   # decided pair, 2026-08-30; was
+#   0.50, the 2026-08-24 sweep answer on the PRE-FIX topography. Re-run on
+#   1984-start/v1 the rig's own sweep returns f = 0.6 (RMSE 23.78 against
+#   24.21 at 0.5), bracketed on both sides -- and 0.6 is what production
+#   uses. The sweep overrides this per cell; it matters only for a
+#   standalone run, which is exactly what the full-life figure plots.
 
 # Optional regional background erosion for a "groin_be" run (only used if that
 # key is in RUN_MATRIX). m/yr, negative = erosive.

@@ -55,8 +55,8 @@ already reproduces the measured history. **No period-specific configuration.**
 
 | | value | where it comes from |
 |---|---|---|
-| `trapping_rate_m_yr` | **M = 60** | **fitted on PERIOD 1, window D4–D8, production geometry, be1 pinned at the production value, demeaned score.** RMSE 11.69 vs 15.58 with no groin — the groin closes **25%** of the shape misfit, and this is within 0.10 m of the global best. Corroborated by the 1967 rig (M=60). Intercepts ~719,000 m³/yr, marginally above the 5–7×10⁵ drift band (a literature range, not a hard limit) |
-| `deterioration_fraction` | **f = 0.6** | same fit; f is only weakly constrained by period 1 (which mostly precedes the 1996–2003 ramp), so it leans on the rig and on period 2 showing trapping ceased. **Updated 2026-08-30:** the rig, re-run on `1984-start/v1`, now returns **f = 0.6** itself (RMSE 23.78, against 27.24 and f = 0.5 on the pre-fix topography) — so the rig corroborates both parameters rather than only M |
+| `trapping_rate_m_yr` | **M = 60** | **fitted on PERIOD 1, window D4–D8, production geometry, be1 pinned at the production value, demeaned score.** RMSE 11.69 vs 15.58 with no groin — the groin closes **25%** of the shape misfit, and this is within 0.10 m of the global best. **Not** corroborated by the 1967 rig: the rig improves monotonically to M = 60 and then blows up (M = 70 → RMSE 320–378, M ≥ 100 crashes), so its M = 60 is the largest value it can hold, not an optimum (*corrected 2026-08-30*). Independently reproduced instead by **D3–D9**, the one other window symmetric about the structure, at the same gain. Intercepts ~719,000 m³/yr, marginally above the 5–7×10⁵ drift band (a literature range, not a hard limit) |
+| `deterioration_fraction` | **f = 0.6** | same fit; f is only weakly constrained by period 1 (which mostly precedes the 1996–2003 ramp), so it leans on the rig and on period 2 showing trapping ceased. **Updated 2026-08-30:** the rig, re-run on `1984-start/v1`, now returns **f = 0.6** itself (RMSE 23.78, against 27.24 and f = 0.5 on the pre-fix topography) — and 0.6 is bracketed on both sides there (0.5 → 24.21, 0.6 → 23.78, 0.7 → 25.06). **f is the parameter the rig actually resolves** — it rails in M but not in f |
 | `install_year` | 1969 | documented |
 | `deterioration_delay_years` | 27 (→ 1996) | last repair |
 | `deterioration_ramp_years` | 7 (→ 2003) | storm damage |
@@ -126,6 +126,16 @@ Three further limits, all measured:
 - **Sub-grid.** The real fillet is ~190 m wide; one model domain is 500 m. M is
   an **effective, grid-specific, field-aggregate** rate — not a sediment flux,
   not divisible by four for a per-structure value.
+- **Only ~3% of what the dipole injects is retained** *(measured 2026-08-30,
+  `output/groin_sweep/figures/sediment_budget.png`)*. Over the rig's 50 years at
+  M = 60, f = 0.6 the module applies **2,400 m** of cumulative one-sided
+  displacement — ±28.7 million m³ — and holds a fillet of **69 m** (peak 129 m).
+  BRIE's alongshore diffusion removes the rest. So M is the rate needed to
+  **sustain** a fillet against diffusion, not the rate sand is impounded, and
+  the 719,000 m³/yr affordability figure below is a **gross restoring rate set
+  against a net transport budget** — not like for like. It remains a fair reason
+  to prefer M = 60 over M = 95; it is not a statement that the groin impounds
+  more sand than the coast carries.
 - **Four groins, one dipole, deliberately.** The field spans northing
   3901373–3901789, entirely inside D6, so four dipoles in one cell would sum to
   the one the cell can express.

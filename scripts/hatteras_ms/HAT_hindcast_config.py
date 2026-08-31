@@ -150,8 +150,12 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     ("offset_mode",                  ("offset_mode",),       _as_str,      "asrun"),
 
     ("groin_enabled",                ("groin", "enabled"),         _as_bool,  False),
-    ("groin_trapping_rate_m_yr",     ("groin", "trapping_M"),      _as_float, 50.0),
-    ("groin_deterioration_fraction", ("groin", "deterioration_f"), _as_float, 0.9),
+    # The decided pair, 2026-08-30. M from period 1 (D4-D8 demeaned), f from
+    # the 1967-2018 rig -- NOT jointly fitted. These defaults matter only when
+    # hat_run.yaml is absent or omits the block; they used to read 50.0 / 0.9,
+    # which were placeholders and f = 0.9 was never fitted at all.
+    ("groin_trapping_rate_m_yr",     ("groin", "trapping_M"),      _as_float, 60.0),
+    ("groin_deterioration_fraction", ("groin", "deterioration_f"), _as_float, 0.6),
 
     ("hs",                           ("physics", "wave_height_Hs"), _as_float, 2.5),
 
