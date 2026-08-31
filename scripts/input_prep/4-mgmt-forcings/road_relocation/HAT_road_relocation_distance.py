@@ -980,22 +980,30 @@ def add_scale_bar(ax, length_m=500, fraction_x=0.06, fraction_y=0.07):
     x_start = x0 + fraction_x * (x1 - x0)
     y_start = y0 + fraction_y * (y1 - y0)
 
+    # A capped bar rather than a slab: the end ticks mark where the interval
+    # actually begins and ends, which a 3 pt line does not.
+    tick = 0.012 * (y1 - y0)
     ax.plot(
         [x_start, x_start + length_m],
         [y_start, y_start],
-        color="black",
-        linewidth=3,
+        color="0.15",
+        linewidth=1.2,
         solid_capstyle="butt",
         zorder=10,
     )
+    for x_tick in (x_start, x_start + length_m):
+        ax.plot([x_tick, x_tick], [y_start - tick, y_start + tick],
+                color="0.15", linewidth=1.2, solid_capstyle="butt", zorder=10)
 
     ax.text(
         x_start + length_m / 2,
-        y_start + 0.02 * (y1 - y0),
+        y_start + 0.024 * (y1 - y0),
         f"{length_m:,} m" if length_m < 1000 else f"{length_m / 1000:g} km",
         ha="center",
         va="bottom",
-        fontsize=8,
+        fontsize=7.5,
+        color="0.15",
+        family="monospace",
         zorder=10,
     )
 
@@ -1266,7 +1274,7 @@ for column, run in enumerate(relocation_sites):
         color="black",
         linewidth=1.0,
         linestyle=(0, (4, 3)),
-        label=f"{YEAR_FROM} road (coloured by how far it moved)",
+        label=f"{YEAR_FROM} road, coloured by displacement",
         zorder=7,
     )
 
@@ -1298,12 +1306,20 @@ for column, run in enumerate(relocation_sites):
     site_stats = relocated[relocated["domain"].isin(run)]
     name = site_label(run[0], run[-1])
 
+    # Panel letters, en-dashed ranges, and the statistics as a separate
+    # quantities line rather than prose -- the conventions a reader of a
+    # journal figure expects, and why the previous title read as a slide.
     ax.set_title(
-        (f"{name} -- " if name else "")
-        + f"domains {run[0]}-{run[-1]}\n"
-        f"up to {site_stats['maximum_relocation_m'].max():.0f} m, "
-        f"mean {site_stats['mean_relocation_m'].mean():.0f} m landward",
-        fontsize=11,
+        f"({chr(97 + column)})  " + (f"{name}, " if name else "")
+        + f"domains {run[0]}–{run[-1]}",
+        fontsize=11, loc="left", pad=22,
+    )
+    ax.annotate(
+        f"max {site_stats['maximum_relocation_m'].max():.0f} m"
+        f"   mean {site_stats['mean_relocation_m'].mean():.0f} m"
+        f"   n = {len(site_stats)} domains",
+        xy=(0.0, 1.008), xycoords="axes fraction", ha="left", va="bottom",
+        fontsize=8.5, color="0.35", family="monospace",
     )
 
     ax.set_xticks([])
@@ -1314,15 +1330,14 @@ for column, run in enumerate(relocation_sites):
     ax.text(
         0.985 if OCEAN_ON_RIGHT else 0.015,
         0.5,
-        "OCEAN",
+        "Atlantic Ocean",
         transform=ax.transAxes,
         rotation=90 if OCEAN_ON_RIGHT else -90,
         ha="right" if OCEAN_ON_RIGHT else "left",
         va="center",
-        fontsize=9,
-        color="tab:blue",
-        alpha=0.65,
-        fontweight="bold",
+        fontsize=8.5,
+        color="0.45",
+        style="italic",
     )
 
     add_scale_bar(ax, length_m=500)
@@ -1333,16 +1348,31 @@ for column, run in enumerate(relocation_sites):
 fig_sites.colorbar(
     plt.cm.ScalarMappable(norm=colour_norm, cmap="viridis"),
     ax=list(site_axes),
-    label=f"Distance from the {YEAR_FROM} road to the {YEAR_TO} road (m)",
+    label=f"Landward displacement of NC-12, {YEAR_FROM}–{YEAR_TO} (m)",
     shrink=0.75,
     pad=0.02,
 )
 
+# TITLE, THEN CAPTION -- not one bold banner carrying both. The title names
+# the subject; the provenance and the reading instruction go in a caption,
+# where a journal puts them and where they do not compete with the data.
 fig_sites.suptitle(
-    f"How NC-12 moved, {YEAR_FROM} -> {YEAR_TO}   "
-    f"(lines digitised from 1978 / 2008 imagery; panels share one scale)",
-    fontsize=14,
-    fontweight="bold",
+    f"Relocation of NC-12, {YEAR_FROM}–{YEAR_TO}",
+    fontsize=13, fontweight="normal",
+)
+
+# Wrapped by hand to a readable measure. matplotlib's wrap=True wraps to the
+# FIGURE width, which on a 13-inch two-panel figure is a single 3,500 px line.
+_SITES_CAPTION = (
+    "Road centrelines digitised from 1978 and 2008 aerial imagery. Colour "
+    f"gives the shortest distance from the {YEAR_FROM} centreline to the "
+    f"{YEAR_TO} one, measured landward;",
+    "grey marks where the two coincide. Both panels share one spatial scale, "
+    "so a given length means the same distance in each. North is up.",
+)
+fig_sites.text(
+    0.5, 0.004, chr(10).join(_SITES_CAPTION),
+    ha="center", va="bottom", fontsize=8.5, color="0.35", linespacing=1.5,
 )
 
 fig_sites.savefig(
