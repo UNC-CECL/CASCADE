@@ -549,53 +549,6 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # M and no further runs. The 1967 window needs no new work -- the rig IS that
 # window (see below) and was re-run on the corrected topography that day.
 #
-# STALENESS AUDIT, 2026-08-31. NOTHING IS STALE, AND ONE WORRY WAS WRONG.
-# Run after the topography work, to check what the updated island invalidated.
-#
-#   55 production runs   topography CLEAN. Every 1984 run is on 1984-start/v1
-#       and every 2004 run on 2004-start/v1 -- what hat_topo_version.py
-#       resolves today. Zero mismatches.
-#   55 production runs   BE field CLEAN. Every be_values_digest matches the
-#       current config, including the 22 calibBE runs rebuilt that day.
-#   period-1 sweep       CLEAN, by re-running cells and diffing.
-#
-# THE WORRY THAT WAS WRONG. The period-1 edgeBE cells split across two dates --
-# 427 at be1 = -10..-46 on 08-29 20:31, and 61 at be1 = -42.6 on 08-30 08:21 --
-# with the sweep worker's topography fix committed between them (562c75c,
-# 08-30 13:01). Since result.json records NO topography, that looked like the
-# be1-sensitivity table above might be comparing two different islands, which
-# would have manufactured its own "global minimum sits at -42.6" result.
-#
-# It does not. Re-running one cell from EACH batch reproduces the stored
-# result to 0.00e+00 -- bit for bit, across differential_m_yr, rmse_window,
-# bias_window and rates D4-D8. Both batches are on today's topography; the two
-# dates were two sweep sessions. The be1-sensitivity table stands as written.
-#
-# PERIOD 2 IS NOT BIT-REPRODUCIBLE, AND PERIOD 1 IS. Re-running a period-2
-# cell twice gives two answers differing by 1.0e-04 -- MORE than either differs
-# from the stored value, which sits inside their spread. So the stored cell is
-# fine, but "re-run and compare" is only an exact staleness test for PERIOD 1.
-# For period 2 the tolerance is ~1e-4.
-#
-# Not an unseeded RNG: roadway_manager seeds at 1973 and nothing else in
-# cascade/ draws randomly. Floating-point summation order is the likely
-# source, and period 2 accumulates more of it through the nourishment events.
-# 1e-4 is five orders below anything that moves a ranking -- the RMSE
-# differences this calibration turns on are 0.1-4 m -- so it changes the TEST,
-# not any result.
-#
-# THE fullperiod_1984_2024 SWEEP IS ALSO CLEAN -- checked 2026-08-31, and the
-# note claiming otherwise is withdrawn. CALIBRATION_FIGURES.md said panel (b)
-# of fig_three_targets ran on the PRE-FIX topography. It did when that was
-# written, and then the sweep was re-run 08-30 18:20 -- five hours AFTER the
-# worker fix at 13:01 -- and the figure rebuilt at 23:52 from those cells. The
-# note outlived the problem. Re-running cell M60_f0.50 reproduces to 8.3e-05,
-# the period-2 noise floor the 40-year window inherits. All 43 cells present.
-#
-# STILL UNVERIFIED: only the 1967 rig, which files no run_index row at all.
-# Its two current runs were rebuilt 2026-08-31 at M = 60 / f = 0.6 and it now
-# lives in output/rig_runs/, away from production.
-#
 # THE 1967 WINDOW HAS ALREADY BEEN RUN -- IT IS THE 41-DOMAIN RIG.
 # GROIN_PLAN.md recommends "fit on the 1967 window; apply in the hindcast",
 # because the hindcast windows begin 15 years after installation and record the
@@ -767,12 +720,12 @@ HATTERAS_BE_RATES_CALIBRATED = {
           5: +0.0,  # Cape Point / Shoal Dynamics
           6: +0.0,  # Cape Point / Shoal Dynamics
           7: +0.0,  # Cape Point / Shoal Dynamics
-          8: +2.3,  # Cape Point / Shoal Dynamics
+          8: +0.4,  # Cape Point / Shoal Dynamics
           9: +0.0,  # Cape Point / Shoal Dynamics
-         10: -2.1,  # Cape Point / Shoal Dynamics
-         11: -1.1,  # Buxton–Avon Transition
-         12: -1.2,  # Buxton–Avon Transition
-         13: -0.7,  # Buxton–Avon Transition
+         10: -1.1,  # Cape Point / Shoal Dynamics
+         11: -0.7,  # Buxton–Avon Transition
+         12: -0.7,  # Buxton–Avon Transition
+         13: -0.6,  # Buxton–Avon Transition
          14: +0.0,  # Buxton–Avon Transition
          15: +0.0,  # Buxton–Avon Transition
          16: +0.0,  # Buxton–Avon Transition
@@ -787,13 +740,13 @@ HATTERAS_BE_RATES_CALIBRATED = {
          25: +0.0,  # Avon
          26: +0.0,  # Avon
          27: +0.9,  # Avon
-         28: +1.2,  # Avon
-         29: +2.3,  # Avon
-         30: +2.9,  # Avon
-         31: +3.4,  # Avon
-         32: +3.1,  # Mid-island
-         33: +1.7,  # Mid-island
-         34: +1.2,  # Mid-island
+         28: +1.5,  # Avon
+         29: +2.0,  # Avon
+         30: +2.0,  # Avon
+         31: +2.1,  # Avon
+         32: +1.9,  # Mid-island
+         33: +1.4,  # Mid-island
+         34: +0.9,  # Mid-island
          35: +0.0,  # Mid-island
          36: +0.0,  # Mid-island
          37: +0.0,  # Mid-island
@@ -809,12 +762,12 @@ HATTERAS_BE_RATES_CALIBRATED = {
          47: +0.0,  # Mid-island
          48: -0.4,  # Mid-island
          49: -1.1,  # Mid-island
-         50: -2.1,  # Mid-island
-         51: -2.4,  # Mid-island
-         52: -2.2,  # Mid-island
-         53: -2.0,  # Mid-island
-         54: -1.8,  # Mid-island
-         55: -1.3,  # Mid-island
+         50: -1.5,  # Mid-island
+         51: -1.7,  # Mid-island
+         52: -1.4,  # Mid-island
+         53: -1.3,  # Mid-island
+         54: -1.2,  # Mid-island
+         55: -1.0,  # Mid-island
          56: -1.0,  # Mid-island
          57: -0.3,  # Mid-island
          58: +0.0,  # Mid-island
@@ -828,27 +781,27 @@ HATTERAS_BE_RATES_CALIBRATED = {
          66: +0.0,  # Wimble Shoals Influence
          67: +0.0,  # Wimble Shoals Influence
          68: +0.5,  # Wimble Shoals Influence
-         69: +1.6,  # Wimble Shoals Influence
-         70: +2.2,  # Wimble Shoals Influence
-         71: +3.0,  # Wimble Shoals Influence
-         72: +3.6,  # Wimble Shoals Influence
-         73: +3.9,  # Wimble Shoals Influence
-         74: +3.3,  # Wimble Shoals Influence
-         75: +1.8,  # Tri-Village / Rodanthe
+         69: +1.0,  # Wimble Shoals Influence
+         70: +1.4,  # Wimble Shoals Influence
+         71: +1.6,  # Wimble Shoals Influence
+         72: +1.7,  # Wimble Shoals Influence
+         73: +1.6,  # Wimble Shoals Influence
+         74: +1.2,  # Wimble Shoals Influence
+         75: +0.7,  # Tri-Village / Rodanthe
          76: +0.0,  # Tri-Village / Rodanthe
          77: +0.0,  # Tri-Village / Rodanthe
          78: -1.2,  # Tri-Village / Rodanthe
-         79: -2.1,  # Tri-Village / Rodanthe
-         80: -3.5,  # Tri-Village / Rodanthe
-         81: -3.8,  # Tri-Village / Rodanthe
-         82: -4.5,  # Tri-Village / Rodanthe
-         83: -4.8,  # Tri-Village / Rodanthe
-         84: -5.3,  # Pea Island NWR
-         85: -5.2,  # Pea Island NWR
-         86: -4.8,  # Pea Island NWR
-         87: -3.9,  # Pea Island NWR
-         88: -3.0,  # Pea Island NWR
-         89: -1.8,  # Pea Island NWR
+         79: -1.8,  # Tri-Village / Rodanthe
+         80: -2.4,  # Tri-Village / Rodanthe
+         81: -2.8,  # Tri-Village / Rodanthe
+         82: -3.0,  # Tri-Village / Rodanthe
+         83: -3.1,  # Tri-Village / Rodanthe
+         84: -3.1,  # Pea Island NWR
+         85: -2.9,  # Pea Island NWR
+         86: -2.5,  # Pea Island NWR
+         87: -1.7,  # Pea Island NWR
+         88: -1.3,  # Pea Island NWR
+         89: -0.7,  # Pea Island NWR
          90: +32.8,  # LOCKED — end domain, LRR-solved; see the end-domain note above
     },
     2004: {
@@ -859,37 +812,37 @@ HATTERAS_BE_RATES_CALIBRATED = {
           5: +0.0,  # Cape Point / Shoal Dynamics
           6: +0.0,  # Cape Point / Shoal Dynamics
           7: +0.0,  # Cape Point / Shoal Dynamics
-          8: -1.8,  # Cape Point / Shoal Dynamics
-          9: +0.0,  # Cape Point / Shoal Dynamics
-         10: +1.5,  # Cape Point / Shoal Dynamics
-         11: +1.2,  # Buxton–Avon Transition
-         12: +1.5,  # Buxton–Avon Transition
-         13: +1.9,  # Buxton–Avon Transition
-         14: +2.0,  # Buxton–Avon Transition
-         15: +2.1,  # Buxton–Avon Transition
-         16: +2.3,  # Buxton–Avon Transition
-         17: +2.4,  # Buxton–Avon Transition
+          8: +0.4,  # Cape Point / Shoal Dynamics
+          9: +0.8,  # Cape Point / Shoal Dynamics
+         10: +1.6,  # Cape Point / Shoal Dynamics
+         11: +1.7,  # Buxton–Avon Transition
+         12: +1.9,  # Buxton–Avon Transition
+         13: +2.1,  # Buxton–Avon Transition
+         14: +2.1,  # Buxton–Avon Transition
+         15: +2.2,  # Buxton–Avon Transition
+         16: +2.4,  # Buxton–Avon Transition
+         17: +2.5,  # Buxton–Avon Transition
          18: +2.4,  # Buxton–Avon Transition
          19: +2.1,  # Buxton–Avon Transition
          20: +1.7,  # Buxton–Avon Transition
-         21: +0.7,  # Avon
-         22: -1.9,  # Avon
+         21: +1.1,  # Avon
+         22: +0.3,  # Avon
          23: +0.0,  # Avon
          24: +0.0,  # Avon
          25: +0.0,  # Avon
          26: +0.0,  # Avon
-         27: -1.0,  # Avon
-         28: +1.2,  # Avon
-         29: +2.3,  # Avon
+         27: +0.9,  # Avon
+         28: +1.5,  # Avon
+         29: +2.0,  # Avon
          30: +2.9,  # Avon
-         31: +3.6,  # Avon
-         32: +4.0,  # Mid-island
-         33: +3.8,  # Mid-island
-         34: +3.8,  # Mid-island
-         35: +3.0,  # Mid-island
-         36: +2.6,  # Mid-island
-         37: +2.2,  # Mid-island
-         38: +2.0,  # Mid-island
+         31: +3.3,  # Avon
+         32: +3.6,  # Mid-island
+         33: +3.5,  # Mid-island
+         34: +3.5,  # Mid-island
+         35: +3.3,  # Mid-island
+         36: +3.2,  # Mid-island
+         37: +2.9,  # Mid-island
+         38: +2.6,  # Mid-island
          39: +2.3,  # Mid-island
          40: +2.0,  # Mid-island
          41: +1.7,  # Mid-island
@@ -901,12 +854,12 @@ HATTERAS_BE_RATES_CALIBRATED = {
          47: +0.0,  # Mid-island
          48: -0.4,  # Mid-island
          49: +0.0,  # Mid-island
-         50: -1.3,  # Mid-island
-         51: -1.6,  # Mid-island
-         52: -2.2,  # Mid-island
-         53: -2.0,  # Mid-island
-         54: -1.8,  # Mid-island
-         55: -1.3,  # Mid-island
+         50: -0.7,  # Mid-island
+         51: -0.9,  # Mid-island
+         52: -1.4,  # Mid-island
+         53: -1.3,  # Mid-island
+         54: -1.2,  # Mid-island
+         55: -1.0,  # Mid-island
          56: +0.0,  # Mid-island
          57: -0.3,  # Mid-island
          58: +0.0,  # Mid-island
@@ -918,29 +871,29 @@ HATTERAS_BE_RATES_CALIBRATED = {
          64: +1.5,  # Wimble Shoals Influence
          65: +1.9,  # Wimble Shoals Influence
          66: +2.3,  # Wimble Shoals Influence
-         67: +2.3,  # Wimble Shoals Influence
+         67: +2.6,  # Wimble Shoals Influence
          68: +3.0,  # Wimble Shoals Influence
-         69: +3.8,  # Wimble Shoals Influence
-         70: +4.1,  # Wimble Shoals Influence
-         71: +4.7,  # Wimble Shoals Influence
-         72: +4.1,  # Wimble Shoals Influence
+         69: +3.2,  # Wimble Shoals Influence
+         70: +3.3,  # Wimble Shoals Influence
+         71: +3.3,  # Wimble Shoals Influence
+         72: +3.1,  # Wimble Shoals Influence
          73: +2.8,  # Wimble Shoals Influence
          74: +2.4,  # Wimble Shoals Influence
-         75: +2.3,  # Tri-Village / Rodanthe
+         75: +2.0,  # Tri-Village / Rodanthe
          76: +1.5,  # Tri-Village / Rodanthe
          77: +1.2,  # Tri-Village / Rodanthe
          78: +0.9,  # Tri-Village / Rodanthe
-         79: +0.4,  # Tri-Village / Rodanthe
+         79: +0.7,  # Tri-Village / Rodanthe
          80: +0.0,  # Tri-Village / Rodanthe
          81: +0.0,  # Tri-Village / Rodanthe
          82: +0.0,  # Tri-Village / Rodanthe
-         83: -2.6,  # Tri-Village / Rodanthe
-         84: -3.5,  # Pea Island NWR
-         85: -3.8,  # Pea Island NWR
-         86: -3.7,  # Pea Island NWR
-         87: -3.9,  # Pea Island NWR
-         88: -3.0,  # Pea Island NWR
-         89: -1.8,  # Pea Island NWR
+         83: -0.9,  # Tri-Village / Rodanthe
+         84: -1.3,  # Pea Island NWR
+         85: -1.5,  # Pea Island NWR
+         86: -1.4,  # Pea Island NWR
+         87: -1.7,  # Pea Island NWR
+         88: -1.3,  # Pea Island NWR
+         89: -0.7,  # Pea Island NWR
          90: +57.9,  # LOCKED — end domain, LRR-solved; see the end-domain note above
     },
 }
