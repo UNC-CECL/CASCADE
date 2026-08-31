@@ -289,6 +289,66 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # production value is statistically indistinguishable from optimal, and the
 # topography bug moved it by less than the ridge it sits on.
 #
+# BOTH M AND f ARE FITTED -- ON THE WINDOW THAT SPANS THE STRUCTURE'S LIFE.
+# Corrected 2026-08-30 after re-running the 1967-2018 rig. Earlier revisions of
+# this note said f was "not determined" or "prescribed rather than fitted".
+# That is true of the HINDCAST windows and false of the full-life window:
+#
+#   1967-2018 rig, 51 years, spans install (1969/70), the 1996 repair, the
+#   2003 storm damage and 14 years of decline. RMSE at M = 60:
+#
+#       f     0.1     0.3     0.4     0.5     0.6     0.7     0.9
+#           33.17   27.99   25.84   24.21   23.78   25.06   39.01
+#                                            ^ best, bracketed both sides
+#
+#   f = 0.6 is a clean INTERIOR minimum with steep curvature either side.
+#
+#   M IS NOT. Corrected 2026-08-30 -- an earlier revision of this note said
+#   "So is M: 53.9 (M=20), 33.3, 27.9, 23.8 (M=60). Neither railed." The rig's
+#   own CSV refuses that. M improves MONOTONICALLY to the last value that runs:
+#
+#       M      20      40      60      70          80          >=100
+#            53.9    33.3    23.8    320-378     556-766     (blank)
+#
+#   The jump at M = 70 is a 13x discontinuity, not a fit degradation -- it is
+#   the instability GROIN_PLAN.md already records ("M >= 70 went unstable and
+#   M >= 100 drowned the barrier on the 41-domain rig"). M = 60 is the LARGEST
+#   M THE RIG CAN HOLD, not the M where the fit stops improving. The two
+#   documents had contradicted each other; GROIN_PLAN.md was right.
+#
+#   SO THE RIG CORROBORATES f, AND IS ONLY CONSISTENT WITH M. Do not write
+#   "two independent routes agree on both parameters." Write: the rig brackets
+#   f = 0.6 on both sides; it rails against a stability wall in M, so it cannot
+#   distinguish M = 60 from any larger value. M = 60 stands on the PRODUCTION
+#   fits (D4-D8 and the independent D3-D9), not on the rig.
+#
+#   "INDEPENDENT" IS ALSO GENEROUS. Since the 2026-08-30 repoint, both routes
+#   use the same topography product (1984-start/v1), the same wave climate, the
+#   same BRIE physics and the same wet/dry shoreline family. They are
+#   independent WINDOWS, not independent EVIDENCE.
+#
+#   AND THE RIG RUNS 1967 OFF A 1984 ISLAND. RIG_TOPO_PRODUCT = "1984-start"
+#   (HAT_groin_hindcast_1967_2017.py:280) -- a deliberate 17-year anachronism
+#   in the initial condition, accepted because the target is a shoreline
+#   OFFSET rather than an elevation. It belongs in any methods description of
+#   the rig. The rig also uses GROIN_INSTALL_YEAR = 1970 against the plan's
+#   1969; one year, inside the build phase, but they are not the same number.
+#
+# WHY THE HINDCAST WINDOWS CANNOT SEE f. They begin 15 years after installation
+# and end before or just after the collapse, so they contain almost none of the
+# 1996-2003 deterioration ramp. Period-1 cumulative trapping is M(15.5 + 4.5f),
+# which f moves by only 29% across its whole range -- so period 1 reads high f
+# as simply "more trapping" and rails at 1.0. Period 2 is 20*M*f and prefers
+# f = 0. Neither is fitting the deterioration; they are fitting its absence.
+#
+# f IS NOT A FREE KNOB EITHER WAY -- it encodes a maintenance record (installed
+# 1969, last repaired 1996, storm damage 2003, fillet peaks 2004). Making the
+# module a STATIC trapping rate was considered on 2026-08-30 and rejected on
+# measurement: at M = 60 setting f = 1 degrades period 2 from 14.90 to 17.87 m
+# (+20%), and at M = 95 from 14.90 to 20.38 (+37%). It also moves the modelled
+# D5-D6 differential the WRONG WAY -- observed is -2.47 m/yr, and the model goes
+# -0.55 at f = 0 to -0.18 at f = 1. Deterioration is doing real work.
+#
 # M AND f ARE SET FROM DIFFERENT EVIDENCE, AND THAT IS DELIBERATE.
 # The authority for these values is hard-structures/groin/GROIN_PLAN.md
 # (2026-08-24); this note summarises it and must not diverge from it. The
@@ -366,6 +426,24 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # So the 2026-08-30 joint fit railing at M = 160 was not a fitting failure to
 # be repaired -- fitting period 2 is the wrong thing to attempt.
 #
+# BUT IT WAS STILL SITTING IN THE FILE THE PIPELINE READS. Found 2026-08-30:
+# output/groin_sweep/joint_fit.json held the RANKING'S answer (edgeBE M = 160
+# f = 0.8, zeroBE M = 140 f = 1.0), and HAT_run_all.py stage 6 passes whatever
+# that file holds to every groin run in the matrix. A stage-6 run would have
+# used M = 160. It prints "RAILED on M" while doing so, so the machinery knew.
+#
+# The file is now PINNED by hand to M = 60, f = 0.6 for both presets, each
+# entry carrying its own superseded_ranking block, and the ranking is archived
+# at output/groin_sweep/archive/joint_fit_RAILED_ranking_20260830.json.
+# RE-RUNNING STAGE 5 OVERWRITES IT -- re-pin afterwards.
+#
+# Two more places the pair is written, both corrected the same day:
+# scripts/hatteras_ms/hat_run.yaml carried M = 50 / f = 0.9 placeholders (a
+# 2026-08-26 note left them stale on purpose pending the re-fit, which has now
+# happened and did not move the answer), and HAT_hindcast_config.py carried the
+# same values as fallback defaults. A MATRIX run reads joint_fit.json; a SINGLE
+# run reads the yaml. Check both before quoting a groin run's parameters.
+#
 # AFFORDABILITY IS A SOFT BOUND, NOT A CEILING. M = 60 intercepts ~719,000
 # m3/yr against a 5-7e5 m3/yr littoral drift -- marginally above a LITERATURE
 # RANGE, which GROIN_PLAN.md is explicit is "not a hard limit". Earlier text
@@ -377,6 +455,26 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # Buxton groins span northings entirely inside D6, so one dipole expresses the
 # whole field. Do not divide M by four for a per-structure value, and do not
 # read it as a flux.
+#
+# NOW MEASURED, 2026-08-30. groin_diagnostics.csv has logged the cumulative
+# displacement every year of every groin run since the module was written, and
+# nothing plotted it until HAT_groin_sediment_budget_figure.py. Over the rig's
+# 50 years at M = 60, f = 0.6:
+#
+#     applied   2,400 m cumulative one-sided displacement  (+/- 28.7e6 m3)
+#     realised     69 m fillet at the end   (peak 129 m)
+#     retained    ~3%
+#
+# BRIE's alongshore diffusion removes the rest. M is therefore the rate needed
+# to SUSTAIN a fillet against diffusion, not the rate at which sand is
+# impounded -- which is the quantitative version of "not a flux".
+#
+# THIS CHANGES HOW THE AFFORDABILITY NUMBER READS. 719,000 m3/yr at M = 60 is a
+# GROSS RESTORING RATE set against a NET transport budget; they are not like
+# for like. The comparison is still a fair reason to prefer M = 60 over M = 95,
+# and it is a deliberate documented diagnostic in the run reports -- but
+# "marginally above the drift band" must NOT be read as "impounds more sand
+# than the coast carries." Figure: output/groin_sweep/figures/sediment_budget.png
 #
 # HOW FAR THE VALUE IS ACTUALLY CONSTRAINED -- ROBUSTNESS, 2026-08-30.
 # Everything below was scored from the existing period-1 cells at
@@ -429,12 +527,27 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # by period 2 the deterioration schedule has trapping at ~0, so running the
 # groin there is a timeline-consistency choice and not a fitted one.
 #
-# WHAT THIS ADDS UP TO. M = 60, f = 0.6 is the best-supported pair available:
-# two independent routes (production D4-D8 and the 1967 rig) agree on both
-# parameters, and a third window (D3-D9) reproduces M. But it is conditional
-# on be1 = -42.6, void without edgeBE, invisible in period 2, and it varies
-# 40-95 across defensible windows. Quote it as a calibrated parameter pair with
-# those conditions attached -- not as a measured property of the structure.
+# WHAT THIS ADDS UP TO. M = 60, f = 0.6 is the best-supported pair available,
+# and the support is asymmetric between the two parameters:
+#
+#     M comes from the PRODUCTION fits -- D4-D8 (11.58 vs 15.20 no-groin) and
+#       the independent, structure-symmetric D3-D9, which returns M = 60 with
+#       the same gain (2.05 vs 2.10). The 1967 rig does NOT confirm M: it rails
+#       against a stability wall at M = 70 (see above).
+#     f comes from the 1967 RIG, where 0.6 is bracketed on both sides, and from
+#       period 2, where the observed fillet declines. The hindcast windows
+#       cannot see f at all.
+#
+# CONDITIONS THAT TRAVEL WITH THE PAIR. Conditional on be1 = -42.6 (the D4-D8
+# optimum moves 50 -> 125 as be1 goes -46 -> -10); void without edgeBE; carries
+# no information in period 2; and M varies 40-95 across defensible windows,
+# with the windows TIGHTEST on the structure (D5-D7, D5-D8) returning M = 0 at
+# gain 0.00. Quote it as a calibrated parameter pair with those conditions
+# attached -- not as a measured property of the structure.
+#
+# DECIDED 2026-08-30: LOCKED. Single value, conditions stated, no ensemble over
+# M and no further runs. The 1967 window needs no new work -- the rig IS that
+# window (see below) and was re-run on the corrected topography that day.
 #
 # THE 1967 WINDOW HAS ALREADY BEEN RUN -- IT IS THE 41-DOMAIN RIG.
 # GROIN_PLAN.md recommends "fit on the 1967 window; apply in the hindcast",
@@ -448,7 +561,7 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # The rig was sized to the extent of the 1967 observations. Its sweep is at
 # hard-structures/groin/HAT-hindcast-groin-test/sensitivity_sweep/.
 #
-# RE-RUN 2026-08-30 ON 1984-start/v1, AND IT NOW REPRODUCES BOTH PARAMETERS.
+# RE-RUN 2026-08-30 ON 1984-start/v1; f MOVED ONTO THE PRODUCTION VALUE.
 # The rig had been resolving topo_dirs() with no product -- the same omission
 # that put the production sweep on the 2004 island -- plus two other stale
 # paths (domain_N_topography_2009.npy, and a "2009-buffer" directory that the
@@ -459,8 +572,10 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 #     best cell          M=60, f=0.5       M=60, f=0.6
 #     RMSE                    27.24              23.78
 #
-# f moved ONTO the production value and the fit improved 13%. Before this the
-# rig agreed with production on M but not on f; it now agrees on both.
+# f moved ONTO the production value and the fit improved 13%. Read this as the
+# rig now supporting f, the parameter it can actually resolve -- NOT as
+# agreement on both. Its M = 60 sits against the stability wall documented
+# above, and would very likely rise if that wall were lifted.
 #
 # ITS CACHE ALSO RESUMES ON (M, fraction, stage) WITH NO RECORD OF THE
 # TOPOGRAPHY, so the first re-run silently skipped all 67 stale cells and
