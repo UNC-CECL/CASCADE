@@ -721,11 +721,11 @@ HATTERAS_BE_RATES_CALIBRATED = {
           6: +0.0,  # Cape Point / Shoal Dynamics
           7: +0.0,  # Cape Point / Shoal Dynamics
           8: +0.4,  # Cape Point / Shoal Dynamics
-          9: +0.0,  # Cape Point / Shoal Dynamics
-         10: -1.1,  # Cape Point / Shoal Dynamics
-         11: -0.7,  # Buxton–Avon Transition
-         12: -0.7,  # Buxton–Avon Transition
-         13: -0.6,  # Buxton–Avon Transition
+          9: +0.3,  # Cape Point / Shoal Dynamics
+         10: -1.2,  # Cape Point / Shoal Dynamics
+         11: -0.8,  # Buxton–Avon Transition
+         12: -0.9,  # Buxton–Avon Transition
+         13: -0.7,  # Buxton–Avon Transition
          14: +0.0,  # Buxton–Avon Transition
          15: +0.0,  # Buxton–Avon Transition
          16: +0.0,  # Buxton–Avon Transition
@@ -813,15 +813,15 @@ HATTERAS_BE_RATES_CALIBRATED = {
           6: +0.0,  # Cape Point / Shoal Dynamics
           7: +0.0,  # Cape Point / Shoal Dynamics
           8: +0.4,  # Cape Point / Shoal Dynamics
-          9: +0.8,  # Cape Point / Shoal Dynamics
-         10: +1.6,  # Cape Point / Shoal Dynamics
-         11: +1.7,  # Buxton–Avon Transition
-         12: +1.9,  # Buxton–Avon Transition
-         13: +2.1,  # Buxton–Avon Transition
-         14: +2.1,  # Buxton–Avon Transition
-         15: +2.2,  # Buxton–Avon Transition
-         16: +2.4,  # Buxton–Avon Transition
-         17: +2.5,  # Buxton–Avon Transition
+          9: +0.3,  # Cape Point / Shoal Dynamics
+         10: +1.5,  # Cape Point / Shoal Dynamics
+         11: +1.5,  # Buxton–Avon Transition
+         12: +1.8,  # Buxton–Avon Transition
+         13: +1.9,  # Buxton–Avon Transition
+         14: +2.0,  # Buxton–Avon Transition
+         15: +2.1,  # Buxton–Avon Transition
+         16: +2.3,  # Buxton–Avon Transition
+         17: +2.4,  # Buxton–Avon Transition
          18: +2.4,  # Buxton–Avon Transition
          19: +2.1,  # Buxton–Avon Transition
          20: +1.7,  # Buxton–Avon Transition
