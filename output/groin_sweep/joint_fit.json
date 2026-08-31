@@ -1,0 +1,82 @@
+{
+  "edgeBE": {
+    "preset": "edgeBE",
+    "M": 60.0,
+    "fraction": 0.6,
+    "fit_err": 1.0756942665394718,
+    "fit_period": 1984,
+    "joint_err": 142.60030812110398,
+    "at_grid_bound": [],
+    "be1_1984": -40.0,
+    "err_1984": 1.0756942665394718,
+    "err_2004": 141.5246138545645,
+    "differential_1984": 1.0260874060614622,
+    "differential_2004": 0.3968954136327208,
+    "observed_differential_1984": 0.9861897435897433,
+    "observed_differential_2004": -2.46525,
+    "periods_reachable": {
+      "1984": true,
+      "2004": false
+    },
+    "provenance": "pinned",
+    "pinned_note": "PINNED 2026-08-30, not produced by HAT_groin_joint_fit.py's ranking. The ranking's own answer (edgeBE M=160 f=0.8, zeroBE M=140 f=1.0) is archived at archive/joint_fit_RAILED_ranking_20260830.json. It railed because it scores BOTH periods jointly, and period 2 records a fillet RELEASE the module cannot produce at any (M, f) -- fitting it is the wrong thing to attempt (see hard-structures/groin/GROIN_PLAN.md). M = 60 comes from the period-1 D4-D8 demeaned fit at be1 = -42.6 and is reproduced by the independent D3-D9 window; f = 0.6 comes from the 1967-2018 rig, where it is bracketed on both sides. Both presets carry the same pair deliberately: a zeroBE groin fit is meaningless (with no edge forcing the groin absorbs the missing source/sink term and improves monotonically to the grid edge), so zeroBE inherits the edgeBE decision rather than a fit of its own. RE-RUNNING STAGE 5 WILL OVERWRITE THIS FILE with the railed ranking -- re-pin afterwards.",
+    "superseded_ranking": {
+      "M": 160.0,
+      "fraction": 0.8,
+      "at_grid_bound": [
+        "M"
+      ]
+    }
+  },
+  "zeroBE": {
+    "preset": "zeroBE",
+    "M": 60.0,
+    "fraction": 0.6,
+    "fit_err": 1.19575459201576,
+    "fit_period": 1984,
+    "joint_err": 153.07036862891067,
+    "at_grid_bound": [],
+    "be1_1984": null,
+    "err_1984": 1.19575459201576,
+    "err_2004": 151.8746140368949,
+    "differential_1984": 0.8529792406522603,
+    "differential_2004": 1.1111479557080362,
+    "observed_differential_1984": 0.9861897435897433,
+    "observed_differential_2004": -2.46525,
+    "periods_reachable": {
+      "1984": true,
+      "2004": false
+    },
+    "provenance": "pinned",
+    "pinned_note": "PINNED 2026-08-30, not produced by HAT_groin_joint_fit.py's ranking. The ranking's own answer (edgeBE M=160 f=0.8, zeroBE M=140 f=1.0) is archived at archive/joint_fit_RAILED_ranking_20260830.json. It railed because it scores BOTH periods jointly, and period 2 records a fillet RELEASE the module cannot produce at any (M, f) -- fitting it is the wrong thing to attempt (see hard-structures/groin/GROIN_PLAN.md). M = 60 comes from the period-1 D4-D8 demeaned fit at be1 = -42.6 and is reproduced by the independent D3-D9 window; f = 0.6 comes from the 1967-2018 rig, where it is bracketed on both sides. Both presets carry the same pair deliberately: a zeroBE groin fit is meaningless (with no edge forcing the groin absorbs the missing source/sink term and improves monotonically to the grid edge), so zeroBE inherits the edgeBE decision rather than a fit of its own. RE-RUNNING STAGE 5 WILL OVERWRITE THIS FILE with the railed ranking -- re-pin afterwards.",
+    "superseded_ranking": {
+      "M": 140.0,
+      "fraction": 1.0,
+      "at_grid_bound": [
+        "f"
+      ]
+    }
+  },
+  "calibBE": {
+    "preset": "calibBE",
+    "M": 60.0,
+    "fraction": 0.6,
+    "fit_err": 1.0756942665394718,
+    "fit_period": 1984,
+    "joint_err": 142.60030812110398,
+    "at_grid_bound": [],
+    "be1_1984": -40.0,
+    "err_1984": 1.0756942665394718,
+    "err_2004": 141.5246138545645,
+    "differential_1984": 1.0260874060614622,
+    "differential_2004": 0.3968954136327208,
+    "observed_differential_1984": 0.9861897435897433,
+    "observed_differential_2004": -2.46525,
+    "periods_reachable": {
+      "1984": true,
+      "2004": false
+    },
+    "provenance": "inherited from edgeBE",
+    "pinned_note": "PINNED 2026-08-31, INHERITED from edgeBE rather than fitted. calibBE is DERIVED FROM the edgeBE groin fit: HAT_be_zone_LOESS_analysis.py with GROIN_AWARE_BASE_RUN=True builds the source/sink field from a base run already carrying M=60/f=0.6, so the field is what the groin could NOT explain. Re-fitting a groin against that field would be circular -- it would be fitting to a residual constructed by removing this exact groin. M was fitted against edgeBE precisely because edgeBE imposes nothing at D5/D6. Without this entry HAT_run_all.py stage 6 prints 'skipping its groin runs' and calibBE gets no groin arm at all."
+  }
+}
