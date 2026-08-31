@@ -1108,12 +1108,12 @@ for run in relocation_sites:
     overview_ax.text(
         (run[0] + run[-1]) / 2,
         label_height * 1.04,
-        (f"{name}\ndomains {run[0]}-{run[-1]}" if name
-         else f"domains {run[0]}-{run[-1]}"),
+        (f"{name}" + chr(10) + f"domains {run[0]}–{run[-1]}" if name
+         else f"domains {run[0]}–{run[-1]}"),
         ha="center",
         va="bottom",
         fontsize=9,
-        fontweight="bold",
+        color="0.15",
     )
 
 # Town spans along the foot of the panel, so a domain number means a place.
@@ -1152,14 +1152,22 @@ overview_ax.set_yticks(
     np.arange(0, label_height, 25 if label_height > 100 else 10)
 )
 
-overview_ax.set_xlabel("GIS domain  (south -> north)")
-overview_ax.set_ylabel("Movement (m)\n+ landward / - seaward")
+overview_ax.set_xlabel("GIS domain  (south → north)")
+overview_ax.set_ylabel(
+    "Displacement (m)" + chr(10) + "+ landward / − seaward")
 
+# Subject in the title, the count as a quantities line beneath it -- the
+# same split the site figure uses, so the two read as one set.
 overview_ax.set_title(
-    f"Where NC-12 moved between {YEAR_FROM} and {YEAR_TO}: "
-    f"{len(relocated)} of {len(results_df)} road-carrying domains, "
-    f"every one landward",
-    fontsize=13,
+    f"Alongshore distribution of NC-12 relocation, {YEAR_FROM}–{YEAR_TO}",
+    fontsize=12, fontweight="normal", loc="left", pad=22,
+)
+overview_ax.annotate(
+    f"{len(relocated)} of {len(results_df)} road-carrying domains"
+    f"   all landward"
+    f"   max {relocated['maximum_relocation_m'].max():.0f} m",
+    xy=(0.0, 1.008), xycoords="axes fraction", ha="left", va="bottom",
+    fontsize=8.5, color="0.35", family="monospace",
 )
 
 overview_ax.grid(axis="y", alpha=0.3, zorder=1)
@@ -1546,34 +1554,33 @@ for run in relocation_sites:
     map_ax.text(
         (run_geometry[0] + run_geometry[2]) / 2,
         maxy + 0.34 * (maxy - miny),
-        (f"{name}\n" if name else "")
-        + f"domains {run[0]}-{run[-1]}\n"
-        f"up to {site_stats['maximum_relocation_m'].max():.0f} m landward",
+        (f"{name}" + chr(10) if name else "")
+        + f"domains {run[0]}–{run[-1]}" + chr(10)
+        + f"max {site_stats['maximum_relocation_m'].max():.0f} m landward",
         ha="center",
         va="bottom",
         fontsize=9,
-        fontweight="bold",
+        color="0.15",
     )
 
 # Which way is which, now that the map is rotated off north.
 map_ax.text(
     minx, miny - 0.18 * (maxy - miny),
-    "SOUTH\nCape Hatteras",
-    ha="left", va="top", fontsize=9, color="0.3",
+    "SOUTH" + chr(10) + "Cape Hatteras",
+    ha="left", va="top", fontsize=8.5, color="0.45",
 )
 
 map_ax.text(
     maxx, miny - 0.18 * (maxy - miny),
-    "NORTH\nPea Island",
-    ha="right", va="top", fontsize=9, color="0.3",
+    "NORTH" + chr(10) + "Pea Island",
+    ha="right", va="top", fontsize=8.5, color="0.45",
 )
 
 map_ax.text(
     (minx + maxx) / 2,
     miny - 0.10 * (maxy - miny),
-    "OCEAN  (island rotated 90 deg clockwise; north is to the right)",
-    ha="center", va="top", fontsize=9, color="tab:blue", alpha=0.8,
-    fontweight="bold",
+    "Atlantic Ocean   —   island rotated 90° clockwise; north is to the right",
+    ha="center", va="top", fontsize=8.5, color="0.45", style="italic",
 )
 
 legend_handles = [
@@ -1588,7 +1595,7 @@ legend_handles.append(
     plt.Rectangle(
         (0, 0), 1, 1,
         facecolor="none", edgecolor="black", linewidth=1.5,
-        label=f"RELOCATED ({len(relocated)} domains, filled by distance)",
+        label=f"relocated ({len(relocated)} domains, filled by distance)",
     )
 )
 
@@ -1605,16 +1612,17 @@ add_scale_bar(map_ax, length_m=5000, fraction_x=0.72, fraction_y=0.06)
 fig_map.colorbar(
     plt.cm.ScalarMappable(norm=colour_norm, cmap="viridis"),
     ax=map_ax,
-    label="Mean relocation (m)",
+    label=f"Mean landward displacement, {YEAR_FROM}–{YEAR_TO} (m)",
     shrink=0.6,
     pad=0.01,
 )
 
+# Normal weight, subject only -- no caption burned into the canvas. The
+# provenance and the reading instructions live in this script's docstring,
+# and a figure placed in a document takes its caption from the document.
 fig_map.suptitle(
-    f"Which CASCADE domains carry an NC-12 relocation, "
-    f"{YEAR_FROM} -> {YEAR_TO}",
-    fontsize=14,
-    fontweight="bold",
+    f"CASCADE domains carrying an NC-12 relocation, {YEAR_FROM}–{YEAR_TO}",
+    fontsize=13, fontweight="normal",
 )
 
 fig_map.savefig(
