@@ -133,6 +133,31 @@ def product_for_year(year: int) -> str:
             f"Add it to YEAR_PRODUCT in {__file__} -- and to HATTERAS_PERIODS "
             f"in hatteras_site_config.py, which imports this mapping.\n")
 
+
+def year_for_product(product: str, strict: bool = True):
+    """The period start year a topography product belongs to.
+
+    The inverse of product_for_year(), and it lives here for the same reason
+    the forward map does: the pairing is defined ONCE. A caller that needs
+    "which year is this product" -- the extractor's figure code does -- must
+    not re-spell {"1984-start": 1984} locally, because a third product added
+    to YEAR_PRODUCT would then update one direction and not the other.
+
+    strict=False returns None instead of raising, for products that are
+    legitimately not a hindcast period ("forecast", "buffer"). A caller using
+    it must have a defined behaviour for None -- see PRODUCT_YEAR in
+    HAT_dune_topo_extractor.py, which falls back to plotting every year.
+    """
+    for year, prod in YEAR_PRODUCT.items():
+        if prod == product:
+            return int(year)
+    if not strict:
+        return None
+    raise SystemExit(
+        f"\nno period year known for topography product {product!r}. "
+        f"Known: {', '.join(sorted(YEAR_PRODUCT.values()))}\n"
+        f"Add it to YEAR_PRODUCT in {__file__}.\n")
+
 # THE ARRAYS HAVE NO YEAR TAG (2026-08-26).
 #
 # They are domain_<N>_topography.npy / _dune.npy / _nodata.npy. There is no
