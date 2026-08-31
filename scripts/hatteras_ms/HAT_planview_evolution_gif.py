@@ -69,8 +69,10 @@ for _path in (PROJECT_BASE_DIR / "scripts",):
 from hatteras_site_config import HATTERAS_DOMAINS as GEOMETRY  # noqa: E402
 from cascade_pipeline.plotting.init_planview import (  # noqa: E402
     DEFAULT_PLAN_VIEW, build_canvas, pad_cross_shore, plot_canvas)
+from cascade_pipeline.plotting.road_planview import overlay_roadway  # noqa: E402
 
 HOLD_FRAMES = 5      # frames held on the final year, so it can be read
+ARROW = chr(0x2192)  # a real arrow, not '->'
 
 
 def load_history(run_dir):
@@ -105,6 +107,15 @@ def load_history(run_dir):
     # ONE reference for the whole run, so the canvas does not breathe.
     reference = min(float(model.x_s_TS[0]) for model in inner)
 
+    # THE ROAD MOVES TOO, and it is the reason to watch this rather than the
+    # shoreline GIFs: a setback is measured from the dune line, so a road that
+    # never relocates still closes on the ocean as the barrier retreats. The
+    # roadway manager keeps _road_setback_TS per domain per year; where a
+    # domain carries no road the series is absent and its entry stays 0, which
+    # road_rows() renders as NaN rather than as a road at the dune line.
+    roadways = getattr(cascade, "_roadways", None) or []
+    setbacks_by_year = []
+
     grids_by_year, offsets_by_year = [], []
     for year in range(n_years):
         grids_by_year.append([
@@ -113,9 +124,24 @@ def load_history(run_dir):
             for model in inner])
         offsets_by_year.append(np.array(
             [float(model.x_s_TS[year]) - reference for model in inner]))
+        setbacks_by_year.append(np.array([
+            _setback_at(road, year) for road in roadways]
+            if roadways else [0.0] * len(inner)))
 
     start_year = int(getattr(cascade, "_start_year", 0)) or None
-    return grids_by_year, offsets_by_year, start_year
+    return grids_by_year, offsets_by_year, setbacks_by_year, start_year
+
+
+def _setback_at(roadway, year):
+    """One domain's road setback in metres at a given year, or 0 if roadless."""
+    series = getattr(roadway, "_road_setback_TS", None)
+    if series is None or len(series) == 0:
+        return 0.0
+    value = series[min(year, len(series) - 1)]
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def main():
@@ -128,7 +154,8 @@ def main():
     args = parser.parse_args()
 
     run_dir = Path(args.run_dir).resolve()
-    grids_by_year, offsets_by_year, detected = load_history(run_dir)
+    (grids_by_year, offsets_by_year,
+     setbacks_by_year, detected) = load_history(run_dir)
     n_years = len(grids_by_year)
 
     # The run name carries the period, so the calendar year is recoverable
@@ -145,30 +172,84 @@ def main():
     # ONE y limit for every frame: what moves should be the island.
     frame_rows = max(canvas[0].shape[0] for canvas in canvases)
 
-    figure, axis = plt.subplots(figsize=(16, 5.4))
+    plt.rcParams.update({
+        "font.family": "sans-serif",
+        "font.sans-serif": ["Arial", "Helvetica", "DejaVu Sans"],
+        "font.size": 10, "axes.linewidth": 0.8, "axes.edgecolor": "#3A4149",
+        "xtick.direction": "out", "ytick.direction": "out",
+        "xtick.color": "#3A4149", "ytick.color": "#3A4149",
+        "legend.frameon": False,
+        "figure.facecolor": "white", "savefig.facecolor": "white",
+    })
+    figure = plt.figure(figsize=(16, 6.2))
+    axis = figure.add_axes([0.062, 0.135, 0.885, 0.66])
     out = Path(args.out) if args.out else (
         run_dir / f"{run_dir.name}_planview_evolution.gif")
+
+    # Static furniture, drawn once. The run name is provenance, not a title,
+    # so it goes in the subtitle at reading weight rather than in bold above
+    # the panel where it competed with the map.
+    figure.text(0.062, 0.945, "Barrier evolution in plan view",
+                fontsize=15, fontweight="bold", color="#15202C",
+                ha="left", va="center")
+    figure.text(0.062, 0.905,
+                f"{run_dir.name}   ·   {GEOMETRY.num_real_domains} domains "
+                f"·   10 m cells   ·   elevation relative to MHW",
+                fontsize=9.5, color="#5C6874", ha="left", va="center")
 
     def frame(index):
         year_index = min(index, n_years - 1)
         axis.clear()
         canvas, starts, per_domain, first_real = canvases[year_index]
-        label = (f"{start_year + year_index}   (year {year_index})"
-                 if start_year else f"year {year_index}")
         plot_canvas(canvas, starts, per_domain, first_real, GEOMETRY,
-                    title=f"{run_dir.name}          {label}",
-                    ax=axis, colorbar=False,
-                    xlabel="Domain (S -> N,  Cape Hatteras to Rodanthe)")
+                    title="", ax=axis, colorbar=False,
+                    xlabel=f"Alongshore domain   (south {ARROW} north,  "
+                           f"Cape Hatteras {ARROW} Rodanthe)")
+
+        # THE ROAD. Placed by the same road_rows() the static figure uses --
+        # offset + floor(setback / cell) -- so the two agree by construction
+        # rather than by a second implementation that could drift.
+        overlay_roadway(axis, setbacks_by_year[year_index],
+                        offsets_by_year[year_index], GEOMETRY,
+                        starts, per_domain, first_real)
+
         axis.set_ylim(0, frame_rows)
-        axis.set_ylabel("Cross-shore cell  (10 m)")
+        # Cells are an implementation detail; kilometres are what a reader
+        # measures the island in.
+        ticks = np.arange(0, frame_rows + 1, 50)
+        axis.set_yticks(ticks)
+        axis.set_yticklabels([f"{t * DEFAULT_PLAN_VIEW.cell_size_m / 1000:g}"
+                              for t in ticks])
+        axis.set_ylabel("Cross-shore distance (km)")
+
+        label = (f"{start_year + year_index}" if start_year
+                 else f"year {year_index}")
+        axis.annotate(label, xy=(0.992, 0.94), xycoords="axes fraction",
+                      ha="right", va="top", fontsize=26, color="#FFFFFF",
+                      fontweight="bold", alpha=0.85, zorder=12)
+        axis.annotate(f"year {year_index} of {n_years - 1}",
+                      xy=(0.992, 0.80), xycoords="axes fraction",
+                      ha="right", va="top", fontsize=9.5, color="#FFFFFF",
+                      alpha=0.8, zorder=12)
 
     # The colorbar is drawn once, outside the frame loop: plot_canvas would
     # otherwise add a new one on every frame and shrink the axes each time.
     frame(0)
     mesh = axis.collections[0]
-    bar = figure.colorbar(mesh, ax=axis, pad=0.01, fraction=0.02)
-    bar.set_label("Elevation (m MHW)")
+    cax = figure.add_axes([0.955, 0.135, 0.011, 0.66])
+    bar = figure.colorbar(mesh, cax=cax)
+    bar.set_label("Elevation (m MHW)", fontsize=9.5)
     bar.set_ticks([-1, 0, 1, 2, 3, 4])
+    bar.ax.tick_params(labelsize=8.5)
+
+    # One legend for the road, at figure level so a frame redraw cannot drop
+    # it and it never lands on the barrier.
+    road_handles = overlay_roadway(axis, setbacks_by_year[0], offsets_by_year[0],
+                                   GEOMETRY, *canvases[0][1:])
+    if road_handles:
+        figure.legend(handles=road_handles, loc="upper right",
+                      bbox_to_anchor=(0.947, 0.962), fontsize=9,
+                      handlelength=1.8, ncol=len(road_handles))
 
     animation = FuncAnimation(figure, frame,
                               frames=n_years + HOLD_FRAMES, blit=False)
