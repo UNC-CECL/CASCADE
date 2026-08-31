@@ -37,12 +37,36 @@ _IGNORABLE_NAMES = {".gitkeep", ".gitignore", ".DS_Store", "Thumbs.db"}
 RUN_INDEX_FILENAME = "run_index.csv"
 
 
+# Paths a run WRITES BACK into the repository, so their being modified says
+# nothing about whether the run's code was committed. See git_provenance.
+EXCLUDED_FROM_DIRTY = (
+    "data/hatteras_init/Hatteras-CASCADE-parameters.yaml",
+)
+
+
 def git_provenance(repo_root):
     """Records which commit produced a run, and whether the tree was clean.
 
     A dirty tree is not an error -- most runs happen mid-edit -- but it does
     mean the commit hash alone will not reproduce the run, so the flag is
     recorded beside it rather than inferred later.
+
+    ONE PATH IS EXCLUDED, AND WITHOUT IT THE FLAG IS USELESS.
+    data/hatteras_init/Hatteras-CASCADE-parameters.yaml is TRACKED and is
+    REWRITTEN BY EVERY CASCADE CONSTRUCTION -- it is the shared file behind
+    the "never run two sweep orchestrators at once" rule. So the moment any
+    run starts the tree is dirty and stays dirty, and `dirty` was True on
+    every report this pipeline had ever written, including runs whose code
+    was fully committed. A flag that cannot be False carries no information.
+
+    Excluding it makes DIRTY TREE mean what it is read as meaning:
+    uncommitted CODE or INPUTS, not the run's own scratch output. Found
+    2026-08-31, when five relocation comparisons were stamped DIRTY TREE and
+    the only run-relevant dirty paths turned out to be this yaml and one
+    benign helper addition.
+
+    Anything else volatile that a run writes back into the repository belongs
+    in EXCLUDED_FROM_DIRTY too -- otherwise it re-breaks the flag silently.
 
     Args:
         repo_root: Path to the repository root.
@@ -61,7 +85,8 @@ def git_provenance(repo_root):
         return {
             "commit": _git("rev-parse", "HEAD"),
             "branch": _git("rev-parse", "--abbrev-ref", "HEAD"),
-            "dirty": bool(_git("status", "--porcelain")),
+            "dirty": bool(_git("status", "--porcelain", "--", ".",
+                               *(f":!{path}" for path in EXCLUDED_FROM_DIRTY))),
         }
     except (subprocess.SubprocessError, OSError):
         return {"commit": "unknown", "branch": "unknown", "dirty": None}
