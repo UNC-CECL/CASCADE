@@ -1361,19 +1361,14 @@ fig_sites.suptitle(
     fontsize=13, fontweight="normal",
 )
 
-# Wrapped by hand to a readable measure. matplotlib's wrap=True wraps to the
-# FIGURE width, which on a 13-inch two-panel figure is a single 3,500 px line.
-_SITES_CAPTION = (
-    "Road centrelines digitised from 1978 and 2008 aerial imagery. Colour "
-    f"gives the shortest distance from the {YEAR_FROM} centreline to the "
-    f"{YEAR_TO} one, measured landward;",
-    "grey marks where the two coincide. Both panels share one spatial scale, "
-    "so a given length means the same distance in each. North is up.",
-)
-fig_sites.text(
-    0.5, 0.004, chr(10).join(_SITES_CAPTION),
-    ha="center", va="bottom", fontsize=8.5, color="0.35", linespacing=1.5,
-)
+# NO CAPTION ON THE CANVAS. It lived here briefly on 2026-08-31 and was
+# removed: a figure destined for a document gets its caption from the document,
+# and burning one into the PNG duplicates it. The facts it carried are recorded
+# in this script's docstring, which is where a regenerating reader looks --
+# centrelines digitised from 1978 and 2008 imagery, colour is the shortest
+# distance from the YEAR_FROM centreline to the YEAR_TO one measured landward,
+# grey marks coincident stretches, both panels share one spatial scale, north
+# is up.
 
 fig_sites.savefig(
     OUTPUT_FIGURE_SITES,
