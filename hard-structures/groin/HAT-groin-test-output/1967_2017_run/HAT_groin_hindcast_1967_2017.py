@@ -256,7 +256,12 @@ PROJECT_BASE_DIR = str(next(
     p for p in pathlib.Path(__file__).resolve().parents
     if (p / "pyproject.toml").exists()))
 HATTERAS_DATA_BASE = os.path.join(PROJECT_BASE_DIR, "data", "hatteras_init")
-OUTPUT_BASE_DIR    = os.path.join(PROJECT_BASE_DIR, "output", "raw_runs")
+# rig_runs, not raw_runs, since 2026-08-31: the rig is a 41-domain grid and
+# production is 120, M is grid-specific, and the rig files no run_index row --
+# so its runs sat in raw_runs unindexed, next to production runs they must not
+# be compared with. One of them was found holding an unstable M = 70 cell while
+# named as though it were the calibrated run.
+OUTPUT_BASE_DIR    = os.path.join(PROJECT_BASE_DIR, "output", "rig_runs")
 PARAMETER_FILE     = "Hatteras-CASCADE-parameters.yaml"
 
 START_YEAR = 1967

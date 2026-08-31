@@ -89,7 +89,11 @@ RIG_BUFFER, RIG_FIRST_GIS, RIG_START_YEAR = 15, 2, 1967
 DOMAINS = list(range(2, 13))
 PAD = [RIG_BUFFER + (n - RIG_FIRST_GIS) for n in DOMAINS]
 
-RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
+# The rig lives in output/rig_runs/, not output/raw_runs/ (moved 2026-08-31).
+# It is a DIFFERENT GRID -- 41 domains against production's 120 -- and M is
+# grid-specific, so mixing the two invited quoting a rig number as a
+# production one. raw_runs is production only, and run_index.csv covers it.
+RAW_RUNS = PROJECT_BASE_DIR / "output" / "rig_runs"
 GROIN_RUN = "HAT_1967_2018_edge_calibrated_groin"
 NO_GROIN_RUN = "HAT_1967_2018_edge_calibrated_no_groin"
 OUT_DIR = (PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
