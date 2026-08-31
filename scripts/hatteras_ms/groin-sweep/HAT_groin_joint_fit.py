@@ -306,11 +306,85 @@ def plot_constraints(surface, fit, preset):
     return path
 
 
+def _pinned_presets(path):
+    """Presets in an existing joint_fit.json that were set by hand, not fitted.
+
+    A pinned entry carries `provenance` naming how it got there. This ranking
+    does not write that key, so its presence is the marker.
+
+    Args:
+        path: joint_fit.json, which may not exist.
+
+    Returns:
+        Sorted preset names that are pinned. Empty if the file is absent,
+        unreadable, or holds only ranking output -- an unreadable file must not
+        be allowed to block a legitimate write.
+    """
+    if not path.exists():
+        return []
+    try:
+        existing = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return []
+    return sorted(k for k, v in existing.items()
+                  if isinstance(v, dict) and v.get("provenance"))
+
+
+def _write_fits(fits, force=False):
+    """Writes the ranking's answer, unless it would clobber a hand pin.
+
+    WHY THIS GUARD EXISTS. This ranking scores BOTH periods jointly, and
+    period 2 records a fillet RELEASE the module cannot produce at any (M, f).
+    So it rails: on 2026-08-30 it returned edgeBE M = 160 / f = 0.8 and zeroBE
+    M = 140 / f = 1.0, both at a grid bound. Fitting period 2 is the wrong
+    thing to attempt -- see hard-structures/groin/GROIN_PLAN.md -- so the file
+    is pinned by hand to M = 60, f = 0.6.
+
+    HAT_run_all.py stage 6 passes whatever this file holds to every groin run
+    in the matrix. A stage-5 re-run would therefore silently rebuild the whole
+    matrix on the railed values, and nothing downstream would notice. That was
+    found on 2026-08-31 with the railed pair sitting in the file.
+
+    Refusing rather than warning is deliberate: stage 5 exits 0 and stage 6
+    then reads the PRESERVED pin, so the pipeline does the right thing
+    unattended. The ranking is not lost -- it goes to a sidecar.
+
+    Args:
+        fits: {preset: fit dict} this run computed.
+        force: Overwrite a pinned file anyway.
+    """
+    pinned = _pinned_presets(JOINT_JSON)
+    if pinned and not force:
+        sidecar = JOINT_JSON.with_name("joint_fit_ranking.json")
+        sidecar.write_text(json.dumps(fits, indent=2))
+        print("")
+        print(f"  {'=' * 66}")
+        print(f"  REFUSED to overwrite {JOINT_JSON.name}: it holds hand-pinned "
+              f"values")
+        print(f"  pinned presets   {', '.join(pinned)}")
+        for preset, fit in sorted(fits.items()):
+            bound = fit.get("at_grid_bound") or []
+            flag = f"   RAILED on {', '.join(bound)}" if bound else ""
+            print(f"  this ranking     {preset:<8} M = {fit.get('M')}, "
+                  f"f = {fit.get('fraction')}{flag}")
+        print(f"  ranking written to {sidecar.name} instead")
+        print(f"  re-run with --force to overwrite the pin deliberately")
+        print(f"  {'=' * 66}")
+        return
+    JOINT_JSON.write_text(json.dumps(fits, indent=2))
+    print(f"  fitted values written to {JOINT_JSON}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--preset", choices=PRESETS, action="append",
                         help="restrict to one preset (repeatable)")
     parser.add_argument("--no-figures", action="store_true")
+    parser.add_argument(
+        "--force", action="store_true",
+        help="overwrite joint_fit.json even if it holds hand-pinned "
+             "values. Without this, a pinned file is preserved and the "
+             "ranking is written beside it instead.")
     args = parser.parse_args()
 
     presets = args.preset or list(PRESETS)
@@ -357,8 +431,7 @@ def main():
         pd.concat(surfaces, ignore_index=True).to_csv(JOINT_CSV, index=False)
         print(f"\n  surface written to {JOINT_CSV}")
     if fits:
-        JOINT_JSON.write_text(json.dumps(fits, indent=2))
-        print(f"  fitted values written to {JOINT_JSON}")
+        _write_fits(fits, force=args.force)
 
     return 0 if fits else 1
 
