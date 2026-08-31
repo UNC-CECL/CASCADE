@@ -54,6 +54,10 @@ class GifConfig:
 
 DEFAULT_GIF_CONFIG = GifConfig()
 
+# Shared with road_planview.RoadPlanViewStyle.relocated and the plan-view
+# animation, so a relocation reads as the same event in all three.
+RELOCATION_COLOR = "#FF8C00"
+
 
 def _open_file(path):
     """Open a file in the OS default application (cross-platform, non-fatal)."""
@@ -179,6 +183,7 @@ def make_shoreline_gif(shoreline_m, run,
                         domain_range="real", mode="displacement", pad=9, groin=None,
                         baseline_m=None, baseline_label=None,
                         target_m=None, target_label=None,
+                        relocations=None,
                         fps=None, stride=None, annotate=None, auto_open=None,
                         keep_frames=None,
                         domains=DEFAULT_DOMAINS,
@@ -408,6 +413,22 @@ def make_shoreline_gif(shoreline_m, run,
                     label=target_label)
         ax.plot(x, cur, color="#1a2a3a", lw=2.0, zorder=4, label="Shoreline")
 
+        # -- Roadway relocations, in the year they happen ----------------------
+        # An EVENT, not a state: _road_relocated_TS is raised in the year the
+        # roadway manager moves the road, so a frame shows that year's moves
+        # only. Drawn on the shoreline itself because that is the line whose
+        # arrival at the road caused them.
+        if relocations is not None and t < len(relocations):
+            moved = np.flatnonzero(np.asarray(relocations[t], dtype=bool))
+            in_view = [p for p in moved if pad_lo <= p < pad_hi]
+            if in_view:
+                mx = [x_lo + (p - pad_lo) for p in in_view]
+                my = [cur[p - pad_lo] for p in in_view]
+                ax.plot(mx, my, linestyle="none", marker="v", markersize=9,
+                        color=RELOCATION_COLOR, markeredgecolor="white",
+                        markeredgewidth=0.7, zorder=6,
+                        label=f"relocated ({len(in_view)})")
+
         # -- Axes --------------------------------------------------------------
         ax.set_xlim(x_lo - 0.5, x_hi + 0.5)
         ax.set_ylim(*ylim)
@@ -490,6 +511,7 @@ def make_shoreline_gif(shoreline_m, run,
 
 def make_all_shoreline_gifs(shoreline_m, run, jobs,
                              baseline_npy=None, target_m=None,
+                             relocations=None,
                              domains=DEFAULT_DOMAINS,
                              annotations=DEFAULT_ANNOTATIONS,
                              gif_config=DEFAULT_GIF_CONFIG):
@@ -513,6 +535,11 @@ def make_all_shoreline_gifs(shoreline_m, run, jobs,
             meters, one value per padded domain) drawn as a static line on
             every "position"/"displacement" job. A job may override it with
             its own "target" key, or opt out with "target": False.
+        relocations: Optional (n_years, domains.total_domains) boolean array,
+            True in the year a domain's roadway is relocated. Passed to every
+            job; each marks only the domains inside its own window. None -- the
+            default, and what a run without roadway management should pass --
+            draws no markers and leaves the GIFs exactly as they were.
 
     Returns:
         List of saved GIF paths.
@@ -566,6 +593,7 @@ def make_all_shoreline_gifs(shoreline_m, run, jobs,
                     groin=extra["groin"],
                     baseline_m=baseline_m,
                     target_m=job_target, target_label=job.get("target_label"),
+                    relocations=relocations,
                     fps=job.get("fps"), stride=job.get("stride"),
                     annotate=job.get("annotate"), auto_open=job.get("auto_open"),
                     keep_frames=job.get("keep_frames"),
