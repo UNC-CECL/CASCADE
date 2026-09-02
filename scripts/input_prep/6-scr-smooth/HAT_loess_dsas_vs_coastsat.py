@@ -15,6 +15,10 @@ New outputs (saved to OUTPUT_DIR)
 
 All original outputs are also regenerated.
 
+comparison_table_smoothed.csv carries the raw values for every domain, but its
+LOESS columns are blank across the southern boundary zone (domains
+1..SKIP_SOUTHERN_DOMAINS), matching what the figures draw and why.
+
 Smoothing method: LOESS (locally weighted scatterplot smoothing)
   - Applied independently to each series (DSAS and CoastSat)
   - Preserves large-scale spatial patterns while removing per-domain noise
@@ -823,6 +827,11 @@ def main():
         if merged is None:
             continue
         m = add_smoothed_columns(merged)
+        # Same guard as the figures, so the table cannot be read as evidence
+        # the plots withheld. The three *_smooth columns are therefore EMPTY
+        # across domains 1..SKIP_SOUTHERN_DOMAINS; the raw columns are not,
+        # and still cover the whole island.
+        m = mask_southern_smoothed(m)
         cols = ["domain", "dsas_lrr", "cs_lrr", "dsas_std", "cs_std",
                 "difference", "dsas_lrr_smooth", "cs_lrr_smooth", "diff_smooth"]
         t = m[cols].copy()
