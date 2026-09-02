@@ -93,6 +93,7 @@ from hatteras_site_config import (                              # noqa: E402
 )
 from cascade_pipeline.roadway import RelocationEvent            # noqa: E402
 from cascade_pipeline.run_info import RunInfo                   # noqa: E402
+from cascade_pipeline.run_registry import preset_dir_for        # noqa: E402
 from cascade_pipeline.plotting.road_relocation_gif import (     # noqa: E402
     make_all_road_gifs,
     make_topography_gif,
@@ -745,7 +746,7 @@ def _report_header(arm_a, arm_b, preset):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    base = PROJECT_BASE_DIR / "output" / "raw_runs" / f"{START_YEAR}_{END_YEAR}"
+    raw_runs = PROJECT_BASE_DIR / "output" / "raw_runs"
     parser.add_argument("--preset", default=DEFAULT_PRESET,
                         help="source/sink preset; names both arms and the "
                              f"output subdirectory (default {DEFAULT_PRESET})")
@@ -762,10 +763,12 @@ def main():
 
     preset, _ = resolve_be_preset(args.preset)
     name_a, name_b = arm_names(preset)
-    # Runs are filed <period>/<preset>/. Both arms share a preset by
-    # construction -- arm_names derives both from the one token -- so the
-    # preset directory is joined once and used for both.
-    period_dir = base / preset
+    # Runs are filed [<forcing arm>/]<period>/<preset>/. Both relocation arms
+    # share a preset by construction -- arm_names derives both from the one
+    # token -- so the directory is resolved once and used for both. Resolved
+    # rather than joined: the join had no slot for the forcing-arm component,
+    # and "arm" here means the relocation switch, not that one.
+    period_dir = preset_dir_for(raw_runs, (START_YEAR, END_YEAR), preset)
     args.arm_a = args.arm_a or str(period_dir / name_a)
     args.arm_b = args.arm_b or str(period_dir / name_b)
 

@@ -127,7 +127,15 @@ def stale_against_runs(paths):
     happened on 2026-08-25, when fig_be_convergence.png was three minutes older
     than the run that had just been rebuilt.
     """
-    runs = list(RAW_RUNS.glob("*/calibBE/*/*_shoreline_change_rate.csv"))
+    # Depth-agnostic on purpose. This was a fixed-depth
+    # "*/calibBE/*/*_shoreline_change_rate.csv" glob, which reaches
+    # <period>/calibBE/<run>/ but NOT the <arm>/<period>/calibBE/<run>/ a run
+    # forced off the calibration wave climate is filed under. A missed run can
+    # only ever make `newest` OLDER, so the failure is the staleness check
+    # passing a figure it should have caught -- silently, and in the direction
+    # that publishes the stale file.
+    runs = [path for path in RAW_RUNS.rglob("*_shoreline_change_rate.csv")
+            if path.parent.parent.name == "calibBE"]
     if not runs:
         return [], None
     newest = max(r.stat().st_mtime for r in runs)

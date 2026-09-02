@@ -23,6 +23,7 @@ HAT_hindcast_1984_2024.py, so the two cannot drift apart.
 import datetime
 import hashlib
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -120,6 +121,232 @@ def values_digest(mapping, length=12):
     payload = ";".join(f"{key}:{float(value):.6g}"
                        for key, value in sorted(mapping.items()))
     return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:length]
+
+
+# =============================================================================
+# WHERE A RUN LIVES
+# =============================================================================
+# One run's outputs are at
+#
+#     <raw_runs>/[<arm>/]<start>_<end>/<preset>/<run_name>/
+#
+# and the ARM COMPONENT IS ABSENT for the calibration arm. That asymmetry is
+# deliberate -- every run made before forcing arms existed is at the short
+# path, and emitting the component unconditionally would rename all of them --
+# but it does mean the path cannot be built by joining a fixed number of parts.
+#
+# THIS IS THE ONLY PLACE THAT SPELLING BELONGS. It was previously rebuilt by
+# hand in six scripts, five of which predate the arm component and so join
+# <period>/<preset>/<name> with no slot for it: an arm-scoped run is simply
+# invisible to them. HAT_plot_sensitivity.py skipped its target-window check
+# silently whenever the path did not resolve, which is the quiet-wrong-path
+# failure hat_topo_version.py exists to end for the domain arrays, one tree
+# over. A name that is not on disk is an error here, and the error names the
+# arms the run IS under.
+
+CALIBRATION_ARM = "calibration"
+
+# A period directory is exactly <4 digits>_<4 digits>. Anything else directly
+# under raw_runs/ is an arm, so the two levels can be told apart without a
+# registry of arm names -- an arm is created by setting HAT_ARM_TAG, and no
+# hardcoded list of them would stay current.
+_PERIOD_DIR = re.compile(r"\d{4}_\d{4}")
+
+
+def period_component(period):
+    """The <start>_<end> path component, from either spelling of a period.
+
+    Callers hold a period as a string in some places and as two integers in
+    others; accepting both is what lets every call site pass what it already
+    has rather than reformatting at each one.
+
+    Args:
+        period: Either "1984_2004" or a (start_year, end_year) pair.
+
+    Returns:
+        The directory component as a string.
+
+    Raises:
+        ValueError: If the string is not <4 digits>_<4 digits>, or the pair is
+            not two values. A malformed period would otherwise build a path
+            that cannot exist, and be reported as a missing run.
+    """
+    if isinstance(period, str):
+        if not _PERIOD_DIR.fullmatch(period):
+            raise ValueError(
+                f"period {period!r} is not <start>_<end>, e.g. '1984_2004'")
+        return period
+    try:
+        start, end = period
+    except (TypeError, ValueError):
+        raise ValueError(
+            f"period must be '1984_2004' or (1984, 2004), got {period!r}"
+        ) from None
+    return f"{int(start)}_{int(end)}"
+
+
+def arm_component(arm):
+    """The path component an arm contributes, which is "" for calibration.
+
+    Args:
+        arm: Arm name, as the `arm` column of run_index.csv spells it. None
+            and "" are read as the calibration arm.
+
+    Returns:
+        The arm name, or "" for the calibration arm.
+
+    Raises:
+        ValueError: If the arm is not a single path component. The value
+            reaches here from an environment variable and is joined onto the
+            output root.
+    """
+    arm = (arm or CALIBRATION_ARM).strip()
+    if arm == CALIBRATION_ARM:
+        return ""
+    if "/" in arm or "\\" in arm or arm.startswith("."):
+        raise ValueError(
+            f"arm {arm!r} must be a single path component -- it is joined "
+            f"onto the raw_runs root and must not escape it.")
+    return arm
+
+
+def preset_dir_for(raw_runs, period, preset, arm=CALIBRATION_ARM):
+    """The directory holding every run of one period, preset and arm.
+
+    This is the runner's OUTPUT_BASE_DIR. It is the level anything that
+    ENUMERATES runs works at -- the scenario grid, the relocation comparison,
+    the source/sink calibration -- as against `run_dir_for`, which is for a run
+    already named.
+
+    Args:
+        raw_runs: The output/raw_runs root.
+        period: "1984_2004" or (1984, 2004).
+        preset: Source/sink preset, e.g. "calibBE".
+        arm: Forcing arm. The default is the calibration arm, which
+            contributes no path component.
+
+    Returns:
+        The preset directory as a Path. Does not check it exists.
+    """
+    root = Path(raw_runs)
+    tag = arm_component(arm)
+    base = root / tag if tag else root
+    return base / period_component(period) / preset
+
+
+def run_dir_for(raw_runs, run_name, period, preset, arm=CALIBRATION_ARM):
+    """The directory one run's output belongs in. Does not check it exists.
+
+    The inverse of the runner's RUN_DIR, and the only place the layout is
+    spelled. Use `find_run_dir` to READ a finished run; this builds the path a
+    run would be WRITTEN to, which is what a writer and a collision guard need
+    and what a reader should not be doing by hand.
+
+    Args:
+        raw_runs: The output/raw_runs root.
+        run_name: The run's derived name, which is also its directory name.
+        period: "1984_2004" or (1984, 2004).
+        preset: Source/sink preset, e.g. "calibBE".
+        arm: Forcing arm. The default is the calibration arm, which
+            contributes no path component.
+
+    Returns:
+        The run directory as a Path.
+    """
+    return preset_dir_for(raw_runs, period, preset, arm) / run_name
+
+
+def arms_holding(raw_runs, run_name, period, preset):
+    """Every arm under which this run exists on disk.
+
+    A run name describes the SCENARIO and an arm describes the FORCING, so one
+    name can legitimately exist in several arms -- and three currently exist in
+    four each. This is what makes that discoverable rather than a surprise: it
+    is what `find_run_dir` reports when the arm it was asked for holds nothing.
+
+    Args:
+        raw_runs: The output/raw_runs root.
+        run_name: The run's directory name.
+        period: "1984_2004" or (1984, 2004).
+        preset: Source/sink preset.
+
+    Returns:
+        Sorted list of arm names, using CALIBRATION_ARM for the unscoped tree.
+        Empty if the name is nowhere under this period and preset.
+    """
+    root = Path(raw_runs)
+    if not root.is_dir():
+        return []
+    candidates = [CALIBRATION_ARM] + sorted(
+        child.name for child in root.iterdir()
+        if child.is_dir() and not _PERIOD_DIR.fullmatch(child.name))
+    return [arm for arm in candidates
+            if run_dir_for(root, run_name, period, preset, arm).is_dir()]
+
+
+def find_run_dir(raw_runs, run_name, period, preset, arm=CALIBRATION_ARM):
+    """Locates a finished run, raising with what IS on disk if it is absent.
+
+    ARM DEFAULTS TO CALIBRATION RATHER THAN SEARCHING. A search would let a
+    figure silently draw a run forced at a wave climate other than the one it
+    names -- exactly what the arm component exists to prevent -- and with three
+    names currently present in four arms each it would have to guess between
+    them. Naming no arm means the calibration arm, which is also what every
+    call site did before arms existed, so routing an existing script through
+    this cannot change which run it reads.
+
+    Args:
+        raw_runs: The output/raw_runs root.
+        run_name: The run's directory name.
+        period: "1984_2004" or (1984, 2004).
+        preset: Source/sink preset.
+        arm: Forcing arm to read from. Defaults to the calibration arm.
+
+    Returns:
+        The run directory as a Path, which exists.
+
+    Raises:
+        FileNotFoundError: If that directory is absent. The message names the
+            arms the run DOES exist under, so an arm-scoped run reads as "it
+            is over there" rather than as "it was never made".
+    """
+    directory = run_dir_for(raw_runs, run_name, period, preset, arm)
+    if directory.is_dir():
+        return directory
+
+    elsewhere = [a for a in arms_holding(raw_runs, run_name, period, preset)
+                 if a != arm]
+    hint = (f"\n  It exists under arm(s): {', '.join(elsewhere)} -- pass "
+            f"arm=... to read one of those."
+            if elsewhere else
+            "\n  It exists under no arm; the run has not been made.")
+    raise FileNotFoundError(
+        f"no run directory for {run_name!r} in arm {arm!r}.\n  {directory}"
+        + hint)
+
+
+def run_dir_for_index_row(raw_runs, row):
+    """The run directory named by one run_index.csv row.
+
+    The index carries `arm`, `start_year`, `end_year` and `source_sink_preset`
+    for exactly this: a row and a directory can be matched without either side
+    reconstructing the other's spelling.
+
+    Args:
+        raw_runs: The output/raw_runs root.
+        row: A mapping or pandas Series with run_name, start_year, end_year,
+            source_sink_preset, and optionally arm.
+
+    Returns:
+        The run directory as a Path. NOT checked for existence -- a row whose
+        arm disagrees with the tree is a bookkeeping fault to be seen, not
+        smoothed over here.
+    """
+    arm = row["arm"] if "arm" in row else CALIBRATION_ARM
+    return run_dir_for(
+        raw_runs, row["run_name"],
+        (int(row["start_year"]), int(row["end_year"])),
+        row["source_sink_preset"], arm)
 
 
 def run_dir_contents(run_dir):
@@ -355,30 +582,42 @@ def append_run_index(index_path, row, key="run_name"):
     Args:
         index_path: Path to the index CSV. Created if absent.
         row: Mapping of column name to value for this run.
-        key: Column identifying a run uniquely.
+        key: Column, or sequence of columns, identifying a run uniquely.
 
     Returns:
         The full index as a DataFrame, as written.
     """
     index_path = Path(index_path)
     new = pd.DataFrame([row])
+    # A COMPOSITE key is allowed because the run name no longer identifies a
+    # run on its own: forcing that is not part of the scenario -- Hs -- scopes
+    # the output DIRECTORY instead of adding a name token, so two runs can share
+    # a name and differ in what they were forced with. Replacing on name alone
+    # would silently drop one of them from the index.
+    keys = (key,) if isinstance(key, str) else tuple(key)
 
     if index_path.exists():
         existing = pd.read_csv(index_path)
-        if key in existing.columns:
-            existing = existing[existing[key] != row[key]]
+        usable = [k for k in keys if k in existing.columns]
+        if usable:
+            same = pd.Series(True, index=existing.index)
+            for k in usable:
+                same &= existing[k].astype(str) == str(row.get(k))
+            existing = existing[~same]
         combined = pd.concat([existing, new], ignore_index=True)
     else:
         combined = new
 
     # Stable ordering: the identity columns first, then whatever else exists,
     # so the file stays readable as columns accumulate.
-    leading = [c for c in (key, "timestamp", "start_year", "end_year")
+    leading = [c for c in keys + ("timestamp", "start_year", "end_year")
                if c in combined.columns]
     combined = combined[leading + [c for c in combined.columns
                                    if c not in leading]]
-    if key in combined.columns:
-        combined = combined.sort_values(key, kind="stable").reset_index(drop=True)
+    sort_on = [k for k in keys if k in combined.columns]
+    if sort_on:
+        combined = combined.sort_values(sort_on,
+                                        kind="stable").reset_index(drop=True)
 
     index_path.parent.mkdir(parents=True, exist_ok=True)
     combined.to_csv(index_path, index=False)

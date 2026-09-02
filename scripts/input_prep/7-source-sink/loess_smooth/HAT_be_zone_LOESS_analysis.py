@@ -114,6 +114,8 @@ from cascade_pipeline.coastsat_loess import (        # noqa: E402
     compute_domain_means,
 )
 from cascade_pipeline.hindcast import build_target_table   # noqa: E402
+from cascade_pipeline.run_registry import (                # noqa: E402
+    CALIBRATION_ARM, preset_dir_for)
 from hatteras_site_config import HATTERAS_DOMAINS          # noqa: E402
 import matplotlib
 matplotlib.use("Agg")
@@ -169,13 +171,24 @@ P2_COASTSAT_CSV = str(COASTSAT_BASE / "2004_2024" / "transect_lrr_full.csv")
 BASE_PRESET   = os.environ.get("HAT_BE_BASE_PRESET", "edgeBE").strip() or "edgeBE"
 BASE_SCENARIO = "road_bdm_nogroin"
 RAW_RUNS_DIR  = PROJECT_BASE_DIR / "output" / "raw_runs"
+# Where a CONCLUDED experiment's forcing arms are kept. A live calibration
+# probe is still written into raw_runs/ under HAT_ARM_TAG -- that is what stops
+# it overwriting the base run it probes -- and is moved here when the question
+# it was answering is settled, so raw_runs/ stays the production matrix.
+ARM_RUNS_DIR  = PROJECT_BASE_DIR / "output" / "hs_experiment" / "runs"
 
 # The section 8 settings, matching the runner. TARGET_WINDOW is the widest
 # window; `rate_comparison` resolves the reference the same way.
 LOESS_CONFIG  = LoessConfig(window_domains=(7, 10), skip_southern_domains=10)
 TARGET_WINDOW = 10
 
-OUTPUT_DIR = str(_HERE.parent / "output")
+# HAT_BE_OUTPUT_DIR redirects every output -- be_zone_metrics.csv,
+# DOMAIN_BE_RATES*.txt, convergence_history.json, the figures. A what-if pass
+# (a different Hs, a trial base run) MUST set it: the production directory
+# holds a converged calibration whose stopping point is a recorded scientific
+# claim, and an exploratory pass silently overwriting it would destroy the
+# provenance without anyone noticing.
+OUTPUT_DIR = os.environ.get("HAT_BE_OUTPUT_DIR", "").strip()     or str(_HERE.parent / "output")
 
 # ── Column names in CoastSat CSVs ─────────────────────────────────────────────
 LRR_COL    = "median_lrr"   # use median — more robust to outlier transects
@@ -471,6 +484,37 @@ def _groin_run_at(period_dir, stem, fitted, tolerance=1e-6):
     return None
 
 
+def _wave_arm():
+    """The forcing arm HAT_BE_HS selects, as run_registry spells arms.
+
+    CALIBRATION_ARM at the calibration wave climate, so every run made before
+    arms existed resolves exactly where it always did. The token comes from
+    wave_climate_token -- the same function the runner derives its own arm tag
+    from -- rather than being spelled here, so the two cannot disagree about
+    which directory a run was filed in.
+
+    Returns:
+        An arm name for preset_dir_for.
+    """
+    # hatteras_ms is not on the path for this script the way SCRIPTS_DIR is.
+    # Added inside the function, mirroring HAT_groin_sweep_config._wave_scope,
+    # so the module does not gain an import-time dependency on the runner.
+    _ms = str(SCRIPTS_DIR / "hatteras_ms")
+    if _ms not in sys.path:
+        sys.path.insert(0, _ms)
+    from cascade_pipeline.hindcast import wave_climate_token
+    from HAT_hindcast_config import field_default
+
+    fields = ("hs", "wave_period_s", "wave_asymmetry",
+              "wave_angle_high_fraction")
+    defaults = {name: field_default(name) for name in fields}
+    values = dict(defaults)
+    raw = os.environ.get("HAT_BE_HS", "").strip()
+    if raw:
+        values["hs"] = float(raw)
+    return wave_climate_token(values, defaults) or CALIBRATION_ARM
+
+
 def base_run_dir(period_start, period_end):
     """The base run directory for one period, resolved from what is on disk.
 
@@ -487,9 +531,26 @@ def base_run_dir(period_start, period_end):
         RuntimeError: If more than one candidate matches, rather than
             guessing which run the calibration should rest on.
     """
-    # Runs are filed <period>/<preset>/.
-    period_dir = (RAW_RUNS_DIR / f"{period_start}_{period_end}"
-                  / BASE_PRESET)
+    # Runs are filed [<forcing arm>/]<period>/<preset>/, the arm being absent
+    # at the calibration climate. HAT_BE_HS points this at the tree for a
+    # different wave height, which is what lets the SAME calibration method be
+    # run against a differently-forced model and the two compared.
+    #
+    # BOTH THE ARM'S SPELLING AND THE LAYOUT COME FROM SHARED CODE. This block
+    # previously spelled "waveHs3" itself and joined the path itself, so it
+    # held a second copy of two rules the runner also implements -- and a
+    # second copy is how the two drift into reading different directories.
+    #
+    # WHICH ROOT, THOUGH. The calibration arm lives in raw_runs/; an
+    # off-calibration arm does NOT. The Hs 3.0 arms were moved to
+    # hs_experiment/runs/ on 2026-09-02, beside the DECISION.md they are the
+    # evidence for, so that raw_runs/ holds only the production matrix and its
+    # sensitivity cells and no run name appears there twice. The layout INSIDE
+    # each root is identical, which is why one preset_dir_for call serves both.
+    arm = _wave_arm()
+    root = RAW_RUNS_DIR if arm == CALIBRATION_ARM else ARM_RUNS_DIR
+    period_dir = preset_dir_for(root, (period_start, period_end),
+                                BASE_PRESET, arm=arm)
     stem = f"HAT_{period_start}_{period_end}_{BASE_PRESET}_road_bdm"
 
     # GROIN-ON BASE RUN, WHEN ONE EXISTS AT THE FITTED (M, f).

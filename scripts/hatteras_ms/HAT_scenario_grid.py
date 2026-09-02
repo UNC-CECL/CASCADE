@@ -90,6 +90,7 @@ from cascade_pipeline.coastsat_loess import (                 # noqa: E402
     build_coastsat_series,
 )
 from cascade_pipeline.hindcast import build_target_table      # noqa: E402
+from cascade_pipeline.run_registry import preset_dir_for      # noqa: E402
 from hatteras_site_config import (                            # noqa: E402
     HATTERAS_ANNOTATIONS,
     HATTERAS_DOMAINS,
@@ -178,7 +179,10 @@ def load_runs(period_start, period_end, preset):
         {(scenario, reloc): Series indexed by GIS domain}, empty if the
         preset directory does not exist.
     """
-    preset_dir = RAW_RUNS / f"{period_start}_{period_end}" / preset
+    # Resolved rather than joined: runs forced off the calibration wave
+    # climate sit under an arm component this join had no slot for. The
+    # default arm is the calibration one, which is what this grid draws.
+    preset_dir = preset_dir_for(RAW_RUNS, (period_start, period_end), preset)
     if not preset_dir.is_dir():
         return {}
 

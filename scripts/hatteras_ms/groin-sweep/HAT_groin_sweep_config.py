@@ -65,6 +65,7 @@ from __future__ import annotations
 
 import re
 import sys
+import os
 from pathlib import Path
 
 import numpy as np
@@ -398,6 +399,53 @@ VALIDATION_TOLERANCE_M_YR = 5e-3
 VALIDATION_REQUIRED_PRESET = "edgeBE"
 
 
+# Scenario tokens that NEGATE a module. The validation reference is the full
+# management run, so a name carrying any of these is a different scenario and
+# must not match -- `..._road_bdm_nonourish_groin` (the full_no_fill arm) sat
+# beside `..._road_bdm_nourish_groin` in 2004-2024 and both matched, so
+# validation_run_dir returned "2 candidates" and period-2 sweep validation could
+# not run at all.
+#
+# MEMBERSHIP, NOT PREFIX. Testing `token.startswith("no")` looks equivalent and
+# is wrong in the one place it matters: `nourish` itself begins with "no", so a
+# prefix test rejects the very run being looked for. The tokens are enumerated
+# for that reason. `nogroin` is in the set, which subsumes the endswith check
+# this replaced.
+_NEGATED_SCENARIO_TOKENS = frozenset(
+    {"nogroin", "nonourish", "noroad", "nobdm"})
+
+
+def _wave_scope():
+    """The raw_runs path component for this sweep's wave climate.
+
+    "" at the calibration climate, so every pre-existing run resolves exactly
+    where it always did, and e.g. "waveHs3" otherwise. Mirrors HS_TAG in
+    section 3 of the runner by calling the same token function, so the two
+    cannot disagree about where a run was filed.
+
+    Returns:
+        A string, empty at the calibration wave climate.
+    """
+    from cascade_pipeline.hindcast import wave_climate_token
+    # hatteras_ms is not on the path for this package the way SCRIPTS_DIR is;
+    # added here rather than at import time so nothing else in this module
+    # gains a dependency on the runner's config.
+    _ms = str(PROJECT_BASE_DIR / "scripts" / "hatteras_ms")
+    if _ms not in sys.path:
+        sys.path.insert(0, _ms)
+    from HAT_hindcast_config import field_default
+
+    fields = ("hs", "wave_period_s", "wave_asymmetry",
+              "wave_angle_high_fraction")
+    defaults = {name: field_default(name) for name in fields}
+    values = dict(defaults)
+
+    raw = os.environ.get("HAT_SWEEP_HS", "").strip()
+    if raw:
+        values["hs"] = float(raw)
+    return wave_climate_token(values, defaults) or ""
+
+
 def validation_run_dir(period):
     """Directory of the matrix run this period's sweep validates against.
 
@@ -416,10 +464,22 @@ def validation_run_dir(period):
     Returns:
         (path, None) for exactly one match, else (None, message).
     """
-    # Runs are filed <period>/<preset>/. The stem below already pins the
-    # preset to edgeBE, so the directory pins it to the same thing.
-    base = (PROJECT_BASE_DIR / "output" / "raw_runs"
-            / f"{period}_{END_YEAR[period]}" / "edgeBE")
+    # Runs are filed <wave scope>/<period>/<preset>/. The stem below already
+    # pins the preset to edgeBE, so the directory pins it to the same thing.
+    #
+    # THE WAVE SCOPE IS NOT OPTIONAL. sweep_output_dir and joint_fit_paths are
+    # already scoped by HAT_SWEEP_HS; this lookup was not, so a sweep at
+    # Hs = 3.0 validated its duplicated model code against the Hs = 2.5 matrix
+    # run -- the one arm it must never be compared with. That failure is
+    # SILENT: the reference exists, it is readable, and it is the wrong island.
+    #
+    # The component is taken from wave_climate_token, the same function the
+    # runner derives HS_TAG from, rather than being spelled here. A second copy
+    # of the "3.0 -> waveHs3" rule is how the two would drift apart.
+    from cascade_pipeline.run_registry import preset_dir_for
+    base = preset_dir_for(PROJECT_BASE_DIR / "output" / "raw_runs",
+                          (period, END_YEAR[period]), "edgeBE",
+                          arm=_wave_scope() or "calibration")
     if not base.exists():
         return None, f"no run directory for {period}-{END_YEAR[period]}: {base}"
 
@@ -428,7 +488,7 @@ def validation_run_dir(period):
         path for path in base.iterdir()
         if path.is_dir() and path.name.startswith(stem)
         and path.name.endswith("_groin")
-        and not path.name.endswith("_nogroin"))
+        and not _NEGATED_SCENARIO_TOKENS & set(path.name.split("_")))
 
     if not matches:
         return None, (
@@ -486,7 +546,35 @@ def sweep_output_dir(period, preset):
         The output directory Path.
     """
     stem = f"{period}_{END_YEAR[period]}_{preset}"
+    # A sweep run at a non-default Hs gets its OWN directory. The worker reads
+    # HAT_SWEEP_HS and would otherwise write its results over the 2.5 m sweep
+    # the fitted M = 60 came from -- the fit would be silently replaced by one
+    # made under different forcing, with nothing on disk recording that it had
+    # happened. Same reasoning as the run-name tokens on the hindcast side.
+    raw = os.environ.get("HAT_SWEEP_HS", "").strip()
+    if raw and float(raw) != 2.5:
+        stem += "_Hs" + f"{float(raw):g}".replace(".", "p")
     return PROJECT_BASE_DIR / "output" / "groin_sweep" / stem
+
+
+def joint_fit_paths():
+    """Where the joint fit writes, scoped by wave climate.
+
+    The default file holds HAND-PINNED values (M = 60, f = 0.6) whose note says
+    re-running the fit will overwrite them. A fit made at a different Hs must
+    therefore not land there: it is not a better answer to the same question,
+    it is the answer to a different one, and the pinned record of how the
+    production pair was chosen would be gone.
+
+    Returns:
+        (json_path, csv_path).
+    """
+    out = PROJECT_BASE_DIR / "output" / "groin_sweep"
+    raw = os.environ.get("HAT_SWEEP_HS", "").strip()
+    suffix = ""
+    if raw and float(raw) != 2.5:
+        suffix = "_Hs" + f"{float(raw):g}".replace(".", "p")
+    return out / f"joint_fit{suffix}.json", out / f"joint_fit{suffix}.csv"
 
 
 def build_grid(period, preset):
