@@ -230,12 +230,20 @@ def stats_annotation(s, prefix=""):
 # SHARED AXIS HELPERS
 # ============================================================
 
-def add_town_lines(ax, ymin=None, ymax=None):
+# Town labels sit in this band, measured down from the top of the axes; the
+# stats boxes start below it. Both are in axes fractions so they cannot drift
+# into each other when ylim changes.
+TOWN_LABEL_Y = 0.985
+STATS_BOX_Y  = 0.88
+
+
+def add_town_lines(ax):
+    """Vertical reference line and label per town, pinned to the axes top."""
+    trans = blended_transform_factory(ax.transData, ax.transAxes)
     for town, dom in TOWNS.items():
         ax.axvline(dom, color="0.55", lw=0.9, ls="--", alpha=0.7, zorder=0)
-        y_pos = ax.get_ylim()[1] * 0.93 if ymax is None else ymax * 0.93
-        ax.text(dom, y_pos, town, ha="center", va="top",
-                fontsize=8, color="0.35",
+        ax.text(dom, TOWN_LABEL_Y, town, transform=trans,
+                ha="center", va="top", fontsize=8, color="0.35",
                 bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.7))
 
 
@@ -408,7 +416,7 @@ def plot_smoothed_only(merged_1978, merged_1997, out_path):
                         color=c_dsas, alpha=0.15, label="DSAS > CoastSat")
 
         s = regression_stats(m["dsas_lrr_smooth"].values, m["cs_lrr_smooth"].values)
-        ax.text(0.01, 0.97, stats_annotation(s), transform=ax.transAxes,
+        ax.text(0.01, STATS_BOX_Y, stats_annotation(s), transform=ax.transAxes,
                 fontsize=9, va="top",
                 bbox=dict(boxstyle="round", fc="white", alpha=0.88, ec="0.7"))
 
@@ -461,7 +469,7 @@ def plot_smoothing_sensitivity(merged, period_label, out_path):
                 label=f"CoastSat smoothed", zorder=3)
 
         s = regression_stats(m["dsas_lrr_smooth"].values, m["cs_lrr_smooth"].values)
-        ax.text(0.01, 0.97,
+        ax.text(0.01, STATS_BOX_Y,
                 f"{flabel}   |   " + stats_annotation(s),
                 transform=ax.transAxes, fontsize=8.5, va="top",
                 bbox=dict(boxstyle="round", fc="white", alpha=0.88, ec="0.7"))
