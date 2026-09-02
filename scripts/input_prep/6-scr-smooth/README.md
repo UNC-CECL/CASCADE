@@ -74,10 +74,26 @@ Re-derive them if `DOMAIN_SPACING_M` changes. One mismatch is deliberately left
 and commented: `GROINS` puts the Buxton groin at domain 6, band centre 2750 m,
 while the hindcast places it at GIS 5.5 - the domain 5/6 boundary, 2500 m.
 
+`SKIP_SOUTHERN_DOMAINS = 10` withholds the smoothed series across domains
+1-10 here too - the same guard as the DSAS script and the hindcast, so all
+three now cut at the same place. It is applied at the two smoothing functions'
+returns, after the fit, which is the whole implementation: every figure and the
+export inherit it from there, and `aggregate_to_domains` picks it up for free
+because a per-domain mean of an all-NaN group is NaN. The band is drawn in both
+x-spaces - domains 1-10 in domain space, 0-5000 m in transect space, which is
+the same cut since domain *d* occupies `[(d-1)*500, d*500)`.
+
+It bites less here than in the domain-space scripts: smoothing runs at transect
+resolution, ~10 points per domain, so the edge fit has far more local support.
+This script never showed the -6.21 m/yr excursion the DSAS one did. The guard
+is applied for consistency with what the model is actually scored against, not
+because the artifact appeared.
+
 Note the folder name `03_cascade_inputs` overstates it: nothing reads that CSV,
 and it is smoothed at this script's primary window (7 domains), whereas the
-hindcast scores against the 10-domain curve. Treat it as a table to read, not
-as an input to a run.
+hindcast scores against the 10-domain curve. Its `cs_lrr_smooth_*` columns are
+blank across domains 1-10 like everything else; the raw columns are complete.
+Treat it as a table to read, not as an input to a run.
 
 ### HAT_loess_dsas_vs_coastsat.py
 
