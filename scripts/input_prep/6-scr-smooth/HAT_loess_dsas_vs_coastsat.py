@@ -71,6 +71,20 @@ DOMAIN_MAX = 90
 # 0.20 = ~18 domains → smoother, loses finer spatial patterns
 LOESS_FRAC = 0.15
 
+# --- Southern boundary guard ---
+# Domains 1..N are dropped from the SMOOTHED curves. Oregon Inlet dominates
+# that zone, and LOESS is a local linear fit, so at the very edge it
+# extrapolates: CoastSat 1978-1997 smooths to -6.21 m/yr at domain 1 where
+# the raw value is -0.59 and the local raw spread is -7.01..-0.59. The
+# smoothed value lands outside the data it claims to summarise.
+#
+# Same guard, same width as the hindcast's
+# cascade_pipeline/coastsat_loess.py: LoessConfig(skip_southern_domains=10).
+# DISPLAY ONLY, as it is there -- the LOESS still fits over all 90 domains,
+# so the southern data still pulls the values just north of the cut; only the
+# result is withheld. Set to 0 to show LOESS everywhere.
+SKIP_SOUTHERN_DOMAINS = 10
+
 # --- Town locations for reference lines ---
 TOWNS = {
     "Buxton": 8,
@@ -127,6 +141,7 @@ C_CS_1978     = "#5B9BD5"   # light blue (dashed)
 C_DSAS_1997   = "#833C00"   # dark red
 C_CS_1997     = "#F4A460"   # light red/tan (dashed)
 C_NO_DSAS     = "#8C8C8C"   # hatch over domains where DSAS has no data
+C_SKIP_ZONE   = "#6A8CAF"   # band over the domains where LOESS is suppressed
 
 # ============================================================
 # DATA LOADING
@@ -247,6 +262,32 @@ def add_town_lines(ax):
                 bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.7))
 
 
+def mask_southern_smoothed(m):
+    """Blank the smoothed columns across the southern boundary zone.
+
+    Applied after the fit, never before: the LOESS still sees every domain,
+    matching how the hindcast splices this zone out. Raw columns are
+    untouched, so the raw series still plots across the whole island.
+    """
+    if SKIP_SOUTHERN_DOMAINS <= 0:
+        return m
+    m = m.copy()
+    zone = m["domain"] <= SKIP_SOUTHERN_DOMAINS
+    for col in ("dsas_lrr_smooth", "cs_lrr_smooth", "diff_smooth"):
+        if col in m.columns:
+            m.loc[zone, col] = np.nan
+    return m
+
+
+def shade_boundary_zone(ax, label=True):
+    """Mark the domains whose smoothed values were withheld."""
+    if SKIP_SOUTHERN_DOMAINS <= 0:
+        return
+    ax.axvspan(DOMAIN_MIN - 0.5, SKIP_SOUTHERN_DOMAINS + 0.5,
+               facecolor=C_SKIP_ZONE, alpha=0.10, lw=0.0, zorder=0,
+               label="LOESS withheld (Oregon Inlet)" if label else None)
+
+
 def shade_missing_dsas(ax, m, label=True):
     """Hatch the domains where DSAS has no data, so absence is not read as agreement.
 
@@ -332,6 +373,7 @@ def plot_overview_smoothed(merged_1978, merged_1997, out_path):
             continue
 
         m = add_smoothed_columns(merged)
+        m = mask_southern_smoothed(m)
         d = m["domain"]
 
         # --- Raw (faded, thin) ---
@@ -368,6 +410,7 @@ def plot_overview_smoothed(merged_1978, merged_1997, out_path):
                 #bbox=dict(boxstyle="round", fc="white", alpha=0.88, ec="0.7"))
 
         ax.set_ylabel("Shoreline Change Rate (m/yr)", fontsize=11, fontweight="bold")
+        shade_boundary_zone(ax)
         shade_missing_dsas(ax, m)
         ax.legend(fontsize=9.5, framealpha=0.95, loc="lower right")
         style_domain_axis(ax)
@@ -404,6 +447,7 @@ def plot_smoothed_only(merged_1978, merged_1997, out_path):
         if merged is None:
             continue
         m = add_smoothed_columns(merged)
+        m = mask_southern_smoothed(m)
         d = m["domain"]
 
         ax.plot(d, m["dsas_lrr_smooth"], color=c_dsas, lw=3.0,
@@ -425,6 +469,7 @@ def plot_smoothed_only(merged_1978, merged_1997, out_path):
                 bbox=dict(boxstyle="round", fc="white", alpha=0.88, ec="0.7"))
 
         ax.set_ylabel("Shoreline Change Rate (m/yr)", fontsize=11, fontweight="bold")
+        shade_boundary_zone(ax)
         shade_missing_dsas(ax, m)
         ax.legend(fontsize=9.5, framealpha=0.95, loc="lower right", ncol=2)
         style_domain_axis(ax)
@@ -460,6 +505,7 @@ def plot_smoothing_sensitivity(merged, period_label, out_path):
 
     for ax, frac, flabel in zip(axes, fracs, labels_frac):
         m = add_smoothed_columns(merged, frac=frac)
+        m = mask_southern_smoothed(m)
         d = m["domain"]
 
         # Raw faded
@@ -479,6 +525,7 @@ def plot_smoothing_sensitivity(merged, period_label, out_path):
                 bbox=dict(boxstyle="round", fc="white", alpha=0.88, ec="0.7"))
 
         ax.set_ylabel("Rate (m/yr)", fontsize=10, fontweight="bold")
+        shade_boundary_zone(ax)
         shade_missing_dsas(ax, m)
         ax.legend(fontsize=9, framealpha=0.95, loc="lower right")
         style_domain_axis(ax)
@@ -508,6 +555,7 @@ def plot_combined_sources(merged_1978, merged_1997, out_path):
         if merged is None:
             continue
         m = add_smoothed_columns(merged)
+        m = mask_southern_smoothed(m)
         d = m["domain"]
         ax.plot(d, m["dsas_lrr_smooth"], color=c_dsas, lw=2.5,
                 label=f"DSAS {label}")
@@ -551,6 +599,7 @@ def pearson_r(x, y):
 
 def plot_scatter_smoothed(merged, period_label, out_path):
     m = add_smoothed_columns(merged)
+    m = mask_southern_smoothed(m)
     s_raw    = regression_stats(m["dsas_lrr"].values,        m["cs_lrr"].values)
     s_smooth = regression_stats(m["dsas_lrr_smooth"].values, m["cs_lrr_smooth"].values)
 
@@ -649,6 +698,7 @@ def plot_line_comparison(merged, period_label, out_path):
     ax.set_ylabel("LRR (m/yr)", fontsize=12, fontweight="bold")
     ax.set_title(f"DSAS vs CoastSat LRR — {period_label}  (raw, ±1 std)",
                  fontsize=13, fontweight="bold")
+    shade_boundary_zone(ax)
     shade_missing_dsas(ax, merged)
     ax.legend(fontsize=10, framealpha=0.95)
     style_domain_axis(ax)
@@ -661,6 +711,7 @@ def plot_line_comparison(merged, period_label, out_path):
 
 def plot_difference(merged, period_label, out_path):
     m    = add_smoothed_columns(merged)
+    m = mask_southern_smoothed(m)
     diff = m["difference"]
     diff_smooth = m["diff_smooth"]
     colors = ["#2166ac" if v >= 0 else "#b2182b" for v in diff]
@@ -678,6 +729,7 @@ def plot_difference(merged, period_label, out_path):
     ax.set_title(f"Dataset Difference: CoastSat minus DSAS — {period_label}\n"
                  f"Blue = CoastSat more accretional  |  Red = CoastSat more erosional",
                  fontsize=12, fontweight="bold")
+    shade_boundary_zone(ax)
     shade_missing_dsas(ax, m)
     ax.legend(fontsize=10, framealpha=0.95)
     style_domain_axis(ax)
