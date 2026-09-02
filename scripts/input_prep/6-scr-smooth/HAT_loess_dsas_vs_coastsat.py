@@ -540,6 +540,15 @@ def plot_combined_sources(merged_1978, merged_1997, out_path):
 # FIGURE 5 — SCATTER of smoothed values
 # ============================================================
 
+def pearson_r(x, y):
+    """Pearson r over the pairs where both series are present."""
+    x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
+    both = ~np.isnan(x) & ~np.isnan(y)
+    if both.sum() < 3:
+        return np.nan, int(both.sum())
+    return float(np.corrcoef(x[both], y[both])[0, 1]), int(both.sum())
+
+
 def plot_scatter_smoothed(merged, period_label, out_path):
     m = add_smoothed_columns(merged)
     s_raw    = regression_stats(m["dsas_lrr"].values,        m["cs_lrr"].values)
@@ -548,11 +557,15 @@ def plot_scatter_smoothed(merged, period_label, out_path):
     c_dsas = C_DSAS_1978 if "1978" in period_label else C_DSAS_1997
     c_cs   = C_CS_1978   if "1978" in period_label else C_CS_1997
 
+    r_raw, _ = pearson_r(m["dsas_lrr"].values, m["cs_lrr"].values)
+    N_EFF_SPANS = 1.0 / LOESS_FRAC
+
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
     for ax, x_col, y_col, s, subtitle in [
         (axes[0], "dsas_lrr",        "cs_lrr",        s_raw,    "Raw values"),
-        (axes[1], "dsas_lrr_smooth", "cs_lrr_smooth", s_smooth, f"LOESS smoothed (frac={LOESS_FRAC})"),
+        (axes[1], "dsas_lrr_smooth", "cs_lrr_smooth", s_smooth,
+         f"LOESS smoothed (frac={LOESS_FRAC}) — spatial structure, not agreement"),
     ]:
         x = m[x_col].values
         y = m[y_col].values
@@ -577,7 +590,27 @@ def plot_scatter_smoothed(merged, period_label, out_path):
         ax.set_xlabel("DSAS LRR (m/yr)", fontsize=11, fontweight="bold")
         ax.set_ylabel("CoastSat LRR (m/yr)", fontsize=11, fontweight="bold")
         ax.set_title(subtitle, fontsize=11)
-        ax.legend(fontsize=9, framealpha=0.95)
+        ax.legend(fontsize=9, framealpha=0.95, loc="lower right")
+
+        # Both panels carry their r. The smoothed one also carries the raw r
+        # and a count of independent spans, because its own r is not a
+        # like-for-like improvement: LOESS runs along domain order, so
+        # neighbouring smoothed values are built from overlapping windows and
+        # are not independent samples. A window holds frac*n domains, so the
+        # number of effectively independent spans is about 1/frac -- roughly
+        # 6 here, not the 90 points plotted.
+        r_here, n_here = pearson_r(x, y)
+        if x_col.endswith("_smooth"):
+            note = (f"r = {r_here:+.2f}  over ~{N_EFF_SPANS:.0f} independent spans\n"
+                    f"NOT comparable to the raw panel: LOESS correlates\n"
+                    f"neighbouring domains. Raw r = {r_raw:+.2f}.")
+            fc = "#FFF4E5"
+        else:
+            note = f"r = {r_here:+.2f}   n = {n_here}"
+            fc = "white"
+        ax.text(0.04, 0.96, note, transform=ax.transAxes, fontsize=8.5,
+                va="top", family="monospace", zorder=6,
+                bbox=dict(boxstyle="round", fc=fc, alpha=0.92, ec="0.7"))
 
         sm = plt.cm.ScalarMappable(cmap="viridis",
              norm=plt.Normalize(vmin=DOMAIN_MIN, vmax=DOMAIN_MAX))
