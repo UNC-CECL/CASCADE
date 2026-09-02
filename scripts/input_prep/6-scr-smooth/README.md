@@ -27,7 +27,10 @@ at the repo root, not typed as an absolute literal.
 
 Every script here is `HAT_loess_<what it compares>`, matching the `HAT_` prefix
 used across `0-elevation`, `3-env-forcings`, `4-mgmt-forcings` and
-`7-source-sink`, and each writes to `<its own name>_output/`. The one exception
+`7-source-sink`. Each writes its products to
+`data/hatteras_init/6-scr-smooth/<its own name>_output/` - scripts live under
+`scripts/`, products under `data/`, the same split every other stage uses, and
+those folders are gitignored because one run regenerates them. The one exception
 is the snapshot, which keeps the live module's filename `coastsat_loess.py` on
 purpose - it is a mirror, and the name is what makes it one.
 
@@ -41,7 +44,8 @@ The one that settled the method. Runs **both** smoothers on every call:
 
 `LOESS_WINDOW_KM = 3.5` (7 domains) is the primary window;
 `COMPARE_WINDOWS_KM = [2.5, 3.5, 5.0]` (5, 7, 10 domains) is the sensitivity set.
-Writes to `HAT_loess_method_comparison_output/` in four numbered subfolders:
+Writes to `data/hatteras_init/6-scr-smooth/HAT_loess_method_comparison_output/`
+in four numbered subfolders:
 `01_transect_based`, `02_domain_averaged`, `03_cascade_inputs`,
 `04_method_comparison`.
 
