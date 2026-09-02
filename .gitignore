@@ -207,8 +207,20 @@ scripts/other_ms/
 *.prescenario
 *.preoutput
 
-# test fixtures (large binary files, not part of active Hatteras work)
-tests/
+# The test suite. ONE fixture is excluded, not the directory.
+#
+# This was a bare `tests/`, aimed at the 21.9 MB
+# 4-B3D_Rave_pt45_Natural_high.npz -- and it took the tests with it: 0 of the
+# 17 files here were tracked, while noxfile.py declares lint / test /
+# test-notebooks sessions and setup.cfg carries the flake8 config. A fresh
+# clone could not run `nox -s test` because the suite was not in the clone.
+# Everything in tests/ except that one file totals 0.8 MB.
+tests/4-B3D_Rave_pt45_Natural_high.npz
+# The small .npy/.npz fixtures back in past the global rules above, which exist
+# for the init domain arrays and the run pickles, not for these.
+!tests/**/*.npy
+!tests/**/*.npz
+tests/4-B3D_Rave_pt45_Natural_high.npz
 # CASCADE run outputs: the bulk artifacts only.
 # A run directory is ~160 MB, almost all of it the .npz model pickle, and the
 # hindcast is run as a 12-scenario matrix. The small text products ARE tracked
@@ -216,15 +228,26 @@ tests/
 # what the comparison figures and the cross-run index read. The .npz and the
 # animations are regenerable from those plus the code.
 #
-# Runs are filed under output/raw_runs/<start>_<end>/. Because output/ is
-# ignored wholesale above, the period directories and the index have to be
-# re-included by name. The subdirectories that predate the move
-# (groin_testing/, wrong/, ...) are left ignored -- that is what they already
-# were, and nothing in the pipeline reads them.
+# Runs are filed under output/raw_runs/[<forcing arm>/]<start>_<end>/, the arm
+# component being absent for the calibration arm. Because output/ is ignored
+# wholesale above, that first level has to be re-included.
+#
+# IT IS RE-INCLUDED AS *, NOT AS THE PERIOD PATTERN. This was
+# `[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]/`, which matches a period
+# directory and nothing else -- so when forcing arms arrived on 2026-09-01 the
+# arm trees fell through to the line above and were ignored whole: 0 tracked
+# files under waveHs3/ against 722 under 1984_2004/. run_index.csv IS tracked,
+# so a fresh clone got seven index rows naming directories it did not have.
+# An arm name comes from HAT_ARM_TAG and cannot be enumerated here, and the
+# file-type rules below already keep the bulk out at any depth, so the level is
+# re-included as a whole. The dirs the narrow pattern guarded against
+# (groin_testing/, wrong/) no longer exist.
 output/raw_runs/*
-!output/raw_runs/[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]/
-!output/raw_runs/run_index.csv
-!output/raw_runs/show_runs.py
+!output/raw_runs/*/
+# Every retired index too, not just the live one: they are a few KB each and
+# they are the provenance of each index mutation -- the 2026-09-01 arm backfill
+# is only checkable against run_index_archive_20260901_235731.csv.
+!output/raw_runs/run_index*.csv
 output/raw_runs/**/*.npz
 output/raw_runs/**/*.gif
 output/raw_runs/**/*.png
