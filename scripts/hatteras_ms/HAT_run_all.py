@@ -117,6 +117,8 @@ import argparse
 import ast
 import json
 import os
+import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -420,7 +422,7 @@ def be_digest_for(period, preset):
 
 
 def job_key(stage, period=None, preset=None, scenario=None, groin=None,
-            reloc=None, M=None, fraction=None):
+            reloc=None, M=None, fraction=None, hs=None):
     """Stable identity for one unit of work.
 
     The relocations flag joined the key when the reloc axis was added. A key
@@ -464,6 +466,14 @@ def job_key(stage, period=None, preset=None, scenario=None, groin=None,
     digest = be_digest_for(period, preset)
     if digest != "empty":
         parts.append(digest)
+    # Hs JOINED THE KEY ON 2026-09-01, the fourth instance of the failure this
+    # docstring already records three of. Without it an Hs = 3.0 matrix matches
+    # every key the 2.5 m matrix wrote and is reported "SKIP (done)" -- and the
+    # skip happens before the collision guard, so --overwrite cannot reach it
+    # either. Appended only when off the default, so every key already on disk
+    # stays byte-identical.
+    if hs is not None and float(hs) != 2.5:
+        parts.append(f"Hs{float(hs):g}")
     return "|".join(str(x) for x in parts)
 
 
@@ -496,8 +506,46 @@ def already_done(manifest, key):
 # RUNNING ONE HINDCAST
 # =============================================================================
 
+# The line the runner prints once its section 7.5 has derived the authoritative
+# name from what sections 5 and 6 actually built.
+_RUN_NAME_LINE = re.compile(r"^RUN_NAME_BASE\s+'([^']+)'", re.M)
+
+
+def run_name_from_log(log_path):
+    """The run name the runner REPORTED, read back out of its own output.
+
+    NOT DERIVED HERE. Everything else in this file is deliberately built from
+    the job key rather than from a run name, because reimplementing the
+    runner's section 7.5 derivation is how the two drift apart -- the module
+    docstring says so and that rule stands. This reads back what the runner
+    itself printed, which is the opposite of reimplementing it: if 7.5 changes,
+    this follows automatically, and if the line is ever absent the manifest
+    simply carries no name rather than a wrong one.
+
+    It exists so a manifest row can be joined to run_index.csv. The manifest is
+    keyed on (stage, period, preset, scenario, groin, reloc, M, f, digest) --
+    the scenario VOCABULARY -- while the index is keyed on the derived name, so
+    the two could previously only be matched by hand.
+
+    Args:
+        log_path: Path to the run's captured stdout, or None on a dry run.
+
+    Returns:
+        The run name, or None if the log is missing or does not carry the line
+        (a failed run that died before 7.5, for instance).
+    """
+    if not log_path:
+        return None
+    try:
+        text = pathlib.Path(log_path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    match = _RUN_NAME_LINE.search(text)
+    return match.group(1) if match else None
+
+
 def run_hindcast(period, preset, scenario, reloc, groin, M, fraction,
-                 overwrite, save_state, log_name, dry_run):
+                 overwrite, save_state, log_name, dry_run, hs=None):
     """Runs the hindcast once, driven entirely through the environment.
 
     The runner reads these through HAT_hindcast_config, so no tracked source
@@ -547,6 +595,11 @@ def run_hindcast(period, preset, scenario, reloc, groin, M, fraction,
         # Matplotlib must not try to open a window in an unattended run.
         "MPLBACKEND": "Agg",
     })
+    # Hs is one of the six settings this driver deliberately leaves to the code
+    # default, so --hs is the only way to move it. Passed explicitly here, which
+    # means a stray HAT_HS in the calling shell still cannot reach a run.
+    if hs is not None:
+        env["HAT_HS"] = repr(float(hs))
 
     if dry_run:
         print(f"      would run: period={period} preset={preset} "
@@ -630,7 +683,8 @@ def matrix_stage(stage, groin, manifest, args, fits=None):
             arm = "reloc  " if reloc else "       "
             print(f"    {period} {preset:<7} {scenario:<16} {arm}-- {reason}")
             _m, _f = _fit_values(preset)
-            key = job_key(stage, period, preset, scenario, groin, reloc, _m, _f)
+            key = job_key(stage, period, preset, scenario, groin, reloc,
+                          _m, _f, args.hs)
             if not already_done(manifest, key) and not args.dry_run:
                 # Recorded as ok so a re-invocation does not retry it, with
                 # skipped=True so the summary can tell "did not need running"
@@ -643,7 +697,8 @@ def matrix_stage(stage, groin, manifest, args, fits=None):
 
     for index, (period, preset, scenario, reloc) in enumerate(jobs, start=1):
         _m, _f = _fit_values(preset)
-        key = job_key(stage, period, preset, scenario, groin, reloc, _m, _f)
+        key = job_key(stage, period, preset, scenario, groin, reloc,
+                      _m, _f, args.hs)
         if already_done(manifest, key):
             print(f"  [{index:>2}/{len(jobs)}] {period} {preset:<7} "
                   f"{scenario:<16} reloc={reloc!s:<5} groin={groin}  "
@@ -694,6 +749,10 @@ def matrix_stage(stage, groin, manifest, args, fits=None):
                         scenario=scenario, groin=groin, reloc=reloc, M=M,
                         fraction=fraction, ok=ok, seconds=round(seconds, 1),
                         detail=detail,
+                        # Read back from the runner's output, not derived --
+                        # see run_name_from_log. This is what lets a manifest
+                        # row be joined to its run_index.csv row.
+                        run_name=run_name_from_log(detail if ok else None),
                         at=datetime.now().isoformat(timespec="seconds")))
         if ok:
             completed += 1
@@ -740,7 +799,7 @@ def stage_seed(manifest, args):
     completed = failed = 0
     for period in PERIODS:
         key = job_key("seed", period, SEED_PRESET, SEED_SCENARIO, True,
-                      False)
+                      False, hs=args.hs)
         if already_done(manifest, key):
             print(f"  {period}: SKIP (done)")
             completed += 1
@@ -751,7 +810,8 @@ def stage_seed(manifest, args):
         # built without relocations.
         ok, seconds, detail = run_hindcast(
             period, SEED_PRESET, SEED_SCENARIO, False, True, SEED_M, SEED_F,
-            False, not args.no_model_state, f"seed_{period}", args.dry_run)
+            False, not args.no_model_state, f"seed_{period}", args.dry_run,
+            hs=args.hs)
         if not args.dry_run:   # see the note in matrix_stage
             record(dict(key=key, stage="seed", period=period,
                         preset=SEED_PRESET, scenario=SEED_SCENARIO,
@@ -779,13 +839,18 @@ def stage_sweeps(manifest, args):
              if preset in args.presets]
     print(f"\n{'=' * 72}\nSTAGE sweeps: {len(order)} sweeps\n{'=' * 72}")
     for period, preset in order:
-        key = job_key("sweep", period, preset)
+        key = job_key("sweep", period, preset, hs=args.hs)
         if already_done(manifest, key):
             print(f"  {period} {preset}: SKIP (done)")
             completed += 1
             continue
         command = [sys.executable, str(SWEEP), "--period", str(period),
                    "--preset", preset, "--workers", str(args.workers)]
+        sweep_env = dict(os.environ)
+        if args.hs is not None:
+            # Read by HAT_groin_sweep_worker, and by sweep_output_dir, which
+            # sends the results to their own directory.
+            sweep_env["HAT_SWEEP_HS"] = repr(float(args.hs))
         if args.dry_run:
             command.append("--dry-run")
         print(f"\n  --> {' '.join(command[1:])}", flush=True)
@@ -799,7 +864,7 @@ def stage_sweeps(manifest, args):
         with log_path.open("w", encoding="utf-8") as handle:
             proc = subprocess.run(command, cwd=str(PROJECT_BASE_DIR),
                                   stdout=handle, stderr=subprocess.STDOUT,
-                                  timeout=SWEEP_TIMEOUT_S)
+                                  env=sweep_env, timeout=SWEEP_TIMEOUT_S)
         seconds = time.perf_counter() - t0
         ok = proc.returncode == 0
         record(dict(key=key, stage="sweep", period=period, preset=preset,
@@ -860,6 +925,13 @@ def main():
                         help="comma-separated scenarios to cover "
                              "(default all; the reloc arm of each is still "
                              "decided by relocation_applies)")
+    parser.add_argument("--hs", type=float, default=None,
+                        help="significant wave height for every run and sweep "
+                             "cell (default: the code value, 2.5). Anything "
+                             "other than 2.5 puts the matrix runs in their own "
+                             "directories via the waveHs run-name token and "
+                             "the sweeps in their own output directory, so an "
+                             "Hs experiment cannot overwrite the 2.5 m one.")
     parser.add_argument("--presets", default=",".join(PRESETS),
                         help="comma-separated source/sink presets to cover "
                              f"(default {','.join(PRESETS)}; also accepts "

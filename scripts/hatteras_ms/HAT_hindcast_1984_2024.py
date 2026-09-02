@@ -139,6 +139,8 @@ from cascade_pipeline.hindcast import (
     measure_groin_extent,
     run_cascade_simulation,
     scenario_run_name,
+    wave_climate_token,
+    relocation_setback_token,
 )
 from cascade_pipeline.coastsat_loess import (
     CoastSatDataset,
@@ -156,10 +158,12 @@ from cascade_pipeline.run_registry import (
     append_run_index,
     git_provenance,
     guard_run_dir,
+    preset_dir_for,
     run_dir_contents,
     skill_vs_target,
     values_digest,
     timestamp,
+    CALIBRATION_ARM,
     RUN_INDEX_FILENAME,
     write_run_metadata,
 )
@@ -351,7 +355,8 @@ reports.run_units_check(ELEVATION_FILE_PATHS, DUNE_FILE_PATHS,
 # restarting the kernel.
 
 from HAT_hindcast_config import (                     # noqa: E402
-    load_run_config, describe as _describe_run_config, preflight as _preflight)
+    load_run_config, describe as _describe_run_config, preflight as _preflight,
+    field_default as _field_default)
 
 RUN_CONFIG = load_run_config()
 
@@ -454,11 +459,54 @@ SCENARIO = RUN_CONFIG.scenario
 # before the name is predicted.
 OFFSET_MODE = RUN_CONFIG.offset_mode
 
+
+
 # The groin is NOT part of the scenario, deliberately. 12.3 measures its effect
 # against a paired no-groin baseline identical in every other token, so every
 # scenario is run twice -- False first to create the baseline, then True.
 # Folding it into the table would double the table to say the same thing.
 GROIN_ENABLED = RUN_CONFIG.groin_enabled
+
+# Where a RELOCATED roadway is rebuilt, in metres behind the dune line. This is
+# the relocation target only: the road's position at t = 0 always comes from the
+# period's measured RoadSetback_<year>_dunestart.csv, and build_cascade applies
+# this after construction so that measured geometry is untouched.
+#
+# CASCADE itself has no separate parameter -- cascade_groin.py:689 re-assigns the
+# relocation target from the initial setback every year -- so without this every
+# domain relocates to wherever its road happened to sit in 1984/2004. That is
+# observed geometry, not a design standard, and at GIS 85 and 86 it is 0 m, which
+# returns a relocated road to the dune line with no clearance and re-fires on the
+# next 10 m of retreat. `measured` in hat_run.yaml restores that behaviour.
+RELOCATION_SETBACK_M = RUN_CONFIG.relocation_setback_m
+
+# --- sensitivity tokens ------------------------------------------------------
+# The wave climate and the relocation target are FORCING, not management: they
+# change what is simulated without changing which modules get built, so nothing
+# in SCENARIO_SWITCHES sees them. A sensitivity cell that moves one of them
+# would therefore derive the matrix run's exact name and overwrite it. These
+# two tokens are what keep a cell in its own directory, and they are None at
+# the calibration values, so no existing run is renamed.
+#
+# Read from RUN_CONFIG here rather than from section 11's constants because 7.5
+# needs them and 7.5 runs first. Unlike the management switches there is no
+# built module for these to disagree with -- they are numbers handed straight
+# to build_cascade -- so the 7.5 preview check is an identity for them, and
+# section 11 asserts it is still handing over the values named here.
+_WAVE_VALUES = {
+    "hs": RUN_CONFIG.hs,
+    "wave_period_s": RUN_CONFIG.wave_period_s,
+    "wave_asymmetry": RUN_CONFIG.wave_asymmetry,
+    "wave_angle_high_fraction": RUN_CONFIG.wave_angle_high_fraction,
+}
+_WAVE_DEFAULTS = {name: _field_default(name) for name in _WAVE_VALUES}
+# Kept for the run log and for HS_TAG below, but NOT emitted into the run
+# name any more. Wave climate is forcing, not scenario: the name describes what
+# was simulated, and a run forced differently belongs in its own directory
+# rather than wearing a longer name. See OUTPUT_BASE_DIR in section 3.
+WAVE_TOKEN = wave_climate_token(_WAVE_VALUES, _WAVE_DEFAULTS)
+RELOCATION_SETBACK_TOKEN = relocation_setback_token(
+    RELOCATION_SETBACK_M, _field_default("relocation_setback_m"))
 
 print("\n" + _describe_run_config())
 
@@ -561,7 +609,40 @@ PERIOD_TAG = f"{START_YEAR}_{END_YEAR}"
 # run_index.csv, the logs and the figure captions all key on, and the
 # directory is only there so the three presets of one period can be read
 # side by side instead of interleaved in one listing of thirty-odd runs.
-OUTPUT_BASE_DIR = OUTPUT_ROOT / PERIOD_TAG / SOURCE_SINK_PRESET
+# Filed by wave climate FIRST, then period, then preset. The Hs level is
+# absent at the calibration climate, so every run made before 2026-09-01 stays
+# exactly where it is; a run forced differently gets a parallel tree rather than
+# a longer name. That keeps a name describing the SCENARIO and the path
+# describing the FORCING, and it means an Hs experiment can never overwrite the
+# calibration matrix even though the two share run names.
+HS_TAG = WAVE_TOKEN or ""
+# HAT_ARM_TAG replaces the wave-derived scope when set, for a run that is a
+# STEP IN A CALIBRATION rather than a result. Solving the two locked ends is a
+# Newton iteration, and every probe in it shares the base run's name, its
+# preset and its wave climate -- so without a scope of its own each probe would
+# derive the base run's directory and guard_run_dir would (correctly) refuse.
+# Overwriting instead would destroy the very run the probe is measured against.
+#
+# The tag is the ARM, not a scratch marker: it names the path AND the `arm`
+# column in run_index.csv from one string, so a probe is filed, indexed and
+# read back as what it is. Unset, everything resolves exactly as before.
+ARM_TAG = os.environ.get("HAT_ARM_TAG", "").strip() or HS_TAG
+# "calibration" is the name the unscoped tree answers to -- it is what the
+# `arm` column says for a run with no arm component, and what run_registry
+# resolves back to the SHORT path. Used as a tag it would produce a real
+# raw_runs/calibration/ directory that every reader would then look for one
+# level up, so it is refused rather than allowed to mean two places at once.
+if ARM_TAG == CALIBRATION_ARM:
+    raise ValueError(
+        f"HAT_ARM_TAG={ARM_TAG!r} is reserved: it is the name of the arm with "
+        f"NO path component. Leave it unset for the calibration tree, or "
+        f"choose another tag.")
+# Built by run_registry, not joined here. The reader that resolves a finished
+# run and the writer that files one have to agree about the layout, and the
+# only way they cannot drift is to be the same code. arm_component does the
+# single-path-component check that used to live in this block.
+OUTPUT_BASE_DIR = preset_dir_for(OUTPUT_ROOT, PERIOD_TAG, SOURCE_SINK_PRESET,
+                                 arm=ARM_TAG or CALIBRATION_ARM)
 OUTPUT_BASE_DIR.mkdir(parents=True, exist_ok=True)
 
 print(f"\nSTART_YEAR = {START_YEAR}  ->  {START_YEAR}-{END_YEAR}, "
@@ -591,6 +672,7 @@ _PREVIEW_TOKENS = [
      else ("nonourish" if _PERIOD_HAS_FILL and ENABLE_BEACH_DUNE_MANAGEMENT
            else None)),
     "groin" if GROIN_ENABLED else "nogroin",
+    RELOCATION_SETBACK_TOKEN,
 ]
 RUN_NAME_PREVIEW = (f"{RUN_NAME_STEM}_"
                     + "_".join(t for t in _PREVIEW_TOKENS if t))
@@ -668,6 +750,58 @@ reports.storm_report(storms=STORM_SERIES, storm_file=STORM_FILE,
 
 
 DOMAIN_BE_RATES = HATTERAS_BE_PRESETS[SOURCE_SINK_PRESET][START_YEAR]
+
+# HAT_BE_OVERRIDE -- per-domain rates for THIS run only, "gis=rate" pairs, e.g.
+# HAT_BE_OVERRIDE="1=-45.2,90=11.8". Unset, nothing below runs and the preset
+# is used exactly as it comes out of the config.
+#
+# WHY THIS EXISTS. Solving the two locked end domains is a Newton iteration:
+# run, read the residual at GIS 1 and 90, step, run again. Without an override
+# every step means editing hatteras_site_config.py, and the config is GLOBAL --
+# so a solve for one forcing arm silently redefines what every other run on the
+# machine means, and an interrupted solve leaves the production preset holding
+# a probe value with nothing on disk saying so. That is the exact failure this
+# file has hit before with a stale topography pin.
+#
+# It does not weaken provenance. `values_digest(DOMAIN_BE_RATES)` fingerprints
+# the mapping AFTER this block, so an overridden run gets a different
+# be_values_digest from the preset it started from, and section 12.4 writes
+# that digest into run_index.csv. A run forced this way cannot be mistaken for
+# a config run; it is separated by the same column that separates two edits of
+# the config from each other.
+_BE_OVERRIDE_RAW = os.environ.get("HAT_BE_OVERRIDE", "").strip()
+if _BE_OVERRIDE_RAW:
+    # Copied before mutating: HATTERAS_BE_PRESETS hands back the config's own
+    # dict, so writing into it would edit the preset in memory for anything
+    # else importing it in this process.
+    DOMAIN_BE_RATES = dict(DOMAIN_BE_RATES)
+    _BE_OVERRIDES = {}
+    for _pair in _BE_OVERRIDE_RAW.split(","):
+        if not _pair.strip():
+            continue
+        _gis, _, _rate = _pair.partition("=")
+        if not _:
+            raise ValueError(
+                f"HAT_BE_OVERRIDE entry {_pair!r} is not 'gis=rate'. "
+                f"Expected e.g. '1=-45.2,90=11.8'.")
+        _BE_OVERRIDES[int(_gis)] = float(_rate)
+
+    _unknown = sorted(g for g in _BE_OVERRIDES
+                      if not HATTERAS_DOMAINS.first_gis_id <= g
+                      <= HATTERAS_DOMAINS.last_gis_id)
+    if _unknown:
+        raise ValueError(
+            f"HAT_BE_OVERRIDE names domain(s) {_unknown} outside the modelled "
+            f"reach GIS {HATTERAS_DOMAINS.first_gis_id}-"
+            f"{HATTERAS_DOMAINS.last_gis_id}.")
+
+    print(f"\nHAT_BE_OVERRIDE       {len(_BE_OVERRIDES)} domain(s) forced off "
+          f"preset {SOURCE_SINK_PRESET!r}")
+    for _gis, _rate in sorted(_BE_OVERRIDES.items()):
+        _was = DOMAIN_BE_RATES.get(_gis, 0.0)
+        print(f"  GIS {_gis:<3}           {_was:+.4f} -> {_rate:+.4f} m/yr")
+        DOMAIN_BE_RATES[_gis] = _rate
+
 BACKGROUND_EROSION_RATES = build_background_erosion(
     DOMAIN_BE_RATES, HATTERAS_DOMAINS)
 USE_BACKGROUND_EROSION = any(rate != 0.0 for rate in BACKGROUND_EROSION_RATES)
@@ -990,6 +1124,20 @@ SCENARIO_SWITCHES = [
            else None)),
     ("groin", "on" if GROIN_ENABLED else "off",
      "groin" if GROIN_ENABLED else "nogroin"),
+    # Forcing, tokened only when off the calibration value -- see section 3.
+    # No name token: an off-calibration wave climate scopes the output
+    # DIRECTORY (OUTPUT_BASE_DIR) and is recorded in run_index.csv and the run
+    # metadata. Reported here so the run log still states it.
+    ("wave climate",
+     f"Hs {RUN_CONFIG.hs} m, Tp {RUN_CONFIG.wave_period_s} s, "
+     f"asym {RUN_CONFIG.wave_asymmetry}, "
+     f"high-angle {RUN_CONFIG.wave_angle_high_fraction}"
+     + ("" if WAVE_TOKEN is None else "  (off calibration; own directory)"),
+     None),
+    ("relocation target",
+     "each domain's measured offset" if RELOCATION_SETBACK_M is None
+     else f"{RELOCATION_SETBACK_M:g} m behind the dune line",
+     RELOCATION_SETBACK_TOKEN),
 ]
 
 RUN_NAME_SUFFIX = "_".join(
@@ -1270,14 +1418,28 @@ DUNE_MINIMUM_ELEVATION = [DUNE_MINIMUM_ELEVATION_M] * HATTERAS_DOMAINS.total_dom
 ROAD_ELEVATION = road_elevation_full   # per-domain, m MHW, from section 5
 ROAD_WIDTH = 20.0
 
-# --- wave climate: one Hs, no sweep ------------------------------------------
-# A sweep over Hs is a separate script; this runs one configuration.
-# From hat_run.yaml (physics.wave_height_Hs); reaches run_index.csv as Hs_m,
-# so a changed value is recoverable from the index and not only from the file.
-Hs = RUN_CONFIG.hs                    # m, calibration value 2.5
-FIXED_WAVE_PERIOD = 8                 # s
-FIXED_WAVE_ASYMMETRY = 0.7
-FIXED_WAVE_ANGLE_HIGH_FRACTION = 0.1
+# --- wave climate: one configuration, no sweep -------------------------------
+# A sweep over these is a separate script (scripts/sensitivity_analysis), which
+# drives this file once per cell through the environment. All four were
+# literals here until 2026-09-01; they read hat_run.yaml's `physics` block now
+# so that sweep never has to edit this source between cells.
+#
+# FIXED_ is kept in the three names: they are still fixed FOR A RUN. Hs reaches
+# run_index.csv as Hs_m and the other three reach the run metadata, so a
+# changed value is recoverable from the index rather than only from the file.
+Hs = RUN_CONFIG.hs                                       # m, calibration 2.5
+FIXED_WAVE_PERIOD = RUN_CONFIG.wave_period_s             # s, calibration 8
+FIXED_WAVE_ASYMMETRY = RUN_CONFIG.wave_asymmetry         # calibration 0.7
+FIXED_WAVE_ANGLE_HIGH_FRACTION = RUN_CONFIG.wave_angle_high_fraction  # 0.1
+
+# The run is named for these in 7.5, before they are read here. If the two ever
+# came apart, the directory would describe a wave climate the model was not
+# forced with -- the one failure the name token exists to prevent.
+assert _WAVE_VALUES == {
+    "hs": Hs, "wave_period_s": FIXED_WAVE_PERIOD,
+    "wave_asymmetry": FIXED_WAVE_ASYMMETRY,
+    "wave_angle_high_fraction": FIXED_WAVE_ANGLE_HIGH_FRACTION,
+}, "section 11's wave climate is not the one section 3 named the run for"
 
 # --- datums -------------------------------------------------------------------
 BERM_ELEVATION = 1.7    # m NAVD88, Hatteras Island, NCDOT-derived via NC State
@@ -1358,6 +1520,7 @@ cascade = build_cascade(
     data_base=HATTERAS_DATA_BASE,
     parameter_file=PARAMETER_FILE,
     groin_callback=GROIN_CALLBACK,
+    relocation_setback_m=RELOCATION_SETBACK_M,
 )
 
 
@@ -1783,6 +1946,16 @@ _index_row = {
     "bdm_domains": int(sum(BEACH_DUNE_MANAGEMENT_ON)),
     "nourishment_projects": len(BN_SCHEDULE_APPLIED.projects),
     "Hs_m": Hs,
+    # The forcing arm this run belongs to, spelled out rather than
+    # inferred. Hs scopes the DIRECTORY (HS_TAG in section 3) and not
+    # the run name, so an Hs experiment shares every run name with the
+    # calibration matrix and the two are separated only by the
+    # ("run_name", "Hs_m") index key. That key is correct but not
+    # legible: a reader filtering the index has to know that Hs = 2.5
+    # means "production" to split the arms. This column says so, and it
+    # is the same string as the path component, so a row and a
+    # directory can be matched without reconstructing either.
+    "arm": ARM_TAG or "calibration",
     "sandbags_on": ENABLE_SANDBAG_PLACEMENT,
     "rslr_m_yr": SEA_LEVEL_RISE_RATE,
     "annual_states": _states,
@@ -1811,7 +1984,19 @@ _index_row = {
     "git_commit": _GIT["commit"][:12],
     "git_dirty": _GIT["dirty"],
 }
-RUN_INDEX = append_run_index(RUN_INDEX_PATH, _index_row)
+# Keyed on the name, the wave height AND the arm. With Hs scoping the directory
+# rather than the name, an Hs = 3.0 matrix shares every run name with the 2.5 m
+# one, so a name-only key would delete one of the two from the index.
+#
+# `arm` is in the key for the SAME reason, one level down, and it was left out
+# on 2026-09-01: two runs can share a name AND an Hs and still be different
+# runs, because a calibration probe is forced off-preset at the same wave
+# climate as the base run it probes. Without arm here, filing the probe DELETED
+# the base run's row -- the exact failure the composite key exists to stop, one
+# scoping level later. The rule is that the key must name every component of
+# OUTPUT_BASE_DIR that the run name does not.
+RUN_INDEX = append_run_index(RUN_INDEX_PATH, _index_row,
+                             key=("run_name", "Hs_m", "arm"))
 print(f"                      {RUN_INDEX_FILENAME}  "
       f"({len(RUN_INDEX)} runs indexed)")
 
