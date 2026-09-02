@@ -471,9 +471,10 @@ def plot_smoothed_only(merged_1978, merged_1997, out_path):
         m = mask_southern_smoothed(m)
         d = m["domain"]
 
+        # DSAS only: this is the presentation figure, and two dotted series
+        # across the withheld zone read as clutter rather than as context.
         draw_raw_in_guard_zone(ax, m, "dsas_lrr", c_dsas,
-                               label="Raw mean (LOESS withheld)")
-        draw_raw_in_guard_zone(ax, m, "cs_lrr", c_cs)
+                               label="DSAS raw mean (LOESS withheld)")
         ax.plot(d, m["dsas_lrr_smooth"], color=c_dsas, lw=3.0,
                 label=f"DSAS {label}")
         ax.plot(d, m["cs_lrr_smooth"],   color=c_cs,   lw=3.0, ls="--",
