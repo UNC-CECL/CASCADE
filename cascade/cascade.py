@@ -676,10 +676,6 @@ class Cascade:
         batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
             delayed(batchB3D)(self._barrier3d[iB3D]) for iB3D in range(self._ny)
         )
-        # elif if sandbags are enabled run a different version instead
-        # batch_output = Parallel(n_jobs=self._num_cores, max_nbytes="10M")(
-        #    delayed(splitbatchB3D)(subB3D = self._barrier3d[iB3D],iB3D = iB3D, sandbag_need = self._sandbag_need) for iB3D in range(self._ny)
-        # )
 
         # reshape output from parallel processing and convert from tuple to list
         x_t_dt, x_s_dt, h_b_dt, b3d = zip(*batch_output)
