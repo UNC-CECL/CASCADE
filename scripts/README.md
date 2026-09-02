@@ -112,7 +112,7 @@ figure_making/old_plot_tests/              input_prep/1-barrier3d-domains/old_ex
 figure_making/shoreline_change/old_rate_analysis/
 hatteras_ms/old_drafts/                    input_prep/5-scr/CoastSat/old_dsas_comparisons/
 hatteras_ms/old_versions/                  input_prep/5-scr/CoastSat/old_time_periods/
-sensitivity_analysis/old_guides/           input_prep/6-scr-smooth/.../old_smoothing/
+sensitivity_analysis/old_guides/           input_prep/6-scr-smooth/old_smoothing/
 input_prep/4-mgmt-forcings/road_offset/1-produce/old_method/
 ```
 

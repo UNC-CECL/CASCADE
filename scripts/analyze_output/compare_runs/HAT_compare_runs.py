@@ -539,7 +539,7 @@ def load_transect_data(ds):
     """
     Load individual transect LRR values from transect_lrr_full.csv and derive
     along-coast distance by spreading each domain's transects evenly across its
-    500 m band (mirrors coastsat_smoothed_method_comparison.py: load_transect_csv).
+    500 m band (mirrors 6-scr-smooth/HAT_loess_method_comparison.py: load_transect_csv).
 
     Returns
     -------
@@ -600,7 +600,7 @@ def loess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_doma
     Apply LOESS at transect resolution using physical along-coast distance (m) as x,
     then aggregate smoothed values to CASCADE domain resolution by averaging within
     each domain.  Mirrors smooth_transect_df() + aggregate_to_domains() from
-    coastsat_smoothed_method_comparison.py.
+    6-scr-smooth/HAT_loess_method_comparison.py.
 
     window_domains is converted to km (× DOMAIN_SPACING_M) so the physical window
     is consistent regardless of transect density.
