@@ -168,6 +168,10 @@ C_PIER         = "#1565C0"
 C_GROIN        = "#B71C1C"
 C_SKIP_ZONE    = "#6A8CAF"   # band over domains whose LOESS is withheld
 
+# Town-span labels are drawn at axes y=0.94 (see _add_annotations); the
+# per-panel window label starts below them so the two cannot overprint.
+PANEL_LABEL_Y = 0.88
+
 # ── Period colors ────────────────────────────────────────────
 C_CS_1984 = "#1F4E79"
 C_CS_2004 = "#833C00"
@@ -510,6 +514,23 @@ def annotation_legend_handles():
          if SKIP_SOUTHERN_DOMAINS > 0 else [])
 
 
+def draw_raw_in_guard_zone(ax, df, color, label=None, col="cs_lrr"):
+    """Raw domain means across the withheld zone, so it is not simply blank.
+
+    Matches what the hindcast does there: splice_loess_with_raw_south omits
+    the LOESS line across the southern domains and the raw values are shown
+    instead. On figures that already draw raw everywhere this adds nothing, so
+    it is called only from the smoothed-only ones.
+    """
+    if SKIP_SOUTHERN_DOMAINS <= 0:
+        return
+    z = df[df["domain"] <= SKIP_SOUTHERN_DOMAINS]
+    if z.empty:
+        return
+    ax.plot(z["domain"], z[col], color=color, lw=1.2, ls=":",
+            marker="o", ms=3, alpha=0.65, zorder=2, label=label)
+
+
 def style_domain_axis(ax, is_bottom=True):
     ax.set_xlim(DOMAIN_MIN - 0.5, DOMAIN_MAX + 0.5)
     ax.axhline(0, color="k", lw=0.6, ls="--", alpha=0.4)
@@ -551,6 +572,10 @@ def _domain_two_panel(d1984, d2004, show_raw, out_path, suptitle):
                             df["cs_lrr"] - df["cs_std"],
                             df["cs_lrr"] + df["cs_std"],
                             color=color, alpha=0.07, zorder=0)
+        else:
+            # Nothing else covers the guard zone on this figure.
+            draw_raw_in_guard_zone(ax, df, color,
+                                   label="Raw mean (LOESS withheld)")
         ax.plot(df["domain"], df["cs_lrr_smooth"],
                 color=color, lw=2.5, zorder=3, label="LOESS smoothed")
         ax.set_ylabel("Rate (m/yr)", fontsize=10, fontweight="bold")
@@ -589,10 +614,15 @@ def plot_domain_combined(d1984, d2004, out_path, suffix=""):
         f"Shoreline Change Rate — Both Periods, Transect-Based\nHatteras Island, NC{suffix}",
         fontsize=14, fontweight="bold",
     )
+    labelled_zone = False
     for df, period, color in [(d1984, "1984–2004", C_CS_1984),
                                (d2004, "2004–2024", C_CS_2004)]:
         if df is None:
             continue
+        draw_raw_in_guard_zone(
+            ax, df, color,
+            label=None if labelled_zone else "Raw mean (LOESS withheld)")
+        labelled_zone = True
         ax.fill_between(df["domain"],
                         df["cs_lrr_smooth"] - df["cs_std"],
                         df["cs_lrr_smooth"] + df["cs_std"],
@@ -631,7 +661,7 @@ def plot_domain_sensitivity(df, period_label, color, out_path, suffix=""):
                 color=color, lw=0.8, alpha=0.25, marker="o", ms=2, label="Raw")
         ax.plot(m["domain"], m["cs_lrr_smooth"],
                 color=color, lw=2.5, label="LOESS")
-        ax.text(0.01, 0.97, lbl, transform=ax.transAxes, fontsize=8.5, va="top",
+        ax.text(0.01, PANEL_LABEL_Y, lbl, transform=ax.transAxes, fontsize=8.5, va="top",
                 bbox=dict(boxstyle="round", fc="white", alpha=0.88, ec="0.7"))
         ax.set_ylabel("Rate (m/yr)", fontsize=10, fontweight="bold")
         style_domain_axis(ax, is_bottom)
@@ -877,7 +907,7 @@ def plot_transect_sensitivity(t_df, period_label, color, out_path, suffix=""):
                 color=color, lw=0.8, alpha=0.25, marker="o", ms=2, label="Raw")
         ax.plot(d_agg["domain"], d_agg["cs_lrr_smooth"],
                 color=color, lw=2.5, label="LOESS")
-        ax.text(0.01, 0.97, label, transform=ax.transAxes, fontsize=8.5, va="top",
+        ax.text(0.01, PANEL_LABEL_Y, label, transform=ax.transAxes, fontsize=8.5, va="top",
                 bbox=dict(boxstyle="round", fc="white", alpha=0.88, ec="0.7"))
         ax.set_ylabel("Rate (m/yr)", fontsize=10, fontweight="bold")
         style_domain_axis(ax, is_bottom)
