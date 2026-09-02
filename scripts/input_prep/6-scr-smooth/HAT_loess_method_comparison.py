@@ -101,6 +101,23 @@ LOESS_WINDOW_KM = 3.5   # primary smoothing window (7 domains)
 # Window sizes (km) tested in sensitivity / comparison figures
 COMPARE_WINDOWS_KM = [2.5, 3.5, 5.0]   # 5, 7, 10 domains
 
+# ── Southern boundary guard ──────────────────────────────────
+# Domains 1..N are dropped from the SMOOTHED series. LOESS is a local linear
+# fit, so at the edge of the reach it extrapolates rather than smooths, and
+# Oregon Inlet dominates that zone anyway.
+#
+# Same guard, same width as the hindcast's cascade_pipeline/coastsat_loess.py:
+# LoessConfig(skip_southern_domains=10). Applied AFTER the fit, never before,
+# so the southern data still pulls the values just north of the cut - only the
+# result is withheld. Raw series are untouched and still cover the whole
+# island. Set to 0 to smooth everywhere.
+#
+# This bites less here than in the domain-space scripts: smoothing runs at
+# transect resolution, ~10 points per domain, so the edge fit has far more
+# local support. It is applied for consistency with what the model is scored
+# against, not because this script showed the same excursion.
+SKIP_SOUTHERN_DOMAINS = 10
+
 # ── Geographic annotations — domain space ────────────────────
 TOWN_SPANS = {
     "Buxton":      ( 7,  8),
@@ -149,6 +166,7 @@ C_WIMBLE       = "#E0A800"
 C_VILLAGE_LINE = "0.40"
 C_PIER         = "#1565C0"
 C_GROIN        = "#B71C1C"
+C_SKIP_ZONE    = "#6A8CAF"   # band over domains whose LOESS is withheld
 
 # ── Period colors ────────────────────────────────────────────
 C_CS_1984 = "#1F4E79"
@@ -365,6 +383,8 @@ def smooth_domain_df(df, window_km=LOESS_WINDOW_KM):
         df["cs_lrr"].values,
         frac,
     )
+    if SKIP_SOUTHERN_DOMAINS > 0:
+        df.loc[df["domain"] <= SKIP_SOUTHERN_DOMAINS, "cs_lrr_smooth"] = np.nan
     return df
 
 
@@ -385,6 +405,12 @@ def smooth_transect_df(df, window_km=LOESS_WINDOW_KM):
          else df["transect_id"].values.astype(float))
 
     df["lrr_smooth"] = apply_loess(x, df["lrr"].values, frac)
+    # Masked on domain, not on along_coast_m: identical cut, and it carries
+    # through aggregate_to_domains, whose per-domain mean of an all-NaN group
+    # is NaN. So every domain-space figure and the CSV export inherit the
+    # guard without a second mask.
+    if SKIP_SOUTHERN_DOMAINS > 0:
+        df.loc[df["domain"] <= SKIP_SOUTHERN_DOMAINS, "lrr_smooth"] = np.nan
     df["_x_smooth"]  = x   # stored so plot functions don't recompute
     return df
 
@@ -454,13 +480,23 @@ def _add_annotations(ax, town_spans, wimble, village_lines, piers, groins):
                 ha="center", color=C_GROIN, rotation=90, va="top")
 
 
+def _shade_boundary_zone(ax, hi):
+    """Band from the start of the reach to `hi`, in whatever x-units the axis uses."""
+    if SKIP_SOUTHERN_DOMAINS > 0:
+        ax.axvspan(ax.get_xlim()[0], hi, facecolor=C_SKIP_ZONE, alpha=0.10,
+                   lw=0.0, zorder=0)
+
+
 def add_domain_annotations(ax):
     _add_annotations(ax, TOWN_SPANS, WIMBLE_SHOALS, VILLAGE_LINES, PIERS, GROINS)
+    _shade_boundary_zone(ax, SKIP_SOUTHERN_DOMAINS + 0.5)
 
 
 def add_transect_annotations(ax):
     _add_annotations(ax, T_TOWN_SPANS, T_WIMBLE_SHOALS,
                      T_VILLAGE_LINES, T_PIERS, T_GROINS)
+    # Domains 1..N occupy [0, N*500) m, so the cut is at N * DOMAIN_SPACING_M.
+    _shade_boundary_zone(ax, SKIP_SOUTHERN_DOMAINS * DOMAIN_SPACING_M)
 
 
 def annotation_legend_handles():
@@ -470,7 +506,8 @@ def annotation_legend_handles():
         Line2D([0], [0], color=C_VILLAGE_LINE, lw=1, ls="--", label="Village center"),
         Line2D([0], [0], color=C_PIER,         lw=1, ls="-.", label="Pier"),
         Line2D([0], [0], color=C_GROIN,        lw=1, ls=":",  label="Groin"),
-    ]
+    ] + ([Patch(color=C_SKIP_ZONE, alpha=0.25, label="LOESS withheld (Oregon Inlet)")]
+         if SKIP_SOUTHERN_DOMAINS > 0 else [])
 
 
 def style_domain_axis(ax, is_bottom=True):
