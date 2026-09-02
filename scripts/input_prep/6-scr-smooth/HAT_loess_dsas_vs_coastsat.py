@@ -81,13 +81,22 @@ TOWNS = {
 }
 
 # --- Output ---
-OUTPUT_DIR = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "6-scr-smooth"
+# Products live under data/hatteras_init/<stage>/, beside every other
+# input_prep stage's output; only the scripts live under scripts/.
+OUTPUT_DIR = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "6-scr-smooth"
                  / "HAT_loess_dsas_vs_coastsat_output")
 
 # ============================================================
 # IMPORTS
 # ============================================================
 import os
+import sys
+
+# Windows consoles default to cp1252, which cannot encode the arrows and
+# en-dashes in the closing summary -- the run died there after writing every
+# figure. UTF-8 here, matching HAT_loess_method_comparison.py.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt

@@ -156,7 +156,9 @@ C_CS_2004 = "#833C00"
 C_WINDOWS  = ["#0072B2", "#E69F00", "#CC79A7"]  # blue=5dom, amber=7dom, pink=10dom
 
 # ── Output ───────────────────────────────────────────────────
-OUTPUT_DIR = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "6-scr-smooth"
+# Products live under data/hatteras_init/<stage>/, beside every other
+# input_prep stage's output; only the scripts live under scripts/.
+OUTPUT_DIR = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "6-scr-smooth"
                  / "HAT_loess_method_comparison_output")
 
 # ============================================================
