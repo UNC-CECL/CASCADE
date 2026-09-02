@@ -100,7 +100,7 @@ DOMAIN_MAX = 90
 # SECTION 4: COLOURS AND STYLE
 # =============================================================================
 
-# CoastSat period colours (matches coastsat_smoothed_final.py)
+# CoastSat period colours (matches 6-scr-smooth/old_smoothing/HAT_loess_v3_window_sensitivity.py)
 C_CS_1984 = "#1F4E79"   # dark blue
 C_CS_2004 = "#833C00"   # dark brown-red
 

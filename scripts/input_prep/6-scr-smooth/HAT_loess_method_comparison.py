@@ -34,6 +34,23 @@ Additional outputs — transect mode only
   coastsat_transect_lrr_*.csv        full transect-level table with lrr_smooth
 """
 
+# pathlib must be imported before the CONFIG block because every path below is
+# built from PROJECT_BASE_DIR at module level.
+import pathlib
+
+# ANCHORED, NOT TYPED. Every path below used to be an absolute literal: the
+# output one had lost its drive ("/scripts/input_prep/...") and so wrote its
+# figures to C:\scripts\ instead of into the repository, and the input ones
+# still spelled the folder "input_preperation" and pointed at a CoastSat tree
+# that has since moved under 5-scr. Anchoring on the pyproject.toml at the repo
+# root makes all of them follow the checkout and survive this file changing
+# depth.
+PROJECT_BASE_DIR = next(
+    q for q in pathlib.Path(__file__).resolve().parents
+    if (q / "pyproject.toml").exists()
+)
+
+
 # ============================================================
 # CONFIG
 # ============================================================
@@ -44,16 +61,20 @@ Additional outputs — transect mode only
 TRANSECT_X_AXIS = "along_coast_m"   # "along_coast_m" | "transect_id"
 
 # ── Domain-mode inputs ───────────────────────────────────────
-DOMAIN_CSV_1984_2004 = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1984_2004\domain_lrr_summary.csv"
-DOMAIN_CSV_2004_2024 = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\2004_2024\domain_lrr_summary.csv"
+DOMAIN_CSV_1984_2004 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr" / "CoastSat"
+                        / "1984_2004" / "domain_lrr_summary.csv")
+DOMAIN_CSV_2004_2024 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr" / "CoastSat"
+                        / "2004_2024" / "domain_lrr_summary.csv")
 CS_DOMAIN_COL = "domain_number"
 CS_LRR_COL    = "mean_lrr"
 CS_STD_COL    = "std_lrr"
 
 # ── Transect-mode inputs ─────────────────────────────────────
 # Point to your transect_lrr_full.csv files for each period
-TRANSECT_CSV_1984_2004 = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1984_2004\transect_lrr_full.csv"
-TRANSECT_CSV_2004_2024 = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\2004_2024\transect_lrr_full.csv"
+TRANSECT_CSV_1984_2004 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr" / "CoastSat"
+                          / "1984_2004" / "transect_lrr_full.csv")
+TRANSECT_CSV_2004_2024 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr" / "CoastSat"
+                          / "2004_2024" / "transect_lrr_full.csv")
 
 # Column names in your transect CSV (transect_lrr_full.csv)
 T_TRANSECT_ID_COL = "transect_id"    # string IDs — converted to sequential int internally
@@ -121,7 +142,8 @@ C_CS_2004 = "#833C00"
 C_WINDOWS  = ["#0072B2", "#E69F00", "#CC79A7"]  # blue=5dom, amber=7dom, pink=10dom
 
 # ── Output ───────────────────────────────────────────────────
-OUTPUT_DIR = r"/scripts/input_prep/6-scr-smooth/shoreline_change_smoothing/coastsat_smoothing_method_comparison"
+OUTPUT_DIR = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "6-scr-smooth"
+                 / "HAT_loess_method_comparison_output")
 
 # ============================================================
 # IMPORTS

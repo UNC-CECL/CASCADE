@@ -20,21 +20,42 @@ Smoothing method: LOESS (locally weighted scatterplot smoothing)
   - Preserves large-scale spatial patterns while removing per-domain noise
 """
 
+# pathlib must be imported before the CONFIG block because every path below is
+# built from PROJECT_BASE_DIR at module level.
+import pathlib
+
+# ANCHORED, NOT TYPED. Every path below used to be an absolute literal: the
+# output one had lost its drive ("/scripts/input_prep/...") and so wrote its
+# figures to C:\scripts\ instead of into the repository, and the input ones
+# still spelled the folder "input_preperation" and pointed at a CoastSat tree
+# that has since moved under 5-scr. Anchoring on the pyproject.toml at the repo
+# root makes all of them follow the checkout and survive this file changing
+# depth.
+PROJECT_BASE_DIR = next(
+    q for q in pathlib.Path(__file__).resolve().parents
+    if (q / "pyproject.toml").exists()
+)
+
+
 # ============================================================
 # CONFIG
 # ============================================================
 
 # --- DSAS CSVs ---
-DSAS_CSV_1978_1997 = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\shoreline_change\dsas_1978_1997_rates.csv"
-DSAS_CSV_1997_2019 = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\shoreline_change\dsas_1997_2019_rates.csv"
+DSAS_CSV_1978_1997 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "scr-dsas-1978-2019"
+                      / "dsas_1978_1997_rates.csv")
+DSAS_CSV_1997_2019 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "scr-dsas-1978-2019"
+                      / "dsas_1997_2019_rates.csv")
 
 DSAS_DOMAIN_COL = "domain_id"
 DSAS_LRR_COL    = "MEAN_LRR"
 DSAS_STD_COL    = "STD_LRR"
 
 # --- CoastSat CSVs ---
-COASTSAT_CSV_1978_1997 = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1978_1997\domain_lrr_summary.csv"
-COASTSAT_CSV_1997_2019 = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1997_2019\domain_lrr_summary.csv"
+COASTSAT_CSV_1978_1997 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr" / "CoastSat" / "old_time_periods"
+                          / "1978_1997" / "domain_lrr_summary.csv")
+COASTSAT_CSV_1997_2019 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr" / "CoastSat" / "old_time_periods"
+                          / "1997_2019" / "domain_lrr_summary.csv")
 
 CS_DOMAIN_COL = "domain_number"
 CS_LRR_COL    = "mean_lrr"
@@ -60,7 +81,8 @@ TOWNS = {
 }
 
 # --- Output ---
-OUTPUT_DIR = r"/scripts/input_prep/6-scr-smooth/shoreline_change_smoothing/dsas_coastsat_comparison_outputs"
+OUTPUT_DIR = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "6-scr-smooth"
+                 / "HAT_loess_dsas_vs_coastsat_output")
 
 # ============================================================
 # IMPORTS
