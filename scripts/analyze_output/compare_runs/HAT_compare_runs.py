@@ -6,19 +6,25 @@ Loads up to 4 pre-computed CASCADE runs from their saved shoreline change
 rate CSVs and overlays them on one figure for visual comparison.  Adds
 LOESS-smoothed CoastSat LRR for reference.
 
-Each run must have already been executed by HAT_hindcast_1984_2024_old version.py, which
-saves a rate CSV automatically:
+Each run must have already been executed by the hindcast runner, which saves
+a rate CSV automatically inside the run directory:
 
-  {OUTPUT_BASE_DIR}/{run_name}/{run_name}_shoreline_change_rate.csv
-  Columns: cascade_padded_index  |  gis_domain_id  |  model_rate_m_per_yr
+  <run_dir>/{run_name}_shoreline_change_rate.csv
+  Columns: gis_domain | change_rate_m_yr | lrr_m_yr | lrr_r2
+  lrr_m_yr is the one read -- see RUN_DOMAIN_COL / RUN_RATE_COL.
 
-Outputs (saved to COMPARISON_OUTPUT_DIR):
+<run_dir> is resolved from (run_name, period, preset, arm) by
+cascade_pipeline.run_registry.find_run_dir -- never joined by hand.
+
+Outputs (saved to COMPARISON_ROOT_DIR/{COMPARISON_NAME}, i.e. under
+output/comparisons/):
   {COMPARISON_NAME}_diagnostic.png      — quick multi-run diagnostic
   {COMPARISON_NAME}_annotated.png       — publication figure with geographic annotations
   {COMPARISON_NAME}_residuals.png       — optional panel: each model minus active CoastSat
 """
 
 import os
+import pathlib
 import sys
 import numpy as np
 import pandas as pd
@@ -52,27 +58,59 @@ DOMAIN_SPACING_M    = 500   # metres per CASCADE domain (used to convert window_
 # SECTION 2: FILE PATHS
 # =============================================================================
 
-PROJECT_BASE_DIR  = r"C:\Users\hanna\PycharmProjects\CASCADE"
-OUTPUT_BASE_DIR   = os.path.join(PROJECT_BASE_DIR, "comparison", "raw_runs")
+# ANCHORED, NOT TYPED. These were absolute literals on one machine, and two
+# of the three pointed at folders that do not exist: "comparison/raw_runs"
+# (the tree is output/raw_runs) and "input_prep/CoastSat" (it is under
+# 5-scr/). Anchoring on the pyproject.toml at the repo root makes them follow
+# the checkout and survive this file changing depth.
+PROJECT_BASE_DIR = next(
+    p for p in pathlib.Path(__file__).resolve().parents
+    if (p / "pyproject.toml").exists()
+)
+RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
+
 COASTSAT_BASE_DIR = os.path.join(
-    PROJECT_BASE_DIR, "scripts", "input_prep", "CoastSat"
+    PROJECT_BASE_DIR, "scripts", "input_prep", "5-scr", "CoastSat"
 )
 
-# Where comparison figures are saved.
-# A subfolder named COMPARISON_NAME is created automatically.
-COMPARISON_ROOT_DIR = os.path.join(PROJECT_BASE_DIR, "scripts", "analyze_output", "compare_runs", "comparison")
+# Where comparison figures are saved. Products belong under output/, never
+# beside the script -- see output/README.md, which names comparisons/ as the
+# home for cross-run figures. A subfolder named COMPARISON_NAME is created
+# automatically.
+COMPARISON_ROOT_DIR = os.path.join(PROJECT_BASE_DIR, "output", "comparisons")
+
+# The rate CSV's schema. WHICH RATE COLUMN IS READ IS A METHOD CHOICE, NOT A
+# SPELLING. The file carries two: lrr_m_yr, an OLS slope through the annual
+# shoreline positions, and change_rate_m_yr, the endpoint rate. This script
+# reads lrr_m_yr because the CoastSat target it is plotted against is one too
+# (see rate_col in COASTSAT_DATASETS below) -- putting an endpoint rate up
+# against an OLS one moves the difference between two estimators into the
+# residual panel, where it reads as model error.
+RUN_DOMAIN_COL = "gis_domain"
+RUN_RATE_COL   = "lrr_m_yr"
+
+sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
+
+from cascade_pipeline.run_registry import find_run_dir   # noqa: E402
 
 # =============================================================================
 # SECTION 3: RUNS TO COMPARE
 # =============================================================================
 #
-# run_name   : folder name AND filename prefix for this run's comparison. By
-#              default the CSV is expected at
-#              OUTPUT_BASE_DIR/{run_name}/{run_name}_shoreline_change_rate.csv
-#              - must match RUN_NAME_BASE used when the run was executed in
-#              the hindcast script. If run_dir (below) is set, run_name is
-#              still used as the filename prefix, but the folder location
-#              comes from run_dir instead of OUTPUT_BASE_DIR.
+# run_name   : folder name AND filename prefix for this run's comparison -
+#              must match RUN_NAME_BASE used when the run was executed in
+#              the hindcast script. The folder itself is RESOLVED from
+#              (run_name, period, preset, arm) by
+#              cascade_pipeline.run_registry.find_run_dir; it is never joined
+#              by hand here. If run_dir (below) is set, run_name is still
+#              used as the filename prefix but the resolver is bypassed.
+# period     : "1984_2004" or "2004_2024" - the run's period directory.
+# preset     : source/sink preset the run was made under ("calibBE",
+#              "edgeBE", "zeroBE"), i.e. the directory below the period.
+# arm        : (optional) forcing arm. Omit for the calibration arm, which is
+#              where every run made before arms existed sits. Naming no arm
+#              never silently searches: a run forced off the calibration wave
+#              climate must be asked for by name.
 # label      : short display label for the legend.
 # start_year : 1984 or 2004. Determines which CoastSat period is drawn solid
 #              for this run, AND which panel it appears in for the two-panel
@@ -85,65 +123,59 @@ COMPARISON_ROOT_DIR = os.path.join(PROJECT_BASE_DIR, "scripts", "analyze_output"
 #              OVERRIDES the auto-generated gradient color for this run only -
 #              useful for pinning one run to a fixed color while letting the
 #              rest auto-generate. Leave unset (or None) for normal use.
-# run_dir    : (optional) full path to the folder containing this run's CSV,
-#              for runs that live somewhere other than OUTPUT_BASE_DIR/{run_name}
-#              (a different drive, a reorganized comparison structure, a folder
-#              shared with a collaborator, etc). If given, this OVERRIDES the
-#              default location for just this run - other runs in the list
-#              without run_dir still resolve normally via OUTPUT_BASE_DIR.
-#              The CSV inside that folder must still be named
-#              {run_name}_shoreline_change_rate.csv.
+# run_dir    : (optional) ESCAPE HATCH - full path to the folder containing
+#              this run's CSV, for a run that is not in the raw_runs tree at
+#              all (another drive, a folder shared with a collaborator, an
+#              archive). If given it OVERRIDES the resolver for just this
+#              run; other entries still resolve through find_run_dir. Prefer
+#              period/preset: a hand-typed path is how a figure ends up
+#              drawing a run other than the one it names. The CSV inside must
+#              still be named {run_name}_shoreline_change_rate.csv.
 #
 # Auto-color gradient: each run's color is drawn from RUN_COLORMAP (Section 5)
 # at a position determined by its rank along sort_key (or list order). This
 # means reordering runs, adding new ones, or changing how many you're
 # comparing never requires manually re-picking hex codes.
 
+# THE FOUR RUNS THIS LIST HELD ARE GONE. HAT_1984_2004_SStest,
+# HAT_1984_2004_FinalSS, HAT_2004_2024_SStest and HAT_2004_2024_FinalSS were
+# addressed by absolute paths into output/raw_runs/source&sink_tests/ and at
+# the flat raw_runs/<name> level; neither exists in the tree any more, and
+# none of the four names appears in run_index.csv or in
+# archived_output_20260828/. The figures they produced are kept at
+# output/comparisons/source_sink_zones/ but cannot be regenerated as-is.
+# Name live runs below before running this script. (Checked 2026-09-02.)
 RUNS_TO_COMPARE = [
-    dict(
-        run_name   = "HAT_1984_2004_SStest",
-        label      = "Old method (1984)",
-        start_year = 1984,
-        sort_key   = 2.5,
-        run_dir    = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\source&sink_tests\HAT_1984_2004_SStest",
-    ),
-    dict(
-        run_name   = "HAT_1984_2004_FinalSS",
-        label      = "New method (1984)",
-        start_year = 1984,
-        sort_key   = 3.0,
-        run_dir    = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1984_2004_FinalSS",
-    ),
-    dict(
-        run_name   = "HAT_2004_2024_SStest",
-        label      = "Old method (2004)",
-        start_year = 2004,
-        sort_key   = 3.5,
-        run_dir    = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\source&sink_tests\HAT_2004_2024_SStest",
-    ),
-    dict(
-        run_name= "HAT_2004_2024_FinalSS",
-        label= "New method (2004)",
-        start_year= 2004,
-        sort_key= 4.0,
-        run_dir= r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_2004_2024_FinalSS",
-    ),
-    # Example: a run living in a different folder than the others, e.g. an
-    # archived run or one organized under a separate subfolder structure.
-    # Uncomment and edit the path to use:
-    #dict(
-        #run_name   = "HAT_2004_2024_L7_Hs2.5",
-        #label      = "Hs2.5 (2004)",
-        #start_year = 2004,
-        #sort_key   = 2.5,
-        #run_dir    = r"C:\Users\hanna\PycharmProjects\CASCADE\comparison\archive\HAT_2004_2024_L7_Hs2.5",
-    #),
+    # dict(
+    #     run_name   = "HAT_1984_2004_calibBE_road_bdm_groin",
+    #     period     = "1984_2004",
+    #     preset     = "calibBE",
+    #     label      = "Calibrated (1984)",
+    #     start_year = 1984,
+    #     sort_key   = 2.5,
+    # ),
+    # dict(
+    #     run_name   = "HAT_2004_2024_calibBE_road_bdm_nourish_groin",
+    #     period     = "2004_2024",
+    #     preset     = "calibBE",
+    #     label      = "Calibrated (2004)",
+    #     start_year = 2004,
+    #     sort_key   = 3.0,
+    # ),
+    # A run outside the raw_runs tree entirely -- see run_dir in Section 3.
+    # dict(
+    #     run_name   = "HAT_2004_2024_L7_Hs2p5",
+    #     label      = "Hs2.5 (2004)",
+    #     start_year = 2004,
+    #     sort_key   = 2.5,
+    #     run_dir    = r"D:\shared\HAT_2004_2024_L7_Hs2p5",
+    # ),
 ]
 
 # =============================================================================
 # >>> NAME THIS ANALYSIS <<<  (controls the comparison folder + filenames)
 # =============================================================================
-COMPARISON_NAME = "Source&Sink_Zones"   # <-- EDIT THIS to name your comparison folder
+COMPARISON_NAME = "source_sink_zones"   # <-- EDIT THIS to name your comparison folder
 
 # =============================================================================
 # SECTION 4: COASTSAT DATASETS
@@ -414,7 +446,7 @@ def assign_run_colors(runs):
 # HELPER FUNCTIONS — data loading
 # =============================================================================
 
-def load_run_rates(run_name, run_dir=None):
+def load_run_rates(run_name, period=None, preset=None, arm=None, run_dir=None):
     """
     Load the shoreline change rate CSV produced by HAT_hindcast_1984_2024_old version.py.
 
@@ -422,25 +454,41 @@ def load_run_rates(run_name, run_dir=None):
     ----------
     run_name : str       — used to build the default path AND the expected
                             CSV filename ({run_name}_shoreline_change_rate.csv),
-                            which is unchanged regardless of run_dir.
-    run_dir  : str, optional — full path to the folder containing that CSV.
-                            If given, this OVERRIDES the default
-                            OUTPUT_BASE_DIR/{run_name} location entirely, so
-                            runs can live anywhere on disk (their own drive,
-                            a different project folder, a shared network
-                            location, etc.) without needing OUTPUT_BASE_DIR
-                            to be a single common parent for every run.
-                            If omitted (None), falls back to the original
-                            behavior: OUTPUT_BASE_DIR/{run_name}.
+                            which is unchanged regardless of how the folder
+                            was resolved.
+    period   : str, optional — "1984_2004" or "2004_2024".
+    preset   : str, optional — source/sink preset the run was made under.
+    arm      : str, optional — forcing arm; None means the calibration arm.
+    run_dir  : str, optional — ESCAPE HATCH. Full path to the folder holding
+                            that CSV, for a run outside the raw_runs tree.
+                            If given it OVERRIDES the resolver entirely.
+                            Otherwise period and preset are both required and
+                            find_run_dir locates the run, raising with what
+                            IS on disk when it is absent.
 
     Returns
     -------
-    gis_ids   : int array, shape (NUM_REAL_DOMAINS,)  — GIS domain IDs 1–90
-    rates_myr : float array, same shape               — shoreline change rate (m/yr)
+    gis_ids   : int array — GIS domain IDs, READ FROM the CSV's gis_domain
+                            column rather than assumed. Normally 1-90; a
+                            short array means the run wrote fewer rows, which
+                            is warned about rather than padded over.
+    rates_myr : float array, same shape — the run's LRR in m/yr, from
+                            RUN_RATE_COL, aligned to gis_ids by construction.
     run_dir   : str                                   — full path to run folder (resolved)
     """
+    # RESOLVED, NOT JOINED BY HAND. A run lives at
+    # raw_runs/[<arm>/]<period>/<preset>/<run_name>; this function used to
+    # join a two-level path that had no slot for the preset or the arm, so
+    # every run read as missing. find_run_dir raises naming the arms a run IS
+    # under, which reads as "it is over there" rather than "it never existed".
     if run_dir is None:
-        run_dir = os.path.join(OUTPUT_BASE_DIR, run_name)
+        if period is None or preset is None:
+            raise ValueError(
+                f"run '{run_name}' names neither (period, preset) nor an "
+                f"explicit run_dir; one of the two is required."
+            )
+        kwargs = {"arm": arm} if arm else {}
+        run_dir = str(find_run_dir(RAW_RUNS, run_name, period, preset, **kwargs))
     csv_path = os.path.join(run_dir, f"{run_name}_shoreline_change_rate.csv")
 
     if not os.path.exists(csv_path):
@@ -451,25 +499,30 @@ def load_run_rates(run_name, run_dir=None):
         )
 
     df = pd.read_csv(csv_path)
-    required = {"cascade_padded_index", "model_rate_m_per_yr"}
+    required = {RUN_DOMAIN_COL, RUN_RATE_COL}
     if not required.issubset(df.columns):
         raise ValueError(
             f"Rate CSV for '{run_name}' is missing required columns.\n"
-            f"Need: {required}  |  Found: {set(df.columns)}"
+            f"Need: {sorted(required)}  |  Found: {sorted(df.columns)}\n"
+            f"  {csv_path}"
         )
 
-    # Slice real domain rows (padded indices START_REAL_INDEX … END_REAL_INDEX-1)
-    real = df[
-        (df["cascade_padded_index"] >= START_REAL_INDEX) &
-        (df["cascade_padded_index"] <  END_REAL_INDEX)
-    ].copy().sort_values("cascade_padded_index")
+    # KEYED ON THE FILE'S OWN DOMAIN COLUMN, NOT ON ROW ORDER. This used to
+    # slice padded indices 15-104 out of a 120-row CSV and pair them
+    # POSITIONALLY with a hand-built arange(1, 91), so the domain ids were
+    # asserted rather than read: a run written in the other alongshore order
+    # would have shifted every rate against its label with nothing raised.
+    # The CSV now carries the 90 real domains keyed on gis_domain, and
+    # reading the ids from the file is what makes that failure impossible.
+    real = df[df[RUN_DOMAIN_COL].between(FIRST_FILE_NUMBER, LAST_FILE_NUMBER)]
+    real = real.sort_values(RUN_DOMAIN_COL)
 
     if len(real) != NUM_REAL_DOMAINS:
         print(f"  ⚠️  '{run_name}': expected {NUM_REAL_DOMAINS} real-domain rows, "
               f"got {len(real)} — results may be incomplete.")
 
-    gis_ids   = np.arange(FIRST_FILE_NUMBER, LAST_FILE_NUMBER + 1, dtype=int)
-    rates_myr = real["model_rate_m_per_yr"].values.astype(float)
+    gis_ids   = real[RUN_DOMAIN_COL].values.astype(int)
+    rates_myr = real[RUN_RATE_COL].values.astype(float)
 
     return gis_ids, rates_myr, run_dir
 
@@ -1216,7 +1269,11 @@ def main():
     for run_cfg in RUNS_TO_COMPARE:
         try:
             gis_ids, rates, run_dir = load_run_rates(
-                run_cfg["run_name"], run_dir=run_cfg.get("run_dir")
+                run_cfg["run_name"],
+                period  = run_cfg.get("period"),
+                preset  = run_cfg.get("preset"),
+                arm     = run_cfg.get("arm"),
+                run_dir = run_cfg.get("run_dir"),
             )
             run_data.append(dict(
                 run_name   = run_cfg["run_name"],
@@ -1235,7 +1292,8 @@ def main():
             print(f"  ❌ SKIPPED '{run_cfg['run_name']}': {e}")
 
     if not run_data:
-        print("\n❌ No valid runs loaded — check OUTPUT_BASE_DIR and run names.")
+        print("\n❌ No valid runs loaded — RUNS_TO_COMPARE is empty "
+              "or every entry failed to resolve. See Section 3.")
         sys.exit(1)
 
     print(f"\n  {len(run_data)} run(s) loaded successfully.")
