@@ -117,17 +117,31 @@ GROINS = {"Buxton Groin": 6}
 WIMBLE_SHOALS = (60, 74)
 
 # ── Geographic annotations — transect / along-coast space ────
-# Fill in values matching your transect IDs or along-coast distances (m)
-# once you know them. Any entry left as None is silently skipped.
+# The same features as above, in metres, so the transect-space figures carry
+# the reference marks their legend already advertises. Left as None these were
+# silently skipped and transect_overview.png shipped a legend for annotations
+# it never drew.
+#
+# Derived from the domain-space values, not measured independently, using the
+# two conventions this script already uses:
+#   - domain d occupies [(d-1)*500, d*500)      (load_transect_csv, ~line 306)
+#   - a domain plots at its band centre (d-0.5)*500   (~line 671)
+# So an inclusive span lo..hi runs ((lo-1)*500, hi*500), and a point feature at
+# domain d sits at (d-0.5)*500. Re-derive these if DOMAIN_SPACING_M changes.
 T_TOWN_SPANS = {
-    "Buxton":      (None, None),
-    "Avon":        (None, None),
-    "Tri-Village": (None, None),
+    "Buxton":      ( 3000,  4000),   # domains  7-8
+    "Avon":        (10000, 15500),   # domains 21-31
+    "Tri-Village": (33500, 41500),   # domains 68-83
 }
-T_VILLAGE_LINES = {"Salvo": None, "Waves": None, "Rodanthe": None}
-T_PIERS         = {"Avon Pier": None, "Rodanthe Pier": None}
-T_GROINS        = {"Buxton Groin": None}
-T_WIMBLE_SHOALS = (None, None)
+T_VILLAGE_LINES = {"Salvo": 34250, "Waves": 36750, "Rodanthe": 39750}
+T_PIERS         = {"Avon Pier": 12750, "Rodanthe Pier": 39250}
+T_GROINS        = {"Buxton Groin": 2750}   # domain 6; see note below
+T_WIMBLE_SHOALS = (29500, 37000)           # domains 60-74
+
+# NOTE: GROINS above puts the Buxton groin at domain 6, so its band centre is
+# 2750 m. The hindcast places it at GIS 5.5 -- the boundary between domains 5
+# and 6, i.e. 2500 m. Translated as-configured rather than silently re-sited;
+# the 250 m gap is a question for the domain-space value, not for this one.
 
 # ── Annotation colors ────────────────────────────────────────
 C_TOWN_SPAN    = "#90AFC5"
@@ -149,6 +163,15 @@ OUTPUT_DIR = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "6-scr-smooth"
 # IMPORTS
 # ============================================================
 import os
+import sys
+
+# Windows consoles default to cp1252, which cannot encode the arrows and
+# en-dashes in the progress output -- the script died on its first status
+# line. UTF-8 here so it runs the same from PyCharm, a terminal or a
+# scheduled call.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
