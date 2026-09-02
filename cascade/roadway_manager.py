@@ -491,7 +491,7 @@ def road_relocation_checks(
 
         if road_setback < 0:
             road_relocated = 1
-            print('Roadway relocated')
+            print("Roadway relocated")
 
             # relocate the road only if the width of the island allows it
             if (
@@ -528,14 +528,14 @@ def check_sandbag_need(
         )
 
         if exceeds_min_dune_threshold == True:
-            print('Elevation is low enough for sandbags')
+            print("Elevation is low enough for sandbags")
             for width in range(0, barrier3d.DuneWidth):
                 for cell in range(0, len(barrier3d.DuneDomain[time_index, :, width])):
                     if (
                         barrier3d.DuneDomain[time_index, cell, width]
                         < threshold_elevation
                     ):
-                        print('Sandbags would be added in cell ', str(cell), str(width))
+                        print("Sandbags would be added in cell ", str(cell), str(width))
                         barrier3d._DuneRestart[width][cell] = design_elevation / 10
                         c = 10
 
