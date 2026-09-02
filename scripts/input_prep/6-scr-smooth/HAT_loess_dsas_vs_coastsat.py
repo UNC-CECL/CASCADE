@@ -584,10 +584,11 @@ def plot_combined_sources(merged_1978, merged_1997, out_path):
         m = mask_southern_smoothed(m)
         frames[label] = m
         d = m["domain"]
+        # DSAS only, one line per period. Four dotted series across the
+        # withheld zone was clutter on a panel already carrying four curves.
         draw_raw_in_guard_zone(ax, m, "dsas_lrr", c_dsas,
                                label=None if frames_labelled else
-                                     "Raw mean (LOESS withheld)")
-        draw_raw_in_guard_zone(ax, m, "cs_lrr", c_cs)
+                                     "DSAS raw mean (LOESS withheld)")
         frames_labelled = True
         ax.plot(d, m["dsas_lrr_smooth"], color=c_dsas, lw=2.5,
                 label=f"DSAS {label}")
