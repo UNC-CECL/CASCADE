@@ -328,7 +328,8 @@ class Cascade:
         self._trigger_dune_knockdown = trigger_dune_knockdown
         self._initial_beach_width = [0] * self._ny
         self._group_roadway_abandonment = group_roadway_abandonment
-        # initialize fake beach which is used to control dune migration when the beach/shoreface is nourished
+        # initialize fake beach which is used to control dune 
+        # migration when the beach/shoreface is nourished
         self._beach_width = [[np.nan] * self._nt] * self._ny
         self._beach_width_threshold = 0  # m, triggers dune migration to turn back on
 
