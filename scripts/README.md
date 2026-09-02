@@ -84,6 +84,8 @@ sensitivity_analysis/  standalone sweep driver and plotter, working off the
 
 analyze_output/        read-only comparisons across finished runs —
                        compare_runs/, overwash/, smoothing_vs_cascade/.
+                       Scripts only: their products go to
+                       output/comparisons/<topic>/, never beside the script.
 
 figure_making/         the older figure tree, largely predating
                        cascade_pipeline/. New figures belong with the run

@@ -21,14 +21,28 @@ Smoothing method: LOESS (locally weighted scatterplot smoothing)
 # os must be imported before the CONFIG block because CASCADE_RUNS uses
 # os.path.join to build CSV paths at module level.
 import os
+import pathlib
+
+# ANCHORED, NOT TYPED. Every path below used to be an absolute literal; the
+# output one had lost its drive ("/scripts/analyze_output/...") and so wrote
+# its figures to C:\scripts\ instead of into the repository, and the input
+# ones still spelled the folder "input_preperation", renamed to "input_prep"
+# long ago. Anchoring on the pyproject.toml at the repo root makes all of
+# them follow the checkout and survive this file changing depth.
+PROJECT_BASE_DIR = next(
+    q for q in pathlib.Path(__file__).resolve().parents
+    if (q / "pyproject.toml").exists()
+)
 
 # ============================================================
 # CONFIG
 # ============================================================
 
 # --- CoastSat CSVs ---
-COASTSAT_CSV_1984_2004 = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1984_2004\domain_lrr_summary.csv"
-COASTSAT_CSV_2004_2024 = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\2004_2024\domain_lrr_summary.csv"
+COASTSAT_CSV_1984_2004 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr"
+                             / "CoastSat" / "1984_2004" / "domain_lrr_summary.csv")
+COASTSAT_CSV_2004_2024 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr"
+                             / "CoastSat" / "2004_2024" / "domain_lrr_summary.csv")
 
 CS_DOMAIN_COL = "domain_number"
 CS_LRR_COL    = "mean_lrr"
@@ -91,7 +105,9 @@ C_PIER         = "#1565C0"   # medium blue — pier lines
 C_GROIN        = "#B71C1C"   # dark red    — groin lines
 
 # --- Output ---
-OUTPUT_DIR = r"/scripts/analyze_output/smoothing_vs_cascade/test_1984_2004"
+# Products live under output/, never beside the script -- see output/README.md.
+OUTPUT_DIR = str(PROJECT_BASE_DIR / "output" / "comparisons"
+                 / "smoothing_vs_cascade" / "1984_2004")
 
 # ============================================================
 # CASCADE MODEL OUTPUT CONFIG
@@ -112,7 +128,7 @@ OUTPUT_DIR = r"/scripts/analyze_output/smoothing_vs_cascade/test_1984_2004"
 #
 # Add one dict per run you want to overlay.  Leave list empty ([]) to skip.
 
-CASCADE_OUTPUT_BASE = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs"
+CASCADE_OUTPUT_BASE = str(PROJECT_BASE_DIR / "output" / "raw_runs")
 
 CASCADE_RUNS = [
     dict(

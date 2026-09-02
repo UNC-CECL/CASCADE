@@ -152,6 +152,20 @@ output/*
 output/groin_sweep/*
 !output/groin_sweep/joint_fit.json
 
+# coastsat_smoothed_table.csv was tracked while it sat beside its script under
+# scripts/analyze_output/. Moving the products into output/comparisons/ on
+# 2026-09-02 would have dropped it from version control silently, so it is
+# re-included by the same directory-in, contents-out pattern as joint_fit.json.
+# It is the LOESS-smoothed CoastSat table the smoothing comparison reports on;
+# the PNGs beside it stay ignored, being regenerable from it plus the code.
+!output/comparisons/
+output/comparisons/*
+!output/comparisons/smoothing_vs_cascade/
+output/comparisons/smoothing_vs_cascade/*
+!output/comparisons/smoothing_vs_cascade/1984_2004/
+output/comparisons/smoothing_vs_cascade/1984_2004/*
+!output/comparisons/smoothing_vs_cascade/1984_2004/coastsat_smoothed_table.csv
+
 # large data / model output file types
 *.nc
 *.npy

@@ -28,9 +28,41 @@ warnings.filterwarnings('ignore')
 # ══════════════════════════════════════════════════════════════════════
 # CONFIGURATION
 # ══════════════════════════════════════════════════════════════════════
-NPZ_PATH      = r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\HAT_1984_2004_basestorms_Hs2p0\HAT_1984_2004_basestorms_Hs2p0.npz"
-OBS_XLSX_PATH = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\overwash_analysis\Hatteras_Overwash_Data.xlsx"
-OUT_DIR       = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\overwash_analysis"
+# ── Paths are ANCHORED, not typed ────────────────────────────────────
+# All three used to be absolute literals under a folder spelling that no
+# longer exists ("input_preperation", renamed to "input_prep"), so this
+# script could not read its observations and crashed on the first save.
+# Anchoring on the pyproject.toml at the repo root makes them follow the
+# checkout instead of one machine's layout.
+import pathlib as _pathlib
+import sys as _sys
+
+PROJECT_BASE_DIR = next(
+    q for q in _pathlib.Path(__file__).resolve().parents
+    if (q / "pyproject.toml").exists()
+)
+RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
+
+_sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
+from cascade_pipeline.run_registry import find_run_dir   # noqa: E402
+
+# --- Which run to read. RESOLVED, NOT JOINED BY HAND: a run lives at
+# raw_runs/[<arm>/]<period>/<preset>/<name>, and find_run_dir raises naming
+# what IS on disk rather than handing back a path that is not there.
+RUN_NAME   = "HAT_1984_2004_calibBE_road_bdm_groin"
+RUN_PERIOD = "1984_2004"
+RUN_PRESET = "calibBE"
+
+NPZ_PATH = str(find_run_dir(RAW_RUNS, RUN_NAME, RUN_PERIOD, RUN_PRESET)
+               / f"{RUN_NAME}.npz")
+
+# The observation workbook is an INPUT and stays under scripts/input_prep/.
+OBS_XLSX_PATH = str(PROJECT_BASE_DIR / "scripts" / "input_prep"
+                    / "8-overwash-analysis" / "Hatteras_Overwash_Data.xlsx")
+
+# Products go under output/, never beside the script -- see output/README.md.
+OUT_DIR = str(PROJECT_BASE_DIR / "output" / "comparisons" / "overwash")
+os.makedirs(OUT_DIR, exist_ok=True)
 
 START_YEAR          = 1984
 END_YEAR            = 2004    # model has END_YEAR - START_YEAR timesteps
