@@ -277,10 +277,14 @@ def shade_missing_dsas(ax, m, label=True):
         ax.axvspan(lo, hi, facecolor=C_NO_DSAS, alpha=0.13, hatch="///",
                    edgecolor=C_NO_DSAS, lw=0.0, zorder=0,
                    label="No DSAS data" if (label and k == 0) else None)
+        # Backed in white like the town labels: on the difference panels the
+        # mean-difference line runs straight through this text otherwise.
         ax.text((lo + hi) / 2, 0.5,
                 f"no DSAS\ndata\n(domains {domains[i0]}–{domains[i1]})",
                 transform=trans, ha="center", va="center", fontsize=7.5,
-                color="0.35", style="italic", zorder=5)
+                color="0.35", style="italic", zorder=5,
+                bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="none",
+                          alpha=0.75))
 
 
 def style_domain_axis(ax):
@@ -612,6 +616,7 @@ def plot_line_comparison(merged, period_label, out_path):
     ax.set_ylabel("LRR (m/yr)", fontsize=12, fontweight="bold")
     ax.set_title(f"DSAS vs CoastSat LRR — {period_label}  (raw, ±1 std)",
                  fontsize=13, fontweight="bold")
+    shade_missing_dsas(ax, merged)
     ax.legend(fontsize=10, framealpha=0.95)
     style_domain_axis(ax)
     add_town_lines(ax)
@@ -640,6 +645,7 @@ def plot_difference(merged, period_label, out_path):
     ax.set_title(f"Dataset Difference: CoastSat minus DSAS — {period_label}\n"
                  f"Blue = CoastSat more accretional  |  Red = CoastSat more erosional",
                  fontsize=12, fontweight="bold")
+    shade_missing_dsas(ax, m)
     ax.legend(fontsize=10, framealpha=0.95)
     style_domain_axis(ax)
     add_town_lines(ax)
