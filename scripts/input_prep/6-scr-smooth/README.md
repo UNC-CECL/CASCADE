@@ -4,7 +4,7 @@ Takes the per-transect and per-domain LRR tables that `5-scr` produces and
 smooths them along the coast, so the noisy transect signal becomes a curve the
 model can be scored against.
 
-    5-scr/CoastSat/<period>/transect_lrr_full.csv     ~2,700 rows, one per transect
+    5-scr/CoastSat/<period>/transect_lrr_full.csv     906 rows, one per transect (~50 m spacing)
     5-scr/CoastSat/<period>/domain_lrr_summary.csv    90 rows, one per GIS domain
 
 **Nothing in this stage writes a model input.** It produced a *decision* -
@@ -35,7 +35,7 @@ purpose - it is a mirror, and the name is what makes it one.
 
 The one that settled the method. Runs **both** smoothers on every call:
 
-- **transect-first** - LOESS over ~2,700 transects using along-coast metres as
+- **transect-first** - LOESS over 906 transects using along-coast metres as
   x, then average the smoothed signal down to 90 domains;
 - **domain-first** - LOESS over the 90 pre-averaged domain means directly.
 
@@ -44,6 +44,11 @@ The one that settled the method. Runs **both** smoothers on every call:
 Writes to `HAT_loess_method_comparison_output/` in four numbered subfolders:
 `01_transect_based`, `02_domain_averaged`, `03_cascade_inputs`,
 `04_method_comparison`.
+
+Note the folder name `03_cascade_inputs` overstates it: nothing reads that CSV,
+and it is smoothed at this script's primary window (7 domains), whereas the
+hindcast scores against the 10-domain curve. Treat it as a table to read, not
+as an input to a run.
 
 ### HAT_loess_dsas_vs_coastsat.py
 
