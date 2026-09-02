@@ -83,6 +83,10 @@ because a per-domain mean of an all-NaN group is NaN. The band is drawn in both
 x-spaces - domains 1-10 in domain space, 0-5000 m in transect space, which is
 the same cut since domain *d* occupies `[(d-1)*500, d*500)`.
 
+Figures that draw raw data anyway simply show it across the zone. The
+smoothed-only ones would otherwise be blank there, so they draw the raw domain
+means as a dotted line - which is what the hindcast shows in that zone too.
+
 It bites less here than in the domain-space scripts: smoothing runs at transect
 resolution, ~10 points per domain, so the edge fit has far more local support.
 This script never showed the -6.21 m/yr excursion the DSAS one did. The guard
@@ -140,7 +144,9 @@ Three ways these figures used to mislead, each now marked:
   reason: Oregon Inlet dominates that zone. Display only, as it is there. The
   fit still runs over all 90 domains, so the southern data still pulls the
   values just north of the cut; only the result is withheld, and the raw series
-  still plots across the whole island. Set it to `0` to smooth everywhere.
+  still plots across the whole island. The smoothed-only figures, which would
+  otherwise be blank there, draw the raw domain means as a dotted line. Set it
+  to `0` to smooth everywhere.
 
 `comparison_table_smoothed.csv` follows the figures rather than the fit: its
 three `*_smooth` columns are blank across domains 1-10, so the table cannot be

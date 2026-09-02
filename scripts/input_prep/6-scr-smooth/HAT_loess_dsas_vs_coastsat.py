@@ -283,6 +283,22 @@ def mask_southern_smoothed(m):
     return m
 
 
+def draw_raw_in_guard_zone(ax, m, col, color, label=None):
+    """Raw domain values across the withheld zone, so it is not simply blank.
+
+    Matches the hindcast, which omits the LOESS line across the southern
+    domains and shows the raw values there rather than nothing. Only the
+    smoothed-only figures need this; the others already draw raw everywhere.
+    """
+    if SKIP_SOUTHERN_DOMAINS <= 0:
+        return
+    z = m[m["domain"] <= SKIP_SOUTHERN_DOMAINS]
+    if z.empty or z[col].isna().all():
+        return
+    ax.plot(z["domain"], z[col], color=color, lw=1.2, ls=":",
+            marker="o", ms=3, alpha=0.65, zorder=2, label=label)
+
+
 def shade_boundary_zone(ax, label=True):
     """Mark the domains whose smoothed values were withheld."""
     if SKIP_SOUTHERN_DOMAINS <= 0:
@@ -321,7 +337,8 @@ def shade_missing_dsas(ax, m, label=True):
         lo, hi = domains[i0] - 0.5, domains[i1] + 0.5
         ax.axvspan(lo, hi, facecolor=C_NO_DSAS, alpha=0.13, hatch="///",
                    edgecolor=C_NO_DSAS, lw=0.0, zorder=0,
-                   label="No DSAS data" if (label and k == 0) else None)
+                   label=(label if isinstance(label, str) else "No DSAS data")
+                         if (label and k == 0) else None)
         # Backed in white like the town labels: on the difference panels the
         # mean-difference line runs straight through this text otherwise.
         ax.text((lo + hi) / 2, 0.5,
@@ -454,6 +471,9 @@ def plot_smoothed_only(merged_1978, merged_1997, out_path):
         m = mask_southern_smoothed(m)
         d = m["domain"]
 
+        draw_raw_in_guard_zone(ax, m, "dsas_lrr", c_dsas,
+                               label="Raw mean (LOESS withheld)")
+        draw_raw_in_guard_zone(ax, m, "cs_lrr", c_cs)
         ax.plot(d, m["dsas_lrr_smooth"], color=c_dsas, lw=3.0,
                 label=f"DSAS {label}")
         ax.plot(d, m["cs_lrr_smooth"],   color=c_cs,   lw=3.0, ls="--",
@@ -551,6 +571,7 @@ def plot_combined_sources(merged_1978, merged_1997, out_path):
     Good for seeing overall pattern and period differences simultaneously.
     """
     fig, ax = plt.subplots(figsize=(16, 6))
+    frames, frames_labelled = {}, False
 
     for merged, label, c_dsas, c_cs, ls_cs in [
         (merged_1978, "1978–1997", C_DSAS_1978, C_CS_1978,   "--"),
@@ -560,7 +581,13 @@ def plot_combined_sources(merged_1978, merged_1997, out_path):
             continue
         m = add_smoothed_columns(merged)
         m = mask_southern_smoothed(m)
+        frames[label] = m
         d = m["domain"]
+        draw_raw_in_guard_zone(ax, m, "dsas_lrr", c_dsas,
+                               label=None if frames_labelled else
+                                     "Raw mean (LOESS withheld)")
+        draw_raw_in_guard_zone(ax, m, "cs_lrr", c_cs)
+        frames_labelled = True
         ax.plot(d, m["dsas_lrr_smooth"], color=c_dsas, lw=2.5,
                 label=f"DSAS {label}")
         ax.fill_between(d, m["dsas_lrr_smooth"] - m["dsas_std"] * 0.5,
@@ -572,6 +599,10 @@ def plot_combined_sources(merged_1978, merged_1997, out_path):
     ax.set_ylabel("Shoreline Change Rate (m/yr)", fontsize=12, fontweight="bold")
     ax.set_title("DSAS vs CoastSat — All Periods Combined (LOESS smoothed)",
                  fontsize=13, fontweight="bold", pad=12)
+    shade_boundary_zone(ax)
+    if "1997–2019" in frames:
+        shade_missing_dsas(ax, frames["1997–2019"],
+                           label="No DSAS data (1997–2019)")
     ax.legend(fontsize=10, framealpha=0.95, ncol=2)
     style_domain_axis(ax)
     add_town_lines(ax)
