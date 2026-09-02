@@ -101,6 +101,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from matplotlib.transforms import blended_transform_factory
 from scipy import stats
 from statsmodels.nonparametric.smoothers_lowess import lowess
 import warnings
@@ -125,6 +126,7 @@ C_DSAS_1978   = "#1F4E79"   # dark blue
 C_CS_1978     = "#5B9BD5"   # light blue (dashed)
 C_DSAS_1997   = "#833C00"   # dark red
 C_CS_1997     = "#F4A460"   # light red/tan (dashed)
+C_NO_DSAS     = "#8C8C8C"   # hatch over domains where DSAS has no data
 
 # ============================================================
 # DATA LOADING
@@ -237,6 +239,42 @@ def add_town_lines(ax, ymin=None, ymax=None):
                 bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.7))
 
 
+def shade_missing_dsas(ax, m, label=True):
+    """Hatch the domains where DSAS has no data, so absence is not read as agreement.
+
+    The 1997-2019 DSAS export covers domains 8-90; without this the DSAS
+    series simply starts late while CoastSat runs the full span, which reads
+    as the two sources agreeing rather than as one of them being absent.
+
+    Runs are found from the data, so this stays correct if the DSAS coverage
+    changes. Only the first run is labelled, to keep one legend entry.
+    """
+    missing = m["dsas_lrr"].isna().values
+    if not missing.any():
+        return
+    domains = m["domain"].values
+
+    runs, start = [], None
+    for i, gap in enumerate(missing):
+        if gap and start is None:
+            start = i
+        elif not gap and start is not None:
+            runs.append((start, i - 1)); start = None
+    if start is not None:
+        runs.append((start, len(missing) - 1))
+
+    trans = blended_transform_factory(ax.transData, ax.transAxes)
+    for k, (i0, i1) in enumerate(runs):
+        lo, hi = domains[i0] - 0.5, domains[i1] + 0.5
+        ax.axvspan(lo, hi, facecolor=C_NO_DSAS, alpha=0.13, hatch="///",
+                   edgecolor=C_NO_DSAS, lw=0.0, zorder=0,
+                   label="No DSAS data" if (label and k == 0) else None)
+        ax.text((lo + hi) / 2, 0.5,
+                f"no DSAS\ndata\n(domains {domains[i0]}–{domains[i1]})",
+                transform=trans, ha="center", va="center", fontsize=7.5,
+                color="0.35", style="italic", zorder=5)
+
+
 def style_domain_axis(ax):
     ax.set_xlim(DOMAIN_MIN - 0.5, DOMAIN_MAX + 0.5)
     ax.set_xticks(range(DOMAIN_MIN, DOMAIN_MAX + 1, 10))
@@ -265,11 +303,13 @@ def plot_overview_smoothed(merged_1978, merged_1997, out_path):
     fig.suptitle("DSAS vs CoastSat Shoreline Change Rates — Hatteras Island, NC\n"
                  "Raw (faded) + LOESS smoothed (bold)",
                  fontsize=14, fontweight="bold", y=1.01)
+    fig.text(0.5, -0.01, "These are the legacy DSAS period pair, not the hindcast's 1984-2004 / 2004-2024 split.",
+             ha="center", fontsize=9, color="0.35", style="italic")
 
     configs = [
-        (axes[0], merged_1978, "1978–1997 (Calibration Period)",
+        (axes[0], merged_1978, "1978–1997",
          C_DSAS_1978, C_CS_1978),
-        (axes[1], merged_1997, "1997–2019 (Validation Period)",
+        (axes[1], merged_1997, "1997–2019",
          C_DSAS_1997, C_CS_1997),
     ]
 
@@ -316,6 +356,7 @@ def plot_overview_smoothed(merged_1978, merged_1997, out_path):
                 #bbox=dict(boxstyle="round", fc="white", alpha=0.88, ec="0.7"))
 
         ax.set_ylabel("Shoreline Change Rate (m/yr)", fontsize=11, fontweight="bold")
+        shade_missing_dsas(ax, m)
         ax.legend(fontsize=9.5, framealpha=0.95, loc="lower right")
         style_domain_axis(ax)
         add_town_lines(ax)
@@ -339,10 +380,12 @@ def plot_smoothed_only(merged_1978, merged_1997, out_path):
     fig.suptitle("DSAS vs CoastSat Shoreline Change Rates — Hatteras Island, NC\n"
                  f"LOESS smoothed (frac={LOESS_FRAC})",
                  fontsize=14, fontweight="bold", y=1.01)
+    fig.text(0.5, -0.01, "These are the legacy DSAS period pair, not the hindcast's 1984-2004 / 2004-2024 split.",
+             ha="center", fontsize=9, color="0.35", style="italic")
 
     configs = [
-        (axes[0], merged_1978, "1978–1997 (Calibration)", C_DSAS_1978, C_CS_1978),
-        (axes[1], merged_1997, "1997–2019 (Validation)",  C_DSAS_1997, C_CS_1997),
+        (axes[0], merged_1978, "1978–1997", C_DSAS_1978, C_CS_1978),
+        (axes[1], merged_1997, "1997–2019", C_DSAS_1997, C_CS_1997),
     ]
 
     for ax, merged, label, c_dsas, c_cs in configs:
@@ -370,6 +413,7 @@ def plot_smoothed_only(merged_1978, merged_1997, out_path):
                 bbox=dict(boxstyle="round", fc="white", alpha=0.88, ec="0.7"))
 
         ax.set_ylabel("Shoreline Change Rate (m/yr)", fontsize=11, fontweight="bold")
+        shade_missing_dsas(ax, m)
         ax.legend(fontsize=9.5, framealpha=0.95, loc="lower right", ncol=2)
         style_domain_axis(ax)
         add_town_lines(ax)
@@ -423,6 +467,7 @@ def plot_smoothing_sensitivity(merged, period_label, out_path):
                 bbox=dict(boxstyle="round", fc="white", alpha=0.88, ec="0.7"))
 
         ax.set_ylabel("Rate (m/yr)", fontsize=10, fontweight="bold")
+        shade_missing_dsas(ax, m)
         ax.legend(fontsize=9, framealpha=0.95, loc="lower right")
         style_domain_axis(ax)
         add_town_lines(ax)
