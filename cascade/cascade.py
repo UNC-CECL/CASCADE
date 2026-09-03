@@ -11,6 +11,7 @@ from .brie_coupler import batchB3D
 from .brie_coupler import initialize_equal
 from .brie_coupler import set_specified_variable_RSLR
 from .chom_coupler import ChomCoupler
+from .outwasher import Outwasher
 from .roadway_manager import RoadwayManager
 from .roadway_manager import check_sandbag_need
 from .roadway_manager import set_growth_parameters
@@ -511,18 +512,16 @@ class Cascade:
                     allow_causeway=self._allow_causeway[iB3D],
                 )
             )
+
             # set initial beach width
-            self._initial_beach_width[iB3D] = (
-                int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
-            )  # [m]
-            self._beach_width[iB3D][0] = self._initial_beach_width[iB3D]
-            # initialize BeachDuneManager
             if self._use_defined_beach_width == False:
                 self._initial_beach_width[iB3D] = (
-                    int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
-                )
+                        int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
+                )  # [m]
             elif self._use_defined_beach_width == True:
                 self._initial_beach_width[iB3D] = self._user_inputed_beach_width
+            self._beach_width[iB3D][0] = self._initial_beach_width[iB3D]
+
             self._nourishments.append(
                 BeachDuneManager(
                     beach_width=self._beach_width[iB3D],
