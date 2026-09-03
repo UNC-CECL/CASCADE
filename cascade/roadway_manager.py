@@ -536,7 +536,6 @@ def check_sandbag_need(
                     ):
                         print("Sandbags would be added in cell ", str(cell), str(width))
                         barrier3d._DuneRestart[width][cell] = design_elevation / 10
-                        c = 10
 
         if exceeds_min_dune_threshold:
             sandbag_need = True
