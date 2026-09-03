@@ -175,9 +175,9 @@ class Cascade:
         sandbag_management_on=False,
         sandbag_elevation=1.5,
         enable_shoreline_offset=False,
-        shoreline_offset=[],
+        shoreline_offset=None,
         user_inputed_RSLR=False,
-        user_inputed_RSLR_rate=[],
+        user_inputed_RSLR_rate=None,
         allow_causeway=False,
         use_defined_beach_width=False,
         user_inputed_beach_width=30,
@@ -305,7 +305,8 @@ class Cascade:
         user_inputed_RSLR: bool, optional
             Whether the user will be inputing their own generated RSLR rates
         user_inputed_RSLR_rates: list, optional
-            Time series of RSLR rates for Cascade to use, RSLR rates must be floats and be in m/yr.
+            Time series of RSLR rates for Cascade to use,
+            RSLR rates must be floats and be in m/yr.
         outwash_storms_file: string, optional
             Filename of outwash storm series (npy file)
         outwash_beach_file: string, optional
@@ -361,7 +362,7 @@ class Cascade:
         # migration when the beach/shoreface is nourished
         self._beach_width = [[np.nan] * self._nt] * self._ny
         self._beach_width_threshold = 0  # m, triggers dune migration to turn back on
-        if type(sandbag_management_on) == bool:
+        if type(sandbag_management_on) is bool:
             self._sandbag_management_on = [sandbag_management_on] * self._ny
         else:
             self._sandbag_management_on = sandbag_management_on
@@ -437,7 +438,7 @@ class Cascade:
         )
 
         # Alter RSLR to set sequence
-        if self._user_inputed_RSLR == True:
+        if self._user_inputed_RSLR:
             set_specified_variable_RSLR(
                 barrier3d=self._barrier3d,
                 brie=self._brie_coupler._brie,
@@ -514,11 +515,11 @@ class Cascade:
             )
 
             # set initial beach width
-            if self._use_defined_beach_width == False:
+            if self._use_defined_beach_width is False:
                 self._initial_beach_width[iB3D] = (
                         int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
                 )  # [m]
-            elif self._use_defined_beach_width == True:
+            elif self._use_defined_beach_width is True:
                 self._initial_beach_width[iB3D] = self._user_inputed_beach_width
             self._beach_width[iB3D][0] = self._initial_beach_width[iB3D]
 
@@ -814,7 +815,7 @@ class Cascade:
         # emplacement. When sandbag conditions are met, SandbagManager will rebuild
         # dunes if they fall below a user defined threshold.
         for iB3D in range(self._ny):
-            if self._sandbag_management_on[iB3D] == True:
+            if self._sandbag_management_on[iB3D]:
                 sandbag_emplacement = check_sandbag_need(
                     dune_road_distance=self._roadways[iB3D]._road_setback,
                     design_elevation=self._sandbag_elevation,
