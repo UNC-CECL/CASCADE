@@ -238,7 +238,7 @@ def test_beach_widths(tmp_path, datadir, monkeypatch):
     BeachDuneManager and Outwasher modules both adjust the "beach"
     """
     monkeypatch.chdir(tmp_path)
-    CASCADE_OUTPUT = run_cascade_noutishment_outwasher(datadir)
+    CASCADE_OUTPUT = run_cascade_nourishment_outwasher(datadir)
 
     for n in range(CASCADE_OUTPUT._ny):
         casc_beach = CASCADE_OUTPUT._beach_width[n]
