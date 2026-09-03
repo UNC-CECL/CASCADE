@@ -517,7 +517,7 @@ class Cascade:
             # set initial beach width
             if self._use_defined_beach_width is False:
                 self._initial_beach_width[iB3D] = (
-                        int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
+                    int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
                 )  # [m]
             elif self._use_defined_beach_width is True:
                 self._initial_beach_width[iB3D] = self._user_inputed_beach_width
