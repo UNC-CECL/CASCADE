@@ -27,7 +27,7 @@ plt.rcParams["font.size"] = 14
 save_on = False
 save_slopes_on = False
 plot_grid = False
-save_berms_on = True
+save_berms_on = False
 d = 0
 beach_range = 15  # points which are spaced every 1 meter
 beach_slopes_2014 = []
@@ -101,17 +101,18 @@ for t in transects:
         plt.plot(elev_2014, ls="dotted", label="2014")
         plt.plot(elev_2020, ls="dotted", label="2020")
         # plot approximate beach elevation and values used to calculate the slope
-        plt.hlines(y=beach_elev, xmin=0, xmax=500, color='darkgrey', linestyle='solid', linewidth=0.25)
+        plt.hlines(y=beach_elev, xmin=0, xmax=500, color='darkgrey', linestyle='solid', linewidth=0.25, label="water line")
         plt.plot([pos1_2014, pos2_2014], [y1_2014, y2_2014], color="coral", linewidth=0.5)
         plt.scatter([pos1_2014, pos2_2014], [y1_2014, y2_2014], color="coral", s=15)
         plt.plot([pos1_2020, pos2_2020], [y1_2020, y2_2020], color="forestgreen", linewidth=0.5)
         plt.scatter([pos1_2020, pos2_2020], [y1_2020, y2_2020], color="forestgreen", s=15)
         # plot apprxomate berm elevation
-        plt.hlines(y=berm_elevs[d], xmin=0, xmax=500, color='goldenrod', linestyle='solid', linewidth=0.5)
+        plt.hlines(y=berm_elevs[d], xmin=0, xmax=500, color='goldenrod', linestyle='solid', linewidth=0.5, label="berm")
         # plot labels
         plt.text(10, 4.5, "2014 beach slope = {0}".format(beach_slope_2014))
         plt.text(10, 4.0, "2020 beach slope = {0}".format(beach_slope_2020))
-        plt.title("transect: {0}, domain: {1}".format(t, domains[d]))
+        # plt.title("transect: {0}, domain: {1}".format(t, domains[d]))
+        plt.title("domain: {0}".format(domains[d]))
         plt.ylabel("elevation [m NAVD88]")
         plt.xlabel("alongshore position [m]")
         plt.ylim(-5, 5)
@@ -125,7 +126,8 @@ for t in transects:
         # save and close figure
         if save_on:
             plt.savefig(os.path.join(savedir, "transect_{0}_{1}.png".format(t, version)))
-        plt.close()
+        if t!=17:
+            plt.close()
         # move to next domain
         d += 1
 
