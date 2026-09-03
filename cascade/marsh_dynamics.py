@@ -282,6 +282,16 @@ def evolvemarsh(
                 C[xx] = C_e * math.exp(
                     coeff * distance)  # [kg/m3] Concentration at each marsh cell. Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
 
+    # Brad's suggestion: always distribute sediment exponentially regardless of vegetation presence
+    elif min_dep_method == 4:
+        # Mineral Deposition Option 3 - no pond
+        coeff = -0.002  # Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
+        distance = 0  # [m] Initialize, distance from marsh edge
+        for xx in range(L):
+            distance += 1  # [m]
+            C[xx] = C_e * math.exp(
+                coeff * distance)  # [kg/m3] Concentration at each marsh cell. Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
+
     else:
         print("not a valid mineral deposition method")
 
@@ -613,7 +623,7 @@ class Marsh:
                     Dmax=self._Dmax,
                     rhoo=self._rhoo,
                     rhos=self._rhos,
-                    plot=True,
+                    plot=False,
                     min_dep_method=self._accretion_method
                     )
 
