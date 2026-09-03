@@ -202,6 +202,11 @@ data/hatteras_init/1-barrier3d-domains/**
 !data/hatteras_init/1-barrier3d-domains/**/README.md
 !data/hatteras_init/1-barrier3d-domains/LINEAGE.md
 !data/hatteras_init/1-barrier3d-domains/archive_purge_*.csv
+# The dune-line shift measurements. Small, and NOT regenerable from this repo
+# alone -- HAT_measure_duneline_shift.py needs the D: GIS drive and a topography
+# version to measure against. duneline_retreat_1984_1997.csv in particular is
+# where N comes from for every seaward-row insert version.
+!data/hatteras_init/1-barrier3d-domains/**/duneline-shift/*.csv
 data/hatteras_init/3-env-forcings/noaa_cache_8651370/
 data/hatteras_init/3-env-forcings/storms/WIS_raw_data/
 data/hatteras_init/3-env-forcings/storms/old/
