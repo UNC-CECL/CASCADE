@@ -1,4 +1,5 @@
 import shutil
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -9,9 +10,147 @@ from cascade.beach_dune_manager import filter_overwash
 from cascade.beach_dune_manager import shoreface_nourishment
 from cascade.roadway_manager import bulldoze
 from cascade.roadway_manager import rebuild_dunes
+from cascade.roadway_manager import RoadwayManager
+from cascade.roadway_manager import road_relocation_checks
 from cascade.roadway_manager import set_growth_parameters
 
 NT = 180
+
+
+def relocation_test_barrier(average_width_m=100.0, dune_migration_m=0.0):
+    """Create the minimum Barrier3D state needed for a manager update."""
+
+    states = 4
+    alongshore = 5
+    interior = np.full((12, alongshore), 0.2)
+    dunes = np.full((states, alongshore, 2), 0.4)
+    domain_ts = np.empty(states, dtype=object)
+    for index in range(states):
+        domain_ts[index] = interior.copy()
+    return SimpleNamespace(
+        time_index=2,
+        growthparam=np.full((1, alongshore), 0.5),
+        InteriorDomain=interior,
+        DuneDomain=dunes,
+        h_b_TS=[0.2, 0.2],
+        InteriorWidth_AvgTS=[average_width_m / 10.0],
+        ShorelineChangeTS=np.array([0.0, dune_migration_m / 10.0, 0.0, 0.0]),
+        RSLR=np.zeros(states),
+        BermEl=0.1,
+        SL=0.0,
+        Dmax=0.5,
+        DomainTS=domain_ts,
+    )
+
+
+def test_relocation_diagnostic_series_start_false():
+    roadway = RoadwayManager(time_step_count=4)
+
+    assert not roadway.triggered_relocation_TS.any()
+    assert not roadway.relocation_incomplete_TS.any()
+    assert not roadway.historical_relocation_requested_TS.any()
+    assert not roadway.forced_relocation_TS.any()
+
+
+def test_natural_relocation_sets_only_triggered_series():
+    roadway = RoadwayManager(
+        road_width=10,
+        road_setback=5,
+        time_step_count=4,
+    )
+    barrier = relocation_test_barrier(dune_migration_m=-10.0)
+
+    roadway.update(barrier, trigger_dune_knockdown=False)
+
+    event_index = barrier.time_index - 1
+    assert roadway.triggered_relocation_TS[event_index]
+    assert not roadway.relocation_incomplete_TS[event_index]
+    assert not roadway.historical_relocation_requested_TS[event_index]
+    assert not roadway.forced_relocation_TS[event_index]
+
+
+def test_historical_request_sets_requested_and_forced_after_success():
+    roadway = RoadwayManager(
+        road_width=10,
+        road_setback=5,
+        time_step_count=4,
+    )
+    barrier = relocation_test_barrier()
+    roadway.request_forced_relocation(30.0)
+
+    roadway.update(barrier, trigger_dune_knockdown=False)
+
+    event_index = barrier.time_index - 1
+    assert not roadway.triggered_relocation_TS[event_index]
+    assert not roadway.relocation_incomplete_TS[event_index]
+    assert roadway.historical_relocation_requested_TS[event_index]
+    assert roadway.forced_relocation_TS[event_index]
+    assert roadway._road_setback_TS[event_index] == pytest.approx(30.0)
+    assert not roadway._historical_relocation_requested
+
+
+def test_historical_request_is_incomplete_when_original_width_check_fails():
+    roadway = RoadwayManager(
+        road_width=10,
+        road_setback=5,
+        time_step_count=4,
+    )
+    barrier = relocation_test_barrier(average_width_m=40.0)
+    roadway.request_historical_relocation(30.0)
+
+    roadway.update(barrier, trigger_dune_knockdown=False)
+
+    event_index = barrier.time_index - 1
+    assert not roadway.triggered_relocation_TS[event_index]
+    assert roadway.relocation_incomplete_TS[event_index]
+    assert roadway.historical_relocation_requested_TS[event_index]
+    assert not roadway.forced_relocation_TS[event_index]
+    assert roadway.relocation_break
+
+
+def test_historical_request_is_incomplete_when_destination_grade_fails():
+    roadway = RoadwayManager(
+        road_width=10,
+        road_setback=5,
+        time_step_count=4,
+    )
+    barrier = relocation_test_barrier()
+    barrier.InteriorDomain[3, :] = 0.0
+    barrier.DomainTS[1] = barrier.InteriorDomain.copy()
+    roadway.request_forced_relocation(30.0)
+
+    roadway.update(barrier, trigger_dune_knockdown=False)
+
+    event_index = barrier.time_index - 1
+    assert not roadway.triggered_relocation_TS[event_index]
+    assert roadway.relocation_incomplete_TS[event_index]
+    assert roadway.historical_relocation_requested_TS[event_index]
+    assert not roadway.forced_relocation_TS[event_index]
+    assert roadway.drown_break
+
+
+def test_forced_relocation_helper_keeps_original_width_check():
+    successful = road_relocation_checks(
+        time_index=2,
+        dune_migrated=0.0,
+        road_setback=5.0,
+        road_relocation_setback=30.0,
+        road_relocation_width=10.0,
+        average_barrier_width=100.0,
+        forced_relocation=True,
+    )
+    incomplete = road_relocation_checks(
+        time_index=2,
+        dune_migrated=0.0,
+        road_setback=5.0,
+        road_relocation_setback=30.0,
+        road_relocation_width=10.0,
+        average_barrier_width=40.0,
+        forced_relocation=True,
+    )
+
+    assert successful == (1, 30.0, 0)
+    assert incomplete == (1, 5.0, 1)
 
 
 def run_cascade_roadway_dynamics(datadir):
@@ -514,10 +653,15 @@ def test_shoreline_road_relocation(tmp_path, datadir, monkeypatch):
 
     dunes_migrated = CASCADE_ROADWAY_OUTPUT.barrier3d[iB3D]._ShorelineChangeTS < 0
     road_relocated = CASCADE_ROADWAY_OUTPUT.roadways[iB3D]._road_relocated_TS > 0
-    road_setback_TS = CASCADE_ROADWAY_OUTPUT.roadways[iB3D]._road_setback_TS
+    roadway = CASCADE_ROADWAY_OUTPUT.roadways[iB3D]
+    road_setback_TS = roadway._road_setback_TS
 
     diff_road_setback = np.hstack([0, np.diff(road_setback_TS)])
     road_relocated_based_on_setback = diff_road_setback > 0
 
     assert np.all(road_relocated_based_on_setback == road_relocated)
     assert np.all(dunes_migrated[road_relocated])
+    assert np.array_equal(roadway.triggered_relocation_TS, road_relocated)
+    assert not roadway.relocation_incomplete_TS.any()
+    assert not roadway.historical_relocation_requested_TS.any()
+    assert not roadway.forced_relocation_TS.any()

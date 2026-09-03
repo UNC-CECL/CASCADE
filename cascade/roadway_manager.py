@@ -372,6 +372,7 @@ def road_relocation_checks(
     road_relocation_setback,
     road_relocation_width,
     average_barrier_width,
+    forced_relocation=False,
 ):
     """Check if the roadway needs to be relocated due to dune migration, and if
     there is room for roadway relocation.
@@ -391,6 +392,9 @@ def road_relocation_checks(
         The road width specified for roadway relocation [m]
     average_barrier_width: float
         The average barrier width from the last time step [m]
+    forced_relocation: bool, optional
+        Request relocation during this update even when the dune line has not
+        crossed the road. The original width-feasibility check still applies.
 
     Returns
     -------
@@ -410,27 +414,26 @@ def road_relocation_checks(
     if dune_migrated != 0:
         road_setback = road_setback + dune_migrated
 
-        # with this shoreline change and dune migration, check if the roadway needs
-        # to be relocated
-        if road_setback < 0:
-            road_relocated = 1
+    relocation_requested = bool(forced_relocation) or (
+        dune_migrated != 0 and road_setback < 0
+    )
+    if relocation_requested:
+        road_relocated = 1
 
-            # relocate the road only if the width of the island allows it
-            if (
-                road_relocation_setback
-                + (
-                    2 * road_relocation_width
-                )  # bay shoreline buffer of one roadway width
-                > average_barrier_width
-            ):
-                relocation_break = 1
-                # time_index - 1 because B3D advances time step at end of dune_update
-                print(
-                    "Island is too narrow for roadway to be relocated. Roadway "
-                    f"eaten up by dunes at {time_index - 1} years"
-                )
-            else:
-                road_setback = road_relocation_setback
+        # relocate the road only if the width of the island allows it
+        if (
+            road_relocation_setback
+            + (2 * road_relocation_width)  # bay shoreline buffer of one roadway width
+            > average_barrier_width
+        ):
+            relocation_break = 1
+            # time_index - 1 because B3D advances time step at end of dune_update
+            print(
+                "Island is too narrow for roadway to be relocated. Roadway "
+                f"eaten up by dunes at {time_index - 1} years"
+            )
+        else:
+            road_setback = road_relocation_setback
 
     return road_relocated, road_setback, relocation_break
 
@@ -501,6 +504,8 @@ class RoadwayManager:
         self._road_relocation_setback = (
             road_setback  # can be updated outside `update` within cascade
         )
+        self._historical_relocation_requested = False
+        self._historical_relocation_setback = None
 
         # user can specify that dune rebuilding is off with `None`: mostly for
         # debugging and sensitivity testing
@@ -538,6 +543,10 @@ class RoadwayManager:
         self._dune_minimum_elevation_TS[0] = self._dune_minimum_elevation
         self._dunes_rebuilt_TS = np.zeros(self._nt)  # when dunes are rebuilt (boolean)
         self._road_relocated_TS = np.zeros(self._nt)  # when road is relocated (boolean)
+        self._triggered_relocation_TS = np.zeros(self._nt, dtype=bool)
+        self._relocation_incomplete_TS = np.zeros(self._nt, dtype=bool)
+        self._historical_relocation_requested_TS = np.zeros(self._nt, dtype=bool)
+        self._forced_relocation_TS = np.zeros(self._nt, dtype=bool)
         self._rebuild_dune_volume_TS = np.zeros(
             self._nt
         )  # sand for rebuilding dunes [m^3]
@@ -558,6 +567,15 @@ class RoadwayManager:
 
     def update(self, barrier3d, trigger_dune_knockdown):
         self._time_index = barrier3d.time_index
+
+        historical_relocation_requested = bool(self._historical_relocation_requested)
+        historical_relocation_setback = self._historical_relocation_setback
+        self._historical_relocation_requested = False
+        self._historical_relocation_setback = None
+        diagnostic_index = self._time_index - 1
+        self._historical_relocation_requested_TS[diagnostic_index] = (
+            historical_relocation_requested
+        )
 
         if self._original_growth_param is None:
             self._original_growth_param = barrier3d.growthparam
@@ -583,6 +601,13 @@ class RoadwayManager:
         dune_migration = (
             barrier3d.ShorelineChangeTS[self._time_index - 1] * 10
         )  # if +, dune progrades; -, dune erodes into interior [m]
+        relocation_target_setback = self._road_relocation_setback
+        if historical_relocation_requested:
+            relocation_target_setback = historical_relocation_setback
+        relocation_requested = bool(
+            historical_relocation_requested
+            or (dune_migration != 0 and self._road_setback + dune_migration < 0)
+        )
         [
             road_relocated,
             self._road_setback,
@@ -591,14 +616,16 @@ class RoadwayManager:
             self._time_index,
             dune_migration,
             self._road_setback,  # current road setback, m
-            self._road_relocation_setback,  # setback specified for relocation, m
+            relocation_target_setback,  # normal or historical target setback, m
             self._road_relocation_width,  # width specified for relocation, m
             average_barrier_width,  # current width, m
+            forced_relocation=historical_relocation_requested,
         )
 
         # if road can't be relocated, no longer manage and exit; dune growth
         # parameters reset to original in CASCADE
         if self._relocation_break == 1:
+            self._relocation_incomplete_TS[diagnostic_index] = relocation_requested
             # an adaptation solution may be to knock down the dunes so that they
             # are small and can easily be overwashed
             if trigger_dune_knockdown:
@@ -654,6 +681,9 @@ class RoadwayManager:
         # road cannot be below 0 m MHW (sea level); stop managing!
         if self._road_ele < 0:
             self._drown_break = 1
+            self._relocation_incomplete_TS[diagnostic_index] = bool(
+                relocation_requested and road_relocated
+            )
             print(
                 f"Roadway drowned in place at {self._time_index - 1} years due to "
                 "SLR - road cannot be below 0 m MHW"
@@ -668,6 +698,9 @@ class RoadwayManager:
 
             return
         elif self._drown_break == 1:  # if road drowned from road relocation above
+            self._relocation_incomplete_TS[diagnostic_index] = bool(
+                relocation_requested and road_relocated
+            )
             # an adaptation solution may be to knock down the dunes so that they are
             # small and can easily be overwashed
             if trigger_dune_knockdown:
@@ -703,6 +736,12 @@ class RoadwayManager:
             self._dune_minimum_elevation
         )
         self._road_relocated_TS[self._time_index - 1] = road_relocated
+        self._triggered_relocation_TS[diagnostic_index] = bool(
+            road_relocated and not historical_relocation_requested
+        )
+        self._forced_relocation_TS[diagnostic_index] = bool(
+            road_relocated and historical_relocation_requested
+        )
 
         ###############################################################################
         # bulldoze roadway after storms and check for road width drowning
@@ -813,6 +852,42 @@ class RoadwayManager:
         barrier3d.growthparam = new_growth_parameters
 
         return
+
+    def request_forced_relocation(self, road_setback):
+        """Queue one historical forced-relocation request for the next update.
+
+        The request supplies a target setback in meters. It does not bypass the
+        original island-width, destination-elevation, or roadway-drowning checks.
+        """
+
+        road_setback = float(road_setback)
+        if not np.isfinite(road_setback) or road_setback < 0:
+            raise ValueError(
+                "Historical relocation setback must be finite and non-negative."
+            )
+        self._historical_relocation_requested = True
+        self._historical_relocation_setback = road_setback
+
+    def request_historical_relocation(self, road_setback):
+        """Alias that explicitly names the historical-request use case."""
+
+        self.request_forced_relocation(road_setback)
+
+    @property
+    def triggered_relocation_TS(self):
+        return self._triggered_relocation_TS
+
+    @property
+    def relocation_incomplete_TS(self):
+        return self._relocation_incomplete_TS
+
+    @property
+    def historical_relocation_requested_TS(self):
+        return self._historical_relocation_requested_TS
+
+    @property
+    def forced_relocation_TS(self):
+        return self._forced_relocation_TS
 
     @property
     def road_relocation_width(self):
