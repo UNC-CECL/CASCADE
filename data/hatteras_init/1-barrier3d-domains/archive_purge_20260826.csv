@@ -1,0 +1,22 @@
+path,files,bytes,reason
+data\hatteras_init\1-barrier3d-domains\superseded\dune-topo_incorrect,921,123856361,"dune-topo v1+v2, superseded twice; named 'incorrect'"
+data\hatteras_init\1-barrier3d-domains\superseded\dune-topo_2009_v3,459,52057503,picked against the UNFILLED 2009 DEM
+data\hatteras_init\1-barrier3d-domains\superseded\dune-topo_2009_v4,459,59555600,road-visible re-pick; superseded by v5 (now 2004-start/v1)
+data\hatteras_init\1-barrier3d-domains\superseded\old-2009-dune-topo,262,10565936,pre-90-domain extraction tree
+data\hatteras_init\4-mgmt-forcing\road_offset\dunestart_offset_ARCHIVE_2009_v3,26,7356922,road setbacks from the v3 extraction
+data\hatteras_init\4-mgmt-forcing\road_offset\dunestart_offset_ARCHIVE_2009_v4,19,4359355,road setbacks from the v4 extraction
+
+# lineage preserved in LINEAGE.md; pick files preserved in 1-barrier3d-domains/control-picks/
+
+# --- second pass, same day: regenerable byproducts + out-of-reach domains ---
+path,files,bytes,reason
+data\hatteras_init\1-barrier3d-domains\domain-clips-1m\domain_{91..136} (111 kept),360,94149186,"outside the model reach; both consumers filter to domains 9-90"
+data\hatteras_init\1-barrier3d-domains\npy-arrays_2009_unfilled\domain_{91..131}.npy,41,1645248,"outside the model reach; pre-90-domain legacy"
+data\hatteras_init\1-barrier3d-domains\domain-clips-1m\**\*.tif.ovr,91,28383356,"ArcGIS pyramid overviews; display-only, GDAL rebuilds on demand"
+data\hatteras_init\1-barrier3d-domains\domain-clips-1m\**\*.xml,364,1611971,"GDAL .aux.xml stats cache + ArcGIS .tif.xml metadata; source path recorded in LINEAGE.md"
+
+# domain_111 KEPT: buffer/README.md cites it as the checkable origin of the
+# three buffer arrays. .tfw sidecars KEPT: HAT_dune_topo_extractor.py:374.
+data\hatteras_init\1-barrier3d-domains\1984-start\dune-topo\v1,922,183896203,"cleared 2026-08-27 for a full 1984-start restart; picks -> control-picks, aerial review -> 1984-start/aerial-review"
+data\hatteras_init\1-barrier3d-domains\1984-start\dune-topo\v2,364,6920132,"cleared 2026-08-27; bridged post-process of the cleared v1"
+data\hatteras_init\1-barrier3d-domains\1984-start\picks,2,58288,"cleared 2026-08-27; both window sets copied to control-picks/ first"
