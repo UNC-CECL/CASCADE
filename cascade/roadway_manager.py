@@ -160,7 +160,7 @@ def bulldoze(
     if (
         (seaside_water_cells > percent_water_cells_touching_road)
         or (bayside_water_cells > percent_water_cells_touching_road)
-    ) and allow_causeway == False:
+    ) and allow_causeway is False:
         roadway_drown = True
         print(
             f"Roadway width drowned at {time_index - 1} years, "
@@ -239,7 +239,6 @@ def rebuild_dunes(
     )
 
     rebuild_dune_volume = np.sum(new_dune_domain - yxz_dune_grid)
-    z = 20
     return new_dune_domain, rebuild_dune_volume
 
 
@@ -251,10 +250,12 @@ def build_interior_dunes(
     dz=10,
     rng=True,
 ):
-    """Build dunes within the barrier island interior if B3D dunes are below specific minimum elevation.
-    Constructing dunes within barrier island interior is based on NCDOT management practices on Ocracoke, as
-    the NCDOT was unable to construct dunes in areas outside a 75' right of way on Ocracoke. Here we construct
-    a dune line within the first row of the barrier island interior grid that falls within the NCDOT's 75' right of way
+    """Build dunes within the barrier island interior if B3D dunes are below specific
+    minimum elevation. Constructing dunes within barrier island interior is based on
+    NCDOT management practices on Ocracoke, as the NCDOT was unable to construct dunes
+    in areas outside a 75' right of way on Ocracoke. Here we construct a dune line
+    within the first row of the barrier island interior grid that falls within the
+    NCDOT's 75' right of way
 
     If the min and max dune heights differ, a linear gradient is applied from the
     first to last dune row, with small random perturbations.
@@ -299,7 +300,6 @@ def build_interior_dunes(
     dune_construction_area_elevation = b3d.InteriorDomain[dune_construction_distance, :]
 
     ny = len(dune_construction_area_elevation)
-    nx = 1
 
     # convert from m to grid z discretization
     dune_height = np.empty((ny, 1), dtype=float)
@@ -522,12 +522,11 @@ def check_sandbag_need(
 ):
     time_index = barrier3d.time_index - 1
     if dune_road_distance == 0:
-        min_elev = np.min(barrier3d.DuneDomain[time_index, :, 0])
         exceeds_min_dune_threshold = (
             np.min(barrier3d.DuneDomain[time_index, :, 0]) < threshold_elevation
         )
 
-        if exceeds_min_dune_threshold == True:
+        if exceeds_min_dune_threshold:
             print("Elevation is low enough for sandbags")
             for width in range(0, barrier3d.DuneWidth):
                 for cell in range(0, len(barrier3d.DuneDomain[time_index, :, width])):
@@ -537,15 +536,14 @@ def check_sandbag_need(
                     ):
                         print("Sandbags would be added in cell ", str(cell), str(width))
                         barrier3d._DuneRestart[width][cell] = design_elevation / 10
-                        c = 10
 
-        if exceeds_min_dune_threshold == True:
+        if exceeds_min_dune_threshold:
             sandbag_need = True
-        elif sandbag_status == True:
+        elif sandbag_status:
             sandbag_need = True
         else:
             sandbag_need = False
-        c = "end"
+
     elif dune_road_distance != 0:
         # If road is too far away reset to initial threshold rebuild value
         for width in range(0, barrier3d.DuneWidth):
@@ -933,7 +931,6 @@ class RoadwayManager:
                 and self._road_setback <= 20
             ):
                 Interior_Dune_Front = (self._road_setback / 10) - 2
-                Interior_Dune_Back = (self._road_setback / 10) - 1
                 new_dune_domain, rebuild_dune_volume = build_interior_dunes(
                     b3d=barrier3d,
                     dune_construction_distance=Interior_Dune_Front,

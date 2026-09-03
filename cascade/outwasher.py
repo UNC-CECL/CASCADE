@@ -1248,6 +1248,7 @@ class Outwasher:
 
     def __init__(
         self,
+        beach_width,
         datadir,
         outwash_storms_file,
         time_step_count,
@@ -1260,9 +1261,10 @@ class Outwasher:
         dune_domain,
         percent_washout_to_shoreface=100,
         outwash_beach_file=None,
-        initial_beach_width=0,
+        beach_width_threshold=0,
     ):
         """
+        :param beach_width: list, required, List of beach widths
         :param datadir: string, directory with storm and elevation files
         :param outwash_storms_file: string, npy storm file
         :param time_step_count: int, ultimate cascade model time step
@@ -1315,18 +1317,22 @@ class Outwasher:
         self._outwash_storms = np.load(
             os.path.join(datadir, outwash_storms_file), allow_pickle=True
         )
-        self._outwash_beach = np.load(
-            os.path.join(datadir, outwash_beach_file), allow_pickle=True
-        )
+        if outwash_beach_file is not None:
+            self._outwash_beach = np.load(
+                os.path.join(datadir, outwash_beach_file), allow_pickle=True
+            )
+        else:
+            self._outwash_beach = None
 
         # initialize the time index variable (changed to b3d_time_step in the update
         # function)
         self._time_index = 0
 
         # beach/shoreface "nourishment" variables
-        self._beach_width_threshold = 0  # m, triggers dune migration to turn back on
-        self._beach_width = [np.nan] * time_step_count
-        self._beach_width[0] = initial_beach_width  # m
+        self._beach_width_threshold = (
+            beach_width_threshold  # m, triggers dune migration to turn back on
+        )
+        self._beach_width = beach_width
         self._dune_migration_on = [np.nan] * time_step_count
         self._dune_migration_on[0] = False
 
@@ -1359,9 +1365,9 @@ class Outwasher:
         self._time_index = b3d.time_index
 
         # reduce beach width by the amount of post-storm shoreline change; if the
-        # beach width reaches zero, turn dune migration in B3D back on -- otherwise
-        # keep it off (we don't want the dune line to prograde
-        # because we have fake houses there!)
+        # beach width reaches zero, turn dune migration in B3D back on
+        # (occurs in beach_width_dune_dynamics function)
+        # -- otherwise keep it off
         change_in_shoreline = (b3d.x_s_TS[-1] - b3d.x_s_TS[-2]) * 10  # m
         self._beach_width[self._time_index - 1] = (
             self._beach_width[self._time_index - 2] - change_in_shoreline
@@ -1373,9 +1379,6 @@ class Outwasher:
             barrier3d=b3d,
             time_index=self._time_index,
         )
-
-        # keep track of dune migration
-        self._dune_migration_on[self._time_index - 1] = b3d.dune_migration_on
 
         # check if this year is an outwash year
         if self._time_index - 1 in self._outwash_storms[:, 0]:
@@ -1420,14 +1423,14 @@ class Outwasher:
 
             # merge the interior domain, dunes, and beach ---
             if self._outwash_beach is None:
-                # we added a beach (and "beachface") to domain with a width of 7
+                # we add a beach (and "beachface") to domain with a width of 7
                 # dam based on general beach widths
                 beach_domain = (
                     np.ones([7, self._length]) * self._beach_elev
                 )  # [dam MHW] 7 rows
                 beachface_domain = np.zeros([6, self._length])
-                # we give the beach slope to be 0.004 m = 0.0004 dam
-                m_beach = 0.0004
+                # we make the beach slope equal to beta
+                m_beach = self._beach_slope
                 # we want the beach to have a slope, but keep the first few
                 # rows the berm elevation
                 for b in range(len(beach_domain)):
@@ -1451,7 +1454,6 @@ class Outwasher:
                         )
             else:
                 beach_domain = self._outwash_beach
-                m_beach = self._beach_slope
 
             # the dune domain is taken from B3D, which is a set of tuples, so
             # it needs to be transposed
