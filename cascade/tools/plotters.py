@@ -629,6 +629,7 @@ def plot_ElevAnimation_CASCADE(
     fig_size=None,
     fig_eps=False,
     km_on=True,
+    flip_domain=False,
 ):
     """
     :param cascade: a cascade model object
@@ -793,6 +794,8 @@ def plot_ElevAnimation_CASCADE(
                 else:
                     elevFig1 = plt.figure(figsize=(7, 7))
                 ax = elevFig1.add_subplot(111)
+                if flip_domain:
+                    AnimateDomain = np.flip(AnimateDomain)
                 cax = ax.pcolormesh(
                     AnimateDomain,
                     cmap="terrain",
@@ -906,6 +909,8 @@ def plot_ElevAnimation_CASCADE(
         else:
             elevFig2 = plt.figure(figsize=(7, 7))
         ax = elevFig2.add_subplot(111)
+        if flip_domain:
+            AnimateDomain = np.flip(AnimateDomain)
         cax = ax.pcolormesh(
             AnimateDomain,
             cmap="terrain",
@@ -942,6 +947,7 @@ def plot_ElevAnimation_CASCADE(
         else:
             name = "elev_" + str(t)
             elevFig2.savefig(name)  # dpi=200
+        # plt.show()
         plt.close(elevFig2)
 
     frames = []
