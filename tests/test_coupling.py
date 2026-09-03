@@ -81,7 +81,7 @@ def initialize_cascade_no_human_dynamics_ast(datadir):
     return cascade
 
 
-def run_cascade_noutishment_outwasher(datadir):
+def run_cascade_nourishment_outwasher(datadir):
     """
     n domains = 3
     outwasher: on
@@ -94,7 +94,7 @@ def run_cascade_noutishment_outwasher(datadir):
 
     cascade = Cascade(
         ".",
-        name="test_coupled_dune_migration",
+        name="test_outwash_with_nourishment",
         storm_file="StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy",
         elevation_file="b3d_pt75_3284yrs_low-elevations.csv",
         dune_file="pathways-dunes.npy",
