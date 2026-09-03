@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy import stats
+import pickle
 
 
 def remove_water_cols(domain_array, w_elev):
@@ -51,6 +52,8 @@ def process_domain_file(
         SHIFT_CELLS=False,
         use_const_interior=False,
         year=2020,
+        dune_loc_dict = {},
+        interior_loc_dict = {},
         ) -> None:
     """Process a single domain elevation array and write topography and dune outputs."""
     arr = np.load(in_path).astype(float, copy=False)
@@ -94,6 +97,7 @@ def process_domain_file(
     dune_m = np.full((ALONG_COLS,), fill_value=SENTINEL_WATER_M, dtype=float)
 
     dune_loc_array = []
+    start_interior_array = np.ones([1, n_along]) * np.nan
 
     # Process up to ALONG_COLS alongshore profiles
     n_cols_to_fill = min(ALONG_COLS, n_along)
@@ -107,7 +111,7 @@ def process_domain_file(
         idx = np.where(prof > BEACH_START_THR_M)[0]
         if idx.size == 0:
             # there are no cells above the beach threshold
-            dune_loc_array.append(np.nan)  # just make the dune cell the last cell
+            dune_loc_array.append(np.nan)  # just make the dune cell nan
         else:
             start_beach = int(idx[0])
 
@@ -133,6 +137,8 @@ def process_domain_file(
 
             # 5) Island interior starts immediately landward of the dune
             start_island = dune_loc + 1
+            # start_interior_array.append(start_island)  # note this is filled left to right with ocean on top
+            start_interior_array[0,i] = start_island
             use_elev = (
                 prof[start_island:-1]
                 if start_island < (prof.size - 1)
@@ -176,12 +182,13 @@ def process_domain_file(
         min_dune_loc = np.nanmin(dune_loc_array)
         mode_dune_loc = stats.mode(dune_loc_array).mode
         start_island = int(max_dune_loc + 1)
-        if "domain_3" in str(in_path):
-            # start_island = int(min_dune_loc + 1)  # 2020 domain
-            start_island = int(mode_dune_loc + 1)  # 2014 domain
-        elif "domain_19" in str(in_path):
-            start_island = int(mode_dune_loc + 1)
+        # if "domain_3" in str(in_path):
+        #     start_island = int(min_dune_loc + 1)  # 2020 domain
+        #     # start_island = int(mode_dune_loc + 1)  # 2014 domain
+        # elif "domain_19" in str(in_path):
+        #     start_island = int(mode_dune_loc + 1)
         topo_m = arr_ocean_top[start_island:, :]
+        start_interior_array = np.ones([1,n_along])*start_island
 
     # remove rows that are all water cells
     topo_m = remove_water_rows(topo_m, -3)
@@ -191,6 +198,8 @@ def process_domain_file(
 
     # Save
     stem = in_path.stem  # e.g., "domain_7"
+    dune_loc_dict[stem] = dune_loc_array
+    interior_loc_dict[stem] = start_interior_array
     topo_out = Path(topo_out_dir) / f"{stem}_interior_{year}.npy"
     dune_out = Path(dune_out_dir) / f"{stem}_dunes_{year}.npy"
     np.save(topo_out, topo_dm)
@@ -200,7 +209,7 @@ def process_domain_file(
         f"{dune_out.name} (len {dune_dm.size})"
         )
 
-    return topo_m, dune_m
+    return topo_m, dune_m, dune_loc_dict, interior_loc_dict
 
 
 ############################################################################################
@@ -209,11 +218,12 @@ def process_domain_file(
 plt.rcParams["font.size"] = 14
 
 # --- PATHS --------------------------------------------------------------
-version = "v2"  # save version to append to folder name
+version = "v4"  # save version to append to folder name
 year = 2004
-LOAD_PATH = r"C:\Users\agfig\model\final_domains\{0}_final_npys".format(year)
+LOAD_PATH = r"C:\Users\agfig\model\final_domains\{0}_final_GIS_npys".format(year)
 TOPO_SAVE_PATH = r"C:\Users\agfig\model\final_domains\cascade_domains\domains_{0}_{1}".format(year, version)
 DUNE_SAVE_PATH = r"C:\Users\agfig\model\final_domains\cascade_domains\dunes_{0}_{1}".format(year, version)
+dict_save_path = r"C:\Users\agfig\model\final_domains\cascade_domains"
 
 os.makedirs(TOPO_SAVE_PATH, exist_ok=True)
 os.makedirs(DUNE_SAVE_PATH, exist_ok=True)
@@ -230,6 +240,12 @@ OCEAN_LOC = "bottom"       # "top", "bottom", "left", or "right"
 shift_interior = False     # add cells to the beginning of the interior domain to keep it aligned
 # use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
 
+# dictionaries for dune locations and interior locations
+# dictionary will contain domain as key, dune or interior cells as values
+# dictionaries dont actually need to be initialized, but just for clarity, initialize them here
+dune_dict = {}
+interior_dict = {}
+
 load_dir = Path(LOAD_PATH)
 topo_dir = Path(TOPO_SAVE_PATH)
 dune_dir = Path(DUNE_SAVE_PATH)
@@ -237,15 +253,18 @@ topo_dir.mkdir(parents=True, exist_ok=True)
 dune_dir.mkdir(parents=True, exist_ok=True)
 
 # Process domain elevation arrays: domain_#.npy
-names = sorted(
-    [
-        n for n in os.listdir(load_dir)
-        if n.endswith(".npy") and n.startswith("domain_2")
-        ]
-    )
-print(f"[info] Found {len(names)} domain file(s) in {load_dir}")
-topo_domain = []
+# names = sorted(
+#     [
+#         n for n in os.listdir(load_dir)
+#         if n.endswith(".npy") and n.startswith("domain_")
+#         ]
+#     )
+# print(f"[info] Found {len(names)} domain file(s) in {load_dir}")
+# topo_domain = []
+names = ["domain_22.npy", "domain_23.npy", "domain_24.npy", "domain_25.npy"]
 for name in names:
+    # use_const_interior = True
+    # DUNE_WINDOW_PX = 3
     # # ----- 2020 ---------------------------------------------------------------------------------------------
     # if "_23" in name or "_24" in name or "_25" in name:  # v5, original method, dune window 5
     #     use_const_interior = False  # select a start row for the interior (most landward dune cell + 1)
@@ -276,20 +295,21 @@ for name in names:
     #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
     #     DUNE_WINDOW_PX = 5
     # ----- 2004 ---------------------------------------------------------------------------------------------
-    if "_23" in name or "_25" in name:  # v5, original method, dune window 5
+    if "_22" in name or "_23" in name or "_24" in name or "_25" in name:
         use_const_interior = False  # select a start row for the interior (most landward dune cell + 1)
-        DUNE_WINDOW_PX = 10
-    elif "_20" in name or "_21" in name or "_24" in name : # v7, dune window 5, constant interior TRUE (2020)
-        use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
-        DUNE_WINDOW_PX = 5
-    elif "_11" in name or "_14" in name: # (2020)
+        DUNE_WINDOW_PX = 3
+        BEACH_START_THR_M = 1.25  # tried 1.0, not great
+    # elif "_20" in name or "_21" in name:
+    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+    #     DUNE_WINDOW_PX = 5
+    # elif "_3" in name or "_4" in name:
+    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+    #     DUNE_WINDOW_PX = 5
+    else:  # v2
         use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
         DUNE_WINDOW_PX = 3
-    else:  # v7, dune window 10, constant interior TRUE
-        use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
-        DUNE_WINDOW_PX = 10
 
-    topo_domain, dune_domain = process_domain_file(
+    topo_domain, dune_domain, dune_dict, interior_dict = process_domain_file(
         load_dir / name,
         topo_dir,
         dune_dir,
@@ -304,7 +324,23 @@ for name in names:
         SHIFT_CELLS=shift_interior,
         use_const_interior=use_const_interior,
         year=year,
+        dune_loc_dict=dune_dict,
+        interior_loc_dict=interior_dict,
         )
+
+# save the dictionaries with dune and interior locations
+dunes = os.path.join(dict_save_path, "dunes_loc_{0}_{1}.pkl".format(year, version))
+with open(dunes, 'wb') as file:  # "wb" for write, binary mode
+    pickle.dump(dune_dict, file)
+    print('dunes dictionary saved successfully to file: {}'.format(dunes))
+interior = os.path.join(dict_save_path, "interior_loc_{0}_{1}.pkl".format(year, version))
+with open(interior, 'wb') as file:  # "wb" for write, binary mode
+    pickle.dump(interior_dict, file)
+    print('interior dictionary saved successfully to file: {}'.format(interior))
+
+# example of how to load the pickled dictionary
+# with open("dict.pkl", 'rb') as file:  # "rb" for read, binary mode
+#     dunes = pickle.load(file)
 
 # domain = np.vstack((dune_domain+(BERM_ELEV_NAVD_M - MHW_M), topo_domain))
 # minz = -3
