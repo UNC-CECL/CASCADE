@@ -1,0 +1,19 @@
+path,files,bytes,reason
+1984-start\dune-topo\v2,184,4840346,"v1 + inserted rows, block scope; built on the PRE-RE-PICK v1 extraction and superseded by v4 (same insert on the v3 re-pick). Arm 'blocksdate' dropped from HAT_run_crest_experiment.py; run output kept at output/raw_runs/blocksdate*"
+1984-start\dune-topo-experiments\v1_D85_translate,183,4828966,"single-domain translate trial, GIS 85; predates the island-width fix, referenced by no script and no run"
+1984-start\dune-topo-experiments\v1_blocks_none_dsas,182,4825001,--variant none (setback CSV only) with the DSAS shift source; referenced by no script and no run
+1984-start\dune-topo-experiments\v1_blocks_none_duneline,182,4824991,--variant none (setback CSV only) with the duneline shift source; referenced by no script and no run
+1984-start\row-insert-scope\duneline-shift\superseded\dsas_shift_1984.csv,1,4524,"DSAS 1978-97 shoreline rate x 12 yr. The --shift-source dsas option was removed 2026-09-03 (it measures the shoreline, not the dune line, and understates dune retreat ~2.3x); nothing reads this file now"
+1984-start\row-insert-scope\duneline-shift\superseded\duneline_retreat_1984_2004.csv,1,541,1984-2004 retreat scaled 20->12 yr; superseded by the unscaled 1984-1997 pair. No script referenced it
+1984-start\dune-topo-experiments\v1_blocks_measured_duneline,182,4837801,arm blocksduneline; N-source comparison settled by the 1997 line; topography only - run outputs survive in output/raw_runs/
+1984-start\dune-topo-experiments\v1_blocks_measured_dsas,182,4829006,arm blocksdsas; DSAS N source removed entirely; topography only - run outputs survive in output/raw_runs/
+1984-start\dune-topo-experiments\v1_blocks_minimum,182,4826174,arm blocksminimum; N-source comparison settled; topography only - run outputs survive in output/raw_runs/
+1984-start\dune-topo-experiments\v1_pea1989_keepcrest,183,4832193,"arm pea1989keep; crest-shaving pair, run outputs retained; topography only - run outputs survive in output/raw_runs/"
+1984-start\dune-topo-experiments\v1_pea1989_lowercrest,183,4832195,"arm pea1989lower; crest-shaving pair, run outputs retained; topography only - run outputs survive in output/raw_runs/"
+scripts\input_prep\1-barrier3d-domains\HAT_measure_dsas_shift.py,1,6159,"orphaned writer: the --shift-source dsas option, the dsas_shift_1984.csv it produced and the blocksdsas arm were all removed the same day, so nothing consumed its output. TRACKED IN GIT - recoverable with git checkout. Its input, 5-scr/scr-dsas-1978-2019/dsas_1978_1997_domain_means.csv, is untouched and still used elsewhere"
+1984-start\dune-topo\HAT_fill_options_GIS85.png,1,486302,stale duplicate - row-insert-scope/figures carries a newer render (different checksum); regenerable
+1984-start\dune-topo\HAT_fill_options_grid_GIS85.png,1,410856,stale duplicate - superseded by the row-insert-scope render; regenerable
+1984-start\dune-topo\HAT_fill_options_grid_GIS86.png,1,398727,"old five-panel format, predates the road-elevation and option changes; regenerable with --domain 86"
+1984-start\dune-topo\HAT_b3d_grid_v3_v4.png,1,458486,superseded by HAT_b3d_grid_v3_v5.png; regenerable with --insert v4
+1984-start\dune-topo\HAT_b3d_grid_v3_v4_GIS85.png,1,273292,superseded by HAT_b3d_grid_v3_v5_GIS85.png; regenerable
+1984-start\row-insert-scope\figures\HAT_insert_three_scales_v3_v4.png,1,299753,"superseded by HAT_insert_three_scales_v3_v5.png. The script's VERSION moved v4 -> v5 so the figure names the version being taken forward; panel (d) genuinely changed (8 -> 38 applied domains), panels (a)-(c) did not. Regenerable with VERSION=v4"

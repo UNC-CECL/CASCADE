@@ -186,7 +186,22 @@ output/comparisons/smoothing_vs_cascade/1984_2004/*
 *.aux.xml
 
 # raw/cached data under data/hatteras_init/
-data/hatteras_init/1-barrier3d-domains/
+#
+# 1-barrier3d-domains holds ~160 MB of .npy topography arrays, so its CONTENTS
+# are ignored -- but the written record of what is in there, and of what has
+# been deleted from it, is not. Those files are the only account of several
+# irreversible purges (the arrays were never tracked, so git cannot recover
+# them) and they were themselves ignored until 2026-09-03.
+#
+# Written as `/**` rather than `/`: git cannot re-include a file whose PARENT
+# DIRECTORY is excluded, so a plain directory rule makes every negation below
+# silently do nothing. The `!**/` line re-includes directories only, so git can
+# descend far enough to see the files named after it.
+data/hatteras_init/1-barrier3d-domains/**
+!data/hatteras_init/1-barrier3d-domains/**/
+!data/hatteras_init/1-barrier3d-domains/**/README.md
+!data/hatteras_init/1-barrier3d-domains/LINEAGE.md
+!data/hatteras_init/1-barrier3d-domains/archive_purge_*.csv
 data/hatteras_init/3-env-forcings/noaa_cache_8651370/
 data/hatteras_init/3-env-forcings/storms/WIS_raw_data/
 data/hatteras_init/3-env-forcings/storms/old/
