@@ -1,14 +1,14 @@
 {
   "identity": {
     "run_name": "HAT_1984_2004_zeroBE_noroad_bdm_groin",
-    "timestamp": "2026-08-31 15:07:16",
+    "timestamp": "2026-09-01 02:11:03",
     "generated_by": "HAT_hindcast_1984_2024.py",
-    "runtime_min": "2.2",
+    "runtime_min": "1.4",
     "use_sandbox_cascade": true,
     "topo_product": "1984-start",
     "topo_dune_version": "v1",
     "parameter_file": "Hatteras-CASCADE-parameters.yaml",
-    "git_commit": "3f33cfe3e299c78cd026a79808b7f8a55535e6c2",
+    "git_commit": "317edc4af21e27ad0634d84afd5b4861a9d0256d",
     "git_branch": "hannahaline/hatteras-cascade",
     "git_dirty": true
   },
@@ -69,7 +69,7 @@
   "skill": {
     "target": "CoastSat LOESS 10-domain",
     "estimator": "lrr",
-    "mean_bias_m_yr": "+0.2420",
+    "mean_bias_m_yr": "+0.2419",
     "rmse_m_yr": "1.3776",
     "mean_bias_interior_m_yr": "+0.2170",
     "rmse_interior_m_yr": "1.3108",

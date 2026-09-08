@@ -1,14 +1,14 @@
 {
   "identity": {
     "run_name": "HAT_2004_2024_zeroBE_road_bdm_nonourish_groin",
-    "timestamp": "2026-08-31 16:02:15",
+    "timestamp": "2026-09-01 03:04:24",
     "generated_by": "HAT_hindcast_1984_2024.py",
-    "runtime_min": "5.5",
+    "runtime_min": "3.5",
     "use_sandbox_cascade": true,
     "topo_product": "2004-start",
     "topo_dune_version": "v1",
     "parameter_file": "Hatteras-CASCADE-parameters.yaml",
-    "git_commit": "f88d568a9f5c6e5e812fbd6fbdf5f22524f8877a",
+    "git_commit": "317edc4af21e27ad0634d84afd5b4861a9d0256d",
     "git_branch": "hannahaline/hatteras-cascade",
     "git_dirty": true
   },

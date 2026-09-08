@@ -1,14 +1,14 @@
 {
   "identity": {
     "run_name": "HAT_2004_2024_edgeBE_road_bdm_nourish_nogroin",
-    "timestamp": "2026-08-29 15:16:22",
+    "timestamp": "2026-09-01 01:14:54",
     "generated_by": "HAT_hindcast_1984_2024.py",
-    "runtime_min": "3.8",
+    "runtime_min": "2.5",
     "use_sandbox_cascade": true,
     "topo_product": "2004-start",
     "topo_dune_version": "v1",
     "parameter_file": "Hatteras-CASCADE-parameters.yaml",
-    "git_commit": "5b26cb543fec464ae7a7d25cf9cb6d95bfb6a5ae",
+    "git_commit": "317edc4af21e27ad0634d84afd5b4861a9d0256d",
     "git_branch": "hannahaline/hatteras-cascade",
     "git_dirty": true
   },
@@ -65,7 +65,7 @@
     "mean_bias_m_yr": "-0.9815",
     "rmse_m_yr": "1.7735",
     "mean_bias_interior_m_yr": "-1.0037",
-    "rmse_interior_m_yr": "1.7936",
+    "rmse_interior_m_yr": "1.7935",
     "lrr_r2_median": "0.8800",
     "lrr_r2_below_floor": "18",
     "endpoint_mean_bias_interior_m_yr": "-0.8804",

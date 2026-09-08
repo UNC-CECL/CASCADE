@@ -3,14 +3,14 @@
 
 [identity]
 run_name                         = HAT_2004_2024_zeroBE_road_bdm_nourish_groin
-timestamp                        = 2026-08-31 15:53:52
+timestamp                        = 2026-09-01 02:59:06
 generated_by                     = HAT_hindcast_1984_2024.py
-runtime_min                      = 6.3
+runtime_min                      = 3.4
 use_sandbox_cascade              = True   # cascade.cascade_groin, not cascade.cascade
 topo_product                     = 2004-start
 topo_dune_version                = v1
 parameter_file                   = Hatteras-CASCADE-parameters.yaml
-git_commit                       = 4b29a5d9ab1aaaeaa6539cf5c5f6bde6e3271734
+git_commit                       = 317edc4af21e27ad0634d84afd5b4861a9d0256d
 git_branch                       = hannahaline/hatteras-cascade
 git_dirty                        = True   # True: the commit alone does not reproduce this run
 

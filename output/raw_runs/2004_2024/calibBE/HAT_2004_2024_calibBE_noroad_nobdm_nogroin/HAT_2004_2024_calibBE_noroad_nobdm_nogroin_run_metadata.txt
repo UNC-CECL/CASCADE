@@ -3,14 +3,14 @@
 
 [identity]
 run_name                         = HAT_2004_2024_calibBE_noroad_nobdm_nogroin
-timestamp                        = 2026-08-31 11:03:41
+timestamp                        = 2026-09-01 01:38:08
 generated_by                     = HAT_hindcast_1984_2024.py
 runtime_min                      = 3.4
 use_sandbox_cascade              = True   # cascade.cascade_groin, not cascade.cascade
 topo_product                     = 2004-start
 topo_dune_version                = v1
 parameter_file                   = Hatteras-CASCADE-parameters.yaml
-git_commit                       = 734c0b54915d4070bfd9ce02db2643827eb407b7
+git_commit                       = 317edc4af21e27ad0634d84afd5b4861a9d0256d
 git_branch                       = hannahaline/hatteras-cascade
 git_dirty                        = True   # True: the commit alone does not reproduce this run
 
@@ -64,14 +64,14 @@ enabled                          = False
 [skill]
 target                           = CoastSat LOESS 10-domain   # raw means over GIS 1-10
 estimator                        = lrr   # OLS slope through every annual state, matching the target's own definition
-mean_bias_m_yr                   = -1.9432
-rmse_m_yr                        = 2.1413
-mean_bias_interior_m_yr          = -1.9572   # GIS 2-89: the locked end domains excluded
-rmse_interior_m_yr               = 2.1496
+mean_bias_m_yr                   = -1.9435
+rmse_m_yr                        = 2.1418
+mean_bias_interior_m_yr          = -1.9576   # GIS 2-89: the locked end domains excluded
+rmse_interior_m_yr               = 2.1501
 lrr_r2_median                    = 0.8605   # how well a line describes the modelled trajectory
 lrr_r2_below_floor               = 16   # domains under r2 0.50
-endpoint_mean_bias_interior_m_yr = -1.7557   # the pre-LRR estimator; calibBE and groin M were fit on this
-endpoint_rmse_interior_m_yr      = 1.9550
+endpoint_mean_bias_interior_m_yr = -1.7562   # the pre-LRR estimator; calibBE and groin M were fit on this
+endpoint_rmse_interior_m_yr      = 1.9557
 
 [verification]
 nourishment_ok                   = True
