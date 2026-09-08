@@ -1,0 +1,42 @@
+{
+  "_what": "Source/sink calibration convergence, frozen-zone masked iteration.",
+  "_why": "The calibration is a fixed-point solve, not a closed-form one. Its stopping point is a scientific claim -- 'this is the model's limit' -- so the path to it has to be on the record, not reconstructed from a chat log. Every number here is a D2-D89 RMSE of the run's lrr_m_yr against the CoastSat LOESS target, measured on the full_management groin-on run of each period.",
+  "_method": "Pass 0 is the ordinary one-shot solve against an edgeBE base (interior BE = 0). Passes 1+ measure the residual left by the CURRENT calibBE runs and ADD it (HAT_BE_BASE_PRESET=calibBE, apply_be_fit.py --add), because imposing X m/yr of background erosion does not move a domain's rate by X -- BRIE diffuses most of it alongshore. Corrections are masked to FROZEN_ZONE_DOMAINS throughout: zone membership is identified ONCE, from the pass-0 residual under the ordinary significance and width rules, and never re-derived. Iterating zone membership as well as magnitude was tried and abandoned -- see _abandoned_unmasked.",
+  "_stopping_rule": "Stop when a pass buys less than 5% of the standing RMSE. Both periods met it.",
+  "_measured": "2026-08-24",
+
+  "baselines": {
+    "_note": "Same scenario and groin setting, only the BE preset differs.",
+    "zeroBE": {"1984_2004": 1.3651, "2004_2024": 2.1258},
+    "edgeBE": {"1984_2004": 1.2203, "2004_2024": 1.7798}
+  },
+
+  "passes": {
+    "1984_2004": [
+      {"pass": 0, "rmse": 0.7054, "note": "one-shot solve against edgeBE"},
+      {"pass": 1, "rmse": 0.5404, "gain_pct": 23.4},
+      {"pass": 2, "rmse": 0.5257, "gain_pct": 2.7, "converged": true}
+    ],
+    "2004_2024": [
+      {"pass": 0, "rmse": 0.7590, "note": "one-shot solve against edgeBE"},
+      {"pass": 1, "rmse": 0.6124, "gain_pct": 19.3},
+      {"pass": 2, "rmse": 0.5809, "gain_pct": 5.1},
+      {"pass": 3, "rmse": 0.5577, "gain_pct": 4.0, "converged": true,
+       "note": "period 2 only, via apply_be_fit.py --periods 2004; period 1 had already converged and re-writing it would have kept adding to a finished field"}
+    ]
+  },
+
+  "_abandoned_unmasked": {
+    "_what": "An earlier run of the same iteration WITHOUT the frozen-zone mask.",
+    "1984_2004": 0.4931,
+    "2004_2024": 0.4843,
+    "_why_abandoned": "It scored better, and that is the point. Re-deriving zones each pass let progressively less coherent features cross the 0.5 m/yr threshold as the real ones were satisfied: two passes corrected 19 domains in 1984-2004 and 12 in 2004-2024 that the pass-0 zone identification never selected, including D5-D7 in period 2 -- the groin's own footprint. Worse, adding BE at a domain pushes sediment into its neighbours and changes THEIR residuals, so later passes partly correct the alongshore spillover of earlier passes. That is bookkeeping, not geomorphology, and it does not terminate. The gap between these numbers and the frozen-zone result is the fit available only by correcting outside justifiable zones; declining it is a result, not a shortfall."
+  },
+
+  "_residual_left": {
+    "_note": "Largest remaining residuals, m/yr, at convergence.",
+    "1984_2004": {"D6": 2.00, "D5": 1.20, "D10": 0.98, "D66": 0.94},
+    "2004_2024": {"D6": 2.59, "D7": 1.88, "D25": 1.45, "D24": 1.42},
+    "_D6": "D6 dominates both periods and is deliberately never corrected -- see GROIN_RESERVED_DOMAINS. It is the groin's own shortfall: +1.72 m/yr in period 1 because M = 60 does not build enough fillet, -2.21 in period 2 because the fillet does not release, which a module with trapping bounded at >= 0 cannot do. Absorbing it into the BE field would double-count against the M/f fit."
+  }
+}
