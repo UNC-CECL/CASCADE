@@ -35,6 +35,7 @@ because the digitized lines trace the toe ~19 m seaward of row 0).
 | `figures/2-footprint-1984/seaward/HAT_footprint_1984_grid.png` | the Barrier3D grid, added rows blank in red, removed rows hatched blue, new row 0 and NC-12 marked |
 | `figures/2-footprint-1984/seaward/HAT_footprint_1984_plan.png` | plan view on the DEM with both dune lines and NC-12 1984 |
 | `figures/2-footprint-1984/behind-road/HAT_row_insert_grid_behindroad.png` | the same rows placed behind NC-12 (advisor's placement): crest-to-road strip as measured; columns `insert_anchor`, `insert_row_behind_road`, `rows_behind_road` in the table |
+| `fill_copy_by_domain.csv`, `HAT_fill_copy_scope.txt` | the COPY fill for the behind-road block (advisor, 2026-09-07): block = the N interior rows immediately landward of the insert point, copied cell by cell; window behind the crest where there is no road; per-domain window stats, seam and flags. Figures in `figures/3-fill/HAT_fill_copy_grid_GIS*.png` |
 | `figures/2-footprint-1984/HAT_footprint_1984_rows.png` | rows per domain, signed |
 | `figures/2-footprint-1984/HAT_footprint_1984_shift.png` | the paired shift with p10–p90 and the rows kept |
 | `figures/2-footprint-1984/seaward/HAT_footprint_1984_setback.png` | the road setback now and from the new row 0, per road domain |

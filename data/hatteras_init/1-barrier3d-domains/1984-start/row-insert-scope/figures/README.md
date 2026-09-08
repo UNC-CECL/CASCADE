@@ -49,6 +49,7 @@ same rows. Every figure reads `../footprint_1984_by_domain.csv`; captions in `CA
 
 | figure | drawn by |
 |---|---|
+| `HAT_footprint_1984_plan_behindroad.png` | `HAT_footprint_1984.py` — plan view with the true-scale band behind NC-12's landward edge |
 | `HAT_row_insert_grid_behindroad.png` | `HAT_report_row_insert_scope.py --anchor road` — the model-frame grid with the blocks landward of the road (`insert_row_behind_road` in the table) |
 
 `1-scope/` was retired the same day: every figure it held was redrawn on this footprint and lives here.
@@ -58,6 +59,7 @@ same rows. Every figure reads `../footprint_1984_by_domain.csv`; captions in `CA
 
 | figure | drawn by |
 |---|---|
+| `3-fill/HAT_fill_copy_grid_GIS80.png`, `_GIS85`, `_GIS5`, `_GIS49` | `HAT_fill_copy_scope.py` (2026-09-07, the live fill) — the COPY fill for the behind-road block: the near-road interior before and after in elevation classes, the source window and the block outlined, NC-12 rows marked, and the alongshore-median profile. Audit in `../fill_copy_by_domain.csv`, report `../HAT_fill_copy_scope.txt`. The four entries below are the record of the deleted layers' fills |
 | `3-fill/HAT_insert_explainer_grid_GIS85.png` | `HAT_plot_insert_explainer_grid.py` — the same mechanics as Barrier3D plan-view grids: survey by year, v2 as the model sees it, the inserted domain, the five fills side by side (2026-09-04) |
 | `3-fill/HAT_insert_explainer_GIS85.png` | `HAT_plot_insert_explainer.py` — the mechanics on one line: the survey by year, what the extraction keeps, where the added rows go, what each version writes into them (2026-09-04) |
 | `HAT_fill_options_grid_GIS85.png` | `HAT_plot_fill_options_grid.py` — candidates as Barrier3D domains, NC-12 at its real road elevation |
