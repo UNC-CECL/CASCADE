@@ -230,6 +230,8 @@ def main() -> None:
              "(v7 from the crest, v8 from one row behind it).",
              fontsize=8, wrap=True, va="bottom")
     fig.tight_layout(rect=(0, 0.07, 1, 0.96))
+    # NOTE 2026-09-08: this figure now lives in figures/superseded-layers/; the script is
+    # guarded (no layer on disk), so nothing is written here until a layer is rebuilt.
     out = Path(args.out) if args.out else insert_figures_dir(PRODUCT, "3-fill") / f"HAT_insert_explainer_GIS{D}.png"
     fig.savefig(out, dpi=150)
     print("wrote", out)

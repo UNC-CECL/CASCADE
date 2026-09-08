@@ -1,0 +1,91 @@
+domain,n_cells,insert_anchor,insert_row,rows_before,rows_after,operation
+1,-1,crest,1,161,160,rows 1..1 removed
+2,1,crest,1,159,160,copy of rows 1..1
+3,3,crest,1,157,160,copy of rows 1..3
+4,2,crest,1,155,157,copy of rows 1..2
+5,6,crest,1,158,164,copy of rows 1..6
+6,0,nan,-1,174,174,unchanged
+7,0,nan,-1,178,178,unchanged
+8,-1,crest,1,170,169,rows 1..1 removed
+9,0,nan,-1,163,163,unchanged
+10,0,nan,-1,154,154,unchanged
+11,1,road,4,162,163,copy of rows 4..4
+12,1,road,5,170,171,copy of rows 5..5
+13,0,nan,-1,168,168,unchanged
+14,0,nan,-1,35,35,unchanged
+15,-1,road,6,32,31,rows 6..6 removed
+16,-4,road,2,61,57,rows 2..5 removed
+17,0,nan,-1,71,71,unchanged
+18,0,nan,-1,87,87,unchanged
+19,0,nan,-1,97,97,unchanged
+20,0,nan,-1,103,103,unchanged
+21,0,nan,-1,113,113,unchanged
+22,-1,road,18,128,127,rows 18..18 removed
+23,-1,road,23,134,133,rows 23..23 removed
+24,0,nan,-1,141,141,unchanged
+25,0,nan,-1,138,138,unchanged
+26,0,nan,-1,148,148,unchanged
+27,0,nan,-1,161,161,unchanged
+28,0,nan,-1,166,166,unchanged
+29,0,nan,-1,154,154,unchanged
+30,-1,road,25,140,139,rows 25..25 removed
+31,-1,road,23,139,138,rows 23..23 removed
+32,-1,road,21,141,140,rows 21..21 removed
+33,-1,road,18,137,136,rows 18..18 removed
+34,-1,road,21,136,135,rows 21..21 removed
+35,-1,road,20,116,115,rows 20..20 removed
+36,-1,road,35,134,133,rows 35..35 removed
+37,-1,road,33,159,158,rows 33..33 removed
+38,-2,road,29,166,164,rows 29..30 removed
+39,0,nan,-1,170,170,unchanged
+40,0,nan,-1,172,172,unchanged
+41,0,nan,-1,174,174,unchanged
+42,0,nan,-1,176,176,unchanged
+43,0,nan,-1,179,179,unchanged
+44,0,nan,-1,169,169,unchanged
+45,1,road,19,155,156,copy of rows 19..19
+46,1,road,18,142,143,copy of rows 18..18
+47,1,road,18,127,128,copy of rows 18..18
+48,1,road,18,118,119,copy of rows 18..18
+49,3,road,14,94,97,copy of rows 14..16
+50,3,road,14,87,90,copy of rows 14..16
+51,2,road,20,58,60,copy of rows 20..21
+52,1,road,20,66,67,copy of rows 20..20
+53,1,road,19,56,57,copy of rows 19..19
+54,2,road,20,114,116,copy of rows 20..21
+55,0,nan,-1,107,107,unchanged
+56,0,nan,-1,77,77,unchanged
+57,0,nan,-1,68,68,unchanged
+58,0,nan,-1,69,69,unchanged
+59,-1,road,27,78,77,rows 27..27 removed
+60,0,nan,-1,102,102,unchanged
+61,0,nan,-1,116,116,unchanged
+62,-2,road,31,133,131,rows 31..32 removed
+63,-5,road,26,134,129,rows 26..30 removed
+64,-5,road,25,133,128,rows 25..29 removed
+65,-4,road,27,132,128,rows 27..30 removed
+66,-5,road,25,121,116,rows 25..29 removed
+67,-5,road,26,134,129,rows 26..30 removed
+68,-1,road,57,103,102,rows 57..57 removed
+69,0,nan,-1,106,106,unchanged
+70,0,nan,-1,140,140,unchanged
+71,0,nan,-1,133,133,unchanged
+72,2,road,51,120,122,copy of rows 51..52
+73,5,road,61,132,137,copy of rows 61..65
+74,2,road,64,131,133,copy of rows 64..65
+75,0,nan,-1,103,103,unchanged
+76,0,nan,-1,140,140,unchanged
+77,0,nan,-1,146,146,unchanged
+78,2,road,59,137,139,copy of rows 59..60
+79,4,road,61,108,112,copy of rows 61..64
+80,7,road,61,94,101,copy of rows 61..67
+81,3,road,46,104,107,copy of rows 46..48
+82,5,road,22,105,110,copy of rows 22..26
+83,2,road,12,108,110,copy of rows 12..13
+84,3,road,7,147,150,copy of rows 7..9
+85,5,road,6,178,183,copy of rows 6..10
+86,2,road,3,189,191,copy of rows 3..4
+87,1,road,8,185,186,copy of rows 8..8
+88,0,nan,-1,177,177,unchanged
+89,0,nan,-1,179,179,unchanged
+90,0,nan,-1,182,182,unchanged
