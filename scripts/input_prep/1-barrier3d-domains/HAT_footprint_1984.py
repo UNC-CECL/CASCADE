@@ -38,13 +38,20 @@ TWO PLACEMENTS OF THE SAME ROWS (the second added 2026-09-07 evening)
                     row 0, so row 0 lands on the 1984 dune line; the setback
                     becomes setback_new_m. The footprint above.
     anchor = road   Hannah's advisor: keep the strip from the crest to the road
-                    AS MEASURED and put the rows BEHIND the road, at the first
-                    row landward of the road's landward-most cell on any profile
-                    (`insert_row_behind_road`, cells landward of current row 0).
-                    Removals take backbarrier rows at the same index. Row 0 and
-                    the road stay put, so the model keeps TODAY's setback
-                    (setback_model_now_m; GIS 85/86 stay floored at 0). Domains
-                    without a road (GIS 1-5, 8) fall back to the dune anchor.
+                    AS MEASURED and put the rows BEHIND THE ROADWAY ROWS. The
+                    roadway in the model is two straight rows at one setback
+                    per domain - road_start = int(setback / 10) from row 0,
+                    ROAD_ROWS = 2 - so the block goes in at
+                        insert_row_behind_road = int(setback_model_now_m / 10) + 2
+                    cells landward of current row 0, directly behind the second
+                    road row. NOT behind the GIS mask's landward-most cell: that
+                    edge wanders 3-12 cells along a domain (kept as
+                    `road_land_max_cell` for the record) but the model never
+                    sees it. Removals take backbarrier rows at the same index.
+                    Row 0 and the road stay put, so the model keeps TODAY's
+                    setback (GIS 85/86 stay floored at 0, so their block starts
+                    at row 2). Domains with no model road (GIS 1-5, 8) fall
+                    back to the dune anchor.
                     N is identical in both; only where the rows sit differs.
                     The missing ground was lost from the OCEAN side; this books
                     it on the sound side, which restores 1984 width but not the
@@ -146,9 +153,10 @@ C_LAND, C_WATER = "#f0e6c8", "#a8c8e0"
 C_ROAD = "#1a1a1a"
 INK = off.INK
 
-ROWS_SHOWN = 190          # every interior row (the deepest domain has 189); was 40 until 2026-09-07, when Hannah asked for the full domains
+ROWS_SHOWN = 200          # every interior row (the deepest domain has 189) plus room for the community bar; was 40 until 2026-09-07, when Hannah asked for the full domains
 DOMAINS_PER_STRIP = 30
 NEAR_ZERO_M = 10.0        # a new setback under one cell is flagged
+ROAD_ROWS = 2             # roadway_manager: road_width 20 m / dy 10 m, two straight rows
 
 
 # =============================================================================
@@ -217,12 +225,17 @@ def by_domain(prof: pd.DataFrame, topo_dir: Path, topo_name: str) -> pd.DataFram
         rec["n_road_profiles"] = len(rd)
         flags = []
         # --- the behind-the-road placement (advisor's suggestion) -----------
-        if len(rd) and n != 0:
-            land_max = int(rd["road_land_rel"].max())
+        # Anchored on the MODEL's road: two straight rows at int(setback/10)
+        # from row 0, the setback the model receives today. The GIS mask's
+        # landward-most cell is recorded beside it but does not place the block.
+        sb_model = (float(dom_csv.loc[d, "setback_model_m"])
+                    if d in dom_csv.index else np.nan)
+        if np.isfinite(sb_model) and n != 0:
             rec["insert_anchor"] = "road"
-            rec["road_land_max_cell"] = land_max
-            rec["road_land_spread_cells"] = int(land_max - rd["road_land_rel"].median())
-            rec["insert_row_behind_road"] = land_max + 1
+            rec["road_land_max_cell"] = int(rd["road_land_rel"].max()) if len(rd) else np.nan
+            rec["road_land_spread_cells"] = (int(rec["road_land_max_cell"] - rd["road_land_rel"].median())
+                                             if len(rd) else np.nan)
+            rec["insert_row_behind_road"] = int(sb_model // CELL_M) + ROAD_ROWS
         elif n != 0:
             rec["insert_anchor"] = "dune"                  # no road: seaward edge
             rec["road_land_max_cell"] = np.nan
@@ -280,8 +293,11 @@ def _elev_rgba(topo_dam: np.ndarray) -> np.ndarray:
 
 
 def _community_bar(ax, y_bar: float, x_lo: float, x_hi: float) -> None:
-    """The communities as a bar above the strip, names above it, from
-    HATTERAS_ANNOTATIONS - the same object every other island figure uses."""
+    """The communities as a bar along the BOTTOM of the strip, names below it and
+    village ticks above it, from HATTERAS_ANNOTATIONS - the same object every
+    other island figure uses. Below rather than above (2026-09-07): above, the
+    names collided with the +N labels and with each other (Tri-Village's
+    villages)."""
     ann = off.HATTERAS_ANNOTATIONS
     for name, (lo, hi) in ann.town_spans.items():
         a, b = max(lo - 0.5, x_lo), min(hi + 0.5, x_hi)
@@ -290,13 +306,13 @@ def _community_bar(ax, y_bar: float, x_lo: float, x_hi: float) -> None:
         ax.plot([a, b], [y_bar, y_bar], color=ann.color_town_span, lw=4.0,
                 solid_capstyle="butt", zorder=8, clip_on=False)
         if (b - a) >= 0.5 * (hi - lo + 1):
-            ax.text((a + b) / 2, y_bar - 0.9, name, ha="center", va="bottom",
+            ax.text((a + b) / 2, y_bar + 1.2, name, ha="center", va="top",
                     fontsize=8, fontweight="bold", color=INK, clip_on=False)
     for name, gid in ann.village_lines.items():
         if x_lo <= gid <= x_hi:
-            ax.plot([gid, gid], [y_bar - 0.7, y_bar + 0.7], color=ann.color_village_line,
+            ax.plot([gid, gid], [y_bar - 0.8, y_bar + 0.8], color=ann.color_village_line,
                     lw=1.0, zorder=9, clip_on=False)
-            ax.text(gid, y_bar - 0.9, name, ha="center", va="bottom", fontsize=7,
+            ax.text(gid, y_bar - 1.4, name, ha="center", va="bottom", fontsize=7,
                     color=ann.color_village_line, clip_on=False)
 
 
@@ -315,7 +331,7 @@ def fig_grid(tab: pd.DataFrame, topo_dir: Path) -> Path:
     doms = tab.index.to_numpy()
     n_by = tab["n_cells"].to_dict()
     top = int(max(1, tab["n_cells"].max()))
-    ymin = -top - 9.0                                    # room for labels + communities
+    ymin = -top - 7.0                                    # room for the +N labels, clear of the frame
     groups = [doms[i:i + DOMAINS_PER_STRIP] for i in range(0, len(doms), DOMAINS_PER_STRIP)]
     add_rgba = np.array(matplotlib.colors.to_rgba(C_ADD_FILL))
 
@@ -347,24 +363,24 @@ def fig_grid(tab: pd.DataFrame, topo_dir: Path) -> Path:
             ax.plot([d - 0.5, d + 0.5], [-n, -n], color=INK if n else "0.5",
                     linewidth=1.7 if n else 0.6, solid_capstyle="butt", zorder=6)
             if n:
-                ax.text(d, -top - 0.6, f"{n:+d}", ha="center", va="bottom", fontsize=7.2,
+                ax.text(d, -top - 1.2, f"{n:+d}", ha="center", va="bottom", fontsize=7.2,
                         color=C_ADD if n > 0 else C_REM, fontweight="bold")
             sb = tab.loc[d, "setback_v2_m"]
             if np.isfinite(sb):
                 ax.add_patch(Rectangle((d - 0.32, sb / CELL_M), 0.64, 2.0,
                                        facecolor=C_ROAD, edgecolor="none", zorder=7))
-        _community_bar(ax, -top - 5.0, g[0] - 0.5, g[-1] + 0.5)
+        _community_bar(ax, ROWS_SHOWN - 4.0, g[0] - 0.5, g[-1] + 0.5)
         ax.set_xlim(g[0] - 0.5, g[-1] + 0.5)
-        ax.set_ylim(ROWS_SHOWN, ymin)
+        ax.set_ylim(ROWS_SHOWN + 1.5, ymin)
         ax.set_xticks([d for d in g if d % 5 == 0])
         ax.set_xticks(list(g), minor=True)
-        ax.set_yticks(range(0, ROWS_SHOWN, 25))
+        ax.set_yticks(range(0, 190, 25))
         ax.set_ylabel("cross-shore cell\n(0 = current interior row 0)")
         ax.grid(axis="y", color="0.9", linewidth=0.4)
         ax.set_axisbelow(True)
         sec = ax.secondary_yaxis("right", functions=(lambda c: c * CELL_M, lambda m: m / CELL_M))
         sec.set_ylabel("m landward of current row 0")
-        sec.set_yticks(range(0, int(ROWS_SHOWN * CELL_M), 500))
+        sec.set_yticks(range(0, 1900, 500))
         for sp in ("top", "right"):
             ax.spines[sp].set_visible(True)
         off._title(ax, k, f"Domains {g[0]}\u2013{g[-1]}")
@@ -751,21 +767,24 @@ def write_report(tab: pd.DataFrame, topo_name: str, figs: list[Path]) -> Path:
     w("-" * 78)
     w("THE SAME ROWS BEHIND THE ROAD (advisor's placement, decided 2026-09-07)")
     w("-" * 78)
-    w("  Keep the crest-to-road strip as measured; put the rows at the first row")
-    w("  landward of the road's landward-most cell on any profile. Row 0 and the")
-    w("  road stay put; the model keeps TODAY's setback (setback_model_now_m).")
-    w("  Removals take backbarrier rows at the same index. No road -> dune anchor.")
+    w("  Keep the crest-to-road strip as measured; put the rows directly behind the")
+    w("  MODEL's two roadway rows: insert_row = int(setback_model_now_m / 10) + 2,")
+    w("  cells landward of current row 0. Row 0 and the road stay put; the model")
+    w("  keeps TODAY's setback. Removals take backbarrier rows at the same index.")
+    w("  No model road -> dune anchor.")
     w("")
-    w("  domain   N  anchor  road cells (rel row 0)  insert at  rows affected")
+    w("  domain   N  anchor  model road rows  insert at  rows affected        (GIS mask landward-most cell)")
     for d, r in tab[tab.n_cells != 0].iterrows():
-        rc = ("-" if not np.isfinite(r.road_land_max_cell) else
-              f"{r.setback_v2_m / CELL_M:+.1f}..{r.road_land_max_cell:+.0f}")
-        w(f"  {d:6d} {r.n_cells:+3d}  {r.insert_anchor:5s}  {rc:>20s}  {int(r.insert_row_behind_road):9d}  {r.rows_behind_road}")
+        rr = ("-" if not np.isfinite(r.setback_model_now_m) else
+              f"{int(r.setback_model_now_m // CELL_M)}..{int(r.setback_model_now_m // CELL_M) + ROAD_ROWS - 1}")
+        lm = "-" if not np.isfinite(r.road_land_max_cell) else f"{r.road_land_max_cell:+.0f}"
+        w(f"  {d:6d} {r.n_cells:+3d}  {r.insert_anchor:5s}  {rr:>15s}  {int(r.insert_row_behind_road):9d}  "
+          f"{r.rows_behind_road:36s} {lm:>8s}")
     w("")
-    w("  the insert row is 'road_land_max_cell + 1': behind the landward-most road cell,")
-    w("  so no road cell is displaced on any profile. Along-domain spread of that edge:")
-    w(f"  median {tab.road_land_spread_cells.median():.0f} cells, max {tab.road_land_spread_cells.max():.0f} "
-      f"(GIS {int(tab.road_land_spread_cells.idxmax())}) - measured backdune between road and insert there.")
+    w("  The GIS mask's landward-most road cell is listed for the record only: it wanders")
+    w(f"  {tab.road_land_spread_cells.median():.0f} cells on median and {tab.road_land_spread_cells.max():.0f} at most "
+      f"(GIS {int(tab.road_land_spread_cells.idxmax())}) along a domain, but the model holds")
+    w("  the road as two straight rows and that is what the block sits behind.")
     w("")
     w("-" * 78)
     w("ASSUMPTIONS THIS CANNOT CHECK")
@@ -807,7 +826,7 @@ def write_captions(tab: pd.DataFrame, topo_name: str) -> None:
             f"removed where the island has prograded since 1984; the signed count is printed above each "
             f"changed domain. The black tick is where interior row 0 ends up; the dark bar is NC-12 at its "
             f"measured 1984 position (seaward edge, 20 m wide), which does not move, so its distance to the "
-            f"tick is the new setback. Communities and villages along the top from the site "
+            f"tick is the new setback. Communities and villages along the bottom of each panel, from the site "
             f"configuration. {stats}",
         "HAT_footprint_1984_rows.png":
             f"Rows per domain under the 10 m rule, positive where rows are added (the 1984 dune line lay "
