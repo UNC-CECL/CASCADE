@@ -446,7 +446,10 @@ def fig_rows(tab: pd.DataFrame) -> Path:
 # FIGURE 2 - PLAN VIEW ON THE DEM
 # =============================================================================
 
-def fig_plan(tab: pd.DataFrame) -> Path:
+ROAD_HALF_WIDTH_M = 10.0      # NC-12 geojson is a centreline; the model road is 20 m
+
+
+def fig_plan(tab: pd.DataFrame, anchor: str = "dune") -> Path:
     """
     The footprint in plan view, in the layout of the dune-line figure
     HAT_duneline_offset_lines_island_3panel.png (2026-09-07, Hannah's request):
@@ -460,6 +463,12 @@ def fig_plan(tab: pd.DataFrame) -> Path:
     drawn on top - the 1997 dune line offset by N x 10 m seaward (add) or
     landward (remove). The 1997 line is the map-space proxy for the existing
     array's seaward edge; the digitized line itself sits ~19 m seaward of row 0.
+
+    anchor="road" (2026-09-07, the advisor's placement): the band hangs off the
+    LANDWARD edge of NC-12 instead - the 1984 centreline offset 10 m landward -
+    and runs landward by N x 10 m for both signs, since added rows go in
+    behind the road and removals take backbarrier rows there. Domains without
+    a model road keep the dune anchor, as the placement does.
     """
     from shapely.geometry import box as _box
     off.apply_style()
@@ -475,6 +484,8 @@ def fig_plan(tab: pd.DataFrame) -> Path:
     by_dom = {r["domain"]: r for r in off.read_rows(off.OUT_DIR / off.CSV_NAME)}
 
     n_by = tab["n_cells"].to_dict()
+    anchor_by = tab["insert_anchor"].fillna("").to_dict() if "insert_anchor" in tab else {}
+    road_geom = roads[1984].union_all() if roads else None
     nmax = int(max(abs(v) for v in n_by.values()))
     reds = plt.get_cmap("Reds")(np.linspace(0.30, 0.90, nmax))
     blues = plt.get_cmap("Blues")(np.linspace(0.30, 0.90, nmax))
@@ -517,12 +528,20 @@ def fig_plan(tab: pd.DataFrame) -> Path:
                                        edgecolor="none", alpha=0.45, zorder=2))
                 m_ = samples["domain"] == d
                 y = samples["y"][m_]
-                x97 = samples["x1997"][m_]
-                ok = np.isfinite(x97)
-                if ok.sum() > 2:
+                on_road = (anchor == "road" and anchor_by.get(d) == "road"
+                           and road_geom is not None)
+                if on_road:
+                    # the road's landward edge; the band runs landward for both signs
+                    xa = off.x_at_northings(road_geom, r.geometry, y) - ROAD_HALF_WIDTH_M
+                    x_edge_all = xa - abs(n) * CELL_M
+                else:
                     # cross-shore grows landward = west, so seaward is +x
-                    x_edge = x97[ok] + n * CELL_M
-                    poly = np.concatenate([np.column_stack([x97[ok], y[ok]]),
+                    xa = samples["x1997"][m_]
+                    x_edge_all = xa + n * CELL_M
+                ok = np.isfinite(xa)
+                if ok.sum() > 2:
+                    x_edge = x_edge_all[ok]
+                    poly = np.concatenate([np.column_stack([xa[ok], y[ok]]),
                                            np.column_stack([x_edge[::-1], y[ok][::-1]])])
                     ax.add_patch(plt.Polygon(poly, closed=True,
                                              facecolor=C_ADD if n > 0 else C_REM,
@@ -572,8 +591,8 @@ def fig_plan(tab: pd.DataFrame) -> Path:
                + [Patch(facecolor=blues[-v - 1], alpha=0.45, edgecolor="0.4",
                         label=f"\u2212{-v} row{'s' if v < -1 else ''}")
                   for v in sorted(present, key=abs) if v < 0]
-               + [Patch(facecolor=C_ADD, label="added, true scale"),
-                  Patch(facecolor=C_REM, label="removed, true scale")]
+               + [Patch(facecolor=C_ADD, label="added, true scale" + (" (behind NC-12)" if anchor == "road" else "")),
+                  Patch(facecolor=C_REM, label="removed, true scale" + (" (behind NC-12)" if anchor == "road" else ""))]
                + [Line2D([0], [0], label=f"{yr} dune line",
                          **dict(off.SIMPLE_LINE_STYLE[yr], linewidth=2.0)) for yr in (1984, 1997)]
                + (off.m.road_legend_handles(roads) if roads else [])
@@ -582,7 +601,8 @@ def fig_plan(tab: pd.DataFrame) -> Path:
     fig.legend(handles=handles, loc="outside lower center",
                ncol=min(len(handles), 9), fontsize=8.5)
 
-    p = FIG_SEAWARD / "HAT_footprint_1984_plan.png"
+    p = (FIG_SEAWARD / "HAT_footprint_1984_plan.png" if anchor == "dune"
+         else insert_figures_dir(PRODUCT, "2-footprint-1984", "behind-road") / "HAT_footprint_1984_plan_behindroad.png")
     fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
@@ -844,6 +864,13 @@ def write_captions(tab: pd.DataFrame, topo_name: str) -> None:
             f"about 19 m seaward of interior row 0. The gap between the band's outer edge and the 1984 "
             f"line is the truncation to whole cells. Communities as a bracket in the ocean margin, the "
             f"pier and groin as seaward marks; scale bar 500 m = 50 cells. {stats}",
+        "HAT_footprint_1984_plan_behindroad.png":
+            f"As the seaward plan view, for the rows placed BEHIND NC-12: the true-scale band hangs off the "
+            f"landward edge of the 1984 road (its centreline offset 10 m landward, the road being 20 m wide) "
+            f"and runs landward by N \u00d7 10 m, red where rows are added behind the road and blue where "
+            f"backbarrier rows are removed there. Box shading, dune lines and NC-12 as before; domains without "
+            f"a model road (GIS 1\u20135, 8) keep the seaward band. The strip from the dune crest through the "
+            f"road is untouched in this placement, and the model keeps today's setback. {stats}",
         "HAT_footprint_1984_shift.png":
             f"Per domain, the median of the 50 paired per-profile differences between the 1997 and 1984 "
             f"dune-line crossings (points, p10\u2013p90 bars), positive where the 1984 line lies seaward, "
@@ -891,7 +918,8 @@ def main() -> None:
 
     figs = [fig_grid(tab, topo_dir), fig_rows(tab), fig_shift(tab), fig_setback(tab)]
     if not args.no_plan:
-        figs.append(fig_plan(tab))
+        figs.append(fig_plan(tab, "dune"))
+        figs.append(fig_plan(tab, "road"))
     for f in figs:
         print(f"wrote {f}")
     rep = write_report(tab, topo_name, figs)
