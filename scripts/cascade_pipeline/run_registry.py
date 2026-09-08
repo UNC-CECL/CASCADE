@@ -203,10 +203,22 @@ def arm_component(arm):
     arm = (arm or CALIBRATION_ARM).strip()
     if arm == CALIBRATION_ARM:
         return ""
-    if "/" in arm or "\\" in arm or arm.startswith("."):
+    # ONE LEVEL OF NESTING IS ALLOWED (2026-09-04): "row-insert/median" files a
+    # run at raw_runs/row-insert/median/<period>/<preset>/<name>, so a SET of
+    # arms that belong together -- the six fills of the 1984 seaward-row
+    # insert -- sit under one folder named for the set rather than loose
+    # under raw_runs/. The `arm` column of run_index.csv carries the same
+    # two-component string, and `arms_holding` enumerates that level too, so a
+    # nested arm round-trips through find_run_dir exactly as a flat one does.
+    # Deeper nesting is refused: two levels is a set and its members, and a
+    # third would be a taxonomy nobody has asked for.
+    parts = arm.split("/")
+    if ("\\" in arm or len(parts) > 2 or any(not p or p.startswith(".")
+                                              for p in parts)):
         raise ValueError(
-            f"arm {arm!r} must be a single path component -- it is joined "
-            f"onto the raw_runs root and must not escape it.")
+            f"arm {arm!r} must be one path component, or two joined by '/' "
+            f"for a set and its member -- it is joined onto the raw_runs "
+            f"root and must not escape it.")
     return arm
 
 
@@ -277,9 +289,19 @@ def arms_holding(raw_runs, run_name, period, preset):
     root = Path(raw_runs)
     if not root.is_dir():
         return []
-    candidates = [CALIBRATION_ARM] + sorted(
-        child.name for child in root.iterdir()
-        if child.is_dir() and not _PERIOD_DIR.fullmatch(child.name))
+    candidates = [CALIBRATION_ARM]
+    for child in sorted(root.iterdir()):
+        if not child.is_dir() or _PERIOD_DIR.fullmatch(child.name):
+            continue
+        candidates.append(child.name)
+        # A SET folder (see arm_component): its members are arms too. A
+        # child that holds a period directory is itself an arm and its
+        # subfolders are runs, not arms, so only look one level down where
+        # no period directory is present.
+        if not any(_PERIOD_DIR.fullmatch(g.name) for g in child.iterdir()
+                   if g.is_dir()):
+            candidates.extend(f"{child.name}/{g.name}"
+                              for g in sorted(child.iterdir()) if g.is_dir())
     return [arm for arm in candidates
             if run_dir_for(root, run_name, period, preset, arm).is_dir()]
 

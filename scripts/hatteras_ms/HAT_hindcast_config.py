@@ -61,7 +61,7 @@ from typing import Dict, List, Optional, Tuple
 
 __all__ = [
     "RUN_CONFIG", "RunConfig", "load_run_config", "describe", "preflight",
-    "ENV_PREFIX", "IGNORE_ENV", "SETTINGS_PATH",
+    "field_default", "ENV_PREFIX", "IGNORE_ENV", "SETTINGS_PATH",
 ]
 
 ENV_PREFIX = "HAT_"
@@ -118,6 +118,23 @@ def _as_opt_bool(raw) -> Optional[bool]:
     return _as_bool(raw)
 
 
+def _as_opt_float(raw) -> Optional[float]:
+    """Casts a float that may also be explicitly unset.
+
+    `null` in the yaml and "", "none" or "measured" in the environment mean
+    "no standard -- use the per-domain measured setbacks". Spelling it
+    "measured" is allowed because that is what the alternative IS, and a run
+    log reading `relocation_setback_m: measured` says what happened where a
+    bare `none` would only say what did not.
+    """
+    if raw is None:
+        return None
+    if isinstance(raw, str) and raw.strip().lower() in (
+            "", "none", "null", "measured"):
+        return None
+    return _as_float(raw)
+
+
 def _as_int(raw) -> int:
     return int(str(raw).strip())
 
@@ -157,7 +174,63 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     ("groin_trapping_rate_m_yr",     ("groin", "trapping_M"),      _as_float, 60.0),
     ("groin_deterioration_fraction", ("groin", "deterioration_f"), _as_float, 0.6),
 
+    # WAVE CLIMATE. All four are forcing, not management: they change what is
+    # simulated, so a run that moves any of them off the value below earns a
+    # `wave...` token in its name and lands in its own directory. Without that
+    # token a sensitivity cell would derive the SAME name as the matrix run it
+    # is being compared against, and the last one to finish would be left
+    # wearing the production name -- the failure output/groin_sweep/README.md
+    # documents for the rig sweep.
+    #
+    # The three below `hs` were literals in section 11 of the .py until
+    # 2026-09-01 (FIXED_WAVE_PERIOD and friends). They are fields now for one
+    # reason: scripts/sensitivity_analysis sweeps them, and a sweep that has to
+    # edit the model source between cells is the hand-editing failure this
+    # module exists to remove.
     ("hs",                           ("physics", "wave_height_Hs"), _as_float, 2.5),
+    ("wave_period_s",                ("physics", "wave_period_s"),  _as_float, 8.0),
+    ("wave_asymmetry",               ("physics", "wave_asymmetry"), _as_float, 0.7),
+    ("wave_angle_high_fraction",     ("physics", "wave_angle_high_fraction"),
+                                                                    _as_float, 0.1),
+
+    # WHERE A RELOCATED ROAD GOES, in metres behind the dune line. This is the
+    # RELOCATION TARGET ONLY -- the road's position at t = 0 always comes from
+    # the period's measured RoadSetback_<year>_dunestart.csv and is untouched
+    # by this.
+    #
+    # CASCADE has no separate parameter for the two: cascade_groin.py:689
+    # re-assigns `road_relocation_setback = road_setback` every year, so the
+    # target is whatever the road's MEASURED 1984/2004 offset happened to be.
+    # That is observed geometry, not a design standard, and it ranges 0-430 m
+    # across the 55 road domains. At GIS 85 and 86 it is 0 m, so a relocation
+    # puts the road back on the dune line with no clearance and the next 10 m
+    # of retreat re-fires it: 7 relocations for 7.3 cells of retreat at GIS 85,
+    # 6 for 6.0 at GIS 86. 13 of the 18 events in the 1984-2004 calibBE groin
+    # run are that ratchet.
+    #
+    # 20.0, decided 2026-09-01: "when the road is rebuilt, it is rebuilt to a
+    # standard clearance". CASCADE's own default is 30 (cascade_groin.py:135)
+    # and the matrix was first run at that, but 30 drowned NC-12 at GIS 11 in
+    # all eight 1984-2004 reloc arms. The cause is NOT the clearance itself --
+    # a prescribed historical relocation is stored as a DISPLACEMENT and
+    # `_apply_relocation` adds it to the model's CURRENT setback, so raising
+    # the emergent target raised where the 1999 event landed too: 0 + 77 = 77 m
+    # became 20 + 77 = 97 m, two cells further back, past the point where 24%
+    # of the bordering row is at or below MHW and `bulldoze` gives the road up.
+    # At 20 m the same event lands at 87 m and all eight drownings go away,
+    # with relocation counts across the twelve arms moving only 26 -> 28. See
+    # output/comparisons/relocation_standard_setback/.
+    #
+    # That coupling is a real weakness and 87 m clears the threshold by ONE
+    # CELL, so this value is not robust to different forcing. Anchoring
+    # `_apply_relocation` to an absolute setback would remove the coupling and
+    # let this be chosen on its merits alone; it has not been done.
+    #
+    # Set to `measured` for the pre-2026-08-31 behaviour, where every domain
+    # relocated to its own measured offset. Setbacks quantise to whole 10 m
+    # cells (`road_start = int(setback / 10)`), so use multiples of 10 -- 20
+    # and 29 are the same model.
+    ("relocation_setback_m",         ("relocation_setback_m",),   _as_opt_float, 20.0),
 
     # Management, not physics: a defence someone decides to build. Top-level
     # in the yaml for that reason, and not in the `scenario` table because no
@@ -186,6 +259,36 @@ _ENV_ALIASES: Dict[str, Tuple[str, ...]] = {
     "hs": ("HS",),
     "sandbags": ("SANDBAGS", "ENABLE_SANDBAG_PLACEMENT"),
 }
+
+
+def field_default(name: str):
+    """The code default for one field, ignoring the yaml and the environment.
+
+    This is the CALIBRATION value of a setting, not the value the current run
+    is using. `RUN_CONFIG.hs` answers "what is this run doing"; this answers
+    "what is it being varied away from", which is the question a sensitivity
+    sweep has to ask before it can tell a cell from the baseline.
+
+    Kept here rather than being re-typed in the sweep script because _FIELDS is
+    already the one home for these numbers. A second copy in a sweep would go
+    stale silently and every cell would then be measured against a value the
+    model no longer uses.
+
+    Args:
+        name: A RunConfig attribute name, e.g. "hs".
+
+    Returns:
+        The default for that field.
+
+    Raises:
+        KeyError: If no such field exists. A typo must not return None and be
+            mistaken for a field whose default is genuinely unset.
+    """
+    for field, _, _, default in _FIELDS:
+        if field == name:
+            return default
+    raise KeyError(f"no such setting: {name!r}; "
+                   f"have {sorted(f for f, _, _, _ in _FIELDS)}")
 
 
 # =============================================================================
@@ -277,6 +380,14 @@ class RunConfig:
         groin_deterioration_fraction: f, the post-deterioration floor as a
             fraction of M.
         hs: Significant wave height, m.
+        wave_period_s: Peak wave period, s.
+        wave_asymmetry: Fraction of waves from the left of shore-normal.
+        wave_angle_high_fraction: Fraction approaching at more than 45
+            degrees. With hs, the four make up the wave climate; a value
+            off its default earns the run a `wave...` name token.
+        relocation_setback_m: Where a relocated road is rebuilt, m behind
+            the dune line. None means each domain uses its own measured
+            offset. Off its default it earns an `rset` name token.
         sandbags: Whether sandbag placement is enabled.
         show_figures: True renders figures inline. None means the reader
             decides -- the .py uses False, the notebook True.

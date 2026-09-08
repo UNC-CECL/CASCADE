@@ -67,8 +67,12 @@ class RateComparisonConfig:
 DEFAULT_RATE_COMPARISON = RateComparisonConfig()
 
 
-def _plot_coastsat_overlay(ax, cs_series, loess_config, config, x_transform, gis_x_transform=None):
+def plot_coastsat_overlay(ax, cs_series, loess_config, config, x_transform, gis_x_transform=None):
     """Draw CoastSat raw-transect scatter + LOESS lines for one axis.
+
+    Public because the sensitivity figures draw many model curves on one axis
+    and need the SAME observed layer underneath them; a second implementation
+    there would let the two drift apart on styling and on the southern splice.
 
     Shared by both branches of plot_rate_comparison (REAL vs ALL domains);
     the annotated figure has extra features (fill_between, legend handle
@@ -200,7 +204,7 @@ def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
         ax.plot(gis_ids, real_rate, color=annotations.model_color, linewidth=2,
                 label=f"Model Hs={run.Hs} m", zorder=6)
 
-        _plot_coastsat_overlay(
+        plot_coastsat_overlay(
             ax, cs_series, loess_config, config,
             x_transform=lambda along_m: along_m / domains.domain_spacing_m + domains.first_gis_id,
         )
@@ -243,7 +247,7 @@ def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
         ax.plot(domain_numbers, change_rate, color=annotations.model_color,
                 linewidth=2, label=f"Model Hs={run.Hs} m", zorder=6)
 
-        _plot_coastsat_overlay(
+        plot_coastsat_overlay(
             ax, cs_series, loess_config, config,
             x_transform=lambda along_m: along_m / domains.domain_spacing_m + domains.start_real_index,
             gis_x_transform=lambda gis_x: gis_x - domains.first_gis_id + domains.start_real_index,

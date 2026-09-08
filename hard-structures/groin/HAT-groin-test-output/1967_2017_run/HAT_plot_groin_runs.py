@@ -55,8 +55,10 @@ OUTPUT_BASE_DIR  = os.path.join(PROJECT_BASE_DIR, "output", "raw_runs")
 
 # Run folder name(s) under output/raw_runs/. First entry is the baseline for Fig 4.
 RUNS = [
-    "HAT_1967_2018_no_BE_no_groin",
-    # "HAT_1967_2018_M60_deterioration_groin",
+    # Set 2026-08-30 to the run the sweep's best cell corresponds to, produced
+    # by HAT_groin_hindcast_1967_2017.py on 1984-start/v1 at M = 60, f = 0.6.
+    "HAT_1967_2018_edge_calibrated_groin",
+    # "HAT_1967_2018_no_BE_no_groin",
 ]
 
 # ── Geometry (must match the run) ──
@@ -99,11 +101,24 @@ SHOW_FIGS = True
 # change table -- 2017 itself only has 6/11 domains (D8-D12 missing), so 2018
 # (11/11, one year later than the model's actual endpoint) is used instead.
 OBSERVED_YEARS = [1978, 1987, 1997, 2008, 2018]
+# REPOINTED 2026-08-30. This named
+#     HAT-hindcast-groin-test/input_prep/shoreline_position/output/
+# which does not exist -- the table lives under HAT-groin-test-OUTPUT. The
+# script did not error: it fell through to "observed wet/dry change table not
+# found -- model only" and drew the model against nothing, which looks like a
+# finished figure. The sweep reads the same table from its own correct path
+# (HAT_groin_sweep_config.py:601), so the FIT was never affected; only these
+# figures were.
 WETDRY_CHANGE_TABLE = os.path.join(
-    PROJECT_BASE_DIR, "hard-structures", "groin", "HAT-hindcast-groin-test",
-    "input_prep", "shoreline_position", "output",
+    PROJECT_BASE_DIR, "hard-structures", "groin", "HAT-groin-test-output",
+    "shoreline_position_output",
     "Change_from_wetdry_1967_D2_D12.csv",
 )
+if not os.path.isfile(WETDRY_CHANGE_TABLE):
+    raise SystemExit(
+        "observed wet/dry table not found at " + WETDRY_CHANGE_TABLE
+        + " -- refusing to draw model-only figures that look like comparisons.")
+
 WETDRY_DOMAIN_COL = "Domain_ID"
 
 # --- Position-mode figures (match main hindcast convention) ---

@@ -90,7 +90,18 @@ from HAT_fullperiod_target import (  # noqa: E402
 )
 
 WORKER = _HERE.parent / "HAT_groin_sweep_worker.py"
-OUT_ROOT = PROJECT_BASE_DIR / "output" / "groin_sweep" / "fullperiod_1984_2024"
+# Scoped by wave climate: the worker reads HAT_SWEEP_HS, and without this a
+# run at another Hs would write its cells over the 2.5 m results that the
+# recorded -15.3 m decay and the M upper bound both came from.
+def _out_root():
+    raw = os.environ.get("HAT_SWEEP_HS", "").strip()
+    stem = "fullperiod_1984_2024"
+    if raw and float(raw) != 2.5:
+        stem += "_Hs" + f"{float(raw):g}".replace(".", "p")
+    return PROJECT_BASE_DIR / "output" / "groin_sweep" / stem
+
+
+OUT_ROOT = _out_root()
 RESULTS_CSV = OUT_ROOT / "results.csv"
 FIGURE_DIR = OUT_ROOT / "figures"
 
@@ -196,8 +207,13 @@ def main():
     parser.add_argument("--workers", type=int, default=6)
     parser.add_argument("--be1", type=float, default=None,
                         help="solved edge value for the continuous window")
-    parser.add_argument("--stage", choices=("coarse", "fine", "both"),
-                        default="both")
+    parser.add_argument("--stage",
+                        choices=("baseline", "coarse", "fine", "both"),
+                        default="both",
+                        help="baseline runs ONLY the M = 0 cell -- the no-groin "
+                             "reference the recorded fillet-decay diagnostic "
+                             "is measured on, and the cheapest way to test how "
+                             "a forcing change moves it")
     parser.add_argument("--collate-only", action="store_true")
     args = parser.parse_args()
 
@@ -210,6 +226,8 @@ def main():
           f"{max(observed.values()):+.1f} m")
 
     if not args.collate_only:
+        if args.stage == "baseline":
+            run_grid([(0.0, 0.0)], args.be1, args.workers, "baseline")
         if args.stage in ("coarse", "both"):
             cells = [(0.0, 0.0)] + [(M, f) for M in M_COARSE for f in F_COARSE]
             run_grid(cells, args.be1, args.workers, "coarse")

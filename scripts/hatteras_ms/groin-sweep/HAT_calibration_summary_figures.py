@@ -84,8 +84,12 @@ from HAT_fullperiod_target import observed_change_profile  # noqa: E402
 
 SWEEP = (PROJECT_BASE_DIR / "output" / "groin_sweep" / "1984_2004_edgeBE"
          / "sweep_results.jsonl")
-FULLPERIOD = (PROJECT_BASE_DIR / "output" / "archived_output_20260828"
-              / "groin_sweep" / "fullperiod_1984_2024" / "results.csv")
+# The LIVE full-period sweep, not the 2026-08-28 archive. This pointed into
+# `archived_output_20260828/`, which is a "do not use for analysis" tree, and
+# that one line was the only thing keeping 12 GB of superseded output
+# undeletable. The live file carries the same 16 columns and the same 43 rows.
+FULLPERIOD = (PROJECT_BASE_DIR / "output" / "groin_sweep"
+              / "fullperiod_1984_2024" / "results.csv")
 OUT = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
 
 PINNED_BE1 = -42.6

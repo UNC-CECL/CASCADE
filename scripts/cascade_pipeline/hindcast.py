@@ -654,6 +654,81 @@ def scenario_run_name(switches, stem, **overrides):
 
 
 # =============================================================================
+# SENSITIVITY NAME TOKENS
+# =============================================================================
+# A sensitivity cell differs from the matrix run beside it in ONE value, and
+# nothing in SCENARIO_SWITCHES sees that value -- the switches describe which
+# management modules were built, not what they were forced with. So without a
+# token of its own, an Hs = 1.2 cell derives the matrix run's exact name, lands
+# in its directory, and replaces its row in run_index.csv. That is the failure
+# output/groin_sweep/README.md records for the rig sweep, and it is silent.
+#
+# The token is emitted ONLY when the value is off its calibration default, so
+# every run that predates this file is named exactly as it was. A run at the
+# defaults has no token, which is correct: it IS the matrix run.
+
+# Field name -> the abbreviation that appears in the run name. Abbreviated
+# rather than spelled out because all four can move at once and
+# "..._wave_angle_high_fraction0p3" is longer than the rest of the name.
+_WAVE_TOKEN_FIELDS = (
+    ("hs", "Hs"),
+    ("wave_period_s", "Tp"),
+    ("wave_asymmetry", "asym"),
+    ("wave_angle_high_fraction", "ahf"),
+)
+
+
+def _number_token(value):
+    """A number, spelled so it can live in a directory name.
+
+    "." becomes "p" and a leading "-" becomes "m", because a name is split on
+    "_" and read by eye: 1.2 -> "1p2", 8.0 -> "8". %g drops the trailing zero
+    so 8.0 and 8 produce one token, not two names for one model.
+    """
+    return f"{float(value):g}".replace(".", "p").replace("-", "m")
+
+
+def wave_climate_token(values, defaults):
+    """The run-name token for a wave climate, or None if it is the default one.
+
+    Args:
+        values: field name -> value this run is using, for the four fields in
+            _WAVE_TOKEN_FIELDS.
+        defaults: the same keys -> the calibration default, from
+            HAT_hindcast_config.field_default.
+
+    Returns:
+        e.g. "waveHs1p2", or "waveHs1p2Tp10" if two moved, or None when every
+        value is at its default.
+    """
+    moved = [f"{abbrev}{_number_token(values[field])}"
+             for field, abbrev in _WAVE_TOKEN_FIELDS
+             if float(values[field]) != float(defaults[field])]
+    return "wave" + "".join(moved) if moved else None
+
+
+def relocation_setback_token(value, default):
+    """The run-name token for the relocation target, or None if default.
+
+    Spelled `rset`, not `reloc`: `reloc` is already the token for whether the
+    historical 1989/1999 events fire at all, and the two are independent -- a
+    run can have the events off and still relocate emergently.
+
+    Args:
+        value: relocation_setback_m for this run; None means "each domain
+            relocates to its own measured offset".
+        default: the calibration value, from field_default.
+
+    Returns:
+        e.g. "rset40", or "rsetmeasured" for the None case, or None when the
+        value is the default.
+    """
+    if value == default:
+        return None
+    return "rsetmeasured" if value is None else f"rset{_number_token(value)}"
+
+
+# =============================================================================
 # BUILD AND RUN
 # =============================================================================
 # The split is what lets the caller hold a built-but-unstepped Cascade. BRIE's
@@ -685,6 +760,7 @@ def build_cascade(
     enable_shoreline_offset, shoreline_offset,
     wave_height, wave_period, wave_asymmetry, wave_angle_high_fraction,
     berm_elevation, MHW, data_base, parameter_file, groin_callback=None,
+    relocation_setback_m=None,
 ):
     """Constructs a Cascade and attaches the groin, without stepping it.
 
@@ -725,6 +801,11 @@ def build_cascade(
         parameter_file: Barrier3D parameter yaml name, resolved by
             CASCADE inside data_base.
         groin_callback: A GroinCallback to attach, or None.
+        relocation_setback_m: Standard distance behind the dune line, in
+            metres, that a relocated roadway is rebuilt at. None leaves every
+            domain relocating to its own measured setback, which is CASCADE's
+            built-in behaviour. See the block below for why the two are
+            separable and why they were not.
 
     Returns:
         The constructed Cascade, before any update().
@@ -786,6 +867,45 @@ def build_cascade(
 
     if groin_callback is not None:
         cascade._groin_callback = groin_callback
+
+    # A STANDARD RELOCATION TARGET, WITHOUT DISTURBING THE INITIAL POSITION.
+    #
+    # `road_setback` does two jobs in CASCADE and they are not the same
+    # decision. It places the road at t = 0, and it is also the distance a
+    # relocated road is rebuilt at -- cascade_groin.py:689 re-assigns
+    # `roadways[i].road_relocation_setback = self._road_setback[i]` every year,
+    # so there is no separate parameter and no way to pass one.
+    #
+    # The two jobs are separable AFTER construction, though, and that is what
+    # this does. `cascade._road_setback` is read in exactly two places:
+    # cascade_groin.py:436, inside the constructor that has already run by the
+    # time we get here, and :689, the yearly relocation target. So overwriting
+    # it now changes the target and nothing else -- every road stays where the
+    # measured RoadSetback_<year>_dunestart.csv put it.
+    #
+    # WHY THIS IS WORTH DOING. The measured setback is observed 1984/2004
+    # geometry, not a design standard: 30 distinct values from 0 to 430 m
+    # across the 55 road domains, exactly one of which is 30 m. Using it as the
+    # relocation target means a domain's rebuild rule is an accident of where
+    # the road happened to sit. At GIS 85 and 86 the measured value is 0 m, so
+    # a relocation returns the road to the dune line with no clearance at all
+    # and the next 10 m of retreat re-fires it -- 7 relocations against 7.3
+    # cells of retreat at GIS 85, 6 against 6.0 at GIS 86, one per cell.
+    #
+    # WHAT IT DOES NOT CHANGE. Every domain's FIRST relocation still fires in
+    # exactly the year it fires today, because that depends only on the initial
+    # setback, which is untouched. What changes is where the road lands, and
+    # therefore every trigger after the first.
+    #
+    # ONE SIDE EFFECT WORTH KNOWING. `road_relocation_checks` refuses to
+    # relocate when `setback + 2 * road_width > average_barrier_width`, and
+    # sets relocation_break, which abandons the road. With measured targets up
+    # to 430 m that guard can fire; with a 20 m standard it effectively cannot.
+    # So a standard does not only move roads, it makes relocation POSSIBLE in
+    # narrow domains where the measured target would have been refused.
+    if relocation_setback_m is not None:
+        cascade._road_setback = (
+            [float(relocation_setback_m)] * len(cascade._road_setback))
 
     return cascade
 

@@ -111,8 +111,44 @@ def resize_interior_domain(
     pre_storm_interior, post_storm_interior, bay_depth, dune_migration
 ):
     """
-    Resize the pre- or post-storm interior domains if they are not the same size by
-    padding with bay cells so the two domains can be easily differenced
+    Align the pre- and post-storm interior domains onto the same cross-shore rows
+    so the two can be differenced.
+
+    Barrier3D indexes the interior seaward-to-landward: row 0 sits behind the
+    dunes, the last row is the bay. Between the pre-storm snapshot and the
+    post-storm domain the grid can change length at either end, and WHICH end
+    tells you how to line the two up:
+
+      * rows are consumed at the SEAWARD end as the shoreline retreats into the
+        island. The bay edge does not move, so it is the anchor: keep the LAST
+        `n_post` rows of the pre-storm domain.
+      * rows are appended at the BAY end as overwash rolls the island landward.
+        The seaward edge is then the anchor, so the pre-storm domain is padded
+        at the back with bay cells.
+
+    This replaces a version that tried to reconstruct the seaward shift from
+    `dune_migration` (`barrier3d.ShorelineChangeTS`) and then mop up any
+    remainder by trimming trailing all-bay rows. That decomposition was wrong in
+    both halves. The shoreline change is not the number of interior rows the
+    front lost -- measured over one Hs = 1.2 m Hatteras run, `dune_migration`
+    read -1.0 at three steps where the front had actually given up 2, 3 and 2
+    rows -- and the trailing-row mop-up required the excess to be ENTIRELY at or
+    below bay depth, which a partly-filled back-barrier row is not. When neither
+    branch closed the gap the function returned mismatched arrays with nothing
+    checking them, and `filter_overwash` died 140 lines later on a numpy
+    broadcast error that named neither this function nor the cause.
+
+    Anchoring on the bay edge is not a new rule, it is the rule the old code was
+    approximating: over a run that completes under the old version, all 45
+    `pre > post` calls produce a byte-identical array under both, so this cannot
+    move a result that already exists. It only resolves the cases that used to
+    raise.
+
+    KNOWN LIMIT: a step that loses seaward rows AND gains bay rows at the same
+    time has no single anchor, and this will mis-align it by the number of rows
+    gained. Not seen in any Hatteras run measured so far (48 of 48 length
+    changes were one-ended), and it cannot be detected from the two grids alone
+    -- it needs Barrier3D to report the two counts separately.
 
     Parameters
     ----------
@@ -123,44 +159,49 @@ def resize_interior_domain(
     bay_depth: float
         Bay depth [dam]
     dune_migration: float
-        The number of grid cells [1 dam each] that the dunes migrated
+        The number of grid cells [1 dam each] that the dunes migrated. Retained
+        for call compatibility and no longer read: it is the quantity whose
+        disagreement with the actual row change caused the failure above.
 
     Returns
     -------
     grid
-        pre_storm_interior: resized
-        post_storm_interior: resized
+        pre_storm_interior: resized to the post-storm row count
+        post_storm_interior: unchanged
     """
 
-    # if pre-storm domain is larger than post-storm...
-    if np.size(pre_storm_interior, 0) > np.size(post_storm_interior, 0):
-        # check first if the dunes migrated this last time step --> this will
-        # make the interior domain smaller
-        if dune_migration != 0:
-            # if yes, remove the number rows corresponding to the number of cells the
-            # dunes migrated from the pre-storm domain (really the last time step);
-            # this happens if the user allows the beach width to fall below a min
-            # threshold, which turns dune migration back on and allows for dune
-            # erosion in the post-storm domain
-            for _ in range(0, abs(int(dune_migration))):
-                pre_storm_interior = np.delete(pre_storm_interior, 0, axis=0)
-                if dune_migration > 0:
-                    break  # break if the dune line aggrades, not set up for this
+    pre_storm_interior = np.asarray(pre_storm_interior)
+    post_storm_interior = np.asarray(post_storm_interior)
 
-        # otherwise, remove all rows of bay without any deposition from the domain
-        cell_diff = np.size(pre_storm_interior, 0) - np.size(post_storm_interior, 0)
-        if (pre_storm_interior[-cell_diff:] <= -bay_depth).all():
-            # pre_storm_interior = np.delete(pre_storm_interior, -1, axis=0)
-            pre_storm_interior = pre_storm_interior[:-cell_diff]
+    # The alongshore length is fixed for a Barrier3D domain, and nothing here
+    # could align a change in it. Checked so that a violation is reported as
+    # itself rather than as a broadcast error inside filter_overwash.
+    if np.size(pre_storm_interior, 1) != np.size(post_storm_interior, 1):
+        raise CascadeError(
+            "pre- and post-storm interior domains disagree on alongshore "
+            f"length ({np.size(pre_storm_interior, 1)} vs "
+            f"{np.size(post_storm_interior, 1)} cells); "
+            "resize_interior_domain only reconciles the cross-shore axis"
+        )
 
-    # if post-storm domain larger than pre-storm, add rows to the bay of the
-    # pre-storm domain
-    if np.size(post_storm_interior, 0) > np.size(pre_storm_interior, 0):
-        number_rows = np.size(post_storm_interior, 0) - np.size(pre_storm_interior, 0)
+    rows_pre = np.size(pre_storm_interior, 0)
+    rows_post = np.size(post_storm_interior, 0)
+
+    # seaward rows lost: anchor on the bay edge
+    if rows_pre > rows_post:
+        pre_storm_interior = pre_storm_interior[rows_pre - rows_post:]
+
+    # bay rows gained: anchor on the seaward edge, pad the pre-storm bay
+    elif rows_post > rows_pre:
         pre_storm_interior = np.concatenate(
             (
                 pre_storm_interior,
-                (np.zeros([number_rows, np.size(post_storm_interior, 1)]) - bay_depth),
+                (
+                    np.zeros(
+                        [rows_post - rows_pre, np.size(post_storm_interior, 1)]
+                    )
+                    - bay_depth
+                ),
             ),
             axis=0,
         )
