@@ -54,6 +54,8 @@ def process_domain_file(
         year=2020,
         dune_loc_dict = {},
         interior_loc_dict = {},
+        set_dune_row_start=False,
+        dune_row_start=5,
         ) -> None:
     """Process a single domain elevation array and write topography and dune outputs."""
     arr = np.load(in_path).astype(float, copy=False)
@@ -109,11 +111,16 @@ def process_domain_file(
 
         # 1) First index where z > 0.5 m (MHW-relative)
         idx = np.where(prof > BEACH_START_THR_M)[0]
-        if idx.size == 0:
+        if idx.size == 0 and set_dune_row_start is False:
             # there are no cells above the beach threshold
             dune_loc_array.append(np.nan)  # just make the dune cell nan
         else:
-            start_beach = int(idx[0])
+            # either use the beach width or set dune row to locate dunes
+            if set_dune_row_start:
+                # set the search window based on the input dune row
+                start_beach = dune_row_start
+            else:
+                start_beach = int(idx[0])
 
             # 2) 8-pixel window landward of that point
             end_beach = min(start_beach + DUNE_WINDOW_PX, prof.size)
@@ -218,7 +225,7 @@ def process_domain_file(
 plt.rcParams["font.size"] = 14
 
 # --- PATHS --------------------------------------------------------------
-version = "v4"  # save version to append to folder name
+version = "final"  # save version to append to folder name
 year = 2004
 LOAD_PATH = r"C:\Users\agfig\model\final_domains\{0}_final_GIS_npys".format(year)
 TOPO_SAVE_PATH = r"C:\Users\agfig\model\final_domains\cascade_domains\domains_{0}_{1}".format(year, version)
@@ -238,6 +245,10 @@ TOPO_ROWS = 200            # number of inland rows to write
 ALONG_COLS = 50            # number of alongshore profiles
 OCEAN_LOC = "bottom"       # "top", "bottom", "left", or "right"
 shift_interior = False     # add cells to the beginning of the interior domain to keep it aligned
+set_dune_row_start = False
+dune_row_start = 0
+
+
 # use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
 
 # dictionaries for dune locations and interior locations
@@ -253,15 +264,22 @@ topo_dir.mkdir(parents=True, exist_ok=True)
 dune_dir.mkdir(parents=True, exist_ok=True)
 
 # Process domain elevation arrays: domain_#.npy
-# names = sorted(
-#     [
-#         n for n in os.listdir(load_dir)
-#         if n.endswith(".npy") and n.startswith("domain_")
-#         ]
-#     )
-# print(f"[info] Found {len(names)} domain file(s) in {load_dir}")
-# topo_domain = []
-names = ["domain_22.npy", "domain_23.npy", "domain_24.npy", "domain_25.npy"]
+names = sorted(
+    [
+        n for n in os.listdir(load_dir)
+        if n.endswith(".npy") and n.startswith("domain_")
+        ]
+    )
+print(f"[info] Found {len(names)} domain file(s) in {load_dir}")
+topo_domain = []
+# names = ["domain_3.npy", "domain_4.npy", "domain_16.npy", "domain_18.npy", "domain_19.npy", "domain_20.npy",
+#          "domain_21.npy", "domain_22.npy", "domain_23.npy", "domain_24.npy", "domain_25.npy"]  # v3
+# names = ["domain_20.npy", "domain_21.npy", "domain_22.npy", "domain_23.npy", "domain_24.npy", "domain_25.npy"]  # v4
+# names = ["domain_18.npy", "domain_19.npy", "domain_20.npy", "domain_21.npy"]  # v4-1 through 6-1
+# names = ["domain_19.npy", "domain_21.npy"]  # v7-1
+# names = ["domain_22.npy", "domain_23.npy", "domain_24.npy", "domain_25.npy"]  # v7
+# names = ["domain_23.npy", "domain_24.npy", "domain_25.npy"]  # v8
+# names = ["domain_3.npy"]  # v9
 for name in names:
     # use_const_interior = True
     # DUNE_WINDOW_PX = 3
@@ -295,19 +313,73 @@ for name in names:
     #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
     #     DUNE_WINDOW_PX = 5
     # ----- 2004 ---------------------------------------------------------------------------------------------
-    if "_22" in name or "_23" in name or "_24" in name or "_25" in name:
-        use_const_interior = False  # select a start row for the interior (most landward dune cell + 1)
-        DUNE_WINDOW_PX = 3
-        BEACH_START_THR_M = 1.25  # tried 1.0, not great
-    # elif "_20" in name or "_21" in name:
-    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
-    #     DUNE_WINDOW_PX = 5
-    # elif "_3" in name or "_4" in name:
-    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
-    #     DUNE_WINDOW_PX = 5
-    else:  # v2
+    if "_3" in name:
         use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+        DUNE_WINDOW_PX = 2
+        set_dune_row_start = True
+        dune_row_start = 8
+    elif "_4" in name:
+        use_const_interior = True
+        DUNE_WINDOW_PX = 5
+        BEACH_START_THR_M = 0.5
+        set_dune_row_start = False
+        dune_row_start = 0
+    elif "_12" in name:
+        use_const_interior = True
+        DUNE_WINDOW_PX = 10
+        BEACH_START_THR_M = 0.5
+        set_dune_row_start = False
+        dune_row_start = 0
+    elif "_18" in name:
+        use_const_interior = True
+        DUNE_WINDOW_PX = 2
+        set_dune_row_start = True
+        dune_row_start = 9
+    elif "_19" in name:
+        use_const_interior = True
+        DUNE_WINDOW_PX = 2
+        set_dune_row_start = True
+        dune_row_start = 7
+    elif "_20" in name:
+        use_const_interior = True
         DUNE_WINDOW_PX = 3
+        set_dune_row_start = True
+        dune_row_start = 9
+    elif "_21" in name:
+        use_const_interior = True
+        DUNE_WINDOW_PX = 4
+        set_dune_row_start = True
+        dune_row_start = 8
+    elif "_22" in name:
+        use_const_interior = False
+        DUNE_WINDOW_PX = 3
+        BEACH_START_THR_M = 1.24
+        set_dune_row_start = False
+        dune_row_start = 0
+    elif "_23" in name:
+        use_const_interior = False
+        DUNE_WINDOW_PX = 2
+        BEACH_START_THR_M = 1.6
+        set_dune_row_start = False
+        dune_row_start = 0
+    elif "_24" in name:
+        use_const_interior = False
+        DUNE_WINDOW_PX = 2
+        BEACH_START_THR_M = 1.5
+        set_dune_row_start = False
+        dune_row_start = 0
+    elif "_25" in name:
+        use_const_interior = False
+        DUNE_WINDOW_PX = 3
+        BEACH_START_THR_M = 1.1
+        set_dune_row_start = False
+        dune_row_start = 0
+    else:  # v2
+        use_const_interior = True
+        DUNE_WINDOW_PX = 3
+        BEACH_START_THR_M = 0.5
+        set_dune_row_start = False
+        dune_row_start = 0
 
     topo_domain, dune_domain, dune_dict, interior_dict = process_domain_file(
         load_dir / name,
@@ -326,6 +398,8 @@ for name in names:
         year=year,
         dune_loc_dict=dune_dict,
         interior_loc_dict=interior_dict,
+        set_dune_row_start=set_dune_row_start,
+        dune_row_start=dune_row_start,
         )
 
 # save the dictionaries with dune and interior locations
