@@ -88,6 +88,7 @@ from HAT_groin_sweep_config import (  # noqa: E402
     PERIOD_DIFFERENTIAL_IS_REACHABLE,
     PRESETS,
     sweep_output_dir,
+    joint_fit_paths,
 )
 
 OUTPUT_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep"
@@ -97,8 +98,7 @@ OUTPUT_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep"
 # both of which pin the top-level path. Moving it would break stage 6 silently.
 FIGURE_DIR = OUTPUT_DIR / "figures"
 FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-JOINT_JSON = OUTPUT_DIR / "joint_fit.json"
-JOINT_CSV = OUTPUT_DIR / "joint_fit.csv"
+JOINT_JSON, JOINT_CSV = joint_fit_paths()
 
 MODEL_COLOR = "#FF8C00"
 GROIN_COLOR = "#B71C1C"

@@ -48,6 +48,8 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
+from matplotlib.ticker import MaxNLocator
 
 from cascade_pipeline.annotations import DEFAULT_ANNOTATIONS
 from cascade_pipeline.domains import DEFAULT_DOMAINS
@@ -62,9 +64,96 @@ COLOR_ROAD = "#b03030"
 COLOR_RELOC = "#f0a202"
 COLOR_BAY = "#4a8fbf"
 # Deliberately not the star colour: a prescribed move and a module-triggered
-# one are different claims and must not share a glyph.
-COLOR_PRESCRIBED = "#00B0F0"
+# one are different claims and must not share a glyph. Purple rather than the
+# old cyan, which sat a few degrees of hue from the dune line and read as a
+# marker ON that line at GIF resolution.
+COLOR_PRESCRIBED = "#6a3d9a"
 COLOR_LAND = "#efe0bd"
+
+
+# =============================================================================
+# Figure style
+# =============================================================================
+# One place for the typographic and axis conventions every frame in this module
+# shares, so the animations read as journal figures rather than as default
+# matplotlib output. Applied per-artist rather than through rcParams: these
+# functions are called from long analysis scripts that draw their own figures,
+# and a module that mutates global rcParams as a side effect of being imported
+# is a debugging trap.
+
+FONT_TITLE = 11.5
+FONT_PANEL = 9.5
+FONT_AXIS = 9.5
+FONT_TICK = 8.5
+FONT_LEGEND = 8.0
+FONT_NOTE = 7.5
+
+INK = "#1a1a1a"
+INK_LIGHT = "#5a5a5a"
+INK_AXIS = "#444444"
+RULE = "#c9c9c9"
+GRID = "#b8b8b8"
+
+# Frames are sized to a target pixel WIDTH rather than to a fixed dpi: the
+# full-island window is twice the figure width of an event window, and a fixed
+# dpi makes its GIF four times the file size for no gain, since nobody views a
+# 3000 px animation at full scale.
+FRAME_TARGET_PX = 1500.0
+FRAME_DPI_RANGE = (110.0, 165.0)
+
+
+def _frame_dpi(width_in):
+    """Dots per inch that puts a figure of `width_in` near FRAME_TARGET_PX."""
+    lo, hi = FRAME_DPI_RANGE
+    return float(np.clip(FRAME_TARGET_PX / max(width_in, 1e-6), lo, hi))
+
+
+def _style_axes(ax, grid_axis="y", box=False):
+    """Applies the shared axis conventions in place.
+
+    Args:
+        ax: The axes to style.
+        grid_axis: "y", "x", "both", or None. Defaults to a HORIZONTAL-only
+            grid: the vertical reference lines these panels draw mark real
+            domains, and a vertical grid of the same weight competes with them.
+        box: True keeps all four spines, for a raster panel where the frame is
+            the edge of the data. False drops the top and right, which is the
+            convention for the line panels.
+    """
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(box)
+    for side in ax.spines:
+        ax.spines[side].set_linewidth(0.8)
+        ax.spines[side].set_color(INK_AXIS)
+    ax.tick_params(direction="out", length=3.5, width=0.8, color=INK_AXIS,
+                   labelsize=FONT_TICK, labelcolor=INK)
+    if grid_axis:
+        ax.grid(axis=grid_axis, color=GRID, lw=0.5, ls=(0, (3, 3)), alpha=0.6)
+    ax.set_axisbelow(True)
+
+
+def _figure_header(fig, left, right, title, year):
+    """Draws the title block: name on the left, year clock on the right.
+
+    Replaces a centred suptitle carrying both. A centred title moves as the
+    year text changes width and, in a GIF, that jitter is the first thing the
+    eye tracks; anchoring the two ends to the axes margins holds them still.
+
+    Args:
+        fig: The figure.
+        left: Left axes margin in figure coordinates.
+        right: Right axes margin in figure coordinates.
+        title: Figure title.
+        year: Calendar year of the frame.
+    """
+    y = 1.0 - 0.30 / fig.get_figheight()
+    fig.text(left, y, title, ha="left", va="center", fontsize=FONT_TITLE,
+             fontweight="bold", color=INK)
+    fig.text(right, y, str(year), ha="right", va="center", fontsize=FONT_TITLE,
+             fontweight="bold", color=INK)
+    gap = 0.20 / fig.get_figheight()
+    fig.add_artist(Line2D([left, right], [y - gap, y - gap], color=RULE,
+                          lw=0.8, transform=fig.transFigure))
 
 
 def _panel_series(shoreline_m, run, pad_lo, pad_hi):
@@ -180,11 +269,12 @@ def make_road_relocation_gif(
     # displacement before the manager updates. So arm B stars in the years its
     # module fired, not in 1989/1999, and the prescribed move shows only as a
     # step in the road. That was silently misleading, hence the separate
-    # prescribed marker and these labels.
-    label_a="relocations OFF  —  module decides   "
-            "[★ = module triggered a move this year]",
-    label_b="relocations ON  —  measured moves applied   "
-            "[★ = module ALSO fired this year]",
+    # prescribed marker -- a RING, drawn around the star rather than over it,
+    # so a year in which BOTH happened in the same domain still reads as both.
+    # The distinction lives in the legend now: it did not fit in these panel
+    # titles, where the two long labels collided across the gutter.
+    label_a="relocations off — the roadway module decides",
+    label_b="relocations on — measured moves applied",
     event_years=None,
     domains=DEFAULT_DOMAINS,
     annotations=DEFAULT_ANNOTATIONS,
@@ -283,23 +373,30 @@ def make_road_relocation_gif(
     frames = []
     for t in year_idx:
         year = run_a.start_year + t
-        fig, axes = plt.subplots(1, 2, figsize=(width, 5.2), dpi=110,
-                                 sharey=True)
+        fig, axes = plt.subplots(1, 2, figsize=(width, 5.4),
+                                 dpi=_frame_dpi(width), sharey=True)
         # Fixed margins (NOT bbox_inches="tight") so every frame is the same
         # size -- mismatched frame dimensions break GIF assembly. Left margin
-        # is wide enough for the y-label at every window width.
-        fig.subplots_adjust(left=0.105, right=0.985, top=0.855, bottom=0.225,
-                            wspace=0.06)
+        # is wide enough for the y-label at every window width; the bottom
+        # clears a two-row legend strip.
+        fig.subplots_adjust(left=0.095, right=0.985, top=0.845, bottom=0.235,
+                            wspace=0.05)
         fig.patch.set_facecolor("white")
 
         # The last flag marks the arm that CARRIES the prescribed moves.
-        panels = ((axes[0], series_a, road_a, reloc_a, label_a, bay_a, False),
-                  (axes[1], series_b, road_b, reloc_b, label_b, bay_b, True))
-        for ax, series, road, reloc, label, bay, is_prescribed_arm in panels:
+        panels = ((axes[0], "a", series_a, road_a, reloc_a, label_a,
+                   bay_a, False),
+                  (axes[1], "b", series_b, road_b, reloc_b, label_b,
+                   bay_b, True))
+        for (ax, letter, series, road, reloc, label,
+             bay, is_prescribed_arm) in panels:
             ax.set_facecolor("white")
             ax.set_ylim(*ylim)
             ax.set_xlim(gis_lo - 0.5, gis_hi + 0.5)
-            ax.grid(alpha=0.25, lw=0.6)
+            _style_axes(ax)
+            # Domains are integers; the default locator offers halves on a
+            # narrow window, which reads as a domain that does not exist.
+            ax.xaxis.set_major_locator(MaxNLocator(integer=True, nbins=8))
 
             for span_label, (d_lo, d_hi) in annotations.town_spans.items():
                 if d_hi < gis_lo or d_lo > gis_hi:
@@ -339,42 +436,59 @@ def make_road_relocation_gif(
                     if gis_lo <= gis <= gis_hi and year == ev_year:
                         col = gis - gis_lo
                         if np.isfinite(road[t][col]):
-                            ax.plot([x[col]], [road[t][col]], marker="D",
-                                    ls="none", ms=9, mfc=COLOR_PRESCRIBED,
-                                    mec="k", mew=0.8, zorder=7)
+                            ax.plot([x[col]], [road[t][col]], marker="o",
+                                    ls="none", ms=17, mfc="none",
+                                    mec=COLOR_PRESCRIBED, mew=1.8, zorder=7)
 
             for gis, ev_year in event_years.items():
                 if gis_lo <= gis <= gis_hi:
-                    ax.axvline(gis, color="0.45", ls=":", lw=0.9, zorder=2,
-                               alpha=0.9 if year >= ev_year else 0.35)
+                    ax.axvline(gis, color="#8a8a8a", ls=(0, (1, 2.5)), lw=0.9,
+                               zorder=2,
+                               alpha=0.85 if year >= ev_year else 0.30)
 
-            ax.set_title(label, fontsize=10)
-            ax.set_xlabel("alongshore domain (GIS)")
+            # Left-aligned and lettered, so the panels can be cited as (a) and
+            # (b) in a caption rather than by position.
+            ax.set_title(f"({letter})  {label}", loc="left",
+                         fontsize=FONT_PANEL, color=INK, pad=6)
+            ax.set_xlabel("alongshore domain (GIS)", fontsize=FONT_AXIS,
+                          color=INK, labelpad=6)
 
+        # No arrow glyph: the label is rotated 90 degrees and a triangle
+        # rotates with it, so it ends up pointing at the axis, not landward.
         axes[0].set_ylabel("cross-shore displacement since "
-                           f"{run_a.start_year} (m)\nlandward ▲")
+                           f"{run_a.start_year} (m)\nlandward positive",
+                           fontsize=FONT_AXIS, color=INK, labelpad=6)
+        # Every mark on the frame, including the two shaded bands, which
+        # were previously unexplained. Two rows of four, sized to fit the
+        # narrowest window this function draws (9 in): a legend entry that
+        # runs off the canvas is worse than no legend at all.
         handles = [
-            Line2D([], [], color=COLOR_DUNE, lw=1.9, label="ocean dune line"),
-            Line2D([], [], color=COLOR_BAY, lw=1.1, label="back-barrier"),
+            Line2D([], [], color=COLOR_DUNE, lw=1.9, label="ocean shoreline"),
+            Line2D([], [], color=COLOR_BAY, lw=1.1,
+                   label="back-barrier shoreline"),
+            Patch(facecolor=COLOR_LAND, edgecolor="none",
+                  label="barrier interior"),
             Line2D([], [], color=COLOR_ROAD, lw=1.7, label="NC-12"),
-            Line2D([], [], color="none", marker="*", ms=13,
-                   mfc=COLOR_RELOC, mec="k", mew=0.6,
-                   label="road moved this year (see panel title "
-                         "for which kind)"),
-            Line2D([], [], color="none", marker="D", ms=8,
-                   mfc=COLOR_PRESCRIBED, mec="k", mew=0.8,
-                   label="measured 1989/1999 move applied (lower panel only)"),
-            Line2D([], [], color="0.45", ls=":", lw=0.9,
-                   label="domain that relocated historically "
-                         "(bright once its year has passed)"),
+            Patch(facecolor=COLOR_ROAD, alpha=0.18, edgecolor="none",
+                  label="shoreline-to-road setback"),
+            Line2D([], [], color="none", marker="*", ms=12,
+                   mfc=COLOR_RELOC, mec="k", mew=0.5,
+                   label="module-triggered relocation"),
+            Line2D([], [], color="none", marker="o", ms=9, mfc="none",
+                   mec=COLOR_PRESCRIBED, mew=1.6,
+                   label="measured move applied (b)"),
+            Line2D([], [], color="#8a8a8a", ls=(0, (1, 2.5)), lw=0.9,
+                   label="relocated historically"),
         ]
         # Figure-level and below the axes: an in-axes legend sits on top of
         # the road wherever the setback is large, which is most of the island.
-        fig.legend(handles=handles, loc="lower center", ncol=4, fontsize=8,
-                   frameon=False, bbox_to_anchor=(0.5, 0.005))
+        fig.legend(handles=handles, loc="lower center", ncol=4,
+                   fontsize=FONT_LEGEND, frameon=False, labelcolor=INK,
+                   handlelength=1.7, handletextpad=0.6, columnspacing=1.4,
+                   borderaxespad=0.0, bbox_to_anchor=(0.5, 0.012))
 
-        head = title or f"NC-12 vs the dune line, GIS {gis_lo}-{gis_hi}"
-        fig.suptitle(f"{head}   |   {year}", fontsize=12, fontweight="bold")
+        head = title or f"NC-12 and the dune line, GIS {gis_lo}-{gis_hi}"
+        _figure_header(fig, 0.095, 0.985, head, year)
 
         buf = io.BytesIO()
         fig.savefig(buf, format="png", facecolor=fig.get_facecolor())
@@ -419,7 +533,7 @@ def make_all_road_gifs(arm_a, arm_b, road_series_a, road_series_b,
             arm_a, arm_b, road_series_a, road_series_b, gis_lo, gis_hi, path,
             back_a=back_a, back_b=back_b,
             event_years=event_years, gif_config=gif_config,
-            title=f"NC-12 vs the dune line — {name}", **kwargs)
+            title=f"NC-12 and the dune line — {name}", **kwargs)
         if result:
             written.append(result)
     return written
@@ -633,10 +747,9 @@ def _land_colormap():
 
 def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
                         gis_lo, gis_hi, out_path, start_year,
-                        label_a="relocations OFF  —  module decides   "
-                                "[★ = module triggered a move this year]",
-                        label_b="relocations ON  —  measured moves applied   "
-                                "[★ = module ALSO fired this year]",
+                        label_a="relocations off — the roadway module "
+                                "decides",
+                        label_b="relocations on — measured moves applied",
                         event_years=None, vmax_m=3.0,
                         domains=DEFAULT_DOMAINS,
                         gif_config=DEFAULT_GIF_CONFIG,
@@ -710,19 +823,18 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
     frames = []
     for t in year_idx:
         year = start_year + t
-        fig, axes = plt.subplots(2, 1, figsize=(width, 7.4), dpi=110,
-                                 sharex=True)
-        # bottom raised from 0.105 to clear the new legend strip and the
-        # planform note beneath it
-        fig.subplots_adjust(left=0.085, right=0.90, top=0.90, bottom=0.155,
-                            hspace=0.22)
+        fig, axes = plt.subplots(2, 1, figsize=(width, 7.6),
+                                 dpi=_frame_dpi(width), sharex=True)
+        # bottom clears the legend strip and the planform note beneath it
+        fig.subplots_adjust(left=0.085, right=0.90, top=0.885, bottom=0.155,
+                            hspace=0.20)
         fig.patch.set_facecolor("white")
 
         # Last flag marks the arm carrying the prescribed moves; see
         # COLOR_PRESCRIBED and the label note on make_road_relocation_gif.
-        for ax, cas, series, label, is_prescribed_arm in (
-                (axes[0], cascade_a, road_series_a, label_a, False),
-                (axes[1], cascade_b, road_series_b, label_b, True)):
+        for ax, letter, cas, series, label, is_prescribed_arm in (
+                (axes[0], "a", cascade_a, road_series_a, label_a, False),
+                (axes[1], "b", cascade_b, road_series_b, label_b, True)):
             grid = _island_raster(cas, t, gis_lo, gis_hi, domains,
                                   n_cross, x_ref)
             masked = np.ma.masked_invalid(np.ma.masked_less_equal(grid, 0.0))
@@ -742,9 +854,9 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
                     if gis_lo <= gis <= gis_hi and year == ev_year:
                         col = gis - gis_lo
                         if col < len(rows) and np.isfinite(rows[col]):
-                            ax.plot([x[col]], [rows[col]], marker="D",
-                                    ls="none", ms=9, mfc=COLOR_PRESCRIBED,
-                                    mec="k", mew=0.8, zorder=7)
+                            ax.plot([x[col]], [rows[col]], marker="o",
+                                    ls="none", ms=17, mfc="none",
+                                    mec=COLOR_PRESCRIBED, mew=1.8, zorder=7)
 
             cell = grid.shape[1] / n_dom
             ticks = np.arange(n_dom) * cell + cell / 2.0
@@ -752,24 +864,36 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
             ax.set_xticklabels(range(gis_lo, gis_hi + 1)[::max(1, n_dom // 12)])
             for gis in event_years:
                 if gis_lo <= gis <= gis_hi:
-                    ax.axvline((gis - gis_lo) * cell + cell / 2.0, color="0.25",
-                               ls=":", lw=0.9, zorder=4, alpha=0.75)
+                    ax.axvline((gis - gis_lo) * cell + cell / 2.0,
+                               color="#2b2b2b", ls=(0, (1, 2.5)), lw=0.9,
+                               zorder=4, alpha=0.7)
             # Cells are 10 m, so the axis is labelled in metres: "row 23"
             # is not a distance anyone can check against a map.
             step = max(10, int(round(n_cross / 5.0 / 10.0)) * 10)
             rows_at = np.arange(0, n_cross, step)
             ax.set_yticks(rows_at)
             ax.set_yticklabels((rows_at * 10).astype(int))
-            ax.set_ylabel("cross-shore (m)\nlandward →", fontsize=9)
+            # The raster keeps all four spines: here the frame IS the edge
+            # of the data, not decoration.
+            _style_axes(ax, grid_axis=None, box=True)
+            ax.set_ylabel("cross-shore (m)\nlandward positive",
+                          fontsize=FONT_AXIS, color=INK, labelpad=6)
             ax.text(0.006, 0.045, "ocean", transform=ax.transAxes,
-                    fontsize=7.5, color="0.30", style="italic")
+                    fontsize=FONT_NOTE, color=INK_LIGHT, style="italic")
             ax.text(0.006, 0.93, "sound", transform=ax.transAxes,
-                    fontsize=7.5, color="0.30", style="italic")
-            ax.set_title(label, fontsize=10, pad=4)
+                    fontsize=FONT_NOTE, color=INK_LIGHT, style="italic")
+            ax.set_title(f"({letter})  {label}", loc="left",
+                         fontsize=FONT_PANEL, color=INK, pad=5)
 
-        axes[1].set_xlabel("alongshore domain (GIS)")
-        cax = fig.add_axes([0.915, 0.155, 0.016, 0.745])
-        fig.colorbar(im, cax=cax, label="elevation (m MHW)")
+        axes[1].set_xlabel("alongshore domain (GIS)", fontsize=FONT_AXIS,
+                           color=INK, labelpad=6)
+        cax = fig.add_axes([0.915, 0.155, 0.014, 0.73])
+        cbar = fig.colorbar(im, cax=cax)
+        cbar.set_label("elevation (m MHW)", fontsize=FONT_AXIS, color=INK)
+        cbar.ax.tick_params(labelsize=FONT_TICK, width=0.8, length=3.0,
+                            color=INK_AXIS, labelcolor=INK)
+        cbar.outline.set_linewidth(0.8)
+        cbar.outline.set_edgecolor(INK_AXIS)
 
         # This panel had NO legend at all: the star and the dotted lines were
         # drawn unexplained, and a reader had no way to tell whether a star
@@ -778,21 +902,24 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
         # glyphs themselves.
         fig.legend(handles=[
             Line2D([], [], color=COLOR_ROAD, lw=2.0, label="NC-12"),
-            Line2D([], [], color="none", marker="*", ms=13,
-                   mfc=COLOR_RELOC, mec="k", mew=0.6,
-                   label="MODULE triggered a move this year (either panel)"),
-            Line2D([], [], color="none", marker="D", ms=8,
-                   mfc=COLOR_PRESCRIBED, mec="k", mew=0.8,
-                   label="MEASURED 1989/1999 move applied (lower panel)"),
-            Line2D([], [], color="0.25", ls=":", lw=0.9,
-                   label="domain that relocated historically"),
-        ], loc="lower center", ncol=3, fontsize=8, frameon=False,
-            bbox_to_anchor=(0.5, 0.038))
+            Line2D([], [], color="none", marker="*", ms=12,
+                   mfc=COLOR_RELOC, mec="k", mew=0.5,
+                   label="module-triggered relocation (either panel)"),
+            Line2D([], [], color="none", marker="o", ms=9, mfc="none",
+                   mec=COLOR_PRESCRIBED, mew=1.6,
+                   label="measured move applied (b)"),
+            Line2D([], [], color="#2b2b2b", ls=(0, (1, 2.5)), lw=0.9,
+                   label="relocated historically"),
+        ], loc="lower center", ncol=4, fontsize=FONT_LEGEND, frameon=False,
+            labelcolor=INK, handlelength=1.7, handletextpad=0.6,
+            columnspacing=1.4, borderaxespad=0.0,
+            bbox_to_anchor=(0.5, 0.042))
 
         head = title or f"Hatteras topography and NC-12, GIS {gis_lo}-{gis_hi}"
-        fig.suptitle(f"{head}   |   {year}", fontsize=12, fontweight="bold")
+        _figure_header(fig, 0.085, 0.93, head, year)
         if planform_note:
-            fig.text(0.085, 0.006, planform_note, fontsize=7.5, color="0.35")
+            fig.text(0.085, 0.008, planform_note, fontsize=FONT_NOTE,
+                     color=INK_LIGHT, style="italic")
 
         buf = io.BytesIO()
         fig.savefig(buf, format="png", facecolor=fig.get_facecolor())

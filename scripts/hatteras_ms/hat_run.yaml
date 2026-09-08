@@ -71,6 +71,34 @@ scenario: full_management
 # inert under `natural` and `beachdune_only`, and no event falls in 2004-2024.
 relocations: null
 
+# Where a RELOCATED roadway is rebuilt, in metres behind the dune line.
+#
+# This is the relocation TARGET only. The road's position at t = 0 always comes
+# from the period's measured RoadSetback_<year>_dunestart.csv and is untouched.
+#
+# CASCADE has no separate parameter for the two -- it re-assigns the relocation
+# target from the initial setback every year -- so without this, each domain
+# relocates to wherever its road happened to sit in 1984/2004: 30 different
+# values from 0 to 430 m, only one of which is 30 m. At GIS 85 and 86 it is 0 m,
+# so a relocation puts the road back on the dune line with no clearance and the
+# next 10 m of retreat re-fires it. 13 of the 18 relocation events in the
+# 1984-2004 calibBE groin run were that ratchet.
+#
+# 20, decided 2026-09-01. CASCADE's own default is 30 and the matrix was first
+# run at that, but 30 drowned NC-12 at GIS 11 in all eight 1984-2004 reloc arms:
+# a prescribed historical relocation is a DISPLACEMENT added to the model's
+# current setback, so a bigger emergent target also pushed the 1999 event back,
+# from 77 m to 97 m, past the depth where bulldoze gives the road up. 20 puts it
+# at 87 m and all eight drownings go away. Note 87 m clears the threshold by one
+# cell, so this is not robust to different forcing.
+#
+# Setbacks quantise to whole 10 m cells, so use multiples of 10.
+# A value other than 20 earns an `rset` token in the run name, for the same
+# reason the wave block below does.
+# Set to `measured` for the pre-2026-08-31 behaviour (each domain relocates to
+# its own measured offset).
+relocation_setback_m: 20
+
 # Which shoreline_offset variant is built:
 #   asrun       reproduces the historical metres/10 unit error, so every
 #               previously published run stays reproducible. The default.
@@ -124,10 +152,29 @@ groin:
 # not just what is emitted, so it reaches run_index.csv (column Hs_m) and a
 # changed value is recoverable from the index rather than only from this file.
 
+# A run that moves ANY of these off the value below earns a `wave...` token in
+# its run name (waveHs1p2, waveHs1p2Tp10) and lands in its own directory. That
+# is what lets scripts/sensitivity_analysis sweep them without overwriting the
+# matrix run it is comparing against. At the values below there is no token, so
+# every run made before 2026-09-01 keeps the name it already has.
+
 physics:
-  # Significant wave height, m. One value, no sweep -- a sweep over Hs is a
-  # separate script.
+  # Significant wave height, m. One value per run, no sweep here -- a sweep is
+  # a separate script that drives this file once per cell.
+  #
+  # 2.5 is the calibration value and is already high: the USGS hindcast mean
+  # for this coast is ~1.2-1.3 m and the morphologically effective height
+  # ~1.4-1.5 m. BRIE's alongshore diffusivity scales with it, so this is the
+  # strongest single lever on the transport the groin is fitted against.
   wave_height_Hs: 2.5
+  # Peak period, s.
+  wave_period_s: 8.0
+  # Fraction of waves approaching from the left of shore-normal. 0.7 is the
+  # standard Ashton-Murray asymmetry for this coast.
+  wave_asymmetry: 0.7
+  # Fraction approaching at more than 45 deg, i.e. the unstable, cuspate-
+  # forming end of the wave climate.
+  wave_angle_high_fraction: 0.1
 
 
 # --- management -------------------------------------------------------------
