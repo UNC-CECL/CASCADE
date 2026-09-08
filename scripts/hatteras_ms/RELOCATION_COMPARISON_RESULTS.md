@@ -12,8 +12,11 @@ clone; the numbers and the reasoning should.
 
 ```
 python scripts/hatteras_ms/HAT_relocation_comparison.py --preset <name>
-# groin arms need explicit arms, since ARM_SCENARIO_TOKENS pins "nogroin":
+# groin arms need explicit arms, since ARM_SCENARIO_TOKENS pins "nogroin".
+# Pass --preset too: it only labels the report header, and omitting it
+# writes "preset zeroBE" above a pair of calibBE arms.
 python scripts/hatteras_ms/HAT_relocation_comparison.py \
+  --preset <preset> \
   --arm-a output/raw_runs/1984_2004/<preset>/HAT_1984_2004_<preset>_road_bdm_groin \
   --arm-b output/raw_runs/1984_2004/<preset>/HAT_1984_2004_<preset>_road_reloc_bdm_groin \
   --out  output/comparisons/relocation_1984_2004/<preset>_groin
@@ -132,3 +135,35 @@ Provenance: all six reports carry a header naming both arms with their run
 times, topography product and git commit. The no-groin arms ran 2026-08-31
 10:57–10:59, the groin arms 11:30–11:32 (edgeBE, calibBE) and 15:12–15:17
 (zeroBE), all on `1984-start/v1`.
+
+
+---
+
+## 2026-09-04 — by interior (the row-insert set), groin on, calibBE
+
+Seven off/on pairs under `output/raw_runs/row-insert/<arm>/`, reports under
+`output/comparisons/relocation_1984_2004/row-insert/<arm>/`, digest in
+`output/experiments/row_insert_set/relocation/`. Versions per
+`1984-start/row-insert-scope/DUNE_TOPO_VERSION_GUIDE.md`.
+
+**All three of those locations were deleted on 2026-09-07**, together with the
+layers v4–v8 themselves (Hannah's decision: keep only unmodified topography).
+This table is the surviving record of the comparison; it cannot be re-run.
+
+| arm | version | ±2 yr | ±5 yr | hits at ±5 | false positives |
+|---|---|---|---|---|---|
+| original (v1 + v1-era setbacks) | v1 | 0.30 | 0.40 | 84 85 86 10 | 0/45 |
+| none (re-pick base) | v2 | 0.30 | 0.40 | 84 85 86 10 | 0/45 |
+| measured-floor | v4 | 0.00 | 0.30 | 86 10 11 | 0/45 |
+| median | v5 | 0.00 | 0.30 | 86 10 11 | 0/45 |
+| platform | v6 | 0.10 | 0.30 | 86 10 11 | 0/45 |
+| matched-crest | v7 | 0.00 | 0.30 | 86 10 11 | 0/45 |
+| matched-nocrest | v8 | 0.10 | 0.30 | 86 10 11 | 0/45 |
+
+`original` reproduces the calibBE groin-on row above (0.30 / 0.40) to the
+domain, so the 08-31 numbers stand on the renumbered tree. The 1984 row insert
+(v4-v8) moves every emergent relocation 3-10 years LATER (GIS 85 1985→1995,
+84 1987→1999, 86 1985→1992, 10 1998→2003, 11 1992→2004): the control's early
+hits at 84-86 were the setback-0 artefact, and the inserted interiors miss
+honestly. The FILL changes timing by at most one year. Mean absolute error
+under the inserts 5.6 yr, signed +5 (late). Full reading in the digest README.

@@ -6,8 +6,8 @@ Barrier3D domains for the **1984–2004** hindcast period.
 |---|---|
 | DEM | `0-elevation/2009-2014-1996/` — the baseline plus 1996 ALACE grafted wherever ALACE has data (no road boundary; rebuilt 2026-08-26) |
 | npy arrays | 90 domains, exported 2026-08-26 from the no-boundary DEM |
-| **what actually loads** | **`v3`** — see the warning below; it is *not* what `CURRENT` says |
-| picks | `picks/HAT_dune_search_windows_v3.json` |
+| **what loads** | **`v2`** — `CURRENT` says so, and since 2026-09-04 `CURRENT` decides |
+| picks | `picks/HAT_dune_search_windows_v2.json` (`_v1.json` for `v1`) |
 
 ## Layout
 
@@ -15,38 +15,44 @@ Barrier3D domains for the **1984–2004** hindcast period.
 npy-arrays/            domain_<N>.npy   m NAVD88, -10 nodata   <- extractor INPUT
 npy-arrays_survey/     domain_<N>.npy   provenance codes (0/1996/2009/2014)
 picks/                 the dune search windows that define each version
-dune-topo/             v1, v3, v4, v5 + CURRENT + a version index README
+dune-topo/             v1 (original picks), v2 (re-pick base = CURRENT) + index.
+                         The layers v3-v8 were deleted 2026-09-07
 dune-topo-experiments/ emptied 2026-09-03; two comparison figures + a record
 row-insert-scope/      EVERYTHING for the seaward-row insert:
                          duneline-shift/  the measurement of N (moved here)
-                         the scope report, the fill comparison, five figures
+                         the scope report, the fill argument, the figures, the
+                         version guide -- a record since the layers went
 aerial-review/         58 holes of 1996 imagery review, keyed on (domain, profile)
 ```
 
 ## Which topography loads
 
-**`CURRENT` says `v5`. `resolve_version()` returns `v3`.** The extractor's
-`VERSION` literal outranks the file, so `CURRENT` is currently inert. The full
-explanation, the version-by-version table, and the two steps needed to actually
-run on `v5` are in **`dune-topo/README.md`** — read that before pointing
+**`CURRENT` says `v2` and, since 2026-09-04, `CURRENT` decides** (until then the
+extractor's `VERSION` literal outranked it and the file was inert). The full
+explanation, the resolution order, and the two steps that changing the default
+takes are in **`dune-topo/README.md`**; the deleted layers are described in
+`row-insert-scope/DUNE_TOPO_VERSION_GUIDE.md` — read those before pointing
 anything at a version.
 
 Short form:
 
 | | what it is |
 |---|---|
-| `v1` | extraction on the OLD pick set. Superseded; kept for the `pea1989base` run arm |
-| **`v3`** | extraction on the 2026-09-02 re-pick. **The base everything resolves to** |
-| `v4` | `v3` + rows at the two relocation blocks (8 domains) |
-| `v5` | `v3` + rows at all 38 domains the measurement selects. **The one to take forward** |
+| `v1` | extraction on the ORIGINAL pick set (2026-08-27). The 2026-09-01 calibration tree and the `pea1989base` arm ran on it |
+| **`v2`** | extraction on the 2026-09-02 re-pick, NC-12 visible. **What `CURRENT` names and the road tree measures against** |
 
-`v2` was deleted 2026-09-03 — see `dune-topo/README.md`.
+Both are unmodified extractions: no rows added, no cell edited. **The layers
+`v3`–`v8`** (`v2` + rows inserted seaward where the 1984 dune line stood
+seaward of the 1996 one; one per scope/fill rule) **were deleted 2026-09-07**
+together with every run made on modified topography — Hannah's decision to
+keep only unmodified topography. `dune-topo/README.md` has the list; the
+guide has what each was. The pre-re-pick `v2` had gone on 2026-09-03.
 
 ## duneline-shift moved into row-insert-scope
 
 It is a measurement and its interpretation, and they now sit together.
 `row-insert-scope/duneline-shift/` holds `duneline_retreat_1984_1997.csv`,
-which is *where N comes from* — `HAT_insert_seaward_rows.py` builds v4 and v5
+which is *where N comes from* — `HAT_insert_seaward_rows.py` builds the layers
 from it. Delete it and no future insert version can be built. It is 301 KB.
 
 The path is resolved by **`hat_topo_version.duneline_shift_dir(product)`**, not
@@ -65,3 +71,8 @@ move a `(domain, profile)` key.
 
 Tidied again 2026-09-03: `dune-topo/v2` and three unreferenced experiment
 variants removed (19.3 MB), logged in `../archive_purge_20260903.csv`.
+
+Reduced to the two extractions 2026-09-07: `dune-topo/v3`–`v8` (29 MB) and
+every run on inserted or edited topography (8.7 GB under `output/`) removed;
+the calibBE `road_bdm_groin` calibration-tree run re-run on `v2`. Logged in
+`../archive_purge_20260907.csv`; lineage entry in `../LINEAGE.md`.

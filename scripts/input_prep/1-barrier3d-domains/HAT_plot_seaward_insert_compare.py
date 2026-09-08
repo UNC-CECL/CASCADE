@@ -1,14 +1,17 @@
 r"""
 HAT_plot_seaward_insert_compare.py
 ==============================================================================
-The three ways of fixing a negative 1984 setback, drawn against each other.
+Two 1984-start versions drawn against each other in a common frame.
 
-    v1   as extracted. GIS 85 setback -10 m, floored to 0, road relocated in
-         model year 1 by construction.
-    v2   N rows inserted behind the dune, N measured as the 1984-1997 dune-line
-         difference. Setback +50 m at GIS 85, island width unchanged.
+    Default pair since 2026-09-07 -- the two EXTRACTIONS, the only versions kept:
+    v1   the original pick set (2026-08-27). GIS 85 setback -10 m, floored to 0.
+    v2   the re-pick with NC-12 visible (2026-09-02); what CURRENT names.
 
-    Any other pair can be compared with --versions "a:label;b:label".
+    The script was written for the seaward-row insert (an extraction against a
+    layer with N rows inserted behind the dune, N measured as the 1984-1997
+    dune-line difference). The layers v3-v8 were deleted 2026-09-07 -- only
+    unmodified topography is kept -- so no insert pair exists on disk.
+    Any pair that does can be compared with --versions "a:label;b:label".
 
 Land width is drawn with BARRIER3D's definition (stop at the first cell at or
 below sea level), not a count of dry cells, so the panel agrees with what the
@@ -57,16 +60,16 @@ ROAD_WIDTH_M = 20.0
 
 # Drawn thick to thin, because the versions coincide over most of the profile
 # and equal linewidths would show only the last one drawn.
-# The default pair is v3 vs v5 (was v1 vs v2 until 2026-09-03, when v2 was
-# deleted -- v1/v2 are the pre-re-pick lineage and v3/v5 is its successor:
-# same comparison, current pick set). The three width variants this script was
-# originally written for -- v1_pad_measured, v1_translate_measured,
-# v1_none_measured -- were DELETED on 2026-09-02: they predated the island-width
-# fix, so all three behaved as `pad`, and no run was ever built from them. Pass
-# --versions to compare anything else.
+# The default pair is v1 vs v2, the two extractions (2026-09-07). It was v2 vs
+# v4 (base vs the measured+floor layer) until the layers were deleted that
+# day, and v1 vs v2 in the pre-re-pick numbering before 2026-09-03. The three
+# width variants this script was originally written for -- v1_pad_measured,
+# v1_translate_measured, v1_none_measured -- were DELETED on 2026-09-02: they
+# predated the island-width fix, so all three behaved as `pad`, and no run was
+# ever built from them. Pass --versions to compare anything else.
 VARIANTS = [
-    ("v3", "v3 (as extracted)", "0.55", "-", 6.0),
-    ("v5", "v5 (rows inserted behind the dune)", "#b2182b", "-", 2.0),
+    ("v1", "v1 (original picks, as extracted)", "0.55", "-", 6.0),
+    ("v2", "v2 (re-pick, as extracted; CURRENT)", "#b2182b", "-", 2.0),
 ]
 
 

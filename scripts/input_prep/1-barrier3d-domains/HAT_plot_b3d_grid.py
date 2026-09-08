@@ -61,6 +61,7 @@ REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 from hat_topo_version import array_name, dune_topo_root          # noqa: E402
 from hat_topo_version import insert_figures_dir  # noqa: E402
+from hat_topo_version import require_version  # noqa: E402
 from hat_figure_style import (apply_style, C, caption,           # noqa: E402
                               elevation_cmap, panel_title,
                               spines_for_image)
@@ -77,8 +78,10 @@ ROAD_CELLS = 2       # road_width 20 m / dy 10 m
 # Default v3 -> v5 since 2026-09-03. It was v3 -> v4, which meant a bare
 # run wrote HAT_b3d_grid_v3_v4.png - a figure deliberately deleted as
 # superseded, so the default recreated the thing the cleanup removed.
-# Pass --insert v4 for the scope comparison; v4 is still on disk.
-BASE_V, INS_V = "v3", "v5"
+# DELETED 2026-09-07 with every layer (only unmodified topography is kept);
+# the literal is kept as the name of what this drew. require_version() in
+# main() says so before any array is opened.
+BASE_V, INS_V = "v2", "v4"   # base was "v3" and the layer "v5" until the 2026-09-04 renumber
 
 
 def load_version(version, domain):
@@ -152,6 +155,7 @@ def main() -> None:
                     help="default is named for the two versions actually drawn")
     args = ap.parse_args()
     BASE_V, INS_V = args.base, args.insert
+    require_version("1984-start", INS_V, "the version with rows added; pass --insert")
     domains = [int(x) for x in args.domains.split(",")]
     apply_style()
 
@@ -234,7 +238,7 @@ def main() -> None:
     # Named for what it DRAWS, so it cannot silently replace another pair's
     # figure.
     out = Path(args.out) if args.out else (
-        insert_figures_dir("1984-start")
+        insert_figures_dir("1984-start", "4-result")
         / "HAT_b3d_grid_{}_{}{}.png".format(
             BASE_V, INS_V,
             "_GIS{}".format(domains[0]) if len(domains) == 1 else ""))

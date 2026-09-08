@@ -72,6 +72,7 @@ REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 from hat_topo_version import array_name, dune_topo_root            # noqa: E402
 from hat_topo_version import insert_figures_dir  # noqa: E402
+from hat_topo_version import require_version  # noqa: E402
 from hat_figure_style import (apply_style, C, caption,             # noqa: E402
                               elevation_cmap, panel_title,
                               spines_for_image)
@@ -80,7 +81,10 @@ from hat_figure_style import (apply_style, C, caption,             # noqa: E402
 # blocks it builds itself. Repointed v4 -> v5 on 2026-09-03: N is
 # identical at all ten block domains (verified), and v5 is the version
 # taken forward, so v4 no longer has to exist for this figure to build.
-BASE_V, INS_V = "v3", "v5"
+# DELETED 2026-09-07 with every layer (only unmodified topography is kept);
+# the literal is kept as the name of what this drew. require_version() in
+# main() says so before any array is opened.
+BASE_V, INS_V = "v2", "v4"   # base was "v3" and the layer "v5" until the 2026-09-04 renumber
 OFFSET_SCRIPT = (REPO / "scripts/input_prep/4-mgmt-forcings/road_offset"
                  / "1-produce/HAT_road_offset_from_dune_start.py")
 BERM_EL_M = 1.7
@@ -188,6 +192,7 @@ def main() -> None:
     ap.add_argument("--rows", type=int, default=26)
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
+    require_version("1984-start", INS_V, "INS_V, the layer that supplies N and the post-insert setback")
     D = args.domain
     apply_style()
 
@@ -309,7 +314,8 @@ def main() -> None:
                         left=0.135, right=0.985, hspace=0.30, wspace=0.10)
 
     out = Path(args.out) if args.out else (
-        insert_figures_dir("1984-start") / "HAT_fill_options_grid_GIS{}.png".format(D))
+        insert_figures_dir("1984-start", "3-fill")
+        / "HAT_fill_options_grid_GIS{}.png".format(D))
     fig.savefig(out)
     print("wrote {}".format(out))
 

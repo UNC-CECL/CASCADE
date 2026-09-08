@@ -52,12 +52,37 @@
 #
 # HOW THE VERSION IS CHOSEN, in order
 #   1. an explicit override= argument
-#   2. the extractor's VERSION, but only if the extractor is currently pointed
-#      at the SAME product - so "bump VERSION and the whole tree follows" still
-#      holds for the product you are actively working on
+#   2. HAT_TOPO_VERSION_<PRODUCT> in the environment, e.g.
+#      HAT_TOPO_VERSION_1984_START=v5. Product-scoped, because
+#      both products have a "v1" and a global override would silently resolve to
+#      a real but wrong directory for the other period.
 #   3. a CURRENT file in the product's dune-topo/ directory
-#   4. the only version present, if there is exactly one
+#   4. the extractor's VERSION, but only if the extractor is currently pointed
+#      at the SAME product
+#   5. the only version present, if there is exactly one
 #   otherwise: raise, listing what is on disk
+#
+#   CURRENT OUTRANKS THE EXTRACTOR LITERAL (swapped 2026-09-04). The extractor's
+#   VERSION says what the extractor WRITES; CURRENT says what everyone READS.
+#   They used to be one literal doing both jobs, which meant the only way to
+#   make a layered version (the 1984-start layers v3-v8 of 2026-09-04 -- built
+#   ON v2, never BY the extractor; DELETED 2026-09-07, only unmodified
+#   extractions are kept) the
+#   default was to edit the extractor to a name it would then overwrite on its
+#   next run. So CURRENT existed, recorded intent, and was inert; the 1984-start
+#   README carried a paragraph explaining that it did nothing. Now a product
+#   with a CURRENT file reads that version, and a product without one still
+#   follows the extractor ("bump VERSION and the tree follows" holds where no
+#   CURRENT has been written - 2004-start today). A fresh extraction with
+#   CURRENT still naming the old one is therefore NOT adopted until CURRENT is changed,
+#   and that is the point: extracting and adopting are two decisions.
+#
+#   THE ENV RULE OUTRANKS THE EXTRACTOR (added 2026-09-02, after it cost a run).
+#   A batch that selected its arm by writing CURRENT was ignored, because rule 3
+#   fired first and the extractor was sitting on the same product. Two arms of a
+#   three-arm experiment silently duplicated the control, exit code 0. CURRENT
+#   is a persistent shared DEFAULT; per-run selection needs something that does
+#   not mutate state every other reader sees.
 #
 # USAGE
 #     from hat_topo_version import topo_dirs
@@ -68,6 +93,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -239,6 +265,77 @@ def npy_dirs(product: str) -> tuple[Path, Path]:
     return d / "npy-arrays", d / "npy-arrays_survey"
 
 
+# THE SEAWARD-ROW-INSERT FOLDER, and the paths that hang off it.
+#
+# ONE definition, because eight plotting scripts and two measurement scripts
+# used to build these by hand - and two of them WRITE.
+#
+# THE LAYOUT IS NOT SYMMETRIC BETWEEN PRODUCTS, deliberately. On 2026-09-03
+# everything belonging to the 1984-start seaward-row insert - the measurement of
+# N, the scope report, the fill comparison and every figure - was consolidated
+# under `row-insert-scope/`. 2004-start has no insert work and no such folder,
+# so its dune-line measurements stay at the product root.
+#
+# The asymmetry is the price of that consolidation. It is contained here so a
+# caller cannot get it wrong, and so a future product does not inherit it by
+# accident: anything not listed gets the plain layout.
+_INSERT_SCOPE = {"1984-start": "row-insert-scope"}
+
+
+def insert_scope_dir(product: str) -> Path:
+    """The seaward-row-insert folder. Raises for a product that has none."""
+    sub = _INSERT_SCOPE.get(product)
+    if sub is None:
+        raise SystemExit(
+            f"\n{product!r} has no row-insert-scope folder. Only "
+            f"{', '.join(_INSERT_SCOPE)} carries the seaward-row insert.\n")
+    return product_dir(product) / sub
+
+
+# The four sections of the insert figures folder, in the order the argument
+# runs: where the insert lands, where N came from, what the rows are made of,
+# and what the result looks like. Numbered so a directory listing reads in that
+# order, matching the numbered layout of data/hatteras_init itself.
+#
+# WHY THIS IS HERE AND NOT IN THE PLOTTERS. Thirteen figures in one flat folder
+# is a dump, and a folder a plotter re-scatters on every run cannot be tidied by
+# moving files. Naming the section at the call site - and resolving it here - is
+# what makes the layout survive a re-plot. A section that is not one of these is
+# a typo, and raises rather than silently creating a new folder.
+INSERT_FIGURE_SECTIONS = ("1-scope", "2-measurement", "3-fill", "4-result")
+
+
+def insert_figures_dir(product: str, section: str | None = None) -> Path:
+    """Where insert figures are written, created if it does not exist.
+
+    `section` is one of INSERT_FIGURE_SECTIONS. Omit it for the folder root,
+    which holds only the README and the `frozen/` figures no script can rebuild
+    - no plotter should write there.
+
+    IT MAKES THE DIRECTORY. Not a pure lookup, deliberately: none of the eight
+    plotters calls mkdir, so before the sections existed they all depended on
+    `figures/` already being on disk and every one of them would have failed on
+    a fresh checkout. Doing it in the one place that knows the layout is one
+    change instead of eight, and it cannot be forgotten by a ninth plotter.
+    """
+    base = insert_scope_dir(product) / "figures"
+    if section is not None:
+        if section not in INSERT_FIGURE_SECTIONS:
+            raise SystemExit(
+                f"\n{section!r} is not an insert-figure section. Use one of "
+                f"{', '.join(INSERT_FIGURE_SECTIONS)}.\n")
+        base = base / section
+    base.mkdir(parents=True, exist_ok=True)
+    return base
+
+
+def duneline_shift_dir(product: str) -> Path:
+    """The duneline-shift directory for a product. Read AND write path."""
+    sub = _INSERT_SCOPE.get(product)
+    base = product_dir(product)
+    return (base / sub / "duneline-shift") if sub else (base / "duneline-shift")
+
+
 # "bridged" is written only by nodata_audit/HAT_bridge_dropouts.py: True where
 # an unsurveyed cell was filled by interpolation between measured neighbours.
 # It is a THIRD state, not a replacement for "nodata" - a bridged cell is still
@@ -304,17 +401,74 @@ def versions(product: str) -> list[str]:
                   if p.is_dir()) if root.is_dir() else []
 
 
+def require_version(product: str, version: str, what: str = "") -> Path:
+    """The version's directory, or a loud exit naming what IS on disk.
+
+    For scripts that carry a version LITERAL instead of resolving through
+    CURRENT -- the seaward-row-insert plotters name the layer they draw. On
+    2026-09-07 the 1984-start layers v3-v8 were deleted (Hannah's decision:
+    keep only unmodified topography), so a literal that was valid the day it
+    was written now names nothing. Failing here, before any array is opened,
+    says so in one line instead of a FileNotFoundError deep in a plotting loop.
+    """
+    d = dune_topo_root(product) / version
+    if d.is_dir():
+        return d
+    raise SystemExit(
+        f"\n{product}/dune-topo/{version} does not exist"
+        + (f" ({what})" if what else "") + ".\n"
+        f"versions present: {versions(product) or '(none)'}\n"
+        f"The 1984-start layers v3-v8 were deleted 2026-09-07 -- see\n"
+        f"  {DOMAIN_ROOT / 'archive_purge_20260907.csv'}\n"
+        f"Rebuild one with HAT_insert_seaward_rows.py --dst-version <name>, or "
+        f"pass a version that is on disk.\n")
+
+
+def env_override_name(product: str) -> str:
+    """The environment variable that pins ONE product's version.
+
+    Product-scoped on purpose. A bare HAT_TOPO_VERSION would apply to every
+    product, and BOTH products currently have a version called "v1" -- so a
+    global override set for one period would silently resolve to a real, wrong
+    directory for the other instead of failing.
+    """
+    return "HAT_TOPO_VERSION_" + product.upper().replace("-", "_")
+
+
 def resolve_version(product: str, override: str | None = None) -> str:
     if override:
         return override
-    ex_product, ex_version = _extractor_state()
-    if ex_version and ex_product == product:
-        return ex_version
+
+    # THE ENVIRONMENT OUTRANKS THE EXTRACTOR LITERAL, and it has to.
+    #
+    # Added 2026-09-02, after it cost a run. The crest experiment selected its
+    # arm by writing dune-topo/CURRENT, ran, and reported dune-topo\v1 -- the
+    # baseline -- because rule 2 below reads the extractor's VERSION literal
+    # FIRST and the extractor happened to be sitting on the same product. The
+    # CURRENT file was never consulted. Two arms of a three-arm experiment
+    # were duplicates of the control, exit code 0, no warning.
+    #
+    # That is this module's own failure mode, one level up: a caller that
+    # cannot say "use THIS version" without editing a source file will end up
+    # editing a source file, or will think it said it and be ignored. CURRENT
+    # is not usable for that -- it is a persistent, shared default, and a batch
+    # that sets it per arm is mutating global state for every other reader.
+    env_name = env_override_name(product)
+    from_env = os.environ.get(env_name, "").strip()
+    if from_env:
+        return from_env
+
+    # CURRENT BEFORE THE EXTRACTOR LITERAL (2026-09-04) - see the header. The
+    # literal is what the extractor writes; CURRENT is what is read. A product
+    # without a CURRENT file behaves exactly as before.
     current = dune_topo_root(product) / "CURRENT"
     if current.is_file():
         name = current.read_text(encoding="utf-8").strip()
         if name:
             return name
+    ex_product, ex_version = _extractor_state()
+    if ex_version and ex_product == product:
+        return ex_version
     avail = versions(product)
     if len(avail) == 1:
         return avail[0]
