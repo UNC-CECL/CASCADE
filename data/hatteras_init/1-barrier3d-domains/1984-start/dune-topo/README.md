@@ -6,12 +6,28 @@ Two versions, both **extractions** (all 90 domains cut from the DEM by
 ```
 v1   extraction, the ORIGINAL pick set (2026-08-27)        67 MB   the 2026-09-01 calibration tree and the pea1989base arm ran on it
 v2   extraction, re-pick with NC-12 visible (2026-09-02)   67 MB   THE BASE: what CURRENT says, what the road tree measures against
+v3   v2 + the 1984 footprint BEHIND THE ROAD, copy fill (2026-09-08)   a layer on v2, built by HAT_build_footprint_version.py; test arm `behindroad-copy`
 ```
+
+`v3` is the first version built on the new approach: the symmetric 1984
+footprint (rows added where the 1984 dune line lay seaward of the 1997 line,
+removed where it lay landward; 52 domains, +73/−47 rows) placed directly behind
+the model's two roadway rows and filled by copying the N rows that follow the
+insert point. Row 0 and the dune array do not move; **its setback CSV carries
+the 1984 setbacks** (`setback_new_m`: the road against the 1984 dune line,
+row-0 convention, no floor - GIS 85/86 go from 0 to 44/12 m); the block sits
+directly behind the road as placed, so the road is on measured cells and the
+added width is behind it. `CURRENT` still says
+`v2`. To run on it, set `HAT_TOPO_VERSION_1984_START=v3` AND copy its CSV over
+the forcing-tree one for the run. Its README and
+`HAT_footprint_audit.csv` say what was done to every domain; the argument is in
+`../row-insert-scope/`.
 
 | | full extraction? | pick set | rows added | own setback CSV |
 |---|---|---|---|---|
 | `v1` | yes, 90 domains | original (08-27), `../picks/HAT_dune_search_windows_v1.json` | no | yes — the v1-era measurement (GIS 85 −10 m floored to 0), saved 09-04 from the `dunestart_offset_ARCHIVE_1984start_v1` archive |
 | `v2` | yes, 90 domains | **re-pick (09-02)**, `../picks/HAT_dune_search_windows_v2.json` | no | yes — the road tree's measurement on v2, saved 09-04; byte-identical to the forcing-tree file |
+| `v3` | no — a layer on `v2` | v2's | **yes, both signs**: +73 rows at 29 domains behind NC-12 as placed, −47 rows at 23 | yes — the 1984 setbacks from the footprint table, no floor |
 
 Each version holds `topography/` (90 `domain_<N>_topography.npy` + nodata
 masks), `dunes/`, its settings CSV/XLSX, plan-view and offset figures, a

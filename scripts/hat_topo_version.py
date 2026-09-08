@@ -305,9 +305,10 @@ def insert_scope_dir(product: str) -> Path:
 # Renumbered 2026-09-07 to the order the argument runs: measure the dune-line
 # shift, turn it into a footprint of rows (two placements of the same rows:
 # seaward/, behind-road/; placement-independent figures at the step's root),
-# argue the fill, look at the result. The old 1-scope was retired that day -
-# everything it held was redrawn for the symmetric footprint - and the old
-# 3-fill / 4-result are the record of the deleted layers.
+# argue the fill, look at the result. 4-result is reserved: nothing has been
+# built and run on the footprint yet. The record figures of the deleted layers
+# sit in superseded-layers/ and the irreproducible pre-re-pick ones in frozen/;
+# neither is a section a plotter may write to (2026-09-08).
 INSERT_FIGURE_SECTIONS = ("1-measurement", "2-footprint-1984", "3-fill", "4-result")
 INSERT_FIGURE_SUBFOLDERS = {"2-footprint-1984": ("seaward", "behind-road")}
 

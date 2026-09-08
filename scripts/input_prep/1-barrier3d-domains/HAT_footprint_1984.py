@@ -41,17 +41,23 @@ TWO PLACEMENTS OF THE SAME ROWS (the second added 2026-09-07 evening)
                     AS MEASURED and put the rows BEHIND THE ROADWAY ROWS. The
                     roadway in the model is two straight rows at one setback
                     per domain - road_start = int(setback / 10) from row 0,
-                    ROAD_ROWS = 2 - so the block goes in at
-                        insert_row_behind_road = int(setback_model_now_m / 10) + 2
-                    cells landward of current row 0, directly behind the second
-                    road row. NOT behind the GIS mask's landward-most cell: that
-                    edge wanders 3-12 cells along a domain (kept as
-                    `road_land_max_cell` for the record) but the model never
-                    sees it. Removals take backbarrier rows at the same index.
-                    Row 0 and the road stay put, so the model keeps TODAY's
-                    setback (GIS 85/86 stay floored at 0, so their block starts
-                    at row 2). Domains with no model road (GIS 1-5, 8) fall
-                    back to the dune anchor.
+                    ROAD_ROWS = 2 - and the setback the model gets is the 1984
+                    one (setback_new_m, no floor), so the block goes in at
+                        insert_row_behind_road = int(setback_new_m / 10) + 2
+                    cells landward of row 0, directly behind the road AS PLACED
+                    (2026-09-08; until then it hung off today's setback and the
+                    re-set road landed on it). NOT behind the GIS mask's
+                    landward-most cell: that edge wanders 3-12 cells along a
+                    domain (kept as `road_land_max_cell` for the record) but the
+                    model never sees it. Removals take backbarrier rows at the
+                    same index. Row 0 and the dune stay put; the road sits on
+                    measured cells at its 1984 distance from the crest; the
+                    added width is behind it. GIS 85: road rows 4-5, block 6-10. Domains with no model road (GIS 1-5, 8) use the
+                    CREST ROW as the anchor instead (anchor "crest", 2026-09-08):
+                    the crest is the largest alongshore-median elevation in the
+                    first CREST_SEARCH_ROWS interior rows, and the block goes in
+                    at crest + 1, so the crest stays at the front and the copy
+                    fill takes what follows the block, as behind the road.
                     N is identical in both; only where the rows sit differs.
                     The missing ground was lost from the OCEAN side; this books
                     it on the sound side, which restores 1984 width but not the
@@ -157,6 +163,7 @@ ROWS_SHOWN = 200          # every interior row (the deepest domain has 189) plus
 DOMAINS_PER_STRIP = 30
 NEAR_ZERO_M = 10.0        # a new setback under one cell is flagged
 ROAD_ROWS = 2             # roadway_manager: road_width 20 m / dy 10 m, two straight rows
+CREST_SEARCH_ROWS = 10    # no-road domains: the crest row is looked for in the first rows
 
 
 # =============================================================================
@@ -211,7 +218,10 @@ def by_domain(prof: pd.DataFrame, topo_dir: Path, topo_name: str) -> pd.DataFram
         n = n_cells(med)
         p10, p90 = float(np.percentile(s, 10)), float(np.percentile(s, 90))
         f = topo_dir / array_name("topography", d)
-        rows_now = int(np.load(f).shape[0]) if f.is_file() else -1
+        z = np.load(f) if f.is_file() else None
+        rows_now = int(z.shape[0]) if z is not None else -1
+        crest_row = (int(np.argmax(np.median(z[:CREST_SEARCH_ROWS], axis=1)))
+                     if z is not None else -1)
         rec = {
             "domain": int(d), "topo_version": topo_name, "n_profiles": len(s),
             "shift_m_median": round(med, 1), "shift_m_p10": round(p10, 1),
@@ -224,34 +234,6 @@ def by_domain(prof: pd.DataFrame, topo_dir: Path, topo_name: str) -> pd.DataFram
         rd = g.dropna(subset=["road_seaward_cell"])
         rec["n_road_profiles"] = len(rd)
         flags = []
-        # --- the behind-the-road placement (advisor's suggestion) -----------
-        # Anchored on the MODEL's road: two straight rows at int(setback/10)
-        # from row 0, the setback the model receives today. The GIS mask's
-        # landward-most cell is recorded beside it but does not place the block.
-        sb_model = (float(dom_csv.loc[d, "setback_model_m"])
-                    if d in dom_csv.index else np.nan)
-        if np.isfinite(sb_model) and n != 0:
-            rec["insert_anchor"] = "road"
-            rec["road_land_max_cell"] = int(rd["road_land_rel"].max()) if len(rd) else np.nan
-            rec["road_land_spread_cells"] = (int(rec["road_land_max_cell"] - rd["road_land_rel"].median())
-                                             if len(rd) else np.nan)
-            rec["insert_row_behind_road"] = int(sb_model // CELL_M) + ROAD_ROWS
-        elif n != 0:
-            rec["insert_anchor"] = "dune"                  # no road: seaward edge
-            rec["road_land_max_cell"] = np.nan
-            rec["road_land_spread_cells"] = np.nan
-            rec["insert_row_behind_road"] = 0
-        else:
-            rec["insert_anchor"] = ""
-            rec["road_land_max_cell"] = np.nan
-            rec["road_land_spread_cells"] = np.nan
-            rec["insert_row_behind_road"] = np.nan
-        if n != 0:
-            r0 = int(rec["insert_row_behind_road"])
-            rec["rows_behind_road"] = (f"new rows {r0}..{r0 + n - 1}" if n > 0
-                                       else f"existing rows {r0}..{r0 - n - 1} removed")
-        else:
-            rec["rows_behind_road"] = ""
         if len(rd):
             sb_new = rd["setback_new_m"].to_numpy()
             rec["setback_v2_m"] = round(float(np.median(rd["setback_v2_m"])), 1)
@@ -268,6 +250,37 @@ def by_domain(prof: pd.DataFrame, topo_dir: Path, topo_name: str) -> pd.DataFram
             for k in ("setback_v2_m", "setback_new_m", "setback_new_p10_m",
                       "setback_new_p90_m", "setback_derived_m", "setback_raw84_m"):
                 rec[k] = np.nan
+        # --- the behind-the-road placement (advisor's suggestion) -----------
+        # Anchored on the MODEL's road AS PLACED under the 1984 setback (Hannah,
+        # 2026-09-08): two straight rows at int(setback_new/10) from row 0, the
+        # block directly behind them. Until then it hung off the road at TODAY's
+        # setback, and once the setback moved to its 1984 value the model's road
+        # landed on the block. The GIS mask's landward-most cell is recorded
+        # beside it but does not place the block.
+        sb_new = rec.get("setback_new_m", np.nan)
+        if np.isfinite(sb_new) and n != 0:
+            rec["insert_anchor"] = "road"
+            rec["road_land_max_cell"] = int(rd["road_land_rel"].max()) if len(rd) else np.nan
+            rec["road_land_spread_cells"] = (int(rec["road_land_max_cell"] - rd["road_land_rel"].median())
+                                             if len(rd) else np.nan)
+            rec["insert_row_behind_road"] = int(sb_new // CELL_M) + ROAD_ROWS
+        elif n != 0:
+            rec["insert_anchor"] = "crest"                 # no road: behind the crest row
+            rec["road_land_max_cell"] = np.nan
+            rec["road_land_spread_cells"] = np.nan
+            rec["insert_row_behind_road"] = crest_row + 1
+        else:
+            rec["insert_anchor"] = ""
+            rec["road_land_max_cell"] = np.nan
+            rec["road_land_spread_cells"] = np.nan
+            rec["insert_row_behind_road"] = np.nan
+        rec["crest_row"] = crest_row if rec["insert_anchor"] == "crest" else np.nan
+        if n != 0:
+            r0 = int(rec["insert_row_behind_road"])
+            rec["rows_behind_road"] = (f"new rows {r0}..{r0 + n - 1}" if n > 0
+                                       else f"existing rows {r0}..{r0 - n - 1} removed")
+        else:
+            rec["rows_behind_road"] = ""
         # what the model receives TODAY (floored, drowning-relocated), for the
         # before/after panel; NaN where the road is outside the managed span
         rec["setback_model_now_m"] = (float(dom_csv.loc[d, "setback_model_m"])
@@ -531,8 +544,16 @@ def fig_plan(tab: pd.DataFrame, anchor: str = "dune") -> Path:
                 on_road = (anchor == "road" and anchor_by.get(d) == "road"
                            and road_geom is not None)
                 if on_road:
-                    # the road's landward edge; the band runs landward for both signs
-                    xa = off.x_at_northings(road_geom, r.geometry, y) - ROAD_HALF_WIDTH_M
+                    # the road AS PLACED under the 1984 setback: the pavement's
+                    # landward edge moved landward by (setback_new - measured);
+                    # the band runs landward from there for both signs
+                    dx = float(tab.loc[d, "setback_new_m"] - tab.loc[d, "setback_v2_m"])
+                    xa = off.x_at_northings(road_geom, r.geometry, y) - ROAD_HALF_WIDTH_M - dx
+                    x_edge_all = xa - abs(n) * CELL_M
+                elif anchor == "road" and anchor_by.get(d) == "crest":
+                    # no road: behind the crest row, i.e. landward of the 1997
+                    # line (the map proxy for row 0), for both signs
+                    xa = samples["x1997"][m_]
                     x_edge_all = xa - abs(n) * CELL_M
                 else:
                     # cross-shore grows landward = west, so seaward is +x
@@ -788,16 +809,20 @@ def write_report(tab: pd.DataFrame, topo_name: str, figs: list[Path]) -> Path:
     w("THE SAME ROWS BEHIND THE ROAD (advisor's placement, decided 2026-09-07)")
     w("-" * 78)
     w("  Keep the crest-to-road strip as measured; put the rows directly behind the")
-    w("  MODEL's two roadway rows: insert_row = int(setback_model_now_m / 10) + 2,")
-    w("  cells landward of current row 0. Row 0 and the road stay put; the model")
-    w("  keeps TODAY's setback. Removals take backbarrier rows at the same index.")
-    w("  No model road -> dune anchor.")
+    w("  MODEL's two roadway rows AS PLACED under the 1984 setback:")
+    w("  insert_row = int(setback_new_m / 10) + 2, cells landward of row 0. Row 0 and")
+    w("  the dune stay put; the road sits on measured cells at its 1984 distance from")
+    w("  the crest; the added width is behind it. Removals at the same index.")
+    w("  No model road (GIS 1-5, 8): the block goes in behind the CREST row instead,")
+    w("  insert_row = crest_row + 1, the crest being the largest row-median elevation")
+    w("  in the first 10 interior rows (anchor 'crest', 2026-09-08).")
     w("")
-    w("  domain   N  anchor  model road rows  insert at  rows affected        (GIS mask landward-most cell)")
+    w("  domain   N  anchor  model road rows  insert at  rows affected        (GIS mask landward-most cell / crest row)")
     for d, r in tab[tab.n_cells != 0].iterrows():
-        rr = ("-" if not np.isfinite(r.setback_model_now_m) else
-              f"{int(r.setback_model_now_m // CELL_M)}..{int(r.setback_model_now_m // CELL_M) + ROAD_ROWS - 1}")
-        lm = "-" if not np.isfinite(r.road_land_max_cell) else f"{r.road_land_max_cell:+.0f}"
+        rr = ("-" if not np.isfinite(r.setback_new_m) else
+              f"{int(r.setback_new_m // CELL_M)}..{int(r.setback_new_m // CELL_M) + ROAD_ROWS - 1}")
+        lm = (f"{r.road_land_max_cell:+.0f}" if np.isfinite(r.road_land_max_cell) else
+              (f"crest {int(r.crest_row)}" if np.isfinite(r.crest_row) else "-"))
         w(f"  {d:6d} {r.n_cells:+3d}  {r.insert_anchor:5s}  {rr:>15s}  {int(r.insert_row_behind_road):9d}  "
           f"{r.rows_behind_road:36s} {lm:>8s}")
     w("")
@@ -865,11 +890,13 @@ def write_captions(tab: pd.DataFrame, topo_name: str) -> None:
             f"line is the truncation to whole cells. Communities as a bracket in the ocean margin, the "
             f"pier and groin as seaward marks; scale bar 500 m = 50 cells. {stats}",
         "HAT_footprint_1984_plan_behindroad.png":
-            f"As the seaward plan view, for the rows placed BEHIND NC-12: the true-scale band hangs off the "
-            f"landward edge of the 1984 road (its centreline offset 10 m landward, the road being 20 m wide) "
-            f"and runs landward by N \u00d7 10 m, red where rows are added behind the road and blue where "
+            f"As the seaward plan view, for the rows placed BEHIND NC-12 as the model places it under the 1984 "
+            f"setback: the true-scale band hangs off the landward edge of the road moved inland by the measured "
+            f"1984\u20131997 dune-line shift (the 1984 centreline offset 10 m for a 20 m road, then by the "
+            f"shift) and runs landward by N \u00d7 10 m, red where rows are added behind the road and blue where "
             f"backbarrier rows are removed there. Box shading, dune lines and NC-12 as before; domains without "
-            f"a model road (GIS 1\u20135, 8) keep the seaward band. The strip from the dune crest through the "
+            f"a model road (GIS 1\u20135, 8) hang the band landward of the 1997 line, behind the crest row. The "
+            f"strip from the dune crest through the "
             f"road is untouched in this placement, and the model keeps today's setback. {stats}",
         "HAT_footprint_1984_shift.png":
             f"Per domain, the median of the 50 paired per-profile differences between the 1997 and 1984 "

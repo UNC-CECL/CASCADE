@@ -314,6 +314,8 @@ def main() -> None:
                         left=0.135, right=0.985, hspace=0.30, wspace=0.10)
 
     out = Path(args.out) if args.out else (
+        # NOTE 2026-09-08: this figure now lives in figures/superseded-layers/; the script is
+        # guarded (no layer on disk), so nothing is written here until a layer is rebuilt.
         insert_figures_dir("1984-start", "3-fill")
         / "HAT_fill_options_grid_GIS{}.png".format(D))
     fig.savefig(out)

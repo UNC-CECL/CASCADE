@@ -1,0 +1,24 @@
+==============================================================================
+1984 FOOTPRINT, BEHIND THE ROAD, COPY FILL  --  v3
+==============================================================================
+
+written    : 2026-09-08 08:36
+source     : 1984-start/v2  (arrays read, never modified)
+footprint  : data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\footprint_1984_by_domain.csv
+builder    : scripts/input_prep/1-barrier3d-domains/HAT_build_footprint_version.py
+
+domains changed : 52 of 90   (+73 rows at 29 domains, -47 rows at 23 domains)
+
+RULES
+  N            trunc(median paired 1997-1984 dune-line shift / 10 m), both signs
+  insert point int(setback_new/10) + 2, behind the model's two roadway rows AS
+               PLACED under the 1984 setback; crest_row + 1 with no model road
+  add          block = a copy of the N rows that follow the insert point
+  remove       rows insert..insert+|N|-1 deleted
+  dune array   unchanged; row 0 unmoved
+  setback      setback_new_m: the 1984 road against the 1984 dune line, row-0
+               convention, unrounded, NO FLOOR (min 1.4 m). The model's
+               road therefore sits on measured cells at its 1984 distance from
+               the crest, and the block is directly behind it. v2's value
+               where the footprint has none.
+  nodata mask  the same row operation as the topography

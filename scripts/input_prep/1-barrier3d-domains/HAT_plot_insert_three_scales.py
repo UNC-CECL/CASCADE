@@ -246,6 +246,8 @@ def main() -> None:
     fig.subplots_adjust(top=1 - 0.62 / fig_h, bottom=1.20 / fig_h,   # caption 0.62 in + x-label 0.4 in + pad
                         left=0.075, right=0.975)
     out = Path(args.out) if args.out else (
+        # NOTE 2026-09-08: this figure now lives in figures/superseded-layers/; the script is
+        # guarded (no layer on disk), so nothing is written here until a layer is rebuilt.
         insert_figures_dir("1984-start", "4-result")
         / "HAT_insert_three_scales_{}_{}.png".format(BASE_VERSION, VERSION))
     fig.savefig(out, dpi=130)

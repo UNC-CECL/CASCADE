@@ -35,7 +35,8 @@ because the digitized lines trace the toe ~19 m seaward of row 0).
 | `figures/2-footprint-1984/seaward/HAT_footprint_1984_grid.png` | the Barrier3D grid, added rows blank in red, removed rows hatched blue, new row 0 and NC-12 marked |
 | `figures/2-footprint-1984/seaward/HAT_footprint_1984_plan.png` | plan view on the DEM with both dune lines and NC-12 1984 |
 | `figures/2-footprint-1984/behind-road/HAT_row_insert_grid_behindroad.png` | the same rows placed behind NC-12 (advisor's placement): crest-to-road strip as measured; columns `insert_anchor`, `insert_row_behind_road`, `rows_behind_road` in the table |
-| `fill_copy_by_domain.csv`, `HAT_fill_copy_scope.txt` | the COPY fill for the behind-road block (advisor, 2026-09-07): block = the N interior rows immediately landward of the insert point, copied cell by cell; window behind the crest where there is no road; per-domain window stats, seam and flags. Figures in `figures/3-fill/HAT_fill_copy_grid_GIS*.png` |
+| `fill_copy_by_domain.csv`, `HAT_fill_copy_scope.txt` | the COPY fill for the behind-road block (advisor, 2026-09-07): block = the N interior rows immediately landward of the insert point, copied cell by cell; window behind the crest where there is no road; per-domain window stats, seam and flags. Figures in `figures/3-fill/` (method, before/after, island-wide) |
+| `../dune-topo/v3/` | **the built version** (2026-09-08): v2 + this footprint behind the road, copy fill, the 1984 setbacks (no floor). Built by `HAT_build_footprint_version.py`; test run under arm `behindroad-copy`; result in `figures/4-result/` |
 | `figures/2-footprint-1984/HAT_footprint_1984_rows.png` | rows per domain, signed |
 | `figures/2-footprint-1984/HAT_footprint_1984_shift.png` | the paired shift with p10–p90 and the rows kept |
 | `figures/2-footprint-1984/seaward/HAT_footprint_1984_setback.png` | the road setback now and from the new row 0, per road domain |
@@ -55,9 +56,9 @@ agree with it; the add-only plan view was retired.
 | `figures/2-footprint-1984/seaward/HAT_row_insert_grid.png` | the Barrier3D grid as the model would hold it: added rows blank, removed rows hatched |
 | ~~`figures/HAT_row_insert_plan.png`~~ | retired 2026-09-07; the plan view is `figures/2-footprint-1984/seaward/HAT_footprint_1984_plan.png` |
 | `HAT_fill_options.txt` | **what to fill the inserted rows with** — the methodological options, worked at GIS 85 |
-| `figures/HAT_fill_options_grid_GIS85.png` | the two candidates and the control as Barrier3D domain views, with NC-12 at its actual road elevation |
-| `figures/HAT_fill_options_GIS85.png` | the fuller set as profiles — what the road sits on, how much is measured |
-| `figures/HAT_duneline_zoom_GIS83_87.png` | the two dune lines at true scale across GIS 83–87, each domain labelled with its offset and its row count |
+| `figures/superseded-layers/HAT_fill_options_grid_GIS85.png` | the two candidates and the control as Barrier3D domain views, with NC-12 at its actual road elevation |
+| `figures/superseded-layers/HAT_fill_options_GIS85.png` | the fuller set as profiles — what the road sits on, how much is measured |
+| `figures/1-measurement/HAT_duneline_zoom_GIS83_87.png` | the two dune lines at true scale across GIS 83–87, each domain labelled with its offset and its row count |
 
 ## Decided 2026-09-04 — `--fill median`, built as `dune-topo/v5` (deleted 2026-09-07)
 
@@ -81,7 +82,7 @@ Consolidated 2026-09-03.
 | `HAT_row_insert_scope.txt` | where the insert lands and how many cells |
 | `HAT_fill_options.txt` | what to fill the inserted rows with |
 | `row_insert_scope_by_domain.csv` | the scope table, machine-readable |
-| `figures/` | five figures: the grid, the plan view, the GIS 83-87 zoom, and the two fill comparisons |
+| `figures/` | numbered by step (measurement, footprint, fill) plus the deleted layers' record and the frozen pair; `figures/README.md` maps every file |
 
 What is deliberately NOT here: the topography itself. `dune-topo/v3` and `v4`
 are the built inserts, and they stay with the other topography versions because

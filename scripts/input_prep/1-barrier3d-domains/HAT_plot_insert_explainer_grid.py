@@ -221,6 +221,8 @@ def main() -> None:
              "row 0 moves seaward by N while NC-12 stays on the ground it was measured on; the old crest remains inside. The bottom "
              "row shows the five fills of those N rows; everything below the black line is identical in all five and identical to v2.",
              fontsize=8, wrap=True, va="bottom")
+    # NOTE 2026-09-08: this figure now lives in figures/superseded-layers/; the script is
+    # guarded (no layer on disk), so nothing is written here until a layer is rebuilt.
     out = Path(args.out) if args.out else insert_figures_dir(PRODUCT, "3-fill") / f"HAT_insert_explainer_grid_GIS{D}.png"
     fig.savefig(out, dpi=150)
     print("wrote", out)
