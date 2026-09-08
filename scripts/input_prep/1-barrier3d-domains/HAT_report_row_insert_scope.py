@@ -34,15 +34,16 @@ WHAT THIS ADDS TO THE FOOTPRINT SCRIPT
 
 THE PLAN VIEW moved. `HAT_row_insert_plan.png` (add-only) was retired the same
 day; the plan view of the symmetric footprint is
-`figures/1-scope/HAT_footprint_1984_plan.png`, drawn by HAT_footprint_1984.py.
+`figures/2-footprint-1984/seaward/HAT_footprint_1984_plan.png`, drawn by HAT_footprint_1984.py.
 Drawing it twice under two names would be one figure with two provenances.
 
 OUTPUTS (1-barrier3d-domains/1984-start/row-insert-scope/)
     HAT_row_insert_scope.txt          the report
     row_insert_scope_by_domain.csv    per domain: signed N, shift, the easting
                                       cross-check, rows now/after
-    figures/1-scope/HAT_row_insert_grid.png   the stacked grid, both signs
-    figures/1-scope/HAT_row_insert_rows.png   rows per domain, signed
+    figures/2-footprint-1984/seaward/HAT_row_insert_grid.png             the stacked grid, both signs
+    figures/2-footprint-1984/behind-road/HAT_row_insert_grid_behindroad.png  the same rows behind NC-12 (--anchor road)
+    figures/2-footprint-1984/HAT_row_insert_rows.png                     rows per domain, signed
 
 USAGE
     python HAT_footprint_1984.py          # first - writes the footprint table
@@ -86,7 +87,9 @@ from hat_figure_style import elevation_cmap  # noqa: E402  the elevation classes
 PRODUCT = "1984-start"
 START_DIR = INIT / "1-barrier3d-domains" / PRODUCT
 OUT_DIR = START_DIR / "row-insert-scope"
-FIG_DIR = insert_figures_dir(PRODUCT, "1-scope")
+FIG_DIR = insert_figures_dir(PRODUCT, "2-footprint-1984")            # rows per domain
+FIG_SEAWARD = insert_figures_dir(PRODUCT, "2-footprint-1984", "seaward")
+FIG_ROAD = insert_figures_dir(PRODUCT, "2-footprint-1984", "behind-road")
 
 # THE footprint: the one table every consumer of N reads (2026-09-07).
 FOOTPRINT_CSV = OUT_DIR / "footprint_1984_by_domain.csv"
@@ -97,6 +100,7 @@ EASTING_CSV = (INIT / "0-elevation" / "2009-2014-1996-duneline"
 CELL_M = 10.0
 DUNE_ROWS = 2            # DuneWidth; row 1 is a copy of row 0
 SENTINEL_DAM = -0.30     # the extractor's water sentinel, in decametres
+ANCHOR = "dune"          # set from --anchor; "road" draws the behind-the-road placement
 ROWS_SHOWN = 200         # every row: dune (2) + up to 7 added + the deepest interior (189); was 46 until 2026-09-07, when Hannah asked for the full domains
 DOMAINS_PER_STRIP = 30
 
@@ -187,15 +191,25 @@ def build_strip(domains, topo_dir, n_by):
     for d in domains:
         topo = np.load(topo_dir / array_name("topography", d))
         n = n_by[d]
+        ins = INSERT_ROW.get(d, 0) if ANCHOR == "road" else 0   # cells landward of row 0
         img = np.ones((ROWS_SHOWN, topo.shape[1], 4))
         img[:DUNE_ROWS] = dune_rgba
-        r0 = DUNE_ROWS + max(n, 0)
-        img[DUNE_ROWS:r0] = add_rgba
-        take = min(topo.shape[0], ROWS_SHOWN - r0)
+        z = cmap(norm(topo * CELL_M))
+        # rows 0..ins-1 stay where they are; the block goes in at `ins`; the
+        # rest of the interior is pushed down by N (add) or stays (remove -
+        # the caller hatches the rows that go)
+        head = min(ins, topo.shape[0])
+        img[DUNE_ROWS:DUNE_ROWS + head] = z[:head]
+        r0 = DUNE_ROWS + head + max(n, 0)
+        img[DUNE_ROWS + head:r0] = add_rgba
+        take = min(topo.shape[0] - head, ROWS_SHOWN - r0)
         if take > 0:
-            img[r0:r0 + take] = cmap(norm(topo[:take] * CELL_M))
+            img[r0:r0 + take] = z[head:head + take]
         cols.append(img)
     return np.concatenate(cols, axis=1)
+
+
+INSERT_ROW: dict = {}     # domain -> insert_row_behind_road, filled by main()
 
 
 def fig_grid(rows, topo_dir):
@@ -216,11 +230,12 @@ def fig_grid(rows, topo_dir):
         for d in g:
             n = n_by[d]
             ax.axvline(d + 0.5, color="0.55", linewidth=0.35, zorder=3)
+            ins = INSERT_ROW.get(d, 0) if ANCHOR == "road" else 0
             if n < 0:
-                # the existing rows 0..|n|-1, which the model would not hold
-                ax.add_patch(Rectangle((d - 0.5, DUNE_ROWS), 1.0, -n, facecolor="none",
+                # the existing rows ins..ins+|n|-1, which the model would not hold
+                ax.add_patch(Rectangle((d - 0.5, DUNE_ROWS + ins), 1.0, -n, facecolor="none",
                                        edgecolor=C_REM, hatch="//////", linewidth=0.0, zorder=4))
-                ax.add_patch(Rectangle((d - 0.5, DUNE_ROWS), 1.0, -n, facecolor="none",
+                ax.add_patch(Rectangle((d - 0.5, DUNE_ROWS + ins), 1.0, -n, facecolor="none",
                                        edgecolor=C_REM, linewidth=0.6, zorder=4))
             if n:
                 ax.text(d, -0.9, f"{n:+d}", fontsize=7.2, ha="center", va="bottom",
@@ -230,7 +245,9 @@ def fig_grid(rows, topo_dir):
             # rows removed it stays where the surviving rows put it.
             sb = sb_by[d]
             if np.isfinite(sb):
-                y = DUNE_ROWS + max(n, 0) + sb / CELL_M
+                # dune anchor: the road is pushed down with the interior. Road
+                # anchor: the rows go in BEHIND it, so it stays put.
+                y = DUNE_ROWS + (max(n, 0) if ANCHOR == "dune" else 0) + sb / CELL_M
                 ax.add_patch(Rectangle((d - 0.32, y), 0.64, 2.0, facecolor=C_ROAD,
                                        edgecolor="none", zorder=7))
         _community_bar(ax, -5.5, g[0] - 0.5, g[-1] + 0.5)
@@ -263,7 +280,8 @@ def fig_grid(rows, topo_dir):
                 Line2D([0], [0], color=off.HATTERAS_ANNOTATIONS.color_town_span, lw=4.0, label="community")]
     fig.legend(handles=handles, loc="outside lower center", ncol=7, fontsize=8,
                title="existing interior, elevation classes (m MHW)", title_fontsize=8)
-    p = FIG_DIR / "HAT_row_insert_grid.png"
+    p = (FIG_SEAWARD / "HAT_row_insert_grid.png" if ANCHOR == "dune"
+         else FIG_ROAD / "HAT_row_insert_grid_behindroad.png")
     fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
@@ -329,7 +347,7 @@ def write_report(rows, topo_name, path, fig_path):
     w(f"cross-check    {EASTING_CSV.relative_to(REPO)}")
     w(f"figure         {fig_path.relative_to(REPO)}")
     w(f"figure         {(FIG_DIR / 'HAT_row_insert_rows.png').relative_to(REPO)}")
-    w(f"plan view      figures/1-scope/HAT_footprint_1984_plan.png  (HAT_footprint_1984.py)")
+    w(f"plan view      figures/2-footprint-1984/seaward/HAT_footprint_1984_plan.png  (HAT_footprint_1984.py)")
     w("")
     w("SCOPE ONLY. No array is written, no elevation is fabricated. This says")
     w("WHERE the interior grows or shrinks and by HOW MANY cells, so the fill")
@@ -426,7 +444,9 @@ def write_report(rows, topo_name, path, fig_path):
 # MAIN
 # =============================================================================
 
-def main(base=None):
+def main(base=None, anchor="dune"):
+    global ANCHOR
+    ANCHOR = anchor
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     topo_dir, _dune_dir, topo_name = topo_dirs(PRODUCT, override=base)
     print(f"topography : {PRODUCT} / {topo_name}")
@@ -456,8 +476,12 @@ def main(base=None):
             "rows_now": rows_now,
             "rows_after": rows_now + n,
             "setback_v2_m": _f(r.get("setback_v2_m", "")),
+            "insert_anchor": r.get("insert_anchor", ""),
+            "insert_row_behind_road": _f(r.get("insert_row_behind_road", "")),
             "modified": int(n != 0),
         })
+        if np.isfinite(_f(r.get("insert_row_behind_road", ""))):
+            INSERT_ROW[d] = int(_f(r["insert_row_behind_road"]))
 
     cp = OUT_DIR / "row_insert_scope_by_domain.csv"
     with open(cp, "w", newline="") as fh:
@@ -466,6 +490,11 @@ def main(base=None):
         wr.writerows(rows)
 
     fig = fig_grid(rows, topo_dir)
+    if anchor == "road":
+        # the table, the rows figure and the report are the same for both
+        # placements (N does not change); only the grid is redrawn
+        print(f"\n  figure : {fig}   (rows behind the road; table/report unchanged)")
+        return
     fig_bars = fig_rows(rows)
     tp = OUT_DIR / "HAT_row_insert_scope.txt"
     text = write_report(rows, topo_name, tp, fig)
@@ -481,4 +510,10 @@ if __name__ == "__main__":
                     help="topography version to read as the existing grid. "
                          "Default: whatever hat_topo_version resolves. N does "
                          "not depend on it; rows_now and the figure do.")
-    main(ap.parse_args().base)
+    ap.add_argument("--anchor", choices=("dune", "road"), default="dune",
+                    help="dune: rows at the seaward edge (row 0 -> the 1984 line). "
+                         "road: the same rows BEHIND the road, the crest-to-road "
+                         "strip kept as measured (advisor's placement, 2026-09-07); "
+                         "writes HAT_row_insert_grid_behindroad.png only")
+    a = ap.parse_args()
+    main(a.base, a.anchor)

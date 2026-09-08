@@ -1,13 +1,13 @@
 ==============================================================================
 1984 ROW FOOTPRINT - SCOPE REPORT (symmetric: rows added AND removed)
 ==============================================================================
-written        2026-09-07 21:25
+written        2026-09-07 22:10
 topography     1984-start / v2   (read, never modified)
 N from         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\footprint_1984_by_domain.csv   (HAT_footprint_1984.py)
 cross-check    data\hatteras_init\0-elevation\2009-2014-1996-duneline\duneline_offset_by_domain.csv
-figure         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\figures\1-scope\HAT_row_insert_grid.png
-figure         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\figures\1-scope\HAT_row_insert_rows.png
-plan view      figures/1-scope/HAT_footprint_1984_plan.png  (HAT_footprint_1984.py)
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\figures\2-footprint-1984\seaward\HAT_row_insert_grid.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\figures\2-footprint-1984\HAT_row_insert_rows.png
+plan view      figures/2-footprint-1984/seaward/HAT_footprint_1984_plan.png  (HAT_footprint_1984.py)
 
 SCOPE ONLY. No array is written, no elevation is fabricated. This says
 WHERE the interior grows or shrinks and by HOW MANY cells, so the fill

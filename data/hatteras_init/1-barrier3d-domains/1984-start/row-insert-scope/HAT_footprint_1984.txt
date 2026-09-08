@@ -1,14 +1,14 @@
 ==============================================================================
 1984 FOOTPRINT - where the interior grows or shrinks to stand at the 1984 dune line
 ==============================================================================
-written        2026-09-07 21:45
+written        2026-09-07 22:10
 topography     1984-start / v2   (read, never modified)
 shift from     data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\duneline-shift  (per-profile files, PAIRED)
 road from      data\hatteras_init\4-mgmt-forcing\road_offset\dunestart_offset\1984  (per-profile file, same frame)
-figure         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\figures\1-scope\HAT_footprint_1984_grid.png
-figure         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\figures\1-scope\HAT_footprint_1984_rows.png
-figure         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\figures\1-scope\HAT_footprint_1984_shift.png
-figure         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\figures\1-scope\HAT_footprint_1984_setback.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\figures\2-footprint-1984\seaward\HAT_footprint_1984_grid.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\figures\2-footprint-1984\HAT_footprint_1984_rows.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\figures\2-footprint-1984\HAT_footprint_1984_shift.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\figures\2-footprint-1984\seaward\HAT_footprint_1984_setback.png
 
 SCOPE ONLY. No array written, no fill chosen, no model-facing CSV touched.
 
@@ -135,6 +135,72 @@ ROAD SETBACK, row-0 convention (metres landward of interior row 0)
       88  +0     6.3    1.0   14.1    6.3   160.0   166.8  134.0  183.0  
       89  +0    -8.4  -10.5   -1.0   -8.4   160.0   152.2  149.5  179.0  
       90  +0    -0.9   -3.4    1.5   -0.9   160.0   154.1  139.1  161.5  
+
+------------------------------------------------------------------------------
+THE SAME ROWS BEHIND THE ROAD (advisor's placement, decided 2026-09-07)
+------------------------------------------------------------------------------
+  Keep the crest-to-road strip as measured; put the rows at the first row
+  landward of the road's landward-most cell on any profile. Row 0 and the
+  road stay put; the model keeps TODAY's setback (setback_model_now_m).
+  Removals take backbarrier rows at the same index. No road -> dune anchor.
+
+  domain   N  anchor  road cells (rel row 0)  insert at  rows affected
+       1  -1  dune                      -          0  existing rows 0..0 removed
+       2  +1  dune                      -          0  new rows 0..0
+       3  +3  dune                      -          0  new rows 0..2
+       4  +2  dune                      -          0  new rows 0..1
+       5  +6  dune                      -          0  new rows 0..5
+       8  -1  dune                      -          0  existing rows 0..0 removed
+      11  +1  road               +1.0..+3          4  new rows 4..4
+      12  +1  road               +2.0..+4          5  new rows 5..5
+      15  -1  road               +6.0..+8          9  existing rows 9..9 removed
+      16  -4  road               +4.0..+8          9  existing rows 9..12 removed
+      22  -1  road             +17.0..+24         25  existing rows 25..25 removed
+      23  -1  road             +23.0..+25         26  existing rows 26..26 removed
+      30  -1  road             +25.0..+27         28  existing rows 28..28 removed
+      31  -1  road             +23.0..+26         27  existing rows 27..27 removed
+      32  -1  road             +21.0..+24         25  existing rows 25..25 removed
+      33  -1  road             +18.0..+23         24  existing rows 24..24 removed
+      34  -1  road             +21.0..+25         26  existing rows 26..26 removed
+      35  -1  road             +19.5..+22         23  existing rows 23..23 removed
+      36  -1  road             +35.0..+41         42  existing rows 42..42 removed
+      37  -1  road             +33.0..+37         38  existing rows 38..38 removed
+      38  -2  road             +30.0..+34         35  existing rows 35..36 removed
+      45  +1  road             +15.0..+20         21  new rows 21..21
+      46  +1  road             +15.0..+20         21  new rows 21..21
+      47  +1  road             +15.0..+17         18  new rows 18..18
+      48  +1  road             +15.0..+17         18  new rows 18..18
+      49  +3  road              +9.0..+14         15  new rows 15..17
+      50  +3  road              +9.0..+16         17  new rows 17..19
+      51  +2  road             +15.5..+20         21  new rows 21..22
+      52  +1  road             +17.0..+19         20  new rows 20..20
+      53  +1  road             +17.0..+20         21  new rows 21..21
+      54  +2  road             +16.0..+20         21  new rows 21..22
+      59  -1  road             +27.0..+30         31  existing rows 31..31 removed
+      62  -2  road             +32.0..+35         36  existing rows 36..37 removed
+      63  -5  road             +30.0..+34         35  existing rows 35..39 removed
+      64  -5  road             +30.0..+33         34  existing rows 34..38 removed
+      65  -4  road             +29.0..+34         35  existing rows 35..38 removed
+      66  -5  road             +29.0..+31         32  existing rows 32..36 removed
+      67  -5  road             +30.0..+38         39  existing rows 39..43 removed
+      68  -1  road             +56.5..+63         64  existing rows 64..64 removed
+      72  +2  road             +47.0..+52         53  new rows 53..54
+      73  +5  road             +55.0..+58         59  new rows 59..63
+      74  +2  road             +59.0..+62         63  new rows 63..64
+      78  +2  road             +55.0..+58         59  new rows 59..60
+      79  +4  road             +56.0..+61         62  new rows 62..65
+      80  +7  road             +52.0..+59         60  new rows 60..66
+      81  +3  road             +41.0..+52         53  new rows 53..55
+      82  +5  road             +14.0..+27         28  new rows 28..32
+      83  +2  road              +9.0..+13         14  new rows 14..15
+      84  +3  road               +2.5..+7          8  new rows 8..10
+      85  +5  road               -1.5..+3          4  new rows 4..8
+      86  +2  road               -1.0..+3          4  new rows 4..5
+      87  +1  road              +5.0..+12         13  new rows 13..13
+
+  the insert row is 'road_land_max_cell + 1': behind the landward-most road cell,
+  so no road cell is displaced on any profile. Along-domain spread of that edge:
+  median 3 cells, max 12 (GIS 82) - measured backdune between road and insert there.
 
 ------------------------------------------------------------------------------
 ASSUMPTIONS THIS CANNOT CHECK

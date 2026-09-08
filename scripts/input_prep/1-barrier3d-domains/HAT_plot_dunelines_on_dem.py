@@ -240,7 +240,7 @@ def main() -> None:
                         left=0.085, right=0.975, hspace=0.42, wspace=0.26)
 
     out = Path(args.out) if args.out else (
-        insert_figures_dir("1984-start")
+        insert_figures_dir("1984-start", "1-measurement")
         / "HAT_dunelines_on_DEM_GIS{}.png".format(D))
     fig.savefig(out)
     print("wrote {}".format(out))

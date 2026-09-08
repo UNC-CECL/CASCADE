@@ -32,11 +32,12 @@ because the digitized lines trace the toe ~19 m seaward of row 0).
 | `footprint_1984_by_domain.csv` | per domain: paired shift (median, p10, p90), N, residual, rows now/after, setback now / new (row-0 convention, with spread) / derived / raw-lines, flags |
 | `footprint_1984_profiles.csv` | the per-profile join the medians come from (both line crossings, row 0, road cell) |
 | `HAT_footprint_1984.txt` | the report: rules, totals, the road table, the assumptions |
-| `figures/1-scope/HAT_footprint_1984_grid.png` | the Barrier3D grid, added rows blank in red, removed rows hatched blue, new row 0 and NC-12 marked |
-| `figures/1-scope/HAT_footprint_1984_plan.png` | plan view on the DEM with both dune lines and NC-12 1984 |
-| `figures/1-scope/HAT_footprint_1984_rows.png` | rows per domain, signed |
-| `figures/1-scope/HAT_footprint_1984_shift.png` | the paired shift with p10–p90 and the rows kept |
-| `figures/1-scope/HAT_footprint_1984_setback.png` | the road setback now and from the new row 0, per road domain |
+| `figures/2-footprint-1984/seaward/HAT_footprint_1984_grid.png` | the Barrier3D grid, added rows blank in red, removed rows hatched blue, new row 0 and NC-12 marked |
+| `figures/2-footprint-1984/seaward/HAT_footprint_1984_plan.png` | plan view on the DEM with both dune lines and NC-12 1984 |
+| `figures/2-footprint-1984/behind-road/HAT_row_insert_grid_behindroad.png` | the same rows placed behind NC-12 (advisor's placement): crest-to-road strip as measured; columns `insert_anchor`, `insert_row_behind_road`, `rows_behind_road` in the table |
+| `figures/2-footprint-1984/HAT_footprint_1984_rows.png` | rows per domain, signed |
+| `figures/2-footprint-1984/HAT_footprint_1984_shift.png` | the paired shift with p10–p90 and the rows kept |
+| `figures/2-footprint-1984/seaward/HAT_footprint_1984_setback.png` | the road setback now and from the new row 0, per road domain |
 | `figures/CAPTIONS.md` | the words under the figures (house style: no in-image titles) |
 
 Result: 29 domains gain 73 rows, 23 lose 47, 38 unchanged; largest +7 (GIS 80)
@@ -50,8 +51,8 @@ agree with it; the add-only plan view was retired.
 |---|---|
 | `HAT_row_insert_scope.txt` | the report — symmetric since 2026-09-07, reads N from the footprint table |
 | `row_insert_scope_by_domain.csv` | the same table, machine-readable, with the easting-frame cross-check |
-| `figures/1-scope/HAT_row_insert_grid.png` | the Barrier3D grid as the model would hold it: added rows blank, removed rows hatched |
-| ~~`figures/HAT_row_insert_plan.png`~~ | retired 2026-09-07; the plan view is `figures/1-scope/HAT_footprint_1984_plan.png` |
+| `figures/2-footprint-1984/seaward/HAT_row_insert_grid.png` | the Barrier3D grid as the model would hold it: added rows blank, removed rows hatched |
+| ~~`figures/HAT_row_insert_plan.png`~~ | retired 2026-09-07; the plan view is `figures/2-footprint-1984/seaward/HAT_footprint_1984_plan.png` |
 | `HAT_fill_options.txt` | **what to fill the inserted rows with** — the methodological options, worked at GIS 85 |
 | `figures/HAT_fill_options_grid_GIS85.png` | the two candidates and the control as Barrier3D domain views, with NC-12 at its actual road elevation |
 | `figures/HAT_fill_options_GIS85.png` | the fuller set as profiles — what the road sits on, how much is measured |

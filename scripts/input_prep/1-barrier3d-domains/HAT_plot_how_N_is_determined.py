@@ -207,7 +207,8 @@ def main() -> None:
                         left=0.085, right=0.98, hspace=0.58, wspace=0.22)
 
     out = Path(args.out) if args.out else (
-        insert_figures_dir("1984-start") / "HAT_how_N_determined_GIS{}.png".format(D))
+        insert_figures_dir("1984-start", "1-measurement")
+        / "HAT_how_N_determined_GIS{}.png".format(D))
     fig.savefig(out)
     print("wrote {}".format(out))
     print("  total {:.1f} m = feature {:.1f} + date {:.1f}  ->  N = {} rows"

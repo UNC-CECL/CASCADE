@@ -1,10 +1,14 @@
 # Figure captions
 
-Written by `HAT_footprint_1984.py` (`write_captions`). The figures carry no in-image titles or footnotes on purpose; use these under them.
+Written by `HAT_footprint_1984.py` (`write_captions`) and by hand for the figures of the other two scripts. All of these live under `2-footprint-1984/` (root, `seaward/` or `behind-road/` — see README.md). The figures carry no in-image titles or footnotes on purpose; use these under them.
 
 ## `HAT_row_insert_grid.png`
 
 (a–c) The 90 Barrier3D domains as the model would hold them, 50 alongshore cells each, every cross-shore row down the page from the two dune rows (right axis in metres; interiors run to 189 rows, white is off the array, cells are not square). Existing cells are shaded by elevation class (m above MHW), so the dune ridge, the backbarrier flat and the sound-side marsh are distinguishable. Where the 1984 dune line lay seaward of the 1997 line, N blank rows (red) are added between the dune and the existing interior, which is pushed down the page; where it lay landward, the existing rows 0 to |N|−1 are hatched (blue) and the interior the model would hold starts below them; the signed count is printed above each changed domain. The dark bar is NC-12 at its measured 1984 position, 20 m wide; it moves down with the interior where rows are added and stays put where rows are removed. Communities and villages along the top from the site configuration. 29 domains gain 73 rows, 23 lose 47, 38 are unchanged.
+
+## `HAT_row_insert_grid_behindroad.png`
+
+(a–c) As `HAT_row_insert_grid.png`, with the same rows placed BEHIND NC-12 instead of at the seaward edge: the strip from the dune crest to the road's landward-most cell on any profile is kept exactly as measured, the added rows (red, blank) go in at the first row landward of it and push only the backbarrier down the page, and removals (blue hatching) take backbarrier rows at the same index. Row 0 and the road do not move, so the model keeps today's setback; GIS 85 and 86 stay floored at 0. Domains without a road (GIS 1–5, 8) fall back to the seaward placement. The insert row per domain is `insert_row_behind_road` in `footprint_1984_by_domain.csv`; along a domain the road's landward edge varies by 3 cells on median and up to 12 (GIS 82), so on some profiles measured backdune lies between the road and the block. N is identical to the seaward placement: 29 domains gain 73 rows, 23 lose 47, 38 are unchanged.
 
 ## `HAT_row_insert_rows.png`
 

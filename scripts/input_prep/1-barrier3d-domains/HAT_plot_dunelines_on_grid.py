@@ -60,7 +60,7 @@ from hat_figure_style import (apply_style, C, caption,             # noqa: E402
 # of a path that eight scripts used to build by hand. Moved under
 # row-insert-scope/ on 2026-09-03.
 S = duneline_shift_dir("1984-start")
-BASE_V = "v3"
+BASE_V = "v2"   # the re-pick base; was "v3" until the 2026-09-04 renumber
 BERM_EL_M = 1.7
 DUNE_ROWS = 2
 L84, L97, LROW0 = C["ACCENT"], "#1b6ca8", "#111111"
@@ -220,7 +220,8 @@ def main() -> None:
                         left=0.085, right=0.985, hspace=0.62)
 
     out = Path(args.out) if args.out else (
-        insert_figures_dir("1984-start") / "HAT_dunelines_on_grid_GIS{}.png".format(D))
+        insert_figures_dir("1984-start", "1-measurement")
+        / "HAT_dunelines_on_grid_GIS{}.png".format(D))
     fig.savefig(out)
     print("wrote {}".format(out))
     print("  island-wide medians:  total {:+.1f}  feature {:+.1f}  date {:+.1f} m"
