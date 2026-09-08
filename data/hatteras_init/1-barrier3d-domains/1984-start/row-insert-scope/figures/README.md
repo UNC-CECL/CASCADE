@@ -5,28 +5,11 @@
 > 2026-09-04; map in `../DUNE_TOPO_VERSION_GUIDE.md`. A re-plot writes the
 > new names.
 
-Every figure for the 1984 seaward-row insert. All eight plotters now default
+Every figure for the 1984 seaward-row insert. Steps are numbered in the order the argument runs (renumbered 2026-09-07:
+measurement, footprint, fill, result). All plotters default
 their `--out` here — resolved by `hat_topo_version.insert_figures_dir`, not
 built by hand. They used to land loose in `dune-topo/`, which turned the version
 folder into a figure dump.
-
-## The scope: where the insert lands
-
-| figure | drawn by |
-|---|---|
-| `1-scope/HAT_row_insert_grid.png` | `HAT_report_row_insert_scope.py` — the grid AS THE MODEL WOULD HOLD IT: dune rows on top, added rows blank (red), removed rows hatched (blue), NC-12 marked. Symmetric since 2026-09-07; reads the footprint table |
-| `1-scope/HAT_row_insert_rows.png` | same — rows per domain, signed, split out of the grid 2026-09-07 |
-| ~~`HAT_row_insert_plan.png`~~ | retired 2026-09-07 (it was add-only). The plan view is `1-scope/HAT_footprint_1984_plan.png` below |
-| `1-scope/HAT_where_inserts_occur_blocks.png` | `HAT_plot_where_inserts_occur.py` — the two relocation blocks zoomed: paired shift with spread and the rows kept. Rewritten 2026-09-07 on the footprint table (it used to compare two deleted layers) and split into three figures |
-| `1-scope/HAT_where_inserts_occur_setback.png` | same — the NC-12 setback at the block domains, now and from the new row 0 |
-| ~~`HAT_where_inserts_occur_island.png`~~ | retired 2026-09-07: it duplicated `HAT_footprint_1984_shift.png`, the canonical island-wide view |
-| `1-scope/HAT_footprint_1984_grid.png` | `HAT_footprint_1984.py` (2026-09-07) — the grid with rows ADDED (blank, red) and REMOVED (hatched, blue), new row 0 and NC-12 marked; the symmetric, 10 m-rule footprint |
-| `1-scope/HAT_footprint_1984_rows.png` | same — rows per domain, signed, on its own (split out of the grid figure 2026-09-07) |
-| `1-scope/HAT_footprint_1984_plan.png` | same — plan view in the layout of the dune-line 3-panel figure: hillshade, tickless, full domain boxes, both dune lines and NC-12 1984 |
-| `1-scope/HAT_footprint_1984_shift.png` | same — paired shift with p10–p90 and the rows kept, communities and relocation blocks marked (was panel (a) of `_N.png`, split 2026-09-07) |
-| `1-scope/HAT_footprint_1984_setback.png` | same — road setback now and from the new row 0, per road domain (was panel (b) of `_N.png`) |
-
-Captions for the three footprint figures are in `CAPTIONS.md` (written by the script); they carry no in-image titles.
 
 ## The measurement: where N comes from
 
@@ -36,6 +19,40 @@ Captions for the three footprint figures are in `CAPTIONS.md` (written by the sc
 | `HAT_how_N_determined_GIS84.png` / `_GIS85.png` | `HAT_plot_how_N_is_determined.py` — the feature/date split |
 | `HAT_dunelines_on_DEM_GIS85.png` | `HAT_plot_dunelines_on_dem.py` |
 | `HAT_dunelines_on_grid_GIS85.png` | `HAT_plot_dunelines_on_grid.py` |
+
+## `2-footprint-1984/` — the symmetric 1984 footprint, both placements (2026-09-07)
+
+The live analysis. One measurement (the paired 1984–1997 dune-line shift, `N = trunc(shift / 10 m)`,
+rows added where the 1984 line lay seaward, removed where it lay landward) and TWO placements of the
+same rows. Every figure reads `../footprint_1984_by_domain.csv`; captions in `CAPTIONS.md`.
+
+**Root — placement-independent**
+
+| figure | drawn by |
+|---|---|
+| `HAT_footprint_1984_rows.png` | `HAT_footprint_1984.py` — rows per domain, signed, communities banded |
+| `HAT_footprint_1984_shift.png` | same — the paired shift with p10–p90 and the rows kept, island-wide (the canonical view) |
+| `HAT_where_inserts_occur_blocks.png` | `HAT_plot_where_inserts_occur.py` — the two NC-12 relocation blocks zoomed |
+| `HAT_row_insert_rows.png` | `HAT_report_row_insert_scope.py` — rows per domain, kept beside the report grid |
+
+**`seaward/` — rows at the seaward edge, row 0 moves to the 1984 dune line, the setback becomes `setback_new_m`**
+
+| figure | drawn by |
+|---|---|
+| `HAT_footprint_1984_grid.png` | `HAT_footprint_1984.py` — the grid in the CURRENT frame (row 0 fixed), elevation classes, added rows blank, removed rows hatched |
+| `HAT_row_insert_grid.png` | `HAT_report_row_insert_scope.py` — the grid AS THE MODEL WOULD HOLD IT (dune fixed, interior pushed down) |
+| `HAT_footprint_1984_plan.png` | `HAT_footprint_1984.py` — plan view in the dune-line 3-panel layout: hillshade, tickless, full domain boxes |
+| `HAT_footprint_1984_setback.png` | same — road setback now and from the new row 0, all road domains |
+| `HAT_where_inserts_occur_setback.png` | `HAT_plot_where_inserts_occur.py` — the same at the ten block domains |
+
+**`behind-road/` — the same rows BEHIND NC-12 (advisor's placement): crest-to-road strip as measured, road and row 0 unmoved, today's setback kept**
+
+| figure | drawn by |
+|---|---|
+| `HAT_row_insert_grid_behindroad.png` | `HAT_report_row_insert_scope.py --anchor road` — the model-frame grid with the blocks landward of the road (`insert_row_behind_road` in the table) |
+
+`1-scope/` was retired the same day: every figure it held was redrawn on this footprint and lives here.
+`HAT_row_insert_plan.png` (add-only) and `HAT_where_inserts_occur[_island].png` are gone for good.
 
 ## The fill: what the rows are made of
 

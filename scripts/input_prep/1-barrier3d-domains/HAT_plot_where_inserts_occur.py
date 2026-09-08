@@ -68,7 +68,8 @@ import HAT_plot_duneline_offset as off  # noqa: E402  the house style
 
 FOOTPRINT_CSV = (REPO / "data" / "hatteras_init" / "1-barrier3d-domains" / "1984-start"
                  / "row-insert-scope" / "footprint_1984_by_domain.csv")
-FIG_DIR = insert_figures_dir("1984-start", "1-scope")
+FIG_DIR = insert_figures_dir("1984-start", "2-footprint-1984")               # the blocks: placement-independent
+FIG_SEAWARD = insert_figures_dir("1984-start", "2-footprint-1984", "seaward")  # the new setback assumes it
 BLOCKS = ((list(range(9, 15)), "GIS 9–14, inter-village", 1999),
           (list(range(84, 88)), "GIS 84–87, Pea Island", 1989))
 YEARS_MEASURED, YEARS_WANTED = 13.0, 12.0
@@ -201,7 +202,7 @@ def fig_setback(D) -> Path:
                        Patch(facecolor="0.45", label="from the new row 0, unchanged"),
                        Line2D([0], [0], color=INK, lw=0.8, label="p10–p90 over the profiles")],
               loc="upper left", ncol=2, fontsize=7.5)
-    p = FIG_DIR / "HAT_where_inserts_occur_setback.png"
+    p = FIG_SEAWARD / "HAT_where_inserts_occur_setback.png"
     fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p

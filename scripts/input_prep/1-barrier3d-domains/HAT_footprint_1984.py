@@ -33,6 +33,23 @@ DECIDED WITH HANNAH, 2026-09-07 (each one changes what the model would ingest)
                   the convention every run so far has used. It is kept as a
                   record column, `setback_raw84_m`, and nothing reads it.
 
+TWO PLACEMENTS OF THE SAME ROWS (the second added 2026-09-07 evening)
+    anchor = dune   rows go in at the seaward edge, between the dune and current
+                    row 0, so row 0 lands on the 1984 dune line; the setback
+                    becomes setback_new_m. The footprint above.
+    anchor = road   Hannah's advisor: keep the strip from the crest to the road
+                    AS MEASURED and put the rows BEHIND the road, at the first
+                    row landward of the road's landward-most cell on any profile
+                    (`insert_row_behind_road`, cells landward of current row 0).
+                    Removals take backbarrier rows at the same index. Row 0 and
+                    the road stay put, so the model keeps TODAY's setback
+                    (setback_model_now_m; GIS 85/86 stay floored at 0). Domains
+                    without a road (GIS 1-5, 8) fall back to the dune anchor.
+                    N is identical in both; only where the rows sit differs.
+                    The missing ground was lost from the OCEAN side; this books
+                    it on the sound side, which restores 1984 width but not the
+                    1984 position of either edge.
+
 WHAT IS ASSUMED (and cannot be checked from these files)
     * the 1984 and 1997 lines trace the SAME feature. 1997 carries metadata
       saying "light/dark elevation break"; 1984 carries none.
@@ -61,11 +78,11 @@ OUTPUTS  row-insert-scope/
     footprint_1984_by_domain.csv     one row per domain (the audit table)
     footprint_1984_profiles.csv      the per-profile join the medians come from
     HAT_footprint_1984.txt           the report
-    figures/1-scope/HAT_footprint_1984_grid.png   the Barrier3D grid, both signs
-    figures/1-scope/HAT_footprint_1984_plan.png   plan view on the DEM, both lines, NC-12
-    figures/1-scope/HAT_footprint_1984_rows.png     rows per domain, signed
-    figures/1-scope/HAT_footprint_1984_shift.png    the paired shift with spread and the rows kept
-    figures/1-scope/HAT_footprint_1984_setback.png  the road setback now and from the new row 0
+    figures/2-footprint-1984/HAT_footprint_1984_rows.png       rows per domain, signed
+    figures/2-footprint-1984/HAT_footprint_1984_shift.png      the paired shift with spread and the rows kept
+    figures/2-footprint-1984/seaward/HAT_footprint_1984_grid.png     the grid, current frame, both signs
+    figures/2-footprint-1984/seaward/HAT_footprint_1984_plan.png     plan view, both lines, NC-12
+    figures/2-footprint-1984/seaward/HAT_footprint_1984_setback.png  the road setback now and from the new row 0
     figures/CAPTIONS.md              the words that go under the figures
 
 USAGE
@@ -113,7 +130,11 @@ CELL_M = 10.0
 SCOPE_DIR = INIT / "1-barrier3d-domains" / PRODUCT / "row-insert-scope"
 SHIFT_DIR = duneline_shift_dir(PRODUCT)
 ROAD_DIR = INIT / "4-mgmt-forcing" / "road_offset" / "dunestart_offset" / "1984"
-FIG_DIR = insert_figures_dir(PRODUCT, "1-scope")
+# The step's root holds the placement-independent figures (rows, shift); the
+# seaward/ subfolder the figures that assume the rows go in at the seaward
+# edge (the grid in the current frame, the plan view, the new setback).
+FIG_DIR = insert_figures_dir(PRODUCT, "2-footprint-1984")
+FIG_SEAWARD = insert_figures_dir(PRODUCT, "2-footprint-1984", "seaward")
 CAPTIONS = SCOPE_DIR / "figures" / "CAPTIONS.md"
 
 # Colours: the RdBu pair the dune-line figures use. Red is 1984 / seaward /
@@ -152,7 +173,8 @@ def load_profiles() -> pd.DataFrame:
     #     = rows to ADD. Cells grow landward, so seaward is the smaller index.
     m["shift_m"] = (m["line97_cell"] - m["line84_cell"]) * CELL_M
 
-    r = road[["domain", "profile", "interior_row0_cell", "road_seaward_cell"]]
+    r = road[["domain", "profile", "interior_row0_cell", "road_seaward_cell",
+              "road_landward_cell"]]
     m = m.merge(r, on=["domain", "profile"], how="left")
     has = m["road_seaward_cell"].notna()
     if not (m.loc[has, "interior_row0_cell"] == m.loc[has, "row0_cell"]).all():
@@ -161,6 +183,7 @@ def load_profiles() -> pd.DataFrame:
                          "the current extraction")
     m = m.drop(columns=["interior_row0_cell"])
     m["setback_v2_m"] = (m["road_seaward_cell"] - m["row0_cell"]) * CELL_M
+    m["road_land_rel"] = m["road_landward_cell"] - m["row0_cell"]      # cells landward of row 0
     m["setback_new_m"] = m["setback_v2_m"] + m["shift_m"]          # row-0 convention
     m["setback_raw84_m"] = (m["road_seaward_cell"] - m["line84_cell"]) * CELL_M
     return m
@@ -193,6 +216,29 @@ def by_domain(prof: pd.DataFrame, topo_dir: Path, topo_name: str) -> pd.DataFram
         rd = g.dropna(subset=["road_seaward_cell"])
         rec["n_road_profiles"] = len(rd)
         flags = []
+        # --- the behind-the-road placement (advisor's suggestion) -----------
+        if len(rd) and n != 0:
+            land_max = int(rd["road_land_rel"].max())
+            rec["insert_anchor"] = "road"
+            rec["road_land_max_cell"] = land_max
+            rec["road_land_spread_cells"] = int(land_max - rd["road_land_rel"].median())
+            rec["insert_row_behind_road"] = land_max + 1
+        elif n != 0:
+            rec["insert_anchor"] = "dune"                  # no road: seaward edge
+            rec["road_land_max_cell"] = np.nan
+            rec["road_land_spread_cells"] = np.nan
+            rec["insert_row_behind_road"] = 0
+        else:
+            rec["insert_anchor"] = ""
+            rec["road_land_max_cell"] = np.nan
+            rec["road_land_spread_cells"] = np.nan
+            rec["insert_row_behind_road"] = np.nan
+        if n != 0:
+            r0 = int(rec["insert_row_behind_road"])
+            rec["rows_behind_road"] = (f"new rows {r0}..{r0 + n - 1}" if n > 0
+                                       else f"existing rows {r0}..{r0 - n - 1} removed")
+        else:
+            rec["rows_behind_road"] = ""
         if len(rd):
             sb_new = rd["setback_new_m"].to_numpy()
             rec["setback_v2_m"] = round(float(np.median(rd["setback_v2_m"])), 1)
@@ -337,7 +383,7 @@ def fig_grid(tab: pd.DataFrame, topo_dir: Path) -> Path:
                 Line2D([0], [0], color=off.HATTERAS_ANNOTATIONS.color_town_span, lw=4.0, label="community")]
     fig.legend(handles=handles, loc="outside lower center", ncol=7, fontsize=8,
                title="existing interior, elevation classes (m MHW)", title_fontsize=8)
-    p = FIG_DIR / "HAT_footprint_1984_grid.png"
+    p = FIG_SEAWARD / "HAT_footprint_1984_grid.png"
     fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
@@ -520,7 +566,7 @@ def fig_plan(tab: pd.DataFrame) -> Path:
     fig.legend(handles=handles, loc="outside lower center",
                ncol=min(len(handles), 9), fontsize=8.5)
 
-    p = FIG_DIR / "HAT_footprint_1984_plan.png"
+    p = FIG_SEAWARD / "HAT_footprint_1984_plan.png"
     fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
@@ -633,7 +679,7 @@ def fig_setback(tab: pd.DataFrame) -> Path:
                         Line2D([0], [0], color="0.6", lw=0.8, label="p10\u2013p90 over the profiles"),
                         Line2D([0], [0], color="#2c6e49", lw=0.9, ls=(0, (3, 2)), label="NC-12 relocation block")],
                loc="outside lower center", ncol=6, fontsize=8)
-    p = FIG_DIR / "HAT_footprint_1984_setback.png"
+    p = FIG_SEAWARD / "HAT_footprint_1984_setback.png"
     fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
@@ -701,6 +747,25 @@ def write_report(tab: pd.DataFrame, topo_name: str, figs: list[Path]) -> Path:
         w(f"  {d:6d} {r.n_cells:+3d} {r.shift_m_median:7.1f} {r.shift_m_p10:6.1f} {r.shift_m_p90:6.1f} "
           f"{r.residual_m:6.1f} {r.setback_model_now_m:7.1f} {r.setback_new_m:7.1f} "
           f"{r.setback_new_p10_m:6.1f} {r.setback_new_p90_m:6.1f}  {r['flags']}")
+    w("")
+    w("-" * 78)
+    w("THE SAME ROWS BEHIND THE ROAD (advisor's placement, decided 2026-09-07)")
+    w("-" * 78)
+    w("  Keep the crest-to-road strip as measured; put the rows at the first row")
+    w("  landward of the road's landward-most cell on any profile. Row 0 and the")
+    w("  road stay put; the model keeps TODAY's setback (setback_model_now_m).")
+    w("  Removals take backbarrier rows at the same index. No road -> dune anchor.")
+    w("")
+    w("  domain   N  anchor  road cells (rel row 0)  insert at  rows affected")
+    for d, r in tab[tab.n_cells != 0].iterrows():
+        rc = ("-" if not np.isfinite(r.road_land_max_cell) else
+              f"{r.setback_v2_m / CELL_M:+.1f}..{r.road_land_max_cell:+.0f}")
+        w(f"  {d:6d} {r.n_cells:+3d}  {r.insert_anchor:5s}  {rc:>20s}  {int(r.insert_row_behind_road):9d}  {r.rows_behind_road}")
+    w("")
+    w("  the insert row is 'road_land_max_cell + 1': behind the landward-most road cell,")
+    w("  so no road cell is displaced on any profile. Along-domain spread of that edge:")
+    w(f"  median {tab.road_land_spread_cells.median():.0f} cells, max {tab.road_land_spread_cells.max():.0f} "
+      f"(GIS {int(tab.road_land_spread_cells.idxmax())}) - measured backdune between road and insert there.")
     w("")
     w("-" * 78)
     w("ASSUMPTIONS THIS CANNOT CHECK")

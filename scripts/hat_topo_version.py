@@ -302,15 +302,25 @@ def insert_scope_dir(product: str) -> Path:
 # moving files. Naming the section at the call site - and resolving it here - is
 # what makes the layout survive a re-plot. A section that is not one of these is
 # a typo, and raises rather than silently creating a new folder.
-INSERT_FIGURE_SECTIONS = ("1-scope", "2-measurement", "3-fill", "4-result")
+# Renumbered 2026-09-07 to the order the argument runs: measure the dune-line
+# shift, turn it into a footprint of rows (two placements of the same rows:
+# seaward/, behind-road/; placement-independent figures at the step's root),
+# argue the fill, look at the result. The old 1-scope was retired that day -
+# everything it held was redrawn for the symmetric footprint - and the old
+# 3-fill / 4-result are the record of the deleted layers.
+INSERT_FIGURE_SECTIONS = ("1-measurement", "2-footprint-1984", "3-fill", "4-result")
+INSERT_FIGURE_SUBFOLDERS = {"2-footprint-1984": ("seaward", "behind-road")}
 
 
-def insert_figures_dir(product: str, section: str | None = None) -> Path:
+def insert_figures_dir(product: str, section: str | None = None,
+                       sub: str | None = None) -> Path:
     """Where insert figures are written, created if it does not exist.
 
     `section` is one of INSERT_FIGURE_SECTIONS. Omit it for the folder root,
-    which holds only the README and the `frozen/` figures no script can rebuild
-    - no plotter should write there.
+    which holds only the README, CAPTIONS.md and the `frozen/` figures no
+    script can rebuild - no plotter should write there. `sub` is a placement
+    subfolder of a section that has them (INSERT_FIGURE_SUBFOLDERS); anything
+    else raises, for the same reason a wrong section does.
 
     IT MAKES THE DIRECTORY. Not a pure lookup, deliberately: none of the eight
     plotters calls mkdir, so before the sections existed they all depended on
@@ -325,6 +335,13 @@ def insert_figures_dir(product: str, section: str | None = None) -> Path:
                 f"\n{section!r} is not an insert-figure section. Use one of "
                 f"{', '.join(INSERT_FIGURE_SECTIONS)}.\n")
         base = base / section
+    if sub is not None:
+        allowed = INSERT_FIGURE_SUBFOLDERS.get(section, ())
+        if sub not in allowed:
+            raise SystemExit(
+                f"\n{sub!r} is not a subfolder of {section!r}. "
+                f"{'Use one of ' + ', '.join(allowed) if allowed else 'It has none'}.\n")
+        base = base / sub
     base.mkdir(parents=True, exist_ok=True)
     return base
 
