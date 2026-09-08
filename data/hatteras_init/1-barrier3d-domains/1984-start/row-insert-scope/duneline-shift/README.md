@@ -8,7 +8,7 @@ the plain `2004-start/duneline-shift/` layout; that asymmetry is deliberate and
 is documented in the resolver.
 
 **This folder is an input, not a by-product.** `duneline_retreat_1984_1997.csv`
-is where N comes from — `HAT_insert_seaward_rows.py` builds v4 and v5 from it,
+is where N comes from — `HAT_insert_seaward_rows.py` builds every `v2-*-*` layer from it,
 and `HAT_report_row_insert_scope.py` reports against it. Deleting it means no
 future insert version can be built.
 

@@ -59,8 +59,30 @@ INPUTS
 
 OUTPUTS (data/hatteras_init/0-elevation/2009-2014-1996-duneline/)
     duneline_offset_by_domain.csv
+    figures/HAT_duneline_offset_simple.png    the stripped version: grey
+                                              relief, both lines solid,
+                                              tight crop, no values
+    figures/HAT_duneline_offset_simple_island.png   the same, whole island,
+                                              with the measured offset as a
+                                              bar beside the map
+    figures/HAT_duneline_offset_lines_island.png  the two lines over the
+                                              whole island with NO bar
+                                              strips: ~5 km panels
+                                              cropped to the lines
     figures/HAT_duneline_offset_island.png    the DEM, both lines, the boxes
     figures/HAT_duneline_offset_bydomain.png  the offset, domain by domain
+    figures/CAPTIONS.md                       a caption per figure, numbers
+                                              filled from the table
+
+STYLE
+-----
+Every figure in the folder is drawn to one house style, set in apply_style()
+and the STYLE block: a plain sans face, 8-10 pt type, thin dark-grey axes,
+a ColorBrewer red/blue pair for the two lines that survives greyscale and
+colour-deficient print, panel letters, a north arrow and scale bar on every
+map without coordinate ticks, and NO in-figure title sentences or footnote
+paragraphs - what a figure needs said goes in figures/CAPTIONS.md, which
+write_captions() fills from the same table the figures draw from.
 
 Requires: rasterio, geopandas, shapely, numpy, matplotlib
 
@@ -80,6 +102,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+import matplotlib.patheffects as pe
 from shapely.geometry import LineString, Point
 
 
@@ -102,6 +125,99 @@ from hat_elevation_products import ELEVATION_ROOT  # noqa: E402
 # IO beyond resolving the product path.
 import HAT_plot_1984_mosaic as m  # noqa: E402
 
+# The place names are NOT redefined here. hatteras_site_config owns the
+# community spans, the village centres and the end labels for the whole
+# project - the same object the shoreline-rate figures annotate from - so
+# a town that moves there moves here too, and this figure cannot quietly
+# disagree with the rest of the repo about where Avon is.
+from hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
+
+
+# =============================================================================
+# STYLE
+# =============================================================================
+# One look for every figure in the folder. Publication conventions: a plain
+# sans face, small type, thin dark-grey axes, hairline grid, frameless legends,
+# and nothing written on the figure that belongs in its caption. The colours
+# are the ColorBrewer RdBu poles - a warm/cool pair that stays distinct in
+# greyscale and under red-green colour deficiency - and the SAME pair is used
+# wherever the sign of the offset is drawn (bars, ribbon fill, markers), so red
+# always means the 1984 line, or the 1984 line lying seaward.
+FONT_STACK = ["Arial", "Helvetica", "Liberation Sans", "DejaVu Sans"]
+INK = "0.15"            # text, axes, baselines
+INK_MUTED = "0.42"      # secondary labels, rulers, guide lines
+GRID_C = "0.88"         # hairline grid
+
+C_1984 = "#b2182b"      # RdBu, dark red
+C_1997 = "#2166ac"      # RdBu, dark blue
+C_1984_FILL = "#f4a582" # RdBu, light red  - the band where 1984 lies seaward
+C_1997_FILL = "#92c5de" # RdBu, light blue - the band where 1984 lies landward
+
+STYLE_RC = {
+    "font.family": "sans-serif", "font.sans-serif": FONT_STACK,
+    "font.size": 9,
+    "axes.titlesize": 10, "axes.titleweight": "normal", "axes.titlepad": 6,
+    "axes.labelsize": 9, "axes.labelcolor": INK,
+    "axes.edgecolor": INK, "axes.linewidth": 0.6,
+    "xtick.labelsize": 8, "ytick.labelsize": 8,
+    "xtick.color": INK, "ytick.color": INK,
+    "xtick.direction": "out", "ytick.direction": "out",
+    "xtick.major.width": 0.6, "ytick.major.width": 0.6,
+    "xtick.major.size": 3.0, "ytick.major.size": 3.0,
+    "grid.color": GRID_C, "grid.linewidth": 0.5, "grid.linestyle": "-",
+    "legend.fontsize": 8, "legend.frameon": True, "legend.framealpha": 0.95,
+    "legend.edgecolor": "none", "legend.fancybox": False,
+    "legend.handlelength": 1.8, "legend.borderpad": 0.5,
+    "legend.labelspacing": 0.4, "legend.columnspacing": 1.4,
+    "text.color": INK,
+    "figure.facecolor": "white", "savefig.facecolor": "white",
+    "savefig.dpi": 300,
+}
+
+
+def apply_style():
+    """Idempotent. Called at the top of every figure so the style holds no
+    matter which entry point drew it, including an import from elsewhere."""
+    plt.rcParams.update(STYLE_RC)
+
+
+def _letter(i):
+    return f"({chr(ord('a') + i)})"
+
+
+def _title(ax, i, text):
+    """Panel letter at the left, title centred - both above the axes."""
+    ax.set_title(_letter(i), loc="left", fontweight="bold")
+    ax.set_title(text, loc="center")
+
+
+def _letter_inside(ax, i):
+    """The letter inside the top-left corner, for a panel whose title is wide
+    enough to run under a letter placed beside it."""
+    ax.text(0.03, 0.985, _letter(i), transform=ax.transAxes, ha="left",
+            va="top", fontsize=10, fontweight="bold", color=INK, zorder=20,
+            bbox=dict(facecolor="white", alpha=0.85, edgecolor="none",
+                      boxstyle="square,pad=0.15"))
+
+
+def _north_arrow(ax, x=0.90, y=0.10, length=0.045):
+    """A north arrow in axes fraction. Only on maps WITHOUT coordinate ticks -
+    a labelled UTM frame is already north-up by construction."""
+    ax.annotate("", xy=(x, y + length), xytext=(x, y),
+                xycoords="axes fraction", textcoords="axes fraction",
+                arrowprops=dict(arrowstyle="-|>", color=INK, lw=1.0,
+                                shrinkA=0, shrinkB=0,
+                                mutation_scale=11), zorder=20)
+    ax.text(x, y + length + 0.008, "N", transform=ax.transAxes, ha="center",
+            va="bottom", fontsize=8.5, fontweight="bold", color=INK,
+            zorder=20,
+            bbox=dict(facecolor="white", alpha=0.8, edgecolor="none",
+                      boxstyle="square,pad=0.1"))
+
+
+def _halo(lw=2.5):
+    return [pe.withStroke(linewidth=lw, foreground="white")]
+
 
 SOURCE_TAG = "2009-2014-1996"
 OUT_DIR = ELEVATION_ROOT / f"{SOURCE_TAG}-duneline"
@@ -117,10 +233,12 @@ DUNE_LINES = {1984: DUNE_DIR / "duneline_1984.geojson",
 SAMPLE_SPACING_M = 1.0
 GRID_10M = 10.0          # the resampled product's cell, for the box fallback
 
-# The row-insert scope table, read ONLY to label a --zoom with how many
+# The 1984 footprint table, read ONLY to label a --zoom with how many
 # Barrier3D rows the measured offset turns into. Optional; absent is fine.
+# Since 2026-09-07 this is the SYMMETRIC footprint (HAT_footprint_1984.py):
+# n_cells is signed, + rows added, - existing rows removed, trunc(shift/10).
 INSERT_SCOPE_CSV = (INIT_ROOT / "1-barrier3d-domains" / "1984-start"
-                    / "row-insert-scope" / "row_insert_scope_by_domain.csv")
+                    / "row-insert-scope" / "footprint_1984_by_domain.csv")
 
 # The box shape the easting-is-cross-shore frame depends on. Checked, not
 # assumed - see THE FRAME above.
@@ -131,14 +249,34 @@ BOX_TOL_M = 1.0
 # emphasis colour; 1997 is the reference. Deliberately NOT the road key from
 # HAT_plot_1984_mosaic - these are dune lines, and reusing black/white-dashed
 # would read as NC-12 on a figure where NC-12 is absent.
-LINE_STYLE = {1984: dict(color="#d62728", linestyle="-", linewidth=1.6),
-              1997: dict(color="#1f77b4", linestyle=(0, (4.0, 2.5)),
-                         linewidth=1.6)}
-LINE_CASING = {1984: dict(color="white", linewidth=3.2),
-               1997: dict(color="white", linewidth=3.2)}
+#
+# ONE key for every figure in this folder. Both lines SOLID, at the weight the
+# simple figure uses, and colour is the only thing that separates them. The
+# 1997 line used to be dashed on the DEM figures and solid on the simple ones,
+# which meant the same two lines carried two keys across one folder; the simple
+# figure is the reference and this is now it. What still varies per figure is
+# the WIDTH, through draw_lines(scale=...) - a 46 km locator and a 300 m crop
+# cannot carry the same line weight - and the two whole-island figures use the
+# same scale as each other, as do the two detail figures.
+LINE_STYLE = {1984: dict(color=C_1984, linestyle="-", linewidth=2.0),
+              1997: dict(color=C_1997, linestyle="-", linewidth=2.0)}
+LINE_CASING = {1984: dict(color="white", linewidth=3.0),
+               1997: dict(color="white", linewidth=3.0)}
 LINE_ORDER = [1997, 1984]      # 1984 drawn last, on top
 
-BOX_STYLE = dict(edgecolor="0.25", facecolor="none", linewidth=0.4)
+# The per-figure line WIDTH, as a multiplier on LINE_STYLE. Paired on purpose:
+# the two whole-island figures share one, the two detail figures share the
+# other, so a change to either cannot land on one of a pair and not the other.
+# 46 km of island next to a 70 m offset puts the two lines inside one line
+# width, and a heavier line there merges them further; a 300 m crop has room.
+LINE_SCALE_ISLAND = 0.55
+LINE_SCALE_DETAIL = 1.0
+# The ribbon is a trace, not a map: 46 km of 1 m sampling on one axis, and
+# the two lines cross constantly, so they are drawn finer than anywhere
+# else. Same key, same colours, both solid - width only.
+LINE_SCALE_RIBBON = 0.7
+
+BOX_STYLE = dict(edgecolor="0.30", facecolor="none", linewidth=0.4)
 LABEL_EVERY = 5                # label every Nth domain box on the island map
 
 # The island is 46 km long and ~2 km wide. Split into thirds, each panel gets
@@ -162,13 +300,129 @@ BASELINE_WINDOW_M = 2000.0
 # looks like at the same scale.
 ZOOM_REACHES = [
     (17, 21, "17-21", "the quietest reach on the island"),
-    (62, 68, "62-68", "1984 line LANDWARD of 1997"),
-    (78, 85, "78-85", "1984 line SEAWARD of 1997"),
+    (62, 68, "62-68", "1984 line landward of 1997"),
+    (78, 85, "78-85", "1984 line seaward of 1997"),
 ]
 # Cross-shore half-width of a zoom panel. The domain box is 2000 m across and
 # almost all of it is water and back-barrier; cropping to the dune makes the
 # offset a visible fraction of the frame at equal aspect.
 ZOOM_HALF_WIDTH_M = 300.0
+
+# -----------------------------------------------------------------------------
+# THE SIMPLE ZOOM  (--simple)
+# -----------------------------------------------------------------------------
+# A stripped version of the same panels: no elevation values, no colour ramp,
+# no colourbar, no coordinate ticks. Both lines SOLID. What is left is the two
+# lines, the ridge they sit on, and a scale bar.
+#
+# WHY THE PAIRS ARE SHORTER THAN THE ZOOM REACHES. The island runs about 7 deg
+# oblique to the UTM grid, so a dune line drifts ~130 m in easting per km of
+# alongshore. A crop tight enough to show a 50 m offset therefore cannot hold a
+# five-domain reach - over 1.5 km the two lines sweep 190-330 m in easting and
+# walk straight out of the frame. Two neighbouring domains sweep 150-223 m,
+# which fits inside +/-150 m with margin. So each panel is the two-domain pair
+# carrying that reach's extreme, not the whole reach.
+#
+# ONE half-width for all three panels, not one per panel. The control only
+# works if it is drawn at exactly the scale of the other two.
+SIMPLE_HALF_WIDTH_M = 150.0
+# South to north, matching the locator. Each pair's lines were checked to sit
+# inside +/-150 m of the pair's median 1984 easting before it was chosen: 3-4
+# needs 115 m, 19-20 needs 88, 63-64 needs 112, 79-80 needs 75. 4-5 carries the
+# south's single largest offset (+62 m at domain 5) and is NOT used, because
+# its lines need 196 m and would have forced a wider crop on all four panels.
+# The third field is a ROLE marker, not a description. Where a pair sits and
+# which way its offset goes are both DERIVED - the place from
+# HATTERAS_ANNOTATIONS, the direction and magnitude from the measured table -
+# so a panel title cannot state a direction its own numbers contradict. Only
+# the reason a pair is in the figure at all is written by hand.
+SIMPLE_REACHES = [
+    (3, 4, ""),
+    (19, 20, "control"),
+    (63, 64, ""),
+    (79, 80, ""),
+]
+
+# THE ISLAND LOCATOR. Two things side by side per third of the island: a true
+# map, and a bar of the measured offset aligned to it row for row.
+#
+# The map ALONE cannot carry this and no styling fixes that - at equal aspect
+# 46 km of island next to a 50 m offset is half a line width, so on the map the
+# two lines are one line nearly everywhere. The map is therefore a LOCATOR: it
+# says where each detail pair sits and how the island is shaped. The bar beside
+# it is what carries the magnitude, and it is the same median that the detail
+# panels print, off the same CSV.
+ISLAND_PANELS = 3
+ISLAND_PAD_M = 500.0
+STRIP_WIDTH_RATIO = 0.42       # bar axes width, as a fraction of the map's
+OFFSET_POS = C_1984            # 1984 seaward - the sign erosion predicts
+OFFSET_NEG = C_1997            # 1984 landward
+HIGHLIGHT = "#111111"          # the label and the band marking a detail pair
+
+# Piers and the groin are drawn SEAWARD from the 1984 line, because that is
+# where they are. The length is a drawing constant, not a measurement - none of
+# these structures has a surveyed length in this repo, and a 46 km panel could
+# not show the difference between 200 m and 400 m of pier anyway. They are
+# drawn as marks and named in the legend rather than labelled on the map: at
+# this scale a label beside the Rodanthe pier lands on the Rodanthe village
+# tick and on the 79-80 detail label, and no amount of nudging fixes three
+# labels inside one 500 m domain.
+STRUCTURE_LEN_M = 380.0
+
+# THE LINES-ONLY LOCATOR (--lines-island). The same whole island with the bar
+# strips dropped, and the maps made to carry the offset themselves by
+# CROPPING, not by styling. Two things change against the three-panel figure:
+#
+#   more panels   each covers LINES_ISLAND_DOMAINS domains (~5 km) instead of
+#                 30 (~15 km), so at the same panel height a 50 m offset is
+#                 about three line widths rather than under one.
+#   tight crop    each panel's easting window is the envelope of the two lines
+#                 inside that panel's northing window, plus LINES_ISLAND_PAD_M
+#                 either side, rather than the whole island. The island runs
+#                 ~7 deg oblique to the grid, so over 5 km the lines sweep
+#                 ~650 m in easting, and the window is roughly 1 km wide.
+#
+# Equal aspect is kept, so nothing is stretched: what the reader sees is the
+# true separation, just at a scale where it is visible.
+LINES_ISLAND_DOMAINS = 10
+LINES_ISLAND_PAD_M = 150.0
+LINES_ISLAND_LINE_SCALE = 0.9
+
+# The alongshore ruler on the bar strip, in km from the south end of domain 1 -
+# the same origin and direction fig_ribbon's x-axis uses, so the two figures
+# can be read against each other.
+KM_TICK_M = 5000.0
+# Kept as a name because the simple figures pass it explicitly, but it is no
+# longer a SEPARATE key - LINE_STYLE is now what this used to be, so every
+# figure in the folder draws the same two solid lines. Copied rather than
+# aliased so a caller mutating one cannot reach the other.
+SIMPLE_LINE_STYLE = {yr: dict(LINE_STYLE[yr]) for yr in LINE_STYLE}
+
+# The 1 m gapfilled tiles, read in place. fig_zooms draws the 10 m resampled
+# mosaic, which across a 300 m crop is 30 cells wide and renders the dune as a
+# staircase. These panels are tight enough to be worth the 1 m source. NOTE the
+# tiles carry NO CRS tag; their bounds are checked against the domain boxes
+# instead, and a mismatch is fatal rather than silent.
+TILE_1M_DIR = ELEVATION_ROOT / SOURCE_TAG / "1-gapfill-1m"
+TILE_1M_NAME = "clip_domain_{d}_filled.tif"
+TILE_BOUNDS_TOL_M = 1.5
+
+# Relief only, no values. Both of these are DRAWING parameters and neither can
+# move either line - they change how the backdrop is shaded, nothing else.
+#
+#   vert_exag  the dune is ~5 m of relief over ~50 m cross-shore, so at 1:1 the
+#              shading is nearly flat grey.
+#   SHADE_SMOOTH_M  the shading is computed off a boxcar-smoothed COPY of the
+#              DEM. 1 m lidar over a vegetated backdune is speckly at the cell
+#              scale, and exaggerating the slope exaggerates the speckle with
+#              it until the dune ridge is lost in it. The smoothing is applied
+#              to the shading only; the elevation array itself is untouched,
+#              and nothing here is measured off the backdrop anyway.
+HILLSHADE = dict(azdeg=315.0, altdeg=40.0, vert_exag=2.2)
+SHADE_SMOOTH_M = 3.0
+NODATA_GREY = "#e8e8e8"
+
+SCALEBAR_M = 50.0              # 5 Barrier3D cells
 
 
 # =============================================================================
@@ -330,12 +584,18 @@ def clip_for_drawing(lines, footprint):
     return out
 
 
-def draw_lines(ax, lines, scale=1.0):
-    """Casing then line, in LINE_ORDER so 1984 lands on top of 1997."""
+def draw_lines(ax, lines, scale=1.0, style=None):
+    """Casing then line, in LINE_ORDER so 1984 lands on top of 1997.
+
+    `style` swaps the per-year style dict - the simple figure draws both lines
+    solid. The draw order and the casing are shared, so the two figures cannot
+    disagree about which line is on top.
+    """
+    style = style or LINE_STYLE
     for yr in LINE_ORDER:
         cas = dict(LINE_CASING[yr])
         cas["linewidth"] *= scale
-        st = dict(LINE_STYLE[yr])
+        st = dict(style[yr])
         st["linewidth"] *= scale
         lines[yr].plot(ax=ax, linestyle="-", alpha=0.9,
                        zorder=6 + LINE_ORDER.index(yr) * 2, **cas)
@@ -357,61 +617,62 @@ def fig_island(elev, extent, gdf, lines, rows):
     thirds and giving each panel its own extent triples the scale for free -
     that is the whole reason for the split, and why the panels deliberately do
     NOT share axes.
+
+    The three panels DO share one northing span - the longest third, padded -
+    so they are the same height, the same scale, and line up top and bottom.
+    Each panel's width is then its own easting span at that scale, which is
+    why the width ratios are computed rather than equal.
     """
+    apply_style()
     vmin, vmax = m.elev_limits(elev)
     ids = gdf["domain_id"].astype(int).to_numpy()
     edges = np.array_split(np.sort(ids), N_PANELS)
+    bounds = [gdf[gdf["domain_id"].astype(int).isin(g)].total_bounds
+              for g in edges]
+    span = max(b[3] - b[1] for b in bounds) + 2 * PANEL_PAD_M
+    widths = [(b[2] - b[0] + 2 * PANEL_PAD_M) / span for b in bounds]
 
-    fig, axes = plt.subplots(1, N_PANELS, figsize=(4.6 * N_PANELS, 17.0),
-                             constrained_layout=True)
+    panel_h = 12.5
+    fig, axes = plt.subplots(
+        1, N_PANELS, figsize=(panel_h * sum(widths) + 1.6, panel_h + 1.6),
+        constrained_layout=True, gridspec_kw=dict(width_ratios=widths))
+    axes = np.atleast_1d(axes)
     im = None
-    for ax, group in zip(np.atleast_1d(axes), edges):
+    for i, (ax, group, bx) in enumerate(zip(axes, edges, bounds)):
         sub = gdf[gdf["domain_id"].astype(int).isin(group)]
-        bx = sub.total_bounds
-        im = m.panel_elev(ax, elev, extent, vmin, vmax,
-                          f"domains {group.min()}-{group.max()}")
+        im = m.panel_elev(ax, elev, extent, vmin, vmax, "")
+        _title(ax, i, f"Domains {group.min()}\u2013{group.max()}")
         sub.boundary.plot(ax=ax, color=BOX_STYLE["edgecolor"],
                           linewidth=BOX_STYLE["linewidth"], zorder=4)
         for _, r in sub.iterrows():
             d = int(r["domain_id"])
             if d % LABEL_EVERY == 0 or d in (1, ids.max()):
                 b = r.geometry.bounds
-                ax.text(b[0] - 90, (b[1] + b[3]) / 2, str(d), fontsize=6,
-                        ha="right", va="center", color="0.1", zorder=6)
-        draw_lines(ax, lines)
+                ax.text(b[0] - 80, (b[1] + b[3]) / 2, str(d), fontsize=6.5,
+                        ha="right", va="center", color=INK_MUTED, zorder=6)
+        draw_lines(ax, lines, scale=LINE_SCALE_ISLAND)
+        yc = (bx[1] + bx[3]) / 2
         ax.set_xlim(bx[0] - PANEL_PAD_M, bx[2] + PANEL_PAD_M)
-        ax.set_ylim(bx[1] - PANEL_PAD_M, bx[3] + PANEL_PAD_M)
+        ax.set_ylim(yc - span / 2, yc + span / 2)
         ax.set_aspect("equal")
         m.km_axes(ax, nx=3, ny=8)
-        ax.set_xlabel("Easting (km)", fontsize=9)
-    np.atleast_1d(axes)[0].set_ylabel("Northing (km)", fontsize=9)
+        ax.set_xlabel("Easting (km)")
+    axes[0].set_ylabel("Northing (km)")
 
-    cb = fig.colorbar(im, ax=list(np.atleast_1d(axes)),
-                      orientation="horizontal", fraction=0.02, pad=0.01,
-                      aspect=55)
-    cb.set_label("Elevation (m NAVD88)", fontsize=9)
-    cb.ax.tick_params(labelsize=8)
+    cb = fig.colorbar(im, ax=list(axes), orientation="horizontal",
+                      fraction=0.02, pad=0.015, aspect=60)
+    cb.set_label("Elevation (m NAVD88)")
+    cb.outline.set_linewidth(0.6)
+    cb.ax.tick_params(labelsize=8, width=0.6, length=3)
 
-    np.atleast_1d(axes)[0].legend(
+    axes[0].legend(
         handles=line_legend() + [Line2D([0], [0], color=BOX_STYLE["edgecolor"],
                                         lw=0.8,
-                                        label="Barrier3D domain, 2000 x 500 m")],
-        loc="lower left", fontsize=8, framealpha=0.92)
-
-    med = np.array([r["offset_med_m"] for r in rows
-                    if r["offset_med_m"] != ""], float)
-    fig.suptitle(f"1984 and 1997 dune lines on the {SOURCE_TAG} DEM",
-                 fontsize=13)
-    fig.text(0.5, -0.008,
-             f"Cross-shore offset between the two lines, median over "
-             f"{len(med)} domains: {np.median(med):+.1f} m, positive where the "
-             f"1984 line lies seaward. Range {med.min():+.1f} to "
-             f"{med.max():+.1f} m. Both lines are clipped to the domain "
-             f"footprint for drawing only. Per-domain values in {CSV_NAME}.",
-             ha="center", va="top", fontsize=8, color="#444444", wrap=True)
+                                        label="Barrier3D domain, 2000 \u00d7 500 m")],
+        loc="lower left")
 
     p = FIG_DIR / "HAT_duneline_offset_island.png"
-    fig.savefig(p, dpi=170, bbox_inches="tight")
+    fig.savefig(p, dpi=200, bbox_inches="tight")
     plt.close(fig)
     return p
 
@@ -442,6 +703,7 @@ def fig_ribbon(samples, rows, gdf):
     curves - a shorter window flattens both toward the axis, a longer one lets
     shared meanders back in. 2 km keeps four domains of context.
     """
+    apply_style()
     y = samples["y"]
     x84, x97 = samples["x1984"], samples["x1997"]
     km = (y - y.min()) / 1000.0
@@ -449,38 +711,44 @@ def fig_ribbon(samples, rows, gdf):
     base = _smooth(np.nanmean(np.vstack([x84, x97]), axis=0), win)
     d84, d97 = x84 - base, x97 - base
     off = x84 - x97
+    med = np.array([r["offset_med_m"] for r in rows
+                    if r["offset_med_m"] != ""], float)
 
     fig, (ax, bx) = plt.subplots(
-        2, 1, figsize=(15.0, 8.6), sharex=True,
-        gridspec_kw=dict(height_ratios=[2.4, 1.0]), constrained_layout=True)
+        2, 1, figsize=(12.0, 6.6), sharex=True,
+        gridspec_kw=dict(height_ratios=[2.3, 1.0]), constrained_layout=True)
 
+    # ---- (a) the two lines about the midline ------------------------------
     ax.fill_between(km, d97, d84, where=(off >= 0), interpolate=True,
-                    color=LINE_STYLE[1984]["color"], alpha=0.30, linewidth=0,
+                    color=C_1984_FILL, linewidth=0, zorder=2,
                     label="1984 seaward of 1997")
     ax.fill_between(km, d97, d84, where=(off < 0), interpolate=True,
-                    color=LINE_STYLE[1997]["color"], alpha=0.30, linewidth=0,
+                    color=C_1997_FILL, linewidth=0, zorder=2,
                     label="1984 landward of 1997")
-    ax.plot(km, d97, **{**LINE_STYLE[1997], "label": "1997 dune line"})
-    ax.plot(km, d84, **{**LINE_STYLE[1984], "label": "1984 dune line"})
-    ax.axhline(0, color="0.55", linewidth=0.7, zorder=1)
-    ax.set_ylabel("cross-shore position, m\n"
-                  f"(from a {BASELINE_WINDOW_M / 1000:.0f} km smoothed "
-                  f"midline; up = seaward)")
-    ax.legend(fontsize=8, loc="upper left", ncol=4, framealpha=0.92)
+    for yr, d in ((1997, d97), (1984, d84)):
+        st = dict(LINE_STYLE[yr])
+        st["linewidth"] = 1.1
+        ax.plot(km, d, label=f"{yr} dune line", zorder=3, **st)
+    ax.axhline(0, color=INK_MUTED, linewidth=0.6, zorder=1)
+    ax.set_ylabel("Cross-shore position (m)\n"
+                  f"relative to a {BASELINE_WINDOW_M / 1000:.0f} km smoothed "
+                  "midline; seaward positive")
 
+    # ---- (b) the difference ----------------------------------------------
     bx.fill_between(km, 0, off, where=(off >= 0), interpolate=True,
-                    color=LINE_STYLE[1984]["color"], alpha=0.55, linewidth=0)
+                    color=C_1984, alpha=0.75, linewidth=0, zorder=2)
     bx.fill_between(km, 0, off, where=(off < 0), interpolate=True,
-                    color=LINE_STYLE[1997]["color"], alpha=0.55, linewidth=0)
-    bx.axhline(0, color="0.2", linewidth=0.9)
-    for s in (-CELL_M, CELL_M):
-        bx.axhline(s, color="0.2", linewidth=0.7, linestyle=":")
-    bx.set_ylabel("1984 minus 1997, m")
-    bx.set_xlabel("alongshore distance from the south end of domain 1 (km)")
-    bx.text(0.2, CELL_M + 2, "one 10 m Barrier3D cell", fontsize=7,
-            color="0.35", va="bottom")
+                    color=C_1997, alpha=0.75, linewidth=0, zorder=2)
+    bx.axhline(0, color=INK, linewidth=0.7, zorder=3)
+    for s_ in (-CELL_M, CELL_M):
+        bx.axhline(s_, color=INK_MUTED, linewidth=0.6, linestyle=(0, (3, 2)),
+                   zorder=1)
+    bx.text(15.0, CELL_M + 2, "\u00b11 cell (10 m)", fontsize=7,
+            color=INK_MUTED, ha="center", va="bottom")
+    bx.set_ylabel("1984 minus 1997 (m)")
+    bx.set_xlabel("Alongshore distance from the south end of domain 1 (km)")
 
-    # The reaches the true-scale zooms cover, marked on both panels so the two
+    # The reaches the true-scale zooms cover, on both panels so the two
     # figures can be read against each other.
     ymid = {int(r["domain_id"]): r.geometry.bounds[1] + 250.0
             for _, r in gdf.iterrows()}
@@ -488,38 +756,51 @@ def fig_ribbon(samples, rows, gdf):
         a = (ymid[lo] - 250 - y.min()) / 1000.0
         b = (ymid[hi] + 250 - y.min()) / 1000.0
         for axis in (ax, bx):
-            axis.axvspan(a, b, color="0.85", alpha=0.55, zorder=0)
-        # Labelled along the BOTTOM of the upper panel. The top is where the
-        # legend sits and where the 1984 excursions run, so a label there is
-        # either hidden or hiding something.
-        ax.text((a + b) / 2, ax.get_ylim()[0], f"zoom {slug} ", fontsize=7,
-                ha="center", va="bottom", color="0.35")
+            axis.axvspan(a, b, color="0.92", zorder=0)
+        ax.text((a + b) / 2, 0.985, f"detail {slug}", fontsize=7,
+                ha="center", va="top", color=INK_MUTED,
+                transform=ax.get_xaxis_transform())
+
+    # The headline numbers, once, in the corner nothing else uses.
+    ax.text(0.995, 0.03,
+            f"island median {np.median(med):+.1f} m;  "
+            f"{int((np.abs(med) >= CELL_M).sum())} of {len(med)} domains "
+            f"\u2265 1 cell apart", transform=ax.transAxes, fontsize=8,
+            ha="right", va="bottom", color=INK_MUTED)
 
     # Domain numbers on top, since the reader thinks in domains and the CSV is
     # keyed by them, but the axis itself stays metric.
     tx = ax.secondary_xaxis("top")
     ticks = [d for d in sorted(ymid) if d % 10 == 0 or d == 1]
     tx.set_xticks([(ymid[d] - y.min()) / 1000.0 for d in ticks])
-    tx.set_xticklabels([str(d) for d in ticks], fontsize=8)
-    tx.set_xlabel("domain", fontsize=9)
-
-    med = np.array([r["offset_med_m"] for r in rows
-                    if r["offset_med_m"] != ""], float)
-    fig.suptitle(
-        f"1984 and 1997 dune lines, cross-shore separation along the island   "
-        f"|   median {np.median(med):+.1f} m, "
-        f"{int((np.abs(med) >= CELL_M).sum())} of {len(med)} domains "
-        f"at least one 10 m cell apart", fontsize=12)
+    tx.set_xticklabels([str(d) for d in ticks])
+    tx.set_xlabel("Domain")
+    tx.tick_params(labelsize=8, color=INK, width=0.6, length=3)
+    for a_ in (ax, bx):
+        a_.spines["right"].set_visible(False)
+        a_.grid(axis="y", zorder=0)
+        a_.set_axisbelow(True)
+    ax.spines["top"].set_visible(False)
+    bx.spines["top"].set_visible(False)
+    for i, a_ in enumerate((ax, bx)):
+        a_.set_title(_letter(i), loc="left", fontweight="bold")
     ax.margins(x=0.005)
 
+    from matplotlib.patches import Patch
+    fig.legend(loc="outside lower center", ncol=4, handles=[
+        Line2D([0], [0], color=C_1984, lw=1.6, label="1984 dune line"),
+        Line2D([0], [0], color=C_1997, lw=1.6, label="1997 dune line"),
+        Patch(color=C_1984_FILL, label="1984 seaward of 1997"),
+        Patch(color=C_1997_FILL, label="1984 landward of 1997")])
+
     p = FIG_DIR / "HAT_duneline_offset_ribbon.png"
-    fig.savefig(p, dpi=180, bbox_inches="tight")
+    fig.savefig(p, dpi=220, bbox_inches="tight")
     plt.close(fig)
     return p
 
 
 def fig_zooms(elev, extent, gdf, lines, rows, reaches=None, out=None,
-              half_width=None, rows_by_domain=None, suptitle=None):
+              half_width=None, rows_by_domain=None):
     """
     True-scale map panels on the reaches where the offset is largest, plus a
     quiet control.
@@ -537,16 +818,18 @@ def fig_zooms(elev, extent, gdf, lines, rows, reaches=None, out=None,
     given, each label also carries the number of Barrier3D rows the insert
     would add there, which is what ties this view to row-insert-scope/.
     """
+    apply_style()
     reaches = reaches or ZOOM_REACHES
     half_width = ZOOM_HALF_WIDTH_M if half_width is None else half_width
     vmin, vmax = m.elev_limits(elev)
     by_dom = {r["domain"]: r for r in rows}
 
     fig, axes = plt.subplots(1, len(reaches),
-                             figsize=(4.4 * len(reaches), 13.0),
+                             figsize=(4.2 * len(reaches), 12.0),
                              constrained_layout=True)
+    axes = np.atleast_1d(axes)
     im = None
-    for ax, (lo, hi, slug, note) in zip(np.atleast_1d(axes), reaches):
+    for i, (ax, (lo, hi, slug, note)) in enumerate(zip(axes, reaches)):
         ids = list(range(lo, hi + 1))
         sub = gdf[gdf["domain_id"].astype(int).isin(ids)]
         bx = sub.total_bounds
@@ -554,61 +837,774 @@ def fig_zooms(elev, extent, gdf, lines, rows, reaches=None, out=None,
                                if by_dom[d]["x1984_med"] != ""]))
         meds = [by_dom[d]["offset_med_m"] for d in ids]
 
-        im = m.panel_elev(ax, elev, extent, vmin, vmax,
-                          f"domains {lo}-{hi}\n{note}\n"
-                          f"offset {min(meds):+.0f} to {max(meds):+.0f} m")
+        im = m.panel_elev(ax, elev, extent, vmin, vmax, "")
+        rng = f"offset {min(meds):+.0f} to {max(meds):+.0f} m"
+        ax.set_title(f"Domains {lo}\u2013{hi}\n"
+                     + (f"{note}\n" if note and note != rng else "") + rng)
+        if len(reaches) > 1:
+            _letter_inside(ax, i)
         sub.boundary.plot(ax=ax, color=BOX_STYLE["edgecolor"],
                           linewidth=0.6, zorder=4)
         for _, r in sub.iterrows():
             b = r.geometry.bounds
             d = int(r["domain_id"])
-            lab = f"{d}   {by_dom[d]['offset_med_m']:+.0f} m"
+            lab = f"{d}:  {by_dom[d]['offset_med_m']:+.0f} m"
             if rows_by_domain is not None:
                 n = rows_by_domain.get(d, 0)
-                lab += f"   →  +{n} row{'' if n == 1 else 's'}"
-            ax.text(cen - half_width + 55, (b[1] + b[3]) / 2, lab,
-                    fontsize=7.5, ha="left", va="center", color="0.05",
+                lab += (f"   →  {n:+d} row{'' if abs(n) == 1 else 's'}"
+                        if n else "   →  no rows")
+            ax.text(cen - half_width + 40, (b[1] + b[3]) / 2, lab,
+                    fontsize=7.5, ha="left", va="center", color=INK,
                     zorder=6,
-                    bbox=dict(facecolor="white", alpha=0.7, edgecolor="none",
-                              boxstyle="square,pad=0.15"))
-        draw_lines(ax, lines, scale=1.3)
+                    bbox=dict(facecolor="white", alpha=0.8, edgecolor="none",
+                              boxstyle="square,pad=0.2"))
+        draw_lines(ax, lines, scale=LINE_SCALE_DETAIL)
         ax.set_xlim(cen - half_width, cen + half_width)
         ax.set_ylim(bx[1] - 100.0, bx[3] + 100.0)
         ax.set_aspect("equal")
         m.km_axes(ax, nx=2, ny=8)
-        ax.set_xlabel("Easting (km)", fontsize=9)
-    np.atleast_1d(axes)[0].set_ylabel("Northing (km)", fontsize=9)
-    np.atleast_1d(axes)[0].legend(handles=line_legend(), loc="lower left",
-                                  fontsize=8, framealpha=0.92)
+        ax.set_xlabel("Easting (km)")
+    axes[0].set_ylabel("Northing (km)")
+    axes[0].legend(handles=line_legend(), loc="lower left")
 
-    cb = fig.colorbar(im, ax=list(np.atleast_1d(axes)),
-                      orientation="horizontal", fraction=0.025, pad=0.01,
-                      aspect=50)
-    cb.set_label("Elevation (m NAVD88)", fontsize=9)
-    cb.ax.tick_params(labelsize=8)
-
-    fig.suptitle(suptitle
-                 or "The same two lines at true scale, cross-shore crop only",
-                 fontsize=13)
-    tail = ("" if rows_by_domain is None else
-            " The row count beside each is what the 1984 seaward-row insert "
-            "would add there: round(offset / 10 m), floored at 0.")
-    fig.text(0.5, -0.01,
-             f"Equal aspect, no exaggeration. Each panel is cropped to "
-             f"{half_width:.0f} m either side of the local line "
-             f"position rather than the full 2000 m domain box. Per-domain "
-             f"median offset is printed beside each box.{tail}",
-             ha="center", va="top", fontsize=8, color="#444444", wrap=True)
+    cb = fig.colorbar(im, ax=list(axes), orientation="horizontal",
+                      fraction=0.025, pad=0.015, aspect=50)
+    cb.set_label("Elevation (m NAVD88)")
+    cb.outline.set_linewidth(0.6)
+    cb.ax.tick_params(labelsize=8, width=0.6, length=3)
 
     p = Path(out) if out else (FIG_DIR / "HAT_duneline_offset_zooms.png")
     p.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(p, dpi=170, bbox_inches="tight")
+    fig.savefig(p, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    return p
+
+
+def load_1m(gdf, ids):
+    """
+    The 1 m gapfilled tiles for `ids`, mosaicked onto one array.
+
+    The tiles carry no CRS tag, so this does NOT trust them: each tile's bounds
+    are checked against its domain box from `gdf`, and a disagreement over
+    TILE_BOUNDS_TOL_M raises. That check is the only thing establishing that
+    the raster and the dune lines are in the same frame, so it is not optional.
+
+    Returns (array, extent) with nodata as NaN, or (None, None) if the tiles
+    are not on disk - the caller falls back to the 10 m mosaic.
+    """
+    import rasterio
+    paths = {d: TILE_1M_DIR / TILE_1M_NAME.format(d=d) for d in ids}
+    missing = [d for d, q in paths.items() if not q.exists()]
+    if missing:
+        print(f"  NOTE: 1 m tiles absent for domains {missing} - "
+              f"falling back to the 10 m mosaic")
+        return None, None
+
+    tiles = {}
+    for d, q in paths.items():
+        box = gdf[gdf["domain_id"].astype(int) == d].total_bounds
+        with rasterio.open(q) as src:
+            b = src.bounds
+            off = max(abs(b.left - box[0]), abs(b.bottom - box[1]),
+                      abs(b.right - box[2]), abs(b.top - box[3]))
+            if off > TILE_BOUNDS_TOL_M:
+                raise SystemExit(
+                    f"\n{q.name} does not sit on domain {d}'s box - the worst "
+                    f"corner is {off:.1f} m out (tolerance "
+                    f"{TILE_BOUNDS_TOL_M} m).\n"
+                    f"  tile {[round(v, 1) for v in b]}\n"
+                    f"  box  {[round(v, 1) for v in box]}\n"
+                    f"  The tiles carry no CRS, so this check is the only "
+                    f"thing tying them to the dune lines.")
+            if src.res != (1.0, 1.0):
+                raise SystemExit(f"{q.name} is {src.res} m, not 1 m")
+            a = src.read(1).astype(float)
+            a[a == src.nodata] = np.nan
+            tiles[d] = (a, b)
+
+    x0 = min(b.left for _, b in tiles.values())
+    x1 = max(b.right for _, b in tiles.values())
+    y0 = min(b.bottom for _, b in tiles.values())
+    y1 = max(b.top for _, b in tiles.values())
+    out = np.full((int(round(y1 - y0)), int(round(x1 - x0))), np.nan)
+    for a, b in tiles.values():
+        r0 = int(round(y1 - b.top))
+        c0 = int(round(b.left - x0))
+        win = out[r0:r0 + a.shape[0], c0:c0 + a.shape[1]]
+        np.copyto(win, a, where=np.isnan(win))
+    print(f"  backdrop: {len(tiles)} tiles at 1 m, {out.shape[0]} x "
+          f"{out.shape[1]}, {int(np.isfinite(out).sum()):,} valid cells")
+    return out, (x0, x1, y0, y1)
+
+
+def _hillshade(ax, arr, extent, res=1.0):
+    """
+    Grey relief. No value is readable off this and none is labelled.
+
+    `res` is the array's cell size in metres. It has to be passed, not assumed:
+    the detail panels shade the 1 m tiles and the locator shades the 10 m
+    mosaic, and a hillshade computed at the wrong cell size gets the slope - and
+    so the whole look of the relief - wrong by that factor. The smoothing is
+    expressed in metres and converted here for the same reason; below one cell
+    it is skipped rather than rounded to a no-op filter.
+    """
+    from matplotlib.colors import LightSource
+    ax.set_facecolor(NODATA_GREY)
+    good = np.isfinite(arr)
+    filled = np.where(good, arr, np.nanmin(arr))
+    win = int(round(SHADE_SMOOTH_M / res))
+    if win > 1:
+        from scipy.ndimage import uniform_filter
+        filled = uniform_filter(filled, size=win, mode="nearest")
+    hs = LightSource(azdeg=HILLSHADE["azdeg"],
+                     altdeg=HILLSHADE["altdeg"]).hillshade(
+        filled, vert_exag=HILLSHADE["vert_exag"], dx=res, dy=res)
+    rgba = plt.get_cmap("gray")(0.30 + 0.62 * hs)
+    rgba[~good] = matplotlib.colors.to_rgba(NODATA_GREY)
+    ax.imshow(rgba, extent=(extent[0], extent[1], extent[2], extent[3]),
+              origin="upper", interpolation="bilinear", zorder=1)
+
+
+def _place_of(lo, hi, ann=HATTERAS_ANNOTATIONS):
+    """
+    Where GIS domains lo..hi are, in the site's own vocabulary.
+
+    Every name comes from HATTERAS_ANNOTATIONS, so none of them is a place name
+    invented for this figure. Most specific first: a community containing the
+    pair, then a named shoal zone, then the gap between the two nearest
+    communities. A pair inside a community also names the village centre it
+    sits on, where the config gives one.
+    """
+    for name, (a, b) in ann.town_spans.items():
+        if a <= lo and hi <= b:
+            near = [v for v, g in ann.village_lines.items() if lo <= g <= hi]
+            return f"{name}, at {near[0]}" if near else name
+    for name, (a, b) in ann.shoal_zones.items():
+        if a <= lo and hi <= b:
+            return name
+    below = [(b, n) for n, (a, b) in ann.town_spans.items() if b < lo]
+    above = [(a, n) for n, (a, b) in ann.town_spans.items() if a > hi]
+    if below and above:
+        return f"{max(below)[1]}–{min(above)[1]}"
+    if above:
+        return f"south of {min(above)[1]}"
+    if below:
+        return f"north of {max(below)[1]}"
+    return ann.region_name
+
+
+def _pair_title(lo, hi, meds, note=""):
+    """
+    Two lines: where the pair is, and what was measured there.
+
+    Both are generated. The direction word comes from the SIGN of the measured
+    medians rather than being written down beside them, so a title cannot read
+    SEAWARD over a panel whose numbers are negative, and the cell count is the
+    same round(offset / 10 m) the row-insert scope uses.
+    """
+    a = np.abs(meds)
+    if (meds > 0).all():
+        way = "1984 seaward"
+    elif (meds < 0).all():
+        way = "1984 landward"
+    else:
+        way = "1984 both ways"
+    if a.max() < CELL_M:
+        mag = f"by {a.min():.0f}–{a.max():.0f} m (under one cell)"
+    else:
+        c0, c1 = round(a.min() / CELL_M), round(a.max() / CELL_M)
+        cell = f"{c0:.0f} cell" if c0 == c1 else f"{c0:.0f}–{c1:.0f} cells"
+        mag = f"by {a.min():.0f}–{a.max():.0f} m ({cell})"
+    head = f"Domains {lo}–{hi} · {_place_of(lo, hi)}"
+    if note:
+        head += f" · {note}"
+    # Every panel gets exactly two lines. A third would make the titles
+    # different heights, and in a one-row figure that pushes the axes tops out
+    # of line with each other.
+    return head + "\n" + way + " " + mag
+
+
+def _span_y(gdf, lo, hi):
+    """Northing bounds of GIS domains lo..hi, or None if none are on the grid.
+
+    Fractional ids are accepted so a groin on a box boundary resolves, but the
+    only thing this figure uses is whole spans.
+    """
+    sub = gdf[gdf["domain_id"].astype(int).isin(
+        range(int(np.floor(lo)), int(np.ceil(hi)) + 1))]
+    if sub.empty:
+        return None
+    b = sub.total_bounds
+    return float(b[1]), float(b[3])
+
+
+def _places(ax, gdf, y0, y1, ann=HATTERAS_ANNOTATIONS):
+    """
+    The communities, as a bracket in the ocean margin - not a wash.
+
+    A translucent band across the panel would sit on the island and on both
+    dune lines, and its colour is a blue close enough to the 1997 line's to be
+    read as belonging to it. A bracket at the seaward edge says the same thing
+    where nothing else is drawn, and leaves the two lines the only coloured
+    marks on the island itself.
+
+    Spans, names and the end labels all come from HATTERAS_ANNOTATIONS. Only
+    the parts falling inside this panel's northing window are drawn, and a
+    bracket is clipped to that window rather than dropped, so a community
+    straddling a panel break appears on both.
+    """
+    xa, xb = ax.get_xlim()
+    xbr = xb - 0.055 * (xb - xa)          # the bracket
+    xtx = xbr - 0.02 * (xb - xa)          # names, to landward of it
+
+    for name, (lo, hi) in ann.town_spans.items():
+        yy = _span_y(gdf, lo, hi)
+        if yy is None or yy[1] < y0 or yy[0] > y1:
+            continue
+        a, b = max(yy[0], y0), min(yy[1], y1)
+        ax.plot([xbr, xbr], [a, b], color=ann.color_town_span, lw=5.0,
+                solid_capstyle="butt", zorder=8)
+        # Avon is GIS 21-31 and the panels break at 30, so it is drawn in two
+        # pieces. The BRACKET is drawn in both - the community really does
+        # continue past the break - but the NAME goes only on the panel holding
+        # most of it, or a one-domain sliver at the foot of the next panel
+        # reads as a second Avon. Centred on the visible piece, never on the
+        # clip edge, so a clipped label cannot ride up over the panel title.
+        if (b - a) < 0.5 * (yy[1] - yy[0]):
+            continue
+        ax.text(xtx, (a + b) / 2.0, name, fontsize=9, fontweight="bold",
+                ha="right", va="center", color="0.15", zorder=11,
+                bbox=dict(facecolor="white", alpha=0.85, edgecolor="none",
+                          boxstyle="square,pad=0.18"))
+
+    for name, gid in ann.village_lines.items():
+        yy = _span_y(gdf, gid, gid)
+        if yy is None:
+            continue
+        yc = (yy[0] + yy[1]) / 2.0
+        if not (y0 <= yc <= y1):
+            continue
+        ax.plot([xbr - 0.012 * (xb - xa), xbr + 0.012 * (xb - xa)], [yc, yc],
+                color=ann.color_village_line, lw=1.0, zorder=9)
+        ax.text(xtx, yc, name, fontsize=7.5, ha="right", va="center",
+                color=ann.color_village_line, zorder=11,
+                bbox=dict(facecolor="white", alpha=0.8, edgecolor="none",
+                          boxstyle="square,pad=0.12"))
+
+
+def _x1984(by_dom, gid):
+    """Median easting of the 1984 line at GIS id `gid`, fractional allowed.
+
+    A structure sitting on a box boundary (the Buxton groin is at 5.5) has no
+    domain of its own, so the two it lies between are averaged. Returns None
+    where the table has no line in those domains, and the caller draws nothing
+    rather than guessing a position.
+    """
+    import math
+    ids = {math.floor(gid), math.ceil(gid)}
+    xs = [by_dom[d]["x1984_med"] for d in ids
+          if d in by_dom and by_dom[d]["x1984_med"] != ""]
+    return float(np.mean(xs)) if xs else None
+
+
+def _structures(ax, gdf, by_dom, y0, y1, ann=HATTERAS_ANNOTATIONS):
+    """
+    The piers and the groin, as seaward marks off the 1984 line.
+
+    Positions come from HATTERAS_ANNOTATIONS. The piers' second field is a
+    label height for the domain-axis figures and is ignored here; only the
+    domain id is used. Drawn perpendicular to a shore-parallel pair of lines,
+    so nothing here can be mistaken for a dune line despite sharing a colour
+    family with one.
+    """
+    for name, spec in ann.piers.items():
+        gid = spec[0] if isinstance(spec, (tuple, list)) else spec
+        yy, x = _span_y(gdf, gid, gid), _x1984(by_dom, gid)
+        if yy is None or x is None:
+            continue
+        yc = (yy[0] + yy[1]) / 2.0
+        if not (y0 <= yc <= y1):
+            continue
+        ax.plot([x, x + STRUCTURE_LEN_M], [yc, yc], color=ann.color_pier,
+                lw=1.8, solid_capstyle="butt", zorder=10)
+
+    for name, gid in ann.groins.items():
+        yy, x = _span_y(gdf, gid, gid), _x1984(by_dom, gid)
+        if yy is None or x is None:
+            continue
+        yc = (yy[0] + yy[1]) / 2.0
+        if not (y0 <= yc <= y1):
+            continue
+        ax.plot([x, x + STRUCTURE_LEN_M], [yc, yc], color=ann.color_groin,
+                lw=1.8, solid_capstyle="butt", zorder=10)
+
+
+def _km_axis(bar, y_origin, y0, y1):
+    """
+    Alongshore distance in km, on the bar strip's left edge.
+
+    It goes on the BAR and not on the map on purpose: the map is pinned to
+    equal aspect and its column width is set to its own data aspect, so hanging
+    tick labels off it would letterbox it and break the row-for-row alignment
+    that is the whole reason the bar sits beside it. The bar is not
+    aspect-locked, and it shares the map's northing axis, so a ruler on the bar
+    reads correctly against the map.
+
+    Origin is the south end of domain 1 and distance increases north, matching
+    fig_ribbon's x-axis.
+    """
+    lo = np.ceil((y0 - y_origin) / KM_TICK_M) * KM_TICK_M
+    if lo <= 0.0:
+        # The first panel starts ISLAND_PAD_M south of domain 1, so ceil() here
+        # returns -0.0 and the tick formats as "-0". max(-0.0, 0.0) does not
+        # fix it - the two compare equal and max keeps the first - so assign.
+        lo = 0.0
+    hi = (y1 - y_origin)
+    vals = np.arange(lo, hi + 1.0, KM_TICK_M)
+    bar.set_yticks([y_origin + v for v in vals])
+    bar.set_yticklabels([f"{v / 1000:.0f}" for v in vals])
+    bar.tick_params(axis="y", labelsize=7, length=2.5, pad=1.5,
+                    color="0.55", labelcolor="0.35")
+
+
+def _end_label(ax, text, at_top, y0, y1):
+    """The site's own name for what lies off the end of the reach."""
+    xa, xb = ax.get_xlim()
+    ax.text(xa + 0.5 * (xb - xa), y1 if at_top else y0, text,
+            fontsize=8.5, fontstyle="italic", ha="center",
+            va="top" if at_top else "bottom", color=INK_MUTED, zorder=12,
+            bbox=dict(facecolor="white", alpha=0.85, edgecolor="none",
+                      boxstyle="square,pad=0.22"))
+
+
+def _scalebar(ax, length_m=SCALEBAR_M):
+    """A bar, because the coordinate ticks are gone. Drawn in data units, so
+    it scales with the panel and cannot disagree with it. White halo rather
+    than a box, so it sits on relief without blanking it."""
+    x0, x1 = ax.get_xlim()
+    y0, y1 = ax.get_ylim()
+    bx = x0 + 0.06 * (x1 - x0)
+    by = y0 + 0.028 * (y1 - y0)
+    tick = 0.004 * (y1 - y0)
+    ax.plot([bx, bx + length_m], [by, by], color=INK, lw=2.2,
+            solid_capstyle="butt", zorder=12, path_effects=_halo(4.2))
+    for e in (bx, bx + length_m):
+        ax.plot([e, e], [by - tick, by + tick], color=INK, lw=1.2,
+                zorder=12, path_effects=_halo(3.0))
+    ax.text(bx + length_m / 2, by + 1.6 * tick,
+            (f"{length_m / 1000:.0f} km" if length_m >= 1000 else
+             f"{length_m:.0f} m  ({length_m / CELL_M:.0f} cells)"),
+            ha="center", va="bottom", fontsize=8, color=INK, zorder=12,
+            bbox=dict(facecolor="white", alpha=0.8, edgecolor="none",
+                      boxstyle="square,pad=0.15"))
+
+
+# The per-domain statistic the bar strip can draw. Median is the figure's
+# default and the number every other figure quotes; the mean is offered
+# because a reader may ask for it, and the two disagree exactly where a
+# domain's 1 m samples are skewed - a short reach of large offset inside an
+# otherwise quiet domain pulls the mean and leaves the median alone.
+ISLAND_STATS = {"median": "offset_med_m", "mean": "offset_mean_m"}
+
+
+def fig_island_simple(elev, extent, gdf, lines, rows, reaches=None,
+                      out=None, stat="median"):
+    """
+    The whole island, and the measured offset beside it.
+
+    `stat` picks the per-domain statistic on the bar - see ISLAND_STATS. The
+    default output name carries a suffix for anything but the median, so the
+    two versions cannot overwrite each other.
+
+    Each of the three columns is one third of the island as TWO axes sharing a
+    northing axis:
+
+      left   a true map at equal aspect - grey relief, both lines solid, the
+             detail pairs boxed. It locates. It does NOT show the offset, and
+             it cannot: 46 km of island against a 50 m offset is under half a
+             line width, so the two lines lie on top of each other nearly
+             everywhere on it. That is a property of the scale, not of the
+             lines, and the bar beside it exists because of it.
+
+      right  the per-domain median offset as a bar, aligned to the map row for
+             row, red where 1984 lies seaward and blue where it lies landward.
+             Same numbers the detail panels print, off the same CSV.
+
+    Read together they answer the two halves of the question: the bar says
+    where along the island the two lines disagree and by how much, the map says
+    what that part of the island looks like and where the detail panels are cut
+    from.
+    """
+    reaches = reaches or SIMPLE_REACHES
+    ids = np.sort(gdf["domain_id"].astype(int).to_numpy())
+    groups = np.array_split(ids, ISLAND_PANELS)
+    by_dom = {r["domain"]: r for r in rows}
+    if stat not in ISLAND_STATS:
+        raise ValueError(f"stat must be one of {list(ISLAND_STATS)}, "
+                         f"not {stat!r}")
+    key = ISLAND_STATS[stat]
+    med = np.array([r[key] for r in rows if r[key] != ""], float)
+    lim = float(np.ceil(np.abs(med).max() / 10.0) * 10.0)
+
+    # THE COLUMN WIDTHS ARE COMPUTED, NOT CHOSEN. Every axes in a one-row
+    # figure gets the same height, and each map is pinned to equal aspect, so a
+    # map whose column is wider than its own data aspect is letterboxed - it
+    # shrinks vertically inside its box and stops lining up with the bar beside
+    # it. Alignment row for row is the whole reason the bar sits next to the
+    # map, so the width of each map column is set to exactly its own
+    # x-span/y-span (the island is 5.7 km wide at the south end and 4.1 at the
+    # north, so the three are genuinely different) and the maps then fill their
+    # boxes and share a northing axis by construction.
+    spans = []
+    for group in groups:
+        b = gdf[gdf["domain_id"].astype(int).isin(group)].total_bounds
+        spans.append(((b[2] - b[0] + 2 * ISLAND_PAD_M),
+                      (b[3] - b[1] + 2 * ISLAND_PAD_M)))
+    ratios = [dx / dy for dx, dy in spans]
+    strip = STRIP_WIDTH_RATIO * float(np.mean(ratios))
+    widths = [v for r in ratios for v in (r, strip)]
+
+    # The south end of domain 1, which is where the alongshore ruler starts.
+    y_origin = float(gdf[gdf["domain_id"].astype(int) == int(ids.min())]
+                     .total_bounds[1])
+
+    apply_style()
+    panel_h = 13.0
+    fig, axes = plt.subplots(
+        1, 2 * ISLAND_PANELS,
+        figsize=(panel_h * sum(widths) + 1.6, panel_h + 1.4),
+        constrained_layout=True,
+        gridspec_kw=dict(width_ratios=widths))
+
+    for i, group in enumerate(groups):
+        ax, bar = axes[2 * i], axes[2 * i + 1]
+        sub = gdf[gdf["domain_id"].astype(int).isin(group)]
+        bx = sub.total_bounds
+        y0, y1 = bx[1] - ISLAND_PAD_M, bx[3] + ISLAND_PAD_M
+
+        # ---- the map -------------------------------------------------------
+        _hillshade(ax, elev, extent, res=GRID_10M)
+        sub.boundary.plot(ax=ax, color="0.45", linewidth=0.35, zorder=4)
+        draw_lines(ax, lines, scale=LINE_SCALE_ISLAND,
+                   style=SIMPLE_LINE_STYLE)
+        for lo, hi, note in reaches:
+            if not (group.min() <= lo <= group.max()):
+                continue
+            r = gdf[gdf["domain_id"].astype(int).isin(range(lo, hi + 1))]
+            rb = r.total_bounds
+            # No outline round the pair. At this scale the box is 2 km of a
+            # 2 km-wide island, so it enclosed the whole width and read as a
+            # feature of the island rather than a crop mark. The label and the
+            # band on the bar beside it carry the same information without
+            # drawing a rectangle over the only two lines the map has.
+            ax.annotate(f"{lo}\u2013{hi}", xy=(rb[0], (rb[1] + rb[3]) / 2),
+                        xytext=(-8, 0), textcoords="offset points",
+                        fontsize=8, fontweight="bold", ha="right",
+                        va="center", color=HIGHLIGHT, zorder=10,
+                        bbox=dict(facecolor="white", alpha=0.85,
+                                  edgecolor="none",
+                                  boxstyle="square,pad=0.18"))
+        ax.set_xlim(bx[0] - ISLAND_PAD_M, bx[2] + ISLAND_PAD_M)
+        ax.set_ylim(y0, y1)
+        ax.set_aspect("equal")
+        ax.set_xticks([])
+        ax.set_yticks([])
+        _title(ax, i, f"Domains {group.min()}\u2013{group.max()}")
+        _places(ax, gdf, y0, y1)
+        _structures(ax, gdf, by_dom, y0, y1)
+        if i == 0:
+            _end_label(ax, HATTERAS_ANNOTATIONS.low_end_label, False, y0, y1)
+            _north_arrow(ax, x=0.88, y=0.09)
+        if i == ISLAND_PANELS - 1:
+            _end_label(ax, HATTERAS_ANNOTATIONS.high_end_label, True, y0, y1)
+        _scalebar(ax, length_m=2000.0)
+
+        # ---- the offset beside it ------------------------------------------
+        for d in group:
+            b = gdf[gdf["domain_id"].astype(int) == d].total_bounds
+            v = by_dom[d][key]
+            if v == "":
+                continue
+            bar.barh((b[1] + b[3]) / 2, v, height=(b[3] - b[1]) * 0.86,
+                     color=OFFSET_POS if v > 0 else OFFSET_NEG,
+                     linewidth=0, zorder=3)
+        for lo, hi, note in reaches:
+            if group.min() <= lo <= group.max():
+                r = gdf[gdf["domain_id"].astype(int).isin(range(lo, hi + 1))]
+                rb = r.total_bounds
+                bar.axhspan(rb[1], rb[3], color=HIGHLIGHT, alpha=0.10,
+                            zorder=1)
+        bar.axvline(0, color=INK, lw=0.7, zorder=4)
+        for c in (-CELL_M, CELL_M):
+            bar.axvline(c, color=INK_MUTED, lw=0.6, ls=(0, (3, 2)), zorder=4)
+        bar.set_xlim(-lim, lim)
+        bar.set_ylim(y0, y1)
+        _km_axis(bar, y_origin, y0, y1)
+        bar.tick_params(axis="x", labelsize=7.5)
+        bar.set_title("Offset (m)", fontsize=9)
+        if i == 0:
+            bar.text(-0.30, 1.008, "km", transform=bar.transAxes, fontsize=7.5,
+                     ha="center", va="bottom", color=INK_MUTED)
+        bar.grid(axis="x", zorder=0)
+        bar.set_axisbelow(True)
+        for sp in ("top", "right", "left"):
+            bar.spines[sp].set_visible(False)
+        # Domain numbers live on the bar, not the map - on the map they would
+        # sit on top of the two lines, which are the only thing it carries.
+        for d in group:
+            if d % 10 == 0 or d in (ids.min(), ids.max()):
+                b = gdf[gdf["domain_id"].astype(int) == d].total_bounds
+                bar.text(lim * 0.96, (b[1] + b[3]) / 2, str(d), fontsize=7.5,
+                         ha="right", va="center", color=INK_MUTED, zorder=6,
+                         bbox=dict(facecolor="white", alpha=0.7,
+                                   edgecolor="none",
+                                   boxstyle="square,pad=0.1"))
+
+    # One legend for the whole figure, below the panels. On the map it would
+    # have to sit on the island, which is 2 km wide at this scale.
+    from matplotlib.patches import Patch
+    fig.legend(
+        handles=[Line2D([0], [0], label=f"{yr} dune line",
+                        **dict(SIMPLE_LINE_STYLE[yr], linewidth=2.0))
+                 for yr in (1984, 1997)]
+        + [Patch(color=OFFSET_POS, label=f"{stat} offset, 1984 seaward"),
+           Patch(color=OFFSET_NEG, label=f"{stat} offset, 1984 landward"),
+           Line2D([0], [0], color=INK_MUTED, lw=0.8, ls=(0, (3, 2)),
+                  label="\u00b11 Barrier3D cell (10 m)"),
+           Line2D([0], [0], color=HATTERAS_ANNOTATIONS.color_town_span,
+                  lw=5.0, label="community"),
+           Line2D([0], [0], color=HATTERAS_ANNOTATIONS.color_pier, lw=1.8,
+                  label="pier"),
+           Line2D([0], [0], color=HATTERAS_ANNOTATIONS.color_groin, lw=1.8,
+                  label="groin"),
+           Patch(facecolor=HIGHLIGHT, alpha=0.10,
+                 label="pair in the detail figure")],
+        loc="outside lower center", ncol=5, fontsize=9)
+
+    suffix = "" if stat == "median" else f"_{stat}"
+    q = Path(out) if out else (
+        FIG_DIR / f"HAT_duneline_offset_simple_island{suffix}.png")
+    q.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(q, dpi=200, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    return q
+
+
+def fig_island_lines(elev, extent, gdf, lines, rows, reaches=None,
+                     out=None, per_panel=LINES_ISLAND_DOMAINS,
+                     pad_m=LINES_ISLAND_PAD_M):
+    """
+    The whole island as maps only: no bar strips, the two lines the subject.
+
+    fig_island_simple's map is a LOCATOR and its bar carries the offset,
+    because at 15 km per panel the two lines sit inside one line width. This
+    figure makes the map itself carry the offset by cutting the island into
+    ~5 km panels and cropping each to the strip the lines occupy (see the
+    LINES_ISLAND_* constants). Everything stays at equal aspect; it is a zoom,
+    not an exaggeration. Communities, village ticks, structures and the detail
+    pair labels are kept as location cues; the domain numbers, which lived on
+    the bar, move to the landward edge of the map every fifth domain.
+    """
+    from shapely.geometry import box as _box
+    from matplotlib.patches import Patch
+
+    reaches = reaches or SIMPLE_REACHES
+    ids = np.sort(gdf["domain_id"].astype(int).to_numpy())
+    n_panels = int(np.ceil(len(ids) / per_panel))
+    groups = np.array_split(ids, n_panels)
+    by_dom = {r["domain"]: r for r in rows}
+    med = np.array([r["offset_med_m"] for r in rows
+                    if r["offset_med_m"] != ""], float)
+
+    # Each panel's window: northing from the domain boxes, easting from the
+    # lines themselves inside that northing window. The lines are what the
+    # panel is for, so they set the crop; the boxes only say which domains.
+    wins = []
+    for group in groups:
+        sub = gdf[gdf["domain_id"].astype(int).isin(group)]
+        bx = sub.total_bounds
+        y0, y1 = bx[1] - 0.2 * pad_m, bx[3] + 0.2 * pad_m
+        band = _box(bx[0] - 5000.0, y0, bx[2] + 5000.0, y1)
+        xs = []
+        for yr in lines:
+            c = gpd.clip(lines[yr], band)
+            if len(c):
+                cb = c.total_bounds
+                xs += [cb[0], cb[2]]
+        if not xs:                      # no line here - fall back to the box
+            xs = [bx[0], bx[2]]
+        x0, x1 = min(xs) - pad_m, max(xs) + pad_m
+        wins.append((x0, x1, y0, y1))
+    ratios = [(w[1] - w[0]) / (w[3] - w[2]) for w in wins]
+
+    apply_style()
+    panel_h = 13.0
+    fig, axes = plt.subplots(
+        1, n_panels,
+        figsize=(panel_h * sum(ratios) + 0.35 * n_panels + 0.8, panel_h + 1.6),
+        constrained_layout=True,
+        gridspec_kw=dict(width_ratios=ratios))
+    axes = np.atleast_1d(axes)
+
+    for i, (group, win) in enumerate(zip(groups, wins)):
+        ax = axes[i]
+        x0, x1, y0, y1 = win
+        sub = gdf[gdf["domain_id"].astype(int).isin(group)]
+        _hillshade(ax, elev, extent, res=GRID_10M)
+        sub.boundary.plot(ax=ax, color="0.45", linewidth=0.4, zorder=4)
+        draw_lines(ax, lines, scale=LINES_ISLAND_LINE_SCALE,
+                   style=SIMPLE_LINE_STYLE)
+        for lo, hi, note in reaches:
+            if not (group.min() <= lo <= group.max()):
+                continue
+            r = gdf[gdf["domain_id"].astype(int).isin(range(lo, hi + 1))]
+            rb = r.total_bounds
+            ax.axhspan(rb[1], rb[3], color=HIGHLIGHT, alpha=0.08, zorder=2)
+            ax.annotate(f"{lo}\u2013{hi}", xy=(x0, (rb[1] + rb[3]) / 2),
+                        xytext=(4, 0), textcoords="offset points",
+                        fontsize=8, fontweight="bold", ha="left",
+                        va="center", color=HIGHLIGHT, zorder=10,
+                        bbox=dict(facecolor="white", alpha=0.85,
+                                  edgecolor="none",
+                                  boxstyle="square,pad=0.18"))
+        ax.set_xlim(x0, x1)
+        ax.set_ylim(y0, y1)
+        ax.set_aspect("equal")
+        ax.set_xticks([])
+        ax.set_yticks([])
+        _title(ax, i, f"Domains {group.min()}\u2013{group.max()}")
+        _places(ax, gdf, y0, y1)
+        _structures(ax, gdf, by_dom, y0, y1)
+        if i == 0:
+            _end_label(ax, HATTERAS_ANNOTATIONS.low_end_label, False, y0, y1)
+            _north_arrow(ax, x=0.86, y=0.09)
+        if i == n_panels - 1:
+            _end_label(ax, HATTERAS_ANNOTATIONS.high_end_label, True, y0, y1)
+        _scalebar(ax, length_m=500.0)
+        # Domain numbers on the landward edge, every fifth. The bar that used
+        # to carry them is gone, and on a 1 km-wide crop the landward margin
+        # is backdune with nothing else drawn on it.
+        for d in group:
+            if d % 5 == 0 or d in (ids.min(), ids.max()):
+                b = gdf[gdf["domain_id"].astype(int) == d].total_bounds
+                ax.text(x0 + 0.03 * (x1 - x0), (b[1] + b[3]) / 2, str(d),
+                        fontsize=7.5, ha="left", va="center", color=INK_MUTED,
+                        zorder=6,
+                        bbox=dict(facecolor="white", alpha=0.7,
+                                  edgecolor="none",
+                                  boxstyle="square,pad=0.1"))
+
+    fig.legend(
+        handles=[Line2D([0], [0], label=f"{yr} dune line",
+                        **dict(SIMPLE_LINE_STYLE[yr], linewidth=2.0))
+                 for yr in (1984, 1997)]
+        + [Line2D([0], [0], color=HATTERAS_ANNOTATIONS.color_town_span,
+                  lw=5.0, label="community"),
+           Line2D([0], [0], color=HATTERAS_ANNOTATIONS.color_pier, lw=1.8,
+                  label="pier"),
+           Line2D([0], [0], color=HATTERAS_ANNOTATIONS.color_groin, lw=1.8,
+                  label="groin"),
+           Patch(facecolor=HIGHLIGHT, alpha=0.08,
+                 label="pair in the detail figure")],
+        loc="outside lower center", ncol=6, fontsize=9)
+
+    q = Path(out) if out else (FIG_DIR / "HAT_duneline_offset_lines_island.png")
+    q.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(q, dpi=200, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    return q
+
+
+def fig_zooms_simple(gdf, lines, rows, elev=None, extent=None, reaches=None,
+                     out=None, half_width=None):
+    """
+    The two lines, and as little else as the picture can carry.
+
+    Same measurement, same frame, same equal aspect and same two colours as
+    fig_zooms. REMOVED: the terrain colour ramp and its colourbar, the
+    elevation values, the coordinate ticks, and the dashed styling - both lines
+    are SOLID here and differ only in colour. ADDED: a 1 m greyscale hillshade
+    backdrop, and a scale bar in place of the ticks.
+
+    What is NOT changed is the geometry. Equal aspect, no horizontal
+    exaggeration, and the crop is the only thing making the offset visible -
+    see SIMPLE_HALF_WIDTH_M for why the pairs are two domains rather than whole
+    reaches. The hillshade's vertical exaggeration is a property of the
+    BACKDROP only and moves nothing in the map plane.
+    """
+    apply_style()
+    reaches = reaches or SIMPLE_REACHES
+    half_width = SIMPLE_HALF_WIDTH_M if half_width is None else half_width
+    by_dom = {r["domain"]: r for r in rows}
+
+    fig, axes = plt.subplots(1, len(reaches),
+                             figsize=(3.2 * len(reaches), 10.0),
+                             constrained_layout=True)
+    span = 0.0
+    for i, (ax, (lo, hi, note)) in enumerate(zip(np.atleast_1d(axes),
+                                                 reaches)):
+        ids = list(range(lo, hi + 1))
+        sub = gdf[gdf["domain_id"].astype(int).isin(ids)]
+        bx = sub.total_bounds
+        span = bx[3] - bx[1]
+        cen = float(np.median([by_dom[d]["x1984_med"] for d in ids
+                               if by_dom[d]["x1984_med"] != ""]))
+        meds = [by_dom[d]["offset_med_m"] for d in ids]
+
+        arr, ext = load_1m(gdf, ids)
+        if arr is None:
+            arr, ext = elev, extent
+        _hillshade(ax, arr, ext)
+
+        sub.boundary.plot(ax=ax, color="0.35", linewidth=0.8, zorder=4)
+        draw_lines(ax, lines, scale=LINE_SCALE_DETAIL,
+                   style=SIMPLE_LINE_STYLE)
+        ax.set_xlim(cen - half_width, cen + half_width)
+        ax.set_ylim(bx[1], bx[3])
+        ax.set_aspect("equal")
+
+        for _, r in sub.iterrows():
+            b = r.geometry.bounds
+            d = int(r["domain_id"])
+            ax.text(cen - half_width + 12, (b[1] + b[3]) / 2,
+                    f"domain {d}\n{by_dom[d]['offset_med_m']:+.0f} m",
+                    fontsize=8.5, ha="left", va="center", color=INK,
+                    zorder=8, linespacing=1.35,
+                    bbox=dict(facecolor="white", alpha=0.8,
+                              edgecolor="none", boxstyle="square,pad=0.28"))
+
+        ax.set_title(_pair_title(lo, hi, np.asarray(meds, float), note),
+                     linespacing=1.4)
+        _letter_inside(ax, i)
+        _scalebar(ax)
+        if i == 0:
+            _north_arrow(ax, x=0.88, y=0.06)
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    np.atleast_1d(axes)[0].legend(
+        handles=[Line2D([0], [0], label=f"{yr} dune line",
+                        **SIMPLE_LINE_STYLE[yr]) for yr in (1984, 1997)],
+        loc="upper right")
+
+    p = Path(out) if out else (FIG_DIR / "HAT_duneline_offset_simple.png")
+    p.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(p, dpi=220, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
 
 
 def fig_by_domain(rows):
-    """The requested number, domain by domain, with its spread."""
+    """
+    The requested number, domain by domain, with its spread.
+
+    One series, so the marker carries the SIGN rather than an identity: red
+    where the 1984 line lies seaward, blue where it lies landward, the same
+    pair every other figure in the folder uses for the same fact. The
+    communities are banded along the axis so a reader can place a domain
+    without the map.
+    """
+    apply_style()
     dom = np.array([r["domain"] for r in rows])
     med = np.array([r["offset_med_m"] if r["offset_med_m"] != "" else np.nan
                     for r in rows], float)
@@ -616,30 +1612,47 @@ def fig_by_domain(rows):
                     for r in rows], float)
     p75 = np.array([r["offset_p75_m"] if r["offset_p75_m"] != "" else np.nan
                     for r in rows], float)
-
-    fig, ax = plt.subplots(figsize=(11.0, 4.2), constrained_layout=True)
-    ax.vlines(dom, p25, p75, color="0.75", linewidth=2.4,
-              label="interquartile range within the domain", zorder=2)
-    ax.scatter(dom, med, s=14, color="#d62728", zorder=3,
-               label="median offset")
-    ax.axhline(0, color="0.2", linewidth=0.9, zorder=1)
-    for s in (-CELL_M, CELL_M):
-        ax.axhline(s, color="0.2", linewidth=0.7, linestyle=":", zorder=1)
-    ax.text(dom.min(), CELL_M + 1.5, "one 10 m Barrier3D cell", fontsize=7,
-            va="bottom", ha="left", color="0.35")
-
     fin = np.isfinite(med)
-    ax.set_xlabel("domain (1 = south)")
-    ax.set_ylabel("1984 line minus 1997 line, m\n(+ve = 1984 seaward)")
-    ax.set_title(f"Cross-shore offset between the 1984 and 1997 dune lines, "
-                 f"per domain   |   island median {np.median(med[fin]):+.1f} m, "
-                 f"{int((med[fin] > 0).sum())} of {int(fin.sum())} domains "
-                 f"positive", fontsize=10)
-    ax.legend(fontsize=8, loc="best")
+
+    fig, ax = plt.subplots(figsize=(11.0, 4.0), constrained_layout=True)
+    ann = HATTERAS_ANNOTATIONS
+    for name, (lo, hi) in ann.town_spans.items():
+        ax.axvspan(lo - 0.5, hi + 0.5, color="0.93", zorder=0)
+        ax.text((lo + hi) / 2, 0.985, name, transform=ax.get_xaxis_transform(),
+                ha="center", va="top", fontsize=7.5, color=INK_MUTED)
+    ax.vlines(dom, p25, p75, color="0.72", linewidth=2.0, zorder=2,
+              label="interquartile range within the domain")
+    pos, neg = fin & (med >= 0), fin & (med < 0)
+    ax.scatter(dom[pos], med[pos], s=16, color=C_1984, zorder=3,
+               edgecolor="white", linewidth=0.5,
+               label="median offset, 1984 seaward")
+    ax.scatter(dom[neg], med[neg], s=16, color=C_1997, zorder=3,
+               edgecolor="white", linewidth=0.5,
+               label="median offset, 1984 landward")
+    ax.axhline(0, color=INK, linewidth=0.7, zorder=1)
+    for s_ in (-CELL_M, CELL_M):
+        ax.axhline(s_, color=INK_MUTED, linewidth=0.6, linestyle=(0, (3, 2)),
+                   zorder=1)
+    ax.text(31.0, CELL_M + 1.5, "\u00b11 cell (10 m)", fontsize=7,
+            va="bottom", ha="center", color=INK_MUTED)
+
+    ax.set_xlabel("Domain (1 = south, at Cape Hatteras)")
+    ax.set_ylabel("1984 minus 1997 dune line (m)\nseaward positive")
+    ax.text(0.995, 0.03,
+            f"island median {np.median(med[fin]):+.1f} m;  "
+            f"{int((med[fin] > 0).sum())} of {int(fin.sum())} domains "
+            f"positive", transform=ax.transAxes, fontsize=8, ha="right",
+            va="bottom", color=INK_MUTED)
+    fig.legend(loc="outside lower center", ncol=3)
     ax.margins(x=0.01)
+    ax.set_xticks([1] + list(range(10, int(dom.max()) + 1, 10)))
+    ax.grid(axis="y", zorder=0)
+    ax.set_axisbelow(True)
+    for sp in ("top", "right"):
+        ax.spines[sp].set_visible(False)
 
     p = FIG_DIR / "HAT_duneline_offset_bydomain.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight")
+    fig.savefig(p, dpi=220, bbox_inches="tight")
     plt.close(fig)
     return p
 
@@ -720,7 +1733,8 @@ def read_rows(path):
     out = []
     for r in csv.DictReader(open(path)):
         rec = {"domain": int(r["domain"])}
-        for k in ("offset_med_m", "x1984_med"):
+        for k in ("offset_med_m", "offset_mean_m", "offset_sd_m",
+                  "x1984_med"):
             rec[k] = float(r[k]) if r[k] not in ("", "nan") else ""
         out.append(rec)
     return out
@@ -731,8 +1745,64 @@ def read_insert_rows(path):
     if not Path(path).exists():
         print(f"  NOTE: {Path(path).name} absent - row counts not labelled")
         return None
-    return {int(r["domain"]): int(r["n_rows"]) for r in
+    return {int(r["domain"]): int(r["n_cells"]) for r in
             csv.DictReader(open(path))}
+
+
+def simple_only(out, half_width, span=None, island_out=None,
+                stat="median"):
+    """
+    Render the two simple figures alone, off the existing table.
+
+    Reads duneline_offset_by_domain.csv rather than re-measuring, so this is
+    seconds. `island_out=False` skips the locator.
+    """
+    rows = read_rows(OUT_DIR / CSV_NAME)
+    gdf = load_domains()
+    print("dune lines:")
+    lines = load_lines(gdf.crs)
+    print("\nfor drawing:")
+    drawn = clip_for_drawing(lines, gdf.union_all())
+
+    reaches = None
+    if span:
+        lo, hi = (int(x) for x in span.split("-"))
+        reaches = [(lo, hi, "")]
+
+    # The 10 m mosaic is what the locator draws, so it is loaded unconditionally
+    # here - unlike in the detail panels, where it is only a fallback for a
+    # missing 1 m tile.
+    print(f"\nloading the {SOURCE_TAG} mosaic at 10 m ...")
+    elev, _s, extent, _n = m.load_mosaic()
+
+    figs = [fig_zooms_simple(gdf, drawn, rows, elev=elev, extent=extent,
+                             reaches=reaches, out=out,
+                             half_width=half_width)]
+    if island_out is not False:
+        figs.append(fig_island_simple(elev, extent, gdf, drawn, rows,
+                                      reaches=reaches, out=island_out,
+                                      stat=stat))
+    figs.append(write_captions(rows, simple_half_width=half_width))
+    print()
+    for f in figs:
+        print(f"  figure : {f}")
+    return figs
+
+
+def lines_island_only(out, per_panel, pad_m):
+    """Render the lines-only island figure alone, off the existing table."""
+    rows = read_rows(OUT_DIR / CSV_NAME)
+    gdf = load_domains()
+    print("dune lines:")
+    lines = load_lines(gdf.crs)
+    print("\nfor drawing:")
+    drawn = clip_for_drawing(lines, gdf.union_all())
+    print(f"\nloading the {SOURCE_TAG} mosaic at 10 m ...")
+    elev, _s, extent, _n = m.load_mosaic()
+    f = fig_island_lines(elev, extent, gdf, drawn, rows, out=out,
+                         per_panel=per_panel, pad_m=pad_m)
+    print(f"\n  figure : {f}")
+    return f
 
 
 def zoom_only(span, out, half_width, note, with_rows):
@@ -771,6 +1841,132 @@ def zoom_only(span, out, half_width, note, with_rows):
 # =============================================================================
 # MAIN
 # =============================================================================
+
+def write_captions(rows, half_width=None, simple_half_width=None):
+    """
+    A caption per figure, with the numbers filled from the table.
+
+    The figures carry no title sentences or footnote paragraphs - that text
+    belongs under the figure in whatever document uses it, and keeping it here
+    rather than on the image means it is editable, searchable and cannot go
+    stale against the picture without the file's own numbers going stale too.
+    """
+    half_width = ZOOM_HALF_WIDTH_M if half_width is None else half_width
+    shw = SIMPLE_HALF_WIDTH_M if simple_half_width is None else simple_half_width
+    med = np.array([r["offset_med_m"] for r in rows
+                    if r["offset_med_m"] != ""], float)
+    n_cell = int((np.abs(med) >= CELL_M).sum())
+    mean = np.array([r["offset_mean_m"] for r in rows
+                     if r.get("offset_mean_m", "") != ""], float)
+    mean_all = float(np.mean(mean)) if mean.size else float("nan")
+    mean_lo = float(mean.min()) if mean.size else float("nan")
+    mean_hi = float(mean.max()) if mean.size else float("nan")
+    n_pos = int((med > 0).sum())
+    stats = (f"Per-domain median offset (1984 minus 1997, seaward positive), "
+             f"from `{CSV_NAME}`: island median {np.median(med):+.1f} m, "
+             f"range {med.min():+.1f} to {med.max():+.1f} m; {n_cell} of "
+             f"{len(med)} domains differ by at least one 10 m Barrier3D "
+             f"cell, {n_pos} of {len(med)} are positive.")
+    pairs = ", ".join(f"{lo}\u2013{hi}" for lo, hi, _ in SIMPLE_REACHES)
+    reaches = "; ".join(f"{slug} ({note})" for _, _, slug, note in ZOOM_REACHES)
+    src = ("Communities, village centres, piers and the groin are the "
+           "project's own positions (`hatteras_site_config."
+           "HATTERAS_ANNOTATIONS`); structures are drawn seaward off the "
+           f"1984 line at a fixed {STRUCTURE_LEN_M:.0f} m, a mark rather than "
+           "a surveyed extent.")
+    caps = [
+        ("HAT_duneline_offset_simple.png",
+         f"The 1984 (red) and 1997 (blue) dune lines at true scale on four "
+         f"two-domain pairs ({pairs}), one of them a control where the two "
+         f"agree. Equal aspect, nothing exaggerated in the map plane: each "
+         f"panel is {2 * shw:.0f} m cross-shore, centred on the 1984 line, "
+         f"by two 500 m domains alongshore. Grey relief is the 1 m gap-filled "
+         f"DEM shaded at {HILLSHADE['vert_exag']:.1f}\u00d7 vertical "
+         f"exaggeration; the shading carries no readable elevation. Numbers "
+         f"beside each domain are its median offset, positive where 1984 "
+         f"lies seaward. Scale bar 50 m = 5 Barrier3D cells."),
+        ("HAT_duneline_offset_simple_island.png",
+         f"Where the two dune lines are and where they disagree, over the "
+         f"whole island in three equal-aspect panels (south at left). Beside "
+         f"each map, the per-domain median offset as a bar, aligned row for "
+         f"row: red where the 1984 line lies seaward of 1997, blue where it "
+         f"lies landward; dashed guides at \u00b110 m, one Barrier3D cell. "
+         f"At this scale the two lines coincide within a line width nearly "
+         f"everywhere, which is what the bars are for. The ruler beside each "
+         f"bar is km north of the south end of domain 1, the same origin the "
+         f"ribbon figure uses. Shaded bands mark the pairs shown in the "
+         f"detail figure. {stats} {src}"),
+        ("HAT_duneline_offset_simple_island_mean.png",
+         f"As the previous figure, with the per-domain MEAN offset on the "
+         f"bars in place of the median (island mean {mean_all:+.1f} m, "
+         f"range {mean_lo:+.1f} to {mean_hi:+.1f} m). The two differ where "
+         f"a domain's 1 m samples are skewed: a short stretch of large "
+         f"offset inside an otherwise quiet domain moves the mean and not "
+         f"the median."),
+        ("HAT_duneline_offset_lines_island.png",
+         f"The two dune lines over the whole island as maps only, in "
+         f"{LINES_ISLAND_DOMAINS}-domain (~5 km) panels reading south (left) "
+         f"to north (right). Each panel is cropped at equal aspect to the "
+         f"envelope of the two lines plus {LINES_ISLAND_PAD_M:.0f} m either "
+         f"side, so the separation is visible on the map itself without "
+         f"exaggeration. Domain numbers every fifth domain on the landward "
+         f"edge; shaded bands mark the pairs in the detail figure. {src}"),
+        ("HAT_duneline_offset_lines_island_3panel.png",
+         f"As the previous figure, in three 30-domain panels matching the "
+         f"map-and-bar figure's layout. At 15 km per panel a 50 m offset is "
+         f"about one line width, so the separation reads only where it is "
+         f"large. {src}"),
+        ("HAT_duneline_offset_ribbon.png",
+         f"(a) The 1984 and 1997 dune lines along the island at 1 m "
+         f"alongshore sampling, each drawn relative to their common "
+         f"{BASELINE_WINDOW_M / 1000:.0f} km boxcar-smoothed midline so the "
+         f"island's curvature drops out; the band between them is filled red "
+         f"where 1984 lies seaward and blue where it lies landward. (b) The "
+         f"difference, 1984 minus 1997, filled by sign; dashed guides at "
+         f"\u00b110 m, one Barrier3D cell. Grey bands mark the reaches shown "
+         f"in the DEM detail figure ({reaches}). Domain numbers along the "
+         f"top; the distance axis starts at the south end of domain 1. "
+         f"{stats}"),
+        ("HAT_duneline_offset_zooms.png",
+         f"The two dune lines on the {SOURCE_TAG} DEM at true scale on three "
+         f"reaches: {reaches}. Equal aspect; each panel is cropped to "
+         f"{half_width:.0f} m either side of the local 1984 line rather than "
+         f"the full 2000 m domain box. Boxes are Barrier3D domains "
+         f"(2000 \u00d7 500 m); the number beside each is its median offset, "
+         f"positive where 1984 lies seaward. Elevation in m NAVD88."),
+        ("HAT_duneline_offset_zoom_83_87.png",
+         f"As the previous figure, for domains 83\u201387: GIS 85 and its "
+         f"neighbours, the largest sustained positive run on the island. "
+         f"Where the 1984 footprint table is on disk the label also gives "
+         f"the number of Barrier3D rows the 1984 start would add (+) or "
+         f"remove (\u2212) there, trunc(paired shift / 10 m): a row only once a "
+         f"full cell of change is measured, in either direction."),
+        ("HAT_duneline_offset_island.png",
+         f"The {SOURCE_TAG} DEM with both dune lines and the 90 Barrier3D "
+         f"domain boxes (2000 \u00d7 500 m), in three panels of thirty "
+         f"domains at one common scale, south at left. A locator: at this "
+         f"scale the two lines are one line nearly everywhere, and the "
+         f"offset is read from the other figures. Both lines are clipped to "
+         f"the domain footprint for drawing only. {stats}"),
+        ("HAT_duneline_offset_bydomain.png",
+         f"Median cross-shore offset between the 1984 and 1997 dune lines in "
+         f"each of the 90 domains, 1984 minus 1997 with seaward positive, "
+         f"with the interquartile range of the 1 m samples within the "
+         f"domain. Red markers: 1984 seaward; blue: 1984 landward. Dashed "
+         f"guides at \u00b110 m, one Barrier3D cell. Grey bands are the "
+         f"communities. {stats}"),
+    ]
+    q = FIG_DIR / "CAPTIONS.md"
+    with open(q, "w", encoding="utf-8") as fh:
+        fh.write("# Figure captions\n\n")
+        fh.write("Written by `HAT_plot_duneline_offset.py` "
+                 "(`write_captions`) from the same table the figures draw "
+                 "from. The figures carry no in-image titles or footnotes on "
+                 "purpose; use these under them.\n\n")
+        for name, text in caps:
+            fh.write(f"## `{name}`\n\n{text}\n\n")
+    return q
+
 
 def main():
     FIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -826,8 +2022,13 @@ def main():
 
     figs = [fig_ribbon(samples, rows, gdf),
             fig_zooms(elev, extent, gdf, drawn, rows),
+            fig_zooms_simple(gdf, drawn, rows, elev=elev, extent=extent),
+            fig_island_simple(elev, extent, gdf, drawn, rows),
+            fig_island_simple(elev, extent, gdf, drawn, rows, stat="mean"),
+            fig_island_lines(elev, extent, gdf, drawn, rows),
             fig_island(elev, extent, gdf, drawn, rows),
             fig_by_domain(rows)]
+    figs.append(write_captions(rows))
     print(f"\n  table  : {cp}")
     for f in figs:
         print(f"  figure : {f}")
@@ -849,12 +2050,59 @@ if __name__ == "__main__":
                          f"(default {ZOOM_HALF_WIDTH_M:.0f})")
     ap.add_argument("--zoom-note", default=None,
                     help="subtitle line under the panel title")
+    ap.add_argument("--simple", action="store_true",
+                    help="render ONLY the simplified figure (grey relief, no "
+                         "elevation values, both lines solid, tight crop) and "
+                         "exit. Reads the existing table rather than "
+                         "re-measuring.")
+    ap.add_argument("--simple-out", default=None,
+                    help="output path for the --simple detail figure")
+    ap.add_argument("--simple-island-out", default=None,
+                    help="output path for the --simple island locator")
+    ap.add_argument("--no-island", action="store_true",
+                    help="with --simple, render only the detail panels")
+    ap.add_argument("--simple-span", default=None, metavar="LO-HI",
+                    help="render the simple figure for ONE domain span "
+                         "instead of the three standard pairs")
+    ap.add_argument("--simple-stat", choices=sorted(ISLAND_STATS),
+                    default="median",
+                    help="per-domain statistic on the --simple island "
+                         "locator's bar strip (default median)")
+    ap.add_argument("--simple-halfwidth", type=float,
+                    default=SIMPLE_HALF_WIDTH_M,
+                    help=f"cross-shore half-width of a simple panel, m "
+                         f"(default {SIMPLE_HALF_WIDTH_M:.0f})")
+    ap.add_argument("--lines-island", action="store_true",
+                    help="render ONLY the lines-only whole-island figure (no "
+                         "bar strips, ~5 km panels cropped to the lines) and "
+                         "exit. Reads the existing table.")
+    ap.add_argument("--lines-island-out", default=None,
+                    help="output path for --lines-island")
+    ap.add_argument("--lines-per-panel", type=int,
+                    default=LINES_ISLAND_DOMAINS,
+                    help=f"domains per panel for --lines-island (default "
+                         f"{LINES_ISLAND_DOMAINS})")
+    ap.add_argument("--lines-pad", type=float, default=LINES_ISLAND_PAD_M,
+                    help=f"easting pad either side of the lines' envelope, m "
+                         f"(default {LINES_ISLAND_PAD_M:.0f})")
+    ap.add_argument("--captions", action="store_true",
+                    help="write figures/CAPTIONS.md from the existing table "
+                         "and exit")
     ap.add_argument("--no-row-labels", action="store_true",
-                    help="do not annotate each domain with its insert row "
-                         "count, even if the scope table is on disk")
+                    help="do not annotate each domain with its footprint row "
+                         "count (+ added / - removed), even if the table is on disk")
     a = ap.parse_args()
 
-    if a.zoom:
+    if a.captions:
+        print(f"  captions : {write_captions(read_rows(OUT_DIR / CSV_NAME))}")
+    elif a.lines_island:
+        lines_island_only(a.lines_island_out, a.lines_per_panel,
+                          a.lines_pad)
+    elif a.simple:
+        simple_only(a.simple_out, a.simple_halfwidth, a.simple_span,
+                    island_out=False if a.no_island else a.simple_island_out,
+                    stat=a.simple_stat)
+    elif a.zoom:
         zoom_only(a.zoom, a.zoom_out, a.zoom_halfwidth, a.zoom_note,
                   not a.no_row_labels)
     else:
