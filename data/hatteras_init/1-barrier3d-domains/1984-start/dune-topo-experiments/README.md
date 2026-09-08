@@ -16,13 +16,15 @@ deleted; only the two comparison figures and this note are left.
 Three earlier variants (`v1_D85_translate`, `v1_blocks_none_dsas`,
 `v1_blocks_none_duneline`) went the same day, having never been referenced.
 
-**The run outputs were NOT touched.** `output/raw_runs/blocksduneline`,
-`blocksdsas`, `blocksminimum`, `pea1989keep`, `pea1989lower` and their
-`*noreloc` twins are all still there, and
-`HAT_plot_crest_experiment.py`, `HAT_score_relocation_timing.py` and
-`HAT_score_road_position.py` read run outputs rather than topography — so every
-comparison built on these arms still works. What is gone is the ability to
-**re-run** them from their inputs.
+**The run outputs went on 2026-09-07.** They had been left in place on 09-03
+(`output/raw_runs/blocksduneline`, `blocksdsas`, `blocksminimum`,
+`pea1989keep`, `pea1989lower` and their `*noreloc` twins) so the comparisons
+built on them kept working. On 2026-09-07 Hannah decided to keep only
+unmodified topography, and every run on inserted or edited topography was
+deleted with the `dune-topo/v3`–`v8` layers. `HAT_plot_crest_experiment.py`,
+`HAT_score_relocation_timing.py` and `HAT_score_road_position.py` now have
+only `pea1989base` (v1) to read; `output/experiments/pea1989_crest/` is the
+frozen record of the keep/lower comparison. `../../archive_purge_20260907.csv`.
 
 Sizes and reasons: `../../archive_purge_20260903.csv`. Lineage: `../../LINEAGE.md`.
 

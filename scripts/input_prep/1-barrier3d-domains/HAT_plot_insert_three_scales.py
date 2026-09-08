@@ -55,6 +55,7 @@ REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 from hat_topo_version import array_name, dune_topo_root  # noqa: E402
 from hat_topo_version import insert_figures_dir  # noqa: E402
+from hat_topo_version import require_version  # noqa: E402
 from hat_topo_version import duneline_shift_dir  # noqa: E402
 from hat_figure_style import (apply_style, C, caption,   # noqa: E402
                               panel_title)
@@ -64,8 +65,11 @@ from hat_figure_style import (apply_style, C, caption,   # noqa: E402
 # row-insert-scope/ on 2026-09-03.
 SHIFT = duneline_shift_dir("1984-start")
 ROAD = (REPO / "data/hatteras_init/4-mgmt-forcing/road_offset/dunestart_offset/1984")
-BASE_VERSION = "v3"   # the re-picked extraction
-VERSION = "v5"        # v3 + added rows, island-wide scope. Was "v4" (block
+BASE_VERSION = "v2"   # the re-picked extraction (was "v3")
+# DELETED 2026-09-07 with every layer (only unmodified topography is kept);
+# the literal is kept as the name of what this drew. require_version() in
+# main() says so before any array is opened.
+VERSION = "v4"   # island scope, measured + floor (was "v5"). v2 + rows. Was "v4" (block
                       # scope) until 2026-09-03. N is identical at the ten
                       # BLOCK domains, so panels (a)-(c) are unchanged - but
                       # panel (d) is NOT: it goes from 8 red bars to 38,
@@ -92,6 +96,7 @@ def main() -> None:
     # v1/v2 to v3/v4 would have overwritten the v1/v2 figure in place.
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
+    require_version("1984-start", VERSION, "VERSION, the layer drawn")
     apply_style()
 
     date = read(SHIFT / "duneline_retreat_1984_1997.csv")
@@ -241,7 +246,7 @@ def main() -> None:
     fig.subplots_adjust(top=1 - 0.62 / fig_h, bottom=1.20 / fig_h,   # caption 0.62 in + x-label 0.4 in + pad
                         left=0.075, right=0.975)
     out = Path(args.out) if args.out else (
-        insert_figures_dir("1984-start")
+        insert_figures_dir("1984-start", "4-result")
         / "HAT_insert_three_scales_{}_{}.png".format(BASE_VERSION, VERSION))
     fig.savefig(out, dpi=130)
     print("wrote {}".format(out))

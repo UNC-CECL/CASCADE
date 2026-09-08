@@ -191,3 +191,180 @@ See `1984-start/dune-topo/README.md`.
   input `5-scr/scr-dsas-1978-2019/dsas_1978_1997_domain_means.csv` is
   untouched.
 - `duneline-shift/superseded/` deleted; its record folded into the folder README.
+
+## 2026-09-04 — `1984-start/dune-topo/v6`: the fill decided
+
+`v6` = `v3` + the same 98 rows at the same 38 domains as `v5`, with
+`--fill median` instead of `--fill measured`. Every dry measured cell in the
+inserted block is kept as measured; only the cells at or below MHW are given a
+value, the median of the block's own dry cells. 4765 of 4900 inserted cells are
+DEM (v5: 3732). Setbacks, land rows and N are identical to v5 in every domain;
+mean land elevation moves 0.001 m median, −0.043 m at worst (GIS 85).
+
+Decided in an interview under two constraints: the extracted interior is not
+modified, and the simplest rule with the least fabrication wins. Matched
+backdune, an alongshore analogue and a mass-conservative reconstruction were
+considered and dropped — `row-insert-scope/HAT_fill_options.txt`, section
+DECISION, has the argument.
+
+**Accepted cost, recorded not corrected:** at GIS 85 and 86 the 1984 road sits
+inside the 1996 dune crest that the block keeps, and `bulldoze()` hands that
+crest to the dune in year 1 (+3.3 m and +2.5 m per dune cell). The fill reaches
+the road at no other domain. Details in `1984-start/dune-topo/v6/README.md`.
+
+`v5` is kept as the shipped measured-plus-floor reference. `dune-topo/CURRENT`
+now says `v6`; it is inert for the reason recorded above. Nothing was wired into
+the forcing tree: `4-mgmt-forcing/.../1984/RoadSetback_1984_dunestart.csv` still
+carries the v3 setbacks (GIS 85 and 86 floored to 0).
+
+## 2026-09-04, later — `v6` wired in; `CURRENT` now decides
+
+- `hat_topo_version.resolve_version`: **`CURRENT` outranks the extractor's
+  `VERSION` literal** (they were the other way round). The literal is what the
+  extractor writes; `CURRENT` is what is read. `1984-start` resolves to `v6`;
+  `2004-start` (`CURRENT` = `v1`) is unchanged. A fresh extraction is no longer
+  adopted until `CURRENT` says so.
+- `4-mgmt-forcing/.../1984/RoadSetback_1984_dunestart.csv` replaced by `v6`'s.
+  The v3-measured file it replaced is saved as `v3/RoadSetback_1984_dunestart.csv`.
+- `test_backdune` built (`--fill backdune`, same footprint) as the reference arm
+  of the row-insert test. Not a candidate; deletable.
+- The calibration-tree run `HAT_1984_2004_calibBE_road_bdm_groin` (v1, 2026-09-01)
+  was re-run on `v6` in place. Its small outputs and index row are kept in
+  `output/experiments/row_insert_test/prior_calibration_run_v1_20260901/`.
+- The test itself: four arms (`islandv3`, `islandv5`, `islandv6`,
+  `islandbackdune`, all `noreloc`) under `output/raw_runs/`, compared at GIS
+  80-90 by `scripts/hatteras_ms/HAT_plot_row_insert_test.py` into
+  `output/experiments/row_insert_test/`.
+
+## 2026-09-04, evening — the six-fill set built; default reverted to `v3`
+
+- **Default reverted.** `dune-topo/CURRENT` back to `v3` and the forcing-tree
+  `RoadSetback_1984_dunestart.csv` back to the v3-measured file, until the set
+  below has been run and compared. The calibration-tree calibBE road run made
+  earlier today stays on `v6` (its metadata says so).
+- **`v7`** flat backdune platform (`--fill backdune`) — replaces the deleted
+  `test_backdune`, identical build. **`v8`** matched backdune, crest kept
+  (`--fill matched-crest`, new rule: interior rows 0..N-1 copied seaward).
+  **`v9`** matched backdune, crest skipped (`--fill matched-nocrest`, rows
+  1..N). All three: same 98 rows / 38 domains as v5, bit-identical to v3 behind
+  the block, setback CSV identical to v5's, 0 of 4900 inserted cells at their
+  own coordinates.
+- **Run registry:** `arm_component` accepts a two-level arm (`row-insert/median`)
+  and `arms_holding` enumerates that level, so a set of arms files under one
+  folder. Deeper nesting refused.
+- **Tooling, not yet run:** `scripts/hatteras_ms/HAT_run_row_insert_set.py`
+  (six arms, calibration settings, setback CSV swapped and restored) and
+  `HAT_plot_row_insert_set.py` (island-wide skill, every road domain's
+  relocations, GIS 80-90 detail) into `output/experiments/row_insert_set/`.
+- The arm-tagged four-arm test from earlier today (`islandv*noreloc`,
+  `output/experiments/row_insert_test/`) is superseded and will be deleted once
+  the set has run.
+
+## 2026-09-04, night — the 1984-start layers renamed to `<base>-<scope>-<fill>`
+
+| old | new |
+|---|---|
+| `v4` | `v3-blocks-floor` |
+| `v5` | `v3-island-floor` |
+| `v6` | `v3-island-median` |
+| `v7` | `v3-island-platform` |
+| `v8` | `v3-island-matchedcrest` |
+| `v9` | `v3-island-matchednocrest` |
+
+`v1` and `v3` (extractions) unchanged. Folders renamed in place; each
+`RUN_MANIFEST.txt` keeps its build-time header with a rename note appended.
+Every script that names a layer by literal was repointed (the set driver and
+plotter, the crest-experiment arms, the five input-prep plotters, the scope
+report). Run metadata, `run_index.csv` rows and dated reports written before
+the rename keep the old names — the map above and
+`1984-start/row-insert-scope/DUNE_TOPO_VERSION_GUIDE.md` (new, the version
+guide) translate them. Sections of this file above are history and keep the
+names they were written with.
+
+## 2026-09-04, last — renumbered to a plain sequence (supersedes the lineage names above)
+
+Hannah's call: `v1` stays the original; everything else numbered from `v2` in
+build order. The lineage names lasted about an hour.
+
+| as built | interim | **final** | what |
+|---|---|---|---|
+| `v3` | `v3` | `v2` | re-pick base (extractor `VERSION = "v2"`; picks file renamed `_v2`) |
+| `v4` | `v3-blocks-floor` | `v3` | blocks, measured + floor |
+| `v5` | `v3-island-floor` | `v4` | island, measured + floor |
+| `v6` | `v3-island-median` | `v5` | island, measured + median |
+| `v7` | `v3-island-platform` | `v6` | island, flat platform |
+| `v8` | `v3-island-matchedcrest` | `v7` | island, matched, crest kept |
+| `v9` | `v3-island-matchednocrest` | `v8` | island, matched, crest skipped |
+
+`CURRENT` = `v2`. Every functional literal repointed again; the v2 folder's
+settings/figure files renamed `_v2`. **Sections above this one use the names
+current when they were written**; run metadata and arm tags likewise. The map
+lives in `1984-start/row-insert-scope/DUNE_TOPO_VERSION_GUIDE.md`.
+
+## 2026-09-04 — the six-fill set RUN; the four-arm test deleted
+
+All six arms exit 0 on the intended versions (`none`=v2, `measured-floor`=v4,
+`median`=v5, `platform`=v6, `matched-crest`=v7, `matched-nocrest`=v8), under
+`output/raw_runs/row-insert/<arm>/1984_2004/calibBE/`. Comparison in
+`output/experiments/row_insert_set/` (README there). The earlier arm-tagged
+test (`islandv3noreloc`, `islandv5noreloc`, `islandv6noreloc`,
+`islandbackdunenoreloc`), its `run_index.csv` rows, its folder
+`output/experiments/row_insert_test/` and `HAT_plot_row_insert_test.py` were
+deleted as superseded; the v1 calibration-run snapshot moved to
+`output/experiments/row_insert_set/prior_calibration_run_v1_20260901/`.
+`CURRENT` is still `v2`; no fill has been adopted from the set.
+
+## 2026-09-04 — relocation comparison by interior
+
+Seventh arm `original` added to the set (`v1` + the v1-era setbacks, saved into
+`v1/RoadSetback_1984_dunestart.csv` from the 1984start_v1 archive). Every arm
+got a relocation-ON partner (same folder, `reloc` token) and
+`HAT_relocation_comparison.py` ran on the seven pairs, groin on, calibBE.
+Digest: `output/experiments/row_insert_set/relocation/`; numbers also in
+`scripts/hatteras_ms/RELOCATION_COMPARISON_RESULTS.md`. Headline: the insert
+moves every emergent relocation 3-10 years later; the fill moves it by at most
+one year; `original` reproduces the published 0.30 / 0.40.
+
+## 2026-09-07 — only unmodified topography: the layers `v3`–`v8` and every run on modified topography deleted
+
+Hannah's decision, made in an interview: keep `v1` and `v2` (the two
+extractions) and remove every version with inserted rows. Applied in full:
+
+| removed | what | size |
+|---|---|---|
+| `1984-start/dune-topo/v3`–`v8` | the six layers (`v2` + rows; block scope, then five fills at 38 domains) | 29 MB |
+| `output/raw_runs/row-insert/` | the six-fill set, controls `none` (v2) and `original` (v1) included, with relocation-ON partners — 14 runs | 4.2 GB |
+| `output/raw_runs/blocksv4*`, `islandv5` | crest-experiment arms on as-built v4/v5 (today's v3/v4) | 0.9 GB |
+| `output/raw_runs/blocksdate*`, `blocksdsas*`, `blocksduneline*`, `blocksminimum*`, `pea1989keep*`, `pea1989lower*` | arms whose topography went on 09-03; run outputs now gone too | 3.6 GB |
+| `output/comparisons/relocation_1984_2004/row-insert/` | the seven relocation-comparison reports | 71 MB |
+| `output/experiments/row_insert_set/` | the set comparison, gifs, logs, digest | 2.6 MB |
+| 29 rows of `output/raw_runs/run_index.csv` | the runs above; pre-edit file kept as `run_index_archive_20260907_prepurge.csv` | — |
+
+Kept: `v1`, `v2`, `CURRENT` (= `v2`), the forcing-tree CSV (v2-measured),
+`pea1989base*` (v1), all of `row-insert-scope/` (the measurement of N, the
+scope report, the fill argument, the figures, and the version guide — now a
+record of deleted versions), and
+`output/experiments/prior_calibration_run_v1_20260901/` (moved up one level out
+of the deleted set folder, not deleted).
+
+**The calibration-tree run `HAT_1984_2004_calibBE_road_bdm_groin` was re-run
+on `v2`.** It had been re-run on the median fill (today's v5; metadata `v6`) on
+09-04 and was the only modified-topography run in the tree. The rest of the
+1984-2004 tree (all presets, all scenarios) still stands on `v1` from
+2026-09-01, so that scenario is now the one tree run on `v2` — flagged, not
+resolved.
+
+**Scripts kept, arms retired.** `HAT_run_row_insert_set.py`,
+`HAT_plot_row_insert_set.py` and `HAT_gif_domain_by_interior.py` keep only
+`original` (v1) and `none` (v2); `HAT_run_crest_experiment.py` keeps
+`pea1989base`; `HAT_plot_seaward_insert_compare.py` defaults to v1 vs v2; the
+scoring scripts default to `pea1989base`. The insert plotters that name a layer
+literal (`HAT_plot_b3d_grid`, `HAT_plot_fill_options[_grid]`,
+`HAT_plot_insert_three_scales`, `HAT_plot_insert_explainer[_grid]`,
+`HAT_plot_where_inserts_occur`) now call `hat_topo_version.require_version()`
+first and exit naming what is on disk. `HAT_insert_seaward_rows.py` is
+untouched: a layer can be rebuilt from `v2` and
+`row-insert-scope/duneline-shift/duneline_retreat_1984_1997.csv` with the
+recipe in the guide.
+
+Sizes and reasons: `archive_purge_20260907.csv`.

@@ -46,10 +46,17 @@ RELOCATIONS ON OR OFF -- TWO DIFFERENT QUESTIONS
     prediction.
 
 ARMS
-    islandv5       v5  island-wide, every domain with a measured shift
-    pea1989base    v1              + the setback CSV as shipped
-    (pea1989keep / pea1989lower were removed 2026-09-03 with their
-     topography; their run outputs remain under output/raw_runs/)
+    pea1989base    v1              + the setback CSV as shipped -- the ONE arm left
+
+    RETIRED 2026-09-07 (Hannah: keep only unmodified topography). The insert
+    arms islandv5 (as-built v5 = today's v4) and blocksv4 (as-built v4 =
+    today's v3) went with the layers v3-v8 they ran on; their run outputs
+    under output/raw_runs/ were deleted too, as were the outputs of the arms
+    already retired on 2026-09-03 (blocksdate*, blocksdsas*, blocksduneline*,
+    blocksminimum*, pea1989keep*, pea1989lower*). Sizes and reasons in
+    data/hatteras_init/1-barrier3d-domains/archive_purge_20260907.csv.
+    HAT_plot_crest_experiment.py's keep/lower comparison is therefore frozen at
+    output/experiments/pea1989_crest/.
 
 USAGE
     python HAT_run_crest_experiment.py [--dry-run] [--arms a,b]
@@ -81,35 +88,16 @@ def _arm(version):
 
 
 ARMS = {
-    # --- ISLAND-WIDE SCOPE ---------------------------------------------------
-    # v5 = v3 + rows at EVERY domain whose measured 1984->1997 shift rounds to
-    # >= 1 cell, road or not (38 domains). Same topography treatment as v4 and
-    # identical N at all ten block domains -- the only difference is that the
-    # 28 other domains with a measured shift are no longer passed over. Under
-    # v4 "unchanged" meant two different things along the island: measured-zero
-    # inside the blocks, and never-asked outside them.
-    "islandv5": _arm("v5"),
-    # --- N-ESTIMATE ARMS (scope: both relocation blocks, GIS 9-14 + 84-87) ----
-    # Same topography treatment throughout -- translate, crest shaved, measured
-    # fill -- so the ONLY thing varying is where N came from. That is the point:
-    # the two measurements of N disagree by a factor of ~3 at GIS 85 (65.9 m vs
-    # 19.5 m), and the relocation-timing test is what discriminates them.
-    # v4 = v3 (2026-09-02 re-pick) + rows. The one to take forward.
-    "blocksv4": _arm("v4"),
-    # "blocksdate" (v2 = v1 + rows) was REMOVED on 2026-09-03 with v2 itself.
-    # v2 was built on the pre-re-pick v1 extraction and superseded by v4. Its
-    # completed run output survives at output/raw_runs/blocksdate{,noreloc};
-    # only re-running it is no longer possible.
-    # --- the earlier GIS 84-86 crest pair, kept so those runs stay reproducible
-    # FIVE ARMS REMOVED 2026-09-03 with their topography variants:
-    #   blocksduneline / blocksdsas / blocksminimum - the N-SOURCE
-    #     comparison, settled by the 1997 dune line. Both v4 and v5 use
-    #     `date`, and the dsas source itself is gone.
-    #   pea1989keep / pea1989lower - the crest-shaving pair.
-    # Their RUN OUTPUTS survive in output/raw_runs/, so
-    # HAT_plot_crest_experiment.py, HAT_score_relocation_timing.py and
-    # HAT_score_road_position.py all still work on them; only re-running
-    # from topography is no longer possible.
+    # Every insert and crest-edit arm is gone (2026-09-07, see the docstring):
+    # islandv5 / blocksv4 with the layers v3-v8; blocksdate*, blocksdsas*,
+    # blocksduneline*, blocksminimum*, pea1989keep*, pea1989lower* had lost
+    # their topography on 2026-09-03 and lost their run outputs on 09-07.
+    # `_arm` is kept so a future arm can be added in one line.
+    #
+    # None = "leave the live forcing-tree CSV". That live file is the
+    # v2-measured one (GIS 85/86 floored to 0), not the v1-era one this arm
+    # was first defined against; v1/ carries its own v1-era CSV if that
+    # pairing is wanted (HAT_run_row_insert_set.py's `original` arm uses it).
     "pea1989base": ("v1", None),
 }
 
