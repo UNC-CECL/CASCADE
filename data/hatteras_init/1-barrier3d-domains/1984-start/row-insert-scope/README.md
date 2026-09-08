@@ -5,16 +5,69 @@ many cells.** Scope only — no array is written, no elevation is fabricated.
 
 Written by `scripts/input_prep/1-barrier3d-domains/HAT_report_row_insert_scope.py`.
 
+> **2026-09-07 — this folder is now a record.** Every layer built from this
+> measurement (`dune-topo/v3`–`v8`) and every run made on one were deleted:
+> Hannah decided to keep only unmodified topography (`v1`, `v2`). The
+> measurement of N, the scope report, the fill argument, the figures and the
+> version guide stay, and `HAT_insert_seaward_rows.py` can rebuild a layer
+> from `v2` and `duneline-shift/duneline_retreat_1984_1997.csv` if one is ever
+> wanted again. Sizes and reasons: `../../archive_purge_20260907.csv`.
+
+## 2026-09-07 — the 1984 footprint, both directions (the new approach)
+
+Written by `scripts/input_prep/1-barrier3d-domains/HAT_footprint_1984.py`. Scope
+only: rows drawn BLANK, no array written, no model-facing CSV touched. Four rules
+decided in interview the same day, each recorded in the script's docstring:
+**symmetric** (rows added where the 1984 line lies seaward of the 1997 line,
+existing rows removed where it lies landward), **paired median** (median of the
+50 per-profile 1997−1984 differences, not the difference of two medians —
+they disagree by one cell at 13 domains), **10 m rule** (N = trunc(shift/10):
+a row only once a full cell of change is measured; the 0–9 m residual is a
+column), and the **row-0 setback convention** (setback' = (road − row 0) + shift
+per profile, unrounded; NOT road minus the 1984 line, which is ~20 m larger
+because the digitized lines trace the toe ~19 m seaward of row 0).
+
 | file | what |
 |---|---|
-| `HAT_row_insert_scope.txt` | the report |
-| `row_insert_scope_by_domain.csv` | the same table, machine-readable |
-| `figures/HAT_row_insert_grid.png` | the Barrier3D grid with the inserted cells in their own colour |
-| `figures/HAT_row_insert_plan.png` | the same thing in plan view, on the DEM, in the island offset map's layout |
+| `footprint_1984_by_domain.csv` | per domain: paired shift (median, p10, p90), N, residual, rows now/after, setback now / new (row-0 convention, with spread) / derived / raw-lines, flags |
+| `footprint_1984_profiles.csv` | the per-profile join the medians come from (both line crossings, row 0, road cell) |
+| `HAT_footprint_1984.txt` | the report: rules, totals, the road table, the assumptions |
+| `figures/1-scope/HAT_footprint_1984_grid.png` | the Barrier3D grid, added rows blank in red, removed rows hatched blue, new row 0 and NC-12 marked |
+| `figures/1-scope/HAT_footprint_1984_plan.png` | plan view on the DEM with both dune lines and NC-12 1984 |
+| `figures/1-scope/HAT_footprint_1984_rows.png` | rows per domain, signed |
+| `figures/1-scope/HAT_footprint_1984_shift.png` | the paired shift with p10–p90 and the rows kept |
+| `figures/1-scope/HAT_footprint_1984_setback.png` | the road setback now and from the new row 0, per road domain |
+| `figures/CAPTIONS.md` | the words under the figures (house style: no in-image titles) |
+
+Result: 29 domains gain 73 rows, 23 lose 47, 38 unchanged; largest +7 (GIS 80)
+and −5 (GIS 63, 64, 66, 67). No new setback is negative; GIS 85/86 go from 0
+(floored) to 44 and 12 m; GIS 16 falls to 1 m after losing four rows. The
+earlier scope report and grid (`HAT_row_insert_scope.txt`, `row_insert_scope_by_domain.csv`,
+`HAT_row_insert_grid.png`) were re-run the same day on this footprint, so they
+agree with it; the add-only plan view was retired.
+
+| file | what |
+|---|---|
+| `HAT_row_insert_scope.txt` | the report — symmetric since 2026-09-07, reads N from the footprint table |
+| `row_insert_scope_by_domain.csv` | the same table, machine-readable, with the easting-frame cross-check |
+| `figures/1-scope/HAT_row_insert_grid.png` | the Barrier3D grid as the model would hold it: added rows blank, removed rows hatched |
+| ~~`figures/HAT_row_insert_plan.png`~~ | retired 2026-09-07; the plan view is `figures/1-scope/HAT_footprint_1984_plan.png` |
 | `HAT_fill_options.txt` | **what to fill the inserted rows with** — the methodological options, worked at GIS 85 |
 | `figures/HAT_fill_options_grid_GIS85.png` | the two candidates and the control as Barrier3D domain views, with NC-12 at its actual road elevation |
 | `figures/HAT_fill_options_GIS85.png` | the fuller set as profiles — what the road sits on, how much is measured |
 | `figures/HAT_duneline_zoom_GIS83_87.png` | the two dune lines at true scale across GIS 83–87, each domain labelled with its offset and its row count |
+
+## Decided 2026-09-04 — `--fill median`, built as `dune-topo/v5` (deleted 2026-09-07)
+
+The fill is settled: keep every dry measured cell, give the water cells the
+median of the block's own dry cells. Chosen under two constraints — the
+extracted interior is not modified, and the simplest rule with the least
+fabrication wins. `v5` carries it; `v4` (measured + floor) stays as the shipped
+reference. Same footprint, same setbacks, 4765 of 4900 inserted cells from the
+DEM. The argument and the one cost that was accepted with it — at GIS 85 and 86
+the road sits inside the 1996 crest and the first bulldoze pass adds ~3 m to the
+dune — are in `HAT_fill_options.txt`, section DECISION, and in
+`../dune-topo/v5/README.md`.
 
 ## Everything for the seaward-row insert lives here
 
@@ -28,7 +81,7 @@ Consolidated 2026-09-03.
 | `row_insert_scope_by_domain.csv` | the scope table, machine-readable |
 | `figures/` | five figures: the grid, the plan view, the GIS 83-87 zoom, and the two fill comparisons |
 
-What is deliberately NOT here: the topography itself. `dune-topo/v4` and `v5`
+What is deliberately NOT here: the topography itself. `dune-topo/v3` and `v4`
 are the built inserts, and they stay with the other topography versions because
 that is what `hat_topo_version` resolves over. This folder is the measurement
 and the argument; `dune-topo/` is the arrays.
@@ -58,10 +111,10 @@ survives into N, and the definitional offset between "a digitized dune line" and
 
 ## This is not a proposal — it is already built
 
-`dune-topo/v5` is the base plus exactly these rows. The report checks itself
-against `v5/HAT_seaward_row_insert_audit.csv` and agrees in **all 90 domains**:
+`dune-topo/v4` is the base plus exactly these rows. The report checks itself
+against `v4/HAT_seaward_row_insert_audit.csv` and agrees in **all 90 domains**:
 38 modified, 98 rows. It also reproduces the ten published block-scope values,
-which `dune-topo/v4` still carries in its audit CSV.
+which `dune-topo/v3` still carries in its audit CSV.
 
 So the footprint is settled. What is open is the **fill**, and whether to adopt
 it at all.
@@ -129,7 +182,7 @@ figures differ* below).
 
 **Matched backdune** copies the real near-dune profile 60 m seaward, so it
 carries genuine alongshore texture and puts the road on backdune. But **it
-duplicates the crest**: v3's row 0 at GIS 85 *is* the 1996 crest, so the copy
+duplicates the crest**: v2's row 0 at GIS 85 *is* the 1996 crest, so the copy
 leaves two interior ridges on top of Barrier3D's own dune array. It counts as 0%
 measured despite being real cells — they are measurements of a *different place*.
 Not a `--fill` option yet.
@@ -181,7 +234,7 @@ disagree about *justification* far more than about the island.
 ### No longer considered
 
 **flat backdune** and **measured + floor** were dropped from the grid figure on
-2026-09-03. `measured + floor` is **still what is on disk** (v4, v5) — adopting
+2026-09-03. `measured + floor` is **still what is on disk** (v3, v4) — adopting
 either candidate is a change *from* it, so it stays documented in the report.
 Its objection: the cells it keeps at GIS 85 are the **1996 dune face**, handing
 the model a road embedded in 3–5 m of ridge that had not formed there in 1984.
@@ -224,7 +277,7 @@ directly on N. Unresolved.
 ## Base version
 
 The figure and the `rows_now` column read whatever `hat_topo_version.topo_dirs`
-resolves — currently **v3**, because that module reads the extractor's `VERSION`
+resolves — currently **v2**, because that module reads the extractor's `VERSION`
 literal *before* `dune-topo/CURRENT`, and CURRENT still says `v1`. The report
 header records which was used. **N does not depend on the choice**; the drawn
 interior does. Override with `--base`.

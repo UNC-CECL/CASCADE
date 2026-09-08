@@ -1,0 +1,175 @@
+==============================================================================
+1984 ROW FOOTPRINT - SCOPE REPORT (symmetric: rows added AND removed)
+==============================================================================
+written        2026-09-07 21:25
+topography     1984-start / v2   (read, never modified)
+N from         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\footprint_1984_by_domain.csv   (HAT_footprint_1984.py)
+cross-check    data\hatteras_init\0-elevation\2009-2014-1996-duneline\duneline_offset_by_domain.csv
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\figures\1-scope\HAT_row_insert_grid.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\figures\1-scope\HAT_row_insert_rows.png
+plan view      figures/1-scope/HAT_footprint_1984_plan.png  (HAT_footprint_1984.py)
+
+SCOPE ONLY. No array is written, no elevation is fabricated. This says
+WHERE the interior grows or shrinks and by HOW MANY cells, so the fill
+for the added rows can be argued separately against a known footprint.
+
+shift    = median over 50 paired profiles of (line_1997 - line_1984), m
+N_rows   = trunc(shift / 10 m)          decided 2026-09-07
+
+  N > 0  the 1984 line is SEAWARD of the 1997 line; the island has
+         retreated, so N rows are ADDED behind the dune.
+  N < 0  the 1984 line is LANDWARD; the island has prograded, so the
+         existing rows 0..|N|-1 are REMOVED. (Until 2026-09-07 this was
+         floored to 0; the layers built that way, v3-v8, are gone.)
+  |shift| < 10 m   no full cell of change is measured; left alone.
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+  domains examined                90
+  rows ADDED     29 domains,  73 rows, largest +7 (domain 80)
+  rows REMOVED   23 domains,  47 rows, largest -5 (domain 63)
+  unchanged      38 domains
+
+  N        domains
+   -5     4   [63, 64, 66, 67]
+   -4     2   [16, 65]
+   -2     2   [38, 62]
+   -1    15   [1, 8, 15, 22, 23, 30, 31, 32, 33, 34, 35, 36, 37, 59, 68]
+   +0    38   
+   +1    10   [2, 11, 12, 45, 46, 47, 48, 52, 53, 87]
+   +2     8   [4, 51, 54, 72, 74, 78, 83, 86]
+   +3     5   [3, 49, 50, 81, 84]
+   +4     1   [79]
+   +5     3   [73, 82, 85]
+   +6     1   [5]
+   +7     1   [80]
+
+------------------------------------------------------------------------------
+CROSS-CHECK against the independent easting-frame measurement
+------------------------------------------------------------------------------
+  Same two geojsons, completely different frame: raw easting inside the
+  axis-aligned domain box, 1 m alongshore sampling, no extractor c0, no
+  shear, no row 0. It bounds the FRAME, not the lines. The same trunc
+  rule is applied to it.
+
+  identical N in                  90 of 90 domains
+  differ                          0
+  median difference in metres     -0.01
+  mean absolute difference        0.08 m (0.01 cells)
+  largest difference              0.4 m
+
+------------------------------------------------------------------------------
+CAVEATS - read before using the footprint
+------------------------------------------------------------------------------
+  1. THE ADDED ROWS ARE FABRICATED. No survey covers land that had eroded
+     away by 1996. This report sizes the block; it does not fill it.
+  2. THE REMOVED ROWS ARE SURVEYED. Where the island prograded, rows
+     0..|N|-1 are 1996 beach and foredune that were ocean in 1984;
+     removing them deletes measured cells on the strength of the line pair.
+  3. THE LINE IS 1997, THE DEM's BEACH IS 1996. One year of change is
+     unaccounted for. Recorded, not corrected.
+  4. THE TWO LINES MAY NOT BE THE SAME FEATURE. duneline_1997 records
+     'light/dark elevation break'; duneline_1984 carries no metadata.
+  5. THE 10 m RULE UNDERSTATES. trunc keeps 0-9 m less than measured at
+     every changed domain, always toward less change. The residual is a
+     column of the footprint table.
+  6. N IS NOT A RATE. Row 0 is a 1996 feature only where ALACE reached
+     the dune and 2009 elsewhere.
+
+------------------------------------------------------------------------------
+PER DOMAIN
+------------------------------------------------------------------------------
+   dom   N   shift_m     p10     p90  easting_m  N_e  rows_now  rows_after  note
+     1  -1     -12.4   -54.2    +0.6      -12.3   -1       161         160  REMOVE
+     2  +1     +14.6   -10.8   +35.8      +14.6   +1       159         160  ADD
+     3  +3     +39.8   +27.9   +43.2      +39.6   +3       157         160  ADD
+     4  +2     +28.7   +22.7   +36.2      +28.8   +2       155         157  ADD
+     5  +6     +62.3   +42.4   +70.8      +62.3   +6       158         164  ADD
+     6  +0      +8.8    -0.5   +74.7       +8.7   +0       174         174  
+     7  +0      +5.1   -13.1    +8.2       +5.0   +0       178         178  
+     8  -1     -10.3   -16.3   +21.3      -10.4   -1       170         169  REMOVE
+     9  +0      -4.5   -11.8   +12.5       -4.5   +0       163         163  
+    10  +0      +5.2    +1.3   +10.4       +5.2   +0       154         154  
+    11  +1     +19.9    +9.5   +24.0      +19.9   +1       162         163  ADD
+    12  +1     +17.7    +3.0   +26.6      +17.7   +1       170         171  ADD
+    13  +0      +7.3    +2.4   +18.7       +7.3   +0       168         168  
+    14  +0      +3.6    +0.7    +5.8       +3.6   +0        35          35  
+    15  -1     -19.1   -29.2    -9.8      -19.2   -1        32          31  REMOVE
+    16  -4     -49.5   -56.7   -14.1      -49.5   -4        61          57  REMOVE
+    17  +0      +0.3   -10.8   +11.3       +0.4   +0        71          71  
+    18  +0      +7.7    +0.4   +11.1       +7.8   +0        87          87  
+    19  +0      -1.6    -2.8    +1.0       -1.5   +0        97          97  
+    20  +0      -7.3   -15.9    -5.9       -7.3   +0       103         103  
+    21  +0      -4.6   -12.7    +2.1       -4.5   +0       113         113  
+    22  -1     -17.8   -25.1    -4.9      -17.8   -1       128         127  REMOVE
+    23  -1     -11.6   -23.1    -6.9      -11.4   -1       134         133  REMOVE
+    24  +0      -6.6   -16.5    -4.1       -6.6   +0       141         141  
+    25  +0      -4.7    -8.2   +10.5       -4.8   +0       138         138  
+    26  +0      +6.4    +0.7   +18.6       +6.8   +0       148         148  
+    27  +0      -3.9   -10.5   +16.1       -3.8   +0       161         161  
+    28  +0      -0.0    -6.3    +6.4       -0.1   +0       166         166  
+    29  +0      -8.8   -16.5    -0.1       -9.0   +0       154         154  
+    30  -1     -12.3   -27.3    -6.3      -12.4   -1       140         139  REMOVE
+    31  -1     -12.7   -29.6    -5.7      -12.4   -1       139         138  REMOVE
+    32  -1     -10.2   -17.0    -3.7      -10.2   -1       141         140  REMOVE
+    33  -1     -13.7   -19.7    -8.3      -13.4   -1       137         136  REMOVE
+    34  -1     -14.8   -19.5    +0.3      -14.8   -1       136         135  REMOVE
+    35  -1     -10.0   -20.1    -0.4      -10.3   -1       116         115  REMOVE
+    36  -1     -14.1   -19.4    -6.2      -14.1   -1       134         133  REMOVE
+    37  -1     -15.1   -32.9    -9.1      -15.1   -1       159         158  REMOVE
+    38  -2     -21.3   -37.6    -7.1      -21.2   -2       166         164  REMOVE
+    39  +0      -9.1   -12.5    -3.2       -9.2   +0       170         170  
+    40  +0      -8.1   -14.1    -4.6       -8.1   +0       172         172  
+    41  +0      -5.0   -10.4    +3.2       -5.1   +0       174         174  
+    42  +0      -6.2   -11.0    +0.4       -6.2   +0       176         176  
+    43  +0      -5.4   -11.1    +7.0       -5.5   +0       179         179  
+    44  +0      +8.2    -0.4   +12.5       +8.2   +0       169         169  
+    45  +1     +15.6   +11.1   +23.6      +15.7   +1       155         156  ADD
+    46  +1     +13.2   +12.3   +19.8      +13.2   +1       142         143  ADD
+    47  +1     +13.2    +7.9   +19.5      +13.3   +1       127         128  ADD
+    48  +1     +11.0    +7.4   +32.7      +11.1   +1       118         119  ADD
+    49  +3     +34.2   +22.8   +40.1      +34.2   +3        94          97  ADD
+    50  +3     +33.7   +21.3   +45.0      +33.8   +3        87          90  ADD
+    51  +2     +26.5   +21.3   +36.0      +26.5   +2        58          60  ADD
+    52  +1     +13.5    +5.5   +27.4      +13.6   +1        66          67  ADD
+    53  +1     +11.4    +4.3   +23.1      +11.3   +1        56          57  ADD
+    54  +2     +28.0   +19.5   +29.3      +27.9   +2       114         116  ADD
+    55  +0      +7.1    +1.9   +13.9       +7.1   +0       107         107  
+    56  +0      -8.8   -15.4    +5.1       -8.8   +0        77          77  
+    57  +0      +2.0    -8.1   +10.4       +1.9   +0        68          68  
+    58  +0      +4.9    -6.0   +12.7       +5.0   +0        69          69  
+    59  -1     -15.3   -20.0    -1.2      -15.3   -1        78          77  REMOVE
+    60  +0      -0.1   -14.3    +2.6       +0.0   +0       102         102  
+    61  +0      -8.6   -16.8    +0.6       -8.4   +0       116         116  
+    62  -2     -29.6   -41.0   -17.9      -29.7   -2       133         131  REMOVE
+    63  -5     -50.6   -54.1   -40.5      -50.8   -5       134         129  REMOVE
+    64  -5     -58.8   -73.7   -51.7      -58.9   -5       133         128  REMOVE
+    65  -4     -40.1   -54.8   -35.5      -40.2   -4       132         128  REMOVE
+    66  -5     -53.8   -60.2   -38.4      -53.6   -5       121         116  REMOVE
+    67  -5     -52.4   -57.3   -31.9      -52.6   -5       134         129  REMOVE
+    68  -1     -16.8   -20.8    -7.8      -16.8   -1       103         102  REMOVE
+    69  +0      +5.2    +1.4    +7.8       +5.3   +0       106         106  
+    70  +0      +3.2    +1.6    +5.7       +3.3   +0       140         140  
+    71  +0      +6.0    +4.5   +11.5       +6.1   +0       133         133  
+    72  +2     +25.6   +17.1   +40.4      +25.6   +2       120         122  ADD
+    73  +5     +50.1   +38.9   +61.5      +50.2   +5       132         137  ADD
+    74  +2     +27.2    +9.6   +48.5      +27.3   +2       131         133  ADD
+    75  +0      +5.5    -0.1   +13.1       +5.5   +0       103         103  
+    76  +0      -4.3    -7.6    -0.8       -4.3   +0       140         140  
+    77  +0      -3.1    -6.8    +5.4       -3.0   +0       146         146  
+    78  +2     +23.4   +16.1   +26.4      +23.5   +2       137         139  ADD
+    79  +4     +45.8   +22.7   +68.7      +45.7   +4       108         112  ADD
+    80  +7     +70.3   +53.8   +79.6      +70.2   +7        94         101  ADD
+    81  +3     +36.8   +21.4   +53.1      +36.9   +3       104         107  ADD
+    82  +5     +53.2   +23.3   +67.5      +53.2   +5       105         110  ADD
+    83  +2     +26.9   +17.4   +49.3      +26.9   +2       108         110  ADD
+    84  +3     +36.3   +27.2   +60.9      +36.3   +3       147         150  ADD
+    85  +5     +58.7   +54.1   +61.1      +58.8   +5       178         183  ADD
+    86  +2     +26.8   +11.2   +48.0      +26.8   +2       189         191  ADD
+    87  +1     +10.3    +6.6   +15.6      +10.3   +1       185         186  ADD
+    88  +0      +6.3    +1.0   +14.1       +6.3   +0       177         177  
+    89  +0      -8.4   -10.5    -1.0       -8.3   +0       179         179  
+    90  +0      -0.9    -3.4    +1.5       -0.8   +0       182         182  
+
+==============================================================================
