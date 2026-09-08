@@ -1,14 +1,14 @@
 {
   "identity": {
     "run_name": "HAT_2004_2024_calibBE_road_nobdm_nogroin",
-    "timestamp": "2026-08-31 11:06:53",
+    "timestamp": "2026-09-01 01:41:16",
     "generated_by": "HAT_hindcast_1984_2024.py",
-    "runtime_min": "2.7",
+    "runtime_min": "2.6",
     "use_sandbox_cascade": true,
     "topo_product": "2004-start",
     "topo_dune_version": "v1",
     "parameter_file": "Hatteras-CASCADE-parameters.yaml",
-    "git_commit": "734c0b54915d4070bfd9ce02db2643827eb407b7",
+    "git_commit": "317edc4af21e27ad0634d84afd5b4861a9d0256d",
     "git_branch": "hannahaline/hatteras-cascade",
     "git_dirty": true
   },
@@ -64,12 +64,12 @@
     "estimator": "lrr",
     "mean_bias_m_yr": "-0.4703",
     "rmse_m_yr": "0.8509",
-    "mean_bias_interior_m_yr": "-0.4679",
-    "rmse_interior_m_yr": "0.8516",
+    "mean_bias_interior_m_yr": "-0.4678",
+    "rmse_interior_m_yr": "0.8515",
     "lrr_r2_median": "0.7385",
     "lrr_r2_below_floor": "24",
-    "endpoint_mean_bias_interior_m_yr": "-0.3277",
-    "endpoint_rmse_interior_m_yr": "0.7391"
+    "endpoint_mean_bias_interior_m_yr": "-0.3276",
+    "endpoint_rmse_interior_m_yr": "0.7390"
   },
   "verification": {
     "nourishment_ok": true,

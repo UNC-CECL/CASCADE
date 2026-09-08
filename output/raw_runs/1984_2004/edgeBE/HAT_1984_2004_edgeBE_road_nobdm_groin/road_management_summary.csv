@@ -1,7 +1,7 @@
 gis,pad,drowned,relocation_blocked,last_managed_year,reason,overwash_removed_m3,dunes_rebuilt,relocations
 9,23,False,False,21,managed throughout,3792.18032393873,2,0
 10,24,False,False,21,managed throughout,9470.223759537239,2,1
-11,25,False,False,21,managed throughout,4981.631892629908,1,1
+11,25,False,False,21,managed throughout,4744.34585313751,1,1
 12,26,False,False,21,managed throughout,9817.861042096036,1,0
 13,27,False,False,21,managed throughout,13920.647181982207,1,0
 14,28,False,False,21,managed throughout,6016.153396667075,2,0
@@ -48,8 +48,8 @@ gis,pad,drowned,relocation_blocked,last_managed_year,reason,overwash_removed_m3,
 66,80,False,False,21,managed throughout,1532.2909697375114,2,0
 67,81,False,False,21,managed throughout,520.0768384015458,2,0
 84,98,False,False,21,managed throughout,16854.836445122175,2,0
-85,99,False,False,21,managed throughout,32429.26776146889,1,2
-86,100,False,False,21,managed throughout,25780.339025259018,0,1
+85,99,False,False,21,managed throughout,31672.821443080902,1,1
+86,100,False,False,21,managed throughout,26082.462261438366,0,1
 87,101,False,False,21,managed throughout,7696.269181510218,2,0
 88,102,False,False,21,managed throughout,3295.1507873403716,2,0
 89,103,False,False,21,managed throughout,4725.236564454988,2,0

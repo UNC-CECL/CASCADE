@@ -3,14 +3,14 @@
 
 [identity]
 run_name                         = HAT_2004_2024_edgeBE_noroad_nobdm_nogroin
-timestamp                        = 2026-08-28 17:49:56
+timestamp                        = 2026-09-01 01:05:09
 generated_by                     = HAT_hindcast_1984_2024.py
-runtime_min                      = 3.6
+runtime_min                      = 3.2
 use_sandbox_cascade              = True   # cascade.cascade_groin, not cascade.cascade
 topo_product                     = 2004-start
 topo_dune_version                = v1
 parameter_file                   = Hatteras-CASCADE-parameters.yaml
-git_commit                       = 5b26cb543fec464ae7a7d25cf9cb6d95bfb6a5ae
+git_commit                       = 317edc4af21e27ad0634d84afd5b4861a9d0256d
 git_branch                       = hannahaline/hatteras-cascade
 git_dirty                        = True   # True: the commit alone does not reproduce this run
 
@@ -68,10 +68,10 @@ mean_bias_m_yr                   = -3.0529
 rmse_m_yr                        = 3.4050
 mean_bias_interior_m_yr          = -3.0945   # GIS 2-89: the locked end domains excluded
 rmse_interior_m_yr               = 3.4356
-lrr_r2_median                    = 0.9570   # how well a line describes the modelled trajectory
+lrr_r2_median                    = 0.9568   # how well a line describes the modelled trajectory
 lrr_r2_below_floor               = 5   # domains under r2 0.50
-endpoint_mean_bias_interior_m_yr = -2.9615   # the pre-LRR estimator; calibBE and groin M were fit on this
-endpoint_rmse_interior_m_yr      = 3.3267
+endpoint_mean_bias_interior_m_yr = -2.9618   # the pre-LRR estimator; calibBE and groin M were fit on this
+endpoint_rmse_interior_m_yr      = 3.3272
 
 [verification]
 nourishment_ok                   = True

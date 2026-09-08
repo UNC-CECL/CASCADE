@@ -1,0 +1,87 @@
+{
+  "identity": {
+    "run_name": "HAT_2004_2024_calibBE_road_bdm_nourish_groin_waveHs1p8",
+    "timestamp": "2026-09-01 18:35:25",
+    "generated_by": "HAT_hindcast_1984_2024.py",
+    "runtime_min": "2.8",
+    "use_sandbox_cascade": true,
+    "topo_product": "2004-start",
+    "topo_dune_version": "v1",
+    "parameter_file": "Hatteras-CASCADE-parameters.yaml",
+    "git_commit": "317edc4af21e27ad0634d84afd5b4861a9d0256d",
+    "git_branch": "hannahaline/hatteras-cascade",
+    "git_dirty": true
+  },
+  "scenario": {
+    "period": "2004-2024 (20 yr)",
+    "source/sink preset": "calibBE",
+    "shoreline offset": "asrun",
+    "background erosion": true,
+    "roadway management": "55 domains",
+    "historical relocations": false,
+    "beach/dune manager": "43 domains",
+    "nourishment fills": "3 applied",
+    "groin": "on",
+    "wave climate": "Hs 1.8 m, Tp 8.0 s, asym 0.7, high-angle 0.1  (off calibration)",
+    "relocation target": "20 m behind the dune line"
+  },
+  "period": {
+    "start_year": 2004,
+    "end_year": 2024,
+    "run_years": 20,
+    "annual_states": 21
+  },
+  "wave climate": {
+    "wave_height_m": 1.8,
+    "wave_period_s": 8.0,
+    "wave_asymmetry": 0.7,
+    "wave_angle_high_frac": 0.1,
+    "shoreface_depth_m": "16.02"
+  },
+  "sea level": {
+    "rslr_m_yr": 0.006,
+    "rslr_constant": true
+  },
+  "dunes and roadway": {
+    "rmin / rmax": "0.55 / 0.95",
+    "dune_design_ele_m_mhw": 3.0,
+    "dune_min_ele_m_mhw": 0.0,
+    "road_width_m": 20.0,
+    "relocations_enabled": false
+  },
+  "source/sink": {
+    "preset": "calibBE",
+    "background_erosion_on": true,
+    "domains_specified": 90,
+    "nonzero_domains": 67,
+    "values_digest": "8652bf10e2a5",
+    "rate_gis1_m_yr": 50.3,
+    "rate_gis90_m_yr": 57.9
+  },
+  "groin": {
+    "enabled": true,
+    "trapping_rate_m_yr": 60.0,
+    "updrift / downdrift": "GIS 6 / 5",
+    "install_year": 1969,
+    "deterioration": "linear_ramp, floor 0.6",
+    "r_ipl_t0": "0.6645",
+    "predicted_extent_m": "2578"
+  },
+  "skill": {
+    "target": "CoastSat LOESS 10-domain",
+    "estimator": "lrr",
+    "mean_bias_m_yr": "-0.2153",
+    "rmse_m_yr": "0.6053",
+    "mean_bias_interior_m_yr": "-0.2198",
+    "rmse_interior_m_yr": "0.5854",
+    "lrr_r2_median": "0.7596",
+    "lrr_r2_below_floor": "26",
+    "endpoint_mean_bias_interior_m_yr": "-0.0450",
+    "endpoint_rmse_interior_m_yr": "0.5349"
+  },
+  "verification": {
+    "nourishment_ok": true,
+    "roads_drowned": 0,
+    "roads_reloc_blocked": 0
+  }
+}
