@@ -155,8 +155,11 @@ def _f(v) -> float:
 # =============================================================================
 
 def _community_bar(ax, y_bar: float, x_lo: float, x_hi: float) -> None:
-    """The communities as a bar above the strip, names above it, from
-    HATTERAS_ANNOTATIONS - the same object every other island figure uses."""
+    """The communities as a bar along the BOTTOM of the strip, names below it and
+    village ticks above it, from HATTERAS_ANNOTATIONS - the same object every
+    other island figure uses. Below rather than above (2026-09-07): above, the
+    names collided with the +N labels and with each other (Tri-Village's
+    villages)."""
     ann = off.HATTERAS_ANNOTATIONS
     for name, (lo, hi) in ann.town_spans.items():
         a, b = max(lo - 0.5, x_lo), min(hi + 0.5, x_hi)
@@ -165,13 +168,13 @@ def _community_bar(ax, y_bar: float, x_lo: float, x_hi: float) -> None:
         ax.plot([a, b], [y_bar, y_bar], color=ann.color_town_span, lw=4.0,
                 solid_capstyle="butt", zorder=8, clip_on=False)
         if (b - a) >= 0.5 * (hi - lo + 1):
-            ax.text((a + b) / 2, y_bar - 0.9, name, ha="center", va="bottom",
+            ax.text((a + b) / 2, y_bar + 1.2, name, ha="center", va="top",
                     fontsize=8, fontweight="bold", color=INK, clip_on=False)
     for name, gid in ann.village_lines.items():
         if x_lo <= gid <= x_hi:
-            ax.plot([gid, gid], [y_bar - 0.7, y_bar + 0.7], color=ann.color_village_line,
+            ax.plot([gid, gid], [y_bar - 0.8, y_bar + 0.8], color=ann.color_village_line,
                     lw=1.0, zorder=9, clip_on=False)
-            ax.text(gid, y_bar - 0.9, name, ha="center", va="bottom", fontsize=7,
+            ax.text(gid, y_bar - 1.4, name, ha="center", va="bottom", fontsize=7,
                     color=ann.color_village_line, clip_on=False)
 
 
@@ -216,10 +219,11 @@ def fig_grid(rows, topo_dir):
     off.apply_style()
     n_by = {r["domain"]: r["n_rows"] for r in rows}
     sb_by = {r["domain"]: r["setback_v2_m"] for r in rows}
+    sb_model_by = {r["domain"]: r["setback_model_now_m"] for r in rows}
     doms = sorted(n_by)
     groups = [doms[i:i + DOMAINS_PER_STRIP]
               for i in range(0, len(doms), DOMAINS_PER_STRIP)]
-    ymin = -9.5                                   # room for labels + communities
+    ymin = -7.5                                   # room for the +N labels, clear of the frame
 
     fig, axes = plt.subplots(len(groups), 1, figsize=(15.0, 5.2 * len(groups) + 1.4),
                              constrained_layout=True)
@@ -238,30 +242,33 @@ def fig_grid(rows, topo_dir):
                 ax.add_patch(Rectangle((d - 0.5, DUNE_ROWS + ins), 1.0, -n, facecolor="none",
                                        edgecolor=C_REM, linewidth=0.6, zorder=4))
             if n:
-                ax.text(d, -0.9, f"{n:+d}", fontsize=7.2, ha="center", va="bottom",
+                ax.text(d, -1.4, f"{n:+d}", fontsize=7.2, ha="center", va="bottom",
                         color=C_ADD if n > 0 else C_REM, fontweight="bold")
             # NC-12 at its measured position (seaward edge, 20 m). It does not
             # move: with rows added it is pushed down with the interior; with
             # rows removed it stays where the surviving rows put it.
-            sb = sb_by[d]
+            # dune anchor: NC-12 at its MEASURED position (unfloored; at GIS 85/86
+            # that is seaward of row 0), pushed down with the interior. Road
+            # anchor: NC-12 where the MODEL holds it - two straight rows at
+            # int(setback/10), the floored setback - and the block sits behind it.
+            sb = sb_by[d] if ANCHOR == "dune" else sb_model_by[d]
             if np.isfinite(sb):
-                # dune anchor: the road is pushed down with the interior. Road
-                # anchor: the rows go in BEHIND it, so it stays put.
-                y = DUNE_ROWS + (max(n, 0) if ANCHOR == "dune" else 0) + sb / CELL_M
+                y = DUNE_ROWS + (max(n, 0) + sb / CELL_M if ANCHOR == "dune"
+                                 else sb // CELL_M)
                 ax.add_patch(Rectangle((d - 0.32, y), 0.64, 2.0, facecolor=C_ROAD,
                                        edgecolor="none", zorder=7))
-        _community_bar(ax, -5.5, g[0] - 0.5, g[-1] + 0.5)
+        _community_bar(ax, ROWS_SHOWN - 4.0, g[0] - 0.5, g[-1] + 0.5)
         ax.set_xlim(g[0] - 0.5, g[-1] + 0.5)
-        ax.set_ylim(ROWS_SHOWN, ymin)
+        ax.set_ylim(ROWS_SHOWN + 1.5, ymin)
         ax.set_xticks([d for d in g if d % 5 == 0])
         ax.set_xticks(list(g), minor=True)
-        ax.set_yticks(range(0, ROWS_SHOWN, 25))
+        ax.set_yticks(range(0, 190, 25))
         ax.set_ylabel("cross-shore cell\n(0 = the dune)")
         ax.grid(axis="y", color="0.9", linewidth=0.4)
         ax.set_axisbelow(True)
         sec = ax.secondary_yaxis("right", functions=(lambda c: c * CELL_M, lambda m: m / CELL_M))
         sec.set_ylabel("m landward of the dune")
-        sec.set_yticks(range(0, int(ROWS_SHOWN * CELL_M), 500))
+        sec.set_yticks(range(0, 1900, 500))
         for sp in ("top", "right"):
             ax.spines[sp].set_visible(True)
         off._title(ax, k, f"Domains {g[0]}\u2013{g[-1]}")
@@ -276,7 +283,9 @@ def fig_grid(rows, topo_dir):
                 Patch(facecolor=C_DUNE, edgecolor="none", label=f"dune rows ({DUNE_ROWS})"),
                 Patch(facecolor=C_ADD_FILL, edgecolor="none", label="rows added (blank, no fill yet)"),
                 Patch(facecolor="none", edgecolor=C_REM, hatch="//////", label="existing rows removed"),
-                Patch(facecolor=C_ROAD, edgecolor="none", label="NC-12 (1984), measured position"),
+                Patch(facecolor=C_ROAD, edgecolor="none",
+                      label=("NC-12 (1984), measured position" if ANCHOR == "dune"
+                             else "NC-12 as the model holds it (two rows at int(setback/10))")),
                 Line2D([0], [0], color=off.HATTERAS_ANNOTATIONS.color_town_span, lw=4.0, label="community")]
     fig.legend(handles=handles, loc="outside lower center", ncol=7, fontsize=8,
                title="existing interior, elevation classes (m MHW)", title_fontsize=8)
@@ -476,6 +485,7 @@ def main(base=None, anchor="dune"):
             "rows_now": rows_now,
             "rows_after": rows_now + n,
             "setback_v2_m": _f(r.get("setback_v2_m", "")),
+            "setback_model_now_m": _f(r.get("setback_model_now_m", "")),
             "insert_anchor": r.get("insert_anchor", ""),
             "insert_row_behind_road": _f(r.get("insert_row_behind_road", "")),
             "modified": int(n != 0),

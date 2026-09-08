@@ -1,7 +1,7 @@
 ==============================================================================
 1984 ROW FOOTPRINT - SCOPE REPORT (symmetric: rows added AND removed)
 ==============================================================================
-written        2026-09-07 22:10
+written        2026-09-07 22:33
 topography     1984-start / v2   (read, never modified)
 N from         data\hatteras_init\1-barrier3d-domains\1984-start\row-insert-scope\footprint_1984_by_domain.csv   (HAT_footprint_1984.py)
 cross-check    data\hatteras_init\0-elevation\2009-2014-1996-duneline\duneline_offset_by_domain.csv
