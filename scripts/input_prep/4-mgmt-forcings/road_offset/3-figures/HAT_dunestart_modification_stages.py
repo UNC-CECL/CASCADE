@@ -261,17 +261,17 @@ def draw_island(ax, fig, shown, crop_rows, year, placed, label_sections,
     # marks them.
     n_neg = sum(1 for p in placed.values() if p.get("wrap_m") is not None)
     drowned = [d for d, p in placed.items() if p["drowned"]]
-    notes = []
+    # A negative setback is the whole story for this panel -- the count says it,
+    # and what a negative setback means belongs in the caption, not on the plot.
     if n_neg:
-        notes.append(f"{n_neg} NEGATIVE — bulldozed into the bay")
-    if drowned:
-        notes.append(f"{len(drowned)} of {len(placed)} drown at initialisation")
-    ax.text(0.5, 0.985,
-            "\n".join(notes) if notes
-            else f"0 of {len(placed)} drown at initialisation",
+        note, flag = f"{n_neg} NEGATIVE", True
+    else:
+        note = f"{len(drowned)} of {len(placed)} drown at initialisation"
+        flag = bool(drowned)
+    ax.text(0.5, 0.985, note,
             transform=ax.transAxes, ha="center", va="top", fontsize=9,
-            color=P.C_DROWN if notes else P.INK_SECOND, zorder=11,
-            bbox=dict(fc=P.SURFACE, ec=P.C_DROWN if notes else P.INK_MUTED,
+            color=P.C_DROWN if flag else P.INK_SECOND, zorder=11,
+            bbox=dict(fc=P.SURFACE, ec=P.C_DROWN if flag else P.INK_MUTED,
                       alpha=0.95, pad=3.0))
 
     # Section names sit on a second row so the count above them stays clear.
@@ -355,9 +355,9 @@ def build_figure(stage: dict, per, crop_rows) -> dict:
                   + [0.0])
     floor_m = min(floor_m - 30.0, -CELL / 2) if floor_m < 0 else -CELL / 2
 
-    fig = plt.figure(figsize=(16.5, 10.4))
+    fig = plt.figure(figsize=(16.5, 9.8))
     gs = fig.add_gridspec(3, 1, height_ratios=[1.25, 1.25, 0.85], hspace=0.19,
-                          left=0.065, right=0.905, top=0.858, bottom=0.062)
+                          left=0.065, right=0.905, top=0.892, bottom=0.062)
     axes = [fig.add_subplot(gs[0])]
     axes.append(fig.add_subplot(gs[1], sharex=axes[0]))
     axes.append(fig.add_subplot(gs[2], sharex=axes[0]))
@@ -370,16 +370,10 @@ def build_figure(stage: dict, per, crop_rows) -> dict:
 
     draw_drown_panel(axes[2], placed)
 
-    fig.text(0.065, 0.985, f"NC-12, dune-start method — {stage['title']}",
+    fig.text(0.065, 0.982, f"NC-12, dune-start method — {stage['title']}",
              fontsize=14, va="top", weight="semibold")
-    fig.text(0.065, 0.957,
-             "Each panel on its own period's topography — "
-             + ", ".join(f"{y} on {P.topo_label(y)}" for y in YEARS)
-             + ". They are different islands, not one island twice. "
-             f"Road drawn where bulldoze puts it: road_start = "
-             f"int(setback / 10 m).\n{stage['blurb']}\nNEXT: "
-             f"{stage['nextfix']}",
-             fontsize=9, color=P.INK_SECOND, va="top", linespacing=1.5)
+    # The stage blurb and the NEXT line lived here and swamped the figure.
+    # They stay on the stage dicts for the caption; the plot keeps a title.
 
     handles = [
         Line2D([], [], color=P.C_1984, lw=2.6, label="1984 road"),
@@ -394,7 +388,7 @@ def build_figure(stage: dict, per, crop_rows) -> dict:
         # row. The band keeps its swatch.
         handles.append(Line2D([], [], color=C_SAND, lw=8,
                               label="seaward of interior row 0"))
-    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.065, 0.898),
+    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.065, 0.948),
                ncol=6, fontsize=8.5, framealpha=0.0, borderpad=0.4,
                columnspacing=1.6, handlelength=2.6)
 

@@ -104,14 +104,228 @@ signed offset can be read directly.
 
 ## Files
 
+Every figure is drawn to one house style (`apply_style()` in the script): Arial, thin dark-grey axes, ColorBrewer red/blue for the two lines and for the sign of the offset, panel letters, a north arrow and scale bar on maps without coordinate ticks, and no in-image titles or footnote paragraphs. The words that used to be on the figures are in `figures/CAPTIONS.md`.
+
 | file | what |
 |---|---|
 | `duneline_offset_by_domain.csv` | 90 rows. Median, quartiles, min/max, mean, sd, cells, the nearest-point check, and the median easting of each line |
+| `figures/HAT_duneline_offset_simple.png` | **the one to look at.** The two lines on grey relief, four two-domain pairs, tight crop, no elevation values |
+| `figures/HAT_duneline_offset_simple_island.png` | the same two lines over the whole island, with each domain's measured offset as a bar aligned to the map |
+| `figures/HAT_duneline_offset_simple_island_mean.png` | the same map-and-bar figure with the per-domain MEAN on the bars instead of the median; `--simple --simple-stat mean` |
+| `figures/CAPTIONS.md` | a caption per figure with the numbers filled from the table; the figures carry no title sentences or footnotes, so use these under them. `--captions` rewrites it alone |
+| `figures/HAT_duneline_offset_lines_island.png` | the whole island as maps only, no bar strips: nine ~5 km panels, each cropped at equal aspect to the strip the two lines occupy, so the offset is visible on the map itself. `--lines-island` renders it alone |
+| `figures/HAT_duneline_offset_lines_island_3panel.png` | the same, three panels of 30 domains to match the simple_island layout; `--lines-island --lines-per-panel 30 --lines-island-out <this path>` |
 | `figures/HAT_duneline_offset_ribbon.png` | **the one to read.** Both lines against a smoothed midline, band filled by sign, at full 1 m alongshore resolution |
 | `figures/HAT_duneline_offset_zooms.png` | the same two lines on the DEM at true scale, three reaches |
 | `figures/HAT_duneline_offset_zoom_83_87.png` | one extra reach, GIS 83–87 — the five domains around 85 |
 | `figures/HAT_duneline_offset_island.png` | the whole island in three panels — a locator, not a measurement |
 | `figures/HAT_duneline_offset_bydomain.png` | the offset per domain, with each domain's IQR |
+
+### The line key
+
+Every figure here draws the same two lines the same way: **1984 solid red
+(`#d62728`), 1997 solid blue (`#1f77b4`)**, both with a white casing, 1984 on
+top. Colour is the only thing that separates them. Until 2026-09-03 the 1997
+line was dashed on the DEM figures and solid on the simple ones, so one folder
+carried two keys for one pair of lines; `LINE_STYLE` in the script is now the
+single key and `SIMPLE_LINE_STYLE` is a copy of it.
+
+What still varies between figures is line WIDTH, through
+`draw_lines(scale=...)`: `LINE_SCALE_ISLAND` for the two whole-island figures,
+`LINE_SCALE_DETAIL` for the two detail figures and the zooms,
+`LINE_SCALE_RIBBON` for the trace. They are paired constants, not per-figure
+numbers, so a change cannot land on one of a pair and not the other. A 46 km
+locator and a 300 m crop cannot carry the same line weight.
+
+**On the two whole-island maps this means the 1997 line is mostly invisible** —
+solid red is drawn over solid blue and at that scale they coincide. That is the
+same scale limit the locator already had, and it is why
+`HAT_duneline_offset_simple_island.png` carries a bar strip. Read the offset
+off the bar or off `HAT_duneline_offset_ribbon.png`, never off either island
+map.
+
+### The simple figure
+
+`HAT_duneline_offset_simple.png` is the zooms with everything that is not the
+two lines taken out: no terrain colour ramp, no colourbar, no elevation values
+and no coordinate ticks. What is behind them is a greyscale hillshade, so the
+dune ridge is still there to see which side of it each line takes, but nothing
+about its height can be read off, and nothing is labelled with a number.
+
+It is built by the same function family as the zooms and shares their line
+key, draw order and equal aspect, so the two cannot disagree about which line
+is which or which is on top.
+
+Three differences from `HAT_duneline_offset_zooms.png` are worth knowing:
+
+**Two domains per panel, not five to eight.** The island runs about 7° oblique
+to the UTM grid, so a dune line drifts ~130 m in easting for every km of
+alongshore. A crop tight enough to make a 50 m offset obvious therefore cannot
+hold a whole reach — over 1.5 km the two lines sweep 190–330 m in easting and
+leave the frame. Two neighbours sweep 150–223 m, which fits inside ±150 m with
+margin. So each panel is the **pair that carries its reach's extreme**, not the
+reach. Four of them, south to north:
+
+| pair | what | offset |
+|---|---|---:|
+| 3–4 | the far south | +40, +29 m |
+| 19–20 | the quietest pair on the island | −2, −7 m |
+| 63–64 | 1984 landward of 1997 | −51, −59 m |
+| 79–80 | 1984 seaward of 1997 | +46, +70 m |
+
+The same half-width, 150 m, is used for all four, because the control only
+works if it is drawn at exactly the scale of the others. Each pair was checked
+against that before being chosen — 3–4 needs 115 m, 19–20 needs 88, 63–64
+needs 112, 79–80 needs 75. **4–5 carries the south's single largest offset**
+(+62 m at domain 5) and is deliberately not used: its lines need 196 m and
+would have forced a wider crop on all four panels.
+
+**The backdrop is the 1 m gapfilled tile, not the 10 m mosaic.** Across a 300 m
+frame the 10 m product is 30 cells wide and draws the dune as a staircase. The
+1 m tiles carry **no CRS tag**, so the script does not trust them: each tile's
+bounds are checked against its domain box and a disagreement over 1.5 m is
+fatal. That check is the only thing tying the raster to the dune lines.
+
+**The shading is vertically exaggerated ×2.2 and smoothed over 3 m; the map is
+not exaggerated at all.** These are two different things and the figure says so
+in its footer. The dune is ~5 m of relief over ~50 m cross-shore, which at 1:1
+shading is nearly flat grey, and 1 m lidar over a vegetated backdune is speckly
+enough at the cell scale that exaggerating the slope buries the ridge in noise.
+Both parameters touch a smoothed **copy** used for shading only. The map plane
+is equal aspect and 1:1, the elevation array is untouched, and nothing on this
+figure is measured off the backdrop — the numbers all come from
+`duneline_offset_by_domain.csv`.
+
+A scale bar replaces the coordinate ticks: 50 m, which is five Barrier3D cells.
+
+### The panel titles are derived, not written
+
+Each detail panel is titled in two lines:
+
+```
+Domains 63-64 . Wimble Shoals
+1984 landward by 51-59 m (5-6 cells)
+```
+
+Only the *role* of a pair is written by hand, in the third field of
+`SIMPLE_REACHES` - and only 19-20 has one, `"control"`. Everything else is
+generated:
+
+* **the place** from `HATTERAS_ANNOTATIONS`, most specific first - a community
+  containing the pair (naming the village centre it sits on, where there is
+  one), else a named shoal zone, else the gap between the two nearest
+  communities. So 79-80 is "Tri-Village, at Rodanthe", 63-64 is "Wimble
+  Shoals", 19-20 is "Buxton-Avon" and 3-4 is "south of Buxton". No place name
+  in this figure was invented for it.
+* **the direction** from the SIGN of the measured medians, not from a word
+  typed next to them. A panel cannot read SEAWARD over numbers that are
+  negative.
+* **the magnitude and the cell count** from the same table the in-panel labels
+  read, with `round(offset / 10 m)` - the same rounding the row-insert scope
+  uses.
+
+The titles used to carry hand-written descriptions such as
+`"1984 line LANDWARD of 1997"`, which restated in words what the numbers
+underneath already said and could drift from them if the table were remeasured.
+
+### The whole island
+
+`HAT_duneline_offset_simple_island.png` is the same two solid lines and the
+same grey relief over all 90 domains, in three columns of a third of the island
+each. Every column is **two axes sharing a northing axis**:
+
+* **left, a true map.** Equal aspect, both lines, the four detail pairs
+  labelled, and the communities bracketed on the seaward margin. It is a
+  *locator*. It does not show the offset and it cannot: 46 km of island against
+  a 70 m offset is under half a line width, so on the map the two lines lie on
+  top of each other nearly everywhere. That is a property of the scale, not of
+  the lines.
+* **right, the measured offset as a bar**, one bar per domain, aligned to the
+  map row for row, red where 1984 lies seaward and blue where it lies landward,
+  with the ±10 m Barrier3D cell marked. Same medians the detail panels print,
+  off the same CSV.
+
+Read together they answer the two halves of the question — the bar says where
+along the island the lines disagree and by how much, the map says what that
+part of the island looks like and where each detail panel is cut from. The bar
+exists **because** the map cannot carry the offset, and the figure's footer
+says so rather than leaving the coincident lines to be read as agreement.
+
+**The detail pairs are no longer boxed.** At this scale a two-domain box is
+2 km of a 2 km-wide island, so the rectangle enclosed the whole width and read
+as a feature of the island rather than a crop mark. The bold pair label on the
+map and the grey band on the bar carry the same information without drawing a
+rectangle over the only two lines the map has.
+
+**The place names are not defined here.** Communities, village centres and the
+two end labels are read from `HATTERAS_ANNOTATIONS` in
+`scripts/hatteras_site_config.py` — the same object the shoreline-rate figures
+annotate from, and the same spans the model consumes as
+`HATTERAS_COMMUNITY_ZONES`. Buxton is GIS 7–8, Avon 21–31, Tri-Village 68–83
+(Salvo 69, Waves 74, Rodanthe 80), all inclusive GIS ids in the 1 = south frame
+this figure already uses. A town that moves in the config moves here, and this
+figure cannot disagree with the rest of the repo about where Avon is.
+
+Two placement rules are worth knowing. Avon straddles the 1–30/31–60 panel
+break, so its **bracket is drawn in both panels** — the community really does
+continue past the break — but its **name is drawn only on the panel holding
+most of it**, or the one-domain sliver at the foot of panel 2 reads as a second
+Avon. And the communities are bracketed in the ocean margin rather than washed
+across the panel: a translucent band would sit on the island and on both dune
+lines, and its colour (`#90AFC5`) is a blue close enough to the 1997 line's to
+be read as belonging to it.
+
+**Structures and the alongshore ruler.** Both piers (Avon, GIS 26; Rodanthe,
+GIS 79) and the Buxton groin (GIS 5.5, the boundary between domains 5 and 6)
+are drawn as short marks running seaward off the 1984 line, in the config's own
+`color_pier` and `color_groin`. Two things about them:
+
+* **The length is a drawing constant** (`STRUCTURE_LEN_M`), not a measurement.
+  No structure in this repo has a surveyed length, and a 46 km panel could not
+  resolve the difference between 200 m and 400 m of pier anyway. Read them as
+  positions, not extents.
+* **They are named in the legend, not on the map.** At this scale a label
+  beside the Rodanthe pier lands on the Rodanthe village tick and on the 79-80
+  detail label -- three labels inside one 500 m domain, which no amount of
+  nudging fixes.
+
+They are drawn perpendicular to a pair of shore-parallel lines, which is what
+keeps `color_pier` (`#1565C0`) from being read as the 1997 line despite the two
+being close blues.
+
+The ruler on the left of each bar is **km north of the south end of domain 1**,
+the same origin and direction `HAT_duneline_offset_ribbon.png` uses on its
+x-axis, so the two figures can be read against each other. It sits on the bar
+and not on the map deliberately: the map is pinned to equal aspect and its
+column width is set to its own data aspect, so hanging tick labels off it would
+letterbox it and break the row-for-row alignment that is the entire reason the
+bar sits beside it.
+
+The piers, the groin and the ruler are on the locator only. The plain
+`HAT_duneline_offset_island.png` and the ribbon do not carry them yet --
+the ribbon has a domain x-axis and could take
+`cascade_pipeline.annotations.add_geographic_annotations` directly.
+
+One implementation note that is not cosmetic: **the map column widths are
+computed, not chosen.** Every axes in a one-row figure gets the same height, so
+a map pinned to equal aspect in a column wider than its own data aspect is
+letterboxed — it shrinks vertically and stops lining up with the bar beside it,
+which destroys the only thing the pairing is for. Each map column is therefore
+set to exactly its own x-span/y-span. The island really is 5.7 km wide at the
+south end and 4.1 km at the north, so the three columns are genuinely different
+widths.
+
+### Rendering either one
+
+```
+python scripts/input_prep/0-elevation/3-figures/HAT_plot_duneline_offset.py \
+    --simple --simple-span 84-85 --simple-out <path>
+```
+
+`--simple` renders both figures. It reads `duneline_offset_by_domain.csv`
+rather than re-measuring, so it takes seconds. `--simple-halfwidth` widens the
+crop if a chosen pair's lines run outside ±150 m, `--no-island` skips the
+locator, and `--simple-island-out` sets the locator's path.
 
 ### Seeing a 20 m difference on a 46 km island
 
@@ -195,3 +409,21 @@ then, this folder contains the line-to-line distance and nothing more.
 ## Status
 
 Written 2026-09-03. Current against `2009-2014-1996` as rebuilt 2026-08-26.
+`HAT_duneline_offset_simple.png` and `HAT_duneline_offset_simple_island.png`
+added 2026-09-03; both are redrawings of the existing table, and no measurement
+changed when they were added.
+
+All seven figures redrawn 2026-09-03 on the single line key described above;
+the island locator gained the community brackets and the two end labels, and
+the detail panels gained derived titles. The locator also gained the two
+piers, the Buxton groin and an alongshore km ruler. Drawing only — every number in this
+README still holds: median +1.2 m, range −58.9 to +70.2 m, 47 of 90 positive.
+
+`duneline_offset_by_domain.csv` was **deliberately left at its committed
+version**. Re-running `main()` remeasures, and on a machine where
+`D:\Hatteras_GIS\domains.geojson` is not mounted the domain boxes are rebuilt
+from the 90 resampled rasters instead — which shifts each box by centimetres
+and rewrites all 90 rows. The rewrite is noise, not a result: max change in
+`offset_med_m` 0.12 m, mean 0.014 m, and every summary statistic identical to
+four significant figures. If you remeasure on a machine with the GIS drive
+mounted, commit that CSV; a rewrite produced without it should be reverted.

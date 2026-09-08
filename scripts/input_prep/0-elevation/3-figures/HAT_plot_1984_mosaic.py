@@ -317,7 +317,20 @@ def panel_survey(ax, surv, extent, title):
     ax.set_title(title, fontsize=11, pad=8)
 
 
-def survey_legend():
+def survey_legend(concise=False):
+    """Handles for the three surveys plus the unsurveyed background.
+
+    concise=True keeps only the year. The island figure needs it: its panels
+    are ~2 in wide (a 46 km island in an 8 km window at equal aspect) and the
+    full labels are wider than the axes they sit in, so the legend spilled
+    across the panel border. The sources are named in this module's docstring,
+    so the year is enough to read the colours by.
+    """
+    if concise:
+        return [Patch(facecolor=C_1996, label="1996"),
+                Patch(facecolor=C_2009, label="2009"),
+                Patch(facecolor=C_2014, label="2014"),
+                Patch(facecolor=C_NONE, label="no survey")]
     return [Patch(facecolor=C_1996, label="1996 ALACE (no road boundary)"),
             Patch(facecolor=C_2009, label="2009 USACE, measured"),
             Patch(facecolor=C_2014, label="2014 NOAA Post-Sandy, gap fill"),
@@ -399,13 +412,20 @@ def fig_island(elev, surv, extent, gdf, roads):
     n96 = int((surv == SURVEY_1996).sum())
     n14 = int((surv == SURVEY_2014).sum())
 
-    fig, axes = plt.subplots(1, 3, figsize=(15, 11), sharex=True, sharey=True,
+    # SAME CANVAS AS HAT_plot_gapfill.py's island figure, deliberately: the two
+    # products are read side by side, so they have to share panel proportions
+    # and gaps. The island spans ~8 km east-west and ~46 km north-south at equal
+    # aspect, so panel width follows figure HEIGHT, not the width asked for --
+    # at the old figsize=(15, 11) each panel was allotted 5 in, could only use
+    # ~2, and constrained_layout turned the other 3 into the gaps between them.
+    fig, axes = plt.subplots(1, 3, figsize=(13, 19), sharex=True, sharey=True,
                              constrained_layout=True)
+    # Wording parallels the gapfill figure's panel titles.
     im = panel_elev(axes[0], only09, extent, vmin, vmax,
-                    f"A  2009 DEM only\n{n09:,} cells measured")
+                    f"A  2009 DEM only\n{n09:,} cells")
     panel_elev(axes[1], elev, extent, vmin, vmax,
                f"B  the 1984 mosaic\n{n09 + n96 + n14:,} cells "
-               f"(+{n96 + n14:,} from 1996 and 2014)")
+               f"(+{n96 + n14:,})")
     panel_survey(axes[2], surv, extent, "C  survey source")
 
     for ax in axes:
@@ -424,8 +444,11 @@ def fig_island(elev, surv, extent, gdf, roads):
     cb.ax.tick_params(labelsize=8)
 
     rh = road_legend_handles(roads)
-    axes[2].legend(handles=survey_legend() + rh, loc="lower right",
-                   fontsize=8, framealpha=0.9)
+    # Concise labels and gapfill's own legend styling. Six entries at the full
+    # wording ran wider than the ~3 in panel and spilled across its border; the
+    # sources are named in this module's docstring, so the year carries it.
+    axes[2].legend(handles=survey_legend(concise=True) + rh,
+                   loc="lower right", fontsize=8, framealpha=0.9)
     fig.suptitle("1984-start topography: what each survey contributed\n"
                  + counts_note(surv), fontsize=12)
     fig.text(0.5, -0.012, FOOT, ha="center", va="top", fontsize=8, wrap=True,

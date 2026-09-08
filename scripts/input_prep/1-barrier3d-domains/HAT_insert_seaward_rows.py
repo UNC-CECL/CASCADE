@@ -237,6 +237,28 @@ def fabricate_rows(topo: np.ndarray, n: int, rule: str) -> np.ndarray:
         # seaward-most row at the backdune value, rising to row 0's elevation
         w = np.linspace(0.0, 1.0, n + 1)[:-1][:, None]
         block = base[None, :] * (1 - w) + topo[0:1, :] * w
+    elif rule in ("matched-crest", "matched-nocrest"):
+        # MATCHED BACKDUNE: the existing near-dune profile copied in front of
+        # itself, per column, so the 1984 block reproduces today's cross-shore
+        # FORM at the 1984 position. Every value is a real measured cell of
+        # THIS domain, shifted N cells seaward; none is a measurement at the
+        # coordinates it lands on, so cells_from_dem is reported as 0.
+        #
+        #   matched-crest    block row k = interior row k      (k = 0 .. N-1)
+        #                    Panel (b) of the 2026-09-03 fill figure, exactly:
+        #                    row 0 IS the 1996 crest, so the crest appears at
+        #                    the new seaward edge AND at its measured position
+        #                    N cells landward. Two interior ridges by design.
+        #   matched-nocrest  block row k = interior row k + 1  (k = 0 .. N-1)
+        #                    The same copy starting one row landward, so the
+        #                    crest is skipped and the block is backdune only.
+        #
+        # Built as separate rules (2026-09-04) rather than as one rule with a
+        # switch because they are two ARMS of the fill comparison, and an arm
+        # should be nameable from the manifest's fill_rule alone.
+        off = 0 if rule == "matched-crest" else 1
+        idx = np.minimum(np.arange(n) + off, topo.shape[0] - 1)
+        block = topo[idx, :].copy()
     else:
         raise SystemExit("unknown fill rule {!r}".format(rule))
     # never fabricate land below the water sentinel
@@ -341,7 +363,8 @@ def main() -> None:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--variant", choices=("pad", "translate", "none"), default="pad")
     ap.add_argument("--fill",
-                    choices=("measured", "median", "backdune", "row0", "taper"),
+                    choices=("measured", "median", "backdune", "row0", "taper",
+                             "matched-crest", "matched-nocrest"),
                     default="measured",
                     help="measured: keep the real DEM cell wherever it is dry "
                          "land AND at or above the backdune platform, floor it "
@@ -349,7 +372,10 @@ def main() -> None:
                          "measured and fill only the cells at or below MHW, "
                          "with the median of the block's own dry cells - one "
                          "guard, one constant, and no measurement is ever "
-                         "raised.")
+                         "raised. matched-crest / matched-nocrest: today's "
+                         "near-dune profile copied N cells seaward, per "
+                         "column, from interior row 0 / row 1 (see "
+                         "fabricate_rows).")
     ap.add_argument("--lower-old-crest", action="store_true",
                     help="shave the DEM's dune ridge down to the backdune "
                          "platform, so the dune exists once, at the 1984 line")

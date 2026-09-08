@@ -1,4 +1,4 @@
-# ==============================================================================
+        # ==============================================================================
 # HAT_dune_topo_extractor.py
 #
 # Hatteras CASCADE dune & interior topography extractor with per-domain,
@@ -68,7 +68,7 @@ plt.rcParams.update({
     "axes.titlesize": 13.0,
     "axes.labelsize": 13.5,
     "xtick.labelsize": 12.5,
-    "ytick.labelsize": 12.5,
+       "ytick.labelsize": 12.5,
     "legend.fontsize": 11.5,
     "axes.linewidth": 0.9,
     "figure.facecolor": "white",
@@ -155,9 +155,18 @@ TOPO_PRODUCT = "1984-start"
 # every reader. hat_topo_version PARSES this file for TOPO_PRODUCT/VERSION and
 # never imports it, so importing it here creates no cycle.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from hat_topo_version import array_name  # noqa: E402
+from hat_topo_version import array_name, year_for_product  # noqa: E402
 
-VERSION = "v2"             # bumped by nodata_audit/HAT_bridge_dropouts.py
+VERSION = "v2"             # 2026-09-02 re-pick (was "v3" until the 2026-09-04
+                           # renumber). What this script WRITES.
+                           # Since 2026-09-04 it no longer decides what is
+                           # READ: dune-topo/CURRENT outranks it in
+                           # hat_topo_version.resolve_version. Do not point
+                           # this at v3-v8 (layers built ON v2) - a re-run
+                           # would overwrite their arrays. Guide: 1984-start/
+                           # row-insert-scope/DUNE_TOPO_VERSION_GUIDE.md.
+                           # To change the default, edit CURRENT; for one
+                           # run, HAT_TOPO_VERSION_1984_START.
 
 # A LABEL ONLY. It is no longer written into any filename.
 #
@@ -269,6 +278,38 @@ CELL_SIZE_M = 10.0             # DEM cell size, cross-shore and alongshore (DAM_
 NUM_REAL_DOMAINS = 90
 N_BUFFER_DOMAINS = 15          # raw_offset files may be padded to 15+90+15 = 120 rows
 OFFSET_COLUMN = 0              # for multi-year raw_offset files, which column to read
+
+# WHICH YEAR'S OFFSETS THIS PRODUCT IS PLOTTED AT (2026-08-27).
+#
+# Both files above are still LOADED -- panel 3 of the island-offsets figure is
+# a 1984->2004 change rate and needs both. What PRODUCT_YEAR controls is the
+# PLAN VIEW, which used to be written once per offset year and so produced
+# four PNGs per run:
+#
+#     2004-start/dune-topo/v1/..._planview_v1_1984_padded.png
+#                             ..._planview_v1_1984_trimmed.png
+#                             ..._planview_v1_2004_padded.png
+#                             ..._planview_v1_2004_trimmed.png
+#
+# The topography is IDENTICAL in all four -- it is whatever TOPO_PRODUCT built.
+# Only off_cells differs, i.e. which canvas row each domain's row 0 lands on.
+# So the _1984_ pair above places the 2009+2014 surface at the 1984 measured
+# shoreline: an island that never existed, sitting in the 2004 product's folder
+# under a filename that reads like a 1984 initial condition.
+#
+# That loop is older than the period-first tree. When ONE topography was read
+# by BOTH hindcast periods (see hat_topo_version.py), plotting it at both years
+# was the whole point. Now that 1984-start and 2004-start are separate DEM
+# products, each with its own offsets -- 1984-start/README.md line 149 pins
+# shoreline_offset to 2-brie-offset/hindcast_1984/ -- the pairing is 1:1 and
+# the cross-product figures are noise.
+#
+# The year is RESOLVED from the product through hat_topo_version.YEAR_PRODUCT,
+# never spelled here, so a third product cannot pick up a stale literal.
+# strict=False: "forecast" and "buffer" are not hindcast periods, and for those
+# PRODUCT_YEAR is None and the plan view falls back to every year it loaded --
+# the old behaviour, for the case where there is no relevant year to pick.
+PRODUCT_YEAR = year_for_product(TOPO_PRODUCT, strict=False)
 
 # Plan-view canvas, reproducing plot_initialization_poster_no_border.py exactly:
 #   offset_cells = round(offset_m / 10); each domain's topo row 0 (ocean side)
@@ -1124,6 +1165,97 @@ def default_window(prof_arr: np.ndarray, start_beach: np.ndarray) -> tuple[int, 
     return base, min(base + DEFAULT_WINDOW_PX, prof_arr.shape[1])
 
 
+# --- SUGGESTED WINDOW ---------------------------------------------------
+# How far landward of the beach a foredune is allowed to be looked for, and how
+# much margin to leave either side of the crest the search finds.
+SUGGEST_REACH_PX = 26      # cells landward of beach start to hunt the crest in
+SUGGEST_PAD_SEAWARD = 3    # cells kept seaward of the crest
+SUGGEST_PAD_LANDWARD = 2   # cells kept landward of the crest (INSIDE the window)
+
+
+def suggest_window(prof_arr: np.ndarray, start_beach: np.ndarray,
+                   road_seaward: int | None = None) -> tuple[int, int, float]:
+    """A crest-aware starting window: (i0, i1, median crest elevation).
+
+    WHY THE SEEDED WINDOW IS NOT ENOUGH. A re-pick seeded from the previous set
+    opens every domain on its previous window, which is precisely the thing a
+    re-pick exists to question -- and if that window clipped the crest, the
+    picker shows no sign of it. The argmax simply pins at i1-1 and looks
+    plausible. This proposes a window derived from the PROFILE instead.
+
+    METHOD. Per profile, take the unconstrained argmax over
+    [start_beach, start_beach + SUGGEST_REACH_PX) -- i.e. the highest ground in
+    the foredune zone, with no window imposed. Take the median of those
+    locations across the domain, then bracket it with margin. The result
+    contains the crest by construction, which the seeded window may not.
+
+    THE ROAD IS A WARNING, NOT A LIMIT -- and the first version of this got that
+    wrong. Bounding the hunt at NC-12's seaward edge looks prudent (the
+    embankment is a flat-topped ridge an argmax locks onto) but it fails exactly
+    where this project lives: at GIS 85 the road sits at cell 13 and the crest
+    at 14, so a road-bounded hunt excluded the crest BY CONSTRUCTION and
+    proposed a 0.54 m "dune" against a real 4.93 m one. Wherever the island has
+    migrated over the roadbed, the dune IS landward of the road.
+
+    So the hunt is unbounded landward within SUGGEST_REACH_PX, and
+    `road_seaward` is used only to tell the caller whether the proposed window
+    overlaps NC-12, which the picker surfaces as a warning for the eye.
+
+    Returns (i0, i1 EXCLUSIVE, median crest elevation, overlaps_road).
+    """
+    n_along, n_cross = prof_arr.shape
+    limit = n_cross
+
+    locs = []
+    for i in range(n_along):
+        a = int(start_beach[i]) if start_beach[i] >= 0 else 0
+        b = min(a + SUGGEST_REACH_PX, limit)
+        if b <= a:
+            continue
+        w = prof_arr[i, a:b]
+        valid = w > SENTINEL_WATER_M + 1e-9
+        if not valid.any():
+            continue
+        locs.append(a + int(np.argmax(np.where(valid, w, -np.inf))))
+
+    if not locs:
+        i0, i1 = default_window(prof_arr, start_beach)
+        return i0, i1, float("nan"), False
+
+    crest = int(np.median(locs))
+    i0 = max(0, crest - SUGGEST_PAD_SEAWARD)
+    i1 = min(limit, crest + SUGGEST_PAD_LANDWARD + 1)
+    if i1 <= i0:
+        i1 = min(limit, i0 + 1)
+
+    elev, loc = find_dunes(prof_arr, start_beach, i0, i1)
+    ok = loc >= 0
+    crest_el = float(np.median(elev[ok])) if ok.any() else float("nan")
+    overlaps = road_seaward is not None and i1 > road_seaward
+    return i0, i1, crest_el, overlaps
+
+
+def window_diagnostics(prof_arr, start_beach, i0, i1):
+    """(median crest, % of profiles whose argmax pins at i1-1, is a higher cell
+    sitting just outside the landward edge?).
+
+    The pin fraction is the live tell for a clipped window: a crest that really
+    is the last cell in the window is fine, but a crest that pins there WHILE
+    cell i1 is higher means the window is cutting the dune off.
+    """
+    elev, loc = find_dunes(prof_arr, start_beach, i0, i1)
+    ok = loc >= 0
+    if not ok.any():
+        return float("nan"), 0.0, 0.0
+    pinned = float(np.mean(loc[ok] == i1 - 1))
+    if i1 < prof_arr.shape[1]:
+        nxt = prof_arr[:, i1]
+        higher = float(np.mean(nxt[ok] > elev[ok]))
+    else:
+        higher = 0.0
+    return float(np.median(elev[ok])), pinned, higher
+
+
 # ==============================================================================
 # INTERACTIVE PICKER
 # ==============================================================================
@@ -1207,19 +1339,65 @@ def pick_window(stem: str, prof_arr: np.ndarray, start_beach: np.ndarray,
         fig.colorbar(im, ax=ax_prof, label="elev (m MHW)")
 
     spans = [None, None]
+    sug_lines = [None, None]
+
+    # The road's seaward edge, so the suggestion can never propose a window
+    # that reaches NC-12. road_masks is the aligned dict the caller passes
+    # for display; if it is absent the hunt is simply unbounded landward.
+    _road_sea = None
+    if road_masks:
+        cols = [np.flatnonzero(m.any(axis=0)) for m in road_masks.values()
+                if m is not None and m.any()]
+        if cols:
+            _road_sea = int(min(c.min() for c in cols))
+    sug_i0, sug_i1, sug_crest, sug_on_road = suggest_window(
+        prof_arr, start_beach, _road_sea)
 
     def redraw():
         for k, ax in enumerate((ax_map, ax_prof)):
             if spans[k] is not None:
                 spans[k].remove()
-            spans[k] = ax.axhspan(state["i0"], state["i1"], color="#FF8C00",
-                                  alpha=0.25, zorder=0)
+            # HALF-CELL OFFSETS, so the band covers the cells actually SEARCHED.
+            #
+            # The window is half-open: find_dunes slices prof_arr[i, i0:i1], so
+            # cell i1 is NOT searched. Drawn as axhspan(i0, i1) the band's edge
+            # landed on the CENTRE of cell i1, so "drag to cover the crest"
+            # excluded the crest -- and did so silently, since the argmax simply
+            # pinned at i1-1. It cost the real crest at GIS 43, 64, 72, 85 and
+            # 86, up to 1.5 m at GIS 85 (3.44 m picked against 4.93 m actual).
+            #
+            # Display only: no stored pick moves, no number changes. It just
+            # makes the shaded band mean what a reader assumes it means.
+            spans[k] = ax.axhspan(state["i0"] - 0.5, state["i1"] - 0.5,
+                                  color="#FF8C00", alpha=0.25, zorder=0)
+            # the suggestion, as an outline so it reads as a proposal rather
+            # than a second selection
+            if sug_lines[k] is not None:
+                for ln in sug_lines[k]:
+                    ln.remove()
+            sug_lines[k] = [
+                ax.axhline(sug_i0 - 0.5, color="#1b6ca8", lw=1.4, ls=(0, (5, 3))),
+                ax.axhline(sug_i1 - 0.5, color="#1b6ca8", lw=1.4, ls=(0, (5, 3))),
+            ]
+
+        crest, pinned, higher = window_diagnostics(
+            prof_arr, start_beach, state["i0"], state["i1"])
+        warn = ""
+        if pinned >= 0.5 and higher >= 0.5:
+            warn = ("   ⚠ CLIPPED: argmax pins at the landward edge on "
+                    f"{pinned:.0%} of profiles and cell {state['i1']} is higher "
+                    f"on {higher:.0%} — widen landward")
+        elif pinned >= 0.5:
+            warn = (f"   · argmax sits on the last cell on {pinned:.0%} of "
+                    "profiles (fine if the crest really is there)")
         fig.suptitle(
-            f"{stem}   search window = [{state['i0']}, {state['i1']}]  "
-            f"({state['i1'] - state['i0']} cells)\n"
-            "drag vertically on either panel | enter = accept | r = reset | "
-            "s = skip | q = quit",
-            fontsize=11,
+            f"{stem}   window = [{state['i0']}, {state['i1']}) = cells "
+            f"{state['i0']}-{state['i1'] - 1}   crest {crest:.2f} m{warn}\n"
+            f"suggested [{sug_i0}, {sug_i1}) crest {sug_crest:.2f} m"
+            f"{'  [overlaps NC-12 - check it is the dune, not the embankment]' if sug_on_road else ''}  (blue "
+            f"dashes)   |   a = adopt suggestion   enter = accept   r = reset   "
+            f"s = skip   q = quit",
+            fontsize=10.5,
         )
         fig.canvas.draw_idle()
 
@@ -1235,6 +1413,9 @@ def pick_window(stem: str, prof_arr: np.ndarray, start_beach: np.ndarray,
         if event.key in ("enter", "return"):
             state["action"] = "accept"
             plt.close(fig)
+        elif event.key == "a":
+            state["i0"], state["i1"] = sug_i0, sug_i1
+            redraw()
         elif event.key == "r":
             state["i0"], state["i1"] = init
             redraw()
@@ -2348,8 +2529,20 @@ def _build_island_canvas(recs, offset_m_by_domain, mode):
 def island_plan_figure(summary: list, offsets: dict, run_dir: Path) -> None:
     """
     Plan view of the processed dune + interior for domains 1-90 at the measured
-    offsets. Writes ONE FIGURE PER OFFSET YEAR PER CROSS-SHORE MODE, styled to
-    match plot_initialization_poster_no_border.py.
+    offsets, styled to match plot_initialization_poster_no_border.py.
+
+    ONE FIGURE PER CROSS-SHORE MODE, at PRODUCT_YEAR's offsets only. It used to
+    be one per offset YEAR per mode; see the PRODUCT_YEAR note for why the
+    off-year figure was a topography and a shoreline from different decades.
+    When PRODUCT_YEAR is None (a product with no hindcast year) it falls back
+    to every year loaded, which is the pre-2026-08-27 behaviour.
+
+    THE ROAD IS NOT RESTRICTED. Both NC-12 vintages stay on the canvas, in
+    their own colours -- that overlay is the subject of
+    RoadOffset_dunestart_audit.md and the reason SHOW_ROAD exists here at all.
+    The vintage mismatch it documents is a property of the ROAD LINES, not of
+    which shoreline the domains are placed against, so restricting the offsets
+    does not make it stale.
     """
     recs = sorted([(domain_number(r["stem"]), r) for r in summary
                    if domain_number(r["stem"]) is not None])
@@ -2357,7 +2550,23 @@ def island_plan_figure(summary: list, offsets: dict, run_dir: Path) -> None:
         return
     cmap, norm = _island_norm()
 
-    for year in sorted(offsets):
+    if PRODUCT_YEAR is None:
+        plot_years = sorted(offsets)
+        print(f"[planview] {TOPO_PRODUCT}: no period year, plotting all "
+              f"offset years {plot_years}")
+    elif PRODUCT_YEAR in offsets:
+        plot_years = [PRODUCT_YEAR]
+        skipped = [y for y in sorted(offsets) if y != PRODUCT_YEAR]
+        if skipped:
+            print(f"[planview] {TOPO_PRODUCT}: plotting {PRODUCT_YEAR} offsets "
+                  f"only; {skipped} loaded but not plotted (this topography is "
+                  f"not that year's island)")
+    else:
+        print(f"[planview] {TOPO_PRODUCT}: {PRODUCT_YEAR} offsets not loaded "
+              f"(have {sorted(offsets)}), no plan view written")
+        return
+
+    for year in plot_years:
         dom, v = offsets[year]
         omap = {int(a): float(b) for a, b in zip(dom, v)}
         for mode in ISLAND_CROSS_SHORE_MODES:
@@ -2486,15 +2695,36 @@ def island_figure(summary: list, offsets: dict, path: Path) -> None:
                            alpha=0.85))
 
     # 1) measured offsets, all domains
+    #
+    # BOTH YEARS STAY. Panel 3 is a 1984->2004 change rate and is empty without
+    # them, and the r() notes under panel 2 are only interpretable as a pair.
+    # What changed 2026-08-27 is WEIGHT: the year this product is actually
+    # built for (PRODUCT_YEAR) is drawn solid and heavy, the other dashed and
+    # faded and labelled "reference". Before, the two read as equal candidates
+    # for the initial condition, which is exactly the confusion the plan-view
+    # split had -- see the PRODUCT_YEAR note.
     colors = {1984: "#1565C0", 2004: "#B71C1C"}
     for year in sorted(offsets):
         dom, v = offsets[year]
-        ax0.plot(dom, v, color=colors.get(year, "0.4"), lw=1.6,
-                 label=f"measured dune raw_offset {year}")
+        own = (PRODUCT_YEAR is None) or (year == PRODUCT_YEAR)
+        ax0.plot(dom, v, color=colors.get(year, "0.4"),
+                 lw=2.2 if own else 1.1,
+                 ls="-" if own else (0, (5, 3)),
+                 alpha=1.0 if own else 0.55,
+                 zorder=3 if own else 2,
+                 label=(f"measured dune raw_offset {year}" if own else
+                        f"measured dune raw_offset {year}  (reference)"))
+    if PRODUCT_YEAR is not None and PRODUCT_YEAR in offsets:
+        ax0.text(0.005, 0.04, f"{TOPO_PRODUCT} initialises at {PRODUCT_YEAR}",
+                 transform=ax0.transAxes, fontsize=8, va="bottom", ha="left",
+                 color=colors.get(PRODUCT_YEAR, "0.2"), fontweight="bold",
+                 bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="0.75",
+                           alpha=0.9))
     ax0.set_ylabel("measured raw_offset\n(m, common frame)")
     ax0.legend(loc="upper right", fontsize=8, framealpha=0.9)
     sign = "seaward +" if OFFSET_SEAWARD_POSITIVE else "landward +"
-    ax0.set_title(f"Island dune offsets vs extracted crest  —  {RUN_NAME}  "
+    ax0.set_title(f"Island dune offsets vs extracted crest  —  "
+                  f"{TOPO_PRODUCT} {RUN_NAME}  "
                   f"({len(recs)} domains, row0={OFFSET_ROW_ORDER}, {sign})",
                   fontsize=12)
 
@@ -2519,7 +2749,8 @@ def island_figure(summary: list, offsets: dict, path: Path) -> None:
         if ok.sum() < 3:
             continue
         r = float(np.corrcoef(a[ok], b[ok])[0, 1])
-        notes.append(f"r(extracted, {year}) = {r:+.2f}  (n={ok.sum()})")
+        tag = "" if year != PRODUCT_YEAR else "  <- this product"
+        notes.append(f"r(extracted, {year}) = {r:+.2f}  (n={ok.sum()}){tag}")
     if notes:
         trans = blended_transform_factory(ax1.transAxes, ax1.transAxes)
         ax1.text(0.01, 0.06, "   |   ".join(notes), transform=trans, fontsize=8,
