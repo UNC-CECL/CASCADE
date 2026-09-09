@@ -10,12 +10,35 @@ turns them into the two things Barrier3D initialises from:
 Input is metres NAVD88; output is Barrier3D's native decameters. That
 conversion happens here and nowhere downstream.
 
-## The stage is one script
+## The stage in two halves
 
 ```
-HAT_dune_topo_extractor.py     the whole chain: pick -> extract -> figures
-old/                           ancestors, kept for provenance only
+1-extraction/                      DEM -> the domain arrays (v1, v2): the first half of the stage
+    HAT_dune_topo_extractor.py     the whole chain: pick -> extract -> figures
+    nodata_audit/                  the dropout bridge
+    old_extractors/                ancestors, kept for provenance only
+2-domain-reconstruction-1984/      v2 -> v3: the 1984 domains reconstructed from the 1996-based DEM,
+                                   one subfolder per step, in the order the argument runs (2026-09-09)
+    1-measurement/                 how far the dune line moved: the shift N comes from, and its per-domain plotters
+    2-extent/                      how many rows, which domains: the footprint table, the scope report
+    3-placement/                   WHERE the rows go: the road placement check; imagery-review/ (batch, window, summary)
+    4-fill/                        what the rows contain: the copy fill, the fill plotters, the explainers
+    5-build/                       HAT_build_footprint_version.py (-> dune-topo/v3)
+    6-result/                      the hindcast on v3 against v2, and the version comparisons
 ```
+
+**Two halves, one stage** (2026-09-09, Hannah). Both halves hand the runner the
+same thing, a dune-topo version under `1984-start/`, so the reconstruction is
+not a pipeline stage of its own: its data live here, its inputs include the
+stage-4 road offset measured on v2, and once v3 exists that offset is measured
+again on it. A stage between 1 and 2 would claim a linear order the method
+does not have.
+
+The footprint steps mirror `data/.../1984-start/2-domain-reconstruction-1984/<step>/` and
+its `figures/<step>/`; paths are resolved through `hat_topo_version`
+(`insert_scope_step`, `insert_figures_dir`, `duneline_shift_dir`), never built
+by hand. Every script finds the repo root by walking up from its own file, so
+the depth does not matter to it.
 
 Run it from anywhere. `MODE` selects `"pick"` (drag a cross-shore dune search
 window per domain, saved to JSON after each one, safe to quit and resume),

@@ -153,7 +153,7 @@ plt.rcParams.update({
 })
 
 INIT = REPO / "data" / "hatteras_init"
-ARR_DIR = INIT / "1-barrier3d-domains" / TOPO_PRODUCT / "npy-arrays"
+ARR_DIR = INIT / "1-barrier3d-domains" / TOPO_PRODUCT / "1-extraction" / "npy-arrays"
 P = product(DEM_PRODUCT)
 OUT_PNG = P.figures / f"HAT_{SLUG}_holes.png"
 

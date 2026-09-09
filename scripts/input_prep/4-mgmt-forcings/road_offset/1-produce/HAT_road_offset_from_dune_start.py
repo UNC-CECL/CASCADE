@@ -104,7 +104,7 @@ INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 # to eliminate. The duplicates are deleted, so that particular trap is gone,
 # but keep resolving the extractor by this single path rather than by a
 # relative one.
-EXTRACTOR = (PROJECT_ROOT / "scripts" / "input_prep" / "1-barrier3d-domains"
+EXTRACTOR = (PROJECT_ROOT / "scripts" / "input_prep" / "1-barrier3d-domains" / "1-extraction"
              / "HAT_dune_topo_extractor.py")
 
 ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
@@ -837,7 +837,7 @@ def load_windows(ext) -> dict:
         f"get past this -- seed the new version from the one it derives from:\n\n"
         f"    python -c \"import importlib.util as u; "
         f"s=u.spec_from_file_location('b', r'scripts/input_prep/"
-        f"1-barrier3d-domains/nodata_audit/HAT_bridge_dropouts.py'); "
+        f"1-barrier3d-domains/1-extraction/nodata_audit/HAT_bridge_dropouts.py'); "
         f"m=u.module_from_spec(s); s.loader.exec_module(m); "
         f"m.carry_picks_forward('<source version>', '{ext.VERSION}')\"\n\n"
         f"That copies the source version's windows, stamps _meta.inherited_from\n"

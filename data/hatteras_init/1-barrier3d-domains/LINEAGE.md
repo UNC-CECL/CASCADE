@@ -137,7 +137,7 @@ cleared extractions stay reproducible from their windows.
 
 One addition to that rule. The 1996 aerial review — 58 holes of manual imagery
 adjudication, the reference that actually decided the v1/v2 dropout verdicts —
-was copied to `1984-start/aerial-review/`, **outside `dune-topo/`**. It is keyed
+was copied to `1984-start/1-extraction/aerial-review/`, **outside `dune-topo/`**. It is keyed
 on `(domain, profile)`, which a cross-shore re-pick cannot move, so it survives
 any number of re-extractions. Keeping it inside a version directory would have
 made it collateral of the next clear, which is exactly the mistake
@@ -152,9 +152,9 @@ Removed, logged in `archive_purge_20260903.csv`:
 | path | files | why |
 |---|---:|---|
 | `1984-start/dune-topo/v2` | 184 | `v1 + rows, block scope`, built on the PRE-re-pick `v1`. Superseded by `v4` (same insert on the `v3` re-pick). |
-| `1984-start/dune-topo-experiments/v1_D85_translate` | 183 | single-domain translate trial; predates the island-width fix; no script, no run |
-| `1984-start/dune-topo-experiments/v1_blocks_none_dsas` | 182 | `--variant none`, DSAS shift source; no script, no run |
-| `1984-start/dune-topo-experiments/v1_blocks_none_duneline` | 182 | `--variant none`, duneline shift source; no script, no run |
+| `1984-start/1-extraction/dune-topo-experiments/v1_D85_translate` | 183 | single-domain translate trial; predates the island-width fix; no script, no run |
+| `1984-start/1-extraction/dune-topo-experiments/v1_blocks_none_dsas` | 182 | `--variant none`, DSAS shift source; no script, no run |
+| `1984-start/1-extraction/dune-topo-experiments/v1_blocks_none_duneline` | 182 | `--variant none`, duneline shift source; no script, no run |
 
 **Run outputs were not touched.** `output/raw_runs/blocksdate{,noreloc}` still
 holds v2's results; only re-running from its inputs is now impossible.
@@ -176,7 +176,7 @@ See `1984-start/dune-topo/README.md`.
 
 ### Second pass, same day — consolidation (24.2 MB)
 
-- `1984-start/duneline-shift/` **moved** to `1984-start/row-insert-scope/duneline-shift/`.
+- `1984-start/duneline-shift/` **moved** to `1984-start/2-domain-reconstruction-1984/1-measurement/duneline-shift/`.
   Eight scripts repointed, including the two that write there. The path is now
   resolved once by `hat_topo_version.duneline_shift_dir(product)`; 2004-start
   keeps the plain layout, and that asymmetry lives in that function alone.
@@ -204,7 +204,7 @@ mean land elevation moves 0.001 m median, −0.043 m at worst (GIS 85).
 Decided in an interview under two constraints: the extracted interior is not
 modified, and the simplest rule with the least fabrication wins. Matched
 backdune, an alongshore analogue and a mass-conservative reconstruction were
-considered and dropped — `row-insert-scope/HAT_fill_options.txt`, section
+considered and dropped — `2-domain-reconstruction-1984/4-fill/HAT_fill_options.txt`, section
 DECISION, has the argument.
 
 **Accepted cost, recorded not corrected:** at GIS 85 and 86 the 1984 road sits
@@ -277,7 +277,7 @@ Every script that names a layer by literal was repointed (the set driver and
 plotter, the crest-experiment arms, the five input-prep plotters, the scope
 report). Run metadata, `run_index.csv` rows and dated reports written before
 the rename keep the old names — the map above and
-`1984-start/row-insert-scope/DUNE_TOPO_VERSION_GUIDE.md` (new, the version
+`1984-start/2-domain-reconstruction-1984/DUNE_TOPO_VERSION_GUIDE.md` (new, the version
 guide) translate them. Sections of this file above are history and keep the
 names they were written with.
 
@@ -299,7 +299,7 @@ build order. The lineage names lasted about an hour.
 `CURRENT` = `v2`. Every functional literal repointed again; the v2 folder's
 settings/figure files renamed `_v2`. **Sections above this one use the names
 current when they were written**; run metadata and arm tags likewise. The map
-lives in `1984-start/row-insert-scope/DUNE_TOPO_VERSION_GUIDE.md`.
+lives in `1984-start/2-domain-reconstruction-1984/DUNE_TOPO_VERSION_GUIDE.md`.
 
 ## 2026-09-04 — the six-fill set RUN; the four-arm test deleted
 
@@ -341,7 +341,7 @@ extractions) and remove every version with inserted rows. Applied in full:
 | 29 rows of `output/raw_runs/run_index.csv` | the runs above; pre-edit file kept as `run_index_archive_20260907_prepurge.csv` | — |
 
 Kept: `v1`, `v2`, `CURRENT` (= `v2`), the forcing-tree CSV (v2-measured),
-`pea1989base*` (v1), all of `row-insert-scope/` (the measurement of N, the
+`pea1989base*` (v1), all of `2-domain-reconstruction-1984/` (the measurement of N, the
 scope report, the fill argument, the figures, and the version guide — now a
 record of deleted versions), and
 `output/experiments/prior_calibration_run_v1_20260901/` (moved up one level out
@@ -364,7 +364,7 @@ literal (`HAT_plot_b3d_grid`, `HAT_plot_fill_options[_grid]`,
 `HAT_plot_where_inserts_occur`) now call `hat_topo_version.require_version()`
 first and exit naming what is on disk. `HAT_insert_seaward_rows.py` is
 untouched: a layer can be rebuilt from `v2` and
-`row-insert-scope/duneline-shift/duneline_retreat_1984_1997.csv` with the
+`2-domain-reconstruction-1984/1-measurement/duneline-shift/duneline_retreat_1984_1997.csv` with the
 recipe in the guide.
 
 Sizes and reasons: `archive_purge_20260907.csv`.

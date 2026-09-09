@@ -91,7 +91,7 @@ ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
 GEOJSON_FMT = ROADS_ROOT / "raw_offset" / "{year}" / "nc12_{year}.geojson"
 OUT_PNG = ROADS_ROOT / "raster" / "HAT_road_geojson_on_2009_dem.png"
 
-EXTRACTOR = (PROJECT_ROOT / "scripts" / "input_prep" / "1-barrier3d-domains"
+EXTRACTOR = (PROJECT_ROOT / "scripts" / "input_prep" / "1-barrier3d-domains" / "1-extraction"
              / "HAT_dune_topo_extractor.py")
 PLACEMENT = (PROJECT_ROOT / "scripts" / "input_prep" / "4-mgmt-forcings"
              / "road_offset" / "1-produce" / "HAT_road_placement_on_domains.py")

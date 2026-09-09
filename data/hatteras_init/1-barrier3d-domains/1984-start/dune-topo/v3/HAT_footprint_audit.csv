@@ -13,30 +13,30 @@ domain,n_cells,insert_anchor,insert_row,rows_before,rows_after,operation
 12,1,road,5,170,171,copy of rows 5..5
 13,0,nan,-1,168,168,unchanged
 14,0,nan,-1,35,35,unchanged
-15,-1,road,6,32,31,rows 6..6 removed
-16,-4,road,2,61,57,rows 2..5 removed
+15,-1,road,5,32,31,rows 5..5 removed
+16,-4,road,0,61,57,rows 0..3 removed
 17,0,nan,-1,71,71,unchanged
 18,0,nan,-1,87,87,unchanged
 19,0,nan,-1,97,97,unchanged
 20,0,nan,-1,103,103,unchanged
 21,0,nan,-1,113,113,unchanged
-22,-1,road,18,128,127,rows 18..18 removed
-23,-1,road,23,134,133,rows 23..23 removed
+22,-1,road,16,128,127,rows 16..16 removed
+23,-1,road,22,134,133,rows 22..22 removed
 24,0,nan,-1,141,141,unchanged
 25,0,nan,-1,138,138,unchanged
 26,0,nan,-1,148,148,unchanged
 27,0,nan,-1,161,161,unchanged
 28,0,nan,-1,166,166,unchanged
 29,0,nan,-1,154,154,unchanged
-30,-1,road,25,140,139,rows 25..25 removed
-31,-1,road,23,139,138,rows 23..23 removed
-32,-1,road,21,141,140,rows 21..21 removed
-33,-1,road,18,137,136,rows 18..18 removed
-34,-1,road,21,136,135,rows 21..21 removed
-35,-1,road,20,116,115,rows 20..20 removed
-36,-1,road,35,134,133,rows 35..35 removed
-37,-1,road,33,159,158,rows 33..33 removed
-38,-2,road,29,166,164,rows 29..30 removed
+30,-1,road,24,140,139,rows 24..24 removed
+31,-1,road,22,139,138,rows 22..22 removed
+32,-1,road,20,141,140,rows 20..20 removed
+33,-1,road,17,137,136,rows 17..17 removed
+34,-1,road,20,136,135,rows 20..20 removed
+35,-1,road,18,116,115,rows 18..18 removed
+36,-1,road,34,134,133,rows 34..34 removed
+37,-1,road,32,159,158,rows 32..32 removed
+38,-2,road,28,166,164,rows 28..29 removed
 39,0,nan,-1,170,170,unchanged
 40,0,nan,-1,172,172,unchanged
 41,0,nan,-1,174,174,unchanged
@@ -57,16 +57,16 @@ domain,n_cells,insert_anchor,insert_row,rows_before,rows_after,operation
 56,0,nan,-1,77,77,unchanged
 57,0,nan,-1,68,68,unchanged
 58,0,nan,-1,69,69,unchanged
-59,-1,road,27,78,77,rows 27..27 removed
+59,-1,road,26,78,77,rows 26..26 removed
 60,0,nan,-1,102,102,unchanged
 61,0,nan,-1,116,116,unchanged
-62,-2,road,31,133,131,rows 31..32 removed
-63,-5,road,26,134,129,rows 26..30 removed
+62,-2,road,30,133,131,rows 30..31 removed
+63,-5,road,25,134,129,rows 25..29 removed
 64,-5,road,25,133,128,rows 25..29 removed
-65,-4,road,27,132,128,rows 27..30 removed
-66,-5,road,25,121,116,rows 25..29 removed
-67,-5,road,26,134,129,rows 26..30 removed
-68,-1,road,57,103,102,rows 57..57 removed
+65,-4,road,25,132,128,rows 25..28 removed
+66,-5,road,24,121,116,rows 24..28 removed
+67,-5,road,25,134,129,rows 25..29 removed
+68,-1,road,55,103,102,rows 55..55 removed
 69,0,nan,-1,106,106,unchanged
 70,0,nan,-1,140,140,unchanged
 71,0,nan,-1,133,133,unchanged

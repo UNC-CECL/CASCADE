@@ -28,7 +28,7 @@ THE SET (decided with Hannah, 2026-09-04; DISMANTLED 2026-09-07)
     matched-nocrest v8. v4-v8 shared one footprint (98 rows, 38 domains) and
     one setback CSV. Versions were a plain sequence (v1 original picks, v2
     re-pick base, v3-v8 layers); the guide is
-    1984-start/row-insert-scope/DUNE_TOPO_VERSION_GUIDE.md.
+    1984-start/2-domain-reconstruction-1984/DUNE_TOPO_VERSION_GUIDE.md.
 
 SETTINGS
     Exactly the calibration-tree run HAT_1984_2004_calibBE_road_bdm_groin:
