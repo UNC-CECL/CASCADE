@@ -9,6 +9,7 @@ Built 2026-09-08 09:10 by `HAT_build_footprint_version.py` from `v2` and `2-doma
 | dune array | unchanged |
 | setback CSV | the 1984 setbacks (`setback_new_m`), no floor: 82 road domains change, GIS 85/86 go from 0 to 44/12 m; the road sits on measured cells and the block is directly behind it |
 | audit | `HAT_footprint_audit.csv` |
+| figures | `figures/grid/domain_NNN_grid_v3.png` (90: v2 beside v3 as the model holds them, the block or seam marked), `HAT_dune_topo_summary_v3.png`, `HAT_dune_topo_island_planview_v3_1984_{trimmed,padded}.png`; written 2026-09-09 by `2-domain-reconstruction-1984/5-build/HAT_plot_version_figures.py`, read from this folder's arrays, setback CSV and audit; see `figures/README.md` for why a built version does not get the extractor's `qc/` set |
 
 Verified on write: unchanged domains byte-identical to `v2`; changed domains have rows_before + N rows, identical rows before the insert point, a block equal to the rows that follow it (add) or an unchanged tail (remove).
 
