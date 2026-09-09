@@ -132,7 +132,7 @@ def _style_axes(ax, grid_axis="y", box=False):
     ax.set_axisbelow(True)
 
 
-def _figure_header(fig, left, right, title, year):
+def _figure_header(fig, left, right, title, year, note=None):
     """Draws the title block: name on the left, year clock on the right.
 
     Replaces a centred suptitle carrying both. A centred title moves as the
@@ -154,6 +154,9 @@ def _figure_header(fig, left, right, title, year):
     gap = 0.20 / fig.get_figheight()
     fig.add_artist(Line2D([left, right], [y - gap, y - gap], color=RULE,
                           lw=0.8, transform=fig.transFigure))
+    if note:
+        fig.text(right, y - gap - 0.10 / fig.get_figheight(), note, ha="right",
+                 va="top", fontsize=FONT_NOTE, color=INK_LIGHT)
 
 
 def _panel_series(shoreline_m, run, pad_lo, pad_hi):
@@ -223,6 +226,84 @@ def _last_managed(entry):
     """
     written = np.flatnonzero(np.asarray(entry["elevation"], dtype=float) != 0)
     return int(written[-1]) if written.size else -1
+
+
+# =============================================================================
+# The relocation tracker (2026-09-09, Hannah): how many of the historically
+# relocated domains has each panel relocated BY THIS FRAME, and how many
+# relocations it made elsewhere - against how many the record says should
+# have happened by now. Island-wide, from the full road_series, whatever the
+# window; the window's own share is given beside it.
+# =============================================================================
+
+def _tracker(road_series, event_years, is_prescribed_arm, t, gis_lo, gis_hi):
+    """Counts for one panel at year index `t`.
+
+    A historical domain counts once it has relocated AT ALL by `t`, early or
+    late (cumulative; the timing error stays visible in the stars and rings).
+    In a panel that carried the prescribed moves, the applied move is read
+    OFF THE SETBACK SERIES - a jump of a cell or more at the event year - not
+    assumed from the event table, so a run that failed to apply an event
+    shows as a miss rather than a hit by construction. 'Elsewhere' is the
+    module's own relocations in domains the record does not list, i.e. the
+    false positives, cumulative.
+
+    Returns:
+        dict(hist_hit, hist_total, hist_hit_win, hist_total_win, elsewhere,
+             observed, observed_by_year)
+    """
+    hit = set()
+    elsewhere = set()
+    for gis, entry in road_series.items():
+        reloc = np.asarray(entry["relocated"], dtype=float)
+        fired = bool(np.any(reloc[:t + 1] > 0)) if reloc.size else False
+        if gis in event_years:
+            applied = False
+            if is_prescribed_arm:
+                k = event_years[gis] - _tracker.start_year
+                sb = np.asarray(entry["setback"], dtype=float)
+                if 0 < k <= t and k < sb.size:
+                    applied = (sb[k] - sb[k - 1]) >= 10.0
+            if fired or applied:
+                hit.add(gis)
+        elif fired:
+            elsewhere.add(gis)
+    in_win = [g for g in event_years if gis_lo <= g <= gis_hi]
+    year = _tracker.start_year + t
+    by_year = {}
+    for g, y in event_years.items():
+        by_year.setdefault(y, [0, 0])
+        by_year[y][1] += 1
+        if y <= year:
+            by_year[y][0] += 1
+    return dict(hist_hit=len(hit), hist_total=len(event_years),
+                hist_hit_win=len([g for g in hit if g in in_win]), hist_total_win=len(in_win),
+                elsewhere=len(elsewhere),
+                observed=sum(v[0] for v in by_year.values()), observed_by_year=by_year)
+
+
+_tracker.start_year = 1984      # set by the makers from the run before drawing
+
+
+def _tracker_label(c):
+    """The per-panel line: 'historical 3 of 10 (window 2 of 4) - elsewhere 2'."""
+    win = (f" (this window {c['hist_hit_win']} of {c['hist_total_win']})"
+           if c["hist_total_win"] and c["hist_total_win"] < c["hist_total"] else "")
+    return (f"relocated: historical domains {c['hist_hit']} of {c['hist_total']}{win}"
+            f"  \u00b7  elsewhere {c['elsewhere']}")
+
+
+def _observed_label(c):
+    """The header line: 'observed to date: 4 of 10 (1989: 4 of 4, 1999: 0 of 6)'."""
+    parts = ", ".join(f"{y}: {v[0]} of {v[1]}" for y, v in sorted(c["observed_by_year"].items()))
+    return f"observed to date: {c['observed']} of {c['hist_total']} ({parts})"
+
+
+def _draw_tracker(ax, text):
+    ax.text(0.995, 0.975, text, transform=ax.transAxes, ha="right", va="top",
+            fontsize=FONT_NOTE, color=INK, zorder=20,
+            bbox=dict(facecolor="white", alpha=0.88, edgecolor="none",
+                      boxstyle="square,pad=0.3"))
 
 
 def _road_matrix(series, road_series, gis_lo, gis_hi, domains, n_years):
@@ -499,7 +580,13 @@ def make_road_relocation_gif(
                    borderaxespad=0.0, bbox_to_anchor=(0.5, 0.012))
 
         head = title or f"NC-12 and the dune line, GIS {gis_lo}-{gis_hi}"
-        _figure_header(fig, 0.095, 0.985, head, year)
+        _tracker.start_year = run_a.start_year
+        _ca = _tracker(road_series_a, event_years, bool(prescribed_panels[0]), t, gis_lo, gis_hi)
+        _cb = _tracker(road_series_b, event_years, bool(prescribed_panels[1]), t, gis_lo, gis_hi)
+        _draw_tracker(axes[0], _tracker_label(_ca))
+        _draw_tracker(axes[1], _tracker_label(_cb))
+        _figure_header(fig, 0.095, 0.985, head, year,
+                       note=_observed_label(_ca) if event_years else None)
 
         buf = io.BytesIO()
         fig.savefig(buf, format="png", facecolor=fig.get_facecolor())
@@ -932,7 +1019,13 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
             bbox_to_anchor=(0.5, 0.042))
 
         head = title or f"Hatteras topography and NC-12, GIS {gis_lo}-{gis_hi}"
-        _figure_header(fig, 0.085, 0.93, head, year)
+        _tracker.start_year = start_year
+        _ca = _tracker(road_series_a, event_years, bool(prescribed_panels[0]), t, gis_lo, gis_hi)
+        _cb = _tracker(road_series_b, event_years, bool(prescribed_panels[1]), t, gis_lo, gis_hi)
+        _draw_tracker(axes[0], _tracker_label(_ca))
+        _draw_tracker(axes[1], _tracker_label(_cb))
+        _figure_header(fig, 0.085, 0.93, head, year,
+                       note=_observed_label(_ca) if event_years else None)
         if planform_note:
             fig.text(0.085, 0.008, planform_note, fontsize=FONT_NOTE,
                      color=INK_LIGHT, style="italic")
