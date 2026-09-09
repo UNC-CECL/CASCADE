@@ -23,7 +23,7 @@ the version built, what the model does. Root keeps this README,
 | `3-placement/` | WHERE the rows go | `road_placement_check_1984.csv` / `.txt` (the road check); `imagery-review/` — the sheet with the verdicts and picks, and its two reports (the evidence that decides) | `3-placement/seaward/`, `behind-road/` (the two candidates), `road-check/`, `imagery-review/` | `HAT_verify_road_placement_1984.py`; `imagery-review/`: batch, window, summary |
 | `4-fill/` | what the rows contain | `fill_copy_by_domain.csv`, `HAT_fill_copy_scope.txt`, `HAT_fill_options.txt` | `4-fill/` | `HAT_fill_copy_scope.py`, the fill plotters, the explainers |
 | `5-build/` | the version built from 2 + 3 + 4 | a README pointing at `../dune-topo/v3/`, where the build writes | none | `HAT_build_footprint_version.py` |
-| `6-result/` | what the model does with it | (none yet) | `6-result/` | the result and comparison plotters |
+| `6-result/` | what the model does with it | `version_compare_<pair>.csv`, `HAT_compare_versions.txt`: v2 against v3 under the same hindcast, emergent and prescribed pairs (2026-09-09) | `6-result/` | `HAT_run_version_pair.py`, `HAT_compare_versions.py`, the result and comparison plotters |
 
 The extractor itself, `HAT_dune_topo_extractor.py`, stays where the resolver
 finds it by path; `nodata_audit/` and `old_extractors/` are untouched.
