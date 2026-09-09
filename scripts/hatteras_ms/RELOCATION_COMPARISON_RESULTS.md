@@ -178,5 +178,5 @@ metadata by the script. The six sets above sit under `v1/`, marked superseded
 (v1 stopped being CURRENT on 2026-09-04). `v2/calibBE_groin/` and
 `v3/calibBE_groin/` are the like-for-like pair run on 2026-09-09 from
 `output/raw_runs/version-pair/`; their numbers are in each set's `report.txt`
-and `confusion.csv`, and the broader v2-against-v3 figure is in the
+and `tables/confusion.csv` (every set: `report.txt`, `tables/`, one folder per place with `topography.gif` and `dune-and-road.gif`), and the broader v2-against-v3 figure is in the
 reconstruction's `6-result/`. The folder README maps it.
