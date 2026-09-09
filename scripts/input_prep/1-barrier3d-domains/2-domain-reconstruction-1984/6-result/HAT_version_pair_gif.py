@@ -68,8 +68,8 @@ SCENARIOS = {
     "prescribed": ("HAT_1984_2004_calibBE_road_reloc_bdm_groin",
                    "the same with the recorded 1989 and 1999 relocations prescribed"),
 }
-LABEL = {"v2": "v2 — the extraction (1996 dune, 2009 interior; today's setbacks)",
-         "v3": "v3 — the 1984 reconstruction (rows behind / in front of NC-12; 1984 setbacks)"}
+LABEL = {"v2": "v2 — the extraction (today's setbacks)",
+         "v3": "v3 — the 1984 reconstruction (1984 setbacks)"}
 # ONE FOLDER PER PLACE, two files in each (Hannah, 2026-09-09: "organize the
 # figures better"): a reader opens the reach they care about and finds both
 # views of it side by side. The relocation-comparison windows first, then the
