@@ -323,7 +323,7 @@ independent rather than derive one from the other.
 ### Downstream state
 
 `HAT_export_to_numpy.py` has been run against this tag: 90 domains sit in
-`1-barrier3d-domains/1984-start/npy-arrays/`, rebuilt with the product itself
+`1-barrier3d-domains/1984-start/1-extraction/npy-arrays/`, rebuilt with the product itself
 after the road boundary came out. `1984-start/dune-topo/v1` exists. What the
 "Still to do" note here used to say - that nothing downstream consumed the 1984
 product - is no longer true.

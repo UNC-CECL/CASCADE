@@ -224,7 +224,7 @@ def year_for_product(product: str, strict: bool = True):
 # The one that has ALONGSHORE_FLIP = True. Three other copies of this file exist
 # in the repo and all are unflipped -- see the note in
 # HAT_road_offset_from_dune_start.py.
-EXTRACTOR = (PROJECT_ROOT / "scripts" / "input_prep" / "1-barrier3d-domains"
+EXTRACTOR = (PROJECT_ROOT / "scripts" / "input_prep" / "1-barrier3d-domains" / "1-extraction"
              / "HAT_dune_topo_extractor.py")
 
 
@@ -259,10 +259,30 @@ def dune_topo_root(product: str) -> Path:
     return product_dir(product) / "dune-topo"
 
 
+# THE TWO HALVES OF STAGE 1 (2026-09-09, Hannah). Under each product,
+# `1-extraction/` holds what the extractor reads and records (npy-arrays,
+# npy-arrays_survey, picks, the aerial review of the holes, the retired
+# experiments) and `2-domain-reconstruction-1984/` the 1984 reconstruction in
+# its six steps; `dune-topo/` stays at the product root because BOTH halves
+# write versions into it and it is what the runner loads. The scripts folder
+# scripts/input_prep/1-barrier3d-domains/ is split the same way.
+EXTRACTION_SUB = "1-extraction"
+
+
+def extraction_dir(product: str) -> Path:
+    """The extraction half of a product: arrays, picks and the audit records."""
+    return product_dir(product) / EXTRACTION_SUB
+
+
 def npy_dirs(product: str) -> tuple[Path, Path]:
     """(elevation arrays, survey/provenance arrays) the extractor reads."""
-    d = product_dir(product)
+    d = extraction_dir(product)
     return d / "npy-arrays", d / "npy-arrays_survey"
+
+
+def picks_dir(product: str) -> Path:
+    """Where the dune-search windows of a product live (one JSON per version)."""
+    return extraction_dir(product) / "picks"
 
 
 # THE SEAWARD-ROW-INSERT FOLDER, and the paths that hang off it.
@@ -273,13 +293,13 @@ def npy_dirs(product: str) -> tuple[Path, Path]:
 # THE LAYOUT IS NOT SYMMETRIC BETWEEN PRODUCTS, deliberately. On 2026-09-03
 # everything belonging to the 1984-start seaward-row insert - the measurement of
 # N, the scope report, the fill comparison and every figure - was consolidated
-# under `row-insert-scope/`. 2004-start has no insert work and no such folder,
+# under `2-domain-reconstruction-1984/`. 2004-start has no insert work and no such folder,
 # so its dune-line measurements stay at the product root.
 #
 # The asymmetry is the price of that consolidation. It is contained here so a
 # caller cannot get it wrong, and so a future product does not inherit it by
 # accident: anything not listed gets the plain layout.
-_INSERT_SCOPE = {"1984-start": "row-insert-scope"}
+_INSERT_SCOPE = {"1984-start": "2-domain-reconstruction-1984"}
 
 
 def insert_scope_dir(product: str) -> Path:
@@ -287,7 +307,7 @@ def insert_scope_dir(product: str) -> Path:
     sub = _INSERT_SCOPE.get(product)
     if sub is None:
         raise SystemExit(
-            f"\n{product!r} has no row-insert-scope folder. Only "
+            f"\n{product!r} has no 2-domain-reconstruction-1984 folder. Only "
             f"{', '.join(_INSERT_SCOPE)} carries the seaward-row insert.\n")
     return product_dir(product) / sub
 
@@ -305,12 +325,78 @@ def insert_scope_dir(product: str) -> Path:
 # Renumbered 2026-09-07 to the order the argument runs: measure the dune-line
 # shift, turn it into a footprint of rows (two placements of the same rows:
 # seaward/, behind-road/; placement-independent figures at the step's root),
-# argue the fill, look at the result. 4-result is reserved: nothing has been
+# argue the fill, look at the result. 6-result is reserved: nothing has been
 # built and run on the footprint yet. The record figures of the deleted layers
 # sit in superseded-layers/ and the irreproducible pre-re-pick ones in frozen/;
 # neither is a section a plotter may write to (2026-09-08).
-INSERT_FIGURE_SECTIONS = ("1-measurement", "2-footprint-1984", "3-fill", "4-result")
-INSERT_FIGURE_SUBFOLDERS = {"2-footprint-1984": ("seaward", "behind-road")}
+INSERT_FIGURE_SECTIONS = ("1-measurement", "2-extent", "3-placement", "4-fill", "5-build", "6-result")
+# Inside a section (2026-09-08, Hannah): island-wide figures go in `island/`
+# (or a named subfolder), and EVERY figure that shows one example domain goes
+# in `rows-added/` or `rows-removed/` by the sign of that domain's N in the
+# footprint table - never at the section root.
+# Six steps since 2026-09-09, in the order the ARGUMENT runs (Hannah): how far
+# the dune line moved, how many rows, WHERE they go (the two candidate
+# placements, the road check, and the imagery review that decides), what they
+# contain, the version built, what the model does. 5-build holds no figures.
+SIGN_SUBFOLDERS = ("rows-added", "rows-removed", "unchanged")
+INSERT_FIGURE_SUBFOLDERS = {
+    "1-measurement": SIGN_SUBFOLDERS,
+    "2-extent": ("island",),
+    "3-placement": ("seaward", "behind-road",
+                    "road-check", *(f"road-check/{s}" for s in SIGN_SUBFOLDERS),
+                    "imagery-review", "imagery-review/island", *(f"imagery-review/{s}" for s in SIGN_SUBFOLDERS)),
+    "4-fill": ("island", *SIGN_SUBFOLDERS),
+    "5-build": (),
+    "6-result": ("island", *SIGN_SUBFOLDERS),
+}
+
+# The DATA of the same steps (2026-09-09, Hannah: "organize this under
+# subfolders"): the tables and reports each step writes sit in a subfolder of
+# 2-domain-reconstruction-1984/ named like its figure section, so a listing of the data
+# folder reads in the same order as figures/. Root keeps README.md,
+# DUNE_TOPO_VERSION_GUIDE.md and figures/. Resolved here for the same reason
+# the figure folders are: one definition, no hand-built paths in the scripts.
+INSERT_SCOPE_STEPS = INSERT_FIGURE_SECTIONS
+
+
+def insert_scope_step(product: str, step: str, sub: str | None = None) -> Path:
+    """The data folder of one step of the insert work (tables, reports), or a
+    named subfolder of it (3-placement has `imagery-review`). Created if
+    absent. `step` is one of INSERT_SCOPE_STEPS; anything else raises."""
+    if step not in INSERT_SCOPE_STEPS:
+        raise SystemExit(
+            f"\n{step!r} is not an insert step. Use one of {', '.join(INSERT_SCOPE_STEPS)}.\n")
+    d = insert_scope_dir(product) / step
+    if sub is not None:
+        d = d / sub
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def rows_sign_sub(n_cells: int) -> str:
+    """The sign subfolder for a domain whose footprint is `n_cells` rows."""
+    return "rows-added" if n_cells > 0 else ("rows-removed" if n_cells < 0 else "unchanged")
+
+
+def footprint_n_cells(product: str, domain: int) -> int:
+    """N for one domain from the footprint table (footprint_1984_by_domain.csv)."""
+    import csv
+    p = insert_scope_step(product, "2-extent") / "footprint_1984_by_domain.csv"
+    if not p.is_file():
+        raise SystemExit(f"\n{p} not found - run HAT_footprint_1984.py first\n")
+    for r in csv.DictReader(open(p, newline="")):
+        if int(r["domain"]) == int(domain):
+            return int(r["n_cells"])
+    raise SystemExit(f"\ndomain {domain} is not in {p}\n")
+
+
+def insert_figures_dir_for_domain(product: str, section: str, domain: int,
+                                  under: str | None = None) -> Path:
+    """Where a figure of ONE example domain goes: the section's rows-added/ or
+    rows-removed/ (or unchanged/) by the sign of that domain's N, optionally
+    under a named subfolder (`under="road-check"`, `under="imagery-review"`). Created if absent."""
+    s = rows_sign_sub(footprint_n_cells(product, domain))
+    return insert_figures_dir(product, section, f"{under}/{s}" if under else s)
 
 
 def insert_figures_dir(product: str, section: str | None = None,
@@ -319,9 +405,11 @@ def insert_figures_dir(product: str, section: str | None = None,
 
     `section` is one of INSERT_FIGURE_SECTIONS. Omit it for the folder root,
     which holds only the README, CAPTIONS.md and the `frozen/` figures no
-    script can rebuild - no plotter should write there. `sub` is a placement
-    subfolder of a section that has them (INSERT_FIGURE_SUBFOLDERS); anything
-    else raises, for the same reason a wrong section does.
+    script can rebuild - no plotter should write there. `sub` is a subfolder
+    of the section (INSERT_FIGURE_SUBFOLDERS: `island/`, a placement, or a
+    sign folder - use insert_figures_dir_for_domain for the latter); anything
+    else raises, for the same reason a wrong section does. Section roots hold
+    no figures either (2026-09-08).
 
     IT MAKES THE DIRECTORY. Not a pure lookup, deliberately: none of the eight
     plotters calls mkdir, so before the sections existed they all depended on
@@ -351,7 +439,8 @@ def duneline_shift_dir(product: str) -> Path:
     """The duneline-shift directory for a product. Read AND write path."""
     sub = _INSERT_SCOPE.get(product)
     base = product_dir(product)
-    return (base / sub / "duneline-shift") if sub else (base / "duneline-shift")
+    # the measurement of N is step 1 of the insert work (moved 2026-09-09)
+    return (base / sub / "1-measurement" / "duneline-shift") if sub else (base / "duneline-shift")
 
 
 # "bridged" is written only by nodata_audit/HAT_bridge_dropouts.py: True where

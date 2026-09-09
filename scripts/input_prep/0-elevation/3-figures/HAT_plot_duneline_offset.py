@@ -59,20 +59,25 @@ INPUTS
 
 OUTPUTS (data/hatteras_init/0-elevation/2009-2014-1996-duneline/)
     duneline_offset_by_domain.csv
-    figures/HAT_duneline_offset_simple.png    the stripped version: grey
-                                              relief, both lines solid,
+    figures/detail/   HAT_duneline_offset_simple.png   four two-domain pairs,
+                                              grey relief, both lines solid,
                                               tight crop, no values
-    figures/HAT_duneline_offset_simple_island.png   the same, whole island,
-                                              with the measured offset as a
-                                              bar beside the map
-    figures/HAT_duneline_offset_lines_island.png  the two lines over the
-                                              whole island with NO bar
-                                              strips: ~5 km panels
-                                              cropped to the lines
-    figures/HAT_duneline_offset_island.png    the DEM, both lines, the boxes
-    figures/HAT_duneline_offset_bydomain.png  the offset, domain by domain
+                      HAT_duneline_offset_zooms.png    three reaches of 5-8
+                                              domains, same style, wider crop
+                      HAT_duneline_offset_zoom_83_87.png   --zoom 83-87
+    figures/island/   HAT_duneline_offset_simple_island.png   whole island,
+                                              the measured offset as a bar
+                                              beside the map (and _mean)
+                      HAT_duneline_offset_lines_island.png  maps only, ~5 km
+                                              panels cropped to the lines
+                                              (and _3panel, 30 per panel)
+    figures/offset/   HAT_duneline_offset_ribbon.png   both lines against a
+                                              smoothed midline, 1 m sampling
+                      HAT_duneline_offset_bydomain.png   the offset per domain
     figures/CAPTIONS.md                       a caption per figure, numbers
                                               filled from the table
+    (the terrain-coloured locator HAT_duneline_offset_island.png was retired
+    2026-09-08; fig_island_lines at 30 domains per panel replaces it)
 
 STYLE
 -----
@@ -222,6 +227,31 @@ def _halo(lw=2.5):
 SOURCE_TAG = "2009-2014-1996"
 OUT_DIR = ELEVATION_ROOT / f"{SOURCE_TAG}-duneline"
 FIG_DIR = OUT_DIR / "figures"
+# figures/ is sorted by what a figure IS (2026-09-08, Hannah): island/ for the
+# whole-island maps, detail/ for the true-scale crops, offset/ for the two
+# readings that are not maps. fig_path() is the only way a figure name becomes
+# a path, so a figure cannot land at the folder root. Every map in the folder
+# is drawn in the simple style - grey relief, both lines solid, red 1984 and
+# blue 1997 - since the same date; the terrain-coloured locator and zooms are
+# gone (the locator retired, the zooms redrawn through fig_zooms_simple).
+FIG_SUBFOLDER = {
+    "HAT_duneline_offset_simple_island.png": "island",
+    "HAT_duneline_offset_simple_island_mean.png": "island",
+    "HAT_duneline_offset_lines_island.png": "island",
+    "HAT_duneline_offset_lines_island_3panel.png": "island",
+    "HAT_duneline_offset_simple.png": "detail",
+    "HAT_duneline_offset_zooms.png": "detail",
+    "HAT_duneline_offset_zoom_83_87.png": "detail",
+    "HAT_duneline_offset_ribbon.png": "offset",
+    "HAT_duneline_offset_bydomain.png": "offset",
+}
+
+
+def fig_path(name):
+    """figures/<kind>/<name>, the folder made; raises on a name not in the map."""
+    p = FIG_DIR / FIG_SUBFOLDER[name] / name
+    p.parent.mkdir(parents=True, exist_ok=True)
+    return p
 CSV_NAME = "duneline_offset_by_domain.csv"
 
 DUNE_DIR = INIT_ROOT / "1-barrier3d-domains" / "raw-duneline-geojson"
@@ -238,7 +268,7 @@ GRID_10M = 10.0          # the resampled product's cell, for the box fallback
 # Since 2026-09-07 this is the SYMMETRIC footprint (HAT_footprint_1984.py):
 # n_cells is signed, + rows added, - existing rows removed, trunc(shift/10).
 INSERT_SCOPE_CSV = (INIT_ROOT / "1-barrier3d-domains" / "1984-start"
-                    / "row-insert-scope" / "footprint_1984_by_domain.csv")
+                    / "2-domain-reconstruction-1984" / "2-extent" / "footprint_1984_by_domain.csv")   # step folder since 2026-09-09
 
 # The box shape the easting-is-cross-shore frame depends on. Checked, not
 # assumed - see THE FRAME above.
@@ -609,6 +639,10 @@ def line_legend():
 
 def fig_island(elev, extent, gdf, lines, rows):
     """
+    RETIRED 2026-09-08 (not called): the terrain-coloured locator, superseded
+    by fig_island_lines with 30 domains per panel, which shows the same boxes
+    and lines on grey relief. Kept so the drawing is on record.
+
     The DEM, both dune lines, and the domain boxes.
 
     THREE PANELS, each a third of the island, rather than one frame. At equal
@@ -793,7 +827,7 @@ def fig_ribbon(samples, rows, gdf):
         Patch(color=C_1984_FILL, label="1984 seaward of 1997"),
         Patch(color=C_1997_FILL, label="1984 landward of 1997")])
 
-    p = FIG_DIR / "HAT_duneline_offset_ribbon.png"
+    p = fig_path("HAT_duneline_offset_ribbon.png")
     fig.savefig(p, dpi=220, bbox_inches="tight")
     plt.close(fig)
     return p
@@ -802,82 +836,32 @@ def fig_ribbon(samples, rows, gdf):
 def fig_zooms(elev, extent, gdf, lines, rows, reaches=None, out=None,
               half_width=None, rows_by_domain=None):
     """
-    True-scale map panels on the reaches where the offset is largest, plus a
-    quiet control.
+    True-scale panels on the reaches where the offset is largest, plus a quiet
+    control - since 2026-09-08 drawn by fig_zooms_simple, so they carry the
+    same grey relief and the same two solid lines as every other map in the
+    folder (Hannah: one style for the whole folder). What this keeps from the
+    original is the REACH definition (ZOOM_REACHES, five to eight domains) and
+    the wider crop (ZOOM_HALF_WIDTH_M), which is why it is still a separate
+    figure from the two-domain pairs.
 
     Equal aspect throughout - nothing is exaggerated. What makes the separation
-    visible here is the CROSS-SHORE CROP: each panel is cut to `half_width`
-    either side of the local line position instead of the full 2000 m domain
-    box, so 50 m of offset is roughly a twelfth of the frame rather than a
-    fortieth. The control reach is included so a reader can see what agreement
-    looks like at the same scale, and not read every figure of this kind as
-    showing a discrepancy.
+    visible is the cross-shore crop: each panel is cut to `half_width` either
+    side of the local line position instead of the full 2000 m domain box. The
+    control reach is included so a reader can see what agreement looks like at
+    the same scale.
 
     `reaches` overrides ZOOM_REACHES so an arbitrary span can be rendered to
     `out` - see --zoom. `rows_by_domain` is an optional {domain: N} mapping; if
-    given, each label also carries the number of Barrier3D rows the insert
-    would add there, which is what ties this view to row-insert-scope/.
+    given, each label also carries the number of Barrier3D rows the 1984
+    footprint adds or removes there, which ties this view to 2-domain-reconstruction-1984/.
     """
-    apply_style()
     reaches = reaches or ZOOM_REACHES
     half_width = ZOOM_HALF_WIDTH_M if half_width is None else half_width
-    vmin, vmax = m.elev_limits(elev)
-    by_dom = {r["domain"]: r for r in rows}
-
-    fig, axes = plt.subplots(1, len(reaches),
-                             figsize=(4.2 * len(reaches), 12.0),
-                             constrained_layout=True)
-    axes = np.atleast_1d(axes)
-    im = None
-    for i, (ax, (lo, hi, slug, note)) in enumerate(zip(axes, reaches)):
-        ids = list(range(lo, hi + 1))
-        sub = gdf[gdf["domain_id"].astype(int).isin(ids)]
-        bx = sub.total_bounds
-        cen = float(np.median([by_dom[d]["x1984_med"] for d in ids
-                               if by_dom[d]["x1984_med"] != ""]))
-        meds = [by_dom[d]["offset_med_m"] for d in ids]
-
-        im = m.panel_elev(ax, elev, extent, vmin, vmax, "")
-        rng = f"offset {min(meds):+.0f} to {max(meds):+.0f} m"
-        ax.set_title(f"Domains {lo}\u2013{hi}\n"
-                     + (f"{note}\n" if note and note != rng else "") + rng)
-        if len(reaches) > 1:
-            _letter_inside(ax, i)
-        sub.boundary.plot(ax=ax, color=BOX_STYLE["edgecolor"],
-                          linewidth=0.6, zorder=4)
-        for _, r in sub.iterrows():
-            b = r.geometry.bounds
-            d = int(r["domain_id"])
-            lab = f"{d}:  {by_dom[d]['offset_med_m']:+.0f} m"
-            if rows_by_domain is not None:
-                n = rows_by_domain.get(d, 0)
-                lab += (f"   →  {n:+d} row{'' if abs(n) == 1 else 's'}"
-                        if n else "   →  no rows")
-            ax.text(cen - half_width + 40, (b[1] + b[3]) / 2, lab,
-                    fontsize=7.5, ha="left", va="center", color=INK,
-                    zorder=6,
-                    bbox=dict(facecolor="white", alpha=0.8, edgecolor="none",
-                              boxstyle="square,pad=0.2"))
-        draw_lines(ax, lines, scale=LINE_SCALE_DETAIL)
-        ax.set_xlim(cen - half_width, cen + half_width)
-        ax.set_ylim(bx[1] - 100.0, bx[3] + 100.0)
-        ax.set_aspect("equal")
-        m.km_axes(ax, nx=2, ny=8)
-        ax.set_xlabel("Easting (km)")
-    axes[0].set_ylabel("Northing (km)")
-    axes[0].legend(handles=line_legend(), loc="lower left")
-
-    cb = fig.colorbar(im, ax=list(axes), orientation="horizontal",
-                      fraction=0.025, pad=0.015, aspect=50)
-    cb.set_label("Elevation (m NAVD88)")
-    cb.outline.set_linewidth(0.6)
-    cb.ax.tick_params(labelsize=8, width=0.6, length=3)
-
-    p = Path(out) if out else (FIG_DIR / "HAT_duneline_offset_zooms.png")
-    p.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(p, dpi=200, bbox_inches="tight")
-    plt.close(fig)
-    return p
+    return fig_zooms_simple(gdf, lines, rows, elev=elev, extent=extent,
+                            reaches=[(lo, hi, note) for lo, hi, _slug, note in reaches],
+                            out=out or fig_path("HAT_duneline_offset_zooms.png"),
+                            half_width=half_width, rows_by_domain=rows_by_domain,
+                            tall=True)
 
 
 def load_1m(gdf, ids):
@@ -993,7 +977,7 @@ def _place_of(lo, hi, ann=HATTERAS_ANNOTATIONS):
     return ann.region_name
 
 
-def _pair_title(lo, hi, meds, note=""):
+def _pair_title(lo, hi, meds, note="", stack=False):
     """
     Two lines: where the pair is, and what was measured there.
 
@@ -1015,6 +999,10 @@ def _pair_title(lo, hi, meds, note=""):
         c0, c1 = round(a.min() / CELL_M), round(a.max() / CELL_M)
         cell = f"{c0:.0f} cell" if c0 == c1 else f"{c0:.0f}–{c1:.0f} cells"
         mag = f"by {a.min():.0f}–{a.max():.0f} m ({cell})"
+    if stack:
+        # the reach panels are narrow: the span, the note and the measurement
+        # each on a line of their own, no place name
+        return f"Domains {lo}–{hi}" + (f"\n{note}" if note else "") + "\n" + way + " " + mag
     head = f"Domains {lo}–{hi} · {_place_of(lo, hi)}"
     if note:
         head += f" · {note}"
@@ -1383,7 +1371,7 @@ def fig_island_simple(elev, extent, gdf, lines, rows, reaches=None,
 
     suffix = "" if stat == "median" else f"_{stat}"
     q = Path(out) if out else (
-        FIG_DIR / f"HAT_duneline_offset_simple_island{suffix}.png")
+        fig_path(f"HAT_duneline_offset_simple_island{suffix}.png"))
     q.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(q, dpi=200, bbox_inches="tight", facecolor="white")
     plt.close(fig)
@@ -1508,7 +1496,7 @@ def fig_island_lines(elev, extent, gdf, lines, rows, reaches=None,
                  label="pair in the detail figure")],
         loc="outside lower center", ncol=6, fontsize=9)
 
-    q = Path(out) if out else (FIG_DIR / "HAT_duneline_offset_lines_island.png")
+    q = Path(out) if out else fig_path("HAT_duneline_offset_lines_island.png")
     q.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(q, dpi=200, bbox_inches="tight", facecolor="white")
     plt.close(fig)
@@ -1516,7 +1504,7 @@ def fig_island_lines(elev, extent, gdf, lines, rows, reaches=None,
 
 
 def fig_zooms_simple(gdf, lines, rows, elev=None, extent=None, reaches=None,
-                     out=None, half_width=None):
+                     out=None, half_width=None, rows_by_domain=None, tall=False):
     """
     The two lines, and as little else as the picture can carry.
 
@@ -1537,8 +1525,16 @@ def fig_zooms_simple(gdf, lines, rows, elev=None, extent=None, reaches=None,
     half_width = SIMPLE_HALF_WIDTH_M if half_width is None else half_width
     by_dom = {r["domain"]: r for r in rows}
 
+    # The panel width follows the crop: equal aspect, so a reach of eight
+    # domains at +/-300 m is a much taller, narrower panel than a pair at
+    # +/-150 m, and a fixed figsize would letterbox one or the other.
+    spans = [gdf[gdf["domain_id"].astype(int).isin(range(lo, hi + 1))].total_bounds
+             for lo, hi, _ in reaches]
+    span_max = max(b[3] - b[1] for b in spans)
+    h = 12.0 if tall else 10.0
+    w_panel = max(2.2, h * (2.0 * half_width) / span_max) + 0.5
     fig, axes = plt.subplots(1, len(reaches),
-                             figsize=(3.2 * len(reaches), 10.0),
+                             figsize=(w_panel * len(reaches), h),
                              constrained_layout=True)
     span = 0.0
     for i, (ax, (lo, hi, note)) in enumerate(zip(np.atleast_1d(axes),
@@ -1551,7 +1547,17 @@ def fig_zooms_simple(gdf, lines, rows, elev=None, extent=None, reaches=None,
                                if by_dom[d]["x1984_med"] != ""]))
         meds = [by_dom[d]["offset_med_m"] for d in ids]
 
-        arr, ext = load_1m(gdf, ids)
+        # the backdrop covers the whole panel: with the reach panels padded to
+        # a common height, the neighbouring domains' tiles are drawn too
+        if tall:
+            ymid = (bx[1] + bx[3]) / 2
+            gb = gdf.bounds
+            ids_draw = sorted(int(v) for v in gdf.loc[(gb["maxy"] > ymid - span_max / 2)
+                                                        & (gb["miny"] < ymid + span_max / 2),
+                                                        "domain_id"])
+        else:
+            ids_draw = ids
+        arr, ext = load_1m(gdf, ids_draw)
         if arr is None:
             arr, ext = elev, extent
         _hillshade(ax, arr, ext)
@@ -1560,20 +1566,29 @@ def fig_zooms_simple(gdf, lines, rows, elev=None, extent=None, reaches=None,
         draw_lines(ax, lines, scale=LINE_SCALE_DETAIL,
                    style=SIMPLE_LINE_STYLE)
         ax.set_xlim(cen - half_width, cen + half_width)
-        ax.set_ylim(bx[1], bx[3])
+        if tall:
+            # reaches of unequal length: every panel spans the longest one, centred,
+            # so the panels come out the same height and their tops line up
+            ymid = (bx[1] + bx[3]) / 2
+            ax.set_ylim(ymid - span_max / 2, ymid + span_max / 2)
+        else:
+            ax.set_ylim(bx[1], bx[3])
         ax.set_aspect("equal")
 
         for _, r in sub.iterrows():
             b = r.geometry.bounds
             d = int(r["domain_id"])
-            ax.text(cen - half_width + 12, (b[1] + b[3]) / 2,
-                    f"domain {d}\n{by_dom[d]['offset_med_m']:+.0f} m",
+            lab = f"domain {d}\n{by_dom[d]['offset_med_m']:+.0f} m"
+            if rows_by_domain is not None:
+                n = rows_by_domain.get(d, 0)
+                lab += (f"\n{n:+d} row{'' if abs(n) == 1 else 's'}" if n else "\nno rows")
+            ax.text(cen - half_width + 12, (b[1] + b[3]) / 2, lab,
                     fontsize=8.5, ha="left", va="center", color=INK,
                     zorder=8, linespacing=1.35,
                     bbox=dict(facecolor="white", alpha=0.8,
                               edgecolor="none", boxstyle="square,pad=0.28"))
 
-        ax.set_title(_pair_title(lo, hi, np.asarray(meds, float), note),
+        ax.set_title(_pair_title(lo, hi, np.asarray(meds, float), note, stack=tall),
                      linespacing=1.4)
         _letter_inside(ax, i)
         _scalebar(ax)
@@ -1587,7 +1602,7 @@ def fig_zooms_simple(gdf, lines, rows, elev=None, extent=None, reaches=None,
                         **SIMPLE_LINE_STYLE[yr]) for yr in (1984, 1997)],
         loc="upper right")
 
-    p = Path(out) if out else (FIG_DIR / "HAT_duneline_offset_simple.png")
+    p = Path(out) if out else fig_path("HAT_duneline_offset_simple.png")
     p.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(p, dpi=220, bbox_inches="tight", facecolor="white")
     plt.close(fig)
@@ -1651,7 +1666,7 @@ def fig_by_domain(rows):
     for sp in ("top", "right"):
         ax.spines[sp].set_visible(False)
 
-    p = FIG_DIR / "HAT_duneline_offset_bydomain.png"
+    p = fig_path("HAT_duneline_offset_bydomain.png")
     fig.savefig(p, dpi=220, bbox_inches="tight")
     plt.close(fig)
     return p
@@ -1928,12 +1943,14 @@ def write_captions(rows, half_width=None, simple_half_width=None):
          f"top; the distance axis starts at the south end of domain 1. "
          f"{stats}"),
         ("HAT_duneline_offset_zooms.png",
-         f"The two dune lines on the {SOURCE_TAG} DEM at true scale on three "
-         f"reaches: {reaches}. Equal aspect; each panel is cropped to "
+         f"The two dune lines at true scale on three reaches of five to eight "
+         f"domains: {reaches}. Equal aspect; each panel is cropped to "
          f"{half_width:.0f} m either side of the local 1984 line rather than "
-         f"the full 2000 m domain box. Boxes are Barrier3D domains "
-         f"(2000 \u00d7 500 m); the number beside each is its median offset, "
-         f"positive where 1984 lies seaward. Elevation in m NAVD88."),
+         f"the full 2000 m domain box. Grey relief is the 1 m gap-filled DEM "
+         f"shaded at {HILLSHADE['vert_exag']:.1f}\u00d7 vertical exaggeration "
+         f"and carries no readable elevation; the domain boxes are outlined; "
+         f"the number beside each domain is its median offset, positive where "
+         f"1984 lies seaward. Scale bar 50 m = 5 Barrier3D cells."),
         ("HAT_duneline_offset_zoom_83_87.png",
          f"As the previous figure, for domains 83\u201387: GIS 85 and its "
          f"neighbours, the largest sustained positive run on the island. "
@@ -1941,13 +1958,6 @@ def write_captions(rows, half_width=None, simple_half_width=None):
          f"the number of Barrier3D rows the 1984 start would add (+) or "
          f"remove (\u2212) there, trunc(paired shift / 10 m): a row only once a "
          f"full cell of change is measured, in either direction."),
-        ("HAT_duneline_offset_island.png",
-         f"The {SOURCE_TAG} DEM with both dune lines and the 90 Barrier3D "
-         f"domain boxes (2000 \u00d7 500 m), in three panels of thirty "
-         f"domains at one common scale, south at left. A locator: at this "
-         f"scale the two lines are one line nearly everywhere, and the "
-         f"offset is read from the other figures. Both lines are clipped to "
-         f"the domain footprint for drawing only. {stats}"),
         ("HAT_duneline_offset_bydomain.png",
          f"Median cross-shore offset between the 1984 and 1997 dune lines in "
          f"each of the 90 domains, 1984 minus 1997 with seaward positive, "
@@ -1961,10 +1971,12 @@ def write_captions(rows, half_width=None, simple_half_width=None):
         fh.write("# Figure captions\n\n")
         fh.write("Written by `HAT_plot_duneline_offset.py` "
                  "(`write_captions`) from the same table the figures draw "
-                 "from. The figures carry no in-image titles or footnotes on "
-                 "purpose; use these under them.\n\n")
+                 "from. Each heading names the figure's folder under "
+                 "`figures/` (island/, detail/, offset/). The figures carry "
+                 "no in-image titles or footnotes on purpose; use these "
+                 "under them.\n\n")
         for name, text in caps:
-            fh.write(f"## `{name}`\n\n{text}\n\n")
+            fh.write(f"## `{FIG_SUBFOLDER[name]}/{name}`\n\n{text}\n\n")
     return q
 
 
@@ -2026,7 +2038,8 @@ def main():
             fig_island_simple(elev, extent, gdf, drawn, rows),
             fig_island_simple(elev, extent, gdf, drawn, rows, stat="mean"),
             fig_island_lines(elev, extent, gdf, drawn, rows),
-            fig_island(elev, extent, gdf, drawn, rows),
+            fig_island_lines(elev, extent, gdf, drawn, rows, per_panel=30,
+                             out=fig_path("HAT_duneline_offset_lines_island_3panel.png")),
             fig_by_domain(rows)]
     figs.append(write_captions(rows))
     print(f"\n  table  : {cp}")

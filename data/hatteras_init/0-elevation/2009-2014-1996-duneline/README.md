@@ -106,20 +106,29 @@ signed offset can be read directly.
 
 Every figure is drawn to one house style (`apply_style()` in the script): Arial, thin dark-grey axes, ColorBrewer red/blue for the two lines and for the sign of the offset, panel letters, a north arrow and scale bar on maps without coordinate ticks, and no in-image titles or footnote paragraphs. The words that used to be on the figures are in `figures/CAPTIONS.md`.
 
+`figures/` is sorted by what a figure IS (2026-09-08): `island/` holds the
+whole-island maps, `detail/` the true-scale crops, `offset/` the two readings
+that are not maps. `fig_path()` in the script is the only way a figure name
+becomes a path, so nothing can land at the folder root. Every map in the folder
+is drawn in one style — grey relief from the 1 m gap-filled DEM, the 1984 line
+solid red and the 1997 line solid blue, a scale bar in place of coordinate
+ticks; the two terrain-coloured figures the folder used to carry (the locator
+and the reach zooms) are retired and redrawn respectively.
+
 | file | what |
 |---|---|
 | `duneline_offset_by_domain.csv` | 90 rows. Median, quartiles, min/max, mean, sd, cells, the nearest-point check, and the median easting of each line |
-| `figures/HAT_duneline_offset_simple.png` | **the one to look at.** The two lines on grey relief, four two-domain pairs, tight crop, no elevation values |
-| `figures/HAT_duneline_offset_simple_island.png` | the same two lines over the whole island, with each domain's measured offset as a bar aligned to the map |
-| `figures/HAT_duneline_offset_simple_island_mean.png` | the same map-and-bar figure with the per-domain MEAN on the bars instead of the median; `--simple --simple-stat mean` |
+| `figures/detail/HAT_duneline_offset_simple.png` | **the one to look at.** The two lines on grey relief, four two-domain pairs, tight crop, no elevation values |
+| `figures/island/HAT_duneline_offset_simple_island.png` | the same two lines over the whole island, with each domain's measured offset as a bar aligned to the map |
+| `figures/island/HAT_duneline_offset_simple_island_mean.png` | the same map-and-bar figure with the per-domain MEAN on the bars instead of the median; `--simple --simple-stat mean` |
 | `figures/CAPTIONS.md` | a caption per figure with the numbers filled from the table; the figures carry no title sentences or footnotes, so use these under them. `--captions` rewrites it alone |
-| `figures/HAT_duneline_offset_lines_island.png` | the whole island as maps only, no bar strips: nine ~5 km panels, each cropped at equal aspect to the strip the two lines occupy, so the offset is visible on the map itself. `--lines-island` renders it alone |
-| `figures/HAT_duneline_offset_lines_island_3panel.png` | the same, three panels of 30 domains to match the simple_island layout; `--lines-island --lines-per-panel 30 --lines-island-out <this path>` |
-| `figures/HAT_duneline_offset_ribbon.png` | **the one to read.** Both lines against a smoothed midline, band filled by sign, at full 1 m alongshore resolution |
-| `figures/HAT_duneline_offset_zooms.png` | the same two lines on the DEM at true scale, three reaches |
-| `figures/HAT_duneline_offset_zoom_83_87.png` | one extra reach, GIS 83–87 — the five domains around 85 |
-| `figures/HAT_duneline_offset_island.png` | the whole island in three panels — a locator, not a measurement |
-| `figures/HAT_duneline_offset_bydomain.png` | the offset per domain, with each domain's IQR |
+| `figures/island/HAT_duneline_offset_lines_island.png` | the whole island as maps only, no bar strips: nine ~5 km panels, each cropped at equal aspect to the strip the two lines occupy, so the offset is visible on the map itself. `--lines-island` renders it alone |
+| `figures/island/HAT_duneline_offset_lines_island_3panel.png` | the same, three panels of 30 domains to match the simple_island layout; drawn by the main run since 2026-09-08 (or `--lines-island --lines-per-panel 30 --lines-island-out <this path>`) |
+| `figures/offset/HAT_duneline_offset_ribbon.png` | **the one to read.** Both lines against a smoothed midline, band filled by sign, at full 1 m alongshore resolution |
+| `figures/detail/HAT_duneline_offset_zooms.png` | the same two lines at true scale on three reaches of five to eight domains, the wider ±300 m crop; since 2026-09-08 drawn in the simple style (grey relief, both lines solid) through `fig_zooms_simple`, so nothing in the folder carries the terrain colour ramp any more |
+| `figures/detail/HAT_duneline_offset_zoom_83_87.png` | one extra reach, GIS 83–87 — the five domains around 85, each labelled with the rows the 1984 footprint adds; also copied to `2-domain-reconstruction-1984/figures/1-measurement/rows-added/` |
+| ~~`figures/HAT_duneline_offset_island.png`~~ | retired 2026-09-08: the terrain-coloured locator with the domain boxes, superseded by `island/HAT_duneline_offset_lines_island_3panel.png`, which shows the same boxes and lines on grey relief. `fig_island` stays in the script, uncalled |
+| `figures/offset/HAT_duneline_offset_bydomain.png` | the offset per domain, with each domain's IQR |
 
 ### The line key
 
@@ -301,9 +310,8 @@ column width is set to its own data aspect, so hanging tick labels off it would
 letterbox it and break the row-for-row alignment that is the entire reason the
 bar sits beside it.
 
-The piers, the groin and the ruler are on the locator only. The plain
-`HAT_duneline_offset_island.png` and the ribbon do not carry them yet --
-the ribbon has a domain x-axis and could take
+The piers, the groin and the ruler are on the locator only. The ribbon does
+not carry them yet -- it has a domain x-axis and could take
 `cascade_pipeline.annotations.add_geographic_annotations` directly.
 
 One implementation note that is not cosmetic: **the map column widths are
@@ -372,7 +380,7 @@ cannot quietly differ. `HAT_duneline_offset_zoom_83_87.png` is that command.
 It overlaps the 78–85 panel at domains 83–85 and extends it to 86–87.
 
 Add `--no-row-labels` to suppress the Barrier3D row-count annotation, which is
-on by default when `1-barrier3d-domains/1984-start/row-insert-scope/` is on
+on by default when `1-barrier3d-domains/1984-start/2-domain-reconstruction-1984/` is on
 disk. The copies in THIS folder are un-annotated: row counts belong to the
 insert, not to the dune-line measurement.
 

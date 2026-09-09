@@ -17,17 +17,20 @@ insert point. Row 0 and the dune array do not move; **its setback CSV carries
 the 1984 setbacks** (`setback_new_m`: the road against the 1984 dune line,
 row-0 convention, no floor - GIS 85/86 go from 0 to 44/12 m); the block sits
 directly behind the road as placed, so the road is on measured cells and the
-added width is behind it. `CURRENT` still says
+added width is behind it; removed rows come out of the interior directly in
+front of today's road (2026-09-08), so the road's cells and everything behind
+them are kept. Placement checked against the 1984 lines on the lidar:
+`2-domain-reconstruction-1984/3-placement/HAT_road_placement_check_1984.txt`. `CURRENT` still says
 `v2`. To run on it, set `HAT_TOPO_VERSION_1984_START=v3` AND copy its CSV over
 the forcing-tree one for the run. Its README and
 `HAT_footprint_audit.csv` say what was done to every domain; the argument is in
-`../row-insert-scope/`.
+`../2-domain-reconstruction-1984/`.
 
 | | full extraction? | pick set | rows added | own setback CSV |
 |---|---|---|---|---|
 | `v1` | yes, 90 domains | original (08-27), `../picks/HAT_dune_search_windows_v1.json` | no | yes — the v1-era measurement (GIS 85 −10 m floored to 0), saved 09-04 from the `dunestart_offset_ARCHIVE_1984start_v1` archive |
 | `v2` | yes, 90 domains | **re-pick (09-02)**, `../picks/HAT_dune_search_windows_v2.json` | no | yes — the road tree's measurement on v2, saved 09-04; byte-identical to the forcing-tree file |
-| `v3` | no — a layer on `v2` | v2's | **yes, both signs**: +73 rows at 29 domains behind NC-12 as placed, −47 rows at 23 | yes — the 1984 setbacks from the footprint table, no floor |
+| `v3` | no — a layer on `v2` | v2's | **yes, both signs**: +73 rows at 29 domains behind NC-12 as placed, −47 rows at 23 from directly in front of it | yes — the 1984 setbacks from the footprint table, no floor |
 
 Each version holds `topography/` (90 `domain_<N>_topography.npy` + nodata
 masks), `dunes/`, its settings CSV/XLSX, plan-view and offset figures, a
@@ -97,7 +100,7 @@ What the layers established is recorded, not lost: the fill rule does not
 matter island-wide (interior RMSE 0.540–0.547 across all seven arms), the
 insert itself makes every emergent relocation 3–10 years late, and the
 no-insert interiors reproduce the published 0.30 / 0.40 recall. The method,
-the measurement of N and the figures stay in `../row-insert-scope/`, whose
+the measurement of N and the figures stay in `../2-domain-reconstruction-1984/`, whose
 `DUNE_TOPO_VERSION_GUIDE.md` describes each deleted version and the recipe
 that built it. The scripts that ran or drew the layers are kept with those
 arms retired; `hat_topo_version.require_version()` fails loudly if one is
@@ -116,7 +119,7 @@ It has held no topography since 2026-09-03.
 
 ## No figures in this folder
 
-Insert figures live in `../row-insert-scope/figures/`; each version keeps its
+Insert figures live in `../2-domain-reconstruction-1984/figures/`; each version keeps its
 own `figures/` subfolder. Plotters default there via
 `hat_topo_version.insert_figures_dir`.
 

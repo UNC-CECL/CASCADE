@@ -133,7 +133,7 @@ def main() -> None:
         # the hindcast with a missing-array error that names no cause.
         version = ARMS[a][0]
         if not (DUNE_TOPO / version).is_dir():
-            retired = DUNE_TOPO.parent / "dune-topo-experiments" / version
+            retired = DUNE_TOPO.parent / "1-extraction" / "dune-topo-experiments" / version
             msg = ("\narm {!r} needs topography version {!r}, which is not in"
                    "\n  {}\n".format(a, version, DUNE_TOPO))
             if retired.is_dir():

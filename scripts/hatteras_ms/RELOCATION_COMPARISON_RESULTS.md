@@ -144,7 +144,7 @@ times, topography product and git commit. The no-groin arms ran 2026-08-31
 Seven off/on pairs under `output/raw_runs/row-insert/<arm>/`, reports under
 `output/comparisons/relocation_1984_2004/row-insert/<arm>/`, digest in
 `output/experiments/row_insert_set/relocation/`. Versions per
-`1984-start/row-insert-scope/DUNE_TOPO_VERSION_GUIDE.md`.
+`1984-start/2-domain-reconstruction-1984/DUNE_TOPO_VERSION_GUIDE.md`.
 
 **All three of those locations were deleted on 2026-09-07**, together with the
 layers v4–v8 themselves (Hannah's decision: keep only unmodified topography).

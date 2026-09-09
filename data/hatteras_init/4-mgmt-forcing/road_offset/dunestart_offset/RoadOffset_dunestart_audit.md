@@ -9,8 +9,8 @@ Covers 1984 on 1984-start/v3, 2004 on 2004-start/v1. Each vintage is measured ag
 | Extractor | `HAT_dune_topo_extractor.py` (ALONGSHORE_FLIP=True, STRAIGHTEN=True) |
 | 1984 topography | `1984-start/v3` |
 | 2004 topography | `2004-start/v1` |
-| 1984 DEMs | `C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\1984-start\npy-arrays` |
-| 2004 DEMs | `C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\2004-start\npy-arrays` |
+| 1984 DEMs | `C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\1984-start\1-extraction\npy-arrays` |
+| 2004 DEMs | `C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\2004-start\1-extraction\npy-arrays` |
 | 1984 picked windows | `HAT_dune_search_windows_v3.json` |
 | 2004 picked windows | `HAT_dune_search_windows_v1.json` |
 | Reference | interior row 0 = picked dune crest + 1 cell |

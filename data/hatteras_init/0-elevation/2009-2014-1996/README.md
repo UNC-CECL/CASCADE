@@ -202,5 +202,5 @@ Add or change a zoom in `ZOOMS` at the top of
 ## Status
 
 Rebuilt 2026-08-26 with no road boundary. `1-gapfill-1m/`, `2-resampled-10m/`
-and the `1984-start/npy-arrays/` export are all current. **No dune/topo
+and the `1984-start/1-extraction/npy-arrays/` export are all current. **No dune/topo
 extraction exists yet** - that pick pass is the next step.

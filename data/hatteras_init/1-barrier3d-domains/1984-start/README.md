@@ -12,18 +12,25 @@ Barrier3D domains for the **1984–2004** hindcast period.
 ## Layout
 
 ```
-npy-arrays/            domain_<N>.npy   m NAVD88, -10 nodata   <- extractor INPUT
-npy-arrays_survey/     domain_<N>.npy   provenance codes (0/1996/2009/2014)
-picks/                 the dune search windows that define each version
-dune-topo/             v1 (original picks), v2 (re-pick base = CURRENT) + index.
-                         The layers v3-v8 were deleted 2026-09-07
-dune-topo-experiments/ emptied 2026-09-03; two comparison figures + a record
-row-insert-scope/      EVERYTHING for the seaward-row insert:
-                         duneline-shift/  the measurement of N (moved here)
-                         the scope report, the fill argument, the figures, the
-                         version guide -- a record since the layers went
-aerial-review/         58 holes of 1996 imagery review, keyed on (domain, profile)
+1-extraction/                  THE FIRST HALF: what the extractor reads and records
+    npy-arrays/                domain_<N>.npy   m NAVD88, -10 nodata   <- extractor INPUT
+    npy-arrays_survey/         domain_<N>.npy   provenance codes (0/1996/2009/2014)
+    picks/                     the dune search windows that define each version
+    aerial-review/             58 holes of 1996 imagery review, keyed on (domain, profile)
+    dune-topo-experiments/     emptied 2026-09-03; two comparison figures + a record
+2-domain-reconstruction-1984/  THE SECOND HALF: v2 -> v3, the 1984 domains reconstructed,
+                               in six steps (1-measurement ... 6-result) + figures/;
+                               was row-insert-scope/ until 2026-09-09
+dune-topo/                     THE PRODUCT, written by both halves: v1, v2 (extraction),
+                               v3 (reconstruction) + CURRENT. Stays at the root: what loads.
 ```
+
+Two halves, mirroring `scripts/input_prep/1-barrier3d-domains/1-extraction/`
+and `2-domain-reconstruction-1984/` (2026-09-09, Hannah). Paths resolve through
+`hat_topo_version` (`extraction_dir`, `npy_dirs`, `picks_dir`,
+`insert_scope_dir`, `insert_scope_step`); the extractor derives its own from
+the product folder. 2004-start has the same `1-extraction/` and no
+reconstruction; its `duneline-shift/` stays at its root.
 
 ## Which topography loads
 
@@ -31,7 +38,7 @@ aerial-review/         58 holes of 1996 imagery review, keyed on (domain, profil
 extractor's `VERSION` literal outranked it and the file was inert). The full
 explanation, the resolution order, and the two steps that changing the default
 takes are in **`dune-topo/README.md`**; the deleted layers are described in
-`row-insert-scope/DUNE_TOPO_VERSION_GUIDE.md` — read those before pointing
+`2-domain-reconstruction-1984/DUNE_TOPO_VERSION_GUIDE.md` — read those before pointing
 anything at a version.
 
 Short form:
@@ -48,10 +55,10 @@ together with every run made on modified topography — Hannah's decision to
 keep only unmodified topography. `dune-topo/README.md` has the list; the
 guide has what each was. The pre-re-pick `v2` had gone on 2026-09-03.
 
-## duneline-shift moved into row-insert-scope
+## duneline-shift moved into 2-domain-reconstruction-1984
 
 It is a measurement and its interpretation, and they now sit together.
-`row-insert-scope/duneline-shift/` holds `duneline_retreat_1984_1997.csv`,
+`2-domain-reconstruction-1984/1-measurement/duneline-shift/` holds `duneline_retreat_1984_1997.csv`,
 which is *where N comes from* — `HAT_insert_seaward_rows.py` builds the layers
 from it. Delete it and no future insert version can be built. It is 301 KB.
 

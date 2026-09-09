@@ -127,8 +127,8 @@ DEM_NAME = SOURCE_TAG   # recorded in the audit; no longer a path segment
 
 # Period-first (2026-08-25). Was {DEM_YEAR}-raw/{DEM_YEAR}-npy-arrays/{DEM_NAME}.
 NPY_ROOT = INIT_ROOT / "1-barrier3d-domains" / TOPO_TARGET
-OUTPUT_DIR = NPY_ROOT / "npy-arrays"
-SURVEY_DIR = NPY_ROOT / "npy-arrays_survey"
+OUTPUT_DIR = NPY_ROOT / "1-extraction" / "npy-arrays"        # the extraction half (2026-09-09)
+SURVEY_DIR = NPY_ROOT / "1-extraction" / "npy-arrays_survey"
 
 NODATA_FILL = -10.0   # the extractor detects nodata as raw <= -9.0
 EXPECTED_SHAPE = (50, 200)
