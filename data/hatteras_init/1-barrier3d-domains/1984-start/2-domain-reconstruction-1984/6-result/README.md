@@ -24,3 +24,12 @@ Why the emergent pair was re-run rather than read from the calibration tree:
 the v2 run there (2026-09-07) and the v3 run in `behindroad-copy` (09-08) sat
 on different commits, with the pipeline and the live 1984 setback CSV changed
 between them, so their differences would not have been the topography's alone.
+
+**Through time, side by side.** `HAT_version_pair_gif.py` (same scripts folder)
+renders the relocation comparison's animations with the two panels being v2
+and v3 under one scenario, into
+`output/comparisons/relocation_1984_2004/v2_vs_v3/<scenario>/<place>/`, one
+folder per place (the island, the two event blocks, Pea Island where rows are
+added, Avon to Tri-Village where they are removed) with `topography.gif` and
+`dune-and-road.gif` in each. That is where the inserted and removed cells can
+be watched doing something.
