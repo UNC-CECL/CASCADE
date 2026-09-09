@@ -715,11 +715,37 @@ def _arm_provenance(run_dir):
             f"commit {str(ident.get('git_commit', '?'))[:12]}{dirty}")
 
 
+def _topo_version(run_dir):
+    """The dune-topo version a run was made on, from its metadata ('v?' if none)."""
+    hits = sorted(glob.glob(os.path.join(str(run_dir), "*_run_metadata.json")))
+    if not hits:
+        return "v?"
+    with open(hits[0], "r", encoding="utf-8") as fh:
+        return str(json.load(fh).get("identity", {}).get("topo_dune_version", "v?"))
+
+
+def default_out_dir(arm_a, arm_b, preset):
+    """OUTPUT_ROOT/<topo version>/<preset>[_groin] (2026-09-09, Hannah: the
+    folder must say which dune-topo version a comparison was made on).
+
+    The version is READ from arm A's run metadata, never typed, so a set cannot
+    land unlabelled; the two arms must agree on it. The groin token follows
+    the arm names: a `_groin` arm (not `nogroin`) gets a `_groin` folder, the
+    convention the six 2026-09-01 sets used.
+    """
+    va, vb = _topo_version(arm_a), _topo_version(arm_b)
+    if va != vb:
+        raise SystemExit(f"the two arms are on different dune-topo versions ({va} vs {vb}); "
+                         f"a comparison across versions is not what this script measures")
+    groin = "_groin" if ("_groin" in os.path.basename(str(arm_a)) and "nogroin" not in os.path.basename(str(arm_a))) else ""
+    return OUTPUT_ROOT / va / f"{preset}{groin}"
+
+
 def _report_header(arm_a, arm_b, preset):
     """Provenance block written above the captured output.
 
     WHY THIS EXISTS. On 2026-08-25 a re-run of this comparison rewrote every
-    CSV and GIF in output/comparisons/relocation_1984_2004/<preset>/ and left
+    CSV and GIF in output/comparisons/relocation_1984_2004/<preset>/ (now <version>/<preset>/) and left
     the report.txt from 2026-08-22 sitting beside them -- the script had lost
     its report-writing step, so nothing overwrote it. For three days that
     folder held a report describing DIFFERENT runs from the CSVs next to it,
@@ -758,7 +784,7 @@ def main():
                              "(overrides --preset)")
     parser.add_argument("--out", default=None,
                         help="output directory "
-                             "(default OUTPUT_ROOT/<preset>)")
+                             "(default OUTPUT_ROOT/<topo version of the arms>/<preset>[_groin])")
     args = parser.parse_args()
 
     preset, _ = resolve_be_preset(args.preset)
@@ -772,7 +798,7 @@ def main():
     args.arm_a = args.arm_a or str(period_dir / name_a)
     args.arm_b = args.arm_b or str(period_dir / name_b)
 
-    out_dir = Path(args.out).resolve() if args.out else (OUTPUT_ROOT / preset)
+    out_dir = Path(args.out).resolve() if args.out else default_out_dir(args.arm_a, args.arm_b, preset)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # A STALE report is worse than a missing one -- see _report_header. Delete

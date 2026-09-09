@@ -289,7 +289,12 @@ def main():
     args = ap.parse_args()
     preset, _ = resolve_be_preset(args.preset)
 
-    out_dir = OUT_ROOT / "dune_position_check"
+    # under the dune-topo version the run was made on (2026-09-09), read from
+    # the run's metadata; the layout is OUT_ROOT/<version>/dune_position_check/
+    import glob as _glob, json as _json
+    _hits = sorted(_glob.glob(str(RUN_ROOT / preset / f"HAT_{START_YEAR}_{END_YEAR}_{preset}_road_bdm_nogroin" / "*_run_metadata.json")))
+    _ver = _json.load(open(_hits[0], encoding="utf-8")).get("identity", {}).get("topo_dune_version", "v?") if _hits else "v?"
+    out_dir = OUT_ROOT / _ver / "dune_position_check"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"dune_position_vs_road_{preset}.png"
 
