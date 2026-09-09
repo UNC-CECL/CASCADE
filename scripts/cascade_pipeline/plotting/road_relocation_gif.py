@@ -132,7 +132,7 @@ def _style_axes(ax, grid_axis="y", box=False):
     ax.set_axisbelow(True)
 
 
-def _figure_header(fig, left, right, title, year, note=None):
+def _figure_header(fig, left, right, title, year, note=None, note_pos="below"):
     """Draws the title block: name on the left, year clock on the right.
 
     Replaces a centred suptitle carrying both. A centred title moves as the
@@ -154,7 +154,13 @@ def _figure_header(fig, left, right, title, year, note=None):
     gap = 0.20 / fig.get_figheight()
     fig.add_artist(Line2D([left, right], [y - gap, y - gap], color=RULE,
                           lw=0.8, transform=fig.transFigure))
-    if note:
+    if note and note_pos == "centre":
+        # the line figures have no room under the rule (the panel titles sit
+        # there); the note goes in the header row, right-aligned against the
+        # clock, so it neither jitters nor runs into a long title
+        fig.text(right - 0.75 / fig.get_figwidth(), y, note, ha="right", va="center",
+                 fontsize=FONT_NOTE, color=INK_LIGHT)
+    elif note:
         fig.text(right, y - gap - 0.10 / fig.get_figheight(), note, ha="right",
                  va="top", fontsize=FONT_NOTE, color=INK_LIGHT)
 
@@ -586,7 +592,7 @@ def make_road_relocation_gif(
         _draw_tracker(axes[0], _tracker_label(_ca))
         _draw_tracker(axes[1], _tracker_label(_cb))
         _figure_header(fig, 0.095, 0.985, head, year,
-                       note=_observed_label(_ca) if event_years else None)
+                       note=_observed_label(_ca) if event_years else None, note_pos="centre")
 
         buf = io.BytesIO()
         fig.savefig(buf, format="png", facecolor=fig.get_facecolor())
