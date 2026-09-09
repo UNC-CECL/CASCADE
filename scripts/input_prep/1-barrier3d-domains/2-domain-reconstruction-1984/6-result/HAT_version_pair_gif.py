@@ -76,15 +76,15 @@ LABEL = {"v2": "v2 — the extraction (1996 dune, 2009 interior; today's setback
 # two reaches where the footprint is largest.
 #   (folder, title, topography window, line window)
 WINDOWS = (
-    ("1-island", "the whole island",
+    ("1-island", "the island",
      RC.TOPO_WINDOWS[0][1:], RC.GIF_WINDOWS[0][1:]),
-    ("2-event-1999_GIS9-14", "the 1999 relocation block (GIS 9-14)",
+    ("2-event-1999_GIS9-14", "1999 block, GIS 9-14",
      RC.TOPO_WINDOWS[1][1:], RC.GIF_WINDOWS[1][1:]),
-    ("3-event-1989_GIS84-87", "the 1989 relocation block (GIS 84-87)",
+    ("3-event-1989_GIS84-87", "1989 block, GIS 84-87",
      RC.TOPO_WINDOWS[2][1:], RC.GIF_WINDOWS[2][1:]),
-    ("4-rows-added_PeaIsland_GIS78-87", "Pea Island, where the footprint adds the most rows (GIS 78-87)",
+    ("4-rows-added_PeaIsland_GIS78-87", "Pea Island, rows added, GIS 78-87",
      (76, 90), (76, 90)),
-    ("5-rows-removed_AvonTriVillage_GIS62-68", "Avon to Tri-Village, where it removes the most (GIS 62-68)",
+    ("5-rows-removed_AvonTriVillage_GIS62-68", "Avon-Tri-Village, rows removed, GIS 62-68",
      (58, 72), (58, 72)),
 )
 FILES = {"topography": "topography.gif", "lines": "dune-and-road.gif"}
@@ -133,6 +133,9 @@ def main() -> None:
                 for v in runs}
         back = {v: RC.back_barrier_matrix(casc[v]) for v in casc}
         written = []
+        # both panels are the SAME scenario: neither run carried a prescribed
+        # move in the emergent pair, both did in the prescribed one
+        rings = (key == "prescribed", key == "prescribed")
         for folder, title, (tlo, thi), (llo, lhi) in WINDOWS:
             wdir = out_dir / folder
             wdir.mkdir(parents=True, exist_ok=True)
@@ -141,15 +144,16 @@ def main() -> None:
                     (shore["v2"], info["v2"]), (shore["v3"], info["v3"]), series["v2"], series["v3"],
                     llo, lhi, str(wdir / FILES["lines"]), back_a=back["v2"], back_b=back["v3"],
                     event_years=targets, gif_config=RC.GIF_CONFIG, label_a=LABEL["v2"], label_b=LABEL["v3"],
-                    title=f"NC-12 and the dune line, v2 beside v3 \u2014 {title}")
+                    title=f"Dune line and NC-12 \u2014 {title}",
+                    prescribed_panels=rings)
                 if r:
                     written.append(Path(r))
             r = make_topography_gif(
                 casc["v2"], casc["v3"], series["v2"], series["v3"], tlo, thi, str(wdir / FILES["topography"]),
                 RC.START_YEAR, event_years=targets, gif_config=RC.GIF_CONFIG,
                 label_a=LABEL["v2"], label_b=LABEL["v3"],
-                title=f"Hatteras topography and NC-12, v2 beside v3 \u2014 {title}",
-                planform_note=RC.PLANFORM_NOTE)
+                title=f"Topography and NC-12 \u2014 {title}",
+                planform_note=RC.PLANFORM_NOTE, prescribed_panels=rings)
             if r:
                 written.append(Path(r))
         write_readme(out_dir, key, name, what, runs)

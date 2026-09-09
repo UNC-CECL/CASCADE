@@ -280,8 +280,17 @@ def make_road_relocation_gif(
     annotations=DEFAULT_ANNOTATIONS,
     gif_config=DEFAULT_GIF_CONFIG,
     fps=None, stride=None, title=None,
+    prescribed_panels=(False, True),
 ):
     """Writes the two-panel road/dune animation for one alongshore window.
+
+    `prescribed_panels` says, per panel, whether that run CARRIED the
+    prescribed 1989/1999 moves and so earns a ring at the event year. The
+    default is the relocation comparison's pairing (a free, b prescribed).
+    A pairing of two versions under ONE scenario passes (False, False) for
+    an emergent scenario and (True, True) for a prescribed one; before this
+    flag (2026-09-09) panel b was ringed unconditionally, which drew
+    "measured move applied" on a v3 run that applied nothing.
 
     Args:
         arm_a: (shoreline_m, RunInfo) for the relocations-OFF run.
@@ -385,9 +394,9 @@ def make_road_relocation_gif(
 
         # The last flag marks the arm that CARRIES the prescribed moves.
         panels = ((axes[0], "a", series_a, road_a, reloc_a, label_a,
-                   bay_a, False),
+                   bay_a, bool(prescribed_panels[0])),
                   (axes[1], "b", series_b, road_b, reloc_b, label_b,
-                   bay_b, True))
+                   bay_b, bool(prescribed_panels[1])))
         for (ax, letter, series, road, reloc, label,
              bay, is_prescribed_arm) in panels:
             ax.set_facecolor("white")
@@ -474,12 +483,14 @@ def make_road_relocation_gif(
             Line2D([], [], color="none", marker="*", ms=12,
                    mfc=COLOR_RELOC, mec="k", mew=0.5,
                    label="module-triggered relocation"),
-            Line2D([], [], color="none", marker="o", ms=9, mfc="none",
-                   mec=COLOR_PRESCRIBED, mew=1.6,
-                   label="measured move applied (b)"),
             Line2D([], [], color="#8a8a8a", ls=(0, (1, 2.5)), lw=0.9,
                    label="relocated historically"),
         ]
+        _ring = [Line2D([], [], color="none", marker="o", ms=9, mfc="none",
+                        mec=COLOR_PRESCRIBED, mew=1.6,
+                        label="measured move applied ("
+                              + ", ".join(l for l, f in zip("ab", prescribed_panels) if f) + ")")]
+        handles = handles[:-1] + (_ring if any(prescribed_panels) else []) + handles[-1:]
         # Figure-level and below the axes: an in-axes legend sits on top of
         # the road wherever the setback is large, which is most of the island.
         fig.legend(handles=handles, loc="lower center", ncol=4,
@@ -754,8 +765,11 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
                         domains=DEFAULT_DOMAINS,
                         gif_config=DEFAULT_GIF_CONFIG,
                         fps=None, stride=None, title=None,
-                        planform_note=None):
+                        planform_note=None, prescribed_panels=(False, True)):
     """Animated elevation map of the island with NC-12 drawn on it.
+
+    `prescribed_panels`: per panel, whether that run carried the prescribed
+    moves (ring at the event year); see make_road_relocation_gif.
 
     Two panels sharing a colour scale and a year clock. Cells at or below
     0 m MHW are drawn as water, so the barrier's real outline, its overwash
@@ -833,8 +847,8 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
         # Last flag marks the arm carrying the prescribed moves; see
         # COLOR_PRESCRIBED and the label note on make_road_relocation_gif.
         for ax, letter, cas, series, label, is_prescribed_arm in (
-                (axes[0], "a", cascade_a, road_series_a, label_a, False),
-                (axes[1], "b", cascade_b, road_series_b, label_b, True)):
+                (axes[0], "a", cascade_a, road_series_a, label_a, bool(prescribed_panels[0])),
+                (axes[1], "b", cascade_b, road_series_b, label_b, bool(prescribed_panels[1]))):
             grid = _island_raster(cas, t, gis_lo, gis_hi, domains,
                                   n_cross, x_ref)
             masked = np.ma.masked_invalid(np.ma.masked_less_equal(grid, 0.0))
@@ -900,17 +914,19 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
         # meant "the module decided to move the road" or "history did". The
         # panel titles now carry the per-panel meaning; these entries name the
         # glyphs themselves.
-        fig.legend(handles=[
+        _topo_handles = [
             Line2D([], [], color=COLOR_ROAD, lw=2.0, label="NC-12"),
             Line2D([], [], color="none", marker="*", ms=12,
                    mfc=COLOR_RELOC, mec="k", mew=0.5,
-                   label="module-triggered relocation (either panel)"),
-            Line2D([], [], color="none", marker="o", ms=9, mfc="none",
-                   mec=COLOR_PRESCRIBED, mew=1.6,
-                   label="measured move applied (b)"),
-            Line2D([], [], color="#2b2b2b", ls=(0, (1, 2.5)), lw=0.9,
-                   label="relocated historically"),
-        ], loc="lower center", ncol=4, fontsize=FONT_LEGEND, frameon=False,
+                   label="module-triggered relocation (either panel)")]
+        if any(prescribed_panels):
+            _topo_handles.append(Line2D([], [], color="none", marker="o", ms=9, mfc="none",
+                                        mec=COLOR_PRESCRIBED, mew=1.6,
+                                        label="measured move applied ("
+                                              + ", ".join(l for l, f in zip("ab", prescribed_panels) if f) + ")"))
+        _topo_handles.append(Line2D([], [], color="#2b2b2b", ls=(0, (1, 2.5)), lw=0.9,
+                                    label="relocated historically"))
+        fig.legend(handles=_topo_handles, loc="lower center", ncol=4, fontsize=FONT_LEGEND, frameon=False,
             labelcolor=INK, handlelength=1.7, handletextpad=0.6,
             columnspacing=1.4, borderaxespad=0.0,
             bbox_to_anchor=(0.5, 0.042))
