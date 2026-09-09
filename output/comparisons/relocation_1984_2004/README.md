@@ -15,6 +15,10 @@ regenerated from the runs it names.
     <preset>/                 groin off (the arm names carry `nogroin`)
     <preset>_groin/           groin on
     dune_position_check/      HAT_relocation_dune_position_check.py, one PNG per preset
+v2_vs_v3/                     the CROSS-version comparison, its own folder: v2 beside v3 under one
+    <scenario>/               scenario (emergent / prescribed), the same animations with the two
+                              panels being the two versions - how the inserted and removed cells
+                              affected things. HAT_version_pair_gif.py (reconstruction 6-result/)
 ```
 
 Each set holds the same files: `report.txt` (the console output, headed by the
@@ -29,6 +33,12 @@ road-on-topography, for the whole island and for each event block).
 | `v1/` | the original pick set (2026-08-27); **superseded** as CURRENT by v2 on 2026-09-04 | zeroBE, edgeBE, calibBE, each with and without the groin; the dune-position check | the calibration tree, 2026-09-01 |
 | `v2/` | the re-pick base, CURRENT | calibBE_groin | `output/raw_runs/version-pair/v2/`, 2026-09-09 |
 | `v3/` | the 1984 reconstruction built from v2 (rows behind the road, copy fill, 1984 setbacks) | calibBE_groin | `output/raw_runs/version-pair/v3/`, 2026-09-09 |
+
+`v2_vs_v3/<scenario>/` holds the animations with v2 in the left panel and v3
+in the right: the topography GIFs (Barrier3D's own grids year by year, NC-12 on
+them) for the whole island, the two event blocks, Pea Island (rows added) and
+the Avon-Tri-Village removals, and the line GIFs of dune line and road. That
+is where the effect of the inserted cells is seen through time.
 
 The v2 and v3 sets are the like-for-like pair: same scenario, same code, same
 day, nothing but the topography and its setback CSV different. The broader
