@@ -167,3 +167,16 @@ domain, so the 08-31 numbers stand on the renumbered tree. The 1984 row insert
 hits at 84-86 were the setback-0 artefact, and the inserted interiors miss
 honestly. The FILL changes timing by at most one year. Mean absolute error
 under the inserts 5.6 yr, signed +5 (late). Full reading in the digest README.
+
+---
+
+## Layout change, 2026-09-09
+
+`output/comparisons/relocation_1984_2004/` is now **version-first**:
+`<dune-topo version>/<preset>[_groin]/`, the version read from the runs'
+metadata by the script. The six sets above sit under `v1/`, marked superseded
+(v1 stopped being CURRENT on 2026-09-04). `v2/calibBE_groin/` and
+`v3/calibBE_groin/` are the like-for-like pair run on 2026-09-09 from
+`output/raw_runs/version-pair/`; their numbers are in each set's `report.txt`
+and `confusion.csv`, and the broader v2-against-v3 figure is in the
+reconstruction's `6-result/`. The folder README maps it.
