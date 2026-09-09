@@ -48,7 +48,7 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
+from matplotlib.patches import Patch, Rectangle
 from matplotlib.ticker import MaxNLocator
 
 from cascade_pipeline.annotations import DEFAULT_ANNOTATIONS
@@ -655,6 +655,7 @@ def make_all_road_gifs(arm_a, arm_b, road_series_a, road_series_b,
 # or below 0 m MHW are masked and drawn as water rather than as low land.
 
 WATER_COLOR = "#c8dcea"
+ROAD_ROWS = 2                  # road_width 20 m / dy 10 m: the two rows bulldoze() writes
 
 # Cross-shore window drawn around the window's reference shoreline, in dam.
 # The seaward end is fixed (a few cells of ocean for context); the landward
@@ -946,7 +947,16 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
 
             x, rows, fired = _road_track(cas, series, t, gis_lo, gis_hi,
                                          domains, x_ref)
-            ax.plot(x, rows, color=COLOR_ROAD, lw=2.0, zorder=5, label="NC-12")
+            # NC-12 AS CASCADE HOLDS IT (Hannah, 2026-09-09): two straight rows
+            # per domain, 20 m wide, spanning the domain's 50 cells - not a
+            # line through the domain centres, which drew slopes between
+            # domains that no cell of the model has.
+            _cell = grid.shape[1] / (gis_hi - gis_lo + 1)
+            for _col, _r in enumerate(rows):
+                if np.isfinite(_r):
+                    ax.add_patch(Rectangle((_col * _cell - 0.5, _r - 0.5), _cell, ROAD_ROWS,
+                                           facecolor=COLOR_ROAD, edgecolor="none",
+                                           alpha=0.9, zorder=5))
             if fired.any():
                 ax.plot(x[fired], rows[fired], marker="*", ls="none", ms=15,
                         mfc=COLOR_RELOC, mec="k", mew=0.6, zorder=6)
