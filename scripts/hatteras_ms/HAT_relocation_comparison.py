@@ -95,7 +95,7 @@ from cascade_pipeline.roadway import RelocationEvent            # noqa: E402
 from cascade_pipeline.run_info import RunInfo                   # noqa: E402
 from cascade_pipeline.run_registry import preset_dir_for        # noqa: E402
 from cascade_pipeline.plotting.road_relocation_gif import (     # noqa: E402
-    make_all_road_gifs,
+    make_road_relocation_gif,
     make_topography_gif,
 )
 from cascade_pipeline.plotting.shoreline_gif import (           # noqa: E402
@@ -179,6 +179,16 @@ GIF_WINDOWS = (
 # being 4100 cells wide and a few hundred tall -- rendered wide and short,
 # that IS the shape of Hatteras, and it is the view that reads as the island
 # rather than as a chart. The event windows carry the cross-shore detail.
+# ONE FOLDER PER PLACE inside a set (2026-09-09, Hannah): the two animations
+# of a window sit together under a readable name, and the eight CSVs under
+# tables/, so a set reads as report + tables + places instead of fifteen files.
+PLACE_DIR = {
+    "full island": "1-island",
+    "1999 event (GIS 9-14)": "2-event-1999_GIS9-14",
+    "1989 event (GIS 84-87)": "3-event-1989_GIS84-87",
+}
+GIF_FILES = {"lines": "dune-and-road.gif", "topography": "topography.gif"}
+
 TOPO_WINDOWS = (
     ("full island", HATTERAS_FIRST_ROAD_DOMAIN, HATTERAS_LAST_ROAD_DOMAIN),
     ("1999 event (GIS 9-14)", 6, 20),
@@ -832,6 +842,8 @@ def main():
 
 def _compare(args, preset, out_dir):
     """The comparison itself. Everything it prints becomes report.txt."""
+    tables_dir = out_dir / "tables"
+    tables_dir.mkdir(parents=True, exist_ok=True)
     print("=" * 74)
     print("NC-12 RELOCATION: emergent vs prescribed")
     print("=" * 74)
@@ -874,7 +886,7 @@ def _compare(args, preset, out_dir):
               f"{agree}/{len(idx_df)} domains")
         if agree != len(idx_df):
             print(idx_df[~idx_df["matches"]].to_string(index=False))
-        idx_df.to_csv(out_dir / "indexing_check.csv", index=False)
+        idx_df.to_csv(tables_dir / "indexing_check.csv", index=False)
 
     # --- 1. first relocation year -------------------------------------------
     print("\n" + "-" * 74)
@@ -882,7 +894,7 @@ def _compare(args, preset, out_dir):
     print("-" * 74)
     first_df = score_first_year(series_a, targets, START_YEAR)
     print(first_df.to_string(index=False))
-    first_df.to_csv(out_dir / "first_relocation_year.csv", index=False)
+    first_df.to_csv(tables_dir / "first_relocation_year.csv", index=False)
 
     dated = first_df.dropna(subset=["error_years"])
     if not dated.empty:
@@ -898,7 +910,7 @@ def _compare(args, preset, out_dir):
     print("1b. NEAR MISSES: how much more dune migration would have fired it")
     print("-" * 74)
     near = near_miss_table(series_a, targets, START_YEAR)
-    near.to_csv(out_dir / "near_miss_margin.csv", index=False)
+    near.to_csv(tables_dir / "near_miss_margin.csv", index=False)
     if near.empty:
         print("  every managed domain relocated at least once")
     else:
@@ -958,7 +970,7 @@ def _compare(args, preset, out_dir):
             print(f"                       GIS {shown}{more}")
     pd.DataFrame([{k: (v if not isinstance(v, list) else " ".join(map(str, v)))
                    for k, v in r.items()} for r in conf_rows]).to_csv(
-        out_dir / "confusion.csv", index=False)
+        tables_dir / "confusion.csv", index=False)
 
     # --- 3. setback trajectories ----------------------------------------------
     print("\n" + "-" * 74)
@@ -968,8 +980,8 @@ def _compare(args, preset, out_dir):
         series_a, series_b, targets, START_YEAR, HATTERAS_RELOCATION_CHECK_2004)
     hist = traj_df[traj_df["historical"]]
     print(hist.to_string(index=False))
-    traj_df.to_csv(out_dir / "setback_summary.csv", index=False)
-    long_df.to_csv(out_dir / "setback_by_year.csv", index=False)
+    traj_df.to_csv(tables_dir / "setback_summary.csv", index=False)
+    long_df.to_csv(tables_dir / "setback_by_year.csv", index=False)
     print(f"\n  saved per-year setbacks for {long_df['gis'].nunique()} domains "
           f"-> setback_by_year.csv")
 
@@ -983,7 +995,7 @@ def _compare(args, preset, out_dir):
                 cas, HATTERAS_DOMAINS, *span):
             out_rows.append(dict(arm=label, **row))
     out_df = pd.DataFrame(out_rows)
-    out_df.to_csv(out_dir / "road_outcomes.csv", index=False)
+    out_df.to_csv(tables_dir / "road_outcomes.csv", index=False)
 
     for label in ("free", "prescribed"):
         arm = out_df[out_df["arm"] == label]
@@ -1021,14 +1033,20 @@ def _compare(args, preset, out_dir):
                          end_year=END_YEAR)
         back_a = back_barrier_matrix(cascade_a)
         back_b = back_barrier_matrix(cascade_b)
-        make_all_road_gifs(
-            (shore_a, info_a), (shore_b, info_b), series_a, series_b,
-            GIF_WINDOWS, str(out_dir), event_years=targets,
-            back_a=back_a, back_b=back_b, gif_config=GIF_CONFIG)
+        for name, lo, hi in GIF_WINDOWS:
+            place = out_dir / PLACE_DIR[name]
+            place.mkdir(parents=True, exist_ok=True)
+            make_road_relocation_gif(
+                (shore_a, info_a), (shore_b, info_b), series_a, series_b, lo, hi,
+                str(place / GIF_FILES["lines"]), back_a=back_a, back_b=back_b,
+                event_years=targets, gif_config=GIF_CONFIG,
+                title=f"NC-12 and the dune line \u2014 {name}")
         for name, lo, hi in TOPO_WINDOWS:
+            place = out_dir / PLACE_DIR[name]
+            place.mkdir(parents=True, exist_ok=True)
             make_topography_gif(
                 cascade_a, cascade_b, series_a, series_b, lo, hi,
-                os.path.join(str(out_dir), f"road_topography_{_slug(name)}.gif"),
+                str(place / GIF_FILES["topography"]),
                 START_YEAR, event_years=targets, gif_config=GIF_CONFIG,
                 title=f"Hatteras topography and NC-12 \u2014 {name}",
                 planform_note=PLANFORM_NOTE)

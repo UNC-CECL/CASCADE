@@ -21,12 +21,24 @@ v2_vs_v3/                     the CROSS-version comparison, its own folder: v2 b
                               affected things. HAT_version_pair_gif.py (reconstruction 6-result/)
 ```
 
-Each set holds the same files: `report.txt` (the console output, headed by the
-identity of the two runs — name, date, topo version, commit), `confusion.csv`
-(recall and false positives at each tolerance), `first_relocation_year.csv`,
-`near_miss_margin.csv`, `setback_by_year.csv`, `setback_summary.csv`,
-`indexing_check.csv`, `road_outcomes.csv`, and six GIFs (road relocation and
-road-on-topography, for the whole island and for each event block).
+Every set has the same shape, so a reader finds the same thing in the same
+place whichever version or scenario they open:
+
+```
+<set>/
+    report.txt                the console output, headed by the identity of the two runs
+                              (name, date, topo version, commit)
+    tables/                   confusion.csv (recall and false positives per tolerance),
+                              first_relocation_year.csv, near_miss_margin.csv, setback_by_year.csv,
+                              setback_summary.csv, indexing_check.csv, road_outcomes.csv
+    1-island/                 one folder per place, two animations in each:
+    2-event-1999_GIS9-14/         topography.gif     Barrier3D's grids year by year, NC-12 on them
+    3-event-1989_GIS84-87/        dune-and-road.gif  the dune line and the road as lines
+```
+
+The cross-version pairs under `v2_vs_v3/` add two places, Pea Island (rows
+added) and Avon to Tri-Village (rows removed), and have no tables: their
+numbers are in the reconstruction's `6-result/`.
 
 | version | what it is | sets here | runs |
 |---|---|---|---|
@@ -55,6 +67,6 @@ python scripts/hatteras_ms/HAT_relocation_comparison.py --preset calibBE \
     --arm-b output/raw_runs/version-pair/v3/1984_2004/calibBE/HAT_1984_2004_calibBE_road_reloc_bdm_groin
 ```
 
-The output folder follows from the arms: `<version>/<preset>[_groin]/`. Pass
+The output folder follows from the arms: `<version>/<preset>[_groin]/`, laid out as above. Pass
 `--out` only to put a set somewhere else on purpose. A pair of arms on
 different versions is refused.
