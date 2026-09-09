@@ -9,3 +9,8 @@ version, with its own README, run manifest and footprint audit:
 
 A version built with a different placement, once the imagery review has
 decided one, goes in `../../dune-topo/v4/` and is recorded here the same way.
+
+`HAT_plot_version_figures.py` (same scripts folder) gives a built version its
+figure set, written into the version folder beside the extractor's for v1 and
+v2: the per-domain grid (source beside version), the summary page and the plan
+views. Run it after every build: `python HAT_plot_version_figures.py --version v3`.
