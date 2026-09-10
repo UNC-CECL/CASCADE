@@ -121,6 +121,11 @@ def process_domain_file(
                 start_beach = dune_row_start
             else:
                 start_beach = int(idx[0])
+                if "domain_24" in str(in_path) and year == 2004:
+                    if i == 8 or i == 9:
+                        start_beach = 14
+                    elif i == 36:
+                        start_beach = 20
 
             # 2) 8-pixel window landward of that point
             end_beach = min(start_beach + DUNE_WINDOW_PX, prof.size)
@@ -225,9 +230,9 @@ def process_domain_file(
 plt.rcParams["font.size"] = 14
 
 # --- PATHS --------------------------------------------------------------
-version = "final"  # save version to append to folder name
+version = "final_v1"  # save version to append to folder name
 year = 2004
-LOAD_PATH = r"C:\Users\agfig\model\final_domains\{0}_final_GIS_npys".format(year)
+LOAD_PATH = r"C:\Users\agfig\model\final_domains\{0}_domainscopy_GIS_npys".format(year)
 TOPO_SAVE_PATH = r"C:\Users\agfig\model\final_domains\cascade_domains\domains_{0}_{1}".format(year, version)
 DUNE_SAVE_PATH = r"C:\Users\agfig\model\final_domains\cascade_domains\dunes_{0}_{1}".format(year, version)
 dict_save_path = r"C:\Users\agfig\model\final_domains\cascade_domains"
@@ -272,14 +277,6 @@ names = sorted(
     )
 print(f"[info] Found {len(names)} domain file(s) in {load_dir}")
 topo_domain = []
-# names = ["domain_3.npy", "domain_4.npy", "domain_16.npy", "domain_18.npy", "domain_19.npy", "domain_20.npy",
-#          "domain_21.npy", "domain_22.npy", "domain_23.npy", "domain_24.npy", "domain_25.npy"]  # v3
-# names = ["domain_20.npy", "domain_21.npy", "domain_22.npy", "domain_23.npy", "domain_24.npy", "domain_25.npy"]  # v4
-# names = ["domain_18.npy", "domain_19.npy", "domain_20.npy", "domain_21.npy"]  # v4-1 through 6-1
-# names = ["domain_19.npy", "domain_21.npy"]  # v7-1
-# names = ["domain_22.npy", "domain_23.npy", "domain_24.npy", "domain_25.npy"]  # v7
-# names = ["domain_23.npy", "domain_24.npy", "domain_25.npy"]  # v8
-# names = ["domain_3.npy"]  # v9
 for name in names:
     # use_const_interior = True
     # DUNE_WINDOW_PX = 3
@@ -315,21 +312,35 @@ for name in names:
     # ----- 2004 ---------------------------------------------------------------------------------------------
     if "_3" in name:
         use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
-        DUNE_WINDOW_PX = 2
+        # DUNE_WINDOW_PX = 2
+        DUNE_WINDOW_PX = 3
         set_dune_row_start = True
-        dune_row_start = 8
+        # dune_row_start = 8
+        dune_row_start = 9
     elif "_4" in name:
         use_const_interior = True
         DUNE_WINDOW_PX = 5
         BEACH_START_THR_M = 0.5
         set_dune_row_start = False
         dune_row_start = 0
+    elif "_10" in name or "_11" in name:
+        use_const_interior = True
+        DUNE_WINDOW_PX = 2
+        BEACH_START_THR_M = 0.5
+        set_dune_row_start = True
+        dune_row_start = 5
     elif "_12" in name:
         use_const_interior = True
         DUNE_WINDOW_PX = 10
         BEACH_START_THR_M = 0.5
         set_dune_row_start = False
         dune_row_start = 0
+    elif "_14" in name:  # decided not to use for simplicity
+        use_const_interior = True
+        DUNE_WINDOW_PX = 3
+        BEACH_START_THR_M = 0.5
+        set_dune_row_start = True
+        dune_row_start = 6
     elif "_18" in name:
         use_const_interior = True
         DUNE_WINDOW_PX = 2
@@ -350,9 +361,10 @@ for name in names:
         DUNE_WINDOW_PX = 4
         set_dune_row_start = True
         dune_row_start = 8
-    elif "_22" in name:
+    elif "_22" in name:  # v2
         use_const_interior = False
-        DUNE_WINDOW_PX = 3
+        # DUNE_WINDOW_PX = 3
+        DUNE_WINDOW_PX = 5
         BEACH_START_THR_M = 1.24
         set_dune_row_start = False
         dune_row_start = 0
@@ -364,8 +376,8 @@ for name in names:
         dune_row_start = 0
     elif "_24" in name:
         use_const_interior = False
-        DUNE_WINDOW_PX = 2
-        BEACH_START_THR_M = 1.5
+        DUNE_WINDOW_PX = 2  # v2 used 2, v3 used 5
+        BEACH_START_THR_M = 1.5  # v2 used 1.3, v3 used 1.0
         set_dune_row_start = False
         dune_row_start = 0
     elif "_25" in name:
