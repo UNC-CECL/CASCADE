@@ -1,14 +1,34 @@
 # Buxton groin — observed history, chosen parameters, and the hindcast plan
 
-Reference note, 2026-08-24.
+Reference note, 2026-08-24. Figure paths and captions updated 2026-09-11.
 
-**Figures** (regenerate with the scripts beside them):
+**Figures** live in `HAT-groin-figures/`, each beside the script that draws it.
+Regenerate one by running its script; each writes a 300 dpi PNG and a PDF with
+the same stem, and its own paragraph into `HAT-groin-figures/CAPTIONS.md`.
 
 | file | shows | script |
 |---|---|---|
 | `groin_two_shorelines.png` | **start here** -- the two shorelines and the gap between them; needs no definition | `HAT_groin_two_shorelines_figure.py` |
 | `groin_module_logic.png` | **the mechanics** -- what the module adds each year, and why it cannot close the gap | `HAT_groin_module_logic_figure.py` |
 | `groin_timeline_and_hindcast.png` | the fillet timeline against the module's `M_eff` schedule | `HAT_groin_timeline_figure.py` |
+
+All three came under the project house style (`scripts/hat_figure_style.py`) on
+2026-09-11: a 190 mm printed column, the sheltered side in the ACCENT purple
+and the unprotected side in BASE grey across all three, panel letters, and
+**nothing on the canvas that belongs in a caption**. The prose those images
+used to carry is in `CAPTIONS.md` beside them, with its numbers computed at
+draw time rather than written in. Two numbers changed when they were measured
+rather than asserted, and both are flagged in the captions: the widest gap in
+the record is the 1995 survey at 155 m, not the 2004 value of 150 m quoted
+below, and diffusion alone closes the gap at 1.5% of the observed post-2004
+rate, not the "about a tenth" the module-logic footnote claimed -- that tenth
+is roughly right for the NET change across the window, which is a different
+comparison.
+
+The shoreline analysis that produced the input tables now sits in
+`HAT-groin-gis-analysis/HAT_groin_shoreline_analysis.py`, beside the outputs it
+writes. Its input and output paths are absolute and several are stale, so the
+move changed nothing about how it runs.
 
 **The one thing to keep straight:** the "fillet" is the GAP between the updrift
 and downdrift shorelines, not a volume of new beach. Both sides eroded; the
