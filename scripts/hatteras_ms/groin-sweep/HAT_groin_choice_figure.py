@@ -77,6 +77,9 @@ from cascade_pipeline.hindcast import implied_interception_m3_yr  # noqa: E402
 from hatteras_site_config import HATTERAS_DOMAINS as GEOMETRY  # noqa: E402
 
 from HAT_fullperiod_target import observed_change_profile  # noqa: E402
+from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+                              caption, error_cmap, figsize, open_frame, save,
+                              _title)
 
 SWEEP = PROJECT_BASE_DIR / "output" / "groin_sweep" / "1984_2004_edgeBE"
 FIGURE_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
@@ -134,50 +137,62 @@ def main():
     band = groin[groin.demeaned <= best.demeaned + BAND_M]
 
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-    figure, (left, right) = plt.subplots(1, 2, figsize=(15, 6.5))
+    apply_style()
+    figure, (left, right) = plt.subplots(
+        1, 2, figsize=figsize("double", aspect=0.44), constrained_layout=True)
 
     # ---- LEFT: the profiles this fit is scored on ------------------------
     x = np.array(FIT_DOMAINS, dtype=float)
     centre = lambda v: np.asarray(v, float) - np.mean(v)
-    left.axvspan(4.5, 5.5, color="#1565C0", alpha=0.10, zorder=0)
-    left.axvspan(5.5, 6.5, color="#B71C1C", alpha=0.10, zorder=0)
-    left.axvline(5.5, color="#B71C1C", linestyle="--", linewidth=1.8, zorder=2)
-    left.text(5.58, 0.97, "groin", rotation=90, fontsize=8.5, color="#B71C1C",
-              va="top", transform=left.get_xaxis_transform())
+    # The two flanks of the structure, named rather than colour-coded: the
+    # blue/red washes here were the vintage pair doing a third job.
+    left.axvspan(4.5, 5.5, color="0.94", zorder=0)
+    left.axvspan(5.5, 6.5, color="0.90", zorder=0)
+    left.axvline(5.5, color=INK_MUTED, linestyle=(0, (4, 2)), linewidth=0.8,
+                 zorder=2)
+    left.text(5.42, 0.97, "downdrift", rotation=90, fontsize=7,
+              color=INK_MUTED, ha="right", va="top",
+              transform=left.get_xaxis_transform())
+    left.text(5.58, 0.97, "updrift", rotation=90, fontsize=7,
+              color=INK_MUTED, ha="left", va="top",
+              transform=left.get_xaxis_transform())
 
-    left.plot(x, centre(observed), marker="s", markersize=8, linestyle="--",
-              color="#1A1A1A", linewidth=2.6, zorder=6, label="OBSERVED 1984-2004")
-    left.plot(x, centre(baseline.profile), marker="^", color="#777777",
-              linewidth=2.0, linestyle=":", zorder=4,
-              label=f"no groin  (RMSE {baseline.demeaned:.2f} m)")
-    left.plot(x, centre(chosen.profile), marker="o", color="#FF8C00",
-              linewidth=2.6, zorder=5,
-              label=f"M={CHOSEN_M:g}, f={CHOSEN_F:g}  (RMSE {chosen.demeaned:.2f} m)")
+    left.plot(x, centre(observed), marker="s", markersize=4.0, linestyle="--",
+              color=INK, linewidth=1.8, zorder=6,
+              label="observed, 1984 to 2004")
+    left.plot(x, centre(baseline.profile), marker="^", markersize=3.4,
+              color=C["BASE"], linewidth=1.4, linestyle=":", zorder=4,
+              label=f"no groin, {baseline.demeaned:.2f} m")
+    left.plot(x, centre(chosen.profile), marker="o", markersize=3.4,
+              color=C["ACCENT"], linewidth=1.8, zorder=5,
+              label=f"M {CHOSEN_M:g}, f {CHOSEN_F:g}, {chosen.demeaned:.2f} m")
 
     left.set_xticks(FIT_DOMAINS)
     left.set_xlabel("GIS domain")
-    left.set_ylabel("shoreline change 1984-2004, demeaned (m)"
-                    "   [+ = landward, erosion]")
-    left.set_title(
-        f"THE FIT\nperiod 1, D4-D8, shape only -- the groin closes "
-        f"{(baseline.demeaned - chosen.demeaned) / baseline.demeaned * 100:.0f}% "
-        f"of the misfit", fontsize=11.5)
-    left.grid(alpha=0.25)
-    left.legend(loc="best", fontsize=9)
+    left.set_ylabel("shoreline change 1984 to 2004, demeaned (m)\n"
+                    "positive is landward")
+    _title(left, 0, "the fit, on shape alone")
+    left.grid(axis="y")
+    left.set_axisbelow(True)
+    open_frame(left)
+    left.legend(loc="lower left", fontsize=7.5)
 
     # ---- RIGHT: the M-f surface, with the indistinguishable band ---------
     grid = groin.pivot_table(index="f", columns="M", values="demeaned")
     mesh = right.pcolormesh(grid.columns, grid.index, grid.values,
-                            shading="nearest", cmap="viridis_r")
-    figure.colorbar(mesh, ax=right, label="demeaned profile RMSE, D4-D8 (m)")
+                            shading="nearest", cmap=error_cmap())
+    cb = figure.colorbar(mesh, ax=right)
+    cb.set_label("demeaned profile RMSE, D4−D8 (m)")
+    cb.outline.set_linewidth(0.6)
 
-    right.plot(band.M, band.f, marker="o", markersize=9, linestyle="none",
-               markerfacecolor="none", markeredgecolor="white",
-               markeredgewidth=2.0, zorder=5,
-               label=f"{len(band)} cells within {BAND_M} m -- indistinguishable")
-    right.plot(chosen.M, chosen.f, marker="*", markersize=26, color="#B71C1C",
-               markeredgecolor="white", markeredgewidth=1.5, linestyle="none",
-               zorder=7, label=f"CHOSEN M={CHOSEN_M:g}, f={CHOSEN_F:g}")
+    right.plot(band.M, band.f, marker="o", markersize=5.5, linestyle="none",
+               markerfacecolor="none", markeredgecolor=C["ACCENT"],
+               markeredgewidth=1.2, zorder=5,
+               label=f"{len(band)} cells within {BAND_M} m of the best")
+    right.plot(chosen.M, chosen.f, marker="*", markersize=14,
+               color=C["ACCENT"], markeredgecolor="white",
+               markeredgewidth=0.8, linestyle="none", zorder=7,
+               label=f"the pair taken forward, M {CHOSEN_M:g}, f {CHOSEN_F:g}")
 
     # affordability, the one physical constraint that DOES apply on this grid
     m_axis = np.array(sorted(grid.columns), dtype=float)
@@ -186,36 +201,52 @@ def main():
     m_lo = float(np.interp(DRIFT_LOW, afford, m_axis))
     m_hi = float(np.interp(DRIFT_HIGH, afford, m_axis))
     for edge in (m_lo, m_hi):
-        right.axvline(edge, color="#1B5E20", linestyle="--", linewidth=1.6, zorder=4)
+        right.axvline(edge, color=C["REF"], linestyle=(0, (4, 2)),
+                      linewidth=1.0, zorder=4)
     right.text((m_lo + m_hi) / 2, 0.02,
-               f"affordable\n{m_lo:.0f}-{m_hi:.0f} m/yr",
-               ha="center", va="bottom", fontsize=8.5, color="#1B5E20",
-               transform=right.get_xaxis_transform(), zorder=6)
+               f"affordable, {m_lo:.0f} to {m_hi:.0f} m/yr",
+               ha="center", va="bottom", fontsize=7, color=C["REF"],
+               transform=right.get_xaxis_transform(), zorder=6,
+               bbox=dict(facecolor="white", alpha=0.85, edgecolor="none",
+                         boxstyle="square,pad=0.15"))
 
     right.set_xlabel("groin trapping rate M (m/yr)")
     right.set_ylabel("deterioration floor f")
-    right.set_title(
-        "THE UNCERTAINTY\nM and f trade off along a ridge of constant "
-        "period-1 trapping, M(15.5 + 4.5f)", fontsize=11.5)
-    right.legend(loc="upper right", fontsize=8.5)
+    _title(right, 1, "the uncertainty in the pair")
+    right.legend(loc="upper right", fontsize=7)
 
-    figure.tight_layout(rect=(0, 0.10, 1, 1))
-    figure.text(
-        0.01, 0.012,
-        f"PERIOD 1 is the only hindcast window where the observed gap between the groin's flanks WIDENS (+52 m), which is the only "
-        f"behaviour a module with trapping >= 0 can produce. D4-D8 excludes D1, where the cape's change over period 1 is 81-104 m -- "
-        f"about five times the groin's signal; on the full window with a raw score the cape swamps it and no-groin wins by 0.18 m. "
-        f"The score is DEMEANED because a uniform level offset is absorbed by the source/sink calibration downstream, so only shape "
-        f"is the groin's responsibility.\n"
-        f"NO STABILITY SHADING HERE, unlike the previous version of this figure: the M>=70 instability and M>=100 drowning were "
-        f"measured on the 41-domain rig and do NOT transfer -- all 36 production cells including M=70 and M=80 ran clean. "
-        f"Affordability is the one physical constraint that does apply.",
-        fontsize=7.5, color="#333333", wrap=True)
+    closed = (baseline.demeaned - chosen.demeaned) / baseline.demeaned * 100
+    caption(figure,
+            "Why M = {M:g}, f = {f:g}. (a) The fit the choice is made on: "
+            "period 1, D4−D8, shape only. The groin closes {closed:.0f}% of "
+            "the misfit the no-groin baseline carries, from {base:.2f} to "
+            "{ch:.2f} m. Period 1 is the only hindcast window where the "
+            "observed gap between the structure's flanks WIDENS, by 52 m, "
+            "which is the only behaviour a module with trapping at or above "
+            "zero can produce. D4−D8 excludes D1, where the cape's change over "
+            "period 1 is 81 to 104 m, about five times the groin's signal; on "
+            "the full window with a raw score the cape swamps it and no groin "
+            "wins by 0.18 m. The score is demeaned because a uniform level "
+            "offset is absorbed by the source/sink calibration downstream, so "
+            "only shape is the groin's responsibility. The two light bands are "
+            "the downdrift and updrift domains either side of the structure. "
+            "(b) What that fit does and does not pin down. {n} cells sit "
+            "within {bandm} m of the best and are not distinguishable by this "
+            "target; M and f trade off along a ridge of constant period-1 "
+            "cumulative trapping, M(15.5 + 4.5f). The green lines are "
+            "affordability, the one physical constraint that does apply on "
+            "this grid: the drift a groin of that trapping rate would have to "
+            "intercept. There is deliberately NO stability shading, unlike an "
+            "earlier version of this figure — the instability above M = 70 and "
+            "the drowning above M = 100 were measured on the 41-domain rig and "
+            "do not transfer, and all 36 production cells including M = 70 and "
+            "M = 80 ran clean."
+            .format(M=CHOSEN_M, f=CHOSEN_F, closed=closed,
+                    base=baseline.demeaned, ch=chosen.demeaned,
+                    n=len(band), bandm=BAND_M))
 
-    path = FIGURE_DIR / "why_M60_f06.png"
-    figure.savefig(path, dpi=150, facecolor="white")
-    plt.close(figure)
-    print(f"wrote {path}")
+    written = save(figure, FIGURE_DIR / "why_M60_f06.png", close=True)
+    print(f"wrote {written[0]}")
     print(f"  no groin        {baseline.demeaned:.2f} m")
     print(f"  chosen ({CHOSEN_M:g},{CHOSEN_F:g}) {chosen.demeaned:.2f} m  "
           f"({(baseline.demeaned - chosen.demeaned) / baseline.demeaned * 100:.0f}% better)")

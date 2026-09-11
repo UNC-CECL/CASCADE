@@ -79,6 +79,9 @@ for _path in (SCRIPTS_DIR, _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+from hat_figure_style import (apply_style, C, C_1984, C_1997,  # noqa: E402
+                              INK, INK_MUTED, error_cmap, figsize,
+                              open_frame, save, _title)
 from HAT_groin_sweep_config import (  # noqa: E402
     END_YEAR,
     F_VALUES,
@@ -112,11 +115,16 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # One colour per sweep, stable across all three figures so a reader who learns
 # "orange is 1984 edgeBE" on one figure keeps it on the next.
+# Colour is the PERIOD, marker is the preset (2026-09-11). Four invented hues
+# were in use here -- a blue, an orange, a green and a dark red -- which spent
+# two colours on a distinction the marker already carries, and put the vintage
+# red on one arbitrary sweep. The house pair means the same thing on every
+# figure in the project: red is the earlier period, blue the later.
 SWEEP_COLORS = {
-    (1984, "zeroBE"): "#1565C0",
-    (1984, "edgeBE"): "#FF8C00",
-    (2004, "zeroBE"): "#2E7D32",
-    (2004, "edgeBE"): "#B71C1C",
+    (1984, "zeroBE"): C_1984,
+    (1984, "edgeBE"): C_1984,
+    (2004, "zeroBE"): C_1997,
+    (2004, "edgeBE"): C_1997,
 }
 SWEEP_MARKERS = {"zeroBE": "o", "edgeBE": "s"}
 
@@ -149,13 +157,14 @@ def collect():
 
 def _placeholder(axis, period, preset):
     """Marks a panel whose sweep has not produced results yet."""
-    axis.text(0.5, 0.5, f"{period}-{END_YEAR[period]}  {preset}\nnot swept yet",
-              ha="center", va="center", fontsize=11, color="#999999",
+    axis.text(0.5, 0.5, f"{period} to {END_YEAR[period]}, {preset}\n"
+              "not swept yet",
+              ha="center", va="center", fontsize=8, color=INK_MUTED,
               transform=axis.transAxes)
     axis.set_xticks([])
     axis.set_yticks([])
     for spine in axis.spines.values():
-        spine.set_edgecolor("#CCCCCC")
+        spine.set_edgecolor("0.85")
 
 
 # =============================================================================
@@ -166,7 +175,11 @@ def fig_surfaces(surfaces):
     """The four M-f fillet-error surfaces in one 2x2 block."""
     plt = _matplotlib()
 
-    figure, axes = plt.subplots(len(PERIODS), len(PRESETS), figsize=(14, 9))
+    apply_style()
+    figure, axes = plt.subplots(len(PERIODS), len(PRESETS),
+                                figsize=figsize("double", aspect=0.66),
+                                constrained_layout=True)
+    notes = []
     for row, period in enumerate(PERIODS):
         for col, preset in enumerate(PRESETS):
             axis = axes[row][col]
@@ -179,48 +192,49 @@ def fig_surfaces(surfaces):
             grid = groin.pivot(index="fraction", columns="M",
                                values=RANK_METRIC)
             mesh = axis.pcolormesh(grid.columns, grid.index, grid.values,
-                                   shading="nearest", cmap="viridis_r")
-            figure.colorbar(mesh, ax=axis, label="|model - obs| fillet (m)")
+                                   shading="nearest", cmap=error_cmap())
+            cb = figure.colorbar(mesh, ax=axis)
+            cb.set_label("|modelled − observed| fillet (m)")
+            cb.outline.set_linewidth(0.6)
 
             best, tied = tied_best(groin)
             if len(tied) > 1:
                 axis.plot(tied["M"], tied["fraction"], marker="o",
-                          markersize=8, color="white",
-                          markeredgecolor=GROIN_COLOR, markeredgewidth=1.4,
+                          markersize=5.5, color="none",
+                          markeredgecolor=C["ACCENT"], markeredgewidth=1.2,
                           linestyle="none", zorder=6,
-                          label=f"{len(tied)} tied (M free)")
+                          label=f"{len(tied)} tied, M free")
             else:
                 axis.plot(best["M"], best["fraction"], marker="*",
-                          markersize=20, color=GROIN_COLOR,
-                          markeredgecolor="white", markeredgewidth=1.2,
+                          markersize=13, color=C["ACCENT"],
+                          markeredgecolor="white", markeredgewidth=0.8,
                           linestyle="none", zorder=6,
                           label=_cell_label(best))
 
-            axis.set_title(
-                f"{period}-{END_YEAR[period]}  {preset}\n"
-                f"observed fillet {OBSERVED_FILLET_M[period]:+.1f} m   |   "
-                f"best err {best[RANK_METRIC]:.2f} m   |   "
-                f"reach RMSE {best[REACH_METRIC]:.2f} m/yr",
-                fontsize=9.5)
+            _title(axis, row * len(PRESETS) + col,
+                   f"{period} to {END_YEAR[period]}, {preset}")
             axis.set_xlabel("M (m/yr)")
             axis.set_ylabel("deterioration floor f")
-            axis.legend(loc="upper right", fontsize=8)
+            axis.legend(loc="upper right", fontsize=7)
+            notes.append(
+                "({}) observed fillet {:+.1f} m, best error {:.2f} m, reach "
+                "RMSE {:.2f} m/yr.".format(
+                    chr(ord("a") + row * len(PRESETS) + col),
+                    OBSERVED_FILLET_M[period], best[RANK_METRIC],
+                    best[REACH_METRIC]))
 
-    figure.suptitle("Groin sweep error surfaces -- all periods and presets",
-                    fontsize=13)
-    figure.tight_layout(rect=(0, 0.05, 1, 0.965))
     _footnote(
         figure,
-        "Colour scales are PER PANEL, not shared: period 2's observed fillet "
-        "is negative (-43.2 m, a relaxing fillet), which no M >= 0 can build, "
-        "so every period-2 cell carries at least that much error and a shared "
-        "scale would flatten period 1 into one colour. Compare the annotated "
-        "numbers, not the hues.", width=170)
+        "The fillet-error surface over the (M, f) grid for every swept period "
+        "and source/sink preset, dark worse, with the best cell marked. "
+        + " ".join(notes) +
+        " The grey scales are PER PANEL, not shared: period 2's observed "
+        "fillet is negative, a relaxing fillet, which no trapping at or above "
+        "zero can build, so every period-2 cell carries at least that much "
+        "error and one shared scale would flatten period 1 into a single tone. "
+        "Compare the numbers quoted here, not the tones.", width=170)
 
-    path = OUTPUT_DIR / "comparison_surfaces.png"
-    figure.savefig(path, dpi=150, facecolor="white")
-    plt.close(figure)
-    return path
+    return save(figure, OUTPUT_DIR / "comparison_surfaces.png", close=True)[0]
 
 
 # =============================================================================
@@ -231,8 +245,10 @@ def fig_optima(surfaces):
     """Each sweep's optimum and valley floor in a single (M, f) plane."""
     plt = _matplotlib()
 
+    apply_style()
     figure, (axis, table_axis) = plt.subplots(
-        2, 1, figsize=(12, 10), gridspec_kw=dict(height_ratios=[3, 2]))
+        2, 1, figsize=figsize("double", aspect=0.85),
+        gridspec_kw=dict(height_ratios=[3, 2]), constrained_layout=True)
 
     rows = []
     for (period, preset), surface in sorted(surfaces.items()):
@@ -251,19 +267,19 @@ def fig_optima(surfaces):
         floor_M = [grid.columns[int(np.nanargmin(grid.loc[f].values))]
                    if np.isfinite(grid.loc[f].values).any() else np.nan
                    for f in grid.index]
-        axis.plot(floor_M, grid.index, color=colour, alpha=0.35, linewidth=1.4,
+        axis.plot(floor_M, grid.index, color=colour, alpha=0.35, linewidth=1.0,
                   zorder=2)
 
         if tie:
-            axis.plot(tied["M"], tied["fraction"], marker=marker, markersize=9,
-                      color="white", markeredgecolor=colour, markeredgewidth=2,
-                      linestyle="none", zorder=5,
-                      label=f"{label}  ({len(tied)} tied, M free)")
+            axis.plot(tied["M"], tied["fraction"], marker=marker,
+                      markersize=5.5, color="none", markeredgecolor=colour,
+                      markeredgewidth=1.2, linestyle="none", zorder=5,
+                      label=f"{label}, {len(tied)} tied, M free")
         else:
             axis.plot(best["M"], best["fraction"], marker=marker,
-                      markersize=15, color=colour, markeredgecolor="white",
-                      markeredgewidth=1.4, linestyle="none", zorder=6,
-                      label=f"{label}  {_cell_label(best)}")
+                      markersize=8, color=colour, markeredgecolor="white",
+                      markeredgewidth=0.8, linestyle="none", zorder=6,
+                      label=f"{label}, {_cell_label(best)}")
 
         rows.append([
             f"{period}-{END_YEAR[period]}", preset,
@@ -281,11 +297,11 @@ def fig_optima(surfaces):
     axis.set_ylim(min(F_VALUES) - 0.12, max(F_VALUES) + 0.12)
     axis.set_xlabel("groin trapping rate M (m/yr)")
     axis.set_ylabel("deterioration floor f")
-    axis.set_title("Where each sweep puts the groin\n"
-                   "faint lines are valley floors: flat = that axis is "
-                   "unconstrained", fontsize=11)
-    axis.grid(alpha=0.25)
-    axis.legend(loc="best", fontsize=8.5)
+    _title(axis, 0, "where each sweep puts the groin")
+    axis.grid()
+    axis.set_axisbelow(True)
+    open_frame(axis)
+    axis.legend(loc="best", fontsize=7)
 
     table_axis.axis("off")
     table = table_axis.table(
@@ -294,15 +310,22 @@ def fig_optima(surfaces):
                    "err (m)", "reach RMSE", "be1", "tied"],
         loc="center", cellLoc="center")
     table.auto_set_font_size(False)
-    table.set_fontsize(9)
-    table.scale(1, 1.6)
+    table.set_fontsize(7)
+    table.scale(1, 1.35)
     for col in range(10):
-        table[0, col].set_facecolor("#EEEEEE")
+        table[0, col].set_facecolor("0.93")
         table[0, col].set_text_props(weight="bold")
+    _title(table_axis, 1, "every optimum, as numbers")
 
-    figure.tight_layout(rect=(0, 0.05, 1, 1))
     _footnote(
         figure,
+        "(a) Each sweep's optimum in one (M, f) plane, coloured by period — "
+        "red for 1984 to 2004, blue for 2004 to 2024, as everywhere in this "
+        "project — and marked by preset. The faint line behind each is that "
+        "sweep's valley floor, the best M at every f, which is what makes two "
+        "sweeps comparable even when their optima coincide: a flat floor means "
+        "that axis is unconstrained, a steep one means it bites. (b) The same "
+        "four sweeps as numbers. "
         "M reads 'tied' where a whole row of the grid scores alike -- in both "
         "period-2 sweeps the fillet relaxed, so the score is minimised by "
         "trapping nothing and every M at f = 0 is equally good. That is a "
@@ -310,10 +333,7 @@ def fig_optima(surfaces):
         "background-erosion rate profiled out of the surface; it is swept "
         "only in the 1984 edgeBE sweep.", width=175)
 
-    path = OUTPUT_DIR / "comparison_optima.png"
-    figure.savefig(path, dpi=150, facecolor="white")
-    plt.close(figure)
-    return path
+    return save(figure, OUTPUT_DIR / "comparison_optima.png", close=True)[0]
 
 
 # =============================================================================
@@ -324,8 +344,11 @@ def fig_profiles(surfaces):
     """Each sweep's best LRR curve against its own CoastSat target."""
     plt = _matplotlib()
 
-    figure, axes = plt.subplots(len(PERIODS), len(PRESETS), figsize=(14, 9),
-                               sharex=True)
+    apply_style()
+    figure, axes = plt.subplots(len(PERIODS), len(PRESETS),
+                                figsize=figsize("double", aspect=0.66),
+                                sharex=True, constrained_layout=True)
+    notes = []
     for row, period in enumerate(PERIODS):
         for col, preset in enumerate(PRESETS):
             axis = axes[row][col]
@@ -339,35 +362,35 @@ def fig_profiles(surfaces):
             gis, model = rate_curve(best)
             _, observed = observed_curve(period)
 
-            axis.plot(gis, observed, marker="o", color=OBSERVED_COLOR,
-                      linewidth=2.0, label="CoastSat observed", zorder=4)
-            axis.plot(gis, model, marker="s",
-                      color=SWEEP_COLORS[(period, preset)], linewidth=2.0,
-                      label=f"model {_cell_label(best)}", zorder=3)
+            axis.plot(gis, observed, marker="o", markersize=3.0,
+                      color=OBSERVED_COLOR, linewidth=1.4,
+                      label="observed, CoastSat", zorder=4)
+            axis.plot(gis, model, marker="s", markersize=3.0,
+                      color=SWEEP_COLORS[(period, preset)], linewidth=1.4,
+                      label=f"modelled, {_cell_label(best)}", zorder=3)
             _profile_axis(axis, period)
 
             bias = float(best.get("bias_window", float("nan")))
-            axis.set_title(
-                f"{period}-{END_YEAR[period]}  {preset}   "
-                f"RMSE {best[REACH_METRIC]:.2f}  bias {bias:+.2f} m/yr",
-                fontsize=9.5)
-            axis.legend(loc="best", fontsize=8)
+            _title(axis, row * len(PRESETS) + col,
+                   f"{period} to {END_YEAR[period]}, {preset}")
+            axis.legend(loc="best", fontsize=7)
+            notes.append(
+                "({}) reach RMSE {:.2f} m/yr, bias {:+.2f}.".format(
+                    chr(ord("a") + row * len(PRESETS) + col),
+                    best[REACH_METRIC], bias))
 
-    figure.suptitle("Best-fit shoreline change against CoastSat -- all sweeps",
-                    fontsize=13)
-    figure.tight_layout(rect=(0, 0.05, 1, 0.965))
     _footnote(
         figure,
+        "Each sweep's best-scoring cell against the observed shoreline change "
+        "rate, one panel per period and preset, with the modelled curve in its "
+        "period's colour. " + " ".join(notes) + " "
         "Each panel is scored against its OWN period's CoastSat target, so "
         "compare a curve to the black line beside it rather than across "
         "panels. A large offset with the right shape is a background-erosion "
         "problem (see bias); a right level with the wrong shape at D5/D6 is "
         "the groin.", width=170)
 
-    path = OUTPUT_DIR / "comparison_profiles.png"
-    figure.savefig(path, dpi=150, facecolor="white")
-    plt.close(figure)
-    return path
+    return save(figure, OUTPUT_DIR / "comparison_profiles.png", close=True)[0]
 
 
 def main():

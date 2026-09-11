@@ -81,6 +81,8 @@ for _path in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
         sys.path.insert(0, str(_path))
 
 from cascade_pipeline.run_layout import resolve  # noqa: E402
+from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+                              figsize, open_frame, record_caption)
 from HAT_groin_sweep_config import WETDRY_CHANGE_TABLE  # noqa: E402
 
 # The rig pads 11 real domains (D2-D12) with 15 buffer either side: D2 -> 15,
@@ -105,22 +107,26 @@ UPDRIFT_GIS, DOWNDRIFT_GIS = 6, 5
 GHOSTS = 5                       # how many past surveys stay on screen
 HOLD_FRAMES = 6                  # frames held on the last year, so it can be read
 
-# Okabe-Ito, colour-vision-safe and muted enough to print.
-MODEL_C = "#D55E00"              # vermillion -- the groin run
-BASE_C = "#8C8C8C"               # grey       -- the groin-OFF baseline
-OBS_C = "#111111"                # near-black -- the surveys
-MARK_C = "#0072B2"               # blue       -- the structure
-GHOST_C = "#CFD3D8"
-INK, SUBTLE, GRID = "#1A1A1A", "#6A6F76", "#E3E6EA"
+# House palette (2026-09-11), replacing an Okabe-Ito set chosen in this file:
+# the run under test is the ACCENT, the groin-off baseline BASE grey, the
+# surveys INK, and the structure a muted guide line rather than a fourth hue.
+MODEL_C = C["ACCENT"]            # the groin run
+BASE_C = C["BASE"]               # the groin-OFF baseline
+OBS_C = INK                      # the surveys
+MARK_C = INK_MUTED               # the structure
+GHOST_C = "0.86"                 # surveys already passed
 
 # Documented structure history -- GROIN_PLAN.md section 1. The rig's own
 # install year is 1970 (it keeps 1967-69 as a free control window); the
 # documented installation is 1969. Both are shown rather than reconciled.
+# The strip is a ruler, not data: four greys, light to dark as the structure
+# degrades, so the timeline reads in one glance without spending four hues on
+# it. It was a grey/blue/orange/red set until 2026-09-11.
 PHASES = [
-    (1967, 1969, "before the groin", "#E9ECEF"),
-    (1970, 1995, "structure sound", "#CDE3F0"),
-    (1996, 2002, "deteriorating", "#F6DFC8"),
-    (2003, 2017, "failed — held at M·f", "#EFCFCF"),
+    (1967, 1969, "before the groin", "0.97"),
+    (1970, 1995, "structure sound", "0.93"),
+    (1996, 2002, "deteriorating", "0.88"),
+    (2003, 2017, "failed, held at M·f", "0.82"),
 ]
 EVENTS = [(1970, "installed"), (1996, "last repair"), (2003, "storm damage")]
 
@@ -199,21 +205,9 @@ def main() -> None:
     pad = 0.12 * (high - low)
     ylim = (low - pad, high + pad)
 
-    plt.rcParams.update({
-        "font.family": "sans-serif",
-        "font.sans-serif": ["Arial", "Helvetica", "DejaVu Sans"],
-        "font.size": 10.5,
-        "axes.linewidth": 0.8,
-        "axes.edgecolor": "#4A4F55",
-        "xtick.direction": "out", "ytick.direction": "out",
-        "xtick.major.size": 4.0, "ytick.major.size": 4.0,
-        "xtick.color": "#4A4F55", "ytick.color": "#4A4F55",
-        "text.color": INK, "axes.labelcolor": INK,
-        "legend.frameon": False,
-        "figure.facecolor": "white", "savefig.facecolor": "white",
-    })
+    apply_style()
 
-    figure = plt.figure(figsize=(10.8, 7.4))
+    figure = plt.figure(figsize=figsize("double", aspect=0.66))
     grid = figure.add_gridspec(
         2, 1, height_ratios=[7.0, 0.75], hspace=0.42,
         left=0.115, right=0.975, top=0.805, bottom=0.135)
@@ -221,35 +215,31 @@ def main() -> None:
     strip = figure.add_subplot(grid[1])
 
     # ---- static furniture, drawn once ------------------------------------
-    figure.text(0.115, 0.947, "The Buxton groin over its whole life",
-                fontsize=16.5, fontweight="bold", color=INK,
+    # Title and subtitle stay ON the canvas: a GIF is watched standalone, with
+    # no caption file beside it in a viewer. House sizes, not a 16.5 pt banner.
+    figure.text(0.115, 0.955, "The Buxton groin over its whole life",
+                fontsize=11, fontweight="bold", color=INK,
                 ha="left", va="center")
-    figure.text(0.115, 0.905,
-                f"Modelled shoreline change against {len(survey_years)} dated "
-                f"wet/dry surveys   ·   M = {applied_M:g} m/yr, "
-                f"f = {applied_f:.1f}   ·   41-domain 1967 rig",
-                fontsize=10.5, color=SUBTLE, ha="left", va="center")
+    figure.text(0.115, 0.912,
+                f"{len(survey_years)} dated wet/dry surveys · "
+                f"M {applied_M:g} m/yr, f {applied_f:.1f}",
+                fontsize=8, color=INK_MUTED, ha="left", va="center")
 
     handles = [
-        Line2D([], [], color=OBS_C, marker="s", markersize=6, linestyle="--",
-               linewidth=1.6, label="Observed (wet/dry survey)"),
-        Line2D([], [], color=MODEL_C, marker="o", markersize=5.5,
-               linewidth=2.4, label="Model, groin on"),
-        Line2D([], [], color=BASE_C, linestyle=":", linewidth=2.0,
-               label="Model, groin off"),
+        Line2D([], [], color=OBS_C, marker="s", markersize=3.6,
+               linestyle="--", linewidth=1.4,
+               label="observed, wet/dry survey"),
+        Line2D([], [], color=MODEL_C, marker="o", markersize=3.4,
+               linewidth=1.8, label="modelled, groin on"),
+        Line2D([], [], color=BASE_C, linestyle=":", linewidth=1.4,
+               label="modelled, groin off"),
     ]
     figure.legend(handles=handles, loc="upper right",
-                  bbox_to_anchor=(0.975, 0.975), fontsize=9.5,
-                  handlelength=2.4, labelspacing=0.55)
+                  bbox_to_anchor=(0.975, 0.975), fontsize=8,
+                  handlelength=2.2, labelspacing=0.45, frameon=False)
 
-    figure.text(
-        0.115, 0.022,
-        "Landward-positive: erosion moves UP, so the panel reads as a plan view "
-        "with the ocean below and the island above. Not demeaned — a uniform "
-        "alongshore offset belongs to the source/sink calibration, not the "
-        "groin, so read the shape around D5/D6 as the groin's. Surveys cover "
-        "8–11 of the 11 domains; lines break at gaps rather than interpolating.",
-        fontsize=7.9, color=SUBTLE, ha="left", va="bottom", wrap=True)
+    # The footnote paragraph goes to CAPTIONS.md beside the GIF, written after
+    # the animation is saved.
 
     def frame(index):
         t = min(index, len(years) - 1)
@@ -257,12 +247,13 @@ def main() -> None:
 
         # ---- main panel ---------------------------------------------------
         axis.clear()
-        axis.axhline(0.0, color="#B9BEC4", linewidth=0.9, zorder=1)
-        axis.axvline(5.5, color=MARK_C, linewidth=1.3, linestyle=(0, (5, 3)),
-                     zorder=2, alpha=0.85)
-        axis.annotate("Buxton groin field\nD6 updrift  |  D5 downdrift",
+        axis.axhline(0.0, color=INK_MUTED, linewidth=0.8,
+                     linestyle=(0, (4, 3)), zorder=1)
+        axis.axvline(5.5, color=MARK_C, linewidth=0.8, linestyle=(0, (5, 3)),
+                     zorder=2)
+        axis.annotate("the groin field: D6 updrift, D5 downdrift",
                       xy=(5.40, 0.025), xycoords=("data", "axes fraction"),
-                      rotation=90, ha="right", va="bottom", fontsize=8.2,
+                      rotation=90, ha="right", va="bottom", fontsize=7,
                       color=MARK_C)
 
         passed = [y for y in survey_years if y < year][-GHOSTS:]
@@ -272,73 +263,75 @@ def main() -> None:
                       linewidth=1.1, alpha=alpha, zorder=2)
 
         if no_groin is not None:
-            axis.plot(DOMAINS, no_groin[t], ":", color=BASE_C, linewidth=2.0,
+            axis.plot(DOMAINS, no_groin[t], ":", color=BASE_C, linewidth=1.4,
                       zorder=4)
-        axis.plot(DOMAINS, groin[t], "-o", color=MODEL_C, linewidth=2.4,
-                  markersize=5.5, zorder=5)
+        axis.plot(DOMAINS, groin[t], "-o", color=MODEL_C, linewidth=1.8,
+                  markersize=3.4, zorder=5)
 
         current = [y for y in survey_years if y <= year]
         if current:
             latest = max(current)
             fresh = latest == year
             axis.plot(DOMAINS, observed[latest], "s--", color=OBS_C,
-                      markersize=6.5 if fresh else 5.2,
-                      linewidth=2.0 if fresh else 1.4,
+                      markersize=4.0 if fresh else 3.2,
+                      linewidth=1.6 if fresh else 1.1,
                       alpha=1.0 if fresh else 0.78, zorder=6)
             coverage = int(np.isfinite(observed[latest]).sum())
             axis.annotate(
                 f"survey {latest}   ({coverage}/{len(DOMAINS)} domains)"
                 + ("   ● new this year" if fresh else ""),
                 xy=(0.015, 0.965), xycoords="axes fraction", ha="left",
-                va="top", fontsize=9.0, color=OBS_C,
+                va="top", fontsize=8, color=OBS_C,
                 fontweight="bold" if fresh else "normal")
 
         axis.set_xlim(1.6, 12.4)
         axis.set_ylim(*ylim)
         axis.set_xticks(DOMAINS)
-        axis.set_xlabel("Alongshore GIS domain      "
-                        "(D2 = toward Cape Point   →   D12 = north)",
-                        labelpad=7)
-        axis.set_ylabel("Shoreline change since 1967 (m)", labelpad=26)
-        axis.grid(axis="y", color=GRID, linewidth=0.7)
+        axis.set_xlabel("GIS domain (D2 toward Cape Point → D12 north)",
+                        labelpad=6)
+        # labelpad clears the orientation cues at x = -0.088, which the
+        # 24 pt pad of the pre-2026-09-11 layout ran through.
+        axis.set_ylabel("shoreline change since 1967 (m)", labelpad=8)
+        axis.grid(axis="y")
         axis.set_axisbelow(True)
-        for side in ("top", "right"):
-            axis.spines[side].set_visible(False)
+        open_frame(axis)
 
         # Orientation cues, so "up = erosion" needs no caption to decode.
-        axis.annotate("erosion\nlandward", xy=(-0.088, 0.94),
-                      xycoords="axes fraction", ha="center", va="top",
-                      fontsize=8.4, color=SUBTLE)
-        axis.annotate("▲", xy=(-0.088, 0.955), xycoords="axes fraction",
-                      ha="center", va="bottom", fontsize=7.5, color=SUBTLE)
-        axis.annotate("accretion\nseaward", xy=(-0.088, 0.06),
-                      xycoords="axes fraction", ha="center", va="bottom",
-                      fontsize=8.4, color=SUBTLE)
-        axis.annotate("▼", xy=(-0.088, 0.045), xycoords="axes fraction",
-                      ha="center", va="top", fontsize=7.5, color=SUBTLE)
+        axis.annotate("▲ erosion, landward", xy=(0.012, 0.975),
+                      xycoords="axes fraction", ha="left", va="top",
+                      fontsize=7.5, color=INK_MUTED,
+                      bbox=dict(facecolor="white", alpha=0.85,
+                                edgecolor="none",
+                                boxstyle="square,pad=0.12"))
+        axis.annotate("▼ accretion, seaward", xy=(0.012, 0.025),
+                      xycoords="axes fraction", ha="left",
+                      va="bottom", fontsize=7.5, color=INK_MUTED,
+                      bbox=dict(facecolor="white", alpha=0.85,
+                                edgecolor="none",
+                                boxstyle="square,pad=0.12"))
 
         # Year as a quiet watermark, plus the state of the structure.
         axis.annotate(str(year), xy=(0.988, 0.965), xycoords="axes fraction",
-                      ha="right", va="top", fontsize=31, color="#DADEE3",
+                      ha="right", va="top", fontsize=24, color="0.88",
                       fontweight="bold", zorder=0)
         m_eff = rate_by_year.get(year, last_rate)
-        axis.annotate(f"applied M$_{{eff}}$ = {m_eff:.0f} m/yr",
+        axis.annotate(f"applied trapping rate {m_eff:.0f} m/yr",
                       xy=(0.988, 0.845), xycoords="axes fraction", ha="right",
-                      va="top", fontsize=9.2, color=SUBTLE)
+                      va="top", fontsize=8, color=INK_MUTED)
 
         up_i, down_i = DOMAINS.index(UPDRIFT_GIS), DOMAINS.index(DOWNDRIFT_GIS)
         model_fillet = groin[t][down_i] - groin[t][up_i]
-        line = f"fillet  D5 − D6        model  {model_fillet:+.0f} m"
+        line = f"fillet, D5 − D6:  modelled {model_fillet:+.0f} m"
         if current:
             latest = max(current)
             observed_fillet = (observed[latest][down_i]
                                - observed[latest][up_i])
             if np.isfinite(observed_fillet):
-                line += f"        observed  {observed_fillet:+.0f} m"
+                line += f",  observed {observed_fillet:+.0f} m"
         # Bottom-RIGHT: the structure label occupies the bottom-left, and the
         # accretion half of the panel is empty in every frame.
         axis.annotate(line, xy=(0.988, 0.035), xycoords="axes fraction",
-                      ha="right", va="bottom", fontsize=9.4, color=INK)
+                      ha="right", va="bottom", fontsize=8, color=INK)
 
         # ---- timeline strip -------------------------------------------------
         strip.clear()
@@ -349,21 +342,21 @@ def main() -> None:
             if end - start >= 5:
                 strip.annotate(label, xy=((start + end + 1) / 2, 0.5),
                                xycoords=("data", "axes fraction"),
-                               ha="center", va="center", fontsize=8.0,
-                               color="#3E434A")
+                               ha="center", va="center", fontsize=7.5,
+                               color=INK_MUTED)
         for event_year, label in EVENTS:
-            strip.axvline(event_year, color="#6A6F76", linewidth=0.9, zorder=3)
+            strip.axvline(event_year, color=INK_MUTED, linewidth=0.8, zorder=3)
             strip.annotate(label, xy=(event_year, -0.30),
                            xycoords=("data", "axes fraction"), ha="center",
-                           va="top", fontsize=7.6, color=SUBTLE)
-        strip.axvline(year, color=MODEL_C, linewidth=2.4, zorder=5)
-        strip.plot([year], [1.0], marker="v", color=MODEL_C, markersize=9,
+                           va="top", fontsize=7, color=INK_MUTED)
+        strip.axvline(year, color=MODEL_C, linewidth=1.8, zorder=5)
+        strip.plot([year], [1.0], marker="v", color=MODEL_C, markersize=6,
                    transform=strip.get_xaxis_transform(), clip_on=False,
                    zorder=6)
         strip.set_xlim(years[0], years[-1] + 1)
         strip.set_yticks([])
         strip.set_xticks([1970, 1980, 1990, 2000, 2010])
-        strip.tick_params(axis="x", labelsize=9, pad=22)
+        strip.tick_params(axis="x", labelsize=8, pad=20)
         for side in ("top", "right", "left"):
             strip.spines[side].set_visible(False)
         return ()
@@ -374,6 +367,29 @@ def main() -> None:
                               frames=len(years) + HOLD_FRAMES, blit=False)
     animation.save(out, writer=PillowWriter(fps=3))
     plt.close(figure)
+
+    # The prose the frames used to carry, in a file beside the GIF.
+    record_caption(
+        out,
+        "The modelled shoreline change of the 41-domain 1967 rig against every "
+        "dated wet/dry survey, year by year from {first} to {last}, at "
+        "M = {M:g} and f = {f:.1f}. The frames keep their own title, legend and "
+        "year clock because a GIF is watched standalone; everything else about "
+        "how to read it is here. The y axis is LANDWARD-POSITIVE, so erosion "
+        "moves up and the panel reads as a plan view with the ocean below and "
+        "the island above. The curves are NOT demeaned: a uniform alongshore "
+        "offset belongs to the source/sink calibration rather than to the "
+        "groin, so it is the shape around D5 and D6 that is the groin's to get "
+        "right. Surveys cover 8 to 11 of the 11 drawn domains and the lines "
+        "break at gaps rather than interpolating across them; the {ghosts} "
+        "most recent past surveys stay on screen as faint lines so the "
+        "trajectory is visible. The strip below the panel is the structure's "
+        "own history, light to dark as it degrades, with the rig's 1970 "
+        "install marked — the documented installation is 1969, and both are "
+        "shown rather than reconciled."
+        .format(first=years[0], last=years[-1], M=applied_M, f=applied_f,
+                ghosts=GHOSTS))
+
     print(f"wrote {out}")
     print(f"  {len(years)} frames + {HOLD_FRAMES} held, {years[0]}-{years[-1]}, "
           f"{len(survey_years)} surveys inside the window")

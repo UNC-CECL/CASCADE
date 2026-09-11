@@ -69,6 +69,8 @@ for _path in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
         sys.path.insert(0, str(_path))
 
 from cascade_pipeline.run_layout import resolve  # noqa: E402
+from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+                              caption, figsize, open_frame, save, _title)
 from HAT_groin_sweep_config import (  # noqa: E402
     GROIN_DOWNDRIFT_GIS,
     GROIN_UPDRIFT_GIS,
@@ -113,8 +115,12 @@ EXPECT_M, EXPECT_F = 60.0, 0.6
 
 FIGURE_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
 
-OBSERVED_COLOR, MODEL_COLOR, RATE_COLOR = "#1A1A1A", "#FF8C00", "#2A6FB0"
-EVENT_COLOR, GRID_COLOR = "#C2185B", "#D5D8DD"
+# House colours (2026-09-11): the surveys are INK, the run under test the
+# ACCENT, the groin-off run BASE grey, and the structure's dated events are
+# guide lines in muted ink rather than a fourth hue. These were near-black,
+# an orange, a blue, a pink and a grey chosen in this file.
+OBSERVED_COLOR, MODEL_COLOR, RATE_COLOR = INK, C["ACCENT"], C["ACCENT"]
+EVENT_COLOR = INK_MUTED
 
 # Documented structure history -- GROIN_PLAN.md section 1.
 EVENTS = [
@@ -193,92 +199,93 @@ def main() -> None:
             "holds a different cell -- see the note at the head of this file. "
             "Re-run HAT_groin_hindcast_1967_2017.py before plotting.")
 
-    plt.rcParams.update({"font.size": 10, "axes.linewidth": 0.7,
-                         "legend.frameon": False, "pdf.fonttype": 42})
+    apply_style()
     figure, (ax_fillet, ax_rate) = plt.subplots(
-        2, 1, figsize=(12.5, 8.2), sharex=True,
-        gridspec_kw={"height_ratios": [2.4, 1.0], "hspace": 0.12})
+        2, 1, figsize=figsize("double", aspect=0.66), sharex=True,
+        gridspec_kw={"height_ratios": [2.4, 1.0]}, constrained_layout=True)
 
     # ---- (a) fillet ------------------------------------------------------
     for year, label in EVENTS:
-        ax_fillet.axvline(year, color=EVENT_COLOR, linewidth=1.0,
-                          linestyle=(0, (4, 2)), alpha=0.75, zorder=2)
-        ax_fillet.annotate(label, xy=(year, 1.005),
+        ax_fillet.axvline(year, color=EVENT_COLOR, linewidth=0.8,
+                          linestyle=(0, (1, 2)), zorder=2)
+        # Inside the axes: above the top edge these ran through the panel
+        # title at the printed width.
+        ax_fillet.annotate(label, xy=(year, 0.985),
                            xycoords=("data", "axes fraction"),
-                           rotation=90, ha="right", va="bottom",
-                           fontsize=8.0, color=EVENT_COLOR)
+                           rotation=90, ha="right", va="top",
+                           fontsize=7.0, color=EVENT_COLOR)
 
-    ax_fillet.axhline(0.0, color="#BBBBBB", linewidth=0.8, zorder=1)
+    ax_fillet.axhline(0.0, color=INK_MUTED, linewidth=0.8,
+                      linestyle=(0, (4, 3)), zorder=1)
     if no_groin is not None:
-        ax_fillet.plot(years, no_groin, color="#777777", linestyle=":",
-                       linewidth=1.9, label="model, groin OFF", zorder=3)
-    ax_fillet.plot(years, modelled, color=MODEL_COLOR, linewidth=2.4,
-                   label=f"model, rig at M = {applied_M:g}, f = {applied_f:.1f}",
+        ax_fillet.plot(years, no_groin, color=C["BASE"], linestyle=":",
+                       linewidth=1.4, label="modelled, groin off", zorder=3)
+    ax_fillet.plot(years, modelled, color=MODEL_COLOR, linewidth=1.8,
+                   label=f"modelled, M {applied_M:g}, f {applied_f:.1f}",
                    zorder=4)
-    ax_fillet.plot(obs_years, obs_vals, marker="o", markersize=6.5,
+    ax_fillet.plot(obs_years, obs_vals, marker="o", markersize=3.6,
                    linestyle="none", color=OBSERVED_COLOR,
-                   label=f"surveyed fillet ({len(obs_years)} dates)", zorder=5)
+                   label=f"surveyed fillet, {len(obs_years)} dates", zorder=5)
 
     peak_year = int(obs_years[int(np.argmax(obs_vals))])
-    ax_fillet.set_ylabel("Fillet, D5 − D6 offset since 1967 (m)\n"
-                         "[+ = updrift side holding]")
-    ax_fillet.set_title(
-        "The Buxton groin over its whole life, 1967–2017 — "
-        "modelled fillet against every survey",
-        fontsize=12.5, pad=26)
-    ax_fillet.grid(axis="y", color=GRID_COLOR, linewidth=0.6)
+    ax_fillet.set_ylabel("fillet, D5 − D6 offset since 1967 (m)\n"
+                         "positive is the updrift side holding")
+    _title(ax_fillet, 0, "the modelled fillet against every survey")
+    ax_fillet.grid(axis="y")
     ax_fillet.set_axisbelow(True)
-    ax_fillet.legend(loc="upper left", fontsize=9)
-    for side in ("top", "right"):
-        ax_fillet.spines[side].set_visible(False)
+    ax_fillet.legend(loc="upper left", fontsize=7.5)
+    open_frame(ax_fillet)
 
     final_obs = float(obs_vals[-1])
     final_mod = float(modelled[-1])
     ax_fillet.annotate(
-        f"observed peak {obs_vals.max():.0f} m in {peak_year}\n"
-        f"model peaks {modelled.max():.0f} m\n"
-        f"end {int(obs_years[-1])}: observed {final_obs:+.0f} m, "
-        f"model {final_mod:+.0f} m",
-        xy=(0.985, 0.13), xycoords="axes fraction", ha="right", va="bottom",
-        fontsize=8.8, color="#444444")
+        f"observed peak {obs_vals.max():.0f} m in {peak_year};"
+        f" modelled peak {modelled.max():.0f} m",
+        xy=(0.985, 0.08), xycoords="axes fraction", ha="right", va="bottom",
+        fontsize=7.5, color=INK_MUTED)
 
     # ---- (b) what the module applied -------------------------------------
     ax_rate.plot(diagnostics["model_year"],
                  diagnostics["trapping_rate_m_yr_applied"]
                  if "trapping_rate_m_yr_applied" in diagnostics
                  else diagnostics["trapping_rate_applied_m_yr"],
-                 color=RATE_COLOR, linewidth=2.2, drawstyle="steps-post")
+                 color=RATE_COLOR, linewidth=1.6, drawstyle="steps-post")
     for year, _ in EVENTS:
-        ax_rate.axvline(year, color=EVENT_COLOR, linewidth=1.0,
-                        linestyle=(0, (4, 2)), alpha=0.75, zorder=2)
-    ax_rate.set_ylabel("Applied trapping\nrate M_eff (m/yr)")
-    ax_rate.set_xlabel("Year")
-    ax_rate.grid(axis="y", color=GRID_COLOR, linewidth=0.6)
+        ax_rate.axvline(year, color=EVENT_COLOR, linewidth=0.8,
+                        linestyle=(0, (1, 2)), zorder=2)
+    ax_rate.set_ylabel("applied trapping\nrate (m/yr)")
+    ax_rate.set_xlabel("year")
+    ax_rate.grid(axis="y")
     ax_rate.set_axisbelow(True)
-    for side in ("top", "right"):
-        ax_rate.spines[side].set_visible(False)
-    ax_rate.annotate("M = 60 while sound        ramp 1996→2003        "
-                     "hold at M·f = 36",
-                     xy=(0.5, 0.06), xycoords="axes fraction", ha="center",
-                     fontsize=8.8, color="#444444")
+    open_frame(ax_rate)
+    _title(ax_rate, 1, "the rate the module applied")
 
-    figure.text(
-        0.012, 0.012,
-        "The rig is the ONLY window containing the build phase -- both hindcast "
-        "windows begin 15 years after installation, which is why they cannot "
-        "constrain f. The module reproduces the SIGN and TIMING of the build "
-        "and undershoots its AMPLITUDE: no admissible M matches the fillet on "
-        "this grid (a ~190 m real fillet in a 500 m domain, and a "
-        "volume-neutral dipole where the real structure's downdrift extent is "
-        "0 m). That gap is what the source/sink calibration absorbs. The rig "
-        "runs 1967 off 1984 topography, deliberately.",
-        fontsize=7.6, color="#555555", wrap=True, va="bottom")
+    caption(figure,
+            "The Buxton groin over its whole life on the 1967 rig, 1967 to "
+            "2017, at M = {M:g} and f = {f:.1f}. (a) The modelled fillet "
+            "against every survey in the window, with the groin-off run for "
+            "reference; the dotted verticals are the structure's dated events. "
+            "This rig is the ONLY window containing the build phase — both "
+            "hindcast windows begin 15 years after installation, which is why "
+            "neither of them can constrain f. The module reproduces the SIGN "
+            "and the TIMING of the build and undershoots its AMPLITUDE: no "
+            "admissible M matches the surveyed fillet on this grid, because a "
+            "real fillet of about 190 m is being represented in a 500 m domain "
+            "by a volume-neutral dipole whose real counterpart has a downdrift "
+            "extent of 0 m. That gap is what the source/sink calibration "
+            "absorbs. The observed peak is {opk:.0f} m in {pk}, the modelled "
+            "peak {mpk:.0f} m, and at {endy} the survey reads {obs:+.0f} m "
+            "against the model's {mod:+.0f} m. (b) The rate the module applied "
+            "over the same years: full trapping while the structure was sound, "
+            "the ramp from the 1996 last repair to the 2003 storm, then held "
+            "at M·f. The rig runs 1967 off 1984 topography, deliberately."
+            .format(M=applied_M, f=applied_f, opk=obs_vals.max(), pk=peak_year,
+                    mpk=modelled.max(), endy=int(obs_years[-1]),
+                    obs=final_obs, mod=final_mod))
 
-    figure.subplots_adjust(top=0.90, bottom=0.155, left=0.085, right=0.985)
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-    out = FIGURE_DIR / "full_life_1967_2017.png"
-    figure.savefig(out, dpi=200)
-    print(f"wrote {out}")
+    written = save(figure, FIGURE_DIR / "full_life_1967_2017.png", close=True)
+    print(f"wrote {written[0]}")
 
 
 if __name__ == "__main__":

@@ -43,7 +43,7 @@ A CAVEAT THAT NO LONGER APPLIES, WITHDRAWN 2026-08-31
     the three were not a controlled comparison. True when written; not true
     now. The fullperiod sweep was re-run 2026-08-30 18:20, five hours AFTER
     the worker topography fix (562c75c, 13:01), and this figure was rebuilt
-    at 23:52 from those cells. The note outlived the problem.
+    at 23:52 from those cells.
 
     VERIFIED, not assumed: re-running cell M60_f0.50 through the worker
     reproduces its stored result to 8.3e-05 on rates of ~2.9 m/yr -- the
@@ -54,10 +54,27 @@ A CAVEAT THAT NO LONGER APPLIES, WITHDRAWN 2026-08-31
 
     All three panels are on the same corrected topography.
 
+STYLE, 2026-09-11
+    Under the project house style (`scripts/hat_figure_style.py`), which
+    replaced this file's own INK/MUTED/ACCENT/FOIL palette and its local
+    rcParams block. Three consequences worth knowing before reading an older
+    copy of these images side by side with a new one:
+
+      * The canvases were 8.6-15 in wide and are now a 190 mm printed column,
+        so the type is the size it claims to be on a page.
+      * The two calibration periods are drawn in the house VINTAGE pair -- the
+        earlier period red, the later blue -- in every panel that shows both.
+        They were pink/teal here and pink meant "the answer" elsewhere in the
+        same figure set.
+      * The suptitles, the italic per-panel verdicts and the footnote
+        paragraphs are off the canvas and in CAPTIONS.md beside the images.
+        The five captions carry every sentence they used to, so nothing in the
+        argument was dropped to make room.
+
 Usage:
     python HAT_calibration_summary_figures.py
 
-Writes output/groin_sweep/figures/ (untracked).
+Writes output/groin_sweep/figures/ (untracked; the PDFs beside the PNGs are).
 Reasoning and results: CALIBRATION_FIGURES.md, beside this file.
 """
 
@@ -73,6 +90,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.colors import LinearSegmentedColormap
 
 _HERE = Path(__file__).resolve()
 PROJECT_BASE_DIR = _HERE.parents[3]
@@ -81,6 +99,9 @@ for _p in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
         sys.path.insert(0, str(_p))
 
 from HAT_fullperiod_target import observed_change_profile  # noqa: E402
+from hat_figure_style import (apply_style, C, C_1984, C_1997,  # noqa: E402
+                              INK, INK_MUTED, caption, error_cmap, figsize,
+                              open_frame, save, _title)
 
 SWEEP = (PROJECT_BASE_DIR / "output" / "groin_sweep" / "1984_2004_edgeBE"
          / "sweep_results.jsonl")
@@ -97,14 +118,19 @@ FIT_DOMAINS = list(range(4, 9))
 SHOW_DOMAINS = list(range(1, 13))
 PERIOD_YEARS = 20.0
 
-INK, MUTED, GRID = "#1a1a2e", "#5c6068", "#d5d8dd"
-ACCENT = "#c2185b"      # the chosen target / the answer
-FOIL = "#7a7f87"        # targets that fail
+# Semantic colours, from the house palette. ACCENT is the target that works
+# and the answer it gives; BASE is a target that fails or a baseline; REF is a
+# reference construction laid over the data (the iso-product curves, a
+# tolerance line); the VINTAGE pair is the two calibration periods.
+ANSWER, FOIL, REF = C["ACCENT"], C["BASE"], C["REF"]
+BAND = "0.94"
 
-plt.rcParams.update({
-    "font.size": 10, "axes.linewidth": 0.7, "axes.labelsize": 10.5,
-    "legend.frameon": False, "pdf.fonttype": 42, "ps.fonttype": 42,
-})
+# Five top cells as one family: a ramp of the accent, so they read as
+# variations of the same thing rather than five unrelated series. viridis was
+# used here until 2026-09-11 and put the best cell in the same green as the
+# reference curves in the neighbouring figure.
+TOP_CMAP = LinearSegmentedColormap.from_list(
+    "hat_accent_ramp", [C["ACCENT_FILL"], C["ACCENT"]])
 
 
 def load_cells():
@@ -133,96 +159,113 @@ def load_cells():
 def fig_three_targets(d):
     """The same cells, scored three ways, with each minimum marked."""
     fp = pd.read_csv(FULLPERIOD)
-    fig, axes = plt.subplots(1, 3, figsize=(15, 4.6))
+    fig, axes = plt.subplots(1, 3, figsize=figsize("double", aspect=0.36),
+                             constrained_layout=True)
     panels = [
         (axes[0], d.groupby("M").differential_err.min(),
-         "(a)  fillet, D5−D6 scalar", "|error| (m/yr)", FOIL,
-         "no admissible M matches it"),
+         "fillet, D5−D6", "|error| (m/yr)", FOIL),
         (axes[1], fp.groupby("M").rmse_m.min(),
-         "(b)  change profile, D1−D12", "RMSE (m)", FOIL,
-         "swamped by Cape Point + D6−D7"),
+         "profile, D1−D12", "RMSE (m)", FOIL),
         (axes[2], d.groupby("M").score_d48.min(),
-         "(c)  change profile, D4−D8 demeaned", "RMSE (m)", ACCENT,
-         "the target that works"),
+         "D4−D8, demeaned", "RMSE (m)", ANSWER),
     ]
-    for ax, series, title, ylab, colour, note in panels:
-        ax.plot(series.index, series.values, marker="o", ms=4.5, lw=1.8,
+    bests = []
+    for i, (ax, series, title, ylab, colour) in enumerate(panels):
+        ax.plot(series.index, series.values, marker="o", ms=3.0, lw=1.4,
                 color=colour)
         best = series.idxmin()
-        ax.axvline(best, color=colour, lw=1.0, ls=(0, (3, 2)), alpha=0.8)
+        bests.append(best)
+        ax.axvline(best, color=colour, lw=0.8, ls=(0, (3, 2)))
         ax.annotate(f"min at M = {best:g}", xy=(best, series.min()),
-                    xytext=(6, 14), textcoords="offset points",
-                    fontsize=9.5, color=colour, fontweight="bold")
-        ax.set_title(title, loc="left", fontsize=11, color=INK, pad=6)
-        ax.set_xlabel("Groin trapping M (m/yr)")
+                    xytext=(4, 10), textcoords="offset points",
+                    fontsize=7.5, color=colour)
+        _title(ax, i, title)
+        ax.set_xlabel("groin trapping M (m/yr)")
         ax.set_ylabel(ylab)
-        ax.grid(color=GRID, lw=0.6)
+        ax.grid(axis="y")
         ax.set_axisbelow(True)
-        for s in ("top", "right"):
-            ax.spines[s].set_visible(False)
-        ax.annotate(note, xy=(0.5, -0.19), xycoords="axes fraction",
-                    ha="center", fontsize=9, color=MUTED, style="italic")
+        open_frame(ax)
 
-    fig.suptitle("Identical model runs, three targets, three answers — the "
-                 "fitted groin is set by the target, not by the data",
-                 fontsize=13, fontweight="bold", color=INK, y=1.02)
-    fig.text(0.5, -0.30,
-             "(a) and (c): period 1, be1 = −42.6, corrected topography, 61 "
-             "cells.   (b): the 40-year continuous window, on the SAME "
-             "corrected topography."
-             " Re-run 2026-08-30 after the worker's topography fix, and "
-             "verified 2026-08-31 to reproduce to 8e-05.",
-             ha="center", fontsize=8.6, color=MUTED)
+    caption(fig,
+            "The same model runs, scored three ways. (a) The fillet, the "
+            "D5−D6 scalar: no admissible M matches it, and fitting it anyway "
+            "rails f at the grid bound. (b) The D1−D12 change profile: ranks "
+            "M = {b:g} best and monotonically, because D2−D4 is Cape Point "
+            "accretion the parameterisation does not represent and D6−D7 is an "
+            "erosion trough peaking one domain north of the structure, which a "
+            "groin actively worsens; a groin signal of about 17 m is swamped. "
+            "(c) D4−D8 demeaned, the target that works: a clean interior "
+            "minimum at M = {c:g}, rising on both sides through M = 160. "
+            "Demeaning removes the level offset the source/sink term owns, and "
+            "D1 is excluded because the cape's 81−104 m change is about five "
+            "times the groin's signal. The fitted groin is therefore set by "
+            "the target, not by the data. (a) and (c) are period 1 at "
+            "be1 = {be:g} on the corrected topography, {n} cells; (b) is the "
+            "40-year continuous window on the SAME corrected topography, "
+            "re-run 2026-08-30 after the worker's topography fix and verified "
+            "2026-08-31 to reproduce to 8e-05."
+            .format(b=bests[1], c=bests[2], be=PINNED_BE1, n=len(d)))
+
     p = OUT / "fig_three_targets.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
-    plt.close(fig)
-    print(f"  {p.name}")
+    print("  {}".format(save(fig, p, close=True)[0].name))
 
 
 def fig_identifiability(d):
     """Is the valley along constant M*f? Tests the config's claim."""
     piv = d.pivot_table(index="fraction", columns="M", values="score_d48")
-    fig, ax = plt.subplots(figsize=(8.6, 5.4))
+    fig, ax = plt.subplots(figsize=figsize("double", aspect=0.50),
+                           constrained_layout=True)
     mesh = ax.pcolormesh(piv.columns, piv.index, piv.values,
-                         cmap="magma_r", shading="auto")
+                         cmap=error_cmap(), shading="auto")
     cb = fig.colorbar(mesh, ax=ax)
     cb.set_label("D4−D8 demeaned RMSE (m)")
+    cb.outline.set_linewidth(0.6)
 
     # Iso-M*f curves. If the valley follows these, only the product is fitted.
     Mg = np.linspace(max(piv.columns.min(), 1), piv.columns.max(), 200)
     for prod in (30, 40, 50, 60):
         f = prod / Mg
         keep = (f >= piv.index.min()) & (f <= piv.index.max())
-        ax.plot(Mg[keep], f[keep], color="#3ddc97", lw=1.2, ls=(0, (4, 2)))
+        ax.plot(Mg[keep], f[keep], color=REF, lw=1.0, ls=(0, (4, 2)))
         if keep.any():
             ax.annotate(f"M·f={prod}", xy=(Mg[keep][-1], f[keep][-1]),
-                        fontsize=8, color="#1b7f5a", ha="right")
+                        fontsize=7, color=REF, ha="right",
+                        bbox=dict(facecolor="white", alpha=0.75,
+                                  edgecolor="none",
+                                  boxstyle="square,pad=0.12"))
 
     best = d.loc[d.score_d48.idxmin()]
-    ax.plot(best.M, best.fraction, marker="*", ms=20, color="#3ddc97",
-            markeredgecolor=INK, markeredgewidth=0.8, zorder=5,
-            label=f"best  M={best.M:g}, f={best.fraction:g}")
-    ax.plot(60, 0.6, marker="o", ms=10, color="none", markeredgecolor="#3ddc97",
-            markeredgewidth=2.0, zorder=5, label="production  M=60, f=0.6")
-    ax.legend(loc="upper right", fontsize=9, labelcolor=INK,
-              facecolor="white", framealpha=0.85, frameon=True)
-    ax.set_xlabel("Groin trapping M (m/yr)")
-    ax.set_ylabel("Deterioration floor f")
-    ax.set_title("Not a product ridge — the iso-M·f curves cut across it; "
-                 "the invariant is M(15.5+4.5f)", loc="left",
-                 fontsize=12, fontweight="bold", color=INK, pad=8)
-    fig.text(0.5, -0.05,
-             "Equal-product cells are not interchangeable: at M·f ≈ 40 the "
-             "RMSE spans 10.4 to 12.5 m, wider than the 3.8 m the groin buys. "
-             "corr(RMSE, M·f) = −0.07,\n"
-             "corr(RMSE, M) = +0.61, corr(RMSE, f) = −0.49 — the target "
-             "responds to M and f separately, so the pair is weakly "
-             "constrained rather than traded off.",
-             ha="center", fontsize=8.8, color=MUTED)
+    ax.plot(best.M, best.fraction, marker="*", ms=13, color=REF,
+            markeredgecolor="white", markeredgewidth=0.7, zorder=5,
+            label=f"best cell, M {best.M:g}, f {best.fraction:g}")
+    ax.plot(60, 0.6, marker="o", ms=8, color="none", markeredgecolor=REF,
+            markeredgewidth=1.6, zorder=5,
+            label="the pair taken forward, M 60, f 0.6")
+    ax.legend(loc="upper right")
+    ax.set_xlabel("groin trapping M (m/yr)")
+    ax.set_ylabel("deterioration floor f")
+    ax.set_title("D4−D8 demeaned error over the (M, f) grid", loc="left")
+
+    caption(fig,
+            "Built to test the claim that only the product M·f is identified, "
+            "and it refutes it: the dashed iso-product curves cut across the "
+            "valley rather than following it. Equal-product cells are not "
+            "interchangeable — at M·f of about 40 the error spans 10.4 to "
+            "12.5 m, wider than the 3.8 m the groin buys — and the "
+            "correlations are −0.07 for M·f against +0.61 for M and −0.49 for "
+            "f, so the target responds to M and f separately. The replacement "
+            "claim, that M and f are each only weakly constrained, is wrong "
+            "too: the invariant is period-1 cumulative trapping, "
+            "M(15.5 + 4.5f). Period 1 mostly precedes the 1996−2003 "
+            "deterioration ramp, so f moves it by only 29% across its whole "
+            "range, while period 2 is 20·M·f and f = 0 gives zero there. M is "
+            "therefore set from period 1 and f from the 1967 rig and period 2, "
+            "and because the best M is 50 at f = 1.0 but 70 at f = 0.6, a poor "
+            "score at M = 50, f = 0.6 means M was too low for that f, not that "
+            "f = 0.6 is wrong.")
+
     p = OUT / "fig_Mf_identifiability.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
-    plt.close(fig)
-    print(f"  {p.name}")
+    print("  {}".format(save(fig, p, close=True)[0].name))
 
 
 def fig_top_profiles(d, obs_dm):
@@ -241,50 +284,67 @@ def fig_top_profiles(d, obs_dm):
 
     top = d.nsmallest(5, "score_d48")
     nog = d[d.M == 0]
-    fig, ax = plt.subplots(figsize=(10.5, 5.6))
+    fig, ax = plt.subplots(figsize=figsize("double", aspect=0.46),
+                           constrained_layout=True)
     ax.axvspan(min(FIT_DOMAINS) - 0.5, max(FIT_DOMAINS) + 0.5,
-               color="#fdf6d8", zorder=0)
-    ax.annotate("FIT WINDOW  D4−D8", xy=(6, 0.02), xycoords=("data", "axes fraction"),
-                ha="center", fontsize=9.5, color="#8a7b1f", fontweight="bold")
-    ax.axvline(5.5, color=ACCENT, lw=1.4, ls=(0, (4, 2)), zorder=2)
-    ax.annotate("Buxton groin", xy=(5.5, 0.93), xycoords=("data", "axes fraction"),
-                rotation=90, ha="right", va="top", fontsize=9, color=ACCENT)
+               color=BAND, zorder=0)
+    ax.annotate("fit window, D4−D8", xy=(6, 0.02),
+                xycoords=("data", "axes fraction"),
+                ha="center", fontsize=7.5, color=INK_MUTED)
+    ax.axvline(5.5, color=INK_MUTED, lw=0.8, ls=(0, (4, 2)), zorder=2)
+    ax.annotate("Buxton groin", xy=(5.5, 0.95),
+                xycoords=("data", "axes fraction"),
+                rotation=90, ha="right", va="top", fontsize=7.5,
+                color=INK_MUTED)
 
-    ax.plot(SHOW_DOMAINS, centred(obs_full), marker="s", ms=7, lw=2.2,
-            ls="--", color=INK, label="observed 1984→2004", zorder=6)
+    ax.plot(SHOW_DOMAINS, centred(obs_full), marker="s", ms=4.0, lw=1.8,
+            ls="--", color=INK, label="observed, 1984 to 2004", zorder=6)
     if len(nog):
         v = [-nog.iloc[0][f"rate_D{k}"] * PERIOD_YEARS for k in SHOW_DOMAINS]
-        ax.plot(SHOW_DOMAINS, centred(v), lw=1.6, ls=":", color=MUTED,
-                label=f"no groin  (RMSE {nog.score_d48.iloc[0]:.1f} m)", zorder=4)
-    cmap = plt.cm.viridis(np.linspace(0.15, 0.8, len(top)))
-    for colour, (_, r) in zip(cmap, top.iterrows()):
+        ax.plot(SHOW_DOMAINS, centred(v), lw=1.4, ls=":", color=FOIL,
+                label=f"no groin, {nog.score_d48.iloc[0]:.1f} m", zorder=4)
+    # Darkest first: `top` is sorted best to worst, and the caption says the
+    # best cell is the darkest.
+    for colour, (_, r) in zip(TOP_CMAP(np.linspace(1.0, 0.15, len(top))),
+                              top.iterrows()):
         v = [-r[f"rate_D{k}"] * PERIOD_YEARS for k in SHOW_DOMAINS]
-        ax.plot(SHOW_DOMAINS, centred(v), lw=1.5, color=colour,
-                label=f"M={r.M:g}, f={r.fraction:g}  ({r.score_d48:.1f} m)",
+        ax.plot(SHOW_DOMAINS, centred(v), lw=1.3, color=colour,
+                label=f"M {r.M:g}, f {r.fraction:g}, {r.score_d48:.1f} m",
                 zorder=5)
 
     ax.set_xlabel("GIS domain")
-    ax.set_ylabel("Shoreline change 1984→2004 (m)\ndemeaned over the fit "
-                  "window   [+ = landward, erosion]")
+    ax.set_ylabel("shoreline change 1984 to 2004 (m)\ndemeaned over the fit"
+                  " window; positive is landward")
     ax.set_xticks(SHOW_DOMAINS)
-    ax.grid(axis="y", color=GRID, lw=0.6)
+    ax.grid(axis="y")
     ax.set_axisbelow(True)
-    for s in ("top", "right"):
-        ax.spines[s].set_visible(False)
-    ax.legend(fontsize=9, loc="upper left")
-    ax.set_title("The groin improves the fit but does not reproduce the shape",
-                 loc="left", fontsize=12, fontweight="bold", color=INK, pad=8)
-    fig.text(0.5, -0.04,
-             "Inside the window the observed profile peaks at D6, dips at D7 "
-             "and peaks again at D8; every cell draws a smooth monotonic rise. "
-             "The RMSE gain comes from\nmatching the overall D4−D8 slope. "
-             "Read the residual as the split between what the groin explains "
-             "and what the source/sink calibration absorbs.",
-             ha="center", fontsize=8.8, color=MUTED)
+    open_frame(ax)
+    # Outside the axes: seven entries inside the panel covered the observed
+    # line across D1-D3, which is the part of the profile the caption is about.
+    fig.legend(loc="outside lower center", ncol=4, frameon=False, fontsize=7.5)
+    ax.set_title("The five best cells and the no-groin baseline", loc="left")
+
+    caption(fig,
+            "The groin improves the fit but does not reproduce the shape. "
+            "Inside the fit window the observed profile peaks at D6, dips at "
+            "D7 and peaks again at D8; every cell draws a smooth monotonic "
+            "rise, and the error gain comes from matching the overall D4−D8 "
+            "slope. Read the residual as the split between what the groin "
+            "explains and what the source/sink calibration absorbs, not as a "
+            "successful shape fit. Everything is demeaned over the fit window "
+            "and plotted landward-positive, so erosion is up and the panel "
+            "reads as a plan view; both sources are seaward-positive and are "
+            "negated at the plotting layer only. The five cells are drawn in "
+            "one colour family because they are variations of one thing, with "
+            "the best cell darkest. Absolute values here are not comparable "
+            "with the production ranking figure: this script approximates "
+            "change as rate times 20 years from the sweep results, while the "
+            "production script reads the shoreline matrix directly. The "
+            "ranking and the shape of the curves are unaffected, and the "
+            "production figure is the one to quote.")
+
     p = OUT / "fig_top_profiles.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
-    plt.close(fig)
-    print(f"  {p.name}")
+    print("  {}".format(save(fig, p, close=True)[0].name))
 
 
 # Transcribed from the pass-by-pass table in hatteras_site_config.py. NOT
@@ -298,105 +358,117 @@ BE_RMSE = {1984: [1.422, 1.219, 0.721, 0.547, 0.527, 0.556, 0.517],
 
 def fig_be_convergence():
     """Interior RMSE per calibration pass, both periods."""
-    fig, ax = plt.subplots(figsize=(9.2, 5.0))
+    fig, ax = plt.subplots(figsize=figsize("double", aspect=0.42),
+                           constrained_layout=True)
     x = np.arange(len(BE_PASSES))
-    for period, colour, mark in ((1984, ACCENT, "o"), (2004, "#1f6f8b", "s")):
-        ax.plot(x, BE_RMSE[period], marker=mark, ms=6.5, lw=2.0, color=colour,
-                label=f"{period}–{period + 20}")
-        ax.annotate(f"{BE_RMSE[period][-1]:.3f}", xy=(x[-1], BE_RMSE[period][-1]),
-                    xytext=(8, -2), textcoords="offset points",
-                    fontsize=9.5, color=colour, fontweight="bold")
-    ax.axvspan(4.5, 5.5, color="#f2f4f6", zorder=0)
+    for period, colour, mark in ((1984, C_1984, "o"), (2004, C_1997, "s")):
+        ax.plot(x, BE_RMSE[period], marker=mark, ms=4.0, lw=1.6, color=colour,
+                label=f"{period} to {period + 20}")
+        ax.annotate(f"{BE_RMSE[period][-1]:.3f}",
+                    xy=(x[-1], BE_RMSE[period][-1]),
+                    xytext=(6, -2), textcoords="offset points",
+                    fontsize=7.5, color=colour)
+    ax.axvspan(4.5, 5.5, color=BAND, zorder=0)
     ax.annotate("edges gained,\ninterior gave back", xy=(5, 1.55),
-                ha="center", fontsize=9, color=MUTED, style="italic")
+                ha="center", fontsize=7.5, color=INK_MUTED)
     ax.set_xticks(x)
-    ax.set_xticklabels(BE_PASSES, fontsize=9)
-    ax.set_ylabel("Interior RMSE vs CoastSat LRR (m/yr)")
-    ax.set_xlabel("Calibration stage")
-    ax.grid(axis="y", color=GRID, lw=0.6)
+    ax.set_xticklabels(BE_PASSES, fontsize=7.5)
+    ax.set_ylabel("interior RMSE against the CoastSat rate (m/yr)")
+    ax.set_xlabel("calibration stage")
+    ax.grid(axis="y")
     ax.set_axisbelow(True)
-    for s in ("top", "right"):
-        ax.spines[s].set_visible(False)
-    ax.legend(fontsize=10)
-    ax.set_title("Source/sink calibration converged in five passes, both "
-                 "periods", loc="left", fontsize=12, fontweight="bold",
-                 color=INK, pad=8)
-    fig.text(0.5, -0.06,
-             "Base run: road + beach/dune management, groin off. Stopping rule "
-             "(convergence_history.json): a pass buys less than 5% of the "
-             "standing RMSE — met at pass 2→3.\nThe GIS 90 re-solve "
-             "cost the interior 0.03 while buying 0.61 at the edge, about "
-             "20:1, so the edge/interior loop contracts rather than "
-             "oscillating.",
-             ha="center", fontsize=8.8, color=MUTED)
+    open_frame(ax)
+    ax.legend(loc="upper right")
+    ax.set_title("Source/sink calibration, pass by pass", loc="left")
+
+    caption(fig,
+            "The source/sink calibration converged in five passes in both "
+            "periods, from a base run with the road and the beach/dune "
+            "management on and the groin off. The stopping rule, recorded in "
+            "convergence_history.json, is that a pass must buy more than 5% of "
+            "the standing error; it was met from pass 2 to pass 3. The shaded "
+            "stage is the GIS 90 re-solve, which cost the interior 0.03 while "
+            "buying 0.61 at the edge, about 20 to 1, so the edge/interior loop "
+            "contracts rather than oscillating. These numbers are TRANSCRIBED "
+            "from the pass-by-pass table in the site config, not re-derived: "
+            "--overwrite replaces a run's row in run_index.csv, so only the "
+            "final pass survives there, and convergence_history.json still "
+            "carries 2026-08-24 baselines from the pre-restructure topography. "
+            "This figure is their durable record, and if one of them was "
+            "mistyped it is mistyped here too.")
+
     p = OUT / "fig_be_convergence.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
-    plt.close(fig)
-    print(f"  {p.name}")
+    print("  {}".format(save(fig, p, close=True)[0].name))
 
 
 def fig_period2_and_bug(d):
     """Why period 2 is unfittable, and what the topography bug was worth."""
-    fig, (a1, a2) = plt.subplots(1, 2, figsize=(12.4, 4.6))
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=figsize("double", aspect=0.42),
+                                 constrained_layout=True)
 
     reach_lo = float(d.differential_m_yr.min())
     reach_hi = float(d.differential_m_yr.max())
-    a1.axhspan(reach_lo, reach_hi, color="#e8f3ee", zorder=0)
-    a1.annotate("reachable by the module\n(trapping ≥ 0)",
+    a1.axhspan(reach_lo, reach_hi, color=BAND, zorder=0)
+    a1.annotate("reachable by the module,\ntrapping at or above zero",
                 xy=(0.5, (reach_lo + reach_hi) / 2), ha="center",
-                fontsize=9, color="#1b7f5a")
-    a1.errorbar([0], [3.46], yerr=[0.70], marker="o", ms=9, lw=2,
-                color=ACCENT, capsize=5, label="observed 1984–2004")
-    a1.errorbar([1], [-3.85], yerr=[0.76], marker="s", ms=9, lw=2,
-                color="#1f6f8b", capsize=5, label="observed 2004–2024")
-    a1.axhline(0, color=INK, lw=0.9)
+                fontsize=7.5, color=INK_MUTED)
+    a1.errorbar([0], [3.46], yerr=[0.70], marker="o", ms=5, lw=1.4,
+                color=C_1984, capsize=3, label="observed, 1984 to 2004")
+    a1.errorbar([1], [-3.85], yerr=[0.76], marker="s", ms=5, lw=1.4,
+                color=C_1997, capsize=3, label="observed, 2004 to 2024")
+    a1.axhline(0, color=INK, lw=0.8)
     a1.set_xlim(-0.6, 1.6)
     a1.set_xticks([0, 1])
-    a1.set_xticklabels(["1984–2004", "2004–2024"])
-    a1.set_ylabel("Fillet trend, D5−D6 (m/yr)")
-    a1.set_title("(a)  Period 2 is outside the module's range",
-                 loc="left", fontsize=11, color=INK, pad=6)
-    a1.grid(axis="y", color=GRID, lw=0.6)
+    a1.set_xticklabels(["1984 to 2004", "2004 to 2024"])
+    a1.set_ylabel("fillet trend, D5−D6 (m/yr)")
+    _title(a1, 0, "period 2 against the module's range")
+    a1.grid(axis="y")
     a1.set_axisbelow(True)
-    for s in ("top", "right"):
-        a1.spines[s].set_visible(False)
-    a1.legend(fontsize=9, loc="lower left")
+    open_frame(a1)
+    a1.legend(loc="lower left")
 
     dom = np.arange(1, 13)
     drift = np.zeros(12)
     drift[3] = 0.1258
     a2.bar(dom, drift, color=FOIL, width=0.65)
-    a2.bar(dom, np.zeros(12), color=ACCENT, width=0.65)
-    a2.axhline(0.005, color=ACCENT, lw=1.4, ls=(0, (4, 2)))
+    a2.axhline(0.005, color=REF, lw=1.0, ls=(0, (4, 2)))
     a2.annotate("guard tolerance 0.005", xy=(12, 0.007), ha="right",
-                fontsize=9, color=ACCENT)
-    a2.annotate("after the fix:\nexactly 0 at every domain", xy=(8, 0.075),
-                ha="center", fontsize=9.5, color="#1b7f5a", fontweight="bold")
+                fontsize=7.5, color=REF)
+    a2.annotate("after the fix, exactly zero\nat every domain", xy=(8, 0.075),
+                ha="center", fontsize=7.5, color=INK_MUTED)
     a2.set_xlabel("GIS domain")
     a2.set_ylabel("|sweep − published| (m/yr)")
     a2.set_xticks(dom)
-    a2.set_title("(b)  The topography-product bug, 25× the tolerance",
-                 loc="left", fontsize=11, color=INK, pad=6)
-    a2.grid(axis="y", color=GRID, lw=0.6)
+    _title(a2, 1, "the topography-product bug")
+    a2.grid(axis="y")
     a2.set_axisbelow(True)
-    for s in ("top", "right"):
-        a2.spines[s].set_visible(False)
+    open_frame(a2)
 
-    fig.text(0.5, -0.06,
-             "(a) A groin with trapping ≥ 0 can only WIDEN the updrift"
-             "−downdrift gap. Period 1's observed gap widens; period 2's "
-             "narrows, so no M ≥ 0 reaches it and there is no joint fit.\n"
-             "(b) The sweep worker resolved topography without naming a "
-             "product, so DEFAULT_PRODUCT (2004-start) answered and 1984 cells "
-             "were built on the 2004 island.",
-             ha="center", fontsize=8.8, color=MUTED)
+    caption(fig,
+            "(a) Why period 2 is not fitted. A groin whose trapping is bounded "
+            "at or above zero can only WIDEN the updrift-to-downdrift gap. "
+            "Period 1's observed gap widens, period 2's narrows, so no M at or "
+            "above zero reaches it and there is no joint fit; the 2026-08-30 "
+            "joint fit railing at M = 160 was not a failure to repair, because "
+            "fitting period 2 is the wrong thing to attempt. The shaded band "
+            "is the range the sweep cells actually span. The groin still RUNS "
+            "in period 2: GroinCallback carries an absolute calendar timeline, "
+            "so no period-specific configuration exists, and running it there "
+            "is right for consistency of the structure's timeline rather than "
+            "because it explains that period's shoreline. (b) What the "
+            "topography-product bug was worth, at 25 times the guard "
+            "tolerance: the sweep worker resolved topography without naming a "
+            "product, so the 2004-start default answered and 1984 cells were "
+            "built on the 2004 island. The single non-zero domain is the "
+            "measured drift before the fix; after it, every domain matches the "
+            "published run exactly.")
+
     p = OUT / "fig_period2_and_bug.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
-    plt.close(fig)
-    print(f"  {p.name}")
+    print("  {}".format(save(fig, p, close=True)[0].name))
 
 
 def main():
+    apply_style()
     OUT.mkdir(parents=True, exist_ok=True)
     d, obs_dm = load_cells()
     print(f"{len(d)} cells at be1 = {PINNED_BE1}")
