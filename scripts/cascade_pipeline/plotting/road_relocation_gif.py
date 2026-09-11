@@ -59,47 +59,67 @@ from cascade_pipeline.plotting.shoreline_gif import (
     _slug,
 )
 
-COLOR_DUNE = "#1f6fb4"
-COLOR_ROAD = "#b03030"
-COLOR_RELOC = "#f0a202"
-COLOR_BAY = "#4a8fbf"
+# `scripts/` is on sys.path already -- cascade_pipeline lives inside it.
+from hat_figure_style import (
+    C, C_1997, DOMAIN_AXIS_LABEL, GRID_C, apply_style, elevation_cmap,
+)
+from hat_figure_style import INK as _HOUSE_INK
+from hat_figure_style import INK_MUTED as _HOUSE_INK_MUTED
+from hat_figure_style import figsize as _figsize
+
+apply_style()
+
+# THE PALETTE IS THE HOUSE PALETTE (2026-09-10). The glyphs, the rings and the
+# panel wording are unchanged -- those were settled on 2026-09-09 and are
+# deliberate -- but every colour now comes from hat_figure_style, so NC-12 is
+# the same ink here as on the road plan view, the relocation marker is the
+# same orange as shoreline_gif's, and the ocean shoreline is the cool pole of
+# the vintage pair rather than a fourth near-identical blue.
+COLOR_DUNE = C_1997                     # ocean shoreline
+COLOR_ROAD = C["ROAD"]                  # NC-12, as everywhere else
+COLOR_RELOC = C["ADDED"]                # a relocation the module triggered
+COLOR_BAY = C["WATER"]                  # the sound edge
 # Deliberately not the star colour: a prescribed move and a module-triggered
 # one are different claims and must not share a glyph. Purple rather than the
 # old cyan, which sat a few degrees of hue from the dune line and read as a
-# marker ON that line at GIF resolution.
-COLOR_PRESCRIBED = "#6a3d9a"
-COLOR_LAND = "#efe0bd"
+# marker ON that line at GIF resolution. Now the house purple, which is the
+# same hue at a hair more saturation.
+COLOR_PRESCRIBED = C["ACCENT"]
+# The barrier interior: the style module's 0.5-1.0 m elevation class, so the
+# island body is the same sand tone as on every elevation figure.
+COLOR_LAND = elevation_cmap()[0].colors[2]
 
 
 # =============================================================================
 # Figure style
 # =============================================================================
 # One place for the typographic and axis conventions every frame in this module
-# shares, so the animations read as journal figures rather than as default
-# matplotlib output. Applied per-artist rather than through rcParams: these
-# functions are called from long analysis scripts that draw their own figures,
-# and a module that mutates global rcParams as a side effect of being imported
-# is a debugging trap.
+# shares. The VALUES are the house standard's now, applied per-artist as before
+# -- these functions are called from long analysis scripts that draw their own
+# figures, and per-artist styling means a frame looks the same whichever entry
+# point drew it. (apply_style() above sets the typeface and the rc defaults;
+# it is idempotent, and shoreline_gif calls it too, so importing this module
+# has been touching rcParams since 2026-09-10 either way.)
 
-FONT_TITLE = 11.5
-FONT_PANEL = 9.5
-FONT_AXIS = 9.5
-FONT_TICK = 8.5
+FONT_TITLE = 10.0
+FONT_PANEL = 9.0
+FONT_AXIS = 9.0
+FONT_TICK = 8.0
 FONT_LEGEND = 8.0
 FONT_NOTE = 7.5
+FONT_TRACKER = 7.0      # it sits inside a half-width panel, so below the notes
 
-INK = "#1a1a1a"
-INK_LIGHT = "#5a5a5a"
-INK_AXIS = "#444444"
-RULE = "#c9c9c9"
-GRID = "#b8b8b8"
+INK = _HOUSE_INK
+INK_LIGHT = _HOUSE_INK_MUTED
+INK_AXIS = _HOUSE_INK
+RULE = "0.85"
+GRID = GRID_C
 
-# Frames are sized to a target pixel WIDTH rather than to a fixed dpi: the
-# full-island window is twice the figure width of an event window, and a fixed
-# dpi makes its GIF four times the file size for no gain, since nobody views a
-# 3000 px animation at full scale.
+# Frames are drawn at the PRINTED double-column width and the dpi carries the
+# pixels: an 18 in canvas set this 8-9 pt type at 3-4 pt on a page. The target
+# pixel width is what it always was, so the GIFs are the same size on screen.
 FRAME_TARGET_PX = 1500.0
-FRAME_DPI_RANGE = (110.0, 165.0)
+FRAME_DPI_RANGE = (110.0, 230.0)
 
 
 def _frame_dpi(width_in):
@@ -292,10 +312,15 @@ _tracker.start_year = 1984      # set by the makers from the run before drawing
 
 
 def _tracker_label(c):
-    """The per-panel line: 'historical 3 of 10 (window 2 of 4) - elsewhere 2'."""
-    win = (f" (this window {c['hist_hit_win']} of {c['hist_total_win']})"
+    """The per-panel line: 'historical 3 of 10 (window 2 of 4) - elsewhere 2'.
+
+    Short, as the line above says. The long form ("historical domains ... this
+    window ...") was 3.6 in of 7.5 pt type, so at the printed width it overran
+    its half-width panel and ran across the gutter into the other one.
+    """
+    win = (f" (window {c['hist_hit_win']} of {c['hist_total_win']})"
            if c["hist_total_win"] and c["hist_total_win"] < c["hist_total"] else "")
-    return (f"relocated: historical domains {c['hist_hit']} of {c['hist_total']}{win}"
+    return (f"relocated: historical {c['hist_hit']} of {c['hist_total']}{win}"
             f"  \u00b7  elsewhere {c['elsewhere']}")
 
 
@@ -307,7 +332,7 @@ def _observed_label(c):
 
 def _draw_tracker(ax, text):
     ax.text(0.995, 0.975, text, transform=ax.transAxes, ha="right", va="top",
-            fontsize=FONT_NOTE, color=INK, zorder=20,
+            fontsize=FONT_TRACKER, color=INK, zorder=20,
             bbox=dict(facecolor="white", alpha=0.88, edgecolor="none",
                       boxstyle="square,pad=0.3"))
 
@@ -461,7 +486,7 @@ def make_road_relocation_gif(
             else (ymax + ypad, ymin - ypad))
 
     n_dom = len(x)
-    width = float(np.clip(5.0 + 0.16 * n_dom, 9.0, 18.0))
+    width = _figsize("double")[0]
     year_idx = list(range(0, n_years, max(int(stride), 1)))
     if year_idx[-1] != n_years - 1:
         year_idx.append(n_years - 1)
@@ -469,13 +494,13 @@ def make_road_relocation_gif(
     frames = []
     for t in year_idx:
         year = run_a.start_year + t
-        fig, axes = plt.subplots(1, 2, figsize=(width, 5.4),
+        fig, axes = plt.subplots(1, 2, figsize=(width, 4.3),
                                  dpi=_frame_dpi(width), sharey=True)
         # Fixed margins (NOT bbox_inches="tight") so every frame is the same
         # size -- mismatched frame dimensions break GIF assembly. Left margin
         # is wide enough for the y-label at every window width; the bottom
         # clears a two-row legend strip.
-        fig.subplots_adjust(left=0.095, right=0.985, top=0.845, bottom=0.235,
+        fig.subplots_adjust(left=0.105, right=0.985, top=0.825, bottom=0.255,
                             wspace=0.05)
         fig.patch.set_facecolor("white")
 
@@ -506,7 +531,7 @@ def make_road_relocation_gif(
                 # and the back-barrier shoreline.
                 ax.fill_between(x, series[t], bay[t], color=COLOR_LAND,
                                 alpha=0.55, zorder=1, lw=0)
-                ax.plot(x, bay[t], color=COLOR_BAY, lw=1.1, zorder=3,
+                ax.plot(x, bay[t], color=COLOR_BAY, lw=1.3, zorder=3,
                         label="back-barrier")
             ax.plot(x, series[t], color=COLOR_DUNE, lw=1.9,
                     label="dune line", zorder=3)
@@ -520,7 +545,7 @@ def make_road_relocation_gif(
             fired = np.flatnonzero(reloc[t])
             if fired.size:
                 ax.plot(x[fired], road[t][fired], marker="*", ls="none",
-                        ms=15, mfc=COLOR_RELOC, mec="k", mew=0.6, zorder=6,
+                        ms=10, mfc=COLOR_RELOC, mec="k", mew=0.5, zorder=6,
                         label="relocated this year")
 
             # The PRESCRIBED move, marked only in the arm that carries it and
@@ -533,12 +558,12 @@ def make_road_relocation_gif(
                         col = gis - gis_lo
                         if np.isfinite(road[t][col]):
                             ax.plot([x[col]], [road[t][col]], marker="o",
-                                    ls="none", ms=17, mfc="none",
-                                    mec=COLOR_PRESCRIBED, mew=1.8, zorder=7)
+                                    ls="none", ms=11, mfc="none",
+                                    mec=COLOR_PRESCRIBED, mew=1.4, zorder=7)
 
             for gis, ev_year in event_years.items():
                 if gis_lo <= gis <= gis_hi:
-                    ax.axvline(gis, color="#8a8a8a", ls=(0, (1, 2.5)), lw=0.9,
+                    ax.axvline(gis, color=INK_LIGHT, ls=(0, (1, 2.5)), lw=0.9,
                                zorder=2,
                                alpha=0.85 if year >= ev_year else 0.30)
 
@@ -546,8 +571,8 @@ def make_road_relocation_gif(
             # (b) in a caption rather than by position.
             ax.set_title(f"({letter})  {label}", loc="left",
                          fontsize=FONT_PANEL, color=INK, pad=6)
-            ax.set_xlabel("alongshore domain (GIS)", fontsize=FONT_AXIS,
-                          color=INK, labelpad=6)
+            ax.set_xlabel(DOMAIN_AXIS_LABEL, fontsize=FONT_AXIS,
+                          color=INK, labelpad=5)
 
         # No arrow glyph: the label is rotated 90 degrees and a triangle
         # rotates with it, so it ends up pointing at the axis, not landward.
@@ -560,21 +585,21 @@ def make_road_relocation_gif(
         # runs off the canvas is worse than no legend at all.
         handles = [
             Line2D([], [], color=COLOR_DUNE, lw=1.9, label="ocean shoreline"),
-            Line2D([], [], color=COLOR_BAY, lw=1.1,
+            Line2D([], [], color=COLOR_BAY, lw=1.3,
                    label="back-barrier shoreline"),
             Patch(facecolor=COLOR_LAND, edgecolor="none",
                   label="barrier interior"),
             Line2D([], [], color=COLOR_ROAD, lw=1.7, label="NC-12"),
             Patch(facecolor=COLOR_ROAD, alpha=0.18, edgecolor="none",
                   label="shoreline-to-road setback"),
-            Line2D([], [], color="none", marker="*", ms=12,
+            Line2D([], [], color="none", marker="*", ms=9,
                    mfc=COLOR_RELOC, mec="k", mew=0.5,
                    label="module-triggered relocation"),
-            Line2D([], [], color="#8a8a8a", ls=(0, (1, 2.5)), lw=0.9,
+            Line2D([], [], color=INK_LIGHT, ls=(0, (1, 2.5)), lw=0.9,
                    label="relocated historically"),
         ]
-        _ring = [Line2D([], [], color="none", marker="o", ms=9, mfc="none",
-                        mec=COLOR_PRESCRIBED, mew=1.6,
+        _ring = [Line2D([], [], color="none", marker="o", ms=7, mfc="none",
+                        mec=COLOR_PRESCRIBED, mew=1.4,
                         label="measured move applied ("
                               + ", ".join(l for l, f in zip("ab", prescribed_panels) if f) + ")")]
         handles = handles[:-1] + (_ring if any(prescribed_panels) else []) + handles[-1:]
@@ -591,11 +616,15 @@ def make_road_relocation_gif(
         _cb = _tracker(road_series_b, event_years, bool(prescribed_panels[1]), t, gis_lo, gis_hi)
         _draw_tracker(axes[0], _tracker_label(_ca))
         _draw_tracker(axes[1], _tracker_label(_cb))
-        _figure_header(fig, 0.095, 0.985, head, year,
+        _figure_header(fig, 0.105, 0.985, head, year,
                        note=_observed_label(_ca) if event_years else None, note_pos="centre")
 
+        # dpi EXPLICIT: the house rcParams put savefig.dpi at 300 for print,
+        # which would render every frame at nearly twice the pixels the GIF
+        # is sized for (and blow up the file).
         buf = io.BytesIO()
-        fig.savefig(buf, format="png", facecolor=fig.get_facecolor())
+        fig.savefig(buf, format="png", dpi=fig.dpi,
+                    facecolor=fig.get_facecolor())
         plt.close(fig)
         buf.seek(0)
         frames.append(Image.open(buf).convert("P", palette=Image.ADAPTIVE))
@@ -660,7 +689,7 @@ def make_all_road_gifs(arm_a, arm_b, road_series_a, road_series_b,
 # (176 rows where the barrier is only ~32), so most of it is sound. Cells at
 # or below 0 m MHW are masked and drawn as water rather than as low land.
 
-WATER_COLOR = "#c8dcea"
+WATER_COLOR = C["WATER"]
 ROAD_ROWS = 2                  # road_width 20 m / dy 10 m: the two rows bulldoze() writes
 
 # Cross-shore window drawn around the window's reference shoreline, in dam.
@@ -926,15 +955,15 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
         _cross_shore_rows(cascade_b, gis_lo, gis_hi, domains, year_idx, x_ref))
 
     n_dom = gis_hi - gis_lo + 1
-    width = float(np.clip(5.0 + 0.42 * n_dom, 9.0, 18.0))
+    width = _figsize("double")[0]
 
     frames = []
     for t in year_idx:
         year = start_year + t
-        fig, axes = plt.subplots(2, 1, figsize=(width, 7.6),
+        fig, axes = plt.subplots(2, 1, figsize=(width, 6.0),
                                  dpi=_frame_dpi(width), sharex=True)
         # bottom clears the legend strip and the planform note beneath it
-        fig.subplots_adjust(left=0.085, right=0.90, top=0.885, bottom=0.155,
+        fig.subplots_adjust(left=0.085, right=0.90, top=0.860, bottom=0.155,
                             hspace=0.20)
         fig.patch.set_facecolor("white")
 
@@ -964,16 +993,16 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
                                            facecolor=COLOR_ROAD, edgecolor="none",
                                            alpha=0.9, zorder=5))
             if fired.any():
-                ax.plot(x[fired], rows[fired], marker="*", ls="none", ms=15,
-                        mfc=COLOR_RELOC, mec="k", mew=0.6, zorder=6)
+                ax.plot(x[fired], rows[fired], marker="*", ls="none", ms=10,
+                        mfc=COLOR_RELOC, mec="k", mew=0.5, zorder=6)
             if is_prescribed_arm:
                 for gis, ev_year in event_years.items():
                     if gis_lo <= gis <= gis_hi and year == ev_year:
                         col = gis - gis_lo
                         if col < len(rows) and np.isfinite(rows[col]):
                             ax.plot([x[col]], [rows[col]], marker="o",
-                                    ls="none", ms=17, mfc="none",
-                                    mec=COLOR_PRESCRIBED, mew=1.8, zorder=7)
+                                    ls="none", ms=11, mfc="none",
+                                    mec=COLOR_PRESCRIBED, mew=1.4, zorder=7)
 
             cell = grid.shape[1] / n_dom
             ticks = np.arange(n_dom) * cell + cell / 2.0
@@ -982,7 +1011,7 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
             for gis in event_years:
                 if gis_lo <= gis <= gis_hi:
                     ax.axvline((gis - gis_lo) * cell + cell / 2.0,
-                               color="#2b2b2b", ls=(0, (1, 2.5)), lw=0.9,
+                               color=INK, ls=(0, (1, 2.5)), lw=0.9,
                                zorder=4, alpha=0.7)
             # Cells are 10 m, so the axis is labelled in metres: "row 23"
             # is not a distance anyone can check against a map.
@@ -1002,9 +1031,9 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
             ax.set_title(f"({letter})  {label}", loc="left",
                          fontsize=FONT_PANEL, color=INK, pad=5)
 
-        axes[1].set_xlabel("alongshore domain (GIS)", fontsize=FONT_AXIS,
-                           color=INK, labelpad=6)
-        cax = fig.add_axes([0.915, 0.155, 0.014, 0.73])
+        axes[1].set_xlabel(DOMAIN_AXIS_LABEL, fontsize=FONT_AXIS,
+                           color=INK, labelpad=5)
+        cax = fig.add_axes([0.915, 0.155, 0.014, 0.705])
         cbar = fig.colorbar(im, cax=cax)
         cbar.set_label("elevation (m MHW)", fontsize=FONT_AXIS, color=INK)
         cbar.ax.tick_params(labelsize=FONT_TICK, width=0.8, length=3.0,
@@ -1019,15 +1048,15 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
         # glyphs themselves.
         _topo_handles = [
             Line2D([], [], color=COLOR_ROAD, lw=2.0, label="NC-12"),
-            Line2D([], [], color="none", marker="*", ms=12,
+            Line2D([], [], color="none", marker="*", ms=9,
                    mfc=COLOR_RELOC, mec="k", mew=0.5,
                    label="module-triggered relocation (either panel)")]
         if any(prescribed_panels):
-            _topo_handles.append(Line2D([], [], color="none", marker="o", ms=9, mfc="none",
-                                        mec=COLOR_PRESCRIBED, mew=1.6,
+            _topo_handles.append(Line2D([], [], color="none", marker="o", ms=7, mfc="none",
+                                        mec=COLOR_PRESCRIBED, mew=1.4,
                                         label="measured move applied ("
                                               + ", ".join(l for l, f in zip("ab", prescribed_panels) if f) + ")"))
-        _topo_handles.append(Line2D([], [], color="#2b2b2b", ls=(0, (1, 2.5)), lw=0.9,
+        _topo_handles.append(Line2D([], [], color=INK, ls=(0, (1, 2.5)), lw=0.9,
                                     label="relocated historically"))
         fig.legend(handles=_topo_handles, loc="lower center", ncol=4, fontsize=FONT_LEGEND, frameon=False,
             labelcolor=INK, handlelength=1.7, handletextpad=0.6,
@@ -1046,8 +1075,10 @@ def make_topography_gif(cascade_a, cascade_b, road_series_a, road_series_b,
             fig.text(0.085, 0.008, planform_note, fontsize=FONT_NOTE,
                      color=INK_LIGHT, style="italic")
 
+        # dpi EXPLICIT -- see the note in make_road_relocation_gif.
         buf = io.BytesIO()
-        fig.savefig(buf, format="png", facecolor=fig.get_facecolor())
+        fig.savefig(buf, format="png", dpi=fig.dpi,
+                    facecolor=fig.get_facecolor())
         plt.close(fig)
         buf.seek(0)
         frames.append(Image.open(buf).convert("P", palette=Image.ADAPTIVE))

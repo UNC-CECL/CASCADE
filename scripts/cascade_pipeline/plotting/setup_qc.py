@@ -23,10 +23,23 @@ import matplotlib.pyplot as plt
 from cascade_pipeline.hindcast import DAM_TO_M
 from cascade_pipeline.plotting import init_planview
 
+# `scripts/` is on sys.path already -- cascade_pipeline lives inside it.
+from hat_figure_style import (
+    C, C_1984, C_1997, DOMAIN_AXIS_LABEL, INK_MUTED, _title, apply_style,
+    figsize, open_frame,
+)
+
+apply_style()
+
 __all__ = ["plot_island_orientation", "plot_initialization_planview",
            "plot_sea_level_rise"]
 
-GIS_AXIS_LABEL = "GIS domain (S -> N, Cape Point to Pea Island)"
+# The one alongshore axis label the whole project uses. The endpoints this
+# constant used to carry ("Cape Point to Pea Island") were the only CORRECT
+# pair anywhere in the repo, so they are not lost: ENDPOINT_NOTE states them
+# beside each figure's title instead.
+GIS_AXIS_LABEL = DOMAIN_AXIS_LABEL
+ENDPOINT_NOTE = "domain 1 Cape Point, domain 90 Pea Island"
 
 
 def plot_island_orientation(offsets_by_year, active_year, geometry):
@@ -44,40 +57,49 @@ def plot_island_orientation(offsets_by_year, active_year, geometry):
     gis_ids = np.arange(geometry.first_gis_id, geometry.last_gis_id + 1)
 
     fig, (ax_offset, ax_diff) = plt.subplots(
-        2, 1, figsize=(13, 7), sharex=True,
-        gridspec_kw={"height_ratios": [2, 1]})
+        2, 1, figsize=figsize("double", aspect=0.62), sharex=True,
+        gridspec_kw={"height_ratios": [2, 1]}, constrained_layout=True)
 
-    for year in sorted(offsets_by_year):
+    # Two start years are two vintages: the earlier red, the later blue.
+    years_sorted = sorted(offsets_by_year)
+    vintage = {y: (C_1984 if i == 0 else C_1997)
+               for i, y in enumerate(years_sorted)}
+    for year in years_sorted:
         is_active = year == active_year
         ax_offset.plot(gis_ids, offsets_by_year[year][real] * DAM_TO_M,
-                       lw=2.2 if is_active else 1.2,
-                       alpha=1.0 if is_active else 0.5,
-                       label=f"{year}" + ("  (active)" if is_active else ""))
+                       color=vintage.get(year, C["BASE"]),
+                       lw=1.8 if is_active else 1.0,
+                       alpha=1.0 if is_active else 0.45,
+                       label=f"{year}" + (" (this run)" if is_active else ""))
 
-    ax_offset.set_ylabel("Island offset (m)")
-    ax_offset.set_title("Island orientation: cross-shore starting position "
-                        "by domain")
-    ax_offset.legend()
+    ax_offset.set_ylabel("island offset (m)")
+    _title(ax_offset, 0, "cross-shore starting position by domain")
+    ax_offset.set_title(ENDPOINT_NOTE, loc="right", fontsize=7.5,
+                        color=INK_MUTED)
+    ax_offset.legend(frameon=False)
 
     years = sorted(offsets_by_year)
     if len(years) == 2:
         earlier, later = years
         difference_m = ((offsets_by_year[later][real]
                          - offsets_by_year[earlier][real]) * DAM_TO_M)
-        ax_diff.plot(gis_ids, difference_m, color="#c0392b", lw=1.4)
-        ax_diff.axhline(0, color="k", lw=0.8)
-        ax_diff.set_ylabel(f"{later} - {earlier} (m)")
+        ax_diff.plot(gis_ids, difference_m, color=C["ACCENT"], lw=1.3)
+        ax_diff.axhline(0, color=INK_MUTED, lw=0.8, ls=(0, (4, 3)))
+        ax_diff.set_ylabel(f"{later} minus {earlier} (m)")
         # NOT shoreline change: each year is zeroed on its own most-seaward
         # domain, so this carries a constant offset. Pattern only; section
-        # 9.4 rebuilds the real change from the raw transect files.
-        ax_diff.set_title(f"Offset-file difference, pattern only -- not "
-                          f"shoreline change "
-                          f"(mean {difference_m.mean():+.1f} m)")
+        # 9.4 rebuilds the real change from the raw transect files. The mean
+        # stays on the canvas: these figures are handed back to a notebook and
+        # never written to disk, so there is no CAPTIONS.md to hold it.
+        _title(ax_diff, 1, "offset-file difference, pattern only")
+        ax_diff.set_title(f"mean {difference_m.mean():+.1f} m", loc="right",
+                          fontsize=7.5, color=INK_MUTED)
 
     ax_diff.set_xlabel(GIS_AXIS_LABEL)
     for ax in (ax_offset, ax_diff):
-        ax.grid(alpha=0.3)
-    fig.tight_layout()
+        ax.grid(axis="y")
+        ax.set_axisbelow(True)
+        open_frame(ax)
     return fig
 
 
@@ -104,23 +126,26 @@ def plot_initialization_planview(elevation_file_paths, island_offset_dam,
     domain_grids = init_planview.load_domain_grids(elevation_file_paths,
                                                    config)
 
-    fig, axes = plt.subplots(2, 1, figsize=(16, 10))
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=6.4),
+                             constrained_layout=True)
     for ax, with_buffers in zip(axes, (False, True)):
         canvas, col_starts, cells, first_real = init_planview.build_canvas(
             domain_grids, offset_cells, geometry,
             include_buffers=with_buffers, config=config)
         init_planview.plot_canvas(
             canvas, col_starts, cells, first_real, geometry,
-            title=f"CASCADE initialization, {start_year} orientation"
-                  + ("  |  with buffers" if with_buffers
-                     else "  |  real domains only"),
+            title=("with buffer domains" if with_buffers
+                   else "real domains only"),
             ax=ax, include_buffers=with_buffers,
             xlabel=GIS_AXIS_LABEL, config=config)
+        if not with_buffers:      # said once, on the upper panel
+            ax.set_title(f"{start_year} initialization surface  ·  "
+                         f"{ENDPOINT_NOTE}", loc="right", fontsize=7.5,
+                         color=INK_MUTED)
         if verbose:
             print(f"{'with buffers' if with_buffers else 'real only  '}: "
                   f"canvas {canvas.shape}")
 
-    fig.tight_layout()
     return fig
 
 
@@ -134,26 +159,33 @@ def plot_sea_level_rise(periods, active_year):
     Returns:
         The matplotlib Figure.
     """
-    fig, ax = plt.subplots(figsize=(9, 4.5))
+    fig, ax = plt.subplots(figsize=figsize("double", aspect=0.40),
+                           constrained_layout=True)
 
-    for year in sorted(periods):
+    years_sorted = sorted(periods)
+    vintage = {y: (C_1984 if i == 0 else C_1997)
+               for i, y in enumerate(years_sorted)}
+    for year in years_sorted:
         period = periods[year]
         run_years = period["end_year"] - year
         calendar_years = np.arange(year, period["end_year"] + 1)
         cumulative_m = (calendar_years - year) * period["sea_level_rise_rate"]
         is_active = year == active_year
         ax.plot(calendar_years, cumulative_m,
-                lw=2.2 if is_active else 1.2,
-                alpha=1.0 if is_active else 0.5,
-                label=f"{year}-{period['end_year']}  "
-                      f"{period['sea_level_rise_rate']} m/yr  "
+                color=vintage.get(year, C["BASE"]),
+                lw=1.8 if is_active else 1.0,
+                alpha=1.0 if is_active else 0.45,
+                label=f"{year}–{period['end_year']}, "
+                      f"{period['sea_level_rise_rate']} m/yr "
                       f"({cumulative_m[-1]:.2f} m over {run_years} yr)"
-                      + ("  (active)" if is_active else ""))
+                      + (" (this run)" if is_active else ""))
 
-    ax.set_xlabel("Calendar year")
-    ax.set_ylabel("Cumulative RSLR (m)")
-    ax.set_title("Relative sea level rise by period")
-    ax.grid(alpha=0.3)
-    ax.legend(fontsize=9)
-    fig.tight_layout()
+    ax.set_xlabel("calendar year")
+    ax.set_ylabel("cumulative RSLR (m)")
+    # No panel letter: one panel, nothing to cite it against.
+    ax.set_title("relative sea level rise by period", loc="left")
+    ax.grid(axis="y")
+    ax.set_axisbelow(True)
+    open_frame(ax)
+    ax.legend(frameon=False, loc="upper left")
     return fig

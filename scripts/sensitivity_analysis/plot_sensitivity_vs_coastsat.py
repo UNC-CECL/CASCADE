@@ -25,7 +25,9 @@ Usage
 """
 
 import os
-import glob
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -38,6 +40,18 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 import warnings
 warnings.filterwarnings("ignore")
 
+# Same anchor its sibling HAT_plot_sensitivity.py uses, so run_layout -- the
+# one definition of where a run folder keeps its files -- is importable.
+_HERE = Path(__file__).resolve()
+_REPO_ROOT = _HERE.parents[2]
+if not (_REPO_ROOT / "pyproject.toml").exists():
+    raise RuntimeError(
+        f"CASCADE repo root not found: {_REPO_ROOT} has no pyproject.toml.")
+if str(_REPO_ROOT / "scripts") not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT / "scripts"))
+
+from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
+
 # =============================================================================
 # SECTION 1: SESSION FOLDER  <- edit this each time
 # =============================================================================
@@ -46,7 +60,9 @@ warnings.filterwarnings("ignore")
 #   SESSION_DIR/
 #     wave_height/
 #       HAT_1984_2004_wvSens_wave_height_1p0/
-#         HAT_1984_2004_wvSens_wave_height_1p0_shoreline_change_rate.csv
+#         tables/shoreline_change_rate.csv     (or, before the 2026-09-10
+#         layout change, the flat *_shoreline_change_rate.csv beside it --
+#         run_layout resolves either)
 #       ...
 #     wave_period/ ...
 #     wave_asymmetry/ ...
@@ -194,9 +210,12 @@ def discover_param_runs(session_dir, param_name):
         except ValueError:
             continue
 
-        csvs = glob.glob(os.path.join(full_path, "*_shoreline_change_rate.csv"))
-        if csvs:
-            runs[val] = csvs[0]
+        # RESOLVED, NOT GLOBBED. The rate CSV is tables/shoreline_change_rate.csv
+        # in the new run layout and {run}_shoreline_change_rate.csv in the old;
+        # the run folder is named for the run, so it supplies the prefix.
+        csv_path = resolve_run_file(full_path, "rate_csv", folder_name)
+        if csv_path.is_file():
+            runs[val] = str(csv_path)
 
     return dict(sorted(runs.items()))
 

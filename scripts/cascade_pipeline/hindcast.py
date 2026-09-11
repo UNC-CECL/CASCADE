@@ -62,6 +62,7 @@ from hat_topo_version import domain_arrays
 
 from cascade_pipeline import roadway as roadway_module
 from cascade_pipeline.coastsat_loess import compute_domain_means
+from cascade_pipeline.run_layout import write_path
 
 __all__ = [
     "USE_SANDBOX_CASCADE", "Cascade",
@@ -1037,12 +1038,12 @@ def run_cascade_simulation(
         print(f"\n  model state NOT saved (HAT_SAVE_MODEL_STATE=false)")
 
     if nourishment_log:
-        _bn_csv = os.path.join(run_dir, f"{name}_nourishment_log.csv")
+        _bn_csv = str(write_path(run_dir, "nourishment_csv", name))
         pd.DataFrame(nourishment_log).to_csv(_bn_csv, index=False)
         print(f"  nourishment log ({len(nourishment_log)} events): {_bn_csv}")
 
     if groin_callback is not None and groin_callback.year_TS:
-        _groin_csv = os.path.join(run_dir, f"{name}_groin_diagnostics.csv")
+        _groin_csv = str(write_path(run_dir, "groin_csv", name))
         pd.DataFrame(groin_callback.diagnostics_frame()).to_csv(
             _groin_csv, index=False)
         print(f"  groin diagnostics ({len(groin_callback.year_TS)} yrs): "

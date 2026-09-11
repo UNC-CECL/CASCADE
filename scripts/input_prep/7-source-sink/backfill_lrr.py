@@ -30,6 +30,7 @@ _HERE = Path(__file__).resolve()
 _REPO_ROOT = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(_REPO_ROOT / "scripts"))
 
+from cascade_pipeline.run_layout import resolve  # noqa: E402
 from cascade_pipeline.shoreline import compute_change_rate, compute_lrr  # noqa: E402
 from hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
 
@@ -44,21 +45,32 @@ ENDPOINT_TOLERANCE_M_YR = 1e-9
 def find_pairs(root=RAW_RUNS):
     """Every (rate_csv, shoreline_matrix) pair under a raw-runs tree.
 
+    Runs are DISCOVERED by their metadata file, not by the rate CSV. The rate
+    CSV moved into the run folder's tables/ subfolder and dropped the run-name
+    prefix, so a `*_shoreline_change_rate.csv` glob no longer finds a migrated
+    run; the metadata file stays at the run root with its prefix, and
+    run_layout.resolve then finds the CSV and the matrix in whichever layout
+    the folder is in.
+
     Args:
         root: Directory to walk. Period and preset nesting is not assumed --
-            the two files are matched by living in the same directory.
+            the files are matched by belonging to the same run folder.
 
     Returns:
         A list of (csv_path, npy_path) tuples, sorted by run directory.
     """
     pairs = []
-    for csv_path in sorted(root.rglob("*_shoreline_change_rate.csv")):
-        stem = csv_path.name[:-len("_shoreline_change_rate.csv")]
-        npy_path = csv_path.parent / f"{stem}_shoreline_matrix.npy"
-        if npy_path.exists():
+    for meta_path in sorted(root.rglob("*_run_metadata.json")):
+        run_dir = meta_path.parent
+        run_name = meta_path.name[: -len("_run_metadata.json")]
+        csv_path = resolve(run_dir, "rate_csv", run_name)
+        npy_path = resolve(run_dir, "matrix", run_name)
+        if not csv_path.is_file():
+            print(f"  SKIP  {run_dir.name}: no rate CSV")
+        elif npy_path.is_file():
             pairs.append((csv_path, npy_path))
         else:
-            print(f"  SKIP  {csv_path.parent.name}: no shoreline matrix")
+            print(f"  SKIP  {run_dir.name}: no shoreline matrix")
     return pairs
 
 
@@ -119,7 +131,9 @@ def main():
         status = backfill_one(csv_path, npy_path, check=args.check)
         tally[status.split()[0]] = tally.get(status.split()[0], 0) + 1
         flag = "  " if status in ("written", "would write", "already") else "! "
-        print(f"{flag}{csv_path.parent.name:58s} {status}")
+        # The matrix stays at the run root in both layouts, so its parent is
+        # the run folder; the CSV's parent is tables/ once migrated.
+        print(f"{flag}{npy_path.parent.name:58s} {status}")
 
     print("\n" + "  ".join(f"{k}={v}" for k, v in sorted(tally.items())))
     return 1 if any(k.startswith("MISMATCH") for k in tally) else 0

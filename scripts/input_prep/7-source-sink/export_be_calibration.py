@@ -78,6 +78,8 @@ _HERE = pathlib.Path(__file__).resolve()
 PROJECT_BASE_DIR = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 
+from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
+
 DATA_DIR = PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
 CALIB_OUT = _HERE.parent / "loess_smooth" / "output"
@@ -134,8 +136,20 @@ def stale_against_runs(paths):
     # only ever make `newest` OLDER, so the failure is the staleness check
     # passing a figure it should have caught -- silently, and in the direction
     # that publishes the stale file.
-    runs = [path for path in RAW_RUNS.rglob("*_shoreline_change_rate.csv")
-            if path.parent.parent.name == "calibBE"]
+    #
+    # Runs are found by their metadata file, which stays at the run folder's
+    # root under its full name; the rate CSV itself has moved into tables/ and
+    # dropped the prefix, so globbing for it would miss a migrated run -- again
+    # in the direction that publishes the stale file. run_layout.resolve reads
+    # either layout.
+    runs = []
+    for meta in RAW_RUNS.rglob("*_run_metadata.json"):
+        if meta.parent.parent.name != "calibBE":
+            continue
+        run_name = meta.name[: -len("_run_metadata.json")]
+        csv_path = resolve_run_file(meta.parent, "rate_csv", run_name)
+        if csv_path.is_file():
+            runs.append(csv_path)
     if not runs:
         return [], None
     newest = max(r.stat().st_mtime for r in runs)

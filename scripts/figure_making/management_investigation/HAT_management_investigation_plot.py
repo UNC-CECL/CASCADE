@@ -16,16 +16,24 @@ USAGE
 Each RUN_PATHS entry:
     "Label shown on plot": r"C:/path/to/saved/run/folder"
 
-The folder must contain a cascade.npz file (written by cascade.save()).
+The folder must contain the run's .npz archive (written by cascade.save()).
 """
 
 import os
 import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from matplotlib.lines import Line2D
+
+_HERE = Path(__file__).resolve()
+_REPO_ROOT = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
+sys.path.insert(0, str(_REPO_ROOT / "scripts"))
+
+from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 
 # =============================================================================
 # SECTION 1: CONFIGURE PATHS AND LABELS  ← edit this section
@@ -45,7 +53,7 @@ END_YEAR   = 2004
 
 # ── RUN PATHS ────────────────────────────────────────────────────────────────
 # Keys   = labels shown on the plot (keep them short)
-# Values = path to the saved run folder (must contain cascade.npz)
+# Values = path to the saved run folder (must contain the run's .npz archive)
 #
 # Order determines plotting order (first = bottom of legend).
 # Add or remove entries freely — the script handles 2, 3, or more scenarios.
@@ -177,8 +185,9 @@ def load_cascade(run_folder):
     """
     Load a saved CASCADE object from a run folder.
 
-    CASCADE's save() method writes a cascade.npz file containing the full
-    pickled Cascade object under the key 'cascade.npy'.
+    CASCADE's save() method writes <run name>.npz containing the full
+    pickled Cascade object under the key 'cascade.npy'. The path is resolved
+    through run_layout so either run-folder layout is read correctly.
 
     Parameters
     ----------
@@ -189,9 +198,10 @@ def load_cascade(run_folder):
     -------
     cascade object or None if loading fails
     """
-    npz_path = os.path.join(run_folder, "cascade.npz")
-    if not os.path.exists(npz_path):
-        print(f"  ❌ cascade.npz not found in: {run_folder}")
+    run_name = os.path.basename(os.path.normpath(run_folder))
+    npz_path = resolve_run_file(run_folder, "archive", run_name)
+    if not npz_path.is_file():
+        print(f"  ❌ {npz_path.name} not found in: {run_folder}")
         return None
     try:
         data = np.load(npz_path, allow_pickle=True)

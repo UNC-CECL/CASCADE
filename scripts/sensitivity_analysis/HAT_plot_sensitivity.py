@@ -74,6 +74,7 @@ from hatteras_site_config import HATTERAS_DOMAINS, HATTERAS_PERIODS  # noqa: E40
 from cascade_pipeline.coastsat_loess import (  # noqa: E402
     CoastSatDataset, LoessConfig, build_coastsat_series)
 from cascade_pipeline.hindcast import build_target_table  # noqa: E402
+from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 from cascade_pipeline.run_registry import (  # noqa: E402
     CALIBRATION_ARM, find_run_dir)
 from cascade_pipeline.plotting.rate_comparison import (  # noqa: E402
@@ -151,7 +152,22 @@ def load_cells(start_year, preset):
         row = json.loads(line)
         if row.get("preset") != preset or not row.get("ok"):
             continue
+        # The manifest stores the run directory as an ABSOLUTE path, written
+        # when the sweep ran, so any later move of output/raw_runs makes it
+        # stale -- the 2026-09-10 tree change moved every sweep run under
+        # sweeps/<family>/. The run NAME is stable, so re-resolve from it and
+        # fall back to what was recorded.
         run_dir = Path(row["detail"])
+        if not run_dir.is_dir():
+            _period = f"{int(row['start_year'])}_{int(row['start_year']) + 20}"
+            _arm = row.get("arm") or CALIBRATION_ARM
+            if not isinstance(_arm, str):
+                _arm = CALIBRATION_ARM
+            try:
+                run_dir = find_run_dir(RAW_RUNS, run_dir.name, _period,
+                                       row["preset"], _arm)
+            except FileNotFoundError:
+                pass
         rows.append(dict(sweep=row["sweep"], setting=row["setting"],
                          value=row["value"], run_dir=run_dir,
                          run_name=run_dir.name))
@@ -237,12 +253,15 @@ def model_rates(run_dir, run_name):
 
     Args:
         run_dir: The run's directory.
-        run_name: The run's name, which prefixes its files.
+        run_name: The run's name, which names the run folder and prefixes the
+            files still at its root.
 
     Returns:
         DataFrame with gis_domain and lrr_m_yr.
     """
-    path = run_dir / f"{run_name}_shoreline_change_rate.csv"
+    # RESOLVED, NOT JOINED: the rate CSV is tables/shoreline_change_rate.csv in
+    # the new run layout and {run}_shoreline_change_rate.csv in the old one.
+    path = resolve_run_file(run_dir, "rate_csv", run_name)
     frame = pd.read_csv(path)
     return frame[["gis_domain", "lrr_m_yr"]]
 
@@ -271,7 +290,7 @@ def check_target_matches(index, run_names):
         directory = find_run_dir(
             RAW_RUNS, name, (int(row.start_year), int(row.end_year)),
             row.source_sink_preset, row.arm)
-        meta = directory / f"{name}_run_metadata.json"
+        meta = resolve_run_file(directory, "metadata_json", name)
         # A run predating the metadata field records no target and cannot be
         # checked. That is the only thing this skip is allowed to mean now.
         if not meta.exists():
@@ -558,7 +577,12 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
             label=f"Target (raw D1–{LOESS_CONFIG.skip_southern_domains}, "
                   f"LOESS {TARGET_WINDOW} elsewhere)")
 
-    base_dir = block.iloc[0].run_dir.parent / base
+    # NOT the cell's sibling: since 2026-09-10 a sweep cell lives in
+    # <preset>/sweeps/<family>/ and its baseline is a scenario run one level
+    # up, so sibling arithmetic pointed at sweeps/<family>/<base>. The
+    # registry row carries the period and preset, so ask for the directory.
+    base_dir = find_run_dir(RAW_RUNS, base,
+                            f"{int(start_year)}_{int(start_year) + 20}", preset)
     base_rates = model_rates(base_dir, base)
     # Named with its VALUE, not just "calibration run". On the Hs panel this is
     # the line the reader is looking for -- where the current setting sits among
