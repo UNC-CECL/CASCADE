@@ -1,5 +1,5 @@
 """
-HAT_groin_hindcast_1967_1997_noBE.py
+HAT_groin_hindcast_1967_1997.py
 ===============================
 Groin-test hindcast (1967-1997, GIS D2-D12). Built from the proven base-run
 script (HAT_base_run_1967_1997.py) -- same inputs, same conventions -- extended
@@ -69,7 +69,7 @@ RUN_MATRIX = ["groin"]              # <- edit this line to choose the run(s)
 # Buxton groin: sits in D6 (source/accretion), starves D5 (sink/erosion).
 GROIN_UPDRIFT_GIS   = 6
 GROIN_DOWNDRIFT_GIS = 5
-GROIN_TRAPPING_RATE_M_YR = 70.0    # M -- the single knob; tune to observed updrift
+GROIN_TRAPPING_RATE_M_YR = 60.0    # M -- the single knob; tune to observed updrift
 GROIN_INSTALL_YEAR  = 1970         # inert before this (free 1967-69 control window)
 
 # Optional regional background erosion for a "groin_be" run (only used if that
@@ -77,11 +77,32 @@ GROIN_INSTALL_YEAR  = 1970         # inert before this (free 1967-69 control win
 REGIONAL_BE_RATE_M_YR = 0
 
 # =============================================================================
+# SECTION 2b: EDGE SOURCE/SINK CORRECTION (buffer-orientation boundary fix)
+# =============================================================================
+# Mirrors the main 1984-2024 hindcast's edge correction at GIS 1 / GIS 90: the
+# outermost REAL domains (here D2 and D12) sit directly against buffer padding,
+# and the buffer's flat/repeated orientation can introduce an artificial
+# alongshore-transport signal right at that boundary. Set a background_erosion
+# value (m/yr, same sign convention as REGIONAL_BE_RATE_M_YR: negative =
+# erosive) at the edge domain(s) to correct for it.
+#
+# This is a STRUCTURAL fix (same role as GIS 1 / 90 in the main script), not a
+# scientific choice like REGIONAL_BE_RATE_M_YR below -- so it's applied to
+# EVERY run in RUN_MATRIX (no_groin, groin, groin_be alike), and it STACKS
+# additively with REGIONAL_BE_RATE_M_YR on groin_be runs rather than being
+# overwritten by it. Set both edge values to 0.0 to disable.
+APPLY_EDGE_BE_CORRECTION = True
+EDGE_BE_RATES_GIS = {
+    2:  0.0,   # D2  -- south edge, against buffer (solve for this)
+    12: 25.0,   # D12 -- north edge, against buffer (solve for this)
+}
+
+# =============================================================================
 # SECTION 3: PERIOD / FILE PATHS   (identical to base run)
 # =============================================================================
 PROJECT_BASE_DIR   = r"/"
 HATTERAS_DATA_BASE = os.path.join(PROJECT_BASE_DIR, "data", "hatteras_init")
-OUTPUT_BASE_DIR    = os.path.join(PROJECT_BASE_DIR, "comparison", "raw_runs")
+OUTPUT_BASE_DIR    = os.path.join(PROJECT_BASE_DIR, "output", "raw_runs")
 PARAMETER_FILE     = "Hatteras-CASCADE-parameters.yaml"
 
 START_YEAR = 1967
@@ -92,7 +113,7 @@ SEA_LEVEL_RISE_RATE = 0.004
 SEA_LEVEL_CONSTANT  = True
 
 GROIN_INIT_DIR = os.path.join(
-    PROJECT_BASE_DIR, "scripts", "groin_module_noBE", "HAT-hindcast-groin-test", "groin_init",
+    PROJECT_BASE_DIR, "scripts", "groin", "HAT-buxton-hindcast-groin-test", "groin_init",
 )
 STORM_FILE = os.path.join(
     GROIN_INIT_DIR, "storms", "1967_1997", "1967_1997_grointest_storms.npy",
@@ -122,7 +143,7 @@ REBUILD_ELEV_THRESHOLD  = 0.01   # dam
 OVERWASH_TO_DUNE        = 0.0
 OVERWASH_FILTER_DEFAULT = 0.0
 
-RUN_NAME_SUFFIX = "noBE_70M"    # -> HAT_1967_1997_groinTest_{run_key}
+RUN_NAME_SUFFIX = "60M"    # -> HAT_1967_1997_groinTest_{run_key}
 
 # Auto-generate + save figures into each run's folder when the run finishes.
 MAKE_FIGURES = True
@@ -304,13 +325,20 @@ def run_one(run_key, island_offset_dam, elevation_files, dune_files):
     run_name = f"HAT_{START_YEAR}_{END_YEAR}_{RUN_NAME_SUFFIX}_{run_key}"
     print("\n" + "=" * 78)
     print(f"RUN: {run_name}   (groin={'ON' if groin_on else 'off'}, "
-          f"BE={'ON' if be_on else 'off'})")
+          f"BE={'ON' if be_on else 'off'}, "
+          f"edge_correction={'ON' if APPLY_EDGE_BE_CORRECTION else 'off'})")
+    if APPLY_EDGE_BE_CORRECTION:
+        print(f"  Edge BE correction: "
+              + ", ".join(f"D{g}={r:+.1f} m/yr" for g, r in EDGE_BE_RATES_GIS.items()))
     print("=" * 78)
 
     be = [0.0] * TOTAL_DOMAINS
+    if APPLY_EDGE_BE_CORRECTION:
+        for gis, rate in EDGE_BE_RATES_GIS.items():
+            be[_gis_to_pad(gis)] += rate
     if be_on:
         for gis in range(FIRST_FILE_NUMBER, LAST_FILE_NUMBER + 1):
-            be[_gis_to_pad(gis)] = REGIONAL_BE_RATE_M_YR
+            be[_gis_to_pad(gis)] += REGIONAL_BE_RATE_M_YR
 
     cascade = Cascade(
         HATTERAS_DATA_BASE,

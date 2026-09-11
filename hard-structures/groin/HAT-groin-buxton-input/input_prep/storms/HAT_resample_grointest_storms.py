@@ -59,7 +59,7 @@ RANDOM_SEED = 1967   # reproducible
 MAX_STORM_DUR = 72
 MIN_STORM_DUR = 8
 
-SAVE_DIR  = r"/scripts/groin/HAT-hindcast-groin-test/groin_init/storms/1967_1997"
+SAVE_DIR  = r"/scripts/groin/HAT-buxton-hindcast-groin-test/groin_init/storms/1967_1997"
 SAVE_NAME = "1967_1997_grointest_storms"
 
 # ============================ BUILD ============================

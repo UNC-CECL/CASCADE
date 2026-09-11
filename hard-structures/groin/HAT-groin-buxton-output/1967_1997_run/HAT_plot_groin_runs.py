@@ -1,9 +1,8 @@
 """
 HAT_plot_groin_runs.py
 ======================
-Plots for the 1967-2017 groin-DETERIORATION-test runs. Loads saved shoreline
-matrices (the *_shoreline_matrix.npy files written by the base / groin
-runners) and produces:
+Plots for the 1967-1997 groin-test runs. Loads saved shoreline matrices (the
+*_shoreline_matrix.npy files written by the base / groin runners) and produces:
 
   FIG 1  Shoreline CHANGE (m, end - start) per domain          [position change]
   FIG 2  Shoreline change RATE (m/yr) per domain               [LRR-style]
@@ -16,20 +15,6 @@ Matches your main hindcast's conventions: model orange (#FF8C00), groin red
 buffers shaded. No CoastSat dependency -- this is for inspecting the model runs
 themselves. Point RUNS at one or more saved run folders.
 
-IMPORTANT -- END_YEAR is EXCLUSIVE (RUN_YEARS = END_YEAR - START_YEAR), so
-END_YEAR=2018 here means the run's actual final modeled year is 2017, not
-2018. Every figure label below derives the true final year from the loaded
-data's own shape (_final_model_year()) rather than trusting END_YEAR
-directly -- END_YEAR is used only for RUN_NAME_SUFFIX-adjacent bookkeeping,
-never for a figure title.
-
-OBSERVED COMPARISON: fig_model_vs_observed() now reads from the validated
-wet/dry change table (Change_from_wetdry_1967_D2_D12.csv, built by
-HAT_geometric_distance_sanity_check.py) instead of the raw dune-line CSVs --
-see HAT_groin_effect_comparison.py's module docstring for the full reasoning
-(x_s is conceptually closer to a water-line proxy than to the dune line, and
-the wet/dry line was confirmed seaward of the dune line at every domain).
-
 Usage
 -----
 Edit RUNS below to list the run folder name(s) under output/raw_runs/. One run
@@ -37,28 +22,19 @@ gives Figs 1-3; two or more also give Fig 4 (differences vs the first as baselin
 """
 
 import os
-import pathlib
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
 # ============================== CONFIG ==============================
 
-# Derived, not hardcoded. This was `r"/"`, which silently resolved every data
-# path to the filesystem root -- the scripts imported fine and then reported
-# every input as missing. Walking up to pyproject.toml survives the repo
-# reorganisation that moved this tree from scripts/groin/ to hard-structures/.
-PROJECT_BASE_DIR = str(next(
-    p for p in pathlib.Path(__file__).resolve().parents
-    if (p / "pyproject.toml").exists()))
+PROJECT_BASE_DIR = r"/"
 OUTPUT_BASE_DIR  = os.path.join(PROJECT_BASE_DIR, "output", "raw_runs")
 
 # Run folder name(s) under output/raw_runs/. First entry is the baseline for Fig 4.
 RUNS = [
-    # Set 2026-08-30 to the run the sweep's best cell corresponds to, produced
-    # by HAT_groin_hindcast_1967_2017.py on 1984-start/v1 at M = 60, f = 0.6.
-    "HAT_1967_2018_edge_calibrated_groin",
-    # "HAT_1967_2018_no_BE_no_groin",
+    "HAT_1967_1997_groinTest_no_groin",
+    # "HAT_1967_1997_groinTest_groin",
 ]
 
 # ── Geometry (must match the run) ──
@@ -71,7 +47,7 @@ START_REAL_INDEX   = NUM_BUFFER_DOMAINS
 END_REAL_INDEX     = START_REAL_INDEX + NUM_REAL_DOMAINS
 
 START_YEAR = 1967
-END_YEAR   = 2018   # EXCLUSIVE convention -- see module docstring; NOT a label year
+END_YEAR   = 1997
 
 # ── Sign / rate conventions (match main hindcast exactly) ──
 # Main script: change_rate = (x_s[-1] - x_s[0]) / (nt-1); then *= -1 if FLIP.
@@ -94,32 +70,18 @@ REAL_DOMAINS_ONLY = True    # focus x-axis on D2-D12; if False, show buffers too
 SAVE_FIGS = True
 SHOW_FIGS = True
 
-# --- Observed reference for the model-vs-observed comparison (fig_model_vs_observed):
-# the validated wet/dry change table, NOT the raw dune-line CSVs -- see module
-# docstring. OBSERVED_YEARS are the checkpoint years to overlay, roughly every
-# ~10 years, chosen from years with full (or near-full) D2-D12 coverage in the
-# change table -- 2017 itself only has 6/11 domains (D8-D12 missing), so 2018
-# (11/11, one year later than the model's actual endpoint) is used instead.
-OBSERVED_YEARS = [1978, 1987, 1997, 2008, 2018]
-# REPOINTED 2026-08-30. This named
-#     HAT-hindcast-groin-test/input_prep/shoreline_position/output/
-# which does not exist -- the table lives under HAT-groin-test-OUTPUT. The
-# script did not error: it fell through to "observed wet/dry change table not
-# found -- model only" and drew the model against nothing, which looks like a
-# finished figure. The sweep reads the same table from its own correct path
-# (HAT_groin_sweep_config.py:601), so the FIT was never affected; only these
-# figures were.
-WETDRY_CHANGE_TABLE = os.path.join(
-    PROJECT_BASE_DIR, "hard-structures", "groin", "HAT-groin-test-output",
-    "shoreline_position_output",
-    "Change_from_wetdry_1967_D2_D12.csv",
+# --- Observed reference (raw ArcGIS dune-line offset files) for the model-vs-
+#     observed comparison figure. Used to overlay the real 1967->1997 change.
+RAW_OFFSET_DIR = os.path.join(
+    PROJECT_BASE_DIR, "scripts", "groin", "HAT-buxton-hindcast-groin-test",
+    "groin_init", "2-brie-offset", "raw_offsets",
 )
-if not os.path.isfile(WETDRY_CHANGE_TABLE):
-    raise SystemExit(
-        "observed wet/dry table not found at " + WETDRY_CHANGE_TABLE
-        + " -- refusing to draw model-only figures that look like comparisons.")
-
-WETDRY_DOMAIN_COL = "Domain_ID"
+OBS_START_YEAR = 1967
+OBS_END_YEAR   = 1997
+OBS_RAW_START  = os.path.join(RAW_OFFSET_DIR, f"{OBS_START_YEAR}_duneline_offset_raw.csv")
+OBS_RAW_END    = os.path.join(RAW_OFFSET_DIR, f"{OBS_END_YEAR}_duneline_offset_raw.csv")
+OBS_DOMAIN_COL = "domain_id"
+OBS_POS_COL    = "ORIG_LEN"
 
 # --- Position-mode figures (match main hindcast convention) ---
 # Real island planform with year-0 as the 0 reference, ocean-at-bottom layout.
@@ -140,19 +102,6 @@ def _load_shoreline(run_name):
     m = np.load(path)
     print(f"  Loaded {run_name}: shape {m.shape}")
     return m
-
-
-def _final_model_year(runs_data):
-    """True final modeled year, derived from the loaded data's own shape
-    (START_YEAR + nt - 1) rather than trusting END_YEAR directly -- END_YEAR
-    is EXCLUSIVE (see module docstring), so using it as a label would be off
-    by one. Warns (doesn't crash) if runs disagree in length."""
-    lengths = {name: m.shape[0] for name, m in runs_data.items()}
-    if len(set(lengths.values())) > 1:
-        print(f"  WARNING: runs have different lengths {lengths} -- "
-              f"using the first run's length for figure labels.")
-    nt = next(iter(lengths.values()))
-    return START_YEAR + nt - 1
 
 
 def _flip(v):
@@ -202,7 +151,6 @@ def _updrift_downdrift_shading(ax):
 def fig_position_change(runs_data):
     """FIG 1: shoreline change (m, end - start) per domain."""
     gis = _gis_axis()
-    final_year = _final_model_year(runs_data)
     fig, ax = plt.subplots(figsize=(12, 5), constrained_layout=True)
     for run_name, m in runs_data.items():
         ax.plot(gis, _total_change(m), marker="o", ms=4, lw=1.8, label=run_name)
@@ -212,7 +160,7 @@ def fig_position_change(runs_data):
     ax.set_xticks(np.arange(FIRST_FILE_NUMBER, LAST_FILE_NUMBER + 1, DOMAIN_TICK_STEP))
     ax.set_xlabel(f"GIS Domain ID ({FIRST_FILE_NUMBER}\u2013{LAST_FILE_NUMBER})")
     ax.set_ylabel("Shoreline change (m)  [erosion \u25b2]")
-    ax.set_title(f"Shoreline change {START_YEAR}\u2013{final_year} (end \u2212 start)   |   "
+    ax.set_title(f"Shoreline change {START_YEAR}\u2013{END_YEAR} (end \u2212 start)   |   "
                  f"erosion up / accretion down   |   updrift = D6+  downdrift = D5\u2212")
     ax.set_ylim(ax.get_ylim()[::-1])   # ocean at bottom: erosion up
     ax.grid(alpha=0.3)
@@ -223,7 +171,6 @@ def fig_position_change(runs_data):
 def fig_change_rate(runs_data):
     """FIG 2: shoreline change RATE (m/yr) per domain -- LRR-style."""
     gis = _gis_axis()
-    final_year = _final_model_year(runs_data)
     fig, ax = plt.subplots(figsize=(12, 5), constrained_layout=True)
     for run_name, m in runs_data.items():
         color = MODEL_COLOR if len(runs_data) == 1 else None
@@ -237,7 +184,7 @@ def fig_change_rate(runs_data):
     ax.set_ylabel("Shoreline change rate (m/yr)  [erosion \u25b2]")
     ax.set_title(f"Modeled Shoreline Change Rate \u2013 Hatteras Island | "
                  f"SLR={SEA_LEVEL_RISE_RATE * 1000:.1f} mm/yr | "
-                 f"{START_YEAR}\u2013{final_year}")
+                 f"{START_YEAR}\u2013{END_YEAR}")
     ax.set_ylim(ax.get_ylim()[::-1])   # ocean at bottom: erosion up
     ax.grid(alpha=0.3)
     ax.legend(fontsize=8)
@@ -294,51 +241,48 @@ def fig_difference(runs_data):
 
 # ============================== MAIN ==============================
 
-def _load_observed_changes():
-    """Observed per-domain shoreline change START_YEAR->year, for every year in
-    OBSERVED_YEARS, from the validated wet/dry change table. Returns
-    dict {year: np.ndarray or None} -- + = landward/erosion (RAW sign)."""
+def _load_observed_change():
+    """Observed per-domain dune-line change 1967->1997 from raw offset files.
+    Returns (gis_array, obs_change_m) where + = landward/erosion (RAW sign),
+    or (None, None) if the raw files aren't found. Matches HAT_target extraction."""
+    missing = [p for p in (OBS_RAW_START, OBS_RAW_END) if not os.path.isfile(p)]
+    if missing:
+        print("  [observed] MISSING file(s) -- model-vs-observed panel will be model-only:")
+        for p in missing:
+            print(f"    {p}")
+        return None, None
+
+    def per_domain(path):
+        df = pd.read_csv(path, encoding="utf-8-sig")
+        df = df[df[OBS_DOMAIN_COL].isin(range(FIRST_FILE_NUMBER, LAST_FILE_NUMBER + 1))]
+        return df.groupby(OBS_DOMAIN_COL)[OBS_POS_COL].mean()
+
+    p0 = per_domain(OBS_RAW_START)
+    p1 = per_domain(OBS_RAW_END)
     gis = _gis_axis()
+    obs_change = np.array([p1.get(d, np.nan) - p0.get(d, np.nan) for d in gis])
 
-    if not os.path.isfile(WETDRY_CHANGE_TABLE):
-        print(f"  [observed] MISSING wet/dry change table -- model-vs-observed "
-              f"panel will be model-only:\n    {WETDRY_CHANGE_TABLE}")
-        return {y: None for y in OBSERVED_YEARS}
+    n_ok = int(np.isfinite(obs_change).sum())
+    print(f"  [observed] Loaded {OBS_START_YEAR}/{OBS_END_YEAR} raw offsets OK -- "
+          f"{n_ok}/{len(gis)} domains (D{FIRST_FILE_NUMBER}-D{LAST_FILE_NUMBER}) have "
+          f"both years present.")
+    if n_ok < len(gis):
+        missing_domains = [int(d) for d, v in zip(gis, obs_change) if not np.isfinite(v)]
+        print(f"  [observed] WARNING: no data for domain(s) {missing_domains} in one "
+              f"or both years -- gap(s) will show as a break in the observed line.")
 
-    df = pd.read_csv(WETDRY_CHANGE_TABLE).set_index(WETDRY_DOMAIN_COL)
-
-    changes = {}
-    for year in OBSERVED_YEARS:
-        col = f"change_from_wetdry_1967_wetdry_{year}_m"
-        if col not in df.columns:
-            print(f"  [observed] MISSING column '{col}' -- {year} omitted.")
-            changes[year] = None
-            continue
-        obs_change = np.array([df[col].get(d, np.nan) for d in gis])
-        n_ok = int(np.isfinite(obs_change).sum())
-        print(f"  [observed] Loaded {START_YEAR}->{year} wet/dry change OK -- "
-              f"{n_ok}/{len(gis)} domains.")
-        if n_ok < len(gis):
-            missing_domains = [int(d) for d, v in zip(gis, obs_change) if not np.isfinite(v)]
-            print(f"    WARNING: no data for domain(s) {missing_domains} -- "
-                  f"gap(s) will show as a break in that year's line.")
-        changes[year] = obs_change
-
-    return changes
+    return gis, obs_change
 
 
 def fig_model_vs_observed(runs_data):
     """Two-panel model-vs-observed comparison:
-      TOP    absolute shoreline POSITION -- start (1967) and modeled end
-      BOTTOM CHANGE since 1967 -- modeled vs observed AT EVERY YEAR IN
-             OBSERVED_YEARS (the validity check), color-coded chronologically
-             (blue=older, red=newer) so multiple decades overlay readably.
+      TOP    absolute shoreline POSITION -- start (1967) and modeled end (1997)
+      BOTTOM CHANGE since 1967 -- modeled vs observed (the validity check)
     The change panel is the apples-to-apples overlay: both are meters of change
     from 1967, + = seaward/accretion (flipped from raw)."""
     gis = _gis_axis()
-    final_year = _final_model_year(runs_data)
-    observed_changes = _load_observed_changes()
-    years_with_data = [y for y, v in observed_changes.items() if v is not None]
+    obs_gis, obs_change_raw = _load_observed_change()
+    have_obs = obs_gis is not None
 
     fig, (axP, axC) = plt.subplots(2, 1, figsize=(12, 9), constrained_layout=True)
 
@@ -349,7 +293,7 @@ def fig_model_vs_observed(runs_data):
         if run_name == list(runs_data)[0]:
             axP.plot(gis, start_pos, marker="o", ms=4, lw=1.6, color="0.5",
                      ls="--", label=f"Start ({START_YEAR}) shoreline")
-        axP.plot(gis, end_pos, marker="o", ms=4, lw=2, label=f"{run_name} end ({final_year})")
+        axP.plot(gis, end_pos, marker="o", ms=4, lw=2, label=f"{run_name} end ({END_YEAR})")
     _updrift_downdrift_shading(axP)
     _mark_groin(axP)
     axP.set_xticks(np.arange(FIRST_FILE_NUMBER, LAST_FILE_NUMBER + 1, DOMAIN_TICK_STEP))
@@ -359,22 +303,18 @@ def fig_model_vs_observed(runs_data):
     axP.set_ylim(axP.get_ylim()[::-1])   # invert: seaward down, landward/erosion up
     axP.grid(alpha=0.3); axP.legend(fontsize=8)
 
-    # ── BOTTOM: change since 1967, model vs observed at every available year ──
+    # ── BOTTOM: change since 1967, model vs observed ──
     for run_name, m in runs_data.items():
         model_change = _total_change(m)          # + = seaward, real slice
-        axC.plot(gis, model_change, marker="o", ms=4, lw=2.5, color=MODEL_COLOR,
-                 zorder=6, label=f"{run_name} (modeled)")
-
-    if years_with_data:
-        vmin, vmax = min(years_with_data), max(years_with_data)
-        norm = plt.Normalize(vmin=vmin, vmax=vmax if vmax > vmin else vmin + 1)
-        cmap = plt.cm.coolwarm
-        for year in years_with_data:
-            obs_change = -observed_changes[year]     # flip: + = seaward, match model
-            axC.plot(gis, obs_change, marker="s", ms=5, lw=1.8, color=cmap(norm(year)),
-                      ls="--", alpha=0.85, label=f"Observed {START_YEAR}\u2013{year}", zorder=5)
+        axC.plot(gis, model_change, marker="o", ms=4, lw=2,
+                 label=f"{run_name} (modeled)")
+    if have_obs:
+        obs_change = -obs_change_raw             # flip: + = seaward, match model
+        axC.plot(obs_gis, obs_change, marker="s", ms=6, lw=2.4, color="black",
+                 ls="--", label=f"Observed {OBS_START_YEAR}\u2013{OBS_END_YEAR} (target)",
+                 zorder=6)
     else:
-        axC.text(0.5, 0.9, "observed wet/dry change table not found -- model only",
+        axC.text(0.5, 0.9, "observed raw files not found -- model only",
                  transform=axC.transAxes, ha="center", color="firebrick", fontsize=9)
     _updrift_downdrift_shading(axC)
     axC.axhline(0, color="gray", ls="--", lw=1, alpha=0.7)
@@ -382,10 +322,10 @@ def fig_model_vs_observed(runs_data):
     axC.set_xticks(np.arange(FIRST_FILE_NUMBER, LAST_FILE_NUMBER + 1, DOMAIN_TICK_STEP))
     axC.set_xlabel(f"GIS Domain ID (D{FIRST_FILE_NUMBER}\u2013D{LAST_FILE_NUMBER})")
     axC.set_ylabel("Shoreline change since 1967 (m)  [erosion \u25b2]")
-    axC.set_title("Change vs observed targets (~10-yr increments)   |   validate "
-                  "UPDRIFT D6\u2013D12 (downdrift D2\u2013D5 not a target: Cape dynamics)")
+    axC.set_title("Change vs observed target   |   validate UPDRIFT D6\u2013D12 "
+                  "(downdrift D2\u2013D5 not a target: Cape dynamics)")
     axC.set_ylim(axC.get_ylim()[::-1])   # invert: erosion (negative) up
-    axC.grid(alpha=0.3); axC.legend(fontsize=7.5, ncol=2)
+    axC.grid(alpha=0.3); axC.legend(fontsize=8)
 
     return fig, "model_vs_observed"
 
@@ -396,7 +336,6 @@ def fig_position_planform(runs_data):
     Cross-shore position relative to the year-0 alongshore mean, ocean at bottom.
     This is the 'real island orientation as position 0' view."""
     gis = _gis_axis()
-    final_year = _final_model_year(runs_data)
     fig, ax = plt.subplots(figsize=(12, 5.5), constrained_layout=True)
 
     for i, (run_name, m) in enumerate(runs_data.items()):
@@ -410,7 +349,7 @@ def fig_position_planform(runs_data):
         # end-of-run planform, same reference
         end = _flip(_real_slice(m[-1])) - ref_mean
         ax.plot(gis, end, marker="o", ms=4, lw=2.2, zorder=5,
-                label=f"{run_name} ({final_year})")
+                label=f"{run_name} ({END_YEAR})")
 
     _updrift_downdrift_shading(ax)
     _mark_groin(ax)

@@ -27,7 +27,7 @@ M, different install year, etc.) each get their own subfolder and never
 overwrite each other. Then run.
 
 Saves to:
-    scripts/groin/HAT-hindcast-groin-test/comparison/{COMPARISON_SUBFOLDER}/
+    scripts/groin/HAT-buxton-hindcast-groin-test/comparison/{COMPARISON_SUBFOLDER}/
         groin_effect_final_position.png      (with title/subtitle)
         groin_effect_final_position_v2.png   (same plot, no title/subtitle --
                                                for a captioned dissertation figure)
@@ -58,7 +58,7 @@ RUN_GROIN    = "HAT_1967_1997_60M_groin"
 # different comparisons never overwrite each other. ---
 COMPARISON_SUBFOLDER = "base_vs_60M"          # <- edit this per comparison
 COMPARISON_OUTPUT_DIR = os.path.join(
-    PROJECT_BASE_DIR, "scripts", "groin", "HAT-hindcast-groin-test",
+    PROJECT_BASE_DIR, "scripts", "groin", "HAT-buxton-hindcast-groin-test",
     "comparison", COMPARISON_SUBFOLDER,
 )
 
@@ -88,7 +88,7 @@ AXIS_LABEL_FONTSIZE = 12         # shared by both the titled and simplified (v2)
 
 # --- Observed reference (raw ArcGIS dune-line offset files) ---
 RAW_OFFSET_DIR = os.path.join(
-    PROJECT_BASE_DIR, "scripts", "groin", "HAT-hindcast-groin-test",
+    PROJECT_BASE_DIR, "scripts", "groin", "HAT-buxton-hindcast-groin-test",
     "groin_init", "2-brie-offset", "raw_offsets",
 )
 OBS_RAW_START  = os.path.join(RAW_OFFSET_DIR, f"{START_YEAR}_duneline_offset_raw.csv")

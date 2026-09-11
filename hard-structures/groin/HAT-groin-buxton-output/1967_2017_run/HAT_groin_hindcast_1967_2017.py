@@ -8,21 +8,12 @@ that also exercises the 1995->2003 deterioration ramp, which needs the
 longer window to actually play out (both dates fall after 1997, so the
 original 30-year test never reached them).
 
-RUN_MODE = "three_way" (default, see Section 2) runs THREE hindcasts in one
-execution, driven by RUN_RECIPES: baseline (no groin, no nourishment),
-nourishment-only (no groin), and the full model (nourishment + groin) --
-all other parameters (storms, edge BE correction, groin M/fraction) held
-identical across all three. This is what feeds HAT_three_run_comparison.py
-directly. Set RUN_MODE = "single" to fall back to the old behavior (run
-whatever's in RUN_MATRIX, nourishment controlled by the single module-level
-ENABLE_HISTORICAL_NOURISHMENT flag) -- unchanged from before, and this is
-also what HAT_groin_sweep_single_combo.py still relies on internally when
-it calls run_one()/build_nourishment_arrays_from_manual_inputs() directly
-(those functions' default behavior is untouched; RUN_MODE only affects what
-main() does).
+  RUN_MATRIX = ["no_groin", "groin"]
+    -> HAT_1967_2018_M60_deterioration_no_groin   (groin OFF -- erosive baseline)
+    -> HAT_1967_2018_M60_deterioration_groin      (groin ON, WITH deterioration)
 
-The "no_groin" recipes need nothing beyond your working base setup. The
-"groin" recipe additionally requires:
+The "no_groin" run needs nothing beyond your working base setup. The "groin"
+run additionally requires:
   1. HAT_groin_module.py importable (same folder / on PYTHONPATH), and
   2. the inert pre-AST hook in cascade.py (sets cascade._groin_callback).
 If the hook is missing, the groin run warns loudly (diagnostics stay empty)
@@ -36,21 +27,20 @@ matching the storm file built by HAT_build_1967_2017_storms.py.
 
 DETERIORATION (Section 2, GROIN_DETERIORATION_*): last repair 1995 (after
 Hurricane Gordon damage in 1994) -> linear decline -> Hurricane Isabel 2003
-locks in the new deteriorated state. GROIN_TRAPPING_RATE_M_YR and
-GROIN_DETERIORATION_FRACTION are marked <<< placeholder -- fill in your
-sensitivity sweep's actual winning combination before running the full-model
-recipe for real; the current values are just carried over from before the
-sweep existed.
+locks in the new deteriorated state. Floor fraction M/3 (~0.333), from
+Katherine's "one groin still functional out of three" framing -- see chat
+history with Laura/Katherine on the Coastal Sediments 2027 abstract for the
+full reasoning behind these specific numbers.
 
-Historical beach nourishment (Section 2c: 1971, 1973) is now TOGGLABLE per
-run via build_nourishment_arrays_from_manual_inputs(enable=...) -- see that
-function and RUN_RECIPES for how the three-way comparison uses this. The
-single-run/RUN_MATRIX path still applies it identically to every run in the
-list by default, same as before.
+Historical beach nourishment (Section 2c: 1971, 1973) is applied identically
+to EVERY run in RUN_MATRIX -- same treatment as the edge BE correction
+(Section 2b) -- since these are documented real-world events, not an
+experimental variable. See Section 2c for full sourcing.
 
-Plot with HAT_three_run_comparison.py (RUN_MODE="three_way", the default) or
-HAT_groin_effect_comparison.py (RUN_MODE="single", comparing exactly two
-named runs) -- see each script's own docstring.
+Plot with HAT_groin_effect_comparison.py:
+    RUN_NO_GROIN = "HAT_1967_2018_M60_deterioration_no_groin"
+    RUN_GROIN    = "HAT_1967_2018_M60_deterioration_groin"
+(no_groin first = baseline for the difference figure).
 """
 
 import os
@@ -98,36 +88,12 @@ def _gis_to_pad(gis_id):
 #   "groin"     -> HAT_1967_2018_M60_deterioration_groin      (dipole at D5/D6, WITH
 #                  deterioration; needs hook)
 #   "groin_be"  -> HAT_1967_2018_M60_deterioration_groin_be   (groin + background erosion)
-RUN_MATRIX = ["groin"]              # <- used by the OLD single-run path (still works,
-                                       # see main()'s RUN_MODE below); ignored when
-                                       # RUN_MODE = "three_way"
-
-# Three-run comparison mode for HAT_three_run_comparison.py: baseline (no
-# groin, no nourishment), nourishment-only (no groin), full model
-# (nourishment + groin). All other parameters (storms, edge BE correction,
-# groin M/fraction, etc.) stay identical across all three -- only nourishment
-# on/off and groin on/off vary, exactly matching what that figure needs.
-# Each entry: (label, run_key, enable_nourishment, run_name_suffix).
-# The baseline gets a DISTINCT suffix ("_no_BN") from the other two -- it
-# shares run_key="no_groin" with the nourishment-only run, and without a
-# distinct suffix the two would produce the identical run_name and overwrite
-# each other on disk.
-RUN_RECIPES = [
-    ("baseline (no groin, no nourishment)", "no_groin", False, "edge_calibrated_no_BN"),
-    ("nourishment only",                    "no_groin", True,  "edge_calibrated"),
-    ("full model (nourishment + groin)",    "groin",    True,  "edge_calibrated"),
-]
-
-# RUN_MODE selects which path main() takes:
-#   "three_way" -> runs all three RUN_RECIPES entries above, in one execution
-#   "single"    -> old behavior, runs whatever's in RUN_MATRIX with the
-#                  module-level ENABLE_HISTORICAL_NOURISHMENT setting
-RUN_MODE = "three_way"
+RUN_MATRIX = ["no_groin", "groin"]  # <- edit this line to choose the run(s)
 
 # Buxton groin: sits in D6 (source/accretion), starves D5 (sink/erosion).
 GROIN_UPDRIFT_GIS   = 6
 GROIN_DOWNDRIFT_GIS = 5
-GROIN_TRAPPING_RATE_M_YR = 50.0    # <<< placeholder -- replace with your sweep's winning M
+GROIN_TRAPPING_RATE_M_YR = 60.0    # M -- the single knob; tune to observed updrift
 GROIN_INSTALL_YEAR  = 1970         # inert before this (free 1967-69 control window)
 
 # Deterioration: last repair 1995 (after Hurricane Gordon, 1994) -> linear
@@ -144,7 +110,12 @@ GROIN_DETERIORATION_RAMP_YEARS  = 2003 - 1995                  # = 8
 # deterioration assumption. Still folded into the ramp itself (not run as a
 # separate standalone experiment) per the plan worked out with
 # Laura/Katherine for the Coastal Sediments 2027 abstract.
-GROIN_DETERIORATION_FRACTION    = 0.90   # <<< placeholder -- replace with your sweep's winning fraction
+GROIN_DETERIORATION_FRACTION    = 0.60   # decided pair, 2026-08-30; was
+#   0.50, the 2026-08-24 sweep answer on the PRE-FIX topography. Re-run on
+#   1984-start/v1 the rig's own sweep returns f = 0.6 (RMSE 23.78 against
+#   24.21 at 0.5), bracketed on both sides -- and 0.6 is what production
+#   uses. The sweep overrides this per cell; it matters only for a
+#   standalone run, which is exactly what the full-life figure plots.
 
 # Optional regional background erosion for a "groin_be" run (only used if that
 # key is in RUN_MATRIX). m/yr, negative = erosive.
@@ -262,21 +233,12 @@ HAT_BN_VOLUME_BY_DOMAIN = {
 # appearing twice as a dict key.
 HAT_BN_VOLUME_BY_DOMAIN[8][1] = round(1_300_000 / 5 * _CY_TO_M3, 1)
 
-# NOTE: unlike earlier versions of this script, ENABLE_HISTORICAL_NOURISHMENT
-# no longer empties HAT_BN_YEARS/HAT_BN_VOLUME_BY_DOMAIN at import time --
-# the full schedule stays intact here, and build_nourishment_arrays_from_
-# manual_inputs() below now takes an explicit enable= override so a single
-# script run (see main()'s RUN_RECIPES) can produce nourishment-on and
-# nourishment-off runs in the same execution, not just a fixed module-wide
-# setting. ENABLE_HISTORICAL_NOURISHMENT is still the DEFAULT used whenever
-# a caller doesn't pass an explicit override (e.g. HAT_groin_sweep_single_
-# combo.py, which is unaffected by this change).
+if not ENABLE_HISTORICAL_NOURISHMENT:
+    HAT_BN_YEARS = []
+    HAT_BN_VOLUME_BY_DOMAIN = {}
 
 # Per-domain flag passed to Cascade's beach_nourishment_module: True only for
 # domains that receive a nourishment event at some point in this window.
-# (Superseded per-run inside run_one(), which derives this fresh from
-# whatever schedule was actually passed to that call -- kept here only for
-# backward compatibility with anything that might reference it directly.)
 NOURISHMENT_MANAGEMENT_ON = [False] * TOTAL_DOMAINS
 for _gis_id in HAT_BN_VOLUME_BY_DOMAIN:
     _pad_idx = _gis_to_pad(_gis_id)
@@ -294,7 +256,12 @@ PROJECT_BASE_DIR = str(next(
     p for p in pathlib.Path(__file__).resolve().parents
     if (p / "pyproject.toml").exists()))
 HATTERAS_DATA_BASE = os.path.join(PROJECT_BASE_DIR, "data", "hatteras_init")
-OUTPUT_BASE_DIR    = os.path.join(PROJECT_BASE_DIR, "output", "raw_runs")
+# rig_runs, not raw_runs, since 2026-08-31: the rig is a 41-domain grid and
+# production is 120, M is grid-specific, and the rig files no run_index row --
+# so its runs sat in raw_runs unindexed, next to production runs they must not
+# be compared with. One of them was found holding an unstable M = 70 cell while
+# named as though it were the calibrated run.
+OUTPUT_BASE_DIR    = os.path.join(PROJECT_BASE_DIR, "output", "rig_runs")
 PARAMETER_FILE     = "Hatteras-CASCADE-parameters.yaml"
 
 START_YEAR = 1967
@@ -306,7 +273,7 @@ SEA_LEVEL_RISE_RATE = 0.004
 SEA_LEVEL_CONSTANT  = True
 
 GROIN_INIT_DIR = os.path.join(
-    PROJECT_BASE_DIR, "hard-structures", "groin", "HAT-groin-test-input", "groin_init",
+    PROJECT_BASE_DIR, "hard-structures", "groin", "HAT-groin-buxton-input", "groin_init",
 )
 STORM_FILE = os.path.join(
     GROIN_INIT_DIR, "storms", "1967_2017",
@@ -317,7 +284,12 @@ ISLAND_OFFSET_FILE = os.path.join(
     "Island_Dune_Offsets_1967_D2_D12_PADDED_41.csv",
 )
 
-TOPO_DUNE_INIT_YEAR = "2009"
+# The rig is a 1967-2017 window; 1984-start is the nearer product in time and
+# the one the production period-1 groin fit reads, so the two routes agree on a
+# surface. Chosen 2026-08-30; previously this resolved to 2004-start by default.
+RIG_TOPO_PRODUCT = "1984-start"
+
+TOPO_DUNE_INIT_YEAR = "2009"   # legacy label, no longer used to build filenames
 TOPO_DUNE_SUBFOLDER = "2009"
 
 # =============================================================================
@@ -372,19 +344,46 @@ def load_island_offset_dam():
 
 
 def build_file_lists():
+    # RESOLVED, NOT HARDCODED. This used HATTERAS_DATA_BASE/topography/2009/ and
+    # /dunes/2009/, a flat layout that no longer exists: the domains moved under
+    # 1-barrier3d-domains/2009-dune-topo/<version>/ and are now VERSIONED. Every
+    # combination of the 2026-08-24 sweep died on the missing files. scripts/
+    # hat_topo_version.py is the project's single resolver for which version is
+    # current -- pinning a version string here is what created this breakage in
+    # the first place, so it is deliberately not pinned.
+    import sys as _sys
+    _scripts = os.path.join(PROJECT_BASE_DIR, "scripts")
+    if _scripts not in _sys.path:
+        _sys.path.insert(0, _scripts)
+    # REPOINTED 2026-08-30 for the period-first restructure of 2026-08-25.
+    # Three things here had gone stale and none of them errored:
+    #   1. topo_dirs() with no product resolves DEFAULT_PRODUCT ("2004-start").
+    #      The rig is a 1967 window, so it should read the 1984 product -- and
+    #      that is also what the production period-1 fit uses, so the two routes
+    #      share a surface. This is the same omission that put the production
+    #      groin sweep on the wrong island until 2026-08-30.
+    #   2. Array names lost their year suffix: domain_N_topography_2009.npy is
+    #      now domain_N_topography.npy. array_name() owns that spelling.
+    #   3. "2009-buffer" became "buffer"; BUFFER_DIR owns that path.
+    from hat_topo_version import topo_dirs, array_name, BUFFER_DIR
+    topo_dir, dune_dir, _topo_run = topo_dirs(RIG_TOPO_PRODUCT)
+    print(f"  topography: {RIG_TOPO_PRODUCT}/{_topo_run}")
+    buf_dune = os.path.join(str(BUFFER_DIR), "sample_1_dune.npy")
+    buf_elev = os.path.join(str(BUFFER_DIR), "sample_1_topography.npy")
+
     elev, dune = [], []
     for _ in range(START_REAL_INDEX):
-        dune.append(os.path.join(HATTERAS_DATA_BASE, "buffer", "sample_1_dune.npy"))
-        elev.append(os.path.join(HATTERAS_DATA_BASE, "buffer", "sample_1_topography.npy"))
+        dune.append(buf_dune)
+        elev.append(buf_elev)
     for i_list in range(START_REAL_INDEX, END_REAL_INDEX):
         file_num = FIRST_FILE_NUMBER + (i_list - START_REAL_INDEX)
-        dune.append(os.path.join(HATTERAS_DATA_BASE, "dunes", TOPO_DUNE_SUBFOLDER,
-                                 f"domain_{file_num}_dune_{TOPO_DUNE_INIT_YEAR}.npy"))
-        elev.append(os.path.join(HATTERAS_DATA_BASE, "topography", TOPO_DUNE_SUBFOLDER,
-                                 f"domain_{file_num}_topography_{TOPO_DUNE_INIT_YEAR}.npy"))
+        dune.append(os.path.join(str(dune_dir),
+                                 array_name("dune", file_num)))
+        elev.append(os.path.join(str(topo_dir),
+                                 array_name("topography", file_num)))
     for _ in range(END_REAL_INDEX, TOTAL_DOMAINS):
-        dune.append(os.path.join(HATTERAS_DATA_BASE, "buffer", "sample_1_dune.npy"))
-        elev.append(os.path.join(HATTERAS_DATA_BASE, "buffer", "sample_1_topography.npy"))
+        dune.append(buf_dune)
+        elev.append(buf_elev)
     print(f"  Generated {len(elev)} elevation + {len(dune)} dune file paths")
 
     missing = [p for p in set(elev + dune) if not os.path.isfile(p)]
@@ -418,34 +417,20 @@ def build_shoreline_matrix(cascade, to_meters=True):
     return shoreline
 
 
-def build_nourishment_arrays_from_manual_inputs(enable=None):
+def build_nourishment_arrays_from_manual_inputs():
     """
     Build per-year nourishment-on and volume arrays for the CASCADE time loop,
     from HAT_BN_YEARS + HAT_BN_VOLUME_BY_DOMAIN (Section 2c). Mirrors the main
     1984-2024 hindcast's build_nourishment_arrays_from_manual_inputs() exactly.
-    Years outside [START_YEAR, END_YEAR] are silently skipped.
-
-    Parameters
-    ----------
-    enable : bool or None, optional
-        If None (default), falls back to the module-level
-        ENABLE_HISTORICAL_NOURISHMENT -- this is what every EXISTING caller
-        (e.g. HAT_groin_sweep_single_combo.py, which calls this with no
-        arguments) already gets, unchanged. Pass True/False explicitly to
-        override per-call -- e.g. main()'s RUN_RECIPES loop uses this to
-        produce a nourishment-off run and a nourishment-on run in the same
-        script execution, without needing two separate module-level settings.
+    Years outside [START_YEAR, END_YEAR] are silently skipped, so
+    ENABLE_HISTORICAL_NOURISHMENT=False returns all-zero arrays with no other
+    code change needed.
 
     Returns
     -------
     nourishment_on_by_year     : dict {year: np.ndarray[TOTAL_DOMAINS]}, 1/0
     nourishment_volume_by_year : dict {year: list[TOTAL_DOMAINS]}, m^3/m
     """
-    if enable is None:
-        enable = ENABLE_HISTORICAL_NOURISHMENT
-    years = HAT_BN_YEARS if enable else []
-    volume_by_domain = HAT_BN_VOLUME_BY_DOMAIN if enable else {}
-
     nourishment_on_by_year     = {}
     nourishment_volume_by_year = {}
 
@@ -453,11 +438,11 @@ def build_nourishment_arrays_from_manual_inputs(enable=None):
         nourishment_on_by_year[year]     = np.zeros(TOTAL_DOMAINS)
         nourishment_volume_by_year[year] = [0.0] * TOTAL_DOMAINS
 
-    for gis_id, volumes_m3 in volume_by_domain.items():
-        if len(years) != len(volumes_m3):
+    for gis_id, volumes_m3 in HAT_BN_VOLUME_BY_DOMAIN.items():
+        if len(HAT_BN_YEARS) != len(volumes_m3):
             raise ValueError(
                 f"GIS domain {gis_id}: HAT_BN_YEARS and volume list must have "
-                f"the same length ({len(years)} vs {len(volumes_m3)})."
+                f"the same length ({len(HAT_BN_YEARS)} vs {len(volumes_m3)})."
             )
 
         pad_idx = _gis_to_pad(gis_id)
@@ -465,7 +450,7 @@ def build_nourishment_arrays_from_manual_inputs(enable=None):
             print(f"  WARNING: GIS {gis_id} -> pad {pad_idx} out of range - skipped.")
             continue
 
-        for year, total_m3 in zip(years, volumes_m3):
+        for year, total_m3 in zip(HAT_BN_YEARS, volumes_m3):
             if year < START_YEAR or year > END_YEAR:
                 continue   # event outside this period - skip silently
 
@@ -595,25 +580,10 @@ def run_one(run_key, island_offset_dam, elevation_files, dune_files,
     groin_on = run_key in ("groin", "groin_be")
     be_on    = run_key == "groin_be"
 
-    # Derived fresh from the schedule actually passed to THIS call, not the
-    # fixed module-level NOURISHMENT_MANAGEMENT_ON -- so a run built with an
-    # empty (nourishment-disabled) schedule correctly gets beach_nourishment_
-    # module=False everywhere too, not just zero volume. This matters: even
-    # with nourish_now never firing, beach_nourishment_module=True still runs
-    # the whole NourishmentManager.update() every year (narrow_break checks,
-    # beach-width tracking, etc.) -- a genuinely clean "no human intervention
-    # machinery at all" baseline needs this False, not just quietly zeroed.
-    nourishment_management_on = [False] * TOTAL_DOMAINS
-    for _year_arr in historical_nourishment_on_by_year.values():
-        for _idx, _flag in enumerate(_year_arr):
-            if _flag == 1:
-                nourishment_management_on[_idx] = True
-
     run_name = f"HAT_{START_YEAR}_{END_YEAR}_{RUN_NAME_SUFFIX}_{run_key}"
     print("\n" + "=" * 78)
     print(f"RUN: {run_name}   (groin={'ON' if groin_on else 'off'}, "
           f"BE={'ON' if be_on else 'off'}, "
-          f"nourishment={'ON' if any(nourishment_management_on) else 'off'}, "
           f"edge_correction={'ON' if APPLY_EDGE_BE_CORRECTION else 'off'})")
     if APPLY_EDGE_BE_CORRECTION:
         print(f"  Edge BE correction: "
@@ -656,7 +626,7 @@ def run_one(run_key, island_offset_dam, elevation_files, dune_files,
         num_cores=NUM_CORES,
 
         roadway_management_module=[False] * TOTAL_DOMAINS,
-        beach_nourishment_module=nourishment_management_on,
+        beach_nourishment_module=NOURISHMENT_MANAGEMENT_ON,
         sandbag_management_on=[False] * TOTAL_DOMAINS,
         alongshore_transport_module=True,
         community_economics_module=False,
@@ -677,10 +647,16 @@ def run_one(run_key, island_offset_dam, elevation_files, dune_files,
 
     groin_cb = None
     if groin_on:
+        # THE SHARED MODULE, not a version_control copy. This imported
+        # scripts.groin_module.hindcast_groin_test.version_control.HAT_groin_module,
+        # which no longer exists -- the groin became part of the package as
+        # cascade/groin.py. Importing the shared definition also means this
+        # 1967 fit and the production hindcast are fitting the SAME model
+        # rather than two copies that can drift apart.
         try:
-            from scripts.groin_module.hindcast_groin_test.version_control.HAT_groin_module import GroinCallback
+            from cascade.groin import GroinCallback
         except ImportError as e:
-            sys.exit(f"ERROR: groin run needs HAT_groin_module.py importable: {e}")
+            sys.exit(f"ERROR: groin run needs cascade.groin importable: {e}")
 
         groin_cb = GroinCallback(
             updrift_pad=_gis_to_pad(GROIN_UPDRIFT_GIS),
@@ -804,12 +780,10 @@ def run_one(run_key, island_offset_dam, elevation_files, dune_files,
 # SECTION 7: MAIN
 # =============================================================================
 def main():
-    global RUN_NAME_SUFFIX   # temporarily overridden per-recipe in three_way mode, restored after
-
     print("=" * 78)
     print(f"GROIN-TEST HINDCAST  {START_YEAR}-{END_YEAR}  "
           f"D{FIRST_FILE_NUMBER}-D{LAST_FILE_NUMBER}  ({TOTAL_DOMAINS} padded)")
-    print(f"Run mode: {RUN_MODE}")
+    print(f"Run matrix: {RUN_MATRIX}")
     print("=" * 78)
 
     print("\nChecking inputs...")
@@ -817,45 +791,20 @@ def main():
     island_offset_dam = load_island_offset_dam()
     elevation_files, dune_files = build_file_lists()
 
+    print("\nBuilding historical nourishment schedule (1971, 1973)...")
+    hist_nourish_on, hist_nourish_vol = build_nourishment_arrays_from_manual_inputs()
+
     produced = []
-    original_suffix = RUN_NAME_SUFFIX
-
-    if RUN_MODE == "three_way":
-        for label, run_key, enable_nourishment, suffix in RUN_RECIPES:
-            print(f"\n{'#' * 78}\n# {label}\n{'#' * 78}")
-            print(f"Building nourishment schedule (enabled={enable_nourishment})...")
-            hist_nourish_on, hist_nourish_vol = build_nourishment_arrays_from_manual_inputs(
-                enable=enable_nourishment)
-
-            RUN_NAME_SUFFIX = suffix   # temporary override for this recipe only
-            try:
-                produced.append(run_one(run_key, island_offset_dam, elevation_files,
-                                         dune_files, hist_nourish_on, hist_nourish_vol))
-            finally:
-                RUN_NAME_SUFFIX = original_suffix   # always restore, even if run_one() raises
-
-    elif RUN_MODE == "single":
-        print(f"Run matrix: {RUN_MATRIX}")
-        print("\nBuilding historical nourishment schedule (1971, 1973)...")
-        hist_nourish_on, hist_nourish_vol = build_nourishment_arrays_from_manual_inputs()
-        for run_key in RUN_MATRIX:
-            produced.append(run_one(run_key, island_offset_dam, elevation_files, dune_files,
-                                     hist_nourish_on, hist_nourish_vol))
-    else:
-        raise ValueError(f"RUN_MODE must be 'three_way' or 'single', got {RUN_MODE!r}")
+    for run_key in RUN_MATRIX:
+        produced.append(run_one(run_key, island_offset_dam, elevation_files, dune_files,
+                                 hist_nourish_on, hist_nourish_vol))
 
     print("\n" + "=" * 78)
     print("DONE. Runs produced:")
     for r in produced:
         print(f"   {r}")
-    if RUN_MODE == "three_way":
-        print("\nPlot with HAT_three_run_comparison.py:")
-        print(f"   RUN_BASELINE         = {produced[0]!r}")
-        print(f"   RUN_NOURISHMENT_ONLY = {produced[1]!r}")
-        print(f"   RUN_FULL_MODEL       = {produced[2]!r}")
-    else:
-        print("\nPlot with HAT_plot_groin_runs.py:")
-        print(f"   RUNS = {produced}")
+    print("\nPlot with HAT_plot_groin_runs.py:")
+    print(f"   RUNS = {produced}")
     print("=" * 78)
 
 

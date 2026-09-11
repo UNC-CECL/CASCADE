@@ -84,13 +84,13 @@ OBSERVED_FIT_YEAR = 2018   # wet/dry column used for the observed target
 FIT_DOMAINS_GIS = list(range(2, 13))   # D2-D12, full range
 
 WETDRY_CHANGE_TABLE = os.path.join(
-    hc.PROJECT_BASE_DIR, "hard-structures", "groin", "HAT-groin-test-output",
+    hc.PROJECT_BASE_DIR, "hard-structures", "groin", "HAT-groin-buxton-output",
     "shoreline_position_output",
     "Change_from_wetdry_1967_D2_D12.csv",
 )
 
 OUTPUT_DIR = os.path.join(
-    hc.PROJECT_BASE_DIR, "hard-structures", "groin", "HAT-hindcast-groin-test",
+    hc.PROJECT_BASE_DIR, "hard-structures", "groin", "HAT-buxton-hindcast-groin-test",
     "sensitivity_sweep",
 )
 RESULTS_CSV = os.path.join(OUTPUT_DIR, "HAT_groin_sweep_results.csv")

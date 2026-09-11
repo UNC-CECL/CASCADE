@@ -87,7 +87,7 @@ OBSERVED_FINAL_YEAR  = 2018   # full D2-D12 coverage; 2017 itself only has 6/11 
                                # earlier scripts for the same substitution
 
 WETDRY_CHANGE_TABLE = os.path.join(
-    PROJECT_BASE_DIR, "scripts", "groin", "HAT-hindcast-groin-test",
+    PROJECT_BASE_DIR, "scripts", "groin", "HAT-buxton-hindcast-groin-test",
     "input_prep", "shoreline_position", "shoreline_position_output",
     "Change_from_wetdry_1967_D2_D12.csv",
 )
@@ -138,7 +138,7 @@ FIGURE_DPI = 300
 GIF_FPS = 4    # frames per second in the animated version
 GIF_DPI = 100  # kept lower than FIGURE_DPI to control file size
 OUTPUT_DIR = os.path.join(PROJECT_BASE_DIR, "scripts", "groin",
-                           "HAT-hindcast-groin-test", "comparison", "three_run_comparison")
+                           "HAT-buxton-hindcast-groin-test", "comparison", "three_run_comparison")
 
 
 # =============================================================================

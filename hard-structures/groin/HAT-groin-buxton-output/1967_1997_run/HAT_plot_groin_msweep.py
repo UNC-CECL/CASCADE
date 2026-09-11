@@ -77,7 +77,7 @@ OBS_START_COLOR  = "0.55"      # grey for the 1967 start reference
 
 # Observed target (raw offset files), same extraction as HAT_target.
 RAW_OFFSET_DIR = os.path.join(
-    PROJECT_BASE_DIR, "scripts", "groin_module_noBE", "HAT-hindcast-groin-test",
+    PROJECT_BASE_DIR, "scripts", "groin_module_noBE", "HAT-buxton-hindcast-groin-test",
     "groin_init", "2-brie-offset", "raw_offsets",
 )
 OBS_RAW_START = os.path.join(RAW_OFFSET_DIR, f"{START_YEAR}_duneline_offset_raw.csv")
@@ -103,7 +103,7 @@ OBS_REFERENCE_YEARS = [1967, 1997]     # e.g. [1967, 1978, 1984, 1997] for all
 
 # WHERE TO SAVE the comparison figures (independent of where runs are read from).
 OUT_DIR = os.path.join(
-    PROJECT_BASE_DIR, "scripts", "groin_module_noBE", "HAT-hindcast-groin-test", "comparison"
+    PROJECT_BASE_DIR, "scripts", "groin_module_noBE", "HAT-buxton-hindcast-groin-test", "comparison"
 )
 OUT_BASENAME = "HAT_1967_1997_noBE_Msweep"
 

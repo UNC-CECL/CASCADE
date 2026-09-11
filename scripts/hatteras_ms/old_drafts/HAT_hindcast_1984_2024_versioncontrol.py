@@ -123,7 +123,7 @@ GROIN_DETERIORATION_FRACTION    = 0.2   # placeholder -- solve from era LRR rati
 
 # Module import path -- update if HAT_groin_module.py has moved since the
 # 1967-1997 test.
-GROIN_MODULE_IMPORT_PATH = "scripts.groin.HAT-hindcast-groin-test.version_control.HAT_groin_module"
+GROIN_MODULE_IMPORT_PATH = "scripts.groin.HAT-buxton-hindcast-groin-test.version_control.HAT_groin_module"
 
 
 # =============================================================================

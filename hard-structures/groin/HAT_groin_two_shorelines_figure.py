@@ -48,7 +48,7 @@ import numpy as np
 import pandas as pd
 
 HERE = pathlib.Path(__file__).resolve().parent
-WETDRY_TABLE = (HERE / "HAT-groin-test-output" / "shoreline_position_output"
+WETDRY_TABLE = (HERE / "HAT-groin-buxton-output" / "shoreline_position_output"
                 / "Change_from_wetdry_1967_D2_D12.csv")
 
 INSTALL_YEAR, LAST_REPAIR_YEAR, STORM_YEAR = 1969, 1996, 2003

@@ -72,16 +72,16 @@ DATUM_YEAR = 1967
 FIT_YEAR = 2023                   # last surveyed wet/dry year
 
 WETDRY_CHANGE_TABLE = (
-    hc.PROJECT_BASE_DIR / "hard-structures" / "groin" / "HAT-groin-test-output"
+    hc.PROJECT_BASE_DIR / "hard-structures" / "groin" / "HAT-groin-buxton-output"
     / "shoreline_position_output" / "Change_from_wetdry_1967_D2_D12.csv"
     if isinstance(hc.PROJECT_BASE_DIR, pathlib.Path)
     else pathlib.Path(hc.PROJECT_BASE_DIR) / "hard-structures" / "groin"
-    / "HAT-groin-test-output" / "shoreline_position_output"
+    / "HAT-groin-buxton-output" / "shoreline_position_output"
     / "Change_from_wetdry_1967_D2_D12.csv")
 
 STORM_FILE_1967_2024 = (
     pathlib.Path(hc.PROJECT_BASE_DIR) / "hard-structures" / "groin"
-    / "HAT-groin-test-input" / "groin_init" / "storms" / "1967_2024"
+    / "HAT-groin-buxton-input" / "groin_init" / "storms" / "1967_2024"
     / "1967_2024_groin_storms.npy")
 
 

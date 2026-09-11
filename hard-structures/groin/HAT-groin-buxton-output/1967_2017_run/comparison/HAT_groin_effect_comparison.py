@@ -54,7 +54,7 @@ THIS comparison. Then run. Produces a combined overview figure (all
 checkpoints together) AND one individual figure per checkpoint year.
 
 Saves to:
-    scripts/groin/HAT-hindcast-groin-test/comparison/{COMPARISON_SUBFOLDER}/
+    scripts/groin/HAT-buxton-hindcast-groin-test/comparison/{COMPARISON_SUBFOLDER}/
         groin_effect_overview.png             (all checkpoints, one figure)
         groin_effect_overview_v2.png           (same, no title/footer)
         groin_effect_{year}.png                (per checkpoint year)
@@ -87,7 +87,7 @@ RUN_GROIN    = "HAT_1967_2018_M60_deterioration_groin"
 # different comparisons never overwrite each other. ---
 COMPARISON_SUBFOLDER = "deterioration_1995_2003_Mover3"   # <- edit per comparison
 COMPARISON_OUTPUT_DIR = os.path.join(
-    PROJECT_BASE_DIR, "scripts", "groin", "HAT-hindcast-groin-test",
+    PROJECT_BASE_DIR, "scripts", "groin", "HAT-buxton-hindcast-groin-test",
     "comparison", COMPARISON_SUBFOLDER,
 )
 
@@ -139,7 +139,7 @@ AXIS_LABEL_FONTSIZE = 12         # shared across every figure variant
 # all-wet/dry observed series reintroduces the exact feature-mismatch this
 # switch was meant to fix.
 WETDRY_CHANGE_TABLE = os.path.join(
-    PROJECT_BASE_DIR, "scripts", "groin", "HAT-hindcast-groin-test",
+    PROJECT_BASE_DIR, "scripts", "groin", "HAT-buxton-hindcast-groin-test",
     "input_prep", "shoreline_position", "output",
     "Change_from_wetdry_1967_D2_D12.csv",
 )

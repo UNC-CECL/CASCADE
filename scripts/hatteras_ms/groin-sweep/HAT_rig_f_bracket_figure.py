@@ -50,7 +50,7 @@ if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
         f"CASCADE repo root not found: {PROJECT_BASE_DIR} has no pyproject.toml.")
 
 SWEEP_CSV = (PROJECT_BASE_DIR / "hard-structures" / "groin"
-             / "HAT-hindcast-groin-test" / "sensitivity_sweep"
+             / "HAT-buxton-hindcast-groin-test" / "sensitivity_sweep"
              / "HAT_groin_sweep_results.csv")
 FIGURE_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
 

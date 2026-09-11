@@ -38,7 +38,7 @@ OBSERVED_FIT_YEAR = 2018
 FIT_DOMAINS_GIS = list(range(2, 13))   # D2-D12, full range
 
 WETDRY_CHANGE_TABLE = os.path.join(
-    hc.PROJECT_BASE_DIR, "hard-structures", "groin", "HAT-groin-test-output",
+    hc.PROJECT_BASE_DIR, "hard-structures", "groin", "HAT-groin-buxton-output",
     "shoreline_position_output",
     "Change_from_wetdry_1967_D2_D12.csv",
 )
@@ -100,7 +100,7 @@ def main():
     # stale arrays were left in the real one. The path is split across two
     # lines, which is why the earlier bulk path fix missed it.
     profile_dir = os.path.join(hc.PROJECT_BASE_DIR, "hard-structures", "groin",
-                                "HAT-hindcast-groin-test", "sensitivity_sweep", "profiles")
+                                "HAT-buxton-hindcast-groin-test", "sensitivity_sweep", "profiles")
     os.makedirs(profile_dir, exist_ok=True)
     profile_path = os.path.join(profile_dir, f"M{M:g}_frac{fraction:g}.npy")
     np.save(profile_path, modeled)
