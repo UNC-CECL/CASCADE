@@ -95,6 +95,16 @@ files rather than one page.
 | `..._sites.png` | **What** did the move look like? |
 | `..._domain_map.png` | **Which** domains carry a relocation? |
 
+Since 2026-09-10 the three are drawn in the house style of the dune-line
+figures (`apply_style()` in `0-elevation/3-figures/HAT_plot_duneline_offset.py`:
+Arial, panel letters, RdBu poles with the earlier vintage red and the later
+blue, north arrow and scale bar on tickless maps, frameless legends outside the
+axes) and carry no title sentences or statistics lines. That text, with the
+numbers filled from the CSV, is in `CAPTIONS.md` beside the figures, written by
+the same run. The `sites` figure labels each domain with its measured
+displacement and the value CASCADE is forced with, the measurement rounded to
+the nearest 10 m cell (`hatteras_site_config.py`, ROUNDED TO WHOLE CELLS).
+
 The island is 8 km wide and 45 km long — aspect 0.18 — so any true-scale map of
 the whole thing is a hairline in a column of white space. `sites` sidesteps
 that by only ever drawing ~2 km; `domain_map` rotates the island 90° clockwise
