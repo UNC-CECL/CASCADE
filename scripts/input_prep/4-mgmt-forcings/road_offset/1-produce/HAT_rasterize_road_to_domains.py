@@ -450,7 +450,7 @@ def summary_figure(recs, path: Path):
         ax2.plot(d[nd > 0], nd[nd > 0], lw=0, marker="v", ms=7, color=C_GROIN,
                  label="road cells on NoData")
     ax2.set_ylabel("cells")
-    ax2.set_xlabel("domain  (1 = Cape Point / south  ->  90 = Rodanthe / north)")
+    ax2.set_xlabel("GIS domain (south → north)")
     ax2.legend(loc="upper right", fontsize=8, framealpha=0.9)
     ax2.set_xlim(d.min() - 0.5, d.max() + 0.5)
 

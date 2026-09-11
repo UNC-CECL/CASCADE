@@ -179,6 +179,10 @@ MEASURED_COLS = ([f"{k}{str(y)[2:]}_{f}" for y in PICK_YEARS for k in PICK_KINDS
                     "d_dune_band_m", "d_back_to_road_m", "d_toe_to_road_m",
                     "lost_dune_band_m", "lost_back_to_road_m", "lost_behind_road_m",
                     "band_suggests", "reviewed_by", "reviewed_at"])
+# The quick review (HAT_imagery_review_quick.py, 2026-09-10): two yes/no/unclear
+# answers per domain - is the 1984 road offset right, is N right - kept across re-runs
+# like the columns above.
+QUICK_COLS = ["offset_ok", "rows_ok"]
 VERDICT_VOCAB = {
     "dune_field_change": "narrower | wider | same | unclear",
     "edge_moved": "seaward | landward | both | none",
@@ -717,7 +721,7 @@ def choose_controls(tab: pd.DataFrame, n_controls: int) -> list[int]:
 
 def write_sheet(rows: list[dict], quiet: bool = False) -> Path:
     new = pd.DataFrame(rows).set_index("domain").sort_index()
-    for c in VERDICT_COLS + MEASURED_COLS:
+    for c in VERDICT_COLS + MEASURED_COLS + QUICK_COLS:
         new[c] = ""
     if SHEET.is_file():
         old = pd.read_csv(SHEET, dtype=str).fillna("")
@@ -725,7 +729,7 @@ def write_sheet(rows: list[dict], quiet: bool = False) -> Path:
             old["domain"] = old["domain"].astype(int)
             old = old.set_index("domain")
             kept = 0
-            for c in VERDICT_COLS + MEASURED_COLS:      # the reviewer's work survives a re-run
+            for c in VERDICT_COLS + MEASURED_COLS + QUICK_COLS:      # the reviewer's work survives a re-run
                 if c in old:
                     for d in new.index:
                         if d in old.index and str(old.loc[d, c]).strip():
@@ -899,7 +903,7 @@ def main() -> None:
             rec = old.loc[d].to_dict()
             rec["domain"] = d
             rec["role"] = role
-            rows.append({k_: v for k_, v in rec.items() if k_ not in VERDICT_COLS + MEASURED_COLS})
+            rows.append({k_: v for k_, v in rec.items() if k_ not in VERDICT_COLS + MEASURED_COLS + QUICK_COLS})
             continue
         print(f"[{k}/{len(ids)}] GIS {d} ({role}, N={int(t['n_cells']):+d}) ...", flush=True)
         pr = frames.get(d)

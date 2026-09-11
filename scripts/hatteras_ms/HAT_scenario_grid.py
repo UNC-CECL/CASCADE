@@ -90,6 +90,7 @@ from cascade_pipeline.coastsat_loess import (                 # noqa: E402
     build_coastsat_series,
 )
 from cascade_pipeline.hindcast import build_target_table      # noqa: E402
+from cascade_pipeline.run_layout import resolve             # noqa: E402
 from cascade_pipeline.run_registry import preset_dir_for      # noqa: E402
 from hatteras_site_config import (                            # noqa: E402
     HATTERAS_ANNOTATIONS,
@@ -193,11 +194,11 @@ def load_runs(period_start, period_end, preset):
         scenario, reloc = classify(run_dir.name)
         if scenario is None:
             continue
-        hits = sorted(run_dir.glob("*_shoreline_change_rate.csv"))
-        if not hits:
+        rate_csv = resolve(run_dir, "rate_csv", run_dir.name)
+        if not rate_csv.is_file():
             print(f"  ! no rate CSV in {run_dir.name}")
             continue
-        frame = pd.read_csv(hits[0]).set_index("gis_domain")
+        frame = pd.read_csv(rate_csv).set_index("gis_domain")
         # lrr_m_yr where the run has it, change_rate_m_yr otherwise.
         # The target on these axes is a CoastSat LRR, so the model side
         # has to be one too; a run written before the column existed

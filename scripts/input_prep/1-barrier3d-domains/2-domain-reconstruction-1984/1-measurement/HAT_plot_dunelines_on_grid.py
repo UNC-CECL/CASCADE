@@ -52,9 +52,10 @@ sys.path.insert(0, str(REPO / "scripts"))
 from hat_topo_version import array_name, dune_topo_root            # noqa: E402
 from hat_topo_version import insert_figures_dir_for_domain  # noqa: E402
 from hat_topo_version import duneline_shift_dir  # noqa: E402
-from hat_figure_style import (apply_style, C, caption,             # noqa: E402
-                              elevation_cmap, panel_title,
-                              spines_for_image)
+from hat_figure_style import (apply_style, C, C_1984, C_1984_FILL,   # noqa: E402
+                              C_1997, DOMAIN_AXIS_LABEL, INK, caption,
+                              elevation_cmap, figsize, open_frame, save,
+                              spines_for_image, town_bands, _title)
 
 # Resolved through hat_topo_version.duneline_shift_dir - ONE definition
 # of a path that eight scripts used to build by hand. Moved under
@@ -63,7 +64,10 @@ S = duneline_shift_dir("1984-start")
 BASE_V = "v2"   # the re-pick base; was "v3" until the 2026-09-04 renumber
 BERM_EL_M = 1.7
 DUNE_ROWS = 2
-L84, L97, LROW0 = C["ACCENT"], "#1b6ca8", "#111111"
+L84, L97, LROW0 = C_1984, C_1997, C["ROAD"]
+L_DATE, L_BAND = C["REF"], C_1984_FILL
+# the two relocation blocks, GIS 9-14 and 84-87: the modification under test
+BLOCKS = ((9, 14), (84, 87))
 
 
 def per_profile(fname, D):
@@ -82,6 +86,12 @@ def domain_medians(fname):
                                  float(r["row0_cell_median"]),
                                  float(r["shift_m_median"]))
     return out
+
+
+def _blocks(ax):
+    for lo, hi in BLOCKS:
+        ax.axvspan(lo - .5, hi + .5, color=C["ACCENT_FILL"], alpha=.45,
+                   lw=0, zorder=0)
 
 
 def main() -> None:
@@ -110,126 +120,130 @@ def main() -> None:
     mdate = domain_medians("duneline_retreat_1984_1997.csv")
     gis = np.array(sorted(set(m84) & set(m97) & set(mdate)))
 
-    fig = plt.figure(figsize=(11.0, 10.2))
-    gs = fig.add_gridspec(3, 1, height_ratios=[1.35, 1.0, 1.0])
+    fig = plt.figure(figsize=figsize("double", height=8.2),
+                     constrained_layout=True)
+    gs = fig.add_gridspec(3, 1, height_ratios=[1.3, 1.0, 1.0])
 
     # ---- (a) the lines on the grid --------------------------------------
     ax = fig.add_subplot(gs[0])
     cmap, norm, bounds = elevation_cmap()
     strip = np.tile(BERM_EL_M + dune[None, :topo.shape[1]], (DUNE_ROWS, 1))
-    ax.imshow(np.vstack([strip, topo[:args.rows, :]]), cmap=cmap, norm=norm,
-              aspect="auto", interpolation="nearest", zorder=1,
-              extent=[-0.5, topo.shape[1] - 0.5,
-                      args.rows - 0.5, -DUNE_ROWS - 0.5])
-    ax.axhline(-0.5, color="#333333", lw=0.9, zorder=4)
-    ax.fill_between(prof, c84, c97, color=C["ADDED"], alpha=0.30, zorder=5,
-                    label="date term = N")
-    ax.plot(prof, c84, "-", color=L84, lw=2.0, zorder=6, label="1984 dune line")
-    ax.plot(prof, c97, "-", color=L97, lw=2.0, zorder=6, label="1997 dune line")
-    ax.plot(prof, r0, "-", color=LROW0, lw=2.2, zorder=6,
+    im = ax.imshow(np.vstack([strip, topo[:args.rows, :]]), cmap=cmap, norm=norm,
+                   aspect="auto", interpolation="nearest", zorder=1,
+                   extent=[-0.5, topo.shape[1] - 0.5,
+                           args.rows - 0.5, -DUNE_ROWS - 0.5])
+    ax.axhline(-0.5, color=INK, lw=0.6, zorder=4)
+    ax.fill_between(prof, c84, c97, color=L_BAND, alpha=0.55, lw=0, zorder=5,
+                    label="band between the lines (the date term, N)")
+    ax.plot(prof, c84, "-", color=L84, lw=1.5, zorder=6, label="1984 dune line")
+    ax.plot(prof, c97, "-", color=L97, lw=1.5, zorder=6, label="1997 dune line")
+    ax.plot(prof, r0, "-", color=LROW0, lw=1.6, zorder=6,
             label="interior row 0")
     ax.set_xlim(-0.5, topo.shape[1] - 0.5)
     ax.set_ylim(args.rows - 0.5, -DUNE_ROWS - 0.5)
     ax.set_xlabel("alongshore cell")
     ax.set_ylabel("cross-shore cell\n(negative = dune rows)")
-    ax.set_title(panel_title("a", "GIS {} — the two dune lines drawn on the "
-                                  "Barrier3D grid".format(D)))
-    ax.legend(fontsize=7.4, loc="upper center", ncol=4,
-              bbox_to_anchor=(0.5, -0.20), frameon=False)
+    _title(ax, 0, "the two dune lines on the model grid, GIS {}".format(D))
+    ax.legend(loc="upper center", ncol=4, bbox_to_anchor=(0.5, -0.20),
+              frameon=False, columnspacing=1.2)
     spines_for_image(ax)
+    # The bar is attached to (a) and describes only that panel; (b) and (c)
+    # are charts.
+    cax = ax.inset_axes([1.012, 0.0, 0.016, 1.0])
+    cb = fig.colorbar(im, cax=cax, boundaries=bounds[1:], ticks=bounds[1:-1])
+    cb.outline.set_linewidth(0.6)
+    cb.ax.tick_params(length=2)
+    cb.set_label("elevation (m MHW)")
 
     # ---- (b) the same three references, all 90 domains ------------------
     ax2 = fig.add_subplot(gs[1])
     a84 = np.array([m84[g][0] for g in gis])
     a97 = np.array([m97[g][0] for g in gis])
     ar0 = np.array([m84[g][1] for g in gis])
-    ax2.fill_between(gis, a84, a97, color=C["ADDED"], alpha=0.30, zorder=2,
-                     label="date term = N")
-    ax2.plot(gis, a84, "-", color=L84, lw=1.5, label="1984 dune line")
-    ax2.plot(gis, a97, "-", color=L97, lw=1.5, label="1997 dune line")
-    ax2.plot(gis, ar0, "-", color=LROW0, lw=1.8, label="interior row 0")
-    for lo, hi in ((9, 14), (84, 87)):
-        ax2.axvspan(lo - .5, hi + .5, color="#ffe9b0", alpha=.5, zorder=0)
-    ax2.invert_yaxis()
+    town_bands(ax2)
+    _blocks(ax2)
+    ax2.fill_between(gis, a84, a97, color=L_BAND, alpha=0.7, lw=0, zorder=2,
+                     label="band between the lines (the date term, N)")
+    ax2.plot(gis, a84, "-", color=L84, lw=1.1, label="1984 dune line")
+    ax2.plot(gis, a97, "-", color=L97, lw=1.1, label="1997 dune line")
+    ax2.plot(gis, ar0, "-", color=LROW0, lw=1.3, label="interior row 0")
+    ax2.set_ylim(50, 0)
     ax2.set_xlim(0, 91)
-    ax2.set_xlabel("GIS domain")
+    ax2.set_xlabel(DOMAIN_AXIS_LABEL)
     ax2.set_ylabel("cross-shore cell\n(median per domain)")
-    ax2.set_title(panel_title("b", "All 90 domains, same three references "
-                                   "(shaded = the two relocation blocks)"))
-    ax2.legend(fontsize=7.6, ncol=4, loc="upper left")
-    ax2.grid(alpha=.3)
+    _title(ax2, 1, "the same three references, all domains")
+    # no legend: the four handles are those of (a), whose legend sits
+    # directly above this panel
+    ax2.grid(axis="y")
+    open_frame(ax2)
 
     # ---- (c) the decomposition, all 90 domains --------------------------
     ax3 = fig.add_subplot(gs[2])
     tot = np.array([m84[g][2] for g in gis])
     fea = np.array([m97[g][2] for g in gis])
     dat = np.array([mdate[g][2] for g in gis])
-    ax3.plot(gis, tot, "-", color=L84, lw=1.4,
-             label="total  row 0 − 1984  (median {:+.1f} m)".format(
-                 float(np.median(tot))))
-    ax3.plot(gis, fea, "-", color=L97, lw=1.4,
-             label="feature  row 0 − 1997  (median {:+.1f} m)".format(
-                 float(np.median(fea))))
-    ax3.plot(gis, dat, "-", color=C["REF"], lw=1.9,
-             label="DATE = N  (median {:+.1f} m)".format(float(np.median(dat))))
-    ax3.axhline(0, color="k", lw=0.9)
-    for lo, hi in ((9, 14), (84, 87)):
-        ax3.axvspan(lo - .5, hi + .5, color="#ffe9b0", alpha=.5, zorder=0)
+    town_bands(ax3, where="bottom")
+    _blocks(ax3)
+    ax3.plot(gis, tot, "-", color=L84, lw=1.1,
+             label="row 0 − 1984 line (total)")
+    ax3.plot(gis, fea, "-", color=L97, lw=1.1,
+             label="row 0 − 1997 line (feature)")
+    ax3.plot(gis, dat, "-", color=L_DATE, lw=1.5,
+             label="1997 line − 1984 line (date, N)")
+    ax3.axhline(0, color=INK, lw=0.6)
     ax3.set_xlim(0, 91)
-    ax3.set_xlabel("GIS domain   (1 = Cape Point  →  90 = north Pea Island)")
-    ax3.set_ylabel("metres")
+    ax3.set_xlabel(DOMAIN_AXIS_LABEL)
+    ax3.set_ylabel("offset (m)")
     # Do not overstate this. The feature term is TIGHT over most of the island
     # (IQR +14.5 to +26.2 m) but it is not constant: it spikes to 130-145 m
     # around GIS 35 and 63-68, the reaches where the date term is strongly
     # negative -- i.e. where the shoreline prograded and the two lines are on
     # opposite sides of row 0. Those are the domains where the differencing
-    # argument is weakest, and the figure should say so rather than average
+    # argument is weakest, and the caption says so rather than averaging
     # them away.
-    ax3.set_title(panel_title("c", "The decomposition island-wide — the feature "
-                                   "term is tight over most of the island, "
-                                   "with excursions at GIS 35 and 63–68"))
-    ax3.legend(fontsize=7.6, ncol=3, loc="upper left")
-    ax3.grid(alpha=.3)
+    _title(ax3, 2, "the decomposition, all domains")
+    fig.legend(*ax3.get_legend_handles_labels(), loc="outside lower center",
+               ncol=3, frameon=False)
+    ax3.grid(axis="y")
+    open_frame(ax3)
 
-    fig_h = fig.get_figheight()
-    # Attached to panel (a), vertically. It describes ONLY that panel, and a
-    # figure-level bar at the bottom kept landing on the caption while implying
-    # it applied to (b) and (c) as well.
-    cb = fig.colorbar(plt.cm.ScalarMappable(cmap=cmap, norm=norm), ax=ax,
-                      orientation="vertical", boundaries=bounds[1:],
-                      ticks=bounds[1:-1], pad=0.012, fraction=0.030,
-                      aspect=18)
-    cb.outline.set_linewidth(0.6)
-    cb.ax.tick_params(labelsize=6.8, length=2)
-    cb.set_label("elevation (m MHW)\npanel (a) only", fontsize=7.0,
-                 labelpad=3)
-
-    fig.suptitle("The digitized dune lines in model cells, and the "
-                 "decomposition across the island",
-                 fontsize=11, fontweight="bold", x=0.055, ha="left",
-                 y=1 - 0.24 / fig_h)
+    med_tot, med_fea, med_dat = (float(np.median(tot)), float(np.median(fea)),
+                                 float(np.median(dat)))
+    q_fea = (float(np.percentile(fea, 25)), float(np.percentile(fea, 75)))
+    q_dat = (float(np.percentile(dat, 25)), float(np.percentile(dat, 75)))
     caption(fig,
-            "Lines are drawn at the fractional cell where each geometry crosses "
-            "that profile's raster row. The sawtooth in (a) is the per-profile "
-            "shear of the north-up clip;\n"
-            "it appears identically in both lines, which is why it cancels in "
-            "the difference. (b) and (c) are medians per domain over the 50 "
-            "profiles.",
-            y=0.06 / fig_h, size=7.4)
-    fig.subplots_adjust(top=1 - 0.58 / fig_h, bottom=0.62 / fig_h,
-                        left=0.085, right=0.985, hspace=0.62)
+            "The digitized dune lines in model cells, and the decomposition "
+            "across the island. (a) GIS {}: the 1984 (red) and 1997 (blue) dune "
+            "lines and interior row 0 (black) drawn on the Barrier3D grid as "
+            "extracted from the 1996 surface (elevation in classes, m MHW; the "
+            "two rows above the rule are the dune rows). Lines are drawn at the "
+            "fractional cell where each geometry crosses that profile's raster "
+            "row; the sawtooth is the per-profile shear of the north-up clip and "
+            "appears identically in both lines, which is why it cancels in the "
+            "difference. The band between the lines is the date term, N. "
+            "(b) The same three references (colours as in (a)) as medians per "
+            "domain over the 50 profiles, along the island (1 at Cape Point, 90 at north Pea "
+            "Island). (c) The decomposition per domain: total (row 0 − 1984 "
+            "line, island median {:+.1f} m), feature (row 0 − 1997 line, "
+            "median {:+.1f} m, IQR {:+.1f} to {:+.1f} m) and date (1997 − 1984 "
+            "line, median {:+.1f} m, IQR {:+.1f} to {:+.1f} m). The feature "
+            "term is tight over most of the island but excursions at GIS 35 "
+            "and 63–68, where the shoreline prograded and the two lines lie on "
+            "opposite sides of row 0, are where the differencing argument is "
+            "weakest. Grey bands are the villages, purple bands the two "
+            "relocation blocks (GIS 9–14 and 84–87)."
+            .format(D, med_tot, med_fea, q_fea[0], q_fea[1], med_dat,
+                    q_dat[0], q_dat[1]))
 
     out = Path(args.out) if args.out else (
         insert_figures_dir_for_domain("1984-start", "1-measurement", D)
         / "HAT_dunelines_on_grid_GIS{}.png".format(D))
-    fig.savefig(out)
+    save(fig, out)
     print("wrote {}".format(out))
     print("  island-wide medians:  total {:+.1f}  feature {:+.1f}  date {:+.1f} m"
-          .format(float(np.median(tot)), float(np.median(fea)),
-                  float(np.median(dat))))
+          .format(med_tot, med_fea, med_dat))
     print("  feature IQR {:+.1f} to {:+.1f} m   date IQR {:+.1f} to {:+.1f} m"
-          .format(float(np.percentile(fea, 25)), float(np.percentile(fea, 75)),
-                  float(np.percentile(dat, 25)), float(np.percentile(dat, 75))))
+          .format(q_fea[0], q_fea[1], q_dat[0], q_dat[1]))
 
 
 if __name__ == "__main__":

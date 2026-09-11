@@ -143,7 +143,7 @@ YEARS = [1984, 2004]
 # 0, and the audit is whole. The year -> product mapping is imported from
 # hat_topo_version.YEAR_PRODUCT rather than spelled here; a local literal is
 # how the figure scripts came to disagree with this one.
-DOMAINS = list(range(1, 91))        # D1 = Cape Point (south) -> D90 = Rodanthe
+DOMAINS = list(range(1, 91))        # D1 = Cape Point (south) -> D90 = Pea Island (north)
 
 # --- ROAD SPAN ----------------------------------------------------------
 # Domains written to the model-facing CSVs. Matches the legacy files and the

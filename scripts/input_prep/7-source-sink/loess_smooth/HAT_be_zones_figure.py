@@ -38,7 +38,17 @@ Reads  the live FROZEN_ZONE_DOMAINS / GROIN_RESERVED_DOMAINS / PHYSICAL_ZONES,
        the calibrated field from hatteras_site_config.py, and the pass-0 field
        from the masked iteration's first backup -- so the figure cannot drift
        from the calibration it documents.
-Writes output/fig_be_zones_and_corrections.png
+Writes data/hatteras_init/7-source-sink/figures/fig_be_zones_and_corrections.png
+       (and the PDF beside it); the caption goes to CAPTIONS.md in that folder.
+
+NOT REGENERABLE AS IT STANDS. The pass-0 field is read from the timestamped
+backup `scripts/hatteras_site_config_prebe_20260824_223143.py`, which is not
+in the working tree and was never committed (the prebe backups that ARE in
+git history are 20260828 and 20260831, later lineages, so they are not this
+figure's pass 0). `convergence_history.json` records only the per-pass RMSE,
+not the per-domain field, so it cannot stand in either. The figure needs that
+one file back, or a fresh pass-0 field written from a re-run of the masked
+iteration; nothing here should be substituted for it.
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -55,24 +65,39 @@ import numpy as np
 _HERE = pathlib.Path(__file__).resolve()
 PROJECT_BASE_DIR = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
 OUTPUT_DIR = _HERE.parent / "output"
+# The figure lives with the rest of the section 7 figures, in the data tree.
+FIG_DIR = (PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
+           / "figures")
 CONFIG = PROJECT_BASE_DIR / "scripts" / "hatteras_site_config.py"
 PASS0_BACKUP = (PROJECT_BASE_DIR / "scripts"
                 / "hatteras_site_config_prebe_20260824_223143.py")
 
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 
+from hat_figure_style import (                                   # noqa: E402
+    apply_style, figsize, save, caption, town_bands, open_frame,
+    DOMAIN_AXIS_LABEL, C, C_1984, C_1997, INK, INK_MUTED, _title)
+
 _ROW = re.compile(r"^\s*(\d+):\s*([+-]?\d+\.?\d*),", re.M)
 
-PERIODS = ((1984, "1984–2004", "#1565C0"), (2004, "2004–2024", "#B71C1C"))
-WITHHELD_COLOUR = "#C9C9C9"
-RESERVED_COLOUR = "#FF8C00"
-LOCKED_COLOUR = "#5E35B1"
-ZONE_COLOURS = ["#4C72B0", "#55A868", "#C44E52", "#8172B2", "#CCB974",
-                "#64B5CD", "#937860"]
+# The earlier period is the red of the house vintage pair, the later the blue.
+WITHHELD_FILL = C["BASE_FILL"]
+PERIODS = ((1984, "1984–2004", C_1984), (2004, "2004–2024", C_1997))
 
 
 def rates_from(path, period):
-    text = pathlib.Path(path).read_text(encoding="utf-8")
+    path = pathlib.Path(path)
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"{path} is missing. The lower panels split the final field into "
+            f"the one-shot solve and what the iteration added, and the one-shot "
+            f"half can only come from the pass-0 backup written before the "
+            f"first pass. It is not in the tree and not in git history; the "
+            f"later prebe backups are a different lineage and must not be "
+            f"substituted, and convergence_history.json records only the "
+            f"per-pass RMSE. Restore that file, or re-run the masked iteration "
+            f"and keep its pass-0 field, before drawing this figure.")
+    text = path.read_text(encoding="utf-8")
     block = text.split("HATTERAS_BE_RATES_CALIBRATED")[1]
     segment = block.split(f"{period}:")[1]
     segment = segment[:segment.find("},")]
@@ -98,127 +123,152 @@ def main():
     reserved = set(module.GROIN_RESERVED_DOMAINS)
     locked = set(module.LOCKED_DOMAINS)
     zones = module.PHYSICAL_ZONES
-    zone_colour = {name: ZONE_COLOURS[i % len(ZONE_COLOURS)]
-                   for i, name in enumerate(zones)}
 
     final = {p: rates_from(CONFIG, p) for p, _, _ in PERIODS}
     pass0 = {p: rates_from(PASS0_BACKUP, p) for p, _, _ in PERIODS}
 
     gis = np.arange(1, 91)
-    figure = plt.figure(figsize=(16, 9.6))
-    grid = figure.add_gridspec(3, 1, height_ratios=[1.05, 1, 1], hspace=0.30)
+    apply_style()
+    figure = plt.figure(figsize=figsize("double", height=6.2),
+                        constrained_layout=True)
+    grid = figure.add_gridspec(3, 1, height_ratios=[1.05, 1, 1])
     strip = figure.add_subplot(grid[0])
     bars = [figure.add_subplot(grid[1]), figure.add_subplot(grid[2])]
 
     # ---- TOP: eligibility, one row per period ----------------------------
-    for row, (period, label, _) in enumerate(PERIODS):
+    # The fill says what happened to the domain, not which zone it is in: the
+    # zones are named on the ruler beneath, and seven categorical colours here
+    # would collide with the two period colours the bars below depend on.
+    for row, (period, label, colour) in enumerate(PERIODS):
         y0 = (1 - row) * 1.0
         for d in gis:
+            kw = dict(facecolor=WITHHELD_FILL, edgecolor="none")
             if d in locked:
-                face = LOCKED_COLOUR
+                kw = dict(facecolor=C["BASE"], edgecolor="none")
             elif d in reserved:
-                face = RESERVED_COLOUR
+                kw = dict(facecolor="none", edgecolor=C["BASE"], hatch="///",
+                          linewidth=0.0)
             elif d in frozen[period]:
-                face = zone_colour[module.assign_physical_zone(d)]
-            else:
-                face = WITHHELD_COLOUR
-            strip.add_patch(plt.Rectangle((d - 0.5, y0), 1.0, 0.66,
-                                          facecolor=face, edgecolor="none"))
+                kw = dict(facecolor=colour, edgecolor="none")
+            strip.add_patch(plt.Rectangle((d - 0.5, y0), 1.0, 0.66, zorder=3,
+                                          **kw))
         n = len([d for d in frozen[period] if d not in reserved | locked])
         strip.text(-1.2, y0 + 0.33, label, ha="right", va="center",
-                   fontsize=11.5, weight="bold")
+                   fontsize=8, color=colour)
         strip.text(91.2, y0 + 0.33, f"{n} correctable", ha="left", va="center",
-                   fontsize=9.5, color="#444444")
+                   fontsize=7, color=INK_MUTED)
 
-    # zone names under the strip, so the colours are decodable without a
-    # seven-entry legend competing with the status colours
-    for name, (d0, d1, _) in zones.items():
-        strip.plot([d0 - 0.5, d1 + 0.5], [-0.16, -0.16],
-                   color=zone_colour[name], linewidth=3.5, solid_capstyle="butt")
-        strip.text((d0 + d1) / 2.0, -0.30, name.replace(" / ", "/\n"),
-                   ha="center", va="top", fontsize=7.5, color=zone_colour[name])
+    # Zone extents named once on a ruler under the strip, in the short forms
+    # the analysis module keeps for exactly this, and on two staggered rows:
+    # set on one row the neighbouring names overlap wherever a zone is narrow.
+    short = getattr(module, "ZONE_DISPLAY_NAMES", {})
+    for k, (name, (d0, d1, _mech)) in enumerate(zones.items()):
+        strip.plot([d0 - 0.4, d1 + 0.4], [-0.14, -0.14], color=INK_MUTED,
+                   linewidth=1.4, solid_capstyle="butt", zorder=3)
+        strip.text((d0 + d1) / 2.0, -0.24 - 0.20 * (k % 2),
+                   short.get(name, name), ha="center", va="top", fontsize=6.5,
+                   color=INK_MUTED)
 
-    strip.set_xlim(-9, 100)
-    # Headroom above the 1984 row for the legend: at the previous limit it
-    # was landing on top of the row it describes.
-    strip.set_ylim(-0.95, 2.75)
+    strip.set_xlim(-10, 104)
+    strip.set_ylim(-0.80, 2.60)      # headroom above the upper row for the key
     strip.set_yticks([])
-    strip.set_xticks([1, 10, 20, 30, 40, 50, 60, 70, 80, 90])
-    strip.set_title("WHICH DOMAINS QUALIFIED\n"
-                    "zone set identified once from the pass-0 residual, then "
-                    "held fixed for every iteration pass", fontsize=12.5)
+    strip.set_xticks([10, 20, 30, 40, 50, 60, 70, 80, 90])
+    for side in ("top", "right", "left"):
+        strip.spines[side].set_visible(False)
+    town_bands(strip, where="top", strip=0.07, fontsize=7)
+    _title(strip, 0, "which domains were eligible")
     strip.legend(handles=[
-        Patch(facecolor="#777777", label="inside the frozen zone set "
-                                         "(coloured by physical zone)"),
-        Patch(facecolor=WITHHELD_COLOUR,
-              label="withheld — outside the set, left at 0.0 however "
-                    "large the residual"),
-        Patch(facecolor=RESERVED_COLOUR, label="D5–D7 reserved for the groin"),
-        Patch(facecolor=LOCKED_COLOUR, label="D1 / D90 locked "
-                                             "(solved separately)")],
-        loc="upper center", fontsize=8.5, ncol=2, framealpha=0.9)
+        Patch(facecolor=C_1984, label="inside the zone set, 1984\u20132004"),
+        Patch(facecolor=WITHHELD_FILL, label="withheld, left at zero"),
+        Patch(facecolor=C_1997, label="inside the zone set, 2004\u20132024"),
+        Patch(facecolor="none", edgecolor=C["BASE"], hatch="///",
+              label="reserved for the groin"),
+        Patch(facecolor=C["BASE"], label="boundary domain, solved separately")],
+        loc="upper center", bbox_to_anchor=(0.5, 0.95), ncol=3, frameon=False,
+        fontsize=7)
 
     # ---- MIDDLE / BOTTOM: how much correction, and from which pass --------
-    for axis, (period, label, colour) in zip(bars, PERIODS):
+    for i, (axis, (period, label, colour)) in enumerate(zip(bars, PERIODS)):
         p0 = np.array([pass0[period].get(d, 0.0) for d in gis])
         fin = np.array([final[period].get(d, 0.0) for d in gis])
         interior = (gis >= 2) & (gis <= 89)      # D1/D90 dwarf everything
 
         axis.bar(gis[interior], p0[interior], width=0.86, color=colour,
-                 alpha=0.35, zorder=3, label="one-shot solve (pass 0)")
+                 alpha=0.40, zorder=3, label="the one-shot solve")
         # Stacked in the SAME direction as pass 0, so the bar reads as a total
         # rather than a difference; where the iteration reversed a sign the
         # segment simply crosses zero, which is itself worth seeing.
         axis.bar(gis[interior], (fin - p0)[interior], width=0.86,
-                 bottom=p0[interior], color=colour, alpha=0.95, zorder=4,
-                 label="added by iteration")
+                 bottom=p0[interior], color=colour, zorder=4,
+                 label="what the further passes added")
 
         for d in gis[interior]:
             if d in reserved:
-                axis.axvspan(d - 0.5, d + 0.5, color=RESERVED_COLOUR,
-                             alpha=0.20, zorder=0)
+                axis.axvspan(d - 0.5, d + 0.5, facecolor="none",
+                             edgecolor=C["BASE"], hatch="///", linewidth=0.0,
+                             alpha=0.6, zorder=0)
             elif d not in frozen[period]:
-                axis.axvspan(d - 0.5, d + 0.5, color=WITHHELD_COLOUR,
-                             alpha=0.45, zorder=0)
+                axis.axvspan(d - 0.5, d + 0.5, color=WITHHELD_FILL, alpha=0.7,
+                             lw=0, zorder=0)
 
-        axis.axhline(0.0, color="#333333", linewidth=0.9, zorder=5)
-        moved = int(np.sum(np.abs(fin - p0)[interior] > 1e-9))
+        axis.axhline(0.0, color=INK, linewidth=0.7, zorder=5)
+        _title(axis, i + 1, label)
+        axis.set_ylabel("background erosion\nrate (m/yr)")
+        axis.set_xlim(-10, 104)
+        axis.set_xticks([10, 20, 30, 40, 50, 60, 70, 80, 90])
+        axis.grid(axis="y")
+        open_frame(axis)
+        # No village bands here: panel (a) sits directly above on the same
+        # x-scale and carries them, and a second grey could not be told from
+        # the wash that marks the withheld domains.
+        axis.legend(loc="upper left", ncol=1, frameon=False, fontsize=7)
+
+    bars[1].set_xlabel(DOMAIN_AXIS_LABEL)
+
+    moved = {}
+    for period, label, _c in PERIODS:
+        p0 = np.array([pass0[period].get(d, 0.0) for d in gis])
+        fin = np.array([final[period].get(d, 0.0) for d in gis])
+        interior = (gis >= 2) & (gis <= 89)
         added = np.abs(fin - p0)[interior]
-        axis.set_title(
-            f"{label}    final field, split by which pass produced it    "
-            f"(iteration moved {moved} domains, mean "
-            f"{added[added > 1e-9].mean():.2f}, max {added.max():.1f} m/yr)",
-            fontsize=11.5, loc="left")
-        axis.set_ylabel("background erosion\nrate (m/yr)", fontsize=10)
-        axis.set_xlim(-9, 100)
-        axis.set_xticks([1, 10, 20, 30, 40, 50, 60, 70, 80, 90])
-        axis.grid(alpha=0.22, axis="y")
-        axis.legend(fontsize=9, loc="lower right", ncol=2, framealpha=0.9)
+        moved[label] = (int(np.sum(added > 1e-9)),
+                        added[added > 1e-9].mean() if np.any(added > 1e-9) else 0.0,
+                        added.max())
+    detail = "; ".join(
+        f"{k}, {v[0]} domains moved, mean {v[1]:.2f} and at most {v[2]:.1f} m/yr"
+        for k, v in moved.items())
 
-    bars[1].set_xlabel("GIS domain  (south → north;  500 m per domain)",
-                       fontsize=11.5)
+    caption(figure, (
+        "Which domains the source/sink calibration was allowed to correct, and "
+        "how much each one received. A rate of zero in the field is ambiguous on "
+        "its face -- it can mean 'no residual here' or 'this domain was never "
+        "eligible', which are opposite claims. (a) separates them: a domain is "
+        "coloured where it lay inside the zone set that was identified once from "
+        "the first residual and then held for every pass, pale where it was "
+        "withheld and stays at zero however large its residual, hatched at "
+        "domains 5 to 7 where the Buxton groin owns the misfit, and dark grey at "
+        "the two ends, which are boundary absorbers solved separately by "
+        "buffer-cell reproduction. The physical zones are named on the ruler "
+        "beneath. (b, c) split each final rate into the one-shot solve and what "
+        "the further passes added on top, for the interior domains only -- the "
+        "two ends carry rates about ten times larger and would flatten "
+        "everything else. That split is the case for iterating at all: imposing "
+        "X m/yr of background erosion does not move a domain's rate by X, "
+        "because BRIE diffuses most of it alongshore, so the one-shot solve "
+        "closes only 42 per cent of the misfit in the first period and 57 per "
+        f"cent in the second ({detail}). Zone membership itself was not "
+        "iterated: re-deriving it each pass would let less coherent features "
+        "cross the threshold as the real ones were satisfied, and would let "
+        "later passes correct the alongshore spillover of earlier ones, which "
+        "never terminates. Domain 1 is at Cape Point and domain 90 at Pea "
+        "Island, 500 m per domain."))
 
-    figure.suptitle("Source/sink calibration — eligible domains and the "
-                    "correction each received", fontsize=14, y=0.985)
-    figure.tight_layout(rect=(0, 0.075, 1, 0.962))
-    figure.text(
-        0.008, 0.010,
-        "A 0.0 IN THE FIELD IS AMBIGUOUS on its face — it can mean 'no residual here' or 'never eligible'. The top panel separates them: grey domains "
-        "were outside the frozen zone set and stay at 0.0 however large their residual, which is honest unexplained variance rather than a fitted "
-        "constant. D1/D90 are boundary absorbers solved by buffer-cell reproduction and are excluded from the bars, where their ~10x rates would "
-        "flatten everything else.\n"
-        "WHY THE SPLIT MATTERS. Imposing X m/yr of background erosion does not move a domain's rate by X — BRIE diffuses most of it alongshore — so "
-        "the one-shot solve closes only 42% (1984–2004) and 57% (2004–2024) of the misfit. The dark segments are what re-measuring and adding bought; "
-        "that they are comparable to the light ones IS the case for iterating. Zone membership was NOT iterated: re-deriving it each pass let less "
-        "coherent features cross the threshold as real ones were satisfied, and let later passes correct the alongshore spillover of earlier ones.",
-        fontsize=7.5, color="#333333", wrap=True)
-
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    path = OUTPUT_DIR / "fig_be_zones_and_corrections.png"
-    figure.savefig(path, dpi=170, facecolor="white")
+    path = FIG_DIR / "fig_be_zones_and_corrections.png"
+    save(figure, path)
     plt.close(figure)
 
     print(f"wrote {path}")
+
     for period, label, _ in PERIODS:
         eligible = [d for d in frozen[period] if d not in reserved | locked]
         print(f"  {label}: {len(eligible)} correctable, "

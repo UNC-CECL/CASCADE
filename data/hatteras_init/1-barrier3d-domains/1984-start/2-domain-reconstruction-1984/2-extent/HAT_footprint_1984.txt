@@ -1,16 +1,16 @@
 ==============================================================================
 1984 FOOTPRINT - where the interior grows or shrinks to stand at the 1984 dune line
 ==============================================================================
-written        2026-09-08 10:18
+written        2026-09-10 19:33
 topography     1984-start / v2   (read, never modified)
-shift from     data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\duneline-shift  (per-profile files, PAIRED)
+shift from     data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\1-measurement\duneline-shift  (per-profile files, PAIRED)
 road from      data\hatteras_init\4-mgmt-forcing\road_offset\dunestart_offset\1984  (per-profile file, same frame)
-figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\2-extent\seaward\HAT_footprint_1984_grid.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\3-placement\seaward\HAT_footprint_1984_grid.png
 figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\2-extent\island\HAT_footprint_1984_rows.png
 figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\2-extent\island\HAT_footprint_1984_shift.png
-figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\2-extent\seaward\HAT_footprint_1984_setback.png
-figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\2-extent\seaward\HAT_footprint_1984_plan.png
-figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\2-extent\behind-road\HAT_footprint_1984_plan_behindroad.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\3-placement\seaward\HAT_footprint_1984_setback.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\3-placement\seaward\HAT_footprint_1984_plan.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\3-placement\behind-road\HAT_footprint_1984_plan_behindroad.png
 
 SCOPE ONLY. No array written, no fill chosen, no model-facing CSV touched.
 

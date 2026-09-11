@@ -18,11 +18,13 @@ One domain, two methodologies, side by side in the model's frame:
 
 Each panel: the two dune rows (berm + dune height) on top, the interior below
 in elevation classes, a metres axis on the right; NC-12 as the model places it
-(dark band); the measured 1984 road position (dashed); the inserted rows
-outlined in red with the retreat they stand for; and a box with the numbers
-that matter, including what each version's hindcast did with the road
-(v1: arm pea1989basenoreloc; v3: arm behindroad-copy; both calibBE, full
-management, prescribed relocations off).
+(dark band); the measured 1984 road position (outlined); and the inserted rows
+outlined in the accent colour. The interior depth, the retreat the block stands
+for and what each version's hindcast did with the road (v1: arm
+pea1989basenoreloc; v3: arm behindroad-copy; both calibBE, full management,
+prescribed relocations off) go to the CAPTIONS.md beside the figure, not onto
+the canvas; the figure is drawn double-column in the house style of
+hat_figure_style.
 
 USAGE
     python HAT_plot_method_compare.py                 # GIS 85
@@ -58,8 +60,9 @@ INIT = REPO / "data" / "hatteras_init"
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "0-elevation" / "3-figures"))
 from hat_topo_version import array_name, dune_topo_root, insert_figures_dir_for_domain, topo_dirs, insert_scope_step# noqa: E402
-from hat_figure_style import elevation_cmap  # noqa: E402
-import HAT_plot_duneline_offset as off  # noqa: E402
+from hat_figure_style import (  # noqa: E402
+    C as STYLE_C, INK, apply_style, elevation_cmap, figsize, record_caption, save, spines_for_image, _title,
+)
 
 PRODUCT = "1984-start"
 CELL_M = 10.0
@@ -79,7 +82,9 @@ MEASURED = {  # the unfloored measurement each version's CSV was floored from
     "v2": INIT / "4-mgmt-forcing/road_offset/dunestart_offset/1984/RoadOffset_1984_domains.csv",
     "v3": INIT / "4-mgmt-forcing/road_offset/dunestart_offset/1984/RoadOffset_1984_domains.csv",
 }
-INK, C_ADD, C_ADD_FILL, C_ROAD, C_OLD = off.INK, off.C_1984, off.C_1984_FILL, "#1a1a1a", "0.35"
+C_ADD = STYLE_C["ACCENT"]        # the modification under test: the inserted rows
+C_ROAD = STYLE_C["ROAD"]         # NC-12 as the model places it
+C_OLD = STYLE_C["REF"]           # the measured 1984 road position, an observation
 
 
 def model_setback(version: str, d: int) -> float:
@@ -116,7 +121,7 @@ def run_years(version: str, d: int):
 def draw_road(ax, y: float, ncol: int, label: str) -> None:
     ax.add_patch(Rectangle((-0.5, y - 0.5), ncol, ROAD_ROWS, facecolor=C_ROAD, edgecolor=C_ROAD,
                            lw=1.2, alpha=0.5, zorder=5))
-    ax.text(ncol - 1.0, y + ROAD_ROWS / 2 - 0.5, label, ha="right", va="center", fontsize=12.5,
+    ax.text(ncol - 1.0, y + ROAD_ROWS / 2 - 0.5, label, ha="right", va="center", fontsize=8,
             fontweight="bold", color="white", zorder=6)
 
 
@@ -129,21 +134,19 @@ def main() -> None:
                          "v1: the original extraction, which also differs by the 2026-09-02 re-pick")
     args = ap.parse_args()
     d = args.domain
-    off.apply_style()
-    # this figure is read on its own, not in a grid of six: one size up everywhere
-    plt.rcParams.update({"font.size": 14, "axes.titlesize": 15, "axes.labelsize": 14,
-                         "xtick.labelsize": 13, "ytick.labelsize": 13})
+    apply_style()
     cmap, norm, bounds = elevation_cmap()
     fp = pd.read_csv(insert_scope_step(PRODUCT, "2-extent") / "footprint_1984_by_domain.csv").set_index("domain").loc[d]
     n = int(fp["n_cells"])
     ins = int(fp["insert_row_behind_road"]) if n != 0 else -1
     shift = float(fp["shift_m_median"])
 
-    base_title = {"v1": "original extraction, setback floored",
-                  "v2": "as extracted, setback floored"}[args.base]
+    base_title = {"v1": "as first extracted (1996 surface)",
+                  "v2": "as extracted (1996 surface)"}[args.base]
     panels = [(args.base, base_title),
-              ("v3", "footprint behind NC-12, copy fill, 1984 setback")]
-    fig, axes = plt.subplots(1, 2, figsize=(15.0, 8.6), constrained_layout=True)
+              ("v3", "1984 reconstruction")]
+    fig, axes = plt.subplots(1, 2, figsize=figsize("double", height=5.2), constrained_layout=True)
+    numbers = {}
     for k, (ax, (ver, title)) in enumerate(zip(axes, panels)):
         img, rows_total = stack(ver, d)
         sb_meas, sb_model = measured_setback(ver, d), model_setback(ver, d)
@@ -152,7 +155,7 @@ def main() -> None:
         ax.imshow(cmap(norm(img[:R])), aspect="auto", interpolation="nearest", origin="upper",
                   extent=[-0.5, ncol - 0.5, R - 0.5, -0.5])
         ax.axhline(DUNE_ROWS - 0.5, color=INK, lw=1.0, zorder=5)
-        ax.text(ncol - 1.0, DUNE_ROWS / 2 - 0.5, "dune", ha="right", va="center", fontsize=12.5,
+        ax.text(ncol - 1.0, DUNE_ROWS / 2 - 0.5, "dune", ha="right", va="center", fontsize=8,
                 fontweight="bold", color="white", zorder=6)
 
         # the road as the model places it: int(setback/10) rows behind row 0
@@ -168,34 +171,18 @@ def main() -> None:
                                    lw=1.2, ls=(0, (2, 2)), zorder=7))
             ax.text(wbox + 0.5, y_meas + ROAD_ROWS / 2 - 0.5,
                     f"measured: {sb_meas:+.0f} m" + (", floored to 0" if sb_model == 0 and sb_meas < 0 else ""),
-                    ha="left", va="center", fontsize=12.5, color=C_OLD,
+                    ha="left", va="center", fontsize=8, color=C_OLD,
                     bbox=dict(facecolor="white", alpha=0.85, edgecolor="none", boxstyle="square,pad=0.15"), zorder=7)
 
         # the inserted rows, with a bracket for the retreat they stand for
         if ver == "v3" and n > 0:
             y0, y1 = DUNE_ROWS + ins - 0.5, DUNE_ROWS + ins + n - 0.5
-            ax.add_patch(Rectangle((-0.5, y0), ncol, n, facecolor="none", edgecolor=C_ADD, lw=1.8, zorder=6))
-            ax.text(0.5, y1 + 0.2, f"+{n} rows inserted, a copy of the {n} rows behind them"
-                    + chr(10) + f"= the {shift:.0f} m the dune line retreated 1984" + chr(8211) + "1997, in whole cells",
-                    ha="left", va="top", fontsize=12.5, color=C_ADD, fontweight="bold", linespacing=1.35,
+            ax.add_patch(Rectangle((-0.5, y0), ncol, n, facecolor="none", edgecolor=C_ADD, lw=1.4, zorder=6))
+            ax.text(0.5, y1 + 0.3, f"+{n} rows inserted (copy fill)",
+                    ha="left", va="top", fontsize=8, color=C_ADD, fontweight="bold",
                     bbox=dict(facecolor="white", alpha=0.88, edgecolor="none", boxstyle="square,pad=0.2"), zorder=7)
-
-        # the numbers that matter, and what the hindcast did with the road
-        years = run_years(ver, d)
-        rec = RECORDED.get(d)
-        lines = [f"interior rows: {rows_total}",
-                 f"road setback given to the model: {sb_model:.0f} m" + (" (floored)" if sb_model == 0 and sb_meas < 0 else ""),
-                 f"road rows: {int(sb_model // CELL_M)}–{int(sb_model // CELL_M) + 1}"]
-        if ver == "v3" and n:
-            lines.append(f"rows added: {n} at interior row {ins}")
-        if years is not None:
-            lines.append("hindcast, relocations off: " + (
-                "relocated " + ", ".join(str(y) for y in years) if years else "no relocation"))
-            if rec:
-                lines.append(f"recorded NC-12 relocation: {rec}")
-        ax.text(0.015, 0.015, "\n".join(lines), transform=ax.transAxes, ha="left", va="bottom", fontsize=12.5,
-                color=INK, linespacing=1.45, zorder=9,
-                bbox=dict(facecolor="white", alpha=0.92, edgecolor="0.6", lw=0.5, boxstyle="round,pad=0.4"))
+        numbers[ver] = dict(rows_total=rows_total, sb_model=sb_model, sb_meas=sb_meas,
+                            years=run_years(ver, d))
 
         ax.set_xlim(-0.5, ncol - 0.5)
         ax.set_xlabel("alongshore cell")
@@ -204,23 +191,48 @@ def main() -> None:
         ax.set_yticks(range(0, R, 5))
         sec = ax.secondary_yaxis("right", functions=(lambda c: (c - DUNE_ROWS) * CELL_M,
                                                      lambda m: m / CELL_M + DUNE_ROWS))
-        sec.set_ylabel("m landward of interior row 0")
+        if k == len(panels) - 1:            # one metres label, at the right edge
+            sec.set_ylabel("m landward of interior row 0")
         sec.set_yticks(range(0, int((R - DUNE_ROWS) * CELL_M), 100))
-        for sp in ("top", "right"):
-            ax.spines[sp].set_visible(True)
-        off._title(ax, k, f"GIS {d}, {ver}: {title}")
+        spines_for_image(ax)
+        _title(ax, k, title)
 
     labels = ["below 0 (water)"] + [f"{lo:g}–{hi:g}" for lo, hi in zip(bounds[1:-2], bounds[2:-1])] \
         + [f"above {bounds[-2]:g}"]
     handles = [Patch(facecolor=cmap(i), edgecolor="0.4", lw=0.4, label=lab) for i, lab in enumerate(labels)]
     handles += [Patch(facecolor=C_ROAD, alpha=0.5, edgecolor=C_ROAD, label="NC-12 as the model places it"),
                 Patch(facecolor="none", edgecolor=C_OLD, lw=1.2, ls=(0, (2, 2)), label="measured 1984 road position"),
-                Line2D([0], [0], color=C_ADD, lw=1.8, label="rows inserted (copy fill)")]
-    fig.legend(handles=handles, loc="outside lower center", ncol=5, fontsize=12.5,
-               title="elevation classes (m MHW); dune rows drawn at berm + dune height", title_fontsize=12.5)
+                Line2D([0], [0], color=C_ADD, lw=1.4, label="rows inserted (copy fill)")]
+    fig.legend(handles=handles, loc="outside lower center", ncol=6, frameon=False,
+               title="elevation classes (m MHW); the dune rows are drawn at berm + dune height")
     p = insert_figures_dir_for_domain(PRODUCT, "6-result", d) / f"HAT_method_compare_{args.base}_v3_GIS{d}.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
+    save(fig, p, vector=False, bbox_inches="tight")
     plt.close(fig)
+
+    def _road(v):
+        b = numbers[v]
+        floored = " (the measurement floored to 0)" if b["sb_model"] == 0 and b["sb_meas"] < 0 else ""
+        did = ("relocated " + ", ".join(str(y) for y in b["years"]) if b["years"] else "no relocation") \
+            if b["years"] is not None else "no hindcast on this version"
+        return (f"{b['rows_total']} interior rows, the road at {b['sb_model']:.0f} m{floored} on rows "
+                f"{int(b['sb_model'] // CELL_M)}–{int(b['sb_model'] // CELL_M) + 1}, measured "
+                f"{b['sb_meas']:+.0f} m; the hindcast with prescribed relocations off {did}")
+
+    base_name = {"v1": "the original extraction", "v2": "the extraction the reconstruction is built on"}[args.base]
+    rec = RECORDED.get(d)
+    record_caption(p, f"GIS {d} under the two methodologies, in the model's frame: the two dune rows on top (berm "
+                      "plus dune height), the interior below in elevation classes (m above MHW), cells on the left "
+                      "axis and metres landward of interior row 0 on the right; NC-12 as the model places it is the "
+                      "dark band, the measured 1984 position the outlined one. (a) The domains as extracted from the "
+                      f"1996 surface ({base_name}, dune-topo {args.base}): {_road(args.base)}. (b) The 1984 "
+                      f"reconstruction (v3): the same extraction with {n} rows inserted directly behind the road at "
+                      f"interior row {ins} and filled by copying the {n} rows that follow them, standing for the "
+                      f"{shift:.0f} m the dune line retreated between 1984 and 1997 in whole cells, and the road at "
+                      f"its 1984 setback; {_road('v3')}."
+                      + (f" The recorded NC-12 relocation here is {rec}." if rec else "")
+                      + (" Both panels share the 2026-09-02 pick set, so they differ only by the block and the "
+                         "setback." if args.base == "v2" else " The base is the original extraction, so the "
+                         "2026-09-02 re-pick is part of the difference as well."))
     print(f"wrote {p}")
 
 

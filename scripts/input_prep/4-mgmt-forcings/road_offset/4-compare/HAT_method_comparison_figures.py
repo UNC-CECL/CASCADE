@@ -16,12 +16,17 @@ ENCODING CHANGES HERE -- READ THIS FIRST
 In the per-method figures, hue = YEAR. In these two, hue = METHOD and the year
 is the panel:
 
-    blue    old method        (min road - min dune, digitised dune line)
-    orange  dune-start method (per-profile, measured from interior row 0)
+    grey    the superseded method: the minimum road elevation minus the
+            minimum dune elevation, taken independently per domain, against
+            the same-year digitised dune line
+    purple  the current method: per profile, measured landward from the dune
+            start, then the domain median
 
-Same validated pair (OKLab normal-vision dE 33.6, worst CVD 26.5), reassigned.
-Mixing the two conventions in one figure would be worse than reassigning them
-in a figure that says so.
+That is the house BASE/ACCENT pair -- the input as it was against the change
+under test -- and it leaves the vintage red/blue free. Because hue is NOT the
+vintage in these two figures, the red pole is available, and it carries the
+one thing that is a failure rather than a category: a roadway that drowns at
+initialisation.
 
 WHAT "ACTUAL ROAD" MEANS, AND WHAT IT DOES NOT
 ----------------------------------------------
@@ -58,7 +63,6 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib.patheffects import withStroke
@@ -82,6 +86,13 @@ P = importlib.util.module_from_spec(_SPEC)
 sys.modules["hat_placement"] = P
 _SPEC.loader.exec_module(P)
 
+sys.path.insert(0, str(_HERE.parents[3]))
+from hat_figure_style import (  # noqa: E402
+    C, C_1984, DOMAIN_AXIS_LABEL, apply_style, caption, figsize, open_frame,
+    save, spines_for_image, town_bands, _title)
+
+apply_style()
+
 ROADS_ROOT = P.ROADS_ROOT
 
 # Cross-method output goes in its own folder, NOT at road_offset/ level and NOT
@@ -94,22 +105,31 @@ YEARS = P.YEARS
 DOMAINS = P.DOMAINS
 CELL_SIZE_M = P.CELL_SIZE_M
 DROWN_PCT = P.DROWN_PCT
-SURFACE, WATER = P.SURFACE, P.WATER
+SURFACE, WATER, NODATA = P.SURFACE, P.WATER, P.NODATA
 INK_MUTED, INK_SECOND = P.INK_MUTED, P.INK_SECOND
-INK = "#0b0b0b"
+INK = P.INK_SECOND
 
-# hue = METHOD here, not year. See the header.
-C_OLD, C_NEW = "#2a78d6", "#eb6834"
-C_ACTUAL = "#3b3a37"          # reference: neutral, never a category colour
-C_DROWN = P.C_DROWN
+# hue = METHOD here, not year. See the header. BASE is the input as it stood,
+# ACCENT the change under test. The rasterized road is the OBSERVATION both
+# methods are measured against, which is what C["REF"] means -- it was the
+# road ink for one draft, and a 42%-alpha near-black band is the same mid grey
+# as BASE, so the reference and the superseded method read as one thing. A
+# drowning roadway is the one failure state, and it takes the red pole, free
+# in this figure precisely because hue is not the vintage here.
+C_OLD, C_NEW = C["BASE"], C["ACCENT"]
+C_ACTUAL = C["REF"]
+C_DROWN = C_1984
 
 METHOD_ORDER = ["old", "dunestart"]
 METHOD_COLOUR = {"old": C_OLD, "dunestart": C_NEW}
-METHOD_LABEL = {"old": "old method", "dunestart": "dune-start method"}
+# What the methods ARE, not what they were called while they were being built.
+METHOD_LABEL = {
+    "old": "setback from independent minima (superseded)",
+    "dunestart": "setback from the dune start",
+}
+METHOD_TICK = {"old": "independent minima", "dunestart": "dune start"}
 
 PROFILES_FMT = ("dunestart_offset/{year}/RoadOffset_{year}_profiles.csv")
-
-plt.rcParams.update(P.plt.rcParams)
 
 
 # =============================================================================
@@ -166,29 +186,27 @@ def load_placements(per: dict) -> dict:
 # SHARED DRAWING
 # =============================================================================
 
-def base_panel(ax, fig, shown, crop_rows, title, label_sections):
-    ax.set_facecolor(WATER)
+def base_panel(ax, fig, shown, crop_rows, title, panel_index):
+    ax.set_facecolor(NODATA)
     im = ax.imshow(np.ma.masked_invalid(shown), aspect="auto", origin="lower",
                    extent=[0.5, len(DOMAINS) + 0.5, -CELL_SIZE_M / 2,
                            crop_rows * CELL_SIZE_M - CELL_SIZE_M / 2],
-                   cmap=P.LAND_CMAP, norm=Normalize(P.LAND_VMIN, P.LAND_VMAX),
+                   cmap=P.LAND_CLASS_CMAP, norm=P.LAND_CLASS_NORM,
                    interpolation="nearest")
     cax = ax.inset_axes([1.012, 0.0, 0.014, 1.0])
-    cb = fig.colorbar(im, cax=cax, extend="max")
-    cb.set_label("interior elev (m MHW)", fontsize=8.5)
-    cb.ax.tick_params(labelsize=8)
+    cb = fig.colorbar(im, cax=cax, spacing="uniform",
+                      ticks=P.LAND_CLASS_BOUNDS[1:-1])
+    cb.set_label("elevation (m MHW)")
     cb.outline.set_edgecolor(INK_MUTED)
+    cb.outline.set_linewidth(0.6)
 
-    for (lo, hi), nm in P.SECTIONS:
-        ax.axvline(hi + 0.5, color=SURFACE, lw=1.0, alpha=0.55, zorder=4)
-        if label_sections:
-            ax.text((lo + hi) / 2, crop_rows * CELL_SIZE_M * 0.97, nm,
-                    ha="center", va="top", fontsize=8, color=INK_SECOND,
-                    zorder=9,
-                    bbox=dict(fc=SURFACE, ec="none", alpha=0.8, pad=1.6))
+    ax.set_xlim(0.5, len(DOMAINS) + 0.5)
+    if panel_index == 0:
+        town_bands(ax, strip=0.075, shade=SURFACE)
 
-    ax.set_title(title, loc="left", fontsize=11.5, weight="semibold", pad=4)
-    ax.set_ylabel("m landward of\ninterior row 0", fontsize=9)
+    spines_for_image(ax)
+    _title(ax, panel_index, title)
+    ax.set_ylabel("m landward of\ninterior row 0")
     plt.setp(ax.get_xticklabels(), visible=False)
 
 
@@ -215,17 +233,17 @@ def draw_method_line(ax, placed, colour, lw=2.4, zorder=6, halo=True):
 # =============================================================================
 
 def figure_methods(per, crop_rows, placements, out_png: Path):
-    fig = plt.figure(figsize=(16.5, 13.4))
+    fig = plt.figure(figsize=figsize("double", height=8.0))
     gs = fig.add_gridspec(4, 1, height_ratios=[1.25, 1.25, 1.0, 0.62],
-                          hspace=0.17, left=0.065, right=0.905,
-                          top=0.872, bottom=0.055)
+                          hspace=0.30, left=0.135, right=0.870,
+                          top=0.958, bottom=0.090)
     axes = [fig.add_subplot(gs[0])]
     axes += [fig.add_subplot(gs[i], sharex=axes[0]) for i in (1, 2, 3)]
     ax84, ax04, ax_d, ax_s = axes
 
-    for ax, year, lab in ((ax84, YEARS[0], True), (ax04, YEARS[1], False)):
+    for i, (ax, year) in enumerate(((ax84, YEARS[0]), (ax04, YEARS[1]))):
         base_panel(ax, fig, per[year]["shown"], crop_rows,
-                   f"{year} — both methods, on {P.topo_label(year)}", lab)
+                   f"both methods in {year}", i)
         for name in METHOD_ORDER:
             if year in placements.get(name, {}):
                 draw_method_line(ax, placements[name][year],
@@ -233,23 +251,25 @@ def figure_methods(per, crop_rows, placements, out_png: Path):
                                  lw=2.8 if name == "old" else 2.0,
                                  zorder=6 if name == "old" else 7)
 
-    # --- (C) how far apart, per domain -------------------------------------
-    ax_d.axhline(0, color=INK_SECOND, lw=1.1, zorder=3)
+    # --- (c) how far apart, per domain -------------------------------------
+    ax_d.axhline(0, color=INK_MUTED, lw=0.8, zorder=3)
+    medians = {}
     for year, style in zip(YEARS, [(0, ()), (0, (5, 1.6))]):
         if not all(year in placements.get(m, {}) for m in METHOD_ORDER):
             continue
         o, n = (placements["old"][year], placements["dunestart"][year])
         common = sorted(set(o) & set(n))
         diff = [n[d]["setback_m"] - o[d]["setback_m"] for d in common]
-        ax_d.plot(common, diff, color=INK, lw=1.7, ls=style, zorder=5,
-                  label=f"{year}: dune-start − old  "
-                        f"(median {np.median(diff):+.0f} m)")
-    ax_d.set_ylabel("dune-start − old\nsetback (m)", fontsize=9)
-    ax_d.grid(axis="y", color=INK_MUTED, alpha=0.22, lw=0.7)
+        medians[year] = float(np.median(diff))
+        ax_d.plot(common, diff, color=INK, lw=1.3, ls=style, zorder=5,
+                  label=f"{year}")
+    ax_d.set_ylabel("dune start − independent\nminima, setback (m)")
+    ax_d.grid(axis="y")
     ax_d.set_axisbelow(True)
-    ax_d.legend(loc="lower left", fontsize=8.5, ncol=2, framealpha=0.92)
-    ax_d.set_title("(C)  Negative = the dune-start method puts the road CLOSER "
-                   "to the dune", loc="left", fontsize=10)
+    town_bands(ax_d, label=False)
+    open_frame(ax_d)
+    ax_d.legend(loc="lower left", ncol=2, fontsize=7)
+    _title(ax_d, 2, "difference between the two methods")
     plt.setp(ax_d.get_xticklabels(), visible=False)
 
     # --- (D) drown status, one row per method-year --------------------------
@@ -264,42 +284,52 @@ def figure_methods(per, crop_rows, placements, out_png: Path):
             ax_s.scatter(bad, [k] * len(bad), s=34, marker="s", color=C_DROWN,
                          zorder=5, linewidths=0)
         ax_s.text(len(DOMAINS) + 1.2, k,
-                  f"{len(bad)} drown", va="center", ha="left", fontsize=8.5,
+                  f"{len(bad)} drown", va="center", ha="left", fontsize=7,
                   color=C_DROWN if bad else INK_MUTED)
     ax_s.set_yticks(range(len(rows)))
-    ax_s.set_yticklabels([f"{METHOD_LABEL[m]}  {y}" for m, y in rows],
-                         fontsize=8.5)
+    ax_s.set_yticklabels([f"{METHOD_TICK[m]}\n{y}" for m, y in rows],
+                         fontsize=7)
     ax_s.set_ylim(-0.6, len(rows) - 0.4)
     ax_s.set_xlim(0.5, len(DOMAINS) + 0.5)
-    ax_s.set_xlabel("Barrier3D / GIS domain   "
-                    "(1 = Cape Point / south  →  90 = Rodanthe / north)")
-    ax_s.set_title("(D)  Drowns at initialisation — crimson square = CASCADE "
-                   "stops managing this roadway", loc="left", fontsize=10)
-    ax_s.grid(axis="x", color=INK_MUTED, alpha=0.18, lw=0.7)
+    ax_s.set_xlabel(DOMAIN_AXIS_LABEL)
+    _title(ax_s, 3, "domains that drown at initialisation")
+    ax_s.grid(axis="x")
     ax_s.set_axisbelow(True)
+    open_frame(ax_s)
 
-    fig.text(0.065, 0.985,
-             "The two setback methods on each period's own Barrier3D "
-             "interiors — where each one puts NC-12",
-             fontsize=14, va="top", weight="semibold")
-    fig.text(0.065, 0.958,
-             "Topography: "
-             + ", ".join(f"{y} on {P.topo_label(y)}" for y in YEARS)
-             + ". Each panel compares two METHODS on ONE island; the two "
-               "panels are different islands. HUE IS THE METHOD HERE, not "
-               "the year — the year is the panel. Road drawn where bulldoze "
-               "puts it: road_start = int(setback / 10 m).",
-             fontsize=9, color=INK_SECOND, va="top", linespacing=1.5)
     fig.legend(handles=[
-        Line2D([], [], color=C_OLD, lw=2.8, label="old method"),
-        Line2D([], [], color=C_NEW, lw=2.0, label="dune-start method"),
+        Line2D([], [], color=C_OLD, lw=2.8, label=METHOD_LABEL["old"]),
+        Line2D([], [], color=C_NEW, lw=2.0, label=METHOD_LABEL["dunestart"]),
         Patch(facecolor=C_DROWN, label="drowns at initialisation"),
-        Line2D([], [], color=WATER, lw=8, label="off-island / sentinel water"),
-    ], loc="upper left", bbox_to_anchor=(0.065, 0.933), ncol=4, fontsize=8.5,
-        framealpha=0.0, borderpad=0.4, columnspacing=1.6, handlelength=2.6)
+        Line2D([], [], color=NODATA, lw=8, label="outside the extraction"),
+    ], loc="lower center", bbox_to_anchor=(0.5, -0.004), ncol=2,
+        frameon=False, columnspacing=1.6, handlelength=2.4)
 
-    out_png.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_png, dpi=150, bbox_inches="tight", facecolor=SURFACE)
+    med = "; ".join(f"{y} median {v:+.0f} m" for y, v in sorted(medians.items()))
+    caption(fig, (
+        "The two setback methods for NC-12, each period drawn on its own "
+        "Barrier3D interiors. Domain 1 is at Cape Point in the south and "
+        "domain 90 at Pea Island in the north; the shaded spans are the "
+        "villages (Buxton, Avon, Tri-Village). The superseded method took the "
+        "setback as the minimum road elevation minus the minimum dune "
+        "elevation, independently per domain, referenced to the same-year "
+        "digitised dune line; the current method measures the road landward "
+        "from the dune start on each of a domain's 50 profiles and takes the "
+        "median. Colour is the METHOD in this figure, not the vintage — the "
+        "vintage is the panel. (a, b) both methods on one island each, the "
+        "road drawn where roadway_manager.bulldoze puts it, road_start = "
+        "int(setback / 10 m); topography "
+        + ", ".join(f"{y} on {P.topo_label(y)}" for y in YEARS)
+        + ", which are different islands rather than one island drawn twice. "
+          "Interior elevation is in classes relative to mean high water; "
+          "cells outside the extraction carry no data and are drawn grey. "
+          "(c) the difference between the two, negative where the dune-start "
+          f"method puts the road closer to the dune ({med}). (d) the domains "
+          "where bulldoze's drown test fires at initialisation, one row per "
+          "method and period; a red square is a roadway CASCADE stops "
+          "managing."))
+
+    save(fig, out_png)
     plt.close(fig)
     print(f"[out] {out_png}")
 
@@ -310,18 +340,17 @@ def figure_methods(per, crop_rows, placements, out_png: Path):
 
 def figure_actual(per, crop_rows, placements, actual,
                   out_png: Path):
-    fig = plt.figure(figsize=(16.5, 13.4))
+    fig = plt.figure(figsize=figsize("double", height=8.0))
     gs = fig.add_gridspec(4, 1, height_ratios=[1.25, 1.25, 1.0, 0.85],
-                          hspace=0.17, left=0.065, right=0.905,
-                          top=0.872, bottom=0.055)
+                          hspace=0.30, left=0.135, right=0.870,
+                          top=0.958, bottom=0.090)
     axes = [fig.add_subplot(gs[0])]
     axes += [fig.add_subplot(gs[i], sharex=axes[0]) for i in (1, 2, 3)]
     ax84, ax04, ax_e, ax_w = axes
 
-    for ax, year, lab in ((ax84, YEARS[0], True), (ax04, YEARS[1], False)):
+    for i, (ax, year) in enumerate(((ax84, YEARS[0]), (ax04, YEARS[1]))):
         base_panel(ax, fig, per[year]["shown"], crop_rows,
-                   f"{year} — rasterized road, with both methods over it "
-                   f"({P.topo_label(year)})", lab)
+                   f"the rasterized road in {year}, both methods over it", i)
         act = actual.get(year, {})
         if act:
             xs, lo, hi = [], [], []
@@ -344,7 +373,8 @@ def figure_actual(per, crop_rows, placements, actual,
     # 3-figures/island_wide/HAT_plot_road_placement_accuracy.py: a method can sit
     # on the median road and still miss most individual profiles, and only the
     # band shows that.
-    ax_e.axhline(0, color=C_ACTUAL, lw=1.4, zorder=3)
+    ax_e.axhline(0, color=C_ACTUAL, lw=1.0, zorder=3)
+    err_medians = {}
     for name in METHOD_ORDER:
         for year, style in zip(YEARS, [(0, ()), (0, (5, 1.6))]):
             if year not in placements.get(name, {}) or year not in actual:
@@ -352,71 +382,83 @@ def figure_actual(per, crop_rows, placements, actual,
             pl, act = placements[name][year], actual[year]
             common = sorted(set(pl) & set(act))
             err = [pl[d]["setback_m"] - act[d]["p50"] for d in common]
+            err_medians[(name, year)] = float(np.median(err))
             if year == YEARS[0]:
                 ax_e.fill_between(
                     common,
                     [pl[d]["setback_m"] - act[d]["p90"] for d in common],
                     [pl[d]["setback_m"] - act[d]["p10"] for d in common],
                     color=METHOD_COLOUR[name], alpha=0.16, lw=0, zorder=4)
-            ax_e.plot(common, err, color=METHOD_COLOUR[name], lw=1.7, ls=style,
-                      zorder=5,
-                      label=f"{METHOD_LABEL[name]} {year}  "
-                            f"(median {np.median(err):+.0f} m)")
-    ax_e.set_ylabel("method − rasterized\nroad (m)", fontsize=9)
-    ax_e.grid(axis="y", color=INK_MUTED, alpha=0.22, lw=0.7)
+            ax_e.plot(common, err, color=METHOD_COLOUR[name], lw=1.3, ls=style,
+                      zorder=5, label=f"{METHOD_TICK[name]} {year}")
+    ax_e.set_ylabel("method − rasterized\nroad (m)")
+    ax_e.grid(axis="y")
     ax_e.set_axisbelow(True)
-    ax_e.legend(loc="upper left", fontsize=8, ncol=2, framealpha=0.92)
-    ax_e.set_title(f"(C)  Distance from the road actually burnt on the grid. "
-                   f"Line = vs the domain's median road; band = vs its p10–p90 "
-                   f"profiles ({YEARS[0]} only). The dune-start line is near "
-                   f"zero BY CONSTRUCTION", loc="left", fontsize=10)
+    town_bands(ax_e, label=False)
+    open_frame(ax_e)
+    ax_e.legend(loc="upper left", ncol=2, fontsize=7)
+    _title(ax_e, 2, "distance from the road burnt on the grid")
     plt.setp(ax_e.get_xticklabels(), visible=False)
 
     # --- (D) what a scalar has to throw away --------------------------------
+    spread_medians = {}
     for year, style in zip(YEARS, [(0, ()), (0, (5, 1.6))]):
         act = actual.get(year, {})
         if not act:
             continue
         xs = sorted(act)
-        ax_w.plot(xs, [act[d]["spread"] for d in xs], color=C_ACTUAL, lw=1.7,
-                  ls=style, zorder=5,
-                  label=f"{year}  (median {np.median([act[d]['spread'] for d in xs]):.0f} m)")
-    ax_w.set_ylabel("road position spread\nwithin a domain, p10–p90 (m)",
-                    fontsize=9)
-    ax_w.set_xlabel("Barrier3D / GIS domain   "
-                    "(1 = Cape Point / south  →  90 = Rodanthe / north)")
+        spread_medians[year] = float(np.median([act[d]["spread"] for d in xs]))
+        ax_w.plot(xs, [act[d]["spread"] for d in xs], color=C_ACTUAL, lw=1.3,
+                  ls=style, zorder=5, label=f"{year}")
+    ax_w.set_ylabel("road position spread\nwithin a domain, p10–p90 (m)")
+    ax_w.set_xlabel(DOMAIN_AXIS_LABEL)
     ax_w.set_xlim(0.5, len(DOMAINS) + 0.5)
     ax_w.set_ylim(bottom=0)
-    ax_w.grid(axis="y", color=INK_MUTED, alpha=0.22, lw=0.7)
+    ax_w.grid(axis="y")
     ax_w.set_axisbelow(True)
-    ax_w.legend(loc="upper left", fontsize=8.5, ncol=2, framealpha=0.92)
-    ax_w.set_title("(D)  How far the road moves across a single domain's 50 "
-                   "profiles — the spread ANY scalar setback discards, "
-                   "whichever method produced it", loc="left", fontsize=10)
+    town_bands(ax_w, label=False)
+    open_frame(ax_w)
+    ax_w.legend(loc="upper left", ncol=2, fontsize=7)
+    _title(ax_w, 3, "how far the road moves within one domain")
 
-    fig.text(0.065, 0.985,
-             "Both methods against the road actually rasterized onto the model "
-             "grid",
-             fontsize=14, va="top", weight="semibold")
-    fig.text(0.065, 0.958,
-             "Reference band = NC-12 as burnt on the domain grids, p10–p90 "
-             "across each domain's 50 profiles plus the measured road width, in "
-             "the same frame both methods are drawn in.\n"
-             "It is NOT an independent check on the dune-start method — that "
-             "method's setback is the median of this band. It IS one on the old "
-             "method, which never saw this grid.",
-             fontsize=9, color=INK_SECOND, va="top", linespacing=1.5)
     fig.legend(handles=[
         Patch(facecolor=C_ACTUAL, alpha=0.42,
-              label="rasterized NC-12 (p10–p90 + width)"),
-        Line2D([], [], color=C_OLD, lw=2.0, label="old method"),
-        Line2D([], [], color=C_NEW, lw=2.0, label="dune-start method"),
-        Line2D([], [], color=WATER, lw=8, label="off-island / sentinel water"),
-    ], loc="upper left", bbox_to_anchor=(0.065, 0.925), ncol=4, fontsize=8.5,
-        framealpha=0.0, borderpad=0.4, columnspacing=1.6, handlelength=2.6)
+              label="NC-12 as burnt on the domain grids (p10–p90 + width)"),
+        Line2D([], [], color=C_OLD, lw=2.0, label=METHOD_LABEL["old"]),
+        Line2D([], [], color=C_NEW, lw=2.0, label=METHOD_LABEL["dunestart"]),
+        Line2D([], [], color=NODATA, lw=8, label="outside the extraction"),
+    ], loc="lower center", bbox_to_anchor=(0.5, -0.004), ncol=2,
+        frameon=False, columnspacing=1.6, handlelength=2.4)
 
-    out_png.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_png, dpi=150, bbox_inches="tight", facecolor=SURFACE)
+    errs = "; ".join(f"{METHOD_TICK[m]} {y} median {v:+.0f} m"
+                     for (m, y), v in sorted(err_medians.items()))
+    spread = "; ".join(f"{y} median {v:.0f} m"
+                       for y, v in sorted(spread_medians.items()))
+    caption(fig, (
+        "Both setback methods against NC-12 as it is actually rasterized onto "
+        "the model grid. Domain 1 is at Cape Point in the south and domain 90 "
+        "at Pea Island in the north; the shaded spans are the villages "
+        "(Buxton, Avon, Tri-Village). The reference is the road burnt on the "
+        "domain grids, p10–p90 of road_seaward_cell − interior_row0_cell "
+        "across each domain's 50 profiles plus the measured road width, in "
+        "the same frame both methods are drawn in. It is NOT an independent "
+        "check on the dune-start method: that method's setback is the median "
+        "of this band, so the two agree by construction up to int() "
+        "truncation and the negative floor. It IS an independent check on the "
+        "superseded method, which never saw this grid. Colour is the METHOD "
+        "here, not the vintage. (a, b) the reference band with both methods "
+        "over it, "
+        + ", ".join(f"{y} on {P.topo_label(y)}" for y in YEARS)
+        + ". Interior elevation is in classes relative to mean high water; "
+          "cells outside the extraction carry no data and are drawn grey. "
+          "(c) the distance from the domain's median rasterized road (line) "
+          "and from its p10–p90 profiles (band, 1984 only): "
+        + errs +
+        ". (d) how far the road moves across a single domain's 50 profiles, "
+        "the spread any scalar setback has to discard whichever method "
+        "produced it: " + spread + "."))
+
+    save(fig, out_png)
     plt.close(fig)
     print(f"[out] {out_png}")
 

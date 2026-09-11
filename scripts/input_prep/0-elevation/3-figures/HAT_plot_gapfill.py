@@ -5,13 +5,18 @@ Review figure for the 2009 DEM gap fill: what the 2009 survey alone gives,
 what the fill adds, and exactly which cells came from where.
 
 Three panels, all on the same 10 m grid and the same colour scale:
-    A  2009 only        cells the 2009 DEM measured; everything else blank
-    B  2009 + fill      the product that goes to the dune/topo extractor
-    C  survey source    2009 measured / fill-year filled / never surveyed
+    (a) 2009 survey      cells the 2009 DEM measured; everything else blank
+    (b) with fill        the product that goes to the dune/topo extractor
+    (c) survey source    2009 measured / fill-year filled / never surveyed
 
-Panels A and B differ ONLY in the filled cells, so flipping between them shows
-the fill directly. Panel C is the same information as a categorical map, which
-is easier to read where the fill is thin.
+Panels (a) and (b) differ ONLY in the filled cells, so flipping between them
+shows the fill directly. Panel (c) is the same information as a categorical map,
+which is easier to read where the fill is thin.
+
+STYLE. Every figure here is drawn under `scripts/hat_figure_style.py` at the
+printed width (190 mm), and carries no title, statistics line or footnote on the
+canvas: that text is written to CAPTIONS.md beside the PNGs. The terrain ramp is
+the house style's one sanctioned exception to drawing elevation in classes.
 
 Domain boxes are drawn over every panel: no fill, thin white outline, so they
 locate a domain without hiding the data under it.
@@ -91,6 +96,15 @@ def _find_project_root(start: Path) -> Path:
 
 
 PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
+
+# The house style, before anything is drawn or any colour is named.
+sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+from hat_figure_style import (  # noqa: E402
+    apply_style, figsize, save, caption, C_1984, C_1997, spines_for_image,
+    _title)
+
+apply_style()
+
 ELEVATION_DIR = PROJECT_ROOT / "data" / "hatteras_init" / "0-elevation"
 IN_DIR = None   # set from SOURCE_TAG below
 FIG_DIR = ELEVATION_DIR / "figures"
@@ -103,17 +117,16 @@ ROAD_DIR = (PROJECT_ROOT / "data" / "hatteras_init" / "4-mgmt-forcing"
             / "road_offset" / "raw_offset")
 ROAD_FILES = {1984: ROAD_DIR / "1984" / "nc12_1984.geojson",
               2004: ROAD_DIR / "2004" / "nc12_2004.geojson"}
-# The two alignments are very nearly coincident through 78-80. Drawn in the same
-# colour with the solid one last, 2004 simply paints over 1984 and only ONE road
-# appears. So 2004 is solid black underneath and 1984 is WHITE dashed on top:
-# where they coincide you see a black line with white dashes (both present),
-# and where they diverge each is legible on its own. Each carries a casing in
-# the opposite colour so it survives terrain running from dark water to near-
-# white dune crest.
-ROAD_STYLE = {2004: dict(color="black", linestyle="-", linewidth=1.8),
-              1984: dict(color="white", linestyle=(0, (4.5, 3.0)), linewidth=1.5)}
-ROAD_CASING = {2004: dict(color="white", linewidth=3.4),
-               1984: dict(color="black", linewidth=3.0)}
+# Two vintages of the same line, so they take the house vintage pair: the
+# EARLIER alignment (1984) red, the LATER one (2004) blue. They are very nearly
+# coincident through 78-80, so 2004 is solid underneath and 1984 dashed on top -
+# where they coincide you see a blue line with red dashes, and where they
+# diverge each is legible on its own. Both carry a white casing so they survive
+# terrain running from dark water to near-white dune crest.
+ROAD_STYLE = {2004: dict(color=C_1997, linestyle="-", linewidth=1.5),
+              1984: dict(color=C_1984, linestyle=(0, (3.6, 2.4)), linewidth=1.5)}
+ROAD_CASING = {2004: dict(color="white", linewidth=3.0),
+               1984: dict(color="white", linewidth=3.0)}
 ROAD_ORDER = [2004, 1984]   # draw order: solid first, dashed on top
 
 # Fill sources this script knows how to plot. Keeping tag, year and label in ONE
@@ -147,10 +160,15 @@ if SOURCE_TAG not in SOURCES:
 SURVEY_FILL, SOURCE_LONG = SOURCES[SOURCE_TAG]
 
 # Built from SURVEY_FILL so it cannot disagree with the data being plotted.
+# It used to be printed under every figure as a `fig.text` footnote; under the
+# house style nothing on the canvas belongs in a caption, so it is now the tail
+# of each CAPTIONS.md entry instead.
 SOURCE_NOTE = (f"Fill is limited to cells the {SURVEY_FILL} source measured, "
                f"contiguous with the island (20 m bridging), above -2.64 m NAVD88. "
-               f"No bias correction, no feathering - filled cells are the "
-               f"{SURVEY_FILL} measurement unchanged.")
+               f"No bias correction, no feathering — filled cells are the "
+               f"{SURVEY_FILL} measurement unchanged. Fill source: "
+               f"{SOURCE_LONG}. Axes are UTM eastings and northings in km; "
+               f"domain outlines are white.")
 
 # The superseded fallback that used to live here is gone: the resolver knows
 # which products are superseded and where they sit, so there is one place that
@@ -176,11 +194,9 @@ ISLAND_PAD_M = 700.0
 # the axes and bbox_inches="tight" adds it after layout, so reserving space for
 # it just opens a gap under the title. Measured: gap above the axes tracks this
 # value almost 1:1, and a two-line suptitle needs ~0.35 in.
-# Zoom legends sit upper-left: the island occupies the centre-right of these
-# panels, so the top-left corner is the one reliably empty area. The ISLAND
-# figure keeps lower-right - there the island runs bottom-left to top-right and
-# the bottom-right corner is the clear one.
-ZOOM_LEGEND_LOC = "upper left"
+# Legends sit OUTSIDE the axes, under the panels, since 2026-09-10: an inside
+# legend on a map this narrow either covers the island or sits in the nodata
+# grey, and the house rule is frameless and outside wherever the layout allows.
 
 # Road-overlay zooms: (domain ids, which NC-12 years, filename slug, title).
 #
@@ -194,17 +210,26 @@ ZOOM_LEGEND_LOC = "upper left"
 # seeing where the road WAS against where it WENT is the point, and this view
 # is meant to be read as a pair with the 1984-start DEM's own 8-15 figure,
 # which now draws the same two lines.
+# The third element is the figure's own caption sentence; the common method
+# paragraph (SOURCE_NOTE) and panel key are appended when it is written.
 ROAD_ZOOMS = [
     ([78, 79, 80], [2004, 1984], "roads_78_80",
-     "Domains 78-80 with NC-12 alignments"),
+     "Domains 78-80, the roadways the extractor names as width-drowning at "
+     "t=0 on missing survey coverage, with both NC-12 alignments drawn: "
+     "1984 dashed red, 2004 solid blue."),
     (list(range(8, 16)), [2004, 1984], "roads_8_15",
-     "Domains 8-15 with NC-12 alignments"),
+     "Domains 8-15, the southern end, with both NC-12 alignments drawn: "
+     "1984 dashed red, 2004 solid blue."),
     (list(range(82, 89)), [2004, 1984], "roads_82_88",
-     "Domains 82-88 with NC-12 alignments"),
+     "Domains 82-88, the northern reach, with both NC-12 alignments drawn: "
+     "1984 dashed red, 2004 solid blue."),
 ]
 
-ZOOM_FIG_W = 15.0
-ZOOM_CHROME_IN = 1.0
+# The house double-column width (190 mm) since 2026-09-10: a figure is drawn at
+# the width it is printed, so its 8-9 pt type is 8-9 pt on the page. It was
+# 15 in, which reduced to a page turned every label into 4 pt.
+ZOOM_FIG_W = figsize("double")[0]
+ZOOM_CHROME_IN = 1.05
 ID_RE = re.compile(r"resampled_domain_(\w+)_filled\.tif$")
 
 SURVEY_2009, SURVEY_NONE = 2009, 0
@@ -361,33 +386,39 @@ def load_roads(dst_crs, clip_to=None):
 
 def draw_roads(ax, roads, scale=1.0):
     """
-    Casing then line, in ROAD_ORDER so the dashed 1984 lands on top of the solid
-    2004 rather than under it (see ROAD_STYLE). `scale` thins the lines for the
-    island-wide figure, where the same widths would smother the island.
+    BOTH casings first, then both lines in ROAD_ORDER so the dashed 1984 lands
+    on top of the solid 2004 rather than under it (see ROAD_STYLE).
+
+    Casings-then-lines, not casing-line-casing-line: the two alignments are
+    nearly coincident through the reaches these figures zoom on, and the second
+    casing then painted out the first line, so 2004 disappeared wherever it
+    mattered. `scale` thins the lines for the island-wide figure, where the same
+    widths would smother the island.
     """
     for yr in ROAD_ORDER:
         if yr not in roads:
             continue
         cas = dict(ROAD_CASING[yr]); cas["linewidth"] *= scale
-        roads[yr].plot(ax=ax, linestyle="-", zorder=6 + ROAD_ORDER.index(yr) * 2,
-                       alpha=0.9, **cas)
+        roads[yr].plot(ax=ax, linestyle="-", zorder=6, alpha=0.9, **cas)
+    for yr in ROAD_ORDER:
+        if yr not in roads:
+            continue
         st = dict(ROAD_STYLE[yr]); st["linewidth"] *= scale
-        roads[yr].plot(ax=ax, zorder=7 + ROAD_ORDER.index(yr) * 2, **st)
+        roads[yr].plot(ax=ax, zorder=8 + ROAD_ORDER.index(yr), **st)
 
 
 def road_legend_handles(roads):
-    return [Line2D([], [], label=f"NC-12 {y}",
-                   **{**ROAD_STYLE[y],
-                      "color": "black" if ROAD_STYLE[y]["color"] == "white"
-                      else ROAD_STYLE[y]["color"]})
+    """Both alignments in their map colours. They are the house vintage pair,
+    so neither is white and the swatches carry straight over."""
+    return [Line2D([], [], label=f"NC-12 {y}", **ROAD_STYLE[y])
             for y in ROAD_ORDER if y in roads]
 
 
-def panel_elev(ax, arr, extent, vmin, vmax, title):
+def panel_elev(ax, i, arr, extent, vmin, vmax, title):
     ax.set_facecolor(C_NONE)
     im = ax.imshow(arr, extent=extent, origin="upper", cmap=ELEV_CMAP,
                    vmin=vmin, vmax=vmax, interpolation="nearest", zorder=1)
-    ax.set_title(title, fontsize=11, pad=8)
+    _title(ax, i, title)
     return im
 
 
@@ -419,13 +450,20 @@ def main():
           f"at {100 * f:.0f}% of terrain; {n_clip:,} cells clip low "
           f"({100 * n_clip / valid.size:.2f}%)")
 
-    fig, axes = plt.subplots(1, 3, figsize=(13, 19), constrained_layout=True)
+    # The island spans ~9 km east-west and ~47 km north-south at equal aspect,
+    # so panel width follows figure HEIGHT, not the width asked for. At the
+    # house double-column width (190 mm) a full page of height gives three
+    # ~40 mm panels, which is the whole strip at one look; the figure is no
+    # longer 13 x 19 in reduced to a page, where the type became 4 pt. A shade
+    # under FIG_H_MAX because the legend sits outside the axes and
+    # bbox_inches="tight" adds it after layout.
+    fig, axes = plt.subplots(1, 3, figsize=figsize("double", height=9.15),
+                             sharex=True, sharey=True, constrained_layout=True)
 
-    im = panel_elev(axes[0], only09, extent, vmin, vmax,
-                    f"A  2009 DEM only\n{n_meas:,} cells")
-    panel_elev(axes[1], filled, extent, vmin, vmax,
-               f"B  2009 + {SURVEY_FILL} fill\n{n_meas + n_fill:,} cells "
-               f"(+{n_fill:,})")
+    # Cell counts are in the caption, not on the canvas.
+    im = panel_elev(axes[0], 0, only09, extent, vmin, vmax, "2009 survey")
+    panel_elev(axes[1], 1, filled, extent, vmin, vmax,
+               f"with {SURVEY_FILL} fill")
 
     # Boundaries must ascend and the fill year (2014) is now GREATER than the
     # measured year (2009), so measured precedes fill in the colour list. With
@@ -438,7 +476,7 @@ def main():
     axes[2].set_facecolor(C_NONE)
     axes[2].imshow(surv, extent=extent, origin="upper", cmap=cmap_s, norm=norm_s,
                    interpolation="nearest", zorder=1)
-    axes[2].set_title("C  survey source", fontsize=11, pad=8)
+    _title(axes[2], 2, "survey source")
 
     for ax in axes:
         draw_domains(ax, gdf)
@@ -448,32 +486,32 @@ def main():
         draw_roads(ax, roads, scale=0.45)
         ax.set_xlim(extent[0] - ISLAND_PAD_M, extent[1] + ISLAND_PAD_M)
         ax.set_ylim(extent[2] - ISLAND_PAD_M, extent[3] + ISLAND_PAD_M)
-        ax.set_xlabel("Easting (km)", fontsize=9)
+        ax.set_xlabel("Easting (km)")
         km_axes(ax)
         ax.set_aspect("equal")
-    axes[0].set_ylabel("Northing (km)", fontsize=9)
-    for ax in axes[1:]:
-        ax.tick_params(labelleft=False)
+        spines_for_image(ax)
+    axes[0].set_ylabel("Northing (km)")
 
     # ax=all three, not axes[:2] - a colorbar sized against a subset shrinks
     # only those axes and leaves the rest misaligned.
     cb = fig.colorbar(im, ax=list(axes), orientation="horizontal",
-                      fraction=0.035, pad=0.01, aspect=45)
-    cb.set_label("Elevation (m NAVD88)", fontsize=9)
-    cb.ax.tick_params(labelsize=8)
+                      fraction=0.028, pad=0.01, aspect=45)
+    cb.set_label("Elevation (m NAVD88)")
 
-    axes[2].legend(handles=[Patch(facecolor=C_2009, label="2009 measured"),
-                            Patch(facecolor=C_FILL, label=f"{SURVEY_FILL} fill"),
-                            Patch(facecolor=C_NONE, label="never surveyed")]
-                   + road_legend_handles(roads),
-                   loc="lower right", fontsize=8, framealpha=0.9)
+    fig.legend(handles=[Patch(facecolor=C_2009, label="2009 measured"),
+                        Patch(facecolor=C_FILL, label=f"{SURVEY_FILL} fill"),
+                        Patch(facecolor=C_NONE, label="never surveyed")]
+               + road_legend_handles(roads),
+               loc="outside lower center", ncol=5, frameon=False)
 
-    fig.suptitle(f"Hatteras 2009 DEM gap fill\nfill source: {SOURCE_LONG}",
-                 fontsize=12)
-    fig.text(0.5, -0.012, SOURCE_NOTE, ha="center", va="top", fontsize=8,
-             wrap=True, color="#444444")
+    caption(fig, "The 2009 DEM gap fill, every domain on one 10 m grid. "
+                 f"(a) the 2009 survey alone, {n_meas:,} cells; (b) the "
+                 f"surface the extractor reads, {n_meas + n_fill:,} cells "
+                 f"(+{n_fill:,}); (c) the survey each cell came from. Domain 1 "
+                 "is at Cape Point in the south, domain 90 at Pea Island in "
+                 "the north. " + SOURCE_NOTE)
     out = FIG_DIR / f"HAT_gapfill_{SOURCE_TAG}_island.png"
-    fig.savefig(out, dpi=170, bbox_inches="tight")
+    save(fig, out, vector=False, bbox_inches="tight")
     plt.close(fig)
     print(f"wrote {out}")
 
@@ -491,37 +529,40 @@ def main():
         _zh = (zmaxy + pad) - (zminy - pad)
         _panel_w = ZOOM_FIG_W / 3.0
         _fig_h = _panel_w / (_zw / _zh) + ZOOM_CHROME_IN
-        fig, axes = plt.subplots(1, 3, figsize=(ZOOM_FIG_W, _fig_h),
+        # sharey: all three panels show the same extent, so repeating the
+        # northing labels three times only narrows the maps.
+        fig, axes = plt.subplots(1, 3, figsize=figsize("double", height=_fig_h),
+                                 sharex=True, sharey=True,
                                  constrained_layout=True)
-        im = panel_elev(axes[0], only09, extent, vmin, vmax, "A  2009 DEM only")
-        panel_elev(axes[1], filled, extent, vmin, vmax,
-                   f"B  2009 + {SURVEY_FILL} fill")
+        im = panel_elev(axes[0], 0, only09, extent, vmin, vmax, "2009 survey")
+        panel_elev(axes[1], 1, filled, extent, vmin, vmax,
+                   f"with {SURVEY_FILL} fill")
         axes[2].set_facecolor(C_NONE)
         axes[2].imshow(surv, extent=extent, origin="upper", cmap=cmap_s,
                        norm=norm_s, interpolation="nearest", zorder=1)
-        axes[2].set_title("C  survey source", fontsize=11, pad=8)
+        _title(axes[2], 2, "survey source")
         for ax in axes:
             draw_domains(ax, gdf, lw=0.9)
             ax.set_xlim(zminx - pad, zmaxx + pad)
             ax.set_ylim(zminy - pad, zmaxy + pad)
             ax.set_aspect("equal")
             km_axes(ax, nx=3, ny=5)
-            ax.set_xlabel("Easting (km)", fontsize=9)
-        axes[0].set_ylabel("Northing (km)", fontsize=9)
-        axes[2].legend(handles=[Patch(facecolor=C_2009, label="2009 measured"),
-                                Patch(facecolor=C_FILL, label=f"{SURVEY_FILL} fill"),
-                                Patch(facecolor=C_NONE, label="never surveyed")],
-                       loc=ZOOM_LEGEND_LOC, fontsize=8, framealpha=0.9)
+            ax.set_xlabel("Easting (km)")
+            spines_for_image(ax)
+        axes[0].set_ylabel("Northing (km)")
+        fig.legend(handles=[Patch(facecolor=C_2009, label="2009 measured"),
+                            Patch(facecolor=C_FILL, label=f"{SURVEY_FILL} fill"),
+                            Patch(facecolor=C_NONE, label="never surveyed")],
+                   loc="outside lower center", ncol=3, frameon=False)
         cb = fig.colorbar(im, ax=list(axes), orientation="horizontal",
-                          fraction=0.05, pad=0.02, aspect=40)
-        cb.set_label("Elevation (m NAVD88)", fontsize=9)
-        fig.suptitle("Domains 78-80 - the roadways that width-drowned at t=0 "
-                     f"on missing survey coverage\nfill source: {SOURCE_LONG}",
-                     fontsize=11)
-        fig.text(0.5, -0.02, SOURCE_NOTE, ha="center", va="top", fontsize=8,
-                 wrap=True, color="#444444")
+                          fraction=0.045, pad=0.02, aspect=40)
+        cb.set_label("Elevation (m NAVD88)")
+        caption(fig, "Domains 78-80, the roadways the extractor names as "
+                     "width-drowning at t=0 on missing survey coverage. "
+                     "(a) the 2009 survey alone; (b) the surface the extractor "
+                     "reads; (c) the survey each cell came from. " + SOURCE_NOTE)
         out2 = FIG_DIR / f"HAT_gapfill_{SOURCE_TAG}_domains_78_80.png"
-        fig.savefig(out2, dpi=170, bbox_inches="tight")
+        save(fig, out2, vector=False, bbox_inches="tight")
         plt.close(fig)
         print(f"wrote {out2}")
 
@@ -529,7 +570,7 @@ def main():
         # Drawn at zoom rather than island scale on purpose: island-wide the
         # road is a ~1 px line over 45 km, where dashed and solid are
         # indistinguishable and the overlay would carry no information.
-        def _road_zoom(dom_ids, years, slug, title):
+        def _road_zoom(dom_ids, years, slug, cap):
             """One A/B/C zoom with the named NC-12 alignments drawn over it.
 
             `years` selects WHICH alignments, and every entry in ROAD_ZOOMS
@@ -551,16 +592,17 @@ def main():
             pad_ = 150
             zw, zh = (zx1 + pad_) - (zx0 - pad_), (zy1 + pad_) - (zy0 - pad_)
             fh = (ZOOM_FIG_W / 3.0) / (zw / zh) + ZOOM_CHROME_IN
-            fig, axes = plt.subplots(1, 3, figsize=(ZOOM_FIG_W, fh),
+            fig, axes = plt.subplots(1, 3, figsize=figsize("double", height=fh),
+                                     sharex=True, sharey=True,
                                      constrained_layout=True)
-            im = panel_elev(axes[0], only09, extent, vmin, vmax,
-                            "A  2009 DEM only")
-            panel_elev(axes[1], filled, extent, vmin, vmax,
-                       f"B  2009 + {SURVEY_FILL} fill")
+            im = panel_elev(axes[0], 0, only09, extent, vmin, vmax,
+                            "2009 survey")
+            panel_elev(axes[1], 1, filled, extent, vmin, vmax,
+                       f"with {SURVEY_FILL} fill")
             axes[2].set_facecolor(C_NONE)
             axes[2].imshow(surv, extent=extent, origin="upper", cmap=cmap_s,
                            norm=norm_s, interpolation="nearest", zorder=1)
-            axes[2].set_title("C  survey source", fontsize=11, pad=8)
+            _title(axes[2], 2, "survey source")
             for ax in axes:
                 draw_domains(ax, gdf, lw=0.9)
                 draw_roads(ax, rsub)
@@ -568,30 +610,29 @@ def main():
                 ax.set_ylim(zy0 - pad_, zy1 + pad_)
                 ax.set_aspect("equal")
                 km_axes(ax, nx=3, ny=5)
-                ax.set_xlabel("Easting (km)", fontsize=9)
-            axes[0].set_ylabel("Northing (km)", fontsize=9)
+                ax.set_xlabel("Easting (km)")
+                spines_for_image(ax)
+            axes[0].set_ylabel("Northing (km)")
             rh = road_legend_handles(rsub)
-            axes[0].legend(handles=rh, loc=ZOOM_LEGEND_LOC, fontsize=8,
-                           framealpha=0.9)
-            axes[2].legend(
+            fig.legend(
                 handles=[Patch(facecolor=C_2009, label="2009 measured"),
                          Patch(facecolor=C_FILL, label=f"{SURVEY_FILL} fill"),
                          Patch(facecolor=C_NONE, label="never surveyed")] + rh,
-                loc=ZOOM_LEGEND_LOC, fontsize=8, framealpha=0.9)
+                loc="outside lower center", ncol=5, frameon=False)
             cb = fig.colorbar(im, ax=list(axes), orientation="horizontal",
-                              fraction=0.05, pad=0.02, aspect=40)
-            cb.set_label("Elevation (m NAVD88)", fontsize=9)
-            fig.suptitle(f"{title}\nfill source: {SOURCE_LONG}", fontsize=11)
-            fig.text(0.5, -0.02, SOURCE_NOTE, ha="center", va="top",
-                     fontsize=8, wrap=True, color="#444444")
+                              fraction=0.045, pad=0.02, aspect=40)
+            cb.set_label("Elevation (m NAVD88)")
+            caption(fig, cap + " (a) the 2009 survey alone; (b) the surface "
+                          "the extractor reads; (c) the survey each cell came "
+                          "from. " + SOURCE_NOTE)
             outp = FIG_DIR / f"HAT_gapfill_{SOURCE_TAG}_{slug}.png"
-            fig.savefig(outp, dpi=170, bbox_inches="tight")
+            save(fig, outp, vector=False, bbox_inches="tight")
             plt.close(fig)
             print(f"wrote {outp}")
 
         if roads:
-            for _ids, _yrs, _slug, _title in ROAD_ZOOMS:
-                _road_zoom(_ids, _yrs, _slug, _title)
+            for _ids, _yrs, _slug, _cap in ROAD_ZOOMS:
+                _road_zoom(_ids, _yrs, _slug, _cap)
 
 
 if __name__ == "__main__":

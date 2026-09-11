@@ -1,9 +1,17 @@
 ==============================================================================
 COPY FILL for the rows behind the road - scope (no version written)
 ==============================================================================
-written        2026-09-08 10:21
+written        2026-09-10 19:30
 topography     1984-start / v2   (read, never modified)
-footprint      data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\footprint_1984_by_domain.csv  (insert_row_behind_road, n_cells)
+footprint      data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\2-extent\footprint_1984_by_domain.csv  (insert_row_behind_road, n_cells)
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\4-fill\rows-added\HAT_fill_copy_grid_GIS80.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\4-fill\rows-added\HAT_fill_copy_method_GIS80.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\4-fill\rows-added\HAT_fill_copy_grid_GIS85.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\4-fill\rows-added\HAT_fill_copy_method_GIS85.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\4-fill\rows-added\HAT_fill_copy_grid_GIS5.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\4-fill\rows-added\HAT_fill_copy_method_GIS5.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\4-fill\rows-added\HAT_fill_copy_grid_GIS49.png
+figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\4-fill\rows-added\HAT_fill_copy_method_GIS49.png
 figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\4-fill\rows-removed\HAT_fill_copy_grid_GIS63.png
 figure         data\hatteras_init\1-barrier3d-domains\1984-start\2-domain-reconstruction-1984\figures\4-fill\rows-removed\HAT_fill_copy_method_GIS63.png
 

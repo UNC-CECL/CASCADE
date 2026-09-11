@@ -28,6 +28,7 @@ Dependencies
 """
 
 import os
+from pathlib import Path
 import glob
 
 import numpy as np
@@ -45,8 +46,15 @@ from tqdm import tqdm
 # CONFIG
 # ============================================================
 
-ROOT_DATA_DIR = r"/scripts/input_prep/5-scr/CoastSat\coastsat_timeseries"
-LOOKUP_CSV    = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\transect_domain_lookup.csv"
+# The per-transect CoastSat timeseries live in the data tree, not under
+# scripts/; the old value was a driveless path that never existed (2026-09-10).
+ROOT_DATA_DIR = str(Path(__file__).resolve().parents[3]
+                    / "data" / "hatteras_init" / "5-scr" / "coastsat_timeseries")
+# "input_preperation" is the pre-2026 folder name; the lookup now lives
+# under scripts/input_prep/5-scr/CoastSat/ (2026-09-10).
+LOOKUP_CSV    = str(Path(__file__).resolve().parents[2]
+                    / "input_prep" / "5-scr" / "CoastSat"
+                    / "transect_domain_lookup.csv")
 OUTPUT_DIR    = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\figure_making\raw_shoreline_change\alldata_output"
 SITE_FILTER   = "usa_NC"
 
@@ -233,7 +241,7 @@ def annotate_axes_publication(ax, domain_per_transect, ylim, domain_tick_every=5
     tick_pos     = [transect_index(domain_per_transect, d) for d in domain_ticks]
     ax.set_xticks(tick_pos)
     ax.set_xticklabels([str(d) for d in domain_ticks], fontsize=6)
-    ax.set_xlabel("CASCADE domain  (1 = Buxton  →  90 = Rodanthe)", fontsize=7)
+    ax.set_xlabel("GIS domain (south → north)", fontsize=7)
 
     # Top x-axis: transect index numbers
     transect_ticks = np.arange(0, len(domain_per_transect), 100)

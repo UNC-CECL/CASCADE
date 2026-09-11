@@ -72,6 +72,7 @@ for _path in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
 
 from hatteras_site_config import HATTERAS_DOMAINS as GEOMETRY  # noqa: E402
 from cascade_pipeline.hindcast import implied_interception_m3_yr  # noqa: E402
+from cascade_pipeline.run_layout import resolve  # noqa: E402
 from HAT_groin_sweep_config import (  # noqa: E402
     GROIN_DOWNDRIFT_GIS,
     GROIN_UPDRIFT_GIS,
@@ -88,8 +89,8 @@ RIG_BUFFER, RIG_FIRST_GIS, RIG_START_YEAR = 15, 2, 1967
 # production one. raw_runs is production only, and run_index.csv covers it.
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "rig_runs"
 RUN = "HAT_1967_2018_edge_calibrated_groin"
-DIAGNOSTICS = RAW_RUNS / RUN / f"{RUN}_groin_diagnostics.csv"
-SHORELINE = RAW_RUNS / RUN / f"{RUN}_shoreline_matrix.npy"
+DIAGNOSTICS = resolve(RAW_RUNS / RUN, "groin_csv", RUN)
+SHORELINE = resolve(RAW_RUNS / RUN, "matrix", RUN)
 
 FIGURE_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
 

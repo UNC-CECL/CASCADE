@@ -715,7 +715,7 @@ def qc_figure(rows, path: Path):
                 bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none",
                           alpha=0.8))
 
-    ax.set_xlabel("GIS domain  (1 = Cape Point / south  ->  90 = Rodanthe / north)")
+    ax.set_xlabel("GIS domain (south → north)")
     ax.set_ylabel("Road elevation (m NAVD88)")
     ax.set_title(f"NC-12 {ROAD_LINE_YEAR} alignment on the 2009 LiDAR "
                  f"(1 m clip, {BUFFER_M:.1f} m buffer, mean of cells)"

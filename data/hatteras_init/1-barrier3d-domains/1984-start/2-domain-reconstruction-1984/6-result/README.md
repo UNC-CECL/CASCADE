@@ -12,13 +12,17 @@ into `output/raw_runs/version-pair/<version>/1984_2004/calibBE/`:
 | prescribed | `HAT_1984_2004_calibBE_road_reloc_bdm_groin` | the same with the recorded 1989 (GIS 84-87) and 1999 (GIS 9-14) relocations imposed: the control |
 
 `HAT_compare_versions.py` reads the two runs' saved state and writes, per pair,
-`../figures/6-result/island/HAT_compare_v2_v3_<pair>.png` (setback at 1984;
-every relocation by year against the recorded events; relocations per year;
-interior width at 1984 and 2004; island-mean width and cumulative overwash
-through time; mean interior elevation at 2004 and the v3 − v2 difference) and
+two figures in `../figures/6-result/island/` — `HAT_compare_v2_v3_<pair>_relocations.png`
+(the setback each version starts with; every relocation by year against the
+recorded events; relocations per year) and `HAT_compare_v2_v3_<pair>_geometry.png`
+(interior width per domain at 1984 and 2004; island-mean width through time and
+the difference between versions on its own axis; cumulative overwash; mean
+interior elevation at 2004 and, below it, the difference) — and
 `version_compare_<pair>.csv` (one row per domain, both versions and the
 difference), plus `HAT_compare_versions.txt` with the skill, the relocation
-counts and timing, and the island medians. Nothing is re-run or re-scored.
+counts and timing, and the island medians, and a `CAPTIONS.md` beside the
+figures. Nothing is re-run or re-scored. The two were one seven-panel figure
+until 2026-09-10, when they were split and sized to a 190 mm column.
 
 Why the emergent pair was re-run rather than read from the calibration tree:
 the v2 run there (2026-09-07) and the v3 run in `behindroad-copy` (09-08) sat
@@ -33,3 +37,13 @@ folder per place (the island, the two event blocks, Pea Island where rows are
 added, Avon to Tri-Village where they are removed) with `topography.gif` and
 `dune-and-road.gif` in each. That is where the inserted and removed cells can
 be watched doing something.
+
+**The relocation comparison, side by side.** `HAT_version_pair_report.py` (same
+scripts folder) reads the v2 and v3 relocation-comparison sets
+(`output/comparisons/relocation_1984_2004/<version>/calibBE_groin/tables/`)
+and the v3 footprint audit, and writes
+`output/comparisons/relocation_1984_2004/v2_vs_v3/report.txt` with `tables/`
+beside it: every section of a per-version report with a v2 column, a v3
+column and the difference, headed by the identity of the four runs. Nothing
+is re-run or re-scored; it must be re-run after `HAT_relocation_comparison.py`
+is re-run on either version.

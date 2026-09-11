@@ -74,7 +74,8 @@ def _find_root(start: Path) -> Path:
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 from hat_topo_version import array_name, dune_topo_root, require_version, year_for_product  # noqa: E402
-from hat_figure_style import apply_style, C, elevation_cmap, spines_for_image  # noqa: E402
+from hat_figure_style import (apply_style, C, C_1984, C_1997, elevation_cmap, spines_for_image,  # noqa: E402
+                              figsize, save, DOMAIN_AXIS_LABEL, town_bands, open_frame, _title)
 
 PRODUCT = "1984-start"
 CELL_M = 10.0
@@ -83,8 +84,12 @@ ROAD_ROWS = 2
 BERM_EL_M = 1.7                 # BermEl, m MHW: the dune rows are drawn at berm + dune height
 ROAD_OFFSET_SCRIPT = (REPO / "scripts" / "input_prep" / "4-mgmt-forcings" / "road_offset"
                       / "1-produce" / "HAT_road_offset_from_dune_start.py")
-C_SRC_ROAD, C_ROAD = "0.35", C["ROAD"]
-C_ADD, C_REM = "#d62728", "#1f77b4"        # the RdBu pair of the reconstruction figures
+C_SRC_ROAD, C_ROAD = C["BASE"], C["ROAD"]
+C_ADD, C_REM = C_1984, C_1997               # the RdBu pair of the reconstruction figures: red added, blue removed
+# What the two versions are called on the figures (no working vocabulary; the
+# version names themselves are in the file names and the README).
+SRC_LABEL = "as extracted (1996 surface)"
+VER_LABEL = "1984 reconstruction"
 
 
 # =============================================================================
@@ -140,7 +145,7 @@ class Version:
 # THE GRID, ONE DOMAIN, SOURCE BESIDE VERSION
 # =============================================================================
 
-def draw_grid(ax, topo, dune, road_row, nrows, title, ylabel=True):
+def draw_grid(ax, topo, dune, road_row, nrows, k, title, ylabel=True):
     cmap, norm, _ = elevation_cmap()
     n_along = topo.shape[1]
     strip = np.tile(BERM_EL_M + dune[None, :n_along], (DUNE_ROWS, 1))
@@ -149,21 +154,21 @@ def draw_grid(ax, topo, dune, road_row, nrows, title, ylabel=True):
     grid[DUNE_ROWS:DUNE_ROWS + topo.shape[0]] = topo[:nrows]
     ax.imshow(np.ma.masked_invalid(grid), cmap=cmap, norm=norm, aspect="auto",
               interpolation="nearest", origin="upper", zorder=1)
-    ax.axhline(DUNE_ROWS - 0.5, color="#333333", lw=1.0, zorder=4)
-    ax.text(n_along - 0.8, DUNE_ROWS / 2 - 0.5, "dune rows", fontsize=7, va="center", ha="right", zorder=6,
+    ax.axhline(DUNE_ROWS - 0.5, color=C["INK"], lw=0.8, zorder=4)
+    ax.text(n_along - 0.8, DUNE_ROWS / 2 - 0.5, "dune", fontsize=7, va="center", ha="right", zorder=6,
             bbox=dict(fc="white", ec="none", alpha=0.85, pad=1.0))
     if road_row is not None:
         rs = road_row + DUNE_ROWS
-        ax.add_patch(Rectangle((-0.5, rs - 0.5), n_along, ROAD_ROWS, fill=False, ec=C_ROAD, lw=1.5, zorder=6))
+        ax.add_patch(Rectangle((-0.5, rs - 0.5), n_along, ROAD_ROWS, fill=False, ec=C_ROAD, lw=1.2, zorder=6))
         ax.text(0.8, rs + ROAD_ROWS / 2 - 0.5, "NC-12", fontsize=7, ha="left", va="center", color=C_ROAD,
                 zorder=7, bbox=dict(fc="white", ec="none", alpha=0.85, pad=1.0))
     ax.set_xlim(-0.5, n_along - 0.5)
     ax.set_ylim(nrows + DUNE_ROWS - 0.5, -0.5)
-    ax.set_xticks([0, 10, 20, 30, 40, 49])
+    ax.set_xticks([0, 25, 49])
     ax.set_xlabel("alongshore cell")
     if ylabel:
-        ax.set_ylabel("cross-shore row (0 = interior row 0, behind the dune)")
-    ax.set_title(title, loc="left")
+        ax.set_ylabel("cross-shore row (0 = interior row 0)")
+    _title(ax, k, title)
     spines_for_image(ax)
 
 
@@ -174,44 +179,49 @@ def fig_grid(d: int, src: Version, ver: Version, out_dir: Path) -> Path:
     n = int(a["n_cells"]) if a else 0
     ins = int(a["insert_row"]) if a and n else None
     nrows = max(t0.shape[0], t1.shape[0])
-    fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(11.0, 4.2 + nrows * 0.028), sharey=True,
+    # a single-column figure per domain: the two panels side by side, the
+    # height following the row count so a deep domain is not squashed
+    fig, (ax0, ax1) = plt.subplots(1, 2, figsize=figsize("single", height=3.3 + nrows * 0.016), sharey=True,
                                    constrained_layout=True)
-    draw_grid(ax0, t0, d0, src.road_row(d), nrows, f"(a) GIS {d}: {src.name}, the source ({t0.shape[0]} rows)")
-    draw_grid(ax1, t1, d1, ver.road_row(d), nrows,
-              f"(b) GIS {d}: {ver.name} ({t1.shape[0]} rows, {n:+d})" if n else f"(b) GIS {d}: {ver.name} (unchanged)",
-              ylabel=False)
+    draw_grid(ax0, t0, d0, src.road_row(d), nrows, 0, f"{t0.shape[0]} rows")
+    draw_grid(ax1, t1, d1, ver.road_row(d), nrows, 1,
+              f"{t1.shape[0]} rows ({'+' if n > 0 else '−'}{abs(n)})" if n else f"{t1.shape[0]} rows", ylabel=False)
     n_along = t0.shape[1]
     if n > 0:
-        ax1.add_patch(Rectangle((-0.5, ins + DUNE_ROWS - 0.5), n_along, n, fill=False, ec=C_ADD, lw=1.8, zorder=5))
-        ax1.text(n_along * 0.5, ins + DUNE_ROWS + n / 2 - 0.5, f"+{n} rows inserted at row {ins}: {a['operation']}",
+        ax1.add_patch(Rectangle((-0.5, ins + DUNE_ROWS - 0.5), n_along, n, fill=False, ec=C_ADD, lw=1.4, zorder=5))
+        ax1.text(n_along * 0.5, ins + DUNE_ROWS + n / 2 - 0.5, f"+{n} row{'s' if n != 1 else ''}",
                  fontsize=7, ha="center", va="center", color=C_ADD, zorder=6,
                  bbox=dict(fc="white", ec="none", alpha=0.85, pad=1.0))
         # the same rows in the source: the window the copy was taken from
-        ax0.add_patch(Rectangle((-0.5, ins + DUNE_ROWS - 0.5), n_along, n, fill=False, ec=C_ADD, lw=1.2,
+        ax0.add_patch(Rectangle((-0.5, ins + DUNE_ROWS - 0.5), n_along, n, fill=False, ec=C_ADD, lw=1.0,
                                 ls=(0, (3, 2)), zorder=5))
     elif n < 0:
         ax0.add_patch(Rectangle((-0.5, ins + DUNE_ROWS - 0.5), n_along, -n, facecolor=C_REM, alpha=0.3,
-                                ec=C_REM, hatch="////", lw=1.2, zorder=5))
-        ax0.text(n_along * 0.5, ins + DUNE_ROWS - n / 2 - 0.5, f"{a['operation']}", fontsize=7, ha="center",
-                 va="center", color=C_REM, zorder=6, bbox=dict(fc="white", ec="none", alpha=0.85, pad=1.0))
-        ax1.axhline(ins + DUNE_ROWS - 0.5, xmax=0.6, color=C_REM, lw=2.0, ls=(0, (3, 1.5)), zorder=8)
-        ax1.text(n_along * 0.62, ins + DUNE_ROWS - 0.5, f"seam: {-n} rows removed", fontsize=7, ha="left",
+                                ec=C_REM, hatch="////", lw=1.0, zorder=5))
+        ax0.text(n_along * 0.5, ins + DUNE_ROWS - n / 2 - 0.5, f"−{-n} row{'s' if n != -1 else ''}",
+                 fontsize=7, ha="center", va="center", color=C_REM, zorder=6,
+                 bbox=dict(fc="white", ec="none", alpha=0.85, pad=1.0))
+        # the seam on the right half of the panel, clear of the NC-12 label at the left
+        ax1.axhline(ins + DUNE_ROWS - 0.5, xmin=0.55, color=C_REM, lw=1.6, ls=(0, (3, 1.5)), zorder=8)
+        ax1.text(n_along * 0.53, ins + DUNE_ROWS - 0.5, "seam", fontsize=7, ha="right",
                  va="center", color=C_REM, zorder=8, bbox=dict(fc="white", ec="none", alpha=0.85, pad=1.0))
     cmap, norm, bounds = elevation_cmap()
-    labels = ["below 0 (water)"] + [f"{lo:g}–{hi:g}" for lo, hi in zip(bounds[1:-2], bounds[2:-1])] + [f"above {bounds[-2]:g}"]
+    # one legend under the figure, two columns: the elevation classes (m MHW)
+    # and the footprint marks; a single column is too narrow for two legends
+    labels = ["< 0 m (water)"] + [f"{lo:g}–{hi:g} m" for lo, hi in zip(bounds[1:-2], bounds[2:-1])] + [f"> {bounds[-2]:g} m"]
     handles = [Patch(facecolor=cmap(i), edgecolor="0.4", lw=0.4, label=lab) for i, lab in enumerate(labels)]
-    handles += [Patch(facecolor="none", edgecolor=C_ROAD, lw=1.5, label="NC-12 rows at the version's setback")]
+    handles += [Patch(facecolor="none", edgecolor=C_ROAD, lw=1.2, label="NC-12 (two rows)")]
     if n > 0:
-        handles += [Patch(facecolor="none", edgecolor=C_ADD, lw=1.8, label="inserted block (a copy of the rows below it)"),
-                    Patch(facecolor="none", edgecolor=C_ADD, lw=1.2, ls=(0, (3, 2)), label="the source rows copied")]
+        handles += [Patch(facecolor="none", edgecolor=C_ADD, lw=1.4, label="rows inserted behind NC-12"),
+                    Patch(facecolor="none", edgecolor=C_ADD, lw=1.0, ls=(0, (3, 2)), label="rows copied into them")]
     elif n < 0:
-        handles += [Patch(facecolor=C_REM, alpha=0.3, edgecolor=C_REM, hatch="////", label="rows removed"),
-                    Line2D([0], [0], color=C_REM, lw=2.0, ls=(0, (3, 1.5)), label="seam")]
-    fig.legend(handles=handles, loc="outside lower center", ncol=6, fontsize=7.5,
-               title="elevation classes (m MHW); dune rows drawn at berm + dune height", title_fontsize=7.5)
+        handles += [Patch(facecolor=C_REM, alpha=0.3, edgecolor=C_REM, hatch="////", label="rows removed before NC-12"),
+                    Line2D([0], [0], color=C_REM, lw=1.6, ls=(0, (3, 1.5)), label="seam left by the removal")]
+    fig.legend(handles=handles, loc="outside lower center", ncol=2, frameon=False, fontsize=7.5,
+               columnspacing=1.0, handlelength=1.4)
     out_dir.mkdir(parents=True, exist_ok=True)
     p = out_dir / f"domain_{d:03d}_grid_{ver.name}.png"
-    fig.savefig(p, dpi=170, facecolor="white")
+    save(fig, p, vector=False, facecolor="white")
     plt.close(fig)
     return p
 
@@ -220,12 +230,12 @@ def fig_grid(d: int, src: Version, ver: Version, out_dir: Path) -> Path:
 # THE SUMMARY PAGE
 # =============================================================================
 
-def _bands(ax, sections):
-    for k, ((lo, hi), label) in enumerate(sections):
-        if k % 2:
-            ax.axvspan(lo - 0.5, hi + 0.5, color="0.93", lw=0, zorder=0)
-        ax.text((lo + hi) / 2, 0.98, label, transform=ax.get_xaxis_transform(), ha="center", va="top",
-                fontsize=7, color="0.4")
+def summary_counts(src: Version, ver: Version) -> dict:
+    """The footprint's totals, for the README (they were in a panel title)."""
+    ids = sorted(int(p.stem.split("_")[1]) for p in (ver.dir / "topography").glob("domain_*_topography.npy"))
+    dn = np.array([ver.arrays(d)[0].shape[0] - src.arrays(d)[0].shape[0] for d in ids])
+    return dict(n_add=int((dn > 0).sum()), rows_add=int(dn[dn > 0].sum()),
+                n_rem=int((dn < 0).sum()), rows_rem=int(-dn[dn < 0].sum()), n_same=int((dn == 0).sum()))
 
 
 def fig_summary(src: Version, ver: Version, sections, out: Path) -> Path:
@@ -244,35 +254,41 @@ def fig_summary(src: Version, ver: Version, sections, out: Path) -> Path:
     dn = rows1 - rows0
 
     apply_style()
-    fig, axes = plt.subplots(4, 1, figsize=(13.5, 10.5), sharex=True, constrained_layout=True)
+    fig, axes = plt.subplots(4, 1, figsize=figsize("double", height=8.2), sharex=True, constrained_layout=True)
     a0, a1, a2, a3 = axes
-    for ax in axes:
-        _bands(ax, sections)
+    for k, ax in enumerate(axes):
+        town_bands(ax, label=(k == 0))
+        open_frame(ax)
+        ax.grid(axis="y")
+        ax.set_axisbelow(True)
     a0.bar(ids, dn, width=0.8, color=np.where(dn > 0, C_ADD, C_REM), zorder=3)
-    a0.axhline(0, color="0.2", lw=0.8)
-    a0.set_ylabel("rows added / removed")
-    a0.set_title(f"(a) the footprint: interior rows in {ver.name} minus {src.name}  "
-                 f"({int((dn > 0).sum())} domains +{int(dn[dn > 0].sum())}, {int((dn < 0).sum())} domains {int(dn[dn < 0].sum())})", loc="left")
-    a1.plot(ids, rows0, "o-", ms=3, lw=0.8, color="0.5", label=src.name, zorder=3)
-    a1.plot(ids, rows1, "o-", ms=3, lw=0.8, color=C["ACCENT"], label=ver.name, zorder=4)
+    a0.axhline(0, color=C["INK"], lw=0.6)
+    a0.set_ylabel("rows added (+)\n/ removed (−)")
+    _title(a0, 0, "interior rows added or removed")
+    a1.plot(ids, rows0, "o-", ms=2.5, lw=0.8, color=C["BASE"], zorder=3)
+    a1.plot(ids, rows1, "o-", ms=2.5, lw=0.8, color=C["ACCENT"], zorder=4)
     a1.set_ylabel("interior rows")
-    a1.set_title("(b) interior extent per domain (rows of 10 m)", loc="left")
-    a1.legend(loc="upper left", ncol=2)
-    a2.plot(ids, sb0, "o-", ms=3, lw=0.8, color="0.5", label=f"{src.name} (as measured on the surface)", zorder=3)
-    a2.plot(ids, sb1, "o-", ms=3, lw=0.8, color=C["ACCENT"], label=f"{ver.name} (the model input)", zorder=4)
-    a2.set_ylabel("NC-12 setback (m from row 0)")
-    a2.set_title("(c) the road setback the model receives", loc="left")
-    a2.legend(loc="upper left", ncol=2)
-    a3.plot(ids, z0, "o-", ms=3, lw=0.8, color="0.5", label=f"mean interior elevation, {src.name}", zorder=3)
-    a3.plot(ids, z1, "o-", ms=3, lw=0.8, color=C["ACCENT"], label=f"mean interior elevation, {ver.name}", zorder=4)
-    a3.plot(ids, h0 + BERM_EL_M, "s-", ms=3, lw=0.8, color="0.3", label="dune crest (berm + height), both versions", zorder=3)
+    _title(a1, 1, "interior extent (rows of 10 m)")
+    a2.plot(ids, sb0, "o-", ms=2.5, lw=0.8, color=C["BASE"], zorder=3)
+    a2.plot(ids, sb1, "o-", ms=2.5, lw=0.8, color=C["ACCENT"], zorder=4)
+    a2.set_ylabel("NC-12 setback\n(m from row 0)")
+    _title(a2, 2, "road setback the model receives")
+    a3.plot(ids, z0, "o-", ms=2.5, lw=0.8, color=C["BASE"], zorder=3)
+    a3.plot(ids, z1, "o-", ms=2.5, lw=0.8, color=C["ACCENT"], zorder=4)
+    a3.plot(ids, h0 + BERM_EL_M, "s-", ms=2.5, lw=0.8, color=C["REF"], zorder=3)
     a3.set_ylabel("m MHW")
-    a3.set_title("(d) mean interior elevation (land cells) and dune crest; the dune array is unchanged", loc="left")
-    a3.legend(loc="upper left", ncol=3)
-    a3.set_xlabel("GIS domain (south at left)")
+    _title(a3, 3, "mean interior elevation (land cells) and dune crest")
+    a3.set_xlabel(DOMAIN_AXIS_LABEL)
     a3.set_xlim(0, ids.max() + 1)
-    a3.set_xticks(range(5, int(ids.max()) + 1, 5))
-    fig.savefig(out, dpi=170, facecolor="white")
+    a3.set_xticks([1] + list(range(10, int(ids.max()) + 1, 10)))
+    a3.set_xticks(ids, minor=True)
+    handles = [Patch(facecolor=C_ADD, label="rows added"), Patch(facecolor=C_REM, label="rows removed"),
+               Line2D([0], [0], marker="o", ms=2.5, lw=0.8, color=C["BASE"], label=SRC_LABEL),
+               Line2D([0], [0], marker="o", ms=2.5, lw=0.8, color=C["ACCENT"], label=VER_LABEL),
+               Line2D([0], [0], marker="s", ms=2.5, lw=0.8, color=C["REF"],
+                      label="dune crest (berm + dune height), unchanged")]
+    fig.legend(handles=handles, loc="outside lower center", ncol=3, frameon=False)
+    save(fig, out, facecolor="white")
     plt.close(fig)
     return out
 
@@ -330,50 +346,56 @@ def fig_planview(ver: Version, ext, offsets: dict, year: int, mode: str, out: Pa
         starts.append(col)
         col += w
     cmap, norm = ext._island_norm()
-    fig_w = 20.0
-    fig_h = min(max(4.5, fig_w * (n_rows / n_cols) * 1.8), 7.5)
-    fig = plt.figure(figsize=(fig_w, fig_h), facecolor="white")
-    ax = fig.add_axes([0.06, 0.18, 0.88, 0.68])
+    fig, ax = plt.subplots(figsize=figsize("double", aspect=0.34), constrained_layout=True)
     ax.set_facecolor(ext.ISLAND_OCEAN_COLOR)
+    # the villages as light bands, in the canvas's column frame: a translucent
+    # white so they read on the ocean colour and vanish under the island
+    col_of = {d: (starts[k], starts[k] + grids[k].shape[1]) for k, d in enumerate(use)}
+    spans = {}
+    try:
+        from hatteras_site_config import HATTERAS_ANNOTATIONS
+        for name, (lo, hi) in HATTERAS_ANNOTATIONS.town_spans.items():
+            inside = [d for d in use if lo <= d <= hi]
+            if inside:
+                spans[name] = (col_of[min(inside)][0] + 0.5, col_of[max(inside)][1] - 0.5)
+    except ImportError:
+        pass
+    town_bands(ax, spans=spans, shade=(1.0, 1.0, 1.0, 0.35))
+    # the extractor's cmap paints masked cells in the ocean colour, which would
+    # cover the bands; here the axes background is the ocean and the mask is clear
+    cmap = cmap.copy()
+    cmap.set_bad((0.0, 0.0, 0.0, 0.0))
     im = ax.pcolormesh(np.ma.masked_invalid(canvas), cmap=cmap, norm=norm, shading="auto", rasterized=True)
     ax.pcolormesh(np.ma.masked_where(~road_canvas, road_canvas.astype(float)), cmap=ListedColormap([C_ROAD]),
                   vmin=0.0, vmax=1.0, shading="auto", rasterized=True, zorder=4)
-    ax.plot([], [], color=C_ROAD, lw=3, label=f"NC-12 as the model places it ({ver.name} setback)")
-    ax.legend(loc="upper right", fontsize=9, framealpha=0.9)
     ax.set_xlim(0, n_cols)
     ax.set_ylim(0, n_rows)
-    cax = fig.add_axes([0.955, 0.18, 0.013, 0.68])
-    cbar = plt.colorbar(im, cax=cax)
-    cbar.set_label("Elevation (m MHW)", fontsize=12, color="#1a1a2e", labelpad=10, rotation=270)
+    cbar = fig.colorbar(im, ax=ax, fraction=0.025, pad=0.015)
+    cbar.set_label("elevation (m MHW)")
     cbar.set_ticks([-1, 0, 1, 2, 3, 4])
     ticks, labels = [], []
     for k, d in enumerate(use):
-        if d % 5 == 0 or d == 1:
+        if d % 10 == 0 or d == 1:
             ticks.append(starts[k] + grids[k].shape[1] // 2)
             labels.append(str(d))
     ax.set_xticks(ticks)
-    ax.set_xticklabels(labels, fontsize=9)
-    ax.set_xlabel("Domain (S → N,  Cape Hatteras to Rodanthe)", fontsize=12, labelpad=8)
-    ax.set_ylabel("Cross-shore cell (raw_offset frame)", fontsize=12)
+    ax.set_xticklabels(labels)
+    ax.set_xlabel(DOMAIN_AXIS_LABEL)
+    ax.set_ylabel("cross-shore cell")
     for k, d in enumerate(use):
         if d % 10 == 0:
             ax.axvline(starts[k] - 0.5, color="#aaaaaa", lw=0.4, alpha=0.5, zorder=2)
-    for sp in ("top", "right"):
-        ax.spines[sp].set_visible(False)
-    what = "dune + interior" if ext.ISLAND_INCLUDE_DUNE else "interior"
-    note = (f"{what}, every domain padded to {pad} cells / {pad * CELL_M:.0f} m cross-shore" if mode == "padded"
-            else f"{what}, each domain trimmed to its own island")
-    ax.set_title(f"Hatteras Island — CASCADE Initialization  |  {year} offsets  |  {PRODUCT} {ver.name} "
-                 f"(built from {source_from_manifest(ver.dir) or '?'}) {note}  ({len(use)} domains)",
-                 fontsize=13, fontweight="bold", color="#1a1a2e", pad=12)
-    fig.savefig(out, dpi=200, bbox_inches="tight", facecolor="white")
+    open_frame(ax)
+    fig.legend(handles=[Line2D([0], [0], color=C_ROAD, lw=3, label="NC-12 as the model places it (1984 setback)")],
+               loc="outside lower center", frameon=False)
+    save(fig, out, vector=False, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return out
 
 
 # =============================================================================
 
-def write_readme(ver: Version, src: Version, n_grid: int, figs: list[Path]) -> Path:
+def write_readme(ver: Version, src: Version, n_grid: int, figs: list[Path], counts: dict) -> Path:
     p = ver.dir / "figures" / "README.md"
     p.parent.mkdir(parents=True, exist_ok=True)
     rel = [str(f.relative_to(ver.dir)).replace("\\", "/") for f in figs]
@@ -389,11 +411,15 @@ It gets the counterparts a built version can answer, every number read from
 its own arrays, its `RoadSetback_1984_dunestart.csv` and
 `HAT_footprint_audit.csv`; nothing is re-measured.
 
+On the figures `{src.name}` is called "{SRC_LABEL}" and `{ver.name}`
+"{VER_LABEL}"; the images carry no titles or statistics, so the captions
+below do. Every PNG has a PDF beside it except the raster-only grid panels.
+
 | figure | what |
 |---|---|
-| `grid/domain_NNN_grid_{ver.name}.png` ({n_grid}) | one per domain: `{src.name}` beside `{ver.name}` as the model holds them — the two dune rows on top (berm + dune height), every interior row down the page, elevation classes (m MHW), NC-12's two rows at each version's setback, and the footprint: the inserted block outlined in red (add; dashed in the source: the rows it copies) or the removed rows hatched blue in the source and the seam marked in the version (remove). Unchanged domains have two identical panels. |
-| `../HAT_dune_topo_summary_{ver.name}.png` | every domain on one page: rows added or removed, interior rows, the road setback the model receives, mean interior elevation and the dune crest, `{src.name}` against `{ver.name}`, communities banded. The counterpart of the extractor's summary page. |
-| `../HAT_dune_topo_island_planview_{ver.name}_<year>_{{trimmed,padded}}.png` | the island in plan view at the period's dune offsets, in the extractor's poster style, NC-12 drawn where the **model** places it (the version's setback) rather than from the GIS mask, whose frame a built interior no longer shares. |
+| `grid/domain_NNN_grid_{ver.name}.png` ({n_grid}) | one per domain, a single-column figure: (a) `{src.name}` beside (b) `{ver.name}` as the model holds them — the two dune rows on top, drawn at berm + dune height, every interior row down the page, elevation classes (m MHW), NC-12's two rows at each version's setback, and the footprint: the inserted block outlined in red (dashed in the source: the rows it copies) or the removed rows hatched blue in the source and the seam marked in the version. The panel titles give the row count and the change. Unchanged domains have two identical panels. |
+| `../HAT_dune_topo_summary_{ver.name}.png` | every domain on one page, {src.name} (grey) against {ver.name} (purple), the villages banded: (a) interior rows added (red) or removed (blue) — {counts["n_add"]} domains gain {counts["rows_add"]} rows, {counts["n_rem"]} lose {counts["rows_rem"]}, {counts["n_same"]} are unchanged; (b) interior rows per domain; (c) the NC-12 setback, as measured on the 1996 surface and as the model receives it for 1984; (d) mean interior elevation over land cells, with the dune crest (berm + dune height, green), which the build does not change. Domain 1 is at Cape Point, 90 at Pea Island. The counterpart of the extractor's summary page. |
+| `../HAT_dune_topo_island_planview_{ver.name}_<year>_{{trimmed,padded}}.png` | the island in plan view at the period's dune offsets (dune row plus interior; `padded` pads every domain to the extractor's cross-shore length, `trimmed` keeps each domain's own), NC-12 drawn where the **model** places it (the version's setback) rather than from the GIS mask, whose frame a built interior no longer shares. Villages as light bands over the water. |
 
 Files:
 
@@ -446,7 +472,8 @@ def main() -> None:
             n_grid += 1
             if k % 15 == 0 or k == len(ids):
                 print(f"  grid {k}/{len(ids)}", flush=True)
-    write_readme(ver, src, n_grid if not a.domains else len(list((ver.dir / "figures" / "grid").glob("*.png"))), figs)
+    write_readme(ver, src, n_grid if not a.domains else len(list((ver.dir / "figures" / "grid").glob("*.png"))), figs,
+                 summary_counts(src, ver))
     print(f"done: {ver.dir}")
 
 

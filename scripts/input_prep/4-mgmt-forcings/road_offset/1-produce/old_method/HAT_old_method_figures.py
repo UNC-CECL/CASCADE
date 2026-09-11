@@ -272,7 +272,7 @@ def tidy(ax, ylabel):
     ax.set_xlim(FIRST_DOMAIN - 0.5, LAST_DOMAIN + 0.5)
 
 
-XLABEL = "GIS domain   (9 = Buxton / south  →  90 = Rodanthe / north)"
+XLABEL = "GIS domain (south → north)"
 
 
 # =============================================================================
