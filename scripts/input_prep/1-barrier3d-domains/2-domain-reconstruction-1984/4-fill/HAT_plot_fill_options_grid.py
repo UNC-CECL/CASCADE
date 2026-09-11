@@ -58,7 +58,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-from matplotlib.patches import Rectangle
+from matplotlib.patches import Patch, Rectangle
 
 
 def _find_root(start: Path) -> Path:
@@ -73,9 +73,9 @@ sys.path.insert(0, str(REPO / "scripts"))
 from hat_topo_version import array_name, dune_topo_root            # noqa: E402
 from hat_topo_version import insert_figures_dir  # noqa: E402
 from hat_topo_version import require_version  # noqa: E402
-from hat_figure_style import (apply_style, C, caption,             # noqa: E402
-                              elevation_cmap, panel_title,
-                              spines_for_image)
+from hat_figure_style import (apply_style, C, INK, caption,       # noqa: E402
+                              elevation_cmap, figsize, save,
+                              spines_for_image, _title)
 
 # INS_V supplies N and the post-insert setback ONLY; the figure draws
 # blocks it builds itself. Repointed v4 -> v5 on 2026-09-03: N is
@@ -134,13 +134,17 @@ def real_cells(dom, row0, n, n_along):
     return out
 
 
-def draw(ax, topo, dune, setback, n_added, nrows, letter, title, note,
-         reference=False, road_ele=None):
+def draw(ax, topo, dune, setback, n_added, nrows, idx, title,
+         road_ele=None):
     """`road_ele` paints the road block at a SINGLE elevation, which is what
     the model holds: bulldoze() does `np.zeros(...) + road_ele`, so after the
     first pass every road cell carries the same value regardless of the ground
     that was there. Left as None for the reference panel, whose setback is
-    negative and whose road therefore falls outside the interior array."""
+    negative and whose road therefore falls outside the interior array.
+
+    The per-panel note box of quantitative results was removed 2026-09-10: the
+    house rule is that statistics belong in the caption, and main() now builds
+    one caption line per panel from the same numbers."""
     cmap, norm, _ = elevation_cmap()
     n_along = topo.shape[1]
     strip = np.tile(BERM_EL_M + dune[None, :n_along], (DUNE_ROWS, 1))
@@ -151,7 +155,7 @@ def draw(ax, topo, dune, setback, n_added, nrows, letter, title, note,
     ax.imshow(shown, cmap=cmap, norm=norm,
               aspect="auto", interpolation="nearest", zorder=1)
 
-    ax.axhline(DUNE_ROWS - 0.5, color="#333333", lw=0.9, zorder=4)
+    ax.axhline(DUNE_ROWS - 0.5, color=INK, lw=0.9, zorder=4)
     if n_added:
         ax.add_patch(Rectangle((-0.5, DUNE_ROWS - 0.5), n_along, n_added,
                                fill=False, ec=C["ADDED"], lw=1.4,
@@ -165,25 +169,12 @@ def draw(ax, topo, dune, setback, n_added, nrows, letter, title, note,
                                facecolor="none", hatch="////", ec=C["ROAD"],
                                lw=0.0, zorder=7))
 
-    # One quantitative note per panel, same corner every time, so the panels
-    # are comparable without the reader going to a table. BOTTOM right, not
-    # top: the added rows, the dune strip and the road band all sit in the top
-    # third of the frame, which is the part being compared, and a box up there
-    # covers it. The back-barrier below is uniform and carries nothing.
-    ax.text(0.985, 0.028, note, transform=ax.transAxes, fontsize=7.2,
-            ha="right", va="bottom", zorder=9, linespacing=1.35,
-            bbox=dict(fc="white", ec="#bbbbbb", lw=0.5, alpha=0.92, pad=2.2))
-
     ax.set_xlim(-0.5, n_along - 0.5)
     ax.set_ylim(nrows + DUNE_ROWS - 0.5, -0.5)
     ax.set_xticks([0, 25, 49])
     ax.set_yticks([0, 5, 10, 15, 20, 25])
-    ax.set_title(panel_title(letter, title), fontsize=9)
     spines_for_image(ax)
-    if reference:
-        for sp in ax.spines.values():
-            sp.set_linewidth(1.6)
-            sp.set_edgecolor(C["ROAD"])
+    _title(ax, idx, title)
 
 
 def main() -> None:
@@ -231,38 +222,45 @@ def main() -> None:
         # fill it carries real alongshore texture - but it is counted as 0%
         # measured because those cells are measurements of the WRONG PLACE,
         # copied, not of the ground being filled.
-        ("matched backdune  ·  profile moved seaward",
+        ("matched backdune", "copies the present near-dune profile to the "
+         "1984 position: real cells, but measurements of a different place, "
+         "so none of the block is taken from the DEM at these coordinates",
          v3[:n, :].copy(), 0.0),
         # KEEP DRY, FILL WET WITH THE BLOCK'S OWN MEDIAN. `--fill median`.
         # Same dry-land test as the shipped rule, but no second step: a
         # measurement is never raised, and the one invented number comes from
         # the ground being filled rather than from interior rows 1-3.
-        ("measured + median fill  ·  --fill median",
+        ("measured + median", "keeps every dry cell as measured and fills only "
+         "the cells at or below mean high water, with the median of the "
+         "block’s own dry cells",
          np.where(dry, real, np.median(real[dry]) if dry.any() else plat.mean()),
          100.0 * dry.mean()),
-        ("raw DEM, no floor  ·  control, not a candidate",
+        ("raw DEM (control)", "is the 1996 cells as they are, no floor and no "
+         "dry-land test — a control, not a candidate, drawn to show what the "
+         "two guards reject",
          np.where(np.isfinite(real), real, plat[None, :]),
          100.0 * np.isfinite(real).mean()),
     ]
 
-    fig, axes = plt.subplots(2, 2, figsize=(7.6, 7.6),
-                             sharex=True, sharey=True)
+    fig, axes = plt.subplots(2, 2, figsize=figsize("double", aspect=0.95),
+                             sharex=True, sharey=True,
+                             constrained_layout=True)
     axf = axes.ravel()
     rs_ref = int(setb_meas / 10.0)
-    draw(axf[0], v3, dune, setb_meas, 0, args.rows, "a",
-         "reference — {} as extracted".format(BASE_V),
-         "NC-12 measured {:+.0f} m\nrow {} — SEAWARD of row 0\nwould not "
-         "initialise".format(setb_meas, rs_ref), reference=True)
+    draw(axf[0], v3, dune, setb_meas, 0, args.rows, 0, "domain as extracted")
 
     rs = int(setb / 10.0)
-    for k, (lab, blk, pct) in enumerate(blocks, start=1):
+    notes = []
+    for k, (lab, why, blk, pct) in enumerate(blocks, start=1):
         full = np.vstack([blk, v3])
         under = np.median(full[rs:rs + ROAD_CELLS, :], axis=1)
-        note = ("NC-12 bulldozed to {:.2f} m\nground beneath was "
-                "{:.2f} / {:.2f} m\nadded block mean {:.2f} m\n"
-                "{:.0f}% taken from the DEM".format(
-                    road_ele, under[0], under[1], float(np.mean(blk)), pct))
-        draw(axf[k], full, dune, setb, n, args.rows, "abcdef"[k], lab, note,
+        notes.append(
+            "({}) “{}” {}; {:.0f}% of the block comes from the DEM, its "
+            "mean elevation is {:.2f} m, and the ground under the road was "
+            "{:.2f} / {:.2f} m before bulldoze() flattened it."
+            .format("abcd"[k], lab, why, pct, float(np.mean(blk)),
+                    under[0], under[1]))
+        draw(axf[k], full, dune, setb, n, args.rows, k, lab,
              road_ele=road_ele)
 
     for ax in axes[-1]:
@@ -270,56 +268,51 @@ def main() -> None:
     for ax in axes[:, 0]:
         ax.set_ylabel("cross-shore row\n(0 = first interior cell)")
 
-    fig_h = fig.get_figheight()
-    # CAP_IN grew from 0.44 when the caption went from two lines to four
-    # (the road-elevation sentence); at 0.44 it ran up into the legend row.
-    CAP_IN, LEG_IN, CBAR_IN, XLAB_IN = 0.92, 0.26, 0.50, 0.46
-    bottom_in = CAP_IN + LEG_IN + CBAR_IN + XLAB_IN
-
     cmap, norm, bounds = elevation_cmap()
-    cax = fig.add_axes([0.345, (CAP_IN + LEG_IN + 0.34) / fig_h, 0.31,
-                        0.095 / fig_h])
-    cb = fig.colorbar(plt.cm.ScalarMappable(cmap=cmap, norm=norm), cax=cax,
-                      orientation="horizontal", boundaries=bounds[1:],
-                      ticks=bounds[1:-1])
+    cb = fig.colorbar(plt.cm.ScalarMappable(cmap=cmap, norm=norm),
+                      ax=axes.ravel().tolist(), orientation="horizontal",
+                      location="bottom", boundaries=bounds[1:],
+                      ticks=bounds[1:-1], shrink=0.45, aspect=32, pad=0.015)
     cb.outline.set_linewidth(0.6)
     cb.ax.tick_params(labelsize=7, length=2)
     cb.set_label("elevation (m MHW); leftmost class is water (≤ 0)",
-                 fontsize=7.4, labelpad=2)
+                 fontsize=7.6, labelpad=2)
 
     fig.legend(handles=[
         Line2D([0], [0], color=C["ROAD"], lw=1.5,
-               label="NC-12, measured offset, at road elevation"),
-        Line2D([0], [0], color=C["ROAD"], lw=6, alpha=0.35,
-               label="hatched = seaward of row 0"),
+               label="NC-12, at its measured offset and road elevation"),
+        Patch(facecolor="white", edgecolor=C["ROAD"], hatch="////", lw=0.6,
+              label="hatched: seaward of interior row 0"),
         Line2D([0], [0], color=C["ADDED"], lw=1.4, ls=(0, (4, 2)),
-               label="the {} added rows".format(n)),
-    ], loc="lower center", bbox_to_anchor=(0.5, CAP_IN / fig_h), ncol=3,
-        fontsize=7.4)
+               label="rows added behind the dune"),
+    ], loc="outside lower center", ncol=3, frameon=False, fontsize=7.6)
 
-    fig.suptitle("GIS {}  ·  candidate interior fills, as the Barrier3D domain"
-                 .format(D), fontsize=11, fontweight="bold", x=0.055,
-                 ha="left", y=1 - 0.24 / fig_h)
     caption(fig,
-            "Two dune rows over the interior domain, row 0 first. Panels "
-            "(b)-(d) differ ONLY in the {} added rows; everything landward of "
-            "the dashed band is identical in all three.\n"
-            "NC-12 is drawn at its measured offset AND at the elevation "
-            "bulldoze() gives it — one value for every road cell, from "
-            "RoadElevation.csv, independent of the fill.\n"
-            "The road does not move; the added rows move interior row 0 out "
-            "from under it. (d) is a control, not a candidate.".format(n),
-            y=0.075 / fig_h, size=7.4)
-    fig.subplots_adjust(top=1 - 0.58 / fig_h, bottom=bottom_in / fig_h,
-                        left=0.135, right=0.985, hspace=0.30, wspace=0.10)
+            "GIS {D}, the candidate interior fills as the Barrier3D domain the "
+            "model would be handed: two dune rows over the interior domain, "
+            "row 0 first. Panels (b)–(d) differ ONLY in the {n} added rows; "
+            "everything landward of the dashed band is identical in all three "
+            "and identical to (a) from its row 0 on. NC-12 is drawn at its "
+            "measured offset AND at the elevation bulldoze() gives it — one "
+            "value, {re:.2f} m, for every road cell, read from "
+            "RoadElevation.csv and independent of the fill. The road does not "
+            "move; the added rows move interior row 0 out from under it. "
+            "(a) is the domain as extracted, where the measured offset of "
+            "{sm:+.0f} m puts the road on row {rr}, SEAWARD of interior row 0 "
+            "(hatched). That is the failure, not a plotting artefact: int() "
+            "truncates toward zero, so roadway_manager would index the "
+            "interior from its landward end and bulldoze the sound-side "
+            "marsh, and the domain would not initialise. {notes}"
+            .format(D=D, n=n, re=road_ele, sm=setb_meas, rr=rs_ref,
+                    notes=" ".join(notes)))
 
     out = Path(args.out) if args.out else (
         # NOTE 2026-09-08: this figure now lives in figures/superseded-layers/; the script is
         # guarded (no layer on disk), so nothing is written here until a layer is rebuilt.
         insert_figures_dir("1984-start", "4-fill")
         / "HAT_fill_options_grid_GIS{}.png".format(D))
-    fig.savefig(out)
-    print("wrote {}".format(out))
+    written = save(fig, out, vector=False)
+    print("wrote {}".format(written[0]))
 
 
 if __name__ == "__main__":
