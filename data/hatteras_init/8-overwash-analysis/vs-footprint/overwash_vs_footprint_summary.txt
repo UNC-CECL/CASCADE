@@ -1,0 +1,71 @@
+Overwash 1984-1997 against the 1984 footprint (rows added / removed)
+========================================================================
+Window: 9 images strictly between the dune-line frames (19 Sep 1984 excluded, 12 Oct 1997 included):
+  23 Aug 1985, 10 Jul 1987, 30 Jul 1989, 19 Oct 1991, 02 Oct 1992, 02 Sep 1993, 18 Oct 1995, 14 Oct 1996, 12 Oct 1997
+
+action              add  none  remove
+all domains (n=90)                   
+overwashed           20     7       0
+not seen              9    31      23
+
+Reading 1, given overwash (27 domains): add 20, none 7, remove 0
+Reading 2, given the action, overwashed: add 20/29, none 7/38, remove 0/23
+Fisher exact, overwashed x (add vs remove): [[20, 9], [0, 23]]  odds inf, p = 0.000  (small counts)
+
+action                 add  none  remove
+unflagged only (n=49)                   
+overwashed              16     1       0
+not seen                 6    12      14
+
+Reading 1, given overwash (17 domains): add 16, none 1, remove 0
+Reading 2, given the action, overwashed: add 16/22, none 1/13, remove 0/14
+Fisher exact, overwashed x (add vs remove): [[16, 6], [0, 14]]  odds inf, p = 0.000  (small counts)
+
+Lists
+------------------------------------------------------------------------
+Agrees: overwash seen, rows added
+  D 3  shift  +39.8 m, +3 rows;  overwash in 1996-10; 1997-10;  [CoastSat -4.8 m/yr]
+  D 4  shift  +28.7 m, +2 rows;  overwash in 1993-09; 1997-10;  [CoastSat -4.0 m/yr]
+  D 5  shift  +62.3 m, +6 rows;  overwash in 1993-09;  [CoastSat -2.4 m/yr]
+  D46  shift  +13.2 m, +1 rows;  overwash in 1991-10
+  D47  shift  +13.2 m, +1 rows;  overwash in 1991-10
+  D48  shift  +11.0 m, +1 rows;  overwash in 1995-10
+  D49  shift  +34.2 m, +3 rows;  overwash in 1995-10
+  D50  shift  +33.7 m, +3 rows;  overwash in 1995-10
+  D51  shift  +26.5 m, +2 rows;  overwash in 1989-07; 1995-10
+  D53  shift  +11.4 m, +1 rows;  overwash in 1995-10
+  D54  shift  +28.0 m, +2 rows;  overwash in 1995-10
+  D79  shift  +45.8 m, +4 rows;  overwash in 1992-10;  [CoastSat -4.8 m/yr]
+  D80  shift  +70.3 m, +7 rows;  overwash in 1992-10;  [CoastSat -3.3 m/yr]
+  D81  shift  +36.8 m, +3 rows;  overwash in 1992-10;  [CoastSat -4.3 m/yr]
+  D82  shift  +53.2 m, +5 rows;  overwash in 1995-10;  [CoastSat -5.8 m/yr]
+  D83  shift  +26.9 m, +2 rows;  overwash in 1993-09; 1995-10;  [CoastSat -4.4 m/yr]
+  D84  shift  +36.3 m, +3 rows;  overwash in 1992-10; 1993-09;  [NC-12 relocated, hotspot Rodanthe 'S' Curves, CoastSat -4.5 m/yr]
+  D85  shift  +58.7 m, +5 rows;  overwash in 1992-10;  [NC-12 relocated, hotspot Rodanthe 'S' Curves, CoastSat -3.3 m/yr]
+  D86  shift  +26.8 m, +2 rows;  overwash in 1992-10; 1993-09; 1995-10;  [NC-12 relocated, hotspot Rodanthe 'S' Curves, CoastSat -2.9 m/yr]
+  D87  shift  +10.3 m, +1 rows;  overwash in 1993-09;  [NC-12 relocated, hotspot Rodanthe 'S' Curves, CoastSat -2.9 m/yr]
+
+DISAGREES: overwash seen, rows removed
+  (none)
+
+Overwash seen, no rows changed
+  D 9  shift   -4.5 m, +0 rows;  overwash in 1992-10;  [shift straddles 0, NC-12 relocated, CoastSat -2.1 m/yr]
+  D10  shift   +5.2 m, +0 rows;  overwash in 1992-10;  [NC-12 relocated, hotspot Buxton, CoastSat -2.7 m/yr]
+  D56  shift   -8.8 m, +0 rows;  overwash in 1995-10;  [shift straddles 0]
+  D57  shift   +2.0 m, +0 rows;  overwash in 1995-10;  [shift straddles 0]
+  D88  shift   +6.3 m, +0 rows;  overwash in 1993-09;  [hotspot Rodanthe 'S' Curves, CoastSat -2.2 m/yr]
+  D89  shift   -8.4 m, +0 rows;  overwash in 1993-09
+  D90  shift   -0.9 m, +0 rows;  overwash in 1993-09;  [shift straddles 0]
+
+Unexplained retreat: rows added, no overwash seen (absence is weak evidence)
+  D 2  shift  +14.6 m, +1 rows;  overwash in -;  [shift straddles 0, CoastSat -4.8 m/yr]
+  D11  shift  +19.9 m, +1 rows;  overwash in -;  [NC-12 relocated, hotspot Buxton, CoastSat -3.0 m/yr]
+  D12  shift  +17.7 m, +1 rows;  overwash in -;  [NC-12 relocated, hotspot Buxton, CoastSat -2.3 m/yr]
+  D45  shift  +15.6 m, +1 rows;  overwash in -
+  D52  shift  +13.5 m, +1 rows;  overwash in -
+  D72  shift  +25.6 m, +2 rows;  overwash in -
+  D73  shift  +50.1 m, +5 rows;  overwash in -
+  D74  shift  +27.2 m, +2 rows;  overwash in -
+  D78  shift  +23.4 m, +2 rows;  overwash in -;  [CoastSat -5.9 m/yr]
+
+Flags: shift straddles zero 25, NC-12 relocated 12, erosion hotspot 17, armor 1, eroding faster than -2 m/yr 23; unflagged 49 of 90.

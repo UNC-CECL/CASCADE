@@ -16,6 +16,7 @@ Author: Hannah A. Henry (extrapolation buffer version)
 import os
 import pandas as pd
 import numpy as np
+from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -25,11 +26,22 @@ import matplotlib.patches as mpatches
 # 1. USER CONFIGURATION
 # =============================================================================
 
-YEAR = 2004
-RAW_FILE = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\island_offset\2004\2004_duneline_offset_raw.csv"
+# The island_offset/ tree was renamed 2-brie-offset/ (raw_offsets/ plus
+# hindcast_<year>/), which left every path here dead. Anchored on the repo
+# root and on YEAR, so either hindcast start can be produced (2026-09-10).
+import argparse as _argparse
 
-OUTPUT_DIR    = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\island_offset\hindcast_2004_v3"
-OUTPUT_BASENAME = "Island_Dune_Offsets_2004"
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+_BRIE_ROOT = _PROJECT_ROOT / "data" / "hatteras_init" / "2-brie-offset"
+
+_ap = _argparse.ArgumentParser(description="island dune offsets for one hindcast start")
+_ap.add_argument("--year", type=int, default=2004, choices=(1984, 2004))
+YEAR = _ap.parse_args().year
+
+RAW_FILE = str(_BRIE_ROOT / "raw_offsets" / f"{YEAR}_duneline_offset_raw.csv")
+
+OUTPUT_DIR    = str(_BRIE_ROOT / f"hindcast_{YEAR}")
+OUTPUT_BASENAME = f"Island_Dune_Offsets_{YEAR}"
 
 START_DOMAIN = 1
 END_DOMAIN   = 90
@@ -436,7 +448,7 @@ def plot_buffer_diagnostic(diag, year, padding_zeros, community_zones,
     real_tick_labels = [str(i + 1) for i in range(0, 90, 10)]
     ax2.set_xticks(real_tick_padded)
     ax2.set_xticklabels(real_tick_labels, fontsize=8)
-    ax2.set_xlabel("Real domain (D1 = Cape Point → D90 = Rodanthe)", fontsize=9, labelpad=4)
+    ax2.set_xlabel("GIS domain (south → north)", fontsize=9, labelpad=4)
 
     for spine in ["top", "right"]:
         ax_main.spines[spine].set_visible(False)

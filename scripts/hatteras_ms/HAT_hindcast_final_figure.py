@@ -64,6 +64,7 @@ OUT_DIR = PROJECT_BASE_DIR / "output" / "comparisons"
 
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 
+from cascade_pipeline.run_layout import resolve                 # noqa: E402
 from cascade_pipeline.run_registry import find_run_dir          # noqa: E402
 
 LOESS_PATH = (PROJECT_BASE_DIR / "scripts" / "input_prep" / "7-source-sink"
@@ -100,7 +101,7 @@ def run_rates(period, preset, scenario):
             f"{exc}"
             f"  Run HAT_run_all.py --stages 2,6 --presets {preset} first."
         ) from None
-    path = run_dir / f"{name}_shoreline_change_rate.csv"
+    path = resolve(run_dir, "rate_csv", name)
     return pd.read_csv(path).set_index("gis_domain")["lrr_m_yr"], name
 
 

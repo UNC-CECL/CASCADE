@@ -737,7 +737,7 @@ def plot_yearly_relative_shoreline_and_bn(
             fontsize=11, fontweight="bold",
         )
         ax_bn.set_ylabel("BN volume\n(m³/domain)", fontsize=9, fontweight="bold")
-        ax_bn.set_xlabel("GIS Domain ID (1–90)  |  1 = Cape Point  ·  90 = near Rodanthe",
+        ax_bn.set_xlabel("GIS domain (south → north)",
                          fontsize=10, fontweight="bold")
         ax_bn.set_ylim(0, max_bn_volume * 1.25)
         ax_bn.grid(True, axis="y", linestyle=":", linewidth=0.6, alpha=0.4)
@@ -904,7 +904,7 @@ def plot_yearly_absolute_shoreline_and_bn(
             fontsize=11, fontweight="bold",
         )
         ax_bn.set_ylabel("BN volume\n(m³/domain)", fontsize=9, fontweight="bold")
-        ax_bn.set_xlabel("GIS Domain ID (1–90)  |  1 = Cape Point  ·  90 = near Rodanthe",
+        ax_bn.set_xlabel("GIS domain (south → north)",
                          fontsize=10, fontweight="bold")
         ax_bn.set_ylim(0, max_bn_volume * 1.25)
         ax_bn.grid(True, axis="y", linestyle=":", linewidth=0.6, alpha=0.4)

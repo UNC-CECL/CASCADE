@@ -41,7 +41,8 @@ Usage:
 
 Reads  the converged calibBE full_management runs, groin on and off, plus the
        live GROIN_RESERVED_DOMAINS.
-Writes output/fig_groin_reserved_residual.png
+Writes data/hatteras_init/7-source-sink/figures/fig_groin_reserved_residual.png
+       (and the PDF beside it); the caption goes to CAPTIONS.md in that folder.
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -59,17 +60,25 @@ _HERE = pathlib.Path(__file__).resolve()
 PROJECT_BASE_DIR = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
 OUTPUT_DIR = _HERE.parent / "output"
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
+# The figure lives with the rest of the section 7 figures, in the data tree.
+FIG_DIR = (PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
+           / "figures")
 
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 
+from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
+from hat_figure_style import (                                   # noqa: E402
+    apply_style, figsize, save, caption, town_bands, open_frame,
+    DOMAIN_AXIS_LABEL, C, C_1984, C_1997, INK, INK_MUTED, halo, _title)
+
 SHOW = list(range(2, 13))
+# The earlier period takes the red of the house vintage pair, the later the blue.
 PERIODS = {
     "1984_2004": dict(label="1984–2004", start=1984, scenario="road_bdm",
-                      colour="#1565C0"),
+                      colour=C_1984),
     "2004_2024": dict(label="2004–2024", start=2004, scenario="road_bdm_nourish",
-                      colour="#B71C1C"),
+                      colour=C_1997),
 }
-RESERVED_COLOUR = "#FF8C00"
 
 
 def analysis_module():
@@ -83,7 +92,10 @@ def analysis_module():
 def run_rates(period, scenario, groin):
     """One run's per-domain LRR, or None when the run is absent."""
     name = f"HAT_{period}_calibBE_{scenario}_{'groin' if groin else 'nogroin'}"
-    path = RAW_RUNS / period / "calibBE" / name / f"{name}_shoreline_change_rate.csv"
+    # RESOLVED, NOT JOINED: the rate CSV is tables/shoreline_change_rate.csv in
+    # the new run layout and {run}_shoreline_change_rate.csv in the old one.
+    path = resolve_run_file(RAW_RUNS / period / "calibBE" / name,
+                            "rate_csv", name)
     if not path.exists():
         return None
     return pd.read_csv(path).set_index("gis_domain")["lrr_m_yr"]
@@ -110,55 +122,57 @@ def main():
                 f"HAT_run_all.py --stages 2,6 --presets calibBE first.")
         data[key] = dict(target=target, on=on, off=off, **meta)
 
-    figure = plt.figure(figsize=(15.5, 8.2))
-    grid = figure.add_gridspec(2, 2, width_ratios=[1.25, 1], hspace=0.34,
-                               wspace=0.22)
+    apply_style()
+    figure = plt.figure(figsize=figsize("double", aspect=0.55),
+                        constrained_layout=True)
+    grid = figure.add_gridspec(2, 2, width_ratios=[1.3, 1])
     axes = [figure.add_subplot(grid[0, 0]), figure.add_subplot(grid[1, 0])]
     bars = figure.add_subplot(grid[:, 1])
 
     # ---- LEFT: observed against the model, groin on and off ---------------
-    for axis, (key, d) in zip(axes, data.items()):
+    for i, (axis, (key, d)) in enumerate(zip(axes, data.items())):
         x = np.array(SHOW, dtype=float)
         tgt = np.array([d["target"].get(g, np.nan) for g in SHOW])
         on = np.array([d["on"].get(g, np.nan) for g in SHOW])
         off = np.array([d["off"].get(g, np.nan) for g in SHOW])
 
-        axis.axvspan(min(reserved) - 0.5, max(reserved) + 0.5,
-                     color=RESERVED_COLOUR, alpha=0.16, zorder=0)
-        axis.text((min(reserved) + max(reserved)) / 2, 0.97,
-                  "RESERVED\nfor the groin", ha="center", va="top", fontsize=8,
-                  color="#B36200", weight="bold", zorder=6,
-                  transform=axis.get_xaxis_transform())
-
-        axis.plot(x, tgt, marker="s", markersize=7, linestyle="--",
-                  color="#1A1A1A", linewidth=2.4, zorder=6, label="observed")
-        axis.plot(x, on, marker="o", markersize=6, color=d["colour"],
-                  linewidth=2.2, zorder=5, label="model, groin ON")
-        axis.plot(x, off, marker="^", markersize=6, color="#888888",
-                  linewidth=1.8, linestyle=":", zorder=4, label="model, groin OFF")
+        axis.plot(x, tgt, marker="s", markersize=3.5, linestyle=(0, (4, 2)),
+                  color=C["REF"], linewidth=1.6, zorder=6, label="observed")
+        axis.plot(x, on, marker="o", markersize=3.5, color=d["colour"],
+                  linewidth=1.4, zorder=5, label="modelled, groin present")
+        axis.plot(x, off, marker="^", markersize=3.5, color=C["BASE"],
+                  linewidth=1.1, linestyle=":", zorder=4,
+                  label="modelled, groin absent")
 
         worst = int(np.nanargmax(np.abs(tgt - on)))
-        # Point at the MIDDLE of the gap, and park the text well clear of both
-        # curves -- anchored on the model line it overlapped it.
-        midpoint = (tgt[worst] + on[worst]) / 2.0
-        axis.annotate(
-            f"D{SHOW[worst]}  residual {tgt[worst] - on[worst]:+.2f} m/yr",
-            xy=(x[worst], midpoint), xytext=(0.62, 0.12 if d["start"] == 1984 else 0.88),
-            textcoords=axis.transAxes, fontsize=9.5, color=d["colour"],
-            weight="bold", ha="left",
-            va="bottom" if d["start"] == 1984 else "top",
-            arrowprops=dict(arrowstyle="->", color=d["colour"], linewidth=1.4,
-                            connectionstyle="arc3,rad=0.15"))
-        axis.annotate("", xy=(x[worst], tgt[worst]), xytext=(x[worst], on[worst]),
+        # The gap itself is drawn; its size is a number, and numbers belong in
+        # the caption and on the bars at the right, not floating over a curve.
+        axis.annotate("", xy=(x[worst], tgt[worst]),
+                      xytext=(x[worst], on[worst]),
                       arrowprops=dict(arrowstyle="<->", color=d["colour"],
-                                      linewidth=1.6, alpha=0.75))
+                                      linewidth=1.0))
 
         axis.set_xticks(SHOW)
-        axis.set_ylabel("shoreline rate (m/yr)\n[+ = seaward]", fontsize=9)
-        axis.set_title(f"{d['label']}", fontsize=11, loc="left")
-        axis.grid(alpha=0.25)
-        axis.legend(fontsize=8, loc="best")
-    axes[1].set_xlabel("GIS domain (south → north)")
+        axis.set_xlim(min(SHOW) - 0.6, max(SHOW) + 0.6)
+        axis.set_ylabel("shoreline rate (m/yr)\npositive is seaward")
+        _title(axis, i, d["label"])
+        axis.axhline(0.0, color=INK, lw=0.7, zorder=2)
+        axis.grid(axis="y")
+        open_frame(axis)
+        # The reserved reach is the groin module's own footprint, so it takes
+        # the accent tint rather than a grey: the villages already occupy the
+        # grey strip along the top, and two greys on one panel cannot be told
+        # apart. Named once, on the upper panel only.
+        axis.axvspan(min(reserved) - 0.5, max(reserved) + 0.5,
+                     color=C["ACCENT_FILL"], alpha=0.40, lw=0, zorder=0)
+        if i == 0:
+            axis.text((min(reserved) + max(reserved)) / 2, 0.03,
+                      "reserved for the groin", ha="center", va="bottom",
+                      fontsize=7, color=INK_MUTED, zorder=6,
+                      transform=axis.get_xaxis_transform())
+        town_bands(axis, where="top", strip=0.10, fontsize=7)
+        axis.legend(loc="upper right", frameon=False, fontsize=7)
+    axes[1].set_xlabel(DOMAIN_AXIS_LABEL)
 
     # ---- RIGHT: the residual at the reserved domains ----------------------
     width = 0.36
@@ -168,62 +182,71 @@ def main():
                     for g in reserved]
         resid_off = [d["target"].get(g, np.nan) - d["off"].get(g, np.nan)
                      for g in reserved]
-        bars.bar(idx + offset, resid_on, width, color=d["colour"], alpha=0.9,
-                 zorder=4, label=f"{d['label']}  groin ON")
-        # groin-off as an outline behind: the gap between the two IS the groin
+        bars.bar(idx + offset, resid_on, width, color=d["colour"], zorder=4,
+                 label=f"{d['label']}, groin present")
+        # groin-off as an outline behind: the gap between the two IS the groin.
         # One legend entry only: the two periods' outlines are visually
         # identical, so labelling both just doubles the legend.
         bars.bar(idx + offset, resid_off, width, facecolor="none",
-                 edgecolor="#333333", linewidth=1.3, linestyle="--", zorder=5,
-                 label="same run, groin OFF" if offset < 0 else None)
-        for i, (a, b) in enumerate(zip(resid_on, resid_off)):
+                 edgecolor=C["BASE"], linewidth=0.9, linestyle=(0, (3, 2)),
+                 zorder=5,
+                 label="the same run with the groin absent" if offset < 0 else None)
+        for i, a in enumerate(resid_on):
             bars.annotate(f"{a:+.2f}", xy=(idx[i] + offset, a),
-                          xytext=(0, 5 if a >= 0 else -13),
-                          textcoords="offset points", ha="center", fontsize=8,
-                          color=d["colour"], weight="bold")
+                          xytext=(0, 4 if a >= 0 else -12),
+                          textcoords="offset points", ha="center", fontsize=7,
+                          color=d["colour"], zorder=8,
+                          path_effects=halo(2.0))
 
-    bars.axhline(0.0, color="#333333", linewidth=1.0, zorder=3)
+    bars.axhline(0.0, color=INK, linewidth=0.7, zorder=3)
+    # Room under the bars for their value labels, and a clear band above them
+    # for the key: at "lower right" the key landed on the D6 label.
+    lo, hi = bars.get_ylim()
+    bars.set_ylim(lo - 0.10 * (hi - lo), hi + 0.38 * (hi - lo))
     bars.set_xticks(idx)
-    bars.set_xticklabels([f"D{g}" for g in reserved], fontsize=11)
-    bars.set_ylabel("residual, observed − modelled (m/yr)")
-    bars.set_title("WHAT IS LEFT AT THE RESERVED DOMAINS\n"
-                   "the gap between filled and dashed is the groin's own "
-                   "contribution", fontsize=11)
-    bars.grid(alpha=0.25, axis="y")
-    bars.legend(fontsize=8, loc="best")
+    bars.set_xticklabels([f"D{g}" for g in reserved])
+    bars.set_ylabel("residual, observed \u2212 modelled (m/yr)")
+    bars.grid(axis="y")
+    open_frame(bars)
+    _title(bars, 2, "what is left at the reserved domains")
+    bars.legend(loc="upper center", frameon=False, fontsize=7)
 
-    # Axes coords, hard against the left edge: in data coords these collided
-    # with the D5 bars and their value labels.
-    bars.text(0.015, 0.955,
-              "observed more seaward\nmodel builds too LITTLE fillet",
-              transform=bars.transAxes, ha="left", va="top", fontsize=8.5,
-              color="#1565C0", style="italic")
-    bars.text(0.015, 0.045,
-              "model more seaward\nmodel cannot RELEASE the fillet",
-              transform=bars.transAxes, ha="left", va="bottom", fontsize=8.5,
-              color="#B71C1C", style="italic")
+    caption(figure, (
+        "The largest residual the source/sink calibration leaves anywhere in the "
+        "hindcast sits at domain 6, and it is left uncorrected on purpose. "
+        "Domains 5 to 7 are the Buxton groin's footprint, shaded here and held "
+        "in the reserved set. (a, b) the observed shoreline rate against the "
+        "calibrated model at the southern domains, with the groin module on and "
+        "off; the double-headed arrow marks the domain where observed and "
+        "modelled are furthest apart. (c) the residual at each reserved domain "
+        "for both periods, filled with the groin present and outlined with it "
+        "absent -- the gap between the two is the groin's own contribution. "
+        "The groin's trapping rate and deterioration floor were fitted against "
+        "the observed shoreline, and the source/sink field is then derived from "
+        "what the modules could not explain, which is why the calibration runs "
+        "against a base run with the groin on. Letting background erosion absorb "
+        "domains 5 to 7 would close the same gap twice: the groin would score as "
+        "well calibrated because a source term was quietly doing its work, and "
+        "the trapping fit could never be falsified by the hindcast. The two "
+        "periods' residuals have opposite signs, and that is the point. In "
+        "1984-2004 the residual is positive -- observed is further seaward than "
+        "modelled, so the model builds too little fillet -- and a trapping rate "
+        "of 60 m/yr already moves about 719,000 m3/yr against a littoral drift "
+        "of 5-7 x 10^5 m3/yr, so it is a budget bound rather than a missed fit. "
+        "In 2004-2024 it is negative -- modelled is further seaward than "
+        "observed -- because the real fillet released after the 2003 storm "
+        "damage and the module cannot, since its trapping is bounded at zero "
+        "from below. One background-erosion term closing both would have to "
+        "change sign between the periods at the same domain: a fitted constant "
+        "standing in for a structure that was built, damaged and left. Domain 1 "
+        "is at Cape Point and domain 90 at Pea Island."))
 
-    figure.suptitle("The largest residual in the hindcast is the groin's, and is "
-                    "left uncorrected on purpose", fontsize=13, y=0.985)
-    figure.tight_layout(rect=(0, 0.115, 1, 0.965))
-    figure.text(
-        0.01, 0.012,
-        "WHY IT IS NOT CORRECTED. M and f were fitted against the observed shoreline, and the source/sink field is then derived from what the "
-        "modules could NOT explain -- which is why the calibration runs against a groin-ON base. Letting background erosion absorb D5-D7 would "
-        "close the same gap twice: the groin would score as well-calibrated because a source term was doing its work, and the M/f fit could never "
-        "be falsified by the hindcast.\n"
-        "WHY THE SIGNS ARE OPPOSITE. Period 1 is positive -- observed is more seaward, so the model builds too little fillet, and M = 60 m/yr is "
-        "already ~719,000 m3/yr against a 5-7e5 littoral drift, so it is a budget bound rather than a missed fit. Period 2 is negative -- the real "
-        "fillet released after the 2003 storm damage and the module cannot, since trapping is bounded at >= 0. A single BE term closing both would "
-        "have to change sign between periods at the same domain: a fitted constant standing in for a structure that was built, damaged and left.",
-        fontsize=7.4, color="#333333", wrap=True)
-
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    path = OUTPUT_DIR / "fig_groin_reserved_residual.png"
-    figure.savefig(path, dpi=150, facecolor="white")
+    path = FIG_DIR / "fig_groin_reserved_residual.png"
+    save(figure, path)
     plt.close(figure)
 
     print(f"wrote {path}")
+
     for key, d in data.items():
         line = "  ".join(
             f"D{g} {d['target'].get(g, np.nan) - d['on'].get(g, np.nan):+.2f}"

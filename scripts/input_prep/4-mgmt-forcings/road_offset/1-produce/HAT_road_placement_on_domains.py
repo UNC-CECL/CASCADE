@@ -5,12 +5,12 @@ Where each setback method actually puts NC-12 on the Barrier3D interiors CASCADE
 initialises with -- the road placed exactly where `roadway_manager.bulldoze`
 would put it from that method's model-facing RoadSetback CSV.
 
-  A  1984 road on the 1984-start interiors (product+version resolved at run time)
-  B  2004 road on the 2004-start interiors -- a DIFFERENT island, not the same
+  a  1984 road on the 1984-start interiors (product+version resolved at run time)
+  b  2004 road on the 2004-start interiors -- a DIFFERENT island, not the same
      one twice: 65 of 90 domains differ in interior shape between the products
-  C  setback against island width, one band per period
-  D  road movement between the two periods, under this method
-  E  bulldoze's own drown test -- does CASCADE keep managing this roadway
+  c  setback against island width, one line per period
+  d  road movement between the two periods, under this method
+  e  bulldoze's own drown test -- does CASCADE keep managing this roadway
 
 ONE SCRIPT, BOTH METHODS, ON PURPOSE
 ------------------------------------
@@ -22,8 +22,18 @@ by copying this file.
   old        old_method_offset/<year>/RoadSetback_<year>.csv
   dunestart  dunestart_offset/<year>/RoadSetback_<year>_dunestart.csv
 
-Read-only with respect to the forcing: writes only a PNG into each method's
-folder.
+Read-only with respect to the forcing: writes a PNG, a PDF beside it and a
+CAPTIONS.md entry into each method's folder.
+
+THE STYLE IS THE HOUSE STYLE, AND THIS MODULE RE-EXPORTS IT
+-----------------------------------------------------------
+Since 2026-09-10 every colour and every type size here comes from
+scripts/hat_figure_style.py, through apply_style(). The palette names this file
+used to own -- LAND_CMAP, SURFACE, WATER, INK_MUTED, INK_SECOND, C_1984 /
+C_2004 / C_YEAR, C_DROWN, SECTIONS -- are KEPT and now resolve to their house
+equivalents, because HAT_dunestart_modification_stages.py,
+HAT_method_comparison_figures.py, HAT_oceanfloor_offset_check.py and
+HAT_road_geojson_map.py all read them off this module as `P.<name>`.
 
 THE FRAME CAVEAT -- WHICH APPLIES TO ONE METHOD AND NOT THE OTHER
 ------------------------------------------------------------------
@@ -75,7 +85,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap, Normalize
+from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.lines import Line2D
 from matplotlib.patheffects import withStroke
 
@@ -93,6 +103,17 @@ INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 from hat_topo_version import (topo_dirs, array_name,  # noqa: E402
                              product_for_year)
+
+# The house style. Everything typographic and every colour comes from here now;
+# nothing in this file re-decides a font size or a grey. The names this module
+# used to define for its own palette survive below as aliases, because three
+# other scripts import this file for them.
+import hat_figure_style as _HS  # noqa: E402
+from hat_figure_style import (  # noqa: E402
+    C, DOMAIN_AXIS_LABEL, apply_style, caption, elevation_cmap, figsize,
+    open_frame, save, spines_for_image, town_bands, _title)
+
+apply_style()
 
 # NOR IS THE PRODUCT (2026-08-26). Until today this line read
 #
@@ -138,16 +159,18 @@ ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
 #            mark domains whose true value was negative and got floored to 0.
 METHODS = {
     "old": dict(
-        label="OLD method (min road − min dune, digitised dune line)",
-        short="old method",
+        label=("setback taken as the minimum road elevation minus the "
+               "minimum dune elevation, independently per domain "
+               "(superseded)"),
+        short="independent minima",
         root=ROADS_ROOT / "old_method_offset",
         setback="{year}/RoadSetback_{year}.csv",
         detail=None,
         png="HAT_old_method_road_on_domains.png",
     ),
     "dunestart": dict(
-        label="DUNE-START method (per-profile, measured from interior row 0)",
-        short="dune-start method",
+        label="setback measured landward from the dune start",
+        short="dune start",
         root=ROADS_ROOT / "dunestart_offset",
         setback="{year}/RoadSetback_{year}_dunestart.csv",
         detail="{year}/RoadOffset_{year}_domains.csv",
@@ -177,33 +200,53 @@ DISPLAY_CROSS_SHORE_M = 900.0
 DROWN_THRESHOLD_M = 0.0
 DROWN_PCT = 0.2
 
-C_1984, C_2004 = "#2a78d6", "#eb6834"
+# --- the palette, re-pointed at the house one (2026-09-10) -------------------
+# These names are the module's public palette: HAT_dunestart_modification_
+# stages.py, HAT_method_comparison_figures.py, HAT_oceanfloor_offset_check.py
+# and HAT_road_geojson_map.py all read them off this module as `P.<name>`. They
+# are kept, and each one now RESOLVES to its house equivalent, so the figures in
+# this folder and the figures elsewhere in the project are one palette.
+#
+# The earlier vintage is the house red and the later the house blue, which is
+# the vintage pair everywhere in this project; the pair used here before
+# (#2a78d6 blue 1984 / #eb6834 orange 2004) had 1984 blue, i.e. exactly
+# inverted against every other two-vintage figure in the repo.
+C_1984, C_2004 = _HS.C_1984, _HS.C_1997
 C_YEAR = {1984: C_1984, 2004: C_2004}
-# Dark crimson, not a bright red. Separation was computed, not eyeballed: the
-# obvious #d62728 measures OKLab dE 11.8 against the 2004 orange, under the 15
-# floor -- which is why an earlier figure in this repo rejected status red
-# outright. This one clears it by going DARK rather than saturated: dE 26.7 vs
-# orange, 32.7 vs blue, worst simulated CVD 26.4. Drowned domains also carry a
-# marker and a label, so the state is never colour-alone.
-C_DROWN = "#8c0d24"
-INK_MUTED, INK_SECOND, SURFACE, WATER = "#8a8a85", "#52514e", "#fcfcfb", "#d8dce0"
 
+# The drowned state. It was a dark crimson picked to separate from the old
+# blue/orange pair; against the house vintage RED it would now read as "1984".
+# ACCENT purple is the one house colour that is neither vintage, neither
+# reference nor fabricated ground, and it separates from both poles on hue and
+# from BASE on luminance. Drowned domains also carry a marker and a count, so
+# the state is never colour-alone.
+C_DROWN = C["ACCENT"]
+
+# INK_SECOND is used for TEXT by the importers, INK_MUTED for rules, outlines
+# and grid; the house rule puts text in INK and rules in INK_MUTED.
+INK_MUTED, INK_SECOND = _HS.INK_MUTED, _HS.INK
+SURFACE = "white"                 # halo / label backing; the house page colour
+WATER = C["WATER"]                # cells at or below MHW
+NODATA = C["BASE_FILL"]           # outside the extraction: no data, not water
+
+# Elevation is drawn in CLASSES, not a ramp (house rule): a linear ramp over
+# 0-4 m renders the whole back-barrier as one tone. LAND_CLASS_* is what the
+# panels here use. LAND_CMAP survives as a CONTINUOUS ramp in the same house
+# colours, because the two out-of-scope importers pair it with a plain
+# Normalize(LAND_VMIN, LAND_VMAX); handing them the discrete list under a
+# linear norm would paint 0-0.5 m land in the water colour.
+LAND_CLASS_CMAP, LAND_CLASS_NORM, LAND_CLASS_BOUNDS = elevation_cmap()
 LAND_CMAP = LinearSegmentedColormap.from_list(
-    "land_seq", ["#eaf3e6", "#c3e0b9", "#8fc487", "#55a05e", "#217a45",
-                 "#0d4d2b"])
+    "hat_land_ramp", list(LAND_CLASS_CMAP.colors)[1:])
 LAND_VMIN, LAND_VMAX = 0.0, 4.0
 
+# The alongshore reaches. Kept because HAT_oceanfloor_offset_check.py reads
+# them off this module to draw its own dividers. The figures BELOW no longer
+# use them: the house `town_bands()` shades the three village spans from
+# hatteras_site_config, which is the one authority on where the towns are.
 SECTIONS = [((1, 6), "Cape Pt"), ((7, 8), "Bux"), ((9, 20), "Buxton-Avon"),
             ((21, 31), "Avon"), ((32, 67), "Avon-Tri-Village / Wimble Shoals"),
             ((68, 83), "Tri-Village"), ((84, 90), "Pea Is.")]
-
-plt.rcParams.update({
-    "font.size": 10,
-    "axes.edgecolor": INK_MUTED, "axes.labelcolor": "#0b0b0b",
-    "text.color": "#0b0b0b", "xtick.color": INK_SECOND,
-    "ytick.color": INK_SECOND,
-    "figure.facecolor": SURFACE, "axes.facecolor": SURFACE,
-})
 
 
 # =============================================================================
@@ -330,20 +373,21 @@ def place_road(interiors: dict, setbacks: dict) -> dict:
 # PANELS
 # =============================================================================
 
-def draw_island(ax, fig, shown, crop_rows, year, placed, label_sections,
-                short):
+def draw_island(ax, fig, shown, crop_rows, year, placed, panel_index,
+                label_towns=False):
     colour = C_YEAR[year]
-    ax.set_facecolor(WATER)
+    ax.set_facecolor(NODATA)
     im = ax.imshow(np.ma.masked_invalid(shown), aspect="auto", origin="lower",
                    extent=[0.5, len(DOMAINS) + 0.5, -CELL_SIZE_M / 2,
                            crop_rows * CELL_SIZE_M - CELL_SIZE_M / 2],
-                   cmap=LAND_CMAP, norm=Normalize(LAND_VMIN, LAND_VMAX),
+                   cmap=LAND_CLASS_CMAP, norm=LAND_CLASS_NORM,
                    interpolation="nearest")
     cax = ax.inset_axes([1.012, 0.0, 0.014, 1.0])
-    cb = fig.colorbar(im, cax=cax, extend="max")
-    cb.set_label("interior elev (m MHW)", fontsize=8.5)
-    cb.ax.tick_params(labelsize=8)
+    cb = fig.colorbar(im, cax=cax, spacing="uniform",
+                      ticks=LAND_CLASS_BOUNDS[1:-1])
+    cb.set_label("elevation (m MHW)")
     cb.outline.set_edgecolor(INK_MUTED)
+    cb.outline.set_linewidth(0.6)
 
     # Only road_start is drawn. The 20 m band's landward edge sat 2 cells away,
     # which at this vertical scale read as line weight, not as width.
@@ -364,30 +408,21 @@ def draw_island(ax, fig, shown, crop_rows, year, placed, label_sections,
         ax.plot(seg[True][0], seg[True][1], color=C_DROWN, lw=3.4,
                 solid_capstyle="butt", path_effects=halo, zorder=7)
 
-    # No marker on the plan views: the crimson segment IS the signal, and a
+    # No marker on the plan views: the accent segment IS the signal, and a
     # triangle on top of a 1-domain-wide line obscured the thing it pointed at.
-    # The state stays recoverable without colour -- each panel carries a count,
-    # and panel D names every failing domain on the same x-axis.
-    drowned = [d for d, p in placed.items() if p["drowned"]]
-    if drowned:
-        ax.text(0.997, 0.06,
-                f"{len(drowned)} of {len(placed)} domains drown at "
-                f"initialisation",
-                transform=ax.transAxes, ha="right", va="bottom", fontsize=9,
-                color=C_DROWN, zorder=9,
-                bbox=dict(fc=SURFACE, ec=C_DROWN, alpha=0.95, pad=3.0))
+    # The state stays recoverable without colour -- panel (e) names every
+    # failing domain on the same x-axis, and the caption carries the count.
 
-    for (lo, hi), name in SECTIONS:
-        ax.axvline(hi + 0.5, color=SURFACE, lw=1.0, alpha=0.55, zorder=4)
-        if label_sections:
-            ax.text((lo + hi) / 2, crop_rows * CELL_SIZE_M * 0.97, name,
-                    ha="center", va="top", fontsize=8, color=INK_SECOND,
-                    zorder=9,
-                    bbox=dict(fc=SURFACE, ec="none", alpha=0.8, pad=1.6))
+    # The three village spans, from hatteras_site_config -- a named strip
+    # against the landward edge rather than a full-height wash, which on an
+    # image panel would hide the island it is meant to locate.
+    ax.set_xlim(0.5, len(DOMAINS) + 0.5)
+    if label_towns:
+        town_bands(ax, strip=0.075, shade=SURFACE)
 
-    ax.set_title(f"{year} road, {short}", loc="left", fontsize=11.5,
-                 weight="semibold", color=colour, pad=4)
-    ax.set_ylabel("m landward of\ninterior row 0", fontsize=9)
+    spines_for_image(ax)
+    _title(ax, panel_index, f"NC-12 in {year}")
+    ax.set_ylabel("m landward of\ninterior row 0")
     plt.setp(ax.get_xticklabels(), visible=False)
 
 
@@ -437,22 +472,22 @@ def build_figure(name: str, spec: dict, per: dict, crop_rows,
         print(f"  deepest road band {deepest:.0f} m, panels crop at "
               f"{crop_rows * CELL_SIZE_M:.0f} m -- nothing cropped is road")
 
-    fig = plt.figure(figsize=(16.5, 14.6))
+    fig = plt.figure(figsize=figsize("double", height=9.4))
     gs = fig.add_gridspec(5, 1, height_ratios=[1.25, 1.25, 0.95, 0.72, 0.72],
-                          hspace=0.17, left=0.065, right=0.905,
-                          top=0.888, bottom=0.050)
+                          hspace=0.30, left=0.105, right=0.870,
+                          top=0.962, bottom=0.078)
     ax84 = fig.add_subplot(gs[0])
     ax04 = fig.add_subplot(gs[1], sharex=ax84)
     ax_sb = fig.add_subplot(gs[2], sharex=ax84)
     ax_mv = fig.add_subplot(gs[3], sharex=ax84)
     ax_w = fig.add_subplot(gs[4], sharex=ax84)
 
-    for ax, year, lab in ((ax84, YEARS[0], True), (ax04, YEARS[1], False)):
+    for i, (ax, year) in enumerate(((ax84, YEARS[0]), (ax04, YEARS[1]))):
         if year in placed:
             draw_island(ax, fig, per[year]["shown"], crop_rows, year,
-                        placed[year], lab, spec['short'])
+                        placed[year], i, label_towns=(i == 0))
 
-    # --- (C) setback against the island it has to fit inside ----------------
+    # --- (c) setback against the island it has to fit inside ----------------
     # ONE BAND PER VINTAGE. This was a single shaded band, drawn from the one
     # shared interiors dict, with both setback curves over it -- which read as
     # "here is the island, here are two roads on it". There are two islands.
@@ -465,120 +500,131 @@ def build_figure(name: str, spec: dict, per: dict, crop_rows,
         width_x = sorted(interiors)
         width_y = [interiors[d].shape[0] * CELL_SIZE_M for d in width_x]
         first = year == YEARS[0]
-        ax_sb.fill_between(width_x, 0, width_y, color=C_YEAR[year],
-                           alpha=0.10, lw=0, zorder=1,
-                           label=f"{year} island width ({topo_label(year)})")
-        ax_sb.plot(width_x, width_y, color=C_YEAR[year], lw=1.0,
-                   ls="-" if first else "--", alpha=0.75, zorder=2)
+        # Lines, not a shaded band under each width. Two 10%-alpha bands, one
+        # red and one blue, overprint to a purple wash across the whole panel
+        # -- and purple is the drowned colour everywhere else in this figure.
+        ax_sb.plot(width_x, width_y, color=C_YEAR[year], lw=0.9,
+                   ls="-" if first else (0, (4, 2)), alpha=0.8, zorder=2,
+                   label=f"{year} island width")
     for year, pl in placed.items():
         xs = sorted(pl)
         ax_sb.plot(xs, [pl[d]["setback_m"] for d in xs], color=C_YEAR[year],
-                   lw=2.2 if year == YEARS[0] else 1.6, zorder=6,
+                   lw=1.8 if year == YEARS[0] else 1.3, zorder=6,
                    label=f"{year} setback")
-    ax_sb.set_ylabel("m landward of\ninterior row 0", fontsize=9)
-    ax_sb.grid(axis="y", color=INK_MUTED, alpha=0.22, lw=0.7)
+    ax_sb.set_ylabel("m landward of\ninterior row 0")
+    ax_sb.grid(axis="y")
     ax_sb.set_axisbelow(True)
     ax_sb.set_ylim(0, min(DISPLAY_CROSS_SHORE_M, max(width_y) * 1.05))
-    ax_sb.legend(loc="upper left", fontsize=8.5, ncol=3, framealpha=0.92)
-    ax_sb.set_title("(C)  The setback against the island it must fit inside — "
-                    "where the lines converge, the road is near the back",
-                    loc="left", fontsize=10)
+    town_bands(ax_sb, label=False)
+    open_frame(ax_sb)
+    ax_sb.legend(loc="upper left", ncol=2, fontsize=7)
+    _title(ax_sb, 2, "setback against island width")
     plt.setp(ax_sb.get_xticklabels(), visible=False)
 
-    # --- (D) where the road moved between the two periods -------------------
+    # --- (d) where the road moved between the two periods -------------------
     # Ported from the retired 3-figures/island_wide/HAT_plot_road_on_b3d_domains
     # .py, which drew this for one method only.
+    move_median = None
     if len(placed) == 2:
         ya, yb = sorted(placed)
         common = sorted(set(placed[ya]) & set(placed[yb]))
         move = np.array([placed[yb][d]["setback_m"] - placed[ya][d]["setback_m"]
                          for d in common])
-        ax_mv.axhline(0, color=INK_SECOND, lw=1.1, zorder=3)
+        move_median = float(np.median(move))
+        ax_mv.axhline(0, color=INK_MUTED, lw=0.8, zorder=3)
         ax_mv.bar(common, np.where(move >= 0, move, 0.0), width=0.86,
                   color=C_YEAR[yb], linewidth=0, zorder=5)
         ax_mv.bar(common, np.where(move < 0, move, 0.0), width=0.86,
                   color=C_YEAR[ya], linewidth=0, zorder=5)
-        ax_mv.text(0.997, 0.9,
-                   f"up = further inland by {yb};  down = closer to the dune."
-                   f"   median {np.median(move):+.0f} m",
-                   transform=ax_mv.transAxes, ha="right", va="top",
-                   fontsize=8.5, color=INK_SECOND,
-                   bbox=dict(fc=SURFACE, ec=INK_MUTED, alpha=0.92, pad=2.6))
-    ax_mv.set_ylabel(f"{max(placed)} − {min(placed)}\nsetback (m)", fontsize=9)
-    ax_mv.grid(axis="y", color=INK_MUTED, alpha=0.22, lw=0.7)
+    ax_mv.set_ylabel(f"{max(placed)} \u2212 {min(placed)}\nsetback (m)")
+    ax_mv.grid(axis="y")
     ax_mv.set_axisbelow(True)
-    ax_mv.set_title("(D)  Road movement between the two periods, under this "
-                    "method", loc="left", fontsize=10)
+    town_bands(ax_mv, label=False)
+    open_frame(ax_mv)
+    _title(ax_mv, 3, "change in setback between the periods")
     plt.setp(ax_mv.get_xticklabels(), visible=False)
 
-    # --- (D) what the bulldozed band actually lands on ----------------------
+    # --- (e) what the bulldozed band actually lands on ----------------------
     # The series is a PERCENTAGE, so the threshold has to be scaled too -- at
     # DROWN_PCT it would sit on 0.2% and read as zero.
     ax_w.axhspan(DROWN_PCT * 100, 104, color=C_DROWN, alpha=0.07, lw=0,
                  zorder=1)
-    ax_w.axhline(DROWN_PCT * 100, color=C_DROWN, lw=1.3, ls=(0, (4, 3)),
-                 zorder=3, label=f"drown threshold, {DROWN_PCT * 100:.0f}%")
+    ax_w.axhline(DROWN_PCT * 100, color=C_DROWN, lw=1.1, ls=(0, (4, 3)),
+                 zorder=3, label=f"threshold, {DROWN_PCT * 100:.0f}%")
     for year, pl in sorted(placed.items()):
         xs = sorted(pl)
         ax_w.plot(xs, [pl[d]["governing"] * 100 for d in xs],
-                  color=C_YEAR[year], lw=1.8, marker="o", ms=3.0, zorder=5,
+                  color=C_YEAR[year], lw=1.2, marker="o", ms=2.0, zorder=5,
                   label=f"{year}")
         bad = [d for d in xs if pl[d]["drowned"]]
         if bad:
             ax_w.plot(bad, [pl[d]["governing"] * 100 for d in bad], lw=0,
-                      marker="v", ms=9, mfc=C_DROWN, mec=SURFACE, mew=1.2,
+                      marker="v", ms=6, mfc=C_DROWN, mec=SURFACE, mew=0.8,
                       zorder=7)
-    ax_w.set_ylabel("% of bordering cells\nat or below 0 m MHW", fontsize=9)
-    ax_w.set_xlabel("Barrier3D / GIS domain   "
-                    "(1 = Cape Point / south  →  90 = Rodanthe / north)")
+    ax_w.set_ylabel("% of bordering cells\nat or below 0 m MHW")
+    ax_w.set_xlabel(DOMAIN_AXIS_LABEL)
     ax_w.set_xlim(0.5, len(DOMAINS) + 0.5)
     ax_w.set_ylim(-4, 104)
-    ax_w.grid(axis="y", color=INK_MUTED, alpha=0.22, lw=0.7)
+    ax_w.grid(axis="y")
     ax_w.set_axisbelow(True)
-    ax_w.legend(loc="upper left", fontsize=8.5, ncol=3, framealpha=0.92)
-    ax_w.set_title("(E)  bulldoze's own drown test — the worse of the two rows "
-                   "BORDERING the road (road_start − 1, road_end + 1). Above "
-                   "the line, CASCADE stops managing this roadway",
-                   loc="left", fontsize=10)
+    town_bands(ax_w, label=False)
+    open_frame(ax_w)
+    ax_w.legend(loc="upper left", ncol=3, fontsize=7)
+    _title(ax_w, 4, "wet cells bordering the road")
 
-    # --- header -------------------------------------------------------------
-    frame_note = (
-        "Measured in the SAME frame it is drawn in — interior row 0 — so this "
-        "figure and the measurement agree."
-        if name == "dunestart" else
-        "Note the frame — this method measured against the digitised dune line, "
-        "but CASCADE applies the number landward of interior row 0.")
-    n_floored = sum(len(v) for v in floored.values())
-    floor_note = (f"  {n_floored} domain-year(s) had a NEGATIVE true setback, "
-                  f"floored to 0 (road on interior row 0)." if n_floored else "")
-
-    fig.text(0.065, 0.985,
-             f"NC-12 placed by the {spec['label']}, on the Barrier3D interiors "
-             f"CASCADE initialises with",
-             fontsize=14, va="top", weight="semibold")
-    fig.text(0.065, 0.962,
-             "Each panel is drawn on ITS OWN period's topography — "
-             + ", ".join(f"{y} on {topo_label(y)}" for y in YEARS if y in per)
-             + ". The two are different islands: 65 of 90 domains differ in "
-               "interior shape.\n"
-             "Road drawn where bulldoze puts it: road_start = int(setback / "
-             "10 m). Crimson = the roadway WIDTH-DROWNS at initialisation — "
-             f">{DROWN_PCT * 100:.0f}% of the cells bordering it sit at or "
-             "below 0 m MHW, so CASCADE stops managing it.\n"
-             + frame_note + floor_note,
-             fontsize=9, color=INK_SECOND, va="top", linespacing=1.5)
+    # --- legend and caption -------------------------------------------------
     fig.legend(handles=[
-        Line2D([], [], color=C_1984, lw=2.6, label="1984 road"),
-        Line2D([], [], color=C_2004, lw=2.6, label="2004 road"),
+        Line2D([], [], color=C_1984, lw=2.6, label="NC-12 in 1984"),
+        Line2D([], [], color=C_2004, lw=2.6, label="NC-12 in 2004"),
         Line2D([], [], color=C_DROWN, lw=3.4,
                label="drowns at initialisation"),
-        Line2D([], [], color=WATER, lw=8, label="off-island / sentinel water"),
-    ], loc="upper left", bbox_to_anchor=(0.065, 0.930), ncol=4, fontsize=8.5,
-        framealpha=0.0, borderpad=0.4, columnspacing=1.6, handlelength=2.6)
+        Line2D([], [], color=NODATA, lw=8, label="outside the extraction"),
+    ], loc="lower center", bbox_to_anchor=(0.5, -0.004), ncol=4, frameon=False,
+        columnspacing=1.6, handlelength=2.4)
+
+    frame_note = (
+        "The setback was measured in the same frame it is drawn in, interior "
+        "row 0, so the drawing and the measurement agree."
+        if name == "dunestart" else
+        "The setback was measured against the same-year digitised dune line "
+        "but CASCADE applies it landward of interior row 0, so the drawing "
+        "and the measurement are in different frames.")
+    n_floored = sum(len(v) for v in floored.values())
+    floor_note = (f" {n_floored} domain-year(s) had a negative true setback and "
+                  f"were floored to 0, putting the road on interior row 0."
+                  if n_floored else "")
+    move_note = ("" if move_median is None else
+                 f" Median change between the periods {move_median:+.0f} m; "
+                 f"bars above zero are further inland by {max(placed)}, below "
+                 f"zero closer to the dune.")
+    drown_note = "; ".join(
+        f"{sum(1 for p in pl.values() if p['drowned'])} of {len(pl)} in {year}"
+        for year, pl in sorted(placed.items()))
+
+    caption(fig, (
+        f"NC-12 placed on the Barrier3D interiors CASCADE initialises with, "
+        f"from the {spec['label']}. Domain 1 is at Cape Point in the south and "
+        f"domain 90 at Pea Island in the north; the shaded spans are the "
+        f"villages (Buxton, Avon, Tri-Village). (a, b) the road as "
+        f"roadway_manager.bulldoze places it, road_start = int(setback / "
+        f"{CELL_SIZE_M:.0f} m), on each period's OWN extraction \u2014 "
+        + ", ".join(f"{y} on {topo_label(y)}" for y in YEARS if y in per)
+        + ". These are different islands: 65 of 90 domains differ in interior "
+          "shape, so the two panels are not one island drawn twice. Interior "
+          "elevation is shown in classes relative to mean high water; cells "
+          "outside the extraction carry no data and are drawn grey. "
+          "(c) the same setback against the island width it has to fit "
+          "inside. (d) the change in setback between the two periods."
+        + move_note +
+        " (e) bulldoze's own drown test: the wetter of the two rows BORDERING "
+        f"the bulldozed band (road_start \u2212 1, road_end + 1). Above "
+        f"{DROWN_PCT * 100:.0f}% of bordering cells at or below 0 m MHW "
+        f"CASCADE stops managing the roadway, and the road is drawn in the "
+        f"accent colour wherever that happens \u2014 {drown_note}. "
+        + frame_note + floor_note))
 
     out_png = spec["root"] / spec["png"]
-    out_png.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_png, dpi=150, bbox_inches="tight", facecolor=SURFACE)
+    save(fig, out_png)
     plt.close(fig)
     print(f"\n[out] {out_png}")
 

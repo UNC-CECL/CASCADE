@@ -91,7 +91,7 @@ MODE = "pick_and_run"      # "pick" | "run" | "pick_and_run"
 # is the modelled set, not just a picking subset.
 #
 #   list(range(1, 91))      the 90 domains CASCADE runs (D1 = Cape Point ->
-#                           D90 = Rodanthe). The DEM folder holds 131; 91-131
+#                           D90 = Pea Island). The DEM folder holds 131; 91-131
 #                           are north of the study area and are not modelled,
 #                           so picking or extracting them is wasted work.
 #   None                    every domain_*.npy found
@@ -358,7 +358,7 @@ OFFSET_ROW_ORDER = "D1_first"  # "D1_first" | "D90_first"
 OFFSET_SEAWARD_POSITIVE = True
 
 # --- ISLAND SECTIONS ----------------------------------------------------
-# D1 = Cape Point (south) -> D90 = near Rodanthe (north). Labels the sheet, the
+# D1 = Cape Point (south) -> D90 = Pea Island (north). Labels the sheet, the
 # per-domain figures and the summary figure. Set to [] to disable.
 SECTIONS = [
     ((1, 6),   "Cape Point"),
@@ -2183,7 +2183,7 @@ def summary_figure(rows: list, path: Path) -> None:
     ax2.plot(d, [r["interior rows"] for r in rows], color="#1565C0", lw=1.6,
              marker="o", ms=3, label="interior rows")
     ax2.set_ylabel("interior rows")
-    ax2.set_xlabel("domain  (1 = Cape Point / south  →  90 = Rodanthe / north)")
+    ax2.set_xlabel("GIS domain (south → north)")
 
     flag = np.array([r["dunes filled"] > 0 or r["window source"] == "default"
                      for r in rows])
@@ -2622,7 +2622,7 @@ def island_plan_figure(summary: list, offsets: dict, run_dir: Path) -> None:
                     labels.append(str(n))
             ax.set_xticks(ticks)
             ax.set_xticklabels(labels, fontsize=9)
-            ax.set_xlabel("Domain (S → N,  Cape Hatteras to Rodanthe)", fontsize=12,
+            ax.set_xlabel("GIS domain (south → north)", fontsize=12,
                           labelpad=8)
             ax.set_ylabel("Cross-shore cell (raw_offset frame)", fontsize=12)
             for k, n in enumerate(used):
@@ -2770,7 +2770,7 @@ def island_figure(summary: list, offsets: dict, path: Path) -> None:
     else:
         ax2.text(0.5, 0.5, "need both 1984 and 2004 offsets", ha="center",
                  va="center", transform=ax2.transAxes, fontsize=10, color="0.4")
-    ax2.set_xlabel("domain  (1 = Cape Point / south  →  90 = Rodanthe / north)")
+    ax2.set_xlabel("GIS domain (south → north)")
     ax2.set_xlim(min(d.min(), 1) - 0.5, max(d.max(), 90) + 0.5)
 
     path.parent.mkdir(parents=True, exist_ok=True)

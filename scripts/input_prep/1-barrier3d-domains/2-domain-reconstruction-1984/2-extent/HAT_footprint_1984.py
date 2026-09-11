@@ -147,7 +147,8 @@ sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "0-elevation" / "3-figu
 from hat_topo_version import (  # noqa: E402
     array_name, duneline_shift_dir, insert_figures_dir, topo_dirs, insert_scope_step)
 import HAT_plot_duneline_offset as off  # noqa: E402  the house style + map loaders
-from hat_figure_style import elevation_cmap  # noqa: E402  the elevation classes
+from hat_figure_style import (  # noqa: E402  the elevation classes and the page rules
+    C, DOMAIN_AXIS_LABEL, elevation_cmap, figsize, open_frame, save, town_bands)
 
 PRODUCT = "1984-start"
 CELL_M = 10.0
@@ -167,8 +168,8 @@ CAPTIONS = SCOPE_DIR / "figures" / "CAPTIONS.md"
 # panel of every figure here.
 C_ADD, C_ADD_FILL = off.C_1984, off.C_1984_FILL
 C_REM, C_REM_FILL = off.C_1997, off.C_1997_FILL
-C_LAND, C_WATER = "#f0e6c8", "#a8c8e0"
-C_ROAD = "#1a1a1a"
+C_LAND, C_WATER = "#f0e6c8", C["WATER"]
+C_ROAD = C["ROAD"]
 INK = off.INK
 
 ROWS_SHOWN = 200          # every interior row (the deepest domain has 189) plus room for the community bar; was 40 until 2026-09-07, when Hannah asked for the full domains
@@ -332,30 +333,6 @@ def _elev_rgba(topo_dam: np.ndarray) -> np.ndarray:
     return cmap(norm(topo_dam * CELL_M))
 
 
-def _community_bar(ax, y_bar: float, x_lo: float, x_hi: float) -> None:
-    """The communities as a bar along the BOTTOM of the strip, names below it and
-    village ticks above it, from HATTERAS_ANNOTATIONS - the same object every
-    other island figure uses. Below rather than above (2026-09-07): above, the
-    names collided with the +N labels and with each other (Tri-Village's
-    villages)."""
-    ann = off.HATTERAS_ANNOTATIONS
-    for name, (lo, hi) in ann.town_spans.items():
-        a, b = max(lo - 0.5, x_lo), min(hi + 0.5, x_hi)
-        if b <= a:
-            continue
-        ax.plot([a, b], [y_bar, y_bar], color=ann.color_town_span, lw=4.0,
-                solid_capstyle="butt", zorder=8, clip_on=False)
-        if (b - a) >= 0.5 * (hi - lo + 1):
-            ax.text((a + b) / 2, y_bar + 1.2, name, ha="center", va="top",
-                    fontsize=8, fontweight="bold", color=INK, clip_on=False)
-    for name, gid in ann.village_lines.items():
-        if x_lo <= gid <= x_hi:
-            ax.plot([gid, gid], [y_bar - 0.8, y_bar + 0.8], color=ann.color_village_line,
-                    lw=1.0, zorder=9, clip_on=False)
-            ax.text(gid, y_bar - 1.4, name, ha="center", va="bottom", fontsize=7,
-                    color=ann.color_village_line, clip_on=False)
-
-
 def fig_grid(tab: pd.DataFrame, topo_dir: Path) -> Path:
     """
     Every interior, every row, in ONE frame: current interior row 0 is y = 0 on
@@ -375,7 +352,7 @@ def fig_grid(tab: pd.DataFrame, topo_dir: Path) -> Path:
     groups = [doms[i:i + DOMAINS_PER_STRIP] for i in range(0, len(doms), DOMAINS_PER_STRIP)]
     add_rgba = np.array(matplotlib.colors.to_rgba(C_ADD_FILL))
 
-    fig, axes = plt.subplots(len(groups), 1, figsize=(15.0, 5.2 * len(groups) + 1.4),
+    fig, axes = plt.subplots(len(groups), 1, figsize=figsize("double", height=9.4),
                              constrained_layout=True)
     axes = np.atleast_1d(axes)
     for k, (ax, g) in enumerate(zip(axes, groups)):
@@ -403,28 +380,32 @@ def fig_grid(tab: pd.DataFrame, topo_dir: Path) -> Path:
             ax.plot([d - 0.5, d + 0.5], [-n, -n], color=INK if n else "0.5",
                     linewidth=1.7 if n else 0.6, solid_capstyle="butt", zorder=6)
             if n:
-                ax.text(d, -top - 1.2, f"{n:+d}", ha="center", va="bottom", fontsize=7.2,
+                ax.text(d, -top - 1.2, f"{n:+d}", ha="center", va="bottom", fontsize=7,
                         color=C_ADD if n > 0 else C_REM, fontweight="bold")
             sb = tab.loc[d, "setback_v2_m"]
             if np.isfinite(sb):
                 ax.add_patch(Rectangle((d - 0.32, sb / CELL_M), 0.64, 2.0,
                                        facecolor=C_ROAD, edgecolor="none", zorder=7))
-        _community_bar(ax, ROWS_SHOWN - 4.0, g[0] - 0.5, g[-1] + 0.5)
+        # villages as light bands, named once in the blank margin under the strip
+        town_bands(ax, where="bottom", fontsize=7,
+                   spans={name: (max(lo, g[0]), min(hi, g[-1]))
+                          for name, (lo, hi) in off.HATTERAS_ANNOTATIONS.town_spans.items()
+                          if lo <= g[-1] and hi >= g[0]})
         ax.set_xlim(g[0] - 0.5, g[-1] + 0.5)
-        ax.set_ylim(ROWS_SHOWN + 1.5, ymin)
+        ax.set_ylim(ROWS_SHOWN + 16.0, ymin)
         ax.set_xticks([d for d in g if d % 5 == 0])
         ax.set_xticks(list(g), minor=True)
-        ax.set_yticks(range(0, 190, 25))
-        ax.set_ylabel("cross-shore cell\n(0 = current interior row 0)")
+        ax.set_yticks(range(0, 190, 50))
+        ax.set_ylabel("cross-shore cell\n(0 = interior row 0)")
         ax.grid(axis="y", color="0.9", linewidth=0.4)
         ax.set_axisbelow(True)
         sec = ax.secondary_yaxis("right", functions=(lambda c: c * CELL_M, lambda m: m / CELL_M))
-        sec.set_ylabel("m landward of current row 0")
+        sec.set_ylabel("m landward of row 0")
         sec.set_yticks(range(0, 1900, 500))
         for sp in ("top", "right"):
             ax.spines[sp].set_visible(True)
         off._title(ax, k, f"Domains {g[0]}\u2013{g[-1]}")
-    axes[-1].set_xlabel("domain (1 = south, Cape Hatteras)")
+    axes[-1].set_xlabel(DOMAIN_AXIS_LABEL)
 
     cmap, _norm, bounds = elevation_cmap()
     labels = ["below 0 (water)"] + [f"{lo:g}\u2013{hi:g}" for lo, hi in zip(bounds[1:-2], bounds[2:-1])] \
@@ -434,13 +415,12 @@ def fig_grid(tab: pd.DataFrame, topo_dir: Path) -> Path:
     handles += [Patch(facecolor="white", edgecolor="0.4", linewidth=0.4, label="beyond the domain"),
                 Patch(facecolor=C_ADD_FILL, edgecolor="none", label="rows inserted at the seaward edge (unfilled)"),
                 Patch(facecolor="none", edgecolor=C_REM, hatch="//////", label="rows removed at the seaward edge"),
-                Line2D([0], [0], color=INK, linewidth=1.7, label="new interior row 0 (on the 1984 dune line)"),
-                Patch(facecolor=C_ROAD, edgecolor="none", label="NC-12 road rows, measured position"),
-                Line2D([0], [0], color=off.HATTERAS_ANNOTATIONS.color_town_span, lw=4.0, label="community")]
-    fig.legend(handles=handles, loc="outside lower center", ncol=7, fontsize=8,
-               title="interior elevation (m above MHW)", title_fontsize=8)
+                Line2D([0], [0], color=INK, linewidth=1.7, label="interior row 0 on the 1984 dune line"),
+                Patch(facecolor=C_ROAD, edgecolor="none", label="NC-12, measured position")]
+    fig.legend(handles=handles, loc="outside lower center", ncol=6, fontsize=7.5, frameon=False,
+               title="interior elevation (m above MHW)", title_fontsize=7.5)
     p = FIG_SEAWARD / "HAT_footprint_1984_grid.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
+    save(fig, p, vector=False, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
 
@@ -451,33 +431,24 @@ def fig_rows(tab: pd.DataFrame) -> Path:
     off.apply_style()
     doms = tab.index.to_numpy()
     nn = tab["n_cells"].to_numpy()
-    fig, ax = plt.subplots(figsize=(13.0, 3.8), constrained_layout=True)
-    ann = off.HATTERAS_ANNOTATIONS
-    for name, (lo, hi) in ann.town_spans.items():
-        ax.axvspan(lo - 0.5, hi + 0.5, color="0.93", zorder=0)
-        ax.text((lo + hi) / 2, 0.985, name, transform=ax.get_xaxis_transform(),
-                ha="center", va="top", fontsize=7.5, color=off.INK_MUTED)
+    fig, ax = plt.subplots(figsize=figsize("double", aspect=0.30), constrained_layout=True)
+    town_bands(ax)
     ax.bar(doms, nn, width=0.82, color=np.where(nn > 0, C_ADD, C_REM), edgecolor="none", zorder=3)
     ax.axhline(0, color=INK, linewidth=0.7, zorder=2)
-    ax.set_xlabel("domain (1 = south, Cape Hatteras)")
+    ax.set_xlabel(DOMAIN_AXIS_LABEL)
     ax.set_ylabel("rows added (+) / removed (\u2212)")
     ax.set_xlim(doms[0] - 0.8, doms[-1] + 0.8)
     ax.set_xticks([1] + list(range(10, int(doms.max()) + 1, 10)))
     ax.set_xticks(list(doms), minor=True)
     ax.set_yticks(range(int(nn.min()), int(nn.max()) + 1))
-    ax.grid(axis="y", color="0.92", linewidth=0.5, zorder=0)
+    ax.grid(axis="y")
     ax.set_axisbelow(True)
-    add, rem = nn[nn > 0], nn[nn < 0]
-    ax.text(0.2, 0.03,
-            f"{len(add)} domains gain {int(add.sum())} rows;  {len(rem)} domains lose "
-            f"{int(-rem.sum())};  {int((nn == 0).sum())} unchanged.  "
-            f"N = trunc(median paired shift / 10 m)",
-            transform=ax.transAxes, fontsize=8, ha="left", va="bottom", color=off.INK_MUTED)
-    ax.legend(handles=[Patch(facecolor=C_ADD, label="rows added"),
-                       Patch(facecolor=C_REM, label="existing rows removed")],
-              loc="upper center", ncol=2)
+    open_frame(ax)
+    fig.legend(handles=[Patch(facecolor=C_ADD, label="rows added"),
+                        Patch(facecolor=C_REM, label="existing rows removed")],
+               loc="outside lower center", ncol=2, frameon=False)
     p = FIG_DIR / "HAT_footprint_1984_rows.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
+    save(fig, p, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
 
@@ -548,10 +519,11 @@ def fig_plan(tab: pd.DataFrame, anchor: str = "dune") -> Path:
                      bx[1] - 0.2 * pad_m, bx[3] + 0.2 * pad_m))
     ratios = [(w[1] - w[0]) / (w[3] - w[2]) for w in wins]
 
-    panel_h = 13.0
+    # drawn at the printed width: the panels are equal-aspect, so their height
+    # follows from the page width and the windows' shapes
+    panel_h = (7.48 - 0.8) / sum(ratios)
     fig, axes = plt.subplots(1, len(groups),
-                             figsize=(panel_h * sum(ratios) + 0.35 * len(groups) + 0.8,
-                                      panel_h + 1.9),
+                             figsize=figsize("double", height=panel_h + 0.9),
                              constrained_layout=True,
                              gridspec_kw=dict(width_ratios=ratios))
     axes = np.atleast_1d(axes)
@@ -629,13 +601,13 @@ def fig_plan(tab: pd.DataFrame, anchor: str = "dune") -> Path:
             b = gdf[gdf["domain_id"].astype(int) == d].total_bounds
             if n:
                 ax.text(b[0] + 45.0, (b[1] + b[3]) / 2, f"{d}  {n:+d}",
-                        fontsize=7.5, fontweight="bold", ha="left", va="center",
+                        fontsize=7.0, fontweight="bold", ha="left", va="center",
                         color=C_ADD if n > 0 else C_REM, zorder=6,
                         bbox=dict(facecolor="white", alpha=0.75, edgecolor="none",
                                   boxstyle="square,pad=0.1"))
             elif d % 5 == 0 or d in (ids.min(), ids.max()):
                 ax.text(b[0] + 45.0, (b[1] + b[3]) / 2, str(d),
-                        fontsize=7.5, ha="left", va="center", color=off.INK_MUTED,
+                        fontsize=7.0, ha="left", va="center", color=off.INK_MUTED,
                         zorder=6,
                         bbox=dict(facecolor="white", alpha=0.7, edgecolor="none",
                                   boxstyle="square,pad=0.1"))
@@ -654,11 +626,11 @@ def fig_plan(tab: pd.DataFrame, anchor: str = "dune") -> Path:
                + [Line2D([0], [0], color=off.HATTERAS_ANNOTATIONS.color_town_span, lw=5.0,
                          label="community")])
     fig.legend(handles=handles, loc="outside lower center",
-               ncol=min(len(handles), 9), fontsize=8.5)
+               ncol=min(len(handles), 6), fontsize=7.5, frameon=False)
 
     p = (FIG_SEAWARD / "HAT_footprint_1984_plan.png" if anchor == "dune"
          else insert_figures_dir(PRODUCT, "3-placement", "behind-road") / "HAT_footprint_1984_plan_behindroad.png")
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
+    save(fig, p, vector=False, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
 
@@ -670,17 +642,15 @@ def fig_plan(tab: pd.DataFrame, anchor: str = "dune") -> Path:
 BLOCKS = (((9, 14), 1999), ((84, 87), 1989))      # the NC-12 relocation blocks
 
 
-def _community_bands(ax) -> None:
-    ann = off.HATTERAS_ANNOTATIONS
-    for name, (lo, hi) in ann.town_spans.items():
-        ax.axvspan(lo - 0.5, hi + 0.5, color="0.93", zorder=0)
-        ax.text((lo + hi) / 2, 0.985, name, transform=ax.get_xaxis_transform(),
-                ha="center", va="top", fontsize=7.5, color=off.INK_MUTED)
+def _community_bands(ax, blocks=True, where="top") -> None:
+    town_bands(ax, where=where)
+    if not blocks:
+        return
     for (lo, hi), yr in BLOCKS:
-        ax.axvspan(lo - .5, hi + .5, facecolor="none", edgecolor="#2c6e49", lw=0.9,
+        ax.axvspan(lo - .5, hi + .5, facecolor="none", edgecolor=C["REF"], lw=0.9,
                    ls=(0, (3, 2)), zorder=1)
-        ax.text((lo + hi) / 2, 0.94, f"relocated {yr}", transform=ax.get_xaxis_transform(),
-                ha="center", va="top", fontsize=7, color="#2c6e49")
+        ax.text((lo + hi) / 2, 0.90, str(yr), transform=ax.get_xaxis_transform(),
+                ha="center", va="top", fontsize=7, color=C["REF"])
 
 
 def fig_shift(tab: pd.DataFrame) -> Path:
@@ -690,7 +660,7 @@ def fig_shift(tab: pd.DataFrame) -> Path:
     n = tab["n_cells"].to_numpy()
     med = tab["shift_m_median"].to_numpy()
     lo, hi = tab["shift_m_p10"].to_numpy(), tab["shift_m_p90"].to_numpy()
-    fig, ax = plt.subplots(figsize=(13.0, 4.4), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=figsize("double", aspect=0.34), constrained_layout=True)
     _community_bands(ax)
     ax.bar(doms, n * CELL_M, width=0.82, color=np.where(n > 0, C_ADD_FILL, C_REM_FILL),
            edgecolor="none", zorder=2)
@@ -699,24 +669,25 @@ def fig_shift(tab: pd.DataFrame) -> Path:
     for yv in (-CELL_M, CELL_M):
         ax.axhline(yv, color="0.6", linewidth=0.6, linestyle="--", zorder=1)
     ax.axhline(0, color=INK, linewidth=0.6, zorder=1)
-    ax.text(89.5, CELL_M + 1.5, "\u00b11 cell", ha="right", va="bottom", fontsize=7, color="0.45")
     ax.set_xlim(0.2, 90.8)
     ax.set_xticks([1] + list(range(10, 91, 10)))
     ax.set_xticks(list(doms), minor=True)
     ax.set_ylim(float(np.nanmin(lo)) - 6, float(np.nanmax(hi)) + 16)
-    ax.set_xlabel("domain (1 = south, Cape Hatteras)")
+    ax.set_xlabel(DOMAIN_AXIS_LABEL)
     ax.set_ylabel("1984 line \u2212 1997 line (m)\n+ seaward (rows added)")
-    ax.grid(axis="y", color="0.92", linewidth=0.5)
+    ax.grid(axis="y")
     ax.set_axisbelow(True)
+    open_frame(ax)
     fig.legend(handles=[Line2D([0], [0], marker="o", ms=3.0, color=INK, linestyle="none",
                                label="median of 50 paired profiles, p10\u2013p90"),
                         Patch(facecolor=C_ADD_FILL, label="kept by the 10 m rule, N \u00d7 10 m (rows added)"),
                         Patch(facecolor=C_REM_FILL, label="kept by the 10 m rule (rows removed)"),
                         Line2D([0], [0], color="0.6", linestyle="--", label="\u00b11 cell"),
-                        Line2D([0], [0], color="#2c6e49", lw=0.9, ls=(0, (3, 2)), label="NC-12 relocation block")],
-               loc="outside lower center", ncol=5, fontsize=8)
+                        Line2D([0], [0], color=C["REF"], lw=0.9, ls=(0, (3, 2)),
+                               label="NC-12 relocated, with the year")],
+               loc="outside lower center", ncol=3, fontsize=7.5, frameon=False)
     p = FIG_DIR / "HAT_footprint_1984_shift.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
+    save(fig, p, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
 
@@ -730,8 +701,8 @@ def fig_setback(tab: pd.DataFrame) -> Path:
     new = rd["setback_new_m"].to_numpy()
     p10, p90 = rd["setback_new_p10_m"].to_numpy(), rd["setback_new_p90_m"].to_numpy()
     nn = rd["n_cells"].to_numpy()
-    fig, ax = plt.subplots(figsize=(13.0, 4.6), constrained_layout=True)
-    _community_bands(ax)
+    fig, ax = plt.subplots(figsize=figsize("double", aspect=0.36), constrained_layout=True)
+    _community_bands(ax, where="bottom")
     ax.vlines(x, now, new, color="0.75", linewidth=1.0, zorder=2)
     ax.plot(x, now, "o", ms=3.4, color="0.5", mfc="white", mew=1.0, zorder=3)
     ax.errorbar(x, new, yerr=[np.clip(new - p10, 0, None), np.clip(p90 - new, 0, None)],
@@ -743,35 +714,29 @@ def fig_setback(tab: pd.DataFrame) -> Path:
     ax.set_yticks([-20, 0, 10, 20, 50, 100, 200, 500])
     ax.set_yticklabels(["\u221220", "0", "10", "20", "50", "100", "200", "500"])
     ax.set_ylim(-32, 900)
-    ax.set_ylabel("NC-12 setback (m landward of row 0)")
-    ax.set_xlabel("domain (1 = south, Cape Hatteras)")
+    ax.set_ylabel("NC-12 setback\n(m landward of row 0)")
+    ax.set_xlabel(DOMAIN_AXIS_LABEL)
     ax.set_xlim(0.2, 90.8)
     ax.set_xticks([1] + list(range(10, 91, 10)))
     ax.set_xticks(list(rd.index), minor=True)
-    ax.grid(axis="y", color="0.92", linewidth=0.5)
+    ax.grid(axis="y")
     ax.set_axisbelow(True)
-    # the three domains worth reading off: the two floored at 0 today and the
-    # one that loses most of its setback. Labels pushed sideways, clear of the
-    # neighbours' spread bars.
-    for d, dx, ha in ((16, 10, "left"), (85, -10, "right"), (86, 10, "left")):
-        if d in rd.index:
-            ax.annotate(f"{d}: {rd.loc[d, 'setback_model_now_m']:.0f} \u2192 {rd.loc[d, 'setback_new_m']:.0f} m",
-                        xy=(d, rd.loc[d, "setback_new_m"]), xytext=(dx, 0),
-                        textcoords="offset points", ha=ha, va="center", fontsize=7, color=INK,
-                        bbox=dict(facecolor="white", alpha=0.85, edgecolor="none", boxstyle="square,pad=0.15"))
-    fig.legend(handles=[Line2D([0], [0], marker="o", ms=3.4, color="0.5", mfc="white", mew=1.0, linestyle="none",
-                               label="setback the model receives now (v2, floored at 0)"),
+    open_frame(ax)
+    fig.legend(handles=[Line2D([0], [0], marker="o", ms=3.4, color=C["BASE"], mfc="white", mew=1.0,
+                               linestyle="none",
+                               label="setback measured on the 1996 surface (floored at 0)"),
                         Line2D([0], [0], marker="o", ms=3.6, color=C_ADD, linestyle="none",
-                               label="from the new row 0, rows added"),
+                               label="1984 setback, rows added"),
                         Line2D([0], [0], marker="o", ms=3.6, color=C_REM, linestyle="none",
-                               label="from the new row 0, rows removed"),
+                               label="1984 setback, rows removed"),
                         Line2D([0], [0], marker="o", ms=3.6, color="0.3", linestyle="none",
-                               label="from the new row 0, unchanged"),
+                               label="1984 setback, domain unchanged"),
                         Line2D([0], [0], color="0.6", lw=0.8, label="p10\u2013p90 over the profiles"),
-                        Line2D([0], [0], color="#2c6e49", lw=0.9, ls=(0, (3, 2)), label="NC-12 relocation block")],
-               loc="outside lower center", ncol=6, fontsize=8)
+                        Line2D([0], [0], color=C["REF"], lw=0.9, ls=(0, (3, 2)),
+                               label="NC-12 relocated, with the year")],
+               loc="outside lower center", ncol=3, fontsize=7.5, frameon=False)
     p = FIG_SEAWARD / "HAT_footprint_1984_setback.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
+    save(fig, p, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
 
@@ -909,8 +874,8 @@ def write_captions(tab: pd.DataFrame, topo_name: str) -> None:
             f"removed where the island has prograded since 1984; the signed count is printed above each "
             f"changed domain. The black tick is where interior row 0 ends up; the dark bar is NC-12 at its "
             f"measured 1984 position (seaward edge, 20 m wide), which does not move, so its distance to the "
-            f"tick is the new setback. Communities and villages along the bottom of each panel, from the site "
-            f"configuration. {stats}",
+            f"tick is the new setback. Villages banded along the bottom of each panel, from the site "
+            f"configuration; domain 1 is at Cape Point, 90 at Pea Island. {stats}",
         "HAT_footprint_1984_rows.png":
             f"Rows per domain under the 10 m rule, positive where rows are added (the 1984 dune line lay "
             f"seaward of the 1997 line) and negative where existing rows are removed, with the communities "

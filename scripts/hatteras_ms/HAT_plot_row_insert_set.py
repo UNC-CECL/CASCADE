@@ -57,6 +57,7 @@ REPO = HERE.parents[1]
 sys.path.insert(0, str(REPO / "scripts"))
 from hat_topo_version import dune_topo_root  # noqa: E402
 from hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
+from cascade_pipeline.run_layout import resolve  # noqa: E402
 from cascade_pipeline.run_registry import preset_dir_for  # noqa: E402
 from cascade_pipeline.coastsat_loess import (  # noqa: E402
     CoastSatDataset, LoessConfig, build_coastsat_series)
@@ -160,7 +161,8 @@ def main() -> None:
         run_dir = find_run(arm)
         npz = next(run_dir.glob("*.npz"))
         c = np.load(npz, allow_pickle=True)["cascade"][0]
-        rates = pd.read_csv(next(run_dir.glob("*_shoreline_change_rate.csv"))) \
+        rates = pd.read_csv(
+            resolve(run_dir, "rate_csv", run_dir.name, must_exist=True)) \
             .set_index("gis_domain")
         loaded[arm] = dict(c=c, run_dir=run_dir, n=n_rows(version),
                            rates=rates, idx=index_row(arm))

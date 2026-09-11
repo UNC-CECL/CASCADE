@@ -41,6 +41,7 @@ Dependencies
 
 import os
 import glob
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -57,9 +58,15 @@ from tqdm import tqdm
 # CONFIG
 # ============================================================
 
-ROOT_DATA_DIR = r"/scripts/input_prep/5-scr/CoastSat\coastsat_timeseries"
-LOOKUP_CSV    = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\transect_domain_lookup.csv"
-OUTPUT_DIR    = r"/scripts/input_prep/5-scr/shoreline_change_patterns/classification_output"
+# The three paths below were driveless ("/scripts/...", resolving to
+# C:\scripts) and one named the pre-2026 "input_preperation" folder, so
+# this script could not run. Anchored on the repo root (2026-09-10).
+PROJECT_ROOT = Path(__file__).resolve().parents[4]
+
+ROOT_DATA_DIR = str(PROJECT_ROOT / "data" / "hatteras_init" / "5-scr"
+                    / "coastsat_timeseries")
+LOOKUP_CSV    = str(PROJECT_ROOT / "scripts" / "input_prep" / "5-scr" / "CoastSat" / "transect_domain_lookup.csv")
+OUTPUT_DIR    = str(PROJECT_ROOT / "scripts" / "input_prep" / "5-scr" / "shoreline_change_patterns" / "classification_output")
 
 SITE_FILTER = "usa_NC"
 
@@ -477,7 +484,7 @@ def plot_classification_bar(metrics, out_path):
            alpha=0.85, zorder=2)
     ax.axhline(VARIABILITY_THRESHOLD, color="#d73027", lw=0.8, ls="--", zorder=1)
     ax.set_ylabel("Variability\n(m std dev)", fontsize=7)
-    ax.set_xlabel("CASCADE domain  (1 = Buxton  →  90 = Rodanthe)", fontsize=8)
+    ax.set_xlabel("GIS domain (south → north)", fontsize=8)
     ax.tick_params(labelsize=7)
     ax.set_xlim(0.5, NUM_REAL_DOMAINS + 0.5)
     add_geo_annotations(ax, "horizontal")

@@ -80,6 +80,7 @@ for _path in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+from cascade_pipeline.run_layout import resolve  # noqa: E402
 from HAT_groin_sweep_config import WETDRY_CHANGE_TABLE  # noqa: E402
 
 # The rig pads 11 real domains (D2-D12) with 15 buffer either side: D2 -> 15,
@@ -125,7 +126,7 @@ EVENTS = [(1970, "installed"), (1996, "last repair"), (2003, "storm damage")]
 
 
 def _matrix(run_name: str) -> Path:
-    return RAW_RUNS / run_name / f"{run_name}_shoreline_matrix.npy"
+    return resolve(RAW_RUNS / run_name, "matrix", run_name)
 
 
 def load_change(run_name: str):
@@ -172,7 +173,7 @@ def main() -> None:
     no_groin = load_change(NO_GROIN_RUN)
 
     diagnostics = pd.read_csv(
-        RAW_RUNS / GROIN_RUN / f"{GROIN_RUN}_groin_diagnostics.csv")
+        resolve(RAW_RUNS / GROIN_RUN, "groin_csv", GROIN_RUN))
     active = diagnostics[diagnostics["groin_active"]]
     applied_M = float(active["trapping_rate_applied_m_yr"].max())
     applied_f = float(active["trapping_rate_applied_m_yr"].min()) / applied_M

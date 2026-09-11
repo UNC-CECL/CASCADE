@@ -23,13 +23,18 @@ OUTPUTS (data/hatteras_init/0-elevation/2009-2014-1996/figures/)
 
 THE THREE PANELS
 ----------------
-    A  2009 only        what the base survey measured; everything else blank
-    B  the 1984 mosaic  1996 ocean-side, 2009, 2014 - the product
-    C  provenance       which survey each cell came from
+    (a) 2009 survey         what the base survey measured; everything else blank
+    (b) 1984-start surface  1996 ocean-side, 2009, 2014 - the product
+    (c) survey source       which survey each cell came from
 
-A and B differ only in filled/overridden cells, so flipping between them shows
-the whole intervention at once. C is the same information as a categorical map,
-which is the only readable form where the 1996 band is thin.
+(a) and (b) differ only in filled/overridden cells, so flipping between them
+shows the whole intervention at once. (c) is the same information as a
+categorical map, which is the only readable form where the 1996 band is thin.
+
+STYLE. Every figure here is drawn under `scripts/hat_figure_style.py` at the
+printed width (190 mm), and carries no title, statistics line or footnote on the
+canvas: that text is written to CAPTIONS.md beside the PNGs. The terrain ramp is
+the house style's one sanctioned exception to drawing elevation in classes.
 
 COLOUR
 ------
@@ -114,6 +119,11 @@ ELEVATION_DIR = INIT_ROOT / "0-elevation"
 SOURCE_TAG = "2009-2014-1996"
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 from hat_elevation_products import product as _product  # noqa: E402
+from hat_figure_style import (  # noqa: E402
+    apply_style, figsize, save, caption, C, C_1984, C_1997, INK, INK_MUTED,
+    DOMAIN_AXIS_LABEL, town_bands, open_frame, spines_for_image, _title)
+
+apply_style()
 
 _P = _product(SOURCE_TAG)
 IN_DIR = _P.resampled_10m
@@ -125,22 +135,21 @@ DOMAIN_FILE = Path(r"D:\Hatteras_GIS\domains.geojson")
 # are EPSG:3725 (UTM 18N, metres), so they are reprojected on load - plotted raw
 # they would land thousands of km off the map.
 #
-# BOTH are drawn, and the styling is copied verbatim from HAT_plot_gapfill.py so
-# a reader moving between the two products' figures does not have to relearn the
-# key. The two alignments are very nearly coincident over much of the island;
-# drawn in one colour with the solid one last, 2004 simply paints over 1984 and
-# only ONE road appears. So 2004 is solid black underneath and 1984 is WHITE
-# dashed on top: where they coincide you see a black line with white dashes,
-# and where they diverge each is legible alone. Each carries a casing in the
-# opposite colour so it survives terrain running from dark water to near-white
-# dune crest.
+# BOTH are drawn, and the styling matches HAT_plot_gapfill.py so a reader moving
+# between the two products' figures does not have to relearn the key. Two
+# vintages of the same line, so they take the house vintage pair: the EARLIER
+# alignment (1984) red, the LATER one (2004) blue. The two are very nearly
+# coincident over much of the island, so 2004 is solid underneath and 1984 is
+# dashed on top - where they coincide you see a blue line with red dashes, and
+# where they diverge each is legible alone. Both carry a white casing so they
+# survive terrain running from dark water to near-white dune crest.
 ROAD_DIR = (INIT_ROOT / "4-mgmt-forcing" / "road_offset" / "raw_offset")
 ROAD_FILES = {1984: ROAD_DIR / "1984" / "nc12_1984.geojson",
               2004: ROAD_DIR / "2004" / "nc12_2004.geojson"}
-ROAD_STYLE = {2004: dict(color="black", linestyle="-", linewidth=1.8),
-              1984: dict(color="white", linestyle=(0, (4.5, 3.0)), linewidth=1.5)}
-ROAD_CASING = {2004: dict(color="white", linewidth=3.4),
-               1984: dict(color="black", linewidth=3.0)}
+ROAD_STYLE = {2004: dict(color=C_1997, linestyle="-", linewidth=1.5),
+              1984: dict(color=C_1984, linestyle=(0, (3.6, 2.4)), linewidth=1.5)}
+ROAD_CASING = {2004: dict(color="white", linewidth=3.0),
+               1984: dict(color="white", linewidth=3.0)}
 ROAD_ORDER = [2004, 1984]   # draw order: solid first, dashed on top
 
 GRID = 10.0
@@ -151,11 +160,14 @@ ISLAND_PAD_M = 700.0
 # extent is usually wider than tall, so matplotlib shrinks each axes to match
 # and a fixed tall figure leaves slack that constrained_layout splits above and
 # below - which reads as a large empty gap under the title. ZOOM_CHROME_IN is
-# the vertical allowance for suptitle, colorbar and tick labels, which do not
-# scale with the map. NOT the footnote: that sits outside the axes and
-# bbox_inches="tight" adds it after layout.
-ZOOM_FIG_W = 15.0
-ZOOM_CHROME_IN = 1.0
+# the vertical allowance for panel titles, colorbar and tick labels, which do
+# not scale with the map.
+#
+# The width is the house double-column width (190 mm) since 2026-09-10: a figure
+# is drawn at the width it is printed, so its 8-9 pt type is 8-9 pt on the page.
+# It was 15 in, which reduced to a page turned every label into 4 pt.
+ZOOM_FIG_W = figsize("double")[0]
+ZOOM_CHROME_IN = 1.05
 # Upper-left: on these zooms the island runs up the centre-right of the frame,
 # so the top-left corner is the one reliably empty area.
 ZOOM_LEGEND_LOC = "upper left"
@@ -169,12 +181,16 @@ ZOOM_LEGEND_LOC = "upper left"
 # products' 8-15 views are meant to be read as a pair.
 ZOOMS = [
     (list(range(76, 82)), "zoom_76_81",
-     "Domains 76-81, the developed reach - where the beach start moves "
-     "furthest seaward (47-72 m, 5-7 Barrier3D cells)"),
+     "Domains 76-81, the developed reach, where the beach start moves furthest "
+     "seaward (47-72 m, 5-7 Barrier3D cells). (a) the 2009 survey alone; "
+     "(b) the surface the extractor reads; (c) the survey each cell came from. "
+     "Both NC-12 alignments are drawn: 1984 dashed red, 2004 solid blue."),
     (list(range(8, 16)), "roads_8_15",
-     "Domains 8-15 with NC-12 alignments - the southern end, where the NC-12 "
-     "exports begin. Domains 1-7 have no road line and, since the boundary "
-     "was dropped, get 1996 anyway"),
+     "Domains 8-15, the southern end, where the NC-12 exports begin; domains "
+     "1-7 have no road line and, since the boundary was dropped, take 1996 "
+     "anyway. (a) the 2009 survey alone; (b) the surface the extractor reads; "
+     "(c) the survey each cell came from. Both NC-12 alignments are drawn: "
+     "1984 dashed red, 2004 solid blue."),
     # Subtitle numbers are from mosaic_1984_audit.csv, not from eyeballing the
     # map. The first draft said "mostly NEW land", which the audit contradicts:
     # this reach is 28% new against 72% overwrite. RE-READ AFTER THE 2026-08-26
@@ -184,9 +200,11 @@ ZOOMS = [
     # reach is now 1.75x the island figure, not 3x. Still the highest on the
     # island, which is the point, but the figure must not keep claiming 3x.
     (list(range(82, 89)), "roads_82_88",
-     "Domains 82-88 with NC-12 alignments - the northern reach, where 28% of "
-     "what 1996 writes is land the 2009 survey never saw (16% island-wide); "
-     "mean beach-start shift +29 m"),
+     "Domains 82-88, the northern reach, where 28% of what 1996 writes is land "
+     "the 2009 survey never saw (16% island-wide) and the mean beach-start "
+     "shift is +29 m. (a) the 2009 survey alone; (b) the surface the extractor "
+     "reads; (c) the survey each cell came from. Both NC-12 alignments are "
+     "drawn: 1984 dashed red, 2004 solid blue."),
 ]
 
 ID_RE = re.compile(r"resampled_domain_(\w+)_filled\.tif$")
@@ -293,28 +311,28 @@ def elev_limits(elev):
     return vmin, vmax
 
 
-def panel_elev(ax, arr, extent, vmin, vmax, title):
+def panel_elev(ax, i, arr, extent, vmin, vmax, title):
     ax.set_facecolor(C_NONE)
     im = ax.imshow(arr, extent=extent, origin="upper", cmap=ELEV_CMAP,
                    vmin=vmin, vmax=vmax, interpolation="nearest", zorder=1)
-    ax.set_title(title, fontsize=11, pad=8)
+    _title(ax, i, title)
     return im
 
 
-def panel_survey(ax, surv, extent, title):
+def panel_survey(ax, i, surv, extent, title):
     """Categorical provenance. Codes are mapped to contiguous indices so the
     colours cannot slide if a code is absent from a crop."""
     codes = [SURVEY_NONE, SURVEY_1996, SURVEY_2009, SURVEY_2014]
     cols = [C_NONE, C_1996, C_2009, C_2014]
     idx = np.zeros(surv.shape, np.uint8)
-    for i, c in enumerate(codes):
-        idx[surv == c] = i
+    for i_c, c in enumerate(codes):
+        idx[surv == c] = i_c
     cmap = ListedColormap(cols)
     norm = BoundaryNorm(np.arange(-0.5, len(codes) + 0.5), cmap.N)
     ax.set_facecolor(C_NONE)
     ax.imshow(idx, extent=extent, origin="upper", cmap=cmap, norm=norm,
               interpolation="nearest", zorder=1)
-    ax.set_title(title, fontsize=11, pad=8)
+    _title(ax, i, title)
 
 
 def survey_legend(concise=False):
@@ -341,13 +359,27 @@ def counts_note(surv):
     n = {c: int((surv == c).sum())
          for c in (SURVEY_1996, SURVEY_2009, SURVEY_2014)}
     tot = sum(n.values())
-    return (f"10 m cells - 1996 {n[SURVEY_1996]:,} ({100 * n[SURVEY_1996] / tot:.1f}%)   "
-            f"2009 {n[SURVEY_2009]:,} ({100 * n[SURVEY_2009] / tot:.1f}%)   "
+    return (f"10 m cells: 1996 {n[SURVEY_1996]:,} ({100 * n[SURVEY_1996] / tot:.1f}%), "
+            f"2009 {n[SURVEY_2009]:,} ({100 * n[SURVEY_2009] / tot:.1f}%), "
             f"2014 {n[SURVEY_2014]:,} ({100 * n[SURVEY_2014] / tot:.1f}%)")
 
 
-FOOT = ("1996 is admitted wherever it has data - there is no road boundary; the landward limit is the ALACE swath edge. Above -2.64 m NAVD88 where no other survey saw the cell and above MHW where one did, "
-        "below a 12 m ceiling, contiguous with the island. No bias correction and no feathering: every cell is its own survey's measurement, unchanged.")
+# The method paragraph. It used to be printed under every figure as a
+# `fig.text` footnote; under the house style nothing on the canvas belongs in a
+# caption, so it is now the tail of each CAPTIONS.md entry instead.
+METHOD = ("1996 is admitted wherever it has data — there is no road boundary, "
+          "and the landward limit is the ALACE swath edge: above -2.64 m "
+          "NAVD88 where no other survey saw the cell and above MHW where one "
+          "did, below a 12 m ceiling, contiguous with the island. No bias "
+          "correction and no feathering: every cell is its own survey's "
+          "measurement, unchanged. Axes are UTM eastings and northings in km; "
+          "domain outlines are white.")
+
+# The legend swatches carry only the year, because the panels are too narrow for
+# the full wording; the surveys are named here instead.
+SURVEY_KEY = ("Survey sources: 1996 ALACE lidar (admitted with no road "
+              "boundary), 2009 USACE, 2014 NOAA Post-Sandy gap fill; grey is "
+              "never surveyed.")
 
 
 def load_roads(dst_crs, clip_to=None):
@@ -378,26 +410,30 @@ def load_roads(dst_crs, clip_to=None):
 
 
 def draw_roads(ax, roads, scale=1.0):
-    """Casing then line, in ROAD_ORDER so the dashed 1984 lands on top of the
-    solid 2004 rather than under it. `scale` thins the lines for the island
-    figure, where the same widths would smother the island."""
+    """BOTH casings first, then both lines in ROAD_ORDER so the dashed 1984
+    lands on top of the solid 2004 rather than under it.
+
+    Casings-then-lines, not casing-line-casing-line: the two alignments are
+    nearly coincident for most of the island, and the second casing then
+    painted out the first line, so 2004 disappeared wherever it mattered.
+    `scale` thins the lines for the island figure, where the same widths would
+    smother the island."""
     for yr in ROAD_ORDER:
         if yr not in roads:
             continue
         cas = dict(ROAD_CASING[yr]); cas["linewidth"] *= scale
-        roads[yr].plot(ax=ax, linestyle="-", alpha=0.9,
-                       zorder=6 + ROAD_ORDER.index(yr) * 2, **cas)
+        roads[yr].plot(ax=ax, linestyle="-", alpha=0.9, zorder=6, **cas)
+    for yr in ROAD_ORDER:
+        if yr not in roads:
+            continue
         st = dict(ROAD_STYLE[yr]); st["linewidth"] *= scale
-        roads[yr].plot(ax=ax, zorder=7 + ROAD_ORDER.index(yr) * 2, **st)
+        roads[yr].plot(ax=ax, zorder=8 + ROAD_ORDER.index(yr), **st)
 
 
 def road_legend_handles(roads):
-    """White-on-map lines would be invisible on a legend's white ground, so the
-    1984 handle is drawn black here. Same compromise as HAT_plot_gapfill.py."""
-    return [Line2D([], [], label=f"NC-12 {y}",
-                   **{**ROAD_STYLE[y],
-                      "color": "black" if ROAD_STYLE[y]["color"] == "white"
-                      else ROAD_STYLE[y]["color"]})
+    """Both alignments in their map colours. They are the house vintage pair,
+    so neither is white and the swatches carry straight over."""
+    return [Line2D([], [], label=f"NC-12 {y}", **ROAD_STYLE[y])
             for y in ROAD_ORDER if y in roads]
 
 
@@ -414,19 +450,21 @@ def fig_island(elev, surv, extent, gdf, roads):
 
     # SAME CANVAS AS HAT_plot_gapfill.py's island figure, deliberately: the two
     # products are read side by side, so they have to share panel proportions
-    # and gaps. The island spans ~8 km east-west and ~46 km north-south at equal
-    # aspect, so panel width follows figure HEIGHT, not the width asked for --
-    # at the old figsize=(15, 11) each panel was allotted 5 in, could only use
-    # ~2, and constrained_layout turned the other 3 into the gaps between them.
-    fig, axes = plt.subplots(1, 3, figsize=(13, 19), sharex=True, sharey=True,
-                             constrained_layout=True)
-    # Wording parallels the gapfill figure's panel titles.
-    im = panel_elev(axes[0], only09, extent, vmin, vmax,
-                    f"A  2009 DEM only\n{n09:,} cells")
-    panel_elev(axes[1], elev, extent, vmin, vmax,
-               f"B  the 1984 mosaic\n{n09 + n96 + n14:,} cells "
-               f"(+{n96 + n14:,})")
-    panel_survey(axes[2], surv, extent, "C  survey source")
+    # and gaps. The island spans ~9 km east-west and ~47 km north-south at equal
+    # aspect, so panel width follows figure HEIGHT, not the width asked for.
+    # At the house double-column width (190 mm) a full page of height gives
+    # three ~40 mm panels, which is the whole strip at one look; the figure is
+    # no longer 13 x 19 in reduced to a page, where the type became 4 pt.
+    # A shade under FIG_H_MAX: the legend sits outside the axes and
+    # bbox_inches="tight" adds it after layout, so the saved page is ~0.1 in
+    # taller than the canvas asked for.
+    fig, axes = plt.subplots(1, 3, figsize=figsize("double", height=9.15),
+                             sharex=True, sharey=True, constrained_layout=True)
+    # Wording parallels the gapfill figure's panel titles. Cell counts are in
+    # the caption, not on the canvas.
+    im = panel_elev(axes[0], 0, only09, extent, vmin, vmax, "2009 survey")
+    panel_elev(axes[1], 1, elev, extent, vmin, vmax, "1984-start surface")
+    panel_survey(axes[2], 2, surv, extent, "survey source")
 
     for ax in axes:
         gdf.boundary.plot(ax=ax, color="white", linewidth=0.35, zorder=5)
@@ -435,31 +473,33 @@ def fig_island(elev, surv, extent, gdf, roads):
         ax.set_ylim(extent[2] - ISLAND_PAD_M, extent[3] + ISLAND_PAD_M)
         ax.set_aspect("equal")
         km_axes(ax)
-        ax.set_xlabel("Easting (km)", fontsize=9)
-    axes[0].set_ylabel("Northing (km)", fontsize=9)
+        spines_for_image(ax)
+        ax.set_xlabel("Easting (km)")
+    axes[0].set_ylabel("Northing (km)")
 
     cb = fig.colorbar(im, ax=list(axes), orientation="horizontal",
-                      fraction=0.035, pad=0.01, aspect=45)
-    cb.set_label("Elevation (m NAVD88)", fontsize=9)
-    cb.ax.tick_params(labelsize=8)
+                      fraction=0.028, pad=0.01, aspect=45)
+    cb.set_label("Elevation (m NAVD88)")
 
     rh = road_legend_handles(roads)
-    # Concise labels and gapfill's own legend styling. Six entries at the full
-    # wording ran wider than the ~3 in panel and spilled across its border; the
-    # sources are named in this module's docstring, so the year carries it.
-    axes[2].legend(handles=survey_legend(concise=True) + rh,
-                   loc="lower right", fontsize=8, framealpha=0.9)
-    fig.suptitle("1984-start topography: what each survey contributed\n"
-                 + counts_note(surv), fontsize=12)
-    fig.text(0.5, -0.012, FOOT, ha="center", va="top", fontsize=8, wrap=True,
-             color="#444444")
+    # Concise survey labels: the panels are ~40 mm wide, and the full wording is
+    # wider than the axes it would sit in. The sources are named in the caption.
+    fig.legend(handles=survey_legend(concise=True) + rh,
+               loc="outside lower center", ncol=6, frameon=False)
+    caption(fig, "The 1984-start topography, every domain on one 10 m grid. "
+                 f"(a) the 2009 survey alone, {n09:,} cells; (b) the surface "
+                 f"the extractor reads, {n09 + n96 + n14:,} cells "
+                 f"(+{n96 + n14:,}); (c) the survey each cell came from. "
+                 + counts_note(surv) + ". Domain 1 is at Cape Point in the "
+                 "south, domain 90 at Pea Island in the north. "
+                 + SURVEY_KEY + " " + METHOD)
     out = FIG_DIR / "HAT_mosaic1984_island.png"
-    fig.savefig(out, dpi=170, bbox_inches="tight")
+    save(fig, out, vector=False, bbox_inches="tight")
     plt.close(fig)
     return out
 
 
-def fig_zoom(elev, surv, extent, gdf, roads, dom_ids, slug, title):
+def fig_zoom(elev, surv, extent, gdf, roads, dom_ids, slug, cap):
     sel = gdf[gdf["domain_id"].astype(int).isin(dom_ids)]
     if sel.empty:
         print(f"  no domains {dom_ids} in the domain file - {slug} skipped")
@@ -472,11 +512,13 @@ def fig_zoom(elev, surv, extent, gdf, roads, dom_ids, slug, title):
     only09 = np.where(surv == SURVEY_2009, elev, np.nan)
     vmin, vmax = elev_limits(elev)
 
-    fig, axes = plt.subplots(1, 3, figsize=(ZOOM_FIG_W, fh),
-                             constrained_layout=True)
-    im = panel_elev(axes[0], only09, extent, vmin, vmax, "A  2009 DEM only")
-    panel_elev(axes[1], elev, extent, vmin, vmax, "B  the 1984 mosaic")
-    panel_survey(axes[2], surv, extent, "C  survey source")
+    # sharey: all three panels show the same extent, so repeating the northing
+    # labels three times only narrows the maps.
+    fig, axes = plt.subplots(1, 3, figsize=figsize("double", height=fh),
+                             sharex=True, sharey=True, constrained_layout=True)
+    im = panel_elev(axes[0], 0, only09, extent, vmin, vmax, "2009 survey")
+    panel_elev(axes[1], 1, elev, extent, vmin, vmax, "1984-start surface")
+    panel_survey(axes[2], 2, surv, extent, "survey source")
 
     for ax in axes:
         gdf.boundary.plot(ax=ax, color="white", linewidth=0.9, zorder=5)
@@ -485,24 +527,20 @@ def fig_zoom(elev, surv, extent, gdf, roads, dom_ids, slug, title):
         ax.set_ylim(zy0 - pad, zy1 + pad)
         ax.set_aspect("equal")
         km_axes(ax, nx=3, ny=5)
-        ax.set_xlabel("Easting (km)", fontsize=9)
-    axes[0].set_ylabel("Northing (km)", fontsize=9)
-
-    rh = road_legend_handles(roads)
-    axes[0].legend(handles=rh, loc=ZOOM_LEGEND_LOC, fontsize=8, framealpha=0.9)
-    axes[2].legend(handles=survey_legend() + rh, loc=ZOOM_LEGEND_LOC,
-                   fontsize=8, framealpha=0.9)
+        spines_for_image(ax)
+        ax.set_xlabel("Easting (km)")
+    axes[0].set_ylabel("Northing (km)")
 
     cb = fig.colorbar(im, ax=list(axes), orientation="horizontal",
-                      fraction=0.05, pad=0.02, aspect=40)
-    cb.set_label("Elevation (m NAVD88)", fontsize=9)
-    cb.ax.tick_params(labelsize=8)
+                      fraction=0.045, pad=0.02, aspect=40)
+    cb.set_label("Elevation (m NAVD88)")
 
-    fig.suptitle(title, fontsize=11)
-    fig.text(0.5, -0.02, FOOT, ha="center", va="top", fontsize=8, wrap=True,
-             color="#444444")
+    fig.legend(handles=survey_legend(concise=True) + road_legend_handles(roads),
+               loc="outside lower center", ncol=6, frameon=False)
+
+    caption(fig, cap + " " + SURVEY_KEY + " " + METHOD)
     out = FIG_DIR / f"HAT_mosaic1984_{slug}.png"
-    fig.savefig(out, dpi=170, bbox_inches="tight")
+    save(fig, out, vector=False, bbox_inches="tight")
     plt.close(fig)
     return out
 
@@ -530,56 +568,74 @@ def fig_shift():
     shift = [float(r["start_beach_shift_m"]) for r in rows]
     has_road = [r["road_line"] == "True" for r in rows]
 
-    fig, ax = plt.subplots(figsize=(14, 5.2))
-    ax.axhspan(-CELL_M, CELL_M, color="#000000", alpha=0.055, zorder=0)
+    fig, ax = plt.subplots(figsize=figsize("double", aspect=0.44),
+                           constrained_layout=True)
+    # The +/- one-cell band is a reference threshold, so it takes the house
+    # reference green rather than a second grey: the village bands at the top
+    # of the panel are grey, and two greys on one panel cannot be told apart.
+    ax.axhspan(-CELL_M, CELL_M, color=C["REF"], alpha=0.08, lw=0, zorder=0)
 
     # Domains 1-7 get no 1996 and so have a shift of exactly zero - a bar of
     # zero height, which is invisible. A legend swatch pointing at nothing
     # reads as "these are missing from the chart", so the span is shaded and
     # labelled in place instead.
     no_road = [d for d, hr in zip(dom, has_road) if not hr]
-    if no_road:
-        ax.axvspan(min(no_road) - 0.5, max(no_road) + 0.5,
-                   color="#BDBDBD", alpha=0.30, zorder=1)
-        # Inside the shaded span, which is empty - below the axis it collided
-        # with the -20 tick label.
-        ax.text((min(no_road) + max(no_road)) / 2, 42,
-                f"domains {min(no_road)}-{max(no_road)}\nno 1984 NC-12 line\n"
-                f"no 1996 applied",
-                ha="center", va="center", fontsize=7.5, color="#555555",
-                zorder=4)
 
     cols = [C_1996 if s > 0 else C_2009 for s in shift]
     ax.bar(dom, shift, color=cols, width=0.8, zorder=3)
-    ax.axhline(0, color="#333333", lw=1.0, zorder=4)
+    ax.axhline(0, color=INK, lw=0.8, zorder=4)
     for y in (-CELL_M, CELL_M):
-        ax.axhline(y, color="#666666", lw=0.8, ls=":", zorder=4)
+        ax.axhline(y, color=C["REF"], lw=0.8, ls=(0, (3, 2)), zorder=4)
 
     n_sea = sum(1 for s, hr in zip(shift, has_road) if hr and s >= CELL_M)
     n_land = sum(1 for s, hr in zip(shift, has_road) if hr and s <= -CELL_M)
-    ax.set_xlabel("GIS domain (1 = south end, 90 = north)", fontsize=10)
-    ax.set_ylabel("beach start shift (m)\n+ seaward", fontsize=10)
-    ax.set_title(f"Where the 1984 mosaic moves each domain's cross-shore "
-                 f"window origin\n{n_sea} domains move at least one 10 m "
-                 f"Barrier3D cell seaward; {n_land} move one landward",
-                 fontsize=12, pad=10)
-    ax.legend(handles=[
-        Patch(facecolor=C_1996, label="seaward - 1996 adds beach above 0.50 m MHW"),
-        Patch(facecolor=C_2009, label="landward"),
-        # Drawn at alpha 0.055 on the axes, which is correct there and
-        # invisible in a legend swatch. The swatch carries the darker edge so
-        # the band is findable; the label says what it is.
-        Patch(facecolor="#000000", alpha=0.10, edgecolor="#666666",
-              linestyle=":",
-              label="within one 10 m cell - below the model's resolution")],
-        loc="upper left", fontsize=8, framealpha=0.95, ncol=3)
+    ax.set_xlabel(DOMAIN_AXIS_LABEL)
+    ax.set_ylabel("beach start shift (m)\n+ seaward")
     ax.set_xlim(0, 91)
-    ax.margins(y=0.22)
-    ax.spines[["top", "right"]].set_visible(False)
-    ax.grid(axis="y", color="#DDDDDD", lw=0.6, zorder=1)
+    # Explicit limits rather than margins(): the shifts run -5 to +72, and a
+    # symmetric margin then opened a band of empty axes below -20.
+    lo, hi = min(min(shift), -CELL_M), max(shift)
+    ax.set_ylim(lo - 0.12 * (hi - lo), hi + 0.24 * (hi - lo))
+    open_frame(ax)
+    ax.grid(axis="y")
     ax.set_axisbelow(True)
+
+    if no_road:
+        ax.axvspan(min(no_road) - 0.5, max(no_road) + 0.5,
+                   color=C["BASE_FILL"], zorder=1)
+        ax.text((min(no_road) + max(no_road)) / 2, 0.78,
+                f"{min(no_road)}-{max(no_road)}\nno 1996",
+                transform=ax.get_xaxis_transform(), ha="center", va="center",
+                fontsize=7.5, color=INK_MUTED, zorder=4)
+
+    # Villages as a strip against the top edge, so they cannot be confused with
+    # the shaded domain span below them. After set_xlim, as the helper
+    # requires, and after the span so Buxton's name is not painted over.
+    town_bands(ax, strip=0.085)
+
+    fig.legend(handles=[
+        Patch(facecolor=C_1996, label="seaward: 1996 adds beach above 0.50 m MHW"),
+        Patch(facecolor=C_2009, label="landward"),
+        Patch(facecolor=C["REF"], alpha=0.25,
+              label="within one 10 m cell")],
+        loc="outside lower center", ncol=3, frameon=False)
+    caption(fig, "Where the 1984-start surface moves each domain's cross-shore "
+                 f"window origin. {n_sea} domains move at least one 10 m "
+                 f"Barrier3D cell seaward and {n_land} move one landward; "
+                 "shifts inside the band are below the model's resolution. "
+                 "Bar colour is the survey that won the beach start: 1996 "
+                 "orange for seaward, 2009 blue for landward. Domains "
+                 f"{min(no_road)}-{max(no_road)} have no 1984 NC-12 line and "
+                 "take no 1996, so their shift is exactly zero (shaded). "
+                 "Domain 1 is at Cape Point in the south, domain 90 at Pea "
+                 "Island in the north; village spans are shaded along the top."
+            if no_road else
+            "Where the 1984-start surface moves each domain's cross-shore "
+            f"window origin. {n_sea} domains move at least one 10 m Barrier3D "
+            f"cell seaward and {n_land} move one landward. Domain 1 is at Cape "
+            "Point in the south, domain 90 at Pea Island in the north.")
     out = FIG_DIR / "HAT_mosaic1984_shift.png"
-    fig.savefig(out, dpi=200, bbox_inches="tight")
+    save(fig, out, bbox_inches="tight")
     plt.close(fig)
     return out
 
@@ -596,9 +652,9 @@ def main():
     roads = load_roads(gdf.crs, clip_to=dom_union)
 
     outs = [fig_island(elev, surv, extent, gdf, roads)]
-    for _ids, _slug, _title in ZOOMS:
+    for _ids, _slug, _cap in ZOOMS:
         outs.append(fig_zoom(elev, surv, extent, gdf, roads,
-                             _ids, _slug, _title))
+                             _ids, _slug, _cap))
     outs.append(fig_shift())
     for out in outs:
         if out:

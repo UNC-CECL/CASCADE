@@ -52,7 +52,8 @@ Usage:
 Reads  output/convergence_history.json, and the live FROZEN_ZONE_DOMAINS /
        GROIN_RESERVED_DOMAINS / HATTERAS_BE_RATES_CALIBRATED, so the figure
        cannot drift from the calibration it documents.
-Writes output/fig_be_convergence.png
+Writes data/hatteras_init/7-source-sink/figures/fig_be_convergence.png (and the
+       PDF beside it); the caption is written to CAPTIONS.md in that folder.
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -70,13 +71,21 @@ _HERE = pathlib.Path(__file__).resolve()
 PROJECT_BASE_DIR = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
 OUTPUT_DIR = _HERE.parent / "output"
 HISTORY = OUTPUT_DIR / "convergence_history.json"
+# The figure belongs with the rest of the section 7 figures, in the data tree;
+# the iteration's own record stays beside the calibration that wrote it.
+FIG_DIR = (PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
+           / "figures")
 
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 
+from hat_figure_style import (                                   # noqa: E402
+    apply_style, figsize, save, caption, town_bands, open_frame,
+    DOMAIN_AXIS_LABEL, C, C_1984, C_1997, INK, INK_MUTED, _title)
+
 PERIOD_LABEL = {"1984_2004": "1984–2004", "2004_2024": "2004–2024"}
 PERIOD_KEY = {"1984_2004": 1984, "2004_2024": 2004}
-COLOUR = {"1984_2004": "#1565C0", "2004_2024": "#B71C1C"}
-RESERVED_COLOUR = "#FF8C00"
+# The earlier period is the red of the house vintage pair, the later the blue.
+COLOUR = {"1984_2004": C_1984, "2004_2024": C_1997}
 
 
 def load_calibration():
@@ -99,13 +108,17 @@ def main():
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+
+    apply_style()
 
     history = json.loads(HISTORY.read_text(encoding="utf-8"))
     frozen, reserved, rates = load_calibration()
     periods = list(history["passes"])
 
     figure, (left, right) = plt.subplots(
-        1, 2, figsize=(15.5, 6.8), gridspec_kw=dict(width_ratios=[1, 1.35]))
+        1, 2, figsize=figsize("double", aspect=0.46),
+        constrained_layout=True, gridspec_kw=dict(width_ratios=[1, 1.45]))
 
     # ---- LEFT: the convergence sequence ---------------------------------
     for period in periods:
@@ -114,54 +127,49 @@ def main():
         x = [p["pass"] for p in passes]
         y = [p["rmse"] for p in passes]
 
-        left.plot(x, y, marker="o", markersize=8, color=colour, linewidth=2.4,
-                  zorder=5, label=f"{PERIOD_LABEL[period]}  (frozen zones)")
+        left.plot(x, y, marker="o", markersize=4.5, color=colour, linewidth=1.6,
+                  zorder=5, label=PERIOD_LABEL[period])
         # Labels sit at SEGMENT MIDPOINTS, not on the markers. A gain belongs to
         # the step, not the endpoint, and at the markers the two periods' labels
         # collided with each other and with the lines.
         for step in range(1, len(x)):
             xm = (x[step - 1] + x[step]) / 2.0
             ym = (y[step - 1] + y[step]) / 2.0
-            dy = 15 if period == periods[0] else -21
+            # The earlier period runs BELOW its line and the later one above,
+            # so the two sets of gains cannot meet in the middle.
+            dy = -15 if period == periods[0] else 11
             left.annotate(f"{passes[step]['gain_pct']:.1f}%",
                           xy=(xm, ym), xytext=(0, dy),
                           textcoords="offset points", ha="center",
-                          fontsize=9, color=colour, weight="bold")
-        left.plot(x[-1], y[-1], marker="o", markersize=15, markerfacecolor="none",
-                  markeredgecolor=colour, markeredgewidth=2.0, zorder=6)
+                          fontsize=7, color=colour)
+        left.plot(x[-1], y[-1], marker="o", markersize=10,
+                  markerfacecolor="none", markeredgecolor=colour,
+                  markeredgewidth=1.2, zorder=6)
 
         # The abandoned run, drawn because it scored better -- see the docstring.
         unmasked = history["_abandoned_unmasked"][period]
-        left.plot([x[-1] + 0.55], [unmasked], marker="x", markersize=11,
-                  color=colour, markeredgewidth=2.2, linestyle="none", zorder=6)
+        left.plot([x[-1] + 0.55], [unmasked], marker="x", markersize=7,
+                  color=colour, markeredgewidth=1.6, linestyle="none", zorder=6)
         left.plot([x[-1], x[-1] + 0.55], [y[-1], unmasked], color=colour,
-                  linestyle="--", linewidth=1.2, alpha=0.55, zorder=4)
+                  linestyle=(0, (3, 2)), linewidth=0.9, zorder=4)
 
     left.set_xlabel("iteration pass")
-    left.set_ylabel("shoreline-rate RMSE vs CoastSat target, D2–D89 (m/yr)")
+    left.set_ylabel("shoreline-rate RMSE against the\nCoastSat target, D2\u2013D89 (m/yr)")
     left.set_xticks(sorted({p["pass"] for pp in history["passes"].values()
                             for p in pp}))
-    left.set_title("CONVERGENCE\neach pass adds the residual the last one left; "
-                   "% is what that pass bought", fontsize=11.5)
-    left.grid(alpha=0.25)
     # Scaled to the SEQUENCE. edgeBE and zeroBE are 2-4x these values and drawing
     # them as lines squashed the whole iteration into the bottom fifth of the
-    # panel, which defeats the point of the figure; they are stated instead.
+    # panel, which defeats the point of the figure; they are in the caption.
     left.set_ylim(0.44, 0.82)
-    baselines = "   |   ".join(
-        f"{PERIOD_LABEL[p]}: edgeBE {history['baselines']['edgeBE'][p]:.2f}, "
-        f"zeroBE {history['baselines']['zeroBE'][p]:.2f}" for p in periods)
-    left.text(0.015, 0.02, f"off-scale above — {baselines}", fontsize=7.6,
-              color="#444444", ha="left", va="bottom", style="italic",
-              transform=left.transAxes)
-    handles = [Line2D([], [], color=COLOUR[p], marker="o", linewidth=2.4,
-                      label=PERIOD_LABEL[p]) for p in periods]
+    left.grid(axis="y")
+    open_frame(left)
+    _title(left, 0, "convergence")
+    handles = [Line2D([], [], color=COLOUR[p], marker="o", markersize=4.5,
+                      linewidth=1.6, label=PERIOD_LABEL[p]) for p in periods]
     handles += [
-        Line2D([], [], color="#555555", marker="x", linestyle="none",
-               markeredgewidth=2.2, label="unmasked run — abandoned"),
-        Line2D([], [], color="#555555", linestyle="--", linewidth=1.0,
-               alpha=0.5, label="edgeBE / zeroBE baselines")]
-    left.legend(handles=handles, loc="upper right", fontsize=8.5)
+        Line2D([], [], color=INK_MUTED, marker="x", linestyle="none",
+               markeredgewidth=1.6, label="zone set not imposed")]
+    left.legend(handles=handles, loc="upper right", frameon=False, fontsize=7)
 
     # ---- RIGHT: the frozen zone set --------------------------------------
     for row, period in enumerate(periods):
@@ -169,65 +177,96 @@ def main():
         members = set(frozen[gis])
         y0 = row * 1.0
         for domain in range(1, 91):
+            kw = dict(facecolor=C["BASE_FILL"], edgecolor="none")
             if domain in reserved:
-                face, alpha = RESERVED_COLOUR, 0.95
+                kw = dict(facecolor="none", edgecolor=C["BASE"], hatch="///",
+                          linewidth=0.0)
             elif domain in members:
-                face, alpha = COLOUR[period], 0.75
-            else:
-                face, alpha = "#DDDDDD", 0.7
+                kw = dict(facecolor=COLOUR[period], edgecolor="none")
             right.add_patch(plt.Rectangle((domain - 0.5, y0), 1.0, 0.62,
-                                          facecolor=face, alpha=alpha,
-                                          edgecolor="none"))
+                                          zorder=3, **kw))
         right.text(-1.5, y0 + 0.31, PERIOD_LABEL[period], ha="right",
-                   va="center", fontsize=10, color=COLOUR[period], weight="bold")
+                   va="center", fontsize=8, color=COLOUR[period])
         right.text(91.5, y0 + 0.31, f"{len(members)} domains", ha="left",
-                   va="center", fontsize=8.5, color=COLOUR[period])
+                   va="center", fontsize=7, color=INK_MUTED)
 
-    # the final BE field, on a shared axis below the zone bars
+    # the final background-erosion field, on a shared axis below the zone bars
     scale = 0.075
     base = -0.62
-    right.axhline(base, color="#999999", linewidth=0.9, zorder=2)
+    right.axhline(base, color=INK_MUTED, linewidth=0.6, zorder=2)
     for period in periods:
         gis = PERIOD_KEY[period]
         values = [rates[gis].get(d, 0.0) for d in range(2, 90)]
         clipped = np.clip(values, -4.0, 4.0)   # interior only; GIS 1/90 dwarf it
         right.plot(range(2, 90), base + np.array(clipped) * scale,
-                   color=COLOUR[period], linewidth=1.6, alpha=0.9, zorder=3,
-                   label=f"final BE, {PERIOD_LABEL[period]}")
-    right.text(91.5, base, "final BE\n(m/yr)", ha="left", va="center",
-               fontsize=8, color="#444444")
+                   color=COLOUR[period], linewidth=1.0, zorder=3)
+    right.text(91.5, base, "calibrated\nfield (m/yr)", ha="left", va="center",
+               fontsize=7, color=INK_MUTED)
 
-    right.set_xlim(-8, 100)
-    right.set_ylim(base - 0.40, 2.05)
+    right.set_xlim(-10, 104)
+    right.set_ylim(base - 0.40, 2.85)
     right.set_yticks([])
-    right.set_xticks([1, 10, 20, 30, 40, 50, 60, 70, 80, 90])
-    right.set_xlabel("GIS domain (south → north)")
-    right.set_title("THE ZONE SET, FIXED BEFORE ITERATION\n"
-                    "coloured = correctable; grey = withheld however large its "
-                    "residual; orange = reserved for the groin", fontsize=11.5)
-    right.legend(loc="upper right", fontsize=8)
+    right.set_xticks([10, 20, 30, 40, 50, 60, 70, 80, 90])
+    right.set_xlabel(DOMAIN_AXIS_LABEL)
+    for side in ("top", "right", "left"):
+        right.spines[side].set_visible(False)
+    town_bands(right, where="top", strip=0.07, fontsize=7)
+    _title(right, 1, "the zone set, fixed before the first pass")
+    right.legend(handles=[
+        Patch(facecolor=COLOUR[periods[0]],
+              label=f"correctable, {PERIOD_LABEL[periods[0]]}"),
+        Patch(facecolor=C["BASE_FILL"], label="withheld, left at zero"),
+        Patch(facecolor=COLOUR[periods[1]],
+              label=f"correctable, {PERIOD_LABEL[periods[1]]}"),
+        Patch(facecolor="none", edgecolor=C["BASE"], hatch="///",
+              label="reserved for the groin")],
+        loc="upper center", bbox_to_anchor=(0.5, 0.93), ncol=2, frameon=False,
+        fontsize=7)
 
-    figure.tight_layout(rect=(0, 0.115, 1, 1))
-    figure.text(
-        0.01, 0.012,
-        "WHY ITERATE. Imposing X m/yr of background erosion does not move a domain's rate by X -- BRIE diffuses most of it alongshore -- so the "
-        "one-shot solve closes only 42% (P1) and 57% (P2) of the misfit and its residual conflates 'the model cannot do this' with 'the correction "
-        "was half applied'. Each pass re-measures and adds what is left, which needs no estimate of the surviving fraction; that fraction is not "
-        "constant anyway, running ~0.8-1.2 for a contiguous block of corrections and ~0.1 for one alternating at the grid scale.\n"
-        "WHY THE ZONES ARE FROZEN. Zone membership is the science, magnitude is arithmetic, and iterating both lets the arithmetic rewrite the "
-        "science: re-deriving zones each pass let 19 domains (P1) and 12 (P2) outside the original identification pick up corrections, and part of "
-        "what later passes 'find' is the alongshore spillover of earlier passes. The abandoned unmasked run is plotted BECAUSE it scored better "
-        "(0.4931 / 0.4843) -- that gap is the fit available only outside justifiable zones, and it was declined deliberately.\n"
-        "WHAT IS LEFT. D6 carries the largest residual in both periods (2.00 and 2.59 m/yr) and is never corrected: it is the groin's own shortfall "
-        "-- too little fillet built in period 1, no release in period 2 -- and absorbing it here would double-count against the M/f fit.",
-        fontsize=7.3, color="#333333", wrap=True)
+    baselines = "; ".join(
+        f"{PERIOD_LABEL[p]} {history['baselines']['edgeBE'][p]:.2f} and "
+        f"{history['baselines']['zeroBE'][p]:.2f}" for p in periods)
+    unmasked = ", ".join(f"{history['_abandoned_unmasked'][p]:.4f}"
+                         for p in periods)
+    caption(figure, (
+        "The source/sink calibration is a fixed-point solve, so where it stopped "
+        "is a claim about the model's limit, and that claim only means something "
+        "if the sequence was contracting and the target was not moving while it "
+        "ran. (a) the shoreline-rate RMSE against the CoastSat target after each "
+        "pass, for each period; the percentage on a segment is what that pass "
+        "bought, and the ringed marker is the pass the calibration stopped at. "
+        "Imposing X m/yr of background erosion does not move a domain's rate by "
+        "X -- BRIE diffuses most of it alongshore -- so a single pass closes only "
+        "42 per cent of the misfit in the first period and 57 per cent in the "
+        "second, and its residual conflates 'the model cannot do this' with 'the "
+        "correction was half applied'. Each further pass re-measures and adds "
+        "what is left, which needs no estimate of the surviving fraction; that "
+        "fraction is not constant anyway, running about 0.8-1.2 for a contiguous "
+        "block of corrections and about 0.1 for one alternating at the grid "
+        "scale. The crosses are the same iteration run without the zone set "
+        f"imposed; it scored better ({unmasked}) and was declined anyway, and "
+        "the gap is the size of the fit available only by correcting outside "
+        "justifiable zones. The axis is scaled to the sequence: the edgeBE and "
+        f"zeroBE baselines are off the top at {baselines} m/yr. (b) the zone "
+        "set, identified once from the first residual and then held for every "
+        "pass, because zone membership is the scientific step and magnitude is "
+        "arithmetic -- re-deriving the zones each pass would let less coherent "
+        "features cross the threshold as real ones were satisfied, and let later "
+        "passes correct the alongshore spillover of earlier ones. Domains 5-7 "
+        "are the Buxton groin's own footprint, reserved so the source/sink field "
+        "cannot absorb the groin's shortfall and double-count against the "
+        "trapping fit; domain 6 carries the largest residual in both periods "
+        "(2.00 and 2.59 m/yr) and is deliberately never corrected. The line "
+        "below each pair of rows is the calibrated field over the interior "
+        "domains, clipped to plus or minus 4 m/yr. Domain 1 is at Cape Point and "
+        "domain 90 at Pea Island."))
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    path = OUTPUT_DIR / "fig_be_convergence.png"
-    figure.savefig(path, dpi=150, facecolor="white")
+    path = FIG_DIR / "fig_be_convergence.png"
+    save(figure, path)
     plt.close(figure)
 
     print(f"wrote {path}")
+
     for period in periods:
         passes = history["passes"][period]
         edge = history["baselines"]["edgeBE"][period]

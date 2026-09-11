@@ -291,7 +291,7 @@ def plot_poster(year, canvas, domain_col_starts, cells_per_domain, first_real_id
 
     ax.set_xticks(tick_cols)
     ax.set_xticklabels(tick_labels, fontsize=9)
-    ax.set_xlabel('Domain (S → N,  Cape Hatteras to Rodanthe)', fontsize=12, labelpad=8)
+    ax.set_xlabel('GIS domain (south → north)', fontsize=12, labelpad=8)
 
     # ---- Buffer zones: bracket the real span and label the interpolated ends ----
     if include_buffers:

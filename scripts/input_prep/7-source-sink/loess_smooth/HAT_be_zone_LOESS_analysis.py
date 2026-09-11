@@ -114,15 +114,22 @@ from cascade_pipeline.coastsat_loess import (        # noqa: E402
     compute_domain_means,
 )
 from cascade_pipeline.hindcast import build_target_table   # noqa: E402
+from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 from cascade_pipeline.run_registry import (                # noqa: E402
     CALIBRATION_ARM, preset_dir_for)
 from hatteras_site_config import HATTERAS_DOMAINS          # noqa: E402
+from hat_figure_style import (                             # noqa: E402
+    apply_style, figsize, save, caption, town_bands, open_frame,
+    DOMAIN_AXIS_LABEL, C, C_1984, C_1997, C_1984_FILL, C_1997_FILL,
+    INK, INK_MUTED, halo, _title)
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.gridspec as gridspec
 from tqdm import tqdm
+
+apply_style()
 
 # ============================================================
 # CONFIG — edit paths and thresholds here
@@ -189,6 +196,14 @@ TARGET_WINDOW = 10
 # claim, and an exploratory pass silently overwriting it would destroy the
 # provenance without anyone noticing.
 OUTPUT_DIR = os.environ.get("HAT_BE_OUTPUT_DIR", "").strip()     or str(_HERE.parent / "output")
+
+# Figures are read out of the data tree, not out of scripts/. The tables above
+# stay with the calibration that produced them; the two PNGs go where the rest
+# of the section 7 figures live, so a re-run refreshes the copies people open.
+# A what-if pass with HAT_BE_OUTPUT_DIR set keeps its figures with its tables.
+FIG_DIR = (os.environ.get("HAT_BE_OUTPUT_DIR", "").strip()
+           or str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
+                  / "figures"))
 
 # ── Column names in CoastSat CSVs ─────────────────────────────────────────────
 LRR_COL    = "median_lrr"   # use median — more robust to outlier transects
@@ -377,30 +392,18 @@ ZONE_DISPLAY_NAMES = {
     "Tri-Village / Rodanthe":       "Tri-Village",
 }
 
-# ── Annotation colours (publication style) ───────────────────────────────────
-ANN_TOWN_SPANS = {
-    "Buxton":      (7,  8),
-    "Avon":        (21, 31),
-    "Tri-Village": (68, 83),
-}
+# ── Alongshore annotation ────────────────────────────────────────────────────
+# The village spans come from the site config through `town_bands()`, so this
+# file cannot disagree with it. What is left here is the structures: the two
+# piers and the Buxton groin, drawn as rulers in the muted ink.
 ANN_WIMBLE_SHOALS = (60, 74)
-ANN_PIERS   = {"Avon Pier": 26, "Rodanthe Pier": 79}
-ANN_GROINS  = {"Buxton Groin": 5.5}
-ANN_C_TOWN  = "#90AFC5"
-ANN_C_WIMBLE = "#E0A800"
-ANN_C_PIER  = "#1565C0"
-ANN_C_GROIN = "#B71C1C"
+ANN_PIERS   = {"Avon pier": 26, "Rodanthe pier": 79}
+ANN_GROINS  = {"Buxton groin": 5.5}
 
-# ── Figure font sizes ─────────────────────────────────────────────────────────
-# Centralised here so the whole figure can be resized for readability (e.g.
-# for sharing with Laura / printing) by editing these six values instead of
-# hunting through every plot function.
-FONT_SUPTITLE = 18   # main figure title (fig.suptitle)
-FONT_TITLE    = 13   # per-panel titles
-FONT_LABEL    = 12   # axis labels (x/y)
-FONT_TICK     = 11   # tick labels
-FONT_LEGEND   = 11   # legend text
-FONT_ANNOT    = 10   # small annotation text (town/pier/groin labels in annotate_ax)
+# Type comes from hat_figure_style.apply_style(); only the two sizes that are
+# deliberately smaller than the 8 pt tick default are named here.
+FONT_ANNOT  = 7.0    # structure names written inside a panel
+FONT_STRIP  = 7.0    # names written on a one-line strip
 
 # ============================================================
 # CASCADE LOADER
@@ -456,7 +459,7 @@ def _groin_run_at(period_dir, stem, fitted, tolerance=1e-6):
             continue
         if "reloc" in run.name or "nonourish" in run.name:
             continue
-        meta = run / f"{run.name}_run_metadata.json"
+        meta = resolve_run_file(run, "metadata_json", run.name)
         if not meta.exists():
             continue
         try:
@@ -610,7 +613,7 @@ def base_run_dir(period_start, period_end):
 def load_model_lrr(period_start, period_end):
     """Per-GIS-domain modelled LRR, m/yr, (+) seaward.
 
-    Read from the run's own `*_shoreline_change_rate.csv` rather than
+    Read from the run's own shoreline change rate CSV rather than
     re-derived from the .npz. The pipeline writes that file from the same
     array section 12 scores, so this cannot disagree with the model about
     sign, units, or padded-index alignment.
@@ -626,15 +629,18 @@ def load_model_lrr(period_start, period_end):
     the current pipeline without setting RATE_COLUMN back.
     """
     run_dir = base_run_dir(period_start, period_end)
-    hits = sorted(run_dir.glob("*_shoreline_change_rate.csv"))
-    if not hits:
+    # RESOLVED, NOT GLOBBED. The rate CSV is tables/shoreline_change_rate.csv
+    # in the new run layout and {run}_shoreline_change_rate.csv in the old,
+    # so a glob on the old name silently finds nothing in a migrated run.
+    csv_path = resolve_run_file(run_dir, "rate_csv", run_dir.name)
+    if not csv_path.is_file():
         raise FileNotFoundError(
-            f"no *_shoreline_change_rate.csv in {run_dir}")
-    print(f"  model  {hits[0].parent.name}  [{RATE_COLUMN}]")
-    frame = pd.read_csv(hits[0])
+            f"no shoreline change rate CSV in {run_dir}")
+    print(f"  model  {run_dir.name}  [{RATE_COLUMN}]")
+    frame = pd.read_csv(csv_path)
     if RATE_COLUMN not in frame.columns:
         raise KeyError(
-            f"{hits[0].name} has no {RATE_COLUMN!r} column. It predates the "
+            f"{csv_path.name} has no {RATE_COLUMN!r} column. It predates the "
             f"LRR estimator; re-run the base run, or backfill it with "
             f"scripts/input_prep/7-source-sink/backfill_lrr.py.")
     return frame.set_index("gis_domain")[RATE_COLUMN]
@@ -965,26 +971,42 @@ def compute_be_rates(raw_p1, raw_p2, smooth_p1, smooth_p2):
 # ANNOTATION HELPER
 # ============================================================
 
-def annotate_ax(ax, ylim):
-    ymin, ymax = ylim; yspan = ymax - ymin
-    ax.axvspan(ANN_WIMBLE_SHOALS[0]-0.5, ANN_WIMBLE_SHOALS[1]+0.5,
-               color=ANN_C_WIMBLE, alpha=0.12, zorder=0)
-    for name, (d0, d1) in ANN_TOWN_SPANS.items():
-        ax.axvspan(d0-0.5, d1+0.5, color=ANN_C_TOWN, alpha=0.18, zorder=0)
-        ax.text((d0+d1)/2, ymax - 0.02*yspan, name, ha="center", va="top",
-                fontsize=FONT_ANNOT, color=ANN_C_TOWN, fontweight="bold")
-    for pname, pdom in ANN_PIERS.items():
-        ax.axvline(pdom, color=ANN_C_PIER, lw=0.9, ls="--", zorder=2)
-        ax.text(pdom+0.3, ymin+0.72*yspan, pname, rotation=90,
-                va="bottom", fontsize=FONT_ANNOT, color=ANN_C_PIER)
-    for gname, gdom in ANN_GROINS.items():
-        ax.axvline(gdom, color=ANN_C_GROIN, lw=0.9, ls="--", zorder=2)
-        ax.text(gdom+0.3, ymin+0.62*yspan, gname, rotation=90,
-                va="bottom", fontsize=FONT_ANNOT, color=ANN_C_GROIN)
-    ax.axhline(0, color="black", lw=0.8, ls="--", alpha=0.5)
-    ax.axhline( SIGNIFICANCE_THRESHOLD, color="#888", lw=0.6, ls=":", alpha=0.7)
-    ax.axhline(-SIGNIFICANCE_THRESHOLD, color="#888", lw=0.6, ls=":", alpha=0.7)
+def annotate_ax(ax, ylim, villages=True, wimble=True, thresholds=True,
+                label_at="bottom"):
+    """The alongshore furniture every panel shares.
+
+    Villages come from the site config through `town_bands()` as a strip along
+    the top edge -- a full-height wash cannot be told apart from the zone
+    shading these panels already carry. Wimble Shoals gets the matching strip
+    along the bottom, on the panels that do not name it some other way. The
+    piers and the groin are rulers, so they are drawn in the muted ink rather
+    than a colour of their own, and their names sit at the foot of the panel
+    under a white halo so they never have to fight the data for a place.
+
+    `thresholds` draws the significance band. It belongs on a residual panel
+    and nowhere else: on a panel of background-erosion rates the same pair of
+    lines would imply a test that was never applied to those numbers."""
+    ymin, ymax = ylim
+    yspan = ymax - ymin
     ax.set_xlim(0.5, NUM_REAL_DOMAINS + 0.5)
+    if villages:
+        town_bands(ax, where="top", strip=0.05, fontsize=FONT_ANNOT)
+    if wimble:
+        town_bands(ax, where="bottom", strip=0.05, fontsize=FONT_ANNOT,
+                   shade="0.90",
+                   spans={"Wimble Shoals": ANN_WIMBLE_SHOALS})
+    ty, tva = ((0.93, "top") if label_at == "top" else (0.02, "bottom"))
+    for name, dom in list(ANN_PIERS.items()) + list(ANN_GROINS.items()):
+        ax.axvline(dom, color=INK_MUTED, lw=0.7, ls=(0, (3, 3)), zorder=2)
+        ax.text(dom + 0.8, ymin + ty * yspan, name, rotation=90,
+                ha="left", va=tva, fontsize=FONT_ANNOT, color=INK_MUTED,
+                zorder=6, path_effects=halo(2.2))
+    ax.axhline(0, color=INK, lw=0.7, zorder=2)
+    if thresholds:
+        ax.axhline(SIGNIFICANCE_THRESHOLD, color=INK_MUTED, lw=0.6, ls=":",
+                   zorder=2)
+        ax.axhline(-SIGNIFICANCE_THRESHOLD, color=INK_MUTED, lw=0.6, ls=":",
+                   zorder=2)
 
 
 def find_zone_runs(zone_series, domains):
@@ -1004,7 +1026,22 @@ def find_zone_runs(zone_series, domains):
     return runs
 
 
-def label_zone_runs(ax, fig, runs, y=0.5, fontsize_start=FONT_LABEL,
+def _contiguous(domains):
+    """Collapse a sorted list of domains into (first, last) runs.
+
+    A local convenience so a set of domains can be handed to `town_bands()`
+    as spans; `find_zone_runs` above needs a per-domain Series instead.
+    Worth lifting into hat_figure_style if another script wants it."""
+    runs = []
+    for d in sorted(domains):
+        if runs and d == runs[-1][1] + 1:
+            runs[-1] = (runs[-1][0], d)
+        else:
+            runs.append((d, d))
+    return runs
+
+
+def label_zone_runs(ax, fig, runs, y=0.5, fontsize_start=FONT_STRIP,
                     fontsize_min=6.5, pad_frac=0.90):
     """
     Place one centered text label per zone run directly on the strip,
@@ -1044,149 +1081,142 @@ def plot_diagnostic(cs_p1, cs_p2, casc_p1, casc_p2,
                     cs_p1_smooth, cs_p2_smooth,
                     raw_p1, raw_p2, smooth_p1, smooth_p2,
                     results, out_path):
+    """Five stacked panels: the two rates, the two residuals, the strategy.
 
+    A working diagnostic rather than a manuscript figure -- it is drawn to the
+    house size and type so it can sit beside the others, and no further."""
     domains = np.arange(1, NUM_REAL_DOMAINS + 1)
-    fig, axes = plt.subplots(5, 1, figsize=(18, 18), sharex=True,
-                             gridspec_kw={"height_ratios": [3, 3, 3, 3, 1.5]})
+    fig, axes = plt.subplots(5, 1, figsize=figsize("double", height=9.4),
+                             sharex=True, constrained_layout=True,
+                             gridspec_kw={"height_ratios": [3, 3, 3, 3, 1.0]})
 
-    # ── Panel 1: CoastSat vs CASCADE LRR — Period 1 ───────────────────────────
-    ax = axes[0]
-    ax.plot(domains, cs_p1,   "o-", ms=3, lw=1.0, color="#b2182b",
-            label="CoastSat LRR (raw)", zorder=3, alpha=0.55)
-    ax.plot(domains, cs_p1_smooth, "-", lw=1.8, color="#762a83",
-            label=f"CoastSat LOESS-smoothed (D{GROIN_EXCLUDE_THROUGH_DOMAIN+1}+)",
-            zorder=4)
-    ax.plot(domains, casc_p1, "s-", ms=3, lw=1.0, color="#2166ac",
-            label="CASCADE base LRR", zorder=3, alpha=0.8)
-    ax.axvline(GROIN_EXCLUDE_THROUGH_DOMAIN + 0.5, color="#762a83",
-               lw=0.8, ls=":", alpha=0.7, zorder=2)
-    ax.set_ylabel("LRR  (m/yr)", fontsize=FONT_LABEL)
-    ax.set_title(f"Period 1  (1984–2004)  |  CoastSat vs CASCADE base run  |  "
-                 f"rate smoothing excludes D1-{GROIN_EXCLUDE_THROUGH_DOMAIN} (groin)",
-                 fontsize=FONT_TITLE, loc="left", pad=3)
-    ylim = (min(np.nanmin([cs_p1, cs_p1_smooth, casc_p1])*1.2, -3),
-            max(np.nanmax([cs_p1, cs_p1_smooth, casc_p1])*1.2,  3))
-    ax.set_ylim(ylim); ax.legend(fontsize=FONT_LEGEND, loc="upper center")
-    ax.tick_params(labelsize=FONT_TICK)
-    annotate_ax(ax, ylim)
+    rate_panels = (
+        (0, axes[0], "1984\u20132004", cs_p1, cs_p1_smooth, casc_p1, C_1984),
+        (1, axes[1], "2004\u20132024", cs_p2, cs_p2_smooth, casc_p2, C_1997),
+    )
+    for i, ax, label, raw, smooth, model, colour in rate_panels:
+        ax.plot(domains, raw, "o-", ms=2.2, lw=0.7, color=colour, alpha=0.55,
+                zorder=3,
+                label="CoastSat linear regression rate, unsmoothed")
+        ax.plot(domains, smooth, "-", lw=1.6, color=C["REF"], zorder=5,
+                label="CoastSat rate, LOESS-smoothed (the target)")
+        ax.plot(domains, model, "-", lw=1.0, color=C["ACCENT"], alpha=0.9,
+                zorder=4, label="model base run, linear regression rate")
+        ax.axvline(GROIN_EXCLUDE_THROUGH_DOMAIN + 0.5, color=INK_MUTED,
+                   lw=0.7, ls=":", zorder=2)
+        ax.set_ylabel("shoreline rate (m/yr)")
+        _title(ax, i, f"shoreline rate, {label}")
+        lo = min(np.nanmin([raw, smooth, model]) * 1.2, -3)
+        hi = max(np.nanmax([raw, smooth, model]) * 1.2, 3)
+        ylim = (lo, hi + 0.30 * (hi - lo))    # headroom for the legend
+        ax.set_ylim(ylim)
+        ax.legend(loc="upper center", bbox_to_anchor=(0.5, 0.94), ncol=2,
+                  fontsize=6.5, framealpha=1.0, handlelength=1.5,
+                  columnspacing=1.0).set_zorder(10)
+        open_frame(ax)
+        annotate_ax(ax, ylim, thresholds=False)
 
-    # ── Panel 2: CoastSat vs CASCADE LRR — Period 2 ───────────────────────────
-    ax = axes[1]
-    ax.plot(domains, cs_p2,   "o-", ms=3, lw=1.0, color="#b2182b",
-            label="CoastSat LRR (raw)", zorder=3, alpha=0.55)
-    ax.plot(domains, cs_p2_smooth, "-", lw=1.8, color="#762a83",
-            label=f"CoastSat LOESS-smoothed (D{GROIN_EXCLUDE_THROUGH_DOMAIN+1}+)",
-            zorder=4)
-    ax.plot(domains, casc_p2, "s-", ms=3, lw=1.0, color="#2166ac",
-            label="CASCADE base LRR", zorder=3, alpha=0.8)
-    ax.axvline(GROIN_EXCLUDE_THROUGH_DOMAIN + 0.5, color="#762a83",
-               lw=0.8, ls=":", alpha=0.7, zorder=2)
-    ax.set_ylabel("LRR  (m/yr)", fontsize=FONT_LABEL)
-    ax.set_title(f"Period 2  (2004–2024)  |  CoastSat vs CASCADE base run  |  "
-                 f"rate smoothing excludes D1-{GROIN_EXCLUDE_THROUGH_DOMAIN} (groin)",
-                 fontsize=FONT_TITLE, loc="left", pad=3)
-    ylim = (min(np.nanmin([cs_p2, cs_p2_smooth, casc_p2])*1.2, -3),
-            max(np.nanmax([cs_p2, cs_p2_smooth, casc_p2])*1.2,  3))
-    ax.set_ylim(ylim); ax.legend(fontsize=FONT_LEGEND, loc="upper center")
-    ax.tick_params(labelsize=FONT_TICK)
-    annotate_ax(ax, ylim)
+    resid_panels = (
+        (2, axes[2], "1984\u20132004", raw_p1, smooth_p1, C_1984, C_1984_FILL,
+         "correction_warranted_p1", FROZEN_ZONE_DOMAINS[1984]),
+        (3, axes[3], "2004\u20132024", raw_p2, smooth_p2, C_1997, C_1997_FILL,
+         "correction_warranted_p2", FROZEN_ZONE_DOMAINS[2004]),
+    )
+    for i, ax, label, raw, smooth, colour, fill, column, frozen in resid_panels:
+        ax.bar(domains, raw, width=0.7, color=C["BASE_FILL"], zorder=2,
+               label="residual from the unsmoothed rates")
+        ax.plot(domains, smooth, "-", lw=1.6, color=colour, zorder=3,
+                label="residual that drives the correction")
+        # Shade warranted zones, distinguishing APPLIED from WITHHELD.
+        # correction_warranted_* is deliberately left unmasked so the metrics
+        # CSV keeps the diagnosis for every domain -- but a domain outside
+        # FROZEN_ZONE_DOMAINS is diagnosed and NOT corrected, and shading the
+        # two alike would tell the reader a correction was applied where none
+        # was. The withheld class is hatched rather than given a third
+        # saturated colour: it is secondary to both.
+        sig = results[column].values
+        for k, dom in enumerate(domains):
+            if not sig[k]:
+                continue
+            if dom in frozen and dom not in GROIN_RESERVED_DOMAINS:
+                ax.axvspan(dom - 0.5, dom + 0.5, color=fill, alpha=0.5, lw=0,
+                           zorder=0)
+            else:
+                ax.axvspan(dom - 0.5, dom + 0.5, facecolor="none",
+                           edgecolor=C["BASE"], hatch="///", linewidth=0.0,
+                           alpha=0.6, zorder=0)
+        ax.set_ylabel("residual (m/yr)\nobserved \u2212 modelled")
+        _title(ax, i, f"residual, {label}")
+        all_vals = np.concatenate([raw[~np.isnan(raw)],
+                                   smooth[~np.isnan(smooth)]])
+        lo = min(np.nanmin(all_vals) * 1.2, -3)
+        hi = max(np.nanmax(all_vals) * 1.2, 3)
+        ylim = (lo, hi + 0.22 * (hi - lo))    # headroom for the legend
+        ax.set_ylim(ylim)
+        handles, _labels = ax.get_legend_handles_labels()
+        handles += [mpatches.Patch(facecolor=fill, alpha=0.5, edgecolor="none",
+                                   label="correction applied"),
+                    mpatches.Patch(facecolor="none", edgecolor=C["BASE"],
+                                   hatch="///", label="diagnosed, withheld")]
+        ax.legend(handles=handles, loc="upper center",
+                  bbox_to_anchor=(0.5, 0.94), ncol=2, fontsize=6.5,
+                  framealpha=1.0, handlelength=1.5,
+                  columnspacing=1.0).set_zorder(10)
+        open_frame(ax)
+        annotate_ax(ax, ylim)
 
-    # ── Panel 3: Raw vs smoothed-rate residual — Period 1 ────────────────────
-    ax = axes[2]
-    ax.bar(domains, raw_p1, width=0.7, color="#d9d9d9", alpha=0.6,
-           label="Raw residual (unsmoothed both sides)", zorder=2)
-    ax.plot(domains, smooth_p1, "-", lw=2.0, color="#b2182b",
-            label="Residual (from smoothed rate)", zorder=3)
-    # Shade warranted zones, distinguishing APPLIED from WITHHELD.
-    # correction_warranted_* is deliberately left unmasked so the metrics CSV
-    # keeps the diagnosis for every domain -- but a domain outside
-    # FROZEN_ZONE_DOMAINS is diagnosed and NOT corrected, and shading the two
-    # alike would tell the reader a correction was applied where none was.
-    sig = results["correction_warranted_p1"].values
-    for i, dom in enumerate(domains):
-        if not sig[i]:
-            continue
-        if dom in FROZEN_ZONE_DOMAINS[1984] and dom not in GROIN_RESERVED_DOMAINS:
-            ax.axvspan(dom-0.5, dom+0.5, color="#b2182b", alpha=0.12, zorder=0)
-        else:
-            ax.axvspan(dom-0.5, dom+0.5, facecolor="none", edgecolor="#777777",
-                       hatch="///", linewidth=0.0, alpha=0.55, zorder=0)
-    ax.set_ylabel("Residual  (m/yr)\nCoastSat − CASCADE", fontsize=FONT_LABEL)
-    ax.set_title(f"Period 1 residual  |  solid = corrected;  hatched = diagnosed but WITHHELD (outside the frozen zone set, or reserved for the groin)  "
-                 f"(|residual| > {SIGNIFICANCE_THRESHOLD} m/yr, ≥{MIN_ZONE_WIDTH} domains wide)",
-                 fontsize=FONT_TITLE, loc="left", pad=3)
-    all_vals = np.concatenate([raw_p1[~np.isnan(raw_p1)],
-                               smooth_p1[~np.isnan(smooth_p1)]])
-    ylim = (min(np.nanmin(all_vals)*1.2, -3), max(np.nanmax(all_vals)*1.2, 3))
-    ax.set_ylim(ylim); ax.legend(fontsize=FONT_LEGEND, loc="upper center")
-    ax.tick_params(labelsize=FONT_TICK)
-    annotate_ax(ax, ylim)
-
-    # ── Panel 4: Raw vs smoothed-rate residual — Period 2 ────────────────────
-    ax = axes[3]
-    ax.bar(domains, raw_p2, width=0.7, color="#d9d9d9", alpha=0.6,
-           label="Raw residual (unsmoothed both sides)", zorder=2)
-    ax.plot(domains, smooth_p2, "-", lw=2.0, color="#2166ac",
-            label="Residual (from smoothed rate)", zorder=3)
-    # Shade warranted zones, distinguishing APPLIED from WITHHELD.
-    # correction_warranted_* is deliberately left unmasked so the metrics CSV
-    # keeps the diagnosis for every domain -- but a domain outside
-    # FROZEN_ZONE_DOMAINS is diagnosed and NOT corrected, and shading the two
-    # alike would tell the reader a correction was applied where none was.
-    sig = results["correction_warranted_p2"].values
-    for i, dom in enumerate(domains):
-        if not sig[i]:
-            continue
-        if dom in FROZEN_ZONE_DOMAINS[2004] and dom not in GROIN_RESERVED_DOMAINS:
-            ax.axvspan(dom-0.5, dom+0.5, color="#2166ac", alpha=0.12, zorder=0)
-        else:
-            ax.axvspan(dom-0.5, dom+0.5, facecolor="none", edgecolor="#777777",
-                       hatch="///", linewidth=0.0, alpha=0.55, zorder=0)
-    ax.set_ylabel("Residual  (m/yr)\nCoastSat − CASCADE", fontsize=FONT_LABEL)
-    ax.set_title(f"Period 2 residual  |  solid = corrected;  hatched = diagnosed but WITHHELD (outside the frozen zone set, or reserved for the groin)",
-                 fontsize=FONT_TITLE, loc="left", pad=3)
-    all_vals = np.concatenate([raw_p2[~np.isnan(raw_p2)],
-                               smooth_p2[~np.isnan(smooth_p2)]])
-    ylim = (min(np.nanmin(all_vals)*1.2, -3), max(np.nanmax(all_vals)*1.2, 3))
-    ax.set_ylim(ylim); ax.legend(fontsize=FONT_LEGEND, loc="upper center")
-    ax.tick_params(labelsize=FONT_TICK)
-    annotate_ax(ax, ylim)
-
-    # ── Panel 5: Strategy strip ───────────────────────────────────────────────
+    # -- Panel 5: what each domain was given ---------------------------------
     ax = axes[4]
-    # Use .get() with strip of * so any starred variant falls back gracefully
-    strat_colors = {"zero": "#ffffff", "stable": "#4dac26",
-                    "shifting": "#d73027", "locked": "#999999"}
-    for i, dom in enumerate(domains):
+    strat_colors = {"zero": "white", "stable": C["REF"],
+                    "shifting": C["ACCENT"], "locked": C["BASE"],
+                    "groin-reserved": C["BASE_FILL"]}
+    for dom in domains:
         strat = results.loc[dom, "strategy"]
-        ax.bar(dom, 1, width=0.9, color=strat_colors.get(strat.rstrip("*"), "#cccccc"),
-               edgecolor="#cccccc", linewidth=0.3, zorder=2)
+        ax.bar(dom, 1, width=0.94,
+               color=strat_colors.get(strat.rstrip("*"), C["BASE_FILL"]),
+               edgecolor=C["GRID"], linewidth=0.3, zorder=2)
     ax.set_yticks([])
-    ax.set_ylabel("BE strategy", fontsize=FONT_LABEL)
-    ax.set_xlabel("CASCADE domain  (1 = Buxton  →  90 = Rodanthe)", fontsize=FONT_LABEL)
-    ax.set_ylim(0, 1); ax.tick_params(labelsize=FONT_TICK)
-    ax.axvspan(ANN_WIMBLE_SHOALS[0]-0.5, ANN_WIMBLE_SHOALS[1]+0.5,
-               color=ANN_C_WIMBLE, alpha=0.12, zorder=0)
-    for name, (d0, d1) in ANN_TOWN_SPANS.items():
-        ax.axvspan(d0-0.5, d1+0.5, color=ANN_C_TOWN, alpha=0.18, zorder=0)
-
+    ax.set_ylabel("strategy")
+    ax.set_xlabel(DOMAIN_AXIS_LABEL)
+    ax.set_ylim(0, 1)
+    ax.set_xlim(0.5, NUM_REAL_DOMAINS + 0.5)
+    town_bands(ax, where="top", strip=0.30, fontsize=FONT_STRIP)
+    _title(ax, 4, "correction strategy")
     patches = [
-        mpatches.Patch(color="#ffffff", ec="#888", label="No correction (within noise)"),
-        mpatches.Patch(color="#4dac26", label="Stable correction (single value P1=P2)"),
-        mpatches.Patch(color="#d73027", label="Shifting (period-specific + forecast scenarios)"),
+        mpatches.Patch(facecolor="white", ec=C["BASE"], label="none (within noise)"),
+        mpatches.Patch(color=C["REF"], label="one value for both periods"),
+        mpatches.Patch(color=C["ACCENT"], label="period-specific"),
+        mpatches.Patch(color=C["BASE"], label="boundary domain, solved separately"),
+        mpatches.Patch(color=C["BASE_FILL"], label="reserved for the groin"),
     ]
-    ax.legend(handles=patches, fontsize=FONT_LEGEND, loc="upper right", framealpha=0.9)
+    ax.legend(handles=patches, loc="upper center",
+              bbox_to_anchor=(0.5, -0.70), ncol=5, fontsize=7, frameon=False)
 
-    fig.suptitle(
-        "Hatteras Island  |  BE source/sink zone identification\n"
-        f"Significance threshold: ±{SIGNIFICANCE_THRESHOLD} m/yr  ·  "
-        f"Min zone width: {MIN_ZONE_WIDTH} domains  ·  "
-        f"Shift threshold: {SHIFT_THRESHOLD} m/yr",
-        fontsize=FONT_SUPTITLE, fontweight="bold")
-    fig.tight_layout(rect=[0, 0, 1, 0.97])
-    fig.savefig(out_path, dpi=180, bbox_inches="tight")
+    caption(fig, (
+        "Background-erosion zone identification along Hatteras Island; domain 1 "
+        "is at Cape Point and domain 90 at Pea Island, 500 m per domain. "
+        "(a, b) the CoastSat linear regression rate at each domain, unsmoothed "
+        "and after the LOESS smoothing applied north of domain "
+        f"{GROIN_EXCLUDE_THROUGH_DOMAIN} (domains 1\u2013"
+        f"{GROIN_EXCLUDE_THROUGH_DOMAIN} pass through unsmoothed because the "
+        "Buxton groin dominates them), against the CASCADE base run. "
+        "(c, d) the residual, observed minus modelled: the grey bars use the "
+        "unsmoothed rates on both sides and are shown for comparison only, "
+        "while the coloured line is the residual the calibration acts on. "
+        "Shaded domains met the significance test "
+        f"(|residual| > {SIGNIFICANCE_THRESHOLD} m/yr over at least "
+        f"{MIN_ZONE_WIDTH} adjacent domains); hatched domains met it but lie "
+        "outside the frozen zone set or inside the groin's reserved footprint "
+        "(domains 5\u20137) and were left uncorrected. "
+        "(e) what each domain was given: one value for both periods where the "
+        f"two differ by less than {SHIFT_THRESHOLD} m/yr, period-specific "
+        "values otherwise. Village spans are shaded along the top edge and the "
+        "Wimble Shoals reach along the bottom; the piers and the groin are "
+        "marked with dashed rulers. A diagnostic figure, not a manuscript one."))
+
+    save(fig, out_path)
     plt.close(fig)
-    print(f"  Diagnostic figure saved → {out_path}")
+    print(f"  Diagnostic figure saved \u2192 {out_path}")
 
 
 # ============================================================
@@ -1195,106 +1225,121 @@ def plot_diagnostic(cs_p1, cs_p2, casc_p1, casc_p2,
 
 def plot_be_rates(results, out_path):
     domains = np.arange(1, NUM_REAL_DOMAINS + 1)
-    fig, axes = plt.subplots(3, 1, figsize=(18, 12), sharex=True,
-                             gridspec_kw={"height_ratios": [4, 4, 1.5]})
+    fig, axes = plt.subplots(3, 1, figsize=figsize("double", height=6.6),
+                             sharex=True, constrained_layout=True,
+                             gridspec_kw={"height_ratios": [4, 4, 1.2]})
 
-    # ── Panel 1: Hindcast BE rates ────────────────────────────────────────────
+    # -- Panel 1: the hindcast field, both periods ---------------------------
     ax = axes[0]
     be_p1 = results["be_hindcast_p1"].values
     be_p2 = results["be_hindcast_p2"].values
-    w = 0.38
-    ax.bar(domains - w/2, be_p1, width=w, color="#4575b4", alpha=0.85,
-           label="P1 hindcast BE  (1984–2004)", zorder=2)
-    ax.bar(domains + w/2, be_p2, width=w, color="#d73027", alpha=0.85,
-           label="P2 hindcast BE  (2004–2024)", zorder=2)
-    ylim = (min(np.nanmin([be_p1, be_p2])*1.3, -2),
-            max(np.nanmax([be_p1, be_p2])*1.3,  2))
+    w = 0.40
+    ax.bar(domains - w / 2, be_p1, width=w, color=C_1984, zorder=3,
+           label="1984\u20132004")
+    ax.bar(domains + w / 2, be_p2, width=w, color=C_1997, zorder=3,
+           label="2004\u20132024")
+    ylim = (min(np.nanmin([be_p1, be_p2]) * 1.3, -2),
+            max(np.nanmax([be_p1, be_p2]) * 1.3, 2))
     ax.set_ylim(ylim)
-    ax.legend(fontsize=FONT_LEGEND, loc="lower center", ncol=2,
-              frameon=True, framealpha=0.9)
-    ax.set_ylabel("BE rate  (m/yr)\n+ = accretion source\n− = erosion sink", fontsize=FONT_LABEL)
-    ax.set_title("Hindcast BE rates  |  only applied where physically warranted",
-                 fontsize=FONT_TITLE, loc="left", pad=3)
-    ax.tick_params(labelsize=FONT_TICK)
-    annotate_ax(ax, ylim)
+    ax.set_ylabel("background erosion\nrate (m/yr)")
+    _title(ax, 0, "hindcast field")
+    open_frame(ax)
+    # Wimble Shoals is named in panel (c); a third grey band here would be one
+    # too many. The significance band belongs to the residual, not to these
+    # rates, so it is off as well.
+    annotate_ax(ax, ylim, wimble=False, thresholds=False, label_at="top")
 
-    # Mark shifting zones
-    for i, dom in enumerate(domains):
-        if results.loc[dom, "strategy"] == "shifting":
-            ax.axvspan(dom-0.5, dom+0.5, color="#ff7f00", alpha=0.10, zorder=0)
+    # Domains whose correction differs between the periods, as a strip at the
+    # foot: as a full-height wash it covered half the panel and swamped the
+    # bars it was meant to qualify.
+    shifting = [d for d in domains if results.loc[d, "strategy"] == "shifting"]
+    town_bands(ax, where="bottom", strip=0.035, label=False,
+               shade=C["ACCENT_FILL"],
+               spans={f"_{d0}": (d0, d1) for d0, d1 in _contiguous(shifting)})
+    handles, _lbl = ax.get_legend_handles_labels()
+    handles.append(mpatches.Patch(color=C["ACCENT_FILL"],
+                                  label="value differs between the periods"))
+    ax.legend(handles=handles, loc="lower center", ncol=3, fontsize=7,
+              framealpha=1.0).set_zorder(10)
 
-    # ── Panel 2: Forecast scenario BE rates ───────────────────────────────────
+    # -- Panel 2: the three forecast scenarios -------------------------------
     ax = axes[1]
     be_cont = results["be_forecast_continue"].values
-    be_rev  = results["be_forecast_revert"].values
+    be_rev = results["be_forecast_revert"].values
     be_neut = results["be_forecast_neutral"].values
 
-    ax.fill_between(domains,
-                    np.minimum(be_rev, be_cont),
-                    np.maximum(be_rev, be_cont),
-                    color="#aaaaaa", alpha=0.30, label="Scenario range (revert↔continue)")
-    ax.plot(domains, be_cont, "o-", ms=3, lw=1.2, color="#d73027",
-            label='Scenario "continue" (P2 state)', zorder=3)
-    ax.plot(domains, be_rev,  "s-", ms=3, lw=1.2, color="#4575b4",
-            label='Scenario "revert" (P1 state)', zorder=3, alpha=0.8)
-    ax.plot(domains, be_neut, "^-", ms=3, lw=1.0, color="#333333",
-            ls="--", label='Scenario "neutral" (mean)', zorder=3, alpha=0.7)
-
-    ylim = (min(np.nanmin([be_cont, be_rev])*1.3, -2),
-            max(np.nanmax([be_cont, be_rev])*1.3,  2))
+    ax.fill_between(domains, np.minimum(be_rev, be_cont),
+                    np.maximum(be_rev, be_cont), color=C["BASE_FILL"],
+                    lw=0, zorder=1, label="range spanned by the two")
+    ax.plot(domains, be_cont, "-", lw=1.3, color=C_1997, zorder=3,
+            label="2004\u20132024 field carried forward")
+    ax.plot(domains, be_rev, "-", lw=1.3, color=C_1984, zorder=3,
+            label="1984\u20132004 field restored")
+    ax.plot(domains, be_neut, ls=(0, (4, 3)), lw=1.0, color=INK_MUTED, zorder=4,
+            label="mean of the two")
+    ylim = (min(np.nanmin([be_cont, be_rev]) * 1.3, -2),
+            max(np.nanmax([be_cont, be_rev]) * 1.3, 2))
     ax.set_ylim(ylim)
-    ax.legend(fontsize=FONT_LEGEND, loc="lower center", ncol=4,
-              frameon=True, framealpha=0.9)
-    ax.set_ylabel("BE rate  (m/yr)", fontsize=FONT_LABEL)
-    ax.set_title("Forecast scenario BE rates  |  grey band = physical uncertainty range",
-                 fontsize=FONT_TITLE, loc="left", pad=3)
-    ax.tick_params(labelsize=FONT_TICK)
-    annotate_ax(ax, ylim)
+    ax.set_ylabel("background erosion\nrate (m/yr)")
+    _title(ax, 1, "forecast scenarios")
+    open_frame(ax)
+    annotate_ax(ax, ylim, wimble=False, thresholds=False, label_at="top")
+    ax.legend(loc="lower center", ncol=4, fontsize=7,
+              framealpha=1.0).set_zorder(10)
 
-    # ── Panel 3: Zone identification strip ────────────────────────────────────
+    # -- Panel 3: the physical zones, and where a correction was applied -----
+    # The zone strip is not a categorical colour scale: each zone is named in
+    # place, so the fill is free to carry the one thing the names cannot, which
+    # is whether the calibration actually corrected that domain. A seven-colour
+    # palette here would also collide with the vintage pair above.
     ax = axes[2]
-    zone_palette = {
-        "Cape Point / Shoal Dynamics":  "#b2182b",
-        "Buxton–Avon Transition":       "#f4a582",
-        "Avon":                         "#4393c3",
-        "Mid-island":                   "#d9d9d9",
-        "Wimble Shoals Influence":      "#E0A800",
-        "Tri-Village / Rodanthe":       "#762a83",
-        "Pea Island NWR":               "#4dac26",
-    }
-    for i, dom in enumerate(domains):
-        zone  = results.loc[dom, "physical_zone"]
-        strat = results.loc[dom, "strategy"]
-        color = zone_palette.get(zone, "#eeeeee")
-        alpha = 0.85 if strat != "zero" else 0.30
-        ax.bar(dom, 1, width=0.9, color=color, alpha=alpha,
-               edgecolor="white", linewidth=0.3, zorder=2)
-
+    for dom in domains:
+        corrected = results.loc[dom, "strategy"] != "zero"
+        ax.bar(dom, 1, width=1.0,
+               color=C["ACCENT_FILL"] if corrected else C["BASE_FILL"],
+               edgecolor="white", linewidth=0.25, zorder=2)
+    for _d0, d1, _name in find_zone_runs(results["physical_zone"], domains):
+        ax.axvline(d1 + 0.5, color="white", lw=1.4, zorder=3)
     ax.set_yticks([])
-    ax.set_ylabel("Physical zone", fontsize=FONT_LABEL)
-    ax.set_xlabel("CASCADE domain  (1 = Buxton  →  90 = Rodanthe)", fontsize=FONT_LABEL)
-    ax.set_ylim(0, 1); ax.tick_params(labelsize=FONT_TICK)
+    ax.set_ylabel("physical zone")
+    ax.set_xlabel(DOMAIN_AXIS_LABEL)
+    ax.set_ylim(0, 1)
+    ax.set_xlim(0.5, NUM_REAL_DOMAINS + 0.5)
+    _title(ax, 2, "physical zones")
+    ax.legend(handles=[
+        mpatches.Patch(color=C["ACCENT_FILL"], label="correction applied"),
+        mpatches.Patch(color=C["BASE_FILL"], label="left at zero")],
+        loc="upper center", bbox_to_anchor=(0.5, -0.70), ncol=2, fontsize=7,
+        frameon=False)
 
-    ax.legend(handles=[mpatches.Patch(color="#aaaaaa", alpha=0.3,
-                                      label="Faded = no correction applied")],
-              fontsize=FONT_ANNOT, loc="lower right", framealpha=0.85)
+    caption(fig, (
+        "The calibrated background-erosion field and the forecast scenarios "
+        "built from it; domain 1 is at Cape Point and domain 90 at Pea Island, "
+        "500 m per domain. A positive rate is a sediment source, a negative "
+        "one a sink. (a) the hindcast field for each period, applied only where "
+        "the residual was significant, spatially coherent and attributable to a "
+        "named process; the purple wash marks the domains whose value differs "
+        f"between the periods by more than {SHIFT_THRESHOLD} m/yr. (b) three "
+        "ways of carrying the field into the future -- the 2004\u20132024 field "
+        "continued, the 1984\u20132004 field restored, and the mean of the two "
+        "-- with the grey band showing the spread between the first two, which "
+        "is the physical uncertainty the choice carries. (c) the physical zones "
+        "named once each in place, shaded where a correction was applied and "
+        "left pale where the domain keeps a rate of zero. Village spans are "
+        "shaded along the top edge of the upper panels and the Wimble Shoals "
+        "reach along the bottom; the Avon and Rodanthe piers and the Buxton "
+        "groin are marked with dashed rulers."))
 
-    fig.suptitle(
-        "Hatteras Island  |  Final BE source/sink rates\n"
-        "Corrections applied only where residual is significant and physically motivated",
-        fontsize=FONT_SUPTITLE, fontweight="bold")
-    fig.tight_layout(rect=[0, 0, 1, 0.97])
-
-    # Direct in-place zone labels, fitted to each zone's own width — done
-    # AFTER tight_layout so the pixel-width measurements used to size each
-    # label reflect the figure's final axes geometry, not a stale pre-layout
-    # one.
+    # Direct in-place zone labels, fitted to each zone's own width -- drawn
+    # after a draw() so the pixel-width measurements used to size each label
+    # reflect the figure's final axes geometry, not a stale pre-layout one.
+    fig.canvas.draw()
     zone_runs = find_zone_runs(results["physical_zone"], domains)
     label_zone_runs(ax, fig, zone_runs)
 
-    fig.savefig(out_path, dpi=180, bbox_inches="tight")
+    save(fig, out_path)
     plt.close(fig)
-    print(f"  BE rates figure saved → {out_path}")
+    print(f"  BE rates figure saved \u2192 {out_path}")
 
 
 # ============================================================
@@ -1350,6 +1395,7 @@ def print_be_dicts(results, txt_path=None):
 
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(FIG_DIR, exist_ok=True)
 
     def as_array(series):
         return np.array([series.get(d, np.nan)
@@ -1419,11 +1465,11 @@ def main():
         cs_p1_smooth, cs_p2_smooth,
         raw_p1, raw_p2, smooth_p1, smooth_p2,
         results,
-        os.path.join(OUTPUT_DIR, "fig_be_diagnostic.png"))
+        os.path.join(FIG_DIR, "fig_be_diagnostic.png"))
 
     plot_be_rates(
         results,
-        os.path.join(OUTPUT_DIR, "fig_be_rates.png"))
+        os.path.join(FIG_DIR, "fig_be_rates.png"))
 
     # ── Print dicts ───────────────────────────────────────────────────────────
     print("\nDone.")

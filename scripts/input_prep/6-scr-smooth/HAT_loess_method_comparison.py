@@ -118,64 +118,16 @@ COMPARE_WINDOWS_KM = [2.5, 3.5, 5.0]   # 5, 7, 10 domains
 # against, not because this script showed the same excursion.
 SKIP_SOUTHERN_DOMAINS = 10
 
-# ── Geographic annotations — domain space ────────────────────
-TOWN_SPANS = {
-    "Buxton":      ( 7,  8),
-    "Avon":        (21, 31),
-    "Tri-Village": (68, 83),
-}
-VILLAGE_LINES = {
-    "Salvo":    69,
-    "Waves":    74,
-    "Rodanthe": 80,
-}
-PIERS  = {"Avon Pier": 26, "Rodanthe Pier": 79}
-GROINS = {"Buxton Groin": 6}
-WIMBLE_SHOALS = (60, 74)
-
-# ── Geographic annotations — transect / along-coast space ────
-# The same features as above, in metres, so the transect-space figures carry
-# the reference marks their legend already advertises. Left as None these were
-# silently skipped and transect_overview.png shipped a legend for annotations
-# it never drew.
+# ── Geographic annotations ──────────────────────────────
+# This block used to hold a copy of the town spans, the village centres, the
+# piers, the groins and the Wimble Shoals zone, in domain units and again in
+# metres, with its own colours -- a second description of the island to keep
+# in step with scripts/hatteras_site_config.py. It is gone: the village
+# shading now comes from the house helper town_bands() and everything else is
+# read from HATTERAS_ANNOTATIONS. See ANNOTATION HELPERS below.
 #
-# Derived from the domain-space values, not measured independently, using the
-# two conventions this script already uses:
-#   - domain d occupies [(d-1)*500, d*500)      (load_transect_csv, ~line 306)
-#   - a domain plots at its band centre (d-0.5)*500   (~line 671)
-# So an inclusive span lo..hi runs ((lo-1)*500, hi*500), and a point feature at
-# domain d sits at (d-0.5)*500. Re-derive these if DOMAIN_SPACING_M changes.
-T_TOWN_SPANS = {
-    "Buxton":      ( 3000,  4000),   # domains  7-8
-    "Avon":        (10000, 15500),   # domains 21-31
-    "Tri-Village": (33500, 41500),   # domains 68-83
-}
-T_VILLAGE_LINES = {"Salvo": 34250, "Waves": 36750, "Rodanthe": 39750}
-T_PIERS         = {"Avon Pier": 12750, "Rodanthe Pier": 39250}
-T_GROINS        = {"Buxton Groin": 2750}   # domain 6; see note below
-T_WIMBLE_SHOALS = (29500, 37000)           # domains 60-74
-
-# NOTE: GROINS above puts the Buxton groin at domain 6, so its band centre is
-# 2750 m. The hindcast places it at GIS 5.5 -- the boundary between domains 5
-# and 6, i.e. 2500 m. Translated as-configured rather than silently re-sited;
-# the 250 m gap is a question for the domain-space value, not for this one.
-
-# ── Annotation colors ────────────────────────────────────────
-C_TOWN_SPAN    = "#90AFC5"
-C_WIMBLE       = "#E0A800"
-C_VILLAGE_LINE = "0.40"
-C_PIER         = "#1565C0"
-C_GROIN        = "#B71C1C"
-C_SKIP_ZONE    = "#6A8CAF"   # band over domains whose LOESS is withheld
-
-# Town-span labels are drawn at axes y=0.94 (see _add_annotations); the
-# per-panel window label starts below them so the two cannot overprint.
-PANEL_LABEL_Y = 0.88
-
-# ── Period colors ────────────────────────────────────────────
-C_CS_1984 = "#1F4E79"
-C_CS_2004 = "#833C00"
-C_WINDOWS  = ["#0072B2", "#E69F00", "#CC79A7"]  # blue=5dom, amber=7dom, pink=10dom
+# The colours those figures use are set after the imports, with the house
+# style, since they are taken from it.
 
 # ── Output ───────────────────────────────────────────────────
 # Products live under data/hatteras_init/<stage>/, beside every other
@@ -206,19 +158,38 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 import warnings
 warnings.filterwarnings("ignore")
 
+# The house figure style and the site's annotation config are siblings in
+# scripts/, which is not on sys.path when this file is run from its own folder.
+sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
+from hat_figure_style import (            # noqa: E402
+    C, C_1984, C_1997, DOMAIN_AXIS_LABEL, INK, INK_MUTED, _title, apply_style,
+    caption, figsize, open_frame, save, town_bands)
+from hatteras_site_config import HATTERAS_ANNOTATIONS as ANN   # noqa: E402
+
 # Subfolders are created automatically in main()
 
 # ============================================================
 # STYLE
 # ============================================================
-plt.rcParams.update({
-    "font.family": "Arial",
-    "axes.spines.top": False,
-    "axes.spines.right": False,
-    "axes.grid": True,
-    "grid.alpha": 0.25,
-    "grid.linestyle": ":",
-})
+# One typographic and colour standard for every Hatteras figure, in
+# scripts/hat_figure_style.py. This script used to set its own rcParams and
+# name its own hex colours; both are gone.
+apply_style()
+
+# Two periods drawn together are the house vintage pair: the earlier one red,
+# the later one blue.
+C_PERIOD_1984 = C_1984
+C_PERIOD_2004 = C_1997
+
+# The band over the domains whose LOESS is withheld, and the shade
+# town_bands() uses for a village span (repeated here only so the legend can
+# show a patch that matches it).
+C_SKIP_ZONE = C["WATER"]
+TOWN_SHADE = "0.94"
+
+# Three LOESS windows are compared on the sweep figures: grey, purple and
+# green from the house palette, three hues that also separate on luminance.
+C_WINDOWS = [C["BASE"], C["ACCENT"], C["REF"]]
 
 # ============================================================
 # FRAC / WINDOW HELPERS
@@ -442,76 +413,96 @@ def aggregate_to_domains(t_df):
 # ============================================================
 # ANNOTATION HELPERS
 # ============================================================
+# Where the villages, piers, groins and shoal zones are is settled in
+# scripts/hatteras_site_config.py (HATTERAS_ANNOTATIONS). This script used to
+# carry its own copy of the spans, the village centres and their colours, so
+# the island had two descriptions of itself that had to be kept in step. The
+# village shading now comes from the house helper town_bands(); only the marks
+# town_bands does not draw -- shoal zones, piers, groins -- are added here, at
+# the positions and in the colours the site config gives them.
 
-def _add_annotations(ax, town_spans, wimble, village_lines, piers, groins):
-    """Draw geographic reference annotations. Any position set to None is skipped."""
+# Sentences the figures used to carry on the canvas. They belong in a caption.
+CAP_ENDPOINTS = ("Domain 1 is at Cape Point in the south and domain 90 at Pea "
+                 "Island in the north; each domain is 500 m of shoreline.")
+CAP_MARKS = ("Grey bands name the village spans, amber bands the Avon and "
+             "Wimble shoal zones, dash-dot lines the Avon and Rodanthe piers "
+             "and the dotted line the Buxton groin.")
+CAP_GUARD = ("The LOESS curve is withheld over the southernmost "
+             f"{SKIP_SOUTHERN_DOMAINS} domains (shaded), where a local linear "
+             "fit extrapolates rather than smooths and Oregon Inlet dominates; "
+             "the hindcast applies the same guard."
+             if SKIP_SOUTHERN_DOMAINS > 0 else "")
+
+
+def _identity(d):
+    return d
+
+
+def _domain_to_m(d):
+    """A GIS domain number as along-coast metres. Domain d occupies
+    [(d-1)*500, d*500) m -- the convention load_transect_csv uses -- so its
+    centre is (d-0.5)*500 and the edges of a span lo..hi fall out of the same
+    call. Nothing about the transect-space figures is measured separately."""
+    return (d - 0.5) * DOMAIN_SPACING_M
+
+
+def _reference_marks(ax, to_x=_identity, label_shoals=True):
+    """Shoal zones, piers and groins from the site config. `to_x` maps a GIS
+    domain number onto this panel's x units, so the same positions serve the
+    domain-space and the along-coast figures."""
     trans = blended_transform_factory(ax.transData, ax.transAxes)
-
-    lo, hi = wimble
-    if lo is not None and hi is not None:
-        ax.axvspan(lo, hi, color=C_WIMBLE, alpha=0.12, zorder=0)
-        ax.text((lo + hi) / 2, 0.03, "Wimble\nShoals",
-                transform=trans, fontsize=7, ha="center",
-                color=C_WIMBLE, style="italic")
-
-    for name, (lo, hi) in town_spans.items():
-        if lo is None or hi is None:
-            continue
-        ax.axvspan(lo, hi, color=C_TOWN_SPAN, alpha=0.18, zorder=0)
-        ax.text((lo + hi) / 2, 0.94, name,
-                transform=trans, fontsize=7.5, ha="center",
-                color="#2C5F80", fontweight="bold")
-
-    for name, pos in village_lines.items():
-        if pos is None:
-            continue
-        ax.axvline(pos, color=C_VILLAGE_LINE, lw=0.8, ls="--", zorder=2)
-        ax.text(pos, 0.88, name, transform=trans, fontsize=6.5,
-                ha="center", color=C_VILLAGE_LINE, rotation=90, va="top")
-
-    for name, pos in piers.items():
-        if pos is None:
-            continue
-        ax.axvline(pos, color=C_PIER, lw=1.0, ls="-.", zorder=2)
-        ax.text(pos, 0.76, name, transform=trans, fontsize=6.5,
-                ha="center", color=C_PIER, rotation=90, va="top")
-
-    for name, pos in groins.items():
-        if pos is None:
-            continue
-        ax.axvline(pos, color=C_GROIN, lw=1.0, ls=":", zorder=2)
-        ax.text(pos, 0.76, name, transform=trans, fontsize=6.5,
-                ha="center", color=C_GROIN, rotation=90, va="top")
+    for name, (lo, hi) in ANN.shoal_zones.items():
+        ax.axvspan(to_x(lo - 0.5), to_x(hi + 0.5), color=ANN.color_shoal,
+                   alpha=0.10, lw=0, zorder=0)
+        if label_shoals:
+            ax.text(to_x((lo + hi) / 2.0), 0.02, name, transform=trans,
+                    ha="center", va="bottom", fontsize=7, style="italic",
+                    color=INK_MUTED, zorder=1, clip_on=True)
+    for dom, _lbl_y in ANN.piers.values():
+        ax.axvline(to_x(dom), color=ANN.color_pier, lw=0.9, ls="-.",
+                   alpha=0.85, zorder=2)
+    for dom in ANN.groins.values():
+        ax.axvline(to_x(dom), color=ANN.color_groin, lw=0.9, ls=":",
+                   alpha=0.85, zorder=2)
 
 
 def _shade_boundary_zone(ax, hi):
     """Band from the start of the reach to `hi`, in whatever x-units the axis uses."""
     if SKIP_SOUTHERN_DOMAINS > 0:
-        ax.axvspan(ax.get_xlim()[0], hi, facecolor=C_SKIP_ZONE, alpha=0.10,
+        ax.axvspan(ax.get_xlim()[0], hi, facecolor=C_SKIP_ZONE, alpha=0.30,
                    lw=0.0, zorder=0)
 
 
-def add_domain_annotations(ax):
-    _add_annotations(ax, TOWN_SPANS, WIMBLE_SHOALS, VILLAGE_LINES, PIERS, GROINS)
+def add_domain_annotations(ax, label_shoals=True):
+    _reference_marks(ax, label_shoals=label_shoals)
+    town_bands(ax, strip=0.085)
     _shade_boundary_zone(ax, SKIP_SOUTHERN_DOMAINS + 0.5)
 
 
-def add_transect_annotations(ax):
-    _add_annotations(ax, T_TOWN_SPANS, T_WIMBLE_SHOALS,
-                     T_VILLAGE_LINES, T_PIERS, T_GROINS)
+def add_transect_annotations(ax, label_shoals=True):
+    _reference_marks(ax, to_x=_domain_to_m, label_shoals=label_shoals)
+    town_bands(ax, strip=0.085,
+               spans={name: (_domain_to_m(lo - 0.5), _domain_to_m(hi + 0.5))
+                      for name, (lo, hi) in ANN.town_spans.items()})
     # Domains 1..N occupy [0, N*500) m, so the cut is at N * DOMAIN_SPACING_M.
     _shade_boundary_zone(ax, SKIP_SOUTHERN_DOMAINS * DOMAIN_SPACING_M)
 
 
 def annotation_legend_handles():
     return [
-        Patch(color=C_TOWN_SPAN,  alpha=0.4,  label="Community span"),
-        Patch(color=C_WIMBLE,     alpha=0.25, label="Wimble Shoals influence"),
-        Line2D([0], [0], color=C_VILLAGE_LINE, lw=1, ls="--", label="Village center"),
-        Line2D([0], [0], color=C_PIER,         lw=1, ls="-.", label="Pier"),
-        Line2D([0], [0], color=C_GROIN,        lw=1, ls=":",  label="Groin"),
-    ] + ([Patch(color=C_SKIP_ZONE, alpha=0.25, label="LOESS withheld (Oregon Inlet)")]
+        Patch(facecolor=TOWN_SHADE, edgecolor="none", label="village span"),
+        Patch(facecolor=ANN.color_shoal, alpha=0.30, edgecolor="none",
+              label="shoal zone"),
+        Line2D([0], [0], color=ANN.color_pier, lw=1.0, ls="-.", label="pier"),
+        Line2D([0], [0], color=ANN.color_groin, lw=1.0, ls=":", label="groin"),
+    ] + ([Patch(facecolor=C_SKIP_ZONE, alpha=0.40, edgecolor="none",
+                label="LOESS withheld")]
          if SKIP_SOUTHERN_DOMAINS > 0 else [])
+
+
+def _outside_legend(fig, handles, ncol=4):
+    fig.legend(handles=handles, loc="outside lower center", ncol=ncol,
+               frameon=False, fontsize=7.5)
 
 
 def draw_raw_in_guard_zone(ax, df, color, label=None, col="cs_lrr"):
@@ -527,24 +518,35 @@ def draw_raw_in_guard_zone(ax, df, color, label=None, col="cs_lrr"):
     z = df[df["domain"] <= SKIP_SOUTHERN_DOMAINS]
     if z.empty:
         return
-    ax.plot(z["domain"], z[col], color=color, lw=1.2, ls=":",
-            marker="o", ms=3, alpha=0.65, zorder=2, label=label)
+    ax.plot(z["domain"], z[col], color=color, lw=1.0, ls=":",
+            marker="o", ms=2.5, alpha=0.75, zorder=2, label=label)
+
+
+def _no_data(ax, period):
+    ax.text(0.5, 0.5, f"no data for {period}", transform=ax.transAxes,
+            ha="center", va="center", color=INK_MUTED)
 
 
 def style_domain_axis(ax, is_bottom=True):
     ax.set_xlim(DOMAIN_MIN - 0.5, DOMAIN_MAX + 0.5)
-    ax.axhline(0, color="k", lw=0.6, ls="--", alpha=0.4)
+    ax.axhline(0, color=INK_MUTED, lw=0.6, ls="--", zorder=1)
+    ax.grid(axis="y")
+    ax.set_axisbelow(True)
+    open_frame(ax)
     if is_bottom:
-        ax.set_xlabel("CASCADE Domain Number", fontsize=11, fontweight="bold")
+        ax.set_xlabel(DOMAIN_AXIS_LABEL)
 
 
 def style_transect_axis(ax, x_values, is_bottom=True):
     ax.set_xlim(x_values.min() - 1, x_values.max() + 1)
-    ax.axhline(0, color="k", lw=0.6, ls="--", alpha=0.4)
+    ax.axhline(0, color=INK_MUTED, lw=0.6, ls="--", zorder=1)
+    ax.grid(axis="y")
+    ax.set_axisbelow(True)
+    open_frame(ax)
     if is_bottom:
-        label = ("Along-coast Distance (m)" if TRANSECT_X_AXIS == "along_coast_m"
-                 else "Transect ID (sequential)")
-        ax.set_xlabel(label, fontsize=11, fontweight="bold")
+        ax.set_xlabel("along-coast distance (m), south to north"
+                      if TRANSECT_X_AXIS == "along_coast_m"
+                      else "transect, numbered south to north")
 
 # ============================================================
 # DOMAIN-SPACE FIGURES
@@ -552,165 +554,165 @@ def style_transect_axis(ax, x_values, is_bottom=True):
 # regardless of whether it came from load_domain_csv or aggregate_to_domains.
 # ============================================================
 
-def _domain_two_panel(d1984, d2004, show_raw, out_path, suptitle):
-    configs   = [(d1984, "1984–2004", C_CS_1984),
-                 (d2004, "2004–2024", C_CS_2004)]
-    fig, axes = plt.subplots(2, 1, figsize=(16, 10), sharex=True)
-    fig.suptitle(suptitle, fontsize=14, fontweight="bold", y=1.01)
+def _domain_two_panel(d1984, d2004, show_raw, out_path, cap):
+    configs   = [(d1984, "1984–2004", C_1984),
+                 (d2004, "2004–2024", C_1997)]
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.8),
+                             sharex=True, constrained_layout=True)
+    caption(fig, cap)
 
     for i, (ax, (df, period, color)) in enumerate(zip(axes, configs)):
         is_bottom = (i == len(configs) - 1)
+        _title(ax, i, period)
         if df is None:
-            ax.text(0.5, 0.5, f"No data — {period}",
-                    transform=ax.transAxes, ha="center", fontsize=12)
+            _no_data(ax, period)
             continue
         if show_raw:
-            ax.plot(df["domain"], df["cs_lrr"],
-                    color=color, lw=0.8, alpha=0.30, marker="o", ms=2,
-                    zorder=1, label="Raw domain LRR")
             ax.fill_between(df["domain"],
                             df["cs_lrr"] - df["cs_std"],
                             df["cs_lrr"] + df["cs_std"],
-                            color=color, alpha=0.07, zorder=0)
+                            color=color, alpha=0.12, lw=0, zorder=0,
+                            label="±1 s.d. within the domain")
+            ax.plot(df["domain"], df["cs_lrr"],
+                    color=color, lw=0.7, alpha=0.45, marker="o", ms=1.8,
+                    zorder=1,
+                    label="domain-averaged linear regression rate, unsmoothed")
         else:
             # Nothing else covers the guard zone on this figure.
-            draw_raw_in_guard_zone(ax, df, color,
-                                   label="Raw mean (LOESS withheld)")
+            draw_raw_in_guard_zone(
+                ax, df, color,
+                label="domain-averaged rate where the curve is withheld")
         ax.plot(df["domain"], df["cs_lrr_smooth"],
-                color=color, lw=2.5, zorder=3, label="LOESS smoothed")
-        ax.set_ylabel("Rate (m/yr)", fontsize=10, fontweight="bold")
-        ax.set_title(period, fontsize=11, fontweight="bold", loc="left", pad=5)
+                color=color, lw=1.8, zorder=3,
+                label=f"LOESS, {LOESS_WINDOW_KM:g} km window")
+        ax.set_ylabel("shoreline change rate (m/yr)")
         style_domain_axis(ax, is_bottom)
-        add_domain_annotations(ax)
-        handles, _ = ax.get_legend_handles_labels()
-        if is_bottom:
-            handles += annotation_legend_handles()
-        ax.legend(handles=handles, fontsize=8.5, framealpha=0.95,
-                  loc="upper center", ncol=2 if is_bottom else 1)
+        add_domain_annotations(ax, label_shoals=is_bottom)
+        if i == 0:
+            ax.legend(loc="lower left", ncol=1)
 
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=300, bbox_inches="tight")
-    plt.close()
+    _outside_legend(fig, annotation_legend_handles(), ncol=5)
+    save(fig, out_path, close=True)
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-def plot_domain_overview(d1984, d2004, out_path, suffix=""):
+def plot_domain_overview(d1984, d2004, out_path, method=""):
     _domain_two_panel(
         d1984, d2004, show_raw=True, out_path=out_path,
-        suptitle=(f"Shoreline Change Rate — Transect-Based Smoothing\nHatteras Island, NC{suffix}"),
+        cap=("CoastSat shoreline change rate by CASCADE domain, "
+             f"{method}. The pale line and band are the unsmoothed "
+             "domain mean and its standard deviation over the transects in "
+             "the domain; the heavy line is the LOESS curve at a "
+             f"{LOESS_WINDOW_KM:g} km window. " + CAP_GUARD + " " +
+             CAP_ENDPOINTS + " " + CAP_MARKS),
     )
 
 
-def plot_domain_smoothed_only(d1984, d2004, out_path, suffix=""):
+def plot_domain_smoothed_only(d1984, d2004, out_path, method=""):
     _domain_two_panel(
         d1984, d2004, show_raw=False, out_path=out_path,
-        suptitle=(f"Shoreline Change Rate — Transect-Based, Smoothed Curve\nHatteras Island, NC{suffix}"),
+        cap=("The smoothed CoastSat shoreline change rate alone, by CASCADE "
+             f"domain, {method}: the LOESS curve at a "
+             f"{LOESS_WINDOW_KM:g} km window, with the unsmoothed domain means "
+             "shown only where the curve is withheld. " + CAP_GUARD + " " +
+             CAP_ENDPOINTS + " " + CAP_MARKS),
     )
 
 
-def plot_domain_combined(d1984, d2004, out_path, suffix=""):
-    fig, ax = plt.subplots(figsize=(16, 6))
-    fig.suptitle(
-        f"Shoreline Change Rate — Both Periods, Transect-Based\nHatteras Island, NC{suffix}",
-        fontsize=14, fontweight="bold",
-    )
+def plot_domain_combined(d1984, d2004, out_path, method=""):
+    fig, ax = plt.subplots(figsize=figsize("double", height=3.6),
+                           constrained_layout=True)
+    caption(fig, "Both hindcast periods on one panel, " + method + ": the "
+                 f"LOESS curve at a {LOESS_WINDOW_KM:g} km window, shaded by "
+                 "one standard deviation of the transects in each domain. " +
+                 CAP_GUARD + " " + CAP_ENDPOINTS + " " + CAP_MARKS)
     labelled_zone = False
-    for df, period, color in [(d1984, "1984–2004", C_CS_1984),
-                               (d2004, "2004–2024", C_CS_2004)]:
+    for df, period, color in [(d1984, "1984–2004", C_1984),
+                               (d2004, "2004–2024", C_1997)]:
         if df is None:
             continue
         draw_raw_in_guard_zone(
             ax, df, color,
-            label=None if labelled_zone else "Raw mean (LOESS withheld)")
+            label=None if labelled_zone
+            else "domain-averaged rate where the curve is withheld")
         labelled_zone = True
         ax.fill_between(df["domain"],
                         df["cs_lrr_smooth"] - df["cs_std"],
                         df["cs_lrr_smooth"] + df["cs_std"],
-                        color=color, alpha=0.10)
+                        color=color, alpha=0.12, lw=0)
         ax.plot(df["domain"], df["cs_lrr_smooth"],
-                color=color, lw=2.5, label=period)
-    ax.set_ylabel("Rate (m/yr)", fontsize=11, fontweight="bold")
+                color=color, lw=1.8, label=period)
+    ax.set_ylabel("shoreline change rate (m/yr)")
     style_domain_axis(ax, is_bottom=True)
     add_domain_annotations(ax)
     handles, _ = ax.get_legend_handles_labels()
-    handles += annotation_legend_handles()
-    ax.legend(handles=handles, fontsize=9, framealpha=0.95, loc="upper center", ncol=2)
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=300, bbox_inches="tight")
-    plt.close()
+    _outside_legend(fig, handles + annotation_legend_handles(), ncol=4)
+    save(fig, out_path, close=True)
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-def plot_domain_sensitivity(df, period_label, color, out_path, suffix=""):
+def plot_domain_sensitivity(df, period_label, color, out_path, method=""):
     """3-panel bandwidth sensitivity figure for a single period (domain space)."""
-    fracs  = [domain_frac(w) for w in COMPARE_WINDOWS_KM]
-    labels = [f"{w:.1f} km  ({int(round(w * 1000 / DOMAIN_SPACING_M))} domains,"
-              f"  frac={f:.3f})"
-              for w, f in zip(COMPARE_WINDOWS_KM, fracs)]
-
+    fracs = [domain_frac(w) for w in COMPARE_WINDOWS_KM]
     fig, axes = plt.subplots(len(COMPARE_WINDOWS_KM), 1,
-                             figsize=(16, 4 * len(COMPARE_WINDOWS_KM)), sharex=True)
-    fig.suptitle(
-        f"Window Sensitivity — Domain-Averaged Smoothing: {period_label}\nHatteras Island, NC{suffix}",
-        fontsize=13, fontweight="bold", y=1.01,
-    )
-    for j, (ax, frac, lbl, km) in enumerate(zip(axes, fracs, labels, COMPARE_WINDOWS_KM)):
+                             figsize=figsize("double", height=7.2),
+                             sharex=True, constrained_layout=True)
+    caption(fig, f"LOESS bandwidth sensitivity, {period_label}, {method}. One "
+                 "panel per window: the pale line is the unsmoothed "
+                 "domain-averaged linear regression rate and the heavy line "
+                 "the LOESS curve at that window. " + CAP_GUARD + " " +
+                 CAP_ENDPOINTS + " " + CAP_MARKS)
+    for j, (ax, frac, km) in enumerate(zip(axes, fracs, COMPARE_WINDOWS_KM)):
         is_bottom = (j == len(fracs) - 1)
+        ndom = int(round(km * 1000 / DOMAIN_SPACING_M))
         m = smooth_domain_df(df, window_km=km)
         ax.plot(df["domain"], df["cs_lrr"],
-                color=color, lw=0.8, alpha=0.25, marker="o", ms=2, label="Raw")
+                color=color, lw=0.7, alpha=0.40, marker="o", ms=1.8,
+                label="domain-averaged rate, unsmoothed")
         ax.plot(m["domain"], m["cs_lrr_smooth"],
-                color=color, lw=2.5, label="LOESS")
-        ax.text(0.01, PANEL_LABEL_Y, lbl, transform=ax.transAxes, fontsize=8.5, va="top",
-                bbox=dict(boxstyle="round", fc="white", alpha=0.88, ec="0.7"))
-        ax.set_ylabel("Rate (m/yr)", fontsize=10, fontweight="bold")
+                color=color, lw=1.8, label="LOESS")
+        _title(ax, j, f"{km:g} km window · {ndom} domains · frac {frac:.3f}")
+        ax.set_ylabel("rate (m/yr)")
         style_domain_axis(ax, is_bottom)
-        add_domain_annotations(ax)
-        handles, _ = ax.get_legend_handles_labels()
-        if is_bottom:
-            handles += annotation_legend_handles()
-        ax.legend(handles=handles, fontsize=8.5, framealpha=0.95,
-                  loc="upper center", ncol=2 if is_bottom else 1)
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=300, bbox_inches="tight")
-    plt.close()
+        add_domain_annotations(ax, label_shoals=is_bottom)
+        if j == 0:
+            ax.legend(loc="lower left")
+    _outside_legend(fig, annotation_legend_handles(), ncol=5)
+    save(fig, out_path, close=True)
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-def plot_domain_window_comparison(d1984, d2004, out_path, suffix=""):
+def plot_domain_window_comparison(d1984, d2004, out_path, method=""):
     """All window sizes overlaid in domain space — both periods."""
-    configs   = [(d1984, "1984–2004", C_CS_1984),
-                 (d2004, "2004–2024", C_CS_2004)]
-    fig, axes = plt.subplots(2, 1, figsize=(16, 11), sharex=True)
-    fig.suptitle(
-        f"Window Comparison — Domain-Averaged Smoothing\nHatteras Island, NC{suffix}",
-        fontsize=14, fontweight="bold", y=1.01,
-    )
+    configs   = [(d1984, "1984–2004", C_1984),
+                 (d2004, "2004–2024", C_1997)]
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=6.2),
+                             sharex=True, constrained_layout=True)
+    caption(fig, "The three LOESS windows overlaid, " + method + ", one panel "
+                 "per hindcast period. The pale line is the unsmoothed "
+                 "domain-averaged linear regression rate. " + CAP_GUARD + " " +
+                 CAP_ENDPOINTS + " " + CAP_MARKS)
     for i, (ax, (df, period, pcol)) in enumerate(zip(axes, configs)):
         is_bottom = (i == len(configs) - 1)
+        _title(ax, i, period)
         if df is None:
-            ax.text(0.5, 0.5, f"No data — {period}",
-                    transform=ax.transAxes, ha="center", fontsize=12)
+            _no_data(ax, period)
             continue
         ax.plot(df["domain"], df["cs_lrr"],
-                color=pcol, lw=1.0, alpha=0.25, marker="o", ms=2.5, label="Raw")
+                color=pcol, lw=0.7, alpha=0.40, marker="o", ms=1.8,
+                label="domain-averaged rate, unsmoothed")
         for km, wc in zip(COMPARE_WINDOWS_KM, C_WINDOWS):
             m    = smooth_domain_df(df, window_km=km)
             ndom = int(round(km * 1000 / DOMAIN_SPACING_M))
             ax.plot(m["domain"], m["cs_lrr_smooth"],
-                    color=wc, lw=2.5, label=f"{km:.1f} km  ({ndom} domains)")
-        ax.set_ylabel("Rate (m/yr)", fontsize=11, fontweight="bold")
-        ax.set_title(period, fontsize=12, fontweight="bold", loc="left", pad=5)
+                    color=wc, lw=1.8, label=f"{km:g} km ({ndom} domains)")
+        ax.set_ylabel("rate (m/yr)")
         style_domain_axis(ax, is_bottom)
-        add_domain_annotations(ax)
-        handles, _ = ax.get_legend_handles_labels()
-        if is_bottom:
-            handles += annotation_legend_handles()
-        ax.legend(handles=handles, fontsize=8.5, framealpha=0.95,
-                  loc="upper center", ncol=2 if is_bottom else 1)
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=300, bbox_inches="tight")
-    plt.close()
+        add_domain_annotations(ax, label_shoals=is_bottom)
+        if i == 0:
+            ax.legend(loc="lower left", ncol=2)
+    _outside_legend(fig, annotation_legend_handles(), ncol=5)
+    save(fig, out_path, close=True)
     print(f"  Saved: {os.path.basename(out_path)}")
 
 # ============================================================
@@ -721,94 +723,88 @@ def plot_transect_overview(t1984, t2004, d1984, d2004, out_path):
     """
     Raw transect scatter + LOESS smoothed curve in along-coast space,
     with domain-averaged LRR overlaid as a dashed line with open markers.
-    Requested by advisor to show how much variability domain averaging collapses.
+    Shows how much variability domain averaging collapses.
     """
-    configs   = [(t1984, d1984, "1984–2004", C_CS_1984),
-                 (t2004, d2004, "2004–2024", C_CS_2004)]
-    fig, axes = plt.subplots(2, 1, figsize=(16, 10), sharex=True)
-    fig.suptitle(
-        "Shoreline Change Rate — Individual Transects and Domain Averages\nHatteras Island, NC",
-        fontsize=14, fontweight="bold", y=1.01,
-    )
+    configs   = [(t1984, d1984, "1984–2004", C_1984),
+                 (t2004, d2004, "2004–2024", C_1997)]
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.8),
+                             sharex=True, constrained_layout=True)
+    caption(fig, "CoastSat shoreline change rate at the resolution it is "
+                 "measured. Dots are the per-transect linear regression rate, "
+                 "unsmoothed; the heavy line is the LOESS curve fitted to "
+                 f"those transects at a {LOESS_WINDOW_KM:g} km window; the "
+                 "open markers are the mean of the transects in each 500 m "
+                 "CASCADE domain, which is what domain averaging keeps. "
+                 "Faint verticals are the domain boundaries. " + CAP_GUARD +
+                 " " + CAP_ENDPOINTS + " " + CAP_MARKS)
     for i, (ax, (t_df, d_df, period, color)) in enumerate(zip(axes, configs)):
         is_bottom = (i == len(configs) - 1)
+        _title(ax, i, period)
         if t_df is None:
-            ax.text(0.5, 0.5, f"No data — {period}",
-                    transform=ax.transAxes, ha="center", fontsize=12)
+            _no_data(ax, period)
             continue
         x = t_df["_x_smooth"].values
 
         # Domain boundary lines at every 500 m — drawn first so they sit behind data
         for domain_n in range(DOMAIN_MIN, DOMAIN_MAX + 2):
             boundary_m = (domain_n - 1) * DOMAIN_SPACING_M
-            ax.axvline(boundary_m, color="0.82", lw=0.4, ls="-", zorder=0, alpha=0.8)
+            ax.axvline(boundary_m, color="0.88", lw=0.3, ls="-", zorder=0)
 
-        # Raw transect LRRs as scatter
-        ax.scatter(x, t_df["lrr"], color=color, s=4, alpha=0.20,
-                   zorder=1, label="Individual transect LRR")
-        # LOESS smoothed transect curve
-        ax.plot(x, t_df["lrr_smooth"], color=color, lw=2.5,
-                zorder=3, label="LOESS smoothed (transect-based)")
-        # Domain averages: x = centre of each 500 m domain in along-coast metres
+        ax.scatter(x, t_df["lrr"], color=color, s=3, alpha=0.20, lw=0,
+                   zorder=1,
+                   label="per-transect linear regression rate, unsmoothed")
+        ax.plot(x, t_df["lrr_smooth"], color=color, lw=1.8, zorder=3,
+                label=f"LOESS on the transects, {LOESS_WINDOW_KM:g} km window")
         if d_df is not None:
             x_dom = (d_df["domain"].values - 0.5) * DOMAIN_SPACING_M
             ax.plot(x_dom, d_df["cs_lrr"].values,
-                    color="black", lw=1.5, ls="--",
-                    marker="o", ms=5, markerfacecolor="white", markeredgewidth=1.5,
-                    zorder=4, alpha=0.75, label="Domain average LRR")
-        ax.set_ylabel("Rate (m/yr)", fontsize=10, fontweight="bold")
-        ax.set_title(period, fontsize=11, fontweight="bold", loc="left", pad=5)
+                    color=INK, lw=0.9, ls="--",
+                    marker="o", ms=3, markerfacecolor="white",
+                    markeredgewidth=0.9, zorder=4, alpha=0.8,
+                    label="mean of the transects in each domain")
+        ax.set_ylabel("shoreline change rate (m/yr)")
         style_transect_axis(ax, x, is_bottom)
-        add_transect_annotations(ax)
-        handles, _ = ax.get_legend_handles_labels()
-        if is_bottom:
-            handles += annotation_legend_handles()
-        ncols = 4 if is_bottom else 1
-        ax.legend(handles=handles, fontsize=8.5, framealpha=0.95,
-                  loc="lower center", ncol=ncols)
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=300, bbox_inches="tight")
-    plt.close()
+        add_transect_annotations(ax, label_shoals=is_bottom)
+        if i == 0:
+            ax.legend(loc="lower left")
+    _outside_legend(fig, annotation_legend_handles(), ncol=5)
+    save(fig, out_path, close=True)
     print(f"  Saved: {os.path.basename(out_path)}")
+
 
 def plot_transect_window_comparison(t1984, t2004, out_path):
     """Window sensitivity in transect space — all km windows overlaid, both periods."""
-    configs = [(t1984, "1984–2004", C_CS_1984),
-               (t2004, "2004–2024", C_CS_2004)]
-    xlabel = ("Along-coast Distance (m)" if TRANSECT_X_AXIS == "along_coast_m"
-             else "Transect ID (sequential)")
-    fig, axes = plt.subplots(2, 1, figsize=(16, 11), sharex=True)
-    fig.suptitle(
-        f"Window Comparison — Transect Space\nHatteras Island, NC",
-        fontsize=14, fontweight="bold", y=1.01,
-    )
+    configs = [(t1984, "1984–2004", C_1984),
+               (t2004, "2004–2024", C_1997)]
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=6.2),
+                             sharex=True, constrained_layout=True)
+    caption(fig, "The three LOESS windows overlaid at transect resolution, "
+                 "one panel per hindcast period. Dots are the per-transect "
+                 "linear regression rate, unsmoothed. " + CAP_GUARD + " " +
+                 CAP_ENDPOINTS + " " + CAP_MARKS)
     for i, (ax, (df, period, pcol)) in enumerate(zip(axes, configs)):
         is_bottom = (i == len(configs) - 1)
+        _title(ax, i, period)
         if df is None:
-            ax.text(0.5, 0.5, f"No data — {period}",
-                    transform=ax.transAxes, ha="center", fontsize=12)
+            _no_data(ax, period)
             continue
         x       = df["_x_smooth"].values
         spacing = estimate_spacing(df["along_coast_m"].values)
-        ax.scatter(x, df["lrr"], color=pcol, s=3, alpha=0.18, label="Raw")
+        ax.scatter(x, df["lrr"], color=pcol, s=3, alpha=0.18, lw=0,
+                   label="per-transect rate, unsmoothed")
         for km, wc in zip(COMPARE_WINDOWS_KM, C_WINDOWS):
             frac     = transect_frac(len(df), spacing, km)
             smoothed = apply_loess(x, df["lrr"].values, frac)
             ndom     = int(round(km * 1000 / DOMAIN_SPACING_M))
-            ax.plot(x, smoothed, color=wc, lw=2.5,
-                    label=f"{km:.1f} km  ({ndom} domains,  frac={frac:.3f})")
-        ax.set_ylabel("Rate (m/yr)", fontsize=11, fontweight="bold")
-        ax.set_title(period, fontsize=12, fontweight="bold", loc="left", pad=5)
+            ax.plot(x, smoothed, color=wc, lw=1.8,
+                    label=f"{km:g} km ({ndom} domains)")
+        ax.set_ylabel("rate (m/yr)")
         style_transect_axis(ax, x, is_bottom)
-        add_transect_annotations(ax)
-        handles, _ = ax.get_legend_handles_labels()
-        if is_bottom:
-            handles += annotation_legend_handles()
-        ax.legend(handles=handles, fontsize=8.5, framealpha=0.95,
-                  loc="upper center", ncol=2 if is_bottom else 1)
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=300, bbox_inches="tight")
-    plt.close()
+        add_transect_annotations(ax, label_shoals=is_bottom)
+        if i == 0:
+            ax.legend(loc="lower left", ncol=2)
+    _outside_legend(fig, annotation_legend_handles(), ncol=5)
+    save(fig, out_path, close=True)
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
@@ -828,25 +824,28 @@ def plot_transect_windows_domain_space(t1984, t2004, out_path):
     Replaces plot_domain_window_comparison in transect mode so all curves
     shown are transect-based — no domain-averaged smoothing is mixed in.
     """
-    configs   = [(t1984, "1984\u20132004", C_CS_1984),
-                 (t2004, "2004\u20132024", C_CS_2004)]
-    fig, axes = plt.subplots(2, 1, figsize=(16, 11), sharex=True)
-    fig.suptitle(
-        "Window Comparison — Transect-Based Smoothing\nHatteras Island, NC",
-        fontsize=14, fontweight="bold", y=1.01,
-    )
+    configs   = [(t1984, "1984–2004", C_1984),
+                 (t2004, "2004–2024", C_1997)]
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=6.2),
+                             sharex=True, constrained_layout=True)
+    caption(fig, "The three LOESS windows overlaid, each fitted to the "
+                 "individual transects and then averaged to CASCADE domains, "
+                 "one panel per hindcast period. The pale line is the "
+                 "unsmoothed mean of the transects in each domain. " +
+                 CAP_GUARD + " " + CAP_ENDPOINTS + " " + CAP_MARKS)
 
     for i, (ax, (t_df, period, pcol)) in enumerate(zip(axes, configs)):
         is_bottom = (i == len(configs) - 1)
+        _title(ax, i, period)
         if t_df is None:
-            ax.text(0.5, 0.5, f"No data — {period}",
-                    transform=ax.transAxes, ha="center", fontsize=12)
+            _no_data(ax, period)
             continue
 
         # Raw domain means — mean of raw transect LRRs, same for all windows
         d_raw = aggregate_to_domains(t_df)
         ax.plot(d_raw["domain"], d_raw["cs_lrr"],
-                color=pcol, lw=1.0, alpha=0.25, marker="o", ms=2.5, label="Raw")
+                color=pcol, lw=0.7, alpha=0.40, marker="o", ms=1.8,
+                label="mean of the transects in each domain, unsmoothed")
 
         spacing = estimate_spacing(t_df["along_coast_m"].values)
 
@@ -857,22 +856,17 @@ def plot_transect_windows_domain_space(t1984, t2004, out_path):
             d_agg    = aggregate_to_domains(t_smooth)
             ndom     = int(round(km * 1000 / DOMAIN_SPACING_M))
             ax.plot(d_agg["domain"], d_agg["cs_lrr_smooth"],
-                    color=wc, lw=2.5,
-                    label=f"{km:.1f} km  ({ndom} domains,  frac={frac:.3f})")
+                    color=wc, lw=1.8,
+                    label=f"{km:g} km ({ndom} domains, frac {frac:.3f})")
 
-        ax.set_ylabel("Rate (m/yr)", fontsize=11, fontweight="bold")
-        ax.set_title(period, fontsize=12, fontweight="bold", loc="left", pad=5)
+        ax.set_ylabel("rate (m/yr)")
         style_domain_axis(ax, is_bottom)
-        add_domain_annotations(ax)
-        handles, _ = ax.get_legend_handles_labels()
-        if is_bottom:
-            handles += annotation_legend_handles()
-        ax.legend(handles=handles, fontsize=8.5, framealpha=0.95,
-                  loc="upper center", ncol=2 if is_bottom else 1)
+        add_domain_annotations(ax, label_shoals=is_bottom)
+        if i == 0:
+            ax.legend(loc="lower left", ncol=2)
 
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=300, bbox_inches="tight")
-    plt.close()
+    _outside_legend(fig, annotation_legend_handles(), ncol=5)
+    save(fig, out_path, close=True)
     print(f"  Saved: {os.path.basename(out_path)}")
 
 # ============================================================
@@ -881,18 +875,20 @@ def plot_transect_windows_domain_space(t1984, t2004, out_path):
 # TRANSECT SENSITIVITY (matches plot_transect_windows_domain_space)
 # ============================================================
 
-def plot_transect_sensitivity(t_df, period_label, color, out_path, suffix=""):
+def plot_transect_sensitivity(t_df, period_label, color, out_path, method=""):
     """
     3-panel bandwidth sensitivity — transect mode.
     Smooths at transect level for each window then aggregates to domains,
     matching plot_transect_windows_domain_space exactly.
     """
     fig, axes = plt.subplots(len(COMPARE_WINDOWS_KM), 1,
-                             figsize=(16, 4 * len(COMPARE_WINDOWS_KM)), sharex=True)
-    fig.suptitle(
-        f"Window Sensitivity — Transect-Based Smoothing: {period_label}\nHatteras Island, NC{suffix}",
-        fontsize=13, fontweight="bold", y=1.01,
-    )
+                             figsize=figsize("double", height=7.2),
+                             sharex=True, constrained_layout=True)
+    caption(fig, f"LOESS bandwidth sensitivity, {period_label}, {method}. One "
+                 "panel per window: the LOESS is fitted to the individual "
+                 "transects and then averaged to CASCADE domains, against the "
+                 "unsmoothed mean of the transects in each domain. " +
+                 CAP_GUARD + " " + CAP_ENDPOINTS + " " + CAP_MARKS)
     spacing = estimate_spacing(t_df["along_coast_m"].values)
     d_raw   = aggregate_to_domains(t_df)
 
@@ -900,26 +896,21 @@ def plot_transect_sensitivity(t_df, period_label, color, out_path, suffix=""):
         is_bottom = (j == len(COMPARE_WINDOWS_KM) - 1)
         frac  = transect_frac(len(t_df), spacing, km)
         ndom  = int(round(km * 1000 / DOMAIN_SPACING_M))
-        label = f"{km:.1f} km  ({ndom} domains,  frac={frac:.3f})"
         t_smooth = smooth_transect_df(t_df, window_km=km)
         d_agg    = aggregate_to_domains(t_smooth)
         ax.plot(d_raw["domain"], d_raw["cs_lrr"],
-                color=color, lw=0.8, alpha=0.25, marker="o", ms=2, label="Raw")
+                color=color, lw=0.7, alpha=0.40, marker="o", ms=1.8,
+                label="mean of the transects in each domain, unsmoothed")
         ax.plot(d_agg["domain"], d_agg["cs_lrr_smooth"],
-                color=color, lw=2.5, label="LOESS")
-        ax.text(0.01, PANEL_LABEL_Y, label, transform=ax.transAxes, fontsize=8.5, va="top",
-                bbox=dict(boxstyle="round", fc="white", alpha=0.88, ec="0.7"))
-        ax.set_ylabel("Rate (m/yr)", fontsize=10, fontweight="bold")
+                color=color, lw=1.8, label="LOESS")
+        _title(ax, j, f"{km:g} km window · {ndom} domains · frac {frac:.3f}")
+        ax.set_ylabel("rate (m/yr)")
         style_domain_axis(ax, is_bottom)
-        add_domain_annotations(ax)
-        handles, _ = ax.get_legend_handles_labels()
-        if is_bottom:
-            handles += annotation_legend_handles()
-        ax.legend(handles=handles, fontsize=8.5, framealpha=0.95,
-                  loc="center", ncol=2 if is_bottom else 1)
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=300, bbox_inches="tight")
-    plt.close()
+        add_domain_annotations(ax, label_shoals=is_bottom)
+        if j == 0:
+            ax.legend(loc="lower left")
+    _outside_legend(fig, annotation_legend_handles(), ncol=5)
+    save(fig, out_path, close=True)
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
@@ -927,81 +918,83 @@ def plot_transect_sensitivity(t_df, period_label, color, out_path, suffix=""):
 # ============================================================
 # METHOD COMPARISON — transect-based vs domain-averaged LOESS
 # Both smoothing approaches overlaid for each window size.
-# This is the figure Laura requested to directly compare methods.
 # ============================================================
+# The two methods are the point of these four figures, so they carry the
+# colour: grey C["BASE"] is smoothing the domain means, the original
+# approach, and purple C["ACCENT"] is smoothing the individual transects,
+# the one under test. The window, where more than one is shown, is the line
+# style.
+M_LS = ["-", "--", (0, (1, 1.4))]
+LBL_TRANSECT = "LOESS on the individual transects, averaged to domains"
+LBL_DOMAIN   = "LOESS on the domain averages"
+LBL_RAW      = "per-transect rates averaged to domains, unsmoothed"
+
+CAP_METHODS = ("Purple is the LOESS fitted to the individual CoastSat "
+               "transects and then averaged to CASCADE domains; grey is the "
+               "LOESS fitted to the domain averages directly. Dots are those "
+               "domain averages before smoothing.")
+
+
+def _method_raw(ax, t_df):
+    d_raw = aggregate_to_domains(t_df)
+    ax.plot(d_raw["domain"], d_raw["cs_lrr"], color=INK_MUTED, lw=0,
+            marker="o", ms=2.2, alpha=0.45, zorder=1, label=LBL_RAW)
+
 
 def plot_method_comparison(t1984, t2004, da1984, da2004, out_path):
     """
     For each window in COMPARE_WINDOWS_KM, plots both:
-      — Solid line  : transect-based LOESS (smooth transects → aggregate to domains)
-      — Dashed line : domain-averaged LOESS (smooth domain means directly)
-
-    Both are shown in domain space with geographic annotations.
-    Window sizes are labelled in km and equivalent domain count.
-
-    This directly answers Laura's question: are the two approaches different?
+      — purple : transect-based LOESS (smooth transects → aggregate to domains)
+      — grey   : domain-averaged LOESS (smooth domain means directly)
+    the window carried by the line style. Both in domain space.
     """
-    configs   = [(t1984, da1984, "1984–2004", C_CS_1984),
-                 (t2004, da2004, "2004–2024", C_CS_2004)]
-    fig, axes = plt.subplots(2, 1, figsize=(16, 11), sharex=True)
-    fig.suptitle(
-        "LOESS Smoothing — Transect-Based vs Domain-Averaged\n"
-        "Hatteras Island, NC  (solid = transect-based,  dashed = domain-averaged)",
-        fontsize=14, fontweight="bold", y=1.01,
-    )
+    configs   = [(t1984, da1984, "1984–2004"),
+                 (t2004, da2004, "2004–2024")]
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=6.4),
+                             sharex=True, constrained_layout=True)
+    caption(fig, "Do the two ways of smoothing the CoastSat rates differ? "
+                 "Each panel is one hindcast period and carries both methods "
+                 "at all three LOESS windows, the window as the line style. " +
+                 CAP_METHODS + " " + CAP_GUARD + " " + CAP_ENDPOINTS + " " +
+                 CAP_MARKS)
 
-    for i, (ax, (t_df, da_df, period, pcol)) in enumerate(zip(axes, configs)):
+    for i, (ax, (t_df, da_df, period)) in enumerate(zip(axes, configs)):
         is_bottom = (i == len(configs) - 1)
+        _title(ax, i, period)
         if t_df is None and da_df is None:
-            ax.text(0.5, 0.5, f"No data — {period}",
-                    transform=ax.transAxes, ha="center", fontsize=12)
+            _no_data(ax, period)
             continue
 
-        # Raw domain means as faint background markers
         if t_df is not None:
-            d_raw = aggregate_to_domains(t_df)
-            ax.plot(d_raw["domain"], d_raw["cs_lrr"],
-                    color=pcol, lw=0, marker="o", ms=3, alpha=0.20,
-                    zorder=1, label="Raw domain LRR")
+            _method_raw(ax, t_df)
 
-        spacing = estimate_spacing(t_df["along_coast_m"].values) if t_df is not None else None
-
-        handles_extra = []
-        for km, wc in zip(COMPARE_WINDOWS_KM, C_WINDOWS):
-            ndom  = int(round(km * 1000 / DOMAIN_SPACING_M))
-            label = f"{km:.1f} km  ({ndom} domains)"
-
-            # — Transect-based: smooth transects then aggregate
+        for km, ls in zip(COMPARE_WINDOWS_KM, M_LS):
             if t_df is not None:
-                frac_t   = transect_frac(len(t_df), spacing, km)
                 t_smooth = smooth_transect_df(t_df, window_km=km)
                 d_agg    = aggregate_to_domains(t_smooth)
-                line_t, = ax.plot(d_agg["domain"], d_agg["cs_lrr_smooth"],
-                                  color=wc, lw=2.5, ls="-", zorder=4,
-                                  label=f"{label} — transect")
-
-            # — Domain-averaged: smooth the 90 domain means directly
+                ax.plot(d_agg["domain"], d_agg["cs_lrr_smooth"],
+                        color=C["ACCENT"], lw=1.7, ls=ls, zorder=4)
             if da_df is not None:
                 m = smooth_domain_df(da_df, window_km=km)
-                line_d, = ax.plot(m["domain"], m["cs_lrr_smooth"],
-                                  color=wc, lw=2.5, ls="--", zorder=3, alpha=0.80,
-                                  label=f"{label} — domain avg")
+                ax.plot(m["domain"], m["cs_lrr_smooth"],
+                        color=C["BASE"], lw=1.7, ls=ls, zorder=3)
 
-        ax.set_ylabel("Rate (m/yr)", fontsize=11, fontweight="bold")
-        ax.set_title(period, fontsize=12, fontweight="bold", loc="left", pad=5)
+        ax.set_ylabel("shoreline change rate (m/yr)")
         style_domain_axis(ax, is_bottom)
-        add_domain_annotations(ax)
+        add_domain_annotations(ax, label_shoals=is_bottom)
 
-        # Build legend: raw + window pairs + annotations (bottom panel only)
-        handles, labels = ax.get_legend_handles_labels()
-        if is_bottom:
-            handles += annotation_legend_handles()
-        ax.legend(handles=handles, fontsize=8.0, framealpha=0.95,
-                  loc="lower center", ncol=3 if is_bottom else 2)
-
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=300, bbox_inches="tight")
-    plt.close()
+    handles = [
+        Line2D([0], [0], color=INK_MUTED, lw=0, marker="o", ms=2.5,
+               alpha=0.6, label=LBL_RAW),
+        Line2D([0], [0], color=C["ACCENT"], lw=1.7, label=LBL_TRANSECT),
+        Line2D([0], [0], color=C["BASE"], lw=1.7, label=LBL_DOMAIN),
+    ] + [
+        Line2D([0], [0], color=INK, lw=1.2, ls=ls,
+               label=f"{km:g} km window ({int(round(km * 1000 / DOMAIN_SPACING_M))} domains)")
+        for km, ls in zip(COMPARE_WINDOWS_KM, M_LS)
+    ] + annotation_legend_handles()
+    _outside_legend(fig, handles, ncol=3)
+    save(fig, out_path, close=True)
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
@@ -1012,61 +1005,44 @@ def plot_method_comparison_single(t1984, t2004, da1984, da2004,
     Shows one window size only so the two curves can be read clearly.
     """
     ndom  = int(round(window_km * 1000 / DOMAIN_SPACING_M))
-    label = f"{window_km:.1f} km  ({ndom} domains)"
+    configs   = [(t1984, da1984, "1984–2004"),
+                 (t2004, da2004, "2004–2024")]
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.8),
+                             sharex=True, constrained_layout=True)
+    caption(fig, "Do the two ways of smoothing the CoastSat rates differ? "
+                 f"Both are shown at a single {window_km:g} km LOESS window "
+                 f"({ndom} CASCADE domains), one panel per hindcast period. " +
+                 CAP_METHODS + " " + CAP_GUARD + " " + CAP_ENDPOINTS + " " +
+                 CAP_MARKS)
 
-    configs   = [(t1984, da1984, "1984–2004", C_CS_1984),
-                 (t2004, da2004, "2004–2024", C_CS_2004)]
-    fig, axes = plt.subplots(2, 1, figsize=(16, 10), sharex=True)
-    fig.suptitle(
-        f"LOESS Smoothing Comparison — {label}\n"
-        "Hatteras Island, NC  "
-        "(solid = transect-based,  dashed = domain-averaged)",
-        fontsize=14, fontweight="bold", y=1.01,
-    )
-
-    for i, (ax, (t_df, da_df, period, pcol)) in enumerate(zip(axes, configs)):
+    for i, (ax, (t_df, da_df, period)) in enumerate(zip(axes, configs)):
         is_bottom = (i == len(configs) - 1)
+        _title(ax, i, period)
         if t_df is None and da_df is None:
-            ax.text(0.5, 0.5, f"No data — {period}",
-                    transform=ax.transAxes, ha="center", fontsize=12)
+            _no_data(ax, period)
             continue
 
-        # Raw domain means as faint background dots
         if t_df is not None:
-            d_raw = aggregate_to_domains(t_df)
-            ax.plot(d_raw["domain"], d_raw["cs_lrr"],
-                    color=pcol, lw=0, marker="o", ms=3, alpha=0.20,
-                    zorder=1, label="Raw domain LRR")
-
-        # Transect-based LOESS (solid)
-        if t_df is not None:
-            spacing = estimate_spacing(t_df["along_coast_m"].values)
+            _method_raw(ax, t_df)
             t_smooth = smooth_transect_df(t_df, window_km=window_km)
             d_agg    = aggregate_to_domains(t_smooth)
             ax.plot(d_agg["domain"], d_agg["cs_lrr_smooth"],
-                    color=pcol, lw=2.8, ls="-", zorder=4,
-                    label=f"Transect-based LOESS  ({label})")
+                    color=C["ACCENT"], lw=2.0, ls="-", zorder=4,
+                    label=LBL_TRANSECT)
 
-        # Domain-averaged LOESS (dashed)
         if da_df is not None:
             m = smooth_domain_df(da_df, window_km=window_km)
             ax.plot(m["domain"], m["cs_lrr_smooth"],
-                    color=pcol, lw=2.8, ls="--", zorder=3, alpha=0.75,
-                    label=f"Domain-averaged LOESS  ({label})")
+                    color=C["BASE"], lw=2.0, ls="--", zorder=3,
+                    label=LBL_DOMAIN)
 
-        ax.set_ylabel("Rate (m/yr)", fontsize=11, fontweight="bold")
-        ax.set_title(period, fontsize=12, fontweight="bold", loc="left", pad=5)
+        ax.set_ylabel("shoreline change rate (m/yr)")
         style_domain_axis(ax, is_bottom)
-        add_domain_annotations(ax)
-        handles, _ = ax.get_legend_handles_labels()
-        if is_bottom:
-            handles += annotation_legend_handles()
-        ax.legend(handles=handles, fontsize=8.5, framealpha=0.95,
-                  loc="lower center", ncol=3 if is_bottom else 2)
+        add_domain_annotations(ax, label_shoals=is_bottom)
 
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=300, bbox_inches="tight")
-    plt.close()
+    handles, _ = axes[0].get_legend_handles_labels()
+    _outside_legend(fig, handles + annotation_legend_handles(), ncol=4)
+    save(fig, out_path, close=True)
     print(f"  Saved: {os.path.basename(out_path)}")
 
 # ============================================================
@@ -1119,11 +1095,14 @@ def main():
 
     # Domain-space overview using transect-smoothed values
     plot_domain_overview(td1984, td2004,
-        os.path.join(DIR_T, "overview_smoothed.png"), "  [transect-based]")
+        os.path.join(DIR_T, "overview_smoothed.png"),
+        "smoothed on the individual transects")
     plot_domain_smoothed_only(td1984, td2004,
-        os.path.join(DIR_T, "smoothed_only.png"), "  [transect-based]")
+        os.path.join(DIR_T, "smoothed_only.png"),
+        "smoothed on the individual transects")
     plot_domain_combined(td1984, td2004,
-        os.path.join(DIR_T, "combined_periods.png"), "  [transect-based]")
+        os.path.join(DIR_T, "combined_periods.png"),
+        "smoothed on the individual transects")
 
     # Window comparison in domain space (transect-smoothed)
     plot_transect_windows_domain_space(t1984, t2004,
@@ -1131,24 +1110,29 @@ def main():
 
     # Sensitivity — transect-based
     if t1984 is not None:
-        plot_transect_sensitivity(t1984, "1984–2004", C_CS_1984,
-            os.path.join(DIR_T, "sensitivity_1984_2004.png"))
+        plot_transect_sensitivity(t1984, "1984–2004", C_PERIOD_1984,
+            os.path.join(DIR_T, "sensitivity_1984_2004.png"),
+            "smoothed on the individual transects")
     if t2004 is not None:
-        plot_transect_sensitivity(t2004, "2004–2024", C_CS_2004,
-            os.path.join(DIR_T, "sensitivity_2004_2024.png"))
+        plot_transect_sensitivity(t2004, "2004–2024", C_PERIOD_2004,
+            os.path.join(DIR_T, "sensitivity_2004_2024.png"),
+            "smoothed on the individual transects")
 
     # ── 02: Domain-averaged figures ──────────────────────────────
     print("\n[02] Domain-averaged figures → 02_domain_averaged/")
 
     plot_domain_window_comparison(da1984, da2004,
-        os.path.join(DIR_D, "window_comparison.png"), "  [domain-averaged]")
+        os.path.join(DIR_D, "window_comparison.png"),
+        "smoothed on the domain averages")
 
     if da1984 is not None:
-        plot_domain_sensitivity(da1984, "1984–2004", C_CS_1984,
-            os.path.join(DIR_D, "sensitivity_1984_2004.png"))
+        plot_domain_sensitivity(da1984, "1984–2004", C_PERIOD_1984,
+            os.path.join(DIR_D, "sensitivity_1984_2004.png"),
+            "smoothed on the domain averages")
     if da2004 is not None:
-        plot_domain_sensitivity(da2004, "2004–2024", C_CS_2004,
-            os.path.join(DIR_D, "sensitivity_2004_2024.png"))
+        plot_domain_sensitivity(da2004, "2004–2024", C_PERIOD_2004,
+            os.path.join(DIR_D, "sensitivity_2004_2024.png"),
+            "smoothed on the domain averages")
 
     # ── 04: Method comparison (Laura's request) ────────────────────
     print("\n[04] Method comparison figures → 04_method_comparison/")

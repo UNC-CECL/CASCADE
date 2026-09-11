@@ -325,7 +325,7 @@ def main():
     axB.bar(dom_centre, a_out, width=w, bottom=a_in, color=COLORS[GAP_OUT],
             lw=0, label="beyond it, in the open sound")
     axB.set_ylabel("unsurveyed cells")
-    axB.set_xlabel("Domain (S $\\rightarrow$ N,  Cape Hatteras to Rodanthe)")
+    axB.set_xlabel("GIS domain (south → north)")
     axB.set_xticks(dom_centre[ticks])
     axB.set_xticklabels([str(domains[t]) for t in ticks])
     axB.grid(axis="y", lw=0.4, color="0.88")

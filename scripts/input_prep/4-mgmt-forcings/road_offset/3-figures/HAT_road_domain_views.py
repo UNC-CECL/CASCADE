@@ -404,7 +404,7 @@ def plot_overview(year: int, setbacks: dict, out_dir: Path):
                 color=C_ROAD, mew=1.6, zorder=5,
                 label="would drown, but village (never updated)")
 
-    ax.set_xlabel("GIS domain  (9 = Buxton  ->  90 = Rodanthe)")
+    ax.set_xlabel("GIS domain (south → north)")
     ax.set_ylabel("distance behind the dune line (m)")
     ax.set_title(f"Where the {year} road sits, against how far the 2009 island "
                  f"actually extends\n"

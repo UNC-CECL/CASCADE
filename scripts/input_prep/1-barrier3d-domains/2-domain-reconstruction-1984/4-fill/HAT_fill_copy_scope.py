@@ -93,7 +93,7 @@ INIT = REPO / "data" / "hatteras_init"
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "0-elevation" / "3-figures"))
 from hat_topo_version import array_name, dune_topo_root, insert_figures_dir_for_domain, topo_dirs, insert_scope_step# noqa: E402
-from hat_figure_style import elevation_cmap  # noqa: E402
+from hat_figure_style import C, caption, elevation_cmap, figsize, save  # noqa: E402
 import HAT_plot_duneline_offset as off  # noqa: E402  the house style
 
 PRODUCT = "1984-start"
@@ -105,11 +105,11 @@ OUTLIER_M = 8.0               # a copied cell above this is flagged (structures,
 SCOPE_DIR = INIT / "1-barrier3d-domains" / PRODUCT / "2-domain-reconstruction-1984"
 FOOTPRINT_CSV = insert_scope_step(PRODUCT, "2-extent") / "footprint_1984_by_domain.csv"
 BUILT_VERSION = "v3"          # the version HAT_build_footprint_version.py wrote; after-panels read it if present
-C_ROAD_OLD = "0.35"
+C_ROAD_OLD = C["BASE"]
 INK = off.INK
 C_ADD, C_ADD_FILL = off.C_1984, off.C_1984_FILL
 C_REM = off.C_1997
-C_ROAD = "#1a1a1a"
+C_ROAD = C["ROAD"]
 
 
 # =============================================================================
@@ -199,7 +199,7 @@ def _draw_road(ax, y: float, ncol: int, label: str, colour: str) -> None:
     ax.add_patch(Rectangle((-0.5, y - 0.5), ncol, ROAD_ROWS, facecolor=colour,
                            edgecolor=colour, lw=1.2, alpha=0.45, zorder=5))
     ax.text(ncol - 1.0, y + ROAD_ROWS / 2 - 0.5, label, ha="right", va="center",
-            fontsize=7.5, fontweight="bold", color="white", zorder=6)
+            fontsize=7, fontweight="bold", color="white", zorder=6)
 
 
 def fig_domain(d: int, a: dict, rows_shown: int = 40) -> Path:
@@ -211,9 +211,9 @@ def fig_domain(d: int, a: dict, rows_shown: int = 40) -> Path:
     if n < 0:
         return _fig_domain_removal(d, a, rows_shown)
     R = min(z1.shape[0], max(rows_shown, ins + n + 14))     # the block and the road always in view
-    fig, axes = plt.subplots(1, 2, figsize=(10.0, 5.6), constrained_layout=True)
+    fig, axes = plt.subplots(1, 2, figsize=figsize("double", aspect=0.50), constrained_layout=True)
     for k, (ax, z, title) in enumerate(zip(axes, (z0, z1),
-                                           ("original domain", f"{n} rows inserted landward of NC-12 and filled; NC-12 at the 1984 setback"))):
+                                           ("original domain", f"+{n} rows, filled"))):
         ax.imshow(z[:R], cmap=cmap, norm=norm, aspect="auto", interpolation="nearest",
                   origin="upper", extent=[-0.5, z.shape[1] - 0.5, R - 0.5, -0.5])
         if road is not None:
@@ -237,22 +237,30 @@ def fig_domain(d: int, a: dict, rows_shown: int = 40) -> Path:
         ax.set_xlabel("alongshore cell")
         if k == 0:
             ax.set_ylabel("cross-shore cell (0 = interior row 0)")
-        ax.set_yticks(range(0, R, 5))
+        ax.set_yticks(range(0, R, 10))
         for sp in ("top", "right"):
             ax.spines[sp].set_visible(True)
         off._title(ax, k, f"GIS {d}: {title}")
 
-    labels = ["below 0 (water)"] + [f"{lo:g}–{hi:g}" for lo, hi in zip(bounds[1:-2], bounds[2:-1])]         + [f"above {bounds[-2]:g}"]
+    labels = ["< 0 m (water)"] + [f"{lo:g}–{hi:g} m" for lo, hi in zip(bounds[1:-2], bounds[2:-1])]         + [f"> {bounds[-2]:g} m"]
     handles = [Patch(facecolor=cmap(i), edgecolor="0.4", lw=0.4, label=lab) for i, lab in enumerate(labels)]
-    handles += [Line2D([0], [0], color=C_ADD, lw=1.4, ls=(0, (3, 2)), label="source rows copied into them"),
+    handles += [Line2D([0], [0], color=C_ADD, lw=1.4, ls=(0, (3, 2)), label="rows copied into them"),
                 Line2D([0], [0], color=C_ADD, lw=1.6, label="rows inserted, filled"),
-                Patch(facecolor=C_ROAD, alpha=0.45, edgecolor=C_ROAD, label="NC-12 road rows (model input)"),
+                Patch(facecolor=C_ROAD, alpha=0.45, edgecolor=C_ROAD, label="NC-12 at the 1984 setback"),
                 Patch(facecolor="none", edgecolor=C_ROAD_OLD, lw=1.0, ls=(0, (2, 2)),
-                      label="NC-12 road rows at the setback measured on the 1996 surface")]
-    fig.legend(handles=handles, loc="outside lower center", ncol=5, fontsize=8,
-               title="elevation classes (m MHW)", title_fontsize=8)
+                      label="NC-12 at the setback measured on the 1996 surface")]
+    fig.legend(handles=handles, loc="outside lower center", ncol=4, fontsize=7, frameon=False,
+               title="interior elevation (m above MHW)", title_fontsize=7)
+    caption(fig, f"GIS {d}, the near-road interior in elevation classes, alongshore across and "
+                 f"cross-shore down from interior row 0. (a) The domain as extracted from the 1996 "
+                 f"surface, with NC-12 at the setback measured there and the {n} rows the fill copies "
+                 f"outlined dashed; the solid line is the insertion point. (b) The same domain with "
+                 f"{n} rows inserted directly behind NC-12 as the model places it under the 1984 setback "
+                 f"and filled with a cell-by-cell copy of the {n} rows immediately landward of them, so "
+                 f"the block fabricates no elevation. The road rows at the setback measured on the 1996 "
+                 f"surface are outlined for comparison.")
     p = insert_figures_dir_for_domain(PRODUCT, "4-fill", d) / f"HAT_fill_copy_grid_GIS{d}.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
+    save(fig, p, vector=False, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
 
@@ -265,9 +273,9 @@ def _fig_domain_removal(d: int, a: dict, rows_shown: int = 40) -> Path:
     z0, z1, ins, n, road, road_new = a["before"], a["after"], a["insert"], a["n"], a["road_row"], a["road_row_new"]
     m = -n
     R = min(z0.shape[0], max(rows_shown, (road or 0) + 16))
-    fig, axes = plt.subplots(1, 2, figsize=(10.0, 5.6), constrained_layout=True)
+    fig, axes = plt.subplots(1, 2, figsize=figsize("double", aspect=0.50), constrained_layout=True)
     for k, (ax, z, title) in enumerate(zip(axes, (z0, z1),
-                                           ("original domain", f"{m} rows removed seaward of NC-12; NC-12 at the 1984 setback"))):
+                                           ("original domain", f"−{m} rows"))):
         ax.imshow(z[:R], cmap=cmap, norm=norm, aspect="auto", interpolation="nearest",
                   origin="upper", extent=[-0.5, z.shape[1] - 0.5, R - 0.5, -0.5])
         if k == 0:
@@ -275,8 +283,8 @@ def _fig_domain_removal(d: int, a: dict, rows_shown: int = 40) -> Path:
                 _draw_road(ax, road, z.shape[1], "NC-12, measured setback", C_ROAD)
             ax.add_patch(Rectangle((-0.5, ins - 0.5), z.shape[1], m, facecolor="none", edgecolor=C_REM,
                                    lw=1.6, hatch="////", zorder=5))
-            ax.text(z.shape[1] / 2, ins + m / 2 - 0.5, f"{m} rows removed: interior rows {ins}\u2013{ins + m - 1}",
-                    ha="center", va="center", fontsize=8, fontweight="bold", color=C_REM, zorder=6,
+            ax.text(z.shape[1] / 2, ins + m / 2 - 0.5, f"rows {ins}\u2013{ins + m - 1} removed",
+                    ha="center", va="center", fontsize=7, fontweight="bold", color=C_REM, zorder=6,
                     bbox=dict(facecolor="white", alpha=0.85, edgecolor="none", boxstyle="square,pad=0.2"))
         else:
             if road is not None:
@@ -286,30 +294,37 @@ def _fig_domain_removal(d: int, a: dict, rows_shown: int = 40) -> Path:
             if road_new is not None:
                 _draw_road(ax, road_new, z.shape[1], "NC-12, 1984 setback", C_ROAD)
             ax.axhline(ins - 0.5, xmax=0.60, color=C_REM, lw=2.0, ls=(0, (3, 1.5)), zorder=8)
-            ax.annotate(f"seam: {m} rows removed between row {ins - 1} and row {ins}",
+            ax.annotate(f"seam: {m} rows removed",
                         xy=(z.shape[1] * 0.35, ins - 0.5), xytext=(z.shape[1] * 0.35, (road_new or ins) + ROAD_ROWS + 3.5),
-                        ha="center", va="top", fontsize=7.5, color=C_REM, fontweight="bold", zorder=9,
+                        ha="center", va="top", fontsize=7, color=C_REM, fontweight="bold", zorder=9,
                         arrowprops=dict(arrowstyle="-|>", color=C_REM, lw=1.2, mutation_scale=12, shrinkB=0),
                         bbox=dict(facecolor="white", alpha=0.9, edgecolor=C_REM, lw=0.8, boxstyle="square,pad=0.25"))
         ax.set_xlabel("alongshore cell")
         if k == 0:
             ax.set_ylabel("cross-shore cell (0 = interior row 0)")
-        ax.set_yticks(range(0, R, 5))
+        ax.set_yticks(range(0, R, 10))
         for sp in ("top", "right"):
             ax.spines[sp].set_visible(True)
         off._title(ax, k, f"GIS {d}: {title}")
-    labels = ["below 0 (water)"] + [f"{lo:g}\u2013{hi:g}" for lo, hi in zip(bounds[1:-2], bounds[2:-1])] \
-        + [f"above {bounds[-2]:g}"]
+    labels = ["< 0 m (water)"] + [f"{lo:g}\u2013{hi:g} m" for lo, hi in zip(bounds[1:-2], bounds[2:-1])] \
+        + [f"> {bounds[-2]:g} m"]
     handles = [Patch(facecolor=cmap(i), edgecolor="0.4", lw=0.4, label=lab) for i, lab in enumerate(labels)]
     handles += [Patch(facecolor="none", edgecolor=C_REM, hatch="////", label="rows removed seaward of NC-12"),
                 Line2D([0], [0], color=C_REM, lw=2.0, ls=(0, (3, 1.5)), label="seam left by the removal"),
-                Patch(facecolor=C_ROAD, alpha=0.45, edgecolor=C_ROAD, label="NC-12 road rows (model input)"),
+                Patch(facecolor=C_ROAD, alpha=0.45, edgecolor=C_ROAD, label="NC-12 at the 1984 setback"),
                 Patch(facecolor="none", edgecolor=C_ROAD_OLD, lw=1.0, ls=(0, (2, 2)),
-                      label="NC-12 road rows at the measured setback, after the removal")]
-    fig.legend(handles=handles, loc="outside lower center", ncol=5, fontsize=8,
-               title="elevation classes (m MHW)", title_fontsize=8)
+                      label="NC-12 at the measured setback, after the removal")]
+    fig.legend(handles=handles, loc="outside lower center", ncol=4, fontsize=7, frameon=False,
+               title="interior elevation (m above MHW)", title_fontsize=7)
+    caption(fig, f"GIS {d}, the near-road interior in elevation classes, alongshore across and "
+                 f"cross-shore down from interior row 0. (a) The domain as extracted from the 1996 "
+                 f"surface, with NC-12 at the setback measured there and the {m} rows directly seaward of "
+                 f"the roadway rows hatched: those are the rows the footprint removes, the island having "
+                 f"prograded here since 1984. (b) The same domain with those rows gone. Nothing is "
+                 f"filled: the surviving rows close up, leaving one seam at the removal, and the road, "
+                 f"its own cells and everything landward of them are kept as measured.")
     p = insert_figures_dir_for_domain(PRODUCT, "4-fill", d) / f"HAT_fill_copy_grid_GIS{d}.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
+    save(fig, p, vector=False, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
 
@@ -330,10 +345,10 @@ def _fig_method_removal(d: int, a: dict, dune_dir: Path, rows_shown: int = 40) -
     def stack(z):
         return np.concatenate([dune_rows, z], axis=0)[:R]
 
-    panels = ((stack(z0), "original domain: dune crest rows and interior"),
-              (stack(z0), f"{m} rows identified directly seaward of NC-12"),
-              (stack(z1), f"the {m} rows removed; NC-12 at the 1984 setback"))
-    fig, axes = plt.subplots(1, 3, figsize=(14.0, 5.8), constrained_layout=True)
+    panels = ((stack(z0), "original domain"),
+              (stack(z0), f"{m} rows identified"),
+              (stack(z1), f"the {m} rows removed"))
+    fig, axes = plt.subplots(1, 3, figsize=figsize("double", aspect=0.44), constrained_layout=True)
     y_road = None if road is None else road + ROAD_ROWS
     y_ins = ins + ROAD_ROWS
     for k, (ax, (img, title)) in enumerate(zip(axes, panels)):
@@ -345,44 +360,52 @@ def _fig_method_removal(d: int, a: dict, dune_dir: Path, rows_shown: int = 40) -
         ax.text(ncol - 1.0, ROAD_ROWS / 2 - 0.5, "dune", ha="right", va="center", fontsize=7.5,
                 fontweight="bold", color="white", zorder=6)
         if k < 2 and road is not None:
-            _draw_road(ax, y_road, ncol, "NC-12, measured setback", C_ROAD)
+            _draw_road(ax, y_road, ncol, "NC-12, measured", C_ROAD)
         if k == 1:
             ax.add_patch(Rectangle((-0.5, y_ins - 0.5), ncol, m, facecolor="none", edgecolor=C_REM,
                                    lw=1.6, hatch="////", zorder=5))
-            ax.text(ncol / 2, y_ins + m / 2 - 0.5, f"{m} rows removed: interior rows {ins}\u2013{ins + m - 1}",
-                    ha="center", va="center", fontsize=8, fontweight="bold", color=C_REM, zorder=6,
+            ax.text(1.0, y_ins + m / 2 - 0.5, f"rows {ins}\u2013{ins + m - 1}",
+                    ha="left", va="center", fontsize=7, fontweight="bold", color=C_REM, zorder=6,
                     bbox=dict(facecolor="white", alpha=0.85, edgecolor="none", boxstyle="square,pad=0.2"))
         if k == 2:
             if road is not None:
                 ax.add_patch(Rectangle((-0.5, y_ins - 0.5), ncol, ROAD_ROWS, facecolor="none",
                                        edgecolor=C_ROAD_OLD, lw=1.0, ls=(0, (2, 2)), zorder=5))
             if road_new is not None:
-                _draw_road(ax, road_new + ROAD_ROWS, ncol, "NC-12 at its 1984 setback", C_ROAD)
+                _draw_road(ax, road_new + ROAD_ROWS, ncol, "NC-12, 1984 setback", C_ROAD)
             ax.axhline(y_ins - 0.5, xmax=0.60, color=C_REM, lw=2.0, ls=(0, (3, 1.5)), zorder=8)
-            ax.annotate(f"seam: {m} rows removed between row {ins - 1} and row {ins}",
+            ax.annotate(f"seam: {m} rows removed",
                         xy=(ncol * 0.35, y_ins - 0.5), xytext=(ncol * 0.35, (road_new or ins) + 2 * ROAD_ROWS + 3.5),
-                        ha="center", va="top", fontsize=7.5, color=C_REM, fontweight="bold", zorder=9,
+                        ha="center", va="top", fontsize=7, color=C_REM, fontweight="bold", zorder=9,
                         arrowprops=dict(arrowstyle="-|>", color=C_REM, lw=1.2, mutation_scale=12, shrinkB=0),
                         bbox=dict(facecolor="white", alpha=0.9, edgecolor=C_REM, lw=0.8, boxstyle="square,pad=0.25"))
         ax.set_xlabel("alongshore cell")
         if k == 0:
             ax.set_ylabel("cross-shore cell (0 = the dune)")
-        ax.set_yticks(range(0, R, 5))
+        ax.set_yticks(range(0, R, 10))
         for sp in ("top", "right"):
             ax.spines[sp].set_visible(True)
-        off._title(ax, k, f"GIS {d}: {title}")
-    labels = ["below 0 (water)"] + [f"{lo:g}\u2013{hi:g}" for lo, hi in zip(bounds[1:-2], bounds[2:-1])] \
-        + [f"above {bounds[-2]:g}"]
+        off._title(ax, k, title)
+    labels = ["< 0 m (water)"] + [f"{lo:g}\u2013{hi:g} m" for lo, hi in zip(bounds[1:-2], bounds[2:-1])] \
+        + [f"> {bounds[-2]:g} m"]
     handles = [Patch(facecolor=cmap(i), edgecolor="0.4", lw=0.4, label=lab) for i, lab in enumerate(labels)]
     handles += [Patch(facecolor="none", edgecolor=C_REM, hatch="////", label="rows removed seaward of NC-12"),
                 Line2D([0], [0], color=C_REM, lw=2.0, ls=(0, (3, 1.5)), label="seam left by the removal"),
-                Patch(facecolor=C_ROAD, alpha=0.45, edgecolor=C_ROAD, label="NC-12 road rows (model input)"),
+                Patch(facecolor=C_ROAD, alpha=0.45, edgecolor=C_ROAD, label="NC-12 at the 1984 setback"),
                 Patch(facecolor="none", edgecolor=C_ROAD_OLD, lw=1.0, ls=(0, (2, 2)),
-                      label="NC-12 road rows at the measured setback, after the removal")]
-    fig.legend(handles=handles, loc="outside lower center", ncol=5, fontsize=8,
-               title="elevation classes (m MHW); dune rows drawn at berm + dune height", title_fontsize=8)
+                      label="NC-12 at the measured setback, after the removal")]
+    fig.legend(handles=handles, loc="outside lower center", ncol=4, fontsize=7, frameon=False,
+               title="interior elevation (m above MHW); dune rows drawn at berm + dune height",
+               title_fontsize=7)
+    caption(fig, f"GIS {d} in the model's own frame: the two dune rows on top, drawn at berm + dune "
+                 f"height, then every interior row, in elevation classes. (a) The domain as extracted "
+                 f"from the 1996 surface, NC-12 at the setback measured there. (b) The {m} rows the "
+                 f"footprint removes, the |N| rows directly seaward of the roadway rows. (c) The domain "
+                 f"with those rows gone and NC-12 at its 1984 setback, which lands on the old pavement's "
+                 f"first row or the row seaward of it; the seam is where the surviving rows close up. "
+                 f"Nothing is filled and no elevation is fabricated.")
     p = insert_figures_dir_for_domain(PRODUCT, "4-fill", d) / f"HAT_fill_copy_method_GIS{d}.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
+    save(fig, p, vector=False, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
 
@@ -410,10 +433,10 @@ def fig_method(d: int, a: dict, dune_dir: Path, rows_shown: int = 40) -> Path:
 
     blank = np.full((n, ncol), np.nan)
     z_blank = np.concatenate([z0[:ins], blank, z0[ins:]], axis=0)
-    panels = ((stack(z0), "original domain: dune crest rows and interior"),
-              (stack(z_blank), f"{n} rows inserted landward of {'NC-12' if road is not None else 'the dune crest'} (unfilled)"),
-              (stack(z1), f"the {n} rows filled by copying; NC-12 at the 1984 setback"))
-    fig, axes = plt.subplots(1, 3, figsize=(14.0, 5.8), constrained_layout=True)
+    panels = ((stack(z0), "original domain"),
+              (stack(z_blank), f"{n} rows inserted (unfilled)"),
+              (stack(z1), f"the {n} rows filled by copying"))
+    fig, axes = plt.subplots(1, 3, figsize=figsize("double", aspect=0.44), constrained_layout=True)
     y_road = None if road is None else road + ROAD_ROWS          # the dune rows shift everything by 2
     y_ins = ins + ROAD_ROWS
     for k, (ax, (img, title)) in enumerate(zip(axes, panels)):
@@ -427,25 +450,25 @@ def fig_method(d: int, a: dict, dune_dir: Path, rows_shown: int = 40) -> Path:
                 fontweight="bold", color="white", zorder=6)
         if road is not None:
             if k == 0:
-                _draw_road(ax, y_road, ncol, "NC-12, measured setback", C_ROAD)
+                _draw_road(ax, y_road, ncol, "NC-12, measured", C_ROAD)
             else:
                 # (b), (c): the model road at its 1984 setback - the block sits
                 # directly behind it; the measured pavement rows outlined
                 ax.add_patch(Rectangle((-0.5, y_road - 0.5), ncol, ROAD_ROWS, facecolor="none",
                                        edgecolor=C_ROAD_OLD, lw=1.0, ls=(0, (2, 2)), zorder=5))
                 if road_new is not None:
-                    _draw_road(ax, road_new + ROAD_ROWS, ncol, "NC-12 at its 1984 setback", C_ROAD)
+                    _draw_road(ax, road_new + ROAD_ROWS, ncol, "NC-12, 1984 setback", C_ROAD)
         if k == 0:
             ax.axhline(y_ins - 0.5, color=C_ADD, lw=1.4, zorder=5)
-            ax.text(0.5, y_ins + 0.1, f"insertion point: interior row {ins}", ha="left", va="top",
-                    fontsize=7.5, color=C_ADD, fontweight="bold", zorder=6,
+            ax.text(0.5, y_ins + 0.1, f"insertion point: row {ins}", ha="left", va="top",
+                    fontsize=7, color=C_ADD, fontweight="bold", zorder=6,
                     bbox=dict(facecolor="white", alpha=0.85, edgecolor="none", boxstyle="square,pad=0.15"))
         else:
             ax.add_patch(Rectangle((-0.5, y_ins - 0.5), ncol, n, facecolor="none", edgecolor=C_ADD,
                                    lw=1.6, hatch="////" if k == 1 else None, zorder=5))
             if k == 1:
-                ax.text(ncol / 2, y_ins + n / 2 - 0.5, f"{n} rows inserted (unfilled)", ha="center", va="center",
-                        fontsize=8, fontweight="bold", color=C_ADD, zorder=6,
+                ax.text(1.0, y_ins + n / 2 - 0.5, f"+{n} rows", ha="left", va="center",
+                        fontsize=7, fontweight="bold", color=C_ADD, zorder=6,
                         bbox=dict(facecolor="white", alpha=0.85, edgecolor="none", boxstyle="square,pad=0.2"))
         if k == 2:
             # the source window, in the after frame, and the copy drawn as an arrow.
@@ -458,29 +481,39 @@ def fig_method(d: int, a: dict, dune_dir: Path, rows_shown: int = 40) -> Path:
             ax.annotate("", xy=(ncol * 0.5, y_ins + n / 2 - 0.5), xytext=(ncol * 0.5, y_src + n / 2 - 0.5),
                         arrowprops=dict(arrowstyle="-|>", color=C_ADD, lw=1.6, mutation_scale=14,
                                         connectionstyle="arc3,rad=-0.4"), zorder=7)
-            ax.text(ncol * 0.5 + 3, y_src + n / 2 - 0.5, "copied", ha="left", va="center", fontsize=7.5,
+            ax.text(ncol * 0.5 + 3, y_src + n / 2 - 0.5, "copied", ha="left", va="center", fontsize=7,
                     color=C_ADD, fontweight="bold", zorder=7)
         ax.set_xlabel("alongshore cell")
         if k == 0:
             ax.set_ylabel("cross-shore cell (0 = the dune)")
-        ax.set_yticks(range(0, R, 5))
+        ax.set_yticks(range(0, R, 10))
         for sp in ("top", "right"):
             ax.spines[sp].set_visible(True)
-        off._title(ax, k, f"GIS {d}: {title}")
+        off._title(ax, k, title)
 
-    labels = ["below 0 (water)"] + [f"{lo:g}\u2013{hi:g}" for lo, hi in zip(bounds[1:-2], bounds[2:-1])] \
-        + [f"above {bounds[-2]:g}"]
+    labels = ["< 0 m (water)"] + [f"{lo:g}\u2013{hi:g} m" for lo, hi in zip(bounds[1:-2], bounds[2:-1])] \
+        + [f"> {bounds[-2]:g} m"]
     handles = [Patch(facecolor=cmap(i), edgecolor="0.4", lw=0.4, label=lab) for i, lab in enumerate(labels)]
     handles += [Patch(facecolor="white", edgecolor=C_ADD, hatch="////", label="rows inserted (unfilled)"),
                 Line2D([0], [0], color=C_ADD, lw=1.6, label="rows inserted, filled"),
-                Line2D([0], [0], color=C_ADD, lw=1.4, ls=(0, (3, 2)), label="source rows copied into them"),
-                Patch(facecolor=C_ROAD, alpha=0.45, edgecolor=C_ROAD, label="NC-12 road rows (model input)"),
+                Line2D([0], [0], color=C_ADD, lw=1.4, ls=(0, (3, 2)), label="rows copied into them"),
+                Patch(facecolor=C_ROAD, alpha=0.45, edgecolor=C_ROAD, label="NC-12 at the 1984 setback"),
                 Patch(facecolor="none", edgecolor=C_ROAD_OLD, lw=1.0, ls=(0, (2, 2)),
-                      label="NC-12 road rows at the setback measured on the 1996 surface")]
-    fig.legend(handles=handles, loc="outside lower center", ncol=5, fontsize=8,
-               title="elevation classes (m MHW); dune rows drawn at berm + dune height", title_fontsize=8)
+                      label="NC-12 at the setback measured on the 1996 surface")]
+    fig.legend(handles=handles, loc="outside lower center", ncol=4, fontsize=7, frameon=False,
+               title="interior elevation (m above MHW); dune rows drawn at berm + dune height",
+               title_fontsize=7)
+    anchor = ("directly behind NC-12 as the model places it under the 1984 setback"
+              if road is not None else "directly behind the dune crest row, this domain having no model road")
+    caption(fig, f"GIS {d} in the model's own frame: the two dune rows on top, drawn at berm + dune "
+                 f"height, then every interior row, in elevation classes. (a) The domain as extracted "
+                 f"from the 1996 surface, NC-12 at the setback measured there; the line is the insertion "
+                 f"point, {anchor}. (b) The {n} rows the footprint adds, inserted there and left blank. "
+                 f"(c) The same rows filled with a cell-by-cell copy of the {n} interior rows immediately "
+                 f"landward of them (dashed, arrow), so the block fabricates no elevation and reads as "
+                 f"the backbarrier it stands beside. The only seam is at the landward end of the block.")
     p = insert_figures_dir_for_domain(PRODUCT, "4-fill", d) / f"HAT_fill_copy_method_GIS{d}.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
+    save(fig, p, vector=False, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
 

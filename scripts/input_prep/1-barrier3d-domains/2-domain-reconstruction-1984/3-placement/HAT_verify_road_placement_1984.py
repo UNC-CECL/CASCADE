@@ -81,7 +81,8 @@ sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "0-elevation" / "3-figures"))
 from hat_topo_version import (insert_figures_dir, insert_figures_dir_for_domain,  # noqa: E402
                               array_name, dune_topo_root, duneline_shift_dir, topo_dirs, insert_scope_step)
-from hat_figure_style import elevation_cmap                                     # noqa: E402
+from hat_figure_style import (C, DOMAIN_AXIS_LABEL, caption, elevation_cmap,     # noqa: E402
+                              figsize, open_frame, save, town_bands)
 import HAT_plot_duneline_offset as off                                          # noqa: E402
 
 INIT = REPO / "data" / "hatteras_init"
@@ -98,7 +99,7 @@ ROAD_ROWS = 2
 HALF_M = 10.0                 # the geojson is a centreline; the model road is 20 m
 BERM_EL_M = 1.7
 SAMPLE_M = 10.0               # spacing of samples along the 1984 dune line
-C_ADD, C_REM, C_ROAD, C_ROAD_OLD, INK = off.C_1984, off.C_1997, "#1a1a1a", "0.35", off.INK
+C_ADD, C_REM, C_ROAD, C_ROAD_OLD, INK = off.C_1984, off.C_1997, C["ROAD"], C["BASE"], off.INK
 
 
 # =============================================================================
@@ -267,7 +268,7 @@ def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame,
     ins = int(t["insert_row_behind_road"]) if n != 0 else None
     box = gdf[gdf["domain_id"].astype(int) == d].geometry.iloc[0]
 
-    fig = plt.figure(figsize=(15.0, 7.2), constrained_layout=True)
+    fig = plt.figure(figsize=figsize("double", height=5.4), constrained_layout=True)
     gs = fig.add_gridspec(1, 2, width_ratios=[1.45, 1.0])
     ax = fig.add_subplot(gs[0, 0])
     ag = fig.add_subplot(gs[0, 1])
@@ -303,13 +304,13 @@ def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame,
     top = pr["interior_y"].max() + CELL_M / 2
     if n > 0:
         xb = float(pr["interior_x"].median()) - (r_new + ROAD_ROWS + n / 2 - 0.5) * CELL_M
-        ax.text(xb, top - 12, f"{n} rows inserted here\n(a copy of the {n} rows landward)", ha="center", va="top",
-                fontsize=7.5, color=C_ADD, fontweight="bold", zorder=9,
+        ax.text(xb, top - 12, f"+{n} rows", ha="center", va="top",
+                fontsize=7, color=C_ADD, fontweight="bold", zorder=9,
                 bbox=dict(facecolor="white", alpha=0.85, edgecolor="none", boxstyle="square,pad=0.15"))
     elif n < 0:
         xb = float(pr["interior_x"].median()) - (ins + (-n) / 2 - 0.5) * CELL_M
-        ax.text(xb, top - 12, f"{-n} rows removed:\ninterior rows {ins}–{ins - n - 1}", ha="center", va="top",
-                fontsize=7.5, color=C_REM, fontweight="bold", zorder=9,
+        ax.text(xb, top - 12, f"−{-n} rows", ha="center", va="top",
+                fontsize=7, color=C_REM, fontweight="bold", zorder=9,
                 bbox=dict(facecolor="white", alpha=0.85, edgecolor="none", boxstyle="square,pad=0.15"))
     # distance arrows on the middle profile
     mid = pr_s.iloc[len(pr_s) // 2]
@@ -331,13 +332,11 @@ def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame,
              f"{'=' if abs(sb_v2 + shift - sb_new) < 0.6 else '\u2248'} {sb_new:.0f} m")
     c_shift = C_ADD if n > 0 else C_REM
     for (xa, xb, lab, col, k) in (
-            (x_l84, x_road_v2, f"1984 dune line \u2192 NC-12 on the map:\n{c['raw84_along_m']:.0f} m along the profile "
-                               f"({c['perp_med_m']:.0f} m perpendicular)", C_ADD, 0),
-            (x_l97, x_l84, f"dune-line shift 1984\u21921997:\nthe 1984 line is {abs(shift):.0f} m "
-                           f"{'seaward' if shift > 0 else 'landward'} of the 1997 line \u2192 {n:+d} rows", c_shift, 1),
-            (x0, x_road_v2, f"measured setback (1996 surface):\nrow 0 \u2192 NC-12 = {sb_v2:.0f} m", C_ROAD_OLD, 2),
-            (x0, x_road_new, f"1984 setback (model input): measured {'+' if shift >= 0 else '\u2212'} shift = {arith} from row 0"
-                             f"\n\u2192 road rows {r_new}\u2013{r_new + 1}", C_ROAD, 3)):
+            (x_l84, x_road_v2, f"1984 dune line \u2192 NC-12: {c['raw84_along_m']:.0f} m", C_ADD, 0),
+            (x_l97, x_l84, f"dune-line shift: {abs(shift):.0f} m "
+                           f"{'seaward' if shift > 0 else 'landward'} \u2192 {n:+d} rows", c_shift, 1),
+            (x0, x_road_v2, f"setback measured on the 1996 surface: {sb_v2:.0f} m", C_ROAD_OLD, 2),
+            (x0, x_road_new, f"1984 setback (model input): {sb_new:.0f} m", C_ROAD, 3)):
         yy = y_mid + (1.5 - k) * 58.0
         ax.annotate("", xy=(xb, yy), xytext=(xa, yy),
                     arrowprops=dict(arrowstyle="<->", color=col, lw=1.4, shrinkA=0, shrinkB=0), zorder=9)
@@ -350,7 +349,7 @@ def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame,
             xt, ha = min(xa, xb), "left"
         else:
             xt, ha = xm, "center"
-        ax.text(xt, yy + 6, lab, ha=ha, va="bottom", fontsize=8, color=col, fontweight="bold",
+        ax.text(xt, yy + 6, lab, ha=ha, va="bottom", fontsize=7, color=col, fontweight="bold",
                 zorder=9, bbox=dict(facecolor="white", alpha=0.85, edgecolor="none", boxstyle="square,pad=0.15"))
     ax.set_xlim(x_lo, x_hi)
     ax.set_ylim(b[1] - 10, b[3] + 10)
@@ -359,9 +358,9 @@ def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame,
     ax.set_yticks([])
     off._scalebar(ax, length_m=100.0)
     off._north_arrow(ax, x=0.94, y=0.12)
-    ax.text(0.99, 0.5, "ocean", transform=ax.transAxes, ha="right", va="center", fontsize=9,
+    ax.text(0.99, 0.5, "ocean", transform=ax.transAxes, ha="right", va="center", fontsize=8,
             color=off.INK_MUTED, rotation=90)
-    off._title(ax, 0, f"GIS {d}: the 1984 dune line and NC-12 on the 1 m lidar, with the model's road rows")
+    off._title(ax, 0, f"GIS {d}: the lines on the 1 m lidar")
 
     # ---- (b) the v3 grid ----------------------------------------------------
     cmap, norm, bounds = elevation_cmap()
@@ -373,30 +372,28 @@ def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame,
     ag.imshow(img[:R], cmap=cmap, norm=norm, aspect="auto", interpolation="nearest", origin="upper",
               extent=[-0.5, ncol - 0.5, R - 0.5, -0.5])
     ag.axhline(ROAD_ROWS - 0.5, color=INK, lw=1.0, zorder=5)
-    ag.text(ncol - 1.0, ROAD_ROWS / 2 - 0.5, "dune", ha="right", va="center", fontsize=7.5, fontweight="bold",
+    ag.text(ncol - 1.0, ROAD_ROWS / 2 - 0.5, "dune", ha="right", va="center", fontsize=7, fontweight="bold",
             color="white", zorder=6)
     y_road = r_new + ROAD_ROWS
     ag.add_patch(Rectangle((-0.5, y_road - 0.5), ncol, ROAD_ROWS, facecolor=C_ROAD, edgecolor=C_ROAD, lw=1.2,
                            alpha=0.45, zorder=5))
-    ag.text(ncol - 1.0, y_road + ROAD_ROWS / 2 - 0.5, f"NC-12, 1984 setback: {c['setback_new_m']:.0f} m",
-            ha="right", va="center", fontsize=7.5, fontweight="bold", color="white", zorder=6)
+    ag.text(ncol - 1.0, y_road + ROAD_ROWS / 2 - 0.5, f"NC-12, {c['setback_new_m']:.0f} m",
+            ha="right", va="center", fontsize=7, fontweight="bold", color="white", zorder=6)
     if n > 0:
         ag.add_patch(Rectangle((-0.5, ins + ROAD_ROWS - 0.5), ncol, n, facecolor="none", edgecolor=C_ADD, lw=1.6,
                                zorder=5))
-        ag.text(0.5, ins + ROAD_ROWS + n - 0.3, f"{n} rows inserted, a copy of the {n} rows landward of them",
-                ha="left", va="top", fontsize=7.5, color=C_ADD, fontweight="bold", zorder=6,
+        ag.text(0.5, ins + ROAD_ROWS + n - 0.3, f"+{n} rows, copied from landward",
+                ha="left", va="top", fontsize=7, color=C_ADD, fontweight="bold", zorder=6,
                 bbox=dict(facecolor="white", alpha=0.85, edgecolor="none", boxstyle="square,pad=0.15"))
         y_pav = r_v2 + ROAD_ROWS
     elif n < 0:
         y_seam = ins + ROAD_ROWS - 0.5
         ag.axhline(y_seam, xmax=0.60, color=C_REM, lw=2.0, ls=(0, (3, 1.5)), zorder=8)
-        seam_txt = (f"seam: {-n} rows removed between row {ins - 1} and row {ins}\n"
-                    f"(original rows {ins}–{ins - n - 1}, directly seaward of NC-12)" if ins > 0 else
-                    f"seam at row 0: original rows 0\u2013{-n - 1} removed, directly seaward of NC-12\n"
-                    f"(the road now abuts the dune)")
+        seam_txt = (f"seam: rows {ins}–{ins - n - 1} removed" if ins > 0 else
+                    f"seam at row 0: rows 0\u2013{-n - 1} removed")
         ag.annotate(seam_txt,
                     xy=(ncol * 0.35, y_seam), xytext=(ncol * 0.35, y_road + ROAD_ROWS + 4.0),
-                    ha="center", va="top", fontsize=7.5, color=C_REM, fontweight="bold", zorder=9,
+                    ha="center", va="top", fontsize=7, color=C_REM, fontweight="bold", zorder=9,
                     arrowprops=dict(arrowstyle="-|>", color=C_REM, lw=1.2, mutation_scale=12, shrinkB=0),
                     bbox=dict(facecolor="white", alpha=0.9, edgecolor=C_REM, lw=0.8, boxstyle="square,pad=0.25"))
         y_pav = r_v2 + n + ROAD_ROWS
@@ -406,16 +403,16 @@ def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame,
                            ls=(0, (2, 2)), zorder=5))
     ag.set_xlabel("alongshore cell")
     ag.set_ylabel("cross-shore cell (0 = the dune)")
-    ag.set_yticks(range(0, R, 5))
+    ag.set_yticks(range(0, R, 10))
     sec = ag.secondary_yaxis("right", functions=(lambda cc: (cc - ROAD_ROWS) * CELL_M,
                                                   lambda mm: mm / CELL_M + ROAD_ROWS))
     sec.set_ylabel("m landward of interior row 0")
     for sp in ("top", "right"):
         ag.spines[sp].set_visible(True)
-    off._title(ag, 1, f"GIS {d}: the model domain after the footprint")
+    off._title(ag, 1, f"GIS {d}: the model domain")
 
-    labels = ["below 0 (water)"] + [f"{lo:g}–{hi:g}" for lo, hi in zip(bounds[1:-2], bounds[2:-1])] \
-        + [f"above {bounds[-2]:g}"]
+    labels = ["< 0 m (water)"] + [f"{lo:g}–{hi:g} m" for lo, hi in zip(bounds[1:-2], bounds[2:-1])] \
+        + [f"> {bounds[-2]:g} m"]
     handles = [Patch(facecolor=cmap(i), edgecolor="0.4", lw=0.4, label=lab) for i, lab in enumerate(labels)]
     handles += [Line2D([0], [0], **dict(off.LINE_STYLE[1984], linewidth=2.0), label="1984 dune line"),
                 Line2D([0], [0], **dict(off.LINE_STYLE[1997], linewidth=2.0), label="1997 dune line"),
@@ -427,10 +424,25 @@ def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame,
                 Patch(facecolor=C_ADD, alpha=0.35, edgecolor=C_ADD, hatch="////", label="rows inserted landward of NC-12"),
                 Patch(facecolor=C_REM, alpha=0.35, edgecolor=C_REM, hatch="////", label="rows removed seaward of NC-12"),
                 Line2D([0], [0], color=C_REM, lw=2.0, ls=(0, (3, 1.5)), label="seam left by the removal")]
-    fig.legend(handles=handles, loc="outside lower center", ncol=6, fontsize=8,
-               title="elevation classes (m MHW); dune rows drawn at berm + dune height", title_fontsize=8)
+    fig.legend(handles=handles, loc="outside lower center", ncol=4, fontsize=7, frameon=False,
+               title="interior elevation (m above MHW)", title_fontsize=7)
+    caption(fig, f"GIS {d}. (a) The 1984 dune line and the 1984 NC-12 centreline on the 1 m lidar, "
+                 f"south at the bottom, ocean to the right; no coordinate ticks, scale bar 100 m. Interior "
+                 f"row 0 (one cell behind the picked 1996 crest) is the dashed black line on every profile. "
+                 f"The arrows are the measurements the check compares: the dune line to the road "
+                 f"({c['raw84_along_m']:.0f} m along the extractor's profiles, {c['perp_med_m']:.0f} m "
+                 f"measured perpendicular), the 1984-to-1997 dune-line shift ({shift:+.0f} m, which the 10 m "
+                 f"rule turns into {n:+d} rows), the setback measured on the 1996 surface "
+                 f"({sb_v2:.0f} m from row 0) and the 1984 setback the model receives "
+                 f"({sb_v2:.0f} {'+' if shift >= 0 else '−'} {abs(shift):.0f} = {sb_new:.0f} m, "
+                 f"which the model resolves to whole rows {r_new}–{r_new + 1}). "
+                 f"(b) The same domain as the model holds it: two dune rows on top drawn at berm + dune "
+                 f"height, then every interior row, in elevation classes; NC-12 at the 1984 setback filled "
+                 f"and at the setback measured on the 1996 surface outlined; the rows the footprint inserts "
+                 f"or removes marked. bulldoze() overwrites the road rows every year, so which cells lie "
+                 f"under the pavement does not change a run — the distance from the crest does.")
     p = insert_figures_dir_for_domain(PRODUCT, "3-placement", d, under="road-check") / f"HAT_road_placement_check_GIS{d}.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
+    save(fig, p, vector=False, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
 
@@ -442,15 +454,11 @@ def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame,
 def fig_island(chk: pd.DataFrame) -> Path:
     off.apply_style()
     doms = chk.index.to_numpy()
-    fig, (a, b) = plt.subplots(2, 1, figsize=(13.0, 7.6), sharex=True, constrained_layout=True,
+    fig, (a, b) = plt.subplots(2, 1, figsize=figsize("double", height=5.2), sharex=True,
+                               constrained_layout=True,
                                gridspec_kw=dict(height_ratios=[0.8, 1.2]))
-    ann = off.HATTERAS_ANNOTATIONS
-    for ax in (a, b):
-        for name, (lo, hi) in ann.town_spans.items():
-            ax.axvspan(lo - .5, hi + .5, color="0.93", zorder=0)
-    for name, (lo, hi) in ann.town_spans.items():
-        a.text((lo + hi) / 2, 0.985, name, transform=a.get_xaxis_transform(), ha="center", va="top",
-               fontsize=7.5, color=off.INK_MUTED)
+    town_bands(a)
+    town_bands(b, label=False)
     # (a) the map distance two ways
     a.axhspan(-CELL_M, CELL_M, color="0.96", zorder=0)
     a.axhline(0, color=INK, lw=0.6)
@@ -460,14 +468,15 @@ def fig_island(chk: pd.DataFrame) -> Path:
            label="setback median minus (measured median + shift median)")
     a.set_ylabel("m")
     a.set_ylim(-32, 32)
-    a.grid(axis="y", color="0.92", lw=0.5)
+    a.grid(axis="y")
     a.set_axisbelow(True)
-    a.legend(loc="lower left", ncol=2, fontsize=7.5)
+    open_frame(a)
+    a.legend(loc="lower left", ncol=2, fontsize=7, frameon=False)
     off._title(a, 0, "two residuals against one cell (±10 m, shaded)")
     # (b) the setback in three forms
-    for col, lab, mk, cc, dx in (("setback_v2_m", "setback measured on the 1996 surface (floored at 0)", "o", "0.55", -0.25),
-                                 ("setback_new_m", "1984 setback (measured setback + dune-line shift)", "D", C_ADD, 0.0),
-                                 ("model_setback_m", "1984 setback as the model resolves it (whole 10 m rows)", "s", C_ROAD, 0.25)):
+    for col, lab, mk, cc, dx in (("setback_v2_m", "measured on the 1996 surface (floored at 0)", "o", C["BASE"], -0.25),
+                                 ("setback_new_m", "1984: measured + dune-line shift", "D", C_ADD, 0.0),
+                                 ("model_setback_m", "1984, resolved to whole 10 m rows", "s", C_ROAD, 0.25)):
         v = chk[col].to_numpy().astype(float)
         if col == "setback_v2_m":
             v = np.maximum(v, 0.0)
@@ -476,16 +485,27 @@ def fig_island(chk: pd.DataFrame) -> Path:
     b.set_yticks([0, 10, 20, 50, 100, 200, 500])
     b.set_yticklabels(["0", "10", "20", "50", "100", "200", "500"])
     b.set_ylabel("NC-12 setback\n(m landward of row 0)")
-    b.set_xlabel("domain (1 = south, Cape Hatteras)")
+    b.set_xlabel(DOMAIN_AXIS_LABEL)
     b.set_xlim(0.2, 90.8)
     b.set_xticks([1] + list(range(10, 91, 10)))
     b.set_xticks(doms, minor=True)
-    b.grid(axis="y", color="0.92", lw=0.5)
+    b.grid(axis="y")
     b.set_axisbelow(True)
-    b.legend(loc="upper center", ncol=3, fontsize=7.5)
-    off._title(b, 1, "NC-12 setback: measured, 1984, and as the model resolves it")
+    open_frame(b)
+    fig.legend(handles=b.get_legend_handles_labels()[0], loc="outside lower center", ncol=3,
+               fontsize=7, frameon=False, title="NC-12 setback", title_fontsize=7)
+    off._title(b, 1, "NC-12 setback, three ways")
+    caption(fig, "Every domain with a model road, south at left; villages banded. (a) Two residuals that "
+                 "would show a frame problem, against one Barrier3D cell (±10 m, shaded): the 1984 dune "
+                 "line to NC-12 measured perpendicular minus the same distance along the extractor's "
+                 "profiles, and the median of the per-profile setbacks minus the sum of the two medians "
+                 "(the row count follows the shift median, the setback the median of the sum, so they need "
+                 "not agree). (b) The NC-12 setback in metres landward of interior row 0 on a "
+                 "symmetric-log axis: as measured on the 1996 surface, the 1984 value the model receives "
+                 "(measured + dune-line shift), and that value resolved to whole 10 m rows, which "
+                 "truncates toward the crest by 0–10 m.")
     p = FIG_DIR / "HAT_road_placement_check_island.png"
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white")
+    save(fig, p, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return p
 

@@ -121,6 +121,7 @@ for _path in (SCRIPTS_DIR, _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+from cascade_pipeline.run_layout import resolve  # noqa: E402
 from hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
 
 from HAT_groin_sweep_config import (  # noqa: E402
@@ -341,8 +342,8 @@ def read_reference_config(period):
     if problem:
         return None, problem
     name = run_dir.name
-    meta_path = run_dir / f"{name}_run_metadata.json"
-    rate_csv = run_dir / f"{name}_shoreline_change_rate.csv"
+    meta_path = resolve(run_dir, "metadata_json", name)
+    rate_csv = resolve(run_dir, "rate_csv", name)
     if not meta_path.exists() or not rate_csv.exists():
         return None, (
             f"reference run incomplete:\n    {run_dir}\n"
@@ -426,7 +427,7 @@ def validate_against_matrix_run(period, workers):
             return False, f"validation combination failed: {row['error']}"
 
     swept = pd.read_csv(out_root / combo_name / "shoreline_change_rate.csv")
-    published = pd.read_csv(run_dir / f"{name}_shoreline_change_rate.csv")
+    published = pd.read_csv(resolve(run_dir, "rate_csv", name))
     merged = swept.merge(published, on="gis_domain",
                          suffixes=("_sweep", "_published"))
     if len(merged) != len(published):

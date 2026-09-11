@@ -67,7 +67,8 @@ INPUT   <product>/dune-topo/<version>/topography/domain_<N>_topography.npy  dam
         dunestart_offset/<year>/RoadSetback_<year>_dunestart.csv            m
         road_elevation/RoadElevation.csv                                    m MHW
 
-OUTPUT  dunestart_offset/HAT_road_island_planview_<year>.png
+OUTPUT  dunestart_offset/HAT_road_island_planview_<year>.png (and .pdf)
+        dunestart_offset/CAPTIONS.md   the caption, keyed by file name
 """
 
 import os
@@ -86,6 +87,9 @@ from matplotlib.patches import Patch, Rectangle
 REPO = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(REPO / "scripts"))
 import hat_topo_version as htv  # noqa: E402
+from hat_figure_style import (  # noqa: E402
+    C, DOMAIN_AXIS_LABEL, INK, INK_MUTED, GRID_C, apply_style, caption,
+    figsize, save)
 
 INIT_ROOT = REPO / "data" / "hatteras_init"
 ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
@@ -118,8 +122,7 @@ BERM_ELEV_MHW_M = BERM_ELEV_NAVD_M - MHW_M      # 1.34 m MHW
 # 4 m maximum. Masked cells take the ocean colour rather than the axes white.
 ISLAND_ELEV_MIN_M = -1.0
 ISLAND_ELEV_MAX_M = 4.0
-ISLAND_OCEAN_COLOR = "#b0cfe8"
-TITLE_INK = "#1a1a2e"
+ISLAND_OCEAN_COLOR = C["WATER"]     # the house colour for cells at or below MHW
 
 # Which island ramp. `terrain` is the extractor's, kept as the default so the
 # pair of plan views stays one picture. `oleron` is Crameri's perceptually
@@ -186,21 +189,12 @@ ROAD_EDGE = "#3f0d2e"
 # "road drawn at N x true width" line reports the factor every run.
 ROAD_LW_PT = 1.6
 
-GRID_C = "#c9ccd1"
-INK = "#1a1a1a"
-MUTED = "#5c6068"
-
+apply_style()
 plt.rcParams.update({
-    "font.size": 10,
-    "axes.linewidth": 0.7,
-    "axes.titlesize": 11,
-    "axes.labelsize": 10.5,
-    "xtick.direction": "out",
-    "ytick.direction": "out",
-    "legend.frameon": False,
     # Embed fonts as TrueType in the PDF. Matplotlib's default is Type 3,
     # which a number of journals reject outright at submission and which no
-    # vector editor can re-flow. Costs nothing to set.
+    # vector editor can re-flow. Costs nothing to set. Not in the house
+    # module; everything else here comes from it.
     "pdf.fonttype": 42,
     "ps.fonttype": 42,
 })
@@ -356,12 +350,16 @@ def draw(D):
     year, domains, n_along = D["year"], D["domains"], D["n_along"]
     n_cs, n_al = D["canvas_rows"], D["total_cols"]
 
-    fig_w = 20.0
-    fig_h = min(max(4.5, fig_w * (n_cs / n_al) * 1.8), 7.5)   # poster aspect
+    # Drawn at the width it will be printed: 190 mm, the house double column,
+    # so the 9 pt type on it is 9 pt on the page. It was 20 in wide, where the
+    # same type reduced to about 3 pt. The height is what the two colour scales
+    # and the four labelled axes need; the vertical exaggeration that follows
+    # from it is computed below and stated in the caption.
+    fig_w, fig_h = figsize("double", aspect=0.52)
     fig = plt.figure(figsize=(fig_w, fig_h), facecolor="white")
     # Narrower than the extractor's 0.88 to leave a gutter for the cross-shore
     # distance axis; the colorbars move right by the same amount.
-    ax_rect = [0.06, 0.18, 0.835, 0.68]
+    ax_rect = [0.085, 0.195, 0.715, 0.665]
     ax = fig.add_axes(ax_rect)
     ax.set_facecolor(ISLAND_OCEAN_COLOR)
 
@@ -399,15 +397,15 @@ def draw(D):
         for r in runs:
             ax.add_patch(Rectangle((idx[r[0]] * n_along, 0),
                                    len(r) * n_along, bar_h,
-                                   facecolor="#f2f2f2", edgecolor="#8c8c8c",
+                                   facecolor=C["BASE_FILL"], edgecolor=INK_MUTED,
                                    lw=0.5, hatch="///", zorder=6))
         span = ", ".join(f"{r[0]}–{r[-1]}" if len(r) > 1 else f"{r[0]}"
                          for r in runs)
         handles = [*ax.get_legend_handles_labels()[0],
-                   Patch(facecolor="#f2f2f2", edgecolor="#8c8c8c", hatch="///",
-                         label=f"no NC-12 in domain {span}")]
+                   Patch(facecolor=C["BASE_FILL"], edgecolor=INK_MUTED,
+                         hatch="///", label=f"no NC-12 in domain {span}")]
 
-    ax.legend(handles=handles, loc="upper right", fontsize=9, framealpha=0.9)
+    ax.legend(handles=handles, loc="upper right", fontsize=7)
 
     ax.set_xlim(0, n_al)
     ax.set_ylim(0, n_cs)
@@ -419,11 +417,9 @@ def draw(D):
     km = lambda c: c * CELL_SIZE_M / 1000.0     # noqa: E731
     cell = lambda k: k * 1000.0 / CELL_SIZE_M   # noqa: E731
     sx = ax.secondary_xaxis("top", functions=(km, cell))
-    sx.set_xlabel("Alongshore distance (km)", fontsize=11, labelpad=6)
-    sx.tick_params(labelsize=9)
+    sx.set_xlabel("alongshore distance (km)", labelpad=4)
     sy = ax.secondary_yaxis("right", functions=(km, cell))
-    sy.set_ylabel("Cross-shore distance (km)", fontsize=11, labelpad=6)
-    sy.tick_params(labelsize=9)
+    sy.set_ylabel("cross-shore distance (km)", labelpad=4)
 
     # Vertical exaggeration, computed from the axes actually drawn rather than
     # assumed. A plan view whose two axes are at different scales must say so,
@@ -435,21 +431,22 @@ def draw(D):
     # waiting on a different island shape.
 
     # Two colorbars share the extractor's single-colorbar column.
-    cax = fig.add_axes([0.955, 0.545, 0.013, 0.315])
+    cax = fig.add_axes([0.895, 0.545, 0.013, 0.315])
     cbar = plt.colorbar(im, cax=cax)
-    cbar.set_label("Island elevation (m MHW)", fontsize=11, color=TITLE_INK,
-                   labelpad=10, rotation=270)
-    cbar.ax.yaxis.set_tick_params(color=TITLE_INK, labelcolor=TITLE_INK)
-    cbar.outline.set_edgecolor("#cccccc")
+    cbar.set_label("island elevation (m MHW)", color=INK, labelpad=8,
+                   rotation=270)
+    cbar.ax.yaxis.set_tick_params(color=INK, labelcolor=INK)
+    cbar.outline.set_edgecolor(INK_MUTED)
+    cbar.outline.set_linewidth(0.6)
     cbar.set_ticks([-1, 0, 1, 2, 3, 4])
 
-    cax_r = fig.add_axes([0.955, 0.18, 0.013, 0.265])
+    cax_r = fig.add_axes([0.895, 0.195, 0.013, 0.265])
     cbr = plt.colorbar(plt.cm.ScalarMappable(norm=rnorm, cmap=ROAD_CMAP), cax=cax_r)
-    cbr.set_label("Road elevation (m MHW)", fontsize=11, color=TITLE_INK,
-                  labelpad=10, rotation=270)
-    cbr.ax.yaxis.set_tick_params(color=TITLE_INK, labelcolor=TITLE_INK)
-    cbr.outline.set_edgecolor("#cccccc")
-    cbr.ax.axhline(BERM_ELEV_MHW_M, color="#1a1a2e", lw=1.1, ls=(0, (2.4, 1.6)))
+    cbr.set_label("road elevation (m MHW)", color=INK, labelpad=8, rotation=270)
+    cbr.ax.yaxis.set_tick_params(color=INK, labelcolor=INK)
+    cbr.outline.set_edgecolor(INK_MUTED)
+    cbr.outline.set_linewidth(0.6)
+    cbr.ax.axhline(BERM_ELEV_MHW_M, color=INK, lw=1.0, ls=(0, (2.4, 1.6)))
 
     ticks, labels = [], []
     for k, n in enumerate(domains):
@@ -457,46 +454,33 @@ def draw(D):
             ticks.append(k * n_along + n_along // 2)
             labels.append(str(n))
     ax.set_xticks(ticks)
-    ax.set_xticklabels(labels, fontsize=9)
-    ax.set_xlabel("Domain (S → N,  Cape Hatteras to Rodanthe)", fontsize=12,
-                  labelpad=8)
-    ax.set_ylabel("Cross-shore cell (raw_offset frame)", fontsize=12)
+    ax.set_xticklabels(labels)
+    # The endpoints used to be named here as "Cape Hatteras to Rodanthe", which
+    # misplaces the north end by about 5 km: Rodanthe is domain 80, and domain
+    # 90 is Pea Island. The one house label carries no endpoints; they are in
+    # the caption instead.
+    ax.set_xlabel(DOMAIN_AXIS_LABEL, labelpad=5)
+    ax.set_ylabel("cross-shore cell (1 cell = 10 m)")
     for k, n in enumerate(domains):
         if n % 10 == 0:
-            ax.axvline(k * n_along - 0.5, color="#aaaaaa", lw=0.4, alpha=0.5,
-                       zorder=2)
+            ax.axvline(k * n_along - 0.5, color=GRID_C, lw=0.4, zorder=2)
     for sp in ("top", "right"):
         ax.spines[sp].set_visible(False)
     for sp in ("bottom", "left"):
-        ax.spines[sp].set_color("#999999")
+        ax.spines[sp].set_color(INK)
 
-    # NO in-figure title. A journal sets the caption in the text, so a title
-    # baked into the image duplicates it, cannot be copyedited, and has to be
-    # cropped out by hand. The caption ships as a sidecar .txt instead.
-    # What DOES stay on the figure is provenance: enough that a copy of this
-    # PNG separated from the repo can still be traced to the files that made it.
-    fig.text(0.06, 0.022,
-             f"{D['product']}/{D['version']}  ·  setback "
-             f"{D['setback_path'].name}  ·  elevation {ROAD_ELEV_CSV.name}  ·  "
-             f"offsets Island_Dune_Offsets_{year}_CASCADE_Input.csv  ·  "
-             f"HAT_road_island_planview.py  ·  {ISLAND_CMAP_NAME}  ·  1 cell = "
-             f"{CELL_SIZE_M:.0f} m, vertical exaggeration ×{ve:.1f}  ·  "
-             f"road stroked {ROAD_LW_PT:.1f} pt vs "
-             f"{(bb.height * fig_h * 72.0) / n_cs * (ROAD_WIDTH_M / CELL_SIZE_M):.1f} pt true",
-             fontsize=7.2, color="#6b6f76", ha="left", va="bottom")
-
-    out = DUNESTART / f"HAT_road_island_planview_{year}{out_suffix()}.png"
-    # 300 dpi is the usual raster floor for a figure submitted to a journal;
-    # the PDF beside it is vector for everything except the rasterized mesh,
-    # so text and the road stay sharp at any zoom.
-    fig.savefig(out, dpi=300, bbox_inches="tight", facecolor="white")
-    fig.savefig(out.with_suffix(".pdf"), bbox_inches="tight", facecolor="white")
-    plt.close(fig)
+    # NO in-figure title, and no footnote either. A journal sets the caption in
+    # the text, so a title baked into the image duplicates it, cannot be
+    # copyedited, and has to be cropped out by hand. The provenance line that
+    # used to sit along the bottom edge is the same problem one size down, so
+    # it has moved into the caption below with everything else.
 
     extent = f"{ISLAND_PAD_ROWS} cells / {ISLAND_PAD_ROWS * CELL_SIZE_M:.0f} m"
     nr = D["no_road"]
     cap = (
         f"NC-12 on Hatteras Island as CASCADE initialises it, {year} vintage. "
+        f"Domain 1 is at Cape Point in the south, domain 90 at Pea Island in "
+        f"the north. "
         f"Barrier interior and dune from the {D['product']}/{D['version']} "
         f"extraction, assembled in the alongshore-offset frame with every "
         f"domain padded to {extent} cross-shore; colour is elevation relative "
@@ -517,18 +501,30 @@ def draw(D):
         + f"The road band is stroked at {ROAD_LW_PT:.1f} pt against a true "
         f"width of {(bb.height * fig_h * 72.0) / n_cs * (ROAD_WIDTH_M / CELL_SIZE_M):.1f} pt "
         f"so that it can carry colour; cross-shore position and alongshore "
-        f"extent are exact. Vertical exaggeration ×{ve:.1f}."
+        f"extent are exact. Vertical exaggeration ×{ve:.1f}. "
+        f"Sources: {D['product']}/{D['version']}; setback "
+        f"{D['setback_path'].name}; elevation {ROAD_ELEV_CSV.name}; offsets "
+        f"Island_Dune_Offsets_{year}_CASCADE_Input.csv; drawn by "
+        f"HAT_road_island_planview.py on the {ISLAND_CMAP_NAME} ramp."
     )
-    cap_path = out.with_name(out.stem + "_caption.txt")
-    cap_path.write_text(cap + "\n", encoding="utf-8")
+    # The caption lands in CAPTIONS.md beside the PNG, keyed by file name,
+    # which is where every other figure in this project keeps its caption. It
+    # was a sidecar <stem>_caption.txt until 2026-09-10.
+    caption(fig, cap)
+
+    out = DUNESTART / f"HAT_road_island_planview_{year}{out_suffix()}.png"
+    # 300 dpi is the usual raster floor for a figure submitted to a journal;
+    # the PDF beside it is vector for everything except the rasterized mesh,
+    # so text and the road stay sharp at any zoom.
+    written = save(fig, out, bbox_inches="tight")
+    plt.close(fig)
 
     true_lw = (bb.height * fig_h * 72.0) / n_cs * (ROAD_WIDTH_M / CELL_SIZE_M)
     print(f"  [road]    stroked {ROAD_LW_PT:.1f} pt vs {true_lw:.1f} pt true "
           f"width -> x{ROAD_LW_PT / true_lw:.2f}")
     print(f"  [scale]   vertical exaggeration x{ve:.2f}")
-    print(f"  [out]     {out}")
-    print(f"  [out]     {out.with_suffix('.pdf')}")
-    print(f"  [out]     {cap_path}")
+    for w in written:
+        print(f"  [out]     {w}")
     return out
 
 

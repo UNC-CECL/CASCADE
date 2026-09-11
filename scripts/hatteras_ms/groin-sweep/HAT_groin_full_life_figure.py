@@ -68,6 +68,7 @@ for _path in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+from cascade_pipeline.run_layout import resolve  # noqa: E402
 from HAT_groin_sweep_config import (  # noqa: E402
     GROIN_DOWNDRIFT_GIS,
     GROIN_UPDRIFT_GIS,
@@ -95,13 +96,12 @@ NO_GROIN_RUN = "HAT_1967_2018_edge_calibrated_no_groin"
 
 
 def _matrix(run_name):
-    return RAW_RUNS / run_name / f"{run_name}_shoreline_matrix.npy"
+    return resolve(RAW_RUNS / run_name, "matrix", run_name)
 
 
 SHORELINE = _matrix(GROIN_RUN)
 NO_GROIN_SHORELINE = _matrix(NO_GROIN_RUN)
-DIAGNOSTICS = (RAW_RUNS / GROIN_RUN
-               / f"{GROIN_RUN}_groin_diagnostics.csv")
+DIAGNOSTICS = resolve(RAW_RUNS / GROIN_RUN, "groin_csv", GROIN_RUN)
 
 # A rig run directory does NOT name its own parameters -- the sweep writes every
 # cell into one run name, so whatever survives is the last cell that finished.
