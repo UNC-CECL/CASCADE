@@ -72,6 +72,8 @@ for _path in (SCRIPTS_DIR, _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+                              caption, figsize, open_frame, save, _title)
 from HAT_groin_sweep_config import (  # noqa: E402
     END_YEAR,
     FIT_DOMAINS_GIS,
@@ -104,7 +106,7 @@ CHAINAGE_CSV = (PROJECT_BASE_DIR / "hard-structures" / "groin"
 GROIN_FIELD_NORTHING = (3901373.14, 3901788.79)
 
 ZOOM_DOMAINS = (4, 8)
-NOGROIN_COLOR = "#777777"
+NOGROIN_COLOR = C["BASE"]   # the run without the modification under test
 MIN_OBS_PER_DOMAIN = 20
 
 
@@ -278,9 +280,11 @@ def draw(preset, chainage):
     plt = _matplotlib()
 
     domains = list(FIT_DOMAINS_GIS)
+    apply_style()
     figure, axes = plt.subplots(
-        len(PERIODS), 2, figsize=(15, 9.5),
-        gridspec_kw=dict(width_ratios=[1.5, 1]))
+        len(PERIODS), 2, figsize=figsize("double", aspect=0.66),
+        gridspec_kw=dict(width_ratios=[1.5, 1]), constrained_layout=True)
+    notes = []
 
     drew_any = False
     for row, period in enumerate(PERIODS):
@@ -289,9 +293,10 @@ def draw(preset, chainage):
         if best is None:
             for axis in (reach_axis, zoom_axis):
                 axis.text(0.5, 0.5,
-                          f"{period}-{END_YEAR[period]} {preset}\nnot swept yet",
-                          ha="center", va="center", color="#999999",
-                          transform=axis.transAxes)
+                          f"{period} to {END_YEAR[period]}, {preset}\n"
+                          "not swept yet",
+                          ha="center", va="center", fontsize=8,
+                          color=INK_MUTED, transform=axis.transAxes)
                 axis.set_xticks([]); axis.set_yticks([])
             continue
         drew_any = True
@@ -307,45 +312,51 @@ def draw(preset, chainage):
                                baseline_combo(period, preset, best), have)
 
         # --- reach panel -------------------------------------------------
-        reach_axis.plot(x, obs_start, marker="o", linestyle="--",
-                        color="#999999", linewidth=1.6,
-                        label=f"observed {period} (start)", zorder=3)
-        reach_axis.plot(x, obs_end, marker="o", color=OBSERVED_COLOR,
-                        linewidth=2.4,
-                        label=f"observed {END_YEAR[period]} (end)", zorder=5)
+        reach_axis.plot(x, obs_start, marker="o", markersize=2.8,
+                        linestyle="--", color=INK_MUTED, linewidth=1.2,
+                        label=f"observed at {period}, the start", zorder=3)
+        reach_axis.plot(x, obs_end, marker="o", markersize=2.8,
+                        color=OBSERVED_COLOR, linewidth=1.8,
+                        label=f"observed at {END_YEAR[period]}, the end",
+                        zorder=5)
         if nogroin is not None:
             reach_axis.plot(x, obs_start + np.array([nogroin[d] for d in have]),
-                            marker="^", color=NOGROIN_COLOR, linewidth=1.8,
-                            linestyle=":", label="model end, groin OFF",
-                            zorder=4)
+                            marker="^", markersize=2.8, color=NOGROIN_COLOR,
+                            linewidth=1.4, linestyle=":",
+                            label="modelled end, groin off", zorder=4)
         if fitted is not None:
             reach_axis.plot(x, obs_start + np.array([fitted[d] for d in have]),
-                            marker="s", color=MODEL_COLOR, linewidth=2.2,
-                            label=f"model end, {_cell_label(best)}", zorder=6)
+                            marker="s", markersize=2.8, color=MODEL_COLOR,
+                            linewidth=1.6,
+                            label=f"modelled end, {_cell_label(best)}",
+                            zorder=6)
 
         # DOMAIN-COORDINATE shading belongs to the reach panel ONLY. The zoom
         # panel's x axis is alongshore METRES, so a span drawn at 5.5-6.5
         # lands six metres from the origin and drags the axis back to zero --
         # which is exactly what it did before this was split.
         reach_axis.axvspan(GROIN_UPDRIFT_GIS - 0.5, GROIN_UPDRIFT_GIS + 0.5,
-                           color=GROIN_COLOR, alpha=0.10, zorder=0)
+                           color="0.90", zorder=0)
         reach_axis.axvspan(GROIN_DOWNDRIFT_GIS - 0.5,
                            GROIN_DOWNDRIFT_GIS + 0.5,
-                           color="#1565C0", alpha=0.10, zorder=0)
-        reach_axis.grid(alpha=0.25)
-        zoom_axis.grid(alpha=0.25)
+                           color="0.94", zorder=0)
+        for axis in (reach_axis, zoom_axis):
+            axis.grid(axis="y")
+            axis.set_axisbelow(True)
+            open_frame(axis)
 
         misfit = (np.nan if fitted is None else
                   float(np.sqrt(np.mean(
                       (obs_start + np.array([fitted[d] for d in have])
                        - obs_end) ** 2))))
-        reach_axis.set_title(
-            f"{period}-{END_YEAR[period]}  {preset}   "
-            f"end-position RMSE {misfit:.1f} m", fontsize=10.5)
-        reach_axis.set_xlabel("GIS domain (south to north)")
-        reach_axis.set_ylabel("shoreline position (m from datum, + seaward)")
+        _title(reach_axis, row * 2, f"{period} to {END_YEAR[period]}, the reach")
+        reach_axis.set_xlabel("GIS domain (south → north)")
+        reach_axis.set_ylabel("shoreline position (m from datum)\n"
+                              "positive is seaward")
         reach_axis.set_xticks(domains)
-        reach_axis.legend(loc="best", fontsize=8)
+        reach_axis.legend(loc="best", fontsize=7)
+        notes.append("({}) {} to {}: end-position RMSE {:.1f} m.".format(
+            chr(ord("a") + row * 2), period, END_YEAR[period], misfit))
 
         # --- zoom panel: transect resolution ------------------------------
         # X IS REAL ALONGSHORE DISTANCE, NOT THE DOMAIN ID. Plotting transects
@@ -356,45 +367,47 @@ def draw(preset, chainage):
         bounds = domain_alongshore_bounds(chainage, ZOOM_DOMAINS)
         if not tr.empty:
             zoom_axis.plot(tr["alongshore_m"], tr["start_m"], linestyle="--",
-                           color="#999999", linewidth=1.4,
-                           label=f"observed {period}", zorder=3)
+                           color=INK_MUTED, linewidth=1.0,
+                           label=f"observed at {period}", zorder=3)
             zoom_axis.plot(tr["alongshore_m"], tr["end_m"],
-                           color=OBSERVED_COLOR, linewidth=2.0,
-                           label=f"observed {END_YEAR[period]}", zorder=5)
+                           color=OBSERVED_COLOR, linewidth=1.4,
+                           label=f"observed at {END_YEAR[period]}", zorder=5)
         zoom_have = [d for d in have
                      if ZOOM_DOMAINS[0] <= d <= ZOOM_DOMAINS[1] and d in bounds]
         if fitted is not None and zoom_have:
             for index, domain in enumerate(zoom_have):
                 lo_m, hi_m = bounds[domain]
                 zoom_axis.hlines(start[domain] + fitted[domain], lo_m, hi_m,
-                                 color=MODEL_COLOR, linewidth=2.6, zorder=6,
-                                 label="model end (500 m cells)"
+                                 color=MODEL_COLOR, linewidth=1.8, zorder=6,
+                                 label="modelled end, one 500 m cell each"
                                  if index == 0 else None)
             for domain in zoom_have:
-                zoom_axis.axvline(bounds[domain][0], color="#DDDDDD",
-                                  linewidth=0.8, zorder=0)
-        for domain, colour in ((GROIN_UPDRIFT_GIS, GROIN_COLOR),
-                               (GROIN_DOWNDRIFT_GIS, "#1565C0")):
+                zoom_axis.axvline(bounds[domain][0], color="0.90",
+                                  linewidth=0.6, zorder=0)
+        for domain, shade in ((GROIN_UPDRIFT_GIS, "0.90"),
+                              (GROIN_DOWNDRIFT_GIS, "0.94")):
             if domain in bounds:
-                zoom_axis.axvspan(*bounds[domain], color=colour, alpha=0.10,
-                                  zorder=0)
-        zoom_axis.set_title(
-            f"groin zoom D{ZOOM_DOMAINS[0]}-D{ZOOM_DOMAINS[1]}: "
-            f"observations at ~62 m, model at 500 m", fontsize=10)
+                zoom_axis.axvspan(*bounds[domain], color=shade, zorder=0)
+        _title(zoom_axis, row * 2 + 1,
+               f"the structure, D{ZOOM_DOMAINS[0]} to D{ZOOM_DOMAINS[1]}")
         if bounds:
             lo_m = min(v[0] for v in bounds.values())
             hi_m = max(v[1] for v in bounds.values())
             zoom_axis.set_xlim(lo_m - 60, hi_m + 60)
-        zoom_axis.set_xlabel("alongshore distance (m, south to north)")
-        zoom_axis.legend(loc="best", fontsize=8)
+        zoom_axis.set_xlabel("alongshore distance (m, south → north)")
+        zoom_axis.legend(loc="best", fontsize=7)
 
-    figure.suptitle(
-        f"Shoreline position: observed start and end vs model at the fitted "
-        f"groin -- {preset}", fontsize=13)
-    figure.tight_layout(rect=(0, 0.065, 1, 0.965))
     _footnote(
         figure,
+        "Observed shoreline POSITION at the start and end of each hindcast "
+        "period against the model at the fitted groin, for the {} preset. The "
+        "left panels are the whole D1\u2013D12 fit window; the right panels "
+        "zoom to the structure at transect resolution, where the observations "
+        "come every 62 m or so and the model has one value per 500 m cell. "
+        "{} "
         "Model and observed START at the same position BY CONSTRUCTION: the "
+        .format(preset, " ".join(notes)) +
+        "".join([]) +
         "model's cross-shore origin is Barrier3D's own, so it is plotted as "
         "observed start + model change (as build_shoreline_target does). Only "
         "the separation at the END year is informative. Positions are OLS fits "
@@ -408,10 +421,7 @@ def draw(preset, chainage):
         return None
     figure_dir = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
     figure_dir.mkdir(parents=True, exist_ok=True)
-    path = figure_dir / f"position_{preset}.png"
-    figure.savefig(path, dpi=150, facecolor="white")
-    plt.close(figure)
-    return path
+    return save(figure, figure_dir / f"position_{preset}.png", close=True)[0]
 
 
 def main():

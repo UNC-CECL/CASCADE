@@ -70,6 +70,8 @@ for _path in (SCRIPTS_DIR, _HERE.parent):
 
 from hatteras_site_config import HATTERAS_DOMAINS as GEOMETRY  # noqa: E402
 
+from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+                              caption, figsize, open_frame, save, _title)
 from HAT_groin_sweep_config import (  # noqa: E402
     END_YEAR,
     GROIN_DOWNDRIFT_GIS,
@@ -82,7 +84,9 @@ from HAT_groin_sweep_config import (  # noqa: E402
 )
 
 FIGURE_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
-OBSERVED_COLOR, ON_COLOR, OFF_COLOR = "#1A1A1A", "#FF8C00", "#777777"
+# House colours (2026-09-11): surveys in INK, the run under test the
+# ACCENT, the groin-off run BASE grey.
+OBSERVED_COLOR, ON_COLOR, OFF_COLOR = INK, C["ACCENT"], C["BASE"]
 
 # be1 is swept only in the 1984 edgeBE sweep. -40 is the grid value nearest
 # production's -41.8, and is the be1 the period-1 D4-D8 fit was pinned at, so
@@ -130,9 +134,12 @@ def main():
 
     observed = observed_fillet_by_year()
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-    figure, axes = plt.subplots(len(PERIODS), len(PRESETS), figsize=(14, 8.5),
-                               sharex="row")
+    apply_style()
+    figure, axes = plt.subplots(len(PERIODS), len(PRESETS),
+                                figsize=figsize("double", aspect=0.62),
+                                sharex="row", constrained_layout=True)
 
+    residuals = []
     for row, period in enumerate(PERIODS):
         end = END_YEAR[period]
         # Re-reference the survey to this period's start: the model begins at
@@ -155,46 +162,59 @@ def main():
 
             if years_off is not None:
                 axis.plot(years_off, fil_off, color=OFF_COLOR, linestyle=":",
-                          linewidth=1.8, label="model, groin OFF", zorder=3)
+                          linewidth=1.4, label="modelled, groin off", zorder=3)
             if years_on is not None:
-                axis.plot(years_on, fil_on, color=ON_COLOR, linewidth=2.4,
-                          label=f"model, M={args.M:g} f={args.fraction:g}", zorder=4)
-            axis.plot(obs_years, obs_vals, marker="o", markersize=6,
+                axis.plot(years_on, fil_on, color=ON_COLOR, linewidth=1.8,
+                          label=f"modelled, M {args.M:g}, f {args.fraction:g}",
+                          zorder=4)
+            axis.plot(obs_years, obs_vals, marker="o", markersize=3.4,
                       linestyle="none", color=OBSERVED_COLOR,
-                      label=f"surveyed ({len(obs_years)} dates)", zorder=5)
+                      label=f"surveyed, {len(obs_years)} dates", zorder=5)
 
-            axis.axhline(0.0, color="#BBBBBB", linewidth=0.8, zorder=1)
-            gap = ""
+            axis.axhline(0.0, color=INK_MUTED, linewidth=0.8,
+                         linestyle=(0, (4, 3)), zorder=1)
             if years_on is not None:
-                modelled_end = float(fil_on[-1])
-                observed_end = float(obs_vals[-1])
-                gap = (f"   end: model {modelled_end:+.0f} m vs surveyed "
-                       f"{observed_end:+.0f} m  (residual {observed_end - modelled_end:+.0f} m)")
-            axis.set_title(f"{period}-{end}  {preset}{gap}", fontsize=10)
+                residuals.append((period, preset, float(fil_on[-1]),
+                                  float(obs_vals[-1])))
+            _title(axis, row * len(PRESETS) + col,
+                   f"{period} to {end}, {preset}")
             axis.set_ylabel("fillet change since start (m)")
             axis.set_xlabel("year")
-            axis.grid(alpha=0.25)
-            axis.legend(loc="best", fontsize=8)
+            # Whole years: the default locator put 1987.5 on a year axis, and
+            # five of those labels collide at the printed width.
+            axis.xaxis.set_major_locator(
+                plt.matplotlib.ticker.MultipleLocator(5))
+            axis.xaxis.set_major_formatter(
+                plt.matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:.0f}"))
+            axis.grid(axis="y")
+            axis.set_axisbelow(True)
+            open_frame(axis)
 
-    figure.suptitle(
-        f"Groin fillet through time -- M={args.M:g}, f={args.fraction:g} "
-        f"vs surveyed shoreline", fontsize=13)
-    figure.tight_layout(rect=(0, 0.06, 1, 0.965))
-    figure.text(
-        0.01, 0.01,
-        "Both sides are differenced against their own start year: a run beginning in 1984 or 2004 inherits "
-        "the real fillet in its initial shoreline, so only the CHANGE is comparable. The gap between the two "
-        "model curves is the groin's contribution; the gap from the solid curve to the markers is the residual "
-        "left for the source/sink calibration, together with the Cape Point dynamics this dipole cannot represent. "
-        "M=60/f=0.6 was chosen by a direct fit to the period-1 D4-D8 change profile, bounded by affordability -- not to "
-        "match the fillet, which no "
-        "admissible M can on this grid.",
-        fontsize=7.5, color="#444444", wrap=True)
+    handles, labels = axes[0][0].get_legend_handles_labels()
+    figure.legend(handles, labels, loc="outside lower center", ncol=3,
+                  frameon=False)
 
-    path = FIGURE_DIR / "timeseries_check.png"
-    figure.savefig(path, dpi=150, facecolor="white")
-    plt.close(figure)
-    print(f"wrote {path}")
+    ends = "; ".join(
+        "{} {}, modelled {:+.0f} m against {:+.0f} m surveyed, residual "
+        "{:+.0f} m".format(pr, ps, mod, obs, obs - mod)
+        for pr, ps, mod, obs in residuals)
+    caption(figure,
+            "The modelled fillet through time against the surveys, for both "
+            "hindcast periods and both source/sink presets, at M = {M:g} and "
+            "f = {f:g}. Both sides are differenced against their own start "
+            "year: a run beginning in 1984 or 2004 inherits the real fillet in "
+            "its initial shoreline, so only the CHANGE is comparable. The gap "
+            "between the two modelled curves is the groin's contribution; the "
+            "gap from the solid curve to the markers is the residual left for "
+            "the source/sink calibration, together with the Cape Point "
+            "dynamics this dipole cannot represent. At the end of each window: "
+            "{ends}. The pair was chosen by a direct fit to the period-1 "
+            "D4\u2013D8 change profile, bounded by affordability, and NOT to "
+            "match the fillet, which no admissible M can on this grid."
+            .format(M=args.M, f=args.fraction, ends=ends))
+
+    written = save(figure, FIGURE_DIR / "timeseries_check.png", close=True)
+    print(f"wrote {written[0]}")
     return 0
 
 

@@ -15,6 +15,45 @@ The conclusions live in prose, in `scripts/hatteras_site_config.py`. These
 figures exist because two things were recorded nowhere else at all — see
 "What was at risk" below.
 
+## The house style, 2026-09-11
+
+Every figure script in this directory now draws under
+`scripts/hat_figure_style.py`, the one style module for the project. Four
+things follow, and they change how these images are read:
+
+* **Canvases are a 190 mm printed column.** They were 8.6 to 15 inches wide,
+  so their 9–10 pt type reduced to about 4 pt on a page.
+* **Nothing on the canvas belongs in a caption.** The suptitles, the
+  statistics lines and the footnote paragraphs are now in a `CAPTIONS.md`
+  beside each image — one per output directory, written by the scripts
+  themselves. Every sentence they used to carry is in there, plus the numbers,
+  which are computed at draw time rather than typed in. `_footnote()` in
+  `HAT_groin_sweep_figures.py` kept its name and its callers; it registers a
+  caption now instead of drawing one, and `HAT_groin_sweep_comparison.py` and
+  `HAT_groin_position_figure.py` inherit that by importing it.
+* **Colour means one thing across the set.** The cell or run under test is the
+  accent purple, a baseline or a failing target is base grey, observations are
+  ink, and the two hindcast periods are the project's vintage pair — red for
+  1984–2004, blue for 2004–2024. Seven scripts had each chosen their own
+  orange, pink, teal or dark red, and that dark red was the vintage red doing
+  a second job.
+* **Error surfaces are greyscale**, through the new `error_cmap()` in the
+  style module, with dark as worse. Six surfaces here were drawn in
+  `viridis_r` or `magma_r`, each with its own hue, and the saturated ramps
+  collided with the marks laid on top of them. All the colour on a surface now
+  belongs to what is marked: the best cell, the chosen pair, an iso-product
+  contour, a constraint.
+
+The two GIF scripts keep their title, legend and year clock ON the canvas,
+because a GIF is watched standalone with no caption file beside it. That is
+the exception the project already takes for per-run artefacts; their footnote
+paragraphs still moved to `CAPTIONS.md`.
+
+**One bug fell out of the restyle.** The zoom GIFs advertised a no-groin
+reference line in the legend and never drew it: the baseline cell on disk is
+`M0_be-42.6`, with no `_f` suffix, and only the suffixed name was being tried.
+Fixed 2026-09-11; the dotted line is in the frames now.
+
 ## The figures
 
 | file | shows |

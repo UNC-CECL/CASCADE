@@ -79,6 +79,8 @@ for _path in (SCRIPTS_DIR, _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+from hat_figure_style import (apply_style, C, C_1984, C_1997,  # noqa: E402
+                              caption, error_cmap, figsize, open_frame, save)
 from HAT_groin_sweep_config import (  # noqa: E402
     END_YEAR,
     F_VALUES,
@@ -100,9 +102,13 @@ FIGURE_DIR = OUTPUT_DIR / "figures"
 FIGURE_DIR.mkdir(parents=True, exist_ok=True)
 JOINT_JSON, JOINT_CSV = joint_fit_paths()
 
-MODEL_COLOR = "#FF8C00"
-GROIN_COLOR = "#B71C1C"
-OBSERVED_COLOR = "#1A1A1A"
+# House colours (2026-09-11): the two periods are the vintage pair, the fitted
+# point is the ACCENT, and the error surface is greyscale so the marks on it
+# stay findable. MODEL_COLOR/GROIN_COLOR/OBSERVED_COLOR were an orange, a dark
+# red and near-black chosen here, and the dark red was the 1984 vintage colour
+# doing a second job.
+EARLY_COLOR, LATE_COLOR = C_1984, C_1997
+FIT_COLOR = C["ACCENT"]
 
 
 def load_period(period, preset):
@@ -243,27 +249,45 @@ def plot_surface(surface, fit, preset):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    apply_style()
     grid = surface.pivot(index="fraction", columns="M", values="fit_err")
-    figure, axis = plt.subplots(figsize=(9, 5.5))
+    figure, axis = plt.subplots(figsize=figsize("double", aspect=0.46),
+                                constrained_layout=True)
     mesh = axis.pcolormesh(grid.columns, grid.index, grid.values,
-                           shading="nearest", cmap="viridis_r")
-    figure.colorbar(mesh, ax=axis,
-                    label="joint |differential - observed|, both periods (m/yr)")
-    axis.plot(fit["M"], fit["fraction"], marker="*", markersize=20,
-              color=GROIN_COLOR, markeredgecolor="white", markeredgewidth=1.2,
+                           shading="nearest", cmap=error_cmap())
+    cb = figure.colorbar(mesh, ax=axis)
+    cb.set_label("joint |modelled − observed| fillet trend,\n"
+                 "both periods (m/yr)")
+    cb.outline.set_linewidth(0.6)
+    axis.plot(fit["M"], fit["fraction"], marker="*", markersize=14,
+              color=FIT_COLOR, markeredgecolor="white", markeredgewidth=0.8,
               linestyle="none", label="best cell", zorder=5)
     axis.set_xlabel("groin trapping rate M (m/yr)")
     axis.set_ylabel("deterioration floor f")
-    title = f"Joint two-period fit -- {preset}"
-    if fit["at_grid_bound"]:
-        title += f"   (railed on {', '.join(fit['at_grid_bound'])})"
-    axis.set_title(title)
+    axis.set_title("Joint two-period fit", loc="left")
     axis.legend(loc="upper right")
-    figure.tight_layout()
+
+    railed = (" The fit is RAILED on {}, so it is a grid bound rather than an "
+              "interior minimum.".format(", ".join(fit["at_grid_bound"]))
+              if fit["at_grid_bound"] else
+              " The fit is an interior minimum, not a grid bound.")
+    caption(figure,
+            "The joint two-period score over the (M, f) grid for the {p} "
+            "source/sink preset: for each cell, how far the modelled fillet "
+            "trend sits from the observed one in both hindcast periods at "
+            "once. Dark is worse, and the marked cell is the best on this "
+            "score.{railed} Read this beside the constraints figure for the "
+            "same preset, which separates the two periods' own valleys and "
+            "shows where they cross. The joint fit is recorded here because it "
+            "was attempted, not because it is the answer: period 2's observed "
+            "gap NARROWS, a groin with trapping at or above zero can only "
+            "widen it, and so fitting the two periods together asks for "
+            "something the parameterisation cannot produce. The production "
+            "pair is fitted on period 1 alone."
+            .format(p=preset, railed=railed))
+
     path = FIGURE_DIR / f"joint_{preset}_surface.png"
-    figure.savefig(path, dpi=150)
-    plt.close(figure)
-    return path
+    return save(figure, path, close=True)[0]
 
 
 def plot_constraints(surface, fit, preset):
@@ -277,8 +301,10 @@ def plot_constraints(surface, fit, preset):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    figure, axis = plt.subplots(figsize=(9, 5.5))
-    colors = {PERIODS[0]: MODEL_COLOR, PERIODS[1]: GROIN_COLOR}
+    apply_style()
+    figure, axis = plt.subplots(figsize=figsize("double", aspect=0.46),
+                                constrained_layout=True)
+    colors = {PERIODS[0]: EARLY_COLOR, PERIODS[1]: LATE_COLOR}
     for period in PERIODS:
         grid = surface.pivot(index="fraction", columns="M",
                              values=f"err_{period}")
@@ -291,19 +317,41 @@ def plot_constraints(surface, fit, preset):
         axis.plot(valley_M, grid.index, marker="o", color=colors[period],
                   label=label)
 
-    axis.plot(fit["M"], fit["fraction"], marker="*", markersize=20,
-              color=OBSERVED_COLOR, linestyle="none",
-              label="joint fit", zorder=5)
+    axis.plot(fit["M"], fit["fraction"], marker="*", markersize=14,
+              color=FIT_COLOR, markeredgecolor="white", markeredgewidth=0.8,
+              linestyle="none", label="joint fit", zorder=5)
     axis.set_xlabel("groin trapping rate M (m/yr)")
     axis.set_ylabel("deterioration floor f")
-    axis.set_title(f"Where the two periods constrain (M, f) -- {preset}")
-    axis.legend(loc="best", fontsize=9)
-    axis.grid(alpha=0.3)
-    figure.tight_layout()
+    axis.set_title("Where each period constrains the pair", loc="left")
+    axis.legend(loc="best", fontsize=7.5)
+    axis.grid()
+    axis.set_axisbelow(True)
+    open_frame(axis)
+
+    unreachable = [str(p) for p in PERIODS
+                   if not PERIOD_DIFFERENTIAL_IS_REACHABLE[p]]
+    caption(figure,
+            "Why the joint fit for the {p} preset lands where it does. Each "
+            "line is one period's own valley floor: for every deterioration "
+            "floor f, the trapping rate M that period scores best. Period 1 "
+            "runs along constant M(16 + 4f) because it mostly precedes the "
+            "1996 to 2003 deterioration ramp, period 2 along constant M·f "
+            "because it lies entirely after it, and the marked point is where "
+            "the two cross. The earlier period is red and the later blue, as "
+            "everywhere in this project. {un} A valley drawn against an "
+            "unreachable target is a grid bound, not a constraint: the module "
+            "can only widen the gap between the structure's flanks, and "
+            "period 2's observed gap narrows, which is why the production pair "
+            "is fitted on period 1 alone."
+            .format(p=preset,
+                    un=("The target is UNREACHABLE for {}, so that line is "
+                        "railed.".format(" and ".join(unreachable))
+                        if unreachable else
+                        "Both periods' targets are reachable on this grid."))
+            )
+
     path = FIGURE_DIR / f"joint_{preset}_constraints.png"
-    figure.savefig(path, dpi=150)
-    plt.close(figure)
-    return path
+    return save(figure, path, close=True)[0]
 
 
 def _pinned_presets(path):

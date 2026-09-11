@@ -64,6 +64,8 @@ for _path in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
 from hatteras_site_config import HATTERAS_DOMAINS as GEOMETRY  # noqa: E402
 
 from HAT_fullperiod_target import observed_change_profile  # noqa: E402
+from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+                              caption, figsize, open_frame, save)
 
 SWEEP = PROJECT_BASE_DIR / "output" / "groin_sweep" / "1984_2004_edgeBE"
 FIGURE_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
@@ -75,7 +77,10 @@ FIT_DOMAINS = list(range(4, 9))       # but rank on D4-D8 only
 # is now on the grid and is what production spends.
 PINNED_BE1 = -42.6                    # production's edgeBE value for 1984
 CHOSEN_M, CHOSEN_F = 60.0, 0.6
-GROIN_COLOR = "#B71C1C"
+# House semantics: the cell taken forward is the ACCENT, the no-groin baseline
+# is BASE, the structure's position is a guide line in muted ink. GROIN_COLOR
+# was a dark red here, which is the 1984 vintage colour elsewhere.
+CHOSEN_COLOR, BASELINE_COLOR, BAND = C["ACCENT"], C["BASE"], "0.94"
 
 
 def load():
@@ -119,6 +124,7 @@ def main():
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    from matplotlib.colors import LinearSegmentedColormap
 
     frame, observed = load()
     groin = frame[frame.M > 0].sort_values("score").reset_index(drop=True)
@@ -132,72 +138,97 @@ def main():
     centre = lambda v: np.asarray(v, float) - np.mean(np.asarray(v, float)[fit_index])
 
     x = np.array(SHOW_DOMAINS, dtype=float)
-    figure, axis = plt.subplots(figsize=(13, 7))
+    apply_style()
+    figure, axis = plt.subplots(figsize=figsize("double", aspect=0.48),
+                                constrained_layout=True)
 
     axis.axvspan(min(FIT_DOMAINS) - 0.5, max(FIT_DOMAINS) + 0.5,
-                 color="#FFF9C4", alpha=0.55, zorder=0)
+                 color=BAND, zorder=0)
     axis.text((min(FIT_DOMAINS) + max(FIT_DOMAINS)) / 2, 0.02,
-              f"FIT WINDOW D{min(FIT_DOMAINS)}-D{max(FIT_DOMAINS)}",
-              ha="center", va="bottom", fontsize=9, color="#8D6E00",
-              weight="bold", transform=axis.get_xaxis_transform(), zorder=6)
-    axis.axvline(5.5, color=GROIN_COLOR, linestyle="--", linewidth=1.8, zorder=2)
-    axis.text(5.58, 0.97, "Buxton groin", rotation=90, fontsize=8.5,
-              color=GROIN_COLOR, va="top", transform=axis.get_xaxis_transform())
+              f"fit window, D{min(FIT_DOMAINS)}−D{max(FIT_DOMAINS)}",
+              ha="center", va="bottom", fontsize=7.5, color=INK_MUTED,
+              transform=axis.get_xaxis_transform(), zorder=6)
+    axis.axvline(5.5, color=INK_MUTED, linestyle=(0, (4, 2)), linewidth=0.8,
+                 zorder=2)
+    axis.text(5.58, 0.97, "Buxton groin", rotation=90, fontsize=7,
+              color=INK_MUTED, va="top",
+              transform=axis.get_xaxis_transform())
 
-    axis.plot(x, centre(observed), marker="s", markersize=8, linestyle="--",
-              color="#1A1A1A", linewidth=2.8, zorder=10, label="Observed 2004")
-    axis.plot(x, centre(baseline.profile), color="#888888", linestyle=":",
-              linewidth=2.2, zorder=4,
-              label=f"no groin  (RMSE={baseline.score:.1f} m)")
+    axis.plot(x, centre(observed), marker="s", markersize=4.0, linestyle="--",
+              color=INK, linewidth=1.8, zorder=10,
+              label="observed, 1984 to 2004")
+    axis.plot(x, centre(baseline.profile), color=BASELINE_COLOR, linestyle=":",
+              linewidth=1.4, zorder=4,
+              label=f"no groin, {baseline.score:.1f} m")
 
-    colours = plt.get_cmap("viridis")(np.linspace(0.12, 0.82, len(top)))
-    for colour, (_, row) in zip(colours, top.iterrows()):
+    # One colour family for the top cells, darkest is best, so they read as
+    # variations of one thing. viridis was used here until 2026-09-11.
+    ramp = LinearSegmentedColormap.from_list(
+        "hat_accent_ramp", [C["ACCENT_FILL"], C["ACCENT"]])
+    for colour, (_, row) in zip(ramp(np.linspace(1.0, 0.2, len(top))),
+                                top.iterrows()):
         marker = "o" if (row.M == CHOSEN_M and row.f == CHOSEN_F) else None
-        axis.plot(x, centre(row.profile), color=colour, linewidth=2.0,
-                  marker=marker, markersize=7, zorder=5,
-                  label=f"M={row.M:g}, frac={row.f:.2f}  (RMSE={row.score:.1f})")
+        axis.plot(x, centre(row.profile), color=colour, linewidth=1.4,
+                  marker=marker, markersize=3.4, zorder=5,
+                  label=f"M {row.M:g}, f {row.f:.2f}, {row.score:.1f} m")
 
     chosen = frame[(frame.M == CHOSEN_M) & (frame.f == CHOSEN_F)]
     if not chosen.empty and not ((top.M == CHOSEN_M) & (top.f == CHOSEN_F)).any():
         row = chosen.iloc[0]
-        axis.plot(x, centre(row.profile), color=GROIN_COLOR, linewidth=2.6,
-                  marker="o", markersize=7, zorder=8,
-                  label=f"CHOSEN M={CHOSEN_M:g}, f={CHOSEN_F:g}  "
-                        f"(RMSE={row.score:.1f})")
+        axis.plot(x, centre(row.profile), color=CHOSEN_COLOR, linewidth=1.8,
+                  marker="o", markersize=3.4, zorder=8,
+                  label=f"the pair taken forward, M {CHOSEN_M:g}, "
+                        f"f {CHOSEN_F:g}, {row.score:.1f} m")
 
     axis.set_xticks(SHOW_DOMAINS)
-    axis.set_xlabel("GIS Domain ID (D1-D12)")
-    axis.set_ylabel("Shoreline change 1984->2004 (m), demeaned over the fit window\n"
-                    "[+ = landward, erosion]")
+    axis.set_xlabel("GIS domain")
+    axis.set_ylabel("shoreline change 1984 to 2004 (m)\ndemeaned over the fit"
+                    " window; positive is landward")
     spread = float(top.score.max() - top.score.min())
-    axis.set_title(
-        f"Top {len(top)} sweep results vs observed shoreline change -- "
-        f"PERIOD 1, production geometry\n"
-        f"ranked on D4-D8 shape; RMSE spread across these cells: {spread:.2f} m "
-        f"(M {top.M.min():g}-{top.M.max():g}, f {top.f.min():g}-{top.f.max():g})",
-        fontsize=12)
-    axis.grid(alpha=0.25)
-    # Lower left: after the 2026-08-30 flip to landward-positive the observed
-    # curve occupies the upper left.
-    axis.legend(loc="lower left", fontsize=9)
+    axis.set_title(f"The top {len(top)} cells against the observed change,"
+                   " period 1", loc="left")
+    axis.grid(axis="y")
+    axis.set_axisbelow(True)
+    open_frame(axis)
+    figure.legend(loc="outside lower center", ncol=4, frameon=False,
+                  fontsize=7.5)
 
-    figure.tight_layout(rect=(0, 0.075, 1, 1))
-    figure.text(
-        0.01, 0.012,
-        "Counterpart to the 1967 rig's top-N figure, for comparison. Differences are deliberate: PERIOD 1 (the only hindcast "
-        "window where the observed gap WIDENS, which is all a module with trapping >= 0 can produce), PRODUCTION geometry (M is "
-        "grid-specific, so a value fitted here transfers and one fitted on the rig does not), and a DEMEANED score over D4-D8 "
-        "(a uniform level offset is absorbed by the source/sink calibration downstream; D1 is excluded because the cape's 81-104 m "
-        "change swamps the groin's ~17 m signal). The top cells bundle tightly despite spanning a wide M and f range -- that is "
-        "the ridge in period-1 cumulative trapping, M(15.5 + 4.5f) -- NOT in "
-        "M*f, which was tested and refuted (corr = -0.07).",
-        fontsize=7.5, color="#333333", wrap=True)
+    caption(figure,
+            "The direct counterpart to the 1967 rig's top-N figure, so the two "
+            "calibrations can be read side by side, and the question is the "
+            "same: do the best-scoring cells reproduce the observed alongshore "
+            "SHAPE, or only a summary number? Three differences from the rig "
+            "figure are deliberate. The window is 1984 to 2004, the only "
+            "window in the hindcast where the observed gap between the groin's "
+            "flanks widens, which is all a module with trapping at or above "
+            "zero can produce. The geometry is the 120-domain production grid "
+            "rather than the rig's 41, and M is grid-specific — a confined "
+            "array preserves dipole amplitude that an open one diffuses away — "
+            "so a value fitted here transfers to the hindcast and one fitted "
+            "on the rig does not. And the score is demeaned and ranked on "
+            "D4−D8 only, because a uniform level offset near the groin is "
+            "absorbed by the source/sink calibration downstream and D1's "
+            "81−104 m of cape change is about five times the groin's signal. "
+            "The no-groin baseline is the grey dotted line: the groin is doing "
+            "real work, taking the chosen cell from {base:.2f} to {chosen} m. "
+            "The top five bundle within {spread:.2f} m while spanning M {mlo:g} "
+            "to {mhi:g} and f {flo:g} to {fhi:g}, which is the visual "
+            "statement of the ridge in period-1 cumulative trapping, "
+            "M(15.5 + 4.5f) — NOT in M·f, which was tested and refuted at a "
+            "correlation of −0.07. Everything is demeaned over the fit window, "
+            "the same way the score centres it, and drawn landward-positive so "
+            "erosion is up."
+            .format(base=baseline.score,
+                    chosen="{:.2f}".format(
+                        float(chosen.iloc[0].score)) if not chosen.empty
+                    else "{:.2f}".format(float(top.score.min())),
+                    spread=spread, mlo=top.M.min(), mhi=top.M.max(),
+                    flo=top.f.min(), fhi=top.f.max()))
 
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-    path = FIGURE_DIR / "period1_top_n_profiles.png"
-    figure.savefig(path, dpi=150, facecolor="white")
-    plt.close(figure)
-    print(f"wrote {path}")
+    written = save(figure, FIGURE_DIR / "period1_top_n_profiles.png",
+                   close=True)
+    print(f"wrote {written[0]}")
     print(f"  no groin {baseline.score:.2f} m")
     print(top[["M", "f", "score"]].to_string(index=False))
     return 0

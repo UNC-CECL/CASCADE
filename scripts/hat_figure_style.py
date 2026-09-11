@@ -263,6 +263,48 @@ def elevation_cmap():
 
 
 # =============================================================================
+# ERROR AND COST SURFACES
+# =============================================================================
+# Added 2026-09-11 for the groin-sweep figures, which draw six error surfaces
+# over a parameter grid (the (M, f) heatmaps, the joint-fit surfaces, the
+# preset comparison). Each had chosen its own ramp -- magma_r, viridis,
+# RdYlBu_r -- so the same quantity was a different colour in adjacent figures,
+# and the saturated ramps collided with the annotations laid on top: magma's
+# purple end against the ACCENT marker, viridis's green against REF.
+#
+# The rule is that a scalar error surface is drawn WITHOUT hue. It is the
+# background against which a best cell, a chosen pair, an iso-product curve or
+# a constraint is marked, and those marks are what the reader is meant to find;
+# reserving all colour for them is what makes them findable. Dark is worse,
+# which matches the convention of every error plot in the project.
+#
+# Truncated at both ends: pure white reads as missing data (a sweep grid has
+# real holes, which `pcolormesh` leaves as the axes background) and pure black
+# hides a marker drawn on top of the worst cell.
+_ERROR_LO, _ERROR_HI = 0.08, 0.86
+
+
+def error_cmap(reverse: bool = False):
+    """The greyscale ramp for a scalar error or cost surface; dark is worse.
+
+    `reverse=True` for a surface where HIGH is better (a score, a share
+    explained), so that dark still means the outcome you do not want."""
+    import matplotlib.pyplot as plt
+    base = plt.get_cmap("Greys")
+    lo, hi = (_ERROR_HI, _ERROR_LO) if reverse else (_ERROR_LO, _ERROR_HI)
+    return ListedColormap(base(_np_linspace(lo, hi, 256)),
+                          name="hat_error" + ("_r" if reverse else ""))
+
+
+def _np_linspace(a, b, n):
+    """numpy.linspace without importing numpy at module scope: this module is
+    imported by scripts that have not yet chosen a backend, and it has stayed
+    free of the numeric stack."""
+    step = (b - a) / (n - 1)
+    return [a + step * i for i in range(n)]
+
+
+# =============================================================================
 # PANELS, MAPS, FRAMES
 # =============================================================================
 
@@ -440,8 +482,11 @@ def write_style_sheet(out_dir: Path | None = None) -> tuple[Path, Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     apply_style()
 
-    fig = plt.figure(figsize=figsize("double", aspect=0.72), constrained_layout=True)
-    gs = fig.add_gridspec(2, 2, height_ratios=[1.0, 1.1])
+    fig = plt.figure(figsize=figsize("double", aspect=0.86), constrained_layout=True)
+    # Three rows since 2026-09-11: the error ramp needs a strip of its own, and
+    # nesting it under the elevation panel collapsed both to zero height under
+    # constrained_layout.
+    gs = fig.add_gridspec(3, 2, height_ratios=[1.0, 0.30, 1.15])
 
     # (a) the palette
     ax = fig.add_subplot(gs[0, 0])
@@ -467,12 +512,26 @@ def write_style_sheet(out_dir: Path | None = None) -> tuple[Path, Path]:
     demo = np.linspace(-0.5, 4.5, 400)[None, :].repeat(20, axis=0)
     ax.imshow(demo, cmap=cmap, norm=norm, aspect="auto", extent=(-0.5, 4.5, 0, 1))
     ax.set_yticks([])
-    ax.set_xlabel("elevation (m above MHW); classes break at 0, 0.5, 1, 1.5, 2, 3, 4 m")
+    ax.set_xlabel("elevation (m above MHW)")
     spines_for_image(ax)
-    _title(ax, 1, "elevation in classes, water below 0 m")
+    _title(ax, 1, "elevation in classes")
 
-    # (c) a chart in the style
-    ax = fig.add_subplot(gs[1, 0])
+    # (c) the error ramp, in its own strip
+    axe = fig.add_subplot(gs[1, 1])
+    ramp = np.linspace(0, 1, 400)[None, :].repeat(20, axis=0)
+    axe.imshow(ramp, cmap=error_cmap(), aspect="auto", extent=(0, 1, 0, 1))
+    axe.plot([0.28], [0.5], marker="*", ms=11, color=C["ACCENT"],
+             markeredgecolor="white", markeredgewidth=0.7)
+    axe.plot([0.62], [0.5], marker="o", ms=7, color="none",
+             markeredgecolor=C["REF"], markeredgewidth=1.6)
+    axe.set_xticks([])
+    axe.set_yticks([])
+    axe.set_xlabel("no hue, dark is worse; the marks carry the colour")
+    spines_for_image(axe)
+    _title(axe, 2, "an error surface")
+
+    # (d) a chart in the style
+    ax = fig.add_subplot(gs[2, 0])
     x = np.arange(1, 13)
     rng = np.random.default_rng(4)
     early = 20 + 6 * np.sin(x / 2) + rng.normal(0, 1, x.size)
@@ -487,10 +546,10 @@ def write_style_sheet(out_dir: Path | None = None) -> tuple[Path, Path]:
     ax.set_xlabel(DOMAIN_AXIS_LABEL)
     ax.set_ylabel("quantity (m)")
     ax.legend(loc="lower left")
-    _title(ax, 2, "a chart: open frame, hairline grid")
+    _title(ax, 3, "a chart: open frame, hairline grid")
 
-    # (d) a map panel in the style
-    ax = fig.add_subplot(gs[1, 1])
+    # (e) a map panel in the style
+    ax = fig.add_subplot(gs[2, 1])
     yy, xx = np.mgrid[0:60, 0:80]
     relief = 2.5 * np.exp(-((yy - 30) / 12.0) ** 2) - 0.3 + 0.2 * np.sin(xx / 7.0)
     ax.imshow(relief, cmap=cmap, norm=norm, extent=(0, 800, 0, 600), origin="lower")
@@ -502,7 +561,7 @@ def write_style_sheet(out_dir: Path | None = None) -> tuple[Path, Path]:
     spines_for_image(ax)
     _scalebar(ax, 100.0)
     _north_arrow(ax)
-    _title(ax, 3, "a map: frame, scale bar, north arrow")
+    _title(ax, 4, "a map: frame, scale bar, north arrow")
 
     swatch = save(fig, out_dir / "HAT_figure_style_sheet.png", close=True)[0]
 
@@ -544,6 +603,7 @@ from it.
 | vintages | the earlier line or surface is red `{C_1984}`, the later blue `{C_1997}`, everywhere the two are drawn together; the light fills `{C_1984_FILL}` / `{C_1997_FILL}` are the band between them |
 | semantic colours | `C["BASE"]` {C["BASE"]} unmodified input · `C["ACCENT"]` {C["ACCENT"]} the modification under test · `C["ROAD"]` {C["ROAD"]} NC-12 · `C["ADDED"]` {C["ADDED"]} fabricated ground · `C["WATER"]` {C["WATER"]} · `C["REF"]` {C["REF"]} a reference value |
 | elevation | classes, not a ramp: `elevation_cmap()` breaks at {", ".join(f"{b:g}" for b in ELEV_BOUNDS[1:-1])} m MHW with water below 0. The terrain colormap of `HAT_plot_1984_mosaic` is the one deliberate exception, on the 1984-start DEM panels |
+| error surfaces | greyscale, no hue: `error_cmap()` (dark is worse; `reverse=True` where high is better). A scalar error or cost over a parameter grid is BACKGROUND, and all colour is reserved for what is marked on top of it -- the best cell, the chosen pair, a constraint, an iso-product curve |
 | the canvas | no title sentences, statistics lines or footnote paragraphs on the image. That text goes in a `CAPTIONS.md` beside the figure. `caption(fig, text)` writes it there on the figure's next `savefig`; scripts with their own captions file (dune-line offset, footprint, road relocation) write it themselves |
 | legend wording | no working vocabulary: not "today's setback", "v2"/"v3", "as placed", "blank". Say what the thing is: "setback measured on the 1996 surface", "1984 setback (model input)", "rows inserted landward of NC-12", "centreline unchanged between surveys" |
 | output | `save(fig, path)`: a 300 dpi PNG and a PDF with the same stem for anything drawn with lines and bars (`vector=False` for image-only panels); white background; `bbox_inches="tight"` only when nothing is positioned absolutely |

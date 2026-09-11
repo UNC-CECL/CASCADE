@@ -53,6 +53,8 @@ _H = Path(__file__).resolve(); BASE = _H.parents[3]
 for p in (BASE/"scripts", _H.parent):
     if str(p) not in sys.path: sys.path.insert(0, str(p))
 from HAT_fullperiod_target import observed_change_profile
+from hat_figure_style import (apply_style, C, INK, INK_MUTED, figsize,
+                              open_frame, record_caption)
 
 SWEEP = BASE/"output"/"groin_sweep"/"1984_2004_edgeBE"
 OUT = BASE/"output"/"groin_sweep"/"figures"/"zoom_gifs_D2_D12"
@@ -71,11 +73,11 @@ HOLD_FRAMES = 5                       # frames held on the last year
 
 # Okabe-Ito, colour-vision-safe and muted enough to print. Shared with
 # HAT_groin_full_life_gif.py so the two animations read as one set.
-MODEL_C = "#D55E00"              # vermillion -- the swept cell
-BASE_C = "#8C8C8C"               # grey       -- the no-groin reference
-OBS_C = "#111111"                # near-black -- the observed endpoint
-MARK_C = "#0072B2"               # blue       -- the structure
-INK, SUBTLE, GRID = "#1A1A1A", "#6A6F76", "#E3E6EA"
+# House palette (2026-09-11), replacing an Okabe-Ito set chosen in this file.
+MODEL_C = C["ACCENT"]            # the swept cell
+BASE_C = C["BASE"]               # the no-groin reference
+OBS_C = INK                      # the observed endpoint
+MARK_C = INK_MUTED               # the structure
 
 # The pairs worth comparing: the chosen value, its f-neighbours, and M values
 # either side -- plus a high-M cell where the module actually draws a dipole.
@@ -93,26 +95,26 @@ WHY = {
     (160, 0.60): "what the railed joint fit would have run",
 }
 
-plt.rcParams.update({
-    "font.family": "sans-serif",
-    "font.sans-serif": ["Arial", "Helvetica", "DejaVu Sans"],
-    "font.size": 10.5,
-    "axes.linewidth": 0.8, "axes.edgecolor": "#4A4F55",
-    "xtick.direction": "out", "ytick.direction": "out",
-    "xtick.major.size": 4.0, "ytick.major.size": 4.0,
-    "xtick.color": "#4A4F55", "ytick.color": "#4A4F55",
-    "text.color": INK, "axes.labelcolor": INK,
-    "legend.frameon": False,
-    "figure.facecolor": "white", "savefig.facecolor": "white",
-})
+# The house style is the whole of it now; the local rcParams block that used
+# to sit here set its own type stack, ink and tick sizes.
+apply_style()
 
 
 def load(M, f):
-    """Change since 1984 per domain, LANDWARD-positive, metres."""
-    p = SWEEP/f"M{M:g}_be{BE}_f{f:.2f}"/"shoreline_matrix.npy"
-    if not p.is_file(): return None
-    m = np.load(p)[:, PAD]                  # metres, landward-+, both already
-    return m - m[0]
+    """Change since 1984 per domain, LANDWARD-positive, metres.
+
+    Two directory spellings, because the no-groin cell has no deterioration
+    floor to name: the swept cells are `M<M>_be<be>_f<f>` while the baseline on
+    disk is `M0_be<be>`. Only the suffixed name was tried until 2026-09-11, so
+    the baseline never loaded and the legend advertised a dotted line these
+    gifs never drew.
+    """
+    for name in (f"M{M:g}_be{BE}_f{f:.2f}", f"M{M:g}_be{BE}"):
+        p = SWEEP/name/"shoreline_matrix.npy"
+        if p.is_file():
+            m = np.load(p)[:, PAD]          # metres, landward-+, both already
+            return m - m[0]
+    return None
 
 
 # observed_change_profile is SEAWARD-positive; negate it onto the landward-
@@ -130,97 +132,113 @@ for M, f in CELLS:
     if ch is None:
         print(f"  [skip] M={M:g} f={f:g} -- cell absent"); continue
     nyr = ch.shape[0]
-    fig = plt.figure(figsize=(10.2, 6.4))
-    ax = fig.add_axes([0.135, 0.175, 0.845, 0.615])
+    fig = plt.figure(figsize=figsize("double", aspect=0.60))
+    ax = fig.add_axes([0.135, 0.165, 0.845, 0.615])
 
-    fig.text(0.135, 0.940, f"M = {M:g} m/yr,  f = {f:g}",
-             fontsize=16.5, fontweight="bold", color=INK, ha="left",
+    # Title, subtitle and legend stay ON the canvas: a GIF is watched
+    # standalone, with no caption file beside it in a viewer.
+    fig.text(0.135, 0.952, f"M = {M:g} m/yr, f = {f:g}",
+             fontsize=11, fontweight="bold", color=INK, ha="left",
              va="center")
-    fig.text(0.135, 0.898,
-             f"{WHY.get((M, f), '')}   ·   period 1, 1984–2004   ·   "
-             f"be1 = {BE}",
-             fontsize=10.5, color=SUBTLE, ha="left", va="center")
+    fig.text(0.135, 0.905,
+             f"{WHY.get((M, f), '')} · period 1, 1984 to 2004",
+             fontsize=8, color=INK_MUTED, ha="left", va="center")
 
     fig.legend(handles=[
-        Line2D([], [], color=OBS_C, marker="s", markersize=6, linestyle="--",
-               linewidth=1.8, label="Observed 1984→2004 (endpoint)"),
-        Line2D([], [], color=MODEL_C, marker="o", markersize=5.5,
-               linewidth=2.2, label=f"Model, M = {M:g}, f = {f:g}"),
-        Line2D([], [], color=BASE_C, linestyle=":", linewidth=2.0,
-               label="Model, no groin (same year)"),
-    ], loc="upper left", bbox_to_anchor=(0.132, 0.862), ncol=3,
-        fontsize=9.5, handlelength=2.4, columnspacing=2.6)
+        Line2D([], [], color=OBS_C, marker="s", markersize=3.6,
+               linestyle="--", linewidth=1.6,
+               label="observed 1984 to 2004, the endpoint"),
+        Line2D([], [], color=MODEL_C, marker="o", markersize=3.4,
+               linewidth=1.8, label=f"modelled, M {M:g}, f {f:g}"),
+        Line2D([], [], color=BASE_C, linestyle=":", linewidth=1.4,
+               label="modelled, no groin, same year"),
+    ], loc="upper left", bbox_to_anchor=(0.132, 0.872), ncol=3,
+        fontsize=8, handlelength=2.2, columnspacing=2.2, frameon=False)
 
-    fig.text(
-        0.135, 0.030,
-        "Landward-positive: erosion moves UP, so the panel reads as a plan view "
-        "with the ocean below and the island above. Demeaned over D4–D8 — a "
-        "uniform alongshore offset belongs to the source/sink calibration, not "
-        "the groin, so only the SHAPE is being compared here. The observed "
-        "target is a fixed endpoint because that is all this window has; the "
-        "full-life gif animates the surveys.",
-        fontsize=7.9, color=SUBTLE, ha="left", va="bottom", wrap=True)
+    # The footnote paragraph goes to CAPTIONS.md beside the GIFs.
 
     def frame(index, M=M, f=f, ch=ch, nyr=nyr, ax=ax):
         t = min(index, nyr - 1)
         ax.clear()
-        ax.axvspan(3.5, 8.5, color="#FBF6E4", zorder=0)
-        ax.annotate("fit window D4–D8", xy=(6.0, 0.015),
+        ax.axvspan(3.5, 8.5, color="0.94", zorder=0)
+        ax.annotate("fit window, D4–D8", xy=(6.0, 0.015),
                     xycoords=("data", "axes fraction"), ha="center",
-                    va="bottom", fontsize=8.2, color="#93842A")
-        ax.axhline(0.0, color="#B9BEC4", linewidth=0.9, zorder=1)
-        ax.axvline(5.5, color=MARK_C, lw=1.3, ls=(0, (5, 3)), zorder=2,
-                   alpha=0.85)
-        ax.annotate("Buxton groin field   D6 updrift | D5 downdrift",
+                    va="bottom", fontsize=7, color=INK_MUTED)
+        ax.axhline(0.0, color=INK_MUTED, linewidth=0.8, ls=(0, (4, 3)),
+                   zorder=1)
+        ax.axvline(5.5, color=MARK_C, lw=0.8, ls=(0, (5, 3)), zorder=2)
+        ax.annotate("the groin field: D6 updrift, D5 downdrift",
                     xy=(5.5, 1.012), xycoords=("data", "axes fraction"),
-                    ha="center", va="bottom", fontsize=8.2, color=MARK_C)
+                    ha="center", va="bottom", fontsize=7, color=MARK_C)
 
-        ax.plot(DOM, c(obs), "s--", ms=6, lw=1.8, color=OBS_C, zorder=6)
+        ax.plot(DOM, c(obs), "s--", ms=3.6, lw=1.6, color=OBS_C, zorder=6)
         if nog is not None:
-            ax.plot(DOM, c(nog[t]), ":", lw=2.0, color=BASE_C, zorder=4)
-        ax.plot(DOM, c(ch[t]), "-o", ms=5.5, lw=2.2, color=MODEL_C, zorder=5)
+            ax.plot(DOM, c(nog[t]), ":", lw=1.4, color=BASE_C, zorder=4)
+        ax.plot(DOM, c(ch[t]), "-o", ms=3.4, lw=1.8, color=MODEL_C, zorder=5)
 
         # -98 not -70: M = 160 dives past -75 at D12 and ran into the
         # fillet readout. All six cells share one limit so they stay
         # directly comparable.
         ax.set_xlim(1.6, 12.4); ax.set_ylim(-98, 70)
         ax.set_xticks(DOM)
-        ax.set_xlabel("Alongshore GIS domain      "
-                      "(D2 = toward Cape Point   →   D12 = north)", labelpad=7)
-        ax.set_ylabel("Shoreline change since 1984 (m)\ndemeaned over D4−D8",
-                      labelpad=26)
-        ax.grid(axis="y", color=GRID, lw=0.7); ax.set_axisbelow(True)
-        for s in ("top", "right"): ax.spines[s].set_visible(False)
+        ax.set_xlabel("GIS domain (D2 toward Cape Point → D12 north)",
+                      labelpad=6)
+        # 26, not 40: the axes start at 0.135 of the figure width, so a
+        # bigger pad pushes the label off the canvas. The orientation
+        # cues moved further out instead.
+        ax.set_ylabel("shoreline change since 1984 (m)\n"
+                      "demeaned over D4−D8", labelpad=8)
+        ax.grid(axis="y"); ax.set_axisbelow(True)
+        open_frame(ax)
 
         # Orientation cues, so "up = erosion" needs no caption to decode.
-        ax.annotate("erosion\nlandward", xy=(-0.105, 0.94),
-                    xycoords="axes fraction", ha="center", va="top",
-                    fontsize=8.4, color=SUBTLE)
-        ax.annotate("▲", xy=(-0.105, 0.955), xycoords="axes fraction",
-                    ha="center", va="bottom", fontsize=7.5, color=SUBTLE)
-        ax.annotate("accretion\nseaward", xy=(-0.105, 0.06),
-                    xycoords="axes fraction", ha="center", va="bottom",
-                    fontsize=8.4, color=SUBTLE)
-        ax.annotate("▼", xy=(-0.105, 0.045), xycoords="axes fraction",
-                    ha="center", va="top", fontsize=7.5, color=SUBTLE)
+        ax.annotate("▲ erosion, landward", xy=(0.012, 0.975),
+                      xycoords="axes fraction", ha="left", va="top",
+                      fontsize=7.5, color=INK_MUTED,
+                      bbox=dict(facecolor="white", alpha=0.85,
+                                edgecolor="none",
+                                boxstyle="square,pad=0.12"))
+        ax.annotate("▼ accretion, seaward", xy=(0.012, 0.025),
+                      xycoords="axes fraction", ha="left",
+                      va="bottom", fontsize=7.5, color=INK_MUTED,
+                      bbox=dict(facecolor="white", alpha=0.85,
+                                edgecolor="none",
+                                boxstyle="square,pad=0.12"))
 
         ax.annotate(str(START + t), xy=(0.988, 0.965),
                     xycoords="axes fraction", ha="right", va="top",
-                    fontsize=31, color="#DADEE3", fontweight="bold", zorder=0)
+                    fontsize=24, color="0.88", fontweight="bold", zorder=0)
 
         # The fillet, model against the fixed observed endpoint.
         up_i, down_i = DOM.index(6), DOM.index(5)
         model_fillet = ch[t][down_i] - ch[t][up_i]
         observed_fillet = obs[down_i] - obs[up_i]
-        ax.annotate(f"fillet  D5 − D6        model  {model_fillet:+.0f} m"
-                    f"        observed  {observed_fillet:+.0f} m",
+        ax.annotate(f"fillet, D5 − D6:  modelled {model_fillet:+.0f} m,"
+                    f"  observed {observed_fillet:+.0f} m",
                     xy=(0.988, 0.035), xycoords="axes fraction", ha="right",
-                    va="bottom", fontsize=9.4, color=INK)
+                    va="bottom", fontsize=8, color=INK)
 
     anim = FuncAnimation(fig, frame, frames=nyr + HOLD_FRAMES, interval=420)
     p = OUT/f"shoreline_D2-D12_M{M:g}_f{f:.2f}.gif"
     anim.save(p, writer=PillowWriter(fps=2.4))
     plt.close(fig); made.append(p.name); print(f"  {p.name}")
+
+    record_caption(
+        p,
+        "One period-1 sweep cell animated year by year, M = {M:g} m/yr with "
+        "f = {f:g}, against the observed 1984 to 2004 change and the no-groin "
+        "run of the same year, at be1 = {be}. {why} The frames keep their own "
+        "title, legend and year clock because a GIF is watched standalone; "
+        "everything else about how to read them is here. The y axis is "
+        "LANDWARD-POSITIVE, so erosion moves up and the panel reads as a plan "
+        "view with the ocean below and the island above. Every curve is "
+        "DEMEANED over the D4–D8 fit window, because a uniform alongshore "
+        "offset belongs to the source/sink calibration rather than to the "
+        "groin, so only the SHAPE is being compared. The observed target is a "
+        "fixed endpoint because that is all this window has; the full-life GIF "
+        "is the one that animates the surveys. All cells share one y limit so "
+        "they stay directly comparable."
+        .format(M=M, f=f, be=BE, why=WHY.get((M, f), "").strip()))
 
 print(f"\n{len(made)} gifs -> {OUT}")
 print("  y axis is LANDWARD-positive: erosion up, matching the full-life gif")

@@ -73,6 +73,8 @@ for _path in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
 from hatteras_site_config import HATTERAS_DOMAINS as GEOMETRY  # noqa: E402
 from cascade_pipeline.hindcast import implied_interception_m3_yr  # noqa: E402
 from cascade_pipeline.run_layout import resolve  # noqa: E402
+from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+                              caption, figsize, open_frame, save, _title)
 from HAT_groin_sweep_config import (  # noqa: E402
     GROIN_DOWNDRIFT_GIS,
     GROIN_UPDRIFT_GIS,
@@ -102,8 +104,11 @@ DRIFT_LOW, DRIFT_HIGH = 5.0e5, 7.0e5
 # cell into one run name. Checked against the diagnostics rather than trusted.
 EXPECT_M, EXPECT_F = 60.0, 0.6
 
-INK, UP_C, DOWN_C = "#1A1A2E", "#FF8C00", "#2A6FB0"
-BAD, MUTED, GRID = "#C2185B", "#777777", "#D5D8DD"
+# The two sides of the structure, in the house semantics: the sheltered
+# updrift cell is the ACCENT (the thing the module does), the downdrift
+# cell it takes from is BASE grey. INK/UP_C/DOWN_C/BAD/MUTED/GRID were a
+# navy, an orange, a blue, a pink and two greys chosen in this file.
+UP_C, DOWN_C = C["ACCENT"], C["BASE"]
 
 
 def _rig_pad(gis_id: int) -> int:
@@ -152,119 +157,119 @@ def main() -> None:
     keep = np.isin(fillet_years, years)
     fillet_on_years, fillet_aligned = fillet_years[keep], fillet[keep]
 
-    plt.rcParams.update({"font.size": 10, "axes.linewidth": 0.7,
-                         "legend.frameon": False, "pdf.fonttype": 42})
+    apply_style()
     figure, (ax_rate, ax_cum, ax_keep) = plt.subplots(
-        3, 1, figsize=(12.0, 11.4), sharex=True,
-        gridspec_kw={"height_ratios": [1.0, 1.0, 1.0], "hspace": 0.16})
+        3, 1, figsize=figsize("double", aspect=1.05), sharex=True,
+        gridspec_kw={"height_ratios": [1.0, 1.0, 1.0]},
+        constrained_layout=True)
 
     millions = FuncFormatter(lambda v, _: f"{v / 1e6:.0f}M")
     thousands = FuncFormatter(lambda v, _: f"{v / 1e3:.0f}k")
 
     # ---- (a) annual interception against the drift band --------------------
-    ax_rate.axhspan(DRIFT_LOW, DRIFT_HIGH, color="#E8F1F8", zorder=0)
-    ax_rate.annotate("littoral drift, 5–7 × 10⁵ m³/yr\n(a literature range, not a limit)",
+    ax_rate.axhspan(DRIFT_LOW, DRIFT_HIGH, color="0.94", zorder=0)
+    ax_rate.annotate("littoral drift, 5 to 7 × 10⁵ m³/yr",
                      xy=(0.985, (DRIFT_LOW + DRIFT_HIGH) / 2),
                      xycoords=("axes fraction", "data"), ha="right",
-                     va="center", fontsize=8.6, color="#2A6FB0")
-    ax_rate.plot(years, annual_volume, color=UP_C, linewidth=2.4,
+                     va="center", fontsize=7, color=INK_MUTED)
+    ax_rate.plot(years, annual_volume, color=UP_C, linewidth=1.6,
                  drawstyle="steps-post", zorder=4)
-    ax_rate.axhline(0.0, color="#BBBBBB", linewidth=0.8, zorder=1)
-    ax_rate.set_ylabel("Annual transfer across\nthe groin (m³/yr)")
+    ax_rate.axhline(0.0, color=INK_MUTED, linewidth=0.8, zorder=1)
+    ax_rate.set_ylabel("annual transfer across\nthe groin (m³/yr)")
     ax_rate.yaxis.set_major_formatter(thousands)
-    ax_rate.set_title(
-        "(a)  What the module moves each year — M_eff × 500 m × "
-        f"{PROFILE_HEIGHT_M:.1f} m profile",
-        fontsize=11, loc="left")
+    _title(ax_rate, 0, "what the module moves each year")
     sound, floor = annual_volume.max(), annual_volume[annual_volume > 0].min()
-    ax_rate.annotate(f"M = 60 while sound:  {sound:,.0f} m³/yr",
-                     xy=(0.22, 0.55), xycoords="axes fraction",
-                     ha="left", va="center", fontsize=9, color=INK)
-    ax_rate.annotate(f"after 2003, M·f = 36:  {floor:,.0f} m³/yr",
-                     xy=(0.22, 0.38), xycoords="axes fraction",
-                     ha="left", va="center", fontsize=9, color=INK)
+    ax_rate.annotate(f"while sound, {sound:,.0f} m³/yr",
+                     xy=(0.22, 0.58), xycoords="axes fraction",
+                     ha="left", va="center", fontsize=7.5, color=INK)
+    ax_rate.annotate(f"after 2003, {floor:,.0f} m³/yr",
+                     xy=(0.22, 0.42), xycoords="axes fraction",
+                     ha="left", va="center", fontsize=7.5, color=INK)
 
     # ---- (b) cumulative volume, mirrored ----------------------------------
-    ax_cum.fill_between(years, 0, cumulative_volume, color=UP_C, alpha=0.30,
-                        zorder=2)
-    ax_cum.fill_between(years, 0, -cumulative_volume, color=DOWN_C, alpha=0.30,
-                        zorder=2)
-    ax_cum.plot(years, cumulative_volume, color=UP_C, linewidth=2.2,
-                label="gained by the updrift cell (D6)", zorder=4)
-    ax_cum.plot(years, -cumulative_volume, color=DOWN_C, linewidth=2.2,
-                label="taken from the downdrift cell (D5)", zorder=4)
-    ax_cum.axhline(0.0, color=INK, linewidth=1.2, zorder=3)
-    ax_cum.set_ylabel("Cumulative volume\ntransferred (m³)")
+    ax_cum.fill_between(years, 0, cumulative_volume, color=UP_C, alpha=0.25,
+                        linewidth=0, zorder=2)
+    ax_cum.fill_between(years, 0, -cumulative_volume, color=DOWN_C, alpha=0.25,
+                        linewidth=0, zorder=2)
+    ax_cum.plot(years, cumulative_volume, color=UP_C, linewidth=1.6,
+                label="gained by the updrift cell, D6", zorder=4)
+    ax_cum.plot(years, -cumulative_volume, color=DOWN_C, linewidth=1.6,
+                label="taken from the downdrift cell, D5", zorder=4)
+    ax_cum.axhline(0.0, color=INK, linewidth=0.8, zorder=3)
+    ax_cum.set_ylabel("cumulative volume\ntransferred (m³)")
     ax_cum.yaxis.set_major_formatter(millions)
-    ax_cum.set_title("(b)  The transfer is exactly volume-neutral — "
-                     "and the real structure is not",
-                     fontsize=11, loc="left")
-    ax_cum.legend(loc="upper left", fontsize=9)
+    _title(ax_cum, 1, "the transfer is exactly volume-neutral")
+    ax_cum.legend(loc="upper left", fontsize=7.5)
     ax_cum.annotate(
-        f"±{cumulative_volume[-1] / 1e6:.1f} million m³ by {years[-1]}\n"
-        "net across the pair: exactly 0, by construction",
-        xy=(0.985, 0.63), xycoords="axes fraction", ha="right", va="center",
-        fontsize=8.8, color=INK)
-    ax_cum.annotate(
-        "THE ASSUMPTION THAT DEPARTS FROM THE FIELD EVIDENCE\n"
-        "Observed downdrift extent is 0 m; the model's is 2,500 m. The real\n"
-        "structure accretes updrift with no measurable downdrift deficit —\n"
-        "the sand comes from the cape, not from D5. Tested: removing the sink\n"
-        "halves the fillet and quadruples reach bias, so deleting it is not the fix.",
-        xy=(0.015, 0.05), xycoords="axes fraction", ha="left", va="bottom",
-        fontsize=8.4, color=BAD)
+        f"±{cumulative_volume[-1] / 1e6:.1f} million m³ by {years[-1]};"
+        " net across the pair, exactly zero",
+        xy=(0.985, 0.62), xycoords="axes fraction", ha="right", va="center",
+        fontsize=7.5, color=INK)
 
     # ---- (c) gross against net --------------------------------------------
-    ax_keep.plot(years, cumulative_m, color=MUTED, linewidth=2.2,
-                 linestyle="--", label="cumulative displacement APPLIED by the module",
+    ax_keep.plot(years, cumulative_m, color=C["BASE"], linewidth=1.4,
+                 linestyle="--",
+                 label="cumulative displacement applied by the module",
                  zorder=3)
-    ax_keep.plot(fillet_on_years, fillet_aligned, color=UP_C, linewidth=2.6,
-                 label="fillet actually REALISED (D5 − D6)", zorder=4)
-    ax_keep.axhline(0.0, color="#BBBBBB", linewidth=0.8, zorder=1)
-    ax_keep.set_ylabel("Shoreline displacement (m)")
-    ax_keep.set_xlabel("Year")
-    ax_keep.set_title("(c)  Almost none of it is retained — "
-                      "so M is not a rate of impoundment",
-                      fontsize=11, loc="left")
-    ax_keep.legend(loc="upper left", fontsize=9)
+    ax_keep.plot(fillet_on_years, fillet_aligned, color=UP_C, linewidth=1.8,
+                 label="fillet actually realised, D5 − D6", zorder=4)
+    ax_keep.axhline(0.0, color=INK_MUTED, linewidth=0.8, zorder=1)
+    ax_keep.set_ylabel("shoreline displacement (m)")
+    ax_keep.set_xlabel("year")
+    _title(ax_keep, 2, "almost none of it is retained")
+    ax_keep.legend(loc="upper left", fontsize=7.5)
 
     retained = 100.0 * fillet_aligned[-1] / cumulative_m[-1]
     ax_keep.annotate(
-        f"applied {cumulative_m[-1]:,.0f} m   →   realised "
-        f"{fillet_aligned[-1]:.0f} m\n"
-        f"retained: {retained:.0f}%   (peak fillet {fillet.max():.0f} m)\n\n"
-        "BRIE's alongshore diffusion removes the rest. M is the rate needed to\n"
-        "SUSTAIN a fillet against diffusion, not the rate sand is impounded —\n"
-        "which is why the 719,000 m³/yr affordability figure is a GROSS\n"
-        "restoring rate, not like-for-like against a NET transport budget.",
+        f"applied {cumulative_m[-1]:,.0f} m, realised "
+        f"{fillet_aligned[-1]:.0f} m: {retained:.0f}% retained",
         xy=(0.985, 0.52), xycoords="axes fraction", ha="right", va="top",
-        fontsize=8.8, color=INK)
+        fontsize=7.5, color=INK)
 
     for axis in (ax_rate, ax_cum, ax_keep):
-        axis.grid(axis="y", color=GRID, linewidth=0.6)
+        axis.grid(axis="y")
         axis.set_axisbelow(True)
-        for side in ("top", "right"):
-            axis.spines[side].set_visible(False)
+        open_frame(axis)
 
-    figure.suptitle(
-        f"Sediment budget of the groin module — rig, 1967–{years[-1]}, "
-        f"M = {applied_M:g}, f = {applied_f:.1f}",
-        fontsize=13, y=0.977)
-    figure.text(
-        0.012, 0.013,
-        "Volumes use the repo's own implied_interception_m3_yr (M × domain "
-        "spacing × active profile height), so they reconcile with the "
-        "affordability numbers quoted in GROIN_PLAN.md and the run reports. "
-        "M is an effective, grid-specific, FIELD-AGGREGATE rate for four "
-        "structures inside one 500 m domain against a ~190 m real fillet — not "
-        "a sediment flux, and not divisible by four for a per-structure value.",
-        fontsize=7.8, color="#555555", wrap=True, va="bottom")
+    caption(figure,
+            "The sediment budget of the groin module on the 1967 rig, "
+            "1967 to {end}, at M = {M:g} and f = {f:.1f}. (a) What the module "
+            "moves each year: the effective trapping rate times the 500 m "
+            "domain spacing times a {h:.1f} m active profile, which is "
+            "{sound:,.0f} m³/yr while the structure is sound and {floor:,.0f} "
+            "m³/yr after the 2003 storm. The band is a literature range for "
+            "the littoral drift, 5 to 7 × 10⁵ m³/yr — a comparison, not a "
+            "limit the module enforces. (b) The transfer is exactly "
+            "volume-neutral: the updrift cell gains what the downdrift cell "
+            "loses, ±{cum:.1f} million m³ by {end}, netting to zero by "
+            "construction. THAT IS THE ASSUMPTION THAT DEPARTS FROM THE FIELD "
+            "EVIDENCE. The observed downdrift extent is 0 m against the "
+            "model's 2,500 m: the real structure accretes updrift with no "
+            "measurable downdrift deficit, because the sand comes from the "
+            "cape and not from D5. Removing the sink was tested and is not the "
+            "fix — it halves the fillet and quadruples the reach bias. "
+            "(c) Almost none of what is applied is retained: {applied:,.0f} m "
+            "of displacement produces {real:.0f} m of fillet, {ret:.0f}%, "
+            "because BRIE's alongshore diffusion removes the rest. So M is the "
+            "rate needed to SUSTAIN a fillet against diffusion, not a rate at "
+            "which sand is impounded, and the affordability figure it implies "
+            "is a GROSS restoring rate rather than like-for-like against a net "
+            "transport budget. Volumes come from the repo's own "
+            "implied_interception_m3_yr, so they reconcile with the numbers in "
+            "GROIN_PLAN.md and the run reports. M is an effective, "
+            "grid-specific, field-aggregate rate for four structures inside "
+            "one 500 m domain against a real fillet of about 190 m: not a "
+            "sediment flux, and not divisible by four for a per-structure "
+            "value."
+            .format(end=years[-1], M=applied_M, f=applied_f,
+                    h=PROFILE_HEIGHT_M, sound=sound, floor=floor,
+                    cum=cumulative_volume[-1] / 1e6,
+                    applied=cumulative_m[-1], real=fillet_aligned[-1],
+                    ret=retained))
 
-    figure.subplots_adjust(top=0.935, bottom=0.075, left=0.105, right=0.985)
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-    out = FIGURE_DIR / "sediment_budget.png"
-    figure.savefig(out, dpi=200)
-    print(f"wrote {out}")
+    written = save(figure, FIGURE_DIR / "sediment_budget.png", close=True)
+    print(f"wrote {written[0]}")
     print(f"  annual while sound   {sound:,.0f} m3/yr "
           f"({100 * sound / DRIFT_HIGH:.0f}% of the upper drift bound)")
     print(f"  annual after 2003    {floor:,.0f} m3/yr "

@@ -69,7 +69,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-import textwrap
 from pathlib import Path
 
 import numpy as np
@@ -91,6 +90,9 @@ for _path in (SCRIPTS_DIR, _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+                              caption, error_cmap, figsize, open_frame,
+                              save, _title)
 from HAT_groin_sweep_config import (  # noqa: E402
     COASTSAT_DIR,
     END_YEAR,
@@ -108,9 +110,13 @@ from HAT_groin_sweep_config import (  # noqa: E402
 
 # Shared with HAT_groin_joint_fit.py so a groin is the same colour in every
 # figure the sweep produces.
-MODEL_COLOR = "#FF8C00"
-GROIN_COLOR = "#B71C1C"
-OBSERVED_COLOR = "#1A1A1A"
+# House colours (2026-09-11): the observations are INK, the modelled cell
+# under test the ACCENT, and the structure's own marks a muted guide. An
+# orange, a dark red and near-black were chosen in this file, and the dark
+# red was the 1984 vintage colour doing a second job.
+MODEL_COLOR = C["ACCENT"]
+GROIN_COLOR = INK_MUTED
+OBSERVED_COLOR = INK
 
 RANK_METRIC = "fillet_err"
 REACH_METRIC = "rmse_window"
@@ -297,36 +303,50 @@ def _mark_groin(axis):
 
 def _shade_pair(axis):
     """Shades the two domains the fillet is measured across."""
+    # Two greys, not two hues: these bands say WHERE, and the colour in this
+    # figure is reserved for WHAT is plotted.
     axis.axvspan(GROIN_UPDRIFT_GIS - 0.5, GROIN_UPDRIFT_GIS + 0.5,
-                 color=GROIN_COLOR, alpha=0.10, zorder=0)
+                 color="0.90", zorder=0)
     axis.axvspan(GROIN_DOWNDRIFT_GIS - 0.5, GROIN_DOWNDRIFT_GIS + 0.5,
-                 color="#1565C0", alpha=0.10, zorder=0)
+                 color="0.94", zorder=0)
 
 
 def _profile_axis(axis, period):
     """Applies the shared labelling of a per-domain LRR panel."""
     _shade_pair(axis)
     _mark_groin(axis)
-    axis.axhline(0.0, color="#888888", linewidth=0.8, zorder=1)
-    axis.set_xlabel("GIS domain (south to north)")
-    axis.set_ylabel("shoreline change rate (m/yr, + = seaward)")
+    axis.axhline(0.0, color=INK_MUTED, linewidth=0.8, linestyle=(0, (4, 3)),
+                 zorder=1)
+    axis.set_xlabel("GIS domain (south → north)")
+    axis.set_ylabel("shoreline change rate (m/yr)\npositive is seaward")
     axis.set_xticks(list(FIT_DOMAINS_GIS))
-    axis.grid(alpha=0.25)
+    axis.grid(axis="y")
+    axis.set_axisbelow(True)
+    open_frame(axis)
     axis.text(GROIN_UPDRIFT_GIS + 0.15, axis.get_ylim()[1], " updrift",
-              color=GROIN_COLOR, fontsize=8, va="top")
+              color=INK_MUTED, fontsize=7, va="top")
     axis.text(GROIN_DOWNDRIFT_GIS - 0.15, axis.get_ylim()[1], "downdrift ",
-              color="#1565C0", fontsize=8, va="top", ha="right")
+              color=INK_MUTED, fontsize=7, va="top", ha="right")
 
 
 def _footnote(figure, text, width=150):
-    """Writes a wrapped footnote under a figure.
+    """Registers `text` as the figure's caption.
 
-    Wrapped with `textwrap` at a fixed column rather than matplotlib's
-    `wrap=True`, which measures against the figure edge and clips the last
-    word of a long line.
+    Until 2026-09-11 this drew the text on the canvas, wrapped with `textwrap`
+    at a fixed column. The house rule is that nothing on the image belongs in
+    a caption, so it now lands in a CAPTIONS.md beside the PNG, written when
+    the figure is saved. Every caller is unchanged, and `width` is accepted and
+    ignored -- a caption file has no columns. Calling it twice on one figure
+    replaces the text, so the second call must carry everything: see
+    `_notch_note`, which appends rather than overwriting.
     """
-    figure.text(0.01, 0.005, "\n".join(textwrap.wrap(text, width)),
-                fontsize=7.5, color="#444444", va="bottom")
+    caption(figure, text)
+
+
+def _append_caption(figure, text):
+    """Adds a sentence to whatever caption the figure already carries."""
+    existing = getattr(figure, "_hat_caption", "")
+    caption(figure, f"{existing} {text}".strip())
 
 
 def _notch_note(figure, period):
@@ -334,7 +354,7 @@ def _notch_note(figure, period):
     one_signed, up, down = observed_anomaly_is_one_signed(period)
     if not one_signed:
         return
-    _footnote(
+    _append_caption(
         figure,
         f"Observed D{GROIN_UPDRIFT_GIS} and D{GROIN_DOWNDRIFT_GIS} both "
         f"depart the regional trend the same way ({up:+.2f} and {down:+.2f} "
@@ -462,25 +482,30 @@ def fig_heatmap(period, preset, surface, out_dir):
         reach_subtitle += (f"   |   BIAS-DRIVEN: mean |bias| {mean_bias:.2f} "
                            f"m/yr, corr(M, bias) = {bias_corr:+.2f}")
 
+    panel_notes = []
     panels = [
-        (RANK_METRIC, "|modelled - observed| fillet size (m)",
+        (RANK_METRIC, "|modelled − observed| fillet size (m)",
          f"RANKED ON THIS. Observed fillet "
          f"{OBSERVED_FILLET_M[period]:.1f} m"),
         (REACH_METRIC, "LRR RMSE over D1-D12 (m/yr)", reach_subtitle),
     ]
 
-    figure, axes = plt.subplots(1, 2, figsize=(14, 5.4))
-    for axis, (column, label, subtitle) in zip(axes, panels):
+    apply_style()
+    figure, axes = plt.subplots(1, 2, figsize=figsize("double", aspect=0.42),
+                                constrained_layout=True)
+    for i, (axis, (column, label, subtitle)) in enumerate(zip(axes, panels)):
         grid = groin.pivot(index="fraction", columns="M", values=column)
         mesh = axis.pcolormesh(grid.columns, grid.index, grid.values,
-                               shading="nearest", cmap="viridis_r")
-        figure.colorbar(mesh, ax=axis, label=label)
+                               shading="nearest", cmap=error_cmap())
+        cb = figure.colorbar(mesh, ax=axis)
+        cb.set_label(label)
+        cb.outline.set_linewidth(0.6)
 
         best, tied = tied_best(groin, column)
         panel_tie = _tie_note(tied, column)
-        axis.plot(tied["M"], tied["fraction"], marker="*", markersize=20,
-                  color=GROIN_COLOR, markeredgecolor="white",
-                  markeredgewidth=1.2, linestyle="none", zorder=5,
+        axis.plot(tied["M"], tied["fraction"], marker="*", markersize=13,
+                  color=C["ACCENT"], markeredgecolor="white",
+                  markeredgewidth=0.8, linestyle="none", zorder=5,
                   label=(f"{len(tied)} tied cells" if panel_tie
                          else f"best: {_cell_label(best)}"))
 
@@ -489,12 +514,14 @@ def fig_heatmap(period, preset, surface, out_dir):
             rails.append("M")
         if best["fraction"] in (min(F_VALUES), max(F_VALUES)):
             rails.append("f")
-        title = column if not rails else f"{column}   (railed on {', '.join(rails)})"
-
-        axis.set_title(f"{title}\n{subtitle}", fontsize=10)
+        short = ("fillet size error" if column == RANK_METRIC
+                 else "reach rate error")
+        _title(axis, i, short if not rails
+               else f"{short}, railed on {', '.join(rails)}")
         axis.set_xlabel("groin trapping rate M (m/yr)")
         axis.set_ylabel("deterioration floor f")
-        axis.legend(loc="upper right", fontsize=8)
+        axis.legend(loc="upper right", fontsize=7)
+        panel_notes.append(f"({chr(ord('a') + i)}) {subtitle}.")
 
     # Whether the two panels agree is the point of drawing both.
     pick_rank = groin.loc[groin[RANK_METRIC].idxmin()]
@@ -516,16 +543,17 @@ def fig_heatmap(period, preset, surface, out_dir):
             f"asking for background erosion, which M is the only knob on this "
             f"grid able to supply.")
 
-    figure.suptitle(
-        f"Groin sweep error surface -- {period}-{END_YEAR[period]}  {preset}",
-        fontsize=12)
-    figure.tight_layout(rect=(0, 0.075, 1, 0.96))
-    _footnote(figure, verdict, width=185)
+    _footnote(figure,
+              "The groin sweep's error surface over the (M, f) grid for "
+              "{period} to {end}, {preset}, scored two ways. Dark is worse and "
+              "the marked cells are the best on each score. (a) is the fillet "
+              "size error, which the sweep RANKS on; (b) is the error in the "
+              "shoreline change rate over the whole D1\u2013D12 reach. {notes} "
+              "{verdict}"
+              .format(period=period, end=END_YEAR[period], preset=preset,
+                      notes=" ".join(panel_notes), verdict=verdict))
 
-    path = out_dir / "heatmap.png"
-    figure.savefig(path, dpi=150, facecolor="white")
-    plt.close(figure)
-    return path
+    return save(figure, out_dir / "heatmap.png", close=True)[0]
 
 
 def fig_best_fit_profile(period, preset, surface, out_dir):
@@ -537,12 +565,15 @@ def fig_best_fit_profile(period, preset, surface, out_dir):
     gis, model = rate_curve(best)
     _, observed = observed_curve(period)
 
+    apply_style()
     figure, (axis, full_axis) = plt.subplots(
-        2, 1, figsize=(11, 9), gridspec_kw=dict(height_ratios=[1, 1]))
-    axis.plot(gis, observed, marker="o", color=OBSERVED_COLOR, linewidth=2.0,
-              label="CoastSat observed", zorder=4)
-    axis.plot(gis, model, marker="s", color=MODEL_COLOR, linewidth=2.0,
-              label=f"model: {_cell_label(best)}", zorder=3)
+        2, 1, figsize=figsize("double", aspect=0.80),
+        gridspec_kw=dict(height_ratios=[1, 1]), constrained_layout=True)
+    axis.plot(gis, observed, marker="o", markersize=3.4,
+              color=OBSERVED_COLOR, linewidth=1.6,
+              label="observed, CoastSat", zorder=4)
+    axis.plot(gis, model, marker="s", markersize=3.4, color=MODEL_COLOR,
+              linewidth=1.6, label=f"modelled, {_cell_label(best)}", zorder=3)
     _profile_axis(axis, period)
 
     # --- full reach ------------------------------------------------------
@@ -551,48 +582,59 @@ def fig_best_fit_profile(period, preset, surface, out_dir):
     # measured (not fitted) out to a few km -- so this panel is where an
     # emergent extent can be checked against the observations that were never
     # part of the objective.
+    reach_note = ""
     gis_full, obs_full = observed_curve_full(period)
     mod_gis, mod_full = model_curve_full(period, preset, best["combo"])
     full_axis.axvspan(min(FIT_DOMAINS_GIS) - 0.5, max(FIT_DOMAINS_GIS) + 0.5,
-                      color="#FFD54F", alpha=0.22, zorder=0,
-                      label="fit window (scored)")
-    full_axis.plot(gis_full, obs_full, color=OBSERVED_COLOR, linewidth=1.6,
-                   label="CoastSat observed", zorder=4)
+                      color="0.92", zorder=0, label="the scored fit window")
+    full_axis.plot(gis_full, obs_full, color=OBSERVED_COLOR, linewidth=1.2,
+                   label="observed, CoastSat", zorder=4)
     if mod_full is not None:
-        full_axis.plot(mod_gis, mod_full, color=MODEL_COLOR, linewidth=1.6,
-                       label=f"model: {_cell_label(best)}", zorder=3)
+        full_axis.plot(mod_gis, mod_full, color=MODEL_COLOR, linewidth=1.2,
+                       label=f"modelled, {_cell_label(best)}", zorder=3)
         common = np.intersect1d(gis_full, mod_gis)
         obs_i = np.array([obs_full[list(gis_full).index(g)] for g in common])
         mod_i = np.array([mod_full[list(mod_gis).index(g)] for g in common])
         outside = ~np.isin(common, FIT_DOMAINS_GIS)
         rmse_in = float(np.sqrt(np.nanmean((mod_i[~outside] - obs_i[~outside]) ** 2)))
         rmse_out = float(np.sqrt(np.nanmean((mod_i[outside] - obs_i[outside]) ** 2)))
-        full_axis.set_title(
-            f"full reach D1-D90   |   RMSE inside fit window {rmse_in:.2f}, "
-            f"outside {rmse_out:.2f} m/yr", fontsize=10)
-    full_axis.axhline(0.0, color="#888888", linewidth=0.8, zorder=1)
+        reach_note = ("RMSE inside the fit window is {:.2f} m/yr and "
+                      "outside it {:.2f}.".format(rmse_in, rmse_out))
+    _title(full_axis, 1, "the whole reach, D1 to D90")
+    full_axis.axhline(0.0, color=INK_MUTED, linewidth=0.8,
+                      linestyle=(0, (4, 3)), zorder=1)
     full_axis.axvline((GROIN_DOWNDRIFT_GIS + GROIN_UPDRIFT_GIS) / 2.0,
-                      color=GROIN_COLOR, linewidth=1.6, zorder=2)
-    full_axis.set_xlabel("GIS domain (south to north)")
-    full_axis.set_ylabel("shoreline change rate (m/yr, + = seaward)")
-    full_axis.grid(alpha=0.25)
-    full_axis.legend(loc="best", fontsize=8)
+                      color=INK_MUTED, linewidth=0.8, zorder=2)
+    full_axis.set_xlabel("GIS domain (south → north)")
+    full_axis.set_ylabel("shoreline change rate (m/yr)\npositive is seaward")
+    full_axis.grid(axis="y")
+    full_axis.set_axisbelow(True)
+    open_frame(full_axis)
+    full_axis.legend(loc="best", fontsize=7)
 
-    axis.set_title(
-        f"Best-fit groin cell -- {period}-{END_YEAR[period]}  {preset}\n"
-        f"fillet {best['fillet_m']:.1f} m vs observed "
-        f"{OBSERVED_FILLET_M[period]:.1f} m "
-        f"(err {best[RANK_METRIC]:.2f} m)   |   "
-        f"D1-D12 RMSE {best[REACH_METRIC]:.3f} m/yr",
-        fontsize=11)
-    axis.legend(loc="best", fontsize=9)
-    figure.tight_layout(rect=(0, 0.075, 1, 1))
+    _title(axis, 0, "the fit window, domain by domain")
+    axis.legend(loc="best", fontsize=7)
+
+    _footnote(figure,
+              "The best-scoring groin cell for {period} to {end}, {preset}: "
+              "{cell}. Its modelled fillet is {fil:.1f} m against an observed "
+              "{obs:.1f} m, an error of {err:.2f} m, and its error over the "
+              "D1\u2013D12 reach is {reach:.3f} m/yr. (a) The scored fit "
+              "window domain by domain, with the two shaded bands marking the "
+              "domains either side of the structure. (b) The same cell over "
+              "the whole 90-domain reach. The fit window is 12 of those 90, so "
+              "a cell that matches the fillet says nothing on its own about "
+              "the other 78; the groin's own influence is MEASURED, not "
+              "fitted, out to a few kilometres, which makes this panel the "
+              "place to check an emergent extent against observations that "
+              "were never part of the objective. {reach_note}"
+              .format(period=period, end=END_YEAR[period], preset=preset,
+                      cell=_cell_label(best), fil=best["fillet_m"],
+                      obs=OBSERVED_FILLET_M[period], err=best[RANK_METRIC],
+                      reach=best[REACH_METRIC], reach_note=reach_note))
     _notch_note(figure, period)
 
-    path = out_dir / "best_fit_profile.png"
-    figure.savefig(path, dpi=150, facecolor="white")
-    plt.close(figure)
-    return path
+    return save(figure, out_dir / "best_fit_profile.png", close=True)[0]
 
 
 def fig_top_n_profiles(period, preset, surface, out_dir, n=5):
@@ -608,32 +650,43 @@ def fig_top_n_profiles(period, preset, surface, out_dir, n=5):
     top = groin.head(n)
     gis, observed = observed_curve(period)
 
-    figure, axis = plt.subplots(figsize=(10, 5.6))
-    axis.plot(gis, observed, marker="o", color=OBSERVED_COLOR, linewidth=2.5,
-              label="CoastSat observed", zorder=5)
+    apply_style()
+    figure, axis = plt.subplots(figsize=figsize("double", aspect=0.46),
+                                constrained_layout=True)
+    axis.plot(gis, observed, marker="o", markersize=3.4, color=OBSERVED_COLOR,
+              linewidth=1.8, label="observed, CoastSat", zorder=5)
 
-    shades = plt.get_cmap("autumn")(np.linspace(0.0, 0.7, len(top)))
+    # One colour family, darkest is best: these are variations of one thing,
+    # and `autumn` put the best cell in a red that means 1984 elsewhere.
+    from matplotlib.colors import LinearSegmentedColormap
+    ramp = LinearSegmentedColormap.from_list(
+        "hat_accent_ramp", [C["ACCENT_FILL"], C["ACCENT"]])
+    shades = ramp(np.linspace(1.0, 0.2, len(top)))
     for colour, (_, row) in zip(shades, top.iterrows()):
         _, model = rate_curve(row)
-        axis.plot(gis, model, marker=".", color=colour, linewidth=1.5,
-                  label=f"{_cell_label(row)}  (err {row[RANK_METRIC]:.2f} m)",
+        axis.plot(gis, model, marker=".", markersize=3.0, color=colour,
+                  linewidth=1.2,
+                  label=f"{_cell_label(row)}, {row[RANK_METRIC]:.2f} m",
                   zorder=3)
     _profile_axis(axis, period)
 
     spread = float(top[RANK_METRIC].max() - top[RANK_METRIC].min())
-    axis.set_title(
-        f"Top {len(top)} cells by fillet error -- "
-        f"{period}-{END_YEAR[period]}  {preset}\n"
-        f"error spread across these cells: {spread:.2f} m",
-        fontsize=11)
-    axis.legend(loc="best", fontsize=8)
-    figure.tight_layout(rect=(0, 0.075, 1, 1))
+    _title(axis, 0, f"the top {len(top)} cells by fillet error")
+    axis.legend(loc="best", fontsize=7)
+
+    _footnote(figure,
+              "The {n} best-scoring cells for {period} to {end}, {preset}, on "
+              "one set of axes against the observations, with the best cell "
+              "darkest. Their scores span {spread:.2f} m. This is a statement "
+              "about identifiability rather than about fit: curves lying on "
+              "top of one another mean the metric cannot tell those cells "
+              "apart. The two shaded bands are the domains either side of the "
+              "structure."
+              .format(n=len(top), period=period, end=END_YEAR[period],
+                      preset=preset, spread=spread))
     _notch_note(figure, period)
 
-    path = out_dir / "top_n_profiles.png"
-    figure.savefig(path, dpi=150, facecolor="white")
-    plt.close(figure)
-    return path
+    return save(figure, out_dir / "top_n_profiles.png", close=True)[0]
 
 
 def fig_period2_surface(period, preset, surface, out_dir):
@@ -661,11 +714,14 @@ def fig_period2_surface(period, preset, surface, out_dir):
     groin = surface[surface["M"] > 0]
     grid = groin.pivot(index="fraction", columns="M", values=RANK_METRIC)
 
-    figure, axis = plt.subplots(figsize=(9.5, 5.8))
+    apply_style()
+    figure, axis = plt.subplots(figsize=figsize("double", aspect=0.48),
+                                constrained_layout=True)
     mesh = axis.pcolormesh(grid.columns, grid.index, grid.values,
-                           shading="nearest", cmap="viridis_r")
-    figure.colorbar(mesh, ax=axis,
-                    label="|modelled - observed| fillet size (m)")
+                           shading="nearest", cmap=error_cmap())
+    cb = figure.colorbar(mesh, ax=axis)
+    cb.set_label("|modelled − observed| fillet size (m)")
+    cb.outline.set_linewidth(0.6)
 
     # Constant-M*f hyperbolae, anchored on the products the GRID spans rather
     # than on the best cell. Anchoring on the best cell silently drew nothing
@@ -687,45 +743,50 @@ def fig_period2_surface(period, preset, surface, out_dir):
         if not visible.any():
             continue
         axis.plot(m_axis[visible], f_axis[visible], linestyle="--",
-                  color="white", linewidth=1.2, alpha=0.9, zorder=4)
+                  color=C["REF"], linewidth=1.0, zorder=4)
         axis.annotate(f"M·f = {product:.0f}",
                       xy=(m_axis[visible][-1], f_axis[visible][-1]),
-                      color="white", fontsize=8, va="bottom", ha="right",
-                      zorder=4)
+                      color=C["REF"], fontsize=7, va="bottom", ha="right",
+                      zorder=4,
+                      bbox=dict(facecolor="white", alpha=0.75,
+                                edgecolor="none",
+                                boxstyle="square,pad=0.12"))
 
     # The valley floor: for each f, the M this period likes best.
     floor_M = [grid.columns[int(np.nanargmin(grid.loc[f].values))]
                if np.isfinite(grid.loc[f].values).any() else np.nan
                for f in grid.index]
-    axis.plot(floor_M, grid.index, marker="o", color=GROIN_COLOR,
-              linewidth=1.5, label="valley floor (best M at each f)", zorder=5)
+    axis.plot(floor_M, grid.index, marker="o", markersize=3.0,
+              color=C["ACCENT"], linewidth=1.2,
+              label="valley floor: the best M at each f", zorder=5)
 
     # Draw the whole tied set, not one arbitrary member of it. A single star
     # on a tie reads as a fitted value; a row of them reads as what it is.
     tie_note = _tie_note(tied)
     if tie_note:
-        axis.plot(tied["M"], tied["fraction"], marker="o", markersize=9,
-                  color="white", markeredgecolor=GROIN_COLOR,
-                  markeredgewidth=1.4, linestyle="none", zorder=6,
-                  label=f"{len(tied)} tied cells (M unconstrained)")
+        axis.plot(tied["M"], tied["fraction"], marker="o", markersize=5.5,
+                  color="none", markeredgecolor=C["ACCENT"],
+                  markeredgewidth=1.2, linestyle="none", zorder=6,
+                  label=f"{len(tied)} tied cells, M unconstrained")
     else:
-        axis.plot(best["M"], best["fraction"], marker="*", markersize=20,
-                  color="white", markeredgecolor=GROIN_COLOR,
-                  markeredgewidth=1.4, linestyle="none", zorder=6,
+        axis.plot(best["M"], best["fraction"], marker="*", markersize=13,
+                  color=C["ACCENT"], markeredgecolor="white",
+                  markeredgewidth=0.8, linestyle="none", zorder=6,
                   label=f"best: {_cell_label(best)}")
 
     axis.set_xlabel("groin trapping rate M (m/yr)")
     axis.set_ylabel("deterioration floor f")
-    axis.set_title(
-        f"{period}-{END_YEAR[period]} {preset}: only the PRODUCT M·f is "
-        f"identifiable\n"
-        f"the run sits entirely past the 2003 ramp, so cumulative trapping is "
-        f"20·M·f",
-        fontsize=11)
-    axis.legend(loc="upper right", fontsize=8)
+    axis.set_title("Only the product of the pair is identifiable here",
+                   loc="left")
+    axis.legend(loc="upper right", fontsize=7)
 
-    figure.tight_layout(rect=(0, 0.075, 1, 1))
-    note = ("A valley floor that tracks a dashed contour means this period "
+    note = ("The error surface for {} to {}, {}, with contours of constant "
+            "M·f drawn on. This window sits entirely past the 2003 end of the "
+            "deterioration ramp, so its cumulative trapping is 20·M·f and only "
+            "the PRODUCT is identifiable: the surface is a valley running "
+            "along a hyperbola rather than a bowl with a minimum. "
+            .format(period, END_YEAR[period], preset)
+            + "A valley floor that tracks a dashed contour means this period "
             "cannot separate M from f: read it as a bound on the product, not "
             "as a fitted M. Period 1 straddles the 1996-2003 ramp and is where "
             "the separation comes from.")
@@ -736,10 +797,7 @@ def fig_period2_surface(period, preset, surface, out_dir):
                  f"every M scores alike once f = 0.")
     _footnote(figure, note, width=165)
 
-    path = out_dir / "period2_surface.png"
-    figure.savefig(path, dpi=150, facecolor="white")
-    plt.close(figure)
-    return path
+    return save(figure, out_dir / "period2_surface.png", close=True)[0]
 
 
 # =============================================================================
