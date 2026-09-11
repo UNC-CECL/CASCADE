@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime
@@ -57,6 +58,9 @@ REPO = _find_root(Path(__file__).resolve())
 RAW_RUNS = REPO / "output" / "raw_runs"
 DOMAIN_ROOT = REPO / "data" / "hatteras_init" / "1-barrier3d-domains"
 REPORT = RAW_RUNS / "SUPERSEDED_CANDIDATES.md"
+# An arm component that names a dune-topo version, e.g. the v3 of
+# arms/version-pair/v3.
+_VERSION_TOKEN = re.compile(r"v\d+")
 
 
 def current_versions() -> dict:
@@ -74,6 +78,26 @@ def versions_on_disk(product: str) -> list:
     if not root.is_dir():
         return []
     return sorted(p.name for p in root.iterdir() if p.is_dir() and p.name.startswith("v"))
+
+
+def expected_version(run, current):
+    """The version this run SHOULD be on, which is not always CURRENT.
+
+    An arm can name a version -- `version-pair/v3` holds v3 against v2, and
+    `behindroad-copy` was built on the v3 footprint layer. Those runs are on
+    that version deliberately, so measuring them against CURRENT reports a
+    deliberate choice as drift, and acting on it would destroy the comparison
+    the arm exists for (flagged 2026-09-11).
+    """
+    for part in run["rel"].split("/"):
+        if _VERSION_TOKEN.fullmatch(part):
+            return part
+    return current.get(run["product"])
+
+
+def _is_stale(run, current):
+    want = expected_version(run, current)
+    return want is not None and run["topo"] != want
 
 
 def load_runs() -> list:
@@ -114,8 +138,7 @@ def main() -> None:
     current = current_versions()
 
     # --- topography ------------------------------------------------------
-    stale_topo = [r for r in runs
-                  if r["product"] in current and r["topo"] != current[r["product"]]]
+    stale_topo = [r for r in runs if _is_stale(r, current)]
     topo_groups = defaultdict(list)
     for r in stale_topo:
         topo_groups[(r["product"], r["topo"])].append(r)
@@ -177,6 +200,12 @@ def main() -> None:
           "the 2026-09-03 re-pick changed the dune search windows, and with them "
           "the interiors and the road setbacks. Comparing a v1 run against a v2 "
           "run attributes the pick difference to whatever the figure is about.")
+        w("")
+        w("**An arm that names a version is judged against that version, not "
+          "CURRENT.** `arms/version-pair/v3` holds v3 against v2 and "
+          "`arms/behindroad-copy` was built on the v3 footprint layer; both are "
+          "on v3 deliberately. Re-running them on CURRENT would destroy the "
+          "comparison they exist for, so they are not listed above.")
     w("")
 
     # 2
