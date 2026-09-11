@@ -1205,6 +1205,19 @@ HATTERAS_ROAD_ELEVATION_FILE = "4-mgmt-forcing/road_elevation/RoadElevation.csv"
 # matters on its own terms: a relocation is landward by definition, so a column
 # that cannot express direction cannot contradict that claim.
 #
+# ROUNDED TO WHOLE CELLS (Hannah, 2026-09-10: "a road can't relocate 17 m,
+# each grid cell is 10 x 10"). The measurement is a distance between two
+# digitised lines and is kept as measured in the CSV; what the model is FORCED
+# with is that distance rounded to the nearest 10 m, the Barrier3D cell, so a
+# prescribed move is a whole number of rows. roadway_manager floors the setback
+# to whole cells at placement anyway (int(road_setback / 10)); rounding here
+# makes the forcing say the same thing instead of carrying a fraction the grid
+# cannot hold. Nearest, not floor: 17.97 m is two cells' worth closer to 20
+# than to 10. No measured value sits on a 5 m boundary, so ties do not arise.
+#   9  18.0 -> 20     10  46.9 -> 50     11  77.1 -> 80     12  68.4 -> 70
+#   13 50.9 -> 50     14  24.7 -> 20     84  39.9 -> 40     85 108.7 -> 110
+#   86 93.7 -> 90     87  17.5 -> 20
+#
 # THE VINTAGE GAP. The lines were digitised off 1978 and 2008 imagery, so the
 # measured interval brackets BOTH events rather than either one. That is safe
 # only because the two events are disjoint in space -- 1989 moves GIS 84-87,
@@ -1238,7 +1251,8 @@ def _measured_displacements(gis_domains):
 
     Returns:
         A {gis: displacement_m} dict, holding mean_signed_landward_m from the
-        measurement.
+        measurement rounded to the nearest CELL_M (see ROUNDED TO WHOLE CELLS
+        above); `measured_displacement_m` returns the unrounded value.
 
     Raises:
         ValueError: If a domain is absent from the measurement, or the
@@ -1262,8 +1276,29 @@ def _measured_displacements(gis_domains):
             f"{path.name} classifies {unmoved} -- the two digitised lines are "
             f"copied or re-traced there, so they cannot measure a relocation")
 
-    return {gis: float(measured[gis]["mean_signed_landward_m"])
+    return {gis: round_to_cell(float(measured[gis]["mean_signed_landward_m"]))
             for gis in gis_domains}
+
+
+CELL_M = 10.0   # Barrier3D cell, m: a prescribed move is a whole number of these
+
+
+def round_to_cell(displacement_m):
+    """A displacement rounded to the nearest whole cell (half-up, sign-aware)."""
+    import math
+    sign = -1.0 if displacement_m < 0 else 1.0
+    return sign * math.floor(abs(displacement_m) / CELL_M + 0.5) * CELL_M
+
+
+def measured_displacement_m(gis):
+    """The UNROUNDED measured displacement for one domain, for labels and
+    reports that want to show the measurement beside the forcing."""
+    path = INIT_ROOT / _RELOCATION_MEASUREMENT_FILE
+    with open(path, newline="", encoding="utf-8") as handle:
+        for row in csv.DictReader(handle):
+            if int(row["domain"]) == gis:
+                return float(row["mean_signed_landward_m"])
+    raise KeyError(gis)
 
 
 HATTERAS_ROAD_EVENTS = (

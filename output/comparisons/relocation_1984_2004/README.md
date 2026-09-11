@@ -15,10 +15,13 @@ regenerated from the runs it names.
     <preset>/                 groin off (the arm names carry `nogroin`)
     <preset>_groin/           groin on
     dune_position_check/      HAT_relocation_dune_position_check.py, one PNG per preset
-v2_vs_v3/                     the CROSS-version comparison, its own folder: v2 beside v3 under one
-    <scenario>/               scenario (emergent / prescribed), the same animations with the two
-                              panels being the two versions - how the inserted and removed cells
-                              affected things. HAT_version_pair_gif.py (reconstruction 6-result/)
+v2_vs_v3/                     the CROSS-version comparison, its own folder: v2 beside v3
+    report.txt                the two per-version reports in one, every section side by side
+    tables/                   (v3 - v2 columns), read from v2/ and v3/ above, nothing re-scored.
+                              HAT_version_pair_report.py (reconstruction 6-result/)
+    <scenario>/               under one scenario (emergent / prescribed), the same animations
+                              with the two panels being the two versions - how the inserted and
+                              removed cells affected things. HAT_version_pair_gif.py (same folder)
 ```
 
 Every set has the same shape, so a reader finds the same thing in the same
@@ -36,9 +39,15 @@ place whichever version or scenario they open:
     3-event-1989_GIS84-87/        dune-and-road.gif  the dune line and the road as lines
 ```
 
-The cross-version pairs under `v2_vs_v3/` add two places, Pea Island (rows
-added) and Avon to Tri-Village (rows removed), and have no tables: their
-numbers are in the reconstruction's `6-result/`.
+The cross-version pairs under `v2_vs_v3/<scenario>/` add two places, Pea
+Island (rows added) and Avon to Tri-Village (rows removed). The folder's own
+`report.txt` and `tables/` are the v2 and v3 sets read side by side: the same
+sections as a per-version report (start conditions, first relocation, near
+misses, hit/miss, setback trajectories, road outcomes) with a v2 column, a v3
+column and their difference, plus a section on what v3 changed at the road
+before the model ran (rows added or removed, 1984 setback) from the v3
+footprint audit. The island-wide geometry is in the reconstruction's
+`6-result/`.
 
 | version | what it is | sets here | runs |
 |---|---|---|---|
@@ -61,6 +70,7 @@ in the reconstruction's result step,
 ## Regenerate
 
 ```
+python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_version_pair_report.py   # v2_vs_v3/report.txt + tables/, after both sets below exist
 python scripts/hatteras_ms/HAT_relocation_comparison.py --preset <preset>          # nogroin pair from the calibration tree
 python scripts/hatteras_ms/HAT_relocation_comparison.py --preset calibBE \
     --arm-a output/raw_runs/version-pair/v3/1984_2004/calibBE/HAT_1984_2004_calibBE_road_bdm_groin \
