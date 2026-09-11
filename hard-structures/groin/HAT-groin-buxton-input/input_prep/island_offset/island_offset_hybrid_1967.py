@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 YEAR = 1967
 RAW_FILE = r"/data/hatteras_init/2-brie-offset/raw_offsets/1967_duneline_offset_raw.csv"
 
-OUTPUT_DIR      = r"/scripts/groin_module_noBE/HAT-hindcast-groin-test/groin_init"
+OUTPUT_DIR      = r"/scripts/groin_module_noBE/HAT-buxton-hindcast-groin-test/groin_init"
 OUTPUT_BASENAME = "Island_Dune_Offsets_1967_D2_D12"
 
 # -------------------------------------------------------------------------

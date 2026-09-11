@@ -47,8 +47,8 @@ import numpy as np
 # =============================================================================
 # CONFIG
 # =============================================================================
-INPUT_DIR = r"/scripts/groin/HAT-hindcast-groin-test/groin_init/storms/input_storms"  # folder containing the three source .npy files
-OUTPUT_PATH = r"/scripts/groin/HAT-hindcast-groin-test/groin_init/storms/1967_2017/1967_2017_groin_storms.npy"
+INPUT_DIR = r"/scripts/groin/HAT-buxton-hindcast-groin-test/groin_init/storms/input_storms"  # folder containing the three source .npy files
+OUTPUT_PATH = r"/scripts/groin/HAT-buxton-hindcast-groin-test/groin_init/storms/1967_2017/1967_2017_groin_storms.npy"
 
 RESAMPLED_FILE = os.path.join(INPUT_DIR, "1967_1997_grointest_storms.npy")
 PERIOD1_FILE   = os.path.join(INPUT_DIR, "1984_2004_storms_v3_72.npy")

@@ -51,7 +51,7 @@ import pandas as pd
 HERE = pathlib.Path(__file__).resolve().parent
 PROJECT_BASE_DIR = next(p for p in HERE.parents if (p / "pyproject.toml").exists())
 
-WETDRY_TABLE = (HERE / "HAT-groin-test-output" / "shoreline_position_output"
+WETDRY_TABLE = (HERE / "HAT-groin-buxton-output" / "shoreline_position_output"
                 / "Change_from_wetdry_1967_D2_D12.csv")
 SWEEP_ROOT = (PROJECT_BASE_DIR / "output" / "groin_sweep"
               / "fullperiod_1984_2024")

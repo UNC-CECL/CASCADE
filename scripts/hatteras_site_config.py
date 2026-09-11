@@ -650,7 +650,7 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 #     11 real + 15 buffer + 15 buffer = 41, the rig's exact domain count.
 #
 # The rig was sized to the extent of the 1967 observations. Its sweep is at
-# hard-structures/groin/HAT-hindcast-groin-test/sensitivity_sweep/.
+# hard-structures/groin/HAT-buxton-hindcast-groin-test/sensitivity_sweep/.
 #
 # RE-RUN 2026-08-30 ON 1984-start/v1; f MOVED ONTO THE PRODUCTION VALUE.
 # The rig had been resolving topo_dirs() with no product -- the same omission

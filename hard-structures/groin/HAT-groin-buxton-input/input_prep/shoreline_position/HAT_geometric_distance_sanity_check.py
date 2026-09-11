@@ -52,7 +52,7 @@ from shapely.ops import transform as shp_transform
 # CONFIG
 # =============================================================================
 INPUT_DIR  = r"/hard-structures/groin\hindcast_groin_test\input_prep\shoreline_position\input"
-OUTPUT_DIR = r"/scripts/groin/HAT-hindcast-groin-test/input_prep/shoreline_position/shoreline_position_output"
+OUTPUT_DIR = r"/scripts/groin/HAT-buxton-hindcast-groin-test/input_prep/shoreline_position/shoreline_position_output"
 
 TARGET_CRS = "EPSG:26918"
 

@@ -685,7 +685,7 @@ FILLET_TREND_ORDER = 2
 
 
 WETDRY_CHANGE_TABLE = (
-    PROJECT_BASE_DIR / "hard-structures" / "groin" / "HAT-groin-test-output"
+    PROJECT_BASE_DIR / "hard-structures" / "groin" / "HAT-groin-buxton-output"
     / "shoreline_position_output" / "Change_from_wetdry_1967_D2_D12.csv")
 
 
