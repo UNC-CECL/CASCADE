@@ -1,3 +1,4 @@
+import copy
 import os
 
 import numpy as np
@@ -10,6 +11,7 @@ from .brie_coupler import batchB3D
 from .brie_coupler import initialize_equal
 from .brie_coupler import set_specified_variable_RSLR
 from .chom_coupler import ChomCoupler
+from .outwasher import Outwasher
 from .roadway_manager import RoadwayManager
 from .roadway_manager import check_sandbag_need
 from .roadway_manager import set_growth_parameters
@@ -173,9 +175,9 @@ class Cascade:
         sandbag_management_on=False,
         sandbag_elevation=1.5,
         enable_shoreline_offset=False,
-        shoreline_offset=[],
+        shoreline_offset=None,
         user_inputed_RSLR=False,
-        user_inputed_RSLR_rate=[],
+        user_inputed_RSLR_rate=None,
         allow_causeway=False,
         use_defined_beach_width=False,
         user_inputed_beach_width=30,
@@ -303,7 +305,8 @@ class Cascade:
         user_inputed_RSLR: bool, optional
             Whether the user will be inputing their own generated RSLR rates
         user_inputed_RSLR_rates: list, optional
-            Time series of RSLR rates for Cascade to use, RSLR rates must be floats and be in m/yr.
+            Time series of RSLR rates for Cascade to use,
+            RSLR rates must be floats and be in m/yr.
         outwash_storms_file: string, optional
             Filename of outwash storm series (npy file)
         outwash_beach_file: string, optional
@@ -355,7 +358,11 @@ class Cascade:
         self._trigger_dune_knockdown = trigger_dune_knockdown
         self._initial_beach_width = [0] * self._ny
         self._group_roadway_abandonment = group_roadway_abandonment
-        if type(sandbag_management_on) == bool:
+        # initialize fake beach which is used to control dune
+        # migration when the beach/shoreface is nourished
+        self._beach_width = [[np.nan] * self._nt] * self._ny
+        self._beach_width_threshold = 0  # m, triggers dune migration to turn back on
+        if type(sandbag_management_on) is bool:
             self._sandbag_management_on = [sandbag_management_on] * self._ny
         else:
             self._sandbag_management_on = sandbag_management_on
@@ -431,7 +438,7 @@ class Cascade:
         )
 
         # Alter RSLR to set sequence
-        if self._user_inputed_RSLR == True:
+        if self._user_inputed_RSLR:
             set_specified_variable_RSLR(
                 barrier3d=self._barrier3d,
                 brie=self._brie_coupler._brie,
@@ -506,22 +513,27 @@ class Cascade:
                     allow_causeway=self._allow_causeway[iB3D],
                 )
             )
-            if self._use_defined_beach_width == False:
+
+            # set initial beach width
+            if self._use_defined_beach_width is False:
                 self._initial_beach_width[iB3D] = (
                     int(self._barrier3d[iB3D].BermEl / self._barrier3d[iB3D]._beta) * 10
-                )
-            elif self._use_defined_beach_width == True:
+                )  # [m]
+            elif self._use_defined_beach_width is True:
                 self._initial_beach_width[iB3D] = self._user_inputed_beach_width
+            self._beach_width[iB3D][0] = self._initial_beach_width[iB3D]
+
             self._nourishments.append(
                 BeachDuneManager(
+                    beach_width=self._beach_width[iB3D],
                     nourishment_interval=self._nourishment_interval[iB3D],
                     nourishment_volume=self._nourishment_volume[iB3D],
-                    initial_beach_width=self._initial_beach_width[iB3D],
                     dune_design_elevation=self._dune_design_elevation[iB3D],
                     time_step_count=self._nt,
                     original_growth_param=self._barrier3d[iB3D].growthparam,
                     overwash_filter=self._overwash_filter[iB3D],
                     overwash_to_dune=self._overwash_to_dune[iB3D],
+                    beach_width_threshold=self._beach_width_threshold,
                 )
             )
 
@@ -547,6 +559,7 @@ class Cascade:
             if self._outwash_module[iB3D]:
                 self._outwash.append(
                     Outwasher(
+                        beach_width=self._beach_width[iB3D],
                         datadir=datadir,
                         outwash_storms_file=outwash_storms_file,
                         time_step_count=self._nt,
@@ -561,7 +574,7 @@ class Cascade:
                         ],
                         percent_washout_to_shoreface=percent_washout_to_shoreface,
                         outwash_beach_file=outwash_beach_file,
-                        initial_beach_width=0,
+                        beach_width_threshold=self._beach_width_threshold,
                     )
                 )
 
@@ -802,7 +815,7 @@ class Cascade:
         # emplacement. When sandbag conditions are met, SandbagManager will rebuild
         # dunes if they fall below a user defined threshold.
         for iB3D in range(self._ny):
-            if self._sandbag_management_on[iB3D] == True:
+            if self._sandbag_management_on[iB3D]:
                 sandbag_emplacement = check_sandbag_need(
                     dune_road_distance=self._roadways[iB3D]._road_setback,
                     design_elevation=self._sandbag_elevation,
@@ -852,6 +865,9 @@ class Cascade:
         for iB3D in range(self._ny):
 
             if self._beach_nourishment_module[iB3D]:
+                # update fake beach variable
+                self._nourishments[iB3D]._beach_width = self._beach_width[iB3D]
+
                 # if barrier was too narrow to sustain a community in the last
                 # time step, stop managing beach and dunes!
                 # NOTE: dune heights must drop below Dmax before reset, so while
@@ -904,6 +920,10 @@ class Cascade:
                         / 10
                     )  # dam
                 )
+                # update fake beach variable
+                self._beach_width[iB3D] = copy.deepcopy(
+                    self._nourishments[iB3D].beach_width
+                )
 
         ###############################################################################
         # outwash module
@@ -913,12 +933,17 @@ class Cascade:
         for iB3D in range(self._ny):
 
             if self._outwash_module[iB3D]:
+                # update domain variables
                 self._outwash[iB3D]._interior_domain = self._barrier3d[
                     iB3D
                 ].InteriorDomain
                 self._outwash[iB3D]._dune_domain = self._barrier3d[iB3D].DuneDomain[
                     self._barrier3d[iB3D].time_index - 1
                 ]
+                # update fake beach variable
+                self._outwash[iB3D]._beach_width = self._beach_width[iB3D]
+
+                # update loop
                 self._outwash[iB3D].update(b3d=self._barrier3d[iB3D])
 
                 # after an outwash event, check for barrier drowning
@@ -948,6 +973,11 @@ class Cascade:
                 if self._barrier3d[iB3D].drown_break == 1:
                     self._b3d_break = 1
                     return
+
+                # update fake beach variable
+                self._beach_width[iB3D] = copy.deepcopy(
+                    self._outwash[iB3D]._beach_width
+                )
 
         ###############################################################################
         # update BRIE for any human modifications to the barrier

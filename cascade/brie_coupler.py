@@ -377,7 +377,7 @@ class BrieCoupler:
                 ]
 
     def offset_shoreline(self, enable_shoreline_offset, offset_values, ny):
-        if enable_shoreline_offset == True:
+        if enable_shoreline_offset:
             for i in range(ny):
                 self._brie.x_t[i] = self._brie.x_t[i] + offset_values[i]
                 self._brie.x_s[i] = self._brie.x_s[i] + offset_values[i]
