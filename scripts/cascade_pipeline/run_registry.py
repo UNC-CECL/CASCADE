@@ -25,7 +25,10 @@ import hashlib
 import json
 import re
 import subprocess
+import shutil
 from pathlib import Path
+
+from cascade_pipeline.run_layout import SUBFOLDERS
 
 import numpy as np
 import pandas as pd
@@ -185,6 +188,62 @@ def period_component(period):
     return f"{int(start)}_{int(end)}"
 
 
+# THE TREE (2026-09-10). Two folders group what used to sit loose:
+#
+#   arms/      a forcing arm's runs, so output/raw_runs shows the hindcast
+#              periods and one arms/ folder instead of periods and arm names
+#              side by side. The `arm` column of run_index.csv is unchanged --
+#              it is a logical name, and only the path it contributes moved.
+#   sweeps/    a family of runs that vary ONE parameter from a scenario run.
+#              91 of 164 runs are such variants, and the runner already
+#              encodes which parameter as a trailing token on the run name
+#              (see the sensitivity sweep driver), so the grouping is read off
+#              the name rather than tracked separately.
+#
+# A family is listed here only once a driver produces it. An unrecognised
+# trailing token is not guessed at: that run files flat, as every run did
+# before.
+ARMS_DIR = "arms"
+SWEEPS_DIR = "sweeps"
+SWEEP_FAMILIES = ("waveHs", "waveTp", "waveahf", "waveasym", "rset")
+
+
+def sweep_family(run_name):
+    """The sweep family a run belongs to, or "" if it is a scenario run.
+
+    Args:
+        run_name: The run's derived name, which is also its directory name.
+
+    Returns:
+        One of SWEEP_FAMILIES, or "" when the trailing token names none of
+        them -- which is every scenario run.
+    """
+    last = str(run_name).rsplit("_", 1)[-1]
+    for family in SWEEP_FAMILIES:
+        if last.startswith(family) and last != family:
+            return family
+    return ""
+
+
+def legacy_run_dir_for(raw_runs, run_name, period, preset, arm=CALIBRATION_ARM):
+    """Where this run sat before the 2026-09-10 tree change.
+
+    Flat: the arm loose at the root rather than under arms/, and a sweep run
+    beside the scenario runs rather than under sweeps/<family>/. Kept so a
+    tree that has not been migrated, or has been half migrated, still reads.
+    """
+    root = Path(raw_runs)
+    tag = arm_component(arm)
+    base = root / tag if tag else root
+    return base / period_component(period) / preset / run_name
+
+
+def sweep_component(run_name):
+    """The path component a sweep run contributes; "" for a scenario run."""
+    family = sweep_family(run_name)
+    return f"{SWEEPS_DIR}/{family}" if family else ""
+
+
 def arm_component(arm):
     """The path component an arm contributes, which is "" for calibration.
 
@@ -242,7 +301,7 @@ def preset_dir_for(raw_runs, period, preset, arm=CALIBRATION_ARM):
     """
     root = Path(raw_runs)
     tag = arm_component(arm)
-    base = root / tag if tag else root
+    base = root / ARMS_DIR / tag if tag else root
     return base / period_component(period) / preset
 
 
@@ -265,7 +324,9 @@ def run_dir_for(raw_runs, run_name, period, preset, arm=CALIBRATION_ARM):
     Returns:
         The run directory as a Path.
     """
-    return preset_dir_for(raw_runs, period, preset, arm) / run_name
+    base = preset_dir_for(raw_runs, period, preset, arm)
+    sweep = sweep_component(run_name)
+    return (base / sweep / run_name) if sweep else (base / run_name)
 
 
 def arms_holding(raw_runs, run_name, period, preset):
@@ -290,20 +351,37 @@ def arms_holding(raw_runs, run_name, period, preset):
     if not root.is_dir():
         return []
     candidates = [CALIBRATION_ARM]
-    for child in sorted(root.iterdir()):
-        if not child.is_dir() or _PERIOD_DIR.fullmatch(child.name):
-            continue
-        candidates.append(child.name)
-        # A SET folder (see arm_component): its members are arms too. A
-        # child that holds a period directory is itself an arm and its
-        # subfolders are runs, not arms, so only look one level down where
-        # no period directory is present.
-        if not any(_PERIOD_DIR.fullmatch(g.name) for g in child.iterdir()
-                   if g.is_dir()):
-            candidates.extend(f"{child.name}/{g.name}"
-                              for g in sorted(child.iterdir()) if g.is_dir())
-    return [arm for arm in candidates
-            if run_dir_for(root, run_name, period, preset, arm).is_dir()]
+    # Arms live under arms/ since 2026-09-10; the root is still scanned so an
+    # unmigrated tree, where they sit loose beside the period folders, reads.
+    tops = [root / ARMS_DIR] if (root / ARMS_DIR).is_dir() else []
+    tops.append(root)
+    for top in tops:
+        for child in sorted(top.iterdir()):
+            if not child.is_dir() or _PERIOD_DIR.fullmatch(child.name):
+                continue
+            if top is root and child.name == ARMS_DIR:
+                continue
+            candidates.append(child.name)
+            # A SET folder (see arm_component): its members are arms too. A
+            # child that holds a period directory is itself an arm and its
+            # subfolders are runs, not arms, so only look one level down where
+            # no period directory is present.
+            if not any(_PERIOD_DIR.fullmatch(g.name) for g in child.iterdir()
+                       if g.is_dir()):
+                candidates.extend(f"{child.name}/{g.name}"
+                                  for g in sorted(child.iterdir()) if g.is_dir())
+
+    def _present(arm):
+        # Either layout: the tree may not have been migrated yet.
+        return (run_dir_for(root, run_name, period, preset, arm).is_dir()
+                or legacy_run_dir_for(root, run_name, period, preset, arm).is_dir())
+
+    seen, found = set(), []
+    for arm in candidates:
+        if arm not in seen and _present(arm):
+            seen.add(arm)
+            found.append(arm)
+    return found
 
 
 def find_run_dir(raw_runs, run_name, period, preset, arm=CALIBRATION_ARM):
@@ -335,6 +413,10 @@ def find_run_dir(raw_runs, run_name, period, preset, arm=CALIBRATION_ARM):
     directory = run_dir_for(raw_runs, run_name, period, preset, arm)
     if directory.is_dir():
         return directory
+    # The pre-2026-09-10 flat location, for a tree that has not been migrated.
+    legacy = legacy_run_dir_for(raw_runs, run_name, period, preset, arm)
+    if legacy != directory and legacy.is_dir():
+        return legacy
 
     elsewhere = [a for a in arms_holding(raw_runs, run_name, period, preset)
                  if a != arm]
@@ -420,10 +502,11 @@ def guard_run_dir(run_dir, overwrite=False):
 
     Raises:
         RuntimeError: If the directory holds output and overwrite is False,
-            or if overwrite is True and the directory holds a subdirectory. A
-            run directory is flat, so a subdirectory means this is not the
-            directory it is taken to be, and deleting its contents is refused
-            rather than guessed at.
+            or if overwrite is True and the directory holds a subdirectory
+            that is not one of the run's own (run_layout.SUBFOLDERS plus
+            gif_frames). An unexpected subdirectory means this is not the
+            directory it is taken to be, and deleting its contents is
+            refused rather than guessed at.
     """
     run_dir = Path(run_dir)
     existing = run_dir_contents(run_dir)
@@ -443,19 +526,33 @@ def guard_run_dir(run_dir, overwrite=False):
         # subdirectory here means run_dir is not pointing where it is thought
         # to be -- a half-built path, a period directory, the output root. The
         # cost of guessing wrong is a recursive delete of someone's runs.
-        subdirs = [p.name for p in existing if p.is_dir()]
-        if subdirs:
+        # A run directory holds a KNOWN set of subfolders (run_layout's
+        # figures/ animations/ tables/, plus the gif_frames scratch) and
+        # nothing else. Any OTHER subdirectory still means run_dir is not
+        # pointing where it is thought to be -- a half-built path, a period
+        # directory, the output root -- and the cost of guessing wrong is a
+        # recursive delete of someone's runs, so that stays refused. Before
+        # 2026-09-10 EVERY subdirectory was refused, which stopped OVERWRITE
+        # working at all once the layout gained folders.
+        known = set(SUBFOLDERS) | {"gif_frames"}
+        unknown = sorted(p.name for p in existing
+                         if p.is_dir() and p.name not in known)
+        if unknown:
             raise RuntimeError(
                 f"{run_dir.name} holds subdirector"
-                f"{'ies' if len(subdirs) > 1 else 'y'} "
-                f"({', '.join(sorted(subdirs)[:3])}), which a run directory "
-                f"never does.\n"
+                f"{'ies' if len(unknown) > 1 else 'y'} "
+                f"({', '.join(unknown[:3])}) that a run directory never "
+                f"does.\n"
                 f"  Refusing to empty it -- check that RUN_DIR points where "
                 f"you think, then remove it by hand if it is really the "
                 f"directory you meant.\n"
+                f"  A run's own subfolders are: {', '.join(sorted(known))}.\n"
                 f"  {run_dir}")
         for path in existing:
-            path.unlink()
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
 
     run_dir.mkdir(parents=True, exist_ok=True)
     return run_dir
@@ -608,6 +705,12 @@ def append_run_index(index_path, row, key="run_name"):
 
     Returns:
         The full index as a DataFrame, as written.
+
+    Note:
+        The index is a DERIVED view of the runs on disk: every value in it is
+        restated from a run's own metadata. This keeps it in step as runs are
+        made; `HAT_index_runs.py` rebuilds it from the runs, checks it against
+        them, and records anything whose run has been deleted.
     """
     index_path = Path(index_path)
     new = pd.DataFrame([row])
@@ -619,7 +722,11 @@ def append_run_index(index_path, row, key="run_name"):
     keys = (key,) if isinstance(key, str) else tuple(key)
 
     if index_path.exists():
-        existing = pd.read_csv(index_path)
+        # AS TEXT. Parsing the existing rows into pandas and writing them
+        # back rewrites every float through repr, which on 2026-09-10 silently
+        # truncated the last digit of five columns in a row this call was not
+        # touching. Only the row being added should change.
+        existing = pd.read_csv(index_path, dtype=str, keep_default_na=False)
         usable = [k for k in keys if k in existing.columns]
         if usable:
             same = pd.Series(True, index=existing.index)

@@ -50,13 +50,18 @@ class LoessConfig:
         window_domains: One or two window widths, in domain units
             (1 domain ~= 500 m). The largest is treated as the primary
             reference window wherever a single window is needed.
+            Hannah, 2026-09-10: the per-run figures show the 10-domain
+            smoothing ONLY. The 7-domain curve was drawn beside it for
+            comparison and never fed a number -- every skill target is
+            built at TARGET_WINDOW = 10 -- so it is no longer computed.
+            Put 7 back in this tuple to see both again.
         skip_southern_domains: Domains 1..N shown as raw per-domain means
             instead of LOESS-smoothed -- boundary effects near Oregon Inlet
             dominate this zone and smoothing can obscure the sharp
             gradient there. 0 disables the splice (LOESS used everywhere).
     """
 
-    window_domains: tuple = (7, 10)
+    window_domains: tuple = (10,)
     skip_southern_domains: int = 10
 
 

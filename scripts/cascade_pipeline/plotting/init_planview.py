@@ -22,6 +22,14 @@ import numpy as np
 from matplotlib.colors import FuncNorm
 import matplotlib.pyplot as plt
 
+# `scripts/` is on sys.path already -- cascade_pipeline lives inside it.
+from hat_figure_style import (
+    C, DOMAIN_AXIS_LABEL, INK, INK_MUTED, apply_style, figsize,
+    spines_for_image,
+)
+
+apply_style()
+
 
 @dataclasses.dataclass(frozen=True)
 class PlanViewConfig:
@@ -50,8 +58,8 @@ class PlanViewConfig:
     elev_max_m: float = 4.0
     sea_level_m: float = 0.0
     sea_level_pos: float = 0.35
-    ocean_color: str = "#b0cfe8"
-    text_color: str = "#1a1a2e"
+    ocean_color: str = C["WATER"]
+    text_color: str = INK
 
 
 DEFAULT_PLAN_VIEW = PlanViewConfig()
@@ -221,7 +229,7 @@ def _elevation_norm(config):
 
 def plot_canvas(canvas, domain_col_starts, cells_per_domain, first_real_idx,
                 geometry, title, ax=None, include_buffers=False,
-                xlabel="Domain (S -> N)", colorbar=True,
+                xlabel=DOMAIN_AXIS_LABEL, colorbar=True,
                 config=DEFAULT_PLAN_VIEW):
     """Draws a composited canvas as a plan-view map.
 
@@ -244,7 +252,8 @@ def plot_canvas(canvas, domain_col_starts, cells_per_domain, first_real_idx,
         The matplotlib Figure the canvas was drawn on.
     """
     if ax is None:
-        _, ax = plt.subplots(figsize=(16, 5))
+        _, ax = plt.subplots(figsize=figsize("double", aspect=0.32),
+                             constrained_layout=True)
     fig = ax.figure
 
     ax.set_facecolor(config.ocean_color)
@@ -257,8 +266,10 @@ def plot_canvas(canvas, domain_col_starts, cells_per_domain, first_real_idx,
 
     if colorbar:
         bar = fig.colorbar(mesh, ax=ax, pad=0.01, fraction=0.02)
-        bar.set_label("Elevation (m MHW)", color=config.text_color)
+        bar.set_label("elevation (m MHW)", color=config.text_color)
         bar.set_ticks([-1, 0, 1, 2, 3, 4])
+        bar.outline.set_linewidth(0.6)
+        bar.outline.set_edgecolor(INK)
 
     # Adaptive so a small multiple (a 7-domain zoom) still gets labels;
     # a fixed step of 5 gives such a panel only two ticks.
@@ -267,35 +278,35 @@ def plot_canvas(canvas, domain_col_starts, cells_per_domain, first_real_idx,
     ax.set_xticks([domain_col_starts[first_real_idx + i]
                    + cells_per_domain[first_real_idx + i] // 2
                    for i in tick_indices])
-    ax.set_xticklabels([str(geometry.first_gis_id + i) for i in tick_indices],
-                       fontsize=9)
+    ax.set_xticklabels([str(geometry.first_gis_id + i) for i in tick_indices])
     ax.set_xlim(0, canvas.shape[1])
     ax.set_ylim(0, canvas.shape[0])
     ax.set_xlabel(xlabel)
-    ax.set_ylabel("Cross-shore cell")
-    ax.set_title(title, fontweight="bold", color=config.text_color)
+    ax.set_ylabel("cross-shore cell")
+    ax.set_title(title, loc="left", color=config.text_color)
 
     for index in range(0, geometry.num_real_domains, 10):
         ax.axvline(domain_col_starts[first_real_idx + index] - 0.5,
-                   color="#aaaaaa", lw=0.4, alpha=0.5, zorder=2)
+                   color=INK_MUTED, lw=0.4, alpha=0.5, zorder=2)
 
     if include_buffers:
         last_real_idx = first_real_idx + geometry.num_real_domains - 1
         real_start = domain_col_starts[first_real_idx]
         real_end = domain_col_starts[last_real_idx] + cells_per_domain[last_real_idx]
         for boundary in (real_start, real_end):
-            ax.axvline(boundary, color="#555555", lw=1.2, ls="--", alpha=0.8,
-                       zorder=6)
+            ax.axvline(boundary, color=INK, lw=0.9, ls=(0, (4, 3)),
+                       alpha=0.8, zorder=6)
         label = f"buffer\n({geometry.num_buffer_domains} domains, interpolated)"
         for x_mid, y, va in ((real_start / 2, 0.03, "bottom"),
                              ((real_end + canvas.shape[1]) / 2, 0.97, "top")):
             ax.text(x_mid, y, label, transform=ax.get_xaxis_transform(),
-                    ha="center", va=va, fontsize=8, color="#333333", zorder=7,
-                    bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
-                              edgecolor="#cccccc", alpha=0.9))
+                    ha="center", va=va, fontsize=7.5, color=INK_MUTED,
+                    zorder=7,
+                    bbox=dict(boxstyle="square,pad=0.3", facecolor="white",
+                              edgecolor="none", alpha=0.85))
 
-    for spine in ("top", "right"):
-        ax.spines[spine].set_visible(False)
+    # A map panel, not a chart: the frame is the edge of the data.
+    spines_for_image(ax)
     return fig
 
 

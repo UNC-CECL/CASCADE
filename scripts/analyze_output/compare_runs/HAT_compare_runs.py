@@ -9,7 +9,9 @@ LOESS-smoothed CoastSat LRR for reference.
 Each run must have already been executed by the hindcast runner, which saves
 a rate CSV automatically inside the run directory:
 
-  <run_dir>/{run_name}_shoreline_change_rate.csv
+  <run_dir>/tables/shoreline_change_rate.csv   (or, before the 2026-09-10
+  layout change, <run_dir>/{run_name}_shoreline_change_rate.csv -- the path is
+  resolved by cascade_pipeline.run_layout, never joined here)
   Columns: gis_domain | change_rate_m_yr | lrr_m_yr | lrr_r2
   lrr_m_yr is the one read -- see RUN_DOMAIN_COL / RUN_RATE_COL.
 
@@ -92,6 +94,7 @@ RUN_RATE_COL   = "lrr_m_yr"
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 
 from cascade_pipeline.run_registry import find_run_dir   # noqa: E402
+from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 
 # =============================================================================
 # SECTION 3: RUNS TO COMPARE
@@ -129,8 +132,9 @@ from cascade_pipeline.run_registry import find_run_dir   # noqa: E402
 #              archive). If given it OVERRIDES the resolver for just this
 #              run; other entries still resolve through find_run_dir. Prefer
 #              period/preset: a hand-typed path is how a figure ends up
-#              drawing a run other than the one it names. The CSV inside must
-#              still be named {run_name}_shoreline_change_rate.csv.
+#              drawing a run other than the one it names. The folder must
+#              still hold its rate CSV where run_layout looks for it -- in
+#              tables/, or under the old flat name.
 #
 # Auto-color gradient: each run's color is drawn from RUN_COLORMAP (Section 5)
 # at a position determined by its rank along sort_key (or list order). This
@@ -452,9 +456,10 @@ def load_run_rates(run_name, period=None, preset=None, arm=None, run_dir=None):
 
     Parameters
     ----------
-    run_name : str       — used to build the default path AND the expected
-                            CSV filename ({run_name}_shoreline_change_rate.csv),
-                            which is unchanged regardless of how the folder
+    run_name : str       — used to resolve the default folder AND, inside it,
+                            the rate CSV, whose name run_layout knows in both
+                            the current and the pre-2026-09-10 layout. Which
+                            is used is unchanged regardless of how the folder
                             was resolved.
     period   : str, optional — "1984_2004" or "2004_2024".
     preset   : str, optional — source/sink preset the run was made under.
@@ -489,7 +494,10 @@ def load_run_rates(run_name, period=None, preset=None, arm=None, run_dir=None):
             )
         kwargs = {"arm": arm} if arm else {}
         run_dir = str(find_run_dir(RAW_RUNS, run_name, period, preset, **kwargs))
-    csv_path = os.path.join(run_dir, f"{run_name}_shoreline_change_rate.csv")
+    # RESOLVED, NOT JOINED. The rate CSV moved into the run folder's
+    # tables/ subfolder and dropped the run-name prefix; run_layout.resolve
+    # returns whichever of the two layouts is on disk.
+    csv_path = str(resolve_run_file(run_dir, "rate_csv", run_name))
 
     if not os.path.exists(csv_path):
         raise FileNotFoundError(

@@ -18,10 +18,11 @@ Smoothing method: LOESS (locally weighted scatterplot smoothing)
   - Preserves large-scale spatial patterns while removing per-domain noise
 """
 
-# os must be imported before the CONFIG block because CASCADE_RUNS uses
-# os.path.join to build CSV paths at module level.
+# os must be imported before the CONFIG block because CASCADE_RUNS builds
+# CSV paths at module level.
 import os
 import pathlib
+import sys
 
 # ANCHORED, NOT TYPED. Every path below used to be an absolute literal; the
 # output one had lost its drive ("/scripts/analyze_output/...") and so wrote
@@ -33,6 +34,13 @@ PROJECT_BASE_DIR = next(
     q for q in pathlib.Path(__file__).resolve().parents
     if (q / "pyproject.toml").exists()
 )
+
+# Same anchor, so run_layout -- the one definition of where a run folder keeps
+# its files -- is importable before the CONFIG block builds any run path.
+if str(PROJECT_BASE_DIR / "scripts") not in sys.path:
+    sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
+
+from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 
 # ============================================================
 # CONFIG
@@ -112,8 +120,7 @@ OUTPUT_DIR = str(PROJECT_BASE_DIR / "output" / "comparisons"
 # ============================================================
 # CASCADE MODEL OUTPUT CONFIG
 # ============================================================
-# Point each entry to the shoreline_change_rate CSV produced by
-# HAT_hindcast_1984_2024_old version.py (one CSV per run, inside the per-run folder).
+# Name each run; run_rate_csv finds its shoreline change rate CSV.
 # The CSV must have columns: gis_domain_id, model_rate_m_per_yr
 #
 # Format:
@@ -121,7 +128,7 @@ OUTPUT_DIR = str(PROJECT_BASE_DIR / "output" / "comparisons"
 #       dict(
 #           label  = "Run label for legend",
 #           period = "1984–2004",   # must match one of the CoastSat period labels
-#           csv    = r"C:\...\<run_name>_shoreline_change_rate.csv",
+#           csv    = run_rate_csv("<run_name>"),
 #       ),
 #       ...
 #   ]
@@ -130,25 +137,32 @@ OUTPUT_DIR = str(PROJECT_BASE_DIR / "output" / "comparisons"
 
 CASCADE_OUTPUT_BASE = str(PROJECT_BASE_DIR / "output" / "raw_runs")
 
+
+def run_rate_csv(run_name, base=None):
+    """The shoreline change rate CSV inside one run folder.
+
+    RESOLVED, NOT JOINED. That file is tables/shoreline_change_rate.csv in the
+    new run layout and {run_name}_shoreline_change_rate.csv in the old one;
+    run_layout.resolve returns whichever is on disk, so a half-migrated tree
+    reads either way. `base` is the folder the run folder sits in -- pass it
+    for a run outside output/raw_runs.
+    """
+    base = CASCADE_OUTPUT_BASE if base is None else base
+    return str(resolve_run_file(os.path.join(base, run_name),
+                                "rate_csv", run_name))
+
+
 CASCADE_RUNS = [
     dict(
         label  = "CASCADE",
         period = "1984–2004",
-        csv    = os.path.join(
-            CASCADE_OUTPUT_BASE,
-            "HAT_1984_2004_SQ_BE_Hs2p0",
-            "HAT_1984_2004_SQ_BE_Hs2p0_shoreline_change_rate.csv",
-        ),
+        csv    = run_rate_csv("HAT_1984_2004_SQ_BE_Hs2p0"),
     ),
     # Add 2004–2024 run here when ready:
     # dict(
     #     label  = "CASCADE  Hs=2.0 m  BE=on",
     #     period = "2004–2024",
-    #     csv    = os.path.join(
-    #         CASCADE_OUTPUT_BASE,
-    #         "HAT_2004_2024_SQ_BE_Hs2.0",
-    #         "HAT_2004_2024_SQ_BE_Hs2.0_shoreline_change_rate.csv",
-    #     ),
+    #     csv    = run_rate_csv("HAT_2004_2024_SQ_BE_Hs2.0"),
     # ),
 ]
 

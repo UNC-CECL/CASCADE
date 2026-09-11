@@ -3,6 +3,19 @@
 One frame per model year; current shoreline drawn over a year-0 reference
 (dashed grey), shaded blue where seaward of the reference, red where
 landward. See make_shoreline_gif's docstring for the three y-axis modes.
+
+STYLE. House standard (scripts/hat_figure_style.py) for type, colour and
+frame. TWO deliberate departures, both because this is a per-run artefact
+that lands in a run folder and is opened later with no context around it:
+the run's identity stays on the canvas as a small muted line beside the
+subject, and the year clock stays in the corner of every frame. There is no
+CAPTIONS.md in a run folder.
+
+FRAME SIZE. A GIF needs every frame to be the same pixel size, so the frames
+are drawn at a fixed figure size with fixed margins (never bbox_inches=
+"tight") and the pixel width comes from the dpi, not from a 16-inch canvas.
+The dpi is passed to savefig EXPLICITLY: the house rcParams set savefig.dpi
+to 300 for print, which would otherwise triple every frame.
 """
 
 import dataclasses
@@ -12,12 +25,30 @@ import subprocess
 import sys
 
 import matplotlib.pyplot as plt
+
+from cascade_pipeline.run_layout import animation_write_path, write_path
 import matplotlib.ticker as ticker
 import numpy as np
 from matplotlib.transforms import blended_transform_factory
 
 from cascade_pipeline.annotations import DEFAULT_ANNOTATIONS, add_geographic_annotations
 from cascade_pipeline.domains import DEFAULT_DOMAINS
+
+# `scripts/` is on sys.path already -- cascade_pipeline lives inside it.
+from hat_figure_style import (
+    C,
+    C_1984_FILL,
+    C_1997_FILL,
+    DOMAIN_AXIS_LABEL,
+    INK,
+    INK_MUTED,
+    apply_style,
+    figsize,
+    open_frame,
+    town_bands,
+)
+
+apply_style()
 
 
 @dataclasses.dataclass(frozen=True)
@@ -55,8 +86,21 @@ class GifConfig:
 DEFAULT_GIF_CONFIG = GifConfig()
 
 # Shared with road_planview.RoadPlanViewStyle.relocated and the plan-view
-# animation, so a relocation reads as the same event in all three.
-RELOCATION_COLOR = "#FF8C00"
+# animation, so a relocation reads as the same event in all three. The house
+# orange, so the three of them and road_relocation_gif's relocation star are
+# now ONE orange across the project instead of three near-misses.
+RELOCATION_COLOR = C["ADDED"]
+
+# Frames are sized to a target pixel WIDTH: the canvas is the printed double
+# column, and the dpi carries the pixels. Matches road_relocation_gif.
+FRAME_TARGET_PX = 1400.0
+FRAME_DPI_RANGE = (110.0, 220.0)
+
+
+def _frame_dpi(width_in):
+    """Dots per inch that puts a figure of `width_in` near FRAME_TARGET_PX."""
+    lo, hi = FRAME_DPI_RANGE
+    return float(np.clip(FRAME_TARGET_PX / max(width_in, 1e-6), lo, hi))
 
 
 def _open_file(path):
@@ -303,20 +347,21 @@ def make_shoreline_gif(shoreline_m, run,
         series = (pos - init[None, :]) - (base_pos - base_pos[0][None, :])
         up_word = "landward" if gif_config.ocean_at_bottom else "seaward"
         ylabel = f"\u0394 shoreline vs {baseline_label} (m)\n{up_word} \u25b2"
-        lbl_up, lbl_dn = (f"Seaward of {baseline_label}", f"Landward of {baseline_label}")
-        lbl_ref = "No difference"
+        lbl_up, lbl_dn = (f"seaward of the {baseline_label}",
+                          f"landward of the {baseline_label}")
+        lbl_ref = "no difference"
     elif mode == "displacement":
         series = pos - init[None, :]
         up_word = "landward" if gif_config.ocean_at_bottom else "seaward"
         ylabel = f"Shoreline displacement since year 0 (m)\n{up_word} \u25b2"
-        lbl_up, lbl_dn = "Accretion (seaward of year 0)", "Erosion (landward of year 0)"
-        lbl_ref = f"Year 0 ({run.start_year}) shoreline"
+        lbl_up, lbl_dn = "accretion, seaward of year 0", "erosion, landward of year 0"
+        lbl_ref = f"year 0 ({run.start_year}) shoreline"
     else:
         series = pos - np.nanmean(init)
         up_word = "landward" if gif_config.ocean_at_bottom else "seaward"
         ylabel = f"Cross-shore position (m, rel. year-0 mean)\n{up_word} \u25b2"
-        lbl_up, lbl_dn = "Accretion (seaward of year 0)", "Erosion (landward of year 0)"
-        lbl_ref = f"Year 0 ({run.start_year}) shoreline"
+        lbl_up, lbl_dn = "accretion, seaward of year 0", "erosion, landward of year 0"
+        lbl_ref = f"year 0 ({run.start_year}) shoreline"
 
     ref = series[0]  # year-0 reference; identically zero except in "position"
 
@@ -350,7 +395,8 @@ def make_shoreline_gif(shoreline_m, run,
         ylim = (ymin - ypad, ymax + ypad)
 
     n_dom = len(x)
-    figsize = (float(np.clip(6.0 + 0.115 * n_dom, 9.0, 18.0)), 5.0)
+    frame_size = figsize("double", aspect=0.56)
+    frame_dpi = _frame_dpi(frame_size[0])
 
     frames_dir = os.path.join(run.run_dir, "gif_frames")
     if keep_frames:
@@ -361,38 +407,45 @@ def make_shoreline_gif(shoreline_m, run,
         year_idx.append(n_years - 1)  # always land on the final year
 
     be_lbl = "on" if run.background_erosion_on else "off"
-    hs_lbl = f"Hs={run.Hs} m  |  " if run.Hs is not None else ""
+    # The run's identity, kept on the canvas -- see the module docstring. No
+    # wave height and no SLR rate (Hannah, 2026-09-10): both crowded the line
+    # and both are in the run's metadata beside the GIF.
+    params = f"background erosion {be_lbl}\nrun {run.run_name}"
+    subject = (f"Shoreline difference against the {baseline_label}, "
+               f"{run.start_year}–{run.end_year}"
+               if mode == "difference" else
+               f"Shoreline evolution, {annotations.region_name}, "
+               f"{run.start_year}–{run.end_year}")
 
     frames = []
+    pad_town_spans = None
     for t in year_idx:
         cur = series[t]
 
-        fig, ax = plt.subplots(figsize=figsize, dpi=110)
+        fig, ax = plt.subplots(figsize=frame_size, dpi=frame_dpi)
         # Fixed margins (NOT bbox_inches="tight") so every frame is byte-identical
         # in size -- mismatched frame dimensions break GIF assembly.
-        fig.subplots_adjust(left=0.085, right=0.985, top=0.90, bottom=0.235)
-        fig.patch.set_facecolor("white")
-        ax.set_facecolor("white")
+        fig.subplots_adjust(left=0.105, right=0.985, top=0.855, bottom=0.225)
 
         # -- Geographic context ------------------------------------------------
         if axis_kind == "gis" and annotate:
             add_geographic_annotations(ax, annotations)
         elif axis_kind == "pad":
-            ax.axvspan(-0.5, domains.start_real_index - 0.5, color="red", alpha=0.10, zorder=0)
+            ax.axvspan(-0.5, domains.start_real_index - 0.5,
+                       color=C["BASE_FILL"], zorder=0, lw=0)
             ax.axvspan(domains.end_real_index - 0.5, domains.total_domains - 0.5,
-                       color="red", alpha=0.10, zorder=0)
-            ax.axvline(domains.start_real_index - 0.5, color="k", ls="--", lw=1.0, alpha=0.5, zorder=2)
-            ax.axvline(domains.end_real_index - 0.5, color="k", ls="--", lw=1.0, alpha=0.5, zorder=2)
+                       color=C["BASE_FILL"], zorder=0, lw=0)
+            for edge in (domains.start_real_index - 0.5,
+                         domains.end_real_index - 0.5):
+                ax.axvline(edge, color=INK_MUTED, ls=(0, (4, 3)), lw=0.8,
+                           zorder=2)
             if annotate:
                 trans_pad = blended_transform_factory(ax.transData, ax.transAxes)
-                for span_label, (d_lo, d_hi) in annotations.town_spans.items():
-                    ax.axvspan(domains.gis_to_pad(d_lo) - 0.5, domains.gis_to_pad(d_hi) + 0.5,
-                               color=annotations.color_town_span, alpha=0.14, zorder=0)
-                    ax.text((domains.gis_to_pad(d_lo) + domains.gis_to_pad(d_hi)) / 2.0, 0.90,
-                            span_label, transform=trans_pad, ha="center", va="top",
-                            fontsize=8, color="0.25", fontweight="bold",
-                            bbox=dict(boxstyle="round,pad=0.2", fc="white",
-                                      ec="none", alpha=0.85))
+                # Drawn after the limits are set, below: town_bands clamps its
+                # labels to the visible part of each span and needs the view.
+                pad_town_spans = {
+                    name: (domains.gis_to_pad(d_lo), domains.gis_to_pad(d_hi))
+                    for name, (d_lo, d_hi) in annotations.town_spans.items()}
                 for gname, dom in annotations.groins.items():
                     ax.axvline(domains.gis_to_pad(dom), color=annotations.color_groin, lw=1.1, ls=":",
                                alpha=0.85, zorder=2)
@@ -403,15 +456,18 @@ def make_shoreline_gif(shoreline_m, run,
                                       ec="none", alpha=0.80))
 
         # -- Shoreline + erosion/accretion shading -----------------------------
+        # The RdBu band fills: light blue where the shoreline lies seaward of
+        # the reference, light red where it lies landward.
         ax.fill_between(x, cur, ref, where=(cur >= ref), interpolate=True,
-                        color="#1565C0", alpha=0.28, zorder=1, label=lbl_up)
+                        color=C_1997_FILL, alpha=0.70, lw=0, zorder=1, label=lbl_up)
         ax.fill_between(x, cur, ref, where=(cur < ref), interpolate=True,
-                        color="#B71C1C", alpha=0.22, zorder=1, label=lbl_dn)
-        ax.plot(x, ref, color="0.70", ls="--", lw=1.2, zorder=3, label=lbl_ref)
+                        color=C_1984_FILL, alpha=0.70, lw=0, zorder=1, label=lbl_dn)
+        ax.plot(x, ref, color=INK_MUTED, ls=(0, (4, 3)), lw=0.9, zorder=3,
+                label=lbl_ref)
         if target is not None:
-            ax.plot(x, target, color="#00897B", ls="-.", lw=1.6, zorder=3.5,
-                    label=target_label)
-        ax.plot(x, cur, color="#1a2a3a", lw=2.0, zorder=4, label="Shoreline")
+            ax.plot(x, target, color=C["REF"], ls=(0, (5, 2)), lw=1.4,
+                    zorder=3.5, label=target_label)
+        ax.plot(x, cur, color=INK, lw=1.6, zorder=4, label="shoreline")
 
         # -- Roadway relocations, in the year they happen ----------------------
         # An EVENT, not a state: _road_relocated_TS is raised in the year the
@@ -434,61 +490,75 @@ def make_shoreline_gif(shoreline_m, run,
         ax.set_ylim(*ylim)
         ax.xaxis.set_major_locator(ticker.MultipleLocator(10 if n_dom > 40 else 5))
         ax.xaxis.set_minor_locator(ticker.MultipleLocator(5 if n_dom > 40 else 1))
-        ax.tick_params(axis="both", which="major", labelsize=9, direction="in", length=5)
-        ax.tick_params(axis="both", which="minor", direction="in", length=3)
-        ax.grid(True, which="major", ls=":", lw=0.6, alpha=0.4, color="gray")
-        ax.spines[["top", "right"]].set_visible(False)
+        ax.tick_params(axis="both", which="minor", length=1.8)
+        ax.grid(axis="y")
+        ax.set_axisbelow(True)
+        open_frame(ax)
+        if pad_town_spans:
+            town_bands(ax, spans=pad_town_spans)
 
         if axis_kind == "pad":
-            ax.set_xlabel(
-                f"{run.model_name} domain index (buffers included, 0\u2013{domains.total_domains - 1})"
-                f"   |   \u2190 {annotations.low_end_label}      {annotations.high_end_label} \u2192",
-                fontsize=11, fontweight="bold")
+            ax.set_xlabel(f"{run.model_name} domain index, buffers included "
+                          f"(0\u2013{domains.total_domains - 1})")
             top_ax = ax.secondary_xaxis("top")
             tp, tl = [], []
             for gid in range(domains.first_gis_id, domains.last_gis_id + 1, 10):
                 tp.append(domains.gis_to_pad(gid))
                 tl.append(str(gid))
             top_ax.set_xticks(tp)
-            top_ax.set_xticklabels(tl, fontsize=8)
-            top_ax.set_xlabel(f"GIS Domain ID ({domains.first_gis_id}\u2013{domains.last_gis_id})",
-                              fontsize=9)
+            top_ax.set_xticklabels(tl)
+            top_ax.set_xlabel(DOMAIN_AXIS_LABEL)
         else:
-            ax.set_xlabel(
-                f"{run.model_name} Model Domain ({int(domains.domain_spacing_m)} m alongshore)"
-                f"   |   \u2190 {annotations.low_end_label}      {annotations.high_end_label} \u2192",
-                fontsize=11, fontweight="bold")
+            ax.set_xlabel(DOMAIN_AXIS_LABEL)
+        # The compass ends, on the axis-label row rather than on top of the
+        # tick labels (they landed on "10" and "90" at the printed width).
+        # ONLY on a window that actually reaches both ends of the island: a
+        # groin zoom over GIS 1-15 was being labelled "Pea Island | N" at its
+        # right-hand edge, which is 37 km from Pea Island.
+        _full_span = (axis_kind == "pad"
+                      or (x_lo <= domains.first_gis_id
+                          and x_hi >= domains.last_gis_id))
+        if _full_span:
+            for _frac, _txt, _ha in (
+                    (0.0, f"\u2190 {annotations.low_end_label}", "left"),
+                    (1.0, f"{annotations.high_end_label} \u2192", "right")):
+                ax.annotate(_txt, xy=(_frac, 0.0), xycoords="axes fraction",
+                            xytext=(0, -31), textcoords="offset points",
+                            ha=_ha, va="center", fontsize=7.5,
+                            color=INK_MUTED, annotation_clip=False)
 
-        ax.set_ylabel(ylabel, fontsize=10.5, fontweight="bold")
+        ax.set_ylabel(ylabel)
 
-        # -- Year stamp + title + legend ---------------------------------------
-        ax.text(0.985, 0.045, f"{run.start_year + t}  (year {t})",
+        # -- Year clock + provenance + legend ----------------------------------
+        # Both stay on the canvas: this frame is a run artefact, not a figure
+        # with a caption beside it.
+        ax.text(0.99, 0.05, f"{run.start_year + t}   year {t}",
                 transform=ax.transAxes, ha="right", va="bottom",
-                fontsize=13, fontweight="bold",
-                bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="0.7"))
-        ax.set_title(
-            (f"Shoreline difference \u2014 {run.run_name} minus {baseline_label}  |  "
-             f"{run.start_year}\u2013{run.end_year}  |  {hs_lbl}BE={be_lbl}"
-             if mode == "difference" else
-             f"Shoreline evolution \u2014 {annotations.region_name}  |  "
-             f"{run.start_year}\u2013{run.end_year}  |  "
-             f"{hs_lbl}BE={be_lbl}  |  {run.run_name}"),
-            fontsize=11, fontweight="bold", color="#1a2a3a", pad=(14 if axis_kind == "gis" else 26))
+                fontsize=11, fontweight="bold", color=INK, zorder=20,
+                bbox=dict(boxstyle="square,pad=0.3", fc="white", ec="none",
+                          alpha=0.85))
+        title_pad = 14 if axis_kind == "gis" else 26
+        ax.set_title(subject, loc="left", pad=title_pad)
+        ax.set_title(params, loc="right", fontsize=7.5, color=INK_MUTED,
+                     linespacing=1.4, pad=title_pad)
         # Legend outside (below) the axes so it never covers the town / shoal
         # labels, which sit at fixed axes fractions inside the panel.
-        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.115),
-                  bbox_transform=ax.transAxes, fontsize=8.5, framealpha=0.95,
-                  edgecolor="#cccccc", frameon=True,
-                  ncol=5 if target is not None else 4)
+        # THREE columns, not five: five long labels ran off the right edge of
+        # the printed width and the last one was clipped.
+        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.215),
+                  bbox_transform=ax.transAxes, frameon=False, ncol=3)
 
         # -- Render to an in-memory PNG (constant size, no disk churn) ----------
+        # dpi EXPLICIT: the house rcParams put savefig.dpi at 300 for print,
+        # and a frame rendered at 300 dpi is three times the pixels the GIF
+        # wants (and no longer matches a frame drawn anywhere else).
         buf = io.BytesIO()
-        fig.savefig(buf, format="png", facecolor="white")
+        fig.savefig(buf, format="png", dpi=frame_dpi, facecolor="white")
         buf.seek(0)
         frames.append(Image.open(buf).convert("RGB"))
         if keep_frames:
             fig.savefig(os.path.join(frames_dir, f"frame_{t:03d}.png"),
-                        facecolor="white")
+                        dpi=frame_dpi, facecolor="white")
         plt.close(fig)
 
     sizes = {f.size for f in frames}
@@ -496,7 +566,8 @@ def make_shoreline_gif(shoreline_m, run,
         print(f"  [GIF] frame sizes differ ({sizes}); aborting animation.")
         return None
 
-    gif_path = os.path.join(run.run_dir, f"{run.run_name}_shoreline_{mode}_{range_tag}.gif")
+    # animations/<mode>_<window>.gif; the run folder already names the run
+    gif_path = str(animation_write_path(run.run_dir, mode, range_tag))
     frames[0].save(gif_path, save_all=True, append_images=frames[1:],
                    duration=int(1000.0 / max(float(fps), 0.1)), loop=0, optimize=True)
 
@@ -545,7 +616,7 @@ def make_all_shoreline_gifs(shoreline_m, run, jobs,
         List of saved GIF paths.
     """
     if gif_config.save_matrix:
-        npy_path = os.path.join(run.run_dir, f"{run.run_name}_shoreline_matrix.npy")
+        npy_path = str(write_path(run.run_dir, "matrix", run.run_name))
         np.save(npy_path, np.asarray(shoreline_m, dtype=float))
         print(f"  Saved shoreline matrix: {npy_path}")
 

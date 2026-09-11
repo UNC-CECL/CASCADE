@@ -154,6 +154,7 @@ from cascade_pipeline.plotting.rate_comparison import (
 )
 from cascade_pipeline.plotting.shoreline_gif import GifConfig, make_all_shoreline_gifs
 from cascade_pipeline.run_info import RunInfo
+from cascade_pipeline.run_layout import resolve, write_path
 from cascade_pipeline.run_registry import (
     append_run_index,
     git_provenance,
@@ -1201,7 +1202,11 @@ COASTSAT_DATASETS = [
     ),
 ]
 
-LOESS_CONFIG = LoessConfig(window_domains=(7, 10), skip_southern_domains=10)
+# The 10-domain smoothing ALONE (Hannah, 2026-09-10). The 7-domain curve was
+# drawn beside it for comparison and never fed a number: every skill target is
+# built at TARGET_WINDOW = 10, asserted just below. Dropping it also saves a
+# LOESS fit per dataset per run. Put (7, 10) back to see both curves again.
+LOESS_CONFIG = LoessConfig(window_domains=(10,), skip_southern_domains=10)
 
 # Named here rather than left implicit. rate_comparison resolves the reference
 # window as max(window_domains); this makes that choice visible, and the
@@ -1329,8 +1334,8 @@ GIF_BASELINE_NPY = None
 if GROIN_ENABLED:
     GIF_BASELINE_NAME = scenario_run_name(
         SCENARIO_SWITCHES, RUN_NAME_STEM, groin="nogroin")
-    _baseline = (OUTPUT_BASE_DIR / GIF_BASELINE_NAME
-                 / f"{GIF_BASELINE_NAME}_shoreline_matrix.npy")
+    _baseline = resolve(OUTPUT_BASE_DIR / GIF_BASELINE_NAME, "matrix",
+                        GIF_BASELINE_NAME)
     GIF_BASELINE_NPY = str(_baseline) if _baseline.exists() else None
 
 
@@ -1710,7 +1715,7 @@ run = RunInfo(
     background_erosion_on=USE_BACKGROUND_EROSION,
 )
 
-_rate_csv = os.path.join(RUN_DIR, f"{RUN_NAME}_shoreline_change_rate.csv")
+_rate_csv = str(write_path(RUN_DIR, "rate_csv", RUN_NAME))
 # Both estimators ship, so a consumer states which one it wants rather than
 # inheriting whichever the pipeline happened to write. lrr_r2 rides along
 # because a slope through a domain that stepped rather than trended is a
@@ -1726,7 +1731,7 @@ pd.DataFrame({
 print(f"\nwrote                 {os.path.basename(_rate_csv)}")
 
 if ROAD_SUMMARY:
-    _road_csv = os.path.join(RUN_DIR, "road_management_summary.csv")
+    _road_csv = str(write_path(RUN_DIR, "road_csv", RUN_NAME))
     pd.DataFrame(ROAD_SUMMARY).to_csv(_road_csv, index=False)
     print(f"                      {os.path.basename(_road_csv)}")
 
@@ -2009,16 +2014,17 @@ plot_rate_comparison(
     PLOTTED_RATE, cs_series, run,
     real_domains_only=PLOT_REAL_DOMAINS_ONLY, estimator=RATE_ESTIMATOR,
     sea_level_rise_rate_m_yr=SEA_LEVEL_RISE_RATE,
-    save_path=os.path.join(
-        RUN_DIR, f"{RUN_NAME}_shoreline_change_rate"
-        f"{'_REAL_DOMAINS_ONLY' if PLOT_REAL_DOMAINS_ONLY else ''}.png"),
+    save_path=str(write_path(
+        RUN_DIR,
+        "figure_rate" if PLOT_REAL_DOMAINS_ONLY else "figure_rate_buffers",
+        RUN_NAME)),
     show=SHOW_FIGURES, **RATE_FIG_KWARGS)
 
 plot_annotated_rate_comparison(
     PLOTTED_RATE, cs_series, run,
     estimator=RATE_ESTIMATOR,
     sea_level_rise_rate_m_yr=SEA_LEVEL_RISE_RATE,
-    save_path=os.path.join(RUN_DIR, f"{RUN_NAME}_annotated.png"),
+    save_path=str(write_path(RUN_DIR, "figure_rate_buffers", RUN_NAME)),
     show=SHOW_FIGURES, **RATE_FIG_KWARGS)
 
 # Section 9.4's validation target, resolved now that the run has a year 0.

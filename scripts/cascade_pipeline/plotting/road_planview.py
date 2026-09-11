@@ -22,6 +22,16 @@ import matplotlib.pyplot as plt
 
 from cascade_pipeline.plotting import init_planview
 
+# `scripts/` is on sys.path already -- cascade_pipeline lives inside it.
+from hat_figure_style import (
+    C, C_1997, DOMAIN_AXIS_LABEL, INK, apply_style,
+)
+# Aliased: `figsize` is already a keyword argument of plot_roadway_island,
+# and no caller should have to change name for a restyle.
+from hat_figure_style import figsize as _figsize
+
+apply_style()
+
 
 @dataclasses.dataclass(frozen=True)
 class IslandSection(object):
@@ -48,7 +58,11 @@ class RoadPlanViewStyle:
     separation (worst adjacent OKLab dE 25.5 against a target of 8; normal
     vision 26.8 against a floor of 15). `relocated` warns on contrast against a
     light surface, so it is always accompanied by a legend entry and never used
-    as the only cue.
+    as the only cue. They are the house colours since 2026-09-10: NC-12 is
+    C["ROAD"] wherever it is drawn in this project, the relocated position is
+    the one house orange that shoreline_gif.RELOCATION_COLOR also uses, and the
+    drowning marker is the cool pole of the vintage pair -- three hues that
+    still separate on luminance as well as on hue.
 
     Attributes:
         road: Color for the initial road footprint.
@@ -59,14 +73,14 @@ class RoadPlanViewStyle:
         text_color: Foreground for titles and labels.
     """
 
-    road: str = "#B71C1C"
-    relocated: str = "#FF8C00"
-    drowning: str = "#1565C0"
-    dune_line: str = "#1a1a2e"
-    bar_linewidth: float = 2.4
-    text_color: str = "#1a1a2e"
+    road: str = C["ROAD"]
+    relocated: str = C["ADDED"]
+    drowning: str = C_1997
+    dune_line: str = INK
+    bar_linewidth: float = 2.0
+    text_color: str = INK
     section_alpha: float = 0.16
-    band_label_size: float = 9.0
+    band_label_size: float = 8.0
 
 
 DEFAULT_ROAD_STYLE = RoadPlanViewStyle()
@@ -129,7 +143,7 @@ def draw_sections(ax, sections, geometry, col_starts, cells_per_domain,
                 transform=ax.get_xaxis_transform(), ha="center", va="top",
                 fontsize=style.band_label_size, color=style.text_color,
                 zorder=10,
-                bbox=dict(fc="white", ec="none", alpha=0.82, pad=2))
+                bbox=dict(fc="white", ec="none", alpha=0.85, pad=2))
 
 
 def road_rows(setbacks_m, offset_cells, geometry, config=None):
@@ -198,7 +212,7 @@ def overlay_roadway(ax, setbacks_m, offset_cells, geometry, col_starts,
                   lw=style.bar_linewidth, zorder=7)
         if gis in drowning:
             ax.plot((col_start + col_end) / 2, base_rows[pad], marker="v",
-                    ms=9, color=style.drowning, mec="white", mew=1.1,
+                    ms=7, color=style.drowning, mec="white", mew=1.0,
                     zorder=9)
 
     handles.append(plt.Line2D([], [], color=style.road,
@@ -206,11 +220,11 @@ def overlay_roadway(ax, setbacks_m, offset_cells, geometry, col_starts,
     if moved_rows is not None:
         handles.append(plt.Line2D([], [], color=style.relocated,
                                   lw=style.bar_linewidth,
-                                  label="after prescribed relocation"))
+                                  label="after the measured relocation"))
     if drowning:
-        handles.append(plt.Line2D([], [], lw=0, marker="v", ms=9,
+        handles.append(plt.Line2D([], [], lw=0, marker="v", ms=7,
                                   color=style.drowning, mec="white",
-                                  label="road drowns at t=0"))
+                                  label="road drowns in year 0"))
     return handles
 
 
@@ -262,15 +276,14 @@ def plot_roadway_planview(elevation_paths, offset_cells, setbacks_m, geometry,
         axes.set_ylim(*crop_to_data(canvas)[::-1] if axes.yaxis_inverted()
                       else crop_to_data(canvas))
     if handles and legend:
-        axes.legend(handles=handles, loc="lower left", fontsize=8,
-                    framealpha=0.92)
+        axes.legend(handles=handles, loc="lower left", frameon=False)
     return figure
 
 
 def plot_roadway_island(elevation_paths, offset_cells, setbacks_m, geometry,
                         title, relocated_m=None, drowning_gis=(),
                         sections=(), zoom_windows=(), config=None,
-                        style=DEFAULT_ROAD_STYLE, figsize=(20, 11),
+                        style=DEFAULT_ROAD_STYLE, figsize=None,
                         xlabel=None, **kwargs):
     """Renders the island-wide roadway figure, with optional zoom panels.
 
@@ -293,7 +306,9 @@ def plot_roadway_island(elevation_paths, offset_cells, setbacks_m, geometry,
             own panel below the island.
         config: PlanViewConfig supplying unit and rendering settings.
         style: RoadPlanViewStyle.
-        figsize: Figure size in inches.
+        figsize: Figure size in inches, or None for the printed double
+            column (the house width; it was a 20 x 11 in canvas until
+            2026-09-10, which set its 9 pt type at 3 pt on a page).
         xlabel: Alongshore axis label.
         **kwargs: Passed through to init_planview.plot_canvas.
 
@@ -302,7 +317,9 @@ def plot_roadway_island(elevation_paths, offset_cells, setbacks_m, geometry,
     """
     config = config or init_planview.DEFAULT_PLAN_VIEW
     n_zoom = len(zoom_windows)
-    figure = plt.figure(figsize=figsize, facecolor="white")
+    figsize = figsize or _figsize("double",
+                                  height=6.6 if zoom_windows else 4.2)
+    figure = plt.figure(figsize=figsize)
     grid = figure.add_gridspec(2 if n_zoom else 1, max(n_zoom, 1),
                                height_ratios=[2.1, 1.0] if n_zoom else [1.0],
                                hspace=0.30, wspace=0.16)
@@ -331,8 +348,10 @@ def plot_roadway_island(elevation_paths, offset_cells, setbacks_m, geometry,
                          else np.asarray(relocated_m)[pads]),
             drowning_gis=drowning_gis, crop=True, legend=False,
             colorbar=False, ax=zoom_ax, config=config, style=style,
-            xlabel="GIS domain", **kwargs)
+            xlabel=DOMAIN_AXIS_LABEL, **kwargs)
 
-    figure.suptitle(title, fontsize=14, fontweight="bold",
-                    color=style.text_color, y=0.98)
+    # The subject line stays on the canvas: this is a per-run artefact that is
+    # opened out of a run folder with nothing around it.
+    figure.suptitle(title, fontsize=10, x=0.012, ha="left",
+                    color=style.text_color, y=0.985)
     return figure
