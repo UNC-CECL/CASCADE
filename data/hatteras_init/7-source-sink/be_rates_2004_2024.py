@@ -4,7 +4,7 @@
 # from hatteras_site_config.py, which is the source of truth. Do not
 # edit this file: edit the config, or re-run the calibration.
 #
-# Frozen-zone masked iteration, converged 2026-08-25. Domains outside the frozen zone set carry
+# Frozen-zone masked iteration, converged 2026-09-12. Domains outside the frozen zone set carry
 # 0.0 because they were never eligible for correction, NOT because
 # their residual was zero -- see be_calibration_domains.csv.
 
@@ -16,38 +16,38 @@ DOMAIN_BE_RATES_CALIBRATED = {
       5: +0.0,  # Cape Point / Shoal Dynamics | RESERVED for the groin module
       6: +0.0,  # Cape Point / Shoal Dynamics | RESERVED for the groin module
       7: +0.0,  # Cape Point / Shoal Dynamics | RESERVED for the groin module
-      8: -2.7,  # Cape Point / Shoal Dynamics
+      8: -1.8,  # Cape Point / Shoal Dynamics
       9: +0.0,  # Cape Point / Shoal Dynamics
      10: +1.5,  # Cape Point / Shoal Dynamics
      11: +1.2,  # Buxton–Avon Transition
      12: +1.5,  # Buxton–Avon Transition
-     13: +1.6,  # Buxton–Avon Transition
+     13: +1.9,  # Buxton–Avon Transition
      14: +2.0,  # Buxton–Avon Transition
      15: +2.1,  # Buxton–Avon Transition
-     16: +2.6,  # Buxton–Avon Transition
-     17: +2.7,  # Buxton–Avon Transition
-     18: +2.7,  # Buxton–Avon Transition
+     16: +2.3,  # Buxton–Avon Transition
+     17: +2.4,  # Buxton–Avon Transition
+     18: +2.4,  # Buxton–Avon Transition
      19: +2.1,  # Buxton–Avon Transition
      20: +1.7,  # Buxton–Avon Transition
      21: +0.7,  # Avon
-     22: -2.7,  # Avon
+     22: -1.9,  # Avon
      23: +0.0,  # Avon
      24: +0.0,  # Avon
      25: +0.0,  # Avon
      26: +0.0,  # Avon
-     27: -1.8,  # Avon
+     27: -1.0,  # Avon
      28: +1.2,  # Avon
      29: +2.3,  # Avon
-     30: +3.2,  # Avon
-     31: +4.3,  # Avon
-     32: +4.5,  # Mid-island
-     33: +4.1,  # Mid-island
+     30: +2.9,  # Avon
+     31: +3.6,  # Avon
+     32: +4.0,  # Mid-island
+     33: +3.8,  # Mid-island
      34: +3.8,  # Mid-island
-     35: +2.6,  # Mid-island
+     35: +3.0,  # Mid-island
      36: +2.6,  # Mid-island
      37: +2.2,  # Mid-island
-     38: +1.6,  # Mid-island
-     39: +2.0,  # Mid-island
+     38: +2.0,  # Mid-island
+     39: +2.3,  # Mid-island
      40: +2.0,  # Mid-island
      41: +1.7,  # Mid-island
      42: +1.4,  # Mid-island
@@ -63,40 +63,40 @@ DOMAIN_BE_RATES_CALIBRATED = {
      52: -2.2,  # Mid-island
      53: -2.0,  # Mid-island
      54: -1.8,  # Mid-island
-     55: -1.0,  # Mid-island
+     55: -1.3,  # Mid-island
      56: +0.0,  # Mid-island
      57: -0.3,  # Mid-island
      58: +0.0,  # Mid-island
      59: +0.0,  # Mid-island
      60: +0.0,  # Wimble Shoals Influence
      61: +0.0,  # Wimble Shoals Influence
-     62: +0.0,  # Wimble Shoals Influence
-     63: +0.7,  # Wimble Shoals Influence
-     64: +0.9,  # Wimble Shoals Influence
+     62: +0.3,  # Wimble Shoals Influence
+     63: +1.0,  # Wimble Shoals Influence
+     64: +1.5,  # Wimble Shoals Influence
      65: +1.9,  # Wimble Shoals Influence
      66: +2.3,  # Wimble Shoals Influence
      67: +2.3,  # Wimble Shoals Influence
      68: +3.0,  # Wimble Shoals Influence
      69: +3.8,  # Wimble Shoals Influence
      70: +4.1,  # Wimble Shoals Influence
-     71: +4.6,  # Wimble Shoals Influence
-     72: +4.4,  # Wimble Shoals Influence
-     73: +3.6,  # Wimble Shoals Influence
-     74: +2.7,  # Wimble Shoals Influence
+     71: +4.7,  # Wimble Shoals Influence
+     72: +4.1,  # Wimble Shoals Influence
+     73: +2.8,  # Wimble Shoals Influence
+     74: +2.4,  # Wimble Shoals Influence
      75: +2.3,  # Tri-Village / Rodanthe
-     76: +1.8,  # Tri-Village / Rodanthe
+     76: +1.5,  # Tri-Village / Rodanthe
      77: +1.2,  # Tri-Village / Rodanthe
      78: +0.9,  # Tri-Village / Rodanthe
      79: +0.4,  # Tri-Village / Rodanthe
      80: +0.0,  # Tri-Village / Rodanthe
      81: +0.0,  # Tri-Village / Rodanthe
      82: +0.0,  # Tri-Village / Rodanthe
-     83: -2.7,  # Tri-Village / Rodanthe
-     84: -3.2,  # Pea Island NWR
-     85: -3.2,  # Pea Island NWR
-     86: -2.7,  # Pea Island NWR
-     87: -2.9,  # Pea Island NWR
-     88: -2.2,  # Pea Island NWR
-     89: -1.3,  # Pea Island NWR
-     90: +52.1,  # LOCKED — end domain, LRR-solved; see the end-domain note above
+     83: -2.6,  # Tri-Village / Rodanthe
+     84: -3.5,  # Pea Island NWR
+     85: -3.8,  # Pea Island NWR
+     86: -3.7,  # Pea Island NWR
+     87: -3.9,  # Pea Island NWR
+     88: -3.0,  # Pea Island NWR
+     89: -1.8,  # Pea Island NWR
+     90: +57.9,  # LOCKED — end domain, LRR-solved; see the end-domain note above
 }

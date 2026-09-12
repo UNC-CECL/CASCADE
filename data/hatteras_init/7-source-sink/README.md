@@ -13,7 +13,7 @@ re-export.
 | `be_rates_2004_2024.py` | the converged field, period 2 |
 | `be_calibration_domains.csv` | per domain: zone, eligibility, pass-0 and final rate, what the iteration added, residual still standing |
 | `convergence_history.json` | every pass, both baselines, and the abandoned unmasked attempt |
-| `figures/` | `fig_be_zones_and_corrections.png` — which domains qualified, and the correction each received; `fig_be_convergence.png` — the iteration sequence and the frozen zone set; `fig_be_diagnostic.png` — observed vs modelled rate, and the residual, per period; `fig_be_rates.png` — the BE field, hindcast and forecast scenarios; `fig_groin_reserved_residual.png` — why the D5-D7 residual is left uncorrected |
+| `figures/` | `fig_be_zones_and_corrections.png` - which domains qualified, and the correction each received; `fig_be_convergence.png` - the iteration sequence and the frozen zone set; `fig_be_diagnostic.png` - observed vs modelled rate, and the residual, per period; `fig_be_rates.png` - the BE field, hindcast and forecast scenarios; `fig_groin_reserved_residual.png` - why the D5-D7 residual is left uncorrected |
 | `superseded_*/` | the 2026-06-15 files this replaces, kept because earlier runs were built against them |
 
 ## How the field was produced
@@ -79,3 +79,12 @@ is the fit available only by correcting outside justifiable zones.
 - **D1 and D90 are not sediment budgets.** They are boundary absorbers, and
   carry rates about ten times the interior because only ~10% of an imposed
   edge rate survives diffusion.
+- **This covers the two CALIBRATED periods only.** 1996-2010 and 2010-2024 are
+  wired in `HATTERAS_PERIODS` but carry no interior fit, so there is nothing to
+  export for them. 1996 has solved end domains; see `HATTERAS_BE_EDGE_ONLY`.
+
+## What this export could not carry
+
+* **`be_pass0_*` and `iteration_added_*` are empty.** They split each final rate into the one-shot solve and what the iteration added, and that split can only come from `hatteras_site_config_prebe_20260824_223143.py`, the field written before the first pass. That file is not on disk and was never committed, so it cannot be recovered. The FINAL values are unaffected -- they come from the config.
+
+* **`fig_be_zones_and_corrections.png` predate(s) the newest calibrated run (2026-09-10).** `fig_be_zones_and_corrections.png` cannot be redrawn for the same reason the pass-0 columns are empty: its lower panels need that lost backup. It still shows the masked iteration that produced these values, which has not been re-run -- but it is older than the runs and is marked here rather than passed off as current.

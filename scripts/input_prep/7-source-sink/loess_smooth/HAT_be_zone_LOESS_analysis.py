@@ -138,7 +138,10 @@ apply_style()
 # CoastSat TRANSECT-level LRR. Not the domain-averaged summary: the target
 # is smoothed at transect resolution and only then averaged, and doing it in
 # the other order gives a measurably different curve.
-COASTSAT_BASE = SCRIPTS_DIR / "input_prep" / "5-scr" / "CoastSat"
+# Moved out of the scripts tree 2026-09-12: the rate fits are DATA and
+# the model reads them. Resolve through hat_observed_rates.py in new code.
+COASTSAT_BASE = (SCRIPTS_DIR.parent / "data" / "hatteras_init" / "5-scr"
+                 / "coastsat_lrr")
 P1_COASTSAT_CSV = str(COASTSAT_BASE / "1984_2004" / "transect_lrr_full.csv")
 P2_COASTSAT_CSV = str(COASTSAT_BASE / "2004_2024" / "transect_lrr_full.csv")
 
@@ -195,7 +198,11 @@ TARGET_WINDOW = 10
 # holds a converged calibration whose stopping point is a recorded scientific
 # claim, and an exploratory pass silently overwriting it would destroy the
 # provenance without anyone noticing.
-OUTPUT_DIR = os.environ.get("HAT_BE_OUTPUT_DIR", "").strip()     or str(_HERE.parent / "output")
+# Products moved to the data tree 2026-09-12; only the script lives under
+# scripts/. HAT_BE_OUTPUT_DIR still redirects a what-if pass anywhere.
+_BE_DATA = (PROJECT_BASE_DIR / "data" / "hatteras_init"
+            / "7-source-sink" / "loess_smooth")
+OUTPUT_DIR = os.environ.get("HAT_BE_OUTPUT_DIR", "").strip() or str(_BE_DATA)
 
 # Figures are read out of the data tree, not out of scripts/. The tables above
 # stay with the calibration that produced them; the two PNGs go where the rest

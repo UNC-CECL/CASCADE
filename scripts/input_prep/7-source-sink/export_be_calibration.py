@@ -82,11 +82,21 @@ from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E40
 
 DATA_DIR = PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
-CALIB_OUT = _HERE.parent / "loess_smooth" / "output"
+# The calibration products moved into the data tree 2026-09-12, so this
+# reads them from there rather than from beside the script that made them.
+CALIB_OUT = DATA_DIR / "loess_smooth"
 CONFIG = PROJECT_BASE_DIR / "scripts" / "hatteras_site_config.py"
 
-# Copied, not linked. These are the record of one calibration; regenerating the
-# scripts' copies later must not silently change what this folder says was run.
+# WHERE THE FIGURES COME FROM (corrected 2026-09-12). This used to read them
+# out of the calibration OUTPUT directory and copy them into figures/ -- but
+# HAT_be_zone_LOESS_analysis.py writes its figures straight into figures/, and
+# the copies in the output directory were older. So the export overwrote the
+# CURRENT figures with SUPERSEDED ones, quietly, every time it ran.
+#
+# figures/ is the record now, and the staleness check below reads the same
+# place. The superseded copies were moved under superseded_20260825/.
+FIGURE_SOURCE_IS_THE_RECORD = True
+
 FIGURES = (
     ("fig_be_zones_and_corrections.png",
      "which domains qualified, and the correction each received"),
@@ -214,10 +224,14 @@ def build_table(module, final, pass0, metrics):
         for period, tag in ((1984, "1984_2004"), (2004, "2004_2024")):
             row[f"eligible_{tag}"] = gis in module.FROZEN_ZONE_DOMAINS[period]
             f = final[period].get(gis, (0.0, ""))[0]
-            p = pass0[period].get(gis, (0.0, ""))[0]
-            row[f"be_pass0_{tag}"] = round(p, 3)
             row[f"be_final_{tag}"] = round(f, 3)
-            row[f"iteration_added_{tag}"] = round(f - p, 3)
+            if pass0 is None:
+                row[f"be_pass0_{tag}"] = ""
+                row[f"iteration_added_{tag}"] = ""
+            else:
+                p = pass0[period].get(gis, (0.0, ""))[0]
+                row[f"be_pass0_{tag}"] = round(p, 3)
+                row[f"iteration_added_{tag}"] = round(f - p, 3)
         if metrics is not None and gis in metrics.index:
             row["residual_1984_2004"] = round(
                 float(metrics.loc[gis, "raw_residual_p1"]), 3)
@@ -227,8 +241,48 @@ def build_table(module, final, pass0, metrics):
     return pd.DataFrame(rows)
 
 
+def caveats_block():
+    """What this export could NOT carry, and why.
+
+    Generated rather than hand-written into the README, because the README is
+    rewritten on every export and a hand-added note would vanish on the next
+    run -- which is how the file came to disagree with the config in the first
+    place.
+    """
+    lines = []
+    if not PASS0_BACKUP.exists():
+        lines.append(
+            f"* **`be_pass0_*` and `iteration_added_*` are empty.** They split "
+            f"each final rate into the one-shot solve and what the iteration "
+            f"added, and that split can only come from `{PASS0_BACKUP.name}`, "
+            f"the field written before the first pass. That file is not on "
+            f"disk and was never committed, so it cannot be recovered. The "
+            f"FINAL values are unaffected -- they come from the config.")
+    stale, newest = stale_against_runs(
+        [DATA_DIR / "figures" / name for name, _ in FIGURES])
+    if stale:
+        from datetime import datetime
+        when = datetime.fromtimestamp(newest).strftime("%Y-%m-%d")
+        names = ", ".join(f"`{pathlib.Path(x).name}`" for x in stale)
+        lines.append(
+            f"* **{names} predate(s) the newest calibrated run ({when}).** "
+            f"`fig_be_zones_and_corrections.png` cannot be redrawn for the "
+            f"same reason the pass-0 columns are empty: its lower panels need "
+            f"that lost backup. It still shows the masked iteration that "
+            f"produced these values, which has not been re-run -- but it is "
+            f"older than the runs and is marked here rather than passed off "
+            f"as current.")
+    if not lines:
+        return ""
+    body = (chr(10) + "## What this export could not carry" + chr(10)
+            + chr(10))
+    return body + (chr(10) + chr(10)).join(lines) + chr(10)
+
+
 def readme(module, table, history):
-    figure_rows = "; ".join(f"`{name}` — {what}" for name, what in FIGURES)
+    figure_rows = "; ".join(f"`{name}` - {what}"
+                            for name, what in FIGURES)
+    caveats = caveats_block()
     p1 = history["passes"]["1984_2004"]
     p2 = history["passes"]["2004_2024"]
     n_corr = int((table["status"] == "correctable").sum())
@@ -314,7 +368,10 @@ is the fit available only by correcting outside justifiable zones.
 - **D1 and D90 are not sediment budgets.** They are boundary absorbers, and
   carry rates about ten times the interior because only ~10% of an imposed
   edge rate survives diffusion.
-"""
+- **This covers the two CALIBRATED periods only.** 1996-2010 and 2010-2024 are
+  wired in `HATTERAS_PERIODS` but carry no interior fit, so there is nothing to
+  export for them. 1996 has solved end domains; see `HATTERAS_BE_EDGE_ONLY`.
+{caveats}"""
 
 
 def main():
@@ -329,11 +386,18 @@ def main():
 
     module = analysis_module()
     final = {p: rates_from(CONFIG, p) for p in (1984, 2004)}
-    if not PASS0_BACKUP.exists():
-        raise FileNotFoundError(
-            f"{PASS0_BACKUP.name} is the pass-0 field of the masked iteration "
-            f"and is needed to report what the iteration added per domain.")
-    pass0 = {p: rates_from(PASS0_BACKUP, p) for p in (1984, 2004)}
+    # THE PASS-0 FIELD IS OPTIONAL NOW (2026-09-12). It used to be required,
+    # which made this exporter unrunnable: the backup it names was never
+    # committed and is not on disk, so the two columns it feeds cannot be
+    # reconstructed. Refusing to export at all meant the VALUES stayed stale
+    # for the sake of a provenance column -- and stale values are the failure
+    # this file exists to prevent. Absent, the pass-0 and iteration-added
+    # columns are written empty and the README says why.
+    pass0 = ({p: rates_from(PASS0_BACKUP, p) for p in (1984, 2004)}
+             if PASS0_BACKUP.exists() else None)
+    if pass0 is None:
+        print(f"  NOTE: {PASS0_BACKUP.name} is absent, so be_pass0_* and "
+              f"iteration_added_* are left empty.")
 
     metrics_path = CALIB_OUT / "be_zone_metrics.csv"
     metrics = (pd.read_csv(metrics_path).set_index("domain")
@@ -346,17 +410,19 @@ def main():
     print("  domain status")
     for name, n in counts.items():
         print(f"    {name:<38} {n:>3}")
-    for period, tag in ((1984, "1984_2004"), (2004, "2004_2024")):
-        moved = table[table[f"iteration_added_{tag}"].abs() > 1e-9]
-        print(f"  {tag}: iteration changed {len(moved)} domains, "
-              f"mean |added| {moved[f'iteration_added_{tag}'].abs().mean():.3f}, "
-              f"max {moved[f'iteration_added_{tag}'].abs().max():.2f} m/yr")
+    if pass0 is not None:
+        for period, tag in ((1984, "1984_2004"), (2004, "2004_2024")):
+            moved = table[table[f"iteration_added_{tag}"].abs() > 1e-9]
+            print(f"  {tag}: iteration changed {len(moved)} domains, "
+                  f"mean |added| "
+                  f"{moved[f'iteration_added_{tag}'].abs().mean():.3f}, "
+                  f"max {moved[f'iteration_added_{tag}'].abs().max():.2f} m/yr")
 
     # BEFORE anything is written, and before --check returns, so a dry run
     # reports the same refusal a real one would. Checking it later left a
     # half-finished export on disk: values written, figures not.
     stale, newest = (([], None) if args.allow_stale
-                     else stale_against_runs([CALIB_OUT / name
+                     else stale_against_runs([DATA_DIR / "figures" / name
                                               for name, _ in FIGURES]))
     if stale:
         from datetime import datetime
@@ -399,16 +465,15 @@ def main():
                         encoding="utf-8")
         print(f"  wrote {path.name}")
 
+    # figures/ IS the record, so there is nothing to copy into it -- the
+    # analysis scripts write here directly. This block now only reports what
+    # is present, which is what the README claims.
     figure_dir = DATA_DIR / "figures"
     figure_dir.mkdir(exist_ok=True)
-    missing = []
-    for name, _ in FIGURES:
-        source = CALIB_OUT / name
-        if source.exists():
-            shutil.copy2(source, figure_dir / name)
-        else:
-            missing.append(name)
-    print(f"  wrote figures/ ({len(FIGURES) - len(missing)} of {len(FIGURES)})")
+    missing = [name for name, _ in FIGURES
+               if not (figure_dir / name).exists()]
+    print(f"  figures/ holds {len(FIGURES) - len(missing)} of "
+          f"{len(FIGURES)} record figures")
     if missing:
         # Named rather than skipped silently: a figure absent from the record
         # is indistinguishable from one that was never made.
