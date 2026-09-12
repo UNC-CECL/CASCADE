@@ -20,16 +20,32 @@ Date:   5/4/2026
 # CONFIGURATION — edit these values before running
 # =============================================================================
 
-# Path to the NOAA CO-OPS mean trend CSV file
-DATA_FILE = r"/scripts/input_prep/3-env-forcings/rslr/duck_8651370_meantrend.csv"
+# The gauge record and every product of this script live in the DATA tree;
+# only the script lives here (2026-09-12). Anchored on this file so it
+# follows the checkout -- the original literal was rooted at the drive and
+# resolved only when the interpreter happened to start at the repo root.
+#
+# OUTPUT_DIR matters as much as DATA_FILE: this script used to write its
+# figures and per-period CSVs into the CURRENT DIRECTORY, so where the
+# products landed depended on where you happened to run it from.
+from pathlib import Path as _Path
+import os as _os
+_RSLR_DATA = (_Path(__file__).resolve().parents[4] / "data" / "hatteras_init"
+              / "3-env-forcings" / "rslr")
+DATA_FILE = str(_RSLR_DATA / "duck_8651370_meantrend.csv")
+OUTPUT_DIR = str(_RSLR_DATA)
 
 # --- Periods of interest ---
 # Add as many (start_year, end_year, label) tuples as you like.
 # The label is used in figure titles, legends, and filenames.
 # Years are inclusive of the full calendar year.
+# Periods 3 and 4 added 2026-09-11. They OVERLAP periods 1 and 2 on purpose --
+# these are four hindcast windows over one record, not a partition of it.
 PERIODS = [
     (1984, 2004, "Period 1: 1984–2004"),
     (2004, 2024, "Period 2: 2004–2024"),
+    (1996, 2010, "Period 3: 1996–2010"),
+    (2010, 2024, "Period 4: 2010–2024"),
 ]
 
 # --- Output settings ---
@@ -525,6 +541,11 @@ def export_timeseries(result, start_year, end_year, prefix="duck_rslr"):
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
+
+    # Products belong beside the record they came from, not beside whatever
+    # directory the script was launched from.
+    _os.makedirs(OUTPUT_DIR, exist_ok=True)
+    _os.chdir(OUTPUT_DIR)
 
     # --- Load data ---
     df = load_noaa_meantrend(DATA_FILE)

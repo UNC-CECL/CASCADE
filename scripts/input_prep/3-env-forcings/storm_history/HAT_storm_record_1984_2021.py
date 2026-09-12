@@ -345,8 +345,15 @@ for s in noted_storms:
 panel_height_pt = ax_side.get_position().height * fig.get_size_inches()[1] * 72.0
 print(f"Sidebar content height: {cursor_pt:.0f}pt / panel height: {panel_height_pt:.0f}pt")
 
-plt.savefig(r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\storm_history\HAT_storm_record_1984_2021.png",
+# Products land in the data tree beside the record they describe
+# (2026-09-12). These were absolute paths into "input_preperation",
+# a folder renamed long ago, so neither had resolved since.
+from pathlib import Path as _Path
+_STORM_RECORD = (_Path(__file__).resolve().parents[4] / "data"
+                 / "hatteras_init" / "3-env-forcings" / "storm_record")
+_STORM_RECORD.mkdir(parents=True, exist_ok=True)
+plt.savefig(str(_STORM_RECORD / "HAT_storm_record_1984_2021.png"),
             dpi=200, bbox_inches="tight")
-plt.savefig(r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\storm_history\HAT_storm_record_1984_2021.pdf",
+plt.savefig(str(_STORM_RECORD / "HAT_storm_record_1984_2021.pdf"),
             bbox_inches="tight")
 print("Saved figure.")

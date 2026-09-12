@@ -207,7 +207,7 @@ data/hatteras_init/1-barrier3d-domains/**
 # version to measure against. duneline_retreat_1984_1997.csv in particular is
 # where N comes from for every seaward-row insert version.
 !data/hatteras_init/1-barrier3d-domains/**/duneline-shift/*.csv
-data/hatteras_init/3-env-forcings/noaa_cache_8651370/
+data/hatteras_init/3-env-forcings/water_level/noaa_cache_8651370/
 data/hatteras_init/3-env-forcings/storms/WIS_raw_data/
 data/hatteras_init/3-env-forcings/storms/old/
 data/hatteras_init/4-mgmt-forcing/road_offset/raster/
@@ -217,7 +217,6 @@ data/hatteras_init/5-scr/coastsat_timeseries/
 data/Ocracoke_init_data/
 
 # raw/cached data and regenerated results under scripts/input_prep/
-scripts/input_prep/3-env-forcings/NOAA_water_level/noaa_cache_8651370/
 scripts/input_prep/5-scr/CoastSat_timeseries/results/
 data/hatteras_init/6-scr-smooth/HAT_loess_method_comparison_output/
 data/hatteras_init/6-scr-smooth/HAT_loess_dsas_vs_coastsat_output/
