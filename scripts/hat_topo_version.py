@@ -140,6 +140,17 @@ PRODUCTS = ("1984-start", "2004-start", "forecast")
 YEAR_PRODUCT = {
     1984: "1984-start",
     2004: "2004-start",
+    # The two periods added 2026-09-11 SHARE these products rather than owning
+    # one each. A product is a DEM composition, not a period label: 1984-start
+    # is the surface carrying the 1996 ALACE graft, which is the survey nearest
+    # a 1996 start, and 2004-start is the 2009-plus-2014 surface, which is the
+    # closest vintage match of any period to a 2010 start.
+    #
+    # So a product name now names the period it was FIRST built for, not the
+    # only one that reads it. Ask this mapping rather than inferring a product
+    # from a year, and ask product_for_year() rather than indexing directly.
+    1996: "1984-start",
+    2010: "2004-start",
 }
 
 

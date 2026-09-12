@@ -175,6 +175,7 @@ from hatteras_site_config import (
     HATTERAS_ANNOTATIONS,
     HATTERAS_BEACH_DUNE,
     HATTERAS_BE_PRESETS,
+    be_rates,
     HATTERAS_BE_EDGE_DOMAINS,
     HATTERAS_BE_RATES_2004_IS_PLACEHOLDER,
     HATTERAS_COMMUNITY_ZONES,
@@ -219,7 +220,13 @@ print(f"HATTERAS_DOMAINS.total_domains = {HATTERAS_DOMAINS.total_domains}")
 # DEMs, so the product is selected from HATTERAS_PERIODS:
 #
 #     1984  ->  1984-start   from DEM 2009-2014-1996
+#     1996  ->  1984-start   from DEM 2009-2014-1996
 #     2004  ->  2004-start   from DEM 2009-2014
+#     2010  ->  2004-start   from DEM 2009-2014
+#
+# Two products, four periods (2026-09-11): each new period reads the surface
+# whose survey is nearest its own start, which is a product that already
+# exists. The mapping is YEAR_PRODUCT's, not this comment's -- ask it.
 #
 # The VERSION within a product is still resolved, never pinned.
 
@@ -259,8 +266,10 @@ print(f"topography            {TOPO_PRODUCT} / {TOPO_DUNE_VERSION}  "
 
 HATTERAS_DATA_BASE = PROJECT_BASE_DIR / "data" / "hatteras_init"
 OUTPUT_ROOT = PROJECT_BASE_DIR / "output" / "raw_runs"
-COASTSAT_BASE_DIR = (PROJECT_BASE_DIR / "scripts" / "input_prep"
-                     / "5-scr" / "CoastSat")
+# Moved out of the scripts tree 2026-09-12: the rate fits are DATA and
+# the model reads them. Resolve through hat_observed_rates.py in new code.
+COASTSAT_BASE_DIR = (PROJECT_BASE_DIR / "data" / "hatteras_init"
+                     / "5-scr" / "coastsat_lrr")
 PARAMETER_FILE = "Hatteras-CASCADE-parameters.yaml"  # resolved by CASCADE
 
 BARRIER3D_DIR = HATTERAS_DATA_BASE / "1-barrier3d-domains"
@@ -379,7 +388,7 @@ if _BOOT_DRIFT:
         + "\nThese are settled at import. Re-run section 1 (in a notebook, "
           "restart the kernel and Run All).")
 
-START_YEAR = RUN_CONFIG.start_year   # 1984 or 2004
+START_YEAR = RUN_CONFIG.start_year   # 1984, 1996, 2004 or 2010
 
 # The source/sink axis of the run matrix. Each name states a hypothesis about
 # where the alongshore sediment budget is unresolved:
@@ -750,7 +759,10 @@ reports.storm_report(storms=STORM_SERIES, storm_file=STORM_FILE,
 # a domain absent from a preset gets 0.0 m/yr.
 
 
-DOMAIN_BE_RATES = HATTERAS_BE_PRESETS[SOURCE_SINK_PRESET][START_YEAR]
+# be_rates() rather than a dict lookup: since 2026-09-11 not every wired
+# period is calibrated, and it says which fit is missing instead of
+# raising a bare KeyError on the year.
+DOMAIN_BE_RATES = be_rates(SOURCE_SINK_PRESET, START_YEAR)
 
 # HAT_BE_OVERRIDE -- per-domain rates for THIS run only, "gis=rate" pairs, e.g.
 # HAT_BE_OVERRIDE="1=-45.2,90=11.8". Unset, nothing below runs and the preset
@@ -1199,6 +1211,19 @@ COASTSAT_DATASETS = [
         label="CoastSat LRR (2004-2024)",
         period_start=2004,
         csv_path=str(COASTSAT_BASE_DIR / "2004_2024" / "transect_lrr_full.csv"),
+    ),
+    # The two periods added 2026-09-11. Every dataset loads on every run --
+    # section 12 styles the non-active ones as reference curves -- so all four
+    # windows are drawn whichever one is being simulated.
+    CoastSatDataset(
+        label="CoastSat LRR (1996-2010)",
+        period_start=1996,
+        csv_path=str(COASTSAT_BASE_DIR / "1996_2010" / "transect_lrr_full.csv"),
+    ),
+    CoastSatDataset(
+        label="CoastSat LRR (2010-2024)",
+        period_start=2010,
+        csv_path=str(COASTSAT_BASE_DIR / "2010_2024" / "transect_lrr_full.csv"),
     ),
 ]
 

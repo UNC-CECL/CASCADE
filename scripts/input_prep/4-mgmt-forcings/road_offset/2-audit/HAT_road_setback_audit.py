@@ -265,6 +265,23 @@ SCENARIOS = [
          source=ROADS_DIR / "1984" / "RoadSetback_1984_dunestart.csv"),
     dict(label="2004 initial", kind="initial", product="2004-start",
          source=ROADS_DIR / "2004" / "RoadSetback_2004_dunestart.csv"),
+    # THE TWO DERIVED VINTAGES, added 2026-09-11 with the 1996-2010 and
+    # 2010-2024 periods. Neither was measured from a road line of its own, so
+    # auditing the file the model actually loads matters more here, not less.
+    #
+    #   1996  the 1984 file with the 1989 Pea Island displacement applied. Its
+    #         other 78 domains are the 1984 values on the same grid, so the new
+    #         information is GIS 84-87 -- which the "1989 relocation" scenario
+    #         below already audits at the same numbers, by construction. Both
+    #         are kept: that scenario audits an EVENT, this audits a FILE, and
+    #         a derived file that stopped matching its own derivation is
+    #         exactly the failure worth catching.
+    #   2010  byte-identical to the 2004 file on the same product, so it is
+    #         NOT audited separately -- a second scenario would report the same
+    #         82 rows under a different label and invite them to be read as
+    #         independent agreement.
+    dict(label="1996 initial (derived)", kind="initial", product="1984-start",
+         source=ROADS_DIR / "1996" / "RoadSetback_1996_dunestart.csv"),
     # The relocation events now carry a DISPLACEMENT, applied to whatever
     # setback the model is carrying at the event year:
     #
