@@ -69,7 +69,9 @@ import numpy as np
 
 _HERE = pathlib.Path(__file__).resolve()
 PROJECT_BASE_DIR = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
-OUTPUT_DIR = _HERE.parent / "output"
+# Reads and writes the data tree, where the fit now puts its products.
+OUTPUT_DIR = (_HERE.parents[4] / "data" / "hatteras_init"
+              / "7-source-sink" / "loess_smooth")
 HISTORY = OUTPUT_DIR / "convergence_history.json"
 # The figure belongs with the rest of the section 7 figures, in the data tree;
 # the iteration's own record stays beside the calibration that wrote it.
