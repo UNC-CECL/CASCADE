@@ -81,8 +81,13 @@ END   = "2024-12-31 23:00:00"           # note the 23:00 — the original script
 # --- Paths ---
 # CACHE_DIR intentionally matches download_noaa_water_levels_resumable.py so the
 # existing cache is reused. Point it at your real cache folder.
-CACHE_DIR   = Path(r"/scripts/input_prep/3-env-forcings/NOAA_water_level/noaa_cache_8651370")
-OUTPUT_DIR  = Path(r"/scripts/input_prep/3-env-forcings/NOAA_water_level")
+# The record and its download cache moved into the data tree 2026-09-12;
+# only this downloader lives under scripts/. Anchored on this file, since
+# the two literals here were drive-rooted and had never resolved.
+_WATER_LEVEL = (Path(__file__).resolve().parents[4] / "data"
+                / "hatteras_init" / "3-env-forcings" / "water_level")
+CACHE_DIR   = _WATER_LEVEL / "noaa_cache_8651370"
+OUTPUT_DIR  = _WATER_LEVEL
 # Derived from BEGIN/END so the filename always states its own span. This is a
 # guard, not cosmetics: the previous broken CSV was named for the full span, and
 # writing a different span under that name is how a stale file gets read as fresh.
