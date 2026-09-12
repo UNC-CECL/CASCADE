@@ -34,7 +34,13 @@ CS_STD_COL    = "std_lrr"
 DOMAIN_MIN = 1
 DOMAIN_MAX = 90
 
-OUTPUT_DIR = r"/scripts/input_prep/5-scr/CoastSat/two_period_comparison"
+# Anchored on this file 2026-09-12. The literals here were
+# drive-rooted and had never resolved; the data they name also
+# moved out of the scripts tree on that date.
+from pathlib import Path as _Path
+_SCR_DATA = (_Path(__file__).resolve().parents[4] / "data"
+             / "hatteras_init" / "5-scr")
+OUTPUT_DIR = str(_SCR_DATA / "coastsat_lrr" / "two_period_comparison")
 
 # ============================================================
 # IMPORTS

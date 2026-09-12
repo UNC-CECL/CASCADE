@@ -35,7 +35,13 @@ DOMAINS_GEOJSON   = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_prepe
 TRANSECTS_GEOJSON = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\CoastSat_transect_layer.geojson"
 METRICS_CSV       = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\shoreline_change_patterns\classification_output\domain_trajectory_metrics.csv"
 OUTLINE_SHP       = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\figure_making\map_elements\hatteras_outline\HAT_island_outline.shp"
-OUTPUT_DIR        = r"/scripts/input_prep/5-scr/shoreline_change_patterns/map_output"
+# Anchored on this file 2026-09-12. The literals here were
+# drive-rooted and had never resolved; the data they name also
+# moved out of the scripts tree on that date.
+from pathlib import Path as _Path
+_SCR_DATA = (_Path(__file__).resolve().parents[4] / "data"
+             / "hatteras_init" / "5-scr")
+OUTPUT_DIR        = str(_SCR_DATA / "shoreline_change_patterns" / "map_output")
 
 # ── Basemap choice ────────────────────────────────────────────────────────────
 USE_SATELLITE = True   # True = Esri satellite tiles; False = plain ocean blue

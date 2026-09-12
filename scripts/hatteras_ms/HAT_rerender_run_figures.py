@@ -89,7 +89,9 @@ from hatteras_site_config import (  # noqa: E402
     HATTERAS_ANNOTATIONS, HATTERAS_DOMAINS)
 
 RAW_RUNS = REPO / "output" / "raw_runs"
-COASTSAT_BASE_DIR = REPO / "scripts" / "input_prep" / "5-scr" / "CoastSat"
+# Moved out of the scripts tree 2026-09-12: the rate fits are DATA and
+# the model reads them. Resolve through hat_observed_rates.py in new code.
+COASTSAT_BASE_DIR = REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr"
 RAW_OFFSET_DIR = REPO / "data" / "hatteras_init" / "2-brie-offset" / "raw_offsets"
 
 # These four MUST match section 8/9 of HAT_hindcast_1984_2024.py. They are

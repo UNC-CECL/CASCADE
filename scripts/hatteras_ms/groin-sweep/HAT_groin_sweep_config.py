@@ -255,7 +255,10 @@ def be_gis1_default(period):
 FIT_GIS_MIN, FIT_GIS_MAX = 1, 12
 FIT_DOMAINS_GIS = tuple(range(FIT_GIS_MIN, FIT_GIS_MAX + 1))
 
-COASTSAT_DIR = SCRIPTS_DIR / "input_prep" / "5-scr" / "CoastSat"
+# Moved out of the scripts tree 2026-09-12: the rate fits are DATA and
+# the model reads them. Resolve through hat_observed_rates.py in new code.
+COASTSAT_DIR = (SCRIPTS_DIR.parent / "data" / "hatteras_init" / "5-scr"
+                / "coastsat_lrr")
 
 # The values the M-only sweep carried as a literal table. Kept ONLY as an
 # assertion target: if computing them from the transect file no longer

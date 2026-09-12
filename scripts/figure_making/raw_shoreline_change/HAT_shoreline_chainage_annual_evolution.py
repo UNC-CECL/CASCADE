@@ -46,10 +46,11 @@ from tqdm import tqdm
 ROOT_DATA_DIR = str(Path(__file__).resolve().parents[3]
                     / "data" / "hatteras_init" / "5-scr" / "coastsat_timeseries")
 # "input_preperation" is the pre-2026 folder name; the lookup now lives
-# under scripts/input_prep/5-scr/CoastSat/ (2026-09-10).
-LOOKUP_CSV    = str(Path(__file__).resolve().parents[2]
-                    / "input_prep" / "5-scr" / "CoastSat"
-                    / "transect_domain_lookup.csv")
+# under data/hatteras_init/5-scr/transect_domains/ (moved out of the
+# scripts tree 2026-09-12; hat_observed_rates.py resolves it).
+LOOKUP_CSV    = str(Path(__file__).resolve().parents[3]
+                    / "data" / "hatteras_init" / "5-scr"
+                    / "transect_domains" / "transect_domain_lookup.csv")
 OUTPUT_DIR    = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\figure_making\raw_shoreline_change\annual_output"
 SITE_FILTER   = "usa_NC"
 

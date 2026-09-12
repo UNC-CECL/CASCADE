@@ -37,7 +37,14 @@ Dependencies
 # GeoJSON downloaded from coastsat.space → "transects" button
 # the script will automatically
 # clip it to your study area using the domain bounding box.
-TRANSECT_GEOM_PATH = r"/scripts/input_prep/5-scr/CoastSat/CoastSat_transect_layer.geojson"
+# Anchored on this file 2026-09-12. The literals here were
+# drive-rooted and had never resolved; the data they name also
+# moved out of the scripts tree on that date.
+from pathlib import Path as _Path
+_SCR_DATA = (_Path(__file__).resolve().parents[4] / "data"
+             / "hatteras_init" / "5-scr")
+TRANSECT_GEOM_PATH = str(_SCR_DATA / "transect_domains"
+                         / "CoastSat_transect_layer.geojson")
 
 # Column in the transect file that holds the transect ID
 # From the global CoastSat GeoJSON this is typically "id"
@@ -45,14 +52,14 @@ TRANSECT_ID_COL = "id"
 
 # --- CASCADE domain geometry ---
 # GeoJSON exported from ArcGIS
-DOMAIN_GEOM_PATH = r"/scripts/input_prep/5-scr/CoastSat/HAT_domains.json"
+DOMAIN_GEOM_PATH = str(_SCR_DATA / "transect_domains" / "HAT_domains.json")
 
 # Column in the domain file that holds the domain number
 # From your attribute table this is "domain_id"
 DOMAIN_ID_COL = "domain_id"
 
 # --- Output ---
-OUTPUT_DIR = r"/scripts/input_prep/5-scr/CoastSat"
+OUTPUT_DIR = str(_SCR_DATA / "transect_domains")
 LOOKUP_CSV = "transect_domain_lookup.csv"
 MAP_PNG    = "transect_domain_map.png"
 

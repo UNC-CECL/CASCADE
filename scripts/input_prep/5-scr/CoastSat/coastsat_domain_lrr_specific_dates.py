@@ -58,7 +58,13 @@ This script supports two mutually exclusive filtering modes.
 LOOKUP_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\transect_domain_lookup.csv"
 
 # Root folder containing all site subfolders
-ROOT_DATA_DIR = r"/scripts/input_prep/5-scr/CoastSat/coastsat_timeseries"
+# Anchored on this file 2026-09-12. The literals here were
+# drive-rooted and had never resolved; the data they name also
+# moved out of the scripts tree on that date.
+from pathlib import Path as _Path
+_SCR_DATA = (_Path(__file__).resolve().parents[4] / "data"
+             / "hatteras_init" / "5-scr")
+ROOT_DATA_DIR = str(_SCR_DATA / "coastsat_timeseries")
 
 # Only include subfolders whose names contain this string. "" = all.
 SITE_FILTER = "usa_NC"
@@ -108,7 +114,8 @@ END_DATE   = "2019-12-31"
 MIN_OBS = 2
 
 # Output directory
-OUTPUT_DIR = r"/scripts/input_prep/5-scr/CoastSat\1997_2019_specific_dates"
+OUTPUT_DIR = str(_SCR_DATA / "coastsat_lrr" / "old_time_periods"
+                 / "1997_2019_specific_dates")
 
 # CASCADE buffer domains to EXCLUDE from summaries
 BUFFER_DOMAINS = []

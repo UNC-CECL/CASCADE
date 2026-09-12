@@ -24,26 +24,48 @@ Edit the CONFIG section below, then run:
 # ============================================================
 
 # Path to the lookup table produced by coastsat_domain_mapping.py
-LOOKUP_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\transect_domain_lookup.csv"
+# THE WINDOW IS GIVEN AS A PERIOD, and every path is anchored on this file
+# (2026-09-11). The three literals here were a machine-specific absolute
+# path into "input_preperation", a tree that no longer exists, plus two
+# drive-rooted paths from before the 5-scr rename -- none of them resolved.
+#
+#     python coastsat_domain_lrr_fixed.py --start-year 1996 --end-year 2010
+import argparse as _argparse
+from pathlib import Path as _Path
+
+_REPO = _Path(__file__).resolve().parents[4]
+_HERE = _Path(__file__).resolve().parent
+
+_ap = _argparse.ArgumentParser(
+    description="CoastSat domain-level LRR for one hindcast window")
+_ap.add_argument("--start-year", type=int, required=True)
+_ap.add_argument("--end-year", type=int, required=True)
+_args = _ap.parse_args()
+
+_PERIOD_TAG = "{0}_{1}".format(_args.start_year, _args.end_year)
+
+_SCR_DATA = _REPO / "data" / "hatteras_init" / "5-scr"
+LOOKUP_CSV = str(_SCR_DATA / "transect_domains" / "transect_domain_lookup.csv")
 
 # Root folder containing all site subfolders (e.g. usa_NC_0032_timeseries, usa_NC_0033_timeseries, ...)
 # The script will automatically find every CSV in every subfolder one level down.
 # Example: r"C:/Users/hahenry/Downloads"
-ROOT_DATA_DIR = r"/scripts/input_prep/5-scr/CoastSat/coastsat_timeseries"
+ROOT_DATA_DIR = str(_REPO / "data" / "hatteras_init" / "5-scr"
+                    / "coastsat_timeseries")
 
 # Optional: only include subfolders whose names contain this string.
 # Set to "" to include ALL subfolders under ROOT_DATA_DIR.
 SITE_FILTER = "usa_NC"    # e.g. "usa_NC" to match usa_NC_0032_timeseries, usa_NC_0033_timeseries, etc.
 
 # Date range for LRR calculation
-START_DATE = "2004-01-01"
-END_DATE   = "2024-12-31"
+START_DATE = "{0}-01-01".format(_args.start_year)
+END_DATE   = "{0}-12-31".format(_args.end_year)
 
 # Minimum observations per transect to include it in domain summaries
 MIN_OBS = 3
 
 # Output directory
-OUTPUT_DIR = r"/scripts/input_prep/5-scr/CoastSat/2004_2024"
+OUTPUT_DIR = str(_SCR_DATA / "coastsat_lrr" / _PERIOD_TAG)
 
 # CASCADE buffer domains to EXCLUDE from summaries
 # (e.g., the 15 buffer domains on each end of your 90+30 setup)

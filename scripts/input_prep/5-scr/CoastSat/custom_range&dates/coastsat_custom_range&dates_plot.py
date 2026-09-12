@@ -55,7 +55,13 @@ TRANSECT_IDS_EXPLICIT = [
 # ---- Data location ----
 # Root folder containing site subfolders (e.g. usa_NC_0032_timeseries/).
 # The script searches all subfolders one level deep.
-ROOT_DATA_DIR = r"/scripts/input_prep/CoastSat/coastsat_timeseries"
+# Anchored on this file 2026-09-12. The literals here were
+# drive-rooted and had never resolved; the data they name also
+# moved out of the scripts tree on that date.
+from pathlib import Path as _Path
+_SCR_DATA = (_Path(__file__).resolve().parents[5] / "data"
+             / "hatteras_init" / "5-scr")
+ROOT_DATA_DIR = str(_SCR_DATA / "coastsat_timeseries")
 
 # Optional: only search subfolders whose names contain this string.
 # Set to "" to search ALL subfolders under ROOT_DATA_DIR.
@@ -90,7 +96,7 @@ PLOT_TIMESERIES = True
 ANNOTATE_BARS = True
 
 # ---- Output ----
-OUTPUT_DIR = r"/scripts/input_prep/5-scr/CoastSat\custom\buxton_2000_2025"
+OUTPUT_DIR = str(_SCR_DATA / "coastsat_lrr" / "custom" / "buxton_2000_2025")
 
 # ============================================================
 # IMPORTS

@@ -48,9 +48,15 @@ Usage
 # ============================================================
 
 LOOKUP_CSV    = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\transect_domain_lookup.csv"
-ROOT_DATA_DIR = r"/scripts/input_prep/5-scr/CoastSat\coastsat_timeseries"
+# Anchored on this file 2026-09-12. The literals here were
+# drive-rooted and had never resolved; the data they name also
+# moved out of the scripts tree on that date.
+from pathlib import Path as _Path
+_SCR_DATA = (_Path(__file__).resolve().parents[4] / "data"
+             / "hatteras_init" / "5-scr")
+ROOT_DATA_DIR = str(_SCR_DATA / "coastsat_timeseries")
 SITE_FILTER   = "usa_NC"
-OUTPUT_DIR    = r"/scripts/input_prep/5-scr/CoastSat_timeseries/results"
+OUTPUT_DIR    = str(_SCR_DATA / "coastsat_timeseries_lrr")
 
 # --- Time periods: (file_tag, figure_title, file_stem, start_date, end_date) ---
 PERIODS = [

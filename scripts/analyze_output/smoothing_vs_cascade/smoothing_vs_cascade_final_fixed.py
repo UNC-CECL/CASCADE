@@ -47,10 +47,12 @@ from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E40
 # ============================================================
 
 # --- CoastSat CSVs ---
-COASTSAT_CSV_1984_2004 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr"
-                             / "CoastSat" / "1984_2004" / "domain_lrr_summary.csv")
-COASTSAT_CSV_2004_2024 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr"
-                             / "CoastSat" / "2004_2024" / "domain_lrr_summary.csv")
+# Moved out of the scripts tree 2026-09-12: the rate fits are DATA and
+# the model reads them. Resolve through hat_observed_rates.py in new code.
+COASTSAT_CSV_1984_2004 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr"
+                             / "coastsat_lrr" / "1984_2004" / "domain_lrr_summary.csv")
+COASTSAT_CSV_2004_2024 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr"
+                             / "coastsat_lrr" / "2004_2024" / "domain_lrr_summary.csv")
 
 CS_DOMAIN_COL = "domain_number"
 CS_LRR_COL    = "mean_lrr"

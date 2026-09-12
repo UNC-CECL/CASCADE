@@ -71,8 +71,10 @@ PROJECT_BASE_DIR = next(
 )
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
 
+# Moved out of the scripts tree 2026-09-12: the rate fits are DATA and
+# the model reads them. Resolve through hat_observed_rates.py in new code.
 COASTSAT_BASE_DIR = os.path.join(
-    PROJECT_BASE_DIR, "scripts", "input_prep", "5-scr", "CoastSat"
+    PROJECT_BASE_DIR, "data", "hatteras_init", "5-scr", "coastsat_lrr"
 )
 
 # Where comparison figures are saved. Products belong under output/, never
