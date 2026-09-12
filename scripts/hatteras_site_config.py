@@ -1152,6 +1152,24 @@ HATTERAS_BE_EDGE_ONLY = {
     # GIS 1 here; it is not evidence about Cape Point, which the model does not
     # represent (the calibrated fits are 0.0 through GIS 2-7).
     #
+    # SOLVED ON 1984-start/v2, WHILE THE 1984 PRESET IS ON v1 -- and that
+    # turns out not to matter, which was worth one run rather than an
+    # assumption either way (2026-09-12). Spending this pair on v1, the island
+    # every published 1984 number was fitted on:
+    #
+    #            GIS 1 residual   GIS 90 residual
+    #     v2          +0.003           +0.003
+    #     v1          +0.048           +0.003
+    #
+    # 0.048 m/yr is a third of the -0.145 that stands unclosed at GIS 1 in
+    # period 2, so these values transfer across the version within the
+    # tolerance the published periods already accept. They do NOT need
+    # re-solving when the 95 remaining v1 runs are moved to v2.
+    #
+    # This says nothing about the INTERIOR. 65 of 90 domains differ in shape
+    # between the two PRODUCTS, and this is a statement about two VERSIONS of
+    # one product at two boundary cells. Do not generalise it.
+    #
     # Solve reproduced with:
     #   scripts/input_prep/7-source-sink/HAT_edge_domain_solve.py --period 1996
     1996: (+32.2, +10.0),
