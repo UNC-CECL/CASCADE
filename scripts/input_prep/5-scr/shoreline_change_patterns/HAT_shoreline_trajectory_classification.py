@@ -65,8 +65,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[4]
 
 ROOT_DATA_DIR = str(PROJECT_ROOT / "data" / "hatteras_init" / "5-scr"
                     / "coastsat_timeseries")
-LOOKUP_CSV    = str(PROJECT_ROOT / "scripts" / "input_prep" / "5-scr" / "CoastSat" / "transect_domain_lookup.csv")
-OUTPUT_DIR    = str(PROJECT_ROOT / "scripts" / "input_prep" / "5-scr" / "shoreline_change_patterns" / "classification_output")
+# Moved out of the scripts tree 2026-09-12: the rate fits are DATA and
+# the model reads them. Resolve through hat_observed_rates.py in new code.
+LOOKUP_CSV    = str(PROJECT_ROOT / "data" / "hatteras_init" / "5-scr"
+                    / "transect_domains" / "transect_domain_lookup.csv")
+OUTPUT_DIR    = str(PROJECT_ROOT / "data" / "hatteras_init" / "5-scr"
+                    / "shoreline_change_patterns" / "classification_output")
 
 SITE_FILTER = "usa_NC"
 

@@ -98,7 +98,10 @@ from hatteras_site_config import (                            # noqa: E402
 )
 
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
-COASTSAT_BASE = SCRIPTS_DIR / "input_prep" / "5-scr" / "CoastSat"
+# Moved out of the scripts tree 2026-09-12: the rate fits are DATA and
+# the model reads them. Resolve through hat_observed_rates.py in new code.
+COASTSAT_BASE = (SCRIPTS_DIR.parent / "data" / "hatteras_init" / "5-scr"
+                 / "coastsat_lrr")
 DEFAULT_OUT = (PROJECT_BASE_DIR / "output" / "comparisons"
                / "scenario_grid_by_preset.png")
 

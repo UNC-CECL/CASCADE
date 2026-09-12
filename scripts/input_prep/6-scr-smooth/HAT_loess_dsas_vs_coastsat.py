@@ -56,9 +56,9 @@ DSAS_LRR_COL    = "MEAN_LRR"
 DSAS_STD_COL    = "STD_LRR"
 
 # --- CoastSat CSVs ---
-COASTSAT_CSV_1978_1997 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr" / "CoastSat" / "old_time_periods"
+COASTSAT_CSV_1978_1997 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "old_time_periods"
                           / "1978_1997" / "domain_lrr_summary.csv")
-COASTSAT_CSV_1997_2019 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr" / "CoastSat" / "old_time_periods"
+COASTSAT_CSV_1997_2019 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "old_time_periods"
                           / "1997_2019" / "domain_lrr_summary.csv")
 
 CS_DOMAIN_COL = "domain_number"

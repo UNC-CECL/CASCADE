@@ -60,7 +60,13 @@ COLOR_STRONG_ACCRETION = "#1a6ea8"   # deep blue
 SHOW_CALLOUTS = True
 
 # ---- Output ----
-OUTPUT_DIR  = r"/scripts/input_prep/5-scr/CoastSat\custom_range&dates\buxton_2000_2025"
+# Anchored on this file 2026-09-12. The literals here were drive-rooted
+# and had never resolved; the data they name also moved out of the
+# scripts tree on that date.
+from pathlib import Path as _Path
+_SCR_DATA = (_Path(__file__).resolve().parents[5] / "data"
+             / "hatteras_init" / "5-scr")
+OUTPUT_DIR  = str(_SCR_DATA / "coastsat_lrr" / "custom" / "buxton_2000_2025")
 OUTPUT_NAME = "shoreline_change_SIMPLE.png"   # filename for the saved figure
 DPI         = 180
 

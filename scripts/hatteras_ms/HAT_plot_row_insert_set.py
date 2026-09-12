@@ -66,7 +66,9 @@ from cascade_pipeline.hindcast import build_target_table  # noqa: E402
 SET = "row-insert"
 RAW_RUNS = REPO / "output" / "raw_runs"
 RUN_INDEX = RAW_RUNS / "run_index.csv"
-COASTSAT_BASE_DIR = REPO / "scripts" / "input_prep" / "5-scr" / "CoastSat"
+# Moved out of the scripts tree 2026-09-12: the rate fits are DATA and
+# the model reads them. Resolve through hat_observed_rates.py in new code.
+COASTSAT_BASE_DIR = REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr"
 OUT = REPO / "output" / "experiments" / "row_insert_set"
 PERIOD, PRESET = "1984_2004", "calibBE"
 START_YEAR = 1984

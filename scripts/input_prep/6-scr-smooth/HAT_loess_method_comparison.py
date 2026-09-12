@@ -61,9 +61,9 @@ PROJECT_BASE_DIR = next(
 TRANSECT_X_AXIS = "along_coast_m"   # "along_coast_m" | "transect_id"
 
 # ── Domain-mode inputs ───────────────────────────────────────
-DOMAIN_CSV_1984_2004 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr" / "CoastSat"
+DOMAIN_CSV_1984_2004 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr"
                         / "1984_2004" / "domain_lrr_summary.csv")
-DOMAIN_CSV_2004_2024 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr" / "CoastSat"
+DOMAIN_CSV_2004_2024 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr"
                         / "2004_2024" / "domain_lrr_summary.csv")
 CS_DOMAIN_COL = "domain_number"
 CS_LRR_COL    = "mean_lrr"
@@ -71,9 +71,9 @@ CS_STD_COL    = "std_lrr"
 
 # ── Transect-mode inputs ─────────────────────────────────────
 # Point to your transect_lrr_full.csv files for each period
-TRANSECT_CSV_1984_2004 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr" / "CoastSat"
+TRANSECT_CSV_1984_2004 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr"
                           / "1984_2004" / "transect_lrr_full.csv")
-TRANSECT_CSV_2004_2024 = str(PROJECT_BASE_DIR / "scripts" / "input_prep" / "5-scr" / "CoastSat"
+TRANSECT_CSV_2004_2024 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr"
                           / "2004_2024" / "transect_lrr_full.csv")
 
 # Column names in your transect CSV (transect_lrr_full.csv)
