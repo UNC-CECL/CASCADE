@@ -34,10 +34,44 @@ from datetime import datetime, timedelta
 # =============================================================================
 # user inputs
 # =============================================================================
-start_time = '2004-01-01 00:00:00'  # date to start the storms
-end_time = '2024-12-31 23:00:00'    # date to end the storms
-water_levels_file = r"/scripts/input_prep/NOAA_water_level/8651370_DUCK_19840101_20241231_NAVD.csv"  # file that contains the water levels from NOAA gauge
-wis_file = r"/data/hatteras_init/storms/WIS_raw_data/ST63228-Generic_Export-20260427T11T11_48.csv"  # file that contains the wave height and period from WIS gauge
+# THE WINDOW IS GIVEN ONCE, AS A PERIOD (2026-09-11). Everything below that
+# names a year -- the dates, the output directory, the file name -- is derived
+# from it, so they cannot disagree. In the committed state they did: save_dir
+# said 1984_2004 while save_name said 2004_2024, a pair that cannot both be
+# right about what was produced.
+#
+# The two source paths were drive-rooted literals from before the tree was
+# reorganised ("/scripts/...", "/data/hatteras_init/storms/..."), so they
+# resolved only if the interpreter happened to start at the drive root. They
+# are anchored on this file now, like every other path in the input tree.
+#
+#     python historical_storm_creation_v3_HAT.py --start-year 1996 --end-year 2010
+import argparse as _argparse
+from pathlib import Path as _Path
+
+_REPO = _Path(__file__).resolve().parents[4]
+
+_ap = _argparse.ArgumentParser(
+    description="CASCADE storm series for one hindcast window")
+_ap.add_argument("--start-year", type=int, required=True,
+                 help="period start, the year that becomes model step 1")
+_ap.add_argument("--end-year", type=int, required=True,
+                 help="period end. The model loop runs start..end-1, so the "
+                      "last storm year the run can spend is end-1")
+_args = _ap.parse_args()
+
+START_YEAR = _args.start_year
+END_YEAR = _args.end_year
+PERIOD_TAG = "{0}_{1}".format(START_YEAR, END_YEAR)
+
+start_time = '{0}-01-01 00:00:00'.format(START_YEAR)  # date to start the storms
+end_time = '{0}-12-31 23:00:00'.format(END_YEAR)      # date to end the storms
+water_levels_file = str(_REPO / "data" / "hatteras_init" / "3-env-forcings"
+                        / "water_level"
+                        / "8651370_DUCK_19840101_20241231_NAVD.csv")  # NOAA gauge
+wis_file = str(_REPO / "data" / "hatteras_init" / "3-env-forcings" / "storms"
+               / "WIS_raw_data"
+               / "ST63228-Generic_Export-20260427T11T11_48.csv")  # WIS gauge
 t_name_water = "t"       # name of the column that contains the datetimes in the water levels file
 water_name = "v"         # name of the column that contains the water levels [m NAVD88] in the water levels file
 t_name_wis = "time"  # name of the column that contains the datetimes in the WIS file
@@ -50,8 +84,10 @@ MHW = 0.36              # conversion from NAVD88 to MHW [m]: 0 m NAVD88 = X m MH
 min_storm_dur = 8        # minimum duration that is considered a storm event [hrs]
 max_storm_dur = 72      # maximum duration to include in storm events [hrs]
 save_dfs = True         # determine whether to save the dataframes as csv and npy files
-save_dir = r"/data/hatteras_init/storms/hindcast_storms/1984_2004"  # directory (no file name or extension) to save the storm files
-save_name = "2004_2024_storms_v3_72"  # name of saved cascade storm files, if saved
+save_dir = str(_REPO / "data" / "hatteras_init" / "3-env-forcings" / "storms"
+               / "hindcast_storms" / PERIOD_TAG)  # derived from the window
+save_name = "{0}_storms_v3_72".format(PERIOD_TAG)  # derived from the window
+_Path(save_dir).mkdir(parents=True, exist_ok=True)
 
 
 # -----------------------------------------------------------------------------
@@ -264,7 +300,8 @@ def create_storms(
     max_storm_dur=240,
     save_dfs=True,
     save_dir="",
-    save_name=""
+    save_name="",
+    window_start_year=None
 ):
     
     """    
@@ -286,6 +323,9 @@ def create_storms(
         directory to save the storm files. if blank, use the current working directory
     save_name: string, optional
         name of this storm run
+    window_start_year: int, optional
+        calendar year that becomes model step 1. None anchors on the first
+        year that holds a storm, which is what this script did before 2026-09-11.
     
     """
     # -----------------------------------------------------------------------------
@@ -366,9 +406,23 @@ def create_storms(
     # =========================
     # CONVERT YEAR → TIME (CASCADE)
     # =========================
+    # MODEL STEP 1 IS THE WINDOW'S FIRST YEAR, not the first year that happens
+    # to hold a storm (2026-09-11). Anchoring on the data means a window whose
+    # opening year is quiet silently shifts the WHOLE series one year earlier,
+    # and nothing downstream can detect it: CASCADE indexes storms by step, so
+    # the run would simply spend the wrong year's storms with no error.
+    #
+    # window_start_year=None keeps the old data-anchored behaviour, so this
+    # reproduces the committed series exactly where the first year is stormy --
+    # which is the case for both of the periods already on disk.
     if not storms_df.empty:
-        start_year = storms_df["calendar_year"].min()
-        storms_df["time"] = storms_df["calendar_year"] - start_year + 1
+        first_storm_year = int(storms_df["calendar_year"].min())
+        anchor = first_storm_year if window_start_year is None             else int(window_start_year)
+        if anchor != first_storm_year:
+            print("NOTE: no storm in {0}; anchoring model step 1 on the window "
+                  "start anyway, so step 1 is {0} and the first storm falls at "
+                  "step {1}.".format(anchor, first_storm_year - anchor + 1))
+        storms_df["time"] = storms_df["calendar_year"] - anchor + 1
     else:
         storms_df["time"] = pd.Series(dtype=float)
 
@@ -424,5 +478,6 @@ create_storms(
     max_storm_dur=max_storm_dur,
     save_dfs=save_dfs,
     save_dir=save_dir,
-    save_name=save_name
+    save_name=save_name,
+    window_start_year=START_YEAR
 )

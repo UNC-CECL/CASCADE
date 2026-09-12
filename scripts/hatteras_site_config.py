@@ -160,6 +160,67 @@ HATTERAS_PERIODS = {
         "enable_nourishment": True,  # historical BN injected per-year in the time loop
         "nourishment_volume": 100,  # m^3/m passed to Cascade init
     },
+
+    # TWO MORE PERIODS, ADDED 2026-09-11. They OVERLAP the two above rather
+    # than partitioning the record: four hindcast windows over one island, not
+    # a timeline cut into quarters.
+    #
+    # THE END YEAR IS A BOUNDARY, NOT A SIMULATED YEAR. run_cascade_simulation
+    # spends start..start+run_years-1, so 1996 runs 1996-2009 and 2010 runs
+    # 2010-2023 -- the two new windows tile without overlapping each other, and
+    # the 2010 survey is both the first one's target and the second one's start.
+    #
+    # THEIR TOPOGRAPHY IS SHARED, NOT NEW (Hannah, 2026-09-11). 1996 reads
+    # 1984-start, whose DEM carries the 1996 ALACE graft -- the survey nearest
+    # that start, and a better match for it than for 1984. 2010 reads
+    # 2004-start, built from the 2009 and 2014 lidar, which is the closest
+    # vintage match of any period to its own start year.
+    1996: {
+        "end_year": 2010,
+        # 0.00402 m/yr fitted over 1996-2010 on the Duck gauge; the other three
+        # periods are stored at this precision too.
+        "sea_level_rise_rate": 0.004,
+        "storm_file": (
+            "3-env-forcings/storms/hindcast_storms/1996_2010/"
+            "1996_2010_storms_v3_72.npy"),
+        # DERIVED, NOT SURVEYED: built from the 1997 dune line, the nearest
+        # island-wide survey. See 2-brie-offset/raw_offsets/PROVENANCE.md.
+        "island_offset_file": (
+            "2-brie-offset/hindcast_1996/Island_Dune_Offsets_1996_PADDED_120.csv"),
+        # DERIVED: the 1984 setbacks with the 1989 Pea Island relocation
+        # applied, since that event precedes 1996 and the 1999 one does not.
+        # No NC-12 line of 1996 vintage exists. See that folder's PROVENANCE.md.
+        "road_setback_file": (
+            "4-mgmt-forcing/road_offset/dunestart_offset/1996/"
+            "RoadSetback_1996_dunestart.csv"),
+        "topo_product": YEAR_PRODUCT[1996],
+        # No project in HATTERAS_NOURISHMENT_PROJECTS falls in 1996-2009.
+        "enable_nourishment": False,
+        "nourishment_volume": 0,  # m^3/m
+    },
+    2010: {
+        "end_year": 2024,
+        # 0.00651 m/yr fitted over 2010-2024. It rounds up where 2004-2024
+        # rounds down (0.00639), so the two differ by more in this table than
+        # in the gauge record.
+        "sea_level_rise_rate": 0.007,
+        "storm_file": (
+            "3-env-forcings/storms/hindcast_storms/2010_2024/"
+            "2010_2024_storms_v3_72.npy"),
+        # NOT BUILT YET: waiting on a digitised 2010 dune line. Every other
+        # input for this period exists, so a run fails here and nowhere else.
+        "island_offset_file": (
+            "2-brie-offset/hindcast_2010/Island_Dune_Offsets_2010_PADDED_120.csv"),
+        # A COPY of the 2004 file: same topography product, same road line, and
+        # no relocation in the record between the two dates.
+        "road_setback_file": (
+            "4-mgmt-forcing/road_offset/dunestart_offset/2010/"
+            "RoadSetback_2010_dunestart.csv"),
+        "topo_product": YEAR_PRODUCT[2010],
+        # Rodanthe 2014 and both 2022 projects fall inside 2010-2023.
+        "enable_nourishment": True,
+        "nourishment_volume": 100,  # m^3/m passed to Cascade init
+    },
 }
 
 # =============================================================================
@@ -189,6 +250,8 @@ HATTERAS_PERIODS = {
 HATTERAS_BE_RATES_ZERO = {
     1984: {},
     2004: {},
+    1996: {},
+    2010: {},
 }
 
 # GIS domains carrying the edge-only preset: the first and last REAL domains.
@@ -1043,6 +1106,66 @@ HATTERAS_BE_RATES_EDGE = {
     for period, rates in HATTERAS_BE_RATES_CALIBRATED.items()
 }
 
+# PERIODS WITH NO CALIBRATED FIT TO SLICE GIS 1 OUT OF (2026-09-11).
+#
+# The comprehension above takes edgeBE's GIS 1 from the calibrated preset, so
+# re-solving one moves both and they cannot drift apart. That works only where
+# a calibrated fit EXISTS. The periods added 2026-09-11 have none: they are
+# being solved edge-first, by the decision to do zero and edge before the
+# interior. Their two end values are therefore carried explicitly and merged
+# in below.
+#
+# WHEN A CALIBRATED FIT ARRIVES for one of these, delete its entry here in the
+# same commit that adds the calibrated one. Leaving both would give GIS 1 two
+# homes, and the merge below would quietly win.
+HATTERAS_BE_EDGE_ONLY = {
+    # (GIS 1, GIS 90), m/yr. SOLVED 2026-09-11, three Newton steps.
+    #
+    # Fit exactly as the 1984 and 2004 end values were: model lrr_m_yr against
+    # the target table's target_lrr_m_yr, on the edgeBE / road_bdm / groin-off
+    # base run, with the same estimator on both sides of the residual. GIS 1 is
+    # graded against the RAW per-domain mean and GIS 90 against the LOESS-10
+    # value, because that is the splice the rate figure draws.
+    #
+    #   step   GIS 1                          GIS 90
+    #     0    imposed  0.0  residual -2.930  imposed  0.0  residual -1.316
+    #     1    imposed 27.9  residual -0.480  imposed 12.5  residual +0.288
+    #     2    imposed 33.4  residual +0.125  imposed 10.3  residual +0.034
+    #     3    imposed 32.2  residual +0.003  imposed 10.0  residual +0.003
+    #
+    # THE GAINS SIT INSIDE THE RANGE THE OTHER FOUR CASES SPAN. The local
+    # secant through steps 0-1 gave d(LRR)/d(BE) = 0.088 at GIS 1 and 0.128 at
+    # GIS 90, against 0.092 to 0.123 for the solved 1984 and 2004 cases. So the
+    # tenth-of-what-you-impose behaviour holds here too, and these values are
+    # again about ten times the misfit they close rather than a sediment
+    # budget. Read them as boundary-artefact absorbers, nothing more.
+    #
+    # A THIRD STEP WAS TAKEN, where 1984 and 2004 stopped at two. Not because
+    # two was wrong: step 2 left +0.125 and +0.034, comparable to the -0.145
+    # that stands at GIS 1 in period 2. It cost two minutes and removed the
+    # question. Do not read the tighter convergence as a better-determined
+    # number -- the target it converged onto carries the same uncertainty.
+    #
+    # BOTH SIGNS ARE POSITIVE, unlike 1984, whose GIS 1 is -42.6. The southern
+    # boundary needs sand added over 1996-2010 where it needed sand removed
+    # over 1984-2004. That follows the observed target, which is +3.23 m/yr at
+    # GIS 1 here; it is not evidence about Cape Point, which the model does not
+    # represent (the calibrated fits are 0.0 through GIS 2-7).
+    #
+    # Solve reproduced with:
+    #   scripts/input_prep/7-source-sink/HAT_edge_domain_solve.py --period 1996
+    1996: (+32.2, +10.0),
+}
+
+for _period, (_d1, _d90) in HATTERAS_BE_EDGE_ONLY.items():
+    if _period in HATTERAS_BE_RATES_EDGE:
+        raise ValueError(
+            f"period {_period} has both a calibrated fit and an entry in "
+            f"HATTERAS_BE_EDGE_ONLY, so GIS 1 has two homes. Delete the "
+            f"edge-only entry -- the calibrated preset is the one the "
+            f"comprehension above keeps in step.")
+    HATTERAS_BE_RATES_EDGE[_period] = {1: _d1, 90: _d90}
+
 for _period, _rates in HATTERAS_BE_RATES_EDGE.items():
     _absent = [gis for gis in HATTERAS_BE_EDGE_DOMAINS if gis not in _rates]
     if _absent:
@@ -1116,6 +1239,41 @@ def resolve_be_preset(name):
             f"{sorted(HATTERAS_BE_PRESETS)} "
             f"(deprecated aliases: {sorted(HATTERAS_BE_PRESET_ALIASES)})")
     return canonical, HATTERAS_BE_PRESETS[canonical]
+
+
+def be_rates(name, start_year):
+    """The per-domain rates one preset supplies for one period.
+
+    WHY THIS IS NOT A PLAIN DICT LOOKUP. A period can be WIRED before it is
+    CALIBRATED, and since 2026-09-11 two of them are: all four periods resolve
+    their forcing files, but only 1984 and 2004 have solved edge and calibrated
+    presets. The other two carry zeroBE alone until their end domains are
+    re-solved against their OWN CoastSat target.
+
+    Indexing the preset dict directly gives a bare KeyError on the year, which
+    reads like a typo in the settings file rather than what it is -- a fit that
+    has not been done yet. This says which, and what would fix it.
+
+    Args:
+        name: A canonical preset key or a deprecated alias.
+        start_year: The period's start year.
+
+    Returns:
+        A sparse {gis_id: rate_m_yr} dict. An absent domain is 0.0 m/yr.
+
+    Raises:
+        ValueError: If the preset is unknown, or is not solved for that period.
+    """
+    canonical, by_period = resolve_be_preset(name)
+    if start_year not in by_period:
+        raise ValueError(
+            f"the {canonical} preset has no rates for the {start_year} "
+            f"period; it is solved for {sorted(by_period)}. These are fitted "
+            f"per period against that period's own observed rates, so another "
+            f"period's numbers cannot stand in for them. Run {start_year} "
+            f"under zeroBE, or solve its end domains first -- see "
+            f"HATTERAS_BE_EDGE_D90 and the end-domain note above it.")
+    return by_period[start_year]
 
 # =============================================================================
 # NC-12 roadway

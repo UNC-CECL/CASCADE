@@ -368,7 +368,8 @@ class RunConfig:
     """The values that select which run the hindcast performs.
 
     Attributes:
-        start_year: 1984 or 2004; selects a period from HATTERAS_PERIODS.
+        start_year: A key of HATTERAS_PERIODS -- 1984, 1996, 2004 or 2010.
+            Selects the period, and every forcing that follows from it.
         source_sink_preset: "zeroBE", "edgeBE" or "calibBE".
         scenario: A key of the SCENARIOS table in section 3.
         relocations: Overrides the scenario's historical-relocation switch.

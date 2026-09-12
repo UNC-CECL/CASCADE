@@ -35,7 +35,11 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _BRIE_ROOT = _PROJECT_ROOT / "data" / "hatteras_init" / "2-brie-offset"
 
 _ap = _argparse.ArgumentParser(description="island dune offsets for one hindcast start")
-_ap.add_argument("--year", type=int, default=2004, choices=(1984, 2004))
+# Four hindcast starts since 2026-09-11. A year is admissible here when
+# raw_offsets/ holds a file under that name -- for 1996 that file is a copy
+# of the 1997 survey, recorded in raw_offsets/PROVENANCE.md.
+_ap.add_argument("--year", type=int, default=2004,
+                 choices=(1984, 1996, 2004, 2010))
 YEAR = _ap.parse_args().year
 
 RAW_FILE = str(_BRIE_ROOT / "raw_offsets" / f"{YEAR}_duneline_offset_raw.csv")
