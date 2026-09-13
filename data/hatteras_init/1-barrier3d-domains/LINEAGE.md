@@ -252,7 +252,7 @@ carries the v3 setbacks (GIS 85 and 86 floored to 0).
 - **Run registry:** `arm_component` accepts a two-level arm (`row-insert/median`)
   and `arms_holding` enumerates that level, so a set of arms files under one
   folder. Deeper nesting refused.
-- **Tooling, not yet run:** `scripts/hatteras_ms/HAT_run_row_insert_set.py`
+- **Tooling, not yet run:** `scripts/hatteras_ms/experiments/HAT_run_row_insert_set.py`
   (six arms, calibration settings, setback CSV swapped and restored) and
   `HAT_plot_row_insert_set.py` (island-wide skill, every road domain's
   relocations, GIS 80-90 detail) into `output/experiments/row_insert_set/`.
@@ -321,7 +321,7 @@ Seventh arm `original` added to the set (`v1` + the v1-era setbacks, saved into
 got a relocation-ON partner (same folder, `reloc` token) and
 `HAT_relocation_comparison.py` ran on the seven pairs, groin on, calibBE.
 Digest: `output/experiments/row_insert_set/relocation/`; numbers also in
-`scripts/hatteras_ms/RELOCATION_COMPARISON_RESULTS.md`. Headline: the insert
+`scripts/hatteras_ms/experiments/RELOCATION_COMPARISON_RESULTS.md`. Headline: the insert
 moves every emergent relocation 3-10 years later; the fill moves it by at most
 one year; `original` reproduces the published 0.30 / 0.40.
 

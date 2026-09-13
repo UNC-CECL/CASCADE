@@ -1,10 +1,10 @@
 # relocation_1984_2004 — does CASCADE relocate NC-12 where and when history did?
 
-Written by `scripts/hatteras_ms/HAT_relocation_comparison.py`: arm A (the
+Written by `scripts/hatteras_ms/experiments/HAT_relocation_comparison.py`: arm A (the
 roadway module deciding on its own) against arm B (the recorded 1989 and 1999
 relocations prescribed), one set per pair of runs. This folder is gitignored
 except the READMEs; the numbers that matter are quoted in
-`scripts/hatteras_ms/RELOCATION_COMPARISON_RESULTS.md`, and every set can be
+`scripts/hatteras_ms/experiments/RELOCATION_COMPARISON_RESULTS.md`, and every set can be
 regenerated from the runs it names.
 
 ## Layout (2026-09-09): the dune-topo version first
@@ -71,8 +71,8 @@ in the reconstruction's result step,
 
 ```
 python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_version_pair_report.py   # v2_vs_v3/report.txt + tables/, after both sets below exist
-python scripts/hatteras_ms/HAT_relocation_comparison.py --preset <preset>          # nogroin pair from the calibration tree
-python scripts/hatteras_ms/HAT_relocation_comparison.py --preset calibBE \
+python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py --preset <preset>          # nogroin pair from the calibration tree
+python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py --preset calibBE \
     --arm-a output/raw_runs/version-pair/v3/1984_2004/calibBE/HAT_1984_2004_calibBE_road_bdm_groin \
     --arm-b output/raw_runs/version-pair/v3/1984_2004/calibBE/HAT_1984_2004_calibBE_road_reloc_bdm_groin
 ```
