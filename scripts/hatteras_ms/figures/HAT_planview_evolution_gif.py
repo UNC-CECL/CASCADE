@@ -74,7 +74,11 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib.lines import Line2D
 
 _HERE = Path(__file__).resolve()
-PROJECT_BASE_DIR = _HERE.parents[2]
+# Anchored by SEARCHING UPWARD for the project root rather than by
+# counting parent directories (2026-09-13). A counted depth is correct
+# only while the file stays where it was written, and these moved into
+# subfolders of hatteras_ms. Six files here already did it this way.
+PROJECT_BASE_DIR = next(_p for _p in _HERE.parents if (_p / 'pyproject.toml').exists())
 if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
     raise RuntimeError(
         f"CASCADE repo root not found: {PROJECT_BASE_DIR} has no pyproject.toml.")

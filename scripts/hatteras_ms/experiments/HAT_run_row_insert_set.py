@@ -73,11 +73,17 @@ from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[1]
+# Anchored by SEARCHING UPWARD for the project root rather than by
+# counting parent directories (2026-09-13). A counted depth is correct
+# only while the file stays where it was written, and these moved into
+# subfolders of hatteras_ms. Six files here already did it this way.
+REPO = next(_p for _p in HERE.parents if (_p / 'pyproject.toml').exists())
 sys.path.insert(0, str(REPO / "scripts"))
 from cascade_pipeline.run_registry import arm_component  # noqa: E402
 
-HINDCAST = HERE / "HAT_hindcast_1984_2024.py"
+# The runner stays at the top of hatteras_ms; this driver moved into
+# experiments/ on 2026-09-13, so it names the folder rather than its own.
+HINDCAST = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 DUNE_TOPO = REPO / "data/hatteras_init/1-barrier3d-domains/1984-start/dune-topo"
 LIVE_SETBACK = (REPO / "data/hatteras_init/4-mgmt-forcing/road_offset"
                 / "dunestart_offset/1984/RoadSetback_1984_dunestart.csv")

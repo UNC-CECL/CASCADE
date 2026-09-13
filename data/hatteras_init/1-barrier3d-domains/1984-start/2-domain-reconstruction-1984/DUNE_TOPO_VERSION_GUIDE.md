@@ -189,7 +189,7 @@ calibration-tree run's settings exactly.
 | `matched-crest` | `v7` |
 | `matched-nocrest` | `v8` |
 
-Driver `scripts/hatteras_ms/HAT_run_row_insert_set.py` → runs under
+Driver `scripts/hatteras_ms/experiments/HAT_run_row_insert_set.py` → runs under
 `output/raw_runs/row-insert/<arm>/1984_2004/calibBE/` (a two-level arm, allowed
 by `run_registry.arm_component` since 2026-09-04). Comparison
 `HAT_plot_row_insert_set.py` → `output/experiments/row_insert_set/`.

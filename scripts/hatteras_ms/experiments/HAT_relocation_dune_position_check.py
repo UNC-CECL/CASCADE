@@ -43,8 +43,8 @@ SIGN CONVENTION
     1984 dune line is 0 by construction on every domain.
 
 USAGE
-    python scripts/hatteras_ms/HAT_relocation_dune_position_check.py
-    python scripts/hatteras_ms/HAT_relocation_dune_position_check.py --preset calibBE
+    python scripts/hatteras_ms/experiments/HAT_relocation_dune_position_check.py
+    python scripts/hatteras_ms/experiments/HAT_relocation_dune_position_check.py --preset calibBE
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -66,7 +66,11 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
 _HERE = Path(__file__).resolve()
-PROJECT_BASE_DIR = _HERE.parents[2]
+# Anchored by SEARCHING UPWARD for the project root rather than by
+# counting parent directories (2026-09-13). A counted depth is correct
+# only while the file stays where it was written, and these moved into
+# subfolders of hatteras_ms. Six files here already did it this way.
+PROJECT_BASE_DIR = next(_p for _p in _HERE.parents if (_p / 'pyproject.toml').exists())
 SCRIPTS_DIR = PROJECT_BASE_DIR / "scripts"
 for _p in (SCRIPTS_DIR, _HERE.parent):
     if str(_p) not in sys.path:

@@ -52,7 +52,11 @@ from matplotlib.patches import Rectangle
 from PIL import Image
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[1]
+# Anchored by SEARCHING UPWARD for the project root rather than by
+# counting parent directories (2026-09-13). A counted depth is correct
+# only while the file stays where it was written, and these moved into
+# subfolders of hatteras_ms. Six files here already did it this way.
+REPO = next(_p for _p in HERE.parents if (_p / 'pyproject.toml').exists())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(HERE))
 from hat_figure_style import elevation_cmap  # noqa: E402

@@ -47,8 +47,8 @@ TIME INDEXING
     assume it: arm B's setbacks must jump at exactly 1989 and 1999.
 
 USAGE
-    python scripts/hatteras_ms/HAT_relocation_comparison.py
-    python scripts/hatteras_ms/HAT_relocation_comparison.py --arm-a DIR --arm-b DIR
+    python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py
+    python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py --arm-a DIR --arm-b DIR
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -72,7 +72,11 @@ import numpy as np
 import pandas as pd
 
 _HERE = Path(__file__).resolve()
-PROJECT_BASE_DIR = _HERE.parents[2]
+# Anchored by SEARCHING UPWARD for the project root rather than by
+# counting parent directories (2026-09-13). A counted depth is correct
+# only while the file stays where it was written, and these moved into
+# subfolders of hatteras_ms. Six files here already did it this way.
+PROJECT_BASE_DIR = next(_p for _p in _HERE.parents if (_p / 'pyproject.toml').exists())
 SCRIPTS_DIR = PROJECT_BASE_DIR / "scripts"
 if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
     raise RuntimeError(

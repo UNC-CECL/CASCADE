@@ -51,8 +51,8 @@ COLOUR
     honestly, and any real divergence would immediately stand out.
 
 Usage:
-    python scripts/hatteras_ms/HAT_scenario_grid.py
-    python scripts/hatteras_ms/HAT_scenario_grid.py --no-reloc --out FIG.png
+    python scripts/hatteras_ms/figures/HAT_scenario_grid.py
+    python scripts/hatteras_ms/figures/HAT_scenario_grid.py --no-reloc --out FIG.png
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -71,7 +71,11 @@ import pandas as pd                      # noqa: E402
 from matplotlib.lines import Line2D      # noqa: E402
 
 _HERE = Path(__file__).resolve()
-PROJECT_BASE_DIR = _HERE.parents[2]
+# Anchored by SEARCHING UPWARD for the project root rather than by
+# counting parent directories (2026-09-13). A counted depth is correct
+# only while the file stays where it was written, and these moved into
+# subfolders of hatteras_ms. Six files here already did it this way.
+PROJECT_BASE_DIR = next(_p for _p in _HERE.parents if (_p / 'pyproject.toml').exists())
 if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
     raise RuntimeError(
         f"CASCADE repo root not found: {PROJECT_BASE_DIR} has no "

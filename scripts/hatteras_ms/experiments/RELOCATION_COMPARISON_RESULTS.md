@@ -11,11 +11,11 @@ clone; the numbers and the reasoning should.
 **Regenerate with:**
 
 ```
-python scripts/hatteras_ms/HAT_relocation_comparison.py --preset <name>
+python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py --preset <name>
 # groin arms need explicit arms, since ARM_SCENARIO_TOKENS pins "nogroin".
 # Pass --preset too: it only labels the report header, and omitting it
 # writes "preset zeroBE" above a pair of calibBE arms.
-python scripts/hatteras_ms/HAT_relocation_comparison.py \
+python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py \
   --preset <preset> \
   --arm-a output/raw_runs/1984_2004/<preset>/HAT_1984_2004_<preset>_road_bdm_groin \
   --arm-b output/raw_runs/1984_2004/<preset>/HAT_1984_2004_<preset>_road_reloc_bdm_groin \

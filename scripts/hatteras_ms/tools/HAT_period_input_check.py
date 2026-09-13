@@ -42,7 +42,11 @@ from pathlib import Path
 import numpy as np
 
 _HERE = Path(__file__).resolve()
-PROJECT_ROOT = _HERE.parents[2]
+# Anchored by SEARCHING UPWARD for the project root rather than by
+# counting parent directories (2026-09-13). A counted depth is correct
+# only while the file stays where it was written, and these moved into
+# subfolders of hatteras_ms. Six files here already did it this way.
+PROJECT_ROOT = next(_p for _p in _HERE.parents if (_p / 'pyproject.toml').exists())
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
 from hatteras_site_config import (                      # noqa: E402
