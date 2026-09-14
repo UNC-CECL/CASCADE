@@ -204,7 +204,7 @@ MOVES.  Each domain's cross-shore window origin. HAT_dune_topo_extractor.py
         picked against a different origin.
 
 DOES NOT.  `shoreline_offset`. That comes from
-        2-brie-offset/hindcast_1984/Island_Dune_Offsets_1984_CASCADE_Input.csv,
+        2-brie-offset/1984/Island_Dune_Offsets_1984_CASCADE_Input.csv,
         is measured independently of any DEM, already exists for 1984, and is
         passed straight to Cascade(). Nothing here touches it. It was a
         deliberate choice to leave the two independent rather than re-derive one

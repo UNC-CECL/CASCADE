@@ -91,6 +91,14 @@ One short file saying what is here, what produced it, and what not to trust.
 The four data folders with the most complicated histories had one; the rest did
 not, which is backwards — the gap was widest where a newcomer starts.
 
+**Orientation is inherited.** A folder whose parent carries a README is
+explained there, so the rule asks at the frontier: a folder holding files whose
+parent explains nothing. Otherwise documenting a tree never finishes — one
+sweep directory alone holds 488 machine-named cells, and nobody reads a README
+for any of them. The corollary is that a parent README has to actually name its
+children, because the check can see that one exists but not that it is any
+good.
+
 ---
 
 ## Where things are

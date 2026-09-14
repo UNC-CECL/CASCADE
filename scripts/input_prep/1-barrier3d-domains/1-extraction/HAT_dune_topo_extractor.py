@@ -301,7 +301,7 @@ OFFSET_COLUMN = 0              # for multi-year raw_offset files, which column t
 # by BOTH hindcast periods (see hat_topo_version.py), plotting it at both years
 # was the whole point. Now that 1984-start and 2004-start are separate DEM
 # products, each with its own offsets -- 1984-start/README.md line 149 pins
-# shoreline_offset to 2-brie-offset/hindcast_1984/ -- the pairing is 1:1 and
+# shoreline_offset to 2-brie-offset/1984/ -- the pairing is 1:1 and
 # the cross-product figures are noise.
 #
 # The year is RESOLVED from the product through hat_topo_version.YEAR_PRODUCT,

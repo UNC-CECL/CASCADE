@@ -45,7 +45,7 @@ YEAR = 1984
 RAW_FILE = str(_REPO_LAYOUT / "data" / "hatteras_init" / "2-brie-offset" / "raw_offsets" / "2004_duneline_offset_raw.csv")
 
 # Output directory
-OUTPUT_DIR = str(_REPO_LAYOUT / "data" / "hatteras_init" / "2-brie-offset" / "hindcast_2004")
+OUTPUT_DIR = str(_REPO_LAYOUT / "data" / "hatteras_init" / "2-brie-offset" / "2004")
 
 # Base name for comparison files
 OUTPUT_BASENAME = "Island_Dune_Offsets_2004"

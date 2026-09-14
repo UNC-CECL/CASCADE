@@ -315,7 +315,7 @@ move a whole cell landward, and the developed reach 76-81 moves 47-72 m - 5 to
 2009_v5 dune windows were picked against a different origin.
 
 **Does not move: `shoreline_offset`.** That is
-`2-brie-offset/hindcast_1984/Island_Dune_Offsets_1984_CASCADE_Input.csv`,
+`2-brie-offset/1984/Island_Dune_Offsets_1984_CASCADE_Input.csv`,
 measured independently of any DEM, already existing for 1984, passed straight
 to `Cascade()`. Nothing here touches it - a deliberate choice to leave the two
 independent rather than derive one from the other.

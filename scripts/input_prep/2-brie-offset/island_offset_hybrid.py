@@ -45,7 +45,7 @@ YEAR = _ap.parse_args().year
 
 RAW_FILE = str(_BRIE_ROOT / "raw_offsets" / f"{YEAR}_duneline_offset_raw.csv")
 
-OUTPUT_DIR    = str(_BRIE_ROOT / f"hindcast_{YEAR}")
+OUTPUT_DIR    = str(_BRIE_ROOT / f"{YEAR}")
 OUTPUT_BASENAME = f"Island_Dune_Offsets_{YEAR}"
 
 START_DOMAIN = 1
