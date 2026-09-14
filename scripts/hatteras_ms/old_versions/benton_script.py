@@ -1,3 +1,28 @@
+# ==============================================================================
+# benton_script.py -- INHERITED. The original way CASCADE was driven for this
+# site, written by a former member of the lab before this project's runner
+# existed. Kept as provenance, not maintained, and not run.
+#
+# IT IS NOT AN EARLIER VERSION OF HAT_hindcast_1984_2024.py. Different
+# lineage, and a different island:
+#
+#                          this script        the current runner
+#     total domains        135                120
+#     real domains         105                90
+#     road cells           model ID 30-128    GIS 9-90
+#
+# So no number it produces is comparable with anything in the current tree,
+# and its domain IDs do not mean what today's GIS IDs mean.
+#
+# It builds Cascade directly and reads Hatteras-CASCADE-parameters.yaml, so it
+# bypasses hatteras_site_config entirely -- none of the period table, the
+# source/sink presets, the road forcing or the topography resolution applies
+# to it. That is what makes it a useful record of how the site was set up
+# before any of those existed.
+#
+# Filed here 2026-09-13. It had been sitting unlabelled in the working folder.
+# ==============================================================================
+
 # Define model simulations to run for modeling Hatteras
 import copy
 import pandas as pd
