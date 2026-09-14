@@ -41,7 +41,7 @@ PROJECT_BASE_DIR   = str(next(
 HATTERAS_DATA_BASE = os.path.join(PROJECT_BASE_DIR, 'data', 'hatteras_init')
 OUTPUT_DIR         = str(Path(__file__).resolve().parent)
 
-# Orientation years to render. Offsets come from 2-brie-offset/hindcast_<year>/,
+# Orientation years to render. Offsets come from 2-brie-offset/<year>/,
 # the same PADDED_120 files the hindcast run script initializes from.
 YEARS = (1984, 2004)
 
@@ -104,7 +104,7 @@ SENTINEL_WATER_M = -3.0   # metres MHW
 
 def dune_offset_file(year):
     """Padded BRIE dune-offset CSV for one orientation year."""
-    return os.path.join(HATTERAS_DATA_BASE, '2-brie-offset', f'hindcast_{year}',
+    return os.path.join(HATTERAS_DATA_BASE, '2-brie-offset', f'{year}',
                         f'Island_Dune_Offsets_{year}_PADDED_{TOTAL_DOMAINS}.csv')
 
 
@@ -169,7 +169,7 @@ def build_canvas(year, include_buffers=False):
     adds the year's offset file loading and validation.
 
     Args:
-        year: Orientation year, keying into 2-brie-offset/hindcast_<year>/.
+        year: Orientation year, keying into 2-brie-offset/<year>/.
         include_buffers: Whether to include the 15-domain buffers on each end.
 
     Returns:

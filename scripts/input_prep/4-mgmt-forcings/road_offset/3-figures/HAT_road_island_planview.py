@@ -46,7 +46,7 @@ Copied from `_build_island_canvas()` in `HAT_dune_topo_extractor.py`, by way of
 `HAT_dune_topo_island_planview_<ver>_<year>_padded.png` cell for cell.
 Importing the extractor instead would drag in its interactive picker.
 
-    offsets  2-brie-offset/hindcast_<year>/Island_Dune_Offsets_*.csv, metres,
+    offsets  2-brie-offset/<year>/Island_Dune_Offsets_*.csv, metres,
              seaward positive, row 0 = domain 1. A 120-row file is stripped of
              its 15 buffer domains per end.
     origin   round(offset_m / 10) - the canvas row interior row 0 lands on
@@ -63,7 +63,7 @@ between the products and 65 differ in interior shape.
 
 INPUT   <product>/dune-topo/<version>/topography/domain_<N>_topography.npy  dam
         <product>/dune-topo/<version>/dunes/domain_<N>_dune.npy             dam
-        2-brie-offset/hindcast_<year>/Island_Dune_Offsets_<year>_*.csv      m
+        2-brie-offset/<year>/Island_Dune_Offsets_<year>_*.csv      m
         dunestart_offset/<year>/RoadSetback_<year>_dunestart.csv            m
         road_elevation/RoadElevation.csv                                    m MHW
 

@@ -115,7 +115,7 @@ MASK_NAME_FMT = "domain_{domain}_road_{year}.npy"
 EXISTING_SETBACK_FMT = ROADS_ROOT / "old_method_offset" / "{year}" / "RoadSetback_{year}.csv"
 
 # Offset files, used ONLY to validate delta_m against measured retreat.
-OFFSET_FMT = (INIT_ROOT / "2-brie-offset" / "hindcast_{year}"
+OFFSET_FMT = (INIT_ROOT / "2-brie-offset" / "{year}"
               / "Island_Dune_Offsets_{year}_CASCADE_Input.csv")
 
 OUT_ROOT = ROADS_ROOT / "dunestart_offset"

@@ -22,7 +22,7 @@ THE CANVAS IS THE SAME ONE, DELIBERATELY
 Every geometric rule here is copied from _build_island_canvas() in
 HAT_dune_topo_extractor.py so the two figures overlay cell for cell:
 
-    offsets     2-brie-offset/hindcast_<year>/Island_Dune_Offsets_*.csv,
+    offsets     2-brie-offset/<year>/Island_Dune_Offsets_*.csv,
                 metres, seaward positive, row 0 = domain 1 (Cape Point).
                 A 120-row file is stripped of its 15 buffer domains per end.
     origin      round(offset_m / 10) - the canvas row interior row 0 lands on
@@ -59,7 +59,7 @@ there while still being a real bar below.
 INPUT   <product>/dune-topo/<version>/topography/domain_<N>_topography.npy  dam
         <product>/dune-topo/<version>/topography/domain_<N>_nodata.npy     bool
         <product>/dune-topo/<version>/dunes/domain_<N>_dune.npy            dam
-        2-brie-offset/hindcast_<year>/Island_Dune_Offsets_*.csv            m
+        2-brie-offset/<year>/Island_Dune_Offsets_*.csv            m
 
         Product and version resolve through scripts/hat_topo_version.py.
 

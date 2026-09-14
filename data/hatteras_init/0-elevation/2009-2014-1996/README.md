@@ -33,7 +33,7 @@ domains move at least one 10 m Barrier3D cell seaward; domains 76-81 move
 a different origin.
 
 **`shoreline_offset` is NOT affected.** That comes from
-`2-brie-offset/hindcast_1984/`, is measured independently of any DEM, and is
+`2-brie-offset/1984/`, is measured independently of any DEM, and is
 passed straight to `Cascade()`.
 
 ## Why the road boundary was dropped, 2026-08-26

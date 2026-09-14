@@ -137,7 +137,7 @@ HATTERAS_PERIODS = {
             "3-env-forcings/storms/hindcast_storms/1984_2004/"
             "1984_2004_storms_v3_72.npy"),
         "island_offset_file": (
-            "2-brie-offset/hindcast_1984/Island_Dune_Offsets_1984_PADDED_120.csv"),
+            "2-brie-offset/1984/Island_Dune_Offsets_1984_PADDED_120.csv"),
         "road_setback_file": (
             "4-mgmt-forcing/road_offset/dunestart_offset/1984/"
             "RoadSetback_1984_dunestart.csv"),
@@ -152,7 +152,7 @@ HATTERAS_PERIODS = {
             "3-env-forcings/storms/hindcast_storms/2004_2024/"
             "2004_2024_storms_v3_72.npy"),
         "island_offset_file": (
-            "2-brie-offset/hindcast_2004/Island_Dune_Offsets_2004_PADDED_120.csv"),
+            "2-brie-offset/2004/Island_Dune_Offsets_2004_PADDED_120.csv"),
         "road_setback_file": (
             "4-mgmt-forcing/road_offset/dunestart_offset/2004/"
             "RoadSetback_2004_dunestart.csv"),
@@ -186,7 +186,7 @@ HATTERAS_PERIODS = {
         # DERIVED, NOT SURVEYED: built from the 1997 dune line, the nearest
         # island-wide survey. See 2-brie-offset/raw_offsets/PROVENANCE.md.
         "island_offset_file": (
-            "2-brie-offset/hindcast_1996/Island_Dune_Offsets_1996_PADDED_120.csv"),
+            "2-brie-offset/1996/Island_Dune_Offsets_1996_PADDED_120.csv"),
         # DERIVED: the 1984 setbacks with the 1989 Pea Island relocation
         # applied, since that event precedes 1996 and the 1999 one does not.
         # No NC-12 line of 1996 vintage exists. See that folder's PROVENANCE.md.
@@ -210,7 +210,7 @@ HATTERAS_PERIODS = {
         # NOT BUILT YET: waiting on a digitised 2010 dune line. Every other
         # input for this period exists, so a run fails here and nowhere else.
         "island_offset_file": (
-            "2-brie-offset/hindcast_2010/Island_Dune_Offsets_2010_PADDED_120.csv"),
+            "2-brie-offset/2010/Island_Dune_Offsets_2010_PADDED_120.csv"),
         # A COPY of the 2004 file: same topography product, same road line, and
         # no relocation in the record between the two dates.
         "road_setback_file": (

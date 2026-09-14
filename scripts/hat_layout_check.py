@@ -115,6 +115,8 @@ def rule_3_provenance_beside_derived():
     for path in walk(REPO / "data" / "hatteras_init"):
         if not (path.is_dir() and VINTAGE.match(path.name)):
             continue
+        if inside_compliant_retirement(path) or is_retired(path):
+            continue          # a retired folder's provenance is in its WHY.md
         if not any(c.suffix for c in path.iterdir() if c.is_file()):
             continue
         if not (path / "PROVENANCE.md").exists():
@@ -174,7 +176,17 @@ def rule_5_paths():
 
 
 def rule_7_readmes():
-    """Folders at depth 1 and 2 of the main trees with no README.md."""
+    """Folders that need a README of their own.
+
+    ORIENTATION IS INHERITED (2026-09-14). A folder whose PARENT carries a
+    README is already explained there, so asking for one in every child turns
+    the rule into noise -- one sweep directory alone holds 488 machine-named
+    cells, none of which anyone reads a README for. The rule asks at the
+    FRONTIER: a folder holding files whose parent explains nothing.
+
+    That makes documenting a tree from the top genuinely finish, rather than
+    exposing a new row of demands each time.
+    """
     out = []
     for tree in README_TREES:
         base = REPO / tree
@@ -189,8 +201,11 @@ def rule_7_readmes():
                 continue
             if not any(c.is_file() for c in path.iterdir()):
                 continue
-            if not (path / "README.md").exists():
-                out.append(path.relative_to(REPO))
+            if (path / "README.md").exists():
+                continue
+            if (path.parent / "README.md").exists():
+                continue          # the parent explains it
+            out.append(path.relative_to(REPO))
     return out
 
 
