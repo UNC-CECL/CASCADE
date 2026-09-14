@@ -22,6 +22,11 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 import warnings
 from pathlib import Path
 
+# Anchored 2026-09-14. These named a home directory or a tree renamed
+# twice over, so none resolved. Rule 5 of ORGANIZATION.md.
+_FIG_REPO = next(_p for _p in Path(__file__).resolve().parents
+                 if (_p / "pyproject.toml").exists())
+
 # Anchored 2026-09-14: these literals named trees renamed twice over.
 _REPO_LAYOUT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
@@ -32,8 +37,8 @@ warnings.filterwarnings("ignore")
 # ============================================================
 
 # Input CSVs — pre-aggregated domain-level LRR summaries
-COASTSAT_CSV_1984_2004 = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1984_2004\domain_lrr_summary.csv"
-COASTSAT_CSV_2004_2024 = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\2004_2024\domain_lrr_summary.csv"
+COASTSAT_CSV_1984_2004 = str(_FIG_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "1984_2004" / "domain_lrr_summary.csv")
+COASTSAT_CSV_2004_2024 = str(_FIG_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "2004_2024" / "domain_lrr_summary.csv")
 
 CS_DOMAIN_COL = "domain_number"
 CS_LRR_COL    = "mean_lrr"

@@ -122,6 +122,16 @@ def rule_3_provenance_beside_derived():
     return out
 
 
+def inside_compliant_retirement(path: Path) -> bool:
+    """Is this already filed under a dated superseded folder?
+
+    What sits INSIDE one keeps its original name on purpose -- that is what it
+    was called when it was in use, and renaming it would erase that. So the
+    convention applies to the retirement folder, not to its contents.
+    """
+    return any(RETIRE_GOOD.match(part) for part in path.parts[:-1])
+
+
 def rule_4_retirement_idioms():
     """Retirement folders that are not superseded_<date>, or lack a note."""
     out = []
@@ -131,6 +141,8 @@ def rule_4_retirement_idioms():
             continue
         for path in walk(base):
             if not path.is_dir() or not RETIRE_ANY.match(path.name):
+                continue
+            if inside_compliant_retirement(path):
                 continue
             if not RETIRE_GOOD.match(path.name):
                 out.append((path.relative_to(REPO), "not superseded_<date>"))
@@ -170,6 +182,8 @@ def rule_7_readmes():
             continue
         for path in walk(base):
             if not path.is_dir() or README_SKIP.match(path.name):
+                continue
+            if inside_compliant_retirement(path) or is_retired(path):
                 continue
             if len(path.relative_to(base).parts) > 2:
                 continue

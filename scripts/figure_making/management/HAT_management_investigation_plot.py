@@ -35,16 +35,25 @@ sys.path.insert(0, str(_REPO_ROOT / "scripts"))
 
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 
+# Anchored 2026-09-14: every path here was absolute into one home
+# directory, and two of the trees they named have since been renamed.
+# Rule 5 of ORGANIZATION.md.
+from pathlib import Path as _Path
+_FIG_REPO = next(_p for _p in _Path(__file__).resolve().parents
+                 if (_p / "pyproject.toml").exists())
+_RAW_RUNS = _FIG_REPO / "output" / "raw_runs"
+
 # =============================================================================
 # SECTION 1: CONFIGURE PATHS AND LABELS  ← edit this section
 # =============================================================================
 
 # Output folder for plots
-OUTPUT_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\figure_making\management_investigation\output"
+OUTPUT_DIR = str(_FIG_REPO / "output" / "figures" / "management_investigation")
 
 # Path to the CoastSat transect CSV for the active period.
 # Columns expected: domain_number (GIS 1–90), lrr_m_yr (m/yr per transect).
-COASTSAT_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1984_2004\transect_lrr_full.csv"
+COASTSAT_CSV = str(_FIG_REPO / "data" / "hatteras_init" / "5-scr"
+                   / "coastsat_lrr" / "1984_2004" / "transect_lrr_full.csv")
 COASTSAT_LABEL = "CoastSat LRR (1984–2004)"   # label shown in legend
 
 # Period covered by these runs — used for axis titles and comparison filenames.
@@ -60,16 +69,13 @@ END_YEAR   = 2004
 
 RUN_PATHS = {
     "Natural": (
-        r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs"
-        r"\HAT_1984_2004_natural_Hs2p5"
+        str(_RAW_RUNS / "HAT_1984_2004_natural_Hs2p5")
     ),
     "Roadway": (
-        r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs"
-        r"\HAT_1984_2004_roadway_Hs2p5"
+        str(_RAW_RUNS / "HAT_1984_2004_roadway_Hs2p5")
     ),
     "Roadway + Historical BN": (
-        r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs"
-        r"\HAT_1984_2004_roadway_histBN_Hs2p5"
+        str(_RAW_RUNS / "HAT_1984_2004_roadway_histBN_Hs2p5")
     ),
 }
 

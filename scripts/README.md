@@ -109,7 +109,7 @@ rule, everywhere under `scripts/`:
 ```
 figure_making/old_dsas_scripts/            input_prep/old_source_sink_search/
 figure_making/old_plot_tests/              input_prep/1-barrier3d-domains/1-extraction/old_extractors/
-figure_making/shoreline_change/old_rate_analysis/
+figure_making/shoreline/old_rate_analysis/
 hatteras_ms/old_drafts/                    input_prep/5-scr/CoastSat/old_dsas_comparisons/
 hatteras_ms/old_versions/                  input_prep/5-scr/CoastSat/old_time_periods/
 sensitivity_analysis/old_guides/           input_prep/6-scr-smooth/old_smoothing/

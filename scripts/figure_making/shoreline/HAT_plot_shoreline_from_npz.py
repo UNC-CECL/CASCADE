@@ -1,3 +1,4 @@
+from pathlib import Path
 #!/usr/bin/env python3
 """
 HATTERAS ISLAND: Shoreline Change Analysis from CASCADE NPZ Output
@@ -27,6 +28,11 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib.transforms import blended_transform_factory
 from statsmodels.nonparametric.smoothers_lowess import lowess
+
+# Anchored 2026-09-14. These named a home directory or a tree renamed
+# twice over, so none resolved. Rule 5 of ORGANIZATION.md.
+_FIG_REPO = next(_p for _p in Path(__file__).resolve().parents
+                 if (_p / "pyproject.toml").exists())
 
 
 # =============================================================================
@@ -71,7 +77,7 @@ def _pad_to_gis(pad_idx):
 # SECTION 2: FILE PATHS
 # =============================================================================
 
-PROJECT_BASE_DIR  = r"C:\Users\hanna\PycharmProjects\CASCADE"
+PROJECT_BASE_DIR  = str(_FIG_REPO)
 OUTPUT_BASE_DIR   = os.path.join(PROJECT_BASE_DIR, "scripts", "figure_making", "position_plot", "comparison")
 COASTSAT_BASE_DIR = os.path.join(
     PROJECT_BASE_DIR, "scripts", "input_prep", "CoastSat"
