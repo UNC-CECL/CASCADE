@@ -53,6 +53,11 @@ if str(_REPO_ROOT / "scripts") not in sys.path:
 
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
 # =============================================================================
 # SECTION 1: SESSION FOLDER  <- edit this each time
 # =============================================================================
@@ -69,7 +74,7 @@ from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E40
 #     wave_asymmetry/ ...
 #     wave_angle_high_fraction/ ...
 
-SESSION_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\output\sensitivity_analysis\HAT_1984_2004_waveSensitivity_20260508_154602"
+SESSION_DIR = str(_PATH_REPO / "output" / "sensitivity_analysis" / "HAT_1984_2004_waveSensitivity_20260508_154602")
 
 # Period being plotted — must match the sensitivity run
 START_YEAR = 1984
@@ -79,7 +84,7 @@ END_YEAR   = 2004
 # SECTION 2: COASTSAT DATA
 # =============================================================================
 
-PROJECT_BASE_DIR  = r"C:\Users\hanna\PycharmProjects\CASCADE"
+PROJECT_BASE_DIR  = str(_PATH_REPO)
 COASTSAT_BASE_DIR = os.path.join(
     PROJECT_BASE_DIR, "scripts", "input_prep", "CoastSat"
 )

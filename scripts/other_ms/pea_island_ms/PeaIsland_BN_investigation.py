@@ -1,3 +1,4 @@
+from pathlib import Path
 #!/usr/bin/env python3
 """
 PEA ISLAND: 1992–2010
@@ -24,6 +25,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from cascade.cascade import Cascade
 import yaml
+
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
 
 
 # =============================================================================
@@ -1270,7 +1276,7 @@ def plot_threshold_bn_effectiveness(
     ax.set_ylabel("Real Pea Island domain", fontsize=12, fontweight="bold")
 
     ax.set_title(
-        f"Threshold BN actually applied to CASCADE\n{run_name}",
+        str(_PATH_REPO / "n{run_name}"),
         fontsize=14,
         fontweight="bold",
     )

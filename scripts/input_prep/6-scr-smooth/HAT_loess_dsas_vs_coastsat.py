@@ -28,8 +28,13 @@ Smoothing method: LOESS (locally weighted scatterplot smoothing)
 # built from PROJECT_BASE_DIR at module level.
 import pathlib
 
+# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
+# Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
 # ANCHORED, NOT TYPED. Every path below used to be an absolute literal: the
-# output one had lost its drive ("/scripts/input_prep/...") and so wrote its
+# output one had lost its drive (str(_PATH_REPO / "scripts" / "input_prep" / "...")) and so wrote its
 # figures to C:\scripts\ instead of into the repository, and the input ones
 # still spelled the folder "input_preperation" and pointed at a CoastSat tree
 # that has since moved under 5-scr. Anchoring on the pyproject.toml at the repo

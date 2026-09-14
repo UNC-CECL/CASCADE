@@ -54,11 +54,16 @@ import matplotlib.patches as mpatches
 import matplotlib.gridspec as gridspec
 from tqdm import tqdm
 
+# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
+# Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
 # ============================================================
 # CONFIG
 # ============================================================
 
-# The three paths below were driveless ("/scripts/...", resolving to
+# The three paths below were driveless (str(_PATH_REPO / "scripts" / "..."), resolving to
 # C:\scripts) and one named the pre-2026 "input_preperation" folder, so
 # this script could not run. Anchored on the repo root (2026-09-10).
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents

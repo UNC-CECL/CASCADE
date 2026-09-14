@@ -70,6 +70,19 @@ the move could not break them silently.
 Never write an absolute path into a home directory, and never a path rooted at
 the drive.
 
+**There is a residue of about 23 files the check will keep reporting**, and it
+is not work left undone. Each names something that no longer exists and cannot
+be mapped to anything that does:
+
+* runs that were deleted (`HAT_1978_1997_natural`, `HAT_2004_2024_base_newbufferv3`);
+* trees deleted before this repository's current shape (`data/hatteras_init/topography/2009_FIXED/`);
+* another person's machine entirely, in the Ocracoke and Pea Island work.
+
+Guessing a replacement would be worse than leaving the literal visible, because
+a plausible wrong path fails silently and an obviously broken one does not. One
+of the 23 is a comment describing this very bug, which the check cannot tell
+from the bug itself.
+
 ## 6. A location has one owner
 
 Where something lives is decided once, in a resolver, and everything else asks:

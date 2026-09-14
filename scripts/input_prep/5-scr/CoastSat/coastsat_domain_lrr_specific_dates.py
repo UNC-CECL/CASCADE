@@ -55,13 +55,18 @@ This script supports two mutually exclusive filtering modes.
 # ============================================================
 
 # Path to the lookup table produced by coastsat_domain_mapping.py
-LOOKUP_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\transect_domain_lookup.csv"
+LOOKUP_CSV = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "transect_domain_lookup.csv")
 
 # Root folder containing all site subfolders
 # Anchored on this file 2026-09-12. The literals here were
 # drive-rooted and had never resolved; the data they name also
 # moved out of the scripts tree on that date.
 from pathlib import Path as _Path
+
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
 _SCR_DATA = (_Path(__file__).resolve().parents[4] / "data"
              / "hatteras_init" / "5-scr")
 ROOT_DATA_DIR = str(_SCR_DATA / "coastsat_timeseries")

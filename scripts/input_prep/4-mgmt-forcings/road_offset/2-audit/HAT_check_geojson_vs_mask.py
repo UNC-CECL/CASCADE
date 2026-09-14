@@ -37,7 +37,12 @@ import numpy as np
 import geopandas as gpd
 import rasterio
 
-PROJECT_ROOT = Path(r"C:\Users\hanna\PycharmProjects\CASCADE")
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
+PROJECT_ROOT = Path(str(_PATH_REPO))
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
 

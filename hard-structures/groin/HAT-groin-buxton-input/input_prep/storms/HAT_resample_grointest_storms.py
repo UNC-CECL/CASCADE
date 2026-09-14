@@ -1,3 +1,4 @@
+from pathlib import Path
 """
 HAT_resample_grointest_storms.py
 ============================
@@ -33,10 +34,15 @@ import os
 import numpy as np
 import pandas as pd
 
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
 # ============================== CONFIG ==============================
 
 # Source storm series to resample (your existing, validated 1984-2004 file).
-SOURCE_NPY = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\storms\hindcast_storms\1984_2004\1984_2004_storms_v3_72.npy"
+SOURCE_NPY = str(_PATH_REPO / "data" / "hatteras_init" / "3-env-forcings" / "storms" / "hindcast_storms" / "1984_2004" / "1984_2004_storms_v3_72.npy")
 # Target run length. 1967->1997 = 30 model years; CASCADE indexes time 1..N.
 TARGET_YEARS = 30
 

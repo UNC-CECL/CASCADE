@@ -43,6 +43,11 @@ Edit the CONFIG section below, then run:
 # drive-rooted and had never resolved; the data they name also
 # moved out of the scripts tree on that date.
 from pathlib import Path as _Path
+
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
 _SCR_DATA = (_Path(__file__).resolve().parents[4] / "data"
              / "hatteras_init" / "5-scr")
 STUDY_AREA_FILTER_PATH = str(_SCR_DATA / "shoreline_inventory"
@@ -66,7 +71,7 @@ NC_STATE_DATE_COL = "DATE_"
 
 # --- Source 3: CoastSat time-series CSVs ---
 # GeoJSON with CoastSat transect geometry (used to spatially filter)
-COASTSAT_TRANSECT_GEOM = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\CoastSat_transect_layer.geojson"
+COASTSAT_TRANSECT_GEOM = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "CoastSat_transect_layer.geojson")
 # ID column in the CoastSat geometry file
 COASTSAT_TRANSECT_ID_COL = "id"
 # Root folder containing per-transect CSVs in site subfolders

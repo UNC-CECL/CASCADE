@@ -13,6 +13,16 @@ same transects (extract_chainage_by_intersection()). Alongshore
 position is built from a trusted along-coast ID order (see
 _compute_alongshore_positions()), and CASCADE domain assignment comes
 from the authoritative HAT_domains.json reference (see
+
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
+# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
+# Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
 load_domain_reference() / assign_domain_from_northing()), not a
 formula.
 
@@ -186,20 +196,20 @@ Edit CONFIG below, then run:
 # ============================================================
 
 # ─── Paths ────────────────────────────────────────────────────────────
-BASE = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\groin_module"
+BASE = str(_PATH_REPO / "scripts" / "groin_module")
 
-STUDY_AREA_FILTER_PATH = r"/scripts/groin_module_noBE/gis_analysis/gis_data/cascade_area.geojson"
+STUDY_AREA_FILTER_PATH = str(_PATH_REPO / "hard-structures" / "groin" / "HAT-groin-gis-analysis" / "gis_data" / "cascade_area.geojson")
 STUDY_AREA_BUFFER_M    = 500
 
-WET_DRY_PATH     = r"/scripts/groin_module_noBE/gis_analysis/gis_data/wet_dry_groin.geojson"
+WET_DRY_PATH     = str(_PATH_REPO / "hard-structures" / "groin" / "HAT-groin-gis-analysis" / "gis_data" / "wet_dry_groin.geojson")
 WET_DRY_DATE_COL = "date"
 
-NC_STATE_PATH     = r"/scripts/groin_module_noBE/gis_analysis/gis_data/nc_shorelines.geojson"
+NC_STATE_PATH     = str(_PATH_REPO / "hard-structures" / "groin" / "HAT-groin-gis-analysis" / "gis_data" / "nc_shorelines.geojson")
 NC_STATE_DATE_COL = "DATE_"
 
-COASTSAT_TRANSECT_GEOM   = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\CoastSat_transect_layer.geojson"
+COASTSAT_TRANSECT_GEOM   = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "CoastSat_transect_layer.geojson")
 COASTSAT_TRANSECT_ID_COL = "id"
-COASTSAT_ROOT_DIR        = r"/scripts/input_prep/CoastSat/coastsat_timeseries"
+COASTSAT_ROOT_DIR        = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "coastsat_timeseries")
 
 # ─── CASCADE domain reference (authoritative) ──────────────────────────
 # A GeoJSON of the 90 real CASCADE domain boxes (D1-D90), each a 500 m
@@ -209,9 +219,9 @@ COASTSAT_ROOT_DIR        = r"/scripts/input_prep/CoastSat/coastsat_timeseries"
 # 3,899,029 per this file, not the ~3,897,750 the original formula assumed
 # (over 2 domains off). See load_domain_reference() /
 # assign_domain_from_northing().
-DOMAINS_JSON_PATH = r"/scripts/groin_module_noBE/gis_analysis/gis_data/HAT_domains.json"
+DOMAINS_JSON_PATH = str(_PATH_REPO / "hard-structures" / "groin" / "HAT-groin-gis-analysis" / "gis_data" / "HAT_domains.json")
 
-OUTPUT_DIR = r"/scripts/groin_module_noBE/gis_analysis/shoreline_output_grid100m"
+OUTPUT_DIR = str(_PATH_REPO / "hard-structures" / "groin" / "HAT-groin-gis-analysis" / "shoreline_output_grid100m")
 
 # CRS for all spatial operations (UTM 18N covers NC Outer Banks)
 PROJECTED_CRS = "EPSG:32618"
@@ -232,7 +242,7 @@ PLOT_X_MAX_KM = 60   # generic safety cap; kept as the GIF/other fallback defaul
 #     from groin" (0 km), since updrift = north here
 #   - the full north-south extent (southernmost to northernmost groin)
 #     as a shaded band on plots, showing the whole groin field's footprint
-GROIN_GEOJSON_PATH = r"/scripts/groin_module_noBE/gis_analysis/gis_data/groins_hatteras.geojson"
+GROIN_GEOJSON_PATH = str(_PATH_REPO / "hard-structures" / "groin" / "HAT-groin-gis-analysis" / "gis_data" / "groins_hatteras.geojson")
 
 # Fallback northing if the geojson can't be loaded. Used only if the
 # geojson is missing. Set to None to error out instead.
@@ -486,7 +496,7 @@ GIF_LAND_COLOR  = "#E3D5A8"
 #       earlier in this project). This option exists so you can see
 #       that for yourself, not because it's recommended.
 GIF_TRANSECT_SOURCE = "grid100m"   # "coastsat", "hybrid", or "grid100m"
-TRANSECTS_100M_PATH = r"/scripts/groin_module_noBE/gis_analysis/gis_data/transects_100m.geojson"
+TRANSECTS_100M_PATH = str(_PATH_REPO / "hard-structures" / "groin" / "HAT-groin-gis-analysis" / "gis_data" / "transects_100m.geojson")
 
 # ─── CASCADE domain assignment ────────────────────────────────────────
 # Domains are ~500 m long, numbered from south (D1) to north (D90).

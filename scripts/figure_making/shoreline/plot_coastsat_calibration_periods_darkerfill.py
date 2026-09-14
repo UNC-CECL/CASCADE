@@ -1,3 +1,4 @@
+from pathlib import Path
 """
 CoastSat Observed Shoreline Change Rates - Calibration & Test Periods
 Hatteras Island, NC
@@ -24,13 +25,18 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib.transforms import blended_transform_factory
 
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
 # ============================================================================
 # CONFIGURATION — edit these if your file names or column names differ
 # ============================================================================
 
 # Input CSVs — pre-aggregated domain-level LRR summaries
-CSV_P1     = r'C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1984_2004\domain_lrr_1984_2004_summary.csv'
-CSV_P2     = r'C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\2004_2024\domain_lrr_2004_2024_summary.csv'
+CSV_P1     = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "1984_2004" / "domain_lrr_1984_2004_summary.csv")
+CSV_P2     = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "2004_2024" / "domain_lrr_2004_2024_summary.csv")
 
 DOMAIN_COL = 'domain_number'
 LRR_COL    = 'mean_lrr'   # Column containing domain-averaged LRR (m/yr)

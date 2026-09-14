@@ -23,6 +23,11 @@ from shapely.geometry import (
 )
 from shapely.ops import unary_union
 
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
 
 # =============================================================================
 # USER SETTINGS
@@ -37,7 +42,7 @@ ROAD_1996_FILE = Path(
 )
 
 DOMAIN_FILE = Path(
-    r"/Users/rsahrae/PycharmProjects/PeaIsland_Hindcast/CASCADE/scripts/input_preperation/CoastSat/PeaIsland_domains.json"
+    str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "PeaIsland_domains.json")
 )
 
 OUTPUT_CSV = Path(

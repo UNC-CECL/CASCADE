@@ -1,3 +1,4 @@
+from pathlib import Path
 #!/usr/bin/env python3
 """
 fix_cascade_yaml.py
@@ -27,8 +28,13 @@ import shutil
 import numpy as np
 import yaml
 
+# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
+# Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
 # Path to the parameter YAML CASCADE is choking on (from your traceback).
-PARAM_FILE = r"/data/hatteras_init/Hatteras-CASCADE-parameters.yaml"
+PARAM_FILE = str(_PATH_REPO / "data" / "hatteras_init" / "Hatteras-CASCADE-parameters.yaml")
 
 
 def to_plain(obj):

@@ -21,8 +21,8 @@ Outputs (saved to OUTPUT_DIR)
 # CONFIG  –  edit paths before running
 # ============================================================
 
-COASTSAT_CSV_P1 = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\1984_2004\domain_lrr_summary.csv"
-COASTSAT_CSV_P2 = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\2004_2024\domain_lrr_summary.csv"
+COASTSAT_CSV_P1 = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "1984_2004" / "domain_lrr_summary.csv")
+COASTSAT_CSV_P2 = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "2004_2024" / "domain_lrr_summary.csv")
 
 PERIOD_1_LABEL = "1984–2004"
 PERIOD_2_LABEL = "2004–2024"
@@ -51,6 +51,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
 import warnings
+
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
 warnings.filterwarnings("ignore")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)

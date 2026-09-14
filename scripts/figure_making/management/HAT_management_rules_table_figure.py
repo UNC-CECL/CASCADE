@@ -1,3 +1,4 @@
+from pathlib import Path
 #!/usr/bin/env python3
 """
 HAT_management_rules_table.py
@@ -10,8 +11,18 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, FancyBboxPatch
 from matplotlib import rcParams
 
-PNG = r'C:\Users\hanna\PycharmProjects\CASCADE\scripts\management_plot\tables\HAT_management_rules_table.png'
-PDF = r'C:\Users\hanna\PycharmProjects\CASCADE\scripts\management_plot\tables\HAT_management_rules_table.pdf'
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
+PNG = str(_PATH_REPO / "output" / "figures" / "management" / "HAT_management_rules_table.png")
+PDF = str(_PATH_REPO / "output" / "figures" / "management" / "HAT_management_rules_table.pdf")
 
 rcParams.update({'font.family': 'DejaVu Serif', 'font.size': 9})
 
@@ -116,7 +127,7 @@ ax.text(TL + TW/2, y_r + h_r/2,
 ri = 1
 y_r = row_ys[ri]; h_r = H_COL
 fill(TL, y_r, TW, h_r, C_COL_BG)
-for i, lbl in enumerate(['Location', 'CASCADE\nDomains', 'Period\nActive', 'Description']):
+for i, lbl in enumerate(['Location', str(_PATH_REPO / "nDomains"), 'Period\nActive', 'Description']):
     ha_i = 'center' if i in (1, 2) else 'left'
     ax.text(
         CX[i] + (CW[i]/2 if ha_i == 'center' else PAD_L),

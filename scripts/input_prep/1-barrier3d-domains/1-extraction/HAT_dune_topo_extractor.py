@@ -61,6 +61,11 @@ from matplotlib.colors import FuncNorm, ListedColormap
 from matplotlib.transforms import blended_transform_factory
 from matplotlib.widgets import SpanSelector
 
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
 # Sized for a projected slide rather than a screen: at 19 in wide, 11 pt tick
 # labels are unreadable once the figure is scaled into a talk.
 plt.rcParams.update({
@@ -197,7 +202,7 @@ DEM_NAME = "2009_pea_hatteras_filled"
 # of a run that happened, and renaming them would rewrite history.
 RUN_NAME = VERSION
 
-PROJECT_ROOT = Path(r"C:\Users\hanna\PycharmProjects\CASCADE")
+PROJECT_ROOT = Path(str(_PATH_REPO))
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 # These two moved when data\hatteras_init was reorganized into the numbered
 # 1-barrier3d-domains \ 2-brie-offset \ ... tree. They previously read

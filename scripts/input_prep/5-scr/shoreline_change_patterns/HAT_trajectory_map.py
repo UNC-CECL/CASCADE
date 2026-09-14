@@ -31,8 +31,8 @@ import matplotlib.patheffects as pe
 # CONFIG  — edit here
 # ============================================================
 
-DOMAINS_GEOJSON   = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\HAT_domains.json"
-TRANSECTS_GEOJSON = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\CoastSat_transect_layer.geojson"
+DOMAINS_GEOJSON   = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "HAT_domains.json")
+TRANSECTS_GEOJSON = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "CoastSat_transect_layer.geojson")
 METRICS_CSV       = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\shoreline_change_patterns\classification_output\domain_trajectory_metrics.csv"
 OUTLINE_SHP= str(_SCR_DATA.parent / "9-figures" / "map_elements"
              / "hatteras_outline" / "HAT_island_outline.shp")
@@ -40,6 +40,11 @@ OUTLINE_SHP= str(_SCR_DATA.parent / "9-figures" / "map_elements"
 # drive-rooted and had never resolved; the data they name also
 # moved out of the scripts tree on that date.
 from pathlib import Path as _Path
+
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
 _SCR_DATA = (_Path(__file__).resolve().parents[4] / "data"
              / "hatteras_init" / "5-scr")
 OUTPUT_DIR        = str(_SCR_DATA / "shoreline_change_patterns" / "map_output")

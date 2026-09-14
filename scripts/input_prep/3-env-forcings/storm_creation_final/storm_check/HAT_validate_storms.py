@@ -53,12 +53,17 @@ import matplotlib.lines as mlines
 from pathlib import Path
 from datetime import timedelta
 
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
 # =============================================================================
 # USER CONFIGURATION
 # =============================================================================
 
 # Path to the readable CSV from HAT_create_storms.py
-READABLE_CSV = Path(r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\storms\hindcast_storms\base_storms\storms_2004_2024_readable.csv")
+READABLE_CSV = Path(str(_PATH_REPO / "data" / "hatteras_init" / "3-env-forcings" / "storms" / "superseded_20260914" / "testing_storms" / "base_storms" / "storms_2004_2024_readable.csv"))
 
 # Period to validate — controls which slice of HISTORICAL_STORMS is used
 BEGIN_YEAR = 2004

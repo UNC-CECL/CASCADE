@@ -1,3 +1,4 @@
+from pathlib import Path
 """
 Hatteras CASCADE Dune Offset Pipeline — subset-capable
 ======================================================
@@ -26,14 +27,19 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
+# Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
 # =============================================================================
 # 1. USER CONFIGURATION
 # =============================================================================
 
 YEAR = 1967
-RAW_FILE = r"/data/hatteras_init/2-brie-offset/raw_offsets/1967_duneline_offset_raw.csv"
+RAW_FILE = str(_PATH_REPO / "data" / "hatteras_init" / "2-brie-offset" / "raw_offsets" / "1967_duneline_offset_raw.csv")
 
-OUTPUT_DIR      = r"/scripts/groin_module_noBE/HAT-buxton-hindcast-groin-test/groin_init"
+OUTPUT_DIR      = str(_PATH_REPO / "hard-structures" / "groin" / "HAT-buxton-hindcast-groin-test" / "groin_init")
 OUTPUT_BASENAME = "Island_Dune_Offsets_1967_D2_D12"
 
 # -------------------------------------------------------------------------
