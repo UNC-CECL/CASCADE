@@ -790,7 +790,7 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # REFIT 2026-08-28 — BOTH PERIODS, FIVE PASSES, ON THE CURRENT TOPOGRAPHY
 # ============================================================================
 # Every value below was re-solved on 2026-08-28. The previous solution is in
-# git history and in output/archived_output_20260828/.
+# git history and in output/superseded_20260828/.
 #
 # WHY. The 2026-08-23 values were derived on a base run against the
 # pre-restructure shared topography. `1984-start` is now a different surface
