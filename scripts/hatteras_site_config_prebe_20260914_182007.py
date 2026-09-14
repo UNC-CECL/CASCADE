@@ -886,11 +886,11 @@ HATTERAS_BE_RATES_CALIBRATED = {
           5: +0.0,  # Cape Point / Shoal Dynamics
           6: +0.0,  # Cape Point / Shoal Dynamics
           7: +0.0,  # Cape Point / Shoal Dynamics
-          8: +3.7,  # Cape Point / Shoal Dynamics
+          8: +2.8,  # Cape Point / Shoal Dynamics
           9: +0.0,  # Cape Point / Shoal Dynamics
-         10: -3.0,  # Cape Point / Shoal Dynamics
-         11: -1.4,  # Buxton–Avon Transition
-         12: -1.4,  # Buxton–Avon Transition
+         10: -2.1,  # Cape Point / Shoal Dynamics
+         11: -1.1,  # Buxton–Avon Transition
+         12: -1.1,  # Buxton–Avon Transition
          13: -0.7,  # Buxton–Avon Transition
          14: +0.0,  # Buxton–Avon Transition
          15: +0.0,  # Buxton–Avon Transition
@@ -909,9 +909,9 @@ HATTERAS_BE_RATES_CALIBRATED = {
          28: +1.2,  # Avon
          29: +2.4,  # Avon
          30: +3.3,  # Avon
-         31: +4.1,  # Avon
-         32: +3.6,  # Mid-island
-         33: +2.0,  # Mid-island
+         31: +3.8,  # Avon
+         32: +3.3,  # Mid-island
+         33: +1.7,  # Mid-island
          34: +0.9,  # Mid-island
          35: +0.0,  # Mid-island
          36: +0.0,  # Mid-island
@@ -950,9 +950,9 @@ HATTERAS_BE_RATES_CALIBRATED = {
          69: +1.6,  # Wimble Shoals Influence
          70: +2.2,  # Wimble Shoals Influence
          71: +3.4,  # Wimble Shoals Influence
-         72: +4.0,  # Wimble Shoals Influence
-         73: +4.2,  # Wimble Shoals Influence
-         74: +3.8,  # Wimble Shoals Influence
+         72: +3.7,  # Wimble Shoals Influence
+         73: +3.9,  # Wimble Shoals Influence
+         74: +3.5,  # Wimble Shoals Influence
          75: +1.9,  # Tri-Village / Rodanthe
          76: +0.0,  # Tri-Village / Rodanthe
          77: +0.0,  # Tri-Village / Rodanthe

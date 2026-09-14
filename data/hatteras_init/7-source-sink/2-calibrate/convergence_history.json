@@ -1,0 +1,88 @@
+{
+  "_what": "Source/sink calibration convergence, frozen-zone masked iteration.",
+
+  "_why": "The calibration is a fixed-point solve, not a closed-form one. Its stopping point is a scientific claim -- 'this is the model's limit' -- so the path to it has to be on the record, not reconstructed from a final field. A stopping point only means something if the sequence was contracting and the target was not moving while it ran.",
+
+  "_method": "Pass 0 is the ordinary one-shot solve against an edgeBE base (interior BE = 0), applied with REPLACE. Passes 1+ measure the residual left by the CURRENT calibBE runs and ADD it (HAT_BE_BASE_PRESET=calibBE, HAT_be_apply_fit_to_config.py --add). Additive because imposing X m/yr moves a domain's rate by well under X once BRIE has diffused it alongshore, so each pass closes a fraction of what remains and no estimate of that fraction is ever needed.",
+
+  "_stopping_rule": "Stop when a pass buys less than 5% of the standing RMSE. Both periods met it.",
+
+  "_measured": "2026-09-14",
+
+  "_supersedes": {
+    "_note": "This replaces the calibration measured 2026-08-24, retired to ../superseded_20260914/ with its WHY.md.",
+    "_reason": "FROZEN_ZONE_DOMAINS held seven domains the zone rules do not put there -- D8, D48, D57 in 2004 and D9, D22, D44, D62 in 1984 -- and every one of the seven is warranted by the ordinary significance and width rules in the OTHER period, where each was already a legitimate member. They had been written into both tuples: a transposition when the sets were assembled. It surfaced as five corrections one domain wide, which MIN_ZONE_WIDTH = 3 exists to make impossible.",
+    "_not_comparable": "The RMSE figures below must NOT be read against the 2026-08-24 table as a measure of what the correction cost or bought. Two things changed between them, not one: the zone set was corrected AND the period-1 base runs were re-run on v2 topography. Only the gains WITHIN this sequence isolate the iteration."
+  },
+
+  "_rmse_is": "rmse_interior_m_yr from each base run's own metadata: LRR (OLS slope) against the CoastSat target, GIS 2-89, the locked end domains excluded. Base runs are the full-management groin-on pair -- HAT_1984_2004_<preset>_road_bdm_groin and HAT_2004_2024_<preset>_road_bdm_nourish_groin -- at the fitted M = 60, f = 0.6.",
+
+  "baselines": {
+    "_note": "Same scenario and groin setting, only the BE preset differs.",
+    "zeroBE": {
+      "1984_2004": 1.3801,
+      "2004_2024": 2.1258
+    },
+    "edgeBE": {
+      "1984_2004": 1.2348,
+      "2004_2024": 1.7793
+    }
+  },
+
+  "passes": {
+    "1984_2004": [
+      {"pass": 0, "rmse": 0.796, "note": "one-shot solve against edgeBE, corrected zone set (46 domains)"},
+      {"pass": 1, "rmse": 0.585, "gain_pct": 26.5},
+      {"pass": 2, "rmse": 0.542, "gain_pct": 7.4},
+      {"pass": 3, "rmse": 0.543, "gain_pct": -0.2, "converged": true,
+       "note": "period 1 only, via --periods 1984; period 2 had already met the stopping rule at pass 2 and re-writing it would have kept adding to a finished field. This pass bought nothing -- it moved the RMSE up by 0.001 -- which is what meeting the stopping rule looks like from the far side. It is kept rather than reverted because the rule says stop when a pass buys under 5%, not revert to the best pass; selecting the best of several passes after the fact is a different and weaker claim."}
+    ],
+    "2004_2024": [
+      {"pass": 0, "rmse": 0.807, "note": "one-shot solve against edgeBE, corrected zone set (63 domains)"},
+      {"pass": 1, "rmse": 0.632, "gain_pct": 21.7},
+      {"pass": 2, "rmse": 0.602, "gain_pct": 4.7, "converged": true}
+    ]
+  },
+
+  "_one_pass_closes": {
+    "_note": "Fraction of the edgeBE misfit closed by the one-shot solve alone -- the reason the solve is iterated at all.",
+    "1984_2004": "35.5% (1.2348 -> 0.796)",
+    "2004_2024": "54.6% (1.7793 -> 0.807)"
+  },
+
+  "_residual_left": {
+    "_note": "Largest remaining smoothed residuals, m/yr, at convergence, GIS 2-89.",
+    "1984_2004": {"D6": 2.27, "D5": 1.48, "D66": -1.0, "D7": 0.92, "D65": -0.92, "D8": 0.89},
+    "2004_2024": {"D6": -2.85, "D7": -2.17, "D25": -1.52, "D24": -1.49, "D26": -1.29, "D23": -1.25},
+    "_D5_D6_D7": "D5-D7 dominate both periods and are deliberately never corrected: they are the Buxton groin's own footprint (GROIN_RESERVED_DOMAINS), and the residual there is the groin module's shortfall rather than a background-erosion term. Period 1 positive means the model does not build enough fillet at M = 60; period 2 negative means the real fillet released after the 2003 storm damage and a module with trapping bounded at >= 0 cannot. Absorbing either into the sediment budget would close the same gap twice and make the M/f fit unfalsifiable.",
+    "_D23_D26": "The Avon block carries the largest residual outside the groin footprint in period 2 and is withheld -- outside the frozen zone set, left at 0.0 however large the residual. That is honest unexplained variance rather than a fitted constant with no named mechanism."
+  },
+
+  "_per_domain_convergence": {
+    "_note": "The stopping rule is on FIELD-WIDE RMSE across D2-D89. It says nothing about any single domain, and individual domains are not all equally settled when it fires. Recorded because a field called converged is easily read as 'every value has stopped moving', which is not what was tested.",
+
+    "_how_to_read_a_domain": "A domain that is settling has shrinking pass-to-pass steps -- D84 in period 1 went -1.6, -0.6, 0.0, and the final -5.3 is simply where the topping-up ran out. A domain still moving has steps that are not shrinking much.",
+
+    "_still_moving_at_the_stop": {
+      "_criterion": "last pass still added more than 0.25 m/yr.",
+      "1984_2004": {"count": 10, "of": 88,
+        "worst": {"D8": 0.9, "D10": 0.9, "D11": 0.3, "D12": 0.3, "D31": 0.3, "D32": 0.3, "D33": 0.3, "D72": 0.3}},
+      "2004_2024": {"count": 22, "of": 88,
+        "worst": {"D22": 1.0, "D27": 0.9, "D31": 0.7, "D32": 0.6, "D84": 0.6, "D85": 0.6, "D86": 0.6, "D87": 0.6}}
+    },
+
+    "_quantisation": "Rates are stored rounded to 0.1 m/yr, so a step of 0.3 is three quanta and a sequence like -0.3, 0.0, -0.3 is as likely to be rounding as real oscillation. Only the domains stepping by 0.6 and above are clearly still moving.",
+
+    "_D8": "The slowest to settle in period 1: steps of +1.0, +1.0, +0.9 to a final +3.7. It is shrinking -- about 10% a pass -- but far more slowly than its neighbours, and a pass 4 would likely have added another ~0.9. D8 is the domain immediately north of GROIN_RESERVED_DOMAINS and sits at the edge of the zone held out of the LOESS fit (GROIN_EXCLUDE_THROUGH_DOMAIN = 10), so the most likely reading is the groin's unresolved residual leaking into the one adjacent domain the source/sink is permitted to touch. Deliberately NOT chased with further passes: forcing D8 to settle would let the source/sink absorb what the groin module cannot do, which is the same double-count D5-D7 are reserved to prevent. Its 1-domain-wide appearance in fig_be_zones_and_corrections is a consequence of the same reservation -- the zone is D5-D8, four wide, and three of its four members emit 0.0 by policy.",
+
+    "_period_2_is_less_settled": "22 domains against period 1's 10, on one fewer pass -- period 2 met the 5% rule at pass 2 while period 1 needed 3. The D84-D87 block was still adding -0.6 and the Avon edge at D22/D27 about -1.0. Not a defect: the rule fired where it was defined to. But period 2's field is the less converged of the two, and a claim resting on a single period-2 domain's value should say so."
+  },
+
+  "_abandoned_unmasked": {
+    "_what": "An earlier run of the same iteration WITHOUT the frozen-zone mask, measured 2026-08-24 against the calibration this one supersedes.",
+    "1984_2004": 0.4931,
+    "2004_2024": 0.4843,
+    "_why_abandoned": "It scored better, and that is the point. Re-deriving zones each pass let progressively less coherent features cross the 0.5 m/yr threshold as the real ones were satisfied: two passes corrected 19 domains in 1984-2004 and 12 in 2004-2024 that the pass-0 zone identification never selected, including D5-D7 in period 2, the groin's own footprint. And because adding BE at a domain pushes sediment into its neighbours, later passes began correcting the alongshore spillover of earlier ones, which never terminates. The gap between those numbers and the ones above is the fit available only by correcting outside justifiable zones. It was declined deliberately, and is recorded rather than hidden so a reader can weigh its size.",
+    "_not_re_measured": "Not re-run against the corrected zone set. The unmasked variant has no zone set by construction, so the correction does not apply to it; its role here is to size the declined fit, and it is left at the value actually measured."
+  }
+}
