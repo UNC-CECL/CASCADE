@@ -87,6 +87,11 @@ from hat_topo_version import (array_name, topo_dirs,  # noqa: E402
 
 import matplotlib
 
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
 # Only the array helpers are used, never the picker.
 matplotlib.use("Agg")
 
@@ -94,7 +99,7 @@ matplotlib.use("Agg")
 # CONFIG
 # ==============================================================================
 
-PROJECT_ROOT = Path(r"C:\Users\hanna\PycharmProjects\CASCADE")
+PROJECT_ROOT = Path(str(_PATH_REPO))
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 
 # There is now exactly ONE copy of HAT_dune_topo_extractor.py in the repo, and

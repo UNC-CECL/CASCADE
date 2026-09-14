@@ -1,3 +1,4 @@
+from pathlib import Path
 """
 HAT_check_nourishment_applied.py
 ==================================
@@ -21,7 +22,12 @@ Usage: point RUN_DIR at the saved run folder (the one containing the
 import os
 import numpy as np
 
-RUN_DIR = r"/output/raw_runs/HAT_1967_2018_edge_calibrated_no_groin"
+# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
+# Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
+RUN_DIR = str(_PATH_REPO / "output" / "raw_runs" / "HAT_1967_2018_edge_calibrated_no_groin")
 RUN_NAME = "HAT_1967_2018_edge_calibrated_no_groin"
 
 START_YEAR = 1967

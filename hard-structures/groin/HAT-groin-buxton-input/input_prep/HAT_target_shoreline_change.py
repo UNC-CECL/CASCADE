@@ -1,3 +1,4 @@
+from pathlib import Path
 """
 HAT_target_shoreline_change.py
 ==============================
@@ -43,10 +44,15 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
 # ============================== CONFIG ==============================
 
 # Raw ArcGIS dune-line offset files, keyed by year.
-RAW_DIR = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\island_offset\raw_offsets"
+RAW_DIR = str(_PATH_REPO / "data" / "hatteras_init" / "2-brie-offset" / "raw_offsets")
 RAW_FILES = {
     1967: os.path.join(RAW_DIR, "1967_duneline_offset_raw.csv"),
     1978: os.path.join(RAW_DIR, "1978_duneline_offset_raw.csv"),

@@ -1,3 +1,4 @@
+from pathlib import Path
 """
 CoastSat Pipeline Data Verification
 =====================================
@@ -31,10 +32,10 @@ Outputs
 # ============================================================
 
 # Full transect-level LRR results (comparison of coastsat_domain_lrr_fixed.py)
-TRANSECT_LRR_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\2004_2024\transect_lrr_full.csv"
+TRANSECT_LRR_CSV = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "2004_2024" / "transect_lrr_full.csv")
 
 # Domain-level summary (comparison of coastsat_domain_lrr_fixed.py)
-DOMAIN_SUMMARY_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\2004_2024\domain_lrr_summary.csv"
+DOMAIN_SUMMARY_CSV = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "2004_2024" / "domain_lrr_summary.csv")
 
 # Where to save the per-domain comparison table
 OUTPUT_REPORT_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat_verification\verification_report_2004_2024.csv"
@@ -49,6 +50,11 @@ TOLERANCE = 0.001
 import os
 import numpy as np
 import pandas as pd
+
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
 
 # ============================================================
 # HELPERS

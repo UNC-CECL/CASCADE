@@ -1,4 +1,14 @@
 """
+
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
+# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
+# Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
 Shoreline Data Inventory — Hatteras Island study area
 ======================================================
 Cross-source inventory of shoreline observations available across the
@@ -39,7 +49,7 @@ Edit the CONFIG section below, then run:
 #   • Line features (e.g., transects): merged and buffered by
 #     STUDY_AREA_BUFFER_M to create a filter polygon.
 # The script auto-detects which case you're using.
-STUDY_AREA_FILTER_PATH = r"/scripts/input_prep/shoreline_inventory/cascade_area.geojson"
+STUDY_AREA_FILTER_PATH = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "shoreline_inventory" / "cascade_area.geojson")
 
 # Buffer distance (m) applied around the filter geometry.
 # For a bounding box: 500 m to catch drifted historic shorelines.
@@ -48,20 +58,20 @@ STUDY_AREA_FILTER_PATH = r"/scripts/input_prep/shoreline_inventory/cascade_area.
 STUDY_AREA_BUFFER_M = 500
 
 # --- Source 1: user-digitized wet-dry lines ---
-WET_DRY_PATH     = r"/scripts/input_prep/shoreline_inventory/wet_dry_groin.geojson"
+WET_DRY_PATH     = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "shoreline_inventory" / "wet_dry_groin.geojson")
 WET_DRY_DATE_COL = "date"
 
 # --- Source 2: NC Coastal Management historical shorelines ---
-NC_STATE_PATH     = r"/scripts/input_prep/shoreline_inventory/nc_shorelines.geojson"
+NC_STATE_PATH     = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "shoreline_inventory" / "nc_shorelines.geojson")
 NC_STATE_DATE_COL = "DATE_"
 
 # --- Source 3: CoastSat time-series CSVs ---
 # GeoJSON with CoastSat transect geometry (used to spatially filter)
-COASTSAT_TRANSECT_GEOM = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\CoastSat_transect_layer.geojson"
+COASTSAT_TRANSECT_GEOM = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "CoastSat_transect_layer.geojson")
 # ID column in the CoastSat geometry file
 COASTSAT_TRANSECT_ID_COL = "id"
 # Root folder containing per-transect CSVs in site subfolders
-COASTSAT_ROOT_DIR = r"/scripts/input_prep/CoastSat/coastsat_timeseries"
+COASTSAT_ROOT_DIR = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "coastsat_timeseries")
 # A CoastSat date is "well-covered" if this many study-area transects
 # reported an observation on that date
 COASTSAT_WELL_COVERED_MIN_TRANSECTS = 10
@@ -91,7 +101,7 @@ N_COASTSAT_SNAPSHOTS = 10
 BASEMAP = "carto_light"
 
 # --- Output ---
-OUTPUT_DIR = r"/scripts/input_prep/shoreline_inventory/comparison"
+OUTPUT_DIR = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "shoreline_inventory" / "comparison")
 
 # CRS for spatial operations (UTM 18N covers NC Outer Banks)
 PROJECTED_CRS = "EPSG:32618"

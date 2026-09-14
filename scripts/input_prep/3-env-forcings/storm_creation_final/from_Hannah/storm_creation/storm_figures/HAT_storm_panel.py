@@ -17,11 +17,16 @@ import matplotlib.patches as mpatches
 from pathlib import Path
 from datetime import timedelta
 
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
 # =============================================================================
 # USER CONFIGURATION
 # =============================================================================
 
-READABLE_CSV = Path(r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\storms\hindcast_storms\base_storms\storms_1984_2004_base_readable.csv")
+READABLE_CSV = Path(str(_PATH_REPO / "data" / "hatteras_init" / "3-env-forcings" / "storms" / "superseded_20260914" / "testing_storms" / "base_storms" / "storms_1984_2004_base_readable.csv"))
 BEGIN_YEAR        = 1984
 END_YEAR          = 2004
 MATCH_WINDOW_DAYS = 5

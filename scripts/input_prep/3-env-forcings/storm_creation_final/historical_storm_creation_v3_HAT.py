@@ -41,13 +41,18 @@ from datetime import datetime, timedelta
 # right about what was produced.
 #
 # The two source paths were drive-rooted literals from before the tree was
-# reorganised ("/scripts/...", "/data/hatteras_init/storms/..."), so they
+# reorganised (str(_PATH_REPO / "scripts" / "..."), str(_PATH_REPO / "data" / "hatteras_init" / "3-env-forcings" / "storms" / "...")), so they
 # resolved only if the interpreter happened to start at the drive root. They
 # are anchored on this file now, like every other path in the input tree.
 #
 #     python historical_storm_creation_v3_HAT.py --start-year 1996 --end-year 2010
 import argparse as _argparse
 from pathlib import Path as _Path
+
+# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
+# Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
 
 _REPO = next(_p for _p in _Path(__file__).resolve().parents
              if (_p / "pyproject.toml").exists())

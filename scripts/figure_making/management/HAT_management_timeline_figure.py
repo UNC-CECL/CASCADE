@@ -1,3 +1,4 @@
+from pathlib import Path
 #!/usr/bin/env python3
 """
 HAT_management_timeline_figure.py  (v8)
@@ -18,8 +19,13 @@ from matplotlib.patches import Rectangle
 import matplotlib.ticker as ticker
 from matplotlib import rcParams
 
-PNG = r'C:\Users\hanna\PycharmProjects\CASCADE\scripts\figure_making\management_plot\figures\HAT_management_1984_2024_timeline.png'
-PDF = r'C:\Users\hanna\PycharmProjects\CASCADE\scripts\figure_making\management_plot\figures\HAT_management_1984_2024_timeline.pdf'
+# Anchored 2026-09-14: absolute into a home directory, or into a tree
+# renamed since. Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
+
+PNG = str(_PATH_REPO / "output" / "figures" / "management" / "HAT_management_1984_2024_timeline.png")
+PDF = str(_PATH_REPO / "output" / "figures" / "management" / "HAT_management_1984_2024_timeline.pdf")
 
 Y0, Y1  = 1984, 2024
 PBREAK  = 2004

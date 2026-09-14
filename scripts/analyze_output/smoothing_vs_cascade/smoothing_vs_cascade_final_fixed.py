@@ -25,7 +25,7 @@ import pathlib
 import sys
 
 # ANCHORED, NOT TYPED. Every path below used to be an absolute literal; the
-# output one had lost its drive ("/scripts/analyze_output/...") and so wrote
+# output one had lost its drive (str(_PATH_REPO / "scripts" / "analyze_output" / "...")) and so wrote
 # its figures to C:\scripts\ instead of into the repository, and the input
 # ones still spelled the folder "input_preperation", renamed to "input_prep"
 # long ago. Anchoring on the pyproject.toml at the repo root makes all of
@@ -41,6 +41,11 @@ if str(PROJECT_BASE_DIR / "scripts") not in sys.path:
     sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
+
+# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
+# Rule 5 of ORGANIZATION.md.
+_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
 
 # ============================================================
 # CONFIG
