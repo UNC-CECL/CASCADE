@@ -21,6 +21,7 @@ class Cascade:
         road_width,
         road_ele,
         road_setback,
+        road_relocation_setback,
         nourishment_interval,
         nourishment_volume,
         overwash_filter,
@@ -52,6 +53,16 @@ class Cascade:
             self._road_setback = road_setback
         else:
             self._road_setback = [road_setback] * self._ny
+        # WHERE A REBUILT ROAD GOES -- a different decision from where the road
+        # STARTS, and until 2026-09-14 they shared `road_setback`. See the note
+        # at the yearly update below for what that cost.
+        if road_relocation_setback is None:
+            self._road_relocation_setback = list(self._road_setback)
+        elif np.size(road_relocation_setback) > 1:
+            self._road_relocation_setback = road_relocation_setback
+        else:
+            self._road_relocation_setback = (
+                [road_relocation_setback] * self._ny)
         if np.size(nourishment_interval) > 1:
             self._nourishment_interval = nourishment_interval
         else:
@@ -133,6 +144,7 @@ class Cascade:
         road_ele=1.7,  # ---------- roadway management --------------- #
         road_width=30,
         road_setback=30,
+        road_relocation_setback=None,
         dune_design_elevation=3.7,
         dune_minimum_elevation=2.2,
         trigger_dune_knockdown=False,
@@ -229,6 +241,10 @@ class Cascade:
             Elevation of the initial roadway [m MHW]
         road_width: int or list of int, optional
             Width of roadway [m]
+        road_relocation_setback: int, list of int, or None, optional
+            Distance from the dune line a RELOCATED road is rebuilt at, m.
+            None means "use road_setback", which is what this did before the
+            two were separated.
         road_setback: int or list of int, optional
             Setback of roadway from the inital dune line and after road relocations [m]
         dune_design_elevation: float or list of floats, optional
@@ -388,6 +404,7 @@ class Cascade:
             road_width=road_width,
             road_ele=road_ele,
             road_setback=road_setback,
+            road_relocation_setback=road_relocation_setback,
             nourishment_interval=nourishment_interval,
             nourishment_volume=nourishment_volume,
             overwash_filter=overwash_filter,
@@ -686,9 +703,16 @@ class Cascade:
                     self._roadways[iB3D].road_relocation_width = self._road_width[
                         iB3D
                     ]  # type: float
-                    self._roadways[iB3D].road_relocation_setback = self._road_setback[
-                        iB3D
-                    ]
+                    # THE TARGET IS ITS OWN PARAMETER (2026-09-14). This used
+                    # to read self._road_setback[iB3D], so "where the road
+                    # starts" and "where a rebuilt road goes" were one number
+                    # and a caller wanting a standard clearance had to
+                    # overwrite the measured initial position after
+                    # construction. They are separate inputs now; passing
+                    # nothing still gives the old behaviour.
+                    self._roadways[iB3D].road_relocation_setback = (
+                        self._road_relocation_setback[iB3D]
+                    )
                     self._roadways[iB3D].update(
                         self._barrier3d[iB3D], self._trigger_dune_knockdown
                     )
