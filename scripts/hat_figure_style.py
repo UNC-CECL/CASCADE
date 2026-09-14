@@ -78,7 +78,8 @@ import matplotlib as mpl
 import matplotlib.patheffects as pe
 from matplotlib.colors import BoundaryNorm, ListedColormap
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
+                    if (_p / "pyproject.toml").exists())
 STYLE_SHEET_DIR = PROJECT_ROOT / "data" / "hatteras_init" / "9-figures"
 
 # =============================================================================

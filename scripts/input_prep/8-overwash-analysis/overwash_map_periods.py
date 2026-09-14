@@ -57,7 +57,9 @@ from shapely.geometry import box as shp_box
 from shapely.ops import unary_union
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[2]
+REPO = next(
+    _p for _p in HERE.parents
+    if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(HERE))
 

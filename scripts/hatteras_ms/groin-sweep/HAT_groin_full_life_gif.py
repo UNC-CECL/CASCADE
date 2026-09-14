@@ -72,7 +72,8 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib.lines import Line2D
 
 _HERE = Path(__file__).resolve()
-PROJECT_BASE_DIR = _HERE.parents[3]
+PROJECT_BASE_DIR = next(_p for _p in _HERE.parents
+                        if (_p / "pyproject.toml").exists())
 if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
     raise RuntimeError(
         f"CASCADE repo root not found: {PROJECT_BASE_DIR} has no pyproject.toml.")

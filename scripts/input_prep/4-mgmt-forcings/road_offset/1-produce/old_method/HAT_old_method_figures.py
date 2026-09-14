@@ -99,7 +99,8 @@ from matplotlib.transforms import blended_transform_factory
 # CONFIG
 # =============================================================================
 
-PROJECT_ROOT = Path(__file__).resolve().parents[6]
+PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
+                    if (_p / "pyproject.toml").exists())
 DATA = PROJECT_ROOT / "data" / "hatteras_init"
 
 ROAD_CSV_FMT = (DATA / "4-mgmt-forcing" / "road_offset" / "raw_offset"

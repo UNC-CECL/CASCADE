@@ -71,7 +71,9 @@ from matplotlib.patches import Polygon
 from pyproj import Transformer
 from rasterio.windows import from_bounds
 
-REPO = Path(__file__).resolve().parents[5]   # 1-extraction/nodata_audit/ since 2026-09-09
+REPO = next(
+    _p for _p in Path(__file__).resolve().parents
+    if (_p / "pyproject.toml").exists())   # 1-extraction/nodata_audit/ since 2026-09-09
 sys.path.insert(0, str(REPO / "scripts"))
 import hat_topo_version as htv  # noqa: E402
 

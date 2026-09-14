@@ -49,7 +49,8 @@ from __future__ import annotations
 from pathlib import Path
 
 _HERE = Path(__file__).resolve()
-PROJECT_ROOT = _HERE.parents[1]
+PROJECT_ROOT = next(_p for _p in _HERE.parents
+                    if (_p / "pyproject.toml").exists())
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 
 SCR_ROOT = INIT_ROOT / "5-scr"

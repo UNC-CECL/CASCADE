@@ -61,8 +61,8 @@ from tqdm import tqdm
 # The three paths below were driveless ("/scripts/...", resolving to
 # C:\scripts) and one named the pre-2026 "input_preperation" folder, so
 # this script could not run. Anchored on the repo root (2026-09-10).
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
-
+PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
+                    if (_p / "pyproject.toml").exists())
 ROOT_DATA_DIR = str(PROJECT_ROOT / "data" / "hatteras_init" / "5-scr"
                     / "coastsat_timeseries")
 # Moved out of the scripts tree 2026-09-12: the rate fits are DATA and

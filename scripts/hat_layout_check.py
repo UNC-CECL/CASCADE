@@ -65,9 +65,23 @@ WINDOW = re.compile(r"^\d{4}_\d{4}$")
 PERIOD_PREFIXED = re.compile(r"^(hindcast|period|run)[_-]\d{4}", re.I)
 
 
-def walk(root: Path):
+# Retired code is not maintained -- every superseded folder says so -- and a
+# rule 5 complaint about a script nobody will run again is noise that makes the
+# real ones harder to see. Rules 4 and 7 still apply to these folders; rule 5
+# does not (2026-09-14).
+RETIRED_PART = re.compile(r"^(superseded.*|old_.*|old|archived_.*|.*_ARCHIVE.*)$",
+                          re.I)
+
+
+def is_retired(path: Path) -> bool:
+    return any(RETIRED_PART.match(part) for part in path.parts)
+
+
+def walk(root: Path, skip_retired: bool = False):
     for path in root.rglob("*"):
         if any(part in SKIP_PARTS for part in path.parts):
+            continue
+        if skip_retired and is_retired(path):
             continue
         yield path
 
@@ -133,7 +147,7 @@ def rule_5_paths():
         base = REPO / tree
         if not base.is_dir():
             continue
-        for path in walk(base):
+        for path in walk(base, skip_retired=True):
             if path.suffix != ".py":
                 continue
             try:

@@ -31,7 +31,8 @@ import matplotlib.patches as mpatches
 # root and on YEAR, so either hindcast start can be produced (2026-09-10).
 import argparse as _argparse
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+_PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
+                     if (_p / "pyproject.toml").exists())
 _BRIE_ROOT = _PROJECT_ROOT / "data" / "hatteras_init" / "2-brie-offset"
 
 _ap = _argparse.ArgumentParser(description="island dune offsets for one hindcast start")

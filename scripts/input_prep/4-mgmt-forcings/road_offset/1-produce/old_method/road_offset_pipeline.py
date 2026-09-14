@@ -46,7 +46,8 @@ YEAR = int(os.environ.get("HAT_ROAD_YEAR", 1984))
 # other script reads. Same defect the rasterizer carried in PROJECT_ROOT.
 # scripts/input_prep/4-mgmt-forcings/road_offset/1-produce/old_method/<this> ->
 # parents[6].
-PROJECT_ROOT = Path(__file__).resolve().parents[6]
+PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
+                    if (_p / "pyproject.toml").exists())
 DATA = PROJECT_ROOT / "data" / "hatteras_init"
 
 RAW_ROAD_CSV = (DATA / "4-mgmt-forcing" / "road_offset" / "raw_offset"

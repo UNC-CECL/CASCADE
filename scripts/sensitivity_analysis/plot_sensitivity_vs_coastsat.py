@@ -43,7 +43,8 @@ warnings.filterwarnings("ignore")
 # Same anchor its sibling HAT_plot_sensitivity.py uses, so run_layout -- the
 # one definition of where a run folder keeps its files -- is importable.
 _HERE = Path(__file__).resolve()
-_REPO_ROOT = _HERE.parents[2]
+_REPO_ROOT = next(_p for _p in _HERE.parents
+                  if (_p / "pyproject.toml").exists())
 if not (_REPO_ROOT / "pyproject.toml").exists():
     raise RuntimeError(
         f"CASCADE repo root not found: {_REPO_ROOT} has no pyproject.toml.")

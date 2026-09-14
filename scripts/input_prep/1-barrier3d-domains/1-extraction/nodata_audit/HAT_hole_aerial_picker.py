@@ -105,7 +105,9 @@ from pyproj import Transformer
 from rasterio.windows import from_bounds
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[4]   # 1-extraction/nodata_audit/ since 2026-09-09
+REPO = next(
+    _p for _p in HERE.parents
+    if (_p / "pyproject.toml").exists())   # 1-extraction/nodata_audit/ since 2026-09-09
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(HERE))
 import hat_topo_version as htv  # noqa: E402

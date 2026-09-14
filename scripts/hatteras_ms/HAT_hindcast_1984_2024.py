@@ -74,7 +74,8 @@ from pathlib import Path
 # installed. The notebook walks up from cwd to find pyproject.toml; a script
 # knows where it is.
 _HERE = Path(__file__).resolve()
-PROJECT_BASE_DIR = _HERE.parents[2]
+PROJECT_BASE_DIR = next(_p for _p in _HERE.parents
+                        if (_p / "pyproject.toml").exists())
 SCRIPTS_DIR = PROJECT_BASE_DIR / "scripts"
 # HAT_hindcast_config sits beside this file. Running the .py puts that
 # directory on sys.path automatically; importing it from the notebook does

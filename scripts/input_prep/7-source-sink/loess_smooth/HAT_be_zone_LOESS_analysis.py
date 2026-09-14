@@ -97,7 +97,8 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 # this file used to reimplement the observed smoothing and the modelled LRR
 # extraction, and both had drifted from what the model is scored against.
 _HERE = Path(__file__).resolve()
-PROJECT_BASE_DIR = _HERE.parents[4]
+PROJECT_BASE_DIR = next(_p for _p in _HERE.parents
+                        if (_p / "pyproject.toml").exists())
 if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
     raise RuntimeError(
         f"CASCADE repo root not found: {PROJECT_BASE_DIR} has no "

@@ -104,7 +104,8 @@ import numpy as np
 from matplotlib.colors import BoundaryNorm, ListedColormap
 from matplotlib.patches import Patch
 
-REPO = Path(__file__).resolve().parents[4]
+REPO = next(_p for _p in Path(__file__).resolve().parents
+            if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
 from hat_elevation_products import product  # noqa: E402
 

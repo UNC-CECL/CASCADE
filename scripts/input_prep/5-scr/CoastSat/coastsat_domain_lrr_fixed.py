@@ -33,7 +33,8 @@ Edit the CONFIG section below, then run:
 import argparse as _argparse
 from pathlib import Path as _Path
 
-_REPO = _Path(__file__).resolve().parents[4]
+_REPO = next(_p for _p in _Path(__file__).resolve().parents
+             if (_p / "pyproject.toml").exists())
 _HERE = _Path(__file__).resolve().parent
 
 _ap = _argparse.ArgumentParser(

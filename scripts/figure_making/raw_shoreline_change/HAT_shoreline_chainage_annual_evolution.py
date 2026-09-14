@@ -37,14 +37,17 @@ import matplotlib.colors as mcolors
 import imageio.v2 as imageio
 from tqdm import tqdm
 
+_REPO = next(_p for _p in Path(__file__).resolve().parents
+             if (_p / "pyproject.toml").exists())
+
 # ============================================================
 # CONFIG
 # ============================================================
 
 # The per-transect CoastSat timeseries live in the data tree, not under
 # scripts/; the old value was a driveless path that never existed (2026-09-10).
-ROOT_DATA_DIR = str(Path(__file__).resolve().parents[3]
-                    / "data" / "hatteras_init" / "5-scr" / "coastsat_timeseries")
+ROOT_DATA_DIR = str(_REPO / "data" / "hatteras_init" / "5-scr"
+                    / "coastsat_timeseries")
 # "input_preperation" is the pre-2026 folder name; the lookup now lives
 # under data/hatteras_init/5-scr/transect_domains/ (moved out of the
 # scripts tree 2026-09-12; hat_observed_rates.py resolves it).
@@ -55,8 +58,6 @@ LOOKUP_CSV    = str(Path(__file__).resolve().parents[3]
 # absolute paths into a home directory, so they resolved on one machine
 # and dumped 1212 files into the code tree. Rule 1 and rule 5 of
 # ORGANIZATION.md.
-_REPO = next(_p for _p in Path(__file__).resolve().parents
-             if (_p / "pyproject.toml").exists())
 OUTPUT_DIR    = str(_REPO / "output" / "observations"
                     / "raw_shoreline_change" / "annual_output")
 SITE_FILTER   = "usa_NC"

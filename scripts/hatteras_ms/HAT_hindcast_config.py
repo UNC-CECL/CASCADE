@@ -70,7 +70,8 @@ IGNORE_ENV = "HAT_IGNORE_SETTINGS"
 SETTINGS_PATH = Path(__file__).resolve().parent / "hat_run.yaml"
 
 # For the runtime estimate in preflight(). scripts/hatteras_ms -> repo root.
-_PROJECT_BASE_DIR = Path(__file__).resolve().parents[2]
+_PROJECT_BASE_DIR = next(_p for _p in Path(__file__).resolve().parents
+                         if (_p / "pyproject.toml").exists())
 RUN_INDEX_PATH = _PROJECT_BASE_DIR / "output" / "raw_runs" / "run_index.csv"
 
 # The model .npz, for the preflight cost line. Measured, not guessed: the
