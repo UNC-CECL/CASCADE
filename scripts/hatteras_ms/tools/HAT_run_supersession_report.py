@@ -122,8 +122,49 @@ def load_runs() -> list:
             digest=source.get("values_digest"),
             start_year=period.get("start_year"),
             period=f"{period.get('start_year')}_{period.get('end_year')}",
+            state_bytes=_state_bytes(meta.parent),
         ))
     return runs
+
+
+# ARMS THAT NAME A VERSION are judged against that version, not CURRENT: they
+# exist to compare two islands, so their state is kept whatever CURRENT says.
+VERSION_ARMS = ("version-pair", "behindroad-copy")
+
+
+def _state_bytes(run_dir: Path) -> int:
+    """Size of this run's model state, or 0 if it was not saved.
+
+    The .npz is the ONLY artifact that lets a deep-dive figure be re-derived
+    without re-running. Everything else -- the rate table, the shoreline
+    matrix, the metadata -- is written regardless and is small.
+    """
+    return sum(f.stat().st_size for f in run_dir.glob("*.npz"))
+
+
+def state_verdict(run, current) -> str:
+    """Does the keep rule keep this run's model state?
+
+    THE RULE (Hannah, 2026-09-14): keep the state of runs on the CURRENT
+    topography, and of arms that name a version deliberately. Drop the rest.
+
+    Why it is defensible: a run on an island a re-pick behind cannot be
+    compared against a run made today, so re-plotting it deeply is answering a
+    question nobody can ask. Its tables and metadata survive either way.
+
+    Why it is not automatic: a run is one to three minutes of compute, but
+    re-running reproduces it at TODAY'S code, not the code it was made with.
+    That is what the state is really insuring against, and it is why nothing
+    here deletes anything.
+    """
+    if not run["state_bytes"]:
+        return "none"
+    if any(arm in run["rel"] for arm in VERSION_ARMS):
+        return "keep (version arm)"
+    if run["topo"] == current.get(run["product"]):
+        return "keep (current topography)"
+    return "would free"
+
 
 
 def main() -> None:
@@ -258,7 +299,46 @@ def main() -> None:
         w("")
 
     # 4
-    w("## 4. Provenance")
+    # ---- model state ----------------------------------------------------
+    w("## 4. Model state on disk")
+    w("")
+    by_verdict = {}
+    for r in runs:
+        v = state_verdict(r, current)
+        if v == "none":
+            continue
+        by_verdict.setdefault(v, []).append(r)
+    total = sum(r["state_bytes"] for rs in by_verdict.values() for r in rs)
+    w(f"**{sum(len(v) for v in by_verdict.values())} runs carry a model state "
+      f"file, {total / 1e9:.1f} GB in total.** The `.npz` is the only artifact "
+      f"that lets a deep-dive figure be re-derived without re-running; the rate "
+      f"table, the shoreline matrix and the metadata are written regardless.")
+    w("")
+    w("**The keep rule (2026-09-14):** keep the state of runs on the CURRENT "
+      "topography, and of arms that name a version deliberately. A run on an "
+      "island a re-pick behind cannot be compared against one made today, so "
+      "re-plotting it deeply answers a question nobody can ask.")
+    w("")
+    w("| verdict | runs | GB |")
+    w("|---|---|---|")
+    for verdict in sorted(by_verdict):
+        rs = by_verdict[verdict]
+        w(f"| {verdict} | {len(rs)} | {sum(r['state_bytes'] for r in rs)/1e9:.1f} |")
+    w("")
+    free = by_verdict.get("would free", [])
+    if free:
+        w(f"### The {len(free)} the rule would free")
+        w("")
+        w("Listed so the decision is reviewable. **Nothing deletes these** -- "
+          "they are git-ignored, so removal cannot be undone, and it stays a "
+          "deliberate act taken after reading this.")
+        w("")
+        for r in sorted(free, key=lambda r: -r["state_bytes"]):
+            w(f"* `{r['rel']}` — {r['state_bytes']/1e6:.0f} MB, "
+              f"{r['product']}/{r['topo']}")
+        w("")
+
+    w("## 5. Provenance")
     w("")
     dirty = sum(1 for r in runs if r["dirty"])
     w(f"- **{dirty} of {len(runs)}** runs were made from a dirty working tree, "
