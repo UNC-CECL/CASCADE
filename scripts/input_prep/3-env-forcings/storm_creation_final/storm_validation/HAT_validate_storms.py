@@ -62,6 +62,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+# Anchored 2026-09-14: these literals named trees renamed twice over.
+_REPO_LAYOUT = next(_p for _p in Path(__file__).resolve().parents
+                    if (_p / "pyproject.toml").exists())
+
 try:
     from HAT_storm_catalog import HISTORICAL_STORMS, storms_in_period
 except ImportError as _e:
@@ -118,7 +122,7 @@ except ImportError as _e:
 # the comparison folder together. Override per period with explicit "file" /
 # "outdir" keys if a run ever sits outside this convention.
 
-STORM_ROOT = Path(r"/data/hatteras_init/storms/hindcast_storms")
+STORM_ROOT = Path(str(_REPO_LAYOUT / "data" / "hatteras_init" / "3-env-forcings" / "storms" / "hindcast_storms"))
 
 SUMMARY_TEMPLATE     = "{name}_storms_v3_summary.csv"
 VALIDATION_SUBFOLDER = "validation"

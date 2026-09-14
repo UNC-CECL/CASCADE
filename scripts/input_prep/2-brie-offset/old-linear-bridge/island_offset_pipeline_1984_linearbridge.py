@@ -30,6 +30,11 @@ Author: Hannah A. Henry (smooth wrap-around buffer version)
 import os
 import pandas as pd
 import numpy as np
+from pathlib import Path
+
+# Anchored 2026-09-14: these literals named trees renamed twice over.
+_REPO_LAYOUT = next(_p for _p in Path(__file__).resolve().parents
+                    if (_p / "pyproject.toml").exists())
 
 # =============================================================================
 # 1. USER CONFIGURATION
@@ -37,10 +42,10 @@ import numpy as np
 
 # Year and input file
 YEAR = 1984
-RAW_FILE = r"/data/hatteras_init/2-brie-offset/2004/2004_duneline_offset_raw.csv"
+RAW_FILE = str(_REPO_LAYOUT / "data" / "hatteras_init" / "2-brie-offset" / "raw_offsets" / "2004_duneline_offset_raw.csv")
 
 # Output directory
-OUTPUT_DIR = r"/data/hatteras_init/2-brie-offset/hindcast_2004"
+OUTPUT_DIR = str(_REPO_LAYOUT / "data" / "hatteras_init" / "2-brie-offset" / "hindcast_2004")
 
 # Base name for comparison files
 OUTPUT_BASENAME = "Island_Dune_Offsets_2004"
