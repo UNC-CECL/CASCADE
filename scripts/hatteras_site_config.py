@@ -138,6 +138,18 @@ HATTERAS_PERIODS = {
             "1984_2004_storms_v3_72.npy"),
         "island_offset_file": (
             "2-brie-offset/1984/Island_Dune_Offsets_1984_PADDED_120.csv"),
+        # PAIRED WITH THE TOPOGRAPHY VERSION, AND NOTHING ENFORCES IT.
+        # A setback is metres landward of interior row 0, so it belongs to the
+        # extraction it was measured on. This file is the v2-era measurement;
+        # the v1-era one it replaced is in
+        # road_offset/superseded_20260907/1984/.
+        #
+        # Measured 2026-09-14: they differ at 27 of 82 domains, mean -12.4 m
+        # and up to 205 m at GIS 35. Running v1 ARRAYS against these v2
+        # setbacks moves every domain's rate by up to 0.005 m/yr -- small, but
+        # it is a mismatch, not a result. Pinning HAT_TOPO_VERSION_1984_START
+        # WITHOUT also pointing this at the matching file is the trap; it cost
+        # a twelve-run comparison before it was noticed.
         "road_setback_file": (
             "4-mgmt-forcing/road_offset/dunestart_offset/1984/"
             "RoadSetback_1984_dunestart.csv"),
