@@ -851,6 +851,8 @@ def build_cascade(
         road_ele=road_ele,
         road_width=road_width,
         road_setback=road_setback,
+        road_relocation_setback=relocation_setback_m,
+
 
         dune_design_elevation=dune_design_elevation,
         dune_minimum_elevation=dune_minimum_elevation,
@@ -869,34 +871,34 @@ def build_cascade(
     if groin_callback is not None:
         cascade._groin_callback = groin_callback
 
-    # A STANDARD RELOCATION TARGET, WITHOUT DISTURBING THE INITIAL POSITION.
+    # A STANDARD RELOCATION TARGET IS NOW AN ARGUMENT, not a fix-up.
     #
-    # `road_setback` does two jobs in CASCADE and they are not the same
-    # decision. It places the road at t = 0, and it is also the distance a
-    # relocated road is rebuilt at -- cascade_groin.py:689 re-assigns
-    # `roadways[i].road_relocation_setback = self._road_setback[i]` every year,
-    # so there is no separate parameter and no way to pass one.
+    # `road_setback` used to do two jobs in CASCADE: it placed the road at
+    # t = 0, AND cascade_groin.py re-read it every year as the distance a
+    # relocated road is rebuilt at. There was no separate parameter, so this
+    # function used to overwrite `cascade._road_setback` after construction --
+    # safe only because the constructor had already consumed it, and only for
+    # as long as that stayed true.
     #
-    # The two jobs are separable AFTER construction, though, and that is what
-    # this does. `cascade._road_setback` is read in exactly two places:
-    # cascade_groin.py:436, inside the constructor that has already run by the
-    # time we get here, and :689, the yearly relocation target. So overwriting
-    # it now changes the target and nothing else -- every road stays where the
-    # measured RoadSetback_<year>_dunestart.csv put it.
+    # Since 2026-09-14 the model takes `road_relocation_setback` directly and
+    # the yearly update reads that instead, so the measured array keeps its
+    # measured meaning and nothing here reaches into the object afterwards.
+    # Passing None gives the old behaviour: every domain relocates to its own
+    # measured offset.
     #
-    # WHY THIS IS WORTH DOING. The measured setback is observed 1984/2004
+    # WHY A STANDARD AT ALL. The measured setback is observed 1984/2004
     # geometry, not a design standard: 30 distinct values from 0 to 430 m
     # across the 55 road domains, exactly one of which is 30 m. Using it as the
-    # relocation target means a domain's rebuild rule is an accident of where
-    # the road happened to sit. At GIS 85 and 86 the measured value is 0 m, so
-    # a relocation returns the road to the dune line with no clearance at all
-    # and the next 10 m of retreat re-fires it -- 7 relocations against 7.3
-    # cells of retreat at GIS 85, 6 against 6.0 at GIS 86, one per cell.
+    # relocation target makes a domain's rebuild rule an accident of where the
+    # road happened to sit. At GIS 85 and 86 the measured value is 0 m, so a
+    # relocation returns the road to the dune line with no clearance and the
+    # next 10 m of retreat re-fires it -- 7 relocations against 7.3 cells of
+    # retreat at GIS 85, 6 against 6.0 at GIS 86, one per cell.
     #
     # WHAT IT DOES NOT CHANGE. Every domain's FIRST relocation still fires in
     # exactly the year it fires today, because that depends only on the initial
-    # setback, which is untouched. What changes is where the road lands, and
-    # therefore every trigger after the first.
+    # setback. What changes is where the road lands, and so every trigger after
+    # the first.
     #
     # ONE SIDE EFFECT WORTH KNOWING. `road_relocation_checks` refuses to
     # relocate when `setback + 2 * road_width > average_barrier_width`, and
@@ -904,9 +906,14 @@ def build_cascade(
     # to 430 m that guard can fire; with a 20 m standard it effectively cannot.
     # So a standard does not only move roads, it makes relocation POSSIBLE in
     # narrow domains where the measured target would have been refused.
-    if relocation_setback_m is not None:
-        cascade._road_setback = (
-            [float(relocation_setback_m)] * len(cascade._road_setback))
+    #
+    # WHAT IT STILL DOES NOT DECOUPLE. A prescribed historical relocation adds
+    # its measured DISPLACEMENT to the road's live setback, so the clearance a
+    # road was last rebuilt at still affects where a later historical event
+    # lands. That is correct -- a historical relocation moved the road from
+    # wherever it then was -- and the alternative, an absolute setback in the
+    # 1984 frame, would count the dune migration between 1984 and the event
+    # twice. The sensitivity is in the physics, not in the plumbing.
 
     return cascade
 

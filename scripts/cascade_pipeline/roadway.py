@@ -587,7 +587,12 @@ def _apply_relocation(cascade, event, pads, roadways, _rm, setback_check):
                     f"island is {island_width_m:.0f} m)")
 
         manager._road_setback = new_setback
-        manager._road_relocation_setback = new_setback   # keep the two in sync
+        # The relocation TARGET is deliberately not touched. It used to be set
+        # here "to keep the two in sync", which never survived a year: the
+        # yearly update re-assigns it from the model's own parameter. Since
+        # 2026-09-14 that parameter is a real input rather than the initial
+        # setback, so overwriting it here would quietly give this one domain a
+        # different rebuild rule from every other.
         manager._road_setback_TS[manager._time_index - 1] = new_setback
 
         rows.append(dict(
