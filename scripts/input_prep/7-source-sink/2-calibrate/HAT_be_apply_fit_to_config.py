@@ -1,4 +1,4 @@
-"""Writes HAT_be_zone_LOESS_analysis.py's fitted rates into the site config.
+"""Writes HAT_be_zone_residual_fit.py's fitted rates into the site config.
 
 The calibration prints a DOMAIN_BE_RATES block "ready to paste". Pasting it by
 hand loses two things every time, so this does it instead:
@@ -15,11 +15,12 @@ hand loses two things every time, so this does it instead:
 Both are preserved here: locked lines are copied verbatim from the config, and
 a missing zone label falls back to the one already there.
 
-Usage:
-    python scripts/input_prep/7-source-sink/apply_be_fit.py [--check] [--add]
+Usage (from scripts/input_prep/7-source-sink):
+    python 2-calibrate/HAT_be_apply_fit_to_config.py [--check] [--add]
 """
 
 import argparse
+import os
 import re
 import shutil
 import sys
@@ -30,7 +31,21 @@ _HERE = Path(__file__).resolve()
 _REPO_ROOT = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
 
 CONFIG = _REPO_ROOT / "scripts" / "hatteras_site_config.py"
-RATES_TXT = (_HERE.parent / "loess_smooth" / "output" / "DOMAIN_BE_RATES.txt")
+
+# Resolved the way the generator resolves its OUTPUT_DIR, not typed again: the
+# products moved from scripts/ to the data tree on 2026-09-12 and this path was
+# missed, so the whole iteration step raised FileNotFoundError until 09-14. A
+# path spelled out in two places is a pair that can disagree, and did.
+#
+# HAT_BE_OUTPUT_DIR is honoured for the same reason the generator honours it.
+# A what-if pass redirects its rates elsewhere; reading production anyway would
+# quietly apply the PREVIOUS calibration and report success. Either way the
+# resolved path is printed before anything is written, so which calibration is
+# being applied is never left to be inferred from the environment.
+_BE_DATA = (_REPO_ROOT / "data" / "hatteras_init" / "7-source-sink"
+            / "2-calibrate")
+RATES_TXT = (Path(os.environ.get("HAT_BE_OUTPUT_DIR", "").strip() or _BE_DATA)
+             / "DOMAIN_BE_RATES.txt")
 LOCKED_GIS = (1, 90)
 NL = chr(10)
 
@@ -52,6 +67,12 @@ def parse_generated(path=RATES_TXT):
         holds three forecast blocks; those are ignored -- this writes the
         hindcast presets only.
     """
+    if not path.exists():
+        raise SystemExit(
+            f"No calibration output at {path}{NL}"
+            f"Run 2-calibrate/HAT_be_zone_residual_fit.py first. If that "
+            f"pass set HAT_BE_OUTPUT_DIR, set it here too -- this reads "
+            f"whichever directory the generator wrote.")
     text = path.read_text(encoding=RATES_ENCODING)
     out = {}
     for block in re.split(r"^# ", text, flags=re.M):
@@ -145,6 +166,7 @@ def main():
     if unknown:
         parser.error(f"unknown period(s) {unknown}; expected 1984 and/or 2004")
 
+    print(f"reading {RATES_TXT}")
     generated = parse_generated()
     source = CONFIG.read_text(encoding="utf-8")
     start, end, block = existing_block(source)

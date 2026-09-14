@@ -1966,7 +1966,7 @@ _index_row = {
     # that date records which deterioration fraction it used -- and the pair
     # is quoted as (M, f), not as M alone. The seed runs turned out to be
     # f = 0.9, recoverable only from a comment in
-    # HAT_be_zone_LOESS_analysis.py. be1 needs no column: it is already here
+    # HAT_be_zone_residual_fit.py. be1 needs no column: it is already here
     # as be_rate_gis1_m_yr.
     "groin_deterioration_f": (GROIN_CALLBACK.deterioration_fraction
                               if GROIN_CALLBACK is not None else np.nan),

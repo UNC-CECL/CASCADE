@@ -1,6 +1,6 @@
 """
-HAT_be_zone_analysis.py
-========================
+HAT_be_zone_residual_fit.py
+===========================
 Derives defensible background erosion (BE) source/sink corrections for CASCADE
 from the residual between a LOESS-smoothed CoastSat observed shoreline change
 rate and the CASCADE base-run LRR.
@@ -45,7 +45,7 @@ Forecast scenarios (for domains where P1 ≠ P2 correction)
 
 Usage
 -----
-  python HAT_be_zone_analysis.py
+  python 2-calibrate/HAT_be_zone_residual_fit.py
 
 Dependencies
 ------------
@@ -103,7 +103,7 @@ if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
     raise RuntimeError(
         f"CASCADE repo root not found: {PROJECT_BASE_DIR} has no "
         f"pyproject.toml. This file expects to live in "
-        f"scripts/input_prep/7-source-sink/loess_smooth/.")
+        f"scripts/input_prep/7-source-sink/2-calibrate/.")
 SCRIPTS_DIR = PROJECT_BASE_DIR / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
@@ -119,6 +119,7 @@ from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E40
 from cascade_pipeline.run_registry import (                # noqa: E402
     CALIBRATION_ARM, preset_dir_for)
 from hatteras_site_config import HATTERAS_DOMAINS          # noqa: E402
+from hatteras_site_config import HATTERAS_BE_RATES_CALIBRATED  # noqa: E402
 from hat_figure_style import (                             # noqa: E402
     apply_style, figsize, save, caption, town_bands, open_frame,
     DOMAIN_AXIS_LABEL, C, C_1984, C_1997, C_1984_FILL, C_1997_FILL,
@@ -168,14 +169,14 @@ P2_COASTSAT_CSV = str(COASTSAT_BASE / "2004_2024" / "transect_lrr_full.csv")
 #
 # The fix is to iterate rather than to guess g: point this at the CURRENT
 # calibBE runs, measure what residual is left, and ADD it to the field already
-# in place (apply_be_fit.py --add). Each pass closes fraction g of whatever
+# in place (HAT_be_apply_fit_to_config.py --add). Each pass closes fraction g of whatever
 # remains, so it converges whatever g turns out to be, and it needs no estimate
 # of g at all. Amplifying by 1/g instead was rejected: g varies by an order of
 # magnitude with wavelength, so narrow features would be amplified ~10x into
 # rates that are indefensible read as sediment fluxes.
 #
-#   pass 0   HAT_BE_BASE_PRESET unset -> edgeBE   ->  apply_be_fit.py
-#   pass 1+  HAT_BE_BASE_PRESET=calibBE           ->  apply_be_fit.py --add
+#   pass 0   HAT_BE_BASE_PRESET unset -> edgeBE   ->  HAT_be_apply_fit_to_config.py
+#   pass 1+  HAT_BE_BASE_PRESET=calibBE           ->  HAT_be_apply_fit_to_config.py --add
 #
 # Stop when no zone clears SIGNIFICANCE_THRESHOLD, which is then the tolerance
 # the field is converged to.
@@ -202,7 +203,7 @@ TARGET_WINDOW = 10
 # Products moved to the data tree 2026-09-12; only the script lives under
 # scripts/. HAT_BE_OUTPUT_DIR still redirects a what-if pass anywhere.
 _BE_DATA = (PROJECT_BASE_DIR / "data" / "hatteras_init"
-            / "7-source-sink" / "loess_smooth")
+            / "7-source-sink" / "2-calibrate")
 OUTPUT_DIR = os.environ.get("HAT_BE_OUTPUT_DIR", "").strip() or str(_BE_DATA)
 
 # Figures are read out of the data tree, not out of scripts/. The tables above
@@ -211,7 +212,7 @@ OUTPUT_DIR = os.environ.get("HAT_BE_OUTPUT_DIR", "").strip() or str(_BE_DATA)
 # A what-if pass with HAT_BE_OUTPUT_DIR set keeps its figures with its tables.
 FIG_DIR = (os.environ.get("HAT_BE_OUTPUT_DIR", "").strip()
            or str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
-                  / "figures"))
+                  / "3-figures"))
 
 # ── Column names in CoastSat CSVs ─────────────────────────────────────────────
 LRR_COL    = "median_lrr"   # use median — more robust to outlier transects
@@ -323,17 +324,39 @@ MANUAL_OVERRIDES = {
 #
 # Regenerate ONLY by re-running pass 0 against edgeBE and re-deriving the set;
 # do not edit a domain in here to chase a residual.
+#
+# CORRECTED 2026-09-14 -- SEVEN DOMAINS WERE IN THE WRONG PERIOD'S TUPLE.
+# D8, D48, D57 sat in 2004 and D9, D22, D44, D62 in 1984, and every one of the
+# seven is warranted by the ordinary rules in the OTHER period -- where each was
+# already a legitimate member (D22 inside period 2's D8-D22 run, D48 inside
+# period 1's D48-D57). They had been written into both tuples. Seven for seven
+# is a transposition when the sets were assembled, not drift in the base runs.
+#
+# It showed up as five corrections ONE DOMAIN WIDE -- D22, D44, D62 here in
+# 1984, D48 and D57 in 2004 -- which MIN_ZONE_WIDTH = 3 exists to make
+# impossible. D8 and D9 are the same error, invisible because they land beside
+# legitimate members.
+#
+# The sets below are now exactly what identify_correction_zones returns for the
+# pass-0 edgeBE residual, plus D5-D7 in 1984 where the width rule puts them
+# anyway. Neither has an isolated member. Re-derived, not hand-pruned: the width
+# rule was re-applied to the residuals directly, because compute_be_rates
+# overwrites the verdict at D5-D7 after the rule has run, which makes D8 read as
+# isolated in the metrics CSV when it is not.
+#
+# The superseded field and the full account are in
+# data/hatteras_init/7-source-sink/superseded_20260914/.
 FROZEN_ZONE_DOMAINS = {
     1984: (
-        5, 6, 7, 8, 9, 10, 11, 12, 13, 22, 27, 28, 29, 30, 31, 32, 33,
-        34, 44, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 62, 68, 69, 70,
+        5, 6, 7, 8, 10, 11, 12, 13, 27, 28, 29, 30, 31, 32, 33,
+        34, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 68, 69, 70,
         71, 72, 73, 74, 75, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
         89
     ),
     2004: (
-        8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 27,
+        9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 27,
         28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43,
-        44, 48, 50, 51, 52, 53, 54, 55, 57, 62, 63, 64, 65, 66, 67, 68,
+        44, 50, 51, 52, 53, 54, 55, 62, 63, 64, 65, 66, 67, 68,
         69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 83, 84, 85, 86, 87,
         88, 89
     ),
@@ -361,7 +384,7 @@ FROZEN_ZONE_DOMAINS = {
 # reverse if MIN_ZONE_WIDTH were ever retuned. Naming the domains here makes the
 # behaviour intentional and survives that.
 #
-# FREEZE, NOT ZERO. These emit 0.0, which under `apply_be_fit.py --add` means
+# FREEZE, NOT ZERO. These emit 0.0, which under `HAT_be_apply_fit_to_config.py --add` means
 # "add nothing" -- the value already in the config is kept. That matters: at D5
 # only ~16% of the standing correction is the groin, the other ~84% being Cape
 # Point background measured with the groin switched OFF. Zeroing would discard
@@ -650,7 +673,8 @@ def load_model_lrr(period_start, period_end):
         raise KeyError(
             f"{csv_path.name} has no {RATE_COLUMN!r} column. It predates the "
             f"LRR estimator; re-run the base run, or backfill it with "
-            f"scripts/input_prep/7-source-sink/backfill_lrr.py.")
+            f"scripts/input_prep/7-source-sink/1-prepare/"
+            f"HAT_backfill_run_lrr.py.")
     return frame.set_index("gis_domain")[RATE_COLUMN]
 
 
@@ -1231,16 +1255,47 @@ def plot_diagnostic(cs_p1, cs_p2, casc_p1, casc_p2,
 # FIGURE 2 — Final BE rates: hindcast + forecast scenarios
 # ============================================================
 
+def _field_from_config(domains):
+    """The CALIBRATED FIELD as the model actually carries it, from the config.
+
+    NOT results["be_hindcast_p*"]. That column is what THIS pass proposes, and
+    the two are the same thing only at pass 0, where the apply step replaces
+    rather than adds. At every later pass it is an increment, so a figure drawn
+    from it is a picture of the last step rather than of the field -- and at
+    convergence, when the increment is near zero by definition, it is a picture
+    of almost nothing under a title that says "hindcast field". That is what
+    this figure showed on 2026-09-14: 5 nonzero domains at max 0.9 m/yr against
+    a real field of 43 at max 5.3.
+
+    Reading the config instead makes the figure say the same thing whenever it
+    is drawn, and independent of which pass happened to run last. It is also
+    where HAT_plot_be_zones.py already reads from, so the two agree by
+    construction.
+
+    The locked ends are zeroed here for DRAWING ONLY -- D1 and D90 carry rates
+    about ten times the interior because they are boundary absorbers rather
+    than sediment budgets, and leaving them in flattens every real feature into
+    the axis. They are not part of this figure's subject.
+    """
+    out = {}
+    for period, tag in ((1984, "p1"), (2004, "p2")):
+        table = HATTERAS_BE_RATES_CALIBRATED[period]
+        out[tag] = np.array([0.0 if d in LOCKED_DOMAINS else table.get(d, 0.0)
+                             for d in domains], dtype=float)
+    return out["p1"], out["p2"]
+
+
 def plot_be_rates(results, out_path):
     domains = np.arange(1, NUM_REAL_DOMAINS + 1)
+    field_p1, field_p2 = _field_from_config(domains)
     fig, axes = plt.subplots(3, 1, figsize=figsize("double", height=6.6),
                              sharex=True, constrained_layout=True,
                              gridspec_kw={"height_ratios": [4, 4, 1.2]})
 
     # -- Panel 1: the hindcast field, both periods ---------------------------
     ax = axes[0]
-    be_p1 = results["be_hindcast_p1"].values
-    be_p2 = results["be_hindcast_p2"].values
+    be_p1 = field_p1
+    be_p2 = field_p2
     w = 0.40
     ax.bar(domains - w / 2, be_p1, width=w, color=C_1984, zorder=3,
            label="1984\u20132004")
@@ -1260,7 +1315,12 @@ def plot_be_rates(results, out_path):
     # Domains whose correction differs between the periods, as a strip at the
     # foot: as a full-height wash it covered half the panel and swamped the
     # bars it was meant to qualify.
-    shifting = [d for d in domains if results.loc[d, "strategy"] == "shifting"]
+    # Which domains hold DIFFERENT values in the two periods -- read off the
+    # field itself rather than from results["strategy"], which records how this
+    # pass classified the residual and so changes pass to pass. SHIFT_THRESHOLD
+    # is the same rule the strategy column applies.
+    shifting = [d for d, a, b in zip(domains, field_p1, field_p2)
+                if abs(a - b) >= SHIFT_THRESHOLD]
     town_bands(ax, where="bottom", strip=0.035, label=False,
                shade=C["ACCENT_FILL"],
                spans={f"_{d0}": (d0, d1) for d0, d1 in _contiguous(shifting)})
@@ -1272,9 +1332,14 @@ def plot_be_rates(results, out_path):
 
     # -- Panel 2: the three forecast scenarios -------------------------------
     ax = axes[1]
-    be_cont = results["be_forecast_continue"].values
-    be_rev = results["be_forecast_revert"].values
-    be_neut = results["be_forecast_neutral"].values
+    # The three scenarios are DEFINITIONS over the two hindcast fields, not
+    # separate fits: continue = carry period 2 forward, revert = restore period
+    # 1, neutral = the mean. Derived here from the config field for the same
+    # reason panel (a) is -- the results[] columns carry this pass's increment,
+    # so a forecast drawn from them forecasts the leftover.
+    be_cont = field_p2
+    be_rev = field_p1
+    be_neut = (field_p1 + field_p2) / 2.0
 
     ax.fill_between(domains, np.minimum(be_rev, be_cont),
                     np.maximum(be_rev, be_cont), color=C["BASE_FILL"],
@@ -1301,8 +1366,13 @@ def plot_be_rates(results, out_path):
     # is whether the calibration actually corrected that domain. A seven-colour
     # palette here would also collide with the vintage pair above.
     ax = axes[2]
-    for dom in domains:
-        corrected = results.loc[dom, "strategy"] != "zero"
+    # "Correction applied" means the FIELD carries a nonzero value in either
+    # period, which is what the legend claims. It used to read
+    # results["strategy"] != "zero" -- this pass's significance verdict, which
+    # at a late pass marks the domains still moving rather than the domains
+    # corrected, and disagreed visibly with the bars above it.
+    for dom, a, b in zip(domains, field_p1, field_p2):
+        corrected = bool(a) or bool(b)
         ax.bar(dom, 1, width=1.0,
                color=C["ACCENT_FILL"] if corrected else C["BASE_FILL"],
                edgecolor="white", linewidth=0.25, zorder=2)
@@ -1473,11 +1543,11 @@ def main():
         cs_p1_smooth, cs_p2_smooth,
         raw_p1, raw_p2, smooth_p1, smooth_p2,
         results,
-        os.path.join(FIG_DIR, "fig_be_diagnostic.png"))
+        os.path.join(FIG_DIR, "1-field", "fig_be_diagnostic.png"))
 
     plot_be_rates(
         results,
-        os.path.join(FIG_DIR, "fig_be_rates.png"))
+        os.path.join(FIG_DIR, "1-field", "fig_be_rates.png"))
 
     # ── Print dicts ───────────────────────────────────────────────────────────
     print("\nDone.")

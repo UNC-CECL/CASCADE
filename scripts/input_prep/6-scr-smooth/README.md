@@ -158,7 +158,7 @@ the guard.
 
 `scripts/cascade_pipeline/coastsat_loess.py`, imported by
 `scripts/hatteras_ms/HAT_hindcast_1984_2024.py` (section 8) and by the groin
-sweep, the sensitivity plotter and `7-source-sink/loess_smooth/`. It reads the
+sweep, the sensitivity plotter and `7-source-sink/2-calibrate/`. It reads the
 same raw `transect_lrr_full.csv` and applies the same transect-first method
 this stage chose, configured as:
 
