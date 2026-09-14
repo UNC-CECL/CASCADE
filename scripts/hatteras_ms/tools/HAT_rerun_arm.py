@@ -12,6 +12,18 @@
 #   either a real change in the model or a change in the inputs, and the only
 #   way to tell which runs is to re-run and difference.
 #
+# PINNING THE TOPOGRAPHY IS HALF THE JOB, and the half that is easy to miss.
+#   A road setback is metres landward of interior row 0, so it belongs to the
+#   extraction it was measured on. `--topo-version v1` pins the ARRAYS but the
+#   run still reads whatever setback file the period table names, which is the
+#   v2-era measurement. Those two differ at 27 of 82 domains, up to 205 m, and
+#   the mismatch moves every domain's rate by up to 0.005 m/yr.
+#
+#   That is exactly what happened on the first use of this script: a twelve-cell
+#   comparison that looked like code drift was mostly a mismatched pair. Pinning
+#   a version means pinning BOTH halves; the archived setbacks are under
+#   road_offset/superseded_<date>/.
+#
 # IT WRITES INTO AN ARM, NEVER OVER THE ORIGINAL. An arm scopes the output
 # directory, so the stored runs and their index rows are untouched and the
 # comparison is reversible. Promoting a re-run to the production path is a
