@@ -34,7 +34,8 @@ import matplotlib.patheffects as pe
 DOMAINS_GEOJSON   = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\HAT_domains.json"
 TRANSECTS_GEOJSON = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\CoastSat_transect_layer.geojson"
 METRICS_CSV       = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\shoreline_change_patterns\classification_output\domain_trajectory_metrics.csv"
-OUTLINE_SHP       = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\figure_making\map_elements\hatteras_outline\HAT_island_outline.shp"
+OUTLINE_SHP= str(_SCR_DATA.parent / "9-figures" / "map_elements"
+             / "hatteras_outline" / "HAT_island_outline.shp")
 # Anchored on this file 2026-09-12. The literals here were
 # drive-rooted and had never resolved; the data they name also
 # moved out of the scripts tree on that date.

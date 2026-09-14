@@ -15,6 +15,14 @@ Usage:
     python plot_dsas_calibration_periods.py
 """
 
+# The DSAS tables moved into the data tree 2026-09-13 (rule 1). These
+# were read by bare filename, so they only resolved when you happened
+# to run from this folder.
+from pathlib import Path as _Path
+_REPO = next(_p for _p in _Path(__file__).resolve().parents
+             if (_p / "pyproject.toml").exists())
+_DSAS = (_REPO / "data" / "hatteras_init" / "5-scr"
+         / "scr-dsas-1978-2019")
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -25,7 +33,7 @@ from matplotlib.lines import Line2D
 # CONFIGURATION — edit these if your column names or file differ
 # ============================================================================
 
-INPUT_CSV = 'All_Shoreline_Transect_Intersections.csv'
+INPUT_CSV = str(_DSAS / "All_Shoreline_Transect_Intersections.csv")
 
 TRANSECT_ID_COL  = 'Transects_100m_LineID'
 DOMAIN_ID_COL    = 'Transects_100m_AddSpatialJoin_domain_id'
