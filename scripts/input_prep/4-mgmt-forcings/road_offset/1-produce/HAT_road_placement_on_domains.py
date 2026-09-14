@@ -93,7 +93,8 @@ from matplotlib.patheffects import withStroke
 # CONFIG
 # =============================================================================
 
-PROJECT_ROOT = Path(__file__).resolve().parents[5]
+PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
+                    if (_p / "pyproject.toml").exists())
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 
 # The topography version is NOT hardcoded here any more. It was "2009_v3", and

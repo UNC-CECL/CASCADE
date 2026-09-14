@@ -119,8 +119,8 @@ from shapely.ops import nearest_points, unary_union
 # CONFIG
 # =============================================================================
 
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
-
+PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
+                    if (_p / "pyproject.toml").exists())
 DATA_DIR = PROJECT_ROOT / "data" / "hatteras_init"
 
 # Which pair of road vintages to compare. Override from the shell to compare a

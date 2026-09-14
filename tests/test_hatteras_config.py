@@ -25,7 +25,8 @@ from pathlib import Path
 
 import pytest
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
+                    if (_p / "pyproject.toml").exists())
 SCRIPTS = PROJECT_ROOT / "scripts"
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 

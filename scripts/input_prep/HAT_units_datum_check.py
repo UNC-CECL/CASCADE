@@ -86,7 +86,8 @@ import numpy as np
 # scripts/input_prep/HAT_units_datum_check.py -> repo root is parents[2].
 # This said parents[4], which resolved to C:\Users\hanna: every path below
 # pointed outside the repo and the script could not find one of its inputs.
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
+                    if (_p / "pyproject.toml").exists())
 DATA = PROJECT_ROOT / "data" / "hatteras_init"
 B3D = DATA / "1-barrier3d-domains"
 

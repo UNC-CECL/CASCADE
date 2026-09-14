@@ -59,7 +59,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 _HERE = Path(__file__).resolve()
-PROJECT_ROOT = _HERE.parents[1]          # scripts/ -> repo root
+PROJECT_ROOT = next(
+    _p for _p in _HERE.parents
+    if (_p / "pyproject.toml").exists())          # scripts/ -> repo root
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 ELEVATION_ROOT = INIT_ROOT / "0-elevation"
 

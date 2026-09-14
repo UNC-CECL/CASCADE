@@ -41,7 +41,9 @@ import numpy as np
 import pandas as pd
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[2]
+REPO = next(
+    _p for _p in HERE.parents
+    if (_p / "pyproject.toml").exists())
 OUT_DIR = REPO / "data" / "hatteras_init" / "8-overwash-analysis"
 # The workbook is the hand-digitised record, so it lives with the data, not
 # the code (moved 2026-09-10). Edit it there.

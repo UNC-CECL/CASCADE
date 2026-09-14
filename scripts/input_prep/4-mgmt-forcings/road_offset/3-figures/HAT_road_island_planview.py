@@ -84,7 +84,8 @@ import matplotlib.patheffects as pe
 from matplotlib.colors import FuncNorm, LinearSegmentedColormap, Normalize
 from matplotlib.patches import Patch, Rectangle
 
-REPO = Path(__file__).resolve().parents[5]
+REPO = next(_p for _p in Path(__file__).resolve().parents
+            if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
 import hat_topo_version as htv  # noqa: E402
 from hat_figure_style import (  # noqa: E402

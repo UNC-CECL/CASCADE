@@ -72,7 +72,8 @@ import numpy as np
 import pandas as pd
 
 _HERE = Path(__file__).resolve()
-PROJECT_BASE_DIR = _HERE.parents[3]
+PROJECT_BASE_DIR = next(_p for _p in _HERE.parents
+                        if (_p / "pyproject.toml").exists())
 SCRIPTS_DIR = PROJECT_BASE_DIR / "scripts"
 for _path in (SCRIPTS_DIR, _HERE.parent):
     if str(_path) not in sys.path:

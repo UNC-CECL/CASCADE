@@ -92,7 +92,8 @@ from matplotlib.transforms import blended_transform_factory
 # reduced to Path("/") -- every path below resolved to the filesystem root and
 # the script died on "missing clipresample root". scripts/input_prep/
 # 4-mgmt-forcings/road_offset/1-produce/<this file> -> parents[5].
-PROJECT_ROOT = Path(__file__).resolve().parents[5]
+PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
+                    if (_p / "pyproject.toml").exists())
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 DOMAIN_ROOT = INIT_ROOT / "1-barrier3d-domains"
 ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"

@@ -42,8 +42,8 @@ import numpy as np
 import pandas as pd
 
 _HERE = Path(__file__).resolve()
-PROJECT_BASE_DIR = _HERE.parents[3]
-
+PROJECT_BASE_DIR = next(_p for _p in _HERE.parents
+                        if (_p / "pyproject.toml").exists())
 CHAINAGE_CSV = (PROJECT_BASE_DIR / "hard-structures" / "groin"
                 / "HAT-groin-gis-analysis" / "shoreline_output_coastsat"
                 / "groin_analysis_chainage_all.csv")

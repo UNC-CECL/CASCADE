@@ -79,7 +79,8 @@ _HERE = Path(__file__).resolve()
 # The guard below is what makes a future move fail here, loudly, instead of
 # resolving to scripts/scripts and surfacing as a missing data file several
 # imports deeper.
-PROJECT_BASE_DIR = _HERE.parents[3]
+PROJECT_BASE_DIR = next(_p for _p in _HERE.parents
+                        if (_p / "pyproject.toml").exists())
 if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
     raise RuntimeError(
         f"CASCADE repo root not found: {PROJECT_BASE_DIR} has no "

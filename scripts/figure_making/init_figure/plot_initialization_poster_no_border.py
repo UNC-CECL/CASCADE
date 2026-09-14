@@ -35,7 +35,9 @@ from cascade_pipeline.plotting import init_planview
 
 # Derived from this file's location (scripts/figure_making/init_figure/) so the
 # script runs on any checkout without editing a hardcoded path.
-PROJECT_BASE_DIR   = str(Path(__file__).resolve().parents[3])
+PROJECT_BASE_DIR   = str(next(
+    _p for _p in Path(__file__).resolve().parents
+    if (_p / "pyproject.toml").exists()))
 HATTERAS_DATA_BASE = os.path.join(PROJECT_BASE_DIR, 'data', 'hatteras_init')
 OUTPUT_DIR         = str(Path(__file__).resolve().parent)
 

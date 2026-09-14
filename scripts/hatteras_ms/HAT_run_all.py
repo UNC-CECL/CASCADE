@@ -127,7 +127,8 @@ from datetime import datetime
 from pathlib import Path
 
 _HERE = Path(__file__).resolve()
-PROJECT_BASE_DIR = _HERE.parents[2]
+PROJECT_BASE_DIR = next(_p for _p in _HERE.parents
+                        if (_p / "pyproject.toml").exists())
 SCRIPTS_DIR = PROJECT_BASE_DIR / "scripts"
 # The sweep, its config and the joint fit live in groin-sweep/. That is a
 # plain directory and not a package -- the hyphen in the name makes it

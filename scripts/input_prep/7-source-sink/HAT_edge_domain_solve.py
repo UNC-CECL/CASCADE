@@ -58,7 +58,8 @@ from pathlib import Path
 import pandas as pd
 
 _HERE = Path(__file__).resolve()
-PROJECT_ROOT = _HERE.parents[3]
+PROJECT_ROOT = next(_p for _p in _HERE.parents
+                    if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 sys.path.insert(0, str(PROJECT_ROOT))
 

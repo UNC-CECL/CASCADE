@@ -49,8 +49,8 @@ from datetime import datetime, timedelta
 import argparse as _argparse
 from pathlib import Path as _Path
 
-_REPO = _Path(__file__).resolve().parents[4]
-
+_REPO = next(_p for _p in _Path(__file__).resolve().parents
+             if (_p / "pyproject.toml").exists())
 _ap = _argparse.ArgumentParser(
     description="CASCADE storm series for one hindcast window")
 _ap.add_argument("--start-year", type=int, required=True,

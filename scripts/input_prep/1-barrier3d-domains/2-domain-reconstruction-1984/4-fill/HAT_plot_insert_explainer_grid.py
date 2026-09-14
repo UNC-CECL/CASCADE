@@ -38,7 +38,9 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[4]                  # domain-reconstruction-1984/4-fill/ (2026-09-09)
+REPO = next(
+    _p for _p in HERE.parents
+    if (_p / "pyproject.toml").exists())                  # domain-reconstruction-1984/4-fill/ (2026-09-09)
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(HERE))
 import HAT_insert_seaward_rows as ins  # noqa: E402

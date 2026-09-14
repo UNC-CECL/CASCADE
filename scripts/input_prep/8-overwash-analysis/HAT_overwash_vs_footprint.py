@@ -70,7 +70,9 @@ import numpy as np
 import pandas as pd
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[2]
+REPO = next(
+    _p for _p in HERE.parents
+    if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(HERE))
 

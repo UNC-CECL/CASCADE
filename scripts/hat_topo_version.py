@@ -98,7 +98,8 @@ import re
 from pathlib import Path
 
 _HERE = Path(__file__).resolve()
-PROJECT_ROOT = _HERE.parents[1]
+PROJECT_ROOT = next(_p for _p in _HERE.parents
+                    if (_p / "pyproject.toml").exists())
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 DOMAIN_ROOT = INIT_ROOT / "1-barrier3d-domains"
 
