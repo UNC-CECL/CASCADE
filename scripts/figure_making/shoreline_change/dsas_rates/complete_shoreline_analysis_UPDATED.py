@@ -4,6 +4,14 @@ Analyzes DSAS data and creates publication-quality visualizations
 Run this once and get everything!
 """
 
+# The DSAS tables moved into the data tree 2026-09-13 (rule 1). These
+# were read by bare filename, so they only resolved when you happened
+# to run from this folder.
+from pathlib import Path as _Path
+_REPO = next(_p for _p in _Path(__file__).resolve().parents
+             if (_p / "pyproject.toml").exists())
+_DSAS = (_REPO / "data" / "hatteras_init" / "5-scr"
+         / "scr-dsas-1978-2019")
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,7 +27,7 @@ print("\nPART 1: Loading data and calculating rates...")
 print("-"*70)
 
 # Load the intersection data
-df = pd.read_csv('All_Shoreline_Transect_Intersections.csv')
+df = pd.read_csv(str(_DSAS / "All_Shoreline_Transect_Intersections.csv"))
 
 # Define column names
 TRANSECT_ID_COL = 'Transects_100m_LineID'

@@ -3,12 +3,20 @@ Verification: Compare Calculated Rates to Known Values
 Checks if your calculated shoreline change rates make sense
 """
 
+# The DSAS tables moved into the data tree 2026-09-13 (rule 1). These
+# were read by bare filename, so they only resolved when you happened
+# to run from this folder.
+from pathlib import Path as _Path
+_REPO = next(_p for _p in _Path(__file__).resolve().parents
+             if (_p / "pyproject.toml").exists())
+_DSAS = (_REPO / "data" / "hatteras_init" / "5-scr"
+         / "scr-dsas-1978-2019")
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
 # Load your calculated rates
-domain_rates = pd.read_csv('domain_shoreline_change_rates.csv')
+domain_rates = pd.read_csv(str(_DSAS / "domain_shoreline_change_rates.csv"))
 
 print("="*70)
 print("VERIFICATION ANALYSIS")

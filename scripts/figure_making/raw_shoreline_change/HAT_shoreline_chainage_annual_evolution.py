@@ -51,7 +51,14 @@ ROOT_DATA_DIR = str(Path(__file__).resolve().parents[3]
 LOOKUP_CSV    = str(Path(__file__).resolve().parents[3]
                     / "data" / "hatteras_init" / "5-scr"
                     / "transect_domains" / "transect_domain_lookup.csv")
-OUTPUT_DIR    = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\figure_making\raw_shoreline_change\annual_output"
+# Products go to output/, not beside the script (2026-09-13). These were
+# absolute paths into a home directory, so they resolved on one machine
+# and dumped 1212 files into the code tree. Rule 1 and rule 5 of
+# ORGANIZATION.md.
+_REPO = next(_p for _p in Path(__file__).resolve().parents
+             if (_p / "pyproject.toml").exists())
+OUTPUT_DIR    = str(_REPO / "output" / "observations"
+                    / "raw_shoreline_change" / "annual_output")
 SITE_FILTER   = "usa_NC"
 
 FULL_START = "1984-01-01"
