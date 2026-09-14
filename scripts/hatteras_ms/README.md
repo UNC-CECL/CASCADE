@@ -18,7 +18,7 @@ experiments/  one-off studies, each a run-it then plot-it pair
 figures/      figures built from finished runs
 groin-sweep/  the M and f fit, its own config and worker
 old_drafts/   superseded
-old_versions/ superseded
+old_versions/ superseded runners, and the inherited driver that predates them
 ```
 
 ## tools/
@@ -35,14 +35,21 @@ Start with the period check before a run and `HAT_list_runs.py` after one.
 
 ## experiments/
 
-Each is a `HAT_run_*` driver paired with a `HAT_plot_*` or `HAT_score_*`
-reader, plus the relocation set: `HAT_relocation_comparison.py`,
-`HAT_relocation_dune_position_check.py`, `HAT_score_relocation_timing.py`,
-`HAT_score_road_position.py`, and `HAT_digest_relocation_by_interior.py`.
-`RELOCATION_COMPARISON_RESULTS.md` is what that set concluded.
+Two live studies, plus one retired.
 
-The two drivers spawn the runner as a subprocess with `HAT_IGNORE_SETTINGS=1`,
-so whatever is sitting in `hat_run.yaml` cannot reach an experiment.
+* **the crest experiment** -- `HAT_run_crest_experiment.py` and its plotter.
+* **the relocation set** -- `HAT_relocation_comparison.py`,
+  `HAT_relocation_dune_position_check.py`, `HAT_score_relocation_timing.py`
+  and `HAT_score_road_position.py`. `RELOCATION_COMPARISON_RESULTS.md` is
+  what it concluded.
+* `superseded_20260907/` -- the 1984 seaward row-insert set, which cannot be
+  re-run: the topography layers it studied were deleted, its output folders
+  are empty, and its arms are not in the run tree. Kept because the four
+  scripts are the only record of how it was driven. Its `WHY.md` has the
+  evidence.
+
+A driver spawns the runner as a subprocess with `HAT_IGNORE_SETTINGS=1`, so
+whatever is sitting in `hat_run.yaml` cannot reach an experiment.
 
 ## figures/
 
