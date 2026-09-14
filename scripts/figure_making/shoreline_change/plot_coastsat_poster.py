@@ -20,6 +20,11 @@ from matplotlib.lines import Line2D
 from matplotlib.transforms import blended_transform_factory
 from statsmodels.nonparametric.smoothers_lowess import lowess
 import warnings
+from pathlib import Path
+
+# Anchored 2026-09-14: these literals named trees renamed twice over.
+_REPO_LAYOUT = next(_p for _p in Path(__file__).resolve().parents
+                    if (_p / "pyproject.toml").exists())
 warnings.filterwarnings("ignore")
 
 # ============================================================
@@ -43,7 +48,7 @@ DOMAIN_MAX = 90
 POSTER_WINDOW_DOMAINS = 10
 
 # Output
-OUTPUT_DIR  = r"/scripts/figure_making/shoreline_change/poster_plot"
+OUTPUT_DIR  = str(_REPO_LAYOUT / "scripts" / "figure_making" / "shoreline_change" / "poster_plot")
 OUTPUT_FILE = "poster_two_periods_10dom.png"
 
 # --- Line colors ---
