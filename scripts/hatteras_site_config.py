@@ -1456,6 +1456,20 @@ def _measured_displacements(gis_domains):
             for gis in gis_domains}
 
 
+# WHAT THE ROUNDING COST, measured 2026-09-14. Rounding to whole cells moves
+# the 1999 event's landing at GIS 11 by +2.93 m (77.07 -> 80.0), and GIS 11 had
+# ONE CELL of margin against the drowning check. Re-running the 1984-2004
+# relocation arm under current code drowns NC-12 there in all eight calibBE and
+# edgeBE cells, where the runs stored on 2026-09-01 report it managed
+# throughout; the four zeroBE cells, which impose no background erosion and so
+# retreat less, do not drown. Forcing the unrounded displacements back reverses
+# it exactly: 0 drowned again.
+#
+# The rounding is still right -- a prescribed move the model cannot represent at
+# sub-cell resolution should not pretend to -- but it is worth knowing that it
+# is what moved that domain over the line, and that GIS 11's margin is one cell
+# either way. See output/raw_runs/arms/recode-20260914/ for the comparison.
+
 CELL_M = 10.0   # Barrier3D cell, m: a prescribed move is a whole number of these
 
 
