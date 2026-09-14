@@ -47,7 +47,7 @@ the six and the like-for-like comparison against the 2026-08-27 baseline.
 
 ## Against the 2026-08-27 archive
 
-`output/archived_output_20260828/comparisons/relocation_1984_2004/`, no-groin
+`output/superseded_20260828/comparisons/relocation_1984_2004/`, no-groin
 arms, so directly comparable:
 
 | preset | ±2 then → now | ±5 then → now |
