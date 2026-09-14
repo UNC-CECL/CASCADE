@@ -97,7 +97,7 @@ from HAT_groin_sweep_config import (  # noqa: E402
 OUTPUT_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep"
 # Figures live in a subdirectory; joint_fit.json does NOT. That file is read by
 # HAT_run_all.py (stage 6 takes its fitted M and f from it) and by
-# HAT_be_zone_LOESS_analysis.py (which uses it to find a groin-aware base run),
+# HAT_be_zone_residual_fit.py (which uses it to find a groin-aware base run),
 # both of which pin the top-level path. Moving it would break stage 6 silently.
 FIGURE_DIR = OUTPUT_DIR / "figures"
 FIGURE_DIR.mkdir(parents=True, exist_ok=True)

@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """The calibrated hindcast against the LOESS reference curve — presentation figure.
 
-A companion to HAT_hindcast_final_figure.py, differing in three deliberate ways.
+THE hindcast result figure. It had a companion, HAT_hindcast_final_figure.py,
+which drew the same two runs scored over D2-D89; on 2026-09-14 this figure took
+on both scoring windows and the companion was retired to
+figures/superseded_20260914/. The three features below were what distinguished
+the two, and are now simply what this figure has.
 
     SHARED Y AXIS
         Both periods on identical limits, so the panels can be read against
@@ -25,12 +29,18 @@ A companion to HAT_hindcast_final_figure.py, differing in three deliberate ways.
         5 km smoother destroys. Dashing it shows the data without implying it
         carries the same weight.
 
-    SCORED ON D11-D89
-        Where the LOESS curve and the calibration target are the SAME numbers,
-        so the statistic on the panel is the statistic for the line drawn. The
-        companion figure scores D2-D89 against the spliced target and reports
-        0.526 / 0.558 m/yr; both are correct for what they measure, and mixing
-        them would be the error.
+    BOTH SCORING WINDOWS, PRINTED PER PANEL
+        D11-D89 is where the LOESS curve and the calibration target are the
+        SAME numbers, so that statistic is the one for the line actually drawn.
+        D2-D89 is the project's canonical skill window -- rmse_interior_m_yr in
+        run_index.csv, and what the groin fit and the source/sink convergence
+        were ranked on -- and additionally takes in D2-D10, where the target is
+        the raw spliced domain mean and the model is at its worst (RMSE ~1.1
+        against ~0.45 north of it). Both are correct for what they measure and
+        mixing them is the error, which is why both are on the panel and
+        labelled. They are COMPUTED here, both of them: the D2-D89 pair used to
+        be a literal quoted from the companion figure, and it sat twelve days
+        stale after the 1984 run was remade on topography v2.
 
 ALSO ADDED FOR PRESENTATION
     An observational spread band (+/- 1 SD of transect rates within each
@@ -45,7 +55,7 @@ ALSO ADDED FOR PRESENTATION
 Usage:
     python HAT_hindcast_final_figure_loess.py [--preset calibBE]
 
-Writes output/comparisons/hindcast_calibrated_loess_reference.png
+Writes output/comparisons/hindcast_calibrated/hindcast_calibrated_loess_reference.png
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -63,7 +73,7 @@ import pandas as pd
 _HERE = pathlib.Path(__file__).resolve()
 PROJECT_BASE_DIR = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
-OUT_DIR = PROJECT_BASE_DIR / "output" / "comparisons"
+OUT_DIR = PROJECT_BASE_DIR / "output" / "comparisons" / "hindcast_calibrated"
 
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 
@@ -71,7 +81,7 @@ from cascade_pipeline.run_layout import resolve                 # noqa: E402
 from cascade_pipeline.run_registry import find_run_dir          # noqa: E402
 
 LOESS_PATH = (PROJECT_BASE_DIR / "scripts" / "input_prep" / "7-source-sink"
-              / "loess_smooth" / "HAT_be_zone_LOESS_analysis.py")
+              / "2-calibrate" / "HAT_be_zone_residual_fit.py")
 
 PERIODS = {
     "1984_2004": dict(panel="a", label="1984–2004", start=1984,
@@ -143,9 +153,10 @@ def loess_and_spread(module, start, csv_path):
 
 def run_rates(period, preset, scenario):
     name = f"HAT_{period}_{preset}_{scenario}_groin"
-    # Resolved rather than joined by hand -- see the note on the twin of this
-    # function in HAT_hindcast_final_figure.py. A hand-built path has no slot
-    # for the arm component and reads an arm-scoped run as missing.
+    # Resolved rather than joined by hand: a hand-built path has no slot for
+    # the arm component and reads an arm-scoped run as missing. The retired
+    # companion carried a twin of this function, in
+    # figures/superseded_20260914/HAT_hindcast_final_figure.py.
     try:
         run_dir = find_run_dir(RAW_RUNS, name, period, preset)
     except FileNotFoundError as exc:
@@ -155,10 +166,54 @@ def run_rates(period, preset, scenario):
     return pd.read_csv(path).set_index("gis_domain")["lrr_m_yr"], name
 
 
+# THE PRESET OWNS EVERY WORD THAT NAMES THE CONFIGURATION. Added 2026-09-14
+# alongside the edgeBE companion. --preset already existed here, but the
+# filename, the title and the footnote were hardcoded to calibBE, so any other
+# preset overwrote the calibrated figure with a page still calling itself
+# calibrated. `stem` must stay in step with the same table in
+# the retired companion's table (figures/superseded_20260914/), which named
+# the same stems -- kept aligned so its output and this figure's still sort
+# together in the folder.
+PRESETS = {
+    "calibBE": dict(
+        stem="hindcast_calibrated",
+        title="Calibrated CASCADE hindcast against the CoastSat LOESS reference, Cape Hatteras",
+        series="CASCADE, calibrated",
+        config="calibrated source/sink field, full management (roadway + beach/dune; "
+               "nourishment in 2004–2024), groin active at M = 60 m/yr, f = 0.6.",
+        zone_note="Source/sink corrections were applied only within a zone set fixed "
+                  "before calibration; D5–D7 were reserved for the groin, so the misfit "
+                  "there is the groin module's and is not absorbed by the sediment budget."),
+    "edgeBE": dict(
+        stem="hindcast_edgeBE",
+        title="CASCADE hindcast with the source/sink calibration removed, against the CoastSat LOESS reference, Cape Hatteras",
+        series="CASCADE, edgeBE (interior uncalibrated)",
+        config="edgeBE source/sink -- the D1 and D90 edge values ONLY, every interior "
+               "correction removed. Full management (roadway + beach/dune; nourishment "
+               "in 2004–2024), groin active at M = 60 m/yr, f = 0.6.",
+        zone_note="NO interior source/sink correction was applied anywhere, so the frozen "
+                  "zone set does not divide these domains; the edge values are kept because "
+                  "they are solved by buffer-cell reproduction rather than fitted to a "
+                  "residual. D5–D7 remain reserved for the groin. The misfit below is the "
+                  "job the source/sink field does."),
+    "zeroBE": dict(
+        stem="hindcast_zeroBE",
+        title="CASCADE hindcast with no source/sink field, against the CoastSat LOESS reference, Cape Hatteras",
+        series="CASCADE, zeroBE (no source/sink)",
+        config="zeroBE -- no background-erosion field anywhere, the D1/D90 edges included. "
+               "Full management (roadway + beach/dune; nourishment in 2004–2024), groin "
+               "active at M = 60 m/yr, f = 0.6.",
+        zone_note="No source/sink field was applied anywhere, edges included, so the edges "
+                  "carry no absorber and are free to run away from the target. D5–D7 remain "
+                  "reserved for the groin."),
+}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--preset", default="calibBE")
+    parser.add_argument("--preset", default="calibBE", choices=sorted(PRESETS))
     args = parser.parse_args()
+    vocab = PRESETS[args.preset]
 
     import matplotlib
     matplotlib.use("Agg")
@@ -200,8 +255,25 @@ def main():
                else module.P2_COASTSAT_CSV)
         loess, sd, transects = loess_and_spread(module, meta["start"], csv)
         model, run_name = run_rates(key, args.preset, meta["scenario"])
+        # WHAT THE COMPANION FIGURE REPORTS, COMPUTED, NOT REMEMBERED. The
+        # footnote quotes the D2-D89 score so a reader can see why it differs
+        # from this figure's D11-D89 one. It used to be a literal, and on
+        # 2026-09-14 it was found to be twelve days stale: written 09-02, it
+        # still held the pre-v2 numbers after the 1984 run was remade on
+        # topography v2 on 09-07. Same target, same model, same window as
+        # the runner's own interior metric -- so it cannot drift from it.
+        spliced = module.load_observed(meta["start"], csv)[1]
+        wide = [g for g in range(2, 90)
+                if g in model.index and not np.isnan(spliced.get(g, np.nan))]
+        wm = np.array([model[g] for g in wide])
+        wo = np.array([spliced[g] for g in wide])
+        companion = dict(rmse=float(np.sqrt(np.mean((wm - wo) ** 2))),
+                         bias=float(np.mean(wm - wo)),
+                         corr=float(np.corrcoef(wm, wo)[0, 1]),
+                         n=len(wide))
         panels[key] = dict(loess=loess, sd=sd, transects=transects,
-                           model=model, run=run_name, **meta)
+                           model=model, run=run_name, companion=companion,
+                           **meta)
 
     gis = np.arange(1, 91)
     lo, hi = np.inf, -np.inf
@@ -261,7 +333,7 @@ def main():
                   linestyle=(0, (4, 2)), zorder=7,
                   label="LOESS, D1–D10 (excluded by convention)")
         axis.plot(gis, mod, color=d["colour"], linewidth=2.6, zorder=6,
-                  label="CASCADE, calibrated")
+                  label=vocab["series"])
         axis.axhline(0.0, color="#AAAAAA", linewidth=0.9, zorder=4)
 
         shared = [g for g in SCORE_DOMAINS
@@ -277,16 +349,28 @@ def main():
                   fontsize=15, weight="bold", va="top", zorder=12)
         # Right-aligned: left-aligned it ran across D3-D45 at the top and the
         # raised groin and pier labels had nowhere to go.
+        # BOTH SCORING WINDOWS, ON THE FIGURE. Added 2026-09-14. This figure
+        # scores D11-D89, the span where the LOESS curve IS the calibration
+        # target; the project's canonical skill column (rmse_interior_m_yr,
+        # recorded for every run in run_index.csv) is D2-D89, which also takes
+        # in D2-D10, where the target is the raw spliced mean and the model is
+        # at its worst (RMSE ~1.1 against ~0.45 north of it). Printing only the
+        # narrow one reads as a better model rather than a shorter ruler, and
+        # printing it in a separate figure is what let the two drift apart.
+        c = d["companion"]
         axis.text(0.995, 0.965,
-                  f"{d['label']}      RMSE {rmse:.3f} m yr⁻¹      "
-                  f"bias {bias:+.3f}      r = {corr:.2f}      "
-                  f"(D{SKIP_SOUTH + 1}–D89, n = {len(shared)})",
-                  transform=axis.transAxes, fontsize=12.5, va="top", ha="right",
-                  zorder=12,
+                  f"{d['label']}\n"
+                  f"D{SKIP_SOUTH + 1}–D89  (n = {len(shared)}):   "
+                  f"RMSE {rmse:.3f} m/yr    bias {bias:+.3f}    r = {corr:.2f}\n"
+                  f"D2–D89  (n = {c['n']}):   "
+                  f"RMSE {c['rmse']:.3f} m/yr    bias {c['bias']:+.3f}    "
+                  f"r = {c['corr']:.2f}",
+                  transform=axis.transAxes, fontsize=11.5, va="top", ha="right",
+                  zorder=12, linespacing=1.5,
                   bbox=dict(facecolor="white", alpha=0.88, edgecolor="none",
-                            pad=2.5))
+                            pad=3.5))
 
-        axis.set_ylabel("Shoreline change rate (m yr⁻¹)\n[+ = seaward]",
+        axis.set_ylabel("Shoreline change rate (m/yr)\n[+ = seaward]",
                         fontsize=12)
         axis.grid(alpha=0.20, linewidth=0.7)
         axis.set_ylim(ylim)
@@ -315,22 +399,24 @@ def main():
     figure.legend(handles=handles, loc="lower center", fontsize=9.5, ncol=4,
                   framealpha=0.95, bbox_to_anchor=(0.5, 0.076))
 
-    figure.suptitle("Calibrated CASCADE hindcast against the CoastSat LOESS "
-                    "reference, Cape Hatteras", fontsize=15, y=0.983)
+    figure.suptitle(vocab["title"], fontsize=15, y=0.983)
     figure.tight_layout(rect=(0, 0.155, 1, 0.963))
     figure.text(
         0.008, 0.008,
-        "Configuration: calibrated source/sink field, full management (roadway + beach/dune; nourishment in 2004–2024), groin active at "
-        "M = 60 m yr⁻¹, f = 0.6. Observations are the 10-domain LOESS of CoastSat transect rates; the hatched span D1–D10 is drawn dashed because "
+        "Configuration: " + vocab["config"] + " Observations are the 10-domain LOESS of CoastSat transect rates; the hatched span D1–D10 is drawn dashed because "
         "the project excludes the LOESS there — the smoother is poorly constrained at the end of its range and Cape Point's attachment–detachment "
-        "cycle is short-wavelength signal a 5 km smoother removes. Statistics are computed over D11–D89, where the LOESS curve and the calibration "
-        "target are identical numbers, so the statistic describes the line that is drawn; the companion figure scores D2–D89 against the spliced "
-        "target (raw domain means over D1–D10) and reports 0.526 / 0.558 m yr⁻¹. Source/sink corrections were applied only within a zone set fixed "
-        "before calibration; D5–D7 were reserved for the groin, so the misfit there is the groin module's and is not absorbed by the sediment budget.",
+        "cycle is short-wavelength signal a 5 km smoother removes. BOTH SCORING WINDOWS ARE PRINTED ON EACH PANEL. D11–D89 is the span where the "
+        "LOESS curve and the calibration target are identical numbers, so that statistic describes the line actually drawn. D2–D89 is the "
+        "project's canonical skill window -- `rmse_interior_m_yr`, recorded for every run in run_index.csv, and what the groin fit and the "
+        "source/sink convergence were ranked on -- and it additionally takes in D2–D10, where the target is the raw spliced domain mean and the "
+        "model is at its worst. The gap between the two numbers is that strip alone, not the smoothing. D1 and D90 are in neither: they are locked "
+        "boundary absorbers, solved by buffer-cell reproduction and carrying rates ~10x the interior, so they are excluded rather than allowed to "
+        "dominate. "
+        + vocab["zone_note"],
         fontsize=7.6, color="#333333", wrap=True)
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    path = OUT_DIR / "hindcast_calibrated_loess_reference.png"
+    path = OUT_DIR / f"{vocab['stem']}_loess_reference.png"
     figure.savefig(path, dpi=200, facecolor="white")
     plt.close(figure)
 

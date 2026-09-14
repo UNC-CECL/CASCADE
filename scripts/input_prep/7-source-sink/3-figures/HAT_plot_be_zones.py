@@ -32,23 +32,27 @@ WHY ZONE MEMBERSHIP IS FIXED
     held (`FROZEN_ZONE_DOMAINS`).
 
 Usage:
-    python HAT_be_zones_figure.py
+    python 3-figures/HAT_plot_be_zones.py
 
 Reads  the live FROZEN_ZONE_DOMAINS / GROIN_RESERVED_DOMAINS / PHYSICAL_ZONES,
        the calibrated field from hatteras_site_config.py, and the pass-0 field
        from the masked iteration's first backup -- so the figure cannot drift
        from the calibration it documents.
-Writes data/hatteras_init/7-source-sink/figures/fig_be_zones_and_corrections.png
+Writes data/hatteras_init/7-source-sink/3-figures/2-method/fig_be_zones_and_corrections.png
        (and the PDF beside it); the caption goes to CAPTIONS.md in that folder.
 
-NOT REGENERABLE AS IT STANDS. The pass-0 field is read from the timestamped
-backup `scripts/hatteras_site_config_prebe_20260824_223143.py`, which is not
-in the working tree and was never committed (the prebe backups that ARE in
-git history are 20260828 and 20260831, later lineages, so they are not this
-figure's pass 0). `convergence_history.json` records only the per-pass RMSE,
-not the per-domain field, so it cannot stand in either. The figure needs that
-one file back, or a fresh pass-0 field written from a re-run of the masked
-iteration; nothing here should be substituted for it.
+REGENERABLE AGAIN SINCE 2026-09-14. It was not, for three weeks: the pass-0
+field came from `scripts/hatteras_site_config_prebe_20260824_223143.py`, which
+was never committed and is not in the tree, and no later backup could stand in
+because each belongs to a different lineage. `convergence_history.json` records
+only the per-pass RMSE, not the per-domain field, so it cannot substitute
+either.
+
+The frozen-zone correction on 2026-09-14 re-ran the masked iteration from pass
+0 and kept every backup it wrote, so the split is recoverable from this
+lineage's own pass-0 file (see PASS0_BACKUP below). The lesson stands: the
+pass-0 backup is the only record of the one-shot half, nothing reconstructs it
+after the fact, and it must be kept with the field it produced.
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -64,13 +68,29 @@ import numpy as np
 
 _HERE = pathlib.Path(__file__).resolve()
 PROJECT_BASE_DIR = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
-OUTPUT_DIR = _HERE.parent / "output"
 # The figure lives with the rest of the section 7 figures, in the data tree.
 FIG_DIR = (PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
-           / "figures")
+           / "3-figures")
 CONFIG = PROJECT_BASE_DIR / "scripts" / "hatteras_site_config.py"
+
+# THE PASS-0 FIELD, AND WHY IT IS THIS FILE AND NOT THE ONE BESIDE IT.
+# The apply step writes its backup BEFORE it writes, so a `prebe` file holds the
+# field as it stood going INTO that pass, not coming out. The one-shot solve is
+# therefore the backup taken before PASS 1, not the one before pass 0 -- that
+# earlier file holds the superseded field the re-derivation replaced.
+#
+#   ..._175853  the 2026-08-24 field, retired  (46 nonzero P1, 65 P2)
+#   ..._180700  pass 0, the one-shot solve     (43 nonzero P1, 63 P2)  <- this
+#   ..._181336  pass 1
+#   ..._182007  pass 2
+#
+# Re-pointed 2026-09-14. The previous target, ..._20260824_223143.py, was the
+# pass-0 backup of the retired lineage and was never committed, which is why
+# this figure could not be drawn and why be_pass0_* / iteration_added_* were
+# empty in the exported CSV. The corrected iteration kept its backups, so the
+# split is recoverable again. Do not delete these four files.
 PASS0_BACKUP = (PROJECT_BASE_DIR / "scripts"
-                / "hatteras_site_config_prebe_20260824_223143.py")
+                / "hatteras_site_config_prebe_20260914_180700.py")
 
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 
@@ -91,12 +111,12 @@ def rates_from(path, period):
         raise FileNotFoundError(
             f"{path} is missing. The lower panels split the final field into "
             f"the one-shot solve and what the iteration added, and the one-shot "
-            f"half can only come from the pass-0 backup written before the "
-            f"first pass. It is not in the tree and not in git history; the "
-            f"later prebe backups are a different lineage and must not be "
-            f"substituted, and convergence_history.json records only the "
-            f"per-pass RMSE. Restore that file, or re-run the masked iteration "
-            f"and keep its pass-0 field, before drawing this figure.")
+            f"half can only come from this lineage's pass-0 backup -- the file "
+            f"the apply step wrote going INTO pass 1. A backup from another "
+            f"lineage must not be substituted, and convergence_history.json "
+            f"records only the per-pass RMSE, not the per-domain field. Restore "
+            f"that file, or re-run the masked iteration from pass 0 and keep "
+            f"every backup it writes, before drawing this figure.")
     text = path.read_text(encoding="utf-8")
     block = text.split("HATTERAS_BE_RATES_CALIBRATED")[1]
     segment = block.split(f"{period}:")[1]
@@ -106,7 +126,8 @@ def rates_from(path, period):
 
 def analysis_module():
     spec = importlib.util.spec_from_file_location(
-        "_loess", _HERE.parent / "HAT_be_zone_LOESS_analysis.py")
+        "_loess",
+        _HERE.parent.parent / "2-calibrate" / "HAT_be_zone_residual_fit.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -263,7 +284,7 @@ def main():
         "never terminates. Domain 1 is at Cape Point and domain 90 at Pea "
         "Island, 500 m per domain."))
 
-    path = FIG_DIR / "fig_be_zones_and_corrections.png"
+    path = FIG_DIR / "2-method" / "fig_be_zones_and_corrections.png"
     save(figure, path)
     plt.close(figure)
 

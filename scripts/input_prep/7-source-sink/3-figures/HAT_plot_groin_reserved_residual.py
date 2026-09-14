@@ -37,11 +37,11 @@ WHAT THE TWO SIGNS MEAN, AND WHY THEY ARE OPPOSITE
     left -- exactly the kind of thing the zone rules exist to keep out.
 
 Usage:
-    python HAT_groin_reserved_residual_figure.py
+    python 3-figures/HAT_plot_groin_reserved_residual.py
 
 Reads  the converged calibBE full_management runs, groin on and off, plus the
        live GROIN_RESERVED_DOMAINS.
-Writes data/hatteras_init/7-source-sink/figures/fig_groin_reserved_residual.png
+Writes data/hatteras_init/7-source-sink/3-figures/3-limits/fig_groin_reserved_residual.png
        (and the PDF beside it); the caption goes to CAPTIONS.md in that folder.
 
 Author: Hannah A. Henry, UNC CECL
@@ -58,11 +58,10 @@ import pandas as pd
 
 _HERE = pathlib.Path(__file__).resolve()
 PROJECT_BASE_DIR = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
-OUTPUT_DIR = _HERE.parent / "output"
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
 # The figure lives with the rest of the section 7 figures, in the data tree.
 FIG_DIR = (PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
-           / "figures")
+           / "3-figures")
 
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 
@@ -83,7 +82,8 @@ PERIODS = {
 
 def analysis_module():
     spec = importlib.util.spec_from_file_location(
-        "_loess_analysis", _HERE.parent / "HAT_be_zone_LOESS_analysis.py")
+        "_loess_analysis",
+        _HERE.parent.parent / "2-calibrate" / "HAT_be_zone_residual_fit.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -241,7 +241,7 @@ def main():
         "standing in for a structure that was built, damaged and left. Domain 1 "
         "is at Cape Point and domain 90 at Pea Island."))
 
-    path = FIG_DIR / "fig_groin_reserved_residual.png"
+    path = FIG_DIR / "3-limits" / "fig_groin_reserved_residual.png"
     save(figure, path)
     plt.close(figure)
 

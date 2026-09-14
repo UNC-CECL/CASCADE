@@ -47,12 +47,12 @@ WHAT THE RIGHT PANEL IS FOR
     deliberately never corrected.
 
 Usage:
-    python HAT_be_convergence_figure.py
+    python 3-figures/HAT_plot_be_convergence.py
 
 Reads  output/convergence_history.json, and the live FROZEN_ZONE_DOMAINS /
        GROIN_RESERVED_DOMAINS / HATTERAS_BE_RATES_CALIBRATED, so the figure
        cannot drift from the calibration it documents.
-Writes data/hatteras_init/7-source-sink/figures/fig_be_convergence.png (and the
+Writes data/hatteras_init/7-source-sink/3-figures/2-method/fig_be_convergence.png (and the
        PDF beside it); the caption is written to CAPTIONS.md in that folder.
 
 Author: Hannah A. Henry, UNC CECL
@@ -70,13 +70,13 @@ import numpy as np
 _HERE = pathlib.Path(__file__).resolve()
 PROJECT_BASE_DIR = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
 # Reads and writes the data tree, where the fit now puts its products.
-OUTPUT_DIR = (_HERE.parents[4] / "data" / "hatteras_init"
-              / "7-source-sink" / "loess_smooth")
+OUTPUT_DIR = (PROJECT_BASE_DIR / "data" / "hatteras_init"
+              / "7-source-sink" / "2-calibrate")
 HISTORY = OUTPUT_DIR / "convergence_history.json"
 # The figure belongs with the rest of the section 7 figures, in the data tree;
 # the iteration's own record stays beside the calibration that wrote it.
 FIG_DIR = (PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
-           / "figures")
+           / "3-figures")
 
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 
@@ -98,7 +98,8 @@ def load_calibration():
     guard against.
     """
     spec = importlib.util.spec_from_file_location(
-        "_loess_analysis", _HERE.parent / "HAT_be_zone_LOESS_analysis.py")
+        "_loess_analysis",
+        _HERE.parent.parent / "2-calibrate" / "HAT_be_zone_residual_fit.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     from hatteras_site_config import HATTERAS_BE_RATES_CALIBRATED as rates
@@ -263,7 +264,7 @@ def main():
         "domains, clipped to plus or minus 4 m/yr. Domain 1 is at Cape Point and "
         "domain 90 at Pea Island."))
 
-    path = FIG_DIR / "fig_be_convergence.png"
+    path = FIG_DIR / "2-method" / "fig_be_convergence.png"
     save(figure, path)
     plt.close(figure)
 
