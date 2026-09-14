@@ -33,7 +33,7 @@ from cascade_pipeline.plotting import init_planview
 # CONFIGURATION
 # =============================================================================
 
-# Derived from this file's location (scripts/figure_making/init_figure/) so the
+# Derived from this file's location (scripts/figure_making/island/) so the
 # script runs on any checkout without editing a hardcoded path.
 PROJECT_BASE_DIR   = str(next(
     _p for _p in Path(__file__).resolve().parents

@@ -1,9 +1,15 @@
+from pathlib import Path
 import numpy as np
 import time
 import matplotlib.pyplot as plt
 import os
 import imageio
 import copy
+
+# Anchored 2026-09-14. These named a home directory or a tree renamed
+# twice over, so none resolved. Rule 5 of ORGANIZATION.md.
+_FIG_REPO = next(_p for _p in Path(__file__).resolve().parents
+                 if (_p / "pyproject.toml").exists())
 
 
 def plot_ElevAnimation_CASCADE(
@@ -426,7 +432,7 @@ else:
 
 ny = len(Model_Grids_Of_Interest)  # number of domains actually plotted
 
-directory = r"C:\Users\hanna\PycharmProjects\CASCADE\output"
+directory = str(_FIG_REPO / "output")
 TMax_Sim = nt_run
 TMax_MGMT = [0] * ny
 beach_management_ny = [False] * ny

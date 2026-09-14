@@ -105,7 +105,7 @@ The period lives in the DIRECTORY and in each run's `RUN_MANIFEST.txt`. Build
 these names with `array_name()` / `array_path()` / `domain_arrays()` rather than
 by hand.
 
-> **Stale caller:** `scripts/figure_making/road_check/diagnose_road_drowning.py`
+> **Stale caller:** `scripts/figure_making/management/diagnose_road_drowning.py`
 > still builds `domain_{n}_topography_{TOPO_DUNE_INIT_YEAR}.npy` and will not
 > find its files.
 

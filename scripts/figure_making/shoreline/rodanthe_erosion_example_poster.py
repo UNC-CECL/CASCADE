@@ -1,3 +1,4 @@
+from pathlib import Path
 """
 CoastSat Shoreline Erosion Trends — Rodanthe Area
 Hatteras Island, NC
@@ -28,14 +29,19 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from matplotlib.lines import Line2D
 
+# Anchored 2026-09-14. These named a home directory or a tree renamed
+# twice over, so none resolved. Rule 5 of ORGANIZATION.md.
+_FIG_REPO = next(_p for _p in Path(__file__).resolve().parents
+                 if (_p / "pyproject.toml").exists())
+
 warnings.filterwarnings("ignore")
 
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
 
-ROOT_DATA_DIR = r"/scripts/input_prep/CoastSat/coastsat_timeseries"
-LOOKUP_CSV    = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat\transect_domain_lookup.csv"
+ROOT_DATA_DIR = str(_FIG_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_timeseries")
+LOOKUP_CSV    = str(_FIG_REPO / "data" / "hatteras_init" / "5-scr" / "transect_domains" / "transect_domain_lookup.csv")
 
 DOMAIN_MIN  = 77
 DOMAIN_MAX  = 83
@@ -44,7 +50,7 @@ START_DATE  = "1984-01-01"
 END_DATE    = "2024-12-31"
 MIN_OBS     = 5
 
-OUTPUT_DIR  = r"/scripts/input_prep/CoastSat/rodanthe_plots"
+OUTPUT_DIR  = str(_FIG_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "rodanthe_plots")
 OUTPUT_FILE = "rodanthe_erosion_trends.png"
 
 FIG_SIZE = (8, 8)

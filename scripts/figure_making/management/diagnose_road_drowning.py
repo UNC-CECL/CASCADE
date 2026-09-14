@@ -27,15 +27,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
+# Anchored 2026-09-14: absolute into one home directory, and the run it
+# names is a two-line implicit concatenation. Rule 5 of ORGANIZATION.md.
+from pathlib import Path as _Path
+_FIG_REPO = next(_p for _p in _Path(__file__).resolve().parents
+                 if (_p / "pyproject.toml").exists())
+
 # =============================================================================
 # CONFIG — match your run script
 # =============================================================================
 
-PROJECT_BASE_DIR   = r"C:\Users\hanna\PycharmProjects\CASCADE"
+PROJECT_BASE_DIR   = str(_FIG_REPO)
 HATTERAS_DATA_BASE = os.path.join(PROJECT_BASE_DIR, "data", "hatteras_init")
 NPZ_PATH = (
-    r"C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs"
-    r"\HAT_1984_2004_base\HAT_1984_2004_base.npz"
+    str(_FIG_REPO / "output" / "raw_runs" / "HAT_1984_2004_base"
+        / "HAT_1984_2004_base.npz")
 )
 
 # Topo/dune file settings — must match run script
