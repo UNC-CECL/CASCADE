@@ -1,0 +1,42 @@
+# Git LFS, for the file types that are inputs and are large.
+#
+# WHY. Twenty-one .geojson files are 106 MB, which is 62% of everything tracked
+# in this repository -- all the Python in it comes to about 8 MB. They cannot
+# simply be ignored: every one is read by a script, and the project has already
+# paid the price of a missing GIS export once, in the dune-line files that make
+# the current RoadSetback CSVs impossible to reproduce from the repo. So they
+# are tracked, but stored as LFS pointers rather than as blobs in the history.
+#
+# The immediate pressure is data/hatteras_init/5-scr/transect_domains/
+# CoastSat_transect_layer.geojson at 80 MB. GitHub warns above 50 MB and
+# REFUSES above 100, so that file has roughly 20 MB of headroom before a push
+# fails outright rather than warning.
+#
+# WHAT THIS DOES AND DOES NOT DO. It applies from the next time a matching file
+# is added or modified. The 21 already in the history stay as ordinary blobs
+# until someone rewrites it -- this config stops the problem growing, it does
+# not shrink what is there. Converting the existing ones means git lfs migrate,
+# which rewrites history on a branch already pushed to UNC-CECL/CASCADE, so it
+# needs to be agreed and done in one pass with everyone re-cloning after.
+#
+# EVERY COLLABORATOR NEEDS GIT LFS INSTALLED (`git lfs install`, once per
+# machine). Without it a matching file checks out as a short text pointer
+# instead of its contents, and a script reading it fails with a parse error
+# rather than a missing-file error, which is the more confusing of the two.
+*.geojson filter=lfs diff=lfs merge=lfs -text
+
+# Not listed here on purpose:
+#   *.npy   the init domain arrays are gitignored; the only ones tracked are
+#           the ~19 KB shoreline matrices, which are small and diff-irrelevant
+#   *.png   gitignored repository-wide; only the PDF of each figure is tracked
+#   *.pdf   38 files, 6.6 MB total -- small enough that LFS would cost more in
+#           setup friction than it saves
+#   *.csv   774 files, 43 MB, and they are text that diffs line by line, which
+#           is most of why they are worth versioning at all
+#
+# NO `text eol=` RULES HERE EITHER, deliberately. This is a Windows checkout and
+# git reports LF-to-CRLF conversion on nearly every text file it touches. A
+# normalisation rule would re-write line endings across hundreds of tracked
+# files on the next checkout and show them all as modified, which buries any
+# real change. If line endings are ever worth normalising it should be its own
+# commit, done knowingly, not a side effect of configuring LFS.
