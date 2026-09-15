@@ -1,9 +1,9 @@
 HAT_2004_2024_calibBE_road_bdm_nourish_groin
-  run        2026-09-01 03:26:31
+  run        2026-09-14 20:28:37
   topography 2004-start/v1  (the CURRENT topography)
-  source/sink calibBE, digest 8652bf10e2a5
+  source/sink calibBE, digest ff3c150172d6
              (the current background-erosion field for this preset and period)
-  commit     317edc4a  DIRTY TREE
+  commit     f8c3bb56  DIRTY TREE
 
 Written by HAT_list_runs.py --stamp. Regenerate it after the
 CURRENT marker or the calibration moves; it describes how this

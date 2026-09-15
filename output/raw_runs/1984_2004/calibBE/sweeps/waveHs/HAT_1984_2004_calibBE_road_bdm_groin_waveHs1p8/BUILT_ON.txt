@@ -2,7 +2,7 @@ HAT_1984_2004_calibBE_road_bdm_groin_waveHs1p8
   run        2026-09-01 13:33:36
   topography 1984-start/v1  (NOT CURRENT -- 1984-start is now v2)
   source/sink calibBE, digest 7784350673d3
-             (the current background-erosion field for this preset and period)
+             (an OLDER background-erosion field than the newest run of this preset and period)
   commit     317edc4a  DIRTY TREE
 
 Written by HAT_list_runs.py --stamp. Regenerate it after the

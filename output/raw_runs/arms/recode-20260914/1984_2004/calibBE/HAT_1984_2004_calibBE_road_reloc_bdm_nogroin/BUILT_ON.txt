@@ -1,0 +1,10 @@
+HAT_1984_2004_calibBE_road_reloc_bdm_nogroin
+  run        2026-09-14 13:20:52
+  topography 1984-start/v1  (NOT CURRENT -- 1984-start is now v2)
+  source/sink calibBE, digest 7784350673d3
+             (an OLDER background-erosion field than the newest run of this preset and period)
+  commit     ead66e13  DIRTY TREE
+
+Written by HAT_list_runs.py --stamp. Regenerate it after the
+CURRENT marker or the calibration moves; it describes how this
+run compares with today's, not what it contains.

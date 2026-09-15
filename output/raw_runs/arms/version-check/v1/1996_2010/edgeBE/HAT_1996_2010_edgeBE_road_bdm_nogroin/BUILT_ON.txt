@@ -1,0 +1,10 @@
+HAT_1996_2010_edgeBE_road_bdm_nogroin
+  run        2026-09-12 14:56:26
+  topography 1984-start/v1  (NOT CURRENT -- 1984-start is now v2)
+  source/sink edgeBE, digest eda3c43b053b
+             (the current background-erosion field for this preset and period)
+  commit     c2ee7e36  DIRTY TREE
+
+Written by HAT_list_runs.py --stamp. Regenerate it after the
+CURRENT marker or the calibration moves; it describes how this
+run compares with today's, not what it contains.
