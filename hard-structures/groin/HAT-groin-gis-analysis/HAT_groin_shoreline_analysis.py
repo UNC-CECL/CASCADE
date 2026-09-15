@@ -204,7 +204,14 @@ STUDY_AREA_BUFFER_M    = 500
 WET_DRY_PATH     = str(_PATH_REPO / "hard-structures" / "groin" / "HAT-groin-gis-analysis" / "gis_data" / "wet_dry_groin.geojson")
 WET_DRY_DATE_COL = "date"
 
-NC_STATE_PATH     = str(_PATH_REPO / "hard-structures" / "groin" / "HAT-groin-gis-analysis" / "gis_data" / "nc_shorelines.geojson")
+# Repointed 2026-09-14 at the data tree. gis_data/ held a BYTE-IDENTICAL second
+# copy of this 20 MB file (md5 330d5f32...), so every clone carried it twice and
+# an edit to one would have silently diverged from the other. The data tree is
+# the owner -- HAT_shoreline_inventory.py reads the same file from there -- and
+# this script already crosses into data/hatteras_init for the CoastSat transect
+# geometry two lines below, so the direction is not new.
+NC_STATE_PATH     = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr"
+                        / "shoreline_inventory" / "nc_shorelines.geojson")
 NC_STATE_DATE_COL = "DATE_"
 
 COASTSAT_TRANSECT_GEOM   = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "CoastSat_transect_layer.geojson")
