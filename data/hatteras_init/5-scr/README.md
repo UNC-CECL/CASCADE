@@ -13,6 +13,11 @@ coastsat_lrr/               rate fits, ONE FOLDER PER WINDOW
     old_time_periods/       retired windows, kept for comparison, not for use
     two_period_comparison/  rodanthe_plots/  old_dsas_comparisons/  custom/
 coastsat_timeseries_lrr/    the 5-year-bin fits
+coastsat_lrr_windows/       the four windows on ONE y axis: a line per
+                            window, filled by sign, and a 2 x 2 by period;
+                            PDFs, captions and the table under supporting/
+duneline_vs_coastsat/       the digitized dune line against the CoastSat
+                            shoreline, ONE FOLDER PER WINDOW (1984_2004)
 shoreline_inventory/        study-area and reference shorelines
 shoreline_change_patterns/  trajectory classification output
 scr-dsas-1978-2019/         DSAS rates — a different source, different transects
@@ -62,3 +67,28 @@ Writes `transect_lrr_full.csv`, `domain_lrr_summary.csv` and two figures into
 `coastsat_lrr/<start>_<end>/`. Re-running an existing window overwrites it in
 place; the fit is deterministic, so that is reproducible rather than
 destructive.
+
+## Comparing windows
+
+`coastsat_lrr_windows/` is the only place the four windows are drawn against
+each other. `scripts/input_prep/5-scr/CoastSat/coastsat_lrr_windows.py` reads
+each `domain_lrr_summary.csv` through the resolver, pins the y axis at the
+largest |mean| over all of them plus 1 m, rounded up to the metre (written to
+`y_bounds.txt`), and writes one figure per window plus `lrr_four_windows`, a
+2 x 2 with the 1984-start period in the left column and the 1996-start period
+in the right. The per-window `domain_lrr_bar.png` autoscales, so it is not
+the figure to compare across windows.
+
+## Dune line against the shoreline
+
+`duneline_vs_coastsat/<start>_<end>/` differences two digitized dune lines
+(`2-brie-offset/raw_offsets/`, read the way the hindcast loader reads them)
+and puts the per-domain rate against the CoastSat shoreline two ways: the
+LRR already in `coastsat_lrr/<start>_<end>/`, and an endpoint rate from the
+mean CoastSat position in a one-year window about each survey date. Seaward
+positive throughout. Built by
+`scripts/input_prep/5-scr/duneline_vs_coastsat/duneline_vs_coastsat.py`;
+the survey dates are in each folder's `supporting/PROVENANCE.md`, with
+the tables, PDFs and captions (a figure folder shows figures). The 1984 line is the 1984-09-19 photo and the 2004 line the
+2004-05-25 Google Earth capture; neither file carries its date, the script's
+`KNOWN_SURVEY_DATES` does.

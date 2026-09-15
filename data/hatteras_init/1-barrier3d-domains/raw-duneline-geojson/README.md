@@ -5,9 +5,9 @@ Digitized NC-12-era dune lines, in the repo rather than on `D:\Hatteras_GIS`.
 | file | CRS | vertices | metadata | notes |
 |---|---|---|---|---|
 | `duneline_1967.geojson` | EPSG:26918 | 96 | none | oldest, unused so far |
-| `duneline_1984.geojson` | EPSG:26918 | 495 | none | the 1984 initial condition |
+| `duneline_1984.geojson` | EPSG:26918 | 495 | none | the 1984 initial condition; USGS photo of 1984-09-19 |
 | `duneline_1997.geojson` | EPSG:3725 | 581 | full | digitized 2026-09-02 |
-| `duneline_2004.geojson` | EPSG:3725 | 158 | partial | the 2004 initial condition |
+| `duneline_2004.geojson` | EPSG:3725 | 158 | partial | the 2004 initial condition; Google Earth capture of 2004-05-25 |
 
 `HAT_measure_duneline_shift.py` reads THIS directory first and falls back to
 `D:\Hatteras_GIS\Dunelines` only for older invocations. The external drive is

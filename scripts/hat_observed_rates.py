@@ -30,6 +30,8 @@
 #             old_time_periods/       retired windows, not for use
 #             two_period_comparison/  rodanthe_plots/  old_dsas_comparisons/
 #         coastsat_timeseries_lrr/    the 5-year-bin fits
+#         duneline_vs_coastsat/       dune-line change vs the CoastSat
+#                                     shoreline, one folder per window
 #         shoreline_inventory/        study-area and reference shorelines
 #         shoreline_change_patterns/  trajectory classification output
 #         scr-dsas-1978-2019/         the DSAS rates, a different source
@@ -59,6 +61,7 @@ COASTSAT_TIMESERIES = SCR_ROOT / "coastsat_timeseries"
 COASTSAT_LRR_ROOT = SCR_ROOT / "coastsat_lrr"
 TRANSECT_DOMAINS = SCR_ROOT / "transect_domains"
 TIMESERIES_LRR = SCR_ROOT / "coastsat_timeseries_lrr"
+DUNELINE_VS_COASTSAT = SCR_ROOT / "duneline_vs_coastsat"
 SHORELINE_INVENTORY = SCR_ROOT / "shoreline_inventory"
 SHORELINE_PATTERNS = SCR_ROOT / "shoreline_change_patterns"
 DSAS_ROOT = SCR_ROOT / "scr-dsas-1978-2019"

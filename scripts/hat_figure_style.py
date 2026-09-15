@@ -37,6 +37,10 @@ THE RULES (the 2026-09-04 house style)
     canvas          NO title sentences, statistics lines or footnote
                     paragraphs on the image. That text goes in a CAPTIONS.md
                     beside the figure; `caption()` here does exactly that
+    folders         a figure folder shows FIGURES: PNGs at the top, and the
+                    PDFs, CAPTIONS.md, tables and provenance under
+                    `supporting/` (`save()`, `record_caption()` and
+                    `support_dir()` put them there)
     elevation       drawn in classes, not a ramp (`elevation_cmap()`); the
                     terrain colormap of HAT_plot_1984_mosaic is the one
                     deliberate exception, for the 1984-start DEM panels
@@ -75,8 +79,10 @@ import re
 from pathlib import Path
 
 import matplotlib as mpl
+import numpy as np
 import matplotlib.patheffects as pe
 from matplotlib.colors import BoundaryNorm, ListedColormap
+from matplotlib.transforms import offset_copy
 
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
@@ -199,15 +205,138 @@ def town_bands(ax, where="top", label=True, shade="0.94", spans=None,
                     zorder=1, clip_on=True)
 
 
+STRUCTURE_LABEL_PT = 6.5
+
+# Where a structure label may sit, tried in order: along the bottom of its
+# line, left of it then right; then along the top, under the village names.
+_LABEL_SLOTS = (("bottom", "right"), ("bottom", "left"),
+                ("top", "right"), ("top", "left"))
+
+
+def _points_under(ax, txt) -> int:
+    """How many plotted points fall inside `txt`'s box (a little padded), over
+    every Line2D and LineCollection drawn in data coordinates."""
+    renderer = ax.figure.canvas.get_renderer()
+    bb = txt.get_window_extent(renderer).expanded(1.3, 1.08)
+    (x0, y0), (x1, y1) = ax.transData.inverted().transform(
+        [[bb.x0, bb.y0], [bb.x1, bb.y1]])
+    def inside(x, y):
+        # A line crosses the box BETWEEN its vertices (one vertex per domain,
+        # a label a fraction of a domain wide), so test the segments, not
+        # the vertices: 20 points along each.
+        x = np.asarray(x, dtype=float)
+        y = np.asarray(y, dtype=float)
+        ok = np.isfinite(x) & np.isfinite(y)
+        x, y = x[ok], y[ok]
+        if x.size < 2:
+            return 0
+        t = np.linspace(0.0, 1.0, 20)
+        xd = (x[:-1, None] + (x[1:] - x[:-1])[:, None] * t).ravel()
+        yd = (y[:-1, None] + (y[1:] - y[:-1])[:, None] * t).ravel()
+        return int(((xd >= x0) & (xd <= x1) & (yd >= y0) & (yd <= y1)).sum())
+
+    n = 0
+    for line in ax.get_lines():
+        if line.get_transform() is not ax.transData or not line.get_visible():
+            continue
+        n += inside(line.get_xdata(), line.get_ydata())
+    for coll in ax.collections:
+        if not hasattr(coll, "get_segments"):
+            continue
+        for seg in coll.get_segments():
+            seg = np.asarray(seg, dtype=float)
+            n += inside(seg[:, 0], seg[:, 1])
+    return n
+
+
+def _place_label(ax, pos, name, label_pt):
+    """Put `name` along the line at `pos` in the first slot that covers no
+    plotted point, else the slot that covers fewest (Hannah, 2026-09-15:
+    labels were sitting on the data at Rodanthe Pier)."""
+    best, best_n = None, None
+    for where, ha in _LABEL_SLOTS:
+        y, va = (0.03, "bottom") if where == "bottom" else (0.86, "top")
+        # a 2 pt gap between the text and its line, so the halo that keeps
+        # the text legible over data does not white out the line itself
+        tr = offset_copy(ax.get_xaxis_transform(), fig=ax.figure,
+                         x=(-2.0 if ha == "right" else 2.0), units="points")
+        txt = ax.text(pos, y, name, transform=tr,
+                      rotation=90, ha=ha, va=va, fontsize=label_pt,
+                      color=INK_MUTED, zorder=7, path_effects=_halo(2.0))
+        n = _points_under(ax, txt)
+        if n == 0:
+            if best is not None:
+                best.remove()
+            return txt
+        if best_n is None or n < best_n:
+            if best is not None:
+                best.remove()
+            best, best_n = txt, n
+        else:
+            txt.remove()
+    return best
+
+
+def structures(ax, label=True, label_pt=STRUCTURE_LABEL_PT, spans=None):
+    """The Buxton groin (solid hairline) and the two piers (dotted hairlines)
+    on an alongshore axis, each named once along its own line, reading upward
+    (Hannah, 2026-09-15). The lines stop short of the top so the village
+    labels there stay clear of them. A label goes at the bottom of its line
+    unless data is drawn there, in which case it moves to the other side of
+    the line or to the top -- so call this AFTER the data is plotted AND
+    after anything that resizes the axes at draw time (an outside legend, a
+    colourbar): the test is made in the layout as it stands.
+    `spans` is a site AnnotationConfig; default the Hatteras one. Lived in
+    coastsat_lrr_windows.py until 2026-09-15, when a third alongshore figure
+    wanted it."""
+    if spans is None:
+        try:
+            from hatteras_site_config import HATTERAS_ANNOTATIONS
+            spans = HATTERAS_ANNOTATIONS
+        except ImportError:
+            return
+    if label:
+        ax.figure.canvas.draw()   # settle the layout so text extents are real
+
+    for name, pos in spans.groins.items():
+        ax.axvline(pos, ymax=0.88, color=INK, lw=0.7, zorder=6)
+        if label:
+            _place_label(ax, pos, name, label_pt)
+    for name, (pos, _frac) in spans.piers.items():
+        ax.axvline(pos, ymax=0.88, color=INK_MUTED, lw=0.6,
+                   ls=(0, (1.5, 1.5)), zorder=6)
+        if label:
+            _place_label(ax, pos, name, label_pt)
+
+
+# A FIGURE FOLDER SHOWS FIGURES. Everything a figure script writes beside the
+# PNG -- the vector copy, CAPTIONS.md, tables, provenance -- goes under this
+# subfolder, so opening the folder shows one image per figure and nothing
+# else (Hannah, 2026-09-15). `save()` and `record_caption()` do it for the PDF
+# and the captions; a script writing its own CSV or PROVENANCE.md uses
+# `support_dir(folder)` for the path.
+SUPPORT_DIR = "supporting"
+
+
+def support_dir(folder) -> Path:
+    """`<folder>/supporting/`, created. Where a figure script puts everything
+    that is not a PNG."""
+    d = Path(folder) / SUPPORT_DIR
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 def save(fig, path, vector=True, close=False, **kwargs):
-    """PNG at 300 dpi and, for `vector`, a PDF beside it with the same stem,
-    so a line or bar figure stays sharp in a manuscript. Returns the paths."""
+    """PNG at 300 dpi in the folder and, for `vector`, a PDF with the same
+    stem under `supporting/`, so a line or bar figure stays sharp in a
+    manuscript without the folder showing two files per figure. Returns the
+    paths."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     out = [path.with_suffix(".png")]
     fig.savefig(out[0], **kwargs)
     if vector:
-        out.append(path.with_suffix(".pdf"))
+        out.append(support_dir(path.parent) / path.with_suffix(".pdf").name)
         fig.savefig(out[-1], **kwargs)
     if close:
         import matplotlib.pyplot as plt
@@ -446,10 +575,11 @@ def caption(fig, text: str, y: float = 0.005, size: float = 7.8) -> None:
 
 
 def record_caption(png_path: Path, text: str) -> Path:
-    """Write or replace the entry for `png_path.name` in the CAPTIONS.md beside
-    it. Entries are '**`<file>`.** text' paragraphs; other content is kept."""
+    """Write or replace the entry for `png_path.name` in the CAPTIONS.md under
+    `supporting/` beside it. Entries are '**`<file>`.** text' paragraphs;
+    other content is kept."""
     png_path = Path(png_path)
-    md = png_path.parent / "CAPTIONS.md"
+    md = support_dir(png_path.parent) / "CAPTIONS.md"
     text = " ".join(str(text).split())
     entry = f"**`{png_path.name}`.** {text}\n"
     if md.is_file():
@@ -457,9 +587,14 @@ def record_caption(png_path: Path, text: str) -> Path:
         pattern = re.compile(r"^\*\*`" + re.escape(png_path.name) + r"`\.\*\*.*?(?=\n\*\*`|\Z)",
                              re.S | re.M)
         if pattern.search(body):
-            body = pattern.sub(entry.rstrip("\n"), body)
+            body = pattern.sub(lambda _m: entry.rstrip("\n"), body)
         else:
             body = body.rstrip("\n") + "\n\n" + entry
+        # A replaced entry's match stops at the newline before the next entry,
+        # so the blank line between them was consumed on every re-run and the
+        # file collapsed into one run-on block (found 2026-09-15). Put one
+        # blank line back before every entry.
+        body = re.sub(r"(?<!\n)\n(\*\*`)", r"\n\n\1", body)
     else:
         body = (f"# Captions — {png_path.parent.name}\n\n"
                 f"Written by the figure scripts through `hat_figure_style.caption()`; "
@@ -605,9 +740,10 @@ from it.
 | semantic colours | `C["BASE"]` {C["BASE"]} unmodified input · `C["ACCENT"]` {C["ACCENT"]} the modification under test · `C["ROAD"]` {C["ROAD"]} NC-12 · `C["ADDED"]` {C["ADDED"]} fabricated ground · `C["WATER"]` {C["WATER"]} · `C["REF"]` {C["REF"]} a reference value |
 | elevation | classes, not a ramp: `elevation_cmap()` breaks at {", ".join(f"{b:g}" for b in ELEV_BOUNDS[1:-1])} m MHW with water below 0. The terrain colormap of `HAT_plot_1984_mosaic` is the one deliberate exception, on the 1984-start DEM panels |
 | error surfaces | greyscale, no hue: `error_cmap()` (dark is worse; `reverse=True` where high is better). A scalar error or cost over a parameter grid is BACKGROUND, and all colour is reserved for what is marked on top of it -- the best cell, the chosen pair, a constraint, an iso-product curve |
-| the canvas | no title sentences, statistics lines or footnote paragraphs on the image. That text goes in a `CAPTIONS.md` beside the figure. `caption(fig, text)` writes it there on the figure's next `savefig`; scripts with their own captions file (dune-line offset, footprint, road relocation) write it themselves |
+| the canvas | no title sentences, statistics lines or footnote paragraphs on the image. That text goes in `supporting/CAPTIONS.md` beside the figure. `caption(fig, text)` writes it there on the figure's next `savefig`; scripts with their own captions file (dune-line offset, footprint, road relocation) write it themselves |
+| the folder | a figure folder shows figures: PNGs at the top level and nothing else. The PDFs, `CAPTIONS.md`, any table or `PROVENANCE.md` a figure script writes go under `{SUPPORT_DIR}/` (`save()` and `record_caption()` do this; a script's own files use `support_dir(folder)`). Since 2026-09-15 |
 | legend wording | no working vocabulary: not "today's setback", "v2"/"v3", "as placed", "blank". Say what the thing is: "setback measured on the 1996 surface", "1984 setback (model input)", "rows inserted landward of NC-12", "centreline unchanged between surveys" |
-| output | `save(fig, path)`: a 300 dpi PNG and a PDF with the same stem for anything drawn with lines and bars (`vector=False` for image-only panels); white background; `bbox_inches="tight"` only when nothing is positioned absolutely |
+| output | `save(fig, path)`: a 300 dpi PNG and, under `{SUPPORT_DIR}/`, a PDF with the same stem for anything drawn with lines and bars (`vector=False` for image-only panels); white background; `bbox_inches="tight"` only when nothing is positioned absolutely |
 | semantic accent | `C["ACCENT"]` is purple since 2026-09-10; it was a red indistinguishable from the 1984 vintage red, so "the change under test" and "1984" read as one colour |
 
 ## Where it came from
