@@ -291,3 +291,25 @@ output/raw_runs/**/*.png
 # it would mean a fresh clone cannot evaluate a groin run without first
 # re-running its no-groin twin.
 !output/raw_runs/**/*_shoreline_matrix.npy
+
+# ── GIS and archive formats that are not covered above ────────────────────────
+# Added 2026-09-14. The shapefile family (.shp/.dbf/.shx/.prj/.cpg) and the
+# raster formats were already here; these are the ones a GIS export can produce
+# that were not. They are kept out rather than sent to LFS because nothing in
+# the repo reads them -- a geopackage or a file geodatabase that becomes an
+# input should be converted, or added with -f and a note saying why.
+*.gpkg
+*.kml
+*.kmz
+*.gdb/
+*.hdf5
+*.h5
+*.zip
+
+# NOT *.geojson. Twenty-one of them ARE tracked and every one is read by a
+# script; ignoring them would recreate the failure recorded against the missing
+# dune-line exports, where the RoadSetback CSVs can no longer be reproduced from
+# what is in the repo. They go to Git LFS instead -- see .gitattributes. At
+# 106 MB across 21 files they are 62% of everything tracked, and
+# 5-scr/transect_domains/CoastSat_transect_layer.geojson is 80 MB against
+# GitHub's hard limit of 100.
