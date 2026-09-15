@@ -1,14 +1,14 @@
 {
   "identity": {
     "run_name": "HAT_2004_2024_edgeBE_road_bdm_nourish_groin",
-    "timestamp": "2026-09-01 02:41:35",
+    "timestamp": "2026-09-14 16:30:05",
     "generated_by": "HAT_hindcast_1984_2024.py",
-    "runtime_min": "2.6",
+    "runtime_min": "5.4",
     "use_sandbox_cascade": true,
     "topo_product": "2004-start",
     "topo_dune_version": "v1",
     "parameter_file": "Hatteras-CASCADE-parameters.yaml",
-    "git_commit": "317edc4af21e27ad0634d84afd5b4861a9d0256d",
+    "git_commit": "8a8798c991692cc6091fcc57d127bc8d8cacb80e",
     "git_branch": "hannahaline/hatteras-cascade",
     "git_dirty": true
   },
@@ -21,7 +21,9 @@
     "historical relocations": false,
     "beach/dune manager": "43 domains",
     "nourishment fills": "3 applied",
-    "groin": "on"
+    "groin": "on",
+    "wave climate": "Hs 2.5 m, Tp 8.0 s, asym 0.7, high-angle 0.1",
+    "relocation target": "20 m behind the dune line"
   },
   "period": {
     "start_year": 2004,
@@ -31,7 +33,7 @@
   },
   "wave climate": {
     "wave_height_m": 2.5,
-    "wave_period_s": 8,
+    "wave_period_s": 8.0,
     "wave_asymmetry": 0.7,
     "wave_angle_high_frac": 0.1,
     "shoreface_depth_m": "22.25"
@@ -64,19 +66,19 @@
     "deterioration": "linear_ramp, floor 0.6",
     "r_ipl_t0": "1.0758",
     "predicted_extent_m": "3280",
-    "measured_extent_m": "6000 updrift / 2500 downdrift"
+    "measured_extent_m": "6500 updrift / 2500 downdrift"
   },
   "skill": {
     "target": "CoastSat LOESS 10-domain",
     "estimator": "lrr",
-    "mean_bias_m_yr": "-0.9748",
-    "rmse_m_yr": "1.7601",
-    "mean_bias_interior_m_yr": "-0.9941",
-    "rmse_interior_m_yr": "1.7798",
-    "lrr_r2_median": "0.8721",
+    "mean_bias_m_yr": "-0.9743",
+    "rmse_m_yr": "1.7596",
+    "mean_bias_interior_m_yr": "-0.9936",
+    "rmse_interior_m_yr": "1.7793",
+    "lrr_r2_median": "0.8715",
     "lrr_r2_below_floor": "18",
-    "endpoint_mean_bias_interior_m_yr": "-0.8720",
-    "endpoint_rmse_interior_m_yr": "1.6874"
+    "endpoint_mean_bias_interior_m_yr": "-0.8714",
+    "endpoint_rmse_interior_m_yr": "1.6869"
   },
   "verification": {
     "nourishment_ok": true,

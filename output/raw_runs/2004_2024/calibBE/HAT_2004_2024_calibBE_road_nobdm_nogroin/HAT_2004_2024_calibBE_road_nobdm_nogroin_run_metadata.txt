@@ -3,14 +3,14 @@
 
 [identity]
 run_name                         = HAT_2004_2024_calibBE_road_nobdm_nogroin
-timestamp                        = 2026-09-01 01:41:16
+timestamp                        = 2026-09-14 19:24:19
 generated_by                     = HAT_hindcast_1984_2024.py
-runtime_min                      = 2.6
+runtime_min                      = 3.2
 use_sandbox_cascade              = True   # cascade.cascade_groin, not cascade.cascade
 topo_product                     = 2004-start
 topo_dune_version                = v1
 parameter_file                   = Hatteras-CASCADE-parameters.yaml
-git_commit                       = 317edc4af21e27ad0634d84afd5b4861a9d0256d
+git_commit                       = f8c3bb56db79adb4537735ca1dd6dcc0d31bcb6f
 git_branch                       = hannahaline/hatteras-cascade
 git_dirty                        = True   # True: the commit alone does not reproduce this run
 
@@ -24,6 +24,8 @@ historical relocations           = False
 beach/dune manager               = off
 nourishment fills                = suppressed
 groin                            = off
+wave climate                     = Hs 2.5 m, Tp 8.0 s, asym 0.7, high-angle 0.1
+relocation target                = 20 m behind the dune line
 
 [period]
 start_year                       = 2004
@@ -33,7 +35,7 @@ annual_states                    = 21
 
 [wave climate]
 wave_height_m                    = 2.5
-wave_period_s                    = 8
+wave_period_s                    = 8.0
 wave_asymmetry                   = 0.7
 wave_angle_high_frac             = 0.1
 shoreface_depth_m                = 22.25   # 8.9 * Hs
@@ -53,8 +55,8 @@ relocations_enabled              = False
 preset                           = calibBE
 background_erosion_on            = True   # implied by the preset, checked in 4.3
 domains_specified                = 90
-nonzero_domains                  = 67
-values_digest                    = 8652bf10e2a5   # changes if any rate changed, interior included
+nonzero_domains                  = 64
+values_digest                    = ff3c150172d6   # changes if any rate changed, interior included
 rate_gis1_m_yr                   = 50.3
 rate_gis90_m_yr                  = 57.9
 
@@ -64,14 +66,14 @@ enabled                          = False
 [skill]
 target                           = CoastSat LOESS 10-domain   # raw means over GIS 1-10
 estimator                        = lrr   # OLS slope through every annual state, matching the target's own definition
-mean_bias_m_yr                   = -0.4703
-rmse_m_yr                        = 0.8509
-mean_bias_interior_m_yr          = -0.4678   # GIS 2-89: the locked end domains excluded
-rmse_interior_m_yr               = 0.8515
-lrr_r2_median                    = 0.7385   # how well a line describes the modelled trajectory
-lrr_r2_below_floor               = 24   # domains under r2 0.50
-endpoint_mean_bias_interior_m_yr = -0.3276   # the pre-LRR estimator; calibBE and groin M were fit on this
-endpoint_rmse_interior_m_yr      = 0.7390
+mean_bias_m_yr                   = -0.4297
+rmse_m_yr                        = 0.8478
+mean_bias_interior_m_yr          = -0.4272   # GIS 2-89: the locked end domains excluded
+rmse_interior_m_yr               = 0.8484
+lrr_r2_median                    = 0.7518   # how well a line describes the modelled trajectory
+lrr_r2_below_floor               = 21   # domains under r2 0.50
+endpoint_mean_bias_interior_m_yr = -0.2850   # the pre-LRR estimator; calibBE and groin M were fit on this
+endpoint_rmse_interior_m_yr      = 0.7397
 
 [verification]
 nourishment_ok                   = True
