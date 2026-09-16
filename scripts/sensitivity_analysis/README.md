@@ -16,3 +16,7 @@ of the three decision records in the output tree.
 **A cell that moves a forcing earns a name token**, so it lands in its own
 directory. Without one it would derive the same name as the matrix run it is
 being compared against, and the last to finish would wear the production name.
+Cells file under `output/raw_runs/sensitivity/<axis>/<period>/<preset>/` (the
+driver sets `HAT_RUN_KIND=sensitivity`; the axis is read off the token), and
+the index keys a cell on (run_name, kind, tag) so it and its matrix baseline
+are two rows. No model state is written for a cell.

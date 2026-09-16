@@ -1,0 +1,133 @@
+{
+  "identity": {
+    "run_name": "HAT_2004_2024_zeroBE_noroad_bdm_nourish_groin",
+    "timestamp": "2026-09-01 02:55:06",
+    "generated_by": "HAT_hindcast_1984_2024.py",
+    "runtime_min": "3.0",
+    "use_sandbox_cascade": true,
+    "topo_product": "2004-start",
+    "topo_dune_version": "v1",
+    "parameter_file": "Hatteras-CASCADE-parameters.yaml",
+    "git_commit": "317edc4af21e27ad0634d84afd5b4861a9d0256d",
+    "git_branch": "hannahaline/hatteras-cascade",
+    "git_dirty": true
+  },
+  "scenario": {
+    "period": "2004-2024 (20 yr)",
+    "source/sink preset": "zeroBE",
+    "shoreline offset": "asrun",
+    "background erosion": false,
+    "roadway management": "off",
+    "historical relocations": false,
+    "beach/dune manager": "43 domains",
+    "nourishment fills": "3 applied",
+    "groin": "on"
+  },
+  "period": {
+    "start_year": 2004,
+    "end_year": 2024,
+    "run_years": 20,
+    "annual_states": 21
+  },
+  "wave climate": {
+    "wave_height_m": 2.5,
+    "wave_period_s": 8,
+    "wave_asymmetry": 0.7,
+    "wave_angle_high_frac": 0.1,
+    "shoreface_depth_m": "22.25"
+  },
+  "sea level": {
+    "rslr_m_yr": 0.006,
+    "rslr_constant": true
+  },
+  "dunes and roadway": {
+    "rmin / rmax": "0.55 / 0.95",
+    "dune_design_ele_m_mhw": 3.0,
+    "dune_min_ele_m_mhw": 0.0,
+    "road_width_m": 20.0,
+    "relocations_enabled": false
+  },
+  "source/sink": {
+    "preset": "zeroBE",
+    "background_erosion_on": false,
+    "domains_specified": 0,
+    "nonzero_domains": 0,
+    "values_digest": "empty",
+    "rate_gis1_m_yr": 0.0,
+    "rate_gis90_m_yr": 0.0
+  },
+  "groin": {
+    "enabled": true,
+    "trapping_rate_m_yr": 60.0,
+    "updrift / downdrift": "GIS 6 / 5",
+    "install_year": 1969,
+    "deterioration": "linear_ramp, floor 0.6",
+    "r_ipl_t0": "1.0758",
+    "predicted_extent_m": "3280",
+    "measured_extent_m": "5000 updrift / 2500 downdrift"
+  },
+  "skill": {
+    "target": "CoastSat LOESS 10-domain",
+    "estimator": "lrr",
+    "mean_bias_m_yr": "-3.0066",
+    "rmse_m_yr": "3.2521",
+    "mean_bias_interior_m_yr": "-2.9523",
+    "rmse_interior_m_yr": "3.1866",
+    "lrr_r2_median": "0.9441",
+    "lrr_r2_below_floor": "0",
+    "endpoint_mean_bias_interior_m_yr": "-2.7775",
+    "endpoint_rmse_interior_m_yr": "3.0271"
+  },
+  "verification": {
+    "nourishment_ok": true,
+    "roads_drowned": 0,
+    "roads_reloc_blocked": 0
+  },
+  "index row": {
+    "run_name": "HAT_2004_2024_zeroBE_noroad_bdm_nourish_groin",
+    "Hs_m": "2.5",
+    "timestamp": "2026-09-01 02:55:06",
+    "start_year": "2004",
+    "end_year": "2024",
+    "source_sink_preset": "zeroBE",
+    "be_nonzero_domains": "0",
+    "be_values_digest": "empty",
+    "be_rate_gis1_m_yr": "0.0",
+    "be_rate_gis90_m_yr": "0.0",
+    "scenario": "beachdune_only",
+    "scenario_overridden": "False",
+    "groin_enabled": "True",
+    "groin_trapping_m_yr": "60.0",
+    "roadway_management": "False",
+    "relocations_enabled": "False",
+    "beach_dune_management": "True",
+    "nourishment_fills": "True",
+    "bdm_domains": "43",
+    "nourishment_projects": "3",
+    "rslr_m_yr": "0.006",
+    "annual_states": "21",
+    "run_complete": "True",
+    "mean_bias_m_yr": "-3.006642960073954",
+    "rmse_m_yr": "3.252145382882348",
+    "mean_bias_interior_m_yr": "-2.95233629995615",
+    "rmse_interior_m_yr": "3.1865976775574256",
+    "nourishment_ok": "True",
+    "roads_drowned": "0",
+    "roads_reloc_blocked": "0",
+    "groin_extent_updrift_m": "5000.0",
+    "groin_extent_downdrift_m": "2500.0",
+    "runtime_min": "3.0",
+    "use_sandbox_cascade": "True",
+    "topo_product": "2004-start",
+    "topo_dune_version": "v1",
+    "git_commit": "317edc4af21e",
+    "git_dirty": "True",
+    "rate_estimator": "lrr",
+    "lrr_r2_median": "0.9440712157866658",
+    "lrr_r2_below_floor": "0",
+    "endpoint_mean_bias_interior_m_yr": "-2.777463523097488",
+    "endpoint_rmse_interior_m_yr": "3.0270918546834773",
+    "sandbags_on": "False",
+    "groin_deterioration_f": "0.6"
+  }
+}

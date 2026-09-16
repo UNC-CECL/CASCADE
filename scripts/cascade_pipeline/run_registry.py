@@ -9,7 +9,9 @@ the three failure modes that costs are all bookkeeping ones:
     the sandbox flag or the extractor version was flipped days earlier
     (git_provenance, and the [identity] section callers pass),
   * twelve runs whose results can only be compared by opening twelve
-    hand-formatted text files (append_run_index).
+    hand-formatted text files (rebuild_run_index, which derives run_index.csv
+    from every run's metadata; append_run_index is the pre-2026-09-16 writer
+    and is kept for the groin sweep).
 
 Metadata is written twice from ONE structure: a .txt to read and a .json to
 parse. Rendering both from the same `sections` mapping is what keeps them from
@@ -41,8 +43,11 @@ _IGNORABLE_NAMES = {".gitkeep", ".gitignore", ".DS_Store", "Thumbs.db"}
 RUN_INDEX_FILENAME = "run_index.csv"
 
 
-# Paths a run WRITES BACK into the repository, so their being modified says
+# Paths a run WROTE BACK into the repository, so their being modified says
 # nothing about whether the run's code was committed. See git_provenance.
+# Since 2026-09-16 the runner copies the parameters yaml into the run
+# directory and CASCADE rewrites only the copy, so this file should stay
+# clean; it is still excluded so a tree dirtied by an older run reports right.
 EXCLUDED_FROM_DIRTY = (
     "data/hatteras_init/Hatteras-CASCADE-parameters.yaml",
 )
@@ -147,12 +152,87 @@ def values_digest(mapping, length=12):
 # over. A name that is not on disk is an error here, and the error names the
 # arms the run IS under.
 
+# =============================================================================
+# THE TREE (2026-09-16): filed by PURPOSE
+# =============================================================================
+# A run is filed by what it is FOR, then by period and preset:
+#
+#   matrix/<period>/<preset>/<run_name>/                  the production runs
+#   sensitivity/<axis>/<period>/<preset>/<run_name>_<token>/   sweep cells
+#   experiments/<tag>/<period>/<preset>/<run_name>/       one question each
+#   versions/<tag>/<period>/<preset>/<run_name>/          input-version pairs
+#   archive/<tag>/<period>/<preset>/<run_name>/           superseded, intact
+#
+# The run NAME still describes the scenario and is derived from the switches
+# the runner built. What used to be an "arm" -- one string that meant a
+# forcing value, an input version or an ad hoc experiment label without saying
+# which -- is now a KIND (one of KINDS) and a TAG. A matrix run has no tag. A
+# sensitivity cell's tag is its axis folder, derived from the trailing token on
+# its name, so the value it was swept to is in the NAME and the axis is in the
+# PATH. An experiment's or version's tag is the folder it was filed under,
+# "<set>/<member>" for a set of related runs.
+#
+# Why (Hannah, 2026-09-16): a wave sweep had fanned out into twelve top-level
+# arms/waveHs<x>/ folders, each holding one run; nineteen of thirty arms were
+# finished one-off experiments nothing marked as finished; and the layout
+# could not tell those from the version comparisons that are kept on purpose.
+#
+# BOTH EARLIER LAYOUTS STILL READ. find_run_dir tries the purpose path, then
+# the 2026-09-10 layout (arms/<arm>/..., <period>/<preset>/sweeps/<family>/),
+# then the flat pre-09-10 one, so a tree that is half migrated resolves. The
+# `arm=` keyword is accepted everywhere as a legacy spelling and translated
+# through LEGACY_ARMS.
+
+KINDS = ("matrix", "sensitivity", "experiment", "version", "archive")
+MATRIX_KIND = "matrix"
+KIND_DIR = {
+    "matrix": "matrix",
+    "sensitivity": "sensitivity",
+    "experiment": "experiments",
+    "version": "versions",
+    "archive": "archive",
+}
+# The legacy name of the unscoped tree. Still what a pre-09-16 index row says
+# in its `arm` column, and what old call sites pass.
 CALIBRATION_ARM = "calibration"
+ARMS_DIR = "arms"
+SWEEPS_DIR = "sweeps"
+# Trailing name tokens that mark a sensitivity cell, and the axis folder each
+# files under. The runner derives the token (cascade_pipeline.hindcast's
+# wave_climate_token / relocation_setback_token); a token combining two wave
+# fields ("waveHs3Tp10") files under the FIRST family it starts with.
+SWEEP_FAMILIES = ("waveHs", "waveTp", "waveahf", "waveasym", "rset")
+
+# Where each pre-09-16 arm was filed on 2026-09-16, decided by Hannah in the
+# same interview: the three version comparisons keep their names under
+# versions/; everything else was a one-off experiment and is filed under
+# experiments/ by the date it was run, with the arm's own name as the member.
+# The twelve waveHs<x> arms are ABSENT on purpose: those were the 1996 wave
+# cells filed by the 2026-09-01 rule, re-run as sensitivity cells and deleted.
+LEGACY_ARMS = {
+    "offsetv1": ("version", "offsetv1"),
+    "version-check/v1": ("version", "version-check/v1"),
+    "version-pair/v2": ("version", "version-pair/v2"),
+    "version-pair/v3": ("version", "version-pair/v3"),
+    "pea1989base": ("experiment", "2026-09-02-pea1989/base"),
+    "pea1989basenoreloc": ("experiment", "2026-09-02-pea1989/basenoreloc"),
+    "behindroad-copy": ("experiment", "2026-09-08-behindroad-copy"),
+    "paramsplit-check": ("experiment", "2026-09-14-paramsplit/check"),
+    "paramsplit-final": ("experiment", "2026-09-14-paramsplit/final"),
+    "paramsplit-oldcode": ("experiment", "2026-09-14-paramsplit/oldcode"),
+    "paramsplit-syncon": ("experiment", "2026-09-14-paramsplit/syncon"),
+    "probe-natural": ("experiment", "2026-09-14-probe/natural"),
+    "probe-paired": ("experiment", "2026-09-14-probe/paired"),
+    "probe-roadonly": ("experiment", "2026-09-14-probe/roadonly"),
+    "probe-unrounded": ("experiment", "2026-09-14-probe/unrounded"),
+    "probe-v1setbacks": ("experiment", "2026-09-14-probe/v1setbacks"),
+    "recode-20260914": ("experiment", "2026-09-14-recode"),
+    "currency-20260914": ("experiment", "2026-09-14-currency"),
+}
 
 # A period directory is exactly <4 digits>_<4 digits>. Anything else directly
-# under raw_runs/ is an arm, so the two levels can be told apart without a
-# registry of arm names -- an arm is created by setting HAT_ARM_TAG, and no
-# hardcoded list of them would stay current.
+# under a kind folder is a tag, so the two levels can be told apart without a
+# registry of tag names.
 _PERIOD_DIR = re.compile(r"\d{4}_\d{4}")
 
 
@@ -188,28 +268,8 @@ def period_component(period):
     return f"{int(start)}_{int(end)}"
 
 
-# THE TREE (2026-09-10). Two folders group what used to sit loose:
-#
-#   arms/      a forcing arm's runs, so output/raw_runs shows the hindcast
-#              periods and one arms/ folder instead of periods and arm names
-#              side by side. The `arm` column of run_index.csv is unchanged --
-#              it is a logical name, and only the path it contributes moved.
-#   sweeps/    a family of runs that vary ONE parameter from a scenario run.
-#              91 of 164 runs are such variants, and the runner already
-#              encodes which parameter as a trailing token on the run name
-#              (see the sensitivity sweep driver), so the grouping is read off
-#              the name rather than tracked separately.
-#
-# A family is listed here only once a driver produces it. An unrecognised
-# trailing token is not guessed at: that run files flat, as every run did
-# before.
-ARMS_DIR = "arms"
-SWEEPS_DIR = "sweeps"
-SWEEP_FAMILIES = ("waveHs", "waveTp", "waveahf", "waveasym", "rset")
-
-
 def sweep_family(run_name):
-    """The sweep family a run belongs to, or "" if it is a scenario run.
+    """The sensitivity axis a run belongs to, or "" if it is a scenario run.
 
     Args:
         run_name: The run's derived name, which is also its directory name.
@@ -218,71 +278,110 @@ def sweep_family(run_name):
         One of SWEEP_FAMILIES, or "" when the trailing token names none of
         them -- which is every scenario run.
     """
-    last = str(run_name).rsplit("_", 1)[-1]
+    token = run_name.rpartition("_")[2]
     for family in SWEEP_FAMILIES:
-        if last.startswith(family) and last != family:
+        if token.startswith(family):
             return family
     return ""
 
 
-def legacy_run_dir_for(raw_runs, run_name, period, preset, arm=CALIBRATION_ARM):
-    """Where this run sat before the 2026-09-10 tree change.
+def check_tag(tag):
+    """Validates a tag: one path component, or two joined by '/'.
 
-    Flat: the arm loose at the root rather than under arms/, and a sweep run
-    beside the scenario runs rather than under sweeps/<family>/. Kept so a
-    tree that has not been migrated, or has been half migrated, still reads.
-    """
-    root = Path(raw_runs)
-    tag = arm_component(arm)
-    base = root / tag if tag else root
-    return base / period_component(period) / preset / run_name
-
-
-def sweep_component(run_name):
-    """The path component a sweep run contributes; "" for a scenario run."""
-    family = sweep_family(run_name)
-    return f"{SWEEPS_DIR}/{family}" if family else ""
-
-
-def arm_component(arm):
-    """The path component an arm contributes, which is "" for calibration.
+    Two levels is a set and its members -- the four probes of one experiment,
+    the two versions of one pair -- and a third would be a taxonomy nobody
+    has asked for. The value reaches here from an environment variable and is
+    joined onto the output root, so it must not escape it.
 
     Args:
-        arm: Arm name, as the `arm` column of run_index.csv spells it. None
-            and "" are read as the calibration arm.
+        tag: The tag string. None and "" mean no tag.
 
     Returns:
-        The arm name, or "" for the calibration arm.
+        The tag, stripped; "" for none.
 
     Raises:
-        ValueError: If the arm is not a single path component. The value
-            reaches here from an environment variable and is joined onto the
-            output root.
+        ValueError: If it is not one or two clean path components.
     """
-    arm = (arm or CALIBRATION_ARM).strip()
-    if arm == CALIBRATION_ARM:
+    tag = (tag or "").strip()
+    if not tag:
         return ""
-    # ONE LEVEL OF NESTING IS ALLOWED (2026-09-04): "row-insert/median" files a
-    # run at raw_runs/row-insert/median/<period>/<preset>/<name>, so a SET of
-    # arms that belong together -- the six fills of the 1984 seaward-row
-    # insert -- sit under one folder named for the set rather than loose
-    # under raw_runs/. The `arm` column of run_index.csv carries the same
-    # two-component string, and `arms_holding` enumerates that level too, so a
-    # nested arm round-trips through find_run_dir exactly as a flat one does.
-    # Deeper nesting is refused: two levels is a set and its members, and a
-    # third would be a taxonomy nobody has asked for.
-    parts = arm.split("/")
-    if ("\\" in arm or len(parts) > 2 or any(not p or p.startswith(".")
-                                              for p in parts)):
+    parts = tag.split("/")
+    if ("\\" in tag or len(parts) > 2
+            or any(not p or p.startswith(".") for p in parts)):
         raise ValueError(
-            f"arm {arm!r} must be one path component, or two joined by '/' "
+            f"tag {tag!r} must be one path component, or two joined by '/' "
             f"for a set and its member -- it is joined onto the raw_runs "
             f"root and must not escape it.")
-    return arm
+    return tag
 
 
-def preset_dir_for(raw_runs, period, preset, arm=CALIBRATION_ARM):
-    """The directory holding every run of one period, preset and arm.
+def check_kind(kind):
+    """Validates a kind, defaulting None and "" to matrix."""
+    kind = (kind or MATRIX_KIND).strip()
+    if kind not in KINDS:
+        raise ValueError(f"kind {kind!r} is not one of {KINDS}")
+    return kind
+
+
+def legacy_arm_to_kind_tag(arm):
+    """(kind, tag) for a pre-2026-09-16 arm name.
+
+    Args:
+        arm: The `arm` column of an old index row, or the value an old call
+            site passes as arm=. None, "" and "calibration" are the matrix.
+
+    Returns:
+        (kind, tag). A wave arm (`waveHs1p2`) maps to a sensitivity cell
+        under the family its name starts with; an arm in LEGACY_ARMS maps as
+        that table says; anything else is an experiment tagged with the arm
+        name itself, so an unknown arm still resolves somewhere sensible.
+    """
+    arm = (arm or "").strip()
+    if not arm or arm == CALIBRATION_ARM:
+        return MATRIX_KIND, ""
+    if arm in LEGACY_ARMS:
+        return LEGACY_ARMS[arm]
+    for family in SWEEP_FAMILIES:
+        if arm.startswith(family):
+            return "sensitivity", family
+    return "experiment", arm
+
+
+def _resolve_identity(kind, tag, arm, run_name=None):
+    """Normalises the three spellings a caller may use into (kind, tag).
+
+    `arm=` wins when given, because a call site still passing it is one that
+    has not been updated and means the OLD thing. For a sensitivity cell the
+    tag is the axis folder, derived from the name when not given.
+    """
+    if kind not in (None, "") and kind not in KINDS:
+        # A pre-09-16 caller passing the ARM positionally, where kind now
+        # sits (find_run_dir(raw, name, period, preset, "version-pair/v2")).
+        if arm not in (None, ""):
+            raise ValueError(f"{kind!r} is not a kind, and arm= was also given")
+        arm, kind = kind, None
+    if arm is not None and arm != "":
+        if kind not in (None, "", MATRIX_KIND) or tag:
+            raise ValueError("pass either arm= (legacy) or kind=/tag=, not both")
+        kind, tag = legacy_arm_to_kind_tag(arm)
+    kind = check_kind(kind)
+    tag = check_tag(tag)
+    if kind == "sensitivity":
+        family = sweep_family(run_name or "")
+        if not tag:
+            if not family:
+                raise ValueError(
+                    f"a sensitivity run needs an axis: {run_name!r} carries no "
+                    f"sweep token and no tag was given")
+            tag = family
+    if kind == MATRIX_KIND and tag:
+        raise ValueError(f"a matrix run carries no tag, got {tag!r}")
+    return kind, tag
+
+
+def preset_dir_for(raw_runs, period, preset, kind=MATRIX_KIND, tag="",
+                   arm=None):
+    """The directory holding every run of one period, preset, kind and tag.
 
     This is the runner's OUTPUT_BASE_DIR. It is the level anything that
     ENUMERATES runs works at -- the scenario grid, the relocation comparison,
@@ -293,19 +392,22 @@ def preset_dir_for(raw_runs, period, preset, arm=CALIBRATION_ARM):
         raw_runs: The output/raw_runs root.
         period: "1984_2004" or (1984, 2004).
         preset: Source/sink preset, e.g. "calibBE".
-        arm: Forcing arm. The default is the calibration arm, which
-            contributes no path component.
+        kind: One of KINDS; the default is the matrix.
+        tag: The experiment/version tag, or the axis for a sensitivity run.
+        arm: LEGACY. A pre-09-16 arm name, translated through LEGACY_ARMS.
 
     Returns:
         The preset directory as a Path. Does not check it exists.
     """
-    root = Path(raw_runs)
-    tag = arm_component(arm)
-    base = root / ARMS_DIR / tag if tag else root
+    kind, tag = _resolve_identity(kind, tag, arm)
+    base = Path(raw_runs) / KIND_DIR[kind]
+    if tag:
+        base = base / tag
     return base / period_component(period) / preset
 
 
-def run_dir_for(raw_runs, run_name, period, preset, arm=CALIBRATION_ARM):
+def run_dir_for(raw_runs, run_name, period, preset, kind=MATRIX_KIND, tag="",
+                arm=None):
     """The directory one run's output belongs in. Does not check it exists.
 
     The inverse of the runner's RUN_DIR, and the only place the layout is
@@ -318,24 +420,72 @@ def run_dir_for(raw_runs, run_name, period, preset, arm=CALIBRATION_ARM):
         run_name: The run's derived name, which is also its directory name.
         period: "1984_2004" or (1984, 2004).
         preset: Source/sink preset, e.g. "calibBE".
-        arm: Forcing arm. The default is the calibration arm, which
-            contributes no path component.
+        kind: One of KINDS; the default is the matrix.
+        tag: The experiment/version tag. For a sensitivity run it is derived
+            from the name's token when not given.
+        arm: LEGACY. A pre-09-16 arm name.
 
     Returns:
         The run directory as a Path.
     """
-    base = preset_dir_for(raw_runs, period, preset, arm)
-    sweep = sweep_component(run_name)
-    return (base / sweep / run_name) if sweep else (base / run_name)
+    kind, tag = _resolve_identity(kind, tag, arm, run_name)
+    return preset_dir_for(raw_runs, period, preset, kind, tag) / run_name
 
 
-def arms_holding(raw_runs, run_name, period, preset):
-    """Every arm under which this run exists on disk.
+def legacy_run_dirs_for(raw_runs, run_name, period, preset, arm=None):
+    """Every place this run could sit under the two earlier layouts.
 
-    A run name describes the SCENARIO and an arm describes the FORCING, so one
-    name can legitimately exist in several arms -- and three currently exist in
-    four each. This is what makes that discoverable rather than a surprise: it
-    is what `find_run_dir` reports when the arm it was asked for holds nothing.
+    2026-09-10 layout:  arms/<arm>/<period>/<preset>/<run>  for an arm,
+                        <period>/<preset>/sweeps/<family>/<run>  for a cell,
+                        <period>/<preset>/<run>  otherwise.
+    Before that:        <arm>/<period>/<preset>/<run>  and  <period>/<preset>/<run>.
+
+    Args:
+        raw_runs: The output/raw_runs root.
+        run_name: The run's directory name.
+        period: "1984_2004" or (1984, 2004).
+        preset: Source/sink preset.
+        arm: The legacy arm the run was filed under; None/"" for calibration.
+
+    Returns:
+        Candidate Paths, most recent layout first. Not checked for existence.
+    """
+    root = Path(raw_runs)
+    per = period_component(period)
+    arm = (arm or "").strip()
+    if arm == CALIBRATION_ARM:
+        arm = ""
+    family = sweep_family(run_name)
+    out = []
+    if arm:
+        out.append(root / ARMS_DIR / arm / per / preset / run_name)
+        out.append(root / arm / per / preset / run_name)
+    else:
+        if family:
+            out.append(root / per / preset / SWEEPS_DIR / family / run_name)
+        out.append(root / per / preset / run_name)
+    return out
+
+
+def _legacy_arm_for(kind, tag, run_name):
+    """The arm name a (kind, tag) run would have carried before 09-16."""
+    if kind == MATRIX_KIND:
+        return ""
+    if kind == "sensitivity":
+        return ""            # cells sat in the calibration arm, token-named
+    for arm, (k, t) in LEGACY_ARMS.items():
+        if (k, t) == (kind, tag):
+            return arm
+    return tag
+
+
+def kinds_holding(raw_runs, run_name, period, preset):
+    """Every (kind, tag) under which this run exists on disk, either layout.
+
+    A run name describes the SCENARIO, so one name can legitimately exist
+    under several tags -- the matrix run and the version pair made from it.
+    This is what makes that discoverable rather than a surprise: it is what
+    `find_run_dir` reports when the place it was asked for holds nothing.
 
     Args:
         raw_runs: The output/raw_runs root.
@@ -344,113 +494,411 @@ def arms_holding(raw_runs, run_name, period, preset):
         preset: Source/sink preset.
 
     Returns:
-        Sorted list of arm names, using CALIBRATION_ARM for the unscoped tree.
-        Empty if the name is nowhere under this period and preset.
+        Sorted list of (kind, tag) pairs. Empty if the name is nowhere under
+        this period and preset.
     """
     root = Path(raw_runs)
     if not root.is_dir():
         return []
-    candidates = [CALIBRATION_ARM]
-    # Arms live under arms/ since 2026-09-10; the root is still scanned so an
-    # unmigrated tree, where they sit loose beside the period folders, reads.
-    tops = [root / ARMS_DIR] if (root / ARMS_DIR).is_dir() else []
-    tops.append(root)
-    for top in tops:
+    per = period_component(period)
+    found = set()
+    # The purpose layout: kind folders, each holding tags (one or two levels)
+    # or, for the matrix, periods directly.
+    for kind, folder in KIND_DIR.items():
+        top = root / folder
+        if not top.is_dir():
+            continue
+        if kind == MATRIX_KIND:
+            if (top / per / preset / run_name).is_dir():
+                found.add((kind, ""))
+            continue
         for child in sorted(top.iterdir()):
             if not child.is_dir() or _PERIOD_DIR.fullmatch(child.name):
                 continue
-            if top is root and child.name == ARMS_DIR:
-                continue
-            candidates.append(child.name)
-            # A SET folder (see arm_component): its members are arms too. A
-            # child that holds a period directory is itself an arm and its
-            # subfolders are runs, not arms, so only look one level down where
-            # no period directory is present.
+            candidates = [child.name]
             if not any(_PERIOD_DIR.fullmatch(g.name) for g in child.iterdir()
                        if g.is_dir()):
-                candidates.extend(f"{child.name}/{g.name}"
-                                  for g in sorted(child.iterdir()) if g.is_dir())
+                candidates = [f"{child.name}/{g.name}"
+                              for g in sorted(child.iterdir()) if g.is_dir()]
+            for tag in candidates:
+                if (top / tag / per / preset / run_name).is_dir():
+                    found.add((kind, tag))
+    # The earlier layouts, translated.
+    arms = [""]
+    for top in ([root / ARMS_DIR] if (root / ARMS_DIR).is_dir() else []) + [root]:
+        for child in sorted(top.iterdir()):
+            if (not child.is_dir() or _PERIOD_DIR.fullmatch(child.name)
+                    or child.name in KIND_DIR.values() or child.name == ARMS_DIR):
+                continue
+            arms.append(child.name)
+            if not any(_PERIOD_DIR.fullmatch(g.name) for g in child.iterdir()
+                       if g.is_dir()):
+                arms.extend(f"{child.name}/{g.name}"
+                            for g in sorted(child.iterdir()) if g.is_dir())
+    for arm in arms:
+        if any(p.is_dir() for p in
+               legacy_run_dirs_for(root, run_name, per, preset, arm)):
+            found.add(legacy_arm_to_kind_tag(arm) if arm else
+                      ("sensitivity", sweep_family(run_name)) if sweep_family(run_name)
+                      else (MATRIX_KIND, ""))
+    return sorted(found)
 
-    def _present(arm):
-        # Either layout: the tree may not have been migrated yet.
-        return (run_dir_for(root, run_name, period, preset, arm).is_dir()
-                or legacy_run_dir_for(root, run_name, period, preset, arm).is_dir())
 
-    seen, found = set(), []
-    for arm in candidates:
-        if arm not in seen and _present(arm):
-            seen.add(arm)
-            found.append(arm)
-    return found
-
-
-def find_run_dir(raw_runs, run_name, period, preset, arm=CALIBRATION_ARM):
+def find_run_dir(raw_runs, run_name, period, preset, kind=MATRIX_KIND, tag="",
+                 arm=None):
     """Locates a finished run, raising with what IS on disk if it is absent.
 
-    ARM DEFAULTS TO CALIBRATION RATHER THAN SEARCHING. A search would let a
-    figure silently draw a run forced at a wave climate other than the one it
-    names -- exactly what the arm component exists to prevent -- and with three
-    names currently present in four arms each it would have to guess between
-    them. Naming no arm means the calibration arm, which is also what every
-    call site did before arms existed, so routing an existing script through
-    this cannot change which run it reads.
+    KIND DEFAULTS TO THE MATRIX RATHER THAN SEARCHING. A search would let a
+    figure silently draw a run forced or versioned differently from the one it
+    names -- exactly what the kind and tag exist to prevent. Naming nothing
+    means the matrix, which is also what every call site did before arms
+    existed, so routing an existing script through this cannot change which
+    run it reads.
 
     Args:
         raw_runs: The output/raw_runs root.
         run_name: The run's directory name.
         period: "1984_2004" or (1984, 2004).
         preset: Source/sink preset.
-        arm: Forcing arm to read from. Defaults to the calibration arm.
+        kind: One of KINDS. Defaults to the matrix.
+        tag: The experiment/version tag, or the axis of a sensitivity cell
+            (derived from the name when not given).
+        arm: LEGACY. A pre-09-16 arm name; translated, and also tried at its
+            old path.
 
     Returns:
         The run directory as a Path, which exists.
 
     Raises:
         FileNotFoundError: If that directory is absent. The message names the
-            arms the run DOES exist under, so an arm-scoped run reads as "it
+            places the run DOES exist, so a run filed elsewhere reads as "it
             is over there" rather than as "it was never made".
     """
-    directory = run_dir_for(raw_runs, run_name, period, preset, arm)
+    directory = run_dir_for(raw_runs, run_name, period, preset, kind, tag, arm)
     if directory.is_dir():
         return directory
-    # The pre-2026-09-10 flat location, for a tree that has not been migrated.
-    legacy = legacy_run_dir_for(raw_runs, run_name, period, preset, arm)
-    if legacy != directory and legacy.is_dir():
-        return legacy
+    kind, tag = _resolve_identity(kind, tag, arm, run_name)
+    legacy_arm = arm if arm else _legacy_arm_for(kind, tag, run_name)
+    for candidate in legacy_run_dirs_for(raw_runs, run_name, period, preset,
+                                         legacy_arm):
+        if candidate.is_dir():
+            return candidate
 
-    elsewhere = [a for a in arms_holding(raw_runs, run_name, period, preset)
-                 if a != arm]
-    hint = (f"\n  It exists under arm(s): {', '.join(elsewhere)} -- pass "
-            f"arm=... to read one of those."
+    elsewhere = [f"{k}:{t}" if t else k
+                 for k, t in kinds_holding(raw_runs, run_name, period, preset)
+                 if (k, t) != (kind, tag)]
+    hint = (f"\n  It exists under: {', '.join(elsewhere)} -- pass kind=/tag= "
+            f"to read one of those."
             if elsewhere else
-            "\n  It exists under no arm; the run has not been made.")
+            "\n  It exists nowhere; the run has not been made.")
+    where = f"{kind}:{tag}" if tag else kind
     raise FileNotFoundError(
-        f"no run directory for {run_name!r} in arm {arm!r}.\n  {directory}"
-        + hint)
+        f"no run directory for {run_name!r} in {where}.\n  {directory}" + hint)
 
 
 def run_dir_for_index_row(raw_runs, row):
     """The run directory named by one run_index.csv row.
 
-    The index carries `arm`, `start_year`, `end_year` and `source_sink_preset`
-    for exactly this: a row and a directory can be matched without either side
-    reconstructing the other's spelling.
+    The index carries `kind`, `tag`, `start_year`, `end_year` and
+    `source_sink_preset` for exactly this: a row and a directory can be
+    matched without either side reconstructing the other's spelling. A row
+    from before 2026-09-16 carries `arm` instead, which is translated.
 
     Args:
         raw_runs: The output/raw_runs root.
         row: A mapping or pandas Series with run_name, start_year, end_year,
-            source_sink_preset, and optionally arm.
+            source_sink_preset, and kind/tag (or the legacy arm).
 
     Returns:
-        The run directory as a Path. NOT checked for existence -- a row whose
-        arm disagrees with the tree is a bookkeeping fault to be seen, not
-        smoothed over here.
+        The run directory as a Path, resolved through find_run_dir so an
+        unmigrated tree still answers.
     """
-    arm = row["arm"] if "arm" in row else CALIBRATION_ARM
-    return run_dir_for(
+    kind = row["kind"] if "kind" in row and str(row["kind"]).strip() else None
+    tag = row["tag"] if "tag" in row and str(row["tag"]).strip() else ""
+    arm = None
+    if kind is None:
+        arm = row["arm"] if "arm" in row else CALIBRATION_ARM
+        if isinstance(arm, float):           # NaN from pandas
+            arm = CALIBRATION_ARM
+    if isinstance(tag, float):
+        tag = ""
+    return find_run_dir(
         raw_runs, row["run_name"],
         (int(row["start_year"]), int(row["end_year"])),
-        row["source_sink_preset"], arm)
+        row["source_sink_preset"], kind or MATRIX_KIND, tag, arm)
+
+
+def arm_component(arm):
+    """LEGACY. The path component a pre-09-16 arm contributed.
+
+    Kept only so an old caller importing it still imports. New code files by
+    kind and tag; see preset_dir_for.
+    """
+    arm = (arm or CALIBRATION_ARM).strip()
+    return "" if arm == CALIBRATION_ARM else check_tag(arm)
+
+
+def sweep_component(run_name):
+    """LEGACY. The sweeps/<family> component of the 2026-09-10 layout."""
+    family = sweep_family(run_name)
+    return f"{SWEEPS_DIR}/{family}" if family else ""
+
+
+def legacy_run_dir_for(raw_runs, run_name, period, preset, arm=CALIBRATION_ARM):
+    """LEGACY. The flat pre-2026-09-10 location of a run."""
+    return legacy_run_dirs_for(raw_runs, run_name, period, preset, arm)[-1]
+
+
+def arms_holding(raw_runs, run_name, period, preset):
+    """LEGACY. Old arm names this run exists under; see kinds_holding."""
+    out = []
+    for kind, tag in kinds_holding(raw_runs, run_name, period, preset):
+        out.append(_legacy_arm_for(kind, tag, run_name) or CALIBRATION_ARM)
+    return sorted(set(out))
+
+
+# =============================================================================
+# THE DERIVED INDEX
+# =============================================================================
+# run_index.csv is a RESTATEMENT of every run's metadata JSON in one table, so
+# a question across runs is one read. Since 2026-09-16 no run appends to it:
+# each run writes the row it would have appended INTO its metadata, under
+# "index row", and the runner then calls rebuild_run_index, which regenerates
+# the whole file from every metadata on disk and replaces it atomically. Two
+# runs finishing at once both rebuild the same complete table, so the last
+# writer wins nothing -- which is what lets runs be concurrent. Rows for runs
+# that predate the "index row" section are carried over from the existing
+# file by their old key, so nothing is lost in the changeover.
+
+INDEX_KEY = ("run_name", "kind", "tag")
+_LEGACY_INDEX_KEY = ("run_name", "Hs_m", "arm")
+INDEX_SECTION = "index row"
+_LEADING_COLUMNS = ("run_name", "kind", "tag", "status", "timestamp",
+                    "start_year", "end_year", "source_sink_preset")
+
+
+def _read_index_rows(index_path):
+    """The index as a list of dicts of strings; [] if absent."""
+    import csv
+    index_path = Path(index_path)
+    if not index_path.is_file():
+        return []
+    with open(index_path, newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+def _kind_tag_from_path(raw_runs, run_dir):
+    """(kind, tag) read off a run directory's place in the tree.
+
+    Either layout: a purpose folder says so directly; an old arms/<arm>/ path
+    or a token-named cell is translated as legacy_arm_to_kind_tag would.
+    """
+    rel = Path(run_dir).relative_to(raw_runs).parts
+    if not rel:
+        return MATRIX_KIND, ""
+    for kind, folder in KIND_DIR.items():
+        if rel[0] == folder:
+            if kind == MATRIX_KIND:
+                return kind, ""
+            # <folder>/<tag parts...>/<period>/<preset>/<run>
+            i = next((k for k, part in enumerate(rel)
+                      if _PERIOD_DIR.fullmatch(part)), None)
+            tag = "/".join(rel[1:i]) if i else ""
+            return kind, tag
+    if rel[0] == ARMS_DIR:
+        i = next((k for k, part in enumerate(rel)
+                  if _PERIOD_DIR.fullmatch(part)), len(rel))
+        return legacy_arm_to_kind_tag("/".join(rel[1:i]))
+    if _PERIOD_DIR.fullmatch(rel[0]):
+        family = sweep_family(rel[-1])
+        return ("sensitivity", family) if family else (MATRIX_KIND, "")
+    # Pre-09-10 loose arm: <arm parts>/<period>/...
+    i = next((k for k, part in enumerate(rel)
+              if _PERIOD_DIR.fullmatch(part)), len(rel))
+    return legacy_arm_to_kind_tag("/".join(rel[:i]))
+
+
+def _legacy_arm_from_path(raw_runs, run_dir):
+    """The `arm` a pre-09-16 index row spelled for a run at this path.
+
+    "calibration" for the unscoped tree (matrix runs AND token-named sweep
+    cells, either old layout); the arm folder(s) for arms/<arm>/ or a loose
+    pre-09-10 arm; and for the purpose layout, the arm LEGACY_ARMS maps the
+    (kind, tag) back to. This is what finds an old row for a moved run.
+    """
+    rel = Path(run_dir).relative_to(raw_runs).parts
+    i = next((k for k, part in enumerate(rel) if _PERIOD_DIR.fullmatch(part)),
+             len(rel))
+    if not rel:
+        return CALIBRATION_ARM
+    if rel[0] == ARMS_DIR:
+        return "/".join(rel[1:i]) or CALIBRATION_ARM
+    if rel[0] in KIND_DIR.values():
+        kind, tag = _kind_tag_from_path(raw_runs, run_dir)
+        return _legacy_arm_for(kind, tag, rel[-1]) or CALIBRATION_ARM
+    return "/".join(rel[:i]) or CALIBRATION_ARM
+
+
+def run_status(kind, product, version, current_versions):
+    """current / superseded / archived, for the index's `status` column.
+
+    A matrix or sensitivity run on a topography that is no longer the
+    product's CURRENT is superseded: comparing it with a run made today would
+    attribute the pick difference to whatever the figure is about. A version
+    or experiment run is judged against nothing -- it names its own inputs
+    deliberately -- and an archived run says so by where it sits.
+    """
+    if kind == "archive":
+        return "archived"
+    if kind in (MATRIX_KIND, "sensitivity"):
+        want = current_versions.get(product)
+        if want and version and str(version) != str(want):
+            return "superseded"
+    return "current"
+
+
+def rebuild_run_index(raw_runs, index_path=None, current_versions=None):
+    """Regenerates run_index.csv from every run's metadata; returns the rows.
+
+    Args:
+        raw_runs: The output/raw_runs root.
+        index_path: Where to write; default raw_runs/run_index.csv.
+        current_versions: {topo_product: CURRENT dune-topo version}, for the
+            status column. None leaves status "current" for everything but
+            the archive; pass hat_topo_version's answer to get supersession.
+
+    Returns:
+        The list of row dicts written, in file order.
+
+    Notes:
+        A run whose metadata has no "index row" section (made before
+        2026-09-16) keeps the row the existing file holds for it, found by the
+        old (run_name, Hs_m, arm) key and given kind/tag from its path. A run
+        with neither is indexed by its identity columns alone, so it is not
+        lost. Rows whose run is gone from disk are dropped here; recording
+        them is HAT_index_runs.py's job (retired_runs.csv), which calls this.
+    """
+    import csv
+    import os
+    import tempfile
+    raw_runs = Path(raw_runs)
+    index_path = Path(index_path) if index_path else raw_runs / RUN_INDEX_FILENAME
+    current_versions = current_versions or {}
+
+    existing = _read_index_rows(index_path)
+    by_new_key = {tuple(r.get(k, "") for k in INDEX_KEY): r for r in existing
+                  if r.get("kind")}
+    # The old key only means something in a file that still HAS the arm
+    # column. On a rebuilt file every row's arm reads "", so three runs of
+    # one name collapse onto one old key and the last wins -- which handed
+    # the 1996 matrix run a version row's skill on 2026-09-16.
+    by_old_key = {tuple(r.get(k, "") for k in _LEGACY_INDEX_KEY): r
+                  for r in existing if "arm" in r}
+
+    rows = []
+    for meta in sorted(raw_runs.rglob("*_run_metadata.json")):
+        try:
+            data = json.loads(meta.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        run_dir = meta.parent
+        kind, tag = _kind_tag_from_path(raw_runs, run_dir)
+        ident = data.get("identity", {})
+        row = None
+        if INDEX_SECTION in data:
+            row = {k: ("" if v is None else v)
+                   for k, v in data[INDEX_SECTION].items()}
+        else:
+            name = str(ident.get("run_name") or run_dir.name)
+            hs = str(data.get("wave climate", {}).get("wave_height_m", ""))
+            row = by_new_key.get((name, kind, tag))
+            row = dict(row) if row else None
+            if row is None:
+                old_arm = _legacy_arm_from_path(raw_runs, run_dir)
+                for probe in ((name, hs, old_arm), (name, hs, ""),
+                              (name, "", old_arm)):
+                    if probe in by_old_key:
+                        row = dict(by_old_key[probe])
+                        break
+            if row is None:
+                row = {
+                    "run_name": name, "timestamp": ident.get("timestamp", ""),
+                    "start_year": data.get("period", {}).get("start_year", ""),
+                    "end_year": data.get("period", {}).get("end_year", ""),
+                    "source_sink_preset": data.get("source/sink", {}).get("preset", ""),
+                    "Hs_m": hs,
+                    "topo_product": ident.get("topo_product", ""),
+                    "topo_dune_version": ident.get("topo_dune_version", "")}
+        row.pop("arm", None)
+        row["kind"], row["tag"] = kind, tag
+        row["status"] = run_status(kind, row.get("topo_product", ""),
+                                   row.get("topo_dune_version", ""),
+                                   current_versions)
+        rows.append(row)
+        # BACKFILL: a legacy run's row, once found, is written into its own
+        # metadata JSON so the next rebuild derives it from the run and not
+        # from whatever the index file happens to hold. Without this, a
+        # rebuild that read a file lacking the arm column matched three
+        # runs of one name to one row (2026-09-16). The .txt is left alone.
+        if INDEX_SECTION not in data and row.get("rmse_interior_m_yr", "") != "":
+            data[INDEX_SECTION] = {k: v for k, v in row.items()
+                                   if k not in ("kind", "tag", "status")}
+            try:
+                meta.write_text(json.dumps(data, indent=2, ensure_ascii=False)
+                                + "\n", encoding="utf-8")
+            except OSError:
+                pass
+
+    # Column order: identity first, then everything else in first-seen order,
+    # so the file stays readable as columns accumulate.
+    columns = [c for c in _LEADING_COLUMNS]
+    for row in rows:
+        for column in row:
+            if column not in columns:
+                columns.append(column)
+    rows.sort(key=lambda r: tuple(str(r.get(k, "")) for k in
+                                  ("start_year", "kind", "tag", "source_sink_preset",
+                                   "run_name")))
+
+    # csv, not pandas: pandas round-trips every float through repr, which once
+    # rewrote unrelated rows. Atomic: written beside, then replaced, so a
+    # reader never sees a half-written file and two writers cannot interleave.
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix=".run_index_", suffix=".csv",
+                               dir=str(index_path.parent))
+    try:
+        with os.fdopen(fd, "w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=columns,
+                                    extrasaction="ignore")
+            writer.writeheader()
+            for row in rows:
+                writer.writerow({k: ("" if v is None else v) for k, v in row.items()})
+        os.replace(tmp, index_path)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+    return rows
+
+
+def load_run_index(index_path):
+    """run_index.csv as a DataFrame with kind/tag/status guaranteed present.
+
+    A file from before 2026-09-16 has `arm` instead; it is translated so a
+    reader written against the new columns works on either.
+    """
+    frame = pd.read_csv(index_path, dtype=str, keep_default_na=False)
+    if "kind" not in frame.columns:
+        pairs = [legacy_arm_to_kind_tag(a) for a in frame.get("arm", "")]
+        frame["kind"] = [k for k, _ in pairs]
+        frame["tag"] = [t for _, t in pairs]
+        # A token-named cell sat in the calibration arm; say what it is.
+        fam = frame["run_name"].map(sweep_family)
+        cells = (frame["kind"] == MATRIX_KIND) & (fam != "")
+        frame.loc[cells, "kind"] = "sensitivity"
+        frame.loc[cells, "tag"] = fam[cells]
+    if "status" not in frame.columns:
+        frame["status"] = "current"
+    return frame
 
 
 def run_dir_contents(run_dir):

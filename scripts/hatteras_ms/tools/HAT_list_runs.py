@@ -118,8 +118,19 @@ def group_key(run, by, current, newest):
 
 
 def parent_bucket(rel: str) -> str:
-    """The folder a run sits in, with a sweep family collapsed to 'sweeps'."""
+    """The folder a run sits in, collapsed to what says its purpose.
+
+    Purpose layout (2026-09-16): matrix/<period>/<preset>, sensitivity/<axis>,
+    experiments/<tag>, versions/<tag>. The 09-10 layout's sweeps/<family>
+    collapses to 'sweeps' as before.
+    """
     parts = rel.split("/")[:-1]
+    if parts and parts[0] in ("sensitivity", "experiments", "versions", "archive"):
+        keep = 2
+        # a two-level tag: <set>/<member>
+        if len(parts) > 2 and not parts[2][:4].isdigit():
+            keep = 3
+        parts = parts[:keep]
     if "sweeps" in parts:
         parts = parts[: parts.index("sweeps") + 1]
     return "/".join(parts) or "."

@@ -5,19 +5,30 @@ HAT_index_runs.py
 Rebuild output/raw_runs/run_index.csv from the runs themselves, and keep a
 single ledger of runs that have been retired.
 
-WHY THE INDEX IS DERIVED (Hannah, 2026-09-11)
+WHY THE INDEX IS DERIVED (Hannah, 2026-09-11; runs stopped appending 09-16)
     Every run writes its own metadata JSON, and that is the source of truth:
     it is produced by the run, beside the run, from the values the run used.
-    The index restates 46 of those 64 facts in one table so that a question
-    across runs -- which topography, which preset, what skill -- is one read
-    instead of 164.
+    The index restates those facts in one table so that a question across
+    runs -- which topography, which preset, what skill -- is one read instead
+    of two hundred.
 
-    A restatement can drift from what it restates. Until now the index was
-    maintained incrementally: every run rewrote the whole file through pandas,
-    which is how a smoke test on 2026-09-10 truncated floats in the last
-    digit of five columns in an UNRELATED row. Rebuilding from the runs makes
-    drift impossible rather than unlikely, and `--check` turns "is it right"
-    into a question with an answer.
+    A restatement can drift from what it restates. Until 2026-09-16 every run
+    also APPENDED its row to the file, which is how a smoke test on 09-10
+    truncated floats in five columns of an unrelated row, and why two runs
+    could never be in flight at once. Since 09-16 a run writes its row INTO
+    its metadata (the "index row" section) and calls the same rebuild this
+    tool runs, so the file is regenerated from disk every time and never
+    edited in place. `--check` turns "is it right" into a question with an
+    answer.
+
+WHAT THE REBUILD DOES (run_registry.rebuild_run_index)
+    One row per *_run_metadata.json under raw_runs. A run made since 09-16
+    supplies its own row; an older run keeps the row the existing file holds
+    for it, found by the old (run_name, Hs_m, arm) key. Every row gets `kind`
+    and `tag` from where the run sits (the purpose layout, or the two older
+    layouts translated) and a `status`: current, superseded (a matrix or
+    sensitivity run on a topography that is no longer its product's CURRENT),
+    or archived. The old `arm` column is dropped.
 
 WHAT IS NOT DERIVED
     A run deleted from disk leaves no metadata to rebuild from, so a rebuild
@@ -38,7 +49,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -54,15 +64,18 @@ def _find_root(start: Path) -> Path:
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 
+from cascade_pipeline.run_registry import (  # noqa: E402
+    INDEX_KEY, legacy_arm_to_kind_tag, load_run_index, rebuild_run_index,
+    sweep_family)
+from hat_topo_version import current_topo_versions  # noqa: E402
+
 RAW_RUNS = REPO / "output" / "raw_runs"
 INDEX = RAW_RUNS / "run_index.csv"
 LEDGER = RAW_RUNS / "retired_runs.csv"
 ARCHIVE_GLOBS = ("run_index_archive_*.csv", "run_index_measuredreloc_*.csv")
-
-# What identifies a run. Not the name alone: forcing that is not part of the
-# scenario (Hs) scopes the output directory rather than adding a name token,
-# so two runs can share a name and differ in what they were forced with.
-KEY = ("run_name", "Hs_m", "arm")
+LEDGER_FIELDS = ["retired_on", "source", "run_name", "kind", "tag", "Hs_m",
+                 "timestamp", "start_year", "end_year", "source_sink_preset",
+                 "topo_product", "topo_dune_version"]
 
 
 def read_csv(path: Path) -> list:
@@ -72,77 +85,54 @@ def read_csv(path: Path) -> list:
         return list(csv.DictReader(fh))
 
 
+def with_kind_tag(row: dict) -> dict:
+    """A row from any vintage of the index, carrying kind and tag."""
+    row = dict(row)
+    if not row.get("kind"):
+        kind, tag = legacy_arm_to_kind_tag(row.get("arm", ""))
+        family = sweep_family(row.get("run_name", ""))
+        if kind == "matrix" and family:
+            kind, tag = "sensitivity", family
+        row["kind"], row["tag"] = kind, tag
+    return row
+
+
 def key_of(row) -> tuple:
-    return tuple(str(row.get(k, "")).strip() for k in KEY)
+    return tuple(str(row.get(k, "")).strip() for k in INDEX_KEY)
 
 
-def rows_on_disk() -> dict:
-    """{key: index row} rebuilt from each run's metadata, keyed as the index is.
-
-    The row is taken from the index where the run still exists, because the
-    index is the shape every consumer already reads and the metadata is its
-    source. Where a run is on disk but absent from the index -- a run made
-    while the index was missing -- the identity columns are filled from the
-    metadata so it is not lost.
-    """
-    indexed = {key_of(r): r for r in read_csv(INDEX)}
-    out = {}
-    for meta in sorted(RAW_RUNS.rglob("*_run_metadata.json")):
-        try:
-            d = json.load(open(meta, encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            continue
-        ident = d.get("identity", {})
-        wave = d.get("wave climate", {})
-        rel = meta.parent.relative_to(RAW_RUNS).as_posix()
-        arm = ""
-        parts = rel.split("/")
-        if parts and parts[0] == "arms":
-            arm = "/".join(parts[1:-3]) if len(parts) > 4 else parts[1]
-        probe = (str(ident.get("run_name") or ""),
-                 str(wave.get("wave_height_m") or ""),
-                 arm or "calibration")
-        row = None
-        for cand in (probe, (probe[0], probe[1], ""), (probe[0], "", probe[2])):
-            if cand in indexed:
-                row = dict(indexed[cand])
-                break
-        if row is None:
-            row = {k: "" for k in (indexed and next(iter(indexed.values())) or {})}
-            row.update({"run_name": probe[0], "Hs_m": probe[1], "arm": probe[2],
-                        "timestamp": ident.get("timestamp") or ""})
-        out[key_of(row)] = row
-    return out
-
-
-def write_rows(path: Path, rows: list, fieldnames: list) -> None:
-    """Write with the csv module, not pandas: pandas round-trips every float
-    through repr and that silently rewrote unrelated rows (2026-09-10)."""
-    with open(path, "w", newline="", encoding="utf-8") as fh:
-        w = csv.DictWriter(fh, fieldnames=fieldnames, extrasaction="ignore")
-        w.writeheader()
-        for r in rows:
-            w.writerow(r)
+def current_rows() -> list:
+    """The index as it stands, every row with kind/tag."""
+    return [with_kind_tag(r) for r in read_csv(INDEX)]
 
 
 def append_ledger(entries: list) -> None:
-    """Append retired rows. Never rewrites: the ledger is the one record of
-    what was removed, and a rebuild must not be able to erase it."""
+    """Append retired rows. Never rewrites a row: the ledger is the one
+    record of what was removed, and a rebuild must not be able to erase it.
+    The header gained kind/tag on 2026-09-16; an older ledger is widened
+    once, keeping every row."""
     if not entries:
         return
-    existing = read_csv(LEDGER)
-    fields = ["retired_on", "source", "run_name", "Hs_m", "arm", "timestamp",
-              "start_year", "end_year", "source_sink_preset", "topo_product",
-              "topo_dune_version"]
-    seen = {(r.get("run_name"), r.get("Hs_m"), r.get("arm"), r.get("timestamp"))
+    existing = [with_kind_tag(r) for r in read_csv(LEDGER)]
+    seen = {(r.get("run_name"), r.get("kind"), r.get("tag"), r.get("timestamp"))
             for r in existing}
     fresh = [e for e in entries
-             if (e.get("run_name"), e.get("Hs_m"), e.get("arm"), e.get("timestamp")) not in seen]
+             if (e.get("run_name"), e.get("kind"), e.get("tag"),
+                 e.get("timestamp")) not in seen]
     if not fresh:
         return
+    header_ok = LEDGER.is_file() and read_csv(LEDGER) and \
+        "kind" in read_csv(LEDGER)[0]
+    if LEDGER.is_file() and not header_ok:
+        # Widen once: rewrite with the new header, rows unchanged.
+        with open(LEDGER, "w", newline="", encoding="utf-8") as fh:
+            w = csv.DictWriter(fh, fieldnames=LEDGER_FIELDS, extrasaction="ignore")
+            w.writeheader()
+            for r in existing:
+                w.writerow(r)
     new = not LEDGER.is_file()
     with open(LEDGER, "a", newline="", encoding="utf-8") as fh:
-        w = csv.DictWriter(fh, fieldnames=fields, extrasaction="ignore")
+        w = csv.DictWriter(fh, fieldnames=LEDGER_FIELDS, extrasaction="ignore")
         if new:
             w.writeheader()
         for e in fresh:
@@ -151,18 +141,13 @@ def append_ledger(entries: list) -> None:
 
 
 def adopt_archives() -> None:
-    """Seed the ledger from the archived copies of the index.
-
-    Those copies are the only record of runs deleted before the ledger
-    existed. Folding them in makes one file answer "what was retired", and
-    the copies stay on disk until they are removed deliberately (they are
-    tracked, so git holds them either way).
-    """
-    live = set(rows_on_disk())
+    """Seed the ledger from the archived copies of the index."""
+    live = {key_of(r) for r in current_rows()}
     entries = []
     for pattern in ARCHIVE_GLOBS:
         for path in sorted(RAW_RUNS.glob(pattern)):
             for row in read_csv(path):
+                row = with_kind_tag(row)
                 if key_of(row) in live:
                     continue
                 e = dict(row)
@@ -176,6 +161,54 @@ def adopt_archives() -> None:
     sys.stdout.write(f"adopted {len(entries)} archived row(s) into {LEDGER.name}\n")
 
 
+def rebuild(check: bool = False, dry_run: bool = False) -> int:
+    """Compare the index with disk and, unless asked not to, rewrite it.
+
+    Returns the exit code: 1 under --check when they differ, else 0.
+    """
+    before = current_rows()
+    have = {key_of(r): r for r in before}
+
+    # A dry rebuild into a scratch path says what the file WOULD hold.
+    target = INDEX if not (check or dry_run) else RAW_RUNS / ".run_index_preview.csv"
+    try:
+        rows = rebuild_run_index(RAW_RUNS, target,
+                                 current_versions=current_topo_versions())
+    finally:
+        if target != INDEX and target.exists():
+            target.unlink()
+    disk = {key_of(r): r for r in rows}
+
+    vanished = [r for k, r in have.items() if k not in disk]
+    missing = [k for k in disk if k not in have]
+    sys.stdout.write(f"{len(disk)} run(s) on disk, {len(before)} row(s) in the index\n")
+    if not vanished and not missing:
+        sys.stdout.write("  in agreement\n")
+    if vanished:
+        sys.stdout.write(f"  {len(vanished)} row(s) whose run is gone from disk:\n")
+        for r in vanished[:8]:
+            sys.stdout.write(f"      {r.get('run_name')}  {r.get('kind')}:{r.get('tag')}  "
+                             f"{r.get('timestamp')}\n")
+    if missing:
+        sys.stdout.write(f"  {len(missing)} run(s) on disk with no row:\n")
+        for k in missing[:8]:
+            sys.stdout.write(f"      {k[0]}  {k[1]}:{k[2]}\n")
+    by_status = {}
+    for r in rows:
+        by_status[r.get("status", "")] = by_status.get(r.get("status", ""), 0) + 1
+    sys.stdout.write("  status: " + ", ".join(f"{k} {v}" for k, v in sorted(by_status.items())) + "\n")
+
+    if check:
+        return 1 if (vanished or missing) else 0
+    if dry_run:
+        sys.stdout.write("\ndry run: nothing written\n")
+        return 0
+    stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    append_ledger([dict(r, retired_on=stamp, source="rebuild") for r in vanished])
+    sys.stdout.write(f"\nwrote {INDEX.name}: {len(rows)} row(s)\n")
+    return 0
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     ap.add_argument("--check", action="store_true",
@@ -184,48 +217,10 @@ def main() -> None:
     ap.add_argument("--adopt-archives", action="store_true",
                     help="seed the ledger from the archived index copies, then exit")
     args = ap.parse_args()
-
     if args.adopt_archives:
         adopt_archives()
         return
-
-    current = read_csv(INDEX)
-    if not current:
-        raise SystemExit(f"no index at {INDEX}")
-    fieldnames = list(current[0])
-    disk = rows_on_disk()
-    have = {key_of(r) for r in current}
-
-    vanished = [r for r in current if key_of(r) not in disk]
-    missing = [k for k in disk if k not in have]
-
-    sys.stdout.write(f"{len(disk)} run(s) on disk, {len(current)} row(s) in the index\n")
-    if not vanished and not missing:
-        sys.stdout.write("  in agreement\n")
-    if vanished:
-        sys.stdout.write(f"  {len(vanished)} row(s) whose run is gone from disk:\n")
-        for r in vanished[:8]:
-            sys.stdout.write(f"      {r.get('run_name')}  {r.get('timestamp')}\n")
-    if missing:
-        sys.stdout.write(f"  {len(missing)} run(s) on disk with no row:\n")
-        for k in missing[:8]:
-            sys.stdout.write(f"      {k[0]}\n")
-
-    if args.check:
-        raise SystemExit(1 if (vanished or missing) else 0)
-    if args.dry_run:
-        sys.stdout.write("\ndry run: nothing written\n")
-        return
-
-    # Order: as the index has them, then anything new, so a rebuild of an
-    # unchanged tree is a byte-for-byte no-op.
-    ordered = [disk[key_of(r)] for r in current if key_of(r) in disk]
-    ordered += [disk[k] for k in disk if k not in have]
-
-    stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    append_ledger([dict(r, retired_on=stamp, source="rebuild") for r in vanished])
-    write_rows(INDEX, ordered, fieldnames)
-    sys.stdout.write(f"\nwrote {INDEX.name}: {len(ordered)} row(s)\n")
+    raise SystemExit(rebuild(check=args.check, dry_run=args.dry_run))
 
 
 if __name__ == "__main__":

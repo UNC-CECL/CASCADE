@@ -662,6 +662,23 @@ def resolve_version(product: str, override: str | None = None) -> str:
         f"  - point the extractor at this product and re-run it\n")
 
 
+def current_topo_versions() -> dict[str, str]:
+    """{product: the dune-topo version it reads TODAY}, for every product.
+
+    What run_registry.rebuild_run_index needs to mark a run superseded: the
+    version each product resolves to now (CURRENT outranks the extractor
+    literal, see the rules above). A product with no dune-topo tree, or none
+    resolvable, is left out rather than guessed.
+    """
+    out = {}
+    for product in PRODUCTS:
+        try:
+            out[product] = resolve_version(product, None)
+        except (SystemExit, FileNotFoundError, OSError, ValueError):
+            continue
+    return out
+
+
 def topo_dirs(product: str | None = None,
               override: str | None = None) -> tuple[Path, Path, str]:
     """(topography dir, dunes dir, run name), checked to exist.

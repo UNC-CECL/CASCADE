@@ -40,15 +40,16 @@ CELLS CANNOT COLLIDE WITH THE MATRIX, BUT THE TWO AXES DO IT DIFFERENTLY
         `cascade_pipeline.hindcast`, so the cell is a separate directory beside
         the matrix run and a separate row in run_index.csv.
 
-      * The four WAVE axes no longer do. The runner stopped emitting the wave
-        token into the run name on 2026-09-01 -- a name describes the SCENARIO
-        and a path describes the FORCING -- so a wave cell keeps the matrix
-        run's name and is separated by its forcing ARM instead: an `arm` path
-        component and the ("run_name", "Hs_m", "arm") index key.
+      * The four WAVE axes earn one too (`waveHs1p2`), again since 2026-09-16.
+        Between 09-01 and 09-16 the runner filed a wave cell by a forcing ARM
+        under the matrix run's own name instead, which fanned one sweep out
+        into twelve top-level folders; the purpose layout put the token back.
 
-    Both are still one-cell-one-directory. The cells already on disk under
-    names like `..._waveHs1p2` predate that change and are left exactly where
-    they are; nothing reads the token, and re-running one now files it by arm.
+    Every cell is filed under raw_runs/sensitivity/<axis>/<period>/<preset>/
+    by run_registry: this driver sets HAT_RUN_KIND=sensitivity and the runner
+    derives the axis from the name's trailing token. The index key is
+    (run_name, kind, tag), so a cell and its baseline -- which differ only in
+    the token -- are two rows.
 
 WHAT IS SWEPT
     Five axes, one at a time, each around its calibration value. Only the swept
@@ -237,6 +238,8 @@ def build_environment(start_year, sweep, value, args):
                    if not key.startswith("HAT_")}
     environment.update({
         "HAT_IGNORE_SETTINGS": "1",
+        # A sweep cell, filed under raw_runs/sensitivity/<axis>/ (2026-09-16).
+        "HAT_RUN_KIND": "sensitivity",
         "HAT_START_YEAR": str(start_year),
         "HAT_SOURCE_SINK_PRESET": args.preset,
         "HAT_SCENARIO": args.scenario,
@@ -246,6 +249,10 @@ def build_environment(start_year, sweep, value, args):
         "HAT_MAKE_GIFS": "false",     # 30+ cells x 4 GIFs is files nobody reads
         "HAT_SAVE_MODEL_STATE": "false",
         "MPLBACKEND": "Agg",
+        # The child prints a few non-ASCII characters (arrows, en dashes);
+        # without this its stdout is cp1252 on Windows and the capture below
+        # raised UnicodeDecodeError on every cell (2026-09-16).
+        "PYTHONIOENCODING": "utf-8",
     })
     # The axis's own arm first, then the swept value. In this order, so an axis
     # can move the arm it is measured in but cannot overwrite the one value
@@ -310,7 +317,8 @@ def run_cell(start_year, sweep, value, args):
     started = time.perf_counter()
     completed = subprocess.run(
         [sys.executable, str(HINDCAST)], env=environment,
-        cwd=str(PROJECT_BASE_DIR), capture_output=True, text=True)
+        cwd=str(PROJECT_BASE_DIR), capture_output=True, text=True,
+        encoding="utf-8", errors="replace")
     seconds = time.perf_counter() - started
     ok = completed.returncode == 0
     if not ok:

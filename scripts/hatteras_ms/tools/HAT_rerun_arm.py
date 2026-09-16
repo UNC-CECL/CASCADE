@@ -78,17 +78,17 @@ def scenario_for(row):
     return "natural"
 
 
-def select(index, period, arm_filter="calibration"):
+def select(index, period):
     """The relocation arm of one period, matrix cells only."""
     d = index[(index["start_year"] == period)
               & (index["relocations_enabled"] == True)      # noqa: E712
-              & (index["arm"].astype(str) == arm_filter)]
+              & (index["kind"] == "matrix")]
     # the rset sweep varies the rebuild clearance; it is a separate experiment
     d = d[~d["run_name"].str.contains("_rset")]
     return d.drop_duplicates("run_name")
 
 
-def env_for(row, arm, topo_version):
+def env_for(row, tag, topo_version):
     env = dict(os.environ)
     env.update({
         "HAT_IGNORE_SETTINGS": "1",
@@ -98,7 +98,9 @@ def env_for(row, arm, topo_version):
         "HAT_RELOCATIONS": "true",
         "HAT_GROIN_ENABLED": "true" if row["groin_enabled"] else "false",
         "HAT_HS": str(row["Hs_m"]),
-        "HAT_ARM_TAG": arm,
+        # An EXPERIMENT, filed under raw_runs/experiments/<tag>/ (2026-09-16).
+        "HAT_RUN_KIND": "experiment",
+        "HAT_RUN_TAG": tag,
         "HAT_MAKE_GIFS": "false",
         "HAT_SAVE_MODEL_STATE": "false",
         "HAT_OVERWRITE": "true",
@@ -113,7 +115,8 @@ def env_for(row, arm, topo_version):
 def main():
     ap = argparse.ArgumentParser(description="re-run an arm under today's code")
     ap.add_argument("--period", type=int, default=1984)
-    ap.add_argument("--arm", default="recode-20260914")
+    ap.add_argument("--tag", "--arm", dest="tag", default="2026-09-14-recode",
+                    help="experiment tag the re-runs are filed under")
     ap.add_argument("--topo-version", default="v1",
                     help="pin the 1984-start version. Default v1, which is "
                          "what the stored runs used -- so the difference is "
@@ -123,6 +126,9 @@ def main():
     args = ap.parse_args()
 
     index = pd.read_csv(INDEX)
+    if "kind" not in index.columns:          # a pre-09-16 index
+        index["kind"] = index["arm"].fillna("calibration").map(
+            lambda a: "matrix" if a == "calibration" else "other")
     todo = select(index, args.period)
     if args.limit:
         todo = todo.head(args.limit)
@@ -139,12 +145,12 @@ def main():
     started = time.time()
     for n, (_, row) in enumerate(todo.iterrows(), 1):
         name = row["run_name"]
-        log = log_dir / f"rerun_{args.arm}_{name}.log"
+        log = log_dir / f"rerun_{args.tag.replace('/', '_')}_{name}.log"
         print(f"\n[{n}/{len(todo)}] {name}", flush=True)
         with open(log, "w", encoding="utf-8") as handle:
             result = subprocess.run(
                 [sys.executable, str(RUNNER)], cwd=str(RUNNER.parent),
-                env=env_for(row, args.arm, args.topo_version),
+                env=env_for(row, args.tag, args.topo_version),
                 stdout=handle, stderr=subprocess.STDOUT)
         print(f"      exit {result.returncode}   log {log.name}", flush=True)
     print(f"\ndone in {(time.time() - started) / 60:.1f} min")

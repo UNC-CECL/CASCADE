@@ -66,6 +66,7 @@ hand, so the output directory cannot disagree with what was simulated.
 
 import datetime
 import os
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -157,7 +158,9 @@ from cascade_pipeline.plotting.shoreline_gif import GifConfig, make_all_shorelin
 from cascade_pipeline.run_info import RunInfo
 from cascade_pipeline.run_layout import resolve, write_path
 from cascade_pipeline.run_registry import (
-    append_run_index,
+    INDEX_SECTION,
+    rebuild_run_index,
+    sweep_family,
     git_provenance,
     guard_run_dir,
     preset_dir_for,
@@ -188,6 +191,7 @@ from hatteras_site_config import (
     HATTERAS_RELOCATION_CHECK_2004,
     HATTERAS_ROAD_ELEVATION_FILE,
     HATTERAS_ROAD_EVENTS,
+    island_offset_version,
     resolve_be_preset,
 )
 
@@ -251,7 +255,7 @@ print(f"HATTERAS_DOMAINS.total_domains = {HATTERAS_DOMAINS.total_domains}")
 #
 # To reproduce an older run deliberately:
 #     topo_dirs("2004-start", override="v3").
-from hat_topo_version import topo_dirs  # scripts/, on sys.path above
+from hat_topo_version import topo_dirs, current_topo_versions  # scripts/, on sys.path above
 from hat_topo_version import BUFFER_DIR as _BUFFER_DIR
 
 # _BOOT_CONFIG, not RUN_CONFIG: the period must be known HERE, and RUN_CONFIG is
@@ -511,10 +515,9 @@ _WAVE_VALUES = {
     "wave_angle_high_fraction": RUN_CONFIG.wave_angle_high_fraction,
 }
 _WAVE_DEFAULTS = {name: _field_default(name) for name in _WAVE_VALUES}
-# Kept for the run log and for HS_TAG below, but NOT emitted into the run
-# name any more. Wave climate is forcing, not scenario: the name describes what
-# was simulated, and a run forced differently belongs in its own directory
-# rather than wearing a longer name. See OUTPUT_BASE_DIR in section 3.
+# Emitted into the run NAME again since 2026-09-16 (it scoped the directory
+# between 09-01 and 09-16): a sensitivity cell is its baseline's name plus
+# this token, filed under sensitivity/<axis>/ by run_registry.
 WAVE_TOKEN = wave_climate_token(_WAVE_VALUES, _WAVE_DEFAULTS)
 RELOCATION_SETBACK_TOKEN = relocation_setback_token(
     RELOCATION_SETBACK_M, _field_default("relocation_setback_m"))
@@ -586,6 +589,8 @@ SEA_LEVEL_RISE_RATE = PERIOD["sea_level_rise_rate"]
 ENABLE_NOURISHMENT = PERIOD["enable_nourishment"]
 NOURISHMENT_VOLUME = PERIOD["nourishment_volume"]
 ISLAND_OFFSET_FILE = HATTERAS_DATA_BASE / PERIOD["island_offset_file"]
+# Which version folder that resolved to (v1, v2, or flat); see the json write.
+ISLAND_OFFSET_VERSION = island_offset_version(START_YEAR)
 STORM_FILE = HATTERAS_DATA_BASE / PERIOD["storm_file"]
 ROAD_SETBACK_FILE = HATTERAS_DATA_BASE / PERIOD["road_setback_file"]
 
@@ -620,40 +625,47 @@ PERIOD_TAG = f"{START_YEAR}_{END_YEAR}"
 # run_index.csv, the logs and the figure captions all key on, and the
 # directory is only there so the three presets of one period can be read
 # side by side instead of interleaved in one listing of thirty-odd runs.
-# Filed by wave climate FIRST, then period, then preset. The Hs level is
-# absent at the calibration climate, so every run made before 2026-09-01 stays
-# exactly where it is; a run forced differently gets a parallel tree rather than
-# a longer name. That keeps a name describing the SCENARIO and the path
-# describing the FORCING, and it means an Hs experiment can never overwrite the
-# calibration matrix even though the two share run names.
-HS_TAG = WAVE_TOKEN or ""
-# HAT_ARM_TAG replaces the wave-derived scope when set, for a run that is a
-# STEP IN A CALIBRATION rather than a result. Solving the two locked ends is a
-# Newton iteration, and every probe in it shares the base run's name, its
-# preset and its wave climate -- so without a scope of its own each probe would
-# derive the base run's directory and guard_run_dir would (correctly) refuse.
-# Overwriting instead would destroy the very run the probe is measured against.
-#
-# The tag is the ARM, not a scratch marker: it names the path AND the `arm`
-# column in run_index.csv from one string, so a probe is filed, indexed and
-# read back as what it is. Unset, everything resolves exactly as before.
-ARM_TAG = os.environ.get("HAT_ARM_TAG", "").strip() or HS_TAG
-# "calibration" is the name the unscoped tree answers to -- it is what the
-# `arm` column says for a run with no arm component, and what run_registry
-# resolves back to the SHORT path. Used as a tag it would produce a real
-# raw_runs/calibration/ directory that every reader would then look for one
-# level up, so it is refused rather than allowed to mean two places at once.
-if ARM_TAG == CALIBRATION_ARM:
+# Filed by PURPOSE (2026-09-16): matrix/, sensitivity/<axis>/,
+# experiments/<tag>/, versions/<tag>/ -- see run_registry. The KIND says what
+# the run is for and the TAG names the experiment or version; a matrix run has
+# no tag, and a sensitivity cell's tag is the axis its name token belongs to.
+# Before this a forcing value, an input version and an experiment label were
+# all "arms", and nothing said which was which.
+RUN_KIND = RUN_CONFIG.run_kind
+RUN_TAG = RUN_CONFIG.run_tag
+# HAT_ARM_TAG is the pre-09-16 spelling. Read as an experiment tag so an old
+# driver still files somewhere sensible, and say so in the log.
+_LEGACY_ARM = os.environ.get("HAT_ARM_TAG", "").strip()
+if _LEGACY_ARM and not RUN_TAG:
+    print(f"HAT_ARM_TAG={_LEGACY_ARM!r} is the pre-2026-09-16 spelling; read as "
+          f"HAT_RUN_KIND=experiment HAT_RUN_TAG={_LEGACY_ARM!r}")
+    RUN_KIND, RUN_TAG = "experiment", _LEGACY_ARM
+# A run forced off the calibration wave climate is NOT a matrix run, whatever
+# the environment says: filing it in matrix/ under a token-bearing name would
+# put an experiment beside the production runs. Refused, not re-filed.
+if RUN_KIND == "matrix" and WAVE_TOKEN:
     raise ValueError(
-        f"HAT_ARM_TAG={ARM_TAG!r} is reserved: it is the name of the arm with "
-        f"NO path component. Leave it unset for the calibration tree, or "
-        f"choose another tag.")
+        f"wave climate is off calibration ({WAVE_TOKEN}) but HAT_RUN_KIND is "
+        f"matrix. A forced run is a sensitivity cell (HAT_RUN_KIND=sensitivity) "
+        f"or an experiment (HAT_RUN_KIND=experiment HAT_RUN_TAG=<name>).")
+if RUN_KIND == "sensitivity" and not (WAVE_TOKEN or RELOCATION_SETBACK_TOKEN):
+    raise ValueError(
+        "HAT_RUN_KIND=sensitivity but every swept forcing is at its default; "
+        "this cell would be the matrix run under another name.")
+if RUN_KIND == "sensitivity" and not RUN_TAG:
+    RUN_TAG = sweep_family(f"x_{WAVE_TOKEN or RELOCATION_SETBACK_TOKEN}")
+# The model state (~99% of a run's size) is kept for MATRIX runs only unless
+# output.save_model_state was set explicitly: a sweep cell or an experiment
+# is re-runnable in minutes and its product is a figure, not the pickle.
+SAVE_MODEL_STATE = (RUN_CONFIG.save_model_state
+                    if (RUN_KIND == "matrix"
+                        or RUN_CONFIG.origins["save_model_state"] != "default")
+                    else False)
 # Built by run_registry, not joined here. The reader that resolves a finished
 # run and the writer that files one have to agree about the layout, and the
-# only way they cannot drift is to be the same code. arm_component does the
-# single-path-component check that used to live in this block.
+# only way they cannot drift is to be the same code.
 OUTPUT_BASE_DIR = preset_dir_for(OUTPUT_ROOT, PERIOD_TAG, SOURCE_SINK_PRESET,
-                                 arm=ARM_TAG or CALIBRATION_ARM)
+                                 kind=RUN_KIND, tag=RUN_TAG)
 OUTPUT_BASE_DIR.mkdir(parents=True, exist_ok=True)
 
 print(f"\nSTART_YEAR = {START_YEAR}  ->  {START_YEAR}-{END_YEAR}, "
@@ -662,6 +674,7 @@ print(f"RUN_NAME_STEM = {RUN_NAME_STEM!r}"
       "   (scenario suffix derived in 7.5)")
 print(f"SOURCE_SINK_PRESET = {SOURCE_SINK_PRESET!r}")
 print(f"OUTPUT_BASE_DIR = {OUTPUT_BASE_DIR}")
+print(f"RUN_KIND = {RUN_KIND!r}   RUN_TAG = {RUN_TAG!r}   SAVE_MODEL_STATE = {SAVE_MODEL_STATE}")
 
 # --- the name this scenario will produce, predicted from the switches --------
 # Advisory only. 7.5 derives the authoritative RUN_NAME_BASE from what sections
@@ -684,6 +697,7 @@ _PREVIEW_TOKENS = [
            else None)),
     "groin" if GROIN_ENABLED else "nogroin",
     RELOCATION_SETBACK_TOKEN,
+    WAVE_TOKEN,
 ]
 RUN_NAME_PREVIEW = (f"{RUN_NAME_STEM}_"
                     + "_".join(t for t in _PREVIEW_TOKENS if t))
@@ -1138,20 +1152,19 @@ SCENARIO_SWITCHES = [
            else None)),
     ("groin", "on" if GROIN_ENABLED else "off",
      "groin" if GROIN_ENABLED else "nogroin"),
-    # Forcing, tokened only when off the calibration value -- see section 3.
-    # No name token: an off-calibration wave climate scopes the output
-    # DIRECTORY (OUTPUT_BASE_DIR) and is recorded in run_index.csv and the run
-    # metadata. Reported here so the run log still states it.
-    ("wave climate",
-     f"Hs {RUN_CONFIG.hs} m, Tp {RUN_CONFIG.wave_period_s} s, "
-     f"asym {RUN_CONFIG.wave_asymmetry}, "
-     f"high-angle {RUN_CONFIG.wave_angle_high_fraction}"
-     + ("" if WAVE_TOKEN is None else "  (off calibration; own directory)"),
-     None),
     ("relocation target",
      "each domain's measured offset" if RELOCATION_SETBACK_M is None
      else f"{RELOCATION_SETBACK_M:g} m behind the dune line",
      RELOCATION_SETBACK_TOKEN),
+    # Forcing, tokened only when off the calibration value -- see section 3.
+    # LAST, so a sensitivity cell's trailing token is the wave one and
+    # run_registry.sweep_family reads the axis off it.
+    ("wave climate",
+     f"Hs {RUN_CONFIG.hs} m, Tp {RUN_CONFIG.wave_period_s} s, "
+     f"asym {RUN_CONFIG.wave_asymmetry}, "
+     f"high-angle {RUN_CONFIG.wave_angle_high_fraction}"
+     + ("" if WAVE_TOKEN is None else "  (off calibration)"),
+     WAVE_TOKEN),
 ]
 
 RUN_NAME_SUFFIX = "_".join(
@@ -1516,6 +1529,18 @@ if _replacing:
 
 # --- 11.2 build ---------------------------------------------------------------
 
+# CASCADE REWRITES THE PARAMETER FILE while it constructs (brie_coupler's
+# set_yaml writes the shoreface, RSLR and file paths into it), so the tracked
+# copy in data/hatteras_init used to be a shared scratch file: two runs at
+# once corrupted each other's, and a run killed mid-write left it empty
+# (2026-09-16). Each run now gets its own copy in its directory and hands
+# CASCADE that path; the tracked file is a read-only template and the tree no
+# longer goes dirty on every run. Absolute on purpose: brie_coupler joins it
+# onto datadir with pathlib, which yields the absolute path unchanged, and
+# Barrier3D opens "<prefix>-parameters.yaml" by that prefix.
+RUN_PARAMETER_FILE = Path(RUN_DIR) / f"{RUN_NAME}-parameters.yaml"
+shutil.copyfile(HATTERAS_DATA_BASE / PARAMETER_FILE, RUN_PARAMETER_FILE)
+
 cascade = build_cascade(
     run_years=RUN_YEARS,
     name=RUN_NAME,
@@ -1549,7 +1574,7 @@ cascade = build_cascade(
     berm_elevation=BERM_ELEVATION,
     MHW=MHW_ELEVATION,
     data_base=HATTERAS_DATA_BASE,
-    parameter_file=PARAMETER_FILE,
+    parameter_file=str(RUN_PARAMETER_FILE),
     groin_callback=GROIN_CALLBACK,
     relocation_setback_m=RELOCATION_SETBACK_M,
 )
@@ -1634,7 +1659,7 @@ _run_kwargs = dict(
     setback_check=HATTERAS_RELOCATION_CHECK_2004,
     nourishment_schedule=BN_SCHEDULE_APPLIED,
     groin_callback=GROIN_CALLBACK,
-    save_model_state=RUN_CONFIG.save_model_state,
+    save_model_state=SAVE_MODEL_STATE,
 )
 if tqdm is not None:
     with tqdm(total=RUN_YEARS, desc=f"{RUN_NAME}", unit="yr") as _bar:
@@ -1844,7 +1869,15 @@ _META = {
         # back to the arrays it read.
         "topo_product": TOPO_PRODUCT,
         "topo_dune_version": TOPO_DUNE_VERSION,
-        "parameter_file": PARAMETER_FILE,
+        # The island offset is versioned too (2026-09-15) and the run name
+        # does not say which one was read, so it is recorded here.
+        "island_offset_version": ISLAND_OFFSET_VERSION,
+        "run_kind": RUN_KIND,
+        "run_tag": RUN_TAG,
+        "parameter_file": (RUN_PARAMETER_FILE.name,
+                           f"this run's copy of {PARAMETER_FILE}; CASCADE "
+                           f"rewrites the copy, not the template"),
+        "save_model_state": SAVE_MODEL_STATE,
         "git_commit": _GIT["commit"],
         "git_branch": _GIT["branch"],
         "git_dirty": (_GIT["dirty"],
@@ -1933,16 +1966,8 @@ if GROIN_CALLBACK is not None:
             f"{GROIN_EXTENT['updrift_m']:.0f} updrift / "
             f"{GROIN_EXTENT['downdrift_m']:.0f} downdrift")
 
-_meta_txt, _meta_json = write_run_metadata(
-    RUN_DIR, RUN_NAME, _META,
-    header=[f"CASCADE run metadata -- generated by {GENERATED_BY}, "
-            f"section 12.",
-            "Companion .json holds the same values, machine-readable."])
-print(f"                      {_meta_txt.name}")
-print(f"                      {_meta_json.name}")
-
 # --- cross-run index: one row per run, for comparing the matrix --------------
-# Keyed on run_name, so a re-run replaces its row rather than adding a second.
+# One row per run; a re-run replaces its row because the rebuild reads disk.
 # This is what makes 12 runs comparable without opening 12 metadata files.
 # At OUTPUT_ROOT rather than the period directory: run_name already
 # carries the period stem, so one file covers the whole matrix and the
@@ -1977,16 +2002,10 @@ _index_row = {
     "bdm_domains": int(sum(BEACH_DUNE_MANAGEMENT_ON)),
     "nourishment_projects": len(BN_SCHEDULE_APPLIED.projects),
     "Hs_m": Hs,
-    # The forcing arm this run belongs to, spelled out rather than
-    # inferred. Hs scopes the DIRECTORY (HS_TAG in section 3) and not
-    # the run name, so an Hs experiment shares every run name with the
-    # calibration matrix and the two are separated only by the
-    # ("run_name", "Hs_m") index key. That key is correct but not
-    # legible: a reader filtering the index has to know that Hs = 2.5
-    # means "production" to split the arms. This column says so, and it
-    # is the same string as the path component, so a row and a
-    # directory can be matched without reconstructing either.
-    "arm": ARM_TAG or "calibration",
+    # Where the run is filed, spelled out rather than inferred from the
+    # path, so a row and a directory match without reconstructing either.
+    "kind": RUN_KIND,
+    "tag": RUN_TAG,
     "sandbags_on": ENABLE_SANDBAG_PLACEMENT,
     "rslr_m_yr": SEA_LEVEL_RISE_RATE,
     "annual_states": _states,
@@ -2012,24 +2031,27 @@ _index_row = {
     "use_sandbox_cascade": USE_SANDBOX_CASCADE,
     "topo_product": TOPO_PRODUCT,          # see the note at the json write
     "topo_dune_version": TOPO_DUNE_VERSION,
+    "island_offset_version": ISLAND_OFFSET_VERSION,
     "git_commit": _GIT["commit"][:12],
     "git_dirty": _GIT["dirty"],
 }
-# Keyed on the name, the wave height AND the arm. With Hs scoping the directory
-# rather than the name, an Hs = 3.0 matrix shares every run name with the 2.5 m
-# one, so a name-only key would delete one of the two from the index.
-#
-# `arm` is in the key for the SAME reason, one level down, and it was left out
-# on 2026-09-01: two runs can share a name AND an Hs and still be different
-# runs, because a calibration probe is forced off-preset at the same wave
-# climate as the base run it probes. Without arm here, filing the probe DELETED
-# the base run's row -- the exact failure the composite key exists to stop, one
-# scoping level later. The rule is that the key must name every component of
-# OUTPUT_BASE_DIR that the run name does not.
-RUN_INDEX = append_run_index(RUN_INDEX_PATH, _index_row,
-                             key=("run_name", "Hs_m", "arm"))
+# The row goes INTO the metadata, under "index row", and run_index.csv is
+# REBUILT from every run's metadata rather than appended to (2026-09-16).
+# Appending was the one shared write that forced runs to be serial, and a
+# rebuild after a move produced skeleton rows; a derived file has neither
+# problem, and two runs finishing together both write the same table.
+_META[INDEX_SECTION] = _index_row
+_meta_txt, _meta_json = write_run_metadata(
+    RUN_DIR, RUN_NAME, _META,
+    header=[f"CASCADE run metadata -- generated by {GENERATED_BY}, "
+            f"section 12.",
+            "Companion .json holds the same values, machine-readable."])
+print(f"                      {_meta_txt.name}")
+print(f"                      {_meta_json.name}")
+RUN_INDEX = rebuild_run_index(OUTPUT_ROOT, RUN_INDEX_PATH,
+                              current_versions=current_topo_versions())
 print(f"                      {RUN_INDEX_FILENAME}  "
-      f"({len(RUN_INDEX)} runs indexed)")
+      f"({len(RUN_INDEX)} runs indexed; rebuilt from every run's metadata)")
 
 
 # --- 12.5 figures -------------------------------------------------------------

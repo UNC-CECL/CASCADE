@@ -582,9 +582,17 @@ def base_run_dir(period_start, period_end):
     # sensitivity cells and no run name appears there twice. The layout INSIDE
     # each root is identical, which is why one preset_dir_for call serves both.
     arm = _wave_arm()
-    root = RAW_RUNS_DIR if arm == CALIBRATION_ARM else ARM_RUNS_DIR
-    period_dir = preset_dir_for(root, (period_start, period_end),
-                                BASE_PRESET, arm=arm)
+    if arm == CALIBRATION_ARM:
+        # The matrix, wherever the registry files it (raw_runs/matrix/ since
+        # 2026-09-16, with the older layouts still readable).
+        period_dir = preset_dir_for(RAW_RUNS_DIR, (period_start, period_end),
+                                    BASE_PRESET)
+    else:
+        # hs_experiment/runs/ keeps its 2026-09-02 shape, <arm>/<period>/
+        # <preset>/, and is a closed experiment; spelled here because the
+        # registry no longer knows that layout.
+        period_dir = (Path(ARM_RUNS_DIR) / arm
+                      / f"{period_start}_{period_end}" / BASE_PRESET)
     stem = f"HAT_{period_start}_{period_end}_{BASE_PRESET}_road_bdm"
 
     # GROIN-ON BASE RUN, WHEN ONE EXISTS AT THE FITTED (M, f).

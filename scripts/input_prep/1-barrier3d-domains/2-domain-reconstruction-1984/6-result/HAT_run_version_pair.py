@@ -18,9 +18,10 @@ with the subprocess. hat_run.yaml is ignored (HAT_IGNORE_SETTINGS=1).
 
 WHERE THE RUNS LAND
     output/raw_runs/version-pair/<version>/1984_2004/calibBE/<run_name>/
-    via HAT_ARM_TAG="version-pair/<version>". The run name is the same for
-    both versions by design; the arm tells them apart, on disk and in the
-    `arm` column of run_index.csv.
+    via HAT_RUN_KIND=version HAT_RUN_TAG="version-pair/<version>", so the
+    runs file under raw_runs/versions/version-pair/<version>/ (2026-09-16).
+    The run name is the same for both versions by design; the tag tells them
+    apart, on disk and in the `kind`/`tag` columns of run_index.csv.
 
 USAGE
     python HAT_run_version_pair.py --relocations 1          # the prescribed control
@@ -97,12 +98,13 @@ def main() -> None:
         for v in versions:
             tag = f"{SET}/{v}"
             print("\n" + "=" * 78)
-            print(f"VERSION {v}  relocations={a.relocations}  -> raw_runs/{tag}/1984_2004/calibBE/")
+            print(f"VERSION {v}  relocations={a.relocations}  -> raw_runs/versions/{tag}/1984_2004/calibBE/")
             print("=" * 78)
             shutil.copy2(DUNE_TOPO / v / LIVE_SETBACK.name, LIVE_SETBACK)
             env = {k: val for k, val in os.environ.items() if not k.startswith("HAT_")}
             env.update(BASE_ENV)
-            env["HAT_ARM_TAG"] = tag
+            env["HAT_RUN_KIND"] = "version"
+            env["HAT_RUN_TAG"] = tag
             env["HAT_TOPO_VERSION_1984_START"] = v
             env["HAT_OVERWRITE"] = "1" if a.overwrite else "0"
             if a.relocations == "1":
