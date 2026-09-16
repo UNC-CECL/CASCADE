@@ -1246,6 +1246,39 @@ HATTERAS_BE_EDGE_ONLY = {
     #   scripts/input_prep/7-source-sink/2-calibrate/
     #       HAT_be_edge_domain_solve.py --period 1996
     1996: (+32.2, +10.0),
+
+    # SOLVED 2026-09-16, three Newton steps, the same protocol as 1996. Base
+    # run: the 2010 matrix zeroBE / full_management / nourish / nogroin run,
+    # 2004-start v1, island offset 2010/v1, Hs 2.5.
+    #
+    #   step   GIS 1                          GIS 90
+    #     0    imposed  0.0  residual -8.430  imposed  0.0  residual -3.565
+    #     1    imposed 80.3  residual +0.919  imposed 34.0  residual +0.331
+    #     2    imposed 72.4  residual -0.022  imposed 31.1  residual -0.024
+    #     3    imposed 72.6  residual -0.003  imposed 31.3  residual +0.001
+    #
+    # THE LARGEST END VALUE OF ANY PERIOD, at GIS 1. It is not a larger
+    # artefact: the gains were 0.116 / 0.115 on the first secant, inside
+    # the 0.09-0.13 every other case gave, so the value is again about ten
+    # times its misfit. The misfit itself is what is large: the 2010-2024
+    # CoastSat target at GIS 1 is +6.90 m/yr, against +3.23 in 1996-2010,
+    # and the model produces -1.53 there unaided. Cape Point accreting at
+    # that rate is not something the model represents (the calibrated fits
+    # are 0.0 through GIS 2-7 in the two published periods), so this is the
+    # boundary term supplying observed accretion the reach cannot make.
+    # Read as a real flux it would be absurd; it is not one.
+    #
+    # GIS 90 is +31.3 against +10.0 in 1996-2010, for the same reason:
+    # the 2010-2024 target there is +2.22 m/yr, and the n115 extension
+    # experiment already showed the north end grows when the observed
+    # accretion at Pea Island is what it has to supply (+41.7 at GIS 115).
+    #
+    # The probes are output/raw_runs/experiments/2026-09-16-edgesolve-2010/
+    # (SOLVED names step3). Reproduced with:
+    #   HAT_be_edge_domain_solve.py --period 2010 --kind experiment
+    #       --run <base> --tag 2026-09-16-edgesolve-2010/base
+    #       --run <step> --tag 2026-09-16-edgesolve-2010/step<k> ...
+    2010: (+72.6, +31.3),
 }
 
 for _period, (_d1, _d90) in HATTERAS_BE_EDGE_ONLY.items():

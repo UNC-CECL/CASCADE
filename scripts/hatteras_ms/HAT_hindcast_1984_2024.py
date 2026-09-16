@@ -777,7 +777,22 @@ reports.storm_report(storms=STORM_SERIES, storm_file=STORM_FILE,
 # be_rates() rather than a dict lookup: since 2026-09-11 not every wired
 # period is calibrated, and it says which fit is missing instead of
 # raising a bare KeyError on the year.
-DOMAIN_BE_RATES = be_rates(SOURCE_SINK_PRESET, START_YEAR)
+#
+# THE FIRST EDGE PROBE OF AN UNSOLVED PERIOD (2026-09-16, the 2010 solve).
+# An edgeBE run on a period with no edge entry yet has nothing to look up,
+# but that is exactly the run a Newton step is: HAT_BE_OVERRIDE below
+# supplies both ends. So an unsolved period starts from an empty mapping
+# WHEN an override is present, and the guard after the override block
+# still refuses the run if either end is left without a nonzero rate.
+# Without an override the refusal stands, naming the missing fit.
+try:
+    DOMAIN_BE_RATES = be_rates(SOURCE_SINK_PRESET, START_YEAR)
+except ValueError:
+    if (SOURCE_SINK_PRESET == "edgeBE"
+            and os.environ.get("HAT_BE_OVERRIDE", "").strip()):
+        DOMAIN_BE_RATES = {}
+    else:
+        raise
 
 # HAT_BE_OVERRIDE -- per-domain rates for THIS run only, "gis=rate" pairs, e.g.
 # HAT_BE_OVERRIDE="1=-45.2,90=11.8". Unset, nothing below runs and the preset
