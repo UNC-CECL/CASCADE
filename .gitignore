@@ -261,9 +261,11 @@ tests/4-B3D_Rave_pt45_Natural_high.npz
 # what the comparison figures and the cross-run index read. The .npz and the
 # animations are regenerable from those plus the code.
 #
-# Runs are filed under output/raw_runs/[<forcing arm>/]<start>_<end>/, the arm
-# component being absent for the calibration arm. Because output/ is ignored
-# wholesale above, that first level has to be re-included.
+# Runs are filed under output/raw_runs/<kind>/[<tag>/]<start>_<end>/ since
+# 2026-09-16 (matrix/, sensitivity/, experiments/, versions/, archive/; see
+# output/raw_runs/README.md). Because output/ is ignored wholesale above, that
+# first level has to be re-included. Each run's <run>-parameters.yaml copy is
+# small text and is tracked with the rest of its provenance.
 #
 # IT IS RE-INCLUDED AS *, NOT AS THE PERIOD PATTERN. This was
 # `[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]/`, which matches a period

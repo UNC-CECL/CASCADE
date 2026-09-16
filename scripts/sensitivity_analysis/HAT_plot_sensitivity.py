@@ -77,7 +77,7 @@ from cascade_pipeline.coastsat_loess import (  # noqa: E402
 from cascade_pipeline.hindcast import build_target_table  # noqa: E402
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 from cascade_pipeline.run_registry import (  # noqa: E402
-    CALIBRATION_ARM, find_run_dir)
+    MATRIX_KIND, find_run_dir, load_run_index, sweep_family)
 from cascade_pipeline.plotting.rate_comparison import (  # noqa: E402
     DEFAULT_RATE_COMPARISON, plot_coastsat_overlay)
 from HAT_hindcast_sensitivity import SWEEPS, normalise  # noqa: E402
@@ -94,8 +94,11 @@ AXIS_ORDER = ("wave_height", "wave_period", "wave_asymmetry",
 OUT_ROOT = PROJECT_BASE_DIR / "output" / "sensitivity_analysis"
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
 RUN_INDEX = RAW_RUNS / "run_index.csv"
-COASTSAT_BASE_DIR = (PROJECT_BASE_DIR / "scripts" / "input_prep"
-                     / "5-scr" / "CoastSat")
+# Where the runner reads them (COASTSAT_BASE_DIR in HAT_hindcast_1984_2024.py).
+# The scripts/input_prep/5-scr/CoastSat path this held until 2026-09-16 no
+# longer exists; the loader only WARNED, so every observed layer was empty.
+COASTSAT_BASE_DIR = (PROJECT_BASE_DIR / "data" / "hatteras_init"
+                     / "5-scr" / "coastsat_lrr")
 
 # Must match section 8.1 of HAT_hindcast_1984_2024.py. These are the LoessConfig
 # defaults, so the two agree by construction rather than by copying -- but the
@@ -103,6 +106,17 @@ COASTSAT_BASE_DIR = (PROJECT_BASE_DIR / "scripts" / "input_prep"
 # below asserts against that rather than trusting this line.
 LOESS_CONFIG = LoessConfig()
 TARGET_WINDOW = max(LOESS_CONFIG.window_domains)
+
+
+def period_component(start_year):
+    """The "<start>_<end>" path component of a period, from the period table.
+
+    Not start + 20: the 1996 window ends at 2010, and a sweep run for it files
+    under 1996_2010 exactly as its scenario run does.
+    """
+    start_year = int(start_year)
+    end_year = HATTERAS_PERIODS[start_year].get("end_year", start_year + 20)
+    return f"{start_year}_{end_year}"
 
 # The model curves are a SEQUENTIAL ramp: the swept values are ordered
 # magnitudes, not categories, so one hue light-to-dark is the correct encoding
@@ -159,24 +173,37 @@ def load_cells(start_year, preset):
         # sweeps/<family>/. The run NAME is stable, so re-resolve from it and
         # fall back to what was recorded.
         run_dir = Path(row["detail"])
-        if not run_dir.is_dir():
-            _period = f"{int(row['start_year'])}_{int(row['start_year']) + 20}"
-            _arm = row.get("arm") or CALIBRATION_ARM
-            if not isinstance(_arm, str):
-                _arm = CALIBRATION_ARM
-            try:
-                run_dir = find_run_dir(RAW_RUNS, run_dir.name, _period,
-                                       row["preset"], _arm)
-            except FileNotFoundError:
-                pass
+        family = sweep_family(run_dir.name)
+        if not family:
+            # A 2026-09-01..16 cell filed by arm under the matrix run's own
+            # name. Those were re-run with the token and deleted; one still
+            # in a manifest is skipped rather than drawn against itself.
+            continue
+        # RESOLVED THROUGH THE REGISTRY, whatever the manifest recorded: the
+        # tree has moved twice (09-10 sweeps/, 09-16 sensitivity/) and the
+        # run NAME is the stable handle.
+        try:
+            run_dir = find_run_dir(RAW_RUNS, run_dir.name,
+                                   period_component(row["start_year"]),
+                                   row["preset"], kind="sensitivity", tag=family)
+        except FileNotFoundError:
+            if not run_dir.is_dir():
+                raise
         rows.append(dict(sweep=row["sweep"], setting=row["setting"],
                          value=row["value"], run_dir=run_dir,
-                         run_name=run_dir.name))
+                         run_name=run_dir.name, kind="sensitivity", tag=family,
+                         base_name=baseline_name(run_dir.name)))
     if not rows:
         return pd.DataFrame(columns=["sweep", "setting", "value", "sort_key",
-                                     "run_dir", "run_name"])
+                                     "run_dir", "run_name", "kind", "tag",
+                                     "base_name", "key", "base_key"])
 
     frame = pd.DataFrame(rows)
+    # The index key, (run_name, kind, tag): a cell is a sensitivity row and
+    # its baseline a matrix row, so nothing below looks a run up by name alone.
+    frame["key"] = list(zip(frame.run_name, frame.kind, frame.tag))
+    frame["base_key"] = list(zip(frame.base_name, [MATRIX_KIND] * len(frame),
+                                 [""] * len(frame)))
     frame["norm"] = frame["value"].map(normalise)
     # `measured` (None) is not a point on the numeric axis; it sorts last and is
     # drawn as its own category rather than being given a fake number.
@@ -189,7 +216,7 @@ def load_cells(start_year, preset):
 def baseline_name(run_name):
     """The matrix run a cell is a departure from.
 
-    Every cell name is its baseline plus one trailing token, so the baseline is
+    Every cell is its baseline plus one trailing token, so the baseline is
     the name with that token removed. Derived rather than rebuilt from switches
     because the token is the only difference by construction -- see the run-name
     tokens in cascade_pipeline.hindcast.
@@ -199,23 +226,17 @@ def baseline_name(run_name):
 
     Returns:
         The baseline run name.
-
-    Raises:
-        ValueError: If the name carries no sensitivity token, which would mean
-            the caller handed over a matrix run and the "baseline" returned
-            would silently be a different scenario.
     """
     stem, _, token = run_name.rpartition("_")
-    if not (token.startswith("wave") or token.startswith("rset")):
-        raise ValueError(
-            f"{run_name} has no sensitivity token; its last token is {token!r}")
-    return stem
+    if token.startswith("wave") or token.startswith("rset"):
+        return stem
+    return run_name
 
 
 def load_index():
-    """run_index.csv for the calibration arm, indexed by run name.
+    """run_index.csv, indexed by (run_name, kind, tag).
 
-    FILTERED TO ONE ARM, NOT DEDUPLICATED. A run name describes the SCENARIO
+    KEYED ON KIND AND TAG TOO, NOT DEDUPLICATED. A run name describes the SCENARIO
     and an arm describes the FORCING, so one name legitimately appears once per
     arm -- and the index is keyed on (run_name, Hs_m, arm) for that reason.
     This function previously collapsed those with
@@ -226,27 +247,40 @@ def load_index():
     wave cell is drawn against, so each panel measured its sweep against a
     different experiment. Silently: the row exists and reads cleanly.
 
-    Every sweep cell is a calibration-arm run, so the baselines are too. Any
-    other arm is a different experiment and is dropped rather than ranked.
+    Since 2026-09-16 the index is keyed on (run_name, kind, tag): a cell is
+    a `sensitivity` row tagged with its axis and its baseline a `matrix` row,
+    so the two are distinct rows even though their names differ by one token.
+    load_run_index translates a file from before that date.
 
     Returns:
-        DataFrame indexed by run_name, one row per name.
+        DataFrame indexed by (run_name, kind, tag), one row per key. Numeric
+        columns are parsed; the registry reads the file as text.
 
     Raises:
-        ValueError: If a name is still duplicated within the calibration arm,
-            which the index key makes impossible and so means a fault in the
-            index rather than something to pick a winner from.
+        ValueError: If a key is duplicated, which the rebuild makes impossible
+            and so means a fault in the index rather than something to pick
+            a winner from.
     """
-    frame = pd.read_csv(RUN_INDEX)
-    if "arm" in frame.columns:
-        frame = frame[frame["arm"].fillna(CALIBRATION_ARM) == CALIBRATION_ARM]
-    repeated = sorted(frame["run_name"][frame["run_name"].duplicated()].unique())
+    frame = load_run_index(RUN_INDEX)
+    text_columns = {"run_name", "kind", "tag", "status", "timestamp",
+                    "source_sink_preset", "scenario", "arm", "git_commit",
+                    "topo_product", "topo_dune_version",
+                    "island_offset_version", "rate_estimator",
+                    "be_values_digest"}
+    for column in frame.columns:
+        if column not in text_columns:
+            try:
+                frame[column] = pd.to_numeric(frame[column])
+            except (ValueError, TypeError):
+                pass
+    keys = list(zip(frame.run_name, frame.kind, frame.tag))
+    repeated = sorted({k for k in keys if keys.count(k) > 1})
     if repeated:
         raise ValueError(
-            f"run_index.csv has more than one {CALIBRATION_ARM}-arm row for "
-            f"{repeated}. The (run_name, Hs_m, arm) key should make that "
-            f"impossible; the index needs repairing, not deduplicating.")
-    return frame.set_index("run_name")
+            f"run_index.csv has more than one row for {repeated}. The "
+            f"(run_name, kind, tag) key should make that impossible; the index "
+            f"needs repairing, not deduplicating.")
+    return frame.set_index(["run_name", "kind", "tag"])
 
 
 def model_rates(run_dir, run_name):
@@ -267,7 +301,7 @@ def model_rates(run_dir, run_name):
     return frame[["gis_domain", "lrr_m_yr"]]
 
 
-def check_target_matches(index, run_names):
+def check_target_matches(index, keys):
     """Assert every run was scored against the target this figure draws.
 
     The skill numbers plotted here come from run_index.csv, and the curve comes
@@ -277,8 +311,8 @@ def check_target_matches(index, run_names):
     checkable rather than assumed.
     """
     expected = f"CoastSat LOESS {TARGET_WINDOW}-domain"
-    for name in run_names:
-        row = index.loc[name]
+    for name, kind, tag in keys:
+        row = index.loc[(name, kind, tag)]
         # RESOLVED, NOT JOINED BY HAND, AND IN THE ARM THE ROW CLAIMS. This
         # join had no slot for the arm component, so a run filed under one
         # resolved to a path that does not exist -- and the `continue` below
@@ -290,7 +324,7 @@ def check_target_matches(index, run_names):
         # arm is the directory it is actually in.
         directory = find_run_dir(
             RAW_RUNS, name, (int(row.start_year), int(row.end_year)),
-            row.source_sink_preset, row.arm)
+            row.source_sink_preset, kind, tag)
         meta = resolve_run_file(directory, "metadata_json", name)
         # A run predating the metadata field records no target and cannot be
         # checked. That is the only thing this skip is allowed to mean now.
@@ -326,6 +360,17 @@ def coastsat_layers(start_year):
         CoastSatDataset(
             label="CoastSat LRR (2004-2024)", period_start=2004,
             csv_path=str(COASTSAT_BASE_DIR / "2004_2024"
+                         / "transect_lrr_full.csv")),
+        # The two windows the runner added 2026-09-11 (COASTSAT_DATASETS in
+        # HAT_hindcast_1984_2024.py). Without them a 1996 or 2010 sweep has no
+        # active dataset and the plotter raises.
+        CoastSatDataset(
+            label="CoastSat LRR (1996-2010)", period_start=1996,
+            csv_path=str(COASTSAT_BASE_DIR / "1996_2010"
+                         / "transect_lrr_full.csv")),
+        CoastSatDataset(
+            label="CoastSat LRR (2010-2024)", period_start=2010,
+            csv_path=str(COASTSAT_BASE_DIR / "2010_2024"
                          / "transect_lrr_full.csv")),
     ]
     series = build_coastsat_series(
@@ -454,8 +499,7 @@ def plot_skill_overview(cells, index, start_year, preset, out_dir):
     footnotes = []
     for col, sweep in enumerate(sweeps):
         block = cells[cells.sweep == sweep]
-        base = baseline_name(block.iloc[0].run_name)
-        base_row = index.loc[base]
+        base_row = index.loc[block.iloc[0].base_key]
 
         numeric = block[np.isfinite(block.sort_key)]
         # The calibration value is a POINT ON THE CURVE, not just a reference
@@ -464,8 +508,8 @@ def plot_skill_overview(cells, index, start_year, preset, out_dir):
         # the 2.5 the whole sweep is measured against.
         default = normalise(field_default(SWEEPS[sweep]["setting"]))
         x = list(numeric.sort_key.to_numpy(dtype=float))
-        rmse = [index.loc[n].rmse_interior_m_yr for n in numeric.run_name]
-        bias = [index.loc[n].mean_bias_interior_m_yr for n in numeric.run_name]
+        rmse = [index.loc[k].rmse_interior_m_yr for k in numeric.key]
+        bias = [index.loc[k].mean_bias_interior_m_yr for k in numeric.key]
         if default is not None:
             x.append(default)
             rmse.append(base_row.rmse_interior_m_yr)
@@ -519,10 +563,10 @@ def plot_skill_overview(cells, index, start_year, preset, out_dir):
         # `measured` has no numeric x. It is reported in the caption strip
         # rather than dropped, and rather than floated inside the axes where it
         # can land on the curve.
-        for name in block[~np.isfinite(block.sort_key)].run_name:
+        for key in block[~np.isfinite(block.sort_key)].key:
             footnotes.append(
                 f"{SWEEPS[sweep]['label']}, measured: "
-                f"RMSE {index.loc[name].rmse_interior_m_yr:.3f} "
+                f"RMSE {index.loc[key].rmse_interior_m_yr:.3f} "
                 f"m yr$^{{-1}}$")
 
     handles, labels = axes[0][0].get_legend_handles_labels()
@@ -556,7 +600,7 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
     block = cells[cells.sweep == sweep]
     if block.empty:
         return None
-    base = baseline_name(block.iloc[0].run_name)
+    base = block.iloc[0].base_name
     colors = ramp_colors(len(block))
 
     fig = plt.figure(figsize=(9.6, 4.5), constrained_layout=True)
@@ -582,8 +626,8 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
     # <preset>/sweeps/<family>/ and its baseline is a scenario run one level
     # up, so sibling arithmetic pointed at sweeps/<family>/<base>. The
     # registry row carries the period and preset, so ask for the directory.
-    base_dir = find_run_dir(RAW_RUNS, base,
-                            f"{int(start_year)}_{int(start_year) + 20}", preset)
+    base_dir = find_run_dir(RAW_RUNS, base, period_component(start_year),
+                            preset, kind=MATRIX_KIND)
     base_rates = model_rates(base_dir, base)
     # Named with its VALUE, not just "calibration run". On the Hs panel this is
     # the line the reader is looking for -- where the current setting sits among
@@ -658,14 +702,13 @@ def plot_relocation_outcomes(cells, index, start_year, preset, out_dir):
     block = cells[cells.sweep == "relocation_setback"]
     if block.empty:
         return None
-    base = baseline_name(block.iloc[0].run_name)
-    base_row = index.loc[base]
+    base_row = index.loc[block.iloc[0].base_key]
     default = normalise(field_default("relocation_setback_m"))
 
     labels = [value_label(v) for v in block.value] + [f"{default:g}"]
-    drowned = [index.loc[n].roads_drowned for n in block.run_name] + \
+    drowned = [index.loc[k].roads_drowned for k in block.key] + \
               [base_row.roads_drowned]
-    blocked = [index.loc[n].roads_reloc_blocked for n in block.run_name] + \
+    blocked = [index.loc[k].roads_reloc_blocked for k in block.key] + \
               [base_row.roads_reloc_blocked]
     keys = [np.inf if normalise(v) is None else normalise(v)
             for v in block.value] + [default]
@@ -743,8 +786,8 @@ def plot_circularity(start_year, index, out_dir):
             continue
         curves[preset] = (
             block.sort_key.to_numpy(dtype=float),
-            np.array([index.loc[n].rmse_interior_m_yr for n in block.run_name]),
-            index.loc[baseline_name(block.iloc[0].run_name)],
+            np.array([index.loc[k].rmse_interior_m_yr for k in block.key]),
+            index.loc[block.iloc[0].base_key],
         )
     if len(curves) < 2:
         return None
@@ -825,12 +868,12 @@ def write_summary(cells, index, start_year, preset, out_dir):
     """One tidy CSV behind the figures, so a number can be read not measured off a line."""
     rows = []
     for _, cell in cells.iterrows():
-        row = index.loc[cell.run_name]
-        base = index.loc[baseline_name(cell.run_name)]
+        row = index.loc[cell.key]
+        base = index.loc[cell.base_key]
         rows.append(dict(
             start_year=start_year, preset=preset, axis=cell.sweep,
             setting=cell.setting, value=value_label(cell.value),
-            run_name=cell.run_name,
+            run_name=cell.run_name, kind=cell.kind, tag=cell.tag,
             rmse_interior_m_yr=row.rmse_interior_m_yr,
             mean_bias_interior_m_yr=row.mean_bias_interior_m_yr,
             baseline_rmse_interior_m_yr=base.rmse_interior_m_yr,
@@ -868,13 +911,18 @@ def main():
         print(f"no completed cells for {args.start_year} / {args.preset}")
         return 1
     known = set(index.index)
-    missing = sorted(set(cells.run_name) - known)
+    missing = sorted(set(cells.key) - known)
     if missing:
         raise ValueError(
             f"{len(missing)} cell(s) are in the manifest but not in "
             f"run_index.csv: {missing[:5]}. The index may have lost rows to a "
             f"concurrent write; re-run those cells before plotting.")
-    check_target_matches(index, list(cells.run_name))
+    absent_base = sorted(set(cells.base_key) - known)
+    if absent_base:
+        raise ValueError(
+            f"baseline run(s) {absent_base} are not in run_index.csv; every "
+            f"cell is drawn against its calibration-arm matrix run.")
+    check_target_matches(index, list(cells.key))
 
     cs_series, target = coastsat_layers(args.start_year)
 

@@ -40,7 +40,7 @@ WHAT IT NEVER TOUCHES
 
 USAGE
     python HAT_rerender_run_figures.py --dry-run
-    python HAT_rerender_run_figures.py --arm 1984_2004/calibBE
+    python HAT_rerender_run_figures.py --arm matrix/1984_2004/calibBE
     python HAT_rerender_run_figures.py --match "*calibBE*groin" --gifs
     python HAT_rerender_run_figures.py --run-dir output/raw_runs/.../HAT_...
 ==============================================================================
@@ -351,7 +351,8 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--arm", default=None,
                     help="only runs whose path under output/raw_runs starts "
-                         "with this, e.g. 1984_2004/calibBE")
+                         "with this, e.g. matrix/1984_2004/calibBE or "
+                         "sensitivity/waveHs")
     ap.add_argument("--match", default=None,
                     help="glob on the run folder name, e.g. '*calibBE*groin'")
     ap.add_argument("--run-dir", default=None, help="one run directory")

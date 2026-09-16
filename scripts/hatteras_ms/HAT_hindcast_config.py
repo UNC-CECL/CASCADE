@@ -167,6 +167,15 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     ("relocations",                  ("relocations",),       _as_opt_bool, None),
     ("offset_mode",                  ("offset_mode",),       _as_str,      "asrun"),
 
+    # WHERE A RUN IS FILED (2026-09-16). run_kind is one of run_registry.KINDS
+    # -- matrix (the default), sensitivity, experiment, version -- and run_tag
+    # names the experiment or version. A matrix run has no tag; a sensitivity
+    # cell's tag is derived from its name's sweep token. HAT_RUN_KIND and
+    # HAT_RUN_TAG in the environment; HAT_ARM_TAG is the old spelling and the
+    # runner reads it as an experiment tag.
+    ("run_kind",                     ("run_kind",),          _as_str,      "matrix"),
+    ("run_tag",                      ("run_tag",),           _as_str,      ""),
+
     ("groin_enabled",                ("groin", "enabled"),         _as_bool,  False),
     # The decided pair, 2026-08-30. M from period 1 (D4-D8 demeaned), f from
     # the 1967-2018 rig -- NOT jointly fitted. These defaults matter only when

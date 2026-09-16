@@ -12,7 +12,10 @@
 # that year on, which changes what happens to the interior without necessarily
 # moving the shoreline much. So the road table is differenced too.
 #
-#     python HAT_compare_rerun.py --arm recode-20260914
+#     python HAT_compare_rerun.py --tag 2026-09-14-recode
+#
+# Since 2026-09-16 a re-run is an EXPERIMENT (raw_runs/experiments/<tag>/) and
+# the stored run a MATRIX row; the index is keyed on (run_name, kind, tag).
 #
 # Author: Hannah A. Henry, UNC CECL
 # ==============================================================================
@@ -22,10 +25,15 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import sys
+
 import pandas as pd
 
 _HERE = Path(__file__).resolve()
 REPO = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
+sys.path.insert(0, str(REPO / "scripts"))
+from cascade_pipeline.run_registry import find_run_dir, load_run_index  # noqa: E402
+
 RAW = REPO / "output" / "raw_runs"
 INDEX = RAW / "run_index.csv"
 
@@ -43,27 +51,33 @@ def road_table(run_dir):
     return pd.read_csv(p) if p.is_file() else None
 
 
-def find_dir(name, arm, period, preset):
-    if arm == "calibration":
-        return RAW / period / preset / name
-    return RAW / "arms" / arm / period / preset / name
+def find_dir(name, kind, tag, period, preset):
+    """Resolved by the registry, either layout."""
+    return find_run_dir(RAW, name, period, preset, kind, tag)
 
 
 def main():
     ap = argparse.ArgumentParser(description="stored run against its re-run")
-    ap.add_argument("--arm", required=True)
+    ap.add_argument("--tag", "--arm", dest="tag", required=True,
+                    help="the experiment tag, e.g. 2026-09-14-recode")
     ap.add_argument("--full", action="store_true",
                     help="list every domain that differs, not just the count")
     args = ap.parse_args()
 
-    index = pd.read_csv(INDEX)
-    rerun = index[index["arm"].astype(str) == args.arm]
+    index = load_run_index(INDEX)
+    for col in METRICS:
+        if col in index.columns:
+            try:
+                index[col] = pd.to_numeric(index[col])
+            except (ValueError, TypeError):
+                pass
+    rerun = index[(index["kind"] == "experiment") & (index["tag"] == args.tag)]
     if rerun.empty:
-        print(f"no runs in arm {args.arm!r}")
+        print(f"no runs in experiment {args.tag!r}")
         return 1
 
     print("=" * 96)
-    print(f"STORED vs RE-RUN   arm {args.arm}")
+    print(f"STORED vs RE-RUN   experiment {args.tag}")
     print("=" * 96)
     print(f"{'run':<46} {'bias':>16} {'RMSE':>16} {'drowned':>10}")
 
@@ -71,7 +85,7 @@ def main():
     for _, new in rerun.iterrows():
         name = new["run_name"]
         old_rows = index[(index["run_name"] == name)
-                         & (index["arm"].astype(str) == "calibration")]
+                         & (index["kind"] == "matrix")]
         if old_rows.empty:
             print(f"{name:<46}   no stored run to compare")
             continue
@@ -89,15 +103,15 @@ def main():
             if not same:
                 bits.append(f"{col}: {a} -> {b}")
 
-        ra = rate_table(find_dir(name, "calibration", period, preset))
-        rb = rate_table(find_dir(name, args.arm, period, preset))
+        ra = rate_table(find_dir(name, "matrix", "", period, preset))
+        rb = rate_table(find_dir(name, "experiment", args.tag, period, preset))
         max_rate = None
         if ra is not None and rb is not None:
             m = ra.merge(rb, on="gis_domain", suffixes=("_a", "_b"))
             max_rate = (m["lrr_m_yr_a"] - m["lrr_m_yr_b"]).abs().max()
 
-        da = road_table(find_dir(name, "calibration", period, preset))
-        db = road_table(find_dir(name, args.arm, period, preset))
+        da = road_table(find_dir(name, "matrix", "", period, preset))
+        db = road_table(find_dir(name, "experiment", args.tag, period, preset))
         road_diff = []
         if da is not None and db is not None:
             m = da.merge(db, on="gis", suffixes=("_a", "_b"))

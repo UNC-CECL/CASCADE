@@ -99,8 +99,9 @@ RESUME
     zeroBE imposes {} in every period.
 
 CONCURRENCY
-    Matrix runs are SERIAL. Each one appends a row to run_index.csv, and
-    concurrent appends to one CSV interleave. The sweep is parallel -- its
+    Matrix runs are SERIAL here for simplicity; since 2026-09-16 nothing
+    forces it (run_index.csv is rebuilt from disk, not appended, and each
+    run has its own parameter yaml), so two drivers may overlap. The sweep is parallel -- its
     cells write only to their own directories and are collected through a
     single thread -- and it is where nearly all the wall clock goes.
 
@@ -587,6 +588,8 @@ def run_hindcast(period, preset, scenario, reloc, groin, M, fraction,
         "HAT_START_YEAR": str(period),
         "HAT_SOURCE_SINK_PRESET": preset,
         "HAT_SCENARIO": scenario,
+        # The production matrix, filed under raw_runs/matrix/ (2026-09-16).
+        "HAT_RUN_KIND": "matrix",
         "HAT_RELOCATIONS": "true" if reloc else "false",
         "HAT_GROIN_ENABLED": "true" if groin else "false",
         "HAT_GROIN_TRAPPING_RATE_M_YR": str(M),

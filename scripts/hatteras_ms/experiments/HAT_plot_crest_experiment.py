@@ -72,8 +72,17 @@ OUT = REPO / "output" / "experiments" / "pea1989_crest"
 
 
 def load_arm(arm: str):
-    hits = glob.glob(str(REPO / "output" / "raw_runs" / arm / "1984_2004"
-                         / "calibBE" / "*" / "*.npz"))
+    # experiments/2026-09-02-pea1989/<member>/ since 2026-09-16; the two
+    # older layouts (arms/<arm>/ and the loose <arm>/) are tried after it.
+    member = arm.replace("pea1989", "", 1)
+    roots = [REPO / "output" / "raw_runs" / "experiments" / "2026-09-02-pea1989" / member,
+             REPO / "output" / "raw_runs" / "arms" / arm,
+             REPO / "output" / "raw_runs" / arm]
+    hits = []
+    for root in roots:
+        hits = glob.glob(str(root / "1984_2004" / "calibBE" / "*" / "*.npz"))
+        if hits:
+            break
     if not hits:
         raise SystemExit(
             "\nno run found for arm {!r}. pea1989keep/pea1989lower and every "

@@ -23,10 +23,11 @@ WHY IT IS A SCRIPT AND NOT THREE COMMANDS
 
 WHY ARMS RATHER THAN RUN NAMES
     All three produce the SAME run name -- the name is derived from the
-    management switches, and those are identical by design. `HAT_ARM_TAG` gives
-    each its own directory component, and the run index is keyed on
-    ("run_name", "Hs_m", "arm"), so nothing overwrites anything. The existing
-    calibration-tree run is never touched.
+    management switches, and those are identical by design. Each is filed as
+    an EXPERIMENT (HAT_RUN_KIND=experiment, HAT_RUN_TAG=2026-09-02-pea1989/<arm>)
+    under raw_runs/experiments/, and the run index is keyed on
+    (run_name, kind, tag), so nothing overwrites anything. The existing
+    matrix run is never touched.
 
 RELOCATIONS ON OR OFF -- TWO DIFFERENT QUESTIONS
     --relocations 1 asks: does an emergent relocation fire BEFORE the prescribed
@@ -86,7 +87,7 @@ HINDCAST = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 DUNE_TOPO = REPO / "data/hatteras_init/1-barrier3d-domains/1984-start/dune-topo"
 CURRENT = DUNE_TOPO / "CURRENT"
 LIVE_SETBACK = (REPO / "data/hatteras_init/4-mgmt-forcing/road_offset"
-                / "dunestart_offset/1984/RoadSetback_1984_dunestart.csv")
+                / "dunestart_offset/measured/1984/RoadSetback_1984_dunestart.csv")
 
 # arm tag -> (topo version, setback CSV source; None = leave the live one)
 def _arm(version):
@@ -178,7 +179,10 @@ def main() -> None:
             env.update(BASE_ENV)
             env["HAT_RELOCATIONS"] = args.relocations
             arm_tag = arm if args.relocations == "1" else arm + "noreloc"
-            env["HAT_ARM_TAG"] = arm_tag
+            # Filed as raw_runs/experiments/2026-09-02-pea1989/<member>/,
+            # the member being the old arm name without its pea1989 prefix.
+            env["HAT_RUN_KIND"] = "experiment"
+            env["HAT_RUN_TAG"] = "2026-09-02-pea1989/" + arm_tag.replace("pea1989", "", 1)
             env["HAT_TOPO_VERSION_1984_START"] = version
             if args.dry_run:
                 print("  [dry-run] would run {}".format(HINDCAST))

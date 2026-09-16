@@ -1,0 +1,133 @@
+{
+  "identity": {
+    "run_name": "HAT_1984_2004_edgeBE_road_reloc_nobdm_groin",
+    "timestamp": "2026-09-01 01:57:00",
+    "generated_by": "HAT_hindcast_1984_2024.py",
+    "runtime_min": "1.4",
+    "use_sandbox_cascade": true,
+    "topo_product": "1984-start",
+    "topo_dune_version": "v1",
+    "parameter_file": "Hatteras-CASCADE-parameters.yaml",
+    "git_commit": "317edc4af21e27ad0634d84afd5b4861a9d0256d",
+    "git_branch": "hannahaline/hatteras-cascade",
+    "git_dirty": true
+  },
+  "scenario": {
+    "period": "1984-2004 (20 yr)",
+    "source/sink preset": "edgeBE",
+    "shoreline offset": "asrun",
+    "background erosion": true,
+    "roadway management": "55 domains",
+    "historical relocations": true,
+    "beach/dune manager": "off",
+    "nourishment fills": "none in period",
+    "groin": "on"
+  },
+  "period": {
+    "start_year": 1984,
+    "end_year": 2004,
+    "run_years": 20,
+    "annual_states": 21
+  },
+  "wave climate": {
+    "wave_height_m": 2.5,
+    "wave_period_s": 8,
+    "wave_asymmetry": 0.7,
+    "wave_angle_high_frac": 0.1,
+    "shoreface_depth_m": "22.25"
+  },
+  "sea level": {
+    "rslr_m_yr": 0.004,
+    "rslr_constant": true
+  },
+  "dunes and roadway": {
+    "rmin / rmax": "0.55 / 0.95",
+    "dune_design_ele_m_mhw": 3.0,
+    "dune_min_ele_m_mhw": 0.0,
+    "road_width_m": 20.0,
+    "relocations_enabled": true
+  },
+  "source/sink": {
+    "preset": "edgeBE",
+    "background_erosion_on": true,
+    "domains_specified": 2,
+    "nonzero_domains": 2,
+    "values_digest": "0fd4a97a4912",
+    "rate_gis1_m_yr": -42.6,
+    "rate_gis90_m_yr": 13.0
+  },
+  "groin": {
+    "enabled": true,
+    "trapping_rate_m_yr": 60.0,
+    "updrift / downdrift": "GIS 6 / 5",
+    "install_year": 1969,
+    "deterioration": "linear_ramp, floor 0.6",
+    "r_ipl_t0": "1.0758",
+    "predicted_extent_m": "3280",
+    "measured_extent_m": "5500 updrift / 2500 downdrift"
+  },
+  "skill": {
+    "target": "CoastSat LOESS 10-domain",
+    "estimator": "lrr",
+    "mean_bias_m_yr": "+0.1127",
+    "rmse_m_yr": "1.1644",
+    "mean_bias_interior_m_yr": "+0.1219",
+    "rmse_interior_m_yr": "1.1760",
+    "lrr_r2_median": "0.9221",
+    "lrr_r2_below_floor": "15",
+    "endpoint_mean_bias_interior_m_yr": "+0.1384",
+    "endpoint_rmse_interior_m_yr": "1.1813"
+  },
+  "verification": {
+    "nourishment_ok": true,
+    "roads_drowned": 0,
+    "roads_reloc_blocked": 0
+  },
+  "index row": {
+    "run_name": "HAT_1984_2004_edgeBE_road_reloc_nobdm_groin",
+    "Hs_m": "2.5",
+    "timestamp": "2026-09-01 01:57:00",
+    "start_year": "1984",
+    "end_year": "2004",
+    "source_sink_preset": "edgeBE",
+    "be_nonzero_domains": "2",
+    "be_values_digest": "0fd4a97a4912",
+    "be_rate_gis1_m_yr": "-42.6",
+    "be_rate_gis90_m_yr": "13.0",
+    "scenario": "roadway_only",
+    "scenario_overridden": "True",
+    "groin_enabled": "True",
+    "groin_trapping_m_yr": "60.0",
+    "roadway_management": "True",
+    "relocations_enabled": "True",
+    "beach_dune_management": "False",
+    "nourishment_fills": "False",
+    "bdm_domains": "0",
+    "nourishment_projects": "0",
+    "rslr_m_yr": "0.004",
+    "annual_states": "21",
+    "run_complete": "True",
+    "mean_bias_m_yr": "0.1127361599917187",
+    "rmse_m_yr": "1.1643877000566514",
+    "mean_bias_interior_m_yr": "0.1218634000539796",
+    "rmse_interior_m_yr": "1.1760270857623545",
+    "nourishment_ok": "True",
+    "roads_drowned": "0",
+    "roads_reloc_blocked": "0",
+    "groin_extent_updrift_m": "5500.0",
+    "groin_extent_downdrift_m": "2500.0",
+    "runtime_min": "1.4",
+    "use_sandbox_cascade": "True",
+    "topo_product": "1984-start",
+    "topo_dune_version": "v1",
+    "git_commit": "317edc4af21e",
+    "git_dirty": "True",
+    "rate_estimator": "lrr",
+    "lrr_r2_median": "0.9220904218971072",
+    "lrr_r2_below_floor": "15",
+    "endpoint_mean_bias_interior_m_yr": "0.1383556946040114",
+    "endpoint_rmse_interior_m_yr": "1.1813254387863386",
+    "sandbags_on": "False",
+    "groin_deterioration_f": "0.6"
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "identity": {
+    "run_name": "HAT_2004_2024_calibBE_noroad_nobdm_nogroin",
+    "timestamp": "2026-09-14 19:20:28",
+    "generated_by": "HAT_hindcast_1984_2024.py",
+    "runtime_min": "4.0",
+    "use_sandbox_cascade": true,
+    "topo_product": "2004-start",
+    "topo_dune_version": "v1",
+    "parameter_file": "Hatteras-CASCADE-parameters.yaml",
+    "git_commit": "f8c3bb56db79adb4537735ca1dd6dcc0d31bcb6f",
+    "git_branch": "hannahaline/hatteras-cascade",
+    "git_dirty": true
+  },
+  "scenario": {
+    "period": "2004-2024 (20 yr)",
+    "source/sink preset": "calibBE",
+    "shoreline offset": "asrun",
+    "background erosion": true,
+    "roadway management": "off",
+    "historical relocations": false,
+    "beach/dune manager": "off",
+    "nourishment fills": "suppressed",
+    "groin": "off",
+    "wave climate": "Hs 2.5 m, Tp 8.0 s, asym 0.7, high-angle 0.1",
+    "relocation target": "20 m behind the dune line"
+  },
+  "period": {
+    "start_year": 2004,
+    "end_year": 2024,
+    "run_years": 20,
+    "annual_states": 21
+  },
+  "wave climate": {
+    "wave_height_m": 2.5,
+    "wave_period_s": 8.0,
+    "wave_asymmetry": 0.7,
+    "wave_angle_high_frac": 0.1,
+    "shoreface_depth_m": "22.25"
+  },
+  "sea level": {
+    "rslr_m_yr": 0.006,
+    "rslr_constant": true
+  },
+  "dunes and roadway": {
+    "rmin / rmax": "0.55 / 0.95",
+    "dune_design_ele_m_mhw": 3.0,
+    "dune_min_ele_m_mhw": 0.0,
+    "road_width_m": 20.0,
+    "relocations_enabled": false
+  },
+  "source/sink": {
+    "preset": "calibBE",
+    "background_erosion_on": true,
+    "domains_specified": 90,
+    "nonzero_domains": 64,
+    "values_digest": "ff3c150172d6",
+    "rate_gis1_m_yr": 50.3,
+    "rate_gis90_m_yr": 57.9
+  },
+  "groin": {
+    "enabled": false
+  },
+  "skill": {
+    "target": "CoastSat LOESS 10-domain",
+    "estimator": "lrr",
+    "mean_bias_m_yr": "-1.9085",
+    "rmse_m_yr": "2.1103",
+    "mean_bias_interior_m_yr": "-1.9226",
+    "rmse_interior_m_yr": "2.1181",
+    "lrr_r2_median": "0.8556",
+    "lrr_r2_below_floor": "17",
+    "endpoint_mean_bias_interior_m_yr": "-1.7116",
+    "endpoint_rmse_interior_m_yr": "1.9118"
+  },
+  "verification": {
+    "nourishment_ok": true,
+    "roads_drowned": 0,
+    "roads_reloc_blocked": 0
+  },
+  "index row": {
+    "run_name": "HAT_2004_2024_calibBE_noroad_nobdm_nogroin",
+    "Hs_m": "2.5",
+    "timestamp": "2026-09-14 19:20:28",
+    "start_year": "2004",
+    "end_year": "2024",
+    "source_sink_preset": "calibBE",
+    "be_nonzero_domains": "64",
+    "be_values_digest": "ff3c150172d6",
+    "be_rate_gis1_m_yr": "50.3",
+    "be_rate_gis90_m_yr": "57.9",
+    "scenario": "natural",
+    "scenario_overridden": "False",
+    "groin_enabled": "False",
+    "groin_trapping_m_yr": "",
+    "roadway_management": "False",
+    "relocations_enabled": "False",
+    "beach_dune_management": "False",
+    "nourishment_fills": "False",
+    "bdm_domains": "0",
+    "nourishment_projects": "0",
+    "rslr_m_yr": "0.006",
+    "annual_states": "21",
+    "run_complete": "True",
+    "mean_bias_m_yr": "-1.9084508970089362",
+    "rmse_m_yr": "2.1103152412510844",
+    "mean_bias_interior_m_yr": "-1.9225649742174298",
+    "rmse_interior_m_yr": "2.118088371184884",
+    "nourishment_ok": "True",
+    "roads_drowned": "0",
+    "roads_reloc_blocked": "0",
+    "groin_extent_updrift_m": "",
+    "groin_extent_downdrift_m": "",
+    "runtime_min": "4.0",
+    "use_sandbox_cascade": "True",
+    "topo_product": "2004-start",
+    "topo_dune_version": "v1",
+    "git_commit": "f8c3bb56db79",
+    "git_dirty": "True",
+    "rate_estimator": "lrr",
+    "lrr_r2_median": "0.8556216091537594",
+    "lrr_r2_below_floor": "17",
+    "endpoint_mean_bias_interior_m_yr": "-1.7115549917323931",
+    "endpoint_rmse_interior_m_yr": "1.9118041324991935",
+    "sandbags_on": "False",
+    "groin_deterioration_f": ""
+  }
+}

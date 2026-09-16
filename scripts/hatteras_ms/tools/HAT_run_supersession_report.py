@@ -242,9 +242,9 @@ def main() -> None:
           "the interiors and the road setbacks. Comparing a v1 run against a v2 "
           "run attributes the pick difference to whatever the figure is about.")
         w("")
-        w("**An arm that names a version is judged against that version, not "
-          "CURRENT.** `arms/version-pair/v3` holds v3 against v2 and "
-          "`arms/behindroad-copy` was built on the v3 footprint layer; both are "
+        w("**A run that names a version is judged against that version, not "
+          "CURRENT.** `versions/version-pair/v3` holds v3 against v2 and "
+          "`experiments/2026-09-08-behindroad-copy` was built on the v3 footprint layer; both are "
           "on v3 deliberately. Re-running them on CURRENT would destroy the "
           "comparison they exist for, so they are not listed above.")
     w("")
