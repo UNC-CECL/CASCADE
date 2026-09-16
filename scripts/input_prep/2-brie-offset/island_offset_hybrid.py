@@ -30,22 +30,44 @@ import matplotlib.patches as mpatches
 # hindcast_<year>/), which left every path here dead. Anchored on the repo
 # root and on YEAR, so either hindcast start can be produced (2026-09-10).
 import argparse as _argparse
+import sys as _sys
 
 _PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                      if (_p / "pyproject.toml").exists())
+_sys.path.insert(0, str(_PROJECT_ROOT / "scripts"))
+from hat_topo_version import DUNE_LINE_FOR_YEAR, dune_raw_file_for_year  # noqa: E402
+
 _BRIE_ROOT = _PROJECT_ROOT / "data" / "hatteras_init" / "2-brie-offset"
 
 _ap = _argparse.ArgumentParser(description="island dune offsets for one hindcast start")
-# Four hindcast starts since 2026-09-11. A year is admissible here when
-# raw_offsets/ holds a file under that name -- for 1996 that file is a copy
-# of the 1997 survey, recorded in raw_offsets/PROVENANCE.md.
+# A start year is admissible here when hat_topo_version.DUNE_LINE_FOR_YEAR
+# pairs it with a dune-line vintage (1996 reads the 1997 line). Since
+# 2026-09-15; before that the raw file had to exist under the period's own
+# name, which for 1996 meant a copy of the 1997 file.
 _ap.add_argument("--year", type=int, default=2004,
-                 choices=(1984, 1996, 2004, 2010))
-YEAR = _ap.parse_args().year
+                 choices=tuple(sorted(DUNE_LINE_FOR_YEAR)))
+# VERSIONED OUTPUT (2026-09-15). A start year can hold more than one build
+# when its dune line is re-digitised: 1996/v1/ is the build from the v1 1997
+# line (ArcGIS intersection), 1996/v2/ from duneline_1997_v2 (shapely
+# intersection, duneline_to_raw_offsets.py). Which one the runner reads is the
+# CURRENT file in <year>/, resolved by hatteras_site_config.island_offset_file.
+# Without --version the files land flat in <year>/, as 1984 and 2004 still are.
+_ap.add_argument("--version", default=None,
+                 help="write to <year>/<version>/ instead of <year>/ (e.g. v2)")
+# raw_offsets/<vintage>_duneline_offset_raw.csv is the file the END-YEAR
+# TARGET loader reads too, so it always holds the CURRENT build of that
+# vintage. To rebuild an older version from its own raw file (each version
+# folder keeps a copy), name that file here.
+_ap.add_argument("--raw-file", default=None,
+                 help="raw CSV to read instead of the vintage's file in raw_offsets/")
+_args = _ap.parse_args()
+YEAR = _args.year
+VERSION = _args.version
 
-RAW_FILE = str(_BRIE_ROOT / "raw_offsets" / f"{YEAR}_duneline_offset_raw.csv")
+RAW_FILE = (str(Path(_args.raw_file).resolve()) if _args.raw_file
+            else str(dune_raw_file_for_year(YEAR)))
 
-OUTPUT_DIR    = str(_BRIE_ROOT / f"{YEAR}")
+OUTPUT_DIR    = str(_BRIE_ROOT / f"{YEAR}" / VERSION if VERSION else _BRIE_ROOT / f"{YEAR}")
 OUTPUT_BASENAME = f"Island_Dune_Offsets_{YEAR}"
 
 START_DOMAIN = 1
@@ -386,7 +408,7 @@ def plot_buffer_diagnostic(diag, year, padding_zeros, community_zones,
     # ------------------------------------------------------------------ #
     fig = plt.figure(figsize=(18, 7), facecolor="white")
     fig.suptitle(
-        f"Buffer Diagnostic — Dune Offset Profile  |  {year}  |  "
+        f"Buffer Diagnostic — Dune Offset Profile  |  {year}{(' ' + VERSION) if VERSION else ''}  |  "
         f"Slope: ±{n_slope} domains  |  Bridge: {n_bridge} domains each side",
         fontsize=13, fontweight="bold", color="#1a1a2e", y=0.98,
     )
@@ -499,7 +521,7 @@ def plot_buffer_diagnostic(diag, year, padding_zeros, community_zones,
     fig_path = os.path.join(output_dir, f"{output_basename}_buffer_diagnostic.png")
     fig.savefig(fig_path, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close(fig)
-    print(f"\n✓ Diagnostic figure saved to:\n  {fig_path}")
+    print(f"\nDiagnostic figure saved to:\n  {fig_path}")
     return fig_path
 
 

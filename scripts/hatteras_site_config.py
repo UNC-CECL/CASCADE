@@ -12,6 +12,9 @@ Import these presets from your run script / notebook:
 
 import csv
 
+import os
+import re
+
 from cascade_pipeline.annotations import AnnotationConfig
 from cascade_pipeline.domains import DomainGeometry
 from cascade_pipeline.nourishment import BeachDuneConfig, NourishmentProject
@@ -129,6 +132,63 @@ HATTERAS_ANNOTATIONS = AnnotationConfig(
 # interiors. Since 65 of 90 domains have a different interior shape between the
 # products, that is a different island, not a rounding difference. One mapping,
 # imported, so the runner and the forcing that feeds it cannot disagree.
+# WHICH BUILD OF THE ISLAND OFFSET A START READS (added 2026-09-15).
+#
+# 2-brie-offset/<year>/ used to hold one build. When the 1997 dune line was
+# re-digitised (duneline_1997_v2, local corrections) the 1996 start gained a
+# second build, and the two live side by side as 1996/v1/ and 1996/v2/ with a
+# CURRENT file naming the one every reader takes -- the same shape as
+# 1-barrier3d-domains/<product>/dune-topo/. Resolved here, in one place, so
+# the runner cannot pin a path that a later re-digitisation silently leaves
+# stale. Order, mirroring hat_topo_version.topo_dirs():
+#   1. HAT_OFFSET_VERSION_<year> in the environment (per-run selection that
+#      does not mutate the shared default)
+#   2. the CURRENT file in 2-brie-offset/<year>/
+#   3. the only v* directory present, if exactly one
+#   4. no v* directory at all: the flat layout, 2-brie-offset/<year>/<file>
+#      (1984 and 2004 today; 2010 once it is built)
+# Several v* directories and no CURRENT is an error, not a guess.
+def _island_offset_file(start_year):
+    """Path of the padded 120-domain offset file, relative to INIT_ROOT."""
+    base = f"2-brie-offset/{start_year}"
+    fname = f"Island_Dune_Offsets_{start_year}_PADDED_120.csv"
+    d = INIT_ROOT / base
+    versions = sorted(p.name for p in d.iterdir()
+                      if p.is_dir() and re.fullmatch(r"v\d+", p.name)) if d.is_dir() else []
+    env = os.environ.get(f"HAT_OFFSET_VERSION_{start_year}")
+    current = d / "CURRENT"
+    if env:
+        version = env.strip()
+    elif current.is_file():
+        version = current.read_text(encoding="utf-8").strip()
+    elif len(versions) == 1:
+        version = versions[0]
+    elif versions:
+        raise RuntimeError(
+            f"{base}/ holds {versions} and no CURRENT file; write one, or set "
+            f"HAT_OFFSET_VERSION_{start_year}.")
+    else:
+        return f"{base}/{fname}"
+    if not (d / version).is_dir():
+        raise FileNotFoundError(
+            f"{base}/{version}/ does not exist (have {versions or 'no versions'}); "
+            f"check CURRENT or HAT_OFFSET_VERSION_{start_year}.")
+    return f"{base}/{version}/{fname}"
+
+
+def island_offset_version(start_year):
+    """The version segment of the offset file this period resolves to.
+
+    "v2" for a versioned layout, "flat" for the unversioned one. Recorded in
+    run metadata and run_index.csv (2026-09-15) because a v1 run and a v2 run
+    are otherwise identical on disk: the run name carries no offset token and
+    the file name is the same in every version folder. Resolves through
+    _island_offset_file so it can never disagree with the file that was read.
+    """
+    parts = _island_offset_file(start_year).split("/")
+    return parts[2] if re.fullmatch(r"v\d+", parts[2]) else "flat"
+
+
 HATTERAS_PERIODS = {
     1984: {
         "end_year": 2004,
@@ -136,8 +196,7 @@ HATTERAS_PERIODS = {
         "storm_file": (
             "3-env-forcings/storms/hindcast_storms/1984_2004/"
             "1984_2004_storms_v3_72.npy"),
-        "island_offset_file": (
-            "2-brie-offset/1984/Island_Dune_Offsets_1984_PADDED_120.csv"),
+        "island_offset_file": _island_offset_file(1984),
         # PAIRED WITH THE TOPOGRAPHY VERSION, AND NOTHING ENFORCES IT.
         # A setback is metres landward of interior row 0, so it belongs to the
         # extraction it was measured on. This file is the v2-era measurement;
@@ -163,8 +222,7 @@ HATTERAS_PERIODS = {
         "storm_file": (
             "3-env-forcings/storms/hindcast_storms/2004_2024/"
             "2004_2024_storms_v3_72.npy"),
-        "island_offset_file": (
-            "2-brie-offset/2004/Island_Dune_Offsets_2004_PADDED_120.csv"),
+        "island_offset_file": _island_offset_file(2004),
         "road_setback_file": (
             "4-mgmt-forcing/road_offset/dunestart_offset/2004/"
             "RoadSetback_2004_dunestart.csv"),
@@ -196,9 +254,10 @@ HATTERAS_PERIODS = {
             "3-env-forcings/storms/hindcast_storms/1996_2010/"
             "1996_2010_storms_v3_72.npy"),
         # DERIVED, NOT SURVEYED: built from the 1997 dune line, the nearest
-        # island-wide survey. See 2-brie-offset/raw_offsets/PROVENANCE.md.
-        "island_offset_file": (
-            "2-brie-offset/1996/Island_Dune_Offsets_1996_PADDED_120.csv"),
+        # island-wide survey (hat_topo_version.DUNE_LINE_FOR_YEAR[1996] ==
+        # 1997; the end-year target loader reads the same table). See
+        # 2-brie-offset/raw_offsets/PROVENANCE.md.
+        "island_offset_file": _island_offset_file(1996),
         # DERIVED: the 1984 setbacks with the 1989 Pea Island relocation
         # applied, since that event precedes 1996 and the 1999 one does not.
         # No NC-12 line of 1996 vintage exists. See that folder's PROVENANCE.md.
@@ -219,10 +278,11 @@ HATTERAS_PERIODS = {
         "storm_file": (
             "3-env-forcings/storms/hindcast_storms/2010_2024/"
             "2010_2024_storms_v3_72.npy"),
-        # NOT BUILT YET: waiting on a digitised 2010 dune line. Every other
-        # input for this period exists, so a run fails here and nowhere else.
-        "island_offset_file": (
-            "2-brie-offset/2010/Island_Dune_Offsets_2010_PADDED_120.csv"),
+        # DERIVED, NOT SURVEYED: built 2026-09-15 from the 2009 dune line, no
+        # 2010 aerial imagery existing (DUNE_LINE_FOR_YEAR[2010] == 2009). So
+        # the period starts from the island as surveyed a year EARLIER, the
+        # mirror of the 1996 case. 2010/v1, CURRENT.
+        "island_offset_file": _island_offset_file(2010),
         # A COPY of the 2004 file: same topography product, same road line, and
         # no relocation in the record between the two dates.
         "road_setback_file": (

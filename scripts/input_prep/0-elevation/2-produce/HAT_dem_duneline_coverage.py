@@ -34,7 +34,7 @@ number confounds:
 
 The 1984-1997 separation is reported per domain so the second term is a
 measured quantity rather than an assumption. Island-wide it is small - the
-`raw-duneline-geojson/README.md` splits the naive 1984-vs-row-0 offset as
+`2-brie-offset/dunelines/README.md` splits the naive 1984-vs-row-0 offset as
 feature +16.2 m, date +0.8 m - but it is not small everywhere, and the
 per-domain column is the point.
 
@@ -120,8 +120,8 @@ INPUTS
     data/.../0-elevation/2009-2014-1996/1-gapfill-1m/clip_domain_*_survey.tif
     D:/Hatteras_GIS/.../2009_full.tif, 2014_full.tif, 1996_FallEC_J1441002/
     D:/Hatteras_GIS/domains.geojson
-    data/.../1-barrier3d-domains/raw-duneline-geojson/duneline_1984.geojson
-    data/.../1-barrier3d-domains/raw-duneline-geojson/duneline_1997.geojson
+    data/.../2-brie-offset/dunelines/duneline_1984.geojson
+    data/.../2-brie-offset/dunelines/duneline_1997.geojson
 
 OUTPUTS (data/hatteras_init/0-elevation/2009-2014-1996-duneline/)
     duneline_coverage_domains.csv     90 rows, one per domain
@@ -180,7 +180,7 @@ DOMAIN_CSV = "duneline_coverage_domains.csv"
 PROFILE_CSV = "duneline_coverage_profiles.csv"
 
 DUNE_DIR = (gf.PROJECT_ROOT / "data" / "hatteras_init" / "1-barrier3d-domains"
-            / "raw-duneline-geojson")
+            / "2-brie-offset/dunelines")
 DUNE_LINES = {1984: DUNE_DIR / "duneline_1984.geojson",
               1997: DUNE_DIR / "duneline_1997.geojson"}
 TARGET_YEAR = 1984      # the line the flag is about

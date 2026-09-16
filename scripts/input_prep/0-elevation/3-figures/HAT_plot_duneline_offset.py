@@ -46,7 +46,7 @@ WHY 1997 AND NOT 2004
 ---------------------
 1997 is one year after the 1996 ALACE flight the DEM's beach comes from, so the
 pair brackets the model's 1984 start and the DEM's own vintage. See
-`data/hatteras_init/1-barrier3d-domains/raw-duneline-geojson/README.md` for
+`data/hatteras_init/2-brie-offset/dunelines/README.md` for
 what each line is and the metadata caveat - 1997 carries `feature_type`,
 `method` and `editor`; 1984 carries nothing at all, so "the same feature at
 both ends" rests on the numbers rather than on the files.
@@ -54,8 +54,8 @@ both ends" rests on the numbers rather than on the files.
 INPUTS
     D:/Hatteras_GIS/domains.geojson
     data/.../0-elevation/2009-2014-1996/2-resampled-10m/resampled_domain_*.tif
-    data/.../1-barrier3d-domains/raw-duneline-geojson/duneline_1984.geojson
-    data/.../1-barrier3d-domains/raw-duneline-geojson/duneline_1997.geojson
+    data/.../2-brie-offset/dunelines/duneline_1984.geojson
+    data/.../2-brie-offset/dunelines/duneline_1997.geojson
 
 OUTPUTS (data/hatteras_init/0-elevation/2009-2014-1996-duneline/)
     duneline_offset_by_domain.csv
@@ -198,7 +198,7 @@ def fig_path(name):
     return p
 CSV_NAME = "duneline_offset_by_domain.csv"
 
-DUNE_DIR = INIT_ROOT / "1-barrier3d-domains" / "raw-duneline-geojson"
+DUNE_DIR = INIT_ROOT / "2-brie-offset" / "dunelines"
 DUNE_LINES = {1984: DUNE_DIR / "duneline_1984.geojson",
               1997: DUNE_DIR / "duneline_1997.geojson"}
 

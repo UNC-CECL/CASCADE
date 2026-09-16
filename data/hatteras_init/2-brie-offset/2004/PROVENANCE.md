@@ -1,10 +1,11 @@
-# 2004 island offsets
+# 2004 island offsets — version index
 
-Built from `raw_offsets/2004_duneline_offset_raw.csv`, a **genuine 2004
-dune-line survey**. No stand-in.
+`CURRENT` names the build every reader takes; `hatteras_site_config._island_offset_file(2004)` resolves it (env `HAT_OFFSET_VERSION_2004` outranks the file).
 
-Produced by `scripts/input_prep/2-brie-offset/island_offset_hybrid.py --year 2004`.
+## Builds
 
-The padded file is zeroed on its own most seaward domain, so it cannot be
-differenced against another year's padded file. Difference the raw files
-instead.
+Written by `build_island_offset.py`, one row per build; each version's own `PROVENANCE.md` has the detail.
+
+| version | built | line | vintage | zero domain | compared with | |
+|---|---|---|---|---|---|---|
+| `v1` | 2026-09-15 | `duneline_2004.geojson` | 2004 | GIS 78 | superseded_20260915_flat | CURRENT |

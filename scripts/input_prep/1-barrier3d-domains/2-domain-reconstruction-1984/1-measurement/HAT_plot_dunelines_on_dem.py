@@ -69,7 +69,7 @@ from hat_figure_style import (apply_style, C, C_1984, C_1997,     # noqa: E402
                               figsize, open_frame, save, spines_for_image,
                               town_bands, _north_arrow, _scalebar, _title)
 
-DL = REPO / "data/hatteras_init/1-barrier3d-domains/raw-duneline-geojson"
+DL = REPO / "data/hatteras_init/2-brie-offset/dunelines"
 PRODUCT = "2009-2014-1996"
 MHW_NAVD = 0.36
 NODATA_BELOW = -900.0

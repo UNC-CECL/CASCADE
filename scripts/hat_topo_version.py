@@ -155,6 +155,65 @@ YEAR_PRODUCT = {
 }
 
 
+# THE DUNE LINES, BY VINTAGE (2026-09-15). The same rule as the road lines:
+# a raw per-transect file under 2-brie-offset/raw_offsets/ is named for the
+# IMAGERY VINTAGE of the digitised line it came from, and this map is the only
+# place a period year is paired with a vintage. Until 2026-09-15 the 1996
+# start read a byte-identical COPY of the 1997 file filed under the name
+# 1996_...; the copy is gone and the pairing lives here (Hannah: "a
+# DUNE_LINE_FOR_YEAR table, no copies"). When the 2010 and 2024 lines are
+# digitised, add them here under the year of their IMAGERY (2009 or 2023, if
+# that is what they are traced from), never under the period year.
+#
+# A vintage may have more than one digitisation (duneline_1997.geojson and
+# duneline_1997_v2.geojson); the raw file under the vintage's name is the
+# CURRENT one, and each build under 2-brie-offset/<year>/v<n>/ keeps a copy of
+# the raw it was made from, so an older build is always reproducible.
+BRIE_ROOT = INIT_ROOT / "2-brie-offset"
+RAW_OFFSET_DIR = BRIE_ROOT / "raw_offsets"
+DUNELINE_DIR = BRIE_ROOT / "dunelines"
+DUNE_LINE_FOR_YEAR = {
+    1984: 1984,
+    1996: 1997,   # no 1996 imagery; the nearest island-wide survey
+    2004: 2004,
+    2010: 2009,   # no 2010 aerial imagery (Hannah, 2026-09-15); the 2009 line
+    2024: 2023,   # the 2023 NOAA imagery (D:\Hatteras_GIS\Aerial3); end year of 2004-2024 and 2010-2024
+}
+
+
+def dune_line_for_year(year, strict: bool = True):
+    """The dune-line vintage a period start OR end year reads. With
+    `strict=False` an unknown year returns None instead of exiting, for the
+    end-year target, which is allowed to be missing."""
+    try:
+        return DUNE_LINE_FOR_YEAR[int(year)]
+    except (KeyError, TypeError, ValueError):
+        if not strict:
+            return None
+        known = ", ".join(f"{y} -> {v}" for y, v in sorted(DUNE_LINE_FOR_YEAR.items()))
+        raise SystemExit(
+            f"\nno dune line known for period year {year!r}. Known: {known}\n"
+            f"Add it to DUNE_LINE_FOR_YEAR in {__file__} under the imagery vintage.\n")
+
+
+def dune_raw_file(vintage) -> Path:
+    """raw_offsets/<vintage>_duneline_offset_raw.csv, the current build of
+    one LINE vintage's per-transect stations."""
+    return RAW_OFFSET_DIR / f"{int(vintage)}_duneline_offset_raw.csv"
+
+
+def dune_raw_file_for_year(year, strict: bool = True):
+    """The raw file a period year reads, through DUNE_LINE_FOR_YEAR."""
+    v = dune_line_for_year(year, strict=strict)
+    return None if v is None else dune_raw_file(v)
+
+
+def duneline_geojson(vintage, version: str | None = None) -> Path:
+    """2-brie-offset/dunelines/duneline_<vintage>[_<version>].geojson."""
+    suffix = f"_{version}" if version else ""
+    return DUNELINE_DIR / f"duneline_{int(vintage)}{suffix}.geojson"
+
+
 def product_for_year(year: int) -> str:
     """The topography product a period start year reads. Raises if unknown.
 

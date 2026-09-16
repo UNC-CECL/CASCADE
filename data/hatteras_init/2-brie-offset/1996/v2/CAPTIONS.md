@@ -1,0 +1,5 @@
+# Captions — v2
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`offset_1996_v1_vs_v2.png`.** Two builds of the 1996 island offset. (a) The unpadded offset each build hands the model, v1 in red and v2 in blue, each zeroed on its own most seaward domain. (b) The change in the dune line itself, v2 minus v1, measured from the shared offshore datum along the 100 m transects and averaged per 500 m domain; positive is landward. 22 of 90 domains differ by 0.5 m or more (mean over all domains +6.3 m; the largest, +63.3 m, at GIS 66). Both raw files were produced by the same shapely intersection, so the metre-scale station convention of the earlier ArcGIS export is not part of the difference.
