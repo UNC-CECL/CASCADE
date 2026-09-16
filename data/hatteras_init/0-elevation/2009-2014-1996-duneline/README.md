@@ -47,7 +47,7 @@ neither line has a gap anywhere in the modelled reach.
 
 **47 of 90 domains positive, 43 negative.** The island-wide median of +1.2 m
 corroborates the +0.8 m "date" term in
-`../../1-barrier3d-domains/raw-duneline-geojson/README.md`, which was derived a
+`../../2-brie-offset/dunelines/README.md`, which was derived a
 different way — but that agreement is the least informative thing in the table.
 The two lines disagree by **at least one Barrier3D cell in 52 of 90 domains**
 and by three or more cells in 17:

@@ -38,11 +38,11 @@ SURVEY DATES
     a sensitivity block reports how far the endpoint rate moves for a
     +/- 6 month shift of that centre.
 
-WHAT CANCELS AND WHAT DOES NOT
-    Both the 1984 and 2004 raw files are ArcGIS exports, so the 1 m GIS-vs-
-    shapely convention (raw_offsets/PROVENANCE.md) cancels here. It will NOT
-    cancel against a shapely-built 2024 file; that leg needs both lines
-    through duneline_to_raw_offsets.py or a stated 1 m correction.
+METHOD
+    Every raw dune file is built by duneline_to_raw_offsets.py since
+    2026-09-15 (1984 and 2004 were ArcGIS exports until that afternoon, one
+    metre landward of the exact crossing; see raw_offsets/PROVENANCE.md), so
+    a change between any two years carries no method term.
 
 OUTPUT   data/hatteras_init/5-scr/duneline_vs_coastsat/<start>_<end>/
              scatter_dune_vs_coastsat.png     a. vs LRR  b. vs endpoint
@@ -74,6 +74,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
 from hat_observed_rates import (COASTSAT_TIMESERIES, SCR_ROOT,  # noqa: E402
                                 lrr_csv, transect_lookup)
+from hat_topo_version import dune_line_for_year, dune_raw_file_for_year  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 
 from hat_figure_style import (C, C_1984, C_1997, DOMAIN_AXIS_LABEL,  # noqa: E402
@@ -81,7 +82,6 @@ from hat_figure_style import (C, C_1984, C_1997, DOMAIN_AXIS_LABEL,  # noqa: E40
                               figsize, open_frame, save, structures,
                               support_dir, town_bands)
 
-RAW_DIR = PROJECT_ROOT / "data" / "hatteras_init" / "2-brie-offset" / "raw_offsets"
 OUT_ROOT = SCR_ROOT / "duneline_vs_coastsat"
 GIS_FIRST, GIS_LAST = 1, 90
 DAYS_PER_YEAR = 365.25
@@ -102,7 +102,15 @@ C_DUNE = C_1984                 # "#b2182b"
 
 # 1984: the Henderson metadata. 2004: the Google Earth capture date (Hannah,
 # 2026-09-15); the raw_GE frames themselves carry none.
-KNOWN_SURVEY_DATES = {1984: "1984-09-19", 2004: "2004-05-25"}
+# Keyed by LINE VINTAGE (the year in the geojson name), not by period year: a
+# period finds its vintage through hat_topo_version.DUNE_LINE_FOR_YEAR.
+# 1984, 1997: the Henderson USGS metadata on D: (Calendar_Date). 2004, 2009:
+# Google Earth capture dates (Hannah, 2026-09-15); the raw_GE frames carry
+# none. 2023: NOAA NGS imagery under D:\Hatteras_GIS\Aerial\2023 whose
+# metadata gives only the 2015-2023 series extent, so None until Hannah
+# supplies the flight date; a None is centred mid-year and flagged.
+KNOWN_SURVEY_DATES = {1984: "1984-09-19", 1997: "1997-10-12",
+                      2004: "2004-05-25", 2009: "2009-05-30", 2023: None}
 
 
 # -----------------------------------------------------------------------------
@@ -111,7 +119,7 @@ KNOWN_SURVEY_DATES = {1984: "1984-09-19", 2004: "2004-05-25"}
 def dune_position_by_domain(year: int) -> pd.Series:
     """Mean ORIG_LEN per GIS domain, first row per transect, as the hindcast
     loader (`load_absolute_dune_distance`) reads it. Grows LANDWARD."""
-    path = RAW_DIR / f"{year}_duneline_offset_raw.csv"
+    path = dune_raw_file_for_year(year)     # the vintage that stands for `year`
     raw = pd.read_csv(path, encoding="utf-8-sig")
     per_transect = raw.drop_duplicates(subset=["domain_id", "LineID"])
     means = per_transect.groupby("domain_id")["ORIG_LEN"].mean()
@@ -314,10 +322,12 @@ def main(argv=None) -> int:
 
     assumed = {}
     dates = {}
+    vintages = {"start": dune_line_for_year(a.start_year),
+                "end": dune_line_for_year(a.end_year)}
     for key, yr in (("start", a.start_year), ("end", a.end_year)):
-        given = getattr(a, f"{key}_date") or KNOWN_SURVEY_DATES.get(yr)
+        given = getattr(a, f"{key}_date") or KNOWN_SURVEY_DATES.get(vintages[key])
         if given is None:
-            given = f"{yr}-07-01"
+            given = f"{vintages[key]}-07-01"     # the LINE's year, not the period's
             assumed[key] = True
         dates[key] = datetime.strptime(given, "%Y-%m-%d").replace(tzinfo=timezone.utc)
     d0, d1 = dates["start"], dates["end"]
@@ -404,16 +414,22 @@ def main(argv=None) -> int:
     known_src = {
         1984: "USGS 1984 aerial photo, Henderson release "
               "(`D:\\Hatteras_GIS\\Aerial\\1984_henderson\\1984_metadata`)",
+        1997: "USGS 1997 aerial photo, Henderson release "
+              "(`D:\\Hatteras_GIS\\Aerial\\1997_henderson`, Calendar_Date 19971012)",
         2004: "Google Earth capture date (the raw_GE frames carry none); "
               "Hannah, 2026-09-15",
+        2009: "Google Earth capture date; Hannah, 2026-09-15",
+        2023: "NOAA NGS 2023 imagery (`D:\\Hatteras_GIS\\Aerial\\2023`)",
     }
 
     def _src(key, yr):
+        v = vintages[key]
+        stand_in = f" — the {v} line standing in for {yr}" if v != yr else ""
         if key in assumed:
-            return "**ASSUMED mid-year**; no date known for this line"
+            return f"**ASSUMED mid-year of {v}**; no flight date known for this line" + stand_in
         if getattr(a, f"{key}_date"):
-            return "given on the command line"
-        return known_src.get(yr, "KNOWN_SURVEY_DATES in the script")
+            return "given on the command line" + stand_in
+        return known_src.get(v, "KNOWN_SURVEY_DATES in the script") + stand_in
 
     start_src = _src("start", a.start_year)
     end_src = _src("end", a.end_year)
@@ -425,10 +441,10 @@ def main(argv=None) -> int:
         "",
         "## Inputs",
         "",
-        f"* dune lines: `2-brie-offset/raw_offsets/{a.start_year}_duneline_offset_raw.csv`, "
-        f"`{a.end_year}_duneline_offset_raw.csv` (first row per transect, domain mean, "
-        f"as `hindcast.load_absolute_dune_distance`). Both are ArcGIS exports, so the "
-        f"1 m GIS-vs-shapely convention cancels.",
+        f"* dune lines: `2-brie-offset/raw_offsets/{dune_raw_file_for_year(a.start_year).name}`, "
+        f"`{dune_raw_file_for_year(a.end_year).name}` (first row per transect, domain mean, "
+        f"as `hindcast.load_absolute_dune_distance`). Both built by "
+        f"`duneline_to_raw_offsets.py`, so no GIS-vs-shapely metre between them.",
         f"* CoastSat LRR: `{lrr_csv(a.start_year, a.end_year).relative_to(SCR_ROOT).as_posix()}` "
         f"(window {a.start_year}-01-01 to {a.end_year}-12-31, per-transect OLS).",
         f"* CoastSat endpoint: mean chainage within ±{a.half_window_days:.0f} days of each "

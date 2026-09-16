@@ -58,7 +58,7 @@ else:
 
 # scripts/ is the parent of this package, so the resolver is importable
 # without a path hack. It owns the dune-topo directory AND the array names.
-from hat_topo_version import domain_arrays
+from hat_topo_version import domain_arrays, dune_line_for_year
 
 from cascade_pipeline import roadway as roadway_module
 from cascade_pipeline.coastsat_loess import compute_domain_means
@@ -558,9 +558,15 @@ def load_absolute_dune_distance(year, geometry, raw_dir,
     not outweigh one sampled at few.
 
     Args:
-        year: Survey year; reads <raw_dir>/<year>_duneline_offset_raw.csv.
+        year: Period year (a start or an end). The file read is
+            <raw_dir>/<vintage>_duneline_offset_raw.csv, where the vintage
+            is hat_topo_version.DUNE_LINE_FOR_YEAR[year] -- the imagery
+            year of the digitised line that stands for this period year
+            (1996 reads the 1997 line). Since 2026-09-15; before that a
+            period year with no line of its own read a copy filed under
+            its name.
         geometry: DomainGeometry supplying the real-domain GIS range.
-        raw_dir: Directory holding the raw per-year CSVs.
+        raw_dir: Directory holding the raw per-vintage CSVs.
         columns: Mapping with "domain", "distance" and "transect" keys.
 
     Returns:
@@ -571,7 +577,7 @@ def load_absolute_dune_distance(year, geometry, raw_dir,
         FileNotFoundError: If that year has no raw file.
         KeyError: If an expected column is missing.
     """
-    path = raw_dir / f"{year}_duneline_offset_raw.csv"
+    path = Path(raw_dir) / f"{dune_line_for_year(year)}_duneline_offset_raw.csv"
     raw = pd.read_csv(path)
     missing = [c for c in columns.values() if c not in raw.columns]
     if missing:
@@ -609,7 +615,9 @@ def build_shoreline_target(model_year0_m, start_year, end_year, geometry,
             observed_change_m: real-domain change, + = landward.
         Both None if the end year was never surveyed.
     """
-    if not (raw_dir / f"{end_year}_duneline_offset_raw.csv").exists():
+    end_vintage = dune_line_for_year(end_year, strict=False)
+    if end_vintage is None or not (
+            Path(raw_dir) / f"{end_vintage}_duneline_offset_raw.csv").exists():
         return None, None
 
     start_dist = load_absolute_dune_distance(start_year, geometry, raw_dir)

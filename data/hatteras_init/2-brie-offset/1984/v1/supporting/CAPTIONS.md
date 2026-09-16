@@ -1,0 +1,5 @@
+# Captions — v1
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`offset_1984_superseded_20260915_flat_vs_v1.png`.** Two builds of the 1984 island offset. (a) The unpadded offset each build hands the model, superseded_20260915_flat in red and v1 in blue, each zeroed on its own most seaward domain. (b) The change in the dune line itself, v1 minus superseded_20260915_flat, measured from the shared offshore datum along the 100 m transects and averaged per 500 m domain; positive is landward. 90 of 90 domains differ by 0.5 m or more (mean over all domains -1.3 m; the largest, +1.7 m, at GIS 1). Both raw files were produced by the same shapely intersection, so the metre-scale station convention of the earlier ArcGIS export is not part of the difference.

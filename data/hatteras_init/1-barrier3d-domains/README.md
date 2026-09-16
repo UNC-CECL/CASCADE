@@ -22,7 +22,8 @@ domain-clips-1m/         per-domain 1 m clips + the 10 m resampled tifs every
                          measurement georeferences against
 control-picks/           window sets kept across a version clear, so a deleted
                          extraction stays reproducible from its picks
-raw-duneline-geojson/    digitized dune lines, 1967 / 1984 / 1997 / 2004
+(the digitized dune lines moved to ../2-brie-offset/dunelines/ on 2026-09-15:
+ they are the island-offset input, not topography)
 npy-arrays_2009_unfilled/  legacy pre-gap-fill arrays; nothing live reads them
 ```
 

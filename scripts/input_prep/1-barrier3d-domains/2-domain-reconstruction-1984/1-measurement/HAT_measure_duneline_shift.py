@@ -100,7 +100,7 @@ OFFSET_SCRIPT = (REPO / "scripts" / "input_prep" / "4-mgmt-forcings" / "road_off
 # repo on 2026-09-02; that is now the source, and the external drive is only a
 # fallback so older invocations keep working.
 DUNELINE_DIRS = (
-    REPO / "data" / "hatteras_init" / "1-barrier3d-domains" / "raw-duneline-geojson",
+    REPO / "data" / "hatteras_init" / "2-brie-offset" / "dunelines",
     Path(r"D:\Hatteras_GIS\Dunelines"),
 )
 

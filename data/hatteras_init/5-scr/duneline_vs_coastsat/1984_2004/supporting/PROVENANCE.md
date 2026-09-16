@@ -1,10 +1,10 @@
 # Dune line vs CoastSat shoreline, 1984-2004
 
-Written 2026-09-15 16:55 by `scripts/input_prep/5-scr/duneline_vs_coastsat/duneline_vs_coastsat.py`.
+Written 2026-09-15 17:26 by `scripts/input_prep/5-scr/duneline_vs_coastsat/duneline_vs_coastsat.py`.
 
 ## Inputs
 
-* dune lines: `2-brie-offset/raw_offsets/1984_duneline_offset_raw.csv`, `2004_duneline_offset_raw.csv` (first row per transect, domain mean, as `hindcast.load_absolute_dune_distance`). Both are ArcGIS exports, so the 1 m GIS-vs-shapely convention cancels.
+* dune lines: `2-brie-offset/raw_offsets/1984_duneline_offset_raw.csv`, `2004_duneline_offset_raw.csv` (first row per transect, domain mean, as `hindcast.load_absolute_dune_distance`). Both built by `duneline_to_raw_offsets.py`, so no GIS-vs-shapely metre between them.
 * CoastSat LRR: `coastsat_lrr/1984_2004/transect_lrr_full.csv` (window 1984-01-01 to 2004-12-31, per-transect OLS).
 * CoastSat endpoint: mean chainage within ±183 days of each survey date, per transect, from `coastsat_timeseries/`.
 * transect → domain: `transect_domains/transect_domain_lookup.csv`.
@@ -22,14 +22,14 @@ Survey interval 19.68 yr. Sign: seaward positive in every column; a negative rat
 
 | dune line | CoastSat LRR | CoastSat endpoint |
 |---|---|---|
-| -0.77 | -1.13 | -0.99 |
+| -0.78 | -1.13 | -0.99 |
 
 ## Agreement, per domain (y against dune rate x)
 
 | y | n | r | slope | intercept | RMSE | bias (y − x) |
 |---|---|---|---|---|---|---|
-| CoastSat LRR | 90 | 0.44 | 0.41 | -0.82 | 2.08 | -0.36 |
-| CoastSat endpoint | 90 | 0.50 | 0.49 | -0.61 | 1.98 | -0.22 |
+| CoastSat LRR | 90 | 0.44 | 0.41 | -0.81 | 2.07 | -0.35 |
+| CoastSat endpoint | 90 | 0.50 | 0.49 | -0.60 | 1.98 | -0.21 |
 
 CoastSat endpoint against CoastSat LRR (two estimators of the same series): r = 0.94, slope = 0.98, RMSE = 0.68, bias = +0.14 m/yr.
 

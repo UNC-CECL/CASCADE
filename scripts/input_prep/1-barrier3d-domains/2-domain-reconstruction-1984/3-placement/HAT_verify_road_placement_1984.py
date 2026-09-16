@@ -523,7 +523,7 @@ def write_report(chk: pd.DataFrame, figs: list[Path]) -> Path:
     w(f"          {SHIFT_DIR.relative_to(REPO)}/duneline_shift_{{1984,1997}}_profiles.csv")
     w(f"          {FOOTPRINT_CSV.relative_to(REPO)}")
     w(f"          dune-topo/{BUILT}/RoadSetback_1984_dunestart.csv, dune-topo/{BUILT}/topography")
-    w("          raw-duneline-geojson/duneline_1984.geojson, raw_offset/1984/nc12_1984.geojson")
+    w("          2-brie-offset/dunelines/duneline_1984.geojson, raw_offset/1984/nc12_1984.geojson")
     for f in figs:
         w(f"figure    {f.relative_to(REPO)}")
     w("")
