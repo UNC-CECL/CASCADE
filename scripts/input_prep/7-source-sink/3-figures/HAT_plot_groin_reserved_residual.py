@@ -41,7 +41,7 @@ Usage:
 
 Reads  the converged calibBE full_management runs, groin on and off, plus the
        live GROIN_RESERVED_DOMAINS.
-Writes data/hatteras_init/7-source-sink/3-figures/3-limits/fig_groin_reserved_residual.png
+Writes data/hatteras_init/7-source-sink/3-figures/1984_2004__2004_2024/3-limits/fig_groin_reserved_residual.png
        (and the PDF beside it); the caption goes to CAPTIONS.md in that folder.
 
 Author: Hannah A. Henry, UNC CECL
@@ -60,13 +60,12 @@ _HERE = pathlib.Path(__file__).resolve()
 PROJECT_BASE_DIR = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
 # The figure lives with the rest of the section 7 figures, in the data tree.
-FIG_DIR = (PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
-           / "3-figures")
-
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
+from site_layer import hat_source_sink as _be  # noqa: E402
+FIG_DIR = _be.figures_dir()   # the default pair's (2026-09-18)
 
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
-from hat_figure_style import (                                   # noqa: E402
+from site_layer.hat_figure_style import (                                   # noqa: E402
     apply_style, figsize, save, caption, town_bands, open_frame,
     DOMAIN_AXIS_LABEL, C, C_1984, C_1997, INK, INK_MUTED, halo, _title)
 

@@ -11,8 +11,6 @@ Import these presets from your run script / notebook:
 """
 
 import csv
-import os
-import re
 
 from cascade_pipeline.annotations import AnnotationConfig
 from cascade_pipeline.domains import DomainGeometry
@@ -23,46 +21,19 @@ from cascade_pipeline.roadway import (
 # Sibling module in scripts/, which owns "where is data/hatteras_init". The
 # relocation cross-check below reads the period-2 setback file rather than
 # carrying a copy of its numbers, so this module needs the data root.
-# It also owns the year -> input pairings this file used to spell out:
-# YEAR_PRODUCT (topography), ROAD_LINE_FOR_YEAR (which digitised NC-12 line
-# a period's road is measured from) and road_setback_relpath() (where that
-# period's setback file is, measured/ or derived/). ROAD_LINE_FOR_YEAR is
-# imported here so a reader of this config sees the pairing by name.
-from site_layer.hat_topo_version import (INIT_ROOT, ROAD_LINE_FOR_YEAR,  # noqa: F401
-                              YEAR_PRODUCT, road_setback_relpath)
-from site_layer.hat_extension_domains import (BASE_GEOMETRY, gis_bounds,  # noqa: F401
-                                   geometry_label, is_extended)
+from site_layer.hat_topo_version import INIT_ROOT, YEAR_PRODUCT
 
 # Real domains GIS 1-90 (500 m each, south to north, Cape Point to Pea
 # Island), padded by 15 buffer domains on each side. These happen to match
 # DomainGeometry's own field defaults, but naming the instance explicitly
 # here (rather than relying on cascade_pipeline.domains.DEFAULT_DOMAINS) keeps
 # "this is Hatteras' geometry" visible at the call site.
-#
-# THE REACH IS A NAMED GEOMETRY SINCE 2026-09-16 (the Pea Island extension
-# experiment). HAT_GEOMETRY in the environment picks one of
-# hat_extension_domains.GEOMETRIES; unset is "base", GIS 1-90, and every
-# matrix run. An extended geometry adds measured coast beyond GIS 90 (and
-# below GIS 1) on the shared buffer topography, with its own offset file
-# under 2-brie-offset/<year>/ext/<geometry>/ and its own CoastSat rows. Read
-# from the environment here, as HAT_OFFSET_VERSION_<year> is, because this
-# module is imported by scripts that never load HAT_hindcast_config; the
-# runner checks the two agree.
-HATTERAS_GEOMETRY = (os.environ.get("HAT_GEOMETRY", "").strip() or BASE_GEOMETRY)
-HATTERAS_GEOMETRY_EXTENDED = is_extended(HATTERAS_GEOMETRY)
-_FIRST_GIS, _LAST_GIS = gis_bounds(HATTERAS_GEOMETRY)
 HATTERAS_DOMAINS = DomainGeometry(
-    num_real_domains=_LAST_GIS - _FIRST_GIS + 1,
+    num_real_domains=90,
     num_buffer_domains=15,
-    first_gis_id=_FIRST_GIS,
+    first_gis_id=1,
     domain_spacing_m=500.0,
 )
-
-# The interior score is ALWAYS GIS 2-89 against the surveyed CoastSat table,
-# whatever the geometry, so an extended run and its 90-domain baseline are
-# graded on the same domains against the same target. The extended reach's
-# own end domains are excluded the way GIS 1 and 90 are in the base.
-SCORE_INTERIOR_GIS = (2, 89)
 
 HATTERAS_ANNOTATIONS = AnnotationConfig(
     town_spans={
@@ -85,7 +56,7 @@ HATTERAS_ANNOTATIONS = AnnotationConfig(
         "Wimble Shoals": (60, 74),
     },
     region_name="Hatteras Island",
-    low_end_label="S | Cape Point",
+    low_end_label="S | Cape Hatteras",
     high_end_label="Pea Island | N",
     obs_source_name="CoastSat",
 )
@@ -117,7 +88,7 @@ HATTERAS_ANNOTATIONS = AnnotationConfig(
 #      them on another extraction measures from a row that does not exist.
 #      This no longer has to be remembered: the runner, the sweep worker and
 #      the road scripts all resolve the version through
-#      scripts/site_layer/hat_topo_version.py, which reads VERSION out of the extractor.
+#      scripts/hat_topo_version.py, which reads VERSION out of the extractor.
 #      Bump it there and everything moves together. (This comment used to
 #      pin 2009_v3 by hand and went stale the day the setbacks moved to v4,
 #      then again when it still said "Current: 2009_v5" after the tree went
@@ -148,7 +119,7 @@ HATTERAS_ANNOTATIONS = AnnotationConfig(
 #     2004  <- DEM 2009-2014       (the baseline gap-filled DEM)
 #
 # The version WITHIN a product is still resolved, never pinned - see
-# scripts/site_layer/hat_topo_version.py.
+# scripts/hat_topo_version.py.
 #
 # NOT A LITERAL ANY MORE (2026-08-26). The value comes from YEAR_PRODUCT in
 # hat_topo_version.py, which is the same mapping every road script in
@@ -158,87 +129,15 @@ HATTERAS_ANNOTATIONS = AnnotationConfig(
 # interiors. Since 65 of 90 domains have a different interior shape between the
 # products, that is a different island, not a rounding difference. One mapping,
 # imported, so the runner and the forcing that feeds it cannot disagree.
-# WHICH BUILD OF THE ISLAND OFFSET A START READS (added 2026-09-15).
-#
-# 2-brie-offset/<year>/ used to hold one build. When the 1997 dune line was
-# re-digitised (duneline_1997_v2, local corrections) the 1996 start gained a
-# second build, and the two live side by side as 1996/v1/ and 1996/v2/ with a
-# CURRENT file naming the one every reader takes -- the same shape as
-# 1-barrier3d-domains/<product>/dune-topo/. Resolved here, in one place, so
-# the runner cannot pin a path that a later re-digitisation silently leaves
-# stale. Order, mirroring hat_topo_version.topo_dirs():
-#   1. HAT_OFFSET_VERSION_<year> in the environment (per-run selection that
-#      does not mutate the shared default)
-#   2. the CURRENT file in 2-brie-offset/<year>/
-#   3. the only v* directory present, if exactly one
-#   4. no v* directory at all: the flat layout, 2-brie-offset/<year>/<file>
-#      (1984 and 2004 today; 2010 once it is built)
-# Several v* directories and no CURRENT is an error, not a guess.
-def _island_offset_file(start_year):
-    """Path of the padded offset file, relative to INIT_ROOT.
-
-    120 domains in the base geometry. An extended geometry reads its own
-    build under <year>/ext/<geometry>/ (island_offset_hybrid.py --geometry),
-    which is not a version and does not move CURRENT; the path is returned
-    unchecked because every period resolves here at import and only the
-    period being run needs the file to exist -- the runner checks that.
-    """
-    base = f"2-brie-offset/{start_year}"
-    if HATTERAS_GEOMETRY_EXTENDED:
-        return (f"{base}/ext/{HATTERAS_GEOMETRY}/Island_Dune_Offsets_"
-                f"{start_year}_PADDED_{HATTERAS_DOMAINS.total_domains}.csv")
-    fname = f"Island_Dune_Offsets_{start_year}_PADDED_120.csv"
-    d = INIT_ROOT / base
-    versions = sorted(p.name for p in d.iterdir()
-                      if p.is_dir() and re.fullmatch(r"v\d+", p.name)) if d.is_dir() else []
-    env = os.environ.get(f"HAT_OFFSET_VERSION_{start_year}")
-    current = d / "CURRENT"
-    if env:
-        version = env.strip()
-    elif current.is_file():
-        version = current.read_text(encoding="utf-8").strip()
-    elif len(versions) == 1:
-        version = versions[0]
-    elif versions:
-        raise RuntimeError(
-            f"{base}/ holds {versions} and no CURRENT file; write one, or set "
-            f"HAT_OFFSET_VERSION_{start_year}.")
-    else:
-        return f"{base}/{fname}"
-    if not (d / version).is_dir():
-        raise FileNotFoundError(
-            f"{base}/{version}/ does not exist (have {versions or 'no versions'}); "
-            f"check CURRENT or HAT_OFFSET_VERSION_{start_year}.")
-    return f"{base}/{version}/{fname}"
-
-
-def island_offset_version(start_year):
-    """The version segment of the offset file this period resolves to.
-
-    "v2" for a versioned layout, "flat" for the unversioned one. Recorded in
-    run metadata and run_index.csv (2026-09-15) because a v1 run and a v2 run
-    are otherwise identical on disk: the run name carries no offset token and
-    the file name is the same in every version folder. Resolves through
-    _island_offset_file so it can never disagree with the file that was read.
-    """
-    if HATTERAS_GEOMETRY_EXTENDED:
-        return f"ext/{HATTERAS_GEOMETRY}"
-    parts = _island_offset_file(start_year).split("/")
-    return parts[2] if re.fullmatch(r"v\d+", parts[2]) else "flat"
-
-
 HATTERAS_PERIODS = {
     1984: {
         "end_year": 2004,
-        # 0.00391 m/yr fitted over 1984-2004 on the Duck gauge, stored to
-        # 0.001. The fits are in 3-env-forcings/rslr/fits/duck_rslr_rates.csv
-        # (column config_m_yr is this rounding), written by
-        # scripts/input_prep/3-env-forcings/rslr/duck_rslr_analysis.py.
-        "sea_level_rise_rate": 0.004,
+        "sea_level_rise_rate": 0.004,  # m/yr, from duck_rslr_analysis.py
         "storm_file": (
             "3-env-forcings/storms/hindcast_storms/1984_2004/"
             "1984_2004_storms_v3_72.npy"),
-        "island_offset_file": _island_offset_file(1984),
+        "island_offset_file": (
+            "2-brie-offset/1984/Island_Dune_Offsets_1984_PADDED_120.csv"),
         # PAIRED WITH THE TOPOGRAPHY VERSION, AND NOTHING ENFORCES IT.
         # A setback is metres landward of interior row 0, so it belongs to the
         # extraction it was measured on. This file is the v2-era measurement;
@@ -251,26 +150,24 @@ HATTERAS_PERIODS = {
         # it is a mismatch, not a result. Pinning HAT_TOPO_VERSION_1984_START
         # WITHOUT also pointing this at the matching file is the trap; it cost
         # a twelve-run comparison before it was noticed.
-        # road_offset/dunestart_offset/measured/1984/RoadSetback_1984_dunestart.csv
-        # -- MEASURED on the 1978 NC-12 line (ROAD_LINE_FOR_YEAR[1984]) against
-        # row 0 of 1984-start.
-        "road_setback_file": road_setback_relpath(1984),
+        "road_setback_file": (
+            "4-mgmt-forcing/road_offset/dunestart_offset/1984/"
+            "RoadSetback_1984_dunestart.csv"),
         "topo_product": YEAR_PRODUCT[1984],
         "enable_nourishment": False,
         "nourishment_volume": 0,  # m^3/m
     },
     2004: {
         "end_year": 2024,
-        # 0.00639 m/yr fitted over 2004-2024; see rslr/fits/duck_rslr_rates.csv.
-        "sea_level_rise_rate": 0.006,
+        "sea_level_rise_rate": 0.006,  # m/yr, from duck_rslr_analysis.py
         "storm_file": (
             "3-env-forcings/storms/hindcast_storms/2004_2024/"
             "2004_2024_storms_v3_72.npy"),
-        "island_offset_file": _island_offset_file(2004),
-        # road_offset/dunestart_offset/measured/2004/RoadSetback_2004_dunestart.csv
-        # -- MEASURED on the 2008 NC-12 line (ROAD_LINE_FOR_YEAR[2004]) against
-        # row 0 of 2004-start.
-        "road_setback_file": road_setback_relpath(2004),
+        "island_offset_file": (
+            "2-brie-offset/2004/Island_Dune_Offsets_2004_PADDED_120.csv"),
+        "road_setback_file": (
+            "4-mgmt-forcing/road_offset/dunestart_offset/2004/"
+            "RoadSetback_2004_dunestart.csv"),
         "topo_product": YEAR_PRODUCT[2004],
         "enable_nourishment": True,  # historical BN injected per-year in the time loop
         "nourishment_volume": 100,  # m^3/m passed to Cascade init
@@ -293,21 +190,21 @@ HATTERAS_PERIODS = {
     1996: {
         "end_year": 2010,
         # 0.00402 m/yr fitted over 1996-2010 on the Duck gauge; the other three
-        # periods are stored at this precision too. See rslr/fits/duck_rslr_rates.csv.
+        # periods are stored at this precision too.
         "sea_level_rise_rate": 0.004,
         "storm_file": (
             "3-env-forcings/storms/hindcast_storms/1996_2010/"
             "1996_2010_storms_v3_72.npy"),
         # DERIVED, NOT SURVEYED: built from the 1997 dune line, the nearest
-        # island-wide survey (hat_topo_version.DUNE_LINE_FOR_YEAR[1996] ==
-        # 1997; the end-year target loader reads the same table). See
-        # 2-brie-offset/raw_offsets/PROVENANCE.md.
-        "island_offset_file": _island_offset_file(1996),
+        # island-wide survey. See 2-brie-offset/raw_offsets/PROVENANCE.md.
+        "island_offset_file": (
+            "2-brie-offset/1996/Island_Dune_Offsets_1996_PADDED_120.csv"),
         # DERIVED: the 1984 setbacks with the 1989 Pea Island relocation
         # applied, since that event precedes 1996 and the 1999 one does not.
         # No NC-12 line of 1996 vintage exists. See that folder's PROVENANCE.md.
-        # road_offset/dunestart_offset/derived/1996/RoadSetback_1996_dunestart.csv
-        "road_setback_file": road_setback_relpath(1996),
+        "road_setback_file": (
+            "4-mgmt-forcing/road_offset/dunestart_offset/1996/"
+            "RoadSetback_1996_dunestart.csv"),
         "topo_product": YEAR_PRODUCT[1996],
         # No project in HATTERAS_NOURISHMENT_PROJECTS falls in 1996-2009.
         "enable_nourishment": False,
@@ -317,20 +214,20 @@ HATTERAS_PERIODS = {
         "end_year": 2024,
         # 0.00651 m/yr fitted over 2010-2024. It rounds up where 2004-2024
         # rounds down (0.00639), so the two differ by more in this table than
-        # in the gauge record. See rslr/fits/duck_rslr_rates.csv.
+        # in the gauge record.
         "sea_level_rise_rate": 0.007,
         "storm_file": (
             "3-env-forcings/storms/hindcast_storms/2010_2024/"
             "2010_2024_storms_v3_72.npy"),
-        # DERIVED, NOT SURVEYED: built 2026-09-15 from the 2009 dune line, no
-        # 2010 aerial imagery existing (DUNE_LINE_FOR_YEAR[2010] == 2009). So
-        # the period starts from the island as surveyed a year EARLIER, the
-        # mirror of the 1996 case. 2010/v1, CURRENT.
-        "island_offset_file": _island_offset_file(2010),
+        # NOT BUILT YET: waiting on a digitised 2010 dune line. Every other
+        # input for this period exists, so a run fails here and nowhere else.
+        "island_offset_file": (
+            "2-brie-offset/2010/Island_Dune_Offsets_2010_PADDED_120.csv"),
         # A COPY of the 2004 file: same topography product, same road line, and
         # no relocation in the record between the two dates.
-        # road_offset/dunestart_offset/derived/2010/RoadSetback_2010_dunestart.csv
-        "road_setback_file": road_setback_relpath(2010),
+        "road_setback_file": (
+            "4-mgmt-forcing/road_offset/dunestart_offset/2010/"
+            "RoadSetback_2010_dunestart.csv"),
         "topo_product": YEAR_PRODUCT[2010],
         # Rodanthe 2014 and both 2022 projects fall inside 2010-2023.
         "enable_nourishment": True,
@@ -355,10 +252,9 @@ HATTERAS_PERIODS = {
 #   calibBE  the full per-domain fit against the CoastSat LRR target rates.
 #
 # Moved here from HAT_hindcast_1984_2024.py so the notebook and the
-# run script read the same numbers. data/hatteras_init/7-source-sink/4-export/
-# holds copies GENERATED from these by HAT_export_be_calibration.py; the older
-# partial copies that disagreed (the 2004 one truncated mid-dict) are under
-# 7-source-sink/archive/. These are the ones that have been run.
+# run script read the same numbers. Note data/hatteras_init/7-source-sink/
+# holds older partial copies of these -- they disagree with these values and
+# the 2004 one is truncated mid-dict; these are the ones that have been run.
 
 # "zeroBE" preset -- empty rather than {1: 0, 90: 0}, because the sparse
 # contract already gives an absent domain 0.0 and an explicit zero reads like a
@@ -371,11 +267,8 @@ HATTERAS_BE_RATES_ZERO = {
 }
 
 # GIS domains carrying the edge-only preset: the first and last REAL domains.
-# Not the padded buffers, which stay 0.0 in every preset. (1, 90) in the base
-# geometry; an extended geometry moves an end, and the value there comes from
-# HAT_BE_OVERRIDE while its solve is in progress (see below).
-HATTERAS_BE_EDGE_DOMAINS = (HATTERAS_DOMAINS.first_gis_id,
-                            HATTERAS_DOMAINS.last_gis_id)
+# Not the padded buffers, which stay 0.0 in every preset.
+HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 
 # "calibBE" preset -- the per-domain fit. HATTERAS_BE_RATES_EDGE is derived
 # from this below, so the two presets cannot disagree about the end domains.
@@ -993,11 +886,11 @@ HATTERAS_BE_RATES_CALIBRATED = {
           5: +0.0,  # Cape Point / Shoal Dynamics
           6: +0.0,  # Cape Point / Shoal Dynamics
           7: +0.0,  # Cape Point / Shoal Dynamics
-          8: +3.7,  # Cape Point / Shoal Dynamics
+          8: +1.8,  # Cape Point / Shoal Dynamics
           9: +0.0,  # Cape Point / Shoal Dynamics
-         10: -3.0,  # Cape Point / Shoal Dynamics
-         11: -1.4,  # Buxton–Avon Transition
-         12: -1.4,  # Buxton–Avon Transition
+         10: -2.1,  # Cape Point / Shoal Dynamics
+         11: -1.1,  # Buxton–Avon Transition
+         12: -1.1,  # Buxton–Avon Transition
          13: -0.7,  # Buxton–Avon Transition
          14: +0.0,  # Buxton–Avon Transition
          15: +0.0,  # Buxton–Avon Transition
@@ -1015,10 +908,10 @@ HATTERAS_BE_RATES_CALIBRATED = {
          27: +0.9,  # Avon
          28: +1.2,  # Avon
          29: +2.4,  # Avon
-         30: +3.3,  # Avon
-         31: +4.1,  # Avon
-         32: +3.6,  # Mid-island
-         33: +2.0,  # Mid-island
+         30: +3.0,  # Avon
+         31: +3.1,  # Avon
+         32: +2.7,  # Mid-island
+         33: +1.4,  # Mid-island
          34: +0.9,  # Mid-island
          35: +0.0,  # Mid-island
          36: +0.0,  # Mid-island
@@ -1056,11 +949,11 @@ HATTERAS_BE_RATES_CALIBRATED = {
          68: +0.5,  # Wimble Shoals Influence
          69: +1.6,  # Wimble Shoals Influence
          70: +2.2,  # Wimble Shoals Influence
-         71: +3.4,  # Wimble Shoals Influence
-         72: +4.0,  # Wimble Shoals Influence
-         73: +4.2,  # Wimble Shoals Influence
-         74: +3.8,  # Wimble Shoals Influence
-         75: +1.9,  # Tri-Village / Rodanthe
+         71: +2.6,  # Wimble Shoals Influence
+         72: +2.7,  # Wimble Shoals Influence
+         73: +2.9,  # Wimble Shoals Influence
+         74: +2.5,  # Wimble Shoals Influence
+         75: +1.5,  # Tri-Village / Rodanthe
          76: +0.0,  # Tri-Village / Rodanthe
          77: +0.0,  # Tri-Village / Rodanthe
          78: -1.2,  # Tri-Village / Rodanthe
@@ -1068,12 +961,12 @@ HATTERAS_BE_RATES_CALIBRATED = {
          80: -3.5,  # Tri-Village / Rodanthe
          81: -3.8,  # Tri-Village / Rodanthe
          82: -4.2,  # Tri-Village / Rodanthe
-         83: -4.8,  # Tri-Village / Rodanthe
-         84: -5.3,  # Pea Island NWR
-         85: -5.2,  # Pea Island NWR
-         86: -4.8,  # Pea Island NWR
-         87: -3.9,  # Pea Island NWR
-         88: -3.0,  # Pea Island NWR
+         83: -4.5,  # Tri-Village / Rodanthe
+         84: -4.7,  # Pea Island NWR
+         85: -4.6,  # Pea Island NWR
+         86: -4.2,  # Pea Island NWR
+         87: -3.3,  # Pea Island NWR
+         88: -2.7,  # Pea Island NWR
          89: -1.8,  # Pea Island NWR
          90: +32.8,  # LOCKED — end domain, LRR-solved; see the end-domain note above
     },
@@ -1098,30 +991,30 @@ HATTERAS_BE_RATES_CALIBRATED = {
          18: +2.4,  # Buxton–Avon Transition
          19: +2.1,  # Buxton–Avon Transition
          20: +1.7,  # Buxton–Avon Transition
-         21: +0.4,  # Avon
-         22: -1.9,  # Avon
+         21: +0.7,  # Avon
+         22: -0.9,  # Avon
          23: +0.0,  # Avon
          24: +0.0,  # Avon
          25: +0.0,  # Avon
          26: +0.0,  # Avon
-         27: -1.1,  # Avon
+         27: -0.2,  # Avon
          28: +1.2,  # Avon
          29: +2.4,  # Avon
-         30: +3.2,  # Avon
-         31: +4.0,  # Avon
-         32: +4.2,  # Mid-island
-         33: +3.8,  # Mid-island
+         30: +2.9,  # Avon
+         31: +3.3,  # Avon
+         32: +3.6,  # Mid-island
+         33: +3.5,  # Mid-island
          34: +3.5,  # Mid-island
-         35: +3.0,  # Mid-island
-         36: +2.6,  # Mid-island
-         37: +2.3,  # Mid-island
-         38: +2.0,  # Mid-island
+         35: +3.3,  # Mid-island
+         36: +2.9,  # Mid-island
+         37: +2.6,  # Mid-island
+         38: +2.3,  # Mid-island
          39: +2.3,  # Mid-island
          40: +2.0,  # Mid-island
          41: +1.7,  # Mid-island
          42: +1.4,  # Mid-island
          43: +1.0,  # Mid-island
-         44: +0.6,  # Mid-island
+         44: +0.3,  # Mid-island
          45: +0.0,  # Mid-island
          46: +0.0,  # Mid-island
          47: +0.0,  # Mid-island
@@ -1139,12 +1032,12 @@ HATTERAS_BE_RATES_CALIBRATED = {
          59: +0.0,  # Mid-island
          60: +0.0,  # Wimble Shoals Influence
          61: +0.0,  # Wimble Shoals Influence
-         62: +0.0,  # Wimble Shoals Influence
-         63: +0.7,  # Wimble Shoals Influence
+         62: +0.3,  # Wimble Shoals Influence
+         63: +1.0,  # Wimble Shoals Influence
          64: +1.5,  # Wimble Shoals Influence
          65: +1.9,  # Wimble Shoals Influence
          66: +2.3,  # Wimble Shoals Influence
-         67: +2.3,  # Wimble Shoals Influence
+         67: +2.6,  # Wimble Shoals Influence
          68: +3.0,  # Wimble Shoals Influence
          69: +3.8,  # Wimble Shoals Influence
          70: +4.1,  # Wimble Shoals Influence
@@ -1152,7 +1045,7 @@ HATTERAS_BE_RATES_CALIBRATED = {
          72: +4.1,  # Wimble Shoals Influence
          73: +2.8,  # Wimble Shoals Influence
          74: +2.4,  # Wimble Shoals Influence
-         75: +2.4,  # Tri-Village / Rodanthe
+         75: +2.0,  # Tri-Village / Rodanthe
          76: +1.5,  # Tri-Village / Rodanthe
          77: +1.2,  # Tri-Village / Rodanthe
          78: +0.9,  # Tri-Village / Rodanthe
@@ -1160,12 +1053,12 @@ HATTERAS_BE_RATES_CALIBRATED = {
          80: +0.0,  # Tri-Village / Rodanthe
          81: +0.0,  # Tri-Village / Rodanthe
          82: +0.0,  # Tri-Village / Rodanthe
-         83: -2.6,  # Tri-Village / Rodanthe
-         84: -3.5,  # Pea Island NWR
-         85: -3.8,  # Pea Island NWR
-         86: -3.7,  # Pea Island NWR
-         87: -3.9,  # Pea Island NWR
-         88: -3.0,  # Pea Island NWR
+         83: -2.3,  # Tri-Village / Rodanthe
+         84: -2.9,  # Pea Island NWR
+         85: -3.2,  # Pea Island NWR
+         86: -3.1,  # Pea Island NWR
+         87: -3.3,  # Pea Island NWR
+         88: -2.7,  # Pea Island NWR
          89: -1.8,  # Pea Island NWR
          90: +57.9,  # LOCKED — end domain, LRR-solved; see the end-domain note above
     },
@@ -1293,39 +1186,6 @@ HATTERAS_BE_EDGE_ONLY = {
     #   scripts/input_prep/7-source-sink/2-calibrate/
     #       HAT_be_edge_domain_solve.py --period 1996
     1996: (+32.2, +10.0),
-
-    # SOLVED 2026-09-16, three Newton steps, the same protocol as 1996. Base
-    # run: the 2010 matrix zeroBE / full_management / nourish / nogroin run,
-    # 2004-start v1, island offset 2010/v1, Hs 2.5.
-    #
-    #   step   GIS 1                          GIS 90
-    #     0    imposed  0.0  residual -8.430  imposed  0.0  residual -3.565
-    #     1    imposed 80.3  residual +0.919  imposed 34.0  residual +0.331
-    #     2    imposed 72.4  residual -0.022  imposed 31.1  residual -0.024
-    #     3    imposed 72.6  residual -0.003  imposed 31.3  residual +0.001
-    #
-    # THE LARGEST END VALUE OF ANY PERIOD, at GIS 1. It is not a larger
-    # artefact: the gains were 0.116 / 0.115 on the first secant, inside
-    # the 0.09-0.13 every other case gave, so the value is again about ten
-    # times its misfit. The misfit itself is what is large: the 2010-2024
-    # CoastSat target at GIS 1 is +6.90 m/yr, against +3.23 in 1996-2010,
-    # and the model produces -1.53 there unaided. Cape Point accreting at
-    # that rate is not something the model represents (the calibrated fits
-    # are 0.0 through GIS 2-7 in the two published periods), so this is the
-    # boundary term supplying observed accretion the reach cannot make.
-    # Read as a real flux it would be absurd; it is not one.
-    #
-    # GIS 90 is +31.3 against +10.0 in 1996-2010, for the same reason:
-    # the 2010-2024 target there is +2.22 m/yr, and the n115 extension
-    # experiment already showed the north end grows when the observed
-    # accretion at Pea Island is what it has to supply (+41.7 at GIS 115).
-    #
-    # The probes are output/raw_runs/experiments/2026-09-16-edgesolve-2010/
-    # (SOLVED names step3). Reproduced with:
-    #   HAT_be_edge_domain_solve.py --period 2010 --kind experiment
-    #       --run <base> --tag 2026-09-16-edgesolve-2010/base
-    #       --run <step> --tag 2026-09-16-edgesolve-2010/step<k> ...
-    2010: (+72.6, +31.3),
 }
 
 for _period, (_d1, _d90) in HATTERAS_BE_EDGE_ONLY.items():
@@ -1337,19 +1197,7 @@ for _period, (_d1, _d90) in HATTERAS_BE_EDGE_ONLY.items():
             f"comprehension above keeps in step.")
     HATTERAS_BE_RATES_EDGE[_period] = {1: _d1, 90: _d90}
 
-# AN EXTENDED GEOMETRY (2026-09-16) keeps only the standing values at domains
-# that are STILL ends -- GIS 90 is interior under n115 and must not carry
-# +10.0 -- and cannot pass the two checks below until its new end is solved:
-# the value arrives through HAT_BE_OVERRIDE, one Newton step at a time, and
-# section 4.3 of the runner refuses an edgeBE run whose end has none.
-if HATTERAS_GEOMETRY_EXTENDED:
-    HATTERAS_BE_RATES_EDGE = {
-        _period: {gis: rate for gis, rate in _rates.items()
-                  if gis in HATTERAS_BE_EDGE_DOMAINS}
-        for _period, _rates in HATTERAS_BE_RATES_EDGE.items()}
-
-for _period, _rates in (() if HATTERAS_GEOMETRY_EXTENDED
-                        else HATTERAS_BE_RATES_EDGE.items()):
+for _period, _rates in HATTERAS_BE_RATES_EDGE.items():
     _absent = [gis for gis in HATTERAS_BE_EDGE_DOMAINS if gis not in _rates]
     if _absent:
         raise ValueError(
@@ -1529,7 +1377,7 @@ HATTERAS_ROAD_ELEVATION_FILE = "4-mgmt-forcing/road_elevation/RoadElevation.csv"
 #
 # Until 2026-08-20 these were eleven hand-entered literals attributed to a
 # 1978->1997 cross-shore offset digitised in ArcGIS Pro. The 1997 line is not in
-# the repo -- only nc12_1978.geojson and nc12_2008.geojson are -- so those
+# the repo -- only nc12_1984.geojson and nc12_2004.geojson are -- so those
 # numbers could not be re-derived, checked, or corrected. They are now read from
 # HAT_road_relocation_distance.py's per-domain measurement of the two lines that
 # ARE on disk.
@@ -1567,11 +1415,8 @@ HATTERAS_ROAD_ELEVATION_FILE = "4-mgmt-forcing/road_elevation/RoadElevation.csv"
 
 # Per-domain measurement written by
 # scripts/input_prep/4-mgmt-forcings/road_relocation/HAT_road_relocation_distance.py
-# Named by the two LINE vintages it was measured between (renamed from
-# 1984_2004 on 2026-09-15, with the lines themselves), not by the periods those
-# lines stand in for.
-_RELOCATION_MEASUREMENT_FILE = ("4-mgmt-forcing/road_relocation/1978_2008/"
-                                "road_relocation_1978_2008.csv")
+_RELOCATION_MEASUREMENT_FILE = ("4-mgmt-forcing/road_relocation/1984_2004/"
+                                "road_relocation_1984_2004.csv")
 
 # WHY THE 1999 EVENT STOPS AT GIS 14. The measurement classifies GIS 15
 # 'relocated', but cannot say by how much or in which direction: the two

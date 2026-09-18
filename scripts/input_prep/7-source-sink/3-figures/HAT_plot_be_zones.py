@@ -38,7 +38,7 @@ Reads  the live FROZEN_ZONE_DOMAINS / GROIN_RESERVED_DOMAINS / PHYSICAL_ZONES,
        the calibrated field from hatteras_site_config.py, and the pass-0 field
        from the masked iteration's first backup -- so the figure cannot drift
        from the calibration it documents.
-Writes data/hatteras_init/7-source-sink/3-figures/2-method/fig_be_zones_and_corrections.png
+Writes data/hatteras_init/7-source-sink/3-figures/1984_2004__2004_2024/2-method/fig_be_zones_and_corrections.png
        (and the PDF beside it); the caption goes to CAPTIONS.md in that folder.
 
 REGENERABLE AGAIN SINCE 2026-09-14. It was not, for three weeks: the pass-0
@@ -69,9 +69,10 @@ import numpy as np
 _HERE = pathlib.Path(__file__).resolve()
 PROJECT_BASE_DIR = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
 # The figure lives with the rest of the section 7 figures, in the data tree.
-FIG_DIR = (PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
-           / "3-figures")
-CONFIG = PROJECT_BASE_DIR / "scripts" / "hatteras_site_config.py"
+sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
+from site_layer import hat_source_sink as _be  # noqa: E402
+FIG_DIR = _be.figures_dir()   # the default pair's (2026-09-18)
+CONFIG = PROJECT_BASE_DIR / "scripts" / "site_layer" / "hatteras_site_config.py"
 
 # THE PASS-0 FIELD, AND WHY IT IS THIS FILE AND NOT THE ONE BESIDE IT.
 # The apply step writes its backup BEFORE it writes, so a `prebe` file holds the
@@ -89,12 +90,17 @@ CONFIG = PROJECT_BASE_DIR / "scripts" / "hatteras_site_config.py"
 # this figure could not be drawn and why be_pass0_* / iteration_added_* were
 # empty in the exported CSV. The corrected iteration kept its backups, so the
 # split is recoverable again. Do not delete these four files.
-PASS0_BACKUP = (PROJECT_BASE_DIR / "scripts"
-                / "hatteras_site_config_prebe_20260914_180700.py")
+#
+# Moved 2026-09-18 from scripts/ into the data tree. They are the calibrate
+# step's output -- a snapshot of the BE field, not code -- and sitting loose at
+# the root of scripts/ they read as stray config copies, which is how the
+# 08-24 one came to be discarded. They now file beside the rest of 2-calibrate.
+# One definition, in hat_source_sink.py, which the export reads too.
+PASS0_BACKUP = _be.PASS0_BACKUP
 
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 
-from hat_figure_style import (                                   # noqa: E402
+from site_layer.hat_figure_style import (                                   # noqa: E402
     apply_style, figsize, save, caption, town_bands, open_frame,
     DOMAIN_AXIS_LABEL, C, C_1984, C_1997, INK, INK_MUTED, _title)
 

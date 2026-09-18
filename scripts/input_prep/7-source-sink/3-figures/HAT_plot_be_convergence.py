@@ -49,10 +49,10 @@ WHAT THE RIGHT PANEL IS FOR
 Usage:
     python 3-figures/HAT_plot_be_convergence.py
 
-Reads  output/convergence_history.json, and the live FROZEN_ZONE_DOMAINS /
+Reads  2-calibrate/1984_2004__2004_2024/convergence_history.json, and the live FROZEN_ZONE_DOMAINS /
        GROIN_RESERVED_DOMAINS / HATTERAS_BE_RATES_CALIBRATED, so the figure
        cannot drift from the calibration it documents.
-Writes data/hatteras_init/7-source-sink/3-figures/2-method/fig_be_convergence.png (and the
+Writes data/hatteras_init/7-source-sink/3-figures/1984_2004__2004_2024/2-method/fig_be_convergence.png (and the
        PDF beside it); the caption is written to CAPTIONS.md in that folder.
 
 Author: Hannah A. Henry, UNC CECL
@@ -69,18 +69,18 @@ import numpy as np
 
 _HERE = pathlib.Path(__file__).resolve()
 PROJECT_BASE_DIR = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
-# Reads and writes the data tree, where the fit now puts its products.
-OUTPUT_DIR = (PROJECT_BASE_DIR / "data" / "hatteras_init"
-              / "7-source-sink" / "2-calibrate")
+sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
+from site_layer import hat_source_sink as _be  # noqa: E402
+
+# Reads and writes the data tree, where the fit now puts its products: the
+# default pair's folder (resolved by hat_source_sink.py since 2026-09-18).
+OUTPUT_DIR = _be.calibrate_dir()
 HISTORY = OUTPUT_DIR / "convergence_history.json"
 # The figure belongs with the rest of the section 7 figures, in the data tree;
 # the iteration's own record stays beside the calibration that wrote it.
-FIG_DIR = (PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
-           / "3-figures")
+FIG_DIR = _be.figures_dir()
 
-sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
-
-from hat_figure_style import (                                   # noqa: E402
+from site_layer.hat_figure_style import (                                   # noqa: E402
     apply_style, figsize, save, caption, town_bands, open_frame,
     DOMAIN_AXIS_LABEL, C, C_1984, C_1997, INK, INK_MUTED, _title)
 
@@ -102,7 +102,7 @@ def load_calibration():
         _HERE.parent.parent / "2-calibrate" / "HAT_be_zone_residual_fit.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    from hatteras_site_config import HATTERAS_BE_RATES_CALIBRATED as rates
+    from site_layer.hatteras_site_config import HATTERAS_BE_RATES_CALIBRATED as rates
     return module.FROZEN_ZONE_DOMAINS, module.GROIN_RESERVED_DOMAINS, rates
 
 

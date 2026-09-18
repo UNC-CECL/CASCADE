@@ -233,26 +233,21 @@ TARGET_WINDOW = 10
 # provenance without anyone noticing.
 # Products moved to the data tree 2026-09-12; only the script lives under
 # scripts/. HAT_BE_OUTPUT_DIR still redirects a what-if pass anywhere.
-_BE_DATA = (PROJECT_BASE_DIR / "data" / "hatteras_init"
-            / "7-source-sink" / "2-calibrate")
-# A NON-DEFAULT PAIR WRITES SOMEWHERE ELSE, AUTOMATICALLY. HAT_BE_OUTPUT_DIR
-# always wins, but without it a run on another pair used to write over the
-# committed 1984/2004 field and metrics -- which is exactly what happened the
-# first time this generalisation was exercised (2026-09-18). Redirecting is
-# not something the explorer should have to remember.
-_PAIR_TAG = (f"{P1_START}_{P1_END}__{P2_START}_{P2_END}"
-             if PERIOD_STARTS != DEFAULT_PERIOD_STARTS else "")
+# EVERY PAIR WRITES TO ITS OWN FOLDER, the default one included (2026-09-18;
+# hat_source_sink.py). HAT_BE_OUTPUT_DIR always wins. Before, only a
+# non-default pair got a folder, added after a run on another pair wrote over
+# the committed 1984/2004 field; the default wrote to the unlabelled root.
+from site_layer import hat_source_sink as _be  # noqa: E402
+_PAIR_TAG = _be.pair_tag(P1_START, P1_END, P2_START, P2_END)
 OUTPUT_DIR = (os.environ.get("HAT_BE_OUTPUT_DIR", "").strip()
-              or str(_BE_DATA / _PAIR_TAG if _PAIR_TAG else _BE_DATA))
+              or str(_be.calibrate_dir(_PAIR_TAG)))
 
 # Figures are read out of the data tree, not out of scripts/. The tables above
 # stay with the calibration that produced them; the two PNGs go where the rest
 # of the section 7 figures live, so a re-run refreshes the copies people open.
 # A what-if pass with HAT_BE_OUTPUT_DIR set keeps its figures with its tables.
-_FIG_BASE = (PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
-             / "3-figures")
 FIG_DIR = (os.environ.get("HAT_BE_OUTPUT_DIR", "").strip()
-           or str(_FIG_BASE / _PAIR_TAG if _PAIR_TAG else _FIG_BASE))
+           or str(_be.figures_dir(_PAIR_TAG)))
 
 # ── Column names in CoastSat CSVs ─────────────────────────────────────────────
 LRR_COL    = "median_lrr"   # use median — more robust to outlier transects
