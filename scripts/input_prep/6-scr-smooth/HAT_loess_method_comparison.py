@@ -138,9 +138,10 @@ SKIP_SOUTHERN_DOMAINS = 10
 
 # ── Output ───────────────────────────────────────────────────
 # Products live under data/hatteras_init/<stage>/, beside every other
-# input_prep stage's output; only the scripts live under scripts/.
-OUTPUT_DIR = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "6-scr-smooth"
-                 / "HAT_loess_method_comparison_output")
+# input_prep stage's output; only the scripts live under scripts/. Resolved
+# through hat_observed_rates.py since 2026-09-18, when the folder was renamed
+# from HAT_loess_method_comparison_output/.
+OUTPUT_DIR = str(_obs.SMOOTH_METHOD_COMPARISON)
 
 # ============================================================
 # IMPORTS

@@ -91,9 +91,9 @@ INIT = REPO / "data" / "hatteras_init"
 FOOTPRINT = (INIT / "1-barrier3d-domains/1984-start/2-domain-reconstruction-1984"
              / "2-extent/footprint_1984_by_domain.csv")
 RELOCATION = INIT / "4-mgmt-forcing/road_relocation/1978_2008/road_relocation_1978_2008.csv"
-COASTSAT = (INIT / "6-scr-smooth/HAT_loess_method_comparison_output/03_cascade_inputs"
+from site_layer.hat_observed_rates import DSAS_ROOT, SMOOTH_METHOD_COMPARISON  # noqa: E402
+COASTSAT = (SMOOTH_METHOD_COMPARISON / "03_cascade_inputs"
             / "cascade_lrr_inputs_transect_based.csv")
-from site_layer.hat_observed_rates import DSAS_ROOT  # noqa: E402
 DSAS = DSAS_ROOT / "dsas_1978_1997_domain_means.csv"
 DOMAIN_FILE = Path("D:/Hatteras_GIS/domains.geojson")
 
