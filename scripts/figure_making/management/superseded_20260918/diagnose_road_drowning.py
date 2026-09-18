@@ -25,6 +25,18 @@ Placement
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). This file drew in
+# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              FIG_W_DOUBLE)
+apply_style()
 import matplotlib.patches as mpatches
 
 # Anchored 2026-09-14: absolute into one home directory, and the run it
@@ -144,7 +156,9 @@ n     = len(all_domains)
 ncols = 3
 nrows = int(np.ceil(n / ncols))
 
-fig, axes = plt.subplots(nrows, ncols, figsize=(15, 4.5 * nrows))
+fig, axes = plt.subplots(
+    nrows, ncols,
+    figsize=figsize("double", height=4.5 * nrows * FIG_W_DOUBLE / 15))
 axes = axes.flatten()
 
 for ax_idx, pad in enumerate(all_domains):

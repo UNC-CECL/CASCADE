@@ -122,9 +122,9 @@ The period lives in the DIRECTORY and in each run's `RUN_MANIFEST.txt`. Build
 these names with `array_name()` / `array_path()` / `domain_arrays()` rather than
 by hand.
 
-> **Stale caller:** `scripts/figure_making/management/diagnose_road_drowning.py`
-> still builds `domain_{n}_topography_{TOPO_DUNE_INIT_YEAR}.npy` and will not
-> find its files.
+> **The last stale caller is retired:** `diagnose_road_drowning.py`, which built
+> `domain_{n}_topography_{TOPO_DUNE_INIT_YEAR}.npy`, moved to
+> `scripts/figure_making/management/superseded_20260918/` on 2026-09-18.
 
 ## The arrays are git-ignored; the record of them is not
 
