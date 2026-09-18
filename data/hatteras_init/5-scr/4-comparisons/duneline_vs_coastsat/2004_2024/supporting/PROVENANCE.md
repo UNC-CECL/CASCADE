@@ -1,11 +1,11 @@
 # Dune line vs CoastSat shoreline, 2004-2024
 
-Written 2026-09-15 20:22 by `scripts/input_prep/5-scr/duneline_vs_coastsat/duneline_vs_coastsat.py`.
+Written 2026-09-18 15:03 by `scripts/input_prep/5-scr/duneline_vs_coastsat/duneline_vs_coastsat.py`.
 
 ## Inputs
 
 * dune lines: `2-brie-offset/raw_offsets/2004_duneline_offset_raw.csv`, `2023_duneline_offset_raw.csv` (first row per transect, domain mean, as `hindcast.load_absolute_dune_distance`). Both built by `duneline_to_raw_offsets.py`, so no GIS-vs-shapely metre between them.
-* CoastSat LRR: `coastsat_lrr/2004_2024/transect_lrr_full.csv` (window 2004-01-01 to 2024-12-31, per-transect OLS).
+* CoastSat LRR: `3-rates/coastsat/lrr/2004_2024/transect_lrr_full.csv` (window 2004-01-01 to 2024-12-31, per-transect OLS).
 * CoastSat endpoint: mean chainage within ±183 days of each survey date, per transect, from `coastsat_timeseries/`.
 * transect → domain: `transect_domains/transect_domain_lookup.csv`.
 
@@ -22,14 +22,14 @@ Survey interval 19.10 yr. Sign: seaward positive in every column; a negative rat
 
 | dune line | CoastSat LRR | CoastSat endpoint |
 |---|---|---|
-| -0.45 | 0.49 | 0.41 |
+| -0.09 | 0.49 | 0.41 |
 
 ## Agreement, per domain (y against dune rate x)
 
 | y | n | r | slope | intercept | RMSE | bias (y − x) |
 |---|---|---|---|---|---|---|
-| CoastSat LRR | 90 | 0.06 | 0.06 | 0.51 | 2.39 | +0.94 |
-| CoastSat endpoint | 90 | 0.18 | 0.16 | 0.48 | 2.24 | +0.86 |
+| CoastSat LRR | 90 | 0.25 | 0.23 | 0.51 | 2.06 | +0.58 |
+| CoastSat endpoint | 90 | 0.37 | 0.34 | 0.44 | 1.89 | +0.50 |
 
 CoastSat endpoint against CoastSat LRR (two estimators of the same series): r = 0.93, slope = 0.95, RMSE = 0.57, bias = -0.08 m/yr.
 
@@ -46,9 +46,9 @@ Median CoastSat observations per transect inside the start window: 20; inside th
 
 | centre shift | start | end | island mean endpoint (m/yr) | r vs dune | slope | RMSE |
 |---|---|---|---|---|---|---|
-| -6 mo | 2004-05-25 | 2022-12-30 | 0.63 | 0.15 | 0.13 | 2.34 |
-| 0 | 2004-05-25 | 2023-07-01 | 0.41 | 0.18 | 0.16 | 2.24 |
-| +6 mo | 2004-05-25 | 2023-12-30 | 0.29 | 0.19 | 0.18 | 2.20 |
+| -6 mo | 2004-05-25 | 2022-12-30 | 0.63 | 0.34 | 0.30 | 1.98 |
+| 0 | 2004-05-25 | 2023-07-01 | 0.41 | 0.37 | 0.34 | 1.89 |
+| +6 mo | 2004-05-25 | 2023-12-30 | 0.29 | 0.38 | 0.35 | 1.87 |
 
 ## Read this before quoting it
 

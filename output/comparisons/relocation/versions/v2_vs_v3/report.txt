@@ -1,0 +1,282 @@
+==========================================================================
+generated   2026-09-17 12:14:12 by HAT_version_pair_report.py
+preset      calibBE
+v2          the extraction (today's setbacks)
+  free       HAT_1984_2004_calibBE_road_bdm_groin
+      run 2026-09-09 15:23:59   topo 1984-start/v2   commit 67eded2fed3d  DIRTY TREE
+  prescribed HAT_1984_2004_calibBE_road_reloc_bdm_groin
+      run 2026-09-10 15:58:28   topo 1984-start/v2   commit c34b49bb7ff9  DIRTY TREE
+v3          the 1984 reconstruction (1984 setbacks)
+  free       HAT_1984_2004_calibBE_road_bdm_groin
+      run 2026-09-09 15:26:14   topo 1984-start/v3   commit 67eded2fed3d  DIRTY TREE
+  prescribed HAT_1984_2004_calibBE_road_reloc_bdm_groin
+      run 2026-09-10 16:00:46   topo 1984-start/v3   commit c34b49bb7ff9  DIRTY TREE
+
+Read from the two per-version comparison sets written by
+HAT_relocation_comparison.py (the report.txt and tables/ in each):
+  v2  output\comparisons\relocation\1984_2004\v2\calibBE_groin   (its report generated 2026-09-10 16:05:47)
+  v3  output\comparisons\relocation\1984_2004\v3\calibBE_groin   (its report generated 2026-09-10 16:07:22)
+and the v3 footprint audit, data\hatteras_init\1-barrier3d-domains\1984-start\dune-topo\v3\HAT_footprint_audit.csv.
+Nothing is re-run and nothing is re-scored: every number below is one
+of theirs, or a difference of two of theirs.
+
+This file is the console output of the run that wrote the CSVs in
+tables/ beside it. If the run identities above do not match the runs on
+disk, or a per-version report is newer than this one, this report is
+stale -- re-run HAT_relocation_comparison.py on both versions, then this.
+==========================================================================
+
+==========================================================================
+NC-12 RELOCATION: v2 against v3, each as emergent vs prescribed
+==========================================================================
+  preset              calibBE
+  v2                  the extraction (today's setbacks)
+  v3                  the 1984 reconstruction (1984 setbacks)
+  managed road domains  v2: 55   v3: 55
+  historical domains    [9, 10, 11, 12, 13, 14, 84, 85, 86, 87]
+    1989  GIS [84, 85, 86, 87]
+    1999  GIS [9, 10, 11, 12, 13, 14]
+
+  Sign convention throughout: a 'change' or 'v3 - v2' column is v3
+  minus v2. Setbacks are metres landward of dune row 0, so a positive
+  change means v3 starts the road FURTHER from the dune line.
+
+--------------------------------------------------------------------------
+A. WHAT v3 CHANGED AT THE ROAD, before the model ran
+--------------------------------------------------------------------------
+  v3 = v2 + the symmetric 1984 footprint (rows added behind NC-12 as
+  placed under the 1984 setback, rows removed in front of today's road)
+  and the 1984 setback CSV in place of today's. The dune array is the
+  same. So the two runs differ in (i) how much island sits behind the
+  road and (ii) where the road starts.
+
+  island (90 domains)   rows added at 29 domains (+73), removed at 23 (-47), unchanged at 38
+  road domains (55)     rows added at 16 (GIS [11, 12, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 84, 85, 86, 87]),
+                        removed at 16 (GIS [15, 16, 32, 33, 34, 35, 36, 37, 38, 59, 62, 63, 64, 65, 66, 67])
+  setback at 1984       differs by >= 5 m at 49 of 55 road domains; median change -4.9 m, range -61.2 to +44.0 m
+                        v2 is quantised to whole cells; v3 carries the measured value unrounded, no floor (min 1.4 m at GIS 16)
+
+  HISTORICAL domains:
+  gis | historical_year | rows_v3_minus_v2 |          operation | setback_1984_v2_m | setback_1984_v3_m | change_m
+  ----+-----------------+------------------+--------------------+-------------------+-------------------+---------
+    9 |            1999 |                0 |          unchanged |              40.0 |              30.3 |     -9.7
+   10 |            1999 |                0 |          unchanged |              20.0 |              28.5 |      8.5
+   11 |            1999 |                1 |  copy of rows 4..4 |              10.0 |              24.5 |     14.5
+   12 |            1999 |                1 |  copy of rows 5..5 |              20.0 |              35.0 |     15.0
+   13 |            1999 |                0 |          unchanged |              20.0 |              32.3 |     12.3
+   14 |            1999 |                0 |          unchanged |              60.0 |              60.1 |      0.1
+   84 |            1989 |                3 |  copy of rows 7..9 |              25.0 |              59.7 |     34.7
+   85 |            1989 |                5 | copy of rows 6..10 |               0.0 |              44.0 |     44.0
+   86 |            1989 |                2 |  copy of rows 3..4 |               0.0 |              12.2 |     12.2
+   87 |            1989 |                1 |  copy of rows 8..8 |              50.0 |              60.0 |     10.0
+
+  saved all road domains -> start_conditions.csv
+
+--------------------------------------------------------------------------
+0. VALIDITY CHECKS, per version
+--------------------------------------------------------------------------
+  v2  prescribed jumps land on the event year: 10/10 domains
+  v3  prescribed jumps land on the event year: 10/10 domains
+  prescribed displacements identical between versions: YES (largest difference 0.000 m) -- the same measured 1989/1999 moves are applied to both
+
+--------------------------------------------------------------------------
+1. FIRST MODELLED RELOCATION, free-running arm
+--------------------------------------------------------------------------
+  gis | historical_year | first_v2 | err_v2 | n_reloc_v2 |      outcome_v2 | first_v3 | err_v3 | n_reloc_v3 |      outcome_v3 | abs_err_change |      verdict
+  ----+-----------------+----------+--------+------------+-----------------+----------+--------+------------+-----------------+----------------+-------------
+    9 |            1999 |      NaN |    NaN |          0 | never relocated |   2002.0 |    3.0 |          1 |       relocated |            NaN | gained in v3
+   10 |            1999 |   1998.0 |   -1.0 |          1 |       relocated |   1998.0 |   -1.0 |          1 |       relocated |            0.0 |         same
+   11 |            1999 |   1992.0 |   -7.0 |          1 |       relocated |   1998.0 |   -1.0 |          1 |       relocated |           -6.0 |    v3 closer
+   12 |            1999 |      NaN |    NaN |          0 | never relocated |      NaN |    NaN |          0 | never relocated |            NaN |      neither
+   13 |            1999 |      NaN |    NaN |          0 | never relocated |      NaN |    NaN |          0 | never relocated |            NaN |      neither
+   14 |            1999 |      NaN |    NaN |          0 | never relocated |      NaN |    NaN |          0 | never relocated |            NaN |      neither
+   84 |            1989 |   1987.0 |   -2.0 |          2 |       relocated |   1995.0 |    6.0 |          1 |       relocated |            4.0 |    v2 closer
+   85 |            1989 |   1985.0 |   -4.0 |          3 |       relocated |   1995.0 |    6.0 |          1 |       relocated |            2.0 |    v2 closer
+   86 |            1989 |   1985.0 |   -4.0 |          2 |       relocated |   1988.0 |   -1.0 |          2 |       relocated |           -3.0 |    v3 closer
+   87 |            1989 |      NaN |    NaN |          0 | never relocated |      NaN |    NaN |          0 | never relocated |            NaN |      neither
+
+  v2  relocated at all 5/10   signed error median -4.0 yr, mean -3.6 yr   mean absolute error 3.6 yr   relocations in these domains 9
+  v3  relocated at all 6/10   signed error median +1.0 yr, mean +2.0 yr   mean absolute error 3.0 yr   relocations in these domains 7
+  per domain: neither 4, v2 closer 2, v3 closer 2, gained in v3 1, same 1
+  a domain that never relocates has no error and is not in the median;
+  compare the 'relocated at all' counts alongside it.
+  saved -> first_relocation_year.csv
+
+--------------------------------------------------------------------------
+1b. NEAR MISSES: how much more dune migration would have fired it
+--------------------------------------------------------------------------
+  'needed' is the extra landward migration that would have tripped
+  `setback < 0`: closest approach + one 10 m cell. 'relocated' where
+  the domain did fire in that version.
+
+  HISTORICAL domains that never relocated in at least one version:
+  gis | hist | closest_v2_m | needed_v2_m | at_year_v2 | closest_v3_m | needed_v3_m | at_year_v3 | needed_change_m
+  ----+------+--------------+-------------+------------+--------------+-------------+------------+----------------
+    9 | 1999 |          0.0 |        10.0 |       2002 |    relocated |   relocated |  relocated |       relocated
+   12 | 1999 |          0.0 |        10.0 |       1999 |         15.0 |        25.0 |       1999 |            15.0
+   13 | 1999 |          0.0 |        10.0 |       2000 |         12.3 |        22.3 |       2000 |            12.3
+   14 | 1999 |         40.0 |        50.0 |       2002 |         40.1 |        50.1 |       2002 |             0.1
+   87 | 1989 |         10.0 |        20.0 |       2001 |         20.0 |        30.0 |       2001 |            10.0
+
+  CONTROL domains (history never relocated these):
+  v2  closest approach median 170 m, min 40.0 m (the per-version reports' 'control margin'); within ONE cell of firing: 0  GIS []
+  v3  closest approach median 164 m, min 1.4 m (the per-version reports' 'control margin'); within ONE cell of firing: 1  GIS [16]
+
+  closest 10 controls in v3, with the v2 margin beside:
+  gis | needed_v2_m | closest_year_v2 | needed_v3_m | closest_year_v3 | needed_change_m
+  ----+-------------+-----------------+-------------+-----------------+----------------
+   16 |        50.0 |            1984 |        11.4 |            1984 |           -38.6
+   15 |        60.0 |            2003 |        40.9 |            2004 |           -19.1
+   20 |        80.0 |            1984 |        61.6 |            1984 |           -18.4
+   49 |        70.0 |            2002 |       101.6 |            2002 |            31.6
+   17 |       100.0 |            1984 |       102.7 |            1984 |             2.7
+   50 |        70.0 |            2004 |       108.8 |            2004 |            38.8
+   18 |       130.0 |            1984 |       130.9 |            1984 |             0.9
+   19 |       140.0 |            1984 |       137.7 |            1984 |            -2.3
+   89 |       150.0 |            2004 |       142.2 |            2004 |            -7.8
+   48 |       140.0 |            2000 |       151.2 |            2000 |            11.2
+  controls whose margin SHRANK by 20 m or more in v3: 8  GIS [16, 38, 62, 63, 64, 65, 66, 67]
+  controls whose margin GREW by 20 m or more in v3:   5  GIS [45, 49, 50, 51, 54]
+  -- v3's 1984 setbacks are the measured ones, no floor, so a control
+     that today sits a few cells back can start almost on the dune line.
+  saved -> near_miss_margin.csv
+
+--------------------------------------------------------------------------
+2. HIT / MISS, with false positives
+--------------------------------------------------------------------------
+
+  +/-2 yr
+    v2  hits 3/10  (recall 0.30)   hit GIS [10, 84, 85]   false pos 0/45 (rate 0.00)
+    v3  hits 3/10  (recall 0.30)   hit GIS [10, 11, 86]   false pos 0/45 (rate 0.00)
+    hit in both [10]   only v2 [84, 85]   only v3 [11, 86]
+
+  +/-5 yr
+    v2  hits 4/10  (recall 0.40)   hit GIS [10, 84, 85, 86]   false pos 0/45 (rate 0.00)
+    v3  hits 4/10  (recall 0.40)   hit GIS [9, 10, 11, 86]   false pos 0/45 (rate 0.00)
+    hit in both [10, 86]   only v2 [84, 85]   only v3 [9, 11]
+
+  the recall is the same in both versions at every tolerance; what
+  changes is WHICH domains are hit:
+  gis | historical_year | first_v2 | err_v2 | first_v3 | err_v3 | setback_1984_v2_m | setback_1984_v3_m
+  ----+-----------------+----------+--------+----------+--------+-------------------+------------------
+    9 |            1999 |      NaN |    NaN |   2002.0 |    3.0 |              40.0 |              30.3
+   11 |            1999 |   1992.0 |   -7.0 |   1998.0 |   -1.0 |              10.0 |              24.5
+   84 |            1989 |   1987.0 |   -2.0 |   1995.0 |    6.0 |              25.0 |              59.7
+   85 |            1989 |   1985.0 |   -4.0 |   1995.0 |    6.0 |               0.0 |              44.0
+   86 |            1989 |   1985.0 |   -4.0 |   1988.0 |   -1.0 |               0.0 |              12.2
+  saved -> confusion.csv
+
+--------------------------------------------------------------------------
+3. SETBACK TRAJECTORIES
+--------------------------------------------------------------------------
+  HISTORICAL domains, 2004 setback under each arm and version:
+  gis | event_year | free_start_v2_m | free_start_v3_m | free_last_v2_m | free_last_v3_m | prescribed_last_v2_m | prescribed_last_v3_m | rmse_v2_m | rmse_v3_m | measured_2004_m
+  ----+------------+-----------------+-----------------+----------------+----------------+----------------------+----------------------+-----------+-----------+----------------
+    9 |     1999.0 |            40.0 |            30.3 |            0.0 |           20.0 |                 20.0 |                 10.3 |      10.7 |       8.4 |            50.0
+   10 |     1999.0 |            20.0 |            28.5 |           10.0 |           10.0 |                 60.0 |                 60.0 |      26.7 |      26.7 |            40.0
+   11 |     1999.0 |            10.0 |            24.5 |            0.0 |           10.0 |                 90.0 |                100.0 |      27.4 |      27.4 |            20.0
+   12 |     1999.0 |            20.0 |            35.0 |            0.0 |           15.0 |                 70.0 |                 85.0 |      37.4 |      37.4 |            30.0
+   13 |     1999.0 |            20.0 |            32.3 |            0.0 |           12.3 |                 50.0 |                 62.3 |      26.7 |      26.7 |            50.0
+   14 |     1999.0 |            60.0 |            60.1 |           40.0 |           40.1 |                 60.0 |                 60.1 |      10.7 |      10.7 |            65.0
+   84 |     1989.0 |            25.0 |            59.7 |            0.0 |            0.0 |                 10.0 |                 19.7 |      22.5 |      25.3 |            30.0
+   85 |     1989.0 |             0.0 |            44.0 |           20.0 |            0.0 |                 70.0 |                 84.0 |      69.7 |      82.6 |            70.0
+   86 |     1989.0 |             0.0 |            12.2 |            0.0 |           10.0 |                 60.0 |                 70.0 |      63.5 |      69.9 |            50.0
+   87 |     1989.0 |            50.0 |            60.0 |           10.0 |           20.0 |                 30.0 |                 40.0 |      17.5 |      17.5 |            40.0
+
+  rmse is the free-vs-prescribed gap within a version (the per-version
+  reports' column), not a gap between versions.
+  v2  |prescribed 2004 - measured 2004| over the 10 historical domains: median 15.0 m, max 70.0 m
+  v3  |prescribed 2004 - measured 2004| over the 10 historical domains: median 17.0 m, max 80.0 m
+
+  ALL road domains, free arm: net 20-yr change of the setback (2004 - 1984)
+  per version, and where the two versions differ by a cell or more:
+  gis | historical | free_start_v2_m | free_start_v3_m | free_net_v2_m | free_net_v3_m | free_net_change_m
+  ----+------------+-----------------+-----------------+---------------+---------------+------------------
+    9 |       True |            40.0 |            30.3 |         -40.0 |         -10.3 |              29.7
+   84 |       True |            25.0 |            59.7 |         -25.0 |         -59.7 |             -34.7
+   85 |       True |             0.0 |            44.0 |          20.0 |         -44.0 |             -64.0
+   88 |      False |           160.0 |           166.8 |         -30.0 |         -20.0 |              10.0
+  4 of 55 road domains differ by >= 10 m in net change; 48 are identical to 0.05 m
+  -- the module's relocation resets the setback to the run's STARTING
+     value (see HAT_relocation_comparison.py, 'what is deliberately not
+     done'), so a domain's net change is the migration since its last
+     relocation, and a larger v3 start does not by itself move 2004.
+
+  free arm, v3 - v2 setback across the road domains, by year:
+  year | median_m | p10_m | p90_m
+  -----+----------+-------+------
+  1984 |     -4.9 | -34.5 |  25.9
+  1985 |     -5.6 | -34.5 |  20.7
+  1986 |     -5.6 | -34.5 |  20.7
+  1987 |     -5.6 | -34.5 |  19.1
+  1988 |     -4.9 | -34.5 |  16.7
+  1989 |     -4.9 | -34.5 |  16.7
+  1990 |     -4.9 | -34.5 |  16.7
+  1991 |     -5.6 | -34.5 |  16.7
+  1992 |     -5.9 | -34.5 |  16.7
+  1993 |     -5.9 | -34.5 |  16.7
+  1994 |     -5.9 | -34.5 |  16.7
+  1995 |     -5.9 | -34.5 |  16.7
+  1996 |     -5.9 | -34.5 |  16.7
+  1997 |     -5.6 | -34.5 |  16.7
+  1998 |     -5.6 | -34.5 |  16.7
+  1999 |     -4.9 | -34.5 |  16.7
+  2000 |     -4.9 | -34.5 |  16.7
+  2001 |     -4.9 | -34.5 |  16.7
+  2002 |     -4.9 | -34.5 |  19.1
+  2003 |     -4.9 | -34.5 |  19.1
+  2004 |     -4.9 | -34.5 |  19.1
+  saved -> setback_summary.csv, setback_by_year.csv (per year, both arms)
+
+--------------------------------------------------------------------------
+4. ROAD OUTCOMES, per arm and version
+--------------------------------------------------------------------------
+  free        v2  drowned   0   blocked   0   relocations   9   dunes rebuilt   93   overwash removed    264.9 x10^3 m3   of 55 managed domains
+  free        v3  drowned   0   blocked   0   relocations   7   dunes rebuilt   91   overwash removed    318.5 x10^3 m3   of 55 managed domains
+  prescribed  v2  drowned   1   blocked   0   relocations   5   dunes rebuilt   93   overwash removed    269.4 x10^3 m3   of 55 managed domains
+  prescribed  v3  drowned   1   blocked   0   relocations   3   dunes rebuilt   91   overwash removed    331.4 x10^3 m3   of 55 managed domains
+
+  free: domains whose relocation count changed: 3
+  gis | relocations_v2 | relocations_v3 | relocations_change
+  ----+----------------+----------------+-------------------
+    9 |              0 |              1 |                  1
+   84 |              2 |              1 |                 -1
+   85 |              3 |              1 |                 -2
+  prescribed: domains whose relocation count changed: 2
+  gis | relocations_v2 | relocations_v3 | relocations_change
+  ----+----------------+----------------+-------------------
+   84 |              1 |              0 |                 -1
+   85 |              1 |              0 |                 -1
+  domains whose fate (drowned / blocked) differs between versions: 0
+  saved -> road_outcomes.csv
+
+--------------------------------------------------------------------------
+5. ANIMATIONS (v2 left, v3 right; written by HAT_version_pair_gif.py)
+--------------------------------------------------------------------------
+  emergent\1-island\dune-and-road.gif
+  emergent\1-island\topography.gif
+  emergent\2-event-1999_GIS9-14\dune-and-road.gif
+  emergent\2-event-1999_GIS9-14\topography.gif
+  emergent\3-event-1989_GIS84-87\dune-and-road.gif
+  emergent\3-event-1989_GIS84-87\topography.gif
+  emergent\4-rows-added_PeaIsland_GIS78-87\dune-and-road.gif
+  emergent\4-rows-added_PeaIsland_GIS78-87\topography.gif
+  emergent\5-rows-removed_AvonTriVillage_GIS62-68\dune-and-road.gif
+  emergent\5-rows-removed_AvonTriVillage_GIS62-68\topography.gif
+  prescribed\1-island\dune-and-road.gif
+  prescribed\1-island\topography.gif
+  prescribed\2-event-1999_GIS9-14\dune-and-road.gif
+  prescribed\2-event-1999_GIS9-14\topography.gif
+  prescribed\3-event-1989_GIS84-87\dune-and-road.gif
+  prescribed\3-event-1989_GIS84-87\topography.gif
+  prescribed\4-rows-added_PeaIsland_GIS78-87\dune-and-road.gif
+  prescribed\4-rows-added_PeaIsland_GIS78-87\topography.gif
+  prescribed\5-rows-removed_AvonTriVillage_GIS62-68\dune-and-road.gif
+  prescribed\5-rows-removed_AvonTriVillage_GIS62-68\topography.gif
+
+  the island-wide geometry (interior width, elevation, overwash) of the
+  same four runs is in 2-domain-reconstruction-1984/6-result/HAT_compare_versions.txt
+
+==========================================================================
+artifacts -> C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation\versions\v2_vs_v3
+==========================================================================

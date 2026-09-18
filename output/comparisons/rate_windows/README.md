@@ -24,15 +24,19 @@ Start with `both/both_grid.png`.
 | ...against the target the run index scores? | `coastsat/loess/` | the scoring target as the fill, the means as dots | OLS rate, CoastSat-solved |
 | Does the model reproduce the dune line's movement over the window? | `duneline/endpoint/` | two surveys differenced, per domain, over the survey interval | endpoint rate, ends solved on the dune line (mean3) |
 | ...with the scatter smoothed out, as the CoastSat target is? | `duneline/endpoint-loess/` | the same, 10-domain LOESS north of D10, raw means D1-10 | endpoint rate, dune-solved |
-| Scored the way CoastSat is scored, OLS against OLS? | `duneline/lrr/` | a per-transect OLS through every island-wide survey in the window (3, or 2 in 2010-2024), smoothed the same way | OLS rate, dune-solved |
-| Which observation does the model follow, the waterline or the dune line? | `both/` | both scoring targets as lines, no fill: CoastSat blue, dune line red | two: solid = ends solved on CoastSat, dashed = ends solved on the dune line |
+| Which observation does the model follow, the waterline or the dune line? | `both/` | both scoring targets as lines, no fill: CoastSat blue (LOESS of the LRR), dune line red (LOESS of the endpoint) | two, each in its target's estimator: solid = ends solved on CoastSat (OLS rate), dashed = ends solved on the dune line (endpoint rate) |
+
+The dune line is scored on NET CHANGE only (2026-09-18, Hannah: "these should
+not be lrr, they would just be endpoint, we are tracking net change"). The
+`duneline/lrr/` reading, an OLS through every dune line in the window, is
+retired with its product (`5-scr/archive/duneline_lrr_retired_20260918/`).
 
 ## Naming
 
 `<observation>_<reading>_<start>_<end>.png` for a window, `_grid` for the
 2 x 2 by model period (1984-start left, 1996-start right, the earlier window
 of each above the later). So `coastsat_loess_1984_2004.png`,
-`duneline_lrr_grid.png`, `both_2010_2024.png`. Every figure folder keeps its
+`duneline_endpoint_grid.png`, `both_2010_2024.png`. Every figure folder keeps its
 PDFs and `CAPTIONS.md` under `supporting/`.
 
 ```
@@ -40,7 +44,6 @@ coastsat/means/            coastsat_means_<w>.png
 coastsat/loess/            coastsat_loess_<w>.png
 duneline/endpoint/         duneline_endpoint_<w>.png
 duneline/endpoint-loess/   duneline_endpoint_loess_<w>.png
-duneline/lrr/              duneline_lrr_<w>.png
 both/                      both_<w>.png
 tables/                    domain_rates_<w>.csv   one row per domain: every
                                                   reading of both observations,
@@ -92,19 +95,20 @@ here rather than copied.
 
 **The dune line:**
 
-| window | start line | end line | interval | surveys in the OLS |
-|---|---|---|---|---|
-| 1984-2004 | 1984 (1984-09-19) | 2004 (2004-05-25) | 19.68 yr | 1984, 1997, 2004 |
-| 1996-2010 | 1997 (1997-10-12) | 2009 (2009-05-30) | 11.63 yr | 1997, 2004, 2009 |
-| 2004-2024 | 2004 (2004-05-25) | 2023 (2023-07-01, assumed) | 19.10 yr | 2004, 2009, 2023 |
-| 2010-2024 | 2009 (2009-05-30) | 2023 (2023-07-01, assumed) | 14.09 yr | 2009, 2023 (= the endpoint) |
+| window | start line | end line | interval |
+|---|---|---|---|
+| 1984-2004 | 1984 (1984-09-19) | 2004 (2004-05-25) | 19.68 yr |
+| 1996-2010 | 1997 (1997-10-12) | 2009 (2009-05-30) | 11.63 yr |
+| 2004-2024 | 2004 (2004-05-25) | 2023 (2023-07-01, assumed) | 19.10 yr |
+| 2010-2024 | 2009 (2009-05-30) | 2023 (2023-07-01, assumed) | 14.09 yr |
 
 Vintages through `hat_topo_version.DUNE_LINE_FOR_YEAR`; stations from
 `2-brie-offset/raw_offsets/<vintage>_duneline_offset_raw.csv` read as the
 hindcast's end-year target loader reads them; seaward positive; dates from
-`duneline_vs_coastsat.KNOWN_SURVEY_DATES`. The OLS product is
-`5-scr/3-rates/duneline_lrr/`. The Buxton-only 1967 and 2017 clips and the 1978 line
-are not used (Hannah, 2026-09-16). Smoothing is the CoastSat target's exact
+`duneline_vs_coastsat.KNOWN_SURVEY_DATES`. The script READS all of this from
+the stored product `5-scr/3-rates/duneline/endpoint/<window>/` (2026-09-18)
+rather than computing it, so the figures and the stored numbers cannot
+disagree. The 1997, 2009 and 2023 lines were re-digitized on 2026-09-18. Smoothing is the CoastSat target's exact
 treatment through the same builder; the LOESS fraction is the 5 km window
 over the reach and comes out the same (0.111 vs 0.110). The model line is
 never smoothed.
@@ -114,7 +118,7 @@ never smoothed.
 ```
 sensitivity/ends-swapped/      each target against the OTHER solve:
     coastsat/means, loess          CoastSat on the dune-solved (mean3) runs
-    duneline/endpoint, endpoint-loess, lrr
+    duneline/endpoint, endpoint-loess
                                    the dune line on the CoastSat-solved matrix
                                    runs (the main level as it was before 09-17)
 sensitivity/dune-raw-solve/    duneline/* on the raw-reading dune solve

@@ -31,15 +31,28 @@
 #         2-transect-frame/
 #             transect_domains/       the lookup, the transect layer, the domain
 #                                     polygons, and the verification set
-#         3-rates/                    the fits; the MODEL TARGETS live here
-#             coastsat_lrr/           one folder per WINDOW
-#                 1984_2004/  1996_2010/  2004_2024/  2010_2024/
-#             coastsat_5yr_bins/      the 5-year-bin fits
-#             duneline_lrr/           OLS through the dune lines, per window
+#         3-rates/                    the MODEL TARGETS: tables + one figure per
+#                                     window (rates_figures.py).
+#                                     Grouped by source since 2026-09-18.
+#             coastsat/
+#                 lrr/<window>/       the OLS rate fits, one folder per WINDOW:
+#                                     1984_2004 1996_2010 2004_2024 2010_2024,
+#                                     and 1996_2024 (CONTEXT, not graded)
+#                 endpoint/<window>/  net change between +/-6-month means at
+#                                     the dune-line dates (m and m/yr)
+#                 5yr_bins/<window>/  the OLS in successive 5-year bins,
+#                                     1996_2010 2010_2024 1996_2024
+#             duneline/
+#                 endpoint/<window>/  net change between the two dune lines
+#                                     (m and m/yr; replaced duneline_lrr/)
 #         4-comparisons/
 #             coastsat_windows/       the four windows on one y axis
 #             duneline_vs_coastsat/   dune-line change vs the CoastSat
 #                                     shoreline, one folder per window
+#             duneline_windows/       net dune-line change in metres, a
+#                                     long window and its halves
+#             net_change_1996_2024/   CoastSat vs dune-line net change,
+#                                     1996-2024 and its halves (09-18)
 #             trajectory_patterns/    trajectory classification output
 #             two_period_comparison/  1984-2004 against 2004-2024
 #         archive/                    retired windows, old 5-year-bin runs,
@@ -84,20 +97,46 @@ COMPARISONS = SCR_ROOT / "4-comparisons"
 ARCHIVE = SCR_ROOT / "archive"
 
 COASTSAT_TIMESERIES = OBSERVATIONS / "coastsat_timeseries"
-COASTSAT_LRR_ROOT = RATES / "coastsat_lrr"
+# 3-rates is grouped BY SOURCE since 2026-09-18 (Hannah): coastsat/{lrr,
+# endpoint,5yr_bins} and duneline/endpoint. Until then the four sat flat as
+# coastsat_lrr/, coastsat_endpoint/, coastsat_5yr_bins/, duneline_endpoint/.
+# 3-rates holds the tables and ONE house-style figure per window beside them
+# (scripts/input_prep/5-scr/rates_figures.py); comparisons are in 4-comparisons.
+COASTSAT_RATES = RATES / "coastsat"
+DUNELINE_RATES = RATES / "duneline"
+COASTSAT_LRR_ROOT = COASTSAT_RATES / "lrr"
 TRANSECT_DOMAINS = TRANSECT_FRAME / "transect_domains"
-TIMESERIES_LRR = RATES / "coastsat_5yr_bins"
+TIMESERIES_LRR = COASTSAT_RATES / "5yr_bins"
 DUNELINE_VS_COASTSAT = COMPARISONS / "duneline_vs_coastsat"
-# The dune-line LRR product (2026-09-16): the same layout as coastsat_lrr/,
-# one folder per window, an OLS through every island-wide dune line inside
-# the window per transect. Written by
-# scripts/input_prep/5-scr/duneline_lrr/duneline_lrr.py.
-DUNELINE_LRR_ROOT = RATES / "duneline_lrr"
+# The stored dune-line observation (2026-09-18): the NET CHANGE between the
+# two lines that bound a window, per transect and per domain, in m and m/yr,
+# one folder per window. Written by
+# scripts/input_prep/5-scr/duneline_endpoint/duneline_endpoint.py. It replaced
+# duneline_lrr/ (an OLS through every line in the window, 2026-09-16; Hannah:
+# "we are tracking net change"), now under archive/duneline_lrr_retired_20260918/.
+DUNELINE_ENDPOINT_ROOT = DUNELINE_RATES / "endpoint"
+# The CoastSat counterpart (2026-09-18): net change in the CoastSat shoreline
+# between +/-6-month window means centred on the SAME dune-line survey dates,
+# so the two products difference like for like. Written by
+# scripts/input_prep/5-scr/coastsat_endpoint/coastsat_endpoint.py.
+COASTSAT_ENDPOINT_ROOT = COASTSAT_RATES / "endpoint"
+# Both endpoint products use the same two file names.
+ENDPOINT_TRANSECT_FILE = "transect_endpoint.csv"
+ENDPOINT_DOMAIN_FILE = "domain_endpoint_summary.csv"
+DUNE_ENDPOINT_TRANSECT_FILE = ENDPOINT_TRANSECT_FILE
+DUNE_ENDPOINT_DOMAIN_FILE = ENDPOINT_DOMAIN_FILE
+# The CoastSat and dune-line net change side by side, 1996-2024 and its
+# halves (net_change_1996_2024.py, 2026-09-18).
+NET_CHANGE_1996_2024 = COMPARISONS / "net_change_1996_2024"
 SHORELINE_INVENTORY = OBSERVATIONS / "shoreline_inventory"
 SHORELINE_PATTERNS = COMPARISONS / "trajectory_patterns"
 DSAS_ROOT = OBSERVATIONS / "dsas_1978_2019"
 # The four windows drawn on one y axis (coastsat_lrr_windows.py).
 COASTSAT_LRR_WINDOWS = COMPARISONS / "coastsat_windows"
+# Net dune-line change over a long window and its two halves, in metres
+# (duneline_windows.py, 2026-09-18): the endpoint mirror of the CoastSat
+# halves figure, one folder per window.
+DUNELINE_WINDOWS = COMPARISONS / "duneline_windows"
 # Two-window comparison figures (coastsat_two_period_comparison.py).
 TWO_PERIOD_COMPARISON = COMPARISONS / "two_period_comparison"
 # Retired windows (1978-1997, 1997-2019 and their specific-dates variants),
@@ -177,16 +216,33 @@ def lrr_csv(start_year, end_year):
     return path
 
 
-def dune_lrr_csv(start_year, end_year):
-    """Per-transect OLS through the island-wide dune lines of one window,
-    in the coastsat_lrr layout. Raises, naming the producer, if absent."""
-    path = DUNELINE_LRR_ROOT / "{0}_{1}".format(start_year, end_year) / TRANSECT_FILE
+def coastsat_endpoint_csv(start_year, end_year, level="transect"):
+    """Net CoastSat shoreline change for one window, between +/-6-month means
+    about the dune-line survey dates: `level` "transect" or "domain". Raises,
+    naming the producer, if absent."""
+    name = {"transect": ENDPOINT_TRANSECT_FILE, "domain": ENDPOINT_DOMAIN_FILE}[level]
+    path = COASTSAT_ENDPOINT_ROOT / "{0}_{1}".format(start_year, end_year) / name
     if not path.is_file():
-        have = sorted(p.name for p in DUNELINE_LRR_ROOT.glob("*_*")
-                      if (p / TRANSECT_FILE).is_file()) if DUNELINE_LRR_ROOT.is_dir() else []
         raise FileNotFoundError(
-            "no dune-line LRR for {0}-{1}; have {2}. Build it with "
-            "scripts/input_prep/5-scr/duneline_lrr/duneline_lrr.py".format(
+            "no CoastSat endpoint for {0}-{1}. Build it with "
+            "scripts/input_prep/5-scr/coastsat_endpoint/coastsat_endpoint.py".format(
+                start_year, end_year))
+    return path
+
+
+def dune_endpoint_csv(start_year, end_year, level="transect"):
+    """Net dune-line change for one window: `level` "transect" (per 100 m
+    transect) or "domain" (per GIS domain). Raises, naming the producer, if
+    absent."""
+    name = {"transect": DUNE_ENDPOINT_TRANSECT_FILE,
+            "domain": DUNE_ENDPOINT_DOMAIN_FILE}[level]
+    path = DUNELINE_ENDPOINT_ROOT / "{0}_{1}".format(start_year, end_year) / name
+    if not path.is_file():
+        have = sorted(p.name for p in DUNELINE_ENDPOINT_ROOT.glob("*_*")
+                      if (p / name).is_file()) if DUNELINE_ENDPOINT_ROOT.is_dir() else []
+        raise FileNotFoundError(
+            "no dune-line endpoint for {0}-{1}; have {2}. Build it with "
+            "scripts/input_prep/5-scr/duneline_endpoint/duneline_endpoint.py".format(
                 start_year, end_year, have or "none"))
     return path
 

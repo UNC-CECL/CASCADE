@@ -27,9 +27,9 @@ script's own loaders; nothing is re-run. The makers are the ones the
 relocation comparison uses (cascade_pipeline.plotting.road_relocation_gif);
 only the panel labels and the pairing differ.
 
-WHERE  output/comparisons/relocation_1984_2004/v2_vs_v3/<scenario>/<place>/
+WHERE  output/comparisons/relocation/versions/v2_vs_v3/<scenario>/<place>/
        (its own folder: it is a cross-version comparison, not a set of one
-       version, so it does not belong under v2/ or v3/)
+       version, so it does not belong under 1984_2004/v2/ or v3/)
 
 USAGE
     python HAT_version_pair_gif.py                       # both scenarios
@@ -55,13 +55,17 @@ def _find_root(start: Path) -> Path:
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "hatteras_ms"))
+# the relocation comparison moved into hatteras_ms/experiments/ on 2026-09-13
+# (cfd0b475); this import broke silently until 2026-09-17
+sys.path.insert(0, str(REPO / "scripts" / "hatteras_ms" / "experiments"))
 import HAT_relocation_comparison as RC  # noqa: E402   loaders, windows, gif config
 from cascade_pipeline.run_info import RunInfo  # noqa: E402
 from cascade_pipeline.plotting.road_relocation_gif import (  # noqa: E402
     make_road_relocation_gif, make_topography_gif)
 
-RAW = REPO / "output" / "raw_runs" / "version-pair"
-OUT = REPO / "output" / "comparisons" / "relocation_1984_2004" / "v2_vs_v3"
+# raw_runs by purpose since 2026-09-16: the version pair is under versions/
+RAW = REPO / "output" / "raw_runs" / "versions" / "version-pair"
+OUT = REPO / "output" / "comparisons" / "relocation" / "versions" / "v2_vs_v3"
 SCENARIOS = {
     "emergent": ("HAT_1984_2004_calibBE_road_bdm_groin",
                  "full management, calibBE, groin; the modules decide on their own"),

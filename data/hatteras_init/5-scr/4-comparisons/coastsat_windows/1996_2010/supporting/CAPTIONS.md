@@ -1,0 +1,5 @@
+# Captions — 1996_2010
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`lrr_1996_2010.png`.** Observed shoreline change rate by GIS domain (1 at Cape Point, 90 at Pea Island), 1996–2010. The line is the mean linear regression rate of the CoastSat transects inside each 500 m domain (domain_lrr_summary.csv), blue and filled where the shoreline moved seaward, red where it moved landward; the dotted lines are ±1 standard deviation across those transects. Village spans are shaded; the solid hairline is the Buxton groin and the dotted hairlines are the Avon and Rodanthe piers. The y axis is held at ±8 m/yr on every panel, the largest |mean| over the four windows plus 1 m rounded up, so the panels are directly comparable.

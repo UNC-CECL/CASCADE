@@ -29,7 +29,7 @@ THE DESIGN
 
 WHERE THINGS ARE
     inputs   2-brie-offset/1996/ext/<geometry>/          the offsets
-             5-scr/3-rates/coastsat_lrr/1996_2010/ext/            the targets
+             5-scr/3-rates/coastsat/lrr/1996_2010/ext/            the targets
     runs     output/raw_runs/experiments/2026-09-16-peaisland-ext/<member>/
              one member per <geometry>-<mode>: its 1996_2010/zeroBE/ run is
              stage 0, its step<k>/ folders are the Newton probes, and SOLVED

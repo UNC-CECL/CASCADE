@@ -5,7 +5,7 @@ Written 2026-09-15 17:26 by `scripts/input_prep/5-scr/duneline_vs_coastsat/dunel
 ## Inputs
 
 * dune lines: `2-brie-offset/raw_offsets/1984_duneline_offset_raw.csv`, `2004_duneline_offset_raw.csv` (first row per transect, domain mean, as `hindcast.load_absolute_dune_distance`). Both built by `duneline_to_raw_offsets.py`, so no GIS-vs-shapely metre between them.
-* CoastSat LRR: `coastsat_lrr/1984_2004/transect_lrr_full.csv` (window 1984-01-01 to 2004-12-31, per-transect OLS).
+* CoastSat LRR: `3-rates/coastsat/lrr/1984_2004/transect_lrr_full.csv` (window 1984-01-01 to 2004-12-31, per-transect OLS).
 * CoastSat endpoint: mean chainage within ±183 days of each survey date, per transect, from `coastsat_timeseries/`.
 * transect → domain: `transect_domains/transect_domain_lookup.csv`.
 

@@ -42,7 +42,7 @@ Note the plural: the code folder is `4-mgmt-forcings`, the data folder is
 `4-mgmt-forcing`. That is a spelling accident, not a distinction; it is left
 alone because too many paths spell it.
 
-`5-scr/` keeps its producer folders (`CoastSat/`, `duneline_lrr/`, ...) rather
+`5-scr/` keeps its producer folders (`CoastSat/`, `duneline_endpoint/`, ...) rather
 than the data tree's `1-observations/ .. 4-comparisons/`: the `CoastSat/`
 scripts import `coastsat_lrr_analysis.py` as a sibling module, so splitting
 them by job would mean moving that module first.

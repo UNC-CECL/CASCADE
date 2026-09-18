@@ -9,3 +9,4 @@ Written by `build_island_offset.py`, one row per build; each version's own `PROV
 | version | built | line | vintage | zero domain | compared with | |
 |---|---|---|---|---|---|---|
 | `v1` | 2026-09-15 | `duneline_2009.geojson` | 2009 | GIS 76 | — | CURRENT |
+| `v2` | 2026-09-18 | `duneline_2009.geojson` | 2009 | GIS 76 | v1 | CURRENT |

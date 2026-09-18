@@ -1,0 +1,3 @@
+tolerance_years,historical_domains,hits,misses,hit_domains,miss_domains,control_domains,false_positives,false_positive_domains,recall,false_positive_rate
+2,10,1,9,10,84 85 86 87 9 11 12 13 14,45,0,,0.1,0.0
+5,10,2,8,10 11,84 85 86 87 9 12 13 14,45,0,,0.2,0.0

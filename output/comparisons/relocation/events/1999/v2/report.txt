@@ -1,0 +1,209 @@
+==========================================================================
+generated   2026-09-17 12:12:09 by HAT_relocation_period_compare.py
+event       1999  GIS [9, 10, 11, 12, 13, 14]
+periods     1984-2004 and 1996-2010
+version     v2
+Read from the per-period sets named below; nothing re-scored.
+==========================================================================
+
+##########################################################################
+PRESET zeroBE
+##########################################################################
+  1984: output\comparisons\relocation\1984_2004\v2\zeroBE
+      generated   2026-09-15 10:04:45 by HAT_relocation_comparison.py
+      period      1984-2004
+      preset      zeroBE
+      arm A       HAT_1984_2004_zeroBE_road_bdm_nogroin
+            run 2026-09-15 09:53:15   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+      arm B       HAT_1984_2004_zeroBE_road_reloc_bdm_nogroin
+            run 2026-09-15 09:56:48   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+  1996: output\comparisons\relocation\1996_2010\v2\zeroBE
+      generated   2026-09-15 09:53:34 by HAT_relocation_comparison.py
+      period      1996-2010
+      preset      zeroBE
+      arm A       HAT_1996_2010_zeroBE_road_bdm_nogroin
+            run 2026-09-15 09:27:25   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+      arm B       HAT_1996_2010_zeroBE_road_reloc_bdm_nogroin
+            run 2026-09-15 09:31:17   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+
+--------------------------------------------------------------------------
+1. RETREAT ACCUMULATED BEFORE THE EVENT, free-running arm
+--------------------------------------------------------------------------
+  start_setback: the road at year 0 (same file for both starts at these
+  domains). setback_before_event: the free arm in 1998.
+   period  gis  years_before_event  start_setback_m  setback_before_event_m  retreat_before_event_m  relocated_before_event
+1984-2004    9                  15             40.0                    30.0                    10.0                   False
+1984-2004   10                  15             20.0                    10.0                    10.0                   False
+1984-2004   11                  15             10.0                     0.0                    10.0                   False
+1984-2004   12                  15             20.0                    20.0                     0.0                   False
+1984-2004   13                  15             20.0                    20.0                     0.0                   False
+1984-2004   14                  15             60.0                    50.0                    10.0                   False
+1996-2010    9                   3             40.0                    40.0                     0.0                   False
+1996-2010   10                   3             20.0                    20.0                     0.0                   False
+1996-2010   11                   3             10.0                    10.0                     0.0                   False
+1996-2010   12                   3             20.0                    20.0                     0.0                   False
+1996-2010   13                   3             20.0                    20.0                     0.0                   False
+1996-2010   14                   3             60.0                    60.0                     0.0                   False
+  (NaN: the free arm relocated this domain BEFORE the event, resetting
+   its setback; section 2 gives the year)
+  1984-2004: mean retreat before 1999 +7 m over 15 yr
+  1996-2010: mean retreat before 1999 +0 m over 3 yr
+
+--------------------------------------------------------------------------
+2. DID THE FREE ARM FIRE, AND WHEN
+--------------------------------------------------------------------------
+   period  gis  modelled_first_year  error_years         outcome  min_setback_m  migration_needed_m
+1984-2004    9                  NaN          NaN never relocated           30.0                40.0
+1984-2004   10                  NaN          NaN never relocated           10.0                20.0
+1984-2004   11               2004.0          5.0       relocated            NaN                 NaN
+1984-2004   12                  NaN          NaN never relocated           10.0                20.0
+1984-2004   13                  NaN          NaN never relocated           10.0                20.0
+1984-2004   14                  NaN          NaN never relocated           50.0                60.0
+1996-2010    9                  NaN          NaN never relocated           30.0                40.0
+1996-2010   10                  NaN          NaN never relocated           10.0                20.0
+1996-2010   11                  NaN          NaN never relocated            0.0                10.0
+1996-2010   12                  NaN          NaN never relocated           20.0                30.0
+1996-2010   13                  NaN          NaN never relocated           20.0                30.0
+1996-2010   14                  NaN          NaN never relocated           60.0                70.0
+
+  recall on the 6 event domains, from the first modelled year:
+   period  tolerance_years  event_domains  hits   recall hit_domains
+1984-2004                2              6     0 0.000000            
+1996-2010                2              6     0 0.000000            
+1984-2004                5              6     1 0.166667          11
+1996-2010                5              6     0 0.000000            
+  1984: false positives period-wide 0/45 control domains
+  1996: false positives period-wide 0/49 control domains
+
+--------------------------------------------------------------------------
+3. POSITION CHECK AT 2004
+--------------------------------------------------------------------------
+  1984-2004: 2004 is year 20 of 20  (the end)
+  1996-2010: 2004 is year 8 of 14  (mid-window)
+   period  gis  free_at_2004_m  prescribed_at_2004_m  measured_2004_m  free_2004_error_m  prescribed_2004_error_m
+1984-2004    9            30.0                  50.0             50.0              -20.0                      0.0
+1984-2004   10            10.0                  60.0             40.0              -30.0                     20.0
+1984-2004   11            20.0                  70.0             20.0                0.0                     50.0
+1984-2004   12            10.0                  80.0             30.0              -20.0                     50.0
+1984-2004   13            10.0                  60.0             50.0              -40.0                     10.0
+1984-2004   14            50.0                  70.0             65.0              -15.0                      5.0
+1996-2010    9            30.0                  50.0             50.0              -20.0                      0.0
+1996-2010   10            10.0                  60.0             40.0              -30.0                     20.0
+1996-2010   11             0.0                  80.0             20.0              -20.0                     60.0
+1996-2010   12            20.0                  90.0             30.0              -10.0                     60.0
+1996-2010   13            20.0                  70.0             50.0              -30.0                     20.0
+1996-2010   14            60.0                  80.0             65.0               -5.0                     15.0
+  1984-2004: mean |error| free 21 m, prescribed 22 m
+  1996-2010: mean |error| free 19 m, prescribed 29 m
+
+--------------------------------------------------------------------------
+4. ROAD OUTCOMES AT THE EVENT DOMAINS
+--------------------------------------------------------------------------
+   period        arm  domains  drowned  relocation_blocked  relocations  overwash_removed_m3  dunes_rebuilt
+1984-2004       free        6        0                   0            1         45396.376313              7
+1984-2004 prescribed        6        0                   0            0         49998.407530              7
+1996-2010       free        6        0                   0            0         48954.882074             12
+1996-2010 prescribed        6        0                   0            0         42121.523377             12
+
+  figure -> setback_trajectories_1999_zeroBE.png
+
+##########################################################################
+PRESET edgeBE
+##########################################################################
+  1984: output\comparisons\relocation\1984_2004\v2\edgeBE
+      generated   2026-09-15 10:06:21 by HAT_relocation_comparison.py
+      period      1984-2004
+      preset      edgeBE
+      arm A       HAT_1984_2004_edgeBE_road_bdm_nogroin
+            run 2026-09-15 09:59:47   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+      arm B       HAT_1984_2004_edgeBE_road_reloc_bdm_nogroin
+            run 2026-09-15 10:02:06   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+  1996: output\comparisons\relocation\1996_2010\v2\edgeBE
+      generated   2026-09-15 09:54:47 by HAT_relocation_comparison.py
+      period      1996-2010
+      preset      edgeBE
+      arm A       HAT_1996_2010_edgeBE_road_bdm_nogroin
+            run 2026-09-15 09:34:58   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+      arm B       HAT_1996_2010_edgeBE_road_reloc_bdm_nogroin
+            run 2026-09-15 09:39:22   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+
+--------------------------------------------------------------------------
+1. RETREAT ACCUMULATED BEFORE THE EVENT, free-running arm
+--------------------------------------------------------------------------
+  start_setback: the road at year 0 (same file for both starts at these
+  domains). setback_before_event: the free arm in 1998.
+   period  gis  years_before_event  start_setback_m  setback_before_event_m  retreat_before_event_m  relocated_before_event
+1984-2004    9                  15             40.0                    10.0                    30.0                   False
+1984-2004   10                  15             20.0                     0.0                    20.0                   False
+1984-2004   11                  15             10.0                     NaN                     NaN                    True
+1984-2004   12                  15             20.0                    10.0                    10.0                   False
+1984-2004   13                  15             20.0                    10.0                    10.0                   False
+1984-2004   14                  15             60.0                    50.0                    10.0                   False
+1996-2010    9                   3             40.0                    40.0                     0.0                   False
+1996-2010   10                   3             20.0                    20.0                     0.0                   False
+1996-2010   11                   3             10.0                    10.0                     0.0                   False
+1996-2010   12                   3             20.0                    20.0                     0.0                   False
+1996-2010   13                   3             20.0                    20.0                     0.0                   False
+1996-2010   14                   3             60.0                    60.0                     0.0                   False
+  (NaN: the free arm relocated this domain BEFORE the event, resetting
+   its setback; section 2 gives the year)
+  1984-2004: mean retreat before 1999 +16 m over 15 yr
+  1996-2010: mean retreat before 1999 +0 m over 3 yr
+
+--------------------------------------------------------------------------
+2. DID THE FREE ARM FIRE, AND WHEN
+--------------------------------------------------------------------------
+   period  gis  modelled_first_year  error_years         outcome  min_setback_m  migration_needed_m
+1984-2004    9                  NaN          NaN never relocated            0.0                10.0
+1984-2004   10               1999.0          0.0       relocated            NaN                 NaN
+1984-2004   11               1994.0         -5.0       relocated            NaN                 NaN
+1984-2004   12                  NaN          NaN never relocated            0.0                10.0
+1984-2004   13                  NaN          NaN never relocated            0.0                10.0
+1984-2004   14                  NaN          NaN never relocated           40.0                50.0
+1996-2010    9                  NaN          NaN never relocated           40.0                50.0
+1996-2010   10                  NaN          NaN never relocated           20.0                30.0
+1996-2010   11                  NaN          NaN never relocated            0.0                10.0
+1996-2010   12                  NaN          NaN never relocated           20.0                30.0
+1996-2010   13                  NaN          NaN never relocated           20.0                30.0
+1996-2010   14                  NaN          NaN never relocated           60.0                70.0
+
+  recall on the 6 event domains, from the first modelled year:
+   period  tolerance_years  event_domains  hits   recall hit_domains
+1984-2004                2              6     1 0.166667          10
+1996-2010                2              6     0 0.000000            
+1984-2004                5              6     2 0.333333       10 11
+1996-2010                5              6     0 0.000000            
+  1984: false positives period-wide 0/45 control domains
+  1996: false positives period-wide 0/49 control domains
+
+--------------------------------------------------------------------------
+3. POSITION CHECK AT 2004
+--------------------------------------------------------------------------
+  1984-2004: 2004 is year 20 of 20  (the end)
+  1996-2010: 2004 is year 8 of 14  (mid-window)
+   period  gis  free_at_2004_m  prescribed_at_2004_m  measured_2004_m  free_2004_error_m  prescribed_2004_error_m
+1984-2004    9             0.0                  20.0             50.0              -50.0                    -30.0
+1984-2004   10            10.0                  60.0             40.0              -30.0                     20.0
+1984-2004   11            10.0                   NaN             20.0              -10.0                      NaN
+1984-2004   12             0.0                  70.0             30.0              -30.0                     40.0
+1984-2004   13             0.0                  50.0             50.0              -50.0                      0.0
+1984-2004   14            40.0                  60.0             65.0              -25.0                     -5.0
+1996-2010    9            40.0                  60.0             50.0              -10.0                     10.0
+1996-2010   10            20.0                  70.0             40.0              -20.0                     30.0
+1996-2010   11             0.0                  80.0             20.0              -20.0                     60.0
+1996-2010   12            20.0                  90.0             30.0              -10.0                     60.0
+1996-2010   13            20.0                  70.0             50.0              -30.0                     20.0
+1996-2010   14            60.0                  80.0             65.0               -5.0                     15.0
+  1984-2004: mean |error| free 32 m, prescribed 19 m
+  1996-2010: mean |error| free 16 m, prescribed 32 m
+
+--------------------------------------------------------------------------
+4. ROAD OUTCOMES AT THE EVENT DOMAINS
+--------------------------------------------------------------------------
+   period        arm  domains  drowned  relocation_blocked  relocations  overwash_removed_m3  dunes_rebuilt
+1984-2004       free        6        0                   0            2         46477.087036             11
+1984-2004 prescribed        6        1                   0            2         51392.203326             11
+1996-2010       free        6        0                   0            0         49559.157322             12
+1996-2010 prescribed        6        0                   0            0         43423.480809             12
+
+  figure -> setback_trajectories_1999_edgeBE.png

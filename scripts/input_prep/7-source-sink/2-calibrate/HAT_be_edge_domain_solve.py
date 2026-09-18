@@ -139,36 +139,21 @@ def load_target(start_year, end_year):
                     [float(r) for r in table["target_lrr_m_yr"]]))
 
 
-def _dune_module():
-    """scripts/input_prep/5-scr/duneline_vs_coastsat/duneline_vs_coastsat.py,
-    imported by path: the survey dates by vintage and the per-domain reader."""
-    import importlib.util
-    path = (PROJECT_ROOT / "scripts" / "input_prep" / "5-scr"
-            / "duneline_vs_coastsat" / "duneline_vs_coastsat.py")
-    spec = importlib.util.spec_from_file_location("duneline_vs_coastsat", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
 def load_dune_target(start_year, end_year, smooth):
     """The dune-line endpoint rate per domain, seaward positive, read at each
-    end domain raw or as a three-domain mean. Returns ({gis: rate}, note)."""
-    from datetime import datetime
-    from site_layer.hat_topo_version import dune_line_for_year
-    dune = _dune_module()
+    end domain raw or as a three-domain mean. Returns ({gis: rate}, note).
 
-    def date(vintage):
-        known = dune.KNOWN_SURVEY_DATES.get(vintage)
-        if known:
-            return datetime.strptime(known, "%Y-%m-%d"), False
-        return datetime(vintage, 7, 1), True
-
-    v0, v1 = dune_line_for_year(start_year), dune_line_for_year(end_year)
-    (d0, a0), (d1, a1) = date(v0), date(v1)
-    years = (d1 - d0).days / dune.DAYS_PER_YEAR
-    rate = -(dune.dune_position_by_domain(end_year)
-             - dune.dune_position_by_domain(start_year)) / years
+    READ FROM the stored product 5-scr/3-rates/duneline/endpoint/<window>/
+    (2026-09-18), the same numbers HAT_rate_windows.py draws, rather than
+    recomputed here from the raw offsets."""
+    from site_layer.hat_observed_rates import dune_endpoint_csv
+    dom = pd.read_csv(dune_endpoint_csv(start_year, end_year, "domain"))
+    meta = pd.read_csv(dune_endpoint_csv(start_year, end_year, "transect")).iloc[0]
+    rate = dom.set_index("domain_number")["mean_rate_m_yr"]
+    v0, v1 = int(meta["start_vintage"]), int(meta["end_vintage"])
+    d0, d1 = pd.Timestamp(meta["start_date"]), pd.Timestamp(meta["end_date"])
+    a0, a1 = bool(meta["start_date_assumed"]), bool(meta["end_date_assumed"])
+    years = float(meta["interval_yr"])
     first, last = int(rate.index.min()), int(rate.index.max())
     out = {}
     for gis in HATTERAS_BE_EDGE_DOMAINS:

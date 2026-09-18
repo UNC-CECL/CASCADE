@@ -1,0 +1,4 @@
+window,lines,start_date,end_date,end_date_assumed,n_domains,mean_shoreline_change_m,mean_dune_change_m,mean_beach_width_change_m,r_dune_vs_shoreline,slope_dune_on_shoreline,intercept_m,rmse_dune_minus_shoreline_m,domains_same_sign,domains_shoreline_landward,domains_dune_landward
+1996_2024,1997-2023,1997-10-12,2023-07-01,True,90,5.03,-14.8,19.83,0.806,0.688,-18.26,29.8,67,40,61
+1996_2010,1997-2009,1997-10-12,2009-05-30,False,90,-1.96,-16.17,14.21,0.66,0.595,-15.01,23.49,58,47,73
+2010_2024,2009-2023,2009-05-30,2023-07-01,True,90,6.99,1.37,5.62,0.71,0.557,-2.52,18.74,71,42,37
