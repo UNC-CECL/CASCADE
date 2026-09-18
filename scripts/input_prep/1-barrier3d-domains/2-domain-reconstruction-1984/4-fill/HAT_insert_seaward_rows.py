@@ -109,7 +109,7 @@ def _find_root(start: Path) -> Path:
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 
-from hat_topo_version import (array_name, dune_topo_root,  # noqa: E402
+from site_layer.hat_topo_version import (array_name, dune_topo_root,  # noqa: E402
                               duneline_shift_dir, topo_dirs)
 
 OFFSET_SCRIPT = (REPO / "scripts" / "input_prep" / "4-mgmt-forcings" / "road_offset"
@@ -142,8 +142,8 @@ SHIFT_SOURCES = {
     # a known-wrong number is not worth keeping reachable.
 }
 
-SETBACK_DIR = (REPO / "data" / "hatteras_init" / "4-mgmt-forcing" / "road_offset"
-               / "dunestart_offset" / str(YEAR))
+from site_layer import hat_topo_version as _tv  # noqa: E402
+SETBACK_DIR = _tv.road_setback_dir(YEAR)
 
 SENTINEL_DAM = -0.30          # SENTINEL_WATER_M / CELL_SIZE_M, the extractor's water
 TOPO_ROWS = 200               # the extractor's cap; a padded array must still fit

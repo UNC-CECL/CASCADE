@@ -6,15 +6,25 @@ is where the two methods are explained and compared. This file is the inventory:
 for every file here, what produced it, whether the model reads it, and whether
 losing it costs anything.
 
-Two vintages throughout, `1984` and `2004`. Each is measured against **its own
-period's extraction** — `1984-start` and `2004-start` — because the two are
-different islands. That pairing is defined once, in
-`scripts/hat_topo_version.py:YEAR_PRODUCT`.
+Two measured vintages, `1984` and `2004`, plus two derived from them, `1996`
+and `2010`. Each measurement is made against **its own period's extraction** —
+`1984-start` and `2004-start` — because the two are different islands, and on
+**its own period's line** — the 1978 and 2008 exports. Both pairings are
+defined once, in `scripts/site_layer/hat_topo_version.py` (`YEAR_PRODUCT`,
+`ROAD_LINE_FOR_YEAR`).
+
+**Two kinds of integer in this tree (since 2026-09-15).** A folder named
+`1984`, `1996`, `2004` or `2010` is a PERIOD START and lives under
+`dunestart_offset/`. A folder named `1978` or `2008` is a LINE VINTAGE and
+lives under `raw_offset/` and `raster/`. Before 2026-09-15 the lines and masks
+were filed under the start years they stand in for, so the same integer meant
+two things; the rename is recorded in each `raster/<vintage>/RUN_MANIFEST.txt`
+footer and `raw_offset/<vintage>/PROVENANCE.md`.
 
 ## Only one file here is a model input
 
 ```
-dunestart_offset/<year>/RoadSetback_<year>_dunestart.csv
+dunestart_offset/measured/<year>/RoadSetback_<year>_dunestart.csv
 ```
 
 `hatteras_site_config.py` resolves it as `PERIOD["road_setback_file"]` and
@@ -22,34 +32,42 @@ dunestart_offset/<year>/RoadSetback_<year>_dunestart.csv
 setback in metres landward of interior row 0. Everything else in this tree is
 provenance, diagnostics, or figures.
 
-`raster/<year>/masks/` is an input too, but to the *pipeline* rather than the
-model — both `HAT_road_offset_from_dune_start.py` and the dune-topo extractor
-read it. See the warning under `raster/` below.
+`raster/<vintage>/masks/` is an input too, but to the *pipeline* rather than
+the model — both `HAT_road_offset_from_dune_start.py` and the dune-topo
+extractor read it, through `hat_topo_version.road_mask_file()`. See the
+warning under `raster/` below.
+
+`dunestart_offset/derived/<year>/` holds the other two model inputs, the 1996
+and 2010 setbacks. They are built from the measured files by
+`1-produce/HAT_road_setback_derived_vintages.py` and never measured; the
+folder name is what says so.
 
 ## Inventory
 
 | path | written by | notes |
 |---|---|---|
-| `dunestart_offset/<year>/RoadSetback_<year>_dunestart.csv` | `1-produce/HAT_road_offset_from_dune_start.py` | **the forcing.** Floored at 0 |
-| `dunestart_offset/<year>/RoadOffset_<year>_domains.csv` | same | per-domain detail; carries the **signed** `setback_dunestart_m` |
-| `dunestart_offset/<year>/RoadOffset_<year>_profiles.csv` | same | per-profile detail |
-| `dunestart_offset/<year>/RoadOffset_<year>_domains_rawframe.csv` | same | the **unstraightened control** pass, not the forcing |
-| `dunestart_offset/<year>/RoadElevation_<year>_dunestart.csv` | same | road elevation over the dune-start road profiles. Not the model's elevation file — that is `../road_elevation/RoadElevation.csv` |
+| `dunestart_offset/measured/<year>/RoadSetback_<year>_dunestart.csv` | `1-produce/HAT_road_offset_from_dune_start.py` | **the forcing** for 1984 and 2004. Floored at 0 |
+| `dunestart_offset/derived/<year>/RoadSetback_<year>_dunestart.csv` | `1-produce/HAT_road_setback_derived_vintages.py` | **the forcing** for 1996 (= 1984 + the 1989 event) and 2010 (= 2004). Refuses to overwrite |
+| `dunestart_offset/derived/<year>/PROVENANCE.md` | same | what each was derived from |
+| `dunestart_offset/measured/<year>/RoadOffset_<year>_domains.csv` | same | per-domain detail; carries the **signed** `setback_dunestart_m` |
+| `dunestart_offset/measured/<year>/RoadOffset_<year>_profiles.csv` | same | per-profile detail |
+| `dunestart_offset/measured/<year>/RoadOffset_<year>_domains_rawframe.csv` | same | the **unstraightened control** pass, not the forcing |
+| `dunestart_offset/measured/<year>/RoadElevation_<year>_dunestart.csv` | same | road elevation over the dune-start road profiles. Not the model's elevation file — that is `../road_elevation/RoadElevation.csv` |
 | `dunestart_offset/RoadOffset_dunestart_audit.md` | same | **one document for both vintages.** A half run publishes a write-up missing a period |
 | `dunestart_offset/RoadSetback_audit.{csv,md}` | `2-audit/HAT_road_setback_audit.py` | the only thing that tells you a domain would spend the hindcast as an unmanaged barrier wearing a road label |
 | `dunestart_offset/HAT_dunestart_road_on_domains.png` | `1-produce/HAT_road_placement_on_domains.py` | |
 | `dunestart_offset/HAT_road_island_planview_<year>.{png,pdf}` | `3-figures/HAT_road_island_planview.py` | the whole island in one view — the road as `roadway_manager.py` builds it (a flat 2-cell band per domain), coloured by `RoadElevation.csv`. Styled and framed as the extractor's plan view, which it overlays. 300 dpi raster + vector |
 | `dunestart_offset/HAT_road_island_planview_<year>_caption.txt` | same | the figure caption. The figure carries **no title** — this is it, regenerated from the same constants the figure is drawn with so the two cannot drift |
 | `dunestart_offset/modifications/*` | `3-figures/HAT_dunestart_modification_stages.py`, `3-figures/HAT_oceanfloor_offset_check.py` | what the flooring and the seaward relocation actually moved |
-| `old_method_offset/<year>/RoadSetback_<year>.csv` | `1-produce/old_method/road_offset_pipeline.py` | the legacy 5-transect method. **Not stale, not a model input** — see below |
-| `old_method_offset/RoadSetback_oldmethod_{audit.md,domains.csv}` | `1-produce/old_method/HAT_old_method_figures.py` | how the legacy number is built, and where it strains |
-| `old_method_offset/HAT_old_method_*.png` | same, and `HAT_road_placement_on_domains.py` | |
-| `raster/<year>/masks/domain_<N>_road_<year>.npy` | `1-produce/HAT_rasterize_road_to_domains.py` | 131 per year. **The only script that masks the road** |
-| `raster/<year>/{HAT_road_mask_diagnostics,HAT_road_mask_summary}*` | same | |
-| `raster/<year>/figures/` | same | 14 QC domains only, by design — `QC_DOMAINS` at that script's line 168 |
-| `raster/<year>/RUN_MANIFEST.txt` | same | see the 2026-08-28 footer: two paths in it were renamed by the 08-25 restructure |
+| `archive/superseded_20260911/<year>/RoadSetback_<year>.csv` (was `old_method_offset/`) | `1-produce/old_method/road_offset_pipeline.py` | the legacy 5-transect method. **Not stale, not a model input** — see below |
+| `archive/superseded_20260911/RoadSetback_oldmethod_{audit.md,domains.csv}` | `1-produce/old_method/HAT_old_method_figures.py` | how the legacy number is built, and where it strains |
+| `archive/superseded_20260911/HAT_old_method_*.png` | same, and `HAT_road_placement_on_domains.py` | |
+| `raster/<vintage>/masks/domain_<N>_road_<vintage>.npy` | `1-produce/HAT_rasterize_road_to_domains.py` | 131 per LINE vintage (1978, 2008). **The only script that masks the road** |
+| `raster/<vintage>/{HAT_road_mask_diagnostics,HAT_road_mask_summary}*` | same | |
+| `raster/<vintage>/figures/` | same | 14 QC domains only, by design — `QC_DOMAINS` at that script's line 168 |
+| `raster/<vintage>/RUN_MANIFEST.txt` | same | the run record as written; see the 2026-08-28 footer (two paths renamed by the 08-25 restructure) and the 2026-09-15 footer (the folder was `raster/<period>/`) |
 | `raster/HAT_road_geojson_on_2009_dem.png` | `3-figures/HAT_road_geojson_map.py` | |
-| `raw_offset/<year>/nc12_<year>.{csv,geojson}` | **ArcGIS, not this repo** | source data. See provenance below |
+| `raw_offset/<vintage>/nc12_<vintage>.{csv,geojson}` | **ArcGIS, not this repo** | source data, filed by the imagery year (1978, 2008). See provenance below |
 | `method_comparison/HAT_method_comparison_on_domains.png`, `.../HAT_method_vs_actual_road.png` | `4-compare/HAT_method_comparison_figures.py` | |
 | `method_comparison/HAT_road_method_diagnostic.{csv,png}` | `4-compare/HAT_road_method_diagnostic.py` | |
 
@@ -66,19 +84,29 @@ whole and regenerated.
 road_offset/
     README.md              this file
     dunestart_offset/      the method that produces the forcing
-    old_method_offset/     the legacy method, kept for comparison only
-    raster/                road masks -- an input to the pipeline
-    raw_offset/            the digitised NC-12 lines, from ArcGIS
+        measured/1984/     measured: 1978 line vs 1984-start row 0
+        measured/2004/     measured: 2008 line vs 2004-start row 0
+        derived/1996/      1984 + the 1989 relocation (no line of its own)
+        derived/2010/      2004, unchanged (no relocation 2004-2010)
+        modifications/     what the flooring and the seaward move changed
+        RoadSetback_audit.{csv,md}, RoadOffset_dunestart_audit.md, figures
+    raster/1978/, 2008/    road masks per LINE vintage -- a pipeline input
+    raw_offset/1978/, 2008/  the digitised NC-12 lines, from ArcGIS
     method_comparison/     old-vs-new. Read when choosing a method, not when
                            running the model
+    archive/               (since 2026-09-18, as in 5-scr and 7-source-sink)
+        superseded_20260907/   the v1-era 1984 measurement (see WHY.md there)
+        superseded_20260911/   the legacy 5-transect method, kept for comparison
+                               only (was old_method_offset/; see WHY.md there)
 ```
 
 The top level holds the forcing, its source, and its inputs. Anything that
 exists to *compare* the two methods sits in `method_comparison/` so it is not
-mistaken for part of the product. `old_method_offset/` stays a sibling of
-`dunestart_offset/` rather than moving under it: they are two methods, and
-that parallel is a fact about the tree. Which one the model reads is stated
-above, in words, rather than encoded in the nesting.
+mistaken for part of the product. The legacy method sat beside
+`dunestart_offset/` as `old_method_offset/` until 2026-09-11, when it was
+retired to a dated folder; it is under `archive/` now. Every script reaches it
+through `hat_topo_version.LEGACY_SETBACK_ROOT` / `legacy_setback_file()`, and
+every other path in this tree through the same module (2026-09-18).
 
 ## Source provenance for raw_offset/
 
@@ -90,10 +118,14 @@ rescued here — the same treatment the `.tif.xml` sidecars got in the
 the origin is not.
 
 ```
-nc12_1984.csv   \\HANNAHS-LAPTOP\D$\Hatteras_GIS\Roads\nc12_1984.csv
-nc12_2004.csv   \\HANNAHS-LAPTOP\D$\Hatteras_GIS\Roads\nc12_2004.csv
-created         2024-10-10 15:56:55, both files
+raw_offset/1978/nc12_1978.csv   from \\HANNAHS-LAPTOP\D$\Hatteras_GIS\Roads\nc12_1984.csv
+raw_offset/2008/nc12_2008.csv   from \\HANNAHS-LAPTOP\D$\Hatteras_GIS\Roads\nc12_2004.csv
+created                         2024-10-10 15:56:55, both files
 ```
+
+The origin files on the laptop are still named `nc12_1984` and `nc12_2004`;
+they were imported under those names and renamed to their imagery vintage in
+this repo on 2026-09-15 (`git log --follow` sees through the rename).
 
 These two line vintages are **1978 and 2008 exports standing in for 1984 and
 2004 on purpose** — not a bug. About 70% of their vertices are shared, so most
@@ -118,7 +150,7 @@ from before `HAT_road_setback_audit.py` was repointed at `dunestart_offset/`
 which is the actual reason they had to go. The legacy method's real audit is
 `RoadSetback_oldmethod_audit.md`, beside them and current.
 
-## Why old_method_offset/ is still here
+## Why the legacy setbacks are still here (archive/superseded_20260911/)
 
 It is 1.9 MB and no model reads it, but three live scripts do:
 `HAT_road_offset_from_dune_start.py:920` for `setback_legacy_m` /

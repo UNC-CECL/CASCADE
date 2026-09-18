@@ -55,11 +55,11 @@ def _find_root(start: Path) -> Path:
 
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
-from hat_topo_version import array_name, dune_topo_root  # noqa: E402
-from hat_topo_version import insert_figures_dir  # noqa: E402
-from hat_topo_version import require_version  # noqa: E402
-from hat_topo_version import duneline_shift_dir  # noqa: E402
-from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+from site_layer.hat_topo_version import array_name, dune_topo_root  # noqa: E402
+from site_layer.hat_topo_version import insert_figures_dir  # noqa: E402
+from site_layer.hat_topo_version import require_version  # noqa: E402
+from site_layer.hat_topo_version import duneline_shift_dir  # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               DOMAIN_AXIS_LABEL, caption, figsize,
                               open_frame, save, town_bands, _title)
 
@@ -67,7 +67,8 @@ from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
 # of a path that eight scripts used to build by hand. Moved under
 # 2-domain-reconstruction-1984/ on 2026-09-03.
 SHIFT = duneline_shift_dir("1984-start")
-ROAD = (REPO / "data/hatteras_init/4-mgmt-forcing/road_offset/dunestart_offset/1984")
+from site_layer import hat_topo_version as _tv  # noqa: E402
+ROAD = _tv.road_setback_dir(1984)
 BASE_VERSION = "v2"   # the re-picked extraction (was "v3")
 # DELETED 2026-09-07 with every layer (only unmodified topography is kept);
 # the literal is kept as the name of what this drew. require_version() in

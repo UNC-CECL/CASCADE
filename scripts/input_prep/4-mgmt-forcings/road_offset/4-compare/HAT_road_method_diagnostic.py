@@ -67,7 +67,7 @@ INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 # "2009_v3" and silently survived the re-pick into 2009_v4. See hat_topo_version.py.
 # parents[4] IS scripts/ -- hat_topo_version.py moved there 2026-08-20.
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-from hat_topo_version import (topo_dirs, array_name,  # noqa: E402
+from site_layer.hat_topo_version import (topo_dirs, array_name,  # noqa: E402
                              product_for_year)
 
 # PER VINTAGE, not once (2026-08-26). This was a module-level topo_dirs() with
@@ -91,9 +91,11 @@ def topo_label(year: int) -> str:
 
 # array_name() is the single definition of these filenames - the same one
 # the extractor writes with. Nothing here spells a name.
-ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
-OFFSET_ROOT = ROADS_ROOT / "dunestart_offset"
-LEGACY_SB_FMT = ROADS_ROOT / "old_method_offset" / "{year}" / "RoadSetback_{year}.csv"
+from site_layer import hat_topo_version as _tv  # noqa: E402
+ROADS_ROOT = _tv.ROADS_ROOT
+OFFSET_ROOT = ROADS_ROOT / "dunestart_offset" / "measured"   # the two measured starts
+# old_method_offset/ became a dated superseded folder on 2026-09-11; resolved 2026-09-18.
+LEGACY_SB_FMT = _tv.LEGACY_SETBACK_ROOT / "{year}" / "RoadSetback_{year}.csv"
 
 # Road elevation is NOT per-year, and it stays that way -- but the reason is no
 # longer "there is one 2009 DEM". There are two elevation products now, and in
@@ -106,8 +108,7 @@ LEGACY_SB_FMT = ROADS_ROOT / "old_method_offset" / "{year}" / "RoadSetback_{year
 # between 1984 and 2004 that nothing supports.
 # See data/.../road_elevation/RoadElevation_audit.md and the note beside
 # HATTERAS_ROAD_ELEVATION_FILE in hatteras_site_config.py.
-LEGACY_EL = (INIT_ROOT / "4-mgmt-forcing" / "road_elevation"
-             / "RoadElevation.csv")
+LEGACY_EL = _tv.ROAD_ELEVATION_FILE
 
 # 4-compare output lands in method_comparison/, NOT inside either method's
 # folder -- this is a legacy-vs-dune-start comparison, so it belongs to neither.
@@ -117,7 +118,7 @@ LEGACY_EL = (INIT_ROOT / "4-mgmt-forcing" / "road_elevation"
 # always correct about that rule; only this one drifted.
 OUT_ROOT = ROADS_ROOT / "method_comparison"
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
-from hat_figure_style import (  # noqa: E402
+from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, figsize, save, caption, open_frame, town_bands, _title,
     DOMAIN_AXIS_LABEL, INK, INK_MUTED, C_1984 as C_EARLY, C_1997 as C_LATE,
 )

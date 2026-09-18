@@ -201,6 +201,51 @@ ROAD_SETBACK_KIND = {
 MGMT_ROOT = INIT_ROOT / "4-mgmt-forcing"
 ROADS_ROOT = MGMT_ROOT / "road_offset"
 
+# THE REST OF 4-mgmt-forcing (2026-09-18). About thirty scripts typed these
+# themselves, and four still spelled old_method_offset/, which became a dated
+# superseded folder on 09-11 -- so they failed soft, comparing against nothing.
+# The layout is the one settled on 2026-09-15; this only names it once.
+ROAD_LINE_ROOT = ROADS_ROOT / "raw_offset"            # <vintage>/nc12_<vintage>.geojson
+ROAD_RASTER_ROOT = ROADS_ROOT / "raster"              # <vintage>/masks/
+ROAD_SETBACK_ROOT = ROADS_ROOT / "dunestart_offset"   # measured/ derived/ modifications/
+ROAD_ARCHIVE = ROADS_ROOT / "archive"
+# The old-method setbacks ("old_method_offset/" in older scripts), kept for the
+# method comparison: <year>/RoadSetback_<year>.csv.
+LEGACY_SETBACK_ROOT = ROAD_ARCHIVE / "superseded_20260911"
+# The 1984 dune-start setbacks as measured on 1984-start/v1, before the road
+# tree was re-measured on v2 ("dunestart_offset_ARCHIVE_1984start_v1").
+SETBACK_1984_V1_DIR = ROAD_ARCHIVE / "superseded_20260907" / "1984"
+
+ROAD_ELEVATION_DIR = MGMT_ROOT / "road_elevation"
+# ONE file for every period; see HATTERAS_ROAD_ELEVATION_FILE for why.
+ROAD_ELEVATION_FILE = ROAD_ELEVATION_DIR / "RoadElevation.csv"
+ROAD_RELOCATION_ROOT = MGMT_ROOT / "road_relocation"
+NOURISHMENT_DIR = MGMT_ROOT / "nourishment"            # figures only
+# The source record behind HATTERAS_NOURISHMENT_PROJECTS.
+MGMT_RECORD_XLSX = MGMT_ROOT / "Hatteras_Management_Timelines.xlsx"
+
+
+def init_relpath(path: Path) -> str:
+    """A path under INIT_ROOT as the POSIX string hatteras_site_config carries."""
+    return Path(path).relative_to(INIT_ROOT).as_posix()
+
+
+def legacy_setback_file(year: int) -> Path:
+    """The OLD-METHOD setback for a measured start (1984, 2004) -- superseded,
+    kept only to compare the two methods."""
+    return LEGACY_SETBACK_ROOT / str(int(year)) / f"RoadSetback_{int(year)}.csv"
+
+
+def road_relocation_dir(vintage_from: int, vintage_to: int) -> Path:
+    """The measured displacement between two LINE vintages."""
+    a, b = _check_line_vintage(vintage_from), _check_line_vintage(vintage_to)
+    return ROAD_RELOCATION_ROOT / f"{a}_{b}"
+
+
+def road_relocation_file(vintage_from: int, vintage_to: int) -> Path:
+    a, b = _check_line_vintage(vintage_from), _check_line_vintage(vintage_to)
+    return road_relocation_dir(a, b) / f"road_relocation_{a}_{b}.csv"
+
 
 def road_line_for_year(year: int) -> int:
     """The NC-12 line vintage (1978 or 2008) a period start year reads."""
@@ -227,13 +272,13 @@ def _check_line_vintage(vintage) -> int:
 def road_line_file(vintage: int) -> Path:
     """The digitised NC-12 centreline of one LINE vintage."""
     v = _check_line_vintage(vintage)
-    return ROADS_ROOT / "raw_offset" / str(v) / f"nc12_{v}.geojson"
+    return ROAD_LINE_ROOT / str(v) / f"nc12_{v}.geojson"
 
 
 def road_mask_dir(vintage: int) -> Path:
     """Where HAT_rasterize_road_to_domains.py put one line vintage's masks."""
     v = _check_line_vintage(vintage)
-    return ROADS_ROOT / "raster" / str(v) / "masks"
+    return ROAD_RASTER_ROOT / str(v) / "masks"
 
 
 def road_mask_file(vintage: int, domain: int) -> Path:
@@ -252,7 +297,7 @@ def road_setback_dir(year: int) -> Path:
             f"Known: {', '.join(str(y) for y in sorted(ROAD_SETBACK_KIND))}\n"
             f"Add it to ROAD_SETBACK_KIND and ROAD_LINE_FOR_YEAR in "
             f"{__file__}.\n")
-    return ROADS_ROOT / "dunestart_offset" / kind / str(int(year))
+    return ROAD_SETBACK_ROOT / kind / str(int(year))
 
 
 def road_setback_file(year: int) -> Path:

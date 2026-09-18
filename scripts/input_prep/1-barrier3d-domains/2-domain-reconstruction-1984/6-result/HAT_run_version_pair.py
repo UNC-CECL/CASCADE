@@ -53,8 +53,8 @@ from cascade_pipeline.run_registry import arm_component  # noqa: E402
 
 HINDCAST = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 DUNE_TOPO = REPO / "data/hatteras_init/1-barrier3d-domains/1984-start/dune-topo"
-LIVE_SETBACK = (REPO / "data/hatteras_init/4-mgmt-forcing/road_offset"
-                / "dunestart_offset/1984/RoadSetback_1984_dunestart.csv")
+from site_layer import hat_topo_version as _tv  # noqa: E402
+LIVE_SETBACK = _tv.road_setback_file(1984)
 SET = "version-pair"
 LOG_DIR = REPO / "output" / "experiments" / "version_pair" / "logs"
 

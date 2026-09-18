@@ -59,8 +59,8 @@ REPO = _find_root(Path(__file__).resolve())
 INIT = REPO / "data" / "hatteras_init"
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "0-elevation" / "3-figures"))
-from hat_topo_version import array_name, dune_topo_root, insert_figures_dir_for_domain, topo_dirs, insert_scope_step# noqa: E402
-from hat_figure_style import (  # noqa: E402
+from site_layer.hat_topo_version import array_name, dune_topo_root, insert_figures_dir_for_domain, topo_dirs, insert_scope_step# noqa: E402
+from site_layer.hat_figure_style import (  # noqa: E402
     C as STYLE_C, INK, apply_style, elevation_cmap, figsize, record_caption, save, spines_for_image, _title,
 )
 
@@ -77,10 +77,13 @@ RUN = "HAT_1984_2004_calibBE_road_bdm_groin"
 RUNS = {"v1": REPO / "output/raw_runs/pea1989basenoreloc/1984_2004/calibBE" / RUN,
         "v2": REPO / "output/raw_runs/1984_2004/calibBE" / RUN,
         "v3": REPO / "output/raw_runs/behindroad-copy/1984_2004/calibBE" / RUN}
+from site_layer import hat_topo_version as _tv  # noqa: E402
 MEASURED = {  # the unfloored measurement each version's CSV was floored from
-    "v1": INIT / "4-mgmt-forcing/road_offset/dunestart_offset_ARCHIVE_1984start_v1/1984/RoadOffset_1984_domains.csv",
-    "v2": INIT / "4-mgmt-forcing/road_offset/dunestart_offset/1984/RoadOffset_1984_domains.csv",
-    "v3": INIT / "4-mgmt-forcing/road_offset/dunestart_offset/1984/RoadOffset_1984_domains.csv",
+    # v1 named dunestart_offset_ARCHIVE_1984start_v1/, which became a dated
+    # superseded folder; resolved since 2026-09-18.
+    "v1": _tv.SETBACK_1984_V1_DIR / "RoadOffset_1984_domains.csv",
+    "v2": _tv.road_setback_dir(1984) / "RoadOffset_1984_domains.csv",
+    "v3": _tv.road_setback_dir(1984) / "RoadOffset_1984_domains.csv",
 }
 C_ADD = STYLE_C["ACCENT"]        # the modification under test: the inserted rows
 C_ROAD = STYLE_C["ROAD"]         # NC-12 as the model places it

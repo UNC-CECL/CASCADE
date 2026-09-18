@@ -1,4 +1,4 @@
-domain,number_of_samples,road_1984_length_m,mean_relocation_m,median_relocation_m,minimum_relocation_m,maximum_relocation_m,std_relocation_m,mean_signed_landward_m,median_signed_landward_m,landward_fraction,sign_agreement,coincident_fraction,oblique_fraction,classification,flags
+domain,number_of_samples,road_1978_length_m,mean_relocation_m,median_relocation_m,minimum_relocation_m,maximum_relocation_m,std_relocation_m,mean_signed_landward_m,median_signed_landward_m,landward_fraction,sign_agreement,coincident_fraction,oblique_fraction,classification,flags
 8,239,1188.623387258726,2.4468931311327413,1.0273863482013483,0.0,56.59883182366377,7.297257466971674,1.512907535958145,-0.8053478155960172,0.4578313253012048,0.5421686746987953,0.3054393305439331,0.6736401673640168,relocated,ROADS_CROSS;OBLIQUE_SIGN
 9,103,507.78632765781737,13.798040822716567,10.631356851143988,0.0,34.71619860563882,12.546928580887643,17.97479768385311,18.057725747487048,1.0,1.0,0.23300970873786409,0.0,relocated,
 10,103,508.4013955756679,46.92372301151031,47.80040594088928,34.95678151063378,59.422894098526186,6.5889138885558225,46.92372301151031,47.80040594088928,1.0,1.0,0.0,0.0,relocated,

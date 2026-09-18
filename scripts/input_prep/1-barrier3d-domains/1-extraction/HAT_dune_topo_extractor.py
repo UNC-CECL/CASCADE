@@ -146,7 +146,7 @@ SAVE_SETTINGS_SHEET = True   # per-domain settings/results sheet (csv + xlsx)
 # v4 different is the WINDOWS, which is exactly why it gets its own folder and
 # its own picks file rather than overwriting v3.
 # WHICH PRODUCT this run builds. One of the period folders under
-# data/hatteras_init/1-barrier3d-domains/ - see scripts/hat_topo_version.py.
+# data/hatteras_init/1-barrier3d-domains/ - see scripts/site_layer/hat_topo_version.py.
 # Added 2026-08-25 when the tree went period-first; before that there was only
 # one topography and both hindcast periods read it.
 #
@@ -160,7 +160,8 @@ TOPO_PRODUCT = "1984-start"
 # every reader. hat_topo_version PARSES this file for TOPO_PRODUCT/VERSION and
 # never imports it, so importing it here creates no cycle.
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))   # scripts/ (1-extraction/ since 2026-09-09)
-from hat_topo_version import array_name, year_for_product  # noqa: E402
+from site_layer.hat_topo_version import (array_name, year_for_product,  # noqa: E402
+                              ROAD_LINE_VINTAGES)
 
 VERSION = "v2"             # 2026-09-02 re-pick (was "v3" until the 2026-09-04
                            # renumber). What this script WRITES.
@@ -179,7 +180,7 @@ VERSION = "v2"             # 2026-09-02 re-pick (was "v3" until the 2026-09-04
 # false for both live products - 2004-start is the 2009+2014 mosaic, 1984-start
 # is 2009+2014+1996 - and the fix is not a better year but no year: the period
 # lives in the PRODUCT DIRECTORY, which every reader must resolve anyway. See
-# the long note in scripts/hat_topo_version.py for why a per-period tag was
+# the long note in scripts/site_layer/hat_topo_version.py for why a per-period tag was
 # tried and reverted the same day.
 #
 # What remains here is the text on two figures. It names the product, because
@@ -316,7 +317,8 @@ OFFSET_COLUMN = 0              # for multi-year raw_offset files, which column t
 # the old behaviour, for the case where there is no relevant year to pick.
 PRODUCT_YEAR = year_for_product(TOPO_PRODUCT, strict=False)
 
-# Plan-view canvas, reproducing plot_initialization_poster_no_border.py exactly:
+# Plan-view canvas, reproducing the ABSOLUTE placement of
+# HAT_initialization_figures.py (island_<year>_absolute.png) exactly:
 #   offset_cells = round(offset_m / 10); each domain's topo row 0 (ocean side)
 #   lands on canvas row = offset_cells; alongshore flipped with np.fliplr.
 SAVE_ISLAND_PLAN_FIG = True
@@ -476,24 +478,31 @@ ALONGSHORE_FLIP = True
 # aligned with the DEM .npy by construction. This script only reads them, and
 # refuses anything whose shape disagrees.
 #
-# TWO VINTAGES ON A 2009 DEM. The road lines are 1984 and 2004; the topography is
-# 2009. That mismatch IS the subject of RoadOffset_dunestart_audit.md, so both are
-# drawn, in different colours, with the year in every label -- never read the
-# 1984 line as 1984 topography.
+# TWO VINTAGES ON A 2009 DEM. The road lines are 1978 and 2008 exports -- the
+# stand-ins for the 1984 and 2004 starts, paired in
+# hat_topo_version.ROAD_LINE_FOR_YEAR -- and the topography is 2009. That
+# mismatch IS the subject of RoadOffset_dunestart_audit.md, so both are drawn,
+# in different colours, with the LINE vintage in every label -- never read the
+# 1978 line as 1984 topography, nor as 1978 topography.
+#
+# RENAMED 2026-09-15. The masks were domain_<N>_road_1978.npy / _2004.npy and
+# now carry the line's true vintage. ROAD_YEARS are therefore LINE vintages,
+# not period starts, and they key every road_masks / road_stats dict below and
+# every "road ... <year>" column of the settings sheet.
 SHOW_ROAD = True
-ROAD_YEARS = [1984, 2004]
+ROAD_YEARS = list(ROAD_LINE_VINTAGES)
 REQUIRE_ROAD_MASKS = True   # missing file or shape mismatch -> hard error.
                             # All 90 domains have masks for both years, so this
                             # only ever fires if the raster tree moved or a
                             # re-export changed a grid.
-ROAD_RASTER_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset" / "raster"
+from site_layer.hat_topo_version import ROAD_RASTER_ROOT  # noqa: E402
 ROAD_MASK_DIR_FMT = "{year}/masks"
 ROAD_MASK_NAME_FMT = "domain_{domain}_road_{year}.npy"
 
 # D1-D7 (Cape Point) have ZERO road cells in both vintages -- NC-12 does not
 # reach the point. An empty mask is normal and silent; only a missing file or a
 # shape mismatch is an error.
-ROAD_COLORS = {1984: "#6A1B9A", 2004: "#111111"}   # purple 1984, near-black 2004
+ROAD_COLORS = {1978: "#6A1B9A", 2008: "#111111"}   # purple 1978 line, near-black 2008 line
 ROAD_EDGE_COLOR = "#FFFFFF"   # thin outline so the road reads on dark water AND
                               # light land, which a single fill colour cannot
 ROAD_PLAN_ALPHA = 0.55        # filled road cells on a map panel
@@ -2382,7 +2391,15 @@ def load_offsets() -> dict:
 
 
 def _island_norm():
-    """Poster colormap: terrain with 0 m pinned to colormap position 0.35."""
+    """Terrain with 0 m pinned to colormap position 0.35.
+
+    A LOCAL copy, and no longer shared with anything. It was written to
+    match the initialization figure, which moved to the house elevation
+    classes on 2026-09-17 (hat_figure_style.elevation_cmap: a hard break at
+    0 m, one colour for water). This is a QC view inside the extractor, so
+    it was left on the ramp rather than changed in the same pass -- but it
+    is now the extractor's own choice, not a shared convention.
+    """
     lo, hi, pos = ISLAND_ELEV_MIN_M, ISLAND_ELEV_MAX_M, ISLAND_SEA_LEVEL_POS
 
     def fwd(x):
@@ -2534,7 +2551,8 @@ def _build_island_canvas(recs, offset_m_by_domain, mode):
 def island_plan_figure(summary: list, offsets: dict, run_dir: Path) -> None:
     """
     Plan view of the processed dune + interior for domains 1-90 at the measured
-    offsets, styled to match plot_initialization_poster_no_border.py.
+    offsets, on the terrain ramp HAT_initialization_figures.py used until
+    2026-09-17 (see _island_norm); that figure is now in elevation classes.
 
     ONE FIGURE PER CROSS-SHORE MODE, at PRODUCT_YEAR's offsets only. It used to
     be one per offset YEAR per mode; see the PRODUCT_YEAR note for why the

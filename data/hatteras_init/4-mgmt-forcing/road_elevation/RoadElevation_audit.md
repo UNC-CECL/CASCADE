@@ -8,7 +8,7 @@ Generated 2026-09-10T20:20:46 by `HAT_road_elevation.py`.
 | Why that fill | The 2008 NOAA IOCM survey was preferred here until 2026-08-26 — one year from the 2009 base, so the same pavement, where a 2014 Post-Sandy surface at GIS 78–80 may be a REBUILT road (post-Irene, post-breach). That product is deleted and not reproducible from this repo, so the baseline is used instead. The cost is bounded: only GIS 78–80 have NoData under the 2004 alignment, and the two fills differ by ≤ 0.015 m in the corridor. |
 | Why NOT the 1984 product | `2009-2014-1996` sits **+0.222 m** higher through this corridor (median; 54 of 82 domains beyond 0.05 m, cell counts identical, so ALACE REPLACED measured 2009 pavement). That is the uncorrected island-wide 1996-vs-2009 survey offset — `mosaic_1984_audit.csv` puts it at median +0.255 m — not a roadbed, and it is kept out of the forcing. One elevation set, on the baseline, for both periods. |
 | Domains materially affected | **GIS 78, 79, 80** — the only ones with NoData under the road in the unfilled 2009 clips. Everywhere else the corridor was already complete, and the change is ≤ 0.01 m: the fill pipeline rebuilds the raster rather than patching the original, so the corridor mask lands on a few cells' difference even where there was nothing to fill. Not a no-op, but well inside the 0.07 m within-domain scatter. |
-| Alignment | `nc12_2004.geojson` — the **2004** digitised centreline |
+| Alignment | `nc12_2008.geojson` — the **2004** digitised centreline |
 | Corridor | 3.5 m buffer either side (~7 m strip) |
 | Aggregation | **mean** of all valid 1 m cells in the corridor |
 | Datum written | **m MHW-relative** (MHW = 0.36 m NAVD88) |
@@ -52,7 +52,7 @@ On this alignment the two agree closely: median |mean − median| = **0.005 m**,
 
 ### The external validation is gone
 
-This method was originally validated against an `elevation_2009` column in `2004_road_offset_raw.csv`, sampled independently in ArcGIS Pro at 1 m transect points; the two agreed to a median of −0.02 m. **That check is no longer reproducible.** The file is now `nc12_2004.csv`, the `elevation_2009` column is absent, and its apparent successors (`avg_elev_m`, `z_mean`, `z_max`, `z_min`, `road_z`, `relief_m`) are all zero or all empty across the 1491 rows. The agreement was real when it was measured; it cannot be re-measured from what is in the repository now. If a pre-rename copy of that CSV turns up, restore the check.
+This method was originally validated against an `elevation_2009` column in `2004_road_offset_raw.csv`, sampled independently in ArcGIS Pro at 1 m transect points; the two agreed to a median of −0.02 m. **That check is no longer reproducible.** The file is now `nc12_2008.csv`, the `elevation_2009` column is absent, and its apparent successors (`avg_elev_m`, `z_mean`, `z_max`, `z_min`, `road_z`, `relief_m`) are all zero or all empty across the 1491 rows. The agreement was real when it was measured; it cannot be re-measured from what is in the repository now. If a pre-rename copy of that CSV turns up, restore the check.
 
 What follows is internal: does the answer depend on choices we made, and does the surface the model runs on agree with the surface we measured.
 

@@ -144,7 +144,7 @@ from site_layer.hat_map_layers import DOMAIN_BOXES as DOMAIN_FILE  # noqa: E402
 # dashed on top - where they coincide you see a blue line with red dashes, and
 # where they diverge each is legible alone. Both carry a white casing so they
 # survive terrain running from dark water to near-white dune crest.
-ROAD_DIR = (INIT_ROOT / "4-mgmt-forcing" / "road_offset" / "raw_offset")
+from site_layer.hat_topo_version import ROAD_LINE_ROOT as ROAD_DIR  # noqa: E402
 # Keyed by PERIOD; the files are the 1978 and 2008 LINES those periods read
 # (hat_topo_version.ROAD_LINE_FOR_YEAR), filed by vintage since 2026-09-15.
 ROAD_FILES = {1984: ROAD_DIR / "1978" / "nc12_1978.geojson",

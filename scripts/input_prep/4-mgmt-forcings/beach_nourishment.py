@@ -66,8 +66,7 @@ from site_layer.hatteras_site_config import (  # noqa: E402
 )
 
 DATA_DIR = PROJECT_ROOT / "data" / "hatteras_init"
-MGMT_DIR = DATA_DIR / "4-mgmt-forcing"
-RECORD_XLSX = MGMT_DIR / "Hatteras_Management_Timelines.xlsx"
+from site_layer.hat_topo_version import MGMT_ROOT as MGMT_DIR, MGMT_RECORD_XLSX as RECORD_XLSX  # noqa: E402
 from site_layer.hat_observed_rates import DOMAIN_BOXES as DOMAIN_FILE  # noqa: E402
 from site_layer.hat_map_layers import ISLAND_OUTLINE as OUTLINE_FILE  # noqa: E402
 OUT_DIR = MGMT_DIR / "nourishment"

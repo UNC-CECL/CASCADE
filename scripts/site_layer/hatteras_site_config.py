@@ -30,6 +30,9 @@ from cascade_pipeline.roadway import (
 # imported here so a reader of this config sees the pairing by name.
 from site_layer.hat_topo_version import (INIT_ROOT, ROAD_LINE_FOR_YEAR,  # noqa: F401
                               YEAR_PRODUCT, road_setback_relpath)
+# The other 4-mgmt-forcing paths this file names (road elevation, the
+# relocation measurement) come from the same module since 2026-09-18.
+from site_layer import hat_topo_version as _tv_mgmt  # noqa: E402
 from site_layer.hat_extension_domains import (BASE_GEOMETRY, gis_bounds,  # noqa: F401
                                    geometry_label, is_extended)
 
@@ -1514,7 +1517,7 @@ HATTERAS_COMMUNITY_ZONES = (
 # within-domain sigma up to 1.70 m -- the abandoned corridor now lies UNDER the
 # foredune, so that sample is dune, not road. The 2004 value is both the better
 # measurement and the lower of the two.
-HATTERAS_ROAD_ELEVATION_FILE = "4-mgmt-forcing/road_elevation/RoadElevation.csv"
+HATTERAS_ROAD_ELEVATION_FILE = _tv_mgmt.init_relpath(_tv_mgmt.ROAD_ELEVATION_FILE)
 
 # Historical NC-12 management events.
 #
@@ -1570,8 +1573,8 @@ HATTERAS_ROAD_ELEVATION_FILE = "4-mgmt-forcing/road_elevation/RoadElevation.csv"
 # Named by the two LINE vintages it was measured between (renamed from
 # 1984_2004 on 2026-09-15, with the lines themselves), not by the periods those
 # lines stand in for.
-_RELOCATION_MEASUREMENT_FILE = ("4-mgmt-forcing/road_relocation/1978_2008/"
-                                "road_relocation_1978_2008.csv")
+_RELOCATION_MEASUREMENT_FILE = _tv_mgmt.init_relpath(
+    _tv_mgmt.road_relocation_file(1978, 2008))
 
 # WHY THE 1999 EVENT STOPS AT GIS 14. The measurement classifies GIS 15
 # 'relocated', but cannot say by how much or in which direction: the two

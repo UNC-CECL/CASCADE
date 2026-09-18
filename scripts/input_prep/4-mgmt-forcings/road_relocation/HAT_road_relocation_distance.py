@@ -122,6 +122,12 @@ from shapely.ops import nearest_points, unary_union
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 DATA_DIR = PROJECT_ROOT / "data" / "hatteras_init"
+# The line files and the output folder resolve through hat_topo_version.py
+# (2026-09-18); scripts/ goes on the path here because the file's own
+# sys.path setup comes later.
+import sys as _tvsys
+_tvsys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+from site_layer import hat_topo_version as _tv  # noqa: E402
 
 # Which pair of road vintages to compare. Override from the shell to compare a
 # different pair without editing the file.
@@ -136,14 +142,7 @@ YEAR_TO = int(os.environ.get("HAT_RELOC_TO", 2008))
 def road_file(year):
     """The digitised NC-12 centreline for one vintage."""
 
-    return (
-        DATA_DIR
-        / "4-mgmt-forcing"
-        / "road_offset"
-        / "raw_offset"
-        / str(year)
-        / f"nc12_{year}.geojson"
-    )
+    return _tv.road_line_file(year)
 
 
 ROAD_FROM_FILE = road_file(YEAR_FROM)
@@ -161,12 +160,7 @@ _sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
 from site_layer import hat_observed_rates as _obs  # noqa: E402
 DOMAIN_FILE = _obs.DOMAIN_BOXES
 
-OUTPUT_DIR = (
-    DATA_DIR
-    / "4-mgmt-forcing"
-    / "road_relocation"
-    / f"{YEAR_FROM}_{YEAR_TO}"
-)
+OUTPUT_DIR = _tv.road_relocation_dir(YEAR_FROM, YEAR_TO)
 
 OUTPUT_CSV = OUTPUT_DIR / f"road_relocation_{YEAR_FROM}_{YEAR_TO}.csv"
 OUTPUT_SAMPLE_POINTS = (

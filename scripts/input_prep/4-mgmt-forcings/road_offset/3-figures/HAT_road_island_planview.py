@@ -26,7 +26,7 @@ than curving, and the step is the discretisation the model imposes.
 
 SOURCES ARE THE MODEL-FACING FILES, FOR THE SAME REASON
 --------------------------------------------------------
-    setback    dunestart_offset/<year>/RoadSetback_<year>_dunestart.csv
+    setback    dunestart_offset/measured/<year>/RoadSetback_<year>_dunestart.csv
                the 2-row file hatteras_site_config.py resolves as
                PERIOD["road_setback_file"]. Already floored and already
                relocated seaward where a roadway would drown at t=0.
@@ -64,7 +64,7 @@ between the products and 65 differ in interior shape.
 INPUT   <product>/dune-topo/<version>/topography/domain_<N>_topography.npy  dam
         <product>/dune-topo/<version>/dunes/domain_<N>_dune.npy             dam
         2-brie-offset/<year>/Island_Dune_Offsets_<year>_*.csv      m
-        dunestart_offset/<year>/RoadSetback_<year>_dunestart.csv            m
+        dunestart_offset/measured/<year>/RoadSetback_<year>_dunestart.csv            m
         road_elevation/RoadElevation.csv                                    m MHW
 
 OUTPUT  dunestart_offset/HAT_road_island_planview_<year>.png (and .pdf)
@@ -87,15 +87,16 @@ from matplotlib.patches import Patch, Rectangle
 REPO = next(_p for _p in Path(__file__).resolve().parents
             if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
-import hat_topo_version as htv  # noqa: E402
-from hat_figure_style import (  # noqa: E402
+from site_layer import hat_topo_version as htv  # noqa: E402
+from site_layer.hat_figure_style import (  # noqa: E402
     C, DOMAIN_AXIS_LABEL, INK, INK_MUTED, GRID_C, apply_style, caption,
     figsize, save)
 
 INIT_ROOT = REPO / "data" / "hatteras_init"
-ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
-DUNESTART = ROADS_ROOT / "dunestart_offset"
-ROAD_ELEV_CSV = INIT_ROOT / "4-mgmt-forcing" / "road_elevation" / "RoadElevation.csv"
+from site_layer import hat_topo_version as _tv  # noqa: E402
+ROADS_ROOT = _tv.ROADS_ROOT
+DUNESTART = _tv.ROAD_SETBACK_ROOT
+ROAD_ELEV_CSV = _tv.ROAD_ELEVATION_FILE
 
 # =============================================================================
 # CONFIG - mirrors HAT_dune_topo_extractor.py and roadway_manager.py
@@ -287,8 +288,7 @@ def build(year):
             dem[origin - 1, c0:c1] = dune_rows[k]
 
     # --- the road, exactly as roadway_manager builds it -------------------
-    setback = read_two_row_csv(DUNESTART / str(year)
-                               / f"RoadSetback_{year}_dunestart.csv")
+    setback = read_two_row_csv(htv.road_setback_file(year))
     elev = read_two_row_csv(ROAD_ELEV_CSV)
     width_cells = int(ROAD_WIDTH_M / CELL_SIZE_M)
 
@@ -331,8 +331,7 @@ def build(year):
                 dem=dem, road=road, segs=segs, seg_z=seg_z, canvas_rows=canvas_rows,
                 total_cols=total_cols, n_along=n_along, drawn=drawn,
                 width_cells=width_cells, no_road=no_road,
-                setback_path=DUNESTART / str(year)
-                / f"RoadSetback_{year}_dunestart.csv")
+                setback_path=htv.road_setback_file(year))
 
 
 # =============================================================================
