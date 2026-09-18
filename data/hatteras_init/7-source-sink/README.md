@@ -24,6 +24,8 @@ named `<p1start>_<p1end>__<p2start>_<p2end>`; the numbers match the script
 steps in `scripts/input_prep/7-source-sink/`. Resolve these paths through
 `scripts/site_layer/hat_source_sink.py`, never by typing them (2026-09-18,
 when the default pair stopped writing to the unlabelled root).
+There is no `1-` folder because step 1, `1-prepare/`, writes into each run's
+folder under `output/raw_runs/`, not here.
 
 The two `be_rates_*.py` are **generated data, not code** — a header comment
 and one dict literal, nothing executable. Nothing imports them. They are
