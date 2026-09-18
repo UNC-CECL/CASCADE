@@ -1078,9 +1078,10 @@ def fig_domain_grid(dom, roads, vector, gis=EXAMPLE_GIS):
 # =============================================================================
 # FIGURE 4: FORCING TIMELINE
 # =============================================================================
-STORM_ROOT = INIT / "3-env-forcings" / "storms" / "hindcast_storms"
-RSLR_RECORD = INIT / "3-env-forcings" / "rslr" / "record" / "duck_8651370_meantrend.csv"
-RSLR_FITS = INIT / "3-env-forcings" / "rslr" / "fits" / "duck_rslr_rates.csv"
+from site_layer import hat_env_forcings as _env  # noqa: E402
+STORM_ROOT = _env.HINDCAST_STORMS
+RSLR_RECORD = _env.RSLR_RECORD_FILE
+RSLR_FITS = _env.RSLR_RATES_CSV
 WINDOW_COLOUR = {(1984, 2004): C_1984, (2004, 2024): C_1997,
                  (1996, 2010): "#ef8a62", (2010, 2024): "#67a9cf"}
 
@@ -1266,7 +1267,7 @@ def fig_forcing_timeline(name):
         f"The forcing record over the {windows[0][0]} chain, {span[0]}–{span[1]}. "
         f"(a) The two hindcast windows, {w}; they tile at {windows[0][1]}, and an end year is a "
         "boundary, not a simulated year. (b) Storms per calendar year in the hindcast storm series "
-        "(3-env-forcings/storms/hindcast_storms, v3, 72 h separation), and (c) the largest storm "
+        "(3-env-forcings/3-storms/hindcast_storms, v3, 72 h separation), and (c) the largest storm "
         "runup R_high of each year, m above MHW. (d) Monthly mean sea level at the Duck gauge "
         "(NOAA 8651370, seasonal cycle removed; grey monthly, black annual mean) with the linear "
         "trend fitted over each window, in the window's colour; the model rounds these to "

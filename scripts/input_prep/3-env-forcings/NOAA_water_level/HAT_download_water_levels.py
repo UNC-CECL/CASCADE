@@ -84,9 +84,13 @@ END   = "2024-12-31 23:00:00"           # note the 23:00 — the original script
 # The record and its download cache moved into the data tree 2026-09-12;
 # only this downloader lives under scripts/. Anchored on this file, since
 # the two literals here were drive-rooted and had never resolved.
-_WATER_LEVEL = (Path(__file__).resolve().parents[4] / "data"
-                / "hatteras_init" / "3-env-forcings" / "water_level")
-CACHE_DIR   = _WATER_LEVEL / "noaa_cache_8651370"
+import sys as _envsys
+from pathlib import Path as _EnvP
+_envsys.path.insert(0, str(next(_q for _q in _EnvP(__file__).resolve().parents
+                                if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_env_forcings as _env  # noqa: E402
+_WATER_LEVEL = _env.WATER_LEVEL_DIR     # 1-records/water_level/ since 2026-09-18
+CACHE_DIR   = _env.WATER_LEVEL_CACHE
 OUTPUT_DIR  = _WATER_LEVEL
 # Derived from BEGIN/END so the filename always states its own span. This is a
 # guard, not cosmetics: the previous broken CSV was named for the full span, and

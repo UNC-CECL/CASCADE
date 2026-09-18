@@ -122,7 +122,12 @@ except ImportError as _e:
 # the comparison folder together. Override per period with explicit "file" /
 # "outdir" keys if a run ever sits outside this convention.
 
-STORM_ROOT = Path(str(_REPO_LAYOUT / "data" / "hatteras_init" / "3-env-forcings" / "storms" / "hindcast_storms"))
+import sys as _envsys
+from pathlib import Path as _EnvP
+_envsys.path.insert(0, str(next(_q for _q in _EnvP(__file__).resolve().parents
+                                if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_env_forcings as _env  # noqa: E402
+STORM_ROOT = _env.HINDCAST_STORMS
 
 SUMMARY_TEMPLATE     = "{name}_storms_v3_summary.csv"
 VALIDATION_SUBFOLDER = "validation"
@@ -494,8 +499,10 @@ def resolve_paths(cfg):
     folder = Path(cfg["folder"]) if "folder" in cfg else STORM_ROOT / cfg["name"]
     file   = (Path(cfg["file"]) if "file" in cfg
               else folder / SUMMARY_TEMPLATE.format(name=cfg["name"]))
+    # Beside the storm_check output for the same window, not inside the
+    # model-input folder (2026-09-18; was <window>/validation/).
     outdir = (Path(cfg["outdir"]) if "outdir" in cfg
-              else folder / VALIDATION_SUBFOLDER)
+              else _env.STORM_VALIDATION / cfg["name"])
     return folder, file, outdir
 
 

@@ -26,7 +26,12 @@ _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
 # USER CONFIGURATION
 # =============================================================================
 
-READABLE_CSV = Path(str(_PATH_REPO / "data" / "hatteras_init" / "3-env-forcings" / "storms" / "superseded_20260914" / "testing_storms" / "base_storms" / "storms_1984_2004_base_readable.csv"))
+import sys as _envsys
+from pathlib import Path as _EnvP
+_envsys.path.insert(0, str(next(_q for _q in _EnvP(__file__).resolve().parents
+                                if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_env_forcings as _env  # noqa: E402
+READABLE_CSV = _env.SUPERSEDED_STORMS / "testing_storms" / "base_storms" / "storms_1984_2004_base_readable.csv"
 BEGIN_YEAR        = 1984
 END_YEAR          = 2004
 MATCH_WINDOW_DAYS = 5

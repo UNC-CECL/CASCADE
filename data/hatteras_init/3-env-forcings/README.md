@@ -3,25 +3,51 @@
 Sea level, storms, and the records they are derived from.
 
 ```
-water_level/             the Duck gauge record, 1984-2024, m NAVD88
-    noaa_cache_8651370/  the per-month download cache (git-ignored)
-rslr/                    the mean-trend record, and one fit per PERIOD
-storms/
-    WIS_raw_data/        the wave record the run-up calculation needs
-    hindcast_storms/     the model-facing series, one folder per WINDOW
+1-records/                   what the forcings are built from, as downloaded
+    water_level/             the Duck gauge record, 1984-2024, m NAVD88
+        noaa_cache_8651370/  the per-month download cache (git-ignored)
+    WIS_raw_data/            the wave record the run-up calculation needs
+                             (git-ignored)
+    storm_record/            the hurricane history documents the storm
+                             series is checked against
+    wave_climate_duke/       the wave climate (e_phi_0_OBX_yearly.nc, 381 MB,
+                             git-ignored); no script reads it
+2-rslr/                      sea level: the record, one fit per WINDOW, figures
+    record/                  the NOAA monthly mean-trend download
+    fits/                    duck_rslr_rates.csv (one row per window) and the
+                             per-window monthly series with trend and residual
+    figures/                 the three figures and their CAPTIONS.md
+3-storms/
+    hindcast_storms/         the MODEL-FACING series, one folder per WINDOW
         1984_2004/  1996_2010/  2004_2024/  2010_2024/
-        1984_2024/       the spliced full-record series — NOT a period, it
-                         exists for the full-span sweep
-        old/             earlier attempts, not for use
-    storm_check/         validation of a series against the record
-    figures/             storm record and panel figures
-storm_record/            the hurricane history documents this is checked against
-wave_climate_duke/       the wave climate summary
+        1984_2024/           the spliced full-record series -- NOT a period, it
+                             exists for the full-span sweep
+    validation/<window>/     both validators' output, side by side
+    figures/                 storm record and panel figures
+    Notes                    the max-duration tests (72 h chosen)
+archive/
+    storms_superseded_20260914/   benton_storms/, testing_storms/ (the
+                                  storm_check validators still read
+                                  testing_storms/base_storms/)
+    figures_roya/                 Roya's storm record figure
 ```
+
+Grouped by job since 2026-09-18, like 5-scr and 8-overwash-analysis. Before
+that the records sat beside the forcings built from them, the WIS export
+inside `storms/`, and the storm validation in two places: `storms/storm_check/`,
+whose two folders were named `storm_check_<window>.png` because a validator
+wrote to a drive-rooted "folder" of that name, and a `validation/` folder
+inside the `2004_2024` model-input window. The RSLR record stays in
+`2-rslr/record/`, not `1-records/`: `rslr/` was laid out record -> fits ->
+figures on 2026-09-15 and is kept whole.
+
+Resolve every path through `scripts/site_layer/hat_env_forcings.py`
+(`storm_series_file(start, end)`, `DUCK_GAUGE_FILE`, `RSLR_RATES_CSV`, ...);
+`hatteras_site_config.py` builds each period's `storm_file` from it.
 
 ## A window, not a year
 
-`hindcast_storms/1996_2010/` is named for an **interval**, because a storm
+`3-storms/hindcast_storms/1996_2010/` is named for an **interval**, because a storm
 series spans one. Surveys are named for their year instead. Same rule as the
 rest of the init tree.
 
@@ -35,9 +61,9 @@ All three live in `scripts/input_prep/3-env-forcings/`, and each writes here:
 
 | Script | Writes |
 |---|---|
-| `NOAA_water_level/HAT_download_water_levels.py` | `water_level/` |
-| `rslr/duck_rslr_analysis.py` | `rslr/` |
-| `storm_creation_final/historical_storm_creation_v3_HAT.py` | `storms/hindcast_storms/<window>/` |
+| `NOAA_water_level/HAT_download_water_levels.py` | `1-records/water_level/` |
+| `rslr/duck_rslr_analysis.py` | `2-rslr/fits/`, `2-rslr/figures/` |
+| `storm_creation_final/historical_storm_creation_v3_HAT.py` | `3-storms/hindcast_storms/<window>/` |
 
 Both of the last two take the window as an argument and derive every path from
 it, so the folder name and the file name cannot disagree about what was built:
@@ -61,6 +87,10 @@ in the code tree. Three things came out of untangling it:
   and absolute paths into folder names that were renamed years ago. Those that
   belong to live producers are anchored on their own file now.
 
-Three retired figure scripts under `storm_creation_final/from_Hannah/` still
-point at `data/hatteras_init/storms/...`, a tree renamed before this work
-began. They were already broken and are left alone rather than guessed at.
+Two retired figure scripts under `storm_creation_final/from_Hannah/storm_figures/`
+still point at `data/hatteras_init/storms/hindcast_storms/...`, a tree
+renamed before this work began: `HAT_storm_record_figure.py` at
+`fixed_storms/`, and `HAT_storm_record_figure_roya.py` at
+`roya_storms_v2/1984_2004/`; they were already broken and are left alone rather
+than guessed at. The third, `HAT_storm_panel.py`, reads the archived testing
+storms through `hat_env_forcings.py` since 2026-09-18.
