@@ -30,12 +30,12 @@ Inputs
     CoastSat time-series CSVs     (one per transect, standard format)
     coastsat_lrr_analysis.py      (same directory or PYTHONPATH)
 
-Outputs  (OUTPUT_DIR / run subfolder / interval subfolder)
-----------------------------------------------------------
-    1yr / Full_Period_1984-2024.png,  Period_1_1984-2004.png,  Period_2_2004-2024.png
-    3yr / ...same...
-    5yr / ...same...
-    lrr_bins_1yr_Full.csv  (rows = bins, cols = domain numbers, values = LRR m/yr)
+Outputs  (OUTPUT_DIR / <window>/, since 2026-09-18; tables only)
+----------------------------------------------------------------
+    1996_2010/lrr_bins_5yr.csv   rows = bins, cols = GIS domains, LRR m/yr
+    2010_2024/lrr_bins_5yr.csv
+    1996_2024/lrr_bins_5yr.csv
+    Figures: coastsat_5yr_bins_figure.py -> 4-comparisons/coastsat_5yr_bins/
 
 Usage
 -----
@@ -69,10 +69,14 @@ SITE_FILTER   = "usa_NC"
 OUTPUT_DIR    = str(_obs.TIMESERIES_LRR)
 
 # --- Time periods: (file_tag, figure_title, file_stem, start_date, end_date) ---
+# The canonical chain since 2026-09-17 (1996 -> 2010 -> 2024), rebuilt here
+# 2026-09-18; the 1984-2004 / 2004-2024 / 1984-2024 run of 2026-06-02 is in
+# 5-scr/archive/coastsat_5yr_bins/. One folder per WINDOW, the coastsat lrr
+# naming, calendar years inclusive like every other window.
 PERIODS = [
-    ("Full", "Full Period 1984-2024", "Full_Period_1984-2024", "1984-01-01", "2024-12-31"),
-    ("P1",   "Period 1: 1984-2004",  "Period_1_1984-2004",   "1984-01-01", "2004-12-31"),
-    ("P2",   "Period 2: 2004-2024",  "Period_2_2004-2024",   "2004-01-01", "2024-12-31"),
+    ("1996_2010", "1996-2010", "1996_2010", "1996-01-01", "2010-12-31"),
+    ("2010_2024", "2010-2024", "2010_2024", "2010-01-01", "2024-12-31"),
+    ("1996_2024", "1996-2024", "1996_2024", "1996-01-01", "2024-12-31"),
 ]
 
 # --- Interval sizes (years): one subfolder per entry ---
@@ -225,8 +229,11 @@ warnings.filterwarnings("ignore")
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, script_dir)
 
-# Use the identical compute_lrr as every other CoastSat script in the project
-from scripts.input_preperation.CoastSat_timeseries.coastsat_lrr_analysis import load_timeseries, compute_lrr
+# Use the identical compute_lrr as every other CoastSat script in the project.
+# The companion file sits beside this one (script_dir is on the path above);
+# the package path it was imported by, scripts.input_preperation..., has not
+# existed since the tree was renamed, so this script could not run (2026-09-18).
+from coastsat_lrr_analysis import load_timeseries, compute_lrr
 
 # Optional LOESS for spatial overlay
 _LOESS_OK = False
@@ -855,8 +862,11 @@ def plot_interval_lines(
 # ============================================================
 
 def main():
-    run_stamp = datetime.now().strftime("%Y%m%d_%H%M")
-    run_dir   = os.path.join(OUTPUT_DIR, f"lrr_intervals_{run_stamp}")
+    # One folder per window, overwritten in place (deterministic); no
+    # timestamped run folders and NO FIGURES since 2026-09-18 -- 3-rates holds
+    # data only. The figure is drawn in the house style by
+    # coastsat_5yr_bins_figure.py into 4-comparisons/coastsat_5yr_bins/.
+    run_dir = OUTPUT_DIR
     os.makedirs(run_dir, exist_ok=True)
     print(f"\nOutput directory: {run_dir}\n{'='*65}\n")
 
@@ -879,8 +889,6 @@ def main():
     all_data = load_all_transect_data(lookup, csv_map)
 
     for interval_yr in INTERVAL_SIZES_YR:
-        interval_dir = os.path.join(run_dir, f"{interval_yr}yr")
-        os.makedirs(interval_dir, exist_ok=True)
 
         print(f"\n{'='*65}")
         print(f"Interval: {interval_yr} yr  (non-overlapping, whole-year bins)")
@@ -922,28 +930,12 @@ def main():
                 buffer_domains = BUFFER_DOMAINS,
             )
 
-            # Save CSV
-            csv_name = f"lrr_bins_{interval_yr}yr_{file_tag}.csv"
-            lrr_df.to_csv(os.path.join(run_dir, csv_name))
-            print(f"    CSV saved: {csv_name}")
-
-            # Plot
-            fig_path = os.path.join(interval_dir, f"{fig_stem}.png")
-            plot_interval_lines(
-                lrr_df          = lrr_df,
-                bins            = bins,
-                overall_domains = ov_domains,
-                overall_lrr     = ov_lrr,
-                period_title    = period_title,
-                interval_yr     = interval_yr,
-                palette         = PALETTE,
-                line_width      = LINE_WIDTH,
-                line_alpha      = LINE_ALPHA,
-                ylim_lrr        = YLIM_LRR,
-                ylim_overall    = YLIM_OVERALL,
-                out_path        = fig_path,
-                dpi             = DPI,
-            )
+            # Save CSV: <window>/lrr_bins_<n>yr.csv, rows = bins, cols = GIS
+            win_dir = os.path.join(run_dir, file_tag)
+            os.makedirs(win_dir, exist_ok=True)
+            csv_name = f"lrr_bins_{interval_yr}yr.csv"
+            lrr_df.to_csv(os.path.join(win_dir, csv_name))
+            print(f"    CSV saved: {file_tag}/{csv_name}")
 
     print(f"\n{'='*65}")
     print(f"Done. All outputs written to:\n  {run_dir}")

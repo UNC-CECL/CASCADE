@@ -1,0 +1,3 @@
+tolerance_years,hits_v2,recall_v2,false_positives_v2,false_positive_rate_v2,hits_v3,recall_v3,false_positives_v3,false_positive_rate_v3,hit_both,hit_only_v2,hit_only_v3,false_positive_domains_v2,false_positive_domains_v3
+2,3,0.3,0,0.0,3,0.3,0,0.0,10,84 85,11 86,,
+5,4,0.4,0,0.0,4,0.4,0,0.0,10 86,84 85,9 11,,

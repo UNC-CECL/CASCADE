@@ -3,19 +3,19 @@
 
 [identity]
 run_name                         = HAT_2010_2024_zeroBE_road_bdm_nourish_nogroin
-timestamp                        = 2026-09-16 18:22:23
+timestamp                        = 2026-09-18 16:46:37
 generated_by                     = HAT_hindcast_1984_2024.py
-runtime_min                      = 3.5
+runtime_min                      = 1.6
 use_sandbox_cascade              = True   # cascade.cascade_groin, not cascade.cascade
 topo_product                     = 2004-start
 topo_dune_version                = v1
-island_offset_version            = v1
+island_offset_version            = v2
 geometry                         = base   # GIS 1 to 90
 run_kind                         = matrix
 run_tag                          = 
 parameter_file                   = HAT_2010_2024_zeroBE_road_bdm_nourish_nogroin-parameters.yaml   # this run's copy of Hatteras-CASCADE-parameters.yaml; CASCADE rewrites the copy, not the template
 save_model_state                 = True
-git_commit                       = 462947eb97cbaf0c59b7eb4bbb33e17006e1c3ff
+git_commit                       = 7e492c34523271f6ac9498237722ba54c5aa0459
 git_branch                       = hannahaline/hatteras-cascade
 git_dirty                        = True   # True: the commit alone does not reproduce this run
 
@@ -71,14 +71,14 @@ enabled                          = False
 [skill]
 target                           = CoastSat LOESS 10-domain   # raw means over GIS 1-10
 estimator                        = lrr   # OLS slope through every annual state, matching the target's own definition
-mean_bias_m_yr                   = -2.1038
-rmse_m_yr                        = 2.7559
-mean_bias_interior_m_yr          = -2.0153   # GIS 2-89: the locked end domains excluded
-rmse_interior_m_yr               = 2.6106
-lrr_r2_median                    = 0.7860   # how well a line describes the modelled trajectory
-lrr_r2_below_floor               = 30   # domains under r2 0.50
-endpoint_mean_bias_interior_m_yr = -1.9889   # the pre-LRR estimator; calibBE and groin M were fit on this
-endpoint_rmse_interior_m_yr      = 2.5573
+mean_bias_m_yr                   = -2.1189
+rmse_m_yr                        = 2.7741
+mean_bias_interior_m_yr          = -2.0305   # GIS 2-89: the locked end domains excluded
+rmse_interior_m_yr               = 2.6293
+lrr_r2_median                    = 0.7724   # how well a line describes the modelled trajectory
+lrr_r2_below_floor               = 29   # domains under r2 0.50
+endpoint_mean_bias_interior_m_yr = -2.0031   # the pre-LRR estimator; calibBE and groin M were fit on this
+endpoint_rmse_interior_m_yr      = 2.5772
 
 [verification]
 nourishment_ok                   = True
@@ -87,7 +87,7 @@ roads_reloc_blocked              = 0
 
 [index row]
 run_name                         = HAT_2010_2024_zeroBE_road_bdm_nourish_nogroin
-timestamp                        = 2026-09-16 18:22:23
+timestamp                        = 2026-09-18 16:46:37
 start_year                       = 2010
 end_year                         = 2024
 source_sink_preset               = zeroBE
@@ -114,25 +114,25 @@ rslr_m_yr                        = 0.007
 annual_states                    = 15
 run_complete                     = True
 rate_estimator                   = lrr
-mean_bias_m_yr                   = -2.103815161604257
-rmse_m_yr                        = 2.7558681545662553
-mean_bias_interior_m_yr          = -2.015319813738845
-rmse_interior_m_yr               = 2.6106295819503833
-lrr_r2_median                    = 0.7860317384142643
-lrr_r2_below_floor               = 30
-endpoint_mean_bias_interior_m_yr = -1.9888569090216934
-endpoint_rmse_interior_m_yr      = 2.557331014157811
+mean_bias_m_yr                   = -2.1188974464434978
+rmse_m_yr                        = 2.7741104983376546
+mean_bias_interior_m_yr          = -2.030454589191598
+rmse_interior_m_yr               = 2.6292740411573
+lrr_r2_median                    = 0.7723811635761468
+lrr_r2_below_floor               = 29
+endpoint_mean_bias_interior_m_yr = -2.0031336522587124
+endpoint_rmse_interior_m_yr      = 2.577161126201343
 nourishment_ok                   = True
 roads_drowned                    = 0
 roads_reloc_blocked              = 0
 groin_extent_updrift_m           = nan
 groin_extent_downdrift_m         = nan
-runtime_min                      = 3.5
+runtime_min                      = 1.6
 use_sandbox_cascade              = True
 topo_product                     = 2004-start
 topo_dune_version                = v1
-island_offset_version            = v1
+island_offset_version            = v2
 geometry                         = base
-rmse_reach_interior_m_yr         = 2.6106295819503833
-git_commit                       = 462947eb97cb
+rmse_reach_interior_m_yr         = 2.6292740411573
+git_commit                       = 7e492c345232
 git_dirty                        = True

@@ -1,0 +1,11 @@
+gis,historical_year,first_v2,err_v2,n_reloc_v2,outcome_v2,first_v3,err_v3,n_reloc_v3,outcome_v3,abs_err_change,verdict
+9,1999,,,0,never relocated,2002.0,3.0,1,relocated,,gained in v3
+10,1999,1998.0,-1.0,1,relocated,1998.0,-1.0,1,relocated,0.0,same
+11,1999,1992.0,-7.0,1,relocated,1998.0,-1.0,1,relocated,-6.0,v3 closer
+12,1999,,,0,never relocated,,,0,never relocated,,neither
+13,1999,,,0,never relocated,,,0,never relocated,,neither
+14,1999,,,0,never relocated,,,0,never relocated,,neither
+84,1989,1987.0,-2.0,2,relocated,1995.0,6.0,1,relocated,4.0,v2 closer
+85,1989,1985.0,-4.0,3,relocated,1995.0,6.0,1,relocated,2.0,v2 closer
+86,1989,1985.0,-4.0,2,relocated,1988.0,-1.0,2,relocated,-3.0,v3 closer
+87,1989,,,0,never relocated,,,0,never relocated,,neither

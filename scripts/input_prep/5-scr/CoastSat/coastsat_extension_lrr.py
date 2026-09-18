@@ -17,9 +17,9 @@ A transect no polygon covers is left out, as the surveyed mapping leaves
 them out. It writes, beside the surveyed products and never into them:
 
     5-scr/2-transect-frame/transect_domains/transect_domain_lookup_ext.csv
-    5-scr/3-rates/coastsat_lrr/<start>_<end>/ext/transect_lrr_full.csv
-    5-scr/3-rates/coastsat_lrr/<start>_<end>/ext/domain_lrr_summary.csv
-    5-scr/3-rates/coastsat_lrr/<start>_<end>/ext/transect_lrr_with_base.csv
+    5-scr/3-rates/coastsat/lrr/<start>_<end>/ext/transect_lrr_full.csv
+    5-scr/3-rates/coastsat/lrr/<start>_<end>/ext/domain_lrr_summary.csv
+    5-scr/3-rates/coastsat/lrr/<start>_<end>/ext/transect_lrr_with_base.csv
 
 The last is the surveyed table with the extension rows appended: what an
 extended-geometry run loads as its active dataset. The window's own

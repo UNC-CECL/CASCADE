@@ -1,0 +1,5 @@
+# Captions — 1996_2010
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`duneline_endpoint_1996_2010.png`.** Net change in dune line position by GIS domain (1 at Cape Point, 90 at Pea Island), 1997–2009, the lines standing in for the model years 1996 and 2010: the 2009 digitized dune line minus the 1997 line, each measured along the 100 m transects from a fixed offshore datum (1997-10-12 to 2009-05-30); the ~5 transects of each 500 m domain are averaged. Seaward positive, in metres; this is net displacement, not a rate. The coloured line and fill are the domain means, blue seaward and red landward; the grey dots are the single transects. Hatched amber boxes mark the offshore shoals (Avon Shoals GIS 24–39; Wimble Shoals GIS 60–74). Village spans are shaded; the solid hairline is the Buxton groin and the dotted hairlines are the Avon and Rodanthe piers. The y axis is ±120 m, shared by every CoastSat and dune-line endpoint figure so the two can be read against each other.

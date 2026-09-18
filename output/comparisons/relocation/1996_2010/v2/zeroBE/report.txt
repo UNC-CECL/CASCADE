@@ -1,0 +1,130 @@
+==========================================================================
+generated   2026-09-15 09:53:34 by HAT_relocation_comparison.py
+period      1996-2010
+preset      zeroBE
+arm A       HAT_1996_2010_zeroBE_road_bdm_nogroin
+      run 2026-09-15 09:27:25   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+arm B       HAT_1996_2010_zeroBE_road_reloc_bdm_nogroin
+      run 2026-09-15 09:31:17   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+
+This file is the console output of the run that wrote the CSVs and
+GIFs beside it. If the arm identities above do not match the runs on
+disk, this report is stale -- re-run the comparison.
+==========================================================================
+
+==========================================================================
+NC-12 RELOCATION: emergent vs prescribed
+==========================================================================
+  preset              zeroBE
+  arm A (free)        C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\1996_2010\zeroBE\HAT_1996_2010_zeroBE_road_bdm_nogroin
+  arm B (prescribed)  C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\1996_2010\zeroBE\HAT_1996_2010_zeroBE_road_reloc_bdm_nogroin
+  period              1996-2010
+
+  managed road domains  A: 55   B: 55
+  historical domains    [9, 10, 11, 12, 13, 14]
+    1999  GIS [9, 10, 11, 12, 13, 14]
+
+--------------------------------------------------------------------------
+0. VALIDITY CHECKS
+--------------------------------------------------------------------------
+  arms identical 1996-1998: YES
+  prescribed jumps land on the event year: 6/6 domains
+
+--------------------------------------------------------------------------
+1. FIRST MODELLED RELOCATION, free-running arm
+--------------------------------------------------------------------------
+ gis  historical_year modelled_first_year error_years  n_relocations  managed         outcome  min_setback_m  closest_year  cells_remaining  migration_needed_m  years_at_min  end_setback_m
+   9             1999                None        None              0     True never relocated           30.0          2003                3                40.0             8           30.0
+  10             1999                None        None              0     True never relocated           10.0          2002                1                20.0             9           10.0
+  11             1999                None        None              0     True never relocated            0.0          2000                0                10.0            11            0.0
+  12             1999                None        None              0     True never relocated           20.0          1996                2                30.0            15           20.0
+  13             1999                None        None              0     True never relocated           20.0          1996                2                30.0            15           20.0
+  14             1999                None        None              0     True never relocated           60.0          1996                6                70.0            15           60.0
+
+  no historical domain relocated in the free-running arm
+
+--------------------------------------------------------------------------
+1b. NEAR MISSES: how much more dune migration would have fired it
+--------------------------------------------------------------------------
+  The trigger is `setback < 0`, strict, and the setback moves in
+  whole 10 m cells (ShorelineChangeTS counts cells). So a road at
+  setback 0 has NOT fired -- it needs one more full cell. 'needed'
+  below is that extra landward migration, = closest + 10 m.
+
+  HISTORICAL domains that never relocated:
+   gis  hist  start_m  closest_m  at_year  cells_left  needed_m
+    11  1999       10          0     2000           0        10
+    10  1999       20         10     2002           1        20
+    12  1999       20         20     1996           2        30
+    13  1999       20         20     1996           2        30
+     9  1999       40         30     2003           3        40
+    14  1999       60         60     1996           6        70
+
+  CONTROL domains (history never relocated these), closest 10 of 49:
+   gis  start_m  closest_m  at_year  cells_left  needed_m
+    16       40         40     1996           4        50
+    84       65         45     2007           4        55
+    15       60         60     1996           6        70
+    87       70         60     2008           6        70
+    20       70         70     1996           7        80
+    17       90         80     1997           8        90
+    86       90         80     2006           8        90
+    49       90         90     1996           9       100
+    50       90         90     1996           9       100
+    85      110         90     2009           9       100
+
+  control margin: median 170 m, min 40 m
+  control domains within ONE cell of firing: 0
+  -- a 0/45 false-positive count is only reassuring if these
+     margins are wide; this is where that gets checked.
+
+  saved -> near_miss_margin.csv
+
+--------------------------------------------------------------------------
+2. HIT / MISS, with false positives
+--------------------------------------------------------------------------
+
+  +/-2 yr   hits 0/6  (recall 0.00)
+           misses      GIS [9, 10, 11, 12, 13, 14]
+           false pos   0/49 control domains (rate 0.00)
+
+  +/-5 yr   hits 0/6  (recall 0.00)
+           misses      GIS [9, 10, 11, 12, 13, 14]
+           false pos   0/49 control domains (rate 0.00)
+
+--------------------------------------------------------------------------
+3. SETBACK TRAJECTORIES
+--------------------------------------------------------------------------
+  position cross-check at 2004, year 8 of 14, mid-window: measured_2004_m is
+  RoadOffset_2004 (2008 line vs 2004-start row 0); free/prescribed_at_check_m
+  are each arm's modelled setback that year.
+
+ gis  historical  event_year  free_start_m  free_last_m  free_last_year  prescribed_start_m  prescribed_last_m  prescribed_last_year  compared_through  difference_at_common_m    rmse_m  check_year  free_at_check_m  prescribed_at_check_m  measured_2004_m
+   9        True      1999.0          40.0         30.0            2010                40.0               50.0                  2010              2010                    20.0 17.888544        2004             30.0                   50.0             50.0
+  10        True      1999.0          20.0         10.0            2010                20.0               60.0                  2010              2010                    50.0 44.721360        2004             10.0                   60.0             40.0
+  11        True      1999.0          10.0          0.0            2010                10.0               80.0                  2010              2010                    80.0 71.554175        2004              0.0                   80.0             20.0
+  12        True      1999.0          20.0         20.0            2010                20.0               90.0                  2010              2010                    70.0 62.609903        2004             20.0                   90.0             30.0
+  13        True      1999.0          20.0         20.0            2010                20.0               70.0                  2010              2010                    50.0 44.721360        2004             20.0                   70.0             50.0
+  14        True      1999.0          60.0         60.0            2010                60.0               80.0                  2010              2010                    20.0 17.888544        2004             60.0                   80.0             65.0
+
+  saved per-year setbacks for 55 domains -> setback_by_year.csv
+
+--------------------------------------------------------------------------
+4. ROAD OUTCOMES: did prescribing the relocations change the fate?
+--------------------------------------------------------------------------
+  free        drowned   0   blocked   0   relocations     0   of 55 managed domains
+  prescribed  drowned   0   blocked   0   relocations     0   of 55 managed domains
+
+  no domain changed outcome between the two arms
+
+--------------------------------------------------------------------------
+5. ANIMATION
+--------------------------------------------------------------------------
+  [GIF] saved (15 frames, GIS 9-90): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1996_2010\v2\zeroBE\1-island\dune-and-road.gif
+  [GIF] saved (15 frames, GIS 9-20): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1996_2010\v2\zeroBE\2-event-1999_GIS9-14\dune-and-road.gif
+  [GIF] saved topography (15 frames, GIS 9-90): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1996_2010\v2\zeroBE\1-island\topography.gif
+  [GIF] saved topography (15 frames, GIS 6-20): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1996_2010\v2\zeroBE\2-event-1999_GIS9-14\topography.gif
+
+==========================================================================
+artifacts -> C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1996_2010\v2\zeroBE
+==========================================================================

@@ -17,27 +17,45 @@ runs (2026-09-18):
 2-transect-frame/
     transect_domains/        the transect-to-domain lookup, the transect layer,
                              the domain polygons, and the verification set
-3-rates/                     the fits. THE MODEL TARGETS LIVE HERE
-    coastsat_lrr/            rate fits, ONE FOLDER PER WINDOW
-        1984_2004/  1996_2010/  2004_2024/  2010_2024/  custom/
-    coastsat_5yr_bins/       the 5-year-bin fits (latest run only)
-    duneline_lrr/            a linear regression rate through the DUNE LINES,
-                             per transect, ONE FOLDER PER WINDOW, in the
-                             coastsat_lrr layout so the same LOESS target
-                             builder reads it (2026-09-16)
+3-rates/                     THE MODEL TARGETS LIVE HERE: tables plus one
+                             house-style figure per window (rates_figures.py).
+                             Grouped by source since 2026-09-18; README.md
+                             there indexes every product
+    coastsat/
+        lrr/<window>/        the OLS rate fits: 1984_2004 1996_2010
+                             2004_2024 2010_2024, and 1996_2024 (CONTEXT
+                             only, not a model target, below)
+        endpoint/<window>/   NET CHANGE between ±6-month means at the
+                             dune-line dates, m and m/yr (2026-09-18)
+        5yr_bins/<window>/   the OLS in successive 5-year bins, 1996_2010
+                             2010_2024 1996_2024 (rebuilt 2026-09-18)
+    duneline/
+        endpoint/<window>/   NET CHANGE between the two DUNE LINES bounding
+                             each window, m and m/yr (2026-09-18; replaced
+                             duneline_lrr/, an OLS through every line in the
+                             window -- Hannah: "we are tracking net change")
 4-comparisons/
-    coastsat_windows/        the four windows on ONE y axis: a line per
-                             window, filled by sign, and a 2 x 2 by period;
-                             PDFs, captions and the table under supporting/
+    coastsat_windows/        the four windows on ONE y axis: the 2 x 2 by
+                             period at the top, ONE FOLDER PER WINDOW below
+                             it, and 1996_2024/ for the long window
     duneline_vs_coastsat/    the digitized dune line against the CoastSat
                              shoreline, ONE FOLDER PER WINDOW, and the four
                              windows as one 2 x 2 (alongshore_four_windows)
+    duneline_windows/        net dune-line change IN METRES over 1996-2024
+                             (the 1997/2009/2023 lines) and its two halves;
+                             the mirror of coastsat_windows/1996_2024/
+    net_change_1996_2024/    net shoreline vs net dune-line change in METRES,
+                             1996-2024 and its halves; the gap is beach width
     trajectory_patterns/     trajectory classification output
     two_period_comparison/   1984-2004 against 2004-2024
 archive/                     kept, not for use
     coastsat_lrr_superseded_20260810/   retired windows (1978-1997, 1997-2019);
                                         6-scr-smooth's DSAS comparison still reads them
-    coastsat_5yr_bins/                  the two earlier 5-year-bin runs
+    coastsat_5yr_bins/                  the three earlier 5-year-bin runs (the
+                                        1984-2004 / 2004-2024 framing)
+    coastsat_lrr_quicklooks_20260918/   the autoscaled bar and scatter PNGs that
+                                        used to sit beside each LRR fit
+    duneline_lrr_retired_20260918/      the dune-line OLS, retired for endpoint
     rodanthe_plots/                     poster figures; the script writes to
                                         output/figures/shoreline/ now
 ```
@@ -48,7 +66,7 @@ were renamed in the move:
 | now | was |
 |---|---|
 | `1-observations/dsas_1978_2019/` | `scr-dsas-1978-2019/` |
-| `3-rates/coastsat_5yr_bins/` | `coastsat_timeseries_lrr/` |
+| `3-rates/coastsat/5yr_bins/` | `coastsat_timeseries_lrr/` |
 | `4-comparisons/coastsat_windows/` | `coastsat_lrr_windows/` |
 | `4-comparisons/trajectory_patterns/` | `shoreline_change_patterns/` |
 
@@ -64,7 +82,7 @@ so the model runs without them.
 
 ## A window, not a year
 
-`3-rates/coastsat_lrr/1996_2010/` is named for an **interval**, because a rate
+`3-rates/coastsat/lrr/1996_2010/` is named for an **interval**, because a rate
 fit spans one. A survey — a dune line, a road alignment — is a moment, and is
 named for its year instead. That split is the naming rule the whole init tree
 follows.
@@ -101,12 +119,15 @@ The **producers stayed** in `scripts/input_prep/5-scr/`:
 | producer (`scripts/input_prep/5-scr/`) | writes to (`data/hatteras_init/5-scr/`) |
 |---|---|
 | `CoastSat/coastsat_domain_mapping.py` | `2-transect-frame/transect_domains/` |
-| `CoastSat/coastsat_domain_lrr_fixed.py` | `3-rates/coastsat_lrr/<window>/` |
-| `CoastSat/coastsat_extension_lrr.py` | `3-rates/coastsat_lrr/<window>/ext/` |
-| `CoastSat_timeseries/coastsat_lrr_5year_bins.py` | `3-rates/coastsat_5yr_bins/` |
-| `duneline_lrr/duneline_lrr.py` | `3-rates/duneline_lrr/<window>/` |
+| `CoastSat/coastsat_domain_lrr_fixed.py` | `3-rates/coastsat/lrr/<window>/` |
+| `CoastSat/coastsat_extension_lrr.py` | `3-rates/coastsat/lrr/<window>/ext/` |
+| `CoastSat_timeseries/coastsat_lrr_5year_bins.py` | `3-rates/coastsat/5yr_bins/` |
+| `duneline_endpoint/duneline_endpoint.py` | `3-rates/duneline/endpoint/<window>/` |
+| `coastsat_endpoint/coastsat_endpoint.py` | `3-rates/coastsat/endpoint/<window>/` |
+| `net_change/net_change_1996_2024.py` | `4-comparisons/net_change_1996_2024/` |
 | `CoastSat/coastsat_lrr_windows.py` | `4-comparisons/coastsat_windows/` |
 | `duneline_vs_coastsat/duneline_vs_coastsat.py` | `4-comparisons/duneline_vs_coastsat/` |
+| `duneline_windows/duneline_windows.py` | `4-comparisons/duneline_windows/` |
 | `shoreline_change_patterns/` | `4-comparisons/trajectory_patterns/` |
 | `CoastSat/coastsat_two_period_comparison.py` | `4-comparisons/two_period_comparison/` |
 | `shoreline_inventory/HAT_shoreline_inventory.py` | `1-observations/shoreline_inventory/` |
@@ -119,9 +140,36 @@ python scripts/input_prep/5-scr/CoastSat/coastsat_domain_lrr_fixed.py \
 ```
 
 Writes `transect_lrr_full.csv`, `domain_lrr_summary.csv` and two figures into
-`3-rates/coastsat_lrr/<start>_<end>/`. Re-running an existing window
+`3-rates/coastsat/lrr/<start>_<end>/`. Re-running an existing window
 overwrites it in place; the fit is deterministic, so that is reproducible
 rather than destructive.
+
+## The long window, 1996-2024 (context, not a target)
+
+`3-rates/coastsat/lrr/1996_2024/` is the long-term rate over the whole
+canonical chain, built 2026-09-18 with the same script and schema as the
+other windows (`--start-year 1996 --end-year 2024`), plus the Pea Island
+extension under `ext/` (`coastsat_extension_lrr.py`, same arguments).
+**No run is graded against it.** The model chain is still 1996→2010 and
+2010→2024, graded window by window. `lrr_csv(1996, 2024)` resolves it like
+any window, so a script that takes a window argument can read it. Nothing
+iterates the windows on disk, so it cannot be picked up as a target by
+accident.
+
+Nourishment is left in: Rodanthe 2014 sits mid-window, and Buxton and Avon
+2022 sit two years from its end. A fill is a step, which a single slope fits
+poorly, so read those domains as "includes placed sand". Nothing is masked.
+
+Its figure is `4-comparisons/coastsat_windows/1996_2024/lrr_1996_2024_halves.png`
+(`coastsat_lrr_windows.py --overlay 1996_2024`), two stacked panels: (a) the
+long window filled by sign, with the model-input fill footprints as bars
+above it; (b) 1996-2010 (grey) and 2010-2024 (black) as plain lines. The
+shoal zones (Avon, Wimble) are faint amber-hatched, outlined boxes behind
+the data in both panels, only to show where they are. The y
+axis is the tightest whole metre that holds every line (±7 m/yr), NOT the
+shared ±8 of the single-window figures; the caption says so. The three
+means are side by side in `supporting/lrr_1996_2024_halves.csv`. The figure is also published to
+`output/figures/shoreline/`.
 
 ## Comparing windows
 
@@ -129,9 +177,11 @@ rather than destructive.
 drawn against each other. `scripts/input_prep/5-scr/CoastSat/coastsat_lrr_windows.py`
 reads each `domain_lrr_summary.csv` through the resolver, pins the y axis at
 the largest |mean| over all of them plus 1 m, rounded up to the metre
-(written to `y_bounds.txt`), and writes one figure per window plus
-`lrr_four_windows`, a 2 x 2 with the 1984-start period in the left column and
-the 1996-start period in the right. The per-window `domain_lrr_bar.png`
+(written to `supporting/y_bounds.txt`), and writes `lrr_four_windows`, a
+2 x 2 with the 1984-start period in the left column and the 1996-start period
+in the right, plus one figure per window in its own `<start>_<end>/` folder
+(the `duneline_vs_coastsat/` layout, 2026-09-18; they sat flat before). See
+that folder's README. The per-window `domain_lrr_bar.png`
 autoscales, so it is not the figure to compare across windows.
 
 ## Dune line against the shoreline
@@ -142,7 +192,7 @@ window, and the results table. `4-comparisons/duneline_vs_coastsat/<start>_<end>
 differences two digitized dune lines (`2-brie-offset/raw_offsets/`, read the
 way the hindcast loader reads them) and puts the per-domain rate against the
 CoastSat shoreline two ways: the LRR already in
-`3-rates/coastsat_lrr/<start>_<end>/`, and an endpoint rate from the mean
+`3-rates/coastsat/lrr/<start>_<end>/`, and an endpoint rate from the mean
 CoastSat position in a one-year window about each survey date. Seaward
 positive throughout. Built by
 `scripts/input_prep/5-scr/duneline_vs_coastsat/duneline_vs_coastsat.py`;

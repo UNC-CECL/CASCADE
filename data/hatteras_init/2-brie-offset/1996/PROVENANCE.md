@@ -62,3 +62,21 @@ under `output/raw_runs/1996_2010/`. They are not wrong, they are on the
 superseded start: a re-run on v2 replaces them, and until then a 1996 figure
 should say which offset build it was drawn from. Any 1996 run from here reads
 v2 unless `HAT_OFFSET_VERSION_1996` says otherwise.
+
+## Extended reaches (experiment inputs, not versions)
+
+Written by `build_island_offset.py --geometry`; each reach's own `ext/<geometry>/PROVENANCE.md` has the detail. GIS 1-90 is identical to the version named under *built as*; `CURRENT` is untouched.
+
+| reach | built | line | vintage | built as | | |
+|---|---|---|---|---|---|---|
+| `ext/n115` | 2026-09-16 | `duneline_1997_v2.geojson` | 1997 | v2 | polygon join onto `1-barrier3d-domains/domain-geojson/domains_pea_hatteras_120.geojson` | GIS 1 to 115 |
+| `ext/n115` | 2026-09-16 | `duneline_1997_v2.geojson` | 1997 | v2 | | |
+
+## Builds
+
+Written by `build_island_offset.py`, one row per build; each version's own `PROVENANCE.md` has the detail.
+
+| version | built | line | vintage | zero domain | compared with | |
+|---|---|---|---|---|---|---|
+| `v3` | 2026-09-18 | `duneline_1997.geojson` | 1997 | GIS 77 | v2 | CURRENT |
+| `ext/n115` | 2026-09-18 | `duneline_1997.geojson` | 1997 | v3 | | |

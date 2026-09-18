@@ -1,0 +1,137 @@
+==========================================================================
+generated   2026-09-10 16:05:47 by HAT_relocation_comparison.py
+preset      calibBE
+arm A       HAT_1984_2004_calibBE_road_bdm_groin
+      run 2026-09-09 15:23:59   topo 1984-start/v2   commit 67eded2fed3d  DIRTY TREE
+arm B       HAT_1984_2004_calibBE_road_reloc_bdm_groin
+      run 2026-09-10 15:58:28   topo 1984-start/v2   commit c34b49bb7ff9  DIRTY TREE
+
+This file is the console output of the run that wrote the CSVs and
+GIFs beside it. If the arm identities above do not match the runs on
+disk, this report is stale -- re-run the comparison.
+==========================================================================
+
+==========================================================================
+NC-12 RELOCATION: emergent vs prescribed
+==========================================================================
+  preset              calibBE
+  arm A (free)        output/raw_runs/version-pair/v2/1984_2004/calibBE/HAT_1984_2004_calibBE_road_bdm_groin
+  arm B (prescribed)  output/raw_runs/version-pair/v2/1984_2004/calibBE/HAT_1984_2004_calibBE_road_reloc_bdm_groin
+
+  managed road domains  A: 55   B: 55
+  historical domains    [9, 10, 11, 12, 13, 14, 84, 85, 86, 87]
+    1989  GIS [84, 85, 86, 87]
+    1999  GIS [9, 10, 11, 12, 13, 14]
+
+--------------------------------------------------------------------------
+0. VALIDITY CHECKS
+--------------------------------------------------------------------------
+  arms identical 1984-1988: YES
+  prescribed jumps land on the event year: 10/10 domains
+
+--------------------------------------------------------------------------
+1. FIRST MODELLED RELOCATION, free-running arm
+--------------------------------------------------------------------------
+ gis  historical_year  modelled_first_year  error_years  n_relocations  managed         outcome  min_setback_m  closest_year  cells_remaining  migration_needed_m  years_at_min  end_setback_m
+   9             1999                  NaN          NaN              0     True never relocated            0.0        2002.0              0.0                10.0           3.0            0.0
+  10             1999               1998.0         -1.0              1     True       relocated            NaN           NaN              NaN                 NaN           NaN            NaN
+  11             1999               1992.0         -7.0              1     True       relocated            NaN           NaN              NaN                 NaN           NaN            NaN
+  12             1999                  NaN          NaN              0     True never relocated            0.0        1999.0              0.0                10.0           6.0            0.0
+  13             1999                  NaN          NaN              0     True never relocated            0.0        2000.0              0.0                10.0           5.0            0.0
+  14             1999                  NaN          NaN              0     True never relocated           40.0        2002.0              4.0                50.0           3.0           40.0
+  84             1989               1987.0         -2.0              2     True       relocated            NaN           NaN              NaN                 NaN           NaN            NaN
+  85             1989               1985.0         -4.0              3     True       relocated            NaN           NaN              NaN                 NaN           NaN            NaN
+  86             1989               1985.0         -4.0              2     True       relocated            NaN           NaN              NaN                 NaN           NaN            NaN
+  87             1989                  NaN          NaN              0     True never relocated           10.0        2001.0              1.0                20.0           4.0           10.0
+
+  domains that relocated at all   5/10
+  median signed error             -4.0 yr
+  mean absolute error             3.6 yr
+
+--------------------------------------------------------------------------
+1b. NEAR MISSES: how much more dune migration would have fired it
+--------------------------------------------------------------------------
+  The trigger is `setback < 0`, strict, and the setback moves in
+  whole 10 m cells (ShorelineChangeTS counts cells). So a road at
+  setback 0 has NOT fired -- it needs one more full cell. 'needed'
+  below is that extra landward migration, = closest + 10 m.
+
+  HISTORICAL domains that never relocated:
+   gis  hist  start_m  closest_m  at_year  cells_left  needed_m
+     9  1999       40          0     2002           0        10
+    12  1999       20          0     1999           0        10
+    13  1999       20          0     2000           0        10
+    87  1989       50         10     2001           1        20
+    14  1999       60         40     2002           4        50
+
+  CONTROL domains (history never relocated these), closest 10 of 45:
+   gis  start_m  closest_m  at_year  cells_left  needed_m
+    16       40         40     1984           4        50
+    15       60         50     2003           5        60
+    49       90         60     2002           6        70
+    50       90         60     2004           6        70
+    20       70         70     1984           7        80
+    17       90         90     1984           9       100
+    18      120        120     1984          12       130
+    19      130        130     1984          13       140
+    47      150        130     1998          13       140
+    48      150        130     2000          13       140
+
+  control margin: median 170 m, min 40 m
+  control domains within ONE cell of firing: 0
+  -- a 0/45 false-positive count is only reassuring if these
+     margins are wide; this is where that gets checked.
+
+  saved -> near_miss_margin.csv
+
+--------------------------------------------------------------------------
+2. HIT / MISS, with false positives
+--------------------------------------------------------------------------
+
+  +/-2 yr   hits 3/10  (recall 0.30)
+           misses      GIS [86, 87, 9, 11, 12, 13, 14]
+           false pos   0/45 control domains (rate 0.00)
+
+  +/-5 yr   hits 4/10  (recall 0.40)
+           misses      GIS [87, 9, 11, 12, 13, 14]
+           false pos   0/45 control domains (rate 0.00)
+
+--------------------------------------------------------------------------
+3. SETBACK TRAJECTORIES
+--------------------------------------------------------------------------
+ gis  historical  event_year  free_start_m  free_last_m  free_last_year  prescribed_start_m  prescribed_last_m  prescribed_last_year  compared_through  difference_at_common_m    rmse_m  measured_2004_m
+   9        True      1999.0          40.0          0.0            2004                40.0               20.0                  2004              2004                    20.0 10.690450             50.0
+  10        True      1999.0          20.0         10.0            2004                20.0               60.0                  2004              2004                    50.0 26.726124             40.0
+  11        True      1999.0          10.0          0.0            2004                10.0               90.0                  2000              2000                    80.0 27.439774             20.0
+  12        True      1999.0          20.0          0.0            2004                20.0               70.0                  2004              2004                    70.0 37.416574             30.0
+  13        True      1999.0          20.0          0.0            2004                20.0               50.0                  2004              2004                    50.0 26.726124             50.0
+  14        True      1999.0          60.0         40.0            2004                60.0               60.0                  2004              2004                    20.0 10.690450             65.0
+  84        True      1989.0          25.0          0.0            2004                25.0               10.0                  2004              2004                    10.0 22.466907             30.0
+  85        True      1989.0           0.0         20.0            2004                 0.0               70.0                  2004              2004                    50.0 69.727360             70.0
+  86        True      1989.0           0.0          0.0            2004                 0.0               60.0                  2004              2004                    60.0 63.471028             50.0
+  87        True      1989.0          50.0         10.0            2004                50.0               30.0                  2004              2004                    20.0 17.457431             40.0
+
+  saved per-year setbacks for 55 domains -> setback_by_year.csv
+
+--------------------------------------------------------------------------
+4. ROAD OUTCOMES: did prescribing the relocations change the fate?
+--------------------------------------------------------------------------
+  free        drowned   0   blocked   0   relocations     9   of 55 managed domains
+  prescribed  drowned   1   blocked   0   relocations     5   of 55 managed domains
+
+  1 domain(s) changed outcome:
+    GIS  11  free: managed throughout    prescribed: drowned
+
+--------------------------------------------------------------------------
+5. ANIMATION
+--------------------------------------------------------------------------
+  [GIF] saved (21 frames, GIS 9-90): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1984_2004\v2\calibBE_groin\1-island\dune-and-road.gif
+  [GIF] saved (21 frames, GIS 9-20): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1984_2004\v2\calibBE_groin\2-event-1999_GIS9-14\dune-and-road.gif
+  [GIF] saved (21 frames, GIS 80-90): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1984_2004\v2\calibBE_groin\3-event-1989_GIS84-87\dune-and-road.gif
+  [GIF] saved topography (21 frames, GIS 9-90): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1984_2004\v2\calibBE_groin\1-island\topography.gif
+  [GIF] saved topography (21 frames, GIS 6-20): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1984_2004\v2\calibBE_groin\2-event-1999_GIS9-14\topography.gif
+  [GIF] saved topography (21 frames, GIS 82-90): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1984_2004\v2\calibBE_groin\3-event-1989_GIS84-87\topography.gif
+
+==========================================================================
+artifacts -> C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1984_2004\v2\calibBE_groin
+==========================================================================

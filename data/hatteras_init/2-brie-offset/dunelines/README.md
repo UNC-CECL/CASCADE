@@ -22,11 +22,10 @@ from a USGS metadata file and from memory).
 |---|---|---|---|---|
 | `duneline_1967.geojson` | EPSG:26918 | 96 | none | oldest, unused so far |
 | `duneline_1984.geojson` | EPSG:26918 | 495 | none | the 1984 initial condition; USGS photo of 1984-09-19 |
-| `duneline_1997.geojson` | EPSG:3725 | 581 | full | digitized 2026-09-02 from the USGS photo of 1997-10-12; still what `HAT_measure_duneline_shift.py` reads |
-| `duneline_1997_v2.geojson` | EPSG:3725 | 592 | full | 2026-09-15, local corrections to the line above; behind `2-brie-offset/1996/v2/` |
+| `duneline_1997.geojson` | EPSG:3725 | 529 | full* | **re-digitized 2026-09-18** from the USGS photo of 1997-10-12; behind `2-brie-offset/1996/v3/` (CURRENT). Also what `HAT_measure_duneline_shift.py` reads |
 | `duneline_2004.geojson` | EPSG:3725 | 158 | partial | the 2004 initial condition; Google Earth capture of 2004-05-25 |
-| `duneline_2009.geojson` | EPSG:26918 | 740 | none | added 2026-09-15; Google Earth capture of 2009-05-30; stands in for the **2010** start (no 2010 aerial imagery), `DUNE_LINE_FOR_YEAR[2010] == 2009` |
-| `duneline_2023.geojson` | EPSG:26918 | 868 | none | added 2026-09-15 as `duneline_2024` and renamed for its imagery, the NOAA NGS 2023 set under `D:\Hatteras_GIS\Aerial3`; stands in for the **2024** end year, `DUNE_LINE_FOR_YEAR[2024] == 2023` |
+| `duneline_2009.geojson` | EPSG:26918 | 603 | none | **re-digitized 2026-09-18** (behind `2-brie-offset/2010/v2/`, CURRENT); Google Earth capture of 2009-05-30; stands in for the **2010** start (no 2010 aerial imagery), `DUNE_LINE_FOR_YEAR[2010] == 2009` |
+| `duneline_2023.geojson` | EPSG:26918 | 749 | none | **re-digitized 2026-09-18**; first added 2026-09-15 as `duneline_2024` and renamed for its imagery, the NOAA NGS 2023 set under `D:\Hatteras_GIS\Aerial3`; stands in for the **2024** end year, `DUNE_LINE_FOR_YEAR[2024] == 2023` |
 
 `HAT_measure_duneline_shift.py` reads THIS directory first and falls back to
 `D:\Hatteras_GIS\Dunelines` only for older invocations. The external drive is
@@ -61,7 +60,42 @@ Note also that 1997 is one year after the 1996 ALACE survey the DEM's beach come
 from. At the fastest measured rate (GIS 85, 4.4 m/yr) that is ~4 m, under half a
 cell.
 
-## 1997 v2
+## The 2026-09-18 re-digitization
+
+Hannah re-digitized the 1997, 2009 and 2023 lines on 2026-09-18, and they
+**replace** the earlier ones under the plain vintage name. That was her
+decision: the earlier 1997, 1997_v2, 2009 and 2023 files survive only in git
+history from before that date. Each old build folder under
+`2-brie-offset/<year>/v<n>/` keeps the raw offsets it was made from, so it
+can still be rebuilt.
+
+\* The 1997 file's `edit_date` still reads 2025-11-04. The properties were
+carried over from the earlier digitization, so that date does not describe
+the 2026-09-18 geometry.
+
+Measured per domain along the 100 m transects, every change went the same
+way: the new line lies SEAWARD of the old.
+
+| line | domains moved ≥ 0.5 m | largest | build |
+|---|---|---|---|
+| 1997 (vs 1997_v2) | 32 of 90 | 66.2 m, GIS 35 | `1996/v3/`, `offset_1996_v2_vs_v3.csv` |
+| 2009 | 50 of 90 | 65.6 m, GIS 2 | `2010/v2/`, `offset_2010_v1_vs_v2.csv` |
+| 2023 | 53 of 90 | 44.6 m, GIS 32 | no build (only an end year); `raw_offsets/2023_...` |
+
+Rebuilt from the new lines the same day:
+- the three raw offset files and the two Pea Island extension raws
+- `1996/v3`, `2010/v2` and `1996/ext/n115`
+- `5-scr/4-comparisons/duneline_vs_coastsat/`, for the three windows that
+  use these lines
+
+NOT rebuilt:
+- `5-scr/3-rates/duneline_lrr/`, a fit through several lines. Retired later
+  that day for `3-rates/duneline/endpoint/` (net change, built from these
+  lines); the fit is in `5-scr/archive/duneline_lrr_retired_20260918/`
+- the 1984 dune-line shift measurement
+- every model run on the 1996 or 2010 inputs
+
+## 1997 v2 (superseded 2026-09-18, kept as history)
 
 Local corrections only (the rest of the line is the same vertices). Where they
 land, measured along the 100 m transects: 22 of 90 domains moved, all of them

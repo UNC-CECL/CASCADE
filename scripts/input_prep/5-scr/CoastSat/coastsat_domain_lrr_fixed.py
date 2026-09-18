@@ -8,9 +8,9 @@ Requires:
   2. CoastSat time-series CSVs    – one per transect
   3. coastsat_lrr_analysis.py     – in the same directory (or on PYTHONPATH)
 
-Outputs:
+Outputs (tables only since 2026-09-18; the window's figure is drawn beside
+them by scripts/input_prep/5-scr/rates_figures.py):
   domain_lrr_summary.csv  –  one row per domain with aggregated LRR stats
-  domain_lrr_plot.png     –  bar chart coloured by erosion/accretion
   transect_lrr_full.csv   –  full transect-level results with domain assignments
 
 Usage
@@ -380,13 +380,15 @@ def main():
     print(f"\nSaved: {transect_out}")
     print(f"Saved: {summary_out}")
 
-    # ---- Plots ----
-    plot_domain_lrr(summary, START_DATE, END_DATE,
-                    os.path.join(OUTPUT_DIR, "domain_lrr_bar.png"),
-                    metric="mean_lrr")
-
-    plot_transect_scatter(transect_df, BUFFER_DOMAINS,
-                          os.path.join(OUTPUT_DIR, "transect_lrr_scatter.png"))
+    # ---- No figures here (2026-09-18) ----
+    # The figure is drawn by scripts/input_prep/5-scr/rates_figures.py. The
+    # domain_lrr_bar.png / transect_lrr_scatter.png quick-looks this used to
+    # draw were autoscaled, titled and coloured by magnitude, a second picture
+    # of the numbers that clashed with the house-style figures; they are in
+    # 5-scr/archive/coastsat_lrr_quicklooks_20260918/. The window's figure is
+    #     python scripts/input_prep/5-scr/CoastSat/coastsat_lrr_windows.py
+    # -> 4-comparisons/coastsat_windows/<window>/. plot_domain_lrr and
+    # plot_transect_scatter are kept, unused, for a one-off look.
 
     return summary, transect_df
 

@@ -30,7 +30,7 @@ WHICH CROSSING when a transect meets the line more than once: the landward-most
 count is written to n_crossings so those transects can be found.
 
 USAGE
-    python duneline_to_raw_offsets.py --duneline duneline_1997_v2.geojson \
+    python duneline_to_raw_offsets.py --duneline duneline_1997.geojson \
         --out 1997_v2_duneline_offset_raw.csv \
         --validate-against 1997_duneline_offset_raw.csv
 
@@ -38,7 +38,7 @@ USAGE
     --out        a file name under 2-brie-offset/raw_offsets/, or a path
 
 EXTENSION MODE (2026-09-16, the Pea Island extension experiment)
-    python duneline_to_raw_offsets.py --duneline duneline_1997_v2.geojson --extension
+    python duneline_to_raw_offsets.py --duneline duneline_1997.geojson --extension
 
     The 172 transects the surveyed polygon join left without a domain -- Pea
     Island north of GIS 90, and the last kilometre south of GIS 1 -- are given

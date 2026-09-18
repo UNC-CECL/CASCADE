@@ -1,0 +1,3 @@
+y axis on every panel: -10 to +10 m/yr
+= ceil(max |rate| + 1) over every observed reading (CoastSat means, dune-line endpoint) and both estimators of every model set (coastsat, dune-mean3, dune-raw), 1984-2004, 1996-2010, 2004-2024, 2010-2024
+(the CoastSat std lines are not in the bound)

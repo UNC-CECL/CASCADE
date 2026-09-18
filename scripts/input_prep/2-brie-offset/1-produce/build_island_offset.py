@@ -33,7 +33,7 @@ VERSIONS
 
 USAGE
     python build_island_offset.py --duneline duneline_1984.geojson --year 1984
-    python build_island_offset.py --duneline duneline_1997_v2.geojson --year 1996 \
+    python build_island_offset.py --duneline duneline_1997.geojson --year 1996 \
         --compare-with v1
     python build_island_offset.py --duneline duneline_2009.geojson --year 2010   # once in the table
 
@@ -45,7 +45,7 @@ USAGE
     --no-current       build but leave CURRENT as it is
 
 EXTENDED GEOMETRY (2026-09-16, the Pea Island extension experiment)
-    python build_island_offset.py --duneline duneline_1997_v2.geojson --year 1996 \
+    python build_island_offset.py --duneline duneline_1997.geojson --year 1996 \
         --geometry n115
 
     Runs step 1 with --extension (the transects beyond GIS 1-90, numbered on

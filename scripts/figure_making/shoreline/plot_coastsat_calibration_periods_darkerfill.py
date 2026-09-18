@@ -167,7 +167,7 @@ def main():
         f"{PERIODS[1][0]}–{PERIODS[1][1]} in blue, positive seaward. Each "
         "curve is the mean of the CoastSat transect LRRs falling in that "
         "500 m domain, read from that window's own product under "
-        "5-scr/3-rates/coastsat_lrr/; the two windows are separate fits, not one "
+        "5-scr/3-rates/coastsat/lrr/; the two windows are separate fits, not one "
         "record split in two. THIS IS THE TARGET the model is graded against "
         "(see dsas_calibration_periods.png under supporting/ for the "
         f"independent DSAS check). Grey bands are the community zones "
