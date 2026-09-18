@@ -26,6 +26,18 @@ import os, io, pickle, zipfile, warnings
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and 9-figures/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). This file drew in
+# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              FIG_W_DOUBLE)
+apply_style()
 import matplotlib.patches as mpatches
 import matplotlib.colors as mcolors
 import matplotlib.ticker as mticker
@@ -64,9 +76,11 @@ RUN_PRESET = "calibBE"
 NPZ_PATH = str(find_run_dir(RAW_RUNS, RUN_NAME, RUN_PERIOD, RUN_PRESET)
                / f"{RUN_NAME}.npz")
 
-# The observation workbook is an INPUT and stays under scripts/input_prep/.
-OBS_XLSX_PATH = str(PROJECT_BASE_DIR / "scripts" / "input_prep"
-                    / "8-overwash-analysis" / "Hatteras_Overwash_Data.xlsx")
+# The observation workbook, resolved by site_layer/hat_overwash.py
+# (2026-09-18). This typed scripts/input_prep/8-overwash-analysis/, which the
+# workbook left on 2026-09-10, so the script could not find its observations.
+from site_layer.hat_overwash import WORKBOOK as _OBS_WORKBOOK  # noqa: E402
+OBS_XLSX_PATH = str(_OBS_WORKBOOK)
 
 # Products go under output/, never beside the script -- see output/README.md.
 OUT_DIR = str(PROJECT_BASE_DIR / "output" / "comparisons" / "overwash")
@@ -236,7 +250,7 @@ def plot_stacked(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
     n_y_o = n_y_m           # both panels show the same year range
     n_d   = len(gis_ids)
 
-    fig = plt.figure(figsize=(15, 12))
+    fig = plt.figure(figsize=figsize("double", height=5.98))
 
     # Axes: model top (55%), obs bottom (30%), section bar (8%)
     ax_m  = fig.add_axes([0.07, 0.44, 0.82, 0.50])   # model heatmap
@@ -438,7 +452,8 @@ def plot_contingency(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
     print(f"  Overall CSI:       {h_tot/(h_tot+m_tot+f_tot):.3f}" if h_tot+m_tot+f_tot>0 else "  CSI: N/A")
 
     # ── FIGURE ────────────────────────────────────────────────────────
-    fig = plt.figure(figsize=(15, max(5, n_obs * 0.55 + 3.5)))
+    fig = plt.figure(figsize=figsize(
+    "double", height=max(5, n_obs * 0.55 + 3.5) * FIG_W_DOUBLE / 15))
     ax_c = fig.add_axes([0.07, 0.30, 0.82, 0.58])
     ax_b = fig.add_axes([0.07, 0.20, 0.82, 0.05])
     ax_s = fig.add_axes([0.07, 0.05, 0.82, 0.10])  # summary stats strip

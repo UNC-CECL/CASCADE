@@ -28,15 +28,15 @@ STYLE
     hat_figure_style; no in-image title or footnote. The words are in
     data/hatteras_init/8-overwash-analysis/CAPTIONS.md, written by this script.
 
-OUTPUT   data/hatteras_init/8-overwash-analysis/
-    figures/heatmaps/overwash_heatmap_<period>.png
-    tables/overwash_observations.csv   one row per image and domain
-    tables/storms_by_image.csv         which image first shows each storm
+OUTPUT   data/hatteras_init/8-overwash-analysis/ (site_layer/hat_overwash.py)
+    2-record/heatmaps/overwash_heatmap_<period>.png
+    1-observations/overwash_observations.csv   one row per image and domain
+    1-observations/storms_by_image.csv         which image first shows each storm
     CAPTIONS.md
 
 The 2026-05 version of this script had a comparison mode for a modelled
 overwash matrix that was never produced. It is gone; a model comparison
-should align to tables/overwash_observations.csv.
+should align to 1-observations/overwash_observations.csv.
 ==============================================================================
 """
 
@@ -57,7 +57,7 @@ REPO = next(
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(HERE))
 
-from hat_figure_style import (C, DOMAIN_AXIS_LABEL, FIG_H_MAX, INK,   # noqa: E402
+from site_layer.hat_figure_style import (C, DOMAIN_AXIS_LABEL, FIG_H_MAX, INK,   # noqa: E402
                               INK_MUTED, _title, apply_style, figsize,
                               open_frame, save, spines_for_image,
                               town_bands)
@@ -65,8 +65,10 @@ from overwash_data import (OUT_DIR, PERIODS, SECTIONS, assign_capture,   # noqa:
                            load_observations, load_storms,
                            observations_long, storms_table, upsert_caption)
 
-FIG_DIR = OUT_DIR / "figures" / "heatmaps"
-TAB_DIR = OUT_DIR / "tables"
+from site_layer import hat_overwash as ow  # noqa: E402
+FIG_DIR = ow.HEATMAPS
+# The long-form tables are the record reshaped, so they sit beside it.
+TAB_DIR = ow.OBSERVATIONS
 
 # ---------------------------------------------------------------- colours
 CLR_OW = C["ACCENT"]          # overwash present

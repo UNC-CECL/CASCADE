@@ -2,7 +2,7 @@
 overwash_data.py
 ==============================================================================
 The overwash observation record, read off `Hatteras_Overwash_Data.xlsx` in
-data/hatteras_init/8-overwash-analysis/observations/, in the shape the two
+data/hatteras_init/8-overwash-analysis/1-observations/, in the shape the two
 figure scripts need. Nothing is plotted here.
 
 WHAT THE WORKBOOK HOLDS
@@ -44,10 +44,17 @@ HERE = Path(__file__).resolve().parent
 REPO = next(
     _p for _p in HERE.parents
     if (_p / "pyproject.toml").exists())
-OUT_DIR = REPO / "data" / "hatteras_init" / "8-overwash-analysis"
+import sys  # noqa: E402
+sys.path.insert(0, str(REPO / "scripts"))
+from site_layer import hat_overwash as ow  # noqa: E402
+
+# Every folder is resolved by site_layer/hat_overwash.py (2026-09-18, when the
+# data folder was regrouped by job). OUT_DIR stays the name the three sibling
+# scripts import; it is the root, where CAPTIONS.md and the README live.
+OUT_DIR = ow.OVERWASH_ROOT
 # The workbook is the hand-digitised record, so it lives with the data, not
 # the code (moved 2026-09-10). Edit it there.
-XLSX = OUT_DIR / "observations" / "Hatteras_Overwash_Data.xlsx"
+XLSX = ow.WORKBOOK
 
 PERIODS = {
     "period1": (1984, 2004),
@@ -239,30 +246,34 @@ def storms_table(storms, obs) -> pd.DataFrame:
 CAPTIONS_HEADER = (
     "# Figure captions\n\n"
     "Written by the scripts in `scripts/input_prep/8-overwash-analysis/`. "
-    "Each heading names the figure and its folder under `figures/`. The "
+    "Each heading names the figure and the folder it is in. The "
     "figures carry no in-image titles or footnotes on purpose; use these "
     "under them.\n")
-# Order of the folders in the file, whatever order the scripts ran in.
-_FOLDER_RANK = {"heatmaps": 0, "map": 1, "vs-footprint": 2}
+# Order of the folders in the file, whatever order the scripts ran in: the
+# order of hat_overwash.CAPTION_FOLDERS, keyed by the label a heading carries.
+_FOLDER_RANK = {label: i for i, label in enumerate(ow.CAPTION_FOLDERS.values())}
 
 
 def upsert_caption(name: str, folder: str, text: str) -> Path:
-    """Replace or add the entry for figures/<folder>/<name> in CAPTIONS.md.
+    """Replace or add the entry for <name> in CAPTIONS.md.
+
+    `folder` is the short name ("heatmaps", "map", "vs-footprint"); the
+    heading carries its path from hat_overwash.CAPTION_FOLDERS.
 
     Every script owns only its own entries; the others are kept as they are,
     and the file is re-sorted by folder so the order never depends on which
     script ran last.
     """
-    p = OUT_DIR / "CAPTIONS.md"
+    p = ow.CAPTIONS
     old = p.read_text(encoding="utf-8") if p.exists() else CAPTIONS_HEADER
     parts = re.split(r"(?m)^(?=## )", old)
     header, sections = parts[0], parts[1:]
     key = f"## `{name}`"
     sections = [x for x in sections if not x.startswith(key)]
-    sections.append(f"{key} (figures/{folder})\n\n{text}\n")
+    sections.append(f"{key} ({ow.CAPTION_FOLDERS[folder]})\n\n{text}\n")
 
     def rank(sec):
-        m = re.search(r"\(figures/([^)]+)\)", sec.splitlines()[0])
+        m = re.search(r"\(([^)]+)\)", sec.splitlines()[0])
         return _FOLDER_RANK.get(m.group(1) if m else "", 9)
 
     sections.sort(key=rank)
@@ -274,7 +285,7 @@ def upsert_caption(name: str, folder: str, text: str) -> Path:
 
 def remove_caption(name: str) -> None:
     """Drop the entry for a figure that no longer exists."""
-    p = OUT_DIR / "CAPTIONS.md"
+    p = ow.CAPTIONS
     if not p.exists():
         return
     old = p.read_text(encoding="utf-8")

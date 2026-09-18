@@ -13,7 +13,7 @@ THE TWO RECORDS
     10 m rule keeps of it: rows ADDED where the dune retreated over the window,
     rows REMOVED where it advanced.
 
-    The overwash record (observations/Hatteras_Overwash_Data.xlsx) gives every
+    The overwash record (1-observations/Hatteras_Overwash_Data.xlsx) gives every
     domain, per image, whether washover was visible.
 
 THE WINDOW (Hannah, 2026-09-10: strictly between the line dates)
@@ -44,11 +44,11 @@ FLAGS (kept, not dropped)
     window. Erosion retreats the dune line without any overwash, which is
     why the last flag exists.
 
-OUTPUT   data/hatteras_init/8-overwash-analysis/vs-footprint/
+OUTPUT   data/hatteras_init/8-overwash-analysis/3-vs-footprint/tables/
     overwash_vs_footprint_by_domain.csv    the joined table, one row per domain
     overwash_vs_footprint_contingency.csv  overwashed x action, all and unflagged
     overwash_vs_footprint_summary.txt      the readings in words, with the lists
-    ../figures/vs-footprint/
+    ../  (3-vs-footprint/, the figures)
         overwash_vs_footprint_alongshore.png   images, footprint bars, flags, by domain
         overwash_vs_footprint_summary.png      shift by overwash status; share overwashed per action
         overwash_vs_footprint_map.png          three alongshore sections, zoomed, each with
@@ -97,8 +97,9 @@ COASTSAT = (SMOOTH_METHOD_COMPARISON / "03_cascade_inputs"
 DSAS = DSAS_ROOT / "dsas_1978_1997_domain_means.csv"
 DOMAIN_FILE = Path("D:/Hatteras_GIS/domains.geojson")
 
-VS_DIR = OUT_DIR / "vs-footprint"
-FIG_DIR = OUT_DIR / "figures" / "vs-footprint"
+from site_layer import hat_overwash as ow  # noqa: E402
+VS_DIR = ow.VS_FOOTPRINT_TABLES
+FIG_DIR = ow.VS_FOOTPRINT
 
 LINE_1984 = pd.Timestamp("1984-09-19")     # the frame the 1984 dune line was drawn on
 LINE_1997 = pd.Timestamp("1997-10-12")     # the frame the 1997 dune line was drawn on

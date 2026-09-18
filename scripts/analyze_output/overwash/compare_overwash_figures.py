@@ -21,6 +21,18 @@ import os, io, pickle, zipfile, warnings
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and 9-figures/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). This file drew in
+# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              FIG_W_DOUBLE)
+apply_style()
 import matplotlib.patches as mpatches
 import matplotlib.colors as mcolors
 warnings.filterwarnings('ignore')
@@ -56,9 +68,11 @@ RUN_PRESET = "calibBE"
 NPZ_PATH = str(find_run_dir(RAW_RUNS, RUN_NAME, RUN_PERIOD, RUN_PRESET)
                / f"{RUN_NAME}.npz")
 
-# The observation workbook is an INPUT and stays under scripts/input_prep/.
-OBS_XLSX_PATH = str(PROJECT_BASE_DIR / "scripts" / "input_prep"
-                    / "8-overwash-analysis" / "Hatteras_Overwash_Data.xlsx")
+# The observation workbook, resolved by site_layer/hat_overwash.py
+# (2026-09-18). This typed scripts/input_prep/8-overwash-analysis/, which the
+# workbook left on 2026-09-10, so the script could not find its observations.
+from site_layer.hat_overwash import WORKBOOK as _OBS_WORKBOOK  # noqa: E402
+OBS_XLSX_PATH = str(_OBS_WORKBOOK)
 
 # Products go under output/, never beside the script -- see output/README.md.
 OUT_DIR = str(PROJECT_BASE_DIR / "output" / "comparisons" / "overwash")
@@ -238,7 +252,7 @@ def plot_stacked(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
     n_d = len(domain_ints)
 
     # --- Layout ---
-    fig  = plt.figure(figsize=(15, 12))
+    fig  = plt.figure(figsize=figsize("double", height=5.98))
     ax_m = fig.add_axes([0.07, 0.42, 0.82, 0.50])   # model  (top 50%)
     ax_o = fig.add_axes([0.07, 0.19, 0.82, 0.21])   # obs    (middle 21%)
     ax_b = fig.add_axes([0.07, 0.12, 0.82, 0.05])   # section bar
@@ -393,7 +407,7 @@ def plot_contingency(years_m, Q, gis_ids, obs_mat, obs_years, domain_ints):
     # --- Figure ---
     row_h = 0.40
     fig_h = max(6.0, n_y * row_h + 4.5)   # extra space at bottom for legend
-    fig   = plt.figure(figsize=(15, fig_h))
+    fig   = plt.figure(figsize=figsize("double", height=fig_h * FIG_W_DOUBLE / 15))
     # More room at bottom for legend
     ax_c  = fig.add_axes([0.07, 0.26, 0.82, 0.65])
     ax_b  = fig.add_axes([0.07, 0.18, 0.82, 0.05])
@@ -544,7 +558,7 @@ def plot_spatial_normalised(Q, obs_mat, domain_ints, obs_years, years_m):
     qow_p75_n  = qow_p75  / np.nanmax(qow_mean)
     freq_norm  = obs_freq   # already 0–1
 
-    fig = plt.figure(figsize=(16, 7))
+    fig = plt.figure(figsize=figsize("double", height=3.27))
     ax  = fig.add_axes([0.07, 0.32, 0.88, 0.57])   # more bottom space for 2-line footnote
     axb = fig.add_axes([0.07, 0.18, 0.88, 0.06])
 
@@ -636,7 +650,7 @@ def plot_spatial_dual_panel(Q, obs_mat, domain_ints, obs_years, years_m):
     x     = np.arange(n_d)
     n_img = len(obs_years)
 
-    fig  = plt.figure(figsize=(16, 9))
+    fig  = plt.figure(figsize=figsize("double", height=4.21))
     ax_m = fig.add_axes([0.07, 0.50, 0.88, 0.41])   # model (top)  — shorter, higher up
     ax_o = fig.add_axes([0.07, 0.25, 0.88, 0.19])   # obs   (bottom) — gap of 0.06 above
     axb  = fig.add_axes([0.07, 0.13, 0.88, 0.06])   # section bar
