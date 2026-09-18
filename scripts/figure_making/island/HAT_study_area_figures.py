@@ -62,14 +62,14 @@ WHICH DOMAIN POLYGONS
     5-scr/2-transect-frame/transect_domains/HAT_domains.json: the 90 boxes, 2000 m cross-shore
     by 500 m alongshore, axis-aligned in UTM 18N, that every per-domain DEM
     clip and elevation array was cut from (the repository copy of
-    D:/Hatteras_GIS/domains.geojson). NOT 9-figures/map_elements/domains/
-    HAT_domains.shp: that is an older 1000 x 500 m set whose ID runs about
+    D:/Hatteras_GIS/domains.geojson). NOT the retired map_elements/archive/
+    domains_1000m_20251014/HAT_domains.shp: an older 1000 x 500 m set whose ID runs about
     nine domains south of the model's, found 2026-09-17 when its box for
     "45" did not contain the array for domain 45.
 
 LAYERS AND THEIR OWNERS
     domain boxes                      5-scr/2-transect-frame/transect_domains/HAT_domains.json
-    island outline                    9-figures/map_elements/hatteras_outline/
+    island outline                    map_elements/hatteras_outline/
     NC-12 centrelines                 hat_topo_version.road_line_file(1978|2008)
     domain elevation arrays           hat_topo_version.npy_dirs("2004-start")
     road cell masks                   hat_topo_version.road_mask_file(2008, gis)
@@ -78,7 +78,7 @@ LAYERS AND THEIR OWNERS
                                       cached under the user's temp dir;
                                       --vector draws the outline instead and
                                       needs no network
-    locator coastline                 9-figures/map_elements/natural_earth/
+    locator coastline                 map_elements/natural_earth/
                                       (Natural Earth 10 m states, clipped)
 ==============================================================================
 """
@@ -120,7 +120,8 @@ from site_layer.hatteras_site_config import (  # noqa: E402
 CRS = "EPSG:26918"
 INIT = REPO / "data" / "hatteras_init"
 from site_layer.hat_observed_rates import DOMAIN_BOXES  # noqa: E402
-OUTLINE = INIT / "9-figures" / "map_elements" / "hatteras_outline" / "HAT_island_outline.shp"
+from site_layer import hat_map_layers as _ml  # noqa: E402
+OUTLINE = _ml.ISLAND_OUTLINE
 FIG_ROOT = REPO / "output" / "figures"
 
 # WHICH SUBJECT FOLDER EACH FIGURE BELONGS TO. output/figures/ is organised by
@@ -525,7 +526,7 @@ def framework_handles():
     ]
 
 
-NE_STATES = INIT / "9-figures" / "map_elements" / "natural_earth" / "ne_10m_states_southeast_us.geojson"
+NE_STATES = _ml.NE_STATES
 LOCATOR_C = C_1984          # the reach on the locator: the one strong colour on the inset
 INSET_LON = (-80.6, -74.6)
 INSET_LAT = (33.4, 37.3)

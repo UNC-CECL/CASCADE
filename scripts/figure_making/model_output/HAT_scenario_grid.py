@@ -79,7 +79,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 # HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and 9-figures/STYLE.md. The root is
+# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
 # found by searching upward (ORGANIZATION.md rule 5). This file drew in
 # matplotlib's defaults until 2026-09-17 -- it never called apply_style().
 import sys as _sys
@@ -415,7 +415,7 @@ def main():
                   frameon=False, bbox_to_anchor=(0.5, 0.004))
 
     # The title and the y-axis note used to be drawn here. Both are caption
-    # material under 9-figures/STYLE.md, and on a 190 mm six-panel grid they
+    # material under figure_making/STYLE.md, and on a 190 mm six-panel grid they
     # were also the two widest things on the page (2026-09-17).
     # WHAT IS MISSING, SAID OUT LOUD. A cell with no run draws nothing, and a
     # near-empty grid looks like a result rather than an absence of runs

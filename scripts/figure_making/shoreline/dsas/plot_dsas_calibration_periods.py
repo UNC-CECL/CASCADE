@@ -33,7 +33,7 @@ matplotlib.use("Agg")
 import pandas as pd
 
 # HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and 9-figures/STYLE.md. The root is
+# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
 # found by searching upward (ORGANIZATION.md rule 5), so this block is
 # independent of whatever this script calls its own repository variable.
 import sys as _sys

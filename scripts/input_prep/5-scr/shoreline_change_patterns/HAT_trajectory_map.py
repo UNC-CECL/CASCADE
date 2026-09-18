@@ -41,8 +41,8 @@ from site_layer import hat_observed_rates as _obs  # noqa: E402
 DOMAINS_GEOJSON   = str(_obs.DOMAIN_BOXES)
 TRANSECTS_GEOJSON = str(_obs.TRANSECT_LAYER)
 METRICS_CSV       = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\shoreline_change_patterns\classification_output\domain_trajectory_metrics.csv"
-OUTLINE_SHP= str(_obs.INIT_ROOT / "9-figures" / "map_elements"
-             / "hatteras_outline" / "HAT_island_outline.shp")
+from site_layer.hat_map_layers import ISLAND_OUTLINE as _OUTLINE  # noqa: E402
+OUTLINE_SHP= str(_OUTLINE)
 # Anchored on this file 2026-09-12. The literals here were
 # drive-rooted and had never resolved; the data they name also
 # moved out of the scripts tree on that date.
@@ -50,7 +50,7 @@ from pathlib import Path as _Path
 
 # Anchored 2026-09-14: absolute into a home directory, or into a tree
 # renamed since. Rule 5 of ORGANIZATION.md.
-_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+_PATH_REPO = next(_p for _p in _Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 OUTPUT_DIR        = str(_obs.SHORELINE_PATTERNS / "map_output")
 

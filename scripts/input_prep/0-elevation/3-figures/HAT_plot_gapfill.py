@@ -13,7 +13,7 @@ Panels (a) and (b) differ ONLY in the filled cells, so flipping between them
 shows the fill directly. Panel (c) is the same information as a categorical map,
 which is easier to read where the fill is thin.
 
-STYLE. Every figure here is drawn under `scripts/hat_figure_style.py` at the
+STYLE. Every figure here is drawn under `scripts/site_layer/hat_figure_style.py` at the
 printed width (190 mm), and carries no title, statistics line or footnote on the
 canvas: that text is written to CAPTIONS.md beside the PNGs. The terrain ramp is
 the house style's one sanctioned exception to drawing elevation in classes.
@@ -99,7 +99,7 @@ PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
 
 # The house style, before anything is drawn or any colour is named.
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
-from hat_figure_style import (  # noqa: E402
+from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, figsize, save, caption, C_1984, C_1997, spines_for_image,
     _title)
 
@@ -108,15 +108,18 @@ apply_style()
 ELEVATION_DIR = PROJECT_ROOT / "data" / "hatteras_init" / "0-elevation"
 IN_DIR = None   # set from SOURCE_TAG below
 FIG_DIR = ELEVATION_DIR / "figures"
-DOMAIN_FILE = Path(r"D:\Hatteras_GIS\domains.geojson")
+# The repository copy of D:/Hatteras_GIS/domains.geojson (identical; 2026-09-18).
+from site_layer.hat_map_layers import DOMAIN_BOXES as DOMAIN_FILE  # noqa: E402
 
 # NC-12 alignments. These are EPSG:2264 (NC State Plane, US survey FEET) while
 # the maps are EPSG:3725 (UTM 18N, metres), so they are reprojected on load -
 # plotted raw they would land thousands of km off the map.
 ROAD_DIR = (PROJECT_ROOT / "data" / "hatteras_init" / "4-mgmt-forcing"
             / "road_offset" / "raw_offset")
-ROAD_FILES = {1984: ROAD_DIR / "1984" / "nc12_1984.geojson",
-              2004: ROAD_DIR / "2004" / "nc12_2004.geojson"}
+# Keyed by PERIOD; the files are the 1978 and 2008 LINES those periods read
+# (hat_topo_version.ROAD_LINE_FOR_YEAR), filed by vintage since 2026-09-15.
+ROAD_FILES = {1984: ROAD_DIR / "1978" / "nc12_1978.geojson",
+              2004: ROAD_DIR / "2008" / "nc12_2008.geojson"}
 # Two vintages of the same line, so they take the house vintage pair: the
 # EARLIER alignment (1984) red, the LATER one (2004) blue. They are very nearly
 # coincident through 78-80, so 2004 is solid underneath and 1984 dashed on top -
@@ -175,7 +178,7 @@ SOURCE_NOTE = (f"Fill is limited to cells the {SURVEY_FILL} source measured, "
 # has to be right rather than a probe-two-paths-and-hope in every consumer.
 # A missing directory is reported there, not as an empty glob later.
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
-from hat_elevation_products import product as _product  # noqa: E402
+from site_layer.hat_elevation_products import product as _product  # noqa: E402
 
 _P = _product(SOURCE_TAG)
 IN_DIR = _P.resampled_10m

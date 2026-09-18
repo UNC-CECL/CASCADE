@@ -57,7 +57,7 @@ silently resolved to `scripts/` one level down.
 ## The two that also run
 
 `hat_figure_style.py` writes the style sheet (`python scripts/site_layer/hat_figure_style.py`
-→ `data/hatteras_init/9-figures/`) and `hat_observed_rates.py` prints a
+→ `scripts/figure_making/STYLE.md` and `output/figures/style/`) and `hat_observed_rates.py` prints a
 locations diagnostic. Running a file directly puts *its own folder* on
 `sys.path` rather than `scripts/`, so both open with a
 `if __package__ in (None, ""):` guard that adds `scripts/` back. Importing

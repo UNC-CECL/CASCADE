@@ -17,9 +17,10 @@ WHY THIS EXISTS
     ColorBrewer RdBu poles, panel letters, nothing on the canvas that belongs in
     a caption). Hannah's call that day was that the 09-04 rules win wherever
     the two disagreed, and that the one module lives here, importable by every
-    script the way hat_topo_version is, with a human-readable style sheet under
-    data/hatteras_init/9-figures/ (written by `write_style_sheet()`, or by
-    running this file).
+    script the way hat_topo_version is, with the rules written out in
+    scripts/figure_making/STYLE.md and the style drawn in output/figures/style/
+    (both written by `write_style_sheet()`, or by running this file; they sat
+    together in data/hatteras_init/9-figures/ until 2026-09-18).
 
 THE RULES (the 2026-09-04 house style)
     typeface        Arial first (Helvetica, Liberation Sans, DejaVu Sans behind
@@ -67,7 +68,7 @@ USAGE
     ...
     caption(fig, "what the reader needs")   # lands in CAPTIONS.md on savefig
 
-    python hat_figure_style.py          # (re)writes data/hatteras_init/9-figures/
+    python hat_figure_style.py          # (re)writes STYLE.md and the style sheet
 ==============================================================================
 """
 
@@ -94,7 +95,7 @@ if __package__ in (None, ""):
 
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
-STYLE_SHEET_DIR = PROJECT_ROOT / "data" / "hatteras_init" / "9-figures"
+from site_layer.hat_map_layers import STYLE_DOC, STYLE_SHEET_DIR  # noqa: E402,F401
 
 # =============================================================================
 # TYPE, INK, THE VINTAGE PAIR
@@ -612,7 +613,7 @@ def record_caption(png_path: Path, text: str) -> Path:
 
 
 # =============================================================================
-# THE STYLE SHEET: data/hatteras_init/9-figures/
+# THE STYLE SHEET: output/figures/style/, and STYLE.md beside the figure code
 # =============================================================================
 
 def write_style_sheet(out_dir: Path | None = None) -> tuple[Path, Path]:
@@ -622,6 +623,9 @@ def write_style_sheet(out_dir: Path | None = None) -> tuple[Path, Path]:
     import matplotlib.pyplot as plt
     import numpy as np
 
+    # A given out_dir takes both files (a trial); the default splits them: the
+    # sheet is a figure, STYLE.md is documentation for whoever writes one.
+    md = (Path(out_dir) / "STYLE.md") if out_dir else STYLE_DOC
     out_dir = Path(out_dir) if out_dir else STYLE_SHEET_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
     apply_style()
@@ -709,7 +713,6 @@ def write_style_sheet(out_dir: Path | None = None) -> tuple[Path, Path]:
 
     swatch = save(fig, out_dir / "HAT_figure_style_sheet.png", close=True)[0]
 
-    md = out_dir / "STYLE.md"
     stamp = _dt.datetime.now().strftime("%Y-%m-%d %H:%M")
     md.write_text(f"""# Hatteras figure style
 

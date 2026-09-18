@@ -69,8 +69,7 @@ DATA_DIR = PROJECT_ROOT / "data" / "hatteras_init"
 MGMT_DIR = DATA_DIR / "4-mgmt-forcing"
 RECORD_XLSX = MGMT_DIR / "Hatteras_Management_Timelines.xlsx"
 from site_layer.hat_observed_rates import DOMAIN_BOXES as DOMAIN_FILE  # noqa: E402
-OUTLINE_FILE = (DATA_DIR / "9-figures" / "map_elements" / "hatteras_outline"
-                / "HAT_island_outline.shp")
+from site_layer.hat_map_layers import ISLAND_OUTLINE as OUTLINE_FILE  # noqa: E402
 OUT_DIR = MGMT_DIR / "nourishment"
 
 SPACING_M = HATTERAS_DOMAINS.domain_spacing_m

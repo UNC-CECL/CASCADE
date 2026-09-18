@@ -54,8 +54,8 @@ OUTPUT   data/hatteras_init/8-overwash-analysis/3-vs-footprint/tables/
         overwash_vs_footprint_map.png          three alongshore sections, zoomed, each with
                                                the three layers: overwash, footprint, reading
         overwash_vs_footprint_map_island.png   the whole island, the same three layers
-    The map needs D:/Hatteras_GIS (domain boxes, coastline), through
-    overwash_map_periods.load_geometry.
+    The map reads the domain boxes and coastline from the repository, through
+    overwash_map_periods.load_geometry (off the D: drive since 2026-09-18).
 ==============================================================================
 """
 
@@ -95,7 +95,9 @@ from site_layer.hat_observed_rates import DSAS_ROOT, SMOOTH_METHOD_COMPARISON  #
 COASTSAT = (SMOOTH_METHOD_COMPARISON / "03_cascade_inputs"
             / "cascade_lrr_inputs_transect_based.csv")
 DSAS = DSAS_ROOT / "dsas_1978_1997_domain_means.csv"
-DOMAIN_FILE = Path("D:/Hatteras_GIS/domains.geojson")
+# The repository copy (identical to D:/Hatteras_GIS/domains.geojson in
+# geometry and every attribute, hotspot and armor included; 2026-09-18).
+from site_layer.hat_map_layers import DOMAIN_BOXES as DOMAIN_FILE  # noqa: E402
 
 from site_layer import hat_overwash as ow  # noqa: E402
 VS_DIR = ow.VS_FOOTPRINT_TABLES

@@ -1,6 +1,6 @@
 # Hatteras figure style
 
-Written 2026-09-15 16:54 by `scripts/hat_figure_style.py` (`write_style_sheet()`); the
+Written 2026-09-18 10:11 by `scripts/site_layer/hat_figure_style.py` (`write_style_sheet()`); the
 module is the source, this page is its rendering. `HAT_figure_style_sheet.png`
 beside it shows every colour, the elevation classes, a chart and a map drawn
 under the rules.
@@ -9,7 +9,7 @@ under the rules.
 
 ```python
 sys.path.insert(0, str(REPO / "scripts"))
-from hat_figure_style import apply_style, C, C_1984, C_1997, INK, INK_MUTED, _title, _scalebar, _north_arrow, caption
+from site_layer.hat_figure_style import apply_style, C, C_1984, C_1997, INK, INK_MUTED, _title, _scalebar, _north_arrow, caption
 apply_style()                 # before any figure is made
 ```
 

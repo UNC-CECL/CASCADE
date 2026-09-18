@@ -267,7 +267,7 @@ print("VERIFICATION COMPLETE")
 print("="*70)
 print("\nReview the diagnostics above and the verification_diagnostics.png plot")
 print("to confirm your results make sense!")
-# the caption lives beside the figure, not on it (9-figures/STYLE.md)
+# the caption lives beside the figure, not on it (figure_making/STYLE.md)
 import sys as _csys
 from pathlib import Path as _CP
 _csys.path.insert(0, str(next(_q for _q in _CP(__file__).resolve().parents

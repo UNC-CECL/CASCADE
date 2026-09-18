@@ -31,7 +31,7 @@ THE THREE PANELS
 shows the whole intervention at once. (c) is the same information as a
 categorical map, which is the only readable form where the 1996 band is thin.
 
-STYLE. Every figure here is drawn under `scripts/hat_figure_style.py` at the
+STYLE. Every figure here is drawn under `scripts/site_layer/hat_figure_style.py` at the
 printed width (190 mm), and carries no title, statistics line or footnote on the
 canvas: that text is written to CAPTIONS.md beside the PNGs. The terrain ramp is
 the house style's one sanctioned exception to drawing elevation in classes.
@@ -118,8 +118,8 @@ ELEVATION_DIR = INIT_ROOT / "0-elevation"
 
 SOURCE_TAG = "2009-2014-1996"
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
-from hat_elevation_products import product as _product  # noqa: E402
-from hat_figure_style import (  # noqa: E402
+from site_layer.hat_elevation_products import product as _product  # noqa: E402
+from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, figsize, save, caption, C, C_1984, C_1997, INK, INK_MUTED,
     DOMAIN_AXIS_LABEL, town_bands, open_frame, spines_for_image, _title)
 
@@ -130,7 +130,8 @@ IN_DIR = _P.resampled_10m
 AUDIT_1M = _P.audit_1m
 FIG_DIR = _P.figures
 
-DOMAIN_FILE = Path(r"D:\Hatteras_GIS\domains.geojson")
+# The repository copy of D:/Hatteras_GIS/domains.geojson (identical; 2026-09-18).
+from site_layer.hat_map_layers import DOMAIN_BOXES as DOMAIN_FILE  # noqa: E402
 # NC-12 alignments. EPSG:2264 (NC State Plane, US survey FEET) while the maps
 # are EPSG:3725 (UTM 18N, metres), so they are reprojected on load - plotted raw
 # they would land thousands of km off the map.
@@ -144,8 +145,10 @@ DOMAIN_FILE = Path(r"D:\Hatteras_GIS\domains.geojson")
 # where they diverge each is legible alone. Both carry a white casing so they
 # survive terrain running from dark water to near-white dune crest.
 ROAD_DIR = (INIT_ROOT / "4-mgmt-forcing" / "road_offset" / "raw_offset")
-ROAD_FILES = {1984: ROAD_DIR / "1984" / "nc12_1984.geojson",
-              2004: ROAD_DIR / "2004" / "nc12_2004.geojson"}
+# Keyed by PERIOD; the files are the 1978 and 2008 LINES those periods read
+# (hat_topo_version.ROAD_LINE_FOR_YEAR), filed by vintage since 2026-09-15.
+ROAD_FILES = {1984: ROAD_DIR / "1978" / "nc12_1978.geojson",
+              2004: ROAD_DIR / "2008" / "nc12_2008.geojson"}
 ROAD_STYLE = {2004: dict(color=C_1997, linestyle="-", linewidth=1.5),
               1984: dict(color=C_1984, linestyle=(0, (3.6, 2.4)), linewidth=1.5)}
 ROAD_CASING = {2004: dict(color="white", linewidth=3.0),
