@@ -52,12 +52,10 @@ _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
 # ============================================================
 
 # --- CoastSat CSVs ---
-# Moved out of the scripts tree 2026-09-12: the rate fits are DATA and
-# the model reads them. Resolve through hat_observed_rates.py in new code.
-COASTSAT_CSV_1984_2004 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr"
-                             / "coastsat_lrr" / "1984_2004" / "domain_lrr_summary.csv")
-COASTSAT_CSV_2004_2024 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr"
-                             / "coastsat_lrr" / "2004_2024" / "domain_lrr_summary.csv")
+# Resolved through hat_observed_rates.py (2026-09-18), not typed.
+from site_layer.hat_observed_rates import domain_csv  # noqa: E402
+COASTSAT_CSV_1984_2004 = str(domain_csv(1984, 2004))
+COASTSAT_CSV_2004_2024 = str(domain_csv(2004, 2024))
 
 CS_DOMAIN_COL = "domain_number"
 CS_LRR_COL    = "mean_lrr"
@@ -184,6 +182,18 @@ C_CASCADE = ["#111111"]   # black for the first run; add more if needed
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and 9-figures/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). This file drew in
+# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              DOMAIN_AXIS_LABEL)
+apply_style()
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 from matplotlib.transforms import blended_transform_factory
@@ -414,7 +424,7 @@ def style_domain_axis(ax):
     ax.set_xlim(DOMAIN_MIN - 0.5, DOMAIN_MAX + 0.5)
     ax.set_xticks(range(DOMAIN_MIN, DOMAIN_MAX + 1, 10))
     ax.set_xticks(range(DOMAIN_MIN, DOMAIN_MAX + 1, 5), minor=True)
-    ax.set_xlabel("CASCADE Model Domain (500 m alongshore)",
+    ax.set_xlabel(DOMAIN_AXIS_LABEL,
                   fontsize=11, fontweight="bold")
     ax.axhline(0, color="black", lw=1.1, ls="--", alpha=0.55)
     ax.annotate("Accretion ▲", xy=(DOMAIN_MAX + 0.5, 0.15),
@@ -433,7 +443,7 @@ def plot_overview_smoothed(cs_1984, cs_2004, out_path):
     """
     2-panel figure: raw CoastSat points (faded) + LOESS overlay (bold).
     """
-    fig, axes = plt.subplots(2, 1, figsize=(16, 11), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.14), sharex=True)
     fig.suptitle("CoastSat Shoreline Change Rates — Hatteras Island, NC\n"
                  "Raw (faded) + LOESS smoothed (bold)",
                  fontsize=14, fontweight="bold", y=1.01)
@@ -495,7 +505,7 @@ def plot_smoothed_only(cs_1984, cs_2004, out_path):
     2-panel: LOESS smoothed lines only, no raw data.
     Cleanest version for presentations or dissertation figures.
     """
-    fig, axes = plt.subplots(2, 1, figsize=(16, 10), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=4.68), sharex=True)
     fig.suptitle("CoastSat Shoreline Change Rates — Hatteras Island, NC\n"
                  f"LOESS smoothed (frac={LOESS_FRAC})",
                  fontsize=14, fontweight="bold", y=1.01)
@@ -548,7 +558,7 @@ def plot_combined_periods(cs_1984, cs_2004, out_path):
     Single panel: both periods of smoothed CoastSat on one axis.
     Good for directly comparing the two periods.
     """
-    fig, ax = plt.subplots(figsize=(16, 6))
+    fig, ax = plt.subplots(figsize=figsize("double", height=2.81))
 
     for df, label, color in [
         (cs_1984, "1984–2004", C_CS_1984),
@@ -612,7 +622,7 @@ def plot_smoothing_sensitivity(df, period_label, out_path,
 
     color = C_CS_1984 if "1984" in period_label else C_CS_2004
 
-    fig, axes = plt.subplots(3, 1, figsize=(16, 13), sharex=True, sharey=True)
+    fig, axes = plt.subplots(3, 1, figsize=figsize("double", height=6.08), sharex=True, sharey=True)
     fig.suptitle(f"LOESS Smoothing Sensitivity — CoastSat {period_label}\n"
                  f"Effect of bandwidth choice",
                  fontsize=13, fontweight="bold", y=1.01)
@@ -684,7 +694,7 @@ def plot_window_comparison(cs_1984, cs_2004, out_path,
     ]
 
     # Build figure — 2 rows (periods), 1 column; shared x-axis
-    fig, axes = plt.subplots(2, 1, figsize=(16, 11), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.14), sharex=True)
     fig.suptitle(
         "CoastSat Shoreline Change Rate — LOESS Window Comparison\n"
         "Hatteras Island, NC",
@@ -789,7 +799,7 @@ def plot_cascade_vs_loess(cs_1984, cs_2004, cascade_runs, out_path,
         ("2004–2024", cs_2004, C_CS_2004),
     ]
 
-    fig, axes = plt.subplots(2, 1, figsize=(16, 11), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.14), sharex=True)
     fig.suptitle(
         "CASCADE Modeled vs CoastSat Shoreline Change Rate\n"
         "Hatteras Island, NC — LOESS smoothed reference curves",
@@ -907,7 +917,7 @@ def plot_cascade_by_window(cs_df, cascade_runs, period_label, out_path,
 
     n_windows = len(window_domains)
     fig, axes = plt.subplots(n_windows, 1,
-                             figsize=(16, 4.5 * n_windows),
+                             figsize=figsize("double", height=4.5 * n_windows * FIG_W_DOUBLE / 16),
                              sharex=True, sharey=True)
     if n_windows == 1:
         axes = [axes]   # make iterable for single-window edge case

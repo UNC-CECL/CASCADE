@@ -88,7 +88,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from cascade_pipeline.coastsat_loess import compute_domain_means  # noqa: E402
-from hatteras_site_config import (  # noqa: E402
+from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_BE_RATES_EDGE,
     HATTERAS_PERIODS,
 )
@@ -96,7 +96,24 @@ from hatteras_site_config import (  # noqa: E402
 # =============================================================================
 # PERIODS AND CONVENTIONS
 # =============================================================================
-PERIODS = (1984, 2004)
+# THE CANONICAL CHAIN IS 1996 -> 2010 -> 2024 (Hannah, 2026-09-17), so the
+# matrix and the sweep iterate these two starts. Both are in
+# HATTERAS_PERIODS and END_YEAR derives from it, so the windows cannot
+# drift from the site config.
+#
+# TWO THINGS THIS DOES NOT CARRY OVER, and neither is silent:
+#   * calibBE is solved for 1984 and 2004 ONLY. PRESETS below is
+#     (edgeBE, zeroBE), both of which are solved for all four starts, so
+#     the matrix is unaffected; a calibBE run on 1996 or 2010 raises the
+#     explicit "not solved for that period" error from be_rates().
+#   * the pinned groin fit (M = 60, f = 0.6 in output/groin_sweep/
+#     joint_fit.json) was fitted on PERIOD 1 = 1984-2004 and records
+#     fit_period 1984. Stage 5 run under this pair intersects the 1996 and
+#     2010 surfaces instead and would produce a different pair -- and that
+#     file is pinned, with its own warning that re-running stage 5
+#     overwrites it. The existing fit stays valid for the window it was
+#     fitted on; it is simply not re-derived by this matrix.
+PERIODS = (1996, 2010)
 PRESETS = ("edgeBE", "zeroBE")
 
 DAM_TO_M = 10.0              # Barrier3D works in decameters
@@ -109,7 +126,7 @@ for _period in PERIODS:
             f"({sorted(HATTERAS_PERIODS)}); the sweep and the site config "
             f"disagree about which periods exist.")
 
-END_YEAR = {p: HATTERAS_PERIODS[p]["end_year"] for p in PERIODS}
+END_YEAR = {p: v["end_year"] for p, v in HATTERAS_PERIODS.items()}
 
 
 # =============================================================================
@@ -256,10 +273,8 @@ def be_gis1_default(period):
 FIT_GIS_MIN, FIT_GIS_MAX = 1, 12
 FIT_DOMAINS_GIS = tuple(range(FIT_GIS_MIN, FIT_GIS_MAX + 1))
 
-# Moved out of the scripts tree 2026-09-12: the rate fits are DATA and
-# the model reads them. Resolve through hat_observed_rates.py in new code.
-COASTSAT_DIR = (SCRIPTS_DIR.parent / "data" / "hatteras_init" / "5-scr"
-                / "coastsat_lrr")
+# Resolved through hat_observed_rates.py (2026-09-18), not typed.
+from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as COASTSAT_DIR  # noqa: E402
 
 # The values the M-only sweep carried as a literal table. Kept ONLY as an
 # assertion target: if computing them from the transect file no longer
@@ -306,8 +321,12 @@ OBSERVED_LRR = {p: _load_observed_lrr(p) for p in PERIODS}
 
 # Provable refactor: the computed 1984 target must reproduce the table the
 # M-only sweep was scored against, to the 2 dp it was written at.
+# Loaded on its own if the sweep no longer iterates 1984: the guard is about
+# the PUBLISHED period-1 numbers, not about which periods this run happens to
+# sweep, so it must not lapse when the canonical chain moves (2026-09-17).
+_OBSERVED_LRR_1984 = OBSERVED_LRR.get(1984) or _load_observed_lrr(1984)
 for _gis, _published in _OBSERVED_LRR_1984_PUBLISHED.items():
-    _computed = OBSERVED_LRR[1984][_gis]
+    _computed = _OBSERVED_LRR_1984[_gis]
     if abs(_computed - _published) > 5e-3:
         raise ValueError(
             f"observed 1984-2004 LRR at D{_gis} computed as {_computed:.4f} "
@@ -637,7 +656,7 @@ def build_grid(period, preset):
 # (HAT_groin_timeseries_check.py:29); fitting it anyway produces a rail, not an
 # optimum. D4-D8 DEMEANED is the target that works, and only the PRODUCT M*f
 # is identified by it -- not M and f separately. See the groin note in
-# scripts/hatteras_site_config.py.
+# scripts/site_layer/hatteras_site_config.py.
 
 
 def measure_fillet(shoreline_m, baseline_m, geometry,

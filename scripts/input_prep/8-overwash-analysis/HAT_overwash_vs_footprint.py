@@ -38,7 +38,7 @@ WHAT COUNTS AS AGREEMENT (Hannah: show both readings, do not blame absence)
 FLAGS (kept, not dropped)
     SPREAD_STRADDLES_ZERO from the footprint (the p10–p90 of the shift
     crosses zero); the erosion hotspots and jetties from domains.geojson;
-    NC-12 relocated 1984–2004 (road_relocation_1984_2004.csv); and shoreline
+    NC-12 relocated 1984–2004 (road_relocation_1978_2008.csv); and shoreline
     erosion faster than ERODE_THRESH by the CoastSat 1984–2004 LRR, with the
     DSAS 1978–1997 mean rate carried beside it because it sits closer to the
     window. Erosion retreats the dune line without any overwash, which is
@@ -76,7 +76,7 @@ REPO = next(
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(HERE))
 
-from hat_figure_style import (C, DOMAIN_AXIS_LABEL, INK, _title,     # noqa: E402
+from site_layer.hat_figure_style import (C, DOMAIN_AXIS_LABEL, INK, _title,     # noqa: E402
                               apply_style, figsize, open_frame, save,
                               spines_for_image, town_bands)
 from overwash_data import (OUT_DIR, SECTIONS, load_observations,     # noqa: E402
@@ -90,10 +90,11 @@ from overwash_map_periods import (CLR_BOX, CLR_LAND, CLR_ROAD, PAD_E,     # noqa
 INIT = REPO / "data" / "hatteras_init"
 FOOTPRINT = (INIT / "1-barrier3d-domains/1984-start/2-domain-reconstruction-1984"
              / "2-extent/footprint_1984_by_domain.csv")
-RELOCATION = INIT / "4-mgmt-forcing/road_relocation/1984_2004/road_relocation_1984_2004.csv"
+RELOCATION = INIT / "4-mgmt-forcing/road_relocation/1978_2008/road_relocation_1978_2008.csv"
 COASTSAT = (INIT / "6-scr-smooth/HAT_loess_method_comparison_output/03_cascade_inputs"
             / "cascade_lrr_inputs_transect_based.csv")
-DSAS = INIT / "5-scr/scr-dsas-1978-2019/dsas_1978_1997_domain_means.csv"
+from site_layer.hat_observed_rates import DSAS_ROOT  # noqa: E402
+DSAS = DSAS_ROOT / "dsas_1978_1997_domain_means.csv"
 DOMAIN_FILE = Path("D:/Hatteras_GIS/domains.geojson")
 
 VS_DIR = OUT_DIR / "vs-footprint"

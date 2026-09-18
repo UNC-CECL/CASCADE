@@ -1,0 +1,1824 @@
+"""Hatteras Island site config: the real place names, spans, and labels.
+
+This is application config, not library code -- it imports cascade_pipeline's
+generic dataclasses and fills them in with Hatteras-specific content, the
+same way any other CASCADE study site would. Nothing in cascade_pipeline itself
+knows these values exist; a different site (Ocracoke, etc.) would write its
+own sibling module in this same shape and never touch the package.
+
+Import these presets from your run script / notebook:
+    from site_layer.hatteras_site_config import HATTERAS_DOMAINS, HATTERAS_ANNOTATIONS
+"""
+
+import csv
+import os
+import re
+
+from cascade_pipeline.annotations import AnnotationConfig
+from cascade_pipeline.domains import DomainGeometry
+from cascade_pipeline.nourishment import BeachDuneConfig, NourishmentProject
+from cascade_pipeline.roadway import (
+    BridgeEvent, RelocationEvent, load_road_setbacks)
+
+# Sibling module in scripts/, which owns "where is data/hatteras_init". The
+# relocation cross-check below reads the period-2 setback file rather than
+# carrying a copy of its numbers, so this module needs the data root.
+# It also owns the year -> input pairings this file used to spell out:
+# YEAR_PRODUCT (topography), ROAD_LINE_FOR_YEAR (which digitised NC-12 line
+# a period's road is measured from) and road_setback_relpath() (where that
+# period's setback file is, measured/ or derived/). ROAD_LINE_FOR_YEAR is
+# imported here so a reader of this config sees the pairing by name.
+from site_layer.hat_topo_version import (INIT_ROOT, ROAD_LINE_FOR_YEAR,  # noqa: F401
+                              YEAR_PRODUCT, road_setback_relpath)
+from site_layer.hat_extension_domains import (BASE_GEOMETRY, gis_bounds,  # noqa: F401
+                                   geometry_label, is_extended)
+
+# Real domains GIS 1-90 (500 m each, south to north, Cape Point to Pea
+# Island), padded by 15 buffer domains on each side. These happen to match
+# DomainGeometry's own field defaults, but naming the instance explicitly
+# here (rather than relying on cascade_pipeline.domains.DEFAULT_DOMAINS) keeps
+# "this is Hatteras' geometry" visible at the call site.
+#
+# THE REACH IS A NAMED GEOMETRY SINCE 2026-09-16 (the Pea Island extension
+# experiment). HAT_GEOMETRY in the environment picks one of
+# hat_extension_domains.GEOMETRIES; unset is "base", GIS 1-90, and every
+# matrix run. An extended geometry adds measured coast beyond GIS 90 (and
+# below GIS 1) on the shared buffer topography, with its own offset file
+# under 2-brie-offset/<year>/ext/<geometry>/ and its own CoastSat rows. Read
+# from the environment here, as HAT_OFFSET_VERSION_<year> is, because this
+# module is imported by scripts that never load HAT_hindcast_config; the
+# runner checks the two agree.
+HATTERAS_GEOMETRY = (os.environ.get("HAT_GEOMETRY", "").strip() or BASE_GEOMETRY)
+HATTERAS_GEOMETRY_EXTENDED = is_extended(HATTERAS_GEOMETRY)
+_FIRST_GIS, _LAST_GIS = gis_bounds(HATTERAS_GEOMETRY)
+HATTERAS_DOMAINS = DomainGeometry(
+    num_real_domains=_LAST_GIS - _FIRST_GIS + 1,
+    num_buffer_domains=15,
+    first_gis_id=_FIRST_GIS,
+    domain_spacing_m=500.0,
+)
+
+# The interior score is ALWAYS GIS 2-89 against the surveyed CoastSat table,
+# whatever the geometry, so an extended run and its 90-domain baseline are
+# graded on the same domains against the same target. The extended reach's
+# own end domains are excluded the way GIS 1 and 90 are in the base.
+SCORE_INTERIOR_GIS = (2, 89)
+
+HATTERAS_ANNOTATIONS = AnnotationConfig(
+    town_spans={
+        "Buxton": (7, 8),
+        "Avon": (21, 31),
+        "Tri-Village": (68, 83),  # Salvo / Waves / Rodanthe
+    },
+    village_lines={
+        "Salvo": 69, "Waves": 74, "Rodanthe": 80,
+    },
+    piers={
+        "Avon Pier": (26, 0.76),
+        "Rodanthe Pier": (79, 0.76),
+    },
+    groins={
+        "Buxton Groin": 5.5,  # boundary between domains 5 and 6
+    },
+    shoal_zones={
+        "Avon Shoals": (24, 39),
+        "Wimble Shoals": (60, 74),
+    },
+    region_name="Hatteras Island",
+    low_end_label="S | Cape Point",
+    high_end_label="Pea Island | N",
+    obs_source_name="CoastSat",
+)
+
+
+# =============================================================================
+# Period forcing config
+# =============================================================================
+# The hindcast runs as one of two periods. Picking the start year resolves
+# every period-dependent forcing: run length, RSLR rate, storm series, the
+# BRIE island-offset file that sets the starting shoreline, the road setback
+# file, nourishment defaults, and which background-erosion preset applies.
+#
+# Paths are relative to data/hatteras_init/ so this module stays independent
+# of where the repo is checked out; join them onto your own data base dir.
+#
+# ROAD SETBACK: switched to the DUNE-START method on 2026-08-18.
+#
+# The setback is metres landward of interior row 0 -- the row
+# roadway_manager.py:99 indexes against -- and the dune-start method is the
+# first one that measures it there. The legacy files measured against the
+# same-year digitised dune line instead, a different feature from a different
+# year, which put the road a median +40 m (1984) / +23 m (2004) landward of the
+# road actually rasterized onto the model grid, reaching 130 m.
+#
+# TWO THINGS THAT MUST MOVE TOGETHER WITH THIS:
+#   1. The topography must be the extraction these setbacks were measured
+#      against -- they are metres landward of ITS interior row 0, so spending
+#      them on another extraction measures from a row that does not exist.
+#      This no longer has to be remembered: the runner, the sweep worker and
+#      the road scripts all resolve the version through
+#      scripts/site_layer/hat_topo_version.py, which reads VERSION out of the extractor.
+#      Bump it there and everything moves together. (This comment used to
+#      pin 2009_v3 by hand and went stale the day the setbacks moved to v4,
+#      then again when it still said "Current: 2009_v5" after the tree went
+#      period-first. It no longer names a version at all -- ask topo_dirs().)
+#      There are now TWO extractions, one per period; see "topo_product".
+#   2. The legacy files are still on disk under old_method_offset/ for the
+#      method comparison. They are NOT interchangeable -- see
+#      scripts/input_prep/4-mgmt-forcings/road_offset/README.md.
+#
+# Both are 2 rows x 82 cols, GIS 9-90, so the swap itself is a drop-in.
+
+# "topo_product" names the folder under
+# data/hatteras_init/1-barrier3d-domains/ that this period's Barrier3D domains
+# come from. It sits beside storm_file / island_offset_file / road_setback_file
+# because it is the same kind of thing: a per-period input the run ingests.
+#
+# ADDED 2026-08-25. Before that the runner hardcoded ONE topography
+# ("2009-dune-topo" / <version>) and BOTH periods read it, so a 1984 run and a
+# 2004 run started from the same barrier. They no longer do:
+#
+#     1984  <- DEM 2009-2014-1996  (1996 ALACE overwriting measured ground
+#                                   wherever ALACE has data; the landward limit
+#                                   is the swath edge, near the dune toe. The
+#                                   "ocean-side of the 1984 NC-12 line"
+#                                   boundary this comment used to name was
+#                                   dropped 2026-08-26 -- see that product's
+#                                   README for the three-way measurement.)
+#     2004  <- DEM 2009-2014       (the baseline gap-filled DEM)
+#
+# The version WITHIN a product is still resolved, never pinned - see
+# scripts/site_layer/hat_topo_version.py.
+#
+# NOT A LITERAL ANY MORE (2026-08-26). The value comes from YEAR_PRODUCT in
+# hat_topo_version.py, which is the same mapping every road script in
+# 4-mgmt-forcings now resolves through. It was spelled out in four places and
+# omitted in three, and the three that omitted it - the placement figure, the
+# method diagnostic and the per-domain views - gave BOTH vintages 2004-start
+# interiors. Since 65 of 90 domains have a different interior shape between the
+# products, that is a different island, not a rounding difference. One mapping,
+# imported, so the runner and the forcing that feeds it cannot disagree.
+# WHICH BUILD OF THE ISLAND OFFSET A START READS (added 2026-09-15).
+#
+# 2-brie-offset/<year>/ used to hold one build. When the 1997 dune line was
+# re-digitised (duneline_1997_v2, local corrections) the 1996 start gained a
+# second build, and the two live side by side as 1996/v1/ and 1996/v2/ with a
+# CURRENT file naming the one every reader takes -- the same shape as
+# 1-barrier3d-domains/<product>/dune-topo/. Resolved here, in one place, so
+# the runner cannot pin a path that a later re-digitisation silently leaves
+# stale. Order, mirroring hat_topo_version.topo_dirs():
+#   1. HAT_OFFSET_VERSION_<year> in the environment (per-run selection that
+#      does not mutate the shared default)
+#   2. the CURRENT file in 2-brie-offset/<year>/
+#   3. the only v* directory present, if exactly one
+#   4. no v* directory at all: the flat layout, 2-brie-offset/<year>/<file>
+#      (1984 and 2004 today; 2010 once it is built)
+# Several v* directories and no CURRENT is an error, not a guess.
+def _island_offset_file(start_year):
+    """Path of the padded offset file, relative to INIT_ROOT.
+
+    120 domains in the base geometry. An extended geometry reads its own
+    build under <year>/ext/<geometry>/ (island_offset_hybrid.py --geometry),
+    which is not a version and does not move CURRENT; the path is returned
+    unchecked because every period resolves here at import and only the
+    period being run needs the file to exist -- the runner checks that.
+    """
+    base = f"2-brie-offset/{start_year}"
+    if HATTERAS_GEOMETRY_EXTENDED:
+        return (f"{base}/ext/{HATTERAS_GEOMETRY}/Island_Dune_Offsets_"
+                f"{start_year}_PADDED_{HATTERAS_DOMAINS.total_domains}.csv")
+    fname = f"Island_Dune_Offsets_{start_year}_PADDED_120.csv"
+    d = INIT_ROOT / base
+    versions = sorted(p.name for p in d.iterdir()
+                      if p.is_dir() and re.fullmatch(r"v\d+", p.name)) if d.is_dir() else []
+    env = os.environ.get(f"HAT_OFFSET_VERSION_{start_year}")
+    current = d / "CURRENT"
+    if env:
+        version = env.strip()
+    elif current.is_file():
+        version = current.read_text(encoding="utf-8").strip()
+    elif len(versions) == 1:
+        version = versions[0]
+    elif versions:
+        raise RuntimeError(
+            f"{base}/ holds {versions} and no CURRENT file; write one, or set "
+            f"HAT_OFFSET_VERSION_{start_year}.")
+    else:
+        return f"{base}/{fname}"
+    if not (d / version).is_dir():
+        raise FileNotFoundError(
+            f"{base}/{version}/ does not exist (have {versions or 'no versions'}); "
+            f"check CURRENT or HAT_OFFSET_VERSION_{start_year}.")
+    return f"{base}/{version}/{fname}"
+
+
+def island_offset_version(start_year):
+    """The version segment of the offset file this period resolves to.
+
+    "v2" for a versioned layout, "flat" for the unversioned one. Recorded in
+    run metadata and run_index.csv (2026-09-15) because a v1 run and a v2 run
+    are otherwise identical on disk: the run name carries no offset token and
+    the file name is the same in every version folder. Resolves through
+    _island_offset_file so it can never disagree with the file that was read.
+    """
+    if HATTERAS_GEOMETRY_EXTENDED:
+        return f"ext/{HATTERAS_GEOMETRY}"
+    parts = _island_offset_file(start_year).split("/")
+    return parts[2] if re.fullmatch(r"v\d+", parts[2]) else "flat"
+
+
+HATTERAS_PERIODS = {
+    1984: {
+        "end_year": 2004,
+        # 0.00391 m/yr fitted over 1984-2004 on the Duck gauge, stored to
+        # 0.001. The fits are in 3-env-forcings/rslr/fits/duck_rslr_rates.csv
+        # (column config_m_yr is this rounding), written by
+        # scripts/input_prep/3-env-forcings/rslr/duck_rslr_analysis.py.
+        "sea_level_rise_rate": 0.004,
+        "storm_file": (
+            "3-env-forcings/storms/hindcast_storms/1984_2004/"
+            "1984_2004_storms_v3_72.npy"),
+        "island_offset_file": _island_offset_file(1984),
+        # PAIRED WITH THE TOPOGRAPHY VERSION, AND NOTHING ENFORCES IT.
+        # A setback is metres landward of interior row 0, so it belongs to the
+        # extraction it was measured on. This file is the v2-era measurement;
+        # the v1-era one it replaced is in
+        # road_offset/superseded_20260907/1984/.
+        #
+        # Measured 2026-09-14: they differ at 27 of 82 domains, mean -12.4 m
+        # and up to 205 m at GIS 35. Running v1 ARRAYS against these v2
+        # setbacks moves every domain's rate by up to 0.005 m/yr -- small, but
+        # it is a mismatch, not a result. Pinning HAT_TOPO_VERSION_1984_START
+        # WITHOUT also pointing this at the matching file is the trap; it cost
+        # a twelve-run comparison before it was noticed.
+        # road_offset/dunestart_offset/measured/1984/RoadSetback_1984_dunestart.csv
+        # -- MEASURED on the 1978 NC-12 line (ROAD_LINE_FOR_YEAR[1984]) against
+        # row 0 of 1984-start.
+        "road_setback_file": road_setback_relpath(1984),
+        "topo_product": YEAR_PRODUCT[1984],
+        "enable_nourishment": False,
+        "nourishment_volume": 0,  # m^3/m
+    },
+    2004: {
+        "end_year": 2024,
+        # 0.00639 m/yr fitted over 2004-2024; see rslr/fits/duck_rslr_rates.csv.
+        "sea_level_rise_rate": 0.006,
+        "storm_file": (
+            "3-env-forcings/storms/hindcast_storms/2004_2024/"
+            "2004_2024_storms_v3_72.npy"),
+        "island_offset_file": _island_offset_file(2004),
+        # road_offset/dunestart_offset/measured/2004/RoadSetback_2004_dunestart.csv
+        # -- MEASURED on the 2008 NC-12 line (ROAD_LINE_FOR_YEAR[2004]) against
+        # row 0 of 2004-start.
+        "road_setback_file": road_setback_relpath(2004),
+        "topo_product": YEAR_PRODUCT[2004],
+        "enable_nourishment": True,  # historical BN injected per-year in the time loop
+        "nourishment_volume": 100,  # m^3/m passed to Cascade init
+    },
+
+    # TWO MORE PERIODS, ADDED 2026-09-11. They OVERLAP the two above rather
+    # than partitioning the record: four hindcast windows over one island, not
+    # a timeline cut into quarters.
+    #
+    # THE END YEAR IS A BOUNDARY, NOT A SIMULATED YEAR. run_cascade_simulation
+    # spends start..start+run_years-1, so 1996 runs 1996-2009 and 2010 runs
+    # 2010-2023 -- the two new windows tile without overlapping each other, and
+    # the 2010 survey is both the first one's target and the second one's start.
+    #
+    # THEIR TOPOGRAPHY IS SHARED, NOT NEW (Hannah, 2026-09-11). 1996 reads
+    # 1984-start, whose DEM carries the 1996 ALACE graft -- the survey nearest
+    # that start, and a better match for it than for 1984. 2010 reads
+    # 2004-start, built from the 2009 and 2014 lidar, which is the closest
+    # vintage match of any period to its own start year.
+    1996: {
+        "end_year": 2010,
+        # 0.00402 m/yr fitted over 1996-2010 on the Duck gauge; the other three
+        # periods are stored at this precision too. See rslr/fits/duck_rslr_rates.csv.
+        "sea_level_rise_rate": 0.004,
+        "storm_file": (
+            "3-env-forcings/storms/hindcast_storms/1996_2010/"
+            "1996_2010_storms_v3_72.npy"),
+        # DERIVED, NOT SURVEYED: built from the 1997 dune line, the nearest
+        # island-wide survey (hat_topo_version.DUNE_LINE_FOR_YEAR[1996] ==
+        # 1997; the end-year target loader reads the same table). See
+        # 2-brie-offset/raw_offsets/PROVENANCE.md.
+        "island_offset_file": _island_offset_file(1996),
+        # DERIVED: the 1984 setbacks with the 1989 Pea Island relocation
+        # applied, since that event precedes 1996 and the 1999 one does not.
+        # No NC-12 line of 1996 vintage exists. See that folder's PROVENANCE.md.
+        # road_offset/dunestart_offset/derived/1996/RoadSetback_1996_dunestart.csv
+        "road_setback_file": road_setback_relpath(1996),
+        "topo_product": YEAR_PRODUCT[1996],
+        # No project in HATTERAS_NOURISHMENT_PROJECTS falls in 1996-2009.
+        "enable_nourishment": False,
+        "nourishment_volume": 0,  # m^3/m
+    },
+    2010: {
+        "end_year": 2024,
+        # 0.00651 m/yr fitted over 2010-2024. It rounds up where 2004-2024
+        # rounds down (0.00639), so the two differ by more in this table than
+        # in the gauge record. See rslr/fits/duck_rslr_rates.csv.
+        "sea_level_rise_rate": 0.007,
+        "storm_file": (
+            "3-env-forcings/storms/hindcast_storms/2010_2024/"
+            "2010_2024_storms_v3_72.npy"),
+        # DERIVED, NOT SURVEYED: built 2026-09-15 from the 2009 dune line, no
+        # 2010 aerial imagery existing (DUNE_LINE_FOR_YEAR[2010] == 2009). So
+        # the period starts from the island as surveyed a year EARLIER, the
+        # mirror of the 1996 case. 2010/v1, CURRENT.
+        "island_offset_file": _island_offset_file(2010),
+        # A COPY of the 2004 file: same topography product, same road line, and
+        # no relocation in the record between the two dates.
+        # road_offset/dunestart_offset/derived/2010/RoadSetback_2010_dunestart.csv
+        "road_setback_file": road_setback_relpath(2010),
+        "topo_product": YEAR_PRODUCT[2010],
+        # Rodanthe 2014 and both 2022 projects fall inside 2010-2023.
+        "enable_nourishment": True,
+        "nourishment_volume": 100,  # m^3/m passed to Cascade init
+    },
+}
+
+# =============================================================================
+# Background erosion (source/sink) rates, m/yr by GIS domain
+# =============================================================================
+# Sparse by design: a domain absent from a preset gets 0.0 m/yr. Sign follows
+# cascade/brie_coupler.py: (-) = erosion, (+) = accretion, in m/yr.
+#
+# Three presets, one per hypothesis about where the alongshore sediment budget
+# is unresolved -- they are the source/sink axis of the run matrix:
+#
+#   zeroBE   no source/sink anywhere. Whatever the shoreline does is what
+#            Barrier3D + BRIE produce unaided.
+#   edgeBE   only the two end domains, which absorb the open-boundary artifact
+#            at the ends of the modelled reach. Nothing is imposed on the
+#            interior, so an interior misfit is the model's own.
+#   calibBE  the full per-domain fit against the CoastSat LRR target rates.
+#
+# Moved here from HAT_hindcast_1984_2024.py so the notebook and the
+# run script read the same numbers. Note data/hatteras_init/7-source-sink/
+# holds older partial copies of these -- they disagree with these values and
+# the 2004 one is truncated mid-dict; these are the ones that have been run.
+
+# "zeroBE" preset -- empty rather than {1: 0, 90: 0}, because the sparse
+# contract already gives an absent domain 0.0 and an explicit zero reads like a
+# value that was solved for.
+HATTERAS_BE_RATES_ZERO = {
+    1984: {},
+    2004: {},
+    1996: {},
+    2010: {},
+}
+
+# GIS domains carrying the edge-only preset: the first and last REAL domains.
+# Not the padded buffers, which stay 0.0 in every preset. (1, 90) in the base
+# geometry; an extended geometry moves an end, and the value there comes from
+# HAT_BE_OVERRIDE while its solve is in progress (see below).
+HATTERAS_BE_EDGE_DOMAINS = (HATTERAS_DOMAINS.first_gis_id,
+                            HATTERAS_DOMAINS.last_gis_id)
+
+# "calibBE" preset -- the per-domain fit. HATTERAS_BE_RATES_EDGE is derived
+# from this below, so the two presets cannot disagree about the end domains.
+#
+# FIT AGAINST THE LRR, NOT THE ENDPOINT DIFFERENCE. These rates are the
+# LOESS-smoothed residual of an edgeBE base run against the CoastSat
+# target, and both sides of that residual are now the same estimator: the
+# target is a per-transect OLS slope (transect_lrr_full.csv, lrr_m_yr) and
+# the model side is read from the run's lrr_m_yr, its own OLS slope
+# through 21 annual states. Before 2026-08-22 the model side was
+# change_rate_m_yr -- (x[-1] - x[0]) / span -- so the residual carried the
+# gap between two estimators as if it were a sediment budget.
+#
+# The refit moved 36 of 88 interior domains in 1984-2004 (mean 0.21, max
+# 0.50 m/yr) and 65 of 88 in 2004-2024 (mean 0.39, max 1.60 m/yr). Period
+# 2 moves further because that is the period with nourishment: a fill is
+# an instantaneous step in x_s, BRIE answers a step with a slowly-decaying
+# alongshore grid mode, and the 2022 Buxton and Avon fills are two years
+# from the end of the run -- so the endpoint difference was reading solver
+# ringing into the residual and calling it background erosion.
+#
+# Regenerate with scripts/input_prep/7-source-sink/2-calibrate/
+# HAT_be_zone_residual_fit.py; GIS 1 and 90 are NOT taken from its
+# output, which writes them as 0.0 -- they stay the separately solved
+# buffer-cell values below.
+#
+# THE END DOMAINS WERE RE-SOLVED AGAINST THE LRR ON 2026-08-23, for the
+# same reason the interior was: the values they replace were solved when
+# the model side was the endpoint difference, so they were fit to a
+# different estimator than the one now plotted. Previous values were
+# GIS 1 / 90 = -24.0 / +10.0 (1984) and +35.0 / +35.0 (2004).
+#
+# HOW THEY WERE SOLVED. Two Newton steps against the base run below: a
+# first from the zeroBE/edgeBE secant, then a second on the local secant
+# through the two bracketing runs. The gain is SMALL -- d(LRR)/d(BE) is
+# 0.092 to 0.123 across the four cases, i.e. only about a TENTH of an
+# imposed edge rate survives in that domain's own shoreline, the rest
+# being diffused alongshore by BRIE within a few domains. So each value
+# here is roughly
+# ten times the misfit it is there to close, and is a boundary-artifact
+# absorber, not a sediment budget: read as a real flux over the 22.25 m
+# shoreface, GIS 1 in 1984-2004 would be ~5e5 m^3/yr across one 500 m
+# domain. It is not capped for plausibility, because capping it would
+# just move the open-boundary artifact back into the figure.
+#
+# THE GAIN IS NOT CONSTANT, which is why one step was not enough. It
+# STIFFENS with the imposed rate at GIS 1 in 1984-2004 (0.098 over
+# BE 0 to -24, but 0.123 over -24 to -46.4) and SOFTENS in 2004-2024
+# (0.097 to 0.092). At -42 m/yr for 20 years GIS 1 is being pushed
+# ~840 m landward, far outside the range where a background rate acts
+# as a small perturbation, so a single global slope should not be
+# assumed if these are ever re-solved.
+#
+# WHAT THEY WERE FIT TO. The value the rate-comparison figure DRAWS at
+# each end, so fit and figure cannot disagree:
+#   GIS 1   raw per-domain transect mean -- LoessConfig.skip_southern_
+#           domains is 10, so D1-D10 are drawn raw, not smoothed.
+#   GIS 90  the LOESS-10 value, the primary window, which is what is
+#           drawn everywhere north of D10.
+# The two ends therefore use different estimators. That is deliberate:
+# it mirrors the splice the figure already makes.
+#
+# BASE RUN. edgeBE / road_bdm / groin off, per period -- the same run
+# HAT_be_zone_residual_fit.py derives the interior residual from.
+#
+# WHY GROIN OFF. Groin-off is a CHOICE, and it is the right one: the groin is
+# a structure whose
+# trapping is fitted against the same period-1 shoreline these BE rates are
+# fitted against, and letting both absorb the same misfit makes neither
+# identifiable. The BE fit goes first, groin off; the sweep then pins be1 at
+# the production edgeBE value and fits the groin on top.
+#
+# THE GROIN FIT, RE-EXAMINED 2026-08-30. M = 60, f = 0.6 STANDS.
+#
+# It was briefly marked void earlier that day. That was an over-correction and
+# is withdrawn. The reason given was true -- every period-1 sweep cell behind
+# the original fit was computed on the WRONG ISLAND, because
+# HAT_groin_sweep_worker.py resolved topography without naming a product and
+# DEFAULT_PRODUCT ("2004-start") answered, so a 1984 sweep built on the 2004
+# barrier. That bug is real and was fixed 2026-08-30; the drift guard now
+# reproduces its reference to exactly 0 m/yr. But re-scoring on the CORRECTED
+# island, at the re-calibrated be1 = -42.6, barely moved the answer:
+#
+#     D4-D8 demeaned profile RMSE, period 1, be1 = -42.6
+#       no groin           15.20 m
+#       M=50  f=0.8        11.44   <- best cell
+#       M=40  f=1.0        11.44
+#       M=50  f=1.0        11.52
+#       M=60  f=0.8        11.58
+#       M=60  f=0.6        11.58   <- the production value
+#
+# 11.58 against a best of 11.44 is 0.14 m across a 3.76 m improvement. The
+# production value is statistically indistinguishable from optimal, and the
+# topography bug moved it by less than the ridge it sits on.
+#
+# BOTH M AND f ARE FITTED -- ON THE WINDOW THAT SPANS THE STRUCTURE'S LIFE.
+# Corrected 2026-08-30 after re-running the 1967-2018 rig. Earlier revisions of
+# this note said f was "not determined" or "prescribed rather than fitted".
+# That is true of the HINDCAST windows and false of the full-life window:
+#
+#   1967-2018 rig, 51 years, spans install (1969/70), the 1996 repair, the
+#   2003 storm damage and 14 years of decline. RMSE at M = 60:
+#
+#       f     0.1     0.3     0.4     0.5     0.6     0.7     0.9
+#           33.17   27.99   25.84   24.21   23.78   25.06   39.01
+#                                            ^ best, bracketed both sides
+#
+#   f = 0.6 is a clean INTERIOR minimum with steep curvature either side.
+#
+#   M IS NOT. Corrected 2026-08-30 -- an earlier revision of this note said
+#   "So is M: 53.9 (M=20), 33.3, 27.9, 23.8 (M=60). Neither railed." The rig's
+#   own CSV refuses that. M improves MONOTONICALLY to the last value that runs:
+#
+#       M      20      40      60      70          80          >=100
+#            53.9    33.3    23.8    320-378     556-766     (blank)
+#
+#   The jump at M = 70 is a 13x discontinuity, not a fit degradation -- it is
+#   the instability GROIN_PLAN.md already records ("M >= 70 went unstable and
+#   M >= 100 drowned the barrier on the 41-domain rig"). M = 60 is the LARGEST
+#   M THE RIG CAN HOLD, not the M where the fit stops improving. The two
+#   documents had contradicted each other; GROIN_PLAN.md was right.
+#
+#   SO THE RIG CORROBORATES f, AND IS ONLY CONSISTENT WITH M. Do not write
+#   "two independent routes agree on both parameters." Write: the rig brackets
+#   f = 0.6 on both sides; it rails against a stability wall in M, so it cannot
+#   distinguish M = 60 from any larger value. M = 60 stands on the PRODUCTION
+#   fits (D4-D8 and the independent D3-D9), not on the rig.
+#
+#   "INDEPENDENT" IS ALSO GENEROUS. Since the 2026-08-30 repoint, both routes
+#   use the same topography product (1984-start/v1), the same wave climate, the
+#   same BRIE physics and the same wet/dry shoreline family. They are
+#   independent WINDOWS, not independent EVIDENCE.
+#
+#   AND THE RIG RUNS 1967 OFF A 1984 ISLAND. RIG_TOPO_PRODUCT = "1984-start"
+#   (HAT_groin_hindcast_1967_2017.py:280) -- a deliberate 17-year anachronism
+#   in the initial condition, accepted because the target is a shoreline
+#   OFFSET rather than an elevation. It belongs in any methods description of
+#   the rig. The rig also uses GROIN_INSTALL_YEAR = 1970 against the plan's
+#   1969; one year, inside the build phase, but they are not the same number.
+#
+# WHY THE HINDCAST WINDOWS CANNOT SEE f. They begin 15 years after installation
+# and end before or just after the collapse, so they contain almost none of the
+# 1996-2003 deterioration ramp. Period-1 cumulative trapping is M(15.5 + 4.5f),
+# which f moves by only 29% across its whole range -- so period 1 reads high f
+# as simply "more trapping" and rails at 1.0. Period 2 is 20*M*f and prefers
+# f = 0. Neither is fitting the deterioration; they are fitting its absence.
+#
+# f IS NOT A FREE KNOB EITHER WAY -- it encodes a maintenance record (installed
+# 1969, last repaired 1996, storm damage 2003, fillet peaks 2004). Making the
+# module a STATIC trapping rate was considered on 2026-08-30 and rejected on
+# measurement: at M = 60 setting f = 1 degrades period 2 from 14.90 to 17.87 m
+# (+20%), and at M = 95 from 14.90 to 20.38 (+37%). It also moves the modelled
+# D5-D6 differential the WRONG WAY -- observed is -2.47 m/yr, and the model goes
+# -0.55 at f = 0 to -0.18 at f = 1. Deterioration is doing real work.
+#
+# M AND f ARE SET FROM DIFFERENT EVIDENCE, AND THAT IS DELIBERATE.
+# The authority for these values is hard-structures/groin/GROIN_PLAN.md
+# (2026-08-24); this note summarises it and must not diverge from it. The
+# figures testing it, and what each one showed, are described in
+# scripts/hatteras_ms/groin-sweep/CALIBRATION_FIGURES.md -- the PNGs themselves
+# land in output/groin_sweep/figures/, which .gitignore does not track.
+#
+#     M from PERIOD 1.  f from the 1967 rig and from period 2.
+#
+# WHY THEY CANNOT BOTH COME FROM PERIOD 1. Period-1 cumulative trapping is
+# M(15.5 + 4.5f), because period 1 mostly PRECEDES the 1996-2003 deterioration
+# ramp -- so f moves it by only 29% across its entire range. Period 2 is
+# 20*M*f, where f = 0 gives zero: total leverage. Period 1 therefore fixes M
+# and barely sees f; period 2 fixes f and cannot see M at all.
+#
+# THE RIDGE IS IN M(15.5 + 4.5f), NOT IN M*f. At f = 1.0 the best M is 50; at
+# f = 0.6 it is 70. So a poor score at M = 50, f = 0.6 is NOT evidence against
+# f = 0.6 -- it means M was set too low for that f.
+#
+# A CORRECTION TO A CORRECTION, 2026-08-30. This note briefly claimed "only the
+# product M*f is identified" (taken from HAT_period1_top_n_figure.py's caption
+# without checking), and then, having tested that and found corr(RMSE, M*f) =
+# -0.07, claimed instead that M and f are separately and weakly constrained.
+# BOTH were wrong. The product test was right that M*f is not the invariant and
+# wrong about what is: the invariant is period-1 cumulative trapping. Quote M
+# and f as a pair, and cite GROIN_PLAN.md for why.
+#
+# f = 0 IN THE PERIOD-2 SWEEPS IS THE RIGHT ANSWER, NOT A RAIL ARTEFACT. The
+# observations show the fillet declining after 2004, i.e. trapping ceased.
+# GROIN_PLAN.md records that considerable time was lost re-defining targets to
+# "fix" a result that was correct. Do not re-litigate it.
+#
+# THE GROIN DOES REAL WORK BUT DOES NOT REPRODUCE THE SHAPE. 15.20 -> 11.44 m
+# is a 25% reduction, and it comes from matching the overall D4-D8 slope. The
+# observed profile has structure the model does not produce: a peak at D6
+# (+14 m observed, ~0 modelled), a dip at D7, a second peak at D8. Read the
+# residual as the split between what the groin explains and what the
+# source/sink calibration absorbs -- not as a successful shape fit.
+#
+# THREE TARGETS THAT DO NOT WORK, so they are not retried:
+#
+#   1. THE FILLET (D5-D6 scalar). No admissible M can match it on this grid --
+#      stated at HAT_groin_timeseries_check.py:29. Fitting it anyway on
+#      2026-08-30 gave M = 95 at be1 = -42.6, with f railed at the grid bound
+#      and the best M swinging 95 -> 160 between adjacent be1 values. Fitting
+#      an unmatchable target is what produced the rail, not a real optimum.
+#   2. THE FULL-PERIOD D1-D12 PROFILE. Ranks M = 0 best, monotonically. Not
+#      because there is no groin: D2-D4 is Cape Point accretion the
+#      parameterisation does not represent, and D6-D7 is an erosion trough
+#      peaking one domain NORTH of the structure, which a groin actively
+#      worsens by pushing D6 seaward. Together they swamp a ~17 m groin
+#      signal. See HAT_fullperiod_windows.py.
+#   3. NARROWING THAT WINDOW TO D5-D7 does not rescue it -- D6-D7 is inside
+#      the narrow window too. D4-D8 DEMEANED is the window that works, because
+#      demeaning removes the level offset the source/sink term owns and D1 is
+#      excluded (the cape's 81-104 m change is ~5x the groin's signal).
+#
+# PERIOD 2 IS NOT FITTED, BUT THE GROIN IS STILL ON FOR IT. GroinCallback
+# carries an ABSOLUTE CALENDAR timeline -- install 1969, deterioration onset
+# 1996, linear ramp to 2003, then hold at M*f -- so no period-specific
+# configuration exists or is wanted. Running it in period 2 is right for
+# consistency of the structure's timeline, not because it explains that
+# period's shoreline.
+#
+# What period 2 records is a RELEASE the module cannot produce: -76 m, of which
+# GROIN_PLAN.md attributes ~85% to the UPDRIFT side eroding once the structure
+# failed, not to impounded sand draining downdrift. Trapping is bounded at >= 0,
+# so the groin can stop adding sand but cannot drain the fillet. That -76 m is
+# carried by the source/sink calibration together with the Cape Point dynamics
+# the dipole does not represent.
+#
+# WHAT THE GROIN EXPLAINS:  period 1  +17.2 m of an observed +52 m (33%).
+#                           period 2  ~0 of an observed -76 m.
+#
+# So the 2026-08-30 joint fit railing at M = 160 was not a fitting failure to
+# be repaired -- fitting period 2 is the wrong thing to attempt.
+#
+# BUT IT WAS STILL SITTING IN THE FILE THE PIPELINE READS. Found 2026-08-30:
+# output/groin_sweep/joint_fit.json held the RANKING'S answer (edgeBE M = 160
+# f = 0.8, zeroBE M = 140 f = 1.0), and HAT_run_all.py stage 6 passes whatever
+# that file holds to every groin run in the matrix. A stage-6 run would have
+# used M = 160. It prints "RAILED on M" while doing so, so the machinery knew.
+#
+# The file is now PINNED by hand to M = 60, f = 0.6 for both presets, each
+# entry carrying its own superseded_ranking block, and the ranking is archived
+# at output/groin_sweep/archive/joint_fit_RAILED_ranking_20260830.json.
+# RE-RUNNING STAGE 5 OVERWRITES IT -- re-pin afterwards.
+#
+# Two more places the pair is written, both corrected the same day:
+# scripts/hatteras_ms/hat_run.yaml carried M = 50 / f = 0.9 placeholders (a
+# 2026-08-26 note left them stale on purpose pending the re-fit, which has now
+# happened and did not move the answer), and HAT_hindcast_config.py carried the
+# same values as fallback defaults. A MATRIX run reads joint_fit.json; a SINGLE
+# run reads the yaml. Check both before quoting a groin run's parameters.
+#
+# AFFORDABILITY IS A SOFT BOUND, NOT A CEILING. M = 60 intercepts ~719,000
+# m3/yr against a 5-7e5 m3/yr littoral drift -- marginally above a LITERATURE
+# RANGE, which GROIN_PLAN.md is explicit is "not a hard limit". Earlier text
+# here treated it as one; it is a reason to prefer 60 over 70 (838k, ~1.3x the
+# drift), not a physical prohibition.
+#
+# M IS NOT A SEDIMENT FLUX. It is an effective, grid-specific, FIELD-AGGREGATE
+# rate: the real fillet is ~190 m wide against a 500 m domain, and the four
+# Buxton groins span northings entirely inside D6, so one dipole expresses the
+# whole field. Do not divide M by four for a per-structure value, and do not
+# read it as a flux.
+#
+# NOW MEASURED, 2026-08-30. groin_diagnostics.csv has logged the cumulative
+# displacement every year of every groin run since the module was written, and
+# nothing plotted it until HAT_groin_sediment_budget_figure.py. Over the rig's
+# 50 years at M = 60, f = 0.6:
+#
+#     applied   2,400 m cumulative one-sided displacement  (+/- 28.7e6 m3)
+#     realised     69 m fillet at the end   (peak 129 m)
+#     retained    ~3%
+#
+# BRIE's alongshore diffusion removes the rest. M is therefore the rate needed
+# to SUSTAIN a fillet against diffusion, not the rate at which sand is
+# impounded -- which is the quantitative version of "not a flux".
+#
+# THIS CHANGES HOW THE AFFORDABILITY NUMBER READS. 719,000 m3/yr at M = 60 is a
+# GROSS RESTORING RATE set against a NET transport budget; they are not like
+# for like. The comparison is still a fair reason to prefer M = 60 over M = 95,
+# and it is a deliberate documented diagnostic in the run reports -- but
+# "marginally above the drift band" must NOT be read as "impounds more sand
+# than the coast carries." Figure: output/groin_sweep/figures/sediment_budget.png
+#
+# HOW FAR THE VALUE IS ACTUALLY CONSTRAINED -- ROBUSTNESS, 2026-08-30.
+# Everything below was scored from the existing period-1 cells at
+# be1 = -42.6; no new runs. Read it before quoting M = 60 as "the fitted value".
+#
+# WINDOW SENSITIVITY. D4-D8 is a CHOICE, and the answer moves with it:
+#
+#     window    best M    f     RMSE   no-groin   gain
+#     D4-D8         60   1.0    10.09     12.19    2.10   <- production
+#     D3-D9         60   1.0    13.93     15.98    2.05
+#     D4-D7         70   1.0    10.54     13.63    3.09
+#     D3-D8         95   0.8    12.91     16.80    3.89
+#     D4-D9         40   1.0    12.23     12.65    0.41
+#     D5-D7          0   0.0     6.18      6.18    0.00
+#     D5-D8          0   0.0     6.18      6.18    0.00
+#
+# THE SUPPORTING HALF: D3-D9, the one independent window that spans the
+# structure symmetrically, also returns M = 60 with the same gain (2.05 vs
+# 2.10). M = 60 is therefore not an artefact of picking D4-D8 specifically.
+#
+# THE QUALIFYING HALF: across defensible windows M ranges 40 to 95. The window
+# does real work in setting the answer. D4-D8 is justified by argument -- keep
+# D1's cape signal out, centre on the structure -- not forced by the data.
+#
+# AND THE SHARPEST RESULT: D5-D7 and D5-D8, the windows TIGHTEST on the groin,
+# return M = 0 with a gain of exactly 0.00. The groin changes nothing where it
+# stands. The 2.10 m gain at D4-D8 comes from D4 and D8, the window's OUTER
+# edges. This is consistent with HAT_fullperiod_windows.py's finding that
+# D6-D7 carries an erosion trough peaking one domain north of the structure
+# that the module cannot produce -- but it should be said plainly: the domains
+# closest to the groin are the ones the groin explains least.
+#
+# CONDITIONAL ON be1, NOT INDEPENDENT OF IT. The D4-D8 optimum trades off
+# monotonically with the edge rate: M = 50 at be1 = -46, 60 at -42.6, 80 at
+# -34, 125 at -10. Two things make this acceptable where the fillet's version
+# was not -- the surface is smooth and monotonic (the fillet swung 95 -> 160
+# non-monotonically between adjacent be1 values), and the GLOBAL minimum over
+# the whole (be1, M, f) space sits at be1 = -42.6, the independently calibrated
+# value. The groin fit prefers the same edge rate the source/sink fit arrived
+# at, which is a real if modest cross-check.
+#
+# NOT PRESET-INDEPENDENT. Under zeroBE the D4-D8 fit improves monotonically all
+# the way to the grid edge (no-groin 21.9 -> M=140: 12.4, M=160: 12.4). With no
+# edge forcing the groin simply absorbs the missing source/sink term. A zeroBE
+# groin fit is meaningless, and M = 60 exists only in the presence of edgeBE.
+#
+# PERIOD 2 CARRIES NO INFORMATION AT ALL. Scored on D4-D8, every M from 0 to
+# 160 gives RMSE 14.90 (edgeBE) or 22.42 (zeroBE) -- identical to four
+# significant figures, not merely "weakly preferring zero". Confirms the plan:
+# by period 2 the deterioration schedule has trapping at ~0, so running the
+# groin there is a timeline-consistency choice and not a fitted one.
+#
+# WHAT THIS ADDS UP TO. M = 60, f = 0.6 is the best-supported pair available,
+# and the support is asymmetric between the two parameters:
+#
+#     M comes from the PRODUCTION fits -- D4-D8 (11.58 vs 15.20 no-groin) and
+#       the independent, structure-symmetric D3-D9, which returns M = 60 with
+#       the same gain (2.05 vs 2.10). The 1967 rig does NOT confirm M: it rails
+#       against a stability wall at M = 70 (see above).
+#     f comes from the 1967 RIG, where 0.6 is bracketed on both sides, and from
+#       period 2, where the observed fillet declines. The hindcast windows
+#       cannot see f at all.
+#
+# CONDITIONS THAT TRAVEL WITH THE PAIR. Conditional on be1 = -42.6 (the D4-D8
+# optimum moves 50 -> 125 as be1 goes -46 -> -10); void without edgeBE; carries
+# no information in period 2; and M varies 40-95 across defensible windows,
+# with the windows TIGHTEST on the structure (D5-D7, D5-D8) returning M = 0 at
+# gain 0.00. Quote it as a calibrated parameter pair with those conditions
+# attached -- not as a measured property of the structure.
+#
+# DECIDED 2026-08-30: LOCKED. Single value, conditions stated, no ensemble over
+# M and no further runs. The 1967 window needs no new work -- the rig IS that
+# window (see below) and was re-run on the corrected topography that day.
+#
+# BE CONVERGENCE, 2026-08-31: THREE PASSES, AND WHERE IT STOPS.
+# The field is converged on everything the protocol can converge, and the
+# remainder is the wavelength it deliberately does not chase.
+#
+#   pass    P1 domains>=0.5   max    mean      P2 domains>=0.5   max    mean
+#     1          27          -1.70   0.35           19          -1.70   0.27
+#     2           8          +1.00   0.10            7          -1.00   0.11
+#     3           2          +0.90   0.05            3          -0.90   0.09
+#
+# Passes 1->2 closed 41% of the max, matching the documented "one pass closes
+# 42% (P1) and 57% (P2)". Pass 2->3 closed only 10%. That is not a stall to be
+# pushed through -- it is g, and the drop is diagnostic.
+#
+# WHAT CLOSED, AND WHAT DID NOT. D83-D88 and D72-D74 -- contiguous, same-signed
+# -- dominated passes 1 and 2 and are now EXACTLY 0.0 in both periods. What
+# remains is D8 +0.9 against D10 -0.9 across a zero at D9, plus isolated single
+# domains at D22 and D32. HAT_be_zone_residual_fit.py:150 predicts precisely
+# this: "a contiguous same-signed block of corrections passes at g ~ 0.8-1.2,
+# while a pattern that alternates sign at the grid scale is damped to g ~ 0.1."
+# The measured 10% IS that g.
+#
+# WHY MORE PASSES ARE THE WRONG ANSWER. At 10% per pass, 0.90 -> 0.50 needs six
+# more passes, each a full calibBE matrix rebuild -- ~12 hours to close a
+# feature the design already refused to close. The same comment records that
+# amplifying by 1/g was considered and REJECTED because "narrow features would
+# be amplified ~10x into rates that are indefensible read as sediment fluxes".
+# Iterating to the same place by brute force does not make them defensible. A
+# +-0.9 m/yr alternation between adjacent 500 m domains is more plausibly noise
+# in the model-observation comparison at that wavelength than a source/sink
+# signal worth encoding.
+#
+# THE TOLERANCE TO QUOTE. The field is converged to 0.0 m/yr on contiguous
+# alongshore structure and to ~0.9 m/yr on isolated grid-scale features, with a
+# mean absolute residual of 0.05 (P1) and 0.09 (P2) m/yr. For scale, the
+# interior RMSE these runs are scored on is 1.1-2.8 m/yr, so the remainder sits
+# well inside the noise the model is fitted against. It does NOT meet the
+# script's own SIGNIFICANCE_THRESHOLD of 0.5 per zone, and should not be
+# described as if it did.
+#
+# STATE ON DISK: config holds the PASS-2 field and all 22 calibBE runs are
+# built on it -- consistent. Pass 3's residual was measured and deliberately
+# NOT applied, because applying without a rebuild is what left the field two
+# days stale in the first place.
+#
+# STALENESS AUDIT, 2026-08-31. NOTHING IS STALE, AND ONE WORRY WAS WRONG.
+# Run after the topography work, to check what the updated island invalidated.
+#
+#   55 production runs   topography CLEAN. Every 1984 run is on 1984-start/v1
+#       and every 2004 run on 2004-start/v1 -- what hat_topo_version.py
+#       resolves today. Zero mismatches.
+#   55 production runs   BE field CLEAN. Every be_values_digest matches the
+#       current config, including the 22 calibBE runs rebuilt that day.
+#   period-1 sweep       CLEAN, by re-running cells and diffing.
+#
+# THE WORRY THAT WAS WRONG. The period-1 edgeBE cells split across two dates --
+# 427 at be1 = -10..-46 on 08-29 20:31, and 61 at be1 = -42.6 on 08-30 08:21 --
+# with the sweep worker's topography fix committed between them (562c75c,
+# 08-30 13:01). Since result.json records NO topography, that looked like the
+# be1-sensitivity table above might be comparing two different islands, which
+# would have manufactured its own "global minimum sits at -42.6" result.
+#
+# It does not. Re-running one cell from EACH batch reproduces the stored
+# result to 0.00e+00 -- bit for bit, across differential_m_yr, rmse_window,
+# bias_window and rates D4-D8. Both batches are on today's topography; the two
+# dates were two sweep sessions. The be1-sensitivity table stands as written.
+#
+# PERIOD 2 IS NOT BIT-REPRODUCIBLE, AND PERIOD 1 IS. Re-running a period-2
+# cell twice gives two answers differing by 1.0e-04 -- MORE than either differs
+# from the stored value, which sits inside their spread. So the stored cell is
+# fine, but "re-run and compare" is only an exact staleness test for PERIOD 1.
+# For period 2 the tolerance is ~1e-4.
+#
+# Not an unseeded RNG: roadway_manager seeds at 1973 and nothing else in
+# cascade/ draws randomly. Floating-point summation order is the likely
+# source, and period 2 accumulates more of it through the nourishment events.
+# 1e-4 is five orders below anything that moves a ranking -- the RMSE
+# differences this calibration turns on are 0.1-4 m -- so it changes the TEST,
+# not any result.
+#
+# THE fullperiod_1984_2024 SWEEP IS ALSO CLEAN -- checked 2026-08-31, and the
+# note claiming otherwise is withdrawn. CALIBRATION_FIGURES.md said panel (b)
+# of fig_three_targets ran on the PRE-FIX topography. It did when that was
+# written, and then the sweep was re-run 08-30 18:20 -- five hours AFTER the
+# worker fix at 13:01 -- and the figure rebuilt at 23:52 from those cells. The
+# note outlived the problem. Re-running cell M60_f0.50 reproduces to 8.3e-05,
+# the period-2 noise floor the 40-year window inherits. All 43 cells present.
+#
+# STILL UNVERIFIED: only the 1967 rig, which files no run_index row at all.
+# Its two current runs were rebuilt 2026-08-31 at M = 60 / f = 0.6 and it now
+# lives in output/rig_runs/, away from production.
+#
+# THE 1967 WINDOW HAS ALREADY BEEN RUN -- IT IS THE 41-DOMAIN RIG.
+# GROIN_PLAN.md recommends "fit on the 1967 window; apply in the hindcast",
+# because the hindcast windows begin 15 years after installation and record the
+# fillet's decay rather than its creation. That was checked on 2026-08-30 and
+# the answer is that the window exists already:
+#
+#     Change_from_wetdry_1967_D2_D12.csv covers D2-D12 -- ELEVEN real domains.
+#     11 real + 15 buffer + 15 buffer = 41, the rig's exact domain count.
+#
+# The rig was sized to the extent of the 1967 observations. Its sweep is at
+# hard-structures/groin/HAT-buxton-hindcast-groin-test/sensitivity_sweep/.
+#
+# RE-RUN 2026-08-30 ON 1984-start/v1; f MOVED ONTO THE PRODUCTION VALUE.
+# The rig had been resolving topo_dirs() with no product -- the same omission
+# that put the production sweep on the 2004 island -- plus two other stale
+# paths (domain_N_topography_2009.npy, and a "2009-buffer" directory that the
+# 2026-08-25 restructure renamed). Repointed at 1984-start, the product nearer
+# the 1967 start in time and the one the production period-1 fit reads:
+#
+#                        2026-08-24        2026-08-30 (1984-start/v1)
+#     best cell          M=60, f=0.5       M=60, f=0.6
+#     RMSE                    27.24              23.78
+#
+# f moved ONTO the production value and the fit improved 13%. Read this as the
+# rig now supporting f, the parameter it can actually resolve -- NOT as
+# agreement on both. Its M = 60 sits against the stability wall documented
+# above, and would very likely rise if that wall were lifted.
+#
+# ITS CACHE ALSO RESUMES ON (M, fraction, stage) WITH NO RECORD OF THE
+# TOPOGRAPHY, so the first re-run silently skipped all 67 stale cells and
+# reported the 2026-08-24 answer as fresh. Caught because the RMSE matched to
+# six decimals. Archive or delete HAT_groin_sweep_results.csv before any re-run
+# whose inputs have changed. Fourth instance of this bug class in this repo,
+# after the driver manifest key and the sweep worker's two call sites.
+#
+# THE NUMBER STILL DOES NOT TRANSFER, the AGREEMENT does. The rig is a confined
+# 41-domain array with its own structure parameters (install 1970, +25 yr onset
+# against the plan's 1969 / +27) and 1971/1973 nourishments the hindcast does
+# not carry. M is grid-specific. Its M >= 70 instability reappeared exactly as
+# documented -- RMSE 320-378 at M=70, and 11 of 39 attempts failed above it --
+# which is a rig artefact and not a production bound.
+#
+# THE BLOCKER IS THE SHORELINE, NOT THE DEM. An earlier version of this note
+# said the 1967 window was impossible for want of a 1967 DEM. That was wrong:
+# the fillet is a SHORELINE quantity, so the 1984 DEM would serve perfectly
+# well for interior elevation. What does not exist is a 1967 SHORELINE for the
+# other 79 real domains -- the wet/dry table stops at D12.
+#
+# WHY IT CANNOT BE LIFTED TO PRODUCTION GEOMETRY. Reconstructing 1967 offsets
+# for D2-D12 and holding D13-D90 at their 1984 values plants a discontinuity at
+# D12/D13. BRIE's diffusion length is ~3.2 km over 20 years, about six domains;
+# D12 to D8 is four. The artefact reaches the fit window before the build phase
+# finishes, contaminating the signal the exercise exists to measure. The only
+# alternative is inventing a 1967 shoreline for 79 domains.
+#
+# M IS GRID-SPECIFIC, so the rig's value cannot be spent directly on the
+# 120-domain grid -- a confined array preserves dipole amplitude that an open
+# one diffuses away. But AGREEMENT between the two is still evidence, and the
+# two routes agree: production-geometry period 1 on D4-D8, and a confined 1967
+# rig covering the build phase, both land on M = 60.
+#
+# DECISION 2026-08-30: keep M = 60, f = 0.6. Revisit only if a pre-1984
+# shoreline record covering more than D2-D12 turns up outside this repo.
+#
+# THE STABILITY BOUNDS DO NOT TRANSFER. "M >= 70 unstable, M >= 100 drowns" was
+# measured on the 41-domain rig. On the production 120-domain grid every cell
+# through M = 160 ran clean. Do not quote that ceiling for production.
+#
+# The groin sits at GIS 5/6 and does not reach GIS 90 at all (on the pre-refit
+# runs D90 was identical to the 3 dp reported, groin-on vs groin-off, in
+# both periods); it moves GIS 1 by about 0.4 m/yr, so GIS 1 is worth
+# re-checking against the fitted groin.
+#
+# STALE AS OF 2026-08-26 FOR PERIOD 1. Every rate below was derived from a
+# base run on the pre-restructure shared topography (now 2004-start/v1). The
+# 1984-start product is a different surface, so the 1984 rates must be refit
+# before any calibBE or edgeBE run on it. Period 2 is unaffected -- its base
+# run read 2004-start, which has not changed.
+#
+# D1 <-> D90 CROSS-TALK IS NEGLIGIBLE, so solving the two ends
+# independently is safe: with 15 buffer domains a side they are 30
+# domains -- 15 km -- apart around the ring, against a BRIE diffusion
+# length of sqrt(D*t) ~ 3.2 km over a 20 year period.
+# ============================================================================
+# REFIT 2026-08-28 — BOTH PERIODS, FIVE PASSES, ON THE CURRENT TOPOGRAPHY
+# ============================================================================
+# Every value below was re-solved on 2026-08-28. The previous solution is in
+# git history and in output/superseded_20260828/.
+#
+# WHY. The 2026-08-23 values were derived on a base run against the
+# pre-restructure shared topography. `1984-start` is now a different surface
+# (re-extracted 2026-08-27 from the same DEM against a new pick set) and its
+# road setbacks were re-measured the same morning, moving 15 of 83 road-bearing
+# domains by up to 25 m. Period 2 was refit alongside it even though its inputs
+# had not changed, because the stage-5 groin joint fit intersects BOTH periods'
+# surfaces — mixed calibration vintages would make M and f mean two things.
+# (Period 2's zeroBE base run reproduced the archived one to 2e-4 m/yr, so its
+# inputs were verified unchanged rather than assumed.)
+#
+# METHOD. Documented in HAT_be_zone_residual_fit.py: solve the two locked
+# ends by Newton steps on a secant, and the interior by iterated additive
+# passes (`HAT_be_apply_fit_to_config.py --add`) so each pass closes fraction g of whatever
+# misfit remains and no estimate of g is ever needed.
+#
+#   pass 0   interior from the edgeBE base runs           replace
+#   pass 1-3 interior from the calibBE base runs          --add
+#   GIS 90   re-solved after the interior settled          Newton, +3.0 probe
+#   pass 4   final interior pass at the final edge values --add
+#
+# INTERIOR RMSE OF THE BASE RUN (road_bdm, groin off), m/yr:
+#
+#                        1984-2004   2004-2024
+#     zeroBE               1.422       2.124
+#     edgeBE               1.219       1.794
+#     calibBE pass 0       0.721       0.763
+#     calibBE pass 1       0.547       0.615
+#     calibBE pass 2       0.527       0.583
+#     + GIS 90 re-solve    0.556       0.603     <- edges gained, interior gave back
+#     calibBE final        0.517       0.563
+#
+# Final mean interior bias: +0.058 (P1), +0.120 (P2).
+#
+# STOPPING. `convergence_history.json` records the operative rule as "a pass
+# buys less than 5% of the standing RMSE". Interior passes hit that at pass 2->3
+# (3.8% P1, 5.3% P2). Note this is NOT the rule the LOESS script's header
+# states ("no zone clears SIGNIFICANCE_THRESHOLD"); that one is unreachable
+# here, because a handful of domains carry residuals of 2-3 m/yr that are
+# narrower than the LOESS window generating the correction and no smooth
+# alongshore field can close them. The 5% rule is the one that was met. The
+# residual it leaves — mean |smoothed residual| ~0.45 m/yr, with 19-28 domains
+# still above the 0.5 m/yr significance threshold — IS the tolerance this field
+# is converged to, and belongs in any methods paragraph built on it.
+#
+# THE END-DOMAIN GAIN, MEASURED NOT ASSUMED:
+#
+#     GIS  1  edgeBE   0.109 (P1)  0.096 (P2)
+#     GIS 90  edgeBE   0.104 (P1)  0.099 (P2)
+#     GIS 90  calibBE  0.103 (P1)  0.094 (P2)
+#
+# The last row settles a question this file used to leave open. The note below
+# says an isolated forced cell runs at g ~ 0.1, a forced ZONE at g ~ 1, and
+# that "GIS 90 sits on that join". Measured against a calibBE interior with a
+# coherent erosive zone at GIS 84-89 pressed against it, GIS 90's gain is
+# 0.103 / 0.094 — indistinguishable from its own edgeBE gain, where every
+# neighbour is unforced. So GIS 90 does NOT sit on the join in practice: it
+# behaves as an isolated cell under both presets. The adjacent zone changes
+# WHERE its solution sits (calibBE +32.8 vs edgeBE +13.0 in P1) but not how
+# hard the cell is to move.
+#
+# THE EDGES AND THE INTERIOR ARE WEAKLY COUPLED, and the loop contracts. GIS 90
+# drifted from converged (-0.06) to +0.62 over three interior passes as the
+# field at 84-89 grew, and re-solving it cost the interior 0.03 RMSE while
+# buying 0.61 at the edge — about 20:1, so it converges rather than oscillates.
+# The final interior pass was run AFTER the edge re-solve specifically so the
+# interior is fit against the final edge values and the table is self-consistent
+# as a set.
+#
+# WHAT WAS NOT RE-SOLVED. edgeBE's GIS 90 (HATTERAS_BE_EDGE_D90) measured
+# converged throughout at -0.06 / -0.01 against the LOESS target and was left
+# alone. GIS 1 in period 2 sits at -0.145 and was shrinking monotonically
+# (-0.231, -0.193, -0.145) but never cleared the threshold; it is a known small
+# residual, not an oversight.
+HATTERAS_BE_RATES_CALIBRATED = {
+    1984: {
+          1: -42.6,  # LOCKED — end domain, LRR-solved; see the end-domain note above
+          2: +0.0,  # Cape Point / Shoal Dynamics
+          3: +0.0,  # Cape Point / Shoal Dynamics
+          4: +0.0,  # Cape Point / Shoal Dynamics
+          5: +0.0,  # Cape Point / Shoal Dynamics
+          6: +0.0,  # Cape Point / Shoal Dynamics
+          7: +0.0,  # Cape Point / Shoal Dynamics
+          8: +3.7,  # Cape Point / Shoal Dynamics
+          9: +0.0,  # Cape Point / Shoal Dynamics
+         10: -3.0,  # Cape Point / Shoal Dynamics
+         11: -1.4,  # Buxton–Avon Transition
+         12: -1.4,  # Buxton–Avon Transition
+         13: -0.7,  # Buxton–Avon Transition
+         14: +0.0,  # Buxton–Avon Transition
+         15: +0.0,  # Buxton–Avon Transition
+         16: +0.0,  # Buxton–Avon Transition
+         17: +0.0,  # Buxton–Avon Transition
+         18: +0.0,  # Buxton–Avon Transition
+         19: +0.0,  # Buxton–Avon Transition
+         20: +0.0,  # Buxton–Avon Transition
+         21: +0.0,  # Avon
+         22: +0.0,  # Avon
+         23: +0.0,  # Avon
+         24: +0.0,  # Avon
+         25: +0.0,  # Avon
+         26: +0.0,  # Avon
+         27: +0.9,  # Avon
+         28: +1.2,  # Avon
+         29: +2.4,  # Avon
+         30: +3.3,  # Avon
+         31: +4.1,  # Avon
+         32: +3.6,  # Mid-island
+         33: +2.0,  # Mid-island
+         34: +0.9,  # Mid-island
+         35: +0.0,  # Mid-island
+         36: +0.0,  # Mid-island
+         37: +0.0,  # Mid-island
+         38: +0.0,  # Mid-island
+         39: +0.0,  # Mid-island
+         40: +0.0,  # Mid-island
+         41: +0.0,  # Mid-island
+         42: +0.0,  # Mid-island
+         43: +0.0,  # Mid-island
+         44: +0.0,  # Mid-island
+         45: +0.0,  # Mid-island
+         46: +0.0,  # Mid-island
+         47: +0.0,  # Mid-island
+         48: -1.1,  # Mid-island
+         49: -1.4,  # Mid-island
+         50: -2.1,  # Mid-island
+         51: -2.4,  # Mid-island
+         52: -2.2,  # Mid-island
+         53: -2.0,  # Mid-island
+         54: -1.8,  # Mid-island
+         55: -1.0,  # Mid-island
+         56: -1.0,  # Mid-island
+         57: -0.3,  # Mid-island
+         58: +0.0,  # Mid-island
+         59: +0.0,  # Mid-island
+         60: +0.0,  # Wimble Shoals Influence
+         61: +0.0,  # Wimble Shoals Influence
+         62: +0.0,  # Wimble Shoals Influence
+         63: +0.0,  # Wimble Shoals Influence
+         64: +0.0,  # Wimble Shoals Influence
+         65: +0.0,  # Wimble Shoals Influence
+         66: +0.0,  # Wimble Shoals Influence
+         67: +0.0,  # Wimble Shoals Influence
+         68: +0.5,  # Wimble Shoals Influence
+         69: +1.6,  # Wimble Shoals Influence
+         70: +2.2,  # Wimble Shoals Influence
+         71: +3.4,  # Wimble Shoals Influence
+         72: +4.0,  # Wimble Shoals Influence
+         73: +4.2,  # Wimble Shoals Influence
+         74: +3.8,  # Wimble Shoals Influence
+         75: +1.9,  # Tri-Village / Rodanthe
+         76: +0.0,  # Tri-Village / Rodanthe
+         77: +0.0,  # Tri-Village / Rodanthe
+         78: -1.2,  # Tri-Village / Rodanthe
+         79: -2.1,  # Tri-Village / Rodanthe
+         80: -3.5,  # Tri-Village / Rodanthe
+         81: -3.8,  # Tri-Village / Rodanthe
+         82: -4.2,  # Tri-Village / Rodanthe
+         83: -4.8,  # Tri-Village / Rodanthe
+         84: -5.3,  # Pea Island NWR
+         85: -5.2,  # Pea Island NWR
+         86: -4.8,  # Pea Island NWR
+         87: -3.9,  # Pea Island NWR
+         88: -3.0,  # Pea Island NWR
+         89: -1.8,  # Pea Island NWR
+         90: +32.8,  # LOCKED — end domain, LRR-solved; see the end-domain note above
+    },
+    2004: {
+          1: +50.3,  # LOCKED — end domain, LRR-solved; see the end-domain note above
+          2: +0.0,  # Cape Point / Shoal Dynamics
+          3: +0.0,  # Cape Point / Shoal Dynamics
+          4: +0.0,  # Cape Point / Shoal Dynamics
+          5: +0.0,  # Cape Point / Shoal Dynamics
+          6: +0.0,  # Cape Point / Shoal Dynamics
+          7: +0.0,  # Cape Point / Shoal Dynamics
+          8: +0.0,  # Cape Point / Shoal Dynamics
+          9: +0.3,  # Cape Point / Shoal Dynamics
+         10: +1.5,  # Cape Point / Shoal Dynamics
+         11: +1.2,  # Buxton–Avon Transition
+         12: +1.5,  # Buxton–Avon Transition
+         13: +1.9,  # Buxton–Avon Transition
+         14: +2.0,  # Buxton–Avon Transition
+         15: +2.1,  # Buxton–Avon Transition
+         16: +2.3,  # Buxton–Avon Transition
+         17: +2.4,  # Buxton–Avon Transition
+         18: +2.4,  # Buxton–Avon Transition
+         19: +2.1,  # Buxton–Avon Transition
+         20: +1.7,  # Buxton–Avon Transition
+         21: +0.4,  # Avon
+         22: -1.9,  # Avon
+         23: +0.0,  # Avon
+         24: +0.0,  # Avon
+         25: +0.0,  # Avon
+         26: +0.0,  # Avon
+         27: -1.1,  # Avon
+         28: +1.2,  # Avon
+         29: +2.4,  # Avon
+         30: +3.2,  # Avon
+         31: +4.0,  # Avon
+         32: +4.2,  # Mid-island
+         33: +3.8,  # Mid-island
+         34: +3.5,  # Mid-island
+         35: +3.0,  # Mid-island
+         36: +2.6,  # Mid-island
+         37: +2.3,  # Mid-island
+         38: +2.0,  # Mid-island
+         39: +2.3,  # Mid-island
+         40: +2.0,  # Mid-island
+         41: +1.7,  # Mid-island
+         42: +1.4,  # Mid-island
+         43: +1.0,  # Mid-island
+         44: +0.6,  # Mid-island
+         45: +0.0,  # Mid-island
+         46: +0.0,  # Mid-island
+         47: +0.0,  # Mid-island
+         48: +0.0,  # Mid-island
+         49: +0.0,  # Mid-island
+         50: -1.3,  # Mid-island
+         51: -1.6,  # Mid-island
+         52: -2.2,  # Mid-island
+         53: -2.0,  # Mid-island
+         54: -1.8,  # Mid-island
+         55: -1.0,  # Mid-island
+         56: +0.0,  # Mid-island
+         57: +0.0,  # Mid-island
+         58: +0.0,  # Mid-island
+         59: +0.0,  # Mid-island
+         60: +0.0,  # Wimble Shoals Influence
+         61: +0.0,  # Wimble Shoals Influence
+         62: +0.0,  # Wimble Shoals Influence
+         63: +0.7,  # Wimble Shoals Influence
+         64: +1.5,  # Wimble Shoals Influence
+         65: +1.9,  # Wimble Shoals Influence
+         66: +2.3,  # Wimble Shoals Influence
+         67: +2.3,  # Wimble Shoals Influence
+         68: +3.0,  # Wimble Shoals Influence
+         69: +3.8,  # Wimble Shoals Influence
+         70: +4.1,  # Wimble Shoals Influence
+         71: +4.3,  # Wimble Shoals Influence
+         72: +4.1,  # Wimble Shoals Influence
+         73: +2.8,  # Wimble Shoals Influence
+         74: +2.4,  # Wimble Shoals Influence
+         75: +2.4,  # Tri-Village / Rodanthe
+         76: +1.5,  # Tri-Village / Rodanthe
+         77: +1.2,  # Tri-Village / Rodanthe
+         78: +0.9,  # Tri-Village / Rodanthe
+         79: +0.4,  # Tri-Village / Rodanthe
+         80: +0.0,  # Tri-Village / Rodanthe
+         81: +0.0,  # Tri-Village / Rodanthe
+         82: +0.0,  # Tri-Village / Rodanthe
+         83: -2.6,  # Tri-Village / Rodanthe
+         84: -3.5,  # Pea Island NWR
+         85: -3.8,  # Pea Island NWR
+         86: -3.7,  # Pea Island NWR
+         87: -3.9,  # Pea Island NWR
+         88: -3.0,  # Pea Island NWR
+         89: -1.8,  # Pea Island NWR
+         90: +57.9,  # LOCKED — end domain, LRR-solved; see the end-domain note above
+    },
+}
+
+# The 2004 calibrated preset falls back to the 1984 fit if it was never
+# solved separately. It has been, so this stays False -- but the flag is
+# what tells you whether a "calibrated 2004" run is really calibrated.
+if HATTERAS_BE_RATES_CALIBRATED.get(2004) is None:
+    HATTERAS_BE_RATES_CALIBRATED[2004] = dict(HATTERAS_BE_RATES_CALIBRATED[1984])
+    HATTERAS_BE_RATES_2004_IS_PLACEHOLDER = True
+else:
+    HATTERAS_BE_RATES_2004_IS_PLACEHOLDER = False
+
+# GIS 90 IS THE ONE VALUE THE TWO PRESETS DO NOT SHARE.
+#
+# GIS 1 is still sliced out of the calibrated fit below, so re-solving it
+# updates both presets at once -- that slicing is what stopped the old "base"
+# preset drifting into commented-out copies of these numbers, and it still
+# holds everywhere it can. GIS 1 can be shared because it lands within
+# 0.22 m/yr of target in BOTH presets: nothing is forced near it (the
+# calibrated fit is 0.0 at GIS 2-4 in 1984-2004 and at GIS 2-7 in 2004-2024),
+# so its neighbourhood is the same either way.
+#
+# GIS 90 CANNOT. Measured on the 2026-08-23 matrix, one shared value put
+# calibBE 1.136 m/yr (1984-2004) and 0.498 m/yr (2004-2024) off target there,
+# against 0.003 and 0.013 for edgeBE at the same number. The asymmetry is
+# structural, not a fitting error:
+#
+#   an ISOLATED forced cell is diffused away by its unforced neighbours, so
+#   its gain d(LRR)/d(BE) is only about 0.1 and it needs roughly ten times
+#   the misfit it closes. A forced ZONE moves together and is not diffused
+#   away, so interior corrections run at a gain near 1.
+#
+# GIS 90 sits on that join. In edgeBE it is isolated and the 0.1 gain holds.
+# In calibBE the fit puts a coherent erosive zone at GIS 84-89 (down to
+# -3.0 m/yr in 1984-2004) hard against it, and that zone drags GIS 90 down
+# by more than a metre a year -- an effect the per-domain LOESS residual
+# never sees, because it fits each domain against a base run in which those
+# neighbours were unforced. So the two presets genuinely need different
+# numbers at GIS 90, and forcing one on them would mean one of them is
+# always wrong there.
+HATTERAS_BE_EDGE_SHARED_DOMAINS = (1,)
+HATTERAS_BE_EDGE_SPLIT_DOMAINS = (90,)
+
+# GIS 90 under edgeBE, solved on the edgeBE road_bdm base run. The calibBE
+# value for the same domain lives in HATTERAS_BE_RATES_CALIBRATED.
+HATTERAS_BE_EDGE_D90 = {
+    1984: +13.0,
+    2004: +46.7,
+}
+
+HATTERAS_BE_RATES_EDGE = {
+    period: {**{gis: rates[gis]
+                for gis in HATTERAS_BE_EDGE_SHARED_DOMAINS if gis in rates},
+             90: HATTERAS_BE_EDGE_D90[period]}
+    for period, rates in HATTERAS_BE_RATES_CALIBRATED.items()
+}
+
+# PERIODS WITH NO CALIBRATED FIT TO SLICE GIS 1 OUT OF (2026-09-11).
+#
+# The comprehension above takes edgeBE's GIS 1 from the calibrated preset, so
+# re-solving one moves both and they cannot drift apart. That works only where
+# a calibrated fit EXISTS. The periods added 2026-09-11 have none: they are
+# being solved edge-first, by the decision to do zero and edge before the
+# interior. Their two end values are therefore carried explicitly and merged
+# in below.
+#
+# WHEN A CALIBRATED FIT ARRIVES for one of these, delete its entry here in the
+# same commit that adds the calibrated one. Leaving both would give GIS 1 two
+# homes, and the merge below would quietly win.
+HATTERAS_BE_EDGE_ONLY = {
+    # (GIS 1, GIS 90), m/yr. SOLVED 2026-09-11, three Newton steps.
+    #
+    # Fit exactly as the 1984 and 2004 end values were: model lrr_m_yr against
+    # the target table's target_lrr_m_yr, on the edgeBE / road_bdm / groin-off
+    # base run, with the same estimator on both sides of the residual. GIS 1 is
+    # graded against the RAW per-domain mean and GIS 90 against the LOESS-10
+    # value, because that is the splice the rate figure draws.
+    #
+    #   step   GIS 1                          GIS 90
+    #     0    imposed  0.0  residual -2.930  imposed  0.0  residual -1.316
+    #     1    imposed 27.9  residual -0.480  imposed 12.5  residual +0.288
+    #     2    imposed 33.4  residual +0.125  imposed 10.3  residual +0.034
+    #     3    imposed 32.2  residual +0.003  imposed 10.0  residual +0.003
+    #
+    # THE GAINS SIT INSIDE THE RANGE THE OTHER FOUR CASES SPAN. The local
+    # secant through steps 0-1 gave d(LRR)/d(BE) = 0.088 at GIS 1 and 0.128 at
+    # GIS 90, against 0.092 to 0.123 for the solved 1984 and 2004 cases. So the
+    # tenth-of-what-you-impose behaviour holds here too, and these values are
+    # again about ten times the misfit they close rather than a sediment
+    # budget. Read them as boundary-artefact absorbers, nothing more.
+    #
+    # A THIRD STEP WAS TAKEN, where 1984 and 2004 stopped at two. Not because
+    # two was wrong: step 2 left +0.125 and +0.034, comparable to the -0.145
+    # that stands at GIS 1 in period 2. It cost two minutes and removed the
+    # question. Do not read the tighter convergence as a better-determined
+    # number -- the target it converged onto carries the same uncertainty.
+    #
+    # BOTH SIGNS ARE POSITIVE, unlike 1984, whose GIS 1 is -42.6. The southern
+    # boundary needs sand added over 1996-2010 where it needed sand removed
+    # over 1984-2004. That follows the observed target, which is +3.23 m/yr at
+    # GIS 1 here; it is not evidence about Cape Point, which the model does not
+    # represent (the calibrated fits are 0.0 through GIS 2-7).
+    #
+    # SOLVED ON 1984-start/v2, WHILE THE 1984 PRESET IS ON v1 -- and that
+    # turns out not to matter, which was worth one run rather than an
+    # assumption either way (2026-09-12). Spending this pair on v1, the island
+    # every published 1984 number was fitted on:
+    #
+    #            GIS 1 residual   GIS 90 residual
+    #     v2          +0.003           +0.003
+    #     v1          +0.048           +0.003
+    #
+    # 0.048 m/yr is a third of the -0.145 that stands unclosed at GIS 1 in
+    # period 2, so these values transfer across the version within the
+    # tolerance the published periods already accept. They do NOT need
+    # re-solving when the 95 remaining v1 runs are moved to v2.
+    #
+    # This says nothing about the INTERIOR. 65 of 90 domains differ in shape
+    # between the two PRODUCTS, and this is a statement about two VERSIONS of
+    # one product at two boundary cells. Do not generalise it.
+    #
+    # Solve reproduced with:
+    #   scripts/input_prep/7-source-sink/2-calibrate/
+    #       HAT_be_edge_domain_solve.py --period 1996
+    1996: (+32.2, +10.0),
+
+    # SOLVED 2026-09-16, three Newton steps, the same protocol as 1996. Base
+    # run: the 2010 matrix zeroBE / full_management / nourish / nogroin run,
+    # 2004-start v1, island offset 2010/v1, Hs 2.5.
+    #
+    #   step   GIS 1                          GIS 90
+    #     0    imposed  0.0  residual -8.430  imposed  0.0  residual -3.565
+    #     1    imposed 80.3  residual +0.919  imposed 34.0  residual +0.331
+    #     2    imposed 72.4  residual -0.022  imposed 31.1  residual -0.024
+    #     3    imposed 72.6  residual -0.003  imposed 31.3  residual +0.001
+    #
+    # THE LARGEST END VALUE OF ANY PERIOD, at GIS 1. It is not a larger
+    # artefact: the gains were 0.116 / 0.115 on the first secant, inside
+    # the 0.09-0.13 every other case gave, so the value is again about ten
+    # times its misfit. The misfit itself is what is large: the 2010-2024
+    # CoastSat target at GIS 1 is +6.90 m/yr, against +3.23 in 1996-2010,
+    # and the model produces -1.53 there unaided. Cape Point accreting at
+    # that rate is not something the model represents (the calibrated fits
+    # are 0.0 through GIS 2-7 in the two published periods), so this is the
+    # boundary term supplying observed accretion the reach cannot make.
+    # Read as a real flux it would be absurd; it is not one.
+    #
+    # GIS 90 is +31.3 against +10.0 in 1996-2010, for the same reason:
+    # the 2010-2024 target there is +2.22 m/yr, and the n115 extension
+    # experiment already showed the north end grows when the observed
+    # accretion at Pea Island is what it has to supply (+41.7 at GIS 115).
+    #
+    # The probes are output/raw_runs/experiments/2026-09-16-edgesolve-2010/
+    # (SOLVED names step3). Reproduced with:
+    #   HAT_be_edge_domain_solve.py --period 2010 --kind experiment
+    #       --run <base> --tag 2026-09-16-edgesolve-2010/base
+    #       --run <step> --tag 2026-09-16-edgesolve-2010/step<k> ...
+    2010: (+72.6, +31.3),
+}
+
+for _period, (_d1, _d90) in HATTERAS_BE_EDGE_ONLY.items():
+    if _period in HATTERAS_BE_RATES_EDGE:
+        raise ValueError(
+            f"period {_period} has both a calibrated fit and an entry in "
+            f"HATTERAS_BE_EDGE_ONLY, so GIS 1 has two homes. Delete the "
+            f"edge-only entry -- the calibrated preset is the one the "
+            f"comprehension above keeps in step.")
+    HATTERAS_BE_RATES_EDGE[_period] = {1: _d1, 90: _d90}
+
+# AN EXTENDED GEOMETRY (2026-09-16) keeps only the standing values at domains
+# that are STILL ends -- GIS 90 is interior under n115 and must not carry
+# +10.0 -- and cannot pass the two checks below until its new end is solved:
+# the value arrives through HAT_BE_OVERRIDE, one Newton step at a time, and
+# section 4.3 of the runner refuses an edgeBE run whose end has none.
+if HATTERAS_GEOMETRY_EXTENDED:
+    HATTERAS_BE_RATES_EDGE = {
+        _period: {gis: rate for gis, rate in _rates.items()
+                  if gis in HATTERAS_BE_EDGE_DOMAINS}
+        for _period, _rates in HATTERAS_BE_RATES_EDGE.items()}
+
+for _period, _rates in (() if HATTERAS_GEOMETRY_EXTENDED
+                        else HATTERAS_BE_RATES_EDGE.items()):
+    _absent = [gis for gis in HATTERAS_BE_EDGE_DOMAINS if gis not in _rates]
+    if _absent:
+        raise ValueError(
+            f"edgeBE {_period}: end domains {_absent} are not in the "
+            f"calibrated preset, so the edge preset would silently model them "
+            f"at 0.0 m/yr. Add them to HATTERAS_BE_RATES_CALIBRATED.")
+
+    # An edge domain present but ZERO is the same failure the check above
+    # exists to prevent, and the absence test does not catch it: edgeBE would
+    # be byte-identical to zeroBE at that domain, which makes the two presets
+    # indistinguishable there and collapses the edge secant to 0/0 with no
+    # error. Found on 2026-08-28 while zeroing the interior of the calibrated
+    # table -- GIS 1 is SLICED from that table, so emptying it would have
+    # silently disarmed the edge preset.
+    _zeroed = [gis for gis in HATTERAS_BE_EDGE_DOMAINS
+               if gis in _rates and _rates[gis] == 0.0]
+    if _zeroed:
+        raise ValueError(
+            f"edgeBE {_period}: end domains {_zeroed} are present but 0.0, so "
+            f"edgeBE is identical to zeroBE there and the edge secant has no "
+            f"second bracket. Give them a nonzero starting value, or run "
+            f"zeroBE if that is what you actually want.")
+
+# The split is only defensible while each side is actually solved against its
+# own preset. If a period ever gains an edgeBE D90 with no calibBE counterpart
+# -- or the two silently converge back to one number, which would mean the
+# split has stopped earning its complexity -- say so rather than let it pass.
+for _period in HATTERAS_BE_RATES_CALIBRATED:
+    if _period not in HATTERAS_BE_EDGE_D90:
+        raise ValueError(
+            f"edgeBE {_period}: GIS 90 is a SPLIT domain but has no entry in "
+            f"HATTERAS_BE_EDGE_D90, so the edge preset has no value solved "
+            f"against its own base run.")
+
+# Canonical presets. Keys are the tokens that land in run-directory names, so
+# each one states which hypothesis was run -- "base" did not.
+HATTERAS_BE_PRESETS = {
+    "zeroBE": HATTERAS_BE_RATES_ZERO,
+    "edgeBE": HATTERAS_BE_RATES_EDGE,
+    "calibBE": HATTERAS_BE_RATES_CALIBRATED,
+}
+
+# Deprecated spellings, kept so older scripts keep running. resolve_be_preset()
+# maps these to the canonical key, and it is the canonical key that reaches the
+# run name -- an alias can never put a stale token in a directory name.
+HATTERAS_BE_PRESET_ALIASES = {
+    "base": "zeroBE",          # "base" was all-zeros, with the edge values
+                               # commented out beside them
+    "calibrated": "calibBE",
+}
+
+
+def resolve_be_preset(name):
+    """Resolves a source/sink preset name to its canonical key and rates.
+
+    Args:
+        name: A canonical preset key or a deprecated alias.
+
+    Returns:
+        A (canonical_name, rates_by_period) tuple. rates_by_period maps start
+        year to a sparse {gis_id: rate_m_yr} dict.
+
+    Raises:
+        ValueError: If the name is neither a canonical key nor an alias.
+    """
+    canonical = HATTERAS_BE_PRESET_ALIASES.get(name, name)
+    if canonical not in HATTERAS_BE_PRESETS:
+        raise ValueError(
+            f"unknown source/sink preset {name!r}; expected one of "
+            f"{sorted(HATTERAS_BE_PRESETS)} "
+            f"(deprecated aliases: {sorted(HATTERAS_BE_PRESET_ALIASES)})")
+    return canonical, HATTERAS_BE_PRESETS[canonical]
+
+
+def be_rates(name, start_year):
+    """The per-domain rates one preset supplies for one period.
+
+    WHY THIS IS NOT A PLAIN DICT LOOKUP. A period can be WIRED before it is
+    CALIBRATED, and since 2026-09-11 two of them are: all four periods resolve
+    their forcing files, but only 1984 and 2004 have solved edge and calibrated
+    presets. The other two carry zeroBE alone until their end domains are
+    re-solved against their OWN CoastSat target.
+
+    Indexing the preset dict directly gives a bare KeyError on the year, which
+    reads like a typo in the settings file rather than what it is -- a fit that
+    has not been done yet. This says which, and what would fix it.
+
+    Args:
+        name: A canonical preset key or a deprecated alias.
+        start_year: The period's start year.
+
+    Returns:
+        A sparse {gis_id: rate_m_yr} dict. An absent domain is 0.0 m/yr.
+
+    Raises:
+        ValueError: If the preset is unknown, or is not solved for that period.
+    """
+    canonical, by_period = resolve_be_preset(name)
+    if start_year not in by_period:
+        raise ValueError(
+            f"the {canonical} preset has no rates for the {start_year} "
+            f"period; it is solved for {sorted(by_period)}. These are fitted "
+            f"per period against that period's own observed rates, so another "
+            f"period's numbers cannot stand in for them. Run {start_year} "
+            f"under zeroBE, or solve its end domains first -- see "
+            f"HATTERAS_BE_EDGE_D90 and the end-domain note above it.")
+    return by_period[start_year]
+
+# =============================================================================
+# NC-12 roadway
+# =============================================================================
+# GIS domains carrying NC-12. Domains 1-8 (Cape Point) have no road in the
+# modelled span.
+HATTERAS_FIRST_ROAD_DOMAIN = 9
+HATTERAS_LAST_ROAD_DOMAIN = 90
+
+# Permanent community zones. Roadway management is OFF here: inside a village
+# the road is a street network that is maintained rather than relocated, so
+# CASCADE's relocate-or-abandon logic does not describe it.
+#
+# These are the PERMANENT settlement footprints only, deliberately narrower
+# than the beach-nourishment footprints, which extend past the villages.
+HATTERAS_COMMUNITY_ZONES = (
+    (7, 8),     # Buxton
+    (21, 31),   # Avon
+    (68, 83),   # Salvo / Waves / Rodanthe (Tri-Village)
+)
+
+# Per-domain road elevation, meters MHW-RELATIVE: the MEAN of the 2009 LiDAR
+# 1 m cells in a 7 m corridor under the digitised 2004 NC-12 alignment.
+# Written by scripts/input_prep/4-mgmt-forcings/road_elevation/
+# HAT_road_elevation.py; see RoadElevation_audit.md beside the file.
+#
+# NOT period-dependent, and that is deliberate -- but the REASON changed on
+# 2026-08-26 and the old one is worth recording because it is now false.
+#
+# It used to read: "there is one topography (2009) for every period, so one
+# elevation set serves both". There are two products now, and they do NOT agree
+# under the road. Sampling the 2004 alignment in a 3.5 m corridor on both:
+#
+#     2009-2014-1996 minus 2009-2014, corridor mean:  median +0.222 m
+#     54 of 82 domains move more than 0.05 m; cell counts identical
+#
+# Identical cell counts means ALACE REPLACED measured 2009 pavement rather
+# than filling holes in it. And +0.222 m is not a road: it is the island-wide
+# 1996-vs-2009 survey offset, which mosaic_1984_audit.csv reports per domain at
+# median +0.255 m (p10 +0.14, p90 +0.33) and HAT_dem_1984_mosaic.py leaves
+# UNCORRECTED on purpose ("bias correction OFF, feathering OFF").
+#
+# So a per-period road elevation built from each period's own DEM would push
+# 1984 road_ele up ~0.22 m island-wide, and that increment would be the survey
+# offset, not a measured roadbed. A higher road is buried by overwash less
+# often, so it would reach the model. One file, built on the 2009-2014
+# baseline, keeps that offset out of a forcing.
+#
+# Hence still no year in the filename -- a per-year name would imply a measured
+# change in roadbed height that no data supports.
+#
+# The 2004 alignment is used rather than 1984 because it is the only digitised
+# line that lands on roadbed everywhere on the 2009 surface. Sampled along the
+# 1984 line, the relocated domains (GIS 9-15, 84-87) return 2.37 m mean with a
+# within-domain sigma up to 1.70 m -- the abandoned corridor now lies UNDER the
+# foredune, so that sample is dune, not road. The 2004 value is both the better
+# measurement and the lower of the two.
+HATTERAS_ROAD_ELEVATION_FILE = "4-mgmt-forcing/road_elevation/RoadElevation.csv"
+
+# Historical NC-12 management events.
+#
+# Relocations carry a DISPLACEMENT, not an absolute setback. CASCADE adds it to
+# whatever setback the model is carrying at the event year, which already
+# reflects the modelled shoreline retreat -- so the retreat is counted once. An
+# absolute setback referenced to the 1984 dune line would count it twice,
+# because the topography's own dune line has already moved landward by that
+# amount.
+#
+# WHERE THE DISPLACEMENTS COME FROM -- measured, not typed.
+#
+# Until 2026-08-20 these were eleven hand-entered literals attributed to a
+# 1978->1997 cross-shore offset digitised in ArcGIS Pro. The 1997 line is not in
+# the repo -- only nc12_1978.geojson and nc12_2008.geojson are -- so those
+# numbers could not be re-derived, checked, or corrected. They are now read from
+# HAT_road_relocation_distance.py's per-domain measurement of the two lines that
+# ARE on disk.
+#
+# WHICH COLUMN, AND WHY THE SIGNED ONE
+#   mean_relocation_m        unsigned nearest-distance old line -> new line.
+#   mean_signed_landward_m   the same displacement vectors projected onto the
+#                            landward normal. THIS ONE.
+# The unsigned column is dragged toward zero wherever the two lines share
+# vertices: the 2004 line was digitised by editing a copy of the 1984 one, so an
+# unedited stretch contributes an exact 0.000 m that is an editing artefact, not
+# a measurement. On GIS 9 and 87 that is 23% and 33% of samples, and the signed
+# mean is correspondingly LARGER (18.0 vs 13.8 m, 17.5 vs 11.8 m). Sign also
+# matters on its own terms: a relocation is landward by definition, so a column
+# that cannot express direction cannot contradict that claim.
+#
+# ROUNDED TO WHOLE CELLS (Hannah, 2026-09-10: "a road can't relocate 17 m,
+# each grid cell is 10 x 10"). The measurement is a distance between two
+# digitised lines and is kept as measured in the CSV; what the model is FORCED
+# with is that distance rounded to the nearest 10 m, the Barrier3D cell, so a
+# prescribed move is a whole number of rows. roadway_manager floors the setback
+# to whole cells at placement anyway (int(road_setback / 10)); rounding here
+# makes the forcing say the same thing instead of carrying a fraction the grid
+# cannot hold. Nearest, not floor: 17.97 m is two cells' worth closer to 20
+# than to 10. No measured value sits on a 5 m boundary, so ties do not arise.
+#   9  18.0 -> 20     10  46.9 -> 50     11  77.1 -> 80     12  68.4 -> 70
+#   13 50.9 -> 50     14  24.7 -> 20     84  39.9 -> 40     85 108.7 -> 110
+#   86 93.7 -> 90     87  17.5 -> 20
+#
+# THE VINTAGE GAP. The lines were digitised off 1978 and 2008 imagery, so the
+# measured interval brackets BOTH events rather than either one. That is safe
+# only because the two events are disjoint in space -- 1989 moves GIS 84-87,
+# 1999 moves GIS 9-15 -- so no domain's displacement is claimed twice. Do not
+# add a third relocation overlapping either span without revisiting this.
+
+# Per-domain measurement written by
+# scripts/input_prep/4-mgmt-forcings/road_relocation/HAT_road_relocation_distance.py
+# Named by the two LINE vintages it was measured between (renamed from
+# 1984_2004 on 2026-09-15, with the lines themselves), not by the periods those
+# lines stand in for.
+_RELOCATION_MEASUREMENT_FILE = ("4-mgmt-forcing/road_relocation/1978_2008/"
+                                "road_relocation_1978_2008.csv")
+
+# WHY THE 1999 EVENT STOPS AT GIS 14. The measurement classifies GIS 15
+# 'relocated', but cannot say by how much or in which direction: the two
+# digitised lines CROSS inside that domain, so 56% of samples read landward and
+# 44% seaward (sign_agreement 0.56), and the mean (+1.8 m) and median (-1.0 m)
+# disagree in SIGN -- that mean is the residue of two opposing populations, not
+# a displacement. Its mean magnitude, 4.0 m, is below the 5 m re-digitising
+# threshold; only its 12.2 m maximum is above, which is the sole reason it
+# classified 'relocated' rather than 'redigitized' at all. GIS 15 is therefore
+# left out of the 1999 event entirely rather than carried with a forced 0.0 m.
+
+
+def _measured_displacements(gis_domains):
+    """Reads the measured landward displacement for one relocation event.
+
+    Args:
+        gis_domains: The GIS domains the event moves. Hand-specified per event,
+            NOT taken from the file: the measurement classifies ~40 domains
+            'relocated' across the whole island, and which of them belong to
+            which historical event is a fact about NC-12, not about the lines.
+
+    Returns:
+        A {gis: displacement_m} dict, holding mean_signed_landward_m from the
+        measurement rounded to the nearest CELL_M (see ROUNDED TO WHOLE CELLS
+        above); `measured_displacement_m` returns the unrounded value.
+
+    Raises:
+        ValueError: If a domain is absent from the measurement, or the
+            measurement classifies it 'no_edit' / 'redigitized'. Either means
+            the CSV cannot support a relocation there, and forcing one anyway
+            would put a number the data does not contain into the model.
+    """
+    path = INIT_ROOT / _RELOCATION_MEASUREMENT_FILE
+    with open(path, newline="", encoding="utf-8") as handle:
+        measured = {int(row["domain"]): row for row in csv.DictReader(handle)}
+
+    absent = [gis for gis in gis_domains if gis not in measured]
+    if absent:
+        raise ValueError(
+            f"relocated domains {absent} are absent from {path.name}")
+
+    unmoved = {gis: measured[gis]["classification"] for gis in gis_domains
+               if measured[gis]["classification"] != "relocated"}
+    if unmoved:
+        raise ValueError(
+            f"{path.name} classifies {unmoved} -- the two digitised lines are "
+            f"copied or re-traced there, so they cannot measure a relocation")
+
+    return {gis: round_to_cell(float(measured[gis]["mean_signed_landward_m"]))
+            for gis in gis_domains}
+
+
+# WHAT THE ROUNDING COST, measured 2026-09-14. Rounding to whole cells moves
+# the 1999 event's landing at GIS 11 by +2.93 m (77.07 -> 80.0), and GIS 11 had
+# ONE CELL of margin against the drowning check. Re-running the 1984-2004
+# relocation arm under current code drowns NC-12 there in all eight calibBE and
+# edgeBE cells, where the runs stored on 2026-09-01 report it managed
+# throughout; the four zeroBE cells, which impose no background erosion and so
+# retreat less, do not drown. Forcing the unrounded displacements back reverses
+# it exactly: 0 drowned again.
+#
+# The rounding is still right -- a prescribed move the model cannot represent at
+# sub-cell resolution should not pretend to -- but it is worth knowing that it
+# is what moved that domain over the line, and that GIS 11's margin is one cell
+# either way. See output/raw_runs/arms/recode-20260914/ for the comparison.
+
+CELL_M = 10.0   # Barrier3D cell, m: a prescribed move is a whole number of these
+
+
+def round_to_cell(displacement_m):
+    """A displacement rounded to the nearest whole cell (half-up, sign-aware)."""
+    import math
+    sign = -1.0 if displacement_m < 0 else 1.0
+    return sign * math.floor(abs(displacement_m) / CELL_M + 0.5) * CELL_M
+
+
+def measured_displacement_m(gis):
+    """The UNROUNDED measured displacement for one domain, for labels and
+    reports that want to show the measurement beside the forcing."""
+    path = INIT_ROOT / _RELOCATION_MEASUREMENT_FILE
+    with open(path, newline="", encoding="utf-8") as handle:
+        for row in csv.DictReader(handle):
+            if int(row["domain"]) == gis:
+                return float(row["mean_signed_landward_m"])
+    raise KeyError(gis)
+
+
+HATTERAS_ROAD_EVENTS = (
+    RelocationEvent(
+        year=1989,
+        displacement_m=_measured_displacements((84, 85, 86, 87)),
+        note="NC-12 relocated landward 1989, Pea Island (GIS 84-87)",
+    ),
+    RelocationEvent(
+        year=1999,
+        displacement_m=_measured_displacements((9, 10, 11, 12, 13, 14)),
+        note="NC-12 relocated landward 1999, inter-village south (GIS 9-14)",
+    ),
+    BridgeEvent(
+        year=2022,
+        gis_domains=tuple(range(82, 89)),
+        note="Jug Handle Bridge 2022; road removed GIS 82-88 -> unmanaged",
+    ),
+)
+
+# Independent check on a relocated setback: the MEASURED 2004 setback for the
+# same domain. Both relocation events precede 2004, so a correctly displaced
+# setback should land near the 2004 same-year measurement.
+# Reporting only -- nothing reads this to decide anything.
+#
+# READ FROM THE FILE PERIOD 2 ACTUALLY RUNS, not typed out here. This used to
+# hold eleven literals copied from the LEGACY old-method RoadSetback_2004.csv
+# (GIS 9 = 89 m, 10 = 83 m, 11 = 81 m ...). That copy survived the move to the
+# dune-start method on 2026-08-18 and both topography bumps after it, so the
+# printed check was comparing a dune-start setback against a number measured to
+# a different feature -- median +23 m landward, and on a topography the run no
+# longer uses. The same domains read 50 / 40 / 20 m in the file period 2
+# actually loads. A check that disagrees by construction is worse than none:
+# it invites a correct relocation to be read as a failed one.
+#
+# Deriving it has the same motive as slicing HATTERAS_BE_RATES_EDGE out of the
+# calibrated preset -- the two can no longer drift apart, and bumping the
+# topography version moves this with the setbacks it is checking.
+
+
+def _relocation_check(period_start=2004):
+    """Reads the measured setback for every domain a relocation event moves.
+
+    The domain list is taken from HATTERAS_ROAD_EVENTS rather than retyped, so
+    adding a relocation adds its cross-check automatically.
+
+    Args:
+        period_start: Start year whose road_setback_file supplies the measured
+            values. Both relocation events precede 2004, so period 2 is the
+            first same-year measurement that postdates them.
+
+    Returns:
+        A {gis: measured_setback_m} dict.
+
+    Raises:
+        ValueError: If a relocated domain is absent from the setback file.
+            load_road_setbacks fills an absent domain with 0.0, which would
+            read here as "the road sits on the dune line" -- a plausible-
+            looking number for a measurement that was never made.
+    """
+    path = INIT_ROOT / HATTERAS_PERIODS[period_start]["road_setback_file"]
+    setbacks, missing = load_road_setbacks(
+        path, HATTERAS_DOMAINS,
+        HATTERAS_FIRST_ROAD_DOMAIN, HATTERAS_LAST_ROAD_DOMAIN)
+
+    relocated = sorted({gis for event in HATTERAS_ROAD_EVENTS
+                        if isinstance(event, RelocationEvent)
+                        for gis in event.displacement_m})
+    absent = sorted(set(relocated) & set(missing))
+    if absent:
+        raise ValueError(
+            f"relocated domains {absent} are not in {path.name}, so their "
+            f"cross-check would report 0.0 m as a measured setback")
+
+    return {gis: float(setbacks[HATTERAS_DOMAINS.gis_to_pad(gis)])
+            for gis in relocated}
+
+
+HATTERAS_RELOCATION_CHECK_2004 = _relocation_check()
+
+# =============================================================================
+# Beach nourishment
+# =============================================================================
+# Source: Hatteras_Management_Timelines.xlsx -> Nourishment_Timeline sheet.
+# Volumes are the reported project totals in cubic yards; cascade_pipeline
+# converts to m^3/m and spreads them evenly across each project's domains.
+#
+# All three projects fall in 2004-2024, so a 1984-2004 run builds an empty
+# schedule from this same list -- no period-keying needed here.
+#
+# The project extents are wider than HATTERAS_COMMUNITY_ZONES on purpose:
+# these are engineering footprints, and both Buxton and Rodanthe extend past
+# the settlement into the NC-12 corridor. That is what puts GIS 9-15 and
+# 85-88 under both the roadway and beach-dune managers.
+# VOLUMES AND EXTENTS ARE FROM THE PROJECT RECORD, and both halves matter:
+# CASCADE applies volume/length, so a right volume on a short footprint is as
+# wrong as a wrong volume. Checked against the record 2026-08-22; Buxton was
+# already correct, Avon and Rodanthe were not.
+#
+#   project    was              now              record
+#   Rodanthe   619 m^3/m        408 m^3/m        ~380 m^3/m
+#   Buxton     183 m^3/m        183 m^3/m        ~197 m^3/m   (unchanged)
+#   Avon       841 m^3/m        191 m^3/m        190-216 m^3/m
+#
+# Avon was wrong on BOTH axes -- 2.2x the volume placed, over 55% of the
+# footprint -- which compounded to 3.9-4.4x the real fill density and a 68 m
+# instantaneous shoreline step. That step is what BRIE's Crank-Nicolson solve
+# rings on; see compute_lrr and HAT_hindcast_methods.md section 12.
+HATTERAS_NOURISHMENT_PROJECTS = (
+    NourishmentProject(
+        name="Rodanthe emergency fill",
+        year=2014,
+        # USACE/NCDOT emergency fill at the Mirlo Beach "S-curves", ~2 miles
+        # (3.2 km) immediately NORTH of Rodanthe village, whose community zone
+        # ends at GIS 83. Six domains is 3.0 km (1.86 mi) rather than the
+        # 6.4 domains 2 miles would take: GIS 90 is the locked north-end
+        # domain carrying the source/sink boundary value (tens of m/yr), and
+        # putting fill into a domain whose rate was pinned rather than
+        # modelled would make the fill and the boundary condition
+        # indistinguishable. The 7% shortfall is the cost of that exclusion
+        # and is stated rather than absorbed into the volume.
+        gis_domains=tuple(range(84, 90)),
+        volume_cubic_yards=1_600_000,
+        note="Mirlo Beach S-curves, ~2 mi N of Rodanthe; GIS 84-89 carry NC-12",
+    ),
+    NourishmentProject(
+        name="Buxton shore protection",
+        year=2022,
+        # 2.9 mi (4.7 km) north from the oceanfront groin at the lighthouse,
+        # which sits at GIS 5.5 -- so 6-15, which is what was already here.
+        # Left untouched: it is the one project whose configured density
+        # (183 m^3/m) already matched the record (197 m^3/m).
+        gis_domains=tuple(range(6, 16)),
+        volume_cubic_yards=1_200_000,
+        note="Extends north out of Buxton village (7-8) into the road corridor",
+    ),
+    NourishmentProject(
+        name="Avon shore protection",
+        year=2022,
+        # Placed from 3,000 ft north of Avon Pier (Due East Road) south to
+        # Askins Creek North Drive at the village's southern boundary. The
+        # pier is GIS 26 (HATTERAS_ANNOTATIONS.piers), 3,000 ft is 1.8
+        # domains, and the southern village boundary is GIS 21 -- so 21-28,
+        # 4.0 km, matching the ~2.5 mi the record gives. The previous 23-26
+        # was the MIDDLE of this footprint, missing ~2 km to the south and
+        # ~1 km to the north. Still entirely inside the Avon community zone
+        # (21-31), so the beach_dune_manager footprint is unchanged by this.
+        gis_domains=tuple(range(21, 29)),
+        volume_cubic_yards=1_000_000,
+        note="Due East Rd to Askins Creek N Dr; inside the Avon zone (21-31)",
+    ),
+)
+
+# Overwash filtering percent for developed ground. CASCADE's overwash_filter
+# is a PERCENT -- filter_overwash divides by 100 -- and Rogers et al. (2015)
+# give 40-90%, residential to commercial. Hatteras' villages are residential,
+# so 40 is the low end of that range.
+#
+# Earlier versions of this pipeline passed 0.4 here, on the assumption it was
+# a fraction. That filtered 0.4% of overwash, which is indistinguishable from
+# no filtering at all; BeachDuneConfig now rejects the fraction scale.
+HATTERAS_BEACH_DUNE = BeachDuneConfig(
+    community_overwash_filter_pct=40.0,
+    default_overwash_filter_pct=0.0,
+    overwash_to_dune_pct=9.0,
+)

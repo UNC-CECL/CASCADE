@@ -31,10 +31,17 @@ import matplotlib.patheffects as pe
 # CONFIG  — edit here
 # ============================================================
 
-DOMAINS_GEOJSON   = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "HAT_domains.json")
-TRANSECTS_GEOJSON = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "CoastSat_transect_layer.geojson")
+# Resolved through hat_observed_rates.py (2026-09-18); the typed paths named
+# coastsat_lrr/ and used _PATH_REPO before it was defined.
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+DOMAINS_GEOJSON   = str(_obs.DOMAIN_BOXES)
+TRANSECTS_GEOJSON = str(_obs.TRANSECT_LAYER)
 METRICS_CSV       = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\shoreline_change_patterns\classification_output\domain_trajectory_metrics.csv"
-OUTLINE_SHP= str(_SCR_DATA.parent / "9-figures" / "map_elements"
+OUTLINE_SHP= str(_obs.INIT_ROOT / "9-figures" / "map_elements"
              / "hatteras_outline" / "HAT_island_outline.shp")
 # Anchored on this file 2026-09-12. The literals here were
 # drive-rooted and had never resolved; the data they name also
@@ -45,9 +52,7 @@ from pathlib import Path as _Path
 # renamed since. Rule 5 of ORGANIZATION.md.
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
-_SCR_DATA = (_Path(__file__).resolve().parents[4] / "data"
-             / "hatteras_init" / "5-scr")
-OUTPUT_DIR        = str(_SCR_DATA / "shoreline_change_patterns" / "map_output")
+OUTPUT_DIR        = str(_obs.SHORELINE_PATTERNS / "map_output")
 
 # ── Basemap choice ────────────────────────────────────────────────────────────
 USE_SATELLITE = True   # True = Esri satellite tiles; False = plain ocean blue

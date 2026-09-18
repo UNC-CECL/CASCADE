@@ -40,11 +40,13 @@ Dependencies
 # Anchored on this file 2026-09-12. The literals here were
 # drive-rooted and had never resolved; the data they name also
 # moved out of the scripts tree on that date.
-from pathlib import Path as _Path
-_SCR_DATA = (_Path(__file__).resolve().parents[4] / "data"
-             / "hatteras_init" / "5-scr")
-TRANSECT_GEOM_PATH = str(_SCR_DATA / "transect_domains"
-                         / "CoastSat_transect_layer.geojson")
+# Resolved through hat_observed_rates.py since 2026-09-18.
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+TRANSECT_GEOM_PATH = str(_obs.TRANSECT_LAYER)
 
 # Column in the transect file that holds the transect ID
 # From the global CoastSat GeoJSON this is typically "id"
@@ -52,14 +54,14 @@ TRANSECT_ID_COL = "id"
 
 # --- CASCADE domain geometry ---
 # GeoJSON exported from ArcGIS
-DOMAIN_GEOM_PATH = str(_SCR_DATA / "transect_domains" / "HAT_domains.json")
+DOMAIN_GEOM_PATH = str(_obs.DOMAIN_BOXES)
 
 # Column in the domain file that holds the domain number
 # From your attribute table this is "domain_id"
 DOMAIN_ID_COL = "domain_id"
 
 # --- Output ---
-OUTPUT_DIR = str(_SCR_DATA / "transect_domains")
+OUTPUT_DIR = str(_obs.TRANSECT_DOMAINS)
 LOOKUP_CSV = "transect_domain_lookup.csv"
 MAP_PNG    = "transect_domain_map.png"
 

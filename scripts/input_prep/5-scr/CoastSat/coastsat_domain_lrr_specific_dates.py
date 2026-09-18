@@ -54,8 +54,15 @@ This script supports two mutually exclusive filtering modes.
 # CONFIG
 # ============================================================
 
-# Path to the lookup table produced by coastsat_domain_mapping.py
-LOOKUP_CSV = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "transect_domain_lookup.csv")
+# Path to the lookup table produced by coastsat_domain_mapping.py.
+# Resolved through hat_observed_rates.py (2026-09-18); the typed path named
+# coastsat_lrr/ and used _PATH_REPO before it was defined.
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+LOOKUP_CSV = str(_obs.TRANSECT_DOMAINS / "transect_domain_lookup.csv")
 
 # Root folder containing all site subfolders
 # Anchored on this file 2026-09-12. The literals here were
@@ -67,9 +74,7 @@ from pathlib import Path as _Path
 # renamed since. Rule 5 of ORGANIZATION.md.
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
-_SCR_DATA = (_Path(__file__).resolve().parents[4] / "data"
-             / "hatteras_init" / "5-scr")
-ROOT_DATA_DIR = str(_SCR_DATA / "coastsat_timeseries")
+ROOT_DATA_DIR = str(_obs.COASTSAT_TIMESERIES)
 
 # Only include subfolders whose names contain this string. "" = all.
 SITE_FILTER = "usa_NC"
@@ -119,8 +124,8 @@ END_DATE   = "2019-12-31"
 MIN_OBS = 2
 
 # Output directory
-OUTPUT_DIR = str(_SCR_DATA / "coastsat_lrr" / "old_time_periods"
-                 / "1997_2019_specific_dates")
+# Retired windows only (old_time_periods/ is superseded_20260810/ now).
+OUTPUT_DIR = str(_obs.COASTSAT_LRR_SUPERSEDED / "1997_2019_specific_dates")
 
 # CASCADE buffer domains to EXCLUDE from summaries
 BUFFER_DOMAINS = []

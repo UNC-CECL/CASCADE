@@ -56,6 +56,18 @@ import matplotlib.colors as mcolors
 import matplotlib.ticker as mticker
 import matplotlib.patheffects as mpatheffects
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and 9-figures/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). Missed by the first
+# sweep because its figsize is computed, not a literal (2026-09-17).
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              FIG_W_DOUBLE)
+apply_style()
 import numpy as np
 import pandas as pd
 
@@ -71,7 +83,7 @@ for _path in (PROJECT_BASE_DIR / "scripts",
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from hatteras_site_config import HATTERAS_DOMAINS, HATTERAS_PERIODS  # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_DOMAINS, HATTERAS_PERIODS  # noqa: E402
 from cascade_pipeline.coastsat_loess import (  # noqa: E402
     CoastSatDataset, LoessConfig, build_coastsat_series)
 from cascade_pipeline.hindcast import build_target_table  # noqa: E402
@@ -97,8 +109,8 @@ RUN_INDEX = RAW_RUNS / "run_index.csv"
 # Where the runner reads them (COASTSAT_BASE_DIR in HAT_hindcast_1984_2024.py).
 # The scripts/input_prep/5-scr/CoastSat path this held until 2026-09-16 no
 # longer exists; the loader only WARNED, so every observed layer was empty.
-COASTSAT_BASE_DIR = (PROJECT_BASE_DIR / "data" / "hatteras_init"
-                     / "5-scr" / "coastsat_lrr")
+# Resolved through hat_observed_rates.py (2026-09-18), not typed.
+from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as COASTSAT_BASE_DIR  # noqa: E402
 
 # Must match section 8.1 of HAT_hindcast_1984_2024.py. These are the LoessConfig
 # defaults, so the two agree by construction rather than by copying -- but the
@@ -493,7 +505,10 @@ def plot_skill_overview(cells, index, start_year, preset, out_dir):
     if not sweeps:
         return None
     fig, axes = plt.subplots(
-        2, len(sweeps), figsize=(2.55 * len(sweeps) + 0.9, 5.6), squeeze=False,
+        2, len(sweeps),
+        figsize=figsize("double",
+                        height=5.6 * FIG_W_DOUBLE / (2.55 * len(sweeps) + 0.9)),
+        squeeze=False,
         sharex="col", constrained_layout=True)
 
     footnotes = []

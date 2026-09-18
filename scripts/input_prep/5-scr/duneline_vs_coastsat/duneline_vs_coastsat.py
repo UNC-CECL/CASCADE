@@ -30,13 +30,15 @@ WHY BOTH  (Hannah, 2026-09-15)
     LRR is the one the rest of 5-scr uses. Report both, and the gap.
 
 SURVEY DATES
-    The dune-line files carry no date. 1984 is the 1984-09-19 USGS photo
-    (Henderson, D:\Hatteras_GIS\Aerial\1984_henderson\1984_metadata). The 2004
-    line was traced from Google Earth captures whose file carries no date; the
-    capture is 2004-05-25 (Hannah, 2026-09-15). Both are in KNOWN_SURVEY_DATES.
-    A year with no known date is centred mid-year, PROVENANCE.md says so, and
-    a sensitivity block reports how far the endpoint rate moves for a
-    +/- 6 month shift of that centre.
+    The dune-line files carry no date. KNOWN_SURVEY_DATES holds them by line
+    VINTAGE: 1984-09-19 and 1997-10-12 from the Henderson USGS metadata on
+    D:, 2004-05-25 and 2009-05-30 from the Google Earth captures (Hannah,
+    2026-09-15), and None for the 2023 NOAA set until its flight date is
+    known. A None is centred mid-year of the line's year, PROVENANCE.md says
+    so, and a sensitivity block reports how far the endpoint rate moves for
+    a +/- 6 month shift of that centre. A period year reaches its vintage
+    through hat_topo_version.DUNE_LINE_FOR_YEAR (2010 reads the 2009 line,
+    2024 the 2023 one).
 
 METHOD
     Every raw dune file is built by duneline_to_raw_offsets.py since
@@ -51,10 +53,16 @@ OUTPUT   data/hatteras_init/5-scr/duneline_vs_coastsat/<start>_<end>/
                  domain_comparison.csv            one row per GIS domain
                  transect_coastsat_endpoint.csv   the window means per transect
                  PROVENANCE.md
+         data/hatteras_init/5-scr/duneline_vs_coastsat/
+             alongshore_four_windows.png      every window on one y axis,
+                                              stacked full width (--grid;
+                                              --layout grid for the 2 x 2)
 
 USAGE
-    python duneline_vs_coastsat.py --start-year 1984 --end-year 2004 \
+    python duneline_vs_coastsat.py --start-year 1984 --end-year 2004
         # dates come from KNOWN_SURVEY_DATES; --start-date/--end-date override
+    python duneline_vs_coastsat.py --grid                 # every window, stacked
+    python duneline_vs_coastsat.py --grid --layout grid   # the 2 x 2 by period
 ==============================================================================
 """
 
@@ -72,17 +80,17 @@ PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
-from hat_observed_rates import (COASTSAT_TIMESERIES, SCR_ROOT,  # noqa: E402
-                                lrr_csv, transect_lookup)
-from hat_topo_version import dune_line_for_year, dune_raw_file_for_year  # noqa: E402
+from site_layer.hat_observed_rates import (COASTSAT_TIMESERIES, DUNELINE_VS_COASTSAT,  # noqa: E402
+                                SCR_ROOT, lrr_csv, transect_lookup)
+from site_layer.hat_topo_version import dune_line_for_year, dune_raw_file_for_year  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 
-from hat_figure_style import (C, C_1984, C_1997, DOMAIN_AXIS_LABEL,  # noqa: E402
+from site_layer.hat_figure_style import (C, C_1984, C_1997, DOMAIN_AXIS_LABEL,  # noqa: E402
                               INK_MUTED, _title, apply_style, caption,
                               figsize, open_frame, save, structures,
                               support_dir, town_bands)
 
-OUT_ROOT = SCR_ROOT / "duneline_vs_coastsat"
+OUT_ROOT = DUNELINE_VS_COASTSAT
 GIS_FIRST, GIS_LAST = 1, 90
 DAYS_PER_YEAR = 365.25
 SIX_MONTHS_DAYS = 182.625
@@ -100,8 +108,6 @@ C_LRR = C_1997                  # "#2166ac"
 C_ENDPOINT = "#74a9cf"          # PuBu mid blue
 C_DUNE = C_1984                 # "#b2182b"
 
-# 1984: the Henderson metadata. 2004: the Google Earth capture date (Hannah,
-# 2026-09-15); the raw_GE frames themselves carry none.
 # Keyed by LINE VINTAGE (the year in the geojson name), not by period year: a
 # period finds its vintage through hat_topo_version.DUNE_LINE_FOR_YEAR.
 # 1984, 1997: the Henderson USGS metadata on D: (Calendar_Date). 2004, 2009:
@@ -242,67 +248,168 @@ def scatter_figure(dom: pd.DataFrame, out: Path, start: int, end: int,
     save(fig, out / "scatter_dune_vs_coastsat", close=True)
 
 
-def alongshore_figure(dom: pd.DataFrame, out: Path, start: int, end: int) -> None:
-    """The house alongshore panel (coastsat_lrr_windows.py): full-height
-    village bands, the groin and piers named along their lines, open frame,
-    y grid, symmetric y limits on the 2 m tick. Three lines: the two CoastSat
-    estimators in one colour family, the dune line warm against them."""
-    import matplotlib.pyplot as plt
-    from matplotlib.ticker import MultipleLocator
+Y_TICK = 2.0
+Y_LABEL = "Rate of change (m/yr)"
+STRUCTURE_LABEL_PT_GRID = 4.0   # the 2 x 2, whose panels are half the width
 
-    fig, ax = plt.subplots(figsize=figsize("double", aspect=0.38),
-                           constrained_layout=True)
-    g = dom["gis"].to_numpy(dtype=float)
-    lrr = dom["cs_lrr_m_yr"].to_numpy(dtype=float)
-    ept = dom["cs_endpoint_m_yr"].to_numpy(dtype=float)
-    dune = dom["dune_rate_m_yr"].to_numpy(dtype=float)
 
-    y_tick = 2.0
-    half = float(np.nanmax(np.abs(np.concatenate([lrr, ept, dune])))) + 1.0
-    half = float(np.ceil(half / y_tick) * y_tick)
-    ax.set_xlim(GIS_FIRST - 0.5, GIS_LAST + 0.5)
-    ax.set_ylim(-half, half)
-    town_bands(ax)
+def _half(*arrays) -> float:
+    """Symmetric y limit: the largest |value| plus 1 m, up to the 2 m tick."""
+    v = np.concatenate([np.asarray(a, dtype=float).ravel() for a in arrays])
+    return float(np.ceil((np.nanmax(np.abs(v)) + 1.0) / Y_TICK) * Y_TICK)
 
-    ax.axhline(0, color=INK_MUTED, lw=0.6, zorder=2)
-    ax.plot(g, ept, color=C_ENDPOINT, lw=0.9, ls=(0, (3, 1.5)), zorder=3)
-    ax.plot(g, lrr, color=C_LRR, lw=1.0, zorder=4)
-    ax.plot(g, dune, color=C_DUNE, lw=1.1, zorder=5)
 
-    ax.xaxis.set_major_locator(MultipleLocator(10))
-    ax.xaxis.set_minor_locator(MultipleLocator(5))
-    ax.yaxis.set_major_locator(MultipleLocator(y_tick))
-    ax.yaxis.grid(True, zorder=0)
-    ax.set_axisbelow(True)
-    open_frame(ax)
-    ax.set_xlabel(DOMAIN_AXIS_LABEL)
-    ax.set_ylabel("Rate of change (m/yr)")
-
-    # The legend sits outside the axes and shrinks them at draw time, so it
-    # goes on BEFORE the structure labels are placed against the data.
-    handles = [
+def _legend_handles():
+    return [
         Line2D([], [], color=C_DUNE, lw=1.1, label="Dune line (two surveys)"),
-        Line2D([], [], color=C_LRR, lw=1.0,
-               label="CoastSat shoreline, LRR"),
+        Line2D([], [], color=C_LRR, lw=1.0, label="CoastSat shoreline, LRR"),
         Line2D([], [], color=C_ENDPOINT, lw=0.9, ls=(0, (3, 1.5)),
                label="CoastSat shoreline, endpoint"),
     ]
-    fig.legend(handles=handles, loc="outside upper right", ncol=3)
-    structures(ax)
 
-    caption(fig, (
-        f"Alongshore rate of change {start}-{end} by GIS domain, seaward "
-        f"positive. Red: the digitized dune line, its {start} and {end} "
-        f"positions differenced over the survey interval. Dark blue: the "
-        f"CoastSat shoreline as the per-domain linear regression rate over "
-        f"the window; light blue, dashed: the CoastSat endpoint rate from the "
-        f"mean position in a one-year window about each survey date. Where "
-        f"the two blues part is where the choice of estimator matters. Red and "
-        f"blue here mark the two features, not the two vintages. "
-        f"Bands mark Buxton, Avon and the Tri-Village; "
-        f"the solid hairline is the Buxton groin, the dotted ones the Avon "
-        f"and Rodanthe piers. Domain 1 is Cape Point, 90 is Pea Island."))
+
+def draw_alongshore(ax, dom: pd.DataFrame, half: float, label: bool = True,
+                    label_pt: float = 6.5) -> None:
+    """One alongshore panel in the house form (coastsat_lrr_windows.py):
+    full-height village bands, the groin and piers named along their lines,
+    open frame, y grid, symmetric y limits. Three lines: the two CoastSat
+    estimators in one colour family, the dune line red against them. Call
+    it after the figure's legend is placed: structures() tests its labels
+    against the data in the layout as it stands."""
+    from matplotlib.ticker import MultipleLocator
+
+    g = dom["gis"].to_numpy(dtype=float)
+    ax.set_xlim(GIS_FIRST - 0.5, GIS_LAST + 0.5)
+    ax.set_ylim(-half, half)
+    town_bands(ax, label=label)
+    ax.axhline(0, color=INK_MUTED, lw=0.6, zorder=2)
+    ax.plot(g, dom["cs_endpoint_m_yr"].to_numpy(dtype=float), color=C_ENDPOINT,
+            lw=0.9, ls=(0, (3, 1.5)), zorder=3)
+    ax.plot(g, dom["cs_lrr_m_yr"].to_numpy(dtype=float), color=C_LRR, lw=1.0,
+            zorder=4)
+    ax.plot(g, dom["dune_rate_m_yr"].to_numpy(dtype=float), color=C_DUNE, lw=1.1,
+            zorder=5)
+    ax.xaxis.set_major_locator(MultipleLocator(10))
+    ax.xaxis.set_minor_locator(MultipleLocator(5))
+    ax.yaxis.set_major_locator(MultipleLocator(Y_TICK))
+    ax.yaxis.grid(True, zorder=0)
+    ax.set_axisbelow(True)
+    open_frame(ax)
+    structures(ax, label=label, label_pt=label_pt)
+
+
+def _caption_body() -> str:
+    return ("Seaward positive. Red: the digitized dune line, its two survey "
+            "positions differenced over the survey interval. Dark blue: the "
+            "CoastSat shoreline as the per-domain linear regression rate over "
+            "the window; light blue, dashed: the CoastSat endpoint rate from the "
+            "mean position in a one-year window about each survey date. Where "
+            "the two blues part is where the choice of estimator matters. Red and "
+            "blue here mark the two features, not the two vintages. Bands mark "
+            "Buxton, Avon and the Tri-Village; the solid hairline is the Buxton "
+            "groin, the dotted ones the Avon and Rodanthe piers. Domain 1 is "
+            "Cape Point, 90 is Pea Island.")
+
+
+def alongshore_figure(dom: pd.DataFrame, out: Path, start: int, end: int) -> None:
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(figsize=figsize("double", aspect=0.38),
+                           constrained_layout=True)
+    half = _half(dom["cs_lrr_m_yr"], dom["cs_endpoint_m_yr"], dom["dune_rate_m_yr"])
+    ax.set_xlabel(DOMAIN_AXIS_LABEL)
+    ax.set_ylabel(Y_LABEL)
+    # The legend sits outside the axes and shrinks them at draw time, so it
+    # goes on BEFORE the structure labels are placed against the data.
+    fig.legend(handles=_legend_handles(), loc="outside upper right", ncol=3)
+    draw_alongshore(ax, dom, half)
+    caption(fig, f"Alongshore rate of change {start}-{end} by GIS domain. "
+                 + _caption_body())
     save(fig, out / "alongshore_dune_vs_coastsat", close=True)
+
+
+def _chains(windows):
+    """Windows linked end-to-start: [(1984,2004),(2004,2024)],
+    [(1996,2010),(2010,2024)] -- the same rule as coastsat_lrr_windows.py."""
+    rest = sorted(windows)
+    chains = []
+    while rest:
+        chain = [rest.pop(0)]
+        while True:
+            nxt = next((w for w in rest if w[0] == chain[-1][1]), None)
+            if nxt is None:
+                break
+            rest.remove(nxt)
+            chain.append(nxt)
+        chains.append(chain)
+    return chains
+
+
+def four_windows_figure(layout: str = "column") -> Path:
+    """Every window on disk on ONE y axis. `layout="column"` (the default
+    since Hannah asked for something easier to read, 2026-09-15): one
+    full-width panel per window, stacked, in chain order -- the 1984-start
+    pair then the 1996-start pair -- so each panel is as wide as the
+    single-window figure. `layout="grid"`: the 2 x 2 by period that
+    coastsat_lrr_windows/lrr_four_windows uses, the 1984 start in the left
+    column, the 1996 start in the right, the earlier window above. Reads
+    each window's supporting/domain_comparison.csv; run the windows first.
+    Written to the folder above the windows."""
+    import matplotlib.pyplot as plt
+
+    windows, frames = [], {}
+    for d in sorted(OUT_ROOT.iterdir()):
+        s_, _, e_ = d.name.partition("_")
+        f = d / "supporting" / "domain_comparison.csv"
+        if s_.isdigit() and e_.isdigit() and f.is_file():
+            windows.append((int(s_), int(e_)))
+            frames[(int(s_), int(e_))] = pd.read_csv(f)
+    if not windows:
+        sys.exit(f"no windows under {OUT_ROOT}; run the comparison first")
+    half = _half(*[frames[w][c] for w in windows
+                   for c in ("cs_lrr_m_yr", "cs_endpoint_m_yr", "dune_rate_m_yr")])
+
+    chains = _chains(windows)
+    grid = layout == "grid" and len(chains) == 2 and all(len(c) == 2 for c in chains)
+    if grid:
+        nrow, ncol = 2, 2
+        cells = [(r, c, chain[r]) for r in range(2) for c, chain in enumerate(chains)]
+        fig, axes = plt.subplots(nrow, ncol, sharex=True, sharey=True,
+                                 figsize=figsize("double", height=4.9),
+                                 constrained_layout=True)
+        label_pt = STRUCTURE_LABEL_PT_GRID
+    else:
+        ordered = [w for chain in chains for w in chain]
+        nrow, ncol = len(ordered), 1
+        cells = [(i, 0, w) for i, w in enumerate(ordered)]
+        fig, axes = plt.subplots(nrow, ncol, sharex=True, sharey=True,
+                                 figsize=figsize("double", height=min(2.0 * nrow + 0.9, 9.4)),
+                                 constrained_layout=True, squeeze=False)
+        label_pt = 6.5
+    axes = np.asarray(axes).reshape(nrow, ncol)
+    for ax in axes[-1, :]:
+        ax.set_xlabel(DOMAIN_AXIS_LABEL)
+    fig.supylabel(Y_LABEL, fontsize=9)
+    fig.legend(handles=_legend_handles(), loc="outside upper center", ncol=3)
+    for i, (r, c, (start, end)) in enumerate(cells):
+        ax = axes[r, c]
+        draw_alongshore(ax, frames[(start, end)], half, label=(i == 0),
+                        label_pt=label_pt)
+        _title(ax, i, f"{start}–{end}")
+        if c > 0:
+            ax.tick_params(labelleft=False)
+    wins = ", ".join(f"{a}–{b}" for _, _, (a, b) in cells)
+    layout = ("a 2 x 2 with the 1984-start period in the left column and the "
+              "1996-start period in the right, the earlier window above"
+              if grid else "one full-width panel per window, the 1984-start "
+              "pair above the 1996-start pair")
+    caption(fig, (f"Dune-line and CoastSat shoreline rates of change by GIS "
+                  f"domain for the {len(cells)} hindcast windows ({wins}), "
+                  f"{layout}, all on one y axis (±{half:g} m/yr, the largest "
+                  f"value over every window plus 1 m). " + _caption_body()
+                  + " Each window's survey dates and statistics are in its "
+                  "own supporting/PROVENANCE.md."))
+    return save(fig, OUT_ROOT / "alongshore_four_windows", close=True)[0]
 
 
 # -----------------------------------------------------------------------------
@@ -318,7 +425,16 @@ def main(argv=None) -> int:
     ap.add_argument("--half-window-days", type=float, default=SIX_MONTHS_DAYS,
                     help="half-width of the CoastSat window about each survey "
                          "date (default six months)")
+    ap.add_argument("--grid", action="store_true",
+                    help="draw every window on disk as one figure "
+                         "(alongshore_four_windows) and exit; no window is run")
+    ap.add_argument("--layout", choices=("column", "grid"), default="column",
+                    help="with --grid: one full-width panel per window "
+                         "(default), or the 2 x 2 by period")
     a = ap.parse_args(argv)
+    if a.grid:
+        print(f"-> {four_windows_figure(a.layout)}")
+        return 0
 
     assumed = {}
     dates = {}

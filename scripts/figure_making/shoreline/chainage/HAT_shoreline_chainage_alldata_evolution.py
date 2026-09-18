@@ -36,6 +36,20 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and 9-figures/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). This file drew in
+# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+# Typeface only: this script writes ANIMATION frames, and the printed-width
+# rule does not apply to something that is never printed. Its figsize is
+# the frame size and is left as it is.
+from site_layer.hat_figure_style import apply_style  # noqa: E402
+apply_style()
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 from matplotlib.colors import LinearSegmentedColormap
@@ -51,14 +65,12 @@ _REPO = next(_p for _p in Path(__file__).resolve().parents
 
 # The per-transect CoastSat timeseries live in the data tree, not under
 # scripts/; the old value was a driveless path that never existed (2026-09-10).
-ROOT_DATA_DIR = str(_REPO / "data" / "hatteras_init" / "5-scr"
-                    / "coastsat_timeseries")
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+ROOT_DATA_DIR = str(_obs.COASTSAT_TIMESERIES)
 # "input_preperation" is the pre-2026 folder name; the lookup now lives
 # under data/hatteras_init/5-scr/transect_domains/ (moved out of the
 # scripts tree 2026-09-12; hat_observed_rates.py resolves it).
-LOOKUP_CSV    = str(Path(__file__).resolve().parents[3]
-                    / "data" / "hatteras_init" / "5-scr"
-                    / "transect_domains" / "transect_domain_lookup.csv")
+LOOKUP_CSV    = str(_obs.transect_lookup())
 # Products go to output/, not beside the script (2026-09-13). These were
 # absolute paths into a home directory, so they resolved on one machine
 # and dumped 1212 files into the code tree. Rule 1 and rule 5 of

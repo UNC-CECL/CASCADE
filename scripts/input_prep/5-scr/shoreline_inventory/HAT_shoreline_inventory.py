@@ -48,10 +48,13 @@ from pathlib import Path as _Path
 # renamed since. Rule 5 of ORGANIZATION.md.
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
-_SCR_DATA = (_Path(__file__).resolve().parents[4] / "data"
-             / "hatteras_init" / "5-scr")
-STUDY_AREA_FILTER_PATH = str(_SCR_DATA / "shoreline_inventory"
-                             / "cascade_area.geojson")
+# Resolved through hat_observed_rates.py since 2026-09-18.
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+STUDY_AREA_FILTER_PATH = str(_obs.SHORELINE_INVENTORY / "cascade_area.geojson")
 
 # Buffer distance (m) applied around the filter geometry.
 # For a bounding box: 500 m to catch drifted historic shorelines.
@@ -60,22 +63,20 @@ STUDY_AREA_FILTER_PATH = str(_SCR_DATA / "shoreline_inventory"
 STUDY_AREA_BUFFER_M = 500
 
 # --- Source 1: user-digitized wet-dry lines ---
-WET_DRY_PATH     = str(_SCR_DATA / "shoreline_inventory"
-                       / "wet_dry_groin.geojson")
+WET_DRY_PATH     = str(_obs.SHORELINE_INVENTORY / "wet_dry_groin.geojson")
 WET_DRY_DATE_COL = "date"
 
 # --- Source 2: NC Coastal Management historical shorelines ---
-NC_STATE_PATH     = str(_SCR_DATA / "shoreline_inventory"
-                        / "nc_shorelines.geojson")
+NC_STATE_PATH     = str(_obs.SHORELINE_INVENTORY / "nc_shorelines.geojson")
 NC_STATE_DATE_COL = "DATE_"
 
 # --- Source 3: CoastSat time-series CSVs ---
 # GeoJSON with CoastSat transect geometry (used to spatially filter)
-COASTSAT_TRANSECT_GEOM = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "CoastSat_transect_layer.geojson")
+COASTSAT_TRANSECT_GEOM = str(_obs.TRANSECT_LAYER)
 # ID column in the CoastSat geometry file
 COASTSAT_TRANSECT_ID_COL = "id"
 # Root folder containing per-transect CSVs in site subfolders
-COASTSAT_ROOT_DIR = str(_SCR_DATA / "coastsat_timeseries")
+COASTSAT_ROOT_DIR = str(_obs.COASTSAT_TIMESERIES)
 # A CoastSat date is "well-covered" if this many study-area transects
 # reported an observation on that date
 COASTSAT_WELL_COVERED_MIN_TRANSECTS = 10
@@ -105,8 +106,7 @@ N_COASTSAT_SNAPSHOTS = 10
 BASEMAP = "carto_light"
 
 # --- Output ---
-OUTPUT_DIR = str(_SCR_DATA / "shoreline_inventory"
-                 / "shoreline_position_output")
+OUTPUT_DIR = str(_obs.SHORELINE_INVENTORY / "shoreline_position_output")
 
 # CRS for spatial operations (UTM 18N covers NC Outer Banks)
 PROJECTED_CRS = "EPSG:32618"

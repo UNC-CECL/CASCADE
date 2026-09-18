@@ -210,13 +210,18 @@ WET_DRY_DATE_COL = "date"
 # the owner -- HAT_shoreline_inventory.py reads the same file from there -- and
 # this script already crosses into data/hatteras_init for the CoastSat transect
 # geometry two lines below, so the direction is not new.
-NC_STATE_PATH     = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr"
-                        / "shoreline_inventory" / "nc_shorelines.geojson")
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+NC_STATE_PATH     = str(_obs.SHORELINE_INVENTORY / "nc_shorelines.geojson")
 NC_STATE_DATE_COL = "DATE_"
 
-COASTSAT_TRANSECT_GEOM   = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "CoastSat_transect_layer.geojson")
+# These two named coastsat_lrr/ and had not resolved since the 2026-09-12 move.
+COASTSAT_TRANSECT_GEOM   = str(_obs.TRANSECT_LAYER)
 COASTSAT_TRANSECT_ID_COL = "id"
-COASTSAT_ROOT_DIR        = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "coastsat_timeseries")
+COASTSAT_ROOT_DIR        = str(_obs.COASTSAT_TIMESERIES)
 
 # ─── CASCADE domain reference (authoritative) ──────────────────────────
 # A GeoJSON of the 90 real CASCADE domain boxes (D1-D90), each a 500 m

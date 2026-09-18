@@ -70,13 +70,13 @@ import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.collections import LineCollection  # noqa: E402
 from matplotlib.ticker import MultipleLocator  # noqa: E402
 
-from hat_figure_style import (  # noqa: E402
+from site_layer.hat_figure_style import (  # noqa: E402
     C, DOMAIN_AXIS_LABEL, INK, INK_MUTED, STRUCTURE_LABEL_PT, apply_style,
     caption, figsize, open_frame, save, structures, support_dir, town_bands,
     _title,
 )
-from hat_observed_rates import SCR_ROOT, domain_csv  # noqa: E402
-from hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
+from site_layer.hat_observed_rates import COASTSAT_LRR_WINDOWS, domain_csv  # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
 
 # The 2 x 2 layout is by model period: each column is one CHAIN of windows,
 # the second starting where the first ends (1984-2004 then 2004-2024 is the
@@ -84,7 +84,7 @@ from hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
 # then down. Any window set that is not two chains of two falls back to one
 # column.
 DEFAULT_WINDOWS = [(1984, 2004), (1996, 2010), (2004, 2024), (2010, 2024)]
-OUT_DIR = SCR_ROOT / "coastsat_lrr_windows"
+OUT_DIR = COASTSAT_LRR_WINDOWS
 
 N_DOMAINS = 90
 Y_LABEL = "Shoreline change rate (m/yr)"
@@ -168,7 +168,7 @@ def draw_panel(ax, df: pd.DataFrame, half: float, label: bool = True,
                line_lw: float = 1.0, fill_y=None, fill_outline_lw: float = 0.8):
     """The observed panel. `std`, `line_lw` and `fill_y` exist for the
     comparison figure that lays a scoring target over this
-    (scripts/analyze_output/compare_runs/HAT_observed_vs_modeled_windows.py):
+    (scripts/analyze_output/compare_runs/HAT_rate_windows.py):
     with `fill_y` given, THAT series takes the fill and a light outline, and
     the per-domain means are only the thin line over it, so the reference is
     the shape and the data the line (Hannah, 2026-09-15, option A)."""

@@ -32,10 +32,15 @@ Outputs
 # ============================================================
 
 # Full transect-level LRR results (comparison of coastsat_domain_lrr_fixed.py)
-TRANSECT_LRR_CSV = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "2004_2024" / "transect_lrr_full.csv")
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+TRANSECT_LRR_CSV = str(_obs.lrr_csv(2004, 2024))
 
 # Domain-level summary (comparison of coastsat_domain_lrr_fixed.py)
-DOMAIN_SUMMARY_CSV = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "2004_2024" / "domain_lrr_summary.csv")
+DOMAIN_SUMMARY_CSV = str(_obs.domain_csv(2004, 2024))
 
 # Where to save the per-domain comparison table
 OUTPUT_REPORT_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat_verification\verification_report_2004_2024.csv"

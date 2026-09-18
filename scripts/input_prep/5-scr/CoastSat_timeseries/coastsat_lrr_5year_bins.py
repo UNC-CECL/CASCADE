@@ -47,7 +47,14 @@ Usage
 # CONFIG
 # ============================================================
 
-LOOKUP_CSV    = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "transect_domain_lookup.csv")
+# Resolved through hat_observed_rates.py (2026-09-18); the typed path named
+# coastsat_lrr/ and used _PATH_REPO before it was defined.
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+LOOKUP_CSV    = str(_obs.TRANSECT_DOMAINS / "transect_domain_lookup.csv")
 # Anchored on this file 2026-09-12. The literals here were
 # drive-rooted and had never resolved; the data they name also
 # moved out of the scripts tree on that date.
@@ -57,11 +64,9 @@ from pathlib import Path as _Path
 # renamed since. Rule 5 of ORGANIZATION.md.
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
-_SCR_DATA = (_Path(__file__).resolve().parents[4] / "data"
-             / "hatteras_init" / "5-scr")
-ROOT_DATA_DIR = str(_SCR_DATA / "coastsat_timeseries")
+ROOT_DATA_DIR = str(_obs.COASTSAT_TIMESERIES)
 SITE_FILTER   = "usa_NC"
-OUTPUT_DIR    = str(_SCR_DATA / "coastsat_timeseries_lrr")
+OUTPUT_DIR    = str(_obs.TIMESERIES_LRR)
 
 # --- Time periods: (file_tag, figure_title, file_stem, start_date, end_date) ---
 PERIODS = [
