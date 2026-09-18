@@ -75,7 +75,8 @@ from site_layer.hat_overwash import WORKBOOK as _OBS_WORKBOOK  # noqa: E402
 OBS_XLSX_PATH = str(_OBS_WORKBOOK)
 
 # Products go under output/, never beside the script -- see output/README.md.
-OUT_DIR = str(PROJECT_BASE_DIR / "output" / "comparisons" / "overwash")
+from site_layer.hat_figure_style import COMPARISONS_ROOT  # noqa: E402
+OUT_DIR = str(COMPARISONS_ROOT / "overwash")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 START_YEAR          = 1984

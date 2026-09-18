@@ -41,7 +41,7 @@ from pathlib import Path as _HP
 _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
                              if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
-                              DOMAIN_AXIS_LABEL)
+                              DOMAIN_AXIS_LABEL, FIG_W_DOUBLE)
 apply_style()
 import matplotlib.ticker as ticker
 import matplotlib.colors as mcolors
@@ -95,7 +95,8 @@ COASTSAT_BASE_DIR = str(_obs.COASTSAT_LRR_ROOT)
 # beside the script -- see output/README.md, which names comparisons/ as the
 # home for cross-run figures. A subfolder named COMPARISON_NAME is created
 # automatically.
-COMPARISON_ROOT_DIR = os.path.join(PROJECT_BASE_DIR, "output", "comparisons")
+from site_layer.hat_figure_style import COMPARISONS_ROOT  # noqa: E402
+COMPARISON_ROOT_DIR = str(COMPARISONS_ROOT)
 
 # The rate CSV's schema. WHICH RATE COLUMN IS READ IS A METHOD CHOICE, NOT A
 # SPELLING. The file carries two: lrr_m_yr, an OLS slope through the annual

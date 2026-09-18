@@ -35,6 +35,18 @@ import types
 import zipfile
 import numpy as np
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). This file drew in
+# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              FIG_W_DOUBLE)
+apply_style()
 import matplotlib.ticker as ticker
 import matplotlib.colors as mcolors
 from matplotlib.cm import ScalarMappable
@@ -294,7 +306,9 @@ def plot_heatmap(years, Q, gis_domain_ids):
     """
     nt    = len(years)
     fig_h = max(5.0, nt * 0.30)
-    fig, ax = plt.subplots(figsize=(14, fig_h), constrained_layout=True)
+    fig, ax = plt.subplots(
+        figsize=figsize("double", height=fig_h * FIG_W_DOUBLE / 14),
+        constrained_layout=True)
     fig.patch.set_facecolor("white")
 
     extent = [
@@ -341,7 +355,7 @@ def plot_lines_by_year(years, Q, gis_domain_ids):
     cmap_lines   = plt.get_cmap("viridis", n_lines)
     norm_lines   = mcolors.Normalize(vmin=years[0], vmax=years[-1])
 
-    fig, ax = plt.subplots(figsize=(13, 5.5), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=figsize("double", height=3.16), constrained_layout=True)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
 
@@ -391,7 +405,7 @@ def plot_timeseries(years, Q):
     q_mean  = np.nanmean(Q, axis=1)
     q_total = np.nansum(Q,  axis=1)
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 7),
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=figsize("double", height=5.24),
                                     sharex=True, constrained_layout=True)
     fig.patch.set_facecolor("white")
 

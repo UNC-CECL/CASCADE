@@ -183,7 +183,8 @@ dune = _import_by_path(
 
 RAW_RUNS = _REPO / "output" / "raw_runs"
 RUN_INDEX = RAW_RUNS / "run_index.csv"
-OUT_DIR = _REPO / "output" / "comparisons" / "rate_windows"
+from site_layer.hat_figure_style import COMPARISONS_ROOT  # noqa: E402
+OUT_DIR = COMPARISONS_ROOT / "rate_windows"
 
 PRESET = "edgeBE"
 # window -> (run_name, arm): the matrix, ends solved on CoastSat

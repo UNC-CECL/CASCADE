@@ -119,8 +119,8 @@ C_GROIN        = "#B71C1C"   # dark red    — groin lines
 
 # --- Output ---
 # Products live under output/, never beside the script -- see output/README.md.
-OUTPUT_DIR = str(PROJECT_BASE_DIR / "output" / "comparisons"
-                 / "smoothing_vs_cascade" / "1984_2004")
+from site_layer.hat_figure_style import COMPARISONS_ROOT, FIG_W_DOUBLE  # noqa: E402
+OUTPUT_DIR = str(COMPARISONS_ROOT / "smoothing_vs_cascade" / "1984_2004")
 
 # ============================================================
 # CASCADE MODEL OUTPUT CONFIG
