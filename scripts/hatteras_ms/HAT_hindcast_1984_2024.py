@@ -175,7 +175,7 @@ from cascade_pipeline.run_registry import (
 from cascade_pipeline.shoreline import (build_shoreline_matrix,
                                         compute_change_rate, compute_lrr)
 
-from hatteras_site_config import (
+from site_layer.hatteras_site_config import (
     HATTERAS_ANNOTATIONS,
     HATTERAS_BEACH_DUNE,
     HATTERAS_BE_PRESETS,
@@ -193,7 +193,11 @@ from hatteras_site_config import (
     HATTERAS_ROAD_EVENTS,
     island_offset_version,
     resolve_be_preset,
+    HATTERAS_GEOMETRY,
+    HATTERAS_GEOMETRY_EXTENDED,
+    SCORE_INTERIOR_GIS,
 )
+from cascade_pipeline.domains import DEFAULT_DOMAINS  # the surveyed reach, GIS 1-90
 
 # The notebook draws its final figures inline. A headless run cannot, so the
 # figures are saved and not shown. This is the only behavioural difference in
@@ -214,7 +218,9 @@ except ImportError:                                     # optional dependency
 
 print(f"Imports OK from {SCRIPTS_DIR}")
 print(f"USE_SANDBOX_CASCADE = {USE_SANDBOX_CASCADE}")
-print(f"HATTERAS_DOMAINS.total_domains = {HATTERAS_DOMAINS.total_domains}")
+print(f"HATTERAS_DOMAINS.total_domains = {HATTERAS_DOMAINS.total_domains}  "
+      f"(geometry {HATTERAS_GEOMETRY!r}: GIS {HATTERAS_DOMAINS.first_gis_id} "
+      f"to {HATTERAS_DOMAINS.last_gis_id})")
 
 
 # =============================================================================
@@ -255,8 +261,8 @@ print(f"HATTERAS_DOMAINS.total_domains = {HATTERAS_DOMAINS.total_domains}")
 #
 # To reproduce an older run deliberately:
 #     topo_dirs("2004-start", override="v3").
-from hat_topo_version import topo_dirs, current_topo_versions  # scripts/, on sys.path above
-from hat_topo_version import BUFFER_DIR as _BUFFER_DIR
+from site_layer.hat_topo_version import topo_dirs, current_topo_versions  # scripts/, on sys.path above
+from site_layer.hat_topo_version import BUFFER_DIR as _BUFFER_DIR
 
 # _BOOT_CONFIG, not RUN_CONFIG: the period must be known HERE, and RUN_CONFIG is
 # not loaded until section 3. The two are compared a few lines below section 3's
@@ -271,10 +277,9 @@ print(f"topography            {TOPO_PRODUCT} / {TOPO_DUNE_VERSION}  "
 
 HATTERAS_DATA_BASE = PROJECT_BASE_DIR / "data" / "hatteras_init"
 OUTPUT_ROOT = PROJECT_BASE_DIR / "output" / "raw_runs"
-# Moved out of the scripts tree 2026-09-12: the rate fits are DATA and
-# the model reads them. Resolve through hat_observed_rates.py in new code.
-COASTSAT_BASE_DIR = (PROJECT_BASE_DIR / "data" / "hatteras_init"
-                     / "5-scr" / "coastsat_lrr")
+# The rate fits are DATA and the model reads them; where they live is
+# hat_observed_rates.py's to say (2026-09-18), not this file's.
+from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as COASTSAT_BASE_DIR  # noqa: E402
 PARAMETER_FILE = "Hatteras-CASCADE-parameters.yaml"  # resolved by CASCADE
 
 BARRIER3D_DIR = HATTERAS_DATA_BASE / "1-barrier3d-domains"
@@ -473,6 +478,19 @@ SCENARIO = RUN_CONFIG.scenario
 # preview below needs it, and a value the name depends on must be settled
 # before the name is predicted.
 OFFSET_MODE = RUN_CONFIG.offset_mode
+
+# THE REACH (2026-09-16, the Pea Island extension experiment).
+# hatteras_site_config built HATTERAS_DOMAINS from HAT_GEOMETRY in the
+# environment at import, before this config was read; the config carries
+# the same name so a yaml `geometry:` cannot silently disagree with the
+# arrays already in memory. "base" is GIS 1-90, every matrix run.
+GEOMETRY = RUN_CONFIG.geometry
+if GEOMETRY != HATTERAS_GEOMETRY:
+    raise SystemExit(
+        f"\n[stop] geometry mismatch: the config says {GEOMETRY!r} but "
+        f"hatteras_site_config built {HATTERAS_GEOMETRY!r} from the "
+        f"environment. Set HAT_GEOMETRY={GEOMETRY} in the environment "
+        f"(the yaml alone cannot select a reach).\n")
 
 
 
@@ -844,6 +862,20 @@ if _BE_OVERRIDE_RAW:
         _was = DOMAIN_BE_RATES.get(_gis, 0.0)
         print(f"  GIS {_gis:<3}           {_was:+.4f} -> {_rate:+.4f} m/yr")
         DOMAIN_BE_RATES[_gis] = _rate
+
+# An edgeBE run imposes a value at BOTH ends. The config guarantees that
+# for the base geometry; in an extended geometry (2026-09-16) the new
+# end has no solved value until the Newton steps are done, and each step
+# supplies its probe through HAT_BE_OVERRIDE. Refused here rather than
+# run as a zeroBE in edgeBE clothing.
+if SOURCE_SINK_PRESET == "edgeBE":
+    _no_edge = [g for g in HATTERAS_BE_EDGE_DOMAINS
+                if not DOMAIN_BE_RATES.get(g)]
+    if _no_edge:
+        raise SystemExit(
+            f"\n[stop] edgeBE has no nonzero rate at end domain(s) "
+            f"{_no_edge} of geometry {HATTERAS_GEOMETRY!r}. Supply one "
+            f"with HAT_BE_OVERRIDE (e.g. '115=12.0'), or run zeroBE.\n")
 
 BACKGROUND_EROSION_RATES = build_background_erosion(
     DOMAIN_BE_RATES, HATTERAS_DOMAINS)
@@ -1273,6 +1305,20 @@ if TARGET_WINDOW != max(LOESS_CONFIG.window_domains):
         f"reference curve -- section 12 would compare against a different "
         f"curve than the one reported here.")
 
+# AN EXTENDED GEOMETRY (2026-09-16) has CoastSat rows beyond GIS 90 of its
+# own (coastsat_extension_lrr.py). Its active window loads the surveyed
+# table WITH those rows appended, so one LOESS runs over the whole reach
+# and the new end domain has a target. The surveyed table stays the
+# interior score's target (COASTSAT_TARGET_BASE, below) in every geometry.
+if HATTERAS_GEOMETRY_EXTENDED:
+    COASTSAT_DATASETS = [
+        CoastSatDataset(label=ds.label + " + extension",
+                        period_start=ds.period_start,
+                        csv_path=str(Path(ds.csv_path).parent / "ext"
+                                     / "transect_lrr_with_base.csv"))
+        if ds.period_start == START_YEAR else ds
+        for ds in COASTSAT_DATASETS]
+
 cs_series = build_coastsat_series(
     COASTSAT_DATASETS, active_period_start=START_YEAR,
     loess_config=LOESS_CONFIG, domains=HATTERAS_DOMAINS)
@@ -1289,6 +1335,23 @@ if CS_ACTIVE is None:
 
 COASTSAT_TARGET = build_target_table(
     CS_ACTIVE, LOESS_CONFIG, HATTERAS_DOMAINS, TARGET_WINDOW)
+
+# The surveyed reach's own target: what the interior score is graded
+# against in every geometry (2026-09-16). The same object as
+# COASTSAT_TARGET in the base geometry; in an extended one, the surveyed
+# table smoothed over GIS 1-90 alone, exactly as the baseline run saw it.
+COASTSAT_TARGET_BASE = COASTSAT_TARGET
+if HATTERAS_GEOMETRY_EXTENDED:
+    _cs_base = build_coastsat_series(
+        [CoastSatDataset(
+            label=f"CoastSat LRR ({START_YEAR}-{END_YEAR}) surveyed",
+            period_start=START_YEAR,
+            csv_path=str(COASTSAT_BASE_DIR / f"{START_YEAR}_{END_YEAR}"
+                         / "transect_lrr_full.csv"))],
+        active_period_start=START_YEAR, loess_config=LOESS_CONFIG,
+        domains=DEFAULT_DOMAINS)
+    COASTSAT_TARGET_BASE = build_target_table(
+        _cs_base[0], LOESS_CONFIG, DEFAULT_DOMAINS, TARGET_WINDOW)
 
 
 # --- 8.4 report ---------------------------------------------------------------
@@ -1818,6 +1881,19 @@ if ROAD_SUMMARY:
 SKILL = skill_vs_target(model_lrr, COASTSAT_TARGET, HATTERAS_DOMAINS)
 SKILL_ENDPOINT = skill_vs_target(change_rate, COASTSAT_TARGET,
                                  HATTERAS_DOMAINS)
+# The interior number is GIS 2-89 against the SURVEYED target in every
+# geometry (2026-09-16), so an extended run and its 90-domain baseline are
+# graded alike; in the base geometry that is exactly the margin-1 interior
+# and nothing changes. The extended reach's own interior, its two ends
+# dropped, is kept beside it as the "reach" interior.
+for _skill, _rate in ((SKILL, model_lrr), (SKILL_ENDPOINT, change_rate)):
+    _skill["mean_bias_reach_interior_m_yr"] = _skill["mean_bias_interior_m_yr"]
+    _skill["rmse_reach_interior_m_yr"] = _skill["rmse_interior_m_yr"]
+    _base = skill_vs_target(_rate, COASTSAT_TARGET_BASE, HATTERAS_DOMAINS,
+                            interior_gis=SCORE_INTERIOR_GIS)
+    for _key in ("mean_bias_interior_m_yr", "rmse_interior_m_yr",
+                 "n_domains_interior"):
+        _skill[_key] = _base[_key]
 print(f"\nSKILL vs CoastSat     model LRR - target LRR, m/yr")
 print(f"  island-wide         bias {SKILL['mean_bias_m_yr']:+.3f}   "
       f"RMSE {SKILL['rmse_m_yr']:.3f}   (n={SKILL['n_domains']})")
@@ -1887,6 +1963,11 @@ _META = {
         # The island offset is versioned too (2026-09-15) and the run name
         # does not say which one was read, so it is recorded here.
         "island_offset_version": ISLAND_OFFSET_VERSION,
+        # The reach (2026-09-16): "base" is GIS 1-90; an extended geometry
+        # is not a matrix run and its rows must say so.
+        "geometry": (HATTERAS_GEOMETRY,
+                     f"GIS {HATTERAS_DOMAINS.first_gis_id} to "
+                     f"{HATTERAS_DOMAINS.last_gis_id}"),
         "run_kind": RUN_KIND,
         "run_tag": RUN_TAG,
         "parameter_file": (RUN_PARAMETER_FILE.name,
@@ -2047,6 +2128,8 @@ _index_row = {
     "topo_product": TOPO_PRODUCT,          # see the note at the json write
     "topo_dune_version": TOPO_DUNE_VERSION,
     "island_offset_version": ISLAND_OFFSET_VERSION,
+    "geometry": HATTERAS_GEOMETRY,
+    "rmse_reach_interior_m_yr": SKILL["rmse_reach_interior_m_yr"],
     "git_commit": _GIT["commit"][:12],
     "git_dirty": _GIT["dirty"],
 }

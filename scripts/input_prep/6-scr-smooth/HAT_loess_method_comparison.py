@@ -66,20 +66,22 @@ PROJECT_BASE_DIR = next(
 TRANSECT_X_AXIS = "along_coast_m"   # "along_coast_m" | "transect_id"
 
 # ── Domain-mode inputs ───────────────────────────────────────
-DOMAIN_CSV_1984_2004 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr"
-                        / "1984_2004" / "domain_lrr_summary.csv")
-DOMAIN_CSV_2004_2024 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr"
-                        / "2004_2024" / "domain_lrr_summary.csv")
+# Resolved through hat_observed_rates.py (2026-09-18), not typed.
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+DOMAIN_CSV_1984_2004 = str(_obs.domain_csv(1984, 2004))
+DOMAIN_CSV_2004_2024 = str(_obs.domain_csv(2004, 2024))
 CS_DOMAIN_COL = "domain_number"
 CS_LRR_COL    = "mean_lrr"
 CS_STD_COL    = "std_lrr"
 
 # ── Transect-mode inputs ─────────────────────────────────────
 # Point to your transect_lrr_full.csv files for each period
-TRANSECT_CSV_1984_2004 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr"
-                          / "1984_2004" / "transect_lrr_full.csv")
-TRANSECT_CSV_2004_2024 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr"
-                          / "2004_2024" / "transect_lrr_full.csv")
+TRANSECT_CSV_1984_2004 = str(_obs.lrr_csv(1984, 2004))
+TRANSECT_CSV_2004_2024 = str(_obs.lrr_csv(2004, 2024))
 
 # Column names in your transect CSV (transect_lrr_full.csv)
 T_TRANSECT_ID_COL = "transect_id"    # string IDs — converted to sequential int internally
@@ -127,7 +129,7 @@ SKIP_SOUTHERN_DOMAINS = 10
 # This block used to hold a copy of the town spans, the village centres, the
 # piers, the groins and the Wimble Shoals zone, in domain units and again in
 # metres, with its own colours -- a second description of the island to keep
-# in step with scripts/hatteras_site_config.py. It is gone: the village
+# in step with scripts/site_layer/hatteras_site_config.py. It is gone: the village
 # shading now comes from the house helper town_bands() and everything else is
 # read from HATTERAS_ANNOTATIONS. See ANNOTATION HELPERS below.
 #
@@ -166,10 +168,10 @@ warnings.filterwarnings("ignore")
 # The house figure style and the site's annotation config are siblings in
 # scripts/, which is not on sys.path when this file is run from its own folder.
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
-from hat_figure_style import (            # noqa: E402
+from site_layer.hat_figure_style import (            # noqa: E402
     C, C_1984, C_1997, DOMAIN_AXIS_LABEL, INK, INK_MUTED, _title, apply_style,
     caption, figsize, open_frame, save, town_bands)
-from hatteras_site_config import HATTERAS_ANNOTATIONS as ANN   # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS as ANN   # noqa: E402
 
 # Subfolders are created automatically in main()
 
@@ -177,7 +179,7 @@ from hatteras_site_config import HATTERAS_ANNOTATIONS as ANN   # noqa: E402
 # STYLE
 # ============================================================
 # One typographic and colour standard for every Hatteras figure, in
-# scripts/hat_figure_style.py. This script used to set its own rcParams and
+# scripts/site_layer/hat_figure_style.py. This script used to set its own rcParams and
 # name its own hex colours; both are gone.
 apply_style()
 
@@ -419,7 +421,7 @@ def aggregate_to_domains(t_df):
 # ANNOTATION HELPERS
 # ============================================================
 # Where the villages, piers, groins and shoal zones are is settled in
-# scripts/hatteras_site_config.py (HATTERAS_ANNOTATIONS). This script used to
+# scripts/site_layer/hatteras_site_config.py (HATTERAS_ANNOTATIONS). This script used to
 # carry its own copy of the spans, the village centres and their colours, so
 # the island had two descriptions of itself that had to be kept in step. The
 # village shading now comes from the house helper town_bands(); only the marks

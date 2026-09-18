@@ -50,21 +50,28 @@ PROJECT_BASE_DIR = next(
 # CONFIG
 # ============================================================
 
+# Resolved through hat_observed_rates.py (2026-09-18), not typed.
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+
 # --- DSAS CSVs ---
-DSAS_CSV_1978_1997 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "scr-dsas-1978-2019"
-                      / "dsas_1978_1997_rates.csv")
-DSAS_CSV_1997_2019 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "scr-dsas-1978-2019"
-                      / "dsas_1997_2019_rates.csv")
+DSAS_CSV_1978_1997 = str(_obs.DSAS_ROOT / "dsas_1978_1997_rates.csv")
+DSAS_CSV_1997_2019 = str(_obs.DSAS_ROOT / "dsas_1997_2019_rates.csv")
 
 DSAS_DOMAIN_COL = "domain_id"
 DSAS_LRR_COL    = "MEAN_LRR"
 DSAS_STD_COL    = "STD_LRR"
 
 # --- CoastSat CSVs ---
-COASTSAT_CSV_1978_1997 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "old_time_periods"
-                          / "1978_1997" / "domain_lrr_summary.csv")
-COASTSAT_CSV_1997_2019 = str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "old_time_periods"
-                          / "1997_2019" / "domain_lrr_summary.csv")
+# The retired windows. old_time_periods/ became superseded_20260810/ and
+# these two had not resolved since.
+COASTSAT_CSV_1978_1997 = str(_obs.COASTSAT_LRR_SUPERSEDED / "1978_1997"
+                          / "domain_lrr_summary.csv")
+COASTSAT_CSV_1997_2019 = str(_obs.COASTSAT_LRR_SUPERSEDED / "1997_2019"
+                          / "domain_lrr_summary.csv")
 
 CS_DOMAIN_COL = "domain_number"
 CS_LRR_COL    = "mean_lrr"
@@ -123,6 +130,18 @@ if hasattr(sys.stdout, "reconfigure"):
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and 9-figures/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). This file drew in
+# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              DOMAIN_AXIS_LABEL)
+apply_style()
 import matplotlib.gridspec as gridspec
 from matplotlib.transforms import blended_transform_factory
 from scipy import stats
@@ -358,7 +377,7 @@ def style_domain_axis(ax):
     ax.set_xlim(DOMAIN_MIN - 0.5, DOMAIN_MAX + 0.5)
     ax.set_xticks(range(DOMAIN_MIN, DOMAIN_MAX + 1, 10))
     ax.set_xticks(range(DOMAIN_MIN, DOMAIN_MAX + 1, 5), minor=True)
-    ax.set_xlabel("CASCADE Model Domain (500 m alongshore)",
+    ax.set_xlabel(DOMAIN_AXIS_LABEL,
                   fontsize=11, fontweight="bold")
     ax.axhline(0, color="black", lw=1.1, ls="--", alpha=0.55)
     ax.annotate("Accretion ▲", xy=(DOMAIN_MAX + 0.5, 0.15),
@@ -378,7 +397,7 @@ def plot_overview_smoothed(merged_1978, merged_1997, out_path):
     2-panel figure: raw lines (faded) + LOESS overlay (bold).
     This is the recommended figure for collaborator review.
     """
-    fig, axes = plt.subplots(2, 1, figsize=(16, 11), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.14), sharex=True)
     fig.suptitle("DSAS vs CoastSat Shoreline Change Rates — Hatteras Island, NC\n"
                  "Raw (faded) + LOESS smoothed (bold)",
                  fontsize=14, fontweight="bold", y=1.01)
@@ -457,7 +476,7 @@ def plot_smoothed_only(merged_1978, merged_1997, out_path):
     2-panel: LOESS smoothed lines only, no raw data.
     Cleanest version for presentations or dissertation figures.
     """
-    fig, axes = plt.subplots(2, 1, figsize=(16, 10), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=4.68), sharex=True)
     fig.suptitle("DSAS vs CoastSat Shoreline Change Rates — Hatteras Island, NC\n"
                  f"LOESS smoothed (frac={LOESS_FRAC})",
                  fontsize=14, fontweight="bold", y=1.01)
@@ -525,7 +544,7 @@ def plot_smoothing_sensitivity(merged, period_label, out_path):
                    "frac=0.15  (~13 domains) ← default",
                    "frac=0.20  (~18 domains)"]
 
-    fig, axes = plt.subplots(3, 1, figsize=(16, 13), sharex=True, sharey=True)
+    fig, axes = plt.subplots(3, 1, figsize=figsize("double", height=6.08), sharex=True, sharey=True)
     fig.suptitle(f"LOESS Smoothing Sensitivity — {period_label}\n"
                  f"Effect of bandwidth on DSAS vs CoastSat comparison",
                  fontsize=13, fontweight="bold", y=1.01)
@@ -576,7 +595,7 @@ def plot_combined_sources(merged_1978, merged_1997, out_path):
     Single panel: all 4 smoothed series together.
     Good for seeing overall pattern and period differences simultaneously.
     """
-    fig, ax = plt.subplots(figsize=(16, 6))
+    fig, ax = plt.subplots(figsize=figsize("double", height=2.81))
     frames, frames_labelled = {}, False
 
     for merged, label, c_dsas, c_cs, ls_cs in [
@@ -651,7 +670,7 @@ def plot_scatter_smoothed(merged, period_label, out_path):
     r_raw, _ = pearson_r(m["dsas_lrr"].values, m["cs_lrr"].values)
     N_EFF_SPANS = 1.0 / LOESS_FRAC
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    fig, axes = plt.subplots(1, 2, figsize=figsize("double", height=3.21))
 
     for ax, x_col, y_col, s, subtitle in [
         (axes[0], "dsas_lrr",        "cs_lrr",        s_raw,    "Raw values"),
@@ -721,7 +740,7 @@ def plot_scatter_smoothed(merged, period_label, out_path):
 # ============================================================
 
 def plot_line_comparison(merged, period_label, out_path):
-    fig, ax = plt.subplots(figsize=(16, 6))
+    fig, ax = plt.subplots(figsize=figsize("double", height=2.81))
     c_dsas = C_DSAS_1978 if "1978" in period_label else C_DSAS_1997
     c_cs   = C_CS_1978   if "1978" in period_label else C_CS_1997
 
@@ -758,7 +777,7 @@ def plot_difference(merged, period_label, out_path):
     diff_smooth = m["diff_smooth"]
     colors = ["#2166ac" if v >= 0 else "#b2182b" for v in diff]
 
-    fig, ax = plt.subplots(figsize=(16, 5))
+    fig, ax = plt.subplots(figsize=figsize("double", height=2.34))
     ax.bar(m["domain"], diff, color=colors, edgecolor="none",
            width=0.85, alpha=0.55, label="Raw difference")
     ax.plot(m["domain"], diff_smooth, color="black", lw=2.5,

@@ -10,11 +10,23 @@ Run this once and get everything!
 from pathlib import Path as _Path
 _REPO = next(_p for _p in _Path(__file__).resolve().parents
              if (_p / "pyproject.toml").exists())
-_DSAS = (_REPO / "data" / "hatteras_init" / "5-scr"
-         / "scr-dsas-1978-2019")
+import sys as _dsys
+_dsys.path.insert(0, str(_REPO / "scripts"))
+from site_layer.hat_observed_rates import DSAS_ROOT as _DSAS  # noqa: E402
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and 9-figures/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). This file drew in
+# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import apply_style, figsize  # noqa: E402
+apply_style()
 
 # ============================================================================
 # PART 1: LOAD AND CALCULATE RATES
@@ -122,7 +134,7 @@ period_names = {
 # OPTION 1: Sequential color scheme
 # ============================================================================
 
-fig, ax = plt.subplots(figsize=(18, 8))
+fig, ax = plt.subplots(figsize=figsize("double", height=3.32))
 
 colors_seq = ['#08519c', '#3182bd', '#6baed6', '#c6dbef']
 periods = ['EPR_1978_1987', 'EPR_1987_1997', 'EPR_1997_2009', 'EPR_2009_2019']
@@ -152,7 +164,7 @@ plt.close()
 # OPTION 2: Faceted panels
 # ============================================================================
 
-fig, axes = plt.subplots(4, 1, figsize=(16, 12), sharex=True)
+fig, axes = plt.subplots(4, 1, figsize=figsize("double", height=5.61), sharex=True)
 
 colors_distinct = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
 period_labels = ['1978-1987', '1987-1997', '1997-2009_v1', '2009_v1-2019']
@@ -182,7 +194,7 @@ plt.close()
 # OPTION 3: Early vs Recent comparison
 # ============================================================================
 
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6), sharey=True)
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize("double", height=2.49), sharey=True)
 
 if 'EPR_1978_1987' in domain_rates.columns:
     ax1.plot(domain_rates['Domain'], domain_rates['EPR_1978_1987'], 
@@ -227,7 +239,7 @@ plt.close()
 # ============================================================================
 
 if 'EPR_1978_1997' in domain_rates.columns and 'EPR_1997_2019' in domain_rates.columns:
-    fig, ax = plt.subplots(figsize=(18, 8))
+    fig, ax = plt.subplots(figsize=figsize("double", height=3.32))
     
     ax.plot(domain_rates['Domain'], domain_rates['EPR_1978_1997'], 
             label='1978-1997 (Calibration Period 1)', linewidth=4, 

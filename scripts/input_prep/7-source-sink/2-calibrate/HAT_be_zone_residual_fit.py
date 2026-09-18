@@ -118,9 +118,10 @@ from cascade_pipeline.hindcast import build_target_table   # noqa: E402
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 from cascade_pipeline.run_registry import (                # noqa: E402
     CALIBRATION_ARM, preset_dir_for)
-from hatteras_site_config import HATTERAS_DOMAINS          # noqa: E402
-from hatteras_site_config import HATTERAS_BE_RATES_CALIBRATED  # noqa: E402
-from hat_figure_style import (                             # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_DOMAINS          # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_BE_RATES_CALIBRATED  # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_PERIODS              # noqa: E402
+from site_layer.hat_figure_style import (                             # noqa: E402
     apply_style, figsize, save, caption, town_bands, open_frame,
     DOMAIN_AXIS_LABEL, C, C_1984, C_1997, C_1984_FILL, C_1997_FILL,
     INK, INK_MUTED, halo, _title)
@@ -140,12 +141,40 @@ apply_style()
 # CoastSat TRANSECT-level LRR. Not the domain-averaged summary: the target
 # is smoothed at transect resolution and only then averaged, and doing it in
 # the other order gives a measurably different curve.
-# Moved out of the scripts tree 2026-09-12: the rate fits are DATA and
-# the model reads them. Resolve through hat_observed_rates.py in new code.
-COASTSAT_BASE = (SCRIPTS_DIR.parent / "data" / "hatteras_init" / "5-scr"
-                 / "coastsat_lrr")
-P1_COASTSAT_CSV = str(COASTSAT_BASE / "1984_2004" / "transect_lrr_full.csv")
-P2_COASTSAT_CSV = str(COASTSAT_BASE / "2004_2024" / "transect_lrr_full.csv")
+# Resolved through hat_observed_rates.py (2026-09-18), not typed.
+from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as COASTSAT_BASE  # noqa: E402
+# THE PAIR BEING FITTED. Set HAT_BE_PERIODS to two comma-separated period
+# STARTS to fit a different pair; each end comes from HATTERAS_PERIODS, and
+# the CoastSat product for a window lives under <start>_<end>/, so naming
+# the starts names the observations too. Default is the pair this field was
+# originally solved on (generalised 2026-09-18).
+#
+# P1/P2 mean EARLIER and LATER throughout this file -- including the _p1 /
+# _p2 columns in the metrics CSV -- not 1984 and 2004.
+_PERIOD_ENV = os.environ.get("HAT_BE_PERIODS", "").strip()
+PERIOD_STARTS = (tuple(int(x) for x in _PERIOD_ENV.split(","))
+                 if _PERIOD_ENV else (1984, 2004))   # see DEFAULT_PERIOD_STARTS
+if len(PERIOD_STARTS) != 2:
+    raise SystemExit(
+        f"\nHAT_BE_PERIODS must name exactly two period starts, got "
+        f"{PERIOD_STARTS!r}. The fit compares an earlier window with a "
+        f"later one.\n")
+for _st in PERIOD_STARTS:
+    if _st not in HATTERAS_PERIODS:
+        raise SystemExit(
+            f"\nperiod start {_st} is not in HATTERAS_PERIODS "
+            f"({sorted(HATTERAS_PERIODS)}).\n")
+
+DEFAULT_PERIOD_STARTS = (1984, 2004)
+P1_START, P2_START = PERIOD_STARTS
+P1_END = HATTERAS_PERIODS[P1_START]["end_year"]
+P2_END = HATTERAS_PERIODS[P2_START]["end_year"]
+P1_LABEL = f"{P1_START}\u2013{P1_END}"
+P2_LABEL = f"{P2_START}\u2013{P2_END}"
+P1_COASTSAT_CSV = str(COASTSAT_BASE / f"{P1_START}_{P1_END}"
+                      / "transect_lrr_full.csv")
+P2_COASTSAT_CSV = str(COASTSAT_BASE / f"{P2_START}_{P2_END}"
+                      / "transect_lrr_full.csv")
 
 # The base run, per period. edgeBE is the preset that is ZERO at every domain
 # being solved (2-89) while carrying the independently solved values at the
@@ -181,7 +210,9 @@ P2_COASTSAT_CSV = str(COASTSAT_BASE / "2004_2024" / "transect_lrr_full.csv")
 # Stop when no zone clears SIGNIFICANCE_THRESHOLD, which is then the tolerance
 # the field is converged to.
 BASE_PRESET   = os.environ.get("HAT_BE_BASE_PRESET", "edgeBE").strip() or "edgeBE"
-BASE_SCENARIO = "road_bdm_nogroin"
+# BASE_SCENARIO was here until 2026-09-18: defined once, read nowhere, and
+# wrong for a period with fills (those runs carry a nourish token). The
+# base run is resolved by globbing the run stem instead -- see _base_run.
 RAW_RUNS_DIR  = PROJECT_BASE_DIR / "output" / "raw_runs"
 # Where a CONCLUDED experiment's forcing arms are kept. A live calibration
 # probe is still written into raw_runs/ under HAT_ARM_TAG -- that is what stops
@@ -204,15 +235,24 @@ TARGET_WINDOW = 10
 # scripts/. HAT_BE_OUTPUT_DIR still redirects a what-if pass anywhere.
 _BE_DATA = (PROJECT_BASE_DIR / "data" / "hatteras_init"
             / "7-source-sink" / "2-calibrate")
-OUTPUT_DIR = os.environ.get("HAT_BE_OUTPUT_DIR", "").strip() or str(_BE_DATA)
+# A NON-DEFAULT PAIR WRITES SOMEWHERE ELSE, AUTOMATICALLY. HAT_BE_OUTPUT_DIR
+# always wins, but without it a run on another pair used to write over the
+# committed 1984/2004 field and metrics -- which is exactly what happened the
+# first time this generalisation was exercised (2026-09-18). Redirecting is
+# not something the explorer should have to remember.
+_PAIR_TAG = (f"{P1_START}_{P1_END}__{P2_START}_{P2_END}"
+             if PERIOD_STARTS != DEFAULT_PERIOD_STARTS else "")
+OUTPUT_DIR = (os.environ.get("HAT_BE_OUTPUT_DIR", "").strip()
+              or str(_BE_DATA / _PAIR_TAG if _PAIR_TAG else _BE_DATA))
 
 # Figures are read out of the data tree, not out of scripts/. The tables above
 # stay with the calibration that produced them; the two PNGs go where the rest
 # of the section 7 figures live, so a re-run refreshes the copies people open.
 # A what-if pass with HAT_BE_OUTPUT_DIR set keeps its figures with its tables.
+_FIG_BASE = (PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
+             / "3-figures")
 FIG_DIR = (os.environ.get("HAT_BE_OUTPUT_DIR", "").strip()
-           or str(PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
-                  / "3-figures"))
+           or str(_FIG_BASE / _PAIR_TAG if _PAIR_TAG else _FIG_BASE))
 
 # ── Column names in CoastSat CSVs ─────────────────────────────────────────────
 LRR_COL    = "median_lrr"   # use median — more robust to outlier transects
@@ -222,8 +262,7 @@ DOMAIN_COL = "domain_number"
 NUM_REAL_DOMAINS = 90
 START_REAL_INDEX = 15        # buffer domains before domain 1
 CASCADE_SIGN     = -1        # x_s_TS increases landward = erosion → flip to standard
-P1_START, P1_END = 1984, 2004
-P2_START, P2_END = 2004, 2024
+# P1_START/P1_END and P2_START/P2_END are derived from PERIOD_STARTS above.
 
 # ── Correction thresholds ─────────────────────────────────────────────────────
 # Minimum smoothed residual magnitude to warrant any correction at all.
@@ -346,6 +385,36 @@ MANUAL_OVERRIDES = {
 #
 # The superseded field and the full account are in
 # data/hatteras_init/7-source-sink/superseded_20260914/.
+def frozen_zones(period_start):
+    """The domains that may receive a correction in this period.
+
+    THIS TABLE IS A SCIENTIFIC JUDGEMENT, NOT A COMPUTATION. A correction is
+    applied only where the residual is significant, spatially coherent AND a
+    physical mechanism can be named for the zone; the first two this script
+    measures, the third a person decides. So a period with no entry raises
+    rather than defaulting to "everywhere" (which would apply every
+    grid-scale wiggle) or to "nowhere" (which would silently fit nothing).
+
+    To add a period: run the fit once to see which zones clear
+    SIGNIFICANCE_THRESHOLD and MIN_ZONE_WIDTH, name a mechanism for each one
+    you accept, and list its domains here (2026-09-18).
+    """
+    try:
+        return FROZEN_ZONE_DOMAINS[period_start]
+    except KeyError:
+        raise SystemExit(
+            f"\nno frozen zone set for period {period_start}. Solved "
+            f"periods: {sorted(FROZEN_ZONE_DOMAINS)}.\n\n"
+            f"This is not a missing file -- it is a judgement that has not "
+            f"been made. Each zone in this table carries a named physical "
+            f"mechanism, and inventing one for {period_start} by reusing "
+            f"another period's zones would assert that the same mechanisms "
+            f"act over a different window.\n\n"
+            f"Run with HAT_BE_FREEZE=off to see the candidate zones for "
+            f"{period_start} without applying them, then add the ones you "
+            f"accept to FROZEN_ZONE_DOMAINS in\n  {__file__}\n") from None
+
+
 FROZEN_ZONE_DOMAINS = {
     1984: (
         5, 6, 7, 8, 10, 11, 12, 13, 27, 28, 29, 30, 31, 32, 33,
@@ -417,7 +486,7 @@ PHYSICAL_ZONES = {
 # names carry more information there. Add more entries here if you want
 # other zones shortened on the chart too.
 ZONE_DISPLAY_NAMES = {
-    "Cape Point / Shoal Dynamics":  "Cape Hatteras",
+    "Cape Point / Shoal Dynamics":  "Cape Point",
     "Buxton–Avon Transition":       "Buxton-Avon",
     "Wimble Shoals Influence":      "Wimble Shoals",
     "Tri-Village / Rodanthe":       "Tri-Village",
@@ -990,20 +1059,41 @@ def compute_be_rates(raw_p1, raw_p2, smooth_p1, smooth_p2):
 
     frame = pd.DataFrame(rows).set_index("domain")
 
+    # EXPLORATORY PASS. With HAT_BE_FREEZE=off the zone set is not applied, so
+    # a period that has no frozen set yet can still be RUN and its candidate
+    # zones read off the metrics CSV and the diagnostic figure. The output is a
+    # diagnosis, not a field: every domain that cleared the significance and
+    # coherence tests keeps its correction, including the grid-scale wiggles
+    # the frozen set exists to withhold. It must not be applied to the config
+    # (2026-09-18, added with the period generalisation so the message that
+    # points here is true).
+    if os.environ.get("HAT_BE_FREEZE", "").strip().lower() == "off":
+        kept = [int(d) for d in frame.index
+                if frame.loc[d, "be_hindcast_p1"] or frame.loc[d, "be_hindcast_p2"]]
+        print("  FREEZE OFF: zone set NOT applied. Candidate domains with a "
+              f"correction: {kept}")
+        print("  These are CANDIDATES, not a field. Name a mechanism for each "
+              "zone you accept, add it to FROZEN_ZONE_DOMAINS, and re-run "
+              "without HAT_BE_FREEZE to produce a field that can be applied.")
+        return frame
+
     # Hold the zone set fixed -- see FROZEN_ZONE_DOMAINS. Applied here rather
     # than inside the loop so the metrics CSV still records the residual and
     # the significance verdict for every domain: the diagnosis stays visible,
     # only the correction is withheld.
-    for period, column in ((1984, "be_hindcast_p1"), (2004, "be_hindcast_p2")):
-        outside = [d for d in frame.index if d not in FROZEN_ZONE_DOMAINS[period]]
+    for period, column in ((P1_START, "be_hindcast_p1"),
+                           (P2_START, "be_hindcast_p2")):
+        zones = frozen_zones(period)
+        outside = [d for d in frame.index if d not in zones]
         frame.loc[outside, column] = 0.0
-    inside_either = set(FROZEN_ZONE_DOMAINS[1984]) | set(FROZEN_ZONE_DOMAINS[2004])
+    inside_either = set(frozen_zones(P1_START)) | set(frozen_zones(P2_START))
     outside_both = [d for d in frame.index if d not in inside_either]
     for column in ("be_forecast_continue", "be_forecast_revert",
                    "be_forecast_neutral"):
         frame.loc[outside_both, column] = 0.0
-    print(f"  Frozen zone set: {len(FROZEN_ZONE_DOMAINS[1984])} domains P1, "
-          f"{len(FROZEN_ZONE_DOMAINS[2004])} P2; corrections outside withheld")
+    print(f"  Frozen zone set: {len(frozen_zones(P1_START))} domains "
+          f"{P1_LABEL}, {len(frozen_zones(P2_START))} {P2_LABEL}; "
+          f"corrections outside withheld")
     return frame
 
 
@@ -1131,8 +1221,8 @@ def plot_diagnostic(cs_p1, cs_p2, casc_p1, casc_p2,
                              gridspec_kw={"height_ratios": [3, 3, 3, 3, 1.0]})
 
     rate_panels = (
-        (0, axes[0], "1984\u20132004", cs_p1, cs_p1_smooth, casc_p1, C_1984),
-        (1, axes[1], "2004\u20132024", cs_p2, cs_p2_smooth, casc_p2, C_1997),
+        (0, axes[0], P1_LABEL, cs_p1, cs_p1_smooth, casc_p1, C_1984),
+        (1, axes[1], P2_LABEL, cs_p2, cs_p2_smooth, casc_p2, C_1997),
     )
     for i, ax, label, raw, smooth, model, colour in rate_panels:
         ax.plot(domains, raw, "o-", ms=2.2, lw=0.7, color=colour, alpha=0.55,

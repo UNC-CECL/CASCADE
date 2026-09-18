@@ -31,6 +31,18 @@ import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and 9-figures/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). This file drew in
+# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              DOMAIN_AXIS_LABEL)
+apply_style()
 import matplotlib.ticker as ticker
 import matplotlib.colors as mcolors
 from matplotlib.lines import Line2D
@@ -71,11 +83,13 @@ PROJECT_BASE_DIR = next(
 )
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
 
-# Moved out of the scripts tree 2026-09-12: the rate fits are DATA and
-# the model reads them. Resolve through hat_observed_rates.py in new code.
-COASTSAT_BASE_DIR = os.path.join(
-    PROJECT_BASE_DIR, "data", "hatteras_init", "5-scr", "coastsat_lrr"
-)
+# Resolved through hat_observed_rates.py (2026-09-18), not typed.
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+COASTSAT_BASE_DIR = str(_obs.COASTSAT_LRR_ROOT)
 
 # Where comparison figures are saved. Products belong under output/, never
 # beside the script -- see output/README.md, which names comparisons/ as the
@@ -148,9 +162,10 @@ from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E40
 # addressed by absolute paths into output/raw_runs/source&sink_tests/ and at
 # the flat raw_runs/<name> level; neither exists in the tree any more, and
 # none of the four names appears in run_index.csv or in
-# superseded_20260828/. The figures they produced are kept at
-# output/comparisons/source_sink_zones/ but cannot be regenerated as-is.
-# Name live runs below before running this script. (Checked 2026-09-02.)
+# superseded_20260828/. The four figures they produced sat at
+# output/comparisons/source_sink_zones/ (2026-06-19) until 2026-09-17, when
+# they were deleted as unregenerable; nothing cited them. Name live runs
+# below before running this script. (Checked 2026-09-02, 2026-09-17.)
 RUNS_TO_COMPARE = [
     # dict(
     #     run_name   = "HAT_1984_2004_calibBE_road_bdm_groin",
@@ -777,13 +792,13 @@ def plot_diagnostic(run_data, cs_series, active_period, out_path, comparison_nam
     loc="best" for the legend, which with 4+ runs landed on top of the
     data (see uploaded screenshot) - both fixed below.
     """
-    fig, ax = plt.subplots(figsize=(15, 7))
+    fig, ax = plt.subplots(figsize=figsize("double", height=3.49))
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
 
     model_handles, cs_handles = _draw_comparison_panel(ax, run_data, cs_series, active_period)
 
-    ax.set_xlabel("CASCADE Model Domain (500 m alongshore)",
+    ax.set_xlabel(DOMAIN_AXIS_LABEL,
                   fontsize=11, fontweight="bold", labelpad=4)
     ax.set_title(
         f"CASCADE Run Comparison — Hatteras Island, NC  |  {comparison_name}",
@@ -911,7 +926,7 @@ def _draw_comparison_panel(ax, run_data, cs_series, active_period,
     _style_ax(ax)
 
     # Compass / orientation labels
-    ax.text(0.0, 1.01, "← S  |  Cape Hatteras",
+    ax.text(0.0, 1.01, "← S  |  Cape Point",
             transform=ax.transAxes, fontsize=9, color="#444444",
             ha="left", va="bottom", style="italic", clip_on=False)
     ax.text(1.0, 1.01, "Pea Island  |  N →",
@@ -928,13 +943,13 @@ def plot_annotated(run_data, cs_series, active_period, out_path, comparison_name
     """
     Publication-quality figure with full geographic annotation layer.
     """
-    fig, ax = plt.subplots(figsize=(14, 7.5))
+    fig, ax = plt.subplots(figsize=figsize("double", height=4.01))
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
 
     model_handles, cs_handles = _draw_comparison_panel(ax, run_data, cs_series, active_period)
 
-    ax.set_xlabel("CASCADE Model Domain (500 m alongshore)",
+    ax.set_xlabel(DOMAIN_AXIS_LABEL,
                   fontsize=12, fontweight="bold", labelpad=4)
 
     # Accretion / erosion side labels
@@ -1019,7 +1034,7 @@ def plot_two_period(run_data, cs_series, out_path, comparison_name):
 
     n_panels = len(panels)
     fig, axes = plt.subplots(
-        1, n_panels, figsize=(11 * n_panels, 8), sharey=True,
+        1, n_panels, figsize=figsize("double", height=8 * FIG_W_DOUBLE / (11 * n_panels)), sharey=True,
     )
     if n_panels == 1:
         axes = [axes]
@@ -1048,7 +1063,7 @@ def plot_two_period(run_data, cs_series, out_path, comparison_name):
              for cs in cs_series if cs["period_start"] == period_start
              for w in cs["windows"]]
         ) if panel_runs else np.array([]))
-        ax.set_xlabel("CASCADE Model Domain (500 m alongshore)",
+        ax.set_xlabel(DOMAIN_AXIS_LABEL,
                       fontsize=11, fontweight="bold", labelpad=4)
 
     # Shared y-limits across both panels, computed from ALL data in either panel
@@ -1190,7 +1205,7 @@ def plot_residuals(run_data, cs_series, active_period, out_path, comparison_name
         cs_smoothed,
     )
 
-    fig, ax = plt.subplots(figsize=(15, 6))
+    fig, ax = plt.subplots(figsize=figsize("double", height=2.99))
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
     add_geographic_annotations(ax)
@@ -1213,7 +1228,7 @@ def plot_residuals(run_data, cs_series, active_period, out_path, comparison_name
                         where=(residual < 0), alpha=0.08, color=run["color"])
 
     _style_ax(ax, ylabel="Model − CoastSat (m/yr)")
-    ax.set_xlabel("CASCADE Model Domain (500 m alongshore)",
+    ax.set_xlabel(DOMAIN_AXIS_LABEL,
                   fontsize=11, fontweight="bold", labelpad=4)
     ax.set_title(
         f"Residuals: Model − CoastSat (active period)  |  {comparison_name}",

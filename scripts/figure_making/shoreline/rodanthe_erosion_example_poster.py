@@ -40,8 +40,13 @@ warnings.filterwarnings("ignore")
 # CONFIGURATION
 # ============================================================================
 
-ROOT_DATA_DIR = str(_FIG_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_timeseries")
-LOOKUP_CSV    = str(_FIG_REPO / "data" / "hatteras_init" / "5-scr" / "transect_domains" / "transect_domain_lookup.csv")
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+ROOT_DATA_DIR = str(_obs.COASTSAT_TIMESERIES)
+LOOKUP_CSV    = str(_obs.transect_lookup())
 
 DOMAIN_MIN  = 77
 DOMAIN_MAX  = 83
@@ -50,7 +55,9 @@ START_DATE  = "1984-01-01"
 END_DATE    = "2024-12-31"
 MIN_OBS     = 5
 
-OUTPUT_DIR  = str(_FIG_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "rodanthe_plots")
+# A poster figure, so it goes to output/figures/ with the others (2026-09-18);
+# it used to be written in among the rate fits, 5-scr/coastsat_lrr/rodanthe_plots.
+OUTPUT_DIR  = str(_FIG_REPO / "output" / "figures" / "shoreline" / "rodanthe_plots")
 OUTPUT_FILE = "rodanthe_erosion_trends.png"
 
 FIG_SIZE = (8, 8)

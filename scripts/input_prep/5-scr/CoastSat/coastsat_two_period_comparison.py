@@ -21,8 +21,15 @@ Outputs (saved to OUTPUT_DIR)
 # CONFIG  –  edit paths before running
 # ============================================================
 
-COASTSAT_CSV_P1 = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "1984_2004" / "domain_lrr_summary.csv")
-COASTSAT_CSV_P2 = str(_PATH_REPO / "data" / "hatteras_init" / "5-scr" / "coastsat_lrr" / "2004_2024" / "domain_lrr_summary.csv")
+# Resolved through hat_observed_rates.py (2026-09-18); _PATH_REPO was never
+# defined in this file, so the typed paths could not run.
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+COASTSAT_CSV_P1 = str(_obs.domain_csv(1984, 2004))
+COASTSAT_CSV_P2 = str(_obs.domain_csv(2004, 2024))
 
 PERIOD_1_LABEL = "1984–2004"
 PERIOD_2_LABEL = "2004–2024"
@@ -37,10 +44,7 @@ DOMAIN_MAX = 90
 # Anchored on this file 2026-09-12. The literals here were
 # drive-rooted and had never resolved; the data they name also
 # moved out of the scripts tree on that date.
-from pathlib import Path as _Path
-_SCR_DATA = (_Path(__file__).resolve().parents[4] / "data"
-             / "hatteras_init" / "5-scr")
-OUTPUT_DIR = str(_SCR_DATA / "coastsat_lrr" / "two_period_comparison")
+OUTPUT_DIR = str(_obs.TWO_PERIOD_COMPARISON)
 
 # ============================================================
 # IMPORTS

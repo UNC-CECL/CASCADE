@@ -9,10 +9,21 @@ Checks if your calculated shoreline change rates make sense
 from pathlib import Path as _Path
 _REPO = next(_p for _p in _Path(__file__).resolve().parents
              if (_p / "pyproject.toml").exists())
-_DSAS = (_REPO / "data" / "hatteras_init" / "5-scr"
-         / "scr-dsas-1978-2019")
+import sys as _dsys
+_dsys.path.insert(0, str(_REPO / "scripts"))
+from site_layer.hat_observed_rates import DSAS_ROOT as _DSAS  # noqa: E402
 import pandas as pd
+
+# HOUSE STYLE. Like the poster script, this imported record_caption at the
+# BOTTOM and never called apply_style(), so it was not in the project
+# typeface at all (2026-09-17).
+import sys as _sys
+_sys.path.insert(0, str(_REPO / "scripts"))
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              support_dir)
+apply_style()
 import numpy as np
+from pathlib import Path
 import matplotlib.pyplot as plt
 
 # Load your calculated rates
@@ -42,9 +53,9 @@ if 'EPR_1978_1997' in domain_rates.columns:
     print(f"Difference: {abs(mean_1978_1997 - CASCADE_BG_EROSION_M):.2f} m/yr")
     
     if abs(mean_1978_1997 - CASCADE_BG_EROSION_M) < 3:
-        print("✓ CLOSE MATCH - Good agreement!")
+        print("OK CLOSE MATCH - Good agreement!")
     else:
-        print("⚠ DISCREPANCY - May need investigation")
+        print("! DISCREPANCY - May need investigation")
 
 # ============================================================================
 # CHECK 2: Sign convention validation
@@ -64,9 +75,9 @@ for col in ['EPR_1978_1987', 'EPR_1987_1997', 'EPR_1997_2009', 'EPR_2009_2019']:
         pct_erosional = (rodanthe[col] < 0).sum() / len(rodanthe) * 100
         
         if mean_rate < 0:
-            status = "✓ EROSIONAL (correct)"
+            status = "OK EROSIONAL (correct)"
         else:
-            status = "✗ ACCRETIONAL (WRONG!)"
+            status = "X ACCRETIONAL (WRONG!)"
         
         print(f"{col}: {mean_rate:+.2f} m/yr  |  {pct_erosional:.0f}% domains eroding  |  {status}")
 
@@ -94,9 +105,9 @@ for col in ['EPR_1978_1987', 'EPR_1987_1997', 'EPR_1997_2009', 'EPR_2009_2019']:
         
         # Check for unrealistic values
         if abs(min_val) > 15 or abs(max_val) > 15:
-            flag = "⚠ EXTREME VALUES - Check data"
+            flag = "! EXTREME VALUES - Check data"
         else:
-            flag = "✓ Reasonable range"
+            flag = "OK Reasonable range"
         
         print(f"{col}: {min_val:+.2f} to {max_val:+.2f} m/yr (mean: {mean_val:+.2f})  |  {flag}")
 
@@ -115,11 +126,11 @@ if len(oregon_inlet) > 0 and 'EPR_1978_1997' in oregon_inlet.columns:
     print(f"\nOregon Inlet area (domains 1-15):")
     print(f"  Mean rate 1978-1997: {oregon_mean:+.2f} m/yr")
     if oregon_mean < -2:
-        print("  ✓ Strong erosion as expected")
+        print("  OK Strong erosion as expected")
     elif oregon_mean < 0:
-        print("  ✓ Erosional as expected")
+        print("  OK Erosional as expected")
     else:
-        print("  ⚠ Unexpected accretion - check data")
+        print("  ! Unexpected accretion - check data")
 
 # Buxton area (domains 50-65) - historically accretional
 buxton = domain_rates[(domain_rates['Domain'] >= 50) & (domain_rates['Domain'] <= 65)]
@@ -128,9 +139,9 @@ if len(buxton) > 0 and 'EPR_1978_1997' in buxton.columns:
     print(f"\nBuxton area (domains 50-65):")
     print(f"  Mean rate 1978-1997: {buxton_mean:+.2f} m/yr")
     if buxton_mean > 0:
-        print("  ✓ Accretional as expected")
+        print("  OK Accretional as expected")
     else:
-        print("  ⚠ Erosional - unexpected but possible")
+        print("  ! Erosional - unexpected but possible")
 
 # Rodanthe validation
 if len(rodanthe) > 0 and 'EPR_1978_1997' in rodanthe.columns:
@@ -138,11 +149,11 @@ if len(rodanthe) > 0 and 'EPR_1978_1997' in rodanthe.columns:
     print(f"\nRodanthe area (domains 77-83):")
     print(f"  Mean rate 1978-1997: {rodanthe_mean:+.2f} m/yr")
     if rodanthe_mean < -2:
-        print("  ✓ Strong erosion as expected")
+        print("  OK Strong erosion as expected")
     elif rodanthe_mean < 0:
-        print("  ✓ Erosional as expected")
+        print("  OK Erosional as expected")
     else:
-        print("  ✗ WRONG - Should be erosional!")
+        print("  X WRONG - Should be erosional!")
 
 # ============================================================================
 # CHECK 5: Temporal trends
@@ -164,9 +175,9 @@ if len(rodanthe_trends) >= 2:
     first_period = rodanthe_trends[0][1]
     last_period = rodanthe_trends[-1][1]
     if last_period < first_period:
-        print("  → Erosion accelerating (more negative over time)")
+        print("  -> Erosion accelerating (more negative over time)")
     else:
-        print("  → Erosion slowing (less negative over time)")
+        print("  -> Erosion slowing (less negative over time)")
 
 # ============================================================================
 # CREATE VERIFICATION PLOT
@@ -176,7 +187,10 @@ print("\n" + "="*70)
 print("Creating validation plot...")
 print("-"*70)
 
-fig, axes = plt.subplots(2, 2, figsize=(16, 10))
+# 190 mm, the printed width, not the 16 in it was drawn at (2026-09-17).
+fig, axes = plt.subplots(2, 2, figsize=figsize("double", height=5.0))
+fig.subplots_adjust(left=0.085, right=0.98, bottom=0.085, top=0.94,
+                    wspace=0.26, hspace=0.42)
 
 # Plot 1: Histogram of rates (1978-1997)
 if 'EPR_1978_1997' in domain_rates.columns:
@@ -184,9 +198,9 @@ if 'EPR_1978_1997' in domain_rates.columns:
     axes[0, 0].axvline(x=0, color='red', linestyle='--', linewidth=2, label='Zero (stable)')
     axes[0, 0].axvline(x=CASCADE_BG_EROSION_M, color='green', linestyle='--', 
                        linewidth=2, label=f'CASCADE BG ({CASCADE_BG_EROSION_M:.1f} m/yr)')
-    axes[0, 0].set_xlabel('Rate (m/yr)', fontweight='bold')
-    axes[0, 0].set_ylabel('Number of Domains', fontweight='bold')
-    axes[0, 0].set_title('Distribution of Rates (1978-1997)', fontweight='bold')
+    axes[0, 0].set_xlabel('Rate (m/yr)', )
+    axes[0, 0].set_ylabel('Number of Domains', )
+    axes[0, 0].set_title('Distribution of Rates (1978-1997)', )
     axes[0, 0].legend()
     axes[0, 0].grid(True, alpha=0.3)
 
@@ -202,8 +216,8 @@ axes[0, 1].plot(range(len(rodanthe_means)), rodanthe_means, 'o-', linewidth=3, m
 axes[0, 1].axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.5)
 axes[0, 1].set_xticks(range(len(rodanthe_labels)))
 axes[0, 1].set_xticklabels(rodanthe_labels, rotation=45, ha='right')
-axes[0, 1].set_ylabel('Mean Rate (m/yr)', fontweight='bold')
-axes[0, 1].set_title('Rodanthe Erosion Trend Over Time', fontweight='bold')
+axes[0, 1].set_ylabel('Mean Rate (m/yr)', )
+axes[0, 1].set_title('Rodanthe Erosion Trend Over Time', )
 axes[0, 1].grid(True, alpha=0.3)
 
 # Plot 3: Comparison to CASCADE background rate
@@ -214,9 +228,9 @@ if 'EPR_1978_1997' in domain_rates.columns:
                        linewidth=2, label=f'CASCADE BG ({CASCADE_BG_EROSION_M:.1f} m/yr)')
     axes[1, 0].axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.3)
     axes[1, 0].axvspan(77, 83, alpha=0.1, color='orange', label='Rodanthe')
-    axes[1, 0].set_xlabel('Domain Number', fontweight='bold')
-    axes[1, 0].set_ylabel('Rate (m/yr)', fontweight='bold')
-    axes[1, 0].set_title('Rates vs CASCADE Background (1978-1997)', fontweight='bold')
+    axes[1, 0].set_xlabel('Domain Number', )
+    axes[1, 0].set_ylabel('Rate (m/yr)', )
+    axes[1, 0].set_title('Rates vs CASCADE Background (1978-1997)', )
     axes[1, 0].legend()
     axes[1, 0].grid(True, alpha=0.3)
 
@@ -232,15 +246,20 @@ axes[1, 1].bar(range(len(erosional_pct)), erosional_pct, edgecolor='black', alph
 axes[1, 1].axhline(y=50, color='red', linestyle='--', linewidth=2, label='50% threshold')
 axes[1, 1].set_xticks(range(len(periods)))
 axes[1, 1].set_xticklabels(periods, rotation=45, ha='right')
-axes[1, 1].set_ylabel('% Domains Eroding', fontweight='bold')
-axes[1, 1].set_title('Percentage of Island Experiencing Erosion', fontweight='bold')
+axes[1, 1].set_ylabel('% Domains Eroding', )
+axes[1, 1].set_title('Percentage of Island Experiencing Erosion', )
 axes[1, 1].set_ylim(0, 100)
 axes[1, 1].legend()
 axes[1, 1].grid(True, alpha=0.3, axis='y')
 
 plt.tight_layout()
-plt.savefig('verification_diagnostics.png', dpi=300, bbox_inches='tight')
-print("✓ Saved: verification_diagnostics.png")
+_FIGDIR = (next(_q for _q in Path(__file__).resolve().parents
+                if (_q / "pyproject.toml").exists())
+           / "output" / "figures" / "shoreline")
+_OUT = support_dir(_FIGDIR) / "dsas_verification.png"
+_OUT.parent.mkdir(parents=True, exist_ok=True)
+plt.savefig(str(_OUT), dpi=300)   # products go under output/ (rule 1)
+print(f"Saved: {_OUT}")   # ASCII: a cp1252 console cannot encode a tick
 plt.close()
 
 print("\n" + "="*70)
@@ -248,3 +267,13 @@ print("VERIFICATION COMPLETE")
 print("="*70)
 print("\nReview the diagnostics above and the verification_diagnostics.png plot")
 print("to confirm your results make sense!")
+# the caption lives beside the figure, not on it (9-figures/STYLE.md)
+import sys as _csys
+from pathlib import Path as _CP
+_csys.path.insert(0, str(next(_q for _q in _CP(__file__).resolve().parents
+                              if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import record_caption as _record_caption
+_record_caption(
+    next(_q for _q in _CP(__file__).resolve().parents if (_q / "pyproject.toml").exists())
+    / "output" / "figures" / "shoreline" / "dsas_verification.png",
+    "Diagnostics on the DSAS shoreline-rate calculation: the checks that the per-domain rates aggregate the transect rates as intended, and where the record is thin enough for a domain rate to rest on few transects. A working figure kept because it is the evidence behind the rates in dsas_calibration_periods.png, not a result in itself.")

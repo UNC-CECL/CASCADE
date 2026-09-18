@@ -45,14 +45,18 @@ _args = _ap.parse_args()
 
 _PERIOD_TAG = "{0}_{1}".format(_args.start_year, _args.end_year)
 
-_SCR_DATA = _REPO / "data" / "hatteras_init" / "5-scr"
-LOOKUP_CSV = str(_SCR_DATA / "transect_domains" / "transect_domain_lookup.csv")
+# Resolved through hat_observed_rates.py (2026-09-18), not typed.
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+LOOKUP_CSV = str(_obs.TRANSECT_DOMAINS / "transect_domain_lookup.csv")
 
 # Root folder containing all site subfolders (e.g. usa_NC_0032_timeseries, usa_NC_0033_timeseries, ...)
 # The script will automatically find every CSV in every subfolder one level down.
 # Example: r"C:/Users/hahenry/Downloads"
-ROOT_DATA_DIR = str(_REPO / "data" / "hatteras_init" / "5-scr"
-                    / "coastsat_timeseries")
+ROOT_DATA_DIR = str(_obs.COASTSAT_TIMESERIES)
 
 # Optional: only include subfolders whose names contain this string.
 # Set to "" to include ALL subfolders under ROOT_DATA_DIR.
@@ -66,7 +70,7 @@ END_DATE   = "{0}-12-31".format(_args.end_year)
 MIN_OBS = 3
 
 # Output directory
-OUTPUT_DIR = str(_SCR_DATA / "coastsat_lrr" / _PERIOD_TAG)
+OUTPUT_DIR = str(_obs.COASTSAT_LRR_ROOT / _PERIOD_TAG)
 
 # CASCADE buffer domains to EXCLUDE from summaries
 # (e.g., the 15 buffer domains on each end of your 90+30 setup)

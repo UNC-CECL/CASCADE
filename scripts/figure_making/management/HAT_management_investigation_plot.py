@@ -26,6 +26,21 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and 9-figures/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). This file drew in
+# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+# Typeface only: this script writes ANIMATION frames, and the printed-width
+# rule does not apply to something that is never printed. Its figsize is
+# the frame size and is left as it is.
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              FIG_W_DOUBLE)
+apply_style()
 import matplotlib.ticker as ticker
 from matplotlib.lines import Line2D
 
@@ -52,8 +67,8 @@ OUTPUT_DIR = str(_FIG_REPO / "output" / "figures" / "management_investigation")
 
 # Path to the CoastSat transect CSV for the active period.
 # Columns expected: domain_number (GIS 1–90), lrr_m_yr (m/yr per transect).
-COASTSAT_CSV = str(_FIG_REPO / "data" / "hatteras_init" / "5-scr"
-                   / "coastsat_lrr" / "1984_2004" / "transect_lrr_full.csv")
+from site_layer.hat_observed_rates import lrr_csv as _lrr_csv  # noqa: E402
+COASTSAT_CSV = str(_lrr_csv(1984, 2004))
 COASTSAT_LABEL = "CoastSat LRR (1984–2004)"   # label shown in legend
 
 # Period covered by these runs — used for axis titles and comparison filenames.
@@ -361,7 +376,8 @@ def configure_gis_xaxis(ax):
 def plot_shoreline_change_rates(rate_profiles, coastsat_x, coastsat_rate):
     gis_ids = np.arange(FIRST_FILE_NUMBER, LAST_FILE_NUMBER + 1)
 
-    fig, ax = plt.subplots(figsize=(20, 6), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=figsize("double", height=2.24),
+                           constrained_layout=True)
 
     for label, rate in rate_profiles.items():
         real_rate = rate[START_REAL_INDEX:END_REAL_INDEX]

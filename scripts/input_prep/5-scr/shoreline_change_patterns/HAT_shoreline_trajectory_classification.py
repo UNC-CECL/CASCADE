@@ -68,14 +68,15 @@ _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
 # this script could not run. Anchored on the repo root (2026-09-10).
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
-ROOT_DATA_DIR = str(PROJECT_ROOT / "data" / "hatteras_init" / "5-scr"
-                    / "coastsat_timeseries")
-# Moved out of the scripts tree 2026-09-12: the rate fits are DATA and
-# the model reads them. Resolve through hat_observed_rates.py in new code.
-LOOKUP_CSV    = str(PROJECT_ROOT / "data" / "hatteras_init" / "5-scr"
-                    / "transect_domains" / "transect_domain_lookup.csv")
-OUTPUT_DIR    = str(PROJECT_ROOT / "data" / "hatteras_init" / "5-scr"
-                    / "shoreline_change_patterns" / "classification_output")
+# Resolved through hat_observed_rates.py (2026-09-18), not typed.
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+ROOT_DATA_DIR = str(_obs.COASTSAT_TIMESERIES)
+LOOKUP_CSV    = str(_obs.TRANSECT_DOMAINS / "transect_domain_lookup.csv")
+OUTPUT_DIR    = str(_obs.SHORELINE_PATTERNS / "classification_output")
 
 SITE_FILTER = "usa_NC"
 

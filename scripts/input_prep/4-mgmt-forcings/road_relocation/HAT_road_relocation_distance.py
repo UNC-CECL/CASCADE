@@ -9,7 +9,7 @@ road, and summarise per domain. Everything Hatteras-specific -- the road
 vintages, the 90-polygon domain file, the CRS chain -- is in CONFIG below.
 
     python HAT_road_relocation_distance.py
-    HAT_RELOC_FROM=1984 HAT_RELOC_TO=2004 python HAT_road_relocation_distance.py
+    HAT_RELOC_FROM=1978 HAT_RELOC_TO=2008 python HAT_road_relocation_distance.py
 
 WHAT THE NUMBER IS
 ------------------
@@ -34,14 +34,14 @@ averaging two directions.
 That convention has one place it breaks. Around the Cape Point bend the island
 turns east-west, the ocean is no longer on the right of a northward road, and
 the sign becomes meaningless -- so domains where the road runs more than 60
-degrees off north are flagged OBLIQUE_SIGN. On the 1984-2004 pair that is
+degrees off north are flagged OBLIQUE_SIGN. On the 1978-2008 pair that is
 domain 8 and nothing else. Magnitude is unaffected: it never used the tangent.
 
 READ THIS BEFORE READING THE ZEROS
 ----------------------------------
-The two Hatteras road files SHARE MOST OF THEIR GEOMETRY. 558 of the 1984
-line's 791 vertices are identical to a 2004 vertex to the millimetre: the 2004
-line was digitised by editing a copy of the 1984 one, and only the stretches
+The two Hatteras road files SHARE MOST OF THEIR GEOMETRY. 558 of the 1978
+line's 791 vertices are identical to a 2008 vertex to the millimetre: the 2008
+line was digitised by editing a copy of the 1978 one, and only the stretches
 that visibly moved were re-drawn. Roughly 72% of the old line is therefore
 exactly 0.000 m from the new line by construction.
 
@@ -74,8 +74,8 @@ interior row 0 of the model grid; this is a GIS-frame observation of how far
 apart two digitised lines lie.
 
 It IS a CASCADE forcing as of 2026-08-20. `HATTERAS_ROAD_EVENTS` in
-scripts/hatteras_site_config.py reads `mean_signed_landward_m` out of the
-1984_2004 CSV for the domains its two historical relocation events move -- GIS
+scripts/site_layer/hatteras_site_config.py reads `mean_signed_landward_m` out of the
+1978_2008 CSV for the domains its two historical relocation events move -- GIS
 84-87 (1989) and GIS 9-15 (1999). It replaced eleven hand-entered literals
 attributed to a 1978->1997 ArcGIS measurement whose 1997 line is not in the
 repo. So re-running this script with those vintages CHANGES WHAT THE MODEL IS
@@ -86,7 +86,7 @@ quietly forcing a number the lines do not support.
 
 A NOTE ON THE VINTAGES
 ----------------------
-nc12_1984.geojson and nc12_2004.geojson were digitised off 1978 and 2008
+nc12_1978.geojson and nc12_2008.geojson were digitised off 1978 and 2008
 imagery -- the nearest usable coverage to the two hindcast period starts. The
 labels are the periods they stand in for, not the photo dates, so the interval
 measured here is really ~30 years, not 20.
@@ -125,8 +125,12 @@ DATA_DIR = PROJECT_ROOT / "data" / "hatteras_init"
 
 # Which pair of road vintages to compare. Override from the shell to compare a
 # different pair without editing the file.
-YEAR_FROM = int(os.environ.get("HAT_RELOC_FROM", 1984))
-YEAR_TO = int(os.environ.get("HAT_RELOC_TO", 2004))
+# LINE vintages, not period starts (2026-09-15): the lines are 1978 and 2008
+# exports, filed under those years, and the output folder is named by them --
+# road_relocation/1978_2008/. Which period reads which line is
+# hat_topo_version.ROAD_LINE_FOR_YEAR.
+YEAR_FROM = int(os.environ.get("HAT_RELOC_FROM", 1978))
+YEAR_TO = int(os.environ.get("HAT_RELOC_TO", 2008))
 
 
 def road_file(year):
@@ -145,15 +149,17 @@ def road_file(year):
 ROAD_FROM_FILE = road_file(YEAR_FROM)
 ROAD_TO_FILE = road_file(YEAR_TO)
 
-# The same 90-polygon domain file the shoreline and groin work uses.
-DOMAIN_FILE = (
-    PROJECT_ROOT
-    / "scripts"
-    / "input_prep"
-    / "5-scr"
-    / "CoastSat"
-    / "HAT_domains.json"
-)
+# The same 90-polygon domain file the shoreline and groin work uses. It left
+# the scripts tree with the observed shoreline data (commit 17a0334f) and
+# lives under data/ now; the old scripts/input_prep/5-scr/CoastSat/ path was
+# still here until 2026-09-15.
+# Resolved through hat_observed_rates.py since 2026-09-18.
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+DOMAIN_FILE = _obs.DOMAIN_BOXES
 
 OUTPUT_DIR = (
     DATA_DIR
@@ -201,7 +207,7 @@ OCEAN_ON_RIGHT = True
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
 try:
-    from hatteras_site_config import HATTERAS_ANNOTATIONS, HATTERAS_ROAD_EVENTS
+    from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS, HATTERAS_ROAD_EVENTS
 
     TOWN_SPANS = HATTERAS_ANNOTATIONS.town_spans
     VILLAGE_LINES = HATTERAS_ANNOTATIONS.village_lines
@@ -216,7 +222,7 @@ try:
     }
     # The forcing is the measurement rounded to the nearest cell (see
     # hatteras_site_config, ROUNDED TO WHOLE CELLS); label both.
-    from hatteras_site_config import round_to_cell as _round_to_cell
+    from site_layer.hatteras_site_config import round_to_cell as _round_to_cell
 
 except ImportError:
     # The measurement does not need them; only the labels do.
@@ -936,7 +942,7 @@ print(f"\nSaved sample points:\n{OUTPUT_SAMPLE_POINTS}")
 # written at the end of this section with the numbers filled from the table,
 # so it cannot go stale against the picture without the CSV going stale too.
 
-from hat_figure_style import (  # noqa: E402   scripts/ is on sys.path since the site-config import
+from site_layer.hat_figure_style import (  # noqa: E402   scripts/ is on sys.path since the site-config import
     DOMAIN_AXIS_LABEL, INK, INK_MUTED, C_1984 as C_EARLY, C_1997 as C_LATE,
     C_1984_FILL as C_EARLY_FILL, C_1997_FILL as C_LATE_FILL,
     FIG_H_MAX, FIG_W_DOUBLE, apply_style, figsize, save,
@@ -1516,7 +1522,7 @@ for run in relocation_sites:
 
 # Which way is which, now that the map is rotated off north: the ends named,
 # the ocean named, and a north arrow pointing along the strip.
-map_ax.text(minx, miny - 0.16 * (maxy - miny), "Cape Hatteras (south)",
+map_ax.text(minx, miny - 0.16 * (maxy - miny), "Cape Point (south)",
             ha="left", va="top", fontsize=8.5, color=INK_MUTED)
 map_ax.text(maxx, miny - 0.16 * (maxy - miny), "Pea Island (north)",
             ha="right", va="top", fontsize=8.5, color=INK_MUTED)

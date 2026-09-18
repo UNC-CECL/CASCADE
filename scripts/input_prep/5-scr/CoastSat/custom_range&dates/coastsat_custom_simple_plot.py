@@ -63,10 +63,12 @@ SHOW_CALLOUTS = True
 # Anchored on this file 2026-09-12. The literals here were drive-rooted
 # and had never resolved; the data they name also moved out of the
 # scripts tree on that date.
-from pathlib import Path as _Path
-_SCR_DATA = (_Path(__file__).resolve().parents[5] / "data"
-             / "hatteras_init" / "5-scr")
-OUTPUT_DIR  = str(_SCR_DATA / "coastsat_lrr" / "custom" / "buxton_2000_2025")
+import sys as _sys
+from pathlib import Path as _RP
+_sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_observed_rates as _obs  # noqa: E402
+OUTPUT_DIR  = str(_obs.COASTSAT_LRR_ROOT / "custom" / "buxton_2000_2025")
 OUTPUT_NAME = "shoreline_change_SIMPLE.png"   # filename for the saved figure
 DPI         = 180
 
