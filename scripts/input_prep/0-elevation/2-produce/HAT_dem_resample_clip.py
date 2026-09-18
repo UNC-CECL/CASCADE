@@ -88,7 +88,12 @@ def _find_project_root(start: Path) -> Path:
 
 
 PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
-ELEVATION_DIR = PROJECT_ROOT / "data" / "hatteras_init" / "0-elevation"
+import sys as _elsys
+from pathlib import Path as _ELP
+_elsys.path.insert(0, str(next(_q for _q in _ELP(__file__).resolve().parents
+                               if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_elevation_products as _el  # noqa: E402
+ELEVATION_DIR = _el.ELEVATION_ROOT
 
 # Must match FILL_SOURCE_TAG in HAT_dem_gap_fill.py, or PRODUCT_TAG in
 # HAT_dem_1984_mosaic.py - each source keeps its own subfolder so a re-run
@@ -109,7 +114,7 @@ for _flag in ("--product", "--source"):      # --source kept as an alias
         break
 
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
-from hat_elevation_products import product as _product, fill_codes  # noqa: E402
+from site_layer.hat_elevation_products import product as _product, fill_codes  # noqa: E402
 
 _P = _product(SOURCE_TAG)
 INPUT_DIR = _P.gapfill_1m

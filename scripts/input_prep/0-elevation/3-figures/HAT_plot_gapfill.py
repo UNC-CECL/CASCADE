@@ -105,9 +105,14 @@ from site_layer.hat_figure_style import (  # noqa: E402
 
 apply_style()
 
-ELEVATION_DIR = PROJECT_ROOT / "data" / "hatteras_init" / "0-elevation"
+import sys as _elsys
+from pathlib import Path as _ELP
+_elsys.path.insert(0, str(next(_q for _q in _ELP(__file__).resolve().parents
+                               if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_elevation_products as _el  # noqa: E402
+ELEVATION_DIR = _el.ELEVATION_ROOT
 IN_DIR = None   # set from SOURCE_TAG below
-FIG_DIR = ELEVATION_DIR / "figures"
+FIG_DIR = None  # set from SOURCE_TAG below (was the pooled 0-elevation/figures/, gone since 08-25)
 # The repository copy of D:/Hatteras_GIS/domains.geojson (identical; 2026-09-18).
 from site_layer.hat_map_layers import DOMAIN_BOXES as DOMAIN_FILE  # noqa: E402
 

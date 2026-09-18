@@ -95,7 +95,7 @@ REPO = next(
     _p for _p in Path(__file__).resolve().parents
     if (_p / "pyproject.toml").exists())   # 1-extraction/nodata_audit/ since 2026-09-09
 sys.path.insert(0, str(REPO / "scripts"))
-import hat_topo_version as htv  # noqa: E402
+from site_layer import hat_topo_version as htv  # noqa: E402
 
 TOPO_PRODUCT = "1984-start"
 NCFMP_DIR = Path(r"D:\Hatteras_GIS\Elevation\Polygons\2014"
@@ -304,8 +304,8 @@ def main():
           f"{sum(len(v) for v in holes.values())} cells")
 
     origins = {}
-    with (REPO / "data" / "hatteras_init" / "0-elevation" / "2009-2014-1996"
-          / "2-resampled-10m" / "resample_audit.csv").open() as f:
+    from site_layer.hat_elevation_products import product as _elprod
+    with _elprod("2009-2014-1996").audit_10m.open() as f:
         for r in csv.DictReader(f):
             origins[int(r["domain"])] = (float(r["origin_x"]),
                                          float(r["origin_y"]))

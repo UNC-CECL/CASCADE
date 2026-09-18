@@ -174,7 +174,8 @@ SOURCE_TAG = "2009-2014-1996"
 # deliberately NOT registered in hat_elevation_products.PRODUCTS - product()
 # resolves things that have gapfill_1m and resampled_10m stages, and this has
 # neither.
-OUT_DIR = ELEVATION_ROOT / f"{SOURCE_TAG}-duneline"
+from site_layer.hat_elevation_products import duneline_check_dir  # noqa: E402
+OUT_DIR = duneline_check_dir(SOURCE_TAG)
 CLASS_DIR = OUT_DIR / "1-alace-class-10m"
 DOMAIN_CSV = "duneline_coverage_domains.csv"
 PROFILE_CSV = "duneline_coverage_profiles.csv"

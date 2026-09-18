@@ -188,3 +188,17 @@ def fill_codes(name: str) -> tuple[int, ...]:
 def source_selection_dir() -> Path:
     """Island-wide DEM-candidate scoring - belongs to no single product."""
     return ELEVATION_ROOT / SOURCE_SELECTION_DIR
+
+
+def duneline_check_dir(name: str) -> Path:
+    """The dune-line-vs-DEM check for one product: <product>-duneline/.
+
+    NOT a product, though it sits beside them: HAT_dem_duneline_coverage.py
+    and HAT_plot_duneline_offset.py measure where the digitised dune lines
+    fall on that product's surface, and write here (named 2026-09-18; the two
+    producers and the row-insert report each spelled the folder themselves).
+    """
+    if name not in PRODUCTS and name not in SUPERSEDED:
+        raise SystemExit(
+            f"\nunknown elevation product {name!r}. Known:\n{_known()}\n")
+    return ELEVATION_ROOT / f"{name}-duneline"

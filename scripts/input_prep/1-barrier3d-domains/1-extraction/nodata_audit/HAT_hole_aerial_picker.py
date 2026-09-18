@@ -110,7 +110,7 @@ REPO = next(
     if (_p / "pyproject.toml").exists())   # 1-extraction/nodata_audit/ since 2026-09-09
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(HERE))
-import hat_topo_version as htv  # noqa: E402
+from site_layer import hat_topo_version as htv  # noqa: E402
 import HAT_hole_aerial_chips as chips  # noqa: E402
 
 # Chip half-widths are PER HOLE, not fixed. The truncating holes run from 1 to
@@ -372,8 +372,8 @@ def build_cache(vdir, cache):
                 (int(r["npy_row"]), int(r["npy_col"])))
 
     origins = {}
-    with (REPO / "data" / "hatteras_init" / "0-elevation" / "2009-2014-1996"
-          / "2-resampled-10m" / "resample_audit.csv").open() as f:
+    from site_layer.hat_elevation_products import product as _elprod
+    with _elprod("2009-2014-1996").audit_10m.open() as f:
         for r in csv.DictReader(f):
             origins[int(r["domain"])] = (float(r["origin_x"]),
                                          float(r["origin_y"]))

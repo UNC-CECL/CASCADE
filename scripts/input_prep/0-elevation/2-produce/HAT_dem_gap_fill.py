@@ -145,7 +145,12 @@ def _find_project_root(start: Path) -> Path:
 
 
 PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
-ELEVATION_DIR = PROJECT_ROOT / "data" / "hatteras_init" / "0-elevation"
+import sys as _elsys
+from pathlib import Path as _ELP
+_elsys.path.insert(0, str(next(_q for _q in _ELP(__file__).resolve().parents
+                               if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_elevation_products as _el  # noqa: E402
+ELEVATION_DIR = _el.ELEVATION_ROOT
 GIS_ROOT = Path(r"D:\Hatteras_GIS")
 
 BASE_DEM_PATH = (GIS_ROOT / "Elevation" / "Polygons" / "2009"
@@ -193,12 +198,12 @@ DOMAIN_ID_FIELD = "domain_id"
 # FILL_SOURCE_TAG above still names the SOURCE, and appears in the console
 # output and the figure labels.
 PRODUCT_TAG = "2009-2014"
-# Paths come from scripts/hat_elevation_products.py, not from string
+# Paths come from scripts/site_layer/hat_elevation_products.py, not from string
 # concatenation here. Six scripts used to build them by hand and that is how
 # HAT_road_elevation.py silently stopped finding its rasters - see the note at
 # the top of that module.
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
-from hat_elevation_products import product as _product  # noqa: E402
+from site_layer.hat_elevation_products import product as _product  # noqa: E402
 
 OUTPUT_DIR = _product(PRODUCT_TAG, check=False).gapfill_1m
 AUDIT_CSV = "gapfill_audit.csv"

@@ -4,11 +4,13 @@ One folder per **product**. A product is a composition of surveys clipped to
 the 90 GIS domains, carried through the same two stages, with its own figures.
 
 ```
-2009-2014/          the baseline DEM      2009 USACE + 2014 NOAA Post-Sandy
-2009-2014-1996/     the 1984-start DEM    the above + 1996 ALACE, no boundary
-superseded/         earlier attempts, same shape, not for use
-source-selection/   island-wide DEM-candidate scoring - belongs to no product
-FIGURES.md          figure design decisions, shared by every product
+2009-2014/               the baseline DEM      2009 USACE + 2014 NOAA Post-Sandy
+2009-2014-1996/          the 1984-start DEM    the above + 1996 ALACE, no boundary
+2009-2014-1996-duneline/ NOT a product: where the digitised 1984 and 1997 dune
+                         lines fall on 2009-2014-1996 (duneline_check_dir())
+source-selection/        island-wide DEM-candidate scoring - belongs to no product
+FIGURES.md               figure design decisions, shared by every product
+superseded/              (none yet) where a retired product would go, same shape
 ```
 
 Each product holds:
@@ -34,24 +36,28 @@ for the fill source alone.
 
 ## Do not hardcode these paths
 
-Resolve them through **`scripts/hat_elevation_products.py`**:
+Resolve them through **`scripts/site_layer/hat_elevation_products.py`**:
 
 ```python
 import sys; sys.path.insert(0, str(REPO / "scripts"))
-from hat_elevation_products import product
+from site_layer.hat_elevation_products import product
 
 p = product("2009-2014")
 p.gapfill_1m, p.resampled_10m, p.figures, p.audit_1m
 ```
 
 It raises with the list of known products if the name is wrong, and again if
-the name is known but the directory is not there. That guard exists because
+the name is known but the directory is not there. `source_selection_dir()` and
+`duneline_check_dir(product)` name the two folders that are not products.
+Since 2026-09-18 every script resolves through it; the last few that typed
+the tree included `HAT_survey_dem_coverage.py`, which still wrote to the
+pooled `0-elevation/figures/` removed on 08-25. That guard exists because
 `HAT_road_elevation.py` built its path by joining strings, and stopped
 resolving the moment 2008 moved under `superseded/`.
 
 ## The .tif files are git-ignored
 
-`.gitignore` line 148 is `*.tif`, so the 720 rasters here (~370 MB) live on
+`.gitignore` ignores `*.tif`, so the 720 rasters here (~370 MB) live on
 your machine only. **The audit CSVs and READMEs are tracked** - those carry the
 per-domain numbers, so a reviewer can check the work without the bulk. Rebuild
 the rasters from the D: drive sources with the chain in
