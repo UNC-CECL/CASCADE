@@ -20,8 +20,9 @@ PANELS
         the first to show.
 
 INPUTS
-    D:/Hatteras_GIS/domains.geojson                 the domain boxes (EPSG:3725)
-    D:/Hatteras_GIS/Outlines/nc_80k/nc_80k.shp      the coastline
+    hat_map_layers.DOMAIN_BOXES                     the domain boxes (EPSG:3725)
+    hat_map_layers.NC_COAST                         the coastline, NC 1:80k clipped
+    (both in the repository since 2026-09-18; they were read off D:/Hatteras_GIS)
     data/hatteras_init/4-mgmt-forcing/road_offset/raw_offset/2008/nc12_2008.geojson
     data/hatteras_init/8-overwash-analysis/1-observations/Hatteras_Overwash_Data.xlsx
     via overwash_data.py
@@ -73,8 +74,9 @@ from site_layer import hat_overwash as ow  # noqa: E402
 FIG_DIR = ow.MAP
 OUT_PNG = FIG_DIR / "overwash_map_periods.png"
 
-DOMAIN_FILE = Path("D:/Hatteras_GIS/domains.geojson")
-COAST_FILE = Path("D:/Hatteras_GIS/Outlines/nc_80k/nc_80k.shp")
+from site_layer import hat_map_layers as _ml  # noqa: E402
+DOMAIN_FILE = _ml.DOMAIN_BOXES
+COAST_FILE = _ml.NC_COAST
 ROAD_FILE = (REPO / "data/hatteras_init/4-mgmt-forcing/road_offset/raw_offset"
              / "2008/nc12_2008.geojson")
 
@@ -103,7 +105,7 @@ REACH_LABEL = {"Rodanthe–Waves–Salvo": "Rodanthe–\nWaves–Salvo"}
 # =================================================================== inputs
 def load_geometry():
     if not DOMAIN_FILE.exists():
-        raise SystemExit(f"\n{DOMAIN_FILE} is not reachable: connect the drive.")
+        raise SystemExit(f"\n{DOMAIN_FILE} is missing.")
     dom = gpd.read_file(DOMAIN_FILE).sort_values("domain_id").reset_index(drop=True)
     b = dom.total_bounds
     win = shp_box(b[0] - PAD_W - 2000, b[1] - PAD_S - 2000,

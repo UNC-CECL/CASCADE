@@ -58,7 +58,7 @@ import matplotlib.patheffects as mpatheffects
 import matplotlib.pyplot as plt
 
 # HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and 9-figures/STYLE.md. The root is
+# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
 # found by searching upward (ORGANIZATION.md rule 5). Missed by the first
 # sweep because its figsize is computed, not a literal (2026-09-17).
 import sys as _sys

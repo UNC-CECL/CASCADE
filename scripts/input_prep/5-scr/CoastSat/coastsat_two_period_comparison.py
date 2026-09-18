@@ -58,7 +58,7 @@ import warnings
 
 # Anchored 2026-09-14: absolute into a home directory, or into a tree
 # renamed since. Rule 5 of ORGANIZATION.md.
-_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+_PATH_REPO = next(_p for _p in _RP(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 warnings.filterwarnings("ignore")
 

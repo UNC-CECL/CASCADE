@@ -30,7 +30,7 @@ import pathlib
 
 # Anchored 2026-09-14: this named a home directory, or a tree renamed since.
 # Rule 5 of ORGANIZATION.md.
-_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+_PATH_REPO = next(_p for _p in pathlib.Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
 # ANCHORED, NOT TYPED. Every path below used to be an absolute literal: the
@@ -133,7 +133,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and 9-figures/STYLE.md. The root is
+# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
 # found by searching upward (ORGANIZATION.md rule 5). This file drew in
 # matplotlib's defaults until 2026-09-17 -- it never called apply_style().
 import sys as _sys

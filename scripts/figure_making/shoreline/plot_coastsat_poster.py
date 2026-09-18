@@ -24,7 +24,7 @@ WHAT CHANGED 2026-09-17
   * OFF THE CANVAS: a two-line bold title, the S/N end labels, the place names
     (Buxton / Avon / Tri-Village / Salvo / Waves / Rodanthe), the
     Accretion/Erosion markers and a footnote paragraph. All caption material
-    under 9-figures/STYLE.md, and the caption carries it now.
+    under figure_making/STYLE.md, and the caption carries it now.
   * THE COLOURS ARE THE VINTAGE PAIR. It used a dark blue and a brown of its
     own; the earlier period is C_1984 red and the later C_1997 blue here, as
     in every other figure that draws two periods.
@@ -38,7 +38,7 @@ import pandas as pd
 import warnings
 
 # HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and 9-figures/STYLE.md. The root is
+# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
 # found by searching upward (ORGANIZATION.md rule 5), so this block is
 # independent of whatever this script calls its own repository variable.
 import sys as _sys

@@ -117,8 +117,8 @@ SMOOTH_METHOD_COMPARISON = SMOOTH_ROOT / "method_comparison"
 SMOOTH_DSAS_VS_COASTSAT = SMOOTH_ROOT / "dsas_vs_coastsat"
 
 # Single files in transect_domains/ that scripts outside 5-scr read by name.
-# HAT_domains.json holds the 90 real domain boxes; the map_elements polygons
-# in 9-figures are NOT the model domains.
+# HAT_domains.json holds the 90 real domain boxes; the older 1000 m polygons,
+# now in map_elements/archive/, are NOT the model domains.
 DOMAIN_BOXES = TRANSECT_DOMAINS / "HAT_domains.json"
 TRANSECT_LAYER = TRANSECT_DOMAINS / "CoastSat_transect_layer.geojson"
 

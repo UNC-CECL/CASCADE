@@ -13,16 +13,6 @@ same transects (extract_chainage_by_intersection()). Alongshore
 position is built from a trusted along-coast ID order (see
 _compute_alongshore_positions()), and CASCADE domain assignment comes
 from the authoritative HAT_domains.json reference (see
-
-# Anchored 2026-09-14: absolute into a home directory, or into a tree
-# renamed since. Rule 5 of ORGANIZATION.md.
-_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
-                  if (_p / "pyproject.toml").exists())
-
-# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
-# Rule 5 of ORGANIZATION.md.
-_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
-                  if (_p / "pyproject.toml").exists())
 load_domain_reference() / assign_domain_from_northing()), not a
 formula.
 
@@ -190,6 +180,13 @@ Usage
 Edit CONFIG below, then run:
     python HAT_groin_shoreline_analysis_v2.py
 """
+
+# Anchored 2026-09-14 (rule 5 of ORGANIZATION.md). The anchoring pass pasted
+# this INSIDE the docstring above, so it never ran and every _PATH_REPO below
+# was a NameError; moved out 2026-09-18.
+from pathlib import Path as _AnchorPath
+_PATH_REPO = next(_p for _p in _AnchorPath(__file__).resolve().parents
+                  if (_p / "pyproject.toml").exists())
 
 # ============================================================
 # CONFIG
