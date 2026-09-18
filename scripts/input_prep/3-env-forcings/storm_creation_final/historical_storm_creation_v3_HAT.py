@@ -71,12 +71,13 @@ PERIOD_TAG = "{0}_{1}".format(START_YEAR, END_YEAR)
 
 start_time = '{0}-01-01 00:00:00'.format(START_YEAR)  # date to start the storms
 end_time = '{0}-12-31 23:00:00'.format(END_YEAR)      # date to end the storms
-water_levels_file = str(_REPO / "data" / "hatteras_init" / "3-env-forcings"
-                        / "water_level"
-                        / "8651370_DUCK_19840101_20241231_NAVD.csv")  # NOAA gauge
-wis_file = str(_REPO / "data" / "hatteras_init" / "3-env-forcings" / "storms"
-               / "WIS_raw_data"
-               / "ST63228-Generic_Export-20260427T11T11_48.csv")  # WIS gauge
+import sys as _envsys
+from pathlib import Path as _EnvP
+_envsys.path.insert(0, str(next(_q for _q in _EnvP(__file__).resolve().parents
+                                if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_env_forcings as _env  # noqa: E402
+water_levels_file = str(_env.DUCK_GAUGE_FILE)   # NOAA gauge
+wis_file = str(_env.WIS_FILE)                     # WIS gauge
 t_name_water = "t"       # name of the column that contains the datetimes in the water levels file
 water_name = "v"         # name of the column that contains the water levels [m NAVD88] in the water levels file
 t_name_wis = "time"  # name of the column that contains the datetimes in the WIS file
@@ -89,8 +90,7 @@ MHW = 0.36              # conversion from NAVD88 to MHW [m]: 0 m NAVD88 = X m MH
 min_storm_dur = 8        # minimum duration that is considered a storm event [hrs]
 max_storm_dur = 72      # maximum duration to include in storm events [hrs]
 save_dfs = True         # determine whether to save the dataframes as csv and npy files
-save_dir = str(_REPO / "data" / "hatteras_init" / "3-env-forcings" / "storms"
-               / "hindcast_storms" / PERIOD_TAG)  # derived from the window
+save_dir = str(_env.storm_window_dir(START_YEAR, END_YEAR))  # derived from the window
 save_name = "{0}_storms_v3_72".format(PERIOD_TAG)  # derived from the window
 _Path(save_dir).mkdir(parents=True, exist_ok=True)
 

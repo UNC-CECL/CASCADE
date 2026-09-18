@@ -349,8 +349,12 @@ print(f"Sidebar content height: {cursor_pt:.0f}pt / panel height: {panel_height_
 # (2026-09-12). These were absolute paths into "input_preperation",
 # a folder renamed long ago, so neither had resolved since.
 from pathlib import Path as _Path
-_STORM_RECORD = (_Path(__file__).resolve().parents[4] / "data"
-                 / "hatteras_init" / "3-env-forcings" / "storm_record")
+import sys as _envsys
+from pathlib import Path as _EnvP
+_envsys.path.insert(0, str(next(_q for _q in _EnvP(__file__).resolve().parents
+                                if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_env_forcings as _env  # noqa: E402
+_STORM_RECORD = _env.STORM_RECORD_DIR   # 1-records/storm_record/ since 2026-09-18
 _STORM_RECORD.mkdir(parents=True, exist_ok=True)
 plt.savefig(str(_STORM_RECORD / "HAT_storm_record_1984_2021.png"),
             dpi=200, bbox_inches="tight")

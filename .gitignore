@@ -210,9 +210,8 @@ data/hatteras_init/1-barrier3d-domains/**
 # version to measure against. duneline_retreat_1984_1997.csv in particular is
 # where N comes from for every seaward-row insert version.
 !data/hatteras_init/1-barrier3d-domains/**/duneline-shift/*.csv
-data/hatteras_init/3-env-forcings/water_level/noaa_cache_8651370/
-data/hatteras_init/3-env-forcings/storms/WIS_raw_data/
-data/hatteras_init/3-env-forcings/storms/old/
+data/hatteras_init/3-env-forcings/1-records/water_level/noaa_cache_8651370/
+data/hatteras_init/3-env-forcings/1-records/WIS_raw_data/
 data/hatteras_init/4-mgmt-forcing/road_offset/raster/
 data/hatteras_init/5-scr/1-observations/coastsat_timeseries/
 # The 5-scr geojsons (the 80 MB CoastSat transect layer, nc_shorelines at

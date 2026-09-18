@@ -33,6 +33,8 @@ from site_layer.hat_topo_version import (INIT_ROOT, ROAD_LINE_FOR_YEAR,  # noqa:
 # The other 4-mgmt-forcing paths this file names (road elevation, the
 # relocation measurement) come from the same module since 2026-09-18.
 from site_layer import hat_topo_version as _tv_mgmt  # noqa: E402
+# The storm series, from 3-env-forcings (2026-09-18).
+from site_layer import hat_env_forcings as _env  # noqa: E402
 from site_layer.hat_extension_domains import (BASE_GEOMETRY, gis_bounds,  # noqa: F401
                                    geometry_label, is_extended)
 
@@ -234,13 +236,11 @@ HATTERAS_PERIODS = {
     1984: {
         "end_year": 2004,
         # 0.00391 m/yr fitted over 1984-2004 on the Duck gauge, stored to
-        # 0.001. The fits are in 3-env-forcings/rslr/fits/duck_rslr_rates.csv
+        # 0.001. The fits are in 3-env-forcings/2-rslr/fits/duck_rslr_rates.csv
         # (column config_m_yr is this rounding), written by
         # scripts/input_prep/3-env-forcings/rslr/duck_rslr_analysis.py.
         "sea_level_rise_rate": 0.004,
-        "storm_file": (
-            "3-env-forcings/storms/hindcast_storms/1984_2004/"
-            "1984_2004_storms_v3_72.npy"),
+        "storm_file": _env.init_relpath(_env.storm_series_file(1984, 2004)),
         "island_offset_file": _island_offset_file(1984),
         # PAIRED WITH THE TOPOGRAPHY VERSION, AND NOTHING ENFORCES IT.
         # A setback is metres landward of interior row 0, so it belongs to the
@@ -266,9 +266,7 @@ HATTERAS_PERIODS = {
         "end_year": 2024,
         # 0.00639 m/yr fitted over 2004-2024; see rslr/fits/duck_rslr_rates.csv.
         "sea_level_rise_rate": 0.006,
-        "storm_file": (
-            "3-env-forcings/storms/hindcast_storms/2004_2024/"
-            "2004_2024_storms_v3_72.npy"),
+        "storm_file": _env.init_relpath(_env.storm_series_file(2004, 2024)),
         "island_offset_file": _island_offset_file(2004),
         # road_offset/dunestart_offset/measured/2004/RoadSetback_2004_dunestart.csv
         # -- MEASURED on the 2008 NC-12 line (ROAD_LINE_FOR_YEAR[2004]) against
@@ -298,9 +296,7 @@ HATTERAS_PERIODS = {
         # 0.00402 m/yr fitted over 1996-2010 on the Duck gauge; the other three
         # periods are stored at this precision too. See rslr/fits/duck_rslr_rates.csv.
         "sea_level_rise_rate": 0.004,
-        "storm_file": (
-            "3-env-forcings/storms/hindcast_storms/1996_2010/"
-            "1996_2010_storms_v3_72.npy"),
+        "storm_file": _env.init_relpath(_env.storm_series_file(1996, 2010)),
         # DERIVED, NOT SURVEYED: built from the 1997 dune line, the nearest
         # island-wide survey (hat_topo_version.DUNE_LINE_FOR_YEAR[1996] ==
         # 1997; the end-year target loader reads the same table). See
@@ -322,9 +318,7 @@ HATTERAS_PERIODS = {
         # rounds down (0.00639), so the two differ by more in this table than
         # in the gauge record. See rslr/fits/duck_rslr_rates.csv.
         "sea_level_rise_rate": 0.007,
-        "storm_file": (
-            "3-env-forcings/storms/hindcast_storms/2010_2024/"
-            "2010_2024_storms_v3_72.npy"),
+        "storm_file": _env.init_relpath(_env.storm_series_file(2010, 2024)),
         # DERIVED, NOT SURVEYED: built 2026-09-15 from the 2009 dune line, no
         # 2010 aerial imagery existing (DUNE_LINE_FOR_YEAR[2010] == 2009). So
         # the period starts from the island as surveyed a year EARLIER, the

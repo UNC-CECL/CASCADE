@@ -42,7 +42,12 @@ _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
 # ============================== CONFIG ==============================
 
 # Source storm series to resample (your existing, validated 1984-2004 file).
-SOURCE_NPY = str(_PATH_REPO / "data" / "hatteras_init" / "3-env-forcings" / "storms" / "hindcast_storms" / "1984_2004" / "1984_2004_storms_v3_72.npy")
+import sys as _envsys
+from pathlib import Path as _EnvP
+_envsys.path.insert(0, str(next(_q for _q in _EnvP(__file__).resolve().parents
+                                if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_env_forcings as _env  # noqa: E402
+SOURCE_NPY = str(_env.storm_series_file(1984, 2004))
 # Target run length. 1967->1997 = 30 model years; CASCADE indexes time 1..N.
 TARGET_YEARS = 30
 

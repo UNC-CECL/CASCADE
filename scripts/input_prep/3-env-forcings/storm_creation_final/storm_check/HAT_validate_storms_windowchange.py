@@ -63,7 +63,12 @@ _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
 # =============================================================================
 
 # Path to the readable CSV from HAT_create_storms.py
-READABLE_CSV = Path(str(_PATH_REPO / "data" / "hatteras_init" / "3-env-forcings" / "storms" / "superseded_20260914" / "testing_storms" / "base_storms" / "storms_1984_2004_base_readable.csv"))
+import sys as _envsys
+from pathlib import Path as _EnvP
+_envsys.path.insert(0, str(next(_q for _q in _EnvP(__file__).resolve().parents
+                                if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_env_forcings as _env  # noqa: E402
+READABLE_CSV = Path(str(_env.SUPERSEDED_STORMS / "testing_storms" / "base_storms" / "storms_1984_2004_base_readable.csv"))
 
 # Period to validate — controls which slice of HISTORICAL_STORMS is used
 BEGIN_YEAR = 1984
@@ -77,7 +82,9 @@ END_YEAR   = 2004
 MATCH_WINDOW_DAYS = 5
 
 # Output
-OUTPUT_DIR  = Path(r"/scripts/input_prep/storm_creation_final/storm_check/comparison/storm_check_1984_2004.png")
+# Was a drive-rooted path ending in "storm_check_1984_2004.png", used as a
+# FOLDER, so the output never landed in the repository (2026-09-18).
+OUTPUT_DIR  = _env.storm_validation_dir(BEGIN_YEAR, END_YEAR)
 SAVE_FIGURE = True
 SHOW_FIGURE = True
 

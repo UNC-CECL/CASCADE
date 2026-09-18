@@ -79,7 +79,7 @@ for _path in (SCRIPTS_DIR, _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from hatteras_site_config import HATTERAS_DOMAINS as GEOMETRY  # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_DOMAINS as GEOMETRY  # noqa: E402
 
 from HAT_fullperiod_target import (  # noqa: E402
     END_YEAR,
@@ -106,7 +106,12 @@ OUT_ROOT = _out_root()
 RESULTS_CSV = OUT_ROOT / "results.csv"
 FIGURE_DIR = OUT_ROOT / "figures"
 
-STORM_REL = "3-env-forcings/storms/hindcast_storms/1984_2024/1984_2024_storms_spliced.npy"
+import sys as _envsys
+from pathlib import Path as _EnvP
+_envsys.path.insert(0, str(next(_q for _q in _EnvP(__file__).resolve().parents
+                                if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_env_forcings as _env  # noqa: E402
+STORM_REL = _env.init_relpath(_env.SPLICED_1984_2024)
 PRESET = "edgeBE"
 
 # Capped at 80: M >= 100 drowned the barrier on every rig cell, M >= 70 went

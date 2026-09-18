@@ -124,7 +124,12 @@ MAX_STORMS_PER_YEAR = 5
 SURGE_MULTIPLIER = 1.0
 
 # --- Output ---
-OUTPUT_DIR = Path(str(_PATH_REPO / "data" / "hatteras_init" / "3-env-forcings" / "storms" / "hindcast_storms" / "fixed_storms"))
+import sys as _envsys
+from pathlib import Path as _EnvP
+_envsys.path.insert(0, str(next(_q for _q in _EnvP(__file__).resolve().parents
+                                if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_env_forcings as _env  # noqa: E402
+OUTPUT_DIR = _env.HINDCAST_STORMS / "fixed_storms"
 
 # --- Plotting ---
 SHOW_PLOTS = True
