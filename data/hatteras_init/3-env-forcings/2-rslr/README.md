@@ -2,7 +2,7 @@
 
 The rate the model raises sea level by, one value per hindcast window, and the
 record it was fitted on. Everything here is written by
-`scripts/input_prep/3-env-forcings/rslr/duck_rslr_analysis.py`; nothing is
+`scripts/input_prep/3-env-forcings/2-rslr/duck_rslr_analysis.py`; nothing is
 edited by hand except this file.
 
 ```

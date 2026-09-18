@@ -61,9 +61,9 @@ All three live in `scripts/input_prep/3-env-forcings/`, and each writes here:
 
 | Script | Writes |
 |---|---|
-| `NOAA_water_level/HAT_download_water_levels.py` | `1-records/water_level/` |
-| `rslr/duck_rslr_analysis.py` | `2-rslr/fits/`, `2-rslr/figures/` |
-| `storm_creation_final/historical_storm_creation_v3_HAT.py` | `3-storms/hindcast_storms/<window>/` |
+| `1-records/HAT_download_water_levels.py` | `1-records/water_level/` |
+| `2-rslr/duck_rslr_analysis.py` | `2-rslr/fits/`, `2-rslr/figures/` |
+| `3-storms/historical_storm_creation_v3_HAT.py` | `3-storms/hindcast_storms/<window>/` |
 
 Both of the last two take the window as an argument and derive every path from
 it, so the folder name and the file name cannot disagree about what was built:
@@ -87,7 +87,7 @@ in the code tree. Three things came out of untangling it:
   and absolute paths into folder names that were renamed years ago. Those that
   belong to live producers are anchored on their own file now.
 
-Two retired figure scripts under `storm_creation_final/from_Hannah/storm_figures/`
+Two retired figure scripts under `3-storms/from_Hannah/storm_creation/storm_figures/`
 still point at `data/hatteras_init/storms/hindcast_storms/...`, a tree
 renamed before this work began: `HAT_storm_record_figure.py` at
 `fixed_storms/`, and `HAT_storm_record_figure_roya.py` at

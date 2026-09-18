@@ -3,7 +3,7 @@ HAT_road_relocation_distance.py
 ===============================================================================
 How far NC-12 moved between two digitised vintages, per Barrier3D domain.
 
-Hatteras port of roya_files/road_relocation_dis.py. Same measurement: sample
+Hatteras port of from_roya/road_relocation_dis.py (was roya_files/ until 2026-09-18). Same measurement: sample
 the OLD road inside each domain, measure each sample point to the WHOLE new
 road, and summarise per domain. Everything Hatteras-specific -- the road
 vintages, the 90-polygon domain file, the CRS chain -- is in CONFIG below.
