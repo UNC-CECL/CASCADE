@@ -15,26 +15,30 @@ WHY THIS EXISTS
     corrected at all, which were withheld and why, and how much of each final
     value came from the one-shot solve versus the iteration.
 
-WHAT IT WRITES
-    3-figures/                  the calibration figures, written straight
-                                there by stage 3, so the data directory is
-                                self-contained -- someone handed just this
-                                folder can see what was done, not only what
-                                came out
-    be_rates_<period>.py        the dict, same shape as the files it replaces
-    be_calibration_domains.csv  one row per domain: zone, eligibility, the
-                                pass-0 and final rate, what the iteration
-                                added, and the residual still standing
-    README.md                   provenance, and the caveats that matter
+WHAT IT WRITES (paths from site_layer/hat_source_sink.py since 2026-09-18)
+    4-export/be_rates_<period>.py        the dict, same shape as the files
+                                         it replaces
+    4-export/be_calibration_domains.csv  one row per domain: zone,
+                                         eligibility, the pass-0 and final
+                                         rate, what the iteration added,
+                                         and the residual still standing
+    README.md                            at the top of 7-source-sink/:
+                                         provenance, and the caveats that
+                                         matter
 
-    convergence_history.json is NOT copied up. It lives once, in
-    2-calibrate/, beside the calibration that wrote it -- a second
+    It READS the default pair's 2-calibrate/1984_2004__2004_2024/ and
+    3-figures/1984_2004__2004_2024/. The figures are written straight there
+    by stage 3, so the data directory is self-contained -- someone handed
+    just this folder can see what was done, not only what came out.
+
+    convergence_history.json is NOT copied up. It lives once, in the pair's
+    2-calibrate/ folder, beside the calibration that wrote it -- a second
     byte-identical copy at the top level gave one fact two owners, and the
     two would drift the first time a pass was re-run without re-exporting.
 
-    The superseded 2026-06-15 files are MOVED to superseded_<date>/ rather than
-    deleted -- they are what earlier runs were built against, so they are
-    history, not clutter.
+    The superseded 2026-06-15 files are MOVED to archive/superseded_<date>/
+    rather than deleted -- they are what earlier runs were built against, so
+    they are history, not clutter.
 
 Usage:
     python scripts/input_prep/7-source-sink/4-export/HAT_export_be_calibration.py [--check]
@@ -84,12 +88,19 @@ sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 
-DATA_DIR = PROJECT_BASE_DIR / "data" / "hatteras_init" / "7-source-sink"
+from site_layer import hat_source_sink as _be  # noqa: E402
+
+# Resolved by hat_source_sink.py since 2026-09-18. The README stays at the
+# top of 7-source-sink/; the exported field goes to 4-export/, the step that
+# writes it; the calibration and figures read are the DEFAULT pair's folders.
+DATA_DIR = _be.BE_ROOT
+EXPORT_DIR = _be.EXPORT_DIR
+FIGURE_DIR = _be.figures_dir()
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
 # The calibration products moved into the data tree 2026-09-12, so this
 # reads them from there rather than from beside the script that made them.
-CALIB_OUT = DATA_DIR / "2-calibrate"
-CONFIG = PROJECT_BASE_DIR / "scripts" / "hatteras_site_config.py"
+CALIB_OUT = _be.calibrate_dir()
+CONFIG = PROJECT_BASE_DIR / "scripts" / "site_layer" / "hatteras_site_config.py"
 
 # WHERE THE FIGURES COME FROM (corrected 2026-09-12). This used to read them
 # out of the calibration OUTPUT directory and copy them into 3-figures/ --
@@ -101,7 +112,8 @@ CONFIG = PROJECT_BASE_DIR / "scripts" / "hatteras_site_config.py"
 # place. The superseded copies were moved under superseded_20260825/.
 FIGURE_SOURCE_IS_THE_RECORD = True
 
-# Paths RELATIVE TO 3-figures/, which is why each carries its subfolder.
+# Paths RELATIVE TO the pair's figure folder (FIGURE_DIR,
+# 3-figures/1984_2004__2004_2024/), which is why each carries its subfolder.
 # The figures were grouped on 2026-09-14 by the question each answers:
 # 1-field is what the calibration produced and what it was fitted against,
 # 2-method is the evidence that the way it was produced holds up, and
@@ -130,10 +142,12 @@ FIGURES = (
 # PASS 1 -- the file before pass 0 holds the superseded field, not this lineage.
 # Re-pointed 2026-09-14 with the corrected iteration, whose backups were kept;
 # the previous target was the retired lineage's pass-0 file and was never
-# committed, which is why these two columns exported empty. Same file as
-# 3-figures/HAT_plot_be_zones.py PASS0_BACKUP -- keep the two in step.
-PASS0_BACKUP = (PROJECT_BASE_DIR / "scripts"
-                / "hatteras_site_config_prebe_20260914_180700.py")
+# committed, which is why these two columns exported empty.
+# This pointed at scripts/, where the backup has not been since it was filed
+# under 2-calibrate/prebe/, so the next export would have written the pass-0
+# columns empty. One definition now, shared with HAT_plot_be_zones.py
+# (2026-09-18).
+PASS0_BACKUP = _be.PASS0_BACKUP
 
 _ROW = re.compile(r"^\s*(\d+):\s*([+-]?\d+\.?\d*),\s*(?:#\s*(.*))?$", re.M)
 NL = chr(10)
@@ -280,7 +294,7 @@ def caveats_block():
             f"disk and was never committed, so it cannot be recovered. The "
             f"FINAL values are unaffected -- they come from the config.")
     stale, newest = stale_against_runs(
-        [DATA_DIR / "3-figures" / name for name, _ in FIGURES])
+        [FIGURE_DIR / name for name, _ in FIGURES])
     if stale:
         from datetime import datetime
         when = datetime.fromtimestamp(newest).strftime("%Y-%m-%d")
@@ -318,7 +332,7 @@ def readme(module, table, history):
     return f"""# Source/sink (background erosion) calibration — converged field
 
 Generated by `scripts/input_prep/7-source-sink/4-export/HAT_export_be_calibration.py` from
-`scripts/hatteras_site_config.py`, which is what the model actually imports.
+`scripts/site_layer/hatteras_site_config.py`, which is what the model actually imports.
 **Do not edit these files** — edit the config, or re-run the calibration and
 re-export.
 
@@ -326,12 +340,21 @@ re-export.
 
 | file | what it is |
 |---|---|
-| `be_rates_1984_2004.py` | the converged field, period 1 |
-| `be_rates_2004_2024.py` | the converged field, period 2 |
-| `be_calibration_domains.csv` | per domain: zone, eligibility, pass-0 and final rate, what the iteration added, residual still standing |
-| `2-calibrate/` | what the fit itself wrote: `DOMAIN_BE_RATES*.txt`, `be_zone_metrics.csv`, `cascade_base_lrr.csv`, and `convergence_history.json` — every pass, both baselines, and the abandoned unmasked attempt |
-| `3-figures/` | {figure_rows} |
-| `superseded_*/` | the 2026-06-15 files this replaces, kept because earlier runs were built against them |
+| `4-export/be_rates_1984_2004.py` | the converged field, period 1 |
+| `4-export/be_rates_2004_2024.py` | the converged field, period 2 |
+| `4-export/be_calibration_domains.csv` | per domain: zone, eligibility, pass-0 and final rate, what the iteration added, residual still standing |
+| `2-calibrate/1984_2004__2004_2024/` | what the fit itself wrote: `DOMAIN_BE_RATES*.txt`, `be_zone_metrics.csv`, `cascade_base_lrr.csv`, and `convergence_history.json` — every pass, both baselines, and the abandoned unmasked attempt |
+| `2-calibrate/1996_2010__2010_2024/` | the same for the 1996/2010 pair, which is fitted but not exported |
+| `2-calibrate/prebe/` | the config as it stood before each apply pass; the pass-0 split reads one of these |
+| `3-figures/1984_2004__2004_2024/` | {figure_rows} |
+| `3-figures/1996_2010__2010_2024/` | `1-field/` for the 1996/2010 pair |
+| `archive/` | the `superseded_*` folders: the 2026-06-15 files this replaces, kept because earlier runs were built against them, and the retired 08-24 lineage |
+
+Every period pair has its own folder under `2-calibrate/` and `3-figures/`,
+named `<p1start>_<p1end>__<p2start>_<p2end>`; the numbers match the script
+steps in `scripts/input_prep/7-source-sink/`. Resolve these paths through
+`scripts/site_layer/hat_source_sink.py`, never by typing them (2026-09-18,
+when the default pair stopped writing to the unlabelled root).
 
 The two `be_rates_*.py` are **generated data, not code** — a header comment
 and one dict literal, nothing executable. Nothing imports them. They are
@@ -390,7 +413,7 @@ An unmasked run of the same iteration scored better
 {history['_abandoned_unmasked']['2004_2024']:.4f}) and was abandoned. The gap
 is the fit available only by correcting outside justifiable zones.
 Those two numbers were measured on 2026-08-24, against the lineage retired in
-`superseded_20260914/`, and have not been re-measured: the unmasked variant has
+`archive/superseded_20260914/`, and have not been re-measured: the unmasked variant has
 no zone set by construction, so the zone-set correction does not apply to it.
 They size the declined fit; they are not a current score.
 
@@ -460,7 +483,7 @@ def main():
     # reports the same refusal a real one would. Checking it later left a
     # half-finished export on disk: values written, figures not.
     stale, newest = (([], None) if args.allow_stale
-                     else stale_against_runs([DATA_DIR / "3-figures" / name
+                     else stale_against_runs([FIGURE_DIR / name
                                               for name, _ in FIGURES]))
     if stale:
         from datetime import datetime
@@ -488,17 +511,17 @@ def main():
         print("\n  --check: nothing written")
         return 0
 
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    superseded = DATA_DIR / f"superseded_{date.today():%Y%m%d}"
+    EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+    superseded = _be.ARCHIVE / f"superseded_{date.today():%Y%m%d}"
     for name in ("1984_2004_values", "2004_2024_values"):
         old = DATA_DIR / name
         if old.exists():
-            superseded.mkdir(exist_ok=True)
+            superseded.mkdir(parents=True, exist_ok=True)
             shutil.move(str(old), str(superseded / name))
-            print(f"  moved {name} -> {superseded.name}/")
+            print(f"  moved {name} -> archive/{superseded.name}/")
 
     for period, tag in ((1984, "1984_2004"), (2004, "2004_2024")):
-        path = DATA_DIR / f"be_rates_{tag}.py"
+        path = EXPORT_DIR / f"be_rates_{tag}.py"
         path.write_text(render_dict(period, final[period], module),
                         encoding="utf-8")
         print(f"  wrote {path.name}")
@@ -506,18 +529,18 @@ def main():
     # 3-figures/ IS the record, so there is nothing to copy into it -- the
     # analysis scripts write here directly. This block now only reports what
     # is present, which is what the README claims.
-    figure_dir = DATA_DIR / "3-figures"
-    figure_dir.mkdir(exist_ok=True)
+    figure_dir = FIGURE_DIR
+    figure_dir.mkdir(parents=True, exist_ok=True)
     missing = [name for name, _ in FIGURES
                if not (figure_dir / name).exists()]
-    print(f"  3-figures/ holds {len(FIGURES) - len(missing)} of "
+    print(f"  3-figures/{_be.DEFAULT_PAIR_TAG}/ holds {len(FIGURES) - len(missing)} of "
           f"{len(FIGURES)} record figures")
     if missing:
         # Named rather than skipped silently: a figure absent from the record
         # is indistinguishable from one that was never made.
         print(f"    MISSING, not copied: {', '.join(missing)}")
 
-    table.to_csv(DATA_DIR / "be_calibration_domains.csv", index=False)
+    table.to_csv(EXPORT_DIR / "be_calibration_domains.csv", index=False)
     print("  wrote be_calibration_domains.csv")
 
     # convergence_history.json is NOT copied up (dropped 2026-09-14). It lives

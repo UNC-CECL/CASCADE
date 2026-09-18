@@ -5,7 +5,7 @@ CASCADE carries as `DOMAIN_BE_RATES`. It is derived from what the modules could
 NOT explain — the residual between the LOESS-smoothed CoastSat rate and the
 model's own LRR — so every value has a named physical zone behind it.
 
-`scripts/hatteras_site_config.py` is the source of truth for the field; the
+`scripts/site_layer/hatteras_site_config.py` is the source of truth for the field; the
 copies under `data/hatteras_init/7-source-sink/` are exported FROM it by stage
 4, never maintained alongside it.
 
@@ -87,9 +87,14 @@ applied is never left to be inferred from the environment.
 
 ## Where things land
 
-Tables go to `data/hatteras_init/7-source-sink/2-calibrate/` (mirroring the code
-folder that writes them), figures to `.../7-source-sink/3-figures/`, and the stage
-4 export to `.../7-source-sink/` itself.
+Tables go to `data/hatteras_init/7-source-sink/2-calibrate/<pair>/` (mirroring the
+code folder that writes them), figures to `.../7-source-sink/3-figures/<pair>/`,
+and the stage 4 export to `.../7-source-sink/4-export/`, with its README at the
+top of `7-source-sink/`. A pair is `<p1start>_<p1end>__<p2start>_<p2end>`, and
+every pair has one, the default `1984_2004__2004_2024` included (2026-09-18;
+before that the default wrote to the unlabelled root of both folders). Config
+backups go to `2-calibrate/prebe/`, shared by every pair. Every script resolves
+these through `scripts/site_layer/hat_source_sink.py`; do not type them.
 
-Style: `scripts/hat_figure_style.py`. No in-image titles or footnotes; the words
+Style: `scripts/site_layer/hat_figure_style.py`. No in-image titles or footnotes; the words
 are in `CAPTIONS.md`.

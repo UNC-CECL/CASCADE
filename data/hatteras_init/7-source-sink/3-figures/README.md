@@ -4,6 +4,13 @@ Five figures, grouped by the question each answers rather than by the script
 that drew it. Each folder carries its own `CAPTIONS.md` beside the figures, as
 everywhere else in the data tree.
 
+**One folder per calibration pair** (since 2026-09-18). The five below are in
+`1984_2004__2004_2024/`, the pair that was fitted, iterated and exported.
+`1996_2010__2010_2024/` has `1-field/` only: that pair's fit writes its two
+field figures, but the method and limits figures are drawn for the default pair
+alone. Before 2026-09-18 the default pair's folders sat directly in
+`3-figures/`.
+
 | folder | figure | the question it answers |
 |---|---|---|
 | `1-field/` | `fig_be_rates` | What is the calibrated field? The per-domain source/sink rate for both periods, and the three forecast scenarios built from them. |
@@ -48,5 +55,5 @@ three are standalone and read the live config, so they cannot drift from the
 field they document. Stage 4 refuses to export figures older than the newest
 calibBE run, so regenerate these before re-exporting.
 
-Style: `scripts/hat_figure_style.py`. No in-image titles or footnotes; the words
+Style: `scripts/site_layer/hat_figure_style.py`. No in-image titles or footnotes; the words
 are in each folder's `CAPTIONS.md`.
