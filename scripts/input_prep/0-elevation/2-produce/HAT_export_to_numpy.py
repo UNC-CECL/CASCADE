@@ -97,7 +97,12 @@ def _find_project_root(start: Path) -> Path:
 
 PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
-ELEVATION_DIR = INIT_ROOT / "0-elevation"
+import sys as _elsys
+from pathlib import Path as _ELP
+_elsys.path.insert(0, str(next(_q for _q in _ELP(__file__).resolve().parents
+                               if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_elevation_products as _el  # noqa: E402
+ELEVATION_DIR = _el.ELEVATION_ROOT
 
 # Which elevation product to export. "2009-2014" is the baseline;
 # "2009-2014-1996" is the 1984-start DEM. Resolved through

@@ -165,8 +165,8 @@ ROAD_ELEV_PRODUCT = "2004-start"
 # corridor, and HAT_dem_1984_mosaic.py leaves the vertical offset UNCORRECTED
 # on purpose ("bias correction OFF, feathering OFF"). It writes the offset it
 # measured, per domain, to this file every run.
-MOSAIC_AUDIT = (DATA / "0-elevation" / "2009-2014-1996" / "1-gapfill-1m"
-                / "mosaic_1984_audit.csv")
+from site_layer.hat_elevation_products import product as _elprod  # noqa: E402
+MOSAIC_AUDIT = _elprod("2009-2014-1996", check=False).gapfill_1m / "mosaic_1984_audit.csv"
 
 
 def recorded_survey_offset(domains) -> float | None:

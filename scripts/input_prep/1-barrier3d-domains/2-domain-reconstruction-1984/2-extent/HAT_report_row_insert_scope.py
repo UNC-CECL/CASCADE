@@ -94,8 +94,8 @@ FIG_ROAD = insert_figures_dir(PRODUCT, "3-placement", "behind-road")
 # THE footprint: the one table every consumer of N reads (2026-09-07).
 FOOTPRINT_CSV = OUT_DIR / "footprint_1984_by_domain.csv"
 # The independent easting-frame measurement, for the cross-check column only.
-EASTING_CSV = (INIT / "0-elevation" / "2009-2014-1996-duneline"
-               / "duneline_offset_by_domain.csv")
+from site_layer.hat_elevation_products import duneline_check_dir  # noqa: E402
+EASTING_CSV = duneline_check_dir("2009-2014-1996") / "duneline_offset_by_domain.csv"
 
 CELL_M = 10.0
 DUNE_ROWS = 2            # DuneWidth; row 1 is a copy of row 0

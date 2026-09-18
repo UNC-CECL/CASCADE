@@ -169,7 +169,8 @@ from site_layer import hat_figure_style as _style  # noqa: E402
 
 
 SOURCE_TAG = "2009-2014-1996"
-OUT_DIR = ELEVATION_ROOT / f"{SOURCE_TAG}-duneline"
+from site_layer.hat_elevation_products import duneline_check_dir, product as _elprod  # noqa: E402
+OUT_DIR = duneline_check_dir(SOURCE_TAG)
 FIG_DIR = OUT_DIR / "figures"
 # figures/ is sorted by what a figure IS (2026-09-08, Hannah): island/ for the
 # whole-island maps, detail/ for the true-scale crops, offset/ for the two
@@ -378,7 +379,7 @@ SIMPLE_LINE_STYLE = {yr: dict(LINE_STYLE[yr]) for yr in LINE_STYLE}
 # staircase. These panels are tight enough to be worth the 1 m source. NOTE the
 # tiles carry NO CRS tag; their bounds are checked against the domain boxes
 # instead, and a mismatch is fatal rather than silent.
-TILE_1M_DIR = ELEVATION_ROOT / SOURCE_TAG / "1-gapfill-1m"
+TILE_1M_DIR = _elprod(SOURCE_TAG, check=False).gapfill_1m
 TILE_1M_NAME = "clip_domain_{d}_filled.tif"
 TILE_BOUNDS_TOL_M = 1.5
 

@@ -79,8 +79,15 @@ def _find_project_root(start: Path) -> Path:
 
 
 PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
-OUT_DIR = (PROJECT_ROOT / "data" / "hatteras_init"
-           / "0-elevation" / "figures")
+import sys as _elsys
+from pathlib import Path as _ELP
+_elsys.path.insert(0, str(next(_q for _q in _ELP(__file__).resolve().parents
+                               if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_elevation_products as _el  # noqa: E402
+# source-selection/, where the committed copies are. This wrote to a pooled
+# 0-elevation/figures/ that the 2026-08-25 product-first inversion removed,
+# so a re-run recreated that folder beside the real one (fixed 2026-09-18).
+OUT_DIR = _el.source_selection_dir()
 
 MHW = 0.36                 # m NAVD88
 CLIP = (500, 2000)
