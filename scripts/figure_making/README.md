@@ -8,10 +8,7 @@ map and 1212 output files mixed into the code.
 island/        the island as the model starts it; HAT_study_area_figures.py draws
                the generic site figures (study area, domain framework, one domain)
 management/    NC-12 and nourishment: the timeline, the rules, the investigation
-               (diagnose_road_drowning.py is STALE: it reads a 2009_v2
-               topography layout and a HAT_1984_2004_base run that no longer
-               exist, and its domains are the t=0 drowning the gap-filled DEM
-               removed. Kept until it is either repointed or retired)
+               (diagnose_road_drowning.py retired to management/superseded_20260918/)
 shoreline/     shoreline change, observed and modelled
     dsas/        the DSAS rates
     chainage/    the raw CoastSat record, and the gifs of it
