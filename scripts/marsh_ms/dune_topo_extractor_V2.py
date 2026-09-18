@@ -191,14 +191,7 @@ def process_domain_file(
         arr_ocean_top = np.rot90(arr)
         dune_loc_array = np.array(dune_loc_array)
         max_dune_loc = np.nanmax(dune_loc_array)
-        min_dune_loc = np.nanmin(dune_loc_array)
-        mode_dune_loc = stats.mode(dune_loc_array).mode
         start_island = int(max_dune_loc + 1)
-        # if "domain_3" in str(in_path):
-        #     start_island = int(min_dune_loc + 1)  # 2020 domain
-        #     # start_island = int(mode_dune_loc + 1)  # 2014 domain
-        # elif "domain_19" in str(in_path):
-        #     start_island = int(mode_dune_loc + 1)
         topo_m = arr_ocean_top[start_island:, :]
         start_interior_array = np.ones([1,n_along])*start_island
 
@@ -230,9 +223,9 @@ def process_domain_file(
 plt.rcParams["font.size"] = 14
 
 # --- PATHS --------------------------------------------------------------
-version = "final_v1"  # save version to append to folder name
-year = 2004
-LOAD_PATH = r"C:\Users\agfig\model\final_domains\{0}_domainscopy_GIS_npys".format(year)
+version = "final_v2_berm2pt0"  # save version to append to folder name
+year = 2014
+LOAD_PATH = r"C:\Users\agfig\model\final_domains\{0}_final_GIS_npys".format(year)
 TOPO_SAVE_PATH = r"C:\Users\agfig\model\final_domains\cascade_domains\domains_{0}_{1}".format(year, version)
 DUNE_SAVE_PATH = r"C:\Users\agfig\model\final_domains\cascade_domains\dunes_{0}_{1}".format(year, version)
 dict_save_path = r"C:\Users\agfig\model\final_domains\cascade_domains"
@@ -242,7 +235,7 @@ os.makedirs(DUNE_SAVE_PATH, exist_ok=True)
 
 # --- CONSTANTS ----------------------------------------------------
 MHW_M = 0.421              # meters (NAVD88)
-BERM_ELEV_NAVD_M = 1.95    # meters (NAVD88)
+BERM_ELEV_NAVD_M = 2.0    # meters (NAVD88)
 BEACH_START_THR_M = 0.5    # meters (MHW-relative), strict '>' comparison
 # DUNE_WINDOW_PX = 5         # pixels
 SENTINEL_WATER_M = -3.0    # meters (MHW-relative)
@@ -284,114 +277,166 @@ for name in names:
     # if "_23" in name or "_24" in name or "_25" in name:  # v5, original method, dune window 5
     #     use_const_interior = False  # select a start row for the interior (most landward dune cell + 1)
     #     DUNE_WINDOW_PX = 5
+    #     set_dune_row_start = False
+    #     dune_row_start = 0
     # elif "_20" in name or "_21" in name: # v7, dune window 5, constant interior TRUE (2020)
     #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
-    #     DUNE_WINDOW_PX = 5
-    # elif "_11" in name or "_14" in name: # (2020)
+    #     DUNE_WINDOW_PX = 4
+    #     # DUNE_WINDOW_PX = 5
+    #     set_dune_row_start = False
+    #     dune_row_start = 0
+    # elif "_11" in name :
     #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
     #     DUNE_WINDOW_PX = 3
+    #     set_dune_row_start = False
+    #     dune_row_start = 0
+    # elif "_14" in name:
+    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+    #     DUNE_WINDOW_PX = 2
+    #     set_dune_row_start = True
+    #     dune_row_start = 16
+    # elif "_3" in name:
+    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+    #     DUNE_WINDOW_PX = 3
+    #     set_dune_row_start = True
+    #     dune_row_start = 35
+    # elif "_19" in name:
+    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+    #     DUNE_WINDOW_PX = 3
+    #     set_dune_row_start = True
+    #     dune_row_start = 17
+    # elif "_22" in name:
+    #     use_const_interior = False
+    #     DUNE_WINDOW_PX = 10
+    #     set_dune_row_start = False
+    #     dune_row_start = 0
     # else:  # v7, dune window 10, constant interior TRUE
     #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
     #     DUNE_WINDOW_PX = 10
-    # # ----- 2014 ---------------------------------------------------------------------------------------------
-    # if "_23" in name or "_24" in name or "_25" in name:  # v5, original method, dune window 5
-    #     use_const_interior = False  # select a start row for the interior (most landward dune cell + 1)
-    #     DUNE_WINDOW_PX = 5
-    # elif "_3" in name:
-    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
-    #     DUNE_WINDOW_PX = 6
-    # elif "_4" in name:
-    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
-    #     DUNE_WINDOW_PX = 8
-    # elif "_6" in name or "_8" in name or "_9" in name or "_10" in name or "_17" in name or "_20" in name:
-    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
-    #     DUNE_WINDOW_PX = 3
-    # else:  # v7, dune window 10, constant interior TRUE
-    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
-    #     DUNE_WINDOW_PX = 5
-    # ----- 2004 ---------------------------------------------------------------------------------------------
-    if "_3" in name:
-        use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
-        # DUNE_WINDOW_PX = 2
-        DUNE_WINDOW_PX = 3
-        set_dune_row_start = True
-        # dune_row_start = 8
-        dune_row_start = 9
-    elif "_4" in name:
-        use_const_interior = True
+    #     set_dune_row_start = False
+    #     dune_row_start = 0
+    # ----- 2014 ---------------------------------------------------------------------------------------------
+    if "_23" in name or "_24" in name or "_25" in name:  # v5, original method, dune window 5
+        use_const_interior = False  # select a start row for the interior (most landward dune cell + 1)
         DUNE_WINDOW_PX = 5
-        BEACH_START_THR_M = 0.5
         set_dune_row_start = False
         dune_row_start = 0
-    elif "_10" in name or "_11" in name:
-        use_const_interior = True
-        DUNE_WINDOW_PX = 2
-        BEACH_START_THR_M = 0.5
+    elif "_22" in name:
+        use_const_interior = False
+        DUNE_WINDOW_PX = 9
         set_dune_row_start = True
-        dune_row_start = 5
+        dune_row_start = 18
+    elif "_3" in name:
+        use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+        DUNE_WINDOW_PX = 3
+        set_dune_row_start = True
+        dune_row_start = 36
+    elif "_4" in name:
+        use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+        DUNE_WINDOW_PX = 5
+        set_dune_row_start = True
+        dune_row_start = 18
+    elif "_6" in name or "_8" in name or "_9" in name or "_10" in name or "_17" in name or "_20" in name:
+        use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+        DUNE_WINDOW_PX = 3
+        set_dune_row_start = False
+        dune_row_start = 0
     elif "_12" in name:
-        use_const_interior = True
-        DUNE_WINDOW_PX = 10
-        BEACH_START_THR_M = 0.5
-        set_dune_row_start = False
-        dune_row_start = 0
-    elif "_14" in name:  # decided not to use for simplicity
-        use_const_interior = True
-        DUNE_WINDOW_PX = 3
-        BEACH_START_THR_M = 0.5
-        set_dune_row_start = True
-        dune_row_start = 6
-    elif "_18" in name:
-        use_const_interior = True
-        DUNE_WINDOW_PX = 2
-        set_dune_row_start = True
-        dune_row_start = 9
-    elif "_19" in name:
-        use_const_interior = True
-        DUNE_WINDOW_PX = 2
-        set_dune_row_start = True
-        dune_row_start = 7
-    elif "_20" in name:
-        use_const_interior = True
-        DUNE_WINDOW_PX = 3
-        set_dune_row_start = True
-        dune_row_start = 9
-    elif "_21" in name:
-        use_const_interior = True
+        use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
         DUNE_WINDOW_PX = 4
         set_dune_row_start = True
-        dune_row_start = 8
-    elif "_22" in name:  # v2
-        use_const_interior = False
-        # DUNE_WINDOW_PX = 3
-        DUNE_WINDOW_PX = 5
-        BEACH_START_THR_M = 1.24
-        set_dune_row_start = False
-        dune_row_start = 0
-    elif "_23" in name:
-        use_const_interior = False
-        DUNE_WINDOW_PX = 2
-        BEACH_START_THR_M = 1.6
-        set_dune_row_start = False
-        dune_row_start = 0
-    elif "_24" in name:
-        use_const_interior = False
-        DUNE_WINDOW_PX = 2  # v2 used 2, v3 used 5
-        BEACH_START_THR_M = 1.5  # v2 used 1.3, v3 used 1.0
-        set_dune_row_start = False
-        dune_row_start = 0
-    elif "_25" in name:
-        use_const_interior = False
-        DUNE_WINDOW_PX = 3
-        BEACH_START_THR_M = 1.1
+        dune_row_start = 14
+    elif "_18" in name:
+        use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+        DUNE_WINDOW_PX = 4
         set_dune_row_start = False
         dune_row_start = 0
     else:  # v2
-        use_const_interior = True
-        DUNE_WINDOW_PX = 3
-        BEACH_START_THR_M = 0.5
+        use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+        DUNE_WINDOW_PX = 5
         set_dune_row_start = False
         dune_row_start = 0
+    # # ----- 2004 ---------------------------------------------------------------------------------------------
+    # if "_3" in name:
+    #     use_const_interior = True  # select a start row for the interior (most landward dune cell + 1)
+    #     DUNE_WINDOW_PX = 3
+    #     set_dune_row_start = True
+    #     dune_row_start = 9
+    # elif "_4" in name:
+    #     use_const_interior = True
+    #     DUNE_WINDOW_PX = 5
+    #     BEACH_START_THR_M = 0.5
+    #     set_dune_row_start = False
+    #     dune_row_start = 0
+    # elif "_10" in name or "_11" in name:
+    #     use_const_interior = True
+    #     DUNE_WINDOW_PX = 2
+    #     BEACH_START_THR_M = 0.5
+    #     set_dune_row_start = True
+    #     dune_row_start = 5
+    # elif "_12" in name:
+    #     use_const_interior = True
+    #     DUNE_WINDOW_PX = 10
+    #     BEACH_START_THR_M = 0.5
+    #     set_dune_row_start = False
+    #     dune_row_start = 0
+    # elif "_14" in name:  # decided not to use for simplicity
+    #     use_const_interior = True
+    #     DUNE_WINDOW_PX = 3
+    #     BEACH_START_THR_M = 0.5
+    #     set_dune_row_start = True
+    #     dune_row_start = 6
+    # elif "_18" in name:
+    #     use_const_interior = True
+    #     DUNE_WINDOW_PX = 2
+    #     set_dune_row_start = True
+    #     dune_row_start = 9
+    # elif "_19" in name:
+    #     use_const_interior = True
+    #     DUNE_WINDOW_PX = 2
+    #     set_dune_row_start = True
+    #     dune_row_start = 7
+    # elif "_20" in name:
+    #     use_const_interior = True
+    #     DUNE_WINDOW_PX = 3
+    #     set_dune_row_start = True
+    #     dune_row_start = 9
+    # elif "_21" in name:
+    #     use_const_interior = True
+    #     DUNE_WINDOW_PX = 4
+    #     set_dune_row_start = True
+    #     dune_row_start = 8
+    # elif "_22" in name:  # v2
+    #     use_const_interior = False
+    #     # DUNE_WINDOW_PX = 3
+    #     DUNE_WINDOW_PX = 5
+    #     BEACH_START_THR_M = 1.24
+    #     set_dune_row_start = False
+    #     dune_row_start = 0
+    # elif "_23" in name:
+    #     use_const_interior = False
+    #     DUNE_WINDOW_PX = 2
+    #     BEACH_START_THR_M = 1.6
+    #     set_dune_row_start = False
+    #     dune_row_start = 0
+    # elif "_24" in name:
+    #     use_const_interior = False
+    #     DUNE_WINDOW_PX = 2  # v2 used 2, v3 used 5
+    #     BEACH_START_THR_M = 1.5  # v2 used 1.3, v3 used 1.0
+    #     set_dune_row_start = False
+    #     dune_row_start = 0
+    # elif "_25" in name:
+    #     use_const_interior = False
+    #     DUNE_WINDOW_PX = 3
+    #     BEACH_START_THR_M = 1.1
+    #     set_dune_row_start = False
+    #     dune_row_start = 0
+    # else:  # v2
+    #     use_const_interior = True
+    #     DUNE_WINDOW_PX = 3
+    #     BEACH_START_THR_M = 0.5
+    #     set_dune_row_start = False
+    #     dune_row_start = 0
 
     topo_domain, dune_domain, dune_dict, interior_dict = process_domain_file(
         load_dir / name,
