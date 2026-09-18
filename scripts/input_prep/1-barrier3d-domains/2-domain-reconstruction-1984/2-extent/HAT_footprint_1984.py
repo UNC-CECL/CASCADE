@@ -152,7 +152,8 @@ from site_layer.hat_figure_style import (  # noqa: E402  the elevation classes a
 
 PRODUCT = "1984-start"
 CELL_M = 10.0
-SCOPE_DIR = INIT / "1-barrier3d-domains" / PRODUCT / "2-domain-reconstruction-1984"
+from site_layer.hat_topo_version import insert_scope_dir  # noqa: E402
+SCOPE_DIR = insert_scope_dir(PRODUCT)
 STEP_DIR = insert_scope_step(PRODUCT, "2-extent")      # the tables and the report (2026-09-09)
 SHIFT_DIR = duneline_shift_dir(PRODUCT)
 from site_layer import hat_topo_version as _tv  # noqa: E402

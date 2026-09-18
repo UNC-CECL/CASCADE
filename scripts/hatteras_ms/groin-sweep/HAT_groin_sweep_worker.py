@@ -106,7 +106,7 @@ from cascade_pipeline.run_registry import git_provenance, values_digest
 from cascade_pipeline.shoreline import (build_shoreline_matrix,
                                         compute_change_rate, compute_lrr)
 
-from hatteras_site_config import (
+from site_layer.hatteras_site_config import (
     HATTERAS_BEACH_DUNE,
     HATTERAS_COMMUNITY_ZONES,
     HATTERAS_DOMAINS,
@@ -195,8 +195,8 @@ def _parse_cli(argv):
 
 # Resolved from the extractor, not pinned -- the same source the hindcast
 # runner and the road setbacks use, so the sweep cannot drift out of step with
-# them. See scripts/hat_topo_version.py.
-from hat_topo_version import topo_dirs, product_for_year  # scripts/, on path
+# them. See scripts/site_layer/hat_topo_version.py.
+from site_layer.hat_topo_version import topo_dirs, product_for_year  # scripts/, on path
 
 # THE PRODUCT MUST BE NAMED. topo_dirs() with no argument resolves
 # DEFAULT_PRODUCT, which is "2004-start" -- so a 1984 sweep built its model on
@@ -218,10 +218,10 @@ _TOPO_DIR, _DUNE_DIR, TOPO_DUNE_VERSION = topo_dirs(TOPO_PRODUCT)
 
 HATTERAS_DATA_BASE = PROJECT_BASE_DIR / "data" / "hatteras_init"
 PARAMETER_FILE = "Hatteras-CASCADE-parameters.yaml"   # resolved by CASCADE
-BARRIER3D_DIR = HATTERAS_DATA_BASE / "1-barrier3d-domains"
+from site_layer.hat_topo_version import DOMAIN_ROOT as BARRIER3D_DIR  # noqa: E402
 # Taken from what topo_dirs() RETURNED rather than re-joined from parts -
 # re-joining is how a resolver gets bypassed without anyone noticing.
-from hat_topo_version import BUFFER_DIR   # noqa: E402
+from site_layer.hat_topo_version import BUFFER_DIR   # noqa: E402
 DUNE_TOPO_DIR = _TOPO_DIR.parent
 
 # Cascade resolves its parameter file relative to cwd, exactly as the runner

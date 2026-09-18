@@ -101,14 +101,14 @@ ELEVATION_DIR = INIT_ROOT / "0-elevation"
 
 # Which elevation product to export. "2009-2014" is the baseline;
 # "2009-2014-1996" is the 1984-start DEM. Resolved through
-# scripts/hat_elevation_products.py so a layout change cannot leave this
+# scripts/site_layer/hat_elevation_products.py so a layout change cannot leave this
 # pointing at a directory that is no longer there.
 SOURCE_TAG = "2009-2014"
 if "--product" in sys.argv:
     SOURCE_TAG = sys.argv[sys.argv.index("--product") + 1]
 
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
-from hat_elevation_products import product as _product  # noqa: E402
+from site_layer.hat_elevation_products import product as _product  # noqa: E402
 
 INPUT_DIR = _product(SOURCE_TAG).resampled_10m
 INPUT_GLOB = "resampled_domain_*_filled.tif"
@@ -126,9 +126,9 @@ if "--target" in sys.argv:
 DEM_NAME = SOURCE_TAG   # recorded in the audit; no longer a path segment
 
 # Period-first (2026-08-25). Was {DEM_YEAR}-raw/{DEM_YEAR}-npy-arrays/{DEM_NAME}.
-NPY_ROOT = INIT_ROOT / "1-barrier3d-domains" / TOPO_TARGET
-OUTPUT_DIR = NPY_ROOT / "1-extraction" / "npy-arrays"        # the extraction half (2026-09-09)
-SURVEY_DIR = NPY_ROOT / "1-extraction" / "npy-arrays_survey"
+from site_layer import hat_topo_version as _b3d  # noqa: E402
+NPY_ROOT = _b3d.product_dir(TOPO_TARGET)
+OUTPUT_DIR, SURVEY_DIR = _b3d.npy_dirs(TOPO_TARGET)          # the extraction half (2026-09-09)
 
 NODATA_FILL = -10.0   # the extractor detects nodata as raw <= -9.0
 EXPECTED_SHAPE = (50, 200)
@@ -140,7 +140,7 @@ SURVEY_2009, SURVEY_NONE = 2009, 0
 # resolver rather than hardcoded to 2014: the 1984 product also carries 1996,
 # and a hardcoded 2014 reported its fill count as if the 1996 graft were not
 # there.
-from hat_elevation_products import fill_codes as _fill_codes  # noqa: E402
+from site_layer.hat_elevation_products import fill_codes as _fill_codes  # noqa: E402
 SURVEY_FILL_CODES = list(_fill_codes(SOURCE_TAG)) or [2014]
 
 

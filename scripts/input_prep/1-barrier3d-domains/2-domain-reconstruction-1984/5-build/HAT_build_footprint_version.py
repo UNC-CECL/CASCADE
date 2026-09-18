@@ -78,11 +78,12 @@ def _find_root(start: Path) -> Path:
 REPO = _find_root(Path(__file__).resolve())
 INIT = REPO / "data" / "hatteras_init"
 sys.path.insert(0, str(REPO / "scripts"))
-from hat_topo_version import array_name, dune_topo_root, topo_dirs, insert_scope_step# noqa: E402
+from site_layer.hat_topo_version import array_name, dune_topo_root, topo_dirs, insert_scope_step# noqa: E402
 
 PRODUCT = "1984-start"
 SRC_VERSION = "v2"
-SCOPE = INIT / "1-barrier3d-domains" / PRODUCT / "2-domain-reconstruction-1984"
+from site_layer.hat_topo_version import insert_scope_dir  # noqa: E402
+SCOPE = insert_scope_dir(PRODUCT)
 FOOTPRINT_CSV = insert_scope_step(PRODUCT, "2-extent") / "footprint_1984_by_domain.csv"
 KINDS = ("topography", "nodata")          # the row operation applies to both
 

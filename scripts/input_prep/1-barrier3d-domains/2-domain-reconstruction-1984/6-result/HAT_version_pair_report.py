@@ -16,7 +16,7 @@ Nothing is re-run and nothing is re-scored: every number here is one of
 theirs, or a difference of two of theirs. A section whose numbers disagree
 with the per-version reports means one of the three is stale.
 
-WHAT IS WRITTEN, all under output/comparisons/relocation_1984_2004/v2_vs_v3/
+WHAT IS WRITTEN, all under output/comparisons/relocation/versions/v2_vs_v3/
     report.txt          the console output of this run, with the provenance
                         of the four runs and the two table sets above it
     tables/*.csv        the side-by-side tables the report prints, in full
@@ -51,12 +51,17 @@ def _find_root(start: Path) -> Path:
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "hatteras_ms"))
+# the relocation comparison moved into hatteras_ms/experiments/ on 2026-09-13
+# (cfd0b475); this import broke silently until 2026-09-17
+sys.path.insert(0, str(REPO / "scripts" / "hatteras_ms" / "experiments"))
 import HAT_relocation_comparison as RC  # noqa: E402   _Tee, _arm_provenance, TOLERANCE_YEARS, windows
 
-RAW = REPO / "output" / "raw_runs" / "version-pair"
-COMP = REPO / "output" / "comparisons" / "relocation_1984_2004"
-OUT = COMP / "v2_vs_v3"
-AUDIT = REPO / "data/hatteras_init/1-barrier3d-domains/1984-start/dune-topo/v3/HAT_footprint_audit.csv"
+# raw_runs by purpose since 2026-09-16: the version pair is under versions/
+RAW = REPO / "output" / "raw_runs" / "versions" / "version-pair"
+COMP = REPO / "output" / "comparisons" / "relocation" / "1984_2004"
+OUT = REPO / "output" / "comparisons" / "relocation" / "versions" / "v2_vs_v3"
+from site_layer import hat_topo_version as _b3d  # noqa: E402
+AUDIT = _b3d.dune_topo_root("1984-start") / "v3" / "HAT_footprint_audit.csv"
 VERSIONS = ("v2", "v3")
 LABEL = {"v2": "the extraction (today's setbacks)", "v3": "the 1984 reconstruction (1984 setbacks)"}
 ARMS = {"free": "HAT_1984_2004_{preset}_road_bdm_groin",

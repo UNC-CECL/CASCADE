@@ -214,8 +214,9 @@ INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 # {DEM_NAME} and {DEM_YEAR}-dune-topo/{RUN_NAME}, which keyed three path
 # segments on the DEM year and said nothing about which run the arrays were
 # for.
-PRODUCT_DIR = INIT_ROOT / "1-barrier3d-domains" / TOPO_PRODUCT
-LOAD_PATH = PRODUCT_DIR / "1-extraction" / "npy-arrays"          # the extraction half (2026-09-09)
+from site_layer.hat_topo_version import npy_dirs, product_dir  # noqa: E402
+PRODUCT_DIR = product_dir(TOPO_PRODUCT)
+LOAD_PATH = npy_dirs(TOPO_PRODUCT)[0]                            # the extraction half (2026-09-09)
 
 DUNE_TOPO_ROOT = PRODUCT_DIR / "dune-topo"
 RUN_DIR = DUNE_TOPO_ROOT / RUN_NAME

@@ -140,13 +140,13 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 HATTERAS_DATA_BASE = PROJECT_ROOT / "data" / "hatteras_init"
-BARRIER3D_DIR = HATTERAS_DATA_BASE / "1-barrier3d-domains"
 import sys as _tvsys
 from pathlib import Path as _TVP
 _tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
                                if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_topo_version as _tv  # noqa: E402
 MGMT_DIR = _tv.MGMT_ROOT
+BARRIER3D_DIR = _tv.DOMAIN_ROOT
 
 # Native-resolution LiDAR clips, one folder per domain. NOT the 10 m resample.
 #   clip_domain_<N>.tif      1 m, native
@@ -155,7 +155,7 @@ MGMT_DIR = _tv.MGMT_ROOT
 # 2026-08-25 restructure removed; the clips then sat under superseded/ and
 # were lifted out on 2026-08-26 because four scripts read them. Same files,
 # same per-domain layout - see 1-barrier3d-domains/LINEAGE.md.
-CLIP_ROOT = BARRIER3D_DIR / "domain-clips-1m"
+CLIP_ROOT = _tv.DOMAIN_CLIPS_DIR
 CLIP_GLOB = "clip_domain_*.tif"
 RESAMPLE_GLOB = "resampled_domain_*.tif"
 

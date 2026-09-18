@@ -89,13 +89,18 @@ import numpy as np
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 DATA = PROJECT_ROOT / "data" / "hatteras_init"
-B3D = DATA / "1-barrier3d-domains"
+import sys as _b3dsys
+from pathlib import Path as _B3DP
+_b3dsys.path.insert(0, str(next(_q for _q in _B3DP(__file__).resolve().parents
+                                if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_topo_version as _b3d  # noqa: E402
+B3D = _b3d.DOMAIN_ROOT
 
 # Resolved from the extractor rather than pinned, so this checks the units of
 # the arrays actually being run. It said "2009_v2", which has since been moved
 # to 2009-dune-topo/incorrect/.
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
-from hat_topo_version import topo_dirs, array_name  # noqa: E402
+from site_layer.hat_topo_version import topo_dirs, array_name  # noqa: E402
 
 # BOTH PERIODS, AND THE FILES THE RUNNER ACTUALLY SPENDS (2026-08-26).
 #
@@ -120,7 +125,7 @@ from hat_topo_version import topo_dirs, array_name  # noqa: E402
 # reads, instead of mirroring it. The header above says this CONFIG "must
 # mirror HAT_hindcast_1984_2024.py"; mirroring is how it drifted, so the
 # period-dependent forcings are now imported and cannot.
-from hatteras_site_config import (HATTERAS_PERIODS,  # noqa: E402
+from site_layer.hatteras_site_config import (HATTERAS_PERIODS,  # noqa: E402
                                   HATTERAS_ROAD_ELEVATION_FILE)
 
 PERIODS = sorted(HATTERAS_PERIODS)          # [1984, 2004]

@@ -137,7 +137,8 @@ PRODUCT = "1984-start"
 CELL_M = 10.0
 ROAD_ROWS = 2
 HALF_M = 10.0                 # the geojson is a centreline; the model road is 20 m
-SCOPE_DIR = INIT / "1-barrier3d-domains" / PRODUCT / "2-domain-reconstruction-1984"
+from site_layer.hat_topo_version import insert_scope_dir  # noqa: E402
+SCOPE_DIR = insert_scope_dir(PRODUCT)
 FOOTPRINT_CSV = insert_scope_step(PRODUCT, "2-extent") / "footprint_1984_by_domain.csv"
 SHIFT_DIR = duneline_shift_dir(PRODUCT)
 from site_layer import hat_topo_version as _tv  # noqa: E402

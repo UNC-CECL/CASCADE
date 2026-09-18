@@ -95,13 +95,13 @@ from matplotlib.transforms import blended_transform_factory
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
-DOMAIN_ROOT = INIT_ROOT / "1-barrier3d-domains"
 import sys as _tvsys
 from pathlib import Path as _TVP
 _tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
                                if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_topo_version as _tv  # noqa: E402
 ROADS_ROOT = _tv.ROADS_ROOT
+DOMAIN_ROOT = _tv.DOMAIN_ROOT
 
 # Same root gis-export-npy.py walks: one subfolder per domain, each holding
 # a resampled_*.tif. The REPO copy, not the OneDrive original, so a run does
@@ -114,7 +114,7 @@ ROADS_ROOT = _tv.ROADS_ROOT
 # road masks the dune/topo extractor requires. Keeping them under a
 # directory called 'superseded' invited exactly the deletion this move
 # prevents.
-CLIPRESAMPLE_ROOT = DOMAIN_ROOT / "domain-clips-1m"
+CLIPRESAMPLE_ROOT = _tv.DOMAIN_CLIPS_DIR
 TIF_GLOB = "resampled_*.tif"
 
 # A GEOMETRY REFERENCE, NOT "THE ARRAYS THE EXTRACTOR READS" (corrected

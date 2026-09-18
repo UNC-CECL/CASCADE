@@ -79,13 +79,14 @@ REPO = _find_project_root(Path(__file__).resolve())
 INIT = REPO / "data" / "hatteras_init"
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "0-elevation" / "3-figures"))
-from hat_topo_version import (  # noqa: E402
+from site_layer.hat_topo_version import (  # noqa: E402
     array_name, insert_figures_dir, topo_dirs, insert_scope_step)
 import HAT_plot_duneline_offset as off  # noqa: E402  the house style
-from hat_figure_style import elevation_cmap  # noqa: E402  the elevation classes
+from site_layer.hat_figure_style import elevation_cmap  # noqa: E402  the elevation classes
 
 PRODUCT = "1984-start"
-START_DIR = INIT / "1-barrier3d-domains" / PRODUCT
+from site_layer.hat_topo_version import product_dir  # noqa: E402
+START_DIR = product_dir(PRODUCT)
 OUT_DIR = insert_scope_step(PRODUCT, "2-extent")   # tables and report (2026-09-09)
 FIG_SEAWARD = insert_figures_dir(PRODUCT, "3-placement", "seaward")
 FIG_ROAD = insert_figures_dir(PRODUCT, "3-placement", "behind-road")
@@ -301,7 +302,7 @@ def fig_grid(rows, topo_dir):
         for sp in ("top", "right"):
             ax.spines[sp].set_visible(True)
         off._title(ax, k, f"Domains {g[0]}\u2013{g[-1]}")
-    axes[-1].set_xlabel("domain (1 = south, Cape Hatteras)")
+    axes[-1].set_xlabel("domain (1 = south, Cape Point)")
 
     cmap, _norm, bounds = elevation_cmap()
     labels = ["below 0 (water)"] + [f"{lo:g}\u2013{hi:g}" for lo, hi in zip(bounds[1:-2], bounds[2:-1])] \
