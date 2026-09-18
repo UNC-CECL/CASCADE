@@ -253,9 +253,8 @@ axes[1, 1].legend()
 axes[1, 1].grid(True, alpha=0.3, axis='y')
 
 plt.tight_layout()
-_FIGDIR = (next(_q for _q in Path(__file__).resolve().parents
-                if (_q / "pyproject.toml").exists())
-           / "output" / "figures" / "shoreline")
+from site_layer.hat_figure_style import figure_dir as _figure_dir  # noqa: E402
+_FIGDIR = _figure_dir("shoreline")
 _OUT = support_dir(_FIGDIR) / "dsas_verification.png"
 _OUT.parent.mkdir(parents=True, exist_ok=True)
 plt.savefig(str(_OUT), dpi=300)   # products go under output/ (rule 1)
@@ -274,6 +273,5 @@ _csys.path.insert(0, str(next(_q for _q in _CP(__file__).resolve().parents
                               if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer.hat_figure_style import record_caption as _record_caption
 _record_caption(
-    next(_q for _q in _CP(__file__).resolve().parents if (_q / "pyproject.toml").exists())
-    / "output" / "figures" / "shoreline" / "dsas_verification.png",
+    _figure_dir("shoreline") / "dsas_verification.png",
     "Diagnostics on the DSAS shoreline-rate calculation: the checks that the per-domain rates aggregate the transect rates as intended, and where the record is thin enough for a domain rate to rest on few transects. A working figure kept because it is the evidence behind the rates in dsas_calibration_periods.png, not a result in itself.")

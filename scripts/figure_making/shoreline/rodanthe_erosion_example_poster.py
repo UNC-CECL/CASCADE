@@ -58,7 +58,8 @@ MIN_OBS     = 5
 # A poster figure, so it goes to output/figures/ with the others (2026-09-18);
 # it used to be written in among the rate fits, 5-scr/coastsat_lrr/rodanthe_plots
 # (those older copies are in 5-scr/archive/rodanthe_plots/).
-OUTPUT_DIR  = str(_FIG_REPO / "output" / "figures" / "shoreline" / "rodanthe_plots")
+from site_layer import hat_figure_style as _hs  # noqa: E402
+OUTPUT_DIR  = str(_hs.figure_dir("shoreline", "rodanthe_plots"))
 OUTPUT_FILE = "rodanthe_erosion_trends.png"
 
 FIG_SIZE = (8, 8)

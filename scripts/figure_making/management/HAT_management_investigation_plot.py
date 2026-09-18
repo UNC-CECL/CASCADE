@@ -63,7 +63,10 @@ _RAW_RUNS = _FIG_REPO / "output" / "raw_runs"
 # =============================================================================
 
 # Output folder for plots
-OUTPUT_DIR = str(_FIG_REPO / "output" / "figures" / "management_investigation")
+# Under management/, the subject it belongs to (2026-09-18); this wrote a
+# top-level output/figures/management_investigation/ beside it.
+from site_layer import hat_figure_style as _hs  # noqa: E402
+OUTPUT_DIR = str(_hs.figure_dir("management", "investigation"))
 
 # Path to the CoastSat transect CSV for the active period.
 # Columns expected: domain_number (GIS 1–90), lrr_m_yr (m/yr per transect).

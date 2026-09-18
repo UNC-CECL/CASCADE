@@ -97,6 +97,26 @@ PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 from site_layer.hat_map_layers import STYLE_DOC, STYLE_SHEET_DIR  # noqa: E402,F401
 
+# WHERE FIGURES GO (2026-09-18). Every script in scripts/figure_making typed
+# output/figures/<subject> itself. The subjects are the ones
+# scripts/figure_making/README.md lists; a name outside them raises rather than
+# quietly starting a new top-level folder, which is how
+# output/figures/management_investigation/ came to sit beside management/.
+OUTPUT_ROOT = PROJECT_ROOT / "output"
+FIGURES_ROOT = OUTPUT_ROOT / "figures"
+COMPARISONS_ROOT = OUTPUT_ROOT / "comparisons"       # cross-run figures
+OBSERVATIONS_OUT = OUTPUT_ROOT / "observations"      # the observed record itself
+FIGURE_SUBJECTS = ("site", "forcing", "management", "shoreline",
+                   "initialization", "style", "talk")
+
+
+def figure_dir(subject: str, *parts: str) -> Path:
+    """output/figures/<subject>[/<parts>...]; subject must be a known one."""
+    if subject not in FIGURE_SUBJECTS:
+        raise ValueError(f"unknown figure subject {subject!r}; one of "
+                         f"{', '.join(FIGURE_SUBJECTS)} (figure_making/README.md)")
+    return FIGURES_ROOT.joinpath(subject, *parts)
+
 # =============================================================================
 # TYPE, INK, THE VINTAGE PAIR
 # =============================================================================

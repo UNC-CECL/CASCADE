@@ -70,8 +70,8 @@ LOOKUP_CSV    = str(_obs.transect_lookup())
 # absolute paths into a home directory, so they resolved on one machine
 # and dumped 1212 files into the code tree. Rule 1 and rule 5 of
 # ORGANIZATION.md.
-OUTPUT_DIR    = str(_REPO / "output" / "observations"
-                    / "raw_shoreline_change" / "annual_output")
+from site_layer import hat_figure_style as _hs  # noqa: E402
+OUTPUT_DIR    = str(_hs.OBSERVATIONS_OUT / "raw_shoreline_change" / "annual_output")
 SITE_FILTER   = "usa_NC"
 
 FULL_START = "1984-01-01"

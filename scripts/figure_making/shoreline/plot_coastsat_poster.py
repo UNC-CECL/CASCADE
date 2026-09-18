@@ -63,7 +63,8 @@ warnings.filterwarnings("ignore")
 _REPO = next(_p for _p in _P(__file__).resolve().parents
              if (_p / "pyproject.toml").exists())
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as LRR_DIR  # noqa: E402
-OUT = _REPO / "output" / "figures" / "shoreline" / "two_periods_10_domains"
+from site_layer import hat_figure_style as _hs  # noqa: E402
+OUT = _hs.figure_dir("shoreline", "two_periods_10_domains")
 
 PERIOD_STARTS = (1996, 2010)
 PERIODS = [(st, HATTERAS_PERIODS[st]["end_year"]) for st in PERIOD_STARTS]

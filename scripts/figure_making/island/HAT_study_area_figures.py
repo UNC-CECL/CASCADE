@@ -122,7 +122,7 @@ INIT = REPO / "data" / "hatteras_init"
 from site_layer.hat_observed_rates import DOMAIN_BOXES  # noqa: E402
 from site_layer import hat_map_layers as _ml  # noqa: E402
 OUTLINE = _ml.ISLAND_OUTLINE
-FIG_ROOT = REPO / "output" / "figures"
+from site_layer.hat_figure_style import FIGURES_ROOT as FIG_ROOT  # noqa: E402
 
 # WHICH SUBJECT FOLDER EACH FIGURE BELONGS TO. output/figures/ is organised by
 # SUBJECT, not by the script that drew the figure (ORGANIZATION.md rule 1, and

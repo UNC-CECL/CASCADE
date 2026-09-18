@@ -61,7 +61,8 @@ from site_layer.hatteras_site_config import HATTERAS_PERIODS, HATTERAS_ANNOTATIO
 _PATH_REPO = next(_p for _p in _P(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as LRR_DIR  # noqa: E402
-OUT = _PATH_REPO / "output" / "figures" / "shoreline" / "coastsat_calibration_periods"
+from site_layer import hat_figure_style as _hs  # noqa: E402
+OUT = _hs.figure_dir("shoreline", "coastsat_calibration_periods")
 
 # The canonical chain. Each end comes from the site config, and the LRR
 # product for a window lives under <start>_<end>/, so naming the starts names

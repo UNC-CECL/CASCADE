@@ -140,13 +140,12 @@ from site_layer.hatteras_site_config import (                            # noqa:
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
 # Resolved through hat_observed_rates.py (2026-09-18), not typed.
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as COASTSAT_BASE  # noqa: E402
-DEFAULT_OUT = (PROJECT_BASE_DIR / "output" / "comparisons"
-               / "scenario_grid" / "scenario_grid_by_preset.png")
+from site_layer import hat_figure_style as _hs  # noqa: E402
+DEFAULT_OUT = _hs.COMPARISONS_ROOT / "scenario_grid" / "scenario_grid_by_preset.png"
 # The manuscript copy, with the other figures by subject (2026-09-18). Written
 # only from a default run: an --out or any flagged variant is a working figure
 # and must not overwrite it.
-PUBLISHED = (PROJECT_BASE_DIR / "output" / "figures" / "shoreline"
-             / "scenario_grid.png")
+PUBLISHED = _hs.figure_dir("shoreline") / "scenario_grid.png"
 
 # THE CANONICAL CHAIN, 1996 -> 2010 -> 2024 (Hannah, 2026-09-17). Ends come
 # from HATTERAS_PERIODS, so changing PERIOD_STARTS moves the whole figure.
