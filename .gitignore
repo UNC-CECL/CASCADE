@@ -222,6 +222,13 @@ data/hatteras_init/5-scr/1-observations/coastsat_timeseries/
 # there. A clone does NOT get them: the scripts that read them need a copy
 # from someone who has one.
 data/hatteras_init/5-scr/**/*.geojson
+# Same decision for 4-mgmt-forcing (Hannah, 2026-09-18): the two NC-12 lines
+# (raw_offset/1978, /2008) and the relocation sample points stay on disk, off
+# GitHub. The line files are INPUTS -- the setback producer, the relocation
+# measurement and several figures read them through
+# hat_topo_version.road_line_file() -- so a clone cannot rebuild the setbacks
+# or redraw those figures without a copy from someone who has one.
+data/hatteras_init/4-mgmt-forcing/**/*.geojson
 
 # unrelated init/reference data
 data/Ocracoke_init_data/
