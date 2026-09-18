@@ -22,13 +22,13 @@ PANELS
 INPUTS
     D:/Hatteras_GIS/domains.geojson                 the domain boxes (EPSG:3725)
     D:/Hatteras_GIS/Outlines/nc_80k/nc_80k.shp      the coastline
-    data/hatteras_init/4-mgmt-forcing/road_offset/raw_offset/2004/nc12_2004.geojson
-    data/hatteras_init/8-overwash-analysis/observations/Hatteras_Overwash_Data.xlsx
+    data/hatteras_init/4-mgmt-forcing/road_offset/raw_offset/2008/nc12_2008.geojson
+    data/hatteras_init/8-overwash-analysis/1-observations/Hatteras_Overwash_Data.xlsx
     via overwash_data.py
 
 OUTPUT
-    data/hatteras_init/8-overwash-analysis/figures/map/overwash_map_period1.png (+ .pdf)
-    data/hatteras_init/8-overwash-analysis/figures/map/overwash_map_period2.png (+ .pdf)
+    data/hatteras_init/8-overwash-analysis/2-record/map/overwash_map_period1.png (+ .pdf)
+    data/hatteras_init/8-overwash-analysis/2-record/map/overwash_map_period2.png (+ .pdf)
     (overwash_map_periods.png with --both) and their entries in CAPTIONS.md.
 
 STYLE
@@ -63,19 +63,20 @@ REPO = next(
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(HERE))
 
-from hat_figure_style import (C, FIG_H_MAX, INK, INK_MUTED, _north_arrow,   # noqa: E402
+from site_layer.hat_figure_style import (C, FIG_H_MAX, INK, INK_MUTED, _north_arrow,   # noqa: E402
                               _scalebar, _title, apply_style, figsize, save,
                               spines_for_image)
 from overwash_data import (OUT_DIR, PERIODS, SECTIONS, assign_capture,   # noqa: E402
                            load_observations, load_storms, upsert_caption)
 
-FIG_DIR = OUT_DIR / "figures" / "map"
+from site_layer import hat_overwash as ow  # noqa: E402
+FIG_DIR = ow.MAP
 OUT_PNG = FIG_DIR / "overwash_map_periods.png"
 
 DOMAIN_FILE = Path("D:/Hatteras_GIS/domains.geojson")
 COAST_FILE = Path("D:/Hatteras_GIS/Outlines/nc_80k/nc_80k.shp")
 ROAD_FILE = (REPO / "data/hatteras_init/4-mgmt-forcing/road_offset/raw_offset"
-             / "2004/nc12_2004.geojson")
+             / "2008/nc12_2008.geojson")
 
 CLR_OW = C["ACCENT"]
 CLR_WATER = "#eef4f8"

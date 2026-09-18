@@ -2,7 +2,7 @@
 
 Figures of the observed overwash record on Hatteras Island, per image and
 per CASCADE domain, for the two model periods. The record itself is the
-workbook in `data/hatteras_init/8-overwash-analysis/observations/`; every
+workbook in `data/hatteras_init/8-overwash-analysis/1-observations/`; every
 output lands under `data/hatteras_init/8-overwash-analysis/` (see the README
 there).
 
@@ -36,8 +36,8 @@ a 7-day grace because the sheet's date ranges run to dissipation. The one
 hand override is the May 2022 nor'easter, routed to the October 2023 image
 on Hannah's own note. Storms not in the sheet (Ida 2009, Debby 2024) are
 listed in `EXTRA_STORMS`. The decisions are written out to
-`tables/storms_by_image.csv`, so a change in the sheet is visible there
+`1-observations/storms_by_image.csv`, so a change in the sheet is visible there
 rather than only in the figure.
 
-Style: `scripts/hat_figure_style.py`. No in-image titles or footnotes; the
+Style: `scripts/site_layer/hat_figure_style.py`. No in-image titles or footnotes; the
 words are in `CAPTIONS.md`.
