@@ -91,7 +91,7 @@ from site_layer.hatteras_site_config import (  # noqa: E402
 RAW_RUNS = REPO / "output" / "raw_runs"
 # Resolved through hat_observed_rates.py (2026-09-18), not typed.
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as COASTSAT_BASE_DIR  # noqa: E402
-RAW_OFFSET_DIR = REPO / "data" / "hatteras_init" / "2-brie-offset" / "raw_offsets"
+from site_layer.hat_topo_version import RAW_OFFSET_DIR  # noqa: E402
 
 # These four MUST match section 8/9 of HAT_hindcast_1984_2024.py. They are
 # restated rather than imported because importing that module runs a hindcast.

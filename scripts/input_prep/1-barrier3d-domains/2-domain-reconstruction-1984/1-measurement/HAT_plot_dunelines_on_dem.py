@@ -62,14 +62,14 @@ def _find_root(start: Path) -> Path:
 
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
-from hat_topo_version import insert_figures_dir_for_domain  # noqa: E402
-from hat_elevation_products import product                        # noqa: E402
-from hat_figure_style import (apply_style, C, C_1984, C_1997,     # noqa: E402
+from site_layer.hat_topo_version import insert_figures_dir_for_domain  # noqa: E402
+from site_layer.hat_elevation_products import product                        # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, C_1984, C_1997,     # noqa: E402
                               DOMAIN_AXIS_LABEL, caption, elevation_cmap,
                               figsize, open_frame, save, spines_for_image,
                               town_bands, _north_arrow, _scalebar, _title)
 
-DL = REPO / "data/hatteras_init/2-brie-offset/dunelines"
+from site_layer.hat_topo_version import DUNELINE_DIR as DL  # noqa: E402
 PRODUCT = "2009-2014-1996"
 MHW_NAVD = 0.36
 NODATA_BELOW = -900.0

@@ -61,7 +61,7 @@ INPUT   <product>/dune-topo/<version>/topography/domain_<N>_topography.npy  dam
         <product>/dune-topo/<version>/dunes/domain_<N>_dune.npy            dam
         2-brie-offset/<year>/Island_Dune_Offsets_*.csv            m
 
-        Product and version resolve through scripts/hat_topo_version.py.
+        Product and version resolve through scripts/site_layer/hat_topo_version.py.
 
 OUTPUT  <product>/dune-topo/<version>/HAT_dune_topo_island_nodata_<version>_<year>_padded.png
         Written beside the elevation plan view it is meant to be compared with.
@@ -82,7 +82,7 @@ REPO = next(
     _p for _p in Path(__file__).resolve().parents
     if (_p / "pyproject.toml").exists())   # 1-extraction/nodata_audit/ since 2026-09-09
 sys.path.insert(0, str(REPO / "scripts"))
-import hat_topo_version as htv  # noqa: E402
+from site_layer import hat_topo_version as htv  # noqa: E402
 
 # =============================================================================
 # CONFIG - mirrors HAT_dune_topo_extractor.py
@@ -149,11 +149,13 @@ def audit_dir(topo_dir):
 
 def load_offsets(year):
     """Offset in metres per domain, {domain: offset_m}. Mirrors load_offsets()."""
-    root = REPO / "data" / "hatteras_init" / "2-brie-offset"
-    hits = sorted(p for p in root.rglob("Island_Dune_Offsets*CASCADE_Input.csv")
-                  if str(year) in p.name)
-    if not hits:
-        raise SystemExit(f"\nno offset CSV for {year} under {root}\n")
+    # The CURRENT build (2026-09-18). This took the first sorted match under
+    # 2-brie-offset/, which for 1984 and 2004 is superseded_20260915_flat/ --
+    # a build that differs from the current one.
+    from site_layer.hat_topo_version import offset_file
+    hits = [offset_file(year, "input")]
+    if not hits[0].is_file():
+        raise SystemExit(f"\nno offset CSV for {year}: {hits[0]}\n")
     v = np.loadtxt(hits[0], skiprows=1, delimiter=",", ndmin=2).astype(float)
     v = v[:, 0]
     if v.size == NUM_REAL_DOMAINS + 2 * N_BUFFER_DOMAINS:

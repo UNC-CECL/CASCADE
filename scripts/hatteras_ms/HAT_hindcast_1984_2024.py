@@ -1462,7 +1462,7 @@ if GROIN_ENABLED:
 # subtracts a constant and flips the sign of the mean, which would put the
 # target on the wrong side of the model. The raw CSVs share a fixed offshore
 # datum, so differencing them is a real shoreline change.
-RAW_OFFSET_DIR = HATTERAS_DATA_BASE / "2-brie-offset" / "raw_offsets"
+from site_layer.hat_topo_version import RAW_OFFSET_DIR  # noqa: E402  (2026-09-18)
 
 
 # --- 9.5 report, and the annotation guard ------------------------------------

@@ -88,7 +88,7 @@ def _find_root(start: Path) -> Path:
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 
-from hat_topo_version import (duneline_shift_dir,  # noqa: E402
+from site_layer.hat_topo_version import (duneline_shift_dir,  # noqa: E402
                               product_for_year)
 
 OFFSET_SCRIPT = (REPO / "scripts" / "input_prep" / "4-mgmt-forcings" / "road_offset"
@@ -99,8 +99,9 @@ OFFSET_SCRIPT = (REPO / "scripts" / "input_prep" / "4-mgmt-forcings" / "road_off
 # something a run can record the state of. Hannah placed a curated set inside the
 # repo on 2026-09-02; that is now the source, and the external drive is only a
 # fallback so older invocations keep working.
+from site_layer import hat_topo_version as _tv  # noqa: E402
 DUNELINE_DIRS = (
-    REPO / "data" / "hatteras_init" / "2-brie-offset" / "dunelines",
+    _tv.DUNELINE_DIR,
     Path(r"D:\Hatteras_GIS\Dunelines"),
 )
 
@@ -131,7 +132,7 @@ def duneline_path(year: int) -> Path:
 # Resolved through hat_elevation_products so the period -> product pairing is
 # the same single definition every other reader uses.
 def resampled_tif(year: int, domain: int) -> Path:
-    from hat_elevation_products import product
+    from site_layer.hat_elevation_products import product
     prod = {1984: "2009-2014-1996", 1997: "2009-2014-1996",
             1967: "2009-2014-1996", 2004: "2009-2014"}[int(year)]
     d = product(prod).resampled_10m

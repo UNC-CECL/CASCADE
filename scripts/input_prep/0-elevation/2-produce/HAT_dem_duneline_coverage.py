@@ -159,7 +159,7 @@ import HAT_dem_gap_fill as gf
 import HAT_dem_1984_mosaic as m84
 
 sys.path.insert(0, str(gf.PROJECT_ROOT / "scripts"))
-from hat_elevation_products import ELEVATION_ROOT, product as _product  # noqa: E402
+from site_layer.hat_elevation_products import ELEVATION_ROOT, product as _product  # noqa: E402
 
 
 # =============================================================================
@@ -179,8 +179,9 @@ CLASS_DIR = OUT_DIR / "1-alace-class-10m"
 DOMAIN_CSV = "duneline_coverage_domains.csv"
 PROFILE_CSV = "duneline_coverage_profiles.csv"
 
-DUNE_DIR = (gf.PROJECT_ROOT / "data" / "hatteras_init" / "1-barrier3d-domains"
-            / "2-brie-offset/dunelines")
+# This named 1-barrier3d-domains/2-brie-offset/dunelines, which never
+# existed; the lines are in 2-brie-offset/dunelines/ (fixed 2026-09-18).
+from site_layer.hat_topo_version import DUNELINE_DIR as DUNE_DIR  # noqa: E402
 DUNE_LINES = {1984: DUNE_DIR / "duneline_1984.geojson",
               1997: DUNE_DIR / "duneline_1997.geojson"}
 TARGET_YEAR = 1984      # the line the flag is about
