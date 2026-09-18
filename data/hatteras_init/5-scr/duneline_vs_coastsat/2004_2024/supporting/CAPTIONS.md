@@ -1,7 +1,0 @@
-# Captions — 2004_2024
-
-Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
-
-**`scatter_dune_vs_coastsat.png`.** Per-domain rate of the digitized dune line, 2004-2024, against the CoastSat shoreline on the same GIS domains (n = 90). Seaward positive. Dashed: 1:1; purple: least-squares fit. (a) the per-transect OLS slope over the window, averaged per domain (r = 0.06, slope = 0.06, RMSE = 2.39 m/yr). (b) the endpoint rate from the mean CoastSat position in a one-year window centred on each survey date (r = 0.18, slope = 0.16, RMSE = 2.24 m/yr). The six domains farthest from 1:1 are labelled. See PROVENANCE.md for the survey dates and what the 2024 date assumes.
-
-**`alongshore_dune_vs_coastsat.png`.** Alongshore rate of change 2004-2024 by GIS domain, seaward positive. Red: the digitized dune line, its 2004 and 2024 positions differenced over the survey interval. Dark blue: the CoastSat shoreline as the per-domain linear regression rate over the window; light blue, dashed: the CoastSat endpoint rate from the mean position in a one-year window about each survey date. Where the two blues part is where the choice of estimator matters. Red and blue here mark the two features, not the two vintages. Bands mark Buxton, Avon and the Tri-Village; the solid hairline is the Buxton groin, the dotted ones the Avon and Rodanthe piers. Domain 1 is Cape Point, 90 is Pea Island.

@@ -36,6 +36,29 @@
 #   which is why the second step uses the LOCAL secant through two real runs
 #   rather than the nominal gain again.
 #
+# AN EXTENDED GEOMETRY (2026-09-16, the Pea Island extension experiment)
+#   The ends are wherever HATTERAS_DOMAINS puts them -- GIS 1 and 115 under
+#   HAT_GEOMETRY=n115 -- and the target for a
+#   domain beyond GIS 90 comes from the window's extension rate table
+#   (coastsat_lrr/<window>/ext/transect_lrr_with_base.csv, the surveyed
+#   transects plus the extension's, one LOESS over the whole reach), which is
+#   exactly the table the runner grades that geometry's ends against. Run
+#   this script with the SAME HAT_GEOMETRY as the runs it reads. A run that
+#   imposed nothing at an end (a zeroBE probe) reads as 0.0 there.
+#
+# THE DUNE LINE AS THE TARGET (2026-09-16, Hannah: "what if we used the dune
+# line change" to set the ends)
+#   --target duneline reads the observation from the two digitised dune lines
+#   of the window instead of CoastSat: the end vintage's line minus the start
+#   vintage's, per domain, over the survey interval (duneline_vs_coastsat
+#   .KNOWN_SURVEY_DATES; a missing date is mid-year), seaward positive --
+#   exactly what HAT_rate_windows.py draws under duneline/endpoint. Two readings of
+#   it at an end domain, --dune-smooth raw (the domain's own value) and mean3
+#   (the mean of it and its two inward neighbours, GIS 1-3 / 88-90). A dune
+#   line is two surveys, so --estimator endpoint reads change_rate_m_yr on
+#   the model side; the default lrr keeps the CoastSat protocol. The runs of
+#   that solve are under output/raw_runs/experiments/2026-09-16-dune-edgesolve/.
+#
 # USAGE
 #   One run -- report the residual and a first step at the nominal gain:
 #       python 2-calibrate/HAT_be_edge_domain_solve.py --period 1996 --run <run_name>
@@ -43,12 +66,14 @@
 #   Two or more -- local secant through the last two, and the next step:
 #       python 2-calibrate/HAT_be_edge_domain_solve.py --period 1996 --run <first> --run <second>
 #
-#   Runs are named as they appear in run_index.csv. The rate each was run
-#   under is read from that index, not retyped.
+#   Runs are named as they appear in run_index.csv and located through
+#   run_registry.find_run_dir: --kind and --tag say where (the matrix by
+#   default; an experiment's runs need --kind experiment --tag <set>/<member>,
+#   one --tag per --run when the members differ). The rate each was run
+#   under is read from the index, not retyped.
 #
 # Author: Hannah A. Henry, UNC CECL
 # ==============================================================================
-
 from __future__ import annotations
 
 import argparse
@@ -63,12 +88,16 @@ PROJECT_ROOT = next(_p for _p in _HERE.parents
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from hatteras_site_config import (                       # noqa: E402
-    HATTERAS_PERIODS, HATTERAS_DOMAINS, HATTERAS_BE_EDGE_DOMAINS)
+from site_layer.hatteras_site_config import (                       # noqa: E402
+    HATTERAS_PERIODS, HATTERAS_DOMAINS, HATTERAS_BE_EDGE_DOMAINS,
+    HATTERAS_GEOMETRY, HATTERAS_GEOMETRY_EXTENDED)
 from cascade_pipeline.hindcast import build_target_table  # noqa: E402
 from cascade_pipeline.coastsat_loess import (            # noqa: E402
     CoastSatDataset, LoessConfig, build_coastsat_series)
-from hat_observed_rates import lrr_csv                   # noqa: E402
+from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
+from cascade_pipeline.run_registry import (              # noqa: E402
+    MATRIX_KIND, find_run_dir, load_run_index)
+from site_layer.hat_observed_rates import lrr_csv, lrr_csv_ext      # noqa: E402
 
 RUN_ROOT = PROJECT_ROOT / "output" / "raw_runs"
 RUN_INDEX = RUN_ROOT / "run_index.csv"
@@ -88,13 +117,18 @@ RATE_COLUMN = "lrr_m_yr"
 # secant through. Mid-range of the four solved cases.
 NOMINAL_GAIN = 0.105
 
-# The index column holding the rate each run imposed, per end domain.
-INDEX_RATE_COLUMN = {1: "be_rate_gis1_m_yr", 90: "be_rate_gis90_m_yr"}
+# The index column holding the rate each run imposed, per end domain. The
+# runner writes be_rate_gis<N>_m_yr for each of HATTERAS_BE_EDGE_DOMAINS.
+INDEX_RATE_COLUMN = {gis: "be_rate_gis{0}_m_yr".format(gis)
+                     for gis in HATTERAS_BE_EDGE_DOMAINS}
 
 
 def load_target(start_year, end_year):
     """The target table the runner grades against, as {gis: rate}."""
-    csv_path = lrr_csv(start_year, end_year)   # raises, listing windows
+    # raises, listing windows, if absent; the extension table if the
+    # geometry reaches beyond GIS 90, as the runner's section 8 does
+    csv_path = (lrr_csv_ext(start_year, end_year) if HATTERAS_GEOMETRY_EXTENDED
+                else lrr_csv(start_year, end_year))
     series = build_coastsat_series(
         [CoastSatDataset(label="CoastSat {0}".format(start_year),
                          period_start=start_year, csv_path=str(csv_path))],
@@ -105,53 +139,128 @@ def load_target(start_year, end_year):
                     [float(r) for r in table["target_lrr_m_yr"]]))
 
 
-def find_run(run_name, start_year, end_year):
-    """The rate CSV of one run, located under the period's own directory."""
-    period_dir = RUN_ROOT / "{0}_{1}".format(start_year, end_year)
-    hits = sorted(period_dir.glob("*/{0}/tables/shoreline_change_rate.csv"
-                                  .format(run_name)))
-    if not hits:
-        raise FileNotFoundError(
-            "no rate CSV for run {0!r} under {1}. Check the name against "
-            "run_index.csv.".format(run_name, period_dir))
-    return hits[0]
+def _dune_module():
+    """scripts/input_prep/5-scr/duneline_vs_coastsat/duneline_vs_coastsat.py,
+    imported by path: the survey dates by vintage and the per-domain reader."""
+    import importlib.util
+    path = (PROJECT_ROOT / "scripts" / "input_prep" / "5-scr"
+            / "duneline_vs_coastsat" / "duneline_vs_coastsat.py")
+    spec = importlib.util.spec_from_file_location("duneline_vs_coastsat", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
-def imposed_rates(run_name):
-    """What this run imposed at each end domain, from run_index.csv."""
-    index = pd.read_csv(RUN_INDEX)
-    rows = index[index["run_name"] == run_name]
+def load_dune_target(start_year, end_year, smooth):
+    """The dune-line endpoint rate per domain, seaward positive, read at each
+    end domain raw or as a three-domain mean. Returns ({gis: rate}, note)."""
+    from datetime import datetime
+    from site_layer.hat_topo_version import dune_line_for_year
+    dune = _dune_module()
+
+    def date(vintage):
+        known = dune.KNOWN_SURVEY_DATES.get(vintage)
+        if known:
+            return datetime.strptime(known, "%Y-%m-%d"), False
+        return datetime(vintage, 7, 1), True
+
+    v0, v1 = dune_line_for_year(start_year), dune_line_for_year(end_year)
+    (d0, a0), (d1, a1) = date(v0), date(v1)
+    years = (d1 - d0).days / dune.DAYS_PER_YEAR
+    rate = -(dune.dune_position_by_domain(end_year)
+             - dune.dune_position_by_domain(start_year)) / years
+    first, last = int(rate.index.min()), int(rate.index.max())
+    out = {}
+    for gis in HATTERAS_BE_EDGE_DOMAINS:
+        if smooth == "raw":
+            out[gis] = float(rate.loc[gis])
+        elif smooth == "mean3":
+            # the end domain and its two INWARD neighbours
+            sel = rate.loc[gis - 2:gis] if gis == last else rate.loc[gis:gis + 2]
+            out[gis] = float(sel.mean())
+        else:
+            raise ValueError(smooth)
+    note = ("dune line {0} ({1}{2}) to {3} ({4}{5}), {6:.2f} yr, {7}".format(
+        v0, d0.date(), " assumed" if a0 else "", v1, d1.date(),
+        " assumed" if a1 else "", years,
+        "raw domain value" if smooth == "raw" else "three-domain mean"))
+    return out, note
+
+
+def find_run(run_name, start_year, end_year, preset, kind, tag):
+    """The rate CSV of one run, located the way every other reader does."""
+    run_dir = find_run_dir(RUN_ROOT, run_name, (start_year, end_year), preset,
+                           kind=kind, tag=tag)
+    return Path(resolve_run_file(run_dir, "rate_csv", run_name))
+
+
+def index_row(run_name, kind, tag):
+    """The run's row in run_index.csv, by its full identity."""
+    index = load_run_index(RUN_INDEX)
+    rows = index[(index["run_name"] == run_name) & (index["kind"] == kind)
+                 & (index["tag"] == tag)]
     if rows.empty:
-        raise ValueError("{0!r} is not in run_index.csv".format(run_name))
-    row = rows.iloc[-1]
-    return {gis: float(row[column])
-            for gis, column in INDEX_RATE_COLUMN.items()}
+        raise ValueError("{0!r} (kind {1}, tag {2!r}) is not in run_index.csv"
+                         .format(run_name, kind, tag))
+    return rows.iloc[-1]
 
 
-def read_model(csv_path):
+def imposed_rates(row):
+    """What this run imposed at each end domain, from its index row.
+
+    A run from a preset that names no rate at an end (zeroBE, or an edgeBE
+    whose column predates this end) reads as 0.0 there, which is what it
+    imposed.
+    """
+    out = {}
+    for gis, column in INDEX_RATE_COLUMN.items():
+        value = row.get(column, "")
+        out[gis] = float(value) if value not in ("", None) else 0.0
+    return out
+
+
+ESTIMATOR_COLUMN = {"lrr": RATE_COLUMN, "endpoint": "change_rate_m_yr"}
+
+
+def read_model(csv_path, column=RATE_COLUMN):
     frame = pd.read_csv(csv_path)
-    if RATE_COLUMN not in frame.columns:
+    if column not in frame.columns:
         raise KeyError(
             "{0} has no {1!r} column -- it predates the LRR estimator. "
             "Re-run, or backfill with HAT_backfill_run_lrr.py.".format(
-                csv_path.name, RATE_COLUMN))
-    return frame.set_index("gis_domain")[RATE_COLUMN].to_dict()
+                csv_path.name, column))
+    return frame.set_index("gis_domain")[column].to_dict()
 
 
-def report(period, runs):
+def report(period, runs, preset, kinds, tags, target_source="coastsat",
+           dune_smooth="raw", estimator="lrr"):
     start_year = period
     end_year = HATTERAS_PERIODS[period]["end_year"]
-    target = load_target(start_year, end_year)
+    if target_source == "coastsat":
+        target = load_target(start_year, end_year)
+        target_note = "CoastSat LRR: raw mean at GIS 1, LOESS-10 at GIS 90"
+    else:
+        target, target_note = load_dune_target(start_year, end_year, dune_smooth)
+    column = ESTIMATOR_COLUMN[estimator]
 
     states = []
-    for run_name in runs:
-        model = read_model(find_run(run_name, start_year, end_year))
-        states.append({"run": run_name,
-                       "imposed": imposed_rates(run_name),
+    for run_name, kind, tag in zip(runs, kinds, tags):
+        row = index_row(run_name, kind, tag)
+        # The preset folder the run sits under is the preset it ran, which
+        # the index knows: a zeroBE stage-0 run and the edgeBE probes after
+        # it belong to one solve and are read together.
+        folder = preset or str(row["source_sink_preset"])
+        model = read_model(find_run(run_name, start_year, end_year, folder, kind, tag),
+                           column)
+        states.append({"run": run_name, "tag": tag,
+                       "imposed": imposed_rates(row),
                        "model": model})
 
     print("\n" + "=" * 74)
-    print("END-DOMAIN SOLVE   {0}-{1}".format(start_year, end_year))
+    print("END-DOMAIN SOLVE   {0}-{1}   geometry {2} (ends GIS {3} and {4})".format(
+        start_year, end_year, HATTERAS_GEOMETRY, *HATTERAS_BE_EDGE_DOMAINS))
+    print("target   {0}".format(target_note))
+    print("model    {0} ({1})".format(estimator, column))
     print("=" * 74)
 
     suggestion = {}
@@ -166,8 +275,10 @@ def report(period, runs):
             got = state["model"][gis]
             residual = got - want
             points.append((imposed, got))
+            label = state["run"] if len(set(tags)) == 1 else "{0} [{1}]".format(
+                state["run"], state["tag"].rsplit("/", 1)[-1])
             print("  {0:<46} {1:>+9.2f} {2:>+9.3f} {3:>+9.3f}".format(
-                state["run"][:46], imposed, got, residual))
+                label[:46], imposed, got, residual))
 
         last_imposed, last_model = points[-1]
         residual = last_model - want
@@ -199,6 +310,7 @@ def report(period, runs):
         print("\nnext probe:")
         print('  HAT_BE_OVERRIDE="{0}"'.format(override))
     print()
+    return suggestion
 
 
 def main():
@@ -208,12 +320,42 @@ def main():
                         help="period start year")
     parser.add_argument("--run", action="append", required=True,
                         help="run name, oldest first; repeatable")
+    parser.add_argument("--preset", default=None,
+                        help="the preset folder the runs sit under; by default "
+                             "each run's own preset, read from the index")
+    parser.add_argument("--kind", action="append", default=None,
+                        help="matrix (default), experiment, sensitivity, "
+                             "version; one for all runs, or one per --run")
+    parser.add_argument("--tag", action="append", default=None,
+                        help="the run's tag; one for all runs, or one per --run")
+    parser.add_argument("--target", choices=("coastsat", "duneline"),
+                        default="coastsat",
+                        help="the observation the ends are solved against")
+    parser.add_argument("--dune-smooth", choices=("raw", "mean3"), default="raw",
+                        help="with --target duneline: the end domain's own "
+                             "value, or the mean of it and its two neighbours")
+    parser.add_argument("--estimator", choices=("lrr", "endpoint"), default="lrr",
+                        help="model column: lrr_m_yr (the OLS slope, default) "
+                             "or change_rate_m_yr (endpoint over run years)")
     args = parser.parse_args()
 
     if args.period not in HATTERAS_PERIODS:
         parser.error("no such period {0}; have {1}".format(
             args.period, sorted(HATTERAS_PERIODS)))
-    report(args.period, args.run)
+
+    def per_run(values, default, what):
+        values = values or [default]
+        if len(values) == 1:
+            values = values * len(args.run)
+        if len(values) != len(args.run):
+            parser.error("give one --{0}, or one per --run".format(what))
+        return values
+
+    tags = per_run(args.tag, "", "tag")
+    kinds = per_run(args.kind, MATRIX_KIND, "kind")
+    report(args.period, args.run, args.preset, kinds, tags,
+           target_source=args.target, dune_smooth=args.dune_smooth,
+           estimator=args.estimator)
     return 0
 
 

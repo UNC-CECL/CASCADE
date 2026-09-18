@@ -16,7 +16,7 @@ product with it.
         control-picks/              LIVE INPUT - unstraightened control windows
         superseded/                 empty; see its README
 
-Resolve paths through `scripts/hat_topo_version.py` — `topo_dirs(product)`,
+Resolve paths through `scripts/site_layer/hat_topo_version.py` — `topo_dirs(product)`,
 `array_path(kind, gis, product)`, `domain_arrays(product)`. Never join these
 strings by hand.
 
@@ -99,7 +99,7 @@ for both products — 2004-start is the 2009+2014 mosaic and 1984-start is
 2009+2014+1996 — and a per-period tag was tried and reverted the same day: the
 tag reached twelve scripts four different ways and no single search found them
 all. The period lives in the DIRECTORY, which every reader must resolve anyway.
-See the long note at the top of `scripts/hat_topo_version.py`.
+See the long note at the top of `scripts/site_layer/hat_topo_version.py`.
 
 ## Reading a run's provenance
 
@@ -188,7 +188,7 @@ See `1984-start/dune-topo/README.md`.
   was already broken (file had moved to `superseded/`), and the estimate
   measures the shoreline rather than the dune line. `HAT_measure_dsas_shift.py`
   was then DELETED (2026-09-03) - it is tracked in git, so recoverable. Its
-  input `5-scr/scr-dsas-1978-2019/dsas_1978_1997_domain_means.csv` is
+  input `5-scr/1-observations/dsas_1978_2019/dsas_1978_1997_domain_means.csv` is
   untouched.
 - `duneline-shift/superseded/` deleted; its record folded into the folder README.
 

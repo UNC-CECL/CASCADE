@@ -7,10 +7,11 @@
 # the current RoadSetback CSVs impossible to reproduce from the repo. So they
 # are tracked, but stored as LFS pointers rather than as blobs in the history.
 #
-# The immediate pressure is data/hatteras_init/5-scr/transect_domains/
+# The immediate pressure was data/hatteras_init/5-scr/transect_domains/
 # CoastSat_transect_layer.geojson at 80 MB. GitHub warns above 50 MB and
-# REFUSES above 100, so that file has roughly 20 MB of headroom before a push
-# fails outright rather than warning.
+# REFUSES above 100, so that file had roughly 20 MB of headroom before a push
+# failed outright rather than warning. Since 2026-09-18 it, and the other
+# 5-scr geojsons, are not tracked at all (see .gitignore), not moved to LFS.
 #
 # WHAT THIS DOES AND DOES NOT DO. It applies from the next time a matching file
 # is added or modified. The 21 already in the history stay as ordinary blobs

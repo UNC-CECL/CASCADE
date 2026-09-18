@@ -68,7 +68,7 @@ _REPO = next(_p for _p in Path(__file__).resolve().parents
 from site_layer import hat_observed_rates as _obs  # noqa: E402
 ROOT_DATA_DIR = str(_obs.COASTSAT_TIMESERIES)
 # "input_preperation" is the pre-2026 folder name; the lookup now lives
-# under data/hatteras_init/5-scr/transect_domains/ (moved out of the
+# under data/hatteras_init/5-scr/2-transect-frame/transect_domains/ (moved out of the
 # scripts tree 2026-09-12; hat_observed_rates.py resolves it).
 LOOKUP_CSV    = str(_obs.transect_lookup())
 # Products go to output/, not beside the script (2026-09-13). These were
