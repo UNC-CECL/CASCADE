@@ -82,7 +82,7 @@ OUTPUTS (data/hatteras_init/0-elevation/2009-2014-1996-duneline/)
 STYLE
 -----
 Every figure in the folder is drawn to the one house style, which lives in
-scripts/hat_figure_style.py and is re-exported here: a plain sans face,
+scripts/site_layer/hat_figure_style.py and is re-exported here: a plain sans face,
 8-10 pt type, thin dark-grey axes, a ColorBrewer red/blue pair for the two
 lines that survives greyscale and colour-deficient print, panel letters, a
 north arrow and a scale bar on the maps, and NO in-figure title sentences or
@@ -134,7 +134,7 @@ INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from hat_elevation_products import ELEVATION_ROOT  # noqa: E402
+from site_layer.hat_elevation_products import ELEVATION_ROOT  # noqa: E402
 # The island mosaic loader, the km axis formatter and the elevation panel are
 # imported rather than re-written so this figure and the other 1984-start
 # figures cannot drift apart in extent, colour or projection. Importing runs no
@@ -146,7 +146,7 @@ import HAT_plot_1984_mosaic as m  # noqa: E402
 # project - the same object the shoreline-rate figures annotate from - so
 # a town that moves there moves here too, and this figure cannot quietly
 # disagree with the rest of the repo about where Avon is.
-from hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
 
 
 # =============================================================================
@@ -155,17 +155,17 @@ from hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
 # One look for every figure. The STYLE block that lived here from 2026-09-04
 # (Arial, thin dark-grey axes, the ColorBrewer RdBu poles for the two vintages,
 # panel letters, nothing on the canvas that belongs in a caption) is now the
-# project-wide standard in scripts/hat_figure_style.py, merged there on
+# project-wide standard in scripts/site_layer/hat_figure_style.py, merged there on
 # 2026-09-10 so every figure script can apply it. The names are re-exported
 # here because a dozen scripts take both the style and the map loaders from
 # this module as `off`.
-from hat_figure_style import (  # noqa: E402,F401
+from site_layer.hat_figure_style import (  # noqa: E402,F401
     FONT_STACK, INK, INK_MUTED, GRID_C, C_1984, C_1997, C_1984_FILL, C_1997_FILL,
     STYLE_RC, apply_style, _letter, _title, _letter_inside, _north_arrow, _halo,
     figsize, FIG_W_DOUBLE, FIG_H_MAX, DOMAIN_AXIS_LABEL, town_bands, open_frame,
     save,
 )
-import hat_figure_style as _style  # noqa: E402
+from site_layer import hat_figure_style as _style  # noqa: E402
 
 
 SOURCE_TAG = "2009-2014-1996"
@@ -198,7 +198,7 @@ def fig_path(name):
     return p
 CSV_NAME = "duneline_offset_by_domain.csv"
 
-DUNE_DIR = INIT_ROOT / "2-brie-offset" / "dunelines"
+from site_layer.hat_topo_version import DUNELINE_DIR as DUNE_DIR  # noqa: E402
 DUNE_LINES = {1984: DUNE_DIR / "duneline_1984.geojson",
               1997: DUNE_DIR / "duneline_1997.geojson"}
 

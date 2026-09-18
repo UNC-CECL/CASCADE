@@ -35,9 +35,10 @@ import sys as _sys
 _PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                      if (_p / "pyproject.toml").exists())
 _sys.path.insert(0, str(_PROJECT_ROOT / "scripts"))
-from hat_topo_version import DUNE_LINE_FOR_YEAR, dune_raw_file_for_year  # noqa: E402
+from site_layer.hat_topo_version import DUNE_LINE_FOR_YEAR, dune_raw_file_for_year  # noqa: E402
+from site_layer.hat_extension_domains import BASE_GEOMETRY, GEOMETRIES, SURVEYED_GIS, gis_bounds  # noqa: E402
 
-_BRIE_ROOT = _PROJECT_ROOT / "data" / "hatteras_init" / "2-brie-offset"
+from site_layer.hat_topo_version import BRIE_ROOT as _BRIE_ROOT  # noqa: E402
 
 _ap = _argparse.ArgumentParser(description="island dune offsets for one hindcast start")
 # A start year is admissible here when hat_topo_version.DUNE_LINE_FOR_YEAR
@@ -60,22 +61,37 @@ _ap.add_argument("--version", default=None,
 # folder keeps a copy), name that file here.
 _ap.add_argument("--raw-file", default=None,
                  help="raw CSV to read instead of the vintage's file in raw_offsets/")
+# EXTENDED GEOMETRY (2026-09-16, the Pea Island extension experiment). A
+# named reach from hat_extension_domains: the surveyed raw for GIS 1-90 plus
+# raw_offsets/ext/<vintage>_duneline_offset_raw_ext.csv for the domains
+# beyond, zeroed on the SAME minimum as the surveyed build (checked against
+# <year>/CURRENT), padded with the same buffers, written to
+# <year>/ext/<geometry>/. Not a version: CURRENT is untouched.
+_ap.add_argument("--geometry", default=None,
+                 choices=[g for g in GEOMETRIES if g != BASE_GEOMETRY],
+                 help="an extended reach, to <year>/ext/<geometry>/")
 _args = _ap.parse_args()
 YEAR = _args.year
 VERSION = _args.version
+GEOMETRY = _args.geometry
+if GEOMETRY and VERSION:
+    _ap.error("--geometry builds are filed under ext/, not as a version")
 
 RAW_FILE = (str(Path(_args.raw_file).resolve()) if _args.raw_file
             else str(dune_raw_file_for_year(YEAR)))
+RAW_EXT_FILE = (str(Path(RAW_FILE).parent / "ext"
+                    / (Path(RAW_FILE).stem + "_ext.csv")) if GEOMETRY else None)
 
-OUTPUT_DIR    = str(_BRIE_ROOT / f"{YEAR}" / VERSION if VERSION else _BRIE_ROOT / f"{YEAR}")
+OUTPUT_DIR    = str(_BRIE_ROOT / f"{YEAR}" / "ext" / GEOMETRY if GEOMETRY
+                    else _BRIE_ROOT / f"{YEAR}" / VERSION if VERSION
+                    else _BRIE_ROOT / f"{YEAR}")
 OUTPUT_BASENAME = f"Island_Dune_Offsets_{YEAR}"
 
-START_DOMAIN = 1
-END_DOMAIN   = 90
+START_DOMAIN, END_DOMAIN = gis_bounds(GEOMETRY or BASE_GEOMETRY)
 B3D_GRIDS    = list(range(START_DOMAIN, END_DOMAIN + 1))
 
 PADDING_ZEROS = 15
-TARGET_LENGTH = (END_DOMAIN - START_DOMAIN + 1) + 2 * PADDING_ZEROS  # 120
+TARGET_LENGTH = (END_DOMAIN - START_DOMAIN + 1) + 2 * PADDING_ZEROS  # 120 for GIS 1-90
 
 # Number of real domains from each edge used to fit the local extrapolation trend.
 EXTRAP_FIT_DOMAINS = 10
@@ -101,6 +117,8 @@ COMMUNITY_ZONES = [
     (32, 67,  "Avon–Tri-Village"),
     (68, 83,  "Tri-Village"),
     (84, 90,  "Pea Island NWR"),
+    (91, 115, "Pea Island ext"),
+    (0, 0, "S ext"),
 ]
 
 # =============================================================================
@@ -113,9 +131,11 @@ def calculate_relative_offset(file_path, year, col_map, grids):
     print(f"Input file: {file_path}")
 
     try:
-        raw_df = pd.read_csv(file_path)
-    except FileNotFoundError:
-        print(f"ERROR: File not found: {file_path}")
+        raw_df = pd.concat([pd.read_csv(f) for f in
+                            ([file_path] if isinstance(file_path, str) else file_path)],
+                           ignore_index=True)
+    except FileNotFoundError as e:
+        print(f"ERROR: File not found: {e.filename}")
         return None
 
     for key, col in col_map.items():
@@ -455,7 +475,7 @@ def plot_buffer_diagnostic(diag, year, padding_zeros, community_zones,
     zone_colors = ["#e8e8f0", "#d8d8ec"] * 10
 
     for zi, (d_start, d_end, label) in enumerate(community_zones):
-        px_start = (d_start - 1) + padding_zeros
+        px_start = (d_start - START_DOMAIN) + padding_zeros
         px_end   = (d_end   - 1) + padding_zeros
         ax_main.axvspan(px_start - 0.5, px_end + 0.5,
                         color=zone_colors[zi], alpha=0.35, zorder=1)
@@ -534,7 +554,7 @@ def main():
 
     # --- 3.1. Compute relative offsets ---
     result = calculate_relative_offset(
-        file_path=RAW_FILE,
+        file_path=[RAW_FILE, RAW_EXT_FILE] if GEOMETRY else RAW_FILE,
         year=YEAR,
         col_map=COL_MAP,
         grids=B3D_GRIDS,
@@ -543,6 +563,28 @@ def main():
     if result is None:
         print("Offset calculation failed. Exiting.")
         return
+
+    if GEOMETRY:
+        # The extension must not move the surveyed reach: same zero, same
+        # values as the build the matrix runs read. A different minimum here
+        # would shift every GIS 1-90 offset and the experiment would no
+        # longer be about the buffer.
+        _current = _BRIE_ROOT / f"{YEAR}" / "CURRENT"
+        _ver = _current.read_text(encoding="utf-8").strip() if _current.is_file() else ""
+        _base = (_BRIE_ROOT / f"{YEAR}" / _ver
+                 / f"{OUTPUT_BASENAME}_CASCADE_Input_unpadded.csv")
+        if not _base.is_file():
+            raise SystemExit(f"no surveyed build to check against: {_base}")
+        base = pd.read_csv(_base).set_index("Domain_ID")[str(YEAR)]
+        mine = result.set_index("Domain_ID")[str(YEAR)]
+        lo, hi = SURVEYED_GIS
+        missing = [g for g in B3D_GRIDS if g not in mine.index]
+        diff = (mine.loc[lo:hi] - base.loc[lo:hi]).abs().max()
+        print(f"\nGeometry {GEOMETRY}: GIS {START_DOMAIN}..{END_DOMAIN}, "
+              f"{len(mine)} domains, {len(missing)} without a dune line {missing}")
+        print(f"  surveyed slice vs {YEAR}/{_ver}: max |diff| {diff:.6f} m")
+        if missing or diff > 1e-6:
+            raise SystemExit("extension build changed or lost surveyed domains; refusing")
 
     # Save unpadded file with Domain_ID
     unpadded_path = os.path.join(OUTPUT_DIR, f"{OUTPUT_BASENAME}_CASCADE_Input_unpadded.csv")

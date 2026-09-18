@@ -208,9 +208,10 @@ plt.rcParams.update({
 
 def load_offsets(year):
     """Offset in metres per domain, {domain: offset_m}. Mirrors load_offsets()."""
-    root = INIT_ROOT / "2-brie-offset"
-    hits = sorted(p for p in root.rglob("Island_Dune_Offsets*CASCADE_Input.csv")
-                  if str(year) in p.name)
+    # The CURRENT build (2026-09-18). This took the first sorted match, which
+    # for 1984 and 2004 is the superseded flat build, not the current one.
+    root = _tv.BRIE_ROOT
+    hits = [p for p in [_tv.offset_file(year, "input")] if p.is_file()]
     if not hits:
         raise SystemExit(f"\nno offset CSV for {year} under {root}\n")
     v = np.loadtxt(hits[0], skiprows=1, delimiter=",", ndmin=2).astype(float)[:, 0]

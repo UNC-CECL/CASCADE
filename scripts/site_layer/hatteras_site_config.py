@@ -193,28 +193,11 @@ def _island_offset_file(start_year):
         return (f"{base}/ext/{HATTERAS_GEOMETRY}/Island_Dune_Offsets_"
                 f"{start_year}_PADDED_{HATTERAS_DOMAINS.total_domains}.csv")
     fname = f"Island_Dune_Offsets_{start_year}_PADDED_120.csv"
-    d = INIT_ROOT / base
-    versions = sorted(p.name for p in d.iterdir()
-                      if p.is_dir() and re.fullmatch(r"v\d+", p.name)) if d.is_dir() else []
-    env = os.environ.get(f"HAT_OFFSET_VERSION_{start_year}")
-    current = d / "CURRENT"
-    if env:
-        version = env.strip()
-    elif current.is_file():
-        version = current.read_text(encoding="utf-8").strip()
-    elif len(versions) == 1:
-        version = versions[0]
-    elif versions:
-        raise RuntimeError(
-            f"{base}/ holds {versions} and no CURRENT file; write one, or set "
-            f"HAT_OFFSET_VERSION_{start_year}.")
-    else:
-        return f"{base}/{fname}"
-    if not (d / version).is_dir():
-        raise FileNotFoundError(
-            f"{base}/{version}/ does not exist (have {versions or 'no versions'}); "
-            f"check CURRENT or HAT_OFFSET_VERSION_{start_year}.")
-    return f"{base}/{version}/{fname}"
+    # The version choice (env, CURRENT, the only v<n>; errors otherwise) lives
+    # in hat_topo_version.offset_version since 2026-09-18, so the figure
+    # scripts that used to repeat it read the same build the runner does.
+    version = _tv_mgmt.offset_version(start_year)
+    return f"{base}/{version}/{fname}" if version else f"{base}/{fname}"
 
 
 def island_offset_version(start_year):
@@ -246,7 +229,7 @@ HATTERAS_PERIODS = {
         # A setback is metres landward of interior row 0, so it belongs to the
         # extraction it was measured on. This file is the v2-era measurement;
         # the v1-era one it replaced is in
-        # road_offset/superseded_20260907/1984/.
+        # road_offset/archive/superseded_20260907/1984/.
         #
         # Measured 2026-09-14: they differ at 27 of 82 domains, mean -12.4 m
         # and up to 205 m at GIS 35. Running v1 ARRAYS against these v2

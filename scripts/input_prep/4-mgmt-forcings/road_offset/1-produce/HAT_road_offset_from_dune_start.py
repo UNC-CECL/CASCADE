@@ -133,8 +133,9 @@ ROADS_ROOT = _tv.ROADS_ROOT
 EXISTING_SETBACK_FMT = _tv.LEGACY_SETBACK_ROOT / "{year}" / "RoadSetback_{year}.csv"
 
 # Offset files, used ONLY to validate delta_m against measured retreat.
-OFFSET_FMT = (INIT_ROOT / "2-brie-offset" / "{year}"
-              / "Island_Dune_Offsets_{year}_CASCADE_Input.csv")
+# The flat <year>/ build this named was versioned on 2026-09-15, so the
+# check has been skipped since; each start's CURRENT build now (2026-09-18).
+OFFSET_FMT = None   # superseded by _tv.offset_file(year, "input")
 
 OUT_ROOT = ROADS_ROOT / "dunestart_offset"
 
@@ -804,7 +805,7 @@ def write_two_row_csv(path: Path, values: dict[int, float]) -> None:
 
 def load_offsets(year: int) -> np.ndarray | None:
     """Per-domain dune-line offset, seaward-positive metres. 90 rows expected."""
-    path = Path(str(OFFSET_FMT).format(year=year))
+    path = _tv.offset_file(year, "input")
     if not path.is_file():
         return None
     values = np.loadtxt(path, delimiter=",", skiprows=1)

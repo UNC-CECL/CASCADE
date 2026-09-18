@@ -62,6 +62,18 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). This file drew in
+# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              FIG_W_DOUBLE)
+apply_style()
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
@@ -77,7 +89,7 @@ for _p in (SCRIPTS_DIR, _HERE.parent):
         sys.path.insert(0, str(_p))
 
 from cascade_pipeline.hindcast import load_absolute_dune_distance  # noqa: E402
-from hatteras_site_config import (                                 # noqa: E402
+from site_layer.hatteras_site_config import (                                 # noqa: E402
     HATTERAS_DOMAINS,
     HATTERAS_ROAD_EVENTS,
     resolve_be_preset,
@@ -85,9 +97,9 @@ from hatteras_site_config import (                                 # noqa: E402
 from cascade_pipeline.roadway import RelocationEvent               # noqa: E402
 
 START_YEAR, END_YEAR = 1984, 2004
-RAW_OFFSET_DIR = PROJECT_BASE_DIR / "data" / "hatteras_init" / "2-brie-offset" / "raw_offsets"
+from site_layer.hat_topo_version import RAW_OFFSET_DIR  # noqa: E402
 RUN_ROOT = PROJECT_BASE_DIR / "output" / "raw_runs" / "1984_2004"
-OUT_ROOT = PROJECT_BASE_DIR / "output" / "comparisons" / "relocation_1984_2004"
+OUT_ROOT = PROJECT_BASE_DIR / "output" / "comparisons" / "relocation" / "1984_2004"
 
 ROAD_WIDTH_M = 20.0          # roadway_manager default, and what the runs use
 
@@ -185,7 +197,7 @@ def draw(rows, preset, out_path):
     reloc = np.array([r["relocations"] > 0 for r in rows])
 
     fig, (ax, bx) = plt.subplots(
-        2, 1, figsize=(15.5, 10.2), height_ratios=[1.45, 1],
+        2, 1, figsize=figsize("double", height=4.92), height_ratios=[1.45, 1],
         constrained_layout=True)
 
     # ---- panel A: every managed domain -------------------------------------
@@ -206,7 +218,7 @@ def draw(rows, preset, out_path):
                 ms=7, color=C_RELOC, zorder=6)
 
     ax.set_ylabel(f"metres landward of the {START_YEAR} dune line", fontsize=10)
-    ax.set_xlabel("GIS domain   (S | Cape Hatteras  →  Pea Island | N)", fontsize=10)
+    ax.set_xlabel("GIS domain   (S | Cape Point  →  Pea Island | N)", fontsize=10)
     ax.set_title(
         f"Does the dune line reach NC-12?   {START_YEAR}–{END_YEAR}, "
         f"{preset}, full management, groin off",

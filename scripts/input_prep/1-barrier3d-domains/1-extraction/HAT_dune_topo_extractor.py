@@ -275,10 +275,13 @@ WINDOW_JSON = PICKS_DIR / f"HAT_dune_search_windows_{PICK_SET}.json"
 #       positive reads that as island-wide retreat at ~2 m/yr (right for Hatteras);
 #       the other sign reads it as island-wide accretion (wrong).
 SAVE_ISLAND_FIG = True
-OFFSET_DIR = INIT_ROOT / "2-brie-offset"
+# Each start's CURRENT build (2026-09-18). These named hindcast_<year>/
+# folders that no longer existed, and the fallback search found several
+# candidates per year, called it ambiguous and skipped the offsets.
+from site_layer.hat_topo_version import BRIE_ROOT as OFFSET_DIR, offset_file  # noqa: E402
 OFFSET_FILES = {
-    1984: OFFSET_DIR / "hindcast_1984" / "Island_Dune_Offsets_1984_CASCADE_Input.csv",
-    2004: OFFSET_DIR / "hindcast_2004" / "Island_Dune_Offsets_2004_CASCADE_Input.csv",
+    1984: offset_file(1984, "input"),
+    2004: offset_file(2004, "input"),
 }
 CELL_SIZE_M = 10.0             # DEM cell size, cross-shore and alongshore (DAM_TO_M)
 NUM_REAL_DOMAINS = 90

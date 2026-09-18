@@ -328,6 +328,75 @@ def road_setback_relpath(year: int) -> str:
 BRIE_ROOT = INIT_ROOT / "2-brie-offset"
 RAW_OFFSET_DIR = BRIE_ROOT / "raw_offsets"
 DUNELINE_DIR = BRIE_ROOT / "dunelines"
+# The rest of 2-brie-offset (2026-09-18): about fifteen scripts typed these,
+# four of them against layouts that no longer existed (the flat per-start
+# build, hindcast_<year>/ folders, a dunelines/ under 1-barrier3d-domains).
+RAW_OFFSET_EXT_DIR = RAW_OFFSET_DIR / "ext"
+RAW_OFFSET_SUPERSEDED = RAW_OFFSET_DIR / "superseded_20260915_gis_exports"
+TRANSECT_DIR = BRIE_ROOT / "transects"
+TRANSECT_FILE_100M = TRANSECT_DIR / "transects_100m.geojson"
+TRANSECT_EXT_TABLE = TRANSECT_DIR / "transects_100m_ext.csv"
+
+_OFFSET_FILE_NAMES = {
+    "padded": "Island_Dune_Offsets_{y}_PADDED_{n}.csv",      # what the model reads
+    "input": "Island_Dune_Offsets_{y}_CASCADE_Input.csv",     # 90 domains, one column
+    "unpadded": "Island_Dune_Offsets_{y}_CASCADE_Input_unpadded.csv",  # 90, with ids
+}
+
+
+def offset_start_dir(year: int) -> Path:
+    """One period start's folder: PROVENANCE.md, CURRENT, v<n>/ builds."""
+    return BRIE_ROOT / str(int(year))
+
+
+def offset_version(year: int):
+    """Which build of a start's island offset every reader takes.
+
+    Order, mirroring topo_dirs(): HAT_OFFSET_VERSION_<year> in the
+    environment, then the CURRENT file, then the only v<n> directory present.
+    None for the flat layout (no v<n> directory at all). Several v<n> and no
+    CURRENT is an error, not a guess; so is naming a version that is not on
+    disk. Moved here from hatteras_site_config._island_offset_file on
+    2026-09-18 so the figure scripts that resolved it themselves share it.
+    """
+    y = int(year)
+    base = f"2-brie-offset/{y}"
+    d = offset_start_dir(y)
+    versions = sorted(p.name for p in d.iterdir()
+                      if p.is_dir() and re.fullmatch(r"v\d+", p.name)) if d.is_dir() else []
+    env = os.environ.get(f"HAT_OFFSET_VERSION_{y}")
+    current = d / "CURRENT"
+    if env:
+        version = env.strip()
+    elif current.is_file():
+        version = current.read_text(encoding="utf-8").strip()
+    elif len(versions) == 1:
+        version = versions[0]
+    elif versions:
+        raise RuntimeError(
+            f"{base}/ holds {versions} and no CURRENT file; write one, or set "
+            f"HAT_OFFSET_VERSION_{y}.")
+    else:
+        return None
+    if not (d / version).is_dir():
+        raise FileNotFoundError(
+            f"{base}/{version}/ does not exist (have {versions or 'no versions'}); "
+            f"check CURRENT or HAT_OFFSET_VERSION_{y}.")
+    return version
+
+
+def offset_build_dir(year: int, version: str | None = None) -> Path:
+    """The folder of one build: the resolved version unless one is given."""
+    v = version or offset_version(year)
+    return offset_start_dir(year) / v if v else offset_start_dir(year)
+
+
+def offset_file(year: int, kind: str = "padded", total_domains: int = 120,
+                version: str | None = None) -> Path:
+    """One file of a start's build. kind: padded (the model input), input
+    (90 values), or unpadded (90, with domain ids)."""
+    name = _OFFSET_FILE_NAMES[kind].format(y=int(year), n=int(total_domains))
+    return offset_build_dir(year, version) / name
 DUNE_LINE_FOR_YEAR = {
     1984: 1984,
     1996: 1997,   # no 1996 imagery; the nearest island-wide survey

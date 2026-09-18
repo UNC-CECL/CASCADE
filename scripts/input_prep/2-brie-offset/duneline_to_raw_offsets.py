@@ -36,11 +36,25 @@ USAGE
 
     --duneline   a file under 2-brie-offset/dunelines/, or a path
     --out        a file name under 2-brie-offset/raw_offsets/, or a path
+
+EXTENSION MODE (2026-09-16, the Pea Island extension experiment)
+    python duneline_to_raw_offsets.py --duneline duneline_1997_v2.geojson --extension
+
+    The 172 transects the surveyed polygon join left without a domain -- Pea
+    Island north of GIS 90, and the last kilometre south of GIS 1 -- are given
+    one by the SAME line-intersects-polygon join onto Hannah's whole-island
+    polygons (hat_extension_domains.join_lines), and intersected the same
+    way. A transect no polygon covers (the kilometre south of GIS 1, and the
+    slivers between polygons) is dropped, as the surveyed join dropped it. Written
+    to raw_offsets/ext/<vintage>_duneline_offset_raw_ext.csv, the same columns
+    as the surveyed file, and the transect-to-domain table once to
+    transects/transects_100m_ext.csv. The surveyed file is not touched.
 """
 
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -52,16 +66,21 @@ import pandas as pd
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
-BRIE_ROOT = INIT_ROOT / "2-brie-offset"
-RAW_DIR = BRIE_ROOT / "raw_offsets"
-DUNELINE_DIR = INIT_ROOT / "2-brie-offset" / "dunelines"
+sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+from site_layer.hat_extension_domains import EXTENDED_DOMAIN_POLYGONS, join_lines  # noqa: E402
+# Resolved through hat_topo_version (2026-09-18).
+from site_layer.hat_topo_version import (BRIE_ROOT, DUNELINE_DIR,  # noqa: E402
+                              RAW_OFFSET_DIR as RAW_DIR, TRANSECT_EXT_TABLE,
+                              TRANSECT_FILE_100M)
+# Extension mode writes beside, never into, the surveyed raw files.
+from site_layer.hat_topo_version import RAW_OFFSET_EXT_DIR as RAW_EXT_DIR  # noqa: E402
 
 # The 100 m transects, 10 km long, each starting on the offshore datum line
 # (x = 460198 in EPSG:3725) and running west across the island. domain_id is
 # the ArcGIS spatial join onto the 500 m domain polygons; 450 of the 622
 # transects fall in GIS 1-90, five per domain. Copied 2026-09-15 from
 # hard-structures/groin/HAT-groin-gis-analysis/gis_data/, see transects/README.md.
-TRANSECT_FILE = BRIE_ROOT / "transects" / "transects_100m.geojson"
+TRANSECT_FILE = TRANSECT_FILE_100M
 
 FIRST_DOMAIN, LAST_DOMAIN = 1, 90
 
@@ -81,16 +100,50 @@ def _resolve(name_or_path, default_dir):
     raise FileNotFoundError(f"{name_or_path}: not a path, and not under {default_dir}")
 
 
-def load_transects():
+def load_transects(extension=False):
+    """The 100 m transects with a domain number each.
+
+    Surveyed mode: the 450 the ArcGIS polygon join placed in GIS 1-90.
+    Extension mode: the 172 it left unplaced, numbered by their northing on
+    their whole-island polygon (hat_extension_domains.join_lines); the table is
+    also written to transects/transects_100m_ext.csv so the numbering is on
+    disk beside the layer it extends.
+    """
     t = gpd.read_file(TRANSECT_FILE)
     # The layer is an ArcGIS join export: every column is prefixed with the
     # table it came from ("Transects_100m.LineID"). Strip to the leaf name and
     # keep the first of any duplicates (OBJECTID and Shape_Length appear twice).
     t.columns = [c.split(".")[-1] for c in t.columns]
     t = t.loc[:, ~t.columns.duplicated()]
+    t["LineID"] = t["LineID"].astype(int)
+    if extension:
+        t = t[t["domain_id"].isna()].copy()
+        # A transect runs due west from the datum line, so either end's
+        # northing is the transect's.
+        t["northing_m"] = t.geometry.apply(lambda g: g.coords[0][1])
+        # The same line-intersects-polygon join that placed the surveyed
+        # transects, onto Hannah's whole-island polygons (2026-09-16). A
+        # transect no polygon covers is dropped, as the surveyed join
+        # dropped those in the slivers between polygons.
+        t["domain_id"] = pd.Series(join_lines(t), index=t.index, dtype=float)
+        dropped = t["domain_id"].isna()
+        if dropped.any():
+            print(f"  {int(dropped.sum())} transect(s) in no polygon skipped: LineID "
+                  f"{t.loc[dropped, 'LineID'].tolist()}")
+            t = t[~dropped].copy()
+        t["domain_id"] = t["domain_id"].astype(int)
+        t = t.sort_values(["domain_id", "LineID"]).reset_index(drop=True)
+        print(f"  placed {len(t)} transects by polygon join onto "
+              f"{EXTENDED_DOMAIN_POLYGONS.name}")
+        TRANSECT_EXT_TABLE.parent.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame({"LineID": t["LineID"], "domain_id": t["domain_id"],
+                      "northing_m": t["northing_m"].round(3),
+                      "crs": str(t.crs), "method": "polygon_join",
+                      "polygons": EXTENDED_DOMAIN_POLYGONS.name}).to_csv(
+            TRANSECT_EXT_TABLE, index=False)
+        return t
     t = t[t["domain_id"].notna()].copy()
     t["domain_id"] = t["domain_id"].astype(int)
-    t["LineID"] = t["LineID"].astype(int)
     t = t[(t["domain_id"] >= FIRST_DOMAIN) & (t["domain_id"] <= LAST_DOMAIN)]
     return t.sort_values(["domain_id", "LineID"]).reset_index(drop=True)
 
@@ -137,15 +190,31 @@ def validate(out_df, gis_path):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--duneline", required=True)
-    ap.add_argument("--out", required=True)
+    ap.add_argument("--out", default=None,
+                    help="required unless --extension, which has its own home")
     ap.add_argument("--validate-against", default=None,
                     help="a GIS-exported raw CSV of the SAME line, to check the method")
+    ap.add_argument("--extension", action="store_true",
+                    help="the transects beyond GIS 1-90, to raw_offsets/ext/")
     a = ap.parse_args(argv)
 
     line_path = _resolve(a.duneline, DUNELINE_DIR)
-    out_path = Path(a.out) if Path(a.out).parent != Path(".") else RAW_DIR / a.out
+    if a.extension:
+        if a.validate_against:
+            ap.error("--validate-against has no GIS export to check in extension mode")
+        vintage = re.search(r"duneline_(\d{4})", line_path.name)
+        if a.out:
+            out_path = Path(a.out) if Path(a.out).parent != Path(".") else RAW_EXT_DIR / a.out
+        elif vintage:
+            out_path = RAW_EXT_DIR / f"{vintage.group(1)}_duneline_offset_raw_ext.csv"
+        else:
+            ap.error(f"{line_path.name}: no duneline_<year> in the name; pass --out")
+    elif a.out:
+        out_path = Path(a.out) if Path(a.out).parent != Path(".") else RAW_DIR / a.out
+    else:
+        ap.error("--out is required (or --extension)")
 
-    transects = load_transects()
+    transects = load_transects(extension=a.extension)
     lines = gpd.read_file(line_path)
     if len(lines) != 1:
         sys.exit(f"{line_path.name}: expected one feature, found {len(lines)}")
@@ -155,8 +224,10 @@ def main(argv=None):
     feat = lines.iloc[0]
 
     print(f"Dune line : {line_path}")
-    print(f"Transects : {TRANSECT_FILE}  ({len(transects)} in GIS "
-          f"{FIRST_DOMAIN}-{LAST_DOMAIN})")
+    print(f"Transects : {TRANSECT_FILE}  ({len(transects)} "
+          + (f"beyond GIS {FIRST_DOMAIN}-{LAST_DOMAIN}, numbered "
+             f"{transects.domain_id.min()}..{transects.domain_id.max()} by northing"
+             if a.extension else f"in GIS {FIRST_DOMAIN}-{LAST_DOMAIN}") + ")")
 
     df = intersect(transects, feat.geometry)
     for col in LINE_META:

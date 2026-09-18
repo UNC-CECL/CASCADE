@@ -39,16 +39,21 @@ import pandas as pd
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
-from hat_figure_style import (  # noqa: E402
+from site_layer.hat_figure_style import (  # noqa: E402
     C_1984, C_1997, DOMAIN_AXIS_LABEL, INK_MUTED, _title, apply_style,
     caption, figsize, save, town_bands)
 
-BRIE_ROOT = PROJECT_ROOT / "data" / "hatteras_init" / "2-brie-offset"
-RAW_DIR = BRIE_ROOT / "raw_offsets"
+import sys as _tvsys
+from pathlib import Path as _TVP
+_tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
+                               if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_topo_version as _tv  # noqa: E402
+BRIE_ROOT = _tv.BRIE_ROOT
+RAW_DIR = _tv.RAW_OFFSET_DIR
 
 
 def _unpadded(year, version):
-    p = BRIE_ROOT / str(year) / version / f"Island_Dune_Offsets_{year}_CASCADE_Input_unpadded.csv"
+    p = _tv.offset_file(year, "unpadded", version=version)
     df = pd.read_csv(p)
     return df.set_index("Domain_ID")[str(year)]
 
