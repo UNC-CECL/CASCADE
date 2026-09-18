@@ -221,7 +221,7 @@ HATTERAS_PERIODS = {
         # 0.00391 m/yr fitted over 1984-2004 on the Duck gauge, stored to
         # 0.001. The fits are in 3-env-forcings/2-rslr/fits/duck_rslr_rates.csv
         # (column config_m_yr is this rounding), written by
-        # scripts/input_prep/3-env-forcings/rslr/duck_rslr_analysis.py.
+        # scripts/input_prep/3-env-forcings/2-rslr/duck_rslr_analysis.py.
         "sea_level_rise_rate": 0.004,
         "storm_file": _env.init_relpath(_env.storm_series_file(1984, 2004)),
         "island_offset_file": _island_offset_file(1984),

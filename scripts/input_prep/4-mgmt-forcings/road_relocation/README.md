@@ -2,7 +2,7 @@
 
 How far NC-12 moved between two digitised vintages, per Barrier3D domain.
 
-Port of `roya_files/road_relocation_dis.py` (Pea Island, 1992→1996) onto
+Port of `from_roya/road_relocation_dis.py` (was `scripts/input_prep/roya_files/` until 2026-09-18) (Pea Island, 1992→1996) onto
 Hatteras. Same measurement — sample the old road inside each domain, measure
 each sample to the whole new road — with the Hatteras road files, the
 90-polygon domain file, and a signed direction added.
@@ -13,11 +13,15 @@ HAT_road_relocation_distance.py
 
 ```
 python HAT_road_relocation_distance.py
-HAT_RELOC_FROM=1984 HAT_RELOC_TO=2004 python HAT_road_relocation_distance.py
+HAT_RELOC_FROM=1978 HAT_RELOC_TO=2008 python HAT_road_relocation_distance.py
 ```
 
 Writes to `data/hatteras_init/4-mgmt-forcing/road_relocation/<from>_<to>/`:
 a per-domain CSV, the sample points as GeoJSON, and three figures (below).
+`<from>` and `<to>` are LINE vintages -- the lines on disk are the 1978 and
+2008 exports, filed under those years since 2026-09-15, so the folder is
+`1978_2008/`. Which hindcast period reads which line is
+`hat_topo_version.ROAD_LINE_FOR_YEAR` (1984 → 1978, 2004 → 2008).
 
 **This is not a forcing.** `road_setback` comes from `../road_offset/`,
 measured against interior row 0 of the model grid. This is a GIS-frame
@@ -27,8 +31,8 @@ can be checked against one.
 
 ## The zeros are not measurements
 
-**70.5% of the 1984 line's vertices are identical to a 2004 vertex to the
-millimetre.** The 2004 road was digitised by editing a copy of the 1984 one,
+**70.5% of the 1978 line's vertices are identical to a 2008 vertex to the
+millimetre.** The 2008 line was digitised by editing a copy of the 1978 one,
 and only the stretches that visibly moved were re-drawn. Every shared vertex
 measures exactly 0.000 m by construction.
 
@@ -81,7 +85,7 @@ hundred metres.
 The sign has one blind spot. Around the Cape Point bend the island turns
 east–west, the ocean stops being on the right of a northward road, and the
 landward/seaward convention breaks. Those domains are flagged `OBLIQUE_SIGN` —
-on the 1984→2004 pair that is **domain 8 and nothing else**. Magnitude is
+on the 1978→2008 pair that is **domain 8 and nothing else**. Magnitude is
 unaffected; it never used the tangent.
 
 ## The three figures
@@ -131,7 +135,7 @@ white where the road never reaches, light grey never-edited, darker grey
 re-traced, and the relocated ones outlined in black and filled by distance on
 the same colour scale as `sites`.
 
-## Result, 1984 → 2004
+## Result, 1978 → 2008 (the 1984 and 2004 periods' roads)
 
 Of 83 road-carrying domains: **56 never edited, 15 re-traced, 12 relocated.**
 

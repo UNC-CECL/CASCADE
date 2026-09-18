@@ -43,6 +43,16 @@ USAGE
                        folder if one exists, else no comparison)
     --validate-against a GIS export of the same line, passed to step 1
     --no-current       build but leave CURRENT as it is
+
+EXTENDED GEOMETRY (2026-09-16, the Pea Island extension experiment)
+    python build_island_offset.py --duneline duneline_1997_v2.geojson --year 1996 \
+        --geometry n115
+
+    Runs step 1 with --extension (the transects beyond GIS 1-90, numbered on
+    the continued grid, to raw_offsets/ext/) and step 2 with --geometry (the
+    surveyed raw plus the extension, zeroed on the surveyed minimum, padded,
+    to <year>/ext/<geometry>/). Not a version: CURRENT is untouched, no
+    comparison is drawn, and the provenance lands in the ext folder.
 ==============================================================================
 """
 
@@ -63,13 +73,16 @@ PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
-from hat_topo_version import (BRIE_ROOT, DUNE_LINE_FOR_YEAR, DUNELINE_DIR,  # noqa: E402
+from site_layer.hat_topo_version import (BRIE_ROOT, DUNE_LINE_FOR_YEAR, DUNELINE_DIR,  # noqa: E402
                               RAW_OFFSET_DIR, dune_line_for_year, dune_raw_file)
+from site_layer.hat_extension_domains import (BASE_GEOMETRY, GEOMETRIES,  # noqa: E402
+                                   extension_gis, gis_bounds)
 
 HERE = Path(__file__).resolve().parent
 STEP_RAW = HERE / "duneline_to_raw_offsets.py"
 STEP_PAD = HERE / "island_offset_hybrid.py"
-STEP_CMP = HERE / "HAT_compare_offset_versions.py"
+# The comparison is a figure step, in 2-figures/ beside 1-produce/ (2026-09-18).
+STEP_CMP = HERE.parent / "2-figures" / "HAT_compare_offset_versions.py"
 
 # geojson properties copied into the provenance when present; imagery_date is
 # the one every new line should carry (the 1984 and 2004 dates had to be
@@ -139,6 +152,101 @@ def _versions(year_dir):
                   key=lambda v: int(v[1:])) if year_dir.is_dir() else []
 
 
+def build_extension(a, line, props, crs, vintage, year_dir):
+    """The extended-reach build: steps 1 and 2 in their extension modes,
+    then a provenance file in <year>/ext/<geometry>/."""
+    if a.version or a.compare_with or a.validate_against:
+        sys.exit("--geometry takes none of --version, --compare-with, --validate-against")
+    first, last = gis_bounds(a.geometry)
+    ext_dir = year_dir / "ext" / a.geometry
+    print(f"line     {line.name}  (vintage {vintage}, {crs})")
+    print(f"start    {a.year}  ->  {year_dir.name}/ext/{a.geometry}/   "
+          f"GIS {first} to {last}")
+
+    log = []
+    # 1. the transects beyond GIS 1-90
+    _run([STEP_RAW, "--duneline", line, "--extension"], log)
+    raw_ext = RAW_OFFSET_DIR / "ext" / f"{vintage}_duneline_offset_raw_ext.csv"
+    raw = pd.read_csv(raw_ext)
+    wanted = extension_gis(a.geometry)
+    per_dom = raw[raw.domain_id.isin(wanted)].groupby("domain_id")["ORIG_LEN"].count()
+    empty = [g for g in wanted if per_dom.get(g, 0) == 0]
+    short = per_dom[per_dom < 5]
+
+    # 2. the padded input for this reach
+    out_pad = _run([STEP_PAD, "--year", a.year, "--geometry", a.geometry], log)
+    m = re.search(r"max \|diff\| ([\d.]+) m", out_pad)
+    max_diff = float(m.group(1)) if m else float("nan")
+    ext_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(raw_ext, ext_dir / raw_ext.name)
+
+    current = year_dir / "CURRENT"
+    base_version = current.read_text(encoding="utf-8").strip() if current.exists() else "(flat)"
+    stamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
+    n_pad = (last - first + 1) + 30
+    lines = [
+        f"# {a.year} island offsets, extended reach `{a.geometry}` (GIS {first} to {last})",
+        "",
+        f"Built {stamp} by `scripts/input_prep/2-brie-offset/1-produce/build_island_offset.py "
+        f"--geometry {a.geometry}` from `{line.name}` ({vintage} imagery). An "
+        f"EXPERIMENT input (the Pea Island extension, 2026-09-16), not a version: "
+        f"`../../CURRENT` still names `{base_version}`, which this build reproduces "
+        f"exactly on GIS 1-90 (max |diff| {max_diff:.6f} m, checked by step 2).",
+        "",
+        "## What is different from the surveyed build",
+        "",
+        f"- The reach is GIS {first} to {last}. Domains beyond GIS 1-90 are numbered on "
+        f"the surveyed reach's own line-intersects-polygon join onto the whole-island "
+        f"polygons (`1-barrier3d-domains/domain-geojson/domains_pea_hatteras_120.geojson`, "
+        f"`hat_extension_domains.join_lines`; a domain no polygon covers, GIS 0, by "
+        f"northing bin) and carry "
+        f"the dune line's measured offset; their topography is the shared buffer profile.",
+        f"- {len(wanted)} extension domains: {wanted[0]}..{wanted[-1]}"
+        + (f"; with fewer than five transects: {short.to_dict()}" if len(short) else "")
+        + (f"; WITHOUT a dune line: {empty}" if empty else "") + ".",
+        f"- Padded to {n_pad} (15 buffer domains each side, the same slope-and-bridge "
+        f"buffer as the surveyed build, now extrapolating from the extension's ends).",
+        "",
+        "## Files",
+        "",
+        f"`Island_Dune_Offsets_{a.year}_PADDED_{n_pad}.csv` (read by the model when "
+        f"`HAT_GEOMETRY={a.geometry}`), `_CASCADE_Input.csv`, `_CASCADE_Input_unpadded.csv`, "
+        f"`_buffer_diagnostic.png`, and `{raw_ext.name}` (the extension raw this was built from; "
+        f"the surveyed raw is the one `{base_version}` keeps).",
+        "",
+        "## Rebuild",
+        "",
+        "```",
+        f"python scripts/input_prep/2-brie-offset/1-produce/build_island_offset.py --duneline {line.name} "
+        f"--year {a.year} --geometry {a.geometry}",
+        "```",
+        "",
+        "## Step output",
+        "",
+    ]
+    for name, text in log:
+        lines += [f"### {name}", "", "```", text.strip(), "```", ""]
+    (ext_dir / "PROVENANCE.md").write_text("\n".join(lines), encoding="utf-8")
+
+    idx = year_dir / "PROVENANCE.md"
+    row = (f"| `ext/{a.geometry}` | {stamp[:10]} | `{line.name}` | {vintage} | "
+           f"{base_version} | | |")
+    section = "## Extended reaches (experiment inputs, not versions)"
+    header = (f"\n{section}\n\nWritten by `build_island_offset.py --geometry`; each "
+              "reach's own `ext/<geometry>/PROVENANCE.md` has the detail. GIS 1-90 is "
+              "identical to the version named under *built as*; `CURRENT` is untouched."
+              "\n\n| reach | built | line | vintage | built as | | |\n"
+              "|---|---|---|---|---|---|---|\n")
+    if idx.exists():
+        text = idx.read_text(encoding="utf-8")
+        if section not in text:
+            text = text.rstrip("\n") + "\n" + header
+        idx.write_text(text.rstrip("\n") + "\n" + row + "\n", encoding="utf-8")
+    print(f"\n{year_dir.name}/ext/{a.geometry}/  GIS {first} to {last}  (CURRENT untouched)")
+    print(f"provenance {ext_dir / 'PROVENANCE.md'}")
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="a dune line in, a model input out")
     ap.add_argument("--duneline", required=True)
@@ -147,6 +255,9 @@ def main(argv=None):
     ap.add_argument("--compare-with", default=None)
     ap.add_argument("--validate-against", default=None)
     ap.add_argument("--no-current", action="store_true")
+    ap.add_argument("--geometry", default=None,
+                    choices=[g for g in GEOMETRIES if g != BASE_GEOMETRY],
+                    help="an extended reach, to <year>/ext/<geometry>/ (no version)")
     a = ap.parse_args(argv)
 
     line = _resolve_geojson(a.duneline)
@@ -160,6 +271,8 @@ def main(argv=None):
 
     year_dir = BRIE_ROOT / str(a.year)
     year_dir.mkdir(parents=True, exist_ok=True)
+    if a.geometry:
+        return build_extension(a, line, props, crs, vintage, year_dir)
     have = _versions(year_dir)
     version = a.version or f"v{(int(have[-1][1:]) + 1) if have else 1}"
     if not re.fullmatch(r"v\d+", version):
@@ -227,7 +340,7 @@ def main(argv=None):
     lines = [
         f"# {a.year} island offsets, {version}",
         "",
-        f"Built {stamp} by `scripts/input_prep/2-brie-offset/build_island_offset.py` "
+        f"Built {stamp} by `scripts/input_prep/2-brie-offset/1-produce/build_island_offset.py` "
         f"from `{line.name}`" + (f" ({vintage} imagery, standing in for the {a.year} start "
                                  f"through `DUNE_LINE_FOR_YEAR`)" if vintage != a.year else
                                  f" (a {a.year} survey, no stand-in)") + ".",
@@ -290,7 +403,7 @@ def main(argv=None):
         "## Rebuild",
         "",
         "```",
-        f"python scripts/input_prep/2-brie-offset/island_offset_hybrid.py --year {a.year} "
+        f"python scripts/input_prep/2-brie-offset/1-produce/island_offset_hybrid.py --year {a.year} "
         f"--version {version} --raw-file data/hatteras_init/2-brie-offset/{a.year}/{version}/{raw_path.name}",
         "```",
         "",

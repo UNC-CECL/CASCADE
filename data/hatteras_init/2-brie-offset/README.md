@@ -60,7 +60,7 @@ Buxton-only clip and cannot stand in for anything island-wide.
 One command (2026-09-15):
 
 ```
-python scripts/input_prep/2-brie-offset/build_island_offset.py \
+python scripts/input_prep/2-brie-offset/1-produce/build_island_offset.py \
     --duneline duneline_1984.geojson --year 1984          # -> 1984/v<next>/, CURRENT
 ```
 
