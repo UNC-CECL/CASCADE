@@ -56,7 +56,8 @@ _REPO = next(_p for _p in _P(__file__).resolve().parents
              if (_p / "pyproject.toml").exists())
 from site_layer.hat_observed_rates import DSAS_ROOT  # noqa: E402
 INPUT_CSV = DSAS_ROOT / "All_Shoreline_Transect_Intersections.csv"
-FIG_DIR = _REPO / "output" / "figures" / "shoreline"
+from site_layer import hat_figure_style as _hs  # noqa: E402
+FIG_DIR = _hs.figure_dir("shoreline")
 
 # The run periods this is checking, and the DSAS pair that stands in for each.
 # Both are stated so a reader never has to infer the offset.
