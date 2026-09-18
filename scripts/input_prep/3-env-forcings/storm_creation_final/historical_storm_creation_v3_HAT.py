@@ -51,7 +51,7 @@ from pathlib import Path as _Path
 
 # Anchored 2026-09-14: this named a home directory, or a tree renamed since.
 # Rule 5 of ORGANIZATION.md.
-_PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
+_PATH_REPO = next(_p for _p in _Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
 _REPO = next(_p for _p in _Path(__file__).resolve().parents
