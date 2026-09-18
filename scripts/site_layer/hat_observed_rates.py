@@ -19,22 +19,35 @@
 #   topography. Same answer here: the location is resolved ONCE, and a window
 #   that is not on disk is a loud error naming the ones that are.
 #
-# THE LAYOUT, which mirrors the producer folders so provenance is obvious
+# THE LAYOUT, grouped by job (2026-09-18). Each group is numbered in the
+# order the work runs: observations, then the frame that ties them to
+# domains, then the rate fits built on both, then the comparisons.
 #
 #     data/hatteras_init/5-scr/
-#         coastsat_timeseries/        raw per-transect chainage, by CoastSat site
-#         transect_domains/           the lookup, the transect layer, the domain
+#         1-observations/             measured or digitized, not fitted by us
+#             coastsat_timeseries/    raw per-transect chainage, by CoastSat site
+#             dsas_1978_2019/         the DSAS rates, a different source
+#             shoreline_inventory/    study-area and reference shorelines
+#         2-transect-frame/
+#             transect_domains/       the lookup, the transect layer, the domain
 #                                     polygons, and the verification set
-#         coastsat_lrr/               rate fits, one folder per WINDOW
-#             1984_2004/  1996_2010/  2004_2024/  2010_2024/
-#             old_time_periods/       retired windows, not for use
-#             two_period_comparison/  rodanthe_plots/  old_dsas_comparisons/
-#         coastsat_timeseries_lrr/    the 5-year-bin fits
-#         duneline_vs_coastsat/       dune-line change vs the CoastSat
+#         3-rates/                    the fits; the MODEL TARGETS live here
+#             coastsat_lrr/           one folder per WINDOW
+#                 1984_2004/  1996_2010/  2004_2024/  2010_2024/
+#             coastsat_5yr_bins/      the 5-year-bin fits
+#             duneline_lrr/           OLS through the dune lines, per window
+#         4-comparisons/
+#             coastsat_windows/       the four windows on one y axis
+#             duneline_vs_coastsat/   dune-line change vs the CoastSat
 #                                     shoreline, one folder per window
-#         shoreline_inventory/        study-area and reference shorelines
-#         shoreline_change_patterns/  trajectory classification output
-#         scr-dsas-1978-2019/         the DSAS rates, a different source
+#             trajectory_patterns/    trajectory classification output
+#             two_period_comparison/  1984-2004 against 2004-2024
+#         archive/                    retired windows, old 5-year-bin runs,
+#                                     the Rodanthe poster figures; not for use
+#
+# Before 2026-09-18 all of these sat side by side at the top of 5-scr/, under
+# their old names (scr-dsas-1978-2019, coastsat_timeseries_lrr,
+# coastsat_lrr_windows, shoreline_change_patterns).
 #
 # A WINDOW IS <start>_<end>, NOT A START YEAR. A rate fit spans an interval, so
 # it is named for one - unlike a dune line or a road alignment, which is a
@@ -64,27 +77,33 @@ PROJECT_ROOT = next(_p for _p in _HERE.parents
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 
 SCR_ROOT = INIT_ROOT / "5-scr"
+OBSERVATIONS = SCR_ROOT / "1-observations"
+TRANSECT_FRAME = SCR_ROOT / "2-transect-frame"
+RATES = SCR_ROOT / "3-rates"
+COMPARISONS = SCR_ROOT / "4-comparisons"
+ARCHIVE = SCR_ROOT / "archive"
 
-COASTSAT_TIMESERIES = SCR_ROOT / "coastsat_timeseries"
-COASTSAT_LRR_ROOT = SCR_ROOT / "coastsat_lrr"
-TRANSECT_DOMAINS = SCR_ROOT / "transect_domains"
-TIMESERIES_LRR = SCR_ROOT / "coastsat_timeseries_lrr"
-DUNELINE_VS_COASTSAT = SCR_ROOT / "duneline_vs_coastsat"
+COASTSAT_TIMESERIES = OBSERVATIONS / "coastsat_timeseries"
+COASTSAT_LRR_ROOT = RATES / "coastsat_lrr"
+TRANSECT_DOMAINS = TRANSECT_FRAME / "transect_domains"
+TIMESERIES_LRR = RATES / "coastsat_5yr_bins"
+DUNELINE_VS_COASTSAT = COMPARISONS / "duneline_vs_coastsat"
 # The dune-line LRR product (2026-09-16): the same layout as coastsat_lrr/,
 # one folder per window, an OLS through every island-wide dune line inside
 # the window per transect. Written by
 # scripts/input_prep/5-scr/duneline_lrr/duneline_lrr.py.
-DUNELINE_LRR_ROOT = SCR_ROOT / "duneline_lrr"
-SHORELINE_INVENTORY = SCR_ROOT / "shoreline_inventory"
-SHORELINE_PATTERNS = SCR_ROOT / "shoreline_change_patterns"
-DSAS_ROOT = SCR_ROOT / "scr-dsas-1978-2019"
+DUNELINE_LRR_ROOT = RATES / "duneline_lrr"
+SHORELINE_INVENTORY = OBSERVATIONS / "shoreline_inventory"
+SHORELINE_PATTERNS = COMPARISONS / "trajectory_patterns"
+DSAS_ROOT = OBSERVATIONS / "dsas_1978_2019"
 # The four windows drawn on one y axis (coastsat_lrr_windows.py).
-COASTSAT_LRR_WINDOWS = SCR_ROOT / "coastsat_lrr_windows"
+COASTSAT_LRR_WINDOWS = COMPARISONS / "coastsat_windows"
 # Two-window comparison figures (coastsat_two_period_comparison.py).
-TWO_PERIOD_COMPARISON = COASTSAT_LRR_ROOT / "two_period_comparison"
+TWO_PERIOD_COMPARISON = COMPARISONS / "two_period_comparison"
 # Retired windows (1978-1997, 1997-2019 and their specific-dates variants),
 # kept for the DSAS comparison in 6-scr-smooth, never a grading target.
-COASTSAT_LRR_SUPERSEDED = COASTSAT_LRR_ROOT / "superseded_20260810"
+# Archived, but still read, so still resolved.
+COASTSAT_LRR_SUPERSEDED = ARCHIVE / "coastsat_lrr_superseded_20260810"
 
 # Single files in transect_domains/ that scripts outside 5-scr read by name.
 # HAT_domains.json holds the 90 real domain boxes; the map_elements polygons
@@ -98,6 +117,8 @@ DOMAIN_FILE = "domain_lrr_summary.csv"
 
 # Folders under coastsat_lrr/ that are not windows. Listed so windows() can
 # report what IS available without having to parse every directory name.
+# Everything but "custom" moved out on 2026-09-18; the names stay listed so a
+# stray copy restored from an old checkout is not mistaken for a window.
 _NOT_WINDOWS = {"old_time_periods", "two_period_comparison",
                 "rodanthe_plots", "old_dsas_comparisons",
                 "superseded_20260810", "custom"}

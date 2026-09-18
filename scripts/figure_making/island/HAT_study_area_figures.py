@@ -59,7 +59,7 @@ THE FRAME
     which assumes north is up.
 
 WHICH DOMAIN POLYGONS
-    5-scr/transect_domains/HAT_domains.json: the 90 boxes, 2000 m cross-shore
+    5-scr/2-transect-frame/transect_domains/HAT_domains.json: the 90 boxes, 2000 m cross-shore
     by 500 m alongshore, axis-aligned in UTM 18N, that every per-domain DEM
     clip and elevation array was cut from (the repository copy of
     D:/Hatteras_GIS/domains.geojson). NOT 9-figures/map_elements/domains/
@@ -68,7 +68,7 @@ WHICH DOMAIN POLYGONS
     "45" did not contain the array for domain 45.
 
 LAYERS AND THEIR OWNERS
-    domain boxes                      5-scr/transect_domains/HAT_domains.json
+    domain boxes                      5-scr/2-transect-frame/transect_domains/HAT_domains.json
     island outline                    9-figures/map_elements/hatteras_outline/
     NC-12 centrelines                 hat_topo_version.road_line_file(1978|2008)
     domain elevation arrays           hat_topo_version.npy_dirs("2004-start")

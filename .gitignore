@@ -152,19 +152,22 @@ output/*
 output/groin_sweep/*
 !output/groin_sweep/joint_fit.json
 
-# coastsat_smoothed_table.csv was tracked while it sat beside its script under
-# scripts/analyze_output/. Moving the products into output/comparisons/ on
-# 2026-09-02 would have dropped it from version control silently, so it is
-# re-included by the same directory-in, contents-out pattern as joint_fit.json.
-# It is the LOESS-smoothed CoastSat table the smoothing comparison reports on;
-# the PNGs beside it stay ignored, being regenerable from it plus the code.
+# output/comparisons/ (one rule since 2026-09-17; before that a per-folder
+# whitelist for smoothing_vs_cascade, then rate_windows): every README,
+# CAPTIONS.md, .csv and .txt in the tree is tracked -- the tables a results
+# document quotes, the report.txt that names the runs a set read, and
+# runs_used.csv / y_bounds.txt -- so the numbers survive a clone. Images,
+# PDFs, GIFs and .npz are regenerable from those plus the code and stay
+# ignored. Directories are re-included so the patterns can reach into the
+# nested figure folders (coastsat/means, sensitivity/ends-swapped/duneline/lrr,
+# relocation/1984_2004/v2/calibBE_groin/tables, ...).
 !output/comparisons/
-output/comparisons/*
-!output/comparisons/smoothing_vs_cascade/
-output/comparisons/smoothing_vs_cascade/*
-!output/comparisons/smoothing_vs_cascade/1984_2004/
-output/comparisons/smoothing_vs_cascade/1984_2004/*
-!output/comparisons/smoothing_vs_cascade/1984_2004/coastsat_smoothed_table.csv
+output/comparisons/**
+!output/comparisons/**/
+!output/comparisons/**/README.md
+!output/comparisons/**/CAPTIONS.md
+!output/comparisons/**/*.csv
+!output/comparisons/**/*.txt
 
 # large data / model output file types
 *.nc
@@ -211,7 +214,14 @@ data/hatteras_init/3-env-forcings/water_level/noaa_cache_8651370/
 data/hatteras_init/3-env-forcings/storms/WIS_raw_data/
 data/hatteras_init/3-env-forcings/storms/old/
 data/hatteras_init/4-mgmt-forcing/road_offset/raster/
-data/hatteras_init/5-scr/coastsat_timeseries/
+data/hatteras_init/5-scr/1-observations/coastsat_timeseries/
+# The 5-scr geojsons (the 80 MB CoastSat transect layer, nc_shorelines at
+# 20 MB, the study-area and wet/dry lines) stay on disk but off GitHub
+# (Hannah, 2026-09-18). They were untracked when 5-scr was regrouped into
+# 1-observations/ .. 4-comparisons/; the copies already in history remain
+# there. A clone does NOT get them: the scripts that read them need a copy
+# from someone who has one.
+data/hatteras_init/5-scr/**/*.geojson
 
 # unrelated init/reference data
 data/Ocracoke_init_data/
@@ -313,5 +323,11 @@ output/raw_runs/**/*.png
 # dune-line exports, where the RoadSetback CSVs can no longer be reproduced from
 # what is in the repo. They go to Git LFS instead -- see .gitattributes. At
 # 106 MB across 21 files they are 62% of everything tracked, and
-# 5-scr/transect_domains/CoastSat_transect_layer.geojson is 80 MB against
-# GitHub's hard limit of 100.
+# 5-scr/transect_domains/CoastSat_transect_layer.geojson was 80 MB against
+# GitHub's hard limit of 100. The exception is 5-scr, whose four geojsons,
+# that one included, are ignored since 2026-09-18 (the rule is above).
+
+# Git Bash / Cygwin crash dumps. Written into whatever directory the shell was
+# in when a bash.exe process died, so they land at the repository root and show
+# up as the only untracked file in an otherwise clean tree.
+*.stackdump

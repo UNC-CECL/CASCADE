@@ -46,14 +46,14 @@ METHOD
     metre landward of the exact crossing; see raw_offsets/PROVENANCE.md), so
     a change between any two years carries no method term.
 
-OUTPUT   data/hatteras_init/5-scr/duneline_vs_coastsat/<start>_<end>/
+OUTPUT   data/hatteras_init/5-scr/4-comparisons/duneline_vs_coastsat/<start>_<end>/
              scatter_dune_vs_coastsat.png     a. vs LRR  b. vs endpoint
              alongshore_dune_vs_coastsat.png  the three rates by domain
              supporting/                      the PDFs, CAPTIONS.md,
                  domain_comparison.csv            one row per GIS domain
                  transect_coastsat_endpoint.csv   the window means per transect
                  PROVENANCE.md
-         data/hatteras_init/5-scr/duneline_vs_coastsat/
+         data/hatteras_init/5-scr/4-comparisons/duneline_vs_coastsat/
              alongshore_four_windows.png      every window on one y axis,
                                               stacked full width (--grid;
                                               --layout grid for the 2 x 2)
@@ -351,7 +351,7 @@ def four_windows_figure(layout: str = "column") -> Path:
     full-width panel per window, stacked, in chain order -- the 1984-start
     pair then the 1996-start pair -- so each panel is as wide as the
     single-window figure. `layout="grid"`: the 2 x 2 by period that
-    coastsat_lrr_windows/lrr_four_windows uses, the 1984 start in the left
+    coastsat_windows/lrr_four_windows uses, the 1984 start in the left
     column, the 1996 start in the right, the earlier window above. Reads
     each window's supporting/domain_comparison.csv; run the windows first.
     Written to the folder above the windows."""

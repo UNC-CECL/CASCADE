@@ -56,7 +56,8 @@ END_DATE    = "2024-12-31"
 MIN_OBS     = 5
 
 # A poster figure, so it goes to output/figures/ with the others (2026-09-18);
-# it used to be written in among the rate fits, 5-scr/coastsat_lrr/rodanthe_plots.
+# it used to be written in among the rate fits, 5-scr/coastsat_lrr/rodanthe_plots
+# (those older copies are in 5-scr/archive/rodanthe_plots/).
 OUTPUT_DIR  = str(_FIG_REPO / "output" / "figures" / "shoreline" / "rodanthe_plots")
 OUTPUT_FILE = "rodanthe_erosion_trends.png"
 

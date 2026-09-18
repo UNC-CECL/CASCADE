@@ -32,7 +32,7 @@ Y BOUNDS
     panel to +/-9 with nothing above 7 (the 2026-09-15 first cut). The value
     used is written to supporting/y_bounds.txt.
 
-OUTPUT   data/hatteras_init/5-scr/coastsat_lrr_windows/
+OUTPUT   data/hatteras_init/5-scr/4-comparisons/coastsat_windows/
     lrr_<start>_<end>.png          one figure per window
     lrr_four_windows.png           2 x 2: the 1984-start period in the left
                                    column, the 1996-start period in the right
