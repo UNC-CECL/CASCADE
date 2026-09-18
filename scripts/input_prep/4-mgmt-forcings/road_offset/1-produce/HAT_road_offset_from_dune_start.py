@@ -210,8 +210,7 @@ CONTROL_UNSTRAIGHTENED = True
 # MOVED 2026-08-25: 1-barrier3d-domains went period-first and the pre-90-domain
 # legacy went under superseded/. Path repointed so this script keeps reading
 # EXACTLY what it read before - no road number moves because of the reorg.
-CONTROL_WINDOW_JSON = (INIT_ROOT / "1-barrier3d-domains" / "control-picks"
-                       / "HAT_dune_search_windows_2009_pea_hatteras.json")
+CONTROL_WINDOW_JSON = _tv.CONTROL_PICKS_DIR / "HAT_dune_search_windows_2009_pea_hatteras.json"
 CONTROL_SUFFIX = "_rawframe"
 
 # Assumed roadway width. RoadwayConfig.road_width_m is a single global 20.0
@@ -410,9 +409,7 @@ def load_extractor(product: str | None = None):
 # inversion rests on - shapely distance from the reconstructed road points to
 # the digitised geojson, 6.62-6.68 m median - so losing them quietly loses the
 # check that would catch an alongshore-flip error.
-TIF_FMT = (INIT_ROOT / "1-barrier3d-domains"
-           / "domain-clips-1m" / "domain_{domain}"
-           / "resampled_domain_{domain}.tif")
+TIF_FMT = _tv.DOMAIN_CLIPS_DIR / "domain_{domain}" / "resampled_domain_{domain}.tif"
 
 WRITE_PROFILE_COORDS = True
 _geo_warned: set[str] = set()

@@ -282,7 +282,7 @@ OUTPUT_ROOT = PROJECT_BASE_DIR / "output" / "raw_runs"
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as COASTSAT_BASE_DIR  # noqa: E402
 PARAMETER_FILE = "Hatteras-CASCADE-parameters.yaml"  # resolved by CASCADE
 
-BARRIER3D_DIR = HATTERAS_DATA_BASE / "1-barrier3d-domains"
+from site_layer.hat_topo_version import DOMAIN_ROOT as BARRIER3D_DIR  # noqa: E402
 # Taken from what topo_dirs() RETURNED rather than re-joined from parts. The
 # old line rebuilt the path independently, which is how a resolver gets bypassed
 # without anyone noticing - the same failure mode as HAT_road_elevation.py.

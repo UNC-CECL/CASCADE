@@ -52,8 +52,8 @@ sys.path.insert(0, str(REPO / "scripts"))
 from cascade_pipeline.run_registry import arm_component  # noqa: E402
 
 HINDCAST = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
-DUNE_TOPO = REPO / "data/hatteras_init/1-barrier3d-domains/1984-start/dune-topo"
 from site_layer import hat_topo_version as _tv  # noqa: E402
+DUNE_TOPO = _tv.dune_topo_root("1984-start")
 LIVE_SETBACK = _tv.road_setback_file(1984)
 SET = "version-pair"
 LOG_DIR = REPO / "output" / "experiments" / "version_pair" / "logs"

@@ -84,8 +84,12 @@ INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 # script printed "no clip tifs found" and produced nothing. Repointed
 # 2026-08-26; the same stale path was in the offset producer and in
 # 2-audit/HAT_check_geojson_vs_mask.py, where it silently zeroed the check.
-DEM_DIR = (INIT_ROOT / "1-barrier3d-domains"
-           / "domain-clips-1m")
+import sys as _b3dsys
+from pathlib import Path as _B3DP
+_b3dsys.path.insert(0, str(next(_q for _q in _B3DP(__file__).resolve().parents
+                                if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_topo_version as _b3d  # noqa: E402
+DEM_DIR = _b3d.DOMAIN_CLIPS_DIR
 DEM_NAME = "domain_{d}/clip_domain_{d}.tif"          # 1 m, the full source grid
 
 import sys as _tvsys

@@ -87,7 +87,8 @@ import HAT_plot_duneline_offset as off                                          
 
 INIT = REPO / "data" / "hatteras_init"
 PRODUCT = "1984-start"
-SCOPE_DIR = INIT / "1-barrier3d-domains" / PRODUCT / "2-domain-reconstruction-1984"
+from site_layer.hat_topo_version import insert_scope_dir  # noqa: E402
+SCOPE_DIR = insert_scope_dir(PRODUCT)
 FOOTPRINT_CSV = insert_scope_step(PRODUCT, "2-extent") / "footprint_1984_by_domain.csv"
 STEP_DIR = insert_scope_step(PRODUCT, "3-placement")           # the check's table and report (2026-09-09)
 from site_layer import hat_topo_version as _tv  # noqa: E402

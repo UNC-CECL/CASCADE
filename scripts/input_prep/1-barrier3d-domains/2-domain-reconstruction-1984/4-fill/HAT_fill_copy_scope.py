@@ -92,8 +92,8 @@ REPO = _find_root(Path(__file__).resolve())
 INIT = REPO / "data" / "hatteras_init"
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "0-elevation" / "3-figures"))
-from hat_topo_version import array_name, dune_topo_root, insert_figures_dir_for_domain, topo_dirs, insert_scope_step# noqa: E402
-from hat_figure_style import C, caption, elevation_cmap, figsize, save  # noqa: E402
+from site_layer.hat_topo_version import array_name, dune_topo_root, insert_figures_dir_for_domain, topo_dirs, insert_scope_step# noqa: E402
+from site_layer.hat_figure_style import C, caption, elevation_cmap, figsize, save  # noqa: E402
 import HAT_plot_duneline_offset as off  # noqa: E402  the house style
 
 PRODUCT = "1984-start"
@@ -102,7 +102,8 @@ ROAD_ROWS = 2
 BERM_EL_M = 1.7               # BermEl, Hatteras-CASCADE-parameters.yaml; the dune file is height above it
 CREST_SEARCH_ROWS = 10        # the crest is looked for in the first rows of a no-road domain
 OUTLIER_M = 8.0               # a copied cell above this is flagged (structures, not ground)
-SCOPE_DIR = INIT / "1-barrier3d-domains" / PRODUCT / "2-domain-reconstruction-1984"
+from site_layer.hat_topo_version import insert_scope_dir  # noqa: E402
+SCOPE_DIR = insert_scope_dir(PRODUCT)
 FOOTPRINT_CSV = insert_scope_step(PRODUCT, "2-extent") / "footprint_1984_by_domain.csv"
 BUILT_VERSION = "v3"          # the version HAT_build_footprint_version.py wrote; after-panels read it if present
 C_ROAD_OLD = C["BASE"]

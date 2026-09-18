@@ -72,7 +72,8 @@ BERM_EL_M = 1.7
 BUFFER = 15
 START = 1984
 RECORDED = {84: 1989, 85: 1989, 86: 1989, 87: 1989, 9: 1999, 10: 1999, 11: 1999, 12: 1999, 13: 1999, 14: 1999}
-SCOPE = INIT / "1-barrier3d-domains" / PRODUCT / "2-domain-reconstruction-1984"
+from site_layer.hat_topo_version import insert_scope_dir  # noqa: E402
+SCOPE = insert_scope_dir(PRODUCT)
 RUN = "HAT_1984_2004_calibBE_road_bdm_groin"
 RUNS = {"v1": REPO / "output/raw_runs/pea1989basenoreloc/1984_2004/calibBE" / RUN,
         "v2": REPO / "output/raw_runs/1984_2004/calibBE" / RUN,

@@ -107,7 +107,7 @@ from matplotlib.patches import Patch
 REPO = next(_p for _p in Path(__file__).resolve().parents
             if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
-from hat_elevation_products import product  # noqa: E402
+from site_layer.hat_elevation_products import product  # noqa: E402
 
 # =============================================================================
 # CONFIG
@@ -154,7 +154,8 @@ plt.rcParams.update({
 })
 
 INIT = REPO / "data" / "hatteras_init"
-ARR_DIR = INIT / "1-barrier3d-domains" / TOPO_PRODUCT / "1-extraction" / "npy-arrays"
+from site_layer import hat_topo_version as _b3d  # noqa: E402
+ARR_DIR = _b3d.npy_dirs(TOPO_PRODUCT)[0]
 P = product(DEM_PRODUCT)
 OUT_PNG = P.figures / f"HAT_{SLUG}_holes.png"
 

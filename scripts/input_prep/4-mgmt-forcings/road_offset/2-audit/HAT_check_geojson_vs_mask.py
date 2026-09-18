@@ -56,8 +56,7 @@ GEOJSON_FMT = ROADS_ROOT / "raw_offset" / "{year}" / "nc12_{year}.geojson"
 # MOVED 2026-08-25: 1-barrier3d-domains went period-first and the pre-90-domain
 # legacy went under superseded/. Path repointed so this script keeps reading
 # EXACTLY what it read before - no road number moves because of the reorg.
-TIF_FMT = (INIT_ROOT / "1-barrier3d-domains"
-           / "domain-clips-1m" / "domain_{d}" / "resampled_domain_{d}.tif")
+TIF_FMT = _tv.DOMAIN_CLIPS_DIR / "domain_{d}" / "resampled_domain_{d}.tif"
 
 YEARS = [1978, 2008]   # LINE vintages (hat_topo_version.ROAD_LINE_FOR_YEAR), not period starts
 DOMAINS = list(range(1, 91))

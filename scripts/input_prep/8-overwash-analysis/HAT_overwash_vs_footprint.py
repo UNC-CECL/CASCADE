@@ -88,8 +88,8 @@ from overwash_map_periods import (CLR_BOX, CLR_LAND, CLR_ROAD, PAD_E,     # noqa
                                   scalebar_and_north)
 
 INIT = REPO / "data" / "hatteras_init"
-FOOTPRINT = (INIT / "1-barrier3d-domains/1984-start/2-domain-reconstruction-1984"
-             / "2-extent/footprint_1984_by_domain.csv")
+from site_layer.hat_topo_version import insert_scope_step  # noqa: E402
+FOOTPRINT = insert_scope_step("1984-start", "2-extent") / "footprint_1984_by_domain.csv"
 from site_layer.hat_topo_version import road_relocation_file  # noqa: E402
 RELOCATION = road_relocation_file(1978, 2008)
 from site_layer.hat_observed_rates import DSAS_ROOT, SMOOTH_METHOD_COMPARISON  # noqa: E402

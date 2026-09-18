@@ -46,7 +46,12 @@ def _find_root(start: Path) -> Path:
 
 REPO = _find_root(Path(__file__).resolve())
 RAW_RUNS = REPO / "output" / "raw_runs"
-DOMAIN_ROOT = REPO / "data" / "hatteras_init" / "1-barrier3d-domains"
+import sys as _b3dsys
+from pathlib import Path as _B3DP
+_b3dsys.path.insert(0, str(next(_q for _q in _B3DP(__file__).resolve().parents
+                                if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_topo_version as _b3d  # noqa: E402
+DOMAIN_ROOT = _b3d.DOMAIN_ROOT
 STAMP_NAME = "BUILT_ON.txt"
 
 

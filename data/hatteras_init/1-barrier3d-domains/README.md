@@ -24,35 +24,42 @@ control-picks/           window sets kept across a version clear, so a deleted
                          extraction stays reproducible from its picks
 (the digitized dune lines moved to ../2-brie-offset/dunelines/ on 2026-09-15:
  they are the island-offset input, not topography)
-npy-arrays_2009_unfilled/  legacy pre-gap-fill arrays; nothing live reads them
+npy-arrays_2009_unfilled/  the pre-gap-fill arrays; still read by
+                         HAT_rasterize_road_to_domains.py as a grid check, so
+                         LIVE (LINEAGE.md had this right; this line did not)
+domain-geojson/          the 120-domain Pea-Hatteras polygons (extension work)
 ```
 
-Each period holds:
+Each period holds (the extraction half went under `1-extraction/` on 2026-09-09):
 
 ```
 <period>/
-    npy-arrays/          domain_<N>.npy   m NAVD88, -10 nodata   <- extractor INPUT
-    npy-arrays_survey/   domain_<N>.npy   provenance codes
+    1-extraction/
+        npy-arrays/          domain_<N>.npy   m NAVD88, -10 nodata   <- extractor INPUT
+        npy-arrays_survey/   domain_<N>.npy   provenance codes
+        picks/               HAT_dune_search_windows_<version>.json
+        aerial-review/       manual imagery verdicts, survives a re-pick (1984-start)
     dune-topo/
         CURRENT          which version to use, when it is ambiguous
         <version>/       topography/  dunes/  figures/  RUN_MANIFEST.txt
-    picks/               HAT_dune_search_windows_<version>.json
     README.md
 ```
 
-1984-start also carries, and 2004-start may:
+and, per period:
 
 ```
-    duneline-shift/          dune-line vs interior-row-0 measurements
-    dune-topo-experiments/   superseded variants, OUTSIDE dune-topo/ so
-                             versions() does not list them
-    aerial-review/           manual imagery verdicts, survives a re-pick
+1984-start/2-domain-reconstruction-1984/   the 1984 footprint work, by step
+                                           (insert_scope_dir / insert_scope_step)
+2004-start/duneline-shift/                 dune-line vs interior-row-0 measurements
+                                           (1984-start's are under
+                                           2-domain-reconstruction-1984/1-measurement/;
+                                           duneline_shift_dir(product) resolves both)
 ```
 
 ## Which period uses which DEM
 
 Set in `HATTERAS_PERIODS[start]["topo_product"]` in
-`scripts/hatteras_site_config.py`, beside `storm_file`, `island_offset_file`
+`scripts/site_layer/hatteras_site_config.py`, beside `storm_file`, `island_offset_file`
 and `road_setback_file` - it is the same kind of thing, a per-period input.
 
 **Before 2026-08-25 there was no such key.** The runner hardcoded one
@@ -61,10 +68,10 @@ from the same barrier. They no longer do.
 
 ## Do not hardcode these paths
 
-Resolve through **`scripts/hat_topo_version.py`**:
+Resolve through **`scripts/site_layer/hat_topo_version.py`**:
 
 ```python
-from hat_topo_version import topo_dirs, BUFFER_DIR
+from site_layer.hat_topo_version import topo_dirs, BUFFER_DIR
 TOPO, DUNE, VERSION = topo_dirs("1984-start")
 TOPO, DUNE, VERSION = topo_dirs()          # 2004-start, the default
 ```
@@ -72,6 +79,15 @@ TOPO, DUNE, VERSION = topo_dirs()          # 2004-start, the default
 `topo_dirs()` with no argument still resolves what it resolved before the
 restructure, so the road tree, the groin sweep and the poster script were not
 moved by this change.
+
+The rest has a name too: `product_dir()`, `npy_dirs()`, `picks_dir()`,
+`dune_topo_root()`, `insert_scope_dir()` / `insert_scope_step()` per period,
+and `DOMAIN_ROOT`, `BUFFER_DIR`, `DOMAIN_CLIPS_DIR` / `domain_clip_file(n)`,
+`CONTROL_PICKS_DIR`, `UNFILLED_2009_DIR`, `DOMAIN_GEOJSON_DIR` for what is
+shared. Until 2026-09-18 about twenty-five scripts re-joined these by hand,
+including eight reconstruction scripts that rebuilt the path
+`insert_scope_dir()` returns. None was broken; the point is that the next
+move is one file.
 
 **The version is resolved, never pinned.** Order:
 
@@ -97,7 +113,7 @@ does not mutate state every other reader sees.
 
 `domain_<N>_topography.npy`, `_dune.npy`, `_nodata.npy`. There is no year in the
 name and there should not be one - see the long note in
-`scripts/hat_topo_version.py`, which records both the `2009` literal that was
+`scripts/site_layer/hat_topo_version.py`, which records both the `2009` literal that was
 false (neither live product is a 2009 DEM) and the period retag that was tried
 and reverted the same day, because the tag reached twelve scripts four different
 ways and no single grep could audit it.
@@ -110,8 +126,11 @@ by hand.
 > still builds `domain_{n}_topography_{TOPO_DUNE_INIT_YEAR}.npy` and will not
 > find its files.
 
-## Everything here is git-ignored
+## The arrays are git-ignored; the record of them is not
 
-`.gitignore` line 164 ignores this whole directory. Nothing in it is tracked -
-the arrays are rebuilt from `0-elevation/` products, and each run records what
-made it in its own `RUN_MANIFEST.txt`.
+`.gitignore` ignores this directory's CONTENTS (`1-barrier3d-domains/**`) and
+re-includes the written record: every `README.md`, `LINEAGE.md`, the
+`archive_purge_*.csv` logs and the `duneline-shift/*.csv` measurements. The
+arrays are rebuilt from `0-elevation/` products, and each run records what
+made it in its own `RUN_MANIFEST.txt`. (This section said nothing here was
+tracked; 39 files are.)

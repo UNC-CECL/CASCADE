@@ -145,7 +145,12 @@ def _find_project_root(start: Path) -> Path:
 
 PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
 HATTERAS_DATA_BASE = PROJECT_ROOT / "data" / "hatteras_init"
-BARRIER3D_DIR = HATTERAS_DATA_BASE / "1-barrier3d-domains"
+import sys as _b3dsys
+from pathlib import Path as _B3DP
+_b3dsys.path.insert(0, str(next(_q for _q in _B3DP(__file__).resolve().parents
+                                if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_topo_version as _b3d  # noqa: E402
+BARRIER3D_DIR = _b3d.DOMAIN_ROOT
 # The method the runner spends (hatteras_site_config.py:78,91). Switched to
 # dune-start on 2026-08-18; the legacy tree is still on disk under
 # road_offset/archive/superseded_20260911/ for the method comparison.

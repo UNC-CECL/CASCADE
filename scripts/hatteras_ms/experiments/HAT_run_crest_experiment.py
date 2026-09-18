@@ -84,7 +84,12 @@ REPO = next(_p for _p in HERE.parents if (_p / 'pyproject.toml').exists())
 # experiments/ on 2026-09-13, so it names the folder rather than its own.
 HINDCAST = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 
-DUNE_TOPO = REPO / "data/hatteras_init/1-barrier3d-domains/1984-start/dune-topo"
+import sys as _b3dsys
+from pathlib import Path as _B3DP
+_b3dsys.path.insert(0, str(next(_q for _q in _B3DP(__file__).resolve().parents
+                                if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_topo_version as _b3d  # noqa: E402
+DUNE_TOPO = _b3d.dune_topo_root("1984-start")
 CURRENT = DUNE_TOPO / "CURRENT"
 import sys as _tvsys
 from pathlib import Path as _TVP

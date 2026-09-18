@@ -211,8 +211,9 @@ GRID_10M = 10.0          # the resampled product's cell, for the box fallback
 # Barrier3D rows the measured offset turns into. Optional; absent is fine.
 # Since 2026-09-07 this is the SYMMETRIC footprint (HAT_footprint_1984.py):
 # n_cells is signed, + rows added, - existing rows removed, trunc(shift/10).
-INSERT_SCOPE_CSV = (INIT_ROOT / "1-barrier3d-domains" / "1984-start"
-                    / "2-domain-reconstruction-1984" / "2-extent" / "footprint_1984_by_domain.csv")   # step folder since 2026-09-09
+from site_layer import hat_topo_version as _b3d  # noqa: E402
+INSERT_SCOPE_CSV = (_b3d.insert_scope_step("1984-start", "2-extent")
+                    / "footprint_1984_by_domain.csv")   # step folder since 2026-09-09
 
 # The box shape the easting-is-cross-shore frame depends on. Checked, not
 # assumed - see THE FRAME above.

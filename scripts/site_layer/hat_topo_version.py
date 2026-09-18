@@ -107,6 +107,28 @@ DOMAIN_ROOT = INIT_ROOT / "1-barrier3d-domains"
 # the 90 real ones. Not per-period - the buffer is not a survey of anything.
 BUFFER_DIR = DOMAIN_ROOT / "buffer"
 
+# The other shared inputs (2026-09-18). About twenty-five scripts typed these,
+# or re-joined the product paths the helpers below already return.
+#   domain-clips-1m/<domain_N>/   clip_domain_N.tif (1 m, native) and
+#                                 resampled_domain_N.tif (10 m, the Barrier3D
+#                                 grid every measurement georeferences against)
+#   control-picks/                window sets kept across a version clear
+#   npy-arrays_2009_unfilled/     the pre-gap-fill arrays; still read by
+#                                 HAT_rasterize_road_to_domains.py as a grid check
+#   domain-geojson/               the 120-domain Pea-Hatteras polygons
+DOMAIN_CLIPS_DIR = DOMAIN_ROOT / "domain-clips-1m"
+CONTROL_PICKS_DIR = DOMAIN_ROOT / "control-picks"
+UNFILLED_2009_DIR = DOMAIN_ROOT / "npy-arrays_2009_unfilled"
+DOMAIN_GEOJSON_DIR = DOMAIN_ROOT / "domain-geojson"
+
+
+def domain_clip_file(domain: int, kind: str = "resampled") -> Path:
+    """One domain's DEM clip: kind "resampled" (10 m) or "clip" (1 m)."""
+    d = int(domain)
+    if kind not in ("resampled", "clip"):
+        raise ValueError(f"kind must be 'resampled' or 'clip', not {kind!r}")
+    return DOMAIN_CLIPS_DIR / f"domain_{d}" / f"{kind}_domain_{d}.tif"
+
 # What topo_dirs() resolves when no product is named. See the note above: this
 # is the pre-restructure behaviour, kept so nothing that was not asked to move
 # moves.
