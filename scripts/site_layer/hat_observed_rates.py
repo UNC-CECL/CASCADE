@@ -105,6 +105,17 @@ TWO_PERIOD_COMPARISON = COMPARISONS / "two_period_comparison"
 # Archived, but still read, so still resolved.
 COASTSAT_LRR_SUPERSEDED = ARCHIVE / "coastsat_lrr_superseded_20260810"
 
+# 6-scr-smooth: what the LOESS smoothing does to the observed rates. Resolved
+# here too because its outputs are read outside their producers (2026-09-18,
+# when the two folders lost their HAT_*_output names).
+#     method_comparison/   transect-based against domain-averaged smoothing;
+#                          03_cascade_inputs/ is read by the overwash work
+#     dsas_vs_coastsat/    the two rate sources, both smoothed, on the
+#                          retired 1978-1997 / 1997-2019 windows
+SMOOTH_ROOT = INIT_ROOT / "6-scr-smooth"
+SMOOTH_METHOD_COMPARISON = SMOOTH_ROOT / "method_comparison"
+SMOOTH_DSAS_VS_COASTSAT = SMOOTH_ROOT / "dsas_vs_coastsat"
+
 # Single files in transect_domains/ that scripts outside 5-scr read by name.
 # HAT_domains.json holds the 90 real domain boxes; the map_elements polygons
 # in 9-figures are NOT the model domains.

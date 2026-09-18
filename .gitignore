@@ -228,8 +228,8 @@ data/Ocracoke_init_data/
 
 # raw/cached data and regenerated results under scripts/input_prep/
 scripts/input_prep/5-scr/CoastSat_timeseries/results/
-data/hatteras_init/6-scr-smooth/HAT_loess_method_comparison_output/
-data/hatteras_init/6-scr-smooth/HAT_loess_dsas_vs_coastsat_output/
+data/hatteras_init/6-scr-smooth/method_comparison/
+data/hatteras_init/6-scr-smooth/dsas_vs_coastsat/
 scripts/input_prep/8-overwash-analysis/Figures_1984_2004/
 
 # oversized outlier files (exceed GitHub's file size limits)
