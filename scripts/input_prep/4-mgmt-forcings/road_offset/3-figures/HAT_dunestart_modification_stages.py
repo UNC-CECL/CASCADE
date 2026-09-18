@@ -103,14 +103,15 @@ P = load_placement()
 # The house style, through the module that already resolves it. P.apply_style()
 # has run at import, so this file only needs the helpers.
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
-from hat_figure_style import (  # noqa: E402
+from site_layer.hat_figure_style import (  # noqa: E402
     C, DOMAIN_AXIS_LABEL, caption, figsize, open_frame, save,
     spines_for_image, town_bands, _title)
 
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
-DUNESTART = INIT_ROOT / "4-mgmt-forcing" / "road_offset" / "dunestart_offset"
+from site_layer import hat_topo_version as _tv  # noqa: E402
+DUNESTART = _tv.ROAD_SETBACK_ROOT
 OUT_DIR = DUNESTART / "modifications"
-DOMAINS_CSV_FMT = "{year}/RoadOffset_{year}_domains.csv"
+DOMAINS_CSV_FMT = "measured/{year}/RoadOffset_{year}_domains.csv"
 
 YEARS = (1984, 2004)
 CELL = P.CELL_SIZE_M

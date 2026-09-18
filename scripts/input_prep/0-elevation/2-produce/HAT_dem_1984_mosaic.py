@@ -215,7 +215,7 @@ INPUTS
     D:/Hatteras_GIS/.../2014_full.tif                gap fill, 1 m, EPSG:6347
     D:/Hatteras_GIS/.../1996_FallEC_J1441002/*.tif   override, 3 m, EPSG:6347
     D:/Hatteras_GIS/domains.geojson                  90 boxes, 2000 x 500 m
-    4-mgmt-forcing/.../1984/nc12_1984.geojson        EPSG:2264, US survey FEET
+    4-mgmt-forcing/.../1978/nc12_1978.geojson        EPSG:2264, US survey FEET
 
 OUTPUTS (data/hatteras_init/0-elevation/2009-2014-1996/1-gapfill-1m/)
     clip_domain_<N>_filled.tif   the mosaic, m NAVD88
@@ -259,10 +259,10 @@ import HAT_dem_gap_fill as gf
 
 # Named for its COMPOSITION rather than the start period - see the note on
 # PRODUCT_TAG in HAT_dem_gap_fill.py. Resolved through
-# scripts/hat_elevation_products.py so the layout lives in one place.
+# scripts/site_layer/hat_elevation_products.py so the layout lives in one place.
 PRODUCT_TAG = "2009-2014-1996"
 sys.path.insert(0, str(gf.PROJECT_ROOT / "scripts"))
-from hat_elevation_products import product as _product  # noqa: E402
+from site_layer.hat_elevation_products import product as _product  # noqa: E402
 
 OUTPUT_DIR = _product(PRODUCT_TAG, check=False).gapfill_1m
 AUDIT_CSV = "mosaic_1984_audit.csv"
@@ -284,12 +284,9 @@ OVERRIDE_YEAR = 1996
 # landward of NC-12 did 1996 actually write?" is the first question a reader
 # will put to this product, and the audit should answer it rather than leave
 # it to be re-derived. NO_ROAD_POLICY is gone with the boundary it configured.
-ROAD_LINES = {
-    1984: (gf.PROJECT_ROOT / "data" / "hatteras_init" / "4-mgmt-forcing"
-           / "road_offset" / "raw_offset" / "1984" / "nc12_1984.geojson"),
-    2004: (gf.PROJECT_ROOT / "data" / "hatteras_init" / "4-mgmt-forcing"
-           / "road_offset" / "raw_offset" / "2004" / "nc12_2004.geojson"),
-}
+# Keyed by PERIOD; each period's LINE comes from ROAD_LINE_FOR_YEAR.
+from site_layer.hat_topo_version import road_line_file, road_line_for_year  # noqa: E402
+ROAD_LINES = {y: road_line_file(road_line_for_year(y)) for y in (1984, 2004)}
 
 # --- THE SPLIT FLOOR. See the module docstring; these are not the same number
 #     twice by accident, and collapsing them re-introduces the 33 landward

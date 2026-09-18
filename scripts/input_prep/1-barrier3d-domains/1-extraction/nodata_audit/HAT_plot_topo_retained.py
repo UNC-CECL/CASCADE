@@ -68,7 +68,7 @@ INPUT   <product>/npy-arrays/domain_<N>.npy                    m NAVD88
         <product>/dune-topo/<version>/topography/domain_<N>_nodata.npy      bool
         <product>/dune-topo/<version>/dunes/domain_<N>_dune.npy             dam
 
-        Product and version resolve through scripts/hat_topo_version.py.
+        Product and version resolve through scripts/site_layer/hat_topo_version.py.
         Do not hardcode either.
 
 OUTPUT  <product>/dune-topo/<version>/figures/HAT_topo_retained_<version>.png
@@ -90,9 +90,9 @@ REPO = next(
     _p for _p in Path(__file__).resolve().parents
     if (_p / "pyproject.toml").exists())   # 1-extraction/nodata_audit/ since 2026-09-09
 sys.path.insert(0, str(REPO / "scripts"))
-import hat_topo_version as htv  # noqa: E402
+from site_layer import hat_topo_version as htv  # noqa: E402
 from cascade_pipeline import roadway  # noqa: E402
-from hat_elevation_products import product as elevation_product  # noqa: E402
+from site_layer.hat_elevation_products import product as elevation_product  # noqa: E402
 
 # =============================================================================
 # CONFIG
@@ -237,8 +237,8 @@ def read_setbacks():
     Only used for the t = 0 drowning check, which is a printout. A missing file
     downgrades that check rather than failing the figure.
     """
-    p = (REPO / "data" / "hatteras_init" / "4-mgmt-forcing" / "road_offset"
-         / "dunestart_offset" / "1984" / "RoadSetback_1984_dunestart.csv")
+    from site_layer.hat_topo_version import road_setback_file
+    p = road_setback_file(1984)
     if not p.is_file():
         return None
     rows = list(csv.reader(p.open()))

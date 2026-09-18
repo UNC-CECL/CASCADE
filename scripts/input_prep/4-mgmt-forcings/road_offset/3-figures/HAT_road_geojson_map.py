@@ -1,7 +1,7 @@
 r"""
 HAT_road_geojson_map.py
 ===============================================================================
-The 1984 and 2004 NC-12 geojsons drawn on the 2009 DEM, in MAP coordinates, for
+The 1978 and 2008 NC-12 geojsons (the 1984 and 2004 periods' roads) drawn on the 2009 DEM, in MAP coordinates, for
 the whole modelled island. A reference sheet: find a GIS domain on the real
 island, and see where each road line actually runs across it.
 
@@ -88,7 +88,12 @@ DEM_DIR = (INIT_ROOT / "1-barrier3d-domains"
            / "domain-clips-1m")
 DEM_NAME = "domain_{d}/clip_domain_{d}.tif"          # 1 m, the full source grid
 
-ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
+import sys as _tvsys
+from pathlib import Path as _TVP
+_tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
+                               if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_topo_version as _tv  # noqa: E402
+ROADS_ROOT = _tv.ROADS_ROOT
 GEOJSON_FMT = ROADS_ROOT / "raw_offset" / "{year}" / "nc12_{year}.geojson"
 OUT_PNG = ROADS_ROOT / "raster" / "HAT_road_geojson_on_2009_dem.png"
 
@@ -98,7 +103,7 @@ PLACEMENT = (PROJECT_ROOT / "scripts" / "input_prep" / "4-mgmt-forcings"
              / "road_offset" / "1-produce" / "HAT_road_placement_on_domains.py")
 
 DOMAINS = list(range(1, 91))
-YEARS = (1984, 2004)
+YEARS = (1978, 2008)   # LINE vintages (hat_topo_version.ROAD_LINE_FOR_YEAR), not period starts
 STRIP_SIZE = 15                 # 6 strips; see WHY THE STRIPS RUN LEFT TO RIGHT
 PAD_M = 150.0                   # breathing room around each strip's bbox
 READ_STRIDE = 3                 # decimated read, ~3 m -- the display resolution
@@ -407,16 +412,16 @@ def main() -> int:
              "them apart.\n"
              "The two road lines COINCIDE almost everywhere — NC-12 did not "
              "move between these dates outside the relocation blocks, so the "
-             "1984 casing under the 2004 dashes is the expected reading. Look "
+             "1978 casing under the 2008 dashes is the expected reading. Look "
              "for two separate lines only around GIS 9–16 (1999 inter-village) "
              "and GIS 84–88 (1989 Pea Island).",
              fontsize=9, color=P.INK_SECOND, va="top", linespacing=1.55)
 
     fig.legend(handles=[
         Line2D([], [], color=P.C_1984, lw=LW_1984,
-               label="1984 NC-12 (geojson)"),
+               label="1978 NC-12 line (the 1984 period's road)"),
         Line2D([], [], color=P.C_2004, lw=LW_2004 + 0.6,
-               ls=(0, (3.2, 1.8)), label="2004 NC-12 (geojson, dashed)"),
+               ls=(0, (3.2, 1.8)), label="2008 NC-12 line (the 2004 period's road, dashed)"),
         Line2D([], [], color=C_WATER, lw=8, label="at or below 0 m MHW"),
         Line2D([], [], color=C_NODATA, lw=8,
                label="never surveyed (raw NoData)"),

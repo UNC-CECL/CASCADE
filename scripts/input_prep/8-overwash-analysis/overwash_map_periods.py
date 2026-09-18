@@ -77,8 +77,8 @@ OUT_PNG = FIG_DIR / "overwash_map_periods.png"
 from site_layer import hat_map_layers as _ml  # noqa: E402
 DOMAIN_FILE = _ml.DOMAIN_BOXES
 COAST_FILE = _ml.NC_COAST
-ROAD_FILE = (REPO / "data/hatteras_init/4-mgmt-forcing/road_offset/raw_offset"
-             / "2008/nc12_2008.geojson")
+from site_layer.hat_topo_version import road_line_file  # noqa: E402
+ROAD_FILE = road_line_file(2008)
 
 CLR_OW = C["ACCENT"]
 CLR_WATER = "#eef4f8"

@@ -51,7 +51,7 @@ def _find_root(start: Path) -> Path:
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 
-from hat_topo_version import array_name, dune_topo_root  # noqa: E402
+from site_layer.hat_topo_version import array_name, dune_topo_root  # noqa: E402
 
 PRODUCT = "1984-start"
 YEAR = 1984
@@ -112,8 +112,8 @@ def baseline_setbacks():
     so its baseline number has to come from the file that produced it, or the
     comparison table prints nan in the row the reader most needs.
     """
-    p = (REPO / "data" / "hatteras_init" / "4-mgmt-forcing" / "road_offset"
-         / "dunestart_offset" / str(YEAR) / "RoadOffset_{}_domains.csv".format(YEAR))
+    from site_layer.hat_topo_version import road_setback_dir
+    p = road_setback_dir(YEAR) / "RoadOffset_{}_domains.csv".format(YEAR)
     out = {}
     for r in csv.DictReader(open(p)):
         if r["setback_dunestart_m"] not in ("", "nan"):

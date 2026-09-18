@@ -29,14 +29,14 @@ OUTPUT LAYOUT
 Everything for one road vintage lands in ONE folder, so comparing vintages
 means comparing two directories:
 
-  data\hatteras_init\4-mgmt-forcing\roads\raster\1984\
+  data\hatteras_init\4-mgmt-forcing\roads\raster\1978\
       RUN_MANIFEST.txt                        every setting that made this folder
       masks\
-          domain_9_road_1984.npy              <- the setback scripts read these
-          domain_10_road_1984.npy
+          domain_9_road_1978.npy              <- the setback scripts read these
+          domain_10_road_1978.npy
           ...
-      HAT_road_mask_diagnostics_1984.csv      per-domain numbers, incl. elevation
-      HAT_road_mask_summary_1984.png          all domains on one page
+      HAT_road_mask_diagnostics_1978.csv      per-domain numbers, incl. elevation
+      HAT_road_mask_summary_1978.png          all domains on one page
       figures\
           domain_009_road_mask.png            per-domain map + profile
 
@@ -96,7 +96,12 @@ PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 DOMAIN_ROOT = INIT_ROOT / "1-barrier3d-domains"
-ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
+import sys as _tvsys
+from pathlib import Path as _TVP
+_tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
+                               if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_topo_version as _tv  # noqa: E402
+ROADS_ROOT = _tv.ROADS_ROOT
 
 # Same root gis-export-npy.py walks: one subfolder per domain, each holding
 # a resampled_*.tif. The REPO copy, not the OneDrive original, so a run does
@@ -141,15 +146,24 @@ ELEV_NPY_DIR = DOMAIN_ROOT / "npy-arrays_2009_unfilled"
 # This file used to be driven by HAT_rasterize_road_run.py, which patched these
 # globals at import. That driver is gone; its settings are folded in here, so
 # there is ONE rasterization implementation and one place for the year and the
-# paths. The rules below are the ones road_offset\raster\1984\RUN_MANIFEST.txt
-# records, so a 2004 run is made by the same rules as the 1984 masks on disk.
+# paths. The rules below are the ones road_offset\raster\1978\RUN_MANIFEST.txt
+# records, so a 2008 run is made by the same rules as the 1978 masks on disk.
 #
 # Overridable from the shell so building BOTH vintages needs no edit and no
 # second copy of this file -- which is the rule above, not an exception to it:
-#     HAT_ROAD_YEAR=1984 python HAT_rasterize_road_to_domains.py
+#     HAT_ROAD_YEAR=1978 python HAT_rasterize_road_to_domains.py
 # With the variable unset the constant below is what runs, so the file still
 # reads as "the one line to change".
-ROAD_YEAR = int(os.environ.get("HAT_ROAD_YEAR", 2004))
+#
+# ROAD_YEAR IS A LINE VINTAGE, NOT A PERIOD START (2026-09-15). The lines are
+# 1978 and 2008 exports and are now filed under those years; which period reads
+# which is hat_topo_version.ROAD_LINE_FOR_YEAR. Passing 1984 or 2004 here is
+# refused rather than resolved to a folder that no longer exists.
+ROAD_YEAR = int(os.environ.get("HAT_ROAD_YEAR", 2008))
+if ROAD_YEAR not in (1978, 2008):
+    raise SystemExit(
+        f"HAT_ROAD_YEAR={ROAD_YEAR}: a LINE vintage is expected (1978 or 2008), "
+        f"not a period start. See hat_topo_version.ROAD_LINE_FOR_YEAR.")
 ROAD_GEOJSON = ROADS_ROOT / "raw_offset" / str(ROAD_YEAR) / f"nc12_{ROAD_YEAR}.geojson"
 
 # --- OUTPUT LAYOUT ------------------------------------------------------

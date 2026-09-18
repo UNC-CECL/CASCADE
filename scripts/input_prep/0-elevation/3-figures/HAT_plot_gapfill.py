@@ -114,8 +114,7 @@ from site_layer.hat_map_layers import DOMAIN_BOXES as DOMAIN_FILE  # noqa: E402
 # NC-12 alignments. These are EPSG:2264 (NC State Plane, US survey FEET) while
 # the maps are EPSG:3725 (UTM 18N, metres), so they are reprojected on load -
 # plotted raw they would land thousands of km off the map.
-ROAD_DIR = (PROJECT_ROOT / "data" / "hatteras_init" / "4-mgmt-forcing"
-            / "road_offset" / "raw_offset")
+from site_layer.hat_topo_version import ROAD_LINE_ROOT as ROAD_DIR  # noqa: E402
 # Keyed by PERIOD; the files are the 1978 and 2008 LINES those periods read
 # (hat_topo_version.ROAD_LINE_FOR_YEAR), filed by vintage since 2026-09-15.
 ROAD_FILES = {1984: ROAD_DIR / "1978" / "nc12_1978.geojson",

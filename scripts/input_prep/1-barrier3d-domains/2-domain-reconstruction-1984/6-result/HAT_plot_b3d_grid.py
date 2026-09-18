@@ -60,15 +60,15 @@ def _find_root(start: Path) -> Path:
 
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
-from hat_topo_version import array_name, dune_topo_root          # noqa: E402
-from hat_topo_version import insert_figures_dir  # noqa: E402
-from hat_topo_version import require_version  # noqa: E402
-from hat_figure_style import (apply_style, C, INK, caption,      # noqa: E402
+from site_layer.hat_topo_version import array_name, dune_topo_root          # noqa: E402
+from site_layer.hat_topo_version import insert_figures_dir  # noqa: E402
+from site_layer.hat_topo_version import require_version  # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, INK, caption,      # noqa: E402
                               elevation_cmap, figsize, save,
                               spines_for_image, _title)
 
-ROAD_DIR = (REPO / "data/hatteras_init/4-mgmt-forcing/road_offset"
-            / "dunestart_offset/1984")
+from site_layer import hat_topo_version as _tv  # noqa: E402
+ROAD_DIR = _tv.road_setback_dir(1984)
 BERM_EL_M = 1.7      # BermEl, Hatteras-CASCADE-parameters.yaml
 DUNE_ROWS = 2        # DuneWidth 20 m / dy 10 m; row 1 is a copy of row 0
 ROAD_CELLS = 2       # road_width 20 m / dy 10 m

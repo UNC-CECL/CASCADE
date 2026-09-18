@@ -79,9 +79,9 @@ def _find_root(start: Path) -> Path:
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "0-elevation" / "3-figures"))
-from hat_topo_version import (insert_figures_dir, insert_figures_dir_for_domain,  # noqa: E402
+from site_layer.hat_topo_version import (insert_figures_dir, insert_figures_dir_for_domain,  # noqa: E402
                               array_name, dune_topo_root, duneline_shift_dir, topo_dirs, insert_scope_step)
-from hat_figure_style import (C, DOMAIN_AXIS_LABEL, caption, elevation_cmap,     # noqa: E402
+from site_layer.hat_figure_style import (C, DOMAIN_AXIS_LABEL, caption, elevation_cmap,     # noqa: E402
                               figsize, open_frame, save, town_bands)
 import HAT_plot_duneline_offset as off                                          # noqa: E402
 
@@ -90,7 +90,8 @@ PRODUCT = "1984-start"
 SCOPE_DIR = INIT / "1-barrier3d-domains" / PRODUCT / "2-domain-reconstruction-1984"
 FOOTPRINT_CSV = insert_scope_step(PRODUCT, "2-extent") / "footprint_1984_by_domain.csv"
 STEP_DIR = insert_scope_step(PRODUCT, "3-placement")           # the check's table and report (2026-09-09)
-ROAD_DIR = INIT / "4-mgmt-forcing" / "road_offset" / "dunestart_offset" / "1984"
+from site_layer import hat_topo_version as _tv  # noqa: E402
+ROAD_DIR = _tv.road_setback_dir(1984)
 SHIFT_DIR = duneline_shift_dir(PRODUCT)
 FIG_DIR = insert_figures_dir(PRODUCT, "3-placement", "road-check")
 BUILT = "v3"
@@ -523,7 +524,7 @@ def write_report(chk: pd.DataFrame, figs: list[Path]) -> Path:
     w(f"          {SHIFT_DIR.relative_to(REPO)}/duneline_shift_{{1984,1997}}_profiles.csv")
     w(f"          {FOOTPRINT_CSV.relative_to(REPO)}")
     w(f"          dune-topo/{BUILT}/RoadSetback_1984_dunestart.csv, dune-topo/{BUILT}/topography")
-    w("          2-brie-offset/dunelines/duneline_1984.geojson, raw_offset/1984/nc12_1984.geojson")
+    w("          2-brie-offset/dunelines/duneline_1984.geojson, raw_offset/1978/nc12_1978.geojson")
     for f in figs:
         w(f"figure    {f.relative_to(REPO)}")
     w("")

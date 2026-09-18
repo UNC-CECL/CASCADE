@@ -129,7 +129,7 @@ REPO = _find_root(Path(__file__).resolve())
 INIT = REPO / "data" / "hatteras_init"
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "0-elevation" / "3-figures"))
-from hat_topo_version import (  # noqa: E402
+from site_layer.hat_topo_version import (  # noqa: E402
     duneline_shift_dir, insert_figures_dir, insert_figures_dir_for_domain, rows_sign_sub, insert_scope_step)
 import HAT_plot_duneline_offset as off  # noqa: E402   house style, lines, tiles, roads
 
@@ -140,7 +140,8 @@ HALF_M = 10.0                 # the geojson is a centreline; the model road is 2
 SCOPE_DIR = INIT / "1-barrier3d-domains" / PRODUCT / "2-domain-reconstruction-1984"
 FOOTPRINT_CSV = insert_scope_step(PRODUCT, "2-extent") / "footprint_1984_by_domain.csv"
 SHIFT_DIR = duneline_shift_dir(PRODUCT)
-ROAD_DIR = INIT / "4-mgmt-forcing" / "road_offset" / "dunestart_offset" / "1984"
+from site_layer import hat_topo_version as _tv  # noqa: E402
+ROAD_DIR = _tv.road_setback_dir(1984)
 ROAD_OFFSET_SCRIPT = (REPO / "scripts" / "input_prep" / "4-mgmt-forcings" / "road_offset"
                       / "1-produce" / "HAT_road_offset_from_dune_start.py")
 STEP_DIR = insert_scope_step(PRODUCT, "3-placement", "imagery-review")        # the sheet and the reports (2026-09-09)

@@ -4,6 +4,10 @@ DERIVED, not measured. Written by
 `scripts/input_prep/4-mgmt-forcings/road_offset/1-produce/HAT_road_setback_derived_vintages.py`
 on 2026-09-11.
 
+Under `dunestart_offset/derived/` since 2026-09-15: the address says this is not a
+measurement. The source is `dunestart_offset/measured/1984/RoadSetback_1984_dunestart.csv`,
+reached through `hat_topo_version.road_setback_file(1984)`.
+
     1996 = RoadSetback_1984_dunestart.csv + the 1989 Pea Island relocation
 
 The 1989 relocation has already happened by 1996 and the 1999 one has not, so

@@ -19,8 +19,8 @@ its own data. Two scripts would drift, and a drifted comparison is worse than no
 comparison -- it looks like a result. Add a method by adding a dict entry, not
 by copying this file.
 
-  old        old_method_offset/<year>/RoadSetback_<year>.csv
-  dunestart  dunestart_offset/<year>/RoadSetback_<year>_dunestart.csv
+  old        archive/superseded_20260911/<year>/RoadSetback_<year>.csv
+  dunestart  dunestart_offset/measured/<year>/RoadSetback_<year>_dunestart.csv
 
 Read-only with respect to the forcing: writes a PNG, a PDF beside it and a
 CAPTIONS.md entry into each method's folder.
@@ -28,7 +28,7 @@ CAPTIONS.md entry into each method's folder.
 THE STYLE IS THE HOUSE STYLE, AND THIS MODULE RE-EXPORTS IT
 -----------------------------------------------------------
 Since 2026-09-10 every colour and every type size here comes from
-scripts/hat_figure_style.py, through apply_style(). The palette names this file
+scripts/site_layer/hat_figure_style.py, through apply_style(). The palette names this file
 used to own -- LAND_CMAP, SURFACE, WATER, INK_MUTED, INK_SECOND, C_1984 /
 C_2004 / C_YEAR, C_DROWN, SECTIONS -- are KEPT and now resolve to their house
 equivalents, because HAT_dunestart_modification_stages.py,
@@ -102,15 +102,15 @@ INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 # interiors under v4 setbacks without erroring. See hat_topo_version.py.
 # parents[4] IS scripts/ -- hat_topo_version.py moved there 2026-08-20.
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-from hat_topo_version import (topo_dirs, array_name,  # noqa: E402
+from site_layer.hat_topo_version import (topo_dirs, array_name,  # noqa: E402
                              product_for_year)
 
 # The house style. Everything typographic and every colour comes from here now;
 # nothing in this file re-decides a font size or a grey. The names this module
 # used to define for its own palette survive below as aliases, because three
 # other scripts import this file for them.
-import hat_figure_style as _HS  # noqa: E402
-from hat_figure_style import (  # noqa: E402
+from site_layer import hat_figure_style as _HS  # noqa: E402
+from site_layer.hat_figure_style import (  # noqa: E402
     C, DOMAIN_AXIS_LABEL, apply_style, caption, elevation_cmap, figsize,
     open_frame, save, spines_for_image, town_bands, _title)
 
@@ -150,7 +150,8 @@ def topo_label(year: int) -> str:
 
 # array_name() is the single definition of these filenames - the same one
 # the extractor writes with. Nothing here spells a name.
-ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
+from site_layer import hat_topo_version as _tv  # noqa: E402
+ROADS_ROOT = _tv.ROADS_ROOT
 
 # Each entry produces one figure, beside that method's own data.
 #   setback  the MODEL-FACING file -- the one CASCADE reads, already floored
@@ -164,7 +165,7 @@ METHODS = {
                "minimum dune elevation, independently per domain "
                "(superseded)"),
         short="independent minima",
-        root=ROADS_ROOT / "old_method_offset",
+        root=_tv.LEGACY_SETBACK_ROOT,   # was old_method_offset/ (2026-09-18)
         setback="{year}/RoadSetback_{year}.csv",
         detail=None,
         png="HAT_old_method_road_on_domains.png",
@@ -172,7 +173,10 @@ METHODS = {
     "dunestart": dict(
         label="setback measured landward from the dune start",
         short="dune start",
-        root=ROADS_ROOT / "dunestart_offset",
+        # measured/ only: YEARS below are the two measured starts. derived/
+        # holds a copy (2010) and a one-event derivation (1996) of these,
+        # which this figure would only draw twice.
+        root=ROADS_ROOT / "dunestart_offset" / "measured",
         setback="{year}/RoadSetback_{year}_dunestart.csv",
         detail="{year}/RoadOffset_{year}_domains.csv",
         png="HAT_dunestart_road_on_domains.png",

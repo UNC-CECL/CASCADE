@@ -23,9 +23,9 @@ MODES
 
 WHICH SETBACK IS DRAWN -- the figures are only honest if this matches the run
 -----------------------------------------------------------------------------
-  --method legacy      old_method_offset/<year>/RoadSetback_<year>.csv
+  --method legacy      archive/superseded_20260911/<year>/RoadSetback_<year>.csv
                        what hatteras_site_config.py spends today
-  --method dunestart   dunestart_offset/<year>/RoadSetback_<year>_dunestart.csv
+  --method dunestart   dunestart_offset/measured/<year>/RoadSetback_<year>_dunestart.csv
                        measured landward of interior row 0, the reference
                        roadway_manager.py:99 actually uses
 
@@ -43,6 +43,7 @@ USAGE
 from __future__ import annotations
 
 import argparse
+import importlib   # the backend switch reloads pyplot; without this it failed silently
 import sys
 from pathlib import Path
 
@@ -81,13 +82,18 @@ import cascade.roadway_manager as rm          # noqa: E402  the real thing
 # =============================================================================
 
 DATA = PROJECT_ROOT / "data" / "hatteras_init"
-ROADS_ROOT = DATA / "4-mgmt-forcing" / "road_offset"
+import sys as _tvsys
+from pathlib import Path as _TVP
+_tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
+                               if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_topo_version as _tv  # noqa: E402
+ROADS_ROOT = _tv.ROADS_ROOT
 # Topography version resolved from the extractor, not hardcoded -- it was
 # "2009_v3" and kept drawing v3 interiors under v4 setbacks after the re-pick,
 # with no error. See hat_topo_version.py.
 # parents[4] IS scripts/ -- hat_topo_version.py moved there 2026-08-20.
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-from hat_topo_version import (topo_dirs, array_name,  # noqa: E402
+from site_layer.hat_topo_version import (topo_dirs, array_name,  # noqa: E402
                              product_for_year)
 
 # BOUND FROM --year, NOT AT IMPORT (2026-08-26).
@@ -126,11 +132,11 @@ def _topo_dir() -> Path:
 # and they differ by a median +0.222 m in the road corridor -- but because that
 # difference is the uncorrected 1996-vs-2009 survey offset rather than a
 # roadbed. See hatteras_site_config.py, HATTERAS_ROAD_ELEVATION_FILE.
-ROAD_ELEV_CSV = DATA / "4-mgmt-forcing" / "road_elevation" / "RoadElevation.csv"
+ROAD_ELEV_CSV = _tv.ROAD_ELEVATION_FILE
 
 _SETBACK_SOURCES = {
-    "legacy": ROADS_ROOT / "old_method_offset" / "{year}" / "RoadSetback_{year}.csv",
-    "dunestart": (ROADS_ROOT / "dunestart_offset" / "{year}"
+    "legacy": _tv.LEGACY_SETBACK_ROOT / "{year}" / "RoadSetback_{year}.csv",   # was old_method_offset/
+    "dunestart": (ROADS_ROOT / "dunestart_offset" / "measured" / "{year}"
                   / "RoadSetback_{year}_dunestart.csv"),
 }
 # Matches hatteras_site_config.py:78,91. Change both together, or these

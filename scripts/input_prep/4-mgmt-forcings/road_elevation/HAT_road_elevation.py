@@ -141,7 +141,12 @@ PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 HATTERAS_DATA_BASE = PROJECT_ROOT / "data" / "hatteras_init"
 BARRIER3D_DIR = HATTERAS_DATA_BASE / "1-barrier3d-domains"
-MGMT_DIR = HATTERAS_DATA_BASE / "4-mgmt-forcing"
+import sys as _tvsys
+from pathlib import Path as _TVP
+_tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
+                               if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_topo_version as _tv  # noqa: E402
+MGMT_DIR = _tv.MGMT_ROOT
 
 # Native-resolution LiDAR clips, one folder per domain. NOT the 10 m resample.
 #   clip_domain_<N>.tif      1 m, native
@@ -186,7 +191,7 @@ RESAMPLE_GLOB = "resampled_domain_*.tif"
 # 2008 was SUPERSEDED as a TOPOGRAPHY fill (2014 replaced it) while remaining
 # the right answer for a ROAD SURFACE, for the reason above. It therefore lived
 # under 0-elevation/superseded/, and this script reaches its product through
-# scripts/hat_elevation_products.py rather than by joining strings - which is
+# scripts/site_layer/hat_elevation_products.py rather than by joining strings - which is
 # exactly what broke on 2026-08-25, when 2008 was moved there and the
 # hand-built path stopped resolving. It is now deleted rather than superseded;
 # resolving through the registry is why that reads as an error instead of as
@@ -243,23 +248,25 @@ if FILL_SOURCE.lower() in ("none", ""):
     FILL_SOURCE = None
 
 sys.path.insert(0, str(HATTERAS_DATA_BASE.parents[1] / "scripts"))
-from hat_elevation_products import product as _elev_product  # noqa: E402
+from site_layer.hat_elevation_products import product as _elev_product  # noqa: E402
 FILL_CLIP_GLOB = "clip_domain_*_filled.tif"
 FILL_RESAMPLE_GLOB = "resampled_domain_*_filled.tif"
 
-# The single alignment. 2004, because it is the one that is contemporaneous with
-# the 2009 DEM everywhere on the island -- see the header.
-ROAD_LINE = (MGMT_DIR / "road_offset" / "raw_offset" / "2004" / "nc12_2004.geojson")
-ROAD_LINE_YEAR = 2004
+# The single alignment: the 2008 line, which is the 2004 period's road
+# (hat_topo_version.ROAD_LINE_FOR_YEAR) and the one contemporaneous with the
+# 2009 DEM everywhere on the island -- see the header. Filed under its true
+# vintage since 2026-09-15; it was raw_offset/2004/nc12_2004.geojson before.
+ROAD_LINE = (MGMT_DIR / "road_offset" / "raw_offset" / "2008" / "nc12_2008.geojson")
+ROAD_LINE_YEAR = 2008
 
 # Sampled ONLY for the RELOCATION BRACKET check -- never written to the product.
 # It exists to test, rather than assume, what the abandoned corridor looks like
 # in the 2009 DEM. Set to None to skip the check.
-BRACKET_LINE = (MGMT_DIR / "road_offset" / "raw_offset" / "1984"
-                / "nc12_1984.geojson")
-BRACKET_LINE_YEAR = 1984
+BRACKET_LINE = (MGMT_DIR / "road_offset" / "raw_offset" / "1978"
+                / "nc12_1978.geojson")
+BRACKET_LINE_YEAR = 1978
 
-OUT_ROOT = MGMT_DIR / "road_elevation"
+OUT_ROOT = _tv.ROAD_ELEVATION_DIR
 
 FIRST_ROAD_DOMAIN, LAST_ROAD_DOMAIN = 9, 90
 
@@ -1046,7 +1053,7 @@ def write_markdown(rows, sweep, resamp, bracket, path: Path):
     a("This method was originally validated against an `elevation_2009` column "
       "in `2004_road_offset_raw.csv`, sampled independently in ArcGIS Pro at "
       "1 m transect points; the two agreed to a median of −0.02 m. **That check "
-      "is no longer reproducible.** The file is now `nc12_2004.csv`, the "
+      "is no longer reproducible.** The file is now `nc12_2008.csv`, the "
       "`elevation_2009` column is absent, and its apparent successors "
       "(`avg_elev_m`, `z_mean`, `z_max`, `z_min`, `road_z`, `relief_m`) are all "
       "zero or all empty across the 1491 rows. The agreement was real when it "
@@ -1347,7 +1354,7 @@ def main():
     print("INTERNAL CHECKS")
     print("=" * 92)
     print("  The ArcGIS elevation_2009 column this method was validated against")
-    print("  is gone from nc12_2004.csv -- its successors are all zeros. That")
+    print("  is gone from nc12_2008.csv -- its successors are all zeros. That")
     print("  external check is no longer reproducible. What follows is internal.")
 
     print(f"\n  corridor width sweep (island median of the per-domain mean):")

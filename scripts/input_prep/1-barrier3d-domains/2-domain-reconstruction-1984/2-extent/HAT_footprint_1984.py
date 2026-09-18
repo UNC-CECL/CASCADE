@@ -91,10 +91,10 @@ INPUTS (all already on disk; nothing is re-measured against GIS here)
     2-domain-reconstruction-1984/1-measurement/duneline-shift/duneline_shift_{1984,1997}_profiles.csv
         per (domain, profile): the line's crossing as a cross-shore cell and
         interior row 0, both in the extractor's own c0/shear frame
-    4-mgmt-forcing/road_offset/dunestart_offset/1984/RoadOffset_1984_profiles.csv
+    4-mgmt-forcing/road_offset/dunestart_offset/measured/1984/RoadOffset_1984_profiles.csv
         per (domain, profile): the road's seaward cell and interior row 0, same
         frame. Row 0 is asserted identical across the three files.
-    4-mgmt-forcing/road_offset/dunestart_offset/1984/RoadOffset_1984_domains.csv
+    4-mgmt-forcing/road_offset/dunestart_offset/measured/1984/RoadOffset_1984_domains.csv
         the setback the model currently receives (setback_model_m) and flags
     1984-start/dune-topo/<CURRENT>/topography   rows_now, and the grid figure
 
@@ -144,10 +144,10 @@ REPO = _find_root(Path(__file__).resolve())
 INIT = REPO / "data" / "hatteras_init"
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "0-elevation" / "3-figures"))
-from hat_topo_version import (  # noqa: E402
+from site_layer.hat_topo_version import (  # noqa: E402
     array_name, duneline_shift_dir, insert_figures_dir, topo_dirs, insert_scope_step)
 import HAT_plot_duneline_offset as off  # noqa: E402  the house style + map loaders
-from hat_figure_style import (  # noqa: E402  the elevation classes and the page rules
+from site_layer.hat_figure_style import (  # noqa: E402  the elevation classes and the page rules
     C, DOMAIN_AXIS_LABEL, elevation_cmap, figsize, open_frame, save, town_bands)
 
 PRODUCT = "1984-start"
@@ -155,7 +155,8 @@ CELL_M = 10.0
 SCOPE_DIR = INIT / "1-barrier3d-domains" / PRODUCT / "2-domain-reconstruction-1984"
 STEP_DIR = insert_scope_step(PRODUCT, "2-extent")      # the tables and the report (2026-09-09)
 SHIFT_DIR = duneline_shift_dir(PRODUCT)
-ROAD_DIR = INIT / "4-mgmt-forcing" / "road_offset" / "dunestart_offset" / "1984"
+from site_layer import hat_topo_version as _tv  # noqa: E402
+ROAD_DIR = _tv.road_setback_dir(1984)
 # The step's root holds the placement-independent figures (rows, shift); the
 # seaward/ subfolder the figures that assume the rows go in at the seaward
 # edge (the grid in the current frame, the plan view, the new setback).

@@ -148,8 +148,13 @@ HATTERAS_DATA_BASE = PROJECT_ROOT / "data" / "hatteras_init"
 BARRIER3D_DIR = HATTERAS_DATA_BASE / "1-barrier3d-domains"
 # The method the runner spends (hatteras_site_config.py:78,91). Switched to
 # dune-start on 2026-08-18; the legacy tree is still on disk under
-# old_method_offset/ for the method comparison.
-ROADS_DIR = HATTERAS_DATA_BASE / "4-mgmt-forcing" / "road_offset" / "dunestart_offset"
+# road_offset/archive/superseded_20260911/ for the method comparison.
+import sys as _tvsys
+from pathlib import Path as _TVP
+_tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
+                               if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_topo_version as _tv  # noqa: E402
+ROADS_DIR = _tv.ROAD_SETBACK_ROOT
 
 # The runner uses ONE topography for BOTH hindcast periods, so the 1984 setbacks
 # and the 2004 setbacks are both spent against a 2009 grid. For 1984 that is a
@@ -172,8 +177,8 @@ ROADS_DIR = HATTERAS_DATA_BASE / "4-mgmt-forcing" / "road_offset" / "dunestart_o
 # hidden. Repointing the runner is a separate job.
 # parents[4] IS scripts/ -- hat_topo_version.py moved there 2026-08-20.
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-from hat_topo_version import topo_dirs, array_name  # noqa: E402
-from hatteras_site_config import HATTERAS_ROAD_EVENTS  # noqa: E402
+from site_layer.hat_topo_version import topo_dirs, array_name, road_setback_file  # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_ROAD_EVENTS  # noqa: E402
 
 
 # --- the relocation bounds, DERIVED (2026-08-26) ----------------------------
@@ -188,7 +193,7 @@ from hatteras_site_config import HATTERAS_ROAD_EVENTS  # noqa: E402
 #
 #   * the current model-facing 1984 setback, RoadSetback_1984_dunestart.csv
 #   * HATTERAS_ROAD_EVENTS[].displacement_m, which hatteras_site_config reads
-#     from road_relocation_1984_2004.csv (mean_signed_landward_m) and which
+#     from road_relocation_1978_2008.csv (mean_signed_landward_m) and which
 #     the runner applies as new_setback = rm._road_setback + displacement
 #
 # Evaluated at ZERO modelled retreat, so this stays the upper bound / worst
@@ -203,7 +208,7 @@ from hatteras_site_config import HATTERAS_ROAD_EVENTS  # noqa: E402
 # construction.
 def _relocation_bounds(event):
     """{gis: 1984 setback + measured displacement} for one relocation event."""
-    path = ROADS_DIR / "1984" / "RoadSetback_1984_dunestart.csv"
+    path = road_setback_file(1984)
     rows = list(csv.reader(open(path, newline="", encoding="utf-8")))
     setback = {int(float(a)): float(b) for a, b in zip(rows[0], rows[1])}
     missing = [g for g in event.displacement_m if g not in setback]
@@ -262,9 +267,9 @@ OUT_DIR = ROADS_DIR
 #              get the two model guards replicated.
 SCENARIOS = [
     dict(label="1984 initial", kind="initial", product="1984-start",
-         source=ROADS_DIR / "1984" / "RoadSetback_1984_dunestart.csv"),
+         source=road_setback_file(1984)),
     dict(label="2004 initial", kind="initial", product="2004-start",
-         source=ROADS_DIR / "2004" / "RoadSetback_2004_dunestart.csv"),
+         source=road_setback_file(2004)),
     # THE TWO DERIVED VINTAGES, added 2026-09-11 with the 1996-2010 and
     # 2010-2024 periods. Neither was measured from a road line of its own, so
     # auditing the file the model actually loads matters more here, not less.
@@ -281,7 +286,7 @@ SCENARIOS = [
     #         82 rows under a different label and invite them to be read as
     #         independent agreement.
     dict(label="1996 initial (derived)", kind="initial", product="1984-start",
-         source=ROADS_DIR / "1996" / "RoadSetback_1996_dunestart.csv"),
+         source=road_setback_file(1996)),
     # The relocation events now carry a DISPLACEMENT, applied to whatever
     # setback the model is carrying at the event year:
     #
@@ -300,7 +305,7 @@ SCENARIOS = [
                    f"- zero-retreat bound",
              kind="relocation", product="1984-start",
              note=f"{e.note}. Current 1984 setback + measured displacement "
-                  f"(mean_signed_landward_m, road_relocation_1984_2004.csv), "
+                  f"(mean_signed_landward_m, road_relocation_1978_2008.csv), "
                   f"evaluated at zero modelled retreat - the upper bound of "
                   f"current_setback + displacement.",
              setbacks=_relocation_bounds(e))

@@ -39,11 +39,17 @@
 #                        files are used ONLY to validate that, never as an input.
 #
 # OUTPUTS (nothing existing is overwritten; new tree under dunestart_offset\)
-#   dunestart_offset\<year>\RoadSetback_<year>_dunestart.csv    2-row, model-facing
-#   dunestart_offset\<year>\RoadElevation_<year>_dunestart.csv  2-row, m MHW
-#   dunestart_offset\<year>\RoadOffset_<year>_domains.csv       per-domain detail
-#   dunestart_offset\<year>\RoadOffset_<year>_profiles.csv      per-profile detail
-#   dunestart_offset\RoadOffset_dunestart_audit.md              the write-up
+#   dunestart_offset\measured\<year>\RoadSetback_<year>_dunestart.csv    2-row, model-facing
+#   dunestart_offset\measured\<year>\RoadElevation_<year>_dunestart.csv  2-row, m MHW
+#   dunestart_offset\measured\<year>\RoadOffset_<year>_domains.csv       per-domain detail
+#   dunestart_offset\measured\<year>\RoadOffset_<year>_profiles.csv      per-profile detail
+#   dunestart_offset\RoadOffset_dunestart_audit.md                       the write-up
+#
+#   measured\ because these ARE measurements: a digitised line against the
+#   period's own extraction. The derived\ sibling (1996, 2010) is written by
+#   HAT_road_setback_derived_vintages.py FROM these, never by this script.
+#   Which line each year reads is hat_topo_version.ROAD_LINE_FOR_YEAR: 1984
+#   reads the 1978 line's masks, 2004 the 2008 line's (2026-09-15).
 #
 # WHERE THIS DEPARTS FROM "MEASURE, DON'T CORRECT" -- TWO PLACES, BOTH FLAGGED
 #   Both act ONLY on the model-facing CSV. `setback_dunestart_m` in the _domains.csv
@@ -82,8 +88,10 @@ import numpy as np
 
 import sys as _sys
 _sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-from hat_topo_version import (array_name, topo_dirs,  # noqa: E402
-                             YEAR_PRODUCT)
+from site_layer.hat_topo_version import (array_name, topo_dirs,  # noqa: E402
+                             YEAR_PRODUCT, road_line_for_year,
+                             road_mask_dir, road_mask_file,
+                             road_setback_dir)
 
 import matplotlib
 
@@ -112,12 +120,17 @@ INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 EXTRACTOR = (PROJECT_ROOT / "scripts" / "input_prep" / "1-barrier3d-domains" / "1-extraction"
              / "HAT_dune_topo_extractor.py")
 
-ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
-MASK_DIR_FMT = ROADS_ROOT / "raster" / "{year}" / "masks"
-MASK_NAME_FMT = "domain_{domain}_road_{year}.npy"
+from site_layer import hat_topo_version as _tv  # noqa: E402
+ROADS_ROOT = _tv.ROADS_ROOT
+# MASKS ARE KEYED BY LINE VINTAGE, NOT START YEAR (2026-09-15). raster/1978/
+# and raster/2008/ hold the 1978 and 2008 lines; the 1984 start reads the
+# first, the 2004 start the second, through hat_topo_version.ROAD_LINE_FOR_YEAR
+# and road_mask_dir() / road_mask_file(). Nothing here spells "raster/<year>".
 
 # The existing same-year measurements, used as the second reference frame.
-EXISTING_SETBACK_FMT = ROADS_ROOT / "old_method_offset" / "{year}" / "RoadSetback_{year}.csv"
+# old_method_offset/ became a dated superseded folder on 2026-09-11 and this
+# kept naming it, so the second frame was silently absent; resolved 2026-09-18.
+EXISTING_SETBACK_FMT = _tv.LEGACY_SETBACK_ROOT / "{year}" / "RoadSetback_{year}.csv"
 
 # Offset files, used ONLY to validate delta_m against measured retreat.
 OFFSET_FMT = (INIT_ROOT / "2-brie-offset" / "{year}"
@@ -132,7 +145,7 @@ YEARS = [1984, 2004]
 # The setback is measured from interior row 0, and row 0 is a property of the
 # EXTRACTION - which is now period-specific: 1984-start is built on the
 # 1996-grafted DEM, 2004-start on the plain 2009+2014 one. Measuring the 2004
-# road against 1984-start row 0 and writing it to dunestart_offset/2004/ with
+# road against 1984-start row 0 and writing it to dunestart_offset/measured/2004/ with
 # nothing saying so is the class of error hat_topo_version.py exists to
 # prevent, and it is silent - the numbers look plausible.
 #
@@ -478,8 +491,7 @@ def measure_domain(ext, domain: int, year: int, windows: dict) -> tuple[dict, li
     """Measure one domain's road setback and elevation against its dune start."""
     stem = f"domain_{domain}"
     dem_path = ext.LOAD_PATH / f"{stem}.npy"
-    mask_path = Path(str(MASK_DIR_FMT).format(year=year)) / \
-        MASK_NAME_FMT.format(domain=domain, year=year)
+    mask_path = road_mask_file(road_line_for_year(year), domain)
 
     record = {
         "year": year, "domain": domain,
@@ -885,7 +897,7 @@ def main() -> None:
         windows = windows_by_year[year]
         print(f"  {ext.TOPO_PRODUCT}/{ext.VERSION} | {ext.WINDOW_JSON.name} "
               f"({sum(1 for k in windows if k != '_meta')} domains)")
-        mask_dir = Path(str(MASK_DIR_FMT).format(year=year))
+        mask_dir = road_mask_dir(road_line_for_year(year))
         if not mask_dir.is_dir():
             print(f"  [skip] no mask folder: {mask_dir}")
             continue
@@ -931,7 +943,7 @@ def main() -> None:
                 if np.isfinite(same) and np.isfinite(r["setback_dunestart_m"])
                 else np.nan)
 
-        out_dir = OUT_ROOT / str(year)
+        out_dir = road_setback_dir(year)
 
         # --- seaward relocation of roadways that drown at initialisation ---
         # Runs on the FLOORED value, because that is what CASCADE would index
@@ -987,14 +999,14 @@ def run_control(exts: dict) -> None:
     try:
         for year in YEARS:
             ext = exts[year]
-            mask_dir = Path(str(MASK_DIR_FMT).format(year=year))
+            mask_dir = road_mask_dir(road_line_for_year(year))
             if not mask_dir.is_dir():
                 continue
             records = [measure_domain(ext, d, year, windows)[0] for d in DOMAINS]
             for r in records:
                 r.pop("setback_legacy_m", None)
                 r.pop("delta_vs_legacy_m", None)
-            out = (OUT_ROOT / str(year)
+            out = (road_setback_dir(year)
                    / f"RoadOffset_{year}_domains{CONTROL_SUFFIX}.csv")
             write_csv(out, records)
             got = [r for r in records if r["n_road_profiles"] > 0]

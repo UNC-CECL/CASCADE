@@ -34,13 +34,13 @@ output sound"; `4-compare/` asks "which method should we spend".
 | Samples/domain | 5 ArcGIS transects | up to 50 alongshore profiles |
 | Statistic | `min(road) − min(dune)`, minima taken independently | per-profile difference, then median |
 | Obliquity | uncorrected | mask sheared with the same per-profile shear as the topography |
-| Output | `old_method_offset/<year>/` | `dunestart_offset/<year>/` |
+| Output | `old_method_offset/<year>/` | `dunestart_offset/measured/<year>/` |
 | Drowns at t=0 | **0 (1984)**, 5 (2004) | **0, both years** |
 | vs the rasterized road | +29 m / +22 m median | 0 m *by construction* |
 
 Both are 2 rows × 82 cols, GIS IDs then metres, so switching is a drop-in.
 
-**What the runner spends today** (`scripts/hatteras_site_config.py:96,110`) is
+**What the runner spends today** (`scripts/site_layer/hatteras_site_config.py:96,110`) is
 the **dune-start** method, switched 2026-08-18. `3-figures/HAT_road_domain_views.py`
 defaults to `--method dunestart` to match; change both together, or the figures
 stop describing the model you run.
@@ -48,7 +48,7 @@ stop describing the model you run.
 **Each vintage is built on its OWN topography** — 1984 on `1984-start/v1`,
 2004 on `2004-start/v1`. They are different islands: all 90 domains differ and
 **65 differ in interior shape**. The pairing is defined once, as `YEAR_PRODUCT`
-in `scripts/hat_topo_version.py`, and every script here resolves through it.
+in `scripts/site_layer/hat_topo_version.py`, and every script here resolves through it.
 Nothing in this tree may call `topo_dirs()` without naming a product — that
 default is what gave both vintages the 2004-start island until 2026-08-26.
 
@@ -62,8 +62,10 @@ HAT_ROAD_YEAR=2004 python 1-produce/old_method/road_offset_pipeline.py
 # dune-start method — masks first, then the measurement
 # The masks are SHARED by both periods (they register to the resampled_*.tif
 # grids, which no fill touches), so they are burnt once per road vintage.
-HAT_ROAD_YEAR=1984 python 1-produce/HAT_rasterize_road_to_domains.py
-HAT_ROAD_YEAR=2004 python 1-produce/HAT_rasterize_road_to_domains.py
+# HAT_ROAD_YEAR is the LINE vintage, 1978 or 2008 -- not the period. Which
+# period reads which line is hat_topo_version.ROAD_LINE_FOR_YEAR (2026-09-15).
+HAT_ROAD_YEAR=1978 python 1-produce/HAT_rasterize_road_to_domains.py
+HAT_ROAD_YEAR=2008 python 1-produce/HAT_rasterize_road_to_domains.py
 
 # ONE run does BOTH vintages. It configures a separate extractor module per
 # product, so you do not repoint HAT_dune_topo_extractor.py between them --
@@ -93,8 +95,8 @@ domain is an unmanaged barrier wearing a road label for the whole hindcast.
 
 | Script | Writes |
 |---|---|
-| `HAT_rasterize_road_to_domains.py` | `raster/<year>/masks/` — **the only script that masks the road**. Set `HAT_ROAD_YEAR`; do not save a per-year copy |
-| `HAT_road_offset_from_dune_start.py` | `dunestart_offset/<year>/` — setback, elevation, per-domain and per-profile detail, audit |
+| `HAT_rasterize_road_to_domains.py` | `raster/<vintage>/masks/` — **the only script that masks the road**. Set `HAT_ROAD_YEAR` to the LINE vintage (1978 or 2008); do not save a per-vintage copy |
+| `HAT_road_offset_from_dune_start.py` | `dunestart_offset/measured/<year>/` — setback, elevation, per-domain and per-profile detail, audit |
 | `HAT_road_placement_on_domains.py` | one PNG per method, into that method's folder |
 | `old_method/road_offset_pipeline.py` | `old_method_offset/<year>/RoadSetback_<year>.csv` |
 | `old_method/HAT_old_method_figures.py` | figures + audit for the old method's arithmetic |
@@ -155,7 +157,7 @@ Both inputs are the **model-facing** files, for the same reason:
 
 | | file | note |
 |---|---|---|
-| setback | `dunestart_offset/<year>/RoadSetback_<year>_dunestart.csv` | what `PERIOD["road_setback_file"]` resolves to; already floored and relocated |
+| setback | `dunestart_offset/measured/<year>/RoadSetback_<year>_dunestart.csv` | what `PERIOD["road_setback_file"]` resolves to; already floored and relocated |
 | elevation | `road_elevation/RoadElevation.csv` | **one file for both vintages** |
 
 That second row matters when reading the pair: the road colour is identical
@@ -272,6 +274,50 @@ domain. If that file ever moves, fix the `_PLACEMENT` path — do not copy the
 functions across.
 
 ## Changelog
+
+**2026-09-15 — two axes, two integers; measured/ and derived/.** Hannah's
+call, after an interview on how the forcings should be organised by start
+year. Three things changed in `data/.../4-mgmt-forcing/`, and no number moved:
+
+* **The lines and masks are filed by their TRUE vintage.** `raw_offset/1984/`
+  → `raw_offset/1978/` (`nc12_1978.*`), `raw_offset/2004/` →
+  `raw_offset/2008/`, `raster/1984/` → `raster/1978/` (masks
+  `domain_<N>_road_1978.npy`), `raster/2004/` → `raster/2008/`, and the
+  relocation measurement `road_relocation/1984_2004/` →
+  `road_relocation/1978_2008/`. Before this the same integer meant a PERIOD
+  under `dunestart_offset/` and a LINE under `raw_offset/` and `raster/`. The
+  pairing lives once, in `hat_topo_version.ROAD_LINE_FOR_YEAR` (1984, 1996 →
+  1978; 2004, 2010 → 2008), with `road_line_file()`, `road_mask_dir()` and
+  `road_mask_file()` beside it; each refuses a period start where a line
+  vintage is expected. `HAT_ROAD_YEAR`, `HAT_RELOC_FROM/TO` and the
+  extractor's `ROAD_YEARS` are line vintages now; the rasterizer refuses 1984
+  and 2004. The masks were renamed, not re-burnt (see the 2026-09-15 footer in
+  each `RUN_MANIFEST.txt`, whose body is left as written).
+* **`dunestart_offset/` is split into `measured/{1984,2004}` and
+  `derived/{1996,2010}`.** Two of the four setback files were never
+  measurements -- 1996 is 1984 plus the 1989 event, 2010 is a copy of 2004 --
+  and nothing but a PROVENANCE.md said so. `hat_topo_version.ROAD_SETBACK_KIND`
+  owns the split and `road_setback_dir()` / `road_setback_file()` /
+  `road_setback_relpath()` resolve it; `HATTERAS_PERIODS[*]["road_setback_file"]`
+  is built from the last of those rather than spelled out. Every script that
+  formatted `dunestart_offset/{year}` now goes through the helper or spells
+  `measured/` explicitly (the figure and compare scripts only ever loop over
+  the two measured years).
+* **The organising rule is written down**, in `data/.../4-mgmt-forcing/README.md`:
+  state at year zero (the setback) is per start year; history (relocation
+  events, nourishment projects) is one timeline the run window selects from;
+  elevation has no year. 1996 stays derived -- no 1997 NC-12 line is planned.
+
+Not done here, and done on 2026-09-18: four live scripts still spelled
+`old_method_offset/`, a folder that became `superseded_20260911/` on 2026-09-11
+(`HAT_road_offset_from_dune_start.py`, `HAT_road_placement_on_domains.py`,
+`HAT_road_domain_views.py`, `HAT_road_method_diagnostic.py`). They failed soft,
+as the data README warns, so from 09-11 to 09-18 the producer's
+`setback_legacy_m` / `delta_vs_legacy_m` diagnostic was empty in any audit it
+wrote; the setbacks themselves never read it. All four now resolve the folder,
+at `road_offset/archive/superseded_20260911/`, through
+`hat_topo_version.LEGACY_SETBACK_ROOT`, as every script now resolves every
+4-mgmt-forcing path.
 
 **2026-08-28 (same day) — the data folder made self-describing.** Seven things
 in `data/.../road_offset/` were not intentional. All are fixed; the folder now
@@ -421,7 +467,7 @@ The scale of it: **all 90 domains differ between the two products and 65 differ
 in interior SHAPE** (GIS 11 is 165 rows on `1984-start`, 157 on `2004-start`).
 That is four times the v3→v4 incident these files already carry warnings about.
 
-* `YEAR_PRODUCT` is now defined **once**, in `scripts/hat_topo_version.py`, and
+* `YEAR_PRODUCT` is now defined **once**, in `scripts/site_layer/hat_topo_version.py`, and
   imported by `hatteras_site_config.py` and every script here. It had been
   written out four times and omitted in three.
 * `load_interiors()` **requires a year**. That is what surfaced two further

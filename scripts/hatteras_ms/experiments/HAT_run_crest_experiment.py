@@ -86,8 +86,12 @@ HINDCAST = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 
 DUNE_TOPO = REPO / "data/hatteras_init/1-barrier3d-domains/1984-start/dune-topo"
 CURRENT = DUNE_TOPO / "CURRENT"
-LIVE_SETBACK = (REPO / "data/hatteras_init/4-mgmt-forcing/road_offset"
-                / "dunestart_offset/measured/1984/RoadSetback_1984_dunestart.csv")
+import sys as _tvsys
+from pathlib import Path as _TVP
+_tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
+                               if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_topo_version as _tv  # noqa: E402
+LIVE_SETBACK = _tv.road_setback_file(1984)
 
 # arm tag -> (topo version, setback CSV source; None = leave the live one)
 def _arm(version):

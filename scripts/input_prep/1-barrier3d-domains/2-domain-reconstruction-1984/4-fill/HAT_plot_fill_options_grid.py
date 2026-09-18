@@ -70,10 +70,10 @@ def _find_root(start: Path) -> Path:
 
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
-from hat_topo_version import array_name, dune_topo_root            # noqa: E402
-from hat_topo_version import insert_figures_dir  # noqa: E402
-from hat_topo_version import require_version  # noqa: E402
-from hat_figure_style import (apply_style, C, INK, caption,       # noqa: E402
+from site_layer.hat_topo_version import array_name, dune_topo_root            # noqa: E402
+from site_layer.hat_topo_version import insert_figures_dir  # noqa: E402
+from site_layer.hat_topo_version import require_version  # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, INK, caption,       # noqa: E402
                               elevation_cmap, figsize, save,
                               spines_for_image, _title)
 
@@ -95,15 +95,14 @@ BACKDUNE_ROWS = 3
 # THE ROAD ELEVATION CASCADE ACTUALLY USES, m MHW.
 #
 # hatteras_site_config.HATTERAS_ROAD_ELEVATION_FILE resolves to THIS file.
-# There is a second one, road_offset/dunestart_offset/1984/
+# There is a second one, road_offset/dunestart_offset/measured/1984/
 # RoadElevation_1984_dunestart.csv, and it must NOT be used here: it samples
 # along the 1984 alignment, which at the relocated domains (GIS 9-15, 84-87)
 # now lies UNDER the foredune, so it returns dune rather than roadbed. At
 # GIS 85 the two read 0.807 m and 1.833 m - a metre of difference that is
 # entirely the abandoned corridor being buried. See the long note beside
 # HATTERAS_ROAD_ELEVATION_FILE in hatteras_site_config.py.
-ROAD_ELEV_FILE = (REPO / "data" / "hatteras_init" / "4-mgmt-forcing"
-                  / "road_elevation" / "RoadElevation.csv")
+from site_layer.hat_topo_version import ROAD_ELEVATION_FILE as ROAD_ELEV_FILE  # noqa: E402
 
 
 def road_elevation(domain):

@@ -21,7 +21,7 @@
 #   2. OFFSET       signed distance from the centerline to the mask's centre, in
 #      metres. Should sit near zero with a spread of well under a cell.
 #   3. COVERAGE     profiles where one source has road and the other does not.
-#   4. YEAR IDENTITY  do the 1984 and 2004 masks actually differ, and only where
+#   4. YEAR IDENTITY  do the 1978 and 2008 masks actually differ, and only where
 #      NC-12 was relocated? This is the check that the 2004 rasterization used
 #      the 2004 line -- a patched driver could silently re-burn 1984.
 #
@@ -44,7 +44,12 @@ _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
 
 PROJECT_ROOT = Path(str(_PATH_REPO))
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
-ROADS_ROOT = INIT_ROOT / "4-mgmt-forcing" / "road_offset"
+import sys as _tvsys
+from pathlib import Path as _TVP
+_tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
+                               if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_topo_version as _tv  # noqa: E402
+ROADS_ROOT = _tv.ROADS_ROOT
 
 MASK_FMT = ROADS_ROOT / "raster" / "{year}" / "masks" / "domain_{d}_road_{year}.npy"
 GEOJSON_FMT = ROADS_ROOT / "raw_offset" / "{year}" / "nc12_{year}.geojson"
@@ -54,7 +59,7 @@ GEOJSON_FMT = ROADS_ROOT / "raw_offset" / "{year}" / "nc12_{year}.geojson"
 TIF_FMT = (INIT_ROOT / "1-barrier3d-domains"
            / "domain-clips-1m" / "domain_{d}" / "resampled_domain_{d}.tif")
 
-YEARS = [1984, 2004]
+YEARS = [1978, 2008]   # LINE vintages (hat_topo_version.ROAD_LINE_FOR_YEAR), not period starts
 DOMAINS = list(range(1, 91))
 CELL_SIZE_M = 10.0
 
@@ -167,12 +172,12 @@ def check_year(year: int) -> dict:
 def check_year_identity() -> None:
     """Do the two years' masks differ, and only where the road was relocated?"""
     print("\n" + "=" * 78)
-    print("CHECK 4  do the 1984 and 2004 masks actually differ, and where?")
+    print("CHECK 4  do the 1978 and 2008 masks actually differ, and where?")
     print("=" * 78)
     differ, same = [], []
     for d in DOMAINS:
-        p84 = Path(str(MASK_FMT).format(year=1984, d=d))
-        p04 = Path(str(MASK_FMT).format(year=2004, d=d))
+        p84 = Path(str(MASK_FMT).format(year=1978, d=d))
+        p04 = Path(str(MASK_FMT).format(year=2008, d=d))
         if not (p84.is_file() and p04.is_file()):
             continue
         a = np.load(p84) > 0
@@ -186,8 +191,8 @@ def check_year_identity() -> None:
     print(f"  domains whose masks DIFFER between years : {len(differ)}")
     print(f"  domains whose masks are IDENTICAL        : {len(same)}")
     if not differ:
-        print("  *** ALL MASKS IDENTICAL -- the 2004 run almost certainly "
-              "re-burned the 1984 geojson. Check ROAD_GEOJSON in the driver.")
+        print("  *** ALL MASKS IDENTICAL -- the 2008 run almost certainly "
+              "re-burned the 1978 geojson. Check ROAD_GEOJSON in the driver.")
         return
 
     in_block = [(d, n) for d, n in differ

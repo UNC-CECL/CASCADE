@@ -92,10 +92,15 @@ def load_placement():
 P = load_placement()
 
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
-DUNESTART = INIT_ROOT / "4-mgmt-forcing" / "road_offset" / "dunestart_offset"
+import sys as _tvsys
+from pathlib import Path as _TVP
+_tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
+                               if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer import hat_topo_version as _tv  # noqa: E402
+DUNESTART = _tv.ROAD_SETBACK_ROOT
 OUT_DIR = DUNESTART / "modifications"
-DOMAINS_FMT = "{year}/RoadOffset_{year}_domains.csv"
-PROFILES_FMT = "{year}/RoadOffset_{year}_profiles.csv"
+DOMAINS_FMT = "measured/{year}/RoadOffset_{year}_domains.csv"
+PROFILES_FMT = "measured/{year}/RoadOffset_{year}_profiles.csv"
 
 YEARS = (1984, 2004)
 CELL = P.CELL_SIZE_M
