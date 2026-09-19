@@ -6,8 +6,8 @@ rebuilt from the re-digitized 1997 and 2009 dune lines.
 
 | start | island offset these runs used | the re-run uses |
 |---|---|---|
-| 1996 | `2-brie-offset/1996/v2` (duneline_1997_v2) | `1996/v3` |
-| 2010 | `2-brie-offset/2010/v1` (the old duneline_2009) | `2010/v2` |
+| 1996 | `2-brie-offset/1996/v2` (duneline_1997_v2), now `1996/superseded_20260919_pre-redigitized/v2` | `1996/v3`, now `1996/v1` |
+| 2010 | `2-brie-offset/2010/v1` (the old duneline_2009), now `2010/superseded_20260919_pre-redigitized/v1` | `2010/v2`, now `2010/v1` |
 
 Why: Hannah re-digitized the 1997, 2009 and 2023 lines on 2026-09-18. They
 moved 32 and 50 domains respectively, by up to about 66 m, every one of them

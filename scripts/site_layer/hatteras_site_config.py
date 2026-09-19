@@ -169,7 +169,9 @@ HATTERAS_ANNOTATIONS = AnnotationConfig(
 # re-digitised (duneline_1997_v2, local corrections) the 1996 start gained a
 # second build, and the two live side by side as 1996/v1/ and 1996/v2/ with a
 # CURRENT file naming the one every reader takes (2026-09-18: the 1997, 2009
-# and 2023 lines re-digitized; 1996/v3/ and 2010/v2/ are CURRENT) -- the same shape as
+# and 2023 lines re-digitized; 1996/v3/ and 2010/v2/ were CURRENT, renumbered
+# 1996/v1/ and 2010/v1/ on 2026-09-19 with the earlier builds under
+# <start>/superseded_20260919_pre-redigitized/) -- the same shape as
 # 1-barrier3d-domains/<product>/dune-topo/. Resolved here, in one place, so
 # the runner cannot pin a path that a later re-digitisation silently leaves
 # stale. Order, mirroring hat_topo_version.topo_dirs():

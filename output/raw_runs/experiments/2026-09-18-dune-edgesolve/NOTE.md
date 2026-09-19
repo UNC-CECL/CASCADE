@@ -8,7 +8,7 @@ with the endpoint estimator on the model side.
 
 **Re-solved:** 1996-2010, 2004-2024 and 2010-2024, the windows whose dune
 target changed. For 1996 and 2010 the island offsets changed too (1996/v3,
-2010/v2).
+2010/v2; renumbered v1 and v1 on 2026-09-19).
 
 **Carried over from 09-16, not re-run:** 1984-2004. Neither of its lines
 (1984, 2004) changed, and its inputs are the same.

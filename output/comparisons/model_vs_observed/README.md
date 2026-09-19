@@ -83,7 +83,7 @@ Three model sets, named for where their two end domains were solved
 | window | run | matrix arm |
 |---|---|---|
 | 1984-2004 | `HAT_1984_2004_edgeBE_road_bdm_nogroin` | `version-pair/v2` |
-| 1996-2010 | `HAT_1996_2010_edgeBE_road_bdm_nogroin` | calibration (offsets v2) |
+| 1996-2010 | `HAT_1996_2010_edgeBE_road_bdm_nogroin` | calibration (offsets v1, the re-digitized 1997 line) |
 | 2004-2024 | `HAT_2004_2024_edgeBE_road_bdm_nourish_nogroin` | calibration (nourishment on) |
 | 2010-2024 | `HAT_2010_2024_edgeBE_road_bdm_nourish_nogroin` | calibration (run 09-16, nourishment on) |
 

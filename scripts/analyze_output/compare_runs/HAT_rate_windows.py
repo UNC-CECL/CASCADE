@@ -30,7 +30,7 @@ THE RUNS (Hannah, 2026-09-15)
     1984-2004   HAT_1984_2004_edgeBE_road_bdm_nogroin, the version-pair/v2 arm
                 (topography v2, as asked; the calibration arm is on v1)
     1996-2010   HAT_1996_2010_edgeBE_road_bdm_nogroin, calibration arm
-                (offsets v2)
+                (offsets v1: the re-digitized 1997 line)
     2004-2024   HAT_2004_2024_edgeBE_road_bdm_nourish_nogroin, calibration arm
                 (full management in this period includes the nourishment)
     2010-2024   HAT_2010_2024_edgeBE_road_bdm_nourish_nogroin, calibration arm
