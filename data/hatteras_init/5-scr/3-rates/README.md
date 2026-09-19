@@ -39,6 +39,7 @@ coastsat/                      the satellite waterline
     lrr/<window>/              OLS rate per transect and per domain       MODEL TARGET
     endpoint/<window>/         net change between ±6-month means at the dune-line dates
     5yr_bins/<window>/         OLS in successive 5-year bins
+    lrr_projected/<window>/    the LRR x window length (projected metres), beside the observed calendar-year change
 duneline/                      the digitized dune line
     endpoint/<window>/         net change between the two lines bounding the window
 ```
@@ -47,6 +48,7 @@ duneline/                      the digitized dune line
 |---|---|---|---|---|---|
 | `coastsat/lrr` | per transect, the OLS slope of CoastSat position against date over the calendar window (1 Jan start to 31 Dec end, ≥ 3 positions); per domain the mean | m/yr | 1984_2004, 1996_2010, 2004_2024, 2010_2024; 1996_2024 (context only); `ext/` for the Pea Island reach | `CoastSat/coastsat_domain_lrr_fixed.py`, `CoastSat/coastsat_extension_lrr.py` | **the hindcast runner** (the scoring target), the edge solve, every rate comparison |
 | `coastsat/endpoint` | per transect, the mean position within ±6 months of the END dune-line date minus the same at the START date; per domain the mean | m and m/yr | the four model windows + 1996_2024 | `coastsat_endpoint/coastsat_endpoint.py` | `net_change_1996_2024.py` |
+| `coastsat/lrr_projected` | per transect, the window's LRR x (end - start) years, the change the long-term rate implies; beside it the OBSERVED change, mean position over the whole end calendar year minus the whole start calendar year (same 28-yr span); per domain the means | m | 1996_2024 | `coastsat_lrr_projected/coastsat_lrr_projected.py` (tables, figure and PROVENANCE in one run) | — (advisor's total-change view, 2026-09-19) |
 | `coastsat/5yr_bins` | the lrr fit, repeated inside successive 5-year bins (bins under 3.75 yr dropped, \|rate\| > 50 m/yr dropped) | m/yr | 1996_2010, 2010_2024, 1996_2024 | `CoastSat_timeseries/coastsat_lrr_5year_bins.py` | `coastsat_5yr_bins_figure.py` |
 | `duneline/endpoint` | per 100 m transect, the start line's distance from the offshore datum minus the end line's; per domain the mean | m and m/yr | the four model windows + 1996_2024 | `duneline_endpoint/duneline_endpoint.py` | `HAT_rate_windows.py`, the dune edge solve, `net_change_1996_2024.py` |
 
