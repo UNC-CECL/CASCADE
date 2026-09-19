@@ -45,7 +45,7 @@ Usage:
     python HAT_groin_sweep_comparison.py
     python HAT_groin_sweep_comparison.py --top-n 3
 
-Writes to output/groin_sweep/figures/:
+Writes to output/calibration/groin/figures/:
     comparison_surfaces.png   the four M-f error surfaces side by side
     comparison_optima.png     every sweep's optimum in one (M, f) plane
     comparison_profiles.png   each sweep's best LRR curve against CoastSat
@@ -84,6 +84,7 @@ from site_layer.hat_figure_style import (apply_style, C, C_1984, C_1997,  # noqa
                               INK, INK_MUTED, error_cmap, figsize,
                               open_frame, save, _title)
 from HAT_groin_sweep_config import (  # noqa: E402
+    GROIN_SWEEP_ROOT,
     END_YEAR,
     F_VALUES,
     M_VALUES,
@@ -111,7 +112,7 @@ from HAT_groin_sweep_figures import (  # noqa: E402
     tied_best,
 )
 
-OUTPUT_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
+OUTPUT_DIR = GROIN_SWEEP_ROOT / "figures"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # One colour per sweep, stable across all three figures so a reader who learns

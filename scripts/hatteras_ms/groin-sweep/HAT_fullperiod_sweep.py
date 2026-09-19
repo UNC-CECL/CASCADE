@@ -49,7 +49,7 @@ ASSUMPTIONS, STATED
 Usage:
     python HAT_fullperiod_sweep.py [--workers 6] [--be1 -5.0] [--stage coarse|fine|both]
 
-Writes output/groin_sweep/fullperiod_1984_2024/:
+Writes output/calibration/groin/fullperiod_1984_2024/:
     results.csv          one row per cell, ranked by profile RMSE
     <combo>/             shoreline matrix per cell
     figures/             heatmap, best-fit profile, top-N profiles
@@ -79,6 +79,7 @@ for _path in (SCRIPTS_DIR, _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+from HAT_groin_sweep_config import GROIN_SWEEP_ROOT  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS as GEOMETRY  # noqa: E402
 
 from HAT_fullperiod_target import (  # noqa: E402
@@ -99,7 +100,7 @@ def _out_root():
     stem = "fullperiod_1984_2024"
     if raw and float(raw) != 2.5:
         stem += "_Hs" + f"{float(raw):g}".replace(".", "p")
-    return PROJECT_BASE_DIR / "output" / "groin_sweep" / stem
+    return GROIN_SWEEP_ROOT / stem
 
 
 OUT_ROOT = _out_root()

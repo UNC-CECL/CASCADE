@@ -45,7 +45,7 @@ HOW TO READ THE RESIDUAL
 Usage:
     python HAT_groin_full_life_figure.py
 
-Writes output/groin_sweep/figures/full_life_1967_2017.png
+Writes output/calibration/groin/figures/full_life_1967_2017.png
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -73,6 +73,7 @@ from cascade_pipeline.run_layout import resolve  # noqa: E402
 from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save, _title)
 from HAT_groin_sweep_config import (  # noqa: E402
+    GROIN_SWEEP_ROOT,
     GROIN_DOWNDRIFT_GIS,
     GROIN_UPDRIFT_GIS,
     WETDRY_CHANGE_TABLE,
@@ -89,11 +90,12 @@ RIG_BUFFER = 15
 RIG_FIRST_GIS = 2
 RIG_START_YEAR = 1967
 
-# The rig lives in output/rig_runs/, not output/raw_runs/ (moved 2026-08-31).
+# The rig lives in output/calibration/groin_rig/, not output/raw_runs/ (moved 2026-08-31;
+# under calibration/ since 2026-09-18).
 # It is a DIFFERENT GRID -- 41 domains against production's 120 -- and M is
 # grid-specific, so mixing the two invited quoting a rig number as a
 # production one. raw_runs is production only, and run_index.csv covers it.
-RAW_RUNS = PROJECT_BASE_DIR / "output" / "rig_runs"
+RAW_RUNS = PROJECT_BASE_DIR / "output" / "calibration" / "groin_rig"
 GROIN_RUN = "HAT_1967_2018_edge_calibrated_groin"
 NO_GROIN_RUN = "HAT_1967_2018_edge_calibrated_no_groin"
 
@@ -114,7 +116,7 @@ DIAGNOSTICS = resolve(RAW_RUNS / GROIN_RUN, "groin_csv", GROIN_RUN)
 # rather than trusted from the label.
 EXPECT_M, EXPECT_F = 60.0, 0.6
 
-FIGURE_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
+FIGURE_DIR = GROIN_SWEEP_ROOT / "figures"
 
 # House colours (2026-09-11): the surveys are INK, the run under test the
 # ACCENT, the groin-off run BASE grey, and the structure's dated events are

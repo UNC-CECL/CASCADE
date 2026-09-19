@@ -48,7 +48,7 @@ WHAT IS PLOTTED
 Usage:
     python HAT_groin_sediment_budget_figure.py
 
-Writes output/groin_sweep/figures/sediment_budget.png
+Writes output/calibration/groin/figures/sediment_budget.png
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -77,6 +77,7 @@ from cascade_pipeline.run_layout import resolve  # noqa: E402
 from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save, _title)
 from HAT_groin_sweep_config import (  # noqa: E402
+    GROIN_SWEEP_ROOT,
     GROIN_DOWNDRIFT_GIS,
     GROIN_UPDRIFT_GIS,
 )
@@ -86,16 +87,17 @@ from HAT_groin_sweep_config import (  # noqa: E402
 # (D5 -> 19, D6 -> 20) -- see HAT_groin_hindcast_1967_2017.py:76.
 RIG_BUFFER, RIG_FIRST_GIS, RIG_START_YEAR = 15, 2, 1967
 
-# The rig lives in output/rig_runs/, not output/raw_runs/ (moved 2026-08-31).
+# The rig lives in output/calibration/groin_rig/, not output/raw_runs/ (moved 2026-08-31;
+# under calibration/ since 2026-09-18).
 # It is a DIFFERENT GRID -- 41 domains against production's 120 -- and M is
 # grid-specific, so mixing the two invited quoting a rig number as a
 # production one. raw_runs is production only, and run_index.csv covers it.
-RAW_RUNS = PROJECT_BASE_DIR / "output" / "rig_runs"
+RAW_RUNS = PROJECT_BASE_DIR / "output" / "calibration" / "groin_rig"
 RUN = "HAT_1967_2018_edge_calibrated_groin"
 DIAGNOSTICS = resolve(RAW_RUNS / RUN, "groin_csv", RUN)
 SHORELINE = resolve(RAW_RUNS / RUN, "matrix", RUN)
 
-FIGURE_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
+FIGURE_DIR = GROIN_SWEEP_ROOT / "figures"
 
 # Same as HAT_groin_choice_figure.py, so the volumes reconcile: h_b + d_sf.
 PROFILE_HEIGHT_M = 1.7 + 22.25

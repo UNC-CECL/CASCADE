@@ -517,7 +517,7 @@ HATTERAS_BE_EDGE_DOMAINS = (HATTERAS_DOMAINS.first_gis_id,
 # (2026-08-24); this note summarises it and must not diverge from it. The
 # figures testing it, and what each one showed, are described in
 # scripts/hatteras_ms/groin-sweep/CALIBRATION_FIGURES.md -- the PNGs themselves
-# land in output/groin_sweep/figures/, which .gitignore does not track.
+# land in output/calibration/groin/figures/, which .gitignore does not track.
 #
 #     M from PERIOD 1.  f from the 1967 rig and from period 2.
 #
@@ -590,14 +590,14 @@ HATTERAS_BE_EDGE_DOMAINS = (HATTERAS_DOMAINS.first_gis_id,
 # be repaired -- fitting period 2 is the wrong thing to attempt.
 #
 # BUT IT WAS STILL SITTING IN THE FILE THE PIPELINE READS. Found 2026-08-30:
-# output/groin_sweep/joint_fit.json held the RANKING'S answer (edgeBE M = 160
+# output/calibration/groin/joint_fit.json held the RANKING'S answer (edgeBE M = 160
 # f = 0.8, zeroBE M = 140 f = 1.0), and HAT_run_all.py stage 6 passes whatever
 # that file holds to every groin run in the matrix. A stage-6 run would have
 # used M = 160. It prints "RAILED on M" while doing so, so the machinery knew.
 #
 # The file is now PINNED by hand to M = 60, f = 0.6 for both presets, each
 # entry carrying its own superseded_ranking block, and the ranking is archived
-# at output/groin_sweep/archive/joint_fit_RAILED_ranking_20260830.json.
+# at output/archive/2026-08-30_groin-railed-ranking/joint_fit_RAILED_ranking_20260830.json.
 # RE-RUNNING STAGE 5 OVERWRITES IT -- re-pin afterwards.
 #
 # Two more places the pair is written, both corrected the same day:
@@ -637,7 +637,7 @@ HATTERAS_BE_EDGE_DOMAINS = (HATTERAS_DOMAINS.first_gis_id,
 # for like. The comparison is still a fair reason to prefer M = 60 over M = 95,
 # and it is a deliberate documented diagnostic in the run reports -- but
 # "marginally above the drift band" must NOT be read as "impounds more sand
-# than the coast carries." Figure: output/groin_sweep/figures/sediment_budget.png
+# than the coast carries." Figure: output/calibration/groin/figures/sediment_budget.png
 #
 # HOW FAR THE VALUE IS ACTUALLY CONSTRAINED -- ROBUSTNESS, 2026-08-30.
 # Everything below was scored from the existing period-1 cells at
@@ -801,7 +801,7 @@ HATTERAS_BE_EDGE_DOMAINS = (HATTERAS_DOMAINS.first_gis_id,
 #
 # STILL UNVERIFIED: only the 1967 rig, which files no run_index row at all.
 # Its two current runs were rebuilt 2026-08-31 at M = 60 / f = 0.6 and it now
-# lives in output/rig_runs/, away from production.
+# lives in output/calibration/groin_rig/, away from production.
 #
 # THE 1967 WINDOW HAS ALREADY BEEN RUN -- IT IS THE 41-DOMAIN RIG.
 # GROIN_PLAN.md recommends "fit on the 1967 window; apply in the hindcast",
@@ -890,7 +890,7 @@ HATTERAS_BE_EDGE_DOMAINS = (HATTERAS_DOMAINS.first_gis_id,
 # REFIT 2026-08-28 — BOTH PERIODS, FIVE PASSES, ON THE CURRENT TOPOGRAPHY
 # ============================================================================
 # Every value below was re-solved on 2026-08-28. The previous solution is in
-# git history and in output/superseded_20260828/.
+# git history and in output/archive/2026-08-28_full-tree/.
 #
 # WHY. The 2026-08-23 values were derived on a base run against the
 # pre-restructure shared topography. `1984-start` is now a different surface

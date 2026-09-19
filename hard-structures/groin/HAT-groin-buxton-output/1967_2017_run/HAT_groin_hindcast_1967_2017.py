@@ -261,7 +261,7 @@ HATTERAS_DATA_BASE = os.path.join(PROJECT_BASE_DIR, "data", "hatteras_init")
 # so its runs sat in raw_runs unindexed, next to production runs they must not
 # be compared with. One of them was found holding an unstable M = 70 cell while
 # named as though it were the calibrated run.
-OUTPUT_BASE_DIR    = os.path.join(PROJECT_BASE_DIR, "output", "rig_runs")
+OUTPUT_BASE_DIR    = os.path.join(PROJECT_BASE_DIR, "output", "calibration", "groin_rig")
 PARAMETER_FILE     = "Hatteras-CASCADE-parameters.yaml"
 
 START_YEAR = 1967

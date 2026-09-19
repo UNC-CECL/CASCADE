@@ -21,8 +21,10 @@ house-style column. What changed:
 ```
 hindcast_edgeBE_loess_reference.png   edgeBE, both periods, both scoring windows
 hindcast_zeroBE_loess_reference.png   the same, no source/sink field at all
-superseded_20260918/                  the last calibBE render, 1984/2004; see WHY.md
 ```
+
+The last calibBE render (1984/2004) was retired to
+`output/archive/2026-09-18_hindcast-calibrated/`; its WHY.md says why.
 
 | | 1996-2010 | 2010-2024 |
 |---|---|---|

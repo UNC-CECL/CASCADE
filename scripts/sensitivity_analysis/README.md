@@ -10,7 +10,7 @@ value, and reads the result.
 | `HAT_plot_hs_experiment.py` | the wave-height experiment specifically |
 | `plot_sensitivity_vs_coastsat.py` | each cell against the observed rates |
 
-Products go to `output/sensitivity_analysis/`. Its `figures/README.md` is one
+Products go to `output/calibration/sensitivity/`. Its `figures/README.md` is one
 of the three decision records in the output tree.
 
 **A cell that moves a forcing earns a name token**, so it lands in its own

@@ -680,7 +680,7 @@ def scenario_run_name(switches, stem, **overrides):
 # management modules were built, not what they were forced with. So without a
 # token of its own, an Hs = 1.2 cell derives the matrix run's exact name, lands
 # in its directory, and replaces its row in run_index.csv. That is the failure
-# output/groin_sweep/README.md records for the rig sweep, and it is silent.
+# output/calibration/groin/README.md records for the rig sweep, and it is silent.
 #
 # The token is emitted ONLY when the value is off its calibration default, so
 # every run that predates this file is named exactly as it was. A run at the

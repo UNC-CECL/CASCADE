@@ -16,7 +16,7 @@ WHY DIVERGING, AND WHY ORDERED SOUTH TO NORTH
     exposes that the improvement is concentrated at one end of the island.
 
 INPUT
-    The two pass-0 calibrations under output/hs_experiment/, produced by
+    The two pass-0 calibrations under output/calibration/hs/, produced by
     HAT_be_zone_residual_fit.py with HAT_BE_OUTPUT_DIR redirected. Nothing
     here reads or writes the production calibration.
 
@@ -55,7 +55,7 @@ from HAT_plot_sensitivity import HOUSE_STYLE, panel_label, tidy  # noqa: E402
 
 plt.rcParams.update(HOUSE_STYLE)
 
-EXPERIMENT = PROJECT_BASE_DIR / "output" / "hs_experiment"
+EXPERIMENT = PROJECT_BASE_DIR / "output" / "calibration" / "hs"
 CONTROL = EXPERIMENT / "02_zones_Hs2p5" / "be_zone_metrics.csv"
 TEST = EXPERIMENT / "03_zones_Hs3" / "be_zone_metrics.csv"
 OUT_DIR = EXPERIMENT / "comparison"

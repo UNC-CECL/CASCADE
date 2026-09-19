@@ -78,7 +78,7 @@ from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa
 
 WETDRY_TABLE = (GROIN_DIR / "HAT-groin-buxton-output" / "shoreline_position_output"
                 / "Change_from_wetdry_1967_D2_D12.csv")
-SWEEP_ROOT = REPO / "output" / "groin_sweep" / "fullperiod_1984_2024"
+SWEEP_ROOT = REPO / "output" / "calibration" / "groin" / "fullperiod_1984_2024"
 
 UP_COLOR, DOWN_COLOR = C["ACCENT"], C["BASE"]
 STORM_YEAR = 2003
@@ -275,7 +275,7 @@ def main():
         "so a module that can only widen the gap cannot fit it however it is "
         "scored. Within period 1 alone the groin does help, closing 23% of the "
         "shape misfit on GIS domains 4-8 (recorded from "
-        "output/groin_sweep/figures/why_M60_f06.png when this figure was built, "
+        "output/calibration/groin/figures/why_M60_f06.png when this figure was built, "
         "not computed here). Fit on period 1; period 2's closure is carried by "
         "the source/sink calibration. The modelled cell drawn here is M 60, "
         "f 0.5: the continuous-window sweep's f grid is 0.1/0.3/0.5/0.7/0.9, so "

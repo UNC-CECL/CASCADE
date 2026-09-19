@@ -218,7 +218,7 @@ RAW_RUNS_DIR  = PROJECT_BASE_DIR / "output" / "raw_runs"
 # probe is still written into raw_runs/ under HAT_ARM_TAG -- that is what stops
 # it overwriting the base run it probes -- and is moved here when the question
 # it was answering is settled, so raw_runs/ stays the production matrix.
-ARM_RUNS_DIR  = PROJECT_BASE_DIR / "output" / "hs_experiment" / "runs"
+ARM_RUNS_DIR  = PROJECT_BASE_DIR / "output" / "calibration" / "hs" / "runs"
 
 # The section 8 settings, matching the runner. TARGET_WINDOW is the widest
 # window; `rate_comparison` resolves the reference the same way.
@@ -504,7 +504,7 @@ FONT_STRIP  = 7.0    # names written on a one-line strip
 # CASCADE LOADER
 # ============================================================
 
-JOINT_FIT_JSON = (PROJECT_BASE_DIR / "output" / "groin_sweep"
+JOINT_FIT_JSON = (PROJECT_BASE_DIR / "output" / "calibration" / "groin"
                   / "joint_fit.json")
 
 

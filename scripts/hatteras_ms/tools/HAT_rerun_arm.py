@@ -140,7 +140,7 @@ def main():
     if args.list:
         return 0
 
-    log_dir = REPO / "output" / "driver" / "logs"
+    log_dir = REPO / "output" / "logs" / "driver" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     started = time.time()
     for n, (_, row) in enumerate(todo.iterrows(), 1):

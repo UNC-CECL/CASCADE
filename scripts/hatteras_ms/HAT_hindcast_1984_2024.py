@@ -1099,7 +1099,7 @@ GROIN_INSTALL_YEAR = 1969   # confirmed construction date
 # only the product M*f is identifiable. Neither window pins both on its own.
 GROIN_TRAPPING_RATE_M_YR = RUN_CONFIG.groin_trapping_rate_m_yr
 GROIN_M_PROVENANCE = ("joint two-period fit against the CoastSat D6-D5 "
-                      "differential; see output/groin_sweep/ for the M-f "
+                      "differential; see output/calibration/groin/ for the M-f "
                       "ridge and which grid bounds the solution touches")
 
 # --- deterioration: 1996 last repair -> 2003 storm damage --------------------

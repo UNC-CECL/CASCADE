@@ -13,6 +13,10 @@ HAT-buxton-hindcast-groin-test/  the groin inside the hindcast
 groin-module-test/          the solver audit
 ```
 
+**Its model output is not here.** The (M, f) sweep, `joint_fit.json` (read by
+`HAT_run_all.py` stage 6) and the `SELECTED_M60_f0.60/` record are in
+`output/calibration/groin/`. The 1967-2018 rig runs are in `output/calibration/groin_rig/`.
+
 ## Where it departs from the rest of the project
 
 **It keeps its data beside its code**, unlike `data/hatteras_init/`, and its

@@ -41,7 +41,7 @@ WHAT TO LOOK FOR
 Usage:
     python HAT_period1_top_n_figure.py [--top-n 5]
 
-Writes output/groin_sweep/figures/period1_top_n_profiles.png
+Writes output/calibration/groin/figures/period1_top_n_profiles.png
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -62,14 +62,15 @@ for _path in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+from HAT_groin_sweep_config import GROIN_SWEEP_ROOT  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS as GEOMETRY  # noqa: E402
 
 from HAT_fullperiod_target import observed_change_profile  # noqa: E402
 from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save)
 
-SWEEP = PROJECT_BASE_DIR / "output" / "groin_sweep" / "1984_2004_edgeBE"
-FIGURE_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
+SWEEP = GROIN_SWEEP_ROOT / "1984_2004_edgeBE"
+FIGURE_DIR = GROIN_SWEEP_ROOT / "figures"
 
 SHOW_DOMAINS = list(range(1, 13))     # plot the whole neighbourhood
 FIT_DOMAINS = list(range(4, 9))       # but rank on D4-D8 only

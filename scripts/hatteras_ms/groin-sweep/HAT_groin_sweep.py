@@ -80,7 +80,7 @@ Usage:
     python HAT_groin_sweep.py --period 1984 --preset edgeBE [--workers N]
                               [--dry-run] [--skip-validation]
 
-Writes to output/groin_sweep/<start>_<end>_<preset>/:
+Writes to output/calibration/groin/<start>_<end>_<preset>/:
     sweep_results.jsonl      one JSON line per combination, written as it lands
     sweep_results.csv        the same rows as a table, plus extent, at the end
     <combo>/                 shoreline matrix + rate curve per combination
@@ -126,6 +126,7 @@ from cascade_pipeline.run_layout import resolve  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
 
 from HAT_groin_sweep_config import (  # noqa: E402
+    GROIN_SWEEP_ROOT,
     END_YEAR,
     GROIN_DOWNDRIFT_GIS,
     GROIN_EXTENT_THRESHOLD_FRAC,
@@ -414,7 +415,7 @@ def validate_against_matrix_run(period, workers):
     if problem:
         return False, problem
     name = run_dir.name
-    out_root = (PROJECT_BASE_DIR / "output" / "groin_sweep"
+    out_root = (GROIN_SWEEP_ROOT
                 / f"_validation_{period}")
     combo_name = combo_dir_name(*combo)
     print(f"  reference {name}: M = {combo[0]:g}, "

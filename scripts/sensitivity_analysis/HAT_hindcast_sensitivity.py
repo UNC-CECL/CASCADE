@@ -32,7 +32,7 @@ BOTH PERIODS COME FREE
 CELLS CANNOT COLLIDE WITH THE MATRIX, BUT THE TWO AXES DO IT DIFFERENTLY
     Without some separator every cell would derive the SAME name as the matrix
     run beside it, and the last one to finish would be left wearing the
-    production name -- the failure `output/groin_sweep/README.md` documents for
+    production name -- the failure `output/calibration/groin/README.md` documents for
     the rig sweep. Two mechanisms prevent it, and which one applies depends on
     the axis:
 
@@ -95,7 +95,7 @@ from cascade_pipeline.roadway import RelocationEvent  # noqa: E402
 from HAT_hindcast_config import field_default  # noqa: E402
 
 HINDCAST = PROJECT_BASE_DIR / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
-OUT_ROOT = PROJECT_BASE_DIR / "output" / "sensitivity_analysis"
+OUT_ROOT = PROJECT_BASE_DIR / "output" / "calibration" / "sensitivity"
 
 # The "each domain relocates to its own measured offset" case. The environment
 # carries strings, and an EMPTY string reads as unset in HAT_hindcast_config

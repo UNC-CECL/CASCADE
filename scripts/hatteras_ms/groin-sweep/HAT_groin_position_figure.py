@@ -45,7 +45,7 @@ Usage:
     python HAT_groin_position_figure.py
     python HAT_groin_position_figure.py --preset zeroBE
 
-Writes to output/groin_sweep/figures/:
+Writes to output/calibration/groin/figures/:
     position_<preset>.png
 
 Author: Hannah A. Henry, UNC CECL
@@ -76,6 +76,7 @@ for _path in (SCRIPTS_DIR, _HERE.parent):
 from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save, _title)
 from HAT_groin_sweep_config import (  # noqa: E402
+    GROIN_SWEEP_ROOT,
     END_YEAR,
     FIT_DOMAINS_GIS,
     GROIN_DOWNDRIFT_GIS,
@@ -420,7 +421,7 @@ def draw(preset, chainage):
     if not drew_any:
         plt.close(figure)
         return None
-    figure_dir = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
+    figure_dir = GROIN_SWEEP_ROOT / "figures"
     figure_dir.mkdir(parents=True, exist_ok=True)
     return save(figure, figure_dir / f"position_{preset}.png", close=True)[0]
 

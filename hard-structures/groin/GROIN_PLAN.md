@@ -82,7 +82,7 @@ already reproduces the measured history. **No period-specific configuration.**
 | `deterioration_ramp_years` | 7 (→ 2003) | storm damage |
 | `updrift / downdrift` | GIS 6 / 5 | field occupies D6 |
 
-Written to `output/groin_sweep/joint_fit.json`, which stage 6 and
+Written to `output/calibration/groin/joint_fit.json`, which stage 6 and
 `HAT_be_zone_residual_fit.py` both read.
 
 ### The fit that supports these values
@@ -147,7 +147,7 @@ Three further limits, all measured:
   an **effective, grid-specific, field-aggregate** rate — not a sediment flux,
   not divisible by four for a per-structure value.
 - **Only ~3% of what the dipole injects is retained** *(measured 2026-08-30,
-  `output/groin_sweep/figures/sediment_budget.png`)*. Over the rig's 50 years at
+  `output/calibration/groin/figures/sediment_budget.png`)*. Over the rig's 50 years at
   M = 60, f = 0.6 the module applies **2,400 m** of cumulative one-sided
   displacement — ±28.7 million m³ — and holds a fillet of **69 m** (peak 129 m).
   BRIE's alongshore diffusion removes the rest. So M is the rate needed to
@@ -206,9 +206,9 @@ Things that looked like problems and were not, or vice versa:
 
 | | |
 |---|---|
-| fitted values | `output/groin_sweep/joint_fit.json` |
-| two-period sweeps | `output/groin_sweep/<period>_<preset>/` |
-| continuous 1984–2024 sweep | `output/groin_sweep/fullperiod_1984_2024/` |
+| fitted values | `output/calibration/groin/joint_fit.json` |
+| two-period sweeps | `output/calibration/groin/<period>_<preset>/` |
+| continuous 1984–2024 sweep | `output/calibration/groin/fullperiod_1984_2024/` |
 | 1967 rig | `hard_structures/groin/HAT-hindcast-groin-test/sensitivity_sweep/` |
 | GIS analysis | `hard_structures/groin/HAT-groin-gis-analysis/` |
 | observed fillet table | `HAT-groin-test-output/shoreline_position_output/Change_from_wetdry_1967_D2_D12.csv` |

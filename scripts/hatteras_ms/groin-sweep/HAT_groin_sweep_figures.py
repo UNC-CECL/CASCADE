@@ -56,7 +56,7 @@ Usage:
     python HAT_groin_sweep_figures.py --period 2004 --preset zeroBE
     python HAT_groin_sweep_figures.py --top-n 8
 
-Writes to output/groin_sweep/<start>_<end>_<preset>/figures/:
+Writes to output/calibration/groin/<start>_<end>_<preset>/figures/:
     heatmap.png              fillet error and reach RMSE over the M-f grid
     best_fit_profile.png     winning cell's LRR against CoastSat
     top_n_profiles.png       the best N cells on the same axes

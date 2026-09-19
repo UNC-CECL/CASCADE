@@ -31,7 +31,7 @@ WHAT IS PLOTTED
 Usage:
     python HAT_rig_f_bracket_figure.py
 
-Writes output/groin_sweep/figures/rig_f_bracket.png
+Writes output/calibration/groin/figures/rig_f_bracket.png
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -54,10 +54,11 @@ if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
 SWEEP_CSV = (PROJECT_BASE_DIR / "hard-structures" / "groin"
              / "HAT-buxton-hindcast-groin-test" / "sensitivity_sweep"
              / "HAT_groin_sweep_results.csv")
-FIGURE_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
+FIGURE_DIR = GROIN_SWEEP_ROOT / "figures"
 
 if str(PROJECT_BASE_DIR / "scripts") not in sys.path:
     sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
+from HAT_groin_sweep_config import GROIN_SWEEP_ROOT  # noqa: E402
 from site_layer.hat_figure_style import (apply_style, C, C_1984, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save, _title)
 

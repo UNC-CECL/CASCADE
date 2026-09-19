@@ -9,7 +9,7 @@ the structure actually acts on.
 
 STYLE, 2026-09-11
     Under the house style (`scripts/site_layer/hat_figure_style.py`). The footnote
-    paragraph is now the caption in output/groin_sweep/figures/CAPTIONS.md, the
+    paragraph is now the caption in output/calibration/groin/figures/CAPTIONS.md, the
     canvas is a 190 mm printed column instead of 14.5 in, and the bars are the
     house BASE grey for the baseline against ACCENT purple for the run under
     test. The per-domain deltas keep a green/red split, which is the one place
@@ -17,7 +17,7 @@ STYLE, 2026-09-11
     1984/1997 vintages -- nothing on this figure is a vintage, and the whole
     point of panel (b) is which domains moved the wrong way.
 
-Writes output/groin_sweep/figures/fig_d4d7_window.png (and .pdf)
+Writes output/calibration/groin/figures/fig_d4d7_window.png (and .pdf)
 """
 from __future__ import annotations
 import json, sys
@@ -29,20 +29,21 @@ import numpy as np, pandas as pd
 _H = Path(__file__).resolve(); BASE = _H.parents[3]
 for p in (BASE/"scripts", _H.parent):
     if str(p) not in sys.path: sys.path.insert(0, str(p))
+from HAT_groin_sweep_config import GROIN_SWEEP_ROOT
 from HAT_fullperiod_target import observed_change_profile
 from site_layer.hat_figure_style import (apply_style, C, C_1984, INK, INK_MUTED, caption,
                               figsize, open_frame, save, _title)
 
 SH = list(range(1, 13)); FIT = list(range(4, 8))     # D4-D7
 fi = [SH.index(k) for k in FIT]
-OUT = BASE/"output"/"groin_sweep"/"figures"
+OUT = GROIN_SWEEP_ROOT/"figures"
 # BETTER / WORSE on panel (b) only; ACC is the run under test, FOIL the
 # baseline it is scored against.
 BETTER, WORSE = C["REF"], C_1984
 ACC, FOIL, BAND = C["ACCENT"], C["BASE"], "0.94"
 
 d = pd.DataFrame([json.loads(l) for l in
-                  open(BASE/"output"/"groin_sweep"/"1984_2004_edgeBE"/"sweep_results.jsonl")
+                  open(GROIN_SWEEP_ROOT/"1984_2004_edgeBE"/"sweep_results.jsonl")
                   if l.strip()])
 d = d[(d.be1 == -42.6) & d.differential_err.notna()]
 # LANDWARD-POSITIVE from here on, so erosion is UP and panel (a) reads as a
