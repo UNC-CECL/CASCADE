@@ -1,6 +1,6 @@
 # 1996 island offsets, extended reach `n115` (GIS 1 to 115)
 
-Built 2026-09-18 15:02 by `scripts/input_prep/2-brie-offset/1-produce/build_island_offset.py --geometry n115` from `duneline_1997.geojson` (1997 imagery). An EXPERIMENT input (the Pea Island extension, 2026-09-16), not a version: `../../CURRENT` still names `v3`, which this build reproduces exactly on GIS 1-90 (max |diff| 0.000000 m, checked by step 2).
+Built 2026-09-18 15:02 by `scripts/input_prep/2-brie-offset/1-produce/build_island_offset.py --geometry n115` from `duneline_1997.geojson` (1997 imagery). An EXPERIMENT input (the Pea Island extension, 2026-09-16), not a version: `../../CURRENT` named `v3` (renumbered `v1` on 2026-09-19), which this build reproduces exactly on GIS 1-90 (max |diff| 0.000000 m, checked by step 2).
 
 ## What is different from the surveyed build
 
@@ -10,7 +10,7 @@ Built 2026-09-18 15:02 by `scripts/input_prep/2-brie-offset/1-produce/build_isla
 
 ## Files
 
-`Island_Dune_Offsets_1996_PADDED_145.csv` (read by the model when `HAT_GEOMETRY=n115`), `_CASCADE_Input.csv`, `_CASCADE_Input_unpadded.csv`, `_buffer_diagnostic.png`, and `1997_duneline_offset_raw_ext.csv` (the extension raw this was built from; the surveyed raw is the one `v3` keeps).
+`Island_Dune_Offsets_1996_PADDED_145.csv` (read by the model when `HAT_GEOMETRY=n115`), `_CASCADE_Input.csv`, `_CASCADE_Input_unpadded.csv`, `_buffer_diagnostic.png`, and `1997_duneline_offset_raw_ext.csv` (the extension raw this was built from; the surveyed raw is the one `v3`, now `v1`, keeps).
 
 ## Rebuild
 

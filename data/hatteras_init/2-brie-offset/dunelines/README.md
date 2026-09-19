@@ -22,9 +22,9 @@ from a USGS metadata file and from memory).
 |---|---|---|---|---|
 | `duneline_1967.geojson` | EPSG:26918 | 96 | none | oldest, unused so far |
 | `duneline_1984.geojson` | EPSG:26918 | 495 | none | the 1984 initial condition; USGS photo of 1984-09-19 |
-| `duneline_1997.geojson` | EPSG:3725 | 529 | full* | **re-digitized 2026-09-18** from the USGS photo of 1997-10-12; behind `2-brie-offset/1996/v3/` (CURRENT). Also what `HAT_measure_duneline_shift.py` reads |
+| `duneline_1997.geojson` | EPSG:3725 | 529 | full* | **re-digitized 2026-09-18** from the USGS photo of 1997-10-12; behind `2-brie-offset/1996/v1/` (CURRENT; built as v3, renumbered 2026-09-19). Also what `HAT_measure_duneline_shift.py` reads |
 | `duneline_2004.geojson` | EPSG:3725 | 158 | partial | the 2004 initial condition; Google Earth capture of 2004-05-25 |
-| `duneline_2009.geojson` | EPSG:26918 | 603 | none | **re-digitized 2026-09-18** (behind `2-brie-offset/2010/v2/`, CURRENT); Google Earth capture of 2009-05-30; stands in for the **2010** start (no 2010 aerial imagery), `DUNE_LINE_FOR_YEAR[2010] == 2009` |
+| `duneline_2009.geojson` | EPSG:26918 | 603 | none | **re-digitized 2026-09-18** (behind `2-brie-offset/2010/v1/`, CURRENT; built as v2, renumbered 2026-09-19); Google Earth capture of 2009-05-30; stands in for the **2010** start (no 2010 aerial imagery), `DUNE_LINE_FOR_YEAR[2010] == 2009` |
 | `duneline_2023.geojson` | EPSG:26918 | 749 | none | **re-digitized 2026-09-18**; first added 2026-09-15 as `duneline_2024` and renamed for its imagery, the NOAA NGS 2023 set under `D:\Hatteras_GIS\Aerial3`; stands in for the **2024** end year, `DUNE_LINE_FOR_YEAR[2024] == 2023` |
 
 `HAT_measure_duneline_shift.py` reads THIS directory first and falls back to
@@ -78,13 +78,13 @@ way: the new line lies SEAWARD of the old.
 
 | line | domains moved ≥ 0.5 m | largest | build |
 |---|---|---|---|
-| 1997 (vs 1997_v2) | 32 of 90 | 66.2 m, GIS 35 | `1996/v3/`, `offset_1996_v2_vs_v3.csv` |
-| 2009 | 50 of 90 | 65.6 m, GIS 2 | `2010/v2/`, `offset_2010_v1_vs_v2.csv` |
+| 1997 (vs 1997_v2) | 32 of 90 | 66.2 m, GIS 35 | `1996/v1/` (was v3), `offset_1996_v2_vs_v3.csv` |
+| 2009 | 50 of 90 | 65.6 m, GIS 2 | `2010/v1/` (was v2), `offset_2010_v1_vs_v2.csv` |
 | 2023 | 53 of 90 | 44.6 m, GIS 32 | no build (only an end year); `raw_offsets/2023_...` |
 
 Rebuilt from the new lines the same day:
 - the three raw offset files and the two Pea Island extension raws
-- `1996/v3`, `2010/v2` and `1996/ext/n115`
+- `1996/v3`, `2010/v2` and `1996/ext/n115` (since 2026-09-19 `1996/v1` and `2010/v1`: the numbering restarts at the re-digitized lines, the earlier builds are under `<start>/superseded_20260919_pre-redigitized/`)
 - `5-scr/4-comparisons/duneline_vs_coastsat/`, for the three windows that
   use these lines
 
