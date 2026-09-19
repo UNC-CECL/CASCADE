@@ -1,5 +1,5 @@
 ==========================================================================
-generated   2026-09-17 12:12:09 by HAT_relocation_period_compare.py
+generated   2026-09-18 23:29:36 by HAT_relocation_period_compare.py
 event       1999  GIS [9, 10, 11, 12, 13, 14]
 periods     1984-2004 and 1996-2010
 version     v2
@@ -18,13 +18,13 @@ PRESET zeroBE
       arm B       HAT_1984_2004_zeroBE_road_reloc_bdm_nogroin
             run 2026-09-15 09:56:48   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
   1996: output\comparisons\relocation\1996_2010\v2\zeroBE
-      generated   2026-09-15 09:53:34 by HAT_relocation_comparison.py
+      generated   2026-09-18 23:28:36 by HAT_relocation_comparison.py
       period      1996-2010
       preset      zeroBE
       arm A       HAT_1996_2010_zeroBE_road_bdm_nogroin
-            run 2026-09-15 09:27:25   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+            run 2026-09-18 15:52:42   topo 1984-start/v2   commit 7e492c345232  DIRTY TREE
       arm B       HAT_1996_2010_zeroBE_road_reloc_bdm_nogroin
-            run 2026-09-15 09:31:17   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+            run 2026-09-18 15:54:48   topo 1984-start/v2   commit 7e492c345232  DIRTY TREE
 
 --------------------------------------------------------------------------
 1. RETREAT ACCUMULATED BEFORE THE EVENT, free-running arm
@@ -119,13 +119,13 @@ PRESET edgeBE
       arm B       HAT_1984_2004_edgeBE_road_reloc_bdm_nogroin
             run 2026-09-15 10:02:06   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
   1996: output\comparisons\relocation\1996_2010\v2\edgeBE
-      generated   2026-09-15 09:54:47 by HAT_relocation_comparison.py
+      generated   2026-09-18 23:29:19 by HAT_relocation_comparison.py
       period      1996-2010
       preset      edgeBE
       arm A       HAT_1996_2010_edgeBE_road_bdm_nogroin
-            run 2026-09-15 09:34:58   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+            run 2026-09-18 15:39:28   topo 1984-start/v2   commit 7e492c345232  DIRTY TREE
       arm B       HAT_1996_2010_edgeBE_road_reloc_bdm_nogroin
-            run 2026-09-15 09:39:22   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+            run 2026-09-18 15:41:41   topo 1984-start/v2   commit 7e492c345232  DIRTY TREE
 
 --------------------------------------------------------------------------
 1. RETREAT ACCUMULATED BEFORE THE EVENT, free-running arm
@@ -203,7 +203,7 @@ PRESET edgeBE
    period        arm  domains  drowned  relocation_blocked  relocations  overwash_removed_m3  dunes_rebuilt
 1984-2004       free        6        0                   0            2         46477.087036             11
 1984-2004 prescribed        6        1                   0            2         51392.203326             11
-1996-2010       free        6        0                   0            0         49559.157322             12
-1996-2010 prescribed        6        0                   0            0         43423.480809             12
+1996-2010       free        6        0                   0            0         49535.086443             12
+1996-2010 prescribed        6        0                   0            0         43434.609370             12
 
   figure -> setback_trajectories_1999_edgeBE.png
