@@ -13,8 +13,8 @@ gis,pad,drowned,relocation_blocked,last_managed_year,reason,overwash_removed_m3,
 20,34,False,False,15,managed throughout,6368.14285239467,2,0
 32,46,False,False,15,managed throughout,1497.7077359448606,2,0
 33,47,False,False,15,managed throughout,2172.496424734301,2,0
-34,48,False,False,15,managed throughout,1788.5412447934696,2,0
-35,49,False,False,15,managed throughout,1928.195648633987,2,0
+34,48,False,False,15,managed throughout,1553.3794104136816,2,0
+35,49,False,False,15,managed throughout,1404.7291908864765,1,0
 36,50,False,False,15,managed throughout,1681.979888057713,1,0
 37,51,False,False,15,managed throughout,1267.481621074681,2,0
 38,52,False,False,15,managed throughout,2089.9959187507684,2,0
@@ -26,10 +26,10 @@ gis,pad,drowned,relocation_blocked,last_managed_year,reason,overwash_removed_m3,
 44,58,False,False,15,managed throughout,4326.232383730224,2,0
 45,59,False,False,15,managed throughout,7342.670228998495,2,0
 46,60,False,False,15,managed throughout,7790.40851757777,2,0
-47,61,False,False,15,managed throughout,3082.401247024541,0,0
+47,61,False,False,15,managed throughout,5111.764589561678,2,0
 48,62,False,False,15,managed throughout,6831.153113386414,2,0
 49,63,False,False,15,managed throughout,2751.6621757117573,1,0
-50,64,False,False,15,managed throughout,8375.149858340365,2,0
+50,64,False,False,15,managed throughout,8204.893551549207,2,0
 51,65,False,False,15,managed throughout,7439.210390375069,2,0
 52,66,False,False,15,managed throughout,5617.797000329779,2,0
 53,67,False,False,15,managed throughout,7840.589624496652,2,0
@@ -42,7 +42,7 @@ gis,pad,drowned,relocation_blocked,last_managed_year,reason,overwash_removed_m3,
 60,74,False,False,15,managed throughout,5129.947044631914,2,0
 61,75,False,False,15,managed throughout,3536.1891846392905,2,0
 62,76,False,False,15,managed throughout,4317.245902173569,2,0
-63,77,False,False,15,managed throughout,4713.1541965723645,2,0
+63,77,False,False,15,managed throughout,3402.0150324821534,0,0
 64,78,False,False,15,managed throughout,3829.8098312202515,2,0
 65,79,False,False,15,managed throughout,1908.9386250416178,2,0
 66,80,False,False,15,managed throughout,1625.845260800356,2,0

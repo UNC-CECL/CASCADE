@@ -1,5 +1,13 @@
 # 2026-09-16-peaisland-ext
 
+> **Re-run 2026-09-19 on the re-digitized 1997 line** (1996 offsets v1, `ext/n115`
+> rebuilt 09-18). Every run here was re-made; the runs quoted below are in
+> `output/raw_runs/archive/2026-09-19-pre-redigitized-sens-exp/`. The reading
+> stands unchanged. The numbers moved by 0.01-0.02 m/yr: base edgeBE interior RMSE
+> 1.141 -> 1.129, n115 edgeBE 1.098 -> 1.087 (a 0.04 gain, as before), north term
+> +42.0 at GIS 115 (unchanged), detrended runs still near 9. Current values
+> are in `RESULTS.md`; the numbers in the text below are the 2026-09-16 ones.
+
 **Question.** Does the orientation of the buffer beyond the modelled reach
 change the hindcast? The matrix models GIS 1-90 and pads each end with 15
 invented domains that extrapolate the local shoreline slope; edgeBE then
