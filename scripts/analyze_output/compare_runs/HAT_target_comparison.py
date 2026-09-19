@@ -282,11 +282,18 @@ def end_values(rows_by_key):
     return out
 
 
-def paired_figure(observations, frames, half, skill_df, ends):
+def paired_figure(observations, frames, half, skill_df, ends, smoothed=False):
     """Each target with the run solved on it, ONE FIGURE PER WINDOW, one panel
     per target (Hannah, 2026-09-19, style B of three rendered candidates):
     the target as the house fill (blue seaward, red landward), its run as the
-    black line, the misfit the gap between them. Both windows on one y axis."""
+    black line, the misfit the gap between them. Both windows on one y axis.
+
+    smoothed=True (2026-09-19, Hannah): the fill is the target AS GRADED (raw
+    domain means over GIS 1-10, the 10-domain LOESS beyond, the form the runs
+    and the edge solve are scored against), the raw domain means as dots over
+    it; written to paired_smoothed/."""
+    sfx = "_loess" if smoothed else ""
+    tgt = {"coastsat": "coastsat" + sfx, rw.MAIN_DUNE: "duneline" + sfx}
     for (key, w), (_, _, n) in ends.items():
         if n != 2:
             raise SystemExit(f"{key} {w}: {n} nonzero source/sink domains, expected "
@@ -302,8 +309,13 @@ def paired_figure(observations, frames, half, skill_df, ends):
         fig, axes = plt.subplots(2, 1, sharex=True, sharey=True, constrained_layout=True,
                                  figsize=figsize("double", height=5.6))
         for i, (ax, (key, col, _, _, _)) in enumerate(zip(axes, PAIR_KEYS)):
-            obs.draw_panel(ax, df.assign(mean_lrr=df[col], std_lrr=0.0), half,
+            fill_col = col.replace("_m", "_loess_m") if smoothed else col
+            obs.draw_panel(ax, df.assign(mean_lrr=df[fill_col], std_lrr=0.0), half,
                            label=(i == 0), std=False)
+            if smoothed:
+                raw = df[col].to_numpy(float)
+                ax.scatter(x, raw, s=9, lw=0, alpha=0.8, zorder=11,
+                           c=np.where(raw < 0, obs.C_ERODE, obs.C_ACCRETE))
             obs.draw_shoals(ax, label=(i == 0))
             ax.plot(x, df[f"model_{MODEL_SETS[key]}_m"], color=INK, lw=LW_MODEL, zorder=12)
             ax.yaxis.set_major_locator(MultipleLocator(20.0 if half > 60 else 10.0))
@@ -313,12 +325,18 @@ def paired_figure(observations, frames, half, skill_df, ends):
             obs.draw_fills(axes[0], fills, half)
         axes[-1].set_xlabel(DOMAIN_AXIS_LABEL)
         fig.supylabel(Y_LABEL, fontsize=9)
-        fig.legend(handles=[(Line2D([], [], color=obs.C_ACCRETE, lw=1.0),
-                             Line2D([], [], color=obs.C_ERODE, lw=1.0)),
-                            Line2D([], [], color=INK, lw=LW_MODEL)],
-                   labels=["Target, net change over 14 yr (seaward / landward)",
-                           "CASCADE, ends solved on that target"],
-                   loc="outside lower center", ncol=2, frameon=False,
+        handles = [(Line2D([], [], color=obs.C_ACCRETE, lw=1.0),
+                    Line2D([], [], color=obs.C_ERODE, lw=1.0))]
+        labels = [("Target as graded (raw GIS 1–10, LOESS beyond)"
+                   if smoothed else "Target, net change over 14 yr (seaward / landward)")]
+        if smoothed:
+            handles.append((Line2D([], [], color=obs.C_ACCRETE, marker="o", ms=3, lw=0),
+                            Line2D([], [], color=obs.C_ERODE, marker="o", ms=3, lw=0)))
+            labels.append("Raw domain means")
+        handles.append(Line2D([], [], color=INK, lw=LW_MODEL))
+        labels.append("CASCADE, ends solved on that target")
+        fig.legend(handles=handles, labels=labels, loc="outside lower center",
+                   ncol=len(handles), frameon=False,
                    handler_map={tuple: HandlerTuple(ndivide=None, pad=0.3)})
         (c1, c90, _), (d1, d90, _) = ends[("coastsat", o.window)], ends[(rw.MAIN_DUNE, o.window)]
         fig.suptitle("{}–{}: source/sink correction at the end domains (GIS 1 and 90) only; "
@@ -331,8 +349,11 @@ def paired_figure(observations, frames, half, skill_df, ends):
         caption(fig, (
             f"{o.window[0]}–{o.window[1]}: each candidate target with the CASCADE run "
             "calibrated to it, as net change in shoreline position over the 14-yr model "
-            "window by GIS domain (1 at Cape Point, 90 at Pea Island), seaward positive, "
-            "domain means. (a) The CoastSat target, " + cs_clause() + " "
+            "window by GIS domain (1 at Cape Point, 90 at Pea Island), seaward positive; "
+            + ("the targets SMOOTHED as the runs are graded: the raw domain means over "
+               "GIS 1–10 and a 10-domain LOESS of the transect values beyond, drawn as the "
+               "fill, with the raw domain means as dots. " if smoothed else "domain means. ")
+            + "(a) The CoastSat target, " + cs_clause() + " "
             "x 14 yr, as the fill (blue seaward, red landward), and the edgeBE run whose "
             "two end domains were solved against it (black). (b) The dune-line target, "
             f"the measured net change between the digitized lines ({m['start_date']} to "
@@ -344,18 +365,20 @@ def paired_figure(observations, frames, half, skill_df, ends):
             "misfit. THE ONLY SOURCE/SINK CORRECTION IN EITHER RUN IS THE BOUNDARY TERM AT "
             "GIS 1 AND GIS 90, whose values are in the figure title; every domain from GIS "
             "2 to 89 carries none, so the interior is the model's own response. Full "
-            "management, groin off. Interior GIS 2–89, model minus its own target: (a) "
+            "management, groin off. Interior GIS 2–89, model minus its own "
+            + ("smoothed " if smoothed else "") + "target: (a) "
             "{:+.1f} m bias, {:.1f} m RMSE; (b) {:+.1f} m bias, {:.1f} m RMSE. The y axis "
             "(±{:g} m) is the same on every figure in target_comparison.{} Scores against the other "
-            "target and the LOESS-smoothed targets are in tables/skill.csv.".format(
-                sk.loc[(w, "ends_solved_on_coastsat", "coastsat"), "bias_m"],
-                sk.loc[(w, "ends_solved_on_coastsat", "coastsat"), "rmse_m"],
-                sk.loc[(w, "ends_solved_on_duneline", "duneline"), "bias_m"],
-                sk.loc[(w, "ends_solved_on_duneline", "duneline"), "rmse_m"], half,
+            "target, raw and smoothed, are in tables/skill.csv.".format(
+                sk.loc[(w, "ends_solved_on_coastsat", tgt["coastsat"]), "bias_m"],
+                sk.loc[(w, "ends_solved_on_coastsat", tgt["coastsat"]), "rmse_m"],
+                sk.loc[(w, "ends_solved_on_duneline", tgt[rw.MAIN_DUNE]), "bias_m"],
+                sk.loc[(w, "ends_solved_on_duneline", tgt[rw.MAIN_DUNE]), "rmse_m"], half,
                 over_note([(df, ["coastsat_target_m", "model_ends_solved_on_coastsat_m",
                                  "dune_target_m", "model_ends_solved_on_duneline_m"], "")],
                           half))))
-        out += save(fig, OUT_DIR / "paired" / f"target_and_own_run_{w}")
+        out += save(fig, OUT_DIR / ("paired_smoothed" if smoothed else "paired")
+                    / f"target_and_own_run_{w}{'_smoothed' if smoothed else ''}")
         plt.close(fig)
     return out
 
@@ -407,8 +430,10 @@ def main() -> int:
     written = []
     for key, folder in MODEL_SETS.items():
         written += figure(observations, frames, key, folder, half, skill_df)
-    written += paired_figure(observations, frames, half, skill_df,
-                             end_values({k: rows for k, (_, rows) in models.items()}))
+    ends = end_values({k: rows for k, (_, rows) in models.items()})
+    written += paired_figure(observations, frames, half, skill_df, ends)
+    if CS_MODE == "full":   # the smoothed version, full-period only (Hannah)
+        written += paired_figure(observations, frames, half, skill_df, ends, smoothed=True)
 
     print(skill_df[skill_df["target"].isin(["coastsat", "duneline"])].to_string(index=False))
     print(f"\ny axis +/-{half:g} m")

@@ -23,6 +23,9 @@ the runs are graded in.
   in BOTH windows, paired with runs whose ends were solved against it
   (`raw_runs/experiments/2026-09-19-edgesolve-lrr1996_2024/`: GIS 1 / 90 =
   +28.5 / +24.5 in 1996–2010, +37.1 / +25.4 in 2010–2024).
+  `coastsat_full_period_lrr/paired_smoothed/` is the same pairing with both
+  targets drawn as GRADED (raw domain means over GIS 1–10, 10-domain LOESS
+  beyond) as the fill and the raw domain means as dots (Hannah, 2026-09-19).
 - `coastsat_subperiod_lrr/` — kept for the record: each window's own LRR (what
   the runner grades against), paired with the matrix runs.
 
