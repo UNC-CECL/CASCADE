@@ -11,8 +11,8 @@ READS    3-rates/coastsat/5yr_bins/<window>/lrr_bins_5yr.csv
          positions, domain MEAN, |rate| > 50 m/yr dropped, bins under 3.75 yr
          dropped)
 DRAWS    one stacked panel per bin, filled blue where the shoreline moved
-         seaward and red where it moved landward (the coastsat_windows
-         drawing, imported); ONE y axis for all three figures, the largest
+         seaward and red where it moved landward (the coastsat_lrr_windows
+         panel drawing, imported); ONE y axis for all three figures, the largest
          |rate| over GIS 2-90 plus 1 m rounded up, with GIS 1 clipped and
          labelled where it runs past (Hannah, 2026-09-18). Village bands, the groin and
          piers, the offshore shoals as faint hatched boxes; a model-input
@@ -155,7 +155,7 @@ def figure(window, half):
         "a triangle and its value"
         + (" (" + "; ".join(f"{lab}: GIS {g} at {v:+.1f} m/yr" for lab, g, v in clipped)
            + ")" if clipped else "")
-        + ". The window-length figures in coastsat_windows use ±8, so these are "
+        + ". The window-length figures in 3-rates/coastsat/lrr use ±8, so these are "
         "not read against them panel for panel."))
     out = save(fig, OUT_ROOT / window / f"lrr_5yr_bins_{window}")
     plt.close(fig)

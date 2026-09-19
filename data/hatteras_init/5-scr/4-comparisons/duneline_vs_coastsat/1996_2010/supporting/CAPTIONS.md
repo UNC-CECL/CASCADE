@@ -1,7 +1,0 @@
-# Captions — 1996_2010
-
-Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
-
-**`scatter_dune_vs_coastsat.png`.** Per-domain net change of the digitized dune line against the CoastSat shoreline over the same interval, 1997–2009 (standing in for 1996–2010), n = 90 domains, both as net change over the survey interval, seaward positive. The shoreline is the mean CoastSat position within six months of each dune-line image date, differenced. Dashed: 1:1; purple: least-squares fit (r = 0.66, slope = 0.73, RMSE = 2.02 m/yr, bias shoreline − dune = +1.22 m/yr). The six domains farthest from 1:1 are labelled. See PROVENANCE.md for the survey dates.
-
-**`alongshore_dune_vs_coastsat.png`.** Net change of the dune line and the CoastSat shoreline, 1997–2009 (standing in for 1996–2010), by GIS domain. Both lines are NET CHANGE over the same survey interval, divided by it, seaward positive. Red: the digitized dune line, end line minus start line. Blue: the CoastSat shoreline, the mean satellite position within six months of each dune-line image date, end minus start. Both are read from the stored products in 5-scr/3-rates (duneline/endpoint, coastsat/endpoint). Where they part, the beach widened or narrowed. Red and blue here mark the two features, not the sign or the vintage. Bands mark Buxton, Avon and the Tri-Village; the solid hairline is the Buxton groin, the dotted ones the Avon and Rodanthe piers. Domain 1 is Cape Point, 90 is Pea Island.

@@ -32,9 +32,12 @@ Y BOUNDS
     panel to +/-9 with nothing above 7 (the 2026-09-15 first cut). The value
     used is written to supporting/y_bounds.txt.
 
-OUTPUT   data/hatteras_init/5-scr/4-comparisons/coastsat_windows/
-    ONE FOLDER PER WINDOW, the grid at the top -- the duneline_vs_coastsat/
-    layout (2026-09-18; until then every figure sat flat in one folder)
+OUTPUT   data/hatteras_init/5-scr/3-rates/coastsat/lrr/  (since 2026-09-19)
+    ONLY the 2 x 2 is drawn now. Until 2026-09-19 this wrote
+    4-comparisons/coastsat_windows/ with one folder per window and the
+    --overlay halves figure too; those duplicated rates_figures.py's window
+    and chain figures and were archived (--overlay is retired). The listing
+    below is as it was.
     lrr_four_windows.png           2 x 2: the 1984-start period in the left
                                    column, the 1996-start period in the right
     supporting/
@@ -538,9 +541,9 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     if args.overlay:
-        apply_style()
-        OUT_DIR.mkdir(parents=True, exist_ok=True)
-        return run_overlay(args.overlay)
+        # RETIRED 2026-09-19: the halves overlay duplicated the 3-rates chain
+        # figure (lrr/chains/lrr_chain_1996_2010_2024) and was archived.
+        sys.exit("--overlay is retired; see 3-rates/coastsat/lrr/chains/")
 
     if args.windows:
         windows = [tuple(int(v) for v in w.split("_")) for w in args.windows]
@@ -564,10 +567,10 @@ def main(argv=None):
         wide[f"std_{a}_{b}"] = df["std_lrr"].round(3)
     wide.to_csv(support_dir(OUT_DIR) / "lrr_windows_wide.csv", index=False)
 
-    written = []
-    for (a, b), df in zip(windows, frames):
-        written += single_figure(a, b, df, half)
-    written += grid_figure(windows, frames, half)
+    # Since 2026-09-19 only the 2 x 2 is drawn, into 3-rates/coastsat/lrr/
+    # (OUT_DIR). The per-window figures are rates_figures.py's; drawing them
+    # here too would overwrite 3-rates/coastsat/lrr/<w>/lrr_<w>.png.
+    written = grid_figure(windows, frames, half)
 
     print(f"y bounds  +/-{half:g} m/yr")
     for p in written:

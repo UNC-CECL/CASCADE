@@ -32,4 +32,4 @@ through `hat_observed_rates.lrr_csv()` / `COASTSAT_LRR_ROOT`.
 python scripts/input_prep/5-scr/CoastSat/coastsat_domain_lrr_fixed.py --start-year 1996 --end-year 2010
 ```
 then redraw the figure beside it, `<window>/lrr_<window>.png`, with
-`python scripts/input_prep/5-scr/rates_figures.py`. The cross-window comparison is `4-comparisons/coastsat_windows/`.
+`python scripts/input_prep/5-scr/rates_figures.py`. The 2 x 2 of the four model windows is `lrr_four_windows.png` here (moved from `4-comparisons/coastsat_windows/` on 2026-09-19).

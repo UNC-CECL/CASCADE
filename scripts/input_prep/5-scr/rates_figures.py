@@ -8,7 +8,7 @@ figures"). This replaces the autoscaled quick-looks the LRR fit used to draw
 
 WHAT EACH FIGURE SHOWS
     The per-domain value as the sign-coloured line and fill of the
-    coastsat_windows figures (blue seaward, red landward; the drawing is
+    coastsat_lrr_windows panel (blue seaward, red landward; the drawing is
     imported), the individual transects behind it as small dots coloured by
     their OWN sign (the same blue / red; Hannah, 2026-09-18), and the
     village bands, groin and piers, the offshore shoals as faint hatched boxes,

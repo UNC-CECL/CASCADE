@@ -386,8 +386,8 @@ def main():
     # draw were autoscaled, titled and coloured by magnitude, a second picture
     # of the numbers that clashed with the house-style figures; they are in
     # 5-scr/archive/coastsat_lrr_quicklooks_20260918/. The window's figure is
-    #     python scripts/input_prep/5-scr/CoastSat/coastsat_lrr_windows.py
-    # -> 4-comparisons/coastsat_windows/<window>/. plot_domain_lrr and
+    #     python scripts/input_prep/5-scr/rates_figures.py
+    # -> 3-rates/coastsat/lrr/<window>/lrr_<window>.png (since 2026-09-19). plot_domain_lrr and
     # plot_transect_scatter are kept, unused, for a one-off look.
 
     return summary, transect_df

@@ -34,23 +34,16 @@ runs (2026-09-18):
                              each window, m and m/yr (2026-09-18; replaced
                              duneline_lrr/, an OLS through every line in the
                              window -- Hannah: "we are tracking net change")
-4-comparisons/
-    coastsat_windows/        the four windows on ONE y axis: the 2 x 2 by
-                             period at the top, ONE FOLDER PER WINDOW below
-                             it, and 1996_2024/ for the long window
-    duneline_vs_coastsat/    the digitized dune line against the CoastSat
-                             shoreline, ONE FOLDER PER WINDOW, and the four
-                             windows as one 2 x 2 (alongshore_four_windows)
-    duneline_windows/        net dune-line change IN METRES over 1996-2024
-                             (the 1997/2009/2023 lines) and its two halves;
-                             the mirror of coastsat_windows/1996_2024/
-    net_change_1996_2024/    net shoreline vs net dune-line change in METRES,
-                             1996-2024 and its halves; the gap is beach width
+4-comparisons/                 one folder per QUESTION (reorganized 2026-09-19)
+    shoreline_vs_duneline/   does the dune line move with the shoreline? Every
+                             alongshore figure in metres with the beach-width gap
+        net_change/<window>/     observed net change on both sides, per window
+                                 (1984_2004 ... 1996_2024), stacked figure, chains/
+        projected/1996_2024/     the shoreline as the 1996-2024 LRR projected over
+                                 the dune-line interval
     duneline_positions/      WHERE the 1997/2009/2023 dune lines sat: an
                              island overview, imagery zooms, and the dune
                              line's distance to NC-12 and to the shoreline
-    trajectory_patterns/     trajectory classification output
-    two_period_comparison/   1984-2004 against 2004-2024
 archive/                     kept, not for use
     coastsat_lrr_superseded_20260810/   retired windows (1978-1997, 1997-2019);
                                         6-scr-smooth's DSAS comparison still reads them
@@ -59,6 +52,10 @@ archive/                     kept, not for use
     coastsat_lrr_quicklooks_20260918/   the autoscaled bar and scatter PNGs that
                                         used to sit beside each LRR fit
     duneline_lrr_retired_20260918/      the dune-line OLS, retired for endpoint
+    2026-09-19_4-comparisons_duplicates/ coastsat_windows/ and duneline_windows/:
+                                        their figures duplicated 3-rates (window
+                                        and chain figures); the 2 x 2 moved to
+                                        3-rates/coastsat/lrr/lrr_four_windows
     rodanthe_plots/                     poster figures; the script writes to
                                         output/figures/shoreline/ now
 ```
@@ -70,8 +67,16 @@ were renamed in the move:
 |---|---|
 | `1-observations/dsas_1978_2019/` | `scr-dsas-1978-2019/` |
 | `3-rates/coastsat/5yr_bins/` | `coastsat_timeseries_lrr/` |
-| `4-comparisons/coastsat_windows/` | `coastsat_lrr_windows/` |
-| `4-comparisons/trajectory_patterns/` | `shoreline_change_patterns/` |
+| `4-comparisons/coastsat_windows/` | `coastsat_lrr_windows/` (archived 2026-09-19) |
+| `4-comparisons/trajectory_patterns/` | `shoreline_change_patterns/` (output deleted 2026-09-19) |
+
+On 2026-09-19 `4-comparisons/` went from eight folders to two (Hannah):
+`duneline_vs_coastsat/`, `net_change_1996_2024/` and `projected_vs_duneline/`
+merged into `shoreline_vs_duneline/`; `coastsat_windows/` and
+`duneline_windows/` archived as duplicates of `3-rates/`;
+`two_period_comparison/` (03-31) and `trajectory_patterns/` (06-09) deleted as
+stale, on the old 1984/2004 periods (their scripts still exist and would
+regenerate them).
 
 ### The geojsons are not in git
 
@@ -127,13 +132,13 @@ The **producers stayed** in `scripts/input_prep/5-scr/`:
 | `CoastSat_timeseries/coastsat_lrr_5year_bins.py` | `3-rates/coastsat/5yr_bins/` |
 | `duneline_endpoint/duneline_endpoint.py` | `3-rates/duneline/endpoint/<window>/` |
 | `coastsat_endpoint/coastsat_endpoint.py` | `3-rates/coastsat/endpoint/<window>/` |
-| `net_change/net_change_1996_2024.py` | `4-comparisons/net_change_1996_2024/` |
+| `net_change/net_change_1996_2024.py` | `4-comparisons/shoreline_vs_duneline/net_change/chains/` |
+| `projected_vs_duneline/projected_vs_duneline.py` | `4-comparisons/shoreline_vs_duneline/projected/` |
 | `duneline_positions/duneline_positions.py` | `4-comparisons/duneline_positions/` |
-| `CoastSat/coastsat_lrr_windows.py` | `4-comparisons/coastsat_windows/` |
-| `duneline_vs_coastsat/duneline_vs_coastsat.py` | `4-comparisons/duneline_vs_coastsat/` |
-| `duneline_windows/duneline_windows.py` | `4-comparisons/duneline_windows/` |
-| `shoreline_change_patterns/` | `4-comparisons/trajectory_patterns/` |
-| `CoastSat/coastsat_two_period_comparison.py` | `4-comparisons/two_period_comparison/` |
+| `CoastSat/coastsat_lrr_windows.py` | `3-rates/coastsat/lrr/lrr_four_windows` (the 2 x 2 only, since 2026-09-19) |
+| `duneline_vs_coastsat/duneline_vs_coastsat.py` | `4-comparisons/shoreline_vs_duneline/net_change/<window>/` |
+| `shoreline_change_patterns/` | `4-comparisons/trajectory_patterns/` (not current: old periods) |
+| `CoastSat/coastsat_two_period_comparison.py` | `4-comparisons/two_period_comparison/` (not current: old periods) |
 | `shoreline_inventory/HAT_shoreline_inventory.py` | `1-observations/shoreline_inventory/` |
 
 ## Rebuilding a window
@@ -164,8 +169,10 @@ Nourishment is left in: Rodanthe 2014 sits mid-window, and Buxton and Avon
 2022 sit two years from its end. A fill is a step, which a single slope fits
 poorly, so read those domains as "includes placed sand". Nothing is masked.
 
-Its figure is `4-comparisons/coastsat_windows/1996_2024/lrr_1996_2024_halves.png`
-(`coastsat_lrr_windows.py --overlay 1996_2024`), two stacked panels: (a) the
+Its figures are `3-rates/coastsat/lrr/1996_2024/lrr_1996_2024.png` and the
+chain figure `3-rates/coastsat/lrr/chains/lrr_chain_1996_2010_2024.png`. Until
+2026-09-19 it was `4-comparisons/coastsat_windows/1996_2024/lrr_1996_2024_halves.png`
+(`coastsat_lrr_windows.py --overlay 1996_2024`, now retired and archived), two stacked panels: (a) the
 long window filled by sign, with the model-input fill footprints as bars
 above it; (b) 1996-2010 (grey) and 2010-2024 (black) as plain lines. The
 shoal zones (Avon, Wimble) are faint amber-hatched, outlined boxes behind
@@ -177,8 +184,10 @@ means are side by side in `supporting/lrr_1996_2024_halves.csv`. The figure is a
 
 ## Comparing windows
 
-`4-comparisons/coastsat_windows/` is the only place the four windows are
-drawn against each other. `scripts/input_prep/5-scr/CoastSat/coastsat_lrr_windows.py`
+`3-rates/coastsat/lrr/lrr_four_windows.png` is the one place the four windows
+are drawn against each other (in `4-comparisons/coastsat_windows/` until
+2026-09-19; since then `coastsat_lrr_windows.py` draws only this 2 x 2, the
+per-window figures being `rates_figures.py`'s). The text below describes it as it was. `scripts/input_prep/5-scr/CoastSat/coastsat_lrr_windows.py`
 reads each `domain_lrr_summary.csv` through the resolver, pins the y axis at
 the largest |mean| over all of them plus 1 m, rounded up to the metre
 (written to `supporting/y_bounds.txt`), and writes `lrr_four_windows`, a
@@ -190,9 +199,11 @@ autoscales, so it is not the figure to compare across windows.
 
 ## Dune line against the shoreline
 
-`4-comparisons/duneline_vs_coastsat/README.md` is the methods report: the
+`4-comparisons/shoreline_vs_duneline/README.md` is the map (since 2026-09-19);
+`4-comparisons/shoreline_vs_duneline/net_change/README.md` (was
+`4-comparisons/duneline_vs_coastsat/README.md`) is the methods report: the
 three rates, the imagery date behind each line, what is inside each endpoint
-window, and the results table. `4-comparisons/duneline_vs_coastsat/<start>_<end>/`
+window, and the results table. `4-comparisons/shoreline_vs_duneline/net_change/<start>_<end>/`
 differences two digitized dune lines (`2-brie-offset/raw_offsets/`, read the
 way the hindcast loader reads them) and puts the per-domain rate against the
 CoastSat shoreline two ways: the LRR already in
@@ -206,6 +217,6 @@ redraws every window on disk as `alongshore_four_windows.png` on one y
 axis: four full-width panels stacked, the 1984-start pair above the
 1996-start pair, each as wide as a single-window figure (Hannah, 2026-09-15:
 the 2 x 2 was too small to read). `--layout grid` gives the 2 x 2 by period
-that `4-comparisons/coastsat_windows/lrr_four_windows` uses. The 1984 line is
+that `3-rates/coastsat/lrr/lrr_four_windows` uses. The 1984 line is
 the 1984-09-19 photo and the 2004 line the 2004-05-25 Google Earth capture;
 neither file carries its date, the script's `KNOWN_SURVEY_DATES` does.
