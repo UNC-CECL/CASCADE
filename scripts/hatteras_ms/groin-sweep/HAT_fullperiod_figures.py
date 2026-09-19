@@ -30,8 +30,8 @@ WHAT AN INTERIOR OPTIMUM WOULD MEAN
 Usage:
     python HAT_fullperiod_figures.py [--top-n 5]
 
-Reads  output/groin_sweep/fullperiod_1984_2024/results.csv
-Writes output/groin_sweep/fullperiod_1984_2024/figures/
+Reads  output/calibration/groin/fullperiod_1984_2024/results.csv
+Writes output/calibration/groin/fullperiod_1984_2024/figures/
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -52,6 +52,7 @@ for _path in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+from HAT_groin_sweep_config import GROIN_SWEEP_ROOT  # noqa: E402
 from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, error_cmap, figsize, open_frame,
                               save)
@@ -62,7 +63,7 @@ from HAT_fullperiod_target import (  # noqa: E402
     observed_change_profile,
 )
 
-OUT_ROOT = PROJECT_BASE_DIR / "output" / "groin_sweep" / "fullperiod_1984_2024"
+OUT_ROOT = GROIN_SWEEP_ROOT / "fullperiod_1984_2024"
 RESULTS_CSV = OUT_ROOT / "results.csv"
 FIGURE_DIR = OUT_ROOT / "figures"
 

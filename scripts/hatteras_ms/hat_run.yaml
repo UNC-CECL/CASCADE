@@ -118,7 +118,7 @@ offset_mode: asrun
 #   purpose, because the fit was about to be redone against the 1984-start
 #   topography. It has been, on the corrected island, and the answer did not
 #   move: M = 60, f = 0.6. So the placeholders are gone and this file now
-#   agrees with output/groin_sweep/joint_fit.json. f = 0.9 was never fitted at
+#   agrees with output/calibration/groin/joint_fit.json. f = 0.9 was never fitted at
 #   all and should not reappear.
 #
 #   NOT JOINTLY FITTED -- the old comment below said so and it was wrong.

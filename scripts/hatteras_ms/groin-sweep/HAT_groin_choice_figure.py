@@ -54,7 +54,7 @@ WHAT THE FIGURE DOES NOT CLAIM
 Usage:
     python HAT_groin_choice_figure.py
 
-Writes output/groin_sweep/figures/why_M60_f06.png
+Writes output/calibration/groin/figures/why_M60_f06.png
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -74,6 +74,7 @@ for _path in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+from HAT_groin_sweep_config import GROIN_SWEEP_ROOT  # noqa: E402
 from cascade_pipeline.hindcast import implied_interception_m3_yr  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS as GEOMETRY  # noqa: E402
 
@@ -82,8 +83,8 @@ from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa
                               caption, error_cmap, figsize, open_frame, save,
                               _title)
 
-SWEEP = PROJECT_BASE_DIR / "output" / "groin_sweep" / "1984_2004_edgeBE"
-FIGURE_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
+SWEEP = GROIN_SWEEP_ROOT / "1984_2004_edgeBE"
+FIGURE_DIR = GROIN_SWEEP_ROOT / "figures"
 
 FIT_DOMAINS = list(range(4, 9))          # D4-D8: excludes the cape at D1
 PINNED_BE1 = -40.0                       # nearest grid value to production's -41.8

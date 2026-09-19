@@ -84,6 +84,10 @@ if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
         f"pyproject.toml. This file expects to live in "
         f"scripts/hatteras_ms/groin-sweep/.")
 SCRIPTS_DIR = PROJECT_BASE_DIR / "scripts"
+# Every groin-sweep product lives under here: the sweeps, joint_fit.json (an
+# INPUT that HAT_run_all.py stage 6 reads), the figures and SELECTED_. Moved
+# from output/calibration/groin/ on 2026-09-18; build paths from this, never by hand.
+GROIN_SWEEP_ROOT = PROJECT_BASE_DIR / "output" / "calibration" / "groin"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
@@ -106,7 +110,7 @@ from site_layer.hatteras_site_config import (  # noqa: E402
 #     (edgeBE, zeroBE), both of which are solved for all four starts, so
 #     the matrix is unaffected; a calibBE run on 1996 or 2010 raises the
 #     explicit "not solved for that period" error from be_rates().
-#   * the pinned groin fit (M = 60, f = 0.6 in output/groin_sweep/
+#   * the pinned groin fit (M = 60, f = 0.6 in output/calibration/groin/
 #     joint_fit.json) was fitted on PERIOD 1 = 1984-2004 and records
 #     fit_period 1984. Stage 5 run under this pair intersects the 1996 and
 #     2010 surfaces instead and would produce a different pair -- and that
@@ -577,7 +581,7 @@ def sweep_output_dir(period, preset):
     raw = os.environ.get("HAT_SWEEP_HS", "").strip()
     if raw and float(raw) != 2.5:
         stem += "_Hs" + f"{float(raw):g}".replace(".", "p")
-    return PROJECT_BASE_DIR / "output" / "groin_sweep" / stem
+    return GROIN_SWEEP_ROOT / stem
 
 
 def joint_fit_paths():
@@ -592,7 +596,7 @@ def joint_fit_paths():
     Returns:
         (json_path, csv_path).
     """
-    out = PROJECT_BASE_DIR / "output" / "groin_sweep"
+    out = GROIN_SWEEP_ROOT
     raw = os.environ.get("HAT_SWEEP_HS", "").strip()
     suffix = ""
     if raw and float(raw) != 2.5:

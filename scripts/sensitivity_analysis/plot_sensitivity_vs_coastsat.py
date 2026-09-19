@@ -86,7 +86,7 @@ _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
 #     wave_asymmetry/ ...
 #     wave_angle_high_fraction/ ...
 
-SESSION_DIR = str(_PATH_REPO / "output" / "sensitivity_analysis" / "HAT_1984_2004_waveSensitivity_20260508_154602")
+SESSION_DIR = str(_PATH_REPO / "output" / "calibration" / "sensitivity" / "HAT_1984_2004_waveSensitivity_20260508_154602")
 
 # Period being plotted — must match the sensitivity run
 START_YEAR = 1984

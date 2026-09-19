@@ -38,7 +38,7 @@ DOMAINS D2-D12, matching the extent of the 1967 wet/dry survey and centred on
 the groin at D5/D6. D1 is excluded: the cape's change over period 1 is 81-104 m,
 about five times the groin's signal, and it swamps the axis.
 
-Writes output/groin_sweep/figures/zoom_gifs_D2_D12/
+Writes output/calibration/groin/figures/zoom_gifs_D2_D12/
 """
 from __future__ import annotations
 import sys
@@ -52,12 +52,13 @@ import numpy as np
 _H = Path(__file__).resolve(); BASE = _H.parents[3]
 for p in (BASE/"scripts", _H.parent):
     if str(p) not in sys.path: sys.path.insert(0, str(p))
+from HAT_groin_sweep_config import GROIN_SWEEP_ROOT
 from HAT_fullperiod_target import observed_change_profile
 from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED, figsize,
                               open_frame, record_caption)
 
-SWEEP = BASE/"output"/"groin_sweep"/"1984_2004_edgeBE"
-OUT = BASE/"output"/"groin_sweep"/"figures"/"zoom_gifs_D2_D12"
+SWEEP = GROIN_SWEEP_ROOT/"1984_2004_edgeBE"
+OUT = GROIN_SWEEP_ROOT/"figures"/"zoom_gifs_D2_D12"
 BE, BUF = "-42.6", 15                 # real GIS n -> padded index BUF + (n-1)
 DOM = list(range(2, 13)); FIT = list(range(4, 9))
 PAD = [BUF + (n - 1) for n in DOM]

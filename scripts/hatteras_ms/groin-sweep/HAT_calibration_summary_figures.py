@@ -74,7 +74,7 @@ STYLE, 2026-09-11
 Usage:
     python HAT_calibration_summary_figures.py
 
-Writes output/groin_sweep/figures/ (untracked; the PDFs beside the PNGs are).
+Writes output/calibration/groin/figures/ (untracked; the PDFs beside the PNGs are).
 Reasoning and results: CALIBRATION_FIGURES.md, beside this file.
 """
 
@@ -99,20 +99,21 @@ for _p in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
+from HAT_groin_sweep_config import GROIN_SWEEP_ROOT  # noqa: E402
 from HAT_fullperiod_target import observed_change_profile  # noqa: E402
 from site_layer.hat_figure_style import (apply_style, C, C_1984, C_1997,  # noqa: E402
                               INK, INK_MUTED, caption, error_cmap, figsize,
                               open_frame, save, _title)
 
-SWEEP = (PROJECT_BASE_DIR / "output" / "groin_sweep" / "1984_2004_edgeBE"
+SWEEP = (GROIN_SWEEP_ROOT / "1984_2004_edgeBE"
          / "sweep_results.jsonl")
 # The LIVE full-period sweep, not the 2026-08-28 archive. This pointed into
-# `superseded_20260828/`, which is a "do not use for analysis" tree, and
+# `superseded_20260828/` (now `output/archive/2026-08-28_full-tree/`), which is a "do not use for analysis" tree, and
 # that one line was the only thing keeping 12 GB of superseded output
 # undeletable. The live file carries the same 16 columns and the same 43 rows.
-FULLPERIOD = (PROJECT_BASE_DIR / "output" / "groin_sweep"
+FULLPERIOD = (GROIN_SWEEP_ROOT
               / "fullperiod_1984_2024" / "results.csv")
-OUT = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
+OUT = GROIN_SWEEP_ROOT / "figures"
 
 PINNED_BE1 = -42.6
 FIT_DOMAINS = list(range(4, 9))

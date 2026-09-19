@@ -198,7 +198,7 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     # `wave...` token in its name and lands in its own directory. Without that
     # token a sensitivity cell would derive the SAME name as the matrix run it
     # is being compared against, and the last one to finish would be left
-    # wearing the production name -- the failure output/groin_sweep/README.md
+    # wearing the production name -- the failure output/calibration/groin/README.md
     # documents for the rig sweep.
     #
     # The three below `hs` were literals in section 11 of the .py until

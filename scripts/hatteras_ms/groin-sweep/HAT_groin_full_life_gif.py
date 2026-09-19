@@ -50,7 +50,7 @@ WHAT IS PLOTTED
 Usage:
     python HAT_groin_full_life_gif.py
 
-Writes output/groin_sweep/figures/full_life_gif/shoreline_D2-D12_1967_2017.gif
+Writes output/calibration/groin/figures/full_life_gif/shoreline_D2-D12_1967_2017.gif
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -84,7 +84,7 @@ for _path in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
 from cascade_pipeline.run_layout import resolve  # noqa: E402
 from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               figsize, open_frame, record_caption)
-from HAT_groin_sweep_config import WETDRY_CHANGE_TABLE  # noqa: E402
+from HAT_groin_sweep_config import GROIN_SWEEP_ROOT, WETDRY_CHANGE_TABLE  # noqa: E402
 
 # The rig pads 11 real domains (D2-D12) with 15 buffer either side: D2 -> 15,
 # D5 -> 18, D6 -> 19, D12 -> 25. The RIG's convention, which differs from
@@ -93,14 +93,15 @@ RIG_BUFFER, RIG_FIRST_GIS, RIG_START_YEAR = 15, 2, 1967
 DOMAINS = list(range(2, 13))
 PAD = [RIG_BUFFER + (n - RIG_FIRST_GIS) for n in DOMAINS]
 
-# The rig lives in output/rig_runs/, not output/raw_runs/ (moved 2026-08-31).
+# The rig lives in output/calibration/groin_rig/, not output/raw_runs/ (moved 2026-08-31;
+# under calibration/ since 2026-09-18).
 # It is a DIFFERENT GRID -- 41 domains against production's 120 -- and M is
 # grid-specific, so mixing the two invited quoting a rig number as a
 # production one. raw_runs is production only, and run_index.csv covers it.
-RAW_RUNS = PROJECT_BASE_DIR / "output" / "rig_runs"
+RAW_RUNS = PROJECT_BASE_DIR / "output" / "calibration" / "groin_rig"
 GROIN_RUN = "HAT_1967_2018_edge_calibrated_groin"
 NO_GROIN_RUN = "HAT_1967_2018_edge_calibrated_no_groin"
-OUT_DIR = (PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
+OUT_DIR = (GROIN_SWEEP_ROOT / "figures"
            / "full_life_gif")
 
 EXPECT_M, EXPECT_F = 60.0, 0.6

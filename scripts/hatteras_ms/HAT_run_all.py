@@ -152,7 +152,8 @@ from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_ROAD_EVENTS,
 )
 
-from HAT_groin_sweep_config import END_YEAR, PERIODS, PRESETS  # noqa: E402
+from HAT_groin_sweep_config import (END_YEAR, GROIN_SWEEP_ROOT, PERIODS,  # noqa: E402
+                                    PRESETS)
 
 # The matrix's preset axis is WIDER than the sweep's. PRESETS is the pair the
 # groin sweep fits M and f against, and it stays the default because the
@@ -170,13 +171,13 @@ JOINT_FIT = GROIN_SWEEP_DIR / "HAT_groin_joint_fit.py"
 
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
 RUN_INDEX = RAW_RUNS / "run_index.csv"
-SWEEP_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep"
+SWEEP_DIR = GROIN_SWEEP_ROOT
 JOINT_JSON = SWEEP_DIR / "joint_fit.json"
 
 PARAMETER_FILE = (PROJECT_BASE_DIR / "data" / "hatteras_init"
                   / "Hatteras-CASCADE-parameters.yaml")
 
-DRIVER_DIR = PROJECT_BASE_DIR / "output" / "driver"
+DRIVER_DIR = PROJECT_BASE_DIR / "output" / "logs" / "driver"
 MANIFEST = DRIVER_DIR / "driver_manifest.jsonl"
 LOG_DIR = DRIVER_DIR / "logs"
 LOCK = DRIVER_DIR / "driver.lock"

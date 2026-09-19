@@ -17,7 +17,7 @@ WHAT TO LOOK FOR
       fig_d4d7_window.png makes numerically -- the groin's gain comes from D4,
       outside the dipole, while D5 (downdrift) gets worse.
 
-Writes output/groin_sweep/figures/profiles_by_M/
+Writes output/calibration/groin/figures/profiles_by_M/
     fig_all_M_profiles.png     the grid, for comparison across M
     fig_M<value>.png           one file per M, for detail
 """
@@ -31,6 +31,7 @@ import numpy as np, pandas as pd
 _H = Path(__file__).resolve(); BASE = _H.parents[3]
 for p in (BASE/"scripts", _H.parent):
     if str(p) not in sys.path: sys.path.insert(0, str(p))
+from HAT_groin_sweep_config import GROIN_SWEEP_ROOT
 from HAT_fullperiod_target import observed_change_profile
 from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED, caption,
                               figsize, open_frame, save, _title)
@@ -38,11 +39,11 @@ from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED, caption
 SH = list(range(1, 13)); FIT = list(range(4, 9))
 fi = [SH.index(k) for k in FIT]
 PINNED_BE1, YRS = -42.6, 20.0
-OUT = BASE/"output"/"groin_sweep"/"figures"/"profiles_by_M"
+OUT = GROIN_SWEEP_ROOT/"figures"/"profiles_by_M"
 apply_style()
 
 d = pd.DataFrame([json.loads(l) for l in
-                  open(BASE/"output"/"groin_sweep"/"1984_2004_edgeBE"/"sweep_results.jsonl")
+                  open(GROIN_SWEEP_ROOT/"1984_2004_edgeBE"/"sweep_results.jsonl")
                   if l.strip()])
 d = d[(d.be1 == PINNED_BE1) & d.differential_err.notna()].copy()
 obs = np.array([observed_change_profile(1984, 2004, SH)[k] for k in SH])

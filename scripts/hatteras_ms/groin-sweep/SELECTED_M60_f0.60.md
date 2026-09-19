@@ -1,5 +1,5 @@
 <!-- TRACKED MIRROR. The live copy is
-     output/groin_sweep/SELECTED_M60_f0.60/README.md, beside the figures it
+     output/calibration/groin/SELECTED_M60_f0.60/README.md, beside the figures it
      describes -- but .gitignore excludes output/*, so that copy does not
      survive a clone. This mirror exists for the same reason
      CALIBRATION_FIGURES.md does: the reasoning has to outlive the PNGs.

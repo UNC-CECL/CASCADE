@@ -103,7 +103,7 @@ from HAT_hindcast_config import field_default  # noqa: E402
 AXIS_ORDER = ("wave_height", "wave_period", "wave_asymmetry",
               "wave_angle_high_fraction", "relocation_setback")
 
-OUT_ROOT = PROJECT_BASE_DIR / "output" / "sensitivity_analysis"
+OUT_ROOT = PROJECT_BASE_DIR / "output" / "calibration" / "sensitivity"
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
 RUN_INDEX = RAW_RUNS / "run_index.csv"
 # Where the runner reads them (COASTSAT_BASE_DIR in HAT_hindcast_1984_2024.py).

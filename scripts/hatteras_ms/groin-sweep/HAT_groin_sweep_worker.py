@@ -120,6 +120,7 @@ from site_layer.hatteras_site_config import (
 )
 
 from HAT_groin_sweep_config import (
+    GROIN_SWEEP_ROOT,
     DAM_TO_M,
     FIT_DOMAINS_GIS,
     FLIP_SIGN_MODEL,
@@ -651,7 +652,7 @@ def score_combo(model_lrr, geometry):
 # runs read, and duplicating that per worker trades a lock for a much larger
 # surface of things that can go stale.
 
-CONSTRUCT_LOCK = PROJECT_BASE_DIR / "output" / "groin_sweep" / ".construct.lock"
+CONSTRUCT_LOCK = GROIN_SWEEP_ROOT / ".construct.lock"
 CONSTRUCT_LOCK_TIMEOUT_S = 900
 CONSTRUCT_LOCK_STALE_S = 300
 
@@ -730,7 +731,7 @@ def cascade_construction_lock():
         _release_construct_lock()
 
 
-PRISTINE_PARAMETERS = (PROJECT_BASE_DIR / "output" / "groin_sweep"
+PRISTINE_PARAMETERS = (GROIN_SWEEP_ROOT
                        / ".parameters_pristine.yaml")
 
 

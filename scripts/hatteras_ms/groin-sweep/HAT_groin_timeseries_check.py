@@ -43,7 +43,7 @@ Usage:
     python HAT_groin_timeseries_check.py
     python HAT_groin_timeseries_check.py --M 50 --fraction 0.6
 
-Writes output/groin_sweep/figures/timeseries_check.png
+Writes output/calibration/groin/figures/timeseries_check.png
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -74,6 +74,7 @@ from site_layer.hatteras_site_config import HATTERAS_DOMAINS as GEOMETRY  # noqa
 from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save, _title)
 from HAT_groin_sweep_config import (  # noqa: E402
+    GROIN_SWEEP_ROOT,
     END_YEAR,
     GROIN_DOWNDRIFT_GIS,
     GROIN_UPDRIFT_GIS,
@@ -84,7 +85,7 @@ from HAT_groin_sweep_config import (  # noqa: E402
     sweep_output_dir,
 )
 
-FIGURE_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
+FIGURE_DIR = GROIN_SWEEP_ROOT / "figures"
 # House colours (2026-09-11): surveys in INK, the run under test the
 # ACCENT, the groin-off run BASE grey.
 OBSERVED_COLOR, ON_COLOR, OFF_COLOR = INK, C["ACCENT"], C["BASE"]

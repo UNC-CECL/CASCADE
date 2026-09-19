@@ -44,7 +44,7 @@ WHAT WOULD COUNT AS A SIGNAL
 Usage:
     python HAT_fullperiod_windows.py
 
-Reads  output/groin_sweep/fullperiod_1984_2024/results.csv
+Reads  output/calibration/groin/fullperiod_1984_2024/results.csv
 Writes fit_windows.csv beside it, and prints the comparison.
 
 Author: Hannah A. Henry, UNC CECL
@@ -65,9 +65,10 @@ for _path in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+from HAT_groin_sweep_config import GROIN_SWEEP_ROOT  # noqa: E402
 from HAT_fullperiod_target import observed_change_profile  # noqa: E402
 
-OUT_ROOT = PROJECT_BASE_DIR / "output" / "groin_sweep" / "fullperiod_1984_2024"
+OUT_ROOT = GROIN_SWEEP_ROOT / "fullperiod_1984_2024"
 RESULTS_CSV = OUT_ROOT / "results.csv"
 WINDOWS_CSV = OUT_ROOT / "fit_windows.csv"
 

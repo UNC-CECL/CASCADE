@@ -163,7 +163,7 @@ from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E40
 # addressed by absolute paths into output/raw_runs/source&sink_tests/ and at
 # the flat raw_runs/<name> level; neither exists in the tree any more, and
 # none of the four names appears in run_index.csv or in
-# superseded_20260828/. The four figures they produced sat at
+# superseded_20260828/ (now output/archive/2026-08-28_full-tree/). The four figures they produced sat at
 # output/comparisons/source_sink_zones/ (2026-06-19) until 2026-09-17, when
 # they were deleted as unregenerable; nothing cited them. Name live runs
 # below before running this script. (Checked 2026-09-02, 2026-09-17.)

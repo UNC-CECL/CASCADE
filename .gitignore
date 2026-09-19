@@ -145,12 +145,9 @@ output/*
 # product: HAT_run_all.py stage 6 reads it and passes its (M, f) to every groin
 # run in the matrix. Untracked, the calibrated pair lived on one machine only --
 # a clone had no groin parameters at all, and the values existed solely in
-# commit messages. Tracked, the pin travels with the repository.
-# The directory is re-included and then re-excluded so ONLY this file returns;
-# the sweep cells and figures beside it stay ignored.
-!output/groin_sweep/
-output/groin_sweep/*
-!output/groin_sweep/joint_fit.json
+# commit messages. Tracked, the pin travels with the repository. It lived at
+# output/groin_sweep/ until 2026-09-18; it is now output/calibration/groin/ and
+# is re-included by the output/calibration/ block below.
 
 # output/comparisons/ (one rule since 2026-09-17; before that a per-folder
 # whitelist for smoothing_vs_cascade, then rate_windows): every README,
@@ -168,6 +165,29 @@ output/comparisons/**
 !output/comparisons/**/CAPTIONS.md
 !output/comparisons/**/*.csv
 !output/comparisons/**/*.txt
+
+# The map of output/ and the archive's index (2026-09-18): the README says where
+# everything is, and each archive entry's README/WHY.md says what replaced it.
+# The retired files themselves stay ignored.
+!output/README.md
+!output/archive/
+output/archive/**
+!output/archive/**/
+!output/archive/**/README.md
+!output/archive/**/WHY.md
+
+# output/calibration/ (2026-09-18): the decision records -- hs/DECISION.md
+# (Hs = 2.5), sensitivity/figures/README.md, groin/SELECTED_M60_f0.60/README.md
+# (M, f) -- every folder's README, and groin/joint_fit.json (an INPUT), so
+# the reasons behind the calibrated values survive a clone. Runs, manifests,
+# logs and figures stay ignored.
+!output/calibration/
+output/calibration/**
+!output/calibration/**/
+!output/calibration/**/README.md
+!output/calibration/**/DECISION.md
+!output/calibration/groin/joint_fit.json
+!output/calibration/groin/SELECTED_M60_f0.60/README.md
 
 # large data / model output file types
 *.nc

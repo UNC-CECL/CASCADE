@@ -16,7 +16,7 @@ that change.
 
 Also here:
 - `run_index_snapshot.csv`, the index as it stood before the move.
-- `driver_manifest.jsonl`, moved out of `output/driver/` so that
+- `driver_manifest.jsonl`, moved out of `output/driver/` (now `output/logs/driver/`) so that
   HAT_run_all.py does not skip the re-run as already done (trap 2 in the
   run-archive notes).
 

@@ -3,7 +3,7 @@
 Five summary figures documenting the source/sink and groin calibrations, and
 **how they were tested**.
 
-The figures themselves are written to `output/groin_sweep/figures/`, which
+The figures themselves are written to `output/calibration/groin/figures/`, which
 `.gitignore` does not track — this file lives here so the reasoning survives
 even when the PNGs do not. Regenerate them with:
 

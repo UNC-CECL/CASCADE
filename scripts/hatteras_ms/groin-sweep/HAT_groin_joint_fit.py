@@ -44,11 +44,11 @@ WHAT THE ANSWER WILL LOOK LIKE, AND WHY
 Usage:
     python HAT_groin_joint_fit.py [--preset edgeBE] [--no-figures]
 
-Reads   output/groin_sweep/<period>_<preset>/sweep_results.csv  (all four)
-Writes  output/groin_sweep/joint_fit.json    fitted (M, f, be1) per preset
-        output/groin_sweep/joint_fit.csv     the full joint surface
-        output/groin_sweep/figures/joint_<preset>_surface.png
-        output/groin_sweep/joint_<preset>_constraints.png
+Reads   output/calibration/groin/<period>_<preset>/sweep_results.csv  (all four)
+Writes  output/calibration/groin/joint_fit.json    fitted (M, f, be1) per preset
+        output/calibration/groin/joint_fit.csv     the full joint surface
+        output/calibration/groin/figures/joint_<preset>_surface.png
+        output/calibration/groin/joint_<preset>_constraints.png
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -83,6 +83,7 @@ for _path in (SCRIPTS_DIR, _HERE.parent):
 from site_layer.hat_figure_style import (apply_style, C, C_1984, C_1997,  # noqa: E402
                               caption, error_cmap, figsize, open_frame, save)
 from HAT_groin_sweep_config import (  # noqa: E402
+    GROIN_SWEEP_ROOT,
     END_YEAR,
     F_VALUES,
     M_VALUES,
@@ -94,7 +95,7 @@ from HAT_groin_sweep_config import (  # noqa: E402
     joint_fit_paths,
 )
 
-OUTPUT_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep"
+OUTPUT_DIR = GROIN_SWEEP_ROOT
 # Figures live in a subdirectory; joint_fit.json does NOT. That file is read by
 # HAT_run_all.py (stage 6 takes its fitted M and f from it) and by
 # HAT_be_zone_residual_fit.py (which uses it to find a groin-aware base run),
