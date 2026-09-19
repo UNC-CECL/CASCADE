@@ -7,18 +7,29 @@ and captions under `supporting/`; and `alongshore_four_windows.png` at this
 level, the four windows on one y axis. Written 2026-09-15 (Hannah's design,
 by interview; the figures and numbers below are the state that evening).
 
+**Since 2026-09-18 both sides are NET CHANGE between the same two dates**
+(Hannah: the CoastSat-vs-dune comparison should use net position change on
+both sides). Both are read from the stored products in `3-rates/`
+(`duneline/endpoint` and `coastsat/endpoint`). The CoastSat LRR is no longer
+drawn or scored here; it stays the model's scoring target in
+`3-rates/coastsat/lrr/` and `rate_windows/coastsat/`.
+
 ```
 python scripts/input_prep/5-scr/duneline_vs_coastsat/duneline_vs_coastsat.py --start-year 1984 --end-year 2004
 python scripts/input_prep/5-scr/duneline_vs_coastsat/duneline_vs_coastsat.py --grid   # the stacked four
 ```
 
-## The three rates, per GIS domain, seaward positive
+## The two net changes, per GIS domain, seaward positive
 
-| rate | what it is | source |
+| side | what it is | stored product |
 |---|---|---|
-| **Dune line** | Two digitised lines differenced. Each line is intersected with the 100 m transects (`2-brie-offset/transects/`) by `duneline_to_raw_offsets.py`, one station per transect measured from the offshore datum line; the ~5 transects of each 500 m domain are averaged, exactly as the hindcast's end-year target loader reads the same files. End minus start, sign flipped so seaward is positive, divided by the interval between the two **survey dates**. | `2-brie-offset/raw_offsets/<vintage>_duneline_offset_raw.csv` |
-| **CoastSat LRR** | The linear regression rate: for each CoastSat transect, an ordinary-least-squares slope of waterline chainage against date over the calendar window (1 Jan of the start year to 31 Dec of the end year; ~250 observations per transect). Averaged over the ~10 transects in each domain. This is the quantity the model is graded against. | `5-scr/3-rates/coastsat/lrr/<start>_<end>/transect_lrr_full.csv` |
-| **CoastSat endpoint** | Built to be like-for-like with a two-survey dune line. For each transect, the mean chainage of every observation within **±6 months (182.6 days) of each survey date**, a one-year window centred on the survey so each end averages one full seasonal cycle. End mean minus start mean, divided by the survey interval. Averaged per domain the same way. | `5-scr/1-observations/coastsat_timeseries/`, computed per run into `supporting/transect_coastsat_endpoint.csv` |
+| **Dune line** | The end digitized line minus the start line. Each line is intersected with the 100 m transects by `duneline_to_raw_offsets.py`, one station per transect measured from the offshore datum; the ~5 transects of each 500 m domain are averaged. | `3-rates/duneline/endpoint/<window>/` |
+| **CoastSat shoreline** | For each CoastSat transect, the mean chainage within **±6 months (182.6 days) of each dune-line survey date**, end minus start, so each end averages one full seasonal cycle; averaged over the ~10 transects of each domain. | `3-rates/coastsat/endpoint/<window>/` |
+
+Both are drawn as the net change divided by the survey interval (m/yr), so
+the four windows of different length share one axis. The metres are in each
+window's `supporting/domain_comparison.csv`, along with the beach-width change
+(shoreline minus dune).
 
 A dune line and a waterline are different features. A gap between their
 rates is beach-width change as much as disagreement, and the purpose here is
@@ -41,7 +52,7 @@ period. The dates centre the endpoint windows and set the dune interval.
 
 So the survey intervals are 19.68 yr (1984–2004), 11.63 yr (1996–2010, really
 1997 to 2009), 19.10 yr (2004–2024, really to 2023) and 14.09 yr (2010–2024,
-really 2009 to 2023), while the LRR spans the calendar window in each case.
+really 2009 to 2023). Both sides of the comparison span exactly these intervals.
 
 Every raw dune file is built by the same shapely intersection since
 2026-09-15 (the 1984 and 2004 ArcGIS exports were rebuilt that afternoon), so
@@ -64,40 +75,29 @@ is an autumn-and-winter mean of about seven images, not a full seasonal cycle.
 | 2010–2024 | 2008-12-04 to 2009-11-05 | 9 | 2023-01-21 to 2023-12-15 | 39 |
 
 No transect had an empty window in any period (906 transects checked each
-time). A storm inside a window moves that end; that is why the LRR is
-reported beside the endpoint.
+time). A storm inside a window moves that end.
 
-## Results, island means over 90 domains (m/yr, seaward positive)
+## Results, over 90 domains (seaward positive)
 
-| window | dune line | CoastSat LRR | CoastSat endpoint | r, dune vs LRR / vs endpoint | slope | endpoint vs LRR, r |
+| window | dune line | CoastSat shoreline | beach width | r | slope (shoreline on dune) | RMSE (m/yr) |
 |---|---|---|---|---|---|---|
-| 1984–2004 | −0.78 | −1.13 | −0.99 | 0.44 / 0.50 | 0.41 / 0.49 | 0.94 |
-| 1996–2010 | −1.39 | −0.32 | −0.17 | 0.59 / 0.66 | 0.61 / 0.73 | 0.90 |
-| 2004–2024 | −0.09 | +0.49 | +0.41 | 0.25 / 0.37 | 0.23 / 0.34 | 0.93 |
-| 2010–2024 | +0.10 | +1.15 | +0.50 | 0.66 / 0.71 | 0.91 / 0.91 | 0.89 |
+| 1984–2004 | −15.4 m (−0.78 m/yr) | −19.4 m (−0.99) | −4.1 m | 0.50 | 0.49 | 1.98 |
+| 1996–2010 | −16.2 m (−1.39) | −2.0 m (−0.17) | +14.2 m | 0.66 | 0.73 | 2.02 |
+| 2004–2024 | −1.7 m (−0.09) | +7.8 m (+0.41) | +9.5 m | 0.37 | 0.34 | 1.89 |
+| 2010–2024 | +1.4 m (+0.10) | +7.0 m (+0.50) | +5.6 m | 0.71 | 0.91 | 1.33 |
 
-**The 1997, 2009 and 2023 lines were re-digitized on 2026-09-18**, and the
-three windows that use them were rebuilt the same day. The 1984–2004 row is
-unchanged (neither of its lines moved). With the old lines, dune against LRR
-gave r = 0.18 (1996–2010), 0.06 (2004–2024) and 0.51 (2010–2024).
+These are on the lines as re-digitized on 2026-09-18. The 1984–2004 row did
+not change with the re-digitization, since neither of its lines moved.
 
-Read across: the two CoastSat estimators agree with each other in every
-window (r 0.89–0.94), so none of the disagreement with the dune line is an
-estimator effect. Since the re-digitization, the dune line tracks the
-shoreline in every window except 2004–2024 (r 0.25). The rest of this
-paragraph was written on the 09-15 lines, and its domain-by-domain reading
-has NOT been re-checked against the new ones. In
-every window the dune line moves landward relative to the waterline by
-roughly 1 m/yr, strongest after 2004 when the shoreline advanced from Cape
-Point to Avon (GIS 1–20, 28–37) while the dune kept retreating; and the dune
-advanced at GIS 49–55 and 60–74 while the shoreline held. The single-domain
-spikes (GIS 1 in 1984–2004 and 1996–2010, GIS 78 in 1996–2010) read as
-digitising or feature questions on the individual lines, not coastal change.
+The dune line follows the shoreline's alongshore pattern in every window.
+2004–2024 is the weakest (r 0.37). In three windows of four, the dune line
+lost ground relative to the waterline, so the beach widened. 1984–2004 is the
+exception: there the shoreline retreated slightly more than the dune.
 
 ## Figures and conventions
 
-Red is the dune line, dark blue the CoastSat LRR, light blue dashed the
-CoastSat endpoint: the house red/blue pair marking FEATURE here, not vintage.
+Red is the dune line and dark blue the CoastSat shoreline, both as net change:
+the house red/blue pair marks FEATURE here, not vintage or sign.
 Village bands, the Buxton groin (solid hairline) and the Avon and Rodanthe
 piers (dotted) are drawn as on every alongshore figure. Domain 1 is Cape
 Point, 90 is Pea Island. Statistics are in each window's
