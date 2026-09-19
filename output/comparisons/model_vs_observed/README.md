@@ -99,7 +99,7 @@ estimator; the one pairing that mixes them is a sensitivity.
 the window's `transect_lrr_full.csv` through `hat_observed_rates.lrr_csv`;
 the scoring target is `cascade_pipeline.hindcast.build_target_table` on it,
 exactly as the runner makes it. The observed-only figure is
-`data/hatteras_init/5-scr/4-comparisons/coastsat_windows/`, and its drawing is imported
+`data/hatteras_init/5-scr/3-rates/coastsat/lrr/` (`rates_figures.py`), and its drawing is imported
 here rather than copied.
 
 **The dune line:**

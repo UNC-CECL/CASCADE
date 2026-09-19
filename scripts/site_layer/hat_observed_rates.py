@@ -46,17 +46,13 @@
 #                 endpoint/<window>/  net change between the two dune lines
 #                                     (m and m/yr; replaced duneline_lrr/)
 #         4-comparisons/
-#             coastsat_windows/       the four windows on one y axis
-#             duneline_vs_coastsat/   dune-line change vs the CoastSat
-#                                     shoreline, one folder per window
-#             duneline_windows/       net dune-line change in metres, a
-#                                     long window and its halves
-#             net_change_1996_2024/   CoastSat vs dune-line net change,
-#                                     1996-2024 and its halves (09-18)
+#             shoreline_vs_duneline/  (one question folder since 2026-09-19)
+#                 net_change/<window>/, net_change/chains/, projected/<window>/
 #             duneline_positions/     where the 1997/2009/2023 dune lines sat:
 #                                     maps, zooms, dune-road, beach width
-#             trajectory_patterns/    trajectory classification output
-#             two_period_comparison/  1984-2004 against 2004-2024
+#             (coastsat_windows/ and duneline_windows/ archived 2026-09-19 as
+#             duplicates of 3-rates; trajectory_patterns/ and
+#             two_period_comparison/ outputs deleted as stale)
 #         archive/                    retired windows, old 5-year-bin runs,
 #                                     the Rodanthe poster figures; not for use
 #
@@ -109,7 +105,13 @@ DUNELINE_RATES = RATES / "duneline"
 COASTSAT_LRR_ROOT = COASTSAT_RATES / "lrr"
 TRANSECT_DOMAINS = TRANSECT_FRAME / "transect_domains"
 TIMESERIES_LRR = COASTSAT_RATES / "5yr_bins"
-DUNELINE_VS_COASTSAT = COMPARISONS / "duneline_vs_coastsat"
+# Shoreline vs dune line, ONE question folder since 2026-09-19 (Hannah):
+# net_change/<window>/ (duneline_vs_coastsat.py, was 4-comparisons/
+# duneline_vs_coastsat/), net_change/chains/ (net_change_1996_2024.py, was
+# 4-comparisons/net_change_1996_2024/), projected/<window>/
+# (projected_vs_duneline.py).
+SHORELINE_VS_DUNELINE = COMPARISONS / "shoreline_vs_duneline"
+DUNELINE_VS_COASTSAT = SHORELINE_VS_DUNELINE / "net_change"
 # The stored dune-line observation (2026-09-18): the NET CHANGE between the
 # two lines that bound a window, per transect and per domain, in m and m/yr,
 # one folder per window. Written by
@@ -133,22 +135,31 @@ ENDPOINT_DOMAIN_FILE = "domain_endpoint_summary.csv"
 DUNE_ENDPOINT_TRANSECT_FILE = ENDPOINT_TRANSECT_FILE
 DUNE_ENDPOINT_DOMAIN_FILE = ENDPOINT_DOMAIN_FILE
 # The CoastSat and dune-line net change side by side, 1996-2024 and its
-# halves (net_change_1996_2024.py, 2026-09-18).
-NET_CHANGE_1996_2024 = COMPARISONS / "net_change_1996_2024"
+# halves (net_change_1996_2024.py, 2026-09-18): the net-change chain figure.
+NET_CHANGE_1996_2024 = DUNELINE_VS_COASTSAT / "chains"
+# The projected shoreline change (1996-2024 LRR x the dune-line interval)
+# against the dune line's net change, per domain (2026-09-19, Hannah). Written
+# by scripts/input_prep/5-scr/projected_vs_duneline/projected_vs_duneline.py.
+PROJECTED_VS_DUNELINE = SHORELINE_VS_DUNELINE / "projected"
 # Where the dune line sat in 1997, 2009 and 2023: maps, imagery zooms, and
 # its distance to NC-12 and to the CoastSat shoreline (duneline_positions.py,
 # 2026-09-18).
 DUNELINE_POSITIONS = COMPARISONS / "duneline_positions"
 SHORELINE_INVENTORY = OBSERVATIONS / "shoreline_inventory"
+# Outputs deleted 2026-09-19 (stale, on the old 1984/2004 periods); the
+# scripts would regenerate here.
 SHORELINE_PATTERNS = COMPARISONS / "trajectory_patterns"
 DSAS_ROOT = OBSERVATIONS / "dsas_1978_2019"
-# The four windows drawn on one y axis (coastsat_lrr_windows.py).
-COASTSAT_LRR_WINDOWS = COMPARISONS / "coastsat_windows"
-# Net dune-line change over a long window and its two halves, in metres
-# (duneline_windows.py, 2026-09-18): the endpoint mirror of the CoastSat
-# halves figure, one folder per window.
-DUNELINE_WINDOWS = COMPARISONS / "duneline_windows"
-# Two-window comparison figures (coastsat_two_period_comparison.py).
+# The four windows drawn on one y axis (coastsat_lrr_windows.py). Since
+# 2026-09-19 only its 2 x 2 is drawn, into 3-rates/coastsat/lrr/; the
+# per-window and halves figures duplicated 3-rates and were archived with
+# the old folder (archive/2026-09-19_4-comparisons_duplicates/).
+COASTSAT_LRR_WINDOWS = COASTSAT_LRR_ROOT
+# RETIRED 2026-09-19: duneline_windows.py duplicated 3-rates/duneline/
+# endpoint (window + chain figures); its output is archived.
+DUNELINE_WINDOWS = ARCHIVE / "2026-09-19_4-comparisons_duplicates" / "duneline_windows"
+# Two-window comparison figures (coastsat_two_period_comparison.py). Outputs
+# deleted 2026-09-19 (stale, old periods); the script would regenerate here.
 TWO_PERIOD_COMPARISON = COMPARISONS / "two_period_comparison"
 # Retired windows (1978-1997, 1997-2019 and their specific-dates variants),
 # kept for the DSAS comparison in 6-scr-smooth, never a grading target.

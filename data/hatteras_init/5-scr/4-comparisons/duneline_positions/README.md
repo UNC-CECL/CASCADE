@@ -69,7 +69,7 @@ so a re-digitized line can move a window.
     of the dune. Without that, 256–470 of the 906 missed the dune line in the
     first draw.
   - Island means: 34 m (1997), 48 m (2009), 54 m (2023). The steps (+14 m,
-    +6 m) match the beach-width change in `../net_change_1996_2024/`.
+    +6 m) match the beach-width change in `../shoreline_vs_duneline/net_change/chains/`.
   - **Caveat:** 12 transects give a negative width in 1997, all at GIS 2–5
     near Cape Point, where the 1997 line lies seaward of the satellite
     shoreline. That is a question about how the 1997 line was traced there,

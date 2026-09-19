@@ -30,8 +30,9 @@ WHAT IS DRAWN
     model-input fills as bars above the top panel -- the same marks as the
     two halves figures.
 
-OUTPUT   data/hatteras_init/5-scr/4-comparisons/net_change_1996_2024/
-    net_change_shoreline_vs_dune.png      also published to
+OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/net_change/chains/
+    (was 4-comparisons/net_change_1996_2024/ until 2026-09-19)
+    net_change_chain_1996_2010_2024.png   also published to
                                           output/figures/shoreline/
     supporting/
         domain_comparison.csv   one row per window x domain: shoreline, dune,
@@ -69,6 +70,8 @@ from matplotlib.patches import Patch  # noqa: E402
 from matplotlib.ticker import MultipleLocator  # noqa: E402
 
 import coastsat_lrr_windows as cw  # noqa: E402
+sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr" / "duneline_vs_coastsat"))
+from duneline_vs_coastsat import beach_width_handles, shade_beach_width  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     C_1984, C_1997, DOMAIN_AXIS_LABEL, INK_MUTED, _title, apply_style, caption,
     figsize, figure_dir, open_frame, save, structures, support_dir, town_bands,
@@ -82,7 +85,9 @@ WHOLE = (1996, 2024)
 HALVES = [(1996, 2010), (2010, 2024)]
 WINDOWS = [WHOLE] + HALVES
 N_DOMAINS = 90
-STEM = "net_change_shoreline_vs_dune"
+# The chain figure of shoreline_vs_duneline/net_change/ since 2026-09-19
+# (was 4-comparisons/net_change_1996_2024/net_change_shoreline_vs_dune).
+STEM = "net_change_chain_1996_2010_2024"
 
 C_SHORE = C_1997          # "#2166ac", the CoastSat blue of duneline_vs_coastsat
 C_DUNE = C_1984           # "#b2182b", its dune red
@@ -140,7 +145,7 @@ def draw(ax, df, half, label):
     ax.axhline(0, color=INK_MUTED, lw=0.6, zorder=2)
     x = df.index.to_numpy(float)
     ys, yd = df["shoreline_change_m"].to_numpy(float), df["dune_change_m"].to_numpy(float)
-    ax.fill_between(x, ys, yd, color=C_GAP, lw=0, zorder=3)
+    shade_beach_width(ax, x, ys, yd)
     ax.plot(x, yd, color=C_DUNE, lw=1.1, zorder=5)
     ax.plot(x, ys, color=C_SHORE, lw=1.1, zorder=5)
     structures(ax, label)
@@ -167,9 +172,9 @@ def caption_text(summ, half, fills):
         "(1997-10-12, 2009-05-30, and 2023-07-01, assumed; the 2023 flight date "
         "is not known), end minus start, averaged over the ~10 CoastSat transects "
         "of each 500 m domain. Red: the dune line, end line minus start line "
-        "along the 100 m transects, averaged over the ~5 of each domain. Grey: "
-        "the gap between them, the change in beach width (the shoreline gaining "
-        "on the dune where blue is above red). Both are measured between the same "
+        "along the 100 m transects, averaged over the ~5 of each domain. The gap "
+        "between them is the change in beach width: solid grey where the beach "
+        "widened (blue above red), hatched where it narrowed. Both are measured between the same "
         "dates, so (b) and (c) add up to (a) for each. Over 1997–2023 the "
         f"shoreline moved {w['mean_shoreline_change_m']:+.1f} m on average and "
         f"the dune line {w['mean_dune_change_m']:+.1f} m; r = "
@@ -222,14 +227,13 @@ def main() -> int:
         _title(ax, i, f"{int(meta['start_vintage'])}–{int(meta['end_vintage'])}")
     cw.draw_fills(axes[0], fills, half)
     axes[-1].set_xlabel(DOMAIN_AXIS_LABEL)
-    fig.supylabel("Net change in position (m, seaward +)", fontsize=9)
-    fig.legend(handles=[Line2D([], [], color=C_SHORE, lw=1.2),
-                        Line2D([], [], color=C_DUNE, lw=1.2),
-                        Patch(facecolor=C_GAP, lw=0)],
-               labels=["shoreline (CoastSat, ±6 months about each image date)",
-                       "dune line (digitized)",
-                       "beach-width change (the gap)"],
-               loc="outside lower center", ncol=3, frameon=False)
+    fig.supylabel("Net change in position (m)", fontsize=9)
+    fig.legend(handles=[Line2D([], [], color=C_SHORE, lw=1.2,
+                               label="Shoreline change (CoastSat endpoint)"),
+                        Line2D([], [], color=C_DUNE, lw=1.2,
+                               label="Dune-line change (endpoint)")]
+               + beach_width_handles(),
+               loc="outside lower center", ncol=4, frameon=False)
     caption(fig, caption_text(summ, half, fills))
     written = save(fig, out / STEM)
     written += save(fig, figure_dir("shoreline") / STEM)

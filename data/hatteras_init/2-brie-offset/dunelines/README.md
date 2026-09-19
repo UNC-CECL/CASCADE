@@ -85,7 +85,7 @@ way: the new line lies SEAWARD of the old.
 Rebuilt from the new lines the same day:
 - the three raw offset files and the two Pea Island extension raws
 - `1996/v3`, `2010/v2` and `1996/ext/n115` (since 2026-09-19 `1996/v1` and `2010/v1`: the numbering restarts at the re-digitized lines, the earlier builds are under `<start>/superseded_20260919_pre-redigitized/`)
-- `5-scr/4-comparisons/duneline_vs_coastsat/`, for the three windows that
+- `5-scr/4-comparisons/shoreline_vs_duneline/net_change/` (was `duneline_vs_coastsat/`), for the three windows that
   use these lines
 
 NOT rebuilt:

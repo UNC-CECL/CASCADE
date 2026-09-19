@@ -41,13 +41,15 @@ METHOD
     metre landward of the exact crossing; see raw_offsets/PROVENANCE.md), so
     a change between any two years carries no method term.
 
-OUTPUT   data/hatteras_init/5-scr/4-comparisons/duneline_vs_coastsat/<start>_<end>/
+OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/net_change/<start>_<end>/
+         (was 4-comparisons/duneline_vs_coastsat/ until 2026-09-19; the
+         alongshore figures are in METRES with the beach-width gap since then)
              scatter_dune_vs_coastsat.png     shoreline vs dune, 1:1
              alongshore_dune_vs_coastsat.png  the two net changes by domain
              supporting/                      the PDFs, CAPTIONS.md,
                  domain_comparison.csv            one row per GIS domain (m and m/yr)
                  PROVENANCE.md
-         data/hatteras_init/5-scr/4-comparisons/duneline_vs_coastsat/
+         data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/net_change/
              alongshore_four_windows.png      every window on one y axis,
                                               stacked full width (--grid;
                                               --layout grid for the 2 x 2)
@@ -234,32 +236,59 @@ def scatter_figure(dom: pd.DataFrame, out: Path, start: int, end: int,
     save(fig, out / "scatter_dune_vs_coastsat", close=True)
 
 
-Y_TICK = 2.0
-Y_LABEL = "Net change rate (m/yr)"
+# The alongshore figures are in METRES since 2026-09-19 (Hannah: one form for
+# every shoreline-vs-dune figure, net change with the beach-width gap).
+Y_TICK = 20.0
+Y_LABEL = "Net change in position (m)"
+# The gap between the two lines: widened solid grey, narrowed hatched. Shared
+# by net_change_1996_2024.py and projected_vs_duneline.py.
+C_GAP = "0.86"
+C_NARROW = "0.55"
+NARROW_HATCH = "////"
 STRUCTURE_LABEL_PT_GRID = 4.0   # the 2 x 2, whose panels are half the width
 
 
 def _half(*arrays) -> float:
-    """Symmetric y limit: the largest |value| plus 1 m, up to the 2 m tick."""
+    """Symmetric y limit: the largest |value| plus 5 m, up to the next 10 m."""
     v = np.concatenate([np.asarray(a, dtype=float).ravel() for a in arrays])
-    return float(np.ceil((np.nanmax(np.abs(v)) + 1.0) / Y_TICK) * Y_TICK)
+    return float(np.ceil((np.nanmax(np.abs(v)) + 5.0) / 10.0) * 10.0)
+
+
+def shade_beach_width(ax, x, shore, dune, zorder=3):
+    """The space between the shoreline and dune-line changes: solid grey where
+    the beach WIDENED (shoreline change > dune-line change), hatched where it
+    narrowed."""
+    x, shore, dune = (np.asarray(a, dtype=float) for a in (x, shore, dune))
+    width = shore - dune
+    ax.fill_between(x, dune, shore, where=width >= 0, interpolate=True,
+                    color=C_GAP, lw=0, zorder=zorder)
+    ax.fill_between(x, dune, shore, where=width < 0, interpolate=True,
+                    facecolor="white", edgecolor=C_NARROW, hatch=NARROW_HATCH,
+                    lw=0, zorder=zorder)
+
+
+def beach_width_handles():
+    from matplotlib.patches import Patch
+    return [Patch(facecolor=C_GAP, lw=0, label="Beach widened"),
+            Patch(facecolor="white", edgecolor=C_NARROW, hatch=NARROW_HATCH, lw=0,
+                  label="Beach narrowed")]
 
 
 def _legend_handles():
     return [
-        Line2D([], [], color=C_DUNE, lw=1.1, label="Dune line, net change"),
-        Line2D([], [], color=C_SHORE, lw=1.1,
-               label="CoastSat shoreline, net change at the same dates"),
-    ]
+        Line2D([], [], color=C_SHORE, lw=1.1, label="Shoreline change (CoastSat endpoint)"),
+        Line2D([], [], color=C_DUNE, lw=1.1, label="Dune-line change (endpoint)"),
+    ] + beach_width_handles()
 
 
 def draw_alongshore(ax, dom: pd.DataFrame, half: float, label: bool = True,
-                    label_pt: float = 6.5) -> None:
+                    label_pt: float = 6.5, window=None) -> None:
     """One alongshore panel in the house form: village bands, groin and piers,
     open frame, y grid, symmetric limits. TWO lines since 2026-09-18, both net
     change over the same survey interval: the CoastSat shoreline blue, the
-    dune line red. Call it after the legend is placed (structures() tests its
-    labels against the layout)."""
+    dune line red; in METRES with the beach-width gap shaded since 2026-09-19.
+    Call it after the legend is placed (structures() tests its labels against
+    the layout)."""
     from matplotlib.ticker import MultipleLocator
 
     g = dom["gis"].to_numpy(dtype=float)
@@ -267,10 +296,11 @@ def draw_alongshore(ax, dom: pd.DataFrame, half: float, label: bool = True,
     ax.set_ylim(-half, half)
     town_bands(ax, label=label)
     ax.axhline(0, color=INK_MUTED, lw=0.6, zorder=2)
-    ax.plot(g, dom["cs_endpoint_m_yr"].to_numpy(dtype=float), color=C_SHORE,
-            lw=1.1, zorder=4)
-    ax.plot(g, dom["dune_rate_m_yr"].to_numpy(dtype=float), color=C_DUNE, lw=1.1,
-            zorder=5)
+    shore = dom["cs_endpoint_change_m"].to_numpy(dtype=float)
+    dune = dom["dune_change_m"].to_numpy(dtype=float)
+    shade_beach_width(ax, g, shore, dune)
+    ax.plot(g, dune, color=C_DUNE, lw=1.1, zorder=5)
+    ax.plot(g, shore, color=C_SHORE, lw=1.1, zorder=5)
     ax.xaxis.set_major_locator(MultipleLocator(10))
     ax.xaxis.set_minor_locator(MultipleLocator(5))
     ax.yaxis.set_major_locator(MultipleLocator(Y_TICK))
@@ -278,16 +308,29 @@ def draw_alongshore(ax, dom: pd.DataFrame, half: float, label: bool = True,
     ax.set_axisbelow(True)
     open_frame(ax)
     structures(ax, label=label, label_pt=label_pt)
+    # the offshore shoals, and the fills placed inside the window, as the
+    # 3-rates figures mark them (2026-09-19)
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "CoastSat"))
+    import coastsat_lrr_windows as cw
+    cw.draw_shoals(ax, label=label, label_pt=label_pt)
+    if window is not None:
+        fills = cw.fills_in(*window)
+        if fills:
+            cw.draw_fills(ax, fills, half, label_pt=label_pt)
 
 
 def _caption_body() -> str:
-    return ("Both lines are NET CHANGE over the same survey interval, divided by "
-            "it, seaward positive. Red: the digitized dune line, end line minus "
-            "start line. Blue: the CoastSat shoreline, the mean satellite position "
-            "within six months of each dune-line image date, end minus start. Both "
-            "are read from the stored products in 5-scr/3-rates (duneline/endpoint, "
-            "coastsat/endpoint). Where they part, the beach widened or narrowed. "
+    return ("Both lines are NET CHANGE in metres over the same survey interval, "
+            "seaward positive. Red: the digitized dune line, end line minus start "
+            "line. Blue: the CoastSat shoreline, the mean satellite position within "
+            "six months of each dune-line image date, end minus start. Both are read "
+            "from the stored products in 5-scr/3-rates (duneline/endpoint, "
+            "coastsat/endpoint). The space between them is beach-width change "
+            "(shoreline minus dune line): solid grey where the beach widened, "
+            "hatched where it narrowed. "
             "Red and blue here mark the two features, not the sign or the vintage. "
+            "Hatched amber boxes mark the offshore shoals and black bars above the "
+            "panel the beach fills placed in the window. "
             "Bands mark Buxton, Avon and the Tri-Village; the solid hairline is the "
             "Buxton groin, the dotted ones the Avon and Rodanthe piers. Domain 1 is "
             "Cape Point, 90 is Pea Island.")
@@ -299,11 +342,12 @@ def alongshore_figure(dom: pd.DataFrame, out: Path, start: int, end: int,
 
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.38),
                            constrained_layout=True)
-    half = _half(dom["cs_endpoint_m_yr"], dom["dune_rate_m_yr"])
+    half = _half(dom["cs_endpoint_change_m"], dom["dune_change_m"])
     ax.set_xlabel(DOMAIN_AXIS_LABEL)
     ax.set_ylabel(Y_LABEL)
-    fig.legend(handles=_legend_handles(), loc="outside upper right", ncol=2)
-    draw_alongshore(ax, dom, half)
+    fig.legend(handles=_legend_handles(), loc="outside lower center", ncol=4,
+               frameon=False)
+    draw_alongshore(ax, dom, half, window=(start, end))
     caption(fig, f"Net change of the dune line and the CoastSat shoreline, "
                  f"{v0}–{v1} (standing in for {start}–{end}), by GIS domain. "
                  + _caption_body())
@@ -344,7 +388,7 @@ def four_windows_figure(layout: str = "column") -> Path:
     if not windows:
         sys.exit(f"no windows under {OUT_ROOT}; run the comparison first")
     half = _half(*[frames[w][c] for w in windows
-                   for c in ("cs_endpoint_m_yr", "dune_rate_m_yr")])
+                   for c in ("cs_endpoint_change_m", "dune_change_m")])
 
     chains = _chains(windows)
     grid = layout == "grid" and len(chains) == 2 and all(len(c) == 2 for c in chains)
@@ -367,11 +411,12 @@ def four_windows_figure(layout: str = "column") -> Path:
     for ax in axes[-1, :]:
         ax.set_xlabel(DOMAIN_AXIS_LABEL)
     fig.supylabel(Y_LABEL, fontsize=9)
-    fig.legend(handles=_legend_handles(), loc="outside upper center", ncol=2)
+    fig.legend(handles=_legend_handles(), loc="outside lower center", ncol=4,
+               frameon=False)
     for i, (r, c, (start, end)) in enumerate(cells):
         ax = axes[r, c]
         draw_alongshore(ax, frames[(start, end)], half, label=(i == 0),
-                        label_pt=label_pt)
+                        label_pt=label_pt, window=(start, end))
         _title(ax, i, f"{start}–{end}")
         if c > 0:
             ax.tick_params(labelleft=False)
@@ -382,8 +427,8 @@ def four_windows_figure(layout: str = "column") -> Path:
               "pair above the 1996-start pair")
     caption(fig, (f"Net change of the dune line and the CoastSat shoreline by GIS "
                   f"domain for the {len(cells)} hindcast windows ({wins}), "
-                  f"{layout}, all on one y axis (±{half:g} m/yr, the largest "
-                  f"value over every window plus 1 m). " + _caption_body()
+                  f"{layout}, all on one y axis (±{half:g} m, the largest "
+                  f"value over every window plus 5 m). " + _caption_body()
                   + " Each window's survey dates and statistics are in its "
                   "own supporting/PROVENANCE.md."))
     return save(fig, OUT_ROOT / "alongshore_four_windows", close=True)[0]
