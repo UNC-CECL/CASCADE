@@ -11,6 +11,7 @@ retired material scattered around `output/` was collected in one place.
 2026-08-30_rig-M70-unstable/     the unstable M = 70 rig cell left under the calibrated name     (was output/rig_runs/HAT_1967_2018_rig_M70_f0.6_UNSTABLE_sweep_leftover/)
 2026-09-17_figures/              4 figures retired when output/figures/ was sorted by subject    (was output/figures/superseded_20260917/)
 2026-09-18_hindcast-calibrated/  the last calibBE render on the 1984/2004 chain                   (was output/comparisons/hindcast_calibrated/superseded_20260918/)
+2026-09-18_rate-windows/         the rate_windows figures before the rename to model_vs_observed (was output/comparisons/rate_windows/)
 ```
 
 **One exception: archived model runs stay in `output/raw_runs/archive/`.**
