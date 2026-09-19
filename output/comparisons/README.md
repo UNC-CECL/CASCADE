@@ -13,6 +13,8 @@ hindcast_calibrated/    the headline: modelled rate against the CoastSat
 model_vs_observed/      the four rate windows on one y axis, the model against
                         the shoreline (CoastSat) and the dune line, each with
                         the run solved on it (rate_windows/ until 09-18)
+target_comparison/      CoastSat vs the dune line as the target, with the model,
+                        as net change (m) over 1996-2010 and 2010-2024 (09-19)
 relocation/             does the model relocate NC-12 where and when history
                         did: per window, per event, across topography
                         versions, and the 20 m rebuild clearance
@@ -23,6 +25,7 @@ scenario_grid/          every preset and management scenario on one page
 |---|---|---|
 | `hindcast_calibrated/` | `scripts/figure_making/model_output/HAT_hindcast_final_figure_loess.py` | the edgeBE and zeroBE full-management nogroin matrix arms, 1996 and 2010 |
 | `model_vs_observed/` | `scripts/analyze_output/compare_runs/HAT_rate_windows.py` | the edgeBE nogroin matrix plus the dune-solved experiment, `runs_used.csv` |
+| `target_comparison/` | `scripts/analyze_output/compare_runs/HAT_target_comparison.py` | the edgeBE matrix and the 09-18 dune edge solve, 1996 and 2010, `runs_used.csv` |
 | `relocation/` | `scripts/hatteras_ms/experiments/HAT_relocation_comparison.py` and the three readers named in its README | each set's `report.txt` header |
 | `scenario_grid/` | `scripts/figure_making/model_output/HAT_scenario_grid.py` | every matrix arm, both periods |
 

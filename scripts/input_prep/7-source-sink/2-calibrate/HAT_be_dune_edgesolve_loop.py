@@ -72,12 +72,17 @@ def brackets(start):
     return [(name("zeroBE"), "matrix", ""), (name("edgeBE"), "matrix", "")]
 
 
+COASTSAT_WINDOW = None   # set by --coastsat-window
+
+
 def solve(start, smooth, runs):
     """Run the solver over `runs`; return (residual GIS 1, residual GIS 90,
     override string, full text). smooth == "coastsat" is the CoastSat target."""
     if smooth == "coastsat":
         cmd = [sys.executable, str(SOLVER), "--period", str(start),
                "--target", "coastsat", "--estimator", "lrr"]
+        if COASTSAT_WINDOW:
+            cmd += ["--coastsat-window", COASTSAT_WINDOW]
     else:
         cmd = [sys.executable, str(SOLVER), "--period", str(start),
                "--target", "duneline", "--dune-smooth", smooth, "--estimator", "endpoint"]
@@ -162,11 +167,16 @@ def main(argv=None) -> int:
     ap.add_argument("--tol", type=float, default=0.01, help="m/yr, both ends")
     ap.add_argument("--max-steps", type=int, default=6)
     ap.add_argument("--target", choices=("duneline", "coastsat"), default="duneline")
+    ap.add_argument("--coastsat-window", default=None, metavar="START_END",
+                    help="with --target coastsat: solve against this LRR window "
+                         "instead of the run's own (e.g. 1996_2024)")
     ap.add_argument("--resume", action="store_true",
                     help="pick every chain up from the finished steps on disk")
     a = ap.parse_args(argv)
     if a.target == "coastsat":
         a.smooth = ["coastsat"]
+        global COASTSAT_WINDOW
+        COASTSAT_WINDOW = a.coastsat_window
 
     # chain: [(run_name, kind, tag), ...]; last: {gis: rate} its last run imposed
     chains, last = {}, {}

@@ -123,8 +123,12 @@ INDEX_RATE_COLUMN = {gis: "be_rate_gis{0}_m_yr".format(gis)
                      for gis in HATTERAS_BE_EDGE_DOMAINS}
 
 
-def load_target(start_year, end_year):
-    """The target table the runner grades against, as {gis: rate}."""
+def load_target(start_year, end_year, window=None):
+    """The target table the runner grades against, as {gis: rate}. `window`
+    (start, end) grades against another CoastSat LRR window instead, e.g.
+    the full 1996-2024 rate for a 1996-2010 run (2026-09-19, Hannah)."""
+    if window is not None:
+        start_year, end_year = window
     # raises, listing windows, if absent; the extension table if the
     # geometry reaches beyond GIS 90, as the runner's section 8 does
     csv_path = (lrr_csv_ext(start_year, end_year) if HATTERAS_GEOMETRY_EXTENDED
@@ -218,12 +222,13 @@ def read_model(csv_path, column=RATE_COLUMN):
 
 
 def report(period, runs, preset, kinds, tags, target_source="coastsat",
-           dune_smooth="raw", estimator="lrr"):
+           dune_smooth="raw", estimator="lrr", coastsat_window=None):
     start_year = period
     end_year = HATTERAS_PERIODS[period]["end_year"]
     if target_source == "coastsat":
-        target = load_target(start_year, end_year)
-        target_note = "CoastSat LRR: raw mean at GIS 1, LOESS-10 at GIS 90"
+        target = load_target(start_year, end_year, coastsat_window)
+        target_note = "CoastSat LRR{0}: raw mean at GIS 1, LOESS-10 at GIS 90".format(
+            " {0}-{1}".format(*coastsat_window) if coastsat_window else "")
     else:
         target, target_note = load_dune_target(start_year, end_year, dune_smooth)
     column = ESTIMATOR_COLUMN[estimator]
@@ -322,6 +327,9 @@ def main():
     parser.add_argument("--estimator", choices=("lrr", "endpoint"), default="lrr",
                         help="model column: lrr_m_yr (the OLS slope, default) "
                              "or change_rate_m_yr (endpoint over run years)")
+    parser.add_argument("--coastsat-window", default=None, metavar="START_END",
+                        help="with --target coastsat: grade against this CoastSat "
+                             "LRR window instead of the run's own, e.g. 1996_2024")
     args = parser.parse_args()
 
     if args.period not in HATTERAS_PERIODS:
@@ -340,7 +348,9 @@ def main():
     kinds = per_run(args.kind, MATRIX_KIND, "kind")
     report(args.period, args.run, args.preset, kinds, tags,
            target_source=args.target, dune_smooth=args.dune_smooth,
-           estimator=args.estimator)
+           estimator=args.estimator,
+           coastsat_window=(tuple(int(x) for x in args.coastsat_window.split("_"))
+                            if args.coastsat_window else None))
     return 0
 
 
