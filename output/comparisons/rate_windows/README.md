@@ -24,7 +24,12 @@ Start with `both/both_grid.png`.
 | ...against the target the run index scores? | `coastsat/loess/` | the scoring target as the fill, the means as dots | OLS rate, CoastSat-solved |
 | Does the model reproduce the dune line's movement over the window? | `duneline/endpoint/` | two surveys differenced, per domain, over the survey interval | endpoint rate, ends solved on the dune line (mean3) |
 | ...with the scatter smoothed out, as the CoastSat target is? | `duneline/endpoint-loess/` | the same, 10-domain LOESS north of D10, raw means D1-10 | endpoint rate, dune-solved |
-| Which observation does the model follow, the waterline or the dune line? | `both/` | both scoring targets as lines, no fill: CoastSat blue (LOESS of the LRR), dune line red (LOESS of the endpoint) | two, each in its target's estimator: solid = ends solved on CoastSat (OLS rate), dashed = ends solved on the dune line (endpoint rate) |
+| Which observation does the model follow, the waterline or the dune line? | `both/` | both observations as NET CHANGE between the same dune-line dates, as lines with no fill: the CoastSat shoreline (`3-rates/coastsat/endpoint`) blue and the dune line red, each with the target's LOESS | two, both endpoint rate: solid = ends solved on CoastSat, dashed = ends solved on the dune line |
+
+Since 2026-09-18, `both/` compares net change with net change (Hannah).
+`skill.csv` scores every run against the CoastSat net change as well
+(`cs_endpoint_raw`, `cs_endpoint_loess`). The CoastSat LRR stays the scoring
+target under `coastsat/`.
 
 The dune line is scored on NET CHANGE only (2026-09-18, Hannah: "these should
 not be lrr, they would just be endpoint, we are tracking net change"). The

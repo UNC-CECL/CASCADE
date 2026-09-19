@@ -1,0 +1,5 @@
+# Captions — overview
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`duneline_positions_overview.png`.** Where the digitized dune line sat along Hatteras Island in 1997, 2009 and 2023, the lines that stand for the model years 1996, 2010 and 2024, north-up in three segments at one common scale: (a) Cape Point to Avon, GIS 1–30; (b) Avon to the Tri-Village, GIS 31–60; (c) the Tri-Village to GIS 90. Light grey 1997, slate 2009, black 2023, over the island outline (pale fill) and the 500 m model domains (thin boxes, every fifth numbered on the ocean side); brackets mark the villages. At this scale the three lines largely overlap; the zoom figures show the separation in metres. The inset in (a) locates the three segments (solid, dashed, dotted) on the North Carolina coast. NAD83(2011) / UTM 18N.

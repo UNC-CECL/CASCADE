@@ -3,31 +3,26 @@ duneline_vs_coastsat.py
 ==============================================================================
 Does the digitized dune line move with the CoastSat shoreline?
 
-WHAT IS COMPARED
-    Dune side      two digitized dune lines (start year, end year), read from
-                   2-brie-offset/raw_offsets/<year>_duneline_offset_raw.csv as
-                   the hindcast loader reads them: first row per transect,
-                   mean over the ~5 transects of each GIS domain. ORIG_LEN is
-                   the station from the OFFSHORE datum line, so it grows
-                   landward; the change is negated so that, like CoastSat,
-                   seaward is positive and a negative rate is retreat.
-    Shoreline side the CoastSat waterline on the same 90 domains, through
-                   transect_domain_lookup.csv, as TWO estimators:
-                     lrr       the per-transect OLS slope already on disk in
-                               coastsat_lrr/<start>_<end>/transect_lrr_full.csv,
-                               the quantity the model is graded against;
-                     endpoint  the mean chainage inside +/- HALF_WINDOW days of
-                               each SURVEY date, differenced and divided by
-                               the survey interval. This is the like-for-like
-                               quantity for two surveys. A symmetric one-year
-                               window averages one full seasonal cycle.
-                   Both are averaged to the domain (mean over transects, as
-                   domain_lrr_summary.csv does).
+WHAT IS COMPARED  (NET CHANGE ON BOTH SIDES since 2026-09-18; Hannah: "I
+wanted the coastsat vs duneline comparison to both be using net position
+change")
+    Dune side      3-rates/duneline/endpoint/<window>/: the end dune line minus
+                   the start line per 100 m transect, domain mean, seaward
+                   positive.
+    Shoreline side 3-rates/coastsat/endpoint/<window>/: the mean CoastSat
+                   position within +/-6 months of each dune-line survey date,
+                   end minus start, domain mean. The like-for-like quantity
+                   for two surveys.
+    Both read from the stored products, not computed here. Shown as the net
+    change over the survey interval (m/yr) so the four windows share one axis;
+    the metres are in domain_comparison.csv.
 
-WHY BOTH  (Hannah, 2026-09-15)
-    A dune line is two moments; an OLS slope through ~250 satellite dates is
-    not the same quantity, so the endpoint rate is the fair comparison and the
-    LRR is the one the rest of 5-scr uses. Report both, and the gap.
+    Until 09-18 the shoreline was ALSO drawn as the CoastSat LRR, an OLS
+    through ~250 dates, and the correlations reported against both. That is
+    not a two-survey quantity; it stays the model's scoring target in
+    3-rates/coastsat/lrr/ and in rate_windows/coastsat/. The helpers below
+    (window_mean, endpoint_by_transect, KNOWN_SURVEY_DATES) are kept: the
+    stored CoastSat endpoint product is built with them.
 
 SURVEY DATES
     The dune-line files carry no date. KNOWN_SURVEY_DATES holds them by line
@@ -47,11 +42,10 @@ METHOD
     a change between any two years carries no method term.
 
 OUTPUT   data/hatteras_init/5-scr/4-comparisons/duneline_vs_coastsat/<start>_<end>/
-             scatter_dune_vs_coastsat.png     a. vs LRR  b. vs endpoint
-             alongshore_dune_vs_coastsat.png  the three rates by domain
+             scatter_dune_vs_coastsat.png     shoreline vs dune, 1:1
+             alongshore_dune_vs_coastsat.png  the two net changes by domain
              supporting/                      the PDFs, CAPTIONS.md,
-                 domain_comparison.csv            one row per GIS domain
-                 transect_coastsat_endpoint.csv   the window means per transect
+                 domain_comparison.csv            one row per GIS domain (m and m/yr)
                  PROVENANCE.md
          data/hatteras_init/5-scr/4-comparisons/duneline_vs_coastsat/
              alongshore_four_windows.png      every window on one y axis,
@@ -60,7 +54,7 @@ OUTPUT   data/hatteras_init/5-scr/4-comparisons/duneline_vs_coastsat/<start>_<en
 
 USAGE
     python duneline_vs_coastsat.py --start-year 1984 --end-year 2004
-        # dates come from KNOWN_SURVEY_DATES; --start-date/--end-date override
+        # the dates come from the stored products
     python duneline_vs_coastsat.py --grid                 # every window, stacked
     python duneline_vs_coastsat.py --grid --layout grid   # the 2 x 2 by period
 ==============================================================================
@@ -81,7 +75,8 @@ PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
 from site_layer.hat_observed_rates import (COASTSAT_TIMESERIES, DUNELINE_VS_COASTSAT,  # noqa: E402
-                                SCR_ROOT, lrr_csv, transect_lookup)
+                                SCR_ROOT, coastsat_endpoint_csv, dune_endpoint_csv,
+                                transect_lookup)
 from site_layer.hat_topo_version import dune_line_for_year, dune_raw_file_for_year  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 
@@ -105,7 +100,10 @@ SIX_MONTHS_DAYS = 182.625
 # vintage and not sign; the caption says so. Grey, purple, sand brown, orange
 # and REF green were tried and rejected, the green as too dark to see.
 C_LRR = C_1997                  # "#2166ac"
-C_ENDPOINT = "#74a9cf"          # PuBu mid blue
+C_ENDPOINT = "#74a9cf"          # PuBu mid blue (unused since 09-18)
+# Since 2026-09-18 the shoreline is ONE line, its net change at the dune
+# dates, drawn in the dark blue the LRR had.
+C_SHORE = C_LRR
 C_DUNE = C_1984                 # "#b2182b"
 
 # Keyed by LINE VINTAGE (the year in the geojson name), not by period year: a
@@ -197,59 +195,47 @@ def _fit_stats(x, y):
 
 
 def scatter_figure(dom: pd.DataFrame, out: Path, start: int, end: int,
-                   stats: dict) -> None:
+                   st: dict, v0: int, v1: int) -> None:
     import matplotlib.pyplot as plt
-    fig, axes = plt.subplots(1, 2, figsize=figsize("double", aspect=0.5),
-                             constrained_layout=True, sharex=True, sharey=True)
-    pairs = [("cs_lrr_m_yr", "CoastSat LRR (m/yr)"),
-             ("cs_endpoint_m_yr", "CoastSat endpoint rate (m/yr)")]
-    x = dom["dune_rate_m_yr"].to_numpy()
-    allv = np.concatenate([x] + [dom[c].to_numpy() for c, _ in pairs])
-    lim = np.nanmax(np.abs(allv)) * 1.05
-    for i, (ax, (col, lab)) in enumerate(zip(axes, pairs)):
-        y = dom[col].to_numpy()
-        ax.plot([-lim, lim], [-lim, lim], color=INK_MUTED, lw=0.6, ls="--",
-                zorder=1)
-        ax.axhline(0, color=C["GRID"], lw=0.6, zorder=0)
-        ax.axvline(0, color=C["GRID"], lw=0.6, zorder=0)
-        ax.scatter(x, y, s=12, color=C["BASE"], edgecolor="none", zorder=3)
-        # label the far-from-1:1 domains so a reader can find them
-        resid = y - x
-        far = np.argsort(-np.abs(np.nan_to_num(resid)))[:6]
-        for j in far:
-            if np.isfinite(resid[j]):
-                ax.annotate(str(int(dom["gis"].iloc[j])), (x[j], y[j]),
-                            xytext=(3, 3), textcoords="offset points",
-                            fontsize=6.5, color=INK_MUTED)
-        st = stats[col]
-        if np.isfinite(st["slope"]):
-            xx = np.array([-lim, lim])
-            ax.plot(xx, st["slope"] * xx + st["intercept"], color=C["ACCENT"],
-                    lw=0.9, zorder=2)
-        ax.set_xlim(-lim, lim)
-        ax.set_ylim(-lim, lim)
-        ax.set_aspect("equal")
-        ax.set_xlabel("Dune-line rate (m/yr)")
-        ax.set_ylabel(lab)
-        _title(ax, i, lab.replace(" (m/yr)", ""))
+    fig, ax = plt.subplots(figsize=figsize("single", aspect=1.0),
+                           constrained_layout=True)
+    x = dom["dune_rate_m_yr"].to_numpy(dtype=float)
+    y = dom["cs_endpoint_m_yr"].to_numpy(dtype=float)
+    lim = np.nanmax(np.abs(np.concatenate([x, y]))) * 1.05
+    ax.plot([-lim, lim], [-lim, lim], color=INK_MUTED, lw=0.6, ls="--", zorder=1)
+    ax.axhline(0, color=C["GRID"], lw=0.6, zorder=0)
+    ax.axvline(0, color=C["GRID"], lw=0.6, zorder=0)
+    ax.scatter(x, y, s=12, color=C["BASE"], edgecolor="none", zorder=3)
+    resid = y - x
+    for j in np.argsort(-np.abs(np.nan_to_num(resid)))[:6]:
+        if np.isfinite(resid[j]):
+            ax.annotate(str(int(dom["gis"].iloc[j])), (x[j], y[j]),
+                        xytext=(3, 3), textcoords="offset points",
+                        fontsize=6.5, color=INK_MUTED)
+    if np.isfinite(st["slope"]):
+        xx = np.array([-lim, lim])
+        ax.plot(xx, st["slope"] * xx + st["intercept"], color=C["ACCENT"],
+                lw=0.9, zorder=2)
+    ax.set_xlim(-lim, lim)
+    ax.set_ylim(-lim, lim)
+    ax.set_aspect("equal")
+    ax.set_xlabel("Dune line, net change rate (m/yr)")
+    ax.set_ylabel("CoastSat shoreline, net change rate (m/yr)")
     caption(fig, (
-        f"Per-domain rate of the digitized dune line, {start}-{end}, against "
-        f"the CoastSat shoreline on the same GIS domains (n = {stats['cs_lrr_m_yr']['n']}). "
-        f"Seaward positive. Dashed: 1:1; purple: least-squares fit. "
-        f"(a) the per-transect OLS slope over the window, averaged per domain "
-        f"(r = {stats['cs_lrr_m_yr']['r']:.2f}, slope = {stats['cs_lrr_m_yr']['slope']:.2f}, "
-        f"RMSE = {stats['cs_lrr_m_yr']['rmse']:.2f} m/yr). "
-        f"(b) the endpoint rate from the mean CoastSat position in a one-year "
-        f"window centred on each survey date "
-        f"(r = {stats['cs_endpoint_m_yr']['r']:.2f}, slope = {stats['cs_endpoint_m_yr']['slope']:.2f}, "
-        f"RMSE = {stats['cs_endpoint_m_yr']['rmse']:.2f} m/yr). "
-        f"The six domains farthest from 1:1 are labelled. See PROVENANCE.md "
-        f"for the survey dates and what the {end} date assumes."))
+        f"Per-domain net change of the digitized dune line against the CoastSat "
+        f"shoreline over the same interval, {v0}–{v1} (standing in for "
+        f"{start}–{end}), n = {st['n']} domains, both as net change over the "
+        "survey interval, seaward positive. The shoreline is the mean CoastSat "
+        "position within six months of each dune-line image date, differenced. "
+        f"Dashed: 1:1; purple: least-squares fit (r = {st['r']:.2f}, slope = "
+        f"{st['slope']:.2f}, RMSE = {st['rmse']:.2f} m/yr, bias shoreline − dune "
+        f"= {st['bias']:+.2f} m/yr). The six domains farthest from 1:1 are "
+        "labelled. See PROVENANCE.md for the survey dates."))
     save(fig, out / "scatter_dune_vs_coastsat", close=True)
 
 
 Y_TICK = 2.0
-Y_LABEL = "Rate of change (m/yr)"
+Y_LABEL = "Net change rate (m/yr)"
 STRUCTURE_LABEL_PT_GRID = 4.0   # the 2 x 2, whose panels are half the width
 
 
@@ -261,21 +247,19 @@ def _half(*arrays) -> float:
 
 def _legend_handles():
     return [
-        Line2D([], [], color=C_DUNE, lw=1.1, label="Dune line (two surveys)"),
-        Line2D([], [], color=C_LRR, lw=1.0, label="CoastSat shoreline, LRR"),
-        Line2D([], [], color=C_ENDPOINT, lw=0.9, ls=(0, (3, 1.5)),
-               label="CoastSat shoreline, endpoint"),
+        Line2D([], [], color=C_DUNE, lw=1.1, label="Dune line, net change"),
+        Line2D([], [], color=C_SHORE, lw=1.1,
+               label="CoastSat shoreline, net change at the same dates"),
     ]
 
 
 def draw_alongshore(ax, dom: pd.DataFrame, half: float, label: bool = True,
                     label_pt: float = 6.5) -> None:
-    """One alongshore panel in the house form (coastsat_lrr_windows.py):
-    full-height village bands, the groin and piers named along their lines,
-    open frame, y grid, symmetric y limits. Three lines: the two CoastSat
-    estimators in one colour family, the dune line red against them. Call
-    it after the figure's legend is placed: structures() tests its labels
-    against the data in the layout as it stands."""
+    """One alongshore panel in the house form: village bands, groin and piers,
+    open frame, y grid, symmetric limits. TWO lines since 2026-09-18, both net
+    change over the same survey interval: the CoastSat shoreline blue, the
+    dune line red. Call it after the legend is placed (structures() tests its
+    labels against the layout)."""
     from matplotlib.ticker import MultipleLocator
 
     g = dom["gis"].to_numpy(dtype=float)
@@ -283,10 +267,8 @@ def draw_alongshore(ax, dom: pd.DataFrame, half: float, label: bool = True,
     ax.set_ylim(-half, half)
     town_bands(ax, label=label)
     ax.axhline(0, color=INK_MUTED, lw=0.6, zorder=2)
-    ax.plot(g, dom["cs_endpoint_m_yr"].to_numpy(dtype=float), color=C_ENDPOINT,
-            lw=0.9, ls=(0, (3, 1.5)), zorder=3)
-    ax.plot(g, dom["cs_lrr_m_yr"].to_numpy(dtype=float), color=C_LRR, lw=1.0,
-            zorder=4)
+    ax.plot(g, dom["cs_endpoint_m_yr"].to_numpy(dtype=float), color=C_SHORE,
+            lw=1.1, zorder=4)
     ax.plot(g, dom["dune_rate_m_yr"].to_numpy(dtype=float), color=C_DUNE, lw=1.1,
             zorder=5)
     ax.xaxis.set_major_locator(MultipleLocator(10))
@@ -299,31 +281,31 @@ def draw_alongshore(ax, dom: pd.DataFrame, half: float, label: bool = True,
 
 
 def _caption_body() -> str:
-    return ("Seaward positive. Red: the digitized dune line, its two survey "
-            "positions differenced over the survey interval. Dark blue: the "
-            "CoastSat shoreline as the per-domain linear regression rate over "
-            "the window; light blue, dashed: the CoastSat endpoint rate from the "
-            "mean position in a one-year window about each survey date. Where "
-            "the two blues part is where the choice of estimator matters. Red and "
-            "blue here mark the two features, not the two vintages. Bands mark "
-            "Buxton, Avon and the Tri-Village; the solid hairline is the Buxton "
-            "groin, the dotted ones the Avon and Rodanthe piers. Domain 1 is "
+    return ("Both lines are NET CHANGE over the same survey interval, divided by "
+            "it, seaward positive. Red: the digitized dune line, end line minus "
+            "start line. Blue: the CoastSat shoreline, the mean satellite position "
+            "within six months of each dune-line image date, end minus start. Both "
+            "are read from the stored products in 5-scr/3-rates (duneline/endpoint, "
+            "coastsat/endpoint). Where they part, the beach widened or narrowed. "
+            "Red and blue here mark the two features, not the sign or the vintage. "
+            "Bands mark Buxton, Avon and the Tri-Village; the solid hairline is the "
+            "Buxton groin, the dotted ones the Avon and Rodanthe piers. Domain 1 is "
             "Cape Point, 90 is Pea Island.")
 
 
-def alongshore_figure(dom: pd.DataFrame, out: Path, start: int, end: int) -> None:
+def alongshore_figure(dom: pd.DataFrame, out: Path, start: int, end: int,
+                      v0: int, v1: int) -> None:
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.38),
                            constrained_layout=True)
-    half = _half(dom["cs_lrr_m_yr"], dom["cs_endpoint_m_yr"], dom["dune_rate_m_yr"])
+    half = _half(dom["cs_endpoint_m_yr"], dom["dune_rate_m_yr"])
     ax.set_xlabel(DOMAIN_AXIS_LABEL)
     ax.set_ylabel(Y_LABEL)
-    # The legend sits outside the axes and shrinks them at draw time, so it
-    # goes on BEFORE the structure labels are placed against the data.
-    fig.legend(handles=_legend_handles(), loc="outside upper right", ncol=3)
+    fig.legend(handles=_legend_handles(), loc="outside upper right", ncol=2)
     draw_alongshore(ax, dom, half)
-    caption(fig, f"Alongshore rate of change {start}-{end} by GIS domain. "
+    caption(fig, f"Net change of the dune line and the CoastSat shoreline, "
+                 f"{v0}–{v1} (standing in for {start}–{end}), by GIS domain. "
                  + _caption_body())
     save(fig, out / "alongshore_dune_vs_coastsat", close=True)
 
@@ -346,28 +328,23 @@ def _chains(windows):
 
 
 def four_windows_figure(layout: str = "column") -> Path:
-    """Every window on disk on ONE y axis. `layout="column"` (the default
-    since Hannah asked for something easier to read, 2026-09-15): one
-    full-width panel per window, stacked, in chain order -- the 1984-start
-    pair then the 1996-start pair -- so each panel is as wide as the
-    single-window figure. `layout="grid"`: the 2 x 2 by period that
-    coastsat_windows/lrr_four_windows uses, the 1984 start in the left
-    column, the 1996 start in the right, the earlier window above. Reads
+    """Every model window on ONE y axis, one full-width panel per window in
+    chain order (`layout="column"`), or the 2 x 2 by period (`"grid"`). Reads
     each window's supporting/domain_comparison.csv; run the windows first.
-    Written to the folder above the windows."""
+    The context window 1996_2024 is left out: it is not a model window."""
     import matplotlib.pyplot as plt
 
     windows, frames = [], {}
     for d in sorted(OUT_ROOT.iterdir()):
         s_, _, e_ = d.name.partition("_")
         f = d / "supporting" / "domain_comparison.csv"
-        if s_.isdigit() and e_.isdigit() and f.is_file():
+        if s_.isdigit() and e_.isdigit() and f.is_file() and (int(s_), int(e_)) != (1996, 2024):
             windows.append((int(s_), int(e_)))
             frames[(int(s_), int(e_))] = pd.read_csv(f)
     if not windows:
         sys.exit(f"no windows under {OUT_ROOT}; run the comparison first")
     half = _half(*[frames[w][c] for w in windows
-                   for c in ("cs_lrr_m_yr", "cs_endpoint_m_yr", "dune_rate_m_yr")])
+                   for c in ("cs_endpoint_m_yr", "dune_rate_m_yr")])
 
     chains = _chains(windows)
     grid = layout == "grid" and len(chains) == 2 and all(len(c) == 2 for c in chains)
@@ -390,7 +367,7 @@ def four_windows_figure(layout: str = "column") -> Path:
     for ax in axes[-1, :]:
         ax.set_xlabel(DOMAIN_AXIS_LABEL)
     fig.supylabel(Y_LABEL, fontsize=9)
-    fig.legend(handles=_legend_handles(), loc="outside upper center", ncol=3)
+    fig.legend(handles=_legend_handles(), loc="outside upper center", ncol=2)
     for i, (r, c, (start, end)) in enumerate(cells):
         ax = axes[r, c]
         draw_alongshore(ax, frames[(start, end)], half, label=(i == 0),
@@ -403,7 +380,7 @@ def four_windows_figure(layout: str = "column") -> Path:
               "1996-start period in the right, the earlier window above"
               if grid else "one full-width panel per window, the 1984-start "
               "pair above the 1996-start pair")
-    caption(fig, (f"Dune-line and CoastSat shoreline rates of change by GIS "
+    caption(fig, (f"Net change of the dune line and the CoastSat shoreline by GIS "
                   f"domain for the {len(cells)} hindcast windows ({wins}), "
                   f"{layout}, all on one y axis (±{half:g} m/yr, the largest "
                   f"value over every window plus 1 m). " + _caption_body()
@@ -415,18 +392,14 @@ def four_windows_figure(layout: str = "column") -> Path:
 # -----------------------------------------------------------------------------
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
-        description="dune-line change against the CoastSat shoreline")
+        description="net dune-line change against net CoastSat shoreline change")
     ap.add_argument("--start-year", type=int, default=1984)
     ap.add_argument("--end-year", type=int, default=2004)
-    ap.add_argument("--start-date", default=None,
-                    help="survey date of the start line, YYYY-MM-DD")
-    ap.add_argument("--end-date", default=None,
-                    help="survey date of the end line, YYYY-MM-DD")
     ap.add_argument("--half-window-days", type=float, default=SIX_MONTHS_DAYS,
-                    help="half-width of the CoastSat window about each survey "
-                         "date (default six months)")
+                    help="half-width of the CoastSat window, for the assumed-"
+                         "date sensitivity only (the product fixes the main one)")
     ap.add_argument("--grid", action="store_true",
-                    help="draw every window on disk as one figure "
+                    help="draw every model window on disk as one figure "
                          "(alongshore_four_windows) and exit; no window is run")
     ap.add_argument("--layout", choices=("column", "grid"), default="column",
                     help="with --grid: one full-width panel per window "
@@ -436,223 +409,163 @@ def main(argv=None) -> int:
         print(f"-> {four_windows_figure(a.layout)}")
         return 0
 
-    assumed = {}
-    dates = {}
-    vintages = {"start": dune_line_for_year(a.start_year),
-                "end": dune_line_for_year(a.end_year)}
-    for key, yr in (("start", a.start_year), ("end", a.end_year)):
-        given = getattr(a, f"{key}_date") or KNOWN_SURVEY_DATES.get(vintages[key])
-        if given is None:
-            given = f"{vintages[key]}-07-01"     # the LINE's year, not the period's
-            assumed[key] = True
-        dates[key] = datetime.strptime(given, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-    d0, d1 = dates["start"], dates["end"]
-    years = (d1 - d0).days / DAYS_PER_YEAR
+    s, e = a.start_year, a.end_year
+    # BOTH SIDES FROM THE STORED NET-CHANGE PRODUCTS (2026-09-18)
+    du_dom = pd.read_csv(dune_endpoint_csv(s, e, "domain")).set_index("domain_number")
+    du_tr = pd.read_csv(dune_endpoint_csv(s, e, "transect"))
+    cs_dom = pd.read_csv(coastsat_endpoint_csv(s, e, "domain")).set_index("domain_number")
+    cs_tr = pd.read_csv(coastsat_endpoint_csv(s, e, "transect"))
+    meta = du_tr.iloc[0]
+    v0, v1 = int(meta["start_vintage"]), int(meta["end_vintage"])
+    d0 = datetime.fromisoformat(meta["start_date"]).replace(tzinfo=timezone.utc)
+    d1 = datetime.fromisoformat(meta["end_date"]).replace(tzinfo=timezone.utc)
+    assumed = {k for k, c in (("start", "start_date_assumed"), ("end", "end_date_assumed"))
+               if bool(meta[c])}
+    years = float(meta["interval_yr"])
     print(f"survey dates  {d0.date()} -> {d1.date()}  ({years:.2f} yr)"
-          + ("   [END DATE ASSUMED]" if "end" in assumed else "")
-          + ("   [START DATE ASSUMED]" if "start" in assumed else ""))
+          + ("   [END DATE ASSUMED]" if "end" in assumed else ""))
 
     apply_style()
-    out = OUT_ROOT / f"{a.start_year}_{a.end_year}"
+    out = OUT_ROOT / f"{s}_{e}"
     out.mkdir(parents=True, exist_ok=True)
-    sup = support_dir(out)      # figures at the top, everything else here
+    sup = support_dir(out)
+    old = sup / "transect_coastsat_endpoint.csv"   # now the stored product
+    if old.is_file():
+        old.unlink()
 
-    # dune
-    p0 = dune_position_by_domain(a.start_year)
-    p1 = dune_position_by_domain(a.end_year)
-    dune_change = -(p1 - p0)               # seaward positive
-    dune_rate = dune_change / years
-    print(f"dune domains with both years: {int((p0.notna() & p1.notna()).sum())} / 90")
-
-    # coastsat
-    lookup = pd.read_csv(transect_lookup())
-    lookup = lookup[lookup["domain_number"].between(GIS_FIRST, GIS_LAST)]
-    cache: dict = {}
-    ep = endpoint_by_transect(lookup, d0, d1, a.half_window_days, cache)
-    for c in ("first_obs_start", "last_obs_start", "first_obs_end", "last_obs_end"):
-        ep[c] = pd.to_datetime(ep[c], utc=True).dt.strftime("%Y-%m-%d")
-    ep.to_csv(sup / "transect_coastsat_endpoint.csv", index=False,
-              float_format="%.3f")
-    # a window truncated by the record itself is not a full seasonal cycle
-    span = {}
-    for key, d in (("start", d0), ("end", d1)):
-        f = pd.to_datetime(ep[f"first_obs_{key}"]).median()
-        l = pd.to_datetime(ep[f"last_obs_{key}"]).median()
-        lo = (d - timedelta(days=a.half_window_days)).date()
-        hi = (d + timedelta(days=a.half_window_days)).date()
-        span[key] = (lo, hi, f.date(), l.date(),
-                     (f.date() - lo).days > 45 or (hi - l.date()).days > 45)
-    lrr = pd.read_csv(lrr_csv(a.start_year, a.end_year))
-    lrr = lrr[lrr["domain_number"].between(GIS_FIRST, GIS_LAST)]
-
-    ep_dom = ep.groupby("domain_number").agg(
-        cs_endpoint_m_yr=("endpoint_rate_m_yr", "mean"),
-        cs_endpoint_change_m=("change_m", "mean"),
-        n_obs_start=("n_start", "median"),
-        n_obs_end=("n_end", "median"),
-        n_transects=("transect_id", "size"))
-    lrr_dom = lrr.groupby("domain_number").agg(cs_lrr_m_yr=("lrr_m_yr", "mean"))
-
+    pos = du_tr.groupby("domain_number")[[f"position_{v0}_m", f"position_{v1}_m"]].mean()
     dom = pd.DataFrame({"gis": range(GIS_FIRST, GIS_LAST + 1)}).set_index("gis")
-    dom["dune_start_m"] = p0
-    dom["dune_end_m"] = p1
-    dom["dune_change_m"] = dune_change
-    dom["dune_rate_m_yr"] = dune_rate
-    dom = dom.join(lrr_dom.rename_axis("gis")).join(ep_dom.rename_axis("gis"))
-    dom["dune_minus_lrr_m_yr"] = dom["dune_rate_m_yr"] - dom["cs_lrr_m_yr"]
+    dom["dune_start_m"] = pos[f"position_{v0}_m"]
+    dom["dune_end_m"] = pos[f"position_{v1}_m"]
+    dom["dune_change_m"] = du_dom["mean_change_m"]
+    dom["dune_rate_m_yr"] = du_dom["mean_rate_m_yr"]
+    dom["cs_endpoint_change_m"] = cs_dom["mean_change_m"]
+    dom["cs_endpoint_m_yr"] = cs_dom["mean_rate_m_yr"]
+    dom["n_obs_start"] = cs_dom["median_n_start"]
+    dom["n_obs_end"] = cs_dom["median_n_end"]
+    dom["n_transects"] = cs_dom["n_transects"]
+    dom["beach_width_change_m"] = dom["cs_endpoint_change_m"] - dom["dune_change_m"]
     dom["dune_minus_endpoint_m_yr"] = dom["dune_rate_m_yr"] - dom["cs_endpoint_m_yr"]
     dom = dom.reset_index()
     dom.to_csv(sup / "domain_comparison.csv", index=False, float_format="%.3f")
 
-    stats = {c: _fit_stats(dom["dune_rate_m_yr"].to_numpy(), dom[c].to_numpy())
-             for c in ("cs_lrr_m_yr", "cs_endpoint_m_yr")}
-    both = _fit_stats(dom["cs_lrr_m_yr"].to_numpy(), dom["cs_endpoint_m_yr"].to_numpy())
+    st = _fit_stats(dom["dune_rate_m_yr"].to_numpy(), dom["cs_endpoint_m_yr"].to_numpy())
 
-    # sensitivity of the endpoint rate to the window centre, for an assumed date
+    span = {}
+    for key, d in (("start", d0), ("end", d1)):
+        f = pd.to_datetime(cs_tr[f"first_obs_{key}"]).median()
+        l = pd.to_datetime(cs_tr[f"last_obs_{key}"]).median()
+        lo = (d - timedelta(days=SIX_MONTHS_DAYS)).date()
+        hi = (d + timedelta(days=SIX_MONTHS_DAYS)).date()
+        span[key] = (lo, hi, f.date(), l.date(),
+                     (f.date() - lo).days > 45 or (hi - l.date()).days > 45)
+
+    # sensitivity of the CoastSat net change to an assumed survey date
     sens = []
     if assumed:
+        lookup = pd.read_csv(transect_lookup())
+        lookup = lookup[lookup["domain_number"].between(GIS_FIRST, GIS_LAST)]
+        cache: dict = {}
         for label, shift in (("-6 mo", -SIX_MONTHS_DAYS), ("0", 0.0),
                              ("+6 mo", SIX_MONTHS_DAYS)):
             dd0 = d0 + timedelta(days=shift if "start" in assumed else 0)
             dd1 = d1 + timedelta(days=shift if "end" in assumed else 0)
-            e = endpoint_by_transect(lookup, dd0, dd1, a.half_window_days, cache)
-            e_dom = e.groupby("domain_number")["endpoint_rate_m_yr"].mean()
-            st = _fit_stats(
+            ep = endpoint_by_transect(lookup, dd0, dd1, a.half_window_days, cache)
+            e_dom = ep.groupby("domain_number")["endpoint_rate_m_yr"].mean()
+            ss = _fit_stats(
                 dom.set_index("gis")["dune_rate_m_yr"].reindex(e_dom.index).to_numpy(),
                 e_dom.to_numpy())
-            sens.append((label, dd0.date(), dd1.date(), float(e_dom.mean()), st))
+            sens.append((label, dd0.date(), dd1.date(), float(e_dom.mean()), ss))
 
-    scatter_figure(dom, out, a.start_year, a.end_year, stats)
-    alongshore_figure(dom, out, a.start_year, a.end_year)
-
-    # provenance
-    isl = dom[["dune_rate_m_yr", "cs_lrr_m_yr", "cs_endpoint_m_yr"]].mean()
-    known_src = {
-        1984: "USGS 1984 aerial photo, Henderson release "
-              "(`D:\\Hatteras_GIS\\Aerial\\1984_henderson\\1984_metadata`)",
-        1997: "USGS 1997 aerial photo, Henderson release "
-              "(`D:\\Hatteras_GIS\\Aerial\\1997_henderson`, Calendar_Date 19971012)",
-        2004: "Google Earth capture date (the raw_GE frames carry none); "
-              "Hannah, 2026-09-15",
-        2009: "Google Earth capture date; Hannah, 2026-09-15",
-        2023: "NOAA NGS 2023 imagery (`D:\\Hatteras_GIS\\Aerial\\2023`)",
-    }
-
-    def _src(key, yr):
-        v = vintages[key]
+    scatter_figure(dom, out, s, e, st, v0, v1)
+    alongshore_figure(dom, out, s, e, v0, v1)
+    isl = dom[["dune_rate_m_yr", "cs_endpoint_m_yr", "dune_change_m",
+               "cs_endpoint_change_m"]].mean()
+    date_rows = []
+    for key, v, d in (("start", v0, d0), ("end", v1, d1)):
+        yr = s if key == "start" else e
         stand_in = f" — the {v} line standing in for {yr}" if v != yr else ""
-        if key in assumed:
-            return f"**ASSUMED mid-year of {v}**; no flight date known for this line" + stand_in
-        if getattr(a, f"{key}_date"):
-            return "given on the command line" + stand_in
-        return known_src.get(v, "KNOWN_SURVEY_DATES in the script") + stand_in
-
-    start_src = _src("start", a.start_year)
-    end_src = _src("end", a.end_year)
+        src = ("**ASSUMED 1 July**; no flight date known for this line"
+               if key in assumed else f"`duneline_vs_coastsat.KNOWN_SURVEY_DATES`")
+        date_rows.append(f"| {yr} | {d.date()} | {src}{stand_in} |")
     lines = [
-        f"# Dune line vs CoastSat shoreline, {a.start_year}-{a.end_year}",
+        f"# Dune line vs CoastSat shoreline, {s}-{e} (net change)",
         "",
         f"Written {datetime.now():%Y-%m-%d %H:%M} by "
-        f"`scripts/input_prep/5-scr/duneline_vs_coastsat/duneline_vs_coastsat.py`.",
+        "`scripts/input_prep/5-scr/duneline_vs_coastsat/duneline_vs_coastsat.py`.",
         "",
-        "## Inputs",
+        "**Both sides are NET CHANGE between the same two dates** (2026-09-18, "
+        "Hannah: the comparison is net position change on both sides). The "
+        "CoastSat LRR, which this folder also drew until then, is not a like-for-"
+        "like quantity for two surveys; it stays the model's scoring target in "
+        "`3-rates/coastsat/lrr/`.",
         "",
-        f"* dune lines: `2-brie-offset/raw_offsets/{dune_raw_file_for_year(a.start_year).name}`, "
-        f"`{dune_raw_file_for_year(a.end_year).name}` (first row per transect, domain mean, "
-        f"as `hindcast.load_absolute_dune_distance`). Both built by "
-        f"`duneline_to_raw_offsets.py`, so no GIS-vs-shapely metre between them.",
-        f"* CoastSat LRR: `{lrr_csv(a.start_year, a.end_year).relative_to(SCR_ROOT).as_posix()}` "
-        f"(window {a.start_year}-01-01 to {a.end_year}-12-31, per-transect OLS).",
-        f"* CoastSat endpoint: mean chainage within ±{a.half_window_days:.0f} days of each "
-        f"survey date, per transect, from `coastsat_timeseries/`.",
-        "* transect → domain: `transect_domains/transect_domain_lookup.csv`.",
+        "## Inputs (the stored products)",
+        "",
+        f"* dune line: `3-rates/duneline/endpoint/{s}_{e}/` (the {v0} and {v1} lines).",
+        f"* CoastSat shoreline: `3-rates/coastsat/endpoint/{s}_{e}/` (mean position "
+        "within ±6 months of each dune-line date, per transect, domain mean).",
         "",
         "## Survey dates",
         "",
         "| line | date | source |",
         "|---|---|---|",
-        f"| {a.start_year} | {d0.date()} | {start_src} |",
-        f"| {a.end_year} | {d1.date()} | {end_src} |",
+        *date_rows,
         "",
-        f"Survey interval {years:.2f} yr. Sign: seaward positive in every column; "
-        f"a negative rate is retreat. Dune change is `-(ORIG_LEN_end - ORIG_LEN_start)`.",
+        f"Survey interval {years:.2f} yr. Seaward positive in every column.",
         "",
-        "## Island-wide means (m/yr)",
+        "## Island-wide means",
         "",
-        "| dune line | CoastSat LRR | CoastSat endpoint |",
+        "| | net change (m) | as a rate (m/yr) |",
         "|---|---|---|",
-        f"| {isl['dune_rate_m_yr']:.2f} | {isl['cs_lrr_m_yr']:.2f} | {isl['cs_endpoint_m_yr']:.2f} |",
+        f"| dune line | {isl['dune_change_m']:+.1f} | {isl['dune_rate_m_yr']:+.2f} |",
+        f"| CoastSat shoreline | {isl['cs_endpoint_change_m']:+.1f} | {isl['cs_endpoint_m_yr']:+.2f} |",
         "",
-        "## Agreement, per domain (y against dune rate x)",
+        "## Agreement, per domain (shoreline y against dune x, m/yr)",
         "",
-        "| y | n | r | slope | intercept | RMSE | bias (y − x) |",
-        "|---|---|---|---|---|---|---|",
-    ]
-    for c, name in (("cs_lrr_m_yr", "CoastSat LRR"), ("cs_endpoint_m_yr", "CoastSat endpoint")):
-        s = stats[c]
-        lines.append(f"| {name} | {s['n']} | {s['r']:.2f} | {s['slope']:.2f} | "
-                     f"{s['intercept']:.2f} | {s['rmse']:.2f} | {s['bias']:+.2f} |")
-    lines += [
+        "| n | r | slope | intercept | RMSE | bias (y − x) |",
+        "|---|---|---|---|---|---|",
+        f"| {st['n']} | {st['r']:.2f} | {st['slope']:.2f} | {st['intercept']:.2f} | "
+        f"{st['rmse']:.2f} | {st['bias']:+.2f} |",
         "",
-        f"CoastSat endpoint against CoastSat LRR (two estimators of the same "
-        f"series): r = {both['r']:.2f}, slope = {both['slope']:.2f}, RMSE = {both['rmse']:.2f}, "
-        f"bias = {both['bias']:+.2f} m/yr.",
+        "## Window occupancy (CoastSat)",
         "",
-        "## Window occupancy",
-        "",
-        f"Median CoastSat observations per transect inside the start window: "
-        f"{int(ep['n_start'].median())}; inside the end window: {int(ep['n_end'].median())}. "
-        f"Transects with an empty window: start {int((ep['n_start'] == 0).sum())}, "
-        f"end {int((ep['n_end'] == 0).sum())}, of {len(ep)}.",
+        f"Median positions per transect inside the start window "
+        f"{int(cs_tr['n_start'].median())}, the end window {int(cs_tr['n_end'].median())}; "
+        f"empty windows: start {int((cs_tr['n_start'] == 0).sum())}, "
+        f"end {int((cs_tr['n_end'] == 0).sum())}, of {len(cs_tr)} transects.",
         "",
         "| window | asked for | median first obs | median last obs | truncated |",
         "|---|---|---|---|---|",
     ]
     for key in ("start", "end"):
         lo, hi, f, l, trunc = span[key]
-        lines.append(f"| {key} | {lo} to {hi} | {f} | {l} | "
-                     f"{'**yes**' if trunc else 'no'} |")
+        lines.append(f"| {key} | {lo} to {hi} | {f} | {l} | {'**yes**' if trunc else 'no'} |")
     if any(v[4] for v in span.values()):
-        lines += [
-            "",
-            "A truncated window does not average a full seasonal cycle. The "
-            "CoastSat record begins 1984-09-21 on most transects (1984-05/06 on "
-            "a few), so a window centred on the 1984-09-19 photo holds only the "
-            "autumn and winter after it.",
-        ]
+        lines += ["", "A truncated window does not average a full seasonal cycle. "
+                  "The CoastSat record begins 1984-09-21 on most transects, so a "
+                  "window centred on the 1984-09-19 photo holds only the autumn and "
+                  "winter after it."]
     if sens:
-        lines += [
-            "",
-            "## Sensitivity of the endpoint rate to the assumed survey date",
-            "",
-            "| centre shift | start | end | island mean endpoint (m/yr) | r vs dune | slope | RMSE |",
-            "|---|---|---|---|---|---|---|",
-        ]
-        for label, s0, s1, m, st in sens:
-            lines.append(f"| {label} | {s0} | {s1} | {m:.2f} | {st['r']:.2f} | "
-                         f"{st['slope']:.2f} | {st['rmse']:.2f} |")
-    lines += [
-        "",
-        "## Read this before quoting it",
-        "",
-        "* The dune line and the waterline are different features. A gap between "
-        "them is beach-width change as much as it is disagreement.",
-        "* The LRR spans the calendar window; the endpoint spans the survey interval. "
-        "They are not the same length of record.",
-        "* `n_obs_*` is the median per-transect count inside a one-year window. "
-        "One storm inside a window moves that end.",
-    ]
+        lines += ["", "## Sensitivity of the CoastSat net change to the assumed date", "",
+                  "| centre shift | start | end | island mean (m/yr) | r vs dune | slope | RMSE |",
+                  "|---|---|---|---|---|---|---|"]
+        for label, s0, s1, m, ss in sens:
+            lines.append(f"| {label} | {s0} | {s1} | {m:.2f} | {ss['r']:.2f} | "
+                         f"{ss['slope']:.2f} | {ss['rmse']:.2f} |")
+    lines += ["", "## Read this before quoting it", "",
+              "* The dune line and the waterline are different features; a gap "
+              "between them is beach-width change as much as disagreement.",
+              "* One storm inside a ±6-month window moves that end."]
     (sup / "PROVENANCE.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    print(f"island means  dune {isl['dune_rate_m_yr']:+.2f}  lrr {isl['cs_lrr_m_yr']:+.2f}  "
-          f"endpoint {isl['cs_endpoint_m_yr']:+.2f} m/yr")
-    for c in stats:
-        s = stats[c]
-        print(f"  {c:18s} n={s['n']} r={s['r']:.2f} slope={s['slope']:.2f} "
-              f"rmse={s['rmse']:.2f} bias={s['bias']:+.2f}")
-    print(f"  endpoint vs lrr    r={both['r']:.2f} slope={both['slope']:.2f} bias={both['bias']:+.2f}")
-    for label, s0, s1, m, st in sens:
-        print(f"  sens {label:6s} {s0} {s1}  mean={m:+.2f}  r={st['r']:.2f}")
+    print(f"island means  dune {isl['dune_rate_m_yr']:+.2f}  coastsat "
+          f"{isl['cs_endpoint_m_yr']:+.2f} m/yr   (net {isl['dune_change_m']:+.1f} / "
+          f"{isl['cs_endpoint_change_m']:+.1f} m)")
+    print(f"  shoreline vs dune  n={st['n']} r={st['r']:.2f} slope={st['slope']:.2f} "
+          f"rmse={st['rmse']:.2f} bias={st['bias']:+.2f}")
+    for label, s0, s1, m, ss in sens:
+        print(f"  sens {label:6s} {s0} {s1}  mean={m:+.2f}  r={ss['r']:.2f}")
     print(f"-> {out}")
     return 0
 

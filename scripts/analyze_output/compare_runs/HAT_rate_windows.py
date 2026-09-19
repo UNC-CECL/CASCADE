@@ -81,11 +81,13 @@ THE OBSERVATIONS
     A third reading, lrr (an OLS through every dune line in the window), was
     RETIRED 2026-09-18 with 3-rates/duneline_lrr (Hannah: "these should not be
     lrr, they would just be endpoint, we are tracking net change").
-    both        the two scoring targets as lines on one panel, no fill:
-                CoastSat blue (LOESS of the LRR), dune line red (LOESS of the
-                endpoint), with a model line per solve, each in its own
-                target's estimator (OLS for the CoastSat solve, endpoint for
-                the dune solve)
+    both        the two observations as lines on one panel, no fill, BOTH
+                AS NET CHANGE between the same two dune-line dates (2026-09-18,
+                Hannah): CoastSat blue (3-rates/coastsat/endpoint, the mean
+                position within +/-6 months of each date, differenced) and the
+                dune line red, each given the scoring target's LOESS treatment;
+                a model line per solve, all as the endpoint rate. The CoastSat
+                LRR, the model's actual scoring target, is in coastsat/.
 
 THE MODEL LINE
     lrr_m_yr           the OLS slope over the run's annual shorelines, the
@@ -157,7 +159,8 @@ from cascade_pipeline.coastsat_loess import (  # noqa: E402
 from cascade_pipeline.hindcast import build_target_table  # noqa: E402
 from cascade_pipeline.run_registry import (  # noqa: E402
     find_run_dir, legacy_arm_to_kind_tag, load_run_index)
-from site_layer.hat_observed_rates import dune_endpoint_csv, lrr_csv  # noqa: E402
+from site_layer.hat_observed_rates import (  # noqa: E402
+    coastsat_endpoint_csv, dune_endpoint_csv, lrr_csv)
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     DOMAIN_AXIS_LABEL, INK, INK_MUTED, apply_style, caption, figsize, save,
@@ -245,7 +248,9 @@ VARIANTS = {
 COASTSAT_VARIANTS = ("coastsat/means", "coastsat/loess")
 DUNELINE_VARIANTS = ("duneline/endpoint", "duneline/endpoint-loess")
 # The "both" panel draws each solve in its own target's estimator.
-BOTH_COLS = {"coastsat": "lrr_m_yr", "dune-mean3": "change_rate_m_yr",
+# Since 2026-09-18 both observations in both/ are NET CHANGE between the same
+# two dates (Hannah), so every model line there is the endpoint rate too.
+BOTH_COLS = {"coastsat": "change_rate_m_yr", "dune-mean3": "change_rate_m_yr",
              "dune-raw": "change_rate_m_yr"}
 
 # What is drawn: (root under OUT_DIR, variant, model sets in drawing order).
@@ -404,6 +409,26 @@ def load_dune_endpoint(window):
     return df, meta
 
 
+def load_coastsat_endpoint(window):
+    """CoastSat NET CHANGE at the dune-line dates (3-rates/coastsat/endpoint,
+    the rate over the survey interval): (domain frame, target frame). The
+    target goes through the SAME builder as the LRR target, only reading the
+    endpoint rate column, so the two differ in the estimator alone."""
+    start, end = window
+    dom = pd.read_csv(coastsat_endpoint_csv(start, end, "domain"))
+    ddf = _full().merge(dom[["domain_number", "mean_rate_m_yr"]]
+                        .rename(columns={"mean_rate_m_yr": "mean_lrr"}),
+                        on="domain_number", how="left")
+    ddf["std_lrr"] = 0.0
+    series = build_coastsat_series(
+        [CoastSatDataset(label=f"CoastSat endpoint {start}-{end}", period_start=start,
+                         csv_path=str(coastsat_endpoint_csv(start, end, "transect")),
+                         rate_col="rate_m_yr")],
+        active_period_start=start, loess_config=LOESS_CONFIG,
+        domains=HATTERAS_DOMAINS)
+    return ddf, _target_frame(series[0])
+
+
 def load_dune_endpoint_target(window, meta):
     """The two-survey rate per transect (from the stored product), then the
     scoring target's treatment. Returns domain_number / target_lrr_m_yr /
@@ -442,6 +467,7 @@ class Observation:
         self.coastsat_target = load_coastsat_target(window)
         self.endpoint, self.meta = load_dune_endpoint(window)
         self.endpoint_target = load_dune_endpoint_target(window, self.meta)
+        self.cs_endpoint, self.cs_endpoint_target = load_coastsat_endpoint(window)
 
     def frames(self, reading):
         """(line/dots frame, target frame or None) for one reading."""
@@ -455,14 +481,16 @@ class Observation:
     # the scoring targets, for tables/skill.csv
     TARGETS = (("coastsat_loess", lambda o: o.coastsat_target["target_lrr_m_yr"]),
                ("endpoint_raw",   lambda o: o.endpoint["mean_lrr"]),
-               ("endpoint_loess", lambda o: o.endpoint_target["target_lrr_m_yr"]))
+               ("endpoint_loess", lambda o: o.endpoint_target["target_lrr_m_yr"]),
+               ("cs_endpoint_raw",   lambda o: o.cs_endpoint["mean_lrr"]),
+               ("cs_endpoint_loess", lambda o: o.cs_endpoint_target["target_lrr_m_yr"]))
 
 
 def shared_bounds(observations, model_sets):
     """One half-range for every panel: the 5-scr rule (largest |rate| plus
     1 m, rounded up) over every observed reading and both estimators of
     every model set drawn."""
-    frames = [f for o in observations for f in (o.coastsat, o.endpoint)]
+    frames = [f for o in observations for f in (o.coastsat, o.endpoint, o.cs_endpoint)]
     half = obs.shared_bounds(frames)
     for mdfs, _ in model_sets.values():
         for df in mdfs:
@@ -522,7 +550,7 @@ def _draw_both(ax, o: Observation, half, **panel_kw):
     the two targets as lines. The model lines go on afterwards."""
     blank = _full().assign(mean_lrr=np.nan, std_lrr=0.0)
     obs.draw_panel(ax, blank, half, std=False, line_lw=0.0, **panel_kw)
-    ax.plot(o.coastsat_target["domain_number"], o.coastsat_target["target_lrr_m_yr"],
+    ax.plot(o.cs_endpoint_target["domain_number"], o.cs_endpoint_target["target_lrr_m_yr"],
             color=C_CS_TARGET, lw=1.2, zorder=6)
     ax.plot(o.endpoint_target["domain_number"], o.endpoint_target["target_lrr_m_yr"],
             color=C_DUNE_TARGET, lw=1.2, zorder=6)
@@ -553,7 +581,7 @@ def _panel(ax, o: Observation, variant, models, model_keys, half, **panel_kw):
 # -----------------------------------------------------------------------------
 def _estimator_label(variant):
     if VARIANTS[variant][0] == "both":
-        return "each in its target's estimator"
+        return "endpoint rate"
     return "OLS rate" if VARIANTS[variant][2] == "lrr_m_yr" else "endpoint rate"
 
 
@@ -574,9 +602,8 @@ def add_legend(fig, variant, model_keys):
     if observation == "both":
         handles = [Line2D([], [], color=C_CS_TARGET, lw=1.2),
                    Line2D([], [], color=C_DUNE_TARGET, lw=1.2)]
-        labels = [f"CoastSat scoring target: {TARGET_LABEL} of the waterline LRR",
-                  "dune-line target: the same treatment of the two-survey "
-                  "dune-line change"]
+        labels = [f"CoastSat shoreline, net change at the dune-line dates, {TARGET_LABEL}",
+                  "dune line, net change, the same treatment"]
     elif reading == "means":
         handles = [line_pair,
                    Line2D([], [], color=INK_MUTED, lw=0.5, ls=(0, (1, 1.6)))]
@@ -633,15 +660,16 @@ TARGET_CLAUSE = (f"a {TARGET_WINDOW}-domain LOESS of the transect rates north of
 def _observed_clause(observation, reading, metas):
     if observation == "both":
         return (
-            " The two coloured lines are the two scoring targets, each a per-transect "
-            f"rate given the same treatment: {TARGET_CLAUSE}. Blue is the CoastSat "
-            "waterline (an OLS through ~250 satellite dates per transect, the target "
-            "run_index.csv scores); red is the digitised dune line (the net change "
-            "between the window's two lines over the survey interval, from "
-            "5-scr/3-rates/duneline/endpoint; vintages and dates: "
-            f"{_dates_clause(metas)}). The gap between them is beach-width change, "
-            "which the model, whose shoreline is a dune line behind a fixed berm, "
-            "cannot represent.")
+            " The two coloured lines are the two observations, BOTH AS NET CHANGE "
+            "between the same two dune-line dates over the survey interval, each "
+            f"given the scoring target's treatment ({TARGET_CLAUSE}). Blue is the "
+            "CoastSat shoreline: the mean satellite position within six months of "
+            "each dune-line date, differenced (5-scr/3-rates/coastsat/endpoint). Red "
+            "is the digitised dune line, end line minus start line "
+            f"(5-scr/3-rates/duneline/endpoint). Vintages and dates: {_dates_clause(metas)}. "
+            "The gap between them is beach-width change, which the model, whose "
+            "shoreline is a dune line behind a fixed berm, cannot represent. The "
+            "CoastSat LRR, the model's scoring target, is drawn under coastsat/.")
     if reading == "means":
         return (
             " The observed line is the mean linear regression rate of the CoastSat "
@@ -678,9 +706,8 @@ def caption_text(windows, rows_by_key, metas, half, grid, variant, model_keys):
     observation, reading, col, _ = VARIANTS[variant]
     wins = ", ".join(f"{a}–{b}" for a, b in windows)
     estimator = (
-        "each in its own target's estimator (the OLS slope over the run's annual "
-        "shorelines for the CoastSat solve, the endpoint rate, last annual "
-        "shoreline minus first over the run years, for the dune-line solve)"
+        "the endpoint rate, the run's last annual shoreline minus its first over "
+        "the run years, like both observations here"
         if observation == "both" else
         "the endpoint rate, the run's last annual shoreline minus its first over "
         "the run years, the like-for-like estimator for two surveys"
@@ -809,7 +836,7 @@ def write_tables(observations, models, tables_dir):
             tab[f"model_endpoint_{tag}_m_yr"] = mdf["change_rate_m_yr"].to_numpy()
             tab[f"model_lrr_{tag}_m_yr"] = mdf["lrr_m_yr"].to_numpy()
             for name, _g in Observation.TARGETS:
-                est = "endpoint" if name.startswith("endpoint") else "lrr"
+                est = "endpoint" if "endpoint" in name else "lrr"
                 tab[f"resid_{est}_{tag}_vs_{name}_m_yr"] = (
                     tab[f"model_{est}_{tag}_m_yr"] - tab[f"{name}_m_yr"])
             for est, col in (("endpoint", "change_rate_m_yr"), ("lrr", "lrr_m_yr")):

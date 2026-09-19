@@ -53,6 +53,8 @@
 #                                     long window and its halves
 #             net_change_1996_2024/   CoastSat vs dune-line net change,
 #                                     1996-2024 and its halves (09-18)
+#             duneline_positions/     where the 1997/2009/2023 dune lines sat:
+#                                     maps, zooms, dune-road, beach width
 #             trajectory_patterns/    trajectory classification output
 #             two_period_comparison/  1984-2004 against 2004-2024
 #         archive/                    retired windows, old 5-year-bin runs,
@@ -128,6 +130,10 @@ DUNE_ENDPOINT_DOMAIN_FILE = ENDPOINT_DOMAIN_FILE
 # The CoastSat and dune-line net change side by side, 1996-2024 and its
 # halves (net_change_1996_2024.py, 2026-09-18).
 NET_CHANGE_1996_2024 = COMPARISONS / "net_change_1996_2024"
+# Where the dune line sat in 1997, 2009 and 2023: maps, imagery zooms, and
+# its distance to NC-12 and to the CoastSat shoreline (duneline_positions.py,
+# 2026-09-18).
+DUNELINE_POSITIONS = COMPARISONS / "duneline_positions"
 SHORELINE_INVENTORY = OBSERVATIONS / "shoreline_inventory"
 SHORELINE_PATTERNS = COMPARISONS / "trajectory_patterns"
 DSAS_ROOT = OBSERVATIONS / "dsas_1978_2019"

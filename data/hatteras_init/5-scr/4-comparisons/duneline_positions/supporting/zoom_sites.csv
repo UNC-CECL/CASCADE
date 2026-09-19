@@ -1,0 +1,6 @@
+site,title,centre_gis,first_gis,last_gis,site_span,chosen_by
+buxton,Buxton,7,6,8,1-15,"named site GIS 1-15; centred on its largest |net dune change| 1997-2023, GIS 7 (-65.9 m)"
+avon,Avon,24,23,25,21-31,"named site GIS 21-31; centred on its largest |net dune change| 1997-2023, GIS 24 (-73.3 m)"
+trivillage,Tri-Village,78,77,79,68-83,"named site GIS 68-83; centred on its largest |net dune change| 1997-2023, GIS 78 (-90.4 m)"
+mirlo,Mirlo Beach S-curves,84,83,85,84-90,"named site GIS 84-90; centred on its largest |net dune change| 1997-2023, GIS 84 (-79.3 m)"
+picked,Largest change elsewhere,33,32,34,33-33,"the domain outside every named site with the largest |net dune change| 1997-2023, GIS 33 (+43.0 m)"

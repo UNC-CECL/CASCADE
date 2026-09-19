@@ -46,6 +46,9 @@ runs (2026-09-18):
                              the mirror of coastsat_windows/1996_2024/
     net_change_1996_2024/    net shoreline vs net dune-line change in METRES,
                              1996-2024 and its halves; the gap is beach width
+    duneline_positions/      WHERE the 1997/2009/2023 dune lines sat: an
+                             island overview, imagery zooms, and the dune
+                             line's distance to NC-12 and to the shoreline
     trajectory_patterns/     trajectory classification output
     two_period_comparison/   1984-2004 against 2004-2024
 archive/                     kept, not for use
@@ -125,6 +128,7 @@ The **producers stayed** in `scripts/input_prep/5-scr/`:
 | `duneline_endpoint/duneline_endpoint.py` | `3-rates/duneline/endpoint/<window>/` |
 | `coastsat_endpoint/coastsat_endpoint.py` | `3-rates/coastsat/endpoint/<window>/` |
 | `net_change/net_change_1996_2024.py` | `4-comparisons/net_change_1996_2024/` |
+| `duneline_positions/duneline_positions.py` | `4-comparisons/duneline_positions/` |
 | `CoastSat/coastsat_lrr_windows.py` | `4-comparisons/coastsat_windows/` |
 | `duneline_vs_coastsat/duneline_vs_coastsat.py` | `4-comparisons/duneline_vs_coastsat/` |
 | `duneline_windows/duneline_windows.py` | `4-comparisons/duneline_windows/` |

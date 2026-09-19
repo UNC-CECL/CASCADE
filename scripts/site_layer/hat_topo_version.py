@@ -228,6 +228,10 @@ ROADS_ROOT = MGMT_ROOT / "road_offset"
 # superseded folder on 09-11 -- so they failed soft, comparing against nothing.
 # The layout is the one settled on 2026-09-15; this only names it once.
 ROAD_LINE_ROOT = ROADS_ROOT / "raw_offset"            # <vintage>/nc12_<vintage>.geojson
+# Today's NC-12, from the NCDOT route inventory (2026-09-18), standing in for
+# 2023/2024. NOT in ROAD_LINE_FOR_YEAR: no hindcast reads it; the dune-line
+# position figures do. See raw_offset/current/PROVENANCE.md.
+ROAD_LINE_CURRENT = ROAD_LINE_ROOT / "current" / "nc12_current.geojson"
 ROAD_RASTER_ROOT = ROADS_ROOT / "raster"              # <vintage>/masks/
 ROAD_SETBACK_ROOT = ROADS_ROOT / "dunestart_offset"   # measured/ derived/ modifications/
 ROAD_ARCHIVE = ROADS_ROOT / "archive"

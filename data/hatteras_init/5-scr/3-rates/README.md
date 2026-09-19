@@ -2,10 +2,24 @@
 
 **Tables, plus one house-style figure per window** beside them. The figures
 are drawn by `scripts/input_prep/5-scr/rates_figures.py` after the tables are built. They show the domain value
-filled blue for seaward and red for landward, the single transects as grey
-dots, and the village, groin, pier, shoal and fill marks. The PDF and caption
+filled blue for seaward and red for landward, the single transects as dots
+coloured by their own sign (the same blue / red), and the village, groin,
+pier, shoal and fill marks. The PDF and caption
 sit under each window's `supporting/`. Figures that compare products or runs
 are in `../4-comparisons/`.
+
+**Per model chain** there is one more figure per product: the chain's two
+windows stacked, earlier above, on the same axis as the product's window
+figures. The chains are 1984 → 2004 → 2024 and 1996 → 2010 → 2024:
+
+```
+coastsat/lrr/chains/lrr_chain_1984_2004_2024.png                     lrr_chain_1996_2010_2024.png
+coastsat/endpoint/chains/coastsat_endpoint_chain_1984_2004_2024.png  ..._1996_2010_2024.png
+duneline/endpoint/chains/duneline_endpoint_chain_1984_2004_2024.png  ..._1996_2010_2024.png
+```
+
+`5yr_bins` has no chain figure: it covers only the 1996 chain, and its
+`1996_2024` figure already shows it bin by bin.
 
 Y axes:
 - `lrr`: ±8 m/yr, the bound of every window figure.
