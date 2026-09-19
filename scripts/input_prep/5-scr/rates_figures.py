@@ -147,11 +147,12 @@ def _legend(fig, what, std):
     h = [(Line2D([], [], color=cw.C_ACCRETE, lw=1.0), Line2D([], [], color=cw.C_ERODE, lw=1.0)),
          (Line2D([], [], color=cw.C_ACCRETE, marker="o", ms=2.2, lw=0),
           Line2D([], [], color=cw.C_ERODE, marker="o", ms=2.2, lw=0))]
-    labels = [f"{what}, domain mean (seaward / landward)",
-              "single transects (seaward / landward)"]
+    # Sentence case, the quantity named by its method; "domain mean" and the
+    # seaward / landward colours are stated in each caption (Hannah, 2026-09-19).
+    labels = [what, "Individual transects"]
     if std:
         h.append(Line2D([], [], color=cw.INK_MUTED, lw=0.5, ls=(0, (1, 1.6))))
-        labels.append("±1 std across the domain's transects")
+        labels.append("±1 standard deviation")
     from matplotlib.legend_handler import HandlerTuple
     fig.legend(h, labels, loc="outside lower center", ncol=len(h), frameon=False,
                handler_map={tuple: HandlerTuple(ndivide=None, pad=0.3)})
@@ -173,7 +174,7 @@ def lrr_figures():
         fig, ax, n_out = _draw(_frame(dom, "mean_lrr", "std_lrr"), x,
                                t["lrr_m_yr"].to_numpy(float), half,
                                cw.Y_LABEL, cw.Y_TICK_M, cw.fills_in(s, e), std=True)
-        _legend(fig, "shoreline change rate", std=True)
+        _legend(fig, "Shoreline change rate (LRR)", std=True)
         caption(fig, (
             f"Observed shoreline change rate by GIS domain (1 at Cape Point, 90 at "
             f"Pea Island), {s}–{e}: for each CoastSat transect the ordinary-least-"
@@ -219,7 +220,7 @@ def endpoint_figures():
                                    tr["change_m"].to_numpy(float), half,
                                    f"Net change in {what} position (m)", tick,
                                    cw.fills_in(v0, v1), std=False)
-            _legend(fig, f"net {what} change", std=False)
+            _legend(fig, f"Net {what} change (endpoint)", std=False)
             dates = (f"{meta['start_date']} to {meta['end_date']}"
                      + (" (the end date assumed; no flight date is known)"
                         if bool(meta["end_date_assumed"]) else ""))
@@ -283,11 +284,11 @@ def chain_figures(half_lrr, half_end):
     from site_layer.hat_figure_style import _title
     products = [
         ("lrr", COASTSAT_LRR_ROOT, half_lrr, cw.Y_LABEL, cw.Y_TICK_M, True,
-         "shoreline change rate", "lrr"),
+         "Shoreline change rate (LRR)", "lrr"),
         ("coastsat", COASTSAT_ENDPOINT_ROOT, half_end, "Net change in shoreline position (m)",
-         10.0 if half_end <= 60 else 20.0, False, "net shoreline change", "coastsat_endpoint"),
+         10.0 if half_end <= 60 else 20.0, False, "Net shoreline change (endpoint)", "coastsat_endpoint"),
         ("duneline", DUNELINE_ENDPOINT_ROOT, half_end, "Net change in dune-line position (m)",
-         10.0 if half_end <= 60 else 20.0, False, "net dune line change", "duneline_endpoint"),
+         10.0 if half_end <= 60 else 20.0, False, "Net dune-line change (endpoint)", "duneline_endpoint"),
     ]
     out = []
     for product, root, half, ylab, tick, std, what, stem in products:

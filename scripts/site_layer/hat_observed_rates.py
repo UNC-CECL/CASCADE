@@ -122,6 +122,11 @@ DUNELINE_ENDPOINT_ROOT = DUNELINE_RATES / "endpoint"
 # so the two products difference like for like. Written by
 # scripts/input_prep/5-scr/coastsat_endpoint/coastsat_endpoint.py.
 COASTSAT_ENDPOINT_ROOT = COASTSAT_RATES / "endpoint"
+# The long-term LRR projected to a distance (2026-09-19, Hannah's advisor):
+# per transect lrr_m_yr x (end - start) years, beside the OBSERVED change
+# between calendar-year mean positions at the two ends. Written by
+# scripts/input_prep/5-scr/coastsat_lrr_projected/coastsat_lrr_projected.py.
+COASTSAT_LRR_PROJECTED_ROOT = COASTSAT_RATES / "lrr_projected"
 # Both endpoint products use the same two file names.
 ENDPOINT_TRANSECT_FILE = "transect_endpoint.csv"
 ENDPOINT_DOMAIN_FILE = "domain_endpoint_summary.csv"
