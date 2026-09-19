@@ -1,0 +1,17 @@
+window,model_ends,target,n,bias_m,rmse_m,r
+1996_2010,ends_solved_on_coastsat,coastsat,88,-0.714,25.677,0.343
+1996_2010,ends_solved_on_coastsat,coastsat_loess,88,0.043,15.444,0.512
+1996_2010,ends_solved_on_coastsat,duneline,88,13.923,32.499,0.033
+1996_2010,ends_solved_on_coastsat,duneline_loess,88,12.565,27.309,-0.055
+1996_2010,ends_solved_on_duneline,coastsat,88,-6.258,26.758,0.293
+1996_2010,ends_solved_on_duneline,coastsat_loess,88,-5.501,17.364,0.389
+1996_2010,ends_solved_on_duneline,duneline,88,8.379,26.178,0.334
+1996_2010,ends_solved_on_duneline,duneline_loess,88,7.021,19.924,0.338
+2010_2024,ends_solved_on_coastsat,coastsat,88,-18.671,35.573,0.289
+2010_2024,ends_solved_on_coastsat,coastsat_loess,88,-18.477,32.013,0.343
+2010_2024,ends_solved_on_coastsat,duneline,88,-4.703,30.682,0.085
+2010_2024,ends_solved_on_coastsat,duneline_loess,88,-4.75,27.425,0.106
+2010_2024,ends_solved_on_duneline,coastsat,88,-24.537,36.436,0.227
+2010_2024,ends_solved_on_duneline,coastsat_loess,88,-24.344,32.93,0.25
+2010_2024,ends_solved_on_duneline,duneline,88,-10.569,26.075,0.081
+2010_2024,ends_solved_on_duneline,duneline_loess,88,-10.617,22.125,0.095
