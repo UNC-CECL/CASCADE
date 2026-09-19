@@ -46,8 +46,20 @@ TIME INDEXING
     START_YEAR + i. The prescribed arm is used to CHECK that rather than
     assume it: arm B's setbacks must jump at exactly 1989 and 1999.
 
+THE PERIOD (2026-09-15)
+    `--period <start year>` selects a hindcast window from HATTERAS_PERIODS
+    (1984 -> 1984-2004, the default; 1996 -> 1996-2010). Only the relocation
+    events INSIDE the window are scored: a 1996 start scores the 1999 event
+    alone, because the 1989 event is already in its derived setback file. The
+    output root follows the period (relocation_<start>_<end>/), the event
+    animations are drawn only for events in the window, and the independent
+    position cross-check stays at the 2004 measurement -- the period's END for
+    1984-2004 and year 8 of 14 for 1996-2010 -- because it is the only
+    surveyed road position; the tables say which year it is.
+
 USAGE
     python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py
+    python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py --period 1996 --preset edgeBE
     python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py --arm-a DIR --arm-b DIR
 
 Author: Hannah A. Henry, UNC CECL
@@ -87,10 +99,11 @@ for _path in (SCRIPTS_DIR, _HERE.parent):
         sys.path.insert(0, str(_path))
 
 from cascade_pipeline import roadway as roadway_module          # noqa: E402
-from hatteras_site_config import (                              # noqa: E402
+from site_layer.hatteras_site_config import (                              # noqa: E402
     HATTERAS_DOMAINS,
     HATTERAS_FIRST_ROAD_DOMAIN,
     HATTERAS_LAST_ROAD_DOMAIN,
+    HATTERAS_PERIODS,
     HATTERAS_RELOCATION_CHECK_2004,
     HATTERAS_ROAD_EVENTS,
     resolve_be_preset,
@@ -106,8 +119,32 @@ from cascade_pipeline.plotting.shoreline_gif import (           # noqa: E402
     DEFAULT_GIF_CONFIG,
 )
 
-START_YEAR = 1984
-END_YEAR = 2004
+# THE PERIOD. Module globals because every scorer, the arm names and the
+# output root read them; set ONCE by set_period() from --period before any of
+# that runs. 1984-2004 is the default so the six 2026-09-01 sets and every
+# regenerate line in RELOCATION_COMPARISON_RESULTS.md still mean what they did.
+DEFAULT_PERIOD = 1984
+START_YEAR = DEFAULT_PERIOD
+END_YEAR = HATTERAS_PERIODS[DEFAULT_PERIOD]["end_year"]
+
+# The ONE surveyed road position: RoadOffset_2004_domains.csv, measured on
+# the 2008 NC-12 line against 2004-start row 0. It is the end of 1984-2004
+# and the middle of 1996-2010, and the same number in both, which is what
+# makes the position check comparable across periods.
+CHECK_YEAR = 2004
+
+
+def set_period(start_year):
+    """Points the module at one hindcast window. Raises on a year that is not
+    a HATTERAS_PERIODS key, so a typo cannot score an empty window."""
+    global START_YEAR, END_YEAR, OUTPUT_ROOT
+    if start_year not in HATTERAS_PERIODS:
+        raise SystemExit(f"--period {start_year}: not a hindcast period "
+                         f"(have {sorted(HATTERAS_PERIODS)})")
+    START_YEAR = int(start_year)
+    END_YEAR = int(HATTERAS_PERIODS[START_YEAR]["end_year"])
+    OUTPUT_ROOT = (PROJECT_BASE_DIR / "output" / "comparisons"
+                   / "relocation" / f"{START_YEAR}_{END_YEAR}")
 
 # The scenario both arms run. `full_management` is the status-quo hindcast,
 # and it is the only scenario where a relocation arm is meaningful and the
@@ -149,7 +186,10 @@ def _slug(text):
 # at GIS 1 and 90, while calibBE is the only one carrying a source/sink term
 # on the relocation domains themselves -- so the artifacts have to be kept
 # apart or the second run silently overwrites the first.
-OUTPUT_ROOT = PROJECT_BASE_DIR / "output" / "comparisons" / "relocation_1984_2004"
+# relocation/<start>_<end>/ (one relocation tree since 2026-09-17; before that
+# relocation_<start>_<end>/ per window at the top level); re-pointed by
+# set_period().
+OUTPUT_ROOT = PROJECT_BASE_DIR / "output" / "comparisons" / "relocation" / f"{START_YEAR}_{END_YEAR}"
 
 # Tolerance windows for the hit/miss matrix. Two are reported rather than one
 # because the answer is sensitive to it and a single number would hide that.
@@ -198,6 +238,16 @@ TOPO_WINDOWS = (
     ("1999 event (GIS 9-14)", 6, 20),
     ("1989 event (GIS 84-87)", 82, 90),
 )
+
+
+def windows_in_period(windows, targets):
+    """The windows worth drawing for this period: the island, plus each event
+    window whose event year is one the period actually scores. A 1996 start
+    has no 1989 event to show; drawing that block would animate two identical
+    arms and read as a null result."""
+    years = {str(y) for y in targets.values()}
+    return tuple(w for w in windows
+                 if w[0] == "full island" or w[0].split()[0] in years)
 
 # Recorded on every topographic frame. The measured island planform spans
 # 6.3 km of cross-shore offset across the real domains, but Cascade's
@@ -597,6 +647,12 @@ def score_trajectories(series_a, series_b, targets, start_year, check_2004):
                              managed_prescribed=bool(i <= last_b)))
 
         wa, wb = a[:common + 1], b[:common + 1]
+        # The modelled position in the check year, per arm, or None if the
+        # manager had stopped by then. For 1984-2004 this is the last year;
+        # for 1996-2010 it is mid-window, and the column says which year.
+        k = CHECK_YEAR - start_year
+        at_a = float(a[k]) if 0 <= k <= last_a else None
+        at_b = float(b[k]) if 0 <= k <= last_b else None
         summary.append(dict(
             gis=gis,
             historical=gis in targets,
@@ -610,6 +666,9 @@ def score_trajectories(series_a, series_b, targets, start_year, check_2004):
             compared_through=int(start_year + common),
             difference_at_common_m=float(wb[-1] - wa[-1]),
             rmse_m=float(np.sqrt(np.mean((wa - wb) ** 2))),
+            check_year=CHECK_YEAR,
+            free_at_check_m=at_a,
+            prescribed_at_check_m=at_b,
             measured_2004_m=check_2004.get(gis),
         ))
     return pd.DataFrame(summary), pd.DataFrame(long)
@@ -759,7 +818,7 @@ def _report_header(arm_a, arm_b, preset):
     """Provenance block written above the captured output.
 
     WHY THIS EXISTS. On 2026-08-25 a re-run of this comparison rewrote every
-    CSV and GIF in output/comparisons/relocation_1984_2004/<preset>/ (now <version>/<preset>/) and left
+    CSV and GIF in output/comparisons/relocation_1984_2004/<preset>/ (now relocation/1984_2004/<version>/<preset>/) and left
     the report.txt from 2026-08-22 sitting beside them -- the script had lost
     its report-writing step, so nothing overwrote it. For three days that
     folder held a report describing DIFFERENT runs from the CSVs next to it,
@@ -774,6 +833,7 @@ def _report_header(arm_a, arm_b, preset):
         "=" * 74 + "\n"
         f"generated   {datetime.datetime.now():%Y-%m-%d %H:%M:%S} by "
         f"{os.path.basename(__file__)}\n"
+        f"period      {START_YEAR}-{END_YEAR}\n"
         f"preset      {preset}\n"
         f"arm A       {_arm_provenance(arm_a)}\n"
         f"arm B       {_arm_provenance(arm_b)}\n"
@@ -787,6 +847,10 @@ def _report_header(arm_a, arm_b, preset):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     raw_runs = PROJECT_BASE_DIR / "output" / "raw_runs"
+    parser.add_argument("--period", type=int, default=DEFAULT_PERIOD,
+                        help="hindcast start year, a HATTERAS_PERIODS key "
+                             f"(default {DEFAULT_PERIOD}); sets the window, "
+                             "the arm names and the output root")
     parser.add_argument("--preset", default=DEFAULT_PRESET,
                         help="source/sink preset; names both arms and the "
                              f"output subdirectory (default {DEFAULT_PRESET})")
@@ -800,6 +864,7 @@ def main():
                         help="output directory "
                              "(default OUTPUT_ROOT/<topo version of the arms>/<preset>[_groin])")
     args = parser.parse_args()
+    set_period(args.period)
 
     preset, _ = resolve_be_preset(args.preset)
     name_a, name_b = arm_names(preset)
@@ -861,7 +926,11 @@ def _compare(args, preset, out_dir):
     series_a = road_series(cascade_a, HATTERAS_DOMAINS, *span)
     series_b = road_series(cascade_b, HATTERAS_DOMAINS, *span)
     targets = historical_targets(START_YEAR, END_YEAR)
+    if not targets:
+        raise SystemExit(f"no relocation event falls in {START_YEAR}-{END_YEAR}; "
+                         "there is nothing for this comparison to score")
 
+    print(f"  period              {START_YEAR}-{END_YEAR}")
     print(f"\n  managed road domains  A: {len(series_a)}   B: {len(series_b)}")
     print(f"  historical domains    {sorted(targets)}")
     for year in sorted(set(targets.values())):
@@ -983,6 +1052,11 @@ def _compare(args, preset, out_dir):
     traj_df, long_df = score_trajectories(
         series_a, series_b, targets, START_YEAR, HATTERAS_RELOCATION_CHECK_2004)
     hist = traj_df[traj_df["historical"]]
+    where = ("the last year of the window" if CHECK_YEAR == END_YEAR else
+             f"year {CHECK_YEAR - START_YEAR} of {END_YEAR - START_YEAR}, mid-window")
+    print(f"  position cross-check at {CHECK_YEAR}, {where}: measured_2004_m is")
+    print("  RoadOffset_2004 (2008 line vs 2004-start row 0); free/prescribed_at_check_m")
+    print("  are each arm's modelled setback that year.\n")
     print(hist.to_string(index=False))
     traj_df.to_csv(tables_dir / "setback_summary.csv", index=False)
     long_df.to_csv(tables_dir / "setback_by_year.csv", index=False)
@@ -1037,7 +1111,7 @@ def _compare(args, preset, out_dir):
                          end_year=END_YEAR)
         back_a = back_barrier_matrix(cascade_a)
         back_b = back_barrier_matrix(cascade_b)
-        for name, lo, hi in GIF_WINDOWS:
+        for name, lo, hi in windows_in_period(GIF_WINDOWS, targets):
             place = out_dir / PLACE_DIR[name]
             place.mkdir(parents=True, exist_ok=True)
             make_road_relocation_gif(
@@ -1045,7 +1119,7 @@ def _compare(args, preset, out_dir):
                 str(place / GIF_FILES["lines"]), back_a=back_a, back_b=back_b,
                 event_years=targets, gif_config=GIF_CONFIG,
                 title=f"NC-12 and the dune line \u2014 {name}")
-        for name, lo, hi in TOPO_WINDOWS:
+        for name, lo, hi in windows_in_period(TOPO_WINDOWS, targets):
             place = out_dir / PLACE_DIR[name]
             place.mkdir(parents=True, exist_ok=True)
             make_topography_gif(

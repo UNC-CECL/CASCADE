@@ -3,7 +3,7 @@
 
 WHY THIS FIGURE EXISTS
     The rig is quoted as corroborating BOTH parameters. It does not, and the
-    difference matters enough to draw. `scripts/hatteras_site_config.py` said
+    difference matters enough to draw. `scripts/site_layer/hatteras_site_config.py` said
     until 2026-08-30 that in the rig "f = 0.6 is a clean INTERIOR minimum ...
     So is M ... Neither railed." The rig's own sweep CSV refuses the second
     half: RMSE improves monotonically to M = 60 and then the model blows up.
@@ -58,7 +58,7 @@ FIGURE_DIR = PROJECT_BASE_DIR / "output" / "groin_sweep" / "figures"
 
 if str(PROJECT_BASE_DIR / "scripts") not in sys.path:
     sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
-from hat_figure_style import (apply_style, C, C_1984, INK, INK_MUTED,  # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, C_1984, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save, _title)
 
 CHOSEN_M, CHOSEN_F = 60.0, 0.6

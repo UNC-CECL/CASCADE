@@ -217,7 +217,7 @@ def check_road_vintages() -> list:
     """
     try:
         sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
-        from hatteras_site_config import HATTERAS_ROAD_EVENTS as events
+        from site_layer.hatteras_site_config import HATTERAS_ROAD_EVENTS as events
     except Exception as e:                      # config moved or unimportable
         return [dict(label=y, src=s, ok=None, clashes=[], why=str(e))
                 for y, s in ROAD_SOURCE_YEAR.items()]

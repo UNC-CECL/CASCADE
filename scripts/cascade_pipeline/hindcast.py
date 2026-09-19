@@ -58,7 +58,7 @@ else:
 
 # scripts/ is the parent of this package, so the resolver is importable
 # without a path hack. It owns the dune-topo directory AND the array names.
-from hat_topo_version import domain_arrays, dune_line_for_year
+from site_layer.hat_topo_version import domain_arrays, dune_line_for_year
 
 from cascade_pipeline import roadway as roadway_module
 from cascade_pipeline.coastsat_loess import compute_domain_means
@@ -579,6 +579,16 @@ def load_absolute_dune_distance(year, geometry, raw_dir,
     """
     path = Path(raw_dir) / f"{dune_line_for_year(year)}_duneline_offset_raw.csv"
     raw = pd.read_csv(path)
+    # An extended geometry (2026-09-16) reaches beyond the surveyed raw; its
+    # domains are in raw_offsets/ext/<vintage>_duneline_offset_raw_ext.csv
+    # (duneline_to_raw_offsets.py --extension), same columns. Read only when
+    # the geometry needs it, so a base run never touches the file.
+    from site_layer.hat_extension_domains import SURVEYED_GIS
+    if (geometry.first_gis_id < SURVEYED_GIS[0]
+            or geometry.last_gis_id > SURVEYED_GIS[1]):
+        ext = Path(raw_dir) / "ext" / (path.stem + "_ext.csv")
+        if ext.is_file():
+            raw = pd.concat([raw, pd.read_csv(ext)], ignore_index=True)
     missing = [c for c in columns.values() if c not in raw.columns]
     if missing:
         raise KeyError(f"{path.name}: missing column(s) {missing}; "

@@ -77,7 +77,7 @@ class AnnotationConfig:
 DEFAULT_ANNOTATIONS = AnnotationConfig()
 
 
-def add_geographic_annotations(ax, config=DEFAULT_ANNOTATIONS):
+def add_geographic_annotations(ax, config=DEFAULT_ANNOTATIONS, label=True):
     """Add every geographic reference annotation to an axis (bottom -> top).
 
     Draw order: shoal zones, community spans, village center lines, pier
@@ -89,6 +89,11 @@ def add_geographic_annotations(ax, config=DEFAULT_ANNOTATIONS):
     Args:
         ax: Matplotlib Axes to annotate.
         config: AnnotationConfig; defaults to an empty (no-op) layout.
+        label: Draw the name beside each band and line. Set False on a small
+            multiple: the bands stay legible at any panel width but their
+            labels do not, and on a six-panel grid the same eight names would
+            be repeated six times (2026-09-17). Name them in the caption
+            instead.
     """
     trans = blended_transform_factory(ax.transData, ax.transAxes)
 
@@ -96,6 +101,8 @@ def add_geographic_annotations(ax, config=DEFAULT_ANNOTATIONS):
         ax.axvspan(z_lo - 0.5, z_hi + 0.5,
                    color=config.color_shoal, alpha=0.10, zorder=0,
                    hatch="///", edgecolor=config.color_shoal, linewidth=0)
+        if not label:
+            continue
         ax.text((z_lo + z_hi) / 2.0, 0.04,
                 f"{zone_label}\nPosition", transform=trans,
                 ha="center", va="bottom", fontsize=7, color="#7A5800", style="italic",
@@ -104,6 +111,8 @@ def add_geographic_annotations(ax, config=DEFAULT_ANNOTATIONS):
     for span_label, (d_lo, d_hi) in config.town_spans.items():
         ax.axvspan(d_lo - 0.5, d_hi + 0.5,
                    color=config.color_town_span, alpha=0.14, zorder=0)
+        if not label:
+            continue
         ax.text((d_lo + d_hi) / 2.0, 0.90,
                 span_label, transform=trans,
                 ha="center", va="top", fontsize=8, color="0.25", fontweight="bold",
@@ -111,18 +120,24 @@ def add_geographic_annotations(ax, config=DEFAULT_ANNOTATIONS):
 
     for vname, dom in config.village_lines.items():
         ax.axvline(dom, color=config.color_village_line, lw=0.9, ls="--", alpha=0.65, zorder=1)
+        if not label:
+            continue
         ax.text(dom, 0.84, vname, transform=trans,
                 ha="center", va="top", fontsize=7.5, color="0.30",
                 bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.80))
 
     for pname, (dom, lbl_y) in config.piers.items():
         ax.axvline(dom, color=config.color_pier, lw=1.0, ls="-.", alpha=0.80, zorder=2)
+        if not label:
+            continue
         ax.text(dom, lbl_y, pname, transform=trans,
                 ha="center", va="top", fontsize=7, color=config.color_pier, rotation=90,
                 bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.80))
 
     for gname, dom in config.groins.items():
         ax.axvline(dom, color=config.color_groin, lw=1.1, ls=":", alpha=0.85, zorder=2)
+        if not label:
+            continue
         ax.text(dom, config.groin_label_y, gname, transform=trans,
                 ha="center", va="top", fontsize=7, color=config.color_groin, rotation=90,
                 bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.80))

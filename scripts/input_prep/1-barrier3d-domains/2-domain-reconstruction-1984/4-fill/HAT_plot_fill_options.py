@@ -87,10 +87,10 @@ def _find_root(start: Path) -> Path:
 
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
-from hat_topo_version import array_name, dune_topo_root          # noqa: E402
-from hat_topo_version import insert_figures_dir  # noqa: E402
-from hat_topo_version import require_version  # noqa: E402
-from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+from site_layer.hat_topo_version import array_name, dune_topo_root          # noqa: E402
+from site_layer.hat_topo_version import insert_figures_dir  # noqa: E402
+from site_layer.hat_topo_version import require_version  # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save, _title)
 
 # INS_V supplies N and the post-insert setback ONLY; the figure draws

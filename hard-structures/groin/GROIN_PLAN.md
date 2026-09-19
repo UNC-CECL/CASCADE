@@ -12,7 +12,7 @@ the same stem, and its own paragraph into `HAT-groin-figures/CAPTIONS.md`.
 | `groin_module_logic.png` | **the mechanics** -- what the module adds each year, and why it cannot close the gap | `HAT_groin_module_logic_figure.py` |
 | `groin_timeline_and_hindcast.png` | the fillet timeline against the module's `M_eff` schedule | `HAT_groin_timeline_figure.py` |
 
-All three came under the project house style (`scripts/hat_figure_style.py`) on
+All three came under the project house style (`scripts/site_layer/hat_figure_style.py`) on
 2026-09-11: a 190 mm printed column, the sheltered side in the ACCENT purple
 and the unprotected side in BASE grey across all three, panel letters, and
 **nothing on the canvas that belongs in a caption**. The prose those images

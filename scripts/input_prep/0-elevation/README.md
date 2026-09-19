@@ -81,7 +81,7 @@ They served the 2008 NOAA IOCM attempt, which lost to 2014 and whose product
 folder is no longer on disk. Keeping the classifier without the branch, or the
 branch without the classifier, would have left a path that reads as live and
 cannot run - so both went, and with them the `2008_NOAA_IOCM` entries in
-`scripts/hat_elevation_products.py` and in `HAT_plot_gapfill.py`'s `SOURCES`.
+`scripts/site_layer/hat_elevation_products.py` and in `HAT_plot_gapfill.py`'s `SOURCES`.
 
 **What this costs.** The 2008 comparison figures can no longer be regenerated,
 and `HAT_road_elevation.py` - which deliberately samples the road surface from
@@ -175,7 +175,7 @@ rasters and the figure legend will disagree about what a filled cell is:
 
 | file | set |
 |---|---|
-| `scripts/hat_elevation_products.py` | **add the product first** - a `Product` entry and its `FILL_CODES` |
+| `scripts/site_layer/hat_elevation_products.py` | **add the product first** - a `Product` entry and its `FILL_CODES` |
 | `2-produce/HAT_dem_gap_fill.py` | `FILL_DEM_PATH`, `FILL_SOURCE_TAG`, `FILL_SOURCE_YEAR`, `PRODUCT_TAG` |
 | `2-produce/HAT_dem_resample_clip.py` | nothing - pass `--product <NAME>` |
 | `2-produce/HAT_export_to_numpy.py` | `SURVEY_FILL`, `DEM_NAME`; pass `--product <NAME>` |
@@ -183,7 +183,7 @@ rasters and the figure legend will disagree about what a filled cell is:
 
 The product name is the TOP-LEVEL folder and appears in the figure filenames,
 so a new product cannot overwrite an existing one or its figures. Paths are
-resolved by `scripts/hat_elevation_products.py`; do not rebuild them by joining
+resolved by `scripts/site_layer/hat_elevation_products.py`; do not rebuild them by joining
 strings, which is how `HAT_road_elevation.py` stopped resolving when 2008 moved
 under `superseded/`.
 
@@ -225,7 +225,7 @@ operation and carries its own justification in the script's docstring.
     everywhere else        :           2009  >  2014
 
 **There is no road boundary (since 2026-08-26).** The override used to be
-confined to the ocean side of `nc12_1984.geojson`. Measurement showed that
+confined to the ocean side of `nc12_1978.geojson`. Measurement showed that
 boundary was buying almost nothing: switching it to the 2004 alignment would
 have recovered just 2,050 cells of new land island-wide, while removing it
 recovers 235,563 and gives domains 1-7 their first 1996 data. ALACE stops

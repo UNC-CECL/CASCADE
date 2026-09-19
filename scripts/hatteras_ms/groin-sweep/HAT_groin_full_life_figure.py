@@ -70,7 +70,7 @@ for _path in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
         sys.path.insert(0, str(_path))
 
 from cascade_pipeline.run_layout import resolve  # noqa: E402
-from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save, _title)
 from HAT_groin_sweep_config import (  # noqa: E402
     GROIN_DOWNDRIFT_GIS,

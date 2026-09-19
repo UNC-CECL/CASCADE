@@ -8,7 +8,8 @@ which is what tells you whether a figure predates a change.
 
 ```
 hindcast_calibrated/    the headline: modelled rate against the CoastSat
-                        target, both periods, calibrated and uncalibrated
+                        target, both periods; edgeBE and zeroBE on the
+                        1996/2010 chain since 09-18 (calibBE is not solved there)
 rate_windows/           the four rate windows on one y axis, the model against
                         the CoastSat waterline and the dune line, each with the
                         run solved on it
@@ -20,10 +21,10 @@ scenario_grid/          every preset and management scenario on one page
 
 | folder | script | runs |
 |---|---|---|
-| `hindcast_calibrated/` | `scripts/hatteras_ms/figures/HAT_hindcast_final_figure_loess.py` | the calibration arm, calibBE and edgeBE, groin on |
+| `hindcast_calibrated/` | `scripts/figure_making/model_output/HAT_hindcast_final_figure_loess.py` | the edgeBE and zeroBE full-management nogroin matrix arms, 1996 and 2010 |
 | `rate_windows/` | `scripts/analyze_output/compare_runs/HAT_rate_windows.py` | the edgeBE nogroin matrix plus the dune-solved experiment, `runs_used.csv` |
 | `relocation/` | `scripts/hatteras_ms/experiments/HAT_relocation_comparison.py` and the three readers named in its README | each set's `report.txt` header |
-| `scenario_grid/` | `scripts/hatteras_ms/figures/HAT_scenario_grid.py` | every matrix arm, both periods |
+| `scenario_grid/` | `scripts/figure_making/model_output/HAT_scenario_grid.py` | every matrix arm, both periods |
 
 ## Layout rule
 

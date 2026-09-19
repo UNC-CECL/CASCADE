@@ -43,9 +43,9 @@ REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "0-elevation" / "3-figures"))
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
-from hat_topo_version import insert_figures_dir  # noqa: E402
+from site_layer.hat_topo_version import insert_figures_dir  # noqa: E402
 from cascade_pipeline.run_registry import find_run_dir  # noqa: E402
-from hat_figure_style import (  # noqa: E402
+from site_layer.hat_figure_style import (  # noqa: E402
     C as STYLE_C, INK, DOMAIN_AXIS_LABEL, apply_style, figsize, open_frame, record_caption, save, town_bands, _title,
 )
 

@@ -23,7 +23,7 @@ from matplotlib.colors import FuncNorm
 import matplotlib.pyplot as plt
 
 # `scripts/` is on sys.path already -- cascade_pipeline lives inside it.
-from hat_figure_style import (
+from site_layer.hat_figure_style import (
     C, DOMAIN_AXIS_LABEL, INK, INK_MUTED, apply_style, figsize,
     spines_for_image,
 )

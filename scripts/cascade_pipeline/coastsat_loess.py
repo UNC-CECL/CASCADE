@@ -121,8 +121,11 @@ def load_transect_data(dataset, domains=DEFAULT_DOMAINS):
     # Spread each domain's transects evenly across its domain_spacing_m band.
     df["_rank"] = df.groupby(domain_col).cumcount()
     df["_n"] = df.groupby(domain_col)[domain_col].transform("count")
+    # From the geometry's first domain, not from 1: rate_comparison maps it
+    # back with along_m / spacing + first_gis_id, and a reach starting at
+    # GIS 0 (an extended geometry) would otherwise plot one domain off.
     df["along_coast_m"] = (
-        (df[domain_col] - 1) * domains.domain_spacing_m
+        (df[domain_col] - domains.first_gis_id) * domains.domain_spacing_m
         + (df["_rank"] + 0.5) * (domains.domain_spacing_m / df["_n"])
     )
     df = df.drop(columns=["_rank", "_n"])

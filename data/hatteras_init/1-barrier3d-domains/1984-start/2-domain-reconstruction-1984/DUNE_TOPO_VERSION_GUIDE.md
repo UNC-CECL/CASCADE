@@ -200,14 +200,14 @@ folder), the arm B of `HAT_relocation_comparison.py`; those reports are under
 
 ## Which version a script reads
 
-`scripts/hat_topo_version.py`, in order: explicit `override=`;
+`scripts/site_layer/hat_topo_version.py`, in order: explicit `override=`;
 `HAT_TOPO_VERSION_1984_START`; the `CURRENT` file in `dune-topo/`; the
 extractor's `VERSION` literal (what it *writes*); the only version present.
 `CURRENT` outranks the extractor since 2026-09-04 so a layer can be adopted
 without editing the extractor to a name it would overwrite. **`CURRENT` says
 `v2`.** Adopting a layer is two steps: write its name into `CURRENT`, and copy
 its `RoadSetback_1984_dunestart.csv` over
-`4-mgmt-forcing/road_offset/dunestart_offset/1984/RoadSetback_1984_dunestart.csv`,
+`4-mgmt-forcing/road_offset/dunestart_offset/measured/1984/RoadSetback_1984_dunestart.csv`,
 which `hatteras_site_config.py` hardcodes. A version's arrays paired with
 another version's CSV restores the off-by-N error the layers exist to remove.
 

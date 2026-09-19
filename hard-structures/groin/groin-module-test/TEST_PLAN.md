@@ -594,7 +594,7 @@ groin-module-test/
   figures/                  house style, captions in CAPTIONS.md
 ```
 
-Figures come under `scripts/hat_figure_style.py` and put their prose in
+Figures come under `scripts/site_layer/hat_figure_style.py` and put their prose in
 `CAPTIONS.md` beside them, with numbers computed at draw time, as the rest of the
 groin tree now does.
 

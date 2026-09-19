@@ -32,7 +32,7 @@ _H = Path(__file__).resolve(); BASE = _H.parents[3]
 for p in (BASE/"scripts", _H.parent):
     if str(p) not in sys.path: sys.path.insert(0, str(p))
 from HAT_fullperiod_target import observed_change_profile
-from hat_figure_style import (apply_style, C, INK, INK_MUTED, caption,
+from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED, caption,
                               figsize, open_frame, save, _title)
 
 SH = list(range(1, 13)); FIT = list(range(4, 9))

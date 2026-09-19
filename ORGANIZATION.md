@@ -4,7 +4,7 @@ Seven rules. They are not new: every one of them is a description of what the
 project already does in the places that work, written down so the places that
 do not can be brought into line, and so the next folder starts right.
 
-`python scripts/hat_layout_check.py` reports every departure from them. It is
+`python scripts/repo_tools/hat_layout_check.py` reports every departure from them. It is
 advisory and always exits zero — it produces a worklist, not an obstacle.
 
 ---
@@ -19,11 +19,29 @@ targets — a model input, read on every run — lived in the scripts tree.
 
 `README.md` is the one non-code file that belongs beside code.
 
+**A `.py` extension is not a defence.** Data can wear one: the BE rate tables
+are spelled as Python, and until 2026-09-18 four `hatteras_site_config_prebe_*.py`
+snapshots of the solved BE field sat at the root of `scripts/`, written there by
+the calibrate step before each pass. They looked like stray copies of the site
+config, and the equivalent 2026-08-24 snapshot was discarded on exactly that
+reading — taking the only record of the one-shot solve with it, and leaving
+`HAT_plot_be_zones.py` undrawable for three weeks. They now file under
+`data/hatteras_init/7-source-sink/2-calibrate/prebe/`.
+
+The root of `scripts/` therefore holds **folders and `README.md`, nothing
+else**, and the layout check reports any file that appears there. A module
+belongs in `scripts/site_layer/`, a repo tool in `scripts/repo_tools/`, and
+anything that is neither — a snapshot, an export, a copy left behind — belongs
+in the data tree.
+
+Only the root is judged. Deeper folders hold task scripts that are run by path
+and imported by nobody, which is correct for them.
+
 ## 2. A survey is named for its year; a window for its span
 
 ```
-4-mgmt-forcing/road_offset/dunestart_offset/1996/      a survey: one moment
-3-env-forcings/storms/hindcast_storms/1996_2010/       a window: an interval
+4-mgmt-forcing/road_offset/dunestart_offset/derived/1996/      a survey: one moment
+3-env-forcings/3-storms/hindcast_storms/1996_2010/     a window: an interval
 ```
 
 A dune line, a road alignment or a lidar survey is a **moment**, so it carries
@@ -89,10 +107,10 @@ Where something lives is decided once, in a resolver, and everything else asks:
 
 | Resolver | Owns |
 |---|---|
-| `scripts/hat_topo_version.py` | which Barrier3D domains a period reads |
-| `scripts/hat_observed_rates.py` | the CoastSat record and the rate fits |
-| `scripts/hat_elevation_products.py` | the DEM products |
-| `scripts/hatteras_site_config.py` | the period table and the forcing it names |
+| `scripts/site_layer/hat_topo_version.py` | which Barrier3D domains a period reads |
+| `scripts/site_layer/hat_observed_rates.py` | the CoastSat record and the rate fits |
+| `scripts/site_layer/hat_elevation_products.py` | the DEM products |
+| `scripts/site_layer/hatteras_site_config.py` | the period table and the forcing it names |
 
 Twenty-two files built the rate path by hand, which is why moving it once cost
 a day. A resolver makes the next move one edit, and turns a name that does not
@@ -121,7 +139,7 @@ cascade/          the model package
 scripts/          all code
     hat_*.py          the resolvers and the site config
     input_prep/       builds model inputs, one folder per stage
-    hatteras_ms/      the hindcast: the run, tools, experiments, figures
+    hatteras_ms/      the hindcast: the run, tools, experiments
     figure_making/    figures drawn from finished runs
     analyze_output/   cross-run analysis
     cascade_pipeline/ the shared library the runner imports

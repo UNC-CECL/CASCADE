@@ -49,13 +49,13 @@ _HERE = Path(__file__).resolve()
 PROJECT_ROOT = next(_p for _p in _HERE.parents if (_p / 'pyproject.toml').exists())
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
-from hatteras_site_config import (                      # noqa: E402
+from site_layer.hatteras_site_config import (                      # noqa: E402
     HATTERAS_PERIODS, HATTERAS_BE_PRESETS, HATTERAS_DOMAINS,
     HATTERAS_ROAD_EVENTS, HATTERAS_NOURISHMENT_PROJECTS,
     HATTERAS_ROAD_ELEVATION_FILE, HATTERAS_FIRST_ROAD_DOMAIN,
     HATTERAS_LAST_ROAD_DOMAIN)
-from hat_topo_version import domain_arrays, topo_dirs   # noqa: E402
-from hat_observed_rates import (                        # noqa: E402
+from site_layer.hat_topo_version import domain_arrays, topo_dirs   # noqa: E402
+from site_layer.hat_observed_rates import (                        # noqa: E402
     COASTSAT_LRR_ROOT, TRANSECT_FILE)
 
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"

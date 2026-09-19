@@ -53,7 +53,7 @@ _H = Path(__file__).resolve(); BASE = _H.parents[3]
 for p in (BASE/"scripts", _H.parent):
     if str(p) not in sys.path: sys.path.insert(0, str(p))
 from HAT_fullperiod_target import observed_change_profile
-from hat_figure_style import (apply_style, C, INK, INK_MUTED, figsize,
+from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED, figsize,
                               open_frame, record_caption)
 
 SWEEP = BASE/"output"/"groin_sweep"/"1984_2004_edgeBE"

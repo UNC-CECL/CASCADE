@@ -23,6 +23,18 @@ import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). This file drew in
+# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              DOMAIN_AXIS_LABEL)
+apply_style()
 import matplotlib.ticker as ticker
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
@@ -681,7 +693,7 @@ def plot_yearly_relative_shoreline_and_bn(
         active_gis  = gis_ids[bn_real > 0].tolist()
 
         fig, (ax, ax_bn) = plt.subplots(
-            2, 1, figsize=(14, 7), sharex=True,
+            2, 1, figsize=figsize("double", height=3.74), sharex=True,
             gridspec_kw={"height_ratios": [3.2, 1.15]},
             constrained_layout=True,
         )
@@ -841,7 +853,7 @@ def plot_yearly_absolute_shoreline_and_bn(
         active_gis = gis_ids[bn_real > 0].tolist()
 
         fig, (ax, ax_bn) = plt.subplots(
-            2, 1, figsize=(14, 7), sharex=True,
+            2, 1, figsize=figsize("double", height=3.74), sharex=True,
             gridspec_kw={"height_ratios": [3.2, 1.15]},
             constrained_layout=True,
         )
@@ -972,7 +984,7 @@ def plot_publication_rate_figure(
     widest_win  = max(LOESS_WINDOW_DOMAINS)
     data_handles = []
 
-    fig, ax = plt.subplots(figsize=(13, 6.0), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=figsize("double", height=3.45), constrained_layout=True)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
 
@@ -1082,12 +1094,12 @@ def plot_publication_rate_figure(
             fontsize=9.5, color="#555555", ha="right", va="center", style="italic")
 
     # Labels, title, orientation text
-    ax.set_xlabel("CASCADE Model Domain (500 m alongshore)",
+    ax.set_xlabel(DOMAIN_AXIS_LABEL,
                   fontsize=12, fontweight="bold", labelpad=8)
     ax.set_ylabel("Shoreline Change Rate (m/yr)",
                   fontsize=12, fontweight="bold", labelpad=8)
 
-    ax.text(0.0, 1.01, "← S  |  Cape Hatteras",
+    ax.text(0.0, 1.01, "← S  |  Cape Point",
             transform=ax.transAxes, fontsize=9, color="#444444",
             ha="left", va="bottom", style="italic", clip_on=False)
     ax.text(1.0, 1.01, "Pea Island  |  N →",

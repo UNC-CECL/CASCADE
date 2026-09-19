@@ -32,7 +32,7 @@ between them, so their differences would not have been the topography's alone.
 **Through time, side by side.** `HAT_version_pair_gif.py` (same scripts folder)
 renders the relocation comparison's animations with the two panels being v2
 and v3 under one scenario, into
-`output/comparisons/relocation_1984_2004/v2_vs_v3/<scenario>/<place>/`, one
+`output/comparisons/relocation/versions/v2_vs_v3/<scenario>/<place>/`, one
 folder per place (the island, the two event blocks, Pea Island where rows are
 added, Avon to Tri-Village where they are removed) with `topography.gif` and
 `dune-and-road.gif` in each. That is where the inserted and removed cells can
@@ -40,9 +40,9 @@ be watched doing something.
 
 **The relocation comparison, side by side.** `HAT_version_pair_report.py` (same
 scripts folder) reads the v2 and v3 relocation-comparison sets
-(`output/comparisons/relocation_1984_2004/<version>/calibBE_groin/tables/`)
+(`output/comparisons/relocation/1984_2004/<version>/calibBE_groin/tables/`)
 and the v3 footprint audit, and writes
-`output/comparisons/relocation_1984_2004/v2_vs_v3/report.txt` with `tables/`
+`output/comparisons/relocation/versions/v2_vs_v3/report.txt` with `tables/`
 beside it: every section of a per-version report with a v2 column, a v3
 column and the difference, headed by the identity of the four runs. Nothing
 is re-run or re-scored; it must be re-run after `HAT_relocation_comparison.py`

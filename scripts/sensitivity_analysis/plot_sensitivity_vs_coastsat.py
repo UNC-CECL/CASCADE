@@ -31,6 +31,18 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). This file drew in
+# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              DOMAIN_AXIS_LABEL)
+apply_style()
 import matplotlib.ticker as ticker
 import matplotlib.colors as mcolors
 from matplotlib.lines import Line2D
@@ -433,7 +445,7 @@ def plot_param_vs_coastsat(
     n_vals = len(values)
     cmap   = plt.get_cmap("viridis", n_vals)
 
-    fig, ax = plt.subplots(figsize=(14, 6.0), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=figsize("double", height=3.21), constrained_layout=True)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
 
@@ -494,11 +506,11 @@ def plot_param_vs_coastsat(
     add_accretion_erosion_labels(ax)
 
     # -- Axis labels & title --------------------------------------------------
-    ax.set_xlabel("CASCADE Model Domain (500 m alongshore)",
+    ax.set_xlabel(DOMAIN_AXIS_LABEL,
                   fontsize=11, fontweight="bold", labelpad=6)
     ax.set_ylabel("Shoreline Change Rate (m/yr)",
                   fontsize=11, fontweight="bold", labelpad=6)
-    ax.text(0.0, 1.01, "\u2190 S  |  Cape Hatteras",
+    ax.text(0.0, 1.01, "\u2190 S  |  Cape Point",
             transform=ax.transAxes, fontsize=9, color="#444444",
             ha="left", va="bottom", style="italic", clip_on=False)
     ax.text(1.0, 1.01, "Pea Island  |  N \u2192",
@@ -591,7 +603,7 @@ def plot_overview_2x2(all_runs, cs_active, cs_period_color, all_smoothed, out_pa
 
     fig, axes = plt.subplots(
         nrows, ncols,
-        figsize=(13 * ncols / 2, 5.2 * nrows),
+        figsize=figsize("double", height=5.2 * nrows * FIG_W_DOUBLE / (13 * ncols / 2)),
         constrained_layout=True,
     )
     fig.patch.set_facecolor("white")

@@ -59,8 +59,8 @@ HERE = Path(__file__).resolve().parent
 # subfolders of hatteras_ms. Six files here already did it this way.
 REPO = next(_p for _p in HERE.parents if (_p / 'pyproject.toml').exists())
 sys.path.insert(0, str(REPO / "scripts"))
-from hat_topo_version import dune_topo_root  # noqa: E402
-from hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
+from site_layer.hat_topo_version import dune_topo_root  # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
 from cascade_pipeline.run_layout import resolve  # noqa: E402
 from cascade_pipeline.run_registry import preset_dir_for  # noqa: E402
 from cascade_pipeline.coastsat_loess import (  # noqa: E402

@@ -32,7 +32,7 @@ DATA
     source convention, which is why its curve rises where these fall.
 
 STYLE, 2026-09-11
-    Drawn under the project house style (`scripts/hat_figure_style.py`): a
+    Drawn under the project house style (`scripts/site_layer/hat_figure_style.py`): a
     190 mm column, so the 9 pt type on the canvas is 9 pt on the page rather
     than the 4 pt a 13 in canvas reduced to. The sheltered side is the ACCENT
     purple and the unprotected side BASE grey -- the RdBu red/blue pair is
@@ -66,7 +66,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 GROIN_DIR = HERE.parent
 REPO = next(p for p in HERE.parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
-from hat_figure_style import (apply_style, C, INK_MUTED,  # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save)
 
 WETDRY_TABLE = (GROIN_DIR / "HAT-groin-buxton-output" / "shoreline_position_output"

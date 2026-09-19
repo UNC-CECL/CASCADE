@@ -59,8 +59,8 @@ HERE = Path(__file__).resolve().parent
 REPO = next(_p for _p in HERE.parents if (_p / 'pyproject.toml').exists())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(HERE))
-from hat_figure_style import elevation_cmap  # noqa: E402
-from hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
+from site_layer.hat_figure_style import elevation_cmap  # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
 from cascade_pipeline.run_registry import preset_dir_for  # noqa: E402
 from HAT_run_row_insert_set import ARMS  # noqa: E402
 

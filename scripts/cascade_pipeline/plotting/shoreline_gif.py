@@ -4,7 +4,7 @@ One frame per model year; current shoreline drawn over a year-0 reference
 (dashed grey), shaded blue where seaward of the reference, red where
 landward. See make_shoreline_gif's docstring for the three y-axis modes.
 
-STYLE. House standard (scripts/hat_figure_style.py) for type, colour and
+STYLE. House standard (scripts/site_layer/hat_figure_style.py) for type, colour and
 frame. TWO deliberate departures, both because this is a per-run artefact
 that lands in a run folder and is opened later with no context around it:
 the run's identity stays on the canvas as a small muted line beside the
@@ -35,7 +35,7 @@ from cascade_pipeline.annotations import DEFAULT_ANNOTATIONS, add_geographic_ann
 from cascade_pipeline.domains import DEFAULT_DOMAINS
 
 # `scripts/` is on sys.path already -- cascade_pipeline lives inside it.
-from hat_figure_style import (
+from site_layer.hat_figure_style import (
     C,
     C_1984_FILL,
     C_1997_FILL,

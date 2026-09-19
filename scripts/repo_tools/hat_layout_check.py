@@ -8,9 +8,9 @@
 # which does not scale and decays between surveys. This is the same survey,
 # run on demand.
 #
-#     python scripts/hat_layout_check.py            every rule
-#     python scripts/hat_layout_check.py --rule 5   just one
-#     python scripts/hat_layout_check.py --full     every offender, not the
+#     python scripts/repo_tools/hat_layout_check.py            every rule
+#     python scripts/repo_tools/hat_layout_check.py --rule 5   just one
+#     python scripts/repo_tools/hat_layout_check.py --full     every offender, not the
 #                                                   first few
 #
 # WHY IT DOES NOT FAIL THE BUILD
@@ -41,6 +41,23 @@ DATA_SUFFIXES = {".csv", ".npy", ".npz", ".tif", ".tiff", ".geojson", ".png",
 # A few data-shaped files belong beside code because they ARE code's input in
 # the sense of configuration, or documentation of it.
 DATA_ALLOWED = {"reference_yaml_hatteras.yaml"}
+
+# Rule 1, second case: the root of scripts/ holds no files but README.md.
+#
+# It held eleven on 2026-09-18 -- six site modules, this checker, and four
+# hatteras_site_config_prebe_<stamp>.py snapshots of the solved BE field that
+# the calibrate step had written beside the config it copied. The snapshots are
+# data wearing a .py extension, which is why the suffix test above never saw
+# them; they read as stray copies, which is how the equivalent 2026-08-24 one
+# came to be discarded, taking the only record of the one-shot solve with it
+# and leaving HAT_plot_be_zones.py undrawable for three weeks.
+#
+# The modules then moved into site_layer/ and the checker into repo_tools/, so
+# the root is now a list of folders and one README. That is worth holding: a
+# reader who opens scripts/ should see the map, not the map plus whatever was
+# most recently left lying on it. Anything new at this level belongs in one of
+# the folders, or is a snapshot that belongs in the data tree.
+ROOT_ALLOWED = {"README.md"}
 
 # Rule 4: the one retirement idiom.
 RETIRE_GOOD = re.compile(r"^superseded_\d{8}$")
@@ -93,6 +110,47 @@ def rule_1_data_beside_code():
         if path.is_file() and path.suffix.lower() in DATA_SUFFIXES \
                 and path.name not in DATA_ALLOWED:
             out.append(path.relative_to(REPO))
+    return out
+
+
+def imported_module_names():
+    """Every bare name any code in the repo imports.
+
+    Read once, not once per candidate. Only the code trees are scanned: a .py
+    under data/ is itself data -- the BE rate tables are spelled that way --
+    and treating one as an importer would let a snapshot vouch for a snapshot.
+    """
+    names = set()
+    for tree in CODE_TREES:
+        base = REPO / tree
+        if not base.is_dir():
+            continue
+        for path in walk(base):
+            if not (path.is_file() and path.suffix.lower() in IMPORT_SUFFIXES):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            # A notebook is JSON holding the same statements, one per string,
+            # so the unanchored pattern reads both without a JSON parse.
+            for hit in IMPORT_STMT.findall(text):
+                names.add(hit.split(".")[0])
+    return names
+
+
+def rule_1_loose_files_at_scripts_root():
+    """Files at the root of scripts/ other than README.md."""
+    root = REPO / "scripts"
+    out = []
+    for path in sorted(root.iterdir()):
+        if not path.is_file() or path.name in ROOT_ALLOWED:
+            continue
+        if path.suffix.lower() == ".py":
+            why = "a module belongs in site_layer/, a tool in repo_tools/"
+        else:
+            why = "not code -- the data tree or a folder README"
+        out.append((path.relative_to(REPO), why))
     return out
 
 
@@ -257,6 +315,9 @@ def main():
     if wanted is None or 1 in wanted:
         total += show("data files under scripts/", rule_1_data_beside_code(),
                       1, limit, "code and data share no tree")
+        total += show("loose files at the scripts/ root",
+                      rule_1_loose_files_at_scripts_root(), 1, limit,
+                      "the root is folders and README.md, nothing else")
     if wanted is None or 2 in wanted:
         total += show("period folders that are neither a vintage nor a window",
                       rule_2_period_folder_names(), 2, limit,

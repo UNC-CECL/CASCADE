@@ -91,7 +91,7 @@ for _path in (SCRIPTS_DIR, _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, error_cmap, figsize, open_frame,
                               save, _title)
 from HAT_groin_sweep_config import (  # noqa: E402

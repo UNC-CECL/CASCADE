@@ -35,9 +35,13 @@
 #       so every period names its own file (Hannah, 2026-09-11).
 #
 # OUTPUTS
-#   dunestart_offset/1996/RoadSetback_1996_dunestart.csv
-#   dunestart_offset/2010/RoadSetback_2010_dunestart.csv
-#   dunestart_offset/<year>/PROVENANCE.md   what was derived from what
+#   dunestart_offset/derived/1996/RoadSetback_1996_dunestart.csv
+#   dunestart_offset/derived/2010/RoadSetback_2010_dunestart.csv
+#   dunestart_offset/derived/<year>/PROVENANCE.md   what was derived from what
+#
+# derived/ rather than beside the measured folders (2026-09-15): the address
+# says these are not measurements. The sources are read from
+# dunestart_offset/measured/, both through hat_topo_version.road_setback_file().
 #
 # Nothing existing is read for writing, and both outputs are new files.
 #
@@ -53,16 +57,19 @@ _HERE = Path(__file__).resolve()
 _sys.path.insert(0, str(_HERE.parents[4]))          # scripts/
 _sys.path.insert(0, str(_HERE.parent))              # this producer folder
 
-from hatteras_site_config import HATTERAS_ROAD_EVENTS   # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_ROAD_EVENTS   # noqa: E402
+from site_layer.hat_topo_version import road_setback_file          # noqa: E402
 from HAT_road_offset_from_dune_start import (           # noqa: E402
-    read_two_row_csv, write_two_row_csv, OUT_ROOT)
+    read_two_row_csv, write_two_row_csv)
 
 RELOCATION_YEAR = 1989      # the one event between the 1984 line and 1996
 SOURCE_YEAR = {1996: 1984, 2010: 2004}
 
 
 def setback_path(year: int) -> Path:
-    return OUT_ROOT / str(year) / "RoadSetback_{0}_dunestart.csv".format(year)
+    """measured/<year>/ for the sources, derived/<year>/ for the outputs --
+    hat_topo_version.ROAD_SETBACK_KIND decides which, not this script."""
+    return road_setback_file(year)
 
 
 def event_displacements(year: int) -> dict:
@@ -126,6 +133,10 @@ DERIVED, not measured. Written by
 `scripts/input_prep/4-mgmt-forcings/road_offset/1-produce/HAT_road_setback_derived_vintages.py`
 on 2026-09-11.
 
+Under `dunestart_offset/derived/` since 2026-09-15: the address says this is not a
+measurement. The source is `dunestart_offset/measured/1984/RoadSetback_1984_dunestart.csv`,
+reached through `hat_topo_version.road_setback_file(1984)`.
+
     1996 = RoadSetback_1984_dunestart.csv + the 1989 Pea Island relocation
 
 The 1989 relocation has already happened by 1996 and the 1999 one has not, so
@@ -144,6 +155,10 @@ imagery and re-measuring is the thing that would replace this file.
 A COPY of `RoadSetback_2004_dunestart.csv`, written by
 `scripts/input_prep/4-mgmt-forcings/road_offset/1-produce/HAT_road_setback_derived_vintages.py`
 on 2026-09-11.
+
+Under `dunestart_offset/derived/` since 2026-09-15: the address says this is not a
+measurement. The source is `dunestart_offset/measured/2004/RoadSetback_2004_dunestart.csv`,
+reached through `hat_topo_version.road_setback_file(2004)`.
 
 The 2010 period reads the same topography product and the same road line as
 the 2004 period, and no relocation in the record falls between the two dates --

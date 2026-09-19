@@ -73,7 +73,7 @@ for _path in (SCRIPTS_DIR, _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save, _title)
 from HAT_groin_sweep_config import (  # noqa: E402
     END_YEAR,
@@ -243,7 +243,7 @@ def model_change(period, preset, combo, domains):
     Returns:
         A dict of domain -> change in metres, or None if the run is absent.
     """
-    from hatteras_site_config import HATTERAS_DOMAINS as geometry
+    from site_layer.hatteras_site_config import HATTERAS_DOMAINS as geometry
     path = sweep_output_dir(period, preset) / combo / "shoreline_matrix.npy"
     if not path.exists():
         return None
