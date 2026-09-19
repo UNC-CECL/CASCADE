@@ -43,6 +43,7 @@ USAGE
 from __future__ import annotations
 
 import math
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -73,8 +74,8 @@ from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
 
 N = cw.N_DOMAINS
 # Each transect dot takes the colour of its own sign, the line's blue / red
-# (the rate_windows per-domain dots use the same pair). Grey until 2026-09-18.
-DOT_ALPHA = 0.75
+# (the model_vs_observed per-domain dots use the same pair). Grey until 2026-09-18.
+DOT_ALPHA = 0.4
 DOT_S = 3.0
 Y_STEP_M = 10.0
 BINS_SCRIPT = (_REPO / "scripts" / "input_prep" / "5-scr" / "CoastSat_timeseries"
@@ -196,7 +197,7 @@ def lrr_figures():
 
 def endpoint_figures():
     products = [("coastsat", COASTSAT_ENDPOINT_ROOT, "shoreline"),
-                ("duneline", DUNELINE_ENDPOINT_ROOT, "dune line")]
+                ("duneline", DUNELINE_ENDPOINT_ROOT, "dune-line")]
     data = {}
     for key, root, _ in products:
         for w in _windows(root):
@@ -216,7 +217,7 @@ def endpoint_figures():
             tr, x = _along(tr)
             fig, ax, n_out = _draw(_frame(dom, "mean_change_m"), x,
                                    tr["change_m"].to_numpy(float), half,
-                                   "Net change in position (m)", tick,
+                                   f"Net change in {what} position (m)", tick,
                                    cw.fills_in(v0, v1), std=False)
             _legend(fig, f"net {what} change", std=False)
             dates = (f"{meta['start_date']} to {meta['end_date']}"
@@ -283,9 +284,9 @@ def chain_figures(half_lrr, half_end):
     products = [
         ("lrr", COASTSAT_LRR_ROOT, half_lrr, cw.Y_LABEL, cw.Y_TICK_M, True,
          "shoreline change rate", "lrr"),
-        ("coastsat", COASTSAT_ENDPOINT_ROOT, half_end, "Net change in position (m)",
+        ("coastsat", COASTSAT_ENDPOINT_ROOT, half_end, "Net change in shoreline position (m)",
          10.0 if half_end <= 60 else 20.0, False, "net shoreline change", "coastsat_endpoint"),
-        ("duneline", DUNELINE_ENDPOINT_ROOT, half_end, "Net change in position (m)",
+        ("duneline", DUNELINE_ENDPOINT_ROOT, half_end, "Net change in dune-line position (m)",
          10.0 if half_end <= 60 else 20.0, False, "net dune line change", "duneline_endpoint"),
     ]
     out = []
@@ -356,7 +357,8 @@ def main() -> int:
     w3 = chain_figures(half, half2)
     print(f"*/chains            {len(w3) // 2} figures (1984-2004-2024, 1996-2010-2024)")
     r = subprocess.run([sys.executable, str(BINS_SCRIPT)], capture_output=True,
-                       text=True, encoding="utf-8")
+                       text=True, encoding="utf-8",
+                       env={**os.environ, "PYTHONIOENCODING": "utf-8"})
     print(r.stdout.strip() or r.stderr.strip())
     return r.returncode
 

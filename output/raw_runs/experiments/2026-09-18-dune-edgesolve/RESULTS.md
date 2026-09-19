@@ -17,7 +17,7 @@ Written 2026-09-18 by scripts/input_prep/7-source-sink/2-calibrate/HAT_be_dune_e
 
 ## Interior skill, GIS 2-89, model minus observation, m/yr
 
-Each run scored against both observations: the CoastSat LRR target (model OLS slope, as run_index.csv) and the dune-line endpoint rate (model endpoint rate, as rate_windows/duneline/endpoint). The CoastSat row is the run the dune solve started from.
+Each run scored against both observations: the CoastSat LRR target (model OLS slope, as run_index.csv) and the dune-line endpoint rate (model endpoint rate, as model_vs_observed/vs_duneline/net_change). The CoastSat row is the run the dune solve started from.
 
 | window | solve | ends | vs CoastSat bias | RMSE | vs dune line bias | RMSE |
 |---|---|---|---|---|---|---|

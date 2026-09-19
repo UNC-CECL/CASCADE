@@ -13,9 +13,9 @@ potentially condensed, especially with the naming")
     vocabularies for one axis (domain_means / loess_target beside
     endpoint/raw / endpoint/loess), five stems that all said "model", and the
     dune tree carrying four copies of its own layout under sensitivity/.
-    Now: one tree under output/comparisons/rate_windows/, organised by
-    OBSERVATION and then READING, one naming rule for every file, and each
-    sensitivity drawn once.
+    Now: one tree under output/comparisons/model_vs_observed/ (named
+    rate_windows/ until 2026-09-18), organised by OBSERVATION and then
+    READING, one naming rule for every file, and each sensitivity drawn once.
 
 WHY IT IS HERE AND NOT IN 5-scr
     The observed-only figure lives with the observations
@@ -87,7 +87,7 @@ THE OBSERVATIONS
                 position within +/-6 months of each date, differenced) and the
                 dune line red, each given the scoring target's LOESS treatment;
                 a model line per solve, all as the endpoint rate. The CoastSat
-                LRR, the model's actual scoring target, is in coastsat/.
+                LRR, the model's actual scoring target, is in vs_shoreline/.
 
 THE MODEL LINE
     lrr_m_yr           the OLS slope over the run's annual shorelines, the
@@ -97,17 +97,25 @@ THE MODEL LINE
     Each reading is paired with its own estimator; the one pairing that
     mixes them (endpoint observation, OLS model) is kept as a sensitivity.
 
-NAMING   <observation>_<reading>_<start>_<end>.png, and _grid for the 2 x 2
-    by period (1984-start left, 1996-start right, earlier window above).
+NAMING   model_vs_<feature>_<reading>_<start>_<end>.png, and _grid for the
+    2 x 2 by period (1984-start left, 1996-start right, earlier window above).
+    The feature is shoreline (CoastSat) or duneline, the reading means,
+    smoothed or netchange (2026-09-18, Hannah: the old coastsat_ / duneline_
+    endpoint_ / both_ stems never said a model was being compared). The
+    internal variant keys (coastsat/means, ...) are unchanged; OUTPUT_FOLDER
+    maps them to the folders below.
     Every figure folder keeps its PDFs and CAPTIONS.md under supporting/,
     as hat_figure_style.save() and caption() put them.
 
-OUTPUT   output/comparisons/rate_windows/
-    coastsat/means/     coastsat_means_<w>.png          ends solved on CoastSat
-    coastsat/loess/     coastsat_loess_<w>.png
-    duneline/endpoint/  duneline_endpoint_<w>.png       ends solved on the dune
-    duneline/endpoint-loess/  duneline_endpoint_loess_<w>.png       line (mean3)
-    both/               both_<w>.png                    both targets, both solves
+OUTPUT   output/comparisons/model_vs_observed/
+    vs_shoreline/domain_means/   model_vs_shoreline_means_<w>.png     ends solved
+    vs_shoreline/smoothed/       model_vs_shoreline_smoothed_<w>.png  on CoastSat
+    vs_duneline/net_change/      model_vs_duneline_netchange_<w>.png  ends solved
+    vs_duneline/net_change_smoothed/
+                        model_vs_duneline_netchange_smoothed_<w>.png  on the dune
+                                                                      line (mean3)
+    vs_shoreline_and_duneline/   model_vs_shoreline_and_duneline_<w>.png
+                                                    both targets, both solves
     tables/             domain_rates_<w>.csv   every reading, every model set,
                                                the residual against each
                         skill.csv              bias and RMSE, GIS 2-89, per
@@ -118,12 +126,12 @@ OUTPUT   output/comparisons/rate_windows/
                         line's vintages, dates and interval
     y_bounds.txt        the shared y range and the rule behind it
     sensitivity/
-        ends-swapped/       coastsat/* on the dune-solved runs, duneline/* on
-                            the CoastSat-solved runs: each target against the
-                            OTHER solve
-        dune-raw-solve/     duneline/* on the raw-reading dune solve
-        mixed-estimator/    duneline_endpoint_olsmodel_<w>.png: the endpoint
-                            observation against the model's OLS rate
+        ends-swapped/       vs_shoreline/* on the dune-solved runs,
+                            vs_duneline/* on the CoastSat-solved runs: each
+                            target against the OTHER solve
+        dune-raw-solve/     vs_duneline/* on the raw-reading dune solve
+        mixed-estimator/    model_ols_vs_duneline_netchange_<w>.png: the
+                            net-change observation against the model's OLS rate
 
 USAGE
     python scripts/analyze_output/compare_runs/HAT_rate_windows.py
@@ -190,7 +198,7 @@ dune = _import_by_path(
 RAW_RUNS = _REPO / "output" / "raw_runs"
 RUN_INDEX = RAW_RUNS / "run_index.csv"
 from site_layer.hat_figure_style import COMPARISONS_ROOT  # noqa: E402
-OUT_DIR = COMPARISONS_ROOT / "rate_windows"
+OUT_DIR = COMPARISONS_ROOT / "model_vs_observed"
 
 PRESET = "edgeBE"
 # window -> (run_name, arm): the matrix, ends solved on CoastSat
@@ -231,19 +239,30 @@ SKIP = LOESS_CONFIG.skip_southern_domains
 TARGET_OUTLINE_LW = 0.8    # the edge of the target's fill
 RAW_DOT_PT2 = 4.0          # the per-domain means as dots: marker area, ~2 pt across
 
-# variant -> (observation, reading, model column, file stem)
+# variant -> (observation, reading, model column, file stem). The variant is
+# the internal key; OUTPUT_FOLDER says where it is written. Folder and stem
+# name the comparison in words (Hannah, 2026-09-18): the feature, not the
+# data source, and "netchange", not "endpoint".
 #   coastsat  means           line + std + fill        lrr_m_yr
 #             loess           target fill + dots       lrr_m_yr
 #   duneline  endpoint        line + fill              change_rate_m_yr
 #             endpoint-loess  target fill + dots       change_rate_m_yr
 #   both      both            two target lines         per solve (BOTH_COLS)
 VARIANTS = {
-    "coastsat/means":             ("coastsat", "means",          "lrr_m_yr",         "coastsat_means"),
-    "coastsat/loess":             ("coastsat", "loess",          "lrr_m_yr",         "coastsat_loess"),
-    "duneline/endpoint":          ("duneline", "endpoint",       "change_rate_m_yr", "duneline_endpoint"),
-    "duneline/endpoint-loess":    ("duneline", "endpoint-loess", "change_rate_m_yr", "duneline_endpoint_loess"),
-    "both":                       ("both",     "both",           "lrr_m_yr",         "both"),
-    "sensitivity/mixed-estimator": ("duneline", "endpoint",      "lrr_m_yr",         "duneline_endpoint_olsmodel"),
+    "coastsat/means":             ("coastsat", "means",          "lrr_m_yr",         "model_vs_shoreline_means"),
+    "coastsat/loess":             ("coastsat", "loess",          "lrr_m_yr",         "model_vs_shoreline_smoothed"),
+    "duneline/endpoint":          ("duneline", "endpoint",       "change_rate_m_yr", "model_vs_duneline_netchange"),
+    "duneline/endpoint-loess":    ("duneline", "endpoint-loess", "change_rate_m_yr", "model_vs_duneline_netchange_smoothed"),
+    "both":                       ("both",     "both",           "lrr_m_yr",         "model_vs_shoreline_and_duneline"),
+    "sensitivity/mixed-estimator": ("duneline", "endpoint",      "lrr_m_yr",         "model_ols_vs_duneline_netchange"),
+}
+OUTPUT_FOLDER = {
+    "coastsat/means":              "vs_shoreline/domain_means",
+    "coastsat/loess":              "vs_shoreline/smoothed",
+    "duneline/endpoint":           "vs_duneline/net_change",
+    "duneline/endpoint-loess":     "vs_duneline/net_change_smoothed",
+    "both":                        "vs_shoreline_and_duneline",
+    "sensitivity/mixed-estimator": "sensitivity/mixed-estimator",
 }
 COASTSAT_VARIANTS = ("coastsat/means", "coastsat/loess")
 DUNELINE_VARIANTS = ("duneline/endpoint", "duneline/endpoint-loess")
@@ -669,7 +688,7 @@ def _observed_clause(observation, reading, metas):
             f"(5-scr/3-rates/duneline/endpoint). Vintages and dates: {_dates_clause(metas)}. "
             "The gap between them is beach-width change, which the model, whose "
             "shoreline is a dune line behind a fixed berm, cannot represent. The "
-            "CoastSat LRR, the model's scoring target, is drawn under coastsat/.")
+            "CoastSat LRR, the model's scoring target, is drawn under vs_shoreline/.")
     if reading == "means":
         return (
             " The observed line is the mean linear regression rate of the CoastSat "
@@ -895,7 +914,7 @@ def main(argv=None):
 
     written = []
     for root, variant, keys in plan:
-        folder = OUT_DIR / root / variant if root else OUT_DIR / variant
+        folder = OUT_DIR / root / OUTPUT_FOLDER[variant]
         for o in observations:
             written += single_figure(o, variant, models, keys, half, folder)
         written += grid_figure(observations, variant, models, keys, half, folder)
