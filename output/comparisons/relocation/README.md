@@ -10,7 +10,8 @@ material was three top-level folders (`relocation_1984_2004/`,
 
 ```
 <start>_<end>/<version>/<preset>[_groin]/   one comparison set: a window, the
-                                            dune-topo version BOTH arms ran on
+                                            dune-TOPOGRAPHY version BOTH arms ran
+                                            on (not the island-offset version)
                                             (read from their metadata, never
                                             typed), a source/sink preset,
                                             groin on or off
@@ -48,7 +49,7 @@ place whichever window, version or preset they open:
 |---|---|---|---|---|
 | `1984_2004/` | `v2/` (CURRENT, the re-pick base) | calibBE_groin (09-09); zeroBE, edgeBE (09-15, for the cross-window report) | `raw_runs/versions/version-pair/v2/` | 1989 Pea Island (GIS 84-87), 1999 (GIS 9-14) |
 | `1984_2004/` | `v3/` (the 1984 reconstruction built from v2) | calibBE_groin (09-09) | `raw_runs/versions/version-pair/v3/` | the same two |
-| `1996_2010/` | `v2/` (island offsets v2) | zeroBE, edgeBE (09-15) | `raw_runs/matrix/1996_2010/` | 1999 only |
+| `1996_2010/` | `v2/` (dune topography v2; island offsets v3, the 09-18 re-digitized 1997 line) | zeroBE, edgeBE (rebuilt 09-18 on the re-run arms; the 09-15 sets were on offsets v2) | `raw_runs/matrix/1996_2010/` | 1999 only |
 
 `v1/` (six sets on the original 2026-08-27 pick set, superseded 09-04) was
 deleted 2026-09-17; its numbers are in the results document.

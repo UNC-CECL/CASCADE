@@ -1,11 +1,11 @@
 ==========================================================================
-generated   2026-09-15 09:53:34 by HAT_relocation_comparison.py
+generated   2026-09-18 23:28:36 by HAT_relocation_comparison.py
 period      1996-2010
 preset      zeroBE
 arm A       HAT_1996_2010_zeroBE_road_bdm_nogroin
-      run 2026-09-15 09:27:25   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+      run 2026-09-18 15:52:42   topo 1984-start/v2   commit 7e492c345232  DIRTY TREE
 arm B       HAT_1996_2010_zeroBE_road_reloc_bdm_nogroin
-      run 2026-09-15 09:31:17   topo 1984-start/v2   commit b1d48a81d32b  DIRTY TREE
+      run 2026-09-18 15:54:48   topo 1984-start/v2   commit 7e492c345232  DIRTY TREE
 
 This file is the console output of the run that wrote the CSVs and
 GIFs beside it. If the arm identities above do not match the runs on
@@ -16,8 +16,8 @@ disk, this report is stale -- re-run the comparison.
 NC-12 RELOCATION: emergent vs prescribed
 ==========================================================================
   preset              zeroBE
-  arm A (free)        C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\1996_2010\zeroBE\HAT_1996_2010_zeroBE_road_bdm_nogroin
-  arm B (prescribed)  C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\1996_2010\zeroBE\HAT_1996_2010_zeroBE_road_reloc_bdm_nogroin
+  arm A (free)        C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\matrix\1996_2010\zeroBE\HAT_1996_2010_zeroBE_road_bdm_nogroin
+  arm B (prescribed)  C:\Users\hanna\PycharmProjects\CASCADE\output\raw_runs\matrix\1996_2010\zeroBE\HAT_1996_2010_zeroBE_road_reloc_bdm_nogroin
   period              1996-2010
 
   managed road domains  A: 55   B: 55
@@ -73,7 +73,7 @@ NC-12 RELOCATION: emergent vs prescribed
     50       90         90     1996           9       100
     85      110         90     2009           9       100
 
-  control margin: median 170 m, min 40 m
+  control margin: median 165 m, min 40 m
   control domains within ONE cell of firing: 0
   -- a 0/45 false-positive count is only reassuring if these
      margins are wide; this is where that gets checked.
@@ -120,11 +120,11 @@ NC-12 RELOCATION: emergent vs prescribed
 --------------------------------------------------------------------------
 5. ANIMATION
 --------------------------------------------------------------------------
-  [GIF] saved (15 frames, GIS 9-90): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1996_2010\v2\zeroBE\1-island\dune-and-road.gif
-  [GIF] saved (15 frames, GIS 9-20): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1996_2010\v2\zeroBE\2-event-1999_GIS9-14\dune-and-road.gif
-  [GIF] saved topography (15 frames, GIS 9-90): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1996_2010\v2\zeroBE\1-island\topography.gif
-  [GIF] saved topography (15 frames, GIS 6-20): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1996_2010\v2\zeroBE\2-event-1999_GIS9-14\topography.gif
+  [GIF] saved (15 frames, GIS 9-90): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation\1996_2010\v2\zeroBE\1-island\dune-and-road.gif
+  [GIF] saved (15 frames, GIS 9-20): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation\1996_2010\v2\zeroBE\2-event-1999_GIS9-14\dune-and-road.gif
+  [GIF] saved topography (15 frames, GIS 9-90): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation\1996_2010\v2\zeroBE\1-island\topography.gif
+  [GIF] saved topography (15 frames, GIS 6-20): C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation\1996_2010\v2\zeroBE\2-event-1999_GIS9-14\topography.gif
 
 ==========================================================================
-artifacts -> C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation_1996_2010\v2\zeroBE
+artifacts -> C:\Users\hanna\PycharmProjects\CASCADE\output\comparisons\relocation\1996_2010\v2\zeroBE
 ==========================================================================
