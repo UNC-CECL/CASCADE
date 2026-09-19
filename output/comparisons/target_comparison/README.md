@@ -26,6 +26,8 @@ the runs are graded in.
 - `coastsat_subperiod_lrr/` — kept for the record: each window's own LRR (what
   the runner grades against), paired with the matrix runs.
 
+**Every figure here uses one y axis, ±80 m** (Hannah, 2026-09-19); each caption names the few domain values that run off it (Cape Point in the sub-period 2010–2024 figures, and the dune line at GIS 12 in 1996–2010).
+
 The dune-line target is the same in both (sub-period: 1997→2009 and
 2009→2023, each scaled to 14 yr). Each version has the layout below.
 `python ... HAT_target_comparison.py --coastsat-target full|subperiod`.
@@ -36,7 +38,7 @@ ends_solved_on_duneline/   the 09-18 dune edge-solve run, mean3 (solved on the d
     target_comparison_1996_2010_2024.png   1996–2010 above 2010–2024; PDF, CAPTIONS under supporting/
 paired/                    START HERE: each target with ITS OWN run only (CoastSat with the
                            CoastSat-solved run, the dune line with the dune-solved run), both
-                           one figure per window, both on the same ±130 m axis; per window
+                           one figure per window, all on the same ±80 m axis; per window
                            (a) the CoastSat target as the house fill with its run in black,
                            (b) the dune-line target the same way; end values in the figure title.
                            Chosen 2026-09-19 over dots+lines and residuals (style B)

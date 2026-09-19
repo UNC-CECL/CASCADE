@@ -124,6 +124,25 @@ MODEL_SETS = {"coastsat": "ends_solved_on_coastsat",
 MODEL_LABEL = {"coastsat": "ends solved on CoastSat",
                rw.MAIN_DUNE: "ends solved on the dune line"}
 LW = 1.1
+Y_HALF_M = 80.0   # fixed y range, ± m, every figure here (Hannah, 2026-09-19)
+
+
+def over_note(frames_cols, half):
+    """' Beyond ±80 m (off the axis): ...' for the (frame, columns, label)
+    triples one figure draws, naming each out-of-range domain; '' if none."""
+    hits = []
+    for df, cols, label in frames_cols:
+        for col in cols:
+            v = df.set_index("domain_number")[col]
+            for g, x in v[v.abs() > half].items():
+                hits.append(f"{label}{_COL_NAME.get(col, col)} {x:+.0f} m at GIS {g}")
+    return (f" Beyond ±{half:g} m, off the axis: " + "; ".join(hits) + "."
+            if hits else "")
+
+
+_COL_NAME = {"coastsat_target_m": "CoastSat target", "dune_target_m": "dune-line target",
+             "model_ends_solved_on_coastsat_m": "CoastSat-solved run",
+             "model_ends_solved_on_duneline_m": "dune-solved run"}
 LW_MODEL = 1.4
 Y_LABEL = "Net change in position (m)"
 
@@ -224,7 +243,10 @@ def figure(observations, frames, key, folder, half, skill_df):
         "beach-width change they imply: solid grey where the beach widened, hatched "
         "where it narrowed. Interior GIS 2–89, model minus target: " + stats
         + " The LOESS-smoothed scores, as the runs are graded, are in "
-        f"tables/skill.csv. One y axis, ±{half:g} m."))
+        f"tables/skill.csv. One y axis, ±{half:g} m, the same on every figure here."
+        + over_note([(frames[o.window], ["coastsat_target_m", "dune_target_m",
+                                         f"model_{folder}_m"], "{}–{} ".format(*o.window))
+                     for o in observations], half)))
     out = save(fig, OUT_DIR / folder / "target_comparison_1996_2010_2024")
     plt.close(fig)
     return out
@@ -324,12 +346,15 @@ def paired_figure(observations, frames, half, skill_df, ends):
             "2 to 89 carries none, so the interior is the model's own response. Full "
             "management, groin off. Interior GIS 2–89, model minus its own target: (a) "
             "{:+.1f} m bias, {:.1f} m RMSE; (b) {:+.1f} m bias, {:.1f} m RMSE. The y axis "
-            "(±{:g} m) is shared with the other window's figure. Scores against the other "
+            "(±{:g} m) is the same on every figure in target_comparison.{} Scores against the other "
             "target and the LOESS-smoothed targets are in tables/skill.csv.".format(
                 sk.loc[(w, "ends_solved_on_coastsat", "coastsat"), "bias_m"],
                 sk.loc[(w, "ends_solved_on_coastsat", "coastsat"), "rmse_m"],
                 sk.loc[(w, "ends_solved_on_duneline", "duneline"), "bias_m"],
-                sk.loc[(w, "ends_solved_on_duneline", "duneline"), "rmse_m"], half)))
+                sk.loc[(w, "ends_solved_on_duneline", "duneline"), "rmse_m"], half,
+                over_note([(df, ["coastsat_target_m", "model_ends_solved_on_coastsat_m",
+                                 "dune_target_m", "model_ends_solved_on_duneline_m"], "")],
+                          half))))
         out += save(fig, OUT_DIR / "paired" / f"target_and_own_run_{w}")
         plt.close(fig)
     return out
@@ -376,8 +401,9 @@ def main() -> int:
                   for r in rows]).to_csv(OUT_DIR / "runs_used.csv", index=False)
 
     cols = ["coastsat_target_m", "dune_target_m"] + [f"model_{f}_m" for f in MODEL_SETS.values()]
-    ext = max(float(np.nanmax(np.abs(df[cols].to_numpy(float)))) for df in frames.values())
-    half = float(math.ceil((ext + 5) / 10.0) * 10.0)
+    # ONE fixed y range for every figure in target_comparison, both versions
+    # (Hannah, 2026-09-19); anything beyond it is counted in the caption.
+    half = Y_HALF_M
     written = []
     for key, folder in MODEL_SETS.items():
         written += figure(observations, frames, key, folder, half, skill_df)
