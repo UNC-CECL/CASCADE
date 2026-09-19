@@ -51,6 +51,18 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). This file drew in
+# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              FIG_W_DOUBLE)
+apply_style()
+
 HERE = Path(__file__).resolve().parent
 # Anchored by SEARCHING UPWARD for the project root rather than by
 # counting parent directories (2026-09-13). A counted depth is correct
@@ -122,7 +134,11 @@ def main() -> None:
     years = START_YEAR + np.arange(nt)
 
     # ---------------------------------------------------------------- figure 1
-    fig, axes = plt.subplots(len(DOMAINS), 2, figsize=(15, 4.2 * len(DOMAINS)),
+    # printed width held fixed; only the height scales with the stack
+    fig, axes = plt.subplots(
+        len(DOMAINS), 2,
+        figsize=figsize("double",
+                        height=4.2 * len(DOMAINS) * FIG_W_DOUBLE / 15),
                              squeeze=False)
     rows = []
     for r, D in enumerate(DOMAINS):
@@ -194,7 +210,7 @@ def main() -> None:
     print("  wrote {}".format(f1))
 
     # ---------------------------------------------------------------- figure 2
-    fig2, ax2 = plt.subplots(2, 1, figsize=(14, 9))
+    fig2, ax2 = plt.subplots(2, 1, figsize=figsize("double", height=4.81))
     gis = np.arange(1, 91)
     base_rate = None
     for arm, label, colour in ARMS:

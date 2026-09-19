@@ -365,7 +365,7 @@ def build_file_lists():
     #   2. Array names lost their year suffix: domain_N_topography_2009.npy is
     #      now domain_N_topography.npy. array_name() owns that spelling.
     #   3. "2009-buffer" became "buffer"; BUFFER_DIR owns that path.
-    from hat_topo_version import topo_dirs, array_name, BUFFER_DIR
+    from site_layer.hat_topo_version import topo_dirs, array_name, BUFFER_DIR
     topo_dir, dune_dir, _topo_run = topo_dirs(RIG_TOPO_PRODUCT)
     print(f"  topography: {RIG_TOPO_PRODUCT}/{_topo_run}")
     buf_dune = os.path.join(str(BUFFER_DIR), "sample_1_dune.npy")

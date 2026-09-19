@@ -89,7 +89,7 @@ for _path in (PROJECT_BASE_DIR / "scripts",
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from hatteras_site_config import (  # noqa: E402
+from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_PERIODS, HATTERAS_ROAD_EVENTS)
 from cascade_pipeline.roadway import RelocationEvent  # noqa: E402
 from HAT_hindcast_config import field_default  # noqa: E402

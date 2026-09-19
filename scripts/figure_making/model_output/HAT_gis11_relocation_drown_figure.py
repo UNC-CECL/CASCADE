@@ -53,7 +53,7 @@ WHAT DROWNS IT
 Usage:
     python HAT_gis11_relocation_drown_figure.py [--out PATH]
 
-Reads output/comparisons/relocation_standard_setback/GIS11_profiles.npz, the
+Reads output/comparisons/relocation/standard_setback/GIS11_profiles.npz, the
 per-domain extract taken before the superseded runs were deleted.
 
 Author: Hannah A. Henry, UNC CECL
@@ -69,6 +69,18 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE: one typeface and one palette across every figure in this
+# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
+# found by searching upward (ORGANIZATION.md rule 5). This file drew in
+# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
+                              FIG_W_DOUBLE, record_caption, save)
+apply_style()
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 
@@ -78,8 +90,16 @@ _HERE = Path(__file__).resolve()
 # only while the file stays where it was written, and these moved into
 # subfolders of hatteras_ms. Six files here already did it this way.
 PROJECT_BASE_DIR = next(_p for _p in _HERE.parents if (_p / 'pyproject.toml').exists())
-PROFILES = (PROJECT_BASE_DIR / "output" / "comparisons"
-            / "relocation_standard_setback" / "GIS11_profiles.npz")
+from site_layer import hat_figure_style as _hs  # noqa: E402
+PROFILES = _hs.COMPARISONS_ROOT / "relocation" / "standard_setback" / "GIS11_profiles.npz"
+# The manuscript copy, with the other figures by subject (2026-09-18): the
+# same panels, the headline and its two lines moved to supporting/CAPTIONS.md.
+# Written only when --out is not given.
+PUBLISHED = _hs.figure_dir("management") / "gis11_relocation_drown.png"
+# ON since the layout was redrawn for the house-style column (2026-09-18).
+# Before that the labels, title and legend overlapped, and it was held off so
+# a broken figure could not land in output/figures/.
+PUBLISH = True
 
 CELL_M = 10.0
 ROAD_CELLS = 2          # 20 m road, as road_width_TS carries all run
@@ -141,9 +161,7 @@ def draw_profile(axis, grid, setbacks, year_label):
                       label="alongshore 10th-90th percentile")
     axis.plot(rows[keep], mean[keep], color=INK, lw=1.6, zorder=4,
               label="alongshore mean elevation")
-    axis.axhline(0.0, color=COLOR_WATER, lw=1.2, ls="--", zorder=3)
-    axis.annotate("0 m MHW  (the drowning threshold)", xy=(2, 0.06),
-                  fontsize=8, color=COLOR_WATER, va="bottom", zorder=6)
+    axis.axhline(0.0, color=COLOR_WATER, lw=1.0, ls="--", zorder=3)
 
     span = axis.get_ylim()
     for setback_m, label, colour in setbacks:
@@ -155,32 +173,32 @@ def draw_profile(axis, grid, setbacks, year_label):
             alpha=0.16, edgecolor=colour, lw=1.4, zorder=5))
         # The two candidate positions are 20 m apart on a 200 m axis, so a
         # label above each band overlaps its neighbour. Rotated inside the band
-        # each label sits on the thing it names and cannot collide.
+        # each label sits on the thing it names and cannot collide; at the
+        # 190 mm column only the distance fits, and the legend says which
+        # target each colour is (2026-09-18).
         axis.annotate(label, xy=(start + ROAD_CELLS * CELL_M / 2, 2.42),
-                      ha="center", va="top", fontsize=8.5, color=colour,
+                      ha="center", va="top", fontsize=7.5, color=colour,
                       fontweight="bold", rotation=90, zorder=7)
         # The row the drowning test actually reads.
         axis.plot([border_index * CELL_M], [row.mean() if row is not None
                                             else 0.0],
-                  marker="v", ms=9, color=colour, mec="white", mew=1.0,
+                  marker="v", ms=6, color=colour, mec="white", mew=0.8,
                   zorder=8, clip_on=False)
         axis.annotate(f"{fraction * 100:.0f}% wet",
-                      xy=(border_index * CELL_M, (row.mean() if row is not None
-                                                  else 0.0) - 0.16),
-                      ha="center", va="top", fontsize=8.5, color=colour,
-                      fontweight="bold", zorder=8)
+                      xy=(border_index * CELL_M + 5,
+                          row.mean() if row is not None else 0.0),
+                      ha="left", va="center", fontsize=7, color=colour,
+                      fontweight="bold", zorder=8,
+                      bbox=dict(facecolor="white", alpha=0.8, edgecolor="none",
+                                pad=0.5))
 
     axis.set_xlim(0, 200)
     axis.set_ylim(-1.4, 2.5)
     axis.set_xlabel("Distance landward of the dune line (m)")
-    axis.set_title(year_label, fontsize=10.5, color=INK, fontweight="bold",
-                   loc="left")
+    axis.set_title(year_label, loc="left", fontweight="bold")
     for side in ("top", "right"):
         axis.spines[side].set_visible(False)
-    axis.spines["left"].set_color("#C6CCD2")
-    axis.spines["bottom"].set_color("#C6CCD2")
-    axis.grid(axis="y", color="#EDF0F3", lw=0.7, zorder=0)
-    axis.tick_params(labelsize=8.5, colors=MUTED)
+    axis.grid(axis="y", color="#EDF0F3", lw=0.6, zorder=0)
 
 
 def draw_cliff(axis, grid):
@@ -203,40 +221,37 @@ def draw_cliff(axis, grid):
     # "evaluated and dry". Every setback gets a visible stub.
     axis.bar(setbacks, np.maximum(fractions * 100, 1.4), width=7.0,
              color=colours, zorder=3)
-    axis.axhline(WET_LIMIT * 100, color=INK, lw=1.3, ls="--", zorder=4)
-    axis.annotate("above this line the road drowns",
-                  xy=(28, WET_LIMIT * 100 - 2.5), fontsize=8.5, color=INK,
-                  ha="left", va="top", zorder=8)
+    axis.axhline(WET_LIMIT * 100, color=INK, lw=1.0, ls="--", zorder=4,
+                 label="20% wet: above it the road drowns")
 
-    # Three callouts within 20 m of each other on a 130 m axis: stack them at
-    # different heights and push the text off the marker, or they merge.
-    for setback_m, label, colour, height, align, dx in (
-            (MEASURED_SETBACK_M, "77 m = cell 7   measured", COLOR_OK,
-             46, "right", -5),
-            (87.0, "87 m = cell 8   20 m standard", COLOR_OK,
-             62, "right", -5),
-            (STANDARD_SETBACK_M, "97 m = cell 9   30 m standard",
-             COLOR_DROWN, 78, "right", -5)):
+    # Three callouts within 20 m of each other on a 130 m axis. Stacked
+    # horizontally they ran off the axis into panel (b) at the 190 mm column
+    # (2026-09-18); rotated, each sits in its own bar's column above the limit
+    # line, where the three dry cells leave the panel empty.
+    height = 27
+    for setback_m, label, colour in (
+            (MEASURED_SETBACK_M, "77 m, cell 7: measured", COLOR_OK),
+            (87.0, "87 m, cell 8: 20 m standard", COLOR_OK),
+            (STANDARD_SETBACK_M, "97 m, cell 9: 30 m standard", COLOR_DROWN)):
         # SNAP TO THE CELL, not to the metre. bulldoze indexes the road at
         # int(setback / 10), so 77 m and 70 m are the SAME road position and
         # the same bar. Pointing the callout at its raw metre value drops it
         # between two bars and invites the reader to interpolate a criterion
         # that only ever takes whole-cell values.
         snapped = int(setback_m / CELL_M) * CELL_M
-        axis.annotate(label, xy=(snapped + dx, height), ha=align,
-                      va="center", fontsize=8.5, color=colour,
+        axis.annotate(label, xy=(snapped, height + 3), ha="center",
+                      va="bottom", fontsize=7, color=colour, rotation=90,
                       fontweight="bold", zorder=7)
-        axis.plot([snapped], [height], marker="o", ms=6, color=colour,
-                  mec="white", mew=1.0, zorder=7)
-        axis.plot([snapped, snapped], [0, height], color=colour, lw=0.9,
+        axis.plot([snapped], [height], marker="o", ms=4, color=colour,
+                  mec="white", mew=0.8, zorder=7)
+        axis.plot([snapped, snapped], [0, height], color=colour, lw=0.8,
                   ls=":", alpha=0.75, zorder=6)
 
     axis.set_xlim(25, 155)
     axis.set_ylim(0, 100)
     axis.set_xlabel("Road setback (m behind the dune line)")
-    axis.set_ylabel("Bordering row at or below 0 m MHW (%)")
-    axis.set_title("The drowning criterion is a cliff, not a slope",
-                   fontsize=10.5, color=INK, fontweight="bold", loc="left")
+    axis.set_ylabel("Bordering row wet (%)")
+    axis.set_title("(c) The drowning test", loc="left", fontweight="bold")
     for side in ("top", "right"):
         axis.spines[side].set_visible(False)
     axis.spines["left"].set_color("#C6CCD2")
@@ -257,64 +272,77 @@ def main():
             f"re-running the arms at relocation_setback_m: measured.")
     data = np.load(PROFILES)
 
-    plt.rcParams.update({
-        "font.family": "sans-serif",
-        "font.sans-serif": ["Arial", "Helvetica", "DejaVu Sans"],
-        "font.size": 10, "figure.facecolor": "white",
-        "savefig.facecolor": "white", "legend.frameon": False,
-    })
-    figure = plt.figure(figsize=(14.5, 5.6))
-    grid_spec = figure.add_gridspec(1, 3, wspace=0.24,
-                                    left=0.055, right=0.985,
-                                    top=0.735, bottom=0.115)
+    # HOUSE STYLE (2026-09-18): apply_style() only, no local rcParams; the
+    # headline and its two lines are the caption, not the canvas.
+    figure = plt.figure(figsize=figsize("double", height=3.1))
+    grid_spec = figure.add_gridspec(1, 3, wspace=0.34,
+                                    width_ratios=(1, 1, 1.1),
+                                    left=0.07, right=0.99,
+                                    top=0.92, bottom=0.32)
 
-    marks = ((MEASURED_SETBACK_M, "77 m\nmeasured", COLOR_OK),
-             (STANDARD_SETBACK_M, "97 m\n30 m standard", COLOR_DROWN))
+    marks = ((MEASURED_SETBACK_M, "77 m", COLOR_OK),
+             (STANDARD_SETBACK_M, "97 m", COLOR_DROWN))
     grid_event = data[f"standard_domain_t{EVENT_YEAR_INDEX}"]
     grid_drown = data[f"standard_domain_t{DROWN_YEAR_INDEX}"]
 
     ax_event = figure.add_subplot(grid_spec[0, 0])
     draw_profile(ax_event, grid_event, marks,
-                 "1999  -  the year the historical relocation fires")
+                 "(a) 1999, the relocation fires")
     ax_event.set_ylabel("Elevation (m MHW)")
 
     ax_drown = figure.add_subplot(grid_spec[0, 1], sharey=ax_event)
     draw_profile(ax_drown, grid_drown, marks,
-                 "2001  -  the year the road is given up")
+                 "(b) 2001, the road is given up")
 
     ax_cliff = figure.add_subplot(grid_spec[0, 2])
     draw_cliff(ax_cliff, grid_drown)
 
-    figure.text(0.055, 0.945,
-                "GIS 11: a standard relocation setback moves where a "
-                "PRESCRIBED relocation lands",
-                fontsize=14, fontweight="bold", color=INK, ha="left")
-    figure.text(0.055, 0.895,
-                "The historical 1999 event is stored as a displacement, so it "
-                "is added to the model's current setback, not to the road's "
-                "surveyed position.",
-                fontsize=9.5, color=MUTED, ha="left")
-    figure.text(0.055, 0.862,
-                "Raising the emergent target 10 m → 30 m left the setback "
-                "at 20 m rather than 0 m in 1999, so 0 + 77 = 77 m became "
-                "20 + 77 = 97 m — two cells further back, across the "
-                "drowning threshold.",
-                fontsize=9.5, color=MUTED, ha="left")
-
+    headline = ("GIS 11: a standard relocation setback moves where a "
+                "PRESCRIBED relocation lands")
+    lede = ("The historical 1999 event is stored as a displacement, so it "
+            "is added to the model's current setback, not to the road's "
+            "surveyed position.")
+    chain = ("Raising the emergent target 10 m → 30 m left the setback "
+             "at 20 m rather than 0 m in 1999, so 0 + 77 = 77 m became "
+             "20 + 77 = 97 m — two cells further back, across the "
+             "drowning threshold.")
     handles = [
         Line2D([], [], color=INK, lw=1.6, label="alongshore mean elevation"),
-        Line2D([], [], color=COLOR_LAND, lw=7, alpha=0.6,
+        Line2D([], [], color=COLOR_LAND, lw=6, alpha=0.6,
                label="alongshore 10th-90th percentile"),
-        Line2D([], [], color=COLOR_WATER, lw=1.2, ls="--", label="0 m MHW"),
-        Line2D([], [], marker="v", ms=8, lw=0, color=INK, mec="white",
+        Line2D([], [], color=COLOR_WATER, lw=1.0, ls="--",
+               label="0 m MHW, the drowning threshold"),
+        Line2D([], [], marker="v", ms=6, lw=0, color=INK, mec="white",
                label="row the drowning test reads"),
+        Rectangle((0, 0), 1, 1, facecolor=COLOR_OK, alpha=0.3,
+                  edgecolor=COLOR_OK, label="road at 77 m, measured target"),
+        Rectangle((0, 0), 1, 1, facecolor=COLOR_DROWN, alpha=0.3,
+                  edgecolor=COLOR_DROWN, label="road at 97 m, 30 m standard"),
+        Line2D([], [], color=INK, lw=1.0, ls="--",
+               label="(c) 20% wet: above it the road drowns"),
     ]
-    figure.legend(handles=handles, loc="upper right", ncol=4, fontsize=8.5,
-                  bbox_to_anchor=(0.985, 0.845), handlelength=1.7)
+    figure.legend(handles=handles, loc="lower center", ncol=3, fontsize=7.5,
+                  frameon=False, bbox_to_anchor=(0.5, 0.0), handlelength=1.8)
 
     out = Path(args.out) if args.out else (
         PROFILES.parent / "HAT_GIS11_relocation_drown.png")
-    figure.savefig(out, dpi=170)
+    # 300 dpi, the house savefig resolution. It was 170, which is a screen
+    # export: the geometry was already right at 190 mm, the pixels were not.
+    figure.savefig(out, dpi=300)
+    if PUBLISH and args.out is None:
+        save(figure, PUBLISHED)
+        record_caption(PUBLISHED, (
+            f"{headline.replace('PRESCRIBED', 'prescribed')}. {lede} {chain} "
+            f"(a) and (b) are the GIS 11 cross-shore profile in 1999, "
+            f"the year the historical relocation fires, and in 2001, the "
+            f"year the road is given up, with the 77 m and 97 m road "
+            f"positions marked. (c) is the drowning test by setback, "
+            f"in the whole 10 m cells the model indexes in: the bordering row "
+            f"goes from 0% wet to 24% wet in one cell, against a 20% limit, "
+            f"so the criterion is a cliff rather than a slope. The project "
+            f"settled on a 20 m standard, which lands the 1999 event at 87 m, "
+            f"one cell on the dry side."))
+        print(f"wrote {PUBLISHED}")
     plt.close(figure)
     print(f"wrote {out}")
 

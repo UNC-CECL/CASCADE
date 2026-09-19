@@ -40,7 +40,7 @@ pick difference** — keep them paired.
 
 ## Which one loads — `CURRENT` decides (since 2026-09-04), and it says `v2`
 
-`scripts/hat_topo_version.py` resolves in this order:
+`scripts/site_layer/hat_topo_version.py` resolves in this order:
 
 1. an explicit `override=` argument
 2. the `HAT_TOPO_VERSION_1984_START` environment variable
@@ -57,7 +57,7 @@ write could be made the default. What survives of that: a fresh extraction is
 ### The forcing-tree setback CSV is the other half
 
 `hatteras_site_config.py:142` hardcodes
-`4-mgmt-forcing/road_offset/dunestart_offset/1984/RoadSetback_1984_dunestart.csv`.
+`4-mgmt-forcing/road_offset/dunestart_offset/measured/1984/RoadSetback_1984_dunestart.csv`.
 It is the **v2-measured** file, a copy of which is saved in `v2/`. Changing the
 default version means both steps:
 

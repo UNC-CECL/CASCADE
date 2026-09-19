@@ -9,7 +9,7 @@ Two entry points:
 Both consume cs_series from cascade_pipeline.coastsat_loess.build_coastsat_series
 -- this module only renders, it doesn't load or smooth CoastSat data itself.
 
-STYLE. Drawn under the house standard (scripts/hat_figure_style.py): printed
+STYLE. Drawn under the house standard (scripts/site_layer/hat_figure_style.py): printed
 width, 8-9 pt type, one alongshore axis label, village bands. The one place
 these figures depart from it is the TITLE. Every other figure in the project
 moves its title sentence into a CAPTIONS.md beside the image; these two are
@@ -39,7 +39,7 @@ from cascade_pipeline.domains import DEFAULT_DOMAINS
 
 # `scripts/` is on sys.path already -- cascade_pipeline lives inside it, so
 # importing this package at all means the style module is importable too.
-from hat_figure_style import (
+from site_layer.hat_figure_style import (
     C,
     DOMAIN_AXIS_LABEL,
     INK_MUTED,

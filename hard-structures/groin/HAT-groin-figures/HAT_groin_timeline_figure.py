@@ -35,7 +35,7 @@ DATA
     which is what a groin builds.
 
 STYLE, 2026-09-11
-    Drawn under the project house style (`scripts/hat_figure_style.py`). Three
+    Drawn under the project house style (`scripts/site_layer/hat_figure_style.py`). Three
     things changed beyond type and colour. The canvas is a 190 mm column
     instead of 14 in, so its type survives a page. The phase washes are gone:
     four overlapping shades on one panel (three phases plus two hindcast
@@ -69,7 +69,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 GROIN_DIR = HERE.parent
 REPO = next(p for p in HERE.parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
-from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save, _title)
 
 WETDRY_TABLE = (GROIN_DIR / "HAT-groin-buxton-output" / "shoreline_position_output"

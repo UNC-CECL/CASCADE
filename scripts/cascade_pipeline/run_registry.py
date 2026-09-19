@@ -286,12 +286,16 @@ def sweep_family(run_name):
 
 
 def check_tag(tag):
-    """Validates a tag: one path component, or two joined by '/'.
+    """Validates a tag: one to three path components joined by '/'.
 
     Two levels is a set and its members -- the four probes of one experiment,
-    the two versions of one pair -- and a third would be a taxonomy nobody
-    has asked for. The value reaches here from an environment variable and is
-    joined onto the output root, so it must not escape it.
+    the two versions of one pair. A third level exists for one thing only:
+    the steps of an iterative solve inside a member (`<set>/<member>/step2`,
+    2026-09-16), so a Newton solve's history sits under the member it
+    belongs to rather than beside it as `<member>-step2`, which put 26
+    folders at one level for a five-member experiment. The value reaches
+    here from an environment variable and is joined onto the output root, so
+    it must not escape it.
 
     Args:
         tag: The tag string. None and "" mean no tag.
@@ -300,18 +304,19 @@ def check_tag(tag):
         The tag, stripped; "" for none.
 
     Raises:
-        ValueError: If it is not one or two clean path components.
+        ValueError: If it is not one to three clean path components.
     """
     tag = (tag or "").strip()
     if not tag:
         return ""
     parts = tag.split("/")
-    if ("\\" in tag or len(parts) > 2
+    if ("\\" in tag or len(parts) > 3
             or any(not p or p.startswith(".") for p in parts)):
         raise ValueError(
-            f"tag {tag!r} must be one path component, or two joined by '/' "
-            f"for a set and its member -- it is joined onto the raw_runs "
-            f"root and must not escape it.")
+            f"tag {tag!r} must be one path component, two joined by '/' "
+            f"for a set and its member, or three for a step of a solve "
+            f"inside a member -- it is joined onto the raw_runs root and "
+            f"must not escape it.")
     return tag
 
 
@@ -1076,7 +1081,7 @@ def write_run_metadata(run_dir, run_name, sections, header):
 
 
 def skill_vs_target(change_rate, target_table, geometry,
-                    interior_margin=1):
+                    interior_margin=1, interior_gis=None):
     """Model-minus-observed skill over the real domains.
 
     Reported over two spans, deliberately. The end domains carry the locked
@@ -1095,6 +1100,9 @@ def skill_vs_target(change_rate, target_table, geometry,
         geometry: DomainGeometry describing the padded array.
         interior_margin: Domains excluded from each end for the interior
             metrics. 1 drops the two locked end domains.
+        interior_gis: (first, last) GIS bounds for the interior instead of
+            a margin, so an extended geometry (2026-09-16) is scored on the
+            same GIS 2-89 as its 90-domain baseline. Overrides the margin.
 
     Returns:
         A dict of mean bias and RMSE in m/yr, island-wide and interior, plus
@@ -1120,7 +1128,10 @@ def skill_vs_target(change_rate, target_table, geometry,
 
     everywhere = np.ones(gis_ids.size, dtype=bool)
     interior = everywhere.copy()
-    if interior_margin > 0:
+    if interior_gis is not None:
+        lo, hi = interior_gis
+        interior = (gis_ids >= lo) & (gis_ids <= hi)
+    elif interior_margin > 0:
         interior[:interior_margin] = False
         interior[-interior_margin:] = False
 

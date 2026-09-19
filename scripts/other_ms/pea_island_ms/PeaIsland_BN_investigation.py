@@ -1276,7 +1276,7 @@ def plot_threshold_bn_effectiveness(
     ax.set_ylabel("Real Pea Island domain", fontsize=12, fontweight="bold")
 
     ax.set_title(
-        str(_PATH_REPO / "n{run_name}"),
+        f"Threshold BN actually applied to CASCADE\n{run_name}",
         fontsize=14,
         fontweight="bold",
     )

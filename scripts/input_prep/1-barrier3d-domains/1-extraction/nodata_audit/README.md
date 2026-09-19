@@ -261,7 +261,7 @@ the arrays and the D: drive sources.
 
 ## Do not hardcode the product or version
 
-Both resolve through `scripts/hat_topo_version.py`. Set `TOPO_PRODUCT` at the
+Both resolve through `scripts/site_layer/hat_topo_version.py`. Set `TOPO_PRODUCT` at the
 top of a script and leave `VERSION_OVERRIDE = None`. The header of
 `hat_topo_version.py` records the incident that rule comes from: four road
 scripts pinned a version string and kept reading a stale interior for 18

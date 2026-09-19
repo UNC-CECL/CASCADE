@@ -34,7 +34,7 @@ DATA
     1984-2024 sweep cells, which carry a full annual trajectory each.
 
 STYLE, 2026-09-11
-    Drawn under the project house style (`scripts/hat_figure_style.py`): a
+    Drawn under the project house style (`scripts/site_layer/hat_figure_style.py`): a
     190 mm column rather than a 15 in canvas, the sheltered side in ACCENT
     purple and the unprotected side in BASE grey to match the two-shoreline
     figure, and the schematic's two shouted sentences and the three footnote
@@ -73,7 +73,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 GROIN_DIR = HERE.parent
 REPO = next(p for p in HERE.parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
-from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save, _title)
 
 WETDRY_TABLE = (GROIN_DIR / "HAT-groin-buxton-output" / "shoreline_position_output"
@@ -101,7 +101,7 @@ def observed_gap():
 
 def modelled_gap(combo):
     """Modelled gap per year for one sweep cell, referenced to its own year 0."""
-    from hatteras_site_config import HATTERAS_DOMAINS as geometry
+    from site_layer.hatteras_site_config import HATTERAS_DOMAINS as geometry
     path = SWEEP_ROOT / combo / "shoreline_matrix.npy"
     if not path.exists():
         return None, None

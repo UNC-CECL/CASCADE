@@ -73,8 +73,8 @@ def _find_root(start: Path) -> Path:
 
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
-from hat_topo_version import array_name, dune_topo_root, require_version, year_for_product  # noqa: E402
-from hat_figure_style import (apply_style, C, C_1984, C_1997, elevation_cmap, spines_for_image,  # noqa: E402
+from site_layer.hat_topo_version import array_name, dune_topo_root, require_version, year_for_product  # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, C_1984, C_1997, elevation_cmap, spines_for_image,  # noqa: E402
                               figsize, save, DOMAIN_AXIS_LABEL, town_bands, open_frame, _title)
 
 PRODUCT = "1984-start"
@@ -353,7 +353,7 @@ def fig_planview(ver: Version, ext, offsets: dict, year: int, mode: str, out: Pa
     col_of = {d: (starts[k], starts[k] + grids[k].shape[1]) for k, d in enumerate(use)}
     spans = {}
     try:
-        from hatteras_site_config import HATTERAS_ANNOTATIONS
+        from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS
         for name, (lo, hi) in HATTERAS_ANNOTATIONS.town_spans.items():
             inside = [d for d in use if lo <= d <= hi]
             if inside:

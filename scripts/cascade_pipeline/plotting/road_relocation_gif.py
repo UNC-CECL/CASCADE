@@ -60,12 +60,12 @@ from cascade_pipeline.plotting.shoreline_gif import (
 )
 
 # `scripts/` is on sys.path already -- cascade_pipeline lives inside it.
-from hat_figure_style import (
+from site_layer.hat_figure_style import (
     C, C_1997, DOMAIN_AXIS_LABEL, GRID_C, apply_style, elevation_cmap,
 )
-from hat_figure_style import INK as _HOUSE_INK
-from hat_figure_style import INK_MUTED as _HOUSE_INK_MUTED
-from hat_figure_style import figsize as _figsize
+from site_layer.hat_figure_style import INK as _HOUSE_INK
+from site_layer.hat_figure_style import INK_MUTED as _HOUSE_INK_MUTED
+from site_layer.hat_figure_style import figsize as _figsize
 
 apply_style()
 

@@ -98,7 +98,7 @@ python scripts/input_prep/0-elevation/3-figures/HAT_plot_1984_mosaic.py
 
 `HAT_plot_gapfill.py` reads `<PRODUCT>/2-resampled-10m/` and writes all three
 PNGs into `<PRODUCT>/figures/`. Paths come from
-`scripts/hat_elevation_products.py`, so a product that is not on disk is a
+`scripts/site_layer/hat_elevation_products.py`, so a product that is not on disk is a
 loud error rather than an empty glob.
 
 **The 2008 comparison figures are not reproducible (since 2026-08-26).** They

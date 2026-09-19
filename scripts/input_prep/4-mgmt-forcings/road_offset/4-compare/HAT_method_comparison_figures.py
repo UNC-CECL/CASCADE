@@ -32,7 +32,7 @@ WHAT "ACTUAL ROAD" MEANS, AND WHAT IT DOES NOT
 ----------------------------------------------
 The reference band is the RASTERIZED NC-12 mask, per alongshore profile, in the
 same frame both methods are drawn in: `road_seaward_cell - interior_row0_cell`,
-read from dunestart_offset/<year>/RoadOffset_<year>_profiles.csv. It is the road
+read from dunestart_offset/measured/<year>/RoadOffset_<year>_profiles.csv. It is the road
 as the model grid sees it, with all 50 profiles kept instead of collapsed.
 
 It is NOT an independent check on the dune-start method. That method's setback
@@ -87,7 +87,7 @@ sys.modules["hat_placement"] = P
 _SPEC.loader.exec_module(P)
 
 sys.path.insert(0, str(_HERE.parents[3]))
-from hat_figure_style import (  # noqa: E402
+from site_layer.hat_figure_style import (  # noqa: E402
     C, C_1984, DOMAIN_AXIS_LABEL, apply_style, caption, figsize, open_frame,
     save, spines_for_image, town_bands, _title)
 
@@ -129,7 +129,7 @@ METHOD_LABEL = {
 }
 METHOD_TICK = {"old": "independent minima", "dunestart": "dune start"}
 
-PROFILES_FMT = ("dunestart_offset/{year}/RoadOffset_{year}_profiles.csv")
+PROFILES_FMT = ("dunestart_offset/measured/{year}/RoadOffset_{year}_profiles.csv")
 
 
 # =============================================================================

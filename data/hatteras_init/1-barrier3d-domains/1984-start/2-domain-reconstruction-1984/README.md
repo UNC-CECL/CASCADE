@@ -296,7 +296,7 @@ decides is how much sand gets scraped off and handed to the dune.
 
 **Which road-elevation file — this is a trap.** `HATTERAS_ROAD_ELEVATION_FILE`
 resolves to `4-mgmt-forcing/road_elevation/RoadElevation.csv` (**0.807 m** at
-GIS 85). A second file, `.../dunestart_offset/1984/RoadElevation_1984_dunestart.csv`,
+GIS 85). A second file, `.../dunestart_offset/measured/1984/RoadElevation_1984_dunestart.csv`,
 reads **1.833 m** — a metre higher, because it samples along the *1984*
 alignment, which at GIS 9–15 and 84–87 now lies **under the foredune** and so
 returns dune, not roadbed.

@@ -75,10 +75,10 @@ for _path in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
         sys.path.insert(0, str(_path))
 
 from cascade_pipeline.hindcast import implied_interception_m3_yr  # noqa: E402
-from hatteras_site_config import HATTERAS_DOMAINS as GEOMETRY  # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_DOMAINS as GEOMETRY  # noqa: E402
 
 from HAT_fullperiod_target import observed_change_profile  # noqa: E402
-from hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, error_cmap, figsize, open_frame, save,
                               _title)
 

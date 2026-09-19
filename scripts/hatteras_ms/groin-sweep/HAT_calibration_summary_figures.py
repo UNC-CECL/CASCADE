@@ -3,7 +3,7 @@
 
 WHY THESE EXIST
     The reasoning behind the source/sink and groin calibrations lives in prose,
-    in comments in scripts/hatteras_site_config.py. That is the right home for
+    in comments in scripts/site_layer/hatteras_site_config.py. That is the right home for
     the conclusions, but two things were not recorded anywhere at all:
 
       * the BE convergence sequence. `--overwrite` REPLACES a run's row in
@@ -55,7 +55,7 @@ A CAVEAT THAT NO LONGER APPLIES, WITHDRAWN 2026-08-31
     All three panels are on the same corrected topography.
 
 STYLE, 2026-09-11
-    Under the project house style (`scripts/hat_figure_style.py`), which
+    Under the project house style (`scripts/site_layer/hat_figure_style.py`), which
     replaced this file's own INK/MUTED/ACCENT/FOIL palette and its local
     rcParams block. Three consequences worth knowing before reading an older
     copy of these images side by side with a new one:
@@ -100,7 +100,7 @@ for _p in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
         sys.path.insert(0, str(_p))
 
 from HAT_fullperiod_target import observed_change_profile  # noqa: E402
-from hat_figure_style import (apply_style, C, C_1984, C_1997,  # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, C_1984, C_1997,  # noqa: E402
                               INK, INK_MUTED, caption, error_cmap, figsize,
                               open_frame, save, _title)
 

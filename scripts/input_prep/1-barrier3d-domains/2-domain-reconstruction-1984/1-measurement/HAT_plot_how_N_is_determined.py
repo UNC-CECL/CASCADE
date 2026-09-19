@@ -58,9 +58,9 @@ def _find_root(start: Path) -> Path:
 
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
-from hat_topo_version import duneline_shift_dir  # noqa: E402
-from hat_topo_version import insert_figures_dir_for_domain  # noqa: E402
-from hat_figure_style import (apply_style, C, C_1984, C_1984_FILL,   # noqa: E402
+from site_layer.hat_topo_version import duneline_shift_dir  # noqa: E402
+from site_layer.hat_topo_version import insert_figures_dir_for_domain  # noqa: E402
+from site_layer.hat_figure_style import (apply_style, C, C_1984, C_1984_FILL,   # noqa: E402
                               C_1997, INK, caption, figsize, open_frame,
                               save, _title)
 

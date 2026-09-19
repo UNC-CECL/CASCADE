@@ -70,6 +70,16 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+# HOUSE STYLE, TYPEFACE ONLY: this script writes ANIMATION frames, and the
+# printed-width rule exists so 9 pt type is 9 pt on a page. A frame is never
+# printed, so its figsize is the frame size and is left alone (2026-09-17).
+import sys as _sys
+from pathlib import Path as _HP
+_sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_figure_style import apply_style  # noqa: E402
+apply_style()
 from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib.lines import Line2D
 
@@ -86,7 +96,7 @@ for _path in (PROJECT_BASE_DIR / "scripts",):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from hatteras_site_config import (  # noqa: E402
+from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_DOMAINS as GEOMETRY, HATTERAS_PERIODS,
     HATTERAS_FIRST_ROAD_DOMAIN, HATTERAS_LAST_ROAD_DOMAIN)
 
@@ -573,7 +583,7 @@ def main():
         plot_canvas(canvas, starts, per_domain, first_real, GEOMETRY,
                     title="", ax=axis, colorbar=False,
                     xlabel=f"Alongshore domain   (south {ARROW} north,  "
-                           f"Cape Hatteras {ARROW} Rodanthe)")
+                           f"Cape Point {ARROW} Rodanthe)")
 
         offsets = history.offsets[year_index]
         setbacks = history.setbacks[year_index]

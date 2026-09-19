@@ -6,7 +6,7 @@ and the cross-shore distance between those two lines, per domain.
 **This folder holds no elevation raster and forks nothing.** The 178 MB of 1 m
 tifs in `../2009-2014-1996/` are read in place, so this and the product it
 describes cannot drift apart on disk. It is deliberately not registered in
-`scripts/hat_elevation_products.py` — that resolves products with
+`scripts/site_layer/hat_elevation_products.py` — that resolves products with
 `1-gapfill-1m` and `2-resampled-10m` stages, and this has neither.
 
 Built by `scripts/input_prep/0-elevation/3-figures/HAT_plot_duneline_offset.py`.
@@ -268,7 +268,7 @@ rectangle over the only two lines the map has.
 
 **The place names are not defined here.** Communities, village centres and the
 two end labels are read from `HATTERAS_ANNOTATIONS` in
-`scripts/hatteras_site_config.py` — the same object the shoreline-rate figures
+`scripts/site_layer/hatteras_site_config.py` — the same object the shoreline-rate figures
 annotate from, and the same spans the model consumes as
 `HATTERAS_COMMUNITY_ZONES`. Buxton is GIS 7–8, Avon 21–31, Tri-Village 68–83
 (Salvo 69, Waves 74, Rodanthe 80), all inclusive GIS ids in the 1 = south frame

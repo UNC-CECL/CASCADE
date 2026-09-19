@@ -78,7 +78,7 @@ def main() -> None:
     ap.add_argument("--suffix", default="")
     args = ap.parse_args()
 
-    from hatteras_site_config import HATTERAS_RELOCATION_CHECK_2004 as MEASURED
+    from site_layer.hatteras_site_config import HATTERAS_RELOCATION_CHECK_2004 as MEASURED
 
     rows = []
     print("MEASURED 2004 setback is the observation; modelled is the run's final year.\n")

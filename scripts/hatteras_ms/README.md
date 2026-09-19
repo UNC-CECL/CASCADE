@@ -38,7 +38,10 @@ Start with the period check before a run and `HAT_list_runs.py` after one.
 Two live studies, plus one retired.
 
 * **the crest experiment** -- `HAT_run_crest_experiment.py` and its plotter.
-* **the relocation set** -- `HAT_relocation_comparison.py`,
+* **the relocation set** -- `HAT_relocation_comparison.py` (takes `--period`
+  since 2026-09-15: 1984 or 1996, one output root per window),
+  `HAT_relocation_period_compare.py` (the 1999 event read across both
+  windows, from the per-period tables),
   `HAT_relocation_dune_position_check.py`, `HAT_score_relocation_timing.py`
   and `HAT_score_road_position.py`. `RELOCATION_COMPARISON_RESULTS.md` is
   what it concluded.
@@ -51,11 +54,13 @@ Two live studies, plus one retired.
 A driver spawns the runner as a subprocess with `HAT_IGNORE_SETTINGS=1`, so
 whatever is sitting in `hat_run.yaml` cannot reach an experiment.
 
-## figures/
+## figures/ — moved
 
-Built from finished runs, never from a live model: `HAT_hindcast_final_figure`
-and its loess variant, `HAT_scenario_grid`, `HAT_rerender_run_figures`,
-`HAT_planview_evolution_gif`, and `HAT_gis11_relocation_drown_figure`.
+The five figure scripts that were here (`HAT_hindcast_final_figure_loess`,
+`HAT_scenario_grid`, `HAT_rerender_run_figures`, `HAT_planview_evolution_gif`,
+`HAT_gis11_relocation_drown_figure`) and their `superseded_20260914/` moved to
+`scripts/figure_making/model_output/` on 2026-09-18, so every figure script is
+in one tree.
 
 ## Paths: search upward, do not count
 

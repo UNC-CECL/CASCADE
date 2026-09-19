@@ -43,8 +43,8 @@ REPO = next(
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(HERE))
 import HAT_insert_seaward_rows as ins  # noqa: E402
-from hat_topo_version import dune_topo_root, insert_figures_dir  # noqa: E402
-from hat_topo_version import require_version  # noqa: E402
+from site_layer.hat_topo_version import dune_topo_root, insert_figures_dir  # noqa: E402
+from site_layer.hat_topo_version import require_version  # noqa: E402
 
 PRODUCT = "1984-start"
 BASE = "v2"

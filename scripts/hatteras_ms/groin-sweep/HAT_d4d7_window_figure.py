@@ -8,7 +8,7 @@ groin improves the domain OUTSIDE the dipole and degrades the downdrift domain
 the structure actually acts on.
 
 STYLE, 2026-09-11
-    Under the house style (`scripts/hat_figure_style.py`). The footnote
+    Under the house style (`scripts/site_layer/hat_figure_style.py`). The footnote
     paragraph is now the caption in output/groin_sweep/figures/CAPTIONS.md, the
     canvas is a 190 mm printed column instead of 14.5 in, and the bars are the
     house BASE grey for the baseline against ACCENT purple for the run under
@@ -30,7 +30,7 @@ _H = Path(__file__).resolve(); BASE = _H.parents[3]
 for p in (BASE/"scripts", _H.parent):
     if str(p) not in sys.path: sys.path.insert(0, str(p))
 from HAT_fullperiod_target import observed_change_profile
-from hat_figure_style import (apply_style, C, C_1984, INK, INK_MUTED, caption,
+from site_layer.hat_figure_style import (apply_style, C, C_1984, INK, INK_MUTED, caption,
                               figsize, open_frame, save, _title)
 
 SH = list(range(1, 13)); FIT = list(range(4, 8))     # D4-D7

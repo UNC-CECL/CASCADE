@@ -32,7 +32,7 @@ sys.path.insert(0, str(_REPO_ROOT / "scripts"))
 
 from cascade_pipeline.run_layout import resolve  # noqa: E402
 from cascade_pipeline.shoreline import compute_change_rate, compute_lrr  # noqa: E402
-from hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
 
 RAW_RUNS = _REPO_ROOT / "output" / "raw_runs"
 

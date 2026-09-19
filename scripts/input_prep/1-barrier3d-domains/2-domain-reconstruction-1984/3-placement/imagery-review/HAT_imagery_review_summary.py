@@ -58,7 +58,7 @@ from matplotlib.patches import Patch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "2-extent"))   # HAT_footprint_1984, for the community bands
 import HAT_imagery_review_1984 as R  # noqa: E402
-from hat_topo_version import insert_figures_dir  # noqa: E402
+from site_layer.hat_topo_version import insert_figures_dir  # noqa: E402
 
 off = R.off
 CATEGORY = {                       # extra_width_was -> colour, label

@@ -1,4 +1,47 @@
-# hindcast_calibrated - the calibrated model against the CoastSat target
+# hindcast_calibrated - the hindcast against the CoastSat target
+
+## Since 2026-09-18: the 1996 -> 2010 -> 2024 chain, edgeBE and zeroBE
+
+The figure moved onto the canonical chain the same day it was redrawn for the
+house-style column. What changed:
+
+* **periods** 1996-2010 and 2010-2024, read from HATTERAS_PERIODS; the target
+  is `hat_observed_rates.lrr_csv(start, end)`
+* **presets** edgeBE (the default now) and zeroBE. calibBE is not solved on
+  this chain, so there is no calibrated figure, and the folder name is now
+  historical
+* **groin off.** The matrix on this chain has only `nogroin` arms, so the
+  figure draws `road_bdm_nogroin` (1996, no fill scheduled) and
+  `road_bdm_nourish_nogroin` (2010). Everything below this section describes
+  groin-on runs
+* **layout.** No title or note on the canvas; that text is the caption. The
+  same figure is also written to `output/figures/shoreline/hindcast_<preset>.png`
+  with its caption in `supporting/CAPTIONS.md`
+
+```
+hindcast_edgeBE_loess_reference.png   edgeBE, both periods, both scoring windows
+hindcast_zeroBE_loess_reference.png   the same, no source/sink field at all
+superseded_20260918/                  the last calibBE render, 1984/2004; see WHY.md
+```
+
+| | 1996-2010 | 2010-2024 |
+|---|---|---|
+| edgeBE, LOESS D11-D89 | RMSE 1.12, bias -0.09, r 0.34 | RMSE 2.34, bias -1.58, r 0.08 |
+| edgeBE, D2-D89 | RMSE 1.14, bias +0.03, r 0.44 | RMSE 2.31, bias -1.33, r 0.28 |
+| zeroBE, LOESS D11-D89 | RMSE 1.04, bias -0.19, r 0.46 | RMSE 2.44, bias -1.86, r 0.10 |
+| zeroBE, D2-D89 | RMSE 1.09, bias -0.22, r 0.47 | RMSE 2.61, bias -2.02, r 0.08 |
+
+zeroBE scores better than edgeBE over the interior in 1996-2010, the reverse
+of what the edge solve is for. That was not investigated on 09-18.
+
+Runs, all `matrix` rows in `output/raw_runs/run_index.csv`:
+`HAT_1996_2010_{edgeBE,zeroBE}_road_bdm_nogroin` and
+`HAT_2010_2024_{edgeBE,zeroBE}_road_bdm_nourish_nogroin`.
+
+---
+
+## History: the 1984/2004 figure, groin on (to 2026-09-17)
+
 
 The headline result, both periods, and its uncalibrated companion. Everything
 here is full management (roadway + beach/dune, with nourishment in 2004-2024)
@@ -29,7 +72,7 @@ twelve days after the 1984 run was remade on topography v2 -- the caption said
 
 So on 2026-09-14 both windows were put on each panel of this figure, computed
 rather than quoted, and the headline was retired to
-`scripts/hatteras_ms/figures/superseded_20260914/` (see the WHY.md there). Its
+`scripts/figure_making/model_output/superseded_20260914/` (see the WHY.md there). Its
 last two PNGs were deleted the same day rather than kept beside their
 replacements -- the retired script still runs and regenerates them, so keeping
 a copy bought nothing but a second set of numbers to go stale.
@@ -42,13 +85,14 @@ stated in the caption instead, and the groin line still marks D5.5. The grey
 frozen-zone band is the one fact now drawn in no live figure -- judged the
 least load-bearing of the three, and recoverable from the retired script.
 
-Written by `scripts/hatteras_ms/figures/HAT_hindcast_final_figure_loess.py`,
+Written by `scripts/figure_making/model_output/HAT_hindcast_final_figure_loess.py`,
 `--preset calibBE` (default) or `--preset edgeBE`. `zeroBE` is wired up but not
 built here. PNG only - it does not write a vector copy.
 
-Unlike every other figure in the project these carry their title sentence ON
-the canvas rather than in a CAPTIONS.md, for the same reason the run figures
-do: they are opened alone, months later, with nothing around them.
+Until 2026-09-18 these carried their title sentence ON the canvas rather than
+in a CAPTIONS.md, because they were opened alone, months later, with nothing
+around them. The 09-17 move to the 190 mm column broke that layout, and the
+title is the caption now.
 
 ## What edgeBE is, and why it is the right "uncalibrated"
 

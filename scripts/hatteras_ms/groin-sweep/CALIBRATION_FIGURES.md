@@ -11,14 +11,14 @@ even when the PNGs do not. Regenerate them with:
 python scripts/hatteras_ms/groin-sweep/HAT_calibration_summary_figures.py
 ```
 
-The conclusions live in prose, in `scripts/hatteras_site_config.py`. These
+The conclusions live in prose, in `scripts/site_layer/hatteras_site_config.py`. These
 figures exist because two things were recorded nowhere else at all — see
 "What was at risk" below.
 
 ## The house style, 2026-09-11
 
 Every figure script in this directory now draws under
-`scripts/hat_figure_style.py`, the one style module for the project. Four
+`scripts/site_layer/hat_figure_style.py`, the one style module for the project. Four
 things follow, and they change how these images are read:
 
 * **Canvases are a 190 mm printed column.** They were 8.6 to 15 inches wide,

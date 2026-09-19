@@ -63,9 +63,9 @@ def _find_root(start: Path) -> Path:
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "0-elevation" / "3-figures"))
-from hat_topo_version import insert_figures_dir, insert_scope_step# noqa: E402
+from site_layer.hat_topo_version import insert_figures_dir, insert_scope_step# noqa: E402
 import HAT_plot_duneline_offset as off  # noqa: E402  the house style
-from hat_figure_style import (C, DOMAIN_AXIS_LABEL, INK_MUTED, caption,   # noqa: E402
+from site_layer.hat_figure_style import (C, DOMAIN_AXIS_LABEL, INK_MUTED, caption,   # noqa: E402
                               figsize, open_frame, save)
 
 FOOTPRINT_CSV = insert_scope_step("1984-start", "2-extent") / "footprint_1984_by_domain.csv"

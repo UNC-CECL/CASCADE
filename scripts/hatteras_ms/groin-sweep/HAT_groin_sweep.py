@@ -123,7 +123,7 @@ for _path in (SCRIPTS_DIR, _HERE.parent):
         sys.path.insert(0, str(_path))
 
 from cascade_pipeline.run_layout import resolve  # noqa: E402
-from hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_DOMAINS  # noqa: E402
 
 from HAT_groin_sweep_config import (  # noqa: E402
     END_YEAR,

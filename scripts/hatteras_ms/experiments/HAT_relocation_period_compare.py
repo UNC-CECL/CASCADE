@@ -54,9 +54,9 @@ for _path in (SCRIPTS_DIR, _HERE.parent):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from hatteras_site_config import HATTERAS_PERIODS, HATTERAS_ROAD_EVENTS   # noqa: E402
+from site_layer.hatteras_site_config import HATTERAS_PERIODS, HATTERAS_ROAD_EVENTS   # noqa: E402
 from cascade_pipeline.roadway import RelocationEvent                      # noqa: E402
-import hat_figure_style as style                                          # noqa: E402
+from site_layer import hat_figure_style as style                                          # noqa: E402
 
 COMPARISONS = PROJECT_BASE_DIR / "output" / "comparisons"
 CHECK_YEAR = 2004                 # the one surveyed road position
@@ -71,9 +71,9 @@ DEFAULT_EVENT = 1999
 # =============================================================================
 
 def set_dir(start_year, version, preset):
-    """The per-period comparison folder this reads: relocation_<s>_<e>/<version>/<preset>/."""
+    """The per-period comparison folder this reads: relocation/<s>_<e>/<version>/<preset>/."""
     end = HATTERAS_PERIODS[start_year]["end_year"]
-    return COMPARISONS / f"relocation_{start_year}_{end}" / version / preset
+    return COMPARISONS / "relocation" / f"{start_year}_{end}" / version / preset
 
 
 def event_domains(event_year):
@@ -140,14 +140,21 @@ def domain_table(sets, domains, event_year):
             pre_m = float(free.get(pre, np.nan))
             f = first.loc[gis] if gis in first.index else None
             m = summ.loc[gis] if gis in summ.index else None
+            # A domain the free arm relocated BEFORE the event has had its
+            # setback reset to the relocation target, so its pre-event
+            # setback no longer measures retreat. Reported as NaN, and the
+            # first-year table says when it fired.
+            fired_early = (f is not None and pd.notna(f["modelled_first_year"])
+                           and int(f["modelled_first_year"]) < event_year)
             rows.append(dict(
                 period=f"{start}-{HATTERAS_PERIODS[start]['end_year']}",
                 start_year=start,
                 gis=gis,
                 years_before_event=event_year - start,
                 start_setback_m=start_m,
-                setback_before_event_m=pre_m,
-                retreat_before_event_m=start_m - pre_m,
+                setback_before_event_m=np.nan if fired_early else pre_m,
+                retreat_before_event_m=np.nan if fired_early else start_m - pre_m,
+                relocated_before_event=bool(fired_early),
                 modelled_first_year=(None if f is None or pd.isna(f["modelled_first_year"])
                                      else int(f["modelled_first_year"])),
                 error_years=(None if f is None or pd.isna(f["error_years"])
@@ -283,7 +290,7 @@ def main():
 
     domains = event_domains(args.event)
     out_dir = (Path(args.out) if args.out else
-               COMPARISONS / "relocation_periods" / f"{args.event}_event" / args.version)
+               COMPARISONS / "relocation" / "events" / str(args.event) / args.version)
     tables_dir = out_dir / "tables"
     tables_dir.mkdir(parents=True, exist_ok=True)
     lines = []
@@ -325,8 +332,11 @@ def main():
         say("  start_setback: the road at year 0 (same file for both starts at these")
         say(f"  domains). setback_before_event: the free arm in {args.event - 1}.")
         cols = ["period", "gis", "years_before_event", "start_setback_m",
-                "setback_before_event_m", "retreat_before_event_m"]
+                "setback_before_event_m", "retreat_before_event_m",
+                "relocated_before_event"]
         say(dom[cols].to_string(index=False))
+        say("  (NaN: the free arm relocated this domain BEFORE the event, resetting")
+        say("   its setback; section 2 gives the year)")
         for period, g in dom.groupby("period", sort=False):
             say(f"  {period}: mean retreat before {args.event} "
                 f"{g['retreat_before_event_m'].mean():+.0f} m over "

@@ -8,6 +8,16 @@ This file exists because the comparison writes to
 same reason `CALIBRATION_FIGURES.md` exists. The artefacts do not survive a
 clone; the numbers and the reasoning should.
 
+**Layout since 2026-09-17:** one tree, `output/comparisons/relocation/`:
+`<start>_<end>/<version>/<preset>[_groin]/` for a set, `events/1999/<version>/`
+for the cross-window report, `versions/v2_vs_v3/` for the cross-version one,
+`standard_setback/` for the GIS 11 drowning figure. Paths quoted below in
+dated sections are the paths of their day. The `v1/` sets (the six results
+below, 2026-09-01, superseded topography) were deleted the same day; this
+file is what survives of them, and five of the six regenerate from the
+calibration tree. Every set's `report.txt` and `tables/*.csv` are tracked
+since then, so the numbers no longer depend on this file alone.
+
 **Regenerate with:**
 
 ```
@@ -180,3 +190,84 @@ metadata by the script. The six sets above sit under `v1/`, marked superseded
 `output/raw_runs/version-pair/`; their numbers are in each set's `report.txt`
 and `tables/confusion.csv` (every set: `report.txt`, `tables/`, one folder per place with `topography.gif` and `dune-and-road.gif`), and the broader v2-against-v3 figure is in the
 reconstruction's `6-result/`. The folder README maps it.
+
+---
+
+## 2026-09-15: the 1999 event from a 1996 start
+
+Four new sets, all on dune-topo `v2`, all groin off, and a cross-window
+report. The 1984-2004 pair was RE-RUN on v2 for this (the calibration tree
+is still v1), filed under `output/raw_runs/arms/version-pair/v2/1984_2004/`;
+the 1996-2010 pair is the calibration tree's own, on island offsets v2.
+
+```
+python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py --period 1996 --preset <zeroBE|edgeBE>
+python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py --preset <p> \
+  --arm-a output/raw_runs/arms/version-pair/v2/1984_2004/<p>/HAT_1984_2004_<p>_road_bdm_nogroin \
+  --arm-b output/raw_runs/arms/version-pair/v2/1984_2004/<p>/HAT_1984_2004_<p>_road_reloc_bdm_nogroin
+python scripts/hatteras_ms/experiments/HAT_relocation_period_compare.py --presets zeroBE edgeBE --version v2
+```
+
+Outputs: `output/comparisons/relocation_1996_2010/v2/`, `relocation_1984_2004/v2/`
+(zeroBE, edgeBE added beside calibBE_groin), `relocation_periods/1999_event/v2/`.
+
+### The 1996 window never fires
+
+| window | preset | 1999 domains relocated unaided | recall ±2 / ±5 (six 1999 domains) | control false positives |
+|---|---|---|---|---|
+| 1984-2004 | zeroBE | GIS 11 in 2004 (+5 yr) | 0.00 / 0.17 | 0/45 |
+| 1984-2004 | edgeBE | GIS 10 in 1999 (0), GIS 11 in 1994 (−5) | 0.17 / 0.33 | 0/45 |
+| 1996-2010 | zeroBE | none | 0.00 / 0.00 | 0/49 |
+| 1996-2010 | edgeBE | none | 0.00 / 0.00 | 0/49 |
+
+(The per-window reports score all ten historical domains for 1984-2004: zeroBE
+0.10 / 0.30, edgeBE 0.10 / 0.20, unchanged from the v1 numbers above.)
+
+**Why, in one number: retreat accumulated at the road before 1999.** Both
+windows start GIS 9-14 at the same setbacks (40, 20, 10, 20, 20, 60 m; the 1996
+file is the 1984 file with the 1989 event applied, which does not touch these
+domains). From 1984 the free arm has 15 model years and erodes a mean 7-12 m of
+it before 1999; from 1996 it has 3 years and erodes 0 m at every domain. The
+closest 1996 approach is GIS 11, which loses its one remaining cell in 2001
+and then sits at 0 m for nine years -- the trigger is strictly `< 0` and the
+setback moves in whole cells, so a road on the dune line has not fired.
+
+**The dune line stops because the modelled shoreline does.** Over 1996-2010
+the free run moves the GIS 9-14 shorelines by 0.2-1.2 m landward in total
+(rates −0.02 to −0.09 m/yr), where CoastSat has −1.1 to −2.4 m/yr, i.e. 15-33 m
+or one to three cells. Under zeroBE/edgeBE nothing puts that erosion on the
+interior domains, and the roadway manager removes every overwash and rebuilds
+the dunes (12 rebuilds across the six domains), so the barrier does not
+migrate either. This is the same mechanism as the 08-31 finding that only
+calibBE moves recall -- and no calibBE field exists for 1996-2010 yet.
+
+### The position check at 2004 cuts the other way
+
+Mean |modelled − surveyed 2004 setback| over GIS 9-14, m:
+
+| window | free arm | prescribed arm |
+|---|---|---|
+| 1984-2004 (2004 is the end) | 21 (zeroBE) / 32 (edgeBE) | 22 / 19 |
+| 1996-2010 (2004 is year 8 of 14) | 19 / 16 | 29 / 32 |
+
+The 1996 free arm is CLOSER to the surveyed 2004 road than the 1984 free arm,
+because it has not eroded the setback that history did not erode either. But
+the 1996 prescribed arm is WORSE than the 1984 one: the prescribed
+displacement is added to the current setback, and from 1996 the current
+setback is still the full 1984 value, so the road lands 10-60 m behind the
+surveyed position (GIS 11: 80 m against 20 m). From 1984 the 15 years of
+modelled retreat had consumed part of the setback first, so the same
+displacement landed nearer the truth. The prescribed arm's accuracy is
+therefore a property of the window as much as of the displacement -- and the
+1984-2004 edgeBE prescribed arm on v2 drowns GIS 11 (the 20 m target clears
+the drowning threshold by one cell; see hat_run.yaml).
+
+### What this does and does not say
+
+The 1996 window cannot reproduce 1999 emergently because the model needs more
+than three years of its own (too-slow) retreat to reach a road 1-6 cells
+behind the dune. That is a statement about the start year AND about the
+missing interior erosion, and the two are separable only with a 1996 calibBE
+field. The 1984 window is the one on which relocation skill should be quoted;
+the 1996 window's value for the road is the position check, where its free
+arm is the best of the four.

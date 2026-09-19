@@ -145,7 +145,7 @@ for _path in (SCRIPTS_DIR, _HERE.parent, GROIN_SWEEP_DIR):
 from cascade_pipeline import nourishment  # noqa: E402
 from cascade_pipeline.roadway import RelocationEvent  # noqa: E402
 from cascade_pipeline.run_registry import values_digest  # noqa: E402
-from hatteras_site_config import (  # noqa: E402
+from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_BE_PRESETS,
     HATTERAS_DOMAINS,
     HATTERAS_NOURISHMENT_PROJECTS,

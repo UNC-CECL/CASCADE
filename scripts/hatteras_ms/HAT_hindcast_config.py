@@ -161,11 +161,20 @@ def _as_str(raw) -> str:
 # renaming them to match a yaml layout would break both.
 
 _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
-    ("start_year",                   ("start_year",),        _as_int,      1984),
+    # 1996 SINCE 2026-09-17 (Hannah: "moving forward the main time period,
+    # for figures and future runs, is 1996-2010-2024"). 1984 was the pair
+    # the project ran first. Every other start is still reachable by naming
+    # it; this is only what a run gets when nothing does.
+    ("start_year",                   ("start_year",),        _as_int,      1996),
     ("source_sink_preset",           ("source_sink",),       _as_str,      "zeroBE"),
     ("scenario",                     ("scenario",),          _as_str,      "full_management"),
     ("relocations",                  ("relocations",),       _as_opt_bool, None),
     ("offset_mode",                  ("offset_mode",),       _as_str,      "asrun"),
+    # THE REACH (2026-09-16): a name from hat_extension_domains.GEOMETRIES.
+    # "base" is GIS 1-90. hatteras_site_config reads the same HAT_GEOMETRY
+    # from the environment to build HATTERAS_DOMAINS, and the runner refuses
+    # a run where the two disagree (a yaml `geometry:` with no env var).
+    ("geometry",                     ("geometry",),          _as_str,      "base"),
 
     # WHERE A RUN IS FILED (2026-09-16). run_kind is one of run_registry.KINDS
     # -- matrix (the default), sensitivity, experiment, version -- and run_tag
@@ -229,7 +238,7 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     # of the bordering row is at or below MHW and `bulldoze` gives the road up.
     # At 20 m the same event lands at 87 m and all eight drownings go away,
     # with relocation counts across the twelve arms moving only 26 -> 28. See
-    # output/comparisons/relocation_standard_setback/.
+    # output/comparisons/relocation/standard_setback/.
     #
     # That coupling is a real weakness and 87 m clears the threshold by ONE
     # CELL, so this value is not robust to different forcing. Anchoring

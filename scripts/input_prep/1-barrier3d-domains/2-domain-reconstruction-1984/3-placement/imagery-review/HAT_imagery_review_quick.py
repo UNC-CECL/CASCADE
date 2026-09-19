@@ -151,8 +151,8 @@ def _square_window(pr, pl, bounds):
 
 _domain_window_orig = R.domain_window
 R.domain_window = _square_window                          # the loader looks it up on R at call time
-from hat_topo_version import insert_figures_dir, topo_dirs, array_name  # noqa: E402
-from hat_figure_style import elevation_cmap  # noqa: E402
+from site_layer.hat_topo_version import insert_figures_dir, topo_dirs, array_name  # noqa: E402
+from site_layer.hat_figure_style import elevation_cmap  # noqa: E402
 
 off = R.off
 BUILT = "v3"                      # the version the model panel shows; falls back to CURRENT

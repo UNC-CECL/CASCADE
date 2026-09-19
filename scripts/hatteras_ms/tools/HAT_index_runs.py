@@ -67,7 +67,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 from cascade_pipeline.run_registry import (  # noqa: E402
     INDEX_KEY, legacy_arm_to_kind_tag, load_run_index, rebuild_run_index,
     sweep_family)
-from hat_topo_version import current_topo_versions  # noqa: E402
+from site_layer.hat_topo_version import current_topo_versions  # noqa: E402
 
 RAW_RUNS = REPO / "output" / "raw_runs"
 INDEX = RAW_RUNS / "run_index.csv"

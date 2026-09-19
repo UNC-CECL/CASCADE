@@ -23,12 +23,12 @@ import matplotlib.pyplot as plt
 from cascade_pipeline.plotting import init_planview
 
 # `scripts/` is on sys.path already -- cascade_pipeline lives inside it.
-from hat_figure_style import (
+from site_layer.hat_figure_style import (
     C, C_1997, DOMAIN_AXIS_LABEL, INK, apply_style,
 )
 # Aliased: `figsize` is already a keyword argument of plot_roadway_island,
 # and no caller should have to change name for a restyle.
-from hat_figure_style import figsize as _figsize
+from site_layer.hat_figure_style import figsize as _figsize
 
 apply_style()
 

@@ -24,7 +24,7 @@ from cascade_pipeline.hindcast import DAM_TO_M
 from cascade_pipeline.plotting import init_planview
 
 # `scripts/` is on sys.path already -- cascade_pipeline lives inside it.
-from hat_figure_style import (
+from site_layer.hat_figure_style import (
     C, C_1984, C_1997, DOMAIN_AXIS_LABEL, INK_MUTED, _title, apply_style,
     figsize, open_frame,
 )

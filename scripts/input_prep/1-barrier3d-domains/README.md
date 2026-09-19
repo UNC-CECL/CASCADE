@@ -47,12 +47,12 @@ window per domain, saved to JSON after each one, safe to quit and resume),
 ## Which product it writes, and how everything else finds it
 
 `TOPO_PRODUCT` and `VERSION` near the top of the extractor decide what gets
-written. **Nothing else hardcodes that path.** `scripts/hat_topo_version.py`
+written. **Nothing else hardcodes that path.** `scripts/site_layer/hat_topo_version.py`
 parses those two names straight out of this file and every reader - the
 runner, the groin sweep, the road tree, the figure scripts - resolves through
 it:
 
-    from hat_topo_version import topo_dirs, array_path, array_name
+    from site_layer.hat_topo_version import topo_dirs, array_path, array_name
 
 Version numbers restart at `v1` **per product**: `1984-start/v1` and
 `2004-start/v1` are different surfaces from different DEMs. See
@@ -64,7 +64,7 @@ breaks version resolution *silently* - `_extractor_state()` returns
 If you move it, update `EXTRACTOR` in `hat_topo_version.py` and the
 `parents[2]` in the `sys.path` line here, then check:
 
-    cd scripts && python -c "import hat_topo_version as h; print(h.EXTRACTOR.is_file(), h._extractor_state())"
+    cd scripts && python -c "from site_layer import hat_topo_version as h; print(h.EXTRACTOR.is_file(), h._extractor_state())"
 
 ## Picks are frame-dependent - the one real footgun
 

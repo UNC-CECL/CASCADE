@@ -1,1 +1,3 @@
-{"type":"FeatureCollection","crs":{"type":"name","properties":{"name":"EPSG:3725"}},"features":[{"type":"Feature","id":1,"geometry":{"type":"LineString","coordinates":[[460198.4523,3897762.3268999998],[460198.4523,3943863.1534000002],[460198.45199999958,3959902.5953000002]]},"properties":{"OBJECTID":1,"Shape_Length":62140.268400000408}}]}
+version https://git-lfs.github.com/spec/v1
+oid sha256:9915789b19c8ad2654c960ce398028a64254cd55adcf8c83f837970189b80222
+size 340

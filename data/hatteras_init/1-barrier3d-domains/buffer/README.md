@@ -52,7 +52,7 @@ into this repo.
 ## Why domain 111
 
 The model reach is GIS domains **1-90** (`num_real_domains=90` in
-`scripts/hatteras_site_config.py`), padded by 15 buffer domains a side. The
+`scripts/site_layer/hatteras_site_config.py`), padded by 15 buffer domains a side. The
 clipped-DEM tree was built out to **1-136** - `domains.geojson` covers more of
 the island than the model uses. Domain 111 is one of those extra boxes: a real
 surveyed 2000 x 500 m section (elevations up to 7.1 m NAVD88), north of the
