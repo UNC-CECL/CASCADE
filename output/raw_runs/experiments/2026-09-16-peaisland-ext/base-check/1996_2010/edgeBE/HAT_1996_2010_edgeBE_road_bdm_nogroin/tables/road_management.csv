@@ -1,7 +1,7 @@
 gis,pad,drowned,relocation_blocked,last_managed_year,reason,overwash_removed_m3,dunes_rebuilt,relocations
 9,23,False,False,15,managed throughout,4724.230389732874,2,0
 10,24,False,False,15,managed throughout,9319.256686996874,2,0
-11,25,False,False,15,managed throughout,4401.94158208031,2,0
+11,25,False,False,15,managed throughout,4377.870704033413,2,0
 12,26,False,False,15,managed throughout,10358.646942081312,2,0
 13,27,False,False,15,managed throughout,13902.96863618676,2,0
 14,28,False,False,15,managed throughout,6852.113084436633,2,0
@@ -12,15 +12,15 @@ gis,pad,drowned,relocation_blocked,last_managed_year,reason,overwash_removed_m3,
 19,33,False,False,15,managed throughout,2360.6222331024856,2,0
 20,34,False,False,15,managed throughout,6368.14285239467,2,0
 32,46,False,False,15,managed throughout,1497.7077359448606,2,0
-33,47,False,False,15,managed throughout,1357.2501172711238,2,0
+33,47,False,False,15,managed throughout,2172.496424734301,2,0
 34,48,False,False,15,managed throughout,1726.3460328661492,2,0
-35,49,False,False,15,managed throughout,2050.1749401306083,2,0
-36,50,False,False,15,managed throughout,1681.979888057713,1,0
+35,49,False,False,15,managed throughout,2371.0595470482617,2,0
+36,50,False,False,15,managed throughout,1686.8394015225404,1,0
 37,51,False,False,15,managed throughout,1267.481621074681,1,0
 38,52,False,False,15,managed throughout,2089.9959187507684,2,0
-39,53,False,False,15,managed throughout,3346.121270370488,1,0
+39,53,False,False,15,managed throughout,3346.121270370488,2,0
 40,54,False,False,15,managed throughout,3537.0551597159288,2,0
-41,55,False,False,15,managed throughout,3434.18543324272,2,0
+41,55,False,False,15,managed throughout,3270.6975825027794,2,0
 42,56,False,False,15,managed throughout,5043.519551956866,2,0
 43,57,False,False,15,managed throughout,2405.315426588064,2,0
 44,58,False,False,15,managed throughout,4326.232383730224,2,0
@@ -42,11 +42,11 @@ gis,pad,drowned,relocation_blocked,last_managed_year,reason,overwash_removed_m3,
 60,74,False,False,15,managed throughout,5129.947044631914,2,0
 61,75,False,False,15,managed throughout,3536.1891846392905,2,0
 62,76,False,False,15,managed throughout,4317.245902173569,2,0
-63,77,False,False,15,managed throughout,4713.1541965723645,2,0
-64,78,False,False,15,managed throughout,3829.8098312202515,2,0
+63,77,False,False,15,managed throughout,4458.917618878291,2,0
+64,78,False,False,15,managed throughout,2721.0633518333966,2,0
 65,79,False,False,15,managed throughout,1908.9386250416178,2,0
 66,80,False,False,15,managed throughout,1625.845260800356,2,0
-67,81,False,False,15,managed throughout,1913.833526261814,2,0
+67,81,False,False,15,managed throughout,1931.5077276973186,2,0
 84,98,False,False,15,managed throughout,8813.942947786107,2,0
 85,99,False,False,15,managed throughout,4433.3789668214085,2,0
 86,100,False,False,15,managed throughout,4108.039670028919,1,0

@@ -1,7 +1,7 @@
 {
   "identity": {
     "run_name": "HAT_1996_2010_edgeBE_offsetdetrended_road_bdm_nogroin",
-    "timestamp": "2026-09-16 17:48:13",
+    "timestamp": "2026-09-19 10:44:30",
     "generated_by": "HAT_hindcast_1984_2024.py",
     "runtime_min": "1.6",
     "use_sandbox_cascade": true,
@@ -13,7 +13,7 @@
     "run_tag": "2026-09-16-peaisland-ext/n115-detrended/step1",
     "parameter_file": "HAT_1996_2010_edgeBE_offsetdetrended_road_bdm_nogroin-parameters.yaml",
     "save_model_state": false,
-    "git_commit": "462947eb97cbaf0c59b7eb4bbb33e17006e1c3ff",
+    "git_commit": "2c05572a834dd4cae64dbfaa6c67c3fd85d99b97",
     "git_branch": "hannahaline/hatteras-cascade",
     "git_dirty": true
   },
@@ -59,9 +59,9 @@
     "background_erosion_on": true,
     "domains_specified": 2,
     "nonzero_domains": 2,
-    "values_digest": "f84a8a8a2449",
-    "rate_gis1_m_yr": 127.1,
-    "rate_gis115_m_yr": -134.1
+    "values_digest": "48d5c911b4e8",
+    "rate_gis1_m_yr": 120.4,
+    "rate_gis115_m_yr": -140.1
   },
   "groin": {
     "enabled": false
@@ -69,14 +69,14 @@
   "skill": {
     "target": "CoastSat LOESS 10-domain",
     "estimator": "lrr",
-    "mean_bias_m_yr": "-5.1136",
-    "rmse_m_yr": "9.0709",
-    "mean_bias_interior_m_yr": "-3.6616",
-    "rmse_interior_m_yr": "8.6101",
-    "lrr_r2_median": "0.9560",
-    "lrr_r2_below_floor": "16",
-    "endpoint_mean_bias_interior_m_yr": "-3.7095",
-    "endpoint_rmse_interior_m_yr": "8.9078"
+    "mean_bias_m_yr": "-5.0642",
+    "rmse_m_yr": "9.0587",
+    "mean_bias_interior_m_yr": "-3.6011",
+    "rmse_interior_m_yr": "8.5929",
+    "lrr_r2_median": "0.9499",
+    "lrr_r2_below_floor": "14",
+    "endpoint_mean_bias_interior_m_yr": "-3.6328",
+    "endpoint_rmse_interior_m_yr": "8.8792"
   },
   "verification": {
     "nourishment_ok": true,
@@ -85,14 +85,14 @@
   },
   "index row": {
     "run_name": "HAT_1996_2010_edgeBE_offsetdetrended_road_bdm_nogroin",
-    "timestamp": "2026-09-16 17:48:13",
+    "timestamp": "2026-09-19 10:44:30",
     "start_year": 1996,
     "end_year": 2010,
     "source_sink_preset": "edgeBE",
     "be_nonzero_domains": 2,
-    "be_values_digest": "f84a8a8a2449",
-    "be_rate_gis1_m_yr": 127.1,
-    "be_rate_gis115_m_yr": -134.1,
+    "be_values_digest": "48d5c911b4e8",
+    "be_rate_gis1_m_yr": 120.4,
+    "be_rate_gis115_m_yr": -140.1,
     "scenario": "full_management",
     "scenario_overridden": false,
     "groin_enabled": false,
@@ -112,14 +112,14 @@
     "annual_states": 15,
     "run_complete": true,
     "rate_estimator": "lrr",
-    "mean_bias_m_yr": -5.113615552918308,
-    "rmse_m_yr": 9.07090930933831,
-    "mean_bias_interior_m_yr": -3.661608450467129,
-    "rmse_interior_m_yr": 8.610123451292498,
-    "lrr_r2_median": 0.9559697604299504,
-    "lrr_r2_below_floor": 16,
-    "endpoint_mean_bias_interior_m_yr": -3.7095457573770974,
-    "endpoint_rmse_interior_m_yr": 8.907824281722766,
+    "mean_bias_m_yr": -5.0641513514297705,
+    "rmse_m_yr": 9.058661191189255,
+    "mean_bias_interior_m_yr": -3.601053684004705,
+    "rmse_interior_m_yr": 8.592893859370887,
+    "lrr_r2_median": 0.9498899628862681,
+    "lrr_r2_below_floor": 14,
+    "endpoint_mean_bias_interior_m_yr": -3.632823518193415,
+    "endpoint_rmse_interior_m_yr": 8.879182917462945,
     "nourishment_ok": true,
     "roads_drowned": 0,
     "roads_reloc_blocked": 0,
@@ -131,8 +131,8 @@
     "topo_dune_version": "v2",
     "island_offset_version": "ext/n115",
     "geometry": "n115",
-    "rmse_reach_interior_m_yr": 9.14724712388089,
-    "git_commit": "462947eb97cb",
+    "rmse_reach_interior_m_yr": 9.134261997733764,
+    "git_commit": "2c05572a834d",
     "git_dirty": true
   }
 }

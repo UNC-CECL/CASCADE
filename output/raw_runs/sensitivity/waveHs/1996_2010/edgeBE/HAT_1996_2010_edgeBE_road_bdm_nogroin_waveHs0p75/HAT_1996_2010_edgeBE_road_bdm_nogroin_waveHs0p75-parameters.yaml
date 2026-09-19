@@ -10,7 +10,7 @@ RSLR_Constant: true
 RSLR_const: 0.004
 Rat: 0.0
 Sandbag_elevation: 1.9
-ShorefaceToe: 3717.5360037392707
+ShorefaceToe: 3717.1827095283693
 Shrub_ON: 0
 TMAX: 15
 beta: 0.04
@@ -21,4 +21,4 @@ k_sf: 18833.038850938665
 rmax: 0.95
 rmin: 0.55
 s_sf_eq: 0.026169919985714423
-storm_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\3-env-forcings\storms\hindcast_storms\1996_2010\1996_2010_storms_v3_72.npy
+storm_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\3-env-forcings\3-storms\hindcast_storms\1996_2010\1996_2010_storms_v3_72.npy

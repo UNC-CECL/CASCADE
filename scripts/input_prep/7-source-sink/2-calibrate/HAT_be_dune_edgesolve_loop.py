@@ -29,6 +29,13 @@ OUTPUT   output/raw_runs/experiments/<exp>/<reading>/step<k>/<window>/edgeBE/<ru
          output/raw_runs/experiments/<exp>/loop_log.csv   one row per step
                                                           per chain
 
+COASTSAT TARGET (2026-09-19)
+    --target coastsat runs the same loop against the CoastSat target, as the
+    matrix end values were solved (model lrr_m_yr against target_lrr_m_yr,
+    GIS 1 raw, GIS 90 LOESS-10). One chain per window, filed under the
+    reading name "coastsat"; --smooth is ignored. E.g. --exp
+    2026-09-19-edgesolve-2010 --windows 2010 --target coastsat.
+
 USAGE
     python HAT_be_dune_edgesolve_loop.py --exp 2026-09-18-dune-edgesolve \\
         --windows 1996 2004 2010 --smooth raw mean3
@@ -67,9 +74,13 @@ def brackets(start):
 
 def solve(start, smooth, runs):
     """Run the solver over `runs`; return (residual GIS 1, residual GIS 90,
-    override string, full text)."""
-    cmd = [sys.executable, str(SOLVER), "--period", str(start),
-           "--target", "duneline", "--dune-smooth", smooth, "--estimator", "endpoint"]
+    override string, full text). smooth == "coastsat" is the CoastSat target."""
+    if smooth == "coastsat":
+        cmd = [sys.executable, str(SOLVER), "--period", str(start),
+               "--target", "coastsat", "--estimator", "lrr"]
+    else:
+        cmd = [sys.executable, str(SOLVER), "--period", str(start),
+               "--target", "duneline", "--dune-smooth", smooth, "--estimator", "endpoint"]
     for name, kind, tag in runs:
         cmd += ["--run", name, "--kind", kind, "--tag", tag]
     env = dict(os.environ, PYTHONIOENCODING="utf-8")
@@ -150,9 +161,12 @@ def main(argv=None) -> int:
     ap.add_argument("--smooth", nargs="+", default=["raw", "mean3"])
     ap.add_argument("--tol", type=float, default=0.01, help="m/yr, both ends")
     ap.add_argument("--max-steps", type=int, default=6)
+    ap.add_argument("--target", choices=("duneline", "coastsat"), default="duneline")
     ap.add_argument("--resume", action="store_true",
                     help="pick every chain up from the finished steps on disk")
     a = ap.parse_args(argv)
+    if a.target == "coastsat":
+        a.smooth = ["coastsat"]
 
     # chain: [(run_name, kind, tag), ...]; last: {gis: rate} its last run imposed
     chains, last = {}, {}
