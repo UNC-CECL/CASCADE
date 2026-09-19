@@ -10,9 +10,9 @@ which is what tells you whether a figure predates a change.
 hindcast_calibrated/    the headline: modelled rate against the CoastSat
                         target, both periods; edgeBE and zeroBE on the
                         1996/2010 chain since 09-18 (calibBE is not solved there)
-rate_windows/           the four rate windows on one y axis, the model against
-                        the CoastSat waterline and the dune line, each with the
-                        run solved on it
+model_vs_observed/      the four rate windows on one y axis, the model against
+                        the shoreline (CoastSat) and the dune line, each with
+                        the run solved on it (rate_windows/ until 09-18)
 relocation/             does the model relocate NC-12 where and when history
                         did: per window, per event, across topography
                         versions, and the 20 m rebuild clearance
@@ -22,7 +22,7 @@ scenario_grid/          every preset and management scenario on one page
 | folder | script | runs |
 |---|---|---|
 | `hindcast_calibrated/` | `scripts/figure_making/model_output/HAT_hindcast_final_figure_loess.py` | the edgeBE and zeroBE full-management nogroin matrix arms, 1996 and 2010 |
-| `rate_windows/` | `scripts/analyze_output/compare_runs/HAT_rate_windows.py` | the edgeBE nogroin matrix plus the dune-solved experiment, `runs_used.csv` |
+| `model_vs_observed/` | `scripts/analyze_output/compare_runs/HAT_rate_windows.py` | the edgeBE nogroin matrix plus the dune-solved experiment, `runs_used.csv` |
 | `relocation/` | `scripts/hatteras_ms/experiments/HAT_relocation_comparison.py` and the three readers named in its README | each set's `report.txt` header |
 | `scenario_grid/` | `scripts/figure_making/model_output/HAT_scenario_grid.py` | every matrix arm, both periods |
 
@@ -52,7 +52,7 @@ folder read them and none could be regenerated:
   rates against a run named `HAT_1984_2004_SQ_BE_Hs2p0`, a pre-archive
   name with no run behind it. The smoothing itself is now the scoring
   target's treatment (`cascade_pipeline.hindcast.build_target_table`) and is
-  drawn in `rate_windows/`.
+  drawn in `model_vs_observed/vs_shoreline/smoothed/`.
 - `source_sink_zones/` (2026-06-19): four figures from runs deleted before
   the 2026-08-28 archive; the script's own note said so.
 - `relocation_1984_2004/v1/` (2026-09-01, superseded topography since

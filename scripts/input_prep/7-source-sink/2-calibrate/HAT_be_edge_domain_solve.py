@@ -52,7 +52,7 @@
 #   of the window instead of CoastSat: the end vintage's line minus the start
 #   vintage's, per domain, over the survey interval (duneline_vs_coastsat
 #   .KNOWN_SURVEY_DATES; a missing date is mid-year), seaward positive --
-#   exactly what HAT_rate_windows.py draws under duneline/endpoint. Two readings of
+#   exactly what HAT_rate_windows.py draws under vs_duneline/net_change. Two readings of
 #   it at an end domain, --dune-smooth raw (the domain's own value) and mean3
 #   (the mean of it and its two inward neighbours, GIS 1-3 / 88-90). A dune
 #   line is two surveys, so --estimator endpoint reads change_rate_m_yr on

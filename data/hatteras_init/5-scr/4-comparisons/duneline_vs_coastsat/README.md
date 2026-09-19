@@ -12,7 +12,7 @@ by interview; the figures and numbers below are the state that evening).
 both sides). Both are read from the stored products in `3-rates/`
 (`duneline/endpoint` and `coastsat/endpoint`). The CoastSat LRR is no longer
 drawn or scored here; it stays the model's scoring target in
-`3-rates/coastsat/lrr/` and `rate_windows/coastsat/`.
+`3-rates/coastsat/lrr/` and `model_vs_observed/vs_shoreline/`.
 
 ```
 python scripts/input_prep/5-scr/duneline_vs_coastsat/duneline_vs_coastsat.py --start-year 1984 --end-year 2004

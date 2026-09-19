@@ -20,7 +20,7 @@ change")
     Until 09-18 the shoreline was ALSO drawn as the CoastSat LRR, an OLS
     through ~250 dates, and the correlations reported against both. That is
     not a two-survey quantity; it stays the model's scoring target in
-    3-rates/coastsat/lrr/ and in rate_windows/coastsat/. The helpers below
+    3-rates/coastsat/lrr/ and in model_vs_observed/vs_shoreline/. The helpers below
     (window_mean, endpoint_by_transect, KNOWN_SURVEY_DATES) are kept: the
     stored CoastSat endpoint product is built with them.
 
