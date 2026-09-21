@@ -25,6 +25,7 @@ Outputs (in OUTPUT_DIR):
         Offset column only, padded with smooth edge-domain bridges
 
 Author: Hannah A. Henry (smooth wrap-around buffer version)
+Edited by: Lexi (Van Blunk) Fiegelist 9/21/2026
 """
 
 import os
@@ -32,43 +33,10 @@ import pandas as pd
 import numpy as np
 
 # =============================================================================
-# 1. USER CONFIGURATION
+# 1. FUNCTIONS
 # =============================================================================
 
-# Year and input file
-YEAR = 2004
-RAW_FILE = r"C:\Users\agfig\model\calibration\offsets\dune_offsets_2004_raw.csv"
-
-# Output directory
-OUTPUT_DIR = r"C:\Users\agfig\model\calibration\offsets"
-
-# Base name for output files
-OUTPUT_BASENAME = "Island_Dune_Offsets_2004"
-
-# -------------------------------------------------------------------------
-# Domain range for Hatteras (updated whole-island configuration)
-# -------------------------------------------------------------------------
-# Real domains included in this run. Updated to use domains 1–90.
-START_DOMAIN = 3
-END_DOMAIN = 25
-B3D_GRIDS = list(range(START_DOMAIN, END_DOMAIN + 1))
-
-# Buffer settings (15 left + 15 right)
-PADDING_ZEROS = 15   # number of buffer domains on each side
-TARGET_LENGTH = (END_DOMAIN - START_DOMAIN + 1) + 2 * PADDING_ZEROS  # 90 + 30 = 120
-
-# Column mapping from raw CSV → standardized names
-COL_MAP = {
-    "Domain_ID": "FID_domains",  # Domain ID
-    "Distance": "FID_offshore_datum_line_points",    # Distance baseline → dune (m)
-    "Transect": "transectID",      # Transect ID within each domain
-}
-
-# =============================================================================
-# 2. FUNCTIONS
-# =============================================================================
-
-def calculate_relative_offset(file_path, year, col_map, grids):
+def calculate_relative_offset(file_path, year, col_map, grids, transect_points):
     """
     Perform the absolute-to-relative offset calculation for a single year.
 
@@ -103,6 +71,17 @@ def calculate_relative_offset(file_path, year, col_map, grids):
         "Distance": raw_df[col_map["Distance"]],
         "Transect": raw_df[col_map["Transect"]],
     })
+
+    # subtract "distances" from the first point at each transects
+    # point IDs do not correspond with distance yet
+    for tid in transect_points.keys():
+        if tid in data_df["Transect"].values:
+            point_ref = transect_points[tid]  # key is transetc ID, value is point ID
+            transect_df = data_df[data_df["Transect"]==tid]
+            indeces = transect_df.index.tolist()
+            new_vals = transect_df["Distance"].values - point_ref
+            # replace values in main dataframe
+            data_df.loc[indeces, "Distance"] = new_vals
 
     mean_distances = []
     seen_domains = []
@@ -254,54 +233,94 @@ def pad_for_cascade(df, padding_zeros, target_length):
 
 
 # =============================================================================
-# 3. MAIN
+# 2. USER CONFIGURATION
 # =============================================================================
 
-def main():
-    # Ensure output directory exists
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+# Year and input file
+YEAR = 2014
+RAW_FILE = r"C:\Users\agfig\model\calibration\offsets\dune_offsets_{0}_raw.csv".format(YEAR)
 
-    # --- 3.1. Compute relative offsets ---
-    result = calculate_relative_offset(
-        file_path=RAW_FILE,
-        year=YEAR,
-        col_map=COL_MAP,
-        grids=B3D_GRIDS,
-    )
+# Output directory
+OUTPUT_DIR = r"C:\Users\agfig\model\calibration\offsets"
 
-    if result is None:
-        print("Offset calculation failed. Exiting.")
-        return
+# Base name for output files
+OUTPUT_BASENAME = "Island_Dune_Offsets_{0}".format(YEAR)
 
-    # Save unpadded file with Domain_ID
-    unpadded_path = os.path.join(OUTPUT_DIR, f"{OUTPUT_BASENAME}_CASCADE_Input_unpadded.csv")
-    result.to_csv(unpadded_path, index=False)
-    print(f"\nUnpadded offsets saved to:\n  {unpadded_path}")
+# Real domains included in this run (whole-island)
+START_DOMAIN = 3
+END_DOMAIN = 25
+B3D_GRIDS = list(range(START_DOMAIN, END_DOMAIN + 1))
 
-    # CASCADE-format: offset column only (no Domain_ID)
-    cascade_df = result[[str(YEAR)]].copy()
+# Buffer settings (15 left + 15 right)
+PADDING_ZEROS = 15   # number of buffer domains on each side
+TARGET_LENGTH = (END_DOMAIN - START_DOMAIN + 1) + 2 * PADDING_ZEROS  # 90 + 30 = 120
 
-    cascade_unpadded_path = os.path.join(OUTPUT_DIR, f"{OUTPUT_BASENAME}_CASCADE_Input.csv")
-    cascade_df.to_csv(cascade_unpadded_path, index=False)
-    print(f"Unpadded CASCADE-format file saved to:\n  {cascade_unpadded_path}")
+# Column mapping from raw CSV → standardized names
+COL_MAP = {
+    "Domain_ID": "FID_domains",  # Domain ID
+    "Distance": "FID_offshore_datum_line_points",    # Distance baseline → dune (m)
+    "Transect": "transectID",      # Transect ID within each domain
+}
 
-    # --- 3.2. Pad for CASCADE with smooth edge-domain buffers ---
-    padded_df = pad_for_cascade(
-        df=cascade_df,
-        padding_zeros=PADDING_ZEROS,
-        target_length=TARGET_LENGTH,
-    )
+# csv file that has the first few points of every transect
+# this is needed to reference the first transect point to the dune points so we can calc distance between them
+# not sure if Hannah/Roya's code for generating transects re-started numbering at each new transect, but mine did not
+transect_points_ref = pd.read_csv(r"C:\Users\agfig\model\calibration\offsets\offshore_datum_points.csv")
+transect_dict = {}  # create empty dictionary
+# group by transect ID and find the minimum value
+groups = transect_points_ref.groupby("transectID")
+for transect_id, group in groups:
+    point_id = min(group["pointID"].values)
+    transect_dict[transect_id] = point_id  # transect ID (key), point ID (value)
 
-    if padded_df is None:
-        print("Padded output not created due to errors.")
-        return
-
-    padded_path = os.path.join(OUTPUT_DIR, f"{OUTPUT_BASENAME}_PADDED_{TARGET_LENGTH}.csv")
-    padded_df.to_csv(padded_path, index=False)
-    print(f"\nSUCCESS: Padded CASCADE input saved to:\n  {padded_path}")
-    print(f"Columns: {', '.join(padded_df.columns)}")
-    print(f"Total rows: {len(padded_df)}")
+# Ensure output directory exists
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
-if __name__ == "__main__":
-    main()
+# =============================================================================
+# 3. CALCULATE OFFSETS
+# =============================================================================
+result = calculate_relative_offset(
+    file_path=RAW_FILE,
+    year=YEAR,
+    col_map=COL_MAP,
+    grids=B3D_GRIDS,
+    transect_points=transect_dict
+)
+
+if result is None:
+    print("Offset calculation failed. Exiting.")
+
+
+# =============================================================================
+# 4. SAVE RESULTS
+# =============================================================================
+# Save unpadded file with Domain_ID
+unpadded_path = os.path.join(OUTPUT_DIR, f"{OUTPUT_BASENAME}_CASCADE_Input_unpadded.csv")
+result.to_csv(unpadded_path, index=False)
+print(f"\nUnpadded offsets saved to:\n  {unpadded_path}")
+
+# CASCADE-format: offset column only (no Domain_ID)
+cascade_df = result[[str(YEAR)]].copy()
+
+cascade_unpadded_path = os.path.join(OUTPUT_DIR, f"{OUTPUT_BASENAME}_CASCADE_Input.csv")
+cascade_df.to_csv(cascade_unpadded_path, index=False)
+print(f"Unpadded CASCADE-format file saved to:\n  {cascade_unpadded_path}")
+
+# --- 3.2. Pad for CASCADE with smooth edge-domain buffers ---
+padded_df = pad_for_cascade(
+    df=cascade_df,
+    padding_zeros=PADDING_ZEROS,
+    target_length=TARGET_LENGTH,
+)
+
+if padded_df is None:
+    print("Padded output not created due to errors.")
+
+
+padded_path = os.path.join(OUTPUT_DIR, f"{OUTPUT_BASENAME}_PADDED_{TARGET_LENGTH}.csv")
+padded_df.to_csv(padded_path, index=False)
+print(f"\nSUCCESS: Padded CASCADE input saved to:\n  {padded_path}")
+print(f"Columns: {', '.join(padded_df.columns)}")
+print(f"Total rows: {len(padded_df)}")
+
