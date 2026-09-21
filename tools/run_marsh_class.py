@@ -10,13 +10,14 @@ from matplotlib import pyplot as plt
 
 # load a test domain and transect which is just an arbitrary segment of Masonboro Island
 # test_domain = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\marsh_domain_test3.npy")  # dam MHW
-test_domain = np.load(r"C:\Users\agfig\model\marsh_domain_test.npy") - 0.07
+# test_domain = np.load(r"C:\Users\agfig\model\marsh_domain_test.npy") - 0.07
+test_domain = np.load(r"C:\Users\agfig\model\basic_cascade_run\marsh\marsh_domain_test2_short.npy")  # dam MHW
 n_cols = np.shape(test_domain)[1]
 width = np.shape(test_domain)[0]
 initial_domain = copy.deepcopy(test_domain)
 
 # set model duration
-model_duration = 1  # yrs
+model_duration = 15  # yrs
 shoreline_change = np.zeros(model_duration)
 
 # initialize the class
@@ -30,7 +31,7 @@ marsh_class = Marsh(
     n_tidal_cycles=365 * (24 / 12.5),
     Bmax=2500,
     Dmin=0,
-    Dmax=1,
+    Dmax=0.4,
     rhoo=85,
     rhos=2000,
     mui=0.4,
@@ -40,7 +41,8 @@ marsh_class = Marsh(
     time_step_count=model_duration,
     alongshore_length=n_cols,
     tidal_amplitude=0.7,
-    initial_width=width
+    initial_width=width,
+    accretion_method=2
     )
 
 
@@ -61,12 +63,9 @@ t_total_seconds = t1 - t0
 t_total_minutes = t_total_seconds / 60
 t_total_hours = t_total_seconds / 3600
 
-# save domains
-np.save(r"C:\Users\agfig\model\basic_cascade_run\marsh\results\work_comp_marsh2.npy",marsh_class._marsh_elevation)
+# # save domains
+# np.save(r"C:\Users\agfig\model\basic_cascade_run\marsh\results\work_comp_marsh2.npy",marsh_class._marsh_elevation)
 
-# # save variables
-# save_dir = r"C:/Users/Lexi\Documents\UNC\BarrierBMFT\tests\post_integration"
-# marsh_class.save(save_dir)
 
 plot_on = False
 save_fig = False

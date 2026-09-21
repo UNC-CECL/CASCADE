@@ -468,7 +468,7 @@ def test_casc_accretion_erosion():
     slr_m_yr = 0.004
     berm_elev = 1.95  # m NAVD88
     MHW = 0.421
-    accretion_method = 3 # must be 3 so the pond is turned off
+    accretion_method = 2
 
     overwash_storm = "cascade-default-storms.npy"
 
@@ -506,12 +506,11 @@ def test_casc_accretion_erosion():
         if cascade_marsh.b3d_break:
             break
         if time_step > 0:
-            m_max_msl = cascade_marsh.marsh[0]._m_max
-            m_min_msl = cascade_marsh.marsh[0]._m_min
             # marsh class stores pre and post marsh elevations in dam MHW
             pre_elev = cascade_marsh.marsh[0]._pre_marsh_elev[time_step]
             post_elev = cascade_marsh.marsh[0]._marsh_elevation[time_step]
-            non_marsh_cells = np.where((pre_elev > m_max_msl) | (pre_elev <= m_min_msl))  # | is or operator
+            # non marsh cells should not change during marsh processes
+            non_marsh_cells = cascade_marsh.marsh[0]._non_marsh_cells[time_step]  # tuple of rows, cols
             assert_array_almost_equal(post_elev[non_marsh_cells], pre_elev[non_marsh_cells])  # actual, desired
 
 
@@ -522,8 +521,9 @@ def test_marsh_accretion_erosion():
     width = np.shape(test_domain)[0]
 
     # set model duration
-    model_duration = 15  # yrs
+    model_duration = 30  # yrs
     shoreline_change = np.zeros(model_duration)
+    accretion_method = 2
 
     # initialize the class
     marsh_class = Marsh(
@@ -546,7 +546,8 @@ def test_marsh_accretion_erosion():
         time_step_count=model_duration,
         alongshore_length=n_cols,
         tidal_amplitude=0.7,
-        initial_width=width
+        initial_width=width,
+        accretion_method=accretion_method
     )
 
     # run the time loop/update function
@@ -557,12 +558,10 @@ def test_marsh_accretion_erosion():
             model_year=time_step,
             shoreline_changeTS=shoreline_change
         )
-        m_max_msl = marsh_class._m_max
-        m_min_msl = marsh_class._m_min
         # marsh class stores pre and post marsh elevations in dam MHW
         pre_elev = marsh_class._pre_marsh_elev[time_step]
         post_elev = marsh_class._marsh_elevation[time_step]
-        non_marsh_cells = np.where((pre_elev> m_max_msl) | (pre_elev <= m_min_msl))  # | is or operator
+        non_marsh_cells = marsh_class._non_marsh_cells[time_step]
         assert_array_almost_equal(post_elev[non_marsh_cells], pre_elev[non_marsh_cells])  # actual, desired
 
 

@@ -89,6 +89,52 @@ def adjust_decomp_array_size(self, interior_transect, sc_TS, year, c):
 
     return shift_marsh
 
+def find_non_marsh_cells(
+        start_marsh,
+        end_marsh,
+        marsh_transect_length,
+        full_transect_length,
+        col_index,
+):
+    """
+    this function is predominantly used for testing the marsh module. cells not included in the marsh transect should
+    not change in elevation during the marsh module dynamics
+    :param start_marsh_cell: int, first index of the marsh
+    :param end_marsh_cell: int, last index of the marsh
+    :param marsh_transect_length: int, length of the marsh transect
+    :param full_transect_length: int, length of the full transect (marsh and non-marsh cells)
+    :return: non_marsh_cells_rows_OG_index, non_marsh_cells_cols: both are lists of index values
+    """
+    # identify the cells that are NOT within the range of marsh cells
+    if marsh_transect_length == 0:
+        non_marsh_cells_rows = list(range(0, full_transect_length, 1))
+    else:
+        if start_marsh > 0 and end_marsh < full_transect_length - 1:
+            non_marsh_cells_rows = list(range(0, start_marsh, 1)) + list(range(end_marsh + 1, full_transect_length, 1))
+        elif start_marsh > 0:  # end of the marsh goes to the end of the transect
+            non_marsh_cells_rows = list(range(0, start_marsh, 1))
+        elif end_marsh < full_transect_length - 1:  # start of the marsh is at the start of the transect
+            non_marsh_cells_rows = list(range(end_marsh + 1, full_transect_length, 1))
+
+    # for debugging: total of marsh and non-marsh should be the length of the transect
+    if len(non_marsh_cells_rows) + marsh_transect_length != full_transect_length:
+        print("marsh cells + non-marsh cells do not equal the length of the transect")
+
+    # for testing: append non-marsh cell rows/cols. one list per model year
+    # EXCEPT these rows are after we flipped the domain, and we want the indices for the original
+    # interior domain, so we have to subtract by the number of rows
+    # note that we only flipped on one axis, so col indices have not changed
+    non_marsh_cells_rows_OG_index = [(full_transect_length - 1) - v for v in non_marsh_cells_rows]
+    non_marsh_cells_cols = list(
+        np.ones(len(non_marsh_cells_rows), dtype=int) * col_index)  # there needs to be a col for each row index
+
+    # for debugging: length of the rows and cols should be the same
+    if len(non_marsh_cells_rows) != len(non_marsh_cells_cols):
+        print("the non-marsh row list is not equal in length to the non-marsh columns list")
+
+    return non_marsh_cells_rows_OG_index, non_marsh_cells_cols
+
+
 
 def evolvemarsh(
         marshelevation,     # elevation domain, here it is the range of marsh cells
@@ -460,6 +506,7 @@ class Marsh:
         self._cols_added_marsh = np.zeros(alongshore_length, dtype=int)
         self._cols_added_barrier = np.zeros(alongshore_length, dtype=int)
         self._pre_marsh_elev = [np.nan] * self._nt
+        self._non_marsh_cells = [np.nan] * self._nt # this will be filled with tuples
 
         # initialize arrays for decomp so the rows are the total model duration and columns are barrier width
         # NOTE: I added code in the update function to account for varying barrier width through time
@@ -506,6 +553,10 @@ class Marsh:
         self._accretion_TS[model_year] = np.zeros(np.shape(interior_domain))
         self._compaction_TS[model_year] = np.zeros(np.shape(interior_domain))
 
+        # initialize non-marsh row and col arrays
+        total_non_marsh_rows = []
+        total_non_marsh_cols = []
+
         for c in range(n_cols):
             # initial transect
             transect = interior_domain[:, c]
@@ -531,10 +582,23 @@ class Marsh:
             marsh_cells = np.where((transect <= m_max_msl) & (transect > m_min_msl))[0]  # if none, all cells are too high or too low to be marsh
             if len(marsh_cells) == 0:
                 marsh_transect = []
+                start_marsh_cell = []
+                end_marsh_cell = []
             else:
                 start_marsh_cell = np.min(marsh_cells)
                 end_marsh_cell = np.max(marsh_cells)
                 marsh_transect = transect[start_marsh_cell:end_marsh_cell+1]
+
+            # for debugging/testing: find non marsh TRANSECT indices, returns indices based on original (B3D) orientation
+            rows_to_add, cols_to_add = find_non_marsh_cells(
+                start_marsh=start_marsh_cell,
+                end_marsh=end_marsh_cell,
+                marsh_transect_length=len(marsh_transect),
+                full_transect_length = len(transect),
+                col_index=c,
+            )
+            total_non_marsh_rows = total_non_marsh_rows + rows_to_add
+            total_non_marsh_cols = total_non_marsh_cols + cols_to_add
 
             # if marsh_transect is empty, there are no marsh cells and we skip the calcs
             if len(marsh_transect) != 0:
@@ -596,5 +660,8 @@ class Marsh:
 
         interior_domain = interior_domain / 10  # convert to dam
         self._marsh_elevation[model_year] = copy.deepcopy(interior_domain)  # dam MHW
+
+        # save non-marsh cell rows and cols as tuple for easy implementation
+        self._non_marsh_cells[model_year] = (total_non_marsh_rows, total_non_marsh_cols)
 
         return interior_domain
