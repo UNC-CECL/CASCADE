@@ -1,5 +1,5 @@
 # Lexi (Van Blunk) Fiegelist
-# last updated: August 07, 2026
+# last updated: September 21, 2026
 
 """Simulate marsh dynamics in CASCADE
 
@@ -105,7 +105,6 @@ def evolvemarsh(
         Dmax,               # maximum depth below high water that marsh vegetation can grow (m)
         rhoo,               # organic matter bulk density (kg/m3), set to 85
         rhos,               # sediment bulk density (kg/m3), set to 2000
-        min_dep_method,     # method for mineral deposition, see options below
         plot,
 ):
     """Calculates biomass and mineral and organic deposition for each cell in the marsh as a function of flooding
@@ -116,12 +115,6 @@ def evolvemarsh(
     # 1. convert elevation into meters
     # 2. we now have multiple transects that represent the marsh, so loop through all columns of the interior domain
     # 3. we need to identify the marsh cells
-
-    # min_dep_method: see options below
-    # 1 for original
-    # 2 for fixed marsh edge
-    # 2.5 for fixed marsh edge plus smoothing
-    # 3 for no pond
 
     dt = P/numiterations  # inundation time, seconds
 
@@ -146,9 +139,6 @@ def evolvemarsh(
     # Belowground Productivity
     # Creates a biomass curve (Mariotti & Carr, 2014) where peak biomass occurs at a depth halfway between the maximum
     # depth for vegetation and the minimum (here, mean high water level)
-    # we might want to just set this value instead of using tidal range
-    # so instead of using HWL as our baseline, use SL
-    # check the paper they reference
     dm = msl + tr / 2 - marshelevation  # [m] Depth of the marsh surface below HWL at any given point
 
     if plot_on:
@@ -203,94 +193,13 @@ def evolvemarsh(
         ax2.tick_params(axis='y', labelcolor='b')
         ax2.set_ylim([0, 2600])
 
-    if min_dep_method == 1:
-        # -------------------------
-        # Mineral Deposition - Original
-        coeff = -0.002  # Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
-        distance = 0  # [m] Initialize, distance from marsh edge
-        pond_index = []
-        pond_y = []
-        pond = False
-        for xx in range(L):
-            if bgb[xx] > 0:
-                pond = False
-                distance += 1  # [m]
-                C[xx] = C_e * math.exp(coeff * distance)  # [kg/m3] Concentration at each marsh cell. Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
-            else:
-                if not pond:  # Allow sediment suply to beyond first ponded cell: this is an ALTERATION/NEW ADDITION not included in original Matlab CoLT version
-                    C_e = C_e * 0.9  # Decrease concentration at the new "marsh edge" by 10% with each subsequent pond formation
-                    pond = True
-                distance = 1  # [m]
-                C[xx] = C_e
-                pond_index.append(xx)
-                pond_y.append(C_e)
-
-    elif min_dep_method == 2:
-        # Mineral Deposition Option 2 - fixed marsh edge
-        coeff = -0.002  # Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
-        distance = 0  # [m] Initialize, distance from marsh edge
-        pond_index = []
-        pond_y = []
-        pond = False
-        for xx in range(L):
-            distance += 1  # [m]
-            if bgb[xx] > 0:
-                pond = False
-                # distance += 1  # [m]
-                C[xx] = C_e * math.exp(coeff * distance)  # [kg/m3] Concentration at each marsh cell. Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
-            else:
-                if not pond:  # Allow sediment suply to beyond first ponded cell: this is an ALTERATION/NEW ADDITION not included in original Matlab CoLT version
-                    C_e = C_e * 0.9  # Decrease concentration at the new "marsh edge" by 10% with each subsequent pond formation
-                    pond = True
-                # distance = 1  # [m]
-                C[xx] = C_e
-                pond_index.append(xx)
-                pond_y.append(C_e)
-
-    elif min_dep_method == 2.5:
-        # Mineral Deposition Option 2.5 - fixed marsh edge
-        coeff = -0.002  # Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
-        distance = 0  # [m] Initialize, distance from marsh edge
-        pond_index = []
-        pond_y = []
-        pond = False
-        for xx in range(L):
-            distance += 1  # [m]
-            if bgb[xx] > 0:
-                pond = False
-                # distance += 1  # [m]
-                C[xx] = C_e * math.exp(coeff * distance)  # [kg/m3] Concentration at each marsh cell. Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
-            else:
-                if not pond:  # Allow sediment suply to beyond first ponded cell: this is an ALTERATION/NEW ADDITION not included in original Matlab CoLT version
-                    if xx == 0:
-                        C_e = C_e * 0.9  # Decrease concentration at the new "marsh edge" by 10% with each subsequent pond formation
-                    else:
-                        C_e = C[xx-1] * 0.9  # Decrease concentration at the new "marsh edge" by 10% with each subsequent pond formation
-                    pond = True
-                # distance = 1  # [m]
-                C[xx] = C_e
-                pond_index.append(xx)
-                pond_y.append(C_e)
-
-    elif min_dep_method == 3:
-        # Mineral Deposition Option 3 - no pond
-        coeff = -0.002  # Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
-        distance = 0  # [m] Initialize, distance from marsh edge
-        for xx in range(L):
-            if bgb[xx] > 0:
-                distance += 1  # [m]
-                C[xx] = C_e * math.exp(
-                    coeff * distance)  # [kg/m3] Concentration at each marsh cell. Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
-
     # Brad's suggestion: always distribute sediment exponentially regardless of vegetation presence
-    elif min_dep_method == 4:
-        # Mineral Deposition Option 3 - no pond
-        coeff = -0.002  # Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
-        distance = 0  # [m] Initialize, distance from marsh edge
-        for xx in range(L):
-            distance += 1  # [m]
-            C[xx] = C_e * math.exp(
-                coeff * distance)  # [kg/m3] Concentration at each marsh cell. Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
+    coeff = -0.002  # Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
+    distance = 0  # [m] Initialize, distance from marsh edge
+    for xx in range(L):
+        distance += 1  # [m]
+        C[xx] = C_e * math.exp(
+            coeff * distance)  # [kg/m3] Concentration at each marsh cell. Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
 
     else:
         print("not a valid mineral deposition method")
@@ -310,15 +219,15 @@ def evolvemarsh(
         ax4.tick_params(axis='y', labelcolor='b')
         ax4.set_ylim([0, 0.051])
         # plot the ponds as stars
-        if min_dep_method != 3:
-            ax4.scatter(pond_index, pond_y, marker="*", c="b")
+        # if min_dep_method != 3:
+        #     ax4.scatter(pond_index, pond_y, marker="*", c="b")
 
     for i in range(1, numiterations):
         tempdepth = depth[i, :]
         tempy = np.zeros([L])
         tempy[tempdepth > 0] = C[tempdepth > 0] * ws * dt * (10*10)  # [kg] mass of mineral sediment deposited, where depth > 0
         # not entirely sure how tempy is in kg bc C is kg/m3, ws is m/s, and dt is s, so it seems like it is kg/m2
-        # maybe assuming 1m x 1m cells? but our cells are 10m x 10m
+        # they are assuming 1m x 1m cells, but our cells are 10m x 10m, so I added conversion
         sedimentcycle[i, :] = tempy
 
     susp_dep = np.sum(sedimentcycle, axis=0) * timestep * 1000  # [g/yr] suspended sediment deposition in an entire year, in each cell
@@ -344,8 +253,8 @@ def evolvemarsh(
         ax2.tick_params(axis='y', labelcolor='b')
         ax2.set_ylim([0, 0.051])
         # plot the ponds as stars
-        if min_dep_method != 3:
-            ax2.scatter(pond_index, pond_y, marker="*", c="b")
+        # if min_dep_method != 3:
+        #     ax2.scatter(pond_index, pond_y, marker="*", c="b")
         # Plot marsh elevation on the left y-axis
         ax3.plot(x_values, marshelevation, 'r', label='marsh elevation')
         ax3.set_ylabel('marsh elevation (m MSL)', color='r')
@@ -361,10 +270,6 @@ def evolvemarsh(
 
     # -------------------------
     # Calculations & Conversions
-
-    # # Total flux of sediment onto the marsh from the bay
-    # Fm_min = np.sum(mineral) / 1000  # [kg/yr] Flux of mineral sediment from the bay
-    # Fm_org = np.sum(organic_alloch) / 1000  # [kg/yr] Flux of organic sediment from the bay
 
     # Calculate thickness of new sediment (mineral+organic) based off LOI and its effect on density
     total = (mineral + organic_autoch + organic_alloch)
@@ -424,7 +329,6 @@ def decompose(
 
     compaction = np.zeros([B])
     compaction_volume = np.zeros([B])
-    # Fd = 0
 
     # Decompose the marsh sediment
     for x in range(x_m, x_f):  # Loop through each marsh cell in the domain
@@ -444,7 +348,6 @@ def decompose(
                 organic_dep_autoch[tempyr, x] -= decomp[tempyr]  # [g] Autochthonous organic material in a given "pocket" of sediment updated for decomposition
         compaction_volume[x] = np.sum(decomp) / 1000 / rhoo  # [m3] Total compaction in a given cell is a result of the sum of all decomposition in that cell
         compaction[x] = compaction_volume[x] / (10 * 10)  # [m] Total compaction based on cell size is 10 m by 10 m
-        # Fd += np.sum(decomp)  # [kg] Flux of organic matter out of the marsh due to decomposition
 
     # Update the elevation of only the most recent layer
     elevation[yr, x_m:x_f] -= compaction[x_m:x_f]
@@ -485,7 +388,6 @@ class Marsh:
         tidal_amplitude,    # tidal amplitude (m)
         initial_width,      # initial width of the barrier
         bay_depth=3,           # bay depth (m MHW)
-        accretion_method=1,  # method for mineral deposition
     ):
         """
 
@@ -513,7 +415,6 @@ class Marsh:
         self._tr = tidal_amplitude * 2  # m
         self._initial_width = initial_width
         self._bay_depth = bay_depth  # m MHW
-        self._accretion_method = accretion_method
 
         # initialize other variables that do not have inputs
         self._inundation_time = P / numiterations  # seconds
@@ -624,7 +525,6 @@ class Marsh:
                     rhoo=self._rhoo,
                     rhos=self._rhos,
                     plot=False,
-                    min_dep_method=self._accretion_method
                     )
 
                 # store accretion values
