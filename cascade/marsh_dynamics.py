@@ -105,6 +105,7 @@ def evolvemarsh(
         Dmax,               # maximum depth below high water that marsh vegetation can grow (m)
         rhoo,               # organic matter bulk density (kg/m3), set to 85
         rhos,               # sediment bulk density (kg/m3), set to 2000
+        min_dep_method,     # method for mineral deposition, see options below
         plot,
 ):
     """Calculates biomass and mineral and organic deposition for each cell in the marsh as a function of flooding
@@ -115,6 +116,10 @@ def evolvemarsh(
     # 1. convert elevation into meters
     # 2. we now have multiple transects that represent the marsh, so loop through all columns of the interior domain
     # 3. we need to identify the marsh cells
+
+    # min_dep_method: see options below
+    # 1 for original
+    # 2 for Brad's method
 
     dt = P/numiterations  # inundation time, seconds
 
@@ -193,13 +198,36 @@ def evolvemarsh(
         ax2.tick_params(axis='y', labelcolor='b')
         ax2.set_ylim([0, 2600])
 
-    # Brad's suggestion: always distribute sediment exponentially regardless of vegetation presence
-    coeff = -0.002  # Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
-    distance = 0  # [m] Initialize, distance from marsh edge
-    for xx in range(L):
-        distance += 1  # [m]
-        C[xx] = C_e * math.exp(
-            coeff * distance)  # [kg/m3] Concentration at each marsh cell. Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
+    if min_dep_method == 1:
+        # -------------------------
+        # Mineral Deposition - Original
+        coeff = -0.002  # Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
+        distance = 0  # [m] Initialize, distance from marsh edge
+        pond_index = []
+        pond_y = []
+        pond = False
+        for xx in range(L):
+            if bgb[xx] > 0:
+                pond = False
+                distance += 1  # [m]
+                C[xx] = C_e * math.exp(coeff * distance)  # [kg/m3] Concentration at each marsh cell. Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
+            else:
+                if not pond:  # Allow sediment suply to beyond first ponded cell: this is an ALTERATION/NEW ADDITION not included in original Matlab CoLT version
+                    C_e = C_e * 0.9  # Decrease concentration at the new "marsh edge" by 10% with each subsequent pond formation
+                    pond = True
+                distance = 1  # [m]
+                C[xx] = C_e
+                pond_index.append(xx)
+                pond_y.append(C_e)
+
+    elif min_dep_method == 2:
+        # Brad's suggestion: always distribute sediment exponentially regardless of vegetation presence
+        coeff = -0.002  # Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
+        distance = 0  # [m] Initialize, distance from marsh edge
+        for xx in range(L):
+            distance += 1  # [m]
+            C[xx] = C_e * math.exp(
+                coeff * distance)  # [kg/m3] Concentration at each marsh cell. Coefficient of -0.0031 is a fitted parameter for realistic marsh topography
 
     else:
         print("not a valid mineral deposition method")
@@ -388,6 +416,7 @@ class Marsh:
         tidal_amplitude,    # tidal amplitude (m)
         initial_width,      # initial width of the barrier
         bay_depth=3,           # bay depth (m MHW)
+        accretion_method=1,  # method for mineral deposition
     ):
         """
 
@@ -415,6 +444,7 @@ class Marsh:
         self._tr = tidal_amplitude * 2  # m
         self._initial_width = initial_width
         self._bay_depth = bay_depth  # m MHW
+        self._accretion_method = accretion_method
 
         # initialize other variables that do not have inputs
         self._inundation_time = P / numiterations  # seconds
@@ -525,6 +555,7 @@ class Marsh:
                     rhoo=self._rhoo,
                     rhos=self._rhos,
                     plot=False,
+                    min_dep_method=self._accretion_method
                     )
 
                 # store accretion values
