@@ -3,7 +3,7 @@
 Positions, not change. These are the dune lines that stand for the model years
 1996, 2010 and 2024 (`hat_topo_version.DUNE_LINE_FOR_YEAR`), shown as maps and
 as alongshore profiles of where they sit relative to NC-12 and the shoreline.
-Written by `scripts/input_prep/5-scr/duneline_positions/duneline_positions.py`
+Written by `scripts/input_prep/5-scr/4-comparisons/duneline_positions/duneline_positions.py`
 (2026-09-18, Hannah's design by interview). Every figure is also published to
 `output/figures/shoreline/duneline_positions/`.
 
@@ -91,8 +91,8 @@ The 2023 image date is not known and is assumed to be 1 July. Beach width for
 ## Rebuilding
 
 ```
-python scripts/input_prep/5-scr/duneline_positions/duneline_positions.py
-python scripts/input_prep/5-scr/duneline_positions/duneline_positions.py --no-imagery
+python scripts/input_prep/5-scr/4-comparisons/duneline_positions/duneline_positions.py
+python scripts/input_prep/5-scr/4-comparisons/duneline_positions/duneline_positions.py --no-imagery
 ```
 
 Run the script with the project's `.venv` Python, which has `rasterio`. The

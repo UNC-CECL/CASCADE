@@ -148,7 +148,7 @@ The **producers stayed** in `scripts/input_prep/5-scr/`:
 ## Rebuilding a window
 
 ```
-python scripts/input_prep/5-scr/CoastSat/coastsat_domain_lrr_fixed.py \
+python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_domain_lrr.py \
     --start-year 1996 --end-year 2010
 ```
 
@@ -191,7 +191,7 @@ means are side by side in `supporting/lrr_1996_2024_halves.csv`. The figure is a
 `3-rates/coastsat/lrr/lrr_four_windows.png` is the one place the four windows
 are drawn against each other (in `4-comparisons/coastsat_windows/` until
 2026-09-19; since then `coastsat_lrr_windows.py` draws only this 2 x 2, the
-per-window figures being `rates_figures.py`'s). The text below describes it as it was. `scripts/input_prep/5-scr/CoastSat/coastsat_lrr_windows.py`
+per-window figures being `rates_figures.py`'s). The text below describes it as it was. `scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_windows.py`
 reads each `domain_lrr_summary.csv` through the resolver, pins the y axis at
 the largest |mean| over all of them plus 1 m, rounded up to the metre
 (written to `supporting/y_bounds.txt`), and writes `lrr_four_windows`, a
@@ -214,7 +214,7 @@ CoastSat shoreline two ways: the LRR already in
 `3-rates/coastsat/lrr/<start>_<end>/`, and an endpoint rate from the mean
 CoastSat position in a one-year window about each survey date. Seaward
 positive throughout. Built by
-`scripts/input_prep/5-scr/duneline_vs_coastsat/duneline_vs_coastsat.py`;
+`scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/duneline_vs_coastsat.py`;
 the survey dates are in each folder's `supporting/PROVENANCE.md`, with
 the tables, PDFs and captions (a figure folder shows figures). `--grid`
 redraws every window on disk as `alongshore_four_windows.png` on one y

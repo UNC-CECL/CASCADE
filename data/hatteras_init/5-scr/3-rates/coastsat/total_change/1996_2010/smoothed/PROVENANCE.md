@@ -1,6 +1,6 @@
 # 3-rates/coastsat/total_change/1996_2010/smoothed - provenance
 
-Written 2026-09-22 10:20 by scripts/input_prep/5-scr/coastsat_total_change/coastsat_total_change.py (--product total_change), beside the raw comparison one level up.
+Written 2026-09-22 10:20 by scripts/input_prep/5-scr/3-rates/coastsat/total_change/coastsat_total_change.py (--product total_change), beside the raw comparison one level up.
 
 **Total shoreline change** = the 1996-2010 LRR x 14 yr. The rate is fitted on the window it is evaluated over, so nothing is extrapolated.
 

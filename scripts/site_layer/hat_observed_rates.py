@@ -110,7 +110,7 @@ COASTSAT_TIMESERIES = OBSERVATIONS / "coastsat_timeseries"
 # endpoint,5yr_bins} and duneline/endpoint. Until then the four sat flat as
 # coastsat_lrr/, coastsat_endpoint/, coastsat_5yr_bins/, duneline_endpoint/.
 # 3-rates holds the tables and ONE house-style figure per window beside them
-# (scripts/input_prep/5-scr/rates_figures.py); comparisons are in 4-comparisons.
+# (scripts/input_prep/5-scr/3-rates/rates_figures.py); comparisons are in 4-comparisons.
 COASTSAT_RATES = RATES / "coastsat"
 DUNELINE_RATES = RATES / "duneline"
 COASTSAT_LRR_ROOT = COASTSAT_RATES / "lrr"
@@ -180,14 +180,14 @@ DUNELINE_VS_COASTSAT = COASTSAT_ENDPOINT_VS_DUNELINE
 # The stored dune-line observation (2026-09-18): the NET CHANGE between the
 # two lines that bound a window, per transect and per domain, in m and m/yr,
 # one folder per window. Written by
-# scripts/input_prep/5-scr/duneline_endpoint/duneline_endpoint.py. It replaced
+# scripts/input_prep/5-scr/3-rates/duneline/duneline_endpoint.py. It replaced
 # duneline_lrr/ (an OLS through every line in the window, 2026-09-16; Hannah:
 # "we are tracking net change"), now under archive/duneline_lrr_retired_20260918/.
 DUNELINE_ENDPOINT_ROOT = DUNELINE_RATES / "endpoint"
 # The CoastSat counterpart (2026-09-18): net change in the CoastSat shoreline
 # between +/-6-month window means centred on the SAME dune-line survey dates,
 # so the two products difference like for like. Written by
-# scripts/input_prep/5-scr/coastsat_endpoint/coastsat_endpoint.py.
+# scripts/input_prep/5-scr/3-rates/coastsat/endpoint/coastsat_endpoint.py.
 COASTSAT_ENDPOINT_ROOT = COASTSAT_RATES / "endpoint"
 # ---------------------------------------------------------------------------
 # THE VOCABULARY (Hannah, by interview, 2026-09-21). An LRR turned into a
@@ -213,7 +213,7 @@ COASTSAT_ENDPOINT_ROOT = COASTSAT_RATES / "endpoint"
 # per transect lrr_m_yr x (end - start) years, the rate fitted on that same
 # window, beside the OBSERVED change between calendar-year mean positions at
 # the two ends. Windows 1996_2024, 1996_2010, 2010_2024. Written by
-# scripts/input_prep/5-scr/coastsat_total_change/coastsat_total_change.py.
+# scripts/input_prep/5-scr/3-rates/coastsat/total_change/coastsat_total_change.py.
 COASTSAT_TOTAL_CHANGE_ROOT = COASTSAT_RATES / "total_change"
 # PROJECTED shoreline change (2026-09-21, Hannah by interview): the 1996-2024
 # LRR carried over each 14-yr half, against the same observed change. Only
@@ -233,7 +233,7 @@ NET_CHANGE_1996_2024 = COASTSAT_ENDPOINT_VS_DUNELINE / "all_windows_stacked"
 # domain, one folder per window: 1996_2010, 2010_2024 and 1996_2024, each
 # window's rate fitted on that same window, x the CALENDAR span (14, 14, 28
 # yr). Plus chains/ and difference/. Written by
-# scripts/input_prep/5-scr/total_change_vs_duneline/total_change_vs_duneline.py.
+# scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/total_change_vs_duneline.py.
 #
 # ONE tree since 2026-09-21 (Hannah, by interview). It absorbed two folders
 # that were the same quantity under two names:
@@ -331,7 +331,7 @@ def window_dir(start_year, end_year):
     Raises:
         FileNotFoundError: If that window has not been built, naming the ones
             that have. A window is built by
-            scripts/input_prep/5-scr/CoastSat/coastsat_domain_lrr_fixed.py.
+            scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_domain_lrr.py.
     """
     path = COASTSAT_LRR_ROOT / "{0}_{1}".format(start_year, end_year)
     if not path.is_dir():
@@ -362,7 +362,7 @@ def coastsat_endpoint_csv(start_year, end_year, level="transect"):
     if not path.is_file():
         raise FileNotFoundError(
             "no CoastSat endpoint for {0}-{1}. Build it with "
-            "scripts/input_prep/5-scr/coastsat_endpoint/coastsat_endpoint.py".format(
+            "scripts/input_prep/5-scr/3-rates/coastsat/endpoint/coastsat_endpoint.py".format(
                 start_year, end_year))
     return path
 
@@ -379,7 +379,7 @@ def dune_endpoint_csv(start_year, end_year, level="transect"):
                       if (p / name).is_file()) if DUNELINE_ENDPOINT_ROOT.is_dir() else []
         raise FileNotFoundError(
             "no dune-line endpoint for {0}-{1}; have {2}. Build it with "
-            "scripts/input_prep/5-scr/duneline_endpoint/duneline_endpoint.py".format(
+            "scripts/input_prep/5-scr/3-rates/duneline/duneline_endpoint.py".format(
                 start_year, end_year, have or "none"))
     return path
 
@@ -423,7 +423,7 @@ if __name__ == "__main__":
 # The with_base file is what an extended-geometry run loads as its active
 # dataset (one LOESS over the whole reach); the surveyed file stays the
 # scoring table for GIS 2-89 so extended and base runs are graded alike.
-# Built by scripts/input_prep/5-scr/CoastSat/coastsat_extension_lrr.py.
+# Built by scripts/input_prep/5-scr/3-rates/coastsat/extension/coastsat_extension_lrr.py.
 EXT_DIR = "ext"
 WITH_BASE_FILE = "transect_lrr_with_base.csv"
 

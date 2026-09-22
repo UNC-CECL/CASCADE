@@ -28,6 +28,9 @@ work runs, and where the data tree is grouped the same way the names match.
     road_relocation/from_roya/   Roya's Pea Island original of the
                                  relocation measurement (was roya_files/)
 5-scr/                the observed shoreline record and its rate fits
+    1-observations/  2-transect-frame/  3-rates/  4-comparisons/
+    lib/              the shared OLS, and scr_paths.py (the module resolver)
+    tools/            the WINDOWS.md generator, the pipeline verifier
 6-scr-smooth/         smoothing the observed rates
 7-source-sink/        the background-erosion calibration
     1-prepare/  2-calibrate/  3-figures/  4-export/
@@ -42,10 +45,12 @@ Note the plural: the code folder is `4-mgmt-forcings`, the data folder is
 `4-mgmt-forcing`. That is a spelling accident, not a distinction; it is left
 alone because too many paths spell it.
 
-`5-scr/` keeps its producer folders (`CoastSat/`, `duneline_endpoint/`, ...) rather
-than the data tree's `1-observations/ .. 4-comparisons/`: the `CoastSat/`
-scripts import `coastsat_lrr_analysis.py` as a sibling module, so splitting
-them by job would mean moving that module first.
+`5-scr/` mirrors its data tree (`1-observations/ .. 4-comparisons/`) since
+2026-09-22. It had kept producer folders (`CoastSat/`, `duneline_endpoint/`,
+...) because the `CoastSat/` scripts imported `coastsat_lrr_analysis.py` as a
+sibling, so splitting them by job meant moving that module first. It now sits
+in `5-scr/lib/coastsat_lrr.py`, and `5-scr/lib/scr_paths.py` is the one place
+that knows where any shared 5-scr module lives. See `5-scr/README.md`.
 
 ## Moving a script
 
@@ -54,10 +59,16 @@ Every script here finds the repository by searching upward for
 change depth without breaking. What does break is another script that loads it
 BY PATH: `build_island_offset.py` runs its three steps that way, and
 `HAT_be_zone_residual_fit.py`, `HAT_road_offset_from_dune_start.py`,
-`HAT_road_placement_on_domains.py`, `duneline_vs_coastsat.py` and
-`HAT_dune_topo_extractor.py` are each loaded by several others. Search for the
-file name before moving one. (2026-09-18: 2-brie-offset and 3-env-forcings
-were split into steps and roya_files/ folded into road_relocation/.)
+`HAT_road_placement_on_domains.py` and `HAT_dune_topo_extractor.py` are each
+loaded by several others. Search for the file name before moving one.
+
+The exception is `5-scr/`, where the six shared modules are registered in
+`5-scr/lib/scr_paths.py`: moving one is editing its row there, and
+`python 5-scr/lib/scr_paths.py` reports any row that no longer matches disk.
+
+(2026-09-18: 2-brie-offset and 3-env-forcings were split into steps and
+roya_files/ folded into road_relocation/. 2026-09-22: 5-scr was split to
+mirror its data tree, and its by-path loads replaced by scr_paths.)
 
 ## Before running any of these
 

@@ -27,3 +27,20 @@ window's PROVENANCE.md.
 
 Read through `hat_observed_rates.dune_lrr_csv(start, end)`. Drawn against
 the model in `output/comparisons/rate_windows/duneline/lrr/`.
+
+---
+
+**2026-09-22 — the producer named above is no longer on disk.** The 5-scr
+scripts tree was reorganised to mirror this data tree that day, and its
+retired scripts were deleted rather than parked in a dated folder (a departure
+from rule 4 of `ORGANIZATION.md`, taken deliberately; see
+`scripts/input_prep/5-scr/README.md`). The product here is unaffected — only
+the path that made it has gone.
+
+To read the script again — note the path below is the one it was last
+COMMITTED under, which is not the path named above:
+
+```
+git log --diff-filter=D --oneline -- scripts/input_prep/5-scr/superseded_20260918/duneline_lrr.py
+git show <commit>^:scripts/input_prep/5-scr/superseded_20260918/duneline_lrr.py
+```

@@ -1,7 +1,7 @@
 # coastsat_windows — the observed CoastSat rate, window by window
 
 Every file here is written by
-`scripts/input_prep/5-scr/CoastSat/coastsat_lrr_windows.py`. Nothing is
+`scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_windows.py`. Nothing is
 edited by hand, and a re-run regenerates the whole folder.
 
 ```
@@ -36,8 +36,8 @@ any panel can be compared with any other. The `1996_2024/` figure does
 ## Rebuilding
 
 ```
-python scripts/input_prep/5-scr/CoastSat/coastsat_lrr_windows.py                     # 2 x 2 + four windows
-python scripts/input_prep/5-scr/CoastSat/coastsat_lrr_windows.py --overlay 1996_2024 # 1996_2024/
+python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_windows.py                     # 2 x 2 + four windows
+python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_windows.py --overlay 1996_2024 # 1996_2024/
 ```
 
 Set `PYTHONIOENCODING=utf-8` on Windows if the console chokes on the

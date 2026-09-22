@@ -1,6 +1,6 @@
 # 3-rates/duneline/endpoint/1996_2024 - provenance
 
-Written 2026-09-18 17:37 by scripts/input_prep/5-scr/duneline_endpoint/duneline_endpoint.py.
+Written 2026-09-18 17:37 by scripts/input_prep/5-scr/3-rates/duneline/duneline_endpoint.py.
 
 Net change between the two dune lines that bound the window, per 100 m transect, seaward positive; per domain the mean over its transects. `change_m` needs no date; `rate_m_yr` is `change_m` over the survey interval.
 

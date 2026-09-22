@@ -20,7 +20,7 @@ potentially condensed, especially with the naming")
 WHY IT IS HERE AND NOT IN 5-scr
     The observed-only figure lives with the observations
     (data/hatteras_init/5-scr/3-rates/coastsat/lrr/, drawn with the panel code of
-    scripts/input_prep/5-scr/CoastSat/coastsat_lrr_windows.py). Once a run's
+    scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_windows.py). Once a run's
     curve is on the panel the figure spans runs, and every cross-run figure
     is filed under output/comparisons/ (output/README.md). This script
     IMPORTS the observed drawing from the 5-scr producer rather than copying

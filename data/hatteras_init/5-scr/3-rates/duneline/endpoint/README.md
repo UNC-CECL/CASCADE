@@ -2,7 +2,7 @@
 
 The stored dune-line observation (2026-09-18): the **net change** between the
 two dune lines that bound each window, per 100 m transect and per GIS domain.
-Written by `scripts/input_prep/5-scr/duneline_endpoint/duneline_endpoint.py`,
+Written by `scripts/input_prep/5-scr/3-rates/duneline/duneline_endpoint.py`,
 read through `hat_observed_rates.dune_endpoint_csv(start, end, level)`.
 `HAT_rate_windows.py` draws and scores the dune line from here. It replaced
 `duneline_lrr/`, an OLS through every line in the window; see
@@ -38,6 +38,6 @@ Windows: 1984_2004, 1996_2010, 2004_2024, 2010_2024 (the model windows) and
 | 1996_2024 | 1997 → 2023 | 25.72 yr | −14.8 m (−0.58 m/yr) | 61 / 90 |
 
 Rebuild after any change to a dune line:
-`python scripts/input_prep/5-scr/duneline_endpoint/duneline_endpoint.py`
+`python scripts/input_prep/5-scr/3-rates/duneline/duneline_endpoint.py`
 
-**Figure:** `<window>/duneline_endpoint_<window>.png`, drawn by `scripts/input_prep/5-scr/rates_figures.py`, on the metre axis shared by both endpoint products.
+**Figure:** `<window>/duneline_endpoint_<window>.png`, drawn by `scripts/input_prep/5-scr/3-rates/rates_figures.py`, on the metre axis shared by both endpoint products.

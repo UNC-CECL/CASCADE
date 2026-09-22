@@ -1,6 +1,6 @@
 # 3-rates/coastsat/projected/2010_2024 - provenance
 
-Written 2026-09-22 10:20 by scripts/input_prep/5-scr/coastsat_total_change/coastsat_total_change.py (--product projected).
+Written 2026-09-22 10:20 by scripts/input_prep/5-scr/3-rates/coastsat/total_change/coastsat_total_change.py (--product projected).
 
 ## Which product this is
 
