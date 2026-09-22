@@ -12,8 +12,19 @@ import numpy as np
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
-RAW_DSAS_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\shoreline_change\dsas_1997_2019_rates.csv"
-OUTPUT_DOMAIN_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\shoreline_change\dsas_1997_2019_domain_means.csv"
+# Anchored 2026-09-22. These were drive-rooted into a home directory, naming
+# data/hatteras_init/shoreline_change/ -- a folder that has not existed since
+# the DSAS tables moved into the 5-scr tree. Both FILENAMES survived the move
+# unchanged, so this is a resolved relocation, not a guess: the resolver owns
+# the folder (rule 6) and the repo is found by searching upward (rule 5).
+import sys as _sys
+from pathlib import Path as _P
+_sys.path.insert(0, str(next(_q for _q in _P(__file__).resolve().parents
+                             if (_q / "pyproject.toml").exists()) / "scripts"))
+from site_layer.hat_observed_rates import DSAS_ROOT  # noqa: E402
+
+RAW_DSAS_CSV = str(DSAS_ROOT / "dsas_1997_2019_rates.csv")
+OUTPUT_DOMAIN_CSV = str(DSAS_ROOT / "dsas_1997_2019_domain_means.csv")
 
 # Domain range for your study area
 MIN_DOMAIN = 1

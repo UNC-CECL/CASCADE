@@ -101,6 +101,27 @@ a plausible wrong path fails silently and an obviously broken one does not. One
 of the 23 is a comment describing this very bug, which the check cannot tell
 from the bug itself.
 
+**2026-09-22: the residue was triaged, and "cannot be mapped" was too strong.**
+It is down to 19. Sorting the literals by what they actually name:
+
+* **another machine** — the Ocracoke work points into
+  `C:\Users\frank\OneDrive - University of North Carolina...`. Nothing to do.
+* **a target that is genuinely gone** — the two deleted runs and
+  `topography/2009_FIXED/`. The paragraph above holds for these: leave the
+  literal visible.
+* **a target that MOVED and kept its name** — one file was in this class.
+  `figure_making/shoreline/dsas/dsas_from_gis.py` named
+  `data/hatteras_init/shoreline_change/dsas_1997_2019_{rates,domain_means}.csv`;
+  both files exist today under `5-scr/1-observations/dsas_1978_2019/` with the
+  **same filenames**. That is a resolved relocation, not a guess, so it was
+  fixed — through `hat_observed_rates.DSAS_ROOT`, per rule 6. The script had
+  been dead, raising FileNotFoundError on import, and now runs.
+
+The lesson for the next sweep: check whether the basename still exists
+somewhere before filing a literal under "unmappable". An exact filename match
+after a folder move is evidence, not a guess. A *similar* name is still a
+guess, and the paragraph above still applies to it.
+
 ## 6. A location has one owner
 
 Where something lives is decided once, in a resolver, and everything else asks:
