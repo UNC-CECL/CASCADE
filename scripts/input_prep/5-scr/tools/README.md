@@ -19,39 +19,40 @@ windows_index.py
         python scripts/input_prep/5-scr/tools/windows_index.py
 
 coastsat_rates_check.py
-    ** DOES NOT RUN AS OF 2026-09-22. ** See below.
-
-    Internal-consistency checks on the CoastSat rate outputs, before they are
-    trusted as model targets:
+    Internal-consistency checks on one CoastSat rate window, before it is
+    trusted as a model target:
       1. NaN audit        how many transects have no LRR, and why
       2. Domain mean      does the stored domain mean equal the mean of the
                           transect LRRs in the same CSV?
       3. Transect count   does n_transects match the actual row count?
       4. Per-domain       a side-by-side table, to spot a domain that looks off
+
+        python tools/coastsat_rates_check.py                          # 2010-2024
+        python tools/coastsat_rates_check.py --start-year 1996 --end-year 2010
+
+    Reads finished products and writes ONE file, the per-domain comparison:
+    3-rates/coastsat/lrr/<window>/checks/rates_check_<window>.csv. A `checks/`
+    subfolder, so a verification artefact is never mistaken for a product.
 ```
 
-### coastsat_rates_check.py is broken, in two ways
+### It was broken until 2026-09-22, in three ways
 
-Found 2026-09-22 by running it. An earlier version of this README said it read
-finished products, wrote nothing and was safe to run at any time. All three
-were wrong.
+Found by running it rather than reading it -- an earlier version of this
+README described it from its docstring and said it "reads finished products
+and writes nothing, so it is safe to run at any time". All three were wrong.
 
-1. **It dies on a cp1252 console** before finishing the first check. It prints
-   a U+2713 check mark, and a Windows console cannot encode that:
-   `UnicodeEncodeError: 'charmap' codec can't encode character '✓'`. The
-   fix is the one its siblings already carry -- reconfigure stdout to UTF-8 at
-   import, as `export_be_calibration.py` and the 6-scr-smooth scripts do.
+1. **It died on a cp1252 console** before finishing the first check, on the
+   U+2713 it prints as a pass mark. It now carries the same stdout guard its
+   siblings do (`export_be_calibration.py`), reconfiguring to UTF-8 rather
+   than ASCII-ifying, so the next mark someone types cannot reintroduce it.
+2. **Its output path was a dead literal**, drive-rooted into
+   `scripts/input_preperation/CoastSat_verification/` -- note the old spelling;
+   that tree has not existed since the rename. It resolves through
+   `hat_observed_rates` now, and creates the folder it writes to.
+3. **Its window was hardcoded to 2004_2024**, which is not on the canonical
+   1996 -> 2010 -> 2024 chain. The window is now an argument, defaulting to
+   2010-2024.
 
-2. **It writes, to a tree deleted long ago.** `OUTPUT_REPORT_CSV` is a
-   drive-rooted literal naming `scripts/input_preperation/CoastSat_verification/`
-   -- note the old spelling; that folder has not existed since the tree was
-   renamed. `detail.to_csv(OUTPUT_REPORT_CSV)` at the end would fail even if
-   the encoding did not stop it first. It is one of the 20 unresolvable paths
-   `hat_layout_check.py` reports under rule 5.
-
-Neither is hard to fix, and neither has been, because nothing runs this. The
-checks it performs are worth having; if you want it back, the work is the
-stdout reconfigure plus routing the report through
-`site_layer/hat_observed_rates.py` instead of a typed path.
+Verified on both current windows: all four checks pass on each.
 
 Neither script is imported by anything. Both are run by path.

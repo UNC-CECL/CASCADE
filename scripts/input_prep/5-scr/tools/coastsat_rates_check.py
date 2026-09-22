@@ -37,13 +37,53 @@ from pathlib import Path as _RP
 _sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
                              if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_observed_rates as _obs  # noqa: E402
-TRANSECT_LRR_CSV = str(_obs.lrr_csv(2004, 2024))
+
+# The window to check. It was hardcoded to 2004_2024, which is not on the
+# canonical 1996 -> 2010 -> 2024 chain, so the default now follows the chain
+# and either end can be overridden.
+import argparse as _ap
+_parser = _ap.ArgumentParser(
+    description="Internal-consistency checks on one CoastSat rate window: "
+                "NaN audit, domain means against the transect mean, and "
+                "transect counts. Reads finished products; writes one report.")
+_parser.add_argument("--start-year", type=int, default=2010)
+_parser.add_argument("--end-year", type=int, default=2024)
+_cli = _parser.parse_args()
+START_YEAR, END_YEAR = _cli.start_year, _cli.end_year
+
+
+def _never_die_on_a_print():
+    """Stop a console encoding from killing a finished check.
+
+    This file prints U+2713 and U+2717 as pass/fail marks, which a Windows
+    cp1252 console cannot encode, so `print` raises UnicodeEncodeError -- it
+    died on the FIRST check, before reporting anything. Reconfigure rather
+    than ASCII-ify, so the next mark someone types cannot reintroduce it.
+    The same guard its siblings carry (export_be_calibration.py).
+    """
+    for stream in (_sys.stdout, _sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            try:
+                stream.reconfigure(errors="replace")
+            except Exception:
+                pass
+
+
+_never_die_on_a_print()
+TRANSECT_LRR_CSV = str(_obs.lrr_csv(START_YEAR, END_YEAR))
 
 # Domain-level summary (comparison of coastsat_domain_lrr_fixed.py)
-DOMAIN_SUMMARY_CSV = str(_obs.domain_csv(2004, 2024))
+DOMAIN_SUMMARY_CSV = str(_obs.domain_csv(START_YEAR, END_YEAR))
 
-# Where to save the per-domain comparison table
-OUTPUT_REPORT_CSV = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\CoastSat_verification\verification_report_2004_2024.csv"
+# Where to save the per-domain comparison table. Resolved through
+# hat_observed_rates, beside the window it checks, in a `checks/` subfolder so
+# a verification artefact is never mistaken for a product. Until 2026-09-22
+# this was a drive-rooted literal naming scripts/input_preperation/ -- a tree
+# renamed long ago -- so the script could not finish even when it ran.
+_REPORT_DIR = _obs.window_dir(START_YEAR, END_YEAR) / "checks"
+OUTPUT_REPORT_CSV = str(_REPORT_DIR / f"rates_check_{START_YEAR}_{END_YEAR}.csv")
 
 # Tolerance for floating-point comparison in Check 2 (m/yr)
 # Differences smaller than this are treated as matching
@@ -405,6 +445,7 @@ def main():
         print(f"       Focus on checks marked ✗ before using this data in CASCADE.")
 
     # ── Save report ───────────────────────────────────────────
+    _REPORT_DIR.mkdir(parents=True, exist_ok=True)
     detail.to_csv(OUTPUT_REPORT_CSV, index=False)
     print(f"\nDetailed report saved to:")
     print(f"  {OUTPUT_REPORT_CSV}")
