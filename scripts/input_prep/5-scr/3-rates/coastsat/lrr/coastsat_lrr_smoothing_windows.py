@@ -19,7 +19,7 @@ WHY THE SIGN FILL IS NOT HERE
     lrr_<w>.png colours the rate blue seaward / red landward. Four curves
     share this panel, so that pair is not available: the smoothing width is an
     ORDERED variable and takes a sequential ramp instead, the one
-    HAT_smoothing_scale.py uses, anchored on the house shoreline blue. Sign is
+    smoothing_scale.py uses, anchored on the house shoreline blue. Sign is
     read off the zero line, which is drawn.
 
 THE SPLICE

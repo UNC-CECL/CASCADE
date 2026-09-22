@@ -1,6 +1,6 @@
 # Hindcast parameter sensitivity — figures
 
-Written by `scripts/sensitivity_analysis/HAT_plot_sensitivity.py`, which reads the
+Written by `scripts/sensitivity_analysis/plot_sensitivity.py`, which reads the
 sweep manifests (`../sensitivity_<year>.jsonl`), `output/raw_runs/run_index.csv`
 and each run's own rate CSV. Nothing here is hand-placed — re-running the script
 rewrites a directory in place.

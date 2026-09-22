@@ -1,10 +1,10 @@
 """
-HAT_overwash_vs_footprint.py
+overwash_vs_footprint.py
 ==============================================================================
 Does the observed overwash of 1984–1997 line up with the rows the 1984
 reconstruction adds and removes?
 
-    python HAT_overwash_vs_footprint.py
+    python overwash_vs_footprint.py
 
 THE TWO RECORDS
     The footprint (2-domain-reconstruction-1984/2-extent/footprint_1984_by_domain.csv)
@@ -74,7 +74,16 @@ REPO = next(
     _p for _p in HERE.parents
     if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
-sys.path.insert(0, str(HERE))
+# overwash_data.py is the stage's shared module -- the observation record,
+# SECTIONS, PERIODS and the loaders. It sits in 1-observations/ because that
+# is the step it builds. Anchored on REPO, never counted from HERE (rule 5),
+# so this survives the file changing depth.
+# This one draws on TWO earlier steps: the record from 1-observations and the
+# shared colours and geometry from the 2-record figures. Both folders go on
+# the path, anchored on REPO (rule 5), never counted from this file.
+_STAGE = REPO / "scripts" / "input_prep" / "8-overwash-analysis"
+for _step in ("1-observations", "2-record"):
+    sys.path.insert(0, str(_STAGE / _step))
 
 from site_layer.hat_figure_style import (C, DOMAIN_AXIS_LABEL, INK, _title,     # noqa: E402
                               apply_style, figsize, open_frame, save,

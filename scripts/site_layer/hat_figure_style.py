@@ -690,7 +690,7 @@ def compare_header(fig, lines, size=8.5):
     what interval it spans, never the numbers that came out. The summary stays
     in `supporting/CAPTIONS.md`.
 
-    `HAT_target_comparison` carried this idea first (the source/sink line); it
+    `target_comparison` carried this idea first (the source/sink line); it
     is here so the dune-line comparisons place it identically.
 
     Args:

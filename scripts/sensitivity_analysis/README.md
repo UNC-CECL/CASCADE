@@ -5,9 +5,9 @@ value, and reads the result.
 
 | Script | Does |
 |---|---|
-| `HAT_hindcast_sensitivity.py` | the sweep driver |
-| `HAT_plot_sensitivity.py` | the sweep's figures |
-| `HAT_plot_hs_experiment.py` | the wave-height experiment specifically |
+| `hindcast_sensitivity.py` | the sweep driver |
+| `plot_sensitivity.py` | the sweep's figures |
+| `plot_hs_experiment.py` | the wave-height experiment specifically |
 | `plot_sensitivity_vs_coastsat.py` | each cell against the observed rates |
 
 Products go to `output/calibration/sensitivity/`. Its `figures/README.md` is one

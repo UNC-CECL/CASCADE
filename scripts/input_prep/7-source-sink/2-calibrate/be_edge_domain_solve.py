@@ -52,7 +52,7 @@
 #   of the window instead of CoastSat: the end vintage's line minus the start
 #   vintage's, per domain, over the survey interval (coastsat_vs_duneline
 #   .KNOWN_SURVEY_DATES; a missing date is mid-year), seaward positive --
-#   exactly what HAT_rate_windows.py draws under vs_duneline/endpoint_net_change. Two readings of
+#   exactly what rate_windows.py draws under vs_duneline/endpoint_net_change. Two readings of
 #   it at an end domain, --dune-smooth raw (the domain's own value) and mean3
 #   (the mean of it and its two inward neighbours, GIS 1-3 / 88-90). A dune
 #   line is two surveys, so --estimator endpoint reads change_rate_m_yr on
@@ -148,7 +148,7 @@ def load_dune_target(start_year, end_year, smooth):
     end domain raw or as a three-domain mean. Returns ({gis: rate}, note).
 
     READ FROM the stored product 5-scr/3-rates/duneline/endpoint/<window>/
-    (2026-09-18), the same numbers HAT_rate_windows.py draws, rather than
+    (2026-09-18), the same numbers rate_windows.py draws, rather than
     recomputed here from the raw offsets."""
     from site_layer.hat_observed_rates import dune_endpoint_csv
     dom = pd.read_csv(dune_endpoint_csv(start_year, end_year, "domain"))

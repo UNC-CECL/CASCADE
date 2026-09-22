@@ -394,7 +394,7 @@ def _smooth_series(dom_ids, along_m, values, window):
     """One alongshore LOESS pass at transect resolution, averaged to domains,
     with GIS 1..SPLICE_DOMAINS put back to their raw domain means -- the
     scoring target's own two steps, shared with the smoothing-scale sweep in
-    analyze_output/compare_runs/HAT_smoothing_scale.py.
+    analyze_output/compare_runs/smoothing_scale.py.
 
     Args:
         dom_ids, along_m, values: per-transect domain id, along-coast distance

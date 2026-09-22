@@ -146,7 +146,7 @@ def values_digest(mapping, length=12):
 # THIS IS THE ONLY PLACE THAT SPELLING BELONGS. It was previously rebuilt by
 # hand in six scripts, five of which predate the arm component and so join
 # <period>/<preset>/<name> with no slot for it: an arm-scoped run is simply
-# invisible to them. HAT_plot_sensitivity.py skipped its target-window check
+# invisible to them. plot_sensitivity.py skipped its target-window check
 # silently whenever the path did not resolve, which is the quiet-wrong-path
 # failure hat_topo_version.py exists to end for the domain arrays, one tree
 # over. A name that is not on disk is an error here, and the error names the

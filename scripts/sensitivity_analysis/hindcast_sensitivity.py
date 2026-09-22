@@ -60,9 +60,9 @@ WHAT IS SWEPT
     threshold by ONE 10 m cell.
 
 Usage:
-    python HAT_hindcast_sensitivity.py --start-year 1984 --param wave_height
-    python HAT_hindcast_sensitivity.py --start-year 1984 --param all --dry-run
-    python HAT_hindcast_sensitivity.py --start-year 2004 --param wave_height \\
+    python hindcast_sensitivity.py --start-year 1984 --param wave_height
+    python hindcast_sensitivity.py --start-year 1984 --param all --dry-run
+    python hindcast_sensitivity.py --start-year 2004 --param wave_height \\
         --values 1.5,2.0,2.5
 
 Author: Hannah A. Henry, UNC CECL

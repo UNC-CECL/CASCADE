@@ -188,7 +188,7 @@ def draw_panel(ax, df: pd.DataFrame, half: float, label: bool = True,
                line_lw: float = 1.0, fill_y=None, fill_outline_lw: float = 0.8):
     """The observed panel. `std`, `line_lw` and `fill_y` exist for the
     comparison figure that lays a scoring target over this
-    (scripts/analyze_output/compare_runs/HAT_rate_windows.py):
+    (scripts/analyze_output/compare_runs/rate_windows.py):
     with `fill_y` given, THAT series takes the fill and a light outline, and
     the per-domain means are only the thin line over it, so the reference is
     the shape and the data the line (Hannah, 2026-09-15, option A)."""

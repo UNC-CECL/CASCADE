@@ -87,7 +87,7 @@ stated in the caption instead, and the groin line still marks D5.5. The grey
 frozen-zone band is the one fact now drawn in no live figure -- judged the
 least load-bearing of the three, and recoverable from the retired script.
 
-Written by `scripts/figure_making/model_output/HAT_hindcast_final_figure_loess.py`,
+Written by `scripts/figure_making/model_output/hindcast_final_figure_loess.py`,
 `--preset calibBE` (default) or `--preset edgeBE`. `zeroBE` is wired up but not
 built here. PNG only - it does not write a vector copy.
 

@@ -14,7 +14,7 @@ production run it is compared against — and it must, since it is the same
 scenario. While these lived in `raw_runs/`, three names existed there four
 times each, and `raw_runs/` no longer had one directory per run name.
 
-That is not hypothetical damage. `HAT_plot_sensitivity.load_index()` collapsed
+That is not hypothetical damage. `plot_sensitivity.load_index()` collapsed
 the repeats with `drop_duplicates(keep="last")`, which does not pick the
 calibration run — it picks whichever row sorts last. Every edgeBE wave cell was
 drawn against `waveHs3_probe`, a Newton probe at Hs 3.0, instead of against its

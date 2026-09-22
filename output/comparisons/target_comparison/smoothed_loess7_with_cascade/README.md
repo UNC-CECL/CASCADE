@@ -73,5 +73,5 @@ width — `../smoothing_scale/PROVENANCE.md` established that over 96 rows.
 Read the bias.
 
 Rebuild:
-`python scripts/analyze_output/compare_runs/HAT_smoothed_loess7_with_cascade.py`
+`python scripts/analyze_output/compare_runs/smoothed_loess7_with_cascade.py`
 (`--window N` for a different width).

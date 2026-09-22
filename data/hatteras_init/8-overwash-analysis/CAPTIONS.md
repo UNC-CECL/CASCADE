@@ -1,6 +1,6 @@
 # Figure captions
 
-Written by `scripts/input_prep/8-overwash-analysis/overwash_heatmap_multiperiod.py` and `overwash_map_periods.py`. Each heading names the figure and the folder it is in. The figures carry no in-image titles or footnotes on purpose; use these under them.
+Written by `scripts/input_prep/8-overwash-analysis/2-record/overwash_heatmap_multiperiod.py` and `overwash_map_periods.py`. Each heading names the figure and the folder it is in. The figures carry no in-image titles or footnotes on purpose; use these under them.
 
 ## `overwash_heatmap_period1.png` (2-record/heatmaps)
 
