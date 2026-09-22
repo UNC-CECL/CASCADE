@@ -21,7 +21,8 @@ groin, relocations off, Hs 2.5, offsets v1.
 | 2010-2024 | +37.1 / +25.4 | +72.6 / +31.3 |
 
 The config (`HATTERAS_BE_EDGE_ONLY`) and the matrix are NOT changed; these
-runs are what `output/comparisons/target_comparison/coastsat_full_period_lrr/`
+runs are what `output/comparisons/target_comparison/projected/`
+(named `coastsat_full_period_lrr/` until 2026-09-21)
 pairs with the full-period CoastSat target.
 
 **Layout.** `coastsat/step<k>/<window>/edgeBE/<run>/`, `logs/`, `loop_log.csv`.

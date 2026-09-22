@@ -1,5 +1,18 @@
 # model_vs_observed - the model against an observation, four windows
 
+> **Units: this tree is in m/yr.** Every other comparison tree —
+> `target_comparison/`, `4-comparisons/shoreline_vs_duneline/`,
+> `3-rates/coastsat/{total_change,projected}/` — is in **metres**. The
+> same comparison exists in both forms and they are not interchangeable.
+>
+> This tree is also sliced by which **observation** the model is held
+> against, while those are sliced by **estimator**, so the folder names
+> do not line up. The table below translates.
+>
+> [`FIGURES.md`](../../../FIGURES.md) is the index across all of them;
+> [`WINDOWS.md`](../../../data/hatteras_init/5-scr/WINDOWS.md) says which
+> window is which.
+
 The four hindcast windows (1984-2004, 1996-2010, 2004-2024, 2010-2024), each
 with the modelled shoreline change rate drawn over an observation: edgeBE,
 full management, groin off. Two observations, the shoreline (CoastSat) and
@@ -191,3 +204,18 @@ named explicitly. `--no-sensitivity` draws the main level only.
 This README, `runs_used.csv`, `y_bounds.txt`, `tables/*.csv` and every
 figure folder's `supporting/CAPTIONS.md`. Images and PDFs are regenerable and
 stay ignored.
+
+## What each folder actually plots
+
+The observation it is drawn against, and the estimator each side uses. All of it in m/yr.
+
+| folder | observation | model estimator | reading |
+|---|---|---|---|
+| `vs_shoreline/domain_means` | CoastSat | OLS rate (`lrr_m_yr`) | raw domain means |
+| `vs_shoreline/smoothed` | CoastSat | OLS rate (`lrr_m_yr`) | spliced LOESS — the form the runner grades |
+| `vs_duneline/endpoint_net_change` | dune line | endpoint rate (`change_rate_m_yr`) | raw domain means |
+| `vs_duneline/net_change_smoothed` | dune line | endpoint rate (`change_rate_m_yr`) | spliced LOESS |
+| `vs_shoreline_and_duneline` | both | endpoint rate, both solves | raw domain means |
+| `sensitivity/mixed-estimator` | dune line | **OLS** rate against an **endpoint** observation | deliberately mismatched, as a sensitivity |
+
+`sensitivity/ends-swapped/` and `sensitivity/dune-raw-solve/` repeat the rows above with a different end solve; the arm is in every filename there, so a figure moved out of its folder still says which arm it is.

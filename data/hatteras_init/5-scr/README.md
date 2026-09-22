@@ -1,5 +1,7 @@
 # 5-scr — observed shoreline change
 
+> **Lost?** [`FIGURES.md`](../../../FIGURES.md) is the one-page index of which figure answers which question. [`WINDOWS.md`](WINDOWS.md) says which window is which — two chains, and one context window nothing is graded against.
+
 Where the observations live: the satellite shoreline record, the rate fits the
 model is graded against, and the layers that tie transects to Barrier3D
 domains.
@@ -72,7 +74,8 @@ were renamed in the move:
 
 On 2026-09-19 `4-comparisons/` went from eight folders to two (Hannah):
 `duneline_vs_coastsat/`, `net_change_1996_2024/` and `projected_vs_duneline/`
-merged into `shoreline_vs_duneline/`; `coastsat_windows/` and
+merged into `shoreline_vs_duneline/` (and on 2026-09-21 `projected_vs_duneline`
+was absorbed again, into `total_change/`, when the vocabulary was settled); `coastsat_windows/` and
 `duneline_windows/` archived as duplicates of `3-rates/`;
 `two_period_comparison/` (03-31) and `trajectory_patterns/` (06-09) deleted as
 stale, on the old 1984/2004 periods (their scripts still exist and would
@@ -132,8 +135,9 @@ The **producers stayed** in `scripts/input_prep/5-scr/`:
 | `CoastSat_timeseries/coastsat_lrr_5year_bins.py` | `3-rates/coastsat/5yr_bins/` |
 | `duneline_endpoint/duneline_endpoint.py` | `3-rates/duneline/endpoint/<window>/` |
 | `coastsat_endpoint/coastsat_endpoint.py` | `3-rates/coastsat/endpoint/<window>/` |
+| `coastsat_total_change/coastsat_total_change.py` | `3-rates/coastsat/total_change/<window>/`; `--product projected` -> `3-rates/coastsat/projected/<window>/` (was `coastsat_lrr_projected/`) |
 | `net_change/net_change_1996_2024.py` | `4-comparisons/shoreline_vs_duneline/net_change/chains/` |
-| `projected_vs_duneline/projected_vs_duneline.py` | `4-comparisons/shoreline_vs_duneline/projected/` |
+| `total_change_vs_duneline/total_change_vs_duneline.py` | `4-comparisons/shoreline_vs_duneline/total_change/` (was `lrr_net_change/`; absorbed `projected/` 2026-09-21) |
 | `duneline_positions/duneline_positions.py` | `4-comparisons/duneline_positions/` |
 | `CoastSat/coastsat_lrr_windows.py` | `3-rates/coastsat/lrr/lrr_four_windows` (the 2 x 2 only, since 2026-09-19) |
 | `duneline_vs_coastsat/duneline_vs_coastsat.py` | `4-comparisons/shoreline_vs_duneline/net_change/<window>/` |

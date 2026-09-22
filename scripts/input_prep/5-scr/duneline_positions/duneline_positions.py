@@ -601,7 +601,7 @@ def context_figure(table, value, ylabel, stem, what, how):
                   f"means: {means}. Village spans are shaded; the solid hairline is "
                   "the Buxton groin and the dotted hairlines are the Avon and "
                   "Rodanthe piers."))
-    return _save(fig, "context", stem)
+    return _save(fig, "beach_width_and_road", stem)
 
 
 def _save(fig, sub, stem):

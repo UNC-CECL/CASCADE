@@ -160,6 +160,14 @@ C = {
     "LATE_FILL": C_1997_FILL,
 }
 
+# An ORDERED variable gets a sequential ramp, not the vintage pair: the
+# alongshore smoothing width, drawn light (unsmoothed) to dark (widest). It is
+# anchored on the shoreline blue C_1997, already the CoastSat target's colour,
+# and stays clear of the amber shoals, the grey village bands and the black
+# model line, while surviving greyscale as a light-to-dark sequence. Added to
+# the style 2026-09-21, when the third script wanted the same four blues.
+SMOOTH_RAMP = ("#9ecae1", "#6baed6", C_1997, "#08306b")
+
 CELL_M = 10.0           # the Barrier3D cell; scale bars under 1 km say it
 
 # COLUMN WIDTHS. A figure is drawn at the width it will be printed, so its
@@ -603,6 +611,97 @@ def caption(fig, text: str, y: float = 0.005, size: float = 7.8) -> None:
         fig._hat_savefig_wrapped = True
 
 
+def _prune_captions(body: str, fig_dir: Path) -> str:
+    """Drop entries whose figure is no longer beside the CAPTIONS.md.
+
+    `record_caption` replaces an entry by name but never removed one, so a
+    renamed or deleted figure left its caption behind forever (68 such
+    entries had accumulated by 2026-09-21, after the filename rename).
+    Pruning on every write keeps the file honest without anyone having to
+    remember.
+
+    Only an entry whose named file is MISSING is dropped, so a run that
+    redraws one figure never touches the captions of the others.
+    """
+    pattern = re.compile(r"^\*\*`([\w.\-]+)`\.\*\*.*?(?=\n\*\*`|\Z)", re.S | re.M)
+    kept = [m.group(0).strip() for m in pattern.finditer(body)
+            if (fig_dir / m.group(1)).exists()]
+    head = body[:m.start()] if (m := pattern.search(body)) else body
+    return head.rstrip("\n") + "\n\n" + "\n\n".join(kept) + "\n"
+
+
+def mark_offaxis(ax, x, y, half, color=None, size=13.0):
+    """Mark values beyond +/-`half` at the axis edge, and say which they were.
+
+    A LINE that leaves the axis is simply cut by `ylim`, with nothing on the
+    canvas to say so, so a domain at +136 m reads as +100 (found 2026-09-22,
+    when the metre figures were fixed to +/-100 m). Scatter points already get
+    this treatment; this is the same for a line, and the caption clause below
+    names the values so nothing is lost silently.
+
+    Args:
+        ax: the axes, already at its final ylim.
+        x, y: the series as drawn. y beyond +/-half is what gets marked.
+        half: the axis half-range.
+        color: marker colour; the axes' ink by default.
+        size: marker area in points squared.
+
+    Returns:
+        [(x, y), ...] for the off-axis points, largest |y| first, for
+        `offaxis_clause()`.
+    """
+    import numpy as _np
+    x = _np.asarray(x, dtype=float)
+    y = _np.asarray(y, dtype=float)
+    out = _np.isfinite(y) & (_np.abs(y) > half)
+    if not out.any():
+        return []
+    ax.scatter(x[out], _np.where(y[out] > 0, half, -half), s=size,
+               marker="^", zorder=14, clip_on=False,
+               c=[color or INK],
+               transform=ax.transData)
+    pairs = sorted(zip(x[out], y[out]), key=lambda t: -abs(t[1]))
+    return [(float(a), float(b)) for a, b in pairs]
+
+
+def offaxis_clause(named, half, unit="m"):
+    """" Beyond +/-100 m, off the axis: the observed change +136 m at GIS 1."
+
+    Args:
+        named: [(label, [(x, y), ...]), ...] as returned by `mark_offaxis`.
+        half: the axis half-range, for the sentence.
+        unit: the y unit.
+    """
+    hits = [f"{label} {v:+.0f} {unit} at GIS {int(g)}"
+            for label, pts in named for g, v in pts]
+    if not hits:
+        return ""
+    return (f" Beyond \u00b1{half:g} {unit}, off the axis and marked with a "
+            "triangle at the edge: " + "; ".join(hits) + ".")
+
+
+def compare_header(fig, lines, size=8.5):
+    """The 'what is being compared' line(s) above the panels.
+
+    Hannah, 2026-09-22: on a figure that puts two DIFFERENT measurements side
+    by side, which is which -- and over what dates -- has to be on the canvas,
+    not only in the caption. This is the one thing the style lets above the
+    panel titles, and it is a NAMING line, not a result: what each side is and
+    what interval it spans, never the numbers that came out. The summary stays
+    in `supporting/CAPTIONS.md`.
+
+    `HAT_target_comparison` carried this idea first (the source/sink line); it
+    is here so the dune-line comparisons place it identically.
+
+    Args:
+        fig: the figure.
+        lines: one string, or a sequence joined with newlines.
+        size: point size; 8.5 sits just under the 10 pt panel titles.
+    """
+    text = lines if isinstance(lines, str) else chr(10).join(lines)
+    fig.suptitle(text, fontsize=size, color=INK)
+
+
 def record_caption(png_path: Path, text: str) -> Path:
     """Write or replace the entry for `png_path.name` in the CAPTIONS.md under
     `supporting/` beside it. Entries are '**`<file>`.** text' paragraphs;
@@ -624,6 +723,7 @@ def record_caption(png_path: Path, text: str) -> Path:
         # file collapsed into one run-on block (found 2026-09-15). Put one
         # blank line back before every entry.
         body = re.sub(r"(?<!\n)\n(\*\*`)", r"\n\n\1", body)
+        body = _prune_captions(body, png_path.parent)
     else:
         body = (f"# Captions — {png_path.parent.name}\n\n"
                 f"Written by the figure scripts through `hat_figure_style.caption()`; "
@@ -771,7 +871,7 @@ from it.
 | semantic colours | `C["BASE"]` {C["BASE"]} unmodified input · `C["ACCENT"]` {C["ACCENT"]} the modification under test · `C["ROAD"]` {C["ROAD"]} NC-12 · `C["ADDED"]` {C["ADDED"]} fabricated ground · `C["WATER"]` {C["WATER"]} · `C["REF"]` {C["REF"]} a reference value |
 | elevation | classes, not a ramp: `elevation_cmap()` breaks at {", ".join(f"{b:g}" for b in ELEV_BOUNDS[1:-1])} m MHW with water below 0. The terrain colormap of `HAT_plot_1984_mosaic` is the one deliberate exception, on the 1984-start DEM panels |
 | error surfaces | greyscale, no hue: `error_cmap()` (dark is worse; `reverse=True` where high is better). A scalar error or cost over a parameter grid is BACKGROUND, and all colour is reserved for what is marked on top of it -- the best cell, the chosen pair, a constraint, an iso-product curve |
-| the canvas | no title sentences, statistics lines or footnote paragraphs on the image. That text goes in `supporting/CAPTIONS.md` beside the figure. `caption(fig, text)` writes it there on the figure's next `savefig`; scripts with their own captions file (dune-line offset, footprint, road relocation) write it themselves |
+| the canvas | no title sentences, statistics lines or footnote paragraphs on the image. That text goes in `supporting/CAPTIONS.md` beside the figure. ONE exception since 2026-09-22: a figure comparing two different measurements may carry a `compare_header()` line saying WHAT each side is and over what dates - a naming line, never a result. `caption(fig, text)` writes it there on the figure's next `savefig`; scripts with their own captions file (dune-line offset, footprint, road relocation) write it themselves |
 | the folder | a figure folder shows figures: PNGs at the top level and nothing else. The PDFs, `CAPTIONS.md`, any table or `PROVENANCE.md` a figure script writes go under `{SUPPORT_DIR}/` (`save()` and `record_caption()` do this; a script's own files use `support_dir(folder)`). Since 2026-09-15 |
 | legend wording | no working vocabulary: not "today's setback", "v2"/"v3", "as placed", "blank". Say what the thing is: "setback measured on the 1996 surface", "1984 setback (model input)", "rows inserted landward of NC-12", "centreline unchanged between surveys" |
 | output | `save(fig, path)`: a 300 dpi PNG and, under `{SUPPORT_DIR}/`, a PDF with the same stem for anything drawn with lines and bars (`vector=False` for image-only panels); white background; `bbox_inches="tight"` only when nothing is positioned absolutely |

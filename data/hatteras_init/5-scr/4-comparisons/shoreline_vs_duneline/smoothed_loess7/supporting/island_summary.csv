@@ -1,0 +1,5 @@
+product,window,r_raw,r_smoothed,beach_width_raw_m,beach_width_smoothed_m
+projected,1996_2010,0.366,0.411,18.3,17.8
+projected,2010_2024,0.847,0.872,0.8,0.6
+total,1996_2010,0.588,0.578,11.6,10.4
+total,2010_2024,0.657,0.692,14.7,14.7

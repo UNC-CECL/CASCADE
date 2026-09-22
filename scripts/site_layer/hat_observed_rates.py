@@ -42,12 +42,23 @@
 #                                     the dune-line dates (m and m/yr)
 #                 5yr_bins/<window>/  the OLS in successive 5-year bins,
 #                                     1996_2010 2010_2024 1996_2024
+#                 total_change/       the same rate as a DISTANCE: LRR(W) x the
+#                     <window>/       years of W, beside the observed change.
+#                                     1996_2024 1996_2010 2010_2024
+#                                     (was lrr_projected/ until 2026-09-21 --
+#                                     nothing in it was ever a projection)
+#                 projected/          the 1996-2024 LRR carried onto a window it
+#                     <window>/       was NOT fitted on: x 14 yr over 1996_2010
+#                                     and 2010_2024. The only projections here.
 #             duneline/
 #                 endpoint/<window>/  net change between the two dune lines
 #                                     (m and m/yr; replaced duneline_lrr/)
 #         4-comparisons/
 #             shoreline_vs_duneline/  (one question folder since 2026-09-19)
-#                 net_change/<window>/, net_change/chains/, projected/<window>/
+#                 coastsat_endpoint_vs_duneline_endpoint/<window>/
+#                     (+ all_windows_stacked/)
+#                 coastsat_total_change_vs_duneline_endpoint/<window>/
+#                     (+ all_windows_stacked/, change_between_periods/)
 #             duneline_positions/     where the 1997/2009/2023 dune lines sat:
 #                                     maps, zooms, dune-road, beach width
 #             (coastsat_windows/ and duneline_windows/ archived 2026-09-19 as
@@ -103,15 +114,69 @@ COASTSAT_TIMESERIES = OBSERVATIONS / "coastsat_timeseries"
 COASTSAT_RATES = RATES / "coastsat"
 DUNELINE_RATES = RATES / "duneline"
 COASTSAT_LRR_ROOT = COASTSAT_RATES / "lrr"
+
+# ---------------------------------------------------------------------------
+# WHAT EACH WINDOW IS. Five window folders sit as peers under most products
+# and they are NOT equivalent: two chains, and one context window that is not
+# graded at all. Nothing in a folder name says so, which is how 1984_2004 gets
+# read as a current result (Hannah, 2026-09-21). This dict is the ONE
+# definition -- data/hatteras_init/5-scr/WINDOWS.md is written from it and
+# coastsat_total_change.py imports it rather than keeping its own copy.
+#
+# All four periods are live in hatteras_site_config.HATTERAS_PERIODS; "legacy"
+# here means superseded as the MAIN chain, not deleted. See
+# [[cascade-canonical-periods]]: 1996 -> 2010 -> 2024 is the main chain.
+CURRENT_CHAIN = (1996, 2010, 2024)
+LEGACY_CHAIN = (1984, 2004, 2024)
+WINDOW_ROLE = {
+    (1996, 2010): "Calibration period",
+    (2010, 2024): "Test period (held out)",
+    (1996, 2024): "Full period (context, not graded)",
+    (1984, 2004): "Calibration period, legacy chain",
+    (2004, 2024): "Test period, legacy chain",
+}
+# The one-line gloss under each role, for READMEs and captions.
+WINDOW_NOTE = {
+    (1996, 2010): "the model is fitted here",
+    (2010, 2024): "held out; nothing is fitted to it",
+    (1996, 2024): "spans the whole current chain; CONTEXT ONLY, no run is "
+                  "graded against it",
+    (1984, 2004): "the 1984-start chain, superseded as the main chain 2026-09",
+    (2004, 2024): "the 1984-start chain, superseded as the main chain 2026-09",
+}
+
+
+def window_role(window, with_note=False):
+    """"Calibration period" for (1996, 2010); "" for a window with no role."""
+    role = WINDOW_ROLE.get(tuple(window), "")
+    if with_note and role:
+        return f"{role} - {WINDOW_NOTE[tuple(window)]}"
+    return role
+
+
+def is_current_chain(window):
+    """True for the 1996 -> 2010 -> 2024 chain and its full-period context."""
+    return tuple(window) in {(1996, 2010), (2010, 2024), (1996, 2024)}
+
 TRANSECT_DOMAINS = TRANSECT_FRAME / "transect_domains"
 TIMESERIES_LRR = COASTSAT_RATES / "5yr_bins"
 # Shoreline vs dune line, ONE question folder since 2026-09-19 (Hannah):
-# net_change/<window>/ (duneline_vs_coastsat.py, was 4-comparisons/
-# duneline_vs_coastsat/), net_change/chains/ (net_change_1996_2024.py, was
-# 4-comparisons/net_change_1996_2024/), projected/<window>/
-# (projected_vs_duneline.py).
+# endpoint_net_change/<window>/ (duneline_vs_coastsat.py, was 4-comparisons/
+# duneline_vs_coastsat/), endpoint_net_change/chains/ (net_change_1996_2024.py, was
+# 4-comparisons/net_change_1996_2024/), total_change/<window>/
+# (total_change_vs_duneline.py).
 SHORELINE_VS_DUNELINE = COMPARISONS / "shoreline_vs_duneline"
-DUNELINE_VS_COASTSAT = SHORELINE_VS_DUNELINE / "net_change"
+# Named for BOTH sides since 2026-09-22 (Hannah): the folder alone says what
+# was measured and how, with no lookup. The dune side is the same measured
+# endpoint in every comparison here -- the 2009 digitized line minus the
+# 1997 one -- so what the old names failed to say is how the SHORELINE was
+# read, which is the only thing that differs.
+#   was endpoint_net_change/  -> coastsat_endpoint_vs_duneline_endpoint/
+#   was total_change/         -> coastsat_total_change_vs_duneline_endpoint/
+COASTSAT_ENDPOINT_VS_DUNELINE = (SHORELINE_VS_DUNELINE
+                                 / "coastsat_endpoint_vs_duneline_endpoint")
+# The old name, kept so nothing that still imports it breaks silently.
+DUNELINE_VS_COASTSAT = COASTSAT_ENDPOINT_VS_DUNELINE
 # The stored dune-line observation (2026-09-18): the NET CHANGE between the
 # two lines that bound a window, per transect and per domain, in m and m/yr,
 # one folder per window. Written by
@@ -124,11 +189,38 @@ DUNELINE_ENDPOINT_ROOT = DUNELINE_RATES / "endpoint"
 # so the two products difference like for like. Written by
 # scripts/input_prep/5-scr/coastsat_endpoint/coastsat_endpoint.py.
 COASTSAT_ENDPOINT_ROOT = COASTSAT_RATES / "endpoint"
-# The long-term LRR projected to a distance (2026-09-19, Hannah's advisor):
-# per transect lrr_m_yr x (end - start) years, beside the OBSERVED change
-# between calendar-year mean positions at the two ends. Written by
-# scripts/input_prep/5-scr/coastsat_lrr_projected/coastsat_lrr_projected.py.
-COASTSAT_LRR_PROJECTED_ROOT = COASTSAT_RATES / "lrr_projected"
+# ---------------------------------------------------------------------------
+# THE VOCABULARY (Hannah, by interview, 2026-09-21). An LRR turned into a
+# DISTANCE is named by the window it was FITTED on, not by the arithmetic:
+#
+#   TOTAL SHORELINE CHANGE   the rate is evaluated over the SAME window it was
+#                            fitted on. LRR(1996-2010) x 14 yr is total change,
+#                            so is LRR(1996-2024) x 28 yr. A shorter span
+#                            INSIDE the fit window (the 25.72 yr dune-line
+#                            interval) is still total change; the span is named
+#                            in the title, not in the folder.
+#   PROJECTED SHORELINE      the rate is carried onto a window it was NOT
+#   CHANGE                   fitted on. LRR(1996-2024) x 14 yr over 1996-2010
+#                            or 2010-2024 is the only case in the project.
+#   OBSERVED CHANGE          no rate anywhere: the mean position over the end
+#                            calendar year minus the mean over the start one.
+#
+# Before 2026-09-21 the folder `lrr_projected/` held all three windows built
+# from their OWN rate -- i.e. no projections at all -- which is what the rename
+# below fixes. Old paths: lrr_projected/ -> total_change/.
+# ---------------------------------------------------------------------------
+# TOTAL shoreline change (2026-09-19, Hannah's advisor; renamed 2026-09-21):
+# per transect lrr_m_yr x (end - start) years, the rate fitted on that same
+# window, beside the OBSERVED change between calendar-year mean positions at
+# the two ends. Windows 1996_2024, 1996_2010, 2010_2024. Written by
+# scripts/input_prep/5-scr/coastsat_total_change/coastsat_total_change.py.
+COASTSAT_TOTAL_CHANGE_ROOT = COASTSAT_RATES / "total_change"
+# PROJECTED shoreline change (2026-09-21, Hannah by interview): the 1996-2024
+# LRR carried over each 14-yr half, against the same observed change. Only
+# 1996_2010 and 2010_2024 exist -- 1996_2024 would BE the total change above.
+# Written by the same script, --product projected.
+COASTSAT_PROJECTED_ROOT = COASTSAT_RATES / "projected"
+PROJECTED_RATE_WINDOW = (1996, 2024)
 # Both endpoint products use the same two file names.
 ENDPOINT_TRANSECT_FILE = "transect_endpoint.csv"
 ENDPOINT_DOMAIN_FILE = "domain_endpoint_summary.csv"
@@ -136,11 +228,34 @@ DUNE_ENDPOINT_TRANSECT_FILE = ENDPOINT_TRANSECT_FILE
 DUNE_ENDPOINT_DOMAIN_FILE = ENDPOINT_DOMAIN_FILE
 # The CoastSat and dune-line net change side by side, 1996-2024 and its
 # halves (net_change_1996_2024.py, 2026-09-18): the net-change chain figure.
-NET_CHANGE_1996_2024 = DUNELINE_VS_COASTSAT / "chains"
-# The projected shoreline change (1996-2024 LRR x the dune-line interval)
-# against the dune line's net change, per domain (2026-09-19, Hannah). Written
-# by scripts/input_prep/5-scr/projected_vs_duneline/projected_vs_duneline.py.
-PROJECTED_VS_DUNELINE = SHORELINE_VS_DUNELINE / "projected"
+NET_CHANGE_1996_2024 = COASTSAT_ENDPOINT_VS_DUNELINE / "all_windows_stacked"
+# TOTAL shoreline change against the dune line's measured net change, per
+# domain, one folder per window: 1996_2010, 2010_2024 and 1996_2024, each
+# window's rate fitted on that same window, x the CALENDAR span (14, 14, 28
+# yr). Plus chains/ and difference/. Written by
+# scripts/input_prep/5-scr/total_change_vs_duneline/total_change_vs_duneline.py.
+#
+# ONE tree since 2026-09-21 (Hannah, by interview). It absorbed two folders
+# that were the same quantity under two names:
+#   lrr_net_change/      the halves, each on its own rate -- renamed, it was
+#                        never a projection and its docstring said so.
+#   projected/1996_2024/ the 1996-2024 rate x the 25.72 yr dune-line interval.
+#                        Not a projection either: same fit window, shorter
+#                        span. Its numbers were already carried here as the
+#                        *_dune_interval_m columns (verified identical to
+#                        0 m before the merge), so the headline figure is the
+#                        28 yr calendar span and the dune interval is a column
+#                        and a caption line. Retired to superseded_20260921/.
+TOTAL_CHANGE_VS_DUNELINE = (SHORELINE_VS_DUNELINE
+                            / "coastsat_total_change_vs_duneline_endpoint")
+# The same comparison with the shoreline side PROJECTED instead: the
+# 1996-2024 LRR carried onto each 14-yr half, against the dune line measured
+# over that half (2026-09-22, Hannah). 1996_2010 and 2010_2024 only -- over
+# the full period the rate window IS the change window, which is
+# TOTAL_CHANGE_VS_DUNELINE/1996_2024. Written by the same script,
+# total_change_vs_duneline.py --product projected.
+PROJECTED_VS_DUNELINE_ENDPOINT = (SHORELINE_VS_DUNELINE
+                                  / "coastsat_projected_vs_duneline_endpoint")
 # Where the dune line sat in 1997, 2009 and 2023: maps, imagery zooms, and
 # its distance to NC-12 and to the CoastSat shoreline (duneline_positions.py,
 # 2026-09-18).
