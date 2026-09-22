@@ -69,7 +69,7 @@ THE OBSERVATIONS
                 2-brie-offset/raw_offsets/<vintage>_duneline_offset_raw.csv
                 read as the hindcast's end-year target loader reads them;
                 seaward positive. Survey dates from
-                duneline_vs_coastsat.KNOWN_SURVEY_DATES; 2023 has no known
+                coastsat_vs_duneline.KNOWN_SURVEY_DATES; 2023 has no known
                 flight date and is centred on 2023-07-01, flagged in every
                 caption that uses it. READ FROM the stored product
                 5-scr/3-rates/duneline/endpoint/<window>/ (2026-09-18), not
@@ -191,9 +191,9 @@ obs = _import_by_path(
     _REPO / "scripts" / "input_prep" / "5-scr" / "CoastSat" / "coastsat_lrr_windows.py")
 # The dune-line producer: survey dates by vintage, the per-domain position.
 dune = _import_by_path(
-    "duneline_vs_coastsat",
-    _REPO / "scripts" / "input_prep" / "5-scr" / "duneline_vs_coastsat"
-    / "duneline_vs_coastsat.py")
+    "coastsat_vs_duneline",
+    _REPO / "scripts" / "input_prep" / "5-scr" / "coastsat_vs_duneline"
+    / "coastsat_vs_duneline.py")
 
 RAW_RUNS = _REPO / "output" / "raw_runs"
 RUN_INDEX = RAW_RUNS / "run_index.csv"
@@ -225,8 +225,8 @@ Y_LABEL = "Change rate (m/yr)"
 # line already carries two hues and a fill, and a third hue on top read as
 # noise. Black sits over both fills and survives greyscale.
 C_MODEL = INK
-C_CS_TARGET = "#2166ac"     # the house shoreline blue (duneline_vs_coastsat C_LRR)
-C_DUNE_TARGET = "#b2182b"   # the house dune red (duneline_vs_coastsat C_DUNE)
+C_CS_TARGET = "#2166ac"     # the house shoreline blue (coastsat_vs_duneline C_LRR)
+C_DUNE_TARGET = "#b2182b"   # the house dune red (coastsat_vs_duneline C_DUNE)
 LS_SECOND = (0, (4, 2))     # the second model line where two share a panel
 NO_RUN_NOTE = "model not yet run for this window"
 

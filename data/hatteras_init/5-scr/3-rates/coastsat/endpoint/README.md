@@ -21,7 +21,7 @@ read through `hat_observed_rates.coastsat_endpoint_csv(start, end, level)`.
 **Why the dune dates.** The windows are centred on the same moments as the
 dune lines, so this product and the dune product difference like for like.
 A gap between them is then beach-width change, not a date mismatch. The
-window means come from the functions `duneline_vs_coastsat.py` uses (imported,
+window means come from the functions `coastsat_vs_duneline.py` uses (imported,
 not copied), and its CoastSat endpoint agrees with this to 0.0000 m/yr.
 
 The dates are 1984-09-19, 1997-10-12, 2004-05-25, 2009-05-30 and 2023-07-01.

@@ -1,5 +1,5 @@
 """
-HAT_shoreline_trajectory_classification.py
+shoreline_trajectory_classification.py
 ===========================================
 Classifies shoreline trajectory stability across Hatteras Island domains
 using CoastSat transect time-series over three periods:
@@ -32,7 +32,7 @@ Outputs
 
 Usage
 -----
-    python HAT_shoreline_trajectory_classification.py
+    python shoreline_trajectory_classification.py
 
 Dependencies
 ------------

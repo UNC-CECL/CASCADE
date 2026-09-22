@@ -1,5 +1,5 @@
 """
-smoothed_loess7.py
+smoothed_loess7_vs_duneline.py
 ==============================================================================
 The two halves-overlay sheets again, with BOTH curves passed through the
 model target's alongshore LOESS at a 7-domain (3.5 km) window. Built
@@ -54,7 +54,7 @@ OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_l
     README.md, supporting/  (PDFs, CAPTIONS.md)
 
 USAGE
-    python scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_loess7.py
+    python scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_loess7_vs_duneline.py
     python ... --window 7          # LOESS width in domain units
 ==============================================================================
 """
@@ -78,7 +78,7 @@ import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
 import rates_figures as rf  # noqa: E402
 import total_change_vs_duneline as tcd  # noqa: E402
 from rates_figures import cw, plt  # noqa: E402
-from duneline_vs_coastsat import beach_width_handles, shade_beach_width  # noqa: E402
+from coastsat_vs_duneline import beach_width_handles, shade_beach_width  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.ticker import MultipleLocator  # noqa: E402
 from cascade_pipeline.coastsat_loess import spliced_loess_series  # noqa: E402
@@ -283,7 +283,7 @@ def main(argv=None) -> int:
     (OUT_ROOT / "PROVENANCE.md").write_text("\n".join([
         "# smoothed_loess7 — provenance", "",
         f"Written {dt.datetime.now():%Y-%m-%d %H:%M} by "
-        "`scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_loess7.py`.", "",
+        "`scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_loess7_vs_duneline.py`.", "",
         f"Both curves LOESS-smoothed at **{a.window} domains "
         f"({a.window * DEFAULT_DOMAINS.domain_spacing_m / 1000.0:g} km)**, at "
         f"transect resolution, with GIS 1–{SPLICE} kept at their raw domain "

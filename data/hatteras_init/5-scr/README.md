@@ -73,7 +73,7 @@ were renamed in the move:
 | `4-comparisons/trajectory_patterns/` | `shoreline_change_patterns/` (output deleted 2026-09-19) |
 
 On 2026-09-19 `4-comparisons/` went from eight folders to two (Hannah):
-`duneline_vs_coastsat/`, `net_change_1996_2024/` and `projected_vs_duneline/`
+`coastsat_vs_duneline/`, `net_change_1996_2024/` and `projected_vs_duneline/`
 merged into `shoreline_vs_duneline/` (and on 2026-09-21 `projected_vs_duneline`
 was absorbed again, into `total_change/`, when the vocabulary was settled); `coastsat_windows/` and
 `duneline_windows/` archived as duplicates of `3-rates/`;
@@ -132,18 +132,18 @@ The **producers stayed** in `scripts/input_prep/5-scr/`:
 | `CoastSat/coastsat_domain_mapping.py` | `2-transect-frame/transect_domains/` |
 | `CoastSat/coastsat_domain_lrr_fixed.py` | `3-rates/coastsat/lrr/<window>/` |
 | `CoastSat/coastsat_extension_lrr.py` | `3-rates/coastsat/lrr/<window>/ext/` |
-| `CoastSat_timeseries/coastsat_lrr_5year_bins.py` | `3-rates/coastsat/5yr_bins/` |
+| `CoastSat_timeseries/coastsat_5yr_bins.py` | `3-rates/coastsat/5yr_bins/` |
 | `duneline_endpoint/duneline_endpoint.py` | `3-rates/duneline/endpoint/<window>/` |
 | `coastsat_endpoint/coastsat_endpoint.py` | `3-rates/coastsat/endpoint/<window>/` |
 | `coastsat_total_change/coastsat_total_change.py` | `3-rates/coastsat/total_change/<window>/`; `--product projected` -> `3-rates/coastsat/projected/<window>/` (was `coastsat_lrr_projected/`) |
-| `net_change/net_change_1996_2024.py` | `4-comparisons/shoreline_vs_duneline/net_change/chains/` |
+| `net_change/net_change_vs_duneline.py` | `4-comparisons/shoreline_vs_duneline/net_change/chains/` |
 | `total_change_vs_duneline/total_change_vs_duneline.py` | `4-comparisons/shoreline_vs_duneline/total_change/` (was `lrr_net_change/`; absorbed `projected/` 2026-09-21) |
 | `duneline_positions/duneline_positions.py` | `4-comparisons/duneline_positions/` |
 | `CoastSat/coastsat_lrr_windows.py` | `3-rates/coastsat/lrr/lrr_four_windows` (the 2 x 2 only, since 2026-09-19) |
-| `duneline_vs_coastsat/duneline_vs_coastsat.py` | `4-comparisons/shoreline_vs_duneline/net_change/<window>/` |
+| `coastsat_vs_duneline/coastsat_vs_duneline.py` | `4-comparisons/shoreline_vs_duneline/net_change/<window>/` |
 | `shoreline_change_patterns/` | `4-comparisons/trajectory_patterns/` (not current: old periods) |
 | `CoastSat/coastsat_two_period_comparison.py` | `4-comparisons/two_period_comparison/` (not current: old periods) |
-| `shoreline_inventory/HAT_shoreline_inventory.py` | `1-observations/shoreline_inventory/` |
+| `shoreline_inventory/shoreline_inventory.py` | `1-observations/shoreline_inventory/` |
 
 ## Rebuilding a window
 
@@ -197,7 +197,7 @@ the largest |mean| over all of them plus 1 m, rounded up to the metre
 (written to `supporting/y_bounds.txt`), and writes `lrr_four_windows`, a
 2 x 2 with the 1984-start period in the left column and the 1996-start period
 in the right, plus one figure per window in its own `<start>_<end>/` folder
-(the `duneline_vs_coastsat/` layout, 2026-09-18; they sat flat before). See
+(the `coastsat_vs_duneline/` layout, 2026-09-18; they sat flat before). See
 that folder's README. The per-window `domain_lrr_bar.png`
 autoscales, so it is not the figure to compare across windows.
 
@@ -205,7 +205,7 @@ autoscales, so it is not the figure to compare across windows.
 
 `4-comparisons/shoreline_vs_duneline/README.md` is the map (since 2026-09-19);
 `4-comparisons/shoreline_vs_duneline/net_change/README.md` (was
-`4-comparisons/duneline_vs_coastsat/README.md`) is the methods report: the
+`4-comparisons/coastsat_vs_duneline/README.md`) is the methods report: the
 three rates, the imagery date behind each line, what is inside each endpoint
 window, and the results table. `4-comparisons/shoreline_vs_duneline/net_change/<start>_<end>/`
 differences two digitized dune lines (`2-brie-offset/raw_offsets/`, read the
@@ -214,7 +214,7 @@ CoastSat shoreline two ways: the LRR already in
 `3-rates/coastsat/lrr/<start>_<end>/`, and an endpoint rate from the mean
 CoastSat position in a one-year window about each survey date. Seaward
 positive throughout. Built by
-`scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/duneline_vs_coastsat.py`;
+`scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/coastsat_vs_duneline.py`;
 the survey dates are in each folder's `supporting/PROVENANCE.md`, with
 the tables, PDFs and captions (a figure folder shows figures). `--grid`
 redraws every window on disk as `alongshore_four_windows.png` on one y

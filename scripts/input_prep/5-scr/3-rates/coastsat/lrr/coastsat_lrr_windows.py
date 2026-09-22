@@ -180,7 +180,7 @@ STRUCTURE_LABEL_PT_GRID = 4.0  # the 2 x 2, whose panels are half the width
 
 
 # structures() moved to hat_figure_style 2026-09-15 (shared with
-# duneline_vs_coastsat); imported above.
+# coastsat_vs_duneline); imported above.
 
 
 def draw_panel(ax, df: pd.DataFrame, half: float, label: bool = True,

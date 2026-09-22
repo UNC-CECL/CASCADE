@@ -26,7 +26,7 @@ of `ORGANIZATION.md`). The five windows are **not** peers: `1996 -> 2010 ->
 2024` is the main chain, `1984_2004` and `2004_2024` are the older one, and
 `1996_2024` is context that nothing is graded against.
 `data/hatteras_init/5-scr/WINDOWS.md` says which is which, generated from
-`hat_observed_rates.WINDOW_ROLE` by `../tools/write_windows_md.py` so the
+`hat_observed_rates.WINDOW_ROLE` by `../tools/windows_index.py` so the
 table cannot drift from the code.
 
 ## Why the figure script is not inside a product folder
@@ -38,8 +38,9 @@ quick-looks the LRR fit used to draw itself, which are archived under
 `5-scr/archive/coastsat_lrr_quicklooks_20260918/`.
 
 Two figures stay at a window folder's top level with `lrr_<w>.png` —
-`smoothing_windows_<w>.png` from `coastsat/lrr/lrr_smoothing_windows.py` —
-while `lrr_transect_zoom.py` writes into a `transects/` subfolder, because
+`smoothing_windows_<w>.png`, from
+`coastsat/lrr/coastsat_lrr_smoothing_windows.py`. By contrast
+`coastsat_lrr_transect_zoom.py` writes into a `transects/` subfolder, because
 that family grows a file per reach and per variant.
 
 ## The scripts
@@ -58,11 +59,11 @@ coastsat/lrr/coastsat_lrr_windows.py
     7 m/yr one and the eye reads the wrong story. Also the module the other
     figure scripts import for the shoals, fills and structure drawing.
 
-coastsat/lrr/lrr_smoothing_windows.py
+coastsat/lrr/coastsat_lrr_smoothing_windows.py
     The unsmoothed field plus the LOESS at 3, 5 and 10 domains (1.5, 2.5 and
     5.0 km) on one axis, darkest being the window runs are graded at.
 
-coastsat/lrr/lrr_transect_zoom.py
+coastsat/lrr/coastsat_lrr_transect_zoom.py
     One window at transect resolution over a short reach, transects on the
     x axis instead of domains.
 
@@ -72,8 +73,8 @@ coastsat/endpoint/coastsat_endpoint.py
     that a gap between the shoreline and the dune line is a real difference
     and not an artefact of comparing different moments.
 
-coastsat/5yr_bins/coastsat_lrr_5year_bins.py     the table
-coastsat/5yr_bins/coastsat_5yr_bins_figure.py    the figure
+coastsat/5yr_bins/coastsat_5yr_bins.py         the table
+coastsat/5yr_bins/coastsat_5yr_bins_figure.py  the figure
     Bin edges snap to whole years and bins under 3.75 yr are dropped, so a
     short tail bin cannot manufacture a large rate.
 

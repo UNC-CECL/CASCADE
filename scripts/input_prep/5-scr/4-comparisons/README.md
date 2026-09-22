@@ -22,7 +22,7 @@ convention (seaward positive). That symmetry was the point of rebuilding the
 dune side as an endpoint product in September 2026.
 
 ```
-duneline_vs_coastsat.py
+coastsat_vs_duneline.py
     The base comparison: 3-rates/duneline/endpoint/ against
     3-rates/coastsat/endpoint/, per window. It is also the module the other
     three import — load_chainage, the survey-date table, the beach-width
@@ -35,10 +35,10 @@ total_change_vs_duneline.py
     when the vocabulary was settled: that script's numbers were already here
     as the *_dune_interval_m columns.
 
-net_change_1996_2024.py
+net_change_vs_duneline.py
     The same pairing over 1996-2024 and its two halves.
 
-smoothed_loess7.py
+smoothed_loess7_vs_duneline.py
     Both curves through the model target's alongshore LOESS at 7 domains
     (3.5 km), in the two readings of the shoreline side, so the effect of the
     smoother is visible rather than assumed.

@@ -25,7 +25,7 @@ Outputs
 Usage
 -----
 Edit the CONFIG section below, then run:
-    python HAT_shoreline_inventory.py
+    python shoreline_inventory.py
 """
 
 # ============================================================

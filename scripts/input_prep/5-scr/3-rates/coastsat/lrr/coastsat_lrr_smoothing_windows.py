@@ -1,5 +1,5 @@
 """
-lrr_smoothing_windows.py
+coastsat_lrr_smoothing_windows.py
 ==============================================================================
 The three LOESS windows overlaid on ONE LRR rate field, in the house style
 (Hannah, 2026-09-21). The rate is the thing smoothed here -- this is the field
@@ -29,8 +29,8 @@ THE SPLICE
     target is built through.
 
 USAGE
-    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/lrr_smoothing_windows.py
-    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/lrr_smoothing_windows.py --window 1996_2024
+    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_smoothing_windows.py
+    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_smoothing_windows.py --window 1996_2024
 ==============================================================================
 """
 

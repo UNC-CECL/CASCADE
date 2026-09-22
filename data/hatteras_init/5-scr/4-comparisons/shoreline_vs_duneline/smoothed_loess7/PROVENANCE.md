@@ -29,4 +29,4 @@ committed — `git log -- scripts/input_prep/5-scr/smoothing_test/` returns
 nothing on any branch — so it was already absent before the 2026-09-22
 reorganisation, and that reorganisation is not what removed it. The figures it
 produced are the only record of it. What replaced it,
-`4-comparisons/shoreline_vs_duneline/smoothed_loess7.py`, is committed.
+`4-comparisons/shoreline_vs_duneline/smoothed_loess7_vs_duneline.py`, is committed.

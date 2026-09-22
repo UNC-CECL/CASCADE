@@ -161,8 +161,8 @@ def is_current_chain(window):
 TRANSECT_DOMAINS = TRANSECT_FRAME / "transect_domains"
 TIMESERIES_LRR = COASTSAT_RATES / "5yr_bins"
 # Shoreline vs dune line, ONE question folder since 2026-09-19 (Hannah):
-# endpoint_net_change/<window>/ (duneline_vs_coastsat.py, was 4-comparisons/
-# duneline_vs_coastsat/), endpoint_net_change/chains/ (net_change_1996_2024.py, was
+# endpoint_net_change/<window>/ (coastsat_vs_duneline.py, was 4-comparisons/
+# coastsat_vs_duneline/), endpoint_net_change/chains/ (net_change_vs_duneline.py, was
 # 4-comparisons/net_change_1996_2024/), total_change/<window>/
 # (total_change_vs_duneline.py).
 SHORELINE_VS_DUNELINE = COMPARISONS / "shoreline_vs_duneline"
@@ -227,7 +227,7 @@ ENDPOINT_DOMAIN_FILE = "domain_endpoint_summary.csv"
 DUNE_ENDPOINT_TRANSECT_FILE = ENDPOINT_TRANSECT_FILE
 DUNE_ENDPOINT_DOMAIN_FILE = ENDPOINT_DOMAIN_FILE
 # The CoastSat and dune-line net change side by side, 1996-2024 and its
-# halves (net_change_1996_2024.py, 2026-09-18): the net-change chain figure.
+# halves (net_change_vs_duneline.py, 2026-09-18): the net-change chain figure.
 NET_CHANGE_1996_2024 = COASTSAT_ENDPOINT_VS_DUNELINE / "all_windows_stacked"
 # TOTAL shoreline change against the dune line's measured net change, per
 # domain, one folder per window: 1996_2010, 2010_2024 and 1996_2024, each

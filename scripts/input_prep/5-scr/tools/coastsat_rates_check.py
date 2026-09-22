@@ -19,7 +19,7 @@ Checks performed
 Usage
 -----
 Edit the CONFIG section to point at your files, then run:
-    python coastsat_verify_pipeline.py
+    python coastsat_rates_check.py
 
 Outputs
 -------

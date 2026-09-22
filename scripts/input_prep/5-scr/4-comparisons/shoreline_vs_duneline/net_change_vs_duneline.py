@@ -1,5 +1,5 @@
 """
-net_change_1996_2024.py
+net_change_vs_duneline.py
 ==============================================================================
 Net shoreline change (CoastSat) against net dune-line change, per GIS domain,
 over 1996-2024 and its two halves, in METRES. Built 2026-09-18 (Hannah, by
@@ -23,7 +23,7 @@ WHAT IS COMPARED
 WHAT IS DRAWN
     Three stacked panels, one per window (1997-2023, 1997-2009, 2009-2023),
     one y axis in metres: the shoreline blue, the dune line red (the house
-    pair for FEATURE in duneline_vs_coastsat), the gap between them shaded
+    pair for FEATURE in coastsat_vs_duneline), the gap between them shaded
     grey. The village spans are a strip along the top of each panel, not the
     usual full-height wash, because the grey gap already shades. Groin and
     piers as hairlines, the offshore shoals as faint hatched amber boxes, the
@@ -44,7 +44,7 @@ OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/endpoint_n
     3-rates/coastsat/endpoint/<window>/transect_endpoint.csv.
 
 USAGE
-    python scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/net_change_1996_2024.py
+    python scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/net_change_vs_duneline.py
 ==============================================================================
 """
 
@@ -71,7 +71,7 @@ from matplotlib.patches import Patch  # noqa: E402
 from matplotlib.ticker import MultipleLocator  # noqa: E402
 
 import coastsat_lrr_windows as cw  # noqa: E402
-from duneline_vs_coastsat import beach_width_handles, shade_beach_width  # noqa: E402
+from coastsat_vs_duneline import beach_width_handles, shade_beach_width  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     C_1984, C_1997, DOMAIN_AXIS_LABEL, INK_MUTED, _title, apply_style, caption,
     figsize, figure_dir, open_frame, save, structures, support_dir, town_bands,
@@ -89,7 +89,7 @@ N_DOMAINS = 90
 # (was 4-comparisons/net_change_1996_2024/net_change_shoreline_vs_dune).
 STEM = "coastsat_endpoint_vs_duneline_1996_2010_2024_stacked"
 
-C_SHORE = C_1997          # "#2166ac", the CoastSat blue of duneline_vs_coastsat
+C_SHORE = C_1997          # "#2166ac", the CoastSat blue of coastsat_vs_duneline
 C_DUNE = C_1984           # "#b2182b", its dune red
 C_GAP = "0.86"            # the beach-width gap
 TOWN_STRIP = 0.055        # village bands as a strip, the gap owns the grey

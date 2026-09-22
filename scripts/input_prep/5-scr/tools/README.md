@@ -5,7 +5,7 @@ they are here rather than under a numbered stage: filing them beside a product
 would suggest they are part of building it.
 
 ```
-write_windows_md.py
+windows_index.py
     Regenerates data/hatteras_init/5-scr/WINDOWS.md from
     hat_observed_rates.WINDOW_ROLE, so the table cannot drift from the code.
 
@@ -16,9 +16,9 @@ write_windows_md.py
     1984_2004 reads as a current result. This renders the roles, plus the
     coverage grid showing which product actually has which window.
 
-        python scripts/input_prep/5-scr/tools/write_windows_md.py
+        python scripts/input_prep/5-scr/tools/windows_index.py
 
-coastsat_verify_pipeline.py
+coastsat_rates_check.py
     Internal-consistency checks on the CoastSat rate outputs, before they are
     trusted as model targets:
       1. NaN audit        how many transects have no LRR, and why

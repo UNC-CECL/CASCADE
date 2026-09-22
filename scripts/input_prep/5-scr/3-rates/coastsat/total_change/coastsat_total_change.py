@@ -121,7 +121,7 @@ sys.path.insert(0, str(_REPO / "scripts"))
 sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr" / "lib"))
 import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
 
-from duneline_vs_coastsat import load_chainage  # noqa: E402
+from coastsat_vs_duneline import load_chainage  # noqa: E402
 import rates_figures as rf  # noqa: E402  (the 3-rates drawing helpers)
 from rates_figures import cw, plt  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
@@ -491,7 +491,7 @@ def smooth_overlay_figure(r, sm, half=None, tick=None) -> list:
     one answers "what does the window do to the target", which needs the
     curves on top of each other and nothing else competing for the eye.
 
-    Note this is the RATE figure of input_prep/5-scr/lrr_smoothing_windows.py
+    Note this is the RATE figure of input_prep/5-scr/coastsat_lrr_smoothing_windows.py
     in metres: LOESS commutes with the x years multiply, so the curves have
     the same shape and only the units differ. It is drawn because metres is
     the unit the model and the dune line are read in, not because it shows a
@@ -552,7 +552,7 @@ def smooth_overlay_figure(r, sm, half=None, tick=None) -> list:
     spread = {w: float((sm["series"][w][0] - sm["series"][0][0]).abs().max())
               for w in windows if w}
     spread_txt = "; ".join(f"{w * km_of:g} km up to {v:.0f} m" for w, v in spread.items())
-    # The rate figure exists only where lrr_smoothing_windows.py has been run;
+    # The rate figure exists only where coastsat_lrr_smoothing_windows.py has been run;
     # a cross-reference to a file that is not there is worse than none.
     rate_png = (COASTSAT_LRR_ROOT / f"{rs}_{re_}" / f"smoothing_windows_{rs}_{re_}.png")
     rate_ref = (

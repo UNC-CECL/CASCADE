@@ -14,7 +14,7 @@ WHY THE DUNE DATES
     2004 lines for the older windows) means a gap between the two changes is
     beach-width change, not a date mismatch. Each end averages one full
     seasonal cycle of satellite positions. The window means are the ones
-    duneline_vs_coastsat.py uses (window_mean / endpoint_by_transect,
+    coastsat_vs_duneline.py uses (window_mean / endpoint_by_transect,
     imported, not copied), so its CoastSat endpoint and this agree.
 
     change_m = end mean - start mean. CoastSat chainage grows SEAWARD, so
@@ -56,7 +56,7 @@ sys.path.insert(0, str(_REPO / "scripts"))
 sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr" / "lib"))
 import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
 
-from duneline_vs_coastsat import (DAYS_PER_YEAR, SIX_MONTHS_DAYS,  # noqa: E402
+from coastsat_vs_duneline import (DAYS_PER_YEAR, SIX_MONTHS_DAYS,  # noqa: E402
                                   endpoint_by_transect)
 from duneline_endpoint import WINDOWS, survey_date  # noqa: E402
 from site_layer.hat_observed_rates import (  # noqa: E402

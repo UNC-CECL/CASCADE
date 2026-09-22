@@ -50,7 +50,7 @@
 # line change" to set the ends)
 #   --target duneline reads the observation from the two digitised dune lines
 #   of the window instead of CoastSat: the end vintage's line minus the start
-#   vintage's, per domain, over the survey interval (duneline_vs_coastsat
+#   vintage's, per domain, over the survey interval (coastsat_vs_duneline
 #   .KNOWN_SURVEY_DATES; a missing date is mid-year), seaward positive --
 #   exactly what HAT_rate_windows.py draws under vs_duneline/endpoint_net_change. Two readings of
 #   it at an end domain, --dune-smooth raw (the domain's own value) and mean3
