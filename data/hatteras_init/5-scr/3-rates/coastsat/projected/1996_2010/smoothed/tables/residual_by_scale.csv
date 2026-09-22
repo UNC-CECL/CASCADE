@@ -1,0 +1,5 @@
+window_domains,window_km,loess_frac,n_domains,bias_m,rms_residual_m,residual_min_m,residual_max_m,sd_projected_m,sd_observed_m,pct_sign_agreement,r_inflated_by_smoothing
+0,,,90,-12.225,24.546,-62.148,38.531,19.356,27.097,76.667,0.62
+3,1.5,0.033,90,-12.864,22.807,-59.481,30.918,18.348,24.418,75.556,0.641
+5,2.5,0.055,90,-12.5,21.264,-51.553,25.911,17.461,22.477,73.333,0.651
+10,5.0,0.11,90,-12.094,18.38,-45.035,8.328,14.761,17.637,68.889,0.644

@@ -26,11 +26,19 @@ RAW AND SMOOTHED
     treatment (raw means D1-10, 10-domain LOESS beyond), the form the runs are
     graded in.
 
-TWO MODEL SETS, ONE SUBFOLDER EACH (Hannah has not chosen the target)
+THREE MODEL SETS, ONE SUBFOLDER EACH (Hannah has not chosen the target)
     ends_solved_on_coastsat/   the matrix edgeBE run, end domains solved
                                against the CoastSat target
     ends_solved_on_duneline/   the 09-18 dune edge-solve run (mean3), end
                                domains solved against the dune line
+    ends_unsolved/             (2026-09-21, Hannah, for her advisor) the
+                               zeroBE arm of the same matrix cell: NO
+                               source/sink term in any domain, the two ends
+                               included, so all 90 domains are the model's
+                               own response and neither target was fitted.
+                               Also unsolved_run_and_targets_<window>.png
+                               (and _smoothed): that one run against both
+                               targets, the paired form with a single line.
     Each holds target_comparison_1996_2010_2024.png: 1996-2010 above
     2010-2024, both targets and the model on one y axis.
     paired/                    (2026-09-19, Hannah) one figure per window,
@@ -77,30 +85,79 @@ from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.ticker import MultipleLocator  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     COMPARISONS_ROOT, DOMAIN_AXIS_LABEL, INK, _title, apply_style, caption,
+    mark_offaxis,
     figsize, save,
 )
 
 obs = rw.obs
 ROOT_DIR = COMPARISONS_ROOT / "target_comparison"
-# The CoastSat target (2026-09-19, Hannah): the FULL-PERIOD 1996-2024 LRR in
-# both windows, with runs whose ends were solved against it
-# (experiments/2026-09-19-edgesolve-lrr1996_2024). The sub-period version
-# (each window's own LRR, as the runner grades) is kept for the record.
-CS_MODES = {"full": "coastsat_full_period_lrr", "subperiod": "coastsat_subperiod_lrr"}
+# The CoastSat target (2026-09-19, Hannah), in the vocabulary settled by
+# interview 2026-09-21: a rate turned into a distance is named by the window
+# it was FITTED on, never by the arithmetic.
+#
+#   projected/    the 1996-2024 LRR x 14 yr in BOTH windows -- the rate is
+#                 carried onto windows it was NOT fitted on, so it is a
+#                 PROJECTION. THE TARGET IN USE. Paired with runs whose ends
+#                 were solved against it
+#                 (experiments/2026-09-19-edgesolve-lrr1996_2024).
+#   total_change/ each window's OWN LRR x 14 yr, as the runner grades. The
+#                 rate is evaluated over the window it was fitted on, so
+#                 nothing is extrapolated. Kept for the record.
+#
+# Was coastsat_full_period_lrr/ and coastsat_subperiod_lrr/ until 2026-09-21;
+# the folders described the fit window but not what was done with it.
+CS_MODES = {"projected": "projected", "total": "total_change",
+            # the pre-2026-09-21 names, kept so old commands still run
+            "full": "projected", "subperiod": "total_change"}
+CS_MODE_NOUN = {"projected": "Projected shoreline change",
+                "total": "Total shoreline change"}
+# The fit window is in the method string, so a figure pulled out of its
+# folder still says where the rate came from (Hannah, 2026-09-21). "total"
+# has no single fit window across the two panels -- each is its own -- so it
+# is filled in per window by cs_method().
+CS_MODE_METHOD = {"projected": "CoastSat LRR 1996–2024 × 14 yr",
+                  "total": "CoastSat LRR {}–{} × {} yr"}
+
+
+def _targets_line(o):
+    """"CoastSat: ... · dune line: ... measured, scaled to 14 yr" (2026-09-22).
+
+    The header used to name only the CoastSat side, so the red line's dates
+    and its real interval -- which is not 14 yr -- were in the caption alone.
+    """
+    m = o.meta
+    return ("CoastSat target: " + cs_method(o.window) + "   ·   "
+            f"dune line: {m['start_date']} → {m['end_date']}"
+            + (" (assumed)" if bool(m.get("end_date_assumed")) else "")
+            + f",  {float(m['interval_yr']):.1f} yr,  measured, scaled to "
+              f"{o.window[1] - o.window[0]} yr")
+
+
+def cs_method(window):
+    """The method string for one window, with its fit window resolved."""
+    m = CS_MODE_METHOD[CS_MODE]
+    return m.format(*window, window[1] - window[0]) if CS_MODE == "total" else m
+# Everything downstream branches on the canonical pair, never on the alias.
+CS_CANON = {"full": "projected", "subperiod": "total",
+            "projected": "projected", "total": "total"}
 FULL_WINDOW = (1996, 2024)
 FULL_SOLVE_DIR = rw.RAW_RUNS / "experiments" / "2026-09-19-edgesolve-lrr1996_2024"
-CS_MODE = "full"
+CS_MODE = "projected"
 OUT_DIR = ROOT_DIR / CS_MODES[CS_MODE]
 
 
 def cs_label():
-    return ("CoastSat target (1996–2024 LRR × 14 yr)" if CS_MODE == "full"
-            else "CoastSat target (LRR × 14 yr)")
+    """The CoastSat target named by the window its rate was FITTED on
+    (the 2026-09-21 vocabulary): PROJECTED when the 1996-2024 rate is carried
+    onto a 14-yr half, TOTAL when each window uses its own."""
+    return ("CoastSat target — " + CS_MODE_NOUN[CS_MODE].lower()
+            + (f" ({CS_MODE_METHOD['projected']})" if CS_MODE == "projected"
+               else " (each window's own CoastSat LRR × 14 yr)"))
 
 
 def cs_clause():
     return ("the full-period 1996–2024 linear regression rate (the same rate in both "
-            "windows)" if CS_MODE == "full" else
+            "windows)" if CS_MODE == "projected" else
             "the window's own linear regression rate (the runner's scoring series)")
 
 
@@ -119,30 +176,59 @@ def full_period_runs():
         runs[w] = (d.name, tag)
     return runs
 WINDOWS = [(1996, 2010), (2010, 2024)]
+# The third set (2026-09-21, Hannah, for her advisor): the SAME matrix cell
+# with NO source/sink term anywhere, not even at the two ends -- the zeroBE
+# arm of the run the CoastSat-solved set reads. All 90 domains are then the
+# model's own response, so the ends are readable rather than prescribed.
+UNSOLVED = "unsolved"
+UNSOLVED_PRESET = "zeroBE"
+UNSOLVED_RUNS = {
+    (1996, 2010): ("HAT_1996_2010_zeroBE_road_bdm_nogroin", "calibration"),
+    (2010, 2024): ("HAT_2010_2024_zeroBE_road_bdm_nourish_nogroin", "calibration"),
+}
 MODEL_SETS = {"coastsat": "ends_solved_on_coastsat",
-              rw.MAIN_DUNE: "ends_solved_on_duneline"}
+              rw.MAIN_DUNE: "ends_solved_on_duneline",
+              UNSOLVED: "ends_unsolved"}
 MODEL_LABEL = {"coastsat": "ends solved on CoastSat",
-               rw.MAIN_DUNE: "ends solved on the dune line"}
+               rw.MAIN_DUNE: "ends solved on the dune line",
+               UNSOLVED: "ends not solved"}
+# How each set's run is named in a caption, after "the model's own net change".
+MODEL_CLAUSE = {
+    "coastsat": "the edgeBE run with its ends solved on CoastSat",
+    rw.MAIN_DUNE: "the edgeBE run with its ends solved on the dune line",
+    UNSOLVED: ("the zeroBE run of the same matrix cell, which carries no "
+               "source/sink term in any domain including the two ends"),
+}
 LW = 1.1
-Y_HALF_M = 80.0   # fixed y range, ± m, every figure here (Hannah, 2026-09-19)
+# Fixed y range, +/- m, every figure here. 80 from 2026-09-19; 100 from
+# 2026-09-22 (Hannah), to match the metre figures in 3-rates and
+# 4-comparisons so the three trees can be laid side by side. Anything
+# beyond it is named by over_note() and marked by mark_offaxis().
+Y_HALF_M = 100.0
 
 
 def over_note(frames_cols, half):
-    """' Beyond ±80 m (off the axis): ...' for the (frame, columns, label)
-    triples one figure draws, naming each out-of-range domain; '' if none."""
+    """' Beyond ±100 m, off the axis: ...' for the (frame, columns, label)
+    triples one figure draws, naming each out-of-range domain; '' if none.
+
+    The canvas marker is `mark_offaxis` at each draw site; this is the words
+    that go with it.
+    """
     hits = []
     for df, cols, label in frames_cols:
         for col in cols:
             v = df.set_index("domain_number")[col]
             for g, x in v[v.abs() > half].items():
                 hits.append(f"{label}{_COL_NAME.get(col, col)} {x:+.0f} m at GIS {g}")
-    return (f" Beyond ±{half:g} m, off the axis: " + "; ".join(hits) + "."
+    return (f" Beyond ±{half:g} m, off the axis and marked with a triangle at "
+            "the edge: " + "; ".join(hits) + "."
             if hits else "")
 
 
-_COL_NAME = {"coastsat_target_m": "CoastSat target", "dune_target_m": "dune-line target",
+_COL_NAME = {"coastsat_target_m": "CoastSat target", "dune_target_m": "the total dune line change",
              "model_ends_solved_on_coastsat_m": "CoastSat-solved run",
-             "model_ends_solved_on_duneline_m": "dune-solved run"}
+             "model_ends_solved_on_duneline_m": "dune-solved run",
+             "model_ends_unsolved_m": "unsolved run"}
 LW_MODEL = 1.4
 Y_LABEL = "Net change in position (m)"
 
@@ -200,10 +286,25 @@ def draw(ax, o, df, folder, half, label):
     ax.plot(x, du, color=rw.C_DUNE_TARGET, lw=LW, zorder=11)
     ax.plot(x, cs, color=rw.C_CS_TARGET, lw=LW, zorder=11)
     ax.plot(x, df[f"model_{folder}_m"], color=INK, lw=LW_MODEL, zorder=12)
+    mark_offaxis(ax, x, du, half, color=rw.C_DUNE_TARGET)
+    mark_offaxis(ax, x, cs, half, color=rw.C_CS_TARGET)
+    mark_offaxis(ax, x, df[f"model_{folder}_m"], half, color=INK)
     obs.draw_shoals(ax, label=label)
     fills = obs.fills_in(*o.window)
     if fills:
         obs.draw_fills(ax, fills, half)
+
+
+def _pad_title(ax, window):
+    """Lift the centred title clear of the fill bars.
+
+    draw_fills puts its bars at 1.025 in axes fractions with the year above
+    them, so a title at the default pad lands on "2022 fill". _title() has
+    already set the bold letter at the left; re-setting only the centred
+    string keeps it and moves both (pad is per-axes in matplotlib).
+    """
+    if obs.fills_in(*window):
+        ax.set_title(ax.get_title(loc="center"), loc="center", pad=20)
 
 
 def figure(observations, frames, key, folder, half, skill_df):
@@ -212,12 +313,14 @@ def figure(observations, frames, key, folder, half, skill_df):
     for i, (ax, o) in enumerate(zip(axes, observations)):
         draw(ax, o, frames[o.window], folder, half, label=(i == 0))
         ax.yaxis.set_major_locator(MultipleLocator(20.0 if half > 60 else 10.0))
-        _title(ax, i, "{}–{}".format(*o.window))
+        _title(ax, i, "{}, {}–{} ({})".format(
+            CS_MODE_NOUN[CS_MODE], *o.window, cs_method(o.window)))
+        _pad_title(ax, o.window)
     axes[-1].set_xlabel(DOMAIN_AXIS_LABEL)
     fig.supylabel(Y_LABEL, fontsize=9)
     handles = [Line2D([], [], color=rw.C_CS_TARGET, lw=LW, label=cs_label()),
                Line2D([], [], color=rw.C_DUNE_TARGET, lw=LW,
-                      label="Dune-line target (net change, projected to 14 yr)"),
+                      label="Total dune line change (measured, scaled to 14 yr)"),
                Line2D([], [], color=INK, lw=LW_MODEL,
                       label=f"CASCADE ({MODEL_LABEL[key]})")] + beach_width_handles()
     fig.legend(handles=handles, loc="outside lower center", ncol=3, frameon=False)
@@ -238,7 +341,7 @@ def figure(observations, frames, key, folder, half, skill_df):
         f"CoastSat target, {cs_clause()}, multiplied by 14 yr. Red: the dune-line target, the measured net "
         f"change between the digitized lines ({dates}; the 2023 date assumed) "
         "divided by its interval and multiplied by 14 yr. Black: the model's own "
-        f"net change over the window, the edgeBE run with its {MODEL_LABEL[key]}, "
+        f"net change over the window, {MODEL_CLAUSE[key]}, "
         "full management, groin off. The space between the two targets is the "
         "beach-width change they imply: solid grey where the beach widened, hatched "
         "where it narrowed. Interior GIS 2–89, model minus target: " + stats
@@ -247,7 +350,10 @@ def figure(observations, frames, key, folder, half, skill_df):
         + over_note([(frames[o.window], ["coastsat_target_m", "dune_target_m",
                                          f"model_{folder}_m"], "{}–{} ".format(*o.window))
                      for o in observations], half)))
-    out = save(fig, OUT_DIR / folder / "target_comparison_1996_2010_2024")
+    # Stem carries the target mode AND the model set (Hannah, 2026-09-21):
+    # six folders wrote this same basename, two targets x three model sets.
+    out = save(fig, OUT_DIR / folder
+               / f"target_comparison_{CS_MODES[CS_MODE]}_{folder}_1996_2010_2024")
     plt.close(fig)
     return out
 
@@ -256,7 +362,7 @@ PAIR_KEYS = (("coastsat", "coastsat_target_m", rw.C_CS_TARGET,
               None,
               "CASCADE, ends solved on CoastSat"),
              (rw.MAIN_DUNE, "dune_target_m", rw.C_DUNE_TARGET,
-              "Dune-line target (net change, projected to 14 yr)",
+              "Total dune line change (measured, scaled to 14 yr)",
               "CASCADE, ends solved on the dune line"))
 LS_MODEL = "-"
 # Observed pale and thick, model dark and thin (Hannah, 2026-09-19: the
@@ -294,13 +400,14 @@ def paired_figure(observations, frames, half, skill_df, ends, smoothed=False):
     it; written to paired_smoothed/."""
     sfx = "_loess" if smoothed else ""
     tgt = {"coastsat": "coastsat" + sfx, rw.MAIN_DUNE: "duneline" + sfx}
+    pair_keys = {k for k, *_ in PAIR_KEYS}
     for (key, w), (_, _, n) in ends.items():
-        if n != 2:
+        if key in pair_keys and n != 2:
             raise SystemExit(f"{key} {w}: {n} nonzero source/sink domains, expected "
                              "the two ends only; the caption would be wrong")
     sk = skill_df.set_index(["window", "model_ends", "target"])
     names = {"coastsat": ("CoastSat target", "coastsat", "ends_solved_on_coastsat"),
-             rw.MAIN_DUNE: ("Dune-line target", "duneline", "ends_solved_on_duneline")}
+             rw.MAIN_DUNE: ("Total dune line change", "duneline", "ends_solved_on_duneline")}
     out = []
     for o in observations:
         w = "{}_{}".format(*o.window)
@@ -318,11 +425,18 @@ def paired_figure(observations, frames, half, skill_df, ends, smoothed=False):
                            c=np.where(raw < 0, obs.C_ERODE, obs.C_ACCRETE))
             obs.draw_shoals(ax, label=(i == 0))
             ax.plot(x, df[f"model_{MODEL_SETS[key]}_m"], color=INK, lw=LW_MODEL, zorder=12)
+            mark_offaxis(ax, x, df[fill_col], half)
+            mark_offaxis(ax, x, df[f"model_{MODEL_SETS[key]}_m"], half, color=INK)
             ax.yaxis.set_major_locator(MultipleLocator(20.0 if half > 60 else 10.0))
-            _title(ax, i, f"{names[key][0]} and its run")
+            _title(ax, i, (f"{CS_MODE_NOUN[CS_MODE]}, {o.window[0]}–{o.window[1]} "
+                           f"({cs_method(o.window)}), and its run"
+                           if key == "coastsat" else
+                           f"Total dune line change, {o.window[0]}–{o.window[1]} "
+                           "(measured, scaled to 14 yr), and its run"))
         fills = obs.fills_in(*o.window)
         if fills:
             obs.draw_fills(axes[0], fills, half)
+            _pad_title(axes[0], o.window)
         axes[-1].set_xlabel(DOMAIN_AXIS_LABEL)
         fig.supylabel(Y_LABEL, fontsize=9)
         handles = [(Line2D([], [], color=obs.C_ACCRETE, lw=1.0),
@@ -339,12 +453,11 @@ def paired_figure(observations, frames, half, skill_df, ends, smoothed=False):
                    ncol=len(handles), frameon=False,
                    handler_map={tuple: HandlerTuple(ndivide=None, pad=0.3)})
         (c1, c90, _), (d1, d90, _) = ends[("coastsat", o.window)], ends[(rw.MAIN_DUNE, o.window)]
-        fig.suptitle("{}–{}: source/sink correction at the end domains (GIS 1 and 90) only; "
-                     "none on GIS 2–89".format(*o.window) + chr(10)
+        fig.suptitle(_targets_line(o) + chr(10)
+                     + "{}–{}: source/sink correction at the end domains (GIS 1 and 90) "
+                       "only; none on GIS 2–89".format(*o.window) + chr(10)
                      + f"end terms GIS 1 / 90 (m/yr): (a) {c1:+.1f} / {c90:+.1f}   "
-                       f"(b) {d1:+.1f} / {d90:+.1f}"
-                     + ("   ·   CoastSat target = 1996–2024 LRR × 14 yr"
-                        if CS_MODE == "full" else ""), fontsize=9)
+                       f"(b) {d1:+.1f} / {d90:+.1f}", fontsize=8.5)
         m = o.meta
         caption(fig, (
             f"{o.window[0]}–{o.window[1]}: each candidate target with the CASCADE run "
@@ -378,7 +491,108 @@ def paired_figure(observations, frames, half, skill_df, ends, smoothed=False):
                                  "dune_target_m", "model_ends_solved_on_duneline_m"], "")],
                           half))))
         out += save(fig, OUT_DIR / ("paired_smoothed" if smoothed else "paired")
-                    / f"target_and_own_run_{w}{'_smoothed' if smoothed else ''}")
+                    / (f"target_and_own_run_{CS_MODES[CS_MODE]}_{w}"
+                       f"{'_smoothed' if smoothed else ''}"))
+        plt.close(fig)
+    return out
+
+
+def unsolved_figure(observations, frames, half, skill_df, ends, smoothed=False):
+    """The UNSOLVED run against both targets, one figure per window (Hannah,
+    2026-09-21, for her advisor). The paired form, except that there is only
+    one run: the same zeroBE line is drawn in both panels, because no part of
+    it was fitted to either target. (a) the CoastSat target as the fill, (b)
+    the dune-line target, the run in black over each.
+
+    With no end solve the two end domains are the model's own response too,
+    so this is the only figure here whose GIS 1 and GIS 90 mean anything."""
+    sfx = "_loess" if smoothed else ""
+    col_model = f"model_{MODEL_SETS[UNSOLVED]}_m"
+    for w_, (_, _, n) in ((k[1], v) for k, v in ends.items() if k[0] == UNSOLVED):
+        if n != 0:
+            raise SystemExit(f"unsolved {w_}: {n} nonzero source/sink domains, "
+                             "expected none; the caption would be wrong")
+    sk = skill_df.set_index(["window", "model_ends", "target"])
+    out = []
+    for o in observations:
+        w = "{}_{}".format(*o.window)
+        df = frames[o.window]
+        x = df["domain_number"].to_numpy(float)
+        fig, axes = plt.subplots(2, 1, sharex=True, sharey=True, constrained_layout=True,
+                                 figsize=figsize("double", height=5.6))
+        for i, (ax, (key, col, _, _, _)) in enumerate(zip(axes, PAIR_KEYS)):
+            fill_col = col.replace("_m", "_loess_m") if smoothed else col
+            obs.draw_panel(ax, df.assign(mean_lrr=df[fill_col], std_lrr=0.0), half,
+                           label=(i == 0), std=False)
+            if smoothed:
+                raw = df[col].to_numpy(float)
+                ax.scatter(x, raw, s=9, lw=0, alpha=0.8, zorder=11,
+                           c=np.where(raw < 0, obs.C_ERODE, obs.C_ACCRETE))
+            obs.draw_shoals(ax, label=(i == 0))
+            ax.plot(x, df[col_model], color=INK, lw=LW_MODEL, zorder=12)
+            mark_offaxis(ax, x, df[fill_col], half)
+            mark_offaxis(ax, x, df[col_model], half, color=INK)
+            ax.yaxis.set_major_locator(MultipleLocator(20.0 if half > 60 else 10.0))
+            _title(ax, i, (f"{CS_MODE_NOUN[CS_MODE]}, {o.window[0]}–{o.window[1]} "
+                           f"({cs_method(o.window)})"
+                           if key == "coastsat" else
+                           f"Total dune line change, {o.window[0]}–{o.window[1]} "
+                           "(measured, scaled to 14 yr)"))
+        fills = obs.fills_in(*o.window)
+        if fills:
+            obs.draw_fills(axes[0], fills, half)
+            _pad_title(axes[0], o.window)
+        axes[-1].set_xlabel(DOMAIN_AXIS_LABEL)
+        fig.supylabel(Y_LABEL, fontsize=9)
+        handles = [(Line2D([], [], color=obs.C_ACCRETE, lw=1.0),
+                    Line2D([], [], color=obs.C_ERODE, lw=1.0))]
+        labels = [("Target as graded (raw GIS 1–10, LOESS beyond)"
+                   if smoothed else "Target, net change over 14 yr (seaward / landward)")]
+        if smoothed:
+            handles.append((Line2D([], [], color=obs.C_ACCRETE, marker="o", ms=3, lw=0),
+                            Line2D([], [], color=obs.C_ERODE, marker="o", ms=3, lw=0)))
+            labels.append("Raw domain means")
+        handles.append(Line2D([], [], color=INK, lw=LW_MODEL))
+        labels.append("CASCADE, no source/sink anywhere (the same run in both panels)")
+        fig.legend(handles=handles, labels=labels, loc="outside lower center",
+                   ncol=len(handles), frameon=False,
+                   handler_map={tuple: HandlerTuple(ndivide=None, pad=0.3)})
+        fig.suptitle(_targets_line(o) + chr(10)
+                     + "{}–{}: NO source/sink correction in any domain, the two ends "
+                     "included".format(*o.window) + chr(10)
+                     + "the same run in both panels; neither target was fitted",
+                     fontsize=8.5)
+        m = o.meta
+        caption(fig, (
+            f"{o.window[0]}–{o.window[1]}: the UNCALIBRATED CASCADE run against both "
+            "candidate targets, as net change in shoreline position over the 14-yr model "
+            "window by GIS domain (1 at Cape Point, 90 at Pea Island), seaward positive; "
+            + ("the targets SMOOTHED as the runs are graded: the raw domain means over "
+               "GIS 1–10 and a 10-domain LOESS of the transect values beyond, drawn as the "
+               "fill, with the raw domain means as dots. " if smoothed else "domain means. ")
+            + "(a) The CoastSat target, " + cs_clause() + " x 14 yr, as the fill (blue "
+            "seaward, red landward). (b) The dune-line target, the measured net change "
+            f"between the digitized lines ({m['start_date']} to {m['end_date']}, "
+            f"{m['interval_yr']:.1f} yr"
+            + (", the end date assumed" if m['end_date_assumed'] else "")
+            + ") divided by its interval and x 14 yr, as the fill. THE BLACK LINE IS THE "
+            "SAME RUN IN BOTH PANELS: the zeroBE arm of the matrix cell, which carries NO "
+            "source/sink term in ANY domain, the two ends included, so every one of the 90 "
+            "domains is the model's own response and neither target was fitted. Full "
+            "management, groin off. The gap between line and fill is the misfit. Interior "
+            "GIS 2–89, model minus " + ("smoothed " if smoothed else "") + "target: (a) "
+            "{:+.1f} m bias, {:.1f} m RMSE; (b) {:+.1f} m bias, {:.1f} m RMSE. The y axis "
+            "(±{:g} m) is the same on every figure in target_comparison.{} Scores for every "
+            "model set against every target, raw and smoothed, are in tables/skill.csv.".format(
+                sk.loc[(w, MODEL_SETS[UNSOLVED], "coastsat" + sfx), "bias_m"],
+                sk.loc[(w, MODEL_SETS[UNSOLVED], "coastsat" + sfx), "rmse_m"],
+                sk.loc[(w, MODEL_SETS[UNSOLVED], "duneline" + sfx), "bias_m"],
+                sk.loc[(w, MODEL_SETS[UNSOLVED], "duneline" + sfx), "rmse_m"], half,
+                over_note([(df, ["coastsat_target_m", "dune_target_m", col_model], "")],
+                          half))))
+        out += save(fig, OUT_DIR / MODEL_SETS[UNSOLVED]
+                    / (f"unsolved_run_and_targets_{CS_MODES[CS_MODE]}_{w}"
+                       f"{'_smoothed' if smoothed else ''}"))
         plt.close(fig)
     return out
 
@@ -386,18 +600,17 @@ def paired_figure(observations, frames, half, skill_df, ends, smoothed=False):
 CS_SOURCE = {}   # window -> (domain frame, LOESS target frame) when full-period
 
 
-def main() -> int:
-    global CS_MODE, OUT_DIR
-    import argparse
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--coastsat-target", choices=sorted(CS_MODES), default="full")
-    CS_MODE = ap.parse_args().coastsat_target
-    OUT_DIR = ROOT_DIR / CS_MODES[CS_MODE]
-    apply_style()
-    observations = [rw.Observation(w) for w in WINDOWS]
+def load_model_sets():
+    """key -> ({window: model frame}, index rows) for the three model sets.
+    Factored out of main 2026-09-21 so HAT_smoothing_scale.py reads exactly
+    the same runs; it depends on CS_MODE, which must be set first."""
     models = {}
     for key in MODEL_SETS:
-        if key == "coastsat" and CS_MODE == "full":
+        if key == UNSOLVED:
+            loaded = [rw.load_model(w, UNSOLVED_RUNS.get(w), key, UNSOLVED_PRESET)
+                      for w in rw.WINDOWS]
+            mdfs, rows = [m for m, _ in loaded], [r for _, r in loaded]
+        elif key == "coastsat" and CS_MODE == "projected":
             runs = full_period_runs()
             loaded = [rw.load_model(w, runs[w], key) for w in rw.WINDOWS]
             mdfs, rows = [m for m, _ in loaded], [r for _, r in loaded]
@@ -405,7 +618,23 @@ def main() -> int:
             mdfs, rows = rw.load_models(key)
         models[key] = ({w: m for w, m in zip(rw.WINDOWS, mdfs)},
                        [r for r in rows if tuple(int(x) for x in r["window"].split("_")) in WINDOWS])
-    if CS_MODE == "full":
+    return models
+
+
+def main() -> int:
+    global CS_MODE, OUT_DIR
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--coastsat-target", choices=sorted(CS_MODES), default="projected",
+                    help="projected (default): the 1996-2024 LRR x 14 yr, carried onto "
+                         "windows it was not fitted on. total: each window's own LRR. "
+                         "'full' and 'subperiod' are the pre-2026-09-21 aliases.")
+    CS_MODE = CS_CANON[ap.parse_args().coastsat_target]
+    OUT_DIR = ROOT_DIR / CS_MODES[CS_MODE]
+    apply_style()
+    observations = [rw.Observation(w) for w in WINDOWS]
+    models = load_model_sets()
+    if CS_MODE == "projected":
         full = (obs.load_window(*FULL_WINDOW), rw.load_coastsat_target(FULL_WINDOW))
         CS_SOURCE.update({o.window: full for o in observations})
     frames, skill = {}, []
@@ -432,8 +661,10 @@ def main() -> int:
         written += figure(observations, frames, key, folder, half, skill_df)
     ends = end_values({k: rows for k, (_, rows) in models.items()})
     written += paired_figure(observations, frames, half, skill_df, ends)
-    if CS_MODE == "full":   # the smoothed version, full-period only (Hannah)
+    written += unsolved_figure(observations, frames, half, skill_df, ends)
+    if CS_MODE == "projected":   # the smoothed versions, full-period only (Hannah)
         written += paired_figure(observations, frames, half, skill_df, ends, smoothed=True)
+        written += unsolved_figure(observations, frames, half, skill_df, ends, smoothed=True)
 
     print(skill_df[skill_df["target"].isin(["coastsat", "duneline"])].to_string(index=False))
     print(f"\ny axis +/-{half:g} m")

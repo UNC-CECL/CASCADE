@@ -14,7 +14,7 @@ WHAT IT WRITES  (under output/raw_runs/experiments/2026-09-16-dune-edgesolve/)
                     same two ways over GIS 2-89: against the CoastSat LRR
                     target (model lrr_m_yr, as run_index.csv scores) and
                     against the dune-line endpoint rate (model
-                    change_rate_m_yr, as HAT_rate_windows.py vs_duneline/net_change
+                    change_rate_m_yr, as HAT_rate_windows.py vs_duneline/endpoint_net_change
                     scores).
     RESULTS.md      the two tables, rendered.
 
@@ -199,7 +199,7 @@ def main(argv=None):
     lines += ["", "## Interior skill, GIS 2-89, model minus observation, m/yr", "",
               "Each run scored against both observations: the CoastSat LRR target "
               "(model OLS slope, as run_index.csv) and the dune-line endpoint rate "
-              "(model endpoint rate, as model_vs_observed/vs_duneline/net_change). The CoastSat "
+              "(model endpoint rate, as model_vs_observed/vs_duneline/endpoint_net_change). The CoastSat "
               "row is the run the dune solve started from.", "",
               "| window | solve | ends | vs CoastSat bias | RMSE | vs dune line bias | RMSE |",
               "|---|---|---|---|---|---|---|"]

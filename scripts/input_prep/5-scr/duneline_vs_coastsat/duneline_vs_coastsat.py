@@ -41,7 +41,7 @@ METHOD
     metre landward of the exact crossing; see raw_offsets/PROVENANCE.md), so
     a change between any two years carries no method term.
 
-OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/net_change/<start>_<end>/
+OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/endpoint_net_change/<start>_<end>/
          (was 4-comparisons/duneline_vs_coastsat/ until 2026-09-19; the
          alongshore figures are in METRES with the beach-width gap since then)
              scatter_dune_vs_coastsat.png     shoreline vs dune, 1:1
@@ -49,7 +49,7 @@ OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/net_change
              supporting/                      the PDFs, CAPTIONS.md,
                  domain_comparison.csv            one row per GIS domain (m and m/yr)
                  PROVENANCE.md
-         data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/net_change/
+         data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/endpoint_net_change/
              alongshore_four_windows.png      every window on one y axis,
                                               stacked full width (--grid;
                                               --layout grid for the 2 x 2)
@@ -76,18 +76,20 @@ PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
-from site_layer.hat_observed_rates import (COASTSAT_TIMESERIES, DUNELINE_VS_COASTSAT,  # noqa: E402
+from site_layer.hat_observed_rates import (COASTSAT_ENDPOINT_VS_DUNELINE,  # noqa: E402
+                                          COASTSAT_TIMESERIES,  # noqa: E402
                                 SCR_ROOT, coastsat_endpoint_csv, dune_endpoint_csv,
                                 transect_lookup)
 from site_layer.hat_topo_version import dune_line_for_year, dune_raw_file_for_year  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 
-from site_layer.hat_figure_style import (C, C_1984, C_1997, DOMAIN_AXIS_LABEL,  # noqa: E402
+from site_layer.hat_figure_style import (  # noqa: E402
+    compare_header,C, C_1984, C_1997, DOMAIN_AXIS_LABEL,  # noqa: E402
                               INK_MUTED, _title, apply_style, caption,
                               figsize, open_frame, save, structures,
                               support_dir, town_bands)
 
-OUT_ROOT = DUNELINE_VS_COASTSAT
+OUT_ROOT = COASTSAT_ENDPOINT_VS_DUNELINE
 GIS_FIRST, GIS_LAST = 1, 90
 DAYS_PER_YEAR = 365.25
 SIX_MONTHS_DAYS = 182.625
@@ -233,7 +235,10 @@ def scatter_figure(dom: pd.DataFrame, out: Path, start: int, end: int,
         f"{st['slope']:.2f}, RMSE = {st['rmse']:.2f} m/yr, bias shoreline − dune "
         f"= {st['bias']:+.2f} m/yr). The six domains farthest from 1:1 are "
         "labelled. See PROVENANCE.md for the survey dates."))
-    save(fig, out / "scatter_dune_vs_coastsat", close=True)
+    # The window is IN the stem (Hannah, 2026-09-21): five windows wrote this
+    # same basename, so a figure lifted out of its folder could not be told
+    # from the other four.
+    save(fig, out / f"coastsat_endpoint_vs_duneline_{start}_{end}_scatter", close=True)
 
 
 # The alongshore figures are in METRES since 2026-09-19 (Hannah: one form for
@@ -241,7 +246,7 @@ def scatter_figure(dom: pd.DataFrame, out: Path, start: int, end: int,
 Y_TICK = 20.0
 Y_LABEL = "Net change in position (m)"
 # The gap between the two lines: widened solid grey, narrowed hatched. Shared
-# by net_change_1996_2024.py and projected_vs_duneline.py.
+# by net_change_1996_2024.py and total_change_vs_duneline.py.
 C_GAP = "0.86"
 C_NARROW = "0.55"
 NARROW_HATCH = "////"
@@ -277,7 +282,7 @@ def beach_width_handles():
 def _legend_handles():
     return [
         Line2D([], [], color=C_SHORE, lw=1.1, label="Shoreline change (CoastSat endpoint)"),
-        Line2D([], [], color=C_DUNE, lw=1.1, label="Dune-line change (endpoint)"),
+        Line2D([], [], color=C_DUNE, lw=1.1, label="Total dune line change (measured)"),
     ] + beach_width_handles()
 
 
@@ -351,7 +356,13 @@ def alongshore_figure(dom: pd.DataFrame, out: Path, start: int, end: int,
     caption(fig, f"Net change of the dune line and the CoastSat shoreline, "
                  f"{v0}–{v1} (standing in for {start}–{end}), by GIS domain. "
                  + _caption_body())
-    save(fig, out / "alongshore_dune_vs_coastsat", close=True)
+    # Both sides are OBSERVED here -- two snapshots differenced, no rate
+    # anywhere -- which is what separates this folder from total_change/.
+    compare_header(fig, [
+        f"{start}–{end}   ·   shoreline: CoastSat, mean position ±6 months about "
+        "each dune-line date",
+        f"dune line: {v0} → {v1} lines,  measured"])
+    save(fig, out / f"coastsat_endpoint_vs_duneline_{start}_{end}_alongshore", close=True)
 
 
 def _chains(windows):
@@ -431,7 +442,8 @@ def four_windows_figure(layout: str = "column") -> Path:
                   f"value over every window plus 5 m). " + _caption_body()
                   + " Each window's survey dates and statistics are in its "
                   "own supporting/PROVENANCE.md."))
-    return save(fig, OUT_ROOT / "alongshore_four_windows", close=True)[0]
+    return save(fig, OUT_ROOT / "coastsat_endpoint_vs_duneline_four_windows_alongshore",
+                close=True)[0]
 
 
 # -----------------------------------------------------------------------------

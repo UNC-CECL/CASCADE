@@ -275,3 +275,47 @@ def build_coastsat_series(datasets, active_period_start, loess_config=DEFAULT_LO
             windows=windows,
         ))
     return series
+
+
+def spliced_loess_series(domain_ids, along_coast_m, values, window,
+                         skip=None, domains=DEFAULT_DOMAINS):
+    """Per-domain series: a LOESS of `values` at transect resolution north of
+    GIS `skip`, the raw domain means at or below it.
+
+    The two steps hindcast.build_target_table applies to the scoring target,
+    factored out (2026-09-21) so an analysis can build the same series at a
+    window other than TARGET_WINDOW without going through a CoastSatDataset.
+    build_target_table itself is untouched -- it is the production scoring
+    path and still reads its window off a built CoastSatDataset.
+
+    Args:
+        domain_ids, along_coast_m, values: per-transect arrays.
+        window: LOESS window width in domain units. 0 means no smoothing at
+            all: raw domain means everywhere, the unsmoothed comparison.
+        skip: domains <= skip keep their raw means. Default the shared
+            LoessConfig's skip_southern_domains.
+        domains: DomainGeometry.
+
+    Returns:
+        (Series indexed first_gis_id..last_gis_id, the lowess frac used, or
+        nan when window is 0).
+    """
+    if skip is None:
+        skip = DEFAULT_LOESS.skip_southern_domains
+    idx = pd.RangeIndex(domains.first_gis_id, domains.last_gis_id + 1,
+                        name="domain_number")
+    out = pd.Series(np.nan, index=idx, dtype=float)
+    frac = float("nan")
+    if window:
+        gis, smoothed, frac = loess_smooth_transect_to_domains(
+            along_coast_m, values, domain_ids, window, domains=domains)
+        if gis is not None:
+            out.loc[gis] = smoothed
+        raw_hi = skip
+    else:
+        raw_hi = domains.last_gis_id
+    raw_x, raw_y = compute_domain_means(domain_ids, values,
+                                        domains.first_gis_id, raw_hi)
+    if len(raw_x):
+        out.loc[raw_x] = raw_y
+    return out, frac

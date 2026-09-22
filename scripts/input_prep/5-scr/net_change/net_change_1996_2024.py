@@ -30,7 +30,7 @@ WHAT IS DRAWN
     model-input fills as bars above the top panel -- the same marks as the
     two halves figures.
 
-OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/net_change/chains/
+OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/endpoint_net_change/chains/
     (was 4-comparisons/net_change_1996_2024/ until 2026-09-19)
     net_change_chain_1996_2010_2024.png   also published to
                                           output/figures/shoreline/
@@ -44,7 +44,7 @@ OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/net_change
     3-rates/coastsat/endpoint/<window>/transect_endpoint.csv.
 
 USAGE
-    python scripts/input_prep/5-scr/net_change/net_change_1996_2024.py
+    python scripts/input_prep/5-scr/endpoint_net_change/net_change_1996_2024.py
 ==============================================================================
 """
 
@@ -85,9 +85,9 @@ WHOLE = (1996, 2024)
 HALVES = [(1996, 2010), (2010, 2024)]
 WINDOWS = [WHOLE] + HALVES
 N_DOMAINS = 90
-# The chain figure of shoreline_vs_duneline/net_change/ since 2026-09-19
+# The chain figure of shoreline_vs_duneline/endpoint_net_change/ since 2026-09-19
 # (was 4-comparisons/net_change_1996_2024/net_change_shoreline_vs_dune).
-STEM = "net_change_chain_1996_2010_2024"
+STEM = "coastsat_endpoint_vs_duneline_1996_2010_2024_stacked"
 
 C_SHORE = C_1997          # "#2166ac", the CoastSat blue of duneline_vs_coastsat
 C_DUNE = C_1984           # "#b2182b", its dune red
@@ -231,7 +231,7 @@ def main() -> int:
     fig.legend(handles=[Line2D([], [], color=C_SHORE, lw=1.2,
                                label="Shoreline change (CoastSat endpoint)"),
                         Line2D([], [], color=C_DUNE, lw=1.2,
-                               label="Dune-line change (endpoint)")]
+                               label="Total dune line change (measured)")]
                + beach_width_handles(),
                loc="outside lower center", ncol=4, frameon=False)
     caption(fig, caption_text(summ, half, fills))

@@ -1,3 +1,6 @@
+
+> **Looking for a figure?** [`FIGURES.md`](FIGURES.md) is the one-page index: which figure answers which question, across `3-rates/`, `4-comparisons/` and `output/comparisons/`. [`WINDOWS.md`](data/hatteras_init/5-scr/WINDOWS.md) says which window is which.
+
 [![DOI](https://zenodo.org/badge/310435424.svg)](https://zenodo.org/doi/10.5281/zenodo.10003561)
 
 🌀 🌊 🏄‍♀️ 🏚️ 🌀 🌊 🏄‍♀️ 🏚️ 🌀 🌊 🏄‍♀️ 🏚️ 🌀 🌊 🏄‍♀️ 🏚️

@@ -110,7 +110,7 @@ NAMING   model_vs_<feature>_<reading>_<start>_<end>.png, and _grid for the
 OUTPUT   output/comparisons/model_vs_observed/
     vs_shoreline/domain_means/   model_vs_shoreline_means_<w>.png     ends solved
     vs_shoreline/smoothed/       model_vs_shoreline_smoothed_<w>.png  on CoastSat
-    vs_duneline/net_change/      model_vs_duneline_netchange_<w>.png  ends solved
+    vs_duneline/endpoint_net_change/      model_vs_duneline_netchange_<w>.png  ends solved
     vs_duneline/net_change_smoothed/
                         model_vs_duneline_netchange_smoothed_<w>.png  on the dune
                                                                       line (mean3)
@@ -259,7 +259,7 @@ VARIANTS = {
 OUTPUT_FOLDER = {
     "coastsat/means":              "vs_shoreline/domain_means",
     "coastsat/loess":              "vs_shoreline/smoothed",
-    "duneline/endpoint":           "vs_duneline/net_change",
+    "duneline/endpoint":           "vs_duneline/endpoint_net_change",
     "duneline/endpoint-loess":     "vs_duneline/net_change_smoothed",
     "both":                        "vs_shoreline_and_duneline",
     "sensitivity/mixed-estimator": "sensitivity/mixed-estimator",
@@ -339,15 +339,20 @@ def runs_for(model_set):
     return dune_solved_runs(_smooth_of(model_set))
 
 
-def load_model(window, spec, model_set):
+def load_model(window, spec, model_set, preset=None):
     """Both per-domain estimators for one run, and the provenance row for
-    runs_used.csv. (None, row) where no run exists."""
+    runs_used.csv. (None, row) where no run exists.
+
+    preset names the source/sink preset the run was filed under; it defaults
+    to PRESET (edgeBE), the only one this module's own figures draw. It is a
+    parameter so a caller can read the zeroBE arm of the same matrix cell
+    (HAT_target_comparison's ends_unsolved set, 2026-09-21)."""
     period = "{}_{}".format(*window)
     if spec is None:
         return None, {"window": period, "model_ends": model_set, "run_name": "",
                       "arm": "", "run_dir": "", "note": NO_RUN_NOTE}
     run_name, arm = spec
-    run_dir = find_run_dir(RAW_RUNS, run_name, window, PRESET, arm)
+    run_dir = find_run_dir(RAW_RUNS, run_name, window, preset or PRESET, arm)
     rates = pd.read_csv(run_dir / "tables" / "shoreline_change_rate.csv")
     rates = rates.rename(columns={"gis_domain": "domain_number"})
     df = _full().merge(rates[["domain_number", "change_rate_m_yr", "lrr_m_yr"]],
@@ -778,15 +783,33 @@ def caption_text(windows, rows_by_key, metas, half, grid, variant, model_keys):
 # -----------------------------------------------------------------------------
 # figures
 # -----------------------------------------------------------------------------
+def _stem_tag(root):
+    """The sensitivity arm as a filename token, "" for the main level.
+
+    Hannah, 2026-09-21: the arm lived only in the folder path, so
+    `model_vs_shoreline_means_1996_2010.png` existed under the main level AND
+    under each sensitivity, and the three were indistinguishable once moved.
+    `sensitivity/ends-swapped` -> `ends-swapped`.
+    """
+    return root.rsplit("/", 1)[-1] if root else ""
+
+
+def _stem(variant, root):
+    """The file stem for this variant on this level, arm included."""
+    stem = VARIANTS[variant][3]
+    tag = _stem_tag(root)
+    return f"{stem}_{tag}" if tag else stem
+
+
 def _save(fig, folder, stem):
     out = save(fig, folder / stem, vector=True)
     plt.close(fig)
     return out
 
 
-def single_figure(o: Observation, variant, models, model_keys, half, folder):
+def single_figure(o: Observation, variant, models, model_keys, half, folder, root=""):
     start, end = o.window
-    stem = VARIANTS[variant][3]
+    stem = _stem(variant, root)
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.40),
                            constrained_layout=True)
     if not _panel(ax, o, variant, models, model_keys, half):
@@ -802,8 +825,8 @@ def single_figure(o: Observation, variant, models, model_keys, half, folder):
     return _save(fig, folder, f"{stem}_{start}_{end}")
 
 
-def grid_figure(observations, variant, models, model_keys, half, folder):
-    stem = VARIANTS[variant][3]
+def grid_figure(observations, variant, models, model_keys, half, folder, root=""):
+    stem = _stem(variant, root)
     chains = obs._chains(WINDOWS)
     assert len(chains) == 2 and all(len(c) == 2 for c in chains), chains
     by_w = {o.window: o for o in observations}
@@ -916,8 +939,8 @@ def main(argv=None):
     for root, variant, keys in plan:
         folder = OUT_DIR / root / OUTPUT_FOLDER[variant]
         for o in observations:
-            written += single_figure(o, variant, models, keys, half, folder)
-        written += grid_figure(observations, variant, models, keys, half, folder)
+            written += single_figure(o, variant, models, keys, half, folder, root)
+        written += grid_figure(observations, variant, models, keys, half, folder, root)
 
     print(f"y bounds  +/-{half:g} m/yr")
     for o in observations:
