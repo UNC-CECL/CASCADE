@@ -19,7 +19,8 @@ work runs, and where the data tree is grouped the same way the names match.
     1-records/        the gauge downloader, the hurricane record figure
     2-rslr/           the sea-level fit
     3-storms/         historical_storm_creation_v3_HAT.py (the model input),
-                      storm_check/ and storm_validation/ (both validators),
+                      storm_validation/ (the validator; storm_check/ held
+                      the two it replaced and was retired 2026-09-22),
                       from_Hannah/ from_lexi/ from_roya/ (earlier generators,
                       kept for provenance; the from_Hannah figure scripts
                       name paths that no longer exist)
