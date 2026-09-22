@@ -129,21 +129,21 @@ The **producers stayed** in `scripts/input_prep/5-scr/`:
 
 | producer (`scripts/input_prep/5-scr/`) | writes to (`data/hatteras_init/5-scr/`) |
 |---|---|
-| `CoastSat/coastsat_domain_mapping.py` | `2-transect-frame/transect_domains/` |
-| `CoastSat/coastsat_domain_lrr_fixed.py` | `3-rates/coastsat/lrr/<window>/` |
-| `CoastSat/coastsat_extension_lrr.py` | `3-rates/coastsat/lrr/<window>/ext/` |
-| `CoastSat_timeseries/coastsat_5yr_bins.py` | `3-rates/coastsat/5yr_bins/` |
-| `duneline_endpoint/duneline_endpoint.py` | `3-rates/duneline/endpoint/<window>/` |
-| `coastsat_endpoint/coastsat_endpoint.py` | `3-rates/coastsat/endpoint/<window>/` |
-| `coastsat_total_change/coastsat_total_change.py` | `3-rates/coastsat/total_change/<window>/`; `--product projected` -> `3-rates/coastsat/projected/<window>/` (was `coastsat_lrr_projected/`) |
-| `net_change/net_change_vs_duneline.py` | `4-comparisons/shoreline_vs_duneline/net_change/chains/` |
-| `total_change_vs_duneline/total_change_vs_duneline.py` | `4-comparisons/shoreline_vs_duneline/total_change/` (was `lrr_net_change/`; absorbed `projected/` 2026-09-21) |
-| `duneline_positions/duneline_positions.py` | `4-comparisons/duneline_positions/` |
-| `CoastSat/coastsat_lrr_windows.py` | `3-rates/coastsat/lrr/lrr_four_windows` (the 2 x 2 only, since 2026-09-19) |
-| `coastsat_vs_duneline/coastsat_vs_duneline.py` | `4-comparisons/shoreline_vs_duneline/net_change/<window>/` |
-| `shoreline_change_patterns/` | `4-comparisons/trajectory_patterns/` (not current: old periods) |
-| `CoastSat/coastsat_two_period_comparison.py` | `4-comparisons/two_period_comparison/` (not current: old periods) |
-| `shoreline_inventory/shoreline_inventory.py` | `1-observations/shoreline_inventory/` |
+| `2-transect-frame/coastsat_domain_mapping.py` | `2-transect-frame/transect_domains/` |
+| `3-rates/coastsat/lrr/coastsat_domain_lrr.py` | `3-rates/coastsat/lrr/<window>/` |
+| `3-rates/coastsat/extension/coastsat_extension_lrr.py` | `3-rates/coastsat/lrr/<window>/ext/` |
+| `3-rates/coastsat/5yr_bins/coastsat_5yr_bins.py` | `3-rates/coastsat/5yr_bins/` |
+| `3-rates/duneline/duneline_endpoint.py` | `3-rates/duneline/endpoint/<window>/` |
+| `3-rates/coastsat/endpoint/coastsat_endpoint.py` | `3-rates/coastsat/endpoint/<window>/` |
+| `3-rates/coastsat/total_change/coastsat_total_change.py` | `3-rates/coastsat/total_change/<window>/`; `--product projected` -> `3-rates/coastsat/projected/<window>/` (was `coastsat_lrr_projected/`) |
+| `4-comparisons/shoreline_vs_duneline/net_change_vs_duneline.py` | `4-comparisons/shoreline_vs_duneline/net_change/chains/` |
+| `4-comparisons/shoreline_vs_duneline/total_change_vs_duneline.py` | `4-comparisons/shoreline_vs_duneline/total_change/` (was `lrr_net_change/`; absorbed `projected/` 2026-09-21) |
+| `4-comparisons/duneline_positions/duneline_positions.py` | `4-comparisons/duneline_positions/` |
+| `3-rates/coastsat/lrr/coastsat_lrr_windows.py` | `3-rates/coastsat/lrr/lrr_four_windows` (the 2 x 2 only, since 2026-09-19) |
+| `4-comparisons/shoreline_vs_duneline/coastsat_vs_duneline.py` | `4-comparisons/shoreline_vs_duneline/net_change/<window>/` |
+| `1-observations/shoreline_patterns/` | `4-comparisons/trajectory_patterns/` (not current: old periods; output deleted 2026-09-19) |
+| _(deleted 2026-09-22)_ `coastsat_two_period_comparison.py` | `4-comparisons/two_period_comparison/` (not current: old periods; output deleted too) |
+| `1-observations/shoreline_inventory/shoreline_inventory.py` | `1-observations/shoreline_inventory/` |
 
 ## Rebuilding a window
 
