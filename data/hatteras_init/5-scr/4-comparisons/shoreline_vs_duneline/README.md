@@ -118,7 +118,7 @@ Paths resolve through `hat_observed_rates.SHORELINE_VS_DUNELINE`,
 
 | folder | script (`scripts/input_prep/5-scr/`) |
 |---|---|
-| `coastsat_endpoint_vs_duneline_endpoint/<window>/` | `coastsat_vs_duneline/coastsat_vs_duneline.py --start-year S --end-year E` (then `--grid`) |
-| `coastsat_endpoint_vs_duneline_endpoint/all_windows_stacked/` | `net_change/net_change_vs_duneline.py` |
-| `coastsat_total_change_vs_duneline_endpoint/` | `total_change_vs_duneline/total_change_vs_duneline.py` |
-| `coastsat_projected_vs_duneline_endpoint/` | `total_change_vs_duneline/total_change_vs_duneline.py --product projected` |
+| `coastsat_endpoint_vs_duneline_endpoint/<window>/` | `4-comparisons/shoreline_vs_duneline/coastsat_vs_duneline.py --start-year S --end-year E` (then `--grid`) |
+| `coastsat_endpoint_vs_duneline_endpoint/all_windows_stacked/` | `4-comparisons/shoreline_vs_duneline/net_change_vs_duneline.py` |
+| `coastsat_total_change_vs_duneline_endpoint/` | `4-comparisons/shoreline_vs_duneline/total_change_vs_duneline.py` |
+| `coastsat_projected_vs_duneline_endpoint/` | `4-comparisons/shoreline_vs_duneline/total_change_vs_duneline.py --product projected` |
