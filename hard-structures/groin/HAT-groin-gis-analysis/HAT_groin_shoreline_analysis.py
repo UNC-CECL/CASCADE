@@ -95,7 +95,7 @@ Analyses (each per-transect, aggregated alongshore):
        unique observation date, using every observation) or "year"
        (pools all sources/dates within a calendar year -- fuller
        per-frame coverage, coarser resolution). Adapted from the
-       whole-island version in HAT_shoreline_chainage_alldata_evolution.py.
+       whole-island version in shoreline_chainage_alldata_evolution.py.
 
 Data sources (identical to shoreline inventory):
     Aerial wet-dry lines   - user-digitized (GeoJSON)
@@ -418,7 +418,7 @@ MIN_OBSERVATIONS_PER_TRANSECT = 8
 # zoomed to the groin area -- no geometric correction of any kind:
 # CoastSat's transects are shore-normal and run parallel to the coast,
 # so chainage is used exactly as provided. Adapted from the whole-
-# island version in HAT_shoreline_chainage_alldata_evolution.py, but
+# island version in shoreline_chainage_alldata_evolution.py, but
 # built on THIS script's multi-source unified chainage table (wet-dry +
 # NC state + CoastSat) so it can show the full historical record, not
 # just the CoastSat era (1984+). See create_groin_evolution_gif().
@@ -3709,7 +3709,7 @@ def create_groin_evolution_gif(chainage: pd.DataFrame,
     output_suffix (e.g. "_zoomed") distinguishes the comparison filename/
     frame folder when generating more than one GIF in the same run.
     Adapted from the whole-island
-    version in HAT_shoreline_chainage_alldata_evolution.py, but built
+    version in shoreline_chainage_alldata_evolution.py, but built
     on this script's multi-source unified chainage table (wet-dry + NC
     state + CoastSat, already merged in `chainage`) instead of CoastSat
     alone, so the animation can show the full historical record instead
