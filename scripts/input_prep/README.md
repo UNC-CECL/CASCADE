@@ -14,7 +14,8 @@ work runs, and where the data tree is grouped the same way the names match.
     1-produce/        duneline_to_raw_offsets -> island_offset_hybrid, and
                       build_island_offset.py, the one command that runs both
     2-figures/        version comparison, the 1:1 offset profile
-    old-linear-bridge/  the retired 1984 linear-bridge variant
+    superseded_20260914/  the retired 1984 linear-bridge variant
+                          (was old-linear-bridge/ until 2026-09-22)
 3-env-forcings/       sea level, storms, waves  (data: 1-records/ 2-rslr/ 3-storms/)
     1-records/        the gauge downloader, the hurricane record figure
     2-rslr/           the sea-level fit
