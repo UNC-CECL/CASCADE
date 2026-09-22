@@ -72,6 +72,27 @@ the decision was taken; the note says what the decision was. **Nothing is
 deleted for being superseded** — a retired script is often the only record of
 how something was done.
 
+**A reason may follow the date** (relaxed 2026-09-22):
+
+```
+superseded_20260919_pre-redigitized/
+superseded_20260915_flat/
+```
+
+The bare form was the rule until then, and it could not express the case the
+data tree actually has: two retirements in one parent. `1996/` holds builds
+from before the line was re-digitized and `1984/` holds the flat pre-versioning
+build — a date alone cannot tell the next one from the last, so demanding a
+bare date asked for information to be thrown away. The **date still comes
+first**, so folders sort chronologically and the rule's point survives.
+
+`output/archive/` has its own documented idiom, `YYYY-MM-DD_<what>/`
+(`output/README.md`). What sits inside one of those is filed, not stray, and
+is not asked to be a `superseded_` folder as well.
+
+`scripts/repo_tools/hat_layout_check.py` enforces exactly this: date first,
+optional reason after it.
+
 ## 5. Find the root by searching upward, never by counting
 
 ```python

@@ -60,7 +60,20 @@ DATA_ALLOWED = {"reference_yaml_hatteras.yaml"}
 ROOT_ALLOWED = {"README.md"}
 
 # Rule 4: the one retirement idiom.
-RETIRE_GOOD = re.compile(r"^superseded_\d{8}$")
+# A retirement folder is `superseded_<date>`, and MAY carry a reason after the
+# date: superseded_20260919_pre-redigitized. Relaxed 2026-09-22 -- the bare form
+# was the rule until then, and it could not express the case the data tree
+# actually has, which is two retirements in one folder. A date alone cannot tell
+# `1996/superseded_20260915_flat` from the next one; the suffix is what
+# distinguishes them, so demanding a bare date asked for information to be
+# thrown away. The DATE STILL COMES FIRST, so the folders sort chronologically
+# and the rule's point -- a date says when the decision was taken -- survives.
+RETIRE_GOOD = re.compile(r"^superseded_\d{8}(_[A-Za-z0-9][\w-]*)?$")
+
+# `output/archive/` files retired material as `YYYY-MM-DD_<what>/`, its own
+# documented idiom (output/README.md). What sits inside one of those is filed,
+# not stray, so it is not asked to be a superseded_ folder as well.
+ARCHIVE_DATED = re.compile(r"^\d{4}-\d{2}-\d{2}_")
 RETIRE_ANY = re.compile(r"^(old_.*|old|.*_ARCHIVE.*|archived_.*|.*_backup|"
                         r"retired.*|superseded.*)$", re.I)
 
@@ -189,7 +202,8 @@ def inside_compliant_retirement(path: Path) -> bool:
     was called when it was in use, and renaming it would erase that. So the
     convention applies to the retirement folder, not to its contents.
     """
-    return any(RETIRE_GOOD.match(part) for part in path.parts[:-1])
+    return any(RETIRE_GOOD.match(part) or ARCHIVE_DATED.match(part)
+               for part in path.parts[:-1])
 
 
 def rule_4_retirement_idioms():
