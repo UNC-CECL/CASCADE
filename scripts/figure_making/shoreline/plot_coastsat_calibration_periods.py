@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-plot_coastsat_calibration_periods_darkerfill.py
+plot_coastsat_calibration_periods.py
 ==============================================================================
 Observed CoastSat shoreline-change rate per domain, one curve per run period.
 

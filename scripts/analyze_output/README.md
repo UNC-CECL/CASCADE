@@ -22,7 +22,7 @@ overwash/
     superseded_20260918/          plot_overwash.py (dead absolute path) and an
                                   early copy of Roya's Pea Island script
 smoothing_vs_cascade/
-    smoothing_vs_cascade_final_fixed.py   what the LOESS smoothing does to the
+    smoothing_vs_cascade.py   what the LOESS smoothing does to the
                              comparison. Names HAT_1984_2004_SQ_BE_Hs2p0, which
                              no longer exists anywhere under raw_runs/: point it
                              at a current run before running
