@@ -6,7 +6,7 @@ figure from 2026-08 until now.
 
 ## Why it was retired
 
-It and `HAT_hindcast_final_figure_loess.py` showed the same two runs. The only
+It and `hindcast_final_figure_loess.py` showed the same two runs. The only
 substantive difference was the scoring window - D2-D89 here, D11-D89 there -
 and on 2026-09-14 the LOESS figure was changed to print BOTH windows on every
 panel. At that point this script drew nothing the surviving one did not, except
@@ -33,7 +33,7 @@ were drawn, and `git log` has every version of it.
 
 ## What replaced it
 
-`../HAT_hindcast_final_figure_loess.py`, `--preset calibBE` (default) or
+`../hindcast_final_figure_loess.py`, `--preset calibBE` (default) or
 `--preset edgeBE`, writing to
 `output/comparisons/hindcast_calibrated/hindcast_<preset>_loess_reference.png`.
 

@@ -1,5 +1,5 @@
 """
-HAT_shoreline_chainage_alldata_evolution.py
+shoreline_chainage_alldata_evolution.py
 ====================================
 Visualises CoastSat shoreline chainage across Hatteras Island over 40 years.
 
@@ -16,7 +16,7 @@ Outputs
 Usage
 -----
     Edit the CONFIG section, then run:
-        python HAT_shoreline_chainage_alldata_evolution.py
+        python shoreline_chainage_alldata_evolution.py
 
 Dependencies
 ------------

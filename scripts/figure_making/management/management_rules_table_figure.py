@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-HAT_management_rules_table_figure.py
+management_rules_table_figure.py
 ==============================================================================
 The management rules the hindcast applies, as a table.
 

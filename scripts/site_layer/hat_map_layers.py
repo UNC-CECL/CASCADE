@@ -24,7 +24,7 @@
 #   attribute to 5-scr's HAT_domains.json, which is what DOMAIN_BOXES points at)
 #   and the NC 1:80k coastline (D:/Hatteras_GIS/Outlines/nc_80k/, 6 MB for the
 #   whole state; NC_COAST is the 25 km window around the domains, rebuilt by
-#   scripts/figure_making/tools/HAT_clip_nc_coast.py).
+#   scripts/figure_making/tools/clip_nc_coast.py).
 #
 # THE DOMAIN BOXES ARE NOT A MAP LAYER TO COPY. They are the model's frame and
 # are owned by 5-scr/2-transect-frame/; DOMAIN_BOXES re-exports that path so a

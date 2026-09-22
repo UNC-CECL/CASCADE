@@ -1,10 +1,10 @@
 """
-HAT_figure_index.py
+figure_index.py
 ==============================================================================
 Writes `output/figures/README.md`: one table per subject folder, listing every
 figure, what it shows and the script that draws it.
 
-    python scripts/figure_making/tools/HAT_figure_index.py
+    python scripts/figure_making/tools/figure_index.py
 
 WHY IT IS GENERATED
     A hand-kept index of a folder that eleven scripts write into is stale the
@@ -118,7 +118,7 @@ def main() -> Path:
         "# figures — by subject",
         "",
         "Every figure this project draws for a manuscript, a poster or a talk.",
-        "**Generated** by `scripts/figure_making/tools/HAT_figure_index.py`; re-run it",
+        "**Generated** by `scripts/figure_making/tools/figure_index.py`; re-run it",
         "after adding a figure rather than editing this file.",
         "",
         "One folder per subject, not per script (ORGANIZATION.md rule 1). A figure's",

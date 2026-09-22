@@ -61,8 +61,8 @@ COLOUR
     honestly, and any real divergence would immediately stand out.
 
 Usage:
-    python scripts/figure_making/model_output/HAT_scenario_grid.py
-    python scripts/figure_making/model_output/HAT_scenario_grid.py --no-reloc --out FIG.png
+    python scripts/figure_making/model_output/scenario_grid.py
+    python scripts/figure_making/model_output/scenario_grid.py --no-reloc --out FIG.png
 
 Author: Hannah A. Henry, UNC CECL
 """

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-HAT_management_timeline_figure.py
+management_timeline_figure.py
 ==============================================================================
 The management of NC-12 and the beach as a timeline: domain against year.
 

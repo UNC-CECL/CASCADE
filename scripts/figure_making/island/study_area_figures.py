@@ -1,12 +1,12 @@
 """
-HAT_study_area_figures.py
+study_area_figures.py
 ==============================================================================
 The generic site figures: where Hatteras Island is, how the 90 model domains
 tile it, and what one domain looks like as a Barrier3D grid. For manuscripts
 and talks, drawn from the model's own inputs so a map and a run cannot
 disagree.
 
-    python scripts/figure_making/island/HAT_study_area_figures.py [--vector] [--only NAME] [--talk]
+    python scripts/figure_making/island/study_area_figures.py [--vector] [--only NAME] [--talk]
 
 Writes to output/figures/<subject>/ (rule 1 of ORGANIZATION.md: products go
 under output/), PNG at the top and PDF + CAPTIONS.md under supporting/. The

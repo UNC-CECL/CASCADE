@@ -51,7 +51,7 @@ WHAT DROWNS IT
     cells the model indexes in rather than in smooth metres.
 
 Usage:
-    python HAT_gis11_relocation_drown_figure.py [--out PATH]
+    python gis11_relocation_drown_figure.py [--out PATH]
 
 Reads output/comparisons/relocation/standard_setback/GIS11_profiles.npz, the
 per-domain extract taken before the superseded runs were deleted.

@@ -1,10 +1,10 @@
 """
-HAT_initialization_figures.py
+initialization_figures.py
 ==============================================================================
 The island as the model starts it: one page figure per orientation year in
 YEARS, showing the t=0 elevation surface every domain is initialised from.
 
-    python scripts/figure_making/island/HAT_initialization_figures.py
+    python scripts/figure_making/island/initialization_figures.py
 
 Writes to output/figures/initialization/<year>/<scheme>/ (ORGANIZATION.md
 rule 1), PNG at the top of the scheme folder and PDF + CAPTIONS.md under its

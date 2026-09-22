@@ -6,7 +6,7 @@ Two versions of an animation script from the 1978-1997 runs (Roya's
 exist, and write a `gif_output/` relative to wherever that lands. Nothing
 else in the repository calls them.
 
-The plan-view animation of a current run is `../HAT_planview_evolution_gif.py`
+The plan-view animation of a current run is `../planview_evolution_gif.py`
 -- a different figure, not a port of these; if the per-domain frames these
 drew are wanted again, start from a current run folder and the house style.
 
