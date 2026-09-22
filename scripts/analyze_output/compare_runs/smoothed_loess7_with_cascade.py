@@ -1,5 +1,5 @@
 """
-HAT_smoothed_loess7_with_cascade.py
+smoothed_loess7_with_cascade.py
 ==============================================================================
 The two smoothed halves-overlay sheets with the CASCADE hindcast drawn over
 them in dark green, so the model's alongshore behaviour can be read against
@@ -51,7 +51,7 @@ OUTPUT   output/comparisons/target_comparison/smoothed_loess7_with_cascade/
     domain_values.csv, runs_used.csv, PROVENANCE.md, README.md, supporting/
 
 USAGE
-    python scripts/analyze_output/compare_runs/HAT_smoothed_loess7_with_cascade.py
+    python scripts/analyze_output/compare_runs/smoothed_loess7_with_cascade.py
     python ... --window 7
 ==============================================================================
 """
@@ -69,16 +69,15 @@ import pandas as pd
 _REPO = next(_p for _p in Path(__file__).resolve().parents
              if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(_REPO / "scripts"))
-for _sub in ("", "CoastSat", "coastsat_vs_duneline", "total_change_vs_duneline",
-             "smoothed_loess7"):
-    sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr" / _sub))
+sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr" / "lib"))
+import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import rates_figures as rf  # noqa: E402
-import smoothed_loess7 as sl7  # noqa: E402
+import smoothed_loess7_vs_duneline as sl7  # noqa: E402
 import total_change_vs_duneline as tcd  # noqa: E402
-import HAT_rate_windows as rw  # noqa: E402
-import HAT_target_comparison as tc  # noqa: E402
+import rate_windows as rw  # noqa: E402
+import target_comparison as tc  # noqa: E402
 from rates_figures import cw, plt  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.ticker import MultipleLocator  # noqa: E402
@@ -249,7 +248,7 @@ def main(argv=None) -> int:
     (OUT_ROOT / "PROVENANCE.md").write_text("\n".join([
         "# smoothed_loess7_with_cascade — provenance", "",
         f"Written {dt.datetime.now():%Y-%m-%d %H:%M} by "
-        "`scripts/analyze_output/compare_runs/HAT_smoothed_loess7_with_cascade.py`.",
+        "`scripts/analyze_output/compare_runs/smoothed_loess7_with_cascade.py`.",
         "",
         "The observations-only pair in "
         "`data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/"

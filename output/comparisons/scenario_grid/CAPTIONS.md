@@ -1,7 +1,7 @@
 # scenario_grid
 
 `scenario_grid_by_preset.png` (2026-09-11), written by
-`scripts/figure_making/model_output/HAT_scenario_grid.py`.
+`scripts/figure_making/model_output/scenario_grid.py`.
 
 Modelled shoreline change rate (m/yr, seaward positive) by GIS domain for
 every management scenario, on a 2 x 3 grid: periods as rows (1984-2004

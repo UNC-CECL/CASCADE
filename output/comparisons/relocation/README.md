@@ -95,7 +95,7 @@ the wet-row criterion by one cell. `GIS11_profiles.npz` is the per-domain
 extract taken from the reloc-arm runs before the 2026-08-28 archive was
 deleted; it is the ONE input here, untracked (`.npz`), and regenerates only by
 re-running the arms at `relocation_setback_m: measured`. Drawn by
-`scripts/figure_making/model_output/HAT_gis11_relocation_drown_figure.py`.
+`scripts/figure_making/model_output/gis11_relocation_drown_figure.py`.
 
 ## Regenerate
 

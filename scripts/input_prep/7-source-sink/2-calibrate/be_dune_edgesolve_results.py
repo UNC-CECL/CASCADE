@@ -8,13 +8,13 @@ observations.
 WHAT IT WRITES  (under output/raw_runs/experiments/2026-09-16-dune-edgesolve/)
     solved.csv      one row per (window, smooth): the solved step, its run
                     name, the pair at GIS 1 / 90, and the CoastSat-solved pair
-                    it replaces. HAT_rate_windows.py reads this to find the
+                    it replaces. rate_windows.py reads this to find the
                     dune-solved runs (model sets dune-mean3, dune-raw).
     skill.csv       every solve AND its CoastSat-solved counterpart scored the
                     same two ways over GIS 2-89: against the CoastSat LRR
                     target (model lrr_m_yr, as run_index.csv scores) and
                     against the dune-line endpoint rate (model
-                    change_rate_m_yr, as HAT_rate_windows.py vs_duneline/endpoint_net_change
+                    change_rate_m_yr, as rate_windows.py vs_duneline/endpoint_net_change
                     scores).
     RESULTS.md      the two tables, rendered.
 
@@ -27,7 +27,7 @@ USAGE
         # 09-18 re-solve kept 1984-2004, whose lines did not change)
 
     The dune target is read from 5-scr/3-rates/duneline/endpoint/ (2026-09-18),
-    the same stored product HAT_rate_windows.py draws.
+    the same stored product rate_windows.py draws.
 
 Author: Hannah A. Henry, UNC CECL
 ==============================================================================

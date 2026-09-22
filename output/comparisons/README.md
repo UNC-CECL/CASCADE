@@ -23,11 +23,11 @@ scenario_grid/          every preset and management scenario on one page
 
 | folder | script | runs |
 |---|---|---|
-| `hindcast_calibrated/` | `scripts/figure_making/model_output/HAT_hindcast_final_figure_loess.py` | the edgeBE and zeroBE full-management nogroin matrix arms, 1996 and 2010 |
-| `model_vs_observed/` | `scripts/analyze_output/compare_runs/HAT_rate_windows.py` | the edgeBE nogroin matrix plus the dune-solved experiment, `runs_used.csv` |
-| `target_comparison/` | `scripts/analyze_output/compare_runs/HAT_target_comparison.py` | the edgeBE matrix and the 09-18 dune edge solve, 1996 and 2010, `runs_used.csv` |
+| `hindcast_calibrated/` | `scripts/figure_making/model_output/hindcast_final_figure_loess.py` | the edgeBE and zeroBE full-management nogroin matrix arms, 1996 and 2010 |
+| `model_vs_observed/` | `scripts/analyze_output/compare_runs/rate_windows.py` | the edgeBE nogroin matrix plus the dune-solved experiment, `runs_used.csv` |
+| `target_comparison/` | `scripts/analyze_output/compare_runs/target_comparison.py` | the edgeBE matrix and the 09-18 dune edge solve, 1996 and 2010, `runs_used.csv` |
 | `relocation/` | `scripts/hatteras_ms/experiments/HAT_relocation_comparison.py` and the three readers named in its README | each set's `report.txt` header |
-| `scenario_grid/` | `scripts/figure_making/model_output/HAT_scenario_grid.py` | every matrix arm, both periods |
+| `scenario_grid/` | `scripts/figure_making/model_output/scenario_grid.py` | every matrix arm, both periods |
 
 ## Layout rule
 

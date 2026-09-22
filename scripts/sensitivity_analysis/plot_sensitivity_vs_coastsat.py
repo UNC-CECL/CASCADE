@@ -52,7 +52,7 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 import warnings
 warnings.filterwarnings("ignore")
 
-# Same anchor its sibling HAT_plot_sensitivity.py uses, so run_layout -- the
+# Same anchor its sibling plot_sensitivity.py uses, so run_layout -- the
 # one definition of where a run folder keeps its files -- is importable.
 _HERE = Path(__file__).resolve()
 _REPO_ROOT = next(_p for _p in _HERE.parents

@@ -192,7 +192,7 @@ dashed) Hannah chose the fill; then the means as a thin line were a second
 same-coloured line beside the fill's outline, doubled over D1-10 where the
 target IS the raw mean, so a dots candidate was rendered and chosen.
 
-Drawn by `scripts/analyze_output/compare_runs/HAT_rate_windows.py`, which
+Drawn by `scripts/analyze_output/compare_runs/rate_windows.py`, which
 imports the panel drawing and the CoastSat reader from the 5-scr producer, the
 survey dates and dune reader from
 `scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/coastsat_vs_duneline.py`, and

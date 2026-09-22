@@ -30,7 +30,7 @@ OUTPUT   data/hatteras_init/5-scr/3-rates/duneline/endpoint/<start>_<end>/
     domain_endpoint_summary.csv   per domain: n, mean/std/min/max of both
     PROVENANCE.md                 lines, raw files, dates, island summary
     Read through hat_observed_rates.dune_endpoint_csv(start, end, level).
-    HAT_rate_windows.py draws the dune line from here and nowhere else.
+    rate_windows.py draws the dune line from here and nowhere else.
 
 USAGE
     python scripts/input_prep/5-scr/3-rates/duneline/duneline_endpoint.py          # every window

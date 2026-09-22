@@ -1,5 +1,5 @@
 """
-HAT_smoothing_scale.py
+smoothing_scale.py
 ==============================================================================
 The modelled net change in shoreline position against the change projected
 from the CoastSat LRR, with the RATE smoothed at four widths before it is
@@ -78,7 +78,7 @@ OUTPUT  output/comparisons/target_comparison/smoothing_scale/
     runs_used.csv, PROVENANCE.md
 
 USAGE
-    python scripts/analyze_output/compare_runs/HAT_smoothing_scale.py
+    python scripts/analyze_output/compare_runs/smoothing_scale.py
     python ... --windows 0 3 5 10 --n-null 1000
 ==============================================================================
 """
@@ -94,8 +94,8 @@ import pandas as pd
 
 _HERE = Path(__file__).resolve()
 sys.path.insert(0, str(_HERE.parent))
-import HAT_rate_windows as rw  # noqa: E402
-import HAT_target_comparison as tc  # noqa: E402
+import rate_windows as rw  # noqa: E402
+import target_comparison as tc  # noqa: E402
 
 _REPO = rw._REPO
 import matplotlib.pyplot as plt  # noqa: E402
@@ -346,7 +346,7 @@ def figure(values, skill, window, windows, model_key=tc.UNSOLVED):
                  "every LOESS width)")
     # mean_lrr all-NaN draws the frame, grid and village bands with no sign
     # fill -- four curves share this panel, so the blue/red fill is not
-    # available here (the idiom is HAT_target_comparison.draw).
+    # available here (the idiom is target_comparison.draw).
     rw.obs.draw_panel(ax, df.assign(mean_lrr=np.nan, std_lrr=0.0), half,
                       label=True, std=False)
     rw.obs.draw_shoals(ax, label=True)
@@ -502,7 +502,7 @@ def provenance(skill, windows, n_null, runs_used, structure=None):
         "# target_comparison/smoothing_scale - provenance",
         "",
         f"Written {dt.datetime.now():%Y-%m-%d %H:%M} by "
-        "scripts/analyze_output/compare_runs/HAT_smoothing_scale.py "
+        "scripts/analyze_output/compare_runs/smoothing_scale.py "
         "(2026-09-21, Hannah, by interview).",
         "",
         "## The figure",
@@ -537,7 +537,7 @@ def provenance(skill, windows, n_null, runs_used, structure=None):
         "LRR x 14 yr, the same rate in both windows) and the dune line.",
         "",
         "Model sets and runs are `../projected/runs_used.csv`; the "
-        "loaders are `HAT_target_comparison.load_model_sets`, so these are the same "
+        "loaders are `target_comparison.load_model_sets`, so these are the same "
         "runs that folder draws. Interior GIS "
         f"{rw.INTERIOR[0]}-{rw.INTERIOR[1]}, as the run index scores.",
         "",

@@ -7,10 +7,10 @@ Nothing here runs the model. Each script reads finished runs and writes to
 
 ```
 compare_runs/
-    HAT_rate_windows.py      LIVE. Observed vs modelled shoreline-change rate,
+    rate_windows.py      LIVE. Observed vs modelled shoreline-change rate,
                              every window, the three end-solve model sets
                              -> comparisons/model_vs_observed/
-    HAT_compare_runs.py      a general run-vs-run / run-vs-CoastSat tool.
+    compare_runs.py      a general run-vs-run / run-vs-CoastSat tool.
                              RUNS_TO_COMPARE is EMPTY: every example in it is
                              commented out. Fill it before running
                              -> comparisons/<COMPARISON_NAME>/

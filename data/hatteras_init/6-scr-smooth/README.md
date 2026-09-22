@@ -17,7 +17,7 @@ They are named for what they compare now, and resolved through
 `scripts/site_layer/hat_observed_rates.py` (`SMOOTH_METHOD_COMPARISON`,
 `SMOOTH_DSAS_VS_COASTSAT`) like the 5-scr folders. Do not type the paths.
 `method_comparison/03_cascade_inputs/` is read outside its producer, by
-`8-overwash-analysis/HAT_overwash_vs_footprint.py`.
+`8-overwash-analysis/3-vs-footprint/overwash_vs_footprint.py`.
 
 Both folders are gitignored: one run of their producer in
 `scripts/input_prep/6-scr-smooth/` regenerates them.

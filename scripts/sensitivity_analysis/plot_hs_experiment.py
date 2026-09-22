@@ -51,7 +51,7 @@ PROJECT_BASE_DIR = next(_p for _p in _HERE.parents
 if str(_HERE.parent) not in sys.path:
     sys.path.insert(0, str(_HERE.parent))
 
-from HAT_plot_sensitivity import HOUSE_STYLE, panel_label, tidy  # noqa: E402
+from plot_sensitivity import HOUSE_STYLE, panel_label, tidy  # noqa: E402
 
 plt.rcParams.update(HOUSE_STYLE)
 

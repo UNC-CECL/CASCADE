@@ -4,8 +4,8 @@
 
 The two candidate targets and the hindcast, as **net change in position (m)
 over each 14-yr model window**, 1996–2010 and 2010–2024. Built 2026-09-19
-(Hannah, by interview) by `scripts/analyze_output/compare_runs/HAT_target_comparison.py`,
-which reuses `HAT_rate_windows.py`'s loaders, so the observations and runs are
+(Hannah, by interview) by `scripts/analyze_output/compare_runs/target_comparison.py`,
+which reuses `rate_windows.py`'s loaders, so the observations and runs are
 the ones `model_vs_observed/` draws as rates.
 
 | line | what | over 14 yr how |
@@ -55,7 +55,7 @@ distance to the SHORELINE target, −14.8 m against the long-term projection in
 **`smoothing_scale/` (2026-09-21, Hannah, by interview).** Does the grading
 window matter? The 10-domain LOESS the target is built with had never been
 examined, and the `coastsat` → `coastsat_loess` rows in `skill.csv` show it is
-worth 3–4 m of RMSE. `HAT_smoothing_scale.py` sweeps it over raw / 1.5 / 2.5 /
+worth 3–4 m of RMSE. `smoothing_scale.py` sweeps it over raw / 1.5 / 2.5 /
 5.0 km against all three model sets, in two forms (target smoothed and model
 raw, as the runner grades; and both smoothed), each r carried beside the 95th
 percentile of 1000 phase-randomised surrogates of the same model series.
@@ -87,7 +87,7 @@ the two targets.
 
 The dune-line target is the same in both (sub-period: 1997→2009 and
 2009→2023, each scaled to 14 yr). Each version has the layout below.
-`python ... HAT_target_comparison.py --coastsat-target projected|total`
+`python ... target_comparison.py --coastsat-target projected|total`
 (`full` and `subperiod` still work, as the pre-2026-09-21 names).
 
 ```

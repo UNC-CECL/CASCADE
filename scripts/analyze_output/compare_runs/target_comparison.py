@@ -1,5 +1,5 @@
 """
-HAT_target_comparison.py
+target_comparison.py
 ==============================================================================
 Which observation should CASCADE be graded against? The two candidate
 targets, the CoastSat shoreline and the digitized dune line, side by side with
@@ -55,11 +55,11 @@ OUTPUT   output/comparisons/target_comparison/
     <model set>/target_comparison_1996_2010_2024.png (PDF and CAPTIONS.md
     under supporting/)
 
-The loaders are HAT_rate_windows.py's (imported), so the observations and
+The loaders are rate_windows.py's (imported), so the observations and
 runs are exactly the ones model_vs_observed draws as rates.
 
 USAGE
-    python scripts/analyze_output/compare_runs/HAT_target_comparison.py
+    python scripts/analyze_output/compare_runs/target_comparison.py
 ==============================================================================
 """
 from __future__ import annotations
@@ -73,10 +73,11 @@ import pandas as pd
 
 _HERE = Path(__file__).resolve()
 sys.path.insert(0, str(_HERE.parent))
-import HAT_rate_windows as rw  # noqa: E402  (loaders, runs, style constants)
+import rate_windows as rw  # noqa: E402  (loaders, runs, style constants)
 
 _REPO = rw._REPO
-sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr" / "coastsat_vs_duneline"))
+sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr" / "lib"))
+import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
 from coastsat_vs_duneline import beach_width_handles, shade_beach_width  # noqa: E402
 
 import matplotlib.pyplot as plt  # noqa: E402
@@ -602,7 +603,7 @@ CS_SOURCE = {}   # window -> (domain frame, LOESS target frame) when full-period
 
 def load_model_sets():
     """key -> ({window: model frame}, index rows) for the three model sets.
-    Factored out of main 2026-09-21 so HAT_smoothing_scale.py reads exactly
+    Factored out of main 2026-09-21 so smoothing_scale.py reads exactly
     the same runs; it depends on CS_MODE, which must be set first."""
     models = {}
     for key in MODEL_SETS:

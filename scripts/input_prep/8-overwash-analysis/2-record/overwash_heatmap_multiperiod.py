@@ -55,7 +55,12 @@ REPO = next(
     _p for _p in HERE.parents
     if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
-sys.path.insert(0, str(HERE))
+# overwash_data.py is the stage's shared module -- the observation record,
+# SECTIONS, PERIODS and the loaders. It sits in 1-observations/ because that
+# is the step it builds. Anchored on REPO, never counted from HERE (rule 5),
+# so this survives the file changing depth.
+sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "8-overwash-analysis"
+                       / "1-observations"))
 
 from site_layer.hat_figure_style import (C, DOMAIN_AXIS_LABEL, FIG_H_MAX, INK,   # noqa: E402
                               INK_MUTED, _title, apply_style, figsize,

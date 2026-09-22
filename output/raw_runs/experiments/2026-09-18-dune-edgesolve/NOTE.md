@@ -19,7 +19,7 @@ under `experiments/2026-09-16-dune-edgesolve/brackets/`. The 2004-start inputs
 did not change.
 
 **Target:** read from the stored product `5-scr/3-rates/duneline/endpoint/`,
-the same numbers `HAT_rate_windows.py` draws.
+the same numbers `rate_windows.py` draws.
 
 **Driven by** `scripts/input_prep/7-source-sink/2-calibrate/be_dune_edgesolve_loop.py`:
 lockstep steps, stopping when both ends are within 0.01 m/yr of the target.

@@ -7,7 +7,7 @@ WHY THIS REPLACED plot_sensitivity_vs_coastsat.py
     SESSION_DIR and two CoastSat CSV paths retyped at the top of the file before
     every use. Neither the folder layout nor those scripts exist any more.
 
-    This reads the run registry instead. `HAT_hindcast_sensitivity.py` writes a
+    This reads the run registry instead. `hindcast_sensitivity.py` writes a
     manifest line per cell recording the parameter, its value and the directory
     the run landed in; `run_index.csv` carries the skill metrics; each run
     directory carries its own per-domain rates. Nothing is retyped and nothing
@@ -35,9 +35,9 @@ INTERIOR METRICS, NOT ISLAND-WIDE
     island-wide skill partly scores the boundary condition rather than the model.
 
 Usage:
-    python HAT_plot_sensitivity.py --start-year 1984 --preset edgeBE
-    python HAT_plot_sensitivity.py --start-year 2004 --preset edgeBE
-    python HAT_plot_sensitivity.py --start-year 1984 --circularity
+    python plot_sensitivity.py --start-year 1984 --preset edgeBE
+    python plot_sensitivity.py --start-year 2004 --preset edgeBE
+    python plot_sensitivity.py --start-year 1984 --circularity
 
 Author: Hannah A. Henry, UNC CECL
 """
@@ -92,7 +92,7 @@ from cascade_pipeline.run_registry import (  # noqa: E402
     MATRIX_KIND, find_run_dir, load_run_index, sweep_family)
 from cascade_pipeline.plotting.rate_comparison import (  # noqa: E402
     DEFAULT_RATE_COMPARISON, plot_coastsat_overlay)
-from HAT_hindcast_sensitivity import SWEEPS, normalise  # noqa: E402
+from hindcast_sensitivity import SWEEPS, normalise  # noqa: E402
 from HAT_hindcast_config import field_default  # noqa: E402
 
 # Reading order, most informative first. Alphabetical put the relocation axis

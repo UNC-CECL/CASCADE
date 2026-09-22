@@ -1,5 +1,5 @@
 """
-HAT_rate_windows.py
+rate_windows.py
 ==============================================================================
 The four hindcast windows, the model against an observation: the CoastSat
 waterline and the digitised dune line, each with the run whose end domains
@@ -134,7 +134,7 @@ OUTPUT   output/comparisons/model_vs_observed/
                             net-change observation against the model's OLS rate
 
 USAGE
-    python scripts/analyze_output/compare_runs/HAT_rate_windows.py
+    python scripts/analyze_output/compare_runs/rate_windows.py
     python ... --no-sensitivity        # the main level only
 
 Author: Hannah A. Henry, UNC CECL
@@ -185,15 +185,18 @@ def _import_by_path(name, path):
     return mod
 
 
-# The 5-scr producer: panel drawing, colours, chains, the CoastSat reader.
-obs = _import_by_path(
-    "coastsat_lrr_windows",
-    _REPO / "scripts" / "input_prep" / "5-scr" / "CoastSat" / "coastsat_lrr_windows.py")
-# The dune-line producer: survey dates by vintage, the per-domain position.
-dune = _import_by_path(
-    "coastsat_vs_duneline",
-    _REPO / "scripts" / "input_prep" / "5-scr" / "coastsat_vs_duneline"
-    / "coastsat_vs_duneline.py")
+# The 5-scr producers: the panel drawing, colours, chains and CoastSat reader
+# from coastsat_lrr_windows, and the survey dates and per-domain position from
+# coastsat_vs_duneline. Both are resolved by scr_paths, which is the one place
+# that knows where a 5-scr module lives -- these were two hand-built paths
+# naming folders that the 2026-09-22 reorganisation removed, and a stale one
+# does not fail here: spec_from_file_location builds a spec from a path that
+# no longer exists and the error arrives at exec_module.
+sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr" / "lib"))
+import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
+
+import coastsat_lrr_windows as obs  # noqa: E402
+import coastsat_vs_duneline as dune  # noqa: E402
 
 RAW_RUNS = _REPO / "output" / "raw_runs"
 RUN_INDEX = RAW_RUNS / "run_index.csv"
@@ -346,7 +349,7 @@ def load_model(window, spec, model_set, preset=None):
     preset names the source/sink preset the run was filed under; it defaults
     to PRESET (edgeBE), the only one this module's own figures draw. It is a
     parameter so a caller can read the zeroBE arm of the same matrix cell
-    (HAT_target_comparison's ends_unsolved set, 2026-09-21)."""
+    (target_comparison's ends_unsolved set, 2026-09-21)."""
     period = "{}_{}".format(*window)
     if spec is None:
         return None, {"window": period, "model_ends": model_set, "run_name": "",
