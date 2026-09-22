@@ -10,7 +10,7 @@
 #
 # THE LAYOUT, grouped by job (2026-09-18). Before that the records sat beside
 # the forcings built from them, the WIS export inside storms/, and the storm
-# validation in two places (storms/storm_check/, and a validation/ folder
+# validation in two places (storms/storm_check/ -- retired 2026-09-22 -- and a validation/ folder
 # inside a model-input window).
 #
 #     data/hatteras_init/3-env-forcings/
