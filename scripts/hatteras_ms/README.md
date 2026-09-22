@@ -11,7 +11,10 @@ HAT_hindcast_config.py         which run happens, and where the value came
 hat_run.yaml                   from: env > yaml > the default in the module
 HAT_run_all.py                 the batch driver: the matrix, then the sweep
 HAT_hindcast_methods.md        the written method
-HAT_hindcast_plan/             planning notes
+HINDCAST_PLAN.md               planning notes: the order the notebook builds
+                               the run in. Was `HAT_hindcast_plan`, a file
+                               with no extension that this line described as
+                               a folder (2026-09-22)
 
 tools/        read or repair the run record; none of them run the model
 experiments/  one-off studies, each a run-it then plot-it pair

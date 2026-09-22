@@ -24,7 +24,9 @@ Sea level, storms, and the records they are derived from.
                              exists for the full-span sweep
     validation/<window>/     both validators' output, side by side
     figures/                 storm record and panel figures
-    Notes                    the max-duration tests (72 h chosen)
+    PROVENANCE.md            the max-duration tests (72 h chosen); was a
+                             file called `Notes` with no extension until
+                             2026-09-22
 archive/
     storms_superseded_20260914/   benton_storms/, testing_storms/ (the
                                   storm_check validators still read

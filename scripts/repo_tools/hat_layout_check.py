@@ -37,7 +37,13 @@ SKIP_PARTS = {".git", "__pycache__", ".nox", ".venv", "node_modules",
 
 # Rule 1: what counts as data rather than code.
 DATA_SUFFIXES = {".csv", ".npy", ".npz", ".tif", ".tiff", ".geojson", ".png",
-                 ".pdf", ".gif", ".xlsx", ".shp", ".docx"}
+                 ".pdf", ".gif", ".xlsx", ".shp", ".docx",
+                 # .log added 2026-09-22. A 100 kB run log sat in
+                 # scripts/hatteras_ms/ for over a year and nothing reported
+                 # it: a log is a PRODUCT, and products live in output/
+                 # (output/README.md says where). Being gitignored hides it
+                 # from a diff, which is exactly why the check has to see it.
+                 ".log"}
 # A few data-shaped files belong beside code because they ARE code's input in
 # the sense of configuration, or documentation of it.
 DATA_ALLOWED = {"reference_yaml_hatteras.yaml"}
@@ -116,12 +122,28 @@ def walk(root: Path, skip_retired: bool = False):
         yield path
 
 
+# A file with no extension has no suffix to match, so a suffix check cannot
+# see it at all. Two sat in the trees untouched -- `HAT_hindcast_plan` (a
+# planning note the hatteras_ms README described as a FOLDER) and `Notes` (the
+# only record of the storm max-duration test). Both are now typed. These names
+# are the extensionless files that are meant to be here.
+NO_SUFFIX_ALLOWED = {"CURRENT", "LICENSE", "Makefile", "Dockerfile", ".gitignore",
+                     ".gitattributes", "MANIFEST.in", "py.typed"}
+
+
 def rule_1_data_beside_code():
-    """Data files under scripts/."""
+    """Data files under scripts/, and files with no extension at all."""
     out = []
     for path in walk(REPO / "scripts"):
-        if path.is_file() and path.suffix.lower() in DATA_SUFFIXES \
-                and path.name not in DATA_ALLOWED:
+        if not path.is_file():
+            continue
+        if path.name in DATA_ALLOWED or path.name in NO_SUFFIX_ALLOWED:
+            continue
+        if path.suffix.lower() in DATA_SUFFIXES:
+            out.append(path.relative_to(REPO))
+        elif not path.suffix:
+            # Untyped: it renders nowhere, no tool can classify it, and it is
+            # invisible to every check that works by suffix. Give it one.
             out.append(path.relative_to(REPO))
     return out
 
