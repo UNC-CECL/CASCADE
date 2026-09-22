@@ -1,5 +1,5 @@
 r"""
-duneline_vs_coastsat.py
+coastsat_vs_duneline.py
 ==============================================================================
 Does the digitized dune line move with the CoastSat shoreline?
 
@@ -42,7 +42,7 @@ METHOD
     a change between any two years carries no method term.
 
 OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/endpoint_net_change/<start>_<end>/
-         (was 4-comparisons/duneline_vs_coastsat/ until 2026-09-19; the
+         (was 4-comparisons/coastsat_vs_duneline/ until 2026-09-19; the
          alongshore figures are in METRES with the beach-width gap since then)
              scatter_dune_vs_coastsat.png     shoreline vs dune, 1:1
              alongshore_dune_vs_coastsat.png  the two net changes by domain
@@ -55,10 +55,10 @@ OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/endpoint_n
                                               --layout grid for the 2 x 2)
 
 USAGE
-    python duneline_vs_coastsat.py --start-year 1984 --end-year 2004
+    python coastsat_vs_duneline.py --start-year 1984 --end-year 2004
         # the dates come from the stored products
-    python duneline_vs_coastsat.py --grid                 # every window, stacked
-    python duneline_vs_coastsat.py --grid --layout grid   # the 2 x 2 by period
+    python coastsat_vs_duneline.py --grid                 # every window, stacked
+    python coastsat_vs_duneline.py --grid --layout grid   # the 2 x 2 by period
 ==============================================================================
 """
 
@@ -246,7 +246,7 @@ def scatter_figure(dom: pd.DataFrame, out: Path, start: int, end: int,
 Y_TICK = 20.0
 Y_LABEL = "Net change in position (m)"
 # The gap between the two lines: widened solid grey, narrowed hatched. Shared
-# by net_change_1996_2024.py and total_change_vs_duneline.py.
+# by net_change_vs_duneline.py and total_change_vs_duneline.py.
 C_GAP = "0.86"
 C_NARROW = "0.55"
 NARROW_HATCH = "////"
@@ -545,13 +545,13 @@ def main(argv=None) -> int:
         yr = s if key == "start" else e
         stand_in = f" — the {v} line standing in for {yr}" if v != yr else ""
         src = ("**ASSUMED 1 July**; no flight date known for this line"
-               if key in assumed else f"`duneline_vs_coastsat.KNOWN_SURVEY_DATES`")
+               if key in assumed else f"`coastsat_vs_duneline.KNOWN_SURVEY_DATES`")
         date_rows.append(f"| {yr} | {d.date()} | {src}{stand_in} |")
     lines = [
         f"# Dune line vs CoastSat shoreline, {s}-{e} (net change)",
         "",
         f"Written {datetime.now():%Y-%m-%d %H:%M} by "
-        "`scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/duneline_vs_coastsat.py`.",
+        "`scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/coastsat_vs_duneline.py`.",
         "",
         "**Both sides are NET CHANGE between the same two dates** (2026-09-18, "
         "Hannah: the comparison is net position change on both sides). The "

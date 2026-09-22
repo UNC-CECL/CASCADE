@@ -21,7 +21,7 @@ WHAT IS MEASURED
     change of the domain means).
 
     change_m needs no dates. rate_m_yr divides by the interval between the
-    two SURVEY DATES (duneline_vs_coastsat.KNOWN_SURVEY_DATES); a vintage
+    two SURVEY DATES (coastsat_vs_duneline.KNOWN_SURVEY_DATES); a vintage
     with no known date is centred on 1 July of its year and flagged in the
     date_assumed columns and the PROVENANCE -- today that is the 2023 line.
 
@@ -54,7 +54,7 @@ sys.path.insert(0, str(_REPO / "scripts"))
 sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr" / "lib"))
 import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
 
-from duneline_vs_coastsat import DAYS_PER_YEAR, KNOWN_SURVEY_DATES  # noqa: E402
+from coastsat_vs_duneline import DAYS_PER_YEAR, KNOWN_SURVEY_DATES  # noqa: E402
 from site_layer.hat_observed_rates import (  # noqa: E402
     DUNE_ENDPOINT_DOMAIN_FILE, DUNE_ENDPOINT_TRANSECT_FILE, DUNELINE_ENDPOINT_ROOT,
 )

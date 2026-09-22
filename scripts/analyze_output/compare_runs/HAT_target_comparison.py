@@ -76,8 +76,8 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_rate_windows as rw  # noqa: E402  (loaders, runs, style constants)
 
 _REPO = rw._REPO
-sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr" / "duneline_vs_coastsat"))
-from duneline_vs_coastsat import beach_width_handles, shade_beach_width  # noqa: E402
+sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr" / "coastsat_vs_duneline"))
+from coastsat_vs_duneline import beach_width_handles, shade_beach_width  # noqa: E402
 
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.legend_handler import HandlerTuple  # noqa: E402

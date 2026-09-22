@@ -69,7 +69,7 @@ import pandas as pd
 _REPO = next(_p for _p in Path(__file__).resolve().parents
              if (_p / "pyproject.toml").exists())
 sys.path.insert(0, str(_REPO / "scripts"))
-for _sub in ("", "CoastSat", "duneline_vs_coastsat", "total_change_vs_duneline",
+for _sub in ("", "CoastSat", "coastsat_vs_duneline", "total_change_vs_duneline",
              "smoothed_loess7"):
     sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr" / _sub))
 sys.path.insert(0, str(Path(__file__).resolve().parent))

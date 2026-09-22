@@ -1,5 +1,5 @@
 """
-HAT_trajectory_map.py
+shoreline_trajectory_map.py
 ======================
 Geographic maps of Hatteras Island with CASCADE domains coloured by
 shoreline trajectory classification or LRR magnitude.

@@ -7,7 +7,7 @@ Written 2026-09-18 when the bins were rebuilt on the 1996 -> 2010 -> 2024
 chain; it writes beside the table, as every 3-rates product does.
 
 READS    3-rates/coastsat/5yr_bins/<window>/lrr_bins_5yr.csv
-         (coastsat_lrr_5year_bins.py: per transect an OLS over the bin's
+         (coastsat_5yr_bins.py: per transect an OLS over the bin's
          positions, domain MEAN, |rate| > 50 m/yr dropped, bins under 3.75 yr
          dropped)
 DRAWS    one stacked panel per bin, filled blue where the shoreline moved

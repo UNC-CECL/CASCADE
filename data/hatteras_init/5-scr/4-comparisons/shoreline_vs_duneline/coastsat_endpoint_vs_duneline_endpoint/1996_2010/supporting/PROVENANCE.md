@@ -1,6 +1,6 @@
 # Dune line vs CoastSat shoreline, 1996-2010 (net change)
 
-Written 2026-09-22 09:14 by `scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/duneline_vs_coastsat.py`.
+Written 2026-09-22 09:14 by `scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/coastsat_vs_duneline.py`.
 
 **Both sides are NET CHANGE between the same two dates** (2026-09-18, Hannah: the comparison is net position change on both sides). The CoastSat LRR, which this folder also drew until then, is not a like-for-like quantity for two surveys; it stays the model's scoring target in `3-rates/coastsat/lrr/`.
 
@@ -13,8 +13,8 @@ Written 2026-09-22 09:14 by `scripts/input_prep/5-scr/4-comparisons/shoreline_vs
 
 | line | date | source |
 |---|---|---|
-| 1996 | 1997-10-12 | `duneline_vs_coastsat.KNOWN_SURVEY_DATES` — the 1997 line standing in for 1996 |
-| 2010 | 2009-05-30 | `duneline_vs_coastsat.KNOWN_SURVEY_DATES` — the 2009 line standing in for 2010 |
+| 1996 | 1997-10-12 | `coastsat_vs_duneline.KNOWN_SURVEY_DATES` — the 1997 line standing in for 1996 |
+| 2010 | 2009-05-30 | `coastsat_vs_duneline.KNOWN_SURVEY_DATES` — the 2009 line standing in for 2010 |
 
 Survey interval 11.63 yr. Seaward positive in every column.
 

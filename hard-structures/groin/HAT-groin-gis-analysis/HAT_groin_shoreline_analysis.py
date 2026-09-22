@@ -204,7 +204,7 @@ WET_DRY_DATE_COL = "date"
 # Repointed 2026-09-14 at the data tree. gis_data/ held a BYTE-IDENTICAL second
 # copy of this 20 MB file (md5 330d5f32...), so every clone carried it twice and
 # an edit to one would have silently diverged from the other. The data tree is
-# the owner -- HAT_shoreline_inventory.py reads the same file from there -- and
+# the owner -- shoreline_inventory.py reads the same file from there -- and
 # this script already crosses into data/hatteras_init for the CoastSat transect
 # geometry two lines below, so the direction is not new.
 import sys as _sys

@@ -127,7 +127,7 @@ here rather than copied.
 Vintages through `hat_topo_version.DUNE_LINE_FOR_YEAR`; stations from
 `2-brie-offset/raw_offsets/<vintage>_duneline_offset_raw.csv` read as the
 hindcast's end-year target loader reads them; seaward positive; dates from
-`duneline_vs_coastsat.KNOWN_SURVEY_DATES`. The script READS all of this from
+`coastsat_vs_duneline.KNOWN_SURVEY_DATES`. The script READS all of this from
 the stored product `5-scr/3-rates/duneline/endpoint/<window>/` (2026-09-18)
 rather than computing it, so the figures and the stored numbers cannot
 disagree. The 1997, 2009 and 2023 lines were re-digitized on 2026-09-18. Smoothing is the CoastSat target's exact
@@ -195,7 +195,7 @@ target IS the raw mean, so a dots candidate was rendered and chosen.
 Drawn by `scripts/analyze_output/compare_runs/HAT_rate_windows.py`, which
 imports the panel drawing and the CoastSat reader from the 5-scr producer, the
 survey dates and dune reader from
-`scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/duneline_vs_coastsat.py`, and
+`scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/coastsat_vs_duneline.py`, and
 resolves run folders through `cascade_pipeline.run_registry` with the arm
 named explicitly. `--no-sensitivity` draws the main level only.
 

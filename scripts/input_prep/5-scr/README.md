@@ -12,6 +12,7 @@ same way on purpose: a folder here has a twin there.
 | `4-comparisons/` | `4-comparisons/` | one source against another; answers, not inputs |
 | `lib/` | — | modules the scripts share; produces nothing |
 | `tools/` | — | checks and indexes; produces no product of its own |
+| `template/` | — | a bare, standalone version of this process, to hand to colleagues |
 
 The numbers are the order the work runs. An observation is collected, tied to a
 domain, fitted into a rate, and only then compared against something else.
@@ -24,13 +25,13 @@ Nothing in `3-rates/` can run before `2-transect-frame/` has built the lookup.
 ### 1-observations — the record
 
 ```
-shoreline_inventory/HAT_shoreline_inventory.py
+shoreline_inventory/shoreline_inventory.py
     What shoreline data exists across the study area, from all three sources
     (digitized wet-dry lines, NC Coastal Management, CoastSat), how they
     overlap in time, and where the gaps are.
-shoreline_patterns/HAT_shoreline_trajectory_classification.py
+shoreline_patterns/shoreline_trajectory_classification.py
     Classifies each domain's trajectory as stable, eroding or reversing.
-shoreline_patterns/HAT_trajectory_map.py
+shoreline_patterns/shoreline_trajectory_map.py
     The same classification drawn on the island.
 ```
 
@@ -52,63 +53,75 @@ their tables. Run it after whichever product you rebuilt.
 
 ```
 coastsat/
-    lrr/            the OLS rate fit — what the model is graded against
-        coastsat_domain_lrr.py       the fit itself, one window per run
-        coastsat_lrr_windows.py      every window on ONE y axis, so a 2 m/yr
-                                     swing is not drawn as tall as a 7 m/yr one
-        lrr_smoothing_windows.py     the 3 / 5 / 10-domain LOESS on one field
-        lrr_transect_zoom.py         one window at transect resolution, over a
-                                     short reach
-    endpoint/       net change between the +/-6-month means at the dune-line
-        coastsat_endpoint.py         survey dates, so the shoreline and the
-                                     dune line difference like for like
-    5yr_bins/       WHEN inside a window the change happened
-        coastsat_lrr_5year_bins.py   the table
-        coastsat_5yr_bins_figure.py  the figure
-    total_change/   the rate as a DISTANCE. --product total is named for the
-        coastsat_total_change.py     window it was FITTED on; --product
-                                     projected carries a rate onto a window it
-                                     was not fitted on. Writes both.
-    extension/      the same fit beyond the 90 surveyed domains, for the
-        coastsat_extension_lrr.py    Pea Island extension experiment
+    lrr/              the OLS rate fit — what the model is graded against
+        coastsat_domain_lrr.py             the fit itself, one window per run
+        coastsat_lrr_windows.py            every window on ONE y axis, so a
+                                           2 m/yr swing is not drawn as tall
+                                           as a 7 m/yr one
+        coastsat_lrr_smoothing_windows.py  the 3 / 5 / 10-domain LOESS on one
+                                           field
+        coastsat_lrr_transect_zoom.py      one window at transect resolution,
+                                           over a short reach
+    endpoint/         net change between the +/-6-month means at the dune-line
+        coastsat_endpoint.py               survey dates, so the shoreline and
+                                           the dune line differ like for like
+    5yr_bins/         WHEN inside a window the change happened
+        coastsat_5yr_bins.py               the table
+        coastsat_5yr_bins_figure.py        the figure
+    total_change/     the rate as a DISTANCE. --product total is named for the
+        coastsat_total_change.py           window it was FITTED on; --product
+                                           projected carries a rate onto a
+                                           window it was not fitted on.
+    extension/        the same fit beyond the 90 surveyed domains, for the
+        coastsat_extension_lrr.py          Pea Island extension experiment
 duneline/
-    duneline_endpoint.py    End dune line minus start line, per 100 m transect
-                            and per domain. Endpoint, not LRR: this is net
-                            change, and an OLS through the intermediate lines
-                            would not be.
-rates_figures.py            One figure per window, for every product above.
+    duneline_endpoint.py      End dune line minus start line, per 100 m
+                              transect and per domain. Endpoint, not LRR: this
+                              is net change, and an OLS through the
+                              intermediate lines would not be.
+rates_figures.py              One figure per window, for every product above.
 ```
 
 ### 4-comparisons — one source against another
 
 ```
 shoreline_vs_duneline/   does the dune line move with the shoreline?
-    duneline_vs_coastsat.py        the base comparison, net change on both
-                                   sides; also the module the others import
-                                   for the chainage loader
-    total_change_vs_duneline.py    total shoreline change against the dune
-                                   line's measured change, per window
-    net_change_1996_2024.py        the same over 1996-2024 and its two halves
-    smoothed_loess7.py             both curves through a 7-domain LOESS
+    coastsat_vs_duneline.py         the base comparison, net change on both
+                                    sides; also the module the others import
+                                    for the chainage loader
+    total_change_vs_duneline.py     total shoreline change against the dune
+                                    line's measured change, per window
+    net_change_vs_duneline.py       the same over 1996-2024 and its halves
+    smoothed_loess7_vs_duneline.py  both curves through a 7-domain LOESS
 dsas_vs_coastsat/        the two rate sources against each other
-    dsas_vs_coastsat_raw.py          no smoothing, on calendar windows
-    dsas_vs_coastsat_datematched.py  CoastSat anchored on the survey dates
-                                     instead, at +/-30 d and +/-6 months
+    dsas_vs_coastsat_raw.py         no smoothing, on calendar windows
+    dsas_vs_coastsat_datematched.py CoastSat anchored on the survey dates
+                                    instead, at +/-30 d and +/-6 months
 duneline_positions/      where the 1997 / 2009 / 2023 lines actually sat
-    duneline_positions.py            maps, zooms, dune-to-NC-12, beach width
+    duneline_positions.py           maps, zooms, dune-to-NC-12, beach width
 ```
 
 ### lib and tools
 
 ```
-lib/coastsat_lrr.py     load_timeseries, compute_lrr, filter_dates. The one
-                        OLS every CoastSat script uses, so they cannot drift.
-lib/scr_paths.py        where the shared modules live (see below)
-tools/write_windows_md.py         Regenerates data/.../5-scr/WINDOWS.md from
-                                  hat_observed_rates.WINDOW_ROLE.
-tools/coastsat_verify_pipeline.py Consistency checks on the rate outputs:
-                                  NaN audit, domain means, transect counts.
+lib/coastsat_lrr.py            load_timeseries, compute_lrr, filter_dates.
+                               The one OLS every CoastSat script uses, so
+                               they cannot drift apart.
+lib/scr_paths.py               where the shared modules live (see below)
+tools/windows_index.py         regenerates data/.../5-scr/WINDOWS.md from
+                               hat_observed_rates.WINDOW_ROLE
+tools/coastsat_rates_check.py  consistency checks on the rate outputs:
+                               NaN audit, domain means, transect counts
 ```
+
+### template — for people outside this project
+
+`template/shoreline_rates_template.py` is the whole process — load, window,
+fit, screen, group, write — in one standalone file that imports nothing from
+this repository. It is for handing to a colleague starting the same work at
+another site, and it is deliberately not wired into anything here. See
+`template/README.md`, which includes a synthetic dataset with known rates so
+the script can be checked before it is trusted.
 
 ---
 
@@ -120,7 +133,7 @@ loud error naming the ones that are.
 
 **Sibling modules** are resolved through `lib/scr_paths.py`. Twelve scripts
 here import a module from another folder — `rates_figures` for the drawing,
-`duneline_vs_coastsat` for the chainage loader, `coastsat_lrr` for the fit.
+`coastsat_vs_duneline` for the chainage loader, `coastsat_lrr` for the fit.
 Each one carries these two lines:
 
 ```python
@@ -137,6 +150,46 @@ checks that table against disk.
 Every script finds the repository by searching upward for `pyproject.toml`
 (rule 5), so depth is never counted and a file can change folder without
 breaking.
+
+---
+
+## How scripts here are named
+
+    <subject>_<product>[_<variant>].py
+
+A **noun phrase, subject first, no prefix and no verb.** The subject is the
+data source (`coastsat_`, `duneline_`, `dsas_`, `shoreline_`) or, for a
+comparison, both sides in the order the folder reads them
+(`total_change_vs_duneline.py` inside `shoreline_vs_duneline/`).
+
+Three rules fall out of that, and one hard constraint:
+
+1. **A name must stand alone, not lean on its folder.** `coastsat/endpoint/`
+   holds `coastsat_endpoint.py`, not `endpoint.py`. The repetition looks
+   redundant in a path and is not: see the constraint below.
+2. **No dates or years in a file name.** A window belongs in an argument, not
+   a filename — `net_change_1996_2024.py` had to be renamed the moment it grew
+   a second window.
+3. **Name the product, not the method.** `smoothed_loess7_vs_duneline.py` says
+   what it compares; the `loess7` is the variant, and it survives only because
+   it matches the data folder it writes to.
+
+**The constraint: every file name here is also a Python module name, and they
+share one flat namespace.** `scr_paths` puts five folders on `sys.path` at
+once, so two files called `endpoint.py` in different folders would shadow each
+other, and the one that won would depend on import order. File names under
+5-scr must therefore be unique across the whole tree, not merely within a
+folder.
+
+**No `HAT_` prefix**, unlike much of `input_prep/`. Seven files here are
+imported as modules, where `import HAT_rates_figures` reads badly, and the
+repo's importable trees — `site_layer/`, `cascade_pipeline/`, `repo_tools/` —
+carry no prefix either. Settled 2026-09-22, when 23 of 26 files were already
+bare.
+
+`lib/` and `tools/` follow the same rule; `tools/` holds the only names that
+describe a job rather than a product (`windows_index.py`,
+`coastsat_rates_check.py`), because neither produces one.
 
 ---
 

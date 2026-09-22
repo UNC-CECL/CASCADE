@@ -100,7 +100,7 @@ import scr_paths  # noqa: E402,F401  (5-scr sibling modules onto sys.path)
 
 import rates_figures as rf  # noqa: E402  (the 3-rates drawing helpers)
 from rates_figures import cw, plt  # noqa: E402
-from duneline_vs_coastsat import beach_width_handles, shade_beach_width  # noqa: E402
+from coastsat_vs_duneline import beach_width_handles, shade_beach_width  # noqa: E402
 from matplotlib.legend_handler import HandlerTuple  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.patches import Patch  # noqa: E402

@@ -1,5 +1,5 @@
 """
-lrr_transect_zoom.py
+coastsat_lrr_transect_zoom.py
 ==============================================================================
 One window's LRR at TRANSECT resolution over a short reach, with the transect
 itself on the x axis (Hannah, 2026-09-22: "x being the transects instead of
@@ -45,10 +45,10 @@ THE REACH
     same number. --gis takes any span.
 
 USAGE
-    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/lrr_transect_zoom.py
-    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/lrr_transect_zoom.py --window 1996_2024 --gis 28 36
-    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/lrr_transect_zoom.py --target
-    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/lrr_transect_zoom.py --slide
+    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_transect_zoom.py
+    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_transect_zoom.py --window 1996_2024 --gis 28 36
+    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_transect_zoom.py --target
+    python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_transect_zoom.py --slide
 ==============================================================================
 """
 

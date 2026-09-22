@@ -25,7 +25,7 @@ figures share a ±18 m/yr axis taken over GIS 2–90 (GIS 2 reaches about +16
 in the 2020s), and GIS 1 is clipped at the top edge, marked with a triangle
 and labelled with its value (Hannah, 2026-09-18).
 
-Producer: `scripts/input_prep/5-scr/3-rates/coastsat/5yr_bins/coastsat_lrr_5year_bins.py`
+Producer: `scripts/input_prep/5-scr/3-rates/coastsat/5yr_bins/coastsat_5yr_bins.py`
 (tables). Figure: `<window>/lrr_5yr_bins_<window>.png` beside the table, drawn
 by `coastsat_5yr_bins_figure.py`, which `rates_figures.py` calls. The 1984 / 2004 runs of 2026-05/06 are in
 `5-scr/archive/coastsat_5yr_bins/`.

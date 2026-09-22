@@ -7,7 +7,7 @@ these observations to domains.
 
 ```
 shoreline_inventory/
-    HAT_shoreline_inventory.py
+    shoreline_inventory.py
         Cross-source inventory for the whole study area: what exists from each
         source, how the sources overlap in time, and where the gaps are. The
         study area comes from a spatial filter file, so the same script can be
@@ -16,11 +16,11 @@ shoreline_inventory/
         Writes 1-observations/shoreline_inventory/shoreline_position_output/.
 
 shoreline_patterns/
-    HAT_shoreline_trajectory_classification.py
+    shoreline_trajectory_classification.py
         Is a domain eroding steadily, stable, or reversing? Classifies each
         domain's trajectory from the CoastSat time series over 1984-2004,
         2004-2024 and the full record.
-    HAT_trajectory_map.py
+    shoreline_trajectory_map.py
         The same classification, and LRR magnitude, drawn on the island.
         USE_SATELLITE = True wants an Esri basemap and therefore the internet;
         False gives a plain ocean background and works offline.

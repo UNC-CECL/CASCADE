@@ -84,7 +84,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.ticker import MultipleLocator  # noqa: E402
 
-from duneline_vs_coastsat import (DAYS_PER_YEAR, endpoint_by_transect,  # noqa: E402
+from coastsat_vs_duneline import (DAYS_PER_YEAR, endpoint_by_transect,  # noqa: E402
                                   load_chainage)
 from site_layer import hat_observed_rates as obs  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402

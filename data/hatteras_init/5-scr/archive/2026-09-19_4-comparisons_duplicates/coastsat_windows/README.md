@@ -49,4 +49,4 @@ en-dashes. The rates behind these figures are in
 Until 2026-09-18 every figure sat flat in this folder with one shared
 `supporting/`, so the ±8 window figures and the ±7 long-window figure lay
 side by side with nothing to tell them apart. The layout now matches
-`duneline_vs_coastsat/`: one folder per window, the grid at the top.
+`coastsat_vs_duneline/`: one folder per window, the grid at the top.

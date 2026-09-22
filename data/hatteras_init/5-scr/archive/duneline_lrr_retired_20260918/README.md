@@ -21,7 +21,7 @@ window, start and end vintages inclusive through `DUNE_LINE_FOR_YEAR`:
 The Buxton-only clips (1967, 2017, GIS 2-12, ArcGIS exports about a metre
 landward of the shapely build) and the island-wide 1978 line (before every
 window) are not in the fit, so every domain in a window has the same design
-and every line the same method. Dates: `duneline_vs_coastsat.KNOWN_SURVEY_DATES`;
+and every line the same method. Dates: `coastsat_vs_duneline.KNOWN_SURVEY_DATES`;
 the 2023 flight date is unknown and assumed 2023-07-01, flagged in each
 window's PROVENANCE.md.
 

@@ -1,5 +1,5 @@
 """
-write_windows_md.py
+windows_index.py
 ==============================================================================
 Write data/hatteras_init/5-scr/WINDOWS.md from the definitions in
 site_layer.hat_observed_rates, so the table cannot drift from the code.
@@ -14,7 +14,7 @@ coverage grid showing which product actually has which window, which is the
 other question a reader cannot answer by looking.
 
 USAGE
-    python scripts/input_prep/5-scr/tools/write_windows_md.py
+    python scripts/input_prep/5-scr/tools/windows_index.py
 ==============================================================================
 """
 
@@ -69,7 +69,7 @@ def main() -> int:
         "# Which window is which",
         "",
         f"*Written {dt.datetime.now():%Y-%m-%d} by "
-        "`scripts/input_prep/5-scr/tools/write_windows_md.py` from "
+        "`scripts/input_prep/5-scr/tools/windows_index.py` from "
         "`site_layer.hat_observed_rates.WINDOW_ROLE`. Edit the dict, not this "
         "file.*",
         "",
