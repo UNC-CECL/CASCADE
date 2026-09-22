@@ -29,7 +29,26 @@ reading — taking the only record of the one-shot solve with it, and leaving
 `data/hatteras_init/7-source-sink/2-calibrate/prebe/`.
 
 The root of `scripts/` therefore holds **folders and `README.md`, nothing
-else**, and the layout check reports any file that appears there. A module
+else**, and the layout check reports any file that appears there.
+
+**Two kinds of file slipped past this for a year** (found 2026-09-22), because
+the check recognised data by file extension:
+
+* **a log.** `scripts/hatteras_ms/cascade_hindcast.log`, 100 kB, last written
+  2025-08-16. A log is a product, and products live in `output/` —
+  `output/README.md` says which folder. Being gitignored kept it out of every
+  diff, which is precisely why the *check* had to see it. `.log` is now a data
+  suffix.
+* **a file with no extension at all.** `HAT_hindcast_plan` (planning notes,
+  which `hatteras_ms/README.md` described as a *folder*) and
+  `3-storms/Notes` (the only record of the storm max-duration test, where 72 h
+  was chosen). A suffix check cannot see a file that has no suffix. Untyped
+  files under `scripts/` are now reported, against a short allowlist —
+  `CURRENT`, `LICENSE`, `Makefile` and the like.
+
+The lesson generalises: **a rule that works by extension is blind to whatever
+carries none**, and the files it misses are exactly the ones nobody has
+classified. A module
 belongs in `scripts/site_layer/`, a repo tool in `scripts/repo_tools/`, and
 anything that is neither — a snapshot, an export, a copy left behind — belongs
 in the data tree.
