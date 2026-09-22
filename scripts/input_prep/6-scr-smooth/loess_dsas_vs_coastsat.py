@@ -114,7 +114,7 @@ TOWNS = {
 # Products live under data/hatteras_init/<stage>/, beside every other
 # input_prep stage's output; only the scripts live under scripts/. Resolved
 # through hat_observed_rates.py since 2026-09-18, when the folder was renamed
-# from HAT_loess_dsas_vs_coastsat_output/.
+# from loess_dsas_vs_coastsat_output/.
 OUTPUT_DIR = str(_obs.SMOOTH_DSAS_VS_COASTSAT)
 
 # ============================================================
@@ -125,7 +125,7 @@ import sys
 
 # Windows consoles default to cp1252, which cannot encode the arrows and
 # en-dashes in the closing summary -- the run died there after writing every
-# figure. UTF-8 here, matching HAT_loess_method_comparison.py.
+# figure. UTF-8 here, matching loess_method_comparison.py.
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 import numpy as np

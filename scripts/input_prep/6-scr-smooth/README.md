@@ -4,8 +4,12 @@ Takes the per-transect and per-domain LRR tables that `5-scr` produces and
 smooths them along the coast, so the noisy transect signal becomes a curve the
 model can be scored against.
 
-    5-scr/CoastSat/<period>/transect_lrr_full.csv     906 rows, one per transect (~50 m spacing)
-    5-scr/CoastSat/<period>/domain_lrr_summary.csv    90 rows, one per GIS domain
+    5-scr/3-rates/coastsat/lrr/<window>/transect_lrr_full.csv     906 rows, one per transect (~50 m spacing)
+    5-scr/3-rates/coastsat/lrr/<window>/domain_lrr_summary.csv    90 rows, one per GIS domain
+
+(Both sat under `5-scr/CoastSat/<period>/` until 2026-09-18. A rate fit spans
+an interval, so the folder is a WINDOW, `<start>_<end>` - rule 2 of
+`ORGANIZATION.md`.)
 
 **Nothing in this stage writes a model input.** It produced a *decision* -
 smooth transects first, then average to domains, at a 7-10 domain window - and
@@ -16,18 +20,21 @@ run. See "What the hindcast actually runs" below.
 ## The stage
 
 ```
-HAT_loess_method_comparison.py   CURRENT. Transect-first vs domain-first smoothing.
-HAT_loess_dsas_vs_coastsat.py    Side question: DSAS vs CoastSat as sources.
-hindcast_loess_snapshot/         Read-only copy of the module the runs use.
-old_smoothing/                   The lineage, v1-v4, provenance only.
+loess_method_comparison.py   CURRENT. Transect-first vs domain-first smoothing.
+loess_dsas_vs_coastsat.py    Side question: DSAS vs CoastSat as sources.
+superseded_20260902/         The lineage, v1-v4, provenance only.
 ```
 
 Both scripts run from anywhere - every path is anchored on the `pyproject.toml`
 at the repo root, not typed as an absolute literal.
 
-Every script here is `HAT_loess_<what it compares>`, matching the `HAT_` prefix
-used across `0-elevation`, `3-env-forcings`, `4-mgmt-forcings` and
-`7-source-sink`. Each writes its products to a folder under
+Every script here is `loess_<what it compares>`. The `HAT_` prefix they carried
+until 2026-09-22 was dropped to match `5-scr`, the stage this one reads from:
+the two shoreline stages are read together, and a reader should not have to
+remember that one spells its scripts differently. That does leave these two as
+the only `input_prep` stages without the prefix - `0-elevation`,
+`3-env-forcings`, `4-mgmt-forcings` and `7-source-sink` still carry it on 46 of
+their 50 active scripts. Each script writes its products to a folder under
 `data/hatteras_init/6-scr-smooth/` named for what it compares
 (`method_comparison/`, `dsas_vs_coastsat/`; they were `<script name>_output/`
 until 2026-09-18), resolved through `site_layer/hat_observed_rates.py` - scripts live under
@@ -41,7 +48,7 @@ en-dashes, and a cp1252 Windows console cannot encode those: the DSAS script
 used to die in its closing summary *after* writing every figure, which looks
 like a failed run that had in fact finished.
 
-### HAT_loess_method_comparison.py
+### loess_method_comparison.py
 
 The one that settled the method. Runs **both** smoothers on every call:
 
@@ -101,11 +108,11 @@ hindcast scores against the 10-domain curve. Its `cs_lrr_smooth_*` columns are
 blank across domains 1-10 like everything else; the raw columns are complete.
 Treat it as a table to read, not as an input to a run.
 
-### HAT_loess_dsas_vs_coastsat.py
+### loess_dsas_vs_coastsat.py
 
 A different question - not method, but **source**: does DSAS agree with CoastSat?
 It runs on the older **1978-1997 / 1997-2019** period pair (from
-`5-scr/CoastSat/old_time_periods/`), domain-level only, at a fixed
+`5-scr/archive/coastsat_lrr_superseded_20260810/`), domain-level only, at a fixed
 `LOESS_FRAC = 0.15`. Not part of the 1984-2024 lineage; keep the period
 difference in mind before reading its figures next to the others. The legends
 name the periods and nothing else - they used to say "Calibration Period" and
@@ -171,24 +178,22 @@ this stage chose, configured as:
 transects and only the result is truncated across GIS 1-10, so the southern
 transects still pull the values just north of the cut.
 
-`hindcast_loess_snapshot/coastsat_loess.py` is a read-only copy of that module,
-kept here so this folder shows the version the method ended on. It is never
-imported. After editing the live module, refresh it:
+**Read `scripts/cascade_pipeline/coastsat_loess.py` for what the runs do.**
+There is no copy of it in this folder any more.
 
-    python - <<'PY'
-    import pathlib
-    live = pathlib.Path("scripts/cascade_pipeline/coastsat_loess.py")
-    snap = pathlib.Path("scripts/input_prep/6-scr-smooth/hindcast_loess_snapshot/coastsat_loess.py")
-    banner = snap.read_bytes().split(b"\n")[:14]
-    snap.write_bytes(b"\n".join(banner) + b"\n" + live.read_bytes())
-    PY
+`hindcast_loess_snapshot/coastsat_loess.py` held one until 2026-09-22. It
+called itself a read-only mirror, and keeping it accurate depended on someone
+refreshing it by hand after every edit to the live module. Nobody did: by the
+time it was removed it was 70 lines and twenty days behind, and nothing in the
+tree could tell. A copy that drifts silently is worse than no copy, because it
+answers the question wrongly instead of sending you to the source.
 
-and update the commit named in its banner. To check whether it has drifted:
+The `method_comparison/` figures were produced against the 2026-09-02 version,
+if you need to know exactly what they ran on:
 
-    diff <(tail -n +15 hindcast_loess_snapshot/coastsat_loess.py) \
-         ../../cascade_pipeline/coastsat_loess.py
+    git show f0b64cf1:scripts/input_prep/6-scr-smooth/hindcast_loess_snapshot/coastsat_loess.py
 
-## old_smoothing/ - how the method got here
+## superseded_20260902/ - how the method got here
 
 Provenance only; none of these run against the current tree (their paths still
 name `input_preperation`). Oldest first:
@@ -199,10 +204,10 @@ likely, and the description as the reliable part.
 
 | file | was | what it added |
 |---|---|---|
-| `HAT_loess_v1_domain_only.py` | `coastsat_smoothed_single LOESS.py` | The start. Domain-averaged only, one hardcoded `frac = 0.111`, no sensitivity. |
-| `HAT_loess_v2_transect_mode_switch.py` | `coastsat_smoothed_transect_domain_dottedline.py` | First transect-first implementation, behind a hand-set `SMOOTHING_MODE` switch. |
-| `HAT_loess_v3_window_sensitivity.py` | `coastsat_smoothed_final.py` | Window sizes expressed in *domains* rather than a raw frac, plus `window_comparison.png`. Still domain-only. Named "final" - it was not. |
-| `HAT_loess_v4_both_modes.py` | `coastsat_smoothed_transect_domain.py` | Drops the switch - both modes every run, windows in km. Tested 5/6/7/8 domains. No method-comparison figure yet. |
+| `loess_v1_domain_only.py` | `coastsat_smoothed_single LOESS.py` | The start. Domain-averaged only, one hardcoded `frac = 0.111`, no sensitivity. |
+| `loess_v2_transect_mode_switch.py` | `coastsat_smoothed_transect_domain_dottedline.py` | First transect-first implementation, behind a hand-set `SMOOTHING_MODE` switch. |
+| `loess_v3_window_sensitivity.py` | `coastsat_smoothed_final.py` | Window sizes expressed in *domains* rather than a raw frac, plus `window_comparison.png`. Still domain-only. Named "final" - it was not. |
+| `loess_v4_both_modes.py` | `coastsat_smoothed_transect_domain.py` | Drops the switch - both modes every run, windows in km. Tested 5/6/7/8 domains. No method-comparison figure yet. |
 
 The current script is that last one plus the method-comparison plots and the
 5/7/10 domain window set that the hindcast's `(7, 10)` came from.

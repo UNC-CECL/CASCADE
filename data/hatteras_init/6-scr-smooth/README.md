@@ -11,8 +11,8 @@ dsas_vs_coastsat/     CoastSat against DSAS, both smoothed, on the retired
                       1978-1997 and 1997-2019 windows
 ```
 
-Until 2026-09-18 these were `HAT_loess_method_comparison_output/` and
-`HAT_loess_dsas_vs_coastsat_output/`, named after the scripts that made them.
+Until 2026-09-18 these were `loess_method_comparison_output/` and
+`loess_dsas_vs_coastsat_output/`, named after the scripts that made them.
 They are named for what they compare now, and resolved through
 `scripts/site_layer/hat_observed_rates.py` (`SMOOTH_METHOD_COMPARISON`,
 `SMOOTH_DSAS_VS_COASTSAT`) like the 5-scr folders. Do not type the paths.

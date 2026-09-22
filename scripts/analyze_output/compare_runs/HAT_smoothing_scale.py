@@ -163,7 +163,7 @@ def field_structure(window, windows):
     wiggle that is plainly visible on the figure reads as a few per cent of it
     and the percentage badly undersells the effect (Hannah caught this
     2026-09-21, comparing against the 1984-2004 panels of
-    input_prep/6-scr-smooth/HAT_loess_method_comparison.py).
+    input_prep/6-scr-smooth/loess_method_comparison.py).
 
     Returns a dict, or None when the window's LRR has not been built.
     """
@@ -445,7 +445,7 @@ def structure_section(struct, windows):
         "m/yr from 1984-2004 -- less than half. `projected_vs_model_<window>.png` then "
         "projects over 14 yr rather than 20, which halves the apparent difference "
         "again. So the near-overlapping curves there and the obvious smoothing in "
-        "`input_prep/6-scr-smooth/HAT_loess_method_comparison.py` are the SAME LOESS on "
+        "`input_prep/6-scr-smooth/loess_method_comparison.py` are the SAME LOESS on "
         "different fields, not a difference in method.",
         "",
         "### It is still not denoising, for this target",
