@@ -322,7 +322,7 @@ OFFSET_COLUMN = 0              # for multi-year raw_offset files, which column t
 PRODUCT_YEAR = year_for_product(TOPO_PRODUCT, strict=False)
 
 # Plan-view canvas, reproducing the ABSOLUTE placement of
-# HAT_initialization_figures.py (island_<year>_absolute.png) exactly:
+# initialization_figures.py (island_<year>_absolute.png) exactly:
 #   offset_cells = round(offset_m / 10); each domain's topo row 0 (ocean side)
 #   lands on canvas row = offset_cells; alongshore flipped with np.fliplr.
 SAVE_ISLAND_PLAN_FIG = True
@@ -2555,7 +2555,7 @@ def _build_island_canvas(recs, offset_m_by_domain, mode):
 def island_plan_figure(summary: list, offsets: dict, run_dir: Path) -> None:
     """
     Plan view of the processed dune + interior for domains 1-90 at the measured
-    offsets, on the terrain ramp HAT_initialization_figures.py used until
+    offsets, on the terrain ramp initialization_figures.py used until
     2026-09-17 (see _island_norm); that figure is now in elevation classes.
 
     ONE FIGURE PER CROSS-SHORE MODE, at PRODUCT_YEAR's offsets only. It used to

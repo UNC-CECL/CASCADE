@@ -54,7 +54,7 @@ ROAD PLACEMENT IS VERIFIED AGAINST THE MODEL, NOT ASSERTED
     dune crest.
 
 Usage:
-    python HAT_planview_evolution_gif.py <run_directory> [--fps 3] [--out PATH]
+    python planview_evolution_gif.py <run_directory> [--fps 3] [--out PATH]
 
 Author: Hannah A. Henry, UNC CECL
 """

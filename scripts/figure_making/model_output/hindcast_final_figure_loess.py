@@ -53,7 +53,7 @@ ALSO ADDED FOR PRESENTATION
     features without a separate map.
 
 Usage:
-    python HAT_hindcast_final_figure_loess.py [--preset edgeBE|zeroBE]
+    python hindcast_final_figure_loess.py [--preset edgeBE|zeroBE]
 
 ON THE 1996 -> 2010 -> 2024 CHAIN since 2026-09-18, nogroin arm, edgeBE by
 default. calibBE is kept in PRESETS but is not solved on this chain.

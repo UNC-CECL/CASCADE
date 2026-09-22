@@ -1433,7 +1433,7 @@ LRR_R2_FLOOR = 0.50
 # `output.make_gifs: false` in hat_run.yaml empties this list rather than
 # skipping the section 12 call. The shoreline matrix .npy is written by that
 # same call, OUTSIDE the job loop, and section 12.3's paired groin baseline
-# and HAT_scenario_grid.py both read it -- so short-circuiting the call would
+# and scenario_grid.py both read it -- so short-circuiting the call would
 # cost the run its matrix, while an empty job list costs only the animations.
 GIF_JOBS = [
     dict(range="real", mode="displacement"),

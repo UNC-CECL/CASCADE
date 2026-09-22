@@ -34,7 +34,11 @@ from cascade_pipeline.annotations import (
     add_geographic_annotations,
     annotation_legend_handles,
 )
-from cascade_pipeline.coastsat_loess import DEFAULT_LOESS, splice_loess_with_raw_south
+from cascade_pipeline.coastsat_loess import (
+    DEFAULT_LOESS,
+    compute_domain_means,
+    splice_loess_with_raw_south,
+)
 from cascade_pipeline.domains import DEFAULT_DOMAINS
 
 # `scripts/` is on sys.path already -- cascade_pipeline lives inside it, so
@@ -78,6 +82,15 @@ class RateComparisonConfig:
             The modelled curve's colour is NOT here: it is the site config's
             `AnnotationConfig.model_color` (HATTERAS_ANNOTATIONS defines the
             orange), which is the single authority for it.
+        plot_domain_means: Draw the UNSMOOTHED per-domain mean of the
+            transect rates under the LOESS curve, the whole island (Hannah,
+            2026-09-22). Without it the only observed curve on a model figure
+            is the smoothed one, and a reader cannot tell a real alongshore
+            feature from one the 5 km window flattened -- the observation
+            figures beside these (rates_figures.lrr_figures) draw the same
+            two curves, so the two products no longer disagree.
+        domain_mean_lw, domain_mean_alpha: Its weight; thinner and fainter
+            than the LOESS it underlies, in the same colour as that window.
         plot_raw_lrr: Show the transect scatter at all.
         raw_lrr_southern_only: True -> scatter only for the domains where
             LOESS is suppressed (D1-loess_config.skip_southern_domains).
@@ -97,6 +110,9 @@ class RateComparisonConfig:
     window_color_default: str = "#4A7C8E"
     window_styles: tuple = ((1.6, "-", 1.00), (1.8, "-", 1.00))
     raw_color: str = "#5BA3C9"
+    plot_domain_means: bool = True
+    domain_mean_lw: float = 0.7
+    domain_mean_alpha: float = 0.55
     plot_raw_lrr: bool = True
     raw_lrr_southern_only: bool = True
     plot_reference_period: bool = False
@@ -106,6 +122,19 @@ class RateComparisonConfig:
 
 
 DEFAULT_RATE_COMPARISON = RateComparisonConfig()
+
+
+def coastsat_domain_mean(cs):
+    """(gis ids, unsmoothed per-domain mean rate) for one CoastSat series.
+
+    The plain mean of the transect LRRs in each 500 m domain -- what
+    domain_lrr_summary.csv holds -- recomputed from the same transect arrays
+    the LOESS is fitted to so the two curves on a figure are the same data
+    two ways, not two files.
+    """
+    dom = cs["transect_domains"]
+    return compute_domain_means(dom, cs["transect_rates"],
+                                int(np.min(dom)), int(np.max(dom)))
 
 
 def plot_coastsat_overlay(ax, cs_series, loess_config, config, x_transform, gis_x_transform=None):
@@ -143,6 +172,14 @@ def plot_coastsat_overlay(ax, cs_series, loess_config, config, x_transform, gis_
             raw_alpha = config.raw_scatter_alpha if is_active else config.raw_scatter_alpha * 0.35
             ax.scatter(x, cs["transect_rates"], color=config.raw_color,
                        s=config.raw_scatter_size, alpha=raw_alpha, zorder=1, linewidths=0)
+        if config.plot_domain_means:
+            mean_x, mean_y = coastsat_domain_mean(cs)
+            if len(mean_x):
+                ax.plot(gis_x_transform(mean_x), mean_y,
+                        color=config.window_colors.get(widest_win,
+                                                       config.window_color_default),
+                        lw=config.domain_mean_lw, zorder=2,
+                        alpha=config.domain_mean_alpha * (1.0 if is_active else 0.40))
         for idx, win in enumerate(cs["windows"]):
             cs_color = config.window_colors.get(win["window"], config.window_color_default)
             lw_base, ls, alpha_factor = (
@@ -475,6 +512,21 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
                            ls="none", alpha=config.raw_scatter_alpha, label=raw_lbl)
                 )
 
+        if config.plot_domain_means:
+            mean_x, mean_y = coastsat_domain_mean(cs)
+            if len(mean_x):
+                mean_c = config.window_colors.get(widest_win,
+                                                  config.window_color_default)
+                mean_a = config.domain_mean_alpha * (1.0 if is_active else 0.40)
+                mean_lbl = f"{cs['label']} — domain mean (unsmoothed)"
+                ax.plot(mean_x, mean_y, color=mean_c, lw=config.domain_mean_lw,
+                        alpha=mean_a, zorder=3.5,
+                        label=mean_lbl if is_active else None)
+                if is_active:
+                    data_handles.append(
+                        Line2D([0], [0], color=mean_c, lw=config.domain_mean_lw,
+                               alpha=mean_a, label=mean_lbl)
+                    )
         for idx, win in enumerate(cs["windows"]):
             cs_color = config.window_colors.get(win["window"], config.window_color_default)
             lw_base, ls, alpha_factor = (
@@ -537,6 +589,11 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
     all_vals = np.concatenate(
         [real_rate] + [w["smoothed"][np.isfinite(w["smoothed"])]
                        for cs in cs_series for w in cs["windows"]]
+        # The unsmoothed means swing wider than the LOESS at every peak
+        # (GIS 68, 1996-2010: +5.1 against +0.1), so a bound locked to the
+        # smoothed curves alone would cut the new line off (2026-09-22).
+        + ([coastsat_domain_mean(cs)[1] for cs in cs_series]
+           if config.plot_domain_means else [])
     )
     ymin, ymax = all_vals.min(), all_vals.max()
     ypad = (ymax - ymin) * 0.06

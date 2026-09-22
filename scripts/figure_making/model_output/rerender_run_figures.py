@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 r"""
-HAT_rerender_run_figures.py
+rerender_run_figures.py
 ==============================================================================
 Redraw a finished run's figures WITHOUT re-running the model.
 
@@ -39,10 +39,10 @@ WHAT IT NEVER TOUCHES
     the ones it can rebuild.
 
 USAGE
-    python HAT_rerender_run_figures.py --dry-run
-    python HAT_rerender_run_figures.py --arm matrix/1984_2004/calibBE
-    python HAT_rerender_run_figures.py --match "*calibBE*groin" --gifs
-    python HAT_rerender_run_figures.py --run-dir output/raw_runs/.../HAT_...
+    python rerender_run_figures.py --dry-run
+    python rerender_run_figures.py --arm matrix/1984_2004/calibBE
+    python rerender_run_figures.py --match "*calibBE*groin" --gifs
+    python rerender_run_figures.py --run-dir output/raw_runs/.../HAT_...
 ==============================================================================
 """
 from __future__ import annotations

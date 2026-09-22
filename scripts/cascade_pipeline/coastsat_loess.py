@@ -141,6 +141,42 @@ def load_transect_data(dataset, domains=DEFAULT_DOMAINS):
     return domain_ids, lrr_values, along_coast_m
 
 
+def loess_transect_values(along_coast_m, lrr, window_domains,
+                          domains=DEFAULT_DOMAINS):
+    """The LOESS itself: one smoothed value per TRANSECT, before any domain
+    averaging.
+
+    Factored out of loess_smooth_transect_to_domains (2026-09-22) so a figure
+    can draw the smoother at the resolution it is actually fitted at without a
+    second copy of the frac rule. That function now calls this and aggregates
+    the result, so there is one implementation and the drawn curve cannot
+    drift from the graded one.
+
+    Args:
+        along_coast_m, lrr: Per-transect arrays from load_transect_data.
+        window_domains: LOESS window width, in domain units.
+        domains: DomainGeometry; only domain_spacing_m is used.
+
+    Returns:
+        (smoothed, frac): smoothed is a per-transect array, NaN where lrr is,
+        or None when fewer than 5 transects have a rate at all.
+    """
+    window_km = window_domains * domains.domain_spacing_m / 1000.0
+    spacing_m = estimate_transect_spacing(along_coast_m)
+    n = len(along_coast_m)
+    frac = float(np.clip((window_km * 1000.0 / spacing_m) / n, 0.02, 1.0))
+
+    valid = np.isfinite(lrr)
+    if valid.sum() < 5:
+        print(f"  WARNING: Too few valid transects ({valid.sum()}) - skipping LOESS")
+        return None, frac
+
+    result = lowess(lrr[valid], along_coast_m[valid], frac=frac, return_sorted=True)
+    smoothed = np.full(n, np.nan)
+    smoothed[valid] = np.interp(along_coast_m[valid], result[:, 0], result[:, 1])
+    return smoothed, frac
+
+
 def loess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_domains,
                                       domains=DEFAULT_DOMAINS):
     """Apply LOESS at transect resolution, then aggregate to domain resolution.
@@ -155,19 +191,10 @@ def loess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_doma
         the domain-averaged smoothed LRR (m/yr), and the LOESS frac used
         (for logging). (None, None, frac) if fewer than 5 valid transects.
     """
-    window_km = window_domains * domains.domain_spacing_m / 1000.0
-    spacing_m = estimate_transect_spacing(along_coast_m)
-    n = len(along_coast_m)
-    frac = float(np.clip((window_km * 1000.0 / spacing_m) / n, 0.02, 1.0))
-
-    valid = np.isfinite(lrr)
-    if valid.sum() < 5:
-        print(f"  WARNING: Too few valid transects ({valid.sum()}) - skipping LOESS")
+    smoothed_t, frac = loess_transect_values(along_coast_m, lrr, window_domains,
+                                             domains=domains)
+    if smoothed_t is None:
         return None, None, frac
-
-    result = lowess(lrr[valid], along_coast_m[valid], frac=frac, return_sorted=True)
-    smoothed_t = np.full(n, np.nan)
-    smoothed_t[valid] = np.interp(along_coast_m[valid], result[:, 0], result[:, 1])
 
     dom_agg = (pd.DataFrame({"domain": domain_ids, "smoothed": smoothed_t})
                .groupby("domain")["smoothed"].mean()

@@ -5,7 +5,7 @@ looking. It was sixteen folders named after the script or the occasion, with no
 map and 1212 output files mixed into the code.
 
 ```
-island/        the island as the model starts it; HAT_study_area_figures.py draws
+island/        the island as the model starts it; study_area_figures.py draws
                the generic site figures (study area, domain framework, one domain)
 management/    NC-12 and nourishment: the timeline, the rules, the investigation
                (diagnose_road_drowning.py retired to management/superseded_20260918/)
@@ -16,8 +16,8 @@ model_output/  a finished run's arrays, and the cross-run figures: the
                hindcast result, the scenario grid, the GIS 11 drowning
                figure, the plan-view gif and the run re-renderer (from
                scripts/hatteras_ms/figures/, 2026-09-18)
-tools/         HAT_figure_index.py (writes output/figures/README.md),
-               HAT_clip_nc_coast.py (rebuilds the NC coast map layer), a
+tools/         figure_index.py (writes output/figures/README.md),
+               clip_nc_coast.py (rebuilds the NC coast map layer), a
                colour picker and an .npy viewer
 STYLE.md       the house style in words, written by write_style_sheet() in
                scripts/site_layer/hat_figure_style.py
@@ -43,10 +43,10 @@ model_output/superseded_20260918/   the two 1978-1997 gif scripts; see WHY.md
 
 A cross-run figure that is finished for the manuscript is ALSO written to its
 subject folder, in the house style, by the same run of the same script, so the
-two copies cannot drift: `HAT_scenario_grid.py` writes
+two copies cannot drift: `scenario_grid.py` writes
 `output/figures/shoreline/scenario_grid.png` beside its `comparisons/` copy.
-`HAT_hindcast_final_figure_loess.py` writes `shoreline/hindcast_<preset>.png`,
-and `HAT_gis11_relocation_drown_figure.py` writes
+`hindcast_final_figure_loess.py` writes `shoreline/hindcast_<preset>.png`,
+and `gis11_relocation_drown_figure.py` writes
 `management/gis11_relocation_drown.png`. Both were redrawn for the house-style
 column on 2026-09-18, and each has a `PUBLISH` switch to hold a figure back
 while its layout is broken.
@@ -60,7 +60,7 @@ until 2026-09-18.
 
 `output/figures/README.md` is a generated index of all of them: figure, what it
 shows, and the script that draws it. Re-run
-`scripts/figure_making/tools/HAT_figure_index.py` after adding a figure. A
+`scripts/figure_making/tools/figure_index.py` after adding a figure. A
 figure with a dash in the "shows" column has no caption recorded, and one with
 a dash under "drawn by" is an orphan nothing in this tree can reproduce.
 
@@ -87,3 +87,21 @@ Three sets retired together, none deleted:
 The Pea Island scripts moved to `scripts/other_ms/pea_island_ms/`. They are a
 **different site**, and `other_ms/` already held three manuscripts. Keeping them
 here made the Hatteras figure tree look twice as large as it is.
+
+## Naming
+
+Active scripts here carry no `HAT_` prefix. The 15 that did were renamed on
+2026-09-22, when `figure_making` was the last folder still inconsistent with
+itself: `management/` and `model_output/` were fully prefixed while
+`shoreline/dsas/` and most of `shoreline/` were not, so the same folder
+answered the question two ways.
+
+**Retirement folders are frozen.** The `superseded_*/` trees keep whatever
+names they had; only a reference to a script that is still live was updated in
+them, so their WHY.md files still point at something real. Renaming a retired
+file edits a record for no gain.
+
+Environment variables keep `HAT_` everywhere in this repo: they share a
+namespace with every other program on the machine, which is what a prefix is
+for. See `scripts/input_prep/README.md` for which stages are bare and which
+are not.

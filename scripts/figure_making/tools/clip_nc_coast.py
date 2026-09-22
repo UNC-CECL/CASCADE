@@ -1,10 +1,10 @@
 """
-HAT_clip_nc_coast.py
+clip_nc_coast.py
 ==============================================================================
 Rebuild data/hatteras_init/map_elements/nc_coast_80k/ from the NC 1:80k
 coastline on the D: GIS drive.
 
-    python scripts/figure_making/tools/HAT_clip_nc_coast.py
+    python scripts/figure_making/tools/clip_nc_coast.py
 
 WHY
     The overwash maps drew the coast straight off

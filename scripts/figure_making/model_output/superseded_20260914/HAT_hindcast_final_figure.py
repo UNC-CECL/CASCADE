@@ -9,7 +9,7 @@ THE FIGURE
     Everything on it is one configuration -- calibBE source/sink, full
     management, groin on at the fitted (M, f) -- because this figure answers
     "how well does the calibrated model reproduce the observed shoreline?"
-    and nothing else. `HAT_scenario_grid.py` is the figure for comparing
+    and nothing else. `scenario_grid.py` is the figure for comparing
     presets and scenarios; overlaying those here would turn a result into a
     contrast and bury it.
 
