@@ -37,6 +37,6 @@ logs/                                      one log per run
 RESULTS.md                                 the solved pairs and the skill tables
 ```
 
-Solve arithmetic: `HAT_be_edge_domain_solve.py --target duneline
+Solve arithmetic: `be_edge_domain_solve.py --target duneline
 --dune-smooth {raw,mean3} --estimator endpoint`, one `--kind` and `--tag`
 per run.

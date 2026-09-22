@@ -111,7 +111,7 @@ from site_layer.hat_observed_rates import lrr_csv                # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_PERIODS     # noqa: E402
 
 LOESS_PATH = (PROJECT_BASE_DIR / "scripts" / "input_prep" / "7-source-sink"
-              / "2-calibrate" / "HAT_be_zone_residual_fit.py")
+              / "2-calibrate" / "be_zone_residual_fit.py")
 
 # THE CANONICAL CHAIN, 1996 -> 2010 -> 2024 (moved from 1984/2004 on
 # 2026-09-18). Ends come from HATTERAS_PERIODS. The full-management arm is

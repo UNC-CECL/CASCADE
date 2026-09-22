@@ -339,7 +339,7 @@ HATTERAS_PERIODS = {
 #
 # Moved here from HAT_hindcast_1984_2024.py so the notebook and the
 # run script read the same numbers. data/hatteras_init/7-source-sink/4-export/
-# holds copies GENERATED from these by HAT_export_be_calibration.py; the older
+# holds copies GENERATED from these by export_be_calibration.py; the older
 # partial copies that disagreed (the 2004 one truncated mid-dict) are under
 # 7-source-sink/archive/. These are the ones that have been run.
 
@@ -381,7 +381,7 @@ HATTERAS_BE_EDGE_DOMAINS = (HATTERAS_DOMAINS.first_gis_id,
 # ringing into the residual and calling it background erosion.
 #
 # Regenerate with scripts/input_prep/7-source-sink/2-calibrate/
-# HAT_be_zone_residual_fit.py; GIS 1 and 90 are NOT taken from its
+# be_zone_residual_fit.py; GIS 1 and 90 are NOT taken from its
 # output, which writes them as 0.0 -- they stay the separately solved
 # buffer-cell values below.
 #
@@ -422,7 +422,7 @@ HATTERAS_BE_EDGE_DOMAINS = (HATTERAS_DOMAINS.first_gis_id,
 # it mirrors the splice the figure already makes.
 #
 # BASE RUN. edgeBE / road_bdm / groin off, per period -- the same run
-# HAT_be_zone_residual_fit.py derives the interior residual from.
+# be_zone_residual_fit.py derives the interior residual from.
 #
 # WHY GROIN OFF. Groin-off is a CHOICE, and it is the right one: the groin is
 # a structure whose
@@ -730,7 +730,7 @@ HATTERAS_BE_EDGE_DOMAINS = (HATTERAS_DOMAINS.first_gis_id,
 # WHAT CLOSED, AND WHAT DID NOT. D83-D88 and D72-D74 -- contiguous, same-signed
 # -- dominated passes 1 and 2 and are now EXACTLY 0.0 in both periods. What
 # remains is D8 +0.9 against D10 -0.9 across a zero at D9, plus isolated single
-# domains at D22 and D32. HAT_be_zone_residual_fit.py:150 predicts precisely
+# domains at D22 and D32. be_zone_residual_fit.py:150 predicts precisely
 # this: "a contiguous same-signed block of corrections passes at g ~ 0.8-1.2,
 # while a pattern that alternates sign at the grid scale is damped to g ~ 0.1."
 # The measured 10% IS that g.
@@ -904,9 +904,9 @@ HATTERAS_BE_EDGE_DOMAINS = (HATTERAS_DOMAINS.first_gis_id,
 # (Period 2's zeroBE base run reproduced the archived one to 2e-4 m/yr, so its
 # inputs were verified unchanged rather than assumed.)
 #
-# METHOD. Documented in HAT_be_zone_residual_fit.py: solve the two locked
+# METHOD. Documented in be_zone_residual_fit.py: solve the two locked
 # ends by Newton steps on a secant, and the interior by iterated additive
-# passes (`HAT_be_apply_fit_to_config.py --add`) so each pass closes fraction g of whatever
+# passes (`be_apply_fit_to_config.py --add`) so each pass closes fraction g of whatever
 # misfit remains and no estimate of g is ever needed.
 #
 #   pass 0   interior from the edgeBE base runs           replace
@@ -1274,7 +1274,7 @@ HATTERAS_BE_EDGE_ONLY = {
     #
     # Solve reproduced with:
     #   scripts/input_prep/7-source-sink/2-calibrate/
-    #       HAT_be_edge_domain_solve.py --period 1996
+    #       be_edge_domain_solve.py --period 1996
     1996: (+32.2, +10.0),
 
     # SOLVED 2026-09-16, three Newton steps, the same protocol as 1996. Base
@@ -1305,7 +1305,7 @@ HATTERAS_BE_EDGE_ONLY = {
     #
     # The probes are output/raw_runs/experiments/2026-09-16-edgesolve-2010/
     # (SOLVED names step3). Reproduced with:
-    #   HAT_be_edge_domain_solve.py --period 2010 --kind experiment
+    #   be_edge_domain_solve.py --period 2010 --kind experiment
     #       --run <base> --tag 2026-09-16-edgesolve-2010/base
     #       --run <step> --tag 2026-09-16-edgesolve-2010/step<k> ...
     2010: (+72.6, +31.3),

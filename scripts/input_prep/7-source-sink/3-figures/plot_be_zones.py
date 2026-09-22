@@ -32,7 +32,7 @@ WHY ZONE MEMBERSHIP IS FIXED
     held (`FROZEN_ZONE_DOMAINS`).
 
 Usage:
-    python 3-figures/HAT_plot_be_zones.py
+    python 3-figures/plot_be_zones.py
 
 Reads  the live FROZEN_ZONE_DOMAINS / GROIN_RESERVED_DOMAINS / PHYSICAL_ZONES,
        the calibrated field from hatteras_site_config.py, and the pass-0 field
@@ -133,7 +133,7 @@ def rates_from(path, period):
 def analysis_module():
     spec = importlib.util.spec_from_file_location(
         "_loess",
-        _HERE.parent.parent / "2-calibrate" / "HAT_be_zone_residual_fit.py")
+        _HERE.parent.parent / "2-calibrate" / "be_zone_residual_fit.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

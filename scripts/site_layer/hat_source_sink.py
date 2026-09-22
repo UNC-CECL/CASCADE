@@ -54,13 +54,13 @@ FIGURES_ROOT = BE_ROOT / "3-figures"
 EXPORT_DIR = BE_ROOT / "4-export"
 ARCHIVE = BE_ROOT / "archive"
 
-# Config backups written by HAT_be_apply_fit_to_config.py before each pass.
+# Config backups written by be_apply_fit_to_config.py before each pass.
 # Shared by every pair: a backup is of the whole config, not of one fit.
 PREBE_DIR = CALIBRATE_ROOT / "prebe"
 
 # The field as it stood before PASS 1 of the frozen-zone masked iteration,
-# i.e. the one-shot (pass-0) solve. HAT_plot_be_zones.py and
-# HAT_export_be_calibration.py both split each final rate into pass-0 plus
+# i.e. the one-shot (pass-0) solve. plot_be_zones.py and
+# export_be_calibration.py both split each final rate into pass-0 plus
 # what the iteration added, and must read the same file to agree.
 PASS0_BACKUP = PREBE_DIR / "hatteras_site_config_prebe_20260914_180700.py"
 

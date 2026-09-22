@@ -25,7 +25,7 @@ snapshots of the solved BE field sat at the root of `scripts/`, written there by
 the calibrate step before each pass. They looked like stray copies of the site
 config, and the equivalent 2026-08-24 snapshot was discarded on exactly that
 reading — taking the only record of the one-shot solve with it, and leaving
-`HAT_plot_be_zones.py` undrawable for three weeks. They now file under
+`plot_be_zones.py` undrawable for three weeks. They now file under
 `data/hatteras_init/7-source-sink/2-calibrate/prebe/`.
 
 The root of `scripts/` therefore holds **folders and `README.md`, nothing

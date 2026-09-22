@@ -52,13 +52,45 @@ sibling, so splitting them by job meant moving that module first. It now sits
 in `5-scr/lib/coastsat_lrr.py`, and `5-scr/lib/scr_paths.py` is the one place
 that knows where any shared 5-scr module lives. See `5-scr/README.md`.
 
+## Naming: two conventions, and where the line is
+
+Scripts are **bare** in the shoreline chain and **`HAT_`-prefixed** everywhere
+else. That is a live split, not drift, and this is the boundary:
+
+| bare | | `HAT_` prefixed | |
+|---|---|---|---|
+| `5-scr/` | 27 | `0-elevation/` | 10 |
+| `7-source-sink/` | 10 | `1-barrier3d-domains/` | 36 |
+| `8-overwash-analysis/` | 3 of 4 | `4-mgmt-forcings/` | 16 of 18 |
+| `2-brie-offset/` | 3 of 5 | `3-env-forcings/` | 10 of 12 |
+| `6-scr-smooth/` | 2 | | |
+
+`5-scr` dropped the prefix on 2026-09-22 for a hard reason: `scr_paths.py` puts
+five of its folders on `sys.path` at once, so its filenames are flat module
+names, and `import HAT_rates_figures` reads badly where `import rates_figures`
+does not. `6-scr-smooth` and `7-source-sink` followed the same day for a softer
+one — they are read together with `5-scr`, which feeds them, and a reader
+should not have to remember that one link in a chain spells its scripts
+differently.
+
+Nothing forces the rest. `1-barrier3d-domains` alone is 36 scripts, and
+renaming them buys consistency at the price of a large sweep through code that
+loads several of them by path. **If the split is ever closed, close it toward
+bare** — that is the direction the four resolver modules in `site_layer/`,
+`cascade_pipeline/` and `repo_tools/` already point, none of which is
+prefixed.
+
+Environment variables keep `HAT_` regardless (`HAT_BE_BASE_PRESET`,
+`HAT_RUN_KIND`, `HAT_GEOMETRY`): they share one namespace with every other
+program on the machine, which is exactly the case a prefix is for.
+
 ## Moving a script
 
 Every script here finds the repository by searching upward for
 `pyproject.toml`, and the data through `scripts/site_layer/`, so a script can
 change depth without breaking. What does break is another script that loads it
 BY PATH: `build_island_offset.py` runs its three steps that way, and
-`HAT_be_zone_residual_fit.py`, `HAT_road_offset_from_dune_start.py`,
+`be_zone_residual_fit.py`, `HAT_road_offset_from_dune_start.py`,
 `HAT_road_placement_on_domains.py` and `HAT_dune_topo_extractor.py` are each
 loaded by several others. Search for the file name before moving one.
 

@@ -291,7 +291,7 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # ringing into the residual and calling it background erosion.
 #
 # Regenerate with scripts/input_prep/7-source-sink/2-calibrate/
-# HAT_be_zone_residual_fit.py; GIS 1 and 90 are NOT taken from its
+# be_zone_residual_fit.py; GIS 1 and 90 are NOT taken from its
 # output, which writes them as 0.0 -- they stay the separately solved
 # buffer-cell values below.
 #
@@ -332,7 +332,7 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # it mirrors the splice the figure already makes.
 #
 # BASE RUN. edgeBE / road_bdm / groin off, per period -- the same run
-# HAT_be_zone_residual_fit.py derives the interior residual from.
+# be_zone_residual_fit.py derives the interior residual from.
 #
 # WHY GROIN OFF. Groin-off is a CHOICE, and it is the right one: the groin is
 # a structure whose
@@ -640,7 +640,7 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # WHAT CLOSED, AND WHAT DID NOT. D83-D88 and D72-D74 -- contiguous, same-signed
 # -- dominated passes 1 and 2 and are now EXACTLY 0.0 in both periods. What
 # remains is D8 +0.9 against D10 -0.9 across a zero at D9, plus isolated single
-# domains at D22 and D32. HAT_be_zone_residual_fit.py:150 predicts precisely
+# domains at D22 and D32. be_zone_residual_fit.py:150 predicts precisely
 # this: "a contiguous same-signed block of corrections passes at g ~ 0.8-1.2,
 # while a pattern that alternates sign at the grid scale is damped to g ~ 0.1."
 # The measured 10% IS that g.
@@ -814,9 +814,9 @@ HATTERAS_BE_EDGE_DOMAINS = (1, 90)
 # (Period 2's zeroBE base run reproduced the archived one to 2e-4 m/yr, so its
 # inputs were verified unchanged rather than assumed.)
 #
-# METHOD. Documented in HAT_be_zone_residual_fit.py: solve the two locked
+# METHOD. Documented in be_zone_residual_fit.py: solve the two locked
 # ends by Newton steps on a secant, and the interior by iterated additive
-# passes (`HAT_be_apply_fit_to_config.py --add`) so each pass closes fraction g of whatever
+# passes (`be_apply_fit_to_config.py --add`) so each pass closes fraction g of whatever
 # misfit remains and no estimate of g is ever needed.
 #
 #   pass 0   interior from the edgeBE base runs           replace
@@ -1184,7 +1184,7 @@ HATTERAS_BE_EDGE_ONLY = {
     #
     # Solve reproduced with:
     #   scripts/input_prep/7-source-sink/2-calibrate/
-    #       HAT_be_edge_domain_solve.py --period 1996
+    #       be_edge_domain_solve.py --period 1996
     1996: (+32.2, +10.0),
 }
 

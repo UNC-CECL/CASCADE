@@ -37,7 +37,7 @@ WHAT THE TWO SIGNS MEAN, AND WHY THEY ARE OPPOSITE
     left -- exactly the kind of thing the zone rules exist to keep out.
 
 Usage:
-    python 3-figures/HAT_plot_groin_reserved_residual.py
+    python 3-figures/plot_groin_reserved_residual.py
 
 Reads  the converged calibBE full_management runs, groin on and off, plus the
        live GROIN_RESERVED_DOMAINS.
@@ -82,7 +82,7 @@ PERIODS = {
 def analysis_module():
     spec = importlib.util.spec_from_file_location(
         "_loess_analysis",
-        _HERE.parent.parent / "2-calibrate" / "HAT_be_zone_residual_fit.py")
+        _HERE.parent.parent / "2-calibrate" / "be_zone_residual_fit.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

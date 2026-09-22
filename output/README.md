@@ -26,7 +26,7 @@ Everything under here is **produced**. The one exception is
 | `figures/` | `scripts/figure_making/` via `site_layer/hat_figure_style.FIGURES_ROOT` | finished figures, by subject: `site`, `forcing`, `initialization`, `management`, `shoreline`, `style`, `talk` |
 | `observations/` | `scripts/figure_making/shoreline/chainage/` | figures of the observed record. ~1200 files, mostly gif frames |
 | `calibration/groin/` | `scripts/hatteras_ms/groin-sweep/` (paths from `HAT_groin_sweep_config.GROIN_SWEEP_ROOT`) | the (M, f) calibration. Holds `joint_fit.json`, the input exception. The study's code is in `hard-structures/groin/` |
-| `calibration/hs/` | `scripts/input_prep/7-source-sink/2-calibrate/HAT_be_zone_residual_fit.py`, `scripts/sensitivity_analysis/HAT_plot_hs_experiment.py` | the Hs 3.0 test, its `DECISION.md`, and its arms in `runs/` |
+| `calibration/hs/` | `scripts/input_prep/7-source-sink/2-calibrate/be_zone_residual_fit.py`, `scripts/sensitivity_analysis/HAT_plot_hs_experiment.py` | the Hs 3.0 test, its `DECISION.md`, and its arms in `runs/` |
 | `calibration/sensitivity/` | `scripts/sensitivity_analysis/` | the parameter sweep's manifests, logs and figures. The sweep's runs are in `raw_runs/sensitivity/` |
 | `calibration/groin_rig/` | `hard-structures/groin/.../HAT_groin_hindcast_1967_2017.py`, read by `scripts/hatteras_ms/groin-sweep/` | the 1967-2018 groin rig, the only window spanning the deterioration ramp |
 | `experiments/` | `scripts/hatteras_ms/experiments/` | older one-off studies that have their own drivers and layouts |

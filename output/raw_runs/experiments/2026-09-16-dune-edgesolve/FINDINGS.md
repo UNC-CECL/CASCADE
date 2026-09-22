@@ -71,5 +71,5 @@ predate the LRR refit and the 20 m relocation standard; their CoastSat
 residuals reproduce the matrix rows. 1996 and 2010 use the matrix pairs of
 09-15 and 09-16. Every probe ran full_management, relocations off, groin
 off, Hs 2.5, edgeBE with HAT_BE_OVERRIDE at both ends. Solve script:
-`HAT_be_edge_domain_solve.py --target duneline --dune-smooth {raw,mean3}
---estimator endpoint`; results: `HAT_be_dune_edgesolve_results.py`.
+`be_edge_domain_solve.py --target duneline --dune-smooth {raw,mean3}
+--estimator endpoint`; results: `be_dune_edgesolve_results.py`.

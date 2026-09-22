@@ -1,5 +1,5 @@
 # ==============================================================================
-# HAT_be_edge_domain_solve.py
+# be_edge_domain_solve.py
 #
 # What background-erosion rate should the two LOCKED END DOMAINS carry, for one
 # hindcast period?
@@ -61,10 +61,10 @@
 #
 # USAGE
 #   One run -- report the residual and a first step at the nominal gain:
-#       python 2-calibrate/HAT_be_edge_domain_solve.py --period 1996 --run <run_name>
+#       python 2-calibrate/be_edge_domain_solve.py --period 1996 --run <run_name>
 #
 #   Two or more -- local secant through the last two, and the next step:
-#       python 2-calibrate/HAT_be_edge_domain_solve.py --period 1996 --run <first> --run <second>
+#       python 2-calibrate/be_edge_domain_solve.py --period 1996 --run <first> --run <second>
 #
 #   Runs are named as they appear in run_index.csv and located through
 #   run_registry.find_run_dir: --kind and --tag say where (the matrix by
@@ -216,7 +216,7 @@ def read_model(csv_path, column=RATE_COLUMN):
     if column not in frame.columns:
         raise KeyError(
             "{0} has no {1!r} column -- it predates the LRR estimator. "
-            "Re-run, or backfill with HAT_backfill_run_lrr.py.".format(
+            "Re-run, or backfill with backfill_run_lrr.py.".format(
                 csv_path.name, column))
     return frame.set_index("gis_domain")[column].to_dict()
 

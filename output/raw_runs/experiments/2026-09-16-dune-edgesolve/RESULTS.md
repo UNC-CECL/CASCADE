@@ -1,6 +1,6 @@
 # 2026-09-16-dune-edgesolve - results
 
-Written 2026-09-16 by scripts/input_prep/7-source-sink/2-calibrate/HAT_be_dune_edgesolve_results.py. See NOTE.md for the question and the layout.
+Written 2026-09-16 by scripts/input_prep/7-source-sink/2-calibrate/be_dune_edgesolve_results.py. See NOTE.md for the question and the layout.
 
 ## The solved pairs, GIS 1 / GIS 90, m/yr
 

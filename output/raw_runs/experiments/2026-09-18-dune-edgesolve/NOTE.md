@@ -21,10 +21,10 @@ did not change.
 **Target:** read from the stored product `5-scr/3-rates/duneline/endpoint/`,
 the same numbers `HAT_rate_windows.py` draws.
 
-**Driven by** `scripts/input_prep/7-source-sink/2-calibrate/HAT_be_dune_edgesolve_loop.py`:
+**Driven by** `scripts/input_prep/7-source-sink/2-calibrate/be_dune_edgesolve_loop.py`:
 lockstep steps, stopping when both ends are within 0.01 m/yr of the target.
 Each step's residuals and next probe are in `loop_log.csv`. The results are
-written by `HAT_be_dune_edgesolve_results.py --exp 2026-09-18-dune-edgesolve`
+written by `be_dune_edgesolve_results.py --exp 2026-09-18-dune-edgesolve`
 into `solved.csv`, `skill.csv` and `RESULTS.md`, with the 1984 rows carried
 from 09-16.
 

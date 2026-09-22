@@ -14,7 +14,7 @@ came from different runs, and guessing which one is authoritative is not this
 script's job.
 
 Usage:
-    python scripts/input_prep/7-source-sink/1-prepare/HAT_backfill_run_lrr.py [--check]
+    python scripts/input_prep/7-source-sink/1-prepare/backfill_run_lrr.py [--check]
 
     --check  report what would change and write nothing.
 """

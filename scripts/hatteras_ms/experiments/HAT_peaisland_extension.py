@@ -70,7 +70,7 @@ from site_layer.hat_extension_domains import GEOMETRIES, BASE_GEOMETRY  # noqa: 
 
 HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 SOLVE = (PROJECT_ROOT / "scripts" / "input_prep" / "7-source-sink" / "2-calibrate"
-         / "HAT_be_edge_domain_solve.py")
+         / "be_edge_domain_solve.py")
 RAW_RUNS = PROJECT_ROOT / "output" / "raw_runs"
 
 TAG = "2026-09-16-peaisland-ext"

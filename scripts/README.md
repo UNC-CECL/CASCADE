@@ -22,7 +22,7 @@ repo_tools/     tools that act on the repository itself
 The snapshots were never code at all: the calibrate step writes one before each
 pass, beside the config it copies. They read as stray duplicates, which is how
 the equivalent 2026-08-24 snapshot came to be discarded, taking the only record
-of the one-shot solve with it and leaving `HAT_plot_be_zones.py` undrawable for
+of the one-shot solve with it and leaving `plot_be_zones.py` undrawable for
 three weeks. They now live in
 `data/hatteras_init/7-source-sink/2-calibrate/prebe/`, and the apply step writes
 new ones there.

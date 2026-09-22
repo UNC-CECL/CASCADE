@@ -83,7 +83,7 @@ already reproduces the measured history. **No period-specific configuration.**
 | `updrift / downdrift` | GIS 6 / 5 | field occupies D6 |
 
 Written to `output/calibration/groin/joint_fit.json`, which stage 6 and
-`HAT_be_zone_residual_fit.py` both read.
+`be_zone_residual_fit.py` both read.
 
 ### The fit that supports these values
 
