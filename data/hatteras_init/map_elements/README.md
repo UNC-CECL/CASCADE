@@ -14,7 +14,7 @@ nc_coast_80k/         nc_80k_hatteras_window.geojson. NC 1:80k coastline
                       polygon within 25 km of the domain boxes, clipped: the
                       sound shores, Ocracoke and Pea Island that a map window
                       reaches past the island. Rebuilt by
-                      scripts/figure_making/tools/HAT_clip_nc_coast.py.  NC_COAST
+                      scripts/figure_making/tools/clip_nc_coast.py.  NC_COAST
 natural_earth/        ne_10m_states_southeast_us.geojson, the locator-map
                       states; see its README.                   NE_STATES
 archive/

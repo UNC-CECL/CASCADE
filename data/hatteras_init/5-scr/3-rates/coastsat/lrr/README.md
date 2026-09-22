@@ -8,12 +8,30 @@ One folder per window, `<start>_<end>`: 1984_2004, 1996_2010, 2004_2024,
     transect_lrr_full.csv    per CoastSat transect: lrr_m_yr (OLS slope of
                              position on date), r_squared, p_value, unc_m_yr
                              (95 % CI half-width), n_obs, first and last date
-    domain_lrr_summary.csv   per GIS domain: n_valid, mean_lrr (the value every
-                             figure draws), median, std, min, max, pct_eroding,
-                             n_transects
+    domain_lrr_summary.csv   per GIS domain: n_valid, mean_lrr, median, std,
+                             min, max, pct_eroding, n_transects
+    lrr_<window>.png         the window figure (rates_figures.py): domain means
+                             with the transects behind them and the graded
+                             target over them
+    smoothing_windows_<w>.png  the LOESS widths on one panel
+                             (coastsat_lrr_smoothing_windows.py). Stays at this level:
+                             coastsat_total_change.py and five PROVENANCE.md
+                             files cross-reference it by this path.
+    transects/               1996_2024 only so far: the transect-resolution
+                             explainer figures (coastsat_lrr_transect_zoom.py), one per
+                             reach and variant, with the --slide versions in
+                             transects/slides/
     ext/                     1996_2010 and 1996_2024 only: the Pea Island
                              extension (GIS 91-115), from coastsat_extension_lrr.py
 ```
+
+**Which domain rate is which.** `mean_lrr` is the plain average of a domain's
+transects and is what the rate figures draw. It is NOT what a model run is
+scored against: that target is rebuilt from `transect_lrr_full.csv` at run
+time by `cascade_pipeline.hindcast.build_target_table` -- a 5 km alongshore
+LOESS of the transect rates, reverting to `mean_lrr` over GIS 1-10. The two
+coincide only there. Since 2026-09-22 the window figures draw both, so the
+difference is visible rather than inferred.
 
 **The window** runs from 1 January of the start year to 31 December of the
 end year, inclusive. A transect needs at least 3 positions. The fit uses
@@ -29,7 +47,7 @@ through `hat_observed_rates.lrr_csv()` / `COASTSAT_LRR_ROOT`.
 
 **Rebuild a window.** The fit script writes tables only:
 ```
-python scripts/input_prep/5-scr/CoastSat/coastsat_domain_lrr_fixed.py --start-year 1996 --end-year 2010
+python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_domain_lrr.py --start-year 1996 --end-year 2010
 ```
 then redraw the figure beside it, `<window>/lrr_<window>.png`, with
-`python scripts/input_prep/5-scr/rates_figures.py`. The 2 x 2 of the four model windows is `lrr_four_windows.png` here (moved from `4-comparisons/coastsat_windows/` on 2026-09-19).
+`python scripts/input_prep/5-scr/3-rates/rates_figures.py`. The 2 x 2 of the four model windows is `lrr_four_windows.png` here (moved from `4-comparisons/coastsat_windows/` on 2026-09-19).

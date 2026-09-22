@@ -4,7 +4,7 @@ The stored dune-line observation (2026-09-18): the **net change** between the
 two dune lines that bound each window, per 100 m transect and per GIS domain.
 Written by `scripts/input_prep/5-scr/3-rates/duneline/duneline_endpoint.py`,
 read through `hat_observed_rates.dune_endpoint_csv(start, end, level)`.
-`HAT_rate_windows.py` draws and scores the dune line from here. It replaced
+`rate_windows.py` draws and scores the dune line from here. It replaced
 `duneline_lrr/`, an OLS through every line in the window; see
 `../../../archive/duneline_lrr_retired_20260918/WHY.md`.
 
