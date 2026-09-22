@@ -4,7 +4,7 @@ The CoastSat counterpart of `../../duneline/endpoint/` (2026-09-18). For each
 CoastSat transect, the mean shoreline position within **±6 months of each of
 the window's dune-line survey dates**, end minus start, **seaward positive**,
 in metres and m/yr. The domain value is the mean over the domain's transects.
-Written by `scripts/input_prep/5-scr/coastsat_endpoint/coastsat_endpoint.py`,
+Written by `scripts/input_prep/5-scr/3-rates/coastsat/endpoint/coastsat_endpoint.py`,
 read through `hat_observed_rates.coastsat_endpoint_csv(start, end, level)`.
 
 ```
@@ -40,4 +40,4 @@ No transect had an empty end window in any window (906 transects each). The
 1997 and 2009 ends rest on only 6 and 9 positions, so a storm inside either
 window moves that end more than it moves the 39-position 2023 end.
 
-**Figure:** `<window>/coastsat_endpoint_<window>.png`, drawn by `scripts/input_prep/5-scr/rates_figures.py`, on the metre axis shared by both endpoint products.
+**Figure:** `<window>/coastsat_endpoint_<window>.png`, drawn by `scripts/input_prep/5-scr/3-rates/rates_figures.py`, on the metre axis shared by both endpoint products.

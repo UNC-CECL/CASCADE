@@ -71,3 +71,19 @@ Rebuild: `python scripts/input_prep/5-scr/smoothing_test/smoothing_test.py`
 (`--window N` for a different width). The unsmoothed pair it is read against
 is in `../coastsat_projected_vs_duneline_endpoint/all_windows_stacked/` and
 `../coastsat_total_change_vs_duneline_endpoint/all_windows_stacked/`.
+
+---
+
+**2026-09-22 — the producer named above is no longer on disk.** The 5-scr
+scripts tree was reorganised to mirror this data tree that day, and its
+retired scripts were deleted rather than parked in a dated folder (a departure
+from rule 4 of `ORGANIZATION.md`, taken deliberately; see
+`scripts/input_prep/5-scr/README.md`). The product here is unaffected — only
+the path that made it has gone.
+
+**This one is not recoverable.** `smoothing_test/smoothing_test.py` was never
+committed — `git log -- scripts/input_prep/5-scr/smoothing_test/` returns
+nothing on any branch — so it was already absent before the 2026-09-22
+reorganisation, and that reorganisation is not what removed it. The figures it
+produced are the only record of it. What replaced it,
+`4-comparisons/shoreline_vs_duneline/smoothed_loess7.py`, is committed.

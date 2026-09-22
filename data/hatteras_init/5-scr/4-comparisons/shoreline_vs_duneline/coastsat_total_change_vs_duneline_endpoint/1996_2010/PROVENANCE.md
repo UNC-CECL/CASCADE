@@ -1,6 +1,6 @@
 # 4-comparisons/shoreline_vs_duneline/coastsat_total_change_vs_duneline_endpoint/1996_2010 - provenance
 
-Written 2026-09-22 09:40 by scripts/input_prep/5-scr/total_change_vs_duneline/total_change_vs_duneline.py.
+Written 2026-09-22 09:40 by scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/total_change_vs_duneline.py.
 
 - Shoreline: `3-rates/coastsat/lrr/1996_2010/transect_lrr_full.csv`, lrr_m_yr x 14 yr (the CALENDAR interval; the fit runs 1 January 1996 to 31 December 2010). Fitted and evaluated in the same window, so nothing is extrapolated - this is the fitted trend's net change, not a projection.
 - Dune line: `3-rates/duneline/endpoint/1996_2010/` as stored (1997 and 2009 lines), 1997-10-12 to 2009-05-30, 11.63 yr.

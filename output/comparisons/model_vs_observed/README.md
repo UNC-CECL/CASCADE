@@ -195,7 +195,7 @@ target IS the raw mean, so a dots candidate was rendered and chosen.
 Drawn by `scripts/analyze_output/compare_runs/HAT_rate_windows.py`, which
 imports the panel drawing and the CoastSat reader from the 5-scr producer, the
 survey dates and dune reader from
-`scripts/input_prep/5-scr/duneline_vs_coastsat/duneline_vs_coastsat.py`, and
+`scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/duneline_vs_coastsat.py`, and
 resolves run folders through `cascade_pipeline.run_registry` with the arm
 named explicitly. `--no-sensitivity` draws the main level only.
 

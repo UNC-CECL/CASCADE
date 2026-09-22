@@ -3,7 +3,7 @@
 > **Lost?** [`FIGURES.md`](../../../../FIGURES.md) is the one-page index of which figure answers which question. [`WINDOWS.md`](../WINDOWS.md) says which window is which — two chains, and one context window nothing is graded against.
 
 **Tables, plus one house-style figure per window** beside them. The figures
-are drawn by `scripts/input_prep/5-scr/rates_figures.py` after the tables are built. They show the domain value
+are drawn by `scripts/input_prep/5-scr/3-rates/rates_figures.py` after the tables are built. They show the domain value
 filled blue for seaward and red for landward, the single transects as dots
 coloured by their own sign (the same blue / red), and the village, groin,
 pier, shoal and fill marks. The PDF and caption

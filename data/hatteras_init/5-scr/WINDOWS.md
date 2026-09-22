@@ -1,6 +1,6 @@
 # Which window is which
 
-*Written 2026-09-22 by `scripts/input_prep/5-scr/write_windows_md.py` from `site_layer.hat_observed_rates.WINDOW_ROLE`. Edit the dict, not this file.*
+*Written 2026-09-22 by `scripts/input_prep/5-scr/tools/write_windows_md.py` from `site_layer.hat_observed_rates.WINDOW_ROLE`. Edit the dict, not this file.*
 
 Most products under `3-rates/` and `4-comparisons/` are filed one folder per window, and the folders are named only by their years. They are **not** peers.
 

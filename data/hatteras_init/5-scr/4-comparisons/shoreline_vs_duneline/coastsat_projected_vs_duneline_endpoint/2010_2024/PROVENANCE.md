@@ -1,6 +1,6 @@
 # 4-comparisons/shoreline_vs_duneline/coastsat_projected_vs_duneline_endpoint/2010_2024 - provenance
 
-Written 2026-09-22 09:39 by scripts/input_prep/5-scr/total_change_vs_duneline/total_change_vs_duneline.py.
+Written 2026-09-22 09:39 by scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/total_change_vs_duneline.py.
 
 - Shoreline: `3-rates/coastsat/lrr/2010_2024/transect_lrr_full.csv`, lrr_m_yr x 14 yr (the CALENDAR interval; the fit runs 1 January 2010 to 31 December 2024). Fitted and evaluated in the same window, so nothing is extrapolated - this is the fitted trend's net change, not a projection.
 - Dune line: `3-rates/duneline/endpoint/2010_2024/` as stored (2009 and 2023 lines), 2009-05-30 to 2023-07-01 (ASSUMED), 14.09 yr.
