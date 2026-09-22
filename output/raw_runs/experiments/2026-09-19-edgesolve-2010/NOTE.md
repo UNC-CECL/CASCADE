@@ -6,7 +6,7 @@ dune line was re-digitized: do the locked end values in
 `HATTERAS_BE_EDGE_ONLY[2010]` (+72.6 at GIS 1, +31.3 at GIS 90) still close the
 CoastSat misfit on offsets 2010/v1?
 
-**Method.** `HAT_be_dune_edgesolve_loop.py --target coastsat --windows 2010`
+**Method.** `be_dune_edgesolve_loop.py --target coastsat --windows 2010`
 (the `--target coastsat` mode was added for this): the same Newton solve as
 09-16 (model lrr_m_yr against target_lrr_m_yr, GIS 1 raw, GIS 90 LOESS-10),
 bracketed by the re-run 09-18 matrix zeroBE and edgeBE full-management runs.

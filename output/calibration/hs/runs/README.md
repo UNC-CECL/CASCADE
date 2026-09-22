@@ -48,7 +48,7 @@ alongside it as `run_index_archive_20260902_002606.csv`.
 
 ## Reproducing them
 
-`HAT_be_zone_residual_fit.py` resolves this root automatically: with
+`be_zone_residual_fit.py` resolves this root automatically: with
 `HAT_BE_HS` at the calibration value it reads `raw_runs/`, and off it, this
 directory. Nothing needs a path typed in.
 

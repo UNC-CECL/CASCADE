@@ -1,14 +1,14 @@
 """
-HAT_be_dune_edgesolve_loop.py
+be_dune_edgesolve_loop.py
 ==============================================================================
 Drive the dune-line end-domain solve to convergence: for each (window,
-reading) chain, ask HAT_be_edge_domain_solve.py for the next probe, run it,
+reading) chain, ask be_edge_domain_solve.py for the next probe, run it,
 and repeat until both ends sit within --tol of the dune-line target. Written
 2026-09-18 for the re-solve after the 1997, 2009 and 2023 dune lines were
 re-digitized; the 09-16 solve was stepped by hand.
 
 WHAT IT DOES NOT CHANGE
-    The arithmetic is HAT_be_edge_domain_solve.py's (target from the stored
+    The arithmetic is be_edge_domain_solve.py's (target from the stored
     5-scr/3-rates/duneline/endpoint product, the local secant through the last
     two runs, --estimator endpoint). This only runs the probes it prints.
 
@@ -37,7 +37,7 @@ COASTSAT TARGET (2026-09-19)
     2026-09-19-edgesolve-2010 --windows 2010 --target coastsat.
 
 USAGE
-    python HAT_be_dune_edgesolve_loop.py --exp 2026-09-18-dune-edgesolve \\
+    python be_dune_edgesolve_loop.py --exp 2026-09-18-dune-edgesolve \\
         --windows 1996 2004 2010 --smooth raw mean3
 ==============================================================================
 """
@@ -54,7 +54,7 @@ from pathlib import Path
 
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
-SOLVER = Path(__file__).with_name("HAT_be_edge_domain_solve.py")
+SOLVER = Path(__file__).with_name("be_edge_domain_solve.py")
 RUNNER = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 RUN_ROOT = PROJECT_ROOT / "output" / "raw_runs"
 BRACKET_EXP = "2026-09-16-dune-edgesolve"

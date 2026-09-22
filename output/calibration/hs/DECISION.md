@@ -16,7 +16,7 @@ the error around.
 ## What was run
 
 Two pass-0 calibrations of the same model, differing only in wave height. Same
-script (`HAT_be_zone_residual_fit.py`), same base scenario
+script (`be_zone_residual_fit.py`), same base scenario
 (`edgeBE road_bdm`, groin on), **groin frozen at the production M = 60, f = 0.6**
 so the comparison isolates Hs. Both arms derived fresh; neither read from the
 stored calibration, and `HAT_BE_OUTPUT_DIR` kept both out of it.

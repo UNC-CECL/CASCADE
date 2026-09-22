@@ -1,5 +1,5 @@
 """
-HAT_be_dune_edgesolve_results.py
+be_dune_edgesolve_results.py
 ==============================================================================
 Close the books on experiments/2026-09-16-dune-edgesolve: which step stands
 as each solve's answer, what the pair is, and how the run scores against BOTH
@@ -19,9 +19,9 @@ WHAT IT WRITES  (under output/raw_runs/experiments/2026-09-16-dune-edgesolve/)
     RESULTS.md      the two tables, rendered.
 
 USAGE
-    python HAT_be_dune_edgesolve_results.py --solved 1984:raw:3 1984:mean3:2 ...
+    python be_dune_edgesolve_results.py --solved 1984:raw:3 1984:mean3:2 ...
         # window start year : smoothing : the step that converged
-    python HAT_be_dune_edgesolve_results.py --exp 2026-09-18-dune-edgesolve         --solved 1984:raw:3@2026-09-16-dune-edgesolve 1996:raw:2 ...
+    python be_dune_edgesolve_results.py --exp 2026-09-18-dune-edgesolve         --solved 1984:raw:3@2026-09-16-dune-edgesolve 1996:raw:2 ...
         # --exp is where the files are written and where a bare spec's runs
         # sit; "@<experiment>" carries a solve over from an earlier one (the
         # 09-18 re-solve kept 1984-2004, whose lines did not change)
@@ -78,8 +78,8 @@ COASTSAT_RUN = {
 
 
 def _solve_module():
-    path = _HERE.with_name("HAT_be_edge_domain_solve.py")
-    spec = importlib.util.spec_from_file_location("HAT_be_edge_domain_solve", path)
+    path = _HERE.with_name("be_edge_domain_solve.py")
+    spec = importlib.util.spec_from_file_location("be_edge_domain_solve", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -187,7 +187,7 @@ def main(argv=None):
     g = lambda v: f"{v:+.2f}"  # noqa: E731
     lines = [f"# {args.exp} - results", "",
              f"Written {_dt.date.today().isoformat()} by "
-             "scripts/input_prep/7-source-sink/2-calibrate/HAT_be_dune_edgesolve_results.py. "
+             "scripts/input_prep/7-source-sink/2-calibrate/be_dune_edgesolve_results.py. "
              "See NOTE.md for the question and the layout.", "",
              "## The solved pairs, GIS 1 / GIS 90, m/yr", "",
              "| window | reading | step | dune-line solve | target at the ends | CoastSat solve |",

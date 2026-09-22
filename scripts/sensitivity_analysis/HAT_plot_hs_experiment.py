@@ -17,7 +17,7 @@ WHY DIVERGING, AND WHY ORDERED SOUTH TO NORTH
 
 INPUT
     The two pass-0 calibrations under output/calibration/hs/, produced by
-    HAT_be_zone_residual_fit.py with HAT_BE_OUTPUT_DIR redirected. Nothing
+    be_zone_residual_fit.py with HAT_BE_OUTPUT_DIR redirected. Nothing
     here reads or writes the production calibration.
 
 Author: Hannah A. Henry, UNC CECL
@@ -62,7 +62,7 @@ OUT_DIR = EXPERIMENT / "comparison"
 
 # THE ENCODING IS NOT FIXED, so it is detected rather than assumed. The
 # analysis writes through whatever encoding stdout has: run at a Windows
-# console it emits cp1252 (the case HAT_be_apply_fit_to_config.py's RATES_ENCODING documents),
+# console it emits cp1252 (the case be_apply_fit_to_config.py's RATES_ENCODING documents),
 # run with stdout redirected to a file it emits UTF-8. Assuming either one
 # turns the en-dash in "Buxton-Avon Transition" into mojibake in the zone
 # labels -- a replacement character one way, "a-EUR-quote" the other.

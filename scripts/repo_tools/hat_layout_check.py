@@ -50,7 +50,7 @@ DATA_ALLOWED = {"reference_yaml_hatteras.yaml"}
 # data wearing a .py extension, which is why the suffix test above never saw
 # them; they read as stray copies, which is how the equivalent 2026-08-24 one
 # came to be discarded, taking the only record of the one-shot solve with it
-# and leaving HAT_plot_be_zones.py undrawable for three weeks.
+# and leaving plot_be_zones.py undrawable for three weeks.
 #
 # The modules then moved into site_layer/ and the checker into repo_tools/, so
 # the root is now a list of folders and one README. That is worth holding: a

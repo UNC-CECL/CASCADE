@@ -16,6 +16,6 @@ groin_rig/     the 1967-2018 groin rig, the only window spanning the      (was o
 
 `groin/` paths are built from `HAT_groin_sweep_config.GROIN_SWEEP_ROOT`. Two callers
 outside `scripts/hatteras_ms/groin-sweep/` spell the path out instead:
-`HAT_be_zone_residual_fit.py` and `hard-structures/groin/HAT-groin-figures/HAT_groin_module_logic_figure.py`.
+`be_zone_residual_fit.py` and `hard-structures/groin/HAT-groin-figures/HAT_groin_module_logic_figure.py`.
 The groin study itself (code, inputs, `GROIN_PLAN.md`, the authority on the fit)
 is `hard-structures/groin/`. What is here is its model output.

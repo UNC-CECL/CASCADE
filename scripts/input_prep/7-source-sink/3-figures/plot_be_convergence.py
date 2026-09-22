@@ -47,7 +47,7 @@ WHAT THE RIGHT PANEL IS FOR
     deliberately never corrected.
 
 Usage:
-    python 3-figures/HAT_plot_be_convergence.py
+    python 3-figures/plot_be_convergence.py
 
 Reads  2-calibrate/1984_2004__2004_2024/convergence_history.json, and the live FROZEN_ZONE_DOMAINS /
        GROIN_RESERVED_DOMAINS / HATTERAS_BE_RATES_CALIBRATED, so the figure
@@ -99,7 +99,7 @@ def load_calibration():
     """
     spec = importlib.util.spec_from_file_location(
         "_loess_analysis",
-        _HERE.parent.parent / "2-calibrate" / "HAT_be_zone_residual_fit.py")
+        _HERE.parent.parent / "2-calibrate" / "be_zone_residual_fit.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     from site_layer.hatteras_site_config import HATTERAS_BE_RATES_CALIBRATED as rates

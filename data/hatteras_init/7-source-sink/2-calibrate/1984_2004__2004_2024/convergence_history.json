@@ -3,7 +3,7 @@
 
   "_why": "The calibration is a fixed-point solve, not a closed-form one. Its stopping point is a scientific claim -- 'this is the model's limit' -- so the path to it has to be on the record, not reconstructed from a final field. A stopping point only means something if the sequence was contracting and the target was not moving while it ran.",
 
-  "_method": "Pass 0 is the ordinary one-shot solve against an edgeBE base (interior BE = 0), applied with REPLACE. Passes 1+ measure the residual left by the CURRENT calibBE runs and ADD it (HAT_BE_BASE_PRESET=calibBE, HAT_be_apply_fit_to_config.py --add). Additive because imposing X m/yr moves a domain's rate by well under X once BRIE has diffused it alongshore, so each pass closes a fraction of what remains and no estimate of that fraction is ever needed.",
+  "_method": "Pass 0 is the ordinary one-shot solve against an edgeBE base (interior BE = 0), applied with REPLACE. Passes 1+ measure the residual left by the CURRENT calibBE runs and ADD it (HAT_BE_BASE_PRESET=calibBE, be_apply_fit_to_config.py --add). Additive because imposing X m/yr moves a domain's rate by well under X once BRIE has diffused it alongshore, so each pass closes a fraction of what remains and no estimate of that fraction is ever needed.",
 
   "_stopping_rule": "Stop when a pass buys less than 5% of the standing RMSE. Both periods met it.",
 

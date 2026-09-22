@@ -1,5 +1,5 @@
 """
-HAT_be_zone_residual_fit.py
+be_zone_residual_fit.py
 ===========================
 Derives defensible background erosion (BE) source/sink corrections for CASCADE
 from the residual between a LOESS-smoothed CoastSat observed shoreline change
@@ -45,7 +45,7 @@ Forecast scenarios (for domains where P1 ≠ P2 correction)
 
 Usage
 -----
-  python 2-calibrate/HAT_be_zone_residual_fit.py
+  python 2-calibrate/be_zone_residual_fit.py
 
 Dependencies
 ------------
@@ -198,14 +198,14 @@ P2_COASTSAT_CSV = str(COASTSAT_BASE / f"{P2_START}_{P2_END}"
 #
 # The fix is to iterate rather than to guess g: point this at the CURRENT
 # calibBE runs, measure what residual is left, and ADD it to the field already
-# in place (HAT_be_apply_fit_to_config.py --add). Each pass closes fraction g of whatever
+# in place (be_apply_fit_to_config.py --add). Each pass closes fraction g of whatever
 # remains, so it converges whatever g turns out to be, and it needs no estimate
 # of g at all. Amplifying by 1/g instead was rejected: g varies by an order of
 # magnitude with wavelength, so narrow features would be amplified ~10x into
 # rates that are indefensible read as sediment fluxes.
 #
-#   pass 0   HAT_BE_BASE_PRESET unset -> edgeBE   ->  HAT_be_apply_fit_to_config.py
-#   pass 1+  HAT_BE_BASE_PRESET=calibBE           ->  HAT_be_apply_fit_to_config.py --add
+#   pass 0   HAT_BE_BASE_PRESET unset -> edgeBE   ->  be_apply_fit_to_config.py
+#   pass 1+  HAT_BE_BASE_PRESET=calibBE           ->  be_apply_fit_to_config.py --add
 #
 # Stop when no zone clears SIGNIFICANCE_THRESHOLD, which is then the tolerance
 # the field is converged to.
@@ -448,7 +448,7 @@ FROZEN_ZONE_DOMAINS = {
 # reverse if MIN_ZONE_WIDTH were ever retuned. Naming the domains here makes the
 # behaviour intentional and survives that.
 #
-# FREEZE, NOT ZERO. These emit 0.0, which under `HAT_be_apply_fit_to_config.py --add` means
+# FREEZE, NOT ZERO. These emit 0.0, which under `be_apply_fit_to_config.py --add` means
 # "add nothing" -- the value already in the config is kept. That matters: at D5
 # only ~16% of the standing correction is the groin, the other ~84% being Cape
 # Point background measured with the groin switched OFF. Zeroing would discard
@@ -746,7 +746,7 @@ def load_model_lrr(period_start, period_end):
             f"{csv_path.name} has no {RATE_COLUMN!r} column. It predates the "
             f"LRR estimator; re-run the base run, or backfill it with "
             f"scripts/input_prep/7-source-sink/1-prepare/"
-            f"HAT_backfill_run_lrr.py.")
+            f"backfill_run_lrr.py.")
     return frame.set_index("gis_domain")[RATE_COLUMN]
 
 
@@ -1362,7 +1362,7 @@ def _field_from_config(domains):
 
     Reading the config instead makes the figure say the same thing whenever it
     is drawn, and independent of which pass happened to run last. It is also
-    where HAT_plot_be_zones.py already reads from, so the two agree by
+    where plot_be_zones.py already reads from, so the two agree by
     construction.
 
     The locked ends are zeroed here for DRAWING ONLY -- D1 and D90 carry rates

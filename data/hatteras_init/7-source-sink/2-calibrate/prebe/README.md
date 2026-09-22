@@ -1,6 +1,6 @@
 # prebe/ — the BE field before each calibration pass
 
-`HAT_be_apply_fit_to_config.py` copies `scripts/site_layer/hatteras_site_config.py` here
+`be_apply_fit_to_config.py` copies `scripts/site_layer/hatteras_site_config.py` here
 **before** it overwrites the `HATTERAS_BE_RATES_CALIBRATED` block. Each file is
 therefore the field as it stood going *into* that pass, not coming out of it —
 the output of pass *n* is the input of the file stamped *n+1*.
@@ -14,7 +14,7 @@ the output of pass *n* is the input of the file stamped *n+1*.
 | `..._181336.py` | pass 1 |
 | `..._182007.py` | pass 2 |
 
-`..._180700.py` is not an archive. `HAT_plot_be_zones.py` reads it as the pass-0
+`..._180700.py` is not an archive. `plot_be_zones.py` reads it as the pass-0
 field, and the `be_pass0_*` / `iteration_added_*` columns of the exported CSV
 are the difference between it and the live config. **Do not delete these four.**
 

@@ -1,4 +1,4 @@
-"""Writes HAT_be_zone_residual_fit.py's fitted rates into the site config.
+"""Writes be_zone_residual_fit.py's fitted rates into the site config.
 
 The calibration prints a DOMAIN_BE_RATES block "ready to paste". Pasting it by
 hand loses two things every time, so this does it instead:
@@ -16,7 +16,7 @@ Both are preserved here: locked lines are copied verbatim from the config, and
 a missing zone label falls back to the one already there.
 
 Usage (from scripts/input_prep/7-source-sink):
-    python 2-calibrate/HAT_be_apply_fit_to_config.py [--check] [--add]
+    python 2-calibrate/be_apply_fit_to_config.py [--check] [--add]
 """
 
 import argparse
@@ -106,7 +106,7 @@ def parse_generated(path=RATES_TXT):
     if not path.exists():
         raise SystemExit(
             f"No calibration output at {path}{NL}"
-            f"Run 2-calibrate/HAT_be_zone_residual_fit.py first. If that "
+            f"Run 2-calibrate/be_zone_residual_fit.py first. If that "
             f"pass set HAT_BE_OUTPUT_DIR, set it here too -- this reads "
             f"whichever directory the generator wrote.")
     text = path.read_text(encoding=RATES_ENCODING)
@@ -261,7 +261,7 @@ def main():
                 f"Solve GIS 90 for {period} under calibBE, then pass it "
                 f"deliberately:{NL}"
                 f'    HAT_BE_GIS90="{period}=<value>" python '
-                f"2-calibrate/HAT_be_apply_fit_to_config.py{NL}")
+                f"2-calibrate/be_apply_fit_to_config.py{NL}")
         old_rates[period] = {g: 0.0 for g in range(1, 91)}
         old_labels[period] = {}
         locked_lines[(period, 1)] = (
@@ -313,7 +313,7 @@ def main():
     # -- so it files with the rest of 2-calibrate, not beside the config it
     # copies. Until 2026-09-18 these landed at the root of scripts/, where they
     # read as stray copies of the config: that is how the 08-24 pass-0 backup
-    # came to be discarded, and HAT_plot_be_zones.py could not be drawn.
+    # came to be discarded, and plot_be_zones.py could not be drawn.
     #
     # PRODUCTION, not HAT_BE_OUTPUT_DIR. A what-if pass redirects its rates but
     # still overwrites the real config, so its backup is a real backup and

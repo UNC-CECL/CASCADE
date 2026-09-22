@@ -44,10 +44,10 @@ PDF exists on one machine only.
 From `scripts/input_prep/7-source-sink`:
 
 ```
-HAT_BE_BASE_PRESET=calibBE python 2-calibrate/HAT_be_zone_residual_fit.py   # 1-field/
-python 3-figures/HAT_plot_be_convergence.py                                 # 2-method/
-python 3-figures/HAT_plot_be_zones.py                                       # 2-method/
-python 3-figures/HAT_plot_groin_reserved_residual.py                        # 3-limits/
+HAT_BE_BASE_PRESET=calibBE python 2-calibrate/be_zone_residual_fit.py   # 1-field/
+python 3-figures/plot_be_convergence.py                                 # 2-method/
+python 3-figures/plot_be_zones.py                                       # 2-method/
+python 3-figures/plot_groin_reserved_residual.py                        # 3-limits/
 ```
 
 The two `1-field/` figures come out of the calibration script itself; the other
