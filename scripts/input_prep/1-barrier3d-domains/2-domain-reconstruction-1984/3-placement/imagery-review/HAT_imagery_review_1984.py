@@ -326,13 +326,25 @@ class Imagery:
                     continue            # footprint touches the box, pixels do not
                 if w.width <= 0 or w.height <= 0:
                     continue
-                arr = src.read(window=w)
+                st, sc = src.window_transform(w), src.crs
+                # A coarse request (an island-wide map, 2026-09-23) reads the
+                # frame decimated -- through its overviews where it has them --
+                # to ~res/2, instead of pulling every 0.3 m pixel into memory.
+                # A fine request (the domain windows) reads at full resolution
+                # as before.
+                unit = 0.3048 if ("foot" in str(sc).lower() or "us_survey_feet" in str(sc).lower()) else 1.0
+                step = int(res / 2 / (src.res[0] * unit))
+                if step >= 2:
+                    oh, ow = max(1, int(w.height // step)), max(1, int(w.width // step))
+                    arr = src.read(window=w, out_shape=(src.count, oh, ow), resampling=Resampling.average)
+                    st = st * Affine.scale(w.width / ow, w.height / oh)
+                else:
+                    arr = src.read(window=w)
                 if arr.shape[0] == 1:
                     arr = np.repeat(arr, 3, axis=0)
                 elif arr.shape[0] > 3:
                     arr = arr[:3]
                 tmp = np.zeros((3, H, W), dtype=np.uint8)
-                st, sc = src.window_transform(w), src.crs
                 reproject(arr, tmp, src_transform=st, src_crs=sc, dst_transform=dst_t, dst_crs=dst_crs,
                           resampling=Resampling.average if src.res[0] < res * 0.8 else Resampling.bilinear,
                           num_threads=2)
