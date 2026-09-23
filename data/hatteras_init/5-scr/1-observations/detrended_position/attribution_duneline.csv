@@ -1,0 +1,4 @@
+window,pair,role,dune_median_m,coastsat_median_m,offset_median_m,r_alongshore,n_domains,offset_vs_control_m
+1996_2010,1997-2009,"control, no step",-11.7,-2.4,14.0,0.66,90,0.0
+2010_2024,2009-2023,spans the step,3.7,3.8,4.3,0.71,90,-9.7
+1996_2024,1997-2023,spans the step,-12.2,3.2,18.2,0.81,90,4.2

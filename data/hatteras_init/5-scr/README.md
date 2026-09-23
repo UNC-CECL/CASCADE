@@ -20,6 +20,12 @@ runs (2026-09-18):
                              so the chainage had to be geolocated; 2-brie-offset
                              turns it into the shoreline-derived island offset
     dsas_1978_2019/          DSAS rates: a different source, different transects
+    detrended_position/          the signal the WHOLE ISLAND shares: every transect
+                             detrended against its own 1996-2024 fit and
+                             averaged, plus the five tests of what causes the
+                             2021 step. Not a rate and not a model input -- it
+                             explains a result in 3-rates/coastsat/
+                             window_convergence/ (2026-09-23)
     shoreline_inventory/     study-area and reference shorelines
 2-transect-frame/
     transect_domains/        the transect-to-domain lookup, the transect layer,
@@ -36,6 +42,23 @@ runs (2026-09-18):
                              dune-line dates, m and m/yr (2026-09-18)
         5yr_bins/<window>/   the OLS in successive 5-year bins, 1996_2010
                              2010_2024 1996_2024 (rebuilt 2026-09-18)
+        window_convergence/  WHICH WINDOWS recover the long-term rate? The
+            forward_from_1996/   same OLS on NESTED families of windows, one
+            backward_from_2024/  pinned at each end: forward walks the END out
+                             (1996-2000 ... 1996-2024), backward walks the
+                             START back (2020-2024 ... 1996-2024). Both
+                             converge on the 1996-2024 rate from opposite
+                             sides, so the pair BRACKETS the answer. Under each,
+                             three scales: sites/ (eight domains, one transect
+                             each, drawn in full), all_transects/ (all ~906) and
+                             domain_means/ (the unit the model is graded on, a
+                             groupby of the transect sweep, not a refit). Not a
+                             target: it says whether the grading window is long
+                             enough. Seven tolerances are scored; the headline
+                             is CI OVERLAP -- a window passes when its own 95%
+                             interval reaches the reference's, so a short fit
+                             is judged against what a short fit can resolve
+                             (2026-09-23)
     duneline/
         endpoint/<window>/   NET CHANGE between the two DUNE LINES bounding
                              each window, m and m/yr (2026-09-18; replaced
@@ -138,6 +161,9 @@ The **producers stayed** in `scripts/input_prep/5-scr/`:
 | `3-rates/coastsat/lrr/coastsat_domain_lrr.py` | `3-rates/coastsat/lrr/<window>/` |
 | `3-rates/coastsat/extension/coastsat_extension_lrr.py` | `3-rates/coastsat/lrr/<window>/ext/` |
 | `3-rates/coastsat/5yr_bins/coastsat_5yr_bins.py` | `3-rates/coastsat/5yr_bins/` |
+| `1-observations/detrended_position/coastsat_detrended_position.py` | `1-observations/detrended_position/` (the index, the matrix, the alongshore step) |
+| `1-observations/detrended_position/coastsat_position_attribution.py` | `1-observations/detrended_position/attribution_*` (five tests, verdicts included) |
+| `3-rates/coastsat/window_convergence/coastsat_window_convergence.py` | `3-rates/coastsat/window_convergence/<direction>_from_<year>/{sites,all_transects,domain_means}/` (tables and its own figures) |
 | `3-rates/duneline/duneline_endpoint.py` | `3-rates/duneline/endpoint/<window>/` |
 | `3-rates/coastsat/endpoint/coastsat_endpoint.py` | `3-rates/coastsat/endpoint/<window>/` |
 | `3-rates/coastsat/total_change/coastsat_total_change.py` | `3-rates/coastsat/total_change/<window>/`; `--product projected` -> `3-rates/coastsat/projected/<window>/` (was `coastsat_lrr_projected/`) |

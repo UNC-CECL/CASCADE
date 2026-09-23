@@ -1,0 +1,7 @@
+test,verdict,measured,result
+per-transect noise,REJECTED,correlation of a transect's noise-to-trend ratio with its convergence time,"r = 0.01 forward, 0.16 backward; calmest quartile 27 yr, swingiest 26 yr"
+nourishment,REJECTED as cause,2020->2021 jump on never-nourished vs nourished transects,+16.5 m untouched vs +17.4 m nourished; the jump is a year before the 2022 fills
+nourishment visibility,CONFIRMED signal,"each fill's step against the rest of the island, year after minus year before",Rodanthe 2014 +15.4 m; Buxton 2022 +5.0 m; Avon 2022 +11.3 m
+seasonal sampling mix,REJECTED,the step computed within each calendar quarter separately,Q1 +10.1 m; Q2 +11.3 m; Q3 +10.1 m; Q4 +13.0 m
+dune line,CORROBORATES,net change from both sources over the same survey-date pairs,1997->2009 dune -11.7 m / CoastSat -2.4 m; 2009->2023 dune +3.7 m / CoastSat +3.8 m; difference-of-differences -9.7 m (an artefact predicts about +13.6)
+spatial structure,CORROBORATES,spread of the step between domains vs within a domain,"domain means -11.9 to +71.5 m, sd 11.5 m between domains vs 2.8 m within; 6 domains step landward"

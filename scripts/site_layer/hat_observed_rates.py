@@ -42,6 +42,14 @@
 #                                     the dune-line dates (m and m/yr)
 #                 5yr_bins/<window>/  the OLS in successive 5-year bins,
 #                                     1996_2010 2010_2024 1996_2024
+#                 window_convergence/ the same OLS on NESTED families of
+#                     forward_from_    windows, one pinned at each end: which
+#                         1996/        windows recover the long-term rate?
+#                     backward_from_   Each holds sites/ (eight domains),
+#                         2024/        all_transects/ (all ~906) and
+#                                      domain_means/ (the graded unit).
+#                                      Seven tolerances scored, headline is
+#                                      CI overlap
 #                 total_change/       the same rate as a DISTANCE: LRR(W) x the
 #                     <window>/       years of W, beside the observed change.
 #                                     1996_2024 1996_2010 2010_2024
@@ -221,6 +229,59 @@ COASTSAT_TOTAL_CHANGE_ROOT = COASTSAT_RATES / "total_change"
 # Written by the same script, --product projected.
 COASTSAT_PROJECTED_ROOT = COASTSAT_RATES / "projected"
 PROJECTED_RATE_WINDOW = (1996, 2024)
+# WINDOW CONVERGENCE (2026-09-23, Hannah by interview): which windows recover
+# the long-term rate, and which are too short? The SAME OLS as lrr/, run on two
+# families of NESTED windows that both converge on the 1996-2024 rate from
+# opposite sides -- forward pins the start at 1996 and walks the end out,
+# backward pins the end at 2024 and walks the start back. The pair brackets the
+# answer: forward gives a window 1996-YYYY, backward a window YYYY-2024. Run at
+# two scales, eight evenly spaced domains and every transect on the island.
+#
+# WHY IT IS A PRODUCT AND NOT A COMPARISON. 4-comparisons reads stored tables
+# and never refits; this refits 200 times, so it belongs in 3-rates as another
+# reading of the CoastSat record (the rule 4-comparisons/README states).
+# Nothing is graded against it -- it says whether the 14-year grading window
+# is long enough, not what the target is.
+#
+# A NESTED SWEEP CONVERGES BY CONSTRUCTION: the last window IS the reference,
+# so the result is the SHAPE of the approach and the year the curve settles,
+# never a yes/no match. Written by scripts/input_prep/5-scr/3-rates/coastsat/
+# window_convergence/coastsat_window_convergence.py.
+COASTSAT_WINDOW_CONVERGENCE_ROOT = COASTSAT_RATES / "window_convergence"
+
+
+def window_convergence_dir(direction, anchor_year,
+                          ref_start=1996, ref_end=2024) -> Path:
+    """One sweep's folder: `forward_from_1996` or `backward_from_2024`.
+
+    NOT `<start>_<end>`, although rule 2 would ask for it: a span name claims
+    ONE interval and each of these folders holds twenty-five of them. What
+    they share is the end that is PINNED, so that is what the name gives.
+
+    Nested under `record_<start>_<end>/`, the span of CoastSat the sweep was
+    allowed to see. The full record is `record_1996_2024`; a truncated one is a
+    DIFFERENT EXPERIMENT, not a version of the same product, because every
+    window in it is fitted against a different reference. Filing them apart
+    also stops a truncated forward run overwriting the full one, which shares
+    its pinned year and so its folder name (Hannah, 2026-09-23).
+
+    Two directions, because the pair brackets the answer (Hannah, 2026-09-23).
+    Forward pins 1996 and walks the end year outward: how much record do you
+    need from the start of the chain? Backward pins 2024 and walks the start
+    year back: how late can a window begin and still recover the long-term
+    rate? Both converge on the same 1996-2024 reference from opposite sides.
+    """
+    if direction not in ("forward", "backward"):
+        raise ValueError(
+            "direction is 'forward' (pinned start) or 'backward' (pinned end), "
+            "not {0!r}".format(direction))
+    return (COASTSAT_WINDOW_CONVERGENCE_ROOT
+            / "record_{0}_{1}".format(int(ref_start), int(ref_end))
+            / "{0}_from_{1}".format(direction, int(anchor_year)))
+
+
+WINDOW_CONVERGENCE_SWEEP_FILE = "window_convergence_transects.csv"
+WINDOW_CONVERGENCE_SUMMARY_FILE = "convergence_summary.csv"
 # Both endpoint products use the same two file names.
 ENDPOINT_TRANSECT_FILE = "transect_endpoint.csv"
 ENDPOINT_DOMAIN_FILE = "domain_endpoint_summary.csv"
@@ -261,6 +322,20 @@ PROJECTED_VS_DUNELINE_ENDPOINT = (SHORELINE_VS_DUNELINE
 # 2026-09-18).
 DUNELINE_POSITIONS = COMPARISONS / "duneline_positions"
 SHORELINE_INVENTORY = OBSERVATIONS / "shoreline_inventory"
+
+# THE DETRENDED POSITION (2026-09-23). Every CoastSat transect detrended against
+# its own 1996-2024 fit and averaged: the signal the whole island shares, and
+# the tests of what causes it. Built to explain a result in
+# 3-rates/coastsat/window_convergence/ -- that the convergence window barely
+# varies between transects, which a per-transect cause cannot produce.
+#
+# It is NOT a rate and NOT a model input, so it files under 1-observations with
+# the record it describes rather than under 3-rates with the targets. Resolved
+# here because two scripts share its matrix and the window_convergence README
+# points at it. Written by
+# scripts/input_prep/5-scr/1-observations/detrended_position/.
+DETRENDED_POSITION = OBSERVATIONS / "detrended_position"
+DETRENDED_POSITION_MATRIX = "annual_medians_detrended.csv"
 # Outputs deleted 2026-09-19 (stale, on the old 1984/2004 periods); the
 # scripts would regenerate here.
 SHORELINE_PATTERNS = COMPARISONS / "trajectory_patterns"
