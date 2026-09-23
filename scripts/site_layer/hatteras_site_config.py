@@ -54,6 +54,27 @@ from site_layer.hat_extension_domains import (BASE_GEOMETRY, gis_bounds,  # noqa
 # module is imported by scripts that never load HAT_hindcast_config; the
 # runner checks the two agree.
 HATTERAS_GEOMETRY = (os.environ.get("HAT_GEOMETRY", "").strip() or BASE_GEOMETRY)
+
+# WHICH FEATURE THE ISLAND OFFSET IS MEASURED FROM, for this run (2026-09-22).
+# "duneline" (the default, and what every run before this date used) or
+# "shoreline", the CoastSat window mean. Read from the environment for the
+# same reason HAT_GEOMETRY is: this module is imported by scripts that never
+# load HAT_hindcast_config.
+#
+# It is a RUN-LEVEL choice, not a per-year one, because a run has one start
+# year. HAT_OFFSET_VERSION_<year> still picks the version WITHIN the source.
+#
+# A run that moves this off the default is not a matrix run: it changes a
+# model input, so it needs HAT_RUN_KIND=experiment and a tag, or it derives
+# the same name as the matrix run it is being compared against and overwrites
+# it (the failure output/calibration/groin/README.md records for the rig
+# sweep). The runner refuses that combination rather than trusting it.
+HATTERAS_OFFSET_SOURCE = (os.environ.get("HAT_ISLAND_OFFSET_SOURCE", "").strip()
+                          or _tv_mgmt.DEFAULT_OFFSET_SOURCE)
+if HATTERAS_OFFSET_SOURCE not in _tv_mgmt.OFFSET_SOURCES:
+    raise SystemExit(
+        f"HAT_ISLAND_OFFSET_SOURCE={HATTERAS_OFFSET_SOURCE!r} is not a known "
+        f"island-offset source; known: {', '.join(_tv_mgmt.OFFSET_SOURCES)}")
 HATTERAS_GEOMETRY_EXTENDED = is_extended(HATTERAS_GEOMETRY)
 _FIRST_GIS, _LAST_GIS = gis_bounds(HATTERAS_GEOMETRY)
 HATTERAS_DOMAINS = DomainGeometry(
@@ -195,7 +216,7 @@ def _island_offset_file(start_year):
     # built by hand here, which meant the source split -- <year>/v1/ becoming
     # <year>/duneline/v1/ -- would have left this resolving a path that no
     # longer exists, silently for every period at import.
-    source = _tv_mgmt.DEFAULT_OFFSET_SOURCE
+    source = HATTERAS_OFFSET_SOURCE
     base = _tv_mgmt.offset_start_dir(start_year, source)
     if HATTERAS_GEOMETRY_EXTENDED:
         name = _tv_mgmt.offset_basename(start_year, source)
