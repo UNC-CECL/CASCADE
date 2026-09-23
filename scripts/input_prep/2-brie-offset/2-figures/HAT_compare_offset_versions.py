@@ -74,6 +74,34 @@ def _raw_domain_means(path):
     return per_transect.groupby("domain_id")["ORIG_LEN"].mean()
 
 
+def _raw_provenance(path, line_override=None):
+    """(method, line file, built date) behind one raw file, read from the file.
+
+    duneline_to_raw_offsets.py stamps `built_by`, `built` and `duneline_file`
+    on every row; the ArcGIS exports it replaced (raw_offsets/superseded_
+    20260915_gis_exports/) carry none, so an export's line is unknown unless
+    the caller names it (--line-a/--line-b). Until 2026-09-23 panel (b) was
+    always titled "the re-digitised line", which was wrong for 1984 and 2004:
+    there the line is the same geojson and only the intersection method
+    changed.
+
+    A FILE NAME IS NOT A LINE. duneline_2009.geojson was re-digitised in place
+    on 2026-09-18, so both 2010 raws name it and differ by up to 66 m. Hence
+    the caller's rule: two shapely raws are compared as a line change whatever
+    the names say, because the intersection is deterministic.
+    """
+    cols = pd.read_csv(path, nrows=50)
+    method = "shapely" if "built_by" in cols else "ArcGIS export"
+
+    def one(col):
+        if col not in cols:
+            return None
+        v = cols[col].dropna().unique()
+        return str(v[0]) if len(v) == 1 else None
+
+    return method, line_override or one("duneline_file"), one("built")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--year", type=int, required=True)
@@ -89,6 +117,10 @@ def main(argv=None):
                     help="what the outputs call --b (default: --b itself)")
     ap.add_argument("--raw-a", default=None, help="raw per-transect CSV behind --a")
     ap.add_argument("--raw-b", default=None, help="raw per-transect CSV behind --b")
+    ap.add_argument("--line-a", default=None,
+                    help="the dune-line file behind --raw-a, when the raw file does "
+                         "not record it (an ArcGIS export)")
+    ap.add_argument("--line-b", default=None, help="the same for --raw-b")
     args = ap.parse_args(argv)
     la = args.label_a or args.a
     lb = args.label_b or args.b
@@ -103,8 +135,11 @@ def main(argv=None):
 
     have_raw = bool(args.raw_a and args.raw_b)
     if have_raw:
-        ra = _raw_domain_means(Path(args.raw_a) if Path(args.raw_a).exists() else RAW_DIR / args.raw_a)
-        rb = _raw_domain_means(Path(args.raw_b) if Path(args.raw_b).exists() else RAW_DIR / args.raw_b)
+        pa = Path(args.raw_a) if Path(args.raw_a).exists() else RAW_DIR / args.raw_a
+        pb = Path(args.raw_b) if Path(args.raw_b).exists() else RAW_DIR / args.raw_b
+        ra, rb = _raw_domain_means(pa), _raw_domain_means(pb)
+        meth_a, line_a, built_a = _raw_provenance(pa, args.line_a)
+        meth_b, line_b, built_b = _raw_provenance(pb, args.line_b)
         out[f"abs_{la}_m"] = ra.reindex(out.index)
         out[f"abs_{lb}_m"] = rb.reindex(out.index)
         # + = the line moved LANDWARD (a larger station from the offshore datum)
@@ -122,6 +157,8 @@ def main(argv=None):
     moved = d[d.abs() >= 0.5]
     print(f"{args.year} {la} -> {lb}")
     if have_raw:
+        print(f"  raw files: {la} = {meth_a} of {line_a or 'an unrecorded line'}, "
+              f"{lb} = {meth_b} of {line_b or 'an unrecorded line'}")
         print(f"  absolute (datum frame): {len(moved)} of {len(d)} domains moved >= 0.5 m; "
               f"mean {d.mean():+.2f} m, min {d.min():+.2f} (GIS {d.idxmin()}), "
               f"max {d.max():+.2f} (GIS {d.idxmax()})")
@@ -145,13 +182,49 @@ def main(argv=None):
     _title(ax, 0, f"Island offset read by the model, {args.year} start")
     ax.legend(loc="lower left")   # the profile is high on the left, and the village labels sit at the top
 
+    # What panel (b) is a picture OF depends on what changed between the raw
+    # files: the line, the method that measured it, or (unrecorded) unknown.
+    # Two shapely raws differ ONLY where the line does -- the intersection is
+    # deterministic against the same transects -- so that case is a line
+    # change even when both name the same file (edited in place).
+    if have_raw:
+        same_line = bool(line_a and line_b and line_a == line_b)
+        if meth_a == meth_b == "shapely":
+            b_title, b_ylabel = "Where the re-digitised line differs", "Dune line moved (m, + landward)"
+            if line_a and line_a == line_b:
+                src = (f"{line_a}, re-digitised in place between "
+                       + (f"builds on {built_a} and {built_b}" if built_a and built_b
+                          else "the two builds"))
+            else:
+                src = f"{line_a or 'an unrecorded line'} to {line_b or 'an unrecorded line'}"
+            b_what = f"(b) The change in the dune line itself ({src}), {lb} minus {la}"
+            b_why = (" Both raw files were produced by the same shapely intersection against "
+                     "the same transects, which is deterministic, so the difference is the "
+                     "line; the metre-scale station convention of the earlier ArcGIS export "
+                     "is not part of it.")
+        elif same_line and meth_a != meth_b:
+            b_title, b_ylabel = ("Where the two intersection methods differ",
+                                 "Measured position changed (m, + landward)")
+            b_what = f"(b) The change in the measured dune-line position, {lb} minus {la}"
+            b_why = (f" Both builds measure the same line, {line_a}: {la} through the "
+                     f"{meth_a}, {lb} through the {meth_b} intersection. None of this is the "
+                     f"line moving; it is the difference between the two ways of measuring it, "
+                     f"the metre-scale station convention of the ArcGIS export among it.")
+        else:
+            b_title, b_ylabel = ("Where the measured position differs",
+                                 "Measured position changed (m, + landward)")
+            b_what = f"(b) The change in the measured dune-line position, {lb} minus {la}"
+            b_why = (f" {la} is the {meth_a} of {line_a or 'a line its raw file does not record'}, "
+                     f"{lb} the {meth_b} of {line_b or 'a line its raw file does not record'}, "
+                     f"so how much of this is the line and how much the method is not known.")
+
     ax = axes[1]
     ax.axhline(0, color=INK_MUTED, lw=0.6)
     if have_raw:
         ax.bar(x, out["abs_diff_m"], color=C_1997, width=0.8,
                label=f"{lb} − {la}, fixed datum")
-        ax.set_ylabel("Dune line moved (m, + landward)")
-        _title(ax, 1, "Where the re-digitised line differs")
+        ax.set_ylabel(b_ylabel)
+        _title(ax, 1, b_title)
     else:
         ax.bar(x, m, color=C_1997, width=0.8)
         ax.set_ylabel(f"{lb} − {la} (m)")
@@ -165,13 +238,12 @@ def main(argv=None):
            f"build hands the model, {la} in red and {lb} in blue, each zeroed on "
            f"its own most seaward domain. ")
     if have_raw:
-        cap += (f"(b) The change in the dune line itself, {lb} minus {la}, measured "
+        cap += (f"{b_what}, measured "
                 f"from the shared offshore datum along the 100 m transects and averaged per "
                 f"500 m domain; positive is landward. {len(moved)} of {len(d)} domains "
                 f"differ by 0.5 m or more (mean over all domains {d.mean():+.1f} m; the "
-                f"largest, {d[d.abs().idxmax()]:+.1f} m, at GIS {d.abs().idxmax()}). Both raw "
-                f"files were produced by the same shapely intersection, so the metre-scale "
-                f"station convention of the earlier ArcGIS export is not part of the difference.")
+                f"largest, {d[d.abs().idxmax()]:+.1f} m, at GIS {d.abs().idxmax()})."
+                f"{b_why}")
     else:
         cap += f"(b) {lb} minus {la} in that model frame."
     caption(fig, cap)
