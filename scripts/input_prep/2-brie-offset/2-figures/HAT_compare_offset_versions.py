@@ -52,8 +52,9 @@ BRIE_ROOT = _tv.BRIE_ROOT
 RAW_DIR = _tv.RAW_OFFSET_DIR
 
 
-def _unpadded(year, version):
-    p = _tv.offset_file(year, "unpadded", version=version)
+def _unpadded(year, version, source=None):
+    p = _tv.offset_file(year, "unpadded", version=version,
+                        source=source or _tv.DEFAULT_OFFSET_SOURCE)
     df = pd.read_csv(p)
     return df.set_index("Domain_ID")[str(year)]
 
@@ -67,13 +68,18 @@ def _raw_domain_means(path):
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--year", type=int, required=True)
+    ap.add_argument("--source", default=_tv.DEFAULT_OFFSET_SOURCE,
+                    choices=_tv.OFFSET_SOURCES,
+                    help="which source's versions to compare "
+                         f"(default {_tv.DEFAULT_OFFSET_SOURCE})")
     ap.add_argument("--a", required=True, help="the earlier version, e.g. v1")
     ap.add_argument("--b", required=True, help="the later version, e.g. v2")
     ap.add_argument("--raw-a", default=None, help="raw per-transect CSV behind --a")
     ap.add_argument("--raw-b", default=None, help="raw per-transect CSV behind --b")
     args = ap.parse_args(argv)
 
-    ua, ub = _unpadded(args.year, args.a), _unpadded(args.year, args.b)
+    ua = _unpadded(args.year, args.a, args.source)
+    ub = _unpadded(args.year, args.b, args.source)
     out = pd.DataFrame({f"model_{args.a}_m": ua, f"model_{args.b}_m": ub})
     out["model_diff_m"] = ub - ua
 
@@ -87,7 +93,10 @@ def main(argv=None):
         out["abs_diff_m"] = out[f"abs_{args.b}_m"] - out[f"abs_{args.a}_m"]
     out.index.name = "gis_domain"
 
-    out_dir = BRIE_ROOT / str(args.year) / args.b
+    # Under the SOURCE's folder since 2026-09-22 -- this joined <year>/ and the
+    # version by hand, which after the split would have written the comparison
+    # into a <year>/v2/ that no longer exists.
+    out_dir = _tv.offset_build_dir(args.year, args.b, args.source)
     stem = f"offset_{args.year}_{args.a}_vs_{args.b}"
     out.to_csv(out_dir / f"{stem}.csv", float_format="%.2f")
 

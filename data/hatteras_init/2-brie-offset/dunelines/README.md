@@ -22,9 +22,9 @@ from a USGS metadata file and from memory).
 |---|---|---|---|---|
 | `duneline_1967.geojson` | EPSG:26918 | 96 | none | oldest, unused so far |
 | `duneline_1984.geojson` | EPSG:26918 | 495 | none | the 1984 initial condition; USGS photo of 1984-09-19 |
-| `duneline_1997.geojson` | EPSG:3725 | 529 | full* | **re-digitized 2026-09-18** from the USGS photo of 1997-10-12; behind `2-brie-offset/1996/v1/` (CURRENT; built as v3, renumbered 2026-09-19). Also what `HAT_measure_duneline_shift.py` reads |
+| `duneline_1997.geojson` | EPSG:3725 | 529 | full* | **re-digitized 2026-09-18** from the USGS photo of 1997-10-12; behind `2-brie-offset/1996/duneline/v1/` (CURRENT; built as v3, renumbered 2026-09-19). Also what `HAT_measure_duneline_shift.py` reads |
 | `duneline_2004.geojson` | EPSG:3725 | 158 | partial | the 2004 initial condition; Google Earth capture of 2004-05-25 |
-| `duneline_2009.geojson` | EPSG:26918 | 603 | none | **re-digitized 2026-09-18** (behind `2-brie-offset/2010/v1/`, CURRENT; built as v2, renumbered 2026-09-19); Google Earth capture of 2009-05-30; stands in for the **2010** start (no 2010 aerial imagery), `DUNE_LINE_FOR_YEAR[2010] == 2009` |
+| `duneline_2009.geojson` | EPSG:26918 | 603 | none | **re-digitized 2026-09-18** (behind `2-brie-offset/2010/duneline/v1/`, CURRENT; built as v2, renumbered 2026-09-19); Google Earth capture of 2009-05-30; stands in for the **2010** start (no 2010 aerial imagery), `DUNE_LINE_FOR_YEAR[2010] == 2009` |
 | `duneline_2023.geojson` | EPSG:26918 | 749 | none | **re-digitized 2026-09-18**; first added 2026-09-15 as `duneline_2024` and renamed for its imagery, the NOAA NGS 2023 set under `D:\Hatteras_GIS\Aerial3`; stands in for the **2024** end year, `DUNE_LINE_FOR_YEAR[2024] == 2023` |
 
 `HAT_measure_duneline_shift.py` reads THIS directory first and falls back to
@@ -100,7 +100,7 @@ NOT rebuilt:
 Local corrections only (the rest of the line is the same vertices). Where they
 land, measured along the 100 m transects: 22 of 90 domains moved, all of them
 landward, at GIS 16, 46-51, 62-67, 79-81 and 86, by up to 63 m (GIS 66); see
-`2-brie-offset/1996/v2/PROVENANCE.md`. The 1996 hindcast start reads the v2
+`2-brie-offset/1996/duneline/v2/PROVENANCE.md`. The 1996 hindcast start reads the v2
 build. The dune-line shift measurement (`../1984-start/duneline-shift/`) was
 made on v1 and has not been re-run; its +16.2 m definitional term was derived
 on v1 and is quoted above as such.

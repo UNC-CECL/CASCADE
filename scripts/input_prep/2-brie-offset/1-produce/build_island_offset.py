@@ -74,6 +74,7 @@ PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
 from site_layer.hat_topo_version import (BRIE_ROOT, DUNE_LINE_FOR_YEAR, DUNELINE_DIR,  # noqa: E402
+                              offset_start_dir,
                               RAW_OFFSET_DIR, dune_line_for_year, dune_raw_file)
 from site_layer.hat_extension_domains import (BASE_GEOMETRY, GEOMETRIES,  # noqa: E402
                                    extension_gis, gis_bounds)
@@ -269,7 +270,9 @@ def main(argv=None):
                  f"{a.year} start with the {expected} line. Change the table in "
                  f"hat_topo_version.py if the pairing is wrong; the driver does not guess.\n")
 
-    year_dir = BRIE_ROOT / str(a.year)
+    # <year>/duneline/ since 2026-09-22: this driver only ever builds from a
+    # dune line, so it writes into that source's folder, not the start's.
+    year_dir = offset_start_dir(a.year, "duneline")
     year_dir.mkdir(parents=True, exist_ok=True)
     if a.geometry:
         return build_extension(a, line, props, crs, vintage, year_dir)

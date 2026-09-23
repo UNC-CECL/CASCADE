@@ -1,25 +1,35 @@
-# 2010 island offsets — version index
+# 2010 island offsets — which SOURCE, then which version
 
-`CURRENT` names the build every reader takes; `hatteras_site_config._island_offset_file(2010)` resolves it (env `HAT_OFFSET_VERSION_2010` outranks the file).
+This folder holds **no build of its own**. Every build sits under the feature
+it was measured from, so a folder listing says what it is:
 
-**Numbering restarted 2026-09-19** (Hannah): `v1` is the first build from the
-re-digitized 2009 line (2026-09-18). The builds from the earlier 2009 line
-are in `superseded_20260919_pre-redigitized/`, under their old numbers.
+| source | what it was measured from | CURRENT | also here |
+|---|---|---|---|
+| `duneline/` | a dune line digitised from aerial imagery | `v1` | `superseded_20260919_pre-redigitized/` |
 
-## Builds
+`shoreline/` — not built for 2010.
 
-Written by `build_island_offset.py`, one row per build; each version's own `PROVENANCE.md` has the detail.
 
-| version | built | line | vintage | zero domain | compared with | |
-|---|---|---|---|---|---|---|
-| `v1` | 2026-09-18 | `duneline_2009.geojson` (re-digitized 2026-09-18) | 2009 | GIS 76 | superseded v1 | CURRENT |
 
-## Superseded (`superseded_20260919_pre-redigitized/`)
+## Resolving a build
 
-| old name | built | line |
-|---|---|---|
-| `v1` | 2026-09-15 | `duneline_2009.geojson` as digitized before 2026-09-18 |
+```python
+from site_layer.hat_topo_version import offset_file
+offset_file(2010)                        # the dune build the model reads
+offset_file(2010, source="shoreline")    # the shoreline arm
+```
 
-Runs made on it are in `output/raw_runs/archive/2026-09-18-pre-redigitized-dunelines/`
-and `.../2026-09-19-pre-redigitized-sens-exp/`; their metadata names it
-`superseded_20260919_pre-redigitized/v1`.
+`CURRENT` inside each source folder names the build that source's readers
+take; `HAT_OFFSET_VERSION_2010` in the environment outranks it for one run
+(a non-default source uses `HAT_OFFSET_VERSION_2010_<SOURCE>`, so overriding
+an arm cannot silently move what the runner reads). **Never join these paths
+by hand** — `hat_topo_version` owns the layout, and it changed on 2026-09-22.
+
+## What changed on 2026-09-22
+
+Dune builds used to sit flat at `2010/v<n>/`, from when they were the only
+kind. A listing could not then say what `v1` was measured from, and the
+shoreline source added in the same week sat one level deeper than the dune
+one. Everything now nests under its source. Run metadata records
+`island_offset_version` as `"duneline/v1"` rather than `"v1"`; a token with no
+`/` is from before the split, and every build then was dune-derived.

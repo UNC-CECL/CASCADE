@@ -363,19 +363,78 @@ TRANSECT_DIR = BRIE_ROOT / "transects"
 TRANSECT_FILE_100M = TRANSECT_DIR / "transects_100m.geojson"
 TRANSECT_EXT_TABLE = TRANSECT_DIR / "transects_100m_ext.csv"
 
-_OFFSET_FILE_NAMES = {
-    "padded": "Island_Dune_Offsets_{y}_PADDED_{n}.csv",      # what the model reads
-    "input": "Island_Dune_Offsets_{y}_CASCADE_Input.csv",     # 90 domains, one column
-    "unpadded": "Island_Dune_Offsets_{y}_CASCADE_Input_unpadded.csv",  # 90, with ids
+# WHICH FEATURE THE OFFSET WAS MEASURED FROM (2026-09-22). Until then every
+# build came from a digitised DUNE line, so the source was not worth naming.
+# The 1996 start now also has a build from the CoastSat satellite SHORELINE
+# (the 1995-1997 mean position; scripts/input_prep/5-scr/1-observations/
+# mean_shoreline/), which is a different feature, not a newer reading of the
+# same one -- so it is a separate source with its own v1, never a v2 of the
+# dune build (Hannah, 2026-09-22, and the rule in [[feedback-version-numbering-restarts]]).
+#
+# The dune build KEEPS the flat layout it has always had, <year>/v<n>/, so
+# nothing the runner resolves moves. A non-default source nests one level
+# deeper, <year>/<source>/v<n>/, and because "shoreline" does not match the
+# v<n> pattern offset_version() scans for, adding it cannot disturb which
+# build the runner reads.
+OFFSET_SOURCES = ("duneline", "shoreline")
+DEFAULT_OFFSET_SOURCE = "duneline"
+
+# A build's three files share one stem, named for the FEATURE the offset was
+# measured from, so a copy that leaves its folder still says what it is -- the
+# basename is the only thing a file carries with it.
+_OFFSET_STEMS = {
+    "duneline": "Island_Dune_Offsets",
+    "shoreline": "Island_Shoreline_Offsets",
+}
+_OFFSET_FILE_SUFFIXES = {
+    "padded": "_PADDED_{n}.csv",            # what the model reads
+    "input": "_CASCADE_Input.csv",          # 90 domains, one column
+    "unpadded": "_CASCADE_Input_unpadded.csv",  # 90, with domain ids
 }
 
 
-def offset_start_dir(year: int) -> Path:
-    """One period start's folder: PROVENANCE.md, CURRENT, v<n>/ builds."""
+def offset_basename(year: int, source: str = DEFAULT_OFFSET_SOURCE) -> str:
+    """The stem a build's three files share, e.g. Island_Dune_Offsets_1996.
+    island_offset_hybrid.py names its outputs from this rather than keeping a
+    second spelling of them (2026-09-22)."""
+    return f"{_OFFSET_STEMS[_check_offset_source(source)]}_{int(year)}"
+
+
+def _check_offset_source(source: str) -> str:
+    s = str(source)
+    if s not in OFFSET_SOURCES:
+        raise ValueError(
+            f"unknown island-offset source {source!r}; "
+            f"known: {', '.join(OFFSET_SOURCES)}")
+    return s
+
+
+def offset_start_dir(year: int, source: str = DEFAULT_OFFSET_SOURCE) -> Path:
+    """One source's folder for one period start: PROVENANCE.md, CURRENT,
+    v<n>/ builds, and any superseded_*/ and ext/.
+
+    EVERY source nests under its own name (2026-09-22, Hannah: "make it clear
+    with the naming of each folder what the original source was"). The dune
+    builds sat flat at <year>/ until then, from when they were the only kind,
+    which left a folder listing unable to say what <year>/v1/ was measured
+    from -- and left the two sources asymmetric once the shoreline arrived.
+
+        <year>/duneline/v<n>/     from a digitised dune line
+        <year>/shoreline/v<n>/    from a CoastSat window mean
+        <year>/comparisons/       between sources; belongs to neither
+
+    Nothing outside this module should join these parts by hand.
+    """
+    return BRIE_ROOT / str(int(year)) / _check_offset_source(source)
+
+
+def offset_year_dir(year: int) -> Path:
+    """The period start's folder itself, which now holds only source folders
+    and comparisons/ -- no build of its own."""
     return BRIE_ROOT / str(int(year))
 
 
-def offset_version(year: int):
+def offset_version(year: int, source: str = DEFAULT_OFFSET_SOURCE):
     """Which build of a start's island offset every reader takes.
 
     Order, mirroring topo_dirs(): HAT_OFFSET_VERSION_<year> in the
@@ -384,13 +443,24 @@ def offset_version(year: int):
     CURRENT is an error, not a guess; so is naming a version that is not on
     disk. Moved here from hatteras_site_config._island_offset_file on
     2026-09-18 so the figure scripts that resolved it themselves share it.
+
+    A non-default source reads HAT_OFFSET_VERSION_<year>_<SOURCE> instead, so
+    overriding the shoreline arm cannot silently move the dune build the
+    runner reads (2026-09-22).
     """
     y = int(year)
-    base = f"2-brie-offset/{y}"
-    d = offset_start_dir(y)
+    s = _check_offset_source(source)
+    base = f"2-brie-offset/{y}/{s}"
+    # The default source keeps the plain env key it has always had, so an
+    # override written before the sources were split still selects the build
+    # it always selected. A non-default source gets its own key, so
+    # overriding the shoreline arm cannot silently move what the runner reads.
+    env_key = (f"HAT_OFFSET_VERSION_{y}" if s == DEFAULT_OFFSET_SOURCE
+               else f"HAT_OFFSET_VERSION_{y}_{s.upper()}")
+    d = offset_start_dir(y, s)
     versions = sorted(p.name for p in d.iterdir()
                       if p.is_dir() and re.fullmatch(r"v\d+", p.name)) if d.is_dir() else []
-    env = os.environ.get(f"HAT_OFFSET_VERSION_{y}")
+    env = os.environ.get(env_key)
     current = d / "CURRENT"
     if env:
         version = env.strip()
@@ -401,28 +471,50 @@ def offset_version(year: int):
     elif versions:
         raise RuntimeError(
             f"{base}/ holds {versions} and no CURRENT file; write one, or set "
-            f"HAT_OFFSET_VERSION_{y}.")
+            f"{env_key}.")
     else:
         return None
     if not (d / version).is_dir():
         raise FileNotFoundError(
             f"{base}/{version}/ does not exist (have {versions or 'no versions'}); "
-            f"check CURRENT or HAT_OFFSET_VERSION_{y}.")
+            f"check CURRENT or {env_key}.")
     return version
 
 
-def offset_build_dir(year: int, version: str | None = None) -> Path:
+def offset_build_dir(year: int, version: str | None = None,
+                     source: str = DEFAULT_OFFSET_SOURCE) -> Path:
     """The folder of one build: the resolved version unless one is given."""
-    v = version or offset_version(year)
-    return offset_start_dir(year) / v if v else offset_start_dir(year)
+    s = _check_offset_source(source)
+    v = version or offset_version(year, s)
+    base = offset_start_dir(year, s)
+    return base / v if v else base
+
+
+def offset_comparison_dir(year: int, name: str) -> Path:
+    """<year>/comparisons/<name>/ -- where a comparison BETWEEN builds lands.
+
+    A comparison is neither a version nor a source, so it does not belong in
+    either's folder. Until 2026-09-22 a version comparison was written into
+    the later version's own folder, which made a build's folder hold both the
+    build and a judgement about it; source comparisons are filed here from the
+    start. `name` says what was compared, e.g. "duneline_vs_shoreline".
+    """
+    # offset_YEAR_dir, not offset_start_dir: a comparison between two sources
+    # belongs to neither, so it must not inherit one source's folder. It did
+    # for a few minutes on 2026-09-22, when offset_start_dir started nesting
+    # and this quietly followed it down into duneline/.
+    return offset_year_dir(year) / "comparisons" / name
 
 
 def offset_file(year: int, kind: str = "padded", total_domains: int = 120,
-                version: str | None = None) -> Path:
+                version: str | None = None,
+                source: str = DEFAULT_OFFSET_SOURCE) -> Path:
     """One file of a start's build. kind: padded (the model input), input
     (90 values), or unpadded (90, with domain ids)."""
-    name = _OFFSET_FILE_NAMES[kind].format(y=int(year), n=int(total_domains))
-    return offset_build_dir(year, version) / name
+    s = _check_offset_source(source)
+    name = offset_basename(year, s) + _OFFSET_FILE_SUFFIXES[kind].format(
+        n=int(total_domains))
+    return offset_build_dir(year, version, s) / name
 DUNE_LINE_FOR_YEAR = {
     1984: 1984,
     1996: 1997,   # no 1996 imagery; the nearest island-wide survey
@@ -463,6 +555,54 @@ def duneline_geojson(vintage, version: str | None = None) -> Path:
     """2-brie-offset/dunelines/duneline_<vintage>[_<version>].geojson."""
     suffix = f"_{version}" if version else ""
     return DUNELINE_DIR / f"duneline_{int(vintage)}{suffix}.geojson"
+
+
+# THE SATELLITE SHORELINE, BY WINDOW (2026-09-22). The dune-line offset is
+# measured from a line digitised on ONE day, so DUNE_LINE_FOR_YEAR pairs a
+# period with a vintage YEAR. A CoastSat shoreline has no such day: a single
+# satellite pass carries metres of tide, wave setup and cloud-edge noise, so
+# the position a period starts from is a MEAN over a window of passes. The
+# pairing is therefore a period year -> a window, and this is the only place
+# it is spelled.
+#
+# 1996 reads the mean of calendar 1995-1997: about 28 positions per CoastSat
+# transect, a standard error of 2-3 m on each transect mean, which is inside
+# the 10 m Barrier3D cell. The window is the CALENDAR span, not a span centred
+# on the 1997 dune survey, following [[cascade-period-is-the-calendar-year]] --
+# the interval mismatch against the dune line is reported, not corrected.
+SHORELINE_WINDOW_FOR_YEAR = {
+    1996: (1995, 1997),
+}
+
+
+def shoreline_window_for_year(year, strict: bool = True):
+    """The CoastSat averaging window a period start reads, as (start, end)."""
+    try:
+        return SHORELINE_WINDOW_FOR_YEAR[int(year)]
+    except (KeyError, TypeError, ValueError):
+        if not strict:
+            return None
+        known = ", ".join(f"{y} -> {a}-{b}" for y, (a, b)
+                          in sorted(SHORELINE_WINDOW_FOR_YEAR.items()))
+        raise SystemExit(
+            f"\nno CoastSat shoreline window known for period year {year!r}. "
+            f"Known: {known}\n"
+            f"Add it to SHORELINE_WINDOW_FOR_YEAR in {__file__}.\n")
+
+
+def shoreline_raw_file(window) -> Path:
+    """raw_offsets/<start>_<end>_shoreline_offset_raw.csv -- the per-transect
+    stations of one averaging window's mean shoreline, the shoreline
+    counterpart of dune_raw_file(). Written by duneline_to_raw_offsets.py from
+    the mean-shoreline geojson, which hat_observed_rates owns."""
+    a, b = window
+    return RAW_OFFSET_DIR / f"{int(a)}_{int(b)}_shoreline_offset_raw.csv"
+
+
+def shoreline_raw_file_for_year(year, strict: bool = True):
+    """The raw file a period year reads, through SHORELINE_WINDOW_FOR_YEAR."""
+    w = shoreline_window_for_year(year, strict=strict)
+    return None if w is None else shoreline_raw_file(w)
 
 
 def product_for_year(year: int) -> str:
