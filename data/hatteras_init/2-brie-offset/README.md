@@ -41,7 +41,7 @@ listing unable to say what `v1` was measured from. Run metadata now records
 split, and every build then was dune-derived.
 
 Each build holds the padded 120-domain file the model reads, the unpadded 90,
-a buffer diagnostic figure (and, since 2026-09-16, `_buffer_diagnostic_v2.png`: the
+a buffer diagnostic figure (and, since 2026-09-16, `_buffer_diagnostic_1to1.png`, called `_v2` until 2026-09-23: the
 same padded profile at 1:1 scale, drawn by `HAT_plot_offset_profile_1to1.py --all`,
 because the original stretches 7.5 km of offset across 72 km alongshore and
 reads as a deep V; the slope is the coast's bearing, not its curvature), a copy

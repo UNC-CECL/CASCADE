@@ -2,6 +2,9 @@
 
 > **Renumbered 2026-09-19 (Hannah: the numbering restarts at the re-digitized lines).** This build was `v2` until 2026-09-19 and is now `v1`. The log below keeps the old names: its `v2` is this folder, its `v1` is `../superseded_20260919_pre-redigitized/v1/`, and the `_vs_` comparison files compare against that superseded build. The files are byte-identical to what they were under the old name.
 
+> **Files renamed 2026-09-23 (Hannah: the files in a `v1` folder should say v1).** `offset_2010_v1_vs_v2.*` is now `offset_2010_superseded_v1_vs_v1.*` (CSV columns `model_v1_m/model_v2_m` etc. are now `model_superseded_v1_m/model_v1_m` etc.), and every `_buffer_diagnostic_v2` is now `_buffer_diagnostic_1to1`: that `_v2` was the second drawing of the figure, not a build. The step-output logs below keep the names the scripts printed. The comparison figure was redrawn the same day under its new name, so its legend and caption say `superseded_v1` and `v1`: `HAT_compare_offset_versions.py --year 2010 --a superseded_20260919_pre-redigitized/v1 --label-a superseded_v1 --b v1` with the same two raw files; the CSV came out identical.
+
+
 
 Built 2026-09-18 15:01 by `scripts/input_prep/2-brie-offset/1-produce/build_island_offset.py` from `duneline_2009.geojson` (2009 imagery, standing in for the 2010 start through `DUNE_LINE_FOR_YEAR`).
 
@@ -36,7 +39,7 @@ Built 2026-09-18 15:01 by `scripts/input_prep/2-brie-offset/1-produce/build_isla
   wrote C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\2-brie-offset\2010\v2\supporting\offset_2010_v1_vs_v2.pdf
 ```
 
-`offset_2010_v1_vs_v2.csv` and `.png` beside this file (PDF and caption under `supporting/`). In the fixed-datum frame a positive difference is the line moved LANDWARD.
+`offset_2010_superseded_v1_vs_v1.csv` and `.png` beside this file (PDF and caption under `supporting/`). In the fixed-datum frame a positive difference is the line moved LANDWARD.
 
 ## CURRENT
 
