@@ -9,13 +9,36 @@ dunelines/        the digitised dune lines, duneline_<vintage>[_v<n>].geojson,
                   under 1-barrier3d-domains/raw-duneline-geojson/)
 transects/        the 100 m transect layer every offset is measured along
 raw_offsets/      one CSV per dune-line VINTAGE, per transect; a period finds
-                  its vintage through hat_topo_version.DUNE_LINE_FOR_YEAR
-<year>/           one period start: a PROVENANCE.md index, a CURRENT file,
-<year>/v<n>/      and one build per version -- every start is versioned since
-                  2026-09-15 (1984 v1, 1996 v2, 2004 v1, 2010 v1 from the
-                  2009 line)
-<year>/superseded_*/   the flat build a start had before it was versioned
+                  its vintage through hat_topo_version.DUNE_LINE_FOR_YEAR.
+                  Also, since 2026-09-22, one per shoreline WINDOW
+                  (<start>_<end>_shoreline_offset_raw.csv)
+<year>/           one period start. Holds NO build of its own: a
+                  PROVENANCE.md naming the sources, and one folder per source
+<year>/<source>/  everything measured from ONE feature: a CURRENT file, one
+                  folder per version, and any ext/ and superseded_*/
+<year>/<source>/v<n>/       one build
+<year>/<source>/ext/<geom>/ an extended geometry (not a version)
+<year>/<source>/superseded_*/   retired builds
+<year>/comparisons/<a>_vs_<b>/  between two sources; belongs to neither
 ```
+
+**The two sources today**
+
+| source | measured from | where the line comes from |
+|---|---|---|
+| `duneline` | a dune line digitised from aerial imagery | `dunelines/` here |
+| `shoreline` | the CoastSat satellite shoreline, averaged over a window | `5-scr/1-observations/mean_shoreline/` |
+
+`duneline` is the default: `offset_file(year)` and everything the runner
+resolves read it. The shoreline arm is reached only by asking,
+`offset_file(year, source="shoreline")`, and nothing reads it today -- see
+`1996/shoreline/PROVENANCE.md` for what would have to be checked first.
+
+**Every source nests, since 2026-09-22.** Dune builds sat flat at
+`<year>/v<n>/` until then, from when they were the only kind, which left a
+listing unable to say what `v1` was measured from. Run metadata now records
+`island_offset_version` as `"duneline/v1"`; a token with no `/` predates the
+split, and every build then was dune-derived.
 
 Each build holds the padded 120-domain file the model reads, the unpadded 90,
 a buffer diagnostic figure (and, since 2026-09-16, `_buffer_diagnostic_v2.png`: the
@@ -32,7 +55,7 @@ flat build (before 2026-09-15) shows it as unset.
 ## Do not type these paths
 
 Resolve them through `scripts/site_layer/hat_topo_version.py`:
-`offset_file(year, "padded" | "input" | "unpadded")` for a start's CURRENT build
+`offset_file(year, "padded" | "input" | "unpadded", source=...)` for a start's CURRENT build
 (`offset_version()` holds the choice: `HAT_OFFSET_VERSION_<year>`, then
 `CURRENT`, then the only `v<n>`; `hatteras_site_config` calls it too),
 `dune_raw_file_for_year()` / `duneline_geojson()` for the lines, and

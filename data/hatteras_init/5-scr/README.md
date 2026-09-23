@@ -14,6 +14,11 @@ runs (2026-09-18):
 ```
 1-observations/              measured or digitized; nothing here is fitted by us
     coastsat_timeseries/     raw per-transect chainage, one folder per CoastSat site
+    mean_shoreline/<w>/      one averaging window's MEAN satellite shoreline, as
+                             a line on the ground (2026-09-22). The only CoastSat
+                             product here that is a POSITION and not a difference,
+                             so the chainage had to be geolocated; 2-brie-offset
+                             turns it into the shoreline-derived island offset
     dsas_1978_2019/          DSAS rates: a different source, different transects
     shoreline_inventory/     study-area and reference shorelines
 2-transect-frame/

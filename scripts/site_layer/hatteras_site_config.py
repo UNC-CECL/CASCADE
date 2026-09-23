@@ -191,31 +191,44 @@ def _island_offset_file(start_year):
     unchecked because every period resolves here at import and only the
     period being run needs the file to exist -- the runner checks that.
     """
-    base = f"2-brie-offset/{start_year}"
+    # Every part of this path comes from hat_topo_version (2026-09-22). It was
+    # built by hand here, which meant the source split -- <year>/v1/ becoming
+    # <year>/duneline/v1/ -- would have left this resolving a path that no
+    # longer exists, silently for every period at import.
+    source = _tv_mgmt.DEFAULT_OFFSET_SOURCE
+    base = _tv_mgmt.offset_start_dir(start_year, source)
     if HATTERAS_GEOMETRY_EXTENDED:
-        return (f"{base}/ext/{HATTERAS_GEOMETRY}/Island_Dune_Offsets_"
-                f"{start_year}_PADDED_{HATTERAS_DOMAINS.total_domains}.csv")
-    fname = f"Island_Dune_Offsets_{start_year}_PADDED_120.csv"
+        name = _tv_mgmt.offset_basename(start_year, source)
+        return _tv_mgmt.init_relpath(
+            base / "ext" / HATTERAS_GEOMETRY
+            / f"{name}_PADDED_{HATTERAS_DOMAINS.total_domains}.csv")
     # The version choice (env, CURRENT, the only v<n>; errors otherwise) lives
     # in hat_topo_version.offset_version since 2026-09-18, so the figure
     # scripts that used to repeat it read the same build the runner does.
-    version = _tv_mgmt.offset_version(start_year)
-    return f"{base}/{version}/{fname}" if version else f"{base}/{fname}"
+    return _tv_mgmt.init_relpath(_tv_mgmt.offset_file(start_year, "padded", 120,
+                                                      source=source))
 
 
 def island_offset_version(start_year):
     """The version segment of the offset file this period resolves to.
 
-    "v2" for a versioned layout, "flat" for the unversioned one. Recorded in
-    run metadata and run_index.csv (2026-09-15) because a v1 run and a v2 run
-    are otherwise identical on disk: the run name carries no offset token and
-    the file name is the same in every version folder. Resolves through
-    _island_offset_file so it can never disagree with the file that was read.
+    "duneline/v2" since 2026-09-22, when every build moved under the SOURCE it
+    was measured from; "v2" before that, and "flat" for the unversioned layout
+    older still. Recorded in run metadata and run_index.csv (2026-09-15)
+    because a v1 run and a v2 run are otherwise identical on disk: the run name
+    carries no offset token and the file name is the same in every version
+    folder. Resolves through _island_offset_file so it can never disagree with
+    the file that was read.
+
+    READING AN OLD RUN: a token with no "/" is from before the sources were
+    split, and every build then was dune-derived -- "v1" means "duneline/v1".
     """
     if HATTERAS_GEOMETRY_EXTENDED:
         return f"ext/{HATTERAS_GEOMETRY}"
+    # <year>/<source>/<version>/<file>, relative to 2-brie-offset.
     parts = _island_offset_file(start_year).split("/")
-    return parts[2] if re.fullmatch(r"v\d+", parts[2]) else "flat"
+    source, version = parts[2], parts[3]
+    return f"{source}/{version}" if re.fullmatch(r"v\d+", version) else source
 
 
 HATTERAS_PERIODS = {

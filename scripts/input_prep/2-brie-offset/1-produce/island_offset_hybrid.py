@@ -35,12 +35,16 @@ import sys as _sys
 _PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                      if (_p / "pyproject.toml").exists())
 _sys.path.insert(0, str(_PROJECT_ROOT / "scripts"))
-from site_layer.hat_topo_version import DUNE_LINE_FOR_YEAR, dune_raw_file_for_year  # noqa: E402
+from site_layer.hat_topo_version import (DUNE_LINE_FOR_YEAR, DEFAULT_OFFSET_SOURCE,  # noqa: E402
+                                         OFFSET_SOURCES, dune_raw_file_for_year,
+                                         offset_basename, offset_file,
+                                         offset_start_dir,
+                                         shoreline_raw_file_for_year)
 from site_layer.hat_extension_domains import BASE_GEOMETRY, GEOMETRIES, SURVEYED_GIS, gis_bounds  # noqa: E402
 
 from site_layer.hat_topo_version import BRIE_ROOT as _BRIE_ROOT  # noqa: E402
 
-_ap = _argparse.ArgumentParser(description="island dune offsets for one hindcast start")
+_ap = _argparse.ArgumentParser(description="island offsets for one hindcast start")
 # A start year is admissible here when hat_topo_version.DUNE_LINE_FOR_YEAR
 # pairs it with a dune-line vintage (1996 reads the 1997 line). Since
 # 2026-09-15; before that the raw file had to exist under the period's own
@@ -70,22 +74,49 @@ _ap.add_argument("--raw-file", default=None,
 _ap.add_argument("--geometry", default=None,
                  choices=[g for g in GEOMETRIES if g != BASE_GEOMETRY],
                  help="an extended reach, to <year>/ext/<geometry>/")
+# WHICH FEATURE THE OFFSET IS MEASURED FROM (2026-09-22). Every build until
+# then came from a digitised DUNE line. "shoreline" builds from the CoastSat
+# window mean instead (scripts/input_prep/5-scr/1-observations/mean_shoreline/),
+# which is a different FEATURE, not a newer reading of the same one -- so it
+# is a separate source with its own v1, never a v2 of the dune build.
+# The dune source keeps the flat <year>/v<n>/ layout it has always had, so
+# nothing the runner resolves moves; a non-default source nests one level
+# deeper, <year>/<source>/v<n>/. Everything after this point is identical:
+# same domain mean, same zeroing on the build's own minimum, same padding.
+_ap.add_argument("--source", default=DEFAULT_OFFSET_SOURCE, choices=OFFSET_SOURCES,
+                 help="the feature the offset is measured from "
+                      f"(default {DEFAULT_OFFSET_SOURCE})")
 _args = _ap.parse_args()
 YEAR = _args.year
 VERSION = _args.version
 GEOMETRY = _args.geometry
+SOURCE = _args.source
 if GEOMETRY and VERSION:
     _ap.error("--geometry builds are filed under ext/, not as a version")
+if GEOMETRY and SOURCE != DEFAULT_OFFSET_SOURCE:
+    _ap.error("the extended geometries are only built from the dune line")
 
+# A source names its own raw file. The shoreline's is named for the AVERAGING
+# WINDOW, not a vintage year (shoreline_raw_file_for_year), because a window
+# mean is what a satellite shoreline has instead of a survey date.
 RAW_FILE = (str(Path(_args.raw_file).resolve()) if _args.raw_file
-            else str(dune_raw_file_for_year(YEAR)))
+            else str(dune_raw_file_for_year(YEAR)) if SOURCE == DEFAULT_OFFSET_SOURCE
+            else str(shoreline_raw_file_for_year(YEAR)))
 RAW_EXT_FILE = (str(Path(RAW_FILE).parent / "ext"
                     / (Path(RAW_FILE).stem + "_ext.csv")) if GEOMETRY else None)
 
-OUTPUT_DIR    = str(_BRIE_ROOT / f"{YEAR}" / "ext" / GEOMETRY if GEOMETRY
-                    else _BRIE_ROOT / f"{YEAR}" / VERSION if VERSION
-                    else _BRIE_ROOT / f"{YEAR}")
-OUTPUT_BASENAME = f"Island_Dune_Offsets_{YEAR}"
+_START_DIR = offset_start_dir(YEAR, SOURCE)
+# ext/ sits under the SOURCE too (2026-09-22): an extended geometry is built
+# from the same feature as the surveyed reach it extends, and it is checked
+# against that source's CURRENT a few hundred lines below.
+OUTPUT_DIR    = str(_START_DIR / "ext" / GEOMETRY if GEOMETRY
+                    else _START_DIR / VERSION if VERSION
+                    else _START_DIR)
+OUTPUT_BASENAME = offset_basename(YEAR, SOURCE)
+# What to call the feature in a title, an axis and a warning, so a
+# shoreline build is not labelled "Dune" on its own diagnostic figure.
+FEATURE_LABEL = {"duneline": "Dune", "shoreline": "Shoreline"}[SOURCE]
+FEATURE_NOUN = {"duneline": "dune line", "shoreline": "mean shoreline"}[SOURCE]
 
 START_DOMAIN, END_DOMAIN = gis_bounds(GEOMETRY or BASE_GEOMETRY)
 B3D_GRIDS    = list(range(START_DOMAIN, END_DOMAIN + 1))
@@ -428,7 +459,7 @@ def plot_buffer_diagnostic(diag, year, padding_zeros, community_zones,
     # ------------------------------------------------------------------ #
     fig = plt.figure(figsize=(18, 7), facecolor="white")
     fig.suptitle(
-        f"Buffer Diagnostic — Dune Offset Profile  |  {year}{(' ' + VERSION) if VERSION else ''}  |  "
+        f"Buffer Diagnostic — {FEATURE_LABEL} Offset Profile  |  {year}{(' ' + VERSION) if VERSION else ''}  |  "
         f"Slope: ±{n_slope} domains  |  Bridge: {n_bridge} domains each side",
         fontsize=13, fontweight="bold", color="#1a1a2e", y=0.98,
     )
@@ -485,7 +516,7 @@ def plot_buffer_diagnostic(diag, year, padding_zeros, community_zones,
                      clip_on=True)
 
     ax_main.set_xlabel("Padded domain index  (0–119;  real = 15–104)", fontsize=11)
-    ax_main.set_ylabel("Dune raw_offset (m)", fontsize=11)
+    ax_main.set_ylabel(f"{FEATURE_LABEL} raw_offset (m)", fontsize=11)
     ax_main.set_xlim(-0.5, len(full) - 0.5)
     ax_main.legend(fontsize=9, loc="upper center", framealpha=0.9)
 
@@ -569,10 +600,10 @@ def main():
         # values as the build the matrix runs read. A different minimum here
         # would shift every GIS 1-90 offset and the experiment would no
         # longer be about the buffer.
-        _current = _BRIE_ROOT / f"{YEAR}" / "CURRENT"
-        _ver = _current.read_text(encoding="utf-8").strip() if _current.is_file() else ""
-        _base = (_BRIE_ROOT / f"{YEAR}" / _ver
-                 / f"{OUTPUT_BASENAME}_CASCADE_Input_unpadded.csv")
+        # Through the resolver since 2026-09-22, when the builds moved under
+        # <year>/<source>/: this joined <year>/ and CURRENT by hand and would
+        # have looked for the surveyed build one level too high.
+        _base = offset_file(YEAR, "unpadded", source=SOURCE)
         if not _base.is_file():
             raise SystemExit(f"no surveyed build to check against: {_base}")
         base = pd.read_csv(_base).set_index("Domain_ID")[str(YEAR)]
@@ -581,7 +612,7 @@ def main():
         missing = [g for g in B3D_GRIDS if g not in mine.index]
         diff = (mine.loc[lo:hi] - base.loc[lo:hi]).abs().max()
         print(f"\nGeometry {GEOMETRY}: GIS {START_DOMAIN}..{END_DOMAIN}, "
-              f"{len(mine)} domains, {len(missing)} without a dune line {missing}")
+              f"{len(mine)} domains, {len(missing)} without a {FEATURE_NOUN} {missing}")
         print(f"  surveyed slice vs {YEAR}/{_ver}: max |diff| {diff:.6f} m")
         if missing or diff > 1e-6:
             raise SystemExit("extension build changed or lost surveyed domains; refusing")

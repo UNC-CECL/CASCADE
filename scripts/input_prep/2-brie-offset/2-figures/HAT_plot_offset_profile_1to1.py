@@ -11,7 +11,7 @@ alongshore is 1 m cross-shore, the way a map draws it (Hannah, 2026-09-16).
     python HAT_plot_offset_profile_1to1.py --file 1996/v1/Island_Dune_Offsets_1996_PADDED_120.csv
     python HAT_plot_offset_profile_1to1.py --all                    # every padded build on disk
 
-Writes <build dir>/Island_Dune_Offsets_<year>_buffer_diagnostic_v2.png beside
+Writes <build dir>/<the build's own stem>_buffer_diagnostic_v2.png beside
 the original diagnostic (v1, exaggerated axes, kept), with the PDF and caption
 under supporting/.
 """
@@ -32,20 +32,22 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 from site_layer.hat_extension_domains import (BASE_GEOMETRY, GEOMETRIES,  # noqa: E402
                                    BUFFER_DOMAINS_PER_SIDE, DOMAIN_SPACING_M,
                                    SURVEYED_GIS, gis_bounds)
-from site_layer.hat_topo_version import BRIE_ROOT  # noqa: E402
+from site_layer.hat_topo_version import (BRIE_ROOT,  # noqa: E402
+                              DEFAULT_OFFSET_SOURCE as SOURCE, OFFSET_SOURCES,
+                              offset_basename, offset_file, offset_start_dir)
 
 
 def padded_file(year, geometry):
     first, last = gis_bounds(geometry)
     n = (last - first + 1) + 2 * BUFFER_DOMAINS_PER_SIDE
+    # Through hat_topo_version since 2026-09-22, when every build moved under
+    # <year>/<source>/. This read CURRENT out of <year>/ itself and would now
+    # find no CURRENT there, silently falling back to the year folder.
     if geometry == BASE_GEOMETRY:
-        year_dir = BRIE_ROOT / str(year)
-        current = year_dir / "CURRENT"
-        build = (year_dir / current.read_text(encoding="utf-8").strip()
-                 if current.is_file() else year_dir)
+        path = offset_file(year, "padded", n, source=SOURCE)
     else:
-        build = BRIE_ROOT / str(year) / "ext" / geometry
-    path = build / f"Island_Dune_Offsets_{year}_PADDED_{n}.csv"
+        path = (offset_start_dir(year, SOURCE) / "ext" / geometry
+                / f"{offset_basename(year, SOURCE)}_PADDED_{n}.csv")
     if not path.is_file():
         sys.exit(f"no padded file at {path}")
     return path
@@ -62,8 +64,17 @@ def geometry_of(path):
 
 
 def every_padded_file():
-    """Every padded build under 2-brie-offset, superseded ones included."""
-    return sorted(BRIE_ROOT.rglob("Island_Dune_Offsets_*_PADDED_*.csv"))
+    """Every padded build under 2-brie-offset, superseded ones included.
+
+    One glob per SOURCE (2026-09-22). This matched only the dune stem, so
+    --all quietly skipped every shoreline build; the stems come from
+    hat_topo_version so a new source cannot be forgotten here again.
+    """
+    out = []
+    for src in OFFSET_SOURCES:
+        stem = offset_basename(0, src).rsplit("_", 1)[0]   # drop the year
+        out.extend(BRIE_ROOT.rglob(f"{stem}_*_PADDED_*.csv"))
+    return sorted(set(out))
 
 
 def draw(path, geometry, first, last):
@@ -129,7 +140,10 @@ def draw(path, geometry, first, last):
                  f"steepest domain-to-domain angle is {np.abs(theta[real][:-1]).max():.0f} "
                  f"degrees. The compressed planform every calibrated run uses divides "
                  f"these offsets by ten.")
-    out = path.parent / f"Island_Dune_Offsets_{year}_buffer_diagnostic_v2.png"
+    # Named from the file it was drawn FROM, not from the dune stem
+    # (2026-09-22): this was hardcoded, so the shoreline build's diagnostic
+    # landed in 1996/shoreline/v1/ calling itself Island_Dune_Offsets.
+    out = path.parent / f"{path.stem.rsplit('_PADDED_', 1)[0]}_buffer_diagnostic_v2.png"
     save(fig, out, close=True)
     print(f"wrote {out.relative_to(BRIE_ROOT).as_posix()}")
 

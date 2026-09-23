@@ -1,17 +1,17 @@
 # NC-12 road offset measured from the extracted dune start
 
-Generated 2026-09-03T00:24:22 by `HAT_road_offset_from_dune_start.py`.
+Generated 2026-09-22T21:23:32 by `HAT_road_offset_from_dune_start.py`.
 
-Covers 1984 on 1984-start/v3, 2004 on 2004-start/v1. Each vintage is measured against interior row 0 of **its own period's extraction** -- the two are different islands, and 65 of 90 domains differ in interior shape between them.
+Covers 1984 on 1984-start/v2, 2004 on 2004-start/v1. Each vintage is measured against interior row 0 of **its own period's extraction** -- the two are different islands, and 65 of 90 domains differ in interior shape between them.
 
 | | |
 |---|---|
 | Extractor | `HAT_dune_topo_extractor.py` (ALONGSHORE_FLIP=True, STRAIGHTEN=True) |
-| 1984 topography | `1984-start/v3` |
+| 1984 topography | `1984-start/v2` |
 | 2004 topography | `2004-start/v1` |
 | 1984 DEMs | `C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\1984-start\1-extraction\npy-arrays` |
 | 2004 DEMs | `C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\1-barrier3d-domains\2004-start\1-extraction\npy-arrays` |
-| 1984 picked windows | `HAT_dune_search_windows_v3.json` |
+| 1984 picked windows | `HAT_dune_search_windows_v2.json` |
 | 2004 picked windows | `HAT_dune_search_windows_v1.json` |
 | Reference | interior row 0 = picked dune crest + 1 cell |
 | Road reference | seaward-most road cell per profile |
@@ -33,7 +33,7 @@ The test transcribed here is bulldoze's: the rows checked are the NEIGHBOURS of 
 
 ### The assumption this rests on
 
-**Nothing drowns at initialisation** on 1984-start/v3, 2004-start/v1 -- 0 domains in either year -- so no setback was moved and the rest of this section does not apply to this run.
+**Nothing drowns at initialisation** on 1984-start/v2, 2004-start/v1 -- 0 domains in either year -- so no setback was moved and the rest of this section does not apply to this run.
 
 That is the point of the gap-filled DEM. On `2009_v4` three domains per year drowned, and the audit for that version showed they drowned on **LiDAR coverage gaps, not measured water**: across the six flanking rows failing at GIS 78/79/80 there were 106 wet cells, of which 105 had never been surveyed and 1 was genuinely wet. The extractor writes no-data back as the water sentinel because Barrier3D has no representation for "unknown", so unsurveyed ground read as ocean and drowned the roadway. Filling those holes from the 2014 NOAA Post-Sandy DEM removes the cause, and the drown count goes to zero.
 
@@ -43,7 +43,7 @@ A move that lands inside the domain's own per-profile spread is a re-pick of the
 
 ## `delta_vs_legacy_m` is NOT the dune-line retreat
 
-It is tempting to read the difference against the legacy `RoadSetback_<year>.csv` as the retreat between `<year>` and 2009. It is not, and the reported `corr(delta, retreat)` shows it: a like-for-like pair of measurements taken in two different years would correlate near +1 with the offset-derived retreat, and the measured correlation is strongly negative.
+It is tempting to read the difference against the legacy `RoadSetback_<year>.csv` as the retreat between `<year>` and 2009. It is not, and the reported `corr(delta, retreat)` shows it: a like-for-like pair of measurements taken in two different years would correlate near +1 with the dune-line retreat, and the measured correlation is indistinguishable from zero -- the two files are not tracking the same feature at all. (It read "strongly negative" until 2026-09-22; the value has been about -0.03, which is no correlation, not a negative one. A correlation is immune to the zeroing error corrected the same day, so this conclusion did not depend on it.)
 
 Three reasons the two files are not commensurable, from `HAT_setback_from_lines.py` (retired 2026-08-17, git blob `c37ec03e`):
 
@@ -79,8 +79,8 @@ D8 is the one extreme outlier (-353 m in 1984). That is the Buxton bend, where N
 - Road span: GIS 9-90 (82 with road, 7 without)
 - Setback vs 2009 dune: median 198 m, range -15 to 590 m
 - Delta vs the LEGACY `RoadSetback_1984.csv`: median 34 m, range -10 to 159 m
-- Offset-derived dune-line retreat 1984->2004: median 43 m
-- **corr(delta, retreat) = -0.027** -- see the caveat below.
+- Offset-derived dune-line retreat 1984->2004: median 14 m
+- **corr(delta, retreat) = +0.028** -- see the caveat below.
 - NEGATIVE, floored to 0: 2 domain(s)
 
 | GIS | true setback (m) |

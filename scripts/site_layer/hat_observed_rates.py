@@ -265,6 +265,43 @@ SHORELINE_INVENTORY = OBSERVATIONS / "shoreline_inventory"
 # scripts would regenerate here.
 SHORELINE_PATTERNS = COMPARISONS / "trajectory_patterns"
 DSAS_ROOT = OBSERVATIONS / "dsas_1978_2019"
+
+# THE MEAN SHORELINE (2026-09-22). One averaging window's mean satellite
+# shoreline, as a line on the ground: each CoastSat transect's chainage
+# averaged over the window and placed back in space, then the ~906 mean points
+# strung into a single polyline. Built by
+# scripts/input_prep/5-scr/1-observations/mean_shoreline/coastsat_mean_shoreline.py.
+#
+# WHY IT IS A PRODUCT AND NOT AN INTERMEDIATE. Every other CoastSat product
+# here is a DIFFERENCE of chainage, in which each transect's arbitrary origin
+# cancels. This one is a POSITION, so the origin does not cancel and the
+# geolocation step is real work: aggregated to the 90 domains, raw chainage
+# spans 124 m alongshore while the geolocated position spans 6222 m, because
+# the transect origins follow the shore around the cape. The line is read
+# outside its producer -- 2-brie-offset turns it into the shoreline-derived
+# island offset -- so it is resolved here rather than typed there.
+MEAN_SHORELINE_ROOT = OBSERVATIONS / "mean_shoreline"
+
+
+def mean_shoreline_dir(start_year, end_year) -> Path:
+    """One averaging window's folder: the line, the per-transect means, the
+    figure and PROVENANCE.md. Named for the span, per rule 2."""
+    return MEAN_SHORELINE_ROOT / "{0}_{1}".format(int(start_year), int(end_year))
+
+
+def mean_shoreline_geojson(start_year, end_year) -> Path:
+    """The mean shoreline as ONE LineString, EPSG:26918, carrying the same
+    metadata properties a digitised dune line carries so the 2-brie-offset
+    intersection step reads it unchanged."""
+    a, b = int(start_year), int(end_year)
+    return mean_shoreline_dir(a, b) / "shoreline_mean_{0}_{1}.geojson".format(a, b)
+
+
+def mean_shoreline_csv(start_year, end_year) -> Path:
+    """Per CoastSat transect: the window mean, its scatter and count, the
+    dates it spans, and the geolocated mean point."""
+    a, b = int(start_year), int(end_year)
+    return mean_shoreline_dir(a, b) / "transect_means_{0}_{1}.csv".format(a, b)
 # The four windows drawn on one y axis (coastsat_lrr_windows.py). Since
 # 2026-09-19 only its 2 x 2 is drawn, into 3-rates/coastsat/lrr/; the
 # per-window and halves figures duplicated 3-rates and were archived with

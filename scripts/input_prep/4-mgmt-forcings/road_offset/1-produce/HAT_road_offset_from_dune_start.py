@@ -78,6 +78,7 @@
 
 from __future__ import annotations
 
+import csv
 import importlib.util
 import json
 import re
@@ -800,16 +801,47 @@ def write_two_row_csv(path: Path, values: dict[int, float]) -> None:
         f.write(",".join(f"{values[i]:.3f}" for i in ids) + "\n")
 
 
-def load_offsets(year: int) -> np.ndarray | None:
-    """Per-domain dune-line offset, seaward-positive metres. 90 rows expected."""
-    path = _tv.offset_file(year, "input")
-    if not path.is_file():
+def load_stations(year: int) -> np.ndarray | None:
+    """Per-domain dune-line station from the SHARED offshore datum, metres,
+    LANDWARD-positive. 90 rows.
+
+    NOT the island-offset build (2026-09-22). This used to read
+    offset_file(year, "input"), and the retreat below differenced two of
+    those. Each build is zeroed on its OWN most seaward domain, and for these
+    two years those minima are 56.6 m apart (1984 zeroed at 1934.3 m, 2004 at
+    1990.9 m, both on GIS 78), so the difference carried a constant -56.6 m
+    and came out the wrong SIGN: a true median retreat of +13.8 m was reported
+    as -42.8 m before the sign convention below, i.e. 43 m of progradation.
+
+    A correlation is immune to a constant, so the corr(delta, retreat) result
+    this function exists to serve never moved -- only the median it printed
+    beside it, and that median reached RoadOffset_dunestart_audit.md.
+
+    The raw files share one offshore datum and have no such constant, so this
+    reads them, exactly as duneline_endpoint.py does for the same question.
+    """
+    path = _tv.dune_raw_file_for_year(year, strict=False)
+    if path is None or not path.is_file():
         return None
-    values = np.loadtxt(path, delimiter=",", skiprows=1)
-    values = np.asarray(values, dtype=float).reshape(-1)
-    if values.size == 120:            # 15 + 90 + 15 padding
-        values = values[15:105]
-    return values if values.size == len(DOMAINS) else None
+    # First row per (domain, transect), then the mean of the transects in each
+    # domain -- the same two steps island_offset_hybrid.py takes, so this and
+    # the build differ only by the build's zeroing.
+    seen, sums, counts = set(), {}, {}
+    with open(path, newline="", encoding="utf-8-sig") as fh:
+        for row in csv.DictReader(fh):
+            try:
+                dom, line = int(float(row["domain_id"])), int(float(row["LineID"]))
+                station = float(row["ORIG_LEN"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if (dom, line) in seen:
+                continue
+            seen.add((dom, line))
+            sums[dom] = sums.get(dom, 0.0) + station
+            counts[dom] = counts.get(dom, 0) + 1
+    if not all(d in counts for d in DOMAINS):
+        return None
+    return np.array([sums[d] / counts[d] for d in DOMAINS], dtype=float)
 
 
 # ==============================================================================
@@ -1033,12 +1065,16 @@ def summarize(year, records, with_road, first_gis, last_gis) -> dict:
     delta = np.array([r["delta_vs_legacy_m"] for r in with_road], dtype=float)
     negative = [r for r in with_road if r["setback_dunestart_m"] < 0]
 
-    offsets_year = load_offsets(year)
-    offsets_2004 = load_offsets(2004)
+    stations_year = load_stations(year)
+    stations_2004 = load_stations(2004)
     retreat = None
     corr = np.nan
-    if offsets_year is not None and offsets_2004 is not None and year != 2004:
-        retreat = offsets_year - offsets_2004     # seaward-positive: >0 = retreat
+    if stations_year is not None and stations_2004 is not None and year != 2004:
+        # Stations grow LANDWARD from the offshore datum, so 2004 minus the
+        # earlier year is the landward movement between them: >0 = retreat.
+        # The operands were the other way round until 2026-09-22, which made
+        # the printed median the negative of the retreat it named.
+        retreat = stations_2004 - stations_year
         # Does delta_vs_legacy actually behave like retreat? If the legacy file
         # and this one were measuring the same thing in different years, this
         # correlation would be strongly POSITIVE. It is not -- see the audit.
@@ -1261,8 +1297,12 @@ def write_audit(audit: dict, exts: dict) -> None:
         "`RoadSetback_<year>.csv` as the retreat between `<year>` and 2009. It "
         "is not, and the reported `corr(delta, retreat)` shows it: a like-for-"
         "like pair of measurements taken in two different years would correlate "
-        "near +1 with the offset-derived retreat, and the measured correlation "
-        "is strongly negative.",
+        "near +1 with the dune-line retreat, and the measured correlation is "
+        "indistinguishable from zero -- the two files are not tracking the same "
+        "feature at all. (It read \"strongly negative\" until 2026-09-22; the "
+        "value has been about -0.03, which is no correlation, not a negative "
+        "one. A correlation is immune to the zeroing error corrected the same "
+        "day, so this conclusion did not depend on it.)",
         "",
         "Three reasons the two files are not commensurable, from "
         "`HAT_setback_from_lines.py` (retired 2026-08-17, git blob "
