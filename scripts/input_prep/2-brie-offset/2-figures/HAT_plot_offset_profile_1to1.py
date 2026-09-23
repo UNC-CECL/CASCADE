@@ -11,9 +11,10 @@ alongshore is 1 m cross-shore, the way a map draws it (Hannah, 2026-09-16).
     python HAT_plot_offset_profile_1to1.py --file 1996/v1/Island_Dune_Offsets_1996_PADDED_120.csv
     python HAT_plot_offset_profile_1to1.py --all                    # every padded build on disk
 
-Writes <build dir>/<the build's own stem>_buffer_diagnostic_v2.png beside
-the original diagnostic (v1, exaggerated axes, kept), with the PDF and caption
-under supporting/.
+Writes <build dir>/<the build's own stem>_buffer_diagnostic_1to1.png beside
+the original diagnostic (exaggerated axes, kept), with the PDF and caption
+under supporting/. Named `_v2` until 2026-09-23, which read as a build number
+inside a v<n>/ folder.
 """
 from __future__ import annotations
 
@@ -143,7 +144,7 @@ def draw(path, geometry, first, last):
     # Named from the file it was drawn FROM, not from the dune stem
     # (2026-09-22): this was hardcoded, so the shoreline build's diagnostic
     # landed in 1996/shoreline/v1/ calling itself Island_Dune_Offsets.
-    out = path.parent / f"{path.stem.rsplit('_PADDED_', 1)[0]}_buffer_diagnostic_v2.png"
+    out = path.parent / f"{path.stem.rsplit('_PADDED_', 1)[0]}_buffer_diagnostic_1to1.png"
     save(fig, out, close=True)
     print(f"wrote {out.relative_to(BRIE_ROOT).as_posix()}")
 

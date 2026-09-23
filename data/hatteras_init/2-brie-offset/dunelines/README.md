@@ -78,8 +78,8 @@ way: the new line lies SEAWARD of the old.
 
 | line | domains moved ≥ 0.5 m | largest | build |
 |---|---|---|---|
-| 1997 (vs 1997_v2) | 32 of 90 | 66.2 m, GIS 35 | `1996/v1/` (was v3), `offset_1996_v2_vs_v3.csv` |
-| 2009 | 50 of 90 | 65.6 m, GIS 2 | `2010/v1/` (was v2), `offset_2010_v1_vs_v2.csv` |
+| 1997 (vs 1997_v2) | 32 of 90 | 66.2 m, GIS 35 | `1996/v1/` (was v3), `offset_1996_superseded_v2_vs_v1.csv` |
+| 2009 | 50 of 90 | 65.6 m, GIS 2 | `2010/v1/` (was v2), `offset_2010_superseded_v1_vs_v1.csv` |
 | 2023 | 53 of 90 | 44.6 m, GIS 32 | no build (only an end year); `raw_offsets/2023_...` |
 
 Rebuilt from the new lines the same day:

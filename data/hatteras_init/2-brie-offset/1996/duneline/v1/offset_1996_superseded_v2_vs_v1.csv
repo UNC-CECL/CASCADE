@@ -1,4 +1,4 @@
-gis_domain,model_v2_m,model_v3_m,model_diff_m,abs_v2_m,abs_v3_m,abs_diff_m
+gis_domain,model_superseded_v2_m,model_v1_m,model_diff_m,abs_superseded_v2_m,abs_v1_m,abs_diff_m
 1,6258.12,6245.11,-13.00,8215.24,8198.31,-16.93
 2,6120.25,6124.17,3.93,8077.37,8077.37,0.00
 3,6053.47,6057.40,3.93,8010.59,8010.59,0.00
