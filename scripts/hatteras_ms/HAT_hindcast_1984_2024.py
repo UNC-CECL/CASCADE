@@ -195,8 +195,10 @@ from site_layer.hatteras_site_config import (
     resolve_be_preset,
     HATTERAS_GEOMETRY,
     HATTERAS_GEOMETRY_EXTENDED,
+    HATTERAS_OFFSET_SOURCE,
     SCORE_INTERIOR_GIS,
 )
+from site_layer.hat_topo_version import DEFAULT_OFFSET_SOURCE  # noqa: E402
 from cascade_pipeline.domains import DEFAULT_DOMAINS  # the surveyed reach, GIS 1-90
 
 # The notebook draws its final figures inline. A headless run cannot, so the
@@ -666,6 +668,18 @@ if RUN_KIND == "matrix" and WAVE_TOKEN:
         f"wave climate is off calibration ({WAVE_TOKEN}) but HAT_RUN_KIND is "
         f"matrix. A forced run is a sensitivity cell (HAT_RUN_KIND=sensitivity) "
         f"or an experiment (HAT_RUN_KIND=experiment HAT_RUN_TAG=<name>).")
+# Same rule for the island offset SOURCE (2026-09-22). A run built from the
+# CoastSat shoreline instead of the dune line derives exactly the same name as
+# the matrix run it is being compared against -- nothing in the name carries
+# the source -- so filing it in matrix/ would overwrite that run's outputs with
+# a different model input behind them. Refused, not re-filed.
+if RUN_KIND == "matrix" and HATTERAS_OFFSET_SOURCE != DEFAULT_OFFSET_SOURCE:
+    raise ValueError(
+        f"island offset source is {HATTERAS_OFFSET_SOURCE!r} (not "
+        f"{DEFAULT_OFFSET_SOURCE!r}) but HAT_RUN_KIND is matrix. The run name "
+        f"carries no offset token, so this would overwrite the matrix run it is "
+        f"meant to be compared against. Use HAT_RUN_KIND=experiment with "
+        f"HAT_RUN_TAG=<name>.")
 if RUN_KIND == "sensitivity" and not (WAVE_TOKEN or RELOCATION_SETBACK_TOKEN):
     raise ValueError(
         "HAT_RUN_KIND=sensitivity but every swept forcing is at its default; "
