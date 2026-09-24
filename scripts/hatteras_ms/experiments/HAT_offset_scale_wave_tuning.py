@@ -222,17 +222,21 @@ def cmd_run(a):
 # RMSE is recomputed from it and checked against the runner's, so the two
 # sets of scores are provably on the same target.
 
-def coastsat_target():
-    """The CoastSat LRR target, GIS 1-90, as the runner builds it for 1996."""
+def coastsat_target(start=PERIOD):
+    """The CoastSat LRR target, GIS 1-90, as the runner builds it for a start
+    year (section 8 of the runner: LOESS at 10 domains, the southern 10 raw).
+    Shared with scripts/sensitivity_analysis/natural_wave_sensitivity.py."""
     from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT
-    from site_layer.hatteras_site_config import HATTERAS_DOMAINS
+    from site_layer.hatteras_site_config import HATTERAS_DOMAINS, HATTERAS_PERIODS
     from cascade_pipeline.hindcast import build_target_table
     from cascade_pipeline.coastsat_loess import (CoastSatDataset, LoessConfig,
                                                  build_coastsat_series)
-    ds = CoastSatDataset(label="CoastSat LRR (1996-2010)", period_start=PERIOD,
-                         csv_path=str(COASTSAT_LRR_ROOT / "1996_2010" / "transect_lrr_full.csv"))
+    window = f"{start}_{HATTERAS_PERIODS[start]['end_year']}"
+    ds = CoastSatDataset(label=f"CoastSat LRR ({window.replace('_', '-')})",
+                         period_start=start,
+                         csv_path=str(COASTSAT_LRR_ROOT / window / "transect_lrr_full.csv"))
     cfg = LoessConfig(window_domains=(10,), skip_southern_domains=10)
-    cs = build_coastsat_series([ds], active_period_start=PERIOD, loess_config=cfg,
+    cs = build_coastsat_series([ds], active_period_start=start, loess_config=cfg,
                                domains=HATTERAS_DOMAINS)[0]
     return build_target_table(cs, cfg, HATTERAS_DOMAINS, 10).set_index(
         "gis_domain")["target_lrr_m_yr"]
