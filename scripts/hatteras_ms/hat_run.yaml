@@ -104,7 +104,8 @@ relocation_setback_m: 20
 #               since 2026-09-24.
 #   asrun       offset / 10, the units error every run before 2026-09-24
 #               carries; kept so those runs stay reproducible (with
-#               HAT_OFFSET_VERSION_<year>=v1, the build they were made from)
+#               HAT_OFFSET_VERSION_<year>=superseded_20260924_pre-metres/v1, the build they
+#               were made from)
 #   detrended   metres with the island-scale tilt removed; tested and
 #               rejected 2026-09-24
 # Anything but "asrun" adds an `offset<mode>` token to the run name.

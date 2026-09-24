@@ -253,7 +253,7 @@ def pad_offset_ring(real_m, buffers):
     """The padded island offset: buffers, real domains, buffers, closed smoothly.
 
     The one definition of the padding. island_offset_hybrid.py writes the
-    offset files with it (since 2026-09-24, build v2), and build_island_offset
+    offset files with it (every v1 since 2026-09-24), and build_island_offset
     re-closes with it, so a file built by it is exactly what metres mode hands
     Cascade.
 
@@ -286,11 +286,12 @@ def build_island_offset(offset_path, geometry, mode="metres"):
             "asrun"     - meters / 10, reproducing the historical unit error
                           exactly, buffers included -- so only with the
                           build a run was made from (v1 for every run before
-                          2026-09-24; v2 closes the buffer differently).
+                          2026-09-24, now superseded_20260924_pre-metres/v1; the
+                          current v1 closes the buffer differently).
             "metres"    - the measurement as-is, with the ring re-closed.
                           Carries the island's full planform including its
                           ~7 degree lean. The default since 2026-09-24. A
-                          file built since then (v2) already holds this
+                          file built since then (the current v1) holds this
                           closure, so it comes back unchanged; an older
                           file's slope-and-bridge buffers are replaced.
             "detrended" - the measurement with its linear trend removed, ring

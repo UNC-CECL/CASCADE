@@ -17,13 +17,13 @@ Written by `build_island_offset.py`, one row per build; each version's own `PROV
 
 | version | built | line | vintage | zero domain | compared with | |
 |---|---|---|---|---|---|---|
-| `v1` | 2026-09-18 (built as v3) | `duneline_1997.geojson` (re-digitized 2026-09-18) | 1997 | GIS 77 | superseded v2 | |
-| `v2` | 2026-09-24 | same raw as v1 (`1997_duneline_offset_raw.csv`) | 1997 | GIS 77 | v1 (real domains identical) | CURRENT |
+| `superseded_20260924_pre-metres/v1` | 2026-09-18 (built as v3) | `duneline_1997.geojson` (re-digitized 2026-09-18) | 1997 | GIS 77 | superseded v2 | |
+| `v1` | 2026-09-24 | same raw as the superseded build (`1997_duneline_offset_raw.csv`) | 1997 | GIS 77 | superseded_20260924_pre-metres/v1 (real domains identical) | CURRENT |
 
-v2 (2026-09-24) is v1 re-padded with the model's smooth wrap-around; the real domains are identical. See `v2/PROVENANCE.md`.
+`v1` (2026-09-24) is the build now in `superseded_20260924_pre-metres/v1/`, re-padded with the model's smooth wrap-around when the offset went in as metres; the real domains are identical. Built as `v2`, renumbered `v1` the same day (numbering restarted). See `v1/PROVENANCE.md`.
 
 A new build is `build_island_offset.py --duneline <line> --year 1996`; it
-takes the next free number (v3), skipping the superseded folder.
+takes the next free number (v2), skipping the superseded folders.
 
 ## Superseded (`superseded_20260919_pre-redigitized/`)
 

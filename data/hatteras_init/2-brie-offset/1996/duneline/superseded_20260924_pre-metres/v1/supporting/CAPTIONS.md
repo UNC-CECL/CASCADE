@@ -1,0 +1,12 @@
+# Captions — v1 (built as v3; renumbered 2026-09-19)
+
+`superseded_v2` in the comparison caption is `superseded_20260919_pre-redigitized/v2`; `v1` is this build.
+
+> **Files renamed 2026-09-23 (Hannah: the files in a `v1` folder should say v1).** `offset_1996_v2_vs_v3.*` is now `offset_1996_superseded_v2_vs_v1.*` (CSV columns `model_v2_m/model_v3_m` etc. are now `model_superseded_v2_m/model_v1_m` etc.), and every `_buffer_diagnostic_v2` is now `_buffer_diagnostic_1to1`: that `_v2` was the second drawing of the figure, not a build. The step-output logs below keep the names the scripts printed. The comparison figure was redrawn the same day under its new name, so its legend and caption say `superseded_v2` and `v1`: `HAT_compare_offset_versions.py --year 1996 --a superseded_20260919_pre-redigitized/v2 --label-a superseded_v2 --b v1` with the same two raw files; the CSV came out identical.
+
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`offset_1996_superseded_v2_vs_v1.png`.** Two builds of the 1996 island offset. (a) The unpadded offset each build hands the model, superseded_v2 in red and v1 in blue, each zeroed on its own most seaward domain. (b) The change in the dune line itself (duneline_1997_v2.geojson to duneline_1997.geojson), v1 minus superseded_v2, measured from the shared offshore datum along the 100 m transects and averaged per 500 m domain; positive is landward. 32 of 90 domains differ by 0.5 m or more (mean over all domains -7.8 m; the largest, -66.2 m, at GIS 35). Both raw files were produced by the same shapely intersection against the same transects, which is deterministic, so the difference is the line; the metre-scale station convention of the earlier ArcGIS export is not part of it.
+
+**`Island_Dune_Offsets_1996_buffer_diagnostic_1to1.png`.** The padded 1996 dune-line offset the model reads for geometry base, build 1996/duneline/v1 (GIS 1 to 90 plus 15 buffer domains each side), at 1:1 scale: one metre alongshore is one metre cross-shore, as a map draws it. The offset is the distance from a north-south datum line east of the island to the dune line, so the slope is the coast's bearing relative to north, not its curvature; the mean bearing is 8 degrees over the reach and the steepest domain-to-domain angle is 27 degrees. The compressed planform every calibrated run uses divides these offsets by ten.
