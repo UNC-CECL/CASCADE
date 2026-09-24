@@ -173,8 +173,9 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     # BRIE's x_s, so the file goes in as it is. "asrun" (offset / 10, the
     # units error every run before this date carries) is still reachable by
     # naming it, so those runs stay reproducible -- with the offset build they
-    # were made from (HAT_OFFSET_VERSION_<year>=v1), since v2 closes the
-    # buffer differently. The name rule is unchanged: every mode but asrun
+    # were made from, HAT_OFFSET_VERSION_<year>=superseded_20260924_pre-metres/v1,
+    # since the current v1 closes the buffer differently (the numbering
+    # restarted at v1 that day). The name rule is unchanged: every mode but asrun
     # earns an `offset<mode>` token, so a metres run can never take the name
     # of the /10 run it replaces. Study:
     # output/raw_runs/experiments/2026-09-24-island-offset-scale-wave-tuning/.

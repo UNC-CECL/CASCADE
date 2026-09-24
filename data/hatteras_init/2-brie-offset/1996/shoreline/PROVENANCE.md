@@ -33,7 +33,8 @@ risks counting the beach width twice.
 
 ```
 CURRENT           the build every reader of this source takes -> v1
-v1/               the build from the 1995-1997 mean shoreline
+v1/               the build from the 1995-1997 mean shoreline, padded with the model's wrap-around
+superseded_20260924_pre-metres/v1/  the same build with the old slope-and-bridge buffers
 ```
 
 Resolved by `hat_topo_version.offset_version(1996, "shoreline")` and
@@ -42,6 +43,6 @@ Resolved by `hat_topo_version.offset_version(1996, "shoreline")` and
 the dune build's `HAT_OFFSET_VERSION_1996`, so overriding this arm cannot
 silently move what the runner reads.
 
-## v2 (2026-09-24)
+## Renumbered (2026-09-24)
 
-`v2/` is `v1/` re-padded with the model's smooth wrap-around (`cascade_pipeline.hindcast.pad_offset_ring`); the real domains are identical and the padded file is exactly what offset_mode `metres` hands Cascade. `CURRENT` = `v2`. See `v2/PROVENANCE.md`.
+`v1/` is the build now in `superseded_20260924_pre-metres/v1/` re-padded with the model's smooth wrap-around (`cascade_pipeline.hindcast.pad_offset_ring`); the real domains are identical and the padded file is exactly what offset_mode `metres` hands Cascade. `CURRENT` = `v1`. Built as `v2` and renumbered the same day (numbering restarted). See `v1/PROVENANCE.md`.

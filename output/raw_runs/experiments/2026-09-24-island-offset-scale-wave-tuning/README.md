@@ -359,20 +359,25 @@ alongshore figures. Check it when the end domains are solved.
 
 After this study the runner's default became `offset_mode: metres`
 (`HAT_hindcast_config.py`, `hat_run.yaml`), and every offset build was
-re-padded as **v2** with the model's own smooth wrap-around
+re-padded with the model's own smooth wrap-around
 (`cascade_pipeline.hindcast.pad_offset_ring`), so the padded file is exactly
-what metres mode hands Cascade. v2's real domains are identical to v1's; only
+what metres mode hands Cascade. The numbering restarted: the re-padded builds
+are the new **v1**, the old ones `superseded_20260924_pre-metres/v1` (built as v2 and renumbered the
+same day). The new v1's real domains are identical to the old one's; only
 the buffer domains changed. The groin sweep now takes an offset mode too
 (`HAT_SWEEP_OFFSET_MODE`, default the runner's) and files a non-asrun sweep
 under an `offset<mode>` suffix.
 
 `checks/defaults-after-metres-switch/` is one run of the runner with nothing
-set: all defaults, v2 offset. It reproduces this study's
+set: all defaults, the new v1 offset. It reproduces this study's
 `runs_wave_height/metres_duneline/…_offsetmetres_road_bdm_nogroin` (Hs 2.5)
 exactly (interior RMSE 9.920179382773128, bias −3.895997977190597), on
-`duneline/v2` where the study ran `duneline/v1`. So no run in this study is
+the new `duneline/v1` where the study's metres runs used the build now in
+`superseded_20260924_pre-metres/v1`. So no run in this study is
 changed by the switch. The `asrun` runs here were made on v1 and reproduce
-only with `HAT_OFFSET_VERSION_<year>=v1`.
+only with `HAT_OFFSET_VERSION_<year>=superseded_20260924_pre-metres/v1`, and their run records now
+say so (`island_offset_version` = `<source>/superseded_20260924_pre-metres/v1`, relabelled
+2026-09-24; metres and detrended runs keep `v1`, whose input is identical).
 
 ## History
 
