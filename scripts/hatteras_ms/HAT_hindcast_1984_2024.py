@@ -159,6 +159,7 @@ from cascade_pipeline.run_info import RunInfo
 from cascade_pipeline.run_layout import resolve, write_path
 from cascade_pipeline.run_registry import (
     INDEX_SECTION,
+    barrier3d_provenance,
     rebuild_run_index,
     sweep_family,
     git_provenance,
@@ -707,6 +708,23 @@ print(f"RUN_NAME_STEM = {RUN_NAME_STEM!r}"
 print(f"SOURCE_SINK_PRESET = {SOURCE_SINK_PRESET!r}")
 print(f"OUTPUT_BASE_DIR = {OUTPUT_BASE_DIR}")
 print(f"RUN_KIND = {RUN_KIND!r}   RUN_TAG = {RUN_TAG!r}   SAVE_MODEL_STATE = {SAVE_MODEL_STATE}")
+
+# WHICH BARRIER3D (2026-09-24). Barrier3D is installed editable, so the branch
+# checked out in its repository is the model. Since 2026-09-24 that must be
+# fix/route-overwash-axis-swap, which corrects the route_overwash indexing
+# bug (experiments/2026-09-24-overwash-fix/NOTE.md); `git checkout master`
+# there would silently put runs back on it. Recorded in the metadata and the
+# index; warned about here, not refused, so a deliberate unfixed run (to
+# reproduce an old one) is still possible.
+_B3D = barrier3d_provenance()
+print(f"BARRIER3D = {_B3D['branch']}@{str(_B3D['commit'])[:7]}   "
+      f"route_overwash fix: {_B3D['route_overwash_fix']}"
+      + ("   (tree dirty)" if _B3D["dirty"] else ""))
+if _B3D["route_overwash_fix"] is not True:
+    print("  WARNING: this Barrier3D does NOT carry the route_overwash index fix. "
+          "Runs read the wrong cells in overwash and can crash silently. Check out "
+          "fix/route-overwash-axis-swap in the Barrier3D repository unless this run "
+          "reproduces an old one on purpose.")
 
 # --- the name this scenario will produce, predicted from the switches --------
 # Advisory only. 7.5 derives the authoritative RUN_NAME_BASE from what sections
@@ -1997,6 +2015,14 @@ _META = {
         "git_branch": _GIT["branch"],
         "git_dirty": (_GIT["dirty"],
                       "True: the commit alone does not reproduce this run"),
+        # Barrier3D is a separate repository, installed editable: its branch
+        # is part of the model (2026-09-24, the route_overwash fix).
+        "barrier3d_branch": _B3D["branch"],
+        "barrier3d_commit": _B3D["commit"],
+        "barrier3d_dirty": _B3D["dirty"],
+        "barrier3d_route_overwash_fix": (_B3D["route_overwash_fix"],
+                                         "True: the loaded Barrier3D has the "
+                                         "2026-09-24 route_overwash index fix"),
     },
     "scenario": {label: value for label, value, _token in SCENARIO_SWITCHES},
     "period": {
@@ -2151,6 +2177,8 @@ _index_row = {
     "rmse_reach_interior_m_yr": SKILL["rmse_reach_interior_m_yr"],
     "git_commit": _GIT["commit"][:12],
     "git_dirty": _GIT["dirty"],
+    "barrier3d_commit": str(_B3D["commit"])[:12],
+    "barrier3d_route_overwash_fix": _B3D["route_overwash_fix"],
 }
 # The row goes INTO the metadata, under "index row", and run_index.csv is
 # REBUILT from every run's metadata rather than appended to (2026-09-16).
