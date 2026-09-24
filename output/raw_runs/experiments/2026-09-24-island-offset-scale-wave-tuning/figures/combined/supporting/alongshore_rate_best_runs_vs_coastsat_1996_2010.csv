@@ -1,0 +1,4 @@
+offset_scale,run_dir,settings,rmse
+div10,runs_wave_height/div10_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_road_bdm_nogroin_waveHs2,Hs 2 m,1.0460749661256652
+metres,runs_wave_angle/metres_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetmetres_road_bdm_nogroin_waveHs1asym0p8ahf0p45,"asymmetry 0.8, high-angle 0.45",1.0702301102566816
+metres-detrended,runs_wave_angle/metres-detrended_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetdetrended_road_bdm_nogroin_waveHs1asym0p5ahf0p4,"asymmetry 0.5, high-angle 0.4",1.2399710532941493

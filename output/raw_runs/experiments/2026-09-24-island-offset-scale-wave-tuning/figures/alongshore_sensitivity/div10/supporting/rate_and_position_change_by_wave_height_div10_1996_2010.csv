@@ -1,0 +1,8 @@
+value,run_dir,variance_explained,bias_m_yr
+0.65,runs_wave_height/div10_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_road_bdm_nogroin_waveHs0p65,-4.683264411325238,-2.017315605825969
+0.75,runs_wave_height/div10_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_road_bdm_nogroin_waveHs0p75,0.1681418558471086,0.0447362344847184
+1.0,runs_wave_height/div10_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_road_bdm_nogroin_waveHs1,0.1962250665351267,0.0055034297001149
+1.5,runs_wave_height/div10_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_road_bdm_nogroin_waveHs1p5,0.2046655752755324,-0.0809351683241017
+2.0,runs_wave_height/div10_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_road_bdm_nogroin_waveHs2,0.2063956731577916,-0.1412294232195593
+2.5,runs_wave_height/div10_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_road_bdm_nogroin,0.1688782354793752,-0.2278495967347708
+3.0,runs_wave_height/div10_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_road_bdm_nogroin_waveHs3,0.0635094631860161,-0.3112085970643838
