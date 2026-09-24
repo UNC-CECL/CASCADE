@@ -193,7 +193,7 @@ plot_ElevAnimation_CASCADE(
     directory=r"C:\Users\agfig\model\calibration\results",
     TMAX_MGMT=0,
     name=run_name,
-    TMAX_SIM=1,
+    TMAX_SIM=model_duration,
     ny=items,
     beach_management_ny=None,  # list of bool the length of ny, or None for all False
     roadway_management_ny=None,
