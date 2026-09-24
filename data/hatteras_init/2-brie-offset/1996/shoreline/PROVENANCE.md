@@ -41,3 +41,7 @@ Resolved by `hat_topo_version.offset_version(1996, "shoreline")` and
 `HAT_OFFSET_VERSION_1996_SHORELINE` in the environment — a separate key from
 the dune build's `HAT_OFFSET_VERSION_1996`, so overriding this arm cannot
 silently move what the runner reads.
+
+## v2 (2026-09-24)
+
+`v2/` is `v1/` re-padded with the model's smooth wrap-around (`cascade_pipeline.hindcast.pad_offset_ring`); the real domains are identical and the padded file is exactly what offset_mode `metres` hands Cascade. `CURRENT` = `v2`. See `v2/PROVENANCE.md`.

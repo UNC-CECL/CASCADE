@@ -120,8 +120,8 @@ from site_layer.hatteras_site_config import (
 )
 
 from HAT_groin_sweep_config import (
+    sweep_offset_mode,
     GROIN_SWEEP_ROOT,
-    DAM_TO_M,
     FIT_DOMAINS_GIS,
     FLIP_SIGN_MODEL,
     GROIN_DOWNDRIFT_GIS,
@@ -319,27 +319,12 @@ SEA_LEVEL_CONSTANT = True
 from cascade_pipeline.hindcast import build_domain_file_paths  # noqa: E402
 
 
-def load_island_offset_dam(offset_path, geometry):
-    """Loads a padded BRIE island-offset file and converts it to decameters.
-
-    Copied from the hindcast runner. See its section 3.1.
-
-    Args:
-        offset_path: Path to a single-column padded offset CSV, in meters.
-        geometry: DomainGeometry the file must match in length.
-
-    Returns:
-        A 1-D array of offsets in decameters, one per padded domain.
-
-    Raises:
-        ValueError: If the file is not one value per padded domain.
-    """
-    offset_m = np.loadtxt(offset_path, skiprows=1, delimiter=",")
-    if offset_m.ndim != 1 or offset_m.size != geometry.total_domains:
-        raise ValueError(f"{offset_path.name}: expected "
-                         f"{geometry.total_domains} values, got shape "
-                         f"{offset_m.shape}")
-    return offset_m / DAM_TO_M
+# The island offset comes from cascade_pipeline.hindcast.build_island_offset,
+# the runner's own builder, in the sweep's offset mode. Until 2026-09-24 this
+# file carried a copy of the runner's old loader, which divided the metre file
+# by ten and had no mode: every groin sweep ran on offset / 10 whatever the
+# runner did.
+from cascade_pipeline.hindcast import build_island_offset  # noqa: E402
 
 
 def build_background_erosion(be_rates, geometry):
@@ -444,7 +429,8 @@ def assemble_forcing(be1):
     return dict(
         elevation_paths=elevation_paths,
         dune_paths=dune_paths,
-        island_offset_dam=load_island_offset_dam(ISLAND_OFFSET_FILE, geometry),
+        island_offset=build_island_offset(ISLAND_OFFSET_FILE, geometry,
+                                          mode=sweep_offset_mode()),
         background_erosion=background_erosion,
         be_rates=be_rates,
         road_setbacks_full=road_setbacks_full,
@@ -862,7 +848,7 @@ def run_combo(M, be1, fraction, out_dir):
         sandbag_management_on=[ENABLE_SANDBAG_PLACEMENT] * total,
         sandbag_elevation=SANDBAG_ELEVATION,
         enable_shoreline_offset=True,
-        shoreline_offset=forcing["island_offset_dam"],
+        shoreline_offset=forcing["island_offset"],   # metres, as Cascade wants
         wave_height=Hs,
         wave_period=FIXED_WAVE_PERIOD,
         wave_asymmetry=FIXED_WAVE_ASYMMETRY,
@@ -961,6 +947,9 @@ def run_combo(M, be1, fraction, out_dir):
         topo_product=TOPO_PRODUCT,
         topo_dune_version=TOPO_DUNE_VERSION,
         be_values_digest=values_digest(forcing["be_rates"]),
+        # The offset mode, since 2026-09-24: before that every cell was offset
+        # / 10 and nothing said so. A result.json without this field is asrun.
+        offset_mode=sweep_offset_mode(),
         **{f"git_{key}": value
            for key, value in git_provenance(PROJECT_BASE_DIR).items()
            if key in ("commit", "dirty")},

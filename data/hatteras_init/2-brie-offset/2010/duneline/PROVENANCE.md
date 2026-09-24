@@ -12,7 +12,10 @@ Written by `build_island_offset.py`, one row per build; each version's own `PROV
 
 | version | built | line | vintage | zero domain | compared with | |
 |---|---|---|---|---|---|---|
-| `v1` | 2026-09-18 | `duneline_2009.geojson` (re-digitized 2026-09-18) | 2009 | GIS 76 | superseded v1 | CURRENT |
+| `v1` | 2026-09-18 | `duneline_2009.geojson` (re-digitized 2026-09-18) | 2009 | GIS 76 | superseded v1 | |
+| `v2` | 2026-09-24 | same raw as v1 (`2009_duneline_offset_raw.csv`) | 2009 | GIS 76 | v1 (real domains identical) | CURRENT |
+
+v2 (2026-09-24) is v1 re-padded with the model's smooth wrap-around; the real domains are identical. See `v2/PROVENANCE.md`.
 
 ## Superseded (`superseded_20260919_pre-redigitized/`)
 

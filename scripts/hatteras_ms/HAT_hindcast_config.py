@@ -169,7 +169,16 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     ("source_sink_preset",           ("source_sink",),       _as_str,      "zeroBE"),
     ("scenario",                     ("scenario",),          _as_str,      "full_management"),
     ("relocations",                  ("relocations",),       _as_opt_bool, None),
-    ("offset_mode",                  ("offset_mode",),       _as_str,      "asrun"),
+    # METRES SINCE 2026-09-24 (Hannah): the offset file is metres and so is
+    # BRIE's x_s, so the file goes in as it is. "asrun" (offset / 10, the
+    # units error every run before this date carries) is still reachable by
+    # naming it, so those runs stay reproducible -- with the offset build they
+    # were made from (HAT_OFFSET_VERSION_<year>=v1), since v2 closes the
+    # buffer differently. The name rule is unchanged: every mode but asrun
+    # earns an `offset<mode>` token, so a metres run can never take the name
+    # of the /10 run it replaces. Study:
+    # output/raw_runs/experiments/2026-09-24-island-offset-scale-wave-tuning/.
+    ("offset_mode",                  ("offset_mode",),       _as_str,      "metres"),
     # THE REACH (2026-09-16): a name from hat_extension_domains.GEOMETRIES.
     # "base" is GIS 1-90. hatteras_site_config reads the same HAT_GEOMETRY
     # from the environment to build HATTERAS_DOMAINS, and the runner refuses
@@ -393,8 +402,9 @@ class RunConfig:
         scenario: A key of the SCENARIOS table in section 3.
         relocations: Overrides the scenario's historical-relocation switch.
             None leaves the scenario preset in charge.
-        offset_mode: Which shoreline_offset variant to build ("asrun",
-            "metres", "detrended").
+        offset_mode: Which shoreline_offset variant to build: "metres"
+            (the default since 2026-09-24), "asrun" (offset / 10, the old
+            units error) or "detrended".
         groin_enabled: Whether the groin callback is attached.
         groin_trapping_rate_m_yr: M, the groin amplitude knob.
         groin_deterioration_fraction: f, the post-deterioration floor as a

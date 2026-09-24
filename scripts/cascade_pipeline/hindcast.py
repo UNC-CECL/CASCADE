@@ -70,6 +70,7 @@ __all__ = [
     "STORM_COLUMNS", "RAW_OFFSET_COLUMNS",
     "build_domain_file_paths", "load_barrier3d_contract", "check_domain_units",
     "load_island_offset_dam", "build_island_offset",
+    "close_offset_ring", "pad_offset_ring",
     "island_offset_tilts", "ISLAND_OFFSET_MODES", "load_storm_series", "build_background_erosion",
     "groin_trapping_schedule", "implied_interception_m3_yr",
     "build_target_table", "groin_differential", "scenario_run_name",
@@ -208,7 +209,7 @@ def load_island_offset_dam(offset_path, geometry):
 ISLAND_OFFSET_MODES = ("asrun", "metres", "detrended")
 
 
-def _close_offset_ring(real_m, buffers):
+def close_offset_ring(real_m, buffers):
     """Buffer values carrying the shoreline from real_m[-1] back to real_m[0].
 
     BRIE's alongshore domain is PERIODIC -- `x_s[np.r_[1:ny, 0]]` makes the
@@ -248,7 +249,27 @@ def _close_offset_ring(real_m, buffers):
     return path[:buffers], path[buffers:]
 
 
-def build_island_offset(offset_path, geometry, mode="asrun"):
+def pad_offset_ring(real_m, buffers):
+    """The padded island offset: buffers, real domains, buffers, closed smoothly.
+
+    The one definition of the padding. island_offset_hybrid.py writes the
+    offset files with it (since 2026-09-24, build v2), and build_island_offset
+    re-closes with it, so a file built by it is exactly what metres mode hands
+    Cascade.
+
+    Args:
+        real_m: The real-domain offsets, in metres, south to north.
+        buffers: Buffer domains per side.
+
+    Returns:
+        A 1-D array of len(real_m) + 2 * buffers values, in metres.
+    """
+    real_m = np.asarray(real_m, dtype=float)
+    right, left = close_offset_ring(real_m, buffers)
+    return np.concatenate([left, real_m, right])
+
+
+def build_island_offset(offset_path, geometry, mode="metres"):
     """Builds the `shoreline_offset` array Cascade is handed.
 
     UNITS. `Cascade(shoreline_offset=...)` must be in METRES.
@@ -263,10 +284,15 @@ def build_island_offset(offset_path, geometry, mode="asrun"):
         geometry: DomainGeometry the file must match in length.
         mode: Which variant to build.
             "asrun"     - meters / 10, reproducing the historical unit error
-                          exactly. Kept so earlier runs stay reproducible.
+                          exactly, buffers included -- so only with the
+                          build a run was made from (v1 for every run before
+                          2026-09-24; v2 closes the buffer differently).
             "metres"    - the measurement as-is, with the ring re-closed.
                           Carries the island's full planform including its
-                          8 degree lean.
+                          ~7 degree lean. The default since 2026-09-24. A
+                          file built since then (v2) already holds this
+                          closure, so it comes back unchanged; an older
+                          file's slope-and-bridge buffers are replaced.
             "detrended" - the measurement with its linear trend removed, ring
                           re-closed. Keeps all 2052 m of real curvature and
                           drops the lean, which is what lets the periodic
@@ -296,8 +322,7 @@ def build_island_offset(offset_path, geometry, mode="asrun"):
         x = np.arange(real_m.size) * geometry.domain_spacing_m
         real_m = real_m - np.polyval(np.polyfit(x, real_m, 1), x)
 
-    right, left = _close_offset_ring(real_m, geometry.num_buffer_domains)
-    return np.concatenate([left, real_m, right])
+    return pad_offset_ring(real_m, geometry.num_buffer_domains)
 
 
 def island_offset_tilts(offset, geometry):
@@ -809,7 +834,9 @@ def build_cascade(
         roadway_management_on, beach_dune_manager_on: Per-domain module flags.
         sea_level_rise_rate, sea_level_constant: RSLR forcing.
         sandbag_management_on, sandbag_elevation: Sandbag forcing.
-        enable_shoreline_offset, shoreline_offset: Island orientation, in dam.
+        enable_shoreline_offset, shoreline_offset: Island orientation, in
+            METRES: brie_coupler.offset_shoreline adds it to brie.x_s with
+            no conversion (build_island_offset).
         wave_height, wave_period, wave_asymmetry, wave_angle_high_fraction:
             Wave climate. wave_height also sets BRIE's shoreface depth,
             d_sf = 8.9 * Hs (brie.py:270).

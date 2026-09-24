@@ -100,12 +100,15 @@ relocations: null
 relocation_setback_m: 20
 
 # Which shoreline_offset variant is built:
-#   asrun       reproduces the historical metres/10 unit error, so every
-#               previously published run stays reproducible. The default.
-#   metres      the correction
-#   detrended   the correction, with the island-scale tilt removed
+#   metres      the offset file as it is -- BRIE's x_s is metres. The default
+#               since 2026-09-24.
+#   asrun       offset / 10, the units error every run before 2026-09-24
+#               carries; kept so those runs stay reproducible (with
+#               HAT_OFFSET_VERSION_<year>=v1, the build they were made from)
+#   detrended   metres with the island-scale tilt removed; tested and
+#               rejected 2026-09-24
 # Anything but "asrun" adds an `offset<mode>` token to the run name.
-offset_mode: asrun
+offset_mode: metres
 
 
 # --- the groin --------------------------------------------------------------
