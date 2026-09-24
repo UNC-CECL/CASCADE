@@ -763,18 +763,23 @@ reports.scenario_report(
 
 
 # OFFSET_MODE selects which shoreline_offset variant is built; see
-# cascade_pipeline.hindcast.build_island_offset. The default, "asrun",
-# reproduces the historical unit error (the file is METRES and Cascade
-# wants metres, but load_island_offset_dam divided by 10), so previously
-# published runs stay reproducible until the correction is adopted.
+# cascade_pipeline.hindcast.build_island_offset. The default since
+# 2026-09-24 is "metres": the file is metres and Cascade wants metres, so it
+# goes in as it is. "asrun" reproduces the old units error (offset / 10) for
+# the runs made before that date.
 island_offset = build_island_offset(
     ISLAND_OFFSET_FILE, HATTERAS_DOMAINS, mode=OFFSET_MODE)
 OFFSET_TILTS = island_offset_tilts(island_offset, HATTERAS_DOMAINS)
 
 _real = slice(HATTERAS_DOMAINS.start_real_index, HATTERAS_DOMAINS.end_real_index)
-print(f"\n{START_YEAR} offsets: {island_offset.size} padded domains | "
-      f"real span {island_offset[_real].min() * DAM_TO_M:.0f}-"
-      f"{island_offset[_real].max() * DAM_TO_M:.0f} m")
+# island_offset is what Cascade is handed: metres, except in asrun, where
+# it is the file / 10. Multiplying by DAM_TO_M unconditionally printed the
+# asrun span right and every metres span ten times too large ("0-62186 m").
+_offset_m = island_offset * (DAM_TO_M if OFFSET_MODE == "asrun" else 1.0)
+print(f"\n{START_YEAR} offsets ({OFFSET_MODE}): {island_offset.size} padded domains | "
+      f"file span {_offset_m[_real].min():.0f}-{_offset_m[_real].max():.0f} m | "
+      f"handed to Cascade {island_offset[_real].min():.0f}-"
+      f"{island_offset[_real].max():.0f} m")
 
 
 # =============================================================================

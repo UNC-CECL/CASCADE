@@ -3,14 +3,26 @@ Hatteras CASCADE Dune Offset Pipeline
 ====================================
 
 This script:
-1. Reads a single raw dune–baseline intersection CSV (1984).
-2. Calculates the relative dune raw_offset per domain (meters, baseline = minimum).
-3. Pads the result for CASCADE using outward linear extrapolation from each
-   real edge, so that buffer domains closest to the real coast follow the
-   local shoreline trend rather than bridging to the opposite end.
-4. Saves a diagnostic figure showing the full 120-domain raw_offset profile.
+1. Reads a raw feature-to-baseline intersection CSV (one vintage).
+2. Calculates the relative offset per domain (metres, baseline = minimum).
+3. Pads the result for CASCADE with the smooth wrap-around the model uses
+   (cascade_pipeline.hindcast.pad_offset_ring): BRIE's domain is periodic,
+   so the buffers carry the shoreline from GIS 90 back round to GIS 1 along
+   a cubic Hermite matched to the island's end slopes. The padded file is
+   therefore exactly what offset_mode "metres" hands Cascade.
+4. Saves a diagnostic figure: the padded profile, and the shoreline angle
+   BRIE reads between neighbouring domains against its ~42 degree limit.
 
-Author: Hannah A. Henry (extrapolation buffer version)
+UNITS: metres throughout, from the raw file's ORIG_LEN (EPSG:3725) to the
+padded file. Nothing here converts to decametres.
+
+PADDING HISTORY: until 2026-09-24 (every v1 build) the buffers were a local
+slope segment plus a linear bridge, clipped at 0. The runner never used them
+in metres mode -- it replaced them with this closure -- so the file and its
+diagnostic showed a buffer the model did not see. Build v2 onward writes the
+closure itself (Hannah: "option (a)").
+
+Author: Hannah A. Henry
 """
 
 import os
@@ -20,7 +32,6 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 
 # =============================================================================
 # 1. USER CONFIGURATION
@@ -41,6 +52,8 @@ from site_layer.hat_topo_version import (DUNE_LINE_FOR_YEAR, DEFAULT_OFFSET_SOUR
                                          offset_start_dir,
                                          shoreline_raw_file_for_year)
 from site_layer.hat_extension_domains import BASE_GEOMETRY, GEOMETRIES, SURVEYED_GIS, gis_bounds  # noqa: E402
+from site_layer.hat_topo_version import offset_version  # noqa: E402
+from cascade_pipeline.hindcast import pad_offset_ring  # noqa: E402
 
 from site_layer.hat_topo_version import BRIE_ROOT as _BRIE_ROOT  # noqa: E402
 
@@ -124,33 +137,14 @@ B3D_GRIDS    = list(range(START_DOMAIN, END_DOMAIN + 1))
 PADDING_ZEROS = 15
 TARGET_LENGTH = (END_DOMAIN - START_DOMAIN + 1) + 2 * PADDING_ZEROS  # 120 for GIS 1-90
 
-# Number of real domains from each edge used to fit the local extrapolation trend.
-EXTRAP_FIT_DOMAINS = 10
-
-# Number of buffer domains on each side that follow the local coastline slope.
-# The remaining (PADDING_ZEROS - SLOPE_BUFFER_DOMAINS) buffer domains on each
-# side are filled by a linear bridge connecting the two slope tails.
-SLOPE_BUFFER_DOMAINS = 10
+DOMAIN_SPACING_M = 500.0          # BRIE's dy; hatteras_site_config.HATTERAS_DOMAINS
+UNSTABLE_ANGLE_DEG = 42.0         # (1.2 sin^2 - cos^2) changes sign here
 
 COL_MAP = {
     "Domain_ID": "domain_id",
     "Distance":  "ORIG_LEN",
     "Transect":  "LineID",
 }
-
-# Community zone annotations for the diagnostic figure
-# (real domain numbers, 1-indexed)
-COMMUNITY_ZONES = [
-    (1,   6,  "Cape Point"),
-    (7,   8,  "Buxton"),
-    (9,  20,  "Buxton–Avon"),
-    (21, 31,  "Avon"),
-    (32, 67,  "Avon–Tri-Village"),
-    (68, 83,  "Tri-Village"),
-    (84, 90,  "Pea Island NWR"),
-    (91, 115, "Pea Island ext"),
-    (0, 0, "S ext"),
-]
 
 # =============================================================================
 # 2. FUNCTIONS
@@ -221,359 +215,62 @@ def calculate_relative_offset(file_path, year, col_map, grids):
     return pd.DataFrame({"Domain_ID": seen_domains, str(year): relative_offsets})
 
 
-def pad_for_cascade(df, padding_zeros, target_length,
-                    extrap_fit_domains=5, slope_buffer_domains=5):
+def shoreline_angles_deg(padded):
+    """The angle BRIE reads between each padded domain and the next, wrapping
+    from the last back to the first (brie.py: atan2(diff(x_s), dy))."""
+    return np.degrees(np.arctan2(np.diff(np.r_[padded, padded[0]]), DOMAIN_SPACING_M))
+
+
+def plot_buffer_diagnostic(padded, year, padding, output_dir, output_basename):
+    """The padded profile and the shoreline angle BRIE reads, one figure.
+
+    (a) offset along the padded domains, buffers shaded, GIS numbering on the
+    real reach; (b) the angle between neighbouring domains, with the ~42
+    degree limit past which BRIE's shoreline goes anti-diffusive.
     """
-    Pad raw_offset array for CASCADE using a hybrid buffer strategy:
-
-      Left buffer  (15 domains, outermost → D1):
-        - Innermost `slope_buffer_domains` (closest to D1): follow local
-          coastline slope, anchored exactly at D1 so no gap at boundary.
-        - Remaining outer domains: linear bridge from the slope tail to the
-          right buffer's outer end, keeping the full array connected.
-
-      Right buffer (15 domains, D90 → outermost):
-        - Innermost `slope_buffer_domains` (closest to D90): follow local
-          coastline slope, anchored exactly at D90.
-        - Remaining outer domains: linear bridge (same bridge as above,
-          approached from the other end).
-
-    This guarantees:
-      - No discontinuity at either real-domain boundary.
-      - The buffer interior is connected (no jumps anywhere).
-      - Behaviour in the outer buffer is irrelevant to the real simulation.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Single raw_offset column, real domains D1–D90, south → north order.
-    padding_zeros : int
-        Buffer domains on each side (15).
-    target_length : int
-        Total padded length (120).
-    extrap_fit_domains : int
-        Real domains used to estimate local edge slope (default 5).
-    slope_buffer_domains : int
-        Buffer domains on each side that follow the local slope (default 5).
-        Must be < padding_zeros.
-
-    Returns
-    -------
-    padded : pd.DataFrame
-    diag   : dict  (arrays for diagnostic plot)
-    """
-    assert slope_buffer_domains < padding_zeros, \
-        "slope_buffer_domains must be less than padding_zeros"
-
-    data_columns = list(df.columns)
-    col          = data_columns[0]
-    values       = df[col].to_numpy(dtype=float)   # shape (90,)
-
-    # ------------------------------------------------------------------ #
-    # 1. Estimate local slopes at each edge                               #
-    # ------------------------------------------------------------------ #
-    x_fit   = np.arange(extrap_fit_domains, dtype=float)
-
-    # Left edge slope (fit D1..D5, anchor at D1 = values[0])
-    m_left, _ = np.polyfit(x_fit, values[:extrap_fit_domains], 1)
-
-    # Right edge slope (fit D86..D90, anchor at D90 = values[-1])
-    m_right, _ = np.polyfit(x_fit, values[-extrap_fit_domains:], 1)
-
-    # ------------------------------------------------------------------ #
-    # 2. Left slope segment (innermost, closest to D1)                    #
-    #    Steps: -1 (adjacent to D1) … -slope_buffer_domains (outermost   #
-    #    of slope segment).  Anchor: values[0].                          #
-    # ------------------------------------------------------------------ #
-    left_slope_steps  = np.arange(-1, -(slope_buffer_domains + 1), -1, dtype=float)
-    left_slope_values = values[0] + m_left * left_slope_steps   # anchored at D1
-    left_slope_values = np.clip(left_slope_values, 0.0, None)
-    # left_slope_values[0]  → adjacent to D1  (step = -1)
-    # left_slope_values[-1] → outermost of slope segment
-
-    # ------------------------------------------------------------------ #
-    # 3. Right slope segment (innermost, closest to D90)                  #
-    # ------------------------------------------------------------------ #
-    right_slope_steps  = np.arange(1, slope_buffer_domains + 1, dtype=float)
-    right_slope_values = values[-1] + m_right * right_slope_steps
-    right_slope_values = np.clip(right_slope_values, 0.0, None)
-    # right_slope_values[0]  → adjacent to D90
-    # right_slope_values[-1] → outermost of slope segment
-
-    # ------------------------------------------------------------------ #
-    # 4. Linear bridge + final assembly                                   #
-    #                                                                     #
-    #  Think of the full padded array as one continuous sequence:         #
-    #    idx 0            = outermost left buffer                         #
-    #    idx 14           = adjacent to D1                                #
-    #    idx 15–104       = real domains D1–D90                           #
-    #    idx 105          = adjacent to D90                               #
-    #    idx 119          = outermost right buffer                        #
-    #                                                                     #
-    #  Slope segments (length = slope_buffer_domains = 5):               #
-    #    Left slope  : idx 10–14  (inner left buffer, touching D1)       #
-    #    Right slope : idx 105–109 (inner right buffer, touching D90)    #
-    #                                                                     #
-    #  Bridge (length = n_bridge_each per side = 10):                    #
-    #    Left bridge : idx 0–9   (outer left buffer)                     #
-    #    Right bridge: idx 110–119 (outer right buffer)                  #
-    #                                                                     #
-    #  The bridge is ONE linspace from left slope TAIL (idx 10 value)    #
-    #  to right slope TAIL (idx 109 value), with 20 interior points.     #
-    #  Left bridge  = first 10 points (running left→right, ascending)    #
-    #  Right bridge = last  10 points (running left→right, continuing)   #
-    #                                                                     #
-    #  Key: left_slope_values is ordered adjacent-to-D1 first,           #
-    #  so left_slope_values[-1] is the OUTERMOST left slope point        #
-    #  (i.e. the value at padded idx 10, the bridge's left anchor).      #
-    # ------------------------------------------------------------------ #
-    n_bridge_each = padding_zeros - slope_buffer_domains   # 10
-
-    # ------------------------------------------------------------------ #
-    # Build bridge as 21 points INCLUDING both slope tails as endpoints.  #
-    # full_bridge[0]               = L = left  slope tail                 #
-    # full_bridge[n_bridge_each]   = M = midpoint                         #
-    # full_bridge[2*n_bridge_each] = R = right slope tail                 #
-    #                                                                      #
-    # Left bridge stored outermost→innermost in padded space (idx 0→9):   #
-    #   idx 9 (innermost) = full_bridge[0] = L  ← zero-gap connect to    #
-    #   idx 10 = left_slope_values[-1] = L                                #
-    #   idx 0 (outermost) = full_bridge[9] (near midpoint)                #
-    #                                                                      #
-    # Right bridge stored innermost→outermost in padded space (idx 110→119):
-    #   idx 110 (innermost) = full_bridge[20] = R ← zero-gap connect to  #
-    #   idx 109 = right_slope_values[-1] = R                              #
-    #   idx 119 (outermost) = full_bridge[11] (near midpoint)             #
-    # ------------------------------------------------------------------ #
-    full_bridge = np.linspace(
-        left_slope_values[-1],      # L: left slope tail
-        right_slope_values[-1],     # R: right slope tail
-        n_bridge_each * 2 + 1,      # 21 points including both endpoints
-    )
-
-    # Left bridge:  [fb[9], fb[8], ..., fb[0]]  — outermost to innermost
-    left_bridge_values  = full_bridge[n_bridge_each - 1::-1]
-
-    # Right bridge: [fb[20], fb[19], ..., fb[11]] — innermost to outermost
-    right_bridge_values = full_bridge[2 * n_bridge_each:n_bridge_each:-1]
-
-    # ------------------------------------------------------------------ #
-    # 5. Assemble full left and right buffer arrays                       #
-    #  left_full  (idx 0=outermost, idx 14=adjacent to D1):              #
-    #    [left_bridge] + [left_slope reversed]                            #
-    #    left_full[9]  = fb[0] = L                                       #
-    #    left_full[10] = left_slope_values[-1] = L  ← ZERO GAP           #
-    #  right_full (idx 0=adjacent to D90, idx 14=outermost):             #
-    #    [right_slope] + [right_bridge]                                   #
-    #    right_full[4] = right_slope_values[-1] = R                      #
-    #    right_full[5] = fb[20] = R              ← ZERO GAP              #
-    # ------------------------------------------------------------------ #
-    left_full  = np.concatenate([left_bridge_values, left_slope_values[::-1]])
-    right_full = np.concatenate([right_slope_values, right_bridge_values])
-
-    left_block  = pd.DataFrame({col: left_full})
-    right_block = pd.DataFrame({col: right_full})
-
-    # ------------------------------------------------------------------ #
-    # 6. Assemble and validate                                            #
-    # ------------------------------------------------------------------ #
-    padded = pd.concat(
-        [left_block, df[[col]], right_block],
-        ignore_index=True,
-    )
-
-    print(f"\nPadding summary (hybrid slope + bridge):")
-    print(f"  Slope domains per side : {slope_buffer_domains}")
-    print(f"  Bridge domains per side: {padding_zeros - slope_buffer_domains}")
-    print(f"  D1  boundary check     : left_buf[-1]={left_full[-1]:.2f}  D1={values[0]:.2f}  "
-          f"diff={abs(left_full[-1]-values[0]):.4f} m")
-    print(f"  D90 boundary check     : right_buf[0]={right_full[0]:.2f}  D90={values[-1]:.2f}  "
-          f"diff={abs(right_full[0]-values[-1]):.4f} m")
-    print(f"  Left  buffer range : {left_full.min():.2f} – {left_full.max():.2f} m")
-    print(f"  Right buffer range : {right_full.min():.2f} – {right_full.max():.2f} m")
-    print(f"  Padded length      : {len(padded)} (target: {target_length})")
-
-    if len(padded) != target_length:
-        print(f"  ERROR: length mismatch!")
-
-    diag = {
-        "left_values":         left_full,           # outermost→D1, length=15
-        "real_values":         values,               # D1→D90, length=90
-        "right_values":        right_full,           # D90→outermost, length=15
-        "slope_buffer_domains": slope_buffer_domains,
-        "extrap_fit_domains":  extrap_fit_domains,
-        "m_left":              m_left,
-        "m_right":             m_right,
-    }
-
-    return padded, diag
-
-
-def plot_buffer_diagnostic(diag, year, padding_zeros, community_zones,
-                            output_dir, output_basename):
-    """
-    Save a diagnostic figure of the full padded raw_offset profile (120 domains).
-
-    Layout:
-      - Full profile across all 120 padded indices
-      - Buffer zones shaded in salmon
-      - Real-domain zone annotations along the top
-      - Inset zoom panels for left and right buffer transitions
-    """
-    lv = diag["left_values"]    # shape (15,) outermost first
-    rv = diag["real_values"]    # shape (90,)
-    rb = diag["right_values"]   # shape (15,) D90-adjacent first
-
-    n_slope  = diag["slope_buffer_domains"]
-    n_bridge = padding_zeros - n_slope
-
-    # Full padded array in plot order (index 0 = leftmost buffer)
-    full = np.concatenate([lv, rv, rb])   # 120 values
-
-    # Index ranges (padded space)
-    left_buf_x   = np.arange(padding_zeros)
-    real_x       = np.arange(padding_zeros, padding_zeros + len(rv))
-    right_buf_x  = np.arange(padding_zeros + len(rv), len(full))
-
-    # Index directly into `full` — no re-slicing of diag sub-arrays.
-    # Left buffer  [0 .. padding_zeros-1]:
-    #   [0 .. n_bridge-1]      = bridge (outermost, far from D1)
-    #   [n_bridge .. 14]       = slope  (adjacent to D1)
-    # Right buffer [padding_zeros+90 .. 119]:
-    #   [+0 .. +n_slope-1]     = slope  (adjacent to D90)
-    #   [+n_slope .. +14]      = bridge (outermost, far from D90)
-    r_start = padding_zeros + len(rv)
-
-    left_bridge_x  = np.arange(0, n_bridge)
-    left_slope_x   = np.arange(n_bridge, padding_zeros)
-    right_slope_x  = np.arange(r_start, r_start + n_slope)
-    right_bridge_x = np.arange(r_start + n_slope, r_start + padding_zeros)
-
-    left_bridge_v  = full[left_bridge_x]
-    left_slope_v   = full[left_slope_x]
-    right_slope_v  = full[right_slope_x]
-    right_bridge_v = full[right_bridge_x]
-
-    # ------------------------------------------------------------------ #
-    # Figure layout                                                        #
-    # ------------------------------------------------------------------ #
-    fig = plt.figure(figsize=(18, 7), facecolor="white")
-    fig.suptitle(
-        f"Buffer Diagnostic — {FEATURE_LABEL} Offset Profile  |  {year}{(' ' + VERSION) if VERSION else ''}  |  "
-        f"Slope: ±{n_slope} domains  |  Bridge: {n_bridge} domains each side",
-        fontsize=13, fontweight="bold", color="#1a1a2e", y=0.98,
-    )
-
-    ax_main  = fig.add_axes([0.05, 0.18, 0.68, 0.68])
-    ax_left  = fig.add_axes([0.76, 0.55, 0.21, 0.32])
-    ax_right = fig.add_axes([0.76, 0.13, 0.21, 0.32])
-
-    BUF_COLOR    = "#f4a582"   # salmon  — slope segment
-    BRIDGE_COLOR = "#b2abd2"   # purple  — linear bridge
-    REAL_COLOR   = "#2166ac"   # blue    — real domains
-    ZOOM_COLOR   = "#d6604d"   # red     — inset
-
-    # ---- Main plot ---------------------------------------------------- #
-    ax_main.axvspan(left_buf_x[0]  - 0.5, left_buf_x[-1]  + 0.5,
-                    color=BUF_COLOR, alpha=0.10, zorder=0)
-    ax_main.axvspan(right_buf_x[0] - 0.5, right_buf_x[-1] + 0.5,
-                    color=BUF_COLOR, alpha=0.10, zorder=0)
-
-    for xv in [padding_zeros - 0.5, padding_zeros + len(rv) - 0.5]:
-        ax_main.axvline(xv, color="#444444", lw=1.0, ls="--", zorder=2)
-
-    # Bridge segments (outer, purple dashed)
-    ax_main.plot(left_bridge_x,  left_bridge_v,  "s--", color=BRIDGE_COLOR,
-                 ms=4, lw=1.5, zorder=3,
-                 label=f"Bridge ({n_bridge} domains/side, linear connect)")
-    ax_main.plot(right_bridge_x, right_bridge_v, "s--", color=BRIDGE_COLOR,
-                 ms=4, lw=1.5, zorder=3)
-
-    # Slope segments (inner, salmon solid)
-    ax_main.plot(left_slope_x,  left_slope_v,  "o-", color=BUF_COLOR,
-                 ms=6, lw=2.0, zorder=4,
-                 label=f"Slope (±{n_slope} domains, local coastline trend)")
-    ax_main.plot(right_slope_x, right_slope_v, "o-", color=BUF_COLOR,
-                 ms=6, lw=2.0, zorder=4)
-
-    # Real domains
-    ax_main.plot(real_x, rv, "o-", color=REAL_COLOR,
-                 ms=3, lw=1.8, zorder=5, label="Real domains (D1–D90)")
-
-    # Community zone annotations along the top
-    ax_main.set_ylim(bottom=-0.5)
-    _, ymax = ax_main.get_ylim()
-    zone_colors = ["#e8e8f0", "#d8d8ec"] * 10
-
-    for zi, (d_start, d_end, label) in enumerate(community_zones):
-        px_start = (d_start - START_DOMAIN) + padding_zeros
-        px_end   = (d_end   - 1) + padding_zeros
-        ax_main.axvspan(px_start - 0.5, px_end + 0.5,
-                        color=zone_colors[zi], alpha=0.35, zorder=1)
-        ax_main.text((px_start + px_end) / 2, ymax * 0.97, label,
-                     ha="center", va="top", fontsize=7.5,
-                     color="#333355", rotation=90 if len(label) > 8 else 0,
-                     clip_on=True)
-
-    ax_main.set_xlabel("Padded domain index  (0–119;  real = 15–104)", fontsize=11)
-    ax_main.set_ylabel(f"{FEATURE_LABEL} raw_offset (m)", fontsize=11)
-    ax_main.set_xlim(-0.5, len(full) - 0.5)
-    ax_main.legend(fontsize=9, loc="upper center", framealpha=0.9)
-
-    ax2 = ax_main.twiny()
-    ax2.set_xlim(ax_main.get_xlim())
-    real_tick_padded = [padding_zeros + i for i in range(0, 90, 10)]
-    real_tick_labels = [str(i + 1) for i in range(0, 90, 10)]
-    ax2.set_xticks(real_tick_padded)
-    ax2.set_xticklabels(real_tick_labels, fontsize=8)
-    ax2.set_xlabel("GIS domain (south → north)", fontsize=9, labelpad=4)
-
-    for spine in ["top", "right"]:
-        ax_main.spines[spine].set_visible(False)
-
-    # ---- Left buffer zoom (show bridge + slope + first few real domains) #
-    n_show = n_slope + n_bridge + 3
-    zoom_real_x  = real_x[:n_slope + 3]
-    zoom_real_v  = rv[:n_slope + 3]
-
-    ax_left.plot(zoom_real_x,  zoom_real_v,   "o-", color=REAL_COLOR,   ms=5, lw=2, label="Real")
-    ax_left.plot(left_slope_x, left_slope_v,  "o-", color=ZOOM_COLOR,   ms=6, lw=2, label=f"Slope (±{n_slope})")
-    ax_left.plot(left_bridge_x,left_bridge_v, "s--",color=BRIDGE_COLOR, ms=5, lw=1.5,label="Bridge")
-    ax_left.axvline(padding_zeros - 0.5, color="#444444", lw=1.0, ls="--")
-    ax_left.axvline(padding_zeros - n_slope - 0.5, color=BRIDGE_COLOR, lw=0.8, ls=":", alpha=0.7)
-    ax_left.axvspan(left_buf_x[0] - 0.5, left_buf_x[-1] + 0.5, color=BUF_COLOR, alpha=0.12)
-    ax_left.set_title("Left buffer (S cape)", fontsize=9, fontweight="bold")
-    ax_left.set_xlabel("Padded index", fontsize=8)
-    ax_left.set_ylabel("Offset (m)", fontsize=8)
-    ax_left.tick_params(labelsize=8)
-    ax_left.legend(fontsize=7)
-    for spine in ["top", "right"]:
-        ax_left.spines[spine].set_visible(False)
-
-    # ---- Right buffer zoom -------------------------------------------- #
-    zoom_real_x2 = real_x[-(n_slope + 3):]
-    zoom_real_v2 = rv[-(n_slope + 3):]
-
-    ax_right.plot(zoom_real_x2,  zoom_real_v2,   "o-", color=REAL_COLOR,   ms=5, lw=2, label="Real")
-    ax_right.plot(right_slope_x, right_slope_v,  "o-", color=ZOOM_COLOR,   ms=6, lw=2, label=f"Slope (±{n_slope})")
-    ax_right.plot(right_bridge_x,right_bridge_v, "s--",color=BRIDGE_COLOR, ms=5, lw=1.5,label="Bridge")
-    ax_right.axvline(padding_zeros + len(rv) - 0.5, color="#444444", lw=1.0, ls="--")
-    ax_right.axvline(padding_zeros + len(rv) + n_slope - 0.5, color=BRIDGE_COLOR, lw=0.8, ls=":", alpha=0.7)
-    ax_right.axvspan(right_buf_x[0] - 0.5, right_buf_x[-1] + 0.5, color=BUF_COLOR, alpha=0.12)
-    ax_right.set_title("Right buffer (N Rodanthe)", fontsize=9, fontweight="bold")
-    ax_right.set_xlabel("Padded index", fontsize=8)
-    ax_right.set_ylabel("Offset (m)", fontsize=8)
-    ax_right.tick_params(labelsize=8)
-    ax_right.legend(fontsize=7)
-    for spine in ["top", "right"]:
-        ax_right.spines[spine].set_visible(False)
-
-    # ---- Save ---------------------------------------------------------- #
-    fig_path = os.path.join(output_dir, f"{output_basename}_buffer_diagnostic.png")
-    fig.savefig(fig_path, dpi=150, bbox_inches="tight", facecolor="white")
-    plt.close(fig)
-    print(f"\nDiagnostic figure saved to:\n  {fig_path}")
-    return fig_path
+    from site_layer.hat_figure_style import (C, INK_MUTED, _title, apply_style,
+                                             figsize, open_frame, record_caption,
+                                             save)
+    apply_style()
+    n_real = len(padded) - 2 * padding
+    x = np.arange(len(padded)) - padding + START_DOMAIN     # GIS numbering, buffers outside
+    theta = shoreline_angles_deg(padded)
+    real = slice(padding, padding + n_real)
+    fig, (ax_o, ax_t) = plt.subplots(2, 1, figsize=figsize("double", height=5.0),
+                                     sharex=True, constrained_layout=True)
+    for ax in (ax_o, ax_t):
+        for lo, hi in ((x[0] - 0.5, START_DOMAIN - 0.5), (END_DOMAIN + 0.5, x[-1] + 0.5)):
+            ax.axvspan(lo, hi, color=C["BASE_FILL"], alpha=0.6, lw=0)
+        ax.grid(axis="y")
+        open_frame(ax)
+    ax_o.plot(x, padded / 1000.0, color=C["INK"], lw=1.4)
+    ax_o.plot(x[real], padded[real] / 1000.0, color=C["LATE"], lw=1.8)
+    ax_o.set_ylabel(f"{FEATURE_LABEL} offset (km)")
+    _title(ax_o, 0, f"Island offset as written, {year}{(' ' + VERSION) if VERSION else ''}")
+    # the wrap from the last domain back to the first is drawn at the right end
+    ax_t.plot(x, theta, color=C["INK"], lw=1.2)
+    for sign in (1, -1):
+        ax_t.axhline(sign * UNSTABLE_ANGLE_DEG, color=C["ACCENT"], lw=0.9, ls="--")
+    ax_t.axhline(0, color=INK_MUTED, lw=0.6)
+    ax_t.set_ylabel("Shoreline angle to the\nnext domain (degrees)")
+    ax_t.set_xlabel("Padded domain, numbered as GIS (shaded: buffer domains)")
+    _title(ax_t, 1, "Angle BRIE reads")
+    path = Path(output_dir) / f"{output_basename}_buffer_diagnostic.png"
+    save(fig, path, vector=False, dpi=200, close=True)
+    record_caption(path, (
+        f"The padded {FEATURE_NOUN} offset for the {year} start, in metres as "
+        f"written to {output_basename}_PADDED_{len(padded)}.csv. (a) Offset along "
+        f"the padded domains; the real reach GIS {START_DOMAIN}-{END_DOMAIN} in "
+        f"blue, the {padding} buffer domains each side shaded. The buffers close "
+        "BRIE's periodic domain from the last real domain back round to the "
+        "first along a cubic Hermite matched to the island's end slopes "
+        "(cascade_pipeline.hindcast.pad_offset_ring), the same array offset_mode "
+        "'metres' hands Cascade. (b) The shoreline angle between each padded "
+        "domain and the next (atan2 of the offset step over 500 m), the last "
+        f"point being the wrap; dashed at +/-{UNSTABLE_ANGLE_DEG:g} degrees, past "
+        "which BRIE's alongshore diffusivity changes sign."))
+    print(f"\nDiagnostic figure saved to:\n  {path}")
+    return path
 
 
 # =============================================================================
@@ -613,6 +310,7 @@ def main():
         diff = (mine.loc[lo:hi] - base.loc[lo:hi]).abs().max()
         print(f"\nGeometry {GEOMETRY}: GIS {START_DOMAIN}..{END_DOMAIN}, "
               f"{len(mine)} domains, {len(missing)} without a {FEATURE_NOUN} {missing}")
+        _ver = offset_version(YEAR, SOURCE) or "(flat)"
         print(f"  surveyed slice vs {YEAR}/{_ver}: max |diff| {diff:.6f} m")
         if missing or diff > 1e-6:
             raise SystemExit("extension build changed or lost surveyed domains; refusing")
@@ -628,32 +326,31 @@ def main():
     cascade_df.to_csv(cascade_unpadded_path, index=False)
     print(f"Unpadded CASCADE-format file saved to:\n  {cascade_unpadded_path}")
 
-    # --- 3.2. Pad with hybrid slope + linear bridge buffers ---
-    padded_df, diag = pad_for_cascade(
-        df=cascade_df,
-        padding_zeros=PADDING_ZEROS,
-        target_length=TARGET_LENGTH,
-        extrap_fit_domains=EXTRAP_FIT_DOMAINS,
-        slope_buffer_domains=SLOPE_BUFFER_DOMAINS,
-    )
-
-    if padded_df is None:
-        print("Padded comparison not created due to errors.")
-        return
+    # --- 3.2. Pad with the smooth wrap-around the model uses ---
+    real_m = cascade_df[str(YEAR)].to_numpy(dtype=float)
+    padded = pad_offset_ring(real_m, PADDING_ZEROS)
+    if len(padded) != TARGET_LENGTH:
+        raise SystemExit(f"padded length {len(padded)}, expected {TARGET_LENGTH}")
+    theta = shoreline_angles_deg(padded)
+    real = slice(PADDING_ZEROS, PADDING_ZEROS + len(real_m))
+    buf = np.r_[theta[:PADDING_ZEROS], theta[PADDING_ZEROS + len(real_m) - 1:]]
+    print("\nPadding summary (smooth wrap-around, pad_offset_ring):")
+    print(f"  Buffer domains per side : {PADDING_ZEROS}")
+    print(f"  Real span               : {real_m.min():.1f} - {real_m.max():.1f} m")
+    print(f"  Buffer span             : {np.r_[padded[:PADDING_ZEROS], padded[-PADDING_ZEROS:]].min():.1f}"
+          f" - {np.r_[padded[:PADDING_ZEROS], padded[-PADDING_ZEROS:]].max():.1f} m")
+    print(f"  Largest angle, real     : {np.abs(theta[real][:-1]).max():.1f} deg")
+    print(f"  Largest angle, buffer   : {np.abs(buf).max():.1f} deg "
+          f"(BRIE goes anti-diffusive past ~{UNSTABLE_ANGLE_DEG:g})")
+    if np.abs(theta).max() > UNSTABLE_ANGLE_DEG:
+        print("  WARNING: an angle exceeds the anti-diffusive limit")
 
     padded_path = os.path.join(OUTPUT_DIR, f"{OUTPUT_BASENAME}_PADDED_{TARGET_LENGTH}.csv")
-    padded_df.to_csv(padded_path, index=False)
+    pd.DataFrame({str(YEAR): padded}).to_csv(padded_path, index=False)
     print(f"\nSUCCESS: Padded CASCADE input saved to:\n  {padded_path}")
 
     # --- 3.3. Diagnostic figure ---
-    plot_buffer_diagnostic(
-        diag=diag,
-        year=YEAR,
-        padding_zeros=PADDING_ZEROS,
-        community_zones=COMMUNITY_ZONES,
-        output_dir=OUTPUT_DIR,
-        output_basename=OUTPUT_BASENAME,
-    )
+    plot_buffer_diagnostic(padded, YEAR, PADDING_ZEROS, OUTPUT_DIR, OUTPUT_BASENAME)
 
 
 if __name__ == "__main__":

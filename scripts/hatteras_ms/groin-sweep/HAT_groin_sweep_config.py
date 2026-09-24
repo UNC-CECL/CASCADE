@@ -473,6 +473,40 @@ def _wave_scope():
     return wave_climate_token(values, defaults) or ""
 
 
+def sweep_offset_mode():
+    """The island-offset mode a sweep runs under.
+
+    HAT_SWEEP_OFFSET_MODE, else the runner's own default (field_default), so
+    a sweep and the matrix run it validates against build the offset the same
+    way. Every sweep before 2026-09-24 ran at "asrun" (offset / 10): the worker
+    had its own loader that divided by ten and no mode at all.
+
+    Returns:
+        One of cascade_pipeline.hindcast.ISLAND_OFFSET_MODES.
+    """
+    from cascade_pipeline.hindcast import ISLAND_OFFSET_MODES
+    _ms = str(PROJECT_BASE_DIR / "scripts" / "hatteras_ms")
+    if _ms not in sys.path:
+        sys.path.insert(0, _ms)
+    from HAT_hindcast_config import field_default
+
+    mode = (os.environ.get("HAT_SWEEP_OFFSET_MODE", "").strip()
+            or field_default("offset_mode"))
+    if mode not in ISLAND_OFFSET_MODES:
+        raise ValueError(f"HAT_SWEEP_OFFSET_MODE={mode!r} is not one of "
+                         f"{ISLAND_OFFSET_MODES}")
+    return mode
+
+
+def _offset_token():
+    """"offset<mode>" for any mode but asrun, else "": the runner's run-name
+    rule, so a sweep folder, its joint fit and the matrix run it validates
+    against are all named the same way. asrun keeps no token so the sweeps
+    made before 2026-09-24 keep their names and are never written over."""
+    mode = sweep_offset_mode()
+    return "" if mode == "asrun" else f"offset{mode}"
+
+
 def validation_run_dir(period):
     """Directory of the matrix run this period's sweep validates against.
 
@@ -510,7 +544,12 @@ def validation_run_dir(period):
     if not base.exists():
         return None, f"no run directory for {period}-{END_YEAR[period]}: {base}"
 
-    stem = f"HAT_{period}_{END_YEAR[period]}_edgeBE_road_bdm"
+    # The offset token sits after the preset in a run name
+    # (HAT_1996_2010_edgeBE_offsetmetres_road_bdm_...), and without it an
+    # asrun sweep would validate against a metres run or the reverse.
+    token = _offset_token()
+    stem = (f"HAT_{period}_{END_YEAR[period]}_edgeBE"
+            + (f"_{token}" if token else "") + "_road_bdm")
     matches = sorted(
         path for path in base.iterdir()
         if path.is_dir() and path.name.startswith(stem)
@@ -581,6 +620,10 @@ def sweep_output_dir(period, preset):
     raw = os.environ.get("HAT_SWEEP_HS", "").strip()
     if raw and float(raw) != 2.5:
         stem += "_Hs" + f"{float(raw):g}".replace(".", "p")
+    # The offset mode likewise (2026-09-24): a metres sweep is a different
+    # island from the /10 sweeps already on disk, not a re-run of them.
+    if _offset_token():
+        stem += "_" + _offset_token()
     return GROIN_SWEEP_ROOT / stem
 
 
@@ -601,6 +644,8 @@ def joint_fit_paths():
     suffix = ""
     if raw and float(raw) != 2.5:
         suffix = "_Hs" + f"{float(raw):g}".replace(".", "p")
+    if _offset_token():
+        suffix += "_" + _offset_token()
     return out / f"joint_fit{suffix}.json", out / f"joint_fit{suffix}.csv"
 
 

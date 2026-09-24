@@ -10,7 +10,8 @@ two steps"):
                                     stations from the offshore datum, written
                                     to raw_offsets/<vintage>_duneline_offset_raw.csv
     2. island_offset_hybrid.py      first row per transect, domain mean, zeroed
-                                    on the minimum, padded to 120 -> <year>/v<n>/
+                                    on the minimum, padded to 120 with the
+                                    model's smooth wrap-around -> <year>/v<n>/
     3. HAT_compare_offset_versions  the new build against the previous one,
                                     in both frames (model, and fixed datum)
     4. CURRENT <- v<n>              unless --no-current
@@ -205,8 +206,8 @@ def build_extension(a, line, props, crs, vintage, year_dir):
         f"- {len(wanted)} extension domains: {wanted[0]}..{wanted[-1]}"
         + (f"; with fewer than five transects: {short.to_dict()}" if len(short) else "")
         + (f"; WITHOUT a dune line: {empty}" if empty else "") + ".",
-        f"- Padded to {n_pad} (15 buffer domains each side, the same slope-and-bridge "
-        f"buffer as the surveyed build, now extrapolating from the extension's ends).",
+        f"- Padded to {n_pad} (15 buffer domains each side, the smooth wrap-around "
+        f"of `cascade_pipeline.hindcast.pad_offset_ring`, from the extension's ends).",
         "",
         "## Files",
         "",
@@ -376,7 +377,9 @@ def main(argv=None):
         f"`island_offset_hybrid.py --year {a.year} --version {version}`: first row per "
         f"transect, mean of the transects in each domain, zeroed on the most seaward "
         f"domain (GIS {zero_domain}, {baseline:.2f} m from the datum), padded to 120 "
-        f"with the slope-and-bridge buffer. Files: `Island_Dune_Offsets_{a.year}_"
+        f"with the smooth wrap-around the model uses "
+        f"(`cascade_pipeline.hindcast.pad_offset_ring`), in metres: the padded file "
+        f"is exactly what offset_mode `metres` hands Cascade. Files: `Island_Dune_Offsets_{a.year}_"
         f"PADDED_120.csv` (read by the model), `_CASCADE_Input.csv`, "
         f"`_CASCADE_Input_unpadded.csv`, `_buffer_diagnostic.png`.",
         "",
