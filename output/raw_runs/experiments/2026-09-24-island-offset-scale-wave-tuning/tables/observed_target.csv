@@ -1,0 +1,2 @@
+target,domains,n_domains,mean_m_yr,sd_m_yr,flat_line_rmse_m_yr,note
+"CoastSat LRR 1996-2010, LOESS 10 domains",GIS 2-89,88,-0.41771597158159,1.1742506128576125,1.1742506128576125,flat line = the observed mean at every domain; variance_explained = 1 - (rmse / flat_line_rmse)^2

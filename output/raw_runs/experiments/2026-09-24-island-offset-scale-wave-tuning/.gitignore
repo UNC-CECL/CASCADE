@@ -1,0 +1,7 @@
+# The run folders stay on disk only (Hannah, 2026-09-24): their paths reach
+# 339 characters, past Windows' 260, and git will not index them. What is
+# committed is the record: README.md, tables/ (every setting and score, one
+# row per run), and each figure's PDF, caption and data CSV under supporting/.
+runs_wave_height/
+runs_wave_angle/
+checks/

@@ -1,0 +1,5 @@
+value,run_dir,variance_explained,bias_m_yr
+0.1,runs_wave_angle/metres-detrended_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetdetrended_road_bdm_nogroin_waveHs1,-3.0911170478404246,-0.7202108327768663
+0.2,runs_wave_angle/metres-detrended_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetdetrended_road_bdm_nogroin_waveHs1ahf0p2,-1.8567176099177765,-0.5647699575461729
+0.3,runs_wave_angle/metres-detrended_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetdetrended_road_bdm_nogroin_waveHs1ahf0p3,-0.8324975794811651,-0.3849782931187357
+0.4,runs_wave_angle/metres-detrended_duneline/1996_2010/zeroBE/HAT_1996_2010_zeroBE_offsetdetrended_road_bdm_nogroin_waveHs1ahf0p4,-0.1395324422534309,-0.2052851474275424
