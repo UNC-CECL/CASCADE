@@ -1,0 +1,5 @@
+# The run folders stay on disk only (paths past Windows' 260). Committed:
+# NOTE.md, comparison.csv, launches.jsonl and the figure's PDF and caption.
+patched_*/
+unpatched_*/
+provenance_check/

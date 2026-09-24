@@ -101,6 +101,46 @@ def git_provenance(repo_root):
         return {"commit": "unknown", "branch": "unknown", "dirty": None}
 
 
+# The route_overwash index fix (2026-09-24). Barrier3D's subaerial test read
+# Elevation[TS, i, d+1:d+10] -- row and column swapped -- which read the wrong
+# cells and, on narrow domains, out of bounds (the silent crashes). Fixed on
+# the local Barrier3D branch fix/route-overwash-axis-swap; see
+# output/raw_runs/experiments/2026-09-24-overwash-fix/NOTE.md.
+_OVERWASH_FIXED = "Elevation[TS, d + 1: d + 10, i]"
+_OVERWASH_BUGGED = "Elevation[TS, i, d + 1: d + 10]"
+
+
+def barrier3d_provenance():
+    """Which Barrier3D a run used, and whether it carries the overwash fix.
+
+    Barrier3D is installed editable, so the branch checked out in its own
+    repository IS the model -- and CASCADE's git_provenance cannot see it. A
+    `git checkout master` there would silently put every later run back on the
+    indexing bug. This records the branch, commit and dirty flag, and checks
+    the SOURCE OF THE MODULE ACTUALLY IMPORTED, not the file on disk, for the
+    fixed line.
+
+    Returns:
+        A dict with branch, commit, dirty and route_overwash_fix (True, False,
+        or None if the source could not be read). Never raises: provenance
+        capture must not be what fails a run.
+    """
+    out = {"branch": "unknown", "commit": "unknown", "dirty": None,
+           "route_overwash_fix": None}
+    try:
+        import inspect
+        import barrier3d.barrier3d as _b3d
+        src = inspect.getsource(_b3d)
+        out["route_overwash_fix"] = (True if _OVERWASH_FIXED in src
+                                     else False if _OVERWASH_BUGGED in src else None)
+        repo = Path(_b3d.__file__).resolve().parents[1]
+        g = git_provenance(repo)
+        out.update(branch=g["branch"], commit=g["commit"], dirty=g["dirty"])
+    except Exception:          # noqa: BLE001 -- see Returns
+        pass
+    return out
+
+
 def values_digest(mapping, length=12):
     """Fingerprints a {domain: rate} mapping.
 
@@ -878,7 +918,20 @@ def rebuild_run_index(raw_runs, index_path=None, current_versions=None):
             writer.writeheader()
             for row in rows:
                 writer.writerow({k: ("" if v is None else v) for k, v in row.items()})
-        os.replace(tmp, index_path)
+        # WINDOWS: os.replace fails with "Access is denied" while another
+        # process has the target open -- which is exactly when a parallel run
+        # is replacing it too (2026-09-24: a finished run died here, its
+        # outputs already written). The index is derived, so waiting a moment
+        # and trying again is safe; the last writer's table is complete.
+        import time as _time
+        for attempt in range(20):
+            try:
+                os.replace(tmp, index_path)
+                break
+            except PermissionError:
+                if attempt == 19:
+                    raise
+                _time.sleep(0.5 + 0.25 * attempt)
     finally:
         if os.path.exists(tmp):
             os.unlink(tmp)
