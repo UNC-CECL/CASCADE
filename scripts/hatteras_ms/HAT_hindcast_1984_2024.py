@@ -712,7 +712,7 @@ print(f"RUN_KIND = {RUN_KIND!r}   RUN_TAG = {RUN_TAG!r}   SAVE_MODEL_STATE = {SA
 # WHICH BARRIER3D (2026-09-24). Barrier3D is installed editable, so the branch
 # checked out in its repository is the model. Since 2026-09-24 that must be
 # fix/route-overwash-axis-swap, which corrects the route_overwash indexing
-# bug (experiments/2026-09-24-overwash-fix/NOTE.md); `git checkout master`
+# bug (experiments/2026-09-24-metres-3-barrier3d-overwash-fix/NOTE.md); `git checkout master`
 # there would silently put runs back on it. Recorded in the metadata and the
 # index; warned about here, not refused, so a deliberate unfixed run (to
 # reproduce an old one) is still possible.

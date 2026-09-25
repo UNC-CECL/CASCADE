@@ -178,7 +178,7 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     # restarted at v1 that day). The name rule is unchanged: every mode but asrun
     # earns an `offset<mode>` token, so a metres run can never take the name
     # of the /10 run it replaces. Study:
-    # output/raw_runs/experiments/2026-09-24-island-offset-scale-wave-tuning/.
+    # output/raw_runs/experiments/2026-09-24-metres-1-offset-units/.
     ("offset_mode",                  ("offset_mode",),       _as_str,      "metres"),
     # THE REACH (2026-09-16): a name from hat_extension_domains.GEOMETRIES.
     # "base" is GIS 1-90. hatteras_site_config reads the same HAT_GEOMETRY

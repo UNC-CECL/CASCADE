@@ -11,7 +11,7 @@ active in my analysis anymore".
 `offset_mode: asrun`: the island offset divided by ten. BRIE's shoreline and
 the offset file are both metres, so every run here carries one tenth of the
 measured planform. See
-`experiments/2026-09-24-island-offset-scale-wave-tuning/README.md` for the
+`experiments/2026-09-24-metres-1-offset-units/README.md` for the
 study that led to the switch, and `2-brie-offset/<start>/<source>/v1/PROVENANCE.md`
 for the builds the runner reads now.
 
