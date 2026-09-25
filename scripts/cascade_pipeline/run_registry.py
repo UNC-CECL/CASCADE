@@ -105,7 +105,7 @@ def git_provenance(repo_root):
 # Elevation[TS, i, d+1:d+10] -- row and column swapped -- which read the wrong
 # cells and, on narrow domains, out of bounds (the silent crashes). Fixed on
 # the local Barrier3D branch fix/route-overwash-axis-swap; see
-# output/raw_runs/experiments/2026-09-24-overwash-fix/NOTE.md.
+# output/raw_runs/experiments/2026-09-24-metres-3-barrier3d-overwash-fix/NOTE.md.
 _OVERWASH_FIXED = "Elevation[TS, d + 1: d + 10, i]"
 _OVERWASH_BUGGED = "Elevation[TS, i, d + 1: d + 10]"
 
