@@ -11,12 +11,12 @@ Hannah asked for a figure that shows the bug plainly. Five panels:
       grid: the read is outside the island's memory
   (d) every compared run's score with the bug and fixed
   (e) what fixing it changes along the island in the run it moved most,
-      natural 2010-2024 (experiments/2026-09-24-metres-3-barrier3d-overwash-fix)
+      natural 2010-2024 (experiments/code-checks/2026-09-24-metres-3-barrier3d-overwash-fix)
 
 The grids in (a)-(c) are schematic (a small domain, not to scale); the
 indexing is the real one from barrier3d.py line 1092.
 
-Output: output/raw_runs/experiments/2026-09-24-metres-3-barrier3d-overwash-fix/figures/
+Output: output/raw_runs/experiments/code-checks/2026-09-24-metres-3-barrier3d-overwash-fix/figures/
         route_overwash_bug_explained.png
 ==============================================================================
 """
@@ -223,7 +223,7 @@ def main():
         "and fixed (green, open): they coincide; the one run that crashed with the bug "
         "completes when fixed. (e) The natural 2010-2024 baseline along the island with the "
         "bug (red) and fixed (green dashed), the run the fix changed most: the lines "
-        "coincide except at a few domains. experiments/2026-09-24-metres-3-barrier3d-overwash-fix/NOTE.md has "
+        "coincide except at a few domains. experiments/code-checks/2026-09-24-metres-3-barrier3d-overwash-fix/NOTE.md has "
         "the numbers."))
     print(OUT)
 

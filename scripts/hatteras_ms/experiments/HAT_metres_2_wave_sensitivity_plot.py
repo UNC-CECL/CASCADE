@@ -5,17 +5,19 @@ HAT_metres_2_wave_sensitivity_plot.py -- the figures for the natural-scenario wa
 Reads tables/all_runs.csv and tables/stage2_selection.csv (written by
 HAT_metres_2_wave_sensitivity.py), each scored run's tables/shoreline_change_rate.csv,
 the CoastSat LRR target and the observed CoastSat position change. Writes,
-under output/raw_runs/experiments/2026-09-24-metres-2-wave-sensitivity/figures/:
+under output/raw_runs/experiments/wave-climate/2026-09-24-metres-2-wave-sensitivity/figures/:
 
   stage1/scores_by_<parameter>_both_periods.png
       share of alongshore variation explained, bias and RMSE against the
       parameter, both periods on one axis (cross-period consistency)
-  alongshore/<period>/rate_and_position_change_by_<parameter>_<period>.png
+  alongshore/<period>/{natural,full_management}/rate_and_position_change_by_<parameter>[_full_management]_<period>.png
       the modelled rate and position change along the island for each value
       against CoastSat
   management/natural_vs_full_management_baseline_both_periods.png
       the baseline under the natural scenario and under full management
   stage2/grid_<p1>_x_<p2>_both_periods.png
+  best/best_settings_by_period.png, best/best_settings_both_periods.png
+      the best settings found for each window, and one setting for both
       the grid as lines: the score against the first parameter, one line per
       value of the second, a panel per period
 ==============================================================================
@@ -223,6 +225,7 @@ def fig_alongshore(t, group, period, target, obs, scenario=study.SCENARIO):
     structures(ax_r, label=False)
     tag = "" if scenario == study.SCENARIO else "_full_management"
     png = (FIG / "alongshore" / study.window(period)
+           / ("natural" if scenario == study.SCENARIO else "full_management")
            / f"rate_and_position_change_by_{group}{tag}_{study.window(period)}.png")
     save(fig, png, dpi=300, close=True)
     record_caption(png, (
@@ -320,7 +323,7 @@ def fig_grid(t, selection="stage2_selection.csv", periods=study.PERIODS, why="")
     s1, s2 = study.PARAMS[g1][0], study.PARAMS[g2][0]
     v1 = [float(x) for x in sel.set_index("parameter").loc[g1, "grid_values"].split(",")]
     v2 = [float(x) for x in sel.set_index("parameter").loc[g2, "grid_values"].split(",")]
-    others = [k for k in study.BASELINE if k not in (s1, s2)]
+    others = [k for k in study.STAGE2_BASELINE if k not in (s1, s2)]
     fig, axes = plt.subplots(2, len(periods), sharex=True, squeeze=False,
                              figsize=figsize("double" if len(periods) > 1 else "single",
                                              height=5.2),
@@ -329,7 +332,7 @@ def fig_grid(t, selection="stage2_selection.csv", periods=study.PERIODS, why="")
     rows = []
     for j, period in enumerate(periods):
         p = t[(t.period_start == period) & (t.scenario == study.SCENARIO)]
-        p = p[np.logical_and.reduce([np.isclose(p[k], study.BASELINE[k]) for k in others])]
+        p = p[np.logical_and.reduce([np.isclose(p[k], study.STAGE2_BASELINE[k]) for k in others])]
         p = p.drop_duplicates([s1, s2])
         for b in v2:
             line = p[np.isclose(p[s2], b) & p[s1].isin(v1)].sort_values(s1)
@@ -374,6 +377,254 @@ def fig_grid(t, selection="stage2_selection.csv", periods=study.PERIODS, why="")
     return png
 
 
+# =============================================================================
+# BEST SETTINGS: each period's own, and one set for both (added 2026-09-24)
+# =============================================================================
+KEYS = ["hs", "wave_period_s", "wave_asymmetry", "wave_angle_high_fraction"]
+SCEN_LINE = {study.SCENARIO: dict(color=C["ACCENT"], lw=1.4, label="Natural"),
+             study.MANAGED: dict(color=C["ADDED"], lw=1.4, label="Full management")}
+
+
+def settings_text(r):
+    return (f"Hs {r.hs:g}, Tp {r.wave_period_s:g}, asym {r.wave_asymmetry:g}, "
+            f"high-angle {r.wave_angle_high_fraction:g}")
+
+
+def best_per_period(t):
+    """{(scenario, period): row} with the highest share explained."""
+    out = {}
+    for sc in (study.SCENARIO, study.MANAGED):
+        for p in study.PERIODS:
+            x = t[(t.scenario == sc) & (t.period_start == p) & t.scored]
+            out[(sc, p)] = x.loc[x.variance_explained.idxmax()]
+    return out
+
+
+def best_both_periods(t):
+    """{(scenario, period): row} for the one setting, run in both periods, with
+    the lowest mean of RMSE / that window's flat-line RMSE. Share explained is
+    not averaged: 2010-2024's values run to -2800% and would decide alone."""
+    flat = pd.read_csv(study.TABLES_DIR / "observed_targets.csv").set_index("period")[
+        "flat_line_rmse_m_yr"]
+    out, table = {}, []
+    for sc in (study.SCENARIO, study.MANAGED):
+        x = t[(t.scenario == sc) & t.scored].copy()
+        x["rel"] = x.rmse_interior_m_yr / x.period.map(flat)
+        per = {p: x[x.period_start == p].drop_duplicates(KEYS).set_index(KEYS)
+               for p in study.PERIODS}
+        both = per[study.PERIODS[0]][["rel"]].join(per[study.PERIODS[1]][["rel"]],
+                                                   lsuffix="_a", rsuffix="_b", how="inner")
+        both["mean_rel"] = (both.rel_a + both.rel_b) / 2
+        key = both.mean_rel.idxmin()
+        for p in study.PERIODS:
+            r = per[p].loc[key].copy()
+            for k, v in zip(KEYS, key):
+                r[k] = v
+            out[(sc, p)] = r
+        table.append(dict(scenario=sc, **dict(zip(KEYS, key)),
+                          mean_rmse_over_flat=float(both.mean_rel.min()),
+                          candidates=len(both)))
+    return out, pd.DataFrame(table)
+
+
+# Split and redrawn 2026-09-25 (Hannah): one figure per scenario and per rule
+# (best/per_period/, best/shared/), drawn for the screen, a colour per
+# scenario, and the model smoothed like the target as a faint dashed line.
+BEST_COLOR = {study.SCENARIO: "#1b7f6b", study.MANAGED: "#c2571a"}
+BEST_NAME = {study.SCENARIO: "Natural", study.MANAGED: "Full management"}
+smooth_like_target = common.smooth_like_target   # one implementation, shared
+
+
+def fig_best(targets, obs, picks, scenario, rule):
+    with plt.rc_context(SCREEN_RC):
+        return _fig_best(targets, obs, picks, scenario, rule)
+
+
+def _fig_best(targets, obs, picks, scenario, rule):
+    col = BEST_COLOR[scenario]
+    fig, axes = plt.subplots(2, 2, figsize=(16, 10.5), sharex=True, constrained_layout=True)
+    rows = []
+    for j, period in enumerate(study.PERIODS):
+        r = picks[(scenario, period)]
+        rt = pd.read_csv(study.STUDY_DIR / r.run_dir / "tables" / "shoreline_change_rate.csv"
+                         ).set_index("gis_domain")
+        rate, change = rt.lrr_m_yr, rt.change_rate_m_yr * 14
+        ax_r, ax_p = axes[0, j], axes[1, j]
+        for ax, o, m in ((ax_r, targets[period], rate), (ax_p, obs[period], change)):
+            ax.plot(o.index, o.values, color=INK, lw=2.6, zorder=5)
+            ax.plot(m.index, m.values, color=col, lw=1.5, zorder=4)
+            sm = smooth_like_target(m)
+            ax.plot(sm.index, sm.values, color=col, lw=2.4, ls=(0, (5, 3)), alpha=0.5,
+                    zorder=4)
+            ax.axhline(0, color=INK_MUTED, lw=0.6)
+            ax.set_xlim(1, 90)
+            ax.grid(axis="y")
+            open_frame(ax)
+            town_bands(ax, label=(ax is ax_r), fontsize=11)
+        structures(ax_p, label=True, label_pt=11)
+        structures(ax_r, label=False)
+        w = study.window(period).replace("_", "–")
+        _title(ax_r, j, f"{w}\n{settings_text(r)}\n"
+                        f"{100 * r.variance_explained:+.0f}% explained, "
+                        f"bias {r.mean_bias_interior_m_yr:+.2f} m/yr")
+        _title(ax_p, 2 + j, "")
+        ax_p.set_xlabel(DOMAIN_AXIS_LABEL)
+        rows.append(dict(period=r.period, scenario=scenario, **{k: r[k] for k in KEYS},
+                         variance_explained=r.variance_explained,
+                         bias_m_yr=r.mean_bias_interior_m_yr,
+                         rmse_m_yr=r.rmse_interior_m_yr, run_dir=r.run_dir))
+    axes[0, 0].set_ylabel("Shoreline change rate,\nLRR (m/yr)")
+    axes[1, 0].set_ylabel("Shoreline position change,\nend minus start (m)")
+    handles = [Line2D([], [], color=INK, lw=2.6, label="CoastSat (LOESS, 10 domains)"),
+               Line2D([], [], color=col, lw=1.5, label=f"Model, {BEST_NAME[scenario].lower()}"),
+               Line2D([], [], color=col, lw=2.4, ls=(0, (5, 3)), alpha=0.5,
+                      label="Model smoothed like CoastSat (LOESS, 10 domains)")]
+    what = ("the best wave settings found for each window" if rule == "per_period"
+            else "one wave setting for both windows")
+    fig.legend(handles=handles, loc="outside lower center", ncol=3, frameon=False,
+               title=f"{BEST_NAME[scenario]}: {what}")
+    tag = "full_management" if scenario == study.MANAGED else "natural"
+    png = FIG / "best" / rule / f"best_{'settings_by_period' if rule == 'per_period' else 'shared_settings'}_{tag}.png"
+    save(fig, png, dpi=300, close=True)
+    pd.DataFrame(rows).to_csv(support_dir(png.parent) / f"{png.stem}.csv", index=False)
+    head = ("The best wave settings found for each window separately: the run with the "
+            "highest share of alongshore variation explained among every scored run of the "
+            "study (the one-at-a-time sweeps, the Hs x high-angle grid in both windows, the "
+            "Hs x Tp grid in 1996-2010 only, and the hand-picked combos). No search covered "
+            "all four parameters jointly. In 2010-2024 the best run is the least bad: no "
+            "setting beats a flat line there. " if rule == "per_period" else
+            "One wave setting for both windows: among settings run in both windows, the one "
+            "with the lowest mean of RMSE divided by each window's flat-line RMSE "
+            "(tables/best_settings_both_periods.csv). The Hs x Tp grid was run in 1996-2010 "
+            "only and so cannot be picked. The choice is dominated by 2010-2024, where every "
+            "setting is far worse than a flat line. ")
+    record_caption(png, (
+        f"{BEST_NAME[scenario]}. " + head + "Top: the modelled LRR rate along the island "
+        "against the CoastSat LRR target (black); bottom: the modelled position change, end "
+        "minus start of the window, against the observed CoastSat change (mean position over "
+        "the last calendar year minus the first, smoothed at 10 domains). Solid colour: the "
+        "model per domain; faint dashed: the model smoothed as the target is (LOESS over 10 "
+        "domains, the southern 10 left raw), for comparing like with like. Settings and "
+        "scores (interior GIS 2-89) above each column. Offset in metres (dune line), zeroBE, "
+        "no groin, no relocations."))
+    return png
+
+
+def best_figures(t, targets, obs):
+    per = best_per_period(t)
+    joint, table = best_both_periods(t)
+    table.to_csv(study.TABLES_DIR / "best_settings_both_periods.csv", index=False)
+    return [fig_best(targets, obs, picks, sc, rule)
+            for rule, picks in (("per_period", per), ("shared", joint))
+            for sc in (study.SCENARIO, study.MANAGED)]
+
+
+# =============================================================================
+# THE ASYMMETRY x HIGH-ANGLE 2x2 (added 2026-09-25)
+# =============================================================================
+# Hannah's combo test (run combo --hs 1 --tp 8 --asym 0.7 --ahf 0.4) closed a
+# 2x2 whose other corners were already run: the old baseline, and each of the
+# two single changes that give the Buxton dip its observed depth.
+# Only the two Hannah asked to see (2026-09-25): the old baseline and her
+# combination. The single-change corners are in tables/combo_asym0.7_ahf0.4_2x2.csv
+# and the explorer's "Asym x high-angle" set.
+CORNERS = [  # (asymmetry, high-angle, style)
+    (0.8, 0.45, dict(color=C["BASE"], lw=2.0, label="Old baseline: asym 0.8, high-angle 0.45")),
+    (0.7, 0.4, dict(color=C["ACCENT"], lw=2.4, label="Combination: asym 0.7, high-angle 0.4")),
+]
+# Drawn for reading on screen, not for the page: larger canvas and type.
+SCREEN_RC = {"font.size": 13, "axes.titlesize": 15, "axes.labelsize": 13,
+             "xtick.labelsize": 12, "ytick.labelsize": 12, "legend.fontsize": 12,
+             "legend.title_fontsize": 13}
+BUXTON_ZOOM = (1, 16)
+
+
+def corner_row(t, period, scenario, a, f):
+    x = t[t.scored & (t.period_start == period) & (t.scenario == scenario)
+          & np.isclose(t.hs, 1.0) & np.isclose(t.wave_period_s, 8.0)
+          & np.isclose(t.wave_asymmetry, a) & np.isclose(t.wave_angle_high_fraction, f)]
+    return None if x.empty else x.iloc[0]
+
+
+def fig_combo(t, period, target, obs):
+    with plt.rc_context(SCREEN_RC):
+        return _fig_combo(t, period, target, obs)
+
+
+def _fig_combo(t, period, target, obs):
+    w = study.window(period).replace("_", "-")
+    fig = plt.figure(figsize=(16, 10.5), constrained_layout=True)
+    gs = fig.add_gridspec(2, 3, width_ratios=[3, 3, 1.35])
+    axes = [[fig.add_subplot(gs[i, j]) for j in range(3)] for i in range(2)]
+    cols = [(study.SCENARIO, "Natural"), (study.MANAGED, "Full management"),
+            (study.MANAGED, "Close-up")]
+    rows, handles = [], []
+    for j, (sc, name) in enumerate(cols):
+        ax_r, ax_p = axes[0][j], axes[1][j]
+        zoom = j == 2
+        ax_r.plot(target.index, target.values, **{**OBSERVED, "lw": 2.6})
+        ax_p.plot(obs.index, obs.values, **{**OBSERVED, "lw": 2.6})
+        for a, f, st in CORNERS:
+            r = corner_row(t, period, sc, a, f)
+            if r is None:
+                continue
+            rt = run_table(r)
+            ax_r.plot(rt.index, rt.lrr_m_yr, **{k: v for k, v in st.items() if k != "label"})
+            ax_p.plot(rt.index, rt.change_rate_m_yr * 14,
+                      **{k: v for k, v in st.items() if k != "label"})
+            if not zoom:
+                rows.append(dict(period=w, scenario=sc, wave_asymmetry=a,
+                                 wave_angle_high_fraction=f,
+                                 variance_explained=r.variance_explained,
+                                 bias_m_yr=r.mean_bias_interior_m_yr,
+                                 rmse_m_yr=r.rmse_interior_m_yr, run_dir=r.run_dir))
+        lim = BUXTON_ZOOM if zoom else (1, 90)
+        for ax in (ax_r, ax_p):
+            ax.axhline(0, color=INK_MUTED, lw=0.6)
+            ax.set_xlim(*lim)
+            ax.grid(axis="y")
+            open_frame(ax)
+            town_bands(ax, label=(ax is ax_r), fontsize=11)
+        if zoom:
+            for ax, key in ((ax_r, None), (ax_p, None)):
+                lines = [l.get_ydata() for l in ax.get_lines()]
+                xs = [l.get_xdata() for l in ax.get_lines()]
+                vals = np.concatenate([np.asarray(y)[(np.asarray(x) >= lim[0]) & (np.asarray(x) <= lim[1])]
+                                       for x, y in zip(xs, lines) if len(np.atleast_1d(x)) > 2])
+                pad = 0.08 * (vals.max() - vals.min())
+                ax.set_ylim(vals.min() - pad, vals.max() + pad)
+        structures(ax_p, label=not zoom, label_pt=11)
+        structures(ax_r, label=False)
+        _title(ax_r, j, name)
+        _title(ax_p, 3 + j, "")
+        ax_p.set_xlabel(DOMAIN_AXIS_LABEL if not zoom else "GIS domain")
+    axes[0][0].set_ylabel("Shoreline change rate,\nLRR (m/yr)")
+    axes[1][0].set_ylabel(f"Shoreline position change,\n{period + 14} minus {period} (m)")
+    scores = {(r["scenario"], r["wave_asymmetry"], r["wave_angle_high_fraction"]): r for r in rows}
+    handles = [Line2D([], [], **{**OBSERVED, "lw": 2.6}, label="CoastSat (LOESS, 10 domains)")]
+    for a, f, st in CORNERS:
+        n = scores.get((study.SCENARIO, a, f)); m = scores.get((study.MANAGED, a, f))
+        tail = (f"   natural {100 * n['variance_explained']:+.0f}%, managed "
+                f"{100 * m['variance_explained']:+.0f}%") if n and m else ""
+        handles.append(Line2D([], [], color=st["color"], lw=st["lw"], label=st["label"] + tail))
+    fig.legend(handles=handles, loc="outside lower center", ncol=1, frameon=False,
+               title=f"Hs 1.0 m, Tp 8 s, {w}: share of the alongshore variation explained")
+    png = FIG / "combos" / f"old_baseline_vs_asym0.7_highangle0.4_{study.window(period)}.png"
+    save(fig, png, dpi=300, close=True)
+    pd.DataFrame(rows).to_csv(support_dir(png.parent) / f"{png.stem}.csv", index=False)
+    record_caption(png, (
+        f"The old baseline (asymmetry 0.8, high-angle 0.45; grey) against Hannah's "
+        f"combination (asymmetry 0.7, high-angle 0.4; purple), Hs 1.0 m and Tp 8 s, {w}, "
+        "against CoastSat (black). Top: the modelled LRR rate against the "
+        "CoastSat LRR target; bottom: the modelled position change, end minus start, against "
+        "the observed CoastSat change. Left, natural; middle, full management; right, the "
+        "full-management runs close up on Buxton (GIS 1-16), where the observed rate dips to "
+        "-2.1 m/yr at GIS 7; the combination dips to more than twice that at GIS 6. "
+        "Legend: share of the alongshore rate variation explained, interior "
+        "GIS 2-89. Offset in metres (dune line), zeroBE, no groin, no relocations."))
+    return png
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     apply_style()
@@ -387,6 +638,8 @@ def main():
         out += [fig_alongshore(t, g, p, targets[p], obs[p], study.MANAGED)
                 for p in study.PERIODS for g in study.PARAMS]
     out.append(fig_management(t, targets, obs))
+    out += best_figures(t, targets, obs)
+    out += [fig_combo(t, p, targets[p], obs[p]) for p in study.PERIODS]
     for selection, periods, why in GRIDS:
         grid = fig_grid(t, selection, periods, why)
         if grid:

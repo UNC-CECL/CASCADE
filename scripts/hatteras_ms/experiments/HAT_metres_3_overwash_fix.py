@@ -25,9 +25,9 @@ THE CHECK (Hannah: "patch it on a branch and measure the impact")
     Every launch records the Barrier3D branch and commit it ran on, and
     refuses to run a patched member off the fix branch or an unpatched one on it.
 
-WHERE: output/raw_runs/experiments/2026-09-24-metres-3-barrier3d-overwash-fix/
-           <member>/<period>/<preset>/<run_name>/   runs (on disk only)
-           logs/, launches.jsonl, comparison.csv, NOTE.md
+WHERE: output/raw_runs/experiments/code-checks/2026-09-24-metres-3-barrier3d-overwash-fix/
+           runs/<variant>_<member>/<period>/<preset>/<run_name>/   runs (on disk only)
+           logs/ (+ launches.jsonl), tables/comparison.csv, NOTE.md
 
 USAGE
     python HAT_metres_3_overwash_fix.py run patched            (fix branch checked out)
@@ -56,7 +56,7 @@ import HAT_metres_1_offset_units as common  # noqa: E402
 
 BARRIER3D = PROJECT_ROOT.parent / "Barrier3D"
 FIX_BRANCH = "fix/route-overwash-axis-swap"
-TAG = "2026-09-24-metres-3-barrier3d-overwash-fix"
+TAG = "code-checks/2026-09-24-metres-3-barrier3d-overwash-fix"
 EXP_DIR = PROJECT_ROOT / "output" / "raw_runs" / "experiments" / TAG
 RAW = PROJECT_ROOT / "output" / "raw_runs"
 STUDY = N.STUDY_DIR
@@ -68,16 +68,16 @@ DIV10 = {"HAT_OFFSET_MODE": "asrun"}          # plus the build the /10 runs used
 BASE = dict(N.BASELINE)
 MEMBERS = {
     "natural_baseline_1996": (1996, N.SCENARIO, BASE, {},
-                              STUDY / "baseline/1996_2010/zeroBE"),
+                              STUDY / "runs" / "baseline/1996_2010/zeroBE"),
     "managed_baseline_1996": (1996, N.MANAGED, BASE, {},
-                              STUDY / "baseline_full_management/1996_2010/zeroBE"),
+                              STUDY / "runs" / "baseline_full_management/1996_2010/zeroBE"),
     "natural_baseline_2010": (2010, N.SCENARIO, BASE, {},
-                              STUDY / "baseline/2010_2024/zeroBE"),
+                              STUDY / "runs" / "baseline/2010_2024/zeroBE"),
     "managed_baseline_2010": (2010, N.MANAGED, BASE, {},
-                              STUDY / "baseline_full_management/2010_2024/zeroBE"),
+                              STUDY / "runs" / "baseline_full_management/2010_2024/zeroBE"),
     "natural_ridge_1996":    (1996, N.SCENARIO,
                               {**BASE, "hs": 1.25, "wave_angle_high_fraction": 0.5}, {},
-                              STUDY / "grid_wave_height_x_high_angle/1996_2010/zeroBE"),
+                              STUDY / "runs" / "grid_wave_height_x_high_angle/1996_2010/zeroBE"),
     "managed_highangle0.4_2010": (2010, N.MANAGED, {**BASE, "wave_angle_high_fraction": 0.4},
                                   {}, None),   # crashed unpatched in year 13
     "div10_managed_1996":    (1996, N.MANAGED, None,
@@ -109,7 +109,7 @@ def env_for(member, variant):
         env.update({N.ENV[k]: f"{v}" for k, v in waves.items()})
     env.update(extra)
     env["HAT_RUN_KIND"] = "experiment"
-    env["HAT_RUN_TAG"] = f"{TAG}/{variant}_{member}"
+    env["HAT_RUN_TAG"] = f"{TAG}/runs/{variant}_{member}"
     if variant == "patched_boundscheck":
         env["NUMBA_BOUNDSCHECK"] = "1"
     return env
@@ -133,7 +133,7 @@ def launch(member, variant):
                minutes=round((time.perf_counter() - t0) / 60, 1),
                outcome="finished" if p.returncode == 0 else N.stop_reason(log),
                index_error="IndexError" in (p.stderr or ""))
-    with (EXP_DIR / "launches.jsonl").open("a", encoding="utf-8") as f:
+    with (EXP_DIR / "logs" / "launches.jsonl").open("a", encoding="utf-8") as f:
         f.write(json.dumps(rec) + "\n")
     print(f"{variant} {member}: {rec['outcome']} ({rec['minutes']} min, Barrier3D "
           f"{state['branch']}@{state['commit']})", flush=True)
@@ -153,7 +153,7 @@ def cmd_run(a):
 
 def run_dir(member, variant):
     """The one run folder under experiments/<TAG>/<variant>_<member>/."""
-    hits = sorted((EXP_DIR / f"{variant}_{member}").glob("*/*/*/*_run_metadata.json"))
+    hits = sorted((EXP_DIR / "runs" / f"{variant}_{member}").glob("*/*/*/*_run_metadata.json"))
     return hits[0].parent if hits else None
 
 
@@ -188,7 +188,7 @@ def scores(d, period):
 
 def cmd_compare(a):
     import pandas as pd
-    launches = [json.loads(l) for l in (EXP_DIR / "launches.jsonl").read_text().splitlines()]
+    launches = [json.loads(l) for l in (EXP_DIR / "logs" / "launches.jsonl").read_text().splitlines()]
     rows = []
     for member, (period, scenario, *_rest) in MEMBERS.items():
         row = dict(member=member, period=f"{period}-{period + 14}", scenario=scenario)
@@ -218,7 +218,7 @@ def cmd_compare(a):
                              patched=l["outcome"],
                              unpatched="IndexError (earlier today)"))
     out = pd.DataFrame(rows)
-    out.to_csv(EXP_DIR / "comparison.csv", index=False)
+    out.to_csv(EXP_DIR / "tables" / "comparison.csv", index=False)
     with pd.option_context("display.width", 250, "display.max_columns", 30,
                            "display.float_format", "{:.3f}".format):
         print(out.drop(columns=[c for c in out.columns if c.startswith("run_")]).to_string(index=False))

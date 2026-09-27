@@ -12,6 +12,7 @@ THE DESIGN (every choice Hannah's)
                  (dune line, CURRENT v1)
     periods      1996-2010 and 2010-2024, each against its own CoastSat LRR
     baseline     Hs 1.0 m, Tp 8 s, asymmetry 0.8, high-angle fraction 0.45
+                 (re-centring on asymmetry 0.7 pending, 2026-09-25)
                  (the best metres point of experiments/2026-09-24-island-
                  offset-scale-wave-tuning, found under full management)
     stage 1      one parameter at a time around the baseline:
@@ -28,9 +29,9 @@ THE DESIGN (every choice Hannah's)
                  The other two stay at the baseline. Cells already run are
                  reused, not re-run.
 
-LAYOUT (output/raw_runs/experiments/2026-09-24-metres-2-wave-sensitivity/)
+LAYOUT (output/raw_runs/experiments/wave-climate/2026-09-24-metres-2-wave-sensitivity/)
     README.md, tables/, figures/, logs/<group>/<period>/<settings>.log
-    <group>/<period>/zeroBE/<run_name>/     group = baseline, wave_height,
+    runs/<group>/<period>/zeroBE/<run_name>/     group = baseline, wave_height,
                                             high_angle, asymmetry, wave_period,
                                             baseline_full_management,
                                             grid_<p1>_x_<p2>
@@ -42,7 +43,9 @@ USAGE
     python HAT_metres_2_wave_sensitivity.py run stage1 [--jobs 6] [--dry-run]
     python HAT_metres_2_wave_sensitivity.py run stage1 --scenario full_management
     python HAT_metres_2_wave_sensitivity.py score
+    python HAT_metres_2_wave_sensitivity.py score-window --start 2010 --end 2020
     python HAT_metres_2_wave_sensitivity.py run stage2 [--jobs 6] [--dry-run]
+    python HAT_metres_2_wave_sensitivity.py run combo --hs 1 --tp 8 --asym 0.7 --ahf 0.4
     python HAT_metres_2_wave_sensitivity.py run grid --pair wave_height wave_period \
         --values1 1 1.25 1.5 2 2.5 --values2 6 7 8 10 12 --periods 1996
 ==============================================================================
@@ -69,7 +72,7 @@ import HAT_metres_1_offset_units as common  # noqa: E402
 
 HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 RAW_RUNS = PROJECT_ROOT / "output" / "raw_runs"
-STUDY_TAG = "2026-09-24-metres-2-wave-sensitivity"
+STUDY_TAG = "wave-climate/2026-09-24-metres-2-wave-sensitivity"
 STUDY_DIR = RAW_RUNS / "experiments" / STUDY_TAG
 TABLES_DIR = STUDY_DIR / "tables"
 LOGS_DIR = STUDY_DIR / "logs"
@@ -84,8 +87,18 @@ MANAGED = "full_management"
 ENV = {"hs": "HAT_HS", "wave_period_s": "HAT_WAVE_PERIOD_S",
        "wave_asymmetry": "HAT_WAVE_ASYMMETRY",
        "wave_angle_high_fraction": "HAT_WAVE_ANGLE_HIGH_FRACTION"}
+# PENDING (2026-09-25): Hannah chose asymmetry 0.7 for the Buxton dip (GIS 6-7)
+# and asked to re-centre the one-at-a-time sweeps on it; the re-run was
+# stopped to test a combination first (runs/combos/). Until it runs, the
+# baseline stays 0.8: every figure and the scoring select on it, and 0.7-
+# centred sweeps do not exist yet. To re-centre: set 0.7 here, then
+# `run stage1` and `run stage1 --scenario full_management`.
 BASELINE = {"hs": 1.0, "wave_period_s": 8.0, "wave_asymmetry": 0.8,
             "wave_angle_high_fraction": 0.45}
+# Stage 2 (the two grids) was chosen and run around the first baseline,
+# asymmetry 0.8, and stays there: selecting or drawing it on BASELINE would
+# find no runs.
+STAGE2_BASELINE = {**BASELINE, "wave_asymmetry": 0.8}
 # folder name -> (setting, stage-1 values, label)
 PARAMS = {
     "wave_height": ("hs", (0.65, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0),
@@ -187,7 +200,7 @@ def run_env(group, period, s, scenario):
         "HAT_OFFSET_MODE": "metres",
         "HAT_ISLAND_OFFSET_SOURCE": "duneline",
         "HAT_RUN_KIND": "experiment",
-        "HAT_RUN_TAG": f"{STUDY_TAG}/{group}",
+        "HAT_RUN_TAG": f"{STUDY_TAG}/runs/{group}",
         "HAT_OVERWRITE": "false",
         "HAT_SAVE_MODEL_STATE": "false",
         "HAT_MAKE_GIFS": "false",
@@ -268,8 +281,8 @@ def choose_grid():
           & (t.period_start == SELECTION_PERIOD) & (t.status == "scored")]
     rows, best = [], {}
     for group, (setting, values, _) in PARAMS.items():
-        others = [k for k in BASELINE if k != setting]
-        mask = np.logical_and.reduce([np.isclose(t[k], BASELINE[k]) for k in others])
+        others = [k for k in STAGE2_BASELINE if k != setting]
+        mask = np.logical_and.reduce([np.isclose(t[k], STAGE2_BASELINE[k]) for k in others])
         line = t[mask].drop_duplicates(setting).set_index(setting)["variance_explained"]
         best[group] = float(line.idxmax())
         rows.append(dict(parameter=group, setting=setting,
@@ -311,11 +324,11 @@ def grid_cells(pair, values, periods):
     t = t[t.scenario == SCENARIO]
     cells = []
     for period in periods:
-        done = {settings_label({k: r[k] for k in BASELINE}) for _, r in
+        done = {settings_label({k: r[k] for k in STAGE2_BASELINE}) for _, r in
                 t[t.period_start == period].iterrows()}
         for v1 in values[0]:
             for v2 in values[1]:
-                st = {**BASELINE, s1: float(v1), s2: float(v2)}
+                st = {**STAGE2_BASELINE, s1: float(v1), s2: float(v2)}
                 if settings_label(st) not in done:
                     cells.append((group, period, st, SCENARIO))
     print(f"grid {group}: {len(values[0])} x {len(values[1])} in {list(periods)}, "
@@ -332,7 +345,7 @@ def stage2_cells():
     for period in PERIODS:
         for v1 in grid[pair[0]]:
             for v2 in grid[pair[1]]:
-                s = {**BASELINE, s1: float(v1), s2: float(v2)}
+                s = {**STAGE2_BASELINE, s1: float(v1), s2: float(v2)}
                 if (period, settings_label(s)) in done:
                     continue                     # already a stage-1 run
                 cells.append((group, period, s, SCENARIO))
@@ -383,7 +396,7 @@ def cmd_score(a):
                "scenario": scenario, **s, "source_sink_preset": PRESET, "groin": False,
                "offset_mode": "metres",
                "log": str(log.relative_to(STUDY_DIR)).replace("\\", "/")}
-        match = [x for x in runs if x[0]["tag"] == f"{STUDY_TAG}/{group}"
+        match = [x for x in runs if x[0]["tag"] == f"{STUDY_TAG}/runs/{group}"
                  and int(x[0]["start_year"]) == period and x[3] == s]
         if match:
             r, run_dir, md, _ = match[0]
@@ -429,12 +442,75 @@ def cmd_score(a):
     return 0
 
 
+# =============================================================================
+# SCORE A WINDOW INSIDE A PERIOD
+# =============================================================================
+# Added 2026-09-24 (Hannah): score the 2010-2024 runs on 2010-2020 too. The
+# CoastSat 2010-2024 target is lifted from ~0 to +1.07 m/yr by the island-wide
+# +17 m step into 2021, which no model run can make. The model's rate over
+# the window is the same OLS estimator the runner uses (shoreline.compute_lrr)
+# on the first (end - start + 1) annual states; the observed one is
+# 5-scr/3-rates/coastsat/lrr/<start>_<end>/, LOESS 10 domains like the runner.
+
+def cmd_score_window(a):
+    import pandas as pd
+    from cascade_pipeline.shoreline import compute_lrr
+    from site_layer.hatteras_site_config import HATTERAS_DOMAINS as G
+
+    start, end = a.start, a.end
+    n_states = end - start + 1
+    target = common.coastsat_target(start, end)
+    full_target = common.coastsat_target(start)
+    t = pd.read_csv(TABLES_DIR / "all_runs.csv")
+    t = t[(t.period_start == start) & (t.status == "scored")]
+    real = slice(G.start_real_index, G.end_real_index)
+    gis = np.arange(G.first_gis_id, G.first_gis_id + G.num_real_domains)
+    rows = []
+    for _, r in t.iterrows():
+        run_dir = STUDY_DIR / r.run_dir
+        m = np.load(next(run_dir.glob("*_shoreline_matrix.npy")))
+        table = common.run_rates(run_dir)
+        # the order check: the full record must give the run's own table
+        full, _ = compute_lrr(m)
+        full = pd.Series(full[real], index=gis)
+        if not np.allclose(full.values, table.reindex(gis).values, atol=1e-9):
+            raise ValueError(f"{run_dir}: compute_lrr on the full record does not "
+                             f"reproduce the run's own rate table; domain order unknown")
+        sub_lrr, _ = compute_lrr(m[:n_states], span_years=end - start)
+        rates = pd.Series(sub_lrr[real], index=gis)
+        sc = common.alongshore_scores(rates, target)
+        mi, oi = common.interior(rates), common.interior(target)
+        rows.append({**{k: r[k] for k in ("group", "scenario", "hs", "wave_period_s",
+                                           "wave_asymmetry", "wave_angle_high_fraction")},
+                     "window": f"{start}-{end}",
+                     "bias_m_yr": float((mi - oi).mean()),
+                     "rmse_m_yr": sc.pop("_rmse"),
+                     "variance_explained": sc["variance_explained"],
+                     "pattern_variance_explained": sc["pattern_variance_explained"],
+                     "r_alongshore": sc["r_alongshore"], "sd_ratio": sc["sd_ratio"],
+                     "full_window_bias_m_yr": r.mean_bias_interior_m_yr,
+                     "full_window_rmse_m_yr": r.rmse_interior_m_yr,
+                     "full_window_variance_explained": r.variance_explained,
+                     "model_mean_m_yr": float(mi.mean()), "observed_mean_m_yr": float(oi.mean()),
+                     "run_dir": r.run_dir})
+    out = pd.DataFrame(rows).sort_values(["scenario", "group", "hs", "wave_period_s",
+                                          "wave_asymmetry", "wave_angle_high_fraction"])
+    path = TABLES_DIR / f"window_{start}_{end}.csv"
+    out.to_csv(path, index=False)
+    i = common.interior(target)
+    print(f"{len(out)} runs scored on {start}-{end} -> {path.name}")
+    print(f"observed {start}-{end}: mean {i.mean():+.3f} m/yr, flat-line RMSE {i.std(ddof=0):.3f}"
+          f"  (full period: mean {common.interior(full_target).mean():+.3f}, "
+          f"flat-line RMSE {common.interior(full_target).std(ddof=0):.3f})")
+    return 0
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     p = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     sub = p.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run")
-    r.add_argument("stage", choices=("stage1", "stage2", "grid"))
+    r.add_argument("stage", choices=("stage1", "stage2", "grid", "combo"))
     r.add_argument("--pair", nargs=2, choices=tuple(PARAMS),
                    help="grid only: the two parameters")
     r.add_argument("--values1", nargs="+", type=float, help="grid only")
@@ -443,14 +519,35 @@ def main():
                    help="grid only")
     r.add_argument("--scenario", choices=(SCENARIO, MANAGED), default=SCENARIO,
                    help="stage1 only: natural (default) or the full_management sweep")
+    r.add_argument("--hs", type=float, help="combo only (default: the baseline's)")
+    r.add_argument("--tp", type=float, help="combo only")
+    r.add_argument("--asym", type=float, help="combo only")
+    r.add_argument("--ahf", type=float, help="combo only")
+    r.add_argument("--scenarios", nargs="+", choices=(SCENARIO, MANAGED),
+                   default=[SCENARIO, MANAGED], help="combo only")
     r.add_argument("--jobs", type=int, default=6)
     r.add_argument("--dry-run", action="store_true")
     s = sub.add_parser("score")
+    w = sub.add_parser("score-window", help="score one period's runs on a window inside it")
+    w.add_argument("--start", type=int, default=2010)
+    w.add_argument("--end", type=int, default=2020)
     a = p.parse_args()
     if a.cmd == "score":
         return cmd_score(a)
+    if a.cmd == "score-window":
+        return cmd_score_window(a)
     if a.stage == "stage2":
         cells = stage2_cells()
+    elif a.stage == "combo":
+        # One hand-picked setting of all four (added 2026-09-25, Hannah: "test a
+        # combo" before re-running stage 1). Filed as runs/combos/ and
+        # runs/full_management_combos/; scored with everything else.
+        s = {**BASELINE, **{k: v for k, v in (("hs", a.hs), ("wave_period_s", a.tp),
+                                              ("wave_asymmetry", a.asym),
+                                              ("wave_angle_high_fraction", a.ahf))
+                            if v is not None}}
+        cells = [(MANAGED_PREFIX + "combos" if sc == MANAGED else "combos", period, s, sc)
+                 for sc in a.scenarios for period in a.periods]
     elif a.stage == "grid":
         cells = grid_cells(a.pair, (a.values1, a.values2), a.periods)
     else:

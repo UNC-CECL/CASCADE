@@ -65,7 +65,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
 HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 RAW_RUNS = PROJECT_ROOT / "output" / "raw_runs"
-STUDY = "2026-09-24-metres-1-offset-units"
+STUDY = "island-offset/2026-09-24-metres-1-offset-units"
 STUDY_DIR = RAW_RUNS / "experiments" / STUDY
 TABLES_DIR = STUDY_DIR / "tables"
 LOGS_DIR = STUDY_DIR / "logs"
@@ -222,7 +222,7 @@ def cmd_run(a):
 # RMSE is recomputed from it and checked against the runner's, so the two
 # sets of scores are provably on the same target.
 
-def coastsat_target(start=PERIOD):
+def coastsat_target(start=PERIOD, end=None):
     """The CoastSat LRR target, GIS 1-90, as the runner builds it for a start
     year (section 8 of the runner: LOESS at 10 domains, the southern 10 raw).
     Shared with scripts/hatteras_ms/experiments/HAT_metres_2_wave_sensitivity.py."""
@@ -231,7 +231,9 @@ def coastsat_target(start=PERIOD):
     from cascade_pipeline.hindcast import build_target_table
     from cascade_pipeline.coastsat_loess import (CoastSatDataset, LoessConfig,
                                                  build_coastsat_series)
-    window = f"{start}_{HATTERAS_PERIODS[start]['end_year']}"
+    # `end` scores a window inside a period (2010-2020 inside 2010-2024,
+    # 2026-09-24): the CoastSat table must exist under lrr/<start>_<end>/.
+    window = f"{start}_{end or HATTERAS_PERIODS[start]['end_year']}"
     ds = CoastSatDataset(label=f"CoastSat LRR ({window.replace('_', '-')})",
                          period_start=start,
                          csv_path=str(COASTSAT_LRR_ROOT / window / "transect_lrr_full.csv"))
@@ -252,6 +254,29 @@ def run_rates(run_dir):
     import pandas as pd
     return pd.read_csv(Path(run_dir) / "tables" / "shoreline_change_rate.csv"
                        ).set_index("gis_domain")["lrr_m_yr"]
+
+
+SMOOTH_DOMAINS = 10                  # the CoastSat target's LOESS window
+
+
+def smooth_like_target(series):
+    """A model series (per GIS domain) smoothed as the CoastSat target is:
+    LOESS over a 10-domain window (frac 10/90 on the 90 domains, matching the
+    target's 0.110), the southern 10 domains left raw as the target leaves
+    them. Added 2026-09-25 for the smoothed score (Hannah); shared by the
+    step-2 figures and wave-climate/2026-09-25-wave-grid-smoothed-score."""
+    import pandas as pd
+    from statsmodels.nonparametric.smoothers_lowess import lowess
+    from cascade_pipeline.coastsat_loess import DEFAULT_LOESS
+    x = series.index.to_numpy(dtype=float)
+    y = series.to_numpy(dtype=float)
+    ok = np.isfinite(y)
+    sm = lowess(y[ok], x[ok], frac=SMOOTH_DOMAINS / len(x), return_sorted=False)
+    out = pd.Series(np.nan, index=series.index)
+    out[ok] = sm
+    raw = series.index <= DEFAULT_LOESS.skip_southern_domains
+    out[raw] = series[raw]
+    return out
 
 
 def alongshore_scores(rates, target):
