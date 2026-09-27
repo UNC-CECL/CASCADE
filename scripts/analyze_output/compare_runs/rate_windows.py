@@ -216,7 +216,7 @@ WINDOWS = list(MATRIX_RUNS)
 # lines (1984-2004 carried over from the 09-16 solve, whose lines did not
 # change); each row of solved.csv names its own run tag, so a carried-over
 # row points back into the 09-16 experiment.
-DUNE_SOLVE_DIR = RAW_RUNS / "experiments" / "2026-09-18-dune-edgesolve"
+DUNE_SOLVE_DIR = RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-18-end-domains-solved-on-redigitized-duneline"
 MODEL_SETS = ("coastsat", "dune-mean3", "dune-raw")   # where the ends were solved
 MAIN_DUNE = "dune-mean3"
 

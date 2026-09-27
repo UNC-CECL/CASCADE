@@ -24,7 +24,7 @@ WHY IT IS A SCRIPT AND NOT THREE COMMANDS
 WHY ARMS RATHER THAN RUN NAMES
     All three produce the SAME run name -- the name is derived from the
     management switches, and those are identical by design. Each is filed as
-    an EXPERIMENT (HAT_RUN_KIND=experiment, HAT_RUN_TAG=2026-09-02-pea1989/<arm>)
+    an EXPERIMENT (HAT_RUN_KIND=experiment, HAT_RUN_TAG=topography-and-domains/2026-09-02-pea-island-row-insert-control/<arm>)
     under raw_runs/experiments/, and the run index is keyed on
     (run_name, kind, tag), so nothing overwrites anything. The existing
     matrix run is never touched.
@@ -188,10 +188,10 @@ def main() -> None:
             env.update(BASE_ENV)
             env["HAT_RELOCATIONS"] = args.relocations
             arm_tag = arm if args.relocations == "1" else arm + "noreloc"
-            # Filed as raw_runs/experiments/2026-09-02-pea1989/<member>/,
+            # Filed as raw_runs/experiments/topography-and-domains/2026-09-02-pea-island-row-insert-control/<member>/,
             # the member being the old arm name without its pea1989 prefix.
             env["HAT_RUN_KIND"] = "experiment"
-            env["HAT_RUN_TAG"] = "2026-09-02-pea1989/" + arm_tag.replace("pea1989", "", 1)
+            env["HAT_RUN_TAG"] = "topography-and-domains/2026-09-02-pea-island-row-insert-control/" + arm_tag.replace("pea1989", "", 1)
             env["HAT_TOPO_VERSION_1984_START"] = version
             if args.dry_run:
                 print("  [dry-run] would run {}".format(HINDCAST))

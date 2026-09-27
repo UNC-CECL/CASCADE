@@ -12,7 +12,7 @@
 # that year on, which changes what happens to the interior without necessarily
 # moving the shoreline much. So the road table is differenced too.
 #
-#     python HAT_compare_rerun.py --tag 2026-09-14-recode
+#     python HAT_compare_rerun.py --tag code-checks/2026-09-14-relocation-arm-rerun-new-code
 #
 # Since 2026-09-16 a re-run is an EXPERIMENT (raw_runs/experiments/<tag>/) and
 # the stored run a MATRIX row; the index is keyed on (run_name, kind, tag).
@@ -59,7 +59,7 @@ def find_dir(name, kind, tag, period, preset):
 def main():
     ap = argparse.ArgumentParser(description="stored run against its re-run")
     ap.add_argument("--tag", "--arm", dest="tag", required=True,
-                    help="the experiment tag, e.g. 2026-09-14-recode")
+                    help="the experiment tag, e.g. code-checks/2026-09-14-relocation-arm-rerun-new-code")
     ap.add_argument("--full", action="store_true",
                     help="list every domain that differs, not just the count")
     args = ap.parse_args()

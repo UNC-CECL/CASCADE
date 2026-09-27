@@ -105,7 +105,7 @@ def git_provenance(repo_root):
 # Elevation[TS, i, d+1:d+10] -- row and column swapped -- which read the wrong
 # cells and, on narrow domains, out of bounds (the silent crashes). Fixed on
 # the local Barrier3D branch fix/route-overwash-axis-swap; see
-# output/raw_runs/experiments/2026-09-24-metres-3-barrier3d-overwash-fix/NOTE.md.
+# output/raw_runs/experiments/code-checks/2026-09-24-metres-3-barrier3d-overwash-fix/NOTE.md.
 _OVERWASH_FIXED = "Elevation[TS, d + 1: d + 10, i]"
 _OVERWASH_BUGGED = "Elevation[TS, i, d + 1: d + 10]"
 
@@ -254,20 +254,20 @@ LEGACY_ARMS = {
     "version-check/v1": ("version", "version-check/v1"),
     "version-pair/v2": ("version", "version-pair/v2"),
     "version-pair/v3": ("version", "version-pair/v3"),
-    "pea1989base": ("experiment", "2026-09-02-pea1989/base"),
-    "pea1989basenoreloc": ("experiment", "2026-09-02-pea1989/basenoreloc"),
-    "behindroad-copy": ("experiment", "2026-09-08-behindroad-copy"),
-    "paramsplit-check": ("experiment", "2026-09-14-paramsplit/check"),
-    "paramsplit-final": ("experiment", "2026-09-14-paramsplit/final"),
-    "paramsplit-oldcode": ("experiment", "2026-09-14-paramsplit/oldcode"),
-    "paramsplit-syncon": ("experiment", "2026-09-14-paramsplit/syncon"),
-    "probe-natural": ("experiment", "2026-09-14-probe/natural"),
-    "probe-paired": ("experiment", "2026-09-14-probe/paired"),
-    "probe-roadonly": ("experiment", "2026-09-14-probe/roadonly"),
-    "probe-unrounded": ("experiment", "2026-09-14-probe/unrounded"),
-    "probe-v1setbacks": ("experiment", "2026-09-14-probe/v1setbacks"),
-    "recode-20260914": ("experiment", "2026-09-14-recode"),
-    "currency-20260914": ("experiment", "2026-09-14-currency"),
+    "pea1989base": ("experiment", "topography-and-domains/2026-09-02-pea-island-row-insert-control/base"),
+    "pea1989basenoreloc": ("experiment", "topography-and-domains/2026-09-02-pea-island-row-insert-control/basenoreloc"),
+    "behindroad-copy": ("experiment", "topography-and-domains/2026-09-08-dune-footprint-behind-road"),
+    "paramsplit-check": ("experiment", "code-checks/2026-09-14-site-config-split-check/check"),
+    "paramsplit-final": ("experiment", "code-checks/2026-09-14-site-config-split-check/final"),
+    "paramsplit-oldcode": ("experiment", "code-checks/2026-09-14-site-config-split-check/oldcode"),
+    "paramsplit-syncon": ("experiment", "code-checks/2026-09-14-site-config-split-check/syncon"),
+    "probe-natural": ("experiment", "code-checks/2026-09-14-relocation-rounding-probes/natural"),
+    "probe-paired": ("experiment", "code-checks/2026-09-14-relocation-rounding-probes/paired"),
+    "probe-roadonly": ("experiment", "code-checks/2026-09-14-relocation-rounding-probes/roadonly"),
+    "probe-unrounded": ("experiment", "code-checks/2026-09-14-relocation-rounding-probes/unrounded"),
+    "probe-v1setbacks": ("experiment", "code-checks/2026-09-14-relocation-rounding-probes/v1setbacks"),
+    "recode-20260914": ("experiment", "code-checks/2026-09-14-relocation-arm-rerun-new-code"),
+    "currency-20260914": ("experiment", "code-checks/2026-09-14-calibrated-pair-rerun-current-code"),
 }
 
 # A period directory is exactly <4 digits>_<4 digits>. Anything else directly
@@ -326,14 +326,16 @@ def sweep_family(run_name):
 
 
 def check_tag(tag):
-    """Validates a tag: one to three path components joined by '/'.
+    """Validates a tag: one to four path components joined by '/'.
 
     Two levels is a set and its members -- the four probes of one experiment,
     the two versions of one pair. A third level exists for one thing only:
     the steps of an iterative solve inside a member (`<set>/<member>/step2`,
     2026-09-16), so a Newton solve's history sits under the member it
     belongs to rather than beside it as `<member>-step2`, which put 26
-    folders at one level for a five-member experiment. The value reaches
+    folders at one level for a five-member experiment. A fourth since
+    2026-09-25: experiments are grouped by theme (Hannah), so a tag is
+    `<theme>/<study>/<member>[/<step>]`. The value reaches
     here from an environment variable and is joined onto the output root, so
     it must not escape it.
 
@@ -344,18 +346,18 @@ def check_tag(tag):
         The tag, stripped; "" for none.
 
     Raises:
-        ValueError: If it is not one to three clean path components.
+        ValueError: If it is not one to four clean path components.
     """
     tag = (tag or "").strip()
     if not tag:
         return ""
     parts = tag.split("/")
-    if ("\\" in tag or len(parts) > 3
+    if ("\\" in tag or len(parts) > 4
             or any(not p or p.startswith(".") for p in parts)):
         raise ValueError(
-            f"tag {tag!r} must be one path component, two joined by '/' "
-            f"for a set and its member, or three for a step of a solve "
-            f"inside a member -- it is joined onto the raw_runs root and "
+            f"tag {tag!r} must be one to four clean path components "
+            f"(<theme>/<study>/<member>/<step> at most) -- it is joined "
+            f"onto the raw_runs root and "
             f"must not escape it.")
     return tag
 

@@ -100,7 +100,7 @@ ROOT_DIR = COMPARISONS_ROOT / "target_comparison"
 #                 carried onto windows it was NOT fitted on, so it is a
 #                 PROJECTION. THE TARGET IN USE. Paired with runs whose ends
 #                 were solved against it
-#                 (experiments/2026-09-19-edgesolve-lrr1996_2024).
+#                 (experiments/end-domain-boundaries/2026-09-19-end-domains-solved-on-lrr-1996-2024).
 #   total_change/ each window's OWN LRR x 14 yr, as the runner grades. The
 #                 rate is evaluated over the window it was fitted on, so
 #                 nothing is extrapolated. Kept for the record.
@@ -142,7 +142,7 @@ def cs_method(window):
 CS_CANON = {"full": "projected", "subperiod": "total",
             "projected": "projected", "total": "total"}
 FULL_WINDOW = (1996, 2024)
-FULL_SOLVE_DIR = rw.RAW_RUNS / "experiments" / "2026-09-19-edgesolve-lrr1996_2024"
+FULL_SOLVE_DIR = rw.RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-19-end-domains-solved-on-lrr-1996-2024"
 CS_MODE = "projected"
 OUT_DIR = ROOT_DIR / CS_MODES[CS_MODE]
 

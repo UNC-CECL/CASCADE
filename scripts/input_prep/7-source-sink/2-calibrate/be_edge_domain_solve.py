@@ -57,7 +57,7 @@
 #   (the mean of it and its two inward neighbours, GIS 1-3 / 88-90). A dune
 #   line is two surveys, so --estimator endpoint reads change_rate_m_yr on
 #   the model side; the default lrr keeps the CoastSat protocol. The runs of
-#   that solve are under output/raw_runs/experiments/2026-09-16-dune-edgesolve/.
+#   that solve are under output/raw_runs/experiments/end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline/.
 #
 # USAGE
 #   One run -- report the residual and a first step at the nominal gain:

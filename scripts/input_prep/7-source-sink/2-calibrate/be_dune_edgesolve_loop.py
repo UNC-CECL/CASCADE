@@ -21,7 +21,7 @@ LOCKSTEP
 
 BRACKETS (step 0, not re-run)
     1996, 2010   the current matrix zeroBE and edgeBE full-management runs
-    2004         the 09-16 brackets (experiments/2026-09-16-dune-edgesolve/
+    2004         the 09-16 brackets (experiments/end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline/
                  brackets): the 2004-start inputs did not change on 09-18
 
 OUTPUT   output/raw_runs/experiments/<exp>/<reading>/step<k>/<window>/edgeBE/<run>/
@@ -34,10 +34,10 @@ COASTSAT TARGET (2026-09-19)
     matrix end values were solved (model lrr_m_yr against target_lrr_m_yr,
     GIS 1 raw, GIS 90 LOESS-10). One chain per window, filed under the
     reading name "coastsat"; --smooth is ignored. E.g. --exp
-    2026-09-19-edgesolve-2010 --windows 2010 --target coastsat.
+    end-domain-boundaries/2026-09-19-end-domains-2010-recheck --windows 2010 --target coastsat.
 
 USAGE
-    python be_dune_edgesolve_loop.py --exp 2026-09-18-dune-edgesolve \\
+    python be_dune_edgesolve_loop.py --exp end-domain-boundaries/2026-09-18-end-domains-solved-on-redigitized-duneline \\
         --windows 1996 2004 2010 --smooth raw mean3
 ==============================================================================
 """
@@ -57,7 +57,7 @@ PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
 SOLVER = Path(__file__).with_name("be_edge_domain_solve.py")
 RUNNER = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 RUN_ROOT = PROJECT_ROOT / "output" / "raw_runs"
-BRACKET_EXP = "2026-09-16-dune-edgesolve"
+BRACKET_EXP = "end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline"
 
 END = {1996: 2010, 2004: 2024, 2010: 2024}
 SUFFIX = {1996: "road_bdm", 2004: "road_bdm_nourish", 2010: "road_bdm_nourish"}

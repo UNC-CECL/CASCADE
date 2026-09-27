@@ -81,7 +81,7 @@ PURPOSE_DIRS = set(KIND_DIR.values())
 # that cite it. Seeded here so the NOTE.md a folder gets on migration is not
 # blank; edit the file, not this table, once the folder exists.
 EXPERIMENT_NOTES = {
-    "2026-09-02-pea1989": """# 2026-09-02-pea1989
+    "topography-and-domains/2026-09-02-pea-island-row-insert-control": """# topography-and-domains/2026-09-02-pea-island-row-insert-control
 
 **Question.** The control for the GIS 84-86 seaward-row insert (the Pea Island
 1989 relocation): the 1984-2004 calibBE full-management groin-on run on
@@ -98,7 +98,7 @@ the control for was deleted on 2026-09-07 (unmodified topography only).
 on v1 and reproducible from the script. Model state was kept because the
 comparison reads roadway objects.
 """,
-    "2026-09-08-behindroad-copy": """# 2026-09-08-behindroad-copy
+    "topography-and-domains/2026-09-08-dune-footprint-behind-road": """# topography-and-domains/2026-09-08-dune-footprint-behind-road
 
 **Question.** Does the 1984 dune footprint placed directly behind NC-12 (the
 dune-topo **v3** layer: v2 + copy fill behind the road) change the calibrated
@@ -111,7 +111,7 @@ dune-topo **v3** layer: v2 + copy fill behind the road) change the calibrated
 **Runs deletable?** Keep while v3 is a candidate; it is the only v3 run of
 this cell besides `versions/version-pair/v3`.
 """,
-    "2026-09-14-paramsplit": """# 2026-09-14-paramsplit
+    "code-checks/2026-09-14-site-config-split-check": """# code-checks/2026-09-14-site-config-split-check
 
 **Question.** Did splitting the site configuration on 2026-09-14 (the
 `hatteras_site_config_prebe_20260914_*` backups mark the steps) change the
@@ -125,7 +125,7 @@ changed nothing. Compare with `tools/HAT_compare_rerun.py`.
 **Runs deletable?** Yes; the answer is the four identical numbers in
 `run_index.csv`, which `retired_runs.csv` keeps.
 """,
-    "2026-09-14-probe": """# 2026-09-14-probe
+    "code-checks/2026-09-14-relocation-rounding-probes": """# code-checks/2026-09-14-relocation-rounding-probes
 
 **Question.** Probes around the 2026-09-14 change that rounds a prescribed
 relocation displacement to whole 10 m cells (see the note in
@@ -135,11 +135,11 @@ on the v1-era setback CSV), `paired` (calibBE with relocations, rounded) and
 `unrounded` (the same without rounding: RMSE 0.523102 against 0.522873).
 
 **Answer lives in.** The recode comparison beside this folder
-(`2026-09-14-recode`) and `tools/HAT_compare_rerun.py`.
+(`code-checks/2026-09-14-relocation-arm-rerun-new-code`) and `tools/HAT_compare_rerun.py`.
 
 **Runs deletable?** Yes; each is a single probe whose numbers are in the index.
 """,
-    "2026-09-14-recode": """# 2026-09-14-recode
+    "code-checks/2026-09-14-relocation-arm-rerun-new-code": """# code-checks/2026-09-14-relocation-arm-rerun-new-code
 
 **Question.** The whole 1984-2004 relocation arm (12 runs: three presets x
 bdm/nobdm x groin/nogroin, relocations on) re-run under the 2026-09-14 code
@@ -155,7 +155,7 @@ the compare tool's output.
 **Runs deletable?** Yes once the stored v1 matrix is itself archived: both
 sides of the comparison go together.
 """,
-    "2026-09-14-currency": """# 2026-09-14-currency
+    "code-checks/2026-09-14-calibrated-pair-rerun-current-code": """# code-checks/2026-09-14-calibrated-pair-rerun-current-code
 
 **Question.** Is the calibrated calibBE pair (1984-2004 on v2, 2004-2024 on
 2004-start v1) current under today's code? Both re-run and differenced per

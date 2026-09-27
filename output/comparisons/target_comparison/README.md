@@ -35,7 +35,7 @@ is `.../coastsat/total_change/`.
 
 - `projected/` — **the target in use**: the 1996–2024 LRR x 14 yr
   in BOTH windows, paired with runs whose ends were solved against it
-  (`raw_runs/experiments/2026-09-19-edgesolve-lrr1996_2024/`: GIS 1 / 90 =
+  (`raw_runs/experiments/end-domain-boundaries/2026-09-19-end-domains-solved-on-lrr-1996-2024/`: GIS 1 / 90 =
   +28.5 / +24.5 in 1996–2010, +37.1 / +25.4 in 2010–2024).
   `projected/paired_smoothed/` is the same pairing with both
   targets drawn as GRADED (raw domain means over GIS 1–10, 10-domain LOESS

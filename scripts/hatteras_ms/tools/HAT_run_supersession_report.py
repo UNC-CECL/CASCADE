@@ -249,7 +249,7 @@ def main() -> None:
         w("")
         w("**A run that names a version is judged against that version, not "
           "CURRENT.** `versions/version-pair/v3` holds v3 against v2 and "
-          "`experiments/2026-09-08-behindroad-copy` was built on the v3 footprint layer; both are "
+          "`experiments/topography-and-domains/2026-09-08-dune-footprint-behind-road` was built on the v3 footprint layer; both are "
           "on v3 deliberately. Re-running them on CURRENT would destroy the "
           "comparison they exist for, so they are not listed above.")
     w("")

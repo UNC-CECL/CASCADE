@@ -90,8 +90,8 @@ Three model sets, named for where their two end domains were solved
 | set | what | where the runs are |
 |---|---|---|
 | `coastsat` | the matrix: ends solved against the CoastSat target | `matrix/` (1984-2004 from `versions/version-pair/v2`, topography v2 as asked; the calibration arm is on v1) |
-| `dune-mean3` | the dune-line end solve, mean of the end domain and its two inward neighbours | `experiments/2026-09-16-dune-edgesolve/mean3/` |
-| `dune-raw` | the same solve, the end domain's own value | `experiments/2026-09-16-dune-edgesolve/raw/` |
+| `dune-mean3` | the dune-line end solve, mean of the end domain and its two inward neighbours | `experiments/end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline/mean3/` |
+| `dune-raw` | the same solve, the end domain's own value | `experiments/end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline/raw/` |
 
 | window | run | matrix arm |
 |---|---|---|

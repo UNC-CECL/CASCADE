@@ -1,11 +1,11 @@
 """
 be_dune_edgesolve_results.py
 ==============================================================================
-Close the books on experiments/2026-09-16-dune-edgesolve: which step stands
+Close the books on experiments/end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline: which step stands
 as each solve's answer, what the pair is, and how the run scores against BOTH
 observations.
 
-WHAT IT WRITES  (under output/raw_runs/experiments/2026-09-16-dune-edgesolve/)
+WHAT IT WRITES  (under output/raw_runs/experiments/end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline/)
     solved.csv      one row per (window, smooth): the solved step, its run
                     name, the pair at GIS 1 / 90, and the CoastSat-solved pair
                     it replaces. rate_windows.py reads this to find the
@@ -21,7 +21,7 @@ WHAT IT WRITES  (under output/raw_runs/experiments/2026-09-16-dune-edgesolve/)
 USAGE
     python be_dune_edgesolve_results.py --solved 1984:raw:3 1984:mean3:2 ...
         # window start year : smoothing : the step that converged
-    python be_dune_edgesolve_results.py --exp 2026-09-18-dune-edgesolve         --solved 1984:raw:3@2026-09-16-dune-edgesolve 1996:raw:2 ...
+    python be_dune_edgesolve_results.py --exp end-domain-boundaries/2026-09-18-end-domains-solved-on-redigitized-duneline         --solved 1984:raw:3@end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline 1996:raw:2 ...
         # --exp is where the files are written and where a bare spec's runs
         # sit; "@<experiment>" carries a solve over from an earlier one (the
         # 09-18 re-solve kept 1984-2004, whose lines did not change)
@@ -52,13 +52,13 @@ from site_layer.hatteras_site_config import HATTERAS_PERIODS, HATTERAS_BE_EDGE_D
 from cascade_pipeline.run_registry import find_run_dir, load_run_index    # noqa: E402
 
 RUN_ROOT = PROJECT_ROOT / "output" / "raw_runs"
-EXP = "2026-09-16-dune-edgesolve"          # default; --exp overrides
+EXP = "end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline"          # default; --exp overrides
 EXP_DIR = RUN_ROOT / "experiments" / EXP
 # The 1984 and 2004 brackets were run once, under the 09-16 experiment; their
 # inputs did not change with the 09-18 re-digitization (the 1984 and 2004
 # lines, and the run itself never reads a dune line), so every re-solve
 # reuses them from there.
-BRACKET_EXP = "2026-09-16-dune-edgesolve"
+BRACKET_EXP = "end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline"
 INTERIOR = (2, 89)
 
 # The CoastSat-solved counterpart of each window: the matrix run for 1996

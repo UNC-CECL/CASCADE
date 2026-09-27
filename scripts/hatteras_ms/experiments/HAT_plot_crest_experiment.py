@@ -84,10 +84,10 @@ OUT = REPO / "output" / "experiments" / "pea1989_crest"
 
 
 def load_arm(arm: str):
-    # experiments/2026-09-02-pea1989/<member>/ since 2026-09-16; the two
+    # experiments/topography-and-domains/2026-09-02-pea-island-row-insert-control/<member>/ since 2026-09-16; the two
     # older layouts (arms/<arm>/ and the loose <arm>/) are tried after it.
     member = arm.replace("pea1989", "", 1)
-    roots = [REPO / "output" / "raw_runs" / "experiments" / "2026-09-02-pea1989" / member,
+    roots = [REPO / "output" / "raw_runs" / "experiments" / "topography-and-domains/2026-09-02-pea-island-row-insert-control" / member,
              REPO / "output" / "raw_runs" / "arms" / arm,
              REPO / "output" / "raw_runs" / arm]
     hits = []

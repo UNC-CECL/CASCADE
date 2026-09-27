@@ -30,11 +30,11 @@ THE DESIGN
 WHERE THINGS ARE
     inputs   2-brie-offset/1996/ext/<geometry>/          the offsets
              5-scr/3-rates/coastsat/lrr/1996_2010/ext/            the targets
-    runs     output/raw_runs/experiments/2026-09-16-peaisland-ext/<member>/
+    runs     output/raw_runs/experiments/topography-and-domains/2026-09-16-pea-island-domain-extension/<member>/
              one member per <geometry>-<mode>: its 1996_2010/zeroBE/ run is
              stage 0, its step<k>/ folders are the Newton probes, and SOLVED
              names the step that stands as the solved run
-    logs     output/raw_runs/experiments/2026-09-16-peaisland-ext/logs/<member>/
+    logs     output/raw_runs/experiments/topography-and-domains/2026-09-16-pea-island-domain-extension/logs/<member>/
     answer   RESULTS.md and figures/ beside NOTE.md in that folder
 
 USAGE
@@ -73,7 +73,7 @@ SOLVE = (PROJECT_ROOT / "scripts" / "input_prep" / "7-source-sink" / "2-calibrat
          / "be_edge_domain_solve.py")
 RAW_RUNS = PROJECT_ROOT / "output" / "raw_runs"
 
-TAG = "2026-09-16-peaisland-ext"
+TAG = "topography-and-domains/2026-09-16-pea-island-domain-extension"
 EXPERIMENT_DIR = RAW_RUNS / "experiments" / TAG
 LOG_DIR = EXPERIMENT_DIR / "logs"
 PERIOD = 1996

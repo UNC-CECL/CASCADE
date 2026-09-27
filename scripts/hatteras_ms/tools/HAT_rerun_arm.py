@@ -115,7 +115,7 @@ def env_for(row, tag, topo_version):
 def main():
     ap = argparse.ArgumentParser(description="re-run an arm under today's code")
     ap.add_argument("--period", type=int, default=1984)
-    ap.add_argument("--tag", "--arm", dest="tag", default="2026-09-14-recode",
+    ap.add_argument("--tag", "--arm", dest="tag", default="code-checks/2026-09-14-relocation-arm-rerun-new-code",
                     help="experiment tag the re-runs are filed under")
     ap.add_argument("--topo-version", default="v1",
                     help="pin the 1984-start version. Default v1, which is "
