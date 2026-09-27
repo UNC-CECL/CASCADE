@@ -62,6 +62,16 @@ coastsat/
                                            field
         coastsat_lrr_transect_zoom.py      one window at transect resolution,
                                            over a short reach
+        -- the Cape Point -> Virginia hand-off (2026-09-27), NOT a model
+           target; writes lrr/1984_2025_obx/ --
+        coastsat_obx_lrr.py                1984-2025 rate for every transect
+                                           to the NC/VA line: the hand-off CSV,
+                                           its README, the profile figure
+        coastsat_obx_lrr_maps.py           overview + four regional maps
+                                           (run after coastsat_obx_lrr.py)
+        coastsat_lrr_standalone.py         the same fit as one pandas+scipy
+                                           file, for colleagues to run on
+                                           their own CoastSat folders
     endpoint/         net change between the +/-6-month means at the dune-line
         coastsat_endpoint.py               survey dates, so the shoreline and
                                            the dune line differ like for like

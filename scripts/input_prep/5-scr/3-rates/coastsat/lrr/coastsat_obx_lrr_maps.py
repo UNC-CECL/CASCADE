@@ -7,18 +7,22 @@ fits nothing.
 
 EACH FIGURE IS TWO PANELS ON ONE NORTHING AXIS
     (a) the map: every transect drawn at its true position and length,
-        coloured by rate on a fixed diverging scale, over a light-grey web
-        basemap (Esri World Gray Canvas via contextily, so it needs the
-        internet). Grey, not imagery, so the rate is the only colour.
+        coloured by rate on a fixed diverging scale (RdBu, +/-3 m/yr), over
+        Esri World Shaded Relief recoloured to light grey (contextily, so it
+        needs the internet). That basemap carries no labels: every name on
+        a map is placed here from PLACES (coastsat_obx_lrr.py) and
+        MAP_AREAS. Latitude ticks on the left edge, exact at the coast; the
+        NC/VA state line drawn where it is in view; north arrow top right.
     (b) the same rates against northing, sharing (a)'s y axis, so a colour on
-        the map reads straight across to its value.
+        the map reads straight across to its value; the black line is the
+        1 km median of the transects, a guide drawn over the points.
     The coast here runs within ~25 degrees of north, which is what makes a
     shared northing axis honest. Cape Point, where it turns, is flagged in
     the table anyway.
 
 THE REGIONS  split at towns, ~35-40 km each, 1 km overlap
     A  Cape Point to Salvo
-    B  Rodanthe to Bodie Island (Oregon Inlet in the middle)
+    B  Rodanthe to South Nags Head (Oregon Inlet in the middle)
     C  Nags Head to Duck
     D  Corolla to the Virginia line
 
@@ -29,6 +33,8 @@ OUTPUT  beside the table in 5-scr/3-rates/coastsat/lrr/1984_2025_obx/
     lrr_obx_1984_2025_map_overview.png
     lrr_obx_1984_2025_map_<A-D>_<region>.png
     (+ supporting/ PDFs and CAPTIONS.md entries)
+    Reads supporting/coastsat_lrr_obx_1984_2025_full.csv (it needs the
+    seaward ends), so run coastsat_obx_lrr.py first.
 ==============================================================================
 """
 import sys
@@ -45,11 +51,10 @@ sys.path.insert(0, str(_REPO / "scripts"))
 from site_layer import hat_observed_rates as obs  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, figsize, open_frame, save, caption, spines_for_image,
-    _scalebar, _title, C, INK, INK_MUTED, GRID_C)
+    _scalebar, _title, INK, INK_MUTED, GRID_C)
 
 import matplotlib.pyplot as plt  # noqa: E402
 import matplotlib.colors as mcolors  # noqa: E402
-from matplotlib.lines import Line2D  # noqa: E402
 import contextily as ctx  # noqa: E402
 
 # ============================================================

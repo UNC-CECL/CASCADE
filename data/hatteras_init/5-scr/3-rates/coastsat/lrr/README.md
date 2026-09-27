@@ -9,6 +9,9 @@ usa_NC_0049_0230), built 2026-09-27 as a hand-off to the Murray lab by
 `coastsat_obx_lrr.py`. Same fit, no domain table; its README is written for
 the people receiving it. `hat_observed_rates.windows()` and
 `rates_figures.py` skip it because its name is not `<start>_<end>`.
+`coastsat_lrr_standalone.py` is the same fit as one dependency-light file
+(pandas, scipy) for colleagues to run on their own CoastSat folders; it
+reproduces that folder's rates exactly.
 
 ```
 <window>/

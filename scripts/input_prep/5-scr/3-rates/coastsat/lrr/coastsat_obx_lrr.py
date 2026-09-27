@@ -7,8 +7,8 @@ work, plus a README and one figure.
 
 WHY A SIBLING OF coastsat_domain_lrr.py
     That script is driven by transect_domain_lookup.csv, so it only sees the
-    transects inside the 90 GIS domains. This hand-off runs 150 km past the
-    model domain, where no domain exists, so it is driven by the CoastSat
+    transects inside the 90 GIS domains. This hand-off covers 153 km of coast,
+    ~90 km of it north of the model domain where no domain exists, so it is driven by the CoastSat
     transect layer instead. The FIT is the same one -- coastsat_lrr.compute_lrr
     on the calendar window, every point, no filter, no weights, >= 3 points --
     so a transect inside the domain gets the number the model target uses.
@@ -17,11 +17,13 @@ THE SPEC (decided 2026-09-27)
     window    1984-01-01 -> 2025-12-31 (whole record, last full calendar year)
     extent    usa_NC_0032_0021 (south end of the model domain, GIS 1) through
               usa_NC_0049_0230 (ends at the NC/VA line, 36.550 N)
-    columns   transect ID, origin and seaward-end lon/lat, alongshore km,
-              LRR with its stats, and a flag column
+    columns   the hand-off CSV is what was asked for: transect ID, alongshore
+              km, origin lon/lat, LRR, its 95% CI, flag. Every other fit stat
+              and CoastSat's beach slope go in supporting/..._full.csv
     flags     flagged, never withheld: fewer than 50 positions, under 20 yr
               between first and last position, within 2 km of Oregon Inlet or
-              of the south end at Cape Point
+              of the south end at Cape Point (only the two location flags
+              fire on this record)
 
 ALONGSHORE DISTANCE
     km from the origin of usa_NC_0032_0021, accumulated transect to transect
@@ -35,9 +37,14 @@ USAGE
     python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_obx_lrr.py
 
 OUTPUT  data/hatteras_init/5-scr/3-rates/coastsat/lrr/1984_2025_obx/
-    coastsat_lrr_obx_1984_2025.csv
-    README.md
-    lrr_obx_1984_2025.png   (+ supporting/ PDF and CAPTIONS.md)
+    coastsat_lrr_obx_1984_2025.csv        the hand-off table (7 columns)
+    README.md                             written for the recipients
+    lrr_obx_1984_2025.png                 rate vs alongshore km, place names,
+                                          1 km median line (a guide only)
+    supporting/coastsat_lrr_obx_1984_2025_full.csv   all 19 columns
+    supporting/ PDF and CAPTIONS.md
+    The maps are drawn from the full table by coastsat_obx_lrr_maps.py; a
+    one-file version of the fit for others is coastsat_lrr_standalone.py.
 ==============================================================================
 """
 import sys
@@ -196,7 +203,7 @@ def draw(t, inlet_km, path):
     from matplotlib.lines import Line2D
     from site_layer.hat_figure_style import (
         apply_style, figsize, open_frame, save, caption, mark_offaxis,
-        C, INK, INK_MUTED, GRID_C)
+        INK, INK_MUTED, GRID_C)
     apply_style()
 
     # Flagged transects are drawn like the rest (Hannah, 2026-09-27: the hollow
@@ -467,6 +474,18 @@ the coast and the (b) panels share that axis.
 python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_obx_lrr.py        # table, README, profile figure
 python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_obx_lrr_maps.py   # the five maps (needs internet for the basemap)
 ```
+
+**To run the same analysis on your own CoastSat data**, use the one-file
+version, `coastsat_lrr_standalone.py` (in the repository at
+`scripts/input_prep/5-scr/3-rates/coastsat/lrr/`, and sent alongside this
+folder; needs only pandas and scipy):
+
+```
+python coastsat_lrr_standalone.py <folder of CoastSat CSVs> 1984 2025 rates.csv
+```
+
+It writes `transect_id, lrr_m_yr, unc_m_yr, n_obs` for every transect it
+finds, and reproduces those columns of this table exactly.
 
 in the CASCADE repository (branch `hannahaline/hatteras-cascade`). The fit
 is `coastsat_lrr.compute_lrr` (`scripts/input_prep/5-scr/lib/`); the

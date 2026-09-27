@@ -162,6 +162,18 @@ python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_obx_lrr.py        
 python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_obx_lrr_maps.py   # the five maps (needs internet for the basemap)
 ```
 
+**To run the same analysis on your own CoastSat data**, use the one-file
+version, `coastsat_lrr_standalone.py` (in the repository at
+`scripts/input_prep/5-scr/3-rates/coastsat/lrr/`, and sent alongside this
+folder; needs only pandas and scipy):
+
+```
+python coastsat_lrr_standalone.py <folder of CoastSat CSVs> 1984 2025 rates.csv
+```
+
+It writes `transect_id, lrr_m_yr, unc_m_yr, n_obs` for every transect it
+finds, and reproduces those columns of this table exactly.
+
 in the CASCADE repository (branch `hannahaline/hatteras-cascade`). The fit
 is `coastsat_lrr.compute_lrr` (`scripts/input_prep/5-scr/lib/`); the
 transect geometry is the CoastSat global transect layer.
