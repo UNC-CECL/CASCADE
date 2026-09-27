@@ -96,8 +96,11 @@ BINS_SCRIPT = (_REPO / "scripts" / "input_prep" / "5-scr" / "3-rates"
 
 
 def _windows(root):
+    # <start>_<end> only: lrr/1984_2025_obx/ (the all-OBX hand-off, 09-27)
+    # starts with a year but is not a model window and has no domain table.
     return sorted(p.name for p in root.iterdir()
-                  if p.is_dir() and p.name[:4].isdigit() and "_" in p.name)
+                  if p.is_dir() and all(s.isdigit() for s in p.name.split("_"))
+                  and p.name.count("_") == 1)
 
 
 def _along(t):

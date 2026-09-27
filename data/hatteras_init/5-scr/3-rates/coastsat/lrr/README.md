@@ -3,6 +3,13 @@
 One folder per window, `<start>_<end>`: 1984_2004, 1996_2010, 2004_2024,
 2010_2024, and 1996_2024 (context only; no run is graded against it).
 
+`1984_2025_obx/` is NOT a window of this tree: it is the full-record rate for
+every transect from Cape Point to the Virginia line (usa_NC_0032_0021 to
+usa_NC_0049_0230), built 2026-09-27 as a hand-off to the Murray lab by
+`coastsat_obx_lrr.py`. Same fit, no domain table; its README is written for
+the people receiving it. `hat_observed_rates.windows()` and
+`rates_figures.py` skip it because its name is not `<start>_<end>`.
+
 ```
 <window>/
     transect_lrr_full.csv    per CoastSat transect: lrr_m_yr (OLS slope of

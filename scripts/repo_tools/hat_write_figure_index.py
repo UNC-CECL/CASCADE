@@ -78,6 +78,12 @@ SECTIONS: list[tuple[str, str, list[tuple[str, str, str]]]] = [
              f"{RATES}/coastsat/total_change/<w>/smoothed/",
              "and `projected/<w>/smoothed/`. Read the bias, not r — a smoother "
              "inflates r on both sides."),
+            ("The full-record rate, Cape Point to Virginia, m/yr",
+             f"{RATES}/coastsat/lrr/1984_2025_obx/lrr_obx_1984_2025.png",
+             "1984–2025, per transect, 153 km of coast, well past the model domain; with an "
+             "overview and four regional maps (`..._map_*.png`) beside it. A "
+             "hand-off to the Murray lab (2026-09-27), NOT a model window or "
+             "target."),
         ],
     ),
     (

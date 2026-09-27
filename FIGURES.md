@@ -1,6 +1,6 @@
 # Which figure do I open?
 
-*Written 2026-09-22 by `scripts/repo_tools/hat_write_figure_index.py`, which checks every path below against the disk. Re-run it after adding or renaming a figure.*
+*Written 2026-09-27 by `scripts/repo_tools/hat_write_figure_index.py`, which checks every path below against the disk. Re-run it after adding or renaming a figure.*
 
 Three things to fix before reading any of these:
 
@@ -22,6 +22,7 @@ CoastSat satellite waterline, observations only. No model anywhere in these.
 | Two snapshots differenced, m and m/yr | `data/hatteras_init/5-scr/3-rates/coastsat/endpoint/<w>/coastsat_endpoint_<w>.png` <br>*windows:* 1996_2010, 2010_2024, 1996_2024, 1984_2004, 2004_2024 | mean position ±6 months about each dune-line date. No rate fit. |
 | The rate in 5-year bins | `data/hatteras_init/5-scr/3-rates/coastsat/5yr_bins/<w>/lrr_5yr_bins_<w>.png` <br>*windows:* 1996_2010, 2010_2024, 1996_2024 | is the trend steady inside the window? |
 | How much the alongshore smoothing changes it | `data/hatteras_init/5-scr/3-rates/coastsat/total_change/<w>/smoothed/` <br>*windows:* 1996_2010, 2010_2024, 1996_2024 | and `projected/<w>/smoothed/`. Read the bias, not r — a smoother inflates r on both sides. |
+| The full-record rate, Cape Point to Virginia, m/yr | `data/hatteras_init/5-scr/3-rates/coastsat/lrr/1984_2025_obx/lrr_obx_1984_2025.png` | 1984–2025, per transect, 153 km of coast, well past the model domain; with an overview and four regional maps (`..._map_*.png`) beside it. A hand-off to the Murray lab (2026-09-27), NOT a model window or target. |
 
 ## What did the dune line do?
 
