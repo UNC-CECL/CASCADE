@@ -1,0 +1,21 @@
+scenario,rule,free,shared,changes,s96,s10,bias96,bias10,mean_rel,n
+natural,A,Hs,"Tp 10, asym 0.5, high-angle 0.5",Hs 2 -> 2,15.9,-530.3,-0.33,-3.42,1.714,406
+natural,B,Hs,"Tp 10, asym 0.6, high-angle 0.5",Hs 2 -> 2,23.1,-571.6,-0.24,-3.5,1.734,16
+natural,A,Tp,"Hs 2, asym 0.5, high-angle 0.5",Tp 9 -> 10,15.9,-530.3,-0.33,-3.42,1.714,301
+natural,B,Tp,"Hs 2, asym 0.6, high-angle 0.5",Tp 10 -> 10,23.1,-571.6,-0.24,-3.5,1.734,14
+natural,A,asym,"Hs 2, Tp 10, high-angle 0.5",asym 0.6 -> 0.5,23.1,-530.3,-0.24,-3.42,1.694,332
+natural,B,asym,"Hs 2, Tp 10, high-angle 0.5",asym 0.6 -> 0.5,23.1,-530.3,-0.24,-3.42,1.694,14
+natural,A,high-angle,"Hs 2, Tp 10, asym 0.5",high-angle 0.55 -> 0.5,16.2,-530.3,-0.05,-3.42,1.713,334
+natural,B,high-angle,"Hs 2, Tp 10, asym 0.6",high-angle 0.5 -> 0.5,23.1,-571.6,-0.24,-3.5,1.734,14
+natural,A,none,"Hs 2, Tp 10, asym 0.5, high-angle 0.5",(none),15.9,-530.3,-0.33,-3.42,1.714,107
+natural,B,none,"Hs 2, Tp 10, asym 0.6, high-angle 0.5",(none),23.1,-571.6,-0.24,-3.5,1.734,6
+full_management,A,Hs,"Tp 7, asym 0.5, high-angle 0.55",Hs 2 -> 2,7.6,-123.5,0.28,-1.54,1.228,390
+full_management,B,Hs,"Tp 10, asym 0.8, high-angle 0.45",Hs 1.25 -> 1.25,22.6,-172.2,-0.08,-1.84,1.265,19
+full_management,A,Tp,"Hs 2, asym 0.5, high-angle 0.55",Tp 7.5 -> 7,9.5,-123.5,0.25,-1.54,1.223,301
+full_management,B,Tp,"Hs 1.25, asym 0.8, high-angle 0.45",Tp 10 -> 10,22.6,-172.2,-0.08,-1.84,1.265,22
+full_management,A,asym,"Hs 2, Tp 7, high-angle 0.55",asym 0.7 -> 0.5,11.5,-123.5,0.08,-1.54,1.218,317
+full_management,B,asym,"Hs 1.25, Tp 10, high-angle 0.45",asym 0.8 -> 0.8,22.6,-172.2,-0.08,-1.84,1.265,18
+full_management,A,high-angle,"Hs 2, Tp 7, asym 0.5",high-angle 0.55 -> 0.55,7.6,-123.5,0.28,-1.54,1.228,317
+full_management,B,high-angle,"Hs 1.5, Tp 10, asym 0.7",high-angle 0.45 -> 0.55,22.7,-156.8,-0.19,-1.74,1.241,15
+full_management,A,none,"Hs 2, Tp 7, asym 0.5, high-angle 0.55",(none),7.6,-123.5,0.28,-1.54,1.228,103
+full_management,B,none,"Hs 1.25, Tp 10, asym 0.8, high-angle 0.45",(none),22.6,-172.2,-0.08,-1.84,1.265,7
