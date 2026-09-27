@@ -1,0 +1,2 @@
+# Run folders stay on disk only (paths past Windows' 260); logs are ignored repo-wide.
+runs/

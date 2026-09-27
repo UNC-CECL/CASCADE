@@ -1,0 +1,7 @@
+# Captions — shared
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`best_shared_natural_grid.png`.** Natural, four-parameter grid with the end domains FIXED (1996-2010 +7.0 / +9.8, 2010-2024 +137.6 / +14.7 m/yr). Among settings run in both windows, the one with the lowest mean of smoothed RMSE divided by each window's flat-line RMSE. Score: 1 - SSE/SST of the model smoothed like the CoastSat target (LOESS over 10 domains, the southern 10 raw) against that target, interior GIS 2-89; the raw (unsmoothed) score in brackets. Top: LRR rate; bottom: position change, end minus start, against the observed CoastSat change. Solid colour: the model per domain; faint dashed: the smoothed model that is scored. Offset in metres (dune line), zeroBE, no groin, no relocations.
+
+**`best_shared_full_management_grid.png`.** Full management, four-parameter grid with the end domains FIXED (1996-2010 +7.0 / +9.8, 2010-2024 +137.6 / +14.7 m/yr). Among settings run in both windows, the one with the lowest mean of smoothed RMSE divided by each window's flat-line RMSE. Score: 1 - SSE/SST of the model smoothed like the CoastSat target (LOESS over 10 domains, the southern 10 raw) against that target, interior GIS 2-89; the raw (unsmoothed) score in brackets. Top: LRR rate; bottom: position change, end minus start, against the observed CoastSat change. Solid colour: the model per domain; faint dashed: the smoothed model that is scored. Offset in metres (dune line), zeroBE, no groin, no relocations.

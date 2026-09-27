@@ -1,0 +1,3 @@
+scenario,hs,wave_period_s,wave_asymmetry,wave_angle_high_fraction,mean_smoothed_rmse_over_flat,candidates
+natural,2.0,10.0,0.5,0.5,1.695490752771265,109
+full_management,2.0,7.5,0.6,0.5,1.1674656056862214,105

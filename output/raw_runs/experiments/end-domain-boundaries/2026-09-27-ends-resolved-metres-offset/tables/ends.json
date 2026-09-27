@@ -1,0 +1,125 @@
+{
+ "reference_waves": {
+  "hs": 1.0,
+  "wave_period_s": 8.0,
+  "wave_asymmetry": 0.8,
+  "wave_angle_high_fraction": 0.45
+ },
+ "scenario": "full_management",
+ "target": "CoastSat LRR per window",
+ "ends_m_yr": {
+  "1996": {
+   "1": 4.8394,
+   "90": 17.545
+  },
+  "2010": {
+   "1": 18.8,
+   "90": 24.535
+  }
+ },
+ "accepted": {
+  "2010": "Solved at Hs 2 / Tp 7.5 / asym 0.6 / high-angle 0.5 (full management): GIS 1 +18.8 by direct probes (residual -0.045), GIS 90 +24.535 (residual -0.008).",
+  "1996": "Solved at Hs 2 / Tp 7.5 / asym 0.6 / high-angle 0.5 (full management), converged: residuals +0.006 / -0.009."
+ },
+ "history": [
+  {
+   "period": "2010",
+   "replaced": {
+    "1": 137.581,
+    "90": 14.731
+   },
+   "waves": {
+    "hs": 1.0,
+    "wave_period_s": 8.0,
+    "wave_asymmetry": 0.8,
+    "wave_angle_high_fraction": 0.45
+   },
+   "note": "GIS 1 not converged to 0.02 m/yr: its response is not monotonic to better than ~0.1. Accepted by Hannah 2026-09-27 at the closest probe, step 6 (+137.581 m/yr, residual +0.069); GIS 90 converged (+14.731, residual +0.013)."
+  },
+  {
+   "period": "1996",
+   "replaced": {
+    "1": 7.0245,
+    "90": 9.8283
+   },
+   "waves": {
+    "hs": 1.0,
+    "wave_period_s": 8.0,
+    "wave_asymmetry": 0.8,
+    "wave_angle_high_fraction": 0.45
+   },
+   "note": ""
+  },
+  {
+   "period": "1996",
+   "replaced": {
+    "1": 4.8394,
+    "90": 17.545
+   },
+   "waves": {
+    "hs": 2.0,
+    "wave_period_s": 7.5,
+    "wave_asymmetry": 0.6,
+    "wave_angle_high_fraction": 0.5
+   },
+   "note": ""
+  },
+  {
+   "period": "2010",
+   "replaced": {
+    "1": 18.8,
+    "90": 24.535
+   },
+   "waves": {
+    "hs": 2.0,
+    "wave_period_s": 7.5,
+    "wave_asymmetry": 0.6,
+    "wave_angle_high_fraction": 0.5
+   },
+   "note": "Solved at Hs 2 / Tp 7.5 / asym 0.6 / high-angle 0.5 (full management). The safeguarded solve stalled at GIS 1 +26.263 (residual +0.151); direct probes below it: +8 -1.192, +14 -0.313, +18.8 -0.045, +19.3 +0.099, +20 +0.062 (the response is not monotonic within ~0.1 m/yr). Taken: GIS 1 +18.8 (residual -0.045), GIS 90 +24.535 (residual -0.008). 2026-09-27."
+  },
+  {
+   "period": "1996",
+   "replaced": {
+    "1": 4.379,
+    "90": 31.404
+   },
+   "waves": {
+    "hs": 2.5,
+    "wave_period_s": 7.5,
+    "wave_asymmetry": 0.6,
+    "wave_angle_high_fraction": 0.5
+   },
+   "note": "Solved at Hs 2.5 / Tp 7.5 / asym 0.6 / high-angle 0.5, full management: step 4 of the safeguarded solve, residuals GIS1 -0.033 / GIS90 -0.000 (2026-09-27)."
+  },
+  {
+   "period": "2010",
+   "replaced": {
+    "1": 8.0,
+    "90": 40.399
+   },
+   "waves": {
+    "hs": 2.5,
+    "wave_period_s": 7.5,
+    "wave_asymmetry": 0.6,
+    "wave_angle_high_fraction": 0.5
+   },
+   "note": "Solved at Hs 2.5 / Tp 7.5 / asym 0.6 / high-angle 0.5, full management: GIS 90 by the solve (+40.399, residual +0.033); GIS 1 by direct probes (+3 -5.584, +6 -1.330, +8 +0.023, +10 +0.195, +20 +0.603, +28 +0.728, +36 +0.812): taken +8.0. 2026-09-27. The solver had been fed a wrong step 0 (lookup bug, fixed); the adopted values are each confirmed by a run at these waves."
+  }
+ ],
+ "reference_waves_by_period": {
+  "2010": {
+   "hs": 2.0,
+   "wave_period_s": 7.5,
+   "wave_asymmetry": 0.6,
+   "wave_angle_high_fraction": 0.5
+  },
+  "1996": {
+   "hs": 2.0,
+   "wave_period_s": 7.5,
+   "wave_asymmetry": 0.6,
+   "wave_angle_high_fraction": 0.5
+  }
+ },
+ "current_note": "2026-09-27: set back to the Hs-2 values, the recommended wave climate. The Hs-2.5 values (1996 +4.379/+31.404, 2010 +8.0/+40.399) are in history; with consistent ends Hs 2.5 did not beat Hs 2.0 in 1996-2010."
+}

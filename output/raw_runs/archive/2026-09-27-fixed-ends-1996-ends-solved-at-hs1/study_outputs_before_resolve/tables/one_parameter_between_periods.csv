@@ -1,0 +1,21 @@
+scenario,rule,free,shared,change,s96,s10,bias96,bias10,n
+natural,A,none,"Hs 2, Tp 10, asym 0.5, ha 0.5",-,16.9,-514.7,-0.29,-3.24,109
+natural,B,none,"Hs 2, Tp 10, asym 0.6, ha 0.5",-,26.6,-545.5,-0.2,-3.45,4
+natural,A,Hs,"Tp 10, asym 0.5, ha 0.5",Hs 2 -> 2,16.9,-514.7,-0.29,-3.24,416
+natural,B,Hs,"Tp 10, asym 0.6, ha 0.5",Hs 2 -> 2,26.6,-545.5,-0.2,-3.45,13
+natural,A,Tp,"Hs 2, asym 0.5, ha 0.5",Tp 9 -> 10,17.2,-514.7,-0.29,-3.24,305
+natural,B,Tp,"Hs 2, asym 0.6, ha 0.5",Tp 10 -> 10,26.6,-545.5,-0.2,-3.45,9
+natural,A,asym,"Hs 2, Tp 10, ha 0.5",asym 0.6 -> 0.5,26.6,-514.7,-0.2,-3.24,340
+natural,B,asym,"Hs 2, Tp 10, ha 0.5",asym 0.6 -> 0.5,26.6,-514.7,-0.2,-3.24,8
+natural,A,ha,"Hs 2, Tp 10, asym 0.5",ha 0.5 -> 0.5,16.9,-514.7,-0.29,-3.24,340
+natural,B,ha,"Hs 2, Tp 10, asym 0.6",ha 0.5 -> 0.5,26.6,-545.5,-0.2,-3.45,7
+full_management,A,none,"Hs 2, Tp 7.5, asym 0.6, ha 0.5",-,24.4,-114.7,0.07,-1.63,105
+full_management,B,none,"Hs 1.75, Tp 10, asym 0.7, ha 0.45",-,28.2,-165.2,-0.24,-1.83,7
+full_management,A,Hs,"Tp 7.5, asym 0.6, ha 0.5",Hs 2 -> 2,24.4,-114.7,0.07,-1.63,390
+full_management,B,Hs,"Tp 10, asym 0.7, ha 0.45",Hs 2 -> 1.5,28.4,-147.1,-0.34,-1.76,23
+full_management,A,Tp,"Hs 2, asym 0.6, ha 0.5",Tp 7.5 -> 7.5,24.4,-114.7,0.07,-1.63,309
+full_management,B,Tp,"Hs 1.5, asym 0.7, ha 0.45",Tp 7 -> 10,27.4,-147.1,-0.19,-1.76,21
+full_management,A,asym,"Hs 2, Tp 7.5, ha 0.5",asym 0.6 -> 0.6,24.4,-114.7,0.07,-1.63,321
+full_management,B,asym,"Hs 1.5, Tp 10, ha 0.45",asym 0.9 -> 0.7,28.0,-147.1,-0.14,-1.76,15
+full_management,A,ha,"Hs 2, Tp 7.5, asym 0.6",ha 0.5 -> 0.5,24.4,-114.7,0.07,-1.63,321
+full_management,B,ha,"Hs 1.5, Tp 10, asym 0.9",ha 0.45 -> 0.55,28.0,-153.7,-0.14,-1.74,15
