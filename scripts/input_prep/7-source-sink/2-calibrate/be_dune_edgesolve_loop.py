@@ -63,9 +63,15 @@ END = {1996: 2010, 2004: 2024, 2010: 2024}
 SUFFIX = {1996: "road_bdm", 2004: "road_bdm_nourish", 2010: "road_bdm_nourish"}
 
 
+# The matrix run names carry the offset token since the metres offset became
+# the default (2026-09-24; the option A matrix, 2026-09-27). The /10 brackets
+# the 09-16 to 09-19 solves started from are in raw_runs/archive/2026-09-24-pre-metres/.
+OFFSET_TOKEN = "offsetmetres"
+
+
 def brackets(start):
     """[(run_name, kind, tag), ...] for zeroBE then edgeBE, full management."""
-    name = lambda p: f"HAT_{start}_{END[start]}_{p}_{SUFFIX[start]}_nogroin"  # noqa: E731
+    name = lambda p: f"HAT_{start}_{END[start]}_{p}_{OFFSET_TOKEN}_{SUFFIX[start]}_nogroin"  # noqa: E731
     if start == 2004:
         tag = f"{BRACKET_EXP}/brackets"
         return [(name("zeroBE"), "experiment", tag), (name("edgeBE"), "experiment", tag)]

@@ -63,11 +63,14 @@ INTERIOR = (2, 89)
 
 # The CoastSat-solved counterpart of each window: the matrix run for 1996
 # and 2010, the fresh bracket for 1984 and 2004 (same code, same versions).
+# 1996 and 2010 carry the offset token since the metres offset (the option A
+# matrix, 2026-09-27); 1984 and 2004 are the /10-era brackets and have no
+# metres run.
 RUN_NAME = {
     1984: "HAT_1984_2004_edgeBE_road_bdm_nogroin",
-    1996: "HAT_1996_2010_edgeBE_road_bdm_nogroin",
+    1996: "HAT_1996_2010_edgeBE_offsetmetres_road_bdm_nogroin",
     2004: "HAT_2004_2024_edgeBE_road_bdm_nourish_nogroin",
-    2010: "HAT_2010_2024_edgeBE_road_bdm_nourish_nogroin",
+    2010: "HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin",
 }
 COASTSAT_RUN = {
     1984: ("experiment", f"{BRACKET_EXP}/brackets"),

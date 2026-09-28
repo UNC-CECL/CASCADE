@@ -45,10 +45,12 @@ Tuning the four wave parameters (Hs, Tp, asymmetry, high-angle fraction) against
 The source/sink rates locked at the two end domains (GIS 1 and 90): what they must carry against each target.
 
 - `2026-09-16-end-domains-solved-on-duneline` (superseded)
-- `2026-09-18-end-domains-solved-on-redigitized-duneline` (record)
+- `2026-09-18-end-domains-solved-on-redigitized-duneline` (superseded)
 - `2026-09-19-end-domains-2010-recheck` (superseded)
-- `2026-09-19-end-domains-solved-on-lrr-1996-2024` (record)
+- `2026-09-19-end-domains-solved-on-lrr-1996-2024` (superseded)
 - `2026-09-27-ends-resolved-metres-offset` (current)
+- `2026-09-27-ends-solved-on-duneline-option-a` (current)
+- `2026-09-27-ends-solved-on-lrr-1996-2024-option-a` (current)
 
 ## [`topography-and-domains/`](topography-and-domains/README.md)
 
