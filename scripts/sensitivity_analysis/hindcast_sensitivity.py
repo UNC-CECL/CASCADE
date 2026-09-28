@@ -144,36 +144,40 @@ def relocation_arm(start_year, end_year):
 # rather than a dict because whether the override is right DEPENDS ON THE
 # PERIOD -- see relocation_arm.
 SWEEPS = {
-    # The Hs range deliberately runs below the physical mean: BRIE's
-    # diffusivity scales with Hs, and the sub-1 m cells are what locate the
-    # transition between erosion regimes. The USGS hindcast mean for this coast
-    # is ~1.2-1.3 m and the morphologically effective height ~1.4-1.5 m, so
-    # 2.5 m (the calibration value) is already high, and how much of the fit
-    # rests on that is the question this axis asks.
+    # The four wave axes are centred on option A (Hs 2.0, Tp 7.5, asymmetry
+    # 0.6, high-angle 0.5; the defaults since 2026-09-27) and were set with
+    # Hannah on 2026-09-28. Each keeps one cell past where the 09-24..09-27
+    # wave studies (raw_runs/experiments/wave-climate/) saw the model break, so
+    # the record shows the edge rather than stopping short of it:
+    #   Hs 0.75 and Tp 12  -- the barrier drowned at Hs 0.75 / Tp 10 and at
+    #                         Tp 12 with Hs 1-1.25 (both at other settings)
+    #   asymmetry 0.5      -- below it the net drift reverses
+    #   high-angle 0.55    -- past ~0.5 most of the coast turns anti-diffusive
+    # The USGS hindcast mean Hs for this coast is ~1.2-1.3 m; 2.0 is a fitted
+    # value, and 2.0-2.5 was a flat optimum in the 09-27 Hs check.
     "wave_height": {
         "setting": "hs",
         "label": "Wave height Hs",
         "units": "m",
-        "values": [0.75, 0.8, 1.0, 1.2, 1.5, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0,
-                   4.5, 5.0],
+        "values": [0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0],
     },
     "wave_period": {
         "setting": "wave_period_s",
         "label": "Wave period",
         "units": "s",
-        "values": [7.0, 8.0, 9.0, 10.0],
+        "values": [6.0, 7.0, 7.5, 8.0, 9.0, 10.0, 12.0],
     },
     "wave_asymmetry": {
         "setting": "wave_asymmetry",
         "label": "Wave asymmetry",
         "units": "",
-        "values": [0.6, 0.65, 0.7, 0.75],
+        "values": [0.5, 0.55, 0.6, 0.65, 0.7, 0.8],
     },
     "wave_angle_high_fraction": {
         "setting": "wave_angle_high_fraction",
         "label": "Wave angle high fraction",
         "units": "",
-        "values": [0.1, 0.15, 0.2, 0.25, 0.3],
+        "values": [0.3, 0.4, 0.45, 0.5, 0.55],
     },
 
     # NOT wave physics, and swept for a different reason. 20 m was decided on

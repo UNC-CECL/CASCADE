@@ -95,17 +95,14 @@ from cascade_pipeline.plotting.rate_comparison import (  # noqa: E402
 from hindcast_sensitivity import SWEEPS, normalise  # noqa: E402
 from HAT_hindcast_config import field_default  # noqa: E402
 
-# THE SWEEP'S BASE RUNS WERE MADE AT THE /10-OFFSET WAVE CLIMATE. On 2026-09-27
-# the field defaults moved to option A (Hs 2.0 / Tp 7.5 / asym 0.6 / ahf 0.5),
-# so the base point of this sweep can no longer be read from field_default for
-# the four wave fields; it is pinned here. Every other setting still reads it.
-_SWEEP_BASE_WAVES = {"hs": 2.5, "wave_period_s": 8.0, "wave_asymmetry": 0.7,
-                     "wave_angle_high_fraction": 0.1}
-
-
+# The base point is the matrix run's value, read from field_default. The
+# 2026-09-28 sweep is centred on option A (Hs 2.0 / Tp 7.5 / asym 0.6 /
+# ahf 0.5), the defaults since 2026-09-27. Between those two dates the wave
+# fields were pinned here to the /10-offset climate (2.5 / 8 / 0.7 / 0.1),
+# whose sweep was archived on 2026-09-24.
 def sweep_base_value(setting):
     """The value this sweep's base runs used for one setting."""
-    return _SWEEP_BASE_WAVES.get(setting, field_default(setting))
+    return field_default(setting)
 
 # Reading order, most informative first. Alphabetical put the relocation axis
 # -- the one that barely moves shoreline skill -- in the leftmost panel and the
