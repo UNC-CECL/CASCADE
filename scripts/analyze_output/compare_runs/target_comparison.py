@@ -142,7 +142,10 @@ def cs_method(window):
 CS_CANON = {"full": "projected", "subperiod": "total",
             "projected": "projected", "total": "total"}
 FULL_WINDOW = (1996, 2024)
-FULL_SOLVE_DIR = rw.RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-19-end-domains-solved-on-lrr-1996-2024"
+# Re-solved under option A on 2026-09-27 (Hannah: redo target_comparison for
+# the new wave climate and offset); the /10 solve was
+# end-domain-boundaries/2026-09-19-end-domains-solved-on-lrr-1996-2024.
+FULL_SOLVE_DIR = rw.RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-27-ends-solved-on-lrr-1996-2024-option-a"
 CS_MODE = "projected"
 OUT_DIR = ROOT_DIR / CS_MODES[CS_MODE]
 
@@ -173,7 +176,11 @@ def full_period_runs():
             runs[w] = None
             continue
         tag = str(hit.iloc[-1]["run_tag"])
-        d = next((FULL_SOLVE_DIR / tag.split("/", 1)[1] / "{}_{}".format(*w) / "edgeBE").glob("HAT_*"))
+        # The tag is <theme>/<study>/<reading>/step<k> since the 2026-09-25
+        # regrouping; strip the whole study tag, not just its first part.
+        study_tag = FULL_SOLVE_DIR.relative_to(rw.RAW_RUNS / "experiments").as_posix()
+        step = tag[len(study_tag) + 1:] if tag.startswith(study_tag + "/") else tag.split("/", 1)[1]
+        d = next((FULL_SOLVE_DIR / step / "{}_{}".format(*w) / "edgeBE").glob("HAT_*"))
         runs[w] = (d.name, tag)
     return runs
 WINDOWS = [(1996, 2010), (2010, 2024)]
@@ -183,9 +190,9 @@ WINDOWS = [(1996, 2010), (2010, 2024)]
 # model's own response, so the ends are readable rather than prescribed.
 UNSOLVED = "unsolved"
 UNSOLVED_PRESET = "zeroBE"
-UNSOLVED_RUNS = {
-    (1996, 2010): ("HAT_1996_2010_zeroBE_road_bdm_nogroin", "calibration"),
-    (2010, 2024): ("HAT_2010_2024_zeroBE_road_bdm_nourish_nogroin", "calibration"),
+UNSOLVED_RUNS = {   # the option A matrix since 2026-09-27
+    (1996, 2010): ("HAT_1996_2010_zeroBE_offsetmetres_road_bdm_nogroin", "calibration"),
+    (2010, 2024): ("HAT_2010_2024_zeroBE_offsetmetres_road_bdm_nourish_nogroin", "calibration"),
 }
 MODEL_SETS = {"coastsat": "ends_solved_on_coastsat",
               rw.MAIN_DUNE: "ends_solved_on_duneline",

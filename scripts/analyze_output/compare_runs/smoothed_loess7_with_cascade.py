@@ -21,8 +21,8 @@ in `output/`. `target_comparison/` already holds exactly this kind of figure
 smoothed, two-panel sibling.
 
 THE RUN: zeroBE, full management, groin off, one per period
-    1996-2010  HAT_1996_2010_zeroBE_road_bdm_nogroin
-    2010-2024  HAT_2010_2024_zeroBE_road_bdm_nourish_nogroin
+    1996-2010  HAT_1996_2010_zeroBE_offsetmetres_road_bdm_nogroin
+    2010-2024  HAT_2010_2024_zeroBE_offsetmetres_road_bdm_nourish_nogroin
 
     zeroBE and not the headline edgeBE matrix run (Hannah's choice): edgeBE
     has its two END domains SOLVED against the CoastSat target, so at GIS 1
@@ -257,8 +257,8 @@ def main(argv=None) -> int:
         "so the sheets differ in exactly one thing.", "",
         "## The run", "",
         "zeroBE, full management, groin off, one per period — "
-        "`HAT_1996_2010_zeroBE_road_bdm_nogroin` and "
-        "`HAT_2010_2024_zeroBE_road_bdm_nourish_nogroin` (see runs_used.csv). "
+        "`HAT_1996_2010_zeroBE_offsetmetres_road_bdm_nogroin` and "
+        "`HAT_2010_2024_zeroBE_offsetmetres_road_bdm_nourish_nogroin` (see runs_used.csv). "
         "NO source/sink term in any domain, the two ends included, so all 90 "
         "are the model's own response and NEITHER target was fitted anywhere "
         "in it. Chosen over the headline edgeBE matrix run for exactly that "

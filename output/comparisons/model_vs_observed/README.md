@@ -19,12 +19,14 @@ new matrix runs"). The model line comes from these runs:
 | 2010–2024 | `matrix/2010_2024/edgeBE/HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin` (nourishment on) |
 | 1984–2004, 2004–2024 | no metres run yet; each panel draws the observation and says "model not yet run" |
 
-**Every figure draws the same run, the one whose ends were solved on CoastSat.**
-- This includes the dune-line figures.
-- The dune-line end solves (experiments/end-domain-boundaries/2026-09-18-…) are /10-offset runs, and no dune-line solve exists under the metres offset.
-- So the dune-line figures are **not** fair at GIS 1 and 90 by construction, as they were before.
-- The `sensitivity/ends-swapped/` and `sensitivity/dune-raw-solve/` levels are not drawn until that solve exists.
-- The switch is `DUNE_SOLVE_CURRENT` in the script.
+**Each observation is drawn with the run solved on it**, so each comparison is fair at GIS 1 and 90 by construction:
+- The shoreline (CoastSat) figures draw the matrix run above, with ends solved on CoastSat.
+- The dune-line figures draw the run with ends solved on the dune line under option A: `experiments/end-domain-boundaries/2026-09-27-ends-solved-on-duneline-option-a/`, mean3 reading. Its ends are 1996 −3.0 / +7.6 and 2010 +3.4 / +15.0 m/yr.
+- The `sensitivity/` levels are drawn again:
+  - `ends-swapped/`: each observation against the other solve;
+  - `dune-raw-solve/`: the raw reading;
+  - `mixed-estimator/`.
+- Between the first option A redraw and the dune-line re-solve (both on 2026-09-27), the dune-line figures briefly drew the CoastSat-solved run. The switch is `DUNE_SOLVE_CURRENT` in the script, now True.
 
 The previous tree (/10 offset, Hs 2.5, all four windows, the dune-solved runs) is in
 `output/archive/2026-09-27_model-vs-observed-div10/`.
@@ -50,9 +52,9 @@ PDFs and `CAPTIONS.md` are under `supporting/`.
 | window | target | model estimator | bias (m/yr) | RMSE (m/yr) |
 |---|---|---|---|---|
 | 1996–2010 | CoastSat LRR, smoothed (the scoring target) | OLS | +0.09 | 1.05 |
-| 1996–2010 | dune line net change, smoothed | endpoint | +0.97 | 1.66 |
+| 1996–2010 | dune line net change, smoothed (dune-solved run) | endpoint | +0.93 | 1.59 |
 | 2010–2024 | CoastSat LRR, smoothed (the scoring target) | OLS | −1.64 | 2.25 |
-| 2010–2024 | dune line net change, smoothed | endpoint | −0.63 | 1.41 |
+| 2010–2024 | dune line net change, smoothed (dune-solved run) | endpoint | −0.67 | 1.43 |
 
 - The two scoring-target rows reproduce the matrix and the wave-recommendation numbers.
 - In 2010–2024 the model sits closer to the dune line than to CoastSat. CoastSat's 2021 +17 m step is the part of the target the model does not make.

@@ -231,7 +231,9 @@ WINDOWS = list(MATRIX_RUNS)
 # lines (1984-2004 carried over from the 09-16 solve, whose lines did not
 # change); each row of solved.csv names its own run tag, so a carried-over
 # row points back into the 09-16 experiment.
-DUNE_SOLVE_DIR = RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-18-end-domains-solved-on-redigitized-duneline"
+# Re-solved under option A on 2026-09-27; the /10 solve was
+# end-domain-boundaries/2026-09-18-end-domains-solved-on-redigitized-duneline.
+DUNE_SOLVE_DIR = RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-27-ends-solved-on-duneline-option-a"
 MODEL_SETS = ("coastsat", "dune-mean3", "dune-raw")   # where the ends were solved
 MAIN_DUNE = "dune-mean3"
 # THE DUNE-SOLVED SETS ARE /10-OFFSET RUNS (2026-09-27). No end domains have
@@ -242,7 +244,7 @@ MAIN_DUNE = "dune-mean3"
 # swap or vary the dune solve is not drawn. MODEL_SETS and MAIN_DUNE stay
 # defined: target_comparison, smoothing_scale and smoothed_loess7_with_cascade
 # import them and read the dune solve on their own terms.
-DUNE_SOLVE_CURRENT = False
+DUNE_SOLVE_CURRENT = True   # re-solved under option A, 2026-09-27
 DRAWN_SETS = MODEL_SETS if DUNE_SOLVE_CURRENT else ("coastsat",)
 DUNE_FIG_SET = MAIN_DUNE if DUNE_SOLVE_CURRENT else "coastsat"
 

@@ -13,8 +13,9 @@ hindcast_calibrated/    the headline: modelled rate against the CoastSat
 model_vs_observed/      the four rate windows on one y axis, the model against
                         the shoreline (CoastSat) and the dune line; option A
                         metres matrix since 09-27 (rate_windows/ until 09-18)
-matrix_rate_and_position/  every option A matrix run, rate (m/yr) AND position
-                        change (m) against CoastSat, fixed y axes (09-27)
+matrix_vs_observed/     every option A matrix run: rate and position change,
+                        and start/end positions against CoastSat AND the dune
+                        line; fixed y axes (09-27)
 target_comparison/      CoastSat vs the dune line as the target, with the model,
                         as net change (m) over 1996-2010 and 2010-2024 (09-19)
 relocation/             does the model relocate NC-12 where and when history
@@ -26,9 +27,9 @@ scenario_grid/          every preset and management scenario on one page
 | folder | script | runs |
 |---|---|---|
 | `hindcast_calibrated/` | `scripts/figure_making/model_output/hindcast_final_figure_loess.py` | the edgeBE and zeroBE full-management nogroin matrix arms, 1996 and 2010 |
-| `model_vs_observed/` | `scripts/analyze_output/compare_runs/rate_windows.py` | the option A edgeBE nogroin matrix, 1996 and 2010 (since 09-27), `runs_used.csv` |
-| `matrix_rate_and_position/` | `scripts/analyze_output/compare_runs/matrix_rate_and_position.py` | all 22 option A nogroin matrix runs, `scores.csv` |
-| `target_comparison/` | `scripts/analyze_output/compare_runs/target_comparison.py` | the edgeBE matrix and the 09-18 dune edge solve, 1996 and 2010, `runs_used.csv` |
+| `model_vs_observed/` | `scripts/analyze_output/compare_runs/rate_windows.py` | the option A edgeBE nogroin matrix and the option A dune-line end solve, 1996 and 2010 (since 09-27), `runs_used.csv` |
+| `matrix_vs_observed/` | `scripts/analyze_output/compare_runs/matrix_vs_observed.py` | all 22 option A nogroin matrix runs, `scores.csv` |
+| `target_comparison/` | `scripts/analyze_output/compare_runs/target_comparison.py` | option A since 09-27: the edgeBE and zeroBE matrix and the dune-line and 1996-2024 LRR end solves, 1996 and 2010, `runs_used.csv` |
 | `relocation/` | `scripts/hatteras_ms/experiments/HAT_relocation_comparison.py` and the three readers named in its README | each set's `report.txt` header |
 | `scenario_grid/` | `scripts/figure_making/model_output/scenario_grid.py` | every matrix arm, both periods |
 
