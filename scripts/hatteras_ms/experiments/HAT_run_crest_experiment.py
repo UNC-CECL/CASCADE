@@ -57,7 +57,7 @@ ARMS
     blocksminimum*, pea1989keep*, pea1989lower*). Sizes and reasons in
     data/hatteras_init/1-barrier3d-domains/archive_purge_20260907.csv.
     HAT_plot_crest_experiment.py's keep/lower comparison is therefore frozen at
-    output/experiments/pea1989_crest/.
+    output/raw_runs/experiments/topography-and-domains/2026-09-02-pea-island-row-insert-control/results/.
 
 USAGE
     python HAT_run_crest_experiment.py [--dry-run] [--arms a,b]
@@ -161,7 +161,7 @@ def main() -> None:
             raise SystemExit(msg)
 
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup = REPO / "output" / "experiments" / "crest_experiment_restore" / stamp
+    backup = REPO / "output" / "archive" / "2026-09-07_crest-insert-arm-logs" / stamp
     backup.mkdir(parents=True, exist_ok=True)
     saved_current = CURRENT.read_text(encoding="utf-8") if CURRENT.is_file() else None
     shutil.copy2(LIVE_SETBACK, backup / LIVE_SETBACK.name)

@@ -1,0 +1,10 @@
+domain,arm,setback_t0_m,n_relocations,first_relocation_year,prescribed_year,pre_empts_event,mean_dune_crest_m,final_dune_crest_m
+84,pea1989base,25.0,2,1987,1989,True,2.555,2.059
+84,pea1989keep,75.0,1,2002,1989,False,2.863,2.605
+84,pea1989lower,75.0,1,2002,1989,False,2.341,2.069
+85,pea1989base,0.0,3,1985,1989,True,3.007,1.925
+85,pea1989keep,60.0,1,2002,1989,False,2.697,2.76
+85,pea1989lower,60.0,1,2002,1989,False,2.479,2.76
+86,pea1989base,0.0,2,1985,1989,True,2.794,2.404
+86,pea1989keep,30.0,1,1996,1989,False,3.238,2.481
+86,pea1989lower,30.0,1,1995,1989,False,2.836,2.449

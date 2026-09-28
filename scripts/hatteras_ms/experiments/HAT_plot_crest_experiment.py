@@ -10,7 +10,7 @@ Compares the three arms written by HAT_run_crest_experiment.py.
 
     FROZEN 2026-09-07. The keep/lower run outputs were deleted with every run
     on modified topography (their topography had gone on 2026-09-03), so this
-    script can no longer be re-run; output/experiments/pea1989_crest/ is the
+    script can no longer be re-run; output/raw_runs/experiments/topography-and-domains/2026-09-02-pea-island-row-insert-control/results/ is the
     record. Only pea1989base (v1) still exists under output/raw_runs/.
 
 WHAT THE FIGURES ARE FOR
@@ -80,7 +80,7 @@ CONTROL = (40, 50, 60)
 BUFFER = 15          # padded domains each side; npz index = GIS + BUFFER - 1
 START_YEAR = 1984
 EVENT_YEAR = {84: 1989, 85: 1989, 86: 1989}
-OUT = REPO / "output" / "experiments" / "pea1989_crest"
+OUT = REPO / "output" / "raw_runs" / "experiments" / "topography-and-domains" / "2026-09-02-pea-island-row-insert-control" / "results"
 
 
 def load_arm(arm: str):

@@ -56,7 +56,7 @@ from site_layer import hat_topo_version as _tv  # noqa: E402
 DUNE_TOPO = _tv.dune_topo_root("1984-start")
 LIVE_SETBACK = _tv.road_setback_file(1984)
 SET = "version-pair"
-LOG_DIR = REPO / "output" / "experiments" / "version_pair" / "logs"
+LOG_DIR = REPO / "output" / "raw_runs" / "versions" / "version-pair" / "logs"
 
 BASE_ENV = {
     "HAT_IGNORE_SETTINGS": "1",

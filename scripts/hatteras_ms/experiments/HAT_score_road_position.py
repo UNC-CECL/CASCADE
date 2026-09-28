@@ -59,7 +59,7 @@ REPO = next(_p for _p in HERE.parents if (_p / 'pyproject.toml').exists())
 sys.path.insert(0, str(REPO / "scripts"))
 
 BUFFER = 15
-OUT = REPO / "output" / "experiments" / "pea1989_crest"
+OUT = REPO / "output" / "raw_runs" / "experiments" / "topography-and-domains" / "2026-09-02-pea-island-row-insert-control" / "results"
 
 
 def load(arm):

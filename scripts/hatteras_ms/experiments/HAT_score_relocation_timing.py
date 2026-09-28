@@ -58,7 +58,7 @@ BUFFER = 15
 START, END = 1984, 2004
 EVENTS = {**{d: 1999 for d in range(9, 15)},
           **{d: 1989 for d in range(84, 88)}}
-OUT = REPO / "output" / "experiments" / "pea1989_crest"
+OUT = REPO / "output" / "raw_runs" / "experiments" / "topography-and-domains" / "2026-09-02-pea-island-row-insert-control" / "results"
 
 
 def load(arm):

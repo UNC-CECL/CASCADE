@@ -10,7 +10,7 @@ the control for was deleted on 2026-09-07 (unmodified topography only).
 
 **Made by.** `scripts/hatteras_ms/experiments/HAT_run_crest_experiment.py`.
 
-**Answer lives in.** `output/experiments/pea1989_crest/` (frozen) and
+**Answer lives in.** [`results/`](results/) (frozen; moved here 2026-09-27 from `output/experiments/pea1989_crest/`) and
 `data/hatteras_init/1-barrier3d-domains/LINEAGE.md`.
 
 **Runs deletable?** Yes once the crest figures are no longer needed; they are

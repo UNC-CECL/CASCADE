@@ -2,7 +2,8 @@
 
 Everything under here is **produced**. The one exception is
 `calibration/groin/joint_fit.json`, an input the pipeline reads back. Rewritten
-2026-09-18, after superseded material, logs and calibration were each given one home.
+2026-09-18, after superseded material, logs and calibration were each given one home. On 2026-09-27 the old
+`output/experiments/` was folded into `raw_runs/experiments/`, `raw_runs/versions/` and `archive/`, so every study now lives in one place.
 
 ## Where do I find...
 
@@ -12,8 +13,9 @@ Everything under here is **produced**. The one exception is
 | a figure for the manuscript or a talk | `figures/<subject>/` (captions in `supporting/CAPTIONS.md`), talk versions in `figures/talk/` |
 | a figure of the observed record, not of a run | `observations/` |
 | a cross-run comparison (rates, relocation, scenario grid) | `comparisons/<question>/` |
-| why a calibration value is what it is | the three decision records: `calibration/groin/SELECTED_M60_f0.60/README.md` (M and f), `calibration/hs/DECISION.md` (Hs = 2.5), `calibration/sensitivity/figures/README.md` |
-| a one-off study | `raw_runs/experiments/<date>-<tag>/` (runs + `NOTE.md`), or `experiments/` for older studies with their own drivers |
+| why a calibration value is what it is | the three decision records: `calibration/groin/SELECTED_M60_f0.60/README.md` (M and f), `calibration/hs/DECISION.md` (Hs = 2.5, the ÷10-offset era), `calibration/sensitivity/figures/README.md` |
+| **the wave climate and end rates to use now** (metres offset, settled 2026-09-27) | `raw_runs/experiments/wave-climate/2026-09-27-wave-recommendation/README.md`, with the ends in `raw_runs/experiments/end-domain-boundaries/2026-09-27-ends-resolved-metres-offset/tables/ends.json`. Summary at the top of `raw_runs/experiments/README.md` |
+| a one-off study | `raw_runs/experiments/<theme>/<date>-<what it tested>/` (runs + `README.md`/`NOTE.md`); each theme's README says what every study found and whether it is current |
 | what a batch did overnight | `logs/driver/driver_manifest.jsonl` |
 | anything retired | `archive/`, or `raw_runs/archive/` for retired runs |
 
@@ -29,7 +31,6 @@ Everything under here is **produced**. The one exception is
 | `calibration/hs/` | `scripts/input_prep/7-source-sink/2-calibrate/be_zone_residual_fit.py`, `scripts/sensitivity_analysis/plot_hs_experiment.py` | the Hs 3.0 test, its `DECISION.md`, and its arms in `runs/` |
 | `calibration/sensitivity/` | `scripts/sensitivity_analysis/` | the parameter sweep's manifests, logs and figures. The sweep's runs are in `raw_runs/sensitivity/` |
 | `calibration/groin_rig/` | `hard-structures/groin/.../HAT_groin_hindcast_1967_2017.py`, read by `scripts/hatteras_ms/groin-sweep/` | the 1967-2018 groin rig, the only window spanning the deterioration ramp |
-| `experiments/` | `scripts/hatteras_ms/experiments/` | older one-off studies that have their own drivers and layouts |
 | `logs/driver/` | `scripts/hatteras_ms/HAT_run_all.py`, `tools/HAT_rerun_arm.py` | the unattended driver's manifest, stdout and per-job logs |
 | `logs/scratch/` | by hand | terminal captures from one-off comparisons. Untracked, safe to delete |
 | `archive/` | nothing (moved aside by hand) | retired material, `YYYY-MM-DD_<what>/`. **Do not use for analysis** |
