@@ -26,9 +26,9 @@ alongshore variation explained (option A): 1996–2010 managed +20%, natural +24
 
 How the island's planform (the BRIE island offset) is set: its units, and whether it comes from the dune line or the CoastSat shoreline.
 
-- `2026-09-22-shoreline-offset-at-div10-scale` (superseded)
-- `2026-09-24-metres-1-offset-units` (current)
-- `2026-09-25-offset-source-duneline-vs-shoreline` (current)
+- `2026-09-22-div10-offset-shoreline-trial-original` (superseded)
+- `2026-09-24-div10-vs-metres-wave-sweep` (current)
+- `2026-09-25-metres-offset-duneline-vs-shoreline-waves-hs1-tp8` (current)
 
 ## [`wave-climate/`](wave-climate/README.md)
 
@@ -75,7 +75,7 @@ Whether a code or model change moves the results: re-runs against stored runs, a
 - [`2026-09-24-metres-INDEX.md`](2026-09-24-metres-INDEX.md): the 2026-09-24 metres work, steps 1-3 (offset units, wave sensitivity, the Barrier3D fix), and its 2026-09-25 follow-ups.
 
 Renamed on 2026-09-25 (old name → new): 
-- `2026-09-22-shoreline-offset` → `island-offset/2026-09-22-shoreline-offset-at-div10-scale`
+- `2026-09-22-shoreline-offset` → `island-offset/2026-09-22-div10-offset-shoreline-trial-original`
 - `2026-09-16-dune-edgesolve` → `end-domain-boundaries/2026-09-16-end-domains-solved-on-duneline`
 - `2026-09-18-dune-edgesolve` → `end-domain-boundaries/2026-09-18-end-domains-solved-on-redigitized-duneline`
 - `2026-09-19-edgesolve-2010` → `end-domain-boundaries/2026-09-19-end-domains-2010-recheck`

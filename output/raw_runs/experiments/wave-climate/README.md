@@ -22,7 +22,7 @@ alongshore variation explained (option A): 1996–2010 managed +20%, natural +24
 - The report, covering the same waves across windows vs period-specific waves and every test: https://claude.ai/artifact/L3ezkgxG7aQNDDPMYazDjG (private)
 - **In the code since 2026-09-27:** option A is the default. The ends are in `hatteras_site_config.HATTERAS_BE_EDGE_ONLY` and the waves are the `HAT_hindcast_config` / `hat_run.yaml` defaults, so a plain edgeBE run uses them with no overrides. Option B is recorded as `HATTERAS_WAVE_OPTION_B` in the site config, with the command that runs it (`HAT_HS=2.5` plus `HAT_BE_OVERRIDE`).
 
-Related, outside this theme: the end rates are in [`../end-domain-boundaries/2026-09-27-ends-resolved-metres-offset`](../end-domain-boundaries/2026-09-27-ends-resolved-metres-offset/README.md). The dune line vs shoreline offset test, run at Hs 1 rather than the recommended waves, is in [`../island-offset/2026-09-25-offset-source-duneline-vs-shoreline`](../island-offset/2026-09-25-offset-source-duneline-vs-shoreline/README.md).
+Related, outside this theme: the end rates are in [`../end-domain-boundaries/2026-09-27-ends-resolved-metres-offset`](../end-domain-boundaries/2026-09-27-ends-resolved-metres-offset/README.md). The dune line vs shoreline offset test, run at Hs 1 rather than the recommended waves, is in [`../island-offset/2026-09-25-metres-offset-duneline-vs-shoreline-waves-hs1-tp8`](../island-offset/2026-09-25-metres-offset-duneline-vs-shoreline-waves-hs1-tp8/README.md).
 
 ## Studies, oldest first
 

@@ -1,0 +1,30 @@
+{
+ "scenario": "full_management",
+ "target": "CoastSat LRR per window",
+ "ends_m_yr": {
+  "1996": {
+   "1": 4.8394,
+   "90": 18.2545
+  },
+  "2010": {
+   "1": 18.8657,
+   "90": 24.2358
+  }
+ },
+ "history": [],
+ "reference_waves_by_period": {
+  "1996": {
+   "hs": 2.0,
+   "wave_period_s": 7.5,
+   "wave_asymmetry": 0.6,
+   "wave_angle_high_fraction": 0.5
+  },
+  "2010": {
+   "hs": 2.0,
+   "wave_period_s": 7.5,
+   "wave_asymmetry": 0.6,
+   "wave_angle_high_fraction": 0.5
+  }
+ },
+ "accepted": {}
+}

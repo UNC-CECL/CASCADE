@@ -8,11 +8,11 @@ figures/, so neither of these existed for the matrix.
 
 RATE AND POSITION CHANGE   ("Where are these position plots?")
     (a) rate      the model's OLS rate (lrr_m_yr) against the CoastSat LRR
-                  target, 10-domain LOESS with the southern 10 raw, as scored
+                  target, 7-domain LOESS with the southern 10 raw, as scored
     (b) position  the model's position change over the window, endpoint rate
                   x 14 yr, against the observed CoastSat change: the mean
                   position over the last calendar year minus that over the
-                  first, smoothed at 10 domains
+                  first, smoothed at 7 domains (10 until 2026-09-28)
                   (5-scr/3-rates/coastsat/total_change/<w>/smoothed)
     The layout the wave experiments use (HAT_metres_2_wave_sensitivity_plot).
 
@@ -27,7 +27,7 @@ START AND END POSITIONS   ("the starting island position with the end modeled
                         (shoreline_matrix.npy, sign flipped to seaward +)
         CoastSat end    the observed change per domain, unsmoothed (the
                         total_change domain means, window 0), with its
-                        10-domain LOESS as a faint line
+                        7-domain LOESS as a faint line
         dune-line end   the runner's own end-year target: the dune-line change
                         between the start and end vintages
                         (hindcast.build_shoreline_target; 1997 -> 2009 for
@@ -114,19 +114,25 @@ SCEN_LABEL = {"natural": "Natural", "beachdune_only": "Beach and dune management
               "full_management": "Full management"}
 PRESET_TEXT = {"edgeBE": "end rates solved on CoastSat (edgeBE)",
                "zeroBE": "no imposed end rates (zeroBE)"}
-OPTION_A = ("Option A matrix (2026-09-27): island offset in metres, Hs 2.0 m, Tp 7.5 s, "
+OPTION_A = ("Option A matrix (2026-09-27; edgeBE re-run 2026-09-28 on the ends re-solved "
+            "against the 7-domain target): island offset in metres, Hs 2.0 m, Tp 7.5 s, "
             "asymmetry 0.6, high-angle fraction 0.5, no groin.")
 RATE_CAPTION = (
     OPTION_A + " (a) Modelled OLS shoreline-change rate against the CoastSat LRR scoring "
-    "target (10-domain LOESS, raw means GIS 1-10). (b) Modelled position change over the "
+    "target (7-domain LOESS, raw means GIS 1-10). (b) Modelled position change over the "
     "window (endpoint rate x 14 yr) against the observed CoastSat change, mean position over "
-    "the last calendar year minus the first, smoothed at 10 domains. Seaward positive; "
+    "the last calendar year minus the first, smoothed at 7 domains. Seaward positive; "
     "scores over the interior GIS 2-89.")
 
 
 # -----------------------------------------------------------------------------
 # data
 # -----------------------------------------------------------------------------
+# The group's smoothing range, 7 domains, since 2026-09-28 (10 until then):
+# the runner's target and the observed change are both smoothed at it.
+SMOOTH = 7
+
+
 def window(p):
     return f"{p}_{p + YEARS}"
 
@@ -137,7 +143,7 @@ def _coastsat_change(period):
     return pd.read_csv(f)
 
 
-def observed_change(period, window_domains=10):
+def observed_change(period, window_domains=SMOOTH):
     """CoastSat position change per domain, seaward +; window 0 is the
     unsmoothed domain mean."""
     d = _coastsat_change(period)
@@ -237,7 +243,7 @@ def fig_rate_position(r, target, obs):
     br, er = score(rt.lrr_m_yr, target)
     bp, ep = score(rt.change_rate_m_yr * YEARS, obs)
     fig.legend(handles=[
-        Line2D([], [], label="CoastSat (LOESS, 10 domains)", **OBSERVED),
+        Line2D([], [], label="CoastSat (LOESS, 7 domains)", **OBSERVED),
         Line2D([], [], label=f"Model: rate bias {br:+.2f} m/yr, RMSE {er:.2f}; "
                              f"position bias {bp:+.1f} m, RMSE {ep:.1f}", **MODEL_ONE)],
         title=run_title(r), loc="outside lower center", ncol=1, frameon=False, fontsize=7)
@@ -275,7 +281,7 @@ def fig_start_end(r, cs_raw, cs_smooth, dune):
         Line2D([], [], color=C_START, lw=2.2, label=f"Start position, {s} (model year 0)"),
         Line2D([], [], color=C_MODEL_END, lw=1.8, label=f"Modelled end position, {e}"),
         Line2D([], [], color=C_COASTSAT, lw=1.3, marker="o", ms=2.2,
-               label=f"CoastSat end, {e} (domain means; faint: 10-domain LOESS); "
+               label=f"CoastSat end, {e} (domain means; faint: 7-domain LOESS); "
                      f"model bias {bc:+.1f} m, RMSE {ec:.1f}"),
         Line2D([], [], color=C_DUNE, lw=1.3, marker="s", ms=2.0,
                label=f"Dune-line end ({dv0} → {dv1} change); model bias {bd:+.1f} m, RMSE {ed:.1f}"),
@@ -287,7 +293,7 @@ def fig_start_end(r, cs_raw, cs_smooth, dune):
         f"to the model's {s} start line (zero) because the island's own position varies by "
         "~6 km along the reach while the changes are tens of metres. Black: the modelled "
         f"{e} position. Blue: the observed CoastSat change added to the start (mean position "
-        "over the last calendar year minus the first, per domain; faint line smoothed at 10 "
+        "over the last calendar year minus the first, per domain; faint line smoothed at 7 "
         f"domains). Red: the digitised dune-line change, the {dv0} line to the {dv1} line, "
         "the runner's own end-year target; its survey interval is not the calendar window "
         "and is not rescaled. Seaward positive; scores over the interior GIS 2-89. "
@@ -311,7 +317,7 @@ def fig_scenarios(runs, period, preset, target, obs):
     ax_r, ax_p = axes
     ax_r.plot(target.index, target.values, zorder=6, **OBSERVED)
     ax_p.plot(obs.index, obs.values, zorder=6, **OBSERVED)
-    handles = [Line2D([], [], label="CoastSat (LOESS, 10 domains)", **OBSERVED)]
+    handles = [Line2D([], [], label="CoastSat (LOESS, 7 domains)", **OBSERVED)]
     for scen in SCEN_ORDER:
         hit = sub[sub.scenario == scen]
         if hit.empty:
@@ -342,7 +348,7 @@ def main():
     apply_style()
     runs = matrix_runs()
     periods = sorted(runs.period.unique())
-    cs = {p: (observed_change(p, 0), observed_change(p, 10)) for p in periods}
+    cs = {p: (observed_change(p, 0), observed_change(p, SMOOTH)) for p in periods}
     dunes = {r.run_name: dune_end_change(r.run_dir, r.period) for r in runs.itertuples()}
     models = {r.run_name: model_end_change(r.run_dir) for r in runs.itertuples()}
 

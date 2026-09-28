@@ -3,9 +3,9 @@
 
 [identity]
 run_name                         = HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nonourish_nogroin
-timestamp                        = 2026-09-27 21:55:03
+timestamp                        = 2026-09-28 16:33:06
 generated_by                     = HAT_hindcast_1984_2024.py
-runtime_min                      = 2.1
+runtime_min                      = 8.9
 use_sandbox_cascade              = True   # cascade.cascade_groin, not cascade.cascade
 topo_product                     = 2004-start
 topo_dune_version                = v1
@@ -15,7 +15,7 @@ run_kind                         = matrix
 run_tag                          = 
 parameter_file                   = HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nonourish_nogroin-parameters.yaml   # this run's copy of Hatteras-CASCADE-parameters.yaml; CASCADE rewrites the copy, not the template
 save_model_state                 = True
-git_commit                       = 6ce59e48129bcdd9a0680ec966c12d75323b4523
+git_commit                       = bfa37ab6fa96a860ecd54d22e65e5448636df6e8
 git_branch                       = hannahaline/hatteras-cascade
 git_dirty                        = True   # True: the commit alone does not reproduce this run
 barrier3d_branch                 = fix/route-overwash-axis-swap
@@ -65,24 +65,24 @@ preset                           = edgeBE
 background_erosion_on            = True   # implied by the preset, checked in 4.3
 domains_specified                = 2
 nonzero_domains                  = 2
-values_digest                    = 6284ea05ad1c   # changes if any rate changed, interior included
-rate_gis1_m_yr                   = 18.8
-rate_gis90_m_yr                  = 24.535
+values_digest                    = 7b2e5ab0906e   # changes if any rate changed, interior included
+rate_gis1_m_yr                   = 18.8657
+rate_gis90_m_yr                  = 24.2358
 
 [groin]
 enabled                          = False
 
 [skill]
-target                           = CoastSat LOESS 10-domain   # raw means over GIS 1-10
+target                           = CoastSat LOESS 7-domain   # raw means over GIS 1-10
 estimator                        = lrr   # OLS slope through every annual state, matching the target's own definition
-mean_bias_m_yr                   = -1.9445
-rmse_m_yr                        = 2.3918
-mean_bias_interior_m_yr          = -1.9723   # GIS 2-89: the locked end domains excluded
-rmse_interior_m_yr               = 2.4143
+mean_bias_m_yr                   = -1.9657
+rmse_m_yr                        = 2.4535
+mean_bias_interior_m_yr          = -1.9941   # GIS 2-89: the locked end domains excluded
+rmse_interior_m_yr               = 2.4765
 lrr_r2_median                    = 0.9044   # how well a line describes the modelled trajectory
 lrr_r2_below_floor               = 13   # domains under r2 0.50
-endpoint_mean_bias_interior_m_yr = -1.9966   # the pre-LRR estimator; calibBE and groin M were fit on this
-endpoint_rmse_interior_m_yr      = 2.4380
+endpoint_mean_bias_interior_m_yr = -2.0184   # the pre-LRR estimator; calibBE and groin M were fit on this
+endpoint_rmse_interior_m_yr      = 2.5001
 
 [verification]
 nourishment_ok                   = True
@@ -91,14 +91,14 @@ roads_reloc_blocked              = 0
 
 [index row]
 run_name                         = HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nonourish_nogroin
-timestamp                        = 2026-09-27 21:55:03
+timestamp                        = 2026-09-28 16:33:06
 start_year                       = 2010
 end_year                         = 2024
 source_sink_preset               = edgeBE
 be_nonzero_domains               = 2
-be_values_digest                 = 6284ea05ad1c
-be_rate_gis1_m_yr                = 18.8
-be_rate_gis90_m_yr               = 24.535
+be_values_digest                 = 7b2e5ab0906e
+be_rate_gis1_m_yr                = 18.8657
+be_rate_gis90_m_yr               = 24.2358
 scenario                         = full_no_fill
 scenario_overridden              = False
 groin_enabled                    = False
@@ -118,27 +118,27 @@ rslr_m_yr                        = 0.007
 annual_states                    = 15
 run_complete                     = True
 rate_estimator                   = lrr
-mean_bias_m_yr                   = -1.9444719253600578
-rmse_m_yr                        = 2.3918310555581046
-mean_bias_interior_m_yr          = -1.9722963579383508
-rmse_interior_m_yr               = 2.4142742373521173
-lrr_r2_median                    = 0.9044449252905906
+mean_bias_m_yr                   = -1.9657453665815559
+rmse_m_yr                        = 2.453470577202368
+mean_bias_interior_m_yr          = -1.994065999362926
+rmse_interior_m_yr               = 2.4764799966109456
+lrr_r2_median                    = 0.9044449252905353
 lrr_r2_below_floor               = 13
-endpoint_mean_bias_interior_m_yr = -1.9966031198988048
-endpoint_rmse_interior_m_yr      = 2.4380258716654217
+endpoint_mean_bias_interior_m_yr = -2.0184394599150686
+endpoint_rmse_interior_m_yr      = 2.500056325913593
 nourishment_ok                   = True
 roads_drowned                    = 0
 roads_reloc_blocked              = 0
 groin_extent_updrift_m           = nan
 groin_extent_downdrift_m         = nan
-runtime_min                      = 2.1
+runtime_min                      = 8.9
 use_sandbox_cascade              = True
 topo_product                     = 2004-start
 topo_dune_version                = v1
 island_offset_version            = duneline/v1
 geometry                         = base
-rmse_reach_interior_m_yr         = 2.4142742373521173
-git_commit                       = 6ce59e48129b
+rmse_reach_interior_m_yr         = 2.4764799966109456
+git_commit                       = bfa37ab6fa96
 git_dirty                        = True
 barrier3d_commit                 = 49fd069d51cf
 barrier3d_route_overwash_fix     = True

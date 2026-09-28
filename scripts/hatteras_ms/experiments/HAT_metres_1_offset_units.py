@@ -65,7 +65,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
 HINDCAST = PROJECT_ROOT / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 RAW_RUNS = PROJECT_ROOT / "output" / "raw_runs"
-STUDY = "island-offset/2026-09-24-metres-1-offset-units"
+STUDY = "island-offset/2026-09-24-div10-vs-metres-wave-sweep"
 STUDY_DIR = RAW_RUNS / "experiments" / STUDY
 TABLES_DIR = STUDY_DIR / "tables"
 LOGS_DIR = STUDY_DIR / "logs"
@@ -237,10 +237,10 @@ def coastsat_target(start=PERIOD, end=None):
     ds = CoastSatDataset(label=f"CoastSat LRR ({window.replace('_', '-')})",
                          period_start=start,
                          csv_path=str(COASTSAT_LRR_ROOT / window / "transect_lrr_full.csv"))
-    cfg = LoessConfig(window_domains=(10,), skip_southern_domains=10)
+    cfg = LoessConfig(window_domains=(SMOOTH_DOMAINS,), skip_southern_domains=10)
     cs = build_coastsat_series([ds], active_period_start=start, loess_config=cfg,
                                domains=HATTERAS_DOMAINS)[0]
-    return build_target_table(cs, cfg, HATTERAS_DOMAINS, 10).set_index(
+    return build_target_table(cs, cfg, HATTERAS_DOMAINS, SMOOTH_DOMAINS).set_index(
         "gis_domain")["target_lrr_m_yr"]
 
 
@@ -256,7 +256,7 @@ def run_rates(run_dir):
                        ).set_index("gis_domain")["lrr_m_yr"]
 
 
-SMOOTH_DOMAINS = 10                  # the CoastSat target's LOESS window
+SMOOTH_DOMAINS = 7                   # the CoastSat target's LOESS window; 10 until 2026-09-28
 
 
 def smooth_like_target(series):

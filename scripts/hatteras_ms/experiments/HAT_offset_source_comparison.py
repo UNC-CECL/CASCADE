@@ -16,7 +16,7 @@ from the dune line rather than the CoastSat shoreline change the output?
 Both offsets are run fresh here (20 runs) so every run in the comparison is
 on the same code and the same Barrier3D (the route_overwash fix).
 
-WHERE: output/raw_runs/experiments/island-offset/2026-09-25-offset-source-duneline-vs-shoreline/
+WHERE: output/raw_runs/experiments/island-offset/2026-09-25-metres-offset-duneline-vs-shoreline-waves-hs1-tp8/
     README.md, tables/all_runs.csv, figures/, logs/<source>_<scenario>/<settings>.log
     runs/<source>_<scenario>/1996_2010/zeroBE/<run_name>/   (on disk only)
 
@@ -42,7 +42,7 @@ sys.path.insert(0, str(_HERE.parent))
 import HAT_wave_grid_smoothed_score as grid  # noqa: E402
 
 common, step2 = grid.common, grid.step2
-TAG = "island-offset/2026-09-25-offset-source-duneline-vs-shoreline"
+TAG = "island-offset/2026-09-25-metres-offset-duneline-vs-shoreline-waves-hs1-tp8"
 STUDY_DIR = grid.RAW_RUNS / "experiments" / TAG
 TABLES_DIR, LOGS_DIR, FIG = STUDY_DIR / "tables", STUDY_DIR / "logs", STUDY_DIR / "figures"
 PERIOD = 1996
@@ -51,6 +51,14 @@ SCENARIOS = grid.SCENARIOS
 BASE = {"hs": 1.0, "wave_period_s": 8.0, "wave_asymmetry": 0.8}
 HIGH_ANGLE = (0.3, 0.4, 0.45, 0.5, 0.55)
 HEADLINE = 0.45
+# Figure labels, overridden by a study that reuses this driver
+# (HAT_offset_source_comparison_div10.py).
+WAVE_NOTE = ("the 09-25 setting, tuned with the dune-line offset; superseded by "
+             "option A on 09-27")
+OFFSET_NOTE = "in metres (duneline/v1, shoreline/v1)"
+FORM_NOTE = ("Redrawn 2026-09-28 in the form of "
+             "../2026-09-28-metres-offset-duneline-vs-shoreline-waves-option-a/.")
+LEGEND_TITLE = "No source/sink correction at the ends"
 
 
 def cells():
@@ -120,7 +128,9 @@ def cmd_score(_=None):
         if hit and grid.finished(log):
             d, md = hit
             got = md["identity"]["island_offset_version"]
-            if not str(got).startswith(src + "/"):
+            # a superseded build records the source alone
+            # (hatteras_site_config.island_offset_version)
+            if not (str(got) == src or str(got).startswith(src + "/")):
                 raise ValueError(f"{d}: ran on offset {got!r}, filed as {src}")
             rec.update(status="scored", **grid.score_run(d, target),
                        offset_recorded=str(got),
@@ -137,126 +147,291 @@ def cmd_score(_=None):
     return 0
 
 
-def cmd_plot(_=None):
+def house_figures(panels, fig_dir, legend_title, note, suffix):
+    """The four island-offset figures, in ONE form for every study that asks the
+    dune-line-or-shoreline question (Hannah, 2026-09-28: "ensure the figures
+    among these experiments are consistent ... so it is easier to compare").
+
+    panels   [{"label": "Natural 1996–2010", "start": 1996, "end": 2010,
+               "rates": {"duneline": df, "shoreline": df}}, ...], one row each;
+               df is a run's tables/shoreline_change_rate.csv indexed by
+               gis_domain, or None where that arm has no run
+    note     the study's own sentence for every caption (waves, offset, ends)
+    suffix   the stem ending, e.g. "1996_2010" or "full_management"
+
+    Net change in metres; observations smoothed with LOESS over LOESS_DOMAINS
+    (southern SKIP_SOUTHERN raw), the model unsmoothed; the model's ENABLED
+    fills marked above each panel; no scores on the figures."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import pandas as pd
     from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
     import HAT_metres_2_wave_sensitivity_plot as p2
-    from site_layer.hat_figure_style import (INK, INK_MUTED, DOMAIN_AXIS_LABEL, _title,
+    from site_layer.hat_figure_style import (INK, INK_MUTED, DOMAIN_AXIS_LABEL, C,
                                              apply_style, open_frame, record_caption, save,
                                              structures, support_dir, town_bands)
+    from site_layer.hatteras_site_config import (HATTERAS_ANNOTATIONS,
+                                                 HATTERAS_NOURISHMENT_PROJECTS)
     apply_style()
-    t = pd.read_csv(TABLES_DIR / "all_runs.csv")
-    target, obs = common.coastsat_target(PERIOD), p2.observed_change(PERIOD)
     col = {"duneline": "#1b7f6b", "shoreline": "#6a3d9a"}
-    name = {"duneline": "Dune line", "shoreline": "Shoreline (CoastSat)"}
+    shoal_c = C["ADDED"]
+    n = len(panels)
+
+    def fills(ax, start, end):
+        trans = ax.get_xaxis_transform()
+        for p in sorted(HATTERAS_NOURISHMENT_PROJECTS, key=lambda p: p.year):
+            if not (p.enabled and start <= p.year <= end):
+                continue
+            lo, hi = min(p.gis_domains), max(p.gis_domains)
+            ax.plot([lo - 0.45, hi + 0.45], [1.025, 1.025], color=INK, lw=2.2,
+                    solid_capstyle="butt", zorder=6, clip_on=False, transform=trans)
+            ax.text((lo + hi) / 2, 1.045, f"{p.year} fill", ha="center", va="bottom",
+                    fontsize=11, color=INK, zorder=6, clip_on=False, transform=trans)
+
+    def dress(ax, j, pan, text):
+        ax.axhline(0, color=INK_MUTED, lw=0.8)
+        ax.set_xlim(1, 90)
+        ax.grid(axis="y")
+        open_frame(ax)
+        town_bands(ax, fontsize=12, strip=0.07)
+        for nm, (lo, hi) in HATTERAS_ANNOTATIONS.shoal_zones.items():
+            ax.axvspan(lo - 0.5, hi + 0.5, color=shoal_c, alpha=0.12, lw=0, zorder=0.5)
+            ax.text((lo + hi) / 2, 0.90, nm, transform=ax.get_xaxis_transform(),
+                    ha="center", va="top", fontsize=12, color="#8a620e", zorder=1)
+        structures(ax, label=True, label_pt=11)
+        fills(ax, pan["start"], pan["end"])
+        ax.set_title(f"({'abcdef'[j]})", loc="left", fontweight="bold", pad=26)
+        ax.set_title(text, loc="center", pad=26)
+        if j == n - 1:
+            ax.set_xlabel(DOMAIN_AXIS_LABEL)
+
+    def legend(f, handles):
+        handles = handles + [Patch(color=shoal_c, alpha=0.25, label="Shoals"),
+                             Patch(color="0.90", label="Villages")]
+        f.legend(handles=handles, loc="outside lower center", ncol=4, frameon=False,
+                 fontsize=12, title=legend_title, title_fontsize=12)
+
+    def axes_for(height):
+        f, axes = plt.subplots(n, 1, figsize=(16, height * n + 1.2), sharex=True,
+                               sharey=True, constrained_layout=True, squeeze=False)
+        return f, axes[:, 0]
+
+    common = (" Amber: Avon and Wimble Shoals; solid line: Buxton groin; dotted lines: "
+              "Avon and Rodanthe piers; grey strip: villages; bars above a panel: the "
+              "nourishments the model is given in that period, footprint and year. " + note)
+    figs = [
+        dict(src="duneline", kind="dune", ylab="Net change (m)",
+             obs_label="Observed dune-line change, smoothed (LOESS, 7 domains)",
+             model_label="Model, started from the dune line",
+             stem="duneline_offset_vs_duneline_change",
+             caption=("The model started from the DUNE-LINE island offset, against the dune "
+                      "line's own change. Net change per domain, seaward positive: observed "
+                      "(black) is the mean change between the digitised dune lines that bound "
+                      "each period (1997-10 to 2009-05, 11.6 yr, for 1996-2010; 2009-05 to "
+                      "2023-07, 14.1 yr, for 2010-2024), LOESS over 7 domains (the southern 10 "
+                      "raw); the model (green) is unsmoothed, its endpoint change over the 14 "
+                      "calendar years. The interval mismatch is not corrected.")),
+        dict(src="shoreline", kind="total", ylab="Total shoreline change (m)",
+             obs_label="Observed total shoreline change (CoastSat LRR of the same period "
+                       "× 14 yr, LOESS 7 domains)",
+             model_label="Model, started from the shoreline (its LRR × 14 yr)",
+             stem="shoreline_offset_vs_coastsat_total_change",
+             caption=("The model started from the SHORELINE island offset (mean CoastSat "
+                      "shoreline over 1995-1997 for 1996, 2009-2011 for 2010), against total "
+                      "shoreline change: each period's OWN CoastSat LRR, LOESS over 7 domains, "
+                      "x 14 yr (black), not the 1996-2024 rate carried onto it; the model "
+                      "(purple) is its own LRR x 14 yr.")),
+        dict(src="shoreline", kind="projected", ylab="Projected shoreline change (m)",
+             obs_label="Observed projected shoreline change (CoastSat LRR 1996–2024 × 14 yr, "
+                       "LOESS 7 domains)",
+             model_label="Model, started from the shoreline (its LRR × 14 yr)",
+             stem="shoreline_offset_vs_coastsat_projected_change",
+             caption=("The model started from the SHORELINE island offset, against PROJECTED "
+                      "shoreline change: the long-term CoastSat LRR fitted on 1996-2024, LOESS "
+                      "over 7 domains, x 14 yr (black), the same profile in every panel, "
+                      "carried onto each period rather than fitted on it; the model (purple) "
+                      "is the same run as in the total-change figure.")),
+    ]
     out = []
     with plt.rc_context(p2.SCREEN_RC):
-        # 1. the profiles at the headline setting, and their difference
-        f, axes = plt.subplots(3, 2, figsize=(16, 13), sharex=True, constrained_layout=True,
-                               gridspec_kw={"height_ratios": [3, 3, 2]})
+        for spec in figs:
+            src = spec["src"]
+            f, axes = axes_for(5)
+            for j, pan in enumerate(panels):
+                a, b = pan["start"], pan["end"]
+                years = b - a
+                ax, rt = axes[j], pan["rates"].get(src)
+                obs = {"dune": lambda: smooth_loess(duneline_change(a, b)),
+                       "total": lambda: coastsat_target_loess(a, f"{a}_{b}") * years,
+                       "projected": lambda: coastsat_target_loess(1996, "1996_2024") * years,
+                       }[spec["kind"]]()
+                ax.plot(obs.index, obs.values, color=INK, lw=3.2, zorder=6)
+                if rt is not None:
+                    m = (rt.change_rate_m_yr if spec["kind"] == "dune" else rt.lrr_m_yr) * years
+                    ax.plot(m.index, m.values, color=col[src], lw=2.0, zorder=4)
+                how = {"total": f" (CoastSat LRR {a}–{b} × 14 yr)",
+                       "projected": " (CoastSat LRR 1996–2024 × 14 yr)"}.get(spec["kind"], "")
+                dress(ax, j, pan, pan["label"] + how)
+                ax.set_ylabel(spec["ylab"])
+            legend(f, [Line2D([], [], color=INK, lw=3.2, label=spec["obs_label"]),
+                       Line2D([], [], color=col[src], lw=2.0, label=spec["model_label"])])
+            png = fig_dir / f"{spec['stem']}_{suffix}.png"
+            save(f, png, dpi=300, close=True)
+            record_caption(png, spec["caption"] + common)
+            out.append(png)
+
+        # where the two offsets disagree: total change, shoreline minus dune-line start
+        f, axes = axes_for(4)
         rows = []
-        for j, sc in enumerate(SCENARIOS):
-            prof = {}
-            for src in SOURCES:
-                r = t[(t.source == src) & (t.scenario == sc) & (t.status == "scored")
-                      & np.isclose(t.wave_angle_high_fraction, HEADLINE)]
-                if r.empty:
-                    continue
-                r = r.iloc[0]
-                rt = pd.read_csv(STUDY_DIR / r.run_dir / "tables" / "shoreline_change_rate.csv"
-                                 ).set_index("gis_domain")
-                prof[src] = (rt.lrr_m_yr, rt.change_rate_m_yr * 14, r)
-            for i, (o, k) in enumerate(((target, 0), (obs, 1))):
-                ax = axes[i, j]
-                ax.plot(o.index, o.values, color=INK, lw=2.6, zorder=6)
-                for src, v in prof.items():
-                    ax.plot(v[k].index, v[k].values, color=col[src], lw=1.3, alpha=0.8, zorder=4)
-                    sm = common.smooth_like_target(v[k])
-                    ax.plot(sm.index, sm.values, color=col[src], lw=2.6, ls=(0, (5, 3)),
-                            alpha=0.6, zorder=5)
-            ax = axes[2, j]
-            if len(prof) == 2:
-                d = prof["shoreline"][0] - prof["duneline"][0]
-                ax.bar(d.index, d.values, color=[col["shoreline"] if v > 0 else col["duneline"]
-                                                  for v in d.values], width=0.85)
-                rows.append(dict(scenario=sc, mean_abs_diff_m_yr=float(d.abs().mean()),
-                                 max_abs_diff_m_yr=float(d.abs().max()),
+        for j, pan in enumerate(panels):
+            ax, r = axes[j], pan["rates"]
+            if r.get("shoreline") is not None and r.get("duneline") is not None:
+                years = pan["end"] - pan["start"]
+                d = (r["shoreline"].lrr_m_yr - r["duneline"].lrr_m_yr) * years
+                ax.bar(d.index, d.values, width=0.85,
+                       color=[col["shoreline"] if v > 0 else col["duneline"] for v in d.values])
+                rows.append(dict(panel=pan["label"], mean_abs_diff_m=float(d.abs().mean()),
+                                 max_abs_diff_m=float(d.abs().max()),
                                  at_gis=int(d.abs().idxmax())))
-            for ax in axes[:, j]:
-                ax.axhline(0, color=INK_MUTED, lw=0.6)
-                ax.set_xlim(1, 90)
-                ax.grid(axis="y")
-                open_frame(ax)
-                town_bands(ax, label=(ax is axes[0, j]), fontsize=11)
-            structures(axes[1, j], label=True, label_pt=11)
-            head = [f"{p2.BEST_NAME[sc]}, 1996–2010, high-angle {HEADLINE:g}"]
-            for src, v in prof.items():
-                r = v[2]
-                head.append(f"{name[src]}: {100 * r.smoothed_variance_explained:+.0f}% "
-                            f"(raw {100 * r.raw_variance_explained:+.0f}%), bias {r.bias_m_yr:+.2f}")
-            _title(axes[0, j], j, "\n".join(head))
-            _title(axes[1, j], 2 + j, "")
-            _title(axes[2, j], 4 + j, "")
-            axes[2, j].set_xlabel(DOMAIN_AXIS_LABEL)
-        axes[0, 0].set_ylabel("Shoreline change rate,\nLRR (m/yr)")
-        axes[1, 0].set_ylabel("Position change,\n2010 minus 1996 (m)")
-        axes[2, 0].set_ylabel("Rate difference,\nshoreline − dune line (m/yr)")
-        handles = [Line2D([], [], color=INK, lw=2.6, label="CoastSat (LOESS, 10 domains)")]
-        for src in SOURCES:
-            handles += [Line2D([], [], color=col[src], lw=1.3, label=f"Model, {name[src].lower()} offset"),
-                        Line2D([], [], color=col[src], lw=2.6, ls=(0, (5, 3)), alpha=0.6,
-                               label=f"{name[src]}, smoothed (scored)")]
-        f.legend(handles=handles, loc="outside lower center", ncol=3, frameon=False,
-                 title="Hs 1.0 m, Tp 8 s, asymmetry 0.8, high-angle 0.45")
-        png = FIG / "profiles_duneline_vs_shoreline_1996_2010.png"
+            dress(ax, j, pan, pan["label"])
+            ax.set_ylabel("Difference in total change,\nshoreline minus dune-line start (m)")
+        legend(f, [Patch(color=col["shoreline"], label="Shoreline start more accretional"),
+                   Patch(color=col["duneline"], label="Dune-line start more accretional")])
+        png = fig_dir / f"total_change_difference_shoreline_minus_duneline_{suffix}.png"
         save(f, png, dpi=300, close=True)
         pd.DataFrame(rows).to_csv(support_dir(png.parent) / f"{png.stem}.csv", index=False)
         record_caption(png, (
-            "The island offset (planform orientation) set from the dune line (green) and from "
-            "the CoastSat shoreline (purple), 1996-2010, Hs 1.0 m, Tp 8 s, asymmetry 0.8, "
-            "high-angle 0.45 (the best managed setting found, tuned with the dune-line offset). "
-            "Left natural, right full management. Top: LRR rate against the CoastSat target "
-            "(black); middle: position change against the observed CoastSat change; solid thin "
-            "lines per domain, dashed the model smoothed like the target (the scored series). "
-            "Bottom: the rate difference, shoreline minus dune line. Header: smoothed share of "
-            "the alongshore variation explained (raw in brackets) and bias, m/yr."))
+            "Modelled total shoreline change (each run's own LRR x 14 yr) with the shoreline "
+            "start minus that with the dune-line start, per domain. Purple: the shoreline start "
+            "gives the more accretional (less erosional) change; green: the dune-line start "
+            "does. Both runs give the same model quantity, so no observation enters." + common))
         out.append(png)
-        # 2. score against the high-angle fraction, both offsets
-        f, axes = plt.subplots(1, 3, figsize=(16, 5.6), constrained_layout=True)
-        ls = {SCENARIOS[0]: "-", SCENARIOS[1]: "--"}
-        for src, sc in product(SOURCES, SCENARIOS):
-            x = t[(t.source == src) & (t.scenario == sc) & (t.status == "scored")
-                  ].sort_values("wave_angle_high_fraction")
-            kw = dict(color=col[src], ls=ls[sc], marker="o", lw=2,
-                      label=f"{name[src]}, {p2.BEST_NAME[sc].lower()}")
-            axes[0].plot(x.wave_angle_high_fraction, 100 * x.smoothed_variance_explained, **kw)
-            axes[1].plot(x.wave_angle_high_fraction, x.bias_m_yr, **kw)
-            axes[2].plot(x.wave_angle_high_fraction, x.smoothed_r, **kw)
-        for ax, lab in zip(axes, ("Smoothed variation explained (%)", "Mean bias (m/yr)",
-                                  "Correlation with CoastSat (smoothed)")):
-            ax.axhline(0, color=INK_MUTED, lw=0.6)
-            ax.set_xlabel("Fraction of high-angle waves (> 45°)")
-            ax.set_ylabel(lab)
-            ax.grid(True)
-            open_frame(ax)
-        for k, ax in enumerate(axes):
-            _title(ax, k, "")
-        axes[0].legend(frameon=False)
-        png = FIG / "scores_vs_high_angle_duneline_vs_shoreline_1996_2010.png"
-        save(f, png, dpi=300, close=True)
-        t.to_csv(support_dir(png.parent) / f"{png.stem}.csv", index=False)
-        record_caption(png, (
-            "Scores against the high-angle fraction for the two island offsets, 1996-2010, "
-            "Hs 1.0 m, Tp 8 s, asymmetry 0.8; solid natural, dashed full management. (a) "
-            "share of the alongshore variation explained by the smoothed model; (b) mean bias; "
-            "(c) correlation of the smoothed model with the CoastSat target. Interior GIS 2-89."))
-        out.append(png)
-    for p in out:
+    return out
+
+
+# THE FIGURES ARE FULL MANAGEMENT x BOTH PERIODS (Hannah, 2026-09-28: "showing
+# only full management and both periods per figure", as the option A study
+# draws them). 1996's run is the study's own; 2010's comes from `run-2010`.
+FM = "full_management"
+PERIODS_FM = (1996, 2010)
+
+
+def fm_log(src, start):
+    sub = [] if start == PERIOD else [grid.window(start)]
+    return LOGS_DIR.joinpath(*sub, group(src, FM), f"{grid.label(fm_settings())}.log")
+
+
+def fm_settings():
+    return {**BASE, "wave_angle_high_fraction": HEADLINE}
+
+
+def fm_launch(cell):
+    src, start = cell
+    log = fm_log(src, start)
+    if grid.finished(log):
+        return
+    log.parent.mkdir(parents=True, exist_ok=True)
+    e = env(src, FM, fm_settings())
+    e["HAT_START_YEAR"] = str(start)
+    t0 = time.perf_counter()
+    p = subprocess.run([sys.executable, str(grid.HINDCAST)], env=e, cwd=str(grid.PROJECT_ROOT),
+                       capture_output=True, text=True, encoding="utf-8", errors="replace",
+                       timeout=grid.RUN_TIMEOUT_S)
+    log.write_text((p.stdout or "") + "\n--- STDERR ---\n" + (p.stderr or ""), encoding="utf-8")
+    what = "done" if p.returncode == 0 else f"FAILED ({step2.stop_reason(log)})"
+    print(f"{what} {group(src, FM)} {grid.window(start)} in "
+          f"{(time.perf_counter() - t0) / 60:.1f} min", flush=True)
+
+
+def cmd_run_2010(a):
+    """The 2010-2024 full-management pair at the study's headline setting."""
+    grid.check_barrier3d()
+    common.keep_awake()
+    todo = [(src, 2010) for src in SOURCES if not grid.finished(fm_log(src, 2010))]
+    print(f"{len(todo)} to run", flush=True)
+    with ThreadPoolExecutor(max_workers=a.jobs) as pool:
+        list(pool.map(fm_launch, todo))
+    return cmd_plot()
+
+
+def fm_rates(src, start):
+    """The full-management run at the headline setting, or None if not run."""
+    import pandas as pd
+    root = STUDY_DIR / "runs" / group(src, FM) / grid.window(start) / "zeroBE"
+    for md in sorted(root.glob("*/*_run_metadata.json")):
+        m = json.loads(md.read_text(encoding="utf-8"))
+        if abs(float(m["wave climate"]["wave_angle_high_frac"]) - HEADLINE) < 1e-9:
+            return pd.read_csv(md.parent / "tables" / "shoreline_change_rate.csv"
+                               ).set_index("gis_domain")
+    return None
+
+
+def cmd_plot(_=None):
+    """This study's figures through house_figures: (a) full management
+    1996-2010, (b) full management 2010-2024, at the headline setting."""
+    panels = []
+    for start in PERIODS_FM:
+        a, b = grid.window(start).split("_")
+        panels.append(dict(label=f"Full management {a}–{b}", start=int(a), end=int(b),
+                           rates={src: fm_rates(src, start) for src in SOURCES}))
+    setting = (f"Hs {BASE['hs']:g} m, Tp {BASE['wave_period_s']:g} s, asymmetry "
+               f"{BASE['wave_asymmetry']:g}, high-angle {HEADLINE:g}")
+    note = (f"(a) full management 1996-2010, (b) full management 2010-2024; waves {setting} "
+            f"({WAVE_NOTE}); island offset {OFFSET_NOTE}; no source/sink correction at the "
+            f"ends (zeroBE); relocations and groins off. The natural runs are in "
+            f"tables/all_runs.csv. {FORM_NOTE}")
+    for p in house_figures(panels, FIG, LEGEND_TITLE, note, "full_management"):
         print(p.relative_to(STUDY_DIR))
     return 0
+
+
+# Observations for the house-form figures: smoothed at 7 domains, the research
+# group's range (Hannah, 2026-09-28), the southern 10 domains left raw.
+LOESS_DOMAINS = 7
+SKIP_SOUTHERN = 10
+
+
+def coastsat_target_loess(start, window):
+    """The CoastSat LRR target built as the runner builds it, at LOESS_DOMAINS,
+    the rate fitted on `window` ("1996_2010", or "1996_2024" for the long-term rate)."""
+    from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT
+    from site_layer.hatteras_site_config import HATTERAS_DOMAINS
+    from cascade_pipeline.hindcast import build_target_table
+    from cascade_pipeline.coastsat_loess import (CoastSatDataset, LoessConfig,
+                                                 build_coastsat_series)
+    ds = CoastSatDataset(label=f"CoastSat LRR ({window.replace('_', '-')})",
+                         period_start=start,
+                         csv_path=str(COASTSAT_LRR_ROOT / window / "transect_lrr_full.csv"))
+    cfg = LoessConfig(window_domains=(LOESS_DOMAINS,), skip_southern_domains=SKIP_SOUTHERN)
+    cs = build_coastsat_series([ds], active_period_start=start, loess_config=cfg,
+                               domains=HATTERAS_DOMAINS)[0]
+    return build_target_table(cs, cfg, HATTERAS_DOMAINS, LOESS_DOMAINS).set_index(
+        "gis_domain")["target_lrr_m_yr"]
+
+
+def smooth_loess(series):
+    """A per-domain series smoothed as the target is: LOESS over LOESS_DOMAINS,
+    the southern SKIP_SOUTHERN left raw."""
+    import pandas as pd
+    from statsmodels.nonparametric.smoothers_lowess import lowess
+    x = series.index.to_numpy(dtype=float)
+    y = series.to_numpy(dtype=float)
+    ok = np.isfinite(y)
+    out = pd.Series(np.nan, index=series.index)
+    out[ok] = lowess(y[ok], x[ok], frac=LOESS_DOMAINS / len(x), return_sorted=False)
+    raw = series.index <= SKIP_SOUTHERN
+    out[raw] = series[raw]
+    return out
+
+
+def duneline_change(start, end):
+    """Observed dune-line net change per domain (m), between the lines that bound the window."""
+    import pandas as pd
+    from site_layer.hat_observed_rates import DUNELINE_ENDPOINT_ROOT
+    t = pd.read_csv(DUNELINE_ENDPOINT_ROOT / f"{start}_{end}" / "domain_endpoint_summary.csv")
+    return t.set_index("domain_number")["mean_change_m"]
 
 
 def main():
@@ -267,8 +442,11 @@ def main():
     r.add_argument("--jobs", type=int, default=8)
     sub.add_parser("score")
     sub.add_parser("plot")
+    r = sub.add_parser("run-2010")
+    r.add_argument("--jobs", type=int, default=2)
     a = ap.parse_args()
-    return {"run": cmd_run, "score": cmd_score, "plot": cmd_plot}[a.cmd](a)
+    return {"run": cmd_run, "score": cmd_score, "plot": cmd_plot,
+            "run-2010": cmd_run_2010}[a.cmd](a)
 
 
 if __name__ == "__main__":

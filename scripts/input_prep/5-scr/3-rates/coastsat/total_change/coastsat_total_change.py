@@ -234,10 +234,11 @@ PROJECTED = Product(
 )
 PRODUCTS = {p.key: p for p in (TOTAL, PROJECTED)}
 
-# LOESS window widths in domain units (1 domain = 500 m). 10 is the model
-# target's window (coastsat_loess.LoessConfig.window_domains); 3 and 5 are
-# there to show how fast the residual collapses with scale.
-SMOOTH_WINDOWS = (3, 5, 10)
+# LOESS window widths in domain units (1 domain = 500 m). 7 is the model
+# target's window since 2026-09-28 (coastsat_loess.LoessConfig.window_domains;
+# the group's range); 10 was until then and is kept for what still reads it;
+# 3 and 5 are there to show how fast the residual collapses with scale.
+SMOOTH_WINDOWS = (3, 5, 7, 10)
 # GIS 1..SPLICE_DOMAINS keep their raw domain means instead of the LOESS --
 # coastsat_loess.LoessConfig.skip_southern_domains, the boundary treatment at
 # Oregon Inlet. Applied to the OBSERVED side too, so the two never differ in

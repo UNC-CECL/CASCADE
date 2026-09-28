@@ -1257,7 +1257,21 @@ HATTERAS_BE_RATES_EDGE = {
 HATTERAS_BE_EDGE_ONLY = {
     # (GIS 1, GIS 90), m/yr.
     #
-    # CURRENT VALUES: OPTION A, ADOPTED 2026-09-27 (Hannah). Re-solved on the
+    # CURRENT VALUES: OPTION A ON THE LOESS-7 TARGET, 2026-09-28 (Hannah: "switch
+    # the runner to 7 and re-solve the ends"). The runner's CoastSat target went
+    # from LOESS-10 to LOESS-7 the same day; GIS 1 is graded against the raw
+    # domain mean, so only GIS 90's target moved (+0.125 m/yr in 1996, -0.066 in
+    # 2010). Same waves, scenario and run as below; seeded at the LOESS-10
+    # values, converged to |residual| <= 0.02 m/yr:
+    #
+    #   1996-2010   GIS 1 +4.8394   GIS 90 +18.2545   residuals +0.006 / +0.016
+    #   2010-2024   GIS 1 +18.8657  GIS 90 +24.2358   residuals -0.005 / +0.001
+    #
+    # Record and every probe: output/raw_runs/experiments/end-domain-boundaries/
+    # 2026-09-28-ends-resolved-loess7/ (tables/ends.json).
+    #
+    # --- LOESS-10 option A values, SUPERSEDED 2026-09-28 ---
+    # OPTION A, ADOPTED 2026-09-27 (Hannah). Re-solved on the
     # METRES island offset at the option A wave climate -- Hs 2.0 m, Tp 7.5 s,
     # asymmetry 0.6, high-angle 0.5, the HAT_hindcast_config defaults since the
     # same day -- on the edgeBE full-management nogroin run, against each
@@ -1334,7 +1348,7 @@ HATTERAS_BE_EDGE_ONLY = {
     # Solve reproduced with:
     #   scripts/input_prep/7-source-sink/2-calibrate/
     #       be_edge_domain_solve.py --period 1996
-    1996: (+4.8394, +17.545),   # option A, 2026-09-27; was (+32.2, +10.0)
+    1996: (+4.8394, +18.2545),  # option A on LOESS-7, 2026-09-28; LOESS-10 +17.545; /10 (+32.2, +10.0)
 
     # --- /10-offset solve, 2010, SUPERSEDED 2026-09-27 ---
     # SOLVED 2026-09-16, three Newton steps, the same protocol as 1996. Base
@@ -1368,7 +1382,7 @@ HATTERAS_BE_EDGE_ONLY = {
     #   be_edge_domain_solve.py --period 2010 --kind experiment
     #       --run <base> --tag 2026-09-16-edgesolve-2010/base
     #       --run <step> --tag 2026-09-16-edgesolve-2010/step<k> ...
-    2010: (+18.8, +24.535),     # option A, 2026-09-27; was (+72.6, +31.3)
+    2010: (+18.8657, +24.2358), # option A on LOESS-7, 2026-09-28; LOESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
 }
 
 # OPTION B, RECORDED, NOT WIRED (2026-09-27, Hannah). The one-parameter

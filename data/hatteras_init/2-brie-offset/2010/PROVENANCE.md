@@ -6,8 +6,7 @@ it was measured from, so a folder listing says what it is:
 | source | what it was measured from | CURRENT | also here |
 |---|---|---|---|
 | `duneline/` | a dune line digitised from aerial imagery | `v1` | `superseded_20260919_pre-redigitized/` |
-
-`shoreline/` — not built for 2010.
+| `shoreline/` | the mean CoastSat shoreline over calendar 2009-2011 (built 2026-09-28) | `v1` | |
 
 
 

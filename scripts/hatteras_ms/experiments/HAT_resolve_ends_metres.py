@@ -13,7 +13,8 @@ m/yr) were solved at Hs 2.5 on the /10 offset. Chosen with Hannah:
                relocations, no groin), as the matrix end values always were;
                the pair is then used for natural and managed runs alike
     target     each window's CoastSat LRR: GIS 1 against the raw domain mean,
-               GIS 90 against the LOESS-10 value
+               GIS 90 against the LOESS value (10 domains until 2026-09-28,
+               7 since: common.SMOOTH_DOMAINS)
     solve      step 0 a fresh zeroBE run; then HAT_wave_shortlist_ends_solved's
                safeguarded step (secant capped at +-30 m/yr until a probe lies
                on each side of the target, then interpolation held inside the
@@ -28,6 +29,11 @@ m/yr) were solved at Hs 2.5 on the /10 offset. Chosen with Hannah:
 WHERE: output/raw_runs/experiments/end-domain-boundaries/2026-09-27-ends-resolved-metres-offset/
 
     python scripts/hatteras_ms/experiments/HAT_resolve_ends_metres.py
+
+    --tag   file the solve under another study (2026-09-28: the LOESS-7 re-solve)
+    --seed  "1996=4.8394,17.545;2010=18.8,24.535": step 1 probes these ends
+            instead of the first-gain guess from zeroBE, so a re-solve near a
+            known answer starts there
 """
 from __future__ import annotations
 
@@ -102,7 +108,20 @@ def main():
     ap.add_argument("--asym", type=float, default=REFERENCE["wave_asymmetry"])
     ap.add_argument("--ahf", type=float, default=REFERENCE["wave_angle_high_fraction"])
     ap.add_argument("--accept", type=float, default=E.TOL)
+    ap.add_argument("--tag", default=None)
+    ap.add_argument("--seed", default=None)
     a = ap.parse_args()
+    global TAG, STUDY_DIR
+    if a.tag:
+        TAG, STUDY_DIR = a.tag, grid.RAW_RUNS / "experiments" / a.tag
+        E.TAG, E.STUDY_DIR = TAG, STUDY_DIR
+        E.TABLES_DIR, E.LOGS_DIR = STUDY_DIR / "tables", STUDY_DIR / "logs"
+    seed = {}
+    for part in (a.seed or "").split(";"):
+        if part.strip():
+            yr, vals = part.split("=")
+            g1, g90 = (float(v) for v in vals.split(","))
+            seed[int(yr)] = {1: g1, 90: g90}
     REFERENCE = {"hs": a.hs, "wave_period_s": a.tp, "wave_asymmetry": a.asym,
                  "wave_angle_high_fraction": a.ahf}
     periods = tuple(a.periods)
@@ -125,8 +144,12 @@ def main():
             if all(abs(h[-1][1][g]) <= E.TOL for g in E.ENDS):
                 continue
             hist = [(e, r) for e, r, _ in h]
-            nxt = ({g: h[-1][0][g] - h[-1][1][g] / E.FIRST_GAIN[g] for g in E.ENDS} if len(h) == 1
-                   else {g: E.safeguarded_next(hist, g) for g in E.ENDS})
+            if len(h) == 1 and p in seed:
+                nxt = dict(seed[p])
+            elif len(h) == 1:
+                nxt = {g: h[-1][0][g] - h[-1][1][g] / E.FIRST_GAIN[g] for g in E.ENDS}
+            else:
+                nxt = {g: E.safeguarded_next(hist, g) for g in E.ENDS}
             jobs.append((SCENARIO, step, p, s, nxt))
         if not jobs:
             break

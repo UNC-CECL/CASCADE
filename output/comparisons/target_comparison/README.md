@@ -11,7 +11,7 @@
 >
 > **LOESS 7 since 2026-09-28** (Hannah: "redo the target comparison with LOESS 7").
 > - The smoothed targets, and every `*_loess` score, now use a 7-domain LOESS (raw domain means over GIS 1–10), following the runner's scoring target.
-> - The runs and end rates are unchanged. The CoastSat-solved ends were solved against the LOESS-10 value at GIS 90, and have not been re-solved at 7.
+> - The CoastSat-solved ends (the matrix) were re-solved against the LOESS-7 target later the same day and the edgeBE matrix re-run: GIS 90 +17.545 → +18.2545 (1996) and +24.535 → +24.2358 (2010), GIS 1 in 2010 +18.8 → +18.8657. `total_change/` was redrawn on those runs; its scores moved by 0.02 m in bias and 0.03 m in RMSE. `projected/` and the dune-line-solved set use experiment runs and did not change.
 > - The LOESS-10 option A version is in `output/archive/2026-09-28_option-a-loess10-comparisons/`.
 > - The raw-domain-mean numbers below do not depend on the smoothing. The smoothed RMSEs rise by 1–2 m at 7 (projected, ends solved on CoastSat: 1996–2010 14.1 → 15.8 m, 2010–2024 19.7 → 21.4 m). Biases move by 0.1 m or less.
 > - No conclusion changes.
@@ -179,8 +179,8 @@ End rates (m/yr, GIS 1 / GIS 90):
 
 | window | ends solved on the 1996–2024 LRR (projected/) | ends solved on the window's own LRR (total_change/, the option A matrix) | ends solved on the dune line (mean3) |
 |---|---|---|---|
-| 1996–2010 | +4.5 / +27.5 | +4.84 / +17.55 | −3.0 / +7.6 |
-| 2010–2024 | +4.8 / +20.5 | +18.8 / +24.54 | +3.4 / +15.0 |
+| 1996–2010 | +4.5 / +27.5 | +4.84 / +18.25 (LOESS-7; was +17.55) | −3.0 / +7.6 |
+| 2010–2024 | +4.8 / +20.5 | +18.87 / +24.24 (LOESS-7; was +18.8 / +24.54) | +3.4 / +15.0 |
 
 /10 era: CoastSat (window's own) +32.2 / +10.0 and +72.6 / +31.3; dune line −16.0 / −3.3 and +20.1 / +19.2.
 

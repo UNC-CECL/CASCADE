@@ -1325,16 +1325,18 @@ COASTSAT_DATASETS = [
     ),
 ]
 
-# The 10-domain smoothing ALONE (Hannah, 2026-09-10). The 7-domain curve was
-# drawn beside it for comparison and never fed a number: every skill target is
-# built at TARGET_WINDOW = 10, asserted just below. Dropping it also saves a
-# LOESS fit per dataset per run. Put (7, 10) back to see both curves again.
-LOESS_CONFIG = LoessConfig(window_domains=(10,), skip_southern_domains=10)
+# The 7-domain smoothing ALONE (Hannah, 2026-09-28: "the smoothing rate for
+# everything in this project should be 7 domains, that is what our group chose
+# as the range"). Every skill target is built at TARGET_WINDOW = 7, asserted
+# just below. From 2026-09-10 to 09-28 this was 10 alone; runs made before
+# 09-28 were scored against the LOESS-10 target, and the end-domain rates in
+# HATTERAS_BE_EDGE_ONLY were re-solved for LOESS-7 the same day.
+LOESS_CONFIG = LoessConfig(window_domains=(7,), skip_southern_domains=10)
 
 # Named here rather than left implicit. rate_comparison resolves the reference
 # window as max(window_domains); this makes that choice visible, and the
 # assertion below catches a window list whose maximum is not what was intended.
-TARGET_WINDOW = 10
+TARGET_WINDOW = 7
 if TARGET_WINDOW != max(LOESS_CONFIG.window_domains):
     raise ValueError(
         f"TARGET_WINDOW={TARGET_WINDOW} but rate_comparison will use "

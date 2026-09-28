@@ -3,7 +3,7 @@
 > **Record (one parameter at a time, zeroBE).** The settings to use: [`../2026-09-27-wave-recommendation/README.md`](../2026-09-27-wave-recommendation/README.md).
 
 Step 2 of 3 in the 2026-09-24 chain: `../../2026-09-24-metres-INDEX.md`. Step 1
-chose the offset unit (`../../island-offset/2026-09-24-metres-1-offset-units/`); this study
+chose the offset unit (`../../island-offset/2026-09-24-div10-vs-metres-wave-sweep/`); this study
 found the Barrier3D bug that step 3 fixed (`../../code-checks/2026-09-24-metres-3-barrier3d-overwash-fix/`).
 Filed as `sensitivity/2026-09-24-natural-waves/` until the 2026-09-24
 reorganisation (runs retagged; the name predates the full-management sweep).
@@ -29,7 +29,7 @@ is hers.
 | baseline | Hs 1.0 m, Tp 8 s, asymmetry 0.8, high-angle fraction 0.45 |
 
 The baseline is the best metres point of
-`experiments/island-offset/2026-09-24-metres-1-offset-units/` (found there under
+`experiments/island-offset/2026-09-24-div10-vs-metres-wave-sweep/` (found there under
 full management, 1996–2010).
 
 **Stage 1, one parameter at a time around the baseline** (baseline value in bold):

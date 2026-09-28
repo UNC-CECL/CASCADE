@@ -98,7 +98,7 @@ from site_layer.hat_topo_version import RAW_OFFSET_DIR  # noqa: E402
 # These four MUST match section 8/9 of HAT_hindcast_1984_2024.py. They are
 # restated rather than imported because importing that module runs a hindcast.
 # The assertion in `check_conventions` catches them drifting apart.
-LOESS_CONFIG = LoessConfig(window_domains=(10,), skip_southern_domains=10)
+LOESS_CONFIG = LoessConfig(window_domains=(7,), skip_southern_domains=10)
 RATE_ESTIMATOR = "lrr"
 FLIP_SIGN_MODEL = True
 PLOT_REAL_DOMAINS_ONLY = True
@@ -142,7 +142,7 @@ def check_conventions() -> None:
         encoding="utf-8", errors="replace")
     want = {
         'RATE_ESTIMATOR = "lrr"': RATE_ESTIMATOR == "lrr",
-        "window_domains=(10,)": LOESS_CONFIG.window_domains == (10,),
+        "window_domains=(7,)": LOESS_CONFIG.window_domains == (7,),
         "skip_southern_domains=10": LOESS_CONFIG.skip_southern_domains == 10,
         "PLOT_REAL_DOMAINS_ONLY = True": PLOT_REAL_DOMAINS_ONLY is True,
         "FLIP_SIGN_MODEL = True": FLIP_SIGN_MODEL is True,

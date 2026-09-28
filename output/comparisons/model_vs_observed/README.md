@@ -9,7 +9,7 @@ new matrix runs"). The model line comes from these runs:
 
 - metres island offset;
 - option A wave climate: Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle 0.5;
-- end rates solved for those waves: 1996 GIS 1 +4.8394 / GIS 90 +17.545, 2010 +18.8 / +24.535 m/yr;
+- end rates solved for those waves against the LOESS-7 target (re-solved and the edgeBE matrix re-run 2026-09-28): 1996 GIS 1 +4.8394 / GIS 90 +18.2545, 2010 +18.8657 / +24.2358 m/yr (LOESS-10 values were +17.545 and +18.8 / +24.535; those runs are in `raw_runs/archive/2026-09-28-loess10-ends/`);
 - edgeBE, full management, groin off;
 - Barrier3D with the route_overwash fix.
 

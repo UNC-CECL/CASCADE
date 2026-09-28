@@ -570,8 +570,12 @@ def duneline_geojson(vintage, version: str | None = None) -> Path:
 # the 10 m Barrier3D cell. The window is the CALENDAR span, not a span centred
 # on the 1997 dune survey, following [[cascade-period-is-the-calendar-year]] --
 # the interval mismatch against the dune line is reported, not corrected.
+#
+# 2010 reads calendar 2009-2011 (added 2026-09-28, Hannah: the same +-1 yr
+# window as 1996, for the offset-source comparison over 2010-2024).
 SHORELINE_WINDOW_FOR_YEAR = {
     1996: (1995, 1997),
+    2010: (2009, 2011),
 }
 
 
