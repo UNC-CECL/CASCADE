@@ -115,6 +115,9 @@ AXIS_ORDER = ("wave_height", "wave_period", "wave_asymmetry",
 OUT_ROOT = PROJECT_BASE_DIR / "output" / "calibration" / "sensitivity"
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
 RUN_INDEX = RAW_RUNS / "run_index.csv"
+# Beside the cells they describe (Hannah, 2026-09-28). Until then they went to
+# OUT_ROOT/figures, where the pre-2026-09-24 sweeps' directories still are.
+FIGURES_ROOT = RAW_RUNS / "sensitivity" / "figures"
 # Where the runner reads them (COASTSAT_BASE_DIR in HAT_hindcast_1984_2024.py).
 # The scripts/input_prep/5-scr/CoastSat path this held until 2026-09-16 no
 # longer exists; the loader only WARNED, so every observed layer was empty.
@@ -925,7 +928,7 @@ def main():
     # compare was to read every name.
     end_year = HATTERAS_PERIODS[args.start_year].get(
         "end_year", args.start_year + 20)
-    root = Path(args.out_dir) if args.out_dir else OUT_ROOT / "figures"
+    root = Path(args.out_dir) if args.out_dir else FIGURES_ROOT
     out_dir = root / f"{args.start_year}_{end_year}_{args.preset}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
