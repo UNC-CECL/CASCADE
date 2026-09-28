@@ -22,6 +22,8 @@ relocation/             does the model relocate NC-12 where and when history
                         did: per window, per event, across topography
                         versions, and the 20 m rebuild clearance
 scenario_grid/          every preset and management scenario on one page
+offset_source/          dune line vs shoreline as BRIE's island offset: how much
+                        the model changes, and whether orientation drives it (09-28)
 ```
 
 | folder | script | runs |
@@ -32,6 +34,7 @@ scenario_grid/          every preset and management scenario on one page
 | `target_comparison/` | `scripts/analyze_output/compare_runs/target_comparison.py` | option A since 09-27: the edgeBE and zeroBE matrix and the dune-line and 1996-2024 LRR end solves, 1996 and 2010, `runs_used.csv` |
 | `relocation/` | `scripts/hatteras_ms/experiments/HAT_relocation_comparison.py` and the three readers named in its README | each set's `report.txt` header |
 | `scenario_grid/` | `scripts/figure_making/model_output/scenario_grid.py` | every matrix arm, both periods |
+| `offset_source/` | `scripts/analyze_output/compare_runs/offset_source_comparison.py` | the full-management duneline/shoreline pairs of `experiments/island-offset/2026-09-28-metres-offset-duneline-vs-shoreline-waves-option-a`, 1996 and 2010, `tables/summary.csv` |
 
 ## Layout rule
 
