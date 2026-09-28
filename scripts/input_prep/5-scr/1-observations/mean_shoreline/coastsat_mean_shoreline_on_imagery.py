@@ -23,6 +23,10 @@ WHAT IS ON EACH PANEL
                         whole window; the scale marks each flight date
                         (added 2026-09-23, Hannah: "with and without the dots",
                         "a gradient to show throughout time")
+    the domains         (third version only) the Barrier3D domain boxes
+                        (transect_domains/HAT_domains.json), white with a grey
+                        edge, each labelled with its GIS number; on the site
+                        zooms and the island overview (added 2026-09-28)
 
 WHAT IT CAN AND CANNOT SHOW
     A photograph is ONE October day; the line is a three-year mean of ~28
@@ -46,6 +50,8 @@ OUTPUT   <mean_shoreline_dir(window)>/on_imagery/
         panel (a) of mean_shoreline_<window>.png alone on the 1996 photographs,
         the island outline beneath where no frame covers
     with_positions/mean_shoreline_<window>_on_imagery_with_positions_GIS<NN>_<site>.png
+    with_domains/mean_shoreline_<window>_on_imagery_with_domains_GIS<NN>_<site>.png
+    with_domains/mean_shoreline_<window>_on_imagery_with_domains_island_1996.png
         each subfolder with supporting/CAPTIONS.md (no PDFs: raster panels)
     supporting/sites.csv   the windows, both files and the position counts per site
     Also published to output/figures/shoreline/mean_shoreline/<the same subfolders>.
@@ -109,8 +115,15 @@ BAND_EDGE = dict(color=C_LINE, lw=0.5, ls=(0, (3, 2)), alpha=0.9)
 CMAP = plt.get_cmap("viridis")
 PUBLISH = fs.figure_dir("shoreline", "mean_shoreline")
 # One subfolder per version, each with its own supporting/CAPTIONS.md
-# (Hannah, 2026-09-23); sites.csv covers both and stays in on_imagery/supporting.
-VERSION_DIRS = {False: "line_and_band", True: "with_positions"}
+# (Hannah, 2026-09-23); sites.csv covers all and stays in on_imagery/supporting.
+# The key is the version, the value its subfolder; with_domains added 2026-09-28.
+VERSION_DIRS = {"line": "line_and_band", "positions": "with_positions",
+                "domains": "with_domains"}
+# The domain boxes follow the island outline's convention in the ribbon figure
+# (white, grey edge), so they cannot be mistaken for the ink shoreline or the
+# dashed band edges.
+DOMAIN_STYLE = dict(color="white", zorder=4,
+                    path_effects=[pe.withStroke(linewidth=1.9, foreground=fs.INK_MUTED)])
 
 REVIEW_SCRIPT = (_REPO / "scripts" / "input_prep" / "1-barrier3d-domains"
                  / "2-domain-reconstruction-1984" / "3-placement" / "imagery-review"
@@ -195,6 +208,27 @@ def draw_line(ax, df, b, lw=1.3, edges=True):
             path_effects=[pe.withStroke(linewidth=lw + 1.7, foreground="white")])
 
 
+def draw_domains(ax, boxes, b, lw=0.8, labels=True):
+    """The Barrier3D domain boxes crossing the window, each labelled at its
+    landward (west) side, clear of the shoreline."""
+    x0, y0, x1, y1 = b
+    bd = boxes.bounds
+    seg = boxes[(bd["maxy"] > y0) & (bd["miny"] < y1)]
+    for gis, g in zip(seg["gis"], seg.geometry):
+        xs, ys = g.exterior.xy
+        ax.plot(xs, ys, lw=lw, **DOMAIN_STYLE)
+        if labels:
+            gy0, gy1 = max(g.bounds[1], y0), min(g.bounds[3], y1)
+            ax.text(x0 + 0.04 * (x1 - x0), (gy0 + gy1) / 2, f"GIS {gis}", fontsize=7.5,
+                    va="center", ha="left", color=C_LINE, zorder=5, clip_on=True,
+                    bbox=dict(facecolor="white", alpha=0.85, edgecolor="none",
+                              boxstyle="square,pad=0.2"))
+
+
+def _domain_handle(lw=0.8):
+    return Line2D([], [], lw=lw, **{k: v for k, v in DOMAIN_STYLE.items() if k != "zorder"})
+
+
 def read_photos(imagery, b):
     """Each year's photograph for one window, read once for both versions."""
     x0, y0, x1, y1 = b
@@ -247,7 +281,8 @@ def time_bar(fig, axes, norm, imagery, window):
 
 
 def site_figure(df, pos, boxes, imagery, centre, key, window, out_dir, norm):
-    """Two versions of one site: the line and band, then the same with the positions."""
+    """Three versions of one site: the line and band, the same with the
+    positions, and the same with the domain boxes."""
     b = extent(df, boxes, centre)
     photos = read_photos(imagery, b)
     w, h = b[2] - b[0], b[3] - b[1]
@@ -257,7 +292,8 @@ def site_figure(df, pos, boxes, imagery, centre, key, window, out_dir, norm):
     row = dict(centre_gis=centre, site=key, first_gis=centre - HALF, last_gis=centre + HALF,
                x0=b[0], y0=b[1], x1=b[2], y1=b[3],
                **{f"no_photo_frac_{im.year}": round(f, 3) for im, (_, f) in zip(imagery, photos)})
-    for dots in (False, True):
+    for version, sub in VERSION_DIRS.items():
+        dots, doms = version == "positions", version == "domains"
         panel_w = fs.FIG_W_DOUBLE / n * 0.92
         fig, axes = plt.subplots(1, n, layout="constrained",
                                  figsize=(fs.FIG_W_DOUBLE, panel_w * h / w + (1.75 if dots else 0.9)))
@@ -266,6 +302,8 @@ def site_figure(df, pos, boxes, imagery, centre, key, window, out_dir, norm):
             panel(ax, im, img, b, df, i)
             if dots:
                 shown = draw_positions(ax, pos, b, norm)
+            if doms:
+                draw_domains(ax, boxes, b)
         fs._scalebar(axes[0], 200.0, show_cells=False)
         fs._north_arrow(axes[0], x=0.86, y=0.06)
         handles = [Line2D([], [], color=C_LINE, lw=1.3,
@@ -277,14 +315,21 @@ def site_figure(df, pos, boxes, imagery, centre, key, window, out_dir, norm):
             handles.append(Line2D([], [], ls="none", marker="o", ms=3.2,
                                   mfc=CMAP(0.5), mec=C_LINE, mew=0.4))
             labels.append("Individual satellite positions")
+        if doms:
+            handles.append(_domain_handle())
+            labels.append("Barrier3D domains")
         fig.legend(handles, labels, loc="outside lower center", ncol=len(handles), frameon=False)
         fig.suptitle(f"GIS {centre - HALF}–{centre + HALF}", fontsize=9.5)
-        what = "_with_positions" if dots else ""
+        what = "" if version == "line" else f"_{sub}"
         stem = f"mean_shoreline_{start}_{end}_on_imagery{what}_GIS{centre:02d}_{key}"
         dot_text = (" Dots: every satellite position the mean was taken over, geolocated along "
                     "its transect and coloured by date on the scale below the panels; the "
                     "triangles on the scale mark each photograph's flight date."
-                    if dots else "")
+                    if dots else
+                    " White boxes with grey edges: the Barrier3D model domains (500 m "
+                    "alongshore), labelled with their GIS numbers; the panel's top and "
+                    "bottom edges are the outer domain boundaries."
+                    if doms else "")
         fs.caption(fig, (
             f"The CoastSat mean shoreline for calendar {start}–{end} (ink, white halo) and "
             f"the ±1 standard deviation of the satellite positions behind each transect mean "
@@ -294,12 +339,11 @@ def site_figure(df, pos, boxes, imagery, centre, key, window, out_dir, norm):
             f"panels at one extent and scale.{dot_text} Each photograph is one autumn day; "
             f"the line is a mean over the window, so the waterline in a photograph is expected "
             f"to fall within the band, not on the line. White is outside the photographs."))
-        sub = VERSION_DIRS[dots]
         path = out_dir / sub / f"{stem}.png"
         fs.save(fig, path, vector=False, close=True)
         (PUBLISH / sub).mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, PUBLISH / sub / path.name)
-        row["file_with_positions" if dots else "file"] = f"{sub}/{path.name}"
+        row["file" if version == "line" else f"file_{sub}"] = f"{sub}/{path.name}"
         if dots:
             row.update({f"positions_{y}": int((shown["year"] == y).sum())
                         for y in range(start, end + 1)}, positions_total=len(shown))
@@ -320,7 +364,8 @@ ISLAND_PANEL_H_IN = 8.2                   # the segments are 15 km tall; this se
 
 def island_figure(df, boxes, im, sites, window, out_dir):
     """Three north-up segments side by side at one scale, on one year's photos,
-    with the site windows of the zoom figures outlined."""
+    with the site windows of the zoom figures outlined; drawn twice, the
+    second time with every domain box (the photographs are read once)."""
     ext = []
     for _, lo, hi in SEGMENTS:
         seg = boxes[boxes["gis"].between(lo, hi)]
@@ -330,16 +375,29 @@ def island_figure(df, boxes, im, sites, window, out_dir):
     widths = [b[2] - b[0] for b in ext]
     height = max(b[3] - b[1] for b in ext)
     scale = min(ISLAND_PANEL_H_IN / height, (fs.FIG_W_DOUBLE - 1.3) / sum(widths))   # in per m
-    fig = plt.figure(figsize=(fs.FIG_W_DOUBLE, height * scale + 1.0), layout="constrained")
-    axes = fig.subplots(1, 3, gridspec_kw={"width_ratios": widths})
-    for i, (ax, b, (title, lo, hi)) in enumerate(zip(axes, ext, SEGMENTS)):
-        x0, y0, x1, y1 = b
+    imgs = []
+    for b, (title, _, _) in zip(ext, SEGMENTS):
         print(f"    {title} ...")
-        img = im.read(x0, x1, y0, y1, ISLAND_RES_M, CRS).copy()
+        img = im.read(b[0], b[2], b[1], b[3], ISLAND_RES_M, CRS).copy()
         img[img.max(axis=2) == 0] = 255
+        imgs.append(img)
+    for version in ("line", "domains"):
+        _island_version(df, boxes, im, sites, window, out_dir, ext, imgs, height * scale,
+                        version)
+
+
+def _island_version(df, boxes, im, sites, window, out_dir, ext, imgs, panel_h, version):
+    doms = version == "domains"
+    widths = [b[2] - b[0] for b in ext]
+    fig = plt.figure(figsize=(fs.FIG_W_DOUBLE, panel_h + 1.0), layout="constrained")
+    axes = fig.subplots(1, 3, gridspec_kw={"width_ratios": widths})
+    for i, (ax, b, img, (title, lo, hi)) in enumerate(zip(axes, ext, imgs, SEGMENTS)):
+        x0, y0, x1, y1 = b
         ax.imshow(img, extent=(x0, x1, y0, y1), origin="upper", zorder=0,
                   interpolation="bilinear")
         draw_line(ax, df, b, lw=0.8, edges=False)
+        if doms:
+            draw_domains(ax, boxes, b, lw=0.5, labels=False)
         for _, s in sites.iterrows():
             if s["y1"] > y0 and s["y0"] < y1:
                 ax.add_patch(matplotlib.patches.Rectangle(
@@ -366,13 +424,16 @@ def island_figure(df, boxes, im, sites, window, out_dir):
     fs._scalebar(axes[0], 2000.0, show_cells=False)
     fs._north_arrow(axes[0], x=0.80, y=0.07, length=0.03)
     start, end = window
-    fig.legend([Line2D([], [], color=C_LINE, lw=0.8,
-                       path_effects=[pe.withStroke(linewidth=2.5, foreground="white")]),
-                Patch(facecolor="0.9", edgecolor="none"),
-                Patch(facecolor="none", edgecolor=C_LINE, lw=0.7)],
-               [f"Mean shoreline, {start}–{end} (CoastSat)", "±1 standard deviation",
-                "Site windows (zoom figures)"],
-               loc="outside lower center", ncol=3, frameon=False)
+    handles = [Line2D([], [], color=C_LINE, lw=0.8,
+                      path_effects=[pe.withStroke(linewidth=2.5, foreground="white")]),
+               Patch(facecolor="0.9", edgecolor="none"),
+               Patch(facecolor="none", edgecolor=C_LINE, lw=0.7)]
+    labels = [f"Mean shoreline, {start}–{end} (CoastSat)", "±1 standard deviation",
+              "Site windows (zoom figures)"]
+    if doms:
+        handles.append(_domain_handle(0.5))
+        labels.append("Barrier3D domains")
+    fig.legend(handles, labels, loc="outside lower center", ncol=len(handles), frameon=False)
     d = pd.Timestamp(im.date)
     fig.suptitle(f"USGS aerial photographs, {d.day} {d:%B %Y}", fontsize=9.5)
     fs.caption(fig, (
@@ -382,13 +443,18 @@ def island_figure(df, boxes, im, sites, window, out_dir):
         f"photographs of {d:%Y-%m-%d} (doi 10.5066/P1CXBCDW, stated accuracy 1.2 m), the island "
         f"in three north-up segments at one scale: (a) GIS 1–30, Cape Point to Avon; (b) GIS "
         f"31–60; (c) GIS 61–90, the Tri-Village to the north end. Ticks mark every fifth "
-        f"Barrier3D domain. Boxes outline the six site windows drawn at full resolution in "
-        f"the zoom figures, labelled with their domains. White is outside the photographs."))
-    path = out_dir / VERSION_DIRS[False] / f"mean_shoreline_{start}_{end}_on_imagery_island_{im.year}.png"
+        f"Barrier3D domain. Ink boxes outline the six site windows drawn at full resolution "
+        f"in the zoom figures, labelled with their domains."
+        + (" White boxes with grey edges: every Barrier3D model domain (500 m alongshore), "
+           "numbered by the ticks." if doms else "")
+        + " White is outside the photographs."))
+    sub = VERSION_DIRS[version]
+    what = "_with_domains" if doms else ""
+    path = out_dir / sub / f"mean_shoreline_{start}_{end}_on_imagery{what}_island_{im.year}.png"
     fs.save(fig, path, vector=False, close=True)
-    (PUBLISH / VERSION_DIRS[False]).mkdir(parents=True, exist_ok=True)
-    shutil.copy2(path, PUBLISH / VERSION_DIRS[False] / path.name)
-    print(f"  island figure -> {path.name}")
+    (PUBLISH / sub).mkdir(parents=True, exist_ok=True)
+    shutil.copy2(path, PUBLISH / sub / path.name)
+    print(f"  island figure -> {sub}/{path.name}")
 
 
 RIBBON_RES_M = 8.0                        # ~ the printed pixel of a 45 km ribbon
@@ -431,9 +497,9 @@ def ribbon_figure(df, im, window, out_dir):
         f"the resolution of the print and is not drawn. The island outline "
         f"(map_elements/hatteras_outline; its survey date is not recorded) is drawn in white "
         f"over the photographs, and as grey land and pale-blue water where no frame covers."))
-    path = out_dir / VERSION_DIRS[False] / f"mean_shoreline_{start}_{end}_on_imagery_ribbon_{im.year}.png"
+    path = out_dir / VERSION_DIRS["line"] / f"mean_shoreline_{start}_{end}_on_imagery_ribbon_{im.year}.png"
     fs.save(fig, path, vector=False, close=True)
-    shutil.copy2(path, PUBLISH / VERSION_DIRS[False] / path.name)
+    shutil.copy2(path, PUBLISH / VERSION_DIRS["line"] / path.name)
     print(f"  ribbon figure -> {path.name}")
 
 
