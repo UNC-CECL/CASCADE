@@ -9,13 +9,6 @@
 >
 > **Where the old version is:** the /10-era tree is in `output/archive/2026-09-27_target-comparison-div10/`. Every number below comes from the redraw.
 >
-> **LOESS 7 since 2026-09-28** (Hannah: "redo the target comparison with LOESS 7").
-> - The smoothed targets, and every `*_loess` score, now use a 7-domain LOESS (raw domain means over GIS 1–10), following the runner's scoring target.
-> - The runs and end rates are unchanged. The CoastSat-solved ends were solved against the LOESS-10 value at GIS 90, and have not been re-solved at 7.
-> - The LOESS-10 option A version is in `output/archive/2026-09-28_option-a-loess10-comparisons/`.
-> - The raw-domain-mean numbers below do not depend on the smoothing. The smoothed RMSEs rise by 1–2 m at 7 (projected, ends solved on CoastSat: 1996–2010 14.1 → 15.8 m, 2010–2024 19.7 → 21.4 m). Biases move by 0.1 m or less.
-> - No conclusion changes.
->
 > **What changed from the /10 version:**
 > - In 1996–2010 the model's correlation with the CoastSat target now clears its null at every smoothing width, for every model set (`smoothing_scale/`). In 2010–2024 it still clears it nowhere.
 > - The dune-line solve still barely moves the interior (RMSE within 1 m of the CoastSat-solved run).
@@ -90,7 +83,6 @@ number a wider window cannot flatter.
 **Option A changes the r reading for 1996–2010** (2026-09-27):
 - Every 1996–2010 row now clears its null, at every width, for every model set: r 0.35–0.49 against a null of about 0.18–0.29.
 - 2010–2024 still clears nowhere.
-- Since 2026-09-28 the sweep includes 7 domains (3.5 km), the grading window: 30 of 60 rows clear, all of them 1996–2010. At 7 domains, 1996–2010 has r 0.39–0.47 against a null of 0.19–0.30.
 - In the /10 version no r cleared its null in any of the 96 rows, which is why "r was never the number to read". That held for the /10 runs, not for option A in 1996–2010.
 
 See `smoothing_scale/PROVENANCE.md` for the tables and the reading rule.

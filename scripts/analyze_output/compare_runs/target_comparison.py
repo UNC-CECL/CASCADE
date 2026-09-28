@@ -403,7 +403,7 @@ def paired_figure(observations, frames, half, skill_df, ends, smoothed=False):
     black line, the misfit the gap between them. Both windows on one y axis.
 
     smoothed=True (2026-09-19, Hannah): the fill is the target AS GRADED (raw
-    domain means over GIS 1-10, the 10-domain LOESS beyond, the form the runs
+    domain means over GIS 1-10, the rw.TARGET_WINDOW-domain LOESS beyond, the form the runs
     and the edge solve are scored against), the raw domain means as dots over
     it; written to paired_smoothed/."""
     sfx = "_loess" if smoothed else ""
@@ -472,7 +472,7 @@ def paired_figure(observations, frames, half, skill_df, ends, smoothed=False):
             "calibrated to it, as net change in shoreline position over the 14-yr model "
             "window by GIS domain (1 at Cape Point, 90 at Pea Island), seaward positive; "
             + ("the targets SMOOTHED as the runs are graded: the raw domain means over "
-               "GIS 1–10 and a 10-domain LOESS of the transect values beyond, drawn as the "
+               f"GIS 1–10 and a {rw.TARGET_WINDOW}-domain LOESS of the transect values beyond, drawn as the "
                "fill, with the raw domain means as dots. " if smoothed else "domain means. ")
             + "(a) The CoastSat target, " + cs_clause() + " "
             "x 14 yr, as the fill (blue seaward, red landward), and the edgeBE run whose "
@@ -576,7 +576,7 @@ def unsolved_figure(observations, frames, half, skill_df, ends, smoothed=False):
             "candidate targets, as net change in shoreline position over the 14-yr model "
             "window by GIS domain (1 at Cape Point, 90 at Pea Island), seaward positive; "
             + ("the targets SMOOTHED as the runs are graded: the raw domain means over "
-               "GIS 1–10 and a 10-domain LOESS of the transect values beyond, drawn as the "
+               f"GIS 1–10 and a {rw.TARGET_WINDOW}-domain LOESS of the transect values beyond, drawn as the "
                "fill, with the raw domain means as dots. " if smoothed else "domain means. ")
             + "(a) The CoastSat target, " + cs_clause() + " x 14 yr, as the fill (blue "
             "seaward, red landward). (b) The dune-line target, the measured net change "

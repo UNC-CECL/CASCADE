@@ -51,16 +51,12 @@ PDFs and `CAPTIONS.md` are under `supporting/`.
 
 | window | target | model estimator | bias (m/yr) | RMSE (m/yr) |
 |---|---|---|---|---|
-| 1996–2010 | CoastSat LRR, smoothed (the scoring target) | OLS | +0.10 | 1.19 |
-| 1996–2010 | dune line net change, smoothed (dune-solved run) | endpoint | +0.99 | 1.73 |
-| 2010–2024 | CoastSat LRR, smoothed (the scoring target) | OLS | −1.66 | 2.31 |
-| 2010–2024 | dune line net change, smoothed (dune-solved run) | endpoint | −0.67 | 1.51 |
+| 1996–2010 | CoastSat LRR, smoothed (the scoring target) | OLS | +0.09 | 1.05 |
+| 1996–2010 | dune line net change, smoothed (dune-solved run) | endpoint | +0.93 | 1.59 |
+| 2010–2024 | CoastSat LRR, smoothed (the scoring target) | OLS | −1.64 | 2.25 |
+| 2010–2024 | dune line net change, smoothed (dune-solved run) | endpoint | −0.67 | 1.43 |
 
-- **Smoothed at 7 domains since 2026-09-28**, following the runner's scoring target.
-- At 10 domains (`output/archive/2026-09-28_option-a-loess10-comparisons/`) the four RMSEs were 1.05, 1.59, 2.25 and 1.43.
-- The narrower window leaves more alongshore detail in the target for the model to miss, so RMSE rises. Bias barely moves.
-
-- At 10 domains the two scoring-target rows reproduced the matrix and the wave-recommendation numbers (RMSE 1.05 and 2.25). At 7 they are 1.19 and 2.31. The runs' own scores in `run_index.csv` were made at 10.
+- The two scoring-target rows reproduce the matrix and the wave-recommendation numbers.
 - In 2010–2024 the model sits closer to the dune line than to CoastSat. CoastSat's 2021 +17 m step is the part of the target the model does not make.
 
 ## Other files

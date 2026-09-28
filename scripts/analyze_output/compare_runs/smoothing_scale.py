@@ -22,8 +22,9 @@ THE FIGURE IS THE POINT (Hannah, 2026-09-21)
     Over GIS 1-10 all four curves coincide, because the splice keeps the raw
     domain means there whatever the window.
 
-    The widths are 0 (raw), 3, 5 and 10 domains (0, 1.5, 2.5, 5.0 km), the
-    same four the projected-LRR product uses.
+    The widths are 0 (raw), 3, 5, 7 and 10 domains (0, 1.5, 2.5, 3.5, 5.0 km):
+    the four the projected-LRR product uses, plus 7, the grading window since
+    2026-09-28.
 
 THE TABLE, BEHIND THE FIGURE
     tables/skill_by_window.csv scores every combination in two forms:
@@ -111,7 +112,9 @@ from site_layer.hat_figure_style import (  # noqa: E402
 )
 
 OUT_DIR = tc.ROOT_DIR / "smoothing_scale"
-SMOOTH_WINDOWS = (0, 3, 5, 10)      # domain units; 10 is the grading window
+# domain units. 7 is the grading window since 2026-09-28 (rw.TARGET_WINDOW);
+# 10, the grading window until then, stays in the sweep for comparison.
+SMOOTH_WINDOWS = (0, 3, 5, 7, 10)
 N_NULL = 1000
 SEED = 20260921
 FORMS = ("as_graded", "scale_matched")
@@ -421,12 +424,13 @@ def structure_section(struct, windows):
             + f" | {r.decorrelation_km:.1f} km |")
     w10 = tgt[f"sd_removed_w{rw.TARGET_WINDOW:02d}_m_yr"]
     return [
-        "## What the 10-domain window is actually doing",
+        f"## What the {rw.TARGET_WINDOW}-domain window is actually doing",
         "",
-        "Decided 2026-09-21 (Hannah): **the window stays at "
-        f"{rw.TARGET_WINDOW} domains, but it is not noise removal and should not be "
-        "described as such.** Every run and both edge solves were graded at "
-        f"{rw.TARGET_WINDOW}; nothing is re-solved. What changes is the claim.",
+        "Decided 2026-09-21 (Hannah): the window stays at 10 domains, but it is not "
+        "noise removal and should not be described as such. Moved to "
+        f"{rw.TARGET_WINDOW} domains on 2026-09-28 (Hannah), following the runner. "
+        "The CoastSat-solved end rates drawn here were solved against the LOESS-10 "
+        "value at GIS 90; nothing is re-solved for this table.",
         "",
         "All figures in m/yr of alongshore structure removed, NOT as a share of "
         "variance: the domain-mean variance is dominated by the long-wavelength swings, "
@@ -530,7 +534,7 @@ def provenance(skill, windows, n_null, runs_used, structure=None):
         *(structure or []),
         "## The question behind it",
         "",
-        "The runs are graded against a 10-domain LOESS of the transect rates (raw "
+        f"The runs are graded against a {rw.TARGET_WINDOW}-domain LOESS of the transect rates (raw "
         f"domain means over GIS 1-{rw.SKIP}). That window has never been examined, and "
         "`../projected/tables/skill.csv` shows it is load-bearing. The "
         "table here sweeps it against the full-period CoastSat target (the 1996-2024 "

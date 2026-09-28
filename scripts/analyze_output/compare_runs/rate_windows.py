@@ -64,7 +64,8 @@ THE OBSERVATIONS
                 satellite dates per transect. Two readings:
         means        the per-domain means as the 5-scr figure draws them
                      (sign-coloured line, fill, +/-1 std)
-        loess        the SCORING TARGET as the fill: a 10-domain LOESS of the
+        loess        the SCORING TARGET as the fill: a TARGET_WINDOW-domain (7; 10 until
+                     2026-09-28) LOESS of the
                      transect rates north of D10 and the raw means over
                      D1-10, as cascade_pipeline.hindcast.build_target_table
                      makes it for the runner; the means as dots over it
@@ -263,7 +264,10 @@ NO_RUN_NOTE = "model not yet run for this window"
 
 # The scoring target, as the runner builds it (HAT_hindcast_1984_2024.py
 # section 8): one 10-domain LOESS window, raw means over D1-D10.
-TARGET_WINDOW = 10
+# 7 since 2026-09-28 (Hannah: "redo the target comparison with LOESS 7"),
+# following the runner's TARGET_WINDOW; 10 until then. The CoastSat-solved
+# end rates the figures draw were solved against the LOESS-10 value at GIS 90.
+TARGET_WINDOW = 7
 LOESS_CONFIG = LoessConfig(window_domains=(TARGET_WINDOW,),
                            skip_southern_domains=10)
 SKIP = LOESS_CONFIG.skip_southern_domains
