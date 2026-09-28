@@ -16,7 +16,7 @@ offset.
 | solve | step 0 a fresh zeroBE run, then safeguarded Newton steps (first from the metres response measured 2026-09-26, then secant capped at ±30 m/yr until bracketed, then interpolation inside the bracket); converged at \|residual\| ≤ 0.02 m/yr |
 | output | `tables/ends.json` (read by `HAT_wave_grid_fixed_ends.py`), `tables/ends.csv`, `tables/solve_log.csv` |
 
-The config is **not** changed by this study.
+The config was not changed by this study. On 2026-09-27 the Hs-2 values (option A) were written into `HATTERAS_BE_EDGE_ONLY`, and the option B pair into `HATTERAS_WAVE_OPTION_B`.
 
 Driver: `scripts/hatteras_ms/experiments/HAT_resolve_ends_metres.py`
 

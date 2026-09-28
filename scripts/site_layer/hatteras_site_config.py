@@ -1255,7 +1255,32 @@ HATTERAS_BE_RATES_EDGE = {
 # same commit that adds the calibrated one. Leaving both would give GIS 1 two
 # homes, and the merge below would quietly win.
 HATTERAS_BE_EDGE_ONLY = {
-    # (GIS 1, GIS 90), m/yr. SOLVED 2026-09-11, three Newton steps.
+    # (GIS 1, GIS 90), m/yr.
+    #
+    # CURRENT VALUES: OPTION A, ADOPTED 2026-09-27 (Hannah). Re-solved on the
+    # METRES island offset at the option A wave climate -- Hs 2.0 m, Tp 7.5 s,
+    # asymmetry 0.6, high-angle 0.5, the HAT_hindcast_config defaults since the
+    # same day -- on the edgeBE full-management nogroin run, against each
+    # window's CoastSat LRR (GIS 1 raw, GIS 90 LOESS-10), converged to
+    # |residual| <= 0.05 m/yr:
+    #
+    #   1996-2010   GIS 1 +4.8394   GIS 90 +17.545   residuals +0.006 / -0.009
+    #   2010-2024   GIS 1 +18.8     GIS 90 +24.535   residuals -0.045 / -0.008
+    #
+    # 2010 GIS 1 was set by direct probes: its response is not monotonic
+    # within ~0.1 m/yr. These values hold ONLY at those four wave settings;
+    # change one and re-solve (HAT_resolve_ends_metres.py). Record and every
+    # probe: output/raw_runs/experiments/end-domain-boundaries/
+    # 2026-09-27-ends-resolved-metres-offset/ (tables/ends.json). Option B is
+    # HATTERAS_WAVE_OPTION_B below.
+    #
+    # The two solves recorded below are the /10-OFFSET values (1996 +32.2 /
+    # +10.0, 2010 +72.6 / +31.3, at Hs 2.5 / Tp 8 / asym 0.7 / ahf 0.1). They
+    # are kept for the record; the matrix runs made on them are in
+    # output/raw_runs/archive/2026-09-24-pre-metres/.
+    #
+    # --- /10-offset solve, 1996, SUPERSEDED 2026-09-27 ---
+    # SOLVED 2026-09-11, three Newton steps.
     #
     # Fit exactly as the 1984 and 2004 end values were: model lrr_m_yr against
     # the target table's target_lrr_m_yr, on the edgeBE / road_bdm / groin-off
@@ -1309,8 +1334,9 @@ HATTERAS_BE_EDGE_ONLY = {
     # Solve reproduced with:
     #   scripts/input_prep/7-source-sink/2-calibrate/
     #       be_edge_domain_solve.py --period 1996
-    1996: (+32.2, +10.0),
+    1996: (+4.8394, +17.545),   # option A, 2026-09-27; was (+32.2, +10.0)
 
+    # --- /10-offset solve, 2010, SUPERSEDED 2026-09-27 ---
     # SOLVED 2026-09-16, three Newton steps, the same protocol as 1996. Base
     # run: the 2010 matrix zeroBE / full_management / nourish / nogroin run,
     # 2004-start v1, island offset 2010/v1, Hs 2.5.
@@ -1342,7 +1368,34 @@ HATTERAS_BE_EDGE_ONLY = {
     #   be_edge_domain_solve.py --period 2010 --kind experiment
     #       --run <base> --tag 2026-09-16-edgesolve-2010/base
     #       --run <step> --tag 2026-09-16-edgesolve-2010/step<k> ...
-    2010: (+72.6, +31.3),
+    2010: (+18.8, +24.535),     # option A, 2026-09-27; was (+72.6, +31.3)
+}
+
+# OPTION B, RECORDED, NOT WIRED (2026-09-27, Hannah). The one-parameter
+# alternative to option A: 2010-2024 at Hs 2.5 m (Tp, asymmetry and high-angle
+# as A), with its own ends, solved the same way; 1996-2010 is unchanged from A.
+# Raw share of the alongshore variation explained in 2010-2024: managed -122%
+# (A -135%), natural -538% (A -699%). No other single-parameter change helps
+# both scenarios. Neither window is fitted well; B only narrows the misfit.
+#
+# NOTHING READS THIS. It holds the numbers so that running B never means
+# digging them out of a study folder. To run B, override the one wave field and
+# the two ends; the run name gains `waveHs2p5`, so it can never overwrite an
+# option A run:
+#
+#   HAT_START_YEAR=2010 HAT_HS=2.5 HAT_SOURCE_SINK_PRESET=edgeBE \
+#   HAT_BE_OVERRIDE="1=8.0,90=40.399" python scripts/hatteras_ms/HAT_hindcast_1984_2024.py
+#
+# Record: output/raw_runs/experiments/wave-climate/2026-09-27-wave-recommendation/
+# ("Same vs period-specific"); ends in ends.json under `history` (Hs 2.5).
+HATTERAS_WAVE_OPTION_B = {
+    2010: {
+        "hs": 2.5,
+        "wave_period_s": 7.5,
+        "wave_asymmetry": 0.6,
+        "wave_angle_high_fraction": 0.5,
+        "be_edge": (+8.0, +40.399),   # (GIS 1, GIS 90), m/yr
+    },
 }
 
 for _period, (_d1, _d90) in HATTERAS_BE_EDGE_ONLY.items():

@@ -95,6 +95,18 @@ from cascade_pipeline.plotting.rate_comparison import (  # noqa: E402
 from hindcast_sensitivity import SWEEPS, normalise  # noqa: E402
 from HAT_hindcast_config import field_default  # noqa: E402
 
+# THE SWEEP'S BASE RUNS WERE MADE AT THE /10-OFFSET WAVE CLIMATE. On 2026-09-27
+# the field defaults moved to option A (Hs 2.0 / Tp 7.5 / asym 0.6 / ahf 0.5),
+# so the base point of this sweep can no longer be read from field_default for
+# the four wave fields; it is pinned here. Every other setting still reads it.
+_SWEEP_BASE_WAVES = {"hs": 2.5, "wave_period_s": 8.0, "wave_asymmetry": 0.7,
+                     "wave_angle_high_fraction": 0.1}
+
+
+def sweep_base_value(setting):
+    """The value this sweep's base runs used for one setting."""
+    return _SWEEP_BASE_WAVES.get(setting, field_default(setting))
+
 # Reading order, most informative first. Alphabetical put the relocation axis
 # -- the one that barely moves shoreline skill -- in the leftmost panel and the
 # first file, which is the opposite of how these should be read. Used for both
@@ -521,7 +533,7 @@ def plot_skill_overview(cells, index, start_year, preset, out_dir):
         # line. Without it the series jumps straight across its own reference
         # -- the Hs cells run 2.0 then 3.0 and the segment between them hides
         # the 2.5 the whole sweep is measured against.
-        default = normalise(field_default(SWEEPS[sweep]["setting"]))
+        default = normalise(sweep_base_value(SWEEPS[sweep]["setting"]))
         x = list(numeric.sort_key.to_numpy(dtype=float))
         rmse = [index.loc[k].rmse_interior_m_yr for k in numeric.key]
         bias = [index.loc[k].mean_bias_interior_m_yr for k in numeric.key]
@@ -647,7 +659,7 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
     # Named with its VALUE, not just "calibration run". On the Hs panel this is
     # the line the reader is looking for -- where the current setting sits among
     # the alternatives -- and "calibration run" does not answer that.
-    current = normalise(field_default(SWEEPS[sweep]["setting"]))
+    current = normalise(sweep_base_value(SWEEPS[sweep]["setting"]))
     units = SWEEPS[sweep]["units"]
     current_text = "measured" if current is None else f"{current:g}"
     if units:
@@ -812,7 +824,7 @@ def plot_circularity(start_year, index, out_dir):
     # Two entities, fixed colours: the preset owns the colour, so adding a third
     # preset later cannot repaint these two.
     preset_colors = {"calibBE": "#B24502", "edgeBE": "#08519C"}
-    default_hs = float(field_default("hs"))
+    default_hs = float(sweep_base_value("hs"))
 
     # PANEL (b) EXISTS BECAUSE OF THE MAGNITUDE GAP. calibBE fits 48 domains to
     # the target and sits around 0.5-1.2; edgeBE fits two and sits around

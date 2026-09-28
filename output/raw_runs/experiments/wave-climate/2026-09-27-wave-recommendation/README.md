@@ -1,5 +1,7 @@
 # 2026-09-27 — recommended hindcast wave climate
 
+> **Adopted 2026-09-27: option A** is now the model default (waves in `HAT_hindcast_config` / `hat_run.yaml`, ends in `hatteras_site_config.HATTERAS_BE_EDGE_ONLY`). Option B is recorded as `HATTERAS_WAVE_OPTION_B` in the site config, not wired.
+
 Synthesis of every wave test of 24–27 September (no new runs except the
 recommended setting under the natural scenario). Write-up with the figures:
 https://claude.ai/artifact/L3ezkgxG7aQNDDPMYazDjG (private).

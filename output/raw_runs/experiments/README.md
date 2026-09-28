@@ -20,7 +20,7 @@ alongshore variation explained (option A): 1996–2010 managed +20%, natural +24
   The top-level `reference_waves` key records the first solve (Hs 1) and is not the current setting.
   Pass the ends as `HAT_BE_OVERRIDE="1=<GIS 1>,90=<GIS 90>"` with the edgeBE preset.
 - The report, covering the same waves across windows vs period-specific waves and every test: https://claude.ai/artifact/L3ezkgxG7aQNDDPMYazDjG (private)
-- Not yet written into the site config: `HATTERAS_BE_EDGE_ONLY` still holds the older ends.
+- **In the code since 2026-09-27:** option A is the default. The ends are in `hatteras_site_config.HATTERAS_BE_EDGE_ONLY` and the waves are the `HAT_hindcast_config` / `hat_run.yaml` defaults, so a plain edgeBE run uses them with no overrides. Option B is recorded as `HATTERAS_WAVE_OPTION_B` in the site config, with the command that runs it (`HAT_HS=2.5` plus `HAT_BE_OVERRIDE`).
 
 ## [`island-offset/`](island-offset/README.md)
 

@@ -216,11 +216,22 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     # reason: scripts/sensitivity_analysis sweeps them, and a sweep that has to
     # edit the model source between cells is the hand-editing failure this
     # module exists to remove.
-    ("hs",                           ("physics", "wave_height_Hs"), _as_float, 2.5),
-    ("wave_period_s",                ("physics", "wave_period_s"),  _as_float, 8.0),
-    ("wave_asymmetry",               ("physics", "wave_asymmetry"), _as_float, 0.7),
+    #
+    # OPTION A, ADOPTED 2026-09-27 (Hannah): Hs 2.0 m, Tp 7.5 s, asymmetry 0.6,
+    # high-angle 0.5, the same in both windows. Chosen on the metres offset
+    # from the fixed-ends wave grid, on the raw score; the edge ends in
+    # hatteras_site_config.HATTERAS_BE_EDGE_ONLY were solved at exactly these
+    # four values and are not valid at any other. Record:
+    # output/raw_runs/experiments/wave-climate/2026-09-27-wave-recommendation/.
+    # Option B (Hs 2.5 in 2010-2024 only) is recorded, not wired:
+    # hatteras_site_config.HATTERAS_WAVE_OPTION_B.
+    # Until 2026-09-27 these read 2.5 / 8.0 / 0.7 / 0.1, the /10-offset
+    # calibration; every run named before then is named against those.
+    ("hs",                           ("physics", "wave_height_Hs"), _as_float, 2.0),
+    ("wave_period_s",                ("physics", "wave_period_s"),  _as_float, 7.5),
+    ("wave_asymmetry",               ("physics", "wave_asymmetry"), _as_float, 0.6),
     ("wave_angle_high_fraction",     ("physics", "wave_angle_high_fraction"),
-                                                                    _as_float, 0.1),
+                                                                    _as_float, 0.5),
 
     # WHERE A RELOCATED ROAD GOES, in metres behind the dune line. This is the
     # RELOCATION TARGET ONLY -- the road's position at t = 0 always comes from

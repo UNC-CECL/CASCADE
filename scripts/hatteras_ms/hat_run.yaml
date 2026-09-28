@@ -166,19 +166,22 @@ physics:
   # Significant wave height, m. One value per run, no sweep here -- a sweep is
   # a separate script that drives this file once per cell.
   #
-  # 2.5 is the calibration value and is already high: the USGS hindcast mean
-  # for this coast is ~1.2-1.3 m and the morphologically effective height
-  # ~1.4-1.5 m. BRIE's alongshore diffusivity scales with it, so this is the
-  # strongest single lever on the transport the groin is fitted against.
-  wave_height_Hs: 2.5
+  # OPTION A, adopted 2026-09-27: Hs 2.0 / Tp 7.5 / asymmetry 0.6 / high-angle
+  # 0.5 in both windows, tuned on the metres offset (Hs is a tuning parameter
+  # here, judged by skill). The edge ends in hatteras_site_config were solved
+  # at exactly these four values; change one and the ends need re-solving.
+  # Record: output/raw_runs/experiments/wave-climate/2026-09-27-wave-recommendation/.
+  # Option B (2010-2024 at Hs 2.5) is recorded as HATTERAS_WAVE_OPTION_B in
+  # hatteras_site_config, with the command that runs it.
+  # Was 2.5 / 8.0 / 0.7 / 0.1 (the /10-offset calibration) until 2026-09-27.
+  wave_height_Hs: 2.0
   # Peak period, s.
-  wave_period_s: 8.0
-  # Fraction of waves approaching from the left of shore-normal. 0.7 is the
-  # standard Ashton-Murray asymmetry for this coast.
-  wave_asymmetry: 0.7
+  wave_period_s: 7.5
+  # Fraction of waves approaching from the left of shore-normal.
+  wave_asymmetry: 0.6
   # Fraction approaching at more than 45 deg, i.e. the unstable, cuspate-
   # forming end of the wave climate.
-  wave_angle_high_fraction: 0.1
+  wave_angle_high_fraction: 0.5
 
 
 # --- management -------------------------------------------------------------
