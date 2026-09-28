@@ -21,7 +21,7 @@ Workflow
   1. Load CoastSat domain-averaged LRR (P1 and P2) — the observed shoreline
      change rate
   2. Load CASCADE base-run LRR from NPZ (P1 and P2, management included, BE=0)
-  3. LOESS-smooth the observed shoreline change rate (10-domain window),
+  3. LOESS-smooth the observed shoreline change rate (7-domain window; 10 until 2026-09-28),
      excluding domains 1-GROIN_EXCLUDE_THROUGH_DOMAIN (Buxton groin influence
      zone) from the fit entirely — those domains pass through with their raw,
      unsmoothed rate
@@ -222,8 +222,8 @@ ARM_RUNS_DIR  = PROJECT_BASE_DIR / "output" / "calibration" / "hs" / "runs"
 
 # The section 8 settings, matching the runner. TARGET_WINDOW is the widest
 # window; `rate_comparison` resolves the reference the same way.
-LOESS_CONFIG  = LoessConfig(window_domains=(7, 10), skip_southern_domains=10)
-TARGET_WINDOW = 10
+LOESS_CONFIG  = LoessConfig(window_domains=(7,), skip_southern_domains=10)
+TARGET_WINDOW = 7   # 10 until 2026-09-28, with the runner
 
 # HAT_BE_OUTPUT_DIR redirects every output -- be_zone_metrics.csv,
 # DOMAIN_BE_RATES*.txt, convergence_history.json, the figures. A what-if pass
@@ -296,14 +296,14 @@ SHIFT_THRESHOLD = 0.75   # m/yr
 
 # ── LOESS smoothing ───────────────────────────────────────────────────────────
 # Fraction of data used for each local regression (larger = smoother).
-# 10-domain window matches the CoastSat LOESS calibration window used
-# throughout the dissertation. As of this version, smoothing is applied to
+# 7-domain window matches the CoastSat LOESS calibration window used
+# throughout the dissertation (10 until 2026-09-28). As of this version, smoothing is applied to
 # the OBSERVED SHORELINE CHANGE RATE itself (before differencing against
 # CASCADE) — not to the residual. LOESS_FRAC is calibrated for the full
 # 90-domain array; see smooth_shoreline_rate() for how it's re-derived once
 # the groin zone is excluded from the fit.
-LOESS_FRAC = 0.111  # exactly 10 domains at 90 total
-LOESS_WINDOW_DOMAINS = 10  # the actual window width LOESS_FRAC is calibrated to hit
+LOESS_FRAC = 7 / 90  # exactly 7 domains at 90 total
+LOESS_WINDOW_DOMAINS = 7  # the actual window width LOESS_FRAC is calibrated to hit
 
 # Domains 1 through this value are excluded ENTIRELY from the shoreline-rate
 # LOESS fit (Buxton groin influence zone) — the groin's localized signal
@@ -842,11 +842,11 @@ def smooth_shoreline_rate(raw_rate, exclude_through=GROIN_EXCLUDE_THROUGH_DOMAIN
     domains 1..exclude_through after smoothing over the full array).
 
     frac is re-derived here rather than reusing LOESS_FRAC directly: LOESS_FRAC
-    (0.111) is calibrated to give a 10-domain window when fit over all 90
+    (7/90) is calibrated to give a 7-domain window when fit over all 90
     domains. Once the groin zone is excluded, only 80 domains remain in the
-    fit, so reusing 0.111 unchanged would narrow the window to ~8.9 domains.
-    Recomputing frac = window_domains / n_valid preserves the true ~10-domain
-    (~5 km) window this dissertation uses everywhere else.
+    fit, so reusing 7/90 unchanged would narrow the window to ~6.2 domains.
+    Recomputing frac = window_domains / n_valid preserves the true ~7-domain
+    (~3.5 km) window this dissertation uses everywhere else.
     """
     n_valid = len(raw_rate) - exclude_through
     frac    = window_domains / n_valid

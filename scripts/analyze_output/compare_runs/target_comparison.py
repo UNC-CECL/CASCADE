@@ -23,7 +23,7 @@ EVERYTHING OVER THE MODEL PERIOD (14 yr per window)
 RAW AND SMOOTHED
     The lines are the raw domain means. tables/skill.csv scores the model
     against both targets both raw and with the scoring target's LOESS
-    treatment (raw means D1-10, 10-domain LOESS beyond), the form the runs are
+    treatment (raw means D1-10, 7-domain LOESS beyond), the form the runs are
     graded in.
 
 THREE MODEL SETS, ONE SUBFOLDER EACH (Hannah has not chosen the target)

@@ -184,7 +184,7 @@ ANN_C_GROIN        = "#B71C1C"   # red for groin line
 #                         so the smoothed signal is the dominant visual.
 #                         Set both True to suppress nearly all raw noise.
 # LOESS_FRAC    : fraction of domains used for each local fit.
-#                 10-domain window over 90 domains -> frac = 10/90 ≈ 0.111.
+#                 7-domain window over 90 domains -> frac = 7/90 ≈ 0.078 (10/90 until 2026-09-28).
 #                 Matches the window used in the cross-period LOESS comparison
 #                 and preserves community-scale signals (Avon, Wimble Shoals)
 #                 while filtering sub-kilometer noise.
@@ -193,7 +193,7 @@ LOESS_OVERLAY      = True
 LOESS_ONLY         = True    # if True, raw line drawn at reduced alpha
 RAW_ALPHA_SCALE    = 0.25    # multiplier applied to LINE_ALPHA for raw line
                              # when LOESS_ONLY is True (0 = hide raw entirely)
-LOESS_FRAC         = 0.111   # ~10-domain window; matches smoothing_vs_cascade.py
+LOESS_FRAC         = 7 / 90  # 7-domain window, the model target's
 LOESS_LINE_WIDTH   = 3.0
 LOESS_LINE_ALPHA   = 0.95
 

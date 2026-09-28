@@ -328,7 +328,7 @@ def _target(extended=False):
     from cascade_pipeline.domains import DEFAULT_DOMAINS, DomainGeometry
     from cascade_pipeline.hindcast import build_target_table
     from site_layer.hat_observed_rates import lrr_csv, lrr_csv_ext
-    loess = LoessConfig(window_domains=(10,), skip_southern_domains=10)
+    loess = LoessConfig(window_domains=(7,), skip_southern_domains=10)  # 10 until 2026-09-28
     if extended:
         first, last = GEOMETRIES["n115"]
         domains = DomainGeometry(num_real_domains=last - first + 1, first_gis_id=first)
@@ -339,7 +339,7 @@ def _target(extended=False):
         [CoastSatDataset(label="extended" if extended else "surveyed",
                          period_start=PERIOD, csv_path=str(csv_path))],
         PERIOD, loess, domains=domains)
-    table = build_target_table(series[0], loess, domains, 10)
+    table = build_target_table(series[0], loess, domains, 7)
     return table.set_index("gis_domain")["target_lrr_m_yr"]
 
 
@@ -486,7 +486,7 @@ def draw_compare(finals, target):
                  "run: the 90-domain reach with extrapolated buffers and boundary source/sink "
                  "terms of +32.2 at GIS 1 and +10.0 m/yr at GIS 90) and for the Pea Island "
                  "extension (GIS 1-115 on the measured coast, its ends solved to +37.1 "
-                 "and +41.7 m/yr), against the CoastSat target (LOESS-10, raw means on "
+                 "and +41.7 m/yr), against the CoastSat target (LOESS-7, raw means on "
                  "GIS 1-10); the main approach without boundary terms is dotted. Compressed "
                  "planform, full_management, no groin. The two runs coincide from GIS 13 "
                  "to 78 and part only where the GIS 90 boundary term acted (GIS 80-90), where "
@@ -537,7 +537,7 @@ def draw(finals, target):
     caption(fig, "Modelled 1996-2010 shoreline change rate (OLS slope through the annual "
                  "states, + seaward) along the reach for the 90-domain reach and the "
                  "extended reach, each with its boundary source/sink terms solved against "
-                 "the observed rate at its end domains, against the CoastSat rate (LOESS-10; "
+                 "the observed rate at its end domains, against the CoastSat rate (LOESS-7; "
                  "raw means on GIS 1-10): solid over the surveyed reach, dashed over the "
                  "extension, where the LOESS is one-sided at GIS 115 as it is at GIS 90 in "
                  "the 90-domain reach. Shaded: beyond GIS 90. (a) the compressed planform "

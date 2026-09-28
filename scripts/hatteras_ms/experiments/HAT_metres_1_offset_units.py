@@ -261,7 +261,8 @@ SMOOTH_DOMAINS = 7                   # the CoastSat target's LOESS window; 10 un
 
 def smooth_like_target(series):
     """A model series (per GIS domain) smoothed as the CoastSat target is:
-    LOESS over a 10-domain window (frac 10/90 on the 90 domains, matching the
+    LOESS over a SMOOTH_DOMAINS window (7 since 2026-09-28, 10 before; frac
+    SMOOTH_DOMAINS/90 on the 90 domains, matching the
     target's 0.110), the southern 10 domains left raw as the target leaves
     them. Added 2026-09-25 for the smoothed score (Hannah); shared by the
     step-2 figures and wave-climate/2026-09-25-wave-grid-smoothed-score."""
@@ -400,7 +401,7 @@ def cmd_score(a):
         out[out.sweep == sweep].to_csv(TABLES_DIR / f"{sweep}_sweep.csv", index=False)
     t = interior(target)
     pd.DataFrame([{
-        "target": "CoastSat LRR 1996-2010, LOESS 10 domains",
+        "target": f"CoastSat LRR 1996-2010, LOESS {SMOOTH_DOMAINS} domains",
         "domains": "GIS 2-89", "n_domains": len(t),
         "mean_m_yr": t.mean(), "sd_m_yr": t.std(ddof=0),
         "flat_line_rmse_m_yr": t.std(ddof=0),

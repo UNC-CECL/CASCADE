@@ -25,7 +25,7 @@ runner scores against. Writes, under figures/ in the study folder:
       their defaults: (a) rate vs the CoastSat LRR target, (b) position change
       vs the observed CoastSat change 1996 -> 2010
 
-Scores are the runner's (interior GIS 2-89, LRR, CoastSat LOESS 10-domain
+Scores are the runner's (interior GIS 2-89, LRR, CoastSat LOESS 7-domain since 2026-09-28, 10 before
 target), plus the alongshore-variation scores `score` adds from the same
 target (study.coastsat_target, checked there against the runner's RMSE).
 ==============================================================================

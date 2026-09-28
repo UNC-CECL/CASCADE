@@ -278,19 +278,18 @@ ACTIVE_PERIOD_START = None   # 1984 or 2004, or None for auto
 # revert to the original single-curve behaviour.
 #   10 domains → frac ≈ 0.111 → ~5 km  ← recommended primary
 #    7 domains → frac ≈ 0.078 → ~3.5 km ← narrower reference
-LOESS_WINDOW_DOMAINS = [7, 10]   # list of 1 or 2 window sizes (domains)
+LOESS_WINDOW_DOMAINS = [7]   # list of 1 or 2 window sizes (domains); [7, 10] until 2026-09-28
 
 # Styling for each entry in LOESS_WINDOW_DOMAINS (matched by list position).
 # Tuple: (linewidth, linestyle, alpha_factor_for_active_period)
 # The fill in plot_annotated is drawn only for windows with linestyle "-".
 LOESS_WINDOW_STYLES = [
-    (1.8, "-",  1.00),   # narrower window (7-dom): solid — distinguished from 10-dom by color
-    (2.0, "-",  1.00),   # wider window   (10-dom): solid, full opacity, primary reference
+    (2.0, "-",  1.00),   # the 7-domain window: solid, full opacity, primary reference
 ]
 
 # Which LOESS window (domain count) to use as the reference curve in the
 # residuals plot.  Must be one of the values in LOESS_WINDOW_DOMAINS.
-RESIDUALS_LOESS_WINDOW = 10
+RESIDUALS_LOESS_WINDOW = 7
 
 # =============================================================================
 # SECTION 5: PLOT OPTIONS

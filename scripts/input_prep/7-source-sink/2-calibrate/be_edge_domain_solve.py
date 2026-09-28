@@ -23,7 +23,8 @@
 # THE TWO TARGETS ARE DIFFERENT ESTIMATORS, DELIBERATELY
 #   GIS 1  the raw per-domain transect mean. LoessConfig.skip_southern_domains
 #          is 10, so D1-D10 are drawn raw rather than smoothed.
-#   GIS 90 the LOESS-10 value, which is what is drawn everywhere north of D10.
+#   GIS 90 the LOESS value (TARGET_WINDOW, 7 since 2026-09-28; 10 before),
+#          which is what is drawn everywhere north of D10.
 #   That splice is what the rate-comparison figure draws, so fitting against
 #   the same table means fit and figure cannot disagree. Both come out of
 #   build_target_table, so neither is computed here.
@@ -105,8 +106,8 @@ RUN_INDEX = RUN_ROOT / "run_index.csv"
 
 # Section 8 of the runner builds the target this way. Kept identical rather
 # than imported from it, because importing that file RUNS a hindcast.
-LOESS_CONFIG = LoessConfig(window_domains=(10,), skip_southern_domains=10)
-TARGET_WINDOW = 10
+LOESS_CONFIG = LoessConfig(window_domains=(7,), skip_southern_domains=10)
+TARGET_WINDOW = 7   # 10 until 2026-09-28, with the runner
 
 # The model side of the residual. Must be the OLS slope, matching the
 # observed side; change_rate_m_yr is the endpoint difference and every preset
@@ -227,8 +228,8 @@ def report(period, runs, preset, kinds, tags, target_source="coastsat",
     end_year = HATTERAS_PERIODS[period]["end_year"]
     if target_source == "coastsat":
         target = load_target(start_year, end_year, coastsat_window)
-        target_note = "CoastSat LRR{0}: raw mean at GIS 1, LOESS-10 at GIS 90".format(
-            " {0}-{1}".format(*coastsat_window) if coastsat_window else "")
+        target_note = "CoastSat LRR{0}: raw mean at GIS 1, LOESS-{1} at GIS 90".format(
+            " {0}-{1}".format(*coastsat_window) if coastsat_window else "", TARGET_WINDOW)
     else:
         target, target_note = load_dune_target(start_year, end_year, dune_smooth)
     column = ESTIMATOR_COLUMN[estimator]

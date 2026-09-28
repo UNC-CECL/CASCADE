@@ -16,7 +16,7 @@ the two, and are now simply what this figure has.
 
     THE LOESS CURVE ONLY, NOT THE SPLICED TARGET
         The calibration target is not one curve: GIS 1-10 are raw per-domain
-        means and D11 north is the 10-domain LOESS. That splice is right for
+        means and D11 north is the 7-domain LOESS. That splice is right for
         calibrating -- the raw means keep the short-wavelength signal the
         source/sink field has to answer for -- but it makes an awkward figure,
         because the eye reads a change of estimator as a change of coast.
@@ -387,7 +387,7 @@ def main():
 
         south = gis <= SKIP_SOUTH
         axis.plot(gis[~south], obs[~south], color="#1A1A1A", linewidth=1.8,
-                  zorder=7, label="CoastSat LOESS (10-domain)")
+                  zorder=7, label="CoastSat LOESS (7-domain)")
         axis.plot(gis[south], obs[south], color="#1A1A1A", linewidth=1.3,
                   linestyle=(0, (4, 2)), zorder=7,
                   label="LOESS, D1–D10 (excluded by convention)")
@@ -434,7 +434,7 @@ def main():
     for axis in axes:
         for h, l in zip(*axis.get_legend_handles_labels()):
             found.setdefault(l, h)
-    order = ["CoastSat LOESS (10-domain)",
+    order = ["CoastSat LOESS (7-domain)",
              "LOESS, D1–D10 (excluded by convention)",
              "CoastSat transect LRR (D1–D10)",
              "observed spread (±1 SD of transects)"]
@@ -454,7 +454,7 @@ def main():
 
     caption_text = (
         vocab["title"] + ". Configuration: " + vocab["config"]
-        + " The observed curve is the 10-domain LOESS of CoastSat transect "
+        + " The observed curve is the 7-domain LOESS of CoastSat transect "
         "rates; over D1–D10 (hatched) it is dashed because the project "
         "excludes the LOESS there (the smoother is poorly constrained at the "
         "end of its range, and Cape Point's attachment-detachment cycle is "

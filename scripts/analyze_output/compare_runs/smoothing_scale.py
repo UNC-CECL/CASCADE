@@ -429,8 +429,8 @@ def structure_section(struct, windows):
         "Decided 2026-09-21 (Hannah): the window stays at 10 domains, but it is not "
         "noise removal and should not be described as such. Moved to "
         f"{rw.TARGET_WINDOW} domains on 2026-09-28 (Hannah), following the runner. "
-        "The CoastSat-solved end rates drawn here were solved against the LOESS-10 "
-        "value at GIS 90; nothing is re-solved for this table.",
+        "The CoastSat-solved end rates drawn here were re-solved against the LOESS-7 "
+        "value at GIS 90 the same day; nothing is re-solved for this table.",
         "",
         "All figures in m/yr of alongshore structure removed, NOT as a share of "
         "variance: the domain-mean variance is dominated by the long-wavelength swings, "

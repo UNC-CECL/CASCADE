@@ -527,7 +527,7 @@ the function's `transect_domain_ids`, `transect_lrr_values` and
 
 So the target has two different provenances along its length, and
 `COASTSAT_TARGET` labels each row accordingly: **raw per-domain mean** for GIS
-1-10, **LOESS 10-domain** for GIS 11-90.
+1-10, **LOESS 7-domain** for GIS 11-90 (10-domain until 2026-09-28).
 
 That boundary matters for section 7. The Buxton groin sits at GIS 5.5, so both
 of its flanking domains fall in the unsmoothed zone -- the groin's

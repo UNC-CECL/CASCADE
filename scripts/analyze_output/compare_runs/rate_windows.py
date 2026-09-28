@@ -263,10 +263,11 @@ LS_SECOND = (0, (4, 2))     # the second model line where two share a panel
 NO_RUN_NOTE = "model not yet run for this window"
 
 # The scoring target, as the runner builds it (HAT_hindcast_1984_2024.py
-# section 8): one 10-domain LOESS window, raw means over D1-D10.
+# section 8): one LOESS window, raw means over D1-D10.
 # 7 since 2026-09-28 (Hannah: "redo the target comparison with LOESS 7"),
 # following the runner's TARGET_WINDOW; 10 until then. The CoastSat-solved
-# end rates the figures draw were solved against the LOESS-10 value at GIS 90.
+# end rates the figures draw were re-solved against the LOESS-7 value at GIS 90
+# the same day (end-domain-boundaries/2026-09-28-ends-resolved-loess7).
 TARGET_WINDOW = 7
 LOESS_CONFIG = LoessConfig(window_domains=(TARGET_WINDOW,),
                            skip_southern_domains=10)
@@ -432,7 +433,7 @@ def _target_frame(series):
 
 
 def load_coastsat_target(window):
-    """The per-domain scoring target: raw means D1-10, the 10-domain LOESS
+    """The per-domain scoring target: raw means D1-10, the TARGET_WINDOW LOESS
     beyond, from build_target_table on the window's transect_lrr_full.csv."""
     start, end = window
     series = build_coastsat_series(

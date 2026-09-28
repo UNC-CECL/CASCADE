@@ -149,12 +149,11 @@ SOURCE_SINK_PRESET = "base"   # used in plot title only (no calculation here)
 Hs_LABEL           = 2.5      # used in plot title / legend
 
 # LOESS windows to overlay (domain count) — matches run script
-LOESS_WINDOW_DOMAINS = [7, 10]
+LOESS_WINDOW_DOMAINS = [7]      # [7, 10] until 2026-09-28
 LOESS_WINDOW_STYLES  = [
-    (1.8, "-", 1.00),   # 7-domain: solid
-    (2.0, "-", 1.00),   # 10-domain: solid, primary reference
+    (2.0, "-", 1.00),   # 7-domain: solid, primary reference
 ]
-RESIDUALS_LOESS_WINDOW      = 10
+RESIDUALS_LOESS_WINDOW      = 7
 LOESS_SKIP_SOUTHERN_DOMAINS = 10   # raw means for domains 1–10; LOESS from 11+
 
 PLOT_RAW_LRR          = True

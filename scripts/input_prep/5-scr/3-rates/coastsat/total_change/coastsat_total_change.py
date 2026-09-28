@@ -136,7 +136,7 @@ from site_layer.hat_observed_rates import (  # noqa: E402
     PROJECTED_RATE_WINDOW, WINDOW_ROLE,
 )
 # The model target's own smoother, imported rather than re-implemented so the
-# 10-domain figure here IS the treatment the runs are graded under.
+# 7-domain figure here IS the treatment the runs are graded under (10 until 2026-09-28).
 from cascade_pipeline.coastsat_loess import spliced_loess_series  # noqa: E402
 from cascade_pipeline.domains import DEFAULT_DOMAINS  # noqa: E402
 

@@ -3,7 +3,7 @@
 plot_coastsat_poster.py
 ==============================================================================
 The LOESS-SMOOTHED companion to coastsat_calibration_periods.png: the same
-CoastSat rates over the same two run periods, smoothed over a 10-domain (5 km)
+CoastSat rates over the same two run periods, smoothed over a 7-domain (3.5 km)
 window so the alongshore pattern reads without the domain-to-domain scatter.
 
 Drawn in exactly the style of the primary, so the two can be laid side by side
@@ -70,7 +70,7 @@ PERIOD_STARTS = (1996, 2010)
 PERIODS = [(st, HATTERAS_PERIODS[st]["end_year"]) for st in PERIOD_STARTS]
 DOMAIN_COL, LRR_COL = "domain_number", "mean_lrr"
 DOMAIN_MIN, DOMAIN_MAX = 1, 90
-WINDOW_DOMAINS = 10                      # 5.0 km at the 500 m domain spacing
+WINDOW_DOMAINS = 7                       # 3.5 km at the 500 m domain spacing; 10 until 2026-09-28
 PERIOD_COLOURS = ((C_1984, C_1984_FILL), (C_1997, C_1997_FILL))
 
 

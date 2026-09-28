@@ -172,7 +172,7 @@ _DROPPED = tuple(p for p in _WANTED if p not in PRESETS)
 
 # Section 8's settings, matching the runner, so the target drawn here is the
 # curve the runs were scored against rather than a second opinion.
-LOESS_CONFIG = LoessConfig(window_domains=(7, 10), skip_southern_domains=10)
+LOESS_CONFIG = LoessConfig(window_domains=(7,), skip_southern_domains=10)
 
 # WHICH MODEL COLUMN THESE PANELS DRAW. The observed curve on every panel
 # is a CoastSat LRR -- a per-transect OLS slope through the period -- so
@@ -184,7 +184,7 @@ RATE_COLUMN = "lrr_m_yr"
 RATE_LABEL = ("LRR" if RATE_COLUMN == "lrr_m_yr"
               else "endpoint difference")
 
-TARGET_WINDOW = 10
+TARGET_WINDOW = 7   # 10 until 2026-09-28, with the runner
 
 # Ordered by management intensity -- the order the colour ramp encodes.
 SCENARIO_ORDER = ("natural", "beachdune_only", "roadway_only",
@@ -337,7 +337,7 @@ def main():
             target = targets[start]
             ax.plot(target.index, target.values, color=TARGET_COLOUR,
                     linewidth=2.6, zorder=5,
-                    label="CoastSat target (LOESS 10-domain)")
+                    label=f"CoastSat target (LOESS {TARGET_WINDOW}-domain)")
             row_values.append(target.values)
 
             for scenario in SCENARIO_ORDER:

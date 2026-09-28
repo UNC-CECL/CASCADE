@@ -450,8 +450,8 @@ HATTERAS_BE_EDGE_DOMAINS = (HATTERAS_DOMAINS.first_gis_id,
 # each end, so fit and figure cannot disagree:
 #   GIS 1   raw per-domain transect mean -- LoessConfig.skip_southern_
 #           domains is 10, so D1-D10 are drawn raw, not smoothed.
-#   GIS 90  the LOESS-10 value, the primary window, which is what is
-#           drawn everywhere north of D10.
+#   GIS 90  the LOESS value of the primary window (7 domains since
+#           2026-09-28, 10 before), which is what is drawn north of D10.
 # The two ends therefore use different estimators. That is deliberate:
 # it mirrors the splice the figure already makes.
 #

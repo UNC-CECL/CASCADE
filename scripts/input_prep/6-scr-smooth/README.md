@@ -171,8 +171,8 @@ sweep, the sensitivity plotter and `7-source-sink/2-calibrate/`. It reads the
 same raw `transect_lrr_full.csv` and applies the same transect-first method
 this stage chose, configured as:
 
-    LoessConfig(window_domains=(7, 10), skip_southern_domains=10)
-    TARGET_WINDOW = 10          # rate_comparison uses max(window_domains)
+    LoessConfig(window_domains=(7,), skip_southern_domains=10)
+    TARGET_WINDOW = 7           # rate_comparison uses max(window_domains); 10 until 2026-09-28
 
 `skip_southern_domains=10` is **display-only**: LOESS still fits over all
 transects and only the result is truncated across GIS 1-10, so the southern

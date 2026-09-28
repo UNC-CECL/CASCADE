@@ -24,7 +24,7 @@ WHAT THE MODEL IS SCORED AGAINST, AND WHY THE FIGURE SHOWS THREE THINGS
     The target is a HYBRID, not one curve: GIS 1..skip_southern_domains are raw
     per-domain means (LOESS is suppressed near Oregon Inlet, where boundary
     effects dominate and smoothing would hide the gradient), and the rest is the
-    LOESS 10-domain reference. So the alongshore panels carry the raw transect
+    LOESS reference (7 domains since 2026-09-28, 10 before). So the alongshore panels carry the raw transect
     scatter, both LOESS windows, and the spliced target -- reporting RMSE
     against a hybrid while plotting only one of its halves would misstate what
     the number means.
@@ -640,7 +640,7 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
         x_transform=lambda along_m: (along_m / HATTERAS_DOMAINS.domain_spacing_m
                                      + HATTERAS_DOMAINS.first_gis_id),
     )
-    # Dashed on purpose: over D11-90 this IS the LOESS-10 curve already drawn
+    # Dashed on purpose: over D11-90 this IS the LOESS target curve already drawn
     # underneath, so a second solid line would just thicken it. Dashed, the
     # reader sees them coincide there and separate over D1-10, which is where
     # the target stops being a LOESS curve at all.
