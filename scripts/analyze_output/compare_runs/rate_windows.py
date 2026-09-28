@@ -26,6 +26,12 @@ WHY IT IS HERE AND NOT IN 5-scr
     IMPORTS the observed drawing from the 5-scr producer rather than copying
     it, so the two cannot drift apart in how the observation is drawn.
 
+THE RUNS, SINCE 2026-09-27: the option A metres matrix, 1996 and 2010 only
+    (MATRIX_RUNS says which), every figure on the CoastSat-solved run
+    (DUNE_SOLVE_CURRENT). The list below is the /10-offset set this script
+    drew until then, kept for the record; those figures are in
+    output/archive/2026-09-27_model-vs-observed-div10/.
+
 THE RUNS (Hannah, 2026-09-15)
     1984-2004   HAT_1984_2004_edgeBE_road_bdm_nogroin, the version-pair/v2 arm
                 (topography v2, as asked; the calibration arm is on v1)
@@ -204,12 +210,21 @@ from site_layer.hat_figure_style import COMPARISONS_ROOT  # noqa: E402
 OUT_DIR = COMPARISONS_ROOT / "model_vs_observed"
 
 PRESET = "edgeBE"
-# window -> (run_name, arm): the matrix, ends solved on CoastSat
+# window -> (run_name, arm): the matrix, ends solved on CoastSat.
+#
+# OPTION A MATRIX (2026-09-27, Hannah: "make the model vs observed figures for
+# the new matrix runs"). The metres-offset matrix at the option A wave climate
+# (Hs 2.0 / Tp 7.5 / asym 0.6 / high-angle 0.5) with the ends solved for it,
+# 1996 and 2010 only. 1984-2004 and 2004-2024 have no metres run, so their
+# panels carry NO_RUN_NOTE. The /10-offset runs these names pointed to until
+# then (HAT_<w>_edgeBE_road_bdm[_nourish]_nogroin, 1984 on version-pair/v2)
+# are in raw_runs/archive/2026-09-24-pre-metres/, and the figures drawn from
+# them in output/archive/2026-09-27_model-vs-observed-div10/.
 MATRIX_RUNS = {
-    (1984, 2004): ("HAT_1984_2004_edgeBE_road_bdm_nogroin", "version-pair/v2"),
-    (1996, 2010): ("HAT_1996_2010_edgeBE_road_bdm_nogroin", "calibration"),
-    (2004, 2024): ("HAT_2004_2024_edgeBE_road_bdm_nourish_nogroin", "calibration"),
-    (2010, 2024): ("HAT_2010_2024_edgeBE_road_bdm_nourish_nogroin", "calibration"),
+    (1984, 2004): None,
+    (1996, 2010): ("HAT_1996_2010_edgeBE_offsetmetres_road_bdm_nogroin", "calibration"),
+    (2004, 2024): None,
+    (2010, 2024): ("HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin", "calibration"),
 }
 WINDOWS = list(MATRIX_RUNS)
 # The dune-line end-domain solve. 2026-09-18: re-solved on the re-digitized
@@ -219,6 +234,17 @@ WINDOWS = list(MATRIX_RUNS)
 DUNE_SOLVE_DIR = RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-18-end-domains-solved-on-redigitized-duneline"
 MODEL_SETS = ("coastsat", "dune-mean3", "dune-raw")   # where the ends were solved
 MAIN_DUNE = "dune-mean3"
+# THE DUNE-SOLVED SETS ARE /10-OFFSET RUNS (2026-09-27). No end domains have
+# been solved on the dune line under the metres offset, so drawing them beside
+# the option A matrix would put two different models on one panel. Until that
+# solve exists, every figure draws the matrix (ends solved on CoastSat), the
+# dune-line figures included, and the sensitivity level that exists only to
+# swap or vary the dune solve is not drawn. MODEL_SETS and MAIN_DUNE stay
+# defined: target_comparison, smoothing_scale and smoothed_loess7_with_cascade
+# import them and read the dune solve on their own terms.
+DUNE_SOLVE_CURRENT = False
+DRAWN_SETS = MODEL_SETS if DUNE_SOLVE_CURRENT else ("coastsat",)
+DUNE_FIG_SET = MAIN_DUNE if DUNE_SOLVE_CURRENT else "coastsat"
 
 INTERIOR = (2, 89)          # the domains the index scores, GIS 2-89
 N = obs.N_DOMAINS
@@ -279,15 +305,15 @@ BOTH_COLS = {"coastsat": "change_rate_m_yr", "dune-mean3": "change_rate_m_yr",
 # The main level pairs each target with the runs solved on it.
 MAIN_PLAN = (
     [("", v, ["coastsat"]) for v in COASTSAT_VARIANTS]
-    + [("", v, [MAIN_DUNE]) for v in DUNELINE_VARIANTS]
-    + [("", "both", ["coastsat", MAIN_DUNE]),
-       ("", "sensitivity/mixed-estimator", [MAIN_DUNE])]
+    + [("", v, [DUNE_FIG_SET]) for v in DUNELINE_VARIANTS]
+    + [("", "both", list(dict.fromkeys(["coastsat", DUNE_FIG_SET]))),
+       ("", "sensitivity/mixed-estimator", [DUNE_FIG_SET])]
 )
 SENSITIVITY_PLAN = (
     [("sensitivity/ends-swapped", v, [MAIN_DUNE]) for v in COASTSAT_VARIANTS]
     + [("sensitivity/ends-swapped", v, ["coastsat"]) for v in DUNELINE_VARIANTS]
     + [("sensitivity/dune-raw-solve", v, ["dune-raw"]) for v in DUNELINE_VARIANTS]
-)
+) if DUNE_SOLVE_CURRENT else []
 
 
 def _full():
@@ -903,7 +929,7 @@ def fair_rows(skill_df):
     s = skill_df
     return s[((s.model_ends == "coastsat") & (s.target == "coastsat_loess")
               & (s.model_estimator == "lrr"))
-             | ((s.model_ends == MAIN_DUNE) & (s.target == "endpoint_loess")
+             | ((s.model_ends == DUNE_FIG_SET) & (s.target == "endpoint_loess")
                 & (s.model_estimator == "endpoint"))]
 
 
@@ -919,7 +945,7 @@ def main(argv=None):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     observations = [Observation(w) for w in WINDOWS]
-    models = {key: load_models(key) for key in MODEL_SETS}
+    models = {key: load_models(key) for key in DRAWN_SETS}
     half = shared_bounds(observations, models)
 
     # provenance: one row per window per model set, with the dune line's
@@ -933,7 +959,7 @@ def main(argv=None):
         f"y axis on every panel: -{half:g} to +{half:g} m/yr\n"
         f"= ceil(max |rate| + {obs.Y_PAD_M:g}) over every observed reading (CoastSat "
         "means, dune-line endpoint) and both estimators of every model set "
-        f"({', '.join(MODEL_SETS)}), " + ", ".join("{}-{}".format(*w) for w in WINDOWS)
+        f"({', '.join(DRAWN_SETS)}), " + ", ".join("{}-{}".format(*w) for w in WINDOWS)
         + "\n(the CoastSat std lines are not in the bound)\n", encoding="utf-8")
 
     skill_df = write_tables(observations, models, OUT_DIR / "tables")
