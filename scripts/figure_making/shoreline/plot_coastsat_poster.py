@@ -64,13 +64,14 @@ _REPO = next(_p for _p in _P(__file__).resolve().parents
              if (_p / "pyproject.toml").exists())
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as LRR_DIR  # noqa: E402
 from site_layer import hat_figure_style as _hs  # noqa: E402
-OUT = _hs.figure_dir("shoreline", "two_periods_10_domains")
 
 PERIOD_STARTS = (1996, 2010)
 PERIODS = [(st, HATTERAS_PERIODS[st]["end_year"]) for st in PERIOD_STARTS]
 DOMAIN_COL, LRR_COL = "domain_number", "mean_lrr"
 DOMAIN_MIN, DOMAIN_MAX = 1, 90
 WINDOW_DOMAINS = 7                       # 3.5 km at the 500 m domain spacing; 10 until 2026-09-28
+# named for its window: two_periods_10_domains until 2026-09-28
+OUT = _hs.figure_dir("shoreline", f"two_periods_{WINDOW_DOMAINS}_domains")
 PERIOD_COLOURS = ((C_1984, C_1984_FILL), (C_1997, C_1997_FILL))
 
 

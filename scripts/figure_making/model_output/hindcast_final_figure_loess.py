@@ -26,7 +26,7 @@ the two, and are now simply what this figure has.
         convention (`skip_southern_domains = 10`), because the smoother is
         poorly constrained at the end of its range and Cape Point's
         attachment-detachment cycle is exactly the short-wavelength signal a
-        5 km smoother destroys. Dashing it shows the data without implying it
+        3.5 km smoother destroys. Dashing it shows the data without implying it
         carries the same weight.
 
     BOTH SCORING WINDOWS, PRINTED PER PANEL
@@ -189,7 +189,9 @@ def loess_and_spread(module, start, csv_path):
 
 
 def run_rates(period, preset, scenario):
-    name = f"HAT_{period}_{preset}_{scenario}_{GROIN}"
+    # The matrix runs carry the offset token since the metres fix (2026-09-24);
+    # without it this found only the archived ÷10 runs.
+    name = f"HAT_{period}_{preset}_offsetmetres_{scenario}_{GROIN}"
     # Resolved rather than joined by hand: a hand-built path has no slot for
     # the arm component and reads an arm-scoped run as missing. The retired
     # companion carried a twin of this function, in
@@ -458,7 +460,7 @@ def main():
         "rates; over D1–D10 (hatched) it is dashed because the project "
         "excludes the LOESS there (the smoother is poorly constrained at the "
         "end of its range, and Cape Point's attachment-detachment cycle is "
-        "short-wavelength signal a 5 km smoother removes), and the individual "
+        "short-wavelength signal a 3.5 km smoother removes), and the individual "
         "transect rates are drawn instead. The grey band is ±1 SD of the "
         "transect rates within each domain, and the tinted band between the "
         "curves is the misfit. Both scoring windows are printed above each "

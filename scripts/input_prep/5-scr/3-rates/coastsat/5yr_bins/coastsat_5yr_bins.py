@@ -841,7 +841,7 @@ def plot_interval_lines(
     overlay_note = ""
     smoothing_note = ""
     if LOESS_OVERLAY and _LOESS_OK:
-        overlay_note = f"  |  LOESS frac={LOESS_FRAC}"
+        overlay_note = f"  |  LOESS frac={LOESS_FRAC:.3f} (7 domains)"
         if LOESS_ONLY and RAW_ALPHA_SCALE > 0:
             smoothing_note = "  |  thick=smoothed, faint=raw"
         elif LOESS_ONLY and RAW_ALPHA_SCALE == 0:
