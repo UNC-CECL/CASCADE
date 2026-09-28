@@ -4,11 +4,13 @@
 
 import os
 import numpy as np
-from cascade.tools.plotters import plot_ElevAnimation_CASCADE, plot_dune_domain
+from cascade.tools.plotters import plot_ElevAnimation_CASCADE, plot_dune_domain, plot_start_end_domains
 
 # choose whether to plot and save the cascade animations since it is automatic
 # the other plots just produce and output on screen
 plot_and_save_elev_anim = False
+plot_dunes = False
+plot_domains = True
 
 # model results
 datadir = r"C:\Users\agfig\model\calibration"
@@ -42,5 +44,15 @@ if plot_and_save_elev_anim:
         km_on=True,
         )
 
-# plot the dune domain over time
-plot_dune_domain(b3d=calib_b3d, TMAX=calib_tmax)
+if plot_dunes:
+    # plot the dune domain over time
+    plot_dune_domain(b3d=calib_b3d, TMAX=calib_tmax)
+
+if plot_domains:
+    # plot 1st and last year domains to compare features
+    plot_start_end_domains(
+            cascade_b3d=calib_b3d,
+            save_dir=r"C:\Users\agfig\model\calibration\results\{0}\domain_comparison".format(run_name),
+            min_z=-3,
+            max_z=5,
+    )

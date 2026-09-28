@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 from matplotlib.ticker import AutoMinorLocator
 from scipy import signal
+from matplotlib import colormaps
 
 # # ###############################################################################
 # # modified from barrier3d
@@ -84,7 +85,7 @@ def plot_XShoreTransects(barrier3d, TMAX):
     return fig
 
 
-def plot_ModelTransects(cascade, time_step, iB3D):
+def plot_ModelTransects(cascade, time_step, iB3D, transect, title):
     """
     :param cascade: cascade object
     :param time_step: a list of time steps to plot
@@ -102,9 +103,14 @@ def plot_ModelTransects(cascade, time_step, iB3D):
     always two rows of dunes, it appears that the barrier island is moving
     landward when really it is eroding the dune line.
     """
-    fig, axs = plt.subplots(1, 1, figsize=(5, 3), sharey=True, sharex=True)
+    plt.rcParams["font.size"] = 18
+    fig, axs = plt.subplots(1, 1, figsize=(20, 8), sharey=True, sharex=True)
     legend_t = []
 
+    n = int(len(time_step))
+    blues_cmap = colormaps['Blues']
+    blues = blues_cmap(np.linspace(0.2, 1, n))  # n evenly spaced colors
+    color = 0
     for t in time_step:
         # Sea level
         sea_level = cascade.barrier3d[iB3D]._SL + (
@@ -140,7 +146,8 @@ def plot_ModelTransects(cascade, time_step, iB3D):
         dune_toe_x = berm_x
         dune_toe_y = berm_y
 
-        v = 10  # just use 10th transect
+        # v = 10  # just use 10th transect
+        v = transect  # just use 10th transect
         interior_y = cascade.barrier3d[iB3D]._DomainTS[t]  # dam MHW
         interior_y = interior_y[:, v]
         dunes_y = (
@@ -179,15 +186,25 @@ def plot_ModelTransects(cascade, time_step, iB3D):
         )
 
         # Plot
-        plt.plot(x, y)
-        plt.hlines(sea_level * 10, shoreface_toe_x, end_of_bay_x, colors="black")
+        if color==0:
+            plot_c = "red"
+        else:
+            plot_c = blues[color]
+        plt.plot(x, y, c=plot_c)
+        color+=1
+        # plt.hlines(sea_level * 10, shoreface_toe_x, end_of_bay_x, colors="black", linewidth=0.25)
         # NOTE: the berm elevation is relative to the MHW, so everything that relies
         # on it is m MHW; confirmed with Ian that the InteriorDomain is m MHW
         # (i.e., m NAVD88 - MHW [in NAVD88])
         legend_t.append("year " + str(t))
 
-    plt.xlabel("cross-shore distance (dam)")
+    plt.xlabel("cross-shore distance (m)")
     plt.ylabel("elevation (m MHW)")
+    x_ticks = plt.xticks()  # returns tuple ()
+    plt.xticks(x_ticks[0], labels=(x_ticks[0]*10).astype(int))
+    plt.xlim(-5, 130)
+    plt.ylim(-9.5, 2.2)
+    plt.title(title)
     plt.legend(legend_t)
     plt.tight_layout()
 
@@ -786,7 +803,7 @@ def plot_ElevAnimation_CASCADE(
                     xOrigin = iB3D * BarrierLength
                     AnimateDomain[
                         OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
-                    ] = np.fliplr(Domain)
+                    ] = Domain
 
                 # Plot and save
                 if fig_size is not None:
@@ -901,7 +918,7 @@ def plot_ElevAnimation_CASCADE(
             xOrigin = iB3D * BarrierLength
             AnimateDomain[
                 OriginTstart:OriginTstop, xOrigin : xOrigin + BarrierLength
-            ] = np.fliplr(Domain)
+            ] = Domain
 
         # Plot and save
         if fig_size is not None:
@@ -1666,3 +1683,109 @@ def plot_nonlinear_stats_BeachDuneManager(
         overwash,
         dune_toe,  # not combined
     )
+
+
+# new from Lexi
+def plot_start_end_domains(
+        cascade_b3d,
+        save_dir,
+        min_z,
+        max_z,
+        figsize=[10,8]
+):
+    """
+    plots the start cascade domain (model year 1) with the end domain (dunes and interior)
+    and saves them to a specified directory
+    :param max_z: min elevation (m MHW) for plot
+    :param min_z: max elevation (m MHW) for plot
+    :param cascade_b3d: barrier3d object of a cascade class
+    :param save_dir: folder path to save the plots. makes it if it does not exist
+
+    :return: nothing, saves the plots to specified location
+    """
+    # plot parameters
+    plt.rcParams["font.size"] = 12
+    plt.ioff()
+
+    # create the save folder if it does not already exist
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    # loop through each domain and plot model years 1 and the last
+    ib3ds = len(cascade_b3d)
+
+    for i in range(ib3ds):
+        # make 1 plot per domain and save it after
+        fig1 = plt.figure(figsize=figsize)
+        # create and format the plot
+        xlabel = "alongshore distance (dam)"
+        ylabel = "cross-shore distance (dam)"
+        minz = min_z
+        maxz = max_z
+
+        # interiors in decameters
+        first_model_year = cascade_b3d[i].DomainTS[1]  # model year 1
+        last_model_year = cascade_b3d[i].DomainTS[-1]  # last model year
+
+        # dunes in decameters above berm elevation
+        first_model_year_dunes = cascade_b3d[i].DuneDomain[1]  # model year 1
+        last_model_year_dunes = cascade_b3d[i].DuneDomain[-1]  # last model year
+
+        # berm elev
+        berm_elev = cascade_b3d[i].BermEl  # dam MHW
+
+        # TMAX
+        tmax = cascade_b3d[i].TMAX
+
+        # convert domains into m MHW
+        first_model_year = first_model_year * 10
+        last_model_year = last_model_year * 10
+        first_model_year_dunes = (first_model_year_dunes + berm_elev) * 10
+        last_model_year_dunes = (last_model_year_dunes + berm_elev) * 10
+
+        # flip dunes
+        first_model_year_dunes = np.rot90(first_model_year_dunes)
+        first_model_year_dunes = np.flipud(first_model_year_dunes)
+        last_model_year_dunes = np.rot90(last_model_year_dunes)
+        last_model_year_dunes = np.flipud(last_model_year_dunes)
+
+        # ---------------- plotting the domains --------------------------------
+        n_plots = 2
+
+        # model year 1 domain
+        ax1 = fig1.add_subplot(1, n_plots, 1)  # rows, cols, plot number
+        mat1 = ax1.matshow(
+            np.vstack((first_model_year_dunes, first_model_year)),
+            cmap="terrain",
+            vmin=minz,
+            vmax=maxz,
+        )
+        cbar = fig1.colorbar(mat1)
+        cbar.set_label('m MHW', rotation=270, labelpad=10)
+        ax1.set_title("model year 1")
+        ax1.set_ylabel(ylabel)
+        ax1.set_xlabel(xlabel)
+        plt.gca().xaxis.tick_bottom()
+
+        # last model year domain
+        ax2 = fig1.add_subplot(1, n_plots, 2)  # rows, cols, plot number
+        mat1 = ax2.matshow(
+            np.vstack((last_model_year_dunes, last_model_year)),
+            cmap="terrain",
+            vmin=minz,
+            vmax=maxz,
+        )
+        cbar = fig1.colorbar(mat1)
+        cbar.set_label('m MHW', rotation=270, labelpad=10)
+        ax2.set_title("model year {0}".format(tmax))
+        ax2.set_ylabel(ylabel)
+        ax2.set_xlabel(xlabel)
+        plt.gca().xaxis.tick_bottom()
+
+        # once all years are plotted, save the figure
+        fig1.suptitle("iB3D {0}".format(i))
+        fig1.tight_layout()
+        fig1.savefig(os.path.join(save_dir, "iB3D_{0}.png".format(i)))
+        plt.close(fig1)
+
+    print("finished. saved {0} figures to {1}".format(ib3ds, save_dir))
