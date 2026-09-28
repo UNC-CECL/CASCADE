@@ -1,5 +1,7 @@
 # 2026-09-27 — the wave grid with the end domains fixed
 
+> **Read the last section** ("Final — ends re-solved at the adopted waves, targeted reruns"). The earlier sections ran on the Hs-1 ends and are kept as the record; those runs are archived under `raw_runs/archive/2026-09-27-fixed-ends-*`. The settings to use: [`../2026-09-27-wave-recommendation/README.md`](../2026-09-27-wave-recommendation/README.md).
+
 Hannah, 2026-09-26/27: sweep the four wave parameters with the end
 source/sink terms held **fixed**, rather than zero
 (`../2026-09-25-wave-grid-smoothed-score/`) or re-solved per setting

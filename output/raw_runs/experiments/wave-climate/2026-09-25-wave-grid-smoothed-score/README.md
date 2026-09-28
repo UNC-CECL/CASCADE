@@ -1,5 +1,7 @@
 # 2026-09-25 — four-parameter wave grid, scored on the smoothed model
 
+> **Record (zeroBE, smoothed score).** The settings to use: [`../2026-09-27-wave-recommendation/README.md`](../2026-09-27-wave-recommendation/README.md).
+
 Follow-up to `wave-climate/2026-09-24-metres-2-wave-sensitivity/` (see `2026-09-24-metres-INDEX.md`):
 that study searched one parameter at a time plus two 2-D grids, never all four
 wave parameters together, and never a grid under full management. Designed

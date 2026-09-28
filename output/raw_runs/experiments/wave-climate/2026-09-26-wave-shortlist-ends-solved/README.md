@@ -1,5 +1,7 @@
 # 2026-09-26 — wave shortlist with the end domains solved per setting
 
+> **Record.** The settings to use: [`../2026-09-27-wave-recommendation/README.md`](../2026-09-27-wave-recommendation/README.md).
+
 Hannah, 2026-09-26: "when you solve for the ends, are there different wave
 parameters that perform the best?" The 2026-09-25 grid
 (`../2026-09-25-wave-grid-smoothed-score/`) ran zeroBE: nothing imposed at the

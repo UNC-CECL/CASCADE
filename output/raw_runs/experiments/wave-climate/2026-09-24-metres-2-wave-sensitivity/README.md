@@ -1,5 +1,7 @@
 # Wave-climate sensitivity in metres, natural and full management (2026-09-24)
 
+> **Record (one parameter at a time, zeroBE).** The settings to use: [`../2026-09-27-wave-recommendation/README.md`](../2026-09-27-wave-recommendation/README.md).
+
 Step 2 of 3 in the 2026-09-24 chain: `../../2026-09-24-metres-INDEX.md`. Step 1
 chose the offset unit (`../../island-offset/2026-09-24-metres-1-offset-units/`); this study
 found the Barrier3D bug that step 3 fixed (`../../code-checks/2026-09-24-metres-3-barrier3d-overwash-fix/`).

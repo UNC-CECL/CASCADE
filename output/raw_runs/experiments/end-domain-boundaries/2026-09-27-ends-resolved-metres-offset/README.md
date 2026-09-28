@@ -1,5 +1,7 @@
 # 2026-09-27 — the end domains re-solved under the metres offset
 
+> **Current values (2026-09-27):** 1996–2010 GIS 1 **+4.8394** / GIS 90 **+17.545**; 2010–2024 **+18.8** / **+24.535** m/yr, solved at Hs 2 / Tp 7.5 / asym 0.6 / high-angle 0.5 (`tables/ends.json`, key `ends_m_yr`). The first Results section below is the Hs-1 solve, since replaced; the Hs-2 solve and the Hs-2.5 check follow it. For Hs 2.5 in 2010–2024 (option B) use +8.0 / +40.399.
+
 Hannah, 2026-09-26/27: the wave sweep should hold the end source/sink terms
 **fixed**, and the ends need re-solving now that the island offset is in
 metres. The stored values (`HATTERAS_BE_EDGE_ONLY`: 1996 +32.2 / +10.0,
