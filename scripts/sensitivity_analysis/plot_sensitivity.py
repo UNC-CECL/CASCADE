@@ -595,7 +595,7 @@ def plot_skill_overview(cells, index, start_year, preset, out_dir):
 
     handles, labels = axes[0][0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="lower center", ncol=3,
-               bbox_to_anchor=(0.5, -0.035), frameon=False)
+               bbox_to_anchor=(0.5, -0.085), frameon=False)
 
     end_year = HATTERAS_PERIODS[start_year].get("end_year", start_year + 20)
     caption = (f"Parameter sensitivity, {start_year}–{end_year}, {preset}. "
