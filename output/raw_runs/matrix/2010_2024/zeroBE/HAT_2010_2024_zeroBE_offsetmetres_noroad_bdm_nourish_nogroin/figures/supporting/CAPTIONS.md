@@ -1,0 +1,5 @@
+# Captions — figures
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`rate_and_position_change.png`.** Beach and dune management only, no imposed end rates (zeroBE), 2010-2024. Run HAT_2010_2024_zeroBE_offsetmetres_noroad_bdm_nourish_nogroin. Option A matrix (2026-09-27): island offset in metres, Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle fraction 0.5, no groin. (a) Modelled OLS shoreline-change rate against the CoastSat LRR scoring target (10-domain LOESS, raw means GIS 1-10). (b) Modelled position change over the window (endpoint rate x 14 yr) against the observed CoastSat change, mean position over the last calendar year minus the first, smoothed at 10 domains. Seaward positive; scores over the interior GIS 2-89.

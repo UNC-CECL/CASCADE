@@ -43,11 +43,13 @@ USAGE
     python rerender_run_figures.py --arm matrix/1984_2004/calibBE
     python rerender_run_figures.py --match "*calibBE*groin" --gifs
     python rerender_run_figures.py --run-dir output/raw_runs/.../HAT_...
+    python rerender_run_figures.py --arm matrix --ylim=-10,10 --ylim-real=-7.5,7.5
 ==============================================================================
 """
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import csv
 import fnmatch
 import json
@@ -108,6 +110,17 @@ COASTSAT_DATASETS = [
     CoastSatDataset(
         label="CoastSat LRR (2004-2024)", period_start=2004,
         csv_path=str(COASTSAT_BASE_DIR / "2004_2024" / "transect_lrr_full.csv")),
+    # The two windows the runner added on 2026-09-11 (section 8 of
+    # HAT_hindcast_1984_2024.py). Missing here until 2026-09-27, so a 1996 or
+    # 2010 run was redrawn with NO CoastSat curve: build_coastsat_series found
+    # no active dataset and the overlay drew nothing. Keep in step with the
+    # runner's list.
+    CoastSatDataset(
+        label="CoastSat LRR (1996-2010)", period_start=1996,
+        csv_path=str(COASTSAT_BASE_DIR / "1996_2010" / "transect_lrr_full.csv")),
+    CoastSatDataset(
+        label="CoastSat LRR (2010-2024)", period_start=2010,
+        csv_path=str(COASTSAT_BASE_DIR / "2010_2024" / "transect_lrr_full.csv")),
 ]
 
 GIF_JOBS = [
@@ -266,8 +279,10 @@ def rerender(run_dir: Path, args, cs_cache: dict) -> dict:
             loess_config=LOESS_CONFIG, domains=HATTERAS_DOMAINS)
     cs_series = cs_cache[key]
 
+    config = dataclasses.replace(DEFAULT_RATE_COMPARISON, ylim=args.ylim,
+                                 ylim_real=args.ylim_real)
     fig_kwargs = dict(domains=HATTERAS_DOMAINS, annotations=HATTERAS_ANNOTATIONS,
-                      loess_config=LOESS_CONFIG, config=DEFAULT_RATE_COMPARISON)
+                      loess_config=LOESS_CONFIG, config=config)
     # Resolved, not joined: this OVERWRITES the figure the run already has,
     # so it has to land wherever that figure currently lives -- the new
     # figures/ subfolder, or the old flat name if the run has not moved.
@@ -363,6 +378,15 @@ def main() -> None:
     ap.add_argument("--dry-run", action="store_true",
                     help="list what would be redrawn; write nothing")
     ap.add_argument("--limit", type=int, default=0, help="stop after N runs")
+    ap.add_argument("--ylim", default=None,
+                    type=lambda s: tuple(float(v) for v in s.split(",")),
+                    help="LOW,HIGH in m/yr: one y axis for every run redrawn, "
+                         "so a set can be compared figure to figure (e.g. "
+                         "--ylim=-10,10); default fits each run to its data")
+    ap.add_argument("--ylim-real", default=None,
+                    type=lambda s: tuple(float(v) for v in s.split(",")),
+                    help="LOW,HIGH for the real-domains-only figure alone "
+                         "(default: --ylim), e.g. --ylim-real=-7.5,7.5")
     ap.add_argument("--traceback", action="store_true",
                     help="print a full traceback for a failed run")
     args = ap.parse_args()

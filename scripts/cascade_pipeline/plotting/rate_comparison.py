@@ -102,6 +102,15 @@ class RateComparisonConfig:
         raw_scatter_alpha: Opacity for the active period; the reference
             period (if shown) uses 0.35x this.
         domain_tick_step: X-axis tick spacing, in GIS domains.
+        ylim: (low, high) in m/yr to fix the y axis, or None (the default) to
+            fit it to the data. Set when a SET of runs has to be read on one
+            scale (Hannah, 2026-09-27: every figure in raw_runs/matrix on one
+            y axis); rerender_run_figures.py --ylim passes it. Applies to
+            the with-buffers figures.
+        ylim_real: the same for the real-domains-only figure, which has no
+            buffer swings to hold and can be tighter (Hannah, 2026-09-27:
+            "so we are efficient with space"). None falls back to ylim.
+            rerender_run_figures.py --ylim-real passes it.
     """
 
     window_colors: dict = dataclasses.field(
@@ -119,6 +128,8 @@ class RateComparisonConfig:
     raw_scatter_size: float = 6
     raw_scatter_alpha: float = 0.60
     domain_tick_step: int = 5
+    ylim: tuple = None
+    ylim_real: tuple = None
 
 
 DEFAULT_RATE_COMPARISON = RateComparisonConfig()
@@ -432,6 +443,11 @@ def plot_rate_comparison(change_rate, cs_series, run, real_domains_only=True,
 
         fig_suffix = "ALL_DOMAINS_WITH_BUFFERS"
 
+    fixed = (config.ylim_real if real_domains_only and config.ylim_real is not None
+             else config.ylim)
+    if fixed is not None:
+        ax.set_ylim(*fixed)
+
     if save_path:
         fig.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"  Saved plot: {save_path}")
@@ -597,7 +613,8 @@ def plot_annotated_rate_comparison(change_rate, cs_series, run,
     )
     ymin, ymax = all_vals.min(), all_vals.max()
     ypad = (ymax - ymin) * 0.06
-    ax.set_ylim(ymin - ypad, ymax + ypad)
+    ax.set_ylim(*(config.ylim if config.ylim is not None
+                  else (ymin - ypad, ymax + ypad)))
 
     ybot, ytop = ax.get_ylim()
     zero_frac = (0 - ybot) / (ytop - ybot)

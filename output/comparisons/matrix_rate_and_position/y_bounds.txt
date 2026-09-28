@@ -1,0 +1,2 @@
+rate panel: -7.5 to +7.5 m/yr, as the runner's real-domains rate figure (rerender_run_figures.py --ylim-real=-7.5,7.5); its with-buffers figure is +/-10
+position panel: -130 to +130 m = max |position change| over every matrix run (GIS 1-90) and both observed windows, rounded up to 10 m
