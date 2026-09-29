@@ -47,6 +47,8 @@ SUBJECTS = {
     "management": "NC-12 and beach nourishment: where, when, and under what rules",
     "shoreline": "Shoreline change, observed and modelled",
     "initialization": "The island as the model starts it",
+    "model": "How Barrier3D, BRIE and CASCADE work, drawn from a finished run: the grid through a storm, alongshore diffusion, the coupling loop, overwash routing",
+    "pipeline": "How each model input is built from its source data, one folder per input_prep step",
 }
 SKIP_DIRS = {"supporting", "talk"}
 
@@ -133,14 +135,23 @@ def main() -> Path:
         folder = FIGURES / subject
         if not folder.is_dir():
             continue
-        caps = captions(folder)
-        pngs = sorted(p for p in folder.glob("*.png"))
         lines += [f"## {subject}", "", blurb, "",
                   "| figure | shows | drawn by |", "|---|---|---|"]
-        for png in pngs:
-            shows = caps.get(png.name, "—")
-            script = scripts_by_stem.get(png.stem) or scripts_by_folder.get(subject, "—")
-            lines.append(f"| `{png.name}` | {shows} | `{script}` |")
+        # The subject folder and every subfolder holding figures (pipeline/<step>/,
+        # initialization/<year>/<style>/), each with its own supporting/CAPTIONS.md.
+        # Until 2026-09-28 only the top level was read, so figures one folder
+        # down were never listed.
+        subdirs = [folder] + sorted(
+            d for d in folder.rglob("*") if d.is_dir()
+            and not SKIP_DIRS.intersection(d.relative_to(folder).parts)
+            and not any(part.startswith("superseded_") for part in d.relative_to(folder).parts))
+        for sub in subdirs:
+            caps = captions(sub)
+            for png in sorted(sub.glob("*.png")):
+                shows = caps.get(png.name, "—")
+                script = scripts_by_stem.get(png.stem) or scripts_by_folder.get(subject, "—")
+                rel = png.relative_to(folder).as_posix()
+                lines.append(f"| `{rel}` | {shows} | `{script}` |")
         lines.append("")
 
     talk = FIGURES / "talk"

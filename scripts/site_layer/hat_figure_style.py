@@ -106,7 +106,7 @@ OUTPUT_ROOT = PROJECT_ROOT / "output"
 FIGURES_ROOT = OUTPUT_ROOT / "figures"
 COMPARISONS_ROOT = OUTPUT_ROOT / "comparisons"       # cross-run figures
 OBSERVATIONS_OUT = OUTPUT_ROOT / "observations"      # the observed record itself
-FIGURE_SUBJECTS = ("site", "forcing", "management", "shoreline",
+FIGURE_SUBJECTS = ("site", "forcing", "management", "shoreline", "model", "pipeline",
                    "initialization", "style", "talk")
 
 
