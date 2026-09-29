@@ -55,11 +55,22 @@ OUTPUT   output/comparisons/target_comparison/
     <model set>/target_comparison_1996_2010_2024.png (PDF and CAPTIONS.md
     under supporting/)
 
+AS A RATE: --units rate (2026-09-29, Hannah: "do the same net change
+    subfolder for target_comparison", choosing to keep the metres figures and
+    add m/yr beside them). Every metres column divided by the 14 model years,
+    which undoes the x 14 exactly: the CoastSat LRR, the dune line's MEASURED
+    rate over its own survey interval (no scaling to the window), and the
+    model's endpoint rate. Same figures, same skill table (bias/RMSE in m/yr),
+    written to <projected|total_change>/change_rate/ with "_rate" after the
+    target mode in every stem. y axis +/-8 m/yr, as model_vs_observed's rates.
+
 The loaders are rate_windows.py's (imported), so the observations and
 runs are exactly the ones model_vs_observed draws as rates.
 
 USAGE
     python scripts/analyze_output/compare_runs/target_comparison.py
+    python ... --units rate                              # change_rate/ in m/yr
+    python ... --coastsat-target total [--units rate]
 ==============================================================================
 """
 from __future__ import annotations
@@ -112,12 +123,22 @@ CS_MODES = {"projected": "projected", "total": "total_change",
             "full": "projected", "subperiod": "total_change"}
 CS_MODE_NOUN = {"projected": "Projected shoreline change",
                 "total": "Total shoreline change"}
+# The same, in rate units: no distance, so nothing is projected or totalled;
+# the rate is named by its fit window alone.
+CS_MODE_NOUN_RATE = {"projected": "Long-term shoreline change rate",
+                     "total": "Shoreline change rate"}
 # The fit window is in the method string, so a figure pulled out of its
 # folder still says where the rate came from (Hannah, 2026-09-21). "total"
 # has no single fit window across the two panels -- each is its own -- so it
 # is filled in per window by cs_method().
 CS_MODE_METHOD = {"projected": "CoastSat LRR 1996–2024 × 14 yr",
                   "total": "CoastSat LRR {}–{} × {} yr"}
+CS_MODE_METHOD_RATE = {"projected": "CoastSat LRR 1996–2024",
+                       "total": "CoastSat LRR {}–{}"}
+
+
+def cs_noun():
+    return (CS_MODE_NOUN if _net() else CS_MODE_NOUN_RATE)[CS_MODE]
 
 
 def _targets_line(o):
@@ -130,13 +151,14 @@ def _targets_line(o):
     return ("CoastSat target: " + cs_method(o.window) + "   ·   "
             f"dune line: {m['start_date']} → {m['end_date']}"
             + (" (assumed)" if bool(m.get("end_date_assumed")) else "")
-            + f",  {float(m['interval_yr']):.1f} yr,  measured, scaled to "
-              f"{o.window[1] - o.window[0]} yr")
+            + f",  {float(m['interval_yr']):.1f} yr,  "
+            + (f"measured, scaled to {o.window[1] - o.window[0]} yr" if _net()
+               else "measured rate"))
 
 
 def cs_method(window):
     """The method string for one window, with its fit window resolved."""
-    m = CS_MODE_METHOD[CS_MODE]
+    m = (CS_MODE_METHOD if _net() else CS_MODE_METHOD_RATE)[CS_MODE]
     return m.format(*window, window[1] - window[0]) if CS_MODE == "total" else m
 # Everything downstream branches on the canonical pair, never on the alias.
 CS_CANON = {"full": "projected", "subperiod": "total",
@@ -152,15 +174,61 @@ FULL_WINDOW = (1996, 2024)
 FULL_SOLVE_DIR = rw.RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-29-ends-solved-on-lrr-1996-2024-dunecap"
 CS_MODE = "projected"
 OUT_DIR = ROOT_DIR / CS_MODES[CS_MODE]
+# "net": metres over the 14-yr window (every figure until 2026-09-29).
+# "rate": the same lines in m/yr, under <mode>/change_rate/ (see the docstring).
+UNITS = "net"
+RATE_SUBDIR = "change_rate"
+Y_HALF_RATE = 8.0          # m/yr, the model_vs_observed rate figures' range
+
+
+def _net():
+    return UNITS == "net"
+
+
+def _u():
+    """The unit every number on a figure is in."""
+    return "m" if _net() else "m/yr"
+
+
+def _fmt(v, signed=False):
+    """A score in the figure's unit: 0.1 m, or 0.01 m/yr."""
+    d = 1 if _net() else 2
+    return f"{v:+.{d}f}" if signed else f"{v:.{d}f}"
+
+
+def _x14(prefix=" multiplied by"):
+    """' multiplied by 14 yr' on the metres figures, nothing on the rate ones."""
+    return f"{prefix} 14 yr" if _net() else ""
+
+
+def _stem_mode():
+    """The target mode as a filename token, '_rate' added in rate units."""
+    return CS_MODES[CS_MODE] + ("" if _net() else "_rate")
+
+
+def dune_label():
+    return ("Total dune line change (measured, scaled to 14 yr)" if _net()
+            else "Dune line change rate (measured over the survey interval)")
+
+
+def _quantity():
+    """What the y axis is, in caption words."""
+    return ("net change in shoreline position over the 14-yr model window" if _net()
+            else "shoreline change rate over the 14-yr model window")
+
+
+def _model_quantity():
+    return ("net change over the window" if _net() else
+            "endpoint rate (last annual shoreline minus first, over the 14 run years)")
 
 
 def cs_label():
     """The CoastSat target named by the window its rate was FITTED on
     (the 2026-09-21 vocabulary): PROJECTED when the 1996-2024 rate is carried
     onto a 14-yr half, TOTAL when each window uses its own."""
-    return ("CoastSat target — " + CS_MODE_NOUN[CS_MODE].lower()
-            + (f" ({CS_MODE_METHOD['projected']})" if CS_MODE == "projected"
-               else " (each window's own CoastSat LRR × 14 yr)"))
+    return ("CoastSat target — " + cs_noun().lower()
+            + (f" ({cs_method(None)})" if CS_MODE == "projected"
+               else " (each window's own CoastSat LRR" + _x14(" ×") + ")"))
 
 
 def cs_clause():
@@ -231,8 +299,9 @@ def over_note(frames_cols, half):
         for col in cols:
             v = df.set_index("domain_number")[col]
             for g, x in v[v.abs() > half].items():
-                hits.append(f"{label}{_COL_NAME.get(col, col)} {x:+.0f} m at GIS {g}")
-    return (f" Beyond ±{half:g} m, off the axis and marked with a triangle at "
+                hits.append(f"{label}{_COL_NAME.get(col, col)} {_fmt(x, True)} "
+                            f"{_u()} at GIS {g}")
+    return (f" Beyond ±{half:g} {_u()}, off the axis and marked with a triangle at "
             "the edge: " + "; ".join(hits) + "."
             if hits else "")
 
@@ -243,6 +312,29 @@ _COL_NAME = {"coastsat_target_m": "CoastSat target", "dune_target_m": "the total
              "model_ends_unsolved_m": "unsolved run"}
 LW_MODEL = 1.4
 Y_LABEL = "Net change in position (m)"
+Y_LABEL_RATE = "Change rate (m/yr)"
+
+
+def y_label():
+    return Y_LABEL if _net() else Y_LABEL_RATE
+
+
+def y_tick(half):
+    return (20.0 if half > 60 else 10.0) if _net() else 2.0
+
+
+def to_rate(df):
+    """Every metres column over the model years: the x 14 undone. Column
+    names are kept so the drawing code reads either frame."""
+    out = df.copy()
+    for c in [c for c in out.columns if c.endswith("_m")]:
+        out[c] = out[c] / out["model_years"]
+    return out
+
+
+def _table_names(df):
+    """The rate frame's columns renamed for the CSV: *_m -> *_m_yr."""
+    return df.rename(columns={c: c[:-2] + "_m_yr" for c in df.columns if c.endswith("_m")})
 
 
 def window_values(o, mdfs):
@@ -324,22 +416,21 @@ def figure(observations, frames, key, folder, half, skill_df):
                              constrained_layout=True, figsize=figsize("double", height=5.6))
     for i, (ax, o) in enumerate(zip(axes, observations)):
         draw(ax, o, frames[o.window], folder, half, label=(i == 0))
-        ax.yaxis.set_major_locator(MultipleLocator(20.0 if half > 60 else 10.0))
+        ax.yaxis.set_major_locator(MultipleLocator(y_tick(half)))
         _title(ax, i, "{}, {}–{} ({})".format(
-            CS_MODE_NOUN[CS_MODE], *o.window, cs_method(o.window)))
+            cs_noun(), *o.window, cs_method(o.window)))
         _pad_title(ax, o.window)
     axes[-1].set_xlabel(DOMAIN_AXIS_LABEL)
-    fig.supylabel(Y_LABEL, fontsize=9)
+    fig.supylabel(y_label(), fontsize=9)
     handles = [Line2D([], [], color=rw.C_CS_TARGET, lw=LW, label=cs_label()),
-               Line2D([], [], color=rw.C_DUNE_TARGET, lw=LW,
-                      label="Total dune line change (measured, scaled to 14 yr)"),
+               Line2D([], [], color=rw.C_DUNE_TARGET, lw=LW, label=dune_label()),
                Line2D([], [], color=INK, lw=LW_MODEL,
                       label=f"CASCADE ({MODEL_LABEL[key]})")] + beach_width_handles()
     fig.legend(handles=handles, loc="outside lower center", ncol=3, frameon=False)
     sk = skill_df[skill_df["model_ends"] == folder]
     def _s(w, t):
         r = sk[(sk["window"] == w) & (sk["target"] == t)].iloc[0]
-        return f"bias {r['bias_m']:+.1f} m, RMSE {r['rmse_m']:.1f} m"
+        return f"bias {_fmt(r['bias_m'], True)} {_u()}, RMSE {_fmt(r['rmse_m'])} {_u()}"
     stats = " ".join(
         f"{w.replace('_', '–')}: against CoastSat {_s(w, 'coastsat')}; against the "
         f"dune line {_s(w, 'duneline')}." for w in ("1996_2010", "2010_2024"))
@@ -347,27 +438,38 @@ def figure(observations, frames, key, folder, half, skill_df):
     dates = "; ".join(f"{m['start_date']} to {m['end_date']} ({m['interval_yr']:.1f} yr) "
                       f"for {w[0]}–{w[1]}" for w, m in metas.items())
     caption(fig, (
-        "The two candidate targets and the CASCADE hindcast as net change in "
-        "shoreline position over each 14-yr model window by GIS domain (1 at Cape "
+        "The two candidate targets and the CASCADE hindcast as "
+        + _quantity().replace("the 14-yr", "each 14-yr") + " by GIS domain (1 at Cape "
         "Point, 90 at Pea Island), seaward positive, domain means. Blue: the "
-        f"CoastSat target, {cs_clause()}, multiplied by 14 yr. Red: the dune-line target, the measured net "
+        f"CoastSat target, {cs_clause()}{_x14(', multiplied by')}. Red: the dune-line target, the measured net "
         f"change between the digitized lines ({dates}; the 2023 date assumed) "
-        "divided by its interval and multiplied by 14 yr. Black: the model's own "
-        f"net change over the window, {MODEL_CLAUSE[key]}, "
+        f"divided by its interval{_x14(' and multiplied by')}. Black: the model's own "
+        f"{_model_quantity()}, {MODEL_CLAUSE[key]}, "
         "full management, groin off. The space between the two targets is the "
         "beach-width change they imply: solid grey where the beach widened, hatched "
         "where it narrowed. Interior GIS 2–89, model minus target: " + stats
         + " The LOESS-smoothed scores, as the runs are graded, are in "
-        f"tables/skill.csv. One y axis, ±{half:g} m, the same on every figure here."
+        f"tables/skill.csv. One y axis, ±{half:g} {_u()}, the same on every figure here."
         + over_note([(frames[o.window], ["coastsat_target_m", "dune_target_m",
                                          f"model_{folder}_m"], "{}–{} ".format(*o.window))
                      for o in observations], half)))
     # Stem carries the target mode AND the model set (Hannah, 2026-09-21):
     # six folders wrote this same basename, two targets x three model sets.
     out = save(fig, OUT_DIR / folder
-               / f"target_comparison_{CS_MODES[CS_MODE]}_{folder}_1996_2010_2024")
+               / f"target_comparison_{_stem_mode()}_{folder}_1996_2010_2024")
     plt.close(fig)
     return out
+
+
+def _dune_title(window):
+    return (f"Total dune line change, {window[0]}–{window[1]} (measured, scaled to 14 yr)"
+            if _net() else
+            f"Dune line change rate, {window[0]}–{window[1]} (measured over the survey interval)")
+
+
+def _target_legend():
+    return ("Target, net change over 14 yr (seaward / landward)" if _net()
+            else "Target, change rate (seaward / landward)")
 
 
 PAIR_KEYS = (("coastsat", "coastsat_target_m", rw.C_CS_TARGET,
@@ -439,22 +541,21 @@ def paired_figure(observations, frames, half, skill_df, ends, smoothed=False):
             ax.plot(x, df[f"model_{MODEL_SETS[key]}_m"], color=INK, lw=LW_MODEL, zorder=12)
             mark_offaxis(ax, x, df[fill_col], half)
             mark_offaxis(ax, x, df[f"model_{MODEL_SETS[key]}_m"], half, color=INK)
-            ax.yaxis.set_major_locator(MultipleLocator(20.0 if half > 60 else 10.0))
-            _title(ax, i, (f"{CS_MODE_NOUN[CS_MODE]}, {o.window[0]}–{o.window[1]} "
+            ax.yaxis.set_major_locator(MultipleLocator(y_tick(half)))
+            _title(ax, i, (f"{cs_noun()}, {o.window[0]}–{o.window[1]} "
                            f"({cs_method(o.window)}), and its run"
                            if key == "coastsat" else
-                           f"Total dune line change, {o.window[0]}–{o.window[1]} "
-                           "(measured, scaled to 14 yr), and its run"))
+                           _dune_title(o.window) + ", and its run"))
         fills = obs.fills_in(*o.window)
         if fills:
             obs.draw_fills(axes[0], fills, half)
             _pad_title(axes[0], o.window)
         axes[-1].set_xlabel(DOMAIN_AXIS_LABEL)
-        fig.supylabel(Y_LABEL, fontsize=9)
+        fig.supylabel(y_label(), fontsize=9)
         handles = [(Line2D([], [], color=obs.C_ACCRETE, lw=1.0),
                     Line2D([], [], color=obs.C_ERODE, lw=1.0))]
         labels = [("Target as graded (raw GIS 1–10, LOESS beyond)"
-                   if smoothed else "Target, net change over 14 yr (seaward / landward)")]
+                   if smoothed else _target_legend())]
         if smoothed:
             handles.append((Line2D([], [], color=obs.C_ACCRETE, marker="o", ms=3, lw=0),
                             Line2D([], [], color=obs.C_ERODE, marker="o", ms=3, lw=0)))
@@ -473,37 +574,37 @@ def paired_figure(observations, frames, half, skill_df, ends, smoothed=False):
         m = o.meta
         caption(fig, (
             f"{o.window[0]}–{o.window[1]}: each candidate target with the CASCADE run "
-            "calibrated to it, as net change in shoreline position over the 14-yr model "
-            "window by GIS domain (1 at Cape Point, 90 at Pea Island), seaward positive; "
+            "calibrated to it, as " + _quantity() + " "
+            "by GIS domain (1 at Cape Point, 90 at Pea Island), seaward positive; "
             + ("the targets SMOOTHED as the runs are graded: the raw domain means over "
                f"GIS 1–10 and a {rw.TARGET_WINDOW}-domain LOESS of the transect values beyond, drawn as the "
                "fill, with the raw domain means as dots. " if smoothed else "domain means. ")
-            + "(a) The CoastSat target, " + cs_clause() + " "
-            "x 14 yr, as the fill (blue seaward, red landward), and the edgeBE run whose "
+            + "(a) The CoastSat target, " + cs_clause() + _x14(" x") + ", "
+            "as the fill (blue seaward, red landward), and the edgeBE run whose "
             "two end domains were solved against it (black). (b) The dune-line target, "
             f"the measured net change between the digitized lines ({m['start_date']} to "
             f"{m['end_date']}, {m['interval_yr']:.1f} yr"
             + (", the end date assumed" if m['end_date_assumed'] else "")
-            + ") divided by its interval and x 14 yr, as the fill, and the edgeBE run whose "
+            + ") divided by its interval" + _x14(" and x") + ", as the fill, and the edgeBE run whose "
             "end domains were solved against the dune line (black). The model lines are "
-            "each run's own net change, unchanged; the gap between line and fill is the "
+            "each run's own " + ("net change" if _net() else "endpoint rate") + ", unchanged; the gap between line and fill is the "
             "misfit. THE ONLY SOURCE/SINK CORRECTION IN EITHER RUN IS THE BOUNDARY TERM AT "
             "GIS 1 AND GIS 90, whose values are in the figure title; every domain from GIS "
             "2 to 89 carries none, so the interior is the model's own response. Full "
             "management, groin off. Interior GIS 2–89, model minus its own "
             + ("smoothed " if smoothed else "") + "target: (a) "
-            "{:+.1f} m bias, {:.1f} m RMSE; (b) {:+.1f} m bias, {:.1f} m RMSE. The y axis "
-            "(±{:g} m) is the same on every figure in target_comparison.{} Scores against the other "
+            "{} {u} bias, {} {u} RMSE; (b) {} {u} bias, {} {u} RMSE. The y axis "
+            "(±{:g} {u}) is the same on every {e}figure in target_comparison.{} Scores against the other "
             "target, raw and smoothed, are in tables/skill.csv.".format(
-                sk.loc[(w, "ends_solved_on_coastsat", tgt["coastsat"]), "bias_m"],
-                sk.loc[(w, "ends_solved_on_coastsat", tgt["coastsat"]), "rmse_m"],
-                sk.loc[(w, "ends_solved_on_duneline", tgt[rw.MAIN_DUNE]), "bias_m"],
-                sk.loc[(w, "ends_solved_on_duneline", tgt[rw.MAIN_DUNE]), "rmse_m"], half,
+                _fmt(sk.loc[(w, "ends_solved_on_coastsat", tgt["coastsat"]), "bias_m"], True),
+                _fmt(sk.loc[(w, "ends_solved_on_coastsat", tgt["coastsat"]), "rmse_m"]),
+                _fmt(sk.loc[(w, "ends_solved_on_duneline", tgt[rw.MAIN_DUNE]), "bias_m"], True),
+                _fmt(sk.loc[(w, "ends_solved_on_duneline", tgt[rw.MAIN_DUNE]), "rmse_m"]), half,
                 over_note([(df, ["coastsat_target_m", "model_ends_solved_on_coastsat_m",
                                  "dune_target_m", "model_ends_solved_on_duneline_m"], "")],
-                          half))))
+                          half), u=_u(), e="" if _net() else "m/yr ")))
         out += save(fig, OUT_DIR / ("paired_smoothed" if smoothed else "paired")
-                    / (f"target_and_own_run_{CS_MODES[CS_MODE]}_{w}"
+                    / (f"target_and_own_run_{_stem_mode()}_{w}"
                        f"{'_smoothed' if smoothed else ''}"))
         plt.close(fig)
     return out
@@ -544,22 +645,20 @@ def unsolved_figure(observations, frames, half, skill_df, ends, smoothed=False):
             ax.plot(x, df[col_model], color=INK, lw=LW_MODEL, zorder=12)
             mark_offaxis(ax, x, df[fill_col], half)
             mark_offaxis(ax, x, df[col_model], half, color=INK)
-            ax.yaxis.set_major_locator(MultipleLocator(20.0 if half > 60 else 10.0))
-            _title(ax, i, (f"{CS_MODE_NOUN[CS_MODE]}, {o.window[0]}–{o.window[1]} "
+            ax.yaxis.set_major_locator(MultipleLocator(y_tick(half)))
+            _title(ax, i, (f"{cs_noun()}, {o.window[0]}–{o.window[1]} "
                            f"({cs_method(o.window)})"
-                           if key == "coastsat" else
-                           f"Total dune line change, {o.window[0]}–{o.window[1]} "
-                           "(measured, scaled to 14 yr)"))
+                           if key == "coastsat" else _dune_title(o.window)))
         fills = obs.fills_in(*o.window)
         if fills:
             obs.draw_fills(axes[0], fills, half)
             _pad_title(axes[0], o.window)
         axes[-1].set_xlabel(DOMAIN_AXIS_LABEL)
-        fig.supylabel(Y_LABEL, fontsize=9)
+        fig.supylabel(y_label(), fontsize=9)
         handles = [(Line2D([], [], color=obs.C_ACCRETE, lw=1.0),
                     Line2D([], [], color=obs.C_ERODE, lw=1.0))]
         labels = [("Target as graded (raw GIS 1–10, LOESS beyond)"
-                   if smoothed else "Target, net change over 14 yr (seaward / landward)")]
+                   if smoothed else _target_legend())]
         if smoothed:
             handles.append((Line2D([], [], color=obs.C_ACCRETE, marker="o", ms=3, lw=0),
                             Line2D([], [], color=obs.C_ERODE, marker="o", ms=3, lw=0)))
@@ -577,33 +676,33 @@ def unsolved_figure(observations, frames, half, skill_df, ends, smoothed=False):
         m = o.meta
         caption(fig, (
             f"{o.window[0]}–{o.window[1]}: the UNCALIBRATED CASCADE run against both "
-            "candidate targets, as net change in shoreline position over the 14-yr model "
-            "window by GIS domain (1 at Cape Point, 90 at Pea Island), seaward positive; "
+            "candidate targets, as " + _quantity() + " "
+            "by GIS domain (1 at Cape Point, 90 at Pea Island), seaward positive; "
             + ("the targets SMOOTHED as the runs are graded: the raw domain means over "
                f"GIS 1–10 and a {rw.TARGET_WINDOW}-domain LOESS of the transect values beyond, drawn as the "
                "fill, with the raw domain means as dots. " if smoothed else "domain means. ")
-            + "(a) The CoastSat target, " + cs_clause() + " x 14 yr, as the fill (blue "
+            + "(a) The CoastSat target, " + cs_clause() + _x14(" x") + ", as the fill (blue "
             "seaward, red landward). (b) The dune-line target, the measured net change "
             f"between the digitized lines ({m['start_date']} to {m['end_date']}, "
             f"{m['interval_yr']:.1f} yr"
             + (", the end date assumed" if m['end_date_assumed'] else "")
-            + ") divided by its interval and x 14 yr, as the fill. THE BLACK LINE IS THE "
+            + ") divided by its interval" + _x14(" and x") + ", as the fill. THE BLACK LINE IS THE "
             "SAME RUN IN BOTH PANELS: the zeroBE arm of the matrix cell, which carries NO "
             "source/sink term in ANY domain, the two ends included, so every one of the 90 "
             "domains is the model's own response and neither target was fitted. Full "
             "management, groin off. The gap between line and fill is the misfit. Interior "
             "GIS 2–89, model minus " + ("smoothed " if smoothed else "") + "target: (a) "
-            "{:+.1f} m bias, {:.1f} m RMSE; (b) {:+.1f} m bias, {:.1f} m RMSE. The y axis "
-            "(±{:g} m) is the same on every figure in target_comparison.{} Scores for every "
+            "{} {u} bias, {} {u} RMSE; (b) {} {u} bias, {} {u} RMSE. The y axis "
+            "(±{:g} {u}) is the same on every {e}figure in target_comparison.{} Scores for every "
             "model set against every target, raw and smoothed, are in tables/skill.csv.".format(
-                sk.loc[(w, MODEL_SETS[UNSOLVED], "coastsat" + sfx), "bias_m"],
-                sk.loc[(w, MODEL_SETS[UNSOLVED], "coastsat" + sfx), "rmse_m"],
-                sk.loc[(w, MODEL_SETS[UNSOLVED], "duneline" + sfx), "bias_m"],
-                sk.loc[(w, MODEL_SETS[UNSOLVED], "duneline" + sfx), "rmse_m"], half,
+                _fmt(sk.loc[(w, MODEL_SETS[UNSOLVED], "coastsat" + sfx), "bias_m"], True),
+                _fmt(sk.loc[(w, MODEL_SETS[UNSOLVED], "coastsat" + sfx), "rmse_m"]),
+                _fmt(sk.loc[(w, MODEL_SETS[UNSOLVED], "duneline" + sfx), "bias_m"], True),
+                _fmt(sk.loc[(w, MODEL_SETS[UNSOLVED], "duneline" + sfx), "rmse_m"]), half,
                 over_note([(df, ["coastsat_target_m", "dune_target_m", col_model], "")],
-                          half))))
+                          half), u=_u(), e="" if _net() else "m/yr ")))
         out += save(fig, OUT_DIR / MODEL_SETS[UNSOLVED]
-                    / (f"unsolved_run_and_targets_{CS_MODES[CS_MODE]}_{w}"
+                    / (f"unsolved_run_and_targets_{_stem_mode()}_{w}"
                        f"{'_smoothed' if smoothed else ''}"))
         plt.close(fig)
     return out
@@ -634,15 +733,22 @@ def load_model_sets():
 
 
 def main() -> int:
-    global CS_MODE, OUT_DIR
+    global CS_MODE, OUT_DIR, UNITS
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--coastsat-target", choices=sorted(CS_MODES), default="projected",
                     help="projected (default): the 1996-2024 LRR x 14 yr, carried onto "
                          "windows it was not fitted on. total: each window's own LRR. "
                          "'full' and 'subperiod' are the pre-2026-09-21 aliases.")
-    CS_MODE = CS_CANON[ap.parse_args().coastsat_target]
+    ap.add_argument("--units", choices=("net", "rate"), default="net",
+                    help="net (default): metres over the 14-yr window. rate: the same "
+                         "in m/yr, written to <mode>/change_rate/.")
+    args = ap.parse_args()
+    CS_MODE = CS_CANON[args.coastsat_target]
+    UNITS = args.units
     OUT_DIR = ROOT_DIR / CS_MODES[CS_MODE]
+    if not _net():
+        OUT_DIR = OUT_DIR / RATE_SUBDIR
     apply_style()
     observations = [rw.Observation(w) for w in WINDOWS]
     models = load_model_sets()
@@ -652,6 +758,8 @@ def main() -> int:
     frames, skill = {}, []
     for o in observations:
         df = window_values(o, {k: m[0][o.window] for k, m in models.items()})
+        if not _net():
+            df = to_rate(df)
         frames[o.window] = df
         skill += skill_rows(o.window, df)
     skill_df = pd.DataFrame(skill)
@@ -659,15 +767,18 @@ def main() -> int:
     tables = OUT_DIR / "tables"
     tables.mkdir(parents=True, exist_ok=True)
     for w, df in frames.items():
-        df.round(3).to_csv(tables / "domain_values_{}_{}.csv".format(*w), index=False)
-    skill_df.to_csv(tables / "skill.csv", index=False)
+        (df if _net() else _table_names(df)).round(3).to_csv(
+            tables / "domain_values_{}_{}.csv".format(*w), index=False)
+    (skill_df if _net() else skill_df.rename(
+        columns={"bias_m": "bias_m_yr", "rmse_m": "rmse_m_yr"})).to_csv(
+        tables / "skill.csv", index=False)
     pd.DataFrame([dict(r, model_ends=MODEL_SETS[k]) for k, (_, rows) in models.items()
                   for r in rows]).to_csv(OUT_DIR / "runs_used.csv", index=False)
 
     cols = ["coastsat_target_m", "dune_target_m"] + [f"model_{f}_m" for f in MODEL_SETS.values()]
     # ONE fixed y range for every figure in target_comparison, both versions
     # (Hannah, 2026-09-19); anything beyond it is counted in the caption.
-    half = Y_HALF_M
+    half = Y_HALF_M if _net() else Y_HALF_RATE
     written = []
     for key, folder in MODEL_SETS.items():
         written += figure(observations, frames, key, folder, half, skill_df)
@@ -679,7 +790,7 @@ def main() -> int:
         written += unsolved_figure(observations, frames, half, skill_df, ends, smoothed=True)
 
     print(skill_df[skill_df["target"].isin(["coastsat", "duneline"])].to_string(index=False))
-    print(f"\ny axis +/-{half:g} m")
+    print(f"\ny axis +/-{half:g} {_u()}")
     for p in written:
         print("wrote   ", Path(p).relative_to(_REPO))
     return 0

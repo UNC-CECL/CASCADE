@@ -35,6 +35,13 @@
 
 > **Lost?** [`FIGURES.md`](../../../FIGURES.md) is the one-page index of which figure answers which question.
 
+**The same figures in m/yr: `projected/change_rate/` and `total_change/change_rate/`** (2026-09-29, Hannah). Written by `target_comparison.py --units rate` (add `--coastsat-target total` for the second). Every metres column is divided by the 14 model years, which undoes the × 14 exactly:
+- the CoastSat target is the LRR itself;
+- the dune line is its measured rate over the survey interval (11.6 / 14.1 yr), with no scaling to the window;
+- the model is its endpoint rate.
+
+The stems carry `_rate` after the target mode, and `tables/skill.csv` there reports `bias_m_yr` / `rmse_m_yr`. The y axis is ±8 m/yr, the range the `model_vs_observed/` rate figures use. The metres figures in the folders below are unchanged.
+
 The two candidate targets and the hindcast, as **net change in position (m)
 over each 14-yr model window**, 1996–2010 and 2010–2024. Built 2026-09-19
 (Hannah, by interview) by `scripts/analyze_output/compare_runs/target_comparison.py`,
