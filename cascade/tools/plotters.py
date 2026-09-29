@@ -78,7 +78,7 @@ def plot_XShoreTransects(barrier3d, TMAX):
     plt.hlines(barrier3d._SL, -1, len(CrossElev + 1), colors="dodgerblue")
     plt.xlabel("Cross-Shore Distance (dam)")
     plt.ylabel("Elevation (m)")
-    plt.title("Cross-shore PEA_2011 Transects")
+    plt.title("Cross-shore Topo Transects")
     plt.show()
 
     return fig
@@ -643,7 +643,7 @@ def plot_ElevAnimation_CASCADE(
     :param y_lim: y limits [low, high] of plot [dam]
     :param z_lim: z limit of plot [m MHW]
     :param fig_size: size of plot, e.g., (6, 2.5)
-    :param fig_eps: comparison files in eps format -- default is png [best for gif]
+    :param fig_eps: output files in eps format -- default is png [best for gif]
     :return: gif
 
     Animation Frames of Barrier and Dune Elevation (#4 in Barrier3D_Functions,
@@ -694,10 +694,10 @@ def plot_ElevAnimation_CASCADE(
         for t in range(maxMGMT + 1):
             # start with plotting t=0, then plot post-storm dune, interior,
             # shoreface, etc. before management, treating this as t=0.5 (i.e.,
-            # this is really the final configuration from original at t=1,2,3,4,5,...
+            # this is really the final configuration from storms at t=1,2,3,4,5,...
             # but before human modifications); for the default dune inputs, we
             # should be able to see natural dune growth at t=0.5 before rebuild
-            # and original (i.e., t=0.5 and t=1 should not be the same)
+            # and storms (i.e., t=0.5 and t=1 should not be the same)
             if 0 < t <= TMAX_SIM:
                 # post-storm variables in the BeachDuneManager are: interior,
                 # dune height, x_s, s_sf, beach width
@@ -806,7 +806,7 @@ def plot_ElevAnimation_CASCADE(
                 plt.ylabel("cross-shore distance (dam)")
                 timestr = (
                     "Time = " + str(t - 0.5) + " yrs"
-                )  # we are letting the post-storm comparison represent 0.5 years
+                )  # we are letting the post-storm output represent 0.5 years
                 if km_on:
                     locs, _ = plt.yticks()
                     plt.yticks(locs, locs / 100)
@@ -1177,7 +1177,7 @@ def plot_nonlinear_stats_RoadwayManager(
     plt.subplot(2, 2, 2)
     if dunes_rebuilt is not None:
         plt.plot(dunes_rebuilt[0:tmax_sim], "k")
-        plt.ylabel("PEA_2011 Rebuilt")
+        plt.ylabel("Dunes Rebuilt")
         plt.xlabel("Time (yr)")
 
     # road relocated
@@ -1517,7 +1517,7 @@ def plot_nonlinear_stats_BeachDuneManager(
     plt.subplot(2, 2, 2)
     if dunes_rebuilt is not None:
         plt.plot(dunes_rebuilt, "k")
-        plt.ylabel("PEA_2011 Rebuilt")
+        plt.ylabel("Dunes Rebuilt")
         plt.xlabel("Time (yr)")
 
     # nourishment volumes

@@ -606,7 +606,7 @@ class Cascade:
 
 
 
-        # reshape comparison from parallel processing and convert from tuple to list
+        # reshape output from parallel processing and convert from tuple to list
         x_t_dt, x_s_dt, h_b_dt, b3d = zip(*batch_output)
         x_t_dt = list(x_t_dt)
         x_s_dt = list(x_s_dt)

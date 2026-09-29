@@ -28,7 +28,7 @@ The fresh-start commit already carried some local edits, made before this branch
 | 2 | Where a relocated road is rebuilt is its own input (`road_relocation_setback`) | `cascade.py`, `cascade_groin.py` | interface fix | ead66e13 | yes |
 | 3 | `resize_interior_domain` aligns pre/post-storm grids by anchoring the edge that did not move | `beach_dune_manager.py` | crash fix | 9b89dfee | yes, every managed run |
 | 4 | The bulldozer dune cap limits only the sand added, not the whole dune cell | `beach_dune_manager.py` | bug fix | 4d9c3acd | yes, every managed run |
-| 5 | Find-and-replace accidents in names, labels and a default file name (the default file name **fixed 2026-09-29**) | `cascade.py`, `cascade_groin.py`, `beach_dune_manager.py`, `roadway_manager.py`, `brie_coupler.py`, `tools/plotters.py` | **defect, not yet reverted** | pre-history | no effect on Hatteras runs (see 5) |
+| 5 | Find-and-replace accidents in names, labels and a default file name | `cascade.py`, `cascade_groin.py`, `beach_dune_manager.py`, `roadway_manager.py`, `brie_coupler.py`, `tools/plotters.py` | defect, **all reverted 2026-09-29** | pre-history | no effect on Hatteras runs (see 5) |
 | 6 | Empty `res_manager.py`; debug `print`s in `road_relocation_checks` / `check_sandbag_need`; whitespace | various | cruft | pre-history | harmless |
 
 ---
@@ -104,7 +104,7 @@ A mismatch in alongshore length now raises a `CascadeError` that names itself. `
 
 **Evidence.** `output/comparisons/adoption_2026-09-28/README.md` ("The dune-cap fix"); `output/raw_runs/experiments/end-domain-boundaries/2026-09-28-ends-resolved-dunecap/README.md`; superseded runs in `output/raw_runs/archive/2026-09-28-pre-dunecap/`.
 
-## 5. Find-and-replace accidents (defect, not yet reverted)
+## 5. Find-and-replace accidents (defect, reverted 2026-09-29)
 
 A project-wide rename (most likely an IDE refactor of folder names) rewrote words inside the model code. Found 2026-09-29 by diffing against the published version:
 
@@ -120,7 +120,12 @@ A project-wide rename (most likely an IDE refactor of folder names) rewrote word
 
 **Fixed 2026-09-29: the default storm file** (Hannah: "fix 1a and 2 now"). The default, the default-storms guard and its message say `cascade-default-storms.npy` again in both classes. The guard had never been able to fire. Hatteras results are bit-identical (`output/raw_runs/experiments/code-checks/2026-09-29-default-storms-sandbag-fix/NOTE.md`).
 
-**To do:** revert the rest (labels, comments, docstrings) to upstream wording before any upstreaming. Do it by hand against upstream: "original" is also a real word in the code (`original_growth_param`), so a reverse find-and-replace would do the same damage again.
+**The rest reverted 2026-09-29** (Hannah: "revert the rest of the find-and-replace accidents"): 24 lines in all, 21 in this pass:
+- the two plot labels and the title in `plotters.py`
+- ten docstrings (`topography_dunes`)
+- the `storms`/`output`/`offset` comments
+
+A line was reverted only if its sole difference from the published version (8549847a) was one of the known substitution pairs; lines with real edits were left alone. The legitimate uses of "original" (`original_growth_param`, "back to original") and "the old behaviour" (change 2) are untouched. Comments, docstrings and plot labels only, so no model behaviour changes. `grep` finds no remaining `topography_dunes`, `PEA_2011` or `raw_offset` in `cascade/`.
 
 ## 6. Cruft
 

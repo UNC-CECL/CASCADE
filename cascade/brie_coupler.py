@@ -90,7 +90,7 @@ def initialize_equal(
     :param background_erosion: rate of shoreline retreat attributed to gradients
         in alongshore transport
     :param parameter_file: name of the Barrier3D parameter file
-    :param storm_file: name of the Barrier3D original file
+    :param storm_file: name of the Barrier3D storms file
     :param dune_file: name of the Barrier3D dunes file
     :param elevation_file: name of the Barrier3D elevation file
     :param MHW: elevation of mean high water [m NAVD88]

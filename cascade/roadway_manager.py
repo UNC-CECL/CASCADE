@@ -4,7 +4,7 @@ This module provides functions for modifying a barrier segment from Barrier3D --
 consisting of 1+ rows of dune cells, a separate interior grid, and an idealized
 shoreface -- for roadway management decisions, including:
 
-1. overwash removal from the roadway after original and placement on the dune line,
+1. overwash removal from the roadway after storms and placement on the dune line,
 2. road relocation landward when the dunes migrate over the roadway,
 3. dune rebuilding when the dunes fall below a minimum height.
 
@@ -61,10 +61,10 @@ def bulldoze(
     time_index: int,
         Time index for drowning error message
     xyz_interior_grid: array
-        Interior barrier island topography_dunes [z units specified by dz; for Barrier3d,
+        Interior barrier island topography [z units specified by dz; for Barrier3d,
         dz=10, decameters MHW]
     yxz_dune_grid:
-        Dune topography_dunes [z units specified by dz; for Barrier3d, dz=10, decameters
+        Dune topography [z units specified by dz; for Barrier3d, dz=10, decameters
         above the berm elevation]
     road_ele: float
         Road elevation [m; needs to be in same reference frame as xyz; for Barrier3d,
@@ -193,7 +193,7 @@ def rebuild_dunes(
     Parameters
     ----------
     yxz_dune_grid: ndarray, shape (ny, nx)
-        Dune topography_dunes [z units specified by dz; for Barrier3D, dz=10, decameters
+        Dune topography [z units specified by dz; for Barrier3D, dz=10, decameters
         above the berm elevation]
     max_dune_height: float, optional
         Maximum dune height for dune rebuilding [m]
@@ -258,7 +258,7 @@ def set_growth_parameters(
     Parameters
     ----------
     yxz_dune_grid:
-        Dune topography_dunes [units must be the same as Dmax]
+        Dune topography [units must be the same as Dmax]
     Dmax: float
         Maximum natural equilibrium dune height [default in Barrier3D is decameters]
     growthparam:
@@ -318,7 +318,7 @@ def get_road_relocation_elevation(
     time_index: int,
         Time index for drowning error message
     xyz_interior_grid: array
-        Interior barrier island topography_dunes [z units specified by dz; for Barrier3d,
+        Interior barrier island topography [z units specified by dz; for Barrier3d,
         dz=10, decameters MHW]
     road_width: int
         Width of roadway [m]
@@ -741,7 +741,7 @@ class RoadwayManager:
         self._road_relocated_TS[self._time_index - 1] = road_relocated
 
         ###############################################################################
-        # bulldoze roadway after original and check for road width drowning
+        # bulldoze roadway after storms and check for road width drowning
         ###############################################################################
 
         # bulldoze the road and put bulldozed sand back on the dunes; drown road
