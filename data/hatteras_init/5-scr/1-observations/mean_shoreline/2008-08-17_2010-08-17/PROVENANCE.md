@@ -76,6 +76,7 @@ No transect was excluded.
 | `mean_shoreline_2008-08-17_2010-08-17.png` | the diagnostic figure |
 | `mean_shoreline_2008-08-17_2010-08-17_island_outline.png` | panel (a) of the diagnostic alone, the line over the island outline |
 | `on_imagery/` | the line and its ±1 sd band on the USGS photographs flown inside the window, at six sites and island-wide (three segments, and one ribbon panel); written by `coastsat_mean_shoreline_on_imagery.py`, which needs the D: drive (see its supporting/ folders) |
+| `storm_check/` | were there big storms around this window? The storm record 3 yr either side, ranked in 1984-2024, and the mean without post-storm passes; written by `coastsat_mean_shoreline_storm_check.py` |
 
 Resolved through `hat_observed_rates.mean_shoreline_dir/_geojson/_csv`.
 Never type these paths.

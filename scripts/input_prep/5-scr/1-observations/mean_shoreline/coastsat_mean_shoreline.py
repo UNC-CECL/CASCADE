@@ -693,6 +693,10 @@ def write_provenance(df, vertices, folder, window, by_year, min_obs, built_on):
                        "island-wide (three segments, and one ribbon panel); written "
                        "by `coastsat_mean_shoreline_on_imagery.py`, which needs the "
                        "D: drive (see its supporting/ folders) |\n")
+    if (folder / "storm_check").is_dir():
+        imagery_row += ("| `storm_check/` | were there big storms around this window? The storm "
+                        "record 3 yr either side, ranked in 1984-2024, and the mean without "
+                        "post-storm passes; written by `coastsat_mean_shoreline_storm_check.py` |\n")
 
     text = """# mean_shoreline/{label} -- the CoastSat window mean, as a line
 
