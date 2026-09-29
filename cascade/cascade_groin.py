@@ -119,7 +119,7 @@ class Cascade:
         dune_file="barrier3d-default-dunes.npy",
         parameter_file="barrier3d-default-parameters.yaml",
         # same as "StormSeries_1kyrs_VCR_Berm1pt9m_Slope0pt04_01.npy"
-        storm_file="cascade-default-old.npy",
+        storm_file="cascade-default-storms.npy",
         num_cores=1,
         roadway_management_module=False,
         alongshore_transport_module=True,
@@ -325,7 +325,14 @@ class Cascade:
         self._trigger_dune_knockdown = trigger_dune_knockdown
         self._initial_beach_width = [0] * self._ny
         self._group_roadway_abandonment = group_roadway_abandonment
-        self._sandbag_management_on = sandbag_management_on
+        # One value per domain: update() indexes it per domain, so a single
+        # True/False (the default) is broadcast, as upstream f7ad676b does.
+        # Until 2026-09-29 it was stored as passed and the default False
+        # raised "'bool' object is not subscriptable" in the first year.
+        if np.size(sandbag_management_on) > 1:
+            self._sandbag_management_on = list(sandbag_management_on)
+        else:
+            self._sandbag_management_on = [bool(sandbag_management_on)] * self._ny
         self._sandbag_elevation = sandbag_elevation
         self._sandbag_need = [False] * self._ny
         self._enable_shoreline_offset = enable_shoreline_offset
@@ -335,9 +342,9 @@ class Cascade:
         # initialization errors
         if (
             berm_elevation != 1.9 or MHW != 0.46 or beta != 0.04
-        ) and storm_file == "cascade-default-old.npy":
+        ) and storm_file == "cascade-default-storms.npy":
             raise CascadeError(
-                "The default old only apply for a berm elevation=1.9 m NAVD88, "
+                "The default storms only apply for a berm elevation=1.9 m NAVD88, "
                 "MHW=0.46 m NAVD88 & beach slope=0.04."
             )
         if (sea_level_rise_constant is False) and (time_step_count > 200):

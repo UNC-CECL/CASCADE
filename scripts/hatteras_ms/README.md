@@ -26,7 +26,9 @@ old_versions/ superseded runners, and the inherited driver that predates them
 
 ## Which Barrier3D the run uses
 
-Barrier3D is a separate repository, installed editable, so the branch checked out at `../Barrier3D` is the model. Every run records the branch and commit it imported (`run_registry.barrier3d_provenance`). None of the fixes below has been pushed upstream (Hannah, 2026-09-28). The full record, with evidence paths, is `HATTERAS_FIXES.md` on `hatteras/adopted`.
+Barrier3D is a separate repository, installed editable, so the branch checked out at `../Barrier3D` is the model. Every run records the branch and commit it imported (`run_registry.barrier3d_provenance`). None of the fixes below has been pushed upstream (Hannah, 2026-09-28).
+
+**To do: push the Barrier3D fixes eventually** (Hannah, 2026-09-29). They stay local for now. Until they are pushed, this branch runs only on a machine that has `hatteras/adopted` checked out at `../Barrier3D`: the runner refuses a Barrier3D without per-cell ceilings. The full record, with evidence paths, is `HATTERAS_FIXES.md` on `hatteras/adopted`. Changes to CASCADE's own `cascade/` package are recorded in `HATTERAS_CASCADE_CHANGES.md` at the repository root.
 
 | branch / tag | what it has | in use? |
 |---|---|---|
