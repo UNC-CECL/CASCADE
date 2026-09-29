@@ -8,6 +8,7 @@ Copyright (C) 2022 Katherine Anarde
 
 import math
 import os
+from matplotlib.lines import Line2D
 
 import imageio.v2 as iio
 import matplotlib as mpl
@@ -1789,3 +1790,56 @@ def plot_start_end_domains(
         plt.close(fig1)
 
     print("finished. saved {0} figures to {1}".format(ib3ds, save_dir))
+
+
+def plot_overwash_flux(
+        cascade_b3d,
+        save_dir,
+        figsize=[10,8]
+):
+    """
+    plots overwash along all domains on one figure
+    :param cascade_b3d:
+    :param save_dir:
+    :param figsize:
+    :return:
+    """
+    # plot parameters
+    plt.rcParams["font.size"] = 12
+    plt.ioff()
+
+    # create the save folder if it does not already exist
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    # tmax is same for all
+    tmax = cascade_b3d[0].TMAX
+    blues_cmap = colormaps['Blues']
+    blues = blues_cmap(np.linspace(0.2, 1, tmax))  # n evenly spaced colors
+    markers = list(Line2D.markers.keys())
+
+    # loop through each ib3d and add the overwash flux to an array
+    ib3ds = len(cascade_b3d)
+    all_overwash = np.zeros([ib3ds,tmax])  # nrows = ib3ds, ncols = nyears
+    for i in range(ib3ds):
+        overwash = cascade_b3d[i].QowTS  # m^3/m, average for the domain for all model years
+        all_overwash[i] = overwash
+
+    # plot each column, which corresponds to a year and has one value per domain
+    fig1 = plt.figure(figsize=figsize)
+    ax1 = fig1.add_subplot(111)  # rows, cols, plot number
+    xlabel = "iB3D domain"
+    ylabel = "Overwash Flux (m^3/m)"
+    for y in range(tmax):
+        ax1.plot(all_overwash[:,y], c=blues[y], marker=markers[y], label="year {0}".format(y))
+    # other plot features
+    ax1.legend(loc="upper right")
+    ax1.set_ylabel(ylabel)
+    ax1.set_xlabel(xlabel)
+    ax1.set_xticks(np.arange(0,ib3ds,1))
+    # save the figure
+    fig1.tight_layout()
+    fig1.savefig(os.path.join(save_dir, "overwash.png"))
+    plt.close(fig1)
+
+    return all_overwash

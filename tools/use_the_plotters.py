@@ -4,13 +4,14 @@
 
 import os
 import numpy as np
-from cascade.tools.plotters import plot_ElevAnimation_CASCADE, plot_dune_domain, plot_start_end_domains
+from cascade.tools.plotters import plot_ElevAnimation_CASCADE, plot_dune_domain, plot_start_end_domains, plot_overwash_flux
 
 # choose whether to plot and save the cascade animations since it is automatic
 # the other plots just produce and output on screen
 plot_and_save_elev_anim = False
-plot_dunes = False
-plot_domains = True
+plot_dunes = True
+plot_domains = False
+plot_overwash = False
 
 # model results
 datadir = r"C:\Users\agfig\model\calibration"
@@ -46,7 +47,8 @@ if plot_and_save_elev_anim:
 
 if plot_dunes:
     # plot the dune domain over time
-    plot_dune_domain(b3d=calib_b3d, TMAX=calib_tmax)
+    dune_fig = plot_dune_domain(b3d=calib_b3d, TMAX=calib_tmax)
+    dune_fig.savefig(r"C:\Users\agfig\model\calibration\results\{0}\dunes".format(run_name))
 
 if plot_domains:
     # plot 1st and last year domains to compare features
@@ -55,4 +57,11 @@ if plot_domains:
             save_dir=r"C:\Users\agfig\model\calibration\results\{0}\domain_comparison".format(run_name),
             min_z=-3,
             max_z=5,
+    )
+
+if plot_overwash:
+    overwash = plot_overwash_flux(
+        cascade_b3d=calib_b3d,
+        save_dir=r"C:\Users\agfig\model\calibration\results\{0}".format(run_name),
+        figsize=[15, 8]
     )
