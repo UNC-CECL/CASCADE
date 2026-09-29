@@ -1067,9 +1067,9 @@ def plot_nonlinear_stats_RoadwayManager(
             else:
                 # Maximum height of each row in DuneDomain
                 DuneDomainCrest = post_storm_dunes[t].max(axis=1)
-            DuneDomainCrest[
-                DuneDomainCrest < CASCADE_b3d[ib3d].DuneRestart
-            ] = CASCADE_b3d[ib3d].DuneRestart
+            DuneDomainCrest[DuneDomainCrest < CASCADE_b3d[ib3d].DuneRestart] = (
+                CASCADE_b3d[ib3d].DuneRestart
+            )
             post_storm_DuneCrestMax.append(
                 (np.max(DuneDomainCrest) + CASCADE_b3d[ib3d].BermEl) * 10
             )  # relative to MHW
@@ -1346,9 +1346,9 @@ def plot_nonlinear_stats_BeachDuneManager(
                 DuneDomainCrest = post_storm_dunes[t].max(
                     axis=1
                 )  # Maximum height of each row in DuneDomain
-            DuneDomainCrest[
-                DuneDomainCrest < CASCADE_b3d[ib3d].DuneRestart
-            ] = CASCADE_b3d[ib3d].DuneRestart
+            DuneDomainCrest[DuneDomainCrest < CASCADE_b3d[ib3d].DuneRestart] = (
+                CASCADE_b3d[ib3d].DuneRestart
+            )
             post_storm_DuneCrestMax.append(
                 (np.max(DuneDomainCrest) + CASCADE_b3d[ib3d].BermEl) * 10
             )  # relative to MHW

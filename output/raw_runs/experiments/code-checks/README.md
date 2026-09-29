@@ -15,6 +15,7 @@ Whether a code or model change moves the results: re-runs against stored runs, a
 | [`2026-09-28-per-cell-dune-ceiling-reproduces`](2026-09-28-per-cell-dune-ceiling-reproduces/) | Does the Barrier3D per-cell dune-ceiling feature reproduce the in-memory experiment, and change nothing when off? | Yes on both. | record |
 | [`2026-09-28-adoption-end-to-end`](2026-09-28-adoption-end-to-end/) | Does the default runner on the adopted setup reproduce the storm and dune experiments? | Yes. | record |
 | [`2026-09-29-default-storms-sandbag-fix`](2026-09-29-default-storms-sandbag-fix/NOTE.md) | Do the fixes to CASCADE's default storm file name and the `sandbag_management_on` broadcast change any Hatteras result? | No: the 2010 full-management run is bit-identical. The defaults run again, and the default-storms guard fires again. | record |
+| [`2026-09-29-cruft-cleanup`](2026-09-29-cruft-cleanup/NOTE.md) | Does removing the cascade/ cruft (empty `res_manager.py`, local debug prints, formatting drift via black) change any Hatteras result? | No: the 2010 full-management run is bit-identical, and the defaults still run. | record |
 
 **Status** — **current**: its answer is in use now. **superseded**: a later study
 re-asked it; follow the pointer. **record**: a finished check or a result from an

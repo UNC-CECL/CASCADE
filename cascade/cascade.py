@@ -61,8 +61,7 @@ class Cascade:
         elif np.size(road_relocation_setback) > 1:
             self._road_relocation_setback = road_relocation_setback
         else:
-            self._road_relocation_setback = (
-                [road_relocation_setback] * self._ny)
+            self._road_relocation_setback = [road_relocation_setback] * self._ny
         if np.size(nourishment_interval) > 1:
             self._nourishment_interval = nourishment_interval
         else:
@@ -164,10 +163,10 @@ class Cascade:
         house_footprint_x=15,
         house_footprint_y=20,
         beach_full_cross_shore=70,
-        sandbag_management_on = False,
-        sandbag_elevation = 1.5,
-        enable_shoreline_offset = False,
-        shoreline_offset = [],
+        sandbag_management_on=False,
+        sandbag_elevation=1.5,
+        enable_shoreline_offset=False,
+        shoreline_offset=[],
     ):
         """
         CASCADE: The CoAStal Community-lAnDscape Evolution model
@@ -368,7 +367,7 @@ class Cascade:
             sea_level_rise_rate=self._sea_level_rise_rate,
             back_barrier_depth=bay_depth,
             s_background=s_background,
-            h_b_crit=(berm_elevation-MHW),
+            h_b_crit=(berm_elevation - MHW),
             ny=self._ny,
             nt=self._nt,
         )
@@ -397,7 +396,6 @@ class Cascade:
             dune_file=self._dune_file,  # can be array
             elevation_file=self._elevation_file,  # can be array
         )
-
 
         ###############################################################################
         # initialize human dynamics modules
@@ -604,8 +602,6 @@ class Cascade:
             delayed(batchB3D)(self._barrier3d[iB3D]) for iB3D in range(self._ny)
         )
 
-
-
         # reshape output from parallel processing and convert from tuple to list
         x_t_dt, x_s_dt, h_b_dt, b3d = zip(*batch_output)
         x_t_dt = list(x_t_dt)
@@ -670,13 +666,13 @@ class Cascade:
 
                             # set dune growth rates back to original only when dune
                             # elevation is less than equilibrium
-                            self._barrier3d[
-                                iRoad
-                            ].growthparam = self.reset_dune_growth_rates(
-                                original_growth_param=self._roadways[
-                                    iRoad
-                                ]._original_growth_param,
-                                iB3D=iRoad,
+                            self._barrier3d[iRoad].growthparam = (
+                                self.reset_dune_growth_rates(
+                                    original_growth_param=self._roadways[
+                                        iRoad
+                                    ]._original_growth_param,
+                                    iB3D=iRoad,
+                                )
                             )
 
                     else:
@@ -685,13 +681,13 @@ class Cascade:
 
                         # set dune growth rates back to original only when dune
                         # elevation is less than equilibrium
-                        self._barrier3d[
-                            iB3D
-                        ].growthparam = self.reset_dune_growth_rates(
-                            original_growth_param=self._roadways[
-                                iB3D
-                            ]._original_growth_param,
-                            iB3D=iB3D,
+                        self._barrier3d[iB3D].growthparam = (
+                            self.reset_dune_growth_rates(
+                                original_growth_param=self._roadways[
+                                    iB3D
+                                ]._original_growth_param,
+                                iB3D=iB3D,
+                            )
                         )
 
                 else:
@@ -733,12 +729,15 @@ class Cascade:
         # dunes if they fall below a user defined threshold.
         for iB3D in range(self._ny):
             if self._sandbag_management_on[iB3D] == True:
-                sandbag_emplacement = check_sandbag_need(dune_road_distance=self._roadways[iB3D]._road_setback,
-                                                              design_elevation = self._sandbag_elevation,
-                                                              barrier3d = self._barrier3d[iB3D],
-                                                         sandbag_status = self._sandbag_Need_TS[iB3D][-1],
-                                                              )
-                self._sandbag_Need_TS[iB3D] = np.append(self._sandbag_Need_TS[iB3D],sandbag_emplacement)
+                sandbag_emplacement = check_sandbag_need(
+                    dune_road_distance=self._roadways[iB3D]._road_setback,
+                    design_elevation=self._sandbag_elevation,
+                    barrier3d=self._barrier3d[iB3D],
+                    sandbag_status=self._sandbag_Need_TS[iB3D][-1],
+                )
+                self._sandbag_Need_TS[iB3D] = np.append(
+                    self._sandbag_Need_TS[iB3D], sandbag_emplacement
+                )
 
         # ~~~ CHOM coupler (in development) ~~~
         # Provide agents in the Coastal Home Ownership Model (CHOM) with variables
@@ -795,14 +794,12 @@ class Cascade:
 
                 # else manage that community!
                 else:
-                    self._nourishments[
-                        iB3D
-                    ].dune_design_elevation = self._dune_design_elevation[
-                        iB3D
-                    ]  # m MHW
-                    self._nourishments[
-                        iB3D
-                    ].nourishment_volume = self._nourishment_volume[iB3D]
+                    self._nourishments[iB3D].dune_design_elevation = (
+                        self._dune_design_elevation[iB3D]
+                    )  # m MHW
+                    self._nourishments[iB3D].nourishment_volume = (
+                        self._nourishment_volume[iB3D]
+                    )
                     [
                         self._nourish_now[iB3D],
                         self._rebuild_dune_now[iB3D],
@@ -830,9 +827,6 @@ class Cascade:
                         / 10
                     )  # dam
                 )
-
-
-
 
         ###############################################################################
         # update BRIE for any human modifications to the barrier

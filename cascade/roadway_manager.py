@@ -29,6 +29,7 @@ due to storm impacts and SLR.
 Because SLR is simulated using a Lagrangian reference frame in Barrier3D, the
 roadway and dune elevations are reduced by SLR for each time step.
 """
+
 import copy
 
 import numpy as np
@@ -118,9 +119,9 @@ def bulldoze(
     )
     new_dune_domain = yxz_dune_grid + overwash_to_dune
 
-    xyz_interior_grid[
-        road_start:road_end, :
-    ] = new_road_domain  # update interior domain
+    xyz_interior_grid[road_start:road_end, :] = (
+        new_road_domain  # update interior domain
+    )
 
     # check if any water cells border the road on either side
     number_border_cells = np.size(xyz_interior_grid[road_end, :])
@@ -363,6 +364,7 @@ def get_road_relocation_elevation(
 
     return road_ele, roadway_drown
 
+
 def road_relocation_checks(
     time_index,
     dune_migrated,
@@ -412,7 +414,7 @@ def road_relocation_checks(
 
         if road_setback < 0:
             road_relocated = 1
-            print('Roadway relocated')
+            print("Roadway relocated")
 
             # relocate the road only if the width of the island allows it
             if (
@@ -433,26 +435,29 @@ def road_relocation_checks(
 
     return road_relocated, road_setback, relocation_break
 
+
 def check_sandbag_need(
-        dune_road_distance,
-        design_elevation,
-        barrier3d,
-        sandbag_status,
-        threshold_elevation = 0.08,
+    dune_road_distance,
+    design_elevation,
+    barrier3d,
+    sandbag_status,
+    threshold_elevation=0.08,
 ):
-    time_index = barrier3d.time_index -1
+    time_index = barrier3d.time_index - 1
     if dune_road_distance == 0:
-        print('Road close enough for sandbags')
-        exceeds_min_dune_threshold = np.min(barrier3d.DuneDomain[time_index,:,:]) < threshold_elevation
-        #print("Theshold value is "+str(exceeds_min_dune_threshold))
-        #print("Smallest value is "+str(np.min(barrier3d.DuneDomain[time_index,:,:])))
+        exceeds_min_dune_threshold = (
+            np.min(barrier3d.DuneDomain[time_index, :, :]) < threshold_elevation
+        )
 
         if exceeds_min_dune_threshold == True:
-            print('Elevation is low enough for sandbags')
+            print("Elevation is low enough for sandbags")
             for width in range(0, barrier3d.DuneWidth):
                 for cell in range(0, len(barrier3d.DuneDomain[time_index, :, width])):
-                    if barrier3d.DuneDomain[time_index, cell, width] < threshold_elevation:
-                        print('Sandbags would be added in cell ', str(cell), str(width),' elevation was ',barrier3d.DuneDomain[time_index, cell, width])
+                    if (
+                        barrier3d.DuneDomain[time_index, cell, width]
+                        < threshold_elevation
+                    ):
+                        print("Sandbags would be added in cell ", str(cell), str(width))
                         barrier3d._DuneRestart[width][cell] = design_elevation / 10
 
         if exceeds_min_dune_threshold == True:
@@ -462,14 +467,14 @@ def check_sandbag_need(
         else:
             sandbag_need = False
     elif dune_road_distance != 0:
-        print('Road far enough away')
         # If road is too far away reset to initial threshold rebuild value
-        for width in range(0,barrier3d.DuneWidth):
-            for cell in range(0,len(barrier3d.DuneDomain[time_index,:,width])):
+        for width in range(0, barrier3d.DuneWidth):
+            for cell in range(0, len(barrier3d.DuneDomain[time_index, :, width])):
                 barrier3d._DuneRestart[width][cell] = 0.075
         sandbag_need = False
 
     return sandbag_need
+
 
 class RoadwayManager:
     """Manage the road!
@@ -732,12 +737,12 @@ class RoadwayManager:
         self._road_setback_TS[self._time_index - 1] = self._road_setback
         self._road_width_TS[self._time_index - 1] = self._road_width
         self._road_ele_TS[self._time_index - 1] = self._road_ele
-        self._dune_design_elevation_TS[
-            self._time_index - 1
-        ] = self._dune_design_elevation
-        self._dune_minimum_elevation_TS[
-            self._time_index - 1
-        ] = self._dune_minimum_elevation
+        self._dune_design_elevation_TS[self._time_index - 1] = (
+            self._dune_design_elevation
+        )
+        self._dune_minimum_elevation_TS[self._time_index - 1] = (
+            self._dune_minimum_elevation
+        )
         self._road_relocated_TS[self._time_index - 1] = road_relocated
 
         ###############################################################################

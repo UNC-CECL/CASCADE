@@ -27,6 +27,7 @@ Notes
 In future versions, the coupled model will incorporate tidal inlet dynamics
 within BRIE (i.e., the inlet model will be turned on).
 """
+
 import math
 import pathlib
 
@@ -59,6 +60,7 @@ def batchB3D(subB3D):
 
     return sub_x_t_dt, sub_x_s_dt, sub_h_b_dt, subB3D
 
+
 def initialize_equal(
     datadir,
     brie,
@@ -73,8 +75,8 @@ def initialize_equal(
     MHW=0.46,
     berm_elevation=1.9,
     beta=0.04,
-    sandbag_elevation = 1.9,
-    enable_sandbags = False,
+    sandbag_elevation=1.9,
+    enable_sandbags=False,
 ):
     """
     For each B3D domain, modify the default parameters to match the shoreface
@@ -173,8 +175,8 @@ def initialize_equal(
             set_yaml("elevation_file", elevation_file, fid)
 
         # Set sandbag_elevation
-        set_yaml('Sandbag_elevation',sandbag_elevation,fid)
-        set_yaml('enable_sandbags',enable_sandbags,fid)
+        set_yaml("Sandbag_elevation", sandbag_elevation, fid)
+        set_yaml("enable_sandbags", enable_sandbags, fid)
 
         # the following parameters CANNOT be changed or else the MSSM storm list &
         # storm time series needs to be remade
@@ -361,7 +363,6 @@ class BrieCoupler:
                 self._brie.x_b_save[iB3D, self._brie.time_index - 1] = self._brie.x_b[
                     iB3D
                 ]
-
 
     def offset_shoreline(self, enable_shoreline_offset, offset_values, ny):
         if enable_shoreline_offset == True:

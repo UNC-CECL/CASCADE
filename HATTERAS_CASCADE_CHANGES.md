@@ -29,7 +29,7 @@ The fresh-start commit already carried some local edits, made before this branch
 | 3 | `resize_interior_domain` aligns pre/post-storm grids by anchoring the edge that did not move | `beach_dune_manager.py` | crash fix | 9b89dfee | yes, every managed run |
 | 4 | The bulldozer dune cap limits only the sand added, not the whole dune cell | `beach_dune_manager.py` | bug fix | 4d9c3acd | yes, every managed run |
 | 5 | Find-and-replace accidents in names, labels and a default file name | `cascade.py`, `cascade_groin.py`, `beach_dune_manager.py`, `roadway_manager.py`, `brie_coupler.py`, `tools/plotters.py` | defect, **all reverted 2026-09-29** | pre-history | no effect on Hatteras runs (see 5) |
-| 6 | Empty `res_manager.py`; debug `print`s in `road_relocation_checks` / `check_sandbag_need`; whitespace | various | cruft | pre-history | harmless |
+| 6 | Empty `res_manager.py`; debug `print`s; formatting drift | various | cruft, **removed 2026-09-29** | pre-history | harmless |
 
 ---
 
@@ -127,12 +127,15 @@ A project-wide rename (most likely an IDE refactor of folder names) rewrote word
 
 A line was reverted only if its sole difference from the published version (8549847a) was one of the known substitution pairs; lines with real edits were left alone. The legitimate uses of "original" (`original_growth_param`, "back to original") and "the old behaviour" (change 2) are untouched. Comments, docstrings and plot labels only, so no model behaviour changes. `grep` finds no remaining `topography_dunes`, `PEA_2011` or `raw_offset` in `cascade/`.
 
-## 6. Cruft
+## 6. Cruft (removed 2026-09-29)
 
-- `cascade/res_manager.py` is an empty file.
-- `print` statements in `roadway_manager.road_relocation_checks` ("Roadway relocated") and in `check_sandbag_need`.
-- Whitespace and formatting drift against upstream's pre-commit formatting.
-- **Fixed 2026-09-29:** `sandbag_management_on` was not broadcast from a single value, so the default `False` crashed in year 1. It is now broadcast to every domain, as upstream f7ad676b does. Not hit by the hindcast, which passes a list; results bit-identical (same code check).
+Hannah: "remove the leftover cruft too". Hatteras results bit-identical (`output/raw_runs/experiments/code-checks/2026-09-29-cruft-cleanup/NOTE.md`).
+
+- `cascade/res_manager.py`, an empty file referenced by nothing and absent upstream: **deleted**.
+- `print`s in `roadway_manager`: most of them ("Roadway relocated", "Elevation is low enough for sandbags", "Sandbags would be added…") turned out to be **upstream code**, so they are kept. Removing them would widen the gap with upstream. The two local-only prints ("Road close enough for sandbags", "Road far enough away") and two commented-out debug prints are **removed**, and the sandbag message is back to upstream's shorter form.
+- Formatting drift: **black** (upstream's pre-commit formatter) run on the drifted modules. `groin.py` was left alone because another session is editing it.
+- **Fixed earlier the same day:** `sandbag_management_on` was not broadcast from a single value, so the default `False` crashed in year 1. It is now broadcast to every domain, as upstream f7ad676b does. Not hit by the hindcast, which passes a list; results bit-identical (`code-checks/2026-09-29-default-storms-sandbag-fix/`).
+- Still different from upstream, and **not cruft**: `check_sandbag_need`'s logic (threshold 0.08 vs upstream 0.101, all dune rows vs row 0). Sandbags are off in the Hatteras runs.
 
 ---
 
