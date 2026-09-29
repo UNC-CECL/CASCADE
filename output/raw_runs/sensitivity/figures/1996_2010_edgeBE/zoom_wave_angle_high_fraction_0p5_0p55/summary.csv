@@ -1,0 +1,2 @@
+start_year,preset,axis,setting,value,run_name,kind,tag,rmse_interior_m_yr,mean_bias_interior_m_yr,baseline_rmse_interior_m_yr,delta_rmse,roads_drowned,roads_reloc_blocked
+1996,edgeBE,wave_angle_high_fraction,wave_angle_high_fraction,0.55,HAT_1996_2010_edgeBE_offsetmetres_road_bdm_nogroin_waveahf0p55,sensitivity,waveahf,1.2975669296497527,0.0871630962375293,1.1717717299378094,0.1257951997119433,0,0
