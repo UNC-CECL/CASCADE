@@ -426,7 +426,10 @@ def figure(observations, frames, key, folder, half, skill_df):
                Line2D([], [], color=rw.C_DUNE_TARGET, lw=LW, label=dune_label()),
                Line2D([], [], color=INK, lw=LW_MODEL,
                       label=f"CASCADE ({MODEL_LABEL[key]})")] + beach_width_handles()
-    fig.legend(handles=handles, loc="outside lower center", ncol=3, frameon=False)
+    # Two columns (2026-09-29): at three, the two long target labels shared a
+    # row with the model and the beach-width swatches and ran off the page.
+    # Filled column-first, so the lines stack left and the swatches right.
+    fig.legend(handles=handles, loc="outside lower center", ncol=2, frameon=False)
     sk = skill_df[skill_df["model_ends"] == folder]
     def _s(w, t):
         r = sk[(sk["window"] == w) & (sk["target"] == t)].iloc[0]
