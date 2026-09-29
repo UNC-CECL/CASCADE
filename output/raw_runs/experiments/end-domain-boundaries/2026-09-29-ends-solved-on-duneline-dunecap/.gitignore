@@ -1,0 +1,3 @@
+# Run folders: on disk only (paths pass the 260-character limit git has here);
+# the solve is in loop_log.csv and the NOTE.
+**/HAT_*/

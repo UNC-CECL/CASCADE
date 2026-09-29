@@ -1,5 +1,7 @@
 # smoothed_loess7_with_cascade — the model against both candidate targets
 
+> **Redrawn 2026-09-29 after the dune-cap fix** (the zeroBE matrix run, rerun with the fix; see `../README.md`).
+>
 > **Redrawn 2026-09-28 on the adopted model** (the rebuilt zeroBE matrix run: Barrier3D `hatteras/adopted` (the three overwash fixes and per-cell dune ceilings), storms `v3_trim24` (every event kept, trimmed to 24 h around its peak); metres offset, Hs 2.0 / Tp 7.5 / asym 0.6 / high-angle 0.5). The numbers in the text below are from earlier versions; the current ones are in the tables and captions.
 
 > **Redrawn 2026-09-27 on option A** (the option A zeroBE matrix run; metres offset, Hs 2.0 / Tp 7.5 / asym 0.6 / high-angle 0.5). The numbers in the text below are the /10-era ones; the current interior means are in `PROVENANCE.md`: model minus dune line +10.7 m (1996-2010) and -10.7 m (2010-2024); model minus shoreline -6.7 / -11.0 m (projected) and +0.7 / -24.7 m (total). The /10 version is in `output/archive/2026-09-27_target-comparison-div10/smoothed_loess7_with_cascade/`.

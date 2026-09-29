@@ -4,13 +4,15 @@
 > `4-comparisons/shoreline_vs_duneline/`, `3-rates/coastsat/{total_change,projected}/`)
 > are in **metres**. [`FIGURES.md`](../../../FIGURES.md) indexes all of them.
 
+**Redrawn 2026-09-29 after the dune-cap fix** (the other session, 2026-09-28: `experiments/end-domain-boundaries/2026-09-28-ends-resolved-dunecap/`). The fix reran every beach/dune-managed run. It moves the managed domains at Buxton (GIS 3–9), Avon (18–34) and Tri-Village (67–86), not the end domains. The matrix's 2010 GIS 90 end went from +22.4937 to +21.2582 m/yr, and the dune-line and 1996–2024 LRR ends were re-solved on the fixed runs (Hannah, 2026-09-29). The model is 1–2 m more seaward in 1996–2010 and about 1 m in 2010–2024. The pre-fix numbers below are recoverable from git (commit 7de36886); the pre-fix runs are in `raw_runs/archive/2026-09-28-pre-dunecap/`.
+
 **Redrawn 2026-09-28 on the adopted model** (Hannah: "include the overwash fixes, keep option A, go ahead"; then "redraw the model vs observed figures"). The matrix was rebuilt on Barrier3D `hatteras/adopted` (the three overwash fixes and per-cell dune ceilings), storms `v3_trim24` (every event kept, trimmed to 24 h around its peak), its ends re-solved on that model, and the dune-line ends re-solved on it too. The option A pre-adoption version, first drawn 2026-09-27, is recoverable from git (commit 70f2efb3); its runs are in `raw_runs/archive/2026-09-28-pre-ceiling/`.
 
 The model line comes from these runs:
 
 - metres island offset;
 - option A wave climate: Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle 0.5;
-- end rates solved on the adopted model against the LOESS-7 target (`experiments/end-domain-boundaries/2026-09-28-ends-resolved-adopted/`): 1996 GIS 1 +4.3509 / GIS 90 +19.0935, 2010 +8.0 / +22.4937 m/yr. Before adoption they were +4.8394 / +18.2545 and +18.8657 / +24.2358;
+- end rates solved on the adopted model against the LOESS-7 target (`experiments/end-domain-boundaries/2026-09-28-ends-resolved-adopted/`): 1996 GIS 1 +4.3509 / GIS 90 +19.0935, 2010 +8.0 / +21.2582 m/yr (after the dune-cap fix; +22.4937 before it). Before adoption they were +4.8394 / +18.2545 and +18.8657 / +24.2358;
 - edgeBE, full management, groin off;
 - Barrier3D `hatteras/adopted` (the three overwash fixes and per-cell dune ceilings), storms `v3_trim24` (every event kept, trimmed to 24 h around its peak).
 
@@ -22,7 +24,7 @@ The model line comes from these runs:
 
 **Each observation is drawn with the run solved on it**, so each comparison is fair at GIS 1 and 90 by construction:
 - The shoreline (CoastSat) figures draw the matrix run above, with ends solved on CoastSat.
-- The dune-line figures draw the run with ends solved on the dune line on the adopted model: `experiments/end-domain-boundaries/2026-09-28-ends-solved-on-duneline-adopted/`, mean3 reading. Its ends are 1996 −2.8 / +7.9 and 2010 +2.1 / +14.2 m/yr (before adoption −3.0 / +7.6 and +3.4 / +15.0).
+- The dune-line figures draw the run with ends solved on the dune line on the dune-cap-fixed model: `experiments/end-domain-boundaries/2026-09-29-ends-solved-on-duneline-dunecap/`, mean3 reading. Its ends are 1996 −2.8 / +7.9 and 2010 +2.1 / +13.6 m/yr (before the fix +2.1 / +14.2 in 2010; before adoption −3.0 / +7.6 and +3.4 / +15.0).
 - The `sensitivity/` levels are drawn again:
   - `ends-swapped/`: each observation against the other solve;
   - `dune-raw-solve/`: the raw reading;
@@ -52,18 +54,20 @@ PDFs and `CAPTIONS.md` are under `supporting/`.
 
 | window | target | model estimator | bias (m/yr) | RMSE (m/yr) |
 |---|---|---|---|---|
-| 1996–2010 | CoastSat LRR, smoothed (the scoring target) | OLS | −0.03 | 1.17 |
-| 1996–2010 | dune line net change, smoothed (dune-solved run) | endpoint | +0.91 | 1.70 |
-| 2010–2024 | CoastSat LRR, smoothed (the scoring target) | OLS | −1.45 | 2.12 |
-| 2010–2024 | dune line net change, smoothed (dune-solved run) | endpoint | −0.39 | 1.45 |
+| 1996–2010 | CoastSat LRR, smoothed (the scoring target) | OLS | +0.06 | 1.17 |
+| 1996–2010 | dune line net change, smoothed (dune-solved run) | endpoint | +1.00 | 1.72 |
+| 2010–2024 | CoastSat LRR, smoothed (the scoring target) | OLS | −1.36 | 2.07 |
+| 2010–2024 | dune line net change, smoothed (dune-solved run) | endpoint | −0.31 | 1.42 |
 
-On the adopted model, 2010–2024 is less erosive against both observations: bias −1.66 → −1.45 m/yr against CoastSat and −0.67 → −0.39 against the dune line. 1996–2010 barely moves.
+After the dune-cap fix. Before it: −0.03 / 1.17, +0.91 / 1.70, −1.45 / 2.12, −0.39 / 1.45.
+
+On the adopted model, 2010–2024 is less erosive against both observations: bias −1.66 → −1.45 m/yr against CoastSat and −0.67 → −0.39 against the dune line; the dune-cap fix takes them to −1.36 and −0.31. 1996–2010 barely moves.
 
 - **Smoothed at 7 domains since 2026-09-28**, following the runner's scoring target.
 - At 10 domains (`output/archive/2026-09-28_option-a-loess10-comparisons/`) the four RMSEs were 1.05, 1.59, 2.25 and 1.43.
 - The narrower window leaves more alongshore detail in the target for the model to miss, so RMSE rises. Bias barely moves.
 
-- At 10 domains the two scoring-target rows reproduced the matrix and the wave-recommendation numbers (RMSE 1.05 and 2.25). At 7, before adoption, they were 1.19 and 2.31; on the adopted model they are 1.17 and 2.12. The runs' own scores in `run_index.csv` were made at 10.
+- At 10 domains the two scoring-target rows reproduced the matrix and the wave-recommendation numbers (RMSE 1.05 and 2.25). At 7, before adoption, they were 1.19 and 2.31; on the adopted model 1.17 and 2.12; after the dune-cap fix 1.17 and 2.07. The runs' own scores in `run_index.csv` were made at 10.
 - In 2010–2024 the model sits closer to the dune line than to CoastSat. CoastSat's 2021 +17 m step is the part of the target the model does not make.
 
 ## Other files

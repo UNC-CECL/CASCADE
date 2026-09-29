@@ -1,5 +1,11 @@
 # target_comparison — CoastSat or the dune line as the CASCADE target?
 
+> **Redrawn 2026-09-29 after the dune-cap fix** (the other session, 2026-09-28: `experiments/end-domain-boundaries/2026-09-28-ends-resolved-dunecap/`). The fix reran every beach/dune-managed run. It moves the managed domains at Buxton (GIS 3–9), Avon (18–34) and Tri-Village (67–86), not the end domains. The matrix's 2010 GIS 90 end went from +22.4937 to +21.2582 m/yr, and the dune-line and 1996–2024 LRR ends were re-solved on the fixed runs (Hannah, 2026-09-29). The model is 1–2 m more seaward in 1996–2010 and about 1 m in 2010–2024. The pre-fix numbers below are recoverable from git (commit 7de36886); the pre-fix runs are in `raw_runs/archive/2026-09-28-pre-dunecap/`.
+>
+> - `smoothing_scale/`: 70 of 120 rows clear their null. That is 55 in 1996–2010 and 15 in 2010–2024 (r 0.24–0.39 against a p95 of 0.23–0.37, spread over every width), up from 6.
+> - The dune-line solve is now `raw_runs/experiments/end-domain-boundaries/2026-09-29-ends-solved-on-duneline-dunecap/`.
+> - The 1996–2024 LRR solve is `.../2026-09-29-ends-solved-on-lrr-1996-2024-dunecap/`.
+>
 > **Redrawn 2026-09-28 on the adopted model.** Every model set now runs on Barrier3D `hatteras/adopted` (the three overwash fixes and per-cell dune ceilings), storms `v3_trim24` (every event kept, trimmed to 24 h around its peak):
 > - the CoastSat-solved and unsolved sets are the rebuilt matrix (ends +4.3509 / +19.0935 in 1996–2010, +8.0 / +22.4937 in 2010–2024);
 > - the dune-line solve was redone on it (`raw_runs/experiments/end-domain-boundaries/2026-09-28-ends-solved-on-duneline-adopted/`);
@@ -62,8 +68,8 @@ is `.../coastsat/total_change/`.
 
 - `projected/` — **the target in use**: the 1996–2024 LRR x 14 yr
   in BOTH windows, paired with runs whose ends were solved against it
-  (`raw_runs/experiments/end-domain-boundaries/2026-09-28-ends-solved-on-lrr-1996-2024-adopted/`: GIS 1 / 90 =
-  +3.9 / +27.7 in 1996–2010, +3.6 / +18.6 in 2010–2024; before adoption +4.5 / +27.5 and +4.8 / +20.5;
+  (`raw_runs/experiments/end-domain-boundaries/2026-09-29-ends-solved-on-lrr-1996-2024-dunecap/`: GIS 1 / 90 =
+  +3.9 / +27.7 in 1996–2010, +3.6 / +17.5 in 2010–2024; +3.6 / +18.6 in 2010 before the dune-cap fix; before adoption +4.5 / +27.5 and +4.8 / +20.5;
   /10 era +28.5 / +24.5 and +37.1 / +25.4).
   `projected/paired_smoothed/` is the same pairing with both
   targets drawn as GRADED (raw domain means over GIS 1–10, 10-domain LOESS
@@ -92,7 +98,7 @@ percentile of 1000 phase-randomised surrogates of the same model series.
 **The answer is that the window does not matter.** RMSE falls at every window
 for every model set, but so does the null band. What the sweep leaves standing is
 the **bias**, which barely moves with the window (unsolved run vs CoastSat, raw → 10 domains:
-−8.4 → −8.1 m in 1996–2010, −6.7 → −6.4 m in 2010–2024, adopted model) and is the one
+−7.2 → −6.8 m in 1996–2010, −5.6 → −5.2 m in 2010–2024, after the dune-cap fix) and is the one
 number a wider window cannot flatter.
 
 **Option A changes the r reading for 1996–2010** (2026-09-27):
@@ -173,26 +179,26 @@ held out. Interior GIS 2–89, model minus target (projected/, raw domain means)
 
 | window | vs CoastSat | vs the dune line |
 |---|---|---|
-| 1996–2010 | bias −8.4 m, RMSE 20.0 m, r 0.38 | bias +12.9 m, RMSE 27.1 m, r 0.40 |
-| 2010–2024 | bias −6.7 m, RMSE 22.3 m, r 0.21 | bias −6.2 m, RMSE 23.3 m, r 0.16 |
+| 1996–2010 | bias −7.2 m, RMSE 19.8 m, r 0.35 | bias +14.1 m, RMSE 27.4 m, r 0.43 |
+| 2010–2024 | bias −5.6 m, RMSE 21.7 m, r 0.24 | bias −5.1 m, RMSE 22.6 m, r 0.20 |
 
-Adopted model. Before adoption: −7.2 / 19.6 / 0.35 and +14.0 / 27.7 / 0.39 in 1996–2010; −10.7 / 24.1 / 0.18 and −10.2 / 23.9 / 0.22 in 2010–2024.
+After the dune-cap fix. Adopted model before the fix: −8.4 / 20.0 / 0.38 and +12.9 / 27.1 / 0.40 in 1996–2010; −6.7 / 22.3 / 0.21 and −6.2 / 23.3 / 0.16 in 2010–2024. Before adoption: −7.2 / 19.6 / 0.35 and +14.0 / 27.7 / 0.39 in 1996–2010; −10.7 / 24.1 / 0.18 and −10.2 / 23.9 / 0.22 in 2010–2024.
 
 /10 era: 1996–2010 −11.0 / 22.7 / 0.24 and +10.3 / 27.7 / 0.25; 2010–2024 −14.8 /
 26.8 / 0.10 and −14.3 / 27.6 / 0.05.
 
-Removing the end solve still costs little in the interior. Against CoastSat, the RMSE goes from 18.3 m (ends solved on CoastSat) to 20.0 m in 1996–2010, and from 21.7 m to 22.3 m in 2010–2024.
+Removing the end solve still costs little in the interior. Against CoastSat, the RMSE goes from 18.0 m (ends solved on CoastSat) to 19.8 m in 1996–2010, and from 21.1 m to 21.7 m in 2010–2024.
 
-In 2010–2024, all three model sets sit the same distance from both targets: bias about −6 m and RMSE about 22–23 m against either one (about −10 m and 24 m before adoption).
+In 2010–2024, all three model sets sit the same distance from both targets: bias about −4 to −6 m and RMSE about 21–23 m against either one (about −10 m and 24 m before adoption).
 
 End rates (m/yr, GIS 1 / GIS 90):
 
 | window | ends solved on the 1996–2024 LRR (projected/) | ends solved on the window's own LRR (total_change/, the matrix) | ends solved on the dune line (mean3) |
 |---|---|---|---|
 | 1996–2010 | +3.9 / +27.7 | +4.35 / +19.09 | −2.8 / +7.9 |
-| 2010–2024 | +3.6 / +18.6 | +8.0 / +22.49 | +2.1 / +14.2 |
+| 2010–2024 | +3.6 / +17.5 | +8.0 / +21.26 | +2.1 / +13.6 |
 
-Adopted model, 2026-09-28. Before adoption (option A, LOESS-7 target): +4.5 / +27.5, +4.84 / +18.25, −3.0 / +7.6 in 1996–2010; +4.8 / +20.5, +18.87 / +24.24, +3.4 / +15.0 in 2010–2024.
+After the dune-cap fix, 2026-09-29; before it the 2010 row was +3.6 / +18.6, +8.0 / +22.49, +2.1 / +14.2 (1996 unchanged). Before adoption (option A, LOESS-7 target): +4.5 / +27.5, +4.84 / +18.25, −3.0 / +7.6 in 1996–2010; +4.8 / +20.5, +18.87 / +24.24, +3.4 / +15.0 in 2010–2024.
 
 /10 era: CoastSat (window's own) +32.2 / +10.0 and +72.6 / +31.3; dune line −16.0 / −3.3 and +20.1 / +19.2.
 

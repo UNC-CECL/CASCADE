@@ -147,7 +147,9 @@ FULL_WINDOW = (1996, 2024)
 # end-domain-boundaries/2026-09-19-end-domains-solved-on-lrr-1996-2024.
 # The adopted model since 2026-09-28 (Barrier3D hatteras/adopted, storms v3_trim24);
 # the option A pre-adoption solve was end-domain-boundaries/2026-09-27-ends-solved-on-lrr-1996-2024-option-a.
-FULL_SOLVE_DIR = rw.RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-28-ends-solved-on-lrr-1996-2024-adopted"
+# 2026-09-29: re-solved after the dune-cap fix; before it,
+# end-domain-boundaries/2026-09-28-ends-solved-on-lrr-1996-2024-adopted.
+FULL_SOLVE_DIR = rw.RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-29-ends-solved-on-lrr-1996-2024-dunecap"
 CS_MODE = "projected"
 OUT_DIR = ROOT_DIR / CS_MODES[CS_MODE]
 
