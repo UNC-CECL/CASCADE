@@ -114,9 +114,10 @@ SCEN_LABEL = {"natural": "Natural", "beachdune_only": "Beach and dune management
               "full_management": "Full management"}
 PRESET_TEXT = {"edgeBE": "end rates solved on CoastSat (edgeBE)",
                "zeroBE": "no imposed end rates (zeroBE)"}
-OPTION_A = ("Option A matrix (2026-09-27; edgeBE re-run 2026-09-28 on the ends re-solved "
-            "against the 7-domain target): island offset in metres, Hs 2.0 m, Tp 7.5 s, "
-            "asymmetry 0.6, high-angle fraction 0.5, no groin.")
+OPTION_A = ("Option A matrix on the adopted model (re-run 2026-09-28): Barrier3D hatteras/adopted "
+            "(the three overwash fixes, per-cell dune ceilings), storms v3_trim24 (every event, 24 h "
+            "around its peak), edgeBE ends re-solved on that setup against the 7-domain target; "
+            "island offset in metres, Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle fraction 0.5, no groin.")
 RATE_CAPTION = (
     OPTION_A + " (a) Modelled OLS shoreline-change rate against the CoastSat LRR scoring "
     "target (7-domain LOESS, raw means GIS 1-10). (b) Modelled position change over the "

@@ -145,7 +145,9 @@ FULL_WINDOW = (1996, 2024)
 # Re-solved under option A on 2026-09-27 (Hannah: redo target_comparison for
 # the new wave climate and offset); the /10 solve was
 # end-domain-boundaries/2026-09-19-end-domains-solved-on-lrr-1996-2024.
-FULL_SOLVE_DIR = rw.RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-27-ends-solved-on-lrr-1996-2024-option-a"
+# The adopted model since 2026-09-28 (Barrier3D hatteras/adopted, storms v3_trim24);
+# the option A pre-adoption solve was end-domain-boundaries/2026-09-27-ends-solved-on-lrr-1996-2024-option-a.
+FULL_SOLVE_DIR = rw.RAW_RUNS / "experiments" / "end-domain-boundaries/2026-09-28-ends-solved-on-lrr-1996-2024-adopted"
 CS_MODE = "projected"
 OUT_DIR = ROOT_DIR / CS_MODES[CS_MODE]
 
