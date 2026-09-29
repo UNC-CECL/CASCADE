@@ -6,7 +6,7 @@ step, for the builds the current runs read (1996 and 2010 starts).
 
     python scripts/figure_making/pipeline/2-brie-offset/offset_build_figures.py
 
-Writes output/figures/pipeline/2-brie-offset/offset_build_<year>.png.
+Writes output/figures/3-model-inputs/2-brie-offset/offset_build_<year>.png.
 
 THE STEPS DRAWN (the producers, not re-implemented)
     1. duneline_to_raw_offsets.py intersects the dune line with the 100 m
@@ -53,7 +53,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
 )
 from cascade_pipeline.hindcast import pad_offset_ring  # noqa: E402
 
-OUT = figure_dir("pipeline", "2-brie-offset")
+OUT = figure_dir("inputs", "2-brie-offset")
 YEARS = (1996, 2010)
 ZOOM_GIS = (44, 47)
 BUFFERS = 15

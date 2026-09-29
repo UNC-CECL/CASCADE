@@ -7,7 +7,7 @@ the same rules as the generator
 
     python scripts/figure_making/pipeline/3-storms/storm_construction_figures.py [--max-dur 72]
 
-Writes to output/figures/pipeline/3-storms/:
+Writes to output/figures/3-model-inputs/3-forcing/:
 
     storm_construction_steps.png   the chain on a worked month (September 2003):
                                    Duck water level and WIS waves -> Stockdon
@@ -51,7 +51,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
     _title, open_frame,
 )
 
-OUT = figure_dir("pipeline", "3-storms")
+OUT = figure_dir("inputs", "3-forcing")
 
 # the generator's inputs (historical_storm_creation_v3_HAT.py, "user inputs")
 BEACH_SLOPE = 0.06

@@ -10,7 +10,7 @@ what the two management modules do to the grid.
 
     python scripts/figure_making/model/model_mechanics_figures.py [--only NAME]
 
-Writes to output/figures/model/ (PNG at the top, PDF + CAPTIONS.md under
+Writes to output/figures/4-model-mechanics/<model>/ (PNG at the top, PDF + CAPTIONS.md under
 supporting/):
 
     barrier3d_storm_year.png     one domain, one storm year: the year's storms
@@ -21,6 +21,17 @@ supporting/):
                                  back-barrier, and the annual fluxes
     brie_diffusion.png           BRIE's angle-dependent diffusivity and where
                                  the Hatteras shoreline sits on it
+    brie_domain_order.png        BRIE alone on the 1996 offset with the
+                                 domains fed south->north (as run) and
+                                 reversed: the order matters through the
+                                 wave asymmetry
+    brie_domain_orientation.png  north-up map of the numbered domains, the
+                                 wave asymmetry and net drift, beside BRIE's
+                                 array (index <-> GIS) in the same orientation
+    brie_asymmetry_explained.png what the asymmetry counts, why its waves are
+                                 head-on to positive-θ links, what that is on
+                                 Hatteras, and what it does to a cape (smoothing
+                                 rate, not drift; the step does not conserve sand)
     cascade_shoreline_split.png  each domain's shoreline change split into the
                                  Barrier3D cross-shore part, the source/sink
                                  (BE) part and the BRIE alongshore part
@@ -70,7 +81,7 @@ from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM  # noqa: E40
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from storm_replay import replay  # noqa: E402
 
-OUT = figure_dir("model")
+OUT = figure_dir("mechanics")   # one sub-folder per model: barrier3d/, brie/, cascade/, storm_routing/
 MATRIX = REPO / "output" / "raw_runs" / "matrix"
 DAM = 10.0                      # Barrier3D decametre -> metre
 
@@ -221,7 +232,7 @@ def fig_barrier3d_storm_year():
     cb.outline.set_linewidth(0.5)
 
     q = np.asarray(b.QowTS)[t]
-    out = save(fig, OUT / "barrier3d_storm_year.png")
+    out = save(fig, OUT / "barrier3d" / "barrier3d_storm_year.png")
     plt.close(fig)
     record_caption(out[0],
         f"Barrier3D through one storm year: GIS {STORM_GIS}, model year {year} (the natural 1996-2010 run, "
@@ -320,7 +331,7 @@ def fig_barrier3d_domain_budget():
     open_frame(ax_h)
     _title(ax_h, 4, "Barrier height")
 
-    out = save(fig, OUT / "barrier3d_domain_budget.png")
+    out = save(fig, OUT / "barrier3d" / "barrier3d_domain_budget.png")
     plt.close(fig)
     record_caption(out[0],
         f"One Barrier3D domain over a hindcast window: GIS {BUDGET_GIS}, {years[0]}-{years[-1]}, the natural "
@@ -415,7 +426,7 @@ def fig_brie_diffusion():
                 frameon=False, fontsize=7.5, loc="upper left", ncol=2)
     _title(ax_k, 3, "Where each domain sits on that curve")
 
-    out = save(fig, OUT / "brie_diffusion.png")
+    out = save(fig, OUT / "brie" / "brie_diffusion.png")
     plt.close(fig)
     record_caption(out[0],
         "How BRIE moves sand alongshore in CASCADE. (a) The angle dependence of alongshore transport "
@@ -429,6 +440,453 @@ def fig_brie_diffusion():
         "which carries the island's measured planform (the shoreline offset, in metres). (d) The angle between "
         "each domain and the next; the implicit solve each year is x_s(t+1) = x_s + r ∇²x_s + Δx_s(Barrier3D), "
         "with r = K Δt / 2Δy². GIS 1 is Cape Point, GIS 90 Pea Island.")
+    return out
+
+
+ORDER_START, ORDER_YEARS = 1996, 14
+
+
+def brie_alone(offset_m, asymmetry, c):
+    """BRIE's alongshore diffusion on its own (no Barrier3D, no source/sink):
+    the padded offset added to BRIE's straight initial shoreline, run
+    ORDER_YEARS annual steps. Returns the change in x_s, m, landward positive."""
+    import warnings
+    from brie import Brie
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        br = Brie(barrier_model=False, ast_model=True, inlet_model=False, b3d=True,
+                  wave_height=c._wave_height, wave_period=c._wave_period,
+                  wave_asymmetry=asymmetry,
+                  wave_angle_high_fraction=c._wave_angle_high_fraction,
+                  alongshore_section_length=c.brie._dy,
+                  alongshore_section_count=offset_m.size,
+                  time_step=1, time_step_count=ORDER_YEARS + 1)
+    start = br.x_s + offset_m
+    br.x_s[:] = start
+    # the width check prints "Barrier Drowned" (x_b is not offset); it does not stop the solve
+    import contextlib, io
+    with contextlib.redirect_stdout(io.StringIO()):
+        for _ in range(ORDER_YEARS):
+            br.update()
+    return br.x_s - start
+
+
+def fig_brie_domain_order():
+    from site_layer.hat_topo_version import offset_file
+    c = load_run(RUN_NATURAL)
+    a = float(c._wave_asymmetry)
+    path = offset_file(ORDER_START)
+    off = np.loadtxt(path, skiprows=1, delimiter=",")
+    rp = real_pads()
+    gis_axis = np.arange(1, 91)
+
+    fwd = brie_alone(off, a, c)[rp]
+    rev = brie_alone(off[::-1], a, c)[::-1][rp]
+    rev_mirror = brie_alone(off[::-1], 1 - a, c)[::-1][rp]
+    rms = lambda v: float(np.sqrt(np.mean(v ** 2)))  # noqa: E731
+
+    fig, axes = plt.subplots(2, 1, sharex=True, constrained_layout=True,
+                             figsize=figsize("double", height=4.6),
+                             gridspec_kw={"height_ratios": [1.25, 1]})
+    ax = axes[0]
+    ax.axhline(0, color=INK_MUTED, lw=0.6)
+    ax.plot(gis_axis, fwd, color=INK, lw=1.4,
+            label=f"south → north (as run), asymmetry {a:g}")
+    ax.plot(gis_axis, rev, color=C["ACCENT"], lw=1.2,
+            label=f"north → south, asymmetry {a:g}")
+    ax.plot(gis_axis, rev_mirror, color=C["BASE"], lw=1.1, ls=(0, (4, 2)),
+            label=f"north → south, asymmetry {1 - a:g}")
+    ax.set_ylabel(f"{ORDER_YEARS}-yr shoreline change (m,\nlandward up)")
+    ax.set_xlim(0.5, 90.5)
+    town_bands(ax)
+    open_frame(ax)
+    _title(ax, 0, "BRIE alongshore diffusion, domains fed in either order")
+
+    ax = axes[1]
+    ax.axhline(0, color=INK_MUTED, lw=0.6)
+    ax.plot(gis_axis, rev - fwd, color=C["ACCENT"], lw=1.2)
+    ax.plot(gis_axis, rev_mirror - fwd, color=C["BASE"], lw=1.1, ls=(0, (4, 2)))
+    ax.set_ylabel("difference from\nas run (m)")
+    ax.set_xlabel(DOMAIN_AXIS_LABEL)
+    open_frame(ax)
+    _title(ax, 1, "Difference from the order as run")
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="outside lower center", ncol=3, frameon=False, fontsize=7.5)
+
+    out = save(fig, OUT / "brie" / "brie_domain_order.png")
+    plt.close(fig)
+    record_caption(out[0],
+        "Does the order of the domains matter to BRIE? BRIE's alongshore step alone (no Barrier3D, no "
+        f"source/sink), run for {ORDER_YEARS} annual steps on the {ORDER_START} island offset "
+        f"({path.relative_to(REPO).as_posix()}), with the wave climate of the adopted setup (Hs "
+        f"{c._wave_height} m, Tp {c._wave_period} s, high-angle fraction {c._wave_angle_high_fraction}). "
+        "(a) Shoreline change, landward positive, with the domains handed to BRIE south to north as the "
+        f"model runs (black), reversed with the same asymmetry {a:g} (purple), and reversed with the "
+        f"asymmetry swapped to {1 - a:g} (grey dashed); reversed runs are flipped back onto the GIS axis. "
+        "(b) Each reversed run minus the order as run. BRIE takes the shoreline angle between each domain "
+        "and the next, and the asymmetry decides which facing of the shoreline diffuses faster, so "
+        f"reversing the order with asymmetry {a:g} changes the result by as much as the result itself "
+        f"(RMS {rms(rev - fwd):.0f} m against {rms(fwd):.0f} m), while reversing it and swapping the "
+        f"asymmetry recovers it to RMS {rms(rev_mirror - fwd):.0f} m; the rest is the one-sided angle "
+        f"(domain to next domain). With the order as run, asymmetry {a:g} is the fraction of waves from "
+        "the north, driving sand south toward Cape Point. GIS 1 is Cape Point, GIS 90 Pea Island; "
+        "the 15 buffer domains at each end are run but not drawn.")
+    return out
+
+
+def fig_brie_domain_orientation():
+    """North-up map of the 90 domains beside BRIE's array, same orientation."""
+    import geopandas as gpd
+    from site_layer import hat_map_layers as ml
+    from site_layer.hat_observed_rates import DOMAIN_BOXES
+    crs = "EPSG:26918"
+    a = float(load_run(RUN_NATURAL)._wave_asymmetry)
+    dom = gpd.read_file(DOMAIN_BOXES).to_crs(crs)
+    dom = dom[(dom.domain_id >= 1) & (dom.domain_id <= 90)].sort_values("domain_id")
+    outline = gpd.read_file(ml.ISLAND_OUTLINE).to_crs(crs)
+    cen = np.c_[dom.geometry.centroid.x, dom.geometry.centroid.y]
+    n_pad, first_pad = DOM.total_domains, pad(1)
+
+    fig = plt.figure(figsize=figsize("double", height=7.6), constrained_layout=True)
+    gs = fig.add_gridspec(1, 2, width_ratios=[1.35, 1])
+
+    # ---- (a) the map, north up ------------------------------------------------
+    ax = fig.add_subplot(gs[0])
+    x0, x1, y0, y1 = 441_000, 470_000, 3_895_500, 3_947_500
+    ax.set_facecolor("#e9eff4")
+    outline.plot(ax=ax, color="#ede9df", edgecolor="0.55", lw=0.4, zorder=1)
+    dom.boundary.plot(ax=ax, color=INK_MUTED, lw=0.35, zorder=2)
+    for gis, (cx, cy), g in zip(dom.domain_id, cen, dom.geometry):
+        if gis in (1, 90) or gis % 10 == 0:
+            ax.add_patch(plt.Polygon(np.asarray(g.exterior.coords)[:, :2], closed=True,
+                                     facecolor=C["ACCENT_FILL"], edgecolor=C["ACCENT"], lw=0.6,
+                                     zorder=3))
+            ax.text(g.bounds[2] + 250, cy, f"GIS {gis}", fontsize=7.5, va="center",
+                    color=INK, zorder=5)
+    ax.set_xlim(x0, x1)
+    ax.set_ylim(y0, y1)
+    ax.set_aspect("equal")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for s in ax.spines.values():
+        s.set_visible(True)
+    ax.text(466_500, 3_925_000, "Atlantic\nOcean", ha="center", fontsize=8.5,
+            color=INK_MUTED, style="italic")
+    ax.text(444_000, 3_935_000, "Pamlico\nSound", ha="center", fontsize=8.5,
+            color=INK_MUTED, style="italic")
+    ax.text(cen[0, 0] - 1500, cen[0, 1] - 2200, "Cape Point", ha="center", fontsize=8)
+    ax.text(cen[-1, 0] - 3500, cen[-1, 1] + 1500, "Pea Island", ha="center", fontsize=8)
+
+    # waves offshore: the asymmetry's share from the north, the rest from the south
+    wx, wy = 465_000, 3_909_000
+    for frac, dy_sign, label in ((a, 1, f"{a:.0%} of waves\nfrom the north"),
+                                 (1 - a, -1, f"{1 - a:.0%} from\nthe south")):
+        ax.annotate("", xy=(wx - 2600, wy), xytext=(wx + 1400, wy + dy_sign * 4000),
+                    arrowprops=dict(arrowstyle="-|>", color=C_1997, lw=5 * frac,
+                                    mutation_scale=8 + 10 * frac, shrinkA=0, shrinkB=0))
+        ax.text(wx + 1400, wy + dy_sign * 4700, label, ha="center",
+                va="bottom" if dy_sign > 0 else "top", fontsize=7.5, color=C_1997)
+    # the drift this wave climate implies physically; BRIE's diffusion has no net-flux term
+    ax.annotate("", xy=(cen[8, 0] + 6200, cen[8, 1]), xytext=(cen[38, 0] + 6200, cen[38, 1]),
+                arrowprops=dict(arrowstyle="-|>", color=C["ADDED"], lw=2.2, mutation_scale=16,
+                                ls=(0, (4, 2))))
+    ax.text(cen[38, 0] + 6200, cen[38, 1] + 700,
+            "wave climate favours\nsouthward drift\n(not a BRIE flux)", fontsize=7,
+            ha="center", color=C["ADDED"], va="bottom")
+    # north arrow and a 5 km bar
+    ax.annotate("", xy=(0.08, 0.97), xytext=(0.08, 0.90), xycoords="axes fraction",
+                arrowprops=dict(arrowstyle="-|>", color=INK, lw=1.0, mutation_scale=11))
+    ax.text(0.08, 0.985, "N", transform=ax.transAxes, ha="center", va="bottom",
+            fontweight="bold", fontsize=8.5)
+    ax.plot([x1 - 6500, x1 - 1500], [y0 + 1500] * 2, color=INK, lw=2)
+    ax.text(x1 - 4000, y0 + 2000, "5 km", ha="center", fontsize=7.5)
+    _title(ax, 0, "The 90 domains, north up")
+
+    # ---- (b) BRIE's array, same orientation ----------------------------------
+    ax = fig.add_subplot(gs[1])
+    for i in range(n_pad):
+        real = first_pad <= i <= pad(90)
+        marked = real and (i - first_pad + 1) in (1, 90) or (real and (i - first_pad + 1) % 10 == 0)
+        fc = C["ACCENT_FILL"] if marked else ("white" if real else "0.85")
+        ax.add_patch(Rectangle((0, i), 1, 1, facecolor=fc, edgecolor=INK_MUTED, lw=0.25))
+    for i, txt in ((0, "index 0"),
+                   (first_pad, f"index {first_pad} = GIS 1"),
+                   (pad(90), f"index {pad(90)} = GIS 90"), (n_pad - 1, f"index {n_pad - 1}")):
+        ax.text(1.25, i + 0.5, txt, va="center", fontsize=7.5)
+    for gis in range(10, 90, 10):
+        ax.text(1.25, pad(gis) + 0.5, f"index {pad(gis)} = GIS {gis}", va="center",
+                fontsize=7, color=INK_MUTED)
+    ax.text(-0.3, (first_pad - 1) / 2, f"{DOM.num_buffer_domains} buffer\ndomains",
+            ha="right", va="center", fontsize=7.5, color=INK_MUTED)
+    ax.text(-0.3, (pad(90) + n_pad) / 2, f"{DOM.num_buffer_domains} buffer\ndomains",
+            ha="right", va="center", fontsize=7.5, color=INK_MUTED)
+    # the ring: the last node's neighbour is the first
+    ax.annotate("", xy=(-0.15, 0.5), xytext=(-0.15, n_pad - 0.5),
+                arrowprops=dict(arrowstyle="-|>", color=INK_MUTED, lw=0.8, ls=(0, (3, 2)),
+                                connectionstyle="bar,fraction=0.08", mutation_scale=9))
+    ax.text(-2.0, n_pad / 2, "ring: index 119's\nneighbour is index 0", rotation=90,
+            ha="center", va="center", fontsize=7, color=INK_MUTED)
+    # the angle BRIE reads: node i to node i+1, i.e. looking north
+    ax.annotate("", xy=(0.5, 62.5), xytext=(0.5, 58.5),
+                arrowprops=dict(arrowstyle="-|>", color=C["ACCENT"], lw=1.2, mutation_scale=10))
+    ax.set_xlim(-2.6, 5.2)
+    ax.set_ylim(-1, n_pad + 1)
+    ax.axis("off")
+    _title(ax, 1, "BRIE's shoreline array")
+
+    out = save(fig, OUT / "brie" / "brie_domain_orientation.png")
+    plt.close(fig)
+    record_caption(out[0],
+        "Which way the domains run, and what BRIE's wave asymmetry means in that frame. (a) The 90 model "
+        "domains (500 m alongshore, 2 km cross-shore, 5-scr/2-transect-frame/transect_domains/"
+        "HAT_domains.json) on the island outline, north up; every tenth domain and the two ends are "
+        "shaded and numbered. GIS 1 is at Cape Point and the numbers increase NORTHWARD to GIS 90 at "
+        f"Pea Island. The blue arrows are the adopted wave asymmetry {a:g}: BRIE's asymmetry is the "
+        "fraction of waves from the left looking offshore, which from this beach (looking east) is the "
+        f"north, so {a:.0%} of waves come from the north and {1 - a:.0%} from the south, and physically "
+        "that climate favours drift south toward Cape Point (amber, dashed). BRIE does NOT compute that "
+        "drift: its alongshore step is a diffusion with no net-flux term, so a straight shoreline moves no "
+        "sand under any asymmetry; the asymmetry only sets which shoreline orientations smooth fastest "
+        "(brie_asymmetry_explained.png). (b) The array BRIE holds, one shoreline position per "
+        f"domain, drawn in the same orientation: {DOM.num_buffer_domains} buffer domains at each end "
+        f"(grey), GIS 1 at index {first_pad} and GIS 90 at index {pad(90)}, so index increases northward "
+        "exactly as the GIS numbers do. The array is a ring (the last node's neighbour is the first), "
+        "which is why the buffers exist. The purple arrow is the direction BRIE reads the shoreline "
+        "angle, from each node to the next one (brie.py:820), i.e. northward. Reversing the order (GIS 90 "
+        "at the bottom of the array) would make the same asymmetry mean waves from the SOUTH; see "
+        "brie_domain_order.png for what that does to the result.")
+    return out
+
+
+def brie_diffusivity(asymmetry, high_fraction, theta_deg, c):
+    """BRIE's wave-climate diffusivity (m2/yr) at shoreline angles theta, read
+    from its own table exactly as the solve does (brie.py:1293, before the
+    clamp at zero)."""
+    import warnings
+    from brie import Brie
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        br = Brie(barrier_model=False, ast_model=True, inlet_model=False, b3d=True,
+                  wave_height=c._wave_height, wave_period=c._wave_period,
+                  wave_asymmetry=asymmetry, wave_angle_high_fraction=high_fraction,
+                  alongshore_section_length=500, alongshore_section_count=4,
+                  time_step=1, time_step_count=3)
+    cd, cl = np.asarray(br._coast_diff), br._wave_climl
+    idx = np.clip(np.round(90 - np.asarray(theta_deg, float)).astype(int), 1, cl)
+    return cd[idx]
+
+
+def brie_cape(asymmetry, high_fraction, c, years=20, ny=40, amp=600.0, sigma=2.0,
+              reverse=False):
+    """A seaward cape (x_s negative = seaward) run through BRIE alone."""
+    import contextlib, io, warnings
+    from brie import Brie
+    y = np.arange(ny)
+    cape = -amp * np.exp(-0.5 * ((y - ny // 2) / sigma) ** 2)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        br = Brie(barrier_model=False, ast_model=True, inlet_model=False, b3d=True,
+                  wave_height=c._wave_height, wave_period=c._wave_period,
+                  wave_asymmetry=asymmetry, wave_angle_high_fraction=high_fraction,
+                  alongshore_section_length=500, alongshore_section_count=ny,
+                  time_step=1, time_step_count=max(years, 1) + 1)
+    base = br.x_s.copy()
+    br.x_s[:] = base + (cape[::-1] if reverse else cape)
+    with contextlib.redirect_stdout(io.StringIO()):
+        for _ in range(years):
+            br.update()
+    out = br.x_s - base
+    return cape, (out[::-1] if reverse else out)
+
+
+def brie_cape_reversed(asymmetry, high_fraction, c, **kw):
+    """The cape run with the array reversed and flipped back: its mirror image."""
+    return brie_cape(asymmetry, high_fraction, c, reverse=True, **kw)[1]
+
+
+def fig_brie_asymmetry_explained():
+    c = load_run(RUN_NATURAL)
+    a, h = float(c._wave_asymmetry), float(c._wave_angle_high_fraction)
+    C_N, C_S = C_1997, C_1984          # waves from the north side / the south side
+    fig = plt.figure(figsize=figsize("double", height=9.0), constrained_layout=True)
+    gs = fig.add_gridspec(3, 2, height_ratios=[1, 1.15, 1.25])
+
+    # ---- (a) what the asymmetry counts --------------------------------------
+    ax = fig.add_subplot(gs[0, 0])
+    edges = [-90, -45, 0, 45, 90]
+    share = [a * h, a * (1 - h), (1 - a) * (1 - h), (1 - a) * h]
+    for (lo, hi), s in zip(zip(edges[:-1], edges[1:]), share):
+        ax.bar((lo + hi) / 2, s, width=44, color=C_N if hi <= 0 else C_S, alpha=0.85)
+        ax.text((lo + hi) / 2, s + 0.01, f"{s:.2f}", ha="center", va="bottom", fontsize=7.5)
+    ax.text(-45, max(share) + 0.09, f"a = {a:g} of all waves", ha="center", color=C_N, fontsize=8)
+    ax.text(45, max(share) + 0.09, f"1 − a = {1 - a:g}", ha="center", color=C_S, fontsize=8)
+    ax.axvline(0, color=INK_MUTED, lw=0.6)
+    ax.set_xlim(-90, 90)
+    ax.set_ylim(0, max(share) + 0.17)
+    ax.set_xticks([-90, -45, 0, 45, 90])
+    ax.set_xlabel(r"wave angle $\varphi_0$ in BRIE (°)")
+    ax.set_ylabel("share of waves")
+    open_frame(ax)
+    _title(ax, 0, "What the asymmetry a counts")
+
+    # ---- (b) one wave: head-on smooths fastest -------------------------------
+    ax = fig.add_subplot(gs[0, 1])
+    rel = np.linspace(-89.5, 89.5, 359)
+    r = np.deg2rad(rel)
+    psi = -(np.cos(r) ** 0.2 * (1.2 * np.sin(r) ** 2 - np.cos(r) ** 2))
+    ax.plot(rel, psi, color=INK, lw=1.3)
+    ax.axhline(0, color=INK_MUTED, lw=0.6)
+    ax.annotate("head-on:\nsmooths fastest", xy=(0, 1), xytext=(28, 0.78), fontsize=7.5,
+                arrowprops=dict(arrowstyle="-", color=INK_MUTED, lw=0.6))
+    ax.set_xlim(-90, 90)
+    ax.set_xticks([-90, -45, 0, 45, 90])
+    ax.set_xlabel("angle between the wave and the shoreline's normal (°)")
+    ax.set_ylabel("relative diffusivity")
+    open_frame(ax)
+    _title(ax, 1, "One wave: head-on smooths most")
+
+    # ---- (c) the whole climate: which shoreline angle is head-on ------------
+    ax = fig.add_subplot(gs[1, 0])
+    th = np.arange(-60, 61)
+    curves = ((1.0, C_N, r"a = 1 (all waves at $-\varphi_0$)"), (a, INK, f"a = {a:g} (adopted)"),
+              (0.5, C["BASE"], "a = 0.5"), (0.0, C_S, r"a = 0 (all waves at $+\varphi_0$)"))
+    peaks = {}
+    for aa, col, lab in curves:
+        d = brie_diffusivity(aa, 0.0, th, c) / 1e6
+        ax.plot(th, d, color=col, lw=1.4 if aa == a else 1.1, label=lab,
+                ls=(0, (4, 2)) if aa == 0.5 else "-")
+        k = int(np.argmax(d))
+        peaks[aa] = int(th[k])
+        if aa != 0.5:
+            ax.plot(th[k], d[k], "o", color=col, ms=4)
+            ax.text(th[k] + (3 if aa == a else 0), d[k] + 0.03, f"{th[k]:+d}°",
+                    ha="left" if aa == a else "center", va="bottom", fontsize=7.5, color=col)
+    ax.axvline(0, color=INK_MUTED, lw=0.6)
+    ax.axhline(0, color=INK_MUTED, lw=0.6)
+    ax.set_xlabel("shoreline angle θ from domain i to i+1 (°)")
+    ax.set_ylabel("diffusivity (10$^6$ m$^2$/yr)")
+    ax.legend(frameon=False, fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=2)
+    ax.set_ylim(-0.45, 0.85)
+    open_frame(ax)
+    _title(ax, 2, "BRIE's diffusivity table")
+
+    # ---- (d) the geometry on Hatteras, north up ------------------------------
+    ax = fig.add_subplot(gs[1, 1])
+    ax.set_aspect("equal")
+    ax.axis("off")
+    L = 1.0
+    for x0, theta, col, side, share, faces in ((0.0, 23, C_N, "WEST", "north side\n(share a)", "ENE"),
+                                               (3.1, -22, C_S, "EAST", "south side\n(share 1 − a)", "ESE")):
+        t = np.deg2rad(theta)
+        # node i (south) at the bottom; node i+1 500 m north; x_s landward = WEST
+        p0 = np.array([x0, 0.0])
+        p1 = p0 + np.array([-np.tan(t) * L, L])
+        seg = p1 - p0
+        nrm = np.array([seg[1], -seg[0]]) / np.hypot(*seg)          # the seaward normal
+        land = np.array([p0 + [-1.2, 0], p1 + [-1.2, 0], p1, p0])
+        ax.add_patch(plt.Polygon(land, closed=True, facecolor="#ede9df", edgecolor="none"))
+        ax.plot([x0, x0], [0, L], color=INK_MUTED, lw=0.6, ls=(0, (2, 2)))
+        ax.plot(*np.c_[p0, p1], color=INK, lw=2.0)
+        for p, lab in ((p0, "i"), (p1, "i+1")):
+            ax.plot(*p, "o", color=INK, ms=4)
+            ax.text(p[0] - 0.08, p[1], lab, ha="right", va="center", fontsize=8)
+        mid = (p0 + p1) / 2
+        ax.annotate("", xy=mid + nrm * 0.05, xytext=mid + nrm * 1.0,
+                    arrowprops=dict(arrowstyle="-|>", color=col, lw=2.2, mutation_scale=14))
+        ax.text(*(mid + nrm * 1.08), f"waves from\nthe {share}", color=col, fontsize=7,
+                ha="left", va="center")
+        ax.text(x0 - 0.1, -0.14, f"θ = {theta:+d}°", ha="center", va="top", fontsize=8.5,
+                fontweight="bold")
+        ax.text(x0 - 0.1, -0.42, f"steps {side} going north,\nso it faces {faces}",
+                ha="center", va="top", fontsize=7, color=col)
+    ax.annotate("", xy=(-1.25, 1.55), xytext=(-1.25, 1.1),
+                arrowprops=dict(arrowstyle="-|>", color=INK, lw=1.0, mutation_scale=10))
+    ax.text(-1.25, 1.6, "N", ha="center", va="bottom", fontweight="bold", fontsize=8.5)
+    ax.text(-0.75, 1.12, "land\n(x$_s$ larger)", fontsize=7, color=INK_MUTED, va="bottom")
+    ax.text(0.55, 0.02, "ocean", fontsize=7, color=INK_MUTED, va="bottom")
+    ax.set_xlim(-1.5, 5.0)
+    ax.set_ylim(-1.0, 1.9)
+    _title(ax, 3, "θ on Hatteras, north up")
+
+    # ---- (e) a cape: which flank BRIE smooths faster ------------------------
+    ny = 40
+    km = np.arange(ny) * 0.5
+    cape = brie_cape(1.0, 0.0, c, years=0, ny=ny)[0]
+    link_theta = np.degrees(np.arctan2(np.roll(cape, -1) - cape, 500.0))[:-1]
+    ax = fig.add_subplot(gs[2, 0])
+    d_link = brie_diffusivity(1.0, 0.0, link_theta, c) / 1e6
+    norm = plt.Normalize(0, float(d_link.max()))
+    cmap = plt.get_cmap("Greys")
+    for i in range(ny - 1):
+        ax.plot(-cape[i:i + 2], km[i:i + 2], color=cmap(0.25 + 0.75 * norm(max(d_link[i], 0))),
+                lw=3.2, solid_capstyle="round")
+    ax.annotate("", xy=(560, 12.2), xytext=(1150, 15.8),
+                arrowprops=dict(arrowstyle="-|>", color=C_N, lw=2.0, mutation_scale=12))
+    ax.text(1150, 16.1, "a = 1: all waves from\nthe north side", color=C_N, fontsize=7.2,
+            ha="center", va="bottom")
+    ax.text(660, 11.4, "north flank faces the waves:\nfast smoothing (dark)", fontsize=7.2,
+            ha="left", va="center")
+    ax.text(660, 8.6, "south flank faces away:\nslow smoothing (light)", fontsize=7.2,
+            ha="left", va="center")
+    ax.set_xlim(-100, 1500)
+    ax.set_ylim(-0.5, 19.5)
+    ax.set_xlabel("distance seaward (m), ocean to the right")
+    ax.set_ylabel("alongshore (km), north up")
+    open_frame(ax)
+    _title(ax, 4, "What BRIE's table does to a cape")
+
+    # ---- (f) what the asymmetry changes after 20 years ----------------------
+    ax = fig.add_subplot(gs[2, 1], sharey=fig.axes[-1])
+    runs = {aa: brie_cape(aa, 0.0, c, years=20, ny=ny)[1] for aa in (1.0, 0.5, 0.0)}
+    diff1 = -(runs[1.0] - runs[0.5])      # seaward positive
+    diff0 = -(runs[0.0] - runs[0.5])
+    ax.axvline(0, color=INK_MUTED, lw=0.6)
+    ax.axhspan(8.5, 11.5, color="0.94", lw=0, zorder=0)
+    ax.text(0.02, 10.0, "cape", transform=ax.get_yaxis_transform(), ha="left", va="center",
+            fontsize=7, color=INK_MUTED)
+    ax.plot(diff1, km, color=C_N, lw=1.4, label="a = 1, all from the north side")
+    ax.plot(diff0, km, color=C_S, lw=1.4, label="a = 0, all from the south side")
+    ax.set_xlabel("20-yr shoreline minus the a = 0.5 run (m, seaward +)")
+    ax.legend(frameon=False, fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=1)
+    ax.tick_params(labelleft=False)
+    open_frame(ax)
+    _title(ax, 5, "What the asymmetry changes in 20 years")
+
+    out = save(fig, OUT / "brie" / "brie_asymmetry_explained.png")
+    plt.close(fig)
+    straight = float(np.abs(brie_cape(1.0, 0.0, c, years=20, ny=ny, amp=0.0)[1]).max())
+    mirror = float(np.abs(runs[0.0] - brie_cape_reversed(1.0, 0.0, c, years=20, ny=ny)).max())
+    record_caption(out[0],
+        "How BRIE's wave asymmetry acts, and which way it points on Hatteras. (a) BRIE draws wave angles "
+        f"φ₀ from four 45° bins (brie/waves.py); the asymmetry a is the share of waves at NEGATIVE angles, "
+        f"here the adopted a = {a:g} with high-angle fraction {h:g}. (b) For one wave, the Ashton & Murray "
+        "(2006) diffusivity term cos^0.2(1.2 sin² − cos²), sign flipped so positive smooths the shoreline: "
+        "a wave hitting the shoreline head-on smooths it fastest; beyond ~42° it sharpens it. (c) BRIE "
+        "averages (b) over the wave climate into a table of diffusivity against the shoreline angle θ "
+        "between neighbouring domains (brie.py:380-400) and reads it at θ each year (brie.py:1293). The "
+        "peak is the orientation the waves hit head-on: θ ≈ "
+        f"{peaks[1.0]:+d}° with every wave at a negative angle (a = 1), {peaks[0.0]:+d}° with every wave at a "
+        f"positive angle (a = 0), {peaks[0.5]:+d}° at a = 0.5 (the table's 1° rounding) and "
+        f"{peaks[a]:+d}° at the adopted a = {a:g}. So the waves counted by a are head-on to links with "
+        "POSITIVE θ. (d) What a positive θ is on Hatteras. θ = atan((x_s[i+1] − x_s[i]) / 500 m); x_s grows "
+        "LANDWARD (west) and index i grows NORTHWARD (GIS 1 at Cape Point), both checked against the "
+        "dune-line coordinates. A positive θ is a link that steps west going north, which faces "
+        "east-north-east, so the waves counted by a come from the NORTH side of shore-normal and the rest "
+        "from the south side. (e) A 600 m seaward cape coloured by BRIE's diffusivity with a = 1: the "
+        "north flank (positive θ) faces the waves and smooths fast (dark), the south flank faces away "
+        "(light). (f) What the asymmetry changes: the same cape after 20 years at a = 1 and at a = 0, "
+        "each minus the a = 0.5 run. The difference is mostly a near-uniform shift of the whole shoreline "
+        "(landward at a = 1, seaward at a = 0) with a small tilt between the flanks, and a = 0 is not an "
+        f"exact mirror of a = 1 (they differ by up to {mirror:.0f} m once reflected). Both follow from how "
+        "BRIE writes the step: x_s changes by D·∂²x_s/∂y² with D read on the link from each domain to "
+        "the next one north, not as the divergence of a flux, so when D differs between flanks sand is "
+        "not conserved and the scheme is not mirror-symmetric. It has no net-flux term at all: a straight "
+        f"shoreline moves at most {straight:.1f} m in 20 years under a = 1. The asymmetry therefore does "
+        "not drive an alongshore drift in BRIE; it sets which shoreline orientations smooth fastest. "
+        "Panels (c), (e) and (f) set the high-angle fraction to 0 so that only the asymmetry differs; "
+        f"Hs {c._wave_height} m and Tp {c._wave_period} s as adopted. Reversing the domain order (GIS 90 "
+        "at the low index) flips the sign of every θ, close to swapping a for 1 − a "
+        "(brie_domain_order.png).")
     return out
 
 
@@ -512,7 +970,7 @@ def fig_cascade_shoreline_split():
     cb.outline.set_linewidth(0.5)
     _title(ax_h, 1, "Cumulative shoreline change, blue seaward, red landward")
 
-    out = save(fig, OUT / "cascade_shoreline_split.png")
+    out = save(fig, OUT / "cascade" / "cascade_shoreline_split.png")
     plt.close(fig)
     resid = np.abs(total - (b3d + ast)).max()
     record_caption(out[0],
@@ -602,7 +1060,7 @@ def fig_cascade_island_grids():
     cb.set_label("elevation (m MHW)")
     cb.outline.set_linewidth(0.5)
 
-    out = save(fig, OUT / "cascade_island_grids.png", vector=False)
+    out = save(fig, OUT / "cascade" / "cascade_island_grids.png", vector=False)
     plt.close(fig)
     record_caption(out[0],
         f"The island as CASCADE holds it at the start of the {y0} window. (a) Every Barrier3D domain's 10 m "
@@ -671,7 +1129,7 @@ def fig_cascade_coupling_loop():
     ax.text(50, 6, "Groin callback (when on): after step 1, adds a source and sink to Δx$_s$ in metres "
             "at the groin's two domains.   Units: UNITS.md.", ha="center", fontsize=7.3, color=INK_MUTED)
 
-    out = save(fig, OUT / "cascade_coupling_loop.png")
+    out = save(fig, OUT / "cascade" / "cascade_coupling_loop.png")
     plt.close(fig)
     record_caption(out[0],
         "CASCADE's annual loop (cascade/cascade_groin.py, Cascade.update) and the unit each exchange is made "
@@ -785,7 +1243,7 @@ def fig_management_modules():
     ax_a.legend(frameon=False, fontsize=7.5, ncol=5, loc="upper left", title="end of year", title_fontsize=7.5)
     _title(ax_a, 4, "BRIE spreads the fill alongshore")
 
-    out = save(fig, OUT / "management_modules.png")
+    out = save(fig, OUT / "cascade" / "management_modules.png")
     plt.close(fig)
     record_caption(out[0],
         "What the two CASCADE management modules do to the grid. (a-c) The roadway manager, GIS "
@@ -808,6 +1266,9 @@ FIGURES = {
     "barrier3d_storm_year": fig_barrier3d_storm_year,
     "barrier3d_domain_budget": fig_barrier3d_domain_budget,
     "brie_diffusion": fig_brie_diffusion,
+    "brie_domain_order": fig_brie_domain_order,
+    "brie_domain_orientation": fig_brie_domain_orientation,
+    "brie_asymmetry_explained": fig_brie_asymmetry_explained,
     "cascade_shoreline_split": fig_cascade_shoreline_split,
     "cascade_island_grids": fig_cascade_island_grids,
     "cascade_coupling_loop": fig_cascade_coupling_loop,

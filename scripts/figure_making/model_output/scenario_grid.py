@@ -145,7 +145,7 @@ DEFAULT_OUT = _hs.COMPARISONS_ROOT / "scenario_grid" / "scenario_grid_by_preset.
 # The manuscript copy, with the other figures by subject (2026-09-18). Written
 # only from a default run: an --out or any flagged variant is a working figure
 # and must not overwrite it.
-PUBLISHED = _hs.figure_dir("shoreline") / "scenario_grid.png"
+PUBLISHED = _hs.figure_dir("results") / "scenario_grid.png"
 
 # THE CANONICAL CHAIN, 1996 -> 2010 -> 2024 (Hannah, 2026-09-17). Ends come
 # from HATTERAS_PERIODS, so changing PERIOD_STARTS moves the whole figure.

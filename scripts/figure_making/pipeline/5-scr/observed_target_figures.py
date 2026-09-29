@@ -6,7 +6,7 @@ built from CoastSat, for the two current windows (1996-2010, 2010-2024).
 
     python scripts/figure_making/pipeline/5-scr/observed_target_figures.py
 
-Writes output/figures/pipeline/5-scr/observed_target_<window>.png.
+Writes output/figures/3-model-inputs/5-observed-target/observed_target_<window>.png.
 
 THE STEPS DRAWN (the producers' own functions, not re-implemented)
     1. One transect's CoastSat shoreline positions (chainage, + seaward) in the
@@ -50,7 +50,7 @@ from cascade_pipeline.coastsat_loess import (  # noqa: E402
 from cascade_pipeline.domains import DEFAULT_DOMAINS  # noqa: E402
 from coastsat_lrr import load_timeseries, filter_dates, compute_lrr  # noqa: E402
 
-OUT = figure_dir("pipeline", "5-scr")
+OUT = figure_dir("inputs", "5-observed-target")
 WINDOWS = ((1996, 2010), (2010, 2024))
 EXAMPLE_GIS = 45
 ZOOM = (38, 52)

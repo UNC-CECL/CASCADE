@@ -6,7 +6,7 @@ surveys become the 10 m grid Barrier3D reads.
 
     python scripts/figure_making/pipeline/0-elevation/dem_composition_figures.py
 
-Writes to output/figures/pipeline/0-elevation/:
+Writes to output/figures/3-model-inputs/0-elevation/:
 
     dem_sources_alongshore.png   per GIS domain, the share of measured cells
                                  each survey supplies, in both products:
@@ -47,7 +47,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
     _title, open_frame, elevation_cmap, town_bands,
 )
 
-OUT = figure_dir("pipeline", "0-elevation")
+OUT = figure_dir("inputs", "0-elevation")
 MHW_NAVD = 0.36
 EXAMPLE_GIS = 45
 # survey code -> label, colour. The vintage pair: the earlier survey red, the

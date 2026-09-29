@@ -72,7 +72,7 @@ from site_layer.hatteras_site_config import (HATTERAS_NOURISHMENT_PROJECTS,
 _PATH_REPO = next(_p for _p in _P(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 from site_layer import hat_figure_style as _hs  # noqa: E402
-OUT = _hs.figure_dir("management")
+OUT = _hs.figure_dir("inputs", "4-management")
 
 # The period starts in use. Each one's end comes from HATTERAS_PERIODS, so the
 # bar below the axis states the run windows rather than a memory of them.

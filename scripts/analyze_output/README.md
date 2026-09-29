@@ -3,7 +3,7 @@
 Nothing here runs the model. Each script reads finished runs and writes to
 `output/comparisons/`, resolved as `hat_figure_style.COMPARISONS_ROOT`
 (2026-09-18); a figure finished for the manuscript also goes to
-`output/figures/<subject>/`, from `scripts/figure_making/`.
+`output/figures/` (numbered layout, map in its README.md), from `scripts/figure_making/`.
 
 ```
 compare_runs/

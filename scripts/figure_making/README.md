@@ -31,32 +31,36 @@ model_output/superseded_20260918/   the two 1978-1997 gif scripts; see WHY.md
 
 | Figures of | Land in |
 |---|---|
-| the site: reach, domains, one domain | `output/figures/site/` |
-| the forcing record | `output/figures/forcing/` |
-| NC-12 and nourishment | `output/figures/management/` (the investigation plots in `management/investigation/`) |
-| shoreline change | `output/figures/shoreline/` |
-| the island as the model starts it | `output/figures/initialization/` |
-| the same figures for a projector | `output/figures/talk/<subject>/` |
+| the site: reach, domains, one domain | `output/figures/1-site/` |
+| what was observed: CoastSat, dune lines, mean shoreline | `output/figures/2-observations/<shoreline, duneline, shoreline_vs_duneline, mean_shoreline>/` |
+| how each model input is built (elevation, domains and the initial island, offset, forcing, management, observed target, source/sink) | `output/figures/3-model-inputs/<step>/` |
+| how the models work | `output/figures/4-model-mechanics/<barrier3d, brie, cascade, storm_routing>/` |
+| hindcasts, scenarios, worked examples | `output/figures/5-results/` |
+| the same figures for a projector | `output/figures/talk/<same path>` |
 | the house style, drawn | `output/figures/style/` |
 | the observed record itself | `output/observations/` |
 | a comparison across runs | `output/comparisons/` |
 
-A cross-run figure that is finished for the manuscript is ALSO written to its
-subject folder, in the house style, by the same run of the same script, so the
+The numbered layout is Hannah's of 2026-09-29 (the paper's order); the old
+subject folders are in `output/archive/2026-09-29_figures-pre-reorg/`.
+
+A cross-run figure that is finished for the manuscript is ALSO written to
+`5-results/`, in the house style, by the same run of the same script, so the
 two copies cannot drift: `scenario_grid.py` writes
-`output/figures/shoreline/scenario_grid.png` beside its `comparisons/` copy.
-`hindcast_final_figure_loess.py` writes `shoreline/hindcast_<preset>.png`,
-and `gis11_relocation_drown_figure.py` writes
-`management/gis11_relocation_drown.png`. Both were redrawn for the house-style
-column on 2026-09-18, and each has a `PUBLISH` switch to hold a figure back
-while its layout is broken.
+`output/figures/5-results/scenario_grid.png` beside its `comparisons/` copy;
+`hindcast_final_figure_loess.py` writes `5-results/hindcast_<preset>.png`, and
+`gis11_relocation_drown_figure.py` writes `5-results/gis11_relocation_drown.png`.
+Each has a `PUBLISH` switch to hold a figure back while its layout is broken.
 
 Resolve these through `scripts/site_layer/hat_figure_style.py`:
-`figure_dir(subject, ...)`, `COMPARISONS_ROOT`, `OBSERVATIONS_OUT`.
-`figure_dir()` raises on a subject not in the table above, so a new top-level
-folder cannot appear by typo -- which is how
-`output/figures/management_investigation/` came to sit beside `management/`
-until 2026-09-18.
+`figure_dir(subject, ...)` with subject one of `site`, `observations`,
+`inputs`, `mechanics`, `results`, `style`, `talk` (and, under `inputs`, a step
+from `INPUT_STEPS`), plus `COMPARISONS_ROOT`, `OBSERVATIONS_OUT`. It raises on
+anything else, so a new top-level folder cannot appear by typo.
+
+**Keeping them current:** `python scripts/figure_making/tools/regenerate_all_figures.py`
+redraws every published figure from its script and rewrites the index; add a
+producer to its `STEPS` when a script starts publishing to `output/figures/`.
 
 `output/figures/README.md` is a generated index of all of them: figure, what it
 shows, and the script that draws it. Re-run

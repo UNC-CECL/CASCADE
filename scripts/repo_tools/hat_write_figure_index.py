@@ -327,7 +327,7 @@ def build() -> tuple[str, list[str]]:
         "",
         "| | |",
         "|---|---|",
-        "| Finished figures for the paper | `output/figures/<subject>/` |",
+        "| Finished figures for the paper | `output/figures/` (map: `output/figures/README.md`) |",
         "| How the repo is laid out | [`ORGANIZATION.md`](ORGANIZATION.md) |",
         "| Figure house style | `scripts/site_layer/hat_figure_style.py`, "
         "`figure_making/STYLE.md`, `output/figures/style/` |",

@@ -6,7 +6,7 @@ using the extractor's own functions on its own saved picks.
 
     python scripts/figure_making/pipeline/1-barrier3d-domains/domain_extraction_figures.py [--gis 45] [--product 2004-start]
 
-Writes output/figures/pipeline/1-barrier3d-domains/domain_extraction_gis<N>.png.
+Writes output/figures/3-model-inputs/1-domains/domain_extraction_gis<N>.png.
 
 WHAT IT CALLS
     HAT_dune_topo_extractor.load_profiles (orient, MHW, clamp, beach start,
@@ -45,7 +45,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
     record_caption, _title, open_frame, elevation_cmap,
 )
 
-OUT = figure_dir("pipeline", "1-barrier3d-domains")
+OUT = figure_dir("inputs", "1-domains")
 PROFILES = (8, 25, 42)          # alongshore profiles drawn in panel (c)
 
 

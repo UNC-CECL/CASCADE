@@ -6,7 +6,7 @@ The source/sink (background erosion, BE) method figures for the current
 
     python scripts/figure_making/pipeline/7-source-sink/be_method_figures.py
 
-Writes output/figures/pipeline/7-source-sink/:
+Writes output/figures/3-model-inputs/7-source-sink/:
     be_end_solve.png   how the two end values the current (edgeBE) runs carry
                        were solved: residual per Newton step at GIS 1 and 90,
                        and the direct probes where 2010 GIS 1 stopped
@@ -50,7 +50,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
     record_caption, _title, open_frame,
 )
 
-OUT = figure_dir("pipeline", "7-source-sink")
+OUT = figure_dir("inputs", "7-source-sink")
 SOLVE = (REPO / "output" / "raw_runs" / "experiments" / "end-domain-boundaries"
          / "2026-09-27-ends-resolved-metres-offset" / "tables")
 # The ends the runs carry since 2026-09-28: re-solved against the LOESS-7 target,

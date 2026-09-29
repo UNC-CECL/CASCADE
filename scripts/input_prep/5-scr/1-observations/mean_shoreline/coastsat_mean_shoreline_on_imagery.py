@@ -63,7 +63,7 @@ OUTPUT   <mean_shoreline_dir(window)>/on_imagery/
     with_domains/mean_shoreline_<window>_on_imagery_with_domains_island_1996.png
         each subfolder with supporting/CAPTIONS.md (no PDFs: raster panels)
     supporting/sites.csv   the windows, both files and the position counts per site
-    Also published to output/figures/shoreline/mean_shoreline/<the same subfolders>.
+    Also published to output/figures/2-observations/mean_shoreline/<the same subfolders>.
 
 USAGE
     python coastsat_mean_shoreline_on_imagery.py
@@ -128,7 +128,7 @@ BAND_EDGE = dict(color=C_LINE, lw=0.5, ls=(0, (3, 2)), alpha=0.9)
 # readers, and is the scale reviewers expect for an ordered variable. The thin
 # ink edge keeps the light end visible on the brightest beach.
 CMAP = plt.get_cmap("viridis")
-PUBLISH = fs.figure_dir("shoreline", "mean_shoreline")
+PUBLISH = fs.figure_dir("observations", "mean_shoreline")
 # One subfolder per version, each with its own supporting/CAPTIONS.md
 # (Hannah, 2026-09-23); sites.csv covers all and stays in on_imagery/supporting.
 # The key is the version, the value its subfolder; with_domains added 2026-09-28.

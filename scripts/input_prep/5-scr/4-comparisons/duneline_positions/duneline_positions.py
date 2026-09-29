@@ -44,7 +44,7 @@ THE FIGURES   data/hatteras_init/5-scr/4-comparisons/duneline_positions/
 
 YEAR COLOURS: one ordered ramp, light grey 1997 -> slate 2009 -> ink 2023, so
 the order reads at a glance and red / blue stay free for seaward / landward.
-Every figure is also published to output/figures/shoreline/duneline_positions/.
+Every figure is also published to output/figures/2-observations/duneline/.
 
 USAGE
     python scripts/input_prep/5-scr/4-comparisons/duneline_positions/duneline_positions.py
@@ -101,7 +101,7 @@ YEAR_C = {1997: "#9a9a9a", 2009: "#4b6a88", 2023: "#141414"}   # the ordered ram
 LINE_LW = 1.3
 ROAD_LW = 0.9
 OUT = DUNELINE_POSITIONS
-PUBLISH = figure_dir("shoreline", "duneline_positions")
+PUBLISH = figure_dir("observations", "duneline")
 
 SEGMENTS = [("South: Cape Point to Avon", 1, 30),
             ("Central: Avon to the Tri-Village", 31, 60),

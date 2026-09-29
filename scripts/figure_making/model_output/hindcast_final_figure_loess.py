@@ -59,7 +59,7 @@ ON THE 1996 -> 2010 -> 2024 CHAIN since 2026-09-18, nogroin arm, edgeBE by
 default. calibBE is kept in PRESETS but is not solved on this chain.
 
 Writes output/comparisons/hindcast_calibrated/hindcast_<preset>_loess_reference.png
-and, with PUBLISH, output/figures/shoreline/hindcast_<preset>.png with its
+and, with PUBLISH, output/figures/5-results/hindcast_<preset>.png with its
 caption in supporting/CAPTIONS.md. Both are the same house-style figure; the
 title and note that were drawn on the canvas are the caption (2026-09-18).
 
@@ -88,7 +88,7 @@ from site_layer import hat_figure_style as _hs  # noqa: E402
 OUT_DIR = _hs.COMPARISONS_ROOT / "hindcast_calibrated"
 # The manuscript copy goes with the other figures, by subject
 # (output/figures/README.md); the presentation version stays in OUT_DIR.
-FIGURES_DIR = _hs.figure_dir("shoreline")
+FIGURES_DIR = _hs.figure_dir("results")
 # ON since the layout was redrawn for the house-style column (2026-09-18).
 # Before that the labels, title and legend overlapped, and it was held off so
 # a broken figure could not land in output/figures/.

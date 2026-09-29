@@ -87,7 +87,7 @@ archive/                     kept, not for use
                                         and chain figures); the 2 x 2 moved to
                                         3-rates/coastsat/lrr/lrr_four_windows
     rodanthe_plots/                     poster figures; the script writes to
-                                        output/figures/shoreline/ now
+                                        output/figures/2-observations/shoreline/ now
 ```
 
 Until 2026-09-18 all of these sat side by side at the top of `5-scr/`. Four
@@ -215,7 +215,7 @@ the data in both panels, only to show where they are. The y
 axis is the tightest whole metre that holds every line (±7 m/yr), NOT the
 shared ±8 of the single-window figures; the caption says so. The three
 means are side by side in `supporting/lrr_1996_2024_halves.csv`. The figure is also published to
-`output/figures/shoreline/`.
+`output/figures/2-observations/shoreline/`.
 
 ## Comparing windows
 

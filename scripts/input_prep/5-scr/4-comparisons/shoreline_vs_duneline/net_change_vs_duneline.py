@@ -33,7 +33,7 @@ WHAT IS DRAWN
 OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/endpoint_net_change/chains/
     (was 4-comparisons/net_change_1996_2024/ until 2026-09-19)
     net_change_chain_1996_2010_2024.png   also published to
-                                          output/figures/shoreline/
+                                          output/figures/2-observations/shoreline_vs_duneline/
     supporting/
         domain_comparison.csv   one row per window x domain: shoreline, dune,
                                 beach-width change, whether they agree in sign
@@ -236,7 +236,7 @@ def main() -> int:
                loc="outside lower center", ncol=4, frameon=False)
     caption(fig, caption_text(summ, half, fills))
     written = save(fig, out / STEM)
-    written += save(fig, figure_dir("shoreline") / STEM)
+    written += save(fig, figure_dir("observations", "shoreline_vs_duneline") / STEM)
     plt.close(fig)
 
     print(pd.DataFrame(summ)[["window", "lines", "mean_shoreline_change_m",

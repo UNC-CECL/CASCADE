@@ -95,7 +95,7 @@ PROFILES = _hs.COMPARISONS_ROOT / "relocation" / "standard_setback" / "GIS11_pro
 # The manuscript copy, with the other figures by subject (2026-09-18): the
 # same panels, the headline and its two lines moved to supporting/CAPTIONS.md.
 # Written only when --out is not given.
-PUBLISHED = _hs.figure_dir("management") / "gis11_relocation_drown.png"
+PUBLISHED = _hs.figure_dir("results") / "gis11_relocation_drown.png"
 # ON since the layout was redrawn for the house-style column (2026-09-18).
 # Before that the labels, title and legend overlapped, and it was held off so
 # a broken figure could not land in output/figures/.

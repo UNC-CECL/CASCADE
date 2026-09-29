@@ -71,7 +71,7 @@ DOMAIN_COL, LRR_COL = "domain_number", "mean_lrr"
 DOMAIN_MIN, DOMAIN_MAX = 1, 90
 WINDOW_DOMAINS = 7                       # 3.5 km at the 500 m domain spacing; 10 until 2026-09-28
 # named for its window: two_periods_10_domains until 2026-09-28
-OUT = _hs.figure_dir("shoreline", f"two_periods_{WINDOW_DOMAINS}_domains")
+OUT = _hs.figure_dir("observations", "shoreline", f"two_periods_{WINDOW_DOMAINS}_domains")
 PERIOD_COLOURS = ((C_1984, C_1984_FILL), (C_1997, C_1997_FILL))
 
 

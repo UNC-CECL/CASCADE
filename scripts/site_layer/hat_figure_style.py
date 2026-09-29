@@ -106,16 +106,35 @@ OUTPUT_ROOT = PROJECT_ROOT / "output"
 FIGURES_ROOT = OUTPUT_ROOT / "figures"
 COMPARISONS_ROOT = OUTPUT_ROOT / "comparisons"       # cross-run figures
 OBSERVATIONS_OUT = OUTPUT_ROOT / "observations"      # the observed record itself
-FIGURE_SUBJECTS = ("site", "forcing", "management", "shoreline", "model", "pipeline",
-                   "initialization", "style", "talk")
+#
+# THE NUMBERED LAYOUT (2026-09-29, Hannah): top folders follow the paper's
+# order -- where, what was observed, what the model is fed, how it works, what
+# it gives. The old subjects (site, forcing, management, shoreline, model,
+# pipeline, initialization) were retired the same day and now raise, so a
+# script still using one fails loudly instead of rebuilding the old tree. The
+# pre-reorganisation tree is output/archive/2026-09-29_figures-pre-reorg/.
+FIGURE_SUBJECTS = {
+    "site": "1-site",                  # the reach, the 90 domains, one domain
+    "observations": "2-observations",  # CoastSat shoreline, dune lines, imagery
+    "inputs": "3-model-inputs",        # how each model input is built, by step
+    "mechanics": "4-model-mechanics",  # how Barrier3D, BRIE and CASCADE work
+    "results": "5-results",            # hindcasts and scenarios
+    "style": "style",
+    "talk": "talk",                    # projector versions, mirroring the above
+}
+# the model-input steps under 3-model-inputs/, numbered as data/hatteras_init/
+INPUT_STEPS = ("0-elevation", "1-domains", "2-brie-offset", "3-forcing",
+               "4-management", "5-observed-target", "7-source-sink")
 
 
 def figure_dir(subject: str, *parts: str) -> Path:
-    """output/figures/<subject>[/<parts>...]; subject must be a known one."""
+    """output/figures/<numbered subject>[/<parts>...]; subject must be a known one."""
     if subject not in FIGURE_SUBJECTS:
         raise ValueError(f"unknown figure subject {subject!r}; one of "
-                         f"{', '.join(FIGURE_SUBJECTS)} (figure_making/README.md)")
-    return FIGURES_ROOT.joinpath(subject, *parts)
+                         f"{', '.join(FIGURE_SUBJECTS)} (output/figures/README.md)")
+    if subject == "inputs" and parts and parts[0] not in INPUT_STEPS:
+        raise ValueError(f"unknown model-input step {parts[0]!r}; one of {INPUT_STEPS}")
+    return FIGURES_ROOT.joinpath(FIGURE_SUBJECTS[subject], *parts)
 
 # =============================================================================
 # TYPE, INK, THE VINTAGE PAIR

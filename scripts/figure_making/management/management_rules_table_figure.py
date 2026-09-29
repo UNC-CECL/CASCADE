@@ -71,7 +71,7 @@ from site_layer.hatteras_site_config import (HATTERAS_NOURISHMENT_PROJECTS,
 _PATH_REPO = next(_p for _p in _P(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 from site_layer import hat_figure_style as _hs  # noqa: E402
-OUT_DIR = _hs.figure_dir("management")
+OUT_DIR = _hs.figure_dir("inputs", "4-management")
 
 Y0, Y1 = 1984, 2024          # the modelled span, as the timeline figure draws it
 EN = "\u2013"                # en dash: ranges only

@@ -8,10 +8,9 @@ disagree.
 
     python scripts/figure_making/island/study_area_figures.py [--vector] [--only NAME] [--talk]
 
-Writes to output/figures/<subject>/ (rule 1 of ORGANIZATION.md: products go
-under output/), PNG at the top and PDF + CAPTIONS.md under supporting/. The
-subject folder comes from SUBJECT below; --talk writes the same names under
-output/figures/talk/<subject>/:
+Writes into the numbered output/figures/ layout (1-site/, 2-observations/,
+3-model-inputs/; see SUBJECT below), PNG at the top and PDF + CAPTIONS.md
+under supporting/; --talk writes the same paths under output/figures/talk/:
 
     study_area.png        the reach on satellite imagery with the 90 domain
                           boxes, NC-12, the villages and structures, and a
@@ -122,36 +121,36 @@ INIT = REPO / "data" / "hatteras_init"
 from site_layer.hat_observed_rates import DOMAIN_BOXES  # noqa: E402
 from site_layer import hat_map_layers as _ml  # noqa: E402
 OUTLINE = _ml.ISLAND_OUTLINE
-from site_layer.hat_figure_style import FIGURES_ROOT as FIG_ROOT  # noqa: E402
+from site_layer.hat_figure_style import FIGURES_ROOT as FIG_ROOT, figure_dir  # noqa: E402
 
-# WHICH SUBJECT FOLDER EACH FIGURE BELONGS TO. output/figures/ is organised by
-# SUBJECT, not by the script that drew the figure (ORGANIZATION.md rule 1, and
-# the same rule scripts/figure_making/ already follows), so these twelve land
-# in five folders rather than one called `study_area` -- which was the name of
-# only one of them (Hannah, 2026-09-17).
+# WHICH FOLDER EACH FIGURE BELONGS TO. output/figures/ is organised by the
+# question a figure answers, in the paper's order (the numbered layout,
+# Hannah 2026-09-29; before that by subject, 2026-09-17): (subject, *parts)
+# as figure_dir() takes them.
 SUBJECT = {
-    "study_area": "site",
-    "site_overview": "site",
-    "domain_framework": "site",
-    "domain_framework_vertical": "site",
-    "domain_metrics": "site",
-    "domain_grid": "site",
-    "domain_schematic": "site",
-    "reach_elevation": "site",
-    "forcing_timeline_1984": "forcing",
-    "forcing_timeline_1996": "forcing",
-    "management_footprint": "management",
-    "observed_rates": "shoreline",
-    "dune_lines": "shoreline",
+    "study_area": ("site",),
+    "site_overview": ("site",),
+    "domain_framework": ("site",),
+    "domain_framework_vertical": ("site",),
+    "domain_metrics": ("site",),
+    "domain_grid": ("site",),
+    "domain_schematic": ("site",),
+    "reach_elevation": ("site",),
+    "forcing_timeline_1984": ("inputs", "3-forcing"),
+    "forcing_timeline_1996": ("inputs", "3-forcing"),
+    "management_footprint": ("inputs", "4-management"),
+    "observed_rates": ("observations", "shoreline"),
+    "dune_lines": ("observations", "duneline"),
 }
-TALK = False        # set by talk_mode(); the projector set mirrors the subjects
+TALK = False        # set by talk_mode(); the projector set mirrors the layout
 
 
 def fig_path(name):
-    """`output/figures/<subject>/<name>.png`, the folder created. Under
-    `talk/` in talk mode, so a subject folder shows one image per figure."""
-    root = FIG_ROOT / "talk" if TALK else FIG_ROOT
-    d = root / SUBJECT[name]
+    """`output/figures/<numbered subject>/.../<name>.png`, the folder created.
+    Under `talk/` in talk mode, mirroring the same path."""
+    d = figure_dir(*SUBJECT[name])
+    if TALK:
+        d = FIG_ROOT / "talk" / d.relative_to(FIG_ROOT)
     d.mkdir(parents=True, exist_ok=True)
     return d / f"{name}.png"
 TILE_CACHE = Path(tempfile.gettempdir()) / "hat_tile_cache"

@@ -6,7 +6,7 @@ YEARS, showing the t=0 elevation surface every domain is initialised from.
 
     python scripts/figure_making/island/initialization_figures.py
 
-Writes to output/figures/initialization/<year>/<scheme>/ (ORGANIZATION.md
+Writes to output/figures/3-model-inputs/1-domains/initial_island/<year>/<scheme>/ (ORGANIZATION.md
 rule 1), PNG at the top of the scheme folder and PDF + CAPTIONS.md under its
 supporting/, through the house `save()`. Three figures per folder:
 
@@ -142,9 +142,8 @@ PROJECT_BASE_DIR   = str(next(
     _p for _p in Path(__file__).resolve().parents
     if (_p / "pyproject.toml").exists()))
 HATTERAS_DATA_BASE = os.path.join(PROJECT_BASE_DIR, 'data', 'hatteras_init')
-OUTPUT_DIR         = str(next(_q for _q in Path(__file__).resolve().parents
-                              if (_q / "pyproject.toml").exists()
-                              ) / "output" / "figures" / "initialization")   # rule 1
+from site_layer.hat_figure_style import figure_dir as _figure_dir  # noqa: E402
+OUTPUT_DIR         = str(_figure_dir("inputs", "1-domains", "initial_island"))   # rule 1
 
 # Orientation years to render: every hindcast period start. Offsets come from
 # 2-brie-offset/<year>/, the same PADDED_120 files the hindcast run script
@@ -483,7 +482,7 @@ def scheme_colours(scheme):
 
 
 def year_dir(year, scheme):
-    """`output/figures/initialization/<year>/<scheme>/`. `save()` creates it,
+    """`output/figures/3-model-inputs/1-domains/initial_island/<year>/<scheme>/`. `save()` creates it,
     and the `supporting/` inside it, so nothing here makes a directory."""
     return Path(OUTPUT_DIR) / str(year) / scheme
 

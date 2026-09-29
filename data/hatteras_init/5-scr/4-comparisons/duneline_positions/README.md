@@ -5,7 +5,7 @@ Positions, not change. These are the dune lines that stand for the model years
 as alongshore profiles of where they sit relative to NC-12 and the shoreline.
 Written by `scripts/input_prep/5-scr/4-comparisons/duneline_positions/duneline_positions.py`
 (2026-09-18, Hannah's design by interview). Every figure is also published to
-`output/figures/shoreline/duneline_positions/`.
+`output/figures/2-observations/duneline/`.
 
 ```
 overview/duneline_positions_overview.png   the island in three north-up

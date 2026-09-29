@@ -26,7 +26,7 @@ line trace on that one frame; the model code is not copied or modified).
     storm_routing_hours.png     one run-up storm hour by hour: where the
                                 water is and what the bed has done so far
 
-Writes to output/figures/model/, ocean at the RIGHT in every plan panel.
+Writes to output/figures/4-model-mechanics/<model>/, ocean at the RIGHT in every plan panel.
 The domain and year are the storm-year example of model_mechanics_figures
 (GIS 6, the 2006 storms, natural 1996-2010 run).
 """
@@ -56,7 +56,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
 import model_mechanics_figures as mm  # noqa: E402
 from storm_replay import replay, regime  # noqa: E402
 
-OUT = figure_dir("model")
+OUT = figure_dir("mechanics")   # one sub-folder per model: barrier3d/, brie/, cascade/, storm_routing/
 DAM = 10.0
 GIS, T = mm.STORM_GIS, mm.STORM_T
 DURATION_H = 24
@@ -141,7 +141,7 @@ def fig_storm_routing_check():
     ax2.set_ylabel("overwash (m$^3$/m)")
     open_frame(ax2)
     _title(ax2, 1, "Overwash per storm")
-    out = save(fig, OUT / "storm_routing_check.png")
+    out = save(fig, OUT / "storm_routing" / "storm_routing_check.png")
     plt.close(fig)
     q_saved = float(np.asarray(b.QowTS)[T])
     record_caption(out[0],
@@ -220,7 +220,7 @@ def fig_storm_routing_ladder():
     cb = fig.colorbar(im_z, cax=cax_z, orientation="horizontal")
     cb.set_label("elevation change (m)")
 
-    out = save(fig, OUT / "storm_routing_ladder.png")
+    out = save(fig, OUT / "storm_routing" / "storm_routing_ladder.png")
     plt.close(fig)
     crest = (b.DuneDomain[T - 1].max(axis=1) + b.BermEl) * DAM
     record_caption(out[0],
@@ -288,7 +288,7 @@ def fig_storm_routing_hours():
     cb = fig.colorbar(imz, cax=fig.add_subplot(gs[-1, 1]), orientation="horizontal")
     cb.set_label("elevation change since the storm began (m)")
 
-    out = save(fig, OUT / "storm_routing_hours.png")
+    out = save(fig, OUT / "storm_routing" / "storm_routing_hours.png")
     plt.close(fig)
     record_caption(out[0],
         f"One storm hour by hour: GIS {GIS} entering {y0 + T - 1}, a {DURATION_H} h storm with Rhigh "
@@ -348,7 +348,7 @@ def fig_storm_routing_response():
         _title(ax2, 2 + j, "overtopped vs given water")
     axes[0, 0].legend(frameon=False, fontsize=7.5, loc="upper left")
     axes[1, 0].legend(frameon=False, fontsize=7.5, loc="upper left")
-    out = save(fig, OUT / "storm_routing_response.png")
+    out = save(fig, OUT / "storm_routing" / "storm_routing_response.png")
     plt.close(fig)
     record_caption(out[0],
         f"Does overwash grow with the storm? GIS {GIS} entering {y0 + T - 1} (natural 1996-2010 run), one "

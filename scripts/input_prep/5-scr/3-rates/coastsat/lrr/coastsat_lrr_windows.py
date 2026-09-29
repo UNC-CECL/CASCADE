@@ -56,7 +56,7 @@ OUTPUT   data/hatteras_init/5-scr/3-rates/coastsat/lrr/  (since 2026-09-19)
                                    lines; the y axis is the tightest whole
                                    metre holding every line, NOT the shared
                                    bound. Also published to
-                                   output/figures/shoreline/
+                                   output/figures/2-observations/shoreline/
     supporting/lrr_1996_2024_halves.csv   the three means side by side
     The long window is context, not a grading target, so it is NOT added to
     the default four or to the 2 x 2.
@@ -499,11 +499,11 @@ def overlay_figure(long_w, halves, frames, half, shared):
 
 
 def _save_both(fig, window, stem):
-    """Into the comparison folder, and published to output/figures/shoreline/
+    """Into the comparison folder, and published to output/figures/2-observations/shoreline/
     (finished figures publish by subject, 2026-09-18). Each copy gets its
     CAPTIONS.md entry through the caption() wrapper."""
     out = save(fig, OUT_DIR / window / stem)
-    out += save(fig, figure_dir("shoreline") / stem)
+    out += save(fig, figure_dir("observations", "shoreline") / stem)
     plt.close(fig)
     return out
 

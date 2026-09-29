@@ -6,7 +6,7 @@ what the 1996 and 2010 runs are handed along the reach.
 
     python scripts/figure_making/pipeline/4-mgmt-forcings/road_setback_figures.py
 
-Writes output/figures/pipeline/4-mgmt-forcings/:
+Writes output/figures/3-model-inputs/4-management/:
     road_setback_measurement.png   one domain: raw grid + rasterised road,
                                    the straightened profiles, the per-profile
                                    setbacks and the domain value
@@ -53,7 +53,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
     save, record_caption, _title, open_frame, town_bands,
 )
 
-OUT = figure_dir("pipeline", "4-mgmt-forcings")
+OUT = figure_dir("inputs", "4-management")
 EXAMPLE_GIS = 31
 EXAMPLE_YEAR = 2004          # the measurement the 2010 run reads unchanged
 PRODUCT = {1984: "1984-start", 2004: "2004-start"}
