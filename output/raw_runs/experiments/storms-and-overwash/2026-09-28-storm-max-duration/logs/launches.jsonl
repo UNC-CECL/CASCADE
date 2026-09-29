@@ -1,0 +1,20 @@
+{"window": "1996_2010", "variant": "96", "scenario": "full_management", "returncode": 0, "minutes": 4.5, "stopped": [], "storm_file_in_log": true}
+{"window": "1996_2010", "variant": "96", "scenario": "natural", "returncode": 0, "minutes": 4.7, "stopped": [], "storm_file_in_log": true}
+{"window": "1996_2010", "variant": "120", "scenario": "full_management", "returncode": 0, "minutes": 4.8, "stopped": [], "storm_file_in_log": true}
+{"window": "1996_2010", "variant": "120", "scenario": "natural", "returncode": 0, "minutes": 5.2, "stopped": [], "storm_file_in_log": true}
+{"window": "1996_2010", "variant": "240", "scenario": "full_management", "returncode": 0, "minutes": 4.5, "stopped": [], "storm_file_in_log": true}
+{"window": "1996_2010", "variant": "72trim", "scenario": "full_management", "returncode": 0, "minutes": 4.1, "stopped": [], "storm_file_in_log": true}
+{"window": "1996_2010", "variant": "72trim", "scenario": "natural", "returncode": 0, "minutes": 5.0, "stopped": [], "storm_file_in_log": true}
+{"window": "1996_2010", "variant": "240", "scenario": "natural", "returncode": 0, "minutes": 5.4, "stopped": [], "storm_file_in_log": true}
+{"window": "2010_2024", "variant": "96", "scenario": "full_management", "returncode": 0, "minutes": 5.3, "stopped": [], "storm_file_in_log": true}
+{"window": "2010_2024", "variant": "120", "scenario": "full_management", "returncode": 0, "minutes": 5.4, "stopped": [], "storm_file_in_log": true}
+{"window": "2010_2024", "variant": "96", "scenario": "natural", "returncode": 0, "minutes": 6.6, "stopped": [], "storm_file_in_log": true}
+{"window": "2010_2024", "variant": "120", "scenario": "natural", "returncode": 0, "minutes": 6.8, "stopped": [], "storm_file_in_log": true}
+{"window": "2010_2024", "variant": "240", "scenario": "full_management", "returncode": 0, "minutes": 6.3, "stopped": [], "storm_file_in_log": true}
+{"window": "2010_2024", "variant": "72trim", "scenario": "full_management", "returncode": 0, "minutes": 5.8, "stopped": [], "storm_file_in_log": true}
+{"window": "2010_2024", "variant": "240", "scenario": "natural", "returncode": 0, "minutes": 8.0, "stopped": [], "storm_file_in_log": true}
+{"window": "2010_2024", "variant": "72trim", "scenario": "natural", "returncode": 0, "minutes": 7.2, "stopped": [], "storm_file_in_log": true}
+{"window": "1996_2010", "variant": "prefix_240", "scenario": "natural", "returncode": 3221225477, "barrier3d": "BARRIER3D = HEAD@ce36866   route_overwash fix: False", "minutes": 2.0, "stopped": [], "storm_file_in_log": true}
+{"window": "1996_2010", "variant": "prefix_72", "scenario": "natural", "returncode": 0, "barrier3d": "BARRIER3D = HEAD@ce36866   route_overwash fix: False", "minutes": 3.4, "stopped": [], "storm_file_in_log": true}
+{"window": "2010_2024", "variant": "prefix_72", "scenario": "natural", "returncode": 0, "barrier3d": "BARRIER3D = HEAD@ce36866   route_overwash fix: False", "minutes": 4.6, "stopped": [], "storm_file_in_log": true}
+{"window": "2010_2024", "variant": "prefix_240", "scenario": "natural", "returncode": 0, "barrier3d": "BARRIER3D = HEAD@ce36866   route_overwash fix: False", "minutes": 6.6, "stopped": [], "storm_file_in_log": true}

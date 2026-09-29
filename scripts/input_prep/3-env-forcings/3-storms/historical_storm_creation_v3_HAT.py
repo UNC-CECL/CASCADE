@@ -63,6 +63,21 @@ _ap.add_argument("--start-year", type=int, required=True,
 _ap.add_argument("--end-year", type=int, required=True,
                  help="period end. The model loop runs start..end-1, so the "
                       "last storm year the run can spend is end-1")
+# THE LONG-EVENT RULE (2026-09-28, Hannah adopted "trim24"). Grouping runs
+# less than weather_grouping hours apart can make one event of 100-190 h, and
+# the original rule DROPPED any event longer than max_storm_dur -- which at
+# 72 h removed Isabel 2003, March 2018, Florence, Dennis and Nor'Ida. The 72
+# existed only because the pre-49fd069 Barrier3D crashed on long storms
+# (experiments/storms-and-overwash/2026-09-28-storm-max-duration). "trim"
+# keeps every event and cuts one longer than max_storm_dur to the
+# max_storm_dur hours around its peak TWL; Rhigh, Rlow and the period are taken
+# from what is kept. The defaults (drop, 72) reproduce the v3_72 files.
+_ap.add_argument("--max-duration", type=int, default=72,
+                 help="hours; the drop limit, or the trim length with --long-events trim")
+_ap.add_argument("--long-events", choices=("drop", "trim"), default="drop",
+                 help="drop events longer than --max-duration (v3_<N>), or trim them (v3_trim<N>)")
+_ap.add_argument("--save-dir", default=None,
+                 help="write here instead of the window's hindcast_storms folder (for checks)")
 _args = _ap.parse_args()
 
 START_YEAR = _args.start_year
@@ -88,10 +103,12 @@ berm_elevation = 1.7    # average berm elevation [m NAVD88]
 weather_grouping = 24    # if storms occur within the specified limit, they are assumed part of same weather system and are grouped into one event [hrs]
 MHW = 0.36              # conversion from NAVD88 to MHW [m]: 0 m NAVD88 = X m MHW
 min_storm_dur = 8        # minimum duration that is considered a storm event [hrs]
-max_storm_dur = 72      # maximum duration to include in storm events [hrs]
+max_storm_dur = _args.max_duration   # hours: the drop limit, or the trim length (see --long-events)
+long_events = _args.long_events      # "drop" (v3_<N>) or "trim" (v3_trim<N>)
 save_dfs = True         # determine whether to save the dataframes as csv and npy files
-save_dir = str(_env.storm_window_dir(START_YEAR, END_YEAR))  # derived from the window
-save_name = "{0}_storms_v3_72".format(PERIOD_TAG)  # derived from the window
+save_dir = _args.save_dir or str(_env.storm_window_dir(START_YEAR, END_YEAR))  # derived from the window
+save_name = "{0}_storms_v3_{1}{2}".format(  # the rule is in the name: v3_72, v3_trim24
+    PERIOD_TAG, "trim" if long_events == "trim" else "", max_storm_dur)
 _Path(save_dir).mkdir(parents=True, exist_ok=True)
 
 
@@ -306,7 +323,8 @@ def create_storms(
     save_dfs=True,
     save_dir="",
     save_name="",
-    window_start_year=None
+    window_start_year=None,
+    long_events="drop",
 ):
     
     """    
@@ -378,9 +396,22 @@ def create_storms(
         group = group.sort_values("Time").copy()
         start_time = group["Time"].iloc[0]
         end_time   = group["Time"].iloc[-1]
+        event_year = start_time.year          # the year the EVENT starts, kept when trimmed
 
         # Duration (hours)
         duration = len(group)  # each row is 1 hour where an exceedance occured
+
+        # "trim": keep a long event, cut to the max_storm_dur hours above the
+        # berm centred on its peak (clamped to the event's ends)
+        trimmed_from = 0
+        if long_events == "trim" and duration > max_storm_dur:
+            k = int(np.argmax(group["TWL"].values))
+            lo = min(max(0, k - max_storm_dur // 2), duration - max_storm_dur)
+            trimmed_from = duration
+            group = group.iloc[lo:lo + max_storm_dur]
+            start_time = group["Time"].iloc[0]
+            end_time = group["Time"].iloc[-1]
+            duration = len(group)
 
         # Rhigh and Rlow from TWL during the storm (in m NAVD88)
         rhigh = group["TWL"].max()
@@ -397,13 +428,14 @@ def create_storms(
         # only add storms > specified duration (Magliocca et al., 2011) but less than maximum 
         if duration >= min_storm_dur and duration <= max_storm_dur:
             storms.append({
-                "calendar_year": start_time.year,
+                "calendar_year": event_year,
                 "StartTime": start_time,
                 "EndTime": end_time,
                 "Rhigh": rhigh,
                 "Rlow": rlow,
                 "period": period,
-                "duration": duration
+                "duration": duration,
+                **({"trimmed_from": trimmed_from} if long_events == "trim" else {}),
             })
 
     storms_df = pd.DataFrame(storms)
@@ -484,5 +516,6 @@ create_storms(
     save_dfs=save_dfs,
     save_dir=save_dir,
     save_name=save_name,
-    window_start_year=START_YEAR
+    window_start_year=START_YEAR,
+    long_events=long_events,
 )

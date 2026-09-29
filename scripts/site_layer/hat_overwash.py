@@ -24,6 +24,9 @@
 #             heatmaps/  map/
 #         3-vs-footprint/           the record against the 1984 footprint:
 #                                   figures here, their tables in tables/
+#         4-vs-model/               the record against modelled overwash in
+#                                   the hindcast runs (2026-09-27): figures
+#                                   here, tables in tables/
 #         archive/                  superseded_20260910/
 # ==============================================================================
 
@@ -50,6 +53,9 @@ MAP = RECORD / "map"
 VS_FOOTPRINT = OVERWASH_ROOT / "3-vs-footprint"
 VS_FOOTPRINT_TABLES = VS_FOOTPRINT / "tables"
 
+VS_MODEL = OVERWASH_ROOT / "4-vs-model"
+VS_MODEL_TABLES = VS_MODEL / "tables"
+
 ARCHIVE = OVERWASH_ROOT / "archive"
 
 # The label each figure's CAPTIONS.md entry carries, keyed by the short
@@ -59,13 +65,14 @@ CAPTION_FOLDERS = {
     "heatmaps": "2-record/heatmaps",
     "map": "2-record/map",
     "vs-footprint": "3-vs-footprint",
+    "vs-model": "4-vs-model",
 }
 
 
 if __name__ == "__main__":
     for name in ("OVERWASH_ROOT", "CAPTIONS", "OBSERVATIONS", "WORKBOOK",
                  "RECORD", "HEATMAPS", "MAP", "VS_FOOTPRINT",
-                 "VS_FOOTPRINT_TABLES", "ARCHIVE"):
+                 "VS_FOOTPRINT_TABLES", "VS_MODEL", "VS_MODEL_TABLES", "ARCHIVE"):
         path = globals()[name]
         print(f"{'ok' if path.exists() else 'MISSING':8} {name:20} "
               f"{path.relative_to(PROJECT_ROOT).as_posix()}")

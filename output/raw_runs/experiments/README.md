@@ -28,7 +28,14 @@ How the island's planform (the BRIE island offset) is set: its units, and whethe
 
 - `2026-09-22-div10-offset-shoreline-trial-original` (superseded)
 - `2026-09-24-div10-vs-metres-wave-sweep` (current)
-- `2026-09-25-metres-offset-duneline-vs-shoreline-waves-hs1-tp8` (current)
+- `2026-09-25-metres-offset-duneline-vs-shoreline-waves-hs1-tp8` (superseded)
+- `2026-09-28-metres-offset-duneline-vs-shoreline-waves-option-a` (current)
+
+## [`storms-and-overwash/`](storms-and-overwash/README.md)
+
+What the storm series contains, and whether overwash happens where and when it should.
+
+- Seven studies from 2026-09-28. They ended in the adoption: per-cell dune ceilings, the overwash fixes and `v3_trim24` storms (current)
 
 ## [`wave-climate/`](wave-climate/README.md)
 

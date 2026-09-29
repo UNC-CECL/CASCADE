@@ -48,6 +48,10 @@ from .roadway_manager import rebuild_dunes, set_growth_parameters
 
 dm3_to_m3 = 1000  # convert from cubic decameters to cubic meters
 
+# What filter_overwash's artificial maximum dune height limits (recorded in run
+# metadata). "added sand only" since 2026-09-28; before, "whole dune cell".
+DUNE_CAP_APPLIES_TO = "added sand only"
+
 
 class CascadeError(Exception):
     pass
@@ -341,13 +345,19 @@ def filter_overwash(
             [total_overwash_removal_dune_volume / number_dune_cells] * number_dune_cells
         )
         total_overwash_removal_dune_volume = np.sum(total_overwash_removal_dune_volume)
-    new_dune_domain = post_storm_yxz_dune_grid + overwash_volume_to_dune
-
-    # don't allow dunes to exceed a maximum height (limits 10-m dunes after big
-    # original...yikes!); assume the rest of the sand disappears
-    new_dune_domain[
-        new_dune_domain > artificial_maximum_dune_height
-    ] = artificial_maximum_dune_height
+    # don't let the bulldozed sand build a dune past a maximum height (limits 10-m
+    # dunes after big overwash); assume the rest of that sand disappears. The cap
+    # limits only what is ADDED: a cell already above it keeps its height and takes
+    # no sand. Until 2026-09-28 the whole cell was clipped, which deleted natural
+    # dune above the cap every year (Hatteras village dunes start 4.3-5 m above the
+    # berm; output/comparisons/adoption_2026-09-28/README.md).
+    new_dune_domain = np.maximum(
+        post_storm_yxz_dune_grid,
+        np.minimum(
+            post_storm_yxz_dune_grid + overwash_volume_to_dune,
+            artificial_maximum_dune_height,
+        ),
+    )
 
     # dam^3
     total_overwash_removal = (

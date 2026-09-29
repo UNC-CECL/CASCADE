@@ -11,6 +11,9 @@ Whether a code or model change moves the results: re-runs against stored runs, a
 | [`2026-09-14-relocation-rounding-probes`](2026-09-14-relocation-rounding-probes/NOTE.md) | Single probes around that rounding change. | Unrounded RMSE 0.5231 vs rounded 0.5229. | record |
 | [`2026-09-14-site-config-split-check`](2026-09-14-site-config-split-check/NOTE.md) | Did splitting the site config change the model? | No: four runs bit-identical. | record |
 | [`2026-09-24-metres-3-barrier3d-overwash-fix`](2026-09-24-metres-3-barrier3d-overwash-fix/NOTE.md) | How much does fixing Barrier3D's route_overwash axis swap move the results? | The bug caused the silent crashes; every run since 09-24 uses the fix (local Barrier3D branch). | **current** (the fix is in use) |
+| [`2026-09-28-barrier3d-overwash-gap-momentum-fix`](2026-09-28-barrier3d-overwash-gap-momentum-fix/NOTE.md) | How much do three further overwash fixes (DuneGaps cells, gap discharge slice, inundation momentum C) move the results? | They add 2–15% more overwash domain-years. Mean retreat grows by 0.1–2.6 m; the observed hit rate rises slightly and RMSE barely changes. Merged into Barrier3D `hatteras/adopted` (local, not pushed). | **current**: adopted 2026-09-28 |
+| [`2026-09-28-per-cell-dune-ceiling-reproduces`](2026-09-28-per-cell-dune-ceiling-reproduces/) | Does the Barrier3D per-cell dune-ceiling feature reproduce the in-memory experiment, and change nothing when off? | Yes on both. | record |
+| [`2026-09-28-adoption-end-to-end`](2026-09-28-adoption-end-to-end/) | Does the default runner on the adopted setup reproduce the storm and dune experiments? | Yes. | record |
 
 **Status** — **current**: its answer is in use now. **superseded**: a later study
 re-asked it; follow the pointer. **record**: a finished check or a result from an

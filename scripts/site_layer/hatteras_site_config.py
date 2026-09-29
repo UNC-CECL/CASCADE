@@ -1257,7 +1257,31 @@ HATTERAS_BE_RATES_EDGE = {
 HATTERAS_BE_EDGE_ONLY = {
     # (GIS 1, GIS 90), m/yr.
     #
-    # CURRENT VALUES: OPTION A ON THE LOESS-7 TARGET, 2026-09-28 (Hannah: "switch
+    # CURRENT VALUES: THE ADOPTED MODEL, 2026-09-28 evening (Hannah: "include
+    # the overwash fixes, keep option A, go ahead"). Barrier3D hatteras/adopted
+    # (the three overwash fixes + per-cell dune ceilings), storms v3_trim24,
+    # option A waves, LOESS-7 target, full management, edgeBE, no groin. The
+    # LOESS-7 values below were the seed:
+    #
+    #   1996-2010   GIS 1 +4.3509   GIS 90 +19.0935   residuals -0.006 / +0.007
+    #   2010-2024   GIS 1 +8.0      GIS 90 +21.2582   residuals +0.002 / -0.008
+    #
+    # DUNE-CAP FIX, 2026-09-28 late (Hannah: "go with option 1, clip only the
+    # bulldozed sand"): beach_dune_manager's 4 m cap now limits only the sand it
+    # adds. 1996 was re-checked and still holds (-0.006 / +0.007). 2010 GIS 90
+    # moved (+0.185 at +22.4937) and was re-solved by the secant, 4 steps from
+    # +21.57 (experiments/end-domain-boundaries/2026-09-28-ends-resolved-dunecap/).
+    # Before the fix it was +22.4937.
+    #
+    # 1996 by the safeguarded secant (4 steps). 2010 GIS 90 by the secant; 2010
+    # GIS 1 by DIRECT PROBES: above ~+10 m/yr its response goes flat and even
+    # reverses (+13.5 to +19 all leave ~+0.8 m/yr), which stalled the secant, so
+    # it was mapped at -6, -2, +2, +6, +8, +8.8, +9.5, +10 and +8.0 closes it.
+    # Record and every probe: output/raw_runs/experiments/end-domain-boundaries/
+    # 2026-09-28-ends-resolved-adopted/.
+    #
+    # --- LOESS-7 option A values on the pre-adoption model, SUPERSEDED 2026-09-28 ---
+    # OPTION A ON THE LOESS-7 TARGET, 2026-09-28 (Hannah: "switch
     # the runner to 7 and re-solve the ends"). The runner's CoastSat target went
     # from LOESS-10 to LOESS-7 the same day; GIS 1 is graded against the raw
     # domain mean, so only GIS 90's target moved (+0.125 m/yr in 1996, -0.066 in
@@ -1348,7 +1372,7 @@ HATTERAS_BE_EDGE_ONLY = {
     # Solve reproduced with:
     #   scripts/input_prep/7-source-sink/2-calibrate/
     #       be_edge_domain_solve.py --period 1996
-    1996: (+4.8394, +18.2545),  # option A on LOESS-7, 2026-09-28; LOESS-10 +17.545; /10 (+32.2, +10.0)
+    1996: (+4.3509, +19.0935),  # adopted model, 2026-09-28; pre-adoption LOESS-7 (+4.8394, +18.2545); LOESS-10 +17.545; /10 (+32.2, +10.0)
 
     # --- /10-offset solve, 2010, SUPERSEDED 2026-09-27 ---
     # SOLVED 2026-09-16, three Newton steps, the same protocol as 1996. Base
@@ -1382,7 +1406,7 @@ HATTERAS_BE_EDGE_ONLY = {
     #   be_edge_domain_solve.py --period 2010 --kind experiment
     #       --run <base> --tag 2026-09-16-edgesolve-2010/base
     #       --run <step> --tag 2026-09-16-edgesolve-2010/step<k> ...
-    2010: (+18.8657, +24.2358), # option A on LOESS-7, 2026-09-28; LOESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
+    2010: (+8.0, +21.2582),     # dune-cap fix, 2026-09-28; adopted before it (+8.0, +22.4937); pre-adoption LOESS-7 (+18.8657, +24.2358); LOESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
 }
 
 # OPTION B, RECORDED, NOT WIRED (2026-09-27, Hannah). The one-parameter

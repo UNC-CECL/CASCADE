@@ -1,0 +1,10 @@
+{"window": "1996_2010", "variant": "trim12", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@2b8f167   route_overwash fix: True", "minutes": 9.0}
+{"window": "1996_2010", "variant": "trim24", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@2b8f167   route_overwash fix: True", "minutes": 12.2}
+{"window": "1996_2010", "variant": "trim48", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@2b8f167   route_overwash fix: True", "minutes": 14.5}
+{"window": "1996_2010", "variant": "trim72", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@2b8f167   route_overwash fix: True", "minutes": 15.0}
+{"window": "1996_2010", "variant": "full", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@2b8f167   route_overwash fix: True", "minutes": 15.7}
+{"window": "2010_2024", "variant": "trim12", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@2b8f167   route_overwash fix: True", "minutes": 4.8}
+{"window": "2010_2024", "variant": "trim24", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@2b8f167   route_overwash fix: True", "minutes": 6.8}
+{"window": "2010_2024", "variant": "trim48", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@2b8f167   route_overwash fix: True", "minutes": 7.8}
+{"window": "2010_2024", "variant": "trim72", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@2b8f167   route_overwash fix: True", "minutes": 8.1}
+{"window": "2010_2024", "variant": "full", "returncode": 0, "barrier3d": "BARRIER3D = hatteras/adopted@2b8f167   route_overwash fix: True", "minutes": 8.4}

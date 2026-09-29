@@ -29,6 +29,12 @@ of it. Scripts: `scripts/input_prep/8-overwash-analysis/`.
         overwash_vs_footprint_by_domain.csv     the joined table: action, rows, shift, overwash, flags
         overwash_vs_footprint_contingency.csv   overwashed x add/none/remove, all and unflagged
         overwash_vs_footprint_summary.txt       the two readings in words, with the domain lists
+4-vs-model/                         the record against modelled overwash (2026-09-27)
+    overwash_vs_model_1996_2010.png         each image vs the model since the previous image
+    overwash_vs_model_2010_2024.png         (managed runs; 7-day grace as the storm table)
+    tables/
+        overwash_vs_model_cells.csv         every image x domain x run x threshold
+        overwash_vs_model_summary.csv       both/observed-only/model-only counts, hit rates
 CAPTIONS.md                         one entry per figure, headed by its folder; the
                                     figures carry no in-image text
 archive/superseded_20260910/

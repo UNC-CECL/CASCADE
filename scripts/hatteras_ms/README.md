@@ -24,6 +24,21 @@ old_drafts/   superseded
 old_versions/ superseded runners, and the inherited driver that predates them
 ```
 
+## Which Barrier3D the run uses
+
+Barrier3D is a separate repository, installed editable, so the branch checked out at `../Barrier3D` is the model. Every run records the branch and commit it imported (`run_registry.barrier3d_provenance`). None of the fixes below has been pushed upstream (Hannah, 2026-09-28). The full record, with evidence paths, is `HATTERAS_FIXES.md` on `hatteras/adopted`.
+
+| branch / tag | what it has | in use? |
+|---|---|---|
+| **`hatteras/adopted`** (2b8f167 code; 8a588ea records it) | everything below merged: the route_overwash fix, the three overwash fixes, and per-cell dune ceilings (`DuneCeilingFromStart`, switched on in `data/hatteras_init/Hatteras-CASCADE-parameters.yaml`) | **yes, since 2026-09-28**: `../Barrier3D` is on it. The runner refuses a Barrier3D without per-cell ceilings. The matrix before this is in `output/raw_runs/archive/2026-09-28-pre-ceiling/`. |
+| `feature/per-cell-dune-ceiling` (d343461) | per-cell dune ceilings alone, on 49fd069; worktree `../Barrier3D-dune-ceiling` | merged into `hatteras/adopted` |
+| `fix/overwash-gaps-momentum` (db0ba30, tag `hat-fix-overwash-gaps-momentum`; worktree `../Barrier3D-overwashfix`) | `DuneGaps` dropping cells; the gap discharge slice; the inundation momentum constant reset to 0 | merged into `hatteras/adopted` |
+| `fix/route-overwash-axis-swap` (49fd069, tag `hat-fix-route-overwash`) | the `route_overwash` index swap: wrong cells read, and a silent crash on long storms | merged; every run from 2026-09-24 to 09-28 used it alone |
+
+The storm series moved to `v3_trim24` on the same day (`hat_env_forcings.DEFAULT_STORM_VARIANT`). Every run records its storm file and dune-ceiling mode in its metadata. To reproduce a run made before 2026-09-28, check out `fix/route-overwash-axis-swap` and use that date's parameter template and `v3_72` storms.
+
+`../Barrier3D-prefix-ce36866` is a detached worktree of the code **before** the route_overwash fix. It is kept only for the storm-duration cause test (`output/raw_runs/experiments/storms-and-overwash/2026-09-28-storm-max-duration/`) and can be removed with `git -C ../Barrier3D worktree remove ../Barrier3D-prefix-ce36866`.
+
 ## tools/
 
 | Script | What it answers |

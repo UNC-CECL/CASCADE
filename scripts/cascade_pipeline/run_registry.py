@@ -126,13 +126,22 @@ def barrier3d_provenance():
         capture must not be what fails a run.
     """
     out = {"branch": "unknown", "commit": "unknown", "dirty": None,
-           "route_overwash_fix": None}
+           "route_overwash_fix": None, "gap_momentum_fix": None,
+           "per_cell_ceiling": None}
     try:
         import inspect
         import barrier3d.barrier3d as _b3d
         src = inspect.getsource(_b3d)
         out["route_overwash_fix"] = (True if _OVERWASH_FIXED in src
                                      else False if _OVERWASH_BUGGED in src else None)
+        # The 2026-09-28 adoption (Barrier3D branch hatteras/adopted): the three
+        # overwash fixes -- all present, all absent, or mixed (None) -- and
+        # per-cell dune ceilings (DuneCeilingFromStart).
+        _fixed = ["Discharge[:, 0, start:stop + 1] = Qdune" in src,
+                  "C = 0  # Initialize" not in src,
+                  "if i == len(Dow) or Dow[i] - Dow[i - 1] != 1:" in src]
+        out["gap_momentum_fix"] = True if all(_fixed) else False if not any(_fixed) else None
+        out["per_cell_ceiling"] = "_DuneCeilingFromStart" in src
         repo = Path(_b3d.__file__).resolve().parents[1]
         g = git_provenance(repo)
         out.update(branch=g["branch"], commit=g["commit"], dirty=g["dirty"])

@@ -2,6 +2,18 @@ BarrierLength: 500
 BayDepth: 3.0
 BermEl: 1.7
 DShoreface: 22.25
+# DUNE CEILINGS (2026-09-28, Hannah). Every dune cell grows toward its own
+# starting crest from the dune file, floored 0.5 m above the berm, instead of
+# one island-wide Dmaxel. Needs Barrier3D hatteras/adopted (or any branch with
+# feature/per-cell-dune-ceiling). With it on, Dmaxel below is replaced by the
+# median cell ceiling; it is written anyway so Barrier3D's 3.4 m NAVD88 default
+# (Virginia; it held every Hatteras dune near 3 m MHW against ~4.9 m in the
+# 2009 lidar) can never apply by omission. 5.5 m NAVD88 is the uniform value
+# that matched the lidar median. Record:
+# output/raw_runs/experiments/storms-and-overwash/2026-09-28-dune-ceiling-per-domain/
+Dmaxel: 5.5
+DuneCeilingFloor: 0.5
+DuneCeilingFromStart: true
 DuneParamStart: true
 GrowthParamStart: false
 LShoreface: 2640.0497975182934

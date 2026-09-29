@@ -84,12 +84,30 @@ def storm_window_dir(start_year: int, end_year: int) -> Path:
     return HINDCAST_STORMS / window_tag(start_year, end_year)
 
 
+# THE STORM SERIES THE HINDCAST RUNS ON (2026-09-28, Hannah adopted trim24).
+# v3_trim24 keeps every event and cuts one longer than 24 h to the 24 h above
+# the berm around its peak. v3_72 (the default until 2026-09-28) DROPPED every
+# event longer than 72 h -- Isabel 2003, March 2018, Florence, Dennis -- a
+# limit that existed only because the pre-49fd069 Barrier3D crashed on long
+# storms. Both are on disk; pass variant="v3_72" to reproduce an older run.
+# Record: 3-storms/PROVENANCE.md; experiments/storms-and-overwash/.
+DEFAULT_STORM_VARIANT = "v3_trim24"
+
+
 def storm_series_file(start_year: int, end_year: int,
-                      variant: str = "v3_72") -> Path:
+                      variant: str = DEFAULT_STORM_VARIANT) -> Path:
     """The .npy CASCADE reads for a window: <window>_storms_<variant>.npy.
-    v3_72 is the v3 method with a 72 h maximum storm duration."""
+    v3_trim24 (the default since 2026-09-28): every event kept, trimmed to 24 h
+    around its peak. v3_72: events over 72 h dropped (the default before)."""
     tag = window_tag(start_year, end_year)
     return storm_window_dir(start_year, end_year) / f"{tag}_storms_{variant}.npy"
+
+
+def storm_summary_file(start_year: int, end_year: int,
+                       variant: str = DEFAULT_STORM_VARIANT) -> Path:
+    """The per-storm table beside the .npy: dates, Rhigh, Rlow, duration."""
+    f = storm_series_file(start_year, end_year, variant)
+    return f.with_name(f.stem + "_summary.csv")
 
 
 def storm_validation_dir(start_year: int, end_year: int) -> Path:

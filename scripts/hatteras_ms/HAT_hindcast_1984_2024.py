@@ -717,9 +717,28 @@ print(f"RUN_KIND = {RUN_KIND!r}   RUN_TAG = {RUN_TAG!r}   SAVE_MODEL_STATE = {SA
 # index; warned about here, not refused, so a deliberate unfixed run (to
 # reproduce an old one) is still possible.
 _B3D = barrier3d_provenance()
+import cascade.beach_dune_manager as _bdm_module  # noqa: E402  (dune-cap provenance)
 print(f"BARRIER3D = {_B3D['branch']}@{str(_B3D['commit'])[:7]}   "
       f"route_overwash fix: {_B3D['route_overwash_fix']}"
       + ("   (tree dirty)" if _B3D["dirty"] else ""))
+print(f"            overwash gap/momentum fixes: {_B3D.get('gap_momentum_fix')}   "
+      f"per-cell dune ceilings: {_B3D.get('per_cell_ceiling')}")
+# THE ADOPTED MODEL (2026-09-28, Hannah). The parameter template switches on
+# per-cell dune ceilings (DuneCeilingFromStart). A Barrier3D without them
+# ignores that setting and grows every dune toward the 3.4 m NAVD88 default,
+# the fault that made the model overwash far more than the imagery -- so a
+# run on one is refused, not warned about. To reproduce a run made before
+# 2026-09-28, check out fix/route-overwash-axis-swap in the Barrier3D
+# repository and use the parameter template and storm variant (v3_72) of
+# that date. experiments/storms-and-overwash/ holds the record.
+if _B3D.get("per_cell_ceiling") is not True:
+    raise RuntimeError(
+        f"Barrier3D {_B3D['branch']}@{str(_B3D['commit'])[:7]} has no per-cell dune "
+        "ceilings, which the parameter template asks for. Check out hatteras/adopted "
+        "in the Barrier3D repository.")
+if _B3D.get("gap_momentum_fix") is not True:
+    print("  WARNING: this Barrier3D does not carry the 2026-09-28 overwash gap and "
+          "momentum fixes (hatteras/adopted has them).")
 if _B3D["route_overwash_fix"] is not True:
     print("  WARNING: this Barrier3D does NOT carry the route_overwash index fix. "
           "Runs read the wrong cells in overwash and can crash silently. Check out "
@@ -2025,6 +2044,18 @@ _META = {
         "barrier3d_route_overwash_fix": (_B3D["route_overwash_fix"],
                                          "True: the loaded Barrier3D has the "
                                          "2026-09-24 route_overwash index fix"),
+        "barrier3d_gap_momentum_fix": (_B3D.get("gap_momentum_fix"),
+                                       "True: DuneGaps, gap discharge slice and "
+                                       "inundation momentum fixed (2026-09-28)"),
+        "barrier3d_per_cell_ceiling": _B3D.get("per_cell_ceiling"),
+        # What the model was actually built with, read off the constructed
+        # model rather than the template (2026-09-28).
+        "dune_ceiling": ("per-cell, from the starting dunes"
+                         if getattr(cascade.barrier3d[0], "_DuneCeilingFromStart", False)
+                         else f"uniform Dmaxel {cascade.barrier3d[0].Dmaxel * 10 + MHW_ELEVATION:.2f} m NAVD88"),
+        "storm_file": str(STORM_FILE.relative_to(HATTERAS_DATA_BASE)),
+        # beach_dune_manager's 4 m bulldozer cap: what it clips (2026-09-28).
+        "bdm_dune_cap_applies_to": getattr(_bdm_module, "DUNE_CAP_APPLIES_TO", "whole dune cell"),
     },
     "scenario": {label: value for label, value, _token in SCENARIO_SWITCHES},
     "period": {
@@ -2180,6 +2211,11 @@ _index_row = {
     "git_commit": _GIT["commit"][:12],
     "git_dirty": _GIT["dirty"],
     "barrier3d_commit": str(_B3D["commit"])[:12],
+    "barrier3d_gap_momentum_fix": _B3D.get("gap_momentum_fix"),
+    "dune_ceiling": ("per-cell" if getattr(cascade.barrier3d[0], "_DuneCeilingFromStart", False)
+                     else "uniform"),
+    "storm_file": STORM_FILE.name,
+    "bdm_dune_cap": getattr(_bdm_module, "DUNE_CAP_APPLIES_TO", "whole dune cell"),
     "barrier3d_route_overwash_fix": _B3D["route_overwash_fix"],
 }
 # The row goes INTO the metadata, under "index row", and run_index.csv is

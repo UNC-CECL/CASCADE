@@ -1102,8 +1102,10 @@ def storm_record():
     """One row per storm, 1984-2023, with its calendar year: the 1984-2004
     and 2004-2024 series tile at 2004."""
     import pandas as pd
-    a = pd.read_csv(STORM_ROOT / "1984_2004" / "1984_2004_storms_v3_72_summary.csv")
-    b = pd.read_csv(STORM_ROOT / "2004_2024" / "2004_2024_storms_v3_72_summary.csv")
+    # the series the hindcast runs on (hat_env_forcings.DEFAULT_STORM_VARIANT)
+    from site_layer import hat_env_forcings as _envf
+    a = pd.read_csv(_envf.storm_summary_file(1984, 2004))
+    b = pd.read_csv(_envf.storm_summary_file(2004, 2024))
     s = pd.concat([a[a.calendar_year < 2004], b], ignore_index=True)
     s["Rhigh_m"] = s["Rhigh"] * 10.0          # Barrier3D stores runup in decametres
     return s
