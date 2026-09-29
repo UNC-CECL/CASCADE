@@ -34,6 +34,11 @@ class AnnotationConfig:
         pier_label_y: Default label_y for piers (informational; the actual
             y used is whatever is stored per-pier in `piers`).
         groin_label_y: Label y (axes fraction) for groin lines.
+        groin_label_side: "center" puts the label ON the line, top-anchored
+            at groin_label_y; "left" puts it beside the line on its south
+            side, bottom-anchored at groin_label_y. The Buxton groin sits in
+            the densest data on the island (D1-10), and a label on the line
+            covered the southern CoastSat curve (2026-09-29).
         label_accretion_y: Fixed axes-fraction y for the "Accretion" side
             label on the annotated figure, or None to auto-place at the
             midpoint between the zero line and the top.
@@ -58,6 +63,7 @@ class AnnotationConfig:
 
     pier_label_y: float = 0.76
     groin_label_y: float = 0.68
+    groin_label_side: str = "center"
     label_accretion_y: float = None
     label_erosion_y: float = None
 
@@ -138,8 +144,11 @@ def add_geographic_annotations(ax, config=DEFAULT_ANNOTATIONS, label=True):
         ax.axvline(dom, color=config.color_groin, lw=1.1, ls=":", alpha=0.85, zorder=2)
         if not label:
             continue
-        ax.text(dom, config.groin_label_y, gname, transform=trans,
-                ha="center", va="top", fontsize=7, color=config.color_groin, rotation=90,
+        beside = config.groin_label_side == "left"
+        ax.text(dom - 0.3 if beside else dom, config.groin_label_y, gname,
+                transform=trans, ha="right" if beside else "center",
+                va="bottom" if beside else "top", fontsize=7,
+                color=config.color_groin, rotation=90,
                 bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.80))
 
 

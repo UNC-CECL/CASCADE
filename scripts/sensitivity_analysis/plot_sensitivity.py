@@ -13,21 +13,16 @@ WHY THIS REPLACED plot_sensitivity_vs_coastsat.py
     directory carries its own per-domain rates. Nothing is retyped and nothing
     is passed between the two scripts except the manifest.
 
-THE OBSERVED LAYER IS NOT REDRAWN HERE
-    The CoastSat scatter and the LOESS curves come from
-    `cascade_pipeline.plotting.rate_comparison.plot_coastsat_overlay`, the same
-    call every other figure in the repo makes, and the target table comes from
-    `build_target_table`. A second implementation here would be free to drift on
-    styling, on the southern splice, and on which window is the reference.
-
-WHAT THE MODEL IS SCORED AGAINST, AND WHY THE FIGURE SHOWS THREE THINGS
-    The target is a HYBRID, not one curve: GIS 1..skip_southern_domains are raw
-    per-domain means (LOESS is suppressed near Oregon Inlet, where boundary
-    effects dominate and smoothing would hide the gradient), and the rest is the
-    LOESS reference (7 domains since 2026-09-28, 10 before). So the alongshore panels carry the raw transect
-    scatter, both LOESS windows, and the spliced target -- reporting RMSE
-    against a hybrid while plotting only one of its halves would misstate what
-    the number means.
+THE OBSERVED LAYER IS THE TARGET, NOTHING ELSE
+    The target table comes from `build_target_table`, the production scoring
+    path, so the curve drawn is exactly what the RMSE is computed against. It
+    is a HYBRID: GIS 1..skip_southern_domains are raw per-domain means (LOESS
+    is suppressed near Oregon Inlet, where boundary effects dominate and
+    smoothing would hide the gradient), and the rest is the 7-domain LOESS.
+    The alongshore panels draw that one curve plus the transect dots over
+    D1..skip only, where the target is not a LOESS. The full transect scatter
+    and the unsmoothed domain-mean line were dropped 2026-09-29: over D11-90
+    they duplicated the target at higher noise and buried the model curves.
 
 INTERIOR METRICS, NOT ISLAND-WIDE
     Every skill number here is the interior one (GIS 2-89). The two end domains
@@ -85,13 +80,14 @@ for _path in (PROJECT_BASE_DIR / "scripts",
 
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS, HATTERAS_PERIODS  # noqa: E402
 from cascade_pipeline.coastsat_loess import (  # noqa: E402
-    CoastSatDataset, LoessConfig, build_coastsat_series)
+    CoastSatDataset, LoessConfig, build_coastsat_series, scale_coastsat_series)
+from cascade_pipeline.shoreline import compute_change_rate  # noqa: E402
 from cascade_pipeline.hindcast import build_target_table  # noqa: E402
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 from cascade_pipeline.run_registry import (  # noqa: E402
     MATRIX_KIND, find_run_dir, load_run_index, sweep_family)
 from cascade_pipeline.plotting.rate_comparison import (  # noqa: E402
-    DEFAULT_RATE_COMPARISON, plot_coastsat_overlay)
+    DEFAULT_RATE_COMPARISON)
 from hindcast_sensitivity import SWEEPS, normalise  # noqa: E402
 from HAT_hindcast_config import field_default  # noqa: E402
 
@@ -325,6 +321,61 @@ def model_rates(run_dir, run_name):
     return frame[["gis_domain", "lrr_m_yr"]]
 
 
+def model_position_change(run_dir, run_name):
+    """Per-domain modelled shoreline position change, end minus start (m).
+
+    From the saved shoreline matrix, the way rerender_run_figures.py
+    --position-change draws each run's own figure, so the two agree.
+    """
+    matrix = np.load(resolve_run_file(run_dir, "matrix", run_name))
+    change = compute_change_rate(matrix, span_years=1, flip_sign=True)
+    real = change[HATTERAS_DOMAINS.start_real_index:
+                  HATTERAS_DOMAINS.end_real_index]
+    gis = np.arange(HATTERAS_DOMAINS.first_gis_id,
+                    HATTERAS_DOMAINS.last_gis_id + 1)
+    return pd.DataFrame({"gis_domain": gis, "lrr_m_yr": real})
+
+
+# The full-record rate PROJECTED change is built from (2026-09-19 advisor
+# target): the 1996-2024 LRR carried onto the run window.
+LONG_TERM_WINDOW = (1996, 2024)
+
+
+def position_layers(start_year, reference):
+    """The observed layer in metres: (cs_series, target, legend label).
+
+    `reference` "total" is the window's own LRR x span; "projected" is the
+    1996-2024 LRR x span (the 09-21 vocabulary: named by the FIT window).
+    Scaling after the LOESS is exact -- see scale_coastsat_series.
+    """
+    end_year = HATTERAS_PERIODS[start_year].get("end_year", start_year + 20)
+    span = end_year - start_year
+    if reference == "total":
+        series, _ = coastsat_layers(start_year)
+        fit = f"{start_year}–{end_year}"
+        name = "total change"
+    else:
+        lo, hi = LONG_TERM_WINDOW
+        series = build_coastsat_series(
+            [CoastSatDataset(
+                label=f"CoastSat LRR ({lo}-{hi})", period_start=lo,
+                csv_path=str(COASTSAT_BASE_DIR / f"{lo}_{hi}"
+                             / "transect_lrr_full.csv"))],
+            active_period_start=lo, loess_config=LOESS_CONFIG,
+            domains=HATTERAS_DOMAINS)
+        fit = f"{lo}–{hi}"
+        name = "projected change"
+    active = next(cs for cs in series if cs["active"])
+    target = build_target_table(active, LOESS_CONFIG, HATTERAS_DOMAINS,
+                                TARGET_WINDOW)
+    target = target.assign(target_lrr_m_yr=target.target_lrr_m_yr * span)
+    scaled = scale_coastsat_series(series, span, active=True if reference ==
+                                   "projected" else None)
+    label = (f"CoastSat {name}, LRR {fit} × {span} yr, {TARGET_WINDOW}-domain "
+             f"LOESS (domain means D1–{LOESS_CONFIG.skip_southern_domains})")
+    return scaled, target, label
+
+
 def check_target_matches(index, keys):
     """Assert every run was scored against the target this figure draws.
 
@@ -547,9 +598,9 @@ def plot_skill_overview(cells, index, start_year, preset, out_dir):
         bias = np.asarray(bias)[order]
 
         for row, (values, base_value, label) in enumerate((
-                (rmse, base_row.rmse_interior_m_yr, "Interior RMSE (m yr$^{-1}$)"),
+                (rmse, base_row.rmse_interior_m_yr, "Interior RMSE (m/yr)"),
                 (bias, base_row.mean_bias_interior_m_yr,
-                 "Interior mean bias (m yr$^{-1}$)"))):
+                 "Interior mean bias (m/yr)"))):
             ax = axes[row][col]
             ax.plot(x, values, color=MODEL_RAMP(RAMP_HI), lw=1.5,
                     marker="o", ms=3.8, mec="white", mew=0.6, zorder=3,
@@ -614,8 +665,12 @@ def plot_skill_overview(cells, index, start_year, preset, out_dir):
 
 
 def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
-                    out_dir):
+                    out_dir, position=None):
     """Modelled LRR per domain for every cell of one axis, over the observed layer.
+
+    `position` None draws rates. Otherwise it is (reference, observed legend
+    label): the model curves are end-minus-start position change (m) and
+    cs_series / target must already be in metres (position_layers).
 
     THE LEGEND IS NOT IN THE DATA AREA. A 16-entry legend box placed inside
     these axes sat directly on the target curve and the southern transect
@@ -635,19 +690,31 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
     ax = fig.add_subplot(grid[0, 0])
     cax = fig.add_subplot(grid[0, 1])
 
-    plot_coastsat_overlay(
-        ax, cs_series, LOESS_CONFIG, DEFAULT_RATE_COMPARISON,
-        x_transform=lambda along_m: (along_m / HATTERAS_DOMAINS.domain_spacing_m
-                                     + HATTERAS_DOMAINS.first_gis_id),
-    )
-    # Dashed on purpose: over D11-90 this IS the LOESS target curve already drawn
-    # underneath, so a second solid line would just thicken it. Dashed, the
-    # reader sees them coincide there and separate over D1-10, which is where
-    # the target stops being a LOESS curve at all.
+    # The observed layer is ONE curve: the scoring target, which is the
+    # 7-domain LOESS over D11-90 and the raw domain means over D1-10. The
+    # full transect scatter and the unsmoothed domain-mean zigzag were drawn
+    # too (Hannah, 2026-09-29) and buried the model curves under a second,
+    # noisier blue layer; the transect dots stay only over D1-10, where the
+    # target is not a LOESS and the reader needs to see what it is made of.
+    skip = LOESS_CONFIG.skip_southern_domains
+    load = model_rates if position is None else model_position_change
+    active = next(cs for cs in cs_series if cs["active"])
+    south = np.asarray(active["transect_domains"]) <= skip
+    ax.scatter(
+        np.asarray(active["transect_along_coast"])[south]
+        / HATTERAS_DOMAINS.domain_spacing_m + HATTERAS_DOMAINS.first_gis_id,
+        np.asarray(active["transect_rates"])[south],
+        color=DEFAULT_RATE_COMPARISON.raw_color, s=7, alpha=0.6,
+        linewidths=0, zorder=2,
+        label=f"CoastSat transects, D1–{skip}")
+    # The line runs through D1-{skip} too, as the raw domain means the target
+    # uses there: without it the southern dots were hard to read as a curve
+    # (Hannah, 2026-09-29, after trying it dots-only).
     ax.plot(target.gis_domain, target.target_lrr_m_yr, color="#08306B", lw=1.8,
-            ls=(0, (5, 2)), zorder=5,
-            label=f"Target (raw D1–{LOESS_CONFIG.skip_southern_domains}, "
-                  f"LOESS {TARGET_WINDOW} elsewhere)")
+            zorder=5,
+            label=(position[1] if position else
+                   f"CoastSat LRR, {TARGET_WINDOW}-domain LOESS "
+                   f"(domain means D1–{skip})"))
 
     # NOT the cell's sibling: since 2026-09-10 a sweep cell lives in
     # <preset>/sweeps/<family>/ and its baseline is a scenario run one level
@@ -655,7 +722,7 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
     # registry row carries the period and preset, so ask for the directory.
     base_dir = find_run_dir(RAW_RUNS, base, period_component(start_year),
                             preset, kind=MATRIX_KIND)
-    base_rates = model_rates(base_dir, base)
+    base_rates = load(base_dir, base)
     # Named with its VALUE, not just "calibration run". On the Hs panel this is
     # the line the reader is looking for -- where the current setting sits among
     # the alternatives -- and "calibration run" does not answer that.
@@ -664,16 +731,17 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
     current_text = "measured" if current is None else f"{current:g}"
     if units:
         current_text += f" {units.split()[0]}"
-    # Identity is carried by colour AND dash pattern AND weight, so the line
-    # survives a greyscale print and red-green colour blindness alike.
+    # Solid, not dashed: with a white halo the dash gaps let the ramp curves
+    # show through as orange/red flecks, and the line read as broken (Hannah,
+    # 2026-09-29). Weight and the thin halo carry its identity instead.
     ax.plot(base_rates.gis_domain, base_rates.lrr_m_yr, color=CURRENT_COLOR,
-            lw=2.6, ls=(0, (7, 1.6)), zorder=8,
-            path_effects=[mpatheffects.withStroke(linewidth=4.6,
+            lw=2.2, solid_capstyle="round", solid_joinstyle="round", zorder=8,
+            path_effects=[mpatheffects.withStroke(linewidth=3.6,
                                                   foreground="white")],
             label=f"Model at the CURRENT setting ({current_text})")
 
     for color, (_, cell) in zip(colors, block.iterrows()):
-        rates = model_rates(cell.run_dir, cell.run_name)
+        rates = load(cell.run_dir, cell.run_name)
         ax.plot(rates.gis_domain, rates.lrr_m_yr, color=color, lw=1.0,
                 alpha=0.95, zorder=6)
 
@@ -681,13 +749,17 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
     ax.set_xlim(HATTERAS_DOMAINS.first_gis_id - 0.5,
                 HATTERAS_DOMAINS.last_gis_id + 0.5)
     ax.set_xlabel("Alongshore position (GIS domain, south → north)")
-    ax.set_ylabel("Shoreline change rate, LRR (m yr$^{-1}$)")
+    ax.set_ylabel("Shoreline change rate, LRR (m/yr)" if position is None
+                  else "Shoreline position change (m)")
     tidy(ax)
 
     # Reference curves only -- the swept values are on the colourbar. Below the
     # axes, so it cannot cover data at any y-limit.
     handles, labels = ax.get_legend_handles_labels()
-    order = sorted(range(len(labels)), key=lambda i: labels[i].startswith("Co"))
+    # Observed curve, then the model, then the transect dots.
+    rank = lambda lbl: (0 if "LOESS" in lbl else
+                        2 if lbl.startswith("CoastSat transects") else 1)
+    order = sorted(range(len(labels)), key=lambda i: rank(labels[i]))
     ax.legend([handles[i] for i in order], [labels[i] for i in order],
               loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=2,
               frameon=False, handlelength=2.4, columnspacing=2.0)
@@ -710,7 +782,9 @@ def plot_alongshore(cells, sweep, start_year, preset, cs_series, target,
 
     end_year = HATTERAS_PERIODS[start_year].get("end_year", start_year + 20)
     ax.set_title(f"{SWEEPS[sweep]['label']} sensitivity, "
-                 f"{start_year}–{end_year}, {preset}", pad=8)
+                 f"{start_year}–{end_year}, {preset}"
+                 + ("" if position is None else
+                    f": position change vs {position[0]} change"), pad=8)
 
     path = out_dir / f"{AXIS_ORDER.index(sweep) + 2:02d}_alongshore_{sweep}.png"
     fig.savefig(path)
@@ -852,8 +926,8 @@ def plot_circularity(start_year, index, out_dir):
 
     end_year = HATTERAS_PERIODS[start_year].get("end_year", start_year + 20)
     for ax, ylab, ttl in (
-            (axes[0], "Interior RMSE (m yr$^{-1}$)", "Absolute skill"),
-            (axes[1], "RMSE above each curve's own minimum (m yr$^{-1}$)",
+            (axes[0], "Interior RMSE (m/yr)", "Absolute skill"),
+            (axes[1], "RMSE above each curve's own minimum (m/yr)",
              "Basin shape, magnitude removed")):
         ax.axvline(default_hs, color=INK_MUTED, lw=0.7, ls=":", zorder=1)
         ax.set_xlabel("Significant wave height, H$_s$ (m)")
@@ -921,6 +995,15 @@ def main():
     parser.add_argument("--circularity", action="store_true",
                         help="also draw the calibBE-vs-edgeBE Hs panel")
     parser.add_argument("--out-dir", default=None)
+    parser.add_argument("--quantity", choices=("rate", "position"),
+                        default="rate",
+                        help="position: model end-minus-start change (m) "
+                             "against CoastSat LRR x span; alongshore figures "
+                             "only, under figures/position_change/<reference>/")
+    parser.add_argument("--reference", choices=("total", "projected"),
+                        default="total",
+                        help="with --quantity position: the window's own LRR "
+                             "(total) or the 1996-2024 LRR (projected)")
     args = parser.parse_args()
 
     # One directory per (period, preset). Flat output put 22 files with long
@@ -929,6 +1012,8 @@ def main():
     end_year = HATTERAS_PERIODS[args.start_year].get(
         "end_year", args.start_year + 20)
     root = Path(args.out_dir) if args.out_dir else FIGURES_ROOT
+    if args.quantity == "position":
+        root = root / "position_change" / args.reference
     out_dir = root / f"{args.start_year}_{end_year}_{args.preset}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -950,6 +1035,19 @@ def main():
             f"baseline run(s) {absent_base} are not in run_index.csv; every "
             f"cell is drawn against its calibration-arm matrix run.")
     check_target_matches(index, list(cells.key))
+
+    if args.quantity == "position":
+        cs_series, target, obs_label = position_layers(args.start_year,
+                                                       args.reference)
+        written = [plot_alongshore(cells, sweep, args.start_year, args.preset,
+                                   cs_series, target, out_dir,
+                                   position=(args.reference, obs_label))
+                   for sweep in AXIS_ORDER if sweep in set(cells.sweep)]
+        print(f"{len(cells)} cells  |  {args.start_year}  |  {args.preset}  |  "
+              f"position change vs {args.reference}")
+        for path in [p for p in written if p is not None]:
+            print(f"  wrote {Path(path).name}")
+        return 0
 
     cs_series, target = coastsat_layers(args.start_year)
 

@@ -44,6 +44,7 @@ USAGE
     python rerender_run_figures.py --match "*calibBE*groin" --gifs
     python rerender_run_figures.py --run-dir output/raw_runs/.../HAT_...
     python rerender_run_figures.py --arm matrix --ylim=-10,10 --ylim-real=-7.5,7.5
+    python rerender_run_figures.py --arm sensitivity --loess-only
 ==============================================================================
 """
 from __future__ import annotations
@@ -77,7 +78,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 from cascade_pipeline.coastsat_loess import (  # noqa: E402
-    CoastSatDataset, LoessConfig, build_coastsat_series)
+    CoastSatDataset, LoessConfig, build_coastsat_series, scale_coastsat_series)
 from cascade_pipeline.hindcast import build_shoreline_target  # noqa: E402
 from cascade_pipeline.run_info import RunInfo  # noqa: E402
 from cascade_pipeline.run_layout import ANIMATIONS, resolve  # noqa: E402
@@ -122,6 +123,45 @@ COASTSAT_DATASETS = [
         label="CoastSat LRR (2010-2024)", period_start=2010,
         csv_path=str(COASTSAT_BASE_DIR / "2010_2024" / "transect_lrr_full.csv")),
 ]
+
+# The full-record rate the PROJECTED position change is built from (the
+# advisor's target, 2026-09-19): the 1996-2024 LRR carried onto a run window.
+LONG_TERM_DATASET = CoastSatDataset(
+    label="CoastSat LRR (1996-2024)", period_start=1996,
+    csv_path=str(COASTSAT_BASE_DIR / "1996_2024" / "transect_lrr_full.csv"))
+LONG_TERM_WINDOW = (1996, 2024)
+POSITION_DIR = "position_change"
+
+
+def position_change_jobs(run, cs_cache):
+    """(reference, scaled cs_series, observed legend, caption phrase) for the
+    two observed references a run's position change is drawn against.
+
+    Named by the window the rate was FITTED on (the 09-21 vocabulary): the
+    run window's own LRR x span is TOTAL change; the 1996-2024 LRR x span is
+    PROJECTED change. Both are LRR x the run's span in years.
+    """
+    span = run.end_year - run.start_year
+    win = f"{run.start_year}–{run.end_year}"
+    lt = f"{LONG_TERM_WINDOW[0]}–{LONG_TERM_WINDOW[1]}"
+    widest = max(LOESS_CONFIG.window_domains)
+    if "long_term" not in cs_cache:
+        cs_cache["long_term"] = build_coastsat_series(
+            [LONG_TERM_DATASET], active_period_start=LONG_TERM_WINDOW[0],
+            loess_config=LOESS_CONFIG, domains=HATTERAS_DOMAINS)
+    return [
+        ("total",
+         scale_coastsat_series(cs_cache[run.start_year], span),
+         f"CoastSat total change (LRR {win} × {span} yr, {widest}-domain LOESS)",
+         f"total change, the per-transect LRR fitted on {win} multiplied by "
+         f"{span} yr"),
+        ("projected",
+         scale_coastsat_series(cs_cache["long_term"], span, active=True),
+         f"CoastSat projected change (LRR {lt} × {span} yr, {widest}-domain LOESS)",
+         f"projected change, the per-transect LRR fitted on the full "
+         f"{lt} record multiplied by {span} yr"),
+    ]
+
 
 GIF_JOBS = [
     dict(range="real", mode="displacement"),
@@ -206,6 +246,7 @@ def run_info_from(meta: dict, run_name: str, run_dir: Path) -> RunInfo:
         Hs=float(wave["wave_height_m"]) if wave.get("wave_height_m") is not None else None,
         flip_sign_model=FLIP_SIGN_MODEL,
         background_erosion_on=bool(src.get("background_erosion_on", True)),
+        wave_climate=meta.get("scenario", {}).get("wave climate"),
     )
 
 
@@ -281,6 +322,14 @@ def rerender(run_dir: Path, args, cs_cache: dict) -> dict:
 
     config = dataclasses.replace(DEFAULT_RATE_COMPARISON, ylim=args.ylim,
                                  ylim_real=args.ylim_real)
+    if args.loess_only:
+        config = dataclasses.replace(config, plot_domain_means=False,
+                                     raw_lrr_southern_only=True,
+                                     overlay_raw_southern_only=True,
+                                     south_mean_line=True, show_features=True,
+                                     model_label_plain=True,
+                                     show_wave_climate=True,
+                                     publication_text=True)
     fig_kwargs = dict(domains=HATTERAS_DOMAINS, annotations=HATTERAS_ANNOTATIONS,
                       loess_config=LOESS_CONFIG, config=config)
     # Resolved, not joined: this OVERWRITES the figure the run already has,
@@ -308,6 +357,29 @@ def rerender(run_dir: Path, args, cs_cache: dict) -> dict:
         save_path=str(buffers_png),
         show=False, **fig_kwargs)
     result["figures"] = 2
+
+    if args.position_change:
+        # End minus start, in metres: compute_change_rate over a span of 1.
+        position_m = compute_change_rate(shoreline_m, span_years=1,
+                                         flip_sign=FLIP_SIGN_MODEL)
+        for ref, series, obs_label, obs_text in position_change_jobs(run, cs_cache):
+            pconfig = dataclasses.replace(
+                config, quantity="position", observed_label=obs_label,
+                observed_description=obs_text, ylim=None, ylim_real=None)
+            pdir = rate_png.parent / POSITION_DIR / ref
+            pdir.mkdir(parents=True, exist_ok=True)
+            pkw = dict(fig_kwargs, config=pconfig)
+            plot_rate_comparison(
+                position_m, series, run,
+                real_domains_only=PLOT_REAL_DOMAINS_ONLY, estimator=None,
+                save_path=str(pdir / "shoreline_position_change.png"),
+                show=False, **pkw)
+            plot_annotated_rate_comparison(
+                position_m, series, run, estimator=None,
+                save_path=str(pdir / "shoreline_position_change_with_buffers.png"),
+                show=False, **pkw)
+            plt.close("all")
+            result["figures"] += 2
 
     if args.gifs:
         # REFRESH ONLY. A run whose GIFs were disabled has none on disk, and
@@ -387,6 +459,18 @@ def main() -> None:
                     type=lambda s: tuple(float(v) for v in s.split(",")),
                     help="LOW,HIGH for the real-domains-only figure alone "
                          "(default: --ylim), e.g. --ylim-real=-7.5,7.5")
+    ap.add_argument("--loess-only", action="store_true",
+                    help="the sensitivity-figure style: LOESS curve, plus "
+                         "transect dots and a dashed unsmoothed domain-mean "
+                         "line over the southern domains only; shoals, piers "
+                         "and groin drawn; no title -- one tag with the period "
+                         "and wave settings, the rest in supporting/CAPTIONS.md")
+    ap.add_argument("--position-change", action="store_true",
+                    help="with --loess-only: also draw the run's shoreline "
+                         "position change (end minus start, m) against CoastSat "
+                         "total change (the window's own LRR x span) and "
+                         "projected change (the 1996-2024 LRR x span), into "
+                         "figures/position_change/{total,projected}/")
     ap.add_argument("--traceback", action="store_true",
                     help="print a full traceback for a failed run")
     args = ap.parse_args()

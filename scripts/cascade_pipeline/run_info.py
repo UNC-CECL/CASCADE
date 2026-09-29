@@ -31,6 +31,9 @@ class RunInfo:
             defaults to "CASCADE" rather than a fully generic placeholder --
             override it if you're comparing against a different model run
             through the same figures.
+        wave_climate: The run's wave settings as one line, e.g. "Hs 2.0 m,
+            Tp 7.5 s, asym 0.6, high-angle 0.5". Shown in the subtitle only
+            when RateComparisonConfig.show_wave_climate is set. None omits it.
     """
 
     run_name: str
@@ -41,3 +44,4 @@ class RunInfo:
     flip_sign_model: bool = True
     background_erosion_on: bool = True
     model_name: str = "CASCADE"
+    wave_climate: str = None

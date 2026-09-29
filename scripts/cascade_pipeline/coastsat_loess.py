@@ -302,6 +302,38 @@ def build_coastsat_series(datasets, active_period_start, loess_config=DEFAULT_LO
     return series
 
 
+def scale_coastsat_series(cs_series, factor, label=None, active=None):
+    """A copy of build_coastsat_series output with every rate times `factor`.
+
+    Turns an LRR series (m/yr) into a distance (m): LRR x span years. EXACT
+    for the LOESS curves as well as the transects, because statsmodels'
+    lowess -- robustness iterations included -- is equivariant under a
+    positive scale (the robustness weights see residual / median |residual|,
+    which a constant cancels), so smoothing the scaled transects would return
+    `factor` x the stored curve.
+
+    Args:
+        cs_series: build_coastsat_series output.
+        factor: Multiplier, e.g. 14 for a 14-year window.
+        label: Replace every series' label, or None to keep them.
+        active: Force every series' `active` flag, or None to keep them. Set
+            True when the series is a reference fitted on a different window
+            (the 1996-2024 LRR drawn against a 1996-2010 run).
+    """
+    out = []
+    for cs in cs_series:
+        scaled = dict(cs)
+        scaled["transect_rates"] = np.asarray(cs["transect_rates"], float) * factor
+        scaled["windows"] = [dict(w, smoothed=np.asarray(w["smoothed"], float) * factor)
+                             for w in cs["windows"]]
+        if label is not None:
+            scaled["label"] = label
+        if active is not None:
+            scaled["active"] = bool(active)
+        out.append(scaled)
+    return out
+
+
 def spliced_loess_series(domain_ids, along_coast_m, values, window,
                          skip=None, domains=DEFAULT_DOMAINS):
     """Per-domain series: a LOESS of `values` at transect resolution north of

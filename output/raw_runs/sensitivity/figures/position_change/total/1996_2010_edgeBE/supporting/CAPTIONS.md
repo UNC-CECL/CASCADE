@@ -1,0 +1,5 @@
+# Captions — 1996_2010_edgeBE
+
+Written by the figure scripts through `hat_figure_style.caption()`; the images carry no titles or footnotes, this file does.
+
+**`06_best_setting_optionA.png`.** Option A, the best wave setting found by the sweep and the matrix baseline it moves around (the pink line in 02-05). Shoreline position change along Hatteras Island, 1996–2010, GIS domain 1 (Cape Point) to 90 (Pea Island); positive is seaward (accretion). Modelled (CASCADE, orange): shoreline position at the end of the run minus the start. Observed (CoastSat, blue): total change, the per-transect LRR fitted on 1996–2010 multiplied by 14 yr. The observed line is smoothed with a 7-domain LOESS north of domain 10; south of it LOESS is not applied and the line is the unsmoothed domain mean (dashed), with the individual transects shown as dots. Grey bands: communities. Hatched: shoal zones. Dash-dot: piers. Dotted: Buxton groin. Wave climate: Hs 2.0 m, Tp 7.5 s, asymmetry 0.6, high-angle fraction 0.5. Background erosion on. Run HAT_1996_2010_edgeBE_offsetmetres_road_bdm_nogroin.
