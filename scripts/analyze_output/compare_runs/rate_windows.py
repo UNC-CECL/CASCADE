@@ -95,6 +95,16 @@ THE OBSERVATIONS
                 dune line red, each given the scoring target's LOESS treatment;
                 a model line per solve, all as the endpoint rate. The CoastSat
                 LRR, the model's actual scoring target, is in vs_shoreline/.
+                Drawn twice since 2026-09-29 (Hannah: "subfolder showing these
+                plots as change rate and also net position change"):
+        both            m/yr, as above                       change_rate/
+        both-netchange  metres: every line x the window's    net_change/
+                        calendar span (14 or 20 yr). The model's is its own
+                        last-minus-first displacement exactly; the two
+                        observations are measured over the dune-line survey
+                        interval (11.6 / 14.1 yr) and scaled to the window,
+                        as target_comparison.py scales them ("measured,
+                        scaled to 14 yr"); the interval stays in the caption.
 
 THE MODEL LINE
     lrr_m_yr           the OLS slope over the run's annual shorelines, the
@@ -121,8 +131,9 @@ OUTPUT   output/comparisons/model_vs_observed/
     vs_duneline/net_change_smoothed/
                         model_vs_duneline_netchange_smoothed_<w>.png  on the dune
                                                                       line (mean3)
-    vs_shoreline_and_duneline/   model_vs_shoreline_and_duneline_<w>.png
-                                                    both targets, both solves
+    vs_shoreline_and_duneline/   both targets, both solves
+        change_rate/    model_vs_shoreline_and_duneline_rate_<w>.png       m/yr
+        net_change/     model_vs_shoreline_and_duneline_netchange_<w>.png  metres
     tables/             domain_rates_<w>.csv   every reading, every model set,
                                                the residual against each
                         skill.csv              bias and RMSE, GIS 2-89, per
@@ -167,6 +178,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.legend_handler import HandlerTuple  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
+from matplotlib.ticker import MultipleLocator  # noqa: E402
 
 from cascade_pipeline.coastsat_loess import (  # noqa: E402
     CoastSatDataset, LoessConfig, build_coastsat_series, compute_domain_means,
@@ -293,7 +305,8 @@ VARIANTS = {
     "coastsat/loess":             ("coastsat", "loess",          "lrr_m_yr",         "model_vs_shoreline_smoothed"),
     "duneline/endpoint":          ("duneline", "endpoint",       "change_rate_m_yr", "model_vs_duneline_netchange"),
     "duneline/endpoint-loess":    ("duneline", "endpoint-loess", "change_rate_m_yr", "model_vs_duneline_netchange_smoothed"),
-    "both":                       ("both",     "both",           "lrr_m_yr",         "model_vs_shoreline_and_duneline"),
+    "both":                       ("both",     "both",           "lrr_m_yr",         "model_vs_shoreline_and_duneline_rate"),
+    "both-netchange":             ("both",     "both-netchange", "change_rate_m_yr", "model_vs_shoreline_and_duneline_netchange"),
     "sensitivity/mixed-estimator": ("duneline", "endpoint",      "lrr_m_yr",         "model_ols_vs_duneline_netchange"),
 }
 OUTPUT_FOLDER = {
@@ -301,9 +314,29 @@ OUTPUT_FOLDER = {
     "coastsat/loess":              "vs_shoreline/smoothed",
     "duneline/endpoint":           "vs_duneline/endpoint_net_change",
     "duneline/endpoint-loess":     "vs_duneline/net_change_smoothed",
-    "both":                        "vs_shoreline_and_duneline",
+    "both":                        "vs_shoreline_and_duneline/change_rate",
+    "both-netchange":              "vs_shoreline_and_duneline/net_change",
     "sensitivity/mixed-estimator": "sensitivity/mixed-estimator",
 }
+# Variants drawn in metres: each line x the window's calendar span (2026-09-29).
+NET_CHANGE_VARIANTS = ("both-netchange",)
+Y_LABEL_NET = "Net change in position (m)"
+NET_PAD_M = 5.0            # the metres bound: largest |change| + this, up to NET_STEP_M
+NET_STEP_M = 5.0
+
+
+def _span(window):
+    """The window's calendar span in years: the model's run years."""
+    return window[1] - window[0]
+
+
+def _scale(variant, window):
+    """Rate -> the drawn quantity: 1 for a rate, the span for net change."""
+    return float(_span(window)) if variant in NET_CHANGE_VARIANTS else 1.0
+
+
+def _y_label(variant):
+    return Y_LABEL_NET if variant in NET_CHANGE_VARIANTS else Y_LABEL
 COASTSAT_VARIANTS = ("coastsat/means", "coastsat/loess")
 DUNELINE_VARIANTS = ("duneline/endpoint", "duneline/endpoint-loess")
 # The "both" panel draws each solve in its own target's estimator.
@@ -317,8 +350,9 @@ BOTH_COLS = {"coastsat": "change_rate_m_yr", "dune-mean3": "change_rate_m_yr",
 MAIN_PLAN = (
     [("", v, ["coastsat"]) for v in COASTSAT_VARIANTS]
     + [("", v, [DUNE_FIG_SET]) for v in DUNELINE_VARIANTS]
-    + [("", "both", list(dict.fromkeys(["coastsat", DUNE_FIG_SET]))),
-       ("", "sensitivity/mixed-estimator", [DUNE_FIG_SET])]
+    + [("", v, list(dict.fromkeys(["coastsat", DUNE_FIG_SET])))
+       for v in ("both", "both-netchange")]
+    + [("", "sensitivity/mixed-estimator", [DUNE_FIG_SET])]
 )
 SENSITIVITY_PLAN = (
     [("sensitivity/ends-swapped", v, [MAIN_DUNE]) for v in COASTSAT_VARIANTS]
@@ -565,6 +599,30 @@ def shared_bounds(observations, model_sets):
     return half
 
 
+def shared_bounds_net(observations, model_sets):
+    """The metres half-range for the net-change panels: the largest |rate x
+    span| over both endpoint observations and every model set's endpoint
+    rate, every window, plus NET_PAD_M, rounded up to NET_STEP_M."""
+    extreme = 0.0
+    for i, o in enumerate(observations):
+        span = _span(o.window)
+        for f in (o.endpoint, o.cs_endpoint):
+            extreme = max(extreme, float(np.nanmax(f["mean_lrr"].abs())) * span)
+        for mdfs, _ in model_sets.values():
+            if mdfs[i] is not None:
+                extreme = max(extreme,
+                              float(np.nanmax(mdfs[i]["change_rate_m_yr"].abs())) * span)
+    return float(math.ceil((extreme + NET_PAD_M) / NET_STEP_M) * NET_STEP_M)
+
+
+def _net_tick(half):
+    """A major y tick giving four to eight intervals across +/-half."""
+    for step in (5, 10, 20, 25, 50, 100):
+        if 2 * half / step <= 8:
+            return step
+    return 200
+
+
 def skill(obs_series, mdf, col):
     """bias and RMSE of model - observation over GIS 2-89."""
     if mdf is None:
@@ -579,8 +637,8 @@ def skill(obs_series, mdf, col):
 # -----------------------------------------------------------------------------
 # drawing
 # -----------------------------------------------------------------------------
-def draw_model(ax, df, col, ls="-"):
-    ax.plot(df["domain_number"], df[col], color=C_MODEL, lw=1.3, ls=ls, zorder=8)
+def draw_model(ax, df, col, ls="-", scale=1.0):
+    ax.plot(df["domain_number"], df[col] * scale, color=C_MODEL, lw=1.3, ls=ls, zorder=8)
 
 
 def draw_raw_dots(ax, odf):
@@ -609,23 +667,29 @@ def _draw_observed(ax, reading, ddf, tdf, half, **panel_kw):
         draw_raw_dots(ax, ddf)
 
 
-def _draw_both(ax, o: Observation, half, **panel_kw):
+def _draw_both(ax, o: Observation, half, scale=1.0, **panel_kw):
     """Axes, bands and structures from the observed panel drawn empty, then
-    the two targets as lines. The model lines go on afterwards."""
+    the two targets as lines, x scale (1 for rates, the span for net change).
+    The model lines go on afterwards."""
     blank = _full().assign(mean_lrr=np.nan, std_lrr=0.0)
     obs.draw_panel(ax, blank, half, std=False, line_lw=0.0, **panel_kw)
-    ax.plot(o.cs_endpoint_target["domain_number"], o.cs_endpoint_target["target_lrr_m_yr"],
+    ax.plot(o.cs_endpoint_target["domain_number"],
+            o.cs_endpoint_target["target_lrr_m_yr"] * scale,
             color=C_CS_TARGET, lw=1.2, zorder=6)
-    ax.plot(o.endpoint_target["domain_number"], o.endpoint_target["target_lrr_m_yr"],
+    ax.plot(o.endpoint_target["domain_number"],
+            o.endpoint_target["target_lrr_m_yr"] * scale,
             color=C_DUNE_TARGET, lw=1.2, zorder=6)
+    if scale != 1.0:
+        ax.yaxis.set_major_locator(MultipleLocator(_net_tick(half)))
 
 
 def _panel(ax, o: Observation, variant, models, model_keys, half, **panel_kw):
     """One window on one axes: the observation in the variant's reading and
     the model line(s) over it. Returns whether any model line was drawn."""
     observation, reading, col, _ = VARIANTS[variant]
+    scale = _scale(variant, o.window)
     if observation == "both":
-        _draw_both(ax, o, half, **panel_kw)
+        _draw_both(ax, o, half, scale=scale, **panel_kw)
     else:
         ddf, tdf = o.frames(reading)
         _draw_observed(ax, reading, ddf, tdf, half, **panel_kw)
@@ -635,7 +699,7 @@ def _panel(ax, o: Observation, variant, models, model_keys, half, **panel_kw):
         mdf = models[key][0][i]
         if mdf is not None:
             c = BOTH_COLS[key] if observation == "both" else col
-            draw_model(ax, mdf, c, ls="-" if k == 0 else LS_SECOND)
+            draw_model(ax, mdf, c, ls="-" if k == 0 else LS_SECOND, scale=scale)
             drawn = True
     return drawn
 
@@ -644,6 +708,8 @@ def _panel(ax, o: Observation, variant, models, model_keys, half, **panel_kw):
 # legends
 # -----------------------------------------------------------------------------
 def _estimator_label(variant):
+    if variant in NET_CHANGE_VARIANTS:
+        return "net change (last annual shoreline minus first)"
     if VARIANTS[variant][0] == "both":
         return "endpoint rate"
     return "OLS rate" if VARIANTS[variant][2] == "lrr_m_yr" else "endpoint rate"
@@ -663,7 +729,14 @@ def add_legend(fig, variant, model_keys):
                  Line2D([], [], color=obs.C_ERODE_FILL, lw=6))
     line_pair = (Line2D([], [], color=obs.C_ACCRETE, lw=1.0),
                  Line2D([], [], color=obs.C_ERODE, lw=1.0))
-    if observation == "both":
+    if observation == "both" and variant in NET_CHANGE_VARIANTS:
+        handles = [Line2D([], [], color=C_CS_TARGET, lw=1.2),
+                   Line2D([], [], color=C_DUNE_TARGET, lw=1.2)]
+        labels = ["CoastSat shoreline, net change at the dune-line dates, measured, "
+                  f"scaled to the window's years, {TARGET_LABEL}",
+                  "dune line, net change, measured, scaled to the window's years, "
+                  "the same treatment"]
+    elif observation == "both":
         handles = [Line2D([], [], color=C_CS_TARGET, lw=1.2),
                    Line2D([], [], color=C_DUNE_TARGET, lw=1.2)]
         labels = [f"CoastSat shoreline, net change at the dune-line dates, {TARGET_LABEL}",
@@ -722,6 +795,22 @@ TARGET_CLAUSE = (f"a {TARGET_WINDOW}-domain LOESS of the transect rates north of
 
 
 def _observed_clause(observation, reading, metas):
+    if reading == "both-netchange":
+        return (
+            " The two coloured lines are the two observations as net change in "
+            "position, each measured between the same two dune-line dates, divided by "
+            "that survey interval and multiplied by the window's calendar years, so "
+            "they sit on the model's span (the same scaling as target_comparison), "
+            f"then given the scoring target's treatment ({TARGET_CLAUSE}). Blue is the "
+            "CoastSat shoreline: the mean satellite position within six months of "
+            "each dune-line date, differenced (5-scr/3-rates/coastsat/endpoint). Red "
+            "is the digitised dune line, end line minus start line "
+            f"(5-scr/3-rates/duneline/endpoint). Vintages, dates and survey intervals: "
+            f"{_dates_clause(metas)}. Where the interval is shorter than the window the "
+            "scaling assumes the same rate over the missing years. The gap between "
+            "the two lines is beach-width change, which the model, whose shoreline "
+            "is a dune line behind a fixed berm, cannot represent. The same figure "
+            "in m/yr is under change_rate/.")
     if observation == "both":
         return (
             " The two coloured lines are the two observations, BOTH AS NET CHANGE "
@@ -769,7 +858,11 @@ def _observed_clause(observation, reading, metas):
 def caption_text(windows, rows_by_key, metas, half, grid, variant, model_keys):
     observation, reading, col, _ = VARIANTS[variant]
     wins = ", ".join(f"{a}–{b}" for a, b in windows)
+    net = variant in NET_CHANGE_VARIANTS
     estimator = (
+        "its net change, the run's last annual shoreline minus its first (the "
+        "endpoint rate x the run years, 14 in 1996–2010 and 2010–2024)"
+        if net else
         "the endpoint rate, the run's last annual shoreline minus its first over "
         "the run years, like both observations here"
         if observation == "both" else
@@ -781,7 +874,8 @@ def caption_text(windows, rows_by_key, metas, half, grid, variant, model_keys):
     what = {"coastsat": "Observed CoastSat shoreline change rate",
             "duneline": "Observed dune-line change",
             "both": "The two scoring targets"}[observation]
-    head = (f"{what} and modelled shoreline change rate by GIS domain (1 at Cape "
+    quantity = "net change in shoreline position" if net else "shoreline change rate"
+    head = (f"{what} and modelled {quantity} by GIS domain (1 at Cape "
             f"Point, 90 at Pea Island) for {wins}"
             + (": the 1984-start period in the left column, the 1996-start period "
                "in the right, the earlier window of each above the later." if grid
@@ -813,10 +907,17 @@ def caption_text(windows, rows_by_key, metas, half, grid, variant, model_keys):
                  "between the two curves is beach-width change as much as model "
                  "misfit.")
     body += (" Village spans are shaded; the solid hairline is the Buxton groin and "
-             "the dotted hairlines are the Avon and Rodanthe piers. The y axis is "
-             f"held at ±{half:g} m/yr on every panel, the largest |rate| over every "
-             "observed reading and modelled curve of every window plus 1 m rounded "
-             "up, so the panels are directly comparable.")
+             "the dotted hairlines are the Avon and Rodanthe piers. ")
+    if net:
+        body += (f"The y axis is held at ±{half:g} m on every panel, the largest "
+                 "|net change| over both observations and every modelled curve of every "
+                 f"window plus {NET_PAD_M:g} m rounded up to {NET_STEP_M:g} m, so the "
+                 "panels are directly comparable; the 1984–2004 and 2004–2024 windows "
+                 "span 20 yr and the other two 14 yr, so equal rates draw larger there.")
+    else:
+        body += (f"The y axis is held at ±{half:g} m/yr on every panel, the largest "
+                 "|rate| over every observed reading and modelled curve of every window "
+                 "plus 1 m rounded up, so the panels are directly comparable.")
     return head + body
 
 
@@ -856,7 +957,7 @@ def single_figure(o: Observation, variant, models, model_keys, half, folder, roo
         note_no_run(ax, 7.5)
     ax.set_title(f"{start}–{end}", loc="center")
     ax.set_xlabel(DOMAIN_AXIS_LABEL)
-    ax.set_ylabel(Y_LABEL)
+    ax.set_ylabel(_y_label(variant))
     add_legend(fig, variant, model_keys)
     i = WINDOWS.index(o.window)
     rows_by_key = {k: [models[k][1][i]] for k in model_keys}
@@ -884,7 +985,7 @@ def grid_figure(observations, variant, models, model_keys, half, folder, root=""
             ax.tick_params(labelleft=False)
     for ax in axes[-1, :]:
         ax.set_xlabel(DOMAIN_AXIS_LABEL)
-    fig.supylabel(Y_LABEL, fontsize=9)
+    fig.supylabel(_y_label(variant), fontsize=9)
     add_legend(fig, variant, model_keys)
     ordered = [w for _, _, w in cells]
     rows_by_key = {k: [models[k][1][WINDOWS.index(w)] for w in ordered] for k in model_keys}
@@ -958,6 +1059,7 @@ def main(argv=None):
     observations = [Observation(w) for w in WINDOWS]
     models = {key: load_models(key) for key in DRAWN_SETS}
     half = shared_bounds(observations, models)
+    half_net = shared_bounds_net(observations, models)
 
     # provenance: one row per window per model set, with the dune line's
     # vintages, dates and interval beside the run
@@ -971,18 +1073,23 @@ def main(argv=None):
         f"= ceil(max |rate| + {obs.Y_PAD_M:g}) over every observed reading (CoastSat "
         "means, dune-line endpoint) and both estimators of every model set "
         f"({', '.join(DRAWN_SETS)}), " + ", ".join("{}-{}".format(*w) for w in WINDOWS)
-        + "\n(the CoastSat std lines are not in the bound)\n", encoding="utf-8")
+        + "\n(the CoastSat std lines are not in the bound)\n"
+        f"net-change panels (vs_shoreline_and_duneline/net_change): -{half_net:g} to "
+        f"+{half_net:g} m\n= ceil to {NET_STEP_M:g} m of (max |rate x window years| + "
+        f"{NET_PAD_M:g}) over both endpoint observations and every model set's "
+        "endpoint rate\n", encoding="utf-8")
 
     skill_df = write_tables(observations, models, OUT_DIR / "tables")
 
     written = []
     for root, variant, keys in plan:
         folder = OUT_DIR / root / OUTPUT_FOLDER[variant]
+        h = half_net if variant in NET_CHANGE_VARIANTS else half
         for o in observations:
-            written += single_figure(o, variant, models, keys, half, folder, root)
-        written += grid_figure(observations, variant, models, keys, half, folder, root)
+            written += single_figure(o, variant, models, keys, h, folder, root)
+        written += grid_figure(observations, variant, models, keys, h, folder, root)
 
-    print(f"y bounds  +/-{half:g} m/yr")
+    print(f"y bounds  +/-{half:g} m/yr, net change +/-{half_net:g} m")
     for o in observations:
         m = o.meta
         print(f"{m['window']}  dune line {m['start_vintage']} ({m['start_date']}) -> "

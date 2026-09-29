@@ -169,9 +169,10 @@ SECTIONS: list[tuple[str, str, list[tuple[str, str, str]]]] = [
              "model_vs_duneline_netchange_<w>.png",
              "and `net_change_smoothed/` beside it."),
             ("vs both at once",
-             f"{OUT}/model_vs_observed/vs_shoreline_and_duneline/"
-             "model_vs_shoreline_and_duneline_<w>.png",
-             "each solve drawn in its own target's estimator."),
+             f"{OUT}/model_vs_observed/vs_shoreline_and_duneline/change_rate/"
+             "model_vs_shoreline_and_duneline_rate_<w>.png",
+             "each solve drawn in its own target's estimator; the same in metres "
+             "(x window years) under `net_change/`."),
             ("Does the answer survive changing the estimator or the solve?",
              f"{OUT}/model_vs_observed/sensitivity/",
              "`ends-swapped`, `dune-raw-solve`, `mixed-estimator`. The arm is "
@@ -225,8 +226,10 @@ CROSSREF = [
      "endpoint rate (`change_rate_m_yr`)", "raw domain means"),
     ("vs_duneline/net_change_smoothed", "dune line",
      "endpoint rate (`change_rate_m_yr`)", "spliced LOESS"),
-    ("vs_shoreline_and_duneline", "both", "endpoint rate, both solves",
+    ("vs_shoreline_and_duneline/change_rate", "both", "endpoint rate, both solves",
      "raw domain means"),
+    ("vs_shoreline_and_duneline/net_change", "both",
+     "net change in metres (rate x window years), both solves", "raw domain means"),
     ("sensitivity/mixed-estimator", "dune line",
      "**OLS** rate against an **endpoint** observation",
      "deliberately mismatched, as a sensitivity"),

@@ -1,6 +1,6 @@
 # Which figure do I open?
 
-*Written 2026-09-27 by `scripts/repo_tools/hat_write_figure_index.py`, which checks every path below against the disk. Re-run it after adding or renaming a figure.*
+*Written 2026-09-29 by `scripts/repo_tools/hat_write_figure_index.py`, which checks every path below against the disk. Re-run it after adding or renaming a figure.*
 
 Three things to fix before reading any of these:
 
@@ -57,7 +57,7 @@ Both observations on one panel, the gap between them shaded as beach-width chang
 | vs the CoastSat shoreline | `output/comparisons/model_vs_observed/vs_shoreline/domain_means/model_vs_shoreline_means_<w>.png` <br>*windows:* 1996_2010, 2010_2024, 1984_2004, 2004_2024 | `_grid.png` puts all four windows on one sheet. |
 | vs the shoreline, as graded | `output/comparisons/model_vs_observed/vs_shoreline/smoothed/model_vs_shoreline_smoothed_<w>.png` <br>*windows:* 1996_2010, 2010_2024, 1984_2004, 2004_2024 | the LOESS form the runner actually scores. |
 | vs the dune line | `output/comparisons/model_vs_observed/vs_duneline/endpoint_net_change/model_vs_duneline_netchange_<w>.png` <br>*windows:* 1996_2010, 2010_2024, 1984_2004, 2004_2024 | and `net_change_smoothed/` beside it. |
-| vs both at once | `output/comparisons/model_vs_observed/vs_shoreline_and_duneline/model_vs_shoreline_and_duneline_<w>.png` <br>*windows:* 1996_2010, 2010_2024, 1984_2004, 2004_2024 | each solve drawn in its own target's estimator. |
+| vs both at once | `output/comparisons/model_vs_observed/vs_shoreline_and_duneline/change_rate/model_vs_shoreline_and_duneline_rate_<w>.png` <br>*windows:* 1996_2010, 2010_2024, 1984_2004, 2004_2024 | each solve drawn in its own target's estimator; the same in metres (x window years) under `net_change/`. |
 | Does the answer survive changing the estimator or the solve? | `output/comparisons/model_vs_observed/sensitivity/` | `ends-swapped`, `dune-raw-solve`, `mixed-estimator`. The arm is in every filename. |
 
 ## Which target should the model be graded on?
@@ -83,7 +83,8 @@ That tree is sliced by which **observation** the model is held against, while `3
 | `vs_shoreline/smoothed` | CoastSat | OLS rate (`lrr_m_yr`) | spliced LOESS — the form the runner grades |
 | `vs_duneline/endpoint_net_change` | dune line | endpoint rate (`change_rate_m_yr`) | raw domain means |
 | `vs_duneline/net_change_smoothed` | dune line | endpoint rate (`change_rate_m_yr`) | spliced LOESS |
-| `vs_shoreline_and_duneline` | both | endpoint rate, both solves | raw domain means |
+| `vs_shoreline_and_duneline/change_rate` | both | endpoint rate, both solves | raw domain means |
+| `vs_shoreline_and_duneline/net_change` | both | net change in metres (rate x window years), both solves | raw domain means |
 | `sensitivity/mixed-estimator` | dune line | **OLS** rate against an **endpoint** observation | deliberately mismatched, as a sensitivity |
 
 All of it in **m/yr**. To see the same comparison as a distance in metres, use `output/comparisons/target_comparison/`.

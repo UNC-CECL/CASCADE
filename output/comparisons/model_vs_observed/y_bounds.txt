@@ -1,3 +1,5 @@
 y axis on every panel: -8 to +8 m/yr
 = ceil(max |rate| + 1) over every observed reading (CoastSat means, dune-line endpoint) and both estimators of every model set (coastsat, dune-mean3, dune-raw), 1984-2004, 1996-2010, 2004-2024, 2010-2024
 (the CoastSat std lines are not in the bound)
+net-change panels (vs_shoreline_and_duneline/net_change): -125 to +125 m
+= ceil to 5 m of (max |rate x window years| + 5) over both endpoint observations and every model set's endpoint rate

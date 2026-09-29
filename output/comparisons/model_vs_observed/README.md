@@ -44,7 +44,8 @@ Start with `vs_shoreline/smoothed/model_vs_shoreline_smoothed_grid.png`: the sco
 | ...against the smoothed target the run index scores? | `vs_shoreline/smoothed/` | the scoring target (10-domain LOESS, raw means D1–10) as the fill, the means as dots | OLS rate |
 | Does the model reproduce the dune line's net change? | `vs_duneline/endpoint_net_change/` | two dune-line surveys differenced per domain | endpoint rate |
 | ...smoothed like the CoastSat target? | `vs_duneline/net_change_smoothed/` | the same, 10-domain LOESS | endpoint rate |
-| Both observations as net change at the same two dates | `vs_shoreline_and_duneline/` | CoastSat blue, dune line red, both LOESS | endpoint rate |
+| Both observations as net change at the same two dates | `vs_shoreline_and_duneline/change_rate/` (m/yr) | CoastSat blue, dune line red, both LOESS | endpoint rate |
+| ...as net change in position (m) over the window | `vs_shoreline_and_duneline/net_change/` | the same two lines x the window's calendar years (measured over the survey interval, scaled to 14 / 20 yr, as `target_comparison/`) | last annual shoreline minus first |
 | Endpoint observation against the model's OLS rate | `sensitivity/mixed-estimator/` | dune-line net change | OLS rate |
 
 Each folder holds one figure per window (`<stem>_<start>_<end>.png`) plus a 2 × 2 `_grid`.
