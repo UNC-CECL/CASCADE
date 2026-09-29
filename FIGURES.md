@@ -72,6 +72,8 @@ CoastSat against the dune line, with the runs, as **net change in metres** over 
 | Does the grading window matter? | `output/comparisons/target_comparison/smoothing_scale/projected_vs_model_<w>.png` <br>*windows:* 1996_2010, 2010_2024 | **No** — and r was never the number to read. See its PROVENANCE.md. |
 | Both targets AND the model, smoothed | `output/comparisons/target_comparison/smoothed_loess7_with_cascade/` | the two smoothed sheets with the zeroBE run over them in dark green. Nothing in that run was fitted to either target, so all 90 domains are the model's own response. |
 | The numbers | `output/comparisons/target_comparison/projected/tables/skill.csv` | bias, RMSE and r per window, model set and target. |
+| The same, as rates (m/yr) | `output/comparisons/target_comparison/projected/change_rate/paired/target_and_own_run_projected_rate_<w>.png` <br>*windows:* 1996_2010, 2010_2024 | every figure above divided back by 14 yr: the CoastSat LRR, the dune line's measured rate (no scaling to the window), the model's endpoint rate. `_rate` in every stem; same layout, own `tables/skill.csv` in m/yr. |
+| ...on each window's own rate | `output/comparisons/target_comparison/total_change/change_rate/paired/target_and_own_run_total_change_rate_<w>.png` <br>*windows:* 1996_2010, 2010_2024 | the m/yr twin of `total_change/`. |
 
 ## Cross-reference: what `model_vs_observed/` actually plots
 
@@ -87,7 +89,7 @@ That tree is sliced by which **observation** the model is held against, while `3
 | `vs_shoreline_and_duneline/net_change` | both | net change in metres (rate x window years), both solves | raw domain means |
 | `sensitivity/mixed-estimator` | dune line | **OLS** rate against an **endpoint** observation | deliberately mismatched, as a sensitivity |
 
-All of it in **m/yr**. To see the same comparison as a distance in metres, use `output/comparisons/target_comparison/`.
+All of it in **m/yr** except `vs_shoreline_and_duneline/net_change/`, the combined panel in metres. To see the full comparison as a distance in metres, use `output/comparisons/target_comparison/` (its m/yr twin is under each target mode's `change_rate/`).
 
 ## Where the rest lives
 

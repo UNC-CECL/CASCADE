@@ -210,6 +210,17 @@ SECTIONS: list[tuple[str, str, list[tuple[str, str, str]]]] = [
             ("The numbers",
              f"{OUT}/target_comparison/projected/tables/skill.csv",
              "bias, RMSE and r per window, model set and target."),
+            ("The same, as rates (m/yr)",
+             f"{OUT}/target_comparison/projected/change_rate/paired/"
+             "target_and_own_run_projected_rate_<w>.png",
+             "every figure above divided back by 14 yr: the CoastSat LRR, the "
+             "dune line's measured rate (no scaling to the window), the model's "
+             "endpoint rate. `_rate` in every stem; same layout, own "
+             "`tables/skill.csv` in m/yr."),
+            ("...on each window's own rate",
+             f"{OUT}/target_comparison/total_change/change_rate/paired/"
+             "target_and_own_run_total_change_rate_<w>.png",
+             "the m/yr twin of `total_change/`."),
         ],
     ),
 ]
@@ -307,8 +318,10 @@ def build() -> tuple[str, list[str]]:
         L.append(f"| `{folder}` | {obs_} | {est} | {reading} |")
     L += [
         "",
-        "All of it in **m/yr**. To see the same comparison as a distance in "
-        "metres, use `output/comparisons/target_comparison/`.",
+        "All of it in **m/yr** except `vs_shoreline_and_duneline/net_change/`, "
+        "the combined panel in metres. To see the full comparison as a distance "
+        "in metres, use `output/comparisons/target_comparison/` (its m/yr twin "
+        "is under each target mode's `change_rate/`).",
         "",
         "## Where the rest lives",
         "",
