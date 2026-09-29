@@ -168,14 +168,22 @@ def house_figures(panels, fig_dir, legend_title, note, suffix):
     import pandas as pd
     from matplotlib.lines import Line2D
     from matplotlib.patches import Patch
-    import HAT_metres_2_wave_sensitivity_plot as p2
     from site_layer.hat_figure_style import (INK, INK_MUTED, DOMAIN_AXIS_LABEL, C,
                                              apply_style, open_frame, record_caption, save,
                                              structures, support_dir, town_bands)
     from site_layer.hatteras_site_config import (HATTERAS_ANNOTATIONS,
                                                  HATTERAS_NOURISHMENT_PROJECTS)
     apply_style()
+    import numpy as np
+    from matplotlib.ticker import MultipleLocator
     col = {"duneline": "#1b7f6b", "shoreline": "#6a3d9a"}
+    # Text sized for reading the figures side by side (Hannah, 2026-09-29:
+    # "make all the text larger"); the canvas stays 16 in wide.
+    rc = {"font.size": 17, "axes.titlesize": 18, "axes.labelsize": 17,
+          "xtick.labelsize": 15, "ytick.labelsize": 15, "legend.fontsize": 15}
+    # One y-axis for every island-offset study (09-22, 09-25, 09-28 option A),
+    # set from the largest of them: the change figures, and the difference one
+    CHANGE_YLIM, DIFF_YLIM = (-80, 100), (-20, 30)
     shoal_c = C["ADDED"]
     n = len(panels)
 
@@ -188,43 +196,61 @@ def house_figures(panels, fig_dir, legend_title, note, suffix):
             ax.plot([lo - 0.45, hi + 0.45], [1.025, 1.025], color=INK, lw=2.2,
                     solid_capstyle="butt", zorder=6, clip_on=False, transform=trans)
             ax.text((lo + hi) / 2, 1.045, f"{p.year} fill", ha="center", va="bottom",
-                    fontsize=11, color=INK, zorder=6, clip_on=False, transform=trans)
+                    fontsize=14, color=INK, zorder=6, clip_on=False, transform=trans)
 
     def dress(ax, j, pan, text):
         ax.axhline(0, color=INK_MUTED, lw=0.8)
         ax.set_xlim(1, 90)
         ax.grid(axis="y")
         open_frame(ax)
-        town_bands(ax, fontsize=12, strip=0.07)
+        town_bands(ax, fontsize=15, strip=0.08)
         for nm, (lo, hi) in HATTERAS_ANNOTATIONS.shoal_zones.items():
             ax.axvspan(lo - 0.5, hi + 0.5, color=shoal_c, alpha=0.12, lw=0, zorder=0.5)
-            ax.text((lo + hi) / 2, 0.90, nm, transform=ax.get_xaxis_transform(),
-                    ha="center", va="top", fontsize=12, color="#8a620e", zorder=1)
-        structures(ax, label=True, label_pt=11)
+            ax.text((lo + hi) / 2, 0.895, nm, transform=ax.get_xaxis_transform(),
+                    ha="center", va="top", fontsize=15, color="#8a620e", zorder=1)
+        structures(ax, label=True, label_pt=13)
         fills(ax, pan["start"], pan["end"])
-        ax.set_title(f"({'abcdef'[j]})", loc="left", fontweight="bold", pad=26)
-        ax.set_title(text, loc="center", pad=26)
+        ax.set_title(f"({'abcdef'[j]})", loc="left", fontweight="bold", pad=40)
+        ax.set_title(text, loc="center", pad=40)
         if j == n - 1:
             ax.set_xlabel(DOMAIN_AXIS_LABEL)
 
     def legend(f, handles):
+        # legend_title (the end correction) goes to the caption, not the canvas:
+        # it read as a heading for the legend entries (2026-09-29)
         handles = handles + [Patch(color=shoal_c, alpha=0.25, label="Shoals"),
                              Patch(color="0.90", label="Villages")]
-        f.legend(handles=handles, loc="outside lower center", ncol=4, frameon=False,
-                 fontsize=12, title=legend_title, title_fontsize=12)
+        f.legend(handles=handles, loc="outside lower center", ncol=2, frameon=False)
 
     def axes_for(height):
-        f, axes = plt.subplots(n, 1, figsize=(16, height * n + 1.2), sharex=True,
+        f, axes = plt.subplots(n, 1, figsize=(16, height * n + 1.8), sharex=True,
                                sharey=True, constrained_layout=True, squeeze=False)
         return f, axes[:, 0]
 
-    common = (" Amber: Avon and Wimble Shoals; solid line: Buxton groin; dotted lines: "
+    def limits(values, fixed, step, what):
+        """The FIXED y-limits, the same in every island-offset study so the
+        figures compare across studies (Hannah, 2026-09-29), widened to `step`
+        only if a study's data leaves them, with a warning."""
+        v = np.concatenate([np.asarray(x, float) for x in values])
+        v = v[np.isfinite(v)]
+        lo, hi = fixed
+        if v.min() < lo or v.max() > hi:
+            lo = min(lo, np.floor(v.min() / step) * step)
+            hi = max(hi, np.ceil(v.max() / step) * step)
+            print(f"  WARNING: {what} data ({v.min():.1f} to {v.max():.1f} m) leave the "
+                  f"shared axis {fixed}; widened to ({lo:g}, {hi:g}), no longer comparable")
+        return lo, hi
+
+    common = ((f" {legend_title}." if legend_title else "") + " Amber: Avon and Wimble Shoals; solid line: Buxton groin; dotted lines: "
               "Avon and Rodanthe piers; grey strip: villages; bars above a panel: the "
               "nourishments the model is given in that period, footprint and year. " + note)
+    common += (" The three comparison figures share one y-axis; the difference figure "
+               "has its own, symmetric about zero.")
     figs = [
-        dict(src="duneline", kind="dune", ylab="Net change (m)",
-             obs_label="Observed dune-line change, smoothed (LOESS, 7 domains)",
-             model_label="Model, started from the dune line",
+        dict(src="duneline", kind="dune",
+             ylab="Dune-line change (m)\n(+ seaward, − landward)",
+             obs_label="Observed: dune-line change (7-domain LOESS)",
+             model_label="Model: started from the dune line",
              stem="duneline_offset_vs_duneline_change",
              caption=("The model started from the DUNE-LINE island offset, against the dune "
                       "line's own change. Net change per domain, seaward positive: observed "
@@ -233,20 +259,20 @@ def house_figures(panels, fig_dir, legend_title, note, suffix):
                       "2023-07, 14.1 yr, for 2010-2024), LOESS over 7 domains (the southern 10 "
                       "raw); the model (green) is unsmoothed, its endpoint change over the 14 "
                       "calendar years. The interval mismatch is not corrected.")),
-        dict(src="shoreline", kind="total", ylab="Total shoreline change (m)",
-             obs_label="Observed total shoreline change (CoastSat LRR of the same period "
-                       "× 14 yr, LOESS 7 domains)",
-             model_label="Model, started from the shoreline (its LRR × 14 yr)",
+        dict(src="shoreline", kind="total",
+             ylab="Total shoreline change (m)\n(+ seaward, − landward)",
+             obs_label="Observed: CoastSat LRR of the same period × 14 yr (7-domain LOESS)",
+             model_label="Model: started from the shoreline (its LRR × 14 yr)",
              stem="shoreline_offset_vs_coastsat_total_change",
              caption=("The model started from the SHORELINE island offset (mean CoastSat "
                       "shoreline over 1995-1997 for 1996, 2009-2011 for 2010), against total "
                       "shoreline change: each period's OWN CoastSat LRR, LOESS over 7 domains, "
                       "x 14 yr (black), not the 1996-2024 rate carried onto it; the model "
                       "(purple) is its own LRR x 14 yr.")),
-        dict(src="shoreline", kind="projected", ylab="Projected shoreline change (m)",
-             obs_label="Observed projected shoreline change (CoastSat LRR 1996–2024 × 14 yr, "
-                       "LOESS 7 domains)",
-             model_label="Model, started from the shoreline (its LRR × 14 yr)",
+        dict(src="shoreline", kind="projected",
+             ylab="Projected shoreline change (m)\n(+ seaward, − landward)",
+             obs_label="Observed: CoastSat LRR 1996–2024 × 14 yr (7-domain LOESS)",
+             model_label="Model: started from the shoreline (its LRR × 14 yr)",
              stem="shoreline_offset_vs_coastsat_projected_change",
              caption=("The model started from the SHORELINE island offset, against PROJECTED "
                       "shoreline change: the long-term CoastSat LRR fitted on 1996-2024, LOESS "
@@ -254,49 +280,77 @@ def house_figures(panels, fig_dir, legend_title, note, suffix):
                       "carried onto each period rather than fitted on it; the model (purple) "
                       "is the same run as in the total-change figure.")),
     ]
+    # Every observed and modelled line first, so the three comparison figures
+    # share ONE y-axis and read against each other (Hannah, 2026-09-29).
+    series = {}
+    for spec in figs:
+        for j, pan in enumerate(panels):
+            a, b = pan["start"], pan["end"]
+            years = b - a
+            rt = pan["rates"].get(spec["src"])
+            obs = {"dune": lambda: smooth_loess(duneline_change(a, b)),
+                   "total": lambda: coastsat_target_loess(a, f"{a}_{b}") * years,
+                   "projected": lambda: coastsat_target_loess(1996, "1996_2024") * years,
+                   }[spec["kind"]]()
+            m = None
+            if rt is not None:
+                m = (rt.change_rate_m_yr if spec["kind"] == "dune" else rt.lrr_m_yr) * years
+            series[(spec["stem"], j)] = (obs, m)
+    # No headroom above the data: the one value past the label line is the
+    # observed +96 m at GIS 1-2 (2010-2024), where no label sits; headroom for
+    # it pushed the top to 160 m and flattened every line.
+    ylim = limits([x.values for pair in series.values() for x in pair if x is not None],
+                  CHANGE_YLIM, 20, "change")
+
     out = []
-    with plt.rc_context(p2.SCREEN_RC):
+    with plt.rc_context(rc):
         for spec in figs:
             src = spec["src"]
-            f, axes = axes_for(5)
+            f, axes = axes_for(5.2)
             for j, pan in enumerate(panels):
+                ax = axes[j]
+                obs, m = series[(spec["stem"], j)]
+                ax.plot(obs.index, obs.values, color=INK, lw=3.4, zorder=6)
+                if m is not None:
+                    ax.plot(m.index, m.values, color=col[src], lw=2.4, zorder=4)
+                ax.set_ylim(*ylim)
+                ax.yaxis.set_major_locator(MultipleLocator(20))
                 a, b = pan["start"], pan["end"]
-                years = b - a
-                ax, rt = axes[j], pan["rates"].get(src)
-                obs = {"dune": lambda: smooth_loess(duneline_change(a, b)),
-                       "total": lambda: coastsat_target_loess(a, f"{a}_{b}") * years,
-                       "projected": lambda: coastsat_target_loess(1996, "1996_2024") * years,
-                       }[spec["kind"]]()
-                ax.plot(obs.index, obs.values, color=INK, lw=3.2, zorder=6)
-                if rt is not None:
-                    m = (rt.change_rate_m_yr if spec["kind"] == "dune" else rt.lrr_m_yr) * years
-                    ax.plot(m.index, m.values, color=col[src], lw=2.0, zorder=4)
-                how = {"total": f" (CoastSat LRR {a}–{b} × 14 yr)",
-                       "projected": " (CoastSat LRR 1996–2024 × 14 yr)"}.get(spec["kind"], "")
+                how = {"total": f"  ·  observed: CoastSat LRR {a}–{b} × 14 yr",
+                       "projected": "  ·  observed: CoastSat LRR 1996–2024 × 14 yr"
+                       }.get(spec["kind"], "")
                 dress(ax, j, pan, pan["label"] + how)
                 ax.set_ylabel(spec["ylab"])
-            legend(f, [Line2D([], [], color=INK, lw=3.2, label=spec["obs_label"]),
-                       Line2D([], [], color=col[src], lw=2.0, label=spec["model_label"])])
+            legend(f, [Line2D([], [], color=INK, lw=3.4, label=spec["obs_label"]),
+                       Line2D([], [], color=col[src], lw=2.4, label=spec["model_label"])])
             png = fig_dir / f"{spec['stem']}_{suffix}.png"
             save(f, png, dpi=300, close=True)
             record_caption(png, spec["caption"] + common)
             out.append(png)
 
         # where the two offsets disagree: total change, shoreline minus dune-line start
-        f, axes = axes_for(4)
-        rows = []
+        f, axes = axes_for(4.4)
+        rows, diffs = [], []
         for j, pan in enumerate(panels):
             ax, r = axes[j], pan["rates"]
             if r.get("shoreline") is not None and r.get("duneline") is not None:
                 years = pan["end"] - pan["start"]
                 d = (r["shoreline"].lrr_m_yr - r["duneline"].lrr_m_yr) * years
+                diffs.append(d.values)
                 ax.bar(d.index, d.values, width=0.85,
                        color=[col["shoreline"] if v > 0 else col["duneline"] for v in d.values])
                 rows.append(dict(panel=pan["label"], mean_abs_diff_m=float(d.abs().mean()),
                                  max_abs_diff_m=float(d.abs().max()),
                                  at_gis=int(d.abs().idxmax())))
             dress(ax, j, pan, pan["label"])
-            ax.set_ylabel("Difference in total change,\nshoreline minus dune-line start (m)")
+            ax.set_ylabel("Shoreline start minus\ndune-line start (m)")
+        if diffs:
+            # its own quantity, so its own axis, with room above the bars for
+            # the village and shoal labels
+            lo, hi = limits(diffs, DIFF_YLIM, 5, "difference")
+            for ax in axes:
+                ax.set_ylim(lo, hi)
+                ax.yaxis.set_major_locator(MultipleLocator(5))
         legend(f, [Patch(color=col["shoreline"], label="Shoreline start more accretional"),
                    Patch(color=col["duneline"], label="Dune-line start more accretional")])
         png = fig_dir / f"total_change_difference_shoreline_minus_duneline_{suffix}.png"
