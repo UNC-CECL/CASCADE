@@ -33,6 +33,7 @@ Related, outside this theme: the end rates are in [`../end-domain-boundaries/202
 | [`2026-09-26-wave-shortlist-ends-solved`](2026-09-26-wave-shortlist-ends-solved/README.md) | The top settings with the ends solved separately for each. | On the smoothed score the best waves barely move once their ends are solved (1996–2010: Hs 1.25–1.5, asym 0.7, high-angle 0.45); 2010–2024 stays below a flat line. | record |
 | [`2026-09-27-wave-grid-fixed-ends`](2026-09-27-wave-grid-fixed-ends/README.md) | The grid with the ends fixed (first the Hs-1 ends, then targeted reruns on the Hs-2 ends), plus one-parameter changes for 2010–2024. | Hs 2 / Tp 7.5 / asym 0.6 / high-angle 0.5 wins on the raw score in both windows; only an Hs change helps 2010–2024. | **current** — the main evidence; read the last section |
 | [`2026-09-27-wave-recommendation`](2026-09-27-wave-recommendation/README.md) | Which settings to use, same or per period? | Options A (same) and B (Hs 2.5 in 2010–2024), with figures and the Hs 2.25–3.0 check. | **current — read this first** |
+| [`2026-09-28-hs2p5-check-adopted-setup`](2026-09-28-hs2p5-check-adopted-setup/README.md) | Does Hs 2.5 beat Hs 2.0 on the adopted setup (overwash fixes, trimmed storms, dune-cap fix), each on its own ends? | No: tied on the raw score (1996 22.3% vs 22.5%, 2010 −74% vs −77%), for +14 m/yr more at GIS 90. Option A stands. | **current** |
 
 **Status** — **current**: its answer is in use now. **superseded**: a later study
 re-asked it; follow the pointer. **record**: a finished check or a result from an

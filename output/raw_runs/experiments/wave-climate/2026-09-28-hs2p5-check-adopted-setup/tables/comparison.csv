@@ -1,0 +1,5 @@
+window,run,ends,dune_cap,rmse,rmse_meta,bias,share_raw_%,share_smoothed_%,roads_drowned
+1996,"Hs 2.0, own ends (matrix)",+4.351 / +19.093,added sand only,1.1718,1.1718,0.0642,22.5325,21.1438,0
+1996,"Hs 2.5, own ends (this check)",+4.000 / +33.185,added sand only,1.1738,1.1738,0.094,22.2636,23.2764,0
+2010,"Hs 2.0, own ends (matrix)",+8.000 / +21.258,added sand only,2.0676,2.0676,-1.3595,-76.9334,-69.2876,1
+2010,"Hs 2.5, own ends (this check)",+6.225 / +34.650,added sand only,2.0528,2.0528,-1.3167,-74.4097,-60.0765,1

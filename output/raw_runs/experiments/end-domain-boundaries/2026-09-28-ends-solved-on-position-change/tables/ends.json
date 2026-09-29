@@ -1,0 +1,42 @@
+{
+ "scenario": "full_management",
+ "target": "CoastSat end-minus-start position change per window (GIS 1 raw, GIS 90 LOESS 7); residuals in m/yr = m / 14",
+ "ends_m_yr": {
+  "1996": {
+   "1": 1.2308,
+   "90": 16.7085
+  },
+  "2010": {
+   "1": 22.3321,
+   "90": 18.5722
+  }
+ },
+ "history": [],
+ "reference_waves_by_period": {
+  "1996": {
+   "hs": 2.0,
+   "wave_period_s": 7.5,
+   "wave_asymmetry": 0.6,
+   "wave_angle_high_fraction": 0.5
+  },
+  "2010": {
+   "hs": 2.0,
+   "wave_period_s": 7.5,
+   "wave_asymmetry": 0.6,
+   "wave_angle_high_fraction": 0.5
+  }
+ },
+ "accepted": {
+  "2010": "closest probe, residuals GIS1 +0.050 / GIS90 +0.006 m/yr (target 0.02; accepted at <= 0.02)"
+ },
+ "observed_change_m": {
+  "1996": {
+   "1": 11.527,
+   "90": 9.511
+  },
+  "2010": {
+   "1": 124.745,
+   "90": 29.607
+  }
+ }
+}
