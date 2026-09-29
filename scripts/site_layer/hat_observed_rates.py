@@ -321,6 +321,11 @@ PROJECTED_VS_DUNELINE_ENDPOINT = (SHORELINE_VS_DUNELINE
 # its distance to NC-12 and to the CoastSat shoreline (duneline_positions.py,
 # 2026-09-18).
 DUNELINE_POSITIONS = COMPARISONS / "duneline_positions"
+# The same period's mean shoreline over two windows -- the 3-yr calendar span
+# and the 2-yr span centred on the start DEM's lidar flights -- differenced per
+# transect and domain (coastsat_mean_shoreline_windows.py, 2026-09-29). One
+# folder per period start: mean_shoreline_windows/<period>/.
+MEAN_SHORELINE_WINDOWS = COMPARISONS / "mean_shoreline_windows"
 SHORELINE_INVENTORY = OBSERVATIONS / "shoreline_inventory"
 
 # THE DETRENDED POSITION (2026-09-23). Every CoastSat transect detrended against
@@ -358,25 +363,39 @@ DSAS_ROOT = OBSERVATIONS / "dsas_1978_2019"
 MEAN_SHORELINE_ROOT = OBSERVATIONS / "mean_shoreline"
 
 
-def mean_shoreline_dir(start_year, end_year) -> Path:
+def mean_shoreline_label(start, end) -> str:
+    """The token a window's folder and files are named with.
+
+    Calendar years give `1995_1997`. Since 2026-09-29 a window can also be
+    given by ISO dates -- the +/-1 yr windows centred on a start DEM's flights
+    -- and then the token is the dates, `1995-10-12_1997-10-12` (Hannah: name
+    them by exact dates, beside the calendar folders)."""
+    def token(v):
+        s = str(v)
+        return s if "-" in s else str(int(s))
+    return "{0}_{1}".format(token(start), token(end))
+
+
+def mean_shoreline_dir(start, end) -> Path:
     """One averaging window's folder: the line, the per-transect means, the
-    figure and PROVENANCE.md. Named for the span, per rule 2."""
-    return MEAN_SHORELINE_ROOT / "{0}_{1}".format(int(start_year), int(end_year))
+    figure and PROVENANCE.md. Named for the span, per rule 2. `start`/`end`
+    are calendar years or ISO dates (see mean_shoreline_label)."""
+    return MEAN_SHORELINE_ROOT / mean_shoreline_label(start, end)
 
 
-def mean_shoreline_geojson(start_year, end_year) -> Path:
+def mean_shoreline_geojson(start, end) -> Path:
     """The mean shoreline as ONE LineString, EPSG:26918, carrying the same
     metadata properties a digitised dune line carries so the 2-brie-offset
     intersection step reads it unchanged."""
-    a, b = int(start_year), int(end_year)
-    return mean_shoreline_dir(a, b) / "shoreline_mean_{0}_{1}.geojson".format(a, b)
+    label = mean_shoreline_label(start, end)
+    return mean_shoreline_dir(start, end) / "shoreline_mean_{0}.geojson".format(label)
 
 
-def mean_shoreline_csv(start_year, end_year) -> Path:
+def mean_shoreline_csv(start, end) -> Path:
     """Per CoastSat transect: the window mean, its scatter and count, the
     dates it spans, and the geolocated mean point."""
-    a, b = int(start_year), int(end_year)
-    return mean_shoreline_dir(a, b) / "transect_means_{0}_{1}.csv".format(a, b)
+    label = mean_shoreline_label(start, end)
+    return mean_shoreline_dir(start, end) / "transect_means_{0}.csv".format(label)
 # The four windows drawn on one y axis (coastsat_lrr_windows.py). Since
 # 2026-09-19 only its 2 x 2 is drawn, into 3-rates/coastsat/lrr/; the
 # per-window and halves figures duplicated 3-rates and were archived with

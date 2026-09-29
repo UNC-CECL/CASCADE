@@ -5,8 +5,11 @@ features** on the island:
 
 | source | what it is | build |
 |---|---|---|
-| `duneline` | dune line (1997 imagery) | `../../v1/` |
-| `shoreline` | CoastSat shoreline (1995–1997 mean) | `../../shoreline/v1/` |
+| `duneline` | dune line (1997 imagery) | `1996/duneline/v1/` |
+| `shoreline` | CoastSat shoreline (1995–1997 mean) | `1996/shoreline/v1/` |
+
+Filed with the shoreline build it was drawn against, `1996/shoreline/v1/`
+(since 2026-09-29; until then `1996/comparisons/`).
 
 Written by `scripts/input_prep/2-brie-offset/2-figures/compare_offset_sources.py`.
 This is a comparison, not a build: nothing here is read by a model run.
@@ -118,9 +121,7 @@ beach width.** The `seaward_gap_m` column of the CSV is.
 ## Rebuild
 
 ```
-python scripts/input_prep/2-brie-offset/2-figures/compare_offset_sources.py --year 1996
+python scripts/input_prep/2-brie-offset/2-figures/compare_offset_sources.py --year 1996 --duneline-version v1 --shoreline-version v1
 ```
 
-Both sources resolve through their `CURRENT`, so this re-reads whatever each
-source currently points at rather than the builds that were current on the day
-it was written.
+Without the two version flags each source resolves through its `CURRENT`.

@@ -6,9 +6,9 @@ it was measured from, so a folder listing says what it is:
 | source | what it was measured from | CURRENT | also here |
 |---|---|---|---|
 | `duneline/` | a dune line digitised from aerial imagery | `v1` | `ext/` extended geometries, `superseded_20260919_pre-redigitized/` |
-| `shoreline/` | the CoastSat satellite shoreline, averaged over a window | `v1` | - |
+| `shoreline/` | the CoastSat satellite shoreline, averaged over a window (v2: ±1 yr of the 1996 ALACE flights) | `v2` (since 2026-09-29; `v1` calendar 1995–1997) | - |
 
-`comparisons/duneline_vs_shoreline/` — between the sources above; belongs to neither, so it sits here.
+`shoreline/<v>/comparisons/duneline_vs_shoreline/` — the dune line against that shoreline build, one per shoreline version (moved from `comparisons/` on 2026-09-29, when the shoreline gained v2 and a shared folder could not say which version it held).
 
 ## Resolving a build
 

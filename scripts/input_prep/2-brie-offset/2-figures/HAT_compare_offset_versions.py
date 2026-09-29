@@ -189,7 +189,18 @@ def main(argv=None):
     # change even when both name the same file (edited in place).
     if have_raw:
         same_line = bool(line_a and line_b and line_a == line_b)
-        if meth_a == meth_b == "shapely":
+        if meth_a == meth_b == "shapely" and args.source == "shoreline":
+            # Two CoastSat window means: nothing was digitised, the averaging
+            # window changed (2026-09-29, the DEM-centred shoreline v2).
+            b_title, b_ylabel = ("Where the two mean shorelines differ",
+                                 "Shoreline moved (m, + landward)")
+            b_what = (f"(b) The change in the mean shoreline itself ({line_a or 'an unrecorded line'} "
+                      f"to {line_b or 'an unrecorded line'}), {lb} minus {la}")
+            b_why = (" Both are CoastSat means strung into a line, differing only in the "
+                     "averaging window, and both raw files come from the same shapely "
+                     "intersection against the same transects, which is deterministic, so "
+                     "the difference is the change of window.")
+        elif meth_a == meth_b == "shapely":
             b_title, b_ylabel = "Where the re-digitised line differs", "Dune line moved (m, + landward)"
             if line_a and line_a == line_b:
                 src = (f"{line_a}, re-digitised in place between "

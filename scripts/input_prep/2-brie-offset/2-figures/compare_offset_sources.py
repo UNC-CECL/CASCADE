@@ -59,20 +59,26 @@ HOW IT IS DRAWN, AND WHAT THAT COSTS
     shape is the point; each panel therefore states its own beach range as a
     number.
 
-OUTPUT   2-brie-offset/<year>/comparisons/<a>_vs_<b>/
+OUTPUT   2-brie-offset/<year>/shoreline/<v>/comparisons/<a>_vs_<b>/
+    (filed with the shoreline build it was drawn against since 2026-09-29;
+    until then <year>/comparisons/<a>_vs_<b>/, which could not say which
+    shoreline version it held once there were two)
     offset_<year>_<a>_vs_<b>.csv        per domain, both frames, columns named
                                         for the SOURCE not for a version
     offset_<year>_<a>_vs_<b>.png/.pdf   the two profiles as vertical strips of
                                         island, caption in CAPTIONS.md
     README.md                           what the folder is
 
-    A comparison is neither a version nor a source, so it lands in
-    comparisons/ rather than inside either build
-    (hat_topo_version.offset_comparison_dir).
+    hat_topo_version.offset_source_comparison_dir resolves it.
 
 USAGE
     python compare_offset_sources.py --year 1996
     python compare_offset_sources.py --year 1996 --a duneline --b shoreline
+    python compare_offset_sources.py --year 1996 --shoreline-version v2
+
+    Each source defaults to its CURRENT build; --duneline-version and
+    --shoreline-version name one instead (2026-09-29, so a build can be
+    compared before it becomes CURRENT).
 ==============================================================================
 """
 
@@ -169,7 +175,7 @@ def _town_bands_alongshore_y(ax, lo, hi):
                 zorder=1, clip_on=True)
 
 
-def _window_gap_months(year):
+def _window_gap_months(year, shoreline_version=None):
     """Months between the centre of the shoreline averaging window and the
     dune line's survey date, or None if either is unavailable.
 
@@ -178,40 +184,62 @@ def _window_gap_months(year):
     has one owner, duneline_endpoint.survey_date, so this asks it.
     """
     try:
-        import datetime as dt
         sys.path.insert(0, str(PROJECT_ROOT / "scripts" / "input_prep" / "5-scr" / "lib"))
         import scr_paths  # noqa: F401  (puts the 5-scr modules on sys.path)
         from duneline_endpoint import survey_date
-        start, end = _tv.shoreline_window_for_year(year)
-        centre = (dt.date(start, 1, 1)
-                  + (dt.date(end, 12, 31) - dt.date(start, 1, 1)) / 2)
+        lo, hi = _shoreline_window(year, shoreline_version)
+        centre = lo + (hi - lo) / 2
         surveyed, _assumed = survey_date(_tv.dune_line_for_year(year))
         return abs((surveyed - centre).days) / 30.44
     except Exception:
         return None
 
 
-def _gap_clause(year):
+def _gap_clause(year, shoreline_version=None):
     """The time between the two observations, spelled for a caption."""
-    months = _window_gap_months(year)
+    months = _window_gap_months(year, shoreline_version)
     return ("" if months is None else
             ", plus the {0:.0f} months between the centre of the shoreline "
             "window and the dune line's survey".format(months))
 
 
-def _vintage_label(source, year):
+def _shoreline_raw(year, version=None):
+    """The raw file a shoreline BUILD was made from: each version folder keeps
+    a copy (<window>_shoreline_offset_raw.csv), and its name is the window."""
+    d = _tv.offset_build_dir(year, version, "shoreline")
+    hits = sorted(d.glob("*_shoreline_offset_raw.csv"))
+    if len(hits) != 1:
+        sys.exit("expected one *_shoreline_offset_raw.csv in {0}, found {1}".format(d, len(hits)))
+    return hits[0]
+
+
+def _shoreline_window(year, version=None):
+    """(first, last) day of the build's averaging window, read from its raw
+    file's name: 1995_1997 (calendar years) or 1995-10-12_1997-10-12."""
+    import datetime as dt
+    label = _shoreline_raw(year, version).name.replace("_shoreline_offset_raw.csv", "")
+    a, b = label.split("_")
+    if "-" in a:
+        return dt.date.fromisoformat(a), dt.date.fromisoformat(b)
+    return dt.date(int(a), 1, 1), dt.date(int(b), 12, 31)
+
+
+def _vintage_label(source, year, version=None):
     """What the source IS for this start year, spelled for a legend: a dune
     line carries an imagery vintage, a shoreline carries a window."""
     if source == "duneline":
         return "dune line ({0} imagery)".format(_tv.dune_line_for_year(year))
-    window = _tv.shoreline_window_for_year(year)
-    return "CoastSat shoreline ({0}–{1} mean)".format(*window)
+    lo, hi = _shoreline_window(year, version)
+    if (lo.month, lo.day, hi.month, hi.day) == (1, 1, 12, 31):
+        return "CoastSat shoreline ({0}–{1} mean)".format(lo.year, hi.year)
+    return "CoastSat shoreline ({0} – {1} mean)".format(lo.isoformat(), hi.isoformat())
 
 
-def _unpadded(year, source):
-    """The 90-domain file the model would read from one source's CURRENT
-    build, zeroed on that build's own most seaward domain."""
-    path = _tv.offset_file(year, "unpadded", source=source)
+def _unpadded(year, source, version=None):
+    """The 90-domain file the model would read from one source's build
+    (CURRENT unless a version is named), zeroed on that build's own most
+    seaward domain."""
+    path = _tv.offset_file(year, "unpadded", source=source, version=version)
     if not path.is_file():
         sys.exit("no {0} build for {1}: {2} is missing".format(source, year, path))
     return pd.read_csv(path).set_index("Domain_ID")[str(year)]
@@ -225,9 +253,9 @@ def _raw_domain_means(path):
     return per_transect.groupby("domain_id")["ORIG_LEN"].mean()
 
 
-def _raw_file(year, source):
+def _raw_file(year, source, version=None):
     return (_tv.dune_raw_file_for_year(year) if source == "duneline"
-            else _tv.shoreline_raw_file_for_year(year))
+            else _shoreline_raw(year, version))
 
 
 def main(argv=None):
@@ -237,19 +265,25 @@ def main(argv=None):
                     help="the reference source (default duneline)")
     ap.add_argument("--b", default="shoreline", choices=tuple(SOURCE_STYLE),
                     help="the source compared against it (default shoreline)")
+    ap.add_argument("--duneline-version", default=None,
+                    help="the dune build to read (default its CURRENT)")
+    ap.add_argument("--shoreline-version", default=None,
+                    help="the shoreline build to read (default its CURRENT)")
     args = ap.parse_args(argv)
     if args.a == args.b:
         ap.error("--a and --b name the same source")
     year, a, b = args.year, args.a, args.b
-    lab_a, lab_b = _vintage_label(a, year), _vintage_label(b, year)
+    ver = {"duneline": args.duneline_version or _tv.offset_version(year, "duneline"),
+           "shoreline": args.shoreline_version or _tv.offset_version(year, "shoreline")}
+    lab_a, lab_b = _vintage_label(a, year, ver[a]), _vintage_label(b, year, ver[b])
 
     # ---- the numbers ----------------------------------------------------- #
-    ma, mb = _unpadded(year, a), _unpadded(year, b)
+    ma, mb = _unpadded(year, a, ver[a]), _unpadded(year, b, ver[b])
     out = pd.DataFrame({"model_{0}_m".format(a): ma, "model_{0}_m".format(b): mb})
     out["model_diff_m"] = mb - ma
 
-    ra = _raw_domain_means(_raw_file(year, a))
-    rb = _raw_domain_means(_raw_file(year, b))
+    ra = _raw_domain_means(_raw_file(year, a, ver[a]))
+    rb = _raw_domain_means(_raw_file(year, b, ver[b]))
     out["datum_{0}_m".format(a)] = ra.reindex(out.index)
     out["datum_{0}_m".format(b)] = rb.reindex(out.index)
     # Stations grow LANDWARD from the offshore datum, so a - b is positive
@@ -260,7 +294,7 @@ def main(argv=None):
 
     gap, mdiff = out["seaward_gap_m"], out["model_diff_m"]
     baseline_shift = float(ra.min() - rb.min())
-    print("{0}: {1} vs {2}".format(year, a, b))
+    print("{0}: {1} {2} vs {3} {4}".format(year, a, ver[a], b, ver[b]))
     print("  fixed datum -- {0} seaward of {1} by: mean {2:+.1f} m, median {3:+.1f}, "
           "sd {4:.1f}, range {5:+.1f} .. {6:+.1f}".format(
               b, a, gap.mean(), gap.median(), gap.std(), gap.min(), gap.max()))
@@ -273,7 +307,8 @@ def main(argv=None):
     print("  (model frame = -(seaward gap) + {0:+.1f} m, which is why the sign "
           "flips)".format(baseline_shift))
 
-    out_dir = _tv.offset_comparison_dir(year, "{0}_vs_{1}".format(a, b))
+    out_dir = _tv.offset_source_comparison_dir(year, "{0}_vs_{1}".format(a, b),
+                                               ver["shoreline"])
     out_dir.mkdir(parents=True, exist_ok=True)
     stem = "offset_{0}_{1}_vs_{2}".format(year, a, b)
     out.to_csv(out_dir / "{0}.csv".format(stem), float_format="%.2f")
@@ -393,18 +428,18 @@ def main(argv=None):
             year=year, fa=SOURCE_STYLE[a]["feature"], fb=SOURCE_STYLE[b]["feature"],
             nsec=len(SECTIONS), nrow=n_rows, ncol=GRID_COLS,
             n=len(gap), gm=gap.mean(), glo=gap.min(), ghi=gap.max(),
-            gapclause=_gap_clause(year), shift=abs(baseline_shift),
+            gapclause=_gap_clause(year, ver["shoreline"]), shift=abs(baseline_shift),
             nflip=int((mdiff > 0).sum()), stem=stem))
     paths = save(fig, out_dir / stem, close=True)
     print("  wrote {0}".format(out_dir / (stem + ".csv")))
     for p in paths:
         print("  wrote {0}".format(p))
 
-    _write_readme(out_dir, year, a, b, lab_a, lab_b, gap, mdiff, baseline_shift, stem)
+    _write_readme(out_dir, year, a, b, lab_a, lab_b, gap, mdiff, baseline_shift, stem, ver)
     print("  wrote {0}".format(out_dir / "README.md"))
 
 
-def _write_readme(out_dir, year, a, b, lab_a, lab_b, gap, mdiff, shift, stem):
+def _write_readme(out_dir, year, a, b, lab_a, lab_b, gap, mdiff, shift, stem, ver):
     (out_dir / "README.md").write_text("""# {year} island offset: {a} vs {b}
 
 Two builds of the **same** {year} island offset, from two **different
@@ -412,8 +447,11 @@ features** on the island:
 
 | source | what it is | build |
 |---|---|---|
-| `{a}` | {lab_a} | `../../v1/` |
-| `{b}` | {lab_b} | `../../{b}/v1/` |
+| `{a}` | {lab_a} | `{year}/{a}/{va}/` |
+| `{b}` | {lab_b} | `{year}/{b}/{vb}/` |
+
+Filed with the shoreline build it was drawn against, `{year}/shoreline/{vs}/`
+(since 2026-09-29; until then `{year}/comparisons/`).
 
 Written by `scripts/input_prep/2-brie-offset/2-figures/compare_offset_sources.py`.
 This is a comparison, not a build: nothing here is read by a model run.
@@ -525,13 +563,12 @@ beach width.** The `seaward_gap_m` column of the CSV is.
 ## Rebuild
 
 ```
-python scripts/input_prep/2-brie-offset/2-figures/compare_offset_sources.py --year {year}
+python scripts/input_prep/2-brie-offset/2-figures/compare_offset_sources.py --year {year} --duneline-version {vd} --shoreline-version {vs}
 ```
 
-Both sources resolve through their `CURRENT`, so this re-reads whatever each
-source currently points at rather than the builds that were current on the day
-it was written.
-""".format(year=year, a=a, b=b, lab_a=lab_a, lab_b=lab_b,
+Without the two version flags each source resolves through its `CURRENT`.
+""".format(year=year, a=a, b=b, lab_a=lab_a, lab_b=lab_b, va=ver[a], vb=ver[b],
+           vd=ver["duneline"], vs=ver["shoreline"],
            gm=gap.mean(), gmed=gap.median(), gsd=gap.std(),
            glo=gap.min(), ghi=gap.max(),
            npos=int((gap > 0).sum()), n=len(gap), shift=shift,

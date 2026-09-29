@@ -28,7 +28,7 @@ The mean shoreline sits seaward of the 2009 dune line on **450 of 450** transect
 
 ## CURRENT
 
-`../CURRENT` = `v1`. Reached with `HAT_ISLAND_OFFSET_SOURCE=shoreline`. The 2010 dune build the runner reads by default is unchanged.
+`../CURRENT` named `v1` until 2026-09-29, when it moved to `v2` (the DEM-centred window); select this build for one run with `HAT_OFFSET_VERSION_2010_SHORELINE=v1`. The source is reached with `HAT_ISLAND_OFFSET_SOURCE=shoreline`. The 2010 dune build the runner reads by default is unchanged.
 
 ## Caveat carried from 1996
 

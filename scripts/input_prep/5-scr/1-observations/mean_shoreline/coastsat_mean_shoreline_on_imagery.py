@@ -70,6 +70,11 @@ USAGE
     python coastsat_mean_shoreline_on_imagery.py --window 1995 1997 --sites 26 79
     python coastsat_mean_shoreline_on_imagery.py --only island   (or sites, ribbon)
     python coastsat_mean_shoreline_on_imagery.py --window 2009 2011 --photo-years 2008
+    python coastsat_mean_shoreline_on_imagery.py --centred-on alace_1996
+    python coastsat_mean_shoreline_on_imagery.py --centred-on usace_2009 --photo-years 2008
+    A window by dates (2026-09-29) is the one coastsat_mean_shoreline.py built
+    with the same flags; a photograph is inside it by its flight DATE, and the
+    date scale runs over the window itself rather than whole years.
     Needs the D: drive; the .venv Python (rasterio).
 ==============================================================================
 """
@@ -156,13 +161,27 @@ def photo_label(im):
     return f"{d.day} {d:%B %Y}"
 
 
+def _inside(im, window):
+    """Was this photograph flown inside the window? By date since 2026-09-29,
+    when windows stopped being whole calendar years; a source whose reader
+    knows only the year (PHOTO_SOURCES) is dated from its table entry."""
+    d = PHOTO_SOURCES.get(im.year, {}).get("date", im.date)
+    try:
+        t = pd.Timestamp(d)
+    except (TypeError, ValueError):
+        return window.lo.year <= im.year <= window.hi.year
+    if len(str(d)) == 4:                    # a bare year: inside if the year is
+        return window.lo.year <= im.year <= window.hi.year
+    return window.lo <= t <= window.hi
+
+
 def photo_ref(imagery, window):
     """'the USGS aerial photographs ... (doi ...)' and/or the other sources."""
     usgs = [im for im in imagery if im.year not in PHOTO_SOURCES]
     parts = []
     if usgs:
         dates = ", ".join(pd.Timestamp(im.date).strftime("%Y-%m-%d") for im in usgs)
-        inside = all(window[0] <= im.year <= window[1] for im in usgs)
+        inside = all(_inside(im, window) for im in usgs)
         parts.append(f"the USGS aerial photographs flown inside the window ({dates}; {USGS_REF})"
                      if inside and len(usgs) > 1 else
                      f"the USGS aerial photographs of {dates} ({USGS_REF})")
@@ -172,7 +191,7 @@ def photo_ref(imagery, window):
 
 def photo_timing(imagery, window):
     """The sentence on what a photograph can show against a window mean."""
-    outside = [im for im in imagery if not window[0] <= im.year <= window[1]]
+    outside = [im for im in imagery if not _inside(im, window)]
     if not outside:
         return ("Each photograph is one autumn day; the line is a mean over the window, so "
                 "the waterline in a photograph is expected to fall within the band, not on "
@@ -199,7 +218,7 @@ def _review_module():
 def transects(window):
     """Included transects with their direction, in alongshore order."""
     import coastsat_mean_shoreline as cms
-    df = pd.read_csv(mean_shoreline_csv(*window))
+    df = pd.read_csv(mean_shoreline_csv(*window.key))
     df = df[df["included"] & df["x"].notna()].copy()
     geom = cms.transect_geometry(set(df["transect_id"]))
     df["x0"] = df["transect_id"].map(lambda t: geom[t][0])
@@ -216,11 +235,10 @@ def positions(df, window):
     are exactly the positions each mean was taken over.
     """
     import coastsat_mean_shoreline as cms
-    from coastsat_lrr import filter_dates, load_timeseries
-    lo, hi = "{0}-01-01".format(window[0]), "{0}-12-31".format(window[1])
+    from coastsat_lrr import load_timeseries
     out = []
     for t in df.itertuples():
-        obs = filter_dates(load_timeseries(str(cms.timeseries_file(t.transect_id))), lo, hi)
+        obs = window.clip(load_timeseries(str(cms.timeseries_file(t.transect_id))))
         obs = obs.dropna(subset=["chainage_m"])
         ch = obs["chainage_m"].to_numpy(dtype=float)
         out.append(pd.DataFrame({"transect_id": t.transect_id,
@@ -323,7 +341,8 @@ def time_bar(fig, axes, norm, imagery, window):
     """The date scale, with each photograph's flight marked by its panel letter."""
     sm = plt.cm.ScalarMappable(cmap=CMAP, norm=norm)
     cb = fig.colorbar(sm, ax=axes, location="bottom", shrink=0.45, aspect=40, pad=0.02)
-    cb.set_ticks(list(range(int(norm.vmin), int(norm.vmax) + 1)))
+    cb.set_ticks([y for y in range(int(norm.vmin), int(norm.vmax) + 1)
+                  if norm.vmin <= y <= norm.vmax])
     cb.ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{int(v)}"))
     cb.set_label("Date of satellite position")
     cb.outline.set_linewidth(0.5)
@@ -344,7 +363,6 @@ def site_figure(df, pos, boxes, imagery, centre, key, window, out_dir, norm):
     photos = read_photos(imagery, b)
     w, h = b[2] - b[0], b[3] - b[1]
     n = len(imagery)
-    start, end = window
     row = dict(centre_gis=centre, site=key, first_gis=centre - HALF, last_gis=centre + HALF,
                x0=b[0], y0=b[1], x1=b[2], y1=b[3],
                **{f"no_photo_frac_{im.year}": round(f, 3) for im, (_, f) in zip(imagery, photos)})
@@ -365,7 +383,7 @@ def site_figure(df, pos, boxes, imagery, centre, key, window, out_dir, norm):
         handles = [Line2D([], [], color=C_LINE, lw=1.3,
                           path_effects=[pe.withStroke(linewidth=3.0, foreground="white")]),
                    Patch(facecolor="0.9", edgecolor=C_LINE, lw=0.5, ls=(0, (3, 2)))]
-        labels = [f"Mean shoreline, {start}–{end} (CoastSat)", "±1 standard deviation"]
+        labels = [f"Mean shoreline, {window.span} (CoastSat)", "±1 standard deviation"]
         if dots:
             time_bar(fig, list(axes), norm, imagery, window)
             handles.append(Line2D([], [], ls="none", marker="o", ms=3.2,
@@ -377,7 +395,7 @@ def site_figure(df, pos, boxes, imagery, centre, key, window, out_dir, norm):
         fig.legend(handles, labels, loc="outside lower center", ncol=len(handles), frameon=False)
         fig.suptitle(f"GIS {centre - HALF}–{centre + HALF}", fontsize=9.5)
         what = "" if version == "line" else f"_{sub}"
-        stem = f"mean_shoreline_{start}_{end}_on_imagery{what}_GIS{centre:02d}_{key}"
+        stem = f"mean_shoreline_{window.label}_on_imagery{what}_GIS{centre:02d}_{key}"
         dot_text = (" Dots: every satellite position the mean was taken over, geolocated along "
                     "its transect and coloured by date on the scale below the panels; the "
                     f"{'triangles' if n > 1 else 'triangle'} on the scale "
@@ -388,7 +406,7 @@ def site_figure(df, pos, boxes, imagery, centre, key, window, out_dir, norm):
                     "bottom edges are the outer domain boundaries."
                     if doms else "")
         fs.caption(fig, (
-            f"The CoastSat mean shoreline for calendar {start}–{end} (ink, white halo) and "
+            f"The CoastSat mean shoreline for {window.described} (ink, white halo) and "
             f"the ±1 standard deviation of the satellite positions behind each transect mean "
             f"(translucent white band with dashed edges, placed along each transect's direction), on "
             f"{photo_ref(imagery, window)}, GIS domains {centre - HALF}–{centre + HALF}, north up"
@@ -401,7 +419,8 @@ def site_figure(df, pos, boxes, imagery, centre, key, window, out_dir, norm):
         row["file" if version == "line" else f"file_{sub}"] = f"{sub}/{path.name}"
         if dots:
             row.update({f"positions_{y}": int((shown["year"] == y).sum())
-                        for y in range(start, end + 1)}, positions_total=len(shown))
+                        for y in range(window.lo.year, window.hi.year + 1)},
+                       positions_total=len(shown))
     return row
 
 
@@ -478,12 +497,11 @@ def _island_version(df, boxes, im, sites, window, out_dir, ext, imgs, panel_h, v
     axes[0].set_ylabel(fs.DOMAIN_AXIS_LABEL)
     fs._scalebar(axes[0], 2000.0, show_cells=False)
     fs._north_arrow(axes[0], x=0.80, y=0.07, length=0.03)
-    start, end = window
     handles = [Line2D([], [], color=C_LINE, lw=0.8,
                       path_effects=[pe.withStroke(linewidth=2.5, foreground="white")]),
                Patch(facecolor="0.9", edgecolor="none"),
                Patch(facecolor="none", edgecolor=C_LINE, lw=0.7)]
-    labels = [f"Mean shoreline, {start}–{end} (CoastSat)", "±1 standard deviation",
+    labels = [f"Mean shoreline, {window.span} (CoastSat)", "±1 standard deviation",
               "Site windows (zoom figures)"]
     if doms:
         handles.append(_domain_handle(0.5))
@@ -492,7 +510,7 @@ def _island_version(df, boxes, im, sites, window, out_dir, ext, imgs, panel_h, v
     short = PHOTO_SOURCES.get(im.year, {}).get("short", "USGS aerial photographs")
     fig.suptitle(f"{short}, {photo_label(im)}", fontsize=9.5)
     fs.caption(fig, (
-        f"The CoastSat mean shoreline for calendar {start}–{end} (ink, white halo) and the "
+        f"The CoastSat mean shoreline for {window.described} (ink, white halo) and the "
         f"±1 standard deviation of the satellite positions behind each transect mean (white "
         f"band; ~25 m wide, so near the limit of the print at this scale) on "
         f"{photo_ref([im], window)}, the island "
@@ -502,12 +520,12 @@ def _island_version(df, boxes, im, sites, window, out_dir, ext, imgs, panel_h, v
         f"in the zoom figures, labelled with their domains."
         + (" White boxes with grey edges: every Barrier3D model domain (500 m alongshore), "
            "numbered by the ticks." if doms else "")
-        + ("" if window[0] <= im.year <= window[1] else
+        + ("" if _inside(im, window) else
            f" The photograph is from outside the window ({photo_label(im)}).")
         + " White is outside the photographs."))
     sub = VERSION_DIRS[version]
     what = "_with_domains" if doms else ""
-    path = out_dir / sub / f"mean_shoreline_{start}_{end}_on_imagery{what}_island_{im.year}.png"
+    path = out_dir / sub / f"mean_shoreline_{window.label}_on_imagery{what}_island_{im.year}.png"
     fs.save(fig, path, vector=False, close=True)
     (PUBLISH / sub).mkdir(parents=True, exist_ok=True)
     shutil.copy2(path, PUBLISH / sub / path.name)
@@ -521,7 +539,6 @@ def ribbon_figure(df, im, window, out_dir):
     """Panel (a) of the diagnostic, alone, over one year's photographs: the
     same extent and axes as coastsat_mean_shoreline.outline_figure."""
     import coastsat_mean_shoreline as cms
-    start, end = window
     ext = cms.ribbon_extent(df)
     n0, n1, e0, e1 = ext
     print("    ribbon ...")
@@ -538,30 +555,38 @@ def ribbon_figure(df, im, window, out_dir):
     ax.plot(df["y"], df["x"], "-", color=C_LINE, lw=0.8, zorder=4,
             path_effects=[pe.withStroke(linewidth=2.3, foreground="white")])
     cms.ribbon_axes(ax, ext)
-    ax.set_title(f"Mean shoreline, {start}–{end}, on the {photo_label(im)} photographs")
+    ax.set_title(f"Mean shoreline, {window.span}, on the {photo_label(im)} photographs")
     fig.legend([Line2D([], [], color=C_LINE, lw=0.8,
                        path_effects=[pe.withStroke(linewidth=2.3, foreground="white")]),
                 Line2D([], [], color="white", lw=0.8,
                        path_effects=[pe.withStroke(linewidth=1.8, foreground=fs.INK_MUTED)])],
-               [f"Mean shoreline, {start}–{end} (CoastSat)", "Island outline"],
+               [f"Mean shoreline, {window.span} (CoastSat)", "Island outline"],
                loc="outside lower center", ncol=2, frameon=False)
     fs.caption(fig, (
-        f"The CoastSat mean shoreline for calendar {start}–{end} (ink, white halo) on "
+        f"The CoastSat mean shoreline for {window.described} (ink, white halo) on "
         f"{photo_ref([im], window)}, drawn as panel (a) of "
-        f"mean_shoreline_{start}_{end}.png but flipped: alongshore across the page, easting "
+        f"mean_shoreline_{window.label}.png: alongshore across the page, easting "
         f"increasing downward, equal aspect, so the ocean is at the bottom. The ±1 standard deviation band (~25 m) is below "
         f"the resolution of the print and is not drawn. The island outline "
         f"(map_elements/hatteras_outline; its survey date is not recorded) is drawn in white "
         f"over the photographs, and as grey land and pale-blue water where no frame covers."))
-    path = out_dir / VERSION_DIRS["line"] / f"mean_shoreline_{start}_{end}_on_imagery_ribbon_{im.year}.png"
+    path = out_dir / VERSION_DIRS["line"] / f"mean_shoreline_{window.label}_on_imagery_ribbon_{im.year}.png"
     fs.save(fig, path, vector=False, close=True)
     shutil.copy2(path, PUBLISH / VERSION_DIRS["line"] / path.name)
     print(f"  ribbon figure -> {path.name}")
 
 
 def main(argv=None) -> int:
+    import coastsat_mean_shoreline as cms
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
-    ap.add_argument("--window", nargs=2, type=int, default=DEFAULT_WINDOW)
+    how = ap.add_mutually_exclusive_group()
+    how.add_argument("--window", nargs=2, type=int, metavar=("START", "END"),
+                     help="calendar years (the default, 1995 1997)")
+    how.add_argument("--window-dates", nargs=2, metavar=("FIRST", "LAST"),
+                     help="a window built by coastsat_mean_shoreline.py --window-dates")
+    how.add_argument("--centred-on", choices=sorted(cms.SURVEY_ANCHORS),
+                     help="a window built by coastsat_mean_shoreline.py --centred-on")
+    ap.add_argument("--half-width", type=int, default=cms.DEFAULT_HALF_WIDTH_YEARS)
     ap.add_argument("--sites", nargs="*", type=int,
                     help="centre GIS domains (default: the six built-in sites)")
     ap.add_argument("--only", choices=("sites", "island", "ribbon"),
@@ -574,14 +599,19 @@ def main(argv=None) -> int:
                     help=f"photographs for the island and ribbon figures (default: "
                          f"{ISLAND_YEAR} if drawn, else the first photo year)")
     a = ap.parse_args(argv)
-    window = tuple(a.window)
+    if a.centred_on:
+        window = cms.Window.centred_on(a.centred_on, a.half_width)
+    elif a.window_dates:
+        window = cms.Window.from_dates(*a.window_dates)
+    else:
+        window = cms.Window.from_years(*(a.window or DEFAULT_WINDOW))
     sites = ([(c, k) for c, k in DEFAULT_SITES if c in a.sites] + [(c, "site") for c in a.sites
               if c not in dict(DEFAULT_SITES)]) if a.sites else DEFAULT_SITES
 
     fs.apply_style()
     R = _review_module()
     imagery = []
-    years = a.photo_years or range(window[0], window[1] + 1)
+    years = a.photo_years or range(window.lo.year, window.hi.year + 1)
     for y in years:
         if R._year_files(y):
             im = R.Imagery(y, CRS)
@@ -591,7 +621,7 @@ def main(argv=None) -> int:
         elif a.photo_years:
             raise SystemExit(f"no photographs for {y} under {R.AERIAL_ROOT} (is D: on?)")
     if not imagery:
-        raise SystemExit(f"no photographs for {window} under {R.AERIAL_ROOT} (is D: on?); "
+        raise SystemExit(f"no photographs for {window.label} under {R.AERIAL_ROOT} (is D: on?); "
                          f"a window with none takes --photo-years")
 
     df = transects(window)
@@ -599,13 +629,18 @@ def main(argv=None) -> int:
     pos["t"] = [_decimal_year(d) for d in pos["date"]]
     # the date scale spans the window, widened to reach any photograph outside it
     flights = [_decimal_year(im.date) for im in imagery]
-    norm = matplotlib.colors.Normalize(min(window[0], int(min(flights))),
-                                       max(window[1] + 1, int(max(flights)) + 1))
+    lo_t = _decimal_year(window.lo)
+    hi_t = _decimal_year(window.hi + pd.Timedelta(days=1))
+    if window.calendar:     # whole years, as drawn since 09-23
+        norm = matplotlib.colors.Normalize(min(lo_t, int(min(flights))),
+                                           max(hi_t, int(max(flights)) + 1))
+    else:                   # a date window: the scale is the window itself
+        norm = matplotlib.colors.Normalize(min(lo_t, min(flights)), max(hi_t, max(flights)))
     print(f"  {len(pos)} satellite positions over {pos['transect_id'].nunique()} transects")
     boxes = gpd.read_file(DOMAIN_BOXES).to_crs(CRS)
     boxes["gis"] = np.arange(1, len(boxes) + 1)   # file order is south -> north, GIS 1-90
 
-    out_dir = mean_shoreline_dir(*window) / "on_imagery"
+    out_dir = mean_shoreline_dir(*window.key) / "on_imagery"
     out_dir.mkdir(parents=True, exist_ok=True)
     table = fs.support_dir(out_dir) / "sites.csv"
     if a.only in (None, "sites"):

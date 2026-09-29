@@ -421,7 +421,9 @@ def offset_start_dir(year: int, source: str = DEFAULT_OFFSET_SOURCE) -> Path:
 
         <year>/duneline/v<n>/     from a digitised dune line
         <year>/shoreline/v<n>/    from a CoastSat window mean
-        <year>/comparisons/       between sources; belongs to neither
+        <year>/shoreline/<v>/comparisons/   dune line vs that shoreline build
+                                  (offset_source_comparison_dir; was
+                                  <year>/comparisons/ until 2026-09-29)
 
     Nothing outside this module should join these parts by hand.
     """
@@ -506,6 +508,22 @@ def offset_comparison_dir(year: int, name: str) -> Path:
     return offset_year_dir(year) / "comparisons" / name
 
 
+def offset_source_comparison_dir(year: int, name: str,
+                                 shoreline_version: str | None = None) -> Path:
+    """<year>/shoreline/<v>/comparisons/<name>/ -- a dune line vs shoreline
+    comparison, filed with the SHORELINE build it was drawn against.
+
+    Since 2026-09-29 (Hannah: "maybe these should instead be organized under
+    their version"). The shoreline source gained a second version that day
+    (v2, the DEM-centred window), and a shared <year>/comparisons/<name>/
+    could not say which shoreline build it held. Each shoreline build now
+    carries its own comparison against the dune line; the dune version used
+    is written into the comparison's README and caption. offset_comparison_dir
+    remains for anything compared between sources that is not versioned.
+    """
+    return offset_build_dir(year, shoreline_version, "shoreline") / "comparisons" / name
+
+
 def offset_file(year: int, kind: str = "padded", total_domains: int = 120,
                 version: str | None = None,
                 source: str = DEFAULT_OFFSET_SOURCE) -> Path:
@@ -565,17 +583,23 @@ def duneline_geojson(vintage, version: str | None = None) -> Path:
 # pairing is therefore a period year -> a window, and this is the only place
 # it is spelled.
 #
-# 1996 reads the mean of calendar 1995-1997: about 28 positions per CoastSat
-# transect, a standard error of 2-3 m on each transect mean, which is inside
-# the 10 m Barrier3D cell. The window is the CALENDAR span, not a span centred
-# on the 1997 dune survey, following [[cascade-period-is-the-calendar-year]] --
-# the interval mismatch against the dune line is reported, not corrected.
+# SINCE 2026-09-29 each window is +-1 yr of the middle of the lidar flights
+# the start DEM is built on (Hannah, by interview): the offset is a snapshot
+# the model starts from beside that DEM, so it is dated like the DEM.
+#   1996: the 1996 ALACE lidar, flown 1996-10-09..16 -> 1995-10-12..1997-10-12
+#   2010: the 2009 USACE NCMP lidar, flown 2009-08-10..24 -> 2008-08-17..2010-08-17
+# These are the windows of the shoreline v2 builds (CURRENT since the same
+# day). Only the OFFSET reads this table -- island_offset_hybrid's default raw
+# file -- so it departs from [[cascade-period-is-the-calendar-year]] for the
+# offset alone; observed change, rates and scoring keep their calendar windows
+# and never read it. The anchors live in coastsat_mean_shoreline.SURVEY_ANCHORS.
 #
-# 2010 reads calendar 2009-2011 (added 2026-09-28, Hannah: the same +-1 yr
-# window as 1996, for the offset-source comparison over 2010-2024).
+# Until then: 1996 -> calendar 1995-1997 (2026-09-22), 2010 -> calendar
+# 2009-2011 (2026-09-28); those built shoreline/v1, whose raw files are kept
+# in each v1 folder.
 SHORELINE_WINDOW_FOR_YEAR = {
-    1996: (1995, 1997),
-    2010: (2009, 2011),
+    1996: ("1995-10-12", "1997-10-12"),
+    2010: ("2008-08-17", "2010-08-17"),
 }
 
 
@@ -599,8 +623,10 @@ def shoreline_raw_file(window) -> Path:
     stations of one averaging window's mean shoreline, the shoreline
     counterpart of dune_raw_file(). Written by duneline_to_raw_offsets.py from
     the mean-shoreline geojson, which hat_observed_rates owns."""
-    a, b = window
-    return RAW_OFFSET_DIR / f"{int(a)}_{int(b)}_shoreline_offset_raw.csv"
+    # a window is two calendar years (1995, 1997) or two ISO dates, and the
+    # file is named as the mean_shoreline folder is (mean_shoreline_label)
+    a, b = (str(v) if "-" in str(v) else str(int(v)) for v in window)
+    return RAW_OFFSET_DIR / f"{a}_{b}_shoreline_offset_raw.csv"
 
 
 def shoreline_raw_file_for_year(year, strict: bool = True):

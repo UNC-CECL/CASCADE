@@ -27,7 +27,7 @@ Largest angle between neighbouring domains: real reach 28.3 deg; buffers 27.7 de
 
 ## CURRENT
 
-`../CURRENT` = `v1` since 2026-09-24. `HAT_OFFSET_VERSION_1996_SHORELINE` in the environment outranks it for one run.
+`../CURRENT` named `v1` from 2026-09-24 to 2026-09-29, when it moved to `v2` (the DEM-centred window). Select this build for one run with `HAT_OFFSET_VERSION_1996_SHORELINE=v1`.
 
 ## Step output
 
