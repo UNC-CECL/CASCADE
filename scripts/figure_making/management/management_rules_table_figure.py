@@ -251,6 +251,7 @@ def build(variant):
         ax.plot([TL, TR], [y, y], color=color, lw=lw, zorder=5,
                 solid_capstyle="butt")
 
+    # Top-aligned in the cell, as a journal table sets a wrapped row
     def put(lines, x, y_top, w, fs, ha="left", **kw):
         for k, ln in enumerate(lines):
             tx = (x + GUT / 2 if ha == "left"

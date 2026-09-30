@@ -151,6 +151,7 @@ class Frame:
         c, s = math.cos(-self.theta), math.sin(-self.theta)
         return np.c_[c * xy[:, 0] - s * xy[:, 1], s * xy[:, 0] + c * xy[:, 1]] + self.origin
 
+    # UTM bounding box that covers a rotated-frame window
     def unrotate_bounds(self, x0, x1, y0, y1):
         corners = np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], float) - self.origin
         c, s = math.cos(self.theta), math.sin(self.theta)
@@ -158,18 +159,21 @@ class Frame:
                      s * corners[:, 0] + c * corners[:, 1]] + self.origin
         return back[:, 0].min(), back[:, 1].min(), back[:, 0].max(), back[:, 1].max()
 
+    # Unit vector of true north in the rotated frame
     def north(self):
         return np.array([math.sin(self.theta), math.cos(self.theta)])
 
     def image_transform(self, ax):
         return Affine2D().rotate_deg_around(*self.origin, self.deg) + ax.transData
 
+    # Rotated-frame point on the reach axis at a (fractional) GIS id
     def along(self, gis):
         cen = self.pts(self.centroids)
         i = np.asarray(gis, float) - FIRST
         idx = np.arange(len(cen))
         return np.c_[np.interp(i, idx, cen[:, 0]), np.interp(i, idx, cen[:, 1])]
 
+    # (x0, x1, y0, y1) of the reach with asymmetric padding, rotated frame
     def window(self, dom, pad_along_km, pad_sea_km, pad_sound_km):
         x0, y0, x1, y1 = self.geoms(dom.geometry).total_bounds
         x0 -= pad_along_km * 1000
@@ -1542,11 +1546,13 @@ def fig_management_footprint(dom, outline, roads, frame):
     TINT_FILL = 0.45
     TINT_ROAD = 0.30
 
+    # Where a label's leader stops
     def anchor_at(gis):
         sel = dom.ID.isin(gis).values
         _x0, _y0, _x1, _y1 = rdom[sel].total_bounds
         return (float(_x0), float(_x1), _y0 if sea[1] < 0 else _y1)
 
+    # The shared basemap
     def panel(ax, i, name, scalebar, show_road):
         draw_reach(ax, frame, dom, outline, roads[2008], vector=True, window=window,
                    label_villages=True, water_labels=False, piers=False,
