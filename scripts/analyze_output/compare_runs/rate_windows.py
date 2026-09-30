@@ -475,8 +475,8 @@ def _ends_clause(model_set):
     if sm is None:
         return " with the two end domains solved against the CoastSat target"
     return (" with the two end domains solved against the dune-line change "
-            f"({sm} reading, endpoint estimator; experiments/2026-09-16-dune-"
-            "edgesolve) instead of CoastSat")
+            f"({sm} reading, endpoint estimator; "
+            f"{DUNE_SOLVE_DIR.relative_to(RAW_RUNS).as_posix()}) instead of CoastSat")
 
 
 # The model estimator in legend words
