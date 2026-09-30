@@ -1,51 +1,14 @@
 #!/usr/bin/env python3
-r"""
-rerender_run_figures.py
-==============================================================================
-Redraw a finished run's figures WITHOUT re-running the model.
+"""
+Redraw a finished run's figures without re-running the model, from its saved shoreline matrix.
 
-WHY THIS EXISTS
-    The per-run figures are built during a run, so a change to the plotting
-    package only reaches a run that is executed again. After the 2026-09-10
-    restyle that left 164 run folders holding figures in the previous look --
-    two LOWESS curves, the wave height and the SLR rate in the title, a 22 in
-    canvas. Re-running them would be 5-11 hours of model time and would rewrite
-    240 MB of archive per run to change a picture.
-
-    Every input those figures need is already saved beside them:
-
-        <run>_shoreline_matrix.npy    (annual_states, padded_domains), metres
-        <run>_run_metadata.json       period, wave height, BE state, run name
-
-    so this reads those two, recomputes the plotted rate with the same
-    function the run used, rebuilds the CoastSat series from the same CSVs,
-    and calls the same plotting entry points. The .npz is never opened.
-
-WHAT IT WILL AND WILL NOT REPRODUCE
-    The two rate PNGs are exact: `compute_lrr` is deterministic on the saved
-    matrix, and the CoastSat side is read from files on disk.
-
-    The GIFs are exact EXCEPT for the roadway-relocation markers. Those come
-    off each RoadwayManager's `_road_relocated_TS`, which lives only in the
-    .npz, so `--gifs` draws no relocation markers unless `--open-npz` is
-    given. A run whose GIFs carry markers is therefore left alone by default:
-    the script detects them from the run's road-management table and SKIPS
-    the GIFs for that run, rather than quietly dropping the markers. `--open-npz`
-    loads the archive for those runs and keeps them.
-
-WHAT IT NEVER TOUCHES
-    The .npz, the .npy matrix, every CSV and TXT in the run folder, and
-    output/raw_runs/run_index.csv. It only overwrites image files, and only
-    the ones it can rebuild.
-
-USAGE
     python rerender_run_figures.py --dry-run
-    python rerender_run_figures.py --arm matrix/1984_2004/calibBE
-    python rerender_run_figures.py --match "*calibBE*groin" --gifs
-    python rerender_run_figures.py --run-dir output/raw_runs/.../HAT_...
-    python rerender_run_figures.py --arm matrix --ylim=-10,10 --ylim-real=-7.5,7.5
-    python rerender_run_figures.py --arm sensitivity --lowess-only
-==============================================================================
+    python rerender_run_figures.py --arm matrix/1996_2010/edgeBE [--gifs] [--open-npz]
+    python rerender_run_figures.py --run-dir output/raw_runs/.../HAT_... [--ylim=-10,10]
+
+Overwrites only image files it can rebuild exactly; never touches the .npz,
+the matrix, the tables or run_index.csv. GIFs with relocation markers need
+--open-npz. Details: scripts/figure_making/model_output/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -68,6 +31,7 @@ from pathlib import Path
 import numpy as np
 
 
+# The project root: the first parent holding data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -96,14 +60,13 @@ from cascade_pipeline.plotting.shoreline_gif import (  # noqa: E402
 from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_ANNOTATIONS, HATTERAS_DOMAINS)
 
+# --- CONFIG ------------------------------------------------------------------
 RAW_RUNS = REPO / "output" / "raw_runs"
 # Resolved through hat_observed_rates.py (2026-09-18), not typed.
 from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT as COASTSAT_BASE_DIR  # noqa: E402
 from site_layer.hat_topo_version import RAW_OFFSET_DIR  # noqa: E402
 
-# These four MUST match section 8/9 of HAT_hindcast_1984_2024.py. They are
-# restated rather than imported because importing that module runs a hindcast.
-# The assertion in `check_conventions` catches them drifting apart.
+# Must match section 8/9 of the hindcast runner; check_conventions asserts it
 LOWESS_CONFIG = LowessConfig(window_domains=(7,), skip_southern_domains=10)
 RATE_ESTIMATOR = "lrr"
 FLIP_SIGN_MODEL = True
@@ -116,11 +79,7 @@ COASTSAT_DATASETS = [
     CoastSatDataset(
         label="CoastSat LRR (2004-2024)", period_start=2004,
         csv_path=str(COASTSAT_BASE_DIR / "2004_2024" / "transect_lrr_full.csv")),
-    # The two windows the runner added on 2026-09-11 (section 8 of
-    # HAT_hindcast_1984_2024.py). Missing here until 2026-09-27, so a 1996 or
-    # 2010 run was redrawn with NO CoastSat curve: build_coastsat_series found
-    # no active dataset and the overlay drew nothing. Keep in step with the
-    # runner's list.
+    # The 1996 and 2010 windows, as the runner lists them
     CoastSatDataset(
         label="CoastSat LRR (1996-2010)", period_start=1996,
         csv_path=str(COASTSAT_BASE_DIR / "1996_2010" / "transect_lrr_full.csv")),
@@ -129,8 +88,7 @@ COASTSAT_DATASETS = [
         csv_path=str(COASTSAT_BASE_DIR / "2010_2024" / "transect_lrr_full.csv")),
 ]
 
-# The full-record rate the PROJECTED position change is built from (the
-# advisor's target, 2026-09-19): the 1996-2024 LRR carried onto a run window.
+# The full-record rate the projected position change is built from
 LONG_TERM_DATASET = CoastSatDataset(
     label="CoastSat LRR (1996-2024)", period_start=1996,
     csv_path=str(COASTSAT_BASE_DIR / "1996_2024" / "transect_lrr_full.csv"))
@@ -138,14 +96,8 @@ LONG_TERM_WINDOW = (1996, 2024)
 POSITION_DIR = "position_change"
 
 
+# The two observed references a run's position change is drawn against
 def position_change_jobs(run, cs_cache):
-    """(reference, scaled cs_series, observed legend, caption phrase) for the
-    two observed references a run's position change is drawn against.
-
-    Named by the window the rate was FITTED on (the 09-21 vocabulary): the
-    run window's own LRR x span is TOTAL change; the 1996-2024 LRR x span is
-    PROJECTED change. Both are LRR x the run's span in years.
-    """
     span = run.end_year - run.start_year
     win = f"{run.start_year}–{run.end_year}"
     lt = f"{LONG_TERM_WINDOW[0]}–{LONG_TERM_WINDOW[1]}"
@@ -174,15 +126,11 @@ GIF_JOBS = [
     dict(range="groin", mode="position", pad=9),
     dict(range="groin", mode="difference", pad=9),
 ]
+# -----------------------------------------------------------------------------
 
 
+# Stop if the runner's figure conventions no longer match the constants here
 def check_conventions() -> None:
-    """Fail loudly if the hindcast's figure conventions have moved.
-
-    A re-render that silently used a different estimator or LOWESS window than
-    the run would put two incompatible curves in one folder, which is exactly
-    the failure this script exists to clean up.
-    """
     src = (REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py").read_text(
         encoding="utf-8", errors="replace")
     want = {
@@ -201,12 +149,8 @@ def check_conventions() -> None:
               "HAT_hindcast_1984_2024.py before re-rendering.")
 
 
-# =============================================================================
-# READING ONE RUN
-# =============================================================================
-
+# Run folders to act on: those holding a *_run_metadata.json
 def find_runs(args) -> list[Path]:
-    """Run directories to act on: those holding a *_run_metadata.json."""
     if args.run_dir:
         roots = [Path(args.run_dir).resolve()]
     else:
@@ -222,8 +166,8 @@ def find_runs(args) -> list[Path]:
     return out
 
 
+# (run_name, metadata, shoreline matrix in m) for one run, or None if unusable
 def load_run(run_dir: Path):
-    """(run_name, metadata, shoreline_m) for one run, or None if unusable."""
     meta_hits = sorted(run_dir.glob("*_run_metadata.json"))
     if not meta_hits:
         return None, None, None, "no run metadata"
@@ -239,6 +183,7 @@ def load_run(run_dir: Path):
     return run_name, meta, shoreline_m, None
 
 
+# The RunInfo the plotting package expects, from a run's metadata
 def run_info_from(meta: dict, run_name: str, run_dir: Path) -> RunInfo:
     period = meta.get("period", {})
     wave = meta.get("wave climate", {})
@@ -255,14 +200,8 @@ def run_info_from(meta: dict, run_name: str, run_dir: Path) -> RunInfo:
     )
 
 
+# Do this run's GIFs carry road-relocation markers? (from its road table)
 def has_relocation_markers(run_dir: Path, run_name: str) -> bool:
-    """Whether this run's GIFs carry roadway-relocation markers.
-
-    Read from the run's road-management table, which the run writes beside
-    the figures; the per-year flags themselves live only in the .npz.
-    Resolved rather than joined: the table is `tables/road_management.csv`
-    in the current layout and `road_management_summary.csv` in the old one.
-    """
     path = resolve(run_dir, "road_csv", run_name)
     if not path.is_file():
         return False
@@ -274,8 +213,8 @@ def has_relocation_markers(run_dir: Path, run_name: str) -> bool:
         return False
 
 
+# Per-year relocation flags, by opening the archive (slow)
 def relocations_from_npz(run_dir: Path, run_name: str, n_states: int):
-    """The per-year relocation flags, by opening the archive. Slow (240 MB)."""
     npz = resolve(run_dir, "archive", run_name)
     if not npz.is_file():
         return None
@@ -294,10 +233,7 @@ def relocations_from_npz(run_dir: Path, run_name: str, n_states: int):
     return events
 
 
-# =============================================================================
-# REDRAWING ONE RUN
-# =============================================================================
-
+# Redraw one run's rate figures, position-change figures and (optionally) GIFs
 def rerender(run_dir: Path, args, cs_cache: dict) -> dict:
     run_name, meta, shoreline_m, why = load_run(run_dir)
     result = {"dir": run_dir, "run": run_name, "figures": 0, "gifs": 0,
@@ -337,9 +273,7 @@ def rerender(run_dir: Path, args, cs_cache: dict) -> dict:
                                      publication_text=True)
     fig_kwargs = dict(domains=HATTERAS_DOMAINS, annotations=HATTERAS_ANNOTATIONS,
                       lowess_config=LOWESS_CONFIG, config=config)
-    # Resolved, not joined: this OVERWRITES the figure the run already has,
-    # so it has to land wherever that figure currently lives -- the new
-    # figures/ subfolder, or the old flat name if the run has not moved.
+    # Resolved, not joined: overwrite the figure wherever the run keeps it
     rate_fig_kind = "figure_rate" if PLOT_REAL_DOMAINS_ONLY else "figure_rate_buffers"
     rate_png = resolve(run_dir, rate_fig_kind, run_name)
     buffers_png = resolve(run_dir, "figure_rate_buffers", run_name)
@@ -387,9 +321,7 @@ def rerender(run_dir: Path, args, cs_cache: dict) -> dict:
             result["figures"] += 2
 
     if args.gifs:
-        # REFRESH ONLY. A run whose GIFs were disabled has none on disk, and
-        # drawing four for it now would add files the run never produced and
-        # change what the tree contains. Skip it.
+        # Refresh only: a run without GIFs does not get new ones
         if not (any(run_dir.glob("*.gif"))
                 or any((run_dir / ANIMATIONS).glob("*.gif"))):
             result["skipped"] = "gifs: this run has none to refresh"
@@ -434,8 +366,7 @@ def rerender(run_dir: Path, args, cs_cache: dict) -> dict:
     return result
 
 
-# =============================================================================
-
+# Run: find the runs, check conventions, redraw each, report
 def main() -> None:
     ap = argparse.ArgumentParser(
         description=__doc__.splitlines()[1],

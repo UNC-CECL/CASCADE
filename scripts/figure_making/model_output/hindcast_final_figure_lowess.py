@@ -1,67 +1,13 @@
 #!/usr/bin/env python3
-"""The calibrated hindcast against the LOWESS reference curve — presentation figure.
+"""
+The hindcast result figure: both periods' full-management runs against the LOWESS reference curve.
 
-THE hindcast result figure. It had a companion, HAT_hindcast_final_figure.py,
-which drew the same two runs scored over D2-D89; on 2026-09-14 this figure took
-on both scoring windows and the companion was retired to
-model_output/superseded_20260914/. The three features below were what distinguished
-the two, and are now simply what this figure has.
+    python scripts/figure_making/model_output/hindcast_final_figure_lowess.py [--preset edgeBE]
 
-    SHARED Y AXIS
-        Both periods on identical limits, so the panels can be read against
-        each other rather than only against their own observations. That
-        comparison is the point: period 2 sits almost entirely above period 1,
-        which is the post-Isabel recovery and the nourishment era showing up as
-        a whole-island shift in the rate, not as a local feature.
-
-    THE LOWESS CURVE ONLY, NOT THE SPLICED TARGET
-        The calibration target is not one curve: GIS 1-10 are raw per-domain
-        means and D11 north is the 7-domain LOWESS. That splice is right for
-        calibrating -- the raw means keep the short-wavelength signal the
-        source/sink field has to answer for -- but it makes an awkward figure,
-        because the eye reads a change of estimator as a change of coast.
-        Here the LOWESS is drawn throughout.
-
-        D1-D10 IS DRAWN DASHED. The project excludes the LOWESS there by
-        convention (`skip_southern_domains = 10`), because the smoother is
-        poorly constrained at the end of its range and Cape Point's
-        attachment-detachment cycle is exactly the short-wavelength signal a
-        3.5 km smoother destroys. Dashing it shows the data without implying it
-        carries the same weight.
-
-    BOTH SCORING WINDOWS, PRINTED PER PANEL
-        D11-D89 is where the LOWESS curve and the calibration target are the
-        SAME numbers, so that statistic is the one for the line actually drawn.
-        D2-D89 is the project's canonical skill window -- rmse_interior_m_yr in
-        run_index.csv, and what the groin fit and the source/sink convergence
-        were ranked on -- and additionally takes in D2-D10, where the target is
-        the raw spliced domain mean and the model is at its worst (RMSE ~1.1
-        against ~0.45 north of it). Both are correct for what they measure and
-        mixing them is the error, which is why both are on the panel and
-        labelled. They are COMPUTED here, both of them: the D2-D89 pair used to
-        be a literal quoted from the companion figure, and it sat twelve days
-        stale after the 1984 run was remade on topography v2.
-
-ALSO ADDED FOR PRESENTATION
-    An observational spread band (+/- 1 SD of transect rates within each
-    domain, from `unc_m_yr`'s parent transect table). A domain is a 500 m
-    average over ~10 transects, and showing that spread makes clear how much
-    real alongshore variability the domain mean hides -- and therefore which
-    model-observation gaps are meaningful and which sit inside the noise.
-
-    Place names along the top, from PHYSICAL_ZONES, so an audience can locate
-    features without a separate map.
-
-Usage:
-    python hindcast_final_figure_lowess.py [--preset edgeBE|zeroBE]
-
-ON THE 1996 -> 2010 -> 2024 CHAIN since 2026-09-18, nogroin arm, edgeBE by
-default. calibBE is kept in PRESETS but is not solved on this chain.
-
-Writes output/comparisons/hindcast_calibrated/hindcast_<preset>_lowess_reference.png
-and, with PUBLISH, output/figures/5-results/hindcast_<preset>.png with its
-caption in supporting/CAPTIONS.md. Both are the same house-style figure; the
-title and note that were drawn on the canvas are the caption (2026-09-18).
+Scores over D11-D89 and the canonical D2-D89 on the figure; reads the nogroin
+matrix runs of the 1996 -> 2010 -> 2024 chain. Writes
+output/comparisons/hindcast_calibrated/ and output/figures/5-results/hindcast_<preset>.png.
+Details: scripts/figure_making/model_output/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -89,21 +35,14 @@ _hssys.path.insert(0, str(next(_q for _q in _HSP(__file__).resolve().parents
                                if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_figure_style as _hs  # noqa: E402
 OUT_DIR = _hs.COMPARISONS_ROOT / "hindcast_calibrated"
-# The manuscript copy goes with the other figures, by subject
-# (output/figures/README.md); the presentation version stays in OUT_DIR.
+# The manuscript copy goes to output/figures/5-results/
 FIGURES_DIR = _hs.figure_dir("results")
-# ON since the layout was redrawn for the house-style column (2026-09-18).
-# Before that the labels, title and legend overlapped, and it was held off so
-# a broken figure could not land in output/figures/.
+# On since the layout was redrawn for the house-style column (2026-09-18)
 PUBLISH = True
 
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. Applied at
-# MODULE level even though this file imports matplotlib inside a function --
-# apply_style() sets rcParams, so it only has to run before the figure is
-# built, and it was never called at all until 2026-09-17.
+# House style (site_layer/hat_figure_style.py), applied at import
 from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
                               FIG_W_DOUBLE, record_caption, save,
                               C_1984, C_1997, INK_MUTED, DOMAIN_AXIS_LABEL)
@@ -113,14 +52,11 @@ from cascade_pipeline.run_registry import find_run_dir          # noqa: E402
 from site_layer.hat_observed_rates import lrr_csv                # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_PERIODS     # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 LOWESS_PATH = (PROJECT_BASE_DIR / "scripts" / "input_prep" / "7-source-sink"
               / "2-calibrate" / "be_zone_residual_fit.py")
 
-# THE CANONICAL CHAIN, 1996 -> 2010 -> 2024 (moved from 1984/2004 on
-# 2026-09-18). Ends come from HATTERAS_PERIODS. The full-management arm is
-# road_bdm in 1996-2010, which schedules no fill, and road_bdm_nourish after.
-# GROIN: the matrix on this chain is nogroin only -- the groin is still being
-# fitted in the sweep -- so the figure draws the nogroin arm and says so.
+# The canonical chain 1996 -> 2010 -> 2024; nogroin, as the matrix is
 GROIN = "nogroin"
 _CHAIN = ((1996, "road_bdm", "a", C_1984), (2010, "road_bdm_nourish", "b", C_1997))
 PERIODS = {}
@@ -134,16 +70,16 @@ SKIP_SOUTH = 10               # matches LOWESS_CONFIG.skip_southern_domains
 SCORE_DOMAINS = range(SKIP_SOUTH + 1, 90)
 RESERVED_COLOUR = "#FF8C00"
 
-# Non-overlapping display spans. PHYSICAL_ZONES overlaps at D9-D10 (Cape Point
-# and Buxton-Avon both claim them) and assign_physical_zone resolves that by
-# first match; a label strip has to pick one, so it picks the same one.
+# Non-overlapping place-label spans (D9-D10 go to Cape Point, as assign_physical_zone does)
 PLACE_LABELS = [
     (1, 10, "Cape Point"), (11, 20, "Buxton"), (21, 31, "Avon"),
     (32, 59, "Mid-island"), (60, 74, "Wimble Shoals"),
     (75, 83, "Rodanthe"), (84, 90, "Pea Island"),
 ]
+# -----------------------------------------------------------------------------
 
 
+# Load be_zone_residual_fit.py by path, for its LOWESS and observation loaders
 def analysis_module():
     spec = importlib.util.spec_from_file_location("_lowess", LOWESS_PATH)
     module = importlib.util.module_from_spec(spec)
@@ -151,13 +87,8 @@ def analysis_module():
     return module
 
 
+# One period's LOWESS curve, transect SD by domain, and the transects
 def lowess_and_spread(module, start, csv_path):
-    """(lowess_by_domain, sd_by_domain) for one period.
-
-    The LOWESS is the widest window's smoothed curve across ALL domains --
-    build_target_table would splice raw means over D1-D10, which is what this
-    figure is deliberately not doing.
-    """
     from cascade_pipeline.coastsat_lowess import (CoastSatDataset,
                                                  build_coastsat_series)
     series = build_coastsat_series(
@@ -175,11 +106,7 @@ def lowess_and_spread(module, start, csv_path):
     frame["domain"] = frame["domain_number"].astype(int)
     frame["lrr"] = frame["lrr_m_yr"].astype(float)
 
-    # A domain is 500 m holding ~10 transects. Plotted at the domain integer
-    # they stack into a vertical column, which reads as one uncertain value
-    # rather than as an alongshore gradient. Spread them across the domain in
-    # transect order instead. The index is the LAST numeric field of the id --
-    # the first is the CoastSat site number and grabbing it sorts by site.
+    # Spread each domain's transects across it in transect order, not stacked at the integer
     order = frame["transect_id"].astype(str).str.split("_").str[-1]
     frame["t_index"] = pd.to_numeric(order, errors="coerce")
     frame = frame.sort_values(["domain", "t_index"])
@@ -191,14 +118,11 @@ def lowess_and_spread(module, start, csv_path):
     return lowess, {int(k): float(v) for k, v in sd.items()}, frame
 
 
+# One run's per-domain rates and its name, resolved through run_registry
 def run_rates(period, preset, scenario):
-    # The matrix runs carry the offset token since the metres fix (2026-09-24);
-    # without it this found only the archived ÷10 runs.
+    # Matrix runs carry the offset token since the metres fix (2026-09-24)
     name = f"HAT_{period}_{preset}_offsetmetres_{scenario}_{GROIN}"
-    # Resolved rather than joined by hand: a hand-built path has no slot for
-    # the arm component and reads an arm-scoped run as missing. The retired
-    # companion carried a twin of this function, in
-    # model_output/superseded_20260914/HAT_hindcast_final_figure.py.
+    # Resolved through run_registry, never joined by hand
     try:
         run_dir = find_run_dir(RAW_RUNS, name, period, preset)
     except FileNotFoundError as exc:
@@ -208,14 +132,7 @@ def run_rates(period, preset, scenario):
     return pd.read_csv(path).set_index("gis_domain")["lrr_m_yr"], name
 
 
-# THE PRESET OWNS EVERY WORD THAT NAMES THE CONFIGURATION. Added 2026-09-14
-# alongside the edgeBE companion. --preset already existed here, but the
-# filename, the title and the footnote were hardcoded to calibBE, so any other
-# preset overwrote the calibrated figure with a page still calling itself
-# calibrated. `stem` must stay in step with the same table in
-# the retired companion's table (model_output/superseded_20260914/), which named
-# the same stems -- kept aligned so its output and this figure's still sort
-# together in the folder.
+# The preset names the file, title and footnote, so presets never overwrite each other
 PRESETS = {
     "calibBE": dict(
         stem="hindcast_calibrated",
@@ -252,6 +169,7 @@ PRESETS = {
 }
 
 
+# Run: load both periods, score both windows, draw, save both copies
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     # calibBE is not solved on the 1996/2010 chain, so edgeBE is the default.
@@ -271,22 +189,7 @@ def main():
                                               annotation_legend_handles)
     from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS
 
-    # Label heights are tuned PER FIGURE, not in the shared config, because
-    # they depend on this figure's y range and on what is drawn where. The
-    # defaults (groin 0.68, piers 0.76) put "Buxton Groin" through the D1-D10
-    # transect scatter and "Avon Pier" through both shoreline curves.
-    #
-    #   Buxton Groin  0.78  below the "Buxton" town label (0.92 put the two on
-    #                       top of each other at the 09-18 column width) and
-    #                       still above the scatter in (a); the
-    #                       "Buxton" town label is centred at D7.5 so its box
-    #                       clears D5.5 horizontally.
-    #   Avon Pier     0.85  the "Avon" town span is ALSO centred on D26, and it
-    #                       sits at 0.90, so the pier has to hang below it.
-    #   Rodanthe Pier 0.72  the "Rodanthe" village line is at D80 with its label
-    #                       at 0.84; dropping the pier clears that, and D79 is
-    #                       deeply erosional in both periods so the mid-panel is
-    #                       empty there.
+    # Label heights tuned for this figure's y range and layout (README)
     annotations = dataclasses.replace(
         HATTERAS_ANNOTATIONS,
         groin_label_y=0.78,
@@ -300,13 +203,7 @@ def main():
         csv = str(lrr_csv(meta["start"], meta["end"]))
         lowess, sd, transects = lowess_and_spread(module, meta["start"], csv)
         model, run_name = run_rates(key, args.preset, meta["scenario"])
-        # WHAT THE COMPANION FIGURE REPORTS, COMPUTED, NOT REMEMBERED. The
-        # footnote quotes the D2-D89 score so a reader can see why it differs
-        # from this figure's D11-D89 one. It used to be a literal, and on
-        # 2026-09-14 it was found to be twelve days stale: written 09-02, it
-        # still held the pre-v2 numbers after the 1984 run was remade on
-        # topography v2 on 09-07. Same target, same model, same window as
-        # the runner's own interior metric -- so it cannot drift from it.
+        # The D2-D89 score is computed here, never quoted, so it cannot go stale
         spliced = module.load_observed(meta["start"], csv)[1]
         wide = [g for g in range(2, 90)
                 if g in model.index and not np.isnan(spliced.get(g, np.nan))]
@@ -327,10 +224,7 @@ def main():
             values = np.array([source.get(g, np.nan) for g in gis], dtype=float)
             lo = min(lo, np.nanmin(values))
             hi = max(hi, np.nanmax(values))
-    # The D1-D10 transect scatter is drawn too, and at Cape Point it runs past
-    # both curves; a limit set on the curves alone clipped it (09-18). It only
-    # widens the axis as far as it reaches, without the label headroom the
-    # curves get -- the place names sit well north of D1-D10.
+    # Widen the axis for the D1-D10 scatter too, without extra label headroom
     s_lo, s_hi = np.inf, -np.inf
     for d in panels.values():
         south_t = d["transects"][d["transects"]["domain"] <= SKIP_SOUTH]["lrr"]
@@ -338,18 +232,11 @@ def main():
             s_lo = min(s_lo, float(south_t.min()))
             s_hi = max(s_hi, float(south_t.max()))
     pad = 0.10 * (hi - lo)
-    # Asymmetric: the top needs room for the place-name strip, the bottom does
-    # not, and a symmetric pad on a shared axis wastes a band of panel (b).
+    # Asymmetric padding: only the top needs room for place names
     ylim = (min(lo - pad * 0.45, s_lo - pad * 0.1),
             max(hi + pad * 1.5, s_hi + pad * 0.1))
 
-    # HOUSE STYLE (2026-09-18). This block drew for a 15 in presentation page
-    # -- 11-15 pt type, a suptitle and a paragraph of note on the canvas --
-    # and when figsize() put it on the 190 mm column on 09-17 the ylabels
-    # clipped and the note ran under the legend. Now: house type sizes, the
-    # letter and period at the left above each panel, the two scoring windows
-    # at the right above it (they used to sit in a box over the curves), the
-    # place names once on (a), and the title and note in CAPTIONS.md.
+    # House-style layout: titles at the panels, place names once, title and note in the caption
     figure, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.0),
                                 sharex=True, sharey=True)
 
@@ -359,17 +246,10 @@ def main():
         mod = np.array([d["model"].get(g, np.nan) for g in gis], dtype=float)
         spread = np.array([d["sd"].get(g, np.nan) for g in gis], dtype=float)
 
-        # Communities, village centres, piers, groins and shoal zones, from the
-        # shared layer every other cascade_pipeline figure uses -- so this
-        # figure cannot disagree with the annotated run plots about where the
-        # Buxton groin or the Avon pier is. Named on (a) only; (b) has the
-        # same bands, and the same eight names twice is clutter.
+        # Place layer from the shared annotations, named on (a) only
         add_geographic_annotations(axis, annotations, label=(i == 0))
 
-        # The D5-D7 (groin-reserved) and D1/D90 (locked) spans were dropped
-        # from this figure: with the geographic annotation layer in place the
-        # Buxton area carried four overlapping fills and read as clutter. Both
-        # facts are stated in the caption instead.
+        # Reserved and locked spans are stated in the caption, not drawn
         axis.axvspan(0.5, SKIP_SOUTH + 0.5, facecolor="none",
                      edgecolor="#999999", hatch="\\\\\\", linewidth=0.0,
                      alpha=0.30, zorder=0)
@@ -378,10 +258,7 @@ def main():
                           alpha=0.22, zorder=2, linewidth=0,
                           label="observed spread (±1 SD of transects)")
 
-        # Individual transects over D1-D10. The LOWESS is dashed there because
-        # the smoother is unreliable at the end of its range; the scatter is
-        # the actual evidence, and it shows the Cape Point spread the smooth
-        # curve cannot represent.
+        # D1-D10 transects drawn; the LOWESS is dashed there, where the smoother is unreliable
         south_t = d["transects"][d["transects"]["domain"] <= SKIP_SOUTH]
         axis.plot(south_t["x"], south_t["lrr"], linestyle="none",
                   marker="o", markersize=1.8, color=INK_MUTED, alpha=0.6,
@@ -409,14 +286,7 @@ def main():
         corr = float(np.corrcoef(mm, oo)[0, 1])
         summary.append((d["label"], d["run"], rmse, bias, corr, len(shared)))
 
-        # BOTH SCORING WINDOWS, ON THE FIGURE. Added 2026-09-14. This figure
-        # scores D11-D89, the span where the LOWESS curve IS the calibration
-        # target; the project's canonical skill column (rmse_interior_m_yr,
-        # recorded for every run in run_index.csv) is D2-D89, which also takes
-        # in D2-D10, where the target is the raw spliced mean and the model is
-        # at its worst. Printing only the narrow one reads as a better model
-        # rather than a shorter ruler, and printing it in a separate figure is
-        # what let the two drift apart.
+        # Both scoring windows on the figure: D11-D89 (the LOWESS target) and D2-D89 (canonical)
         c = d["companion"]
         axis.set_title(f"({d['panel']})  {d['label']}", loc="left",
                        fontweight="bold")
@@ -433,8 +303,7 @@ def main():
     axes[1].set_xlim(0, 91)
     axes[1].set_xticks([1, 10, 20, 30, 40, 50, 60, 70, 80, 90])
 
-    # One key for both panels, in reading order: the observations, then the
-    # model and its misfit per period, then the place layer.
+    # One key for both panels, in reading order
     found = {}
     for axis in axes:
         for h, l in zip(*axis.get_legend_handles_labels()):
@@ -450,8 +319,7 @@ def main():
     extra = annotation_legend_handles(annotations)
     handles += extra
     labels += [h.get_label() for h in extra]
-    # Figure-level, below both panels. Too many entries to sit inside an axis
-    # without covering something.
+    # Legend at figure level, below both panels
     figure.legend(handles, labels, loc="lower center", ncol=3, fontsize=7.5,
                   frameon=False, bbox_to_anchor=(0.5, 0.0))
     _leg_rows = math.ceil(len(handles) / 3)
