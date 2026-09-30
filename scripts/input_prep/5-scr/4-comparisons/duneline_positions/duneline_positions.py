@@ -1,55 +1,11 @@
 """
-duneline_positions.py
-==============================================================================
-Where did the dune line sit across Hatteras Island in 1997, 2009 and 2023 --
-the lines that stand for the model years 1996, 2010 and 2024? Positions, not
-change: a set of maps and alongshore profiles, designed by interview with
-Hannah on 2026-09-18.
+Where the dune line sat across the island in 1997, 2009 and 2023, the lines for model years 1996, 2010 and 2024.
 
-THE FIGURES   data/hatteras_init/5-scr/4-comparisons/duneline_positions/
-    overview/duneline_positions_overview.png
-        The island in three north-up segments side by side (south: Cape Point
-        to Avon, GIS 1-30; central: GIS 31-60; north: the Tri-Village to GIS
-        90), the three dune lines over the island outline and the 90 domain
-        boxes, villages named, a scale bar and north arrow per segment, and a
-        locator map. Orientation: at this scale the lines overlap; the zooms
-        show the metres.
-    zooms/zoom_<site>.png, zooms/duneline_positions_zooms.png
-        Each a window 3 domains (1.5 km) alongshore by 950 m across (650 m
-        landward, 300 m seaward of the 2023 line), every panel the same extent
-        and scale, north-up over the 2023 NOAA orthomosaic (D:, read through
-        its overviews): the three dune lines, edged for contrast, and NC-12
-        white with the year by dash pattern. Named sites Buxton (GIS 1-15),
-        Avon (21-31), the Tri-Village (68-83) and Mirlo Beach / the S-curves
-        (84-90), each window centred on the site's domain with the largest
-        |net dune change| 1997-2023; plus the domain outside them with the
-        largest change. The rule and the choices are in
-        supporting/zoom_sites.csv. The combined page puts every site on one
-        sheet.
-    context/dune_to_nc12.png
-        Distance from the dune line to the NC-12 centreline per domain, one
-        line per year: along each 100 m transect, the road's station minus
-        the dune's (both measured from the offshore datum by
-        duneline_to_raw_offsets.intersect, the function that builds the dune
-        stations), positive where the road is landward of the dune. Road
-        line per year: 1978 export for 1997, 2008 export for 2009 (the
-        model's ROAD_LINE_FOR_YEAR), today's NC-12 for 2023
-        (road_offset/raw_offset/current/).
-    context/beach_width.png
-        Dune line to CoastSat shoreline per domain, one line per year: along
-        each CoastSat transect, the shoreline position (the mean within +/-6
-        months of the dune-line image date, 3-rates/coastsat/endpoint) minus
-        the distance at which the dune line crosses that transect.
-    supporting/   PDFs, CAPTIONS.md, and the tables behind every figure.
-
-YEAR COLOURS: one ordered ramp, light grey 1997 -> slate 2009 -> ink 2023, so
-the order reads at a glance and red / blue stay free for seaward / landward.
-Every figure is also published to output/figures/2-observations/duneline/.
-
-USAGE
     python scripts/input_prep/5-scr/4-comparisons/duneline_positions/duneline_positions.py
     python scripts/input_prep/5-scr/4-comparisons/duneline_positions/duneline_positions.py --no-imagery
-==============================================================================
+
+Positions, not change: an overview map, imagery zooms and alongshore
+profiles (dune line to NC-12, beach width). Details: scripts/input_prep/5-scr/4-comparisons/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -97,6 +53,7 @@ from site_layer.hat_topo_version import (  # noqa: E402
 )
 from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 CRS = "EPSG:6347"                         # NAD83(2011) UTM 18N, the 2023 mosaic's
 IMAGERY = Path("D:/Hatteras_GIS/Aerial/2023/2023_full_aerial.tif")
 IMAGERY_LABEL = "2023 NOAA NGS orthomosaic"
@@ -117,8 +74,10 @@ NAMED_SITES = [("buxton", "Buxton", 1, 15),
                ("mirlo", "Mirlo Beach S-curves", 84, 90)]
 PICK_WIDTH = 10                           # domains in a data-picked reach
 EXT_M = 400.0                             # CoastSat transects extended landward
+# -----------------------------------------------------------------------------
 
 
+# A sibling script, loaded as a module
 def _import(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
@@ -130,11 +89,10 @@ D2R = _import("duneline_to_raw_offsets", _REPO / "scripts" / "input_prep"
               / "2-brie-offset" / "1-produce" / "duneline_to_raw_offsets.py")
 
 
-# -----------------------------------------------------------------------------
-# inputs
-# -----------------------------------------------------------------------------
+# Inputs
+
+# [(period year, dune vintage, road vintage label, road path), ...]
 def vintages():
-    """[(period year, dune vintage, road vintage label, road path), ...]"""
     out = []
     for y in PERIOD_YEARS:
         v = dune_line_for_year(y)
@@ -146,12 +104,14 @@ def vintages():
     return out
 
 
+# One file's geometries, merged and reprojected
 def _union(path, crs=CRS):
     g = gpd.read_file(path)
     g = g.set_geometry(g.geometry.force_2d()) if hasattr(g.geometry, "force_2d") else g
     return unary_union(g.to_crs(crs).geometry)
 
 
+# Domains, dune lines, roads and outline
 def load_layers():
     dom = gpd.read_file(DOMAIN_BOXES).to_crs(CRS)
     dom["gis"] = dom["domain_id"].astype(int)
@@ -164,17 +124,10 @@ def load_layers():
     return dom, outline, lines, roads
 
 
-# -----------------------------------------------------------------------------
-# measurements
-# -----------------------------------------------------------------------------
+# Measurements
+
+# Per transect
 def road_stations(tr, road):
-    """Per transect: the station of the SEAWARD-most road crossing (the one
-    nearest the dune). duneline_to_raw_offsets.intersect takes the landward-
-    most, right for a dune line but not for a road: at Buxton (GIS 8-9) the
-    transects also cross the leg of NC-12 that turns west toward Frisco, and
-    the landward-most rule put the road 1.6-2 km inland there (first draw,
-    2026-09-18). At Rodanthe the 2022 Jug Handle bridge is the only crossing,
-    so it is kept."""
     rows = []
     for _, t in tr.iterrows():
         x = t.geometry.intersection(road)
@@ -185,8 +138,8 @@ def road_stations(tr, road):
     return pd.DataFrame(rows, columns=["domain_id", "LineID", "road_station_m", "n_crossings"])
 
 
+# Per 100 m transect
 def dune_to_road():
-    """Per 100 m transect: road station minus dune station (m), per year."""
     tr = D2R.load_transects()
     rows = []
     for y, v, rlabel, rpath in vintages():
@@ -209,9 +162,8 @@ def dune_to_road():
     return t, d
 
 
+# Per CoastSat transect
 def beach_width():
-    """Per CoastSat transect: shoreline chainage minus the chainage where the
-    dune line crosses the transect (m), per year."""
     lk = pd.read_csv(transect_lookup())
     lk = lk[lk["domain_number"].between(1, N)]
     import pyogrio
@@ -232,10 +184,7 @@ def beach_width():
         if tid not in layer.index:
             continue
         geom = layer.loc[tid, "geometry"]
-        # CoastSat transects often START seaward of the dune line (256-470 of
-        # 906 missed it in the first draw, 2026-09-18), so extend each one
-        # EXT_M landward along its own direction and measure from the ORIGINAL
-        # origin: a dune landward of it gets a negative chainage.
+        # CoastSat transects often START seaward of the dune line (256-470 of 906 missed it in the first draw
         c = np.asarray(geom.coords)
         u = (c[-1] - c[0]) / np.linalg.norm(c[-1] - c[0])
         ext = LineString([tuple(c[0] - EXT_M * u)] + [tuple(p) for p in c])
@@ -260,9 +209,8 @@ def beach_width():
     return t, d
 
 
+# The PICK_WIDTH-domain reach outside the named sites with the largest mean |net dune change| ...
 def pick_reach(named):
-    """The PICK_WIDTH-domain reach outside the named sites with the largest
-    mean |net dune change| 1997-2023."""
     from site_layer.hat_observed_rates import dune_endpoint_csv
     ch = (pd.read_csv(dune_endpoint_csv(1996, 2024, "domain"))
           .set_index("domain_number")["mean_change_m"].abs())
@@ -278,13 +226,14 @@ def pick_reach(named):
     return best
 
 
-# -----------------------------------------------------------------------------
-# drawing
-# -----------------------------------------------------------------------------
+# Drawing
+
+# A stroke halo
 def _halo(width=2.4, color="white"):
     return [pe.withStroke(linewidth=width, foreground=color, alpha=0.9)]
 
 
+# Draw a line or its parts
 def _draw_geom(ax, geom, **kw):
     parts = getattr(geom, "geoms", [geom])
     for g in parts:
@@ -294,6 +243,7 @@ def _draw_geom(ax, geom, **kw):
             kw.pop("label", None)
 
 
+# Legend handles for the three dune lines
 def _year_legend(fig, roads=True, loc="outside lower center"):
     h = [Line2D([], [], color=YEAR_C[v], lw=LINE_LW) for v in YEAR_C]
     lab = [f"dune line {v} (for {y})" for v, y in zip(YEAR_C, PERIOD_YEARS)]
@@ -303,6 +253,7 @@ def _year_legend(fig, roads=True, loc="outside lower center"):
     fig.legend(h, lab, loc=loc, ncol=len(h), frameon=False)
 
 
+# An imagery backdrop for a window, downsampled
 def _imagery(ax, bounds, max_px=1800):
     import rasterio
     from rasterio.enums import Resampling
@@ -319,6 +270,7 @@ def _imagery(ax, bounds, max_px=1800):
               origin="upper", zorder=0, interpolation="bilinear")
 
 
+# Limits and no ticks for a map panel
 def _map_axes(ax, bounds):
     x0, y0, x1, y1 = bounds
     ax.set_xlim(x0, x1)
@@ -331,6 +283,7 @@ def _map_axes(ax, bounds):
         s.set_linewidth(0.6)
 
 
+# A round scale-bar length for a span
 def _nice_bar(span_m):
     for L in (100, 200, 250, 500, 1000, 2000, 2500, 5000):
         if L >= span_m / 6:
@@ -338,18 +291,17 @@ def _nice_bar(span_m):
     return 5000
 
 
+# Letter and title left-aligned on one line, so a narrow map panel cannot overlap them (the house ...
 def _panel_title(ax, i, text):
-    """Letter and title left-aligned on one line, so a narrow map panel
-    cannot overlap them (the house _title centres the text)."""
     ax.set_title(f"({chr(97 + i)})  {text}", loc="left", fontsize=9,
                  fontweight="normal", pad=4)
 
 
+# The whole island with the three lines, in segments
 def overview_figure(dom, outline, lines):
     island = (outline.geometry.union_all() if hasattr(outline.geometry, "union_all")
               else unary_union(outline.geometry))
-    # ONE extent for every segment (centred on each), so the three panels share
-    # a scale and line up; the ocean side carries the village brackets
+    # ONE extent for every segment (centred on each), so the three panels share a scale and line up
     ext = []
     for _, lo, hi in SEGMENTS:
         x0, y0, x1, y1 = dom[dom["gis"].between(lo, hi)].total_bounds
@@ -422,24 +374,21 @@ def overview_figure(dom, outline, lines):
     return _save(fig, "overview", "duneline_positions_overview")
 
 
-# THE ZOOMS (reworked 2026-09-18 after the first draw). At 5-15 domains a panel
-# was 5-7 km tall and the three lines sat on top of each other; the point of a
-# zoom is the tens of metres between them. Each site now shows a 3-domain
-# (1.5 km) WINDOW centred on the domain of that site with the largest
-# |net dune change| 1997-2023, every panel at the same extent and scale.
+# THE ZOOMS (reworked 2026-09-18 after the first draw)
 ZOOM_HALF = 1                             # domains either side of the centre
 ROAD_DASH = {1997: (0, (1, 1.5)), 2009: (0, (3, 1.8)), 2023: (0, (7, 2.5))}
 EDGE = {1997: "#1a1a1a", 2009: "#1a1a1a", 2023: "white"}
 
 
+# Dune-line change 1996-2024 per domain
 def _change():
     from site_layer.hat_observed_rates import dune_endpoint_csv
     return (pd.read_csv(dune_endpoint_csv(1996, 2024, "domain"))
             .set_index("domain_number")["mean_change_m"])
 
 
+# [(key, title, centre GIS, site span lo, hi, why), ...]
 def zoom_sites():
-    """[(key, title, centre GIS, site span lo, hi, why), ...]"""
     ch = _change()
     out = []
     for key, title, lo, hi in NAMED_SITES:
@@ -462,13 +411,8 @@ def zoom_sites():
 ZOOM_LAND_M, ZOOM_SEA_M = 650.0, 300.0     # window either side of the dune
 
 
+# A fixed window, 3 domains alongshore by 950 m cross-shore, set on the 2023 dune line
 def _zoom_extent(dom, lines, roads, centre):
-    """A fixed window, 3 domains alongshore by 950 m cross-shore, set on the
-    2023 dune line: 650 m landward (NC-12 is 270 m behind the dune on
-    average, so it is usually in view) and 300 m seaward. The first rework
-    widened each window to take every road in, which at Buxton (the Frisco
-    turn) and Rodanthe (the Jug Handle) stretched every panel and squeezed
-    the lines back together."""
     seg = dom[dom["gis"].between(centre - ZOOM_HALF, centre + ZOOM_HALF)]
     x0, y0, x1, y1 = seg.total_bounds
     part = lines[2023].intersection(box(x0 - 3000, y0, x1 + 3000, y1))
@@ -476,6 +420,7 @@ def _zoom_extent(dom, lines, roads, centre):
     return (cx - ZOOM_LAND_M, y0 - 40, cx + ZOOM_SEA_M, y1 + 40)
 
 
+# One site zoom
 def zoom_panel(ax, dom, lines, roads, b, imagery=True):
     _map_axes(ax, b)
     if imagery:
@@ -502,6 +447,7 @@ def zoom_panel(ax, dom, lines, roads, b, imagery=True):
     _north_arrow(ax, x=0.08, y=0.80, length=0.06)
 
 
+# Legend handles for the zooms
 def _zoom_legend(fig):
     h = [Line2D([], [], color=YEAR_C[v], lw=1.6,
                 path_effects=[pe.withStroke(linewidth=2.8, foreground=EDGE[v])])
@@ -514,6 +460,7 @@ def _zoom_legend(fig):
                fontsize=7.5)
 
 
+# Every site zoom at one scale
 def zoom_figures(dom, lines, roads, sites, imagery):
     exts = {s[0]: _zoom_extent(dom, lines, roads, s[2]) for s in sites}
     # one size for every panel: the widest window sets the width
@@ -558,6 +505,7 @@ def zoom_figures(dom, lines, roads, sites, imagery):
     return written
 
 
+# A zoom figure's caption
 def _zoom_caption(what, imagery, sheet=False):
     head = "" if sheet else f"The dune line at {what}, in 1997, 2009 and 2023. "
     return (head + "Solid lines: the digitized dune lines, light grey 1997, slate "
@@ -572,6 +520,7 @@ def _zoom_caption(what, imagery, sheet=False):
             + "Scale bar in metres; north up; NAD83(2011) / UTM 18N.")
 
 
+# The alongshore profiles
 def context_figure(table, value, ylabel, stem, what, how):
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.40),
                            constrained_layout=True)
@@ -609,6 +558,7 @@ def context_figure(table, value, ylabel, stem, what, how):
     return _save(fig, "beach_width_and_road", stem)
 
 
+# Save to the comparison folder and the published copy
 def _save(fig, sub, stem):
     out = save(fig, OUT / sub / stem)
     out += save(fig, PUBLISH / stem)
@@ -616,7 +566,7 @@ def _save(fig, sub, stem):
     return out
 
 
-# -----------------------------------------------------------------------------
+# Run: overview, zooms and profiles
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="dune-line positions, 1997/2009/2023")
     ap.add_argument("--no-imagery", action="store_true",

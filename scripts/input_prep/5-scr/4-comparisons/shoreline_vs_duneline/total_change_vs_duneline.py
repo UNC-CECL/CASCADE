@@ -1,84 +1,11 @@
 """
-total_change_vs_duneline.py
-==============================================================================
-TOTAL shoreline change against the dune line's MEASURED net change, per GIS
-domain, over 1996-2010, 2010-2024 and the whole 1996-2024. Built 2026-09-21
-(Hannah, by interview: "the difference between the measured dune line change
-between 1996-2010 and 2010-2024, and compare that with the LRR net position
-change over those same periods"); renamed from lrr_net_change.py and merged
-with projected_vs_duneline.py the same day, after a second interview settled
-the vocabulary.
+Total shoreline change against the dune line's measured net change per GIS domain, over 1996-2024 and its halves.
 
-WHY "TOTAL" AND NOT "PROJECTED".  A rate turned into a distance is named by
-the window it was FITTED on, never by the arithmetic:
-
-    TOTAL      the rate is evaluated over the SAME window it was fitted on.
-               Every window here is total: LRR(1996-2010) x 14 yr,
-               LRR(2010-2024) x 14 yr, LRR(1996-2024) x 28 yr. Nothing is
-               extrapolated.
-    PROJECTED  the rate is carried onto a window it was NOT fitted on. None
-               of that happens here; it lives in
-               3-rates/coastsat/projected/ and, against the model, in
-               output/comparisons/target_comparison/projected/.
-
-THE MERGE (2026-09-21, Hannah, by interview).  This folder absorbed
-`shoreline_vs_duneline/projected/1996_2024`, which was the 1996-2024 rate x
-the 25.72 yr DUNE-LINE INTERVAL rather than the 28 calendar years. That is
-the same fit window with a shorter span, so it was never a projection either.
-Its three numbers were already carried here as the `*_dune_interval_m`
-columns -- checked identical to 0 m before the merge -- so the headline
-figure is the 28 yr CALENDAR span and the dune interval is a column and a
-caption line. Hannah chose the calendar span so every window in the tree is
-read the same way. The old folder is in superseded_20260921/.
-
-    Hannah, 2026-09-21: "Dont fit on the exact dune dates, the year is most
-    important" -- so the fit window stays the stored CALENDAR window,
-    1 January to 31 December.
-
-WHAT IS COMPARED, per 500 m GIS domain, SEAWARD POSITIVE, in metres
-    shoreline   3-rates/coastsat/lrr/<window>/transect_lrr_full.csv,
-                lrr_m_yr x (end_year - start_year), mean over the ~10 CoastSat
-                transects of the domain. 14 yr in each half, 28 yr over the
-                whole -- the CALENDAR interval (Hannah's choice, 2026-09-21),
-                matching the year labels and 3-rates/coastsat/total_change.
-    dune line   3-rates/duneline/endpoint/<window>/ as stored, end line minus
-                start line, mean over the ~5 dune transects. Read, never
-                recomputed.
-    beach width shoreline change - dune-line change; positive = the beach
-                widened (the waterline gained on the dune).
-
-THE INTERVAL MISMATCH, reported and not corrected.  The dune line is two
-photographs, 11.63 yr apart in the first half (1997-10-12 to 2009-05-30),
-14.09 yr in the second (to 2023-07-01, assumed) and 25.72 yr over the whole,
-while the shoreline is carried over the full calendar span in each. So in the
-first half the gap holds about 2.4 yr of shoreline drift on top of beach-width
-change. Every table carries the interval-matched alternative beside the
-headline value (`*_dune_interval_m`, the same rate x the dune line's own
-span) and every PROVENANCE.md reports both, so the size of the term is
-visible rather than argued about.
-
-FIGURE TITLES carry quantity, window and method (Hannah, 2026-09-21), e.g.
-"Total shoreline change vs dune line, 1996-2010 (LRR x 14 yr)".
-
-WHAT IS DRAWN
-    <window>/    two_panel, shaded_gap, overlay -- the three presentations,
-                 one folder per window.
-    chains/      1996-2024 stacked over its two halves on one y axis, the
-                 shape of endpoint_net_change/chains.
-    difference/  second half minus first half on both sides: where the
-                 shoreline trend sped up or slowed, did the dune line follow?
-
-OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/total_change/
-    <window>/domain_comparison.csv, the three PNGs, PROVENANCE.md,
-             supporting/ (PDFs, CAPTIONS.md)
-    chains/total_change_chain_1996_2010_2024.png,
-             supporting/{domain_comparison,island_summary}.csv
-    difference/total_change_difference.png, supporting/domain_difference.csv
-
-USAGE
     python scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/total_change_vs_duneline.py
-    python ... --start-year 1996 --end-year 2010
-==============================================================================
+    python scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/total_change_vs_duneline.py --start-year 1996 --end-year 2010
+
+Figures, provenance and statistics per window, the chain figure, and the
+half-to-half difference. Details: scripts/input_prep/5-scr/4-comparisons/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -122,11 +49,9 @@ from site_layer.hat_observed_rates import (  # noqa: E402
     TOTAL_CHANGE_VS_DUNELINE,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 N = cw.N_DOMAINS
-# How the SHORELINE side is read. The dune side never varies -- it is the
-# measured endpoint between the two digitized lines bounding the window -- so
-# this is the only choice the script makes, and it is what the output folder
-# is named for. Mirrors 3-rates/coastsat/{total_change,projected}.
+# How the SHORELINE side is read
 PRODUCTS = {
     "total": {
         "root": TOTAL_CHANGE_VS_DUNELINE,
@@ -143,16 +68,10 @@ PRODUCTS = {
         "root": PROJECTED_VS_DUNELINE_ENDPOINT,
         "noun": "Projected shoreline change",
         "rate_window": lambda s, e: (1996, 2024),
-        # no 1996_2024: there the rate window IS the change window, so the
-        # answer is the TOTAL product, not a second copy under another name.
+        # No 1996_2024: there the rate window is the change window (TOTAL)
         "windows": [(1996, 2010), (2010, 2024)],
         "stem": "coastsat_projected_vs_duneline",
-        # BOTH halves carry the same 1996-2024 rate over the same 14 yr, so
-        # the shoreline side is IDENTICAL in them. That makes
-        # change_between_periods zero by construction on that side -- not
-        # drawn -- but it is exactly what makes the STACK worth drawing: one
-        # prediction against two different dune-line outcomes, which is the
-        # question this product exists to ask (Hannah, 2026-09-22).
+        # BOTH halves carry the same 1996-2024 rate over the same 14 yr, so the shoreline side is IDENTICAL in them
         "stacked": "halves",
         "difference": False,
     },
@@ -170,28 +89,20 @@ C_GAP_TOWN = 0.055      # village bands as a strip: the gap already shades grey
 C_DIFF_GAP = "0.88"     # the difference figure's neutral gap (not a beach width)
 LW = 1.1
 Y_LABEL = "Net change in position (m)"
-# The shared fixed metre axis (Hannah, 2026-09-22); see
-# coastsat_total_change.Y_HALF_M for why it is fixed and not a floor.
+# The shared fixed metre axis (Hannah, 2026-09-22)
 Y_HALF_M = 100.0
 Y_TICK_M = 20.0
+# -----------------------------------------------------------------------------
 
 
-# --------------------------------------------------------------------------
-# load
-# --------------------------------------------------------------------------
+# Load
 
+# Per-domain change from both sides, plus the per-transect shoreline
 def load(window):
-    """Per-domain change from both sides, plus the per-transect shoreline.
-
-    The shoreline is the stored calendar-window LRR carried over the CALENDAR
-    interval; `*_dune_interval_m` is the same rate over the dune line's own
-    span, kept beside it as the diagnostic for the mismatch.
-    """
     s, e = window
     w = f"{s}_{e}"
     years = float(e - s)
-    # `w` indexes the DUNE side and the change window; the shoreline rate may
-    # come from a different window (see PRODUCTS).
+    # `w` indexes the dune side and change window; the rate may differ
 
     dune_t = pd.read_csv(DUNELINE_ENDPOINT_ROOT / w / ENDPOINT_TRANSECT_FILE)
     dune_d = pd.read_csv(DUNELINE_ENDPOINT_ROOT / w / ENDPOINT_DOMAIN_FILE)
@@ -225,6 +136,7 @@ def load(window):
     return dom.round(3), cs, meta, years, dune_years
 
 
+# Per-window statistics of the two changes
 def stats(dom, years, dune_years):
     ok = dom.dropna(subset=["shoreline_change_m", "dune_change_m"])
     x, y = ok["shoreline_change_m"], ok["dune_change_m"]
@@ -251,14 +163,14 @@ def stats(dom, years, dune_years):
     }
 
 
-# --------------------------------------------------------------------------
-# per-window figures (three presentations, from the absorbed projected_vs_duneline)
-# --------------------------------------------------------------------------
+# Per-window figures (three presentations, from the absorbed projected_vs_duneline)
 
+# An empty domain frame to draw on
 def _empty(dom):
     return rf._frame(dom.assign(_nan=np.nan), "_nan")
 
 
+# Shoals and fills for a panel
 def _marks(ax, half, label, window):
     cw.draw_shoals(ax, label=label)
     fills = cw.fills_in(*window)
@@ -266,6 +178,7 @@ def _marks(ax, half, label, window):
         cw.draw_fills(ax, fills, half)
 
 
+# The shoreline change with its transect dots
 def _shoreline_panel(ax, dom, cs, half, window, label=True):
     cw.draw_panel(ax, rf._frame(dom, "shoreline_change_m"), half, label=label, std=False)
     tt, x = rf._along(cs)
@@ -273,9 +186,7 @@ def _shoreline_panel(ax, dom, cs, half, window, label=True):
     ax.plot(dom["domain_number"], dom["dune_change_m"], color=INK, lw=LW,
             zorder=12, solid_capstyle="round")
     _marks(ax, half, label, window)
-    # The axis is fixed at +/-100 m, so a domain-mean line can leave it. Mark
-    # it at the edge and hand the values back for the caption; nothing that
-    # walks off the panel should do so silently.
+    # The axis is fixed at +/-100 m, so a domain-mean line can leave it
     off = [("the shoreline change",
             mark_offaxis(ax, dom["domain_number"], dom["shoreline_change_m"],
                          half, color=C_SHORE)),
@@ -285,6 +196,7 @@ def _shoreline_panel(ax, dom, cs, half, window, label=True):
     return n_out, off
 
 
+# The gap between the two changes
 def _gap_panel(ax, dom, half, window, label=True):
     cw.draw_panel(ax, _empty(dom), half, label=label, std=False)
     x = dom["domain_number"].to_numpy(float)
@@ -298,6 +210,7 @@ def _gap_panel(ax, dom, half, window, label=True):
             ("the dune-line change", mark_offaxis(ax, x, yd, half, color=C_DUNE))]
 
 
+# The beach-width change
 def _width_panel(ax, dom, half, window, label=False):
     cw.draw_panel(ax, _empty(dom), half, label=label, std=False)
     x = dom["domain_number"].to_numpy(float)
@@ -308,6 +221,7 @@ def _width_panel(ax, dom, half, window, label=False):
     return [("the beach-width change", mark_offaxis(ax, x, y, half, color=INK))]
 
 
+# The house legend handles
 def _house_handles():
     return [(Line2D([], [], color=cw.C_ACCRETE, lw=1.0), Line2D([], [], color=cw.C_ERODE, lw=1.0)),
             (Line2D([], [], color=cw.C_ACCRETE, marker="o", ms=2.2, lw=0),
@@ -315,26 +229,21 @@ def _house_handles():
             Line2D([], [], color=INK, lw=LW)]
 
 
+# The figure legend
 def _legend(fig, handles, labels, ncol):
     fig.legend(handles, labels, loc="outside lower center", ncol=ncol, frameon=False,
                handler_map={tuple: HandlerTuple(ndivide=None, pad=0.3)})
 
 
+# "dune line
 def _dune_side(meta, dune_years):
-    """"dune line: 1997-10-12 -> 2023-07-01 (25.7 yr), measured" for the header."""
     return (f"dune line: {meta['start_date']} → {meta['end_date']}"
             + (" (assumed)" if bool(meta["end_date_assumed"]) else "")
             + f",  {dune_years:.1f} yr,  measured")
 
 
+# The two sides named on the canvas (Hannah, 2026-09-22)
 def _header(window, meta, years, dune_years):
-    """The two sides named on the canvas (Hannah, 2026-09-22).
-
-    The interval mismatch is the reason this is worth the space: the shoreline
-    is carried over the full CALENDAR span and the dune line spans whatever
-    its two photographs do, so the gap between them holds that difference as
-    well as beach-width change. Stated here, it cannot be missed.
-    """
     s, e = window
     rs, re_ = PROD["rate_window"](s, e)
     note = ("" if (rs, re_) == (s, e) else
@@ -343,6 +252,7 @@ def _header(window, meta, years, dune_years):
             _dune_side(meta, dune_years)]
 
 
+# The caption common to a window's figures
 def _base_caption(window, meta, years, dune_years, st):
     s, e = window
     return (
@@ -368,6 +278,7 @@ def _base_caption(window, meta, years, dune_years, st):
         + ". " + rf._marks_clause(s, e))
 
 
+# The caption's statistics clause
 def _stats_clause(st, half):
     return (f" Over the {st['n_domains']} domains the shoreline changed "
             f"{st['mean_shoreline_change_m']:+.1f} m on average and the dune line "
@@ -379,28 +290,14 @@ def _stats_clause(st, half):
             "every panel.")
 
 
+# Lift the centred title clear of the fill bars
 def _pad_title(ax, window):
-    """Lift the centred title clear of the fill bars.
-
-    draw_fills puts its bars at 1.025 in axes fractions with the year label
-    above them, so a title at the default pad lands on top of "2022 fill".
-    _title() has already set the bold letter at the left; re-setting only the
-    centred string keeps it and moves both (pad is per-axes in matplotlib).
-    """
     if cw.fills_in(*window):
         ax.set_title(ax.get_title(loc="center"), loc="center", pad=20)
 
 
+# The two halves' overlay panels on one sheet, 1996-2010 above 2010-2024
 def halves_overlay_figure(loaded, out_dir):
-    """The two halves' overlay panels on one sheet, 1996-2010 above 2010-2024.
-
-    TITLE SPACE (Hannah, 2026-09-22: "be strategic ... concise yet organized").
-    The method is the SAME in both panels -- that is the whole point of the
-    projected product -- so it is stated ONCE in the header and never repeated.
-    Each panel title then carries only what actually differs between them: the
-    window, and the two dune-line dates with their real interval. Nothing is
-    said twice, and nothing a reader needs is only in the caption.
-    """
     windows = [w for w in PROD["windows"] if w[1] - w[0] == 14]
     half, tick = Y_HALF_M, Y_TICK_M
     fig, axes = plt.subplots(len(windows), 1, sharex=True, sharey=True,
@@ -432,8 +329,7 @@ def halves_overlay_figure(loaded, out_dir):
               else f"{PROD['noun']} (own CoastSat LRR × 14 yr)"),
              "Individual CoastSat transects",
              "Total dune line change (measured)"], ncol=3)
-    # Said once above the panels, because it is what the two panels have in
-    # common -- and for `projected` it is also the whole point of the figure.
+    # Said once above the panels, because it is what the two panels have in common
     compare_header(fig, f"{PROD['noun']} vs dune line   ·   shoreline is "
                         + (f"the SAME CoastSat LRR {rs}–{re_} × 14 yr in both panels"
                            if shared_rate else
@@ -481,21 +377,19 @@ def halves_overlay_figure(loaded, out_dir):
     return written
 
 
+# The shoal/village/fill sentence, said once for the stacked figure
 def _marks_note(windows):
-    """The shoal/village/fill sentence, said once for the stacked figure."""
     return rf._marks_clause(*windows[0]).replace(
         "Black bars above the panel mark the beach fills placed inside the window",
         "Black bars above the TOP panel mark the beach fills placed inside it")
 
 
+# One window's figures
 def window_figures(window, dom, cs, meta, years, dune_years, st, out_dir):
     half, tick = Y_HALF_M, Y_TICK_M
     s, e = window
     base = _base_caption(window, meta, years, dune_years, st) + _stats_clause(st, half)
-    # The fit window is IN the label, not implied by the folder (Hannah,
-    # 2026-09-21): "CoastSat LRR 1996–2010 × 14 yr" says where the rate came
-    # from, and the reader can see it matches the window in the title -- which
-    # is the whole difference between total change and a projection.
+    # The fit window is IN the label, not implied by the folder (Hannah, 2026-09-21)
     rs, re_ = PROD["rate_window"](s, e)
     lab_shore = (f"{PROD['noun']} (CoastSat LRR {rs}–{re_} × {years:.0f} yr)")
     lab_dune = "Total dune line change (measured)"
@@ -511,8 +405,7 @@ def window_figures(window, dom, cs, meta, years, dune_years, st, out_dir):
     axes[0].set_ylabel(Y_LABEL)
     axes[1].set_ylabel("Beach-width change (m)")
     axes[-1].set_xlabel(DOMAIN_AXIS_LABEL)
-    # Quantity, window, method (Hannah, 2026-09-21). "Total" because the rate
-    # is fitted on the window it is evaluated over; see the module docstring.
+    # Quantity, window, method (Hannah, 2026-09-21)
     _title(axes[0], 0, f"{PROD['noun']} vs dune line, {s}–{e} "
                        f"(CoastSat LRR {rs}–{re_} × {years:.0f} yr)")
     _title(axes[1], 1, f"Beach-width change, {s}–{e}")
@@ -573,6 +466,7 @@ def window_figures(window, dom, cs, meta, years, dune_years, st, out_dir):
     return half, written
 
 
+# The window's provenance
 def write_provenance(window, out_dir, meta, years, dune_years, st, half):
     s, e = window
     drift = years - dune_years
@@ -628,10 +522,9 @@ def write_provenance(window, out_dir, meta, years, dune_years, st, half):
     ]), encoding="utf-8")
 
 
-# --------------------------------------------------------------------------
-# the chain: the whole over its two halves
-# --------------------------------------------------------------------------
+# The chain: the whole over its two halves
 
+# One window in the chain figure
 def _chain_panel(ax, dom, half, label):
     ax.set_xlim(0.5, N + 0.5)
     ax.set_ylim(-half, half)
@@ -653,6 +546,7 @@ def _chain_panel(ax, dom, half, label):
     open_frame(ax)
 
 
+# Every window stacked
 def chain_figure(loaded, summaries, out):
     ext = max(float(np.nanmax(np.abs(loaded[w][0][c])))
               for w in CHAIN_WINDOWS
@@ -722,10 +616,9 @@ def chain_figure(loaded, summaries, out):
     return half, written
 
 
-# --------------------------------------------------------------------------
-# the difference: second half minus first half, both sides
-# --------------------------------------------------------------------------
+# The difference: second half minus first half, both sides
 
+# Half-to-half differences per domain
 def difference_table(loaded):
     a = loaded[HALVES[0]][0].set_index("domain_number")
     b = loaded[HALVES[1]][0].set_index("domain_number")
@@ -743,6 +636,7 @@ def difference_table(loaded):
     return d.round(3)
 
 
+# The half-to-half differences against each other
 def difference_figure(d, out):
     ok = d.dropna(subset=["d_shoreline_m", "d_dune_m"])
     r_m = float(np.corrcoef(ok["d_shoreline_m"], ok["d_dune_m"])[0, 1])
@@ -761,9 +655,7 @@ def difference_figure(d, out):
     x = d.index.to_numpy(float)
     ys = d["d_shoreline_m"].to_numpy(float)
     yd = d["d_dune_m"].to_numpy(float)
-    # NOT shade_beach_width: both lines are differences, so the gap between
-    # them is disagreement, not a width. One neutral fill, no hatch, so the
-    # figure does not borrow a vocabulary that would read as beach width.
+    # One neutral fill: the gap between two differences is disagreement, not a width
     ax.fill_between(x, ys, yd, color=C_DIFF_GAP, lw=0, zorder=3)
     ax.plot(x, yd, color=C_DUNE, lw=LW, zorder=5)
     ax.plot(x, ys, color=C_SHORE, lw=LW, zorder=5)
@@ -776,8 +668,7 @@ def difference_figure(d, out):
     open_frame(ax)
     ax.set_ylabel("Second half − first half (m)")
     ax.set_xlabel(DOMAIN_AXIS_LABEL)
-    # Each half is fitted on itself, so there is no single fit window to name
-    # in the title; the legend carries it per line.
+    # Each half is fitted on itself, so there is no single fit window to name in the title
     ax.set_title("Total shoreline change and dune line, second half − first half "
                  "(each half's own CoastSat LRR × 14 yr)")
     compare_header(fig, [
@@ -815,8 +706,7 @@ def difference_figure(d, out):
     return r_m, r_rate, half, written
 
 
-# --------------------------------------------------------------------------
-
+# Run: every window, the chain, the difference
 def main() -> int:
     global PROD
     ap = argparse.ArgumentParser(description=__doc__)
@@ -892,11 +782,7 @@ def main() -> int:
     summ.to_csv(sup / "island_summary.csv", index=False)
     half, w = chain_figure(loaded, summaries, chain_out)
     written += w
-    # The two-panel overlay of the halves ALONGSIDE the three-panel chain, not
-    # instead of it (Hannah, 2026-09-22). The chain answers "how does the whole
-    # period relate to its halves"; this one is the direct counterpart of the
-    # projected product's sheet, so the two can be laid side by side to see what
-    # changes when the rate is fitted per half instead of over the full record.
+    # The two-panel overlay of the halves ALONGSIDE the three-panel chain, not instead of it (Hannah, 2026-09-22)
     written += halves_overlay_figure(loaded, chain_out)
 
     # difference

@@ -1,62 +1,10 @@
 """
-smoothed_lowess7_vs_duneline.py
-==============================================================================
-The two halves-overlay sheets again, with BOTH curves passed through the
-model target's alongshore LOWESS at a 7-domain (3.5 km) window. Built
-2026-09-22 (Hannah, by interview) as a place to see what the smoother does to
-the shoreline-vs-dune-line comparison, in the two readings of the shoreline
-side side by side.
+The halves-overlay sheets with both curves through the model target's 7-domain LOWESS.
 
-WHAT IS DRAWN, one sheet per shoreline reading, 1996-2010 above 2010-2024:
-
-    projected     shoreline = the 1996-2024 LRR x 14 yr, the SAME in both
-                  panels (the long-term trend carried onto each half)
-    total_change  shoreline = each half's OWN LRR x its own 14 yr
-
-    The dune side is the same either way and always follows the sub-period:
-    the measured net change between the two digitized lines bounding that
-    half. Only the shoreline reading differs between the two sheets.
-
-THE SMOOTHING (Hannah's choices, 2026-09-22)
-
-    window        7 domains = 3.5 km.
-    both sides    BOTH curves get the same pass at the same window, at
-                  TRANSECT resolution, then average to domains. Smoothing one
-                  side and not the other would make the gap between them an
-                  artefact of the treatment rather than a beach-width change
-                  -- the same trap the 3-rates smoothed panels avoid.
-                  CoastSat has ~10 transects per domain and the dune line
-                  exactly 5; `rates_figures._along` gives both an even spread
-                  inside their domain, so the two are handled identically.
-    GIS 1-10      kept at their RAW domain means, the Oregon Inlet boundary
-                  treatment (`coastsat_lowess.LowessConfig.skip_southern_domains`).
-                  Hannah chose to keep it so the figure shows the target the
-                  way the model actually sees it. The cost, stated here so it
-                  is not read as a result: those ten domains are IDENTICAL to
-                  the unsmoothed sheet by construction, and any difference
-                  there is not the smoother.
-    raw kept      the raw domain means stay on the figure as faint dots
-                  behind each curve, so what the smoother removed is visible
-                  without leaving the sheet.
-
-WHAT THIS IS FOR.  It is a test folder, not a product: the question is how
-much of the shoreline-vs-dune-line disagreement survives smoothing at the
-scale the model resolves. The unsmoothed sheets it is paired with are
-`coastsat_{projected,total_change}_vs_duneline_endpoint/all_windows_stacked/
-*_halves_overlay.png`.
-
-OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_lowess7/
-    lowess7_projected_vs_duneline_1996_2010_2024_halves_overlay.png
-    lowess7_total_change_vs_duneline_1996_2010_2024_halves_overlay.png
-    domain_smoothed.csv     per domain per window per product: both sides raw
-                            and smoothed, and the beach-width gap of each
-    PROVENANCE.md           what changed, per window and per product
-    README.md, supporting/  (PDFs, CAPTIONS.md)
-
-USAGE
     python scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_lowess7_vs_duneline.py
-    python ... --window 7          # LOWESS width in domain units
-==============================================================================
+    python scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_lowess7_vs_duneline.py --window 7
+
+One sheet per product, with the raw dots faint underneath. Details: scripts/input_prep/5-scr/4-comparisons/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -96,6 +44,7 @@ from site_layer.hat_observed_rates import (  # noqa: E402
     DUNELINE_ENDPOINT_ROOT, ENDPOINT_TRANSECT_FILE, SHORELINE_VS_DUNELINE,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 OUT_ROOT = SHORELINE_VS_DUNELINE / "smoothed_lowess7"
 WINDOW = 7                      # domain units; 7 x 500 m = 3.5 km
 SPLICE = 10                     # GIS 1..SPLICE keep their raw domain means
@@ -110,15 +59,11 @@ SHEETS = [
     ("total", "lowess7_total_change_vs_duneline",
      "shoreline is each panel's OWN CoastSat LRR × its own 14 yr"),
 ]
+# -----------------------------------------------------------------------------
 
 
+# One alongshore LOWESS pass at TRANSECT resolution, averaged to domains
 def smooth_side(frame, value_col, window):
-    """One alongshore LOWESS pass at TRANSECT resolution, averaged to domains.
-
-    The same two steps the scoring target is built through, so the curve here
-    is the quantity the model is graded against rather than a different
-    smoother that happens to look similar.
-    """
     t, x_dom = rf._along(frame)
     along_m = x_dom * DEFAULT_DOMAINS.domain_spacing_m
     series, _ = spliced_lowess_series(
@@ -127,8 +72,8 @@ def smooth_side(frame, value_col, window):
     return series.reindex(pd.RangeIndex(1, N + 1, name="domain_number"))
 
 
+# Per half
 def build(product, window):
-    """Per half: the raw domain means and the smoothed series, both sides."""
     tcd.PROD = tcd.PRODUCTS[product]
     out = {}
     for w in HALVES:
@@ -148,8 +93,8 @@ def build(product, window):
     return out
 
 
+# The smoothed pair with the raw domain means faint behind them
 def _panel(ax, r, half, window_tuple, label):
-    """The smoothed pair with the raw domain means faint behind them."""
     sm_s = r["sm_shore"].to_numpy(float)
     sm_d = r["sm_dune"].to_numpy(float)
     x = np.asarray(r["sm_shore"].index, dtype=float)
@@ -173,6 +118,7 @@ def _panel(ax, r, half, window_tuple, label):
             ("the smoothed dune line", mark_offaxis(ax, x, sm_d, half, color=INK))]
 
 
+# One sheet: both halves, both curves smoothed
 def figure(product, stem, what, data, window, out_dir):
     half, tick = tcd.Y_HALF_M, tcd.Y_TICK_M
     km = window * DEFAULT_DOMAINS.domain_spacing_m / 1000.0
@@ -237,11 +183,13 @@ def figure(product, stem, what, data, window, out_dir):
     return written, rows
 
 
+# Correlation of two series where both are finite
 def _r(a, b):
     ok = np.isfinite(a) & np.isfinite(b)
     return float(np.corrcoef(a[ok], b[ok])[0, 1])
 
 
+# Run: every sheet
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--window", type=int, default=WINDOW,

@@ -1,65 +1,11 @@
 """
-dsas_vs_coastsat_datematched.py
-==============================================================================
-DSAS against CoastSat with the CoastSat side anchored on the SHORELINE SURVEY
-DATES rather than on a calendar window (Hannah, 2026-09-22, "do both": at
-+/-30 days and at +/-6 months).
+DSAS against CoastSat, with the CoastSat side anchored on the shoreline survey dates.
 
-    4-comparisons/dsas_vs_coastsat/survey_dates/dsas_vs_coastsat_datematched.png
-    4-comparisons/dsas_vs_coastsat/survey_dates/slides/ (--slide)
-    4-comparisons/dsas_vs_coastsat/survey_dates/supporting/*.csv
-
-THE METHOD
-    Not an OLS over a window. For each CoastSat transect, the mean shoreline
-    position within +/-W days of the START survey date is subtracted from the
-    mean within +/-W days of the END date and divided by the interval -- the
-    same endpoint method coastsat_endpoint.py uses against the dune line, run
-    through the same endpoint_by_transect(). That is what "match the imagery
-    dates" means: both sources then describe motion between the same two
-    moments, not between two calendar years.
-
-THE ARCHIVE DID NOT DO THIS
-    5-scr/archive/coastsat_lrr_superseded_20260810/dsas_coastsat_specific_dates/
-    is named for this method but was produced with SURVEY_DATES = [] in
-    coastsat_domain_lrr_specific_dates.py, so it fell through to the
-    continuous-range mode. Its median n_obs (417) matches the plain calendar
-    fit (414.5) and its statistics are the calendar comparison's to two
-    decimals. This script is the analysis that folder's name promised.
-
-THE TWO ANCHORS, AND ONE DISCREPANCY
-    1997-09-27 and 2019-09-07. The 2019 date is what nc_shorelines.geojson
-    carries in SHR_DATE (Wet-Dry, 32 features). The 1997 date is Hannah's
-    (2026-09-22) and matches the date commented into
-    coastsat_domain_lrr_specific_dates.py, so two independent records of the
-    survey agree on it.
-
-    THE INVENTORY AGREED ONLY AFTER IT WAS FIXED. nc_shorelines.geojson
-    stamped every 1997 feature 1/1/1997, a placeholder Hannah entered when the
-    date was not to hand. On 2026-09-22 the two features covering this study
-    area -- "Outer Banks - National Seashore" and "Outer Banks - North of
-    Oregon Inlet" -- were restamped 9/27/1997; the other 21, elsewhere in the
-    state and flown on other days, still carry the placeholder. See
-    1-observations/shoreline_inventory/PROVENANCE.md.
-
-    THAT EDIT DOES NOT REACH THIS SCRIPT. The dates below are module
-    constants; nothing here opens the geojson, so the restamp changed no
-    number in this comparison (verified by re-running: identical to three
-    decimals). The two records now agree, which is worth having, but they are
-    still two records.
-
-    Both window widths are still drawn, because the two anchors are late
-    September and early September -- nearly the same point in the seasonal
-    cycle, so a tight window is meaningful, and agreement between the widths
-    says the result does not depend on how much of the year is swept in.
-
-    The two DSAS ends are different proxies (MHW in 1997, wet/dry in 2019)
-    while CoastSat is one proxy throughout. That is a property of the DSAS
-    rate, not of the matching, and no window width fixes it.
-
-USAGE
     python scripts/input_prep/5-scr/4-comparisons/dsas_vs_coastsat/dsas_vs_coastsat_datematched.py
     python scripts/input_prep/5-scr/4-comparisons/dsas_vs_coastsat/dsas_vs_coastsat_datematched.py --slide
-==============================================================================
+
+At +/-30 days and +/-6 months around each survey; one figure each, and
+the agreement statistics. Details: scripts/input_prep/5-scr/4-comparisons/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -97,10 +43,9 @@ from site_layer.hat_figure_style import (  # noqa: E402
     figsize, open_frame, save, structures, support_dir, town_bands,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 N = 90
-# The survey date, from Hannah (2026-09-22), matching the date commented into
-# coastsat_domain_lrr_specific_dates.py. The inventory's 1997-01-01 is her own
-# placeholder, not an alternative reading; see the header.
+# The survey date, from Hannah (2026-09-22)
 START_DATE = dt.datetime(1997, 9, 27, tzinfo=dt.timezone.utc)
 END_DATE = dt.datetime(2019, 9, 7, tzinfo=dt.timezone.utc)
 HALF_DAYS = (30.0, 182.0)          # "do both"
@@ -110,8 +55,10 @@ STEM = "dsas_vs_coastsat_datematched"
 C_DSAS, C_CS = C_1984, C_1997
 LW, LW_SLIDE = 1.1, 0.8
 SLIDE_W_IN, SLIDE_H_IN = 3.4, 4.2
+# -----------------------------------------------------------------------------
 
 
+# The DSAS rates per domain for the window
 def dsas():
     df = pd.read_csv(obs.DSAS_ROOT / f"dsas_{DSAS_WINDOW[0]}_{DSAS_WINDOW[1]}_rates.csv")
     df = df.rename(columns={"domain_id": "domain", "MEAN_LRR": "lrr"})
@@ -119,12 +66,8 @@ def dsas():
             .reindex(range(1, N + 1)))
 
 
+# Per-domain endpoint rate from CoastSat, anchored on the survey dates
 def coastsat_datematched(half_days, lookup, cache):
-    """Per-domain endpoint rate from CoastSat, anchored on the survey dates.
-
-    Returns (per-domain Series, per-transect frame). A transect with no
-    position inside one of the two windows yields NaN and drops out.
-    """
     ep = endpoint_by_transect(lookup, START_DATE, END_DATE, half_days, cache)
     per_domain = (ep.dropna(subset=["endpoint_rate_m_yr"])
                   .groupby("domain_number")["endpoint_rate_m_yr"].mean()
@@ -132,6 +75,7 @@ def coastsat_datematched(half_days, lookup, cache):
     return per_domain, ep
 
 
+# (n, r, mean and RMS difference) between two series
 def agreement(a, b):
     ok = a.notna() & b.notna()
     d = (b[ok] - a[ok]).to_numpy(float)
@@ -140,6 +84,7 @@ def agreement(a, b):
                 rmse=float(np.sqrt((d ** 2).mean())), r=r)
 
 
+# Both rates along the island for one anchoring width
 def figure(d, cs, stats, cover, slide=False):
     x = np.arange(1, N + 1)
     lw = LW_SLIDE if slide else LW
@@ -199,10 +144,12 @@ def figure(d, cs, stats, cover, slide=False):
     return fig
 
 
+# An anchoring half-width in words
 def _w(half_days):
     return "30 days" if half_days < 100 else "6 months"
 
 
+# Run: both widths, figures and statistics
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--slide", action="store_true",

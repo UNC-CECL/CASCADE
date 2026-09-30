@@ -1,65 +1,10 @@
-r"""
-coastsat_vs_duneline.py
-==============================================================================
-Does the digitized dune line move with the CoastSat shoreline?
+"""
+Does the digitized dune line move with the CoastSat shoreline? Net change on both sides, over the same interval.
 
-WHAT IS COMPARED  (NET CHANGE ON BOTH SIDES since 2026-09-18; Hannah: "I
-wanted the coastsat vs duneline comparison to both be using net position
-change")
-    Dune side      3-rates/duneline/endpoint/<window>/: the end dune line minus
-                   the start line per 100 m transect, domain mean, seaward
-                   positive.
-    Shoreline side 3-rates/coastsat/endpoint/<window>/: the mean CoastSat
-                   position within +/-6 months of each dune-line survey date,
-                   end minus start, domain mean. The like-for-like quantity
-                   for two surveys.
-    Both read from the stored products, not computed here. Shown as the net
-    change over the survey interval (m/yr) so the four windows share one axis;
-    the metres are in domain_comparison.csv.
+    python scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/coastsat_vs_duneline.py --start-year 1996 --end-year 2010
+    python scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/coastsat_vs_duneline.py --grid
 
-    Until 09-18 the shoreline was ALSO drawn as the CoastSat LRR, an OLS
-    through ~250 dates, and the correlations reported against both. That is
-    not a two-survey quantity; it stays the model's scoring target in
-    3-rates/coastsat/lrr/ and in model_vs_observed/vs_shoreline/. The helpers below
-    (window_mean, endpoint_by_transect, KNOWN_SURVEY_DATES) are kept: the
-    stored CoastSat endpoint product is built with them.
-
-SURVEY DATES
-    The dune-line files carry no date. KNOWN_SURVEY_DATES holds them by line
-    VINTAGE: 1984-09-19 and 1997-10-12 from the Henderson USGS metadata on
-    D:, 2004-05-25 and 2009-05-30 from the Google Earth captures (Hannah,
-    2026-09-15), and None for the 2023 NOAA set until its flight date is
-    known. A None is centred mid-year of the line's year, PROVENANCE.md says
-    so, and a sensitivity block reports how far the endpoint rate moves for
-    a +/- 6 month shift of that centre. A period year reaches its vintage
-    through hat_topo_version.DUNE_LINE_FOR_YEAR (2010 reads the 2009 line,
-    2024 the 2023 one).
-
-METHOD
-    Every raw dune file is built by duneline_to_raw_offsets.py since
-    2026-09-15 (1984 and 2004 were ArcGIS exports until that afternoon, one
-    metre landward of the exact crossing; see raw_offsets/PROVENANCE.md), so
-    a change between any two years carries no method term.
-
-OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/endpoint_net_change/<start>_<end>/
-         (was 4-comparisons/coastsat_vs_duneline/ until 2026-09-19; the
-         alongshore figures are in METRES with the beach-width gap since then)
-             scatter_dune_vs_coastsat.png     shoreline vs dune, 1:1
-             alongshore_dune_vs_coastsat.png  the two net changes by domain
-             supporting/                      the PDFs, CAPTIONS.md,
-                 domain_comparison.csv            one row per GIS domain (m and m/yr)
-                 PROVENANCE.md
-         data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/endpoint_net_change/
-             alongshore_four_windows.png      every window on one y axis,
-                                              stacked full width (--grid;
-                                              --layout grid for the 2 x 2)
-
-USAGE
-    python coastsat_vs_duneline.py --start-year 1984 --end-year 2004
-        # the dates come from the stored products
-    python coastsat_vs_duneline.py --grid                 # every window, stacked
-    python coastsat_vs_duneline.py --grid --layout grid   # the 2 x 2 by period
-==============================================================================
+Scatter and alongshore figures per window, or every window stacked. Details: scripts/input_prep/5-scr/4-comparisons/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -94,44 +39,29 @@ from site_layer.hat_figure_style import (  # noqa: E402
                               figsize, open_frame, save, structures,
                               support_dir, town_bands)
 
+# --- CONFIG ------------------------------------------------------------------
 OUT_ROOT = COASTSAT_ENDPOINT_VS_DUNELINE
 GIS_FIRST, GIS_LAST = 1, 90
 DAYS_PER_YEAR = 365.25
 SIX_MONTHS_DAYS = 182.625
 
-# Colours (Hannah, 2026-09-15, third pass): the two CoastSat estimators are
-# the SAME feature measured two ways, so they share the blue family, one line
-# each -- the LRR dark (the RdBu blue pole the house uses for the sea side),
-# the endpoint a lighter blue and dashed so the pair still separates in
-# greyscale. The dune line is the house RdBu red against them, the pair the
-# other figures already use, so the red/blue contrast reads at a glance
-# (Hannah, 2026-09-15). Here the pair means FEATURE, dune vs shoreline, not
-# vintage and not sign; the caption says so. Grey, purple, sand brown, orange
-# and REF green were tried and rejected, the green as too dark to see.
+# Colours (Hannah, 2026-09-15, third pass)
 C_LRR = C_1997                  # "#2166ac"
 C_ENDPOINT = "#74a9cf"          # PuBu mid blue (unused since 09-18)
-# Since 2026-09-18 the shoreline is ONE line, its net change at the dune
-# dates, drawn in the dark blue the LRR had.
+# Since 2026-09-18 the shoreline is ONE line, its net change at the dune dates
 C_SHORE = C_LRR
 C_DUNE = C_1984                 # "#b2182b"
 
-# Keyed by LINE VINTAGE (the year in the geojson name), not by period year: a
-# period finds its vintage through hat_topo_version.DUNE_LINE_FOR_YEAR.
-# 1984, 1997: the Henderson USGS metadata on D: (Calendar_Date). 2004, 2009:
-# Google Earth capture dates (Hannah, 2026-09-15); the raw_GE frames carry
-# none. 2023: NOAA NGS imagery under D:\Hatteras_GIS\Aerial\2023 whose
-# metadata gives only the 2015-2023 series extent, so None until Hannah
-# supplies the flight date; a None is centred mid-year and flagged.
+# Keyed by LINE VINTAGE (the year in the geojson name), not by period year
 KNOWN_SURVEY_DATES = {1984: "1984-09-19", 1997: "1997-10-12",
                       2004: "2004-05-25", 2009: "2009-05-30", 2023: None}
+# -----------------------------------------------------------------------------
 
 
-# -----------------------------------------------------------------------------
-# dune side
-# -----------------------------------------------------------------------------
+# Dune side
+
+# Mean ORIG_LEN per GIS domain, first row per transect, as the hindcast loader ...
 def dune_position_by_domain(year: int) -> pd.Series:
-    """Mean ORIG_LEN per GIS domain, first row per transect, as the hindcast
-    loader (`load_absolute_dune_distance`) reads it. Grows LANDWARD."""
     path = dune_raw_file_for_year(year)     # the vintage that stands for `year`
     raw = pd.read_csv(path, encoding="utf-8-sig")
     per_transect = raw.drop_duplicates(subset=["domain_id", "LineID"])
@@ -139,9 +69,9 @@ def dune_position_by_domain(year: int) -> pd.Series:
     return means.reindex(range(GIS_FIRST, GIS_LAST + 1))
 
 
-# -----------------------------------------------------------------------------
-# coastsat side
-# -----------------------------------------------------------------------------
+# Coastsat side
+
+# One transect's CoastSat series
 def load_chainage(transect_id: str):
     site = transect_id.rsplit("_", 1)[0]
     path = COASTSAT_TIMESERIES / f"{site}_timeseries" / f"{transect_id}.csv"
@@ -154,6 +84,7 @@ def load_chainage(transect_id: str):
     return df.dropna(subset=["chainage"])
 
 
+# Mean chainage within +/- half_days of a date
 def window_mean(df: pd.DataFrame, centre: datetime, half_days: float):
     lo = centre - timedelta(days=half_days)
     hi = centre + timedelta(days=half_days)
@@ -165,6 +96,7 @@ def window_mean(df: pd.DataFrame, centre: datetime, half_days: float):
             sel["date"].min(), sel["date"].max())
 
 
+# Per-transect net change between two survey dates
 def endpoint_by_transect(lookup: pd.DataFrame, d0: datetime, d1: datetime,
                          half_days: float, cache: dict) -> pd.DataFrame:
     years = (d1 - d0).days / DAYS_PER_YEAR
@@ -186,9 +118,9 @@ def endpoint_by_transect(lookup: pd.DataFrame, d0: datetime, d1: datetime,
     return pd.DataFrame(rows)
 
 
-# -----------------------------------------------------------------------------
-# figures
-# -----------------------------------------------------------------------------
+# Figures
+
+# Slope, intercept and r of y on x
 def _fit_stats(x, y):
     ok = np.isfinite(x) & np.isfinite(y)
     x, y = x[ok], y[ok]
@@ -203,6 +135,7 @@ def _fit_stats(x, y):
                 bias=float(np.mean(y - x)))
 
 
+# Dune-line change against shoreline change
 def scatter_figure(dom: pd.DataFrame, out: Path, start: int, end: int,
                    st: dict, v0: int, v1: int) -> None:
     import matplotlib.pyplot as plt
@@ -240,34 +173,28 @@ def scatter_figure(dom: pd.DataFrame, out: Path, start: int, end: int,
         f"{st['slope']:.2f}, RMSE = {st['rmse']:.2f} m/yr, bias shoreline − dune "
         f"= {st['bias']:+.2f} m/yr). The six domains farthest from 1:1 are "
         "labelled. See PROVENANCE.md for the survey dates."))
-    # The window is IN the stem (Hannah, 2026-09-21): five windows wrote this
-    # same basename, so a figure lifted out of its folder could not be told
-    # from the other four.
+    # The window is IN the stem (Hannah, 2026-09-21)
     save(fig, out / f"coastsat_endpoint_vs_duneline_{start}_{end}_scatter", close=True)
 
 
-# The alongshore figures are in METRES since 2026-09-19 (Hannah: one form for
-# every shoreline-vs-dune figure, net change with the beach-width gap).
+# The alongshore figures are in METRES since 2026-09-19 (Hannah
 Y_TICK = 20.0
 Y_LABEL = "Net change in position (m)"
-# The gap between the two lines: widened solid grey, narrowed hatched. Shared
-# by net_change_vs_duneline.py and total_change_vs_duneline.py.
+# The gap between the lines: widened solid grey, narrowed hatched (shared)
 C_GAP = "0.86"
 C_NARROW = "0.55"
 NARROW_HATCH = "////"
 STRUCTURE_LABEL_PT_GRID = 4.0   # the 2 x 2, whose panels are half the width
 
 
+# Symmetric y limit
 def _half(*arrays) -> float:
-    """Symmetric y limit: the largest |value| plus 5 m, up to the next 10 m."""
     v = np.concatenate([np.asarray(a, dtype=float).ravel() for a in arrays])
     return float(np.ceil((np.nanmax(np.abs(v)) + 5.0) / 10.0) * 10.0)
 
 
+# The space between the shoreline and dune-line changes
 def shade_beach_width(ax, x, shore, dune, zorder=3):
-    """The space between the shoreline and dune-line changes: solid grey where
-    the beach WIDENED (shoreline change > dune-line change), hatched where it
-    narrowed."""
     x, shore, dune = (np.asarray(a, dtype=float) for a in (x, shore, dune))
     width = shore - dune
     ax.fill_between(x, dune, shore, where=width >= 0, interpolate=True,
@@ -277,6 +204,7 @@ def shade_beach_width(ax, x, shore, dune, zorder=3):
                     lw=0, zorder=zorder)
 
 
+# Legend handles for widened and narrowed beach
 def beach_width_handles():
     from matplotlib.patches import Patch
     return [Patch(facecolor=C_GAP, lw=0, label="Beach widened"),
@@ -284,6 +212,7 @@ def beach_width_handles():
                   label="Beach narrowed")]
 
 
+# Legend handles for the two lines
 def _legend_handles():
     return [
         Line2D([], [], color=C_SHORE, lw=1.1, label="Shoreline change (CoastSat endpoint)"),
@@ -291,14 +220,9 @@ def _legend_handles():
     ] + beach_width_handles()
 
 
+# One alongshore panel in the house form
 def draw_alongshore(ax, dom: pd.DataFrame, half: float, label: bool = True,
                     label_pt: float = 6.5, window=None) -> None:
-    """One alongshore panel in the house form: village bands, groin and piers,
-    open frame, y grid, symmetric limits. TWO lines since 2026-09-18, both net
-    change over the same survey interval: the CoastSat shoreline blue, the
-    dune line red; in METRES with the beach-width gap shaded since 2026-09-19.
-    Call it after the legend is placed (structures() tests its labels against
-    the layout)."""
     from matplotlib.ticker import MultipleLocator
 
     g = dom["gis"].to_numpy(dtype=float)
@@ -318,8 +242,7 @@ def draw_alongshore(ax, dom: pd.DataFrame, half: float, label: bool = True,
     ax.set_axisbelow(True)
     open_frame(ax)
     structures(ax, label=label, label_pt=label_pt)
-    # the offshore shoals, and the fills placed inside the window, as the
-    # 3-rates figures mark them (2026-09-19)
+    # The offshore shoals, and the fills placed inside the window, as the 3-rates figures mark them (2026-09-19)
     sys.path.insert(0, str(PROJECT_ROOT / "scripts" / "input_prep"
                            / "5-scr" / "lib"))
     import scr_paths  # noqa: F401  (5-scr sibling modules onto sys.path)
@@ -331,6 +254,7 @@ def draw_alongshore(ax, dom: pd.DataFrame, half: float, label: bool = True,
             cw.draw_fills(ax, fills, half, label_pt=label_pt)
 
 
+# The shared caption body
 def _caption_body() -> str:
     return ("Both lines are NET CHANGE in metres over the same survey interval, "
             "seaward positive. Red: the digitized dune line, end line minus start "
@@ -348,6 +272,7 @@ def _caption_body() -> str:
             "Cape Point, 90 is Pea Island.")
 
 
+# Both changes along the island, the gap shaded
 def alongshore_figure(dom: pd.DataFrame, out: Path, start: int, end: int,
                       v0: int, v1: int) -> None:
     import matplotlib.pyplot as plt
@@ -363,8 +288,7 @@ def alongshore_figure(dom: pd.DataFrame, out: Path, start: int, end: int,
     caption(fig, f"Net change of the dune line and the CoastSat shoreline, "
                  f"{v0}–{v1} (standing in for {start}–{end}), by GIS domain. "
                  + _caption_body())
-    # Both sides are OBSERVED here -- two snapshots differenced, no rate
-    # anywhere -- which is what separates this folder from total_change/.
+    # Both sides are OBSERVED here -- two snapshots differenced, no rate anywhere
     compare_header(fig, [
         f"{start}–{end}   ·   shoreline: CoastSat, mean position ±6 months about "
         "each dune-line date",
@@ -372,9 +296,8 @@ def alongshore_figure(dom: pd.DataFrame, out: Path, start: int, end: int,
     save(fig, out / f"coastsat_endpoint_vs_duneline_{start}_{end}_alongshore", close=True)
 
 
+# Windows linked end-to-start
 def _chains(windows):
-    """Windows linked end-to-start: [(1984,2004),(2004,2024)],
-    [(1996,2010),(2010,2024)] -- the same rule as coastsat_lrr_windows.py."""
     rest = sorted(windows)
     chains = []
     while rest:
@@ -389,11 +312,8 @@ def _chains(windows):
     return chains
 
 
+# Every model window on ONE y axis, one full-width panel per window in chain order ...
 def four_windows_figure(layout: str = "column") -> Path:
-    """Every model window on ONE y axis, one full-width panel per window in
-    chain order (`layout="column"`), or the 2 x 2 by period (`"grid"`). Reads
-    each window's supporting/domain_comparison.csv; run the windows first.
-    The context window 1996_2024 is left out: it is not a model window."""
     import matplotlib.pyplot as plt
 
     windows, frames = [], {}
@@ -453,7 +373,7 @@ def four_windows_figure(layout: str = "column") -> Path:
                 close=True)[0]
 
 
-# -----------------------------------------------------------------------------
+# Run: one window, or the stacked grid
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description="net dune-line change against net CoastSat shoreline change")

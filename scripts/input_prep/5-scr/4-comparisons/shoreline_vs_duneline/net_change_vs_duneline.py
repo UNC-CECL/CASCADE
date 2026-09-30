@@ -1,51 +1,9 @@
 """
-net_change_vs_duneline.py
-==============================================================================
-Net shoreline change (CoastSat) against net dune-line change, per GIS domain,
-over 1996-2024 and its two halves, in METRES. Built 2026-09-18 (Hannah, by
-interview: "the total long term shoreline position change and then compare
-this to the total change in duneline position").
+Net shoreline change (CoastSat) against net dune-line change per GIS domain, 1996-2024 and its halves, in metres.
 
-WHAT IS COMPARED
-    Both sides are read from the stored endpoint products, never recomputed:
-        shoreline   3-rates/coastsat/endpoint/<window>/   mean CoastSat position
-                    within +/-6 months of each dune-line survey date, end minus
-                    start
-        dune line   3-rates/duneline/endpoint/<window>/   end line minus start
-                    line
-    Same windows, same survey dates (1997-10-12, 2009-05-30, 2023-07-01
-    ASSUMED), seaward positive on both, so the gap is
-        beach-width change = shoreline change - dune-line change
-    positive where the beach widened (the waterline gained on the dune).
-    Both products share the 2009 date, so for each of them the two halves add
-    up to the whole exactly; the script checks it.
-
-WHAT IS DRAWN
-    Three stacked panels, one per window (1997-2023, 1997-2009, 2009-2023),
-    one y axis in metres: the shoreline blue, the dune line red (the house
-    pair for FEATURE in coastsat_vs_duneline), the gap between them shaded
-    grey. The village spans are a strip along the top of each panel, not the
-    usual full-height wash, because the grey gap already shades. Groin and
-    piers as hairlines, the offshore shoals as faint hatched amber boxes, the
-    model-input fills as bars above the top panel -- the same marks as the
-    two halves figures.
-
-OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/endpoint_net_change/chains/
-    (was 4-comparisons/net_change_1996_2024/ until 2026-09-19)
-    net_change_chain_1996_2010_2024.png   also published to
-                                          output/figures/2-observations/shoreline_vs_duneline/
-    supporting/
-        domain_comparison.csv   one row per window x domain: shoreline, dune,
-                                beach-width change, whether they agree in sign
-        island_summary.csv      per window: means, r, slope, RMSE, sign
-                                agreement
-        net_change_shoreline_vs_dune.pdf, CAPTIONS.md
-    The per-transect CoastSat change (with positions per end window) is in
-    3-rates/coastsat/endpoint/<window>/transect_endpoint.csv.
-
-USAGE
     python scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/net_change_vs_duneline.py
-==============================================================================
+
+One stacked figure, a caption and a summary table. Details: scripts/input_prep/5-scr/4-comparisons/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -86,12 +44,12 @@ from site_layer.hat_observed_rates import (  # noqa: E402
 )
 from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 WHOLE = (1996, 2024)
 HALVES = [(1996, 2010), (2010, 2024)]
 WINDOWS = [WHOLE] + HALVES
 N_DOMAINS = 90
-# The chain figure of shoreline_vs_duneline/endpoint_net_change/ since 2026-09-19
-# (was 4-comparisons/net_change_1996_2024/net_change_shoreline_vs_dune).
+# The chain figure of endpoint_net_change/ since 2026-09-19
 STEM = "coastsat_endpoint_vs_duneline_1996_2010_2024_stacked"
 
 C_SHORE = C_1997          # "#2166ac", the CoastSat blue of coastsat_vs_duneline
@@ -100,10 +58,11 @@ C_GAP = "0.86"            # the beach-width gap
 TOWN_STRIP = 0.055        # village bands as a strip, the gap owns the grey
 Y_STEP_M = 10.0
 Y_TICK_M = 20.0
+# -----------------------------------------------------------------------------
 
 
+# Per-domain change from both products, plus the survey metadata
 def load(window):
-    """Per-domain change from both products, plus the survey metadata."""
     s, e = window
     cs = pd.read_csv(coastsat_endpoint_csv(s, e, "domain")).set_index("domain_number")
     du = pd.read_csv(dune_endpoint_csv(s, e, "domain")).set_index("domain_number")
@@ -119,6 +78,7 @@ def load(window):
     return df, meta
 
 
+# Slope, r and mean difference for one window
 def summarise(label, df, meta):
     x, y = df["shoreline_change_m"], df["dune_change_m"]
     ok = x.notna() & y.notna()
@@ -142,6 +102,7 @@ def summarise(label, df, meta):
     }
 
 
+# One window's panel
 def draw(ax, df, half, label):
     ax.set_xlim(0.5, N_DOMAINS + 0.5)
     ax.set_ylim(-half, half)
@@ -162,6 +123,7 @@ def draw(ax, df, half, label):
     open_frame(ax)
 
 
+# The figure caption
 def caption_text(summ, half, fills):
     by = {r["window"]: r for r in summ}
     w = by[f"{WHOLE[0]}_{WHOLE[1]}"]
@@ -194,6 +156,7 @@ def caption_text(summ, half, fills):
         "value.")
 
 
+# Run: load every window, the figure and the table
 def main() -> int:
     frames, summ, rows = {}, [], []
     for w in WINDOWS:

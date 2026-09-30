@@ -1,60 +1,10 @@
 """
-dsas_vs_coastsat_raw.py
-==============================================================================
-The two shoreline-rate sources against each other with NO SMOOTHING: the raw
-per-domain mean LRR from DSAS and from CoastSat, on the two DSAS windows
-(Hannah, 2026-09-22: "I want to see it without smoothing").
+The two shoreline-rate sources against each other with no smoothing: raw per-domain LRR, DSAS and CoastSat.
 
-    4-comparisons/dsas_vs_coastsat/calendar_windows/dsas_vs_coastsat_raw.png
-    4-comparisons/dsas_vs_coastsat/calendar_windows/slides/ (--slide)
-    4-comparisons/dsas_vs_coastsat/calendar_windows/supporting/*.csv
-
-WHY IT IS SEPARATE FROM 6-scr-smooth/dsas_vs_coastsat/
-    That folder exists to argue about the SMOOTHING -- every figure in it
-    draws a LOWESS, and its own README calls these windows retired. The
-    question here is different and prior to it: before any smoothing, do the
-    two sources say the same thing about the same 500 m of beach? So it sits
-    with the other comparisons, and the figure carries no LOWESS at all.
-
-WHAT THE CoastSat SIDE IS
-    REFIT HERE from the current time series (Hannah, 2026-09-22), not read
-    from the archive: every transect in the current transect_domain_lookup.csv
-    is fitted over the DSAS window with coastsat_lrr.compute_lrr --
-    the same loader, the same date filter, the same OLS, the same 3-position
-    minimum as the live windows -- and averaged per domain. Only the window
-    differs from 3-rates/coastsat/lrr/.
-
-    The refit is NOT written to 3-rates/coastsat/lrr/. hat_observed_rates
-    .windows() enumerates that tree by scanning it, so a 1978_1997 folder
-    there would become a window for every caller: rates_figures would draw
-    figures for it, and the shared y bound of EVERY window figure is the
-    largest domain mean over all windows, so the existing figures would
-    change. These years are a comparison, not a rate product, and they stay
-    inside this folder.
-
-    The archived fits from 5-scr/archive/coastsat_lrr_superseded_20260810/
-    are still read, for one purpose: the table carries them beside the refit
-    so the two can be differenced. Nothing in this folder feeds a run.
-
-    READ THE FIRST PANEL WITH CARE. CoastSat imagery begins in 1984, so its
-    "1978-1997" rate is fitted from 1984-06-17 -- 13.5 years against DSAS's
-    19, and it misses the six years at the start entirely. The second window
-    is a fair comparison (CoastSat 1997-01-12 to 2019-12-28); the first is
-    two different periods with one label, which is worth more of the
-    disagreement than any method difference.
-
-SLIDE VERSION
-    --slide draws the same two panels on a 3.4 in canvas, as
-    dsas_vs_coastsat_raw_slide.png. The reach is NOT cut down the way
-    lrr_transect_zoom's slide is: the whole island IS the comparison here, and
-    the thing a viewer reads off it -- the two lines apart in (a), together in
-    (b) -- survives the smaller canvas, where a nine-domain crop would not
-    show it at all. Only the labels, ticks and line weight come down.
-
-USAGE
     python scripts/input_prep/5-scr/4-comparisons/dsas_vs_coastsat/dsas_vs_coastsat_raw.py
     python scripts/input_prep/5-scr/4-comparisons/dsas_vs_coastsat/dsas_vs_coastsat_raw.py --slide
-==============================================================================
+
+On the two DSAS windows; one figure and a statistics table. Details: scripts/input_prep/5-scr/4-comparisons/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -92,6 +42,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
     figsize, open_frame, save, structures, support_dir, town_bands,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 N = 90
 WINDOWS = ((1978, 1997), (1997, 2019))
 OUT = obs.COMPARISONS / "dsas_vs_coastsat" / "calendar_windows"
@@ -102,18 +53,19 @@ SLIDE_W_IN = 3.4
 SLIDE_H_IN = 4.2
 LW_SLIDE = 0.8
 MIN_OBS = 3   # as the live windows, coastsat_domain_lrr_fixed.MIN_OBS
+# -----------------------------------------------------------------------------
 
 
+# Per-domain mean LRR from the DSAS rate table, on domains 1..90
 def dsas(start, end):
-    """Per-domain mean LRR from the DSAS rate table, on domains 1..90."""
     df = pd.read_csv(obs.DSAS_ROOT / f"dsas_{start}_{end}_rates.csv")
     df = df.rename(columns={"domain_id": "domain", "MEAN_LRR": "lrr"})
     return (df[["domain", "lrr"]].groupby("domain")["lrr"].mean()
             .reindex(range(1, N + 1)))
 
 
+# Per-domain mean LRR as the retired fit recorded it, for the diff only
 def coastsat_archived(start, end):
-    """Per-domain mean LRR as the retired fit recorded it, for the diff only."""
     df = pd.read_csv(obs.COASTSAT_LRR_SUPERSEDED / f"{start}_{end}"
                      / "domain_lrr_summary.csv")
     df = df.rename(columns={"domain_number": "domain", "mean_lrr": "lrr"})
@@ -121,12 +73,8 @@ def coastsat_archived(start, end):
             .reindex(range(1, N + 1)))
 
 
+# {transect_id
 def _series_cache():
-    """{transect_id: chainage frame} for every transect in the current lookup.
-
-    Read once and fitted to both windows, rather than once per window: the
-    time series are the same file either way.
-    """
     lookup = pd.read_csv(obs.transect_lookup())
     lookup = lookup[lookup["domain_number"].between(1, N)]
     cache, missing = {}, 0
@@ -142,13 +90,8 @@ def _series_cache():
     return lookup, cache
 
 
+# Per-domain mean LRR refitted from the current time series
 def coastsat_refit(start, end, lookup, cache):
-    """Per-domain mean LRR refitted from the current time series.
-
-    Same method as the live windows: every position inside the calendar
-    window, no outlier filter, no weighting, at least MIN_OBS positions.
-    Returns (per-domain Series, per-transect frame).
-    """
     rows = []
     for tid, dom in zip(lookup["transect_id"], lookup["domain_number"]):
         df = cache.get(tid)
@@ -164,12 +107,8 @@ def coastsat_refit(start, end, lookup, cache):
     return per_domain, t
 
 
+# n, bias, RMSE and r over the domains where both sources have a value
 def agreement(a, b):
-    """n, bias, RMSE and r over the domains where both sources have a value.
-
-    bias is CoastSat minus DSAS, so positive means CoastSat reports the more
-    seaward rate.
-    """
     ok = a.notna() & b.notna()
     d = (b[ok] - a[ok]).to_numpy(float)
     r = (float(np.corrcoef(a[ok], b[ok])[0, 1]) if ok.sum() > 2 else float("nan"))
@@ -179,6 +118,7 @@ def agreement(a, b):
                 max_at=int((b - a).abs().idxmax()))
 
 
+# Both rates along the island, one panel per window
 def figure(series, stats, slide=False):
     x = np.arange(1, N + 1)
     lw = LW_SLIDE if slide else LW
@@ -188,9 +128,7 @@ def figure(series, stats, slide=False):
                              figsize=size, constrained_layout=True)
     for i, ((s, e), ax) in enumerate(zip(WINDOWS, axes)):
         ax.set_xlim(0.5, N + 0.5)
-        # Village names and structure labels are page furniture: at 3.4 in
-        # they collide with each other and with the data (2026-09-22). The
-        # bands stay, unlabelled, so the villages are still locatable.
+        # Village names and structure labels are page furniture
         town_bands(ax, label=(i == 0 and not slide))
         ax.axhline(0, color=INK_MUTED, lw=0.6, zorder=2)
         ax.plot(x, series[(s, e)]["dsas"], color=C_DSAS, lw=lw, zorder=4)
@@ -237,6 +175,7 @@ def figure(series, stats, slide=False):
     return fig
 
 
+# Run: both windows, the figure and the table
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--slide", action="store_true",

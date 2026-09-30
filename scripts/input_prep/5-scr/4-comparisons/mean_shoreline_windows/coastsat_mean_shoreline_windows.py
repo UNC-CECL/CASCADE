@@ -1,49 +1,11 @@
 """
-coastsat_mean_shoreline_windows.py -- one period's mean shoreline, two windows
-==============================================================================
-The CoastSat mean shoreline a period starts from, averaged over two windows,
-differenced transect by transect and domain by domain:
+One period's CoastSat mean shoreline over two windows, differenced transect by transect and domain by domain.
 
-    3-yr   the calendar span the shoreline offset v1 was built from
-           (1995_1997 for 1996, 2009_2011 for 2010)
-    2-yr   +/-1 yr of the start DEM's lidar flights, the window the offset v2
-           is built from (1995-10-12_1997-10-12, 2008-08-17_2010-08-17)
+    python scripts/input_prep/5-scr/4-comparisons/mean_shoreline_windows/coastsat_mean_shoreline_windows.py
+    python scripts/input_prep/5-scr/4-comparisons/mean_shoreline_windows/coastsat_mean_shoreline_windows.py --periods 1996
 
-Asked for by Hannah on 2026-09-29 ("a new comparison of the 3 year window vs
-the 2"), after the interview that moved the offset onto the DEM-centred
-window ([[cascade-shoreline-offset-dem-centred-window]]).
-
-WHAT IS COMPARED
-    Both windows' per-transect means as coastsat_mean_shoreline.py stored them
-    (mean_shoreline/<label>/transect_means_<label>.csv). Nothing is re-averaged
-    here. The difference is 2-yr MINUS 3-yr along the transect, so + is
-    SEAWARD: the DEM-centred line sits seaward of the calendar one. A domain's
-    value is the mean over its transects included in BOTH windows.
-
-WHAT IT CANNOT SAY
-    The two windows share most of their satellite passes (1996 shares
-    1995-10-12..1997-10-12, all of the 2-yr window), so their means are not
-    independent and no significance is attached to a difference. The standard
-    errors are drawn beside the difference so a reader can see how big a
-    difference is against the sampling noise of either mean.
-
-    The island offset is zeroed on its own minimum, so a UNIFORM shift between
-    the windows does not reach the model; only the alongshore-varying part
-    does. Both are reported.
-
-OUTPUT   data/hatteras_init/5-scr/4-comparisons/mean_shoreline_windows/<period>/
-    mean_shoreline_windows_<period>.png        (a) the difference, (b) the SE
-    supporting/mean_shoreline_windows_<period>.pdf, CAPTIONS.md
-    supporting/domain_comparison_<period>.csv  per domain: both means' SE and
-                                               positions, the difference
-    supporting/transect_comparison_<period>.csv per transect, both windows
-    PROVENANCE.md
-    Resolved through hat_observed_rates.MEAN_SHORELINE_WINDOWS.
-
-USAGE
-    python coastsat_mean_shoreline_windows.py                 # both periods
-    python coastsat_mean_shoreline_windows.py --periods 1996
-==============================================================================
+The 3-yr calendar window against the DEM-centred +/-1 yr window; figures,
+an island map, a datum check and provenance per period. Details: scripts/input_prep/5-scr/4-comparisons/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -73,6 +35,7 @@ from site_layer.hat_observed_rates import (  # noqa: E402
     MEAN_SHORELINE_WINDOWS, mean_shoreline_csv,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 # period start -> (the 3-yr calendar window, the 2-yr DEM-centred window)
 PERIODS = {
     1996: (cms.Window.from_years(1995, 1997), cms.Window.centred_on("alace_1996")),
@@ -80,16 +43,17 @@ PERIODS = {
 }
 # The unmodified input grey, the modification under test purple (style rule).
 C_CAL, C_DEM = fs.C["BASE"], fs.C["ACCENT"]
+# -----------------------------------------------------------------------------
 
 
+# The stored per-transect means of one window, included transects only
 def load(window):
-    """The stored per-transect means of one window, included transects only."""
     df = pd.read_csv(mean_shoreline_csv(*window.key))
     return df[df["included"]].set_index("transect_id")
 
 
+# Per transect and per domain
 def compare(cal, dem):
-    """Per transect and per domain: both windows, and dem - cal (+ seaward)."""
     a, b = load(cal), load(dem)
     both = a.index.intersection(b.index)
     t = pd.DataFrame({
@@ -119,6 +83,7 @@ def compare(cal, dem):
     return t.sort_index(), d, only
 
 
+# The two windows' profiles and their difference
 def figure(t, d, cal, dem, period, folder):
     import matplotlib
     matplotlib.use("Agg")
@@ -184,6 +149,7 @@ def figure(t, d, cal, dem, period, folder):
 SURVEYS = cms.SURVEY_ANCHORS
 
 
+# The provenance beside a period's comparison
 def write_provenance(t, d, only, cal, dem, period, folder, built_on):
     a = SURVEYS[dem.anchor]
     big = d.reindex(d["diff_minus_island_mean_m"].abs().sort_values(ascending=False).index).head(5)
@@ -264,41 +230,26 @@ The five domains that move most once the island mean is removed:
     (folder / "PROVENANCE.md").write_text(text, encoding="utf-8")
 
 
-# =============================================================================
-# the two lines themselves, on a photograph (Hannah, 2026-09-29: "plot the
-# shorelines themselves to visualize the difference")
-# =============================================================================
+# The two lines themselves, on a photograph (Hannah, 2026-09-29
 
-# The photograph nearest the start DEM's survey: the USGS frame of 1996-10-14
-# (two days before the ALACE flights ended); for 2010 no georeferenced photo
-# lies in the window, and the NOAA NGS mosaic of March 2008 is the nearest,
-# as for the 2009_2011 imagery figures.
+# The photograph nearest the start DEM's survey
 PHOTO_YEAR = {1996: 1996, 2010: 2008}
 N_LARGEST = 6
 LINE_LAND_M, LINE_SEA_M = 45.0, 35.0       # panel reach either side of the lines
-# The middle half of each domain: at 500 m alongshore the oblique shore makes
-# the panel wide and a few metres between the lines is under a line width.
+# The middle half of each domain
 LINE_ALONG_M = 250.0
-# On the photographs the two windows are the house RdBu pair, 3-yr red and
-# 2-yr blue (Hannah, 2026-09-29: "more distinct instead of grey and purple").
-# Grey and purple were the BASE/ACCENT pair of the other figures here, but on
-# a photograph grey read as a white line on sand and purple sat too close to
-# it; red against blue separates on hue and on greyscale. Only these figures
-# carry no red/blue difference scale, so the pair means nothing else on them.
+# On the photographs the two windows are the house RdBu pair, 3-yr red and 2-yr blue (Hannah, 2026-09-29
 C_CAL_PHOTO, C_DEM_PHOTO = fs.C_1984, fs.C_1997
 HALO_LW = 1.5
 
 
+# The window's mean line in alongshore order, as coastsat_mean_shoreline strung it
 def line_points(window):
-    """The window's mean line in alongshore order, as coastsat_mean_shoreline
-    strung it."""
     return cms.line_vertices(pd.read_csv(mean_shoreline_csv(*window.key)))
 
 
+# One panel per domain
 def lines_figure(d, cal, dem, period, folder, gis, tag, what):
-    """One panel per domain: both lines on the photograph, north up, at one
-    scale. At the island scale a 10 m difference is a hair; one domain
-    (500 m) by ~200 m across makes it visible."""
     import geopandas as gpd
     import matplotlib
     matplotlib.use("Agg")
@@ -372,15 +323,12 @@ def lines_figure(d, cal, dem, period, folder, gis, tag, what):
     print("  figure -> {0}".format(out[0].name))
 
 
-# The whole island in six north-up segments of 15 domains (Hannah, 2026-09-29,
-# after the duneline_positions overview). At 7.5 km a panel, 10 m is ~0.2 pt:
-# the two lines would print as one. So the geometry drawn is the true 3-yr
-# line, and the DIFFERENCE is carried by colour, transect by transect.
-# (Dropped and restored the same day: Hannah kept it beside the datum figure.)
+# The whole island in six north-up segments of 15 domains (Hannah, 2026-09-29
 SIX_SEGMENTS = [(1, 15), (16, 30), (31, 45), (46, 60), (61, 75), (76, 90)]
 DIFF_CMAP = "RdBu"            # blue seaward, red landward; the house RdBu poles
 
 
+# The difference along the island on a map
 def island_figure(t, d, cal, dem, period, folder):
     import geopandas as gpd
     import matplotlib
@@ -404,8 +352,7 @@ def island_figure(t, d, cal, dem, period, folder):
     vmax = float(np.ceil(np.nanmax(np.abs(t["diff_m"])) / 2.5) * 2.5)
     norm = matplotlib.colors.Normalize(-vmax, vmax)
 
-    # ONE extent for every panel, centred on each segment, so all six share
-    # a scale; the ocean side carries the domain numbers
+    # ONE extent for every panel, centred on each segment, so all six share a scale
     ext = [boxes[boxes["gis"].between(lo, hi)].total_bounds for lo, hi in SIX_SEGMENTS]
     w = max(e[2] - e[0] for e in ext) + 900
     h = max(e[3] - e[1] for e in ext) + 300
@@ -418,8 +365,7 @@ def island_figure(t, d, cal, dem, period, folder):
         island.clip(box(*b)).plot(ax=ax, color="0.93", edgecolor="0.62", lw=0.4, zorder=1)
         seg = boxes[boxes["gis"].between(lo, hi)]
         seg.boundary.plot(ax=ax, color="0.78", lw=0.3, zorder=2)
-        # a grey edge under the colour, so where the windows agree (white)
-        # the shoreline does not vanish against the white ocean
+        # A grey edge under the colour, so agreeing (white) stretches stay visible
         ax.add_collection(LineCollection(seg_xy, colors="0.45", lw=3.3, zorder=3,
                                          capstyle="round"))
         lc = LineCollection(seg_xy, cmap=DIFF_CMAP, norm=norm, lw=2.4, zorder=4,
@@ -464,23 +410,16 @@ def island_figure(t, d, cal, dem, period, folder):
     print("  figure -> {0}".format(out[0].name))
 
 
-# =============================================================================
-# the two lines as the offset build sees them (Hannah, 2026-09-29: "I was
-# thinking of this figure" -- 2-brie-offset/<year>/comparisons/duneline_vs_
-# shoreline, compare_offset_sources.py). The same 2 x 3 grid of vertical
-# strips, the same frame: the distance from the shared offshore datum along
-# the 100 m model transects, per 500 m domain. That is the quantity the
-# island offset is made of, so this is the offset v1 vs v2 before the build.
-# =============================================================================
+# The two lines as the offset build sees them (Hannah, 2026-09-29
 
 OFFSET_PRODUCER = (_REPO / "scripts" / "input_prep" / "2-brie-offset" / "1-produce"
                    / "duneline_to_raw_offsets.py")
-# SECTIONS and GRID_COLS as compare_offset_sources.py sets them (its 2 x 3
-# note: rows, not six across, keep width on the axis the gap is measured on).
+# SECTIONS and GRID_COLS as compare_offset_sources.py sets them (its 2 x 3 note
 SECTIONS = ((1, 15), (16, 30), (31, 45), (46, 60), (61, 75), (76, 90))
 GRID_COLS = 3
 
 
+# duneline_to_raw_offsets.py, loaded as a module
 def _offset_producer():
     import importlib.util
     spec = importlib.util.spec_from_file_location("duneline_to_raw_offsets", OFFSET_PRODUCER)
@@ -489,14 +428,8 @@ def _offset_producer():
     return mod
 
 
+# Per domain, each window's mean station from the offshore datum
 def datum_stations(windows):
-    """Per domain, each window's mean station from the offshore datum.
-
-    Computed in memory with the offset build's own intersection
-    (duneline_to_raw_offsets.intersect on its 100 m transects), so the 2-yr
-    line needs no raw file in 2-brie-offset before step 3 writes one, and both
-    windows go through the identical code. One value per transect first, then
-    the domain mean, as compare_offset_sources._raw_domain_means does."""
     import geopandas as gpd
     from site_layer.hat_observed_rates import mean_shoreline_geojson
     prod = _offset_producer()
@@ -509,6 +442,7 @@ def datum_stations(windows):
     return pd.DataFrame(out)
 
 
+# Both windows in the offset producer's datum
 def datum_figure(cal, dem, period, folder):
     import matplotlib
     matplotlib.use("Agg")
@@ -517,8 +451,7 @@ def datum_figure(cal, dem, period, folder):
 
     st = datum_stations([cal, dem])
     s3, s2 = st[cal.label], st[dem.label]
-    # stations grow LANDWARD, so 3-yr minus 2-yr is + where the 2-yr line is
-    # seaward -- the same sign as everywhere else in this folder
+    # Stations grow LANDWARD, so 3-yr minus 2-yr is + where the 2-yr line is seaward
     diff = s3 - s2
     st["seaward_shift_2yr_m"] = diff
     st.index.name = "gis_domain"
@@ -538,11 +471,7 @@ def datum_figure(cal, dem, period, folder):
         print("  (v1 raw file not checked: {0})".format(exc))
 
     fs.apply_style()
-    # Each section is a PAIR: the two profiles, and beside them a narrow strip
-    # of the difference itself on the same domain axis (Hannah, 2026-09-29).
-    # The profiles span 1-2 km across and the difference is at most ~12 m, so
-    # in the profile panel the two lines print as one; the strip is where the
-    # difference can be read. One symmetric scale for every strip.
+    # Each section a pair: the two profiles and a strip of their difference
     n_rows = int(np.ceil(len(SECTIONS) / GRID_COLS))
     lim = float(np.ceil(max(np.nanmax(np.abs(diff)), fs.CELL_M) / 5.0) * 5.0) + 2.0
     fig = plt.figure(figsize=(fs.FIG_W_DOUBLE, 3.9 * n_rows + 1.2), layout="constrained")
@@ -616,8 +545,8 @@ def datum_figure(cal, dem, period, folder):
     print("  figure -> {0}".format(out[0].name))
 
 
+# The village spans that touch GIS lo..hi, from the one owner
 def _town_spans(lo, hi):
-    """The village spans that touch GIS lo..hi, from the one owner."""
     try:
         from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS
     except ImportError:
@@ -626,9 +555,8 @@ def _town_spans(lo, hi):
             if not (z + 0.5 < lo - 0.5 or a - 0.5 > hi + 0.5)]
 
 
+# Village spans against a VERTICAL alongshore axis, as ...
 def _town_bands_y(ax, lo, hi):
-    """Village spans against a VERTICAL alongshore axis, as
-    compare_offset_sources._town_bands_alongshore_y draws them."""
     try:
         from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS
         spans = HATTERAS_ANNOTATIONS.town_spans
@@ -643,6 +571,7 @@ def _town_bands_y(ax, lo, hi):
                 va="center", fontsize=6.5, color=fs.INK_MUTED, zorder=1, clip_on=True)
 
 
+# The largest differences on the photographs
 def draw_lines(d, cal, dem, period, folder):
     largest = (d["diff_minus_island_mean_m"].abs().sort_values(ascending=False)
                .head(N_LARGEST).index)
@@ -658,6 +587,7 @@ def draw_lines(d, cal, dem, period, folder):
                  "imagery figures, south to north.")
 
 
+# Run: every period asked for
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--periods", nargs="+", type=int, default=sorted(PERIODS),
