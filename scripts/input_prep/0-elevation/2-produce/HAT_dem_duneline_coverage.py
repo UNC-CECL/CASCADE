@@ -471,7 +471,7 @@ def main(only_domains=None):
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description=__doc__.split("\n")[2])
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--domains", default=None,
                     help="comma-separated subset, for checking the code path. "
                          "Overwrites the full CSVs - re-run without it.")

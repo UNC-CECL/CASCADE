@@ -746,7 +746,7 @@ def upsert_caption(head: str, body: str) -> None:
 
 # Run: every chosen domain's figure, then the sheet, report and caption
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n")[2])
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--domains", default="", help="comma-separated GIS ids (default: every changed domain + controls)")
     ap.add_argument("--years", default=",".join(str(y) for y in DEFAULT_YEARS))
     ap.add_argument("--controls", type=int, default=10, help="how many unchanged neighbours to add (default 10)")
