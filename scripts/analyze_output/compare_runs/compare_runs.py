@@ -832,16 +832,16 @@ def plot_residuals(run_data, cs_series, active_period, out_path, comparison_name
 
 # Run: load runs and CoastSat, smooth, draw every figure
 def main():
-    # ── Resolve comparison name ───────────────────────────────────────────────
+    # Resolve comparison name
     global COMPARISON_NAME
     if COMPARISON_NAME is None:
         COMPARISON_NAME = "_vs_".join(r["label"].replace(" ", "") for r in RUNS_TO_COMPARE)
     comparison_name = COMPARISON_NAME
 
-    # ── Resolve run colors (auto-gradient unless a run overrides 'color') ────
+    # Resolve run colors (auto-gradient unless a run overrides 'color')
     RUNS_TO_COMPARE[:] = assign_run_colors(RUNS_TO_COMPARE)
 
-    # ── Resolve active CoastSat period ────────────────────────────────────────
+    # Resolve active CoastSat period
     global ACTIVE_PERIOD_START
     if ACTIVE_PERIOD_START is None:
         years = [r["start_year"] for r in RUNS_TO_COMPARE]
@@ -849,14 +849,14 @@ def main():
         print(f"ACTIVE_PERIOD_START inferred from runs: {ACTIVE_PERIOD_START}")
     active_period = ACTIVE_PERIOD_START
 
-    # ── Create comparison folder ──────────────────────────────────────────────────
+    # Create comparison folder
     out_dir = os.path.join(COMPARISON_ROOT_DIR, comparison_name)
     os.makedirs(out_dir, exist_ok=True)
     print(f"\nComparison:   {comparison_name}")
     print(f"Output dir:   {out_dir}")
     print("=" * 70)
 
-    # ── Load model runs ───────────────────────────────────────────────────────
+    # Load model runs
     print("\nLoading CASCADE run rate CSVs...")
     run_data = []
     for run_cfg in RUNS_TO_COMPARE:
@@ -891,7 +891,7 @@ def main():
 
     print(f"\n  {len(run_data)} run(s) loaded successfully.")
 
-    # ── Load CoastSat transects + apply LOWESS at transect resolution ─────────
+    # Load CoastSat transects + apply LOWESS at transect resolution
     print("\nLoading CoastSat transect data...")
     cs_series = []
     for ds in COASTSAT_DATASETS:
@@ -937,7 +937,7 @@ def main():
                   f"trusting any figure that includes these runs.")
             print("=" * 70)
 
-    # ── Produce figures ───────────────────────────────────────────────────────
+    # Produce figures
     print("\nGenerating figures...")
 
     plot_diagnostic(

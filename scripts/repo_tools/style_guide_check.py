@@ -23,7 +23,7 @@ from pathlib import Path
 MAX_HEADER_LINES = 12          # docstring lines above the author block
 SKIP_DIRS = re.compile(r"(__pycache__|supersed|archive|legacy|other_ms|colleague_old_version|from_lexi|from_roya)", re.I)
 AUTHOR_LINES = ("Author:  Hannah A. Henry", "Contact: hahenry@unc.edu", "Version: ")
-BANNER = re.compile(r"^\s*#\s*(={5,}|-{5,}|─{3,}|═{3,})")
+BANNER = re.compile(r"^\s*#.*(={5,}|-{5,}|─{5,}|═{5,})")
 CONFIG_RULE = re.compile(r"^# --- CONFIG -+$|^# -{20,}$")
 CODE_LIKE = re.compile(r"^\s*#\s*(\w+\s*=|dict\(|\)|\]|\}|[\w.]+\()")
 # -----------------------------------------------------------------------------
