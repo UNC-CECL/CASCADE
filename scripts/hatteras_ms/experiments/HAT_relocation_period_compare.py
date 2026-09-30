@@ -241,7 +241,7 @@ def plt_subplots(nrow, ncol, size):
 
 # Run: read both sets, write the tables, the figure and the report
 def main():
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     ap.add_argument("--periods", type=int, nargs=2, default=DEFAULT_PERIODS,
                     help="two hindcast start years (default 1984 1996)")
     ap.add_argument("--presets", nargs="+", default=list(DEFAULT_PRESETS))

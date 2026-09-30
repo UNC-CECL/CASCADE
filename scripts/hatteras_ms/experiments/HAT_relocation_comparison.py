@@ -496,7 +496,7 @@ def _report_header(arm_a, arm_b, preset):
 
 # Run: resolve the arms, compare them, write the report
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     raw_runs = PROJECT_BASE_DIR / "output" / "raw_runs"
     parser.add_argument("--period", type=int, default=DEFAULT_PERIOD,
                         help="hindcast start year, a HATTERAS_PERIODS key "
