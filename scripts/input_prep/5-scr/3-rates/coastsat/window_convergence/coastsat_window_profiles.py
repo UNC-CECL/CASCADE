@@ -317,7 +317,7 @@ def one_direction(direction):
 
 # Run: the chosen directions
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.split("\n")[3])
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--direction", choices=("forward", "backward", "both"),
                     default="both")
     args = ap.parse_args(argv)
