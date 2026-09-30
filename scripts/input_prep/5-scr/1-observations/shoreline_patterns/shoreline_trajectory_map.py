@@ -35,7 +35,7 @@ from site_layer import hat_observed_rates as _obs  # noqa: E402
 # --- CONFIG ------------------------------------------------------------------
 DOMAINS_GEOJSON   = str(_obs.DOMAIN_BOXES)
 TRANSECTS_GEOJSON = str(_obs.TRANSECT_LAYER)
-METRICS_CSV       = r"C:\Users\hanna\PycharmProjects\CASCADE\scripts\input_preperation\shoreline_change_patterns\classification_output\domain_trajectory_metrics.csv"
+METRICS_CSV       = str(_obs.SHORELINE_PATTERNS / "classification_output" / "domain_trajectory_metrics.csv")   # what the classification writes
 from site_layer.hat_map_layers import ISLAND_OUTLINE as _OUTLINE  # noqa: E402
 OUTLINE_SHP= str(_OUTLINE)
 # Anchored on this file 2026-09-12
