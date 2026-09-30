@@ -1,60 +1,11 @@
-r"""
-build_island_offset.py -- a digitised dune line in, a model input out
-==============================================================================
-One command from a geojson under 2-brie-offset/dunelines/ to
-the padded 120-domain file a hindcast start reads, following the same steps
-that were run by hand until 2026-09-15 (Hannah: "one driver that chains the
-two steps"):
+"""
+A digitised dune line in, a model input out: the padded 120-domain island offset for one start year.
 
-    1. duneline_to_raw_offsets.py   line x 100 m transects -> per-transect
-                                    stations from the offshore datum, written
-                                    to raw_offsets/<vintage>_duneline_offset_raw.csv
-    2. island_offset_hybrid.py      first row per transect, domain mean, zeroed
-                                    on the minimum, padded to 120 with the
-                                    model's smooth wrap-around -> <year>/v<n>/
-    3. HAT_compare_offset_versions  the new build against the previous one,
-                                    in both frames (model, and fixed datum)
-    4. CURRENT <- v<n>              unless --no-current
-    5. PROVENANCE.md                written from the run, not by hand
+    python scripts/input_prep/2-brie-offset/1-produce/build_island_offset.py --duneline duneline_1984.geojson --year 1984
+    python scripts/input_prep/2-brie-offset/1-produce/build_island_offset.py --duneline duneline_1997.geojson --year 1996 --version v2
 
-The two scripts are unchanged and still run on their own.
-
-VINTAGE VS PERIOD YEAR
-    The geojson is named for the IMAGERY vintage of the line (duneline_1997);
-    --year is the hindcast start it serves (1996). The pairing is
-    hat_topo_version.DUNE_LINE_FOR_YEAR, the only place it is spelled, and
-    this driver refuses a pair the table does not hold rather than guess.
-
-VERSIONS
-    Every build is a version: <year>/v1/, v2/, ... and a CURRENT file naming
-    the one the runner reads (hatteras_site_config._island_offset_file).
-    A version is never overwritten; ask for the next one. Each version folder
-    keeps a copy of the raw file it was built from, so it can be rebuilt with
-    island_offset_hybrid.py --raw-file after the vintage's raw has moved on.
-
-USAGE
-    python build_island_offset.py --duneline duneline_1984.geojson --year 1984
-    python build_island_offset.py --duneline duneline_1997.geojson --year 1996 \
-        --compare-with v1
-    python build_island_offset.py --duneline duneline_2009.geojson --year 2010   # once in the table
-
-    --version vN       name the version (default: the next free one)
-    --compare-with X   a version folder under <year>/ to compare against
-                       (default: the previous version, else a superseded_*
-                       folder if one exists, else no comparison)
-    --validate-against a GIS export of the same line, passed to step 1
-    --no-current       build but leave CURRENT as it is
-
-EXTENDED GEOMETRY (2026-09-16, the Pea Island extension experiment)
-    python build_island_offset.py --duneline duneline_1997.geojson --year 1996 \
-        --geometry n115
-
-    Runs step 1 with --extension (the transects beyond GIS 1-90, numbered on
-    the continued grid, to raw_offsets/ext/) and step 2 with --geometry (the
-    surveyed raw plus the extension, zeroed on the surveyed minimum, padded,
-    to <year>/ext/<geometry>/). Not a version: CURRENT is untouched, no
-    comparison is drawn, and the provenance lands in the ext folder.
-==============================================================================
+Chains duneline_to_raw_offsets.py, island_offset_hybrid.py and the version
+comparison, writing a new version under 2-brie-offset/<year>/duneline/. Details: scripts/input_prep/2-brie-offset/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -86,28 +37,27 @@ from site_layer.hat_extension_domains import (BASE_GEOMETRY, GEOMETRIES,  # noqa
                                    extension_gis, gis_bounds)
 
 HERE = Path(__file__).resolve().parent
+# --- CONFIG ------------------------------------------------------------------
 STEP_RAW = HERE / "duneline_to_raw_offsets.py"
 STEP_PAD = HERE / "island_offset_hybrid.py"
 # The comparison is a figure step, in 2-figures/ beside 1-produce/ (2026-09-18).
 STEP_CMP = HERE.parent / "2-figures" / "HAT_compare_offset_versions.py"
 
-# geojson properties copied into the provenance when present; imagery_date is
-# the one every new line should carry (the 1984 and 2004 dates had to be
-# recovered from a metadata file and from memory).
+# Geojson properties copied into the provenance when present
 LINE_PROPS = ("feature_type", "year", "imagery_date", "source_type", "method",
               "editor", "edit_date", "notes")
+# -----------------------------------------------------------------------------
 
 
+# Print a step's output on whatever console this is (Windows cp1252 included) without dying on a ...
 def _echo(text):
-    """Print a step's output on whatever console this is (Windows cp1252
-    included) without dying on a character it cannot show."""
     enc = sys.stdout.encoding or "utf-8"
     sys.stdout.write(text.encode(enc, errors="replace").decode(enc))
     sys.stdout.flush()
 
 
+# Run a step, echo it, keep its stdout for the provenance
 def _run(cmd, log):
-    """Run a step, echo it, keep its stdout for the provenance."""
     print("\n$ " + " ".join(str(c) for c in cmd))
     r = subprocess.run([sys.executable, *map(str, cmd)], capture_output=True,
                        text=True, encoding="utf-8", errors="replace",
@@ -120,6 +70,7 @@ def _run(cmd, log):
     return r.stdout
 
 
+# A dune-line path, or a name under the dunelines folder
 def _resolve_geojson(name_or_path):
     p = Path(name_or_path)
     if p.exists():
@@ -130,6 +81,7 @@ def _resolve_geojson(name_or_path):
     sys.exit(f"{name_or_path}: not a path and not under {DUNELINE_DIR}")
 
 
+# The single feature's properties from a dune-line file
 def _line_properties(path):
     import geopandas as gpd
     g = gpd.read_file(path)
@@ -144,6 +96,7 @@ def _line_properties(path):
     return props, str(g.crs)
 
 
+# The line's survey year, from its properties or its file name
 def _vintage_of(path, props):
     if props.get("year") not in (None, "") and not pd.isna(props.get("year")):
         return int(props["year"])
@@ -153,15 +106,15 @@ def _vintage_of(path, props):
     return int(m.group(1))
 
 
+# The v<N> folders under a year, in order
 def _versions(year_dir):
     return sorted((p.name for p in year_dir.iterdir()
                    if p.is_dir() and re.fullmatch(r"v\d+", p.name)),
                   key=lambda v: int(v[1:])) if year_dir.is_dir() else []
 
 
+# The extended-reach build
 def build_extension(a, line, props, crs, vintage, year_dir):
-    """The extended-reach build: steps 1 and 2 in their extension modes,
-    then a provenance file in <year>/ext/<geometry>/."""
     if a.version or a.compare_with or a.validate_against:
         sys.exit("--geometry takes none of --version, --compare-with, --validate-against")
     first, last = gis_bounds(a.geometry)
@@ -254,6 +207,7 @@ def build_extension(a, line, props, crs, vintage, year_dir):
     return 0
 
 
+# Run: raw offsets, the padded build, the comparison, then CURRENT
 def main(argv=None):
     ap = argparse.ArgumentParser(description="a dune line in, a model input out")
     ap.add_argument("--duneline", required=True)
@@ -276,8 +230,7 @@ def main(argv=None):
                  f"{a.year} start with the {expected} line. Change the table in "
                  f"hat_topo_version.py if the pairing is wrong; the driver does not guess.\n")
 
-    # <year>/duneline/ since 2026-09-22: this driver only ever builds from a
-    # dune line, so it writes into that source's folder, not the start's.
+    # <year>/duneline/ since 2026-09-22: this driver only builds from a dune line
     year_dir = offset_start_dir(a.year, "duneline")
     year_dir.mkdir(parents=True, exist_ok=True)
     if a.geometry:

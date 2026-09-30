@@ -1,36 +1,10 @@
 """
 Two builds of one start year: where did the island offset move?
-===============================================================
 
-Compares two versions under data/hatteras_init/2-brie-offset/<year>/ (the
-unpadded 90-domain files each version's island_offset_hybrid.py run wrote) and,
-when both versions have a raw per-transect file, the ABSOLUTE distances behind
-them. The unpadded files are each zeroed on their own minimum, so their
-difference is the change the MODEL sees; the raw files share the offshore
-datum, so their difference is where the dune line was actually moved.
+    python scripts/input_prep/2-brie-offset/2-figures/HAT_compare_offset_versions.py --year 1996 --a v1 --b v2
 
-Written 2026-09-15 for 1996 v1 (the ArcGIS intersection of duneline_1997) vs
-v2 (the shapely intersection of duneline_1997_v2, local corrections only).
-The raw comparison uses the v1 line re-intersected by the SAME shapely script,
-so the 1 m station convention of the GIS export (see
-duneline_to_raw_offsets.py) does not appear as a change.
-
-Outputs, in <year>/<b>/:
-    offset_<year>_<a>_vs_<b>.csv    per domain: both versions, both frames
-    offset_<year>_<a>_vs_<b>.png/.pdf   two panels, caption in CAPTIONS.md
-
-USAGE
-    python HAT_compare_offset_versions.py --year 1996 --a v1 --b v2 \
-        --raw-a <path to the v1 line's shapely raw> --raw-b 1997_v2_duneline_offset_raw.csv
-
-    # a superseded build: --a is its folder, --label-a what the outputs call it
-    python HAT_compare_offset_versions.py --year 1996 \
-        --a superseded_20260919_pre-redigitized/v2 --label-a superseded_v2 --b v1 \
-        --raw-a <its raw> --raw-b <v1's raw>
-
---label-a/--label-b (2026-09-23) name a build in the file stem, the columns,
-the legend and the caption. They default to --a/--b; they exist because a
-superseded build's folder is a path, and a slash cannot go in a file name.
+Compares two versions' unpadded offsets and, given both raw files, the
+absolute transect lengths; writes the figure beside the newer build. Details: scripts/input_prep/2-brie-offset/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -62,10 +36,13 @@ from pathlib import Path as _TVP
 _tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
                                if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_topo_version as _tv  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 BRIE_ROOT = _tv.BRIE_ROOT
 RAW_DIR = _tv.RAW_OFFSET_DIR
+# -----------------------------------------------------------------------------
 
 
+# A version's unpadded offset per domain
 def _unpadded(year, version, source=None):
     p = _tv.offset_file(year, "unpadded", version=version,
                         source=source or _tv.DEFAULT_OFFSET_SOURCE)
@@ -73,28 +50,15 @@ def _unpadded(year, version, source=None):
     return df.set_index("Domain_ID")[str(year)]
 
 
+# Mean raw transect length per domain
 def _raw_domain_means(path):
     raw = pd.read_csv(path)
     per_transect = raw.drop_duplicates(["domain_id", "LineID"])
     return per_transect.groupby("domain_id")["ORIG_LEN"].mean()
 
 
+# (method, line file, built date) behind one raw file, read from the file
 def _raw_provenance(path, line_override=None):
-    """(method, line file, built date) behind one raw file, read from the file.
-
-    duneline_to_raw_offsets.py stamps `built_by`, `built` and `duneline_file`
-    on every row; the ArcGIS exports it replaced (raw_offsets/superseded_
-    20260915_gis_exports/) carry none, so an export's line is unknown unless
-    the caller names it (--line-a/--line-b). Until 2026-09-23 panel (b) was
-    always titled "the re-digitised line", which was wrong for 1984 and 2004:
-    there the line is the same geojson and only the intersection method
-    changed.
-
-    A FILE NAME IS NOT A LINE. duneline_2009.geojson was re-digitised in place
-    on 2026-09-18, so both 2010 raws name it and differ by up to 66 m. Hence
-    the caller's rule: two shapely raws are compared as a line change whatever
-    the names say, because the intersection is deterministic.
-    """
     cols = pd.read_csv(path, nrows=50)
     method = "shapely" if "built_by" in cols else "ArcGIS export"
 
@@ -107,6 +71,7 @@ def _raw_provenance(path, line_override=None):
     return method, line_override or one("duneline_file"), one("built")
 
 
+# Run: the two builds' offsets and their difference
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--year", type=int, required=True)
@@ -151,9 +116,7 @@ def main(argv=None):
         out["abs_diff_m"] = out[f"abs_{lb}_m"] - out[f"abs_{la}_m"]
     out.index.name = "gis_domain"
 
-    # Under the SOURCE's folder since 2026-09-22 -- this joined <year>/ and the
-    # version by hand, which after the split would have written the comparison
-    # into a <year>/v2/ that no longer exists.
+    # Under the source's folder since 2026-09-22
     out_dir = _tv.offset_build_dir(args.year, args.b, args.source)
     stem = f"offset_{args.year}_{la}_vs_{lb}"
     out.to_csv(out_dir / f"{stem}.csv", float_format="%.2f")
@@ -174,7 +137,7 @@ def main(argv=None):
     print(f"  model frame (each zeroed on its own minimum): mean {m.mean():+.2f} m, "
           f"range {m.min():+.2f} .. {m.max():+.2f}")
 
-    # ---- figure ---------------------------------------------------------- #
+    # Figure
     apply_style()
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", aspect=0.62),
                              sharex=True, constrained_layout=True)
@@ -187,16 +150,11 @@ def main(argv=None):
     _title(ax, 0, f"Island offset read by the model, {args.year} start")
     ax.legend(loc="lower left")   # the profile is high on the left, and the village labels sit at the top
 
-    # What panel (b) is a picture OF depends on what changed between the raw
-    # files: the line, the method that measured it, or (unrecorded) unknown.
-    # Two shapely raws differ ONLY where the line does -- the intersection is
-    # deterministic against the same transects -- so that case is a line
-    # change even when both name the same file (edited in place).
+    # What panel (b) is a picture OF depends on what changed between the raw files
     if have_raw:
         same_line = bool(line_a and line_b and line_a == line_b)
         if meth_a == meth_b == "shapely" and args.source == "shoreline":
-            # Two CoastSat window means: nothing was digitised, the averaging
-            # window changed (2026-09-29, the DEM-centred shoreline v2).
+            # Two CoastSat window means: the averaging window changed, nothing was digitised
             b_title, b_ylabel = ("Where the two mean shorelines differ",
                                  "Shoreline moved (m, + landward)")
             b_what = (f"(b) The change in the mean shoreline itself ({line_a or 'an unrecorded line'} "

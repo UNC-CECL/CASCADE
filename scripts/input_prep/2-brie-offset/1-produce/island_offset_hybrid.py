@@ -1,27 +1,11 @@
 """
-Hatteras CASCADE Dune Offset Pipeline
-====================================
+Raw per-transect offsets -> the relative island offset per domain, padded to 120 domains for the model.
 
-This script:
-1. Reads a raw feature-to-baseline intersection CSV (one vintage).
-2. Calculates the relative offset per domain (metres, baseline = minimum).
-3. Pads the result for CASCADE with the smooth wrap-around the model uses
-   (cascade_pipeline.hindcast.pad_offset_ring): BRIE's domain is periodic,
-   so the buffers carry the shoreline from GIS 90 back round to GIS 1 along
-   a cubic Hermite matched to the island's end slopes. The padded file is
-   therefore exactly what offset_mode "metres" hands Cascade.
-4. Saves a diagnostic figure: the padded profile, and the shoreline angle
-   BRIE reads between neighbouring domains against its ~42 degree limit.
+    python scripts/input_prep/2-brie-offset/1-produce/island_offset_hybrid.py --year 1996 --version v1
 
-UNITS: metres throughout, from the raw file's ORIG_LEN (EPSG:3725) to the
-padded file. Nothing here converts to decametres.
-
-PADDING HISTORY: until 2026-09-24 (every v1 build) the buffers were a local
-slope segment plus a linear bridge, clipped at 0. The runner never used them
-in metres mode -- it replaced them with this closure -- so the file and its
-diagnostic showed a buffer the model did not see; those builds are now
-<start>/<source>/superseded_20260924_pre-metres/v1. The current v1 (built 2026-09-24) writes the
-closure itself (Hannah: "option (a)").
+Relative offset per domain (metres, baseline = minimum), buffer domains
+closed with a Hermite curve, written unpadded and padded with a diagnostic
+figure under 2-brie-offset/<year>/. Details: scripts/input_prep/2-brie-offset/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -37,13 +21,9 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# =============================================================================
-# 1. USER CONFIGURATION
-# =============================================================================
+# 1. user configuration
 
-# The island_offset/ tree was renamed 2-brie-offset/ (raw_offsets/ plus
-# hindcast_<year>/), which left every path here dead. Anchored on the repo
-# root and on YEAR, so either hindcast start can be produced (2026-09-10).
+# Paths anchored on the repo root and YEAR, so either start can be built
 import argparse as _argparse
 import sys as _sys
 
@@ -62,44 +42,20 @@ from cascade_pipeline.hindcast import pad_offset_ring  # noqa: E402
 from site_layer.hat_topo_version import BRIE_ROOT as _BRIE_ROOT  # noqa: E402
 
 _ap = _argparse.ArgumentParser(description="island offsets for one hindcast start")
-# A start year is admissible here when hat_topo_version.DUNE_LINE_FOR_YEAR
-# pairs it with a dune-line vintage (1996 reads the 1997 line). Since
-# 2026-09-15; before that the raw file had to exist under the period's own
-# name, which for 1996 meant a copy of the 1997 file.
+# Any start year DUNE_LINE_FOR_YEAR pairs with a dune-line vintage
 _ap.add_argument("--year", type=int, default=2004,
                  choices=tuple(sorted(DUNE_LINE_FOR_YEAR)))
-# VERSIONED OUTPUT (2026-09-15). A start year can hold more than one build
-# when its dune line is re-digitised: 1996/v1/ is the build from the v1 1997
-# line (ArcGIS intersection), 1996/v2/ from duneline_1997_v2 (shapely
-# intersection, duneline_to_raw_offsets.py). Which one the runner reads is the
-# CURRENT file in <year>/, resolved by hatteras_site_config.island_offset_file.
-# Without --version the files land flat in <year>/, as 1984 and 2004 still are.
+# Versioned output: --version writes <year>/<version>/; CURRENT picks the one read
 _ap.add_argument("--version", default=None,
                  help="write to <year>/<version>/ instead of <year>/ (e.g. v2)")
-# raw_offsets/<vintage>_duneline_offset_raw.csv is the file the END-YEAR
-# TARGET loader reads too, so it always holds the CURRENT build of that
-# vintage. To rebuild an older version from its own raw file (each version
-# folder keeps a copy), name that file here.
+# The raw file to build from; defaults to the vintage's current one
 _ap.add_argument("--raw-file", default=None,
                  help="raw CSV to read instead of the vintage's file in raw_offsets/")
-# EXTENDED GEOMETRY (2026-09-16, the Pea Island extension experiment). A
-# named reach from hat_extension_domains: the surveyed raw for GIS 1-90 plus
-# raw_offsets/ext/<vintage>_duneline_offset_raw_ext.csv for the domains
-# beyond, zeroed on the SAME minimum as the surveyed build (checked against
-# <year>/CURRENT), padded with the same buffers, written to
-# <year>/ext/<geometry>/. Not a version: CURRENT is untouched.
+# EXTENDED GEOMETRY (2026-09-16, the Pea Island extension experiment)
 _ap.add_argument("--geometry", default=None,
                  choices=[g for g in GEOMETRIES if g != BASE_GEOMETRY],
                  help="an extended reach, to <year>/ext/<geometry>/")
-# WHICH FEATURE THE OFFSET IS MEASURED FROM (2026-09-22). Every build until
-# then came from a digitised DUNE line. "shoreline" builds from the CoastSat
-# window mean instead (scripts/input_prep/5-scr/1-observations/mean_shoreline/),
-# which is a different FEATURE, not a newer reading of the same one -- so it
-# is a separate source with its own v1, never a v2 of the dune build.
-# The dune source keeps the flat <year>/v<n>/ layout it has always had, so
-# nothing the runner resolves moves; a non-default source nests one level
-# deeper, <year>/<source>/v<n>/. Everything after this point is identical:
-# same domain mean, same zeroing on the build's own minimum, same padding.
+# WHICH FEATURE THE OFFSET IS MEASURED FROM (2026-09-22)
 _ap.add_argument("--source", default=DEFAULT_OFFSET_SOURCE, choices=OFFSET_SOURCES,
                  help="the feature the offset is measured from "
                       f"(default {DEFAULT_OFFSET_SOURCE})")
@@ -113,9 +69,7 @@ if GEOMETRY and VERSION:
 if GEOMETRY and SOURCE != DEFAULT_OFFSET_SOURCE:
     _ap.error("the extended geometries are only built from the dune line")
 
-# A source names its own raw file. The shoreline's is named for the AVERAGING
-# WINDOW, not a vintage year (shoreline_raw_file_for_year), because a window
-# mean is what a satellite shoreline has instead of a survey date.
+# A source names its own raw file
 RAW_FILE = (str(Path(_args.raw_file).resolve()) if _args.raw_file
             else str(dune_raw_file_for_year(YEAR)) if SOURCE == DEFAULT_OFFSET_SOURCE
             else str(shoreline_raw_file_for_year(YEAR)))
@@ -123,15 +77,13 @@ RAW_EXT_FILE = (str(Path(RAW_FILE).parent / "ext"
                     / (Path(RAW_FILE).stem + "_ext.csv")) if GEOMETRY else None)
 
 _START_DIR = offset_start_dir(YEAR, SOURCE)
-# ext/ sits under the SOURCE too (2026-09-22): an extended geometry is built
-# from the same feature as the surveyed reach it extends, and it is checked
-# against that source's CURRENT a few hundred lines below.
+# ext/ sits under the source too (2026-09-22), and is checked against its CURRENT
 OUTPUT_DIR    = str(_START_DIR / "ext" / GEOMETRY if GEOMETRY
                     else _START_DIR / VERSION if VERSION
                     else _START_DIR)
 OUTPUT_BASENAME = offset_basename(YEAR, SOURCE)
-# What to call the feature in a title, an axis and a warning, so a
-# shoreline build is not labelled "Dune" on its own diagnostic figure.
+# --- CONFIG ------------------------------------------------------------------
+# Feature names for titles and warnings, so a shoreline build is not called 'Dune'
 FEATURE_LABEL = {"duneline": "Dune", "shoreline": "Shoreline"}[SOURCE]
 FEATURE_NOUN = {"duneline": "dune line", "shoreline": "mean shoreline"}[SOURCE]
 
@@ -149,13 +101,12 @@ COL_MAP = {
     "Distance":  "ORIG_LEN",
     "Transect":  "LineID",
 }
+# -----------------------------------------------------------------------------
 
-# =============================================================================
-# 2. FUNCTIONS
-# =============================================================================
+# 2. functions
 
+# Compute mean relative dune raw_offset per domain from raw CSV
 def calculate_relative_offset(file_path, year, col_map, grids):
-    """Compute mean relative dune raw_offset per domain from raw CSV."""
     print(f"\n--- Processing {year} ---")
     print(f"Input file: {file_path}")
 
@@ -219,19 +170,13 @@ def calculate_relative_offset(file_path, year, col_map, grids):
     return pd.DataFrame({"Domain_ID": seen_domains, str(year): relative_offsets})
 
 
+# The angle BRIE reads between each padded domain and the next, wrapping from the last back to the ...
 def shoreline_angles_deg(padded):
-    """The angle BRIE reads between each padded domain and the next, wrapping
-    from the last back to the first (brie.py: atan2(diff(x_s), dy))."""
     return np.degrees(np.arctan2(np.diff(np.r_[padded, padded[0]]), DOMAIN_SPACING_M))
 
 
+# The padded profile and the shoreline angle BRIE reads, one figure
 def plot_buffer_diagnostic(padded, year, padding, output_dir, output_basename):
-    """The padded profile and the shoreline angle BRIE reads, one figure.
-
-    (a) offset along the padded domains, buffers shaded, GIS numbering on the
-    real reach; (b) the angle between neighbouring domains, with the ~42
-    degree limit past which BRIE's shoreline goes anti-diffusive.
-    """
     from site_layer.hat_figure_style import (C, INK_MUTED, _title, apply_style,
                                              figsize, open_frame, record_caption,
                                              save)
@@ -250,8 +195,7 @@ def plot_buffer_diagnostic(padded, year, padding, output_dir, output_basename):
     ax_o.plot(x, padded / 1000.0, color=C["INK"], lw=1.4)
     ax_o.plot(x[real], padded[real] / 1000.0, color=C["LATE"], lw=1.8)
     ax_o.set_ylabel("Cross-shore offset (km)")
-    # No build version in the title: the folder carries it, and a title naming
-    # it went stale when the builds were renumbered v2 -> v1 (2026-09-28).
+    # No build version in the title: the folder carries it
     _title(ax_o, 0, f"Initial {FEATURE_NOUN} offset, {year}")
     # the wrap from the last domain back to the first is drawn at the right end
     ax_t.plot(x, theta, color=C["INK"], lw=1.2)
@@ -279,14 +223,13 @@ def plot_buffer_diagnostic(padded, year, padding, output_dir, output_basename):
     return path
 
 
-# =============================================================================
-# 3. MAIN
-# =============================================================================
+# 3. main
 
+# Run: relative offsets, the padded file, the diagnostic figure
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # --- 3.1. Compute relative offsets ---
+    # 3.1. Compute relative offsets
     result = calculate_relative_offset(
         file_path=[RAW_FILE, RAW_EXT_FILE] if GEOMETRY else RAW_FILE,
         year=YEAR,
@@ -299,13 +242,7 @@ def main():
         return
 
     if GEOMETRY:
-        # The extension must not move the surveyed reach: same zero, same
-        # values as the build the matrix runs read. A different minimum here
-        # would shift every GIS 1-90 offset and the experiment would no
-        # longer be about the buffer.
-        # Through the resolver since 2026-09-22, when the builds moved under
-        # <year>/<source>/: this joined <year>/ and CURRENT by hand and would
-        # have looked for the surveyed build one level too high.
+        # The extension must not move the surveyed reach
         _base = offset_file(YEAR, "unpadded", source=SOURCE)
         if not _base.is_file():
             raise SystemExit(f"no surveyed build to check against: {_base}")
@@ -332,7 +269,7 @@ def main():
     cascade_df.to_csv(cascade_unpadded_path, index=False)
     print(f"Unpadded CASCADE-format file saved to:\n  {cascade_unpadded_path}")
 
-    # --- 3.2. Pad with the smooth wrap-around the model uses ---
+    # 3.2. Pad with the smooth wrap-around the model uses
     real_m = cascade_df[str(YEAR)].to_numpy(dtype=float)
     padded = pad_offset_ring(real_m, PADDING_ZEROS)
     if len(padded) != TARGET_LENGTH:
@@ -355,7 +292,7 @@ def main():
     pd.DataFrame({str(YEAR): padded}).to_csv(padded_path, index=False)
     print(f"\nSUCCESS: Padded CASCADE input saved to:\n  {padded_path}")
 
-    # --- 3.3. Diagnostic figure ---
+    # 3.3. Diagnostic figure
     plot_buffer_diagnostic(padded, YEAR, PADDING_ZEROS, OUTPUT_DIR, OUTPUT_BASENAME)
 
 

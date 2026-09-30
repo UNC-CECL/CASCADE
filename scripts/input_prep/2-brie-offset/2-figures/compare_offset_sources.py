@@ -1,85 +1,11 @@
 """
-Two SOURCES for one start year: the dune line against the shoreline
-==============================================================================
-Compares the island offset built from the digitised DUNE line with the one
-built from the CoastSat SHORELINE, for one hindcast start. Written 2026-09-22,
-the day the shoreline source was added.
+Two sources for one start year: the island offset from the dune line against the one from the shoreline.
 
-NOT THE SAME QUESTION AS HAT_compare_offset_versions.py
-    That script compares two VERSIONS of one source: the same feature
-    re-digitised, where the difference is a correction and the interesting
-    number is how many domains moved. This one compares two SOURCES: two
-    DIFFERENT FEATURES on the island, where the difference is the beach
-    between them and is supposed to be there. Different question, different
-    framing, different caption -- so a sibling script rather than a flag.
+    python scripts/input_prep/2-brie-offset/2-figures/compare_offset_sources.py --year 1996
+    python scripts/input_prep/2-brie-offset/2-figures/compare_offset_sources.py --year 1996 --a duneline --b shoreline
 
-THE TRAP THIS FIGURE EXISTS TO SHOW
-    Correlate the two profiles and you get r = 1.0000, which looks like the
-    two features agreeing about the island. They do not. Both are dominated by
-    the same ~6.2 km of cape curvature, against which the 17 m standard
-    deviation of their difference is 0.3%. So the figure states the
-    correlation nowhere and shows the gap instead.
-
-WHICH FRAME IS DRAWN, AND WHY IT HAD TO CHANGE
-    Both profiles are drawn as the STATION FROM THE SHARED OFFSHORE DATUM, not
-    as the min-zeroed offset the model is handed.
-
-    The figure was drawn in the model frame until 2026-09-22, when Hannah
-    asked the question that breaks it: "shouldn't the dune always be behind
-    the shoreline?" It should, and on the ground it is -- the shoreline is
-    seaward of the dune line in 90 of 90 domains, by 17-97 m. But the two
-    model files are each zeroed on their OWN most seaward domain, and those
-    minima are 45.6 m apart (dune 1953.198, shoreline 1907.607), so
-
-        model_diff = -beach_width + 45.6 m
-
-    and the dune line comes out apparently seaward wherever the beach is
-    narrower than 45.6 m. That was 69 of 90 domains -- exactly the 69 the old
-    figure shaded "dune line seaward", a physically impossible claim generated
-    entirely by the zeroing.
-
-    The datum frame has no such constant, and it is the SAME SHAPE (a model
-    offset is this minus the build's own minimum). So the profiles are
-    unchanged, the band between them is the beach, and it is on the correct
-    side of the island everywhere. What the model reads is still one
-    subtraction away, and the CSV holds both frames.
-
-HOW IT IS DRAWN, AND WHAT THAT COSTS
-    Six consecutive sections on a 2 x 3 grid, each a VERTICAL strip:
-    alongshore up the page, cross-shore across it, south at the bottom, the
-    axis inverted so the ocean is on the right. The panels read as the island.
-    Why a GRID and not a row of six: see SECTIONS below -- columns take width
-    from the very axis the gap is measured on.
-
-    These are the ABSOLUTE profiles, and the beach is a small fraction of the
-    cross-shore range they span, so the band is thin. Removing a smooth trend
-    from both sources would open it up (14-43% of a panel rather than 2-3%),
-    and was built and then taken back out (Hannah, 2026-09-22: "I actually
-    don't like the detrend, I want to see the original shoreline shape"). The
-    shape is the point; each panel therefore states its own beach range as a
-    number.
-
-OUTPUT   2-brie-offset/<year>/shoreline/<v>/comparisons/<a>_vs_<b>/
-    (filed with the shoreline build it was drawn against since 2026-09-29;
-    until then <year>/comparisons/<a>_vs_<b>/, which could not say which
-    shoreline version it held once there were two)
-    offset_<year>_<a>_vs_<b>.csv        per domain, both frames, columns named
-                                        for the SOURCE not for a version
-    offset_<year>_<a>_vs_<b>.png/.pdf   the two profiles as vertical strips of
-                                        island, caption in CAPTIONS.md
-    README.md                           what the folder is
-
-    hat_topo_version.offset_source_comparison_dir resolves it.
-
-USAGE
-    python compare_offset_sources.py --year 1996
-    python compare_offset_sources.py --year 1996 --a duneline --b shoreline
-    python compare_offset_sources.py --year 1996 --shoreline-version v2
-
-    Each source defaults to its CURRENT build; --duneline-version and
-    --shoreline-version name one instead (2026-09-29, so a build can be
-    compared before it becomes CURRENT).
-==============================================================================
+Draws both offsets and their difference along the island, with a README,
+in the start year's comparison folder. Details: scripts/input_prep/2-brie-offset/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -108,13 +34,8 @@ from site_layer import hat_topo_version as _tv  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     C, FIG_W_DOUBLE, INK_MUTED, _title, apply_style, caption, save)
 
-# HOW EACH SOURCE IS NAMED AND DRAWN.
-#
-# The house RdBu pair (C_1984 red / C_1997 blue) means EARLIER and LATER
-# vintage, and these two are not a time order -- drawing them red and blue
-# would say the dune line came first. Blue is already the CoastSat colour in
-# this style sheet, so the shoreline keeps it and the dune line takes the
-# accent purple.
+# --- CONFIG ------------------------------------------------------------------
+# HOW EACH SOURCE IS NAMED AND DRAWN
 SOURCE_STYLE = {
     "duneline": {
         "label": "dune line",
@@ -131,40 +52,14 @@ SOURCE_STYLE = {
 }
 
 
-# The island in sixths, drawn as vertical strips on a 2 x 3 GRID (2026-09-22).
-#
-# THE GRID IS THE POINT, not the section count. These panels are columns, so
-# every extra one alongside takes width away from the offset axis -- the axis
-# the gap is measured on -- faster than the tighter zoom gives back. Measured,
-# as the widest gap actually rendered on paper at 300 dpi:
-#
-#     sections, across   panel width   gap on paper
-#        3                  2.07 in       13 px
-#        4                  1.52 in       10 px
-#        6                  0.96 in        7 px   <- MORE panels, LESS gap
-#       10                  0.52 in        6 px
-#
-# Splitting into ROWS instead gives the width back, so the zoom is kept and
-# the offset axis is not squeezed:
-#
-#     6 as 2 x 3          2.07 in       15 px
-#     9 as 3 x 3          2.07 in       23 px
-#
-# 6 on a 2 x 3 grid is the chosen point: half again the separation of 4 across,
-# 15 domains a panel, and panels still tall enough (3.9 in) to read as strips
-# of coast.
+# The island in sixths, drawn as vertical strips on a 2 x 3 GRID (2026-09-22)
 SECTIONS = ((1, 15), (16, 30), (31, 45), (46, 60), (61, 75), (76, 90))
 GRID_COLS = 3
+# -----------------------------------------------------------------------------
 
 
+# Village spans, for a panel whose ALONGSHORE axis is the vertical one
 def _town_bands_alongshore_y(ax, lo, hi):
-    """Village spans, for a panel whose ALONGSHORE axis is the vertical one.
-
-    hat_figure_style.town_bands draws the same thing against a horizontal
-    alongshore axis and has no orientation switch, so this is its axhspan
-    twin. The spans themselves still come from the one owner,
-    hatteras_site_config.HATTERAS_ANNOTATIONS -- only the axis differs.
-    """
     try:
         from site_layer.hatteras_site_config import HATTERAS_ANNOTATIONS
         spans = HATTERAS_ANNOTATIONS.town_spans
@@ -180,14 +75,8 @@ def _town_bands_alongshore_y(ax, lo, hi):
                 zorder=1, clip_on=True)
 
 
+# Months between the centre of the shoreline averaging window and the dune line's survey date, or ...
 def _window_gap_months(year, shoreline_version=None):
-    """Months between the centre of the shoreline averaging window and the
-    dune line's survey date, or None if either is unavailable.
-
-    Computed, never typed: it was typed once, as "about nine months", and it
-    is 15.4 (found 2026-09-22 when the figure asked for it). The survey date
-    has one owner, duneline_endpoint.survey_date, so this asks it.
-    """
     try:
         sys.path.insert(0, str(PROJECT_ROOT / "scripts" / "input_prep" / "5-scr" / "lib"))
         import scr_paths  # noqa: F401  (puts the 5-scr modules on sys.path)
@@ -200,17 +89,16 @@ def _window_gap_months(year, shoreline_version=None):
         return None
 
 
+# The time between the two observations, spelled for a caption
 def _gap_clause(year, shoreline_version=None):
-    """The time between the two observations, spelled for a caption."""
     months = _window_gap_months(year, shoreline_version)
     return ("" if months is None else
             ", plus the {0:.0f} months between the centre of the shoreline "
             "window and the dune line's survey".format(months))
 
 
+# The raw file a shoreline BUILD was made from
 def _shoreline_raw(year, version=None):
-    """The raw file a shoreline BUILD was made from: each version folder keeps
-    a copy (<window>_shoreline_offset_raw.csv), and its name is the window."""
     d = _tv.offset_build_dir(year, version, "shoreline")
     hits = sorted(d.glob("*_shoreline_offset_raw.csv"))
     if len(hits) != 1:
@@ -218,9 +106,8 @@ def _shoreline_raw(year, version=None):
     return hits[0]
 
 
+# (first, last) day of the build's averaging window, read from its raw file's name
 def _shoreline_window(year, version=None):
-    """(first, last) day of the build's averaging window, read from its raw
-    file's name: 1995_1997 (calendar years) or 1995-10-12_1997-10-12."""
     import datetime as dt
     label = _shoreline_raw(year, version).name.replace("_shoreline_offset_raw.csv", "")
     a, b = label.split("_")
@@ -229,9 +116,8 @@ def _shoreline_window(year, version=None):
     return dt.date(int(a), 1, 1), dt.date(int(b), 12, 31)
 
 
+# What the source IS for this start year, spelled for a legend
 def _vintage_label(source, year, version=None):
-    """What the source IS for this start year, spelled for a legend: a dune
-    line carries an imagery vintage, a shoreline carries a window."""
     if source == "duneline":
         return "dune line ({0} imagery)".format(_tv.dune_line_for_year(year))
     lo, hi = _shoreline_window(year, version)
@@ -240,29 +126,28 @@ def _vintage_label(source, year, version=None):
     return "CoastSat shoreline ({0} – {1} mean)".format(lo.isoformat(), hi.isoformat())
 
 
+# The 90-domain file the model would read from one source's build (CURRENT unless a version is ...
 def _unpadded(year, source, version=None):
-    """The 90-domain file the model would read from one source's build
-    (CURRENT unless a version is named), zeroed on that build's own most
-    seaward domain."""
     path = _tv.offset_file(year, "unpadded", source=source, version=version)
     if not path.is_file():
         sys.exit("no {0} build for {1}: {2} is missing".format(source, year, path))
     return pd.read_csv(path).set_index("Domain_ID")[str(year)]
 
 
+# Per-domain mean station from the shared offshore datum
 def _raw_domain_means(path):
-    """Per-domain mean station from the shared offshore datum. One row per
-    transect first, so a domain with more transects does not weight twice."""
     raw = pd.read_csv(path)
     per_transect = raw.drop_duplicates(["domain_id", "LineID"])
     return per_transect.groupby("domain_id")["ORIG_LEN"].mean()
 
 
+# The raw offset file for a year and source
 def _raw_file(year, source, version=None):
     return (_tv.dune_raw_file_for_year(year) if source == "duneline"
             else _shoreline_raw(year, version))
 
 
+# Run: both sources' offsets, the figure, the README
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--year", type=int, default=1996)
@@ -282,7 +167,7 @@ def main(argv=None):
            "shoreline": args.shoreline_version or _tv.offset_version(year, "shoreline")}
     lab_a, lab_b = _vintage_label(a, year, ver[a]), _vintage_label(b, year, ver[b])
 
-    # ---- the numbers ----------------------------------------------------- #
+    # The numbers
     ma, mb = _unpadded(year, a, ver[a]), _unpadded(year, b, ver[b])
     out = pd.DataFrame({"model_{0}_m".format(a): ma, "model_{0}_m".format(b): mb})
     out["model_diff_m"] = mb - ma
@@ -291,9 +176,7 @@ def main(argv=None):
     rb = _raw_domain_means(_raw_file(year, b, ver[b]))
     out["datum_{0}_m".format(a)] = ra.reindex(out.index)
     out["datum_{0}_m".format(b)] = rb.reindex(out.index)
-    # Stations grow LANDWARD from the offshore datum, so a - b is positive
-    # where b lies seaward of a. With a=duneline and b=shoreline that is the
-    # beach width.
+    # Stations grow LANDWARD from the offshore datum, so a - b is positive where b lies seaward of a
     out["seaward_gap_m"] = out["datum_{0}_m".format(a)] - out["datum_{0}_m".format(b)]
     out.index.name = "gis_domain"
 
@@ -318,39 +201,10 @@ def main(argv=None):
     stem = "offset_{0}_{1}_vs_{2}".format(year, a, b)
     out.to_csv(out_dir / "{0}.csv".format(stem), float_format="%.2f")
 
-    # ---- figure ---------------------------------------------------------- #
-    # FOUR SECTIONS, DRAWN VERTICALLY, ABSOLUTE OFFSETS (2026-09-22, Hannah:
-    # "I want to see the original shoreline shape ... should you do vertical
-    # instead like the actual island shape").
-    #
-    # Alongshore runs UP the page and the offset across it, so the panels read
-    # as four consecutive strips of Hatteras with south at the bottom. The x
-    # axis is INVERTED: an offset grows landward (the 100 m transects run due
-    # west from the offshore datum), so inverting it puts the ocean on the
-    # right, where it is.
-    #
-    # No detrending: these are the profiles as the model reads them. That
-    # costs legibility and it is worth being honest about how much -- a
-    # quarter of the island still spans 800-2200 m of offset, so the widest
-    # gap between the two sources is 1.3-3.3% of a panel's width. The filled
-    # band is what carries it; in the flatter sections it is a sliver.
+    # FOUR SECTIONS, DRAWN VERTICALLY, ABSOLUTE OFFSETS (2026-09-22, Hannah
     col_a, col_b = SOURCE_STYLE[a]["colour"], SOURCE_STYLE[b]["colour"]
     fill_b = SOURCE_STYLE[b]["fill"]
-    # DRAWN IN THE FIXED-DATUM FRAME, not the model frame (2026-09-22, Hannah:
-    # "shouldn't the dune always be behind the shoreline?").
-    #
-    # It should, and on the ground it is: the shoreline is seaward of the dune
-    # line in 90 of 90 domains. But the MODEL files are each zeroed on their
-    # own most seaward domain, and those two minima are 45.6 m apart, so
-    # differencing them puts the dune line apparently seaward wherever the
-    # beach is narrower than 45.6 m -- which is 69 of 90 domains. The earlier
-    # version of this figure drew exactly that and labelled it "dune line
-    # seaward", a physically impossible claim produced entirely by the zeroing.
-    #
-    # The station from the shared offshore datum carries no such constant, and
-    # it is the SAME SHAPE: a model offset is this minus the build's own
-    # minimum. So nothing about the profiles is lost, the band between them is
-    # the beach, and it is on the correct side everywhere.
+    # DRAWN IN THE FIXED-DATUM FRAME, not the model frame (2026-09-22, Hannah
     ya, yb = out["datum_{0}_m".format(a)], out["datum_{0}_m".format(b)]
 
     apply_style()
@@ -370,10 +224,7 @@ def main(argv=None):
 
         _town_bands_alongshore_y(ax, lo, hi)
 
-        # One band, one colour, one direction: the station grows LANDWARD from
-        # the datum and the shoreline's is always the smaller, so the band is
-        # always the beach. It needs no second colour for a sign that cannot
-        # change.
+        # One band, one colour, one direction
         ax.fill_betweenx(dom, va, vb, color=fill_b, lw=0, zorder=2,
                          label="beach (shoreline to dune line)")
         ax.plot(va, dom, color=col_a, lw=1.3, zorder=4, label=lab_a)
@@ -383,16 +234,14 @@ def main(argv=None):
         ax.set_ylim(lo - 0.5, hi + 0.5)
         ax.invert_xaxis()          # landward left, ocean right
         ax.xaxis.set_major_locator(mticker.MaxNLocator(3))
-        # A domain is a count, so its ticks are whole numbers; the default
-        # locator offered 42.5 and 45.0.
+        # A domain is a count, so its ticks are whole numbers
         ax.yaxis.set_major_locator(mticker.MaxNLocator(integer=True))
         ax.tick_params(axis="x", labelsize=7)
 
         beach = va - vb          # + = shoreline seaward of the dune line
         k = int(np.argmax(beach))
         _title(ax, i, "GIS {0}–{1}".format(lo, hi))
-        # The beach as a number, inside the panel: at this scale the eye
-        # cannot measure the band, and the title has no room for it.
+        # The beach as a number, inside the panel
         ax.annotate("beach {0:.0f}–{1:.0f} m\nwidest at GIS {2}".format(
                         beach.min(), beach.max(), dom[k]),
                     xy=(0.5, 0.008), xycoords="axes fraction", ha="center",
@@ -403,9 +252,7 @@ def main(argv=None):
     fig.supylabel("GIS domain (south → north)", fontsize=9)
     fig.supxlabel("Distance from the offshore datum (m)   —   "
                   "landward ←   |   → ocean", fontsize=9)
-    # ABOVE the panels, not below: at the bottom the legend and the shared
-    # offset label are both "outside lower centre" and constrained_layout
-    # stacks them on top of each other.
+    # Legend above the panels, clear of the shared offset label below
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="outside upper center", ncol=3, fontsize=7,
                frameon=False)
@@ -444,6 +291,7 @@ def main(argv=None):
     print("  wrote {0}".format(out_dir / "README.md"))
 
 
+# The README beside the comparison
 def _write_readme(out_dir, year, a, b, lab_a, lab_b, gap, mdiff, shift, stem, ver):
     (out_dir / "README.md").write_text("""# {year} island offset: {a} vs {b}
 

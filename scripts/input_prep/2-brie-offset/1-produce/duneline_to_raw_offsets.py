@@ -1,54 +1,12 @@
 """
-Dune line -> raw per-transect offsets (the step ArcGIS used to do)
-==================================================================
+Dune line -> raw per-transect offsets: the ArcGIS step, redone in shapely.
 
-Every file in data/hatteras_init/2-brie-offset/raw_offsets/ was, until
-2026-09-15, an ArcGIS export: buffer the digitised dune line by 1.5 m, intersect
-the buffer with 1 m points generated along the 100 m transects, and export the
-attribute table. The distance that matters is ORIG_LEN, the station of the
-point along its transect measured from the transect's start on the offshore
-datum line. island_offset_hybrid.py then keeps one point per transect, averages
-the ~5 transects in each 500 m domain, and pads for CASCADE.
+    python scripts/input_prep/2-brie-offset/1-produce/duneline_to_raw_offsets.py --duneline duneline_1997.geojson --out 1997_v2_duneline_offset_raw.csv
+    python scripts/input_prep/2-brie-offset/1-produce/duneline_to_raw_offsets.py --duneline duneline_1997.geojson --extension
 
-This script does the same intersection in shapely, so a re-digitised line can
-be turned into a raw file from the repo alone, with no GIS session and no
-external drive. One row per transect, holding the exact intersection station.
-
-VALIDATED 2026-09-15 against the ArcGIS export of the v1 1997 line
-(raw_offsets/1997_duneline_offset_raw.csv): all 450 transects in GIS 1-90
-match, mean difference -1.01 m, sd 0.32 m, worst 1.9 m. The constant metre is
-the GIS convention, not geometry: of the ~3 one-metre stations inside the
-1.5 m buffer the export lists the LANDWARD-most first, and the downstream
-scripts take the first row per transect. The exact intersection sits ~1 m
-seaward of it. This cancels in island_offset_hybrid.py (each year is zeroed
-on its own minimum) and cancels in an end-year difference of two files built
-by THIS script; a difference between a GIS-built and a shapely-built file
-carries the metre. Pass --validate-against to reproduce those numbers.
-
-WHICH CROSSING when a transect meets the line more than once: the landward-most
-(largest station), which is what the GIS first-row convention returned. The
-count is written to n_crossings so those transects can be found.
-
-USAGE
-    python duneline_to_raw_offsets.py --duneline duneline_1997.geojson \
-        --out 1997_v2_duneline_offset_raw.csv \
-        --validate-against 1997_duneline_offset_raw.csv
-
-    --duneline   a file under 2-brie-offset/dunelines/, or a path
-    --out        a file name under 2-brie-offset/raw_offsets/, or a path
-
-EXTENSION MODE (2026-09-16, the Pea Island extension experiment)
-    python duneline_to_raw_offsets.py --duneline duneline_1997.geojson --extension
-
-    The 172 transects the surveyed polygon join left without a domain -- Pea
-    Island north of GIS 90, and the last kilometre south of GIS 1 -- are given
-    one by the SAME line-intersects-polygon join onto Hannah's whole-island
-    polygons (hat_extension_domains.join_lines), and intersected the same
-    way. A transect no polygon covers (the kilometre south of GIS 1, and the
-    slivers between polygons) is dropped, as the surveyed join dropped it. Written
-    to raw_offsets/ext/<vintage>_duneline_offset_raw_ext.csv, the same columns
-    as the surveyed file, and the transect-to-domain table once to
-    transects/transects_100m_ext.csv. The surveyed file is not touched.
+Intersects the line with the 100 m transects and writes the raw offset CSV
+island_offset_hybrid.py reads; --validate-against checks it against an
+ArcGIS export. Details: scripts/input_prep/2-brie-offset/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -80,21 +38,19 @@ from site_layer.hat_topo_version import (BRIE_ROOT, DUNELINE_DIR,  # noqa: E402
 # Extension mode writes beside, never into, the surveyed raw files.
 from site_layer.hat_topo_version import RAW_OFFSET_EXT_DIR as RAW_EXT_DIR  # noqa: E402
 
-# The 100 m transects, 10 km long, each starting on the offshore datum line
-# (x = 460198 in EPSG:3725) and running west across the island. domain_id is
-# the ArcGIS spatial join onto the 500 m domain polygons; 450 of the 622
-# transects fall in GIS 1-90, five per domain. Copied 2026-09-15 from
-# hard-structures/groin/HAT-groin-gis-analysis/gis_data/, see transects/README.md.
+# --- CONFIG ------------------------------------------------------------------
+# The 100 m transects: 10 km from the offshore datum line, five per domain (source in README)
 TRANSECT_FILE = TRANSECT_FILE_100M
 
 FIRST_DOMAIN, LAST_DOMAIN = 1, 90
 
-# Metadata columns copied from the dune-line feature when it carries them
-# (the 1997 lines do; 1984 and 1967 carry none).
+# Metadata columns copied from the dune-line feature when it carries them (the 1997 lines do
 LINE_META = ("feature_type", "year", "source_type", "method", "editor",
              "edit_date", "notes")
+# -----------------------------------------------------------------------------
 
 
+# A path as given, or a name under default_dir
 def _resolve(name_or_path, default_dir):
     p = Path(name_or_path)
     if p.exists():
@@ -105,31 +61,18 @@ def _resolve(name_or_path, default_dir):
     raise FileNotFoundError(f"{name_or_path}: not a path, and not under {default_dir}")
 
 
+# The 100 m transects with a domain number each
 def load_transects(extension=False):
-    """The 100 m transects with a domain number each.
-
-    Surveyed mode: the 450 the ArcGIS polygon join placed in GIS 1-90.
-    Extension mode: the 172 it left unplaced, numbered by their northing on
-    their whole-island polygon (hat_extension_domains.join_lines); the table is
-    also written to transects/transects_100m_ext.csv so the numbering is on
-    disk beside the layer it extends.
-    """
     t = gpd.read_file(TRANSECT_FILE)
-    # The layer is an ArcGIS join export: every column is prefixed with the
-    # table it came from ("Transects_100m.LineID"). Strip to the leaf name and
-    # keep the first of any duplicates (OBJECTID and Shape_Length appear twice).
+    # The layer is an ArcGIS join export
     t.columns = [c.split(".")[-1] for c in t.columns]
     t = t.loc[:, ~t.columns.duplicated()]
     t["LineID"] = t["LineID"].astype(int)
     if extension:
         t = t[t["domain_id"].isna()].copy()
-        # A transect runs due west from the datum line, so either end's
-        # northing is the transect's.
+        # A transect runs due west from the datum line, so either end's northing is the transect's
         t["northing_m"] = t.geometry.apply(lambda g: g.coords[0][1])
-        # The same line-intersects-polygon join that placed the surveyed
-        # transects, onto Hannah's whole-island polygons (2026-09-16). A
-        # transect no polygon covers is dropped, as the surveyed join
-        # dropped those in the slivers between polygons.
+        # Domains by the same line-in-polygon join as the surveyed transects
         t["domain_id"] = pd.Series(join_lines(t), index=t.index, dtype=float)
         dropped = t["domain_id"].isna()
         if dropped.any():
@@ -153,8 +96,8 @@ def load_transects(extension=False):
     return t.sort_values(["domain_id", "LineID"]).reset_index(drop=True)
 
 
+# One row per transect
 def intersect(transects, line):
-    """One row per transect: station of the landward-most crossing, or NaN."""
     rows = []
     for _, tr in transects.iterrows():
         geom = tr.geometry
@@ -172,8 +115,8 @@ def intersect(transects, line):
                                        "n_crossings", "x", "y"])
 
 
+# Compare per-transect stations with a GIS export (first row per transect)
 def validate(out_df, gis_path):
-    """Compare per-transect stations with a GIS export (first row per transect)."""
     gis = pd.read_csv(gis_path)
     gis = gis.drop_duplicates(["domain_id", "LineID"])[["domain_id", "LineID", "ORIG_LEN"]]
     gis["LineID"] = gis["LineID"].astype(int)
@@ -192,6 +135,7 @@ def validate(out_df, gis_path):
     return m
 
 
+# Run: intersect, write the raw CSV, validate if asked
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--duneline", required=True)

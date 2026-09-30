@@ -1,20 +1,10 @@
 """
-The padded offset profile at true 1:1 scale
-============================================
-The buffer diagnostic that island_offset_hybrid.py draws stretches 7.5 km of
-cross-shore offset across a panel that spans 72 km alongshore, so the island
-reads as a deep V. This draws the same padded profile with equal axes: 1 m
-alongshore is 1 m cross-shore, the way a map draws it (Hannah, 2026-09-16).
+The padded island offset profile at true 1:1 scale, so the buffer's shape reads as it is.
 
-    python HAT_plot_offset_profile_1to1.py --year 1996 --geometry n115
-    python HAT_plot_offset_profile_1to1.py --year 1996              # the CURRENT surveyed build
-    python HAT_plot_offset_profile_1to1.py --file 1996/v1/Island_Dune_Offsets_1996_PADDED_120.csv
-    python HAT_plot_offset_profile_1to1.py --all                    # every padded build on disk
+    python scripts/input_prep/2-brie-offset/2-figures/HAT_plot_offset_profile_1to1.py --year 1996
+    python scripts/input_prep/2-brie-offset/2-figures/HAT_plot_offset_profile_1to1.py --all
 
-Writes <build dir>/<the build's own stem>_buffer_diagnostic_1to1.png beside
-the original diagnostic (exaggerated axes, kept), with the PDF and caption
-under supporting/. Named `_v2` until 2026-09-23, which read as a build number
-inside a v<n>/ folder.
+One figure per padded build, beside the build. Details: scripts/input_prep/2-brie-offset/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -43,12 +33,11 @@ from site_layer.hat_topo_version import (BRIE_ROOT,  # noqa: E402
                               offset_basename, offset_file, offset_start_dir)
 
 
+# The padded build for a year and geometry
 def padded_file(year, geometry):
     first, last = gis_bounds(geometry)
     n = (last - first + 1) + 2 * BUFFER_DOMAINS_PER_SIDE
-    # Through hat_topo_version since 2026-09-22, when every build moved under
-    # <year>/<source>/. This read CURRENT out of <year>/ itself and would now
-    # find no CURRENT there, silently falling back to the year folder.
+    # Through hat_topo_version since 2026-09-22, when every build moved under <year>/<source>/
     if geometry == BASE_GEOMETRY:
         path = offset_file(year, "padded", n, source=SOURCE)
     else:
@@ -59,9 +48,8 @@ def padded_file(year, geometry):
     return path
 
 
+# (geometry, first, last) from a padded file's length
 def geometry_of(path):
-    """(geometry, first, last) from a padded file's length; None if no
-    geometry pads to that many domains."""
     n = len(pd.read_csv(path))
     for name, (first, last) in GEOMETRIES.items():
         if (last - first + 1) + 2 * BUFFER_DOMAINS_PER_SIDE == n:
@@ -69,13 +57,8 @@ def geometry_of(path):
     return None
 
 
+# Every padded build under 2-brie-offset, superseded ones included
 def every_padded_file():
-    """Every padded build under 2-brie-offset, superseded ones included.
-
-    One glob per SOURCE (2026-09-22). This matched only the dune stem, so
-    --all quietly skipped every shoreline build; the stems come from
-    hat_topo_version so a new source cannot be forgotten here again.
-    """
     out = []
     for src in OFFSET_SOURCES:
         stem = offset_basename(0, src).rsplit("_", 1)[0]   # drop the year
@@ -83,6 +66,7 @@ def every_padded_file():
     return sorted(set(out))
 
 
+# The profile at equal axes, 1 m alongshore to 1 m cross-shore
 def draw(path, geometry, first, last):
     import matplotlib
     matplotlib.use("Agg")
@@ -146,14 +130,13 @@ def draw(path, geometry, first, last):
                  f"steepest domain-to-domain angle is {np.abs(theta[real][:-1]).max():.0f} "
                  f"degrees. The compressed planform every calibrated run uses divides "
                  f"these offsets by ten.")
-    # Named from the file it was drawn FROM, not from the dune stem
-    # (2026-09-22): this was hardcoded, so the shoreline build's diagnostic
-    # landed in 1996/shoreline/v1/ calling itself Island_Dune_Offsets.
+    # Named from the file it was drawn FROM, not from the dune stem (2026-09-22)
     out = path.parent / f"{path.stem.rsplit('_PADDED_', 1)[0]}_buffer_diagnostic_1to1.png"
     save(fig, out, close=True)
     print(f"wrote {out.relative_to(BRIE_ROOT).as_posix()}")
 
 
+# Run: one build, or every padded build on disk
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--year", type=int, default=1996)
