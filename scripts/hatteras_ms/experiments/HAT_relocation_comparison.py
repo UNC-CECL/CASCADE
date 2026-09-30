@@ -62,7 +62,10 @@ USAGE
     python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py --period 1996 --preset edgeBE
     python scripts/hatteras_ms/experiments/HAT_relocation_comparison.py --arm-a DIR --arm-b DIR
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

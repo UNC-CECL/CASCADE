@@ -41,6 +41,11 @@ WHAT CHANGED 2026-09-17, and why
     swatches repeated the labelled period bar.
   * THE PANEL WAS THREE QUARTERS EMPTY at 5.6 in of height.
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 import matplotlib
 matplotlib.use('Agg')

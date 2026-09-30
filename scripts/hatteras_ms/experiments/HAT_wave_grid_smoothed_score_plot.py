@@ -16,6 +16,11 @@ Reads tables only; it never rebuilds the run index, so it is safe to run
 while the sweep is going.
 
     python scripts/hatteras_ms/experiments/HAT_wave_grid_smoothed_score_plot.py [--source step2|grid|both]
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

@@ -17,6 +17,11 @@ a missing zone label falls back to the one already there.
 
 Usage (from scripts/input_prep/7-source-sink):
     python 2-calibrate/be_apply_fit_to_config.py [--check] [--add]
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 import argparse

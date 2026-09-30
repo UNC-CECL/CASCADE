@@ -27,6 +27,11 @@ caption rather than smoothed over:
   shorelines an OLS slope IS the end-point rate, so the two agree in form
   here; they would not if a third DSAS vintage fell inside a window.
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 import matplotlib
 matplotlib.use("Agg")

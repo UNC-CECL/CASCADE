@@ -49,6 +49,11 @@ USAGE
     python HAT_footprint_1984.py          # first - writes the footprint table
     python HAT_report_row_insert_scope.py
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

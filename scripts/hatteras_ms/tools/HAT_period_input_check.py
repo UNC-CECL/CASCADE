@@ -30,7 +30,10 @@
 #     python HAT_period_input_check.py
 #     python HAT_period_input_check.py --period 2010
 #
-# Author: Hannah A. Henry, UNC CECL
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-18
 # ==============================================================================
 
 from __future__ import annotations

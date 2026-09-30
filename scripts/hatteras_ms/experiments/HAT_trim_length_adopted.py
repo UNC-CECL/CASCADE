@@ -25,6 +25,11 @@ NOTHING IN THE MAIN CODE CHANGES.
 
 WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-trim-length-adopted/
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

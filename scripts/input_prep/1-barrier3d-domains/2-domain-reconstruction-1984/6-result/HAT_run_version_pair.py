@@ -28,6 +28,11 @@ USAGE
     python HAT_run_version_pair.py                          # emergent (the modules decide)
     python HAT_run_version_pair.py --versions v2,v3 --dry-run
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-27
 """
 from __future__ import annotations
 

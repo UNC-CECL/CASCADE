@@ -23,7 +23,10 @@ diagnostic showed a buffer the model did not see; those builds are now
 <start>/<source>/superseded_20260924_pre-metres/v1. The current v1 (built 2026-09-24) writes the
 closure itself (Hannah: "option (a)").
 
-Author: Hannah A. Henry
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 import os

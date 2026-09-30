@@ -44,6 +44,11 @@ TARGET  (second version of the change figure, Hannah 2026-09-29) projected
 USAGE
     python scripts/analyze_output/compare_runs/offset_source_comparison.py
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

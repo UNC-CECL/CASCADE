@@ -56,7 +56,10 @@ Usage:
 Reads output/comparisons/relocation/standard_setback/GIS11_profiles.npz, the
 per-domain extract taken before the superseded runs were deleted.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

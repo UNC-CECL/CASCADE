@@ -33,6 +33,11 @@
 # A WINDOW IS <start>_<end> (the end is a boundary; the model spends
 # start..end-1), the same naming rule as the rest of the init tree.
 # ==============================================================================
+#
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-30
 
 from __future__ import annotations
 

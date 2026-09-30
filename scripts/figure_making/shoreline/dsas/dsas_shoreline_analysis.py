@@ -2,6 +2,11 @@
 Complete Shoreline Change Rate Analysis - All-in-One
 Analyzes DSAS data and creates publication-quality visualizations
 Run this once and get everything!
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 # The DSAS tables moved into the data tree 2026-09-13 (rule 1). These

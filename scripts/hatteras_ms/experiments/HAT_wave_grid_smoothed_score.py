@@ -36,6 +36,11 @@ USAGE (from the project root):
     python scripts/hatteras_ms/experiments/HAT_wave_grid_smoothed_score.py run coarse --periods 1996
     python scripts/hatteras_ms/experiments/HAT_wave_grid_smoothed_score.py score
     python scripts/hatteras_ms/experiments/HAT_wave_grid_smoothed_score.py rescore-step2
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

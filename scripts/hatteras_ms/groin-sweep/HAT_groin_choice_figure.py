@@ -56,7 +56,10 @@ Usage:
 
 Writes output/calibration/groin/figures/why_M60_f06.png
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

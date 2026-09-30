@@ -55,6 +55,11 @@ EXTENDED GEOMETRY (2026-09-16, the Pea Island extension experiment)
     to <year>/ext/<geometry>/). Not a version: CURRENT is untouched, no
     comparison is drawn, and the provenance lands in the ext folder.
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-24
 """
 
 from __future__ import annotations

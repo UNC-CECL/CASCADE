@@ -41,6 +41,11 @@ USAGE
     python HAT_metres_1_offset_units.py score
     (--jobs N, --dry-run, --overwrite on `run`)
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

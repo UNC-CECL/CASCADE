@@ -24,6 +24,11 @@ THE STEPS DRAWN (the producers, not re-implemented)
 Every path resolves through site_layer.hat_topo_version: the dune-line vintage
 from DUNE_LINE_FOR_YEAR, the build from offset_version (env > CURRENT > the
 only v<n>). The ocean is on the right in the plan panels (easting across).
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

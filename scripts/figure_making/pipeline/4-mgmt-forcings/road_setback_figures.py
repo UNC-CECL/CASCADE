@@ -28,6 +28,11 @@ Everything is read from the producers' saved products (nothing re-measured):
         HAT_road_setback_derived_vintages.py: 1996 = the 1984 measurement +
         the 1989 Pea Island relocation; 2010 = the 2004 measurement.
 Paths resolve through site_layer.hat_topo_version. Ocean on the right.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

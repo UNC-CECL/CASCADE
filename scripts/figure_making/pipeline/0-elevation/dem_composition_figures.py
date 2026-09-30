@@ -22,6 +22,11 @@ scripts/site_layer/hat_elevation_products.py. Nothing is regenerated.
 
 The tiles are north-up UTM boxes, 500 m alongshore by 2000 m cross-shore;
 through the reach the ocean is to the east, so it sits at the right.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

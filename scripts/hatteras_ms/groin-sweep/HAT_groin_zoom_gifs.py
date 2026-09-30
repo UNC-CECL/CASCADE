@@ -39,6 +39,11 @@ the groin at D5/D6. D1 is excluded: the cape's change over period 1 is 81-104 m,
 about five times the groin's signal, and it swamps the axis.
 
 Writes output/calibration/groin/figures/zoom_gifs_D2_D12/
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 from __future__ import annotations
 import sys

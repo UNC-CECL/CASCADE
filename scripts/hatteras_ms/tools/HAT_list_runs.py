@@ -27,6 +27,11 @@ USAGE
     python HAT_list_runs.py --only-stale       # just what is not CURRENT
     python HAT_list_runs.py --stamp            # write BUILT_ON.txt per run
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 from __future__ import annotations
 

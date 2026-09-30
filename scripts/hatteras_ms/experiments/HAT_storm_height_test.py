@@ -38,6 +38,11 @@ USAGE
     python HAT_storm_height_test.py run [--workers 6]
     python HAT_storm_height_test.py score
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

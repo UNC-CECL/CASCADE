@@ -19,6 +19,11 @@ WHY IT EXISTS
 
     The logs go to output/logs/scratch/figures_<timestamp>/, one per step.
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

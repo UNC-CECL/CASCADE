@@ -69,6 +69,11 @@ INPUT   <product>/dune-topo/<version>/topography/domain_<N>_topography.npy  dam
 
 OUTPUT  dunestart_offset/HAT_road_island_planview_<year>.png (and .pdf)
         dunestart_offset/CAPTIONS.md   the caption, keyed by file name
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import os

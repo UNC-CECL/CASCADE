@@ -46,6 +46,11 @@ OUTPUT   data/hatteras_init/5-scr/4-comparisons/shoreline_vs_duneline/endpoint_n
 USAGE
     python scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/net_change_vs_duneline.py
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

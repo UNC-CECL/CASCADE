@@ -34,7 +34,10 @@ USAGE
     python scripts/hatteras_ms/experiments/HAT_relocation_period_compare.py
     python scripts/hatteras_ms/experiments/HAT_relocation_period_compare.py --presets zeroBE edgeBE --version v2
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

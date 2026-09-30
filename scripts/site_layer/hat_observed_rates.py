@@ -86,6 +86,11 @@
 #     from site_layer.hat_observed_rates import lrr_csv, transect_lookup
 #     path = lrr_csv(1996, 2010)          # raises, listing windows, if absent
 # ==============================================================================
+#
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-30
 
 from __future__ import annotations
 

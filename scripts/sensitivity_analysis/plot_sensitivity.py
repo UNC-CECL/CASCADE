@@ -34,7 +34,10 @@ Usage:
     python plot_sensitivity.py --start-year 2004 --preset edgeBE
     python plot_sensitivity.py --start-year 1984 --circularity
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

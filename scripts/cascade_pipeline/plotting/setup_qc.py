@@ -12,7 +12,10 @@ WHY THIS MODULE EXISTS
     Nothing downstream reads their output. Skipping them changes no result --
     which is exactly why they belong out of the file that describes the run.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

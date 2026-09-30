@@ -35,6 +35,11 @@ OUTPUTS   data/hatteras_init/4-mgmt-forcing/nourishment/
 RUN
     python scripts/input_prep/4-mgmt-forcings/beach_nourishment.py
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

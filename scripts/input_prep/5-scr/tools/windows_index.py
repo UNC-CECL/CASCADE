@@ -16,6 +16,11 @@ other question a reader cannot answer by looking.
 USAGE
     python scripts/input_prep/5-scr/tools/windows_index.py
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 from __future__ import annotations

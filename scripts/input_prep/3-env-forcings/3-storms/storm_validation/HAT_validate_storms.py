@@ -49,7 +49,10 @@
 # Usage:
 #   Set STORM_FILE / BEGIN_YEAR / END_YEAR below and run.
 #
-# Author: Hannah Henry
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-18
 # =============================================================================
 
 import contextlib

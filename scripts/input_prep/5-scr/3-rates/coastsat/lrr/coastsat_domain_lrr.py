@@ -17,6 +17,11 @@ Usage
 -----
 Edit the CONFIG section below, then run:
     python coastsat_domain_lrr.py
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 # ============================================================

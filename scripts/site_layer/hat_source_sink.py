@@ -38,6 +38,11 @@
 # and only other pairs got a folder, so what the unlabelled files belonged to
 # had to be known rather than read. Every pair has a folder now.
 # ==============================================================================
+#
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-22
 
 from __future__ import annotations
 

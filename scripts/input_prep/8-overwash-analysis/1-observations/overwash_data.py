@@ -30,6 +30,11 @@ WHAT IS DERIVED HERE, AND WHY
 USAGE
     from overwash_data import load_observations, load_storms, SECTIONS
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 from __future__ import annotations

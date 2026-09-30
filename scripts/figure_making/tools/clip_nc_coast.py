@@ -16,6 +16,11 @@ WHY
 
     Re-run it only if the source changes; the output is what the figures read.
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 from __future__ import annotations

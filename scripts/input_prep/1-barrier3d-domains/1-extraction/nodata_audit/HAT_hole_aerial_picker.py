@@ -88,6 +88,11 @@ INPUT   dune-topo/<version>/hole_verdicts.csv
 
 OUTPUT  dune-topo/<version>/figures/aerial_1996_conflicts/aerial_review.csv
             the aerial_verdict column, filled in
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import csv

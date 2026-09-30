@@ -48,7 +48,10 @@
 #       Highest-Rhigh events are retained when trimming is needed.
 #
 # Adapted from: Storm_Creation.ipynb
-# Author: Hannah Henry
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-18
 # =============================================================================
 
 import numpy as np

@@ -90,6 +90,11 @@ INPUT   data/hatteras_init/1-barrier3d-domains/<PRODUCT>/npy-arrays/domain_<N>.n
         Georeferencing comes from the elevation product resample_audit.csv.
 
 OUTPUT  <elevation product>/figures/HAT_<slug>_holes.png
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import csv

@@ -15,6 +15,11 @@ Figure 2  (PLOT_CONTINGENCY = True)
 USAGE
 -----
 Set NPZ_PATH, OBS_XLSX_PATH, OUT_DIR, and QOW_THRESHOLD, then run.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import os, io, pickle, zipfile, warnings

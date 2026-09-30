@@ -1,6 +1,11 @@
 """
 Verification: Compare Calculated Rates to Known Values
 Checks if your calculated shoreline change rates make sense
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 # The DSAS tables moved into the data tree 2026-09-13 (rule 1). These

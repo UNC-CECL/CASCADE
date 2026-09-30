@@ -34,6 +34,11 @@ WHERE: output/raw_runs/experiments/wave-climate/2026-09-26-wave-shortlist-ends-s
 
     python scripts/hatteras_ms/experiments/HAT_wave_shortlist_ends_solved.py run [--jobs 8]
     python scripts/hatteras_ms/experiments/HAT_wave_shortlist_ends_solved.py score
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

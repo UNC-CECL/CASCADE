@@ -10,7 +10,10 @@ Usage:
     python plot_sensitivity_zoom.py --start-year 1996 \
         --sweep wave_angle_high_fraction --lo 0.5 --hi 0.55
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

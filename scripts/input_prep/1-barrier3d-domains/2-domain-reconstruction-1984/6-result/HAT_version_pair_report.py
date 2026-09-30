@@ -27,6 +27,11 @@ USAGE
     python HAT_version_pair_report.py
     python HAT_version_pair_report.py --preset calibBE --set calibBE_groin
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 from __future__ import annotations
 

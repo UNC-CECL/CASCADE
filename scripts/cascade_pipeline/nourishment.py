@@ -33,6 +33,11 @@ Four things about `BeachDuneManager` this module exists to get right:
   increments `barrier3d.time_index` before the managers run, so a manager
   writing at `time_index - 1` lands on index `year - start_year + 1`.
   `NourishmentSchedule.time_index` is the single place that conversion lives.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-08-19
 """
 
 import dataclasses

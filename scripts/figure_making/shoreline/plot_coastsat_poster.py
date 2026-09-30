@@ -30,6 +30,11 @@ WHAT CHANGED 2026-09-17
     in every other figure that draws two periods.
   * THE LEGEND IS OUT OF THE PANEL. It was boxed and sat on the data.
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 import matplotlib
 matplotlib.use("Agg")

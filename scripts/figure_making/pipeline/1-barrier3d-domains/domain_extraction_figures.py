@@ -18,6 +18,11 @@ WHAT IT CALLS
     figure shows what the model reads. The road overlay is switched off.
 
 Every cross-shore panel has the ocean at the RIGHT.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

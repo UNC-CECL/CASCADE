@@ -34,6 +34,11 @@ WHY IT IS A DIFFERENCE OF TWO LINES AND NOT ONE MEASUREMENT
 USAGE
     python HAT_plot_how_N_is_determined.py [--domain 85]
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

@@ -105,6 +105,11 @@ REQUIREMENTS
 ------------
   geopandas, rasterio, numpy, matplotlib
 ===============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

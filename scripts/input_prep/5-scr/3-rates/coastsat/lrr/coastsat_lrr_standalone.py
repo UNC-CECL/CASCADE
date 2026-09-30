@@ -15,6 +15,11 @@ least 3 positions. Positive = seaward (accretion), negative = erosion.
 START and END are whole calendar years, both included -- the window
 convention of every 5-scr script and of 5-scr/template/, whose
 shoreline_rates_template.py is the fuller version of this file.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 import sys
 from pathlib import Path

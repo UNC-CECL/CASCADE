@@ -36,6 +36,11 @@ OUTPUT  beside the table in 5-scr/3-rates/coastsat/lrr/1984_2025_obx/
     Reads supporting/coastsat_lrr_obx_1984_2025_full.csv (it needs the
     seaward ends), so run coastsat_obx_lrr.py first.
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-27
 """
 import sys
 from pathlib import Path

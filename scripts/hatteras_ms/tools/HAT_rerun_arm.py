@@ -33,7 +33,10 @@
 #     python HAT_rerun_arm.py --arm recode-20260914 --topo-version v1
 #     python HAT_rerun_arm.py --arm recode-20260914 --topo-version v1 --limit 2
 #
-# Author: Hannah A. Henry, UNC CECL
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-27
 # ==============================================================================
 
 from __future__ import annotations

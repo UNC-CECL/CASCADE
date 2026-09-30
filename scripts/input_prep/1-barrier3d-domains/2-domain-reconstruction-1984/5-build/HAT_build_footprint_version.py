@@ -54,6 +54,11 @@ USAGE
     python HAT_build_footprint_version.py --dst-version v3
     python HAT_build_footprint_version.py --dst-version v3 --overwrite
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 from __future__ import annotations
 

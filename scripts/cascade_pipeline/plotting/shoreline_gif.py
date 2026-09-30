@@ -16,6 +16,11 @@ are drawn at a fixed figure size with fixed margins (never bbox_inches=
 "tight") and the pixel width comes from the dpi, not from a 16-inch canvas.
 The dpi is passed to savefig EXPLICITLY: the house rcParams set savefig.dpi
 to 300 for print, which would otherwise triple every frame.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import dataclasses

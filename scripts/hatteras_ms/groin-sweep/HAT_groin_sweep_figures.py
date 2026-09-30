@@ -62,7 +62,10 @@ Writes to output/calibration/groin/<start>_<end>_<preset>/figures/:
     top_n_profiles.png       the best N cells on the same axes
     period2_surface.png      2004-2024 only: the M*f ridge, with contours
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

@@ -62,6 +62,11 @@ OUTPUT  data/hatteras_init/0-elevation/<SOURCE_TAG>/figures/
         existing figures.
 
 Requires: rasterio, geopandas, numpy, matplotlib
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from pathlib import Path

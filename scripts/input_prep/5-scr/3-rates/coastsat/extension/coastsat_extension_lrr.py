@@ -28,6 +28,11 @@ transect_lrr_full.csv must already exist (coastsat_domain_lrr_fixed.py).
 Usage
 -----
     python coastsat_extension_lrr.py --start-year 1996 --end-year 2010
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 from __future__ import annotations
 

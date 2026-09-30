@@ -140,6 +140,11 @@ Requires: rasterio, geopandas, numpy, scipy
 `--domains` is for checking the code path on a few windows. It writes the CSVs
 for that subset only, so a subset run OVERWRITES the full ones - re-run without
 it before reading anything.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

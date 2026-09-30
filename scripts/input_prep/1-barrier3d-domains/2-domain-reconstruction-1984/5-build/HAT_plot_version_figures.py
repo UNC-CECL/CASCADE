@@ -44,6 +44,11 @@ USAGE
     python HAT_plot_version_figures.py --domains 85,63      # only the grid panels of these
     python HAT_plot_version_figures.py --no-grid            # summary and plan views only
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 from __future__ import annotations
 

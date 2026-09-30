@@ -21,7 +21,10 @@ ONE RULE
     returns whether anything failed, because the loop existed only to be
     printed. Everything else takes already-built objects.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

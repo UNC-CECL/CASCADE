@@ -26,7 +26,10 @@ THE SYNC RULE
     Editing a function here changes the notebook, the .py, and the sweep at
     once. That is the point. Verify with a full hindcast run, not by reading.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

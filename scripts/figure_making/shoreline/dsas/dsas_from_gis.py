@@ -4,6 +4,11 @@ Uses domain-level statistics already calculated in GIS
 
 This script formats pre-calculated domain means from GIS for use in Python analysis.
 No transect-level filtering or aggregation needed - just clean formatting.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 import pandas as pd

@@ -1,3 +1,10 @@
+"""
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
+"""
+
 from pathlib import Path
 #!/usr/bin/env python3
 """

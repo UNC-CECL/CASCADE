@@ -116,6 +116,11 @@ Usage
     python .../coastsat_window_convergence.py --direction forward --scale sites
     (--abs-tol, --rel-tol, --domains to vary it)
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 import argparse

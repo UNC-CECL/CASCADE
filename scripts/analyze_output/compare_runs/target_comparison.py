@@ -72,6 +72,11 @@ USAGE
     python ... --units rate                              # change_rate/ in m/yr
     python ... --coastsat-target total [--units rate]
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

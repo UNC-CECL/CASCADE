@@ -78,6 +78,11 @@ USAGE
     python HAT_imagery_review_gui.py --years 1984,1997,1996
     python HAT_imagery_review_gui.py --smoke         # open, draw one, screenshot, close
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-09
 """
 from __future__ import annotations
 

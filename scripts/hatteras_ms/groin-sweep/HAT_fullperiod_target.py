@@ -30,7 +30,10 @@ SIGN
     against the published CoastSat LRR (+0.74). Barrier3D's x_s is
     landward-positive, so the model side is negated before comparison.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-14
 """
 
 from __future__ import annotations

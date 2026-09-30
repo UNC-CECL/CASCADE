@@ -50,6 +50,11 @@ THE RUNS
     the physics figures because nothing human touches its grids; the
     management figure pairs a managed run with the natural run of the same
     window. The unit contract behind the loop figure is UNITS.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

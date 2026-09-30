@@ -54,7 +54,10 @@ Writes output/calibration/groin/fullperiod_1984_2024/:
     <combo>/             shoreline matrix per cell
     figures/             heatmap, best-fit profile, top-N profiles
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

@@ -98,7 +98,10 @@ HOUSE STYLE
     caption lives in CAPTIONS.md rather than on the canvas, and the local
     rcParams block that overrode the house ink with '#1a1a2e' is gone.
 
-Author: Hannah Henry (UNC Chapel Hill)
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 ==============================================================================
 """
 

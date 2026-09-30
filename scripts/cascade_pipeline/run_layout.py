@@ -42,6 +42,11 @@ USAGE
     p = resolve(run_dir, "rate_csv", run_name)          # read, either layout
     p = write_path(run_dir, "figure_rate", run_name)    # write, new layout
     migrate_run(run_dir)                                # move an old folder
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-11
 """
 from __future__ import annotations
 

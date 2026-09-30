@@ -42,6 +42,11 @@ top value exceeds FLAT_FRACTION_WARN of its gap coverage is flagged.
     python HAT_survey_dem_coverage.py [--domains 78,79,80]
 
 Requires: rasterio, geopandas, numpy, pyproj
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

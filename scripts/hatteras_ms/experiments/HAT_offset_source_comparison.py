@@ -23,6 +23,11 @@ WHERE: output/raw_runs/experiments/island-offset/2026-09-25-metres-offset-duneli
     python scripts/hatteras_ms/experiments/HAT_offset_source_comparison.py run
     python scripts/hatteras_ms/experiments/HAT_offset_source_comparison.py score
     python scripts/hatteras_ms/experiments/HAT_offset_source_comparison.py plot
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

@@ -18,7 +18,10 @@
 #   experiment gets disabled, and a disabled check reports nothing. This one
 #   is meant to be run when you want a picture.
 #
-# Author: Hannah A. Henry, UNC CECL
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-22
 # ==============================================================================
 
 from __future__ import annotations

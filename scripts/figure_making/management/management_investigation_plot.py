@@ -17,6 +17,11 @@ Each RUN_PATHS entry:
     "Label shown on plot": r"C:/path/to/saved/run/folder"
 
 The folder must contain the run's .npz archive (written by cascade.save()).
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 import os

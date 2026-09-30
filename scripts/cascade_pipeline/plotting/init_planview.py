@@ -14,6 +14,11 @@ Two conventions this module depends on, both Barrier3D's:
   landward water rows are absent from the .npy files. `PlanViewConfig.topo_rows`
   is the untrimmed frame height; the missing rows are refilled with
   `sentinel_water_m` (see RUN_MANIFEST.txt in the extractor's version folder).
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import dataclasses

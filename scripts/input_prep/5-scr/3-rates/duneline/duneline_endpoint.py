@@ -36,6 +36,11 @@ USAGE
     python scripts/input_prep/5-scr/3-rates/duneline/duneline_endpoint.py          # every window
     python scripts/input_prep/5-scr/3-rates/duneline/duneline_endpoint.py --windows 1996_2010
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 from __future__ import annotations

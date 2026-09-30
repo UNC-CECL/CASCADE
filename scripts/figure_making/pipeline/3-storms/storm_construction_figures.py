@@ -41,6 +41,11 @@ THE REPRODUCTION
 REWORKED 2026-09-29 (Hannah: "rework the construction figures"). Until then
 this drew the v3_72 rule -- events over 72 h dropped whole -- which has not
 been the model's input since 2026-09-28 (trim24) and did not have the split.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

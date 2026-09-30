@@ -50,7 +50,10 @@ THE SYNC RULE STILL APPLIES
     matching section of both files has to read it, or the two drift again.
     See the module docstring of the .py.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

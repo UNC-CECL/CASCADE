@@ -15,6 +15,11 @@ Writes <build dir>/<the build's own stem>_buffer_diagnostic_1to1.png beside
 the original diagnostic (exaggerated axes, kept), with the PDF and caption
 under supporting/. Named `_v2` until 2026-09-23, which read as a build number
 inside a v<n>/ folder.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-23
 """
 from __future__ import annotations
 

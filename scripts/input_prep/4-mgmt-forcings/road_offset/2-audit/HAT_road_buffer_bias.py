@@ -59,6 +59,11 @@
 # REQUIREMENTS
 #     numpy, geopandas, rasterio   (same set HAT_check_geojson_vs_mask.py needs)
 # ==============================================================================
+#
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-08-20
 
 from __future__ import annotations
 

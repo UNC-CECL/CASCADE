@@ -66,6 +66,11 @@ USAGE
     python HAT_storm_length_selection.py ends --variants drop72 trimXX ...
     python HAT_storm_length_selection.py figures
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 from __future__ import annotations
 

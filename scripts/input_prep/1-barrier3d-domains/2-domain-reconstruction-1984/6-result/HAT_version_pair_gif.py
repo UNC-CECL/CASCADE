@@ -35,6 +35,11 @@ USAGE
     python HAT_version_pair_gif.py                       # both scenarios
     python HAT_version_pair_gif.py --scenarios emergent
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 from __future__ import annotations
 

@@ -31,6 +31,11 @@ USAGE
 --label-a/--label-b (2026-09-23) name a build in the file stem, the columns,
 the legend and the caption. They default to --a/--b; they exist because a
 superseded build's folder is a path, and a slash cannot go in a file name.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

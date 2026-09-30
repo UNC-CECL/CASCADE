@@ -13,6 +13,11 @@ visible against the barrier that has to absorb it.
 
 Nothing here is site-specific: geometry arrives as a DomainGeometry, and the
 setbacks, offsets and events are supplied by the caller.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import dataclasses

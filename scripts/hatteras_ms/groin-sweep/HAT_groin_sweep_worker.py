@@ -57,7 +57,10 @@ Usage:  HAT_groin_sweep_worker.py <period> <preset> <M> <fraction> <be1|none>
 Prints: RESULT_JSON={...} on success. Non-zero exit means the combination
         failed; the orchestrator records it and moves on.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-24
 """
 
 from __future__ import annotations

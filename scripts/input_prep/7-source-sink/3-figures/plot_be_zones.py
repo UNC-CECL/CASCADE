@@ -54,7 +54,10 @@ lineage's own pass-0 file (see PASS0_BACKUP below). The lesson stands: the
 pass-0 backup is the only record of the one-shot half, nothing reconstructs it
 after the fact, and it must be kept with the field it produced.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

@@ -25,6 +25,11 @@ WHAT EXISTS AND WHAT DOES NOT
     for 2010 GIS 1) and, for 2010 GIS 90, re-solved after the dune-cap fix;
     be_end_solve.png draws both records (end-domain-boundaries/
     2026-09-28-ends-resolved-adopted/ and 2026-09-28-ends-resolved-dunecap/).
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

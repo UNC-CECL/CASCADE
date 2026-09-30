@@ -38,6 +38,11 @@ USAGE
     python HAT_road_domain_views.py --domains drowning --mode map
     python HAT_road_domain_views.py --browse --year 2004 --start 52
 ===============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

@@ -18,6 +18,11 @@ STYLE, 2026-09-11
     point of panel (b) is which domains moved the wrong way.
 
 Writes output/calibration/groin/figures/fig_d4d7_window.png (and .pdf)
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 from __future__ import annotations
 import json, sys

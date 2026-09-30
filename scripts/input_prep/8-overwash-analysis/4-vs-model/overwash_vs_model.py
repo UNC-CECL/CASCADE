@@ -45,6 +45,11 @@ THE RUNS
     The managed runs are the comparison (the imagery is the managed island):
     edgeBE, road + beach/dune manager (+ fills in 2010-2024), no groin. The
     natural runs (no road, no manager) are in the tables for contrast.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

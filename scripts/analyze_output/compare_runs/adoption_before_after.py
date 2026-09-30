@@ -34,6 +34,11 @@ PYTHONPATH=<Barrier3D at 49fd069 + the ceiling feature, off> (the worktree
 
 WHERE: output/comparisons/adoption_2026-09-28/
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

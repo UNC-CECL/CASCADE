@@ -38,6 +38,11 @@ The 2026-05 version of this script had a comparison mode for a modelled
 overwash matrix that was never produced. It is gone; a model comparison
 should align to 1-observations/overwash_observations.csv.
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 from __future__ import annotations

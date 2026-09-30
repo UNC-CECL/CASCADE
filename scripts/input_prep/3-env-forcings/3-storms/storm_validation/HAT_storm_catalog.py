@@ -46,6 +46,11 @@
 #   available. At Hatteras these are the dominant morphological forcing, so
 #   unmatched events in a TWL-derived storm file are EXPECTED, not errors.
 # =============================================================================
+#
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-18
 
 import pandas as pd
 

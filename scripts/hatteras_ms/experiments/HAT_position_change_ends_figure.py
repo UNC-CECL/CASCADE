@@ -10,6 +10,11 @@ figure is left as it is, for comparison.
 
 Natural runs land under <study>/runs/natural_final/; the figure goes to the
 study's figures/ folder.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

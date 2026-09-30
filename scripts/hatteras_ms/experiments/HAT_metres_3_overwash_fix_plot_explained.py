@@ -19,6 +19,11 @@ indexing is the real one from barrier3d.py line 1092.
 Output: output/raw_runs/experiments/code-checks/2026-09-24-metres-3-barrier3d-overwash-fix/figures/
         route_overwash_bug_explained.png
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-27
 """
 from __future__ import annotations
 

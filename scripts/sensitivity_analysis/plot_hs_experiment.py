@@ -20,7 +20,10 @@ INPUT
     be_zone_residual_fit.py with HAT_BE_OUTPUT_DIR redirected. Nothing
     here reads or writes the production calibration.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 from __future__ import annotations

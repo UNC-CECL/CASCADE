@@ -22,6 +22,11 @@ LOWESS columns are blank across the southern boundary zone (domains
 Smoothing method: LOWESS (locally weighted scatterplot smoothing)
   - Applied independently to each series (DSAS and CoastSat)
   - Preserves large-scale spatial patterns while removing per-domain noise
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 # pathlib must be imported before the CONFIG block because every path below is

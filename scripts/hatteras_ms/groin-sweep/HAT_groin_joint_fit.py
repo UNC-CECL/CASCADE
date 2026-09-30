@@ -50,7 +50,10 @@ Writes  output/calibration/groin/joint_fit.json    fitted (M, f, be1) per preset
         output/calibration/groin/figures/joint_<preset>_surface.png
         output/calibration/groin/joint_<preset>_constraints.png
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 from __future__ import annotations

@@ -22,6 +22,11 @@ Usage
 1. Point SESSION_DIR to the timestamped comparison folder from the sensitivity run.
 2. Point COASTSAT_CSV_1984_2004 / _2004_2024 to your CoastSat CSVs.
 3. python plot_sensitivity_vs_coastsat.py
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 import os

@@ -64,6 +64,11 @@ USAGE
     python HAT_fill_copy_scope.py                    # examples 80, 85, 5, 49
     python HAT_fill_copy_scope.py --domains 80,73
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 from __future__ import annotations
 

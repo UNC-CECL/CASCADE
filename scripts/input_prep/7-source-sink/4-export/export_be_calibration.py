@@ -43,7 +43,10 @@ WHAT IT WRITES (paths from site_layer/hat_source_sink.py since 2026-09-18)
 Usage:
     python scripts/input_prep/7-source-sink/4-export/export_be_calibration.py [--check]
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

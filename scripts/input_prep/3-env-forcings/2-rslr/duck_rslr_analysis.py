@@ -38,7 +38,10 @@ holds everywhere. The NOAA full-record trend is the reference green.
 Units: all computed rates are in metres per year [m/yr]; the CSVs carry
 mm/yr beside them.
 
-Author: Hannah Henry
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 Date:   5/4/2026; restyled and split into record/fits/figures 2026-09-15
 """
 

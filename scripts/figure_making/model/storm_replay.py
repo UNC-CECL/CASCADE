@@ -20,6 +20,11 @@ saved run to 0.0 m (overwash_routing_figures.storm_routing_check):
     barrier3d.py:1358) is computed ONCE per year, after dune growth and
     before the first storm. Every storm that year is tested against it and
     routed over it, although each storm also lowers the dune it erodes.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

@@ -27,6 +27,11 @@ WHY IT IS GENERATED
 THE LAYOUT (Hannah, 2026-09-29): numbered in the paper's order, see LAYOUT.
     The folder names come from hat_figure_style.FIGURE_SUBJECTS / INPUT_STEPS.
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 from __future__ import annotations
 

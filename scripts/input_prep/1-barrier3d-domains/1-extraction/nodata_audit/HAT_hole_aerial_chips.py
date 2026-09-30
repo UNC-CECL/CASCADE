@@ -57,6 +57,11 @@ INPUT   dune-topo/<version>/hole_verdicts.csv          which holes conflict
 OUTPUT  dune-topo/<version>/figures/aerial_1996_conflicts/
             sheet_D<a>-<b>.png        contact sheets, 12 chips each
             aerial_review.csv         one row per hole, blank verdict column
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import csv

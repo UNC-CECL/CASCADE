@@ -65,7 +65,10 @@ Usage:
     python hindcast_sensitivity.py --start-year 2004 --param wave_height \\
         --values 1.5,2.0,2.5
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-28
 """
 
 from __future__ import annotations

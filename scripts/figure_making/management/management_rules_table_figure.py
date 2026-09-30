@@ -41,6 +41,11 @@ WHAT CHANGED 2026-09-17, and why each change was needed
     size; text is now wrapped against the measured width of the column, and row
     heights follow the number of lines that produces.
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 import matplotlib
 matplotlib.use('Agg')

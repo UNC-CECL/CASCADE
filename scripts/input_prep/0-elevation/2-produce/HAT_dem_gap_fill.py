@@ -105,6 +105,11 @@ per-domain subfolders: step 1 writes the 1 m clips and step 2 writes the 10 m
 ones, so one folder per step means re-running a step is a single delete.
 
 Requires: rasterio, geopandas, numpy, scipy
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

@@ -58,6 +58,11 @@ WHERE THE SWITCHES LIVE
 
 RUN_NAME is derived from those switches in section 7.5 -- it is not typed by
 hand, so the output directory cannot disagree with what was simulated.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 # =============================================================================

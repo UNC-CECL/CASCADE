@@ -25,6 +25,11 @@ WHY PUT THE LINES ON THE GRID
 USAGE
     python HAT_plot_dunelines_on_grid.py [--domain 85]
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

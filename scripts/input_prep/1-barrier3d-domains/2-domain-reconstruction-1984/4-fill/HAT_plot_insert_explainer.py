@@ -22,6 +22,11 @@ from v2's interior row 0 (negative = seaward), the frame every version shares.
 USAGE
     python HAT_plot_insert_explainer.py [--domain 85]
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 from __future__ import annotations
 

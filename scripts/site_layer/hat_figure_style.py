@@ -70,6 +70,11 @@ USAGE
 
     python hat_figure_style.py          # (re)writes STYLE.md and the style sheet
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

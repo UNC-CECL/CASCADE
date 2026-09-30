@@ -46,6 +46,11 @@ OUTPUT  data/hatteras_init/5-scr/3-rates/coastsat/lrr/1984_2025_obx/
     The maps are drawn from the full table by coastsat_obx_lrr_maps.py; a
     one-file version of the fit for others is coastsat_lrr_standalone.py.
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-27
 """
 import sys
 from pathlib import Path

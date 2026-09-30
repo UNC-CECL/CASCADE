@@ -34,6 +34,11 @@ USAGE
     python HAT_metres_3_overwash_fix.py run unpatched          (master checked out)
     python HAT_metres_3_overwash_fix.py compare
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-27
 """
 from __future__ import annotations
 

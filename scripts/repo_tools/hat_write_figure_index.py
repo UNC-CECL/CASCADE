@@ -31,6 +31,11 @@ USAGE
     python scripts/repo_tools/hat_write_figure_index.py
     python scripts/repo_tools/hat_write_figure_index.py --check   # no write
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

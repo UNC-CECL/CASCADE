@@ -29,7 +29,10 @@ USAGE
     The dune target is read from 5-scr/3-rates/duneline/endpoint/ (2026-09-18),
     the same stored product rate_windows.py draws.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-28
 ==============================================================================
 """
 from __future__ import annotations

@@ -23,6 +23,11 @@ output/comparisons/):
   {COMPARISON_NAME}_diagnostic.png      — quick multi-run diagnostic
   {COMPARISON_NAME}_annotated.png       — publication figure with geographic annotations
   {COMPARISON_NAME}_residuals.png       — optional panel: each model minus active CoastSat
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 import os

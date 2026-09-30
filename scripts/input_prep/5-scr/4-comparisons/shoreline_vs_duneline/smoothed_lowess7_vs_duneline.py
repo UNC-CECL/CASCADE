@@ -57,6 +57,11 @@ USAGE
     python scripts/input_prep/5-scr/4-comparisons/shoreline_vs_duneline/smoothed_lowess7_vs_duneline.py
     python ... --window 7          # LOWESS width in domain units
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

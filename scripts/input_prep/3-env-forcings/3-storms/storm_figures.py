@@ -30,6 +30,11 @@ HURDAT2 best tracks in 1-records/hurdat2/; see TC_NEAR_KM below.
 
     python storm_figures.py                # 1996-2024, the canonical chain
     python storm_figures.py --variant v3_72
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 import argparse
 import sys

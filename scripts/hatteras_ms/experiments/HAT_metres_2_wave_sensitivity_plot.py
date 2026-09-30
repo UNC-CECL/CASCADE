@@ -21,6 +21,11 @@ under output/raw_runs/experiments/wave-climate/2026-09-24-metres-2-wave-sensitiv
       the grid as lines: the score against the first parameter, one line per
       value of the second, a panel per period
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

@@ -63,7 +63,10 @@ and, with PUBLISH, output/figures/5-results/hindcast_<preset>.png with its
 caption in supporting/CAPTIONS.md. Both are the same house-style figure; the
 title and note that were drawn on the canvas are the caption (2026-09-18).
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

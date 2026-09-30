@@ -25,6 +25,11 @@ THREE EXPLANATIONS, EACH TESTED DIRECTLY (read-only: existing runs and inputs)
 
 WHERE: output/raw_runs/experiments/storms-and-overwash/2026-09-28-excess-overwash-diagnosis/
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 from __future__ import annotations
 

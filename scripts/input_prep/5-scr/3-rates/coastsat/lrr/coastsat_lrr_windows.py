@@ -66,6 +66,11 @@ USAGE
     python coastsat_lrr_windows.py --windows 1984_2004 2004_2024
     python coastsat_lrr_windows.py --overlay 1996_2024
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

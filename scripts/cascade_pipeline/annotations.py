@@ -9,6 +9,11 @@ empty and its text fields default to generic placeholders. Build a
 populated instance for your own site (see e.g. hatteras_site_config.py)
 and pass it explicitly -- a reusable library shouldn't silently draw
 somebody else's place names.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 import dataclasses

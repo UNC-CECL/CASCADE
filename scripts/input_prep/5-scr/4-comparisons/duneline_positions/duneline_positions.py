@@ -50,6 +50,11 @@ USAGE
     python scripts/input_prep/5-scr/4-comparisons/duneline_positions/duneline_positions.py
     python scripts/input_prep/5-scr/4-comparisons/duneline_positions/duneline_positions.py --no-imagery
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

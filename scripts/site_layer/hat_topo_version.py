@@ -90,6 +90,11 @@
 #     TOPO_DIR, DUNE_DIR, RUN_NAME = topo_dirs("1984-start")
 #     TOPO_DIR, DUNE_DIR, RUN_NAME = topo_dirs("2004-start", override="v1")
 # ==============================================================================
+#
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-29
 
 from __future__ import annotations
 

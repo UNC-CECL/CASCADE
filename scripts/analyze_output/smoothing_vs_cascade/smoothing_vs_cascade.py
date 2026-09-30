@@ -16,6 +16,11 @@ Outputs (saved to OUTPUT_DIR)
 Smoothing method: LOWESS (locally weighted scatterplot smoothing)
   - Applied independently to each period's CoastSat series
   - Preserves large-scale spatial patterns while removing per-domain noise
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 # os must be imported before the CONFIG block because CASCADE_RUNS builds

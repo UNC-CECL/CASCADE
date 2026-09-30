@@ -15,4 +15,9 @@ Import from submodules explicitly rather than from the package root, e.g.:
     from cascade_pipeline.coastsat_lowess import CoastSatDataset, LowessConfig, build_coastsat_series
     from cascade_pipeline.plotting.shoreline_gif import GifConfig, make_all_shoreline_gifs
     from cascade_pipeline.plotting.rate_comparison import plot_rate_comparison, plot_annotated_rate_comparison
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """

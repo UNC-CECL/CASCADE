@@ -64,7 +64,10 @@ Usage:
     python scripts/figure_making/model_output/scenario_grid.py
     python scripts/figure_making/model_output/scenario_grid.py --no-reloc --out FIG.png
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

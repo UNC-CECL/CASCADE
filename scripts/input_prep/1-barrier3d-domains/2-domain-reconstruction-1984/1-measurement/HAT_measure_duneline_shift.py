@@ -60,6 +60,11 @@ USAGE
     python HAT_measure_duneline_shift.py --year 2004      # the control
     python HAT_measure_duneline_shift.py --domains 84,85,86
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

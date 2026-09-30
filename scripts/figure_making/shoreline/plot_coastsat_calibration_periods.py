@@ -31,6 +31,11 @@ WHAT CHANGED 2026-09-17, and why
     same statement in the place the house style keeps it.
   * LEGEND OUT OF THE PANEL, frameless, below -- as the management figures.
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 import matplotlib
 matplotlib.use("Agg")

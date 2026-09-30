@@ -58,7 +58,10 @@ JOINT IDENTIFIABILITY -- why two periods are needed for two knobs
     zero. `differential`, being a domain-mean quantity, carries the same
     aggregation defect and is retained for reporting only -- never ranked on.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

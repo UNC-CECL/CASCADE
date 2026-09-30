@@ -3,6 +3,11 @@
 Bundles the handful of values every plotting function in cascade_pipeline needs
 (run name/dir, period, wave height, sign convention) so call sites pass one
 object instead of five loose scalars pulled from module globals.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 import dataclasses

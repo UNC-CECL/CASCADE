@@ -40,6 +40,11 @@ WHERE: output/raw_runs/experiments/island-offset/2026-09-29-shoreline-offset-v1-
     python scripts/hatteras_ms/experiments/HAT_offset_source_shoreline_v2.py run --jobs 4
     python scripts/hatteras_ms/experiments/HAT_offset_source_shoreline_v2.py score
     python scripts/hatteras_ms/experiments/HAT_offset_source_shoreline_v2.py plot
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

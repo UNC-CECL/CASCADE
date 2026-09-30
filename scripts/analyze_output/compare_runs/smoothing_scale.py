@@ -82,6 +82,11 @@ USAGE
     python scripts/analyze_output/compare_runs/smoothing_scale.py
     python ... --windows 0 3 5 10 --n-null 1000
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

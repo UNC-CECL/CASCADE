@@ -34,6 +34,11 @@ WHERE: output/raw_runs/experiments/end-domain-boundaries/2026-09-27-ends-resolve
     --seed  "1996=4.8394,17.545;2010=18.8,24.535": step 1 probes these ends
             instead of the first-gain guess from zeroBE, so a re-solve near a
             known answer starts there
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

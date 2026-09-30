@@ -57,6 +57,11 @@ OUTPUT   data/hatteras_init/8-overwash-analysis/3-vs-footprint/tables/
     The map reads the domain boxes and coastline from the repository, through
     overwash_map_periods.load_geometry (off the D: drive since 2026-09-18).
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 from __future__ import annotations

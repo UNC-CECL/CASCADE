@@ -17,6 +17,11 @@ WHERE: output/raw_runs/experiments/wave-climate/2026-09-27-wave-grid-fixed-ends/
 
     python scripts/hatteras_ms/experiments/HAT_wave_grid_fixed_ends.py run all --jobs 8
     python scripts/hatteras_ms/experiments/HAT_wave_grid_fixed_ends.py score
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-27
 """
 from __future__ import annotations
 

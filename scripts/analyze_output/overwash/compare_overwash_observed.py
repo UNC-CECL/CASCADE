@@ -20,6 +20,11 @@ USAGE
 2. Adjust PERIOD, domain constants, and SECTIONS to match your run.
 3. Set QOW_THRESHOLD for the contingency analysis.
 4. python compare_overwash.py
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import os, io, pickle, zipfile, warnings

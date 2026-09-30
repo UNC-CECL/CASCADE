@@ -20,6 +20,11 @@ downstream had to re-parse it.
 
 Used by both HAT_hindcast_1984_2024.ipynb and its headless mirror
 HAT_hindcast_1984_2024.py, so the two cannot drift apart.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 import datetime

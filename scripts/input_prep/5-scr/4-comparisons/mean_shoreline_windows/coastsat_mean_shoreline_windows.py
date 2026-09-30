@@ -44,6 +44,11 @@ USAGE
     python coastsat_mean_shoreline_windows.py                 # both periods
     python coastsat_mean_shoreline_windows.py --periods 1996
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

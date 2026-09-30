@@ -54,7 +54,10 @@ Sweeps that have not run yet are drawn as labelled placeholders rather than
 skipped, so a missing panel reads as "not swept" instead of silently
 shrinking the figure.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

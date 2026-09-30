@@ -37,6 +37,11 @@ USAGE
     python HAT_barrier3d_gap_momentum_fix.py run [--workers 4]
     python HAT_barrier3d_gap_momentum_fix.py compare
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 from __future__ import annotations
 

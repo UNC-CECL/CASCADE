@@ -42,6 +42,11 @@ THE ROAD IS DRAWN AT ITS MEASURED OFFSET, NOT THE FLOORED ONE
 USAGE
     python HAT_plot_fill_options_grid.py [--domain 85] [--rows 26]
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

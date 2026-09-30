@@ -6,6 +6,11 @@ real-domain boundary. DomainGeometry's field defaults happen to match the
 Hatteras Island hindcast (90 real domains, 15-domain buffers, 500 m
 spacing, starting at GIS ID 1) -- override them for a different site or
 grid resolution; nothing else in this module assumes Hatteras' numbers.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-08-19
 """
 
 import dataclasses

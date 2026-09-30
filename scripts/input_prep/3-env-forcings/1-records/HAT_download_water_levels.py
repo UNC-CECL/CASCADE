@@ -48,7 +48,10 @@
 #                          peak flattens the peak and biases Rhigh low — the
 #                          quiet version of the bug we just found.
 #
-# Author: Hannah Henry
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-18
 # =============================================================================
 
 import json

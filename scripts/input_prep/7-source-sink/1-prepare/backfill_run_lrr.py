@@ -17,6 +17,11 @@ Usage:
     python scripts/input_prep/7-source-sink/1-prepare/backfill_run_lrr.py [--check]
 
     --check  report what would change and write nothing.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 import argparse

@@ -30,6 +30,11 @@
 # are owned by 5-scr/2-transect-frame/; DOMAIN_BOXES re-exports that path so a
 # figure script needs one import, not a second copy that could drift.
 # ==============================================================================
+#
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-22
 
 from __future__ import annotations
 

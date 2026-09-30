@@ -41,6 +41,11 @@ STYLE
 The domain boxes live on the external drive; the script stops with a
 message if the drive is not there rather than drawing without them.
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 from __future__ import annotations

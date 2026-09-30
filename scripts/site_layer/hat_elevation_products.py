@@ -52,6 +52,11 @@
 #   if it does not. Pass check=False only when creating the product for the
 #   first time, which is what the two producer scripts do.
 # ==============================================================================
+#
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-18
 
 from __future__ import annotations
 

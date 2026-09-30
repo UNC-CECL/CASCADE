@@ -34,6 +34,11 @@ USAGE
     python HAT_plot_b3d_grid.py
     python HAT_plot_b3d_grid.py --domains 85 --rows 40
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

@@ -25,6 +25,11 @@ ends do not move linearly and the model does.
 WHERE: output/raw_runs/experiments/end-domain-boundaries/2026-09-28-ends-solved-on-position-change/
 
     python scripts/hatteras_ms/experiments/HAT_resolve_ends_on_position_change.py
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

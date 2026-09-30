@@ -17,7 +17,10 @@
 # Since 2026-09-16 a re-run is an EXPERIMENT (raw_runs/experiments/<tag>/) and
 # the stored run a MATRIX row; the index is keyed on (run_name, kind, tag).
 #
-# Author: Hannah A. Henry, UNC CECL
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-27
 # ==============================================================================
 
 from __future__ import annotations

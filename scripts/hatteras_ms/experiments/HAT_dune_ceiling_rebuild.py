@@ -45,6 +45,11 @@ USAGE
     python HAT_dune_ceiling_rebuild.py score
     python HAT_dune_ceiling_rebuild.py figures
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 from __future__ import annotations
 

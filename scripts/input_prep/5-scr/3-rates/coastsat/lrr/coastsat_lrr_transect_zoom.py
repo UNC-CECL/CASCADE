@@ -50,6 +50,11 @@ USAGE
     python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_transect_zoom.py --target
     python scripts/input_prep/5-scr/3-rates/coastsat/lrr/coastsat_lrr_transect_zoom.py --slide
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

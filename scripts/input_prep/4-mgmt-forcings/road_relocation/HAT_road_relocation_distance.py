@@ -95,6 +95,12 @@ REQUIREMENTS
 ------------
   geopandas, shapely, numpy, pandas, matplotlib
 ===============================================================================
+
+Adapted from: from_roya/road_relocation_dis.py, by Roya
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import os

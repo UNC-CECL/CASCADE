@@ -92,6 +92,11 @@ USAGE
     python HAT_imagery_review_1984.py --no-controls
     python HAT_imagery_review_1984.py --resume             # after an interrupted run
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-23
 """
 from __future__ import annotations
 

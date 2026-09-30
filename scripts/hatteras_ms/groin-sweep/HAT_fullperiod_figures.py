@@ -33,7 +33,10 @@ Usage:
 Reads  output/calibration/groin/fullperiod_1984_2024/results.csv
 Writes output/calibration/groin/fullperiod_1984_2024/figures/
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

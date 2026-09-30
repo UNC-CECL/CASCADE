@@ -8,6 +8,11 @@ own sibling module in this same shape and never touch the package.
 
 Import these presets from your run script / notebook:
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS, HATTERAS_ANNOTATIONS
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 import csv

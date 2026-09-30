@@ -51,6 +51,11 @@ Each run is the ordinary hindcast runner driven through the environment,
 exactly as HAT_run_all.py drives the matrix; nothing here reimplements a
 run. Runs are never overwritten (pass --overwrite to redo one).
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

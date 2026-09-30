@@ -47,7 +47,10 @@ Usage:
 
 Writes output/calibration/groin/figures/full_life_1967_2017.png
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

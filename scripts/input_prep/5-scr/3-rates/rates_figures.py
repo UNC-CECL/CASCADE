@@ -38,6 +38,11 @@ Y AXES
 USAGE
     python scripts/input_prep/5-scr/3-rates/rates_figures.py
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

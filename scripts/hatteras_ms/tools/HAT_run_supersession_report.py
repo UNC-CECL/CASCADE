@@ -35,6 +35,11 @@ USAGE
     python HAT_run_supersession_report.py
     python HAT_run_supersession_report.py --print
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-27
 """
 from __future__ import annotations
 

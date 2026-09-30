@@ -38,7 +38,10 @@ WHERE A LINE STOPS
     `_road_ele_TS`, never from the setback, because a setback of exactly
     0.0 m is legitimate -- see `_last_managed`.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import io

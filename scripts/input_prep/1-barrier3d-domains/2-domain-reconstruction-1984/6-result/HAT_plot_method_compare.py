@@ -30,6 +30,11 @@ USAGE
     python HAT_plot_method_compare.py                 # GIS 85
     python HAT_plot_method_compare.py --domain 86 --rows 40
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 from __future__ import annotations
 

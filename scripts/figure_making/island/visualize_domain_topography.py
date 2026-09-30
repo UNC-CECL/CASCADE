@@ -7,7 +7,10 @@ with labeled dune domain and interior domain regions.
 Usage:
     python visualize_domain_topography.py
 
-Author: Hannah (UNC Chapel Hill)
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-14
 Date: January 2025
 """
 

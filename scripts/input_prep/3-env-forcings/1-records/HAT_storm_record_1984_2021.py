@@ -33,6 +33,11 @@ asterisk (*); the writeup is in the "Storm Details" sidebar, matched by
 name/year rather than a numbered reference (numbers next to the year
 abbreviation, e.g. Gloria '85, read as confusingly similar to the year
 itself).
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import datetime as dt

@@ -17,6 +17,11 @@ Three Barrier3D conventions this module depends on:
 - `bulldoze` tests the rows FLANKING the road, never the road's own cells, and
   drowns the road when either flank is more than `percent_water` water.
   `predict_drowning` reproduces that test rather than approximating it.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-14
 """
 
 import dataclasses

@@ -155,7 +155,10 @@ USAGE
     python scripts/analyze_output/compare_runs/rate_windows.py
     python ... --no-sensitivity        # the main level only
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 ==============================================================================
 """
 from __future__ import annotations

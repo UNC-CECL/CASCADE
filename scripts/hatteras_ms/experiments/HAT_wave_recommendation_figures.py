@@ -20,6 +20,11 @@ runs), into output/raw_runs/experiments/wave-climate/2026-09-27-wave-recommendat
 Scores are the RAW share of the alongshore variation explained (the per-domain
 model against the CoastSat LOWESS-10 target, interior GIS 2-89), as the runner
 and the matrix runs are scored.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

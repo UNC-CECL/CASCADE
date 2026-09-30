@@ -68,6 +68,11 @@ INPUT   dune-topo/<src>/topography, dunes
 OUTPUT  dune-topo/<dst>/topography/domain_<N>_{topography,nodata,bridged}.npy
         dune-topo/<dst>/dunes/domain_<N>_dune.npy      (copied unchanged)
         dune-topo/<dst>/BRIDGE_MANIFEST.txt
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import csv

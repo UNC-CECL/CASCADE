@@ -55,7 +55,10 @@ Reads  2-calibrate/1984_2004__2004_2024/convergence_history.json, and the live F
 Writes data/hatteras_init/7-source-sink/3-figures/1984_2004__2004_2024/2-method/fig_be_convergence.png (and the
        PDF beside it); the caption is written to CAPTIONS.md in that folder.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

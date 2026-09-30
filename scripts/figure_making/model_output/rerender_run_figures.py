@@ -46,6 +46,11 @@ USAGE
     python rerender_run_figures.py --arm matrix --ylim=-10,10 --ylim-real=-7.5,7.5
     python rerender_run_figures.py --arm sensitivity --lowess-only
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

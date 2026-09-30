@@ -40,6 +40,11 @@ USAGE
     python be_dune_edgesolve_loop.py --exp end-domain-boundaries/2026-09-18-end-domains-solved-on-redigitized-duneline \\
         --windows 1996 2004 2010 --smooth raw mean3
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

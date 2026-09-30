@@ -32,6 +32,11 @@ Additional outputs — transect mode only
   transect_smoothed_overview.png     raw transect scatter + LOWESS in transect space
   transect_window_comparison.png     window sensitivity in transect space
   coastsat_transect_lrr_*.csv        full transect-level table with lrr_smooth
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 # pathlib must be imported before the CONFIG block because every path below is

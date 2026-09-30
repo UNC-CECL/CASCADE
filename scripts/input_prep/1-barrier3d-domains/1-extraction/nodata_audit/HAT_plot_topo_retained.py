@@ -72,6 +72,11 @@ INPUT   <product>/npy-arrays/domain_<N>.npy                    m NAVD88
         Do not hardcode either.
 
 OUTPUT  <product>/dune-topo/<version>/figures/HAT_topo_retained_<version>.png
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import csv

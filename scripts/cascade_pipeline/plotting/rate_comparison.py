@@ -20,6 +20,11 @@ rather than as a 14 pt banner, but it is not moved off the image and there is
 no captions file in a run folder. The wave height and the SLR rate came OFF
 that line on 2026-09-10 (Hannah): they crowded it, and both are in the run's
 metadata JSON and TXT beside the PNG.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 import dataclasses

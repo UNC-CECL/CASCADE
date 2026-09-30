@@ -41,6 +41,11 @@ Usage
 -----
     Edit CONFIG section, then:
         python coastsat_lrr_interval_lines.py
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 # ============================================================

@@ -79,6 +79,11 @@ INPUT   dune-topo/<version>/bracketed_hole_cells.csv   from HAT_plot_island_noda
 
 OUTPUT  dune-topo/<version>/hole_verdicts.csv          per hole, both votes
         dune-topo/<version>/dropout_mask/domain_<N>.npy  bool, cleared cells only
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import csv

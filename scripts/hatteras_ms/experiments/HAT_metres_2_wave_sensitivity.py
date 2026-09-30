@@ -49,6 +49,11 @@ USAGE
     python HAT_metres_2_wave_sensitivity.py run grid --pair wave_height wave_period \
         --values1 1 1.25 1.5 2 2.5 --values2 6 7 8 10 12 --periods 1996
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

@@ -29,6 +29,11 @@ line trace on that one frame; the model code is not copied or modified).
 Writes to output/figures/4-model-mechanics/<model>/, ocean at the RIGHT in every plan panel.
 The domain and year are the storm-year example of model_mechanics_figures
 (GIS 6, the 2006 storms, natural 1996-2010 run).
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

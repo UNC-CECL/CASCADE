@@ -23,6 +23,11 @@ WRITES   3-rates/coastsat/5yr_bins/<window>/lrr_5yr_bins_<window>.png
 USAGE
     python scripts/input_prep/5-scr/3-rates/coastsat/5yr_bins/coastsat_5yr_bins_figure.py
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 from __future__ import annotations

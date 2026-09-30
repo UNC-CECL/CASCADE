@@ -34,6 +34,11 @@ USAGE
     python HAT_dune_ceiling_per_domain.py run [--workers 6]
     python HAT_dune_ceiling_per_domain.py score
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

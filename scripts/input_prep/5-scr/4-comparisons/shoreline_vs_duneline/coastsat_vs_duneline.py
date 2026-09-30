@@ -60,6 +60,11 @@ USAGE
     python coastsat_vs_duneline.py --grid                 # every window, stacked
     python coastsat_vs_duneline.py --grid --layout grid   # the 2 x 2 by period
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
 """
 
 from __future__ import annotations

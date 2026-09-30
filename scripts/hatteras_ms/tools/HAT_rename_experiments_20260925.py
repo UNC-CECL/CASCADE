@@ -23,6 +23,11 @@ The archive and retired_runs.csv are history and are left as they were.
 cascade_pipeline.run_registry.check_tag allows 4 tag levels since this change.
 
     python scripts/hatteras_ms/tools/HAT_rename_experiments_20260925.py [--dry-run]
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-27
 """
 from __future__ import annotations
 

@@ -49,6 +49,11 @@ EXTENSION MODE (2026-09-16, the Pea Island extension experiment)
     to raw_offsets/ext/<vintage>_duneline_offset_raw_ext.csv, the same columns
     as the surveyed file, and the transect-to-domain table once to
     transects/transects_100m_ext.csv. The surveyed file is not touched.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 from __future__ import annotations

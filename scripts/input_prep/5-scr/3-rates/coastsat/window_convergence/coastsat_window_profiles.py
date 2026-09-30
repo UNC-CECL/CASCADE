@@ -54,6 +54,11 @@ Usage
     python .../coastsat_window_profiles.py                     both directions
     python .../coastsat_window_profiles.py --direction forward
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 import argparse

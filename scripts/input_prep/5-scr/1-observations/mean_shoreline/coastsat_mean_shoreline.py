@@ -96,6 +96,11 @@ THEN (the offset build, which this script does not do)
     island_offset_hybrid.py --year 1996 --source shoreline --version v1
         --raw-file <the raw file above>
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

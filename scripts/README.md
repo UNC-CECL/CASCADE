@@ -8,6 +8,8 @@ as a package (`setup.py`, name `cascade`). Nothing under `scripts/` is packaged.
 These scripts reach each other by putting **`scripts/` on `sys.path`**, and
 that one fact explains the layout below.
 
+How a script is laid out, commented and signed is [`STYLE.md`](STYLE.md).
+
 ## The root is folders and this file
 
 Nothing else. On 2026-09-18 it held eleven loose files — six site modules, the

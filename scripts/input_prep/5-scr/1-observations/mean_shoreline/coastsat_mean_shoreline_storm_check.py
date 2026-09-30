@@ -68,6 +68,11 @@ USAGE
     python coastsat_mean_shoreline_storm_check.py --window-dates 1995-10-12 1997-10-12
     python coastsat_mean_shoreline_storm_check.py --context-years 5 --recovery-days 60
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-29
 """
 
 from __future__ import annotations

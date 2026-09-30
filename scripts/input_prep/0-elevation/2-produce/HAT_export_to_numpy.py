@@ -65,6 +65,11 @@ OUTPUTS
     python HAT_export_to_numpy.py                            # -> 2004-start
 
 Requires: rasterio, numpy
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import csv

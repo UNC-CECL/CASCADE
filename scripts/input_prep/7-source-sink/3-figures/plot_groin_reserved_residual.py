@@ -44,7 +44,10 @@ Reads  the converged calibBE full_management runs, groin on and off, plus the
 Writes data/hatteras_init/7-source-sink/3-figures/1984_2004__2004_2024/3-limits/fig_groin_reserved_residual.png
        (and the PDF beside it); the caption goes to CAPTIONS.md in that folder.
 
-Author: Hannah A. Henry, UNC CECL
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

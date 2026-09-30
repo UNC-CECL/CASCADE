@@ -65,6 +65,11 @@ INPUT   <product>/dune-topo/<version>/topography/domain_<N>_topography.npy  dam
 
 OUTPUT  <product>/dune-topo/<version>/HAT_dune_topo_island_nodata_<version>_<year>_padded.png
         Written beside the elevation plan view it is meant to be compared with.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 
 import sys

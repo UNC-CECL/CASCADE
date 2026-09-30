@@ -2,6 +2,11 @@
 
 Pure data extraction -- nothing here touches matplotlib. Feeds both the
 shoreline GIF and the rate-comparison figures in cascade_pipeline.plotting.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-08-27
 """
 
 import numpy as np

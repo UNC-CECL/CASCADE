@@ -20,6 +20,11 @@ WHAT TO LOOK FOR
 Writes output/calibration/groin/figures/profiles_by_M/
     fig_all_M_profiles.png     the grid, for comparison across M
     fig_M<value>.png           one file per M, for detail
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
 """
 from __future__ import annotations
 import json, sys

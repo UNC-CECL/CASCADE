@@ -29,6 +29,11 @@ Scores are the runner's (interior GIS 2-89, LRR, CoastSat LOWESS 7-domain since 
 target), plus the alongshore-variation scores `score` adds from the same
 target (study.coastsat_target, checked there against the runner's RMSE).
 ==============================================================================
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 from __future__ import annotations
 

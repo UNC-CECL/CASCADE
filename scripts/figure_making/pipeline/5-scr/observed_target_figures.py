@@ -20,6 +20,11 @@ THE STEPS DRAWN (the producers' own functions, not re-implemented)
        back to domains, with GIS 1-10 kept as raw domain means
        (cascade_pipeline.coastsat_lowess.spliced_lowess_series, the same two
        steps hindcast.build_target_table applies to the scoring target).
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 from __future__ import annotations

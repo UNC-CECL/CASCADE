@@ -48,6 +48,11 @@
 #     first, last = gis_bounds("n115")          # (1, 115)
 #     join_lines(transects_gdf)                 # -> domain per transect line
 # ==============================================================================
+#
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-18
 from __future__ import annotations
 
 from functools import lru_cache

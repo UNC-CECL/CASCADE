@@ -22,6 +22,12 @@ Input variables include:
 - berm elevation in m NAVD88
 - conversion from m NAVD88 to m MHW for your tidal gauge (check the NOAA
   datums for your gauge)
+
+Adapted from: from_lexi/historical_storm_creation_v3.ipynb, by Lexi
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-30
 """
 
 # load necessary packages

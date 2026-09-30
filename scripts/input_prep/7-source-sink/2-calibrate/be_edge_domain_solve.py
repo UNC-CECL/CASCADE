@@ -73,7 +73,10 @@
 #   one --tag per --run when the members differ). The rate each was run
 #   under is read from the index, not retyped.
 #
-# Author: Hannah A. Henry, UNC CECL
+# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+#          University of North Carolina at Chapel Hill
+# Contact: hahenry@unc.edu
+# Version: 2026-09-30
 # ==============================================================================
 from __future__ import annotations
 
