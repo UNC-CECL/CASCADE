@@ -1,5 +1,18 @@
 # target_comparison — CoastSat or the dune line as the CASCADE target?
 
+> **Redrawn 2026-09-29 (later) on the split12 storms.** The storms changed from `v3_trim24` to `v3_split12_trim24`: grouped events split at ≥12 h below the berm, which put back Fran 1996 and Jose 2017 (`data/hatteras_init/3-env-forcings/3-storms/PROVENANCE.md`). The matrix was re-run (the trim24 runs are in `raw_runs/archive/2026-09-29-pre-split12/`), and every set of ends was re-solved on it:
+>
+> | set | 1996–2010 (GIS 1 / 90, m/yr) | 2010–2024 |
+> |---|---|---|
+> | CoastSat, the matrix (`end-domain-boundaries/2026-09-29-ends-resolved-split12/`) | +4.3888 / +19.0935 | +8.0405 / +21.2582 |
+> | dune line, mean3 (`.../2026-09-29-ends-solved-on-duneline-split12/`) | −2.7 / +8.0 | +2.2 / +13.8 |
+> | 1996–2024 LRR (`.../2026-09-29-ends-solved-on-lrr-1996-2024-split12/`) | +4.0 / +27.7 | +3.6 / +17.5 |
+>
+> Every end moved by 0.2 m/yr or less.
+> - Every bias and RMSE in `projected/` and `total_change/` moved by ≤0.06 m over the 14 yr, with r unchanged.
+> - `smoothing_scale/`: 68 of 120 rows clear their null, against 70 before. 1996–2010 holds at 55. 2010–2024 goes from 15 to 13: those rows sit on their threshold (r ≈ 0.24 against a p95 ≈ 0.24), so two flipped.
+> - The pre-split12 numbers are recoverable from git (the commit before this redraw).
+>
 > **Redrawn 2026-09-29 after the dune-cap fix** (the other session, 2026-09-28: `experiments/end-domain-boundaries/2026-09-28-ends-resolved-dunecap/`). The fix reran every beach/dune-managed run. It moves the managed domains at Buxton (GIS 3–9), Avon (18–34) and Tri-Village (67–86), not the end domains. The matrix's 2010 GIS 90 end went from +22.4937 to +21.2582 m/yr, and the dune-line and 1996–2024 LRR ends were re-solved on the fixed runs (Hannah, 2026-09-29). The model is 1–2 m more seaward in 1996–2010 and about 1 m in 2010–2024. The pre-fix numbers below are recoverable from git (commit 7de36886); the pre-fix runs are in `raw_runs/archive/2026-09-28-pre-dunecap/`.
 >
 > - `smoothing_scale/`: 70 of 120 rows clear their null. That is 55 in 1996–2010 and 15 in 2010–2024 (r 0.24–0.39 against a p95 of 0.23–0.37, spread over every width), up from 6.

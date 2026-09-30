@@ -1,0 +1,15 @@
+window,preset,rung,run_name,adds,rate_bias,rate_rmse,position_bias,position_rmse
+1996_2010,edgeBE,1,HAT_1996_2010_edgeBE_offsetmetres_noroad_nobdm_nogroin,none,-0.0878,1.1436,3.9689,17.3662
+1996_2010,edgeBE,2,HAT_1996_2010_edgeBE_offsetmetres_road_nobdm_nogroin,road,-0.0053,1.1496,5.2755,18.0271
+1996_2010,edgeBE,3,HAT_1996_2010_edgeBE_offsetmetres_road_bdm_nogroin,bdm,0.0642,1.1718,6.2186,19.001
+1996_2010,zeroBE,1,HAT_1996_2010_zeroBE_offsetmetres_noroad_nobdm_nogroin,none,-0.1728,1.1814,2.8211,17.7997
+1996_2010,zeroBE,2,HAT_1996_2010_zeroBE_offsetmetres_road_nobdm_nogroin,road,-0.0887,1.1823,4.1452,18.3587
+1996_2010,zeroBE,3,HAT_1996_2010_zeroBE_offsetmetres_road_bdm_nogroin,bdm,-0.0191,1.2039,5.0905,19.317
+2010_2024,edgeBE,1,HAT_2010_2024_edgeBE_offsetmetres_noroad_nobdm_nogroin,none,-2.188,2.7175,-25.8356,33.1511
+2010_2024,edgeBE,2,HAT_2010_2024_edgeBE_offsetmetres_road_nobdm_nogroin,road,-1.8457,2.3779,-21.1434,28.9354
+2010_2024,edgeBE,3,HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nonourish_nogroin,bdm,-1.6906,2.2128,-18.9917,26.6874
+2010_2024,edgeBE,4,HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin,fills,-1.3595,2.0676,-13.645,24.749
+2010_2024,zeroBE,1,HAT_2010_2024_zeroBE_offsetmetres_noroad_nobdm_nogroin,none,-2.2731,2.8199,-26.9987,34.8262
+2010_2024,zeroBE,2,HAT_2010_2024_zeroBE_offsetmetres_road_nobdm_nogroin,road,-1.9308,2.4777,-22.3122,30.589
+2010_2024,zeroBE,3,HAT_2010_2024_zeroBE_offsetmetres_road_bdm_nonourish_nogroin,bdm,-1.7712,2.3123,-20.0985,28.3585
+2010_2024,zeroBE,4,HAT_2010_2024_zeroBE_offsetmetres_road_bdm_nourish_nogroin,fills,-1.454,2.1231,-14.8961,25.9312

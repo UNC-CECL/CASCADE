@@ -1280,6 +1280,17 @@ HATTERAS_BE_EDGE_ONLY = {
     # Record and every probe: output/raw_runs/experiments/end-domain-boundaries/
     # 2026-09-28-ends-resolved-adopted/.
     #
+    # SPLIT12 STORMS, 2026-09-29 (Hannah: "use split12 as the storm series going
+    # forward", then "re-run the matrix and re-solve the ends"). The storms are
+    # now v3_split12_trim24 (grouped events split at >= 12 h below the berm, so
+    # Fran 1996 and Jose 2017 are back). Seeded at the ends above, the secant
+    # moved only GIS 1, by +0.04 in each window; GIS 90 held:
+    #
+    #   1996-2010   GIS 1 +4.3509 -> +4.3888   residuals +0.005 / -0.008   2 steps
+    #   2010-2024   GIS 1 +8.0    -> +8.0405   residuals +0.003 / -0.018   2 steps
+    #
+    # (experiments/end-domain-boundaries/2026-09-29-ends-resolved-split12/)
+    #
     # --- LOWESS-7 option A values on the pre-adoption model, SUPERSEDED 2026-09-28 ---
     # OPTION A ON THE LOWESS-7 TARGET, 2026-09-28 (Hannah: "switch
     # the runner to 7 and re-solve the ends"). The runner's CoastSat target went
@@ -1372,7 +1383,7 @@ HATTERAS_BE_EDGE_ONLY = {
     # Solve reproduced with:
     #   scripts/input_prep/7-source-sink/2-calibrate/
     #       be_edge_domain_solve.py --period 1996
-    1996: (+4.3509, +19.0935),  # adopted model, 2026-09-28; pre-adoption LOWESS-7 (+4.8394, +18.2545); LOWESS-10 +17.545; /10 (+32.2, +10.0)
+    1996: (+4.3888, +19.0935),  # split12 storms, 2026-09-29; trim24 (+4.3509, +19.0935); adopted model, 2026-09-28; pre-adoption LOWESS-7 (+4.8394, +18.2545); LOWESS-10 +17.545; /10 (+32.2, +10.0)
 
     # --- /10-offset solve, 2010, SUPERSEDED 2026-09-27 ---
     # SOLVED 2026-09-16, three Newton steps, the same protocol as 1996. Base
@@ -1406,7 +1417,7 @@ HATTERAS_BE_EDGE_ONLY = {
     #   be_edge_domain_solve.py --period 2010 --kind experiment
     #       --run <base> --tag 2026-09-16-edgesolve-2010/base
     #       --run <step> --tag 2026-09-16-edgesolve-2010/step<k> ...
-    2010: (+8.0, +21.2582),     # dune-cap fix, 2026-09-28; adopted before it (+8.0, +22.4937); pre-adoption LOWESS-7 (+18.8657, +24.2358); LOWESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
+    2010: (+8.0405, +21.2582),  # split12 storms, 2026-09-29; trim24 (+8.0, +21.2582) after the dune-cap fix, 2026-09-28; adopted before it (+8.0, +22.4937); pre-adoption LOWESS-7 (+18.8657, +24.2358); LOWESS-10 (+18.8, +24.535); /10 (+72.6, +31.3)
 }
 
 # OPTION B, RECORDED, NOT WIRED (2026-09-27, Hannah). The one-parameter

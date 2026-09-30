@@ -24,4 +24,4 @@ k_sf: 54614.69449841209
 rmax: 0.95
 rmin: 0.55
 s_sf_eq: 0.009704123925238598
-storm_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\3-env-forcings\3-storms\hindcast_storms\2010_2024\2010_2024_storms_v3_trim24.npy
+storm_file: C:\Users\hanna\PycharmProjects\CASCADE\data\hatteras_init\3-env-forcings\3-storms\hindcast_storms\2010_2024\2010_2024_storms_v3_split12_trim24.npy

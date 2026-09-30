@@ -15,7 +15,7 @@ house-style column. What changed:
   `road_bdm_nourish_nogroin` (2010). Everything below this section describes
   groin-on runs
 * **layout.** No title or note on the canvas; that text is the caption. The
-  same figure is also written to `output/figures/shoreline/hindcast_<preset>.png`
+  same figure is also written to `output/figures/5-results/hindcast_<preset>.png`
   with its caption in `supporting/CAPTIONS.md`
 
 ```
