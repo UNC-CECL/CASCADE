@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import re
 import subprocess
 import sys
 from collections import Counter
@@ -42,6 +43,7 @@ def strip_docstrings(tree: ast.AST) -> ast.AST:
     return tree
 
 
+OTHERS = r"colleague_old_version|other_ms|from_lexi|from_roya"   # colleagues' code: inventory only
 # -----------------------------------------------------------------------------
 
 
@@ -187,7 +189,7 @@ def main() -> None:
     a = ap.parse_args()
 
     files = [f for p in a.paths for f in ([p] if p.is_file() else sorted(p.rglob("*.py")))
-             if "__pycache__" not in f.parts]
+             if "__pycache__" not in f.parts and not re.search(OTHERS, f.as_posix())]
     failed = 0
 
     # Inventory: every script at --ref must still exist at the same path

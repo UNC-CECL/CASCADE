@@ -27,6 +27,7 @@ from pathlib import Path
 # --- CONFIG ------------------------------------------------------------------
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 MIN_WORD = 4
+OTHERS = r"colleague_old_version|other_ms|from_lexi|from_roya"   # colleagues' code, never restyled
 SKIP = {"this", "that", "with", "from", "have", "been", "were", "which", "when", "than", "then",
         "they", "them", "their", "there", "here", "into", "onto", "also", "only", "each", "every",
         "over", "under", "does", "done", "used", "uses", "same", "what", "where", "while", "would",
@@ -82,14 +83,18 @@ def main() -> None:
 
     readme = (a.folder / "README.md").read_text(encoding="utf-8")
     for f in sorted(a.folder.rglob("*.py")):
-        if "__pycache__" in f.parts or re.search(r"supersed|archive", f.as_posix(), re.I):
+        if "__pycache__" in f.parts or re.search(r"supersed|archive|" + OTHERS, f.as_posix(), re.I):
             continue
         old = at_ref(a.ref, f)
         if old is None:
             continue
         new = f.read_text(encoding="utf-8")
-        kept = set(prose(new))
-        removed = " ".join(l for l in prose(old) if l not in kept)
+        try:
+            kept = set(prose(new))
+            removed = " ".join(l for l in prose(old) if l not in kept)
+        except (SyntaxError, tokenize.TokenError) as e:
+            print(f"  ??   {f}: does not parse ({type(e).__name__}), skipped")
+            continue
         gone = words(removed)
         if not gone:
             print(f"  --   {f}: nothing removed")
