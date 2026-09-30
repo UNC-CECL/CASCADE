@@ -253,7 +253,8 @@ _SHARED = ("by domain and year: the beach-nourishment projects, the NC-12 "
            "events as management_footprint.png, against time rather than against "
            "the reach.")
 
-if __name__ == "__main__":
+# Run: build the runs and the record timelines and record their captions
+def main():
     runs_png, y1 = build(PERIODS[0][0], f"timeline_{PERIODS[0][0]}_"
                                         f"{max(en for _, en in PERIODS)}")
     record_png, _ = build(RECORD_Y0, f"timeline_{RECORD_Y0}_{y1}", pre_run=True)
@@ -273,3 +274,7 @@ if __name__ == "__main__":
         "applied by any run: it precedes both periods, and it reaches the model "
         "as the starting road position rather than as an event. "
         f"timeline_{PERIODS[0][0]}_{y1}.png is the modelled window alone.")
+
+
+if __name__ == "__main__":
+    main()

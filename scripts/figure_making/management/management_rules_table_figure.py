@@ -341,8 +341,13 @@ CAPTION_SLIDE = (
     "caption beside it. Use rules_table.png in a manuscript."
 )
 
-if __name__ == "__main__":
+# Run: build both variants and record their captions
+def main():
     for variant, caption in (("paper", CAPTION_PAPER), ("slide", CAPTION_SLIDE)):
         paths = build(variant)
         record_caption(paths[0], caption)
         print("Saved: " + str(paths[0]))
+
+
+if __name__ == "__main__":
+    main()
