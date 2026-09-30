@@ -120,3 +120,54 @@ Version: YYYY-MM-DD
 
   Borrowing an idea is not adapting: a script that only took inspiration says
   so in its README, not in this line.
+
+## 5. Habits
+
+**Paths come from the repo, never typed.** Find the root by searching upward,
+and take data locations from the `site_layer/` resolvers
+(`hat_observed_rates`, `hat_topo_version`, `hat_env_forcings`, ...). See
+ORGANIZATION.md rules 5 and 6.
+
+```python
+REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
+```
+
+**Units are in the name.** Every variable and column carries its unit:
+`_m`, `_m_yr`, `_dam`, `_yr`. State the sign convention once (seaward
+positive). What each quantity is and where it is converted:
+[`UNITS.md`](../UNITS.md).
+
+**Fail loudly, never guess.** A missing input, CRS, column or window stops the
+script with a message naming what *is* available. No silent fallbacks, no
+default that quietly stands in for real data.
+
+**Report, don't correct.** When two things disagree, write the mismatch out as
+its own column or note; don't adjust either side to fit. For example, the
+endpoint template reports `interval_obs_yr` beside the calendar interval
+instead of swapping one for the other.
+
+**Arguments for what varies, CONFIG for what doesn't.** A window, period or
+version that changes run to run is a command-line argument. Constants live in
+CONFIG. Runner settings come from the `HAT_` environment variables
+(`HAT_hindcast_config`).
+
+**Outputs say where they came from.** The window or version is in the output
+filename (`rates_per_zone_1996_2010.csv`). A product folder carries a
+`PROVENANCE.md`: the script that wrote it, when, and from which inputs.
+
+**Print UTF-8 on Windows.** A script that prints anything beyond ASCII
+(✓, →, ±) reconfigures its output first, or it crashes on the cp1252 console:
+
+```python
+for stream in (sys.stdout, sys.stderr):
+    stream.reconfigure(encoding="utf-8", errors="replace")
+```
+
+**Experiments don't edit main code.** An experiment drives the unchanged runner
+(swapping inputs in-process or through a worktree on `PYTHONPATH`) and answers
+one question. Adopting its answer is a separate, deliberate change.
+
+**Check against a known answer.** A script that makes a model target or a
+shared template gets a test with an answer you already know, such as the
+synthetic coast in `input_prep/5-scr/template/README.md`. Run it after every
+edit.
