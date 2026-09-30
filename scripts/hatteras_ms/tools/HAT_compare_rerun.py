@@ -1,28 +1,16 @@
-# ==============================================================================
-# HAT_compare_rerun.py
-#
-# What changed between a stored run and the same run made under today's code?
-#
-# Pairs each run in an ARM against the stored run of the same name, and reports
-# the differences that matter: the skill metrics, whether a road drowned, how
-# many relocations fired, and the largest per-domain rate change.
-#
-# WHY IT IS NOT ENOUGH TO COMPARE SKILL. An island-wide RMSE can sit still
-# while a road drowns: drowning stops roadway management for that domain from
-# that year on, which changes what happens to the interior without necessarily
-# moving the shoreline much. So the road table is differenced too.
-#
-#     python HAT_compare_rerun.py --tag code-checks/2026-09-14-relocation-arm-rerun-new-code
-#
-# Since 2026-09-16 a re-run is an EXPERIMENT (raw_runs/experiments/<tag>/) and
-# the stored run a MATRIX row; the index is keyed on (run_name, kind, tag).
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-27
-# ==============================================================================
+"""
+What changed between a stored run and the same run made under today's code?
 
+    python scripts/hatteras_ms/tools/HAT_compare_rerun.py --tag <arm>
+
+Pairs each run in an arm with the stored run of the same name and reports
+the differences that matter: rates, road outcomes and headline metrics. Details: scripts/hatteras_ms/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-27
+"""
 from __future__ import annotations
 
 import argparse
@@ -37,28 +25,33 @@ REPO = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
 from cascade_pipeline.run_registry import find_run_dir, load_run_index  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 RAW = REPO / "output" / "raw_runs"
 INDEX = RAW / "run_index.csv"
 
 METRICS = ["mean_bias_interior_m_yr", "rmse_interior_m_yr",
            "roads_drowned", "roads_reloc_blocked"]
+# -----------------------------------------------------------------------------
 
 
+# A run's shoreline change rate table, or None
 def rate_table(run_dir):
     p = run_dir / "tables" / "shoreline_change_rate.csv"
     return pd.read_csv(p) if p.is_file() else None
 
 
+# A run's road management table, or None
 def road_table(run_dir):
     p = run_dir / "tables" / "road_management.csv"
     return pd.read_csv(p) if p.is_file() else None
 
 
+# Resolved by the registry, either layout
 def find_dir(name, kind, tag, period, preset):
-    """Resolved by the registry, either layout."""
     return find_run_dir(RAW, name, period, preset, kind, tag)
 
 
+# Run: pair the arm's runs with the stored ones and report
 def main():
     ap = argparse.ArgumentParser(description="stored run against its re-run")
     ap.add_argument("--tag", "--arm", dest="tag", required=True,

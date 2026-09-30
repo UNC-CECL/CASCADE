@@ -1,49 +1,12 @@
 #!/usr/bin/env python3
-r"""
-HAT_index_runs.py
-==============================================================================
-Rebuild output/raw_runs/run_index.csv from the runs themselves, and keep a
-single ledger of runs that have been retired.
+"""
+Rebuild output/raw_runs/run_index.csv from the runs themselves, with one ledger of retired runs.
 
-WHY THE INDEX IS DERIVED (Hannah, 2026-09-11; runs stopped appending 09-16)
-    Every run writes its own metadata JSON, and that is the source of truth:
-    it is produced by the run, beside the run, from the values the run used.
-    The index restates those facts in one table so that a question across
-    runs -- which topography, which preset, what skill -- is one read instead
-    of two hundred.
+    python scripts/hatteras_ms/tools/HAT_index_runs.py --check
+    python scripts/hatteras_ms/tools/HAT_index_runs.py --dry-run
+    python scripts/hatteras_ms/tools/HAT_index_runs.py
 
-    A restatement can drift from what it restates. Until 2026-09-16 every run
-    also APPENDED its row to the file, which is how a smoke test on 09-10
-    truncated floats in five columns of an unrelated row, and why two runs
-    could never be in flight at once. Since 09-16 a run writes its row INTO
-    its metadata (the "index row" section) and calls the same rebuild this
-    tool runs, so the file is regenerated from disk every time and never
-    edited in place. `--check` turns "is it right" into a question with an
-    answer.
-
-WHAT THE REBUILD DOES (run_registry.rebuild_run_index)
-    One row per *_run_metadata.json under raw_runs. A run made since 09-16
-    supplies its own row; an older run keeps the row the existing file holds
-    for it, found by the old (run_name, Hs_m, arm) key. Every row gets `kind`
-    and `tag` from where the run sits (the purpose layout, or the two older
-    layouts translated) and a `status`: current, superseded (a matrix or
-    sensitivity run on a topography that is no longer its product's CURRENT),
-    or archived. The old `arm` column is dropped.
-
-WHAT IS NOT DERIVED
-    A run deleted from disk leaves no metadata to rebuild from, so a rebuild
-    would drop its row silently. `retired_runs.csv` is the append-only record
-    of those: a row that was in the index, whose run is gone. It is written
-    here and never rewritten, so the history of what was removed survives a
-    rebuild. `--adopt-archives` seeds it from the pre-2026-09-11 archived
-    copies of the index.
-
-USAGE
-    python HAT_index_runs.py --check          # compare, change nothing
-    python HAT_index_runs.py --dry-run
-    python HAT_index_runs.py                  # rebuild, retiring vanished rows
-    python HAT_index_runs.py --adopt-archives # seed the ledger from the copies
-==============================================================================
+Derived, never appended to; vanished rows are retired to the ledger. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -59,6 +22,7 @@ from datetime import datetime
 from pathlib import Path
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -74,6 +38,7 @@ from cascade_pipeline.run_registry import (  # noqa: E402
     sweep_family)
 from site_layer.hat_topo_version import current_topo_versions  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 RAW_RUNS = REPO / "output" / "raw_runs"
 INDEX = RAW_RUNS / "run_index.csv"
 LEDGER = RAW_RUNS / "retired_runs.csv"
@@ -81,8 +46,10 @@ ARCHIVE_GLOBS = ("run_index_archive_*.csv", "run_index_measuredreloc_*.csv")
 LEDGER_FIELDS = ["retired_on", "source", "run_name", "kind", "tag", "Hs_m",
                  "timestamp", "start_year", "end_year", "source_sink_preset",
                  "topo_product", "topo_dune_version"]
+# -----------------------------------------------------------------------------
 
 
+# A CSV as a list of dicts, or [] if absent
 def read_csv(path: Path) -> list:
     if not path.is_file():
         return []
@@ -90,8 +57,8 @@ def read_csv(path: Path) -> list:
         return list(csv.DictReader(fh))
 
 
+# A row from any vintage of the index, carrying kind and tag
 def with_kind_tag(row: dict) -> dict:
-    """A row from any vintage of the index, carrying kind and tag."""
     row = dict(row)
     if not row.get("kind"):
         kind, tag = legacy_arm_to_kind_tag(row.get("arm", ""))
@@ -102,20 +69,18 @@ def with_kind_tag(row: dict) -> dict:
     return row
 
 
+# A row's index key (run_name, kind, tag)
 def key_of(row) -> tuple:
     return tuple(str(row.get(k, "")).strip() for k in INDEX_KEY)
 
 
+# The index as it stands, every row with kind/tag
 def current_rows() -> list:
-    """The index as it stands, every row with kind/tag."""
     return [with_kind_tag(r) for r in read_csv(INDEX)]
 
 
+# Append retired rows
 def append_ledger(entries: list) -> None:
-    """Append retired rows. Never rewrites a row: the ledger is the one
-    record of what was removed, and a rebuild must not be able to erase it.
-    The header gained kind/tag on 2026-09-16; an older ledger is widened
-    once, keeping every row."""
     if not entries:
         return
     existing = [with_kind_tag(r) for r in read_csv(LEDGER)]
@@ -145,8 +110,8 @@ def append_ledger(entries: list) -> None:
     sys.stdout.write(f"  ledger: {len(fresh)} row(s) appended to {LEDGER.name}\n")
 
 
+# Seed the ledger from the archived copies of the index
 def adopt_archives() -> None:
-    """Seed the ledger from the archived copies of the index."""
     live = {key_of(r) for r in current_rows()}
     entries = []
     for pattern in ARCHIVE_GLOBS:
@@ -166,11 +131,8 @@ def adopt_archives() -> None:
     sys.stdout.write(f"adopted {len(entries)} archived row(s) into {LEDGER.name}\n")
 
 
+# Compare the index with disk and, unless asked not to, rewrite it
 def rebuild(check: bool = False, dry_run: bool = False) -> int:
-    """Compare the index with disk and, unless asked not to, rewrite it.
-
-    Returns the exit code: 1 under --check when they differ, else 0.
-    """
     before = current_rows()
     have = {key_of(r): r for r in before}
 
@@ -214,6 +176,7 @@ def rebuild(check: bool = False, dry_run: bool = False) -> int:
     return 0
 
 
+# Run: rebuild, compare, or retire, as asked
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     ap.add_argument("--check", action="store_true",

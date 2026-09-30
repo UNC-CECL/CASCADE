@@ -1,41 +1,17 @@
-# ==============================================================================
-# HAT_period_input_check.py
-#
-# Does every hindcast period resolve everything it needs, and does each of
-# those things exist on disk?
-#
-# WHY THIS EXISTS
-#   HATTERAS_PERIODS names six forcing inputs per period as RELATIVE PATHS.
-#   Nothing checks them until a run is most of the way through section 5, and
-#   two of the six are read later still -- so a period wired against a file
-#   that was never built fails partway into a run that has already spent
-#   minutes building an island. Four periods since 2026-09-11, two of them
-#   wired ahead of inputs still being digitised, made that a certainty rather
-#   than a risk.
-#
-#   It is also the answer to "is this period runnable yet", which is otherwise
-#   answered by starting a run and waiting.
-#
-# WHAT IT DOES NOT DO
-#   It does not validate VALUES. A setback of the right shape measured against
-#   the wrong topography is a real failure this cannot see; that is what
-#   HAT_road_setback_audit.py and the extractor audits are for. This checks
-#   resolution and existence, the class of failure that costs a run rather
-#   than a result.
-#
-# EXIT CODE
-#   0 when every period is runnable, 1 when any is blocked, so a batch driver
-#   can gate on it.
-#
-#     python HAT_period_input_check.py
-#     python HAT_period_input_check.py --period 2010
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-18
-# ==============================================================================
+"""
+Does every hindcast period resolve everything it needs, and does each file exist on disk?
 
+    python scripts/hatteras_ms/tools/HAT_period_input_check.py
+    python scripts/hatteras_ms/tools/HAT_period_input_check.py --period 1996
+
+Checks the forcing inputs HATTERAS_PERIODS names, and the topography and
+rate files, per period; prints a table and exits nonzero on a blocker. Details: scripts/hatteras_ms/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
+"""
 from __future__ import annotations
 
 import argparse
@@ -45,10 +21,7 @@ from pathlib import Path
 import numpy as np
 
 _HERE = Path(__file__).resolve()
-# Anchored by SEARCHING UPWARD for the project root rather than by
-# counting parent directories (2026-09-13). A counted depth is correct
-# only while the file stays where it was written, and these moved into
-# subfolders of hatteras_ms. Six files here already did it this way.
+# Anchored by SEARCHING UPWARD for the project root rather than by counting parent directories (2026-09-13)
 PROJECT_ROOT = next(_p for _p in _HERE.parents if (_p / 'pyproject.toml').exists())
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
@@ -61,17 +34,18 @@ from site_layer.hat_topo_version import domain_arrays, topo_dirs   # noqa: E402
 from site_layer.hat_observed_rates import (                        # noqa: E402
     COASTSAT_LRR_ROOT, TRANSECT_FILE)
 
+# --- CONFIG ------------------------------------------------------------------
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 
-# Resolved, not built: hat_observed_rates owns where the rate fits live, so
-# this check cannot look somewhere the runner does not.
+# Resolved, not built: hat_observed_rates owns where the rate fits live
 
 OK = "ok"
 MISSING = "MISSING"
+# -----------------------------------------------------------------------------
 
 
+# One checked input
 class Finding:
-    """One checked input: what it is, whether it is there, what it holds."""
 
     def __init__(self, label, status, detail="", blocking=True):
         self.label = label
@@ -89,14 +63,15 @@ class Finding:
             mark, self.label, self.status, self.detail)
 
 
+# A finding for one file: present or missing
 def check_file(label, path, blocking=True):
     if not path.is_file():
         return Finding(label, MISSING, str(path), blocking)
     return Finding(label, OK, path.name, blocking)
 
 
+# Exists, loads, and covers every model step the run will spend
 def check_storms(path, run_years):
-    """Exists, loads, and covers every model step the run will spend."""
     found = check_file("storm series", path)
     if found.failed:
         return found
@@ -110,8 +85,8 @@ def check_storms(path, run_years):
     return found
 
 
+# Exists, and is the padded length CASCADE expects
 def check_offsets(path, geometry):
-    """Exists, and is the padded length CASCADE expects."""
     found = check_file("island offsets", path)
     if found.failed:
         return found
@@ -123,8 +98,8 @@ def check_offsets(path, geometry):
     return found
 
 
+# Exists, is the 2-row format, and covers the road span
 def check_setbacks(path):
-    """Exists, is the 2-row format, and covers the road span."""
     found = check_file("road setback", path)
     if found.failed:
         return found
@@ -135,14 +110,13 @@ def check_setbacks(path):
         found.status = "SHAPE"
         found.detail += ", expected 2 x {0}".format(expected)
         return found
-    # Not a failure, but worth seeing: a zero setback puts the road on the dune
-    # line, where one cell of retreat re-fires a relocation.
+    # Not a failure, but worth seeing
     found.detail += ", {0} at zero".format(int((raw[1] == 0).sum()))
     return found
 
 
+# The product resolves to a version, and its domain arrays are on disk
 def check_topography(product, geometry):
-    """The product resolves to a version, and its domain arrays are on disk."""
     try:
         _, _, version = topo_dirs(product)
     except Exception as exc:                 # the resolver raises loudly
@@ -161,13 +135,8 @@ def check_topography(product, geometry):
     return found
 
 
+# Which source/sink presets are solved for this period
 def check_presets(start_year):
-    """Which source/sink presets are solved for this period.
-
-    Not blocking: zeroBE alone is enough to run. A period missing edgeBE simply
-    cannot be run under it, which is a fact about the calibration rather than
-    about the inputs.
-    """
     solved = sorted(name for name, rates in HATTERAS_BE_PRESETS.items()
                     if start_year in rates)
     missing = sorted(set(HATTERAS_BE_PRESETS) - set(solved))
@@ -179,12 +148,8 @@ def check_presets(start_year):
     return found
 
 
+# What the record fires inside this window
 def events_in_window(start_year, end_year):
-    """What the record fires inside this window.
-
-    The window is start..end-1, matching run_cascade_simulation: an event dated
-    exactly on the end year belongs to the next period and never fires here.
-    """
     lines = []
     for event in HATTERAS_ROAD_EVENTS:
         year = getattr(event, "year", None)
@@ -203,6 +168,7 @@ def events_in_window(start_year, end_year):
     return sorted(lines)
 
 
+# Every input of one period
 def check_period(start_year):
     period = HATTERAS_PERIODS[start_year]
     end_year = period["end_year"]
@@ -248,6 +214,7 @@ def check_period(start_year):
     return not blocked
 
 
+# Run: every period (or one), the table and the exit code
 def main():
     parser = argparse.ArgumentParser(
         description="resolve and check the inputs of every hindcast period")

@@ -1,32 +1,13 @@
 #!/usr/bin/env python3
-r"""
-HAT_list_runs.py
-==============================================================================
+"""
 What is under output/raw_runs, grouped by whatever makes runs comparable.
 
-WHY A LISTING RATHER THAN A FOLDER
-    98 of 164 runs sit on a topography that is no longer CURRENT, and opening
-    a preset folder does not say which. The obvious fix is to nest by
-    topography version, and it is the wrong one: 2004-start has only one
-    version, so 63 runs would gain a level that says nothing; a sweep run is
-    already five levels down; and topography is not the only axis that decides
-    whether two runs are comparable, so nesting one of them just moves the
-    question.
+    python scripts/hatteras_ms/tools/HAT_list_runs.py
+    python scripts/hatteras_ms/tools/HAT_list_runs.py --by erosion
+    python scripts/hatteras_ms/tools/HAT_list_runs.py --only-stale
 
-    Every run records all of it -- topo_product, topo_dune_version,
-    be_values_digest -- in its metadata and in run_index.csv. So the question
-    "which runs are on v1" is a query, and this is the query.
-
-    `--stamp` writes the same facts as a one-line BUILT_ON.txt inside each run
-    folder, so a folder opened on its own also answers it.
-
-USAGE
-    python HAT_list_runs.py                    # by topography (the default)
-    python HAT_list_runs.py --by erosion
-    python HAT_list_runs.py --by preset --detail
-    python HAT_list_runs.py --only-stale       # just what is not CURRENT
-    python HAT_list_runs.py --stamp            # write BUILT_ON.txt per run
-==============================================================================
+Grouped by topography (default), erosion preset or others; --stamp writes
+BUILT_ON.txt into each run. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -42,6 +23,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -50,6 +32,7 @@ def _find_root(start: Path) -> Path:
 
 
 REPO = _find_root(Path(__file__).resolve())
+# --- CONFIG ------------------------------------------------------------------
 RAW_RUNS = REPO / "output" / "raw_runs"
 import sys as _b3dsys
 from pathlib import Path as _B3DP
@@ -58,8 +41,10 @@ _b3dsys.path.insert(0, str(next(_q for _q in _B3DP(__file__).resolve().parents
 from site_layer import hat_topo_version as _b3d  # noqa: E402
 DOMAIN_ROOT = _b3d.DOMAIN_ROOT
 STAMP_NAME = "BUILT_ON.txt"
+# -----------------------------------------------------------------------------
 
 
+# The CURRENT dune-topo version of each product
 def current_versions() -> dict:
     out = {}
     if not DOMAIN_ROOT.is_dir():
@@ -71,6 +56,7 @@ def current_versions() -> dict:
     return out
 
 
+# Every run's metadata
 def load_runs() -> list:
     runs = []
     for meta in sorted(RAW_RUNS.rglob("*_run_metadata.json")):
@@ -96,14 +82,8 @@ def load_runs() -> list:
     return runs
 
 
+# The digest the most recent run of each (preset, period) carries
 def newest_digest_per_preset(runs) -> dict:
-    """The digest the most recent run of each (preset, period) carries.
-
-    PER PERIOD, not per preset: the background-erosion field is calibrated for
-    one period at a time, so one preset legitimately has a different digest in
-    1984-2004 than in 2004-2024. Keying on the preset alone called that
-    by-design difference "superseded".
-    """
     newest = {}
     for r in runs:
         key = (r["preset"], r["period"])
@@ -112,6 +92,7 @@ def newest_digest_per_preset(runs) -> dict:
     return {k: d for k, (_, d) in newest.items()}
 
 
+# The group a run falls in, for the chosen grouping
 def group_key(run, by, current, newest):
     if by == "topo":
         cur = current.get(run["product"])
@@ -127,13 +108,8 @@ def group_key(run, by, current, newest):
     return run["period"]
 
 
+# The folder a run sits in, collapsed to what says its purpose
 def parent_bucket(rel: str) -> str:
-    """The folder a run sits in, collapsed to what says its purpose.
-
-    Purpose layout (2026-09-16): matrix/<period>/<preset>, sensitivity/<axis>,
-    experiments/<tag>, versions/<tag>. The 09-10 layout's sweeps/<family>
-    collapses to 'sweeps' as before.
-    """
     parts = rel.split("/")[:-1]
     if parts and parts[0] in ("sensitivity", "experiments", "versions", "archive"):
         keep = 2
@@ -146,6 +122,7 @@ def parent_bucket(rel: str) -> str:
     return "/".join(parts) or "."
 
 
+# Run: list the runs, grouped
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     ap.add_argument("--by", default="topo",

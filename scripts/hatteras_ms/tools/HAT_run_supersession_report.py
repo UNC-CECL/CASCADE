@@ -1,40 +1,12 @@
 #!/usr/bin/env python3
-r"""
-HAT_run_supersession_report.py
-==============================================================================
-Which runs under output/raw_runs are candidates for retirement, and why.
+"""
+Which runs under output/raw_runs are candidates for retirement, and why (read-only).
 
-READ-ONLY. It moves nothing and deletes nothing. Hannah's instruction on
-2026-09-10 was "flag candidates, retire nothing yet", and a script that can
-only report cannot be misread as one that acts.
+    python scripts/hatteras_ms/tools/HAT_run_supersession_report.py
+    python scripts/hatteras_ms/tools/HAT_run_supersession_report.py --print
 
-WHAT "SUPERSEDED" MEANS HERE, AND WHAT IT DOES NOT
-    A run is flagged when something it was built on has since moved, which
-    makes it incomparable with a run made today. That is not the same as
-    wrong: a run is a faithful record of the inputs it had, and the two
-    1984-2004 archives were kept for exactly that reason. The judgement about
-    whether an incomparable run is still worth keeping is the reader's.
-
-THE CHECKS
-    topography   the run's dune-topo version against the product's CURRENT.
-                 The 2026-09-03 re-pick moved 1984-start from v1 to v2, so a
-                 v1 run measures a different island from a run made today.
-    calibration  the source/sink `values_digest` within one preset AND ONE
-                 PERIOD. The field is calibrated per period, so a preset having
-                 a different digest in each period is by design; two digests
-                 inside one period would mean it was recalibrated and only some
-                 runs remade. (Grouping on the preset alone reported the
-                 by-design difference as 55 superseded runs on 2026-09-10.)
-    duplicates   one run name in more than one place. Usually legitimate --
-                 an arm is a different forcing of the same scenario -- so
-                 these are listed for orientation, not flagged.
-
-WHERE   output/raw_runs/SUPERSEDED_CANDIDATES.md
-
-USAGE
-    python HAT_run_supersession_report.py
-    python HAT_run_supersession_report.py --print
-==============================================================================
+Flags runs on a stale topography, superseded arms and duplicates; writes
+a report, moves nothing. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -52,6 +24,7 @@ from datetime import datetime
 from pathlib import Path
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -60,6 +33,7 @@ def _find_root(start: Path) -> Path:
 
 
 REPO = _find_root(Path(__file__).resolve())
+# --- CONFIG ------------------------------------------------------------------
 RAW_RUNS = REPO / "output" / "raw_runs"
 import sys as _b3dsys
 from pathlib import Path as _B3DP
@@ -68,13 +42,13 @@ _b3dsys.path.insert(0, str(next(_q for _q in _B3DP(__file__).resolve().parents
 from site_layer import hat_topo_version as _b3d  # noqa: E402
 DOMAIN_ROOT = _b3d.DOMAIN_ROOT
 REPORT = RAW_RUNS / "SUPERSEDED_CANDIDATES.md"
-# An arm component that names a dune-topo version, e.g. the v3 of
-# arms/version-pair/v3.
+# An arm component that names a dune-topo version, e.g
 _VERSION_TOKEN = re.compile(r"v\d+")
+# -----------------------------------------------------------------------------
 
 
+# The dune-topo version each product's CURRENT marker names
 def current_versions() -> dict:
-    """The dune-topo version each product's CURRENT marker names."""
     out = {}
     for product in sorted(p.name for p in DOMAIN_ROOT.iterdir() if p.is_dir()):
         marker = DOMAIN_ROOT / product / "dune-topo" / "CURRENT"
@@ -83,6 +57,7 @@ def current_versions() -> dict:
     return out
 
 
+# The dune-topo versions a product has on disk
 def versions_on_disk(product: str) -> list:
     root = DOMAIN_ROOT / product / "dune-topo"
     if not root.is_dir():
@@ -90,26 +65,21 @@ def versions_on_disk(product: str) -> list:
     return sorted(p.name for p in root.iterdir() if p.is_dir() and p.name.startswith("v"))
 
 
+# The version this run SHOULD be on, which is not always CURRENT
 def expected_version(run, current):
-    """The version this run SHOULD be on, which is not always CURRENT.
-
-    An arm can name a version -- `version-pair/v3` holds v3 against v2, and
-    `behindroad-copy` was built on the v3 footprint layer. Those runs are on
-    that version deliberately, so measuring them against CURRENT reports a
-    deliberate choice as drift, and acting on it would destroy the comparison
-    the arm exists for (flagged 2026-09-11).
-    """
     for part in run["rel"].split("/"):
         if _VERSION_TOKEN.fullmatch(part):
             return part
     return current.get(run["product"])
 
 
+# Is a run on a topography other than the one it should be?
 def _is_stale(run, current):
     want = expected_version(run, current)
     return want is not None and run["topo"] != want
 
 
+# Every run's metadata
 def load_runs() -> list:
     runs = []
     for meta in sorted(RAW_RUNS.rglob("*_run_metadata.json")):
@@ -137,36 +107,17 @@ def load_runs() -> list:
     return runs
 
 
-# ARMS THAT NAME A VERSION are judged against that version, not CURRENT: they
-# exist to compare two islands, so their state is kept whatever CURRENT says.
+# ARMS THAT NAME A VERSION are judged against that version, not CURRENT
 VERSION_ARMS = ("version-pair", "behindroad-copy")
 
 
+# Size of this run's model state, or 0 if it was not saved
 def _state_bytes(run_dir: Path) -> int:
-    """Size of this run's model state, or 0 if it was not saved.
-
-    The .npz is the ONLY artifact that lets a deep-dive figure be re-derived
-    without re-running. Everything else -- the rate table, the shoreline
-    matrix, the metadata -- is written regardless and is small.
-    """
     return sum(f.stat().st_size for f in run_dir.glob("*.npz"))
 
 
+# Does the keep rule keep this run's model state? THE RULE (Hannah, 2026-09-14)
 def state_verdict(run, current) -> str:
-    """Does the keep rule keep this run's model state?
-
-    THE RULE (Hannah, 2026-09-14): keep the state of runs on the CURRENT
-    topography, and of arms that name a version deliberately. Drop the rest.
-
-    Why it is defensible: a run on an island a re-pick behind cannot be
-    compared against a run made today, so re-plotting it deeply is answering a
-    question nobody can ask. Its tables and metadata survive either way.
-
-    Why it is not automatic: a run is one to three minutes of compute, but
-    re-running reproduces it at TODAY'S code, not the code it was made with.
-    That is what the state is really insuring against, and it is why nothing
-    here deletes anything.
-    """
     if not run["state_bytes"]:
         return "none"
     if any(arm in run["rel"] for arm in VERSION_ARMS):
@@ -176,7 +127,7 @@ def state_verdict(run, current) -> str:
     return "would free"
 
 
-
+# Run: classify every run, write the report
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     ap.add_argument("--print", action="store_true", dest="echo",
@@ -188,18 +139,15 @@ def main() -> None:
         raise SystemExit(f"no runs found under {RAW_RUNS}")
     current = current_versions()
 
-    # --- topography ------------------------------------------------------
+    # Topography
     stale_topo = [r for r in runs if _is_stale(r, current)]
     topo_groups = defaultdict(list)
     for r in stale_topo:
         topo_groups[(r["product"], r["topo"])].append(r)
 
-    # --- calibration ------------------------------------------------------
-    # WITHIN A PERIOD. The background-erosion field is calibrated per period,
-    # so one preset legitimately carries a different digest for 1984-2004 than
-    # for 2004-2024. Grouping on the preset alone reported that by-design
-    # difference as 55 superseded runs on 2026-09-10, which was wrong; the
-    # split that would matter is two digests for one preset in ONE period.
+    # Calibration
+
+    # Grouped within a period: a preset's BE field differs by period by design
     by_preset = defaultdict(Counter)
     newest = {}
     for r in runs:
@@ -209,7 +157,7 @@ def main() -> None:
             newest[(key, r["digest"])] = r["timestamp"]
     split_presets = {k: c for k, c in by_preset.items() if len(c) > 1}
 
-    # --- duplicates -------------------------------------------------------
+    # Duplicates
     by_name = defaultdict(list)
     for r in runs:
         by_name[r["name"]].append(r)
@@ -226,7 +174,7 @@ def main() -> None:
       f"inputs it had.")
     w("")
 
-    # 1
+    # 1. Stale topography
     w("## 1. Built on a topography that is no longer CURRENT")
     w("")
     w("The dune-topo version each product now points at:")
@@ -259,7 +207,7 @@ def main() -> None:
           "comparison they exist for, so they are not listed above.")
     w("")
 
-    # 2
+    # 2. A different background-erosion field
     w("## 2. Forced with a different background-erosion field")
     w("")
     w("The field is calibrated PER PERIOD, so one preset carrying a different "
@@ -291,7 +239,7 @@ def main() -> None:
             w("")
     w("")
 
-    # 3
+    # 3. One name in more than one place
     w("## 3. One name in more than one place")
     w("")
     w("Usually legitimate: an arm is a different forcing of the same scenario, "
@@ -308,8 +256,7 @@ def main() -> None:
             w(f"| {r['timestamp'][:16]} | {r['topo']} | `{r['rel']}` |")
         w("")
 
-    # 4
-    # ---- model state ----------------------------------------------------
+    # 4. Model state
     w("## 4. Model state on disk")
     w("")
     by_verdict = {}

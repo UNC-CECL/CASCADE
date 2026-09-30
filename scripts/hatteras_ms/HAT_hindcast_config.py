@@ -1,54 +1,11 @@
 #!/usr/bin/env python3
-"""Run-selecting settings for the Hatteras hindcast, in one place.
+"""
+Run-selecting settings for the Hatteras hindcast, in one place: hat_run.yaml, overridable by HAT_* variables.
 
-WHERE A SETTING IS TYPED
-    `hat_run.yaml`, beside this file. Edit it, save it, run the hindcast.
-    That file is the interface; this module is the machinery that reads it,
-    and its own values are only the fallbacks.
+    python scripts/hatteras_ms/HAT_hindcast_config.py   # prints the resolved settings
 
-WHY THIS MODULE EXISTS
-    `HAT_hindcast_1984_2024.ipynb` and its headless mirror
-    `HAT_hindcast_1984_2024.py` used to carry these values as literals in
-    sections 1, 3, 7, 9 and 11. Running the scenario matrix therefore meant
-    hand-editing a source file between every run, which is how the two
-    published edgeBE runs in the retired `run_index.csv` ended up disagreeing
-    with each other on the background-erosion values they were fit under.
-
-    Both files now read the values from here, so a run can be selected by
-    editing one untracked-by-the-model settings file, or driven through the
-    environment without editing anything at all.
-
-PRECEDENCE
-    environment variable  >  hat_run.yaml  >  the default in this file
-
-    `HAT_IGNORE_SETTINGS=1` drops the middle term. `HAT_run_all.py` sets it on
-    every run it launches, so a batch run is described entirely by the driver
-    plus this file's defaults, and a half-finished experiment left in
-    hat_run.yaml can never reach the comparison matrix or the sweep.
-
-    `describe()` reports which of the three each value came from, so a run log
-    states how it was driven rather than leaving it to be inferred.
-
-RE-READING, FOR THE NOTEBOOK
-    `load_run_config()` re-reads hat_run.yaml on every call. Section 3 of both
-    files calls it rather than using the module-level RUN_CONFIG, so editing
-    the yaml and re-running the cell picks the change up without restarting
-    the kernel -- a module-level constant would be cached by the import system
-    and the edit would silently not apply.
-
-WHAT IS *NOT* VALIDATED HERE
-    Value legality: scenario names, periods and offset modes each have exactly
-    one home in the code (`SCENARIOS` in section 3, `HATTERAS_PERIODS`,
-    `ISLAND_OFFSET_MODES`), and a second copy here is a second thing to drift.
-    A bad value raises in section 3 with the valid list attached. What IS
-    validated here is what this module owns: that every key in the yaml is a
-    key it knows, and that each value casts to the right type.
-
-THE SYNC RULE STILL APPLIES
-    This module is imported by BOTH the notebook and the .py. Adding a field
-    here is only part of the change -- the yaml needs a documented key and the
-    matching section of both files has to read it, or the two drift again.
-    See the module docstring of the .py.
+Imported by the runner, the notebook and every driver, so a run is chosen
+without editing tracked source. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -67,6 +24,7 @@ __all__ = [
     "field_default", "ENV_PREFIX", "IGNORE_ENV", "SETTINGS_PATH",
 ]
 
+# --- CONFIG ------------------------------------------------------------------
 ENV_PREFIX = "HAT_"
 IGNORE_ENV = "HAT_IGNORE_SETTINGS"
 
@@ -77,27 +35,17 @@ _PROJECT_BASE_DIR = next(_p for _p in Path(__file__).resolve().parents
                          if (_p / "pyproject.toml").exists())
 RUN_INDEX_PATH = _PROJECT_BASE_DIR / "output" / "raw_runs" / "run_index.csv"
 
-# The model .npz, for the preflight cost line. Measured, not guessed: the
-# saved states dominate and the file is ~160 MB for either period.
+# The model .npz, for the preflight cost line
 _MODEL_STATE_MB = 160
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# CASTS
-# =============================================================================
-# Each raises ValueError on malformed input. Deliberately fatal rather than
-# falling back to the default: a driver or a yaml that misspells a value would
-# otherwise run the default configuration under the name of the one it asked
-# for.
+# Casts
 
+# Each raises ValueError on malformed input
+
+# Casts a boolean, strictly
 def _as_bool(raw) -> bool:
-    """Casts a boolean, strictly.
-
-    Accepts real booleans (which is what the yaml parser produces) and the
-    unambiguous string spellings a shell driver emits. Anything else raises
-    rather than being silently truthy, because `bool("False")` is True and
-    that failure mode is invisible in a run log.
-    """
     if isinstance(raw, bool):
         return raw
     lowered = str(raw).strip().lower()
@@ -108,13 +56,8 @@ def _as_bool(raw) -> bool:
     raise ValueError(f"expected a boolean spelling, got {raw!r}")
 
 
+# Casts a boolean that may also be explicitly unset
 def _as_opt_bool(raw) -> Optional[bool]:
-    """Casts a boolean that may also be explicitly unset.
-
-    `null` in the yaml and "" or "none" in the environment mean "leave the
-    decision to whoever reads this" -- for `relocations` that is the named
-    scenario, for `show_figures` it is the notebook/.py split.
-    """
     if raw is None:
         return None
     if isinstance(raw, str) and raw.strip().lower() in ("", "none", "null"):
@@ -122,15 +65,8 @@ def _as_opt_bool(raw) -> Optional[bool]:
     return _as_bool(raw)
 
 
+# Casts a float that may also be explicitly unset
 def _as_opt_float(raw) -> Optional[float]:
-    """Casts a float that may also be explicitly unset.
-
-    `null` in the yaml and "", "none" or "measured" in the environment mean
-    "no standard -- use the per-domain measured setbacks". Spelling it
-    "measured" is allowed because that is what the alternative IS, and a run
-    log reading `relocation_setback_m: measured` says what happened where a
-    bare `none` would only say what did not.
-    """
     if raw is None:
         return None
     if isinstance(raw, str) and raw.strip().lower() in (
@@ -139,152 +75,59 @@ def _as_opt_float(raw) -> Optional[float]:
     return _as_float(raw)
 
 
+# An int from a yaml or environment value
 def _as_int(raw) -> int:
     return int(str(raw).strip())
 
 
+# A float from a yaml or environment value
 def _as_float(raw) -> float:
     return float(str(raw).strip())
 
 
+# A stripped string from a yaml or environment value
 def _as_str(raw) -> str:
     return str(raw).strip()
 
 
-# =============================================================================
-# THE FIELDS
-# =============================================================================
-# (attribute, yaml path, cast, default)
-#
-# The yaml path is a tuple so a nested block reads naturally in the file
-# (`groin.enabled`) while staying a flat attribute in code (`groin_enabled`).
-# The environment name is always ENV_PREFIX + the attribute upper-cased, and
-# is NOT derived from the yaml path -- the ten names that existed before this
-# file did are load-bearing in `HAT_run_all.py` and in shell history, and
-# renaming them to match a yaml layout would break both.
+# The fields
+
+# (attribute, yaml path, cast, default); env name = HAT_ + attribute, never from the yaml path
 
 _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
-    # 1996 SINCE 2026-09-17 (Hannah: "moving forward the main time period,
-    # for figures and future runs, is 1996-2010-2024"). 1984 was the pair
-    # the project ran first. Every other start is still reachable by naming
-    # it; this is only what a run gets when nothing does.
+    # The project ran first; any other start is reachable by naming it
     ("start_year",                   ("start_year",),        _as_int,      1996),
     ("source_sink_preset",           ("source_sink",),       _as_str,      "zeroBE"),
     ("scenario",                     ("scenario",),          _as_str,      "full_management"),
     ("relocations",                  ("relocations",),       _as_opt_bool, None),
-    # METRES SINCE 2026-09-24 (Hannah): the offset file is metres and so is
-    # BRIE's x_s, so the file goes in as it is. "asrun" (offset / 10, the
-    # units error every run before this date carries) is still reachable by
-    # naming it, so those runs stay reproducible -- with the offset build they
-    # were made from, HAT_OFFSET_VERSION_<year>=superseded_20260924_pre-metres/v1,
-    # since the current v1 closes the buffer differently (the numbering
-    # restarted at v1 that day). The name rule is unchanged: every mode but asrun
-    # earns an `offset<mode>` token, so a metres run can never take the name
-    # of the /10 run it replaces. Study:
-    # output/raw_runs/experiments/island-offset/2026-09-24-div10-vs-metres-wave-sweep/.
+    # METRES SINCE 2026-09-24 (Hannah)
     ("offset_mode",                  ("offset_mode",),       _as_str,      "metres"),
-    # THE REACH (2026-09-16): a name from hat_extension_domains.GEOMETRIES.
-    # "base" is GIS 1-90. hatteras_site_config reads the same HAT_GEOMETRY
-    # from the environment to build HATTERAS_DOMAINS, and the runner refuses
-    # a run where the two disagree (a yaml `geometry:` with no env var).
+    # The reach (2026-09-16): a name from hat_extension_domains.GEOMETRIES
     ("geometry",                     ("geometry",),          _as_str,      "base"),
 
-    # WHERE A RUN IS FILED (2026-09-16). run_kind is one of run_registry.KINDS
-    # -- matrix (the default), sensitivity, experiment, version -- and run_tag
-    # names the experiment or version. A matrix run has no tag; a sensitivity
-    # cell's tag is derived from its name's sweep token. HAT_RUN_KIND and
-    # HAT_RUN_TAG in the environment; HAT_ARM_TAG is the old spelling and the
-    # runner reads it as an experiment tag.
+    # WHERE A RUN IS FILED (2026-09-16)
     ("run_kind",                     ("run_kind",),          _as_str,      "matrix"),
     ("run_tag",                      ("run_tag",),           _as_str,      ""),
 
     ("groin_enabled",                ("groin", "enabled"),         _as_bool,  False),
-    # The decided pair, 2026-08-30. M from period 1 (D4-D8 demeaned), f from
-    # the 1967-2018 rig -- NOT jointly fitted. These defaults matter only when
-    # hat_run.yaml is absent or omits the block; they used to read 50.0 / 0.9,
-    # which were placeholders and f = 0.9 was never fitted at all.
+    # The decided pair, 2026-08-30: M from period 1, f from the 1967-2018 rig
     ("groin_trapping_rate_m_yr",     ("groin", "trapping_M"),      _as_float, 60.0),
     ("groin_deterioration_fraction", ("groin", "deterioration_f"), _as_float, 0.6),
-    # WHICH GROIN, 2026-09-29: "dipole" (GroinCallback, +/-M a year) or
-    # "blocking" (BlockingGroinCallback, intercepts a fraction b of the
-    # alongshore transport at the face). b = 0.6 is the option A emulator's
-    # best joint fit with f = 0.3 under the instant 2004 failure, not yet
-    # confirmed in the full model.
+    # Which groin: 'dipole' (+/-M a year) or 'blocking' (a fraction b of the transport)
     ("groin_kind",                   ("groin", "kind"),            _as_str,   "dipole"),
     ("groin_blocking_fraction",      ("groin", "blocking_b"),      _as_float, 0.6),
 
-    # WAVE CLIMATE. All four are forcing, not management: they change what is
-    # simulated, so a run that moves any of them off the value below earns a
-    # `wave...` token in its name and lands in its own directory. Without that
-    # token a sensitivity cell would derive the SAME name as the matrix run it
-    # is being compared against, and the last one to finish would be left
-    # wearing the production name -- the failure output/calibration/groin/README.md
-    # documents for the rig sweep.
-    #
-    # The three below `hs` were literals in section 11 of the .py until
-    # 2026-09-01 (FIXED_WAVE_PERIOD and friends). They are fields now for one
-    # reason: scripts/sensitivity_analysis sweeps them, and a sweep that has to
-    # edit the model source between cells is the hand-editing failure this
-    # module exists to remove.
-    #
-    # OPTION A, ADOPTED 2026-09-27 (Hannah): Hs 2.0 m, Tp 7.5 s, asymmetry 0.6,
-    # high-angle 0.5, the same in both windows. Chosen on the metres offset
-    # from the fixed-ends wave grid, on the raw score; the edge ends in
-    # hatteras_site_config.HATTERAS_BE_EDGE_ONLY were solved at exactly these
-    # four values and are not valid at any other. Record:
-    # output/raw_runs/experiments/wave-climate/2026-09-27-wave-recommendation/.
-    # Option B (Hs 2.5 in 2010-2024 only) is recorded, not wired:
-    # hatteras_site_config.HATTERAS_WAVE_OPTION_B.
-    # Until 2026-09-27 these read 2.5 / 8.0 / 0.7 / 0.1, the /10-offset
-    # calibration; every run named before then is named against those.
+    # Wave climate: option A since 2026-09-27; moving one earns a name token (README)
     ("hs",                           ("physics", "wave_height_Hs"), _as_float, 2.0),
     ("wave_period_s",                ("physics", "wave_period_s"),  _as_float, 7.5),
     ("wave_asymmetry",               ("physics", "wave_asymmetry"), _as_float, 0.6),
     ("wave_angle_high_fraction",     ("physics", "wave_angle_high_fraction"),
                                                                     _as_float, 0.5),
 
-    # WHERE A RELOCATED ROAD GOES, in metres behind the dune line. This is the
-    # RELOCATION TARGET ONLY -- the road's position at t = 0 always comes from
-    # the period's measured RoadSetback_<year>_dunestart.csv and is untouched
-    # by this.
-    #
-    # CASCADE has no separate parameter for the two: cascade_groin.py:689
-    # re-assigns `road_relocation_setback = road_setback` every year, so the
-    # target is whatever the road's MEASURED 1984/2004 offset happened to be.
-    # That is observed geometry, not a design standard, and it ranges 0-430 m
-    # across the 55 road domains. At GIS 85 and 86 it is 0 m, so a relocation
-    # puts the road back on the dune line with no clearance and the next 10 m
-    # of retreat re-fires it: 7 relocations for 7.3 cells of retreat at GIS 85,
-    # 6 for 6.0 at GIS 86. 13 of the 18 events in the 1984-2004 calibBE groin
-    # run are that ratchet.
-    #
-    # 20.0, decided 2026-09-01: "when the road is rebuilt, it is rebuilt to a
-    # standard clearance". CASCADE's own default is 30 (cascade_groin.py:135)
-    # and the matrix was first run at that, but 30 drowned NC-12 at GIS 11 in
-    # all eight 1984-2004 reloc arms. The cause is NOT the clearance itself --
-    # a prescribed historical relocation is stored as a DISPLACEMENT and
-    # `_apply_relocation` adds it to the model's CURRENT setback, so raising
-    # the emergent target raised where the 1999 event landed too: 0 + 77 = 77 m
-    # became 20 + 77 = 97 m, two cells further back, past the point where 24%
-    # of the bordering row is at or below MHW and `bulldoze` gives the road up.
-    # At 20 m the same event lands at 87 m and all eight drownings go away,
-    # with relocation counts across the twelve arms moving only 26 -> 28. See
-    # output/comparisons/relocation/standard_setback/.
-    #
-    # That coupling is a real weakness and 87 m clears the threshold by ONE
-    # CELL, so this value is not robust to different forcing. Anchoring
-    # `_apply_relocation` to an absolute setback would remove the coupling and
-    # let this be chosen on its merits alone; it has not been done.
-    #
-    # Set to `measured` for the pre-2026-08-31 behaviour, where every domain
-    # relocated to its own measured offset. Setbacks quantise to whole 10 m
-    # cells (`road_start = int(setback / 10)`), so use multiples of 10 -- 20
-    # and 29 are the same model.
+    # WHERE A RELOCATED ROAD GOES, in metres behind the dune line
     ("relocation_setback_m",         ("relocation_setback_m",),   _as_opt_float, 20.0),
 
-    # Management, not physics: a defence someone decides to build. Top-level
-    # in the yaml for that reason, and not in the `scenario` table because no
-    # historical sandbag campaign is reconstructed for either period.
+    # Management, not physics: a defence someone decides to build
     ("sandbags",                     ("sandbags",),                 _as_bool,  False),
 
     ("show_figures",                 ("output", "show_figures"),    _as_opt_bool, None),
@@ -292,18 +135,11 @@ _FIELDS: Tuple[Tuple[str, Tuple[str, ...], object, object], ...] = (
     ("save_model_state",             ("output", "save_model_state"), _as_bool,    True),
     ("overwrite",                    ("output", "overwrite"),       _as_bool,     False),
 
-    # Effectively fixed, and deliberately absent from hat_run.yaml -- see the
-    # "not settable here" block at the foot of that file. It stays a field so
-    # HAT_USE_SANDBOX_CASCADE can still force the installed package for a
-    # one-off A/B, and so describe() records which model a run actually built.
-    # It must NOT be derived from groin_enabled: section 12.3's paired
-    # baseline has to be the same model as the groin run in every respect.
+    # Effectively fixed, and deliberately absent from hat_run.yaml
     ("use_sandbox_cascade",          ("use_sandbox_cascade",), _as_bool, True),
 )
 
-# Aliases kept so an environment variable that predates the yaml still works.
-# HAT_SOURCE_SINK_PRESET is the name HAT_run_all.py sets; the attribute is the
-# same, so this is only about the env spelling being longer than the yaml key.
+# Aliases kept so an environment variable that predates the yaml still works
 _ENV_ALIASES: Dict[str, Tuple[str, ...]] = {
     "source_sink_preset": ("SOURCE_SINK_PRESET",),
     "hs": ("HS",),
@@ -311,29 +147,8 @@ _ENV_ALIASES: Dict[str, Tuple[str, ...]] = {
 }
 
 
+# The code default for one field, ignoring the yaml and the environment
 def field_default(name: str):
-    """The code default for one field, ignoring the yaml and the environment.
-
-    This is the CALIBRATION value of a setting, not the value the current run
-    is using. `RUN_CONFIG.hs` answers "what is this run doing"; this answers
-    "what is it being varied away from", which is the question a sensitivity
-    sweep has to ask before it can tell a cell from the baseline.
-
-    Kept here rather than being re-typed in the sweep script because _FIELDS is
-    already the one home for these numbers. A second copy in a sweep would go
-    stale silently and every cell would then be measured against a value the
-    model no longer uses.
-
-    Args:
-        name: A RunConfig attribute name, e.g. "hs".
-
-    Returns:
-        The default for that field.
-
-    Raises:
-        KeyError: If no such field exists. A typo must not return None and be
-            mistaken for a field whose default is genuinely unset.
-    """
     for field, _, _, default in _FIELDS:
         if field == name:
             return default
@@ -341,17 +156,10 @@ def field_default(name: str):
                    f"have {sorted(f for f, _, _, _ in _FIELDS)}")
 
 
-# =============================================================================
-# READING THE SETTINGS FILE
-# =============================================================================
+# Reading the settings file
 
+# Flattens a nested yaml mapping to {path tuple
 def _flatten(mapping, prefix=()) -> Dict[Tuple[str, ...], object]:
-    """Flattens a nested yaml mapping to {path tuple: value}.
-
-    A block that is itself a known field's parent (e.g. `groin`) flattens into
-    its leaves; a block that is not is reported as an unknown key by the
-    caller, path and all, rather than being silently skipped.
-    """
     flat: Dict[Tuple[str, ...], object] = {}
     for key, value in (mapping or {}).items():
         path = prefix + (str(key),)
@@ -362,20 +170,8 @@ def _flatten(mapping, prefix=()) -> Dict[Tuple[str, ...], object]:
     return flat
 
 
+# Reads hat_run.yaml, or returns nothing if it is absent or suppressed
 def _load_settings_file(path: Path) -> Tuple[Dict[Tuple[str, ...], object], Optional[Path]]:
-    """Reads hat_run.yaml, or returns nothing if it is absent or suppressed.
-
-    Returns:
-        (flat mapping of yaml path -> value, the path actually read or None).
-
-    Raises:
-        RuntimeError: If the file exists but pyyaml is not installed -- the
-            settings would otherwise be silently ignored and the run would use
-            defaults under the name of whatever the file asked for.
-        ValueError: If the file holds a key this module does not know. A
-            misspelled key is the failure this catches: ignoring it produces a
-            run that used the default while its settings file says otherwise.
-    """
     if _as_bool(os.environ.get(IGNORE_ENV, "0")):
         return {}, None
     if not path.exists():
@@ -410,50 +206,10 @@ def _load_settings_file(path: Path) -> Tuple[Dict[Tuple[str, ...], object], Opti
     return flat, path
 
 
-# =============================================================================
-# THE CONFIGURATION
-# =============================================================================
+# The configuration
 
+# The values that select which run the hindcast performs
 class RunConfig:
-    """The values that select which run the hindcast performs.
-
-    Attributes:
-        start_year: A key of HATTERAS_PERIODS -- 1984, 1996, 2004 or 2010.
-            Selects the period, and every forcing that follows from it.
-        source_sink_preset: "zeroBE", "edgeBE" or "calibBE".
-        scenario: A key of the SCENARIOS table in section 3.
-        relocations: Overrides the scenario's historical-relocation switch.
-            None leaves the scenario preset in charge.
-        offset_mode: Which shoreline_offset variant to build: "metres"
-            (the default since 2026-09-24), "asrun" (offset / 10, the old
-            units error) or "detrended".
-        groin_enabled: Whether the groin callback is attached.
-        groin_trapping_rate_m_yr: M, the groin amplitude knob.
-        groin_deterioration_fraction: f, the post-deterioration floor as a
-            fraction of M.
-        groin_kind: "dipole" or "blocking" -- which groin form is attached.
-        groin_blocking_fraction: b, the blocking groin's intercepted fraction
-            of alongshore transport; f applies to it as it does to M.
-        hs: Significant wave height, m.
-        wave_period_s: Peak wave period, s.
-        wave_asymmetry: Fraction of waves from the left of shore-normal.
-        wave_angle_high_fraction: Fraction approaching at more than 45
-            degrees. With hs, the four make up the wave climate; a value
-            off its default earns the run a `wave...` name token.
-        relocation_setback_m: Where a relocated road is rebuilt, m behind
-            the dune line. None means each domain uses its own measured
-            offset. Off its default it earns an `rset` name token.
-        sandbags: Whether sandbag placement is enabled.
-        show_figures: True renders figures inline. None means the reader
-            decides -- the .py uses False, the notebook True.
-        make_gifs: Whether section 9's shoreline animations are built.
-        save_model_state: Whether the ~160 MB model .npz is written.
-        overwrite: True empties an existing run directory and reuses it.
-        use_sandbox_cascade: True imports cascade.cascade_groin, which carries
-            the hook the groin callback needs.
-        origins: attribute -> "default" | "file" | "env", for describe().
-        settings_path: The yaml actually read, or None.
-    """
 
     def __init__(self, settings_path: Optional[Path] = None) -> None:
         path = SETTINGS_PATH if settings_path is None else Path(settings_path)
@@ -467,8 +223,8 @@ class RunConfig:
             setattr(self, name, value)
             self.origins[name] = origin
 
+    # Applies the precedence: environment, then the file, then default
     def _resolve(self, name, yaml_path, cast, default, file_values):
-        """Applies the precedence: environment, then the file, then default."""
         for env_name in (name.upper(),) + _ENV_ALIASES.get(name, ()):
             raw = os.environ.get(ENV_PREFIX + env_name, "")
             if raw != "":
@@ -477,10 +233,7 @@ class RunConfig:
 
         if yaml_path in file_values:
             raw = file_values[yaml_path]
-            # A yaml `key:` with nothing after it parses to None. For a
-            # nullable field that is a deliberate "unset"; for any other it is
-            # an unfinished edit, and taking the default silently would run
-            # something the file does not say.
+            # A yaml `key:` with nothing after it parses to None
             if raw is None and cast is not _as_opt_bool:
                 raise ValueError(
                     f"{'.'.join(yaml_path)} in {self.settings_path} is empty. "
@@ -502,41 +255,23 @@ class RunConfig:
                 f"{cast.__name__.lstrip('_').replace('as_', '')}: {exc}"
             ) from exc
 
+    # Returns the settings as a plain dict, for run metadata
     def as_dict(self) -> Dict[str, object]:
-        """Returns the settings as a plain dict, for run metadata."""
         return {name: getattr(self, name) for name, _, _, _ in _FIELDS}
 
 
+# Reads the settings afresh
 def load_run_config(settings_path: Optional[Path] = None) -> RunConfig:
-    """Reads the settings afresh.
-
-    Call this rather than using the module-level RUN_CONFIG when the file may
-    have changed since import -- which in a notebook is every time, since the
-    kernel caches the module and an edit to the yaml would otherwise not
-    apply until a restart.
-    """
     return RunConfig(settings_path)
 
 
 RUN_CONFIG = load_run_config()
 
 
-# =============================================================================
-# REPORTING
-# =============================================================================
+# Reporting
 
+# Renders the settings and their provenance as a printable block
 def describe(config: Optional[RunConfig] = None) -> str:
-    """Renders the settings and their provenance as a printable block.
-
-    Section 3 of both the notebook and the .py prints this, so every run log
-    records not just what was run but whether each value was typed in the
-    settings file, driven from the environment, or left at this module's
-    default -- the distinction that matters when a matrix run and a
-    hand-iterated run land in the same index.
-
-    Returns:
-        A multi-line string, no trailing newline.
-    """
     config = RUN_CONFIG if config is None else config
 
     if config.settings_path is not None:
@@ -566,17 +301,8 @@ def describe(config: Optional[RunConfig] = None) -> str:
     return "\n".join(lines)
 
 
+# Median wall-clock of prior runs of this period, from run_index.csv
 def _runtime_estimate(start_year: int, index_path: Optional[Path] = None):
-    """Median wall-clock of prior runs of this period, from run_index.csv.
-
-    Measured rather than assumed: the index records `runtime_min` for every
-    run that has completed, so the estimate is this machine's own history for
-    this period and no constant has to be maintained here.
-
-    Returns:
-        (median minutes, number of runs it was taken over), or (None, 0) when
-        the index is absent or holds no run of this period.
-    """
     path = RUN_INDEX_PATH if index_path is None else Path(index_path)
     if not path.exists():
         return None, 0
@@ -595,31 +321,9 @@ def _runtime_estimate(start_year: int, index_path: Optional[Path] = None):
         return None, 0
 
 
+# Renders what this run will produce, before it produces it
 def preflight(run_name: str, run_dir, config: Optional[RunConfig] = None,
               index_path: Optional[Path] = None) -> str:
-    """Renders what this run will produce, before it produces it.
-
-    Answers the three questions worth asking before a long run starts: what
-    will it be called, where will it land, and does something already live
-    there. The name is the section 3 preview, not a name built here -- section
-    7.5 derives the authoritative one from what the modules actually built and
-    raises if the two disagree, so this can never quietly become the thing
-    that names the directory.
-
-    The collision line WARNS rather than raises. `guard_run_dir` in section 11
-    is the authority on that, and a second gate here would be a second place
-    for the rule to live.
-
-    Args:
-        run_name: RUN_NAME_PREVIEW from section 3.
-        run_dir: Directory the run will write to.
-        config: Settings to report. Defaults to the module-level RUN_CONFIG.
-        index_path: run_index.csv, for the runtime estimate. Defaults to the
-            repo's own.
-
-    Returns:
-        A multi-line string, no trailing newline.
-    """
     config = RUN_CONFIG if config is None else config
     run_dir = Path(run_dir)
 

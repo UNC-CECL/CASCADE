@@ -1,55 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_migrate_run_layout.py
-==============================================================================
-Move output/raw_runs into the PURPOSE layout of 2026-09-16. Moves only;
-nothing is deleted, rewritten or renamed in content, and run_index.csv is
-rebuilt from the runs afterwards rather than edited.
+"""
+Move output/raw_runs into the purpose layout of 2026-09-16 (moves only), then rebuild the index.
 
-THE MOVES
-    <period>/<preset>/<run>                       -> matrix/<period>/<preset>/<run>
-    <period>/<preset>/sweeps/<axis>/<run>_<tok>   -> sensitivity/<axis>/<period>/<preset>/<run>_<tok>
-    arms/<arm>/<period>/<preset>/<run>            -> versions/<tag>/... or experiments/<tag>/...
-                                                     as run_registry.LEGACY_ARMS says
-    arms/waveHs<x>/1996_2010/<preset>/<run>       LEFT IN PLACE, and listed. Those are
-                                                     the twelve 1996 wave cells filed by
-                                                     the 09-01 rule; they are re-run as
-                                                     sensitivity cells (the token back in
-                                                     the name) and then deleted, because
-                                                     renaming a run's files and metadata
-                                                     is exactly the in-content edit this
-                                                     tool refuses to make.
+    python scripts/hatteras_ms/tools/HAT_migrate_run_layout.py --dry-run
+    python scripts/hatteras_ms/tools/HAT_migrate_run_layout.py
 
-    Why (Hannah, 2026-09-16): a wave sweep had fanned out into twelve
-    top-level arms; nineteen of thirty arms were finished one-off experiments
-    nothing marked as finished; and the layout could not tell those from the
-    version comparisons that are kept on purpose. A run's folder now says what
-    it is FOR. The whole design is in output/raw_runs/README.md.
-
-WHAT ELSE IT WRITES
-    experiments/<tag>/NOTE.md   one per experiment set, seeded from the index
-                                and the write-ups that already name these
-                                runs. Says what was asked, where the answer
-                                is, and whether the runs may be deleted. Not
-                                overwritten if present.
-    run_index.csv               rebuilt (HAT_index_runs), every row with
-                                kind, tag and status.
-
-WHY IT IS SAFE TO RUN, AND TO INTERRUPT
-    Every destination is checked to be free before anything moves, so a name
-    collision is reported and nothing happens. All three layouts are readable:
-    run_registry.find_run_dir tries the purpose path, then the 09-10 one, then
-    the flat one, so a tree that is half moved -- or interrupted here -- still
-    reads. Running it twice is a no-op.
-
-    The 2026-09-10 pass (files inside each run into figures/, animations/,
-    tables/) is retained as --files, and is a no-op on a migrated run.
-
-USAGE
-    python HAT_migrate_run_layout.py --dry-run       # show every move
-    python HAT_migrate_run_layout.py
-    python HAT_migrate_run_layout.py --files         # the 09-10 in-run file pass
-==============================================================================
+Nothing is deleted or rewritten; --files does the 09-10 in-run file pass. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -65,6 +21,7 @@ import sys
 from pathlib import Path
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -79,12 +36,11 @@ from cascade_pipeline.run_layout import plan_run  # noqa: E402
 from cascade_pipeline.run_registry import (  # noqa: E402
     ARMS_DIR, KIND_DIR, LEGACY_ARMS, SWEEPS_DIR, _PERIOD_DIR, sweep_family)
 
+# --- CONFIG ------------------------------------------------------------------
 RAW_RUNS = REPO / "output" / "raw_runs"
 PURPOSE_DIRS = set(KIND_DIR.values())
 
-# What each experiment set was for, from the run index and the write-ups
-# that cite it. Seeded here so the NOTE.md a folder gets on migration is not
-# blank; edit the file, not this table, once the folder exists.
+# What each experiment set was for, from the run index and the write-ups that cite it
 EXPERIMENT_NOTES = {
     "topography-and-domains/2026-09-02-pea-island-row-insert-control": """# topography-and-domains/2026-09-02-pea-island-row-insert-control
 
@@ -174,15 +130,16 @@ domain against the stored matrix runs.
 **Runs deletable?** Yes; the write-up holds the numbers.
 """,
 }
+# -----------------------------------------------------------------------------
 
 
+# Every run folder under raw_runs, found by its metadata file
 def run_dirs() -> list[Path]:
-    """Every run folder under raw_runs, found by its metadata file."""
     return sorted({p.parent for p in RAW_RUNS.rglob("*_run_metadata.json")})
 
 
+# (destination, reason) for one run folder
 def destination(run_dir: Path):
-    """(destination, reason) for one run folder; destination None = stay."""
     rel = run_dir.relative_to(RAW_RUNS).parts
     if rel[0] in PURPOSE_DIRS:
         return None, "already in the purpose layout"
@@ -217,9 +174,8 @@ def destination(run_dir: Path):
     return RAW_RUNS / KIND_DIR["matrix"] / period / preset / run, "matrix"
 
 
+# (source, destination) for each run folder that changes place, and the folders that stay with why
 def tree_moves():
-    """(source, destination) for each run folder that changes place, and the
-    folders that stay with why."""
     moves, stays = [], []
     for d in run_dirs():
         dest, why = destination(d)
@@ -230,16 +186,16 @@ def tree_moves():
     return moves, stays
 
 
+# (source, destination) for each FILE that changes place inside a run
 def file_moves() -> list[tuple[Path, Path]]:
-    """(source, destination) for each FILE that changes place inside a run."""
     moves = []
     for d in run_dirs():
         moves.extend(plan_run(d))
     return moves
 
 
+# Destinations that are already occupied, or collide with each other
 def check_free(moves) -> list[str]:
-    """Destinations that are already occupied, or collide with each other."""
     problems, seen = [], {}
     for src, dst in moves:
         if dst.exists():
@@ -250,8 +206,8 @@ def check_free(moves) -> list[str]:
     return problems
 
 
+# Remove directories left empty by the tree move
 def prune_empty(root: Path) -> int:
-    """Remove directories left empty by the tree move. Never removes a file."""
     removed = 0
     for d in sorted((p for p in root.rglob("*") if p.is_dir()),
                     key=lambda p: len(p.parts), reverse=True):
@@ -263,8 +219,8 @@ def prune_empty(root: Path) -> int:
     return removed
 
 
+# A NOTE.md per experiment set that has none
 def write_notes(dry_run: bool) -> int:
-    """A NOTE.md per experiment set that has none. Returns how many."""
     root = RAW_RUNS / KIND_DIR["experiment"]
     written = 0
     if not root.is_dir():
@@ -282,6 +238,7 @@ def write_notes(dry_run: bool) -> int:
     return written
 
 
+# Print a list of moves, up to a limit
 def show(moves, limit, label) -> None:
     sys.stdout.write(f"\n{label}: {len(moves)}\n")
     for src, dst in moves[:limit]:
@@ -292,6 +249,7 @@ def show(moves, limit, label) -> None:
         sys.stdout.write(f"    ... {len(moves) - limit} more\n")
 
 
+# Run: plan the moves, show or make them, rebuild the index
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[1],
                                  formatter_class=argparse.RawDescriptionHelpFormatter)

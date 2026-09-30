@@ -1,44 +1,16 @@
-# ==============================================================================
-# HAT_rerun_arm.py
-#
-# Re-run a set of existing runs under TODAY'S code, into an arm, so the old
-# results survive and the two can be compared.
-#
-# WHY
-#   A run records the git commit it was made at, and the index shows those
-#   commits drifting apart. The relocation arm of the 1984-2004 matrix was made
-#   on 2026-09-01 from a dirty tree; spot-checking one of its cells on current
-#   code drowned NC-12 at GIS 11, where the stored run reports none. That is
-#   either a real change in the model or a change in the inputs, and the only
-#   way to tell which runs is to re-run and difference.
-#
-# PINNING THE TOPOGRAPHY IS HALF THE JOB, and the half that is easy to miss.
-#   A road setback is metres landward of interior row 0, so it belongs to the
-#   extraction it was measured on. `--topo-version v1` pins the ARRAYS but the
-#   run still reads whatever setback file the period table names, which is the
-#   v2-era measurement. Those two differ at 27 of 82 domains, up to 205 m, and
-#   the mismatch moves every domain's rate by up to 0.005 m/yr.
-#
-#   That is exactly what happened on the first use of this script: a twelve-cell
-#   comparison that looked like code drift was mostly a mismatched pair. Pinning
-#   a version means pinning BOTH halves; the archived setbacks are under
-#   road_offset/superseded_<date>/.
-#
-# IT WRITES INTO AN ARM, NEVER OVER THE ORIGINAL. An arm scopes the output
-# directory, so the stored runs and their index rows are untouched and the
-# comparison is reversible. Promoting a re-run to the production path is a
-# separate, deliberate act.
-#
-#     python HAT_rerun_arm.py --list
-#     python HAT_rerun_arm.py --arm recode-20260914 --topo-version v1
-#     python HAT_rerun_arm.py --arm recode-20260914 --topo-version v1 --limit 2
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-27
-# ==============================================================================
+"""
+Re-run a set of existing runs under today's code, into an arm, so the two can be compared.
 
+    python scripts/hatteras_ms/tools/HAT_rerun_arm.py --period 1996 --tag <arm>
+
+Reads each run's settings from the index and runs the hindcast with them;
+HAT_compare_rerun.py compares the results. Details: scripts/hatteras_ms/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-27
+"""
 from __future__ import annotations
 
 import argparse
@@ -52,12 +24,11 @@ import pandas as pd
 
 _HERE = Path(__file__).resolve()
 REPO = next(p for p in _HERE.parents if (p / "pyproject.toml").exists())
+# --- CONFIG ------------------------------------------------------------------
 RUNNER = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 INDEX = REPO / "output" / "raw_runs" / "run_index.csv"
 
-# The switches a run name encodes, recovered from the index columns rather than
-# parsed out of the name: the name is DERIVED from the switches, so reading it
-# back would be inverting a lossy function.
+# The switches a run name encodes, recovered from the index columns rather than parsed out of the name
 SWITCH_COLUMNS = {
     "roadway_management": "HAT_SCENARIO",         # resolved below
     "beach_dune_management": None,
@@ -65,10 +36,11 @@ SWITCH_COLUMNS = {
     "relocations_enabled": "HAT_RELOCATIONS",
     "groin_enabled": "HAT_GROIN_ENABLED",
 }
+# -----------------------------------------------------------------------------
 
 
+# The named scenario matching this run's four management switches
 def scenario_for(row):
-    """The named scenario matching this run's four management switches."""
     road = bool(row["roadway_management"])
     bdm = bool(row["beach_dune_management"])
     fills = bool(row["nourishment_fills"])
@@ -81,8 +53,8 @@ def scenario_for(row):
     return "natural"
 
 
+# The relocation arm of one period, matrix cells only
 def select(index, period):
-    """The relocation arm of one period, matrix cells only."""
     d = index[(index["start_year"] == period)
               & (index["relocations_enabled"] == True)      # noqa: E712
               & (index["kind"] == "matrix")]
@@ -91,6 +63,7 @@ def select(index, period):
     return d.drop_duplicates("run_name")
 
 
+# The environment that reproduces one indexed run
 def env_for(row, tag, topo_version):
     env = dict(os.environ)
     env.update({
@@ -115,6 +88,7 @@ def env_for(row, tag, topo_version):
     return env
 
 
+# Run: every selected run, into the arm
 def main():
     ap = argparse.ArgumentParser(description="re-run an arm under today's code")
     ap.add_argument("--period", type=int, default=1984)

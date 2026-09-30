@@ -1,28 +1,10 @@
-"""Rename the older experiments and group every experiment by theme (2026-09-25).
+"""
+Rename the older experiments and group every experiment by theme (the 2026-09-25 one-off).
 
-Hannah, 2026-09-25: "rename the old experiments so their names are clearer
-about what they tested", then "organize the experiment folders ... by what
-the theme or investigation is". Names and themes approved the same day:
+    python scripts/hatteras_ms/tools/HAT_rename_experiments_20260925.py --dry-run
 
-    experiments/<theme>/<date>-<what it tested>/
-
-What this does, while nothing is running:
-  1. removes the parameters-only folders a paused sweep leaves behind (a run
-     killed at start-up), which would block its resume
-  2. moves each study to <theme>/<new name>
-  3. rewrites the old path/name inside every text file of every study
-     (run-metadata tags, NOTE/README/FINDINGS, logs and CSVs naming runs),
-     fixing the relative links between studies (one level deeper now) and
-     notes the old name at the top of the renamed studies' NOTE.md
-  4. rewrites the old names in every tracked text file outside the archive
-     (scripts -- a study's folder is also its run tag -- comparison READMEs
-     and captions) and in the memory notes
-  5. writes experiments/README.md (the map) and a README per theme
-  6. rebuilds the run index and checks every run is under its new name
-The archive and retired_runs.csv are history and are left as they were.
-cascade_pipeline.run_registry.check_tag allows 4 tag levels since this change.
-
-    python scripts/hatteras_ms/tools/HAT_rename_experiments_20260925.py [--dry-run]
+Moves each study to <theme>/<name>, rewrites references and writes the
+theme READMEs; resumable. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -35,6 +17,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+# --- CONFIG ------------------------------------------------------------------
 ROOT = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 EXP = ROOT / "output" / "raw_runs" / "experiments"
 MEMORY = Path.home() / ".claude" / "projects" / "C--Users-hanna-PycharmProjects-CASCADE" / "memory"
@@ -79,17 +62,17 @@ CHAIN_INDEX = "2026-09-24-metres-INDEX.md"      # stays at experiments/, links u
 PAUSED_SWEEP = "2026-09-25-wave-grid-smoothed-score"
 TEXT = {".md", ".py", ".txt", ".json", ".yaml", ".yml", ".csv", ".log", ".ipynb", ".jsonl"}
 DRY = "--dry-run" in sys.argv
+# -----------------------------------------------------------------------------
 
 
+# A study's new <theme>/<name>
 def new_path(old):
     theme, name = MOVES[old]
     return f"{theme}/{name}"
 
 
+# Ordered (old, new) string pairs
 def replacements(inside_study):
-    """Ordered (old, new) string pairs. Relative links first: from inside a
-    study, ../<other> becomes ../../<theme>/<other> and the chain INDEX moves
-    one level up; then every remaining bare name gets its theme."""
     pairs = []
     if inside_study:
         pairs.append((f"../{CHAIN_INDEX}", f"../../{CHAIN_INDEX}"))
@@ -100,6 +83,7 @@ def replacements(inside_study):
     return pairs
 
 
+# Rewrite old study paths inside one text file
 def rewrite(path, pairs):
     try:
         s0 = path.read_text(encoding="utf-8")
@@ -117,15 +101,15 @@ def rewrite(path, pairs):
     return 0
 
 
+# The number of runs under a folder
 def runs(d):
     return len(list(d.rglob("*_run_metadata.json")))
 
 
+# Run folders a paused sweep left incomplete
 def partial_run_dirs():
     out = []
-    # 2010_2024 only: the pause stops the sweep as its 2010-2024 cells start.
-    # A DROWNED run also leaves only its parameters file, and those (1996-2010,
-    # Hs 0.75 / Tp 10) are results that must stay.
+    # 2010_2024 only: the pause stops the sweep there; a drowned run's lone file is a result
     for d in (EXP / PAUSED_SWEEP).glob("runs/*/2010_2024/*/*"):
         files = [p for p in d.iterdir()] if d.is_dir() else []
         if len(files) == 1 and files[0].name.endswith("-parameters.yaml"):
@@ -133,6 +117,7 @@ def partial_run_dirs():
     return out
 
 
+# The experiments index and one README per theme
 def write_readmes():
     lines = ["# Experiments, by theme", "",
              "One question each, grouped by the investigation it belongs to "
@@ -161,11 +146,9 @@ def write_readmes():
         (EXP / "README.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+# Run: move, rewrite, write the READMEs
 def main():
-    # Resumable (2026-09-25: the first pass stopped at a folder held open by
-    # a shell's working directory): a study already at its new place is
-    # skipped; the text rewrite cannot double a prefix, and the rename note
-    # is written once.
+    # Resumable: a study already moved is skipped, and nothing is doubled
     done = {o for o in MOVES if not (EXP / o).exists() and (EXP / new_path(o)).is_dir()}
     for old in MOVES:
         if old not in done:
