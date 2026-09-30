@@ -1,58 +1,11 @@
 #!/usr/bin/env python3
-"""Groin sweep over ONE continuous 1984-2024 window, scored on the change profile.
+"""
+Groin sweep over one continuous 1984-2024 window, scored on the change profile.
 
-This is the 1967-rig method applied to the production geometry and the full
-hindcast span. It exists because the two-period, scalar-fillet approach failed
-in a specific and repeatable way, and this one did not.
+    python scripts/hatteras_ms/groin-sweep/HAT_fullperiod_sweep.py --workers 6 --stage coarse
 
-WHAT WENT WRONG BEFORE, AND WHAT IS DIFFERENT HERE
-
-    scalar target -> profile target
-        Matching one number (the fillet) left a RIDGE of equally good (M, f)
-        pairs; the ranking then returned whichever cell sat at a grid edge.
-        Scoring the per-domain CHANGE PROFILE constrains shape as well as
-        magnitude. That is what gave the rig an interior optimum in both knobs.
-
-    two 20-year windows -> one 40-year window
-        The fillet builds through 1984-2004 (+52 m) and declines through
-        2004-2024 (-76 m). Each 20-year window sees only one of those, so M and
-        f trade off within it. One continuous run sees both, and they constrain
-        different combinations of the pair.
-
-    coarse then fine
-        A wide coarse pass, then a fine pass centred on its best cell. M is
-        capped at 80: on the rig every cell at M >= 100 DROWNED the barrier
-        partway through, and M >= 70 produced RMSE an order of magnitude above
-        its neighbours. Sweeping into that region wastes runs on a model that
-        refuses the parameter.
-
-ASSUMPTIONS, STATED
-
-    static background erosion
-        `background_erosion` is written once at construction, so a 40-year run
-        carries ONE field. The two periods' calibrated edge values differ in
-        sign (be1 -41.8 vs +50.3), but over the whole window they largely
-        cancel: the surveyed change at D1 is -3.2 m in 40 years. be1 is
-        therefore SOLVED against that, not inherited from either period.
-
-    spliced storms
-        1984-2003 from the 1984-2004 series, 2004-2024 from the 2004-2024 one,
-        with the model-year index remapped. Checked at the join: wave height,
-        runup and period agree to within 2%.
-
-    this is a rig, not a hindcast
-        One static background field cannot reproduce a field that reverses
-        mid-window. The run is fit for calibrating a LOCAL structure, where a
-        smooth regional field largely cancels in the profile's shape. It is not
-        a substitute for the two-period hindcast.
-
-Usage:
-    python HAT_fullperiod_sweep.py [--workers 6] [--be1 -5.0] [--stage coarse|fine|both]
-
-Writes output/calibration/groin/fullperiod_1984_2024/:
-    results.csv          one row per cell, ranked by profile RMSE
-    <combo>/             shoreline matrix per cell
-    figures/             heatmap, best-fit profile, top-N profiles
+The 1967-rig method on the production geometry and the full span; one
+worker process per cell. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -95,9 +48,7 @@ from HAT_fullperiod_target import (  # noqa: E402
 )
 
 WORKER = _HERE.parent / "HAT_groin_sweep_worker.py"
-# Scoped by wave climate: the worker reads HAT_SWEEP_HS, and without this a
-# run at another Hs would write its cells over the 2.5 m results that the
-# recorded -15.3 m decay and the M upper bound both came from.
+# Scoped by wave climate, so another Hs cannot overwrite the 2.5 m results
 def _out_root():
     raw = os.environ.get("HAT_SWEEP_HS", "").strip()
     stem = "fullperiod_1984_2024"
@@ -106,6 +57,7 @@ def _out_root():
     return GROIN_SWEEP_ROOT / stem
 
 
+# --- CONFIG ------------------------------------------------------------------
 OUT_ROOT = _out_root()
 RESULTS_CSV = OUT_ROOT / "results.csv"
 FIGURE_DIR = OUT_ROOT / "figures"
@@ -118,22 +70,22 @@ from site_layer import hat_env_forcings as _env  # noqa: E402
 STORM_REL = _env.init_relpath(_env.SPLICED_1984_2024)
 PRESET = "edgeBE"
 
-# Capped at 80: M >= 100 drowned the barrier on every rig cell, M >= 70 went
-# unstable there. The production grid is better buffered so the threshold may
-# differ, but sweeping far past a known failure mode buys nothing.
+# Capped at 80: M >= 100 drowned every rig cell
 M_COARSE = [20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0]
 F_COARSE = [0.1, 0.3, 0.5, 0.7, 0.9]
 FINE_M_STEP, FINE_F_STEP = 10.0, 0.1
 
 WORKER_TIMEOUT_S = 1800     # a 40-year cell is ~6 min; this is a wide margin
+# -----------------------------------------------------------------------------
 
 
+# A cell's name from (M, f)
 def combo_name(M, fraction):
     return "M0" if M == 0 else f"M{M:g}_f{fraction:.2f}"
 
 
+# Runs one combination in its own process
 def run_cell(M, fraction, be1):
-    """Runs one combination in its own process. Returns (name, ok, seconds)."""
     name = combo_name(M, fraction)
     out_dir = OUT_ROOT / name
     if (out_dir / "shoreline_matrix.npy").exists():
@@ -158,8 +110,8 @@ def run_cell(M, fraction, be1):
     return name, ok, time.perf_counter() - started
 
 
+# Profile RMSE for one finished cell, or None if its matrix is absent
 def score_cell(name, observed):
-    """Profile RMSE for one finished cell, or None if its matrix is absent."""
     path = OUT_ROOT / name / "shoreline_matrix.npy"
     if not path.exists():
         return None
@@ -167,8 +119,8 @@ def score_cell(name, observed):
     return profile_rmse(model, observed), model
 
 
+# Runs a list of (M, f) cells in parallel, printing as each lands
 def run_grid(cells, be1, workers, label):
-    """Runs a list of (M, f) cells in parallel, printing as each lands."""
     todo = [c for c in cells
             if not (OUT_ROOT / combo_name(*c) / "shoreline_matrix.npy").exists()]
     print(f"\n{'=' * 70}\nSTAGE {label}: {len(cells)} cells, {len(todo)} to run, "
@@ -186,8 +138,8 @@ def run_grid(cells, be1, workers, label):
                   flush=True)
 
 
+# Scores every finished cell and writes results.csv, ranked
 def collate(observed):
-    """Scores every finished cell and writes results.csv, ranked."""
     rows = []
     for cell in sorted(OUT_ROOT.iterdir()):
         if not cell.is_dir() or cell.name == "figures":
@@ -201,9 +153,7 @@ def collate(observed):
         fraction = 0.0 if name == "M0" else float(name.split("_f")[1])
         rows.append(dict(combo=name, M=M, fraction=fraction, rmse_m=rmse,
                          **{f"change_D{d}": model[d] for d in FIT_DOMAINS_GIS}))
-    # An empty list gives a DataFrame with no columns, and sorting on a column
-    # that does not exist raises KeyError -- which is what a first invocation,
-    # or a --collate-only before anything has run, would hit.
+    # An empty list gives a DataFrame with no columns
     if not rows:
         return pd.DataFrame(columns=["combo", "M", "fraction", "rmse_m"])
     frame = pd.DataFrame(rows).sort_values("rmse_m").reset_index(drop=True)
@@ -212,6 +162,7 @@ def collate(observed):
     return frame
 
 
+# Run: the chosen stage's cells, then the results table
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--workers", type=int, default=6)

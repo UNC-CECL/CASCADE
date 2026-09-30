@@ -1,51 +1,10 @@
 #!/usr/bin/env python3
-"""The groin module over the STRUCTURE'S WHOLE LIFE, against every survey.
+"""
+The groin module over the structure's whole life, against every survey.
 
-WHY THIS FIGURE EXISTS
-    `HAT_groin_timeseries_check.py` plots the two hindcast windows, and both
-    of them start 15 years after the groin went in. They therefore show the
-    fillet's DECAY and never its CREATION -- which is why they cannot see f,
-    and why they make the module look worse than it is. The 1967-2018 rig is
-    the only window that contains the build phase, the 1996 repair, the 2003
-    storm damage and the decline that follows. This figure is that window.
+    python scripts/hatteras_ms/groin-sweep/HAT_groin_full_life_figure.py
 
-    It is also the figure that justifies f = 0.6: the deterioration ramp is
-    visible here and nowhere else.
-
-WHAT IS PLOTTED
-    (a) FILLET THROUGH TIME. The surveyed fillet (D5 - D6 offset against the
-        fixed 1967 datum, from 24 dated wet/dry surveys) as markers -- markers
-        only, because the record is irregular and a joining line would imply
-        samples that do not exist -- against the rig's modelled fillet. The
-        structure's documented timeline is marked on top.
-
-    (b) WHAT THE MODULE WAS DOING. The trapping rate the module actually
-        applied each year, read from the run's own groin_diagnostics.csv
-        rather than recomputed. This is the schedule f parameterises: zero
-        before install, M while the structure is sound, a linear ramp down
-        from the 1996 repair to the 2003 damage, then a hold at M*f.
-
-    Reading the two together is the point. Panel (b) explains the shape of
-    the model curve in (a), and the observed peak in (a) at 2004 is what
-    fixes the end of the ramp in (b).
-
-HOW TO READ THE RESIDUAL
-    The module reproduces the SIGN and the TIMING of the build, and it
-    undershoots the AMPLITUDE. That is expected and documented: no admissible
-    M matches the fillet on this grid, because the real fillet is ~190 m wide
-    against a 500 m domain and the dipole is volume-neutral where the real
-    structure is not (observed downdrift extent 0 m, the model's 2,500 m).
-    The gap is the part the source/sink calibration and the Cape Point
-    dynamics absorb -- not a failed fit.
-
-    Note also that the rig runs a 1967 window off 1984 topography
-    (RIG_TOPO_PRODUCT = "1984-start"), a deliberate anachronism accepted
-    because the target is a shoreline OFFSET rather than an elevation.
-
-Usage:
-    python HAT_groin_full_life_figure.py
-
-Writes output/calibration/groin/figures/full_life_1967_2017.png
+Fillet, rates and the dated events, 1967-2017, from the rig runs. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -82,27 +41,22 @@ from HAT_groin_sweep_config import (  # noqa: E402
     WETDRY_CHANGE_TABLE,
 )
 
-# ---------------------------------------------------------------------------
 # The rig, and its own index convention.
-# ---------------------------------------------------------------------------
-# The rig pads 11 real domains (D2-D12) with 15 buffer domains either side, so
-# D2 -> 15 and D5 -> 18, D6 -> 19. This is _gis_to_pad() in
-# HAT_groin_hindcast_1967_2017.py:76, restated rather than imported because
-# importing that module builds a CASCADE run.
+
+# --- CONFIG ------------------------------------------------------------------
+# The rig pads 11 real domains (D2-D12) with 15 buffer domains either side, so D2 -> 15 and D5 -> 18, D6 -> 19
 RIG_BUFFER = 15
 RIG_FIRST_GIS = 2
 RIG_START_YEAR = 1967
 
-# The rig lives in output/calibration/groin_rig/, not output/raw_runs/ (moved 2026-08-31;
-# under calibration/ since 2026-09-18).
-# It is a DIFFERENT GRID -- 41 domains against production's 120 -- and M is
-# grid-specific, so mixing the two invited quoting a rig number as a
-# production one. raw_runs is production only, and run_index.csv covers it.
+# The rig lives in output/calibration/groin_rig/, not output/raw_runs/ (moved 2026-08-31
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "calibration" / "groin_rig"
 GROIN_RUN = "HAT_1967_2018_edge_calibrated_groin"
 NO_GROIN_RUN = "HAT_1967_2018_edge_calibrated_no_groin"
+# -----------------------------------------------------------------------------
 
 
+# A run's shoreline matrix
 def _matrix(run_name):
     return resolve(RAW_RUNS / run_name, "matrix", run_name)
 
@@ -111,20 +65,12 @@ SHORELINE = _matrix(GROIN_RUN)
 NO_GROIN_SHORELINE = _matrix(NO_GROIN_RUN)
 DIAGNOSTICS = resolve(RAW_RUNS / GROIN_RUN, "groin_csv", GROIN_RUN)
 
-# A rig run directory does NOT name its own parameters -- the sweep writes every
-# cell into one run name, so whatever survives is the last cell that finished.
-# On 2026-08-30 this directory was found holding an UNSTABLE M = 70 cell whose
-# fillet ran away to 444 m, while being named as though it were the calibrated
-# run. So the applied rate is read back from the diagnostics and checked here
-# rather than trusted from the label.
+# A rig run directory does NOT name its own parameters
 EXPECT_M, EXPECT_F = 60.0, 0.6
 
 FIGURE_DIR = GROIN_SWEEP_ROOT / "figures"
 
-# House colours (2026-09-11): the surveys are INK, the run under test the
-# ACCENT, the groin-off run BASE grey, and the structure's dated events are
-# guide lines in muted ink rather than a fourth hue. These were near-black,
-# an orange, a blue, a pink and a grey chosen in this file.
+# House colours (2026-09-11): observations in INK, the run under test the ACCENT, guides muted
 OBSERVED_COLOR, MODEL_COLOR, RATE_COLOR = INK, C["ACCENT"], C["ACCENT"]
 EVENT_COLOR = INK_MUTED
 
@@ -137,18 +83,13 @@ EVENTS = [
 ]
 
 
+# D2->15, D5->18, D6->19, D12->25
 def _rig_pad(gis_id: int) -> int:
-    """D2->15, D5->18, D6->19, D12->25."""
     return RIG_BUFFER + (gis_id - RIG_FIRST_GIS)
 
 
+# Surveyed fillet against the fixed 1967 datum, {year
 def observed_fillet_by_year() -> dict:
-    """Surveyed fillet against the fixed 1967 datum, {year: metres}.
-
-    Same convention as HAT_groin_timeseries_check.py: downdrift minus
-    updrift, so a rising curve means the updrift side is holding while the
-    downdrift side retreats -- what a groin builds.
-    """
     frame = pd.read_csv(WETDRY_CHANGE_TABLE).set_index("Domain_ID")
     out: dict = {}
     for column in frame.columns:
@@ -164,6 +105,7 @@ def observed_fillet_by_year() -> dict:
     return {year: float(np.mean(v)) for year, v in sorted(out.items())}
 
 
+# Run: the figure
 def main() -> None:
     for path in (SHORELINE, DIAGNOSTICS):
         if not path.exists():
@@ -210,12 +152,11 @@ def main() -> None:
         2, 1, figsize=figsize("double", aspect=0.66), sharex=True,
         gridspec_kw={"height_ratios": [2.4, 1.0]}, constrained_layout=True)
 
-    # ---- (a) fillet ------------------------------------------------------
+    # (a) fillet
     for year, label in EVENTS:
         ax_fillet.axvline(year, color=EVENT_COLOR, linewidth=0.8,
                           linestyle=(0, (1, 2)), zorder=2)
-        # Inside the axes: above the top edge these ran through the panel
-        # title at the printed width.
+        # Labels inside the axes, clear of the title
         ax_fillet.annotate(label, xy=(year, 0.985),
                            xycoords=("data", "axes fraction"),
                            rotation=90, ha="right", va="top",
@@ -250,7 +191,7 @@ def main() -> None:
         xy=(0.985, 0.08), xycoords="axes fraction", ha="right", va="bottom",
         fontsize=7.5, color=INK_MUTED)
 
-    # ---- (b) what the module applied -------------------------------------
+    # (b) what the module applied
     ax_rate.plot(diagnostics["model_year"],
                  diagnostics["trapping_rate_m_yr_applied"]
                  if "trapping_rate_m_yr_applied" in diagnostics

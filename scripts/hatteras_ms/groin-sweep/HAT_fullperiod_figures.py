@@ -1,37 +1,10 @@
 #!/usr/bin/env python3
-"""The four sweep outputs for the continuous 1984-2024 groin calibration.
+"""
+The four sweep outputs for the continuous 1984-2024 groin calibration, the set the 1967 rig produced.
 
-Deliberately the same set the 1967 rig produced, because that set answered the
-question the scalar-fillet figures could not: a heatmap showing whether the
-optimum is INTERIOR, and profile plots showing whether the winning cell has the
-right SHAPE and not merely the right magnitude at one point.
+    python scripts/hatteras_ms/groin-sweep/HAT_fullperiod_figures.py --top-n 5
 
-    heatmap.png            profile RMSE over the M-f grid, best cell marked,
-                           cells the model refused drawn as gaps rather than
-                           silently dropped
-    best_fit_profile.png   the winning cell against the observed change profile
-    top_n_profiles.png     the best N cells together, so the spread shows how
-                           sharply the metric discriminates
-
-SIGN CONVENTION, AND WHY IT DIFFERS FROM THE RIG FIGURE
-    These plot SEAWARD-POSITIVE change, because that is what the CoastSat
-    chainage target is measured in and converting for display would put two
-    conventions in one workflow. The 1967 rig's figures are landward-positive
-    ("+ = landward"), so a curve that rises here falls there. The axis label
-    states it on every panel rather than relying on the reader to remember.
-
-WHAT AN INTERIOR OPTIMUM WOULD MEAN
-    Every earlier attempt at this calibration railed: the best cell sat on a
-    grid edge, which means the search wanted to keep going and ran out of grid,
-    not that it found a minimum. A best cell with neighbours on all four sides
-    is the evidence that this window and this metric can actually identify the
-    pair. The heatmap flags the outcome either way.
-
-Usage:
-    python HAT_fullperiod_figures.py [--top-n 5]
-
-Reads  output/calibration/groin/fullperiod_1984_2024/results.csv
-Writes output/calibration/groin/fullperiod_1984_2024/figures/
+Surface, profiles, top cells and the fillet through time. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -66,17 +39,19 @@ from HAT_fullperiod_target import (  # noqa: E402
     observed_change_profile,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 OUT_ROOT = GROIN_SWEEP_ROOT / "fullperiod_1984_2024"
 RESULTS_CSV = OUT_ROOT / "results.csv"
 FIGURE_DIR = OUT_ROOT / "figures"
 
 GROIN_UPDRIFT_GIS, GROIN_DOWNDRIFT_GIS = 6, 5
-# House colours (2026-09-11): observations in INK; the structure is a
-# muted guide line, not the vintage red it used to be drawn in.
+# House colours (2026-09-11): observations in INK, the run under test the ACCENT, guides muted
 OBSERVED_COLOR = INK
 GROIN_COLOR = INK_MUTED
+# -----------------------------------------------------------------------------
 
 
+# matplotlib on the Agg backend, imported when needed
 def _plt():
     import matplotlib
     matplotlib.use("Agg")
@@ -84,8 +59,8 @@ def _plt():
     return plt
 
 
+# Scored cells, ranked
 def load_results():
-    """Scored cells, ranked. Raises if the sweep has not collated yet."""
     if not RESULTS_CSV.exists():
         raise FileNotFoundError(
             f"{RESULTS_CSV} not found -- run HAT_fullperiod_sweep.py first "
@@ -96,15 +71,14 @@ def load_results():
     return frame.sort_values("rmse_m").reset_index(drop=True)
 
 
+# The per-domain change profile carried on one results row
 def _profile_of(row):
-    """The per-domain change profile carried on one results row."""
     return np.array([float(row[f"change_D{d}"]) for d in FIT_DOMAINS_GIS])
 
 
+# Groin line plus updrift / downdrift shading, on a domain axis
 def _mark_groin(axis):
-    """Groin line plus updrift / downdrift shading, on a domain axis."""
-    # Two greys, not two hues: these bands say WHERE the structure is, and
-    # the colour on this figure belongs to what is plotted.
+    # Two greys, not two hues: the bands say where; colour is for what is plotted
     axis.axvspan(GROIN_DOWNDRIFT_GIS - 0.5, GROIN_DOWNDRIFT_GIS + 0.5,
                  color="0.94", zorder=0)
     axis.axvspan(GROIN_UPDRIFT_GIS - 0.5, GROIN_UPDRIFT_GIS + 0.5,
@@ -117,6 +91,7 @@ def _mark_groin(axis):
               fontsize=7, va="top", transform=axis.get_xaxis_transform())
 
 
+# Zero line, labels and structure bands for a profile panel
 def _profile_axis(axis):
     axis.axhline(0.0, color=INK_MUTED, linewidth=0.8, linestyle=(0, (4, 3)),
                  zorder=1)
@@ -129,8 +104,8 @@ def _profile_axis(axis):
     open_frame(axis)
 
 
+# Profile RMSE over the M-f grid, with the optimum's interiority stated
 def fig_heatmap(frame):
-    """Profile RMSE over the M-f grid, with the optimum's interiority stated."""
     plt = _plt()
     groin = frame[frame["M"] > 0]
     grid = groin.pivot_table(index="fraction", columns="M", values="rmse_m")
@@ -165,11 +140,7 @@ def fig_heatmap(frame):
     baseline = frame[frame["M"] == 0]
     sub = (f"no-groin baseline RMSE {baseline.iloc[0]['rmse_m']:.1f} m"
            if not baseline.empty else "no M = 0 baseline")
-    # The caveat belongs in the TITLE, not a footnote. This window nets period
-    # 1's fillet build against period 2's collapse, so a module whose trapping
-    # is bounded at >= 0 can never win here regardless of how it is scored. The
-    # sweep bounds M from above; it does not test whether a groin operated.
-    # Fitting is done on period 1 -- see why_M60_f06.png.
+    # The caveat belongs in the TITLE, not a footnote
     axis.set_title(f"Profile error over the (M, f) grid, "
                    f"{START_YEAR} to {END_YEAR}", loc="left")
     axis.set_xlabel("groin trapping rate M (m/yr)")
@@ -191,8 +162,8 @@ def fig_heatmap(frame):
     return save(figure, FIGURE_DIR / "heatmap.png", close=True)[0], verdict
 
 
+# The winning cell against the observed change profile
 def fig_best_fit(frame, observed):
-    """The winning cell against the observed change profile."""
     plt = _plt()
     gis = np.array(FIT_DOMAINS_GIS, dtype=float)
     obs = np.array([observed[d] for d in FIT_DOMAINS_GIS])
@@ -231,8 +202,8 @@ def fig_best_fit(frame, observed):
     return save(figure, FIGURE_DIR / "best_fit_profile.png", close=True)[0]
 
 
+# The best N cells together
 def fig_top_n(frame, observed, n):
-    """The best N cells together; a tight bundle means weak discrimination."""
     plt = _plt()
     gis = np.array(FIT_DOMAINS_GIS, dtype=float)
     obs = np.array([observed[d] for d in FIT_DOMAINS_GIS])
@@ -274,6 +245,7 @@ def fig_top_n(frame, observed, n):
     return save(figure, FIGURE_DIR / "top_n_profiles.png", close=True)[0]
 
 
+# Run: the four figures
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--top-n", type=int, default=5)

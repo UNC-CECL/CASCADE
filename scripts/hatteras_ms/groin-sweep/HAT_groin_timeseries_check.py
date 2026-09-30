@@ -1,49 +1,11 @@
 #!/usr/bin/env python3
-"""Does the chosen groin hold up THROUGH TIME, not just at the end year?
+"""
+Does the chosen groin hold up through time, not just at the end year?
 
-Every other figure here compares a single end state. That cannot distinguish a
-groin that tracks the observations year by year from one that wanders and
-happens to arrive in the right place -- and it cannot show WHEN a fit starts to
-fail. This one plots the fillet's whole trajectory against the surveys.
+    python scripts/hatteras_ms/groin-sweep/HAT_groin_timeseries_check.py
+    python scripts/hatteras_ms/groin-sweep/HAT_groin_timeseries_check.py --M 50 --fraction 0.6
 
-WHAT IS PLOTTED
-    Three curves per panel:
-
-      observed   the surveyed fillet from `Change_from_wetdry_1967_D2_D12.csv`,
-                 re-referenced to the period's start year so it begins at zero
-                 like the model does. Markers only on the years actually
-                 surveyed -- the record is irregular and joining it with a line
-                 would imply samples that do not exist.
-      groin ON   the chosen cell, M = 60, f = 0.6.
-      groin OFF  the paired M = 0 run at the same be1. The gap between the two
-                 model curves is the groin's contribution; the gap from ON to
-                 observed is what the source/sink field is left to absorb.
-
-WHY THE MODEL IS RE-REFERENCED TOO
-    A run starting in 1984 or 2004 inherits the real fillet in its initial
-    shoreline, so its absolute D5-D6 offset is not comparable to a survey
-    measured from a 1967 datum. Differencing both sides against their own start
-    year removes the inherited part and leaves the CHANGE, which is the only
-    quantity the two share.
-
-WHAT THIS FIGURE IS EXPECTED TO SHOW
-    A shortfall, and a documented one. M = 60 / f = 0.6 was not chosen to match
-    the fillet -- no admissible M can, on this grid -- but by a DIRECT FIT to
-    the period-1 D4-D8 change profile (demeaned RMSE 11.69 m against 15.58 m
-    with no groin), bounded above by affordability (719,000 m3/yr against a
-    5-7e5 littoral drift). The stability bounds an earlier version of this text
-    cited -- "M >= 70 unstable, M >= 100 drowns" -- were measured on the
-    41-domain rig and do NOT transfer: every production cell through M = 160
-    ran clean.
-    The residual this figure shows IS the quantity that calibration absorbs,
-    together with the Cape Point dynamics the dipole does not represent. Read
-    it as the split between the two, not as a failed fit.
-
-Usage:
-    python HAT_groin_timeseries_check.py
-    python HAT_groin_timeseries_check.py --M 50 --fraction 0.6
-
-Writes output/calibration/groin/figures/timeseries_check.png
+The fillet year by year against the surveys, both windows. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -88,20 +50,18 @@ from HAT_groin_sweep_config import (  # noqa: E402
     sweep_output_dir,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 FIGURE_DIR = GROIN_SWEEP_ROOT / "figures"
-# House colours (2026-09-11): surveys in INK, the run under test the
-# ACCENT, the groin-off run BASE grey.
+# House colours (2026-09-11)
 OBSERVED_COLOR, ON_COLOR, OFF_COLOR = INK, C["ACCENT"], C["BASE"]
 
-# be1 is swept only in the 1984 edgeBE sweep. -40 is the grid value nearest
-# production's -41.8, and is the be1 the period-1 D4-D8 fit was pinned at, so
-# this figure and the M = 60 choice rest on the same cell. (An earlier version
-# used -34, the reach-RMSE minimiser, which is no longer what M is fitted on.)
+# Be1 is swept only in the 1984 edgeBE sweep
 EDGE_BE1_1984 = -40.0
+# -----------------------------------------------------------------------------
 
 
+# Surveyed fillet against the fixed 1967 datum, {year
 def observed_fillet_by_year():
-    """Surveyed fillet against the fixed 1967 datum, {year: metres}."""
     frame = pd.read_csv(WETDRY_CHANGE_TABLE).set_index("Domain_ID")
     out = {}
     for column in frame.columns:
@@ -116,8 +76,8 @@ def observed_fillet_by_year():
     return {year: float(np.mean(values)) for year, values in sorted(out.items())}
 
 
+# Modelled fillet per year, referenced to the run's own year 0
 def model_fillet_series(period, preset, combo):
-    """Modelled fillet per year, referenced to the run's own year 0."""
     path = sweep_output_dir(period, preset) / combo / "shoreline_matrix.npy"
     if not path.exists():
         return None, None
@@ -127,6 +87,7 @@ def model_fillet_series(period, preset, combo):
     return period + np.arange(matrix.shape[0]), offset - offset[0]
 
 
+# Run: the figure for the chosen pair
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--M", type=float, default=60.0)
@@ -147,8 +108,7 @@ def main():
     residuals = []
     for row, period in enumerate(PERIODS):
         end = END_YEAR[period]
-        # Re-reference the survey to this period's start: the model begins at
-        # zero, so the observations must too.
+        # Re-reference the survey to this period's start
         in_window = {y: v for y, v in observed.items() if period <= y <= end}
         if not in_window:
             continue
@@ -185,8 +145,7 @@ def main():
                    f"{period} to {end}, {preset}")
             axis.set_ylabel("fillet change since start (m)")
             axis.set_xlabel("year")
-            # Whole years: the default locator put 1987.5 on a year axis, and
-            # five of those labels collide at the printed width.
+            # Whole years
             axis.xaxis.set_major_locator(
                 plt.matplotlib.ticker.MultipleLocator(5))
             axis.xaxis.set_major_formatter(

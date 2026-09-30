@@ -1,60 +1,10 @@
 #!/usr/bin/env python3
-"""Why M = 60, f = 0.6 -- the period-1 fit that supports it.
+"""
+Why M = 60, f = 0.6: the period-1 fit that supports it.
 
-REPLACES AN EARLIER VERSION OF THIS FIGURE, and the reason matters.
+    python scripts/hatteras_ms/groin-sweep/HAT_groin_choice_figure.py
 
-    The previous version argued that the fillet metric was unsatisfiable, so M
-    had to be bounded by physics (sediment budget, barrier stability) with the
-    reach fit refining inside those bounds. Two things were wrong with it:
-
-      1. The premise is superseded. M = 60 is now supported by a DIRECT FIT on
-         period 1 over D4-D8 -- a 25% improvement on no groin -- rather than by
-         an argument from constraints.
-
-      2. It shaded "unstable M >= 70" and "barrier drowns M >= 100" on a
-         PRODUCTION-geometry plot. Those thresholds were measured on the
-         41-domain rig and do not transfer: all 36 production cells, including
-         the full M = 70 and M = 80 rows, ran clean. Shading them was
-         misleading.
-
-WHY PERIOD 1, AND WHY D4-D8
-    Period 1 is the only window in the hindcast where the observed gap between
-    the groin's two flanks WIDENS (+52 m). That is the only behaviour the
-    module can produce -- trapping is bounded at >= 0, so it can widen the gap
-    or stop widening it, never close it. Period 2 closes, and the continuous
-    1984-2024 window nets the two against each other, so neither can fit a
-    groin however it is scored.
-
-    D4-D8 excludes D1, where the cape's shoreline change over period 1 is
-    81-104 m -- roughly five times the groin's ~17 m signal. On the full window
-    with a raw score the cape swamps the groin and no-groin wins by 0.18 m; on
-    D4-D8 the groin wins by 5.06 m. The signal was always there; the window was
-    hiding it.
-
-WHY THE SCORE IS DEMEANED
-    A uniform level offset in the groin's neighbourhood is absorbed by the
-    source/sink calibration that runs afterwards, so correcting it is not the
-    groin's job. What the groin must get right is the SHAPE. Demeaning removes
-    a constant and keeps every gradient -- unlike a linear detrend, which would
-    partly absorb the dipole's own gradient and hide a working groin.
-
-WHAT THE FIGURE DOES NOT CLAIM
-    Not that (60, 0.6) is uniquely determined. Fourteen cells lie within 0.5 m
-    of the best, spanning M = 40-95 and f = 0.4-1.0. The ridge is in
-    PERIOD-1 CUMULATIVE TRAPPING, M(15.5 + 4.5f) -- not in M*f, which
-    fig_Mf_identifiability.png tested and refuted (corr(RMSE, M*f) = -0.07).
-    See CALIBRATION_FIGURES.md. The chosen pair is not the top-scoring one
-    (M = 50, f = 1.0 scores 11.59 m, 0.10 m better) because f = 1.0 asserts the
-    groin never deteriorated, which the GIS record contradicts outright. Within
-    the tied band, (60, 0.6) is the cell that carries a real deterioration floor
-    and still stays inside the affordable drift. The right panel draws the band rather
-    than a single star, because a star would assert precision the data does not
-    support.
-
-Usage:
-    python HAT_groin_choice_figure.py
-
-Writes output/calibration/groin/figures/why_M60_f06.png
+The profile fit and the ridge the chosen pair sits on. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -86,6 +36,7 @@ from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa
                               caption, error_cmap, figsize, open_frame, save,
                               _title)
 
+# --- CONFIG ------------------------------------------------------------------
 SWEEP = GROIN_SWEEP_ROOT / "1984_2004_edgeBE"
 FIGURE_DIR = GROIN_SWEEP_ROOT / "figures"
 
@@ -95,15 +46,12 @@ CHOSEN_M, CHOSEN_F = 60.0, 0.6
 BAND_M = 0.5                             # cells within this of the best are tied
 PROFILE_HEIGHT_M = 1.7 + 22.25
 DRIFT_LOW, DRIFT_HIGH = 5.0e5, 7.0e5
+# -----------------------------------------------------------------------------
 
 
+# Every period-1 cell at the pinned be1, scored on the demeaned profile
 def load_cells():
-    """Every period-1 cell at the pinned be1, scored on the demeaned profile."""
-    # LANDWARD-POSITIVE, so erosion is UP in the left panel and it reads as a
-    # plan view, matching the gifs and the other profile figures.
-    # observed_change_profile is SEAWARD-positive, so it is negated; x_s is
-    # landward-positive already, so the negation on `change` below is gone.
-    # Both flip together, so every RMSE here is unchanged.
+    # LANDWARD-POSITIVE, so erosion is UP in the left panel and it reads as a plan view
     observed = -np.array([observed_change_profile(1984, 2004, FIT_DOMAINS)[d]
                           for d in FIT_DOMAINS])
     observed_shape = observed - observed.mean()
@@ -129,6 +77,7 @@ def load_cells():
     return pd.DataFrame(rows), observed
 
 
+# Run: the figure
 def main():
     import matplotlib
     matplotlib.use("Agg")
@@ -146,11 +95,10 @@ def main():
     figure, (left, right) = plt.subplots(
         1, 2, figsize=figsize("double", aspect=0.44), constrained_layout=True)
 
-    # ---- LEFT: the profiles this fit is scored on ------------------------
+    # Left: the profiles this fit is scored on
     x = np.array(FIT_DOMAINS, dtype=float)
     centre = lambda v: np.asarray(v, float) - np.mean(v)
-    # The two flanks of the structure, named rather than colour-coded: the
-    # blue/red washes here were the vintage pair doing a third job.
+    # The two flanks of the structure, named rather than colour-coded
     left.axvspan(4.5, 5.5, color="0.94", zorder=0)
     left.axvspan(5.5, 6.5, color="0.90", zorder=0)
     left.axvline(5.5, color=INK_MUTED, linestyle=(0, (4, 2)), linewidth=0.8,
@@ -182,7 +130,7 @@ def main():
     open_frame(left)
     left.legend(loc="lower left", fontsize=7.5)
 
-    # ---- RIGHT: the M-f surface, with the indistinguishable band ---------
+    # Right: the M-f surface, with the indistinguishable band
     grid = groin.pivot_table(index="f", columns="M", values="demeaned")
     mesh = right.pcolormesh(grid.columns, grid.index, grid.values,
                             shading="nearest", cmap=error_cmap())

@@ -1,54 +1,12 @@
 #!/usr/bin/env python3
-"""Intersects the two periods' sweep surfaces to fit M and f together.
+"""
+Fit M and f together from the two periods' sweep surfaces.
 
-WHY THIS IS A SEPARATE STEP
-    Neither period identifies both knobs on its own. Cumulative trapping per
-    unit M, measured from `cascade.groin.GroinCallback` with the documented
-    1969 install / 1996 onset / 7-year ramp schedule:
+    python scripts/hatteras_ms/groin-sweep/HAT_groin_joint_fit.py --preset edgeBE
+    python scripts/hatteras_ms/groin-sweep/HAT_groin_joint_fit.py --no-figures
 
-        1984-2004    16 + 4f      f moves this only 16.0 -> 20.0, so holding
-                                  cumulative trapping fixed while sliding f
-                                  across its whole range needs just a 25%
-                                  change in M. f is nearly free here.
-        2004-2024    20f          the run sits entirely past the 2003 ramp,
-                                  so M and f enter only as their product.
-
-    One period gives one constraint on two unknowns. Two periods intersect.
-    This script does that intersection, per source/sink preset.
-
-HOW be1 IS TREATED
-    be1 is a NUISANCE parameter, not a fitted result: it is swept in period 1
-    under edgeBE and absent everywhere else. For each (M, f) the period-1
-    contribution is MINIMISED over be1 -- a profile likelihood -- and the
-    winning be1 is reported alongside. Summing over be1, or fixing it at one
-    value, would both charge the groin for background erosion the model was
-    free to place elsewhere.
-
-WHAT THE ANSWER WILL LOOK LIKE, AND WHY
-    Period 2's observed D6 - D5 is negative (-2.47 m/yr). The source/sink pair
-    adds -M updrift and +M downdrift, so the modelled differential is
-    non-negative at any M >= 0 and no cell can reach that target. Period 2
-    therefore contributes a monotone penalty in M*f, pushing the joint
-    solution toward f = 0, and period 1 then sets M through M*(16 + 4f).
-
-    Algebraically, with A the period-1 constraint and B the period-2 one:
-
-        f = 4*B / (5*A - B)
-
-    B pinned near zero gives f near zero. That is a RESULT -- the structure
-    stopped trapping after the 2003 storm -- but it is reached by railing to
-    a grid edge, so this script flags every fitted value that lands on a
-    bound rather than in the interior. A railed value is a bound, not an
-    optimum, and must not be quoted as a fitted parameter.
-
-Usage:
-    python HAT_groin_joint_fit.py [--preset edgeBE] [--no-figures]
-
-Reads   output/calibration/groin/<period>_<preset>/sweep_results.csv  (all four)
-Writes  output/calibration/groin/joint_fit.json    fitted (M, f, be1) per preset
-        output/calibration/groin/joint_fit.csv     the full joint surface
-        output/calibration/groin/figures/joint_<preset>_surface.png
-        output/calibration/groin/joint_<preset>_constraints.png
+Ranked on period 1 (the only window that separates M and f); writes
+joint_fit.json and the surface figures. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -67,10 +25,7 @@ import numpy as np
 import pandas as pd
 
 _HERE = Path(__file__).resolve()
-# parents[3], not [2]: this file lives in scripts/hatteras_ms/groin-sweep/.
-# The guard below is what makes a future move fail here, loudly, instead of
-# resolving to scripts/scripts and surfacing as a missing data file several
-# imports deeper.
+# parents[3]: this file is in hatteras_ms/groin-sweep/; the guard makes a move fail loudly here
 PROJECT_BASE_DIR = next(_p for _p in _HERE.parents
                         if (_p / "pyproject.toml").exists())
 if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
@@ -98,30 +53,21 @@ from HAT_groin_sweep_config import (  # noqa: E402
     joint_fit_paths,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 OUTPUT_DIR = GROIN_SWEEP_ROOT
-# Figures live in a subdirectory; joint_fit.json does NOT. That file is read by
-# HAT_run_all.py (stage 6 takes its fitted M and f from it) and by
-# be_zone_residual_fit.py (which uses it to find a groin-aware base run),
-# both of which pin the top-level path. Moving it would break stage 6 silently.
+# Figures live in a subdirectory
 FIGURE_DIR = OUTPUT_DIR / "figures"
 FIGURE_DIR.mkdir(parents=True, exist_ok=True)
 JOINT_JSON, JOINT_CSV = joint_fit_paths()
 
-# House colours (2026-09-11): the two periods are the vintage pair, the fitted
-# point is the ACCENT, and the error surface is greyscale so the marks on it
-# stay findable. MODEL_COLOR/GROIN_COLOR/OBSERVED_COLOR were an orange, a dark
-# red and near-black chosen here, and the dark red was the 1984 vintage colour
-# doing a second job.
+# House colours (2026-09-11): observations in INK, the run under test the ACCENT, guides muted
 EARLY_COLOR, LATE_COLOR = C_1984, C_1997
 FIT_COLOR = C["ACCENT"]
+# -----------------------------------------------------------------------------
 
 
+# Loads one sweep's scored results
 def load_period(period, preset):
-    """Loads one sweep's scored results.
-
-    Returns:
-        A DataFrame, or None if that sweep has not produced a CSV yet.
-    """
     path = sweep_output_dir(period, preset) / "sweep_results.csv"
     if not path.exists():
         return None
@@ -129,26 +75,8 @@ def load_period(period, preset):
     return frame[frame["differential_err"].notna()].copy()
 
 
+# Reduces one period's rows to a value per (M, f) cell
 def period_surface(frame, period):
-    """Reduces one period's rows to a value per (M, f) cell.
-
-    `err` is the FILLET-SIZE error where the sweep recorded one, the
-    differential error otherwise. The fillet saturates, so its level
-    carries the information about M and its slope -- which is what the
-    differential measures -- carries almost none.
-
-    be1 is profiled out: for each (M, f) the best-scoring be1 is kept, and
-    which one it was is carried along so the fitted background erosion can be
-    reported with the fitted groin.
-
-    The M = 0 baseline carries no f, so it is broadcast across every f -- with
-    no groin attached, all f give the identical run, and leaving the row at a
-    single f would punch a hole in the surface at M = 0.
-
-    Returns:
-        A DataFrame indexed by (M, fraction) with columns err, be1,
-        differential.
-    """
     rows = []
     zero = frame[frame["M"] == 0]
     for _, row in zero.iterrows():
@@ -175,14 +103,8 @@ def period_surface(frame, period):
         "differential": f"differential_{period}"})
 
 
+# Builds the joint surface for one preset and picks its best cell
 def joint_fit(preset):
-    """Builds the joint surface for one preset and picks its best cell.
-
-    Returns:
-        (surface, fit) where surface is a DataFrame over (M, f) and fit is a
-        dict describing the winning cell, or (None, reason) if a period's
-        sweep is missing.
-    """
     surfaces = {}
     for period in PERIODS:
         frame = load_period(period, preset)
@@ -196,19 +118,7 @@ def joint_fit(preset):
         return None, (f"the two {preset} sweeps share no (M, f) cells -- one "
                       f"of them is incomplete")
 
-    # RANKED ON PERIOD 1 ALONE. Cumulative trapping is M*(16 + 4f) in
-    # 1984-2004 but 20*M*f in 2004-2024, so period 2 sees only the PRODUCT
-    # M*f and cannot separate the two parameters. Every bit of information
-    # distinguishing M from f lives in period 1, the one window straddling
-    # the 1996-2003 ramp.
-    #
-    # Summing both legs let a window that cannot identify the parameters pull
-    # them anyway, and in the wrong direction: holding period-1 trapping
-    # fixed, driving f from 0.9 to 0 forces M from 50 to 61.3 m/yr -- away
-    # from what the sediment budget can afford, not toward it.
-    #
-    # joint_err is still computed and reported, so the change is visible in
-    # the output rather than only in this comment.
+    # Ranked on period 1 alone: period 2 sees only M*f; joint_err still reported
     err_columns = [f"err_{p}" for p in PERIODS]
     surface["joint_err"] = surface[err_columns].sum(axis=1)
     surface["fit_err"] = surface[f"err_{PERIODS[0]}"]
@@ -217,9 +127,7 @@ def joint_fit(preset):
     best = surface.iloc[0]
     fitted_M, fitted_f = float(best["M"]), float(best["fraction"])
 
-    # A value sitting on the edge of its grid is a bound, not an optimum: the
-    # search wanted to keep going and ran out of grid. Reported explicitly so
-    # a railed result cannot be quoted as a fitted parameter.
+    # A value sitting on the edge of its grid is a bound, not an optimum
     bounds = []
     if fitted_M in (min(M_VALUES), max(M_VALUES)):
         bounds.append("M")
@@ -248,8 +156,8 @@ def joint_fit(preset):
     return surface, fit
 
 
+# Draws the joint score over the M-f grid, with the ridge visible
 def plot_surface(surface, fit, preset):
-    """Draws the joint score over the M-f grid, with the ridge visible."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -295,13 +203,8 @@ def plot_surface(surface, fit, preset):
     return save(figure, path, close=True)[0]
 
 
+# Draws each period's own best-fit valley in (M, f), and where they cross
 def plot_constraints(surface, fit, preset):
-    """Draws each period's own best-fit valley in (M, f), and where they cross.
-
-    This is the figure that shows WHY the joint fit lands where it does: each
-    period contributes a valley, period 1's running along M*(16 + 4f) = const
-    and period 2's along M*f = const, and the fitted point is their crossing.
-    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -359,20 +262,8 @@ def plot_constraints(surface, fit, preset):
     return save(figure, path, close=True)[0]
 
 
+# Presets in an existing joint_fit.json that were set by hand, not fitted
 def _pinned_presets(path):
-    """Presets in an existing joint_fit.json that were set by hand, not fitted.
-
-    A pinned entry carries `provenance` naming how it got there. This ranking
-    does not write that key, so its presence is the marker.
-
-    Args:
-        path: joint_fit.json, which may not exist.
-
-    Returns:
-        Sorted preset names that are pinned. Empty if the file is absent,
-        unreadable, or holds only ranking output -- an unreadable file must not
-        be allowed to block a legitimate write.
-    """
     if not path.exists():
         return []
     try:
@@ -383,29 +274,8 @@ def _pinned_presets(path):
                   if isinstance(v, dict) and v.get("provenance"))
 
 
+# Writes the ranking's answer, unless it would clobber a hand pin
 def _write_fits(fits, force=False):
-    """Writes the ranking's answer, unless it would clobber a hand pin.
-
-    WHY THIS GUARD EXISTS. This ranking scores BOTH periods jointly, and
-    period 2 records a fillet RELEASE the module cannot produce at any (M, f).
-    So it rails: on 2026-08-30 it returned edgeBE M = 160 / f = 0.8 and zeroBE
-    M = 140 / f = 1.0, both at a grid bound. Fitting period 2 is the wrong
-    thing to attempt -- see hard-structures/groin/GROIN_PLAN.md -- so the file
-    is pinned by hand to M = 60, f = 0.6.
-
-    HAT_run_all.py stage 6 passes whatever this file holds to every groin run
-    in the matrix. A stage-5 re-run would therefore silently rebuild the whole
-    matrix on the railed values, and nothing downstream would notice. That was
-    found on 2026-08-31 with the railed pair sitting in the file.
-
-    Refusing rather than warning is deliberate: stage 5 exits 0 and stage 6
-    then reads the PRESERVED pin, so the pipeline does the right thing
-    unattended. The ranking is not lost -- it goes to a sidecar.
-
-    Args:
-        fits: {preset: fit dict} this run computed.
-        force: Overwrite a pinned file anyway.
-    """
     pinned = _pinned_presets(JOINT_JSON)
     if pinned and not force:
         sidecar = JOINT_JSON.with_name("joint_fit_ranking.json")
@@ -428,6 +298,7 @@ def _write_fits(fits, force=False):
     print(f"  fitted values written to {JOINT_JSON}")
 
 
+# Run: load both periods' sweeps, rank, write the fit and figures
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--preset", choices=PRESETS, action="append",

@@ -1,54 +1,10 @@
 #!/usr/bin/env python3
-"""The groin module's sediment budget: what it moves, and what it keeps.
+"""
+The groin module's sediment budget: what it moves, and what it keeps.
 
-WHY THIS FIGURE EXISTS
-    `groin_diagnostics.csv` has recorded `cumulative_updrift_m` and
-    `cumulative_downdrift_m` every year of every groin run since the module was
-    written, and nothing has ever plotted them. Two things that matter for
-    reading M were therefore visible nowhere:
+    python scripts/hatteras_ms/groin-sweep/HAT_groin_sediment_budget_figure.py
 
-      1. THE DIPOLE IS VOLUME-NEUTRAL AND THE REAL STRUCTURE IS NOT. The module
-         takes exactly as much from the downdrift cell as it gives the updrift
-         one. The real Buxton structure accretes updrift with NO measurable
-         downdrift deficit -- observed downdrift extent 0 m against the model's
-         2,500 m -- because the sand comes from the cape, not from D5. This is
-         the module's largest structural assumption and it had no figure.
-
-      2. ALMOST NONE OF WHAT THE DIPOLE INJECTS IS RETAINED. Over the rig's 50
-         years at M = 60, f = 0.6 the module applies ~2,400 m of cumulative
-         one-sided displacement and holds a fillet of ~69 m. BRIE's alongshore
-         diffusion removes the rest. So M is NOT the rate at which sand is
-         impounded -- it is the rate needed to SUSTAIN a fillet against
-         diffusion, which is a much larger number.
-
-    Panel (c) is the reason this figure is worth having. It reframes the
-    affordability comparison that GROIN_PLAN.md and the run reports both make:
-    719,000 m3/yr at M = 60 against a 5-7e5 m3/yr littoral drift is a GROSS
-    restoring rate set against a NET transport budget, and they are not like
-    for like. That does not make the comparison wrong -- it is a deliberate,
-    documented diagnostic -- but it does mean "marginally above the drift band"
-    should not be read as "impounds more sand than the coast carries."
-
-WHAT IS PLOTTED
-    (a) ANNUAL INTERCEPTION. M_eff each year converted to a volume by the
-        repo's own `implied_interception_m3_yr` (M * dy * profile height),
-        against the shaded 5-7e5 m3/yr littoral drift band. Shows the
-        deterioration schedule carrying the module from marginally above the
-        band down into it.
-    (b) CUMULATIVE VOLUME, updrift and downdrift as exact mirror images. The
-        symmetry IS the assumption; the annotation is where it departs from the
-        field evidence.
-    (c) GROSS AGAINST NET. Cumulative applied displacement against the fillet
-        actually realised, same axis, same units.
-
-    Volumes use the repo's conversion and the same profile height as
-    HAT_groin_choice_figure.py, so the numbers reconcile with the affordability
-    figures quoted elsewhere.
-
-Usage:
-    python HAT_groin_sediment_budget_figure.py
-
-Writes output/calibration/groin/figures/sediment_budget.png
+Cumulative updrift and downdrift volumes from the run's diagnostics. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -85,16 +41,11 @@ from HAT_groin_sweep_config import (  # noqa: E402
     GROIN_UPDRIFT_GIS,
 )
 
-# The rig pads 11 real domains (D2-D12) with 15 buffer either side, so D5 -> 18
-# and D6 -> 19. This is the RIG's convention and differs from production's
-# (D5 -> 19, D6 -> 20) -- see HAT_groin_hindcast_1967_2017.py:76.
+# --- CONFIG ------------------------------------------------------------------
+# The rig pads 11 real domains (D2-D12) with 15 buffer either side, so D5 -> 18 and D6 -> 19
 RIG_BUFFER, RIG_FIRST_GIS, RIG_START_YEAR = 15, 2, 1967
 
-# The rig lives in output/calibration/groin_rig/, not output/raw_runs/ (moved 2026-08-31;
-# under calibration/ since 2026-09-18).
-# It is a DIFFERENT GRID -- 41 domains against production's 120 -- and M is
-# grid-specific, so mixing the two invited quoting a rig number as a
-# production one. raw_runs is production only, and run_index.csv covers it.
+# The rig lives in output/calibration/groin_rig/, not output/raw_runs/ (moved 2026-08-31
 RAW_RUNS = PROJECT_BASE_DIR / "output" / "calibration" / "groin_rig"
 RUN = "HAT_1967_2018_edge_calibrated_groin"
 DIAGNOSTICS = resolve(RAW_RUNS / RUN, "groin_csv", RUN)
@@ -106,21 +57,20 @@ FIGURE_DIR = GROIN_SWEEP_ROOT / "figures"
 PROFILE_HEIGHT_M = 1.7 + 22.25
 DRIFT_LOW, DRIFT_HIGH = 5.0e5, 7.0e5
 
-# A rig run directory does not name its own parameters -- the sweep writes every
-# cell into one run name. Checked against the diagnostics rather than trusted.
+# A rig run directory does not name its own parameters -- the sweep writes every cell into one run name
 EXPECT_M, EXPECT_F = 60.0, 0.6
 
-# The two sides of the structure, in the house semantics: the sheltered
-# updrift cell is the ACCENT (the thing the module does), the downdrift
-# cell it takes from is BASE grey. INK/UP_C/DOWN_C/BAD/MUTED/GRID were a
-# navy, an orange, a blue, a pink and two greys chosen in this file.
+# The two sides of the structure, in the house semantics
 UP_C, DOWN_C = C["ACCENT"], C["BASE"]
+# -----------------------------------------------------------------------------
 
 
+# The rig's pad index for a GIS domain
 def _rig_pad(gis_id: int) -> int:
     return RIG_BUFFER + (gis_id - RIG_FIRST_GIS)
 
 
+# Run: the figure
 def main() -> None:
     for path in (DIAGNOSTICS, SHORELINE):
         if not path.exists():
@@ -148,9 +98,7 @@ def main() -> None:
     rate = diagnostics["trapping_rate_applied_m_yr"].to_numpy()
     annual_volume = np.array(
         [implied_interception_m3_yr(r, PROFILE_HEIGHT_M, GEOMETRY) for r in rate])
-    # Sign convention in the CSV: updrift is negative (seaward in the model's
-    # landward-positive frame), downdrift positive. Magnitudes are identical by
-    # construction -- that identity is the point of panel (b).
+    # Updrift negative, downdrift positive, equal in size: that identity is panel (b)
     cumulative_m = diagnostics["cumulative_downdrift_m"].to_numpy()
     cumulative_volume = cumulative_m * GEOMETRY.domain_spacing_m * PROFILE_HEIGHT_M
 
@@ -172,7 +120,7 @@ def main() -> None:
     millions = FuncFormatter(lambda v, _: f"{v / 1e6:.0f}M")
     thousands = FuncFormatter(lambda v, _: f"{v / 1e3:.0f}k")
 
-    # ---- (a) annual interception against the drift band --------------------
+    # (a) annual interception against the drift band
     ax_rate.axhspan(DRIFT_LOW, DRIFT_HIGH, color="0.94", zorder=0)
     ax_rate.annotate("littoral drift, 5 to 7 × 10⁵ m³/yr",
                      xy=(0.985, (DRIFT_LOW + DRIFT_HIGH) / 2),
@@ -192,7 +140,7 @@ def main() -> None:
                      xy=(0.22, 0.42), xycoords="axes fraction",
                      ha="left", va="center", fontsize=7.5, color=INK)
 
-    # ---- (b) cumulative volume, mirrored ----------------------------------
+    # (b) cumulative volume, mirrored
     ax_cum.fill_between(years, 0, cumulative_volume, color=UP_C, alpha=0.25,
                         linewidth=0, zorder=2)
     ax_cum.fill_between(years, 0, -cumulative_volume, color=DOWN_C, alpha=0.25,
@@ -212,7 +160,7 @@ def main() -> None:
         xy=(0.985, 0.62), xycoords="axes fraction", ha="right", va="center",
         fontsize=7.5, color=INK)
 
-    # ---- (c) gross against net --------------------------------------------
+    # (c) gross against net
     ax_keep.plot(years, cumulative_m, color=C["BASE"], linewidth=1.4,
                  linestyle="--",
                  label="cumulative displacement applied by the module",

@@ -1,81 +1,11 @@
 #!/usr/bin/env python3
-"""Summary figures documenting the 2026-08-30 calibration, and how it was tested.
+"""
+Summary figures documenting the 2026-08-30 calibration, and how it was tested.
 
-WHY THESE EXIST
-    The reasoning behind the source/sink and groin calibrations lives in prose,
-    in comments in scripts/site_layer/hatteras_site_config.py. That is the right home for
-    the conclusions, but two things were not recorded anywhere at all:
+    python scripts/hatteras_ms/groin-sweep/HAT_calibration_summary_figures.py
 
-      * the BE convergence sequence. `--overwrite` REPLACES a run's row in
-        run_index.csv, so only the last pass survives there, and
-        convergence_history.json still carries 2026-08-24 baselines from the
-        pre-restructure topography. The pass-by-pass numbers existed only as
-        text typed into a comment.
-      * the three-target comparison. That the groin's fitted M is set by the
-        CHOICE OF TARGET rather than by the data is the methodological result
-        of the exercise, and nothing on disk showed it.
-
-    These figures are the durable record of both.
-
-WHAT EACH ONE SHOWS
-    fig_three_targets.png    the same 61 sweep cells scored three ways. The
-                             fillet says M = 95, the D1-D12 profile says M = 0,
-                             D4-D8 demeaned says M = 60. Identical model runs.
-    fig_Mf_identifiability.png  D4-D8 demeaned RMSE over the (M, f) grid, with
-                             iso-M*f contours. Built to TEST the claim that
-                             "only the product M*f is identified" -- and it
-                             refuted it: corr(RMSE, M*f) = -0.07 against
-                             +0.61 for M and -0.49 for f, and equal-product
-                             cells score 10.4 to 12.5 m. But the REPLACEMENT
-                             claim ("M and f each weakly constrained") was
-                             also wrong: per GROIN_PLAN.md the invariant is
-                             period-1 cumulative trapping, M(15.5 + 4.5f).
-    fig_top_profiles.png     the top cells and the no-groin baseline against
-                             the observed change profile, fit window marked.
-    fig_be_convergence.png   interior RMSE per calibration pass, both periods,
-                             with the GIS 90 re-solve marked.
-    fig_period2_and_bug.png  why period 2 is not fitted, and what the
-                             topography-product bug was worth.
-
-A CAVEAT THAT NO LONGER APPLIES, WITHDRAWN 2026-08-31
-    This said the D1-D12 panel came from the 40-year window on the PRE-FIX
-    topography while the other two were period 1 on the corrected one, so
-    the three were not a controlled comparison. True when written; not true
-    now. The fullperiod sweep was re-run 2026-08-30 18:20, five hours AFTER
-    the worker topography fix (562c75c, 13:01), and this figure was rebuilt
-    at 23:52 from those cells.
-
-    VERIFIED, not assumed: re-running cell M60_f0.50 through the worker
-    reproduces its stored result to 8.3e-05 on rates of ~2.9 m/yr -- the
-    SAME noise floor a period-2 cell shows against itself (1.0e-04 between
-    two re-runs), which the 1984-2024 window inherits because it contains
-    period 2. A wrong-island run would differ in the first or second
-    decimal, not the fifth.
-
-    All three panels are on the same corrected topography.
-
-STYLE, 2026-09-11
-    Under the project house style (`scripts/site_layer/hat_figure_style.py`), which
-    replaced this file's own INK/MUTED/ACCENT/FOIL palette and its local
-    rcParams block. Three consequences worth knowing before reading an older
-    copy of these images side by side with a new one:
-
-      * The canvases were 8.6-15 in wide and are now a 190 mm printed column,
-        so the type is the size it claims to be on a page.
-      * The two calibration periods are drawn in the house VINTAGE pair -- the
-        earlier period red, the later blue -- in every panel that shows both.
-        They were pink/teal here and pink meant "the answer" elsewhere in the
-        same figure set.
-      * The suptitles, the italic per-panel verdicts and the footnote
-        paragraphs are off the canvas and in CAPTIONS.md beside the images.
-        The five captions carry every sentence they used to, so nothing in the
-        argument was dropped to make room.
-
-Usage:
-    python HAT_calibration_summary_figures.py
-
-Writes output/calibration/groin/figures/ (untracked; the PDFs beside the PNGs are).
-Reasoning and results: CALIBRATION_FIGURES.md, beside this file.
+The source/sink and groin choices drawn from the sweep and full-period
+results, for readers who will not open the prose. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -110,12 +40,10 @@ from site_layer.hat_figure_style import (apply_style, C, C_1984, C_1997,  # noqa
                               INK, INK_MUTED, caption, error_cmap, figsize,
                               open_frame, save, _title)
 
+# --- CONFIG ------------------------------------------------------------------
 SWEEP = (GROIN_SWEEP_ROOT / "1984_2004_edgeBE"
          / "sweep_results.jsonl")
-# The LIVE full-period sweep, not the 2026-08-28 archive. This pointed into
-# `superseded_20260828/` (now `output/archive/2026-08-28_full-tree/`), which is a "do not use for analysis" tree, and
-# that one line was the only thing keeping 12 GB of superseded output
-# undeletable. The live file carries the same 16 columns and the same 43 rows.
+# The LIVE full-period sweep, not the 2026-08-28 archive
 FULLPERIOD = (GROIN_SWEEP_ROOT
               / "fullperiod_1984_2024" / "results.csv")
 OUT = GROIN_SWEEP_ROOT / "figures"
@@ -125,23 +53,18 @@ FIT_DOMAINS = list(range(4, 9))
 SHOW_DOMAINS = list(range(1, 13))
 PERIOD_YEARS = 20.0
 
-# Semantic colours, from the house palette. ACCENT is the target that works
-# and the answer it gives; BASE is a target that fails or a baseline; REF is a
-# reference construction laid over the data (the iso-product curves, a
-# tolerance line); the VINTAGE pair is the two calibration periods.
+# Semantic colours, from the house palette
 ANSWER, FOIL, REF = C["ACCENT"], C["BASE"], C["REF"]
 BAND = "0.94"
 
-# Five top cells as one family: a ramp of the accent, so they read as
-# variations of the same thing rather than five unrelated series. viridis was
-# used here until 2026-09-11 and put the best cell in the same green as the
-# reference curves in the neighbouring figure.
+# The top cells as one family: a ramp of the accent
 TOP_CMAP = LinearSegmentedColormap.from_list(
     "hat_accent_ramp", [C["ACCENT_FILL"], C["ACCENT"]])
+# -----------------------------------------------------------------------------
 
 
+# Sweep cells at the calibrated be1, with all three scores attached
 def load_cells():
-    """Sweep cells at the calibrated be1, with all three scores attached."""
     rows = [json.loads(l) for l in open(SWEEP, encoding="utf-8") if l.strip()]
     d = pd.DataFrame(rows)
     d = d[(d.be1 == PINNED_BE1) & d.differential_err.notna()].copy()
@@ -151,10 +74,7 @@ def load_cells():
     obs_dm = obs - obs.mean()
 
     def d48(r):
-        # Rates are m/yr; the observed target is CHANGE over the period, so the
-        # model side is scaled by the period length. Demeaned because a uniform
-        # level offset in the groin's neighbourhood belongs to the source/sink
-        # term, not to the groin -- what the groin must get right is the shape.
+        # Change, not rate: the model side scaled by the period and demeaned
         m = np.array([r[f"rate_D{k}"] for k in FIT_DOMAINS]) * PERIOD_YEARS
         m = m - m.mean()
         return float(np.sqrt(((m - obs_dm) ** 2).mean()))
@@ -163,8 +83,8 @@ def load_cells():
     return d, obs_dm
 
 
+# The same cells, scored three ways, with each minimum marked
 def fig_three_targets(d):
-    """The same cells, scored three ways, with each minimum marked."""
     fp = pd.read_csv(FULLPERIOD)
     fig, axes = plt.subplots(1, 3, figsize=figsize("double", aspect=0.36),
                              constrained_layout=True)
@@ -217,8 +137,8 @@ def fig_three_targets(d):
     print("  {}".format(save(fig, p, close=True)[0].name))
 
 
+# Is the valley along constant M*f? Tests the config's claim
 def fig_identifiability(d):
-    """Is the valley along constant M*f? Tests the config's claim."""
     piv = d.pivot_table(index="fraction", columns="M", values="score_d48")
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.50),
                            constrained_layout=True)
@@ -275,13 +195,9 @@ def fig_identifiability(d):
     print("  {}".format(save(fig, p, close=True)[0].name))
 
 
+# Top cells and the no-groin baseline against the observed profile
 def fig_top_profiles(d, obs_dm):
-    """Top cells and the no-groin baseline against the observed profile."""
-    # LANDWARD-POSITIVE, so erosion is UP and this panel reads as a plan view,
-    # matching the gifs and the other profile figures. Both sources are
-    # SEAWARD-positive, so both are negated -- at the PLOTTING layer only.
-    # score_d48 is computed upstream and is unaffected.
-    # fig_three_targets needs no flip: it plots error against M, not a profile.
+    # LANDWARD-POSITIVE, so erosion is UP and this panel reads as a plan view
     obs_full = -np.array([observed_change_profile(1984, 2004, SHOW_DOMAINS)[k]
                           for k in SHOW_DOMAINS])
     fit_idx = [SHOW_DOMAINS.index(k) for k in FIT_DOMAINS]
@@ -310,8 +226,7 @@ def fig_top_profiles(d, obs_dm):
         v = [-nog.iloc[0][f"rate_D{k}"] * PERIOD_YEARS for k in SHOW_DOMAINS]
         ax.plot(SHOW_DOMAINS, centred(v), lw=1.4, ls=":", color=FOIL,
                 label=f"no groin, {nog.score_d48.iloc[0]:.1f} m", zorder=4)
-    # Darkest first: `top` is sorted best to worst, and the caption says the
-    # best cell is the darkest.
+    # Darkest first: the best cell is the darkest
     for colour, (_, r) in zip(TOP_CMAP(np.linspace(1.0, 0.15, len(top))),
                               top.iterrows()):
         v = [-r[f"rate_D{k}"] * PERIOD_YEARS for k in SHOW_DOMAINS]
@@ -326,8 +241,7 @@ def fig_top_profiles(d, obs_dm):
     ax.grid(axis="y")
     ax.set_axisbelow(True)
     open_frame(ax)
-    # Outside the axes: seven entries inside the panel covered the observed
-    # line across D1-D3, which is the part of the profile the caption is about.
+    # Legend outside the axes, clear of the D1-D3 profile
     fig.legend(loc="outside lower center", ncol=4, frameon=False, fontsize=7.5)
     ax.set_title("The five best cells and the no-groin baseline", loc="left")
 
@@ -354,17 +268,15 @@ def fig_top_profiles(d, obs_dm):
     print("  {}".format(save(fig, p, close=True)[0].name))
 
 
-# Transcribed from the pass-by-pass table in hatteras_site_config.py. NOT
-# derivable from run_index.csv: --overwrite replaces a run's row, so only the
-# final pass survives there. This figure is the durable record.
+# Transcribed from the pass-by-pass table in hatteras_site_config.py
 BE_PASSES = ["zeroBE", "edgeBE", "calib\npass 0", "pass 1", "pass 2",
              "+GIS 90\nre-solve", "final"]
 BE_RMSE = {1984: [1.422, 1.219, 0.721, 0.547, 0.527, 0.556, 0.517],
            2004: [2.124, 1.794, 0.763, 0.615, 0.583, 0.603, 0.563]}
 
 
+# Interior RMSE per calibration pass, both periods
 def fig_be_convergence():
-    """Interior RMSE per calibration pass, both periods."""
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.42),
                            constrained_layout=True)
     x = np.arange(len(BE_PASSES))
@@ -408,8 +320,8 @@ def fig_be_convergence():
     print("  {}".format(save(fig, p, close=True)[0].name))
 
 
+# Why period 2 is unfittable, and what the topography bug was worth
 def fig_period2_and_bug(d):
-    """Why period 2 is unfittable, and what the topography bug was worth."""
     fig, (a1, a2) = plt.subplots(1, 2, figsize=figsize("double", aspect=0.42),
                                  constrained_layout=True)
 
@@ -474,6 +386,7 @@ def fig_period2_and_bug(d):
     print("  {}".format(save(fig, p, close=True)[0].name))
 
 
+# Run: every summary figure
 def main():
     apply_style()
     OUT.mkdir(parents=True, exist_ok=True)

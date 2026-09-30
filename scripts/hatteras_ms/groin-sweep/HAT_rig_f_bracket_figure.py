@@ -1,37 +1,10 @@
 #!/usr/bin/env python3
-"""What the 1967 rig can and cannot say: f is bracketed, M is railed.
+"""
+What the 1967 rig can and cannot say: f is bracketed, M is railed.
 
-WHY THIS FIGURE EXISTS
-    The rig is quoted as corroborating BOTH parameters. It does not, and the
-    difference matters enough to draw. `scripts/site_layer/hatteras_site_config.py` said
-    until 2026-08-30 that in the rig "f = 0.6 is a clean INTERIOR minimum ...
-    So is M ... Neither railed." The rig's own sweep CSV refuses the second
-    half: RMSE improves monotonically to M = 60 and then the model blows up.
+    python scripts/hatteras_ms/groin-sweep/HAT_rig_f_bracket_figure.py
 
-    So the rig resolves f and is only CONSISTENT with M. M is set by the
-    production period-1 fit instead. This figure is the evidence for both
-    halves of that sentence, in one place, so the claim cannot drift back.
-
-WHAT IS PLOTTED
-    (a) f AT M = 60 -- a clean interior minimum at f = 0.6, bracketed on both
-        sides with steep curvature. This is the parameter the rig owns: it is
-        the only window containing the 1996-2003 deterioration ramp, because
-        both hindcast windows begin 15 years after the structure went in.
-
-    (b) M ACROSS THE WHOLE GRID, on a log axis because the failure spans three
-        orders of magnitude. Every f-series improves monotonically to M = 60
-        and then jumps ~13x at M = 70. Cells at M >= 100 do not complete at
-        all and are drawn on the "crashed" rule at the top. M = 60 is the LAST
-        VALUE THAT RUNS, not the value where the fit stops improving.
-
-    The stability wall is RIG-SPECIFIC and does not transfer: all 36 production
-    cells, including the full M = 70 and M = 80 rows, ran clean on the
-    120-domain grid. Do not quote this ceiling for production runs.
-
-Usage:
-    python HAT_rig_f_bracket_figure.py
-
-Writes output/calibration/groin/figures/rig_f_bracket.png
+From the rig sweep's results. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -54,6 +27,7 @@ if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
     raise RuntimeError(
         f"CASCADE repo root not found: {PROJECT_BASE_DIR} has no pyproject.toml.")
 
+# --- CONFIG ------------------------------------------------------------------
 SWEEP_CSV = (PROJECT_BASE_DIR / "hard-structures" / "groin"
              / "HAT-buxton-hindcast-groin-test" / "sensitivity_sweep"
              / "HAT_groin_sweep_results.csv")
@@ -66,15 +40,12 @@ from site_layer.hat_figure_style import (apply_style, C, C_1984, INK, INK_MUTED,
                               caption, figsize, open_frame, save, _title)
 
 CHOSEN_M, CHOSEN_F = 60.0, 0.6
-# House colours (2026-09-11). The series under test is the ACCENT; a cell
-# that did not complete is drawn in the vintage red, the one warm colour in
-# the palette, because "this run does not exist" has to be findable at a
-# glance; the f families in panel (b) are a ramp of the accent so they read
-# as one family. GOOD/BAD/INK/GRID were an orange, a pink and a navy chosen
-# in this file.
+# House colours (2026-09-11)
 DEAD = C_1984
+# -----------------------------------------------------------------------------
 
 
+# Run: the figure
 def main() -> None:
     if not SWEEP_CSV.exists():
         raise SystemExit(f"missing rig sweep results: {SWEEP_CSV}")
@@ -85,8 +56,7 @@ def main() -> None:
 
     frame = pd.read_csv(SWEEP_CSV)
     frame["rmse"] = pd.to_numeric(frame["rmse"], errors="coerce")
-    # A blank rmse is a cell that did not complete -- the barrier drowned or
-    # the solver diverged. Those are information, not missing data.
+    # A blank rmse is a cell that did not complete -- the barrier drowned or the solver diverged
     crashed = frame[frame["rmse"].isna()]
     ok = frame.dropna(subset=["rmse"])
 
@@ -96,7 +66,7 @@ def main() -> None:
         1, 2, figsize=figsize("double", aspect=0.44),
         gridspec_kw={"width_ratios": [1, 1.25]}, constrained_layout=True)
 
-    # ---- (a) f at M = 60 -------------------------------------------------
+    # (a) f at m = 60
     series = ok[ok["M"] == CHOSEN_M].sort_values("fraction")
     ax_f.plot(series["fraction"], series["rmse"], "-o", color=C["ACCENT"],
               linewidth=1.6, markersize=3.4, zorder=4)
@@ -116,7 +86,7 @@ def main() -> None:
     ax_f.set_axisbelow(True)
     open_frame(ax_f)
 
-    # ---- (b) M across the grid -------------------------------------------
+    # (b) m across the grid
     ceiling = ok["rmse"].max() * 2.4
     fractions = sorted(ok["fraction"].unique())
     ramp = LinearSegmentedColormap.from_list(
@@ -153,8 +123,7 @@ def main() -> None:
     ax_m.grid(which="both")
     ax_m.set_axisbelow(True)
     open_frame(ax_m)
-    # Outside: eight entries inside panel (b) sat on top of the low-M cells,
-    # which are the ones the panel is about.
+    # Outside
     figure.legend(*ax_m.get_legend_handles_labels(),
                   loc="outside lower center", ncol=8, frameon=False,
                   fontsize=7)

@@ -1,25 +1,10 @@
 #!/usr/bin/env python3
-"""Every M value as its own panel, with all six f curves drawn on it.
+"""
+Every M value as its own panel, with all six f curves on it.
 
-The top-N overlay (fig_top_profiles.png) shows only the best cells, and they sit
-so close together that nothing about the parameter response is visible. This
-draws the whole grid instead: one panel per M, six f curves inside it, the same
-observed and no-groin reference on every panel, and a shared y axis so panels
-can be read against each other.
+    python scripts/hatteras_ms/groin-sweep/HAT_profiles_by_M_figure.py
 
-WHAT TO LOOK FOR
-    * within a panel: how much f moves the profile at fixed M. Period 1 mostly
-      PRECEDES the 1996-2003 deterioration ramp, so f should move it little --
-      period-1 cumulative trapping is M(15.5 + 4.5f), which f changes by only
-      29% across its whole range.
-    * across panels: M lifts the whole curve rather than building a local
-      fillet at D5/D6. That is the finding the per-domain decomposition in
-      fig_d4d7_window.png makes numerically -- the groin's gain comes from D4,
-      outside the dipole, while D5 (downdrift) gets worse.
-
-Writes output/calibration/groin/figures/profiles_by_M/
-    fig_all_M_profiles.png     the grid, for comparison across M
-    fig_M<value>.png           one file per M, for detail
+Shows how the fit moves across the grid, which the top-N overlay hides. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -33,6 +18,7 @@ import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np, pandas as pd
 
+# --- CONFIG ------------------------------------------------------------------
 _H = Path(__file__).resolve(); BASE = _H.parents[3]
 for p in (BASE/"scripts", _H.parent):
     if str(p) not in sys.path: sys.path.insert(0, str(p))
@@ -45,6 +31,7 @@ SH = list(range(1, 13)); FIT = list(range(4, 9))
 fi = [SH.index(k) for k in FIT]
 PINNED_BE1, YRS = -42.6, 20.0
 OUT = GROIN_SWEEP_ROOT/"figures"/"profiles_by_M"
+# -----------------------------------------------------------------------------
 apply_style()
 
 d = pd.DataFrame([json.loads(l) for l in
@@ -62,18 +49,16 @@ nog_row = d[d.M == 0].iloc[0]
 nog_c, nog_rmse = c(prof(nog_row)), rmse(prof(nog_row))
 MS = sorted(m for m in d.M.unique() if m > 0)
 FS = sorted(d.fraction.unique())
-# The f family as one colour family, so a panel reads as "one M, six f" and
-# not as six unrelated series; darkest is the largest f. viridis was used here
-# until 2026-09-11 and shared its green with the reference marks elsewhere.
+# The f family as one colour family, so a panel reads as "one M, six f" and not as six unrelated series
 from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 CMAP = LinearSegmentedColormap.from_list(
     "hat_accent_ramp", [C["ACCENT_FILL"], C["ACCENT"]])(
         np.linspace(0.15, 1.0, len(FS)))
-# Top widened on the 2026-08-30 flip to landward-positive: the high-M cells
-# (M >= 110) reach past +70 at D12 and were clipping.
+# Top widened on the 2026-08-30 flip to landward-positive
 YLIM = (-60, 88)
 
 
+# One panel: the f curves for one M, the observed and no-groin lines
 def draw(ax, M, compact, letter=None):
     ax.axvspan(3.5, 8.5, color="0.94", zorder=0)
     ax.axvline(5.5, color=INK_MUTED, lw=0.8, ls=(0, (3, 2)), zorder=1)
@@ -81,9 +66,7 @@ def draw(ax, M, compact, letter=None):
             label=f"no groin, {nog_rmse:.1f} m")
     sub = d[d.M == M].sort_values("fraction")
     for colour, (_, r) in zip(CMAP, sub.iterrows()):
-        # The per-cell error is panel-specific: in the grid these handles feed
-        # ONE shared legend, so quoting a number there would attach panel (a)'s
-        # errors to every panel.
+        # The per-cell error is panel-specific
         ax.plot(SH, c(prof(r)), "-", lw=1.2, color=colour, zorder=4,
                 label=(f"f {r.fraction:g}" if compact
                        else f"f {r.fraction:g}, {r.rmse:.1f} m"))
@@ -98,15 +81,14 @@ def draw(ax, M, compact, letter=None):
         ax.set_title(f"M = {M:g}, best f {best.fraction:g} at "
                      f"{best.rmse:.2f} m", loc="left")
     else:
-        # Four to a row: the letter and a full sentence collide, so the panel
-        # carries the M and the caption carries the best f per panel.
+        # Four to a row
         _title(ax, letter, f"M = {M:g}")
     return best
 
 
 OUT.mkdir(parents=True, exist_ok=True)
 
-# ---- the grid --------------------------------------------------------------
+# The grid
 ncol = 4; nrow = int(np.ceil(len(MS) / ncol))
 fig, axes = plt.subplots(nrow, ncol,
                          figsize=figsize("double", height=1.55 * nrow),
@@ -148,7 +130,7 @@ caption(fig,
 p = save(fig, OUT/"fig_all_M_profiles.png", close=True)[0]
 print(f"  {p.name}")
 
-# ---- one per M -------------------------------------------------------------
+# One per m
 for M in MS:
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.44),
                            constrained_layout=True)

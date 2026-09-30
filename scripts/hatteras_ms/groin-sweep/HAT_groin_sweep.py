@@ -1,91 +1,11 @@
 #!/usr/bin/env python3
-"""Groin / background-erosion grid search for ONE period and preset.
+"""
+Groin / background-erosion grid search for one period and preset.
 
-Sweeps the groin trapping rate M against the deterioration floor f -- and, in
-period 1 under edgeBE, against the GIS 1 background-erosion rate be1 -- scoring
-each cell on that period's CoastSat LRR over D1-D12. Every reported number
-comes from a real CASCADE run; no surrogate, no interpolation.
+    python scripts/hatteras_ms/groin-sweep/HAT_groin_sweep.py --period 1996 --preset edgeBE --workers 4
 
-This script fits ONE period. M and f are not separable within a single period
-(see HAT_groin_sweep_config's JOINT IDENTIFIABILITY note), so the actual
-parameter choice is made by `HAT_groin_joint_fit.py`, which intersects the two
-periods' surfaces. What this script produces is one period's surface.
-
-WHY M, f AND be1 TOGETHER
-    The groin sits at GIS 5.5, four domains from the modelled reach's southern
-    boundary. Its downdrift sink does not stay local: at M = 70 it imposes
-    roughly -0.5 m/yr at D1 and -0.7 m/yr at D5. The be1 edge source pushes on
-    exactly the same domains, so fitting either with the other held fixed
-    charges the same erosion to whichever knob happens to be free. f enters
-    through the cumulative trapping the schedule actually delivers. All three
-    are swept together because none of them is separable from the others.
-
-WHAT IS RANKED, AND WHAT IS ONLY REPORTED
-    Ranked:   |differential - observed|, where differential is the modelled
-              D6 - D5 rate. It is the only metric that identifies M. Over
-              D1-D12 the profile RMSE moves 7% while M moves 4x; the
-              differential moves 5x over the same span.
-    Reported: RMSE over the D5/D6 pair, RMSE and bias over D1-D12, the
-              per-domain modelled rates, and the fillet extent.
-    Never fit: the extent. `cascade.groin`'s design argument is that M sets
-              amplitude only and the alongshore extent falls out for free, so
-              the emergent extent is the module's one independent test. It is
-              measured against the paired M = 0 run at the same be1 and
-              written to the CSV, and nothing ranks on it.
-
-WHAT THIS SWEEP CANNOT DO, STATED UP FRONT
-    Period 1's residual over D1-D12 does not have the shape of a single-domain
-    edge source. At the joint least-squares optimum it still runs -1.7 m/yr at
-    D6 and +1.7 m/yr at D11: the model under-erodes the Cape Point reach by
-    2-3 m/yr, be1's influence decays from 0.121 to 0.013 m/yr per unit across
-    the window, and no value of be1 has the reach to flatten that. Expect a
-    floor around 1.0 m/yr RMSE. That floor is the finding -- it is what
-    `calibBE`'s Cape Point entries were invented to absorb, and holding to
-    strict edgeBE leaves it visible instead of hiding it in the interior.
-
-    Period 2's observed D6 - D5 is NEGATIVE (-2.47 m/yr): the updrift domain
-    eroded faster than the downdrift one. The source/sink pair cannot produce
-    that at any M >= 0, so the period-2 leg reports a BOUND, not an optimum,
-    and says so in its summary. Do not read its best cell as a fitted value.
-
-    The model restarts its dipole fresh at the start of each period, from an
-    observed surface that already carries 15 years (1984) or 35 years (2004)
-    of accumulated fillet. Treating M as one structure-level parameter across
-    both windows -- which the joint fit does -- is a modelling decision, not
-    something these runs establish.
-
-DESIGN
-    One subprocess per combination. An earlier in-process sweep died partway
-    through with a Windows access violation (0xC0000005) from state
-    accumulating across many Cascade constructions; process isolation makes
-    the OS reclaim everything between combinations.
-
-    Resumable. Combinations with a scored result are skipped; rows recorded
-    as failed are retried automatically on the next invocation. Each result
-    is appended as a JSON line the moment it lands, so an interrupted sweep
-    costs at most one run.
-
-    Parallel. NUM_CORES is 1 in the worker (>1 has crashed on this
-    configuration) and CASCADE's internal joblib.Parallel therefore does not
-    fan out, so concurrent workers do not oversubscribe. The pool is capped if
-    the requested width will not fit in available RAM.
-
-    Self-validating. Before reporting anything, the worker's duplicated copy
-    of build_cascade / run_cascade_simulation is run against the period's
-    published matrix run and the two rate curves differenced. The validation
-    cell lives in a per-period `_validation/` directory and is shared by both
-    presets, because what it checks is the CODE, not the preset.
-
-Usage:
-    python HAT_groin_sweep.py --period 1984 --preset edgeBE [--workers N]
-                              [--dry-run] [--skip-validation]
-
-Writes to output/calibration/groin/<start>_<end>_<preset>/:
-    sweep_results.jsonl      one JSON line per combination, written as it lands
-    sweep_results.csv        the same rows as a table, plus extent, at the end
-    <combo>/                 shoreline matrix + rate curve per combination
-Nothing is written to output/raw_runs/ or run_index.csv: a sweep combination
-is not a run of the scenario matrix and must not be filed as one.
+Sweeps M against f (and be1 in period 1 under edgeBE), one worker per
+cell, ranked on fillet size. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -109,10 +29,7 @@ import numpy as np
 import pandas as pd
 
 _HERE = Path(__file__).resolve()
-# parents[3], not [2]: this file lives in scripts/hatteras_ms/groin-sweep/.
-# The guard below is what makes a future move fail here, loudly, instead of
-# resolving to scripts/scripts and surfacing as a missing data file several
-# imports deeper.
+# parents[3]: this file is in hatteras_ms/groin-sweep/; the guard makes a move fail loudly here
 PROJECT_BASE_DIR = next(_p for _p in _HERE.parents
                         if (_p / "pyproject.toml").exists())
 if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
@@ -150,80 +67,48 @@ from HAT_groin_sweep_config import (  # noqa: E402
     validation_run_dir,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 WORKER = _HERE.parent / "HAT_groin_sweep_worker.py"
 
-# A 20-year run is ~1.5 min; 10 minutes is a wide margin for a loaded machine
-# and stops one wedged worker from holding the pool open indefinitely.
+# A 20-year run is ~1.5 min; the timeout stops a wedged worker
 WORKER_TIMEOUT_S = 900
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# RESULT LOG
-# =============================================================================
+# Result log
 
+# Loads every recorded result, or an empty frame if none exist
 def load_results(results_jsonl):
-    """Loads every recorded result, or an empty frame if none exist.
-
-    Returns:
-        A DataFrame of previous results with guaranteed `combo` and
-        `differential_err` columns. Failed rows carry NaN in
-        `differential_err` and a message in `error`.
-    """
     if not results_jsonl.exists():
         return pd.DataFrame(columns=["combo", "differential_err"])
     rows = [json.loads(line) for line in
             results_jsonl.read_text().splitlines() if line.strip()]
     frame = pd.DataFrame(rows)
-    # A sweep with only failures has no differential_err column at all, and
-    # every caller filters on it.
+    # A sweep with only failures has no differential_err column at all, and every caller filters on it
     for column in ("combo", "differential_err"):
         if column not in frame:
             frame[column] = np.nan
     return frame
 
 
+# Records one result immediately, as a JSON line
 def append_result(results_jsonl, row):
-    """Records one result immediately, as a JSON line.
-
-    JSONL rather than appending to the CSV: a failure record has far fewer
-    keys than a success record, and `to_csv(mode="a")` writes values
-    positionally under the existing header -- so one failure after a run of
-    successes silently shifts every later row's columns. JSON lines carry
-    their own keys, so a mixed-schema log stays readable and resumable.
-    """
     results_jsonl.parent.mkdir(parents=True, exist_ok=True)
     with results_jsonl.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(row) + "\n")
 
 
-# =============================================================================
-# EXECUTION
-# =============================================================================
+# Execution
 
+# Runs one combination in its own subprocess
 def run_worker(period, preset, combo, out_root):
-    """Runs one combination in its own subprocess.
-
-    Args:
-        period: 1984 or 2004.
-        preset: "edgeBE" or "zeroBE".
-        combo: An (M, be1, fraction) tuple.
-        out_root: Directory the combination's subdirectory goes under.
-
-    Returns:
-        A result dict on success, or a failure record carrying `error` and
-        the worker's last stderr lines.
-    """
     M, be1, fraction = combo
     name = combo_dir_name(M, be1, fraction)
     out_dir = Path(out_root) / name
     failure = dict(M=M, be1=be1, fraction=fraction, combo=name,
                    period=period, preset=preset)
 
-    # One thread per worker. numpy/BLAS defaults to one thread per core, so N
-    # concurrent workers each spawn N threads and the pool spends its time
-    # context-switching instead of running: measured, four workers took 4-5x
-    # longer per cell than one, for almost no net throughput. CASCADE's own
-    # NUM_CORES is already 1, so nothing here wants the extra threads.
+    # One thread per worker, or the pool spends its time context-switching
     env = os.environ.copy()
     env.update({name: "1" for name in (
         "OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS",
@@ -245,24 +130,13 @@ def run_worker(period, preset, combo, out_root):
         if line.startswith("RESULT_JSON="):
             return json.loads(line[len("RESULT_JSON="):])
 
-    # No result line: an access violation exits non-zero with nothing on
-    # stdout, so the stderr tail is the only diagnostic there is.
+    # No result line: the stderr tail is the only diagnostic
     tail = "\n".join((proc.stderr or "").strip().splitlines()[-6:])
     return dict(failure, error=f"exit {proc.returncode}", stderr_tail=tail)
 
 
+# Caps the pool width at what available RAM will hold
 def safe_worker_count(requested):
-    """Caps the pool width at what available RAM will hold.
-
-    Each worker builds 120 Barrier3D domains and holds the run's full state.
-    Oversubscribing memory does not fail cleanly -- it swaps, and a swapping
-    sweep is slower than a serial one.
-
-    Returns:
-        The width to actually use. Falls back to `requested` if psutil is not
-        installed, since a missing optional dependency should not block a
-        sweep the user explicitly sized.
-    """
     try:
         import psutil
     except ImportError:
@@ -271,8 +145,7 @@ def safe_worker_count(requested):
         return requested
 
     available_gb = psutil.virtual_memory().available / 1e9
-    # 1.8 GB/worker, measured from a 120-domain 20-year run, plus 2 GB left
-    # for the OS and this process.
+    # 1.8 GB a worker (measured on a 120-domain 20-year run), 2 GB kept for the OS
     fits = max(1, int((available_gb - 2.0) / 1.8))
     if fits < requested:
         print(f"  RAM headroom {available_gb:.1f} GB -> capping pool at "
@@ -282,8 +155,8 @@ def safe_worker_count(requested):
     return requested
 
 
+# Runs a list of combinations concurrently, recording each as it lands
 def run_pool(period, preset, combos, workers, out_root, results_jsonl, label):
-    """Runs a list of combinations concurrently, recording each as it lands."""
     results = []
     if not combos:
         return results
@@ -301,13 +174,7 @@ def run_pool(period, preset, combos, workers, out_root, results_jsonl, label):
             elapsed = time.perf_counter() - t0
             if "error" in row:
                 status = f"FAILED  {row['error']}"
-                # The worker writes nothing to stdout when it dies, so
-                # its stderr tail is the only record of WHY. Printed on
-                # the first failure of a sweep rather than only into the
-                # results file: a sweep where every cell fails otherwise
-                # produces a log of 215 identical "exit 1" lines and no
-                # diagnosis, which is how four sweeps came to be broken
-                # without anyone being able to say what broke them.
+                # The worker writes nothing to stdout when it dies, so its stderr tail is the only record of WHY
                 if not printed_stderr and row.get("stderr_tail"):
                     printed_stderr = True
                     print()
@@ -327,22 +194,10 @@ def run_pool(period, preset, combos, workers, out_root, results_jsonl, label):
     return results
 
 
-# =============================================================================
-# DRIFT GUARD
-# =============================================================================
+# Drift guard
 
+# Reads the reference matrix run's own M, f and be1 from its metadata
 def read_reference_config(period):
-    """Reads the reference matrix run's own M, f and be1 from its metadata.
-
-    Not pinned in the config module on purpose: the reference run is re-run
-    with new values as the fit is refined, and a pinned pair would report
-    drift the first time it changed.
-
-    Returns:
-        ((M, be1, fraction), None) on success, or (None, message) if the
-        reference is missing, mid-run, or not comparable to what the worker
-        builds.
-    """
     run_dir, problem = validation_run_dir(period)
     if problem:
         return None, problem
@@ -377,10 +232,7 @@ def read_reference_config(period):
             f"against the current table before sweeping -- otherwise every "
             f"combination is fit against a different north end.")
 
-    # The metadata stores the deterioration as prose, so the floor has to be
-    # parsed back out. An unreadable string is reported rather than defaulted:
-    # guessing the floor would validate the worker against a groin schedule
-    # the reference did not run.
+    # The metadata stores the deterioration as prose, so the floor has to be parsed back out
     text = str(groin.get("deterioration", ""))
     match = re.search(r"floor\s+([0-9.]+)", text)
     if "linear_ramp" not in text or match is None:
@@ -393,23 +245,8 @@ def read_reference_config(period):
             float(match.group(1))), None
 
 
+# Checks the worker reproduces the period's reference matrix run exactly
 def validate_against_matrix_run(period, workers):
-    """Checks the worker reproduces the period's reference matrix run exactly.
-
-    The worker holds a third copy of `build_cascade` and
-    `run_cascade_simulation` -- the notebook has one, the hindcast runner has
-    another. Copies drift, and drift here is silent: the sweep would keep
-    producing plausible numbers from a model that no longer matches the
-    hindcast. Running the reference's own configuration and differencing the
-    rate curves catches that numerically.
-
-    The validation cell lives in a per-period `_validation/` directory shared
-    by both presets, and always runs under edgeBE regardless of which preset
-    is being swept: what it checks is the duplicated CODE, not the preset.
-
-    Returns:
-        (ok, message). ok is False if the sweep must not proceed.
-    """
     combo, problem = read_reference_config(period)
     if problem:
         return False, problem
@@ -477,28 +314,10 @@ def validate_against_matrix_run(period, workers):
                   f"(tolerance {VALIDATION_TOLERANCE_M_YR:g})")
 
 
-# =============================================================================
-# EXTENT, MEASURED AGAINST THE PAIRED BASELINE
-# =============================================================================
+# Extent, measured against the paired baseline
 
+# Adds the fillet size and its error to every M > 0 row
 def attach_fillets(frame, out_root, period):
-    """Adds the fillet size and its error to every M > 0 row.
-
-    THIS IS THE RANKING METRIC, and it is computed here rather than in the
-    worker for the same reason the extent is: it needs the paired M = 0 run,
-    and pairing is a property of the grid, not of one combination. Each cell
-    pairs with the baseline at the SAME be1 -- pairing across be1 would report
-    the background-erosion difference as fillet.
-
-    Args:
-        frame: Scored results, one row per combination.
-        out_root: Directory holding the per-combination subdirectories.
-        period: 1984 or 2004, selecting the observed fillet to score against.
-
-    Returns:
-        A copy of `frame` with `fillet_m` and `fillet_err` columns. Both are
-        NaN on the M = 0 baseline rows, which have no fillet by definition.
-    """
     geometry = HATTERAS_DOMAINS
     observed = OBSERVED_FILLET_M[period]
     baselines = {}
@@ -526,14 +345,8 @@ def attach_fillets(frame, out_root, period):
     return frame
 
 
+# Adds the emergent fillet extent to every M > 0 row
 def attach_extents(frame, out_root):
-    """Adds the emergent fillet extent to every M > 0 row.
-
-    Each groin cell is paired with the M = 0 cell at the SAME be1. Pairing
-    across be1 would report the background-erosion difference as fillet.
-    Nothing here feeds the ranking -- the extent is the pre-registered
-    independent check from `cascade.groin`.
-    """
     geometry = HATTERAS_DOMAINS
     baselines = {}
     for _, row in frame[frame["M"] == 0].iterrows():
@@ -563,10 +376,7 @@ def attach_extents(frame, out_root):
     return frame
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: build the grid, run the cells, rank and write
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--period", type=int, required=True, choices=PERIODS)
@@ -607,7 +417,7 @@ def main():
             print("   ", combo_dir_name(*combo))
         return 0
 
-    # --- resume ---------------------------------------------------------------
+    # Resume
     previous = load_results(results_jsonl)
     scored = set(previous.loc[previous["differential_err"].notna(), "combo"])
     todo = [c for c in grid if combo_dir_name(*c) not in scored]
@@ -616,7 +426,7 @@ def main():
 
     workers = safe_worker_count(args.workers)
 
-    # --- drift guard ----------------------------------------------------------
+    # Drift guard
     if args.skip_validation:
         print("\n  VALIDATION SKIPPED -- results are not guarded against "
               "code drift")
@@ -628,29 +438,23 @@ def main():
             return 2
         print(f"  OK: {message}")
 
-    # --- run ------------------------------------------------------------------
+    # Run
     if todo:
         run_pool(period, preset, todo, workers, out_root, results_jsonl,
                  f"{period} {preset}")
 
-    # --- collate --------------------------------------------------------------
+    # Collate
     frame = load_results(results_jsonl)
     scored_frame = frame[frame["differential_err"].notna()].copy()
     if scored_frame.empty:
         print("\nno scored combinations; nothing to report")
         return 1
 
-    # A retried combination appears twice in the JSONL. The last line wins:
-    # it is the one whose files are on disk.
+    # A retried combination appears twice in the JSONL
     scored_frame = scored_frame.drop_duplicates(subset="combo", keep="last")
     scored_frame = attach_extents(scored_frame, out_root)
     scored_frame = attach_fillets(scored_frame, out_root, period)
-    # RANKED ON FILLET SIZE. differential_err is retained and reported,
-    # but it scores the fillet's SLOPE, which is near zero once the
-    # fillet saturates and therefore nearly uninformative about M. Falls
-    # back to the differential only if no fillet could be measured --
-    # which means the M = 0 baselines are missing, and the sweep should
-    # be re-run rather than ranked on the weaker metric silently.
+    # Ranked on fillet size, not slope (README)
     if "fillet_err" in scored_frame and scored_frame["fillet_err"].notna().any():
         scored_frame = scored_frame.sort_values("fillet_err")
         _rank_metric = "fillet_err"

@@ -1,66 +1,11 @@
 #!/usr/bin/env python3
-"""Per-period diagnostic figures for one groin sweep.
+"""
+Per-period diagnostic figures for one groin sweep: whether a winning cell is worth believing.
 
-The sweep orchestrator writes numbers; the joint fit draws the two-period
-surface. Neither draws the per-period diagnostics that say WHETHER a winning
-cell is any good: what the M-f error surface looks like on its own, and what
-the winning shoreline-change curve looks like against CoastSat. This file
-draws those, reading only what the sweep already wrote.
+    python scripts/hatteras_ms/groin-sweep/HAT_groin_sweep_figures.py
+    python scripts/hatteras_ms/groin-sweep/HAT_groin_sweep_figures.py --period 2004 --preset zeroBE
 
-WHAT IS PLOTTED, AND WHY THAT AND NOT SOMETHING ELSE
-    The heatmap carries TWO panels, not one, because the sweep's ranking
-    metric and the reach-scale fit are different questions and can disagree:
-
-        fillet_err   |modelled fillet - observed fillet| at the groin pair.
-                     This is what the sweep RANKS on. The fillet saturates
-                     (~18 m by 1990 at M = 40, where BRIE's diffusion balances
-                     the trapping), so its LEVEL carries the information about
-                     M while its slope -- which is what `differential` measures
-                     -- carries almost none.
-        rmse_window  RMSE of the modelled LRR against CoastSat across D1-D12.
-                     A whole-reach number, dominated by domains the groin
-                     never touches.
-
-    If the two panels pick different cells that is a RESULT worth seeing, not
-    a defect to average away: it means the groin parameters that reproduce the
-    local fillet are not the ones that reproduce the reach.
-
-    The profile figures plot the per-domain LRR, because that is the quantity
-    the sweep is scored against -- the figure and the ranking then agree. The
-    alternative (end-of-run shoreline position) shows the fillet's shape more
-    directly but has no observed counterpart to overlay.
-
-THE NOTCH CAVEAT, DRAWN RATHER THAN FOOTNOTED
-    `observed_fillet_m` in the sweep config derives the observed fillet by
-    fitting a regional trend across the fit window EXCLUDING the groin pair
-    and taking the pair's departure from it. That anomaly is ONE-SIGNED --
-    both D5 and D6 sit ABOVE the trend in 1984-2004 (+0.79 and +1.48 m/yr).
-    A volume-neutral source/sink dipole must put a NOTCH at the downdrift
-    domain, and the model does at every cell on the grid.
-
-    So the observed shape is not a groin dipole, and the scalar fillet is the
-    best available summary of a feature whose SHAPE the model cannot
-    reproduce. Every profile figure that hits this case says so on its face,
-    because a reader looking at a mismatched D5 should be told it is a
-    property of the target and not a bad fit.
-
-M = 0 IS NOT A COLUMN
-    The M = 0 cells are the paired baselines the fillet is differenced
-    against, so they have no fillet by definition and would be a blank column
-    on the ranking panel. They are reported as a reference line in the panel
-    subtitle instead, which is also the honest way to read them: the number to
-    beat, not a candidate.
-
-Usage:
-    python HAT_groin_sweep_figures.py                     # every swept cell
-    python HAT_groin_sweep_figures.py --period 2004 --preset zeroBE
-    python HAT_groin_sweep_figures.py --top-n 8
-
-Writes to output/calibration/groin/<start>_<end>_<preset>/figures/:
-    heatmap.png              fillet error and reach RMSE over the M-f grid
-    best_fit_profile.png     winning cell's LRR against CoastSat
-    top_n_profiles.png       the best N cells on the same axes
-    period2_surface.png      2004-2024 only: the M*f ridge, with contours
+Written into the sweep's own folder. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -78,10 +23,7 @@ import numpy as np
 import pandas as pd
 
 _HERE = Path(__file__).resolve()
-# parents[3], not [2]: this file lives in scripts/hatteras_ms/groin-sweep/.
-# The guard below is what makes a future move fail here, loudly, instead of
-# resolving to scripts/scripts and surfacing as a missing data file several
-# imports deeper.
+# parents[3]: this file is in hatteras_ms/groin-sweep/; the guard makes a move fail loudly here
 PROJECT_BASE_DIR = next(_p for _p in _HERE.parents
                         if (_p / "pyproject.toml").exists())
 if not (PROJECT_BASE_DIR / "pyproject.toml").exists():
@@ -112,54 +54,29 @@ from HAT_groin_sweep_config import (  # noqa: E402
     sweep_output_dir,
 )
 
-# Shared with HAT_groin_joint_fit.py so a groin is the same colour in every
-# figure the sweep produces.
-# House colours (2026-09-11): the observations are INK, the modelled cell
-# under test the ACCENT, and the structure's own marks a muted guide. An
-# orange, a dark red and near-black were chosen in this file, and the dark
-# red was the 1984 vintage colour doing a second job.
+# --- CONFIG ------------------------------------------------------------------
+# Shared with HAT_groin_joint_fit.py so a groin is the same colour in every figure the sweep produces
 MODEL_COLOR = C["ACCENT"]
 GROIN_COLOR = INK_MUTED
 OBSERVED_COLOR = INK
 
 RANK_METRIC = "fillet_err"
 REACH_METRIC = "rmse_window"
+# -----------------------------------------------------------------------------
 
 
+# Imports pyplot with a headless backend
 def _matplotlib():
-    """Imports pyplot with a headless backend.
-
-    Deferred rather than imported at module scope so `--list` and the argument
-    parsing stay usable on a machine where matplotlib is missing.
-    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     return plt
 
 
-# =============================================================================
-# LOADING
-# =============================================================================
+# Loading
 
+# Loads one sweep's scored results
 def load_scored(period, preset):
-    """Loads one sweep's scored results.
-
-    Args:
-        period: 1984 or 2004.
-        preset: "edgeBE" or "zeroBE".
-
-    Returns:
-        A DataFrame of scored rows, or None if that sweep has no CSV yet.
-
-    Raises:
-        ValueError: If the CSV predates the fillet-size rescore. Ranking such
-            a frame would silently fall back to the differential -- the
-            fillet's SLOPE -- which is the metric that railed at both grid
-            edges. Re-running the orchestrator over a finished sweep is free
-            (every cell resumes from disk) and adds the column, so this is a
-            fixable error rather than a reason to plot the weaker metric.
-    """
     path = sweep_output_dir(period, preset) / "sweep_results.csv"
     if not path.exists():
         return None
@@ -177,63 +94,29 @@ def load_scored(period, preset):
     return frame
 
 
+# Reduces rows to one per (M, f) by keeping the best-scoring be1
 def profile_be1(frame):
-    """Reduces rows to one per (M, f) by keeping the best-scoring be1.
-
-    be1 is a nuisance axis here: it exists in the 1984 edgeBE sweep only, and
-    the figure's subject is (M, f). Profiling it out -- keeping, for each
-    (M, f), the be1 that scored best -- is what the joint fit does, so the
-    surface drawn here and the surface fitted there are the same reduction.
-    The winning be1 is carried along so it can be annotated rather than lost.
-
-    Args:
-        frame: Scored rows for one period/preset.
-
-    Returns:
-        A DataFrame with one row per (M, f), sorted by the ranking metric.
-    """
     ranked = frame.sort_values(RANK_METRIC, na_position="last")
     return (ranked.drop_duplicates(subset=["M", "fraction"], keep="first")
             .reset_index(drop=True))
 
 
+# The modelled per-domain LRR for one row, over the fit window
 def rate_curve(row):
-    """The modelled per-domain LRR for one row, over the fit window.
-
-    Args:
-        row: One row of a scored frame.
-
-    Returns:
-        (gis, rate) arrays over FIT_DOMAINS_GIS.
-    """
     gis = np.array(FIT_DOMAINS_GIS, dtype=float)
     rate = np.array([float(row[f"rate_D{int(g)}"]) for g in gis])
     return gis, rate
 
 
+# The CoastSat per-domain LRR for one period, over the fit window
 def observed_curve(period):
-    """The CoastSat per-domain LRR for one period, over the fit window."""
     gis = np.array(FIT_DOMAINS_GIS, dtype=float)
     rate = np.array([OBSERVED_LRR[period][int(g)] for g in gis])
     return gis, rate
 
 
+# Whether both groin domains depart the regional trend the SAME way
 def observed_anomaly_is_one_signed(period, trend_order=2):
-    """Whether both groin domains depart the regional trend the SAME way.
-
-    Mirrors the trend removal in `observed_fillet_m`. When true, the observed
-    pair is not a dipole and no volume-neutral source/sink can reproduce its
-    shape -- which the profile figures state on their face.
-
-    Args:
-        period: 1984 or 2004.
-        trend_order: Polynomial order for the regional trend. Must match the
-            default in `observed_fillet_m` or the two disagree about the same
-            data.
-
-    Returns:
-        (is_one_signed, updrift_anomaly, downdrift_anomaly) in m/yr.
-    """
     gis, rate = observed_curve(period)
     keep = ~np.isin(gis, [GROIN_DOWNDRIFT_GIS, GROIN_UPDRIFT_GIS])
     trend = np.polyval(np.polyfit(gis[keep], rate[keep], trend_order), gis)
@@ -243,26 +126,12 @@ def observed_anomaly_is_one_signed(period, trend_order=2):
     return (up * down > 0.0), up, down
 
 
-# The whole island, not just the fit window. Loaded lazily and cached: this
-# reads the transect file, and the module is imported by the comparison and
-# position scripts too.
+# The whole island, not just the fit window
 _OBSERVED_FULL = {}
 
 
+# CoastSat per-domain LRR across ALL 90 domains
 def observed_curve_full(period):
-    """CoastSat per-domain LRR across ALL 90 domains.
-
-    `observed_curve` covers D1-D12 because that is the window the sweep is
-    SCORED on. Nothing about the data stops at D12 -- both periods have
-    transects in all 90 domains -- so the full reach is available for showing
-    where a groin fitted on 12 domains leaves the other 78.
-
-    Args:
-        period: 1984 or 2004.
-
-    Returns:
-        (gis, rate) arrays over the domains that have transects.
-    """
     if period not in _OBSERVED_FULL:
         import pandas as _pd
         from cascade_pipeline.coastsat_lowess import compute_domain_means
@@ -276,17 +145,8 @@ def observed_curve_full(period):
     return _OBSERVED_FULL[period]
 
 
+# One cell's modelled LRR across all 90 domains
 def model_curve_full(period, preset, combo):
-    """One cell's modelled LRR across all 90 domains.
-
-    Read from the cell's own `shoreline_change_rate.csv` rather than from the
-    rate_D1..rate_D12 columns of sweep_results.csv, which carry the fit window
-    only. `lrr_m_yr` is the column, not `change_rate_m_yr`: the sweep is scored
-    on the OLS slope, and rate_D* is that same quantity.
-
-    Returns:
-        (gis, rate) arrays, or (None, None) if the cell has no rate file.
-    """
     path = sweep_output_dir(period, preset) / combo / "shoreline_change_rate.csv"
     if not path.exists():
         return None, None
@@ -295,28 +155,25 @@ def model_curve_full(period, preset, combo):
             frame["lrr_m_yr"].to_numpy(dtype=float))
 
 
-# =============================================================================
-# SHARED AXIS FURNITURE
-# =============================================================================
+# Shared axis furniture
 
+# Draws the groin between the downdrift and updrift domains
 def _mark_groin(axis):
-    """Draws the groin between the downdrift and updrift domains."""
     axis.axvline((GROIN_DOWNDRIFT_GIS + GROIN_UPDRIFT_GIS) / 2.0,
                  color=GROIN_COLOR, linewidth=2.0, zorder=1)
 
 
+# Shades the two domains the fillet is measured across
 def _shade_pair(axis):
-    """Shades the two domains the fillet is measured across."""
-    # Two greys, not two hues: these bands say WHERE, and the colour in this
-    # figure is reserved for WHAT is plotted.
+    # Two greys, not two hues: the bands say where; colour is for what is plotted
     axis.axvspan(GROIN_UPDRIFT_GIS - 0.5, GROIN_UPDRIFT_GIS + 0.5,
                  color="0.90", zorder=0)
     axis.axvspan(GROIN_DOWNDRIFT_GIS - 0.5, GROIN_DOWNDRIFT_GIS + 0.5,
                  color="0.94", zorder=0)
 
 
+# Applies the shared labelling of a per-domain LRR panel
 def _profile_axis(axis, period):
-    """Applies the shared labelling of a per-domain LRR panel."""
     _shade_pair(axis)
     _mark_groin(axis)
     axis.axhline(0.0, color=INK_MUTED, linewidth=0.8, linestyle=(0, (4, 3)),
@@ -333,28 +190,19 @@ def _profile_axis(axis, period):
               color=INK_MUTED, fontsize=7, va="top", ha="right")
 
 
+# Registers `text` as the figure's caption
 def _footnote(figure, text, width=150):
-    """Registers `text` as the figure's caption.
-
-    Until 2026-09-11 this drew the text on the canvas, wrapped with `textwrap`
-    at a fixed column. The house rule is that nothing on the image belongs in
-    a caption, so it now lands in a CAPTIONS.md beside the PNG, written when
-    the figure is saved. Every caller is unchanged, and `width` is accepted and
-    ignored -- a caption file has no columns. Calling it twice on one figure
-    replaces the text, so the second call must carry everything: see
-    `_notch_note`, which appends rather than overwriting.
-    """
     caption(figure, text)
 
 
+# Adds a sentence to whatever caption the figure already carries
 def _append_caption(figure, text):
-    """Adds a sentence to whatever caption the figure already carries."""
     existing = getattr(figure, "_hat_caption", "")
     caption(figure, f"{existing} {text}".strip())
 
 
+# Writes the one-signed-anomaly caveat under a profile figure, if it applies
 def _notch_note(figure, period):
-    """Writes the one-signed-anomaly caveat under a profile figure, if it applies."""
     one_signed, up, down = observed_anomaly_is_one_signed(period)
     if not one_signed:
         return
@@ -367,63 +215,20 @@ def _notch_note(figure, period):
         f"is a property of the target, not of this cell.")
 
 
+# Whether the reach RMSE panel is tracking bias rather than groin skill
 def reach_panel_is_bias_driven(groin, threshold=-0.7):
-    """Whether the reach RMSE panel is tracking bias rather than groin skill.
-
-    THE FAILURE THIS CATCHES, measured on the 1984 zeroBE sweep. With
-    background erosion switched off the whole reach is far too accretional
-    (bias +2.50 m/yr against CoastSat), and `rmse_window` is dominated by that
-    offset rather than by shape. Trapping sediment adds net erosion, so
-    raising M shaves the bias and the reach RMSE falls MONOTONICALLY with M --
-    corr(M, bias) = -0.96 -- until it rails at the largest M on the grid.
-
-    A reader seeing that panel rail at M = 110 would reasonably conclude the
-    reach fit wants an enormous groin. It does not: it wants background
-    erosion, and M is the only knob on the grid that can supply any. Flagged
-    on the figure so the railing cannot be quoted as a groin result.
-
-    Args:
-        groin: Scored rows with M > 0 for one period/preset.
-        threshold: Correlation at or below which bias is called dominant.
-
-    Returns:
-        (is_bias_driven, correlation, mean_absolute_bias).
-    """
     if "bias_window" not in groin.columns or len(groin) < 3:
         return False, float("nan"), float("nan")
     correlation = float(groin["M"].corr(groin["bias_window"]))
     mean_bias = float(groin["bias_window"].abs().mean())
     mean_rmse = float(groin[REACH_METRIC].abs().mean())
-    # Both conditions matter: a strong correlation with a NEGLIGIBLE bias is
-    # just a well-fit reach responding mildly to M.
+    # Both conditions: a strong correlation with little bias is just a mild response
     dominant = mean_rmse > 0 and (mean_bias / mean_rmse) > 0.7
     return (correlation <= threshold and dominant), correlation, mean_bias
 
 
+# The best cell and every cell statistically tied with it
 def tied_best(groin, column=RANK_METRIC, rel_tol=0.01):
-    """The best cell and every cell statistically tied with it.
-
-    WHY THIS IS NOT `idxmin`. In 2004-2024 the observed fillet is NEGATIVE
-    (-43.2 m: the fillet RELAXED across the window), and no M >= 0 can build a
-    negative fillet. The whole f = 0 row therefore scores identically -- a
-    fully deteriorated groin traps nothing, so M has no effect at all -- and on
-    the 2026-08-23 sweep seven cells from M = 40 to M = 110 tied to within
-    5e-5 m. `idxmin` picks one of them arbitrarily and the figure then
-    announces "best: M=95", which is not a fitted value: it is whichever tied
-    cell numpy happened to reach first.
-
-    Reporting the tie is the honest version, because the tie IS the result --
-    it says this period cannot constrain M.
-
-    Args:
-        groin: Scored rows with M > 0.
-        column: Metric to rank on.
-        rel_tol: Fraction of the best score within which a cell counts as tied.
-
-    Returns:
-        (best_row, tied_frame). `tied_frame` always contains at least the best
-        row, so `len(tied) > 1` is the test for an unidentified parameter.
-    """
     ranked = groin.sort_values(column)
     best = ranked.iloc[0]
     threshold = abs(float(best[column])) * rel_tol
@@ -431,8 +236,8 @@ def tied_best(groin, column=RANK_METRIC, rel_tol=0.01):
     return best, tied
 
 
+# One line describing a tie, or None when the best cell is unique
 def _tie_note(tied, column=RANK_METRIC):
-    """One line describing a tie, or None when the best cell is unique."""
     if len(tied) <= 1:
         return None
     m_span = (tied["M"].min(), tied["M"].max())
@@ -447,30 +252,18 @@ def _tie_note(tied, column=RANK_METRIC):
             + " -- not a fitted optimum")
 
 
+# Short human label for one cell, with be1 only where it was swept
 def _cell_label(row):
-    """Short human label for one cell, with be1 only where it was swept."""
     label = f"M={row['M']:g}, f={row['fraction']:.2f}"
     if not pd.isna(row.get("be1")):
         label += f", be1={row['be1']:g}"
     return label
 
 
-# =============================================================================
-# FIGURES
-# =============================================================================
+# Figures
 
+# Two-panel M-f error surface
 def fig_heatmap(period, preset, surface, out_dir):
-    """Two-panel M-f error surface: the ranking metric and the reach fit.
-
-    Args:
-        period: 1984 or 2004.
-        preset: "edgeBE" or "zeroBE".
-        surface: One row per (M, f), from `profile_be1`.
-        out_dir: Directory to write into.
-
-    Returns:
-        The written path.
-    """
     plt = _matplotlib()
 
     groin = surface[surface["M"] > 0]
@@ -560,8 +353,8 @@ def fig_heatmap(period, preset, surface, out_dir):
     return save(figure, out_dir / "heatmap.png", close=True)[0]
 
 
+# The winning cell's per-domain LRR against CoastSat
 def fig_best_fit_profile(period, preset, surface, out_dir):
-    """The winning cell's per-domain LRR against CoastSat."""
     plt = _matplotlib()
 
     groin = surface[surface["M"] > 0]
@@ -580,12 +373,9 @@ def fig_best_fit_profile(period, preset, surface, out_dir):
               linewidth=1.6, label=f"modelled, {_cell_label(best)}", zorder=3)
     _profile_axis(axis, period)
 
-    # --- full reach ------------------------------------------------------
-    # The fit window is 12 of 90 domains. A cell that matches the fillet says
-    # nothing on its own about the other 78, and the groin's own influence is
-    # measured (not fitted) out to a few km -- so this panel is where an
-    # emergent extent can be checked against the observations that were never
-    # part of the objective.
+    # Full reach
+
+    # The fit window is 12 of 90 domains
     reach_note = ""
     gis_full, obs_full = observed_curve_full(period)
     mod_gis, mod_full = model_curve_full(period, preset, best["combo"])
@@ -641,13 +431,8 @@ def fig_best_fit_profile(period, preset, surface, out_dir):
     return save(figure, out_dir / "best_fit_profile.png", close=True)[0]
 
 
+# The best N cells on one set of axes, against CoastSat
 def fig_top_n_profiles(period, preset, surface, out_dir, n=5):
-    """The best N cells on one set of axes, against CoastSat.
-
-    Shows how tightly the ranking discriminates: curves that lie on top of
-    each other mean the metric cannot tell those cells apart, which is a
-    statement about identifiability rather than about the fit.
-    """
     plt = _matplotlib()
 
     groin = surface[surface["M"] > 0].sort_values(RANK_METRIC)
@@ -660,8 +445,7 @@ def fig_top_n_profiles(period, preset, surface, out_dir, n=5):
     axis.plot(gis, observed, marker="o", markersize=3.4, color=OBSERVED_COLOR,
               linewidth=1.8, label="observed, CoastSat", zorder=5)
 
-    # One colour family, darkest is best: these are variations of one thing,
-    # and `autumn` put the best cell in a red that means 1984 elsewhere.
+    # One colour family, darkest is best
     from matplotlib.colors import LinearSegmentedColormap
     ramp = LinearSegmentedColormap.from_list(
         "hat_accent_ramp", [C["ACCENT_FILL"], C["ACCENT"]])
@@ -693,26 +477,8 @@ def fig_top_n_profiles(period, preset, surface, out_dir, n=5):
     return save(figure, out_dir / "top_n_profiles.png", close=True)[0]
 
 
+# The second period's error surface with constant-M*f contours drawn on
 def fig_period2_surface(period, preset, surface, out_dir):
-    """The second period's error surface with constant-M*f contours drawn on.
-
-    WHY THIS FIGURE EXISTS. 2004-2024 sits entirely past the 2003 end of the
-    deterioration ramp, so its cumulative trapping is 20*M*f: only the PRODUCT
-    is identifiable and the surface is a valley running along a hyperbola, not
-    a bowl with a minimum. Drawing the constant-M*f contours makes that
-    visible -- if the valley floor follows a contour, the non-identifiability
-    is shown rather than asserted in a caption.
-
-    Args:
-        period: Must be the second period; the figure is meaningless for the
-            first, which straddles the ramp.
-        preset: "edgeBE" or "zeroBE".
-        surface: One row per (M, f), from `profile_be1`.
-        out_dir: Directory to write into.
-
-    Returns:
-        The written path.
-    """
     plt = _matplotlib()
 
     groin = surface[surface["M"] > 0]
@@ -727,11 +493,7 @@ def fig_period2_surface(period, preset, surface, out_dir):
     cb.set_label("|modelled − observed| fillet size (m)")
     cb.outline.set_linewidth(0.6)
 
-    # Constant-M*f hyperbolae, anchored on the products the GRID spans rather
-    # than on the best cell. Anchoring on the best cell silently drew nothing
-    # here: period 2's optimum sits at f = 0, so every product was 0 and each
-    # contour was skipped as non-positive -- the one figure whose entire point
-    # is to show the M*f ridge came out with no ridge on it.
+    # Constant-M*f hyperbolae, anchored on the products the GRID spans rather than on the best cell
     m_axis = np.linspace(min(grid.columns), max(grid.columns), 200)
     best, tied = tied_best(groin)
     all_products = (groin["M"] * groin["fraction"])
@@ -764,8 +526,7 @@ def fig_period2_surface(period, preset, surface, out_dir):
               color=C["ACCENT"], linewidth=1.2,
               label="valley floor: the best M at each f", zorder=5)
 
-    # Draw the whole tied set, not one arbitrary member of it. A single star
-    # on a tie reads as a fitted value; a row of them reads as what it is.
+    # Draw the whole tied set, not one arbitrary member of it
     tie_note = _tie_note(tied)
     if tie_note:
         axis.plot(tied["M"], tied["fraction"], marker="o", markersize=5.5,
@@ -804,21 +565,10 @@ def fig_period2_surface(period, preset, surface, out_dir):
     return save(figure, out_dir / "period2_surface.png", close=True)[0]
 
 
-# =============================================================================
-# DRIVER
-# =============================================================================
+# Driver
 
+# Draws every figure for one swept period/preset
 def figures_for(period, preset, top_n):
-    """Draws every figure for one swept period/preset.
-
-    Args:
-        period: 1984 or 2004.
-        preset: "edgeBE" or "zeroBE".
-        top_n: How many cells the top-N profile figure carries.
-
-    Returns:
-        A list of written paths, empty if that sweep has no results yet.
-    """
     frame = load_scored(period, preset)
     if frame is None:
         print(f"  {period}-{END_YEAR[period]} {preset:<8} no sweep_results.csv "
@@ -853,6 +603,7 @@ def figures_for(period, preset, top_n):
     return written
 
 
+# Run: every swept cell's figures
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--period", type=int, choices=PERIODS, action="append",

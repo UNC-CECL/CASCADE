@@ -1,47 +1,10 @@
 #!/usr/bin/env python3
-"""Top-N sweep results against observed change -- PERIOD 1, production geometry.
+"""
+Top-N sweep results against observed change, period 1, production geometry.
 
-The direct counterpart to the 1967 rig's `HAT_groin_sweep_top_n_profiles.png`,
-so the two calibrations can be read side by side. Same question: do the
-best-scoring cells actually reproduce the observed alongshore SHAPE, or do they
-only match a summary number?
+    python scripts/hatteras_ms/groin-sweep/HAT_period1_top_n_figure.py --top-n 5
 
-THREE DIFFERENCES FROM THE RIG FIGURE, ALL DELIBERATE
-
-    window      1984-2004, not 1967-2018. Period 1 is the only window in the
-                hindcast where the observed gap between the groin's flanks
-                WIDENS, which is the only behaviour a module with trapping
-                >= 0 can produce.
-
-    geometry    120-domain production grid, not the rig's 41. M is
-                grid-specific -- a confined array preserves dipole amplitude
-                that an open one diffuses away -- so a value fitted here
-                transfers to the hindcast and one fitted on the rig does not.
-
-    score       DEMEANED, and ranked on D4-D8 only. A uniform level offset in
-                the groin's neighbourhood is absorbed by the source/sink
-                calibration downstream, so it is not the groin's job; what the
-                groin must get right is the shape. D1 is excluded from the
-                ranking because the cape's change over period 1 is 81-104 m,
-                roughly five times the groin's signal, and it swamps it.
-
-WHAT TO LOOK FOR
-    The no-groin baseline is drawn alongside the top cells. If the groin is
-    doing real work the top cells should sit closer to the observations than
-    that grey line does, in the shaded fit window. They do: 15.58 -> 11.69 m
-    for the chosen cell (M = 60, f = 0.6), a 25% reduction.
-
-    Watch also how tightly the top five bundle together. They span M = 40-95
-    and f = 0.4-1.0 yet differ by under 0.5 m, which is the visual statement of
-    the ridge in period-1 cumulative trapping, M(15.5 + 4.5f). An earlier
-    version of this caption said "the metric identifies a product, not a
-    pair"; fig_Mf_identifiability.png tested that and refuted it
-    (corr(RMSE, M*f) = -0.07). See CALIBRATION_FIGURES.md and GROIN_PLAN.md.
-
-Usage:
-    python HAT_period1_top_n_figure.py [--top-n 5]
-
-Writes output/calibration/groin/figures/period1_top_n_profiles.png
+The counterpart of the 1967 rig's top-N profile figure. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -72,29 +35,23 @@ from HAT_fullperiod_target import observed_change_profile  # noqa: E402
 from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save)
 
+# --- CONFIG ------------------------------------------------------------------
 SWEEP = GROIN_SWEEP_ROOT / "1984_2004_edgeBE"
 FIGURE_DIR = GROIN_SWEEP_ROOT / "figures"
 
 SHOW_DOMAINS = list(range(1, 13))     # plot the whole neighbourhood
 FIT_DOMAINS = list(range(4, 9))       # but rank on D4-D8 only
-# The CALIBRATED value, re-solved 2026-08-28. This was -40.0, which was the
-# nearest grid point to the old -41.8 rather than the value itself; -42.6
-# is now on the grid and is what production spends.
+# The CALIBRATED value, re-solved 2026-08-28
 PINNED_BE1 = -42.6                    # production's edgeBE value for 1984
 CHOSEN_M, CHOSEN_F = 60.0, 0.6
-# House semantics: the cell taken forward is the ACCENT, the no-groin baseline
-# is BASE, the structure's position is a guide line in muted ink. GROIN_COLOR
-# was a dark red here, which is the 1984 vintage colour elsewhere.
+# House semantics
 CHOSEN_COLOR, BASELINE_COLOR, BAND = C["ACCENT"], C["BASE"], "0.94"
+# -----------------------------------------------------------------------------
 
 
+# Cells at the pinned be1, with their profiles and D4-D8 demeaned score
 def load():
-    """Cells at the pinned be1, with their profiles and D4-D8 demeaned score."""
-    # LANDWARD-POSITIVE, so erosion is UP and the panel reads as a plan view,
-    # matching the gifs. observed_change_profile is SEAWARD-positive, so it is
-    # negated; x_s is landward-positive already, so the negation that used to
-    # sit on `change` below is gone. Both series flip together, so `score` is
-    # unchanged, and the scoring pipeline itself is untouched.
+    # LANDWARD-POSITIVE, so erosion is UP and the panel reads as a plan view, matching the gifs
     show_obs = -np.array([observed_change_profile(1984, 2004, SHOW_DOMAINS)[d]
                           for d in SHOW_DOMAINS])
     fit_index = [SHOW_DOMAINS.index(d) for d in FIT_DOMAINS]
@@ -121,6 +78,7 @@ def load():
     return pd.DataFrame(rows), show_obs
 
 
+# Run: the figure
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--top-n", type=int, default=5)
@@ -136,9 +94,7 @@ def main():
     baseline = frame[frame.M == 0].sort_values("score").iloc[0]
     top = groin.head(args.top_n)
 
-    # Demeaned over the FIT window, so every curve is centred the same way the
-    # score centres it. Centring on the plotted window instead would show a
-    # different quantity from the one that was ranked.
+    # Demeaned over the FIT window, so every curve is centred the same way the score centres it
     fit_index = [SHOW_DOMAINS.index(d) for d in FIT_DOMAINS]
     centre = lambda v: np.asarray(v, float) - np.mean(np.asarray(v, float)[fit_index])
 
@@ -166,8 +122,7 @@ def main():
               linewidth=1.4, zorder=4,
               label=f"no groin, {baseline.score:.1f} m")
 
-    # One colour family for the top cells, darkest is best, so they read as
-    # variations of one thing. viridis was used here until 2026-09-11.
+    # One colour family for the top cells, darkest is best, so they read as variations of one thing
     ramp = LinearSegmentedColormap.from_list(
         "hat_accent_ramp", [C["ACCENT_FILL"], C["ACCENT"]])
     for colour, (_, row) in zip(ramp(np.linspace(1.0, 0.2, len(top))),

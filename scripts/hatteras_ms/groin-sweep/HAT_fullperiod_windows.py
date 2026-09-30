@@ -1,51 +1,10 @@
 #!/usr/bin/env python3
-"""Does a groin signal survive in a NARROW window? Rescores the sweep several ways.
+"""
+Does a groin signal survive in a narrow window? The full-period sweep rescored several ways.
 
-THE QUESTION
-    On the full D1-D12 window the no-groin cell fits best and RMSE rises
-    monotonically with trapping. But that window is dominated by two features
-    the groin module cannot produce:
+    python scripts/hatteras_ms/groin-sweep/HAT_fullperiod_windows.py
 
-        D2-D4   observed ACCRETES (+3 to +7 m over 40 years); the model erodes
-                there. Cape Point, which the parameterisation does not
-                represent.
-        D6-D7   observed erodes 48 and 63 m, a trough peaking one domain NORTH
-                of the structure. A groin pushes D6 seaward, i.e. the wrong
-                way, so raising M makes the single largest misfit worse.
-
-    Neither is a groin signal, and together they swamp one. The question this
-    file answers is whether a groin signal exists underneath, in the few
-    domains the structure actually reaches.
-
-TWO SCORES PER WINDOW, AND WHY BOTH ARE NEEDED
-    raw         RMSE of modelled against observed change. As the window
-                narrows this is increasingly dominated by a constant OFFSET:
-                if the model sits 20 m low across D4-D8, raw RMSE is ~20 m
-                whatever M does, and the groin's contribution is invisible.
-
-    detrended   A straight line is fitted across the window and removed from
-                BOTH profiles first, leaving only SHAPE. A groin's dipole is a
-                shape -- a step across the structure -- so this is the score
-                that can actually see it. A cell that gets the local shape
-                right while sitting on a biased background shows up here and
-                nowhere else.
-
-    Reported together on purpose: a groin that improves the detrended score
-    while leaving the raw one unchanged has explained the local pattern
-    without fixing the level, which is a precise and reportable statement
-    rather than a pass or a fail.
-
-WHAT WOULD COUNT AS A SIGNAL
-    An INTERIOR optimum at M > 0 that beats the M = 0 baseline. If every
-    window at both scores still prefers M = 0, that is a much stronger
-    negative result than one window alone -- it says the groin's effect is not
-    merely swamped at reach scale but absent at the scale it acts on.
-
-Usage:
-    python HAT_fullperiod_windows.py
-
-Reads  output/calibration/groin/fullperiod_1984_2024/results.csv
-Writes fit_windows.csv beside it, and prints the comparison.
+Writes the windows table. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -71,54 +30,40 @@ for _path in (PROJECT_BASE_DIR / "scripts", _HERE.parent):
 from HAT_groin_sweep_config import GROIN_SWEEP_ROOT  # noqa: E402
 from HAT_fullperiod_target import observed_change_profile  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 OUT_ROOT = GROIN_SWEEP_ROOT / "fullperiod_1984_2024"
 RESULTS_CSV = OUT_ROOT / "results.csv"
 WINDOWS_CSV = OUT_ROOT / "fit_windows.csv"
 
-# The groin field occupies D6; the pair is D5/D6. Measured influence is 2.25 km
-# updrift (~4.5 domains) and ZERO downdrift, so windows widen mostly northward
-# in spirit even though they are drawn symmetrically for simplicity.
+# The groin field is D6 (pair D5/D6); influence 2.25 km updrift, none downdrift
 WINDOWS = {
     "D5-D7  (pair +1)": (5, 7),
     "D4-D8  (pair +/-2)": (4, 8),
     "D3-D9  (pair +/-3)": (3, 9),
     "D1-D12 (reach)": (1, 12),
 }
+# -----------------------------------------------------------------------------
 
 
+# Removes a CONSTANT offset, preserving every gradient and step
 def demean(values):
-    """Removes a CONSTANT offset, preserving every gradient and step.
-
-    This is the score that matches how the model is actually applied: a
-    per-domain source/sink correction is fitted afterwards, so a uniform level
-    error in the groin's neighbourhood is absorbed downstream and is not the
-    groin's job to fix. What the groin must get right is the SHAPE.
-
-    Deliberately weaker than `detrend`. Removing a linear trend across a short
-    window also removes the gradient that a dipole PRODUCES -- fit a line
-    through D4-D8 and the step across D5/D6 is partly absorbed into it, so a
-    working groin can be scored as no better than none. Subtracting the mean
-    cannot do that.
-    """
     values = np.asarray(values, dtype=float)
     return values - values.mean()
 
 
+# Removes a straight line, leaving shape only
 def detrend(values, x):
-    """Removes a straight line, leaving shape only."""
     values = np.asarray(values, dtype=float)
     x = np.asarray(x, dtype=float)
     if len(values) < 3:
-        # Two points define the line exactly, so detrending would zero them
-        # and every cell would score identically. Return as-is and let the
-        # caller see the raw score instead of a meaningless zero.
+        # Two points define the line exactly, so detrending would zero them and every cell would score identically
         return values - values.mean()
     slope, intercept = np.polyfit(x, values, 1)
     return values - (slope * x + intercept)
 
 
+# raw and detrended RMSE for every cell over one window
 def score(frame, observed, lo, hi):
-    """raw and detrended RMSE for every cell over one window."""
     domains = [d for d in range(lo, hi + 1) if f"change_D{d}" in frame.columns]
     x = np.array(domains, dtype=float)
     obs = np.array([observed[d] for d in domains], dtype=float)
@@ -139,6 +84,7 @@ def score(frame, observed, lo, hi):
     return out
 
 
+# Run: rescore every window
 def main():
     if not RESULTS_CSV.exists():
         raise SystemExit(f"{RESULTS_CSV} not found -- run the sweep first.")

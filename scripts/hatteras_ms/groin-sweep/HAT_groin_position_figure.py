@@ -1,52 +1,11 @@
 #!/usr/bin/env python3
-"""Observed vs modelled SHORELINE POSITION across the groin, per period.
+"""
+Observed against modelled shoreline position across the groin, per period.
 
-Every other figure in this directory plots a RATE. This one plots position:
-where the shoreline started, where it ended, and where the model put it at the
-fitted (M, f). A rate figure can hide a run that gets the trend right from the
-wrong place; a position figure cannot.
+    python scripts/hatteras_ms/groin-sweep/HAT_groin_position_figure.py
+    python scripts/hatteras_ms/groin-sweep/HAT_groin_position_figure.py --preset zeroBE
 
-WHERE THE OBSERVATIONS COME FROM
-    `HAT-groin-gis-analysis/.../groin_analysis_chainage_all.csv` -- 904k
-    shoreline observations carrying `chainage_m`, the cross-shore distance from
-    the project's offshore datum line, already mapped to CASCADE domains.
-    Chainage is SEAWARD-POSITIVE: verified on 2026-08-23 by differencing the
-    1984 and 2004 domain means and correlating against the published CoastSat
-    LRR (+0.74). The model's x_s is landward-positive, so it is negated.
-
-    POSITIONS ARE FITTED, NOT BINNED. Two year-bins differenced give a noisy
-    endpoint rate -- at D1 that route gave -1.6 m/yr against a published LRR of
-    -4.2. Instead an OLS line is fitted to chainage against decimal year across
-    the whole period and evaluated at both ends, so the plotted start and end
-    are consistent with the LRR that the sweep is scored on. Same estimator,
-    same answer.
-
-WHY THE START LINES COINCIDE -- read this before reading the figure
-    The model's cross-shore origin is Barrier3D's own, not a real datum, so the
-    model cannot be placed on a surveyed axis independently. Following
-    `build_shoreline_target` in cascade_pipeline.hindcast, the model is plotted
-    as OBSERVED START + MODEL CHANGE. The consequence is unavoidable and worth
-    stating plainly: model and observed start at the same place BY
-    CONSTRUCTION. Only the separation at the END year carries information. The
-    figure annotates this rather than letting a reader mistake a shared start
-    for a validated initial condition.
-
-THE ZOOM PANEL, AND WHY IT IS NOT A FAILURE
-    The groin field -- four structures, northing 3901373-3901789 -- sits
-    entirely inside D6, which spans 3901298-3901798. Its fillet is ~190 m
-    wide while a model domain is 500 m, so the model CANNOT resolve it: its
-    dipole is 500 m wide by construction. The right panel plots the
-    observations at transect resolution against the model's 500 m steps so the
-    mismatch is visible as a resolution limit rather than being averaged away.
-    A reader who sees the model miss a 190 m notch should know the model was
-    never able to draw one.
-
-Usage:
-    python HAT_groin_position_figure.py
-    python HAT_groin_position_figure.py --preset zeroBE
-
-Writes to output/calibration/groin/figures/:
-    position_<preset>.png
+Where the shoreline started, where it ended, and the fit through CoastSat. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -101,20 +60,21 @@ from HAT_groin_sweep_figures import (  # noqa: E402
     tied_best,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 CHAINAGE_CSV = (PROJECT_BASE_DIR / "hard-structures" / "groin"
                 / "HAT-groin-gis-analysis" / "shoreline_output_coastsat"
                 / "groin_analysis_chainage_all.csv")
 
-# The groin field's real footprint, from HAT_groin_shoreline_analysis_v2.py's
-# metadata. Drawn on the zoom panel so the structure's extent is visible
-# rather than implied by a single line.
+# The groin field's real footprint, from HAT_groin_shoreline_analysis_v2.py's metadata
 GROIN_FIELD_NORTHING = (3901373.14, 3901788.79)
 
 ZOOM_DOMAINS = (4, 8)
 NOGROIN_COLOR = C["BASE"]   # the run without the modification under test
 MIN_OBS_PER_DOMAIN = 20
+# -----------------------------------------------------------------------------
 
 
+# matplotlib on the Agg backend, imported when needed
 def _matplotlib():
     import matplotlib
     matplotlib.use("Agg")
@@ -122,19 +82,10 @@ def _matplotlib():
     return plt
 
 
-# =============================================================================
-# OBSERVATIONS
-# =============================================================================
+# Observations
 
+# The shoreline-position observations, CoastSat only
 def load_chainage():
-    """The shoreline-position observations, CoastSat only.
-
-    Returns:
-        A DataFrame with domain, decimal_year, chainage_m, alongshore_m.
-
-    Raises:
-        FileNotFoundError: If the GIS analysis output is absent.
-    """
     if not CHAINAGE_CSV.exists():
         raise FileNotFoundError(
             f"shoreline chainage not found at {CHAINAGE_CSV}. It is produced "
@@ -144,30 +95,12 @@ def load_chainage():
         CHAINAGE_CSV,
         usecols=["domain", "decimal_year", "chainage_m", "alongshore_m",
                  "source", "transect_id"])
-    # CoastSat only: nc_state and wet_dry are different features measured to
-    # different definitions, and mixing them into one fitted line would put
-    # the source's offset into the trend.
+    # CoastSat only: other sources measure a different feature
     return frame[frame["source"] == "coastsat"].copy()
 
 
+# Start and end shoreline position per domain, by OLS over the period
 def fitted_positions(chainage, period, domains):
-    """Start and end shoreline position per domain, by OLS over the period.
-
-    The same estimator the sweep is scored on (see `compute_lrr`), so the
-    endpoints of this line and the LRR are the same statement about the same
-    data. Differencing two year-bins instead gives an endpoint rate that
-    disagrees with the published LRR by a factor of two at the noisiest
-    domains.
-
-    Args:
-        chainage: Observation frame from `load_chainage`.
-        period: 1984 or 2004.
-        domains: Iterable of GIS domain ids.
-
-    Returns:
-        (start, end, n_obs) dicts keyed by domain, in metres seaward-positive.
-        Domains with too few observations are absent from all three.
-    """
     lo, hi = float(period), float(END_YEAR[period])
     window = chainage[(chainage["decimal_year"] >= lo)
                       & (chainage["decimal_year"] <= hi)]
@@ -184,15 +117,8 @@ def fitted_positions(chainage, period, domains):
     return start, end, counts
 
 
+# Per-transect start and end positions, for the zoom panel
 def transect_positions(chainage, period, domains):
-    """Per-transect start and end positions, for the zoom panel.
-
-    Same OLS treatment as `fitted_positions` but without the domain averaging,
-    so a fillet narrower than a domain survives.
-
-    Returns:
-        A DataFrame with alongshore_m, start_m, end_m, one row per transect.
-    """
     lo, hi = float(period), float(END_YEAR[period])
     window = chainage[(chainage["decimal_year"] >= lo)
                       & (chainage["decimal_year"] <= hi)
@@ -209,44 +135,18 @@ def transect_positions(chainage, period, domains):
     return pd.DataFrame(rows).sort_values("alongshore_m")
 
 
+# Alongshore extent of each domain, measured from the observations
 def domain_alongshore_bounds(chainage, domains):
-    """Alongshore extent of each domain, measured from the observations.
-
-    Derived from the transects rather than from the domain polygons because
-    the zoom panel plots observations on an alongshore axis and the model's
-    cells must be drawn on the SAME axis. Taking the extent from the data that
-    is being plotted keeps the two aligned even where a domain's transect
-    coverage is partial.
-
-    Args:
-        chainage: Observation frame from `load_chainage`.
-        domains: (first, last) inclusive domain range.
-
-    Returns:
-        {domain: (min_alongshore_m, max_alongshore_m)}.
-    """
     window = chainage[chainage["domain"].between(*domains)]
     grouped = window.groupby("domain")["alongshore_m"].agg(["min", "max"])
     return {int(d): (float(r["min"]), float(r["max"]))
             for d, r in grouped.iterrows()}
 
 
-# =============================================================================
-# MODEL
-# =============================================================================
+# Model
 
+# Modelled start->end shoreline change per domain, seaward-positive
 def model_change(period, preset, combo, domains):
-    """Modelled start->end shoreline change per domain, seaward-positive.
-
-    Args:
-        period: 1984 or 2004.
-        preset: "edgeBE" or "zeroBE".
-        combo: Combination directory name.
-        domains: GIS domain ids wanted.
-
-    Returns:
-        A dict of domain -> change in metres, or None if the run is absent.
-    """
     from site_layer.hatteras_site_config import HATTERAS_DOMAINS as geometry
     path = sweep_output_dir(period, preset) / combo / "shoreline_matrix.npy"
     if not path.exists():
@@ -257,8 +157,8 @@ def model_change(period, preset, combo, domains):
     return {d: float(change[geometry.gis_to_pad(d)]) for d in domains}
 
 
+# The fitted cell for one sweep, or None if it has not been scored
 def best_cell(period, preset):
-    """The fitted cell for one sweep, or None if it has not been scored."""
     frame = load_scored(period, preset)
     if frame is None or frame.empty:
         return None
@@ -270,18 +170,16 @@ def best_cell(period, preset):
     return best
 
 
+# The M = 0 combination paired with `best`, at the same be1
 def baseline_combo(period, preset, best):
-    """The M = 0 combination paired with `best`, at the same be1."""
     be1 = None if pd.isna(best.get("be1")) else float(best["be1"])
     return combo_dir_name(0.0, be1, 0.0)
 
 
-# =============================================================================
-# FIGURE
-# =============================================================================
+# Figure
 
+# Draws the two-period position figure for one preset
 def draw(preset, chainage):
-    """Draws the two-period position figure for one preset."""
     plt = _matplotlib()
 
     domains = list(FIT_DOMAINS_GIS)
@@ -316,7 +214,7 @@ def draw(preset, chainage):
         nogroin = model_change(period, preset,
                                baseline_combo(period, preset, best), have)
 
-        # --- reach panel -------------------------------------------------
+        # Reach panel
         reach_axis.plot(x, obs_start, marker="o", markersize=2.8,
                         linestyle="--", color=INK_MUTED, linewidth=1.2,
                         label=f"observed at {period}, the start", zorder=3)
@@ -336,10 +234,7 @@ def draw(preset, chainage):
                             label=f"modelled end, {_cell_label(best)}",
                             zorder=6)
 
-        # DOMAIN-COORDINATE shading belongs to the reach panel ONLY. The zoom
-        # panel's x axis is alongshore METRES, so a span drawn at 5.5-6.5
-        # lands six metres from the origin and drags the axis back to zero --
-        # which is exactly what it did before this was split.
+        # DOMAIN-COORDINATE shading belongs to the reach panel ONLY
         reach_axis.axvspan(GROIN_UPDRIFT_GIS - 0.5, GROIN_UPDRIFT_GIS + 0.5,
                            color="0.90", zorder=0)
         reach_axis.axvspan(GROIN_DOWNDRIFT_GIS - 0.5,
@@ -363,11 +258,9 @@ def draw(preset, chainage):
         notes.append("({}) {} to {}: end-position RMSE {:.1f} m.".format(
             chr(ord("a") + row * 2), period, END_YEAR[period], misfit))
 
-        # --- zoom panel: transect resolution ------------------------------
-        # X IS REAL ALONGSHORE DISTANCE, NOT THE DOMAIN ID. Plotting transects
-        # against their integer domain puts every transect in a cell on the
-        # same x, so a domain's whole spread draws as one vertical spike and
-        # the fillet -- the entire point of this panel -- is unreadable.
+        # Zoom panel: transect resolution
+
+        # X IS REAL ALONGSHORE DISTANCE, NOT THE DOMAIN ID
         tr = transect_positions(chainage, period, ZOOM_DOMAINS)
         bounds = domain_alongshore_bounds(chainage, ZOOM_DOMAINS)
         if not tr.empty:
@@ -429,6 +322,7 @@ def draw(preset, chainage):
     return save(figure, figure_dir / f"position_{preset}.png", close=True)[0]
 
 
+# Run: one figure per period and preset
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--preset", choices=PRESETS, action="append",

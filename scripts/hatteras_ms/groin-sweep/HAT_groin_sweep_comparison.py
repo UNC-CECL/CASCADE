@@ -1,58 +1,11 @@
 #!/usr/bin/env python3
-"""Cross-reference figures spanning every groin sweep at once.
+"""
+Cross-reference figures spanning every groin sweep at once.
 
-`HAT_groin_sweep_figures.py` draws one sweep at a time, into that sweep's own
-directory. That is the right place for a diagnostic and the wrong place for a
-comparison: answering "does edgeBE put the optimum where zeroBE does?" or
-"do the two periods agree about f?" currently means opening four folders and
-holding four colour scales in your head.
+    python scripts/hatteras_ms/groin-sweep/HAT_groin_sweep_comparison.py
+    python scripts/hatteras_ms/groin-sweep/HAT_groin_sweep_comparison.py --top-n 3
 
-This file draws the four sweeps together.
-
-WHAT THE COMPARISON IS FOR
-    The sweep grid is the same in every cell -- same M values, same f values,
-    same observed target per period -- so the four surfaces are directly
-    comparable and the interesting content is where they DIFFER:
-
-    across presets (zeroBE vs edgeBE)
-        Same period, same groin, different background erosion. If the optimum
-        moves, the fitted groin is absorbing background erosion rather than
-        describing the structure.
-
-    across periods (1984-2004 vs 2004-2024)
-        Same structure, different window. Period 1 straddles the 1996 repair
-        and the 2003 storm and is the only window that can separate M from f;
-        period 2 sits entirely past the ramp and sees only the product M*f.
-        Disagreement here is the scientific result, not a defect.
-
-WHY THE PANELS DO NOT SHARE A COLOUR SCALE
-    Period 1's fillet error spans roughly 0-40 m and period 2's roughly 43-95
-    m, because period 2's observed fillet is NEGATIVE (-43.2 m: the fillet
-    relaxed) and no M >= 0 can build a negative fillet, so every cell carries
-    at least that much error. Forcing one scale would flatten period 1 --
-    where the actual optimum lives -- into a single colour. Each panel is
-    scaled to its own range and the numbers are given on the panel, so the
-    comparison is read from the annotations rather than from the hue.
-
-TIES ARE DRAWN, NOT RESOLVED
-    In both period-2 sweeps the whole f = 0 row scores identically: a fully
-    deteriorated groin traps nothing, so M has no effect and seven cells tie
-    to within 5e-5 m. Marking one of them as "best" would report a fitted M
-    that is really just whichever cell sorted first. Tied sets are drawn as
-    open circles and labelled as unconstrained.
-
-Usage:
-    python HAT_groin_sweep_comparison.py
-    python HAT_groin_sweep_comparison.py --top-n 3
-
-Writes to output/calibration/groin/figures/:
-    comparison_surfaces.png   the four M-f error surfaces side by side
-    comparison_optima.png     every sweep's optimum in one (M, f) plane
-    comparison_profiles.png   each sweep's best LRR curve against CoastSat
-
-Sweeps that have not run yet are drawn as labelled placeholders rather than
-skipped, so a missing panel reads as "not swept" instead of silently
-shrinking the figure.
+Reduces each sweep the same way the single-sweep figures do. Details: scripts/hatteras_ms/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -96,9 +49,7 @@ from HAT_groin_sweep_config import (  # noqa: E402
     PRESETS,
 )
 
-# Imported, never copied. The single-sweep figures and these comparisons must
-# reduce a sweep the SAME way -- same be1 profiling, same tie rule, same
-# ranking metric -- or the two figure sets would disagree about which cell won.
+# Imported, never copied, so both figure sets agree on the winner
 from HAT_groin_sweep_figures import (  # noqa: E402
     GROIN_COLOR,
     OBSERVED_COLOR,
@@ -115,16 +66,11 @@ from HAT_groin_sweep_figures import (  # noqa: E402
     tied_best,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 OUTPUT_DIR = GROIN_SWEEP_ROOT / "figures"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# One colour per sweep, stable across all three figures so a reader who learns
-# "orange is 1984 edgeBE" on one figure keeps it on the next.
-# Colour is the PERIOD, marker is the preset (2026-09-11). Four invented hues
-# were in use here -- a blue, an orange, a green and a dark red -- which spent
-# two colours on a distinction the marker already carries, and put the vintage
-# red on one arbitrary sweep. The house pair means the same thing on every
-# figure in the project: red is the earlier period, blue the later.
+# Colour is the period (house pair), marker the preset
 SWEEP_COLORS = {
     (1984, "zeroBE"): C_1984,
     (1984, "edgeBE"): C_1984,
@@ -132,8 +78,10 @@ SWEEP_COLORS = {
     (2004, "edgeBE"): C_1997,
 }
 SWEEP_MARKERS = {"zeroBE": "o", "edgeBE": "s"}
+# -----------------------------------------------------------------------------
 
 
+# matplotlib on the Agg backend, imported when needed
 def _matplotlib():
     import matplotlib
     matplotlib.use("Agg")
@@ -141,13 +89,8 @@ def _matplotlib():
     return plt
 
 
+# Loads every sweep that has results
 def collect():
-    """Loads every sweep that has results.
-
-    Returns:
-        {(period, preset): surface}, where surface is one row per (M, f) with
-        be1 profiled out. Sweeps with no results are absent from the dict.
-    """
     found = {}
     for period in PERIODS:
         for preset in PRESETS:
@@ -160,8 +103,8 @@ def collect():
     return found
 
 
+# Marks a panel whose sweep has not produced results yet
 def _placeholder(axis, period, preset):
-    """Marks a panel whose sweep has not produced results yet."""
     axis.text(0.5, 0.5, f"{period} to {END_YEAR[period]}, {preset}\n"
               "not swept yet",
               ha="center", va="center", fontsize=8, color=INK_MUTED,
@@ -172,12 +115,10 @@ def _placeholder(axis, period, preset):
         spine.set_edgecolor("0.85")
 
 
-# =============================================================================
-# FIGURE 1 -- the four surfaces
-# =============================================================================
+# Figure 1 -- the four surfaces
 
+# The four M-f fillet-error surfaces in one 2x2 block
 def fig_surfaces(surfaces):
-    """The four M-f fillet-error surfaces in one 2x2 block."""
     plt = _matplotlib()
 
     apply_style()
@@ -242,12 +183,10 @@ def fig_surfaces(surfaces):
     return save(figure, OUTPUT_DIR / "comparison_surfaces.png", close=True)[0]
 
 
-# =============================================================================
-# FIGURE 2 -- every optimum in one plane, plus the numbers
-# =============================================================================
+# Figure 2 -- every optimum in one plane, plus the numbers
 
+# Each sweep's optimum and valley floor in a single (M, f) plane
 def fig_optima(surfaces):
-    """Each sweep's optimum and valley floor in a single (M, f) plane."""
     plt = _matplotlib()
 
     apply_style()
@@ -265,9 +204,7 @@ def fig_optima(surfaces):
         best, tied = tied_best(groin)
         tie = _tie_note(tied)
 
-        # The valley floor shows the SHAPE of each sweep's constraint, which is
-        # what makes two sweeps comparable even when their optima coincide: a
-        # flat floor means the axis is unconstrained, a steep one means it bites.
+        # The valley floor shows the SHAPE of each sweep's constraint
         grid = groin.pivot(index="fraction", columns="M", values=RANK_METRIC)
         floor_M = [grid.columns[int(np.nanargmin(grid.loc[f].values))]
                    if np.isfinite(grid.loc[f].values).any() else np.nan
@@ -341,12 +278,10 @@ def fig_optima(surfaces):
     return save(figure, OUTPUT_DIR / "comparison_optima.png", close=True)[0]
 
 
-# =============================================================================
-# FIGURE 3 -- best profile per sweep
-# =============================================================================
+# Figure 3 -- best profile per sweep
 
+# Each sweep's best LRR curve against its own CoastSat target
 def fig_profiles(surfaces):
-    """Each sweep's best LRR curve against its own CoastSat target."""
     plt = _matplotlib()
 
     apply_style()
@@ -398,6 +333,7 @@ def fig_profiles(surfaces):
     return save(figure, OUTPUT_DIR / "comparison_profiles.png", close=True)[0]
 
 
+# Run: every comparison figure
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.parse_args()
