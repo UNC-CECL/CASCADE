@@ -1,35 +1,19 @@
 #!/usr/bin/env python3
 """
-HATTERAS ISLAND — CASCADE Run Comparison Plot
-=============================================
-Loads up to 4 pre-computed CASCADE runs from their saved shoreline change
-rate CSVs and overlays them on one figure for visual comparison.  Adds
-LOWESS-smoothed CoastSat LRR for reference.
+Overlay up to four finished CASCADE runs' shoreline change rates against the smoothed CoastSat LRR.
 
-Each run must have already been executed by the hindcast runner, which saves
-a rate CSV automatically inside the run directory:
+    python scripts/analyze_output/compare_runs/compare_runs.py
 
-  <run_dir>/tables/shoreline_change_rate.csv   (or, before the 2026-09-10
-  layout change, <run_dir>/{run_name}_shoreline_change_rate.csv -- the path is
-  resolved by cascade_pipeline.run_layout, never joined here)
-  Columns: gis_domain | change_rate_m_yr | lrr_m_yr | lrr_r2
-  lrr_m_yr is the one read -- see RUN_DOMAIN_COL / RUN_RATE_COL.
-
-<run_dir> is resolved from (run_name, period, preset, arm) by
-cascade_pipeline.run_registry.find_run_dir -- never joined by hand.
-
-Outputs (saved to COMPARISON_ROOT_DIR/{COMPARISON_NAME}, i.e. under
-output/comparisons/):
-  {COMPARISON_NAME}_diagnostic.png      — quick multi-run diagnostic
-  {COMPARISON_NAME}_annotated.png       — publication figure with geographic annotations
-  {COMPARISON_NAME}_residuals.png       — optional panel: each model minus active CoastSat
+Fill RUNS_TO_COMPARE and COMPARISON_NAME first (the list ships empty). Reads
+each run's tables/shoreline_change_rate.csv; writes diagnostic, annotated,
+two-period and residual figures to output/comparisons/<COMPARISON_NAME>/.
+Details: scripts/analyze_output/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
 Version: 2026-09-30
 """
-
 import os
 import pathlib
 import sys
@@ -37,10 +21,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5). This file drew in
-# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+# House style (site_layer/hat_figure_style.py), applied at import
 import sys as _sys
 from pathlib import Path as _HP
 _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
@@ -54,124 +35,42 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib.transforms import blended_transform_factory
 from statsmodels.nonparametric.smoothers_lowess import lowess
-
-# =============================================================================
-# SECTION 1: DOMAIN CONFIGURATION
-# (must match the values used in HAT_hindcast_1984_2024_old version.py)
-# =============================================================================
-
-NUM_REAL_DOMAINS   = 90
-NUM_BUFFER_DOMAINS = 15
-
-FIRST_FILE_NUMBER = 1     # GIS domain IDs: 1–90
-LAST_FILE_NUMBER  = FIRST_FILE_NUMBER + NUM_REAL_DOMAINS - 1   # = 90
-
-TOTAL_DOMAINS    = NUM_BUFFER_DOMAINS + NUM_REAL_DOMAINS + NUM_BUFFER_DOMAINS  # 120
-START_REAL_INDEX = NUM_BUFFER_DOMAINS             # = 15
-END_REAL_INDEX   = START_REAL_INDEX + NUM_REAL_DOMAINS  # = 105
-
-DOMAIN_TICK_STEP    = 5
-DOMAIN_SPACING_M    = 500   # metres per CASCADE domain (used to convert window_domains → km)
-
-# =============================================================================
-# SECTION 2: FILE PATHS
-# =============================================================================
-
-# ANCHORED, NOT TYPED. These were absolute literals on one machine, and two
-# of the three pointed at folders that do not exist: "comparison/raw_runs"
-# (the tree is output/raw_runs) and "input_prep/CoastSat" (it is under
-# 5-scr/). Anchoring on the pyproject.toml at the repo root makes them follow
-# the checkout and survive this file changing depth.
-PROJECT_BASE_DIR = next(
-    p for p in pathlib.Path(__file__).resolve().parents
-    if (p / "pyproject.toml").exists()
-)
-RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
-
 # Resolved through hat_observed_rates.py (2026-09-18), not typed.
 import sys as _sys
 from pathlib import Path as _RP
 _sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
                              if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_observed_rates as _obs  # noqa: E402
-COASTSAT_BASE_DIR = str(_obs.COASTSAT_LRR_ROOT)
-
-# Where comparison figures are saved. Products belong under output/, never
-# beside the script -- see output/README.md, which names comparisons/ as the
-# home for cross-run figures. A subfolder named COMPARISON_NAME is created
-# automatically.
 from site_layer.hat_figure_style import COMPARISONS_ROOT  # noqa: E402
-COMPARISON_ROOT_DIR = str(COMPARISONS_ROOT)
 
-# The rate CSV's schema. WHICH RATE COLUMN IS READ IS A METHOD CHOICE, NOT A
-# SPELLING. The file carries two: lrr_m_yr, an OLS slope through the annual
-# shoreline positions, and change_rate_m_yr, the endpoint rate. This script
-# reads lrr_m_yr because the CoastSat target it is plotted against is one too
-# (see rate_col in COASTSAT_DATASETS below) -- putting an endpoint rate up
-# against an OLS one moves the difference between two estimators into the
-# residual panel, where it reads as model error.
+
+# --- CONFIG ------------------------------------------------------------------
+# Domain layout; must match the hindcast runner
+NUM_REAL_DOMAINS   = 90
+NUM_BUFFER_DOMAINS = 15
+FIRST_FILE_NUMBER = 1     # GIS domain IDs: 1–90
+LAST_FILE_NUMBER  = FIRST_FILE_NUMBER + NUM_REAL_DOMAINS - 1   # = 90
+TOTAL_DOMAINS    = NUM_BUFFER_DOMAINS + NUM_REAL_DOMAINS + NUM_BUFFER_DOMAINS  # 120
+START_REAL_INDEX = NUM_BUFFER_DOMAINS             # = 15
+END_REAL_INDEX   = START_REAL_INDEX + NUM_REAL_DOMAINS  # = 105
+DOMAIN_TICK_STEP    = 5
+DOMAIN_SPACING_M    = 500   # metres per CASCADE domain (used to convert window_domains → km)
+# Paths resolved from the repo root, never typed
+PROJECT_BASE_DIR = next(
+    p for p in pathlib.Path(__file__).resolve().parents
+    if (p / "pyproject.toml").exists()
+)
+RAW_RUNS = PROJECT_BASE_DIR / "output" / "raw_runs"
+COASTSAT_BASE_DIR = str(_obs.COASTSAT_LRR_ROOT)
+# Figures go under output/comparisons/<COMPARISON_NAME>/
+COMPARISON_ROOT_DIR = str(COMPARISONS_ROOT)
+# Rate CSV columns; lrr_m_yr because the CoastSat target is an OLS rate too
 RUN_DOMAIN_COL = "gis_domain"
 RUN_RATE_COL   = "lrr_m_yr"
-
 sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
-
 from cascade_pipeline.run_registry import find_run_dir   # noqa: E402
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
-
-# =============================================================================
-# SECTION 3: RUNS TO COMPARE
-# =============================================================================
-#
-# run_name   : folder name AND filename prefix for this run's comparison -
-#              must match RUN_NAME_BASE used when the run was executed in
-#              the hindcast script. The folder itself is RESOLVED from
-#              (run_name, period, preset, arm) by
-#              cascade_pipeline.run_registry.find_run_dir; it is never joined
-#              by hand here. If run_dir (below) is set, run_name is still
-#              used as the filename prefix but the resolver is bypassed.
-# period     : "1984_2004" or "2004_2024" - the run's period directory.
-# preset     : source/sink preset the run was made under ("calibBE",
-#              "edgeBE", "zeroBE"), i.e. the directory below the period.
-# arm        : (optional) forcing arm. Omit for the calibration arm, which is
-#              where every run made before arms existed sits. Naming no arm
-#              never silently searches: a run forced off the calibration wave
-#              climate must be asked for by name.
-# label      : short display label for the legend.
-# start_year : 1984 or 2004. Determines which CoastSat period is drawn solid
-#              for this run, AND which panel it appears in for the two-panel
-#              period-comparison figure (see plot_two_period below).
-# sort_key   : (optional) numeric value used to order this run along the
-#              color gradient - typically the swept parameter (Hs, a BE
-#              multiplier, etc). If omitted, the run's position in this list
-#              is used instead. Lower sort_key -> lighter color, higher -> darker.
-# color      : (optional) explicit matplotlib color string. If given, this
-#              OVERRIDES the auto-generated gradient color for this run only -
-#              useful for pinning one run to a fixed color while letting the
-#              rest auto-generate. Leave unset (or None) for normal use.
-# run_dir    : (optional) ESCAPE HATCH - full path to the folder containing
-#              this run's CSV, for a run that is not in the raw_runs tree at
-#              all (another drive, a folder shared with a collaborator, an
-#              archive). If given it OVERRIDES the resolver for just this
-#              run; other entries still resolve through find_run_dir. Prefer
-#              period/preset: a hand-typed path is how a figure ends up
-#              drawing a run other than the one it names. The folder must
-#              still hold its rate CSV where run_layout looks for it -- in
-#              tables/, or under the old flat name.
-#
-# Auto-color gradient: each run's color is drawn from RUN_COLORMAP (Section 5)
-# at a position determined by its rank along sort_key (or list order). This
-# means reordering runs, adding new ones, or changing how many you're
-# comparing never requires manually re-picking hex codes.
-
-# THE FOUR RUNS THIS LIST HELD ARE GONE. HAT_1984_2004_SStest,
-# HAT_1984_2004_FinalSS, HAT_2004_2024_SStest and HAT_2004_2024_FinalSS were
-# addressed by absolute paths into output/raw_runs/source&sink_tests/ and at
-# the flat raw_runs/<name> level; neither exists in the tree any more, and
-# none of the four names appears in run_index.csv or in
-# superseded_20260828/ (now output/archive/2026-08-28_full-tree/). The four figures they produced sat at
-# output/comparisons/source_sink_zones/ (2026-06-19) until 2026-09-17, when
-# they were deleted as unregenerable; nothing cited them. Name live runs
-# below before running this script. (Checked 2026-09-02, 2026-09-17.)
+# Runs to overlay (fields in README); EMPTY: name live runs before running
 RUNS_TO_COMPARE = [
     # dict(
     #     run_name   = "HAT_1984_2004_calibBE_road_bdm_groin",
@@ -198,26 +97,8 @@ RUNS_TO_COMPARE = [
     #     run_dir    = r"D:\shared\HAT_2004_2024_L7_Hs2p5",
     # ),
 ]
-
-# =============================================================================
-# >>> NAME THIS ANALYSIS <<<  (controls the comparison folder + filenames)
-# =============================================================================
 COMPARISON_NAME = "source_sink_zones"   # <-- EDIT THIS to name your comparison folder
-
-# =============================================================================
-# SECTION 4: COASTSAT DATASETS
-# =============================================================================
-# Each entry points to a transect_lrr_full.csv — one row per CoastSat transect
-# (~50 m spacing, hundreds of transects total).  LOWESS is applied at transect
-# resolution then aggregated to domain resolution for the CASCADE comparison.
-#
-# period_start controls "active vs reference" styling:
-#   active period  → full opacity scatter + solid LOWESS lines
-#   reference period → faded scatter + faded LOWESS lines
-#
-# The active period is inferred from the majority of RUNS_TO_COMPARE start years.
-# Override ACTIVE_PERIOD_START manually if your runs span different periods.
-
+# CoastSat LRR per period; LOWESS at transect resolution, then domain means
 COASTSAT_DATASETS = [
     dict(
         label           = "CoastSat (1984–2004)",
@@ -230,16 +111,6 @@ COASTSAT_DATASETS = [
     dict(
         label           = "CoastSat (2004–2024)",
         period_start    = 2004,
-        # *** BUG FIX: this previously pointed to "2004_2024_specific_dates",
-        # *** which doesn't match the folder HAT_hindcast_1984_2024_old version.py
-        # *** actually writes/reads ("2004_2024"). Since that path didn't
-        # *** exist, the load silently failed and cs_series only ever had
-        # *** the 1984 entry - every 2004 run was then being compared
-        # *** against 1984 CoastSat data in every figure (diagnostic,
-        # *** annotated, two-period, residuals), which is why residuals for
-        # *** the 2004 runs were reaching +9 m/yr instead of a realistic
-        # *** +-1-2 m/yr, and why the right-side 2004 panel had no transect
-        # *** scatter at all in the two-period figure.
         csv             = os.path.join(
             COASTSAT_BASE_DIR, "2004_2024", "transect_lrr_full.csv"
         ),
@@ -248,14 +119,7 @@ COASTSAT_DATASETS = [
         transect_id_col = "transect_id",
     ),
 ]
-
-# *** NOTE: TRANSECT_DATASETS below is NOT referenced anywhere else in this
-# *** file - COASTSAT_DATASETS above already carries transect-level data
-# *** (read via the same domain_col/rate_col pattern, see load_transect_data).
-# *** This block appears to be left over from an earlier version of the
-# *** script's structure. Left here with the same path fix applied so it's
-# *** at least not actively wrong if something starts using it again, but
-# *** it's currently dead code - safe to delete if you don't need it.
+# Not used anywhere (README)
 TRANSECT_DATASETS = [
     dict(
         period_start = 1984,
@@ -272,124 +136,47 @@ TRANSECT_DATASETS = [
         lrr_col      = "lrr_m_yr",
     ),
 ]
-
-# Which CoastSat period is drawn solid.  Inferred from runs if None.
+# CoastSat period drawn solid; None infers it from the runs
 ACTIVE_PERIOD_START = None   # 1984 or 2004, or None for auto
-
-# --- LOWESS smoothing applied to CoastSat overlay ---
-# List one or two window sizes (domain units; 1 domain ≈ 500 m).
-# Two windows are drawn with distinct line styles so you can compare
-# smoothing bandwidth side-by-side.  Set to a single-element list to
-# revert to the original single-curve behaviour.
-#   10 domains → frac ≈ 0.111 → ~5 km  ← recommended primary
-#    7 domains → frac ≈ 0.078 → ~3.5 km ← narrower reference
+# LOWESS widths in domains (1 domain = 500 m); [7, 10] until 2026-09-28
 LOWESS_WINDOW_DOMAINS = [7]   # list of 1 or 2 window sizes (domains); [7, 10] until 2026-09-28
-
-# Styling for each entry in LOWESS_WINDOW_DOMAINS (matched by list position).
-# Tuple: (linewidth, linestyle, alpha_factor_for_active_period)
-# The fill in plot_annotated is drawn only for windows with linestyle "-".
+# (linewidth, linestyle, active alpha) per width; fill only for '-'
 LOWESS_WINDOW_STYLES = [
     (2.0, "-",  1.00),   # the 7-domain window: solid, full opacity, primary reference
 ]
-
-# Which LOWESS window (domain count) to use as the reference curve in the
-# residuals plot.  Must be one of the values in LOWESS_WINDOW_DOMAINS.
+# The width used as the residuals reference
 RESIDUALS_LOWESS_WINDOW = 7
-
-# =============================================================================
-# SECTION 5: PLOT OPTIONS
-# =============================================================================
-
-# Show the residuals figure (model − CoastSat for each run)?
+# Draw the residuals figure
 PLOT_RESIDUALS = True
-
-# Show the two-panel period-comparison figure? Left panel = all runs whose
-# start_year is 1984, right panel = all runs whose start_year is 2004, each
-# with its own active CoastSat overlay, sharing one y-axis and one combined
-# legend. Useful when RUNS_TO_COMPARE mixes runs from both periods and you
-# want everything side-by-side in a single figure rather than picking one
-# ACTIVE_PERIOD_START. Has no effect if all runs share the same start_year
-# (the panel for the missing period is simply skipped).
+# Draw the two-panel figure (1984-start left, 2004-start right)
 PLOT_TWO_PERIOD = True
-
-# --- Annotation label y-positions (axes fraction: 0.0 = bottom, 1.0 = top) ---
-# Pier and groin labels sit on the vertical lines; adjust to avoid overlap.
+# Pier and groin label heights, axes fraction 0-1
 ANN_PIER_LABEL_Y  = 0.80   # default rotated label y for any pier not given its own override
 ANN_PIERS = {
-    # *** BUG FIX: label_y values below were 85 and 70 (presumably intended
-    # *** as percentages), but the rotated pier labels are drawn with
-    # *** blended_transform_factory(ax.transData, ax.transAxes) - meaning y
-    # *** is in AXES-FRACTION coordinates (valid range 0.0-1.0), same as
-    # *** ANN_PIER_LABEL_Y above. A label_y of 85 placed the label 85x the
-    # *** axes height above the plot, which made matplotlib's tight-bbox
-    # *** calculation balloon to ~300+ inches on save and crash with an
-    # *** out-of-memory error. Fixed to 0.0-1.0 values matching the
-    # *** documented default and the equivalent hindcast-script values.
     "Avon Pier":     (26, 0.85),   # (domain, label_y) - label_y is axes-fraction [0,1]
     "Rodanthe Pier": (79, 0.70),
 }
 ANN_GROIN_LABEL_Y = 0.65
-
-# Accretion / Erosion side labels on the annotated figure.
-# Set to None to use the auto-computed midpoint between zero and the plot edge.
-# Override with a 0–1 axes fraction to pin the label to a fixed position.
+# Accretion / erosion label heights (axes fraction); None = automatic
 LABEL_ACCRETION_Y = None   # e.g. 0.80 to pin near the top
 LABEL_EROSION_Y   = None   # e.g. 0.15 to pin near the bottom
-
-# =============================================================================
-# COLOUR PALETTE REFERENCE
-# =============================================================================
-# CoastSat — cool blue family.  Four layers, light → dark = less → more processed:
-#   transect scatter  #9ECAE1   very light blue    individual ~50 m transect LRR (dots)
-#   domain avg. line  #9ECAE1   very light blue    domain-averaged LRR (dotted line)
-#    7-domain LOWESS   #6BAED6   medium sky blue    LOWESS narrow window, solid
-#   10-domain LOWESS   #08519C   deep ocean blue    LOWESS primary reference, solid + fill
-#
-# CASCADE runs — warm orange-red gradient (light → dark = low → high parameter),
-# generated automatically from RUN_COLORMAP below rather than hardcoded hex
-# values, so any number of runs can be compared without manually assigning
-# colors. A run's `color` field (if set) overrides the auto color for just
-# that run.
-#
-# Design rationale:
-#   Cool blue = observations (CoastSat)   Warm orange-red = model comparison (CASCADE)
-#   Blue + orange-red is the most colorblind-safe pairing (deuteranopia / protanopia)
-#   Within each family, lighter → darker encodes low → high smoothing / parameter value
-#   Period distinction (1984–2004 vs 2004–2024) is carried by linestyle, not color
-# =============================================================================
-
-# Colormap used to auto-generate run colors, sampled light->dark across the
-# rank-ordered sort_key (or list order if sort_key is omitted). "YlOrRd" and
-# "Oranges" both stay in the warm orange-red family used by prior versions of
-# this script; "plasma" or "inferno" work well for >5 runs since they keep
-# more contrast between adjacent steps.
+# Colormap for run colours, sampled light -> dark
 RUN_COLORMAP = "YlOrRd"
-
-# The auto gradient is sampled from this range of the colormap (0=lightest
-# end, 1=darkest end). Avoiding the very ends keeps the lightest run visible
-# against a white background and the darkest run distinguishable from black text.
+# Part of the colormap used: skips near-white and near-black
 RUN_COLORMAP_RANGE = (0.35, 0.95)
-
-# CoastSat LOWESS colors keyed by window size (domain count).
-# Add entries here if you add new window sizes to LOWESS_WINDOW_DOMAINS.
+# CoastSat LOWESS colour per width
 CS_WINDOW_COLORS = {
      7: "#6BAED6",   # medium sky blue  — 7-domain LOWESS
     10: "#08519C",   # deep ocean blue  — 10-domain LOWESS
 }
 CS_WINDOW_COLOR_DEFAULT = "#4A7C8E"   # fallback for any unlisted window size
-
-# Individual transect LRR scatter — plotted at lowest zorder as context.
-# Styling matches HAT_hindcast_1984_2024_old version.py for visual consistency between
-# the two scripts.
+# Transect scatter, styled as in the hindcast script
 CS_RAW_COLOR            = "#5BA3C9"    # medium blue
 PLOT_RAW_LRR            = True         # set False to hide transect scatter from all figures
-RAW_LRR_SOUTHERN_ONLY   = True         # True  -> scatter only D1-LOWESS_SKIP_SOUTHERN_DOMAINS
-                                        #          (the zone where LOWESS is suppressed)
-                                        # False -> scatter for all domains D1-90
+RAW_LRR_SOUTHERN_ONLY   = True         # True: scatter only where LOWESS is suppressed
 RAW_LRR_SCATTER_SIZE    = 6            # marker area in points²
 RAW_LRR_SCATTER_ALPHA   = 0.60         # opacity for active period; ×0.35 for reference period
-
-# Geographic annotation colors (shared with hindcast script)
+# Geographic annotations, shared with the hindcast script
 ANN_TOWN_SPANS = {
     "Buxton":      (7,   8),
     "Avon":        (21, 31),
@@ -399,52 +186,25 @@ ANN_VILLAGE_LINES = {"Salvo": 69, "Waves": 74, "Rodanthe": 80}
 ANN_GROINS        = {"Buxton Groin": 5.5}   # boundary between domains 5 and 6
 ANN_WIMBLE_SHOALS = (60, 74)
 ANN_AVON_SHOALS   = (24, 39)   # Avon Shoals influence zone (same feature type as Wimble Shoals)
-
+# Annotation colours
 ANN_C_TOWN_SPAN    = "#90AFC5"
 ANN_C_WIMBLE       = "#E0A800"   # amber - both shoal zones share this color
 ANN_C_AVON_SHOALS  = "#E0A800"   # same amber as Wimble Shoals (same feature type)
 ANN_C_VILLAGE_LINE = "0.40"
 ANN_C_PIER         = "#1565C0"
 ANN_C_GROIN        = "#B71C1C"
-
-# Southernmost domains (1 through this value) for which raw per-domain scatter
-# is shown instead of LOWESS smoothing - Oregon Inlet boundary effects dominate
-# this zone and LOWESS smoothing there can obscure the sharp gradient. The raw
-# scatter toggle below restricts dots to just this zone so domain 11+ is
-# represented only by the LOWESS lines (matches HAT_hindcast_1984_2024_old version.py).
+# Domains 1..N show raw scatter instead of LOWESS (Oregon Inlet)
 LOWESS_SKIP_SOUTHERN_DOMAINS = 10
+# -----------------------------------------------------------------------------
 
-# =============================================================================
-# HELPER FUNCTIONS — domain utilities
-# =============================================================================
 
+# GIS domain ID (1-based) -> CASCADE padded array index
 def _gis_to_pad(gis_id):
-    """Convert a 1-based GIS domain ID to a CASCADE padded array index."""
     return START_REAL_INDEX + (gis_id - FIRST_FILE_NUMBER)
 
 
+# Light -> dark colours by sort_key (or list order); an explicit 'color' is kept
 def assign_run_colors(runs):
-    """
-    Auto-generate a light->dark color gradient for a list of run configs.
-
-    Runs are ranked by `sort_key` if every run provides one; otherwise by
-    their position in the list (so simply listing runs low-to-high parameter
-    value works without setting sort_key explicitly). Colors are sampled
-    evenly across RUN_COLORMAP_RANGE of RUN_COLORMAP, lightest first.
-
-    Any run with an explicit, non-None `color` field keeps that color
-    untouched and is excluded from the rank-based assignment - useful for
-    pinning one run (e.g. a baseline) to a fixed color while the rest of the
-    sweep auto-generates.
-
-    Parameters
-    ----------
-    runs : list of dict - entries from RUNS_TO_COMPARE (or equivalent)
-
-    Returns
-    -------
-    list of dict - same entries, each with a resolved 'color' key (hex string)
-    """
     cmap = plt.get_cmap(RUN_COLORMAP)
     lo, hi = RUN_COLORMAP_RANGE
 
@@ -468,46 +228,9 @@ def assign_run_colors(runs):
     return fixed_runs + auto_runs if fixed_runs else auto_runs
 
 
-# =============================================================================
-# HELPER FUNCTIONS — data loading
-# =============================================================================
-
+# A run's (gis_ids, LRR m/yr, run_dir), resolved by run_registry unless run_dir is given
 def load_run_rates(run_name, period=None, preset=None, arm=None, run_dir=None):
-    """
-    Load the shoreline change rate CSV produced by HAT_hindcast_1984_2024_old version.py.
-
-    Parameters
-    ----------
-    run_name : str       — used to resolve the default folder AND, inside it,
-                            the rate CSV, whose name run_layout knows in both
-                            the current and the pre-2026-09-10 layout. Which
-                            is used is unchanged regardless of how the folder
-                            was resolved.
-    period   : str, optional — "1984_2004" or "2004_2024".
-    preset   : str, optional — source/sink preset the run was made under.
-    arm      : str, optional — forcing arm; None means the calibration arm.
-    run_dir  : str, optional — ESCAPE HATCH. Full path to the folder holding
-                            that CSV, for a run outside the raw_runs tree.
-                            If given it OVERRIDES the resolver entirely.
-                            Otherwise period and preset are both required and
-                            find_run_dir locates the run, raising with what
-                            IS on disk when it is absent.
-
-    Returns
-    -------
-    gis_ids   : int array — GIS domain IDs, READ FROM the CSV's gis_domain
-                            column rather than assumed. Normally 1-90; a
-                            short array means the run wrote fewer rows, which
-                            is warned about rather than padded over.
-    rates_myr : float array, same shape — the run's LRR in m/yr, from
-                            RUN_RATE_COL, aligned to gis_ids by construction.
-    run_dir   : str                                   — full path to run folder (resolved)
-    """
-    # RESOLVED, NOT JOINED BY HAND. A run lives at
-    # raw_runs/[<arm>/]<period>/<preset>/<run_name>; this function used to
-    # join a two-level path that had no slot for the preset or the arm, so
-    # every run read as missing. find_run_dir raises naming the arms a run IS
-    # under, which reads as "it is over there" rather than "it never existed".
+    # Resolve the run folder through run_registry, never by joining a path
     if run_dir is None:
         if period is None or preset is None:
             raise ValueError(
@@ -516,9 +239,7 @@ def load_run_rates(run_name, period=None, preset=None, arm=None, run_dir=None):
             )
         kwargs = {"arm": arm} if arm else {}
         run_dir = str(find_run_dir(RAW_RUNS, run_name, period, preset, **kwargs))
-    # RESOLVED, NOT JOINED. The rate CSV moved into the run folder's
-    # tables/ subfolder and dropped the run-name prefix; run_layout.resolve
-    # returns whichever of the two layouts is on disk.
+    # run_layout finds the rate CSV in either the current or the pre-2026-09-10 layout
     csv_path = str(resolve_run_file(run_dir, "rate_csv", run_name))
 
     if not os.path.exists(csv_path):
@@ -537,13 +258,7 @@ def load_run_rates(run_name, period=None, preset=None, arm=None, run_dir=None):
             f"  {csv_path}"
         )
 
-    # KEYED ON THE FILE'S OWN DOMAIN COLUMN, NOT ON ROW ORDER. This used to
-    # slice padded indices 15-104 out of a 120-row CSV and pair them
-    # POSITIONALLY with a hand-built arange(1, 91), so the domain ids were
-    # asserted rather than read: a run written in the other alongshore order
-    # would have shifted every rate against its label with nothing raised.
-    # The CSV now carries the 90 real domains keyed on gis_domain, and
-    # reading the ids from the file is what makes that failure impossible.
+    # Keyed on the file's own gis_domain column, never on row order
     real = df[df[RUN_DOMAIN_COL].between(FIRST_FILE_NUMBER, LAST_FILE_NUMBER)]
     real = real.sort_values(RUN_DOMAIN_COL)
 
@@ -557,28 +272,16 @@ def load_run_rates(run_name, period=None, preset=None, arm=None, run_dir=None):
     return gis_ids, rates_myr, run_dir
 
 
+# Median spacing between consecutive transects (m)
 def estimate_transect_spacing(along_coast_m):
-    """Median spacing between consecutive transects in metres (positive diffs only)."""
     arr   = np.sort(along_coast_m)
     diffs = np.diff(arr)
     pos   = diffs[diffs > 0]
     return float(np.median(pos)) if len(pos) else 50.0
 
 
+# Transect LRR with along-coast distance, each domain's transects spread over its 500 m
 def load_transect_data(ds):
-    """
-    Load individual transect LRR values from transect_lrr_full.csv and derive
-    along-coast distance by spreading each domain's transects evenly across its
-    500 m band (mirrors 6-scr-smooth/lowess_method_comparison.py: load_transect_csv).
-
-    Returns
-    -------
-    domain_ids    : int array   — CASCADE domain ID for each transect
-    lrr_values    : float array — LRR (m/yr) for each transect
-    along_coast_m : float array — cumulative along-coast distance (m)
-    All three arrays share the same length (one entry per transect).
-    Returns (None, None, None) on load failure.
-    """
     csv_path   = ds["csv"]
     domain_col = ds["domain_col"]
     rate_col   = ds["rate_col"]
@@ -602,8 +305,7 @@ def load_transect_data(ds):
     sort_cols = [domain_col, id_col] if id_col in df.columns else [domain_col]
     df = df.sort_values(sort_cols).reset_index(drop=True)
 
-    # Spread each domain's transects evenly across its 500 m band so that
-    # physical spacing can be estimated correctly for the LOWESS frac.
+    # Spread each domain's transects over its 500 m band, for the LOWESS frac
     def _spread(grp):
         n         = len(grp)
         base      = (grp[domain_col].iloc[0] - 1) * DOMAIN_SPACING_M
@@ -625,22 +327,8 @@ def load_transect_data(ds):
     return domain_ids, lrr_values, along_coast_m
 
 
+# LOWESS at transect resolution, then averaged to domains; returns (gis_x, smoothed, frac)
 def lowess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_domains):
-    """
-    Apply LOWESS at transect resolution using physical along-coast distance (m) as x,
-    then aggregate smoothed values to CASCADE domain resolution by averaging within
-    each domain.  Mirrors smooth_transect_df() + aggregate_to_domains() from
-    6-scr-smooth/lowess_method_comparison.py.
-
-    window_domains is converted to km (× DOMAIN_SPACING_M) so the physical window
-    is consistent regardless of transect density.
-
-    Returns
-    -------
-    gis_x    : int array   — domain IDs that have at least one transect
-    smoothed : float array — domain-averaged smoothed LRR (m/yr), same length as gis_x
-    frac     : float       — LOWESS frac used (for logging)
-    """
     window_km = window_domains * DOMAIN_SPACING_M / 1000.0
     spacing_m = estimate_transect_spacing(along_coast_m)
     n         = len(along_coast_m)
@@ -663,30 +351,8 @@ def lowess_smooth_transect_to_domains(along_coast_m, lrr, domain_ids, window_dom
     return dom_agg.index.values.astype(int), dom_agg.values, frac
 
 
+# Drop the LOWESS curve over domains 1..skip_n, where raw scatter is shown instead
 def splice_lowess_with_raw_south(win_gis_x, win_smoothed, skip_n=None):
-    """
-    Trim a LOWESS curve so it starts north of the southernmost `skip_n`
-    domains, leaving that southern zone to show raw transect scatter only.
-
-    Ported from HAT_hindcast_1984_2024_old version.py's function of the same name for
-    visual consistency between the two scripts - domains 1-skip_n are
-    boundary-affected (Oregon Inlet dynamics) and LOWESS smoothing there can
-    obscure the sharp gradient rather than clarify it, so the LOWESS line is
-    simply not drawn there; the raw scatter (already restricted to this same
-    zone via RAW_LRR_SOUTHERN_ONLY) carries the signal instead.
-
-    Parameters
-    ----------
-    win_gis_x    : int array   - GIS domain IDs from the LOWESS result
-    win_smoothed : float array - LOWESS-smoothed LRR (m/yr)
-    skip_n       : int         - domains 1..skip_n are excluded from the
-                                  returned line. Defaults to
-                                  LOWESS_SKIP_SOUTHERN_DOMAINS.
-
-    Returns
-    -------
-    plot_x, plot_y : arrays - the LOWESS curve restricted to domains > skip_n
-    """
     if skip_n is None:
         skip_n = LOWESS_SKIP_SOUTHERN_DOMAINS
     if skip_n <= 0:
@@ -695,15 +361,8 @@ def splice_lowess_with_raw_south(win_gis_x, win_smoothed, skip_n=None):
     return win_gis_x[mask], win_smoothed[mask]
 
 
-# =============================================================================
-# HELPER FUNCTIONS — geographic annotations
-# =============================================================================
-
+# Shoals, villages, piers and groin on an axis in GIS domain units
 def add_geographic_annotations(ax):
-    """
-    Draw the standard Hatteras geographic annotation layer onto ax.
-    X-axis must be in GIS domain IDs (1–90).
-    """
     trans = blended_transform_factory(ax.transData, ax.transAxes)
 
     # 1a. Avon Shoals influence zone (same feature type as Wimble Shoals)
@@ -757,8 +416,8 @@ def add_geographic_annotations(ax):
                 bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.80))
 
 
+# Legend handles for the annotation layer
 def annotation_legend_handles():
-    """Return proxy legend artists for the geographic annotation layers."""
     return [
         Patch(fc=ANN_C_TOWN_SPAN, alpha=0.30, label="Community"),
         Patch(fc=ANN_C_WIMBLE, alpha=0.25, hatch="///",
@@ -769,8 +428,8 @@ def annotation_legend_handles():
     ]
 
 
+# Shared axis styling
 def _style_ax(ax, ylabel="Shoreline change rate (m/yr)"):
-    """Apply shared axis styling."""
     ax.set_xlim(FIRST_FILE_NUMBER - 0.5, LAST_FILE_NUMBER + 0.5)
     ax.axhline(0.0, color="#2c2c2c", linewidth=1.0, linestyle="--", alpha=0.55, zorder=3)
     ax.xaxis.set_major_locator(ticker.MultipleLocator(10))
@@ -783,20 +442,8 @@ def _style_ax(ax, ylabel="Shoreline change rate (m/yr)"):
     ax.set_ylabel(ylabel, fontsize=11, fontweight="bold", labelpad=8)
 
 
-# =============================================================================
-# PLOTTING
-# =============================================================================
-
+# Quick multi-run diagnostic figure
 def plot_diagnostic(run_data, cs_series, active_period, out_path, comparison_name):
-    """
-    Quick diagnostic plot — all runs + CoastSat + geographic annotations on
-    one panel. Uses the same drawing helper as plot_annotated/plot_two_period
-    so all comparison figures stay visually consistent.
-
-    Previously this plot had NO geographic annotations and used
-    loc="best" for the legend, which with 4+ runs landed on top of the
-    data (see uploaded screenshot) - both fixed below.
-    """
     fig, ax = plt.subplots(figsize=figsize("double", height=3.49))
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
@@ -810,10 +457,7 @@ def plot_diagnostic(run_data, cs_series, active_period, out_path, comparison_nam
         fontsize=12, fontweight="bold", pad=12, color="#1a2a3a"
     )
 
-    # Reserve bottom margin BEFORE placing the legend so it stays in
-    # on-canvas figure-fraction coordinates (see plot_annotated for the
-    # full explanation of why this matters - a previous off-canvas
-    # bbox_to_anchor caused an out-of-memory crash on save in this script).
+    # Reserve the bottom margin before the legend, so it stays on the canvas (README)
     fig.subplots_adjust(bottom=0.26)
 
     all_handles = model_handles + cs_handles + annotation_legend_handles()
@@ -828,29 +472,9 @@ def plot_diagnostic(run_data, cs_series, active_period, out_path, comparison_nam
     print(f"✓ Saved diagnostic:  {os.path.basename(out_path)}")
 
 
+# One panel: CoastSat scatter and LOWESS, then every run
 def _draw_comparison_panel(ax, run_data, cs_series, active_period,
                             panel_title=None, show_reference_period=True):
-    """
-    Draw geographic annotations + CoastSat curves + model run lines onto a
-    single axis. Shared by plot_annotated (one panel) and plot_two_period
-    (two panels, called once per period) so both stay visually identical.
-
-    Parameters
-    ----------
-    show_reference_period : bool
-        True  -> the inactive CoastSat period is still drawn, faded, with a
-                 "(ref)" label (useful in plot_annotated's single-panel view,
-                 where showing the other period for context is informative).
-        False -> only the active period (cs["period_start"] == active_period)
-                 is drawn at all; the inactive period is skipped entirely.
-                 This is what plot_two_period uses, since each panel is
-                 already dedicated to one period - showing the other period
-                 there just duplicates what the OTHER panel is for.
-
-    Returns
-    -------
-    model_handles, cs_handles : lists of Line2D proxies for the legend
-    """
     add_geographic_annotations(ax)
 
     cs_handles = []
@@ -888,9 +512,7 @@ def _draw_comparison_panel(ax, run_data, cs_series, active_period,
                 LOWESS_WINDOW_STYLES[idx] if idx < len(LOWESS_WINDOW_STYLES)
                 else (1.5, "--", 0.80)
             )
-            # Trim the LOWESS line to start north of LOWESS_SKIP_SOUTHERN_DOMAINS
-            # when RAW_LRR_SOUTHERN_ONLY is on, leaving D1-10 to show only the
-            # raw transect scatter (matches HAT_hindcast_1984_2024_old version.py styling).
+            # With RAW_LRR_SOUTHERN_ONLY, LOWESS starts north of the raw-scatter zone
             if RAW_LRR_SOUTHERN_ONLY:
                 w_gis_x, rate = splice_lowess_with_raw_south(win["gis_x"], win["smoothed"])
             else:
@@ -944,10 +566,8 @@ def _draw_comparison_panel(ax, run_data, cs_series, active_period,
     return model_handles, cs_handles
 
 
+# Publication figure with the geographic annotations
 def plot_annotated(run_data, cs_series, active_period, out_path, comparison_name):
-    """
-    Publication-quality figure with full geographic annotation layer.
-    """
     fig, ax = plt.subplots(figsize=figsize("double", height=4.01))
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
@@ -982,14 +602,7 @@ def plot_annotated(run_data, cs_series, active_period, out_path, comparison_name
         fontsize=12, fontweight="bold", pad=12, color="#1a2a3a"
     )
 
-    # Reserve bottom margin BEFORE placing the legend/caption so both stay
-    # in on-canvas figure-fraction coordinates ([0, 1]). A prior version
-    # placed these via ax.legend(bbox_to_anchor=(...), bbox_transform=
-    # ax.transAxes) with a negative y - in this matplotlib version that
-    # combination produced a degenerate tight-bbox computation (~490 inches
-    # tall) on save, causing an out-of-memory crash. fig.legend/fig.text in
-    # plain figure-fraction coordinates with a reserved margin avoids that
-    # failure mode entirely.
+    # Reserve the bottom margin before legend and caption: off-canvas placement crashed saves (README)
     fig.subplots_adjust(bottom=0.26)
 
     # Legend: model runs | CoastSat | geographic annotations
@@ -1014,16 +627,8 @@ def plot_annotated(run_data, cs_series, active_period, out_path, comparison_name
     print(f"✓ Saved annotated:   {os.path.basename(out_path)}")
 
 
+# 1984-start runs left, 2004-start right, shared y axis
 def plot_two_period(run_data, cs_series, out_path, comparison_name):
-    """
-    Two-panel figure: left = all runs with start_year=1984 (vs. 1984-2004
-    CoastSat), right = all runs with start_year=2004 (vs. 2004-2024 CoastSat).
-    Shares one y-axis range and one combined legend below both panels.
-
-    If every run shares the same start_year, the empty panel is skipped and
-    a single-panel figure is produced instead (so this is always safe to call
-    regardless of what's in RUNS_TO_COMPARE).
-    """
     runs_1984 = [r for r in run_data if r["start_year"] == 1984]
     runs_2004 = [r for r in run_data if r["start_year"] == 2004]
 
@@ -1057,10 +662,7 @@ def plot_two_period(run_data, cs_series, out_path, comparison_name):
             show_reference_period=False,   # each panel shows ONLY its own period's CoastSat
         )
         all_model_handles.extend(model_handles)
-        # Keep cs_handles per-period so duplicate "active" labels across
-        # panels (e.g. both panels showing their own active LOWESS curve)
-        # don't collide - keyed by period so panel 2's handles don't get
-        # silently dropped as "duplicates" of panel 1's.
+        # CoastSat handles kept per period, so panel 2's aren't dropped as duplicates
         all_cs_handles_by_period[period_start] = cs_handles
         all_vals_chunks.append(np.concatenate(
             [r["rates"] for r in panel_runs] +
@@ -1092,19 +694,7 @@ def plot_two_period(run_data, cs_series, out_path, comparison_name):
     axes[0].set_ylabel("Shoreline change rate (m/yr)", fontsize=11,
                         fontweight="bold", labelpad=8)
 
-    # Reserve real margin at the top (suptitle) and bottom (legend + caption)
-    # BEFORE placing those artists, so every coordinate below stays inside
-    # the canvas (figure-fraction range [0, 1]). Placing fig.legend/fig.text
-    # at negative y (i.e. below the canvas) forces bbox_inches="tight" to
-    # expand the saved bounding box to include that off-canvas content,
-    # which on a wide multi-panel figure produced a runaway canvas size and
-    # an out-of-memory crash on save - this keeps everything on-canvas instead.
-    # bottom=0.20 leaves room for: xlabel (~0.04) + legend (now deduplicated
-    # by visual style across the two panels - typically ~12 handles at
-    # ncol=4 -> 3 rows, ~0.10) + caption (~0.02). Previously this was 0.30,
-    # sized for the legend BEFORE the cross-panel CoastSat dedup fix (which
-    # used to list every CoastSat entry twice, once per period); the smaller
-    # deduplicated legend left a large unused gap with the original margin.
+    # Reserve top and bottom margins first so everything stays on the canvas (README)
     fig.subplots_adjust(top=0.88, bottom=0.20, wspace=0.06)
 
     fig.suptitle(
@@ -1112,9 +702,7 @@ def plot_two_period(run_data, cs_series, out_path, comparison_name):
         fontsize=13, fontweight="bold", color="#1a2a3a", y=0.97,
     )
 
-    # Combined legend: model runs from both panels (deduplicated by label,
-    # since the same run could theoretically appear via panel_runs once each)
-    # + one CoastSat entry set per period shown + annotation proxies.
+    # Combined legend: runs (deduplicated by label), CoastSat entries, annotations
     seen_labels = set()
     dedup_model_handles = []
     for h in all_model_handles:
@@ -1126,17 +714,7 @@ def plot_two_period(run_data, cs_series, out_path, comparison_name):
     for period_start, _, period_label in panels:
         combined_cs_handles.extend(all_cs_handles_by_period.get(period_start, []))
 
-    # De-duplicate CoastSat legend entries by VISUAL STYLE rather than label
-    # text. Both panels draw their own period's CoastSat in the same colors
-    # (CS_WINDOW_COLORS is keyed by window size only, not by period; CS_RAW_COLOR
-    # is a single global color) - so "CoastSat (1984-2004) - LOWESS 7-dom" and
-    # "CoastSat (2004-2024) - LOWESS 7-dom" render as the literal same line
-    # style. Previously the legend listed both anyway since they were
-    # deduplicated by exact label text, which never matched (different period
-    # in the label). Since each panel's title already says which period it
-    # is, one shared legend entry per visual style is enough here - relabeled
-    # to be period-agnostic ("LOWESS 7-dom" instead of "CoastSat (1984-2004)
-    # - LOWESS 7-dom").
+    # One CoastSat legend entry per visual style, period dropped from the label (README)
     def _style_key(h):
         return (h.get_color(), h.get_linestyle(), round(h.get_linewidth(), 2),
                 h.get_marker(), round(h.get_alpha() or 1.0, 2))
@@ -1148,8 +726,7 @@ def plot_two_period(run_data, cs_series, out_path, comparison_name):
         if key in seen_styles:
             continue
         seen_styles.add(key)
-        # Strip the period prefix ("CoastSat (1984-2004) - ") from the label,
-        # leaving just the part that describes the line itself.
+        # Strip the "CoastSat (1984-2004) - " prefix
         label = h.get_label()
         if " — " in label:
             label = label.split(" — ", 1)[1]
@@ -1172,20 +749,14 @@ def plot_two_period(run_data, cs_series, out_path, comparison_name):
         fontsize=7.5, color="#666666", ha="center", va="bottom", style="italic",
     )
 
-    # bbox_inches=None (figure's own bounds) rather than "tight": with the
-    # margins already reserved above, the figure's own bounding box is
-    # correct, and "tight" recomputation is what caused the runaway size.
+    # The figure's own bounds, not "tight": margins are already reserved
     fig.savefig(out_path, dpi=300, facecolor="white")
     plt.close(fig)
     print(f"✓ Saved two-period:  {os.path.basename(out_path)}")
 
 
+# Each run minus the active CoastSat LOWESS
 def plot_residuals(run_data, cs_series, active_period, out_path, comparison_name):
-    """
-    Residual panel — each model run minus the active CoastSat LOWESS curve.
-    Helps identify where each run over- or under-predicts relative to observations.
-    Only produced if PLOT_RESIDUALS = True.
-    """
     # Find the active CoastSat series and the designated residuals window
     active_cs = next(
         (cs for cs in cs_series if cs["period_start"] == active_period), None
@@ -1215,9 +786,7 @@ def plot_residuals(run_data, cs_series, active_period, out_path, comparison_name
     ax.set_facecolor("white")
     add_geographic_annotations(ax)
 
-    # Per-run summary stats, shown in the legend so the single most useful
-    # diagnostic number (typical fit quality) is visible at a glance instead
-    # of requiring a visual estimate from the curve alone.
+    # Per-run fit statistics, shown in the legend
     run_stats = []
     for run in run_data:
         residual = run["rates"] - cs_interp
@@ -1246,10 +815,7 @@ def plot_residuals(run_data, cs_series, active_period, out_path, comparison_name
     cs_label_handle = Line2D([0], [0], color="gray", lw=1.0, ls="--",
                               label=f"Reference: {active_cs['label']} LOWESS {active_win['window']}-dom")
 
-    # Reserve bottom margin BEFORE placing the legend so it stays in
-    # on-canvas figure-fraction coordinates (see plot_annotated for the
-    # full explanation - loc="best" previously placed the legend directly
-    # on top of data, see uploaded screenshot).
+    # Reserve the bottom margin before the legend (loc="best" landed on the data)
     fig.subplots_adjust(bottom=0.24)
     fig.legend(handles=run_handles + [cs_label_handle],
                loc="lower center",
@@ -1264,10 +830,7 @@ def plot_residuals(run_data, cs_series, active_period, out_path, comparison_name
         print(f"    {run['label']:<20s} MAE={mae:.3f} m/yr   RMSE={rmse:.3f} m/yr")
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: load runs and CoastSat, smooth, draw every figure
 def main():
     # ── Resolve comparison name ───────────────────────────────────────────────
     global COMPARISON_NAME
@@ -1358,12 +921,7 @@ def main():
     if not cs_series:
         print("  ⚠️  No CoastSat data loaded — plots will show model lines only.")
     else:
-        # Catch the case that caused real confusion before: one period's
-        # CoastSat CSV failed to load (e.g. wrong path) while another
-        # period's loaded fine. cs_series then silently has only one
-        # period's data, so any run expecting the missing period gets
-        # compared against the wrong period's CoastSat with no error - only
-        # a one-line warning printed earlier, easy to miss.
+        # Stop if a run's CoastSat period failed to load, rather than compare against the wrong one
         loaded_periods = {cs["period_start"] for cs in cs_series}
         needed_periods = {r["start_year"] for r in RUNS_TO_COMPARE}
         missing_periods = needed_periods - loaded_periods
