@@ -1,27 +1,24 @@
 """
-Visualize CASCADE Domain Topography
-====================================
-Creates a cross-shore vs alongshore elevation heatmap for a single CASCADE domain,
-with labeled dune domain and interior domain regions.
+One CASCADE domain's topography as a cross-shore vs alongshore heatmap, dune and interior labelled.
 
-Usage:
-    python visualize_domain_topography.py
+    python scripts/figure_making/island/visualize_domain_topography.py
+
+Set DOMAIN_NUMBER, TIME_STEP and CASCADE_OUTPUT_FILE (a run's .npz) first: the
+file it names is from a deleted run. Writes domain_<N>_topography.png to the
+working directory. Details: scripts/figure_making/island/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-14
-Date: January 2025
+Version: 2026-09-30
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
 
 # Domain to visualize
+# --- CONFIG ------------------------------------------------------------------
 DOMAIN_NUMBER = 45  # Change this to visualize different domains
 
 # Time step to visualize
@@ -38,8 +35,7 @@ DUNE_WIDTH = 2  # Number of cross-shore cells in dune domain (first 2 rows)
 # Cross-shore extent options
 CROP_CROSSSHORE = True   # If True, crop to MAX_CROSSSHORE_M; if False, use CASCADE's actual width
 MAX_CROSSSHORE_M = 500    # Maximum cross-shore distance to display when CROP_CROSSSHORE = True (m)
-                          # Common options: 300 (nearshore focus), 500 (moderate), 1000 (wide view)
-                          # Set CROP_CROSSSHORE = False to use CASCADE's evolved island width
+                          # Crop width in m (300 nearshore, 500 moderate, 1000 wide); False = the evolved width
 
 # Figure parameters
 FIGURE_WIDTH = 10
@@ -50,33 +46,11 @@ Z_LIM = 8.0           # Maximum elevation for colorbar (m MSL) - used only if AU
                       # Your data ranges from -1 to ~7.3 m
 SAVE_FIGURE = True
 OUTPUT_FILE = f"domain_{DOMAIN_NUMBER}_topography.png"
+# -----------------------------------------------------------------------------
 
-# ============================================================================
-# FUNCTIONS
-# ============================================================================
 
+# Load elevation data for a specific domain from CASCADE comparison
 def load_elevation_data(filepath, domain_idx, time_step=-1, max_crossshore_m=None, dy=10.0):
-    """
-    Load elevation data for a specific domain from CASCADE comparison.
-    
-    Parameters:
-    -----------
-    filepath : str
-        Path to NPZ file containing CASCADE comparison
-    domain_idx : int
-        Domain index to extract (0-indexed)
-    time_step : int
-        Time step to extract. Default -1 gets the final time step.
-    max_crossshore_m : float or None
-        Maximum cross-shore distance to include (m). If None, includes full domain.
-    dy : float
-        Cross-shore resolution (m) for calculating crop index
-        
-    Returns:
-    --------
-    elevation : ndarray
-        2D array of elevation values (cross-shore x alongshore) in meters MSL
-    """
     # Load CASCADE comparison
     data = np.load(filepath, allow_pickle=True)
     
@@ -87,20 +61,17 @@ def load_elevation_data(filepath, domain_idx, time_step=-1, max_crossshore_m=Non
     # Get the domain
     domain = barrier3d[domain_idx]
     
-    # Get domain topography at specified time step
-    # DomainTS is in units of dam (decameters), so multiply by 10 to get meters
+    # Interior at the time step, dam -> m
     interior_elevation = domain.DomainTS[time_step] * 10
     
-    # Get dune domain at specified time step
-    # DuneDomain is also in dam, convert to meters and add berm elevation
+    # Dune domain at the time step, dam -> m, plus the berm
     dune_elevation = (domain.DuneDomain[time_step, :, :] + domain.BermEl) * 10
     
     # Rotate and flip dune domain to match orientation
     dune_elevation = np.rot90(dune_elevation)
     dune_elevation = np.flipud(dune_elevation)
     
-    # Combine dune and interior domains
-    # Stack dune domain (first few rows) with interior domain
+    # Dune rows first, then the interior
     elevation = np.vstack([dune_elevation, interior_elevation])
     
     # Crop cross-shore extent if requested
@@ -116,29 +87,8 @@ def load_elevation_data(filepath, domain_idx, time_step=-1, max_crossshore_m=Non
     return elevation
 
 
+# Create a heatmap visualization of domain topography
 def create_topography_plot(elevation, dy, dx, dune_width, domain_num, z_lim):
-    """
-    Create a heatmap visualization of domain topography.
-    
-    Parameters:
-    -----------
-    elevation : ndarray
-        2D array of elevation values (cross-shore x alongshore)
-    dy : float
-        Cross-shore resolution (m)
-    dx : float
-        Alongshore resolution (m)
-    dune_width : int
-        Number of cross-shore cells in dune domain
-    domain_num : int
-        Domain number for title
-    z_lim : float
-        Maximum elevation for colorbar
-        
-    Returns:
-    --------
-    fig, ax : matplotlib figure and axis objects
-    """
     # Create coordinate arrays
     num_crossshore, num_alongshore = elevation.shape
     crossshore_width = np.arange(num_crossshore) * dy
@@ -148,8 +98,7 @@ def create_topography_plot(elevation, dy, dx, dune_width, domain_num, z_lim):
     total_crossshore_m = num_crossshore * dy
     total_alongshore_m = num_alongshore * dx
     
-    # Calculate figure dimensions to maintain proper aspect ratio
-    # aspect_ratio = physical_width / physical_height
+    # Figure size from the physical aspect ratio (width / height)
     aspect_ratio = total_alongshore_m / total_crossshore_m
     
     # Set figure size based on desired height and calculated width
@@ -174,8 +123,7 @@ def create_topography_plot(elevation, dy, dx, dune_width, domain_num, z_lim):
     ax.axhline(y=dune_boundary, color='red', linewidth=2, 
                linestyle='-', alpha=0.8)
     
-    # Add region labels
-    # Dune domain label (near bottom)
+    # Region labels: dune near the bottom
     dune_center_y = dune_boundary / 2
     dune_center_x = num_alongshore * dx / 2
     ax.text(dune_center_x, dune_center_y, 'Dune Domain',
@@ -202,21 +150,8 @@ def create_topography_plot(elevation, dy, dx, dune_width, domain_num, z_lim):
     return fig, ax
 
 
+# Print useful statistics about the domain topography
 def print_domain_statistics(elevation, dy, dx, dune_width):
-    """
-    Print useful statistics about the domain topography.
-    
-    Parameters:
-    -----------
-    elevation : ndarray
-        2D array of elevation values
-    dy : float
-        Cross-shore resolution (m)
-    dx : float
-        Alongshore resolution (m)
-    dune_width : int
-        Number of cross-shore cells in dune domain
-    """
     num_crossshore, num_alongshore = elevation.shape
     
     print("\n" + "="*60)
@@ -252,10 +187,6 @@ def print_domain_statistics(elevation, dy, dx, dune_width):
     print(f"  Max elevation: {np.nanmax(interior_elevation):.2f} m MSL")
     print("="*60 + "\n")
 
-
-# ============================================================================
-# MAIN EXECUTION
-# ============================================================================
 
 if __name__ == "__main__":
     print(f"\nVisualizing CASCADE Domain {DOMAIN_NUMBER} Topography")

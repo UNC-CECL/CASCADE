@@ -1,90 +1,16 @@
 """
-study_area_figures.py
-==============================================================================
-The generic site figures: where Hatteras Island is, how the 90 model domains
-tile it, and what one domain looks like as a Barrier3D grid. For manuscripts
-and talks, drawn from the model's own inputs so a map and a run cannot
-disagree.
+The generic site figures: where Hatteras is, how the 90 domains tile it, one domain as a grid, the forcing.
 
     python scripts/figure_making/island/study_area_figures.py [--vector] [--only NAME] [--talk]
 
-Writes into the numbered output/figures/ layout (1-site/, 2-observations/,
-3-model-inputs/; see SUBJECT below), PNG at the top and PDF + CAPTIONS.md
-under supporting/; --talk writes the same paths under output/figures/talk/:
-
-    study_area.png        the reach on satellite imagery with the 90 domain
-                          boxes, NC-12, the villages and structures, and a
-                          regional inset
-    domain_framework.png  the domains by role (boundary, scored interior,
-                          community zones, buffers) over the island outline,
-                          with a regional inset
-    domain_framework_vertical.png
-                          the same, NORTH UP as a portrait page: the reach
-                          running up the page, ocean to the east
-    domain_metrics.png    the island width and highest cell the 2004-start
-                          extraction gives each domain
-    site_overview.png     study_area and domain_framework as one two-panel
-                          figure on one frame, for a manuscript
-    domain_grid.png       one domain (GIS 45): its box on imagery, the 10 m
-                          elevation array the model reads, the road cells, and
-                          the mean cross-shore profile
-    forcing_timeline_1984.png, forcing_timeline_1996.png
-                          one figure per hindcast CHAIN (1984-2004 + 2004-2024,
-                          and 1996-2010 + 2010-2024): its windows, storms per
-                          year and the largest runup, Duck sea level with the
-                          window trends, and the road and nourishment events by
-                          domain and year. Each is drawn on its own span, so
-                          the two do not share an axis
-    observed_rates.png    CoastSat LRR per domain for the four windows
-    dune_lines.png        the digitised dune line 1984-2023: per-domain
-                          movement since 1984, and two detail maps
-    domain_schematic.png  the cross-section and plan of one domain as the
-                          coupled model builds it: shoreface, berm, dune rows,
-                          interior, road setback, bay
-    management_footprint.png  both NC-12 alignments, the relocations, the
-                          fills and the bridge on the reach
-    reach_elevation.png   both extractions at 10 m, all 90 domains
-
-THE FRAME
-    The island is drawn ROTATED a quarter turn so the reach runs left to
-    right, GIS 1 (Cape Point) at the left and GIS 90 (Pea Island) at the
-    right -- the same direction as every alongshore chart in the project
-    (DOMAIN_AXIS_LABEL). A north-up map of a 60 km strip trending NNW is a
-    thin diagonal that wastes the page. The turn is exactly 90 degrees, not
-    the fitted reach axis (82.4 degrees), because the domain boxes are
-    axis-aligned in UTM: at 90 degrees every box is a level rectangle on the
-    page and the reach steps in y where the coast bends (Hannah, 2026-09-17).
-    The north arrow points right, and is not drawn with `_north_arrow()`,
-    which assumes north is up.
-
-WHICH DOMAIN POLYGONS
-    5-scr/2-transect-frame/transect_domains/HAT_domains.json: the 90 boxes, 2000 m cross-shore
-    by 500 m alongshore, axis-aligned in UTM 18N, that every per-domain DEM
-    clip and elevation array was cut from (the repository copy of
-    D:/Hatteras_GIS/domains.geojson). NOT the retired map_elements/archive/
-    domains_1000m_20251014/HAT_domains.shp: an older 1000 x 500 m set whose ID runs about
-    nine domains south of the model's, found 2026-09-17 when its box for
-    "45" did not contain the array for domain 45.
-
-LAYERS AND THEIR OWNERS
-    domain boxes                      5-scr/2-transect-frame/transect_domains/HAT_domains.json
-    island outline                    map_elements/hatteras_outline/
-    NC-12 centrelines                 hat_topo_version.road_line_file(1978|2008)
-    domain elevation arrays           hat_topo_version.npy_dirs("2004-start")
-    road cell masks                   hat_topo_version.road_mask_file(2008, gis)
-    villages, piers, groin, zones     hatteras_site_config
-    imagery                           Esri World Imagery through contextily,
-                                      cached under the user's temp dir;
-                                      --vector draws the outline instead and
-                                      needs no network
-    locator coastline                 map_elements/natural_earth/
-                                      (Natural Earth 10 m states, clipped)
-==============================================================================
+Drawn from the model's own inputs; --vector uses the island outline instead of
+satellite tiles (no network). Writes into output/figures/1-site/, 2-observations/
+and 3-model-inputs/ (or talk/). Details: scripts/figure_making/island/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-09-30
 """
 from __future__ import annotations
 
@@ -121,6 +47,7 @@ from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_NOURISHMENT_PROJECTS, HATTERAS_ROAD_EVENTS, SCORE_INTERIOR_GIS,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 CRS = "EPSG:26918"
 INIT = REPO / "data" / "hatteras_init"
 from site_layer.hat_observed_rates import DOMAIN_BOXES  # noqa: E402
@@ -128,10 +55,7 @@ from site_layer import hat_map_layers as _ml  # noqa: E402
 OUTLINE = _ml.ISLAND_OUTLINE
 from site_layer.hat_figure_style import FIGURES_ROOT as FIG_ROOT, figure_dir  # noqa: E402
 
-# WHICH FOLDER EACH FIGURE BELONGS TO. output/figures/ is organised by the
-# question a figure answers, in the paper's order (the numbered layout,
-# Hannah 2026-09-29; before that by subject, 2026-09-17): (subject, *parts)
-# as figure_dir() takes them.
+# Which numbered output/figures/ folder each figure belongs to
 SUBJECT = {
     "study_area": ("site",),
     "site_overview": ("site",),
@@ -150,9 +74,8 @@ SUBJECT = {
 TALK = False        # set by talk_mode(); the projector set mirrors the layout
 
 
+# `output/figures/<numbered subject>/.../<name>.png`, the folder created
 def fig_path(name):
-    """`output/figures/<numbered subject>/.../<name>.png`, the folder created.
-    Under `talk/` in talk mode, mirroring the same path."""
     d = figure_dir(*SUBJECT[name])
     if TALK:
         d = FIG_ROOT / "talk" / d.relative_to(FIG_ROOT)
@@ -166,11 +89,7 @@ N_BUFFER = HATTERAS_DOMAINS.num_buffer_domains
 EXAMPLE_GIS = 45
 TOPO_PRODUCT = "2004-start"
 
-# THE VECTOR BASE MAP. Water a pale blue-grey, land an ivory, edges a mid
-# grey: the conventional quiet base of a journal map, on which the black
-# road and the grey role fills carry the figure (Hannah, 2026-09-17: "more
-# professional and academic"). C["WATER"] stays for elevation classes, where
-# it means a cell at or below sea level.
+# The vector base map: pale water, ivory land, grey edges
 WATER_MAP = "#e9eff4"
 LAND = "#ede9df"
 LAND_EDGE = "0.55"
@@ -180,14 +99,12 @@ ROLE = {                       # fills for domain_framework
     "community": "#e6b39a",    # the community zones: the settlement tint of a topographic map
 }
 HALO = _halo(2.0)
-# white type on imagery needs the opposite of the house halo: a dark stroke,
-# so a number over pale sand is as legible as one over dark water
+# White type on imagery needs a dark halo, the opposite of the house one
 DARK_HALO = [mpl.patheffects.withStroke(linewidth=1.8, foreground="0.15")]
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# LAYERS
-# =============================================================================
+# The domain boxes, island outline and NC-12 lines, in UTM
 def load_layers():
     dom = gpd.read_file(DOMAIN_BOXES).to_crs(CRS)
     dom["ID"] = dom["domain_id"].astype(int)
@@ -197,24 +114,19 @@ def load_layers():
     return dom, outline, roads
 
 
+# A polygon's exterior as an (n, 2) array
 def xy2d(geom):
     return np.asarray(geom.exterior.coords)[:, :2]
 
 
+# The rotation that lays the reach out left to right, and which way is seaward in it
 class Frame:
-    """The rotation that lays the reach out left to right, and which way is
-    seaward in it."""
 
     def __init__(self, dom, outline):
         c = dom.geometry.centroid
         xy = np.c_[c.x.values, c.y.values]
         p1, p2 = xy[0], xy[-1]
-        # The boxes are axis-aligned in UTM with their alongshore side due
-        # north, so the frame is an exact quarter turn: north to the right.
-        # A reach axis FITTED through the centroids (82.4 deg) tilted every
-        # box by 7.6 deg on the page (Hannah, 2026-09-17: "perfectly
-        # horizontal"). The reach then steps in y as the coast bends, which
-        # is the boxes' real stagger.
+        # The boxes are axis-aligned in UTM, north along the reach, so the frame is a quarter turn
         self.u = np.array([0.0, 1.0]) if (p2 - p1)[1] > 0 else np.array([0.0, -1.0])
         self.theta = math.atan2(self.u[1], self.u[0])
         self.origin = tuple(xy.mean(0))
@@ -238,7 +150,6 @@ class Frame:
         return np.c_[c * xy[:, 0] - s * xy[:, 1], s * xy[:, 0] + c * xy[:, 1]] + self.origin
 
     def unrotate_bounds(self, x0, x1, y0, y1):
-        """UTM bounding box that covers a rotated-frame window."""
         corners = np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], float) - self.origin
         c, s = math.cos(self.theta), math.sin(self.theta)
         back = np.c_[c * corners[:, 0] - s * corners[:, 1],
@@ -246,21 +157,18 @@ class Frame:
         return back[:, 0].min(), back[:, 1].min(), back[:, 0].max(), back[:, 1].max()
 
     def north(self):
-        """Unit vector of true north in the rotated frame."""
         return np.array([math.sin(self.theta), math.cos(self.theta)])
 
     def image_transform(self, ax):
         return Affine2D().rotate_deg_around(*self.origin, self.deg) + ax.transData
 
     def along(self, gis):
-        """Rotated-frame point on the reach axis at a (fractional) GIS id."""
         cen = self.pts(self.centroids)
         i = np.asarray(gis, float) - FIRST
         idx = np.arange(len(cen))
         return np.c_[np.interp(i, idx, cen[:, 0]), np.interp(i, idx, cen[:, 1])]
 
     def window(self, dom, pad_along_km, pad_sea_km, pad_sound_km):
-        """(x0, x1, y0, y1) of the reach with asymmetric padding, rotated frame."""
         x0, y0, x1, y1 = self.geoms(dom.geometry).total_bounds
         x0 -= pad_along_km * 1000
         x1 += pad_along_km * 1000
@@ -273,10 +181,8 @@ class Frame:
         return x0, x1, y0, y1
 
 
+# A north arrow pointing to true north in a rotated, equal-aspect frame
 def north_arrow_rotated(ax, frame, x=0.965, y=0.10, length=0.16):
-    """A north arrow pointing to true north in a rotated, equal-aspect frame;
-    `length` is a fraction of the axes height. (x, y) is the corner the arrow
-    keeps clear of: the arrow is placed so that neither end crosses it."""
     n = frame.north()
     x0, x1 = ax.get_xlim()
     y0, y1 = ax.get_ylim()
@@ -294,12 +200,8 @@ def north_arrow_rotated(ax, frame, x=0.965, y=0.10, length=0.16):
             bbox=dict(facecolor="white", alpha=0.8, edgecolor="none", boxstyle="square,pad=0.1"))
 
 
-# =============================================================================
-# IMAGERY
-# =============================================================================
+# Tile mosaic for a UTM window
 def tiles(bounds_utm, zoom, source, t_crs=CRS):
-    """Tile mosaic for a UTM window: (img, extent(left, right, bottom, top))
-    in `t_crs`, warped from Web Mercator."""
     import contextily as cx
     from rasterio.warp import transform_bounds
     cx.set_cache_dir(str(TILE_CACHE))
@@ -310,45 +212,39 @@ def tiles(bounds_utm, zoom, source, t_crs=CRS):
     return cx.warp_tiles(img, ext, t_crs=t_crs)
 
 
+# The satellite tile provider
 def imagery_source():
     import contextily as cx
     return cx.providers.Esri.WorldImagery
 
 
+# The plain canvas tile provider
 def canvas_source():
     import contextily as cx
     return cx.providers.Esri.WorldGrayCanvas
 
 
+# The panel letter inside a frame but clear of it
 def letter_corner(ax, i, x=0.06, y=0.94, ha="left"):
-    """The panel letter inside a frame but clear of it. `_letter_inside` puts
-    it at (0.03, 0.985), where its white backing lands on the two spines of
-    the corner and reads as a nick in the frame. Every lettered map panel in
-    this script uses this instead (Hannah, 2026-09-17: no label text on top
-    of a border or a line)."""
     ax.text(x, y, f"({chr(ord('a') + i)})", transform=ax.transAxes, ha=ha, va="top",
             fontsize=10, fontweight="bold", color=INK, zorder=20,
             bbox=dict(facecolor="white", alpha=0.85, edgecolor="none", boxstyle="square,pad=0.15"))
 
 
+# The tile attribution once for the whole figure, in the bottom margin
 def credit_figure(fig, text, x=0.995, y=0.004):
-    """The tile attribution once for the whole figure, in the bottom margin.
-    On a panel narrower than about an inch the in-panel credit is wider than
-    the free water and its backing lands on the frame."""
     fig.text(x, y, text, ha="right", va="bottom", fontsize=6.5, color=INK_MUTED, zorder=25)
 
 
+# Tile attribution
 def credit(ax, text, loc="lower right"):
-    """Tile attribution: the one text a licence puts on the canvas."""
     x, ha = (0.988, "right") if loc.endswith("right") else (0.012, "left")
     y, va = (0.018, "bottom") if loc.startswith("lower") else (0.982, "top")
     ax.text(x, y, text, transform=ax.transAxes, ha=ha, va=va, fontsize=8, color=INK_MUTED,
             zorder=25, bbox=dict(facecolor="white", alpha=0.7, edgecolor="none", boxstyle="square,pad=0.15"))
 
 
-# =============================================================================
-# SHARED DRAWING
-# =============================================================================
+# Set an axes to a map window: equal aspect, no ticks
 def map_axes(ax, window):
     x0, x1, y0, y1 = window
     ax.set_xlim(x0, x1)
@@ -359,24 +255,18 @@ def map_axes(ax, window):
     spines_for_image(ax)
 
 
+# What draw_reach drew that a caller needs back
 class ReachArt(typing.NamedTuple):
-    """What draw_reach drew that a caller needs back: the road colour it chose
-    for this basemap, and how far the village names reach from the soundward
-    edge of the boxes, so annotations placed beyond them can clear them."""
 
     road_c: str
     village_out_m: float
 
 
+# The rotated reach
 def draw_reach(ax, frame, dom, outline, road, vector, window, zoom=12,
                label_every=10, label_villages=True, water_labels=True, box_lw=0.35,
                arrow_xy=(0.965, 0.20), ocean_x=0.55, sound_x=0.20, piers=True, scalebar=True,
                numbers=True, arrow=True, show_road=True):
-    """The rotated reach: imagery or the outline, the domain boxes, NC-12,
-    the ends, the structures. Villages are named in ONE ROW on the sound
-    side, each with a leader down to its domains, so they read as a labelled
-    axis rather than scattered text (Hannah, 2026-09-17 evening). Returns
-    the road colour used."""
     map_axes(ax, window)
     x0, x1, y0, y1 = window
     if vector:
@@ -429,11 +319,9 @@ def draw_reach(ax, frame, dom, outline, road, vector, window, zoom=12,
     return ReachArt(road_c=road_c, village_out_m=village_out_m)
 
 
+# The five village names on one line along the sound side of the reach, a leader from each down to ...
 def village_row(ax, frame, dom, vector, clear_m=1300.0, leader_gap_m=700.0,
                 pad_m=600.0):
-    """The five village names on one line along the sound side of the reach,
-    a leader from each down to the sound edge of its domains where the gap
-    is more than `leader_gap_m`."""
     sea = frame.seaward
     rdom = frame.geoms(dom.geometry)
     x0, y0, x1, y1 = rdom.total_bounds
@@ -443,12 +331,7 @@ def village_row(ax, frame, dom, vector, clear_m=1300.0, leader_gap_m=700.0,
              "Salvo": (ANN.village_lines["Salvo"],) * 2, "Waves": (ANN.village_lines["Waves"],) * 2,
              "Rodanthe": (ANN.village_lines["Rodanthe"],) * 2}
     lc = "white" if not vector else INK_MUTED
-    # Salvo, Waves and Rodanthe are single domains 5 and 6 apart -- under 3 km,
-    # which is narrower than the names are wide on a reach-length panel, so
-    # they printed as "Salvo WavesRodanthe". They are measured and pushed
-    # apart, with the leader running from the moved name back to its own
-    # domains (found 2026-09-17 when the villages were put back on the
-    # management map).
+    # Salvo, Waves and Rodanthe are too close to label separately: one row with leaders (README)
     sized = measure_m(ax, list(names), fontsize=8, fontstyle="italic")
     placed = []
     for (name, (lo, hi)), (hw, hh) in zip(names.items(), sized):
@@ -466,23 +349,17 @@ def village_row(ax, frame, dom, vector, clear_m=1300.0, leader_gap_m=700.0,
             ax.plot([d["x"], d["anchor_x"]],
                     [y_row - out * 330, d["edge"] - out * 80],
                     color=lc, lw=0.5, zorder=7)
-    # How far out the names actually reach, so whatever is placed beyond them
-    # can be told to stay clear.
+    # How far out the names actually reach, so whatever is placed beyond them can be told to stay (README)
     hh = max(h for _, h in sized)
     return abs((y_row + out * hh) - sound_edge_all)
 
 
+# UTM 18N coordinates on a quarter-turned map
 def utm_frame(ax, frame, every_x_km=10, every_y_km=5, fontsize=8):
-    """UTM 18N coordinates on a quarter-turned map: northing runs along the
-    x axis and easting up the y axis (decreasing upward when the ocean is at
-    the bottom). Ticks at round kilometres, labelled in km. A labelled frame
-    replaces the scale bar; the north arrow stays because the frame is
-    turned."""
     ox, oy = frame.origin
     x0, x1 = ax.get_xlim()
     y0, y1 = ax.get_ylim()
-    # x_rot = ox + (northing - oy); y_rot = oy - (easting - ox)   (theta = +90 deg)
-    # x_rot = ox - (northing - oy); y_rot = oy + (easting - ox)   (theta = -90 deg)
+    # x_rot = ox ± (northing - oy); y_rot = oy ∓ (easting - ox), for theta = ±90 deg
     sgn = 1.0 if frame.theta > 0 else -1.0
     n_lo = min(oy + sgn * (x0 - ox), oy + sgn * (x1 - ox))
     n_hi = max(oy + sgn * (x0 - ox), oy + sgn * (x1 - ox))
@@ -500,12 +377,8 @@ def utm_frame(ax, frame, every_x_km=10, every_y_km=5, fontsize=8):
     ax.set_ylabel("easting (km)", fontsize=9, labelpad=2)
 
 
+# The framework legend, one column inside the map over open water
 def framework_legend(ax, handles, corner="lower right", anchor=None):
-    """One column INSIDE the map, in a corner of open water, with the faint
-    white backing the house style allows for a legend inside the axes
-    (Hannah, 2026-09-17). The ocean corner is the one that never competes
-    with the domains; a legend under the map cost the figure an inch of
-    height for nothing."""
     anchor = anchor or {"lower right": (0.985, 0.025), "lower left": (0.015, 0.025),
                         "upper right": (0.985, 0.975), "upper left": (0.015, 0.975)}[corner]
     ax.legend(handles=handles, loc=corner, bbox_to_anchor=anchor, ncol=1, frameon=True,
@@ -513,12 +386,8 @@ def framework_legend(ax, handles, corner="lower right", anchor=None):
               handlelength=1.5, labelspacing=0.42, borderpad=0.5)
 
 
+# SHORT labels
 def framework_handles():
-    """SHORT labels. What each class MEANS -- scored against CoastSat, carries
-    the alongshore boundary condition, roadway management off -- is in the
-    caption; spelling it in the legend made the longest entry five sixths of
-    a single-column panel, which is why the legend used to sit under the map
-    instead of in it."""
     return [
         Patch(facecolor="white", edgecolor=INK, lw=0.6,
               label=f"interior, GIS {SCORE_INTERIOR_GIS[0]}–{SCORE_INTERIOR_GIS[1]}"),
@@ -536,12 +405,8 @@ INSET_LON = (-80.6, -74.6)
 INSET_LAT = (33.4, 37.3)
 
 
+# The south-eastern US coast with the reach marked
 def regional_inset(ax, outline, vector=True, lat_side="right"):
-    """The south-eastern US coast with the reach marked: a vector locator
-    from the Natural Earth 10 m states layer, in plain longitude and
-    latitude with a labelled graticule, so it needs no scale bar or north
-    arrow (the house rule for a labelled frame). Until 2026-09-17 evening
-    this was a grey tile basemap whose own small labels fought ours."""
     states = gpd.read_file(NE_STATES)
     lon0, lon1 = INSET_LON
     lat0, lat1 = INSET_LAT
@@ -557,24 +422,15 @@ def regional_inset(ax, outline, vector=True, lat_side="right"):
     pad = 0.18
     ax.add_patch(Rectangle((bx0 - pad, by0 - pad), bx1 - bx0 + 2 * pad, by1 - by0 + 2 * pad,
                            facecolor="none", edgecolor=INK, lw=0.7, zorder=5))
-    # THE NAMES SIT INSIDE ONE GRATICULE CELL EACH, not across a line: the
-    # cells are 2 deg of longitude, about half an inch here, so a name wider
-    # than that is set on two lines (Hannah, 2026-09-17: no label text over a
-    # border or a line).
+    # Locator names sit inside one graticule cell each
     ax.text(bx0 - pad - 0.42, (by0 + by1) / 2, "Hatteras\nIsland", ha="right", va="center", fontsize=8,
             color=INK, zorder=6, path_effects=HALO)
-    # only the two names a reader needs: a locator carrying five at 6 pt is a
-    # thicket at this size. Under about an inch wide even two collide, so the
-    # state name goes and the box keeps the meaning (the vertical framework's
-    # locator is 0.82 in).
+    # Only the two names a reader needs
     w_in = ax.get_position().width * ax.figure.get_size_inches()[0]
     if w_in >= 1.05:
         ax.text(-79.0, 35.2, "North\nCarolina", ha="center", va="center", fontsize=8, color=INK_MUTED,
                 zorder=6, path_effects=HALO)
-    # AT 8 PT A SMALL LOCATOR HOLDS TWO NAMES, not three: one line of
-    # "Atlantic Ocean" is 2.5 deg wide against graticule cells of 2 deg, and
-    # the main map names the ocean anyway. It returns on a wide locator,
-    # clear of the reach box (which reaches 35.1 N) and of the lines.
+    # At 8 pt a small locator holds two names, not three
     if w_in >= 1.45:
         ax.text(-75.45, 34.35, "Atlantic\nOcean", ha="center", va="center", fontsize=8,
                 color=INK_MUTED, fontstyle="italic", zorder=6, path_effects=HALO)
@@ -592,9 +448,7 @@ def regional_inset(ax, outline, vector=True, lat_side="right"):
     ax.set_yticks(lats)
     ax.set_yticklabels([f"{y}°N" for y in lats], fontsize=8)
     ax.tick_params(length=2, width=0.5, pad=1.5, colors=INK)
-    # the latitude labels go on whichever side has open water beside them:
-    # on the portrait map the locator's right edge is a kilometre from the
-    # domain numbers, so they go left, over the sound
+    # The latitude labels go on whichever side has open water beside them
     if lat_side == "left":
         ax.yaxis.tick_left()
     else:
@@ -603,9 +457,8 @@ def regional_inset(ax, outline, vector=True, lat_side="right"):
     spines_for_image(ax)
 
 
+# A double-column figure whose height is set by the window's aspect, so an equal-aspect map panel ...
 def reach_figure(window, panel_frac=(0.004, 0.006, 0.992, 0.988)):
-    """A double-column figure whose height is set by the window's aspect, so
-    an equal-aspect map panel fills it."""
     x0, x1, y0, y1 = window
     aspect = (x1 - x0) / (y1 - y0)
     fx, fy, fw, fh = panel_frac
@@ -614,9 +467,7 @@ def reach_figure(window, panel_frac=(0.004, 0.006, 0.992, 0.988)):
     return fig, fig.add_axes([fx, fy, fw, fh])
 
 
-# =============================================================================
-# FIGURE 1: STUDY AREA
-# =============================================================================
+# The reach on imagery with domains, NC-12, villages and the regional inset
 def fig_study_area(dom, outline, roads, frame, vector):
     window = frame.window(dom, pad_along_km=4.0, pad_sea_km=3.5, pad_sound_km=11.5)
     fig, ax = reach_figure(window)
@@ -652,13 +503,8 @@ def fig_study_area(dom, outline, roads, frame, vector):
     return out[0]
 
 
-# =============================================================================
-# FIGURE 2: DOMAIN FRAMEWORK
-# =============================================================================
+# Per domain, from the extraction arrays (m NAVD88, -10 water)
 def domain_metrics(product=TOPO_PRODUCT):
-    """Per domain, from the extraction arrays (m NAVD88, -10 water): the
-    median across the alongshore rows of the land width, and of each row's
-    highest cell. The width is capped by the 2000 m box."""
     d, _ = tv.npy_dirs(product)
     gis, width, crest = [], [], []
     for g in range(FIRST, LAST + 1):
@@ -673,8 +519,8 @@ def domain_metrics(product=TOPO_PRODUCT):
     return np.array(gis), np.array(width), np.array(crest)
 
 
+# The end domains and the community zones filled on the reach map
 def draw_role_fills(ax, frame, dom):
-    """The end domains and the community zones filled on the reach map."""
     rdom = frame.geoms(dom.geometry)
     zones = set()
     for lo, hi in HATTERAS_COMMUNITY_ZONES:
@@ -689,8 +535,8 @@ def draw_role_fills(ax, frame, dom):
         ax.add_patch(mpl.patches.Polygon(xy2d(geom), closed=True, facecolor=fc, edgecolor="none", zorder=3))
 
 
+# The buffer domains stepped out due north and south of the reach
 def draw_buffers(ax, frame, dom, label=True):
-    """The buffer domains stepped out due north and south of the reach."""
     step = frame.u * frame.step
     sea = frame.seaward
     cen = frame.pts(frame.centroids)
@@ -707,6 +553,7 @@ def draw_buffers(ax, frame, dom, label=True):
                     color=INK_MUTED, zorder=8)
 
 
+# The domains by role over the island outline, with the inset
 def fig_domain_framework(dom, outline, roads, frame, vector):
     window = frame.window(dom, pad_along_km=3.5, pad_sea_km=7.5, pad_sound_km=13.0)
     fig, ax = reach_figure(window, panel_frac=(0.048, 0.10, 0.94, 0.885))
@@ -716,8 +563,7 @@ def fig_domain_framework(dom, outline, roads, frame, vector):
                ocean_x=0.60, sound_x=0.60, piers=False, scalebar=False)
     draw_role_fills(ax, frame, dom)
     utm_frame(ax, frame)
-    # the regional inset in the upper right, above the village row: one inch
-    # square, the sound padded to make the room
+    # The regional inset in the upper right, above the village row
     ih, iw = 1.3 / fh, 1.3 / fw
     ax_in = fig.add_axes([0.93 - iw, 0.96 - ih, iw, ih])   # room for the latitude labels on its right
     regional_inset(ax_in, outline, vector)
@@ -740,19 +586,8 @@ def fig_domain_framework(dom, outline, roads, frame, vector):
     return out[0]
 
 
+# The domain framework NORTH UP, as a portrait figure
 def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5):
-    """The domain framework NORTH UP, as a portrait figure: the reach runs up
-    the page, GIS 1 at the bottom and GIS 90 at the top, the ocean to the
-    right. Every other map in this script is turned a quarter turn, because a
-    45 km strip trending NNW wastes a landscape page; a portrait page is the
-    one shape that fits it unturned, and unturned is the orientation a reader
-    can carry to any other map of the Outer Banks (Hannah, 2026-09-17).
-
-    Nothing is rotated here, so the domain boxes are level by construction
-    (they are axis-aligned in UTM) and north is up: `_north_arrow` applies,
-    and the UTM frame reads the ordinary way round, easting along the bottom
-    and northing up the side. The window is sized from `panel_in` so the map
-    keeps equal scale in both directions."""
     boxes = dom.geometry
     bx0, by0, bx1, by1 = boxes.total_bounds
     pad_n = 2600.0          # room for the end names clear of the frame
@@ -763,17 +598,7 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5):
     pw = fw - left - right
     win_h = n1 - n0
     win_w = win_h * pw / panel_in                          # equal scale in both directions
-    # THE NAMES SIT ON THE OCEAN SIDE and the domain numbers on the sound
-    # side (Hannah, 2026-09-17), which frees the whole north-west corner for
-    # the locator: the island runs 5 km east as it goes north, so at the top
-    # of the frame the sound is at its widest.
-    #
-    # THE REACH SITS WELL EAST OF CENTRE, 9 km of window west of it. The
-    # window's WIDTH is fixed by equal scale (it is the height times the
-    # panel's shape), so the only way to widen the sound is to draw the map
-    # shorter: `panel_in` came down from 7.8 to 6.5 in to buy those 3 km,
-    # which costs the reach a seventh of its scale and buys the locator a
-    # fifth more side. The east margin is what the names need and no more.
+    # Names on the ocean side, domain numbers on the sound side (README)
     e0 = bx0 - 8000.0      # 8 pt names need a kilometre more of ocean
     e1 = e0 + win_w
     fh = top + panel_in + bottom
@@ -786,8 +611,7 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5):
     ax.set_facecolor(WATER_MAP)
     spines_for_image(ax)
 
-    # land, clipped to the window (the outline file also holds Ocracoke and
-    # the mainland, 20 km west of anything this figure shows)
+    # Land, clipped to the window (the outline file also holds Ocracoke and the mainland, 20 km west (README)
     from shapely.geometry import box as _box
     win = _box(e0, n0, e1, n1)
     land = outline.geometry.intersection(win)
@@ -806,8 +630,7 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5):
                                              lw=0.3, zorder=4))
     roads[2008].clip(win).plot(ax=ax, color=C["ROAD"], lw=0.9, zorder=5)
 
-    # every tenth domain numbered on the SOUND side, the villages named on
-    # the OCEAN side beside their own domains
+    # Every tenth domain numbered on the SOUND side, the villages named on the OCEAN side beside (README)
     cen = np.c_[boxes.centroid.x.values, boxes.centroid.y.values]
     for i, g in enumerate(dom.ID.values):
         if g == FIRST or g % 10 == 0:
@@ -827,10 +650,7 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5):
         i = int(np.clip(round(pos) - FIRST, 0, len(dom) - 1))
         ax.plot(dom.geometry.iloc[i].bounds[2] + 250, np.interp(pos - FIRST, np.arange(len(cen)), cen[:, 1]),
                 marker="_", ms=7, mew=1.4, color=INK, zorder=9, ls="none")
-    # the ends and the water bodies
-    # the end names: inside the frame with a kilometre to spare, and beside
-    # the reach rather than on it -- placed on the axis they sat on NC-12,
-    # which runs on past both ends of the modelled domains
+    # The ends and the water bodies the end names
     ax.text(bx0 - 300, by0 - 800, "Cape Point", ha="right", va="top", fontsize=8, color=INK,
             zorder=8, path_effects=HALO)
     ax.text(bx1 + 1100, by1 + 400, "Pea Island", ha="left", va="bottom", fontsize=8, color=INK,
@@ -840,8 +660,7 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5):
     ax.text(0.13, 0.50, "PAMLICO\nSOUND", transform=ax.transAxes, ha="center", va="center", fontsize=8,
             color=INK_MUTED, zorder=8)
 
-    # north is up here, so the ordinary arrow applies; a labelled UTM frame
-    # replaces the scale bar
+    # North is up here, so the ordinary arrow applies
     _north_arrow(ax, x=0.92, y=0.46, length=0.032)
     ticks_e = np.arange(math.ceil(e0 / 5000) * 5000, e1, 5000)
     ticks_n = np.arange(math.ceil(n0 / 5000) * 5000, n1, 5000)
@@ -853,23 +672,12 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5):
     ax.set_xlabel("UTM 18N easting (km)", fontsize=9, labelpad=2)
     ax.set_ylabel("northing (km)", fontsize=9, labelpad=2)
 
-    # the locator in the UPPER LEFT, the open sound at the north end
-    # (Hannah, 2026-09-17). It clears the northernmost village name by about
-    # a tenth of an inch, and the (a) letter goes ABOVE the frame rather than
-    # in the corner the locator now holds.
-    # as wide as the sound is at the north end of the frame, less the room
-    # its own latitude labels need on the right and the domain numbers take
-    # at 455 km easting. Every tenth of an inch more reaches a tenth of an
-    # inch further south, where the island is further west and the sound
-    # narrower, so this is close to the ceiling for a locator in this corner.
+    # The locator in the upper left, over the open sound (README)
     side = 1.20
     ax_in = fig.add_axes([(left + 0.30) / fw, (bottom + 0.985 * panel_in - side) / fh,
                           side / fw, side / fh])
     regional_inset(ax_in, outline, vector, lat_side="left")
-    # THE LEGEND UNDER THE LOCATOR (Hannah, 2026-09-17), in the open sound:
-    # the locator ends a fifth of the way down the panel and nothing else is
-    # drawn below it until the sound's own name. Anchored to the locator's
-    # foot rather than to a corner, so the two read as one block.
+    # The legend under the locator, in the open sound
     framework_legend(ax, framework_handles(), "upper left",
                      anchor=(0.015, 0.985 - side / panel_in - 0.03))
     _title(ax, 0, "")
@@ -894,10 +702,8 @@ def fig_domain_framework_vertical(dom, outline, roads, vector, panel_in=6.5):
     return out[0]
 
 
+# The study-area imagery and the domain framework as one two-panel figure on one frame, for a ...
 def fig_site_overview(dom, outline, roads, frame, vector):
-    """The study-area imagery and the domain framework as one two-panel
-    figure on one frame, for a manuscript that should carry one map of the
-    reach rather than two."""
     window = frame.window(dom, pad_along_km=3.5, pad_sea_km=7.5, pad_sound_km=13.0)
     x0, x1, y0, y1 = window
     aspect = (x1 - x0) / (y1 - y0)
@@ -942,6 +748,7 @@ def fig_site_overview(dom, outline, roads, frame, vector):
     return out[0]
 
 
+# Island width and highest cell per domain, from the extraction
 def fig_domain_metrics():
     gis, width, crest = domain_metrics()
     fig = plt.figure(figsize=figsize("double", height=3.6))
@@ -974,9 +781,7 @@ def fig_domain_metrics():
     return out[0]
 
 
-# =============================================================================
-# FIGURE 3: ONE DOMAIN AS THE MODEL GRID
-# =============================================================================
+# One domain: its box on imagery, the 10 m array, road cells, mean profile
 def fig_domain_grid(dom, roads, vector, gis=EXAMPLE_GIS):
     d, _ = tv.npy_dirs(TOPO_PRODUCT)
     a = np.load(d / f"domain_{gis}.npy")                    # (alongshore rows, cross-shore cols), m NAVD88
@@ -1079,9 +884,6 @@ def fig_domain_grid(dom, roads, vector, gis=EXAMPLE_GIS):
     return out[0]
 
 
-# =============================================================================
-# FIGURE 4: FORCING TIMELINE
-# =============================================================================
 from site_layer import hat_env_forcings as _env  # noqa: E402
 STORM_ROOT = _env.HINDCAST_STORMS
 RSLR_RECORD = _env.RSLR_RECORD_FILE
@@ -1089,22 +891,15 @@ RSLR_FITS = _env.RSLR_RATES_CSV
 WINDOW_COLOUR = {(1984, 2004): C_1984, (2004, 2024): C_1997,
                  (1996, 2010): "#ef8a62", (2010, 2024): "#67a9cf"}
 
-# THE TWO HINDCAST CHAINS, ONE FIGURE EACH. A start year runs a PAIR of windows
-# that tile at their shared year, and the 1984 pair and the 1996 pair are two
-# alternative readings of the same forty years, not four panels of one record:
-# putting all four on one frame invited a reader to compare windows that are
-# never run together (Hannah, 2026-09-17). Each chain is drawn on its own span
-# so the years it actually covers get the full width of the page, which is why
-# the two figures are NOT on a common axis.
+# The two hindcast chains, one figure each (README)
 CHAINS = {
     "forcing_timeline_1984": {"windows": [(1984, 2004), (2004, 2024)], "years": (1983, 2025)},
     "forcing_timeline_1996": {"windows": [(1996, 2010), (2010, 2024)], "years": (1995, 2025)},
 }
 
 
+# One row per storm, 1984-2023, with its calendar year
 def storm_record():
-    """One row per storm, 1984-2023, with its calendar year: the 1984-2004
-    and 2004-2024 series tile at 2004."""
     import pandas as pd
     # the series the hindcast runs on (hat_env_forcings.DEFAULT_STORM_VARIANT)
     from site_layer import hat_env_forcings as _envf
@@ -1115,6 +910,7 @@ def storm_record():
     return s
 
 
+# The Duck sea-level record for the forcing timeline
 def sea_level_record():
     import pandas as pd
     lines = RSLR_RECORD.read_text(encoding="utf-8").splitlines()
@@ -1126,8 +922,8 @@ def sea_level_record():
     return d
 
 
+# The chain's windows as horizontal bars
 def windows_bar(ax, windows):
-    """The chain's windows as horizontal bars."""
     for i, (a, b) in enumerate(windows):
         ax.barh(i, b - a, left=a, height=0.62, color=WINDOW_COLOUR[(a, b)], lw=0)
         ax.text(a + 0.4, i, f"{a}–{b}", ha="left", va="center", fontsize=8, color="white",
@@ -1139,8 +935,8 @@ def windows_bar(ax, windows):
         ax.spines[side].set_visible(False)
 
 
+# The forcing record over ONE chain
 def fig_forcing_timeline(name):
-    """The forcing record over ONE chain; `name` is a key of CHAINS."""
     chain = CHAINS[name]
     windows, years = chain["windows"], chain["years"]
     s = storm_record()
@@ -1148,10 +944,7 @@ def fig_forcing_timeline(name):
     import pandas as pd
     fits = pd.read_csv(RSLR_FITS)
 
-    # Cut to the years the chain COVERS (its first window's start to its last
-    # window's end), not to the axis, which carries a margin year at each end:
-    # clipping by the axis alone left a half-drawn storm bar in the margin, and
-    # a record outside the span would still set the y limits of its panel.
+    # Cut to the years the chain covers, not the axis margins
     span = (windows[0][0], windows[-1][1])
 
     def in_span(y):
@@ -1226,8 +1019,7 @@ def fig_forcing_timeline(name):
             ax_m.add_patch(Rectangle((e.year - 0.5, gis[0] - 0.5), 1.0, gis[-1] - gis[0] + 1,
                                      facecolor=C["ROAD"], edgecolor="none", zorder=3))
             drew_reloc = True
-            # an early event's label would run off the left of the axis, so
-            # it goes to the right of its bar instead
+            # An early event's label would run off the left of the axis, so it goes to the right of its bar (README)
             side = "left" if e.year - years[0] < 8 else "right"
             ax_m.text(e.year + (0.8 if side == "left" else -0.8), (gis[0] + gis[-1]) / 2,
                       f"{e.year}, GIS {gis[0]}–{gis[-1]}", ha=side, va="center", fontsize=8,
@@ -1284,9 +1076,7 @@ def fig_forcing_timeline(name):
     return out[0]
 
 
-# =============================================================================
-# FIGURE 5: OBSERVED SHORELINE CHANGE RATES
-# =============================================================================
+# The observed CoastSat rates of each window
 def fig_observed_rates():
     import pandas as pd
     from site_layer import hat_observed_rates as obs
@@ -1328,23 +1118,18 @@ def fig_observed_rates():
     return out[0]
 
 
-# =============================================================================
-# FIGURE 6: THE DUNE LINES, 1984-2023
-# =============================================================================
 DUNE_VINTAGES = (1984, 1997, 2004, 2009, 2023)
 VINTAGE_COLOUR = {1984: C_1984, 1997: "#ef8a62", 2004: "#7f7f7f", 2009: "#67a9cf", 2023: C_1997}
 ZOOMS = {"Buxton": (4, 7), "Avon": (29, 32), "GIS 50–53": (50, 53), "Rodanthe": (82, 85)}   # detail panels
 
 
+# Every dune-line vintage, in UTM
 def dune_lines():
     return {v: gpd.read_file(tv.duneline_geojson(v)).to_crs(CRS) for v in DUNE_VINTAGES}
 
 
+# Mean easting of each vintage's line inside each domain box, m
 def line_position(lines, dom):
-    """Mean easting of each vintage's line inside each domain box, m. The
-    boxes are axis-aligned and the coast trends 8 degrees from north, so a
-    difference of eastings between vintages is the cross-shore movement to
-    within one per cent; positive is seaward."""
     pos = {}
     for v, gs in lines.items():
         line = gs.geometry.union_all()
@@ -1356,6 +1141,7 @@ def line_position(lines, dom):
     return pos
 
 
+# The digitised dune lines on the reach, with zooms
 def fig_dune_lines(dom, roads, vector):
     lines = dune_lines()
     pos = line_position(lines, dom)
@@ -1400,8 +1186,7 @@ def fig_dune_lines(dom, roads, vector):
         for v in DUNE_VINTAGES:
             lines[v].plot(ax=ax, color=VINTAGE_COLOUR[v], lw=1.1, zorder=4)
         roads[2008].plot(ax=ax, color=road_c, lw=0.8, zorder=3)
-        # the numbers on the OCEAN side, clear of the panel letter in the
-        # other corner, and only where the whole of one clears the frame
+        # The numbers on the OCEAN side, clear of the panel letter in the other corner, and only where (README)
         for g, geom in zip(boxes.ID.values, boxes.geometry):
             yc = geom.centroid.y
             if y0 + 90 < yc < y1 - 90:
@@ -1411,9 +1196,7 @@ def fig_dune_lines(dom, roads, vector):
         ax.text(0.5, 0.965, name, transform=ax.transAxes, ha="center", va="top", fontsize=8, color=INK,
                 fontstyle="italic", zorder=9, path_effects=HALO)
         _scalebar(ax, 250, show_cells=False)
-        # the arrow sits between two domain numbers, not beside one: the
-        # numbers fall at the middle of each 500 m box, so the gap at
-        # mid-panel is the one place in the water that is always free
+        # The arrow sits between two domain numbers, not beside one
         _north_arrow(ax, x=0.90, y=0.44, length=0.05)
         letter_corner(ax, i)
 
@@ -1434,18 +1217,15 @@ def fig_dune_lines(dom, roads, vector):
     return out[0]
 
 
-# =============================================================================
-# FIGURE 7: THE DOMAIN AS BARRIER3D BUILDS IT (SCHEMATIC)
-# =============================================================================
+# The Barrier3D parameters the runs use, from the yaml
 def model_params():
     import yaml
     with open(INIT / "Hatteras-CASCADE-parameters.yaml", encoding="utf-8") as fh:
         return yaml.safe_load(fh)
 
 
+# The extractor's output for one domain
 def processed_domain(gis, product=TOPO_PRODUCT):
-    """The extractor's output for one domain: interior (rows cross-shore,
-    ocean first; columns alongshore) and the dune row, both in decametres."""
     root = tv.dune_topo_root(product)
     ver = (root / "CURRENT").read_text(encoding="utf-8").strip()
     topo = np.load(root / ver / "topography" / f"domain_{gis}_topography.npy")
@@ -1453,11 +1233,13 @@ def processed_domain(gis, product=TOPO_PRODUCT):
     return topo, dune, ver
 
 
+# One domain's road setback (m) for a start year
 def setback_m(gis, year=2004):
     a = np.loadtxt(tv.road_setback_file(year), delimiter=",")
     return float(a[1][a[0] == gis][0])
 
 
+# One domain as Barrier3D holds it: profile and plan on one cross-shore axis
 def fig_domain_schematic(gis=EXAMPLE_GIS):
     prm = model_params()
     topo, dune, ver = processed_domain(gis)
@@ -1511,8 +1293,7 @@ def fig_domain_schematic(gis=EXAMPLE_GIS):
     open_frame(ax_a)
     _title(ax_a, 0, "")
 
-    # (b) the same domain in plan, on the same cross-shore axis: dune rows
-    # then interior, alongshore up the page
+    # (b) the same domain in plan, on the same cross-shore axis
     cmap, norm, bounds = elevation_cmap()
     grid = np.vstack([np.tile(dune * dam, (n_dune, 1)), topo * dam]).T      # (alongshore, cross-shore)
     ext = (x_dune0, x_end, 0, grid.shape[0] * CELL_M)
@@ -1550,19 +1331,13 @@ def fig_domain_schematic(gis=EXAMPLE_GIS):
     return out[0]
 
 
-# =============================================================================
-# FIGURE 8: MANAGEMENT FOOTPRINT
-# =============================================================================
+# True when `half` ("sea" or "sound") is the LOWER half of a domain box on the page
 def half_is_lower(frame, half):
-    """True when `half` ("sea" or "sound") is the LOWER half of a domain box
-    on the page. One expression, shared by the map and the legend, so a
-    flipped reach cannot leave the key describing the other side."""
     return (frame.seaward[1] < 0) == (half == "sea")
 
 
+# A legend entry that IS a domain box with one half marked, drawn the way `tint_domains` marks it
 class HalfBox:
-    """A legend entry that IS a domain box with one half marked, drawn the way
-    `tint_domains` marks it. Handled by HalfBoxHandler."""
 
     def __init__(self, color, lower, alpha, hatch=None, label="", whole=False):
         self.color, self.lower, self.alpha, self.hatch = color, lower, alpha, hatch
@@ -1573,9 +1348,8 @@ class HalfBox:
         return self._label
 
 
+# Draws a HalfBox
 class HalfBoxHandler(HandlerBase):
-    """Draws a HalfBox: the domain box's outline at draw_reach's own weight,
-    with the marked half shaded inside it."""
 
     def create_artists(self, legend, orig, xdescent, ydescent, width, height,
                        fontsize, trans):
@@ -1594,25 +1368,8 @@ class HalfBoxHandler(HandlerBase):
         return [marked, box]
 
 
+# A rotated road line with a per-domain LANDWARD displacement applied
 def relocate_line(frame, rotated, displacement_m):
-    """A rotated road line with a per-domain LANDWARD displacement applied.
-
-    The digitised NC-12 lines are 1978 and 2008 exports, so a line read by a
-    later period start is only that period's alignment if the relocations
-    between the two dates are applied to it. The 1989 Pea Island event falls
-    inside the 1978-1996 gap, which left the red line at its pre-1989 position
-    at GIS 84-87 while the panel labelled that same stretch "relocated 1989"
-    (Hannah, 2026-09-17).
-
-    The shift is per DOMAIN and therefore STEPS at a domain boundary rather
-    than tapering. That is the forcing, not a drafting choice: CASCADE moves
-    the road by a whole number of cells per domain, and a smooth taper here
-    would draw something the model does not do.
-
-    Args:
-        rotated: the road GeoSeries already in the frame.
-        displacement_m: {gis: metres landward}, as HATTERAS_ROAD_EVENTS holds it.
-    """
     if not displacement_m:
         return rotated
     sea = frame.seaward
@@ -1637,31 +1394,8 @@ def relocate_line(frame, rotated, displacement_m):
     return rotated.apply(apply)
 
 
+# Tint the seaward or soundward HALF of each selected domain box
 def tint_domains(ax, frame, rdom, sel, half, **kw):
-    """Tint the seaward or soundward HALF of each selected domain box.
-
-    WHY HALVES. Every management category is a statement about whole domains,
-    so each is drawn on the domains themselves rather than on a bar alongside
-    them (Hannah, 2026-09-17). At the north end they land on the SAME
-    domains -- the Rodanthe fill is GIS 84–89, the 1989 relocation 84–87, the
-    bridge 82–88 -- so one tint per whole box would stack three colours on one
-    rectangle and none of them would be legible. Splitting the box gives each
-    family its own half, and an overlap reads as both halves being marked
-    rather than as a fourth colour nobody can name. The split is also where
-    the things are: the fill goes on the ocean side, the road sits landward.
-
-    The boxes are axis-aligned rectangles in the rotated frame (see Frame),
-    so a half is exactly half of the geometry's bounds.
-
-    Args:
-        rdom: the rotated domain GeoSeries.
-        sel: boolean mask over it.
-        half: "sea", "sound", or "all" for the whole box. Since the figure
-            was split into one panel per family (2026-09-17) each family has
-            the domain to itself again, so "all" is what the management
-            panels use; the halves remain for any panel that must carry two
-            families at once.
-    """
     whole = half == "all"
     lower = whole or half_is_lower(frame, half)
     for geom in rdom[sel]:
@@ -1671,14 +1405,8 @@ def tint_domains(ax, frame, rdom, sel, half, **kw):
         ax.add_patch(mpl.patches.Rectangle((x0, lo), x1 - x0, hi - lo, **kw))
 
 
+# Half-width and half-height of each string, in DATA metres
 def measure_m(ax, texts, fontsize, **kw):
-    """Half-width and half-height of each string, in DATA metres.
-
-    Label placement has to compare text against reach distances, and a
-    character count cannot: it is a different physical width at every font
-    size. The text is rendered on a throwaway artist and converted through the
-    (equal-aspect) data transform instead.
-    """
     renderer = ax.figure.canvas.get_renderer()
     p0 = ax.transData.transform((0.0, 0.0))
     p1 = ax.transData.transform((1000.0, 0.0))
@@ -1692,14 +1420,8 @@ def measure_m(ax, texts, fontsize, **kw):
     return out
 
 
+# Push labels apart along the reach until none overlaps, in place
 def separate_x(ax, placed, pad_m):
-    """Push labels apart along the reach until none overlaps, in place.
-
-    `placed` is a list of dicts carrying "x" (wanted position) and "hw" (half
-    width), in any order. Left-to-right push first, then a right-to-left pull
-    back inside the window, so a label cannot be shoved off the canvas by the
-    one before it, and a margin keeps any of them off the frame.
-    """
     xlo, xhi = ax.get_xlim()
     margin = pad_m / 2
     placed.sort(key=lambda d: d["x"])
@@ -1716,48 +1438,10 @@ def separate_x(ax, placed, pad_m):
     return placed
 
 
+# Annotation labels beside the reach, on as few straight rows as they fit
 def label_lanes(fig, ax, frame, items, side, y_edge, first_offset_m,
                 row_step_m=None, pad_m=1100.0, fontsize=8, leader_gap_m=600.0,
                 clear_m=0.0, clear_pad_m=700.0):
-    """Annotation labels beside the reach, on as few straight rows as they fit.
-
-    WHY THIS EXISTS. Every label here used to carry its own hand-tuned
-    perpendicular offset (3300, 4500, 6500 ...), each tuned once against one
-    rendering. Two labels whose bands are close in the reach then overlap,
-    and nothing in the figure prevents it -- the 1989 relocation and the 2022
-    bridge annotations were printing on top of each other, and the Buxton
-    fill label was running under the domain boxes.
-
-    Labels in a row share one perpendicular offset, so the annotations read
-    as a labelled axis rather than as scattered text -- the convention
-    village_row() already uses for the village names (Hannah, 2026-09-17
-    evening). A label goes in the first row where it clears the labels
-    already there; within a row the labels are then pushed apart along the
-    reach until none can touch, and a leader runs from each to the band it
-    names. Widths are MEASURED from the rendered text, so this holds at any
-    font size and for any wording.
-
-    Args:
-        items: [(gis_mid, anchor_xy, text)] -- the reach position the label
-            belongs to, the point on its band to lead to, and the text.
-        side: +1 to place seaward of the reach, -1 soundward.
-        y_edge: the domain boxes' edge on that side, in frame coordinates.
-        first_offset_m: perpendicular distance from `y_edge` to the first row.
-        clear_m: a distance from `y_edge` already occupied -- the village
-            names, say. The first row is pushed outside it rather than
-            printing on top of it.
-        clear_pad_m: the air left between that and the first row.
-        row_step_m: distance between rows. Default: the tallest label plus a
-            half line, MEASURED -- a literal step here is what let the 1989
-            and bridge labels sit one line apart and touch.
-        pad_m: the clear space kept between two labels in a row.
-        leader_gap_m: draw a leader only when label and band are further
-            apart than this.
-
-    Returns:
-        The outermost y the labels reach, so the caller can keep the legend,
-        the scale bar and the north arrow clear of them.
-    """
     if not items:
         return y_edge
     sea = frame.seaward
@@ -1767,13 +1451,7 @@ def label_lanes(fig, ax, frame, items, side, y_edge, first_offset_m,
                    hw=hw, hh=hh)
               for (gis_mid, anchor, text), (hw, hh) in zip(items, sized)]
 
-    # ROW ASSIGNMENT: ONE row for as long as the labels fit on it side by
-    # side, and a second only when they no longer do. Stacking eagerly -- a
-    # new row whenever two labels wanted the same place on the reach -- looks
-    # tidy per label and reads badly, because the outer label's leader then
-    # has to cross the inner label to reach its band, which is what the 1989
-    # leader was doing to the bridge label. A reach 60 km long has room to
-    # separate three labels sideways; use it.
+    # Row assignment for the labels (README)
     xlo, xhi = ax.get_xlim()
     placed.sort(key=lambda d: d["x"])
     avail = (xhi - xlo) - 2 * pad_m
@@ -1791,13 +1469,11 @@ def label_lanes(fig, ax, frame, items, side, y_edge, first_offset_m,
     for row in rows:
         separate_x(ax, row, pad_m)
 
-    # One row's worth of clear space is the tallest label plus half a line of
-    # air, so two rows can never print into each other whatever the wording.
+    # One row's worth of clear space is the tallest label plus half a line of air, so two rows can (README)
     if row_step_m is None:
         row_step_m = max(d["hh"] for d in placed) * 2.9
 
-    # The first row clears both the offset asked for and anything already
-    # occupying the space (the village row), plus this row's own half height.
+    # The first row clears both the offset asked for and anything already occupying the space (the (README)
     first = max(first_offset_m,
                 clear_m + clear_pad_m + max(d["hh"] for d in placed))
 
@@ -1821,28 +1497,9 @@ def label_lanes(fig, ax, frame, items, side, y_edge, first_offset_m,
     return y_out
 
 
+# Two panels on one reach
 def fig_management_footprint(dom, outline, roads, frame):
-    """Two panels on one reach: (a) what was added to the beach, (b) what was
-    done to the road.
-
-    ONE MAP CARRIED BOTH until 2026-09-17, and the two families competed for
-    the same domains and the same label space. At the north end the Rodanthe
-    fill (GIS 84-89), the 1989 relocation (84-87) and the bridge span (82-88)
-    all cover the same ground, so a whole-box tint per family would have
-    stacked three colours on one rectangle; that is what forced each family
-    onto half a box, and it still left six annotations and five village names
-    competing for two label rows. Split into panels, each family has the WHOLE
-    domain again -- which is what the model applies it to -- and each panel
-    carries two or three labels. The panels share ONE window, so the same
-    domain is the same place on the page and a reader can still see that the
-    Rodanthe fill and the bridge cover the same ground (Hannah, 2026-09-17).
-
-    The two panels are deliberately identical in structure: villages named
-    soundward, annotations seaward, so the eye learns the layout once.
-    """
-    # One window for both panels. Equal aspect and a shared width mean a
-    # shared height too, so the padding here is the worst case of the two:
-    # village names soundward, one row of annotation seaward.
+    # One window for both panels
     window = frame.window(dom, pad_along_km=3.0, pad_sea_km=5.2, pad_sound_km=4.4)
     x0, x1, y0, y1 = window
     aspect = (x1 - x0) / (y1 - y0)
@@ -1861,62 +1518,27 @@ def fig_management_footprint(dom, outline, roads, frame):
     bx0, by0, bx1, by1 = rdom.total_bounds
     sea_edge = by0 if sea[1] < 0 else by1
 
-    # THE PERIOD STARTS THIS FIGURE SPEAKS TO, and the digitised line each one
-    # reads. Looked up rather than typed: there are only two NC-12 lines on
-    # disk, 1978 and 2008, and ROAD_LINE_FOR_YEAR is what decides which start
-    # gets which. Change PERIOD_STARTS and the key follows.
-    #
-    # THE KEY NAMES THE START YEARS, not the tracing vintages (Hannah,
-    # 2026-09-17: "it is the same for the corresponding start years"). For
-    # 2010 that is exact -- both relocations predate the 2008 trace and the
-    # road does not move between 2008 and 2010. For 1996 it holds everywhere
-    # EXCEPT GIS 84-87, because the 1989 Pea Island relocation falls inside
-    # the 1978-1996 gap; derived/1996/PROVENANCE.md is explicit that a 1996
-    # road is the 1984 road with that one event applied, and that no line of
-    # 1996 vintage exists. The caption carries the exception, because the
-    # same stretch is labelled "relocated 1989" right beside it.
+    # The period starts this figure speaks to, and the dune line each reads (README)
     PERIOD_STARTS = (1996, 2010)
     early_start, late_start = PERIOD_STARTS
     early_line = tv.road_line_for_year(early_start)
     late_line = tv.road_line_for_year(late_start)
 
-    # Opaque enough to be unmistakable over both the land tan and the water
-    # blue, light enough that the island outline and the domain edges survive
-    # under it. ONE VALUE PER FAMILY, each passed to both the tinted boxes and
-    # that family's legend swatch, so the key and the map cannot disagree.
-    # The road tint is lighter because C["ROAD"] is near-black where
-    # C["ADDED"] is a mid orange, so equal alpha does not read as equal
-    # weight, and the road tint carries the bridge hatch on top of it at
-    # GIS 84-87. Matched by APPEARANCE, not by arithmetic.
+    # Tint opaque enough to read over land and water, light enough to keep the edges
     TINT_FILL = 0.45
     TINT_ROAD = 0.30
 
     def anchor_at(gis):
-        """Where a label's leader stops: the seaward edge of the tinted block,
-        as a SPAN rather than a midpoint.
-
-        Anchoring every leader at its block's centre made the two north-end
-        labels converge into a V, because the bridge span (GIS 82-88) and the
-        1989 relocation (84-87) have almost the same centre. Given the span,
-        label_lanes attaches each leader to the nearest part of the block it
-        names, so the two arrive at opposite ends and stay apart (Hannah,
-        2026-09-17)."""
         sel = dom.ID.isin(gis).values
         _x0, _y0, _x1, _y1 = rdom[sel].total_bounds
         return (float(_x0), float(_x1), _y0 if sea[1] < 0 else _y1)
 
     def panel(ax, i, name, scalebar, show_road):
-        """The shared basemap. The scale bar and the north arrow are drawn
-        once, on (b): the panels are the same map at the same scale, and a
-        second set would say they might not be."""
         draw_reach(ax, frame, dom, outline, roads[2008], vector=True, window=window,
                    label_villages=True, water_labels=False, piers=False,
                    scalebar=scalebar, arrow=scalebar, arrow_xy=(0.47, 0.055),
                    show_road=show_road)
-        # UPPER RIGHT (Hannah, 2026-09-17). The letter keeps its bold weight,
-        # so this is two artists, and the letter's x is set from the MEASURED
-        # width of the name: the two names differ in length and a fixed gap
-        # would leave one pair tight and the other loose.
+        # Upper right (2026-09-17)
         RIGHT_X, GAP = 0.985, 0.012
         probe = ax.text(0, 0, name, fontsize=9)
         w = (probe.get_window_extent(renderer=fig.canvas.get_renderer()).width
@@ -1928,15 +1550,7 @@ def fig_management_footprint(dom, outline, roads, frame):
                           boxstyle="square,pad=0.2"))
         letter_corner(ax, i, x=RIGHT_X - w - GAP, y=0.94, ha="right")
 
-    # ---- (a) BEACH NOURISHMENT -------------------------------------------
-    # NC-12 IS NOT DRAWN HERE. It is panel (b)'s subject, and the same blue
-    # line appearing in (a) as unlabelled context makes a reader ask whether
-    # it means something in (a) too (Hannah, 2026-09-17). What that costs is
-    # the reason the Buxton and Rodanthe fills run past their villages --
-    # they follow the road corridor -- and that is a sentence, so it lives in
-    # the caption and the rules table rather than in a line the key cannot
-    # label without ambiguity. The domains are numbered and the villages
-    # named, so the footprints still read.
+    # (a) Beach nourishment; NC-12 is not drawn here (README)
     panel(ax_a, 0, "beach nourishment", scalebar=False, show_road=False)
     fills = []
     for p_ in sorted(HATTERAS_NOURISHMENT_PROJECTS, key=lambda q: q.year):
@@ -1946,23 +1560,16 @@ def fig_management_footprint(dom, outline, roads, frame):
         sel = dom.ID.isin(gis).values
         tint_domains(ax_a, frame, rdom, sel, "all", facecolor=C["ADDED"],
                      edgecolor="none", alpha=TINT_FILL, zorder=3)
-        # TERSE, because a label's width is what makes it collide: where and
-        # how much. The project's full name and agency are in the rules table.
+        # Terse labels: width is what makes them collide
         fills.append(((gis[0] + gis[-1]) / 2, anchor_at(gis),
                       f"{p_.name.split()[0]} fill, {p_.year}\n"
                       f"GIS {gis[0]}\u2013{gis[-1]}, "
                       f"{p_.volume_cubic_yards / 1e6:.1f} M yd\u00b3"))
     label_lanes(fig, ax_a, frame, fills, +1, sea_edge, first_offset_m=2500)
 
-    # ---- (b) NC-12 ROADWAY -----------------------------------------------
+    # (b) NC-12 ROADWAY
     panel(ax_b, 1, "NC-12 roadway", scalebar=True, show_road=False)
-    # both vintages, the earlier in red, so a relocation is visible as the gap
-    # The early line carries every relocation that has already happened by its
-    # period start, so it IS that start's alignment rather than the raw trace.
-    # Consequence worth knowing: the red and blue lines now coincide at
-    # GIS 84-87, because the road did not move there between 1996 and 2010 --
-    # the 1989 event is before both. The only divergence left is GIS 9-14,
-    # the 1999 relocation, which is the one that does fall between them.
+    # Both vintages, the earlier in red, so a relocation shows as the gap (README)
     before_start = {}
     for _e in HATTERAS_ROAD_EVENTS:
         if hasattr(_e, "displacement_m") and _e.year <= early_start:
@@ -1971,9 +1578,7 @@ def fig_management_footprint(dom, outline, roads, frame):
                                before_start)
     early_geom.plot(ax=ax_b, color=C_1984, lw=0.9, zorder=5)
     frame.geoms(roads[late_line].geometry).plot(ax=ax_b, color=C_1997, lw=0.9, zorder=6)
-    # The bridge span CONTAINS the 1989 relocation, so it is a hatch laid over
-    # the tint rather than a second fill: GIS 82, 83 and 88 read as hatch
-    # alone, 84-87 as hatch over the tint, and 9-14 as tint alone.
+    # The bridge span CONTAINS the 1989 relocation, so it is a hatch laid over the tint rather than (README)
     events = []
     for e in HATTERAS_ROAD_EVENTS:
         if hasattr(e, "displacement_m"):
@@ -1996,10 +1601,7 @@ def fig_management_footprint(dom, outline, roads, frame):
                            f"road off GIS {gis[0]}\u2013{gis[-1]}"))
     label_lanes(fig, ax_b, frame, events, +1, sea_edge, first_offset_m=2500)
 
-    # ---- one legend for both panels --------------------------------------
-    # Each swatch is a domain box marked the way the panels mark one, so the
-    # key restates the drawing rather than the colours. INK at 0.35 is
-    # draw_reach's own box edge.
+    # One legend for both panels; each swatch is a domain box marked as the panels mark one
     handles = [Line2D([], [], color=C_1984, lw=1.2,
                       label=f"(b) NC-12, {early_start} alignment"),
                Line2D([], [], color=C_1997, lw=1.2,
@@ -2040,24 +1642,8 @@ def fig_management_footprint(dom, outline, roads, frame):
     return out[0]
 
 
-# =============================================================================
-# FIGURE 9: THE REACH AT 10 M, BOTH PRODUCTS
-# =============================================================================
+# Domains lo..hi of one extraction as one (cross-shore, alongshore) mosaic, m NAVD88, water -10, ...
 def reach_mosaic(product, dom, lo, hi, margin_cells=8):
-    """Domains lo..hi of one extraction as one (cross-shore, alongshore)
-    mosaic, m NAVD88, water -10, ocean at the top, cropped to the rows that
-    hold land plus a margin.
-
-    Each box has its own easting, so stacking the arrays edge to edge (as
-    until 2026-09-17) drew the coast as a sawtooth. The boxes are first laid
-    at their true eastings, which makes the coast continuous; then the
-    LINEAR alongshore trend of the box eastings across the strip is fitted
-    and every alongshore column is shifted by it -- the shear the extractor's
-    own `straighten` applies -- so the coast runs level and only its residual
-    bend remains. Cross-shore distances within a column are unchanged. Drawn
-    at true eastings the bend made each strip 3-4 km tall and the figure
-    overran the page. Returns the mosaic and its cross-shore extent
-    (m, in the sheared frame: top, bottom)."""
     d, _ = tv.npy_dirs(product)
     boxes = dom[(dom.ID >= lo) & (dom.ID <= hi)]
     n = hi - lo + 1
@@ -2069,8 +1655,7 @@ def reach_mosaic(product, dom, lo, hi, margin_cells=8):
         a = np.load(d / f"domain_{g}.npy")[::-1]           # rows north to south -> south to north
         c0 = int(round((lefts[k] - e0) / CELL_M))
         canvas[c0:c0 + a.shape[1], k * 50:(k + 1) * 50] = a.T
-    # the shear: the trend of easting against alongshore cell, fitted on the
-    # box centres, removed column by column
+    # The shear
     jc = np.arange(n) * 50 + 25
     slope, icpt = np.polyfit(jc, lefts, 1)
     js = np.arange(n * 50)
@@ -2091,6 +1676,7 @@ def reach_mosaic(product, dom, lo, hi, margin_cells=8):
     return crop, (e0 + r1 * CELL_M, e0 + r0 * CELL_M)
 
 
+# The whole reach's elevation, in three stacked sections
 def fig_reach_elevation(dom):
     groups = ((1, 30), (31, 60), (61, 90))
     products = ("1984-start", "2004-start")
@@ -2154,11 +1740,8 @@ def fig_reach_elevation(dom):
     return out[0]
 
 
+# Projector settings: heavier lines and fills for a slide seen from afar
 def talk_mode():
-    """A projector reads pale fills as white and thin lines as nothing, and a
-    slide is seen from further away than a page. So: the water barely off
-    the white of the slide (the land still ivory), type one point larger,
-    hairlines heavier, and the output kept apart under talk/."""
     global WATER_MAP, TALK
     WATER_MAP = "#f3f6f9"
     TALK = True
@@ -2173,7 +1756,6 @@ def talk_mode():
     mpl.rcParams["axes.linewidth"] = float(mpl.rcParams["axes.linewidth"]) * 1.3
 
 
-# =============================================================================
 # name -> a callable taking the shared layers by keyword
 FIGURES = {
     "study_area": lambda dom, outline, roads, frame, vector: fig_study_area(dom, outline, roads, frame, vector),
@@ -2192,6 +1774,7 @@ FIGURES = {
 }
 
 
+# Run: draw every figure, or the one named with --only
 def main():
     ap = argparse.ArgumentParser(description="The generic Hatteras site figures.")
     ap.add_argument("--vector", action="store_true", help="island outline instead of imagery (no network)")
