@@ -47,7 +47,10 @@ from cascade_pipeline.run_registry import find_run_dir   # noqa: E402
 RUN_NAME   = "HAT_1984_2004_calibBE_road_bdm_groin"
 RUN_PERIOD = "1984_2004"
 RUN_PRESET = "calibBE"
-NPZ_PATH = str(find_run_dir(RAW_RUNS, RUN_NAME, RUN_PERIOD, RUN_PRESET)
+# Where the run lives since the matrix was archived on 2026-09-24
+RUN_KIND   = "archive"
+RUN_TAG    = "2026-09-24-pre-metres/matrix"
+NPZ_PATH = str(find_run_dir(RAW_RUNS, RUN_NAME, RUN_PERIOD, RUN_PRESET, kind=RUN_KIND, tag=RUN_TAG)
                / f"{RUN_NAME}.npz")
 from site_layer.hat_overwash import WORKBOOK as _OBS_WORKBOOK  # noqa: E402
 # The observation workbook (site_layer/hat_overwash.py)
