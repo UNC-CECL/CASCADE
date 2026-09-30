@@ -1,51 +1,17 @@
 #!/usr/bin/env python3
 """
-management_timeline_figure.py
-==============================================================================
-The management of NC-12 and the beach as a timeline: domain against year.
+The management of NC-12 and the beach as a timeline, domain against year: the runs and the whole record.
 
-TWO OUTPUTS, ONE BUILDER
-    timeline_1996_2024.png   THE RUNS. Starts at the first period start, so
-                             every mark is an event some run applies.
-    timeline_1984_2024.png   THE RECORD. The whole management history, with
-                             1984-1996 drawn as the stretch before the runs.
-                             The 1989 Pea Island relocation only appears here.
+    python scripts/figure_making/management/management_timeline_figure.py
 
-WHAT CHANGED 2026-09-17, and why
-  * THE PERIODS WERE STALE. Y0/PBREAK/Y1 were typed as 1984/2004/2024, the
-    pair the project ran first. hatteras_site_config defines four periods now
-    and the ones in use are 1996->2010 and 2010->2024 (Hannah, 2026-09-17:
-    "1996 and 2010 are my main starting years now"). The span, the break and
-    both period labels are READ FROM HATTERAS_PERIODS -- change PERIOD_STARTS
-    and both figures follow.
-  * THE RED WAS NOT THE HOUSE RED. The village bands carried a one-off salmon
-    (#e6b39a, the settlement tint of the site figures) and it sat right beside
-    C_1984_FILL on the Period 1 bar, so the period pair read as two oranges
-    rather than as the red/blue vintage pair every other figure uses (Hannah,
-    2026-09-17: "make the red match the red we have been using instead of this
-    orange"). The period bars now carry the vintage pair with their saturated
-    edge and text -- the same red as the 1996 NC-12 alignment on the map --
-    and the ZONES moved to neutral greys, because on this figure colour is
-    reserved for management and period. The map keeps the settlement tint,
-    where nothing else is red.
-  * ONE VISUAL LANGUAGE WITH THE MAP. The two figures drew the same three
-    management families in different encodings -- here an orange bar, a black
-    bar and a blue block; there an orange tint, a grey tint and a hatch. Both
-    use the map's now, so a reader learns the key once.
-  * THE CALLOUT BOXES ARE GONE. Rounded white boxes with coloured borders and
-    curved arrows are a slide idiom, and six of them, each hand-placed, were
-    most of the ink. Labels are plain text at a MEASURED, collision-checked
-    position with a hairline leader -- what the reach figures use.
-  * THE LEGEND LOST ITS BOX, ITS TITLE AND HALF ITS ENTRIES. The zone swatches
-    repeated the zone names printed up the right-hand side, and the period
-    swatches repeated the labelled period bar.
-  * THE PANEL WAS THREE QUARTERS EMPTY at 5.6 in of height.
-==============================================================================
+Events come from hatteras_site_config, period ends from HATTERAS_PERIODS;
+writes timeline_1996_2024.png and timeline_1984_2024.png to
+output/figures/3-model-inputs/4-management/. Details: scripts/figure_making/management/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-09-30
 """
 import matplotlib
 matplotlib.use('Agg')
@@ -54,10 +20,7 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import Rectangle
 import matplotlib.ticker as ticker
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5), so this block is
-# independent of whatever this script calls its own repository variable.
+# House style (site_layer/hat_figure_style.py), applied at import
 import sys as _sys
 from pathlib import Path as _P
 _sys.path.insert(0, str(next(_q for _q in _P(__file__).resolve().parents
@@ -72,23 +35,20 @@ from site_layer.hatteras_site_config import (HATTERAS_NOURISHMENT_PROJECTS,
                                   HATTERAS_PERIODS,
                                   HATTERAS_ANNOTATIONS)
 
-# Anchored 2026-09-14: absolute into a home directory, or into a tree
-# renamed since. Rule 5 of ORGANIZATION.md.
+# Paths resolved from the repo root (ORGANIZATION.md rule 5)
 _PATH_REPO = next(_p for _p in _P(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 from site_layer import hat_figure_style as _hs  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 OUT = _hs.figure_dir("inputs", "4-management")
 
-# The period starts in use. Each one's end comes from HATTERAS_PERIODS, so the
-# bar below the axis states the run windows rather than a memory of them.
+# The period starts in use; ends come from HATTERAS_PERIODS
 PERIOD_STARTS = (1996, 2010)
 PERIODS = [(st, HATTERAS_PERIODS[st]["end_year"]) for st in PERIOD_STARTS]
 RECORD_Y0 = 1984                       # the first year the record covers
 PW = 0.6                               # point-event width, in years
 
-# COLOUR IS FOR MANAGEMENT AND PERIOD ON THIS FIGURE. The zones are greys so
-# that nothing competes with the vintage red/blue; the site map keeps the warm
-# settlement tint, where nothing else is red.
+# Colour is for management and period; zones are greys
 C_N = C["ADDED"]                       # sediment added
 C_R = C["ROAD"]                        # NC-12
 C_VILLAGE = "0.86"
@@ -105,19 +65,17 @@ COMMUNITIES = [
     ('Pea Island NWR',                         84, 90,  C_INTERV),
 ]
 
-# The map's encoding, so a reader learns one key: fill orange, relocation the
-# NC-12 ink, the bridge a hatch.
+# The map's encoding: fill orange, relocation NC-12 ink, the bridge a hatch
 STYLE = {
     'nourish': dict(facecolor=C_N, edgecolor='none'),
     'road': dict(facecolor=C_R, edgecolor='none', alpha=0.85),
     'bridge': dict(facecolor='none', edgecolor=INK, hatch='////', lw=0.0),
 }
+# -----------------------------------------------------------------------------
 
 
+# (year0, year1, gis_lo, gis_hi, kind, label) for the window, from the config
 def events_in(y0, y1):
-    """(year0, year1, gis_lo, gis_hi, kind, label) for the window, from the
-    config. An event before `y0` is dropped; on the runs window that is what
-    removes the 1989 Pea Island relocation, which precedes both periods."""
     out = []
     for p in sorted(HATTERAS_NOURISHMENT_PROJECTS, key=lambda q: q.year):
         if p.enabled and y0 <= p.year <= y1:
@@ -142,12 +100,8 @@ def events_in(y0, y1):
     return out
 
 
+# Does a segment miss every rectangle? (sampled)
 def _clear(x0, y0_, x1, y1_, rects, steps=64):
-    """True if the segment misses every rectangle in `rects`.
-
-    Sampled rather than clipped analytically: at 64 steps the spacing is far
-    finer than the narrowest event box, and the intent is legibility, not a
-    proof."""
     for i in range(steps + 1):
         t = i / steps
         x, y = x0 + (x1 - x0) * t, y0_ + (y1_ - y0_) * t
@@ -157,21 +111,8 @@ def _clear(x0, y0_, x1, y1_, rects, steps=64):
     return True
 
 
+# Place each event's label clear of bars, other labels and leaders
 def place(fig, ax, items, bars, y0, y1, fontsize=8, pad_x=0.45, pad_y=2.0):
-    """Label each event without printing on a bar, on another label, OR
-    dragging its leader across one.
-
-    A label starts beside its own bar and, if that position is taken, tries the
-    next candidate offset; a hairline leader is drawn whenever it ends up away
-    from its anchor. Positions come from the RENDERED size of the text, so this
-    holds if the wording or the window changes -- which the six hand-placed
-    callout boxes it replaces did not.
-
-    THE LEADER IS CHECKED TOO (Hannah, 2026-09-17). Testing only the label box
-    let a position pass whose leader then ran straight down through a coloured
-    box on its way to the bar below: the Buxton fill label sat above Avon, so
-    its leader crossed the Avon fill. A candidate is now rejected unless the
-    line it would draw also misses every box but its own."""
     renderer = fig.canvas.get_renderer()
     inv = ax.transData.inverted()
     taken = list(bars)
@@ -182,10 +123,7 @@ def place(fig, ax, items, bars, y0, y1, fontsize=8, pad_x=0.45, pad_y=2.0):
         probe.remove()
         (px0, py0), (px1, py1) = inv.transform([[bb.x0, bb.y0], [bb.x1, bb.y1]])
         w, h = px1 - px0, py1 - py0
-        # EVERY BOX BUT ITS OWN. A label sits beside the bar it names, so the
-        # clearance pad around it overlaps that bar by design; testing against
-        # it let the bar veto its own label, and the Buxton fill label -- boxed
-        # in by Avon above and the axis below -- was dropped entirely.
+        # Test against every box but the label's own bar
         others = [r for r in taken
                   if not (r[0] <= x_anchor <= r[1] and r[2] <= y_anchor <= r[3])]
 
@@ -214,9 +152,7 @@ def place(fig, ax, items, bars, y0, y1, fontsize=8, pad_x=0.45, pad_y=2.0):
                 continue
             chosen = (dy, side, cx, box)
             break
-        # NEVER DROP A LABEL. If nothing is clear, take the first position that
-        # at least fits on the panel: a label that overlaps is a flaw a reader
-        # can see and work around, one that is missing is a figure that lies.
+        # Never drop a label: if nothing is clear, take the first that fits
         if chosen is None and cands:
             chosen = cands[0]
         if chosen is None:
@@ -233,17 +169,12 @@ def place(fig, ax, items, bars, y0, y1, fontsize=8, pad_x=0.45, pad_y=2.0):
                     color=INK_MUTED, lw=0.5, zorder=4)
 
 
+# One timeline from y0; pre_run draws the years before the first period start
 def build(y0, stem, pre_run=False):
-    """One timeline. `y0` is the first year on the axis; `pre_run` draws the
-    stretch before the first period start as unmodelled context."""
     y1 = max(en for _, en in PERIODS)
     events = events_in(y0, y1)
     fig, ax = plt.subplots(figsize=figsize("double", height=3.9))
-    # Explicit margins: the locator strip hangs off the left of the axes and
-    # the zone names off the right, and with a tight bbox both were growing
-    # the saved figure past the 190 mm double column -- which is how 8 pt type
-    # becomes 7 pt on the page. Reserving the room here keeps the content
-    # inside the width figsize() asked for.
+    # Explicit margins keep the figure inside the 190 mm width
     fig.subplots_adjust(left=0.115, right=0.790, bottom=0.235, top=0.97)
 
     for _, d0, d1, fc in COMMUNITIES:
@@ -251,15 +182,13 @@ def build(y0, stem, pre_run=False):
     for _, d0, _, _ in COMMUNITIES[1:]:
         ax.axhline(d0 - 0.5, color=GRID_C, lw=0.5, zorder=2)
 
-    # PERIOD BAR. The vintage pair, saturated on the edge and in the text, so
-    # Period 1 is the same red as the 1996 NC-12 alignment on the map.
+    # Period bar in the vintage pair, matching the map's alignments
     BAR_Y0, BAR_Y1 = -9.0, -4.5
     segs = [(st, en, fill, ink, f"Period {i}  ({st}–{en})")
             for i, ((st, en), fill, ink) in enumerate(
                 zip(PERIODS, (C_1984_FILL, C_1997_FILL), (C_1984, C_1997)), 1)]
     if pre_run:
-        # no years on this one: the axis and the dashed break carry them,
-        # and the segment is too narrow at 40 years to hold them
+        # No years on this one: the axis and the dashed break carry them
         segs.insert(0, (y0, PERIODS[0][0], "0.93", INK_MUTED, "before the runs"))
     for st, en, fill, ink, label in segs:
         ax.add_patch(Rectangle((st, BAR_Y0), en - st, BAR_Y1 - BAR_Y0, fc=fill,

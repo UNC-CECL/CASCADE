@@ -1,27 +1,17 @@
 #!/usr/bin/env python3
 """
-HATTERAS ISLAND: Management Investigation — Plot from Saved Runs
-Natural vs Roadway Management vs Roadway Management + Historical Beach Nourishment
+Natural vs roadway vs roadway + historical nourishment, plotted from saved runs (no re-running).
 
-This script loads previously saved CASCADE NPZ files and produces the
-management comparison plots without re-running any simulations.
+    python scripts/figure_making/management/management_investigation_plot.py
 
-USAGE
------
-1. Run your three scenarios separately using HAT_hindcast_1984_2024_old version.py
-   (or any other script) with the appropriate management flags.
-2. Fill in the RUN_PATHS dict below with the paths to each saved run folder.
-3. Run this script -- it loads the cascade objects and plots.
-
-Each RUN_PATHS entry:
-    "Label shown on plot": r"C:/path/to/saved/run/folder"
-
-The folder must contain the run's .npz archive (written by cascade.save()).
+Fill RUN_PATHS with the saved run folders first; loads each run's .npz and
+the CoastSat LRR; writes to output/figures/3-model-inputs/4-management/investigation/.
+Details: scripts/figure_making/management/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-09-30
 """
 
 import os
@@ -32,17 +22,12 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5). This file drew in
-# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+# House style (site_layer/hat_figure_style.py), applied at import
 import sys as _sys
 from pathlib import Path as _HP
 _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
                              if (_q / "pyproject.toml").exists()) / "scripts"))
-# Typeface only: this script writes ANIMATION frames, and the printed-width
-# rule does not apply to something that is never printed. Its figsize is
-# the frame size and is left as it is.
+# Typeface only: these are animation frames, never printed
 from site_layer.hat_figure_style import (apply_style, figsize,  # noqa: E402
                               FIG_W_DOUBLE)
 apply_style()
@@ -55,26 +40,19 @@ sys.path.insert(0, str(_REPO_ROOT / "scripts"))
 
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 
-# Anchored 2026-09-14: every path here was absolute into one home
-# directory, and two of the trees they named have since been renamed.
-# Rule 5 of ORGANIZATION.md.
+# Paths resolved from the repo root (ORGANIZATION.md rule 5)
 from pathlib import Path as _Path
 _FIG_REPO = next(_p for _p in _Path(__file__).resolve().parents
                  if (_p / "pyproject.toml").exists())
 _RAW_RUNS = _FIG_REPO / "output" / "raw_runs"
 
-# =============================================================================
-# SECTION 1: CONFIGURE PATHS AND LABELS  ← edit this section
-# =============================================================================
 
-# Output folder for plots
-# Under management/, the subject it belongs to (2026-09-18); this wrote a
-# top-level output/figures/management_investigation/ beside it.
+# Output folder, under 3-model-inputs/4-management/
 from site_layer import hat_figure_style as _hs  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 OUTPUT_DIR = str(_hs.figure_dir("inputs", "4-management", "investigation"))
 
-# Path to the CoastSat transect CSV for the active period.
-# Columns expected: domain_number (GIS 1–90), lrr_m_yr (m/yr per transect).
+# CoastSat transect LRR for the active period (domain_number, lrr_m_yr)
 from site_layer.hat_observed_rates import lrr_csv as _lrr_csv  # noqa: E402
 COASTSAT_CSV = str(_lrr_csv(1984, 2004))
 COASTSAT_LABEL = "CoastSat LRR (1984–2004)"   # label shown in legend
@@ -83,12 +61,10 @@ COASTSAT_LABEL = "CoastSat LRR (1984–2004)"   # label shown in legend
 START_YEAR = 1984
 END_YEAR   = 2004
 
-# ── RUN PATHS ────────────────────────────────────────────────────────────────
+# RUN PATHS
 # Keys   = labels shown on the plot (keep them short)
 # Values = path to the saved run folder (must contain the run's .npz archive)
-#
-# Order determines plotting order (first = bottom of legend).
-# Add or remove entries freely — the script handles 2, 3, or more scenarios.
+# Order sets plotting order (first = bottom of legend); any number of scenarios
 
 RUN_PATHS = {
     "Natural": (
@@ -102,18 +78,13 @@ RUN_PATHS = {
     ),
 }
 
-# Historical BN volume schedule — used for the BN bar panel on yearly plots.
-# Only needed for Period 2 (2004–2024). For Period 1 leave as empty dict {}.
-# Format: {calendar_year: [volume_m3 per padded domain index, length=120]}
-# If you leave this empty the bar panel will show zeros (correct for Period 1).
+# Historical nourishment volumes for the bar panel: {year: m3 per padded domain}; {} = zeros
 HIST_BN_VOL_BY_YEAR = {}   # populated automatically below if ENABLE_BN = True
 
 # Set True for Period 2 to inject BN volumes into the bar panel.
 ENABLE_BN = False   # ← change to True for 2004–2024
+# -----------------------------------------------------------------------------
 
-# =============================================================================
-# SECTION 2: DOMAIN CONSTANTS  (match your Hatteras CASCADE setup exactly)
-# =============================================================================
 
 NUM_REAL_DOMAINS   = 90
 NUM_BUFFER_DOMAINS = 15
@@ -133,9 +104,6 @@ TO_METERS        = True
 MAKE_YEARLY_GIF      = True
 GIF_DURATION_SECONDS = 4
 
-# =============================================================================
-# SECTION 3: HISTORICAL BN SCHEDULE (Period 2 only)
-# =============================================================================
 
 _CY_TO_M3 = 0.764555
 
@@ -165,9 +133,6 @@ HAT_BN_VOLUME_BY_DOMAIN = {
     88: [round(1_620_000 / 4 * _CY_TO_M3, 1), 0],
 }
 
-# =============================================================================
-# SECTION 4: STYLING
-# =============================================================================
 
 # Add or change colors here — keys must match RUN_PATHS keys exactly.
 SCENARIO_COLORS = {
@@ -188,9 +153,6 @@ COMM_COLORS = {
     "Tri-Village": "#d5e8d4",
 }
 
-# =============================================================================
-# STARTUP
-# =============================================================================
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 print("=" * 80)
@@ -202,31 +164,13 @@ print(f"Runs to load: {list(RUN_PATHS.keys())}")
 print("=" * 80 + "\n")
 
 
-# =============================================================================
-# HELPER FUNCTIONS
-# =============================================================================
-
+# GIS domain -> padded array index
 def _gis_to_pad(gis_id):
     return START_REAL_INDEX + (gis_id - FIRST_FILE_NUMBER)
 
 
+# A saved Cascade object from a run folder's .npz
 def load_cascade(run_folder):
-    """
-    Load a saved CASCADE object from a run folder.
-
-    CASCADE's save() method writes <run name>.npz containing the full
-    pickled Cascade object under the key 'cascade.npy'. The path is resolved
-    through run_layout so either run-folder layout is read correctly.
-
-    Parameters
-    ----------
-    run_folder : str
-        Path to the saved run folder (the argument passed to cascade.save()).
-
-    Returns
-    -------
-    cascade object or None if loading fails
-    """
     run_name = os.path.basename(os.path.normpath(run_folder))
     npz_path = resolve_run_file(run_folder, "archive", run_name)
     if not npz_path.is_file():
@@ -242,6 +186,7 @@ def load_cascade(run_folder):
         return None
 
 
+# One domain's shoreline time series (m)
 def get_x_s_TS(b3d):
     for attr in ("x_s_TS", "_x_s_TS"):
         if hasattr(b3d, attr):
@@ -249,6 +194,7 @@ def get_x_s_TS(b3d):
     raise AttributeError("No shoreline time series found on Barrier3D object.")
 
 
+# Shoreline position per year and domain
 def build_shoreline_matrix(cascade, to_meters=True):
     b3d_list = cascade.barrier3d
     nt = len(get_x_s_TS(b3d_list[0]))
@@ -260,6 +206,7 @@ def build_shoreline_matrix(cascade, to_meters=True):
     return shoreline
 
 
+# Shoreline change relative to the first year, per year and domain
 def build_relative_shoreline_change_matrix(cascade, to_meters=True, flip_sign=True):
     sm = build_shoreline_matrix(cascade, to_meters=to_meters)
     sc = sm - sm[0, :]
@@ -268,8 +215,8 @@ def build_relative_shoreline_change_matrix(cascade, to_meters=True, flip_sign=Tr
     return sc
 
 
+# Per-year nourishment volumes for the bar panel (Period 2 only)
 def build_bn_arrays():
-    """Build per-year BN volume arrays for the bar panel (Period 2 only)."""
     vol_by_year = {yr: np.zeros(TOTAL_DOMAINS)
                    for yr in range(START_YEAR, END_YEAR + 1)}
     if not ENABLE_BN:
@@ -285,8 +232,8 @@ def build_bn_arrays():
     return vol_by_year
 
 
+# CoastSat transect LRR aggregated to domain means
 def load_coastsat():
-    """Load CoastSat transect CSV and aggregate to per-domain means."""
     if not COASTSAT_CSV or not os.path.exists(COASTSAT_CSV):
         print(f"  ⚠️  CoastSat CSV not found: {COASTSAT_CSV}")
         return None, None
@@ -310,10 +257,6 @@ def load_coastsat():
         return None, None
 
 
-# =============================================================================
-# ANNOTATION HELPERS
-# =============================================================================
-
 ANN_COMMUNITY_SPANS = [
     (_gis_to_pad(1),  _gis_to_pad(6),  "Cape Point"),
     (_gis_to_pad(7),  _gis_to_pad(8),  "Buxton"),
@@ -327,6 +270,7 @@ ANN_GROIN  = _gis_to_pad(6)
 ANN_WIMBLE = (_gis_to_pad(60), _gis_to_pad(74))
 
 
+# Villages, piers and groin on an axis
 def add_geographic_annotations(ax):
     ymin, ymax = ax.get_ylim()
     yrange = ymax - ymin
@@ -367,6 +311,7 @@ def add_geographic_annotations(ax):
                 arrowprops=dict(arrowstyle="-|>", color="0.40", lw=1.0))
 
 
+# GIS 1-90 axis ticks and label
 def configure_gis_xaxis(ax):
     ax.set_xlim(FIRST_FILE_NUMBER - 0.5, LAST_FILE_NUMBER + 0.5)
     ax.xaxis.set_major_locator(ticker.MultipleLocator(DOMAIN_TICK_STEP))
@@ -377,10 +322,7 @@ def configure_gis_xaxis(ax):
                   fontsize=11, fontweight="bold")
 
 
-# =============================================================================
-# PLOT 1: SHORELINE CHANGE RATES (end-of-period summary)
-# =============================================================================
-
+# Shoreline change rate of every scenario against CoastSat
 def plot_shoreline_change_rates(rate_profiles, coastsat_x, coastsat_rate):
     gis_ids = np.arange(FIRST_FILE_NUMBER, LAST_FILE_NUMBER + 1)
 
@@ -421,10 +363,7 @@ def plot_shoreline_change_rates(rate_profiles, coastsat_x, coastsat_rate):
     plt.show()
 
 
-# =============================================================================
-# PLOT 2: YEARLY RELATIVE SHORELINE CHANGE  (+ optional GIF)
-# =============================================================================
-
+# One frame per year: relative shoreline change and nourishment
 def plot_yearly_relative_shoreline(sc_by_label, bn_vol_by_year):
     yearly_dir = os.path.join(OUTPUT_DIR,
                               f"HAT_{START_YEAR}_{END_YEAR}_yearly_frames")
@@ -545,12 +484,9 @@ def plot_yearly_relative_shoreline(sc_by_label, bn_vol_by_year):
     return png_files
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: load each run, then draw the rate plot and the yearly frames
 def main():
-    # ── Load cascade objects ──────────────────────────────────────────────────
+    # Load cascade objects
     print("Loading CASCADE runs...")
     cascades = {}
     for label, folder in RUN_PATHS.items():
@@ -566,15 +502,15 @@ def main():
 
     print(f"\n✓ Loaded {len(cascades)} run(s): {list(cascades.keys())}\n")
 
-    # ── Load CoastSat ─────────────────────────────────────────────────────────
+    # Load CoastSat
     print("Loading CoastSat data...")
     coastsat_x, coastsat_rate = load_coastsat()
     print()
 
-    # ── Build BN volume arrays for bar panel ─────────────────────────────────
+    # Build BN volume arrays for bar panel
     bn_vol_by_year = build_bn_arrays()
 
-    # ── Compute shoreline change rate profiles ────────────────────────────────
+    # Compute shoreline change rate profiles
     print("Computing shoreline change rates...")
     rate_profiles   = {}
     sc_by_label     = {}
@@ -602,11 +538,11 @@ def main():
 
     print()
 
-    # ── Plot 1: Shoreline change rates ────────────────────────────────────────
+    # Plot 1: Shoreline change rates
     print("Generating shoreline rate plot...")
     plot_shoreline_change_rates(rate_profiles, coastsat_x, coastsat_rate)
 
-    # ── Plot 2: Yearly relative shoreline change ──────────────────────────────
+    # Plot 2: Yearly relative shoreline change
     print("Generating yearly frames...")
     plot_yearly_relative_shoreline(sc_by_label, bn_vol_by_year)
 

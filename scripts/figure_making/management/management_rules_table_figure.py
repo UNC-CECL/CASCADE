@@ -1,61 +1,24 @@
 #!/usr/bin/env python3
 """
-management_rules_table_figure.py
-==============================================================================
-The management rules the hindcast applies, as a table.
+The management rules the hindcast applies, as a table: a manuscript version and a slide version.
 
-TWO OUTPUTS, ONE SOURCE
-    rules_table.png         the manuscript table: 190 mm, booktabs rules, no
-                            fills, no title and no note on the canvas (house
-                            style -- that text is in CAPTIONS.md beside it).
-    rules_table_slide.png   the same rows for a projector: wider, larger type,
-                            a title and the note ON the canvas, because a slide
-                            has no caption to carry them. This is the ONE
-                            deliberate departure from the "nothing on the
-                            canvas" rule in figure_making/STYLE.md.
+    python scripts/figure_making/management/management_rules_table_figure.py
 
-WHAT CHANGED 2026-09-17, and why each change was needed
-  * THE HEADER WAS PRINTING A FILE PATH. The column label was 'Model\\nDomains';
-    the 2026-09-14 path-anchoring pass read "\\nDomains" as a path fragment and
-    rewrote the literal to `str(_PATH_REPO / "nDomains")`, so every rendering
-    since carried C:\\Users\\...\\CASCADE\\nDomains across the header row.
-  * THE NUMBERS WERE STALE. Three rows were typed by hand in an earlier draft
-    and never followed the config: Rodanthe read D85-88 / 1,620,000 cy against
-    the configured 84-89 / 1,600,000, Avon read D23-26 against 21-28 (the
-    config's own comment names 23-26 as the superseded footprint, corrected
-    2026-08-22), and the no-road reach read D1-6 against
-    HATTERAS_FIRST_ROAD_DOMAIN = 9. Every domain span, year and volume in this
-    figure is now READ FROM hatteras_site_config, which is what the caption
-    always claimed. Only the prose in the Description column is editorial.
-  * TYPE AND WIDTH. It was set in DejaVu Serif on a 15 in canvas, so its 9 pt
-    body reduced to about 4.5 pt in a two-column manuscript -- the exact
-    failure hat_figure_style.figsize() exists to prevent. It is Arial on 190 mm
-    now, and the type is the size it will be printed at.
-  * THE DECORATION. A black title bar, a grey header bar, zebra-striped fills
-    and boxed column rules are web-table conventions; a journal table is three
-    horizontal rules and white space. The only colour left is the accent tick
-    beside each section heading, in the SAME two colours the other management
-    figures use for fill (C["ADDED"]) and NC-12 (C["ROAD"]).
-  * WRAPPING IS MEASURED, not guessed. Line breaks came from textwrap at a
-    hand-tuned 80 characters, which is a different physical width at every font
-    size; text is now wrapped against the measured width of the column, and row
-    heights follow the number of lines that produces.
-==============================================================================
+Rows are built from hatteras_site_config (nourishment projects, road-rule
+exceptions); writes rules_table.png and rules_table_slide.png to
+output/figures/3-model-inputs/4-management/. Details: scripts/figure_making/management/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-09-30
 """
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5), so this block is
-# independent of whatever this script calls its own repository variable.
+# House style (site_layer/hat_figure_style.py), applied at import
 import sys as _sys
 from pathlib import Path as _P
 _sys.path.insert(0, str(next(_q for _q in _P(__file__).resolve().parents
@@ -71,33 +34,30 @@ from site_layer.hatteras_site_config import (HATTERAS_NOURISHMENT_PROJECTS,
                                   HATTERAS_DOMAINS,
                                   HATTERAS_ANNOTATIONS)
 
-# Anchored 2026-09-14: absolute into a home directory, or into a tree
-# renamed since. Rule 5 of ORGANIZATION.md.
+# Paths resolved from the repo root (ORGANIZATION.md rule 5)
 _PATH_REPO = next(_p for _p in _P(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 from site_layer import hat_figure_style as _hs  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 OUT_DIR = _hs.figure_dir("inputs", "4-management")
 
 Y0, Y1 = 1984, 2024          # the modelled span, as the timeline figure draws it
 EN = "\u2013"                # en dash: ranges only
 SPACING = HATTERAS_DOMAINS.domain_spacing_m
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# THE ROWS, BUILT FROM THE CONFIG
-# =============================================================================
+# A domain range as text
 def _span(first, last):
     return f"D{first}" if first == last else f"D{first}{EN}{last}"
 
 
+# A year range as text
 def _years(first, last):
     return str(first) if first == last else f"{first}{EN}{last}"
 
 
-# The Description column is the only editorial text in the table: what the
-# project was and where it was placed, keyed by the project name in the config
-# so a renamed or added project shows up with its own config note rather than
-# silently inheriting someone else's sentence.
+# The only editorial text: each project's description, keyed by its config name
 _FILL_PROSE = {
     "Rodanthe emergency fill": (
         "Rodanthe",
@@ -114,8 +74,8 @@ _FILL_PROSE = {
 }
 
 
+# One row per configured nourishment project, in order of placement
 def nourishment_rows():
-    """One row per configured project, in order of placement."""
     rows = []
     for p in sorted(HATTERAS_NOURISHMENT_PROJECTS,
                     key=lambda q: (q.year, q.gis_domains[0])):
@@ -132,8 +92,8 @@ def nourishment_rows():
     return rows
 
 
+# The domains where the relocate-or-abandon rule does not run, and why
 def road_rows():
-    """The domains where the relocate-or-abandon rule does not run, and why."""
     rows = [(
         "Cape Point",
         _span(1, HATTERAS_FIRST_ROAD_DOMAIN - 1),
@@ -141,8 +101,7 @@ def road_rows():
         "No NC-12 in the modelled span; the cape terminus carries no "
         "through-road infrastructure to manage.")]
 
-    # The permanent settlement footprints. Inside a village the road is a
-    # street network that is maintained, not relocated, so the rule is off.
+    # Village footprints: the road is a maintained street network, so the rule is off
     _label = {tuple(v): k for k, v in HATTERAS_ANNOTATIONS.town_spans.items()}
     _long = {"Tri-Village": "Tri-Village\n(Salvo / Waves / Rodanthe)"}
     for lo, hi in HATTERAS_COMMUNITY_ZONES:
@@ -179,15 +138,8 @@ SECTIONS = [
 ]
 
 
-# =============================================================================
-# MEASURED WRAPPING
-# =============================================================================
+# width_in(text, size, bold, italic) -> rendered width in inches, from a scratch canvas
 def _measurer(dpi=100):
-    """width_in(text, fontsize, bold, italic) -> rendered width in inches.
-
-    A scratch canvas, so the real figure can be sized from the lines the text
-    actually takes rather than from a character count that means a different
-    width at every font size."""
     fig = plt.figure(figsize=(1, 1), dpi=dpi)
     ax = fig.add_axes([0, 0, 1, 1])
     renderer = fig.canvas.get_renderer()
@@ -206,8 +158,8 @@ def _measurer(dpi=100):
     return width_in, fig
 
 
+# Greedy wrap to `avail` inches, keeping explicit newlines
 def wrap(width_in, text, avail, fs, **kw):
-    """Greedy wrap to `avail` inches. Explicit newlines are kept."""
     lines = []
     for para in str(text).split("\n"):
         words = para.split()
@@ -225,11 +177,8 @@ def wrap(width_in, text, avail, fs, **kw):
     return lines
 
 
-# =============================================================================
-# THE TABLE
-# =============================================================================
+# Draw one variant ('paper' or 'slide'); returns the saved paths
 def build(variant):
-    """`variant` is 'paper' or 'slide'. Returns the saved paths."""
     slide = variant == "slide"
 
     FW = 10.0 if slide else FIG_W_DOUBLE
@@ -243,9 +192,7 @@ def build(variant):
     TL, TR = ML, FW - MR
     TW = TR - TL
 
-    # Location | Domains | Years | Description. The first three are sized to
-    # their own widest entry plus a gutter, so the Description column gets
-    # everything that is left rather than a share fixed by hand.
+    # Location, Domains and Years sized to their widest entry; Description gets the rest
     width_in, scratch = _measurer()
     GUT = 0.26 if slide else 0.18
     fixed = []
@@ -263,8 +210,7 @@ def build(variant):
     PAD_V = 0.075 if slide else 0.050        # above and below a cell's text
     PAD_SEC = 0.090 if slide else 0.058
 
-    # Lay the rows out: wrap every cell, then give the row the height its
-    # tallest cell needs.
+    # Lay the rows out: wrap every cell, row height from the tallest
     blocks = []
     for name, accent, gloss, heads, rows in SECTIONS:
         head_cells = [wrap(width_in, h, CW[i] - GUT, FS_HEAD, bold=True)
@@ -300,8 +246,6 @@ def build(variant):
                 solid_capstyle="butt")
 
     def put(lines, x, y_top, w, fs, ha="left", **kw):
-        """Top-aligned in the cell, which is how a wrapped journal table sets
-        a row whose columns have different line counts."""
         for k, ln in enumerate(lines):
             tx = (x + GUT / 2 if ha == "left"
                   else x + w - GUT / 2 if ha == "right" else x + w / 2)
@@ -328,8 +272,7 @@ def build(variant):
             y -= GAP
             rule(y, 0.6)                            # \midrule between sections
 
-        # SECTION HEADING. An accent tick in the colour this rule wears in the
-        # other management figures, then the name and a one-line gloss.
+        # Section heading: an accent tick in the rule's colour, the name, a one-line gloss
         y_s = y - b["sec_h"]
         if slide:
             ax.add_patch(Rectangle((TL, y_s), TW, b["sec_h"], fc="0.965",
