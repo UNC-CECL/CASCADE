@@ -72,6 +72,9 @@ def check(path: Path) -> list[str]:
         isinstance(t, ast.Name) and t.id.isupper() for t in n.targets)]
     if upper and not any(l.startswith("# --- CONFIG") for l in lines):
         out.append(f"{len(upper)} module constants but no CONFIG block")
+    for i, l in enumerate(lines[1:], 2):
+        if l.startswith("# --- CONFIG") and lines[i - 2].startswith("# "):
+            out.append(f"line {i - 1}: comment above the CONFIG rule, cut off from its setting")
 
     run = []
     for i, l in enumerate(lines + [""], 1):
