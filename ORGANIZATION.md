@@ -4,6 +4,9 @@ Seven rules. They are not new: every one of them is a description of what the
 project already does in the places that work, written down so the places that
 do not can be brought into line, and so the next folder starts right.
 
+A general version, for starting a project elsewhere, is
+`scripts/repo_tools/template/`.
+
 `python scripts/repo_tools/hat_layout_check.py` reports every departure from them. It is
 advisory and always exits zero — it produces a worklist, not an obstacle.
 

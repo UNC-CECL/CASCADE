@@ -6,6 +6,7 @@ on it. They are **run**, never imported.
 | Tool | Does |
 |---|---|
 | `hat_layout_check.py` | Audits the tree against the seven rules in `ORGANIZATION.md`. |
+| `template/` | A general project layout and a script that builds it empty, to share with colleagues. |
 
 ```
 python scripts/repo_tools/hat_layout_check.py            every rule
