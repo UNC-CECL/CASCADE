@@ -1,28 +1,17 @@
-# ==============================================================================
-# hat_layout_check.py
-#
-# Does the repository still follow the seven rules in ORGANIZATION.md?
-#
-# ADVISORY, ALWAYS EXITS ZERO. It produces a worklist, not an obstacle. Every
-# tidy-up in this project so far has been someone noticing a case by hand,
-# which does not scale and decays between surveys. This is the same survey,
-# run on demand.
-#
-#     python scripts/repo_tools/hat_layout_check.py            every rule
-#     python scripts/repo_tools/hat_layout_check.py --rule 5   just one
-#     python scripts/repo_tools/hat_layout_check.py --full     every offender, not the
-#                                                   first few
-#
-# WHY IT DOES NOT FAIL THE BUILD
-#   Chosen deliberately (Hannah, 2026-09-13): a check that blocks you mid
-#   experiment gets disabled, and a disabled check reports nothing. This one
-#   is meant to be run when you want a picture.
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-22
-# ==============================================================================
+"""
+Check the repository against the seven layout rules in ORGANIZATION.md.
+
+    python scripts/repo_tools/hat_layout_check.py            every rule
+    python scripts/repo_tools/hat_layout_check.py --rule 5   just one
+    python scripts/repo_tools/hat_layout_check.py --full     every offender, not the first few
+
+Advisory: prints a worklist and always exits zero. Details: scripts/repo_tools/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-22
+"""
 
 from __future__ import annotations
 
@@ -33,61 +22,31 @@ from pathlib import Path
 REPO = next(p for p in Path(__file__).resolve().parents
             if (p / "pyproject.toml").exists())
 
-# Trees that hold the project's own work. Vendored code and caches are not
-# judged by these rules.
+# --- CONFIG ------------------------------------------------------------------
+# Trees the rules skip: vendored code and caches
 SKIP_PARTS = {".git", "__pycache__", ".nox", ".venv", "node_modules",
               ".pytest_cache", ".ipynb_checkpoints", "coastal_cascade.egg-info"}
 
 # Rule 1: what counts as data rather than code.
 DATA_SUFFIXES = {".csv", ".npy", ".npz", ".tif", ".tiff", ".geojson", ".png",
                  ".pdf", ".gif", ".xlsx", ".shp", ".docx",
-                 # .log added 2026-09-22. A 100 kB run log sat in
-                 # scripts/hatteras_ms/ for over a year and nothing reported
-                 # it: a log is a PRODUCT, and products live in output/
-                 # (output/README.md says where). Being gitignored hides it
-                 # from a diff, which is exactly why the check has to see it.
+                 # .log added 2026-09-22: a log is a product, and products live in output/
                  ".log"}
-# A few data-shaped files belong beside code because they ARE code's input in
-# the sense of configuration, or documentation of it.
+# Data-shaped files allowed beside code, as its configuration
 DATA_ALLOWED = {"reference_yaml_hatteras.yaml"}
 
-# Rule 1, second case: the root of scripts/ holds no files but README.md.
-#
-# It held eleven on 2026-09-18 -- six site modules, this checker, and four
-# hatteras_site_config_prebe_<stamp>.py snapshots of the solved BE field that
-# the calibrate step had written beside the config it copied. The snapshots are
-# data wearing a .py extension, which is why the suffix test above never saw
-# them; they read as stray copies, which is how the equivalent 2026-08-24 one
-# came to be discarded, taking the only record of the one-shot solve with it
-# and leaving plot_be_zones.py undrawable for three weeks.
-#
-# The modules then moved into site_layer/ and the checker into repo_tools/, so
-# the root is now a list of folders and one README. That is worth holding: a
-# reader who opens scripts/ should see the map, not the map plus whatever was
-# most recently left lying on it. Anything new at this level belongs in one of
-# the folders, or is a snapshot that belongs in the data tree.
+# Rule 1, second case: the root of scripts/ holds folders and README.md only
 ROOT_ALLOWED = {"README.md"}
 
-# Rule 4: the one retirement idiom.
-# A retirement folder is `superseded_<date>`, and MAY carry a reason after the
-# date: superseded_20260919_pre-redigitized. Relaxed 2026-09-22 -- the bare form
-# was the rule until then, and it could not express the case the data tree
-# actually has, which is two retirements in one folder. A date alone cannot tell
-# `1996/superseded_20260915_flat` from the next one; the suffix is what
-# distinguishes them, so demanding a bare date asked for information to be
-# thrown away. The DATE STILL COMES FIRST, so the folders sort chronologically
-# and the rule's point -- a date says when the decision was taken -- survives.
+# Rule 4: superseded_<date>, optionally with a reason after the date
 RETIRE_GOOD = re.compile(r"^superseded_\d{8}(_[A-Za-z0-9][\w-]*)?$")
 
-# `output/archive/` files retired material as `YYYY-MM-DD_<what>/`, its own
-# documented idiom (output/README.md). What sits inside one of those is filed,
-# not stray, so it is not asked to be a superseded_ folder as well.
+# output/archive/ files retired material as YYYY-MM-DD_<what>/, its own idiom
 ARCHIVE_DATED = re.compile(r"^\d{4}-\d{2}-\d{2}_")
 RETIRE_ANY = re.compile(r"^(old_.*|old|.*_ARCHIVE.*|archived_.*|.*_backup|"
                         r"retired.*|superseded.*)$", re.I)
 
-# Rule 5: a counted depth used to find a root. Only flagged when the name being
-# assigned looks like a root, so ordinary parents[] use is not noise.
+# Rule 5: a counted depth used to find a root, flagged only for root-like names
 COUNTED_ANCHOR = re.compile(
     r"^\s*(?:\w+\s*=\s*)?(?:\w*(?:REPO|ROOT|PROJECT|BASE)\w*)\s*=\s*"
     r"[\w.()_]*parents\[\d+\]", re.I | re.M)
@@ -102,20 +61,20 @@ README_SKIP = re.compile(r"^(superseded_\d{8}|old_.*|__pycache__|figures?|"
 VINTAGE = re.compile(r"^\d{4}$")
 WINDOW = re.compile(r"^\d{4}_\d{4}$")
 PERIOD_PREFIXED = re.compile(r"^(hindcast|period|run)[_-]\d{4}", re.I)
+# -----------------------------------------------------------------------------
 
 
-# Retired code is not maintained -- every superseded folder says so -- and a
-# rule 5 complaint about a script nobody will run again is noise that makes the
-# real ones harder to see. Rules 4 and 7 still apply to these folders; rule 5
-# does not (2026-09-14).
+# Retired folders are exempt from rule 5 (2026-09-14)
 RETIRED_PART = re.compile(r"^(superseded.*|old_.*|old|archived_.*|.*_ARCHIVE.*)$",
                           re.I)
 
 
+# Is any part of the path a retired folder?
 def is_retired(path: Path) -> bool:
     return any(RETIRED_PART.match(part) for part in path.parts)
 
 
+# Every path under root, skipping caches and, if asked, retired folders
 def walk(root: Path, skip_retired: bool = False):
     for path in root.rglob("*"):
         if any(part in SKIP_PARTS for part in path.parts):
@@ -125,17 +84,13 @@ def walk(root: Path, skip_retired: bool = False):
         yield path
 
 
-# A file with no extension has no suffix to match, so a suffix check cannot
-# see it at all. Two sat in the trees untouched -- `HAT_hindcast_plan` (a
-# planning note the hatteras_ms README described as a FOLDER) and `Notes` (the
-# only record of the storm max-duration test). Both are now typed. These names
-# are the extensionless files that are meant to be here.
+# Extensionless files that are meant to be here
 NO_SUFFIX_ALLOWED = {"CURRENT", "LICENSE", "Makefile", "Dockerfile", ".gitignore",
                      ".gitattributes", "MANIFEST.in", "py.typed"}
 
 
+# Rule 1: data files under scripts/, and files with no extension
 def rule_1_data_beside_code():
-    """Data files under scripts/, and files with no extension at all."""
     out = []
     for path in walk(REPO / "scripts"):
         if not path.is_file():
@@ -145,19 +100,13 @@ def rule_1_data_beside_code():
         if path.suffix.lower() in DATA_SUFFIXES:
             out.append(path.relative_to(REPO))
         elif not path.suffix:
-            # Untyped: it renders nowhere, no tool can classify it, and it is
-            # invisible to every check that works by suffix. Give it one.
+            # Untyped: it needs a suffix before any other check can see it
             out.append(path.relative_to(REPO))
     return out
 
 
+# Every bare name any code in the repo imports
 def imported_module_names():
-    """Every bare name any code in the repo imports.
-
-    Read once, not once per candidate. Only the code trees are scanned: a .py
-    under data/ is itself data -- the BE rate tables are spelled that way --
-    and treating one as an importer would let a snapshot vouch for a snapshot.
-    """
     names = set()
     for tree in CODE_TREES:
         base = REPO / tree
@@ -170,15 +119,14 @@ def imported_module_names():
                 text = path.read_text(encoding="utf-8", errors="ignore")
             except OSError:
                 continue
-            # A notebook is JSON holding the same statements, one per string,
-            # so the unanchored pattern reads both without a JSON parse.
+            # A notebook's JSON holds the same statements, so one pattern reads both
             for hit in IMPORT_STMT.findall(text):
                 names.add(hit.split(".")[0])
     return names
 
 
+# Rule 1: files at the root of scripts/ other than README.md
 def rule_1_loose_files_at_scripts_root():
-    """Files at the root of scripts/ other than README.md."""
     root = REPO / "scripts"
     out = []
     for path in sorted(root.iterdir()):
@@ -192,8 +140,8 @@ def rule_1_loose_files_at_scripts_root():
     return out
 
 
+# Rule 2: period folders that are neither a vintage nor a window
 def rule_2_period_folder_names():
-    """Period folders that are neither a vintage nor a window."""
     out = []
     for path in walk(REPO / "data" / "hatteras_init"):
         if path.is_dir() and PERIOD_PREFIXED.match(path.name):
@@ -201,12 +149,8 @@ def rule_2_period_folder_names():
     return out
 
 
+# Rule 3: year-named period folders with no PROVENANCE.md
 def rule_3_provenance_beside_derived():
-    """Period folders holding a file named for a year, with no PROVENANCE.md.
-
-    Only checked where the folder name IS a bare year, which is where the
-    period-start naming convention applies.
-    """
     out = []
     for path in walk(REPO / "data" / "hatteras_init"):
         if not (path.is_dir() and VINTAGE.match(path.name)):
@@ -220,19 +164,14 @@ def rule_3_provenance_beside_derived():
     return out
 
 
+# Is this already filed under a dated superseded folder?
 def inside_compliant_retirement(path: Path) -> bool:
-    """Is this already filed under a dated superseded folder?
-
-    What sits INSIDE one keeps its original name on purpose -- that is what it
-    was called when it was in use, and renaming it would erase that. So the
-    convention applies to the retirement folder, not to its contents.
-    """
     return any(RETIRE_GOOD.match(part) or ARCHIVE_DATED.match(part)
                for part in path.parts[:-1])
 
 
+# Rule 4: retirement folders that are not superseded_<date>, or lack a note
 def rule_4_retirement_idioms():
-    """Retirement folders that are not superseded_<date>, or lack a note."""
     out = []
     for tree in README_TREES:
         base = REPO / tree
@@ -251,8 +190,8 @@ def rule_4_retirement_idioms():
     return out
 
 
+# Rule 5: counted-depth anchors, and paths that cannot resolve anywhere
 def rule_5_paths():
-    """Counted-depth anchors, and paths that cannot resolve anywhere."""
     counted, literal = [], []
     for tree in ("scripts", "tests", "hard-structures"):
         base = REPO / tree
@@ -272,18 +211,8 @@ def rule_5_paths():
     return counted, literal
 
 
+# Rule 7: folders that need a README of their own
 def rule_7_readmes():
-    """Folders that need a README of their own.
-
-    ORIENTATION IS INHERITED (2026-09-14). A folder whose PARENT carries a
-    README is already explained there, so asking for one in every child turns
-    the rule into noise -- one sweep directory alone holds 488 machine-named
-    cells, none of which anyone reads a README for. The rule asks at the
-    FRONTIER: a folder holding files whose parent explains nothing.
-
-    That makes documenting a tree from the top genuinely finish, rather than
-    exposing a new row of demands each time.
-    """
     out = []
     for tree in README_TREES:
         base = REPO / tree
@@ -306,6 +235,7 @@ def rule_7_readmes():
     return out
 
 
+# Empty folders in the README trees and tests/
 def empty_directories():
     out = []
     for tree in README_TREES + ("tests",):
@@ -318,6 +248,7 @@ def empty_directories():
     return out
 
 
+# Print one rule's findings, up to limit, and return the count
 def show(title, items, rule, limit, note=""):
     print(f"\nRULE {rule}  {title}")
     if not items:
@@ -334,6 +265,7 @@ def show(title, items, rule, limit, note=""):
     return len(items)
 
 
+# Run: each wanted rule in turn, then the total
 def main():
     parser = argparse.ArgumentParser(
         description="report departures from ORGANIZATION.md")

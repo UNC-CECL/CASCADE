@@ -1,36 +1,11 @@
 """
-hat_write_figure_index.py
-==============================================================================
-Write FIGURES.md at the repo root: one page that answers "which figure do I
-open for X" across the three trees that hold shoreline-change work --
-`data/hatteras_init/5-scr/3-rates/`, `.../4-comparisons/` and
-`output/comparisons/`.
+Write FIGURES.md at the repo root: which figure to open for each shoreline-change question.
 
-WHY THIS EXISTS (Hannah, 2026-09-21).  Each of those trees has a good README
-of its own and none of them spans the others, so answering a question meant
-already knowing which tree it lived in. Three things in particular were easy
-to get wrong and are stated here once:
-
-  * the estimator            rate (m/yr) vs distance (m), and which window
-                             the rate was FITTED on -- see the vocabulary in
-                             3-rates/README.md
-  * the window               five window folders sit as peers across two
-                             chains; see WINDOWS.md
-  * the units                model_vs_observed/ is in m/yr; every other
-                             comparison tree is in METRES. Two figures of the
-                             same comparison in different units is the single
-                             most confusable pair in the project.
-
-HOW IT STAYS HONEST.  The map below is editorial -- a person decides which
-question a figure answers -- but every path in it is CHECKED against the disk
-when this runs, and a missing one is reported and marked in the output rather
-than silently written. So the index cannot quietly rot the way a hand-kept
-list does. Run it after adding or renaming a figure.
-
-USAGE
     python scripts/repo_tools/hat_write_figure_index.py
-    python scripts/repo_tools/hat_write_figure_index.py --check   # no write
-==============================================================================
+    python scripts/repo_tools/hat_write_figure_index.py --check   # report only, no write
+
+Spans 5-scr/3-rates/, 5-scr/4-comparisons/ and output/comparisons/. Every path
+is checked against the disk and a missing one is reported. Details: scripts/repo_tools/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -48,13 +23,14 @@ from pathlib import Path
 REPO = next(p for p in Path(__file__).resolve().parents
             if (p / "pyproject.toml").exists())
 
+# --- CONFIG ------------------------------------------------------------------
 SCR = "data/hatteras_init/5-scr"
 RATES = f"{SCR}/3-rates"
 COMP = f"{SCR}/4-comparisons"
 OUT = "output/comparisons"
+# -----------------------------------------------------------------------------
 
-# question -> [(what you get, path, note)]. A path ending in "/" is a folder.
-# <w> is substituted per window where a row covers several.
+# Question -> [(what you get, path, note)]; a path ending in / is a folder, <w> a window
 SECTIONS: list[tuple[str, str, list[tuple[str, str, str]]]] = [
     (
         "What did the shoreline do?",
@@ -250,9 +226,7 @@ SECTIONS: list[tuple[str, str, list[tuple[str, str, str]]]] = [
     ),
 ]
 
-# Item 4 of the 2026-09-21 tidy: model_vs_observed slices by OBSERVATION while
-# every other tree slices by ESTIMATOR. Rather than rename it -- its axis
-# genuinely is a different question -- say which estimator each folder uses.
+# Which estimator each model_vs_observed folder uses (item 4 of the 2026-09-21 tidy)
 CROSSREF = [
     ("vs_shoreline/domain_means", "CoastSat", "OLS rate (`lrr_m_yr`)",
      "raw domain means"),
@@ -272,8 +246,8 @@ CROSSREF = [
 ]
 
 
+# Expand <w> over the windows that exist, and check each path
 def resolve(path: str) -> list[tuple[str, bool]]:
-    """Expand <w> over the windows that exist, and check each path."""
     if "<w>" not in path:
         return [(path, (REPO / path).exists())]
     out = []
@@ -284,6 +258,7 @@ def resolve(path: str) -> list[tuple[str, bool]]:
     return out or [(path, False)]
 
 
+# The page text, and the paths that were missing
 def build() -> tuple[str, list[str]]:
     missing: list[str] = []
     L = [
@@ -362,6 +337,7 @@ def build() -> tuple[str, list[str]]:
     return "\n".join(L), missing
 
 
+# Run: build the page, report missing paths, write it unless --check
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--check", action="store_true",
