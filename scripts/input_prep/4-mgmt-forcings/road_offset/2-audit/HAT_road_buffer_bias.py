@@ -26,7 +26,7 @@ from HAT_check_geojson_vs_mask import (  # noqa: E402
 )
 
 # --- CONFIG ------------------------------------------------------------------
-YEARS = [1984, 2004]
+YEARS = [1978, 2008]   # LINE vintages (hat_topo_version.ROAD_LINE_FOR_YEAR), not period starts
 
 # Bulldoze's modelled road block, from cascade_pipeline/roadway.py (road_width_m) and roadway_manager.bulldoze
 ROAD_WIDTH_M = 20.0
