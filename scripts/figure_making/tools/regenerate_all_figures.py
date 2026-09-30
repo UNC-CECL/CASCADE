@@ -71,7 +71,7 @@ def png_times() -> dict[str, float]:
 
 # Run: each producer in order, record what it redrew, then the index
 def main():
-    ap = argparse.ArgumentParser(description=__doc__.split("\n")[3])
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("--only", nargs="+", metavar="FOLDER",
                     help="top folders to redraw, e.g. 4-model-mechanics 5-results")
     ap.add_argument("--list", action="store_true", help="print the producers and stop")

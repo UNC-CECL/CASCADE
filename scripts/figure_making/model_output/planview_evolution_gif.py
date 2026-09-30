@@ -284,7 +284,7 @@ def draw_timeline(axis, moves_by_year, pinned_by_year, start_year):
 
 # Run: load the run, draw every frame, write the GIF
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     parser.add_argument("run_dir", help="matrix run directory")
     parser.add_argument("--fps", type=float, default=3.0)
     parser.add_argument("--out", default=None)

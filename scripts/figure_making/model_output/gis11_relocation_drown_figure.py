@@ -168,7 +168,7 @@ def draw_cliff(axis, grid):
 
 # Run: load the profiles, draw the three panels, save both copies
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     parser.add_argument("--out", default=None)
     args = parser.parse_args()
 

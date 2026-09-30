@@ -203,7 +203,7 @@ def load_target(period_start):
 
 # Run: load runs and targets, draw the grid, name what is missing, save both copies
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     parser.add_argument("--out", default=str(DEFAULT_OUT))
     parser.add_argument("--no-reloc", action="store_true",
                         help="omit the dashed relocation arms")

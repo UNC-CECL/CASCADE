@@ -171,7 +171,7 @@ PRESETS = {
 
 # Run: load both periods, score both windows, draw, save both copies
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     # calibBE is not solved on the 1996/2010 chain, so edgeBE is the default.
     parser.add_argument("--preset", default="edgeBE", choices=sorted(PRESETS))
     args = parser.parse_args()
