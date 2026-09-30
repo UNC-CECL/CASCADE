@@ -1,41 +1,17 @@
 """
-overwash_routing_figures.py
-==============================================================================
-Where the water and the sand go during a storm, and whether Barrier3D's
-overwash routing does what it should as a storm gets stronger.
+Where the water and sand go during a storm, and whether Barrier3D's overwash routing behaves as storms grow.
 
     python scripts/figure_making/model/overwash_routing_figures.py [--only NAME]
 
-Barrier3D routes each storm hour by hour over the domain grid (plus one dune
-row in front and a strip of bay behind), tracking discharge and sediment flux
-in every cell. None of that is saved. This script REPLAYS storms through the
-model's own `Barrier3d.update()` from a saved run's grid, and reads the
-routing arrays out of the running update at the point the storm finishes (a
-line trace on that one frame; the model code is not copied or modified).
-
-    storm_routing_check.png     the replay of the year's real storms against
-                                the grid the run saved: if they differ, the
-                                replay is not the model and nothing below
-                                should be trusted
-    storm_routing_ladder.png    the same grid hit by four storms of rising
-                                strength, collision -> run-up through the
-                                gaps -> run-up over the dune -> inundation:
-                                the water that crossed each cell, the
-                                elevation change, and the cross-shore
-                                deposition profile
-    storm_routing_hours.png     one run-up storm hour by hour: where the
-                                water is and what the bed has done so far
-
-Writes to output/figures/4-model-mechanics/<model>/, ocean at the RIGHT in every plan panel.
-The domain and year are the storm-year example of model_mechanics_figures
-(GIS 6, the 2006 storms, natural 1996-2010 run).
+Replays storms through Barrier3d.update() from a saved run's grid (storm_replay)
+and reads the routing arrays the model discards; writes to
+output/figures/4-model-mechanics/storm_routing/. Details: scripts/figure_making/model/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
 Version: 2026-09-30
 """
-
 from __future__ import annotations
 
 import argparse
@@ -50,45 +26,41 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from matplotlib.colors import LogNorm, TwoSlopeNorm  # noqa: E402
 
+
+# --- CONFIG ------------------------------------------------------------------
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-
 from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, C, INK, INK_MUTED, CELL_M, figsize, figure_dir, save, record_caption,
     _title, open_frame,
 )
 import model_mechanics_figures as mm  # noqa: E402
 from storm_replay import replay, regime  # noqa: E402
-
 OUT = figure_dir("mechanics")   # one sub-folder per model: barrier3d/, brie/, cascade/, storm_routing/
 DAM = 10.0
 GIS, T = mm.STORM_GIS, mm.STORM_T
 DURATION_H = 24
 PERIOD_S = 10.0
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# THE REPLAY
-# =============================================================================
-
+# The saved natural run's domain at GIS and its start year
 @functools.lru_cache(maxsize=1)
 def saved_domain():
     c = mm.load_run(mm.RUN_NATURAL)
     return c.barrier3d[mm.pad(GIS)], mm.start_year(mm.RUN_NATURAL)
 
 
+# That domain's storms in model year T, in m MHW
 def real_storms():
     b, _ = saved_domain()
     s = b.StormSeries[b.StormSeries[:, 0] == T]
     return [(r[1] * DAM, r[2] * DAM, r[3], int(r[4])) for r in s]
 
 
+# Four storms set from this grid's dune: below, between, over the crest, and inundation
 def ladder():
-    """Four storms against this grid's dune: below its lowest crest, between
-    its lowest and mean crest, over its mean crest, and with Rlow above the
-    gaps (inundation). Levels are set from the grid, so the ladder means the
-    same thing on any domain."""
     b, _ = saved_domain()
     crest = (b.DuneDomain[T - 1].max(axis=1) + b.BermEl) * DAM
     lo, mean = crest.min(), crest.mean()
@@ -101,31 +73,24 @@ def ladder():
     ]
 
 
+# Rows of the routing domain: dune row, interior, then a bay strip
 def interior_rows(s):
-    """The routing domain is the dune row, the interior, then a bay strip."""
     return s["elevation"].shape[1]
 
 
-# =============================================================================
-# FIGURES
-# =============================================================================
-
+# Plan extent with the dune row at x = 0, landward positive (ocean drawn at the right)
 def extent(nrows, ncols):
-    """Plan extent with the dune row at x = 0 and landward positive; the axis
-    is then inverted so the ocean sits at the right."""
     return (-0.5 * CELL_M, (nrows - 0.5) * CELL_M, 0, ncols * CELL_M)
 
 
+# The replay reproduces the saved run's year exactly
 def fig_storm_routing_check():
     b, y0 = saved_domain()
     storms = real_storms()
     got, _ = replay(b, T, storms)
     last = got[-1]["elevation"][-1, 1:, :]
     saved = np.asarray(b.DomainTS[T]) * DAM
-    # Two things happen to the grid after the captured line, and the saved grid
-    # has both: update() drops trailing all-bay rows, and the year's shoreline
-    # change drops (retreat) or adds (progradation) rows at the ocean side.
-    # Compared unaligned, a one-cell retreat read as an 8.6 m mismatch.
+    # Align for rows update() drops or adds after the captured line (README)
     bay = -b._BayDepth * DAM
     while len(last) > 1 and (last[-1] <= bay).all():
         last = last[:-1]
@@ -175,6 +140,7 @@ def fig_storm_routing_check():
     return out
 
 
+# The four ladder storms: discharge and sediment flux in plan
 def fig_storm_routing_ladder():
     b, y0 = saved_domain()
     runs = []
@@ -262,6 +228,7 @@ def fig_storm_routing_ladder():
     return out
 
 
+# One storm hour by hour
 def fig_storm_routing_hours():
     b, y0 = saved_domain()
     label, rh, rl = ladder()[2]
@@ -321,10 +288,8 @@ def fig_storm_routing_hours():
     return out
 
 
+# Overwash against storm strength, adopted model vs defects put back
 def fig_storm_routing_response():
-    """Overwash against storm strength on one grid, as the model is (all three
-    overwash fixes, hatteras/adopted) and with the defects put back in memory
-    (storm_replay.DEFECTS, the upstream code)."""
     b, y0 = saved_domain()
     berm = b.BermEl * DAM
     got0, _ = replay(b, T, [(berm + 0.1, berm + 0.05, PERIOD_S, 1)])
@@ -391,14 +356,7 @@ def fig_storm_routing_response():
     return out
 
 
-FIGURES = {
-    "storm_routing_check": fig_storm_routing_check,
-    "storm_routing_ladder": fig_storm_routing_ladder,
-    "storm_routing_hours": fig_storm_routing_hours,
-    "storm_routing_response": fig_storm_routing_response,
-}
-
-
+# Run: draw every figure, or those named with --only
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", nargs="*", choices=sorted(FIGURES))
@@ -407,6 +365,14 @@ def main():
     for name in args.only or FIGURES:
         out = FIGURES[name]()
         print(f"{name:24s} -> {out[0].relative_to(REPO)}")
+
+
+FIGURES = {
+    "storm_routing_check": fig_storm_routing_check,
+    "storm_routing_ladder": fig_storm_routing_ladder,
+    "storm_routing_hours": fig_storm_routing_hours,
+    "storm_routing_response": fig_storm_routing_response,
+}
 
 
 if __name__ == "__main__":

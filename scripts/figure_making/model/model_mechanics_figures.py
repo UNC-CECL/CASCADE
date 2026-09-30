@@ -1,62 +1,16 @@
 """
-model_mechanics_figures.py
-==============================================================================
-How the models work, drawn from a finished Hatteras run rather than from a
-cartoon: the Barrier3D grid through one storm year, one domain's cross-shore
-budget over a window, BRIE's alongshore diffusion, how CASCADE splits a
-shoreline's change between the two, the whole island as the coupled model
-holds it, the annual coupling loop with the unit handed across each join, and
-what the two management modules do to the grid.
+How the models work, drawn from a finished Hatteras run: Barrier3D, BRIE, the coupling, management.
 
     python scripts/figure_making/model/model_mechanics_figures.py [--only NAME]
 
-Writes to output/figures/4-model-mechanics/<model>/ (PNG at the top, PDF + CAPTIONS.md under
-supporting/):
-
-    barrier3d_storm_year.png     one domain, one storm year: the year's storms
-                                 against the dune, the grid before and after,
-                                 and what moved
-    barrier3d_domain_budget.png  one domain over 1996-2010: the profile at the
-                                 two ends, the shoreface toe / shoreline /
-                                 back-barrier, and the annual fluxes
-    brie_diffusion.png           BRIE's angle-dependent diffusivity and where
-                                 the Hatteras shoreline sits on it
-    brie_domain_order.png        BRIE alone on the 1996 offset with the
-                                 domains fed south->north (as run) and
-                                 reversed: the order matters through the
-                                 wave asymmetry
-    brie_domain_orientation.png  north-up map of the numbered domains, the
-                                 wave asymmetry and net drift, beside BRIE's
-                                 array (index <-> GIS) in the same orientation
-    brie_asymmetry_explained.png what the asymmetry counts, why its waves are
-                                 head-on to positive-θ links, what that is on
-                                 Hatteras, and what it does to a cape (smoothing
-                                 rate, not drift; the step does not conserve sand)
-    cascade_shoreline_split.png  each domain's shoreline change split into the
-                                 Barrier3D cross-shore part, the source/sink
-                                 (BE) part and the BRIE alongshore part
-    cascade_island_grids.png     all 90 Barrier3D grids placed on the BRIE
-                                 shoreline, the island as CASCADE holds it
-    cascade_coupling_loop.png    the annual loop: who runs, what is handed
-                                 across, and the unit it is handed in
-    management_modules.png       the roadway manager (overwash cleared, dunes
-                                 rebuilt) and a nourishment spreading
-                                 alongshore
-
-THE RUNS
-    Everything is read from the saved Cascade object in each run's .npz
-    (output/raw_runs/matrix/...), so a figure and a run cannot disagree. The
-    natural run (no road, no beach/dune manager, edgeBE, 1996-2010) carries
-    the physics figures because nothing human touches its grids; the
-    management figure pairs a managed run with the natural run of the same
-    window. The unit contract behind the loop figure is UNITS.md.
+Reads the matrix runs named in CONFIG (and replays storms with storm_replay);
+writes to output/figures/4-model-mechanics/<model>/. Details: scripts/figure_making/model/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-29
+Version: 2026-09-30
 """
-
 from __future__ import annotations
 
 import argparse
@@ -74,9 +28,10 @@ from matplotlib.colors import TwoSlopeNorm  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle  # noqa: E402
 
+
+# --- CONFIG ------------------------------------------------------------------
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
-
 from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, C, C_1984, C_1997, INK, INK_MUTED, CELL_M, DOMAIN_AXIS_LABEL,
     figsize, figure_dir, save, record_caption, _title, open_frame,
@@ -85,27 +40,23 @@ from site_layer.hat_figure_style import (  # noqa: E402
 from site_layer.hatteras_site_config import HATTERAS_DOMAINS as DOM  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from storm_replay import replay  # noqa: E402
-
 OUT = figure_dir("mechanics")   # one sub-folder per model: barrier3d/, brie/, cascade/, storm_routing/
 MATRIX = REPO / "output" / "raw_runs" / "matrix"
 DAM = 10.0                      # Barrier3D decametre -> metre
-
 RUN_NATURAL = ("1996_2010", "edgeBE", "HAT_1996_2010_edgeBE_offsetmetres_noroad_nobdm_nogroin")
 RUN_ROAD = ("1996_2010", "edgeBE", "HAT_1996_2010_edgeBE_offsetmetres_road_nobdm_nogroin")
-# the fill pair differs ONLY in the fills: same road, same beach/dune manager
+# The fill pair differs only in the fills: same road, same beach/dune management
 RUN_NOURISH = ("2010_2024", "edgeBE", "HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nourish_nogroin")
 RUN_NOURISH_OFF = ("2010_2024", "edgeBE", "HAT_2010_2024_edgeBE_offsetmetres_road_bdm_nonourish_nogroin")
-
 STORM_GIS, STORM_T = 6, 11      # 2006 storms: an intact dune (mean crest 2.9 m) that 40% of storms overtop
 BUDGET_GIS = 45                 # the project's example domain (site/domain_schematic)
 ROAD_GIS = 13                   # most overwash cleared off NC-12 in the road run
 NOURISH_GIS, NOURISH_YEAR = 86, 2014   # Rodanthe emergency fill, GIS 84-89
+ORDER_START, ORDER_YEARS = 1996, 14
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# LOADING
-# =============================================================================
-
+# A matrix run's Cascade object from its .npz
 @functools.lru_cache(maxsize=4)
 def load_run(spec):
     window, preset, name = spec
@@ -113,38 +64,39 @@ def load_run(spec):
     return np.load(path, allow_pickle=True)["cascade"][0]
 
 
+# The start year of a run spec
 def start_year(spec):
     return int(spec[0].split("_")[0])
 
 
+# GIS domain -> padded array index
 def pad(gis):
     return DOM.gis_to_pad(gis)
 
 
+# Padded indices of GIS 1-90
 def real_pads():
     return np.arange(pad(1), pad(90) + 1)
 
 
+# A domain's grid (m MHW), dune rows then interior, ocean first as Barrier3D stores it
 def plan_grid(b3d, t):
-    """(cross-shore rows, alongshore columns) in m MHW: the two dune rows on
-    top of the berm, then the interior. Ocean first, as Barrier3D stores it."""
     dune = (b3d.DuneDomain[t].T + b3d.BermEl) * DAM            # (2, 50)
     return np.vstack([dune, np.asarray(b3d.DomainTS[t]) * DAM])
 
 
+# Rows to draw: the last land row of any grid, plus a margin
 def land_rows(*grids, margin=8):
     last = max(int(np.nonzero((g > 0).any(axis=1))[0].max()) for g in grids)
     return last + 1 + margin
 
 
+# The run's initial beach width (m)
 def beach_width_m(cascade):
     return float(cascade._initial_beach_width[0])
 
 
-# =============================================================================
-# 1. BARRIER3D: ONE STORM YEAR
-# =============================================================================
-
+# (1) Barrier3D: one domain through one storm year
 def fig_barrier3d_storm_year():
     spec = RUN_NATURAL
     c = load_run(spec)
@@ -153,10 +105,7 @@ def fig_barrier3d_storm_year():
     year = start_year(spec) + t - 1          # update t applies storms with time == t
     berm = b.BermEl * DAM
     storms = b.StormSeries[b.StormSeries[:, 0] == t]
-    # The storms as the model met them: replayed through update() from the
-    # saved grid, which reproduces the run exactly (storm_routing_check). The
-    # crest they are tested against is the dune AFTER the year's growth,
-    # computed once before the first storm (storm_replay.py).
+    # The storms as the model met them, replayed from the saved grid (exact; README)
     got, _ = replay(b, t, [(r[1] * DAM, r[2] * DAM, r[3], int(r[4])) for r in storms])
     crest = got[0]["crest_pre"]
     crest_mean, crest_min = crest.mean(), crest.min()
@@ -259,10 +208,7 @@ def fig_barrier3d_storm_year():
     return out
 
 
-# =============================================================================
-# 2. BARRIER3D: ONE DOMAIN'S BUDGET OVER A WINDOW
-# =============================================================================
-
+# (2) Barrier3D: one domain's cross-shore budget over the window
 def fig_barrier3d_domain_budget():
     spec = RUN_NATURAL
     c = load_run(spec)
@@ -353,15 +299,12 @@ def fig_barrier3d_domain_budget():
     return out
 
 
-# =============================================================================
-# 3. BRIE: THE ALONGSHORE DIFFUSIVITY
-# =============================================================================
-
+# BRIE's angle between each domain and the next (brie.py:820)
 def shoreline_angle_deg(x_s_m, dy):
-    """BRIE's angle between each domain and the next (brie.py:820)."""
     return np.degrees(np.arctan2(np.roll(x_s_m, -1) - x_s_m, dy))
 
 
+# (3) BRIE: the alongshore diffusivity along the reach
 def fig_brie_diffusion():
     spec = RUN_NATURAL
     c = load_run(spec)
@@ -448,13 +391,8 @@ def fig_brie_diffusion():
     return out
 
 
-ORDER_START, ORDER_YEARS = 1996, 14
-
-
+# BRIE's alongshore diffusion alone, from the padded offset, for ORDER_YEARS
 def brie_alone(offset_m, asymmetry, c):
-    """BRIE's alongshore diffusion on its own (no Barrier3D, no source/sink):
-    the padded offset added to BRIE's straight initial shoreline, run
-    ORDER_YEARS annual steps. Returns the change in x_s, m, landward positive."""
     import warnings
     from brie import Brie
     with warnings.catch_warnings():
@@ -476,6 +414,7 @@ def brie_alone(offset_m, asymmetry, c):
     return br.x_s - start
 
 
+# BRIE: what reversing the domain order does
 def fig_brie_domain_order():
     from site_layer.hat_topo_version import offset_file
     c = load_run(RUN_NATURAL)
@@ -539,8 +478,8 @@ def fig_brie_domain_order():
     return out
 
 
+# BRIE: north-up map of the 90 domains beside BRIE's array
 def fig_brie_domain_orientation():
-    """North-up map of the 90 domains beside BRIE's array, same orientation."""
     import geopandas as gpd
     from site_layer import hat_map_layers as ml
     from site_layer.hat_observed_rates import DOMAIN_BOXES
@@ -555,7 +494,7 @@ def fig_brie_domain_orientation():
     fig = plt.figure(figsize=figsize("double", height=7.6), constrained_layout=True)
     gs = fig.add_gridspec(1, 2, width_ratios=[1.35, 1])
 
-    # ---- (a) the map, north up ------------------------------------------------
+    # (a) the map, north up
     ax = fig.add_subplot(gs[0])
     x0, x1, y0, y1 = 441_000, 470_000, 3_895_500, 3_947_500
     ax.set_facecolor("#e9eff4")
@@ -607,7 +546,7 @@ def fig_brie_domain_orientation():
     ax.text(x1 - 4000, y0 + 2000, "5 km", ha="center", fontsize=7.5)
     _title(ax, 0, "The 90 domains, north up")
 
-    # ---- (b) BRIE's array, same orientation ----------------------------------
+    # (b) BRIE's array, same orientation
     ax = fig.add_subplot(gs[1])
     for i in range(n_pad):
         real = first_pad <= i <= pad(90)
@@ -663,10 +602,8 @@ def fig_brie_domain_orientation():
     return out
 
 
+# BRIE's diffusivity (m2/yr) at given shoreline angles, from its own table (brie.py:1293)
 def brie_diffusivity(asymmetry, high_fraction, theta_deg, c):
-    """BRIE's wave-climate diffusivity (m2/yr) at shoreline angles theta, read
-    from its own table exactly as the solve does (brie.py:1293, before the
-    clamp at zero)."""
     import warnings
     from brie import Brie
     with warnings.catch_warnings():
@@ -681,9 +618,9 @@ def brie_diffusivity(asymmetry, high_fraction, theta_deg, c):
     return cd[idx]
 
 
+# A seaward cape run through BRIE alone
 def brie_cape(asymmetry, high_fraction, c, years=20, ny=40, amp=600.0, sigma=2.0,
               reverse=False):
-    """A seaward cape (x_s negative = seaward) run through BRIE alone."""
     import contextlib, io, warnings
     from brie import Brie
     y = np.arange(ny)
@@ -704,11 +641,12 @@ def brie_cape(asymmetry, high_fraction, c, years=20, ny=40, amp=600.0, sigma=2.0
     return cape, (out[::-1] if reverse else out)
 
 
+# The cape run with the array reversed and flipped back
 def brie_cape_reversed(asymmetry, high_fraction, c, **kw):
-    """The cape run with the array reversed and flipped back: its mirror image."""
     return brie_cape(asymmetry, high_fraction, c, reverse=True, **kw)[1]
 
 
+# BRIE: how wave asymmetry makes the response one-sided
 def fig_brie_asymmetry_explained():
     c = load_run(RUN_NATURAL)
     a, h = float(c._wave_asymmetry), float(c._wave_angle_high_fraction)
@@ -716,7 +654,7 @@ def fig_brie_asymmetry_explained():
     fig = plt.figure(figsize=figsize("double", height=9.0), constrained_layout=True)
     gs = fig.add_gridspec(3, 2, height_ratios=[1, 1.15, 1.25])
 
-    # ---- (a) what the asymmetry counts --------------------------------------
+    # (a) what the asymmetry counts
     ax = fig.add_subplot(gs[0, 0])
     edges = [-90, -45, 0, 45, 90]
     share = [a * h, a * (1 - h), (1 - a) * (1 - h), (1 - a) * h]
@@ -734,7 +672,7 @@ def fig_brie_asymmetry_explained():
     open_frame(ax)
     _title(ax, 0, "What the asymmetry a counts")
 
-    # ---- (b) one wave: head-on smooths fastest -------------------------------
+    # (b) one wave: head-on smooths fastest
     ax = fig.add_subplot(gs[0, 1])
     rel = np.linspace(-89.5, 89.5, 359)
     r = np.deg2rad(rel)
@@ -750,7 +688,7 @@ def fig_brie_asymmetry_explained():
     open_frame(ax)
     _title(ax, 1, "One wave: head-on smooths most")
 
-    # ---- (c) the whole climate: which shoreline angle is head-on ------------
+    # (c) the whole climate: which shoreline angle is head-on
     ax = fig.add_subplot(gs[1, 0])
     th = np.arange(-60, 61)
     curves = ((1.0, C_N, r"a = 1 (all waves at $-\varphi_0$)"), (a, INK, f"a = {a:g} (adopted)"),
@@ -775,7 +713,7 @@ def fig_brie_asymmetry_explained():
     open_frame(ax)
     _title(ax, 2, "BRIE's diffusivity table")
 
-    # ---- (d) the geometry on Hatteras, north up ------------------------------
+    # (d) the geometry on Hatteras, north up
     ax = fig.add_subplot(gs[1, 1])
     ax.set_aspect("equal")
     ax.axis("off")
@@ -813,7 +751,7 @@ def fig_brie_asymmetry_explained():
     ax.set_ylim(-1.0, 1.9)
     _title(ax, 3, "θ on Hatteras, north up")
 
-    # ---- (e) a cape: which flank BRIE smooths faster ------------------------
+    # (e) a cape: which flank BRIE smooths faster
     ny = 40
     km = np.arange(ny) * 0.5
     cape = brie_cape(1.0, 0.0, c, years=0, ny=ny)[0]
@@ -840,7 +778,7 @@ def fig_brie_asymmetry_explained():
     open_frame(ax)
     _title(ax, 4, "What BRIE's table does to a cape")
 
-    # ---- (f) what the asymmetry changes after 20 years ----------------------
+    # (f) what the asymmetry changes after 20 years
     ax = fig.add_subplot(gs[2, 1], sharey=fig.axes[-1])
     runs = {aa: brie_cape(aa, 0.0, c, years=20, ny=ny)[1] for aa in (1.0, 0.5, 0.0)}
     diff1 = -(runs[1.0] - runs[0.5])      # seaward positive
@@ -895,16 +833,8 @@ def fig_brie_asymmetry_explained():
     return out
 
 
-# =============================================================================
-# 4. CASCADE: CROSS-SHORE VS ALONGSHORE
-# =============================================================================
-
+# Invert BRIE's solve year by year to split each domain's change into its parts
 def split_shoreline_change(c):
-    """Invert BRIE's implicit solve year by year to recover the Barrier3D
-    shoreline change it was handed, so each domain's total change splits
-    exactly into what Barrier3D did (cross-shore) and what BRIE did
-    (alongshore). Only valid for a run with no management: the managers move
-    x_s between the two solves. All in metres, + = landward."""
     br = c.brie
     dy, dt = float(br._dy), 1.0
     cd = np.asarray(br._coast_diff)
@@ -921,8 +851,7 @@ def split_shoreline_change(c):
         idx = np.maximum(1, np.minimum(br._wave_climl, np.round(90 - theta).astype(int)))
         r = np.maximum(0, cd[idx] * dt / 2 / dy ** 2)
         lap = np.roll(old, -1) - 2 * old + np.roll(old, 1)
-        # brie.py:1310 builds A row by row from that row's own r (periodic):
-        # A x = (1 + 2r) x - r (x[i-1] + x[i+1]) = x - r lap(x).
+        # brie.py:1310: A x = (1 + 2r) x - r (x[i-1] + x[i+1]) = x - r lap(x), periodic
         a_new = new - r * (np.roll(new, -1) - 2 * new + np.roll(new, 1))
         b3d[t - 1] = a_new - old - r * lap
         be[t - 1] = 2 * qat / (2 * hb[t] + d_sf) * DAM
@@ -930,6 +859,7 @@ def split_shoreline_change(c):
     return total, b3d.sum(0), be.sum(0), total - b3d.sum(0), xs
 
 
+# (4) CASCADE: cross-shore vs alongshore shares of shoreline change
 def fig_cascade_shoreline_split():
     spec = RUN_NATURAL
     c = load_run(spec)
@@ -992,10 +922,7 @@ def fig_cascade_shoreline_split():
     return out
 
 
-# =============================================================================
-# 5. CASCADE: THE ISLAND AS THE COUPLED MODEL HOLDS IT
-# =============================================================================
-
+# The island in plan at one time, beach and grids, on one axes
 def draw_island(ax, c, t, pads, alpha_pad=0.35, borders=False):
     cmap, norm, _ = elevation_cmap()
     bw = beach_width_m(c)
@@ -1019,6 +946,7 @@ def draw_island(ax, c, t, pads, alpha_pad=0.35, borders=False):
     ax.set_facecolor(C["WATER"])
 
 
+# (5) CASCADE: the island as the coupled model holds it
 def fig_cascade_island_grids():
     spec = RUN_NATURAL
     c = load_run(spec)
@@ -1080,10 +1008,7 @@ def fig_cascade_island_grids():
     return out
 
 
-# =============================================================================
-# 6. CASCADE: THE ANNUAL COUPLING LOOP
-# =============================================================================
-
+# (6) CASCADE: the annual coupling loop, with the unit at each join
 def fig_cascade_coupling_loop():
     fig = plt.figure(figsize=figsize("double", height=5.2))
     ax = fig.add_axes([0, 0, 1, 1])
@@ -1151,10 +1076,7 @@ def fig_cascade_coupling_loop():
     return out
 
 
-# =============================================================================
-# 7. THE MANAGEMENT MODULES
-# =============================================================================
-
+# (7) What the roadway and beach/dune managers do to the grid
 def fig_management_modules():
     nat, road = load_run(RUN_NATURAL), load_run(RUN_ROAD)
     y0 = start_year(RUN_ROAD)
@@ -1198,9 +1120,7 @@ def fig_management_modules():
     _title(ax_m, 0, f"GIS {ROAD_GIS}, {y0 + t_end}: road run − natural")
 
     ax_c = fig.add_subplot(gs[0, 1])
-    # State t is the grid on 1 January of y0 + t; model year t (storms of
-    # calendar year y0 + t - 1) runs between states t - 1 and t. The roadway
-    # series are written at index t by update t (roadway_manager.py:780).
+    # State t = 1 January of y0 + t; model year t runs from state t - 1 to t (README)
     yrs = y0 + np.arange(t_end + 1)
     cr_n = [(dd.max(axis=1).mean() + bn.BermEl) * DAM for dd in bn.DuneDomain[:t_end + 1]]
     cr_r = [(dd.max(axis=1).mean() + br_.BermEl) * DAM for dd in br_.DuneDomain[:t_end + 1]]
@@ -1265,7 +1185,16 @@ def fig_management_modules():
     return out
 
 
-# =============================================================================
+# Run: draw every figure, or those named with --only
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--only", nargs="*", choices=sorted(FIGURES))
+    args = ap.parse_args()
+    apply_style()
+    for name in args.only or FIGURES:
+        out = FIGURES[name]()
+        print(f"{name:28s} -> {out[0].relative_to(REPO)}")
+
 
 FIGURES = {
     "barrier3d_storm_year": fig_barrier3d_storm_year,
@@ -1279,16 +1208,6 @@ FIGURES = {
     "cascade_coupling_loop": fig_cascade_coupling_loop,
     "management_modules": fig_management_modules,
 }
-
-
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--only", nargs="*", choices=sorted(FIGURES))
-    args = ap.parse_args()
-    apply_style()
-    for name in args.only or FIGURES:
-        out = FIGURES[name]()
-        print(f"{name:28s} -> {out[0].relative_to(REPO)}")
 
 
 if __name__ == "__main__":

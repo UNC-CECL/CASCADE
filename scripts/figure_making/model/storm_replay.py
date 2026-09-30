@@ -1,25 +1,11 @@
 """
-storm_replay.py
-==============================================================================
-Replay storms through a saved Barrier3D domain's own `update()` and read the
-routing arrays out of it: water discharge, sediment flux in and out, and the
-elevation of every cell for every routing step, which the model computes and
-throws away. Used by model_mechanics_figures.py and overwash_routing_figures.py.
+Replay storms through a saved Barrier3D domain's own update() and read the routing arrays it discards.
 
-The model code is not copied or modified. A line trace on the one update()
-frame snapshots its locals at the first statement after each storm's routing
-loop, and stops the update once the last storm is captured.
+    from storm_replay import replay, regime
 
-Two facts about Barrier3D that the replay depends on, both checked against a
-saved run to 0.0 m (overwash_routing_figures.storm_routing_check):
-  - SeaLevel() lowers DuneDomain[t - 1] IN PLACE at the start of update t, so
-    a saved object's dune slice t - 1 has already lost year t's sea-level rise
-    and must have it put back. The interior is lowered into a new array, so
-    DomainTS[t - 1] is the true starting grid.
-  - The dune crest that decides which cells overwash (DuneDomainCrest,
-    barrier3d.py:1358) is computed ONCE per year, after dune growth and
-    before the first storm. Every storm that year is tested against it and
-    routed over it, although each storm also lowers the dune it erodes.
+Used by model_mechanics_figures.py and overwash_routing_figures.py. The model
+code is not copied; `defects=` puts a fixed Barrier3D defect back in memory.
+Details: scripts/figure_making/model/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -40,34 +26,21 @@ from barrier3d import Barrier3d
 DAM = 10.0
 
 
+# Raised to stop update() once the last storm is captured
 class _StormsDone(Exception):
     pass
 
 
 CAPTURE_TEXT = "InteriorUpdate = Elevation[-1, 1:, :]"
 
-# THREE DEFECTS in how Barrier3D starts overwash, found with this replay on
-# 2026-09-27 and FIXED in ../Barrier3D on 2026-09-28 (990c3bd, 015f11e,
-# e929e65; merged into hatteras/adopted, see HATTERAS_FIXES.md there). The
-# model now carries all three, so `fixes=` is a no-op on it and `defects=` is
-# the variant that matters: it puts a defect BACK into an in-memory copy of the
-# class (the upstream UNC-CECL code), so the fix's effect can still be measured.
-#   "gaps"     DuneGaps() (2020) drops the last overtopped cell of the last
-#              gap, and returns nothing at all when one cell is overtopped.
-#   "slice"    update() sets gap water with Discharge[:, 0, start:stop], but
-#              stop is inclusive: every gap loses its last cell of water, and
-#              a one-cell gap gets none (2020).
-#   "momentum" update() computes the inundation momentum constant
-#              C = Cx * AvgSlope before the gap loop, then resets C = 0 inside
-#              it (b11b880, 2024 Numba refactor), so inundation transport
-#              Ki * (Q * (S + C))**mm always runs with C = 0.
+# The three overwash defects, fixed in hatteras/adopted; `defects=` puts them back (README)
 FIXES = ("gaps", "slice", "momentum")
 DEFECTS = FIXES
 _SOURCE_FIXES = {
     "slice": ("Discharge[:, 0, start:stop] = Qdune", "Discharge[:, 0, start:stop + 1] = Qdune"),
     "momentum": ("C = 0  # Initialize", "pass  # C kept (replay variant)"),
 }
-# The reverse substitutions: the fixed text in hatteras/adopted back to upstream.
+# Reverse substitutions: hatteras/adopted text back to upstream
 _INUNDATION_IF = "if inundation == 1:  # Inundation regime"
 _SOURCE_DEFECTS = {
     "slice": ("Discharge[:, 0, start:stop + 1] = Qdune", "Discharge[:, 0, start:stop] = Qdune"),
@@ -75,8 +48,8 @@ _SOURCE_DEFECTS = {
 }
 
 
+# DuneGaps with every overtopped cell kept
 def _dune_gaps_fixed(self, DuneDomain, Dow, bermel, Rhigh):
-    """Contiguous runs of overtopped cells, every cell kept."""
     gaps = []
     if not len(Dow):
         return gaps
@@ -93,9 +66,8 @@ def _dune_gaps_fixed(self, DuneDomain, Dow, bermel, Rhigh):
     return gaps
 
 
+# DuneGaps as upstream Barrier3D has it (drops the last cell, and lone cells)
 def _dune_gaps_upstream(self, DuneDomain, Dow, bermel, Rhigh):
-    """DuneGaps as upstream Barrier3D has it (UNC-CECL master): drops the last
-    overtopped cell of the last gap, and a lone overtopped cell entirely."""
     gaps = []
     start = 0
     i = start
@@ -119,12 +91,9 @@ def _dune_gaps_upstream(self, DuneDomain, Dow, bermel, Rhigh):
     return gaps
 
 
+# (class, update code, capture line): Barrier3d, or a subclass compiled with fixes/defects
 @functools.lru_cache(maxsize=None)
 def model_class(fixes=(), defects=()):
-    """(class, update code object, capture line). With neither, Barrier3d
-    itself; otherwise a subclass whose update() is compiled from the model's
-    own source with the named text substitutions. A fix already in the model
-    is skipped; a defect is put back from its upstream text."""
     if set(fixes) & set(defects):
         raise ValueError(f"both fixed and restored: {set(fixes) & set(defects)}")
     if not fixes and not defects:
@@ -166,22 +135,14 @@ def model_class(fixes=(), defects=()):
     return cls, ns["update"].__code__, line
 
 
+# Run storms (Rhigh, Rlow m MHW, period s, duration h) through model year t of a saved domain
 def replay(b_saved, t, storms, fixes=(), defects=()):
-    """Run `storms` (rows of Rhigh m MHW, Rlow m MHW, period s, duration h)
-    through model year `t` of a saved Barrier3D domain, starting from the
-    grid the run saved entering that year. Returns one dict per storm."""
     b = copy.deepcopy(b_saved)
     cls, code, line = model_class(tuple(sorted(fixes)), tuple(sorted(defects)))
     b.__class__ = cls
     b._time_index = t
     b._InteriorDomain = np.array(b.DomainTS[t - 1], dtype=float).copy()
-    # SeaLevel() lowers DuneDomain[t - 1] IN PLACE at the start of update t
-    # (barrier3d.py:19), so the saved object's slice t - 1 has already had
-    # year t's sea-level rise taken off. Put it back, or the replay lowers the
-    # dune twice. The interior is lowered into a new array, so DomainTS[t - 1]
-    # is the true starting grid. (A 4 mm slip here moved individual cells by
-    # up to 0.5 m while the storm's total overwash changed by 1%: the routing
-    # is cell-scale sensitive, the volumes are not.)
+    # Put back year t's sea-level rise, which SeaLevel() took off the saved dune in place (README)
     b._DuneDomain[t - 1] = b._DuneDomain[t - 1] + b._RSLR[t]
     b._StormSeries = np.array([[t, rh / DAM, rl / DAM, per, dur] for rh, rl, per, dur in storms], dtype=float)
     got = []
@@ -219,6 +180,7 @@ def replay(b_saved, t, storms, fixes=(), defects=()):
     return got, b
 
 
+# The overwash regime name of a replayed storm
 def regime(s):
     if not s["gaps"]:
         return "collision"
