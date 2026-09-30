@@ -1,4 +1,12 @@
 """
+Check the CoastSat rate outputs are internally consistent before they reach CASCADE.
+
+    python scripts/input_prep/5-scr/tools/coastsat_rates_check.py
+    python scripts/input_prep/5-scr/tools/coastsat_rates_check.py --start-year 1996 --end-year 2010
+
+NaN audit, domain means against the transects, transect counts and a
+per-domain table; prints the report and writes verification_report.csv. Details: scripts/input_prep/5-scr/tools/README.md.
+
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
@@ -6,38 +14,8 @@ Version: 2026-09-22
 """
 
 from pathlib import Path
-"""
-CoastSat Pipeline Data Verification
-=====================================
-Runs targeted checks on the outputs of the CoastSat → CASCADE pipeline
-to confirm that transect LRR values, domain averages, and transect counts
-are internally consistent before these values enter CASCADE.
 
-Checks performed
-----------------
-  1. NaN audit        — how many transects have missing LRR, and why
-  2. Domain mean match — do the pre-computed domain means equal the manual mean
-                         of transect LRRs in the same CSV?
-  3. Transect count   — does n_transects in the summary match the actual count
-                         in the transect file?
-  4. Per-domain detail — prints a side-by-side table for every domain so you
-                         can spot any domain that looks off
-
-Usage
------
-Edit the CONFIG section to point at your files, then run:
-    python coastsat_rates_check.py
-
-Outputs
--------
-  Console report (always)
-  verification_report.csv  — detailed per-domain comparison table
-"""
-
-# ============================================================
-# CONFIG — edit these paths to match your actual file locations
-# ============================================================
-
+# --- CONFIG ------------------------------------------------------------------
 # Full transect-level LRR results (comparison of coastsat_domain_lrr_fixed.py)
 import sys as _sys
 from pathlib import Path as _RP
@@ -45,9 +23,7 @@ _sys.path.insert(0, str(next(_q for _q in _RP(__file__).resolve().parents
                              if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_observed_rates as _obs  # noqa: E402
 
-# The window to check. It was hardcoded to 2004_2024, which is not on the
-# canonical 1996 -> 2010 -> 2024 chain, so the default now follows the chain
-# and either end can be overridden.
+# The window to check follows the canonical chain; either end can be overridden
 import argparse as _ap
 _parser = _ap.ArgumentParser(
     description="Internal-consistency checks on one CoastSat rate window: "
@@ -59,15 +35,8 @@ _cli = _parser.parse_args()
 START_YEAR, END_YEAR = _cli.start_year, _cli.end_year
 
 
+# Stop a console encoding from killing a finished check
 def _never_die_on_a_print():
-    """Stop a console encoding from killing a finished check.
-
-    This file prints U+2713 and U+2717 as pass/fail marks, which a Windows
-    cp1252 console cannot encode, so `print` raises UnicodeEncodeError -- it
-    died on the FIRST check, before reporting anything. Reconfigure rather
-    than ASCII-ify, so the next mark someone types cannot reintroduce it.
-    The same guard its siblings carry (export_be_calibration.py).
-    """
     for stream in (_sys.stdout, _sys.stderr):
         try:
             stream.reconfigure(encoding="utf-8", errors="replace")
@@ -84,45 +53,35 @@ TRANSECT_LRR_CSV = str(_obs.lrr_csv(START_YEAR, END_YEAR))
 # Domain-level summary (comparison of coastsat_domain_lrr_fixed.py)
 DOMAIN_SUMMARY_CSV = str(_obs.domain_csv(START_YEAR, END_YEAR))
 
-# Where to save the per-domain comparison table. Resolved through
-# hat_observed_rates, beside the window it checks, in a `checks/` subfolder so
-# a verification artefact is never mistaken for a product. Until 2026-09-22
-# this was a drive-rooted literal naming scripts/input_preperation/ -- a tree
-# renamed long ago -- so the script could not finish even when it ran.
+# Where to save the per-domain comparison table
 _REPORT_DIR = _obs.window_dir(START_YEAR, END_YEAR) / "checks"
 OUTPUT_REPORT_CSV = str(_REPORT_DIR / f"rates_check_{START_YEAR}_{END_YEAR}.csv")
 
-# Tolerance for floating-point comparison in Check 2 (m/yr)
-# Differences smaller than this are treated as matching
+# Tolerance for check 2 (m/yr): smaller differences count as a match
 TOLERANCE = 0.001
 
-# ============================================================
-# IMPORTS
-# ============================================================
 import os
 import numpy as np
 import pandas as pd
 
-# Anchored 2026-09-14: absolute into a home directory, or into a tree
-# renamed since. Rule 5 of ORGANIZATION.md.
+# Repo root, found by searching upward
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
-# ============================================================
-# HELPERS
-# ============================================================
 
 PASS = "  ✓ PASS"
 WARN = "  ⚠ WARN"
 FAIL = "  ✗ FAIL"
+# -----------------------------------------------------------------------------
 
+# A section heading in the console report
 def section(title):
     print("\n" + "=" * 60)
     print(f"  {title}")
     print("=" * 60)
 
+# Load both CSVs with clear error messages if files are missing
 def load_data():
-    """Load both CSVs with clear error messages if files are missing."""
     missing = []
     for path, name in [(TRANSECT_LRR_CSV, "transect_lrr_full.csv"),
                        (DOMAIN_SUMMARY_CSV, "domain_lrr_summary.csv")]:
@@ -150,15 +109,10 @@ def load_data():
     return t, d
 
 
-# ============================================================
-# CHECK 1 — NaN audit
-# ============================================================
+# Check 1 — NaN audit
 
+# How many transects are missing LRR values? A large number here usually means transect IDs didn't ...
 def check_nan_lrr(t):
-    """
-    How many transects are missing LRR values?
-    A large number here usually means transect IDs didn't match CSV filenames.
-    """
     section("CHECK 1 — Missing LRR values (NaN audit)")
 
     total      = len(t)
@@ -206,18 +160,10 @@ def check_nan_lrr(t):
     return nan_by_domain
 
 
-# ============================================================
-# CHECK 2 — Domain mean consistency
-# ============================================================
+# Check 2 — Domain mean consistency
 
+# Does the mean_lrr in domain_lrr_summary.csv equal the manual mean of lrr_m_yr values for each ...
 def check_domain_means(t, d):
-    """
-    Does the mean_lrr in domain_lrr_summary.csv equal the manual mean
-    of lrr_m_yr values for each domain in transect_lrr_full.csv?
-
-    A mismatch means something changed between when the summary was computed
-    and the current transect file, or a different set of transects was used.
-    """
     section("CHECK 2 — Domain mean consistency")
 
     # Manual domain means from transect file (valid LRR only)
@@ -260,17 +206,10 @@ def check_domain_means(t, d):
     return merged
 
 
-# ============================================================
-# CHECK 3 — Transect count consistency
-# ============================================================
+# Check 3 — Transect count consistency
 
+# Does n_transects in domain_lrr_summary.csv match the actual count of rows per domain in ...
 def check_transect_counts(t, d):
-    """
-    Does n_transects in domain_lrr_summary.csv match the actual count
-    of rows per domain in transect_lrr_full.csv?
-
-    Includes both valid and NaN-LRR transects (n_transects = total in domain).
-    """
     section("CHECK 3 — Transect count per domain")
 
     # Actual counts from transect file
@@ -330,16 +269,10 @@ def check_transect_counts(t, d):
     return merged
 
 
-# ============================================================
-# CHECK 4 — Per-domain detail table
-# ============================================================
+# Check 4 — Per-domain detail table
 
+# Build a side-by-side per-domain table combining
 def build_detail_table(t, d, count_check):
-    """
-    Build a side-by-side per-domain table combining:
-      - Values from domain_lrr_summary.csv
-      - Manually computed values from transect_lrr_full.csv
-    """
     section("CHECK 4 — Per-domain detail table")
 
     t_valid = t[t["lrr_m_yr"].notna()].copy()
@@ -409,16 +342,13 @@ def build_detail_table(t, d, count_check):
     return detail
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
+# Run: the four checks and the report
 def main():
     print("\n" + "=" * 60)
     print("  CoastSat Pipeline Verification")
     print("=" * 60)
 
-    # ── Load ──────────────────────────────────────────────────
+    # Load
     print("\nLoading files...")
     print(f"  Transect CSV : {os.path.basename(TRANSECT_LRR_CSV)}")
     print(f"  Summary CSV  : {os.path.basename(DOMAIN_SUMMARY_CSV)}")
@@ -426,13 +356,13 @@ def main():
     print(f"  Transect rows: {len(t):,}")
     print(f"  Domain rows  : {len(d):,}")
 
-    # ── Checks ────────────────────────────────────────────────
+    # Checks
     nan_by_domain = check_nan_lrr(t)
     mean_check    = check_domain_means(t, d)
     count_check   = check_transect_counts(t, d)
     detail        = build_detail_table(t, d, count_check)
 
-    # ── Summary ───────────────────────────────────────────────
+    # Summary
     section("VERIFICATION SUMMARY")
     checks = {
         "Check 1 — NaN audit"         : t["lrr_m_yr"].isna().sum() == 0,
@@ -451,7 +381,7 @@ def main():
         print(f"\n{FAIL}  ONE OR MORE CHECKS FAILED — review the output above.")
         print(f"       Focus on checks marked ✗ before using this data in CASCADE.")
 
-    # ── Save report ───────────────────────────────────────────
+    # Save report
     _REPORT_DIR.mkdir(parents=True, exist_ok=True)
     detail.to_csv(OUTPUT_REPORT_CSV, index=False)
     print(f"\nDetailed report saved to:")

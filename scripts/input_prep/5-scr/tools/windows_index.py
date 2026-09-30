@@ -1,21 +1,9 @@
 """
-windows_index.py
-==============================================================================
-Write data/hatteras_init/5-scr/WINDOWS.md from the definitions in
-site_layer.hat_observed_rates, so the table cannot drift from the code.
+Write data/hatteras_init/5-scr/WINDOWS.md from the window definitions in the code.
 
-WHY THIS EXISTS.  Five window folders sit as peers under most 3-rates and
-4-comparisons products -- 1984_2004, 1996_2010, 1996_2024, 2004_2024,
-2010_2024 -- and they are NOT equivalent: two chains, and one context window
-nothing is graded against. A folder named only by its years says none of
-that, so 1984_2004 reads as a current result (Hannah, 2026-09-21). The roles
-live in `hat_observed_rates.WINDOW_ROLE`; this script renders them, plus the
-coverage grid showing which product actually has which window, which is the
-other question a reader cannot answer by looking.
-
-USAGE
     python scripts/input_prep/5-scr/tools/windows_index.py
-==============================================================================
+
+Reads site_layer.hat_observed_rates, so the table cannot drift from it. Details: scripts/input_prep/5-scr/tools/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -38,6 +26,7 @@ from site_layer.hat_observed_rates import (  # noqa: E402
     is_current_chain,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 WINDOWS = [(1996, 2010), (2010, 2024), (1996, 2024), (1984, 2004), (2004, 2024)]
 # The products that are filed one folder per window. Label -> path.
 PRODUCTS = {
@@ -54,10 +43,11 @@ PRODUCTS = {
     "4-comp/coastsat_projected_vs_duneline_endpoint":
         COMPARISONS / "shoreline_vs_duneline" / "coastsat_projected_vs_duneline_endpoint",
 }
+# -----------------------------------------------------------------------------
 
 
+# Which product has which window, read off the disk, not asserted
 def coverage_grid() -> list[str]:
-    """Which product has which window, read off the disk, not asserted."""
     head = "| product | " + " | ".join(f"{s}–{e}" for s, e in WINDOWS) + " |"
     rows = [head, "|" + "---|" * (len(WINDOWS) + 1)]
     for label, root in PRODUCTS.items():
@@ -66,6 +56,7 @@ def coverage_grid() -> list[str]:
     return rows
 
 
+# Run: build the table, write WINDOWS.md
 def main() -> int:
     out = _REPO / "data" / "hatteras_init" / "5-scr" / "WINDOWS.md"
     cur = " → ".join(str(y) for y in CURRENT_CHAIN)

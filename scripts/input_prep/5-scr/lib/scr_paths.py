@@ -1,43 +1,10 @@
 """
-scr_paths.py
-==============================================================================
-Where the 5-scr modules live -- the one place that knows.
+Where the 5-scr modules live: import this and any 5-scr module imports by name.
 
-WHY THIS EXISTS
-    Twelve scripts under 5-scr import a module from a SIBLING folder:
-    rates_figures for the house drawing, coastsat_vs_duneline for the chainage
-    loader, coastsat_lrr for the OLS fit. Until 2026-09-22 each one built that
-    folder's path by hand --
+    python scripts/input_prep/5-scr/lib/scr_paths.py   # checks the table after a move
 
-        sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr"
-                               / "coastsat_vs_duneline"))
-
-    -- so the folder layout was written down in twelve places, in five
-    different spellings, and the reorganisation on 2026-09-22 would have had to
-    edit all twelve. Worse, a stale one does not raise where it is written: the
-    insert succeeds against a directory that no longer exists, and the failure
-    surfaces forty lines later as `ModuleNotFoundError: coastsat_vs_duneline`,
-    naming the module rather than the path that is wrong.
-
-    Rule 6 of ORGANIZATION.md: a location is decided once, in a resolver, and
-    everything else asks. This is that resolver for 5-scr's own modules, as
-    site_layer/hat_observed_rates.py is for its data.
-
-USAGE  -- the two lines every 5-scr script that imports a sibling carries:
-
-        sys.path.insert(0, str(_REPO / "scripts" / "input_prep" / "5-scr" / "lib"))
-        import scr_paths  # noqa: E402,F401
-
-    The import is the whole point: bringing the module in runs the loop at the
-    bottom, which puts every module-bearing folder on sys.path. After it, a
-    plain `import rates_figures` resolves no matter which folder the importing
-    script sits in.
-
-MOVING A MODULE
-    Edit its row in MODULE_DIRS below. Nothing else changes. A name whose
-    folder has gone missing is reported by check() with the path that is
-    wrong, which is the thing the old hand-built inserts could never say.
-==============================================================================
+Puts every folder in MODULE_DIRS on sys.path once, in order; run directly
+it reports any module that is not where the table says. Details: scripts/input_prep/5-scr/lib/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -48,10 +15,10 @@ Version: 2026-09-30
 import sys
 from pathlib import Path
 
+# --- CONFIG ------------------------------------------------------------------
 SCR = Path(__file__).resolve().parents[1]
 
-# Every module another 5-scr script imports BY NAME, and the folder holding it.
-# The comment is who imports it, so a move can be checked against real callers.
+# Every module another 5-scr script imports by name, its folder, and who imports it
 MODULE_DIRS = {
     # module name             folder                                      imported by
     "coastsat_lrr":           SCR / "lib",                                # lrr, 5yr_bins, extension, dsas
@@ -63,14 +30,11 @@ MODULE_DIRS = {
     "total_change_vs_duneline": SCR / "4-comparisons" / "shoreline_vs_duneline",
     "smoothed_lowess7_vs_duneline": SCR / "4-comparisons" / "shoreline_vs_duneline",
 }
+# -----------------------------------------------------------------------------
 
 
+# Every module whose file is not where MODULE_DIRS says
 def check():
-    """Report any module in MODULE_DIRS whose file is not where it is claimed.
-
-    Returns a list of complaint strings, empty when the table is accurate.
-    Run as `python lib/scr_paths.py` after moving anything.
-    """
     missing = []
     for name, folder in MODULE_DIRS.items():
         if not (folder / f"{name}.py").exists():
@@ -78,8 +42,7 @@ def check():
     return missing
 
 
-# Importing this module is what does the work. dict.fromkeys keeps the folders
-# unique and in declaration order; two modules share a folder.
+# Importing this module does the work: each folder once, in declaration order
 for _folder in dict.fromkeys(MODULE_DIRS.values()):
     _s = str(_folder)
     if _s not in sys.path:
