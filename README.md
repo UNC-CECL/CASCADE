@@ -153,3 +153,36 @@ for time_step in range(cascade.time_step_count - 1):
     if cascade.b3d_break:
         break
 ```
+
+## New groin approaches (2026-09-29, emulator only)
+
+**Approach 1, a groin that blocks transport** (`blocking_groin_emulator.py` → `.txt`, `blocking_groin_scores.csv`).
+Each year it cancels a fraction b of BRIE's flux across the GIS 5|6 face. The `callback` form is a
+pre-solve `x_s_dt` correction that fits the existing hook, with no BRIE change. It matches the
+`exact` form (the face coupling scaled inside the Crank–Nicolson step) to within ~1 m everywhere.
+**On the module's 1996→2003 linear ramp it fails exactly like the dipole** (best joint cell
+−32 / +41 m). The groin representation was not the problem.
+
+**The schedule was.** The observed D5−D6 gap (wet/dry table) grows from 1967 to 1995, stays at
+134–155 m through 2004, then falls: 125 (2008), 104 (2016), 63–74 (2019–23). An intact groin
+that fails after the 2003 storm, not a gradual wear-down from 1996. The linear ramp puts a decline
+inside the 1996 window that the data don't show.
+
+**With an instant failure taking effect in model year 2004** (`failure_schedule_test.py`,
+`trajectory_check.py` → `.txt/.csv`), scored against the observed gap at its own dates (the OLS
+trend alone was matched by wrong-shaped trajectories, e.g. dipole M = 15 building 66 m by 2004):
+
+| | best cell | 1996 RMSE | 2010 RMSE | joint | 1996 trajectory (obs +2, +16, −10) |
+|---|---|---|---|---|---|
+| no groin | — | 60.1 | 22.1 | 45.2 | −14, −63, −75 |
+| dipole (existing module) | M 10, f 0.2 | 4.0 | 14.9 | **10.9** | +4, +22, −12 |
+| blocking (approach 1) | b 0.6, f 0.3 | 7.7 | 14.6 | **11.7** | +6, +25, −19 |
+
+Both optima are interior on M 4–15 / b 0.2–1.0 × f 0–0.5/0.6. The 2010 RMSE of ~15 m is near
+the 11–14 m year-to-year scatter of the observations.
+
+Caveats: the 1996 window has only three observation dates. Barrier3D and the 2010 nourishment
+enter as an additive offset taken from the full model's no-groin runs. Only 2003 and 2004 were
+tried as failure years (2004 was better on trend). The dipole at M = 10 is ~62,000 m³/yr, ~10%
+of the reach budget. The blocking groin's b is a trapping fraction with literature values to
+compare against, and it cannot run away.

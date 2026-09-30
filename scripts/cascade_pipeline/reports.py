@@ -344,8 +344,13 @@ def groin_report(*, enabled, callback, updrift_gis, downdrift_gis,
                  deterioration_delay_years, deterioration_ramp_years,
                  deterioration_fraction, profile_height_candidates_m,
                  reach_transport_loss_m3_yr, reach_transport_citation,
-                 reach_transport_caveat, source_sink_preset, domain_be_rates):
+                 reach_transport_caveat, source_sink_preset, domain_be_rates,
+                 groin_kind="dipole", blocking_fraction=None):
     """Prints the groin configuration, its sediment budget, and the overlap.
+
+    For a blocking groin (groin_kind "blocking") the schedule is of b, the
+    intercepted fraction, and the budget is emergent -- it depends on the
+    transport arriving -- so it is reported after the run, not here.
 
     The double-count note is reported rather than corrected: the calibrated
     background-erosion rates were fit to CoastSat spanning the functional-groin
@@ -360,16 +365,25 @@ def groin_report(*, enabled, callback, updrift_gis, downdrift_gis,
     print(f"structure             updrift GIS {updrift_gis} (pad {up_pad}) "
           f"/ downdrift GIS {downdrift_gis} (pad {down_pad}), "
           f"installed {install_year}")
-    print(f"trapping rate M       {trapping_rate_m_yr:.0f} m/yr")
-    print(f"  provenance          {m_provenance}")
+    blocking = groin_kind == "blocking"
+    if blocking:
+        print(f"blocking fraction b   {blocking_fraction:.2f}   "
+              f"(share of alongshore transport intercepted at the face)")
+    else:
+        print(f"trapping rate M       {trapping_rate_m_yr:.0f} m/yr")
+        print(f"  provenance          {m_provenance}")
     print(f"deterioration         {deterioration_mode}, "
           f"onset {callback.deterioration_year:.0f} "
           f"(+{deterioration_delay_years:.0f} yr), "
           f"ramp {deterioration_ramp_years:.0f} yr, "
           f"floor {deterioration_fraction:.2f}")
-    print(f"  M over {start_year}-{end_year}    "
-          f"{m_eff[0]:.1f} -> {m_eff[-1]:.1f} m/yr   "
-          f"(mean {m_eff.mean():.1f})")
+    if blocking:
+        print(f"  b over {start_year}-{end_year}    "
+              f"{m_eff[0]:.2f} -> {m_eff[-1]:.2f}   (mean {m_eff.mean():.2f})")
+    else:
+        print(f"  M over {start_year}-{end_year}    "
+              f"{m_eff[0]:.1f} -> {m_eff[-1]:.1f} m/yr   "
+              f"(mean {m_eff.mean():.1f})")
     if install_year <= start_year:
         print(f"  note                install {install_year} predates the "
               f"run: active every step, and {start_year - install_year} yr "
@@ -384,14 +398,20 @@ def groin_report(*, enabled, callback, updrift_gis, downdrift_gis,
           f"m3/yr")
     print(f"  source              {reach_transport_citation}")
     print(f"  CAVEAT              {reach_transport_caveat}")
-    print(f"  implied transfer at M = {trapping_rate_m_yr:.0f} m/yr over "
-          f"dy = {geometry.domain_spacing_m:.0f} m:")
-    for h in profile_height_candidates_m:
-        vol = implied_interception_m3_yr(trapping_rate_m_yr, h, geometry)
-        pct = 100.0 * vol / reach_transport_loss_m3_yr
-        print(f"    profile height {h:5.1f} m ->  {vol:>9,.0f} m3/yr "
-              f"= {pct:5.1f}% of the reach budget"
-              + ("   BREACH" if pct > 50 else ""))
+    if blocking:
+        print("  emergent for a blocking groin: the trapped volume is bounded "
+              "by the transport")
+        print("  arriving, and the applied rate is written per year to the "
+              "groin diagnostics CSV")
+    else:
+        print(f"  implied transfer at M = {trapping_rate_m_yr:.0f} m/yr over "
+              f"dy = {geometry.domain_spacing_m:.0f} m:")
+        for h in profile_height_candidates_m:
+            vol = implied_interception_m3_yr(trapping_rate_m_yr, h, geometry)
+            pct = 100.0 * vol / reach_transport_loss_m3_yr
+            print(f"    profile height {h:5.1f} m ->  {vol:>9,.0f} m3/yr "
+                  f"= {pct:5.1f}% of the reach budget"
+                  + ("   BREACH" if pct > 50 else ""))
     print("  Not corrected. Section 11 resolves the profile height from the "
           "constructed model")
     print("  rather than the yaml, and section 12 reports the resulting "
@@ -577,14 +597,24 @@ def pre_run_report(*, run_name, run_dir, run_years, start_year, end_year,
           + ("(consistent with the metre reading)" if berm_floor_m < 5
              else "SUSPECT -- see the notebook markdown on BermEl units"))
 
-    if groin_callback is not None:
+    if groin_callback is not None and getattr(groin_callback, "kind",
+                                               "dipole") == "blocking":
+        print(f"\nGROIN                 attached, BLOCKING, b = "
+              f"{groin_callback.blocking_fraction:.2f}, updrift pad "
+              f"{groin_callback.updrift_pad} / downdrift pad "
+              f"{groin_callback.downdrift_pad}")
+        print(f"  r_ipl (t=0)         {r_ipl:.4f}  (at the groin cell's t=0 "
+              f"angle, brie.py:1294)")
+        print(f"  no a-priori amplitude or extent: the trapped volume depends "
+              f"on the transport arriving")
+    elif groin_callback is not None:
         vol = implied_interception_m3_yr(groin_callback.M, profile_height_m,
                                          geometry)
         pct = 100.0 * vol / reach_transport_loss_m3_yr
         print(f"\nGROIN                 attached, M = {groin_callback.M:.0f} "
               f"m/yr, updrift pad {groin_callback.updrift_pad} / "
               f"downdrift pad {groin_callback.downdrift_pad}")
-        print(f"  r_ipl (t=0)         {r_ipl:.4f}  (shore-normal, "
+        print(f"  r_ipl (t=0)         {r_ipl:.4f}  (at the groin cell's t=0 angle, "
               f"brie.py:1294)")
         print(f"  PREDICTED amplitude {predicted_amplitude_m:.1f} m       "
               f"= M / (4 * r_ipl)")
@@ -685,6 +715,10 @@ def groin_extent_report(*, extent, threshold_frac, baseline_name,
           f"({extent['updrift_m']:.0f} m)")
     print(f"  downdrift           {extent['downdrift_domains']} domains "
           f"({extent['downdrift_m']:.0f} m)")
+    if predicted_extent_domains is None:
+        print(f"  PREDICTED (sec 11)  none (blocking groin: no a-priori "
+              f"extent)")
+        return
     print(f"  PREDICTED (sec 11)  "
           f"{predicted_extent_domains:.1f} domains "
           f"({predicted_extent_m:.0f} m)")
