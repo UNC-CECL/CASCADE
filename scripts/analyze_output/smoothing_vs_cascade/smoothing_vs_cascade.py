@@ -1,21 +1,13 @@
 """
-CoastSat LRR Smoothing — Hatteras Island
-=========================================
-Applies LOWESS smoothing to CoastSat shoreline change rates across two
-time periods and produces publication-ready figures.
+LOWESS smoothing of the CoastSat LRR, both periods, with a CASCADE run drawn against it.
 
-Outputs (saved to OUTPUT_DIR)
-------------------------------
-  overview_smoothed.png          – 2-panel both periods, raw + LOWESS overlay
-  smoothed_only_comparison.png   – 2-panel both periods, smoothed lines only
-  combined_periods.png           – single panel combining both periods (smoothed)
-  smoothing_sensitivity_*.png    – 3-panel bandwidth sensitivity per period
-  window_comparison.png          – NEW: raw + 3 smoothing windows overlaid,
-                                    both periods, for window selection
+    python scripts/analyze_output/smoothing_vs_cascade/smoothing_vs_cascade.py
 
-Smoothing method: LOWESS (locally weighted scatterplot smoothing)
-  - Applied independently to each period's CoastSat series
-  - Preserves large-scale spatial patterns while removing per-domain noise
+Seven figures (raw + LOWESS, smoothed only, both periods, bandwidth
+sensitivity, window comparison, CASCADE vs LOWESS, CASCADE per window) to
+output/comparisons/smoothing_vs_cascade/1984_2004/. CASCADE_RUNS names a run
+that no longer exists: point it at a current one first.
+Details: scripts/analyze_output/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -23,38 +15,27 @@ Contact: hahenry@unc.edu
 Version: 2026-09-30
 """
 
-# os must be imported before the CONFIG block because CASCADE_RUNS builds
-# CSV paths at module level.
+# os first: CASCADE_RUNS builds paths at import
 import os
 import pathlib
 import sys
 
-# ANCHORED, NOT TYPED. Every path below used to be an absolute literal; the
-# output one had lost its drive (str(_PATH_REPO / "scripts" / "analyze_output" / "...")) and so wrote
-# its figures to C:\scripts\ instead of into the repository, and the input
-# ones still spelled the folder "input_preperation", renamed to "input_prep"
-# long ago. Anchoring on the pyproject.toml at the repo root makes all of
-# them follow the checkout and survive this file changing depth.
+# Paths resolved from the repo root, never typed
 PROJECT_BASE_DIR = next(
     q for q in pathlib.Path(__file__).resolve().parents
     if (q / "pyproject.toml").exists()
 )
 
-# Same anchor, so run_layout -- the one definition of where a run folder keeps
-# its files -- is importable before the CONFIG block builds any run path.
+# run_layout must be importable before CONFIG builds any run path
 if str(PROJECT_BASE_DIR / "scripts") not in sys.path:
     sys.path.insert(0, str(PROJECT_BASE_DIR / "scripts"))
 
 from cascade_pipeline.run_layout import resolve as resolve_run_file  # noqa: E402
 
-# Anchored 2026-09-14: this named a home directory, or a tree renamed since.
-# Rule 5 of ORGANIZATION.md.
 _PATH_REPO = next(_p for _p in pathlib.Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
-# ============================================================
-# CONFIG
-# ============================================================
+# --- CONFIG ------------------------------------------------------------------
 
 # --- CoastSat CSVs ---
 # Resolved through hat_observed_rates.py (2026-09-18), not typed.
@@ -70,18 +51,10 @@ CS_STD_COL    = "std_lrr"
 DOMAIN_MIN = 1
 DOMAIN_MAX = 90
 
-# --- LOWESS bandwidth (fraction of data used per local fit) ---
-# 0.10 = ~9 domains  → more local, preserves more variation
-# 0.167 = ~15 domains → recommended default (1.5km smoothing window)
-# 0.20 = ~18 domains → smoother, loses finer spatial patterns
+# LOWESS bandwidth, the fraction of the data in each local fit (0.167 = ~15 domains)
 LOWESS_FRAC = 0.167
 
-# --- Window comparison: domain counts to test in window_comparison.png ---
-# Each value is the number of CASCADE domains (~500 m each) used in the
-# local LOWESS fit.  Fracs are computed as n / (DOMAIN_MAX - DOMAIN_MIN + 1).
-#   5  domains → frac ≈ 0.056  (2.5 km window)
-#  10  domains → frac ≈ 0.111  (5.0 km window)
-#  15  domains → frac ≈ 0.167  (7.5 km window) ← matches LOWESS_FRAC default
+# Windows compared in window_comparison.png, in domains (~500 m each)
 COMPARE_WINDOWS_DOMAINS = [5, 10, 15]   # ← edit here (in domains)
 
 # --- Geographic annotations ---
@@ -111,8 +84,7 @@ GROINS = {
     "Buxton Groin": 6,
 }
 
-# Wimble Shoals offshore shoal influence zone: (domain_lo, domain_hi)
-# Spans domains 60–74; overlaps with the southern portion of Tri-Village.
+# Wimble Shoals influence zone (domain_lo, domain_hi); overlaps southern Tri-Village
 WIMBLE_SHOALS = (60, 74)
 
 # --- Annotation colors ---
@@ -127,36 +99,13 @@ C_GROIN        = "#B71C1C"   # dark red    — groin lines
 from site_layer.hat_figure_style import COMPARISONS_ROOT, FIG_W_DOUBLE  # noqa: E402
 OUTPUT_DIR = str(COMPARISONS_ROOT / "smoothing_vs_cascade" / "1984_2004")
 
-# ============================================================
-# CASCADE MODEL OUTPUT CONFIG
-# ============================================================
-# Name each run; run_rate_csv finds its shoreline change rate CSV.
-# The CSV must have columns: gis_domain_id, model_rate_m_per_yr
-#
-# Format:
-#   CASCADE_RUNS = [
-#       dict(
-#           label  = "Run label for legend",
-#           period = "1984–2004",   # must match one of the CoastSat period labels
-#           csv    = run_rate_csv("<run_name>"),
-#       ),
-#       ...
-#   ]
-#
-# Add one dict per run you want to overlay.  Leave list empty ([]) to skip.
+# CASCADE runs to overlay: one dict(label, period, csv) each (README); [] to skip
 
 CASCADE_OUTPUT_BASE = str(PROJECT_BASE_DIR / "output" / "raw_runs")
 
 
+# A run's shoreline change rate CSV, in either run-folder layout; `base` for runs outside raw_runs
 def run_rate_csv(run_name, base=None):
-    """The shoreline change rate CSV inside one run folder.
-
-    RESOLVED, NOT JOINED. That file is tables/shoreline_change_rate.csv in the
-    new run layout and {run_name}_shoreline_change_rate.csv in the old one;
-    run_layout.resolve returns whichever is on disk, so a half-migrated tree
-    reads either way. `base` is the folder the run folder sits in -- pass it
-    for a run outside output/raw_runs.
-    """
     base = CASCADE_OUTPUT_BASE if base is None else base
     return str(resolve_run_file(os.path.join(base, run_name),
                                 "rate_csv", run_name))
@@ -176,22 +125,15 @@ CASCADE_RUNS = [
     # ),
 ]
 
-# Color for CASCADE model line(s).  If you add multiple runs for the same
-# period, extend this list — one color per run entry above.
+# One colour per CASCADE run above
 C_CASCADE = ["#111111"]   # black for the first run; add more if needed
 
-# ============================================================
-# IMPORTS
-# ============================================================
 # os is already imported at the top of this file (before CONFIG).
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# HOUSE STYLE: one typeface and one palette across every figure in this
-# project. See scripts/site_layer/hat_figure_style.py and figure_making/STYLE.md. The root is
-# found by searching upward (ORGANIZATION.md rule 5). This file drew in
-# matplotlib's defaults until 2026-09-17 -- it never called apply_style().
+# House style (site_layer/hat_figure_style.py), applied at import
 import sys as _sys
 from pathlib import Path as _HP
 _sys.path.insert(0, str(next(_q for _q in _HP(__file__).resolve().parents
@@ -208,9 +150,7 @@ warnings.filterwarnings("ignore")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# ============================================================
-# STYLE
-# ============================================================
+# Local overrides on top of the house style
 plt.rcParams.update({
     "font.family": "Arial",
     "axes.spines.top": False,
@@ -224,22 +164,16 @@ plt.rcParams.update({
 C_CS_1984 = "#1F4E79"   # dark blue  — 1984–2004
 C_CS_2004 = "#833C00"   # dark brown — 2004–2024
 
-# Colors for the three smoothing windows in the comparison figure.
-# Sequential cool → warm: narrow (5-dom, teal) → mid (10-dom, gold) → wide (15-dom, coral)
-# This encodes "more smoothing = warmer color" intuitively.
+# Smoothing-window colours, cool to warm = narrow to wide
 C_WINDOWS = ["#0097a7", "#e6a817", "#c0392b"]   # teal, amber, crimson
 
-# ============================================================
-# DATA LOADING
-# ============================================================
-
+# CoastSat domain LRR for one period, or None if the file is missing
 def load_coastsat(path, domain_col, lrr_col, std_col, period_label):
     if path is None or not os.path.exists(path):
         print(f"  CoastSat ({period_label}): SKIPPED — not found: {path}")
         return None
     df = pd.read_csv(path)
-    # Fix corrupted header: filename sometimes gets prepended to the first
-    # column name on export (e.g. "domain_lrr_summary.csvdomain_number").
+    # Strip a filename some exports prepend to the first column ("...csvdomain_number")
     df.columns = [c.split("csv")[-1] if "csv" in c else c for c in df.columns]
     df[domain_col] = pd.to_numeric(df[domain_col], errors="coerce")
     df[lrr_col]    = pd.to_numeric(df[lrr_col],    errors="coerce")
@@ -257,17 +191,8 @@ def load_coastsat(path, domain_col, lrr_col, std_col, period_label):
     return df
 
 
+# A CASCADE rate CSV as [domain, model_rate], or None if missing
 def load_cascade_rate(run_dict):
-    """
-    Load a CASCADE shoreline change rate CSV produced by HAT_hindcast_1984_2024_old version.py.
-
-    Expects columns:
-        gis_domain_id       – integer 1–90 for real domains, NaN for buffer rows
-        model_rate_m_per_yr – shoreline change rate in m/yr
-
-    Returns a DataFrame with columns [domain, model_rate] filtered to
-    DOMAIN_MIN–DOMAIN_MAX, or None if the file is missing.
-    """
     path = run_dict["csv"]
     label = run_dict["label"]
     if not os.path.exists(path):
@@ -286,8 +211,8 @@ def load_cascade_rate(run_dict):
           f"range {df['model_rate'].min():+.2f} to {df['model_rate'].max():+.2f} m/yr")
     return df
 
+# LOWESS-smoothed values at the same domain positions
 def apply_lowess(domains, values, frac=LOWESS_FRAC):
-    """Apply LOWESS smoothing. Returns smoothed values at same domain positions."""
     valid = ~np.isnan(values)
     if valid.sum() < 5:
         return values.copy()
@@ -297,54 +222,25 @@ def apply_lowess(domains, values, frac=LOWESS_FRAC):
     return smoothed
 
 
+# Add the LOWESS column to a CoastSat frame
 def add_smoothed_columns(df, frac=LOWESS_FRAC):
-    """Add LOWESS-smoothed LRR column to a CoastSat dataframe."""
     df = df.copy()
     d = df["domain"].values.astype(float)
     df["cs_lrr_smooth"] = apply_lowess(d, df["cs_lrr"].values, frac)
     return df
 
 
+# A window in domains -> LOWESS frac over the whole island (DOMAIN_MAX - DOMAIN_MIN + 1)
 def domains_to_frac(n_domains):
-    """
-    Convert a window size in CASCADE domains to a LOWESS frac value.
-
-    Always divides by the total island domain range (DOMAIN_MAX - DOMAIN_MIN + 1)
-    so that fracs are consistent regardless of how many domains have valid data
-    in a given CSV.  This ensures:
-      5  domains → frac ≈ 0.056
-      10 domains → frac ≈ 0.111
-      15 domains → frac ≈ 0.167  (matches the LOWESS_FRAC default)
-    """
     return n_domains / (DOMAIN_MAX - DOMAIN_MIN + 1)
 
 
-# ============================================================
-# SHARED AXIS HELPERS
-# ============================================================
-
+# Geographic reference layers: shoals, spans, village lines, piers, groins
 def add_annotations(ax):
-    """
-    Add all geographic reference annotations to an axis.
-
-    Layer order (bottom → top):
-      1. Wimble Shoals influence zone  (hatched amber fill, bottom label)
-      2. Community shaded spans        (steel-blue fill, top labels)
-      3. Village center lines          (dashed gray,  y=0.88)
-      4. Pier lines                    (dash-dot blue, y=0.76, rotated)
-      5. Groin lines                   (dotted red,    y=0.76, rotated)
-
-    All label y-positions use blended axes-fraction coordinates so they
-    stay fixed relative to the panel height regardless of data range.
-    """
     # Blended transform: data x, axes-fraction y
     trans = blended_transform_factory(ax.transData, ax.transAxes)
 
-    # ------------------------------------------------------------------
-    # 1. Wimble Shoals influence zone
-    #    Placed first so community spans render on top of it.
-    #    Label at the bottom of the panel to avoid crowding the top tier.
-    # ------------------------------------------------------------------
+    # 1. Wimble Shoals zone first, so the spans draw over it; label at the bottom
     wlo, whi = WIMBLE_SHOALS
     ax.axvspan(wlo - 0.5, whi + 0.5,
                color=C_WIMBLE, alpha=0.10, zorder=0,
@@ -355,10 +251,7 @@ def add_annotations(ax):
             style="italic",
             bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.80))
 
-    # ------------------------------------------------------------------
-    # 2. Community / town spans
-    #    Labels at y=0.90 (one step below the panel frac-label tier at 0.97).
-    # ------------------------------------------------------------------
+    # 2. Community spans, labels at y=0.90
     for span_label, (d_lo, d_hi) in TOWN_SPANS.items():
         ax.axvspan(d_lo - 0.5, d_hi + 0.5,
                    color=C_TOWN_SPAN, alpha=0.14, zorder=0)
@@ -368,10 +261,7 @@ def add_annotations(ax):
                 fontweight="bold",
                 bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.85))
 
-    # ------------------------------------------------------------------
-    # 3. Village center lines (within Tri-Village span)
-    #    Dashed gray; labels at y=0.79 so they sit clearly below span labels.
-    # ------------------------------------------------------------------
+    # 3. Village centre lines within Tri-Village, labels at y=0.79
     for vname, dom in VILLAGE_LINES.items():
         ax.axvline(dom, color=C_VILLAGE_LINE, lw=0.9, ls="--",
                    alpha=0.65, zorder=1)
@@ -380,12 +270,7 @@ def add_annotations(ax):
                 bbox=dict(boxstyle="round,pad=0.15", fc="white",
                           ec="none", alpha=0.80))
 
-    # ------------------------------------------------------------------
-    # 4. Pier lines
-    #    Dash-dot blue; rotated labels at y=0.74.
-    #    Avon Pier (26) sits inside the Avon span — raw_offset label downward
-    #    so it clears the span label above.
-    # ------------------------------------------------------------------
+    # 4. Piers, rotated labels at y=0.74 (Avon Pier's offset down, clear of the span label)
     for pname, dom in PIERS.items():
         ax.axvline(dom, color=C_PIER, lw=1.0, ls="-.", alpha=0.80, zorder=2)
         ax.text(dom, 0.74, pname, transform=trans,
@@ -394,11 +279,7 @@ def add_annotations(ax):
                 bbox=dict(boxstyle="round,pad=0.15", fc="white",
                           ec="none", alpha=0.80))
 
-    # ------------------------------------------------------------------
-    # 5. Groin lines
-    #    Dotted dark-red; rotated labels at y=0.74.
-    #    Buxton Groin (6) is just left of the Buxton span (7–8).
-    # ------------------------------------------------------------------
+    # 5. Groins, rotated labels at y=0.74
     for gname, dom in GROINS.items():
         ax.axvline(dom, color=C_GROIN, lw=1.1, ls=":", alpha=0.85, zorder=2)
         ax.text(dom, 0.74, gname, transform=trans,
@@ -408,12 +289,8 @@ def add_annotations(ax):
                           ec="none", alpha=0.80))
 
 
+# Proxy legend handles for the annotation layers
 def annotation_legend_handles():
-    """
-    Return proxy artists explaining the annotation layer types.
-    Append these to a plot's legend handle list so readers can decode
-    all reference marks without scanning every label individually.
-    """
     return [
         Patch(fc=C_TOWN_SPAN,  alpha=0.30, label="Community"),
         Patch(fc=C_WIMBLE,     alpha=0.25, hatch="///",
@@ -425,6 +302,7 @@ def annotation_legend_handles():
     ]
 
 
+# Shared GIS-domain axis styling
 def style_domain_axis(ax):
     ax.set_xlim(DOMAIN_MIN - 0.5, DOMAIN_MAX + 0.5)
     ax.set_xticks(range(DOMAIN_MIN, DOMAIN_MAX + 1, 10))
@@ -440,14 +318,8 @@ def style_domain_axis(ax):
                 ha="right", va="top", fontsize=8, color="0.4")
 
 
-# ============================================================
-# FIGURE 1 — PRIMARY: Raw + LOWESS overlay, both periods
-# ============================================================
-
+# Figure 1: raw CoastSat (faded) with the LOWESS overlay, both periods
 def plot_overview_smoothed(cs_1984, cs_2004, out_path):
-    """
-    2-panel figure: raw CoastSat points (faded) + LOWESS overlay (bold).
-    """
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=5.14), sharex=True)
     fig.suptitle("CoastSat Shoreline Change Rates — Hatteras Island, NC\n"
                  "Raw (faded) + LOWESS smoothed (bold)",
@@ -501,15 +373,8 @@ def plot_overview_smoothed(cs_1984, cs_2004, out_path):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-# ============================================================
-# FIGURE 2 — SMOOTHED ONLY (clean, for presentations)
-# ============================================================
-
+# Figure 2: LOWESS lines only, both periods (for presentations)
 def plot_smoothed_only(cs_1984, cs_2004, out_path):
-    """
-    2-panel: LOWESS smoothed lines only, no raw data.
-    Cleanest version for presentations or dissertation figures.
-    """
     fig, axes = plt.subplots(2, 1, figsize=figsize("double", height=4.68), sharex=True)
     fig.suptitle("CoastSat Shoreline Change Rates — Hatteras Island, NC\n"
                  f"LOWESS smoothed (frac={LOWESS_FRAC})",
@@ -554,15 +419,8 @@ def plot_smoothed_only(cs_1984, cs_2004, out_path):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-# ============================================================
-# FIGURE 3 — COMBINED: Both periods on one panel (smoothed)
-# ============================================================
-
+# Figure 3: both periods' smoothed CoastSat on one panel
 def plot_combined_periods(cs_1984, cs_2004, out_path):
-    """
-    Single panel: both periods of smoothed CoastSat on one axis.
-    Good for directly comparing the two periods.
-    """
     fig, ax = plt.subplots(figsize=figsize("double", height=2.81))
 
     for df, label, color in [
@@ -601,18 +459,9 @@ def plot_combined_periods(cs_1984, cs_2004, out_path):
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-# ============================================================
-# FIGURE 4 — SMOOTHING SENSITIVITY (frac comparison)
-# ============================================================
-
+# Figure 4: one panel per LOWESS window, for one period
 def plot_smoothing_sensitivity(df, period_label, out_path,
                                window_domains=COMPARE_WINDOWS_DOMAINS):
-    """
-    3-panel showing the effect of each LOWESS window on CoastSat data.
-    One smoothed line per panel so individual window behavior is clear.
-    Fracs are derived from COMPARE_WINDOWS_DOMAINS / 90 domains, matching
-    exactly what plot_window_comparison uses.
-    """
     n_total = DOMAIN_MAX - DOMAIN_MIN + 1   # 90 domains
     fracs = [domains_to_frac(n) for n in window_domains]
     panel_labels = [
@@ -657,8 +506,7 @@ def plot_smoothing_sensitivity(df, period_label, out_path,
         handles, lbls = ax.get_legend_handles_labels()
         if is_bottom:
             handles = handles + annotation_legend_handles()
-        # Use loc="best" so matplotlib picks whitespace automatically —
-        # the data range differs between periods and panel corners vary.
+        # loc="best": the free corner differs between periods
         ax.legend(handles=handles, fontsize=8.5, framealpha=0.95,
                   loc="best", ncol=2 if is_bottom else 1)
 
@@ -668,31 +516,9 @@ def plot_smoothing_sensitivity(df, period_label, out_path,
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-# ============================================================
-# FIGURE 5 — WINDOW COMPARISON: All 3 windows overlaid (NEW)
-# ============================================================
-
+# Figure 5: raw CoastSat with every LOWESS window overlaid, per period
 def plot_window_comparison(cs_1984, cs_2004, out_path,
                            window_domains=COMPARE_WINDOWS_DOMAINS):
-    """
-    2-panel figure (one per period) showing the raw CoastSat LRR (faded)
-    overlaid by LOWESS-smoothed lines for each window size in
-    COMPARE_WINDOWS_DOMAINS.  All smoothed lines share one panel so spatial
-    patterns and differences between window choices are directly visible.
-
-    Window sizes are specified in CASCADE domains and converted to LOWESS fracs
-    using the actual number of valid domains in each dataset.
-
-    Parameters
-    ----------
-    cs_1984, cs_2004 : pd.DataFrame or None
-        Loaded CoastSat data for each period.
-    out_path : str
-        Full path for the comparison PNG.
-    window_domains : list of int
-        Number of CASCADE domains for each smoothing window to compare.
-        Defaults to COMPARE_WINDOWS_DOMAINS from CONFIG.
-    """
     configs = [
         (cs_1984, "1984–2004", C_CS_1984),
         (cs_2004, "2004–2024", C_CS_2004),
@@ -769,36 +595,9 @@ def plot_window_comparison(cs_1984, cs_2004, out_path,
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-# ============================================================
-# FIGURE 6 — CASCADE vs LOWESS-SMOOTHED CoastSat
-# ============================================================
-
+# Figure 6: CASCADE against raw and LOWESS CoastSat, per period
 def plot_cascade_vs_lowess(cs_1984, cs_2004, cascade_runs, out_path,
                           window_domains=COMPARE_WINDOWS_DOMAINS):
-    """
-    One panel per CoastSat period (1984–2004, 2004–2024).
-
-    Each panel shows:
-      • Raw CoastSat LRR (faded, period color)
-      • Three LOWESS-smoothed CoastSat curves (green / orange / purple)
-      • CASCADE modeled change rate(s) for that period (thick black line)
-
-    CASCADE runs are matched to panels by their 'period' key in CASCADE_RUNS.
-    If no CASCADE run exists for a period, that panel still shows the CoastSat
-    smoothed curves alone.
-
-    Parameters
-    ----------
-    cs_1984, cs_2004 : pd.DataFrame or None
-        CoastSat data for each period.
-    cascade_runs : list of dict
-        Loaded CASCADE rate DataFrames, each with an extra 'label' and
-        'period' key (same structure as CASCADE_RUNS but with 'df' added).
-    out_path : str
-        Full path for the comparison PNG.
-    window_domains : list of int
-        LOWESS window sizes in CASCADE domains (from COMPARE_WINDOWS_DOMAINS).
-    """
     period_configs = [
         ("1984–2004", cs_1984, C_CS_1984),
         ("2004–2024", cs_2004, C_CS_2004),
@@ -877,41 +676,9 @@ def plot_cascade_vs_lowess(cs_1984, cs_2004, cascade_runs, out_path,
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-# ============================================================
-# FIGURE 7 — CASCADE vs CoastSat, ONE PANEL PER LOWESS WINDOW
-# ============================================================
-
+# Figure 7: CASCADE against one LOWESS window per panel, one period
 def plot_cascade_by_window(cs_df, cascade_runs, period_label, out_path,
                            window_domains=COMPARE_WINDOWS_DOMAINS):
-    """
-    3-panel figure (one per LOWESS window) for a single CoastSat period.
-
-    Each panel shows:
-      • Raw CoastSat LRR (faded, period color)
-      • ONE LOWESS-smoothed CoastSat curve (bold, period color)
-      • CASCADE modeled rate (thick black)
-
-    This isolates the model-vs-observation comparison for each smoothing
-    choice so you can judge fit quality without the visual clutter of
-    seeing all three windows simultaneously.
-
-    Panels share the same y-axis limits so differences in smoothing
-    level — not axis scaling — drive the visual comparison.
-
-    Parameters
-    ----------
-    cs_df : pd.DataFrame or None
-        CoastSat data for the target period.
-    cascade_runs : list of dict
-        Loaded CASCADE run dicts (with 'df', 'label', 'period' keys).
-        Only runs whose 'period' matches period_label are plotted.
-    period_label : str
-        e.g. "1984–2004".  Used for title and CASCADE run matching.
-    out_path : str
-        Full path for the comparison PNG.
-    window_domains : list of int
-        LOWESS window sizes in CASCADE domains.
-    """
     if cs_df is None:
         print(f"  cascade_by_window ({period_label}): SKIPPED — no CoastSat data")
         return
@@ -952,9 +719,7 @@ def plot_cascade_by_window(cs_df, cascade_runs, period_label, out_path,
                         cs_df["cs_lrr"] + cs_df["cs_std"],
                         color=period_color, alpha=0.05, zorder=1)
 
-        # --- Single LOWESS-smoothed CoastSat curve ---
-        # Use the C_WINDOWS color for this window index so it matches
-        # window_comparison.png, making cross-figure reading easier.
+        # This window's LOWESS curve, in the same colour as window_comparison.png
         win_idx = list(window_domains).index(n_dom) if n_dom in window_domains else 0
         lowess_color = C_WINDOWS[win_idx % len(C_WINDOWS)]
         smoothed = apply_lowess(d.values.astype(float),
@@ -994,10 +759,7 @@ def plot_cascade_by_window(cs_df, cascade_runs, period_label, out_path,
     print(f"  Saved: {os.path.basename(out_path)}")
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
+# Run: load CoastSat and CASCADE, smooth, draw every figure, write the table
 def main():
     print("=" * 65)
     print("CoastSat LRR Smoothing — Hatteras Island")
