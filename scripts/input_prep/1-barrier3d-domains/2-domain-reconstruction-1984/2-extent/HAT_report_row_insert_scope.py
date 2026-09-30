@@ -1,54 +1,12 @@
 #!/usr/bin/env python3
-r"""
-HAT_report_row_insert_scope.py
-==============================================================================
-Which domains would have interior rows ADDED behind the dune, which would have
-rows REMOVED, and how many - drawn on the Barrier3D grid the way the model
-would hold it, with a report and a per-domain table.
+"""
+Which domains would have interior rows added or removed, and how many, drawn on the Barrier3D grid.
 
-SCOPE ONLY. Nothing is written into a topography version, no array is
-modified, no elevation is fabricated. The added rows are drawn BLANK.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/2-extent/HAT_footprint_1984.py   # first: writes the footprint table
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/2-extent/HAT_report_row_insert_scope.py
 
-REWRITTEN 2026-09-07 for the symmetric footprint. Until then this script
-computed N itself as round(shift / 10) FLOORED AT ZERO and reported what the
-negatives "would have implied". Hannah's decision that day made the footprint
-symmetric (rows removed where the island prograded), changed the per-domain
-statistic to the median of PAIRED per-profile differences, and changed the
-rounding to a 10 m threshold (trunc). Those rules are applied in ONE place,
-HAT_footprint_1984.py, which writes `footprint_1984_by_domain.csv`; this script
-READS that table rather than re-deriving N, so the two cannot disagree. The
-rules, and the assumptions behind them, are in that script's docstring.
-
-WHAT THIS ADDS TO THE FOOTPRINT SCRIPT
-    * the grid drawn AS THE MODEL WOULD HOLD IT: dune rows on top, then the
-      added rows, then the existing interior pushed down the page by N; where
-      rows are removed, the existing rows 0..|N|-1 are hatched between the
-      dune and the rows that survive. HAT_footprint_1984_grid.png draws the
-      same footprint in the CURRENT frame (row 0 fixed); this one shows the
-      stack. NC-12 is drawn at its measured position in both.
-    * the cross-check against the independent easting-frame measurement
-      (`0-elevation/2009-2014-1996-duneline/duneline_offset_by_domain.csv`:
-      raw easting in the axis-aligned box, 1 m sampling, no extractor frame,
-      no row 0). Same two geojsons, so agreement bounds the FRAME, not the
-      lines. The same trunc rule is applied to it.
-
-THE PLAN VIEW moved. `HAT_row_insert_plan.png` (add-only) was retired the same
-day; the plan view of the symmetric footprint is
-`figures/3-placement/seaward/HAT_footprint_1984_plan.png`, drawn by HAT_footprint_1984.py.
-Drawing it twice under two names would be one figure with two provenances.
-
-OUTPUTS (1-barrier3d-domains/1984-start/2-domain-reconstruction-1984/)
-    HAT_row_insert_scope.txt          the report
-    row_insert_scope_by_domain.csv    per domain: signed N, shift, the easting
-                                      cross-check, rows now/after
-    figures/3-placement/seaward/HAT_row_insert_grid.png             the stacked grid, both signs
-    figures/3-placement/behind-road/HAT_row_insert_grid_behindroad.png  the same rows behind NC-12 (--anchor road)
-    figures/4-fill/HAT_fill_copy_grid_island.png   ... filled by the copy rule (--anchor road --fill copy)
-
-USAGE
-    python HAT_footprint_1984.py          # first - writes the footprint table
-    python HAT_report_row_insert_scope.py
-==============================================================================
+Scope only: reads N from the footprint table, writes a report, a per-domain
+table and the grid figure; no topography version is written. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -73,6 +31,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch, Rectangle
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_project_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -89,6 +48,7 @@ from site_layer.hat_topo_version import (  # noqa: E402
 import HAT_plot_duneline_offset as off  # noqa: E402  the house style
 from site_layer.hat_figure_style import elevation_cmap  # noqa: E402  the elevation classes
 
+# --- CONFIG ------------------------------------------------------------------
 PRODUCT = "1984-start"
 from site_layer.hat_topo_version import product_dir  # noqa: E402
 START_DIR = product_dir(PRODUCT)
@@ -110,21 +70,20 @@ FILL = "blank"           # set from --fill; "copy" fills the block with the next
 ROWS_SHOWN = 200         # every row: dune (2) + up to 7 added + the deepest interior (189); was 46 until 2026-09-07, when Hannah asked for the full domains
 DOMAINS_PER_STRIP = 30
 
-# Colours: the RdBu pair every 1984 dune-line figure uses. Red = 1984 line
-# seaward = ground ADDED; blue = 1984 line landward = ground REMOVED.
+# Colours: the RdBu pair; red = 1984 line seaward = added, blue = landward = removed
 C_ADD, C_ADD_FILL = off.C_1984, off.C_1984_FILL
 C_REM = off.C_1997
 C_DUNE, C_LAND, C_WATER, C_ROAD = "#c8a165", "#f0e6c8", "#a8c8e0", "#1a1a1a"
 INK = off.INK
+# -----------------------------------------------------------------------------
 
 
+# trunc(shift / 10)
 def n_cells(metres: float) -> int:
-    """trunc(shift / 10): a row only once a FULL cell of change is measured.
-    The rule HAT_footprint_1984.py applies; repeated here ONLY for the
-    easting-frame cross-check, which that script does not carry."""
     return int(np.trunc(metres / CELL_M))
 
 
+# The footprint table, or stop with how to write it
 def read_footprint(path: Path) -> dict[int, dict]:
     if not path.exists():
         raise SystemExit(
@@ -137,6 +96,7 @@ def read_footprint(path: Path) -> dict[int, dict]:
     return out
 
 
+# The easting cross-check shifts, or {} if absent
 def read_easting(path: Path) -> dict[int, float]:
     if not path.exists():
         print(f"  NOTE: {path.name} absent - cross-check column left blank")
@@ -149,6 +109,7 @@ def read_easting(path: Path) -> dict[int, float]:
     return out
 
 
+# A float, or NaN for anything that is not a number
 def _f(v) -> float:
     try:
         return float(v)
@@ -156,16 +117,10 @@ def _f(v) -> float:
         return float("nan")
 
 
-# =============================================================================
-# THE FIGURE - the grid as the model would hold it
-# =============================================================================
+# The figure - the grid as the model would hold it
 
+# The communities as a bar along the BOTTOM of the strip, names below it and village ticks above it, ...
 def _community_bar(ax, y_bar: float, x_lo: float, x_hi: float) -> None:
-    """The communities as a bar along the BOTTOM of the strip, names below it and
-    village ticks above it, from HATTERAS_ANNOTATIONS - the same object every
-    other island figure uses. Below rather than above (2026-09-07): above, the
-    names collided with the +N labels and with each other (Tri-Village's
-    villages)."""
     ann = off.HATTERAS_ANNOTATIONS
     for name, (lo, hi) in ann.town_spans.items():
         a, b = max(lo - 0.5, x_lo), min(hi + 0.5, x_hi)
@@ -184,15 +139,8 @@ def _community_bar(ax, y_bar: float, x_lo: float, x_hi: float) -> None:
                     color=ann.color_village_line, clip_on=False)
 
 
+# One alongshore strip as RGBA, rows DOWN the page from the dune
 def build_strip(domains, topo_dir, n_by):
-    """
-    One alongshore strip as RGBA, rows DOWN the page from the dune. The dune
-    stays put. Added rows go in between the dune and the existing interior,
-    which is pushed down by N. Removed rows are the existing rows 0..|N|-1,
-    left in place here and hatched by the caller: what the model would hold is
-    the interior starting at row |N|. Existing cells carry the project's
-    elevation classes; white is off the array.
-    """
     cmap, norm, _ = elevation_cmap()
     dune_rgba = np.array(matplotlib.colors.to_rgba(C_DUNE))
     add_rgba = np.array(matplotlib.colors.to_rgba(C_ADD_FILL))
@@ -204,15 +152,12 @@ def build_strip(domains, topo_dir, n_by):
         img = np.ones((ROWS_SHOWN, topo.shape[1], 4))
         img[:DUNE_ROWS] = dune_rgba
         z = cmap(norm(topo * CELL_M))
-        # rows 0..ins-1 stay where they are; the block goes in at `ins`; the
-        # rest of the interior is pushed down by N (add) or stays (remove -
-        # the caller hatches the rows that go)
+        # Rows 0..ins-1 stay where they are
         head = min(ins, topo.shape[0])
         img[DUNE_ROWS:DUNE_ROWS + head] = z[:head]
         r0 = DUNE_ROWS + head + max(n, 0)
         if FILL == "copy" and ANCHOR == "road" and n > 0:
-            # the fill rule (HAT_fill_copy_scope.py): the N rows that follow
-            # the insert point, copied cell by cell
+            # The fill rule (HAT_fill_copy_scope.py)
             img[DUNE_ROWS + head:r0] = z[head:head + n]
         else:
             img[DUNE_ROWS + head:r0] = add_rgba
@@ -226,6 +171,7 @@ def build_strip(domains, topo_dir, n_by):
 INSERT_ROW: dict = {}     # domain -> insert_row_behind_road, filled by main()
 
 
+# Every domain's grid strip with the rows added or removed
 def fig_grid(rows, topo_dir):
     off.apply_style()
     n_by = {r["domain"]: r["n_rows"] for r in rows}
@@ -254,31 +200,16 @@ def fig_grid(rows, topo_dir):
                 ax.add_patch(Rectangle((d - 0.5, DUNE_ROWS + ins), 1.0, -n, facecolor="none",
                                        edgecolor=C_REM, linewidth=0.6, zorder=4))
             if n > 0 and FILL == "copy" and ANCHOR == "road":
-                # the replaced rows, outlined so the fill reads as part of the
-                # interior and still shows where it is
+                # The replaced rows, outlined so the fill still shows where it is
                 ax.add_patch(Rectangle((d - 0.5, DUNE_ROWS + ins), 1.0, n, facecolor="none",
                                        edgecolor=C_ADD, linewidth=0.9, zorder=6))
             if n:
                 ax.text(d, -1.4, f"{n:+d}", fontsize=7.2, ha="center", va="bottom",
                         color=C_ADD if n > 0 else C_REM, fontweight="bold")
-            # NC-12 at its measured position (seaward edge, 20 m). It does not
-            # move: with rows added it is pushed down with the interior; with
-            # rows removed it stays where the surviving rows put it.
-            # dune anchor: NC-12 at its MEASURED position (unfloored; at GIS 85/86
-            # that is seaward of row 0), pushed down with the interior. Road
-            # anchor: NC-12 where the MODEL holds it - two straight rows at
-            # int(setback/10), the floored setback - and the block sits behind it.
+            # NC-12 at its measured position (seaward edge, 20 m)
             sb = sb_by[d] if ANCHOR == "dune" else sb_model_by[d]
             if ANCHOR == "road" and np.isfinite(sb_new_by.get(d, np.nan)):
-                # Two road symbols, drawn the same way at every road domain
-                # (2026-09-08, Hannah: the roadway labelling was not clear).
-                #   filled  NC-12 as the model holds it in v3: two rows at the
-                #           1984 setback, int(setback_new/10) from row 0
-                #   outline NC-12 as surveyed: the pavement rows of the 1984
-                #           alignment on this surface, today's setback
-                # Where rows are removed in front of the road the strip is still
-                # the v2 frame (the hatched rows are on it), so the model's road
-                # is drawn on the v2 cells it ends up on: |N| rows further down.
+                # Two road symbols, drawn the same way at every road domain (2026-09-08, Hannah
                 y_old = DUNE_ROWS + sb // CELL_M
                 y_new = DUNE_ROWS + sb_new_by[d] // CELL_M + (-n if n < 0 else 0)
                 ax.add_patch(Rectangle((d - 0.32, y_new), 0.64, 2.0, facecolor=C_ROAD,
@@ -314,10 +245,7 @@ def fig_grid(rows, topo_dir):
         + [f"above {bounds[-2]:g}"]
     handles = [Patch(facecolor=cmap(i), edgecolor="0.4", linewidth=0.4, label=lab)
                for i, lab in enumerate(labels)]
-    # Legend wording (2026-09-08, Hannah): plain, academic, no working
-    # vocabulary - "today's setback", "v3", "as surveyed" - on the figure.
-    # The two road symbols are the same road at two setbacks: the one measured
-    # on the 1996 surface, and the 1984 one the model is given.
+    # Legend wording (2026-09-08, Hannah)
     handles += [Patch(facecolor="white", edgecolor="0.4", linewidth=0.4, label="beyond the domain"),
                 Patch(facecolor=C_DUNE, edgecolor="none", label=f"dune crest rows ({DUNE_ROWS})"),
                 (Patch(facecolor="none", edgecolor=C_ADD, linewidth=0.9,
@@ -348,10 +276,9 @@ def fig_grid(rows, topo_dir):
     return p
 
 
-# =============================================================================
-# THE REPORT
-# =============================================================================
+# The report
 
+# The plain-text scope report
 def write_report(rows, topo_name, path, fig_path):
     n = np.array([r["n_rows"] for r in rows])
     add = [r for r in rows if r["n_rows"] > 0]
@@ -465,10 +392,7 @@ def write_report(rows, topo_name, path, fig_path):
     return "\n".join(L)
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: read N, draw the grid, write the report and table
 def main(base=None, anchor="dune", fill="blank"):
     global ANCHOR, FILL
     ANCHOR, FILL = anchor, fill
@@ -521,8 +445,7 @@ def main(base=None, anchor="dune", fill="blank"):
 
     fig = fig_grid(rows, topo_dir)
     if anchor == "road":
-        # the table and the report are the same for both placements (N does
-        # not change); only the grid is redrawn
+        # The table and the report are the same for both placements (N does not change)
         print(f"\n  figure : {fig}   (rows behind the road{', copy fill' if fill == 'copy' else ''}; "
               f"table/report unchanged)")
         return

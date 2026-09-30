@@ -1,83 +1,13 @@
 #!/usr/bin/env python3
-r"""
-HAT_imagery_review_gui.py
-==============================================================================
-The aerial-imagery review of the 1984 footprint as a window you work in,
-instead of 62 PNGs and a spreadsheet. Same data, same overlays, same sheet as
-HAT_imagery_review_1984.py - this only changes how the judgement is entered,
-and lets the reviewer MEASURE the one thing the verdict rests on.
+"""
+The aerial-imagery review of the 1984 footprint as a window you work in, with measuring tools.
 
-WHAT THE WINDOW SHOWS
-    Left: the 1984 and 1997 photographs of one domain side by side (a third
-    panel, the 1 m lidar, on request), sharing one view so pan and zoom in
-    either moves both (the matplotlib toolbar below them; the mouse wheel
-    zooms about the pointer). Under them the brightness strip. Every overlay
-    - the two digitized dune lines, NC-12, interior row 0, the road rows,
-    v3's rows, the seaward alternative, the domain box, your picks - is a
-    checkbox, so the photograph can be looked at bare and the lines brought
-    back.
-    BLINK MODE puts both photographs in ONE panel and flips between them on
-    Space (or B), or on a timer. The eye catches movement between two frames
-    of the same view far better than side by side, which matters for the
-    one-cell offsets most of the footprint is made of.
-    Right: the domain's numbers from the footprint table, the pick buttons,
-    the verdict form (the six columns of imagery_review_1984.csv, with the
-    vocabulary as drop-downs), Save, Prev / Next, and Summarize.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/3-placement/imagery-review/HAT_imagery_review_gui.py
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/3-placement/imagery-review/HAT_imagery_review_gui.py --domains 85,63
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/3-placement/imagery-review/HAT_imagery_review_gui.py --smoke
 
-THE PICKS (measured by the reviewer, not by code)
-    Three features per year, each one click on the photograph after its button:
-        toe    the seaward vegetation line, beach sand -> dune vegetation: the
-               feature the digitized dune lines trace
-        back   the landward edge of the dune band, hummocky dune sand -> flat
-               vegetated interior
-        road   the seaward edge of the pavement AS IT IS IN THAT PHOTOGRAPH
-    Each click is taken on the profile nearest it and stored as a position and
-    as metres landward of interior row 0 (negative = seaward). From them, per
-    year, the three bands the placement question is about:
-        dune_band     back - toe        the dune field
-        back_to_road  road - back       the strip between the dune and the road
-        toe_to_road   road - toe        the whole crest-to-road space
-    and once both years are picked, their change 1997 - 1984, the shift of each
-    feature (positive where the 1984 feature lay seaward, the footprint's sign),
-    and - taking N as given (Hannah, 2026-09-09) - where the lost or gained
-    width sat:
-        lost_dune_band     = -(d_dune_band)
-        lost_back_to_road  = -(d_back_to_road)
-        lost_behind_road   = N x 10 m - the two above      (the remainder)
-    `band_suggests` names the largest share (dune_band / back_to_road /
-    behind_road / none when N is 0) and is DERIVED; the verdict is yours.
-    Nothing is snapped: the number is where you clicked, on the photograph as
-    georeferenced (stated accuracy 1.2 m). A domain without a model road still
-    takes the road pick if a road is visible; the bands that need it stay blank
-    otherwise.
-
-WHAT IT WRITES
-    On Save (Ctrl+S, or "Save & next"): the six verdict columns and the
-    measured columns of the domain on screen, plus reviewed_by / reviewed_at,
-    into 2-domain-reconstruction-1984/3-placement/imagery-review/imagery_review_1984.csv. Nothing else in the sheet
-    is touched, and HAT_imagery_review_1984.py keeps these columns when it
-    re-runs. "Summarize" runs HAT_imagery_review_summary.py on the sheet as
-    it stands.
-
-KEYS   Right / Left  next / previous domain      Ctrl+S  save
-       Space or B    flip the year in blink mode   Esc     cancel a pick
-       1 2 3         pick toe / back / road on the year shown (blink mode)
-       (keys are ignored while the cursor is in a text box)
-
-PERFORMANCE
-    A domain takes ~5-10 s to read from the drive the first time. The arrays
-    are cached under ~/.cascade/imagery_review_cache/ (outside the repo, keyed
-    on domain, year, window and resolution), and the next domain in the list
-    is read in the background while you look at the current one. Delete the
-    cache folder to force a re-read (e.g. after changing the merge rule in
-    the batch script).
-
-USAGE
-    python HAT_imagery_review_gui.py                 # every domain in the sheet
-    python HAT_imagery_review_gui.py --domains 85,63 # a subset
-    python HAT_imagery_review_gui.py --years 1984,1997,1996
-    python HAT_imagery_review_gui.py --smoke         # open, draw one, screenshot, close
-==============================================================================
+Same data, overlays and sheet as HAT_imagery_review_1984.py; only how the
+judgement is entered changes. Interactive. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -108,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import HAT_imagery_review_1984 as R  # noqa: E402   the batch script: data, overlays, sheet
 off = R.off
 
+# --- CONFIG ------------------------------------------------------------------
 CACHE_DIR = Path.home() / ".cascade" / "imagery_review_cache"
 YEAR_COLOUR = {1984: off.LINE_STYLE[1984]["color"], 1997: off.LINE_STYLE[1997]["color"]}
 PICK_YEARS = R.PICK_YEARS          # the two the sheet has columns for
@@ -127,8 +58,10 @@ OVERLAYS = [                       # key, label, default on
     ("picks", "your picks (toe, back of dune, road)", True),
     ("stripmarks", "lines and rows on the strip", True),
 ]
+# -----------------------------------------------------------------------------
 
 
+# A float, or NaN for anything that is not a number
 def _num(v) -> float:
     try:
         return float(v)
@@ -136,12 +69,8 @@ def _num(v) -> float:
         return np.nan
 
 
-# =============================================================================
-# DATA
-# =============================================================================
-
+# Everything the window needs, loaded once
 class Data:
-    """Everything the window needs, loaded once; per-domain arrays cached."""
 
     def __init__(self, years: list[int]):
         self.years = years
@@ -171,8 +100,8 @@ class Data:
         win = R.domain_window(pr, pl, bounds)
         return {"t": t, "pr": pr, "pl": pl, "win": win, "bounds": bounds}
 
+    # Photographs (and their strips) for one domain, from memory, disk or the drive
     def load(self, d: int) -> dict:
-        """Photographs (and their strips) for one domain, from memory, disk or the drive."""
         with self._lock:
             if d in self._cache:
                 return self._cache[d]
@@ -220,12 +149,10 @@ class Data:
         return rec["lidar"]
 
 
-# =============================================================================
-# THE MEASUREMENT BEHIND A PICK
-# =============================================================================
+# The measurement behind a pick
 
+# One click -> the columns for that feature and year, on the nearest profile
 def measure_pick(rec: dict, year: int, kind: str, x: float, y: float) -> dict:
-    """One click -> the columns for that feature and year, on the nearest profile."""
     pr = rec["pr"]
     i = int(np.argmin(np.abs(pr["interior_y"].to_numpy() - y)))
     p = pr.iloc[i]
@@ -235,8 +162,8 @@ def measure_pick(rec: dict, year: int, kind: str, x: float, y: float) -> dict:
             f"{k}_from_row0_m": round(from_row0, 1)}
 
 
+# Bands per year, their change, and where the width sat given N
 def derived(m: dict, n_cells: int) -> dict:
-    """Bands per year, their change, and where the width sat given N."""
     out = {}
     pos = {}
     for y in PICK_YEARS:
@@ -255,8 +182,7 @@ def derived(m: dict, n_cells: int) -> dict:
     for band in ("dune_band", "back_to_road", "toe_to_road"):
         a, b = _num(out[f"{band}{str(y0)[2:]}_m"]), _num(out[f"{band}{str(y1)[2:]}_m"])
         out[f"d_{band}_m"] = round(b - a, 1) if np.isfinite(a) and np.isfinite(b) else ""
-    # where the width sat, taking N as given: lost = 1984 - 1997 (positive where
-    # the 1984 island was wider there); the remainder is behind the road
+    # Where the width sat, taking N as given
     total = n_cells * R.CELL_M
     ld = -_num(out["d_dune_band_m"])
     lb = -_num(out["d_back_to_road_m"])
@@ -274,10 +200,9 @@ def derived(m: dict, n_cells: int) -> dict:
     return out
 
 
-# =============================================================================
-# THE WINDOW
-# =============================================================================
+# The window
 
+# The review window: one domain at a time, verdicts and picks saved to the sheet
 class App:
     def __init__(self, data: Data, ids: list[int], smoke: bool = False):
         self.data = data
@@ -332,7 +257,7 @@ class App:
         self.status("ready")
         self.show(0)
 
-    # ---- the right-hand panel ------------------------------------------------
+    # The right-hand panel
     def build_right(self, f):
         nav = ttk.Frame(f)
         nav.pack(fill=tk.X)
@@ -425,13 +350,13 @@ class App:
         self.status_var.set(f"{datetime.now():%H:%M:%S}  {msg}")
         self.root.update_idletasks()
 
+    # Keys act unless the cursor is in a text box or drop-down
     def _key(self, fn):
-        """Keys act unless the cursor is in a text box or drop-down."""
         if isinstance(self.root.focus_get(), (tk.Text, ttk.Combobox)):
             return
         fn()
 
-    # ---- navigation ---------------------------------------------------------
+    # Navigation
     def step(self, k: int):
         j = self.i + k
         if 0 <= j < len(self.ids):
@@ -464,7 +389,7 @@ class App:
         except Exception:
             pass
 
-    # ---- drawing ------------------------------------------------------------
+    # Drawing
     def draw(self, d: int, rec: dict):
         self.fig.clear()
         self.artists = {k: [] for k, _, _ in OVERLAYS}
@@ -617,8 +542,8 @@ class App:
             self._set_visible(key, self.overlay_vars[key].get())
         self.canvas.draw_idle()
 
+    # Your picks, on every map panel and on the strip: colour by year, marker by feature
     def draw_picks(self):
-        """Your picks, on every map panel and on the strip: colour by year, marker by feature."""
         for a in self.artists.get("picks", []):
             try:
                 a.remove()
@@ -661,8 +586,8 @@ class App:
         self._set_visible(key, self.overlay_vars[key].get())
         self.canvas.draw_idle()
 
+    # Wheel zoom about the pointer on the map panels (all move together)
     def on_scroll(self, event):
-        """Wheel zoom about the pointer on the map panels (all move together)."""
         ax = event.inaxes
         if ax is None or ax not in self.all_axes or event.xdata is None:
             return
@@ -673,7 +598,7 @@ class App:
         ax.set_ylim(event.ydata - (event.ydata - y0) * f, event.ydata + (y1 - event.ydata) * f)
         self.canvas.draw_idle()
 
-    # ---- blink ----------------------------------------------------------------
+    # Blink
     def _show_blink_year(self):
         for y, im in self.blink_images.items():
             im.set_visible(y == self.blink_year)
@@ -707,7 +632,7 @@ class App:
         self.flip()
         self._blink_job = self.root.after(BLINK_MS, self._tick)
 
-    # ---- picks ------------------------------------------------------------------
+    # Picks
     def start_pick(self, year: int, kind: str):
         if self.toolbar.mode:                # leave pan/zoom so the click reaches us
             if str(self.toolbar.mode).lower().startswith("pan"):
@@ -786,7 +711,7 @@ class App:
             lines.append(f"  -> bands suggest: {m['band_suggests']}   (derived; the verdict is yours)")
         self.measure_var.set("\n".join(lines) if lines else "no picks yet")
 
-    # ---- the form -------------------------------------------------------------
+    # The form
     def fill_info(self, d: int, rec: dict):
         t = rec["t"]
         n = int(t["n_cells"])
@@ -864,7 +789,7 @@ class App:
         except Exception as e:
             self.status(f"summary failed: {e}")
 
-    # ---- lifecycle ------------------------------------------------------------
+    # Lifecycle
     def _smoke_done(self):
         out = CACHE_DIR.parent / "imagery_review_gui_smoke.png"       # outside the repo
         self.fig.savefig(out, dpi=100)
@@ -881,6 +806,7 @@ class App:
         self.root.mainloop()
 
 
+# Run: load the sheet's domains and open the window
 def main() -> None:
     ap = argparse.ArgumentParser(description="the imagery review as a window")
     ap.add_argument("--domains", default="", help="comma-separated GIS ids (default: the sheet's domains)")

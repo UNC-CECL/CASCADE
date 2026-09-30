@@ -1,39 +1,12 @@
 #!/usr/bin/env python3
-r"""
-HAT_plot_b3d_grid.py
-==============================================================================
-The Barrier3D grid itself -- the arrays CASCADE is handed -- for the
-extraction and the layer built from it, side by side (--base/--insert).
+"""
+The Barrier3D grid itself, for the extraction and the layer built from it, side by side.
 
-WHAT IS DRAWN
-    Every cell the model receives for a domain, in the model's own indexing:
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_plot_b3d_grid.py
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_plot_b3d_grid.py --domains 85 --rows 40
 
-        dune rows      DuneDomain, 2 rows, height above berm -> m MHW
-        interior rows  InteriorDomain, row 0 seaward, increasing landward
-        NC-12          the 2-cell block bulldoze() writes, at
-                       road_start = int(setback / dy)
-
-    Cross-shore runs DOWN the page (row 0 at the top, behind the dune), and
-    alongshore runs across -- 50 cells, 500 m.
-
-    The beach and shoreface are NOT in these arrays. Barrier3D carries them as
-    parameters, not cells, so they are named in the caption but not drawn; the
-    top of the dune strip is where the model's grid begins.
-
-WHY BOTH VERSIONS SIDE BY SIDE
-    v2 prepends N interior rows behind the dune so the 1984 roadway starts where
-    it historically did. In the grid that shows as the road block moving DOWN the
-    page: the dune does not move relative to the array, the ground between the
-    dune and the road grows.
-
-    At GIS 85 the difference is stark. In v1 the road occupies rows 0-1 -- on
-    interior row 0, which is the dune crest itself -- because the setback
-    measured -10 m and was floored to 0. In v2 it sits at rows 5-6 on backdune.
-
-USAGE
-    python HAT_plot_b3d_grid.py
-    python HAT_plot_b3d_grid.py --domains 85 --rows 40
-==============================================================================
+Guarded: the layers it draws were deleted 2026-09-07, so it stops
+before drawing until one is rebuilt. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -56,6 +29,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -73,23 +47,17 @@ from site_layer.hat_figure_style import (apply_style, C, INK, caption,      # no
                               spines_for_image, _title)
 
 from site_layer import hat_topo_version as _tv  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 ROAD_DIR = _tv.road_setback_dir(1984)
 BERM_EL_M = 1.7      # BermEl, Hatteras-CASCADE-parameters.yaml
 DUNE_ROWS = 2        # DuneWidth 20 m / dy 10 m; row 1 is a copy of row 0
 ROAD_CELLS = 2       # road_width 20 m / dy 10 m
-# Defaults, overridable per run. HARDCODING THESE IS WHAT WENT WRONG: the
-# script was named _v1_v2 and defaulted its output to that name, then was
-# repointed at v3/v4 -- so a default run would have written v3/v4 content
-# into a file called v1_v2 and quietly replaced a correct figure.
-# Default v3 -> v5 since 2026-09-03. It was v3 -> v4, which meant a bare
-# run wrote HAT_b3d_grid_v3_v4.png - a figure deliberately deleted as
-# superseded, so the default recreated the thing the cleanup removed.
-# DELETED 2026-09-07 with every layer (only unmodified topography is kept);
-# the literal is kept as the name of what this drew. require_version() in
-# main() says so before any array is opened.
+# Defaults, overridable per run; the layer they named was deleted 2026-09-07
 BASE_V, INS_V = "v2", "v4"   # base was "v3" and the layer "v5" until the 2026-09-04 renumber
+# -----------------------------------------------------------------------------
 
 
+# One version's topography and dune arrays for a domain, with its audit
 def load_version(version, domain):
     root = dune_topo_root("1984-start") / version
     topo = np.load(root / "topography" / array_name("topography", domain)) * 10.0
@@ -101,6 +69,7 @@ def load_version(version, domain):
     return topo, dune, aud.get(domain)
 
 
+# The domain's measured 1984 setback from the road-offset table
 def baseline_setback(domain):
     for r in csv.DictReader(open(ROAD_DIR / "RoadOffset_1984_domains.csv")):
         if int(r["domain"]) == domain and r["setback_dunestart_m"] not in ("", "nan"):
@@ -108,13 +77,9 @@ def baseline_setback(domain):
     return np.nan
 
 
+# One domain's grid
 def draw(ax, topo, dune, setback_model, n_inserted, nrows, idx, title,
          ylabel=True, xlabel=True):
-    """One domain's grid: dune strip on top, interior below, NC-12 outlined.
-
-    The per-panel "+N rows" count came off the canvas 2026-09-10 with the
-    title's setback figures: the house rule puts statistics in the caption,
-    and main() writes one caption clause per domain from the same numbers."""
     cmap, norm, _ = elevation_cmap()
     n_along = topo.shape[1]
     dune_strip = np.tile(BERM_EL_M + dune[None, :n_along], (DUNE_ROWS, 1))
@@ -152,6 +117,7 @@ def draw(ax, topo, dune, setback_model, n_inserted, nrows, idx, title,
     _title(ax, idx, title)
 
 
+# Run: base and layer side by side for each domain
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--domains", default="84,85,86")
@@ -228,11 +194,9 @@ def main() -> None:
             "dune and the road grows. {notes}"
             .format(notes=" ".join(notes)))
 
-    # Named for what it DRAWS, so it cannot silently replace another pair's
-    # figure.
+    # Named for what it DRAWS, so it cannot silently replace another pair's figure
     out = Path(args.out) if args.out else (
-        # NOTE 2026-09-08: this figure now lives in figures/superseded-layers/; the script is
-        # guarded (no layer on disk), so nothing is written here until a layer is rebuilt.
+        # Superseded-layers figure: guarded, writes nothing until a layer is rebuilt
         insert_figures_dir("1984-start", "6-result")
         / "HAT_b3d_grid_{}_{}{}.png".format(
             BASE_V, INS_V,

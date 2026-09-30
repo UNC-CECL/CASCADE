@@ -1,64 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_plot_fill_options.py
-==============================================================================
-What can the added interior rows be MADE of? Four candidates and a control,
-one domain.
+"""
+What can the added interior rows be made of? Four candidates and a control, on one domain.
 
-THE PROBLEM
-    The rows added behind the dune stand where land existed in 1984 and had
-    eroded away by 1996. No survey covers that ground. The DEM does have cells
-    at those coordinates, but they are the 1996 surface -- a later, lower
-    landform at the same place. So every option below is a different answer to
-    "what was here in 1984", and none of them is a measurement of it.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/4-fill/HAT_plot_fill_options.py [--domain 85]
 
-FOUR CANDIDATES AND A CONTROL
-    Each is named by its RULE, in the legend, on the bar axes and in the
-    caption -- the b/c/d/e tags this figure carried until 2026-09-10 read as
-    panel letters beside the house style's own (a)/(b)/(c), which is a trap
-    worth closing. The grid figure names the same rules the same way.
-
-    flat backdune     flat, at the median of interior rows 1-3
-    matched backdune  today's near-dune PROFILE copied to the 1984 position
-                     -- "the 1984 backdune looked like the present one, just
-                     further seaward". Real cells, so it carries alongshore
-                     texture the flat fill cannot.
-    measured + floor  the real DEM cell where it is dry land, floored at the
-                     backdune platform. THIS IS THE SHIPPED RULE -- v4 at the
-                     ten block domains, v5 island-wide. Same rule, new scope.
-    measured + median  every dry cell kept AS MEASURED; only the cells at or
-                     below MHW filled, with the median of the block's own dry
-                     cells. `--fill median`. One guard, one constant, and no
-                     measurement is ever raised -- 91% measured at GIS 85
-                     against the floored rule's 47%.
-    raw DEM          the 1996 cells as they are, no floor, no dry-land test.
-                     A CONTROL, NOT A CANDIDATE -- drawn to show what the two
-                     guards actually reject, in numbers.
-
-    Dropped 2026-09-03: `taper`, a linear platform-to-row-0 ramp. Fully
-    invented, and it anchored on row 0 -- which at GIS 85 IS the mis-picked
-    1996 crest, so it inherited a known-bad endpoint. `--fill taper` still
-    exists in HAT_insert_seaward_rows.py: removing a build capability is a
-    different decision from removing a figure panel.
-
-    `matched backdune` is NOT a --fill choice in HAT_insert_seaward_rows.py.
-    It is drawn as a candidate; building it needs a new fill rule.
-
-    Still undrawn: an alongshore analogue from a neighbouring domain, and a
-    mass-conservative reconstruction. Neither is a one-line variant of the
-    others, and the second is the only one that would be DERIVED rather than
-    asserted.
-
-WHAT TO LOOK FOR
-    Where NC-12 lands. The road is a fixed 2-cell block at a fixed setback, so
-    the only thing that changes between options is the ground under it.
-    `measured + floor` puts it on 3.17 / 4.96 m because those cells are the
-    1996 DUNE FACE; the flat and matched backdunes put it on backdune, where a
-    road behind a dune belongs.
-
-USAGE
-    python HAT_plot_fill_options.py [--domain 85]
-==============================================================================
+Guarded: the layers it draws were deleted 2026-09-07, so it stops
+before drawing until one is rebuilt. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -83,6 +30,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch, Rectangle
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -98,20 +46,17 @@ from site_layer.hat_topo_version import require_version  # noqa: E402
 from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa: E402
                               caption, figsize, open_frame, save, _title)
 
-# INS_V supplies N and the post-insert setback ONLY; the figure draws
-# blocks it builds itself. Repointed v4 -> v5 on 2026-09-03: N is
-# identical at all ten block domains (verified), and v5 is the version
-# taken forward, so v4 no longer has to exist for this figure to build.
-# DELETED 2026-09-07 with every layer (only unmodified topography is kept);
-# the literal is kept as the name of what this drew. require_version() in
-# main() says so before any array is opened.
+# --- CONFIG ------------------------------------------------------------------
+# INS_V supplies N and the post-insert setback ONLY
 BASE_V, INS_V = "v2", "v4"   # base was "v3" and the layer "v5" until the 2026-09-04 renumber
 OFFSET_SCRIPT = (REPO / "scripts/input_prep/4-mgmt-forcings/road_offset"
                  / "1-produce/HAT_road_offset_from_dune_start.py")
 BACKDUNE_ROWS = 3
 ROAD_CELLS = 2
+# -----------------------------------------------------------------------------
 
 
+# The extractor module, for the 1984-start product
 def load_ext():
     spec = _iu.spec_from_file_location("hat_off", OFFSET_SCRIPT)
     m = _iu.module_from_spec(spec)
@@ -120,8 +65,8 @@ def load_ext():
     return m.load_extractor("1984-start")
 
 
+# The DEM cell at each added position, per profile
 def real_cells(ext, dom, row0, n, n_along):
-    """The DEM cell at each added position, per profile. NaN where off-array."""
     z = dom["z"]
     out = np.full((n, n_along), np.nan)
     for i in range(n_along):
@@ -132,6 +77,7 @@ def real_cells(ext, dom, row0, n, n_along):
     return out
 
 
+# Run: the candidate fills on one domain's profile
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--domain", type=int, default=85)
@@ -161,7 +107,7 @@ def main() -> None:
     plat = np.median(v3[1:1 + BACKDUNE_ROWS, :], axis=0)          # (along,)
     real = real_cells(ext, dom, row0, n, n_along)                  # (n, along)
 
-    # --- the candidate blocks, all (n, n_along) in m MHW ------------------
+    # The candidate blocks, all (n, n_along) in m mhw
     flat = np.repeat(plat[None, :], n, axis=0)
     matched = v3[:n, :].copy()          # today's near-dune profile, moved
     measured = np.where(np.isfinite(real) & (real > 0.0),
@@ -170,26 +116,9 @@ def main() -> None:
 
     dry = np.isfinite(real) & (real > 0.0)
 
-    # TAGGED b/c/d/e TO MATCH THE GRID FIGURE'S PANEL LETTERS, where (a) is the
-    # reference. The two figures are read side by side and single letters that
-    # meant different things in each was a trap worth closing.
-    #
-    # THE "% FROM THE DEM" IS CARRIED HERE, beside the block it describes.
-    # It used to be recomputed further down by an `if tag == "A"` chain, which
-    # fell through to the wrong branch the moment these tags were renamed and
-    # silently reported 47% for every option. A number that describes a block
-    # belongs with the block.
-    #
-    # `matched backdune` counts as 0%: its cells ARE real measurements, but of
-    # a different place, copied. Measured-ness here means "measured AT THESE
-    # COORDINATES", which is the only sense that bears on whether the fill is
-    # invented.
+    # TAGGED b/c/d/e TO MATCH THE GRID FIGURE'S PANEL LETTERS, where (a) is the reference
     opts = [
-        # (key, legend label, axis label, block, colour, % taken from the DEM)
-        #
-        # Five house colours, one per rule; the same colour names the rule in
-        # all three panels. "measured + floor" is the rule the layers were
-        # built with, so it carries C["ACCENT"], the change under test.
+        # (key, legend label, axis label, block, colour, % from the DEM); one house colour per rule
         ("flat", "flat backdune", "flat\nbackdune", flat, C["LATE"], 0.0),
         ("matched", "matched backdune", "matched\nbackdune", matched,
          C["REF"], 0.0),
@@ -208,7 +137,7 @@ def main() -> None:
                      constrained_layout=True)
     gs = fig.add_gridspec(2, 2, height_ratios=[1.15, 1.0])
 
-    # ---- (a) the five profiles in a common frame ------------------------
+    # (a) the five profiles in a common frame
     ax = fig.add_subplot(gs[0, :])
     x_body = np.arange(v3.shape[0]) * 10.0
     keep = x_body <= 260
@@ -241,7 +170,7 @@ def main() -> None:
               columnspacing=1.0, borderpad=0.35)
     _title(ax, 0, "candidate fills in profile")
 
-    # ---- (b) what NC-12 ends up sitting on ------------------------------
+    # (b) what nc-12 ends up sitting on
     axb = fig.add_subplot(gs[1, 0])
     rs = int(setb / 10.0)
     unders = []
@@ -268,7 +197,7 @@ def main() -> None:
     ], loc="upper left", fontsize=7, handlelength=1.4, borderpad=0.35)
     _title(axb, 1, "ground under NC-12")
 
-    # ---- (c) how much of each block is invented -------------------------
+    # (c) how much of each block is invented
     axc = fig.add_subplot(gs[1, 1])
     frac = [o[5] for o in opts]
     axc.bar(xi, frac, 0.62, color=cols)
@@ -305,8 +234,7 @@ def main() -> None:
                     plat=float(np.median(plat))))
 
     out = Path(args.out) if args.out else (
-        # NOTE 2026-09-08: this figure now lives in figures/superseded-layers/; the script is
-        # guarded (no layer on disk), so nothing is written here until a layer is rebuilt.
+        # Superseded-layers figure: guarded, writes nothing until a layer is rebuilt
         insert_figures_dir("1984-start", "4-fill")
         / "HAT_fill_options_GIS{}.png".format(D))
     written = save(fig, out)

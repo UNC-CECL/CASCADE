@@ -1,27 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_plot_insert_explainer.py
-==============================================================================
-How the 1984 seaward-row insert is built, on one cross-shore line at one domain
-(GIS 85 by default), drawn from the real arrays.
+"""
+How the 1984 seaward-row insert is built, on one cross-shore line at one domain, from the real arrays.
 
-    (a) the survey along that line, cell by cell, shaded by survey year, with
-        the crest pick and the measured 1984 road position
-    (b) what the extraction keeps: the crest cell becomes Barrier3D's dune
-        rows, everything landward of it is the interior (row 0 first), and
-        everything seaward is dropped
-    (c) the insert: N rows are added at the dropped coordinates, the dune rows
-        move in front of them, the old crest stays inside, and the road does
-        not move -- its setback grows by 10 N
-    (d) what each version writes into the N cells, over the survey values that
-        are there
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/4-fill/HAT_plot_insert_explainer.py [--domain 85]
 
-Alongshore MEDIANS of the domain's 50 profiles; the cross-shore axis is metres
-from v2's interior row 0 (negative = seaward), the frame every version shares.
-
-USAGE
-    python HAT_plot_insert_explainer.py [--domain 85]
-==============================================================================
+Guarded: the layers it draws were deleted 2026-09-07, so it stops
+before drawing until one is rebuilt. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -51,11 +35,10 @@ import HAT_insert_seaward_rows as ins  # noqa: E402
 from site_layer.hat_topo_version import dune_topo_root, insert_figures_dir  # noqa: E402
 from site_layer.hat_topo_version import require_version  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 PRODUCT = "1984-start"
 BASE = "v2"
-# DELETED 2026-09-07 with every layer (only unmodified topography is kept);
-# the literal is kept as the name of what this drew. require_version() in
-# main() says so before any array is opened.
+# DELETED 2026-09-07 with every layer (only unmodified topography is kept)
 LAYERS = [("v4", "v4  measured + floor", "#2166ac", "-"),
           ("v5", "v5  measured + median", "#b2182b", "-"),
           ("v6", "v6  flat platform", "#1b7837", "--"),
@@ -63,10 +46,11 @@ LAYERS = [("v4", "v4  measured + floor", "#2166ac", "-"),
           ("v8", "v8  matched, crest skipped", "#7b3294", "--")]
 YEAR_COLOUR = {1996: "#e8c98a", 2009: "#c9c9c9", 2014: "#a9b8c9", 0: "white"}
 CELL = 10.0
+# -----------------------------------------------------------------------------
 
 
+# Survey year per cell in the extractor's z frame (n_along, n_cross)
 def survey_in_z_frame(ext, dom, D):
-    """Survey year per cell in the extractor's z frame (n_along, n_cross)."""
     s = np.load(dune_topo_root(PRODUCT).parent / "1-extraction" / "npy-arrays_survey" / f"domain_{D}.npy").astype(float)
     s = ext.orient_ocean_right(s, ext.OCEAN_LOC)[:, ::-1]
     c0 = int(dom["c0"]); sh = np.asarray(dom["shear"]).astype(int)
@@ -79,6 +63,7 @@ def survey_in_z_frame(ext, dom, D):
     return out
 
 
+# Run: the explainer panels for one domain
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--domain", type=int, default=85)
@@ -135,7 +120,7 @@ def main() -> None:
             raw_sb = float(r["setback_raw_before_m"])
     road_x = raw_sb if raw_sb is not None else None       # metres from v2 row 0
 
-    # ------------------------------------------------------------------ figure
+    # Figure
     fig, axes = plt.subplots(2, 2, figsize=(15, 9.5))
     (a, b), (c, d) = axes
     crest_x = -CELL                                        # the crest cell is r0 - 1
@@ -148,8 +133,8 @@ def main() -> None:
             ax.add_patch(Rectangle((xi - CELL / 2, min(0, zi)), CELL, abs(zi), facecolor=col,
                                    edgecolor=edge, lw=.4, hatch=hatch, alpha=alpha))
 
+    # A 2-cell road bar with its seaward edge at x_left (m)
     def road(ax, x_left, label, y=-0.75):
-        """A 2-cell road bar with its seaward edge at x_left (m)."""
         if road_x is None:
             return
         ax.add_patch(Rectangle((x_left, y - 0.2), 2 * CELL, 0.4, facecolor="k"))
@@ -237,8 +222,7 @@ def main() -> None:
              "(v7 from the crest, v8 from one row behind it).",
              fontsize=8, wrap=True, va="bottom")
     fig.tight_layout(rect=(0, 0.07, 1, 0.96))
-    # NOTE 2026-09-08: this figure now lives in figures/superseded-layers/; the script is
-    # guarded (no layer on disk), so nothing is written here until a layer is rebuilt.
+    # Superseded-layers figure: guarded, writes nothing until a layer is rebuilt
     out = Path(args.out) if args.out else insert_figures_dir(PRODUCT, "4-fill") / f"HAT_insert_explainer_GIS{D}.png"
     fig.savefig(out, dpi=150)
     print("wrote", out)

@@ -1,39 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_plot_how_N_is_determined.py
-==============================================================================
-How the number of inserted rows, N, is measured. One domain, the whole chain.
+"""
+How the number of inserted rows, N, is measured: one domain, the whole chain.
 
-THE QUANTITY WANTED
-    How far the dune line moved between 1984 and the surveyed surface, in 10 m
-    cells. That distance is how far interior row 0 has to move seaward for the
-    1984 roadway to sit its true distance behind the dune.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/1-measurement/HAT_plot_how_N_is_determined.py [--domain 85]
 
-WHY IT IS A DIFFERENCE OF TWO LINES AND NOT ONE MEASUREMENT
-    The obvious measurement -- 1984 dune line against the extractor's interior
-    row 0 -- confounds two things:
-
-        row 0 - line_1984  =  (how far the island moved)          DATE
-                           +  (digitized line vs the model's row 0)  FEATURE
-
-    The feature term is not small. The 1997 line, measured the same way against
-    the same row 0, sits +16.2 m seaward of it island-wide (IQR +12.8 to +21.0)
-    -- a near-constant offset, which is what a definitional difference looks
-    like. Island-wide it accounts for ~85% of the naive number.
-
-    Differencing two digitized lines cancels it exactly:
-
-        (row0 - line_1984) - (row0 - line_1997) = line_1997 - line_1984
-
-    Row 0 drops out algebraically, so no assumption about where row 0 sits
-    survives into N. And because the same person digitized the same feature from
-    the same kind of imagery at both dates, the definitional term cancels too.
-
-    N = round( median over profiles / 10 m ),  floored at 0.
-
-USAGE
-    python HAT_plot_how_N_is_determined.py [--domain 85]
-==============================================================================
+The dune line's move between 1984 and the surveyed surface, in 10 m cells,
+from both lines against row 0 to the difference. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -54,6 +26,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -69,13 +42,14 @@ from site_layer.hat_figure_style import (apply_style, C, C_1984, C_1984_FILL,   
                               C_1997, INK, caption, figsize, open_frame,
                               save, _title)
 
-# Resolved through hat_topo_version.duneline_shift_dir - ONE definition
-# of a path that eight scripts used to build by hand. Moved under
-# 2-domain-reconstruction-1984/ on 2026-09-03.
+# --- CONFIG ------------------------------------------------------------------
+# The measured shifts, from hat_topo_version.duneline_shift_dir (one definition, eight readers)
 S = duneline_shift_dir("1984-start")
 L84, L97, LROW0, L_DATE = C_1984, C_1997, C["ROAD"], C["REF"]
+# -----------------------------------------------------------------------------
 
 
+# {profile: (dune-line cell, interior row-0 cell, ...)} for one domain
 def per_profile(fname, D):
     out = {}
     for r in csv.DictReader(open(S / fname)):
@@ -86,6 +60,7 @@ def per_profile(fname, D):
     return out
 
 
+# The domain's row of the per-domain table
 def domain_row(fname, D):
     for r in csv.DictReader(open(S / fname)):
         if int(r["domain"]) == D:
@@ -93,6 +68,7 @@ def domain_row(fname, D):
     return {}
 
 
+# Run: (a) and (b) side by side, (c) the bar below
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--domain", type=int, default=85)
@@ -118,15 +94,14 @@ def main() -> None:
     p_tot = (float(np.percentile(s84, 10)), float(np.percentile(s84, 90)))
     p_fea = (float(np.percentile(s97, 10)), float(np.percentile(s97, 90)))
 
-    # (a) and (b) side by side, (c) the bar below them. The arithmetic that
-    # used to be a monospace panel (d) is in the caption.
+    # (a) and (b) side by side, (c) the bar below; the arithmetic is in the caption
     fig = plt.figure(figsize=figsize("double", aspect=0.74),
                      constrained_layout=True)
     gs = fig.add_gridspec(2, 2, height_ratios=[1.0, 0.62])
     ax1, ax2 = fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])
     ax3 = fig.add_subplot(gs[1, :])
 
-    # ---- (a) the geometry, per profile ---------------------------------
+    # (a) the geometry, per profile
     ax1.plot(prof, row0, "-", color=LROW0, lw=1.6, label="interior row 0")
     ax1.plot(prof, line84, "-", color=L84, lw=1.3, label="1984 dune line")
     ax1.plot(prof, line97, "-", color=L97, lw=1.3, label="1997 dune line")
@@ -141,7 +116,7 @@ def main() -> None:
     ax1.grid(axis="y")
     open_frame(ax1)
 
-    # ---- (b) the two shifts, and their difference ----------------------
+    # (b) the two shifts, and their difference
     ax2.plot(prof, s84, "-", color=L84, lw=1.2,
              label="row 0 − 1984 line (total)")
     ax2.plot(prof, s97, "-", color=L97, lw=1.2,
@@ -160,7 +135,7 @@ def main() -> None:
     ax2.grid(axis="y")
     open_frame(ax2)
 
-    # ---- (c) the decomposition as a bar ---------------------------------
+    # (c) the decomposition as a bar
     ax3.barh([2], [med84], color=L84, height=0.55)
     ax3.barh([1], [med97], color=L97, height=0.55)
     ax3.barh([0], [date], color=L_DATE, height=0.55)

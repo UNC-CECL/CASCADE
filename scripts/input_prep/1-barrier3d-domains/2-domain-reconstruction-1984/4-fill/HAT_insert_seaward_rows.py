@@ -1,88 +1,12 @@
-r"""
-HAT_insert_seaward_rows.py
-==============================================================================
-Move the island seaward, per domain, by prepending fabricated interior rows.
+"""
+Move the island seaward per domain by prepending interior rows, as a new dune-topo layer.
 
-WHY THIS EXISTS
----------------
-The 1984-start topography is a 1996 ALACE beach and foredune grafted onto a
-2009 backdune. The NC-12 road lines are 1984-vintage. Between 1984 and 1996 the
-island migrated landward, so at the worst domains the 1984 roadbed now sits
-SEAWARD of the 1996 dune crest and the measured setback comes out negative:
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/4-fill/HAT_insert_seaward_rows.py
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/4-fill/HAT_insert_seaward_rows.py --variant translate
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/4-fill/HAT_insert_seaward_rows.py --n-rule minimum --domains 85,86
 
-    GIS 85   road seaward cell 13, interior row 0 = source cell 14
-             setback (13 - 14) * 10 = -10 m  ->  floored to 0 in the model CSV
-
-A zero setback is not inert. roadway_manager.road_relocation_checks does
-`road_setback += dune_migrated` every year, so the first year with any erosion
-drives it negative and relocates the road. In the shipped 1984-2004 run GIS 85
-relocates in YEAR 1 and twice more after that; GIS 86 the same; the relocation
-year across GIS 10/11/84/85/86 is monotone in the input setback, not in the
-physics. That is the artefact this script exists to remove.
-
-WHAT IT DOES
-------------
-For each selected domain it prepends N rows to the SEAWARD end of the saved
-interior array, which moves interior row 0 N cells seaward and turns the road's
-setback from (road - row0) into (road - row0) + N*10.
-
-N comes from a MEASUREMENT, not a target: the per-domain cross-shore offset
-between the digitized 1984 dune line and interior row 0, measured in the
-extractor's own frame by HAT_measure_duneline_shift.py. Island-wide that median
-is +18.9 m; at GIS 85 it is +65.9 m with a p10-p90 of +62 to +70.
-
-The control that makes this credible is in the 2004 pair: measured the same way,
-the 2004 dune line and 2004-start row 0 agree to +1.4 / -4.1 / -3.6 m on the
-stable mid-island (GIS 40/50/60). So "digitized line vs DEM row 0" carries no
-material feature offset, and the 1984 number is a date difference rather than a
-definitional one.
-
-WHAT IS FABRICATED, AND SAY SO
-------------------------------
-No survey covers land that was gone by 1996. The N new rows are invented. The
-fill rule is explicit and recorded in the manifest; `backdune` (the default)
-lays them flat at the median of interior rows 1-3, i.e. a backdune platform, NOT
-at row 0's elevation -- at GIS 85 row 0 IS the 4.82 m crest, and copying it
-would build a 70 m plateau at crest height.
-
-Note what stays behind: the old row 0 becomes an interior ridge N cells inside
-the island. That is a relict foredune, which is a reasonable thing for a
-migrating barrier to have, but it is a consequence rather than a choice.
-
-TWO VARIANTS, BECAUSE THE BAY SIDE IS NOT FREE
-----------------------------------------------
-brie_coupler.offset_shoreline sets x_s per domain and the interior extends
-LANDWARD from the dune, so prepending rows does not push the shoreline seaward
--- it pushes the bay edge further into the sound.
-
-    pad         prepend N. Island gets N cells wider. Mean interior height and
-                InteriorWidth_AvgTS both rise, which feeds overwash flux and the
-                relocation room test.
-    translate   prepend N and retire the N landward-most LAND rows per column to
-                the water sentinel. Per-column land width is preserved. This is
-                the barrier-migration reading: in 1984 the bay edge was also N
-                cells seaward.
-
-Neither is free and they are not equivalent; run both and compare before
-picking. `none` writes the setback CSV alone and leaves the topography be.
-
-OUTPUT
-------
-A NEW dune-topo version beside the source. v1 is never written to.
-
-    1984-start/dune-topo/<DST_VERSION>/
-        topography/   domain_<N>_topography.npy    (dam)
-        dunes/        domain_<N>_dune.npy          copied unchanged
-        RUN_MANIFEST.txt
-        HAT_seaward_row_insert_audit.csv
-        RoadSetback_1984_dunestart.csv             matched to this topography
-
-USAGE
------
-    python HAT_insert_seaward_rows.py                       # measured N, pad
-    python HAT_insert_seaward_rows.py --variant translate
-    python HAT_insert_seaward_rows.py --n-rule minimum --domains 85,86
-==============================================================================
+N comes from the measured shift (--shift-source); the rows are filled by the
+chosen rule; writes the arrays, a setback CSV, an audit and a manifest. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -104,6 +28,7 @@ from pathlib import Path
 import numpy as np
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -120,31 +45,19 @@ from site_layer.hat_topo_version import (array_name, dune_topo_root,  # noqa: E4
 OFFSET_SCRIPT = (REPO / "scripts" / "input_prep" / "4-mgmt-forcings" / "road_offset"
                  / "1-produce" / "HAT_road_offset_from_dune_start.py")
 
+# --- CONFIG ------------------------------------------------------------------
 SRC_PRODUCT = "1984-start"
 YEAR = 1984
 
 # Where the measured shift comes from. Written by HAT_measure_duneline_shift.py.
 SHIFT_DIR = duneline_shift_dir(SRC_PRODUCT)
-# TWO measurements of the same quantity, and they disagree by a factor of ~3
-# at the domains this work is about (GIS 85: 65.9 m vs 19.5 m). Neither is
-# the truth; --shift-source names which one a build used and the manifest
-# records it, so no output can be read without knowing.
+# Two measurements of the shift, disagreeing ~3x; --shift-source names the one used
 SHIFT_SOURCES = {
-    # THE ONE TO USE (2026-09-02). 1984 line minus 1997 line, same feature at
-    # both ends, so the DEFINITIONAL offset between a digitized line and interior
-    # row 0 cancels and what is left is pure date. Measured, not assumed: the
-    # 1997 line sits +16.2 m seaward of row 0 island-wide (IQR +12.8 to +21.0),
-    # and subtracting that leaves an island-wide date term of +0.8 m -- i.e. the
-    # ORIGINAL "duneline" source below was about 85% feature offset.
+    # The one to use: 1984 line minus 1997 line, so the row-0 offset cancels
     "date": SHIFT_DIR / "duneline_retreat_1984_1997.csv",
-    # Superseded. Kept so the earlier arms stay reproducible and so the size of
-    # the correction stays visible rather than being quietly absorbed.
+    # Superseded, kept so earlier arms stay reproducible
     "duneline": SHIFT_DIR / "duneline_shift_1984.csv",
-    # "dsas" REMOVED 2026-09-03. It pointed at a file that had already been
-    # moved into superseded/, so the option failed at runtime; and the
-    # estimate measures the SHORELINE, not the dune line, understating dune
-    # retreat by ~2.3x (GIS 85: 19.5 m against a measured 58.2 m). A route to
-    # a known-wrong number is not worth keeping reachable.
+    # 'dsas' removed 2026-09-03: a missing file, and a shoreline not a dune measure
 }
 
 from site_layer import hat_topo_version as _tv  # noqa: E402
@@ -154,14 +67,12 @@ SENTINEL_DAM = -0.30          # SENTINEL_WATER_M / CELL_SIZE_M, the extractor's 
 TOPO_ROWS = 200               # the extractor's cap; a padded array must still fit
 BACKDUNE_ROWS = 3             # rows averaged for the `backdune` fill
 
-# LAND is > 0 m MHW, not "> the water sentinel". At these domains the sound side
-# is MEASURED marsh and shallow bay sitting between -3 m and 0 m, so a sentinel
-# test calls the bay land and reports GIS 85 as 160 rows wide when its island is
-# 37. 0 m MHW is the threshold bulldoze() itself uses (drown_threshold = 0) and
-# the one HAT_road_domain_views draws.
+# LAND is > 0 m MHW, not "> the water sentinel"
 LAND_DAM = 0.0
+# -----------------------------------------------------------------------------
 
 
+# HAT_road_offset.py, loaded as a module for its extractor helpers
 def load_offset_module():
     spec = _iu.spec_from_file_location("hat_off", OFFSET_SCRIPT)
     mod = _iu.module_from_spec(spec)
@@ -170,6 +81,7 @@ def load_offset_module():
     return mod
 
 
+# The measured shift per domain, or stop: N is a measurement
 def read_shift_csv(path: Path) -> dict:
     if not path.is_file():
         raise SystemExit(
@@ -182,6 +94,7 @@ def read_shift_csv(path: Path) -> dict:
     return out
 
 
+# {domain: setback} from a two-row setback CSV
 def read_setback_csv(path: Path) -> dict:
     rows = list(csv.reader(open(path)))
     ids = [int(float(v)) for v in rows[0] if v.strip() != ""]
@@ -189,6 +102,7 @@ def read_setback_csv(path: Path) -> dict:
     return dict(zip(ids, vals))
 
 
+# Write a two-row setback CSV
 def write_setback_csv(path: Path, values: dict) -> None:
     ids = sorted(values)
     with open(path, "w", newline="") as fh:
@@ -197,23 +111,8 @@ def write_setback_csv(path: Path, values: dict) -> None:
         w.writerow(["{:.3f}".format(values[i]) for i in ids])
 
 
+# The DEM cells that ALREADY EXIST seaward of interior row 0, as (n, along)
 def real_block(ext, dom, row0: np.ndarray, n: int, n_along: int) -> np.ndarray:
-    """The DEM cells that ALREADY EXIST seaward of interior row 0, as (n, along).
-
-    build_interior fills topo[:, i] from prof_arr[i, row0[i]:], so the cells the
-    insert is about to cover are prof_arr[i, row0[i]-n : row0[i]] -- per profile,
-    because row 0 is a per-profile cut, not a horizontal one.
-
-    These are real measurements, just excluded from the interior for being
-    seaward of the dune pick. At GIS 85 they include cell 13 at 3.44 m, which is
-    the road's own seaward cell -- the cell whose elevation decides what
-    bulldoze() is scraping. Fabricating over it when the DEM has it measured is
-    a loss for nothing.
-
-    Returned in dam, NaN where the source cell is off the array. Cells at or
-    below water are left as NaN too: they are 1996 beach, and in 1984 that
-    ground was dry island. Those are the ones that genuinely have to be invented.
-    """
     z = dom["z"]                                   # (along, cross), m MHW
     out = np.full((n, n_along), np.nan)
     for i in range(n_along):
@@ -228,8 +127,8 @@ def real_block(ext, dom, row0: np.ndarray, n: int, n_along: int) -> np.ndarray:
     return out
 
 
+# The N invented rows, (n, n_along) in dam
 def fabricate_rows(topo: np.ndarray, n: int, rule: str) -> np.ndarray:
-    """The N invented rows, (n, n_along) in dam. topo is (rows, along), dam."""
     if rule == "row0":
         block = np.repeat(topo[0:1, :], n, axis=0)
     elif rule == "backdune":
@@ -243,24 +142,7 @@ def fabricate_rows(topo: np.ndarray, n: int, rule: str) -> np.ndarray:
         w = np.linspace(0.0, 1.0, n + 1)[:-1][:, None]
         block = base[None, :] * (1 - w) + topo[0:1, :] * w
     elif rule in ("matched-crest", "matched-nocrest"):
-        # MATCHED BACKDUNE: the existing near-dune profile copied in front of
-        # itself, per column, so the 1984 block reproduces today's cross-shore
-        # FORM at the 1984 position. Every value is a real measured cell of
-        # THIS domain, shifted N cells seaward; none is a measurement at the
-        # coordinates it lands on, so cells_from_dem is reported as 0.
-        #
-        #   matched-crest    block row k = interior row k      (k = 0 .. N-1)
-        #                    Panel (b) of the 2026-09-03 fill figure, exactly:
-        #                    row 0 IS the 1996 crest, so the crest appears at
-        #                    the new seaward edge AND at its measured position
-        #                    N cells landward. Two interior ridges by design.
-        #   matched-nocrest  block row k = interior row k + 1  (k = 0 .. N-1)
-        #                    The same copy starting one row landward, so the
-        #                    crest is skipped and the block is backdune only.
-        #
-        # Built as separate rules (2026-09-04) rather than as one rule with a
-        # switch because they are two ARMS of the fill comparison, and an arm
-        # should be nameable from the manifest's fill_rule alone.
+        # Matched backdune: today's near-dune profile copied in front of itself (two variants)
         off = 0 if rule == "matched-crest" else 1
         idx = np.minimum(np.arange(n) + off, topo.shape[0] - 1)
         block = topo[idx, :].copy()
@@ -270,31 +152,9 @@ def fabricate_rows(topo: np.ndarray, n: int, rule: str) -> np.ndarray:
     return np.maximum(block, SENTINEL_DAM)
 
 
+# Shave the DEM's dune ridge down to the backdune platform, per column
 def lower_old_crest(new: np.ndarray, base: np.ndarray, n: int,
                     max_reach: int = 15):
-    """Shave the DEM's dune ridge down to the backdune platform, per column.
-
-    THE PROBLEM THIS SOLVES. Prepending N rows puts Barrier3D's dune at the 1984
-    dune line, but the DEM's own crest is still standing in the interior N cells
-    landward -- so the model starts with TWO dunes. That is the same sand counted
-    twice: the ridge is at the later position *because* the dune migrated there
-    by 1996, so in 1984 it had not formed yet. At GIS 85 it is 4.82 m, the
-    tallest thing in the domain, sitting on the road's own cell and shielding it
-    from landward.
-
-    THE COST, STATED PLAINLY. This discards a real measurement. The defence is
-    that it is a measurement of the wrong YEAR: the whole operation is de-aging
-    the surface by 12-25 years, and a 1996 crest is not a 1984 initial condition
-    just because it is real. The opposite choice -- keeping it -- is equally
-    defensible and is what --no-lower-old-crest gives you. Build both.
-
-    Walks landward from the seaward edge capping at the platform, and stops at
-    the first cell already at or below it, so it shaves the ridge and nothing
-    else. `max_reach` bounds the walk past the insert: a column whose profile
-    never drops back to the platform would otherwise be flattened across the
-    whole island, and that is a failure worth hearing about rather than
-    absorbing.
-    """
     out = new.copy()
     overrun = 0
     for c in range(out.shape[1]):
@@ -309,35 +169,8 @@ def lower_old_crest(new: np.ndarray, base: np.ndarray, n: int,
     return out, overrun
 
 
+# Drown the N landward-most LAND cells of each column, into the local bay
 def retire_landward_rows(topo: np.ndarray, n: int) -> np.ndarray:
-    """Drown the N landward-most LAND cells of each column, into the local bay.
-
-    Per column, not per row: the island's landward edge is not a straight line,
-    which is the whole reason the road drown test looks at flanking rows rather
-    than a single width.
-
-    The retired cells take the elevation of the bay immediately landward of them
-    in the SAME column, not the -3 m sentinel. Stamping the sentinel would dig a
-    30 m trench along the sound edge of a domain whose real back-barrier is
-    measured marsh a few decimetres below MHW, and Barrier3D would read that as
-    the island having calved rather than migrated.
-
-    USES BARRIER3D'S OWN WIDTH DEFINITION, not a count of dry cells.
-
-    THIS WAS A BUG AND IT MADE `translate` BEHAVE LIKE `pad` (fixed 2026-09-02).
-    The first version counted every cell above 0 m MHW in a column and drowned
-    the landward-most n of them. Barrier3D's FindWidths (barrier3d.py:29) does
-    something else: it walks from row 0 and STOPS AT THE FIRST cell <= SL, so
-    anything beyond an interior water gap is not island at all.
-
-    On GIS 85 the two disagree in all 50 columns -- median 37.5 cells against 44,
-    and in the worst column 25 against 52, because the profile dips to -0.02 m at
-    row 26 and everything past it is sound-side marsh at 0.03-0.19 m. So the
-    cells being drowned were out in that marsh, which the model was never
-    counting; the retirement removed nothing while the prepended rows still
-    added. Measured effect: t=0 island width rose 263->309 m (D84), 361->402
-    (D85), 286->301 (D86) when it should not have moved at all.
-    """
     out = topo.copy()
     for c in range(out.shape[1]):
         col = out[:, c]
@@ -355,14 +188,15 @@ def retire_landward_rows(topo: np.ndarray, n: int) -> np.ndarray:
     return out
 
 
+# (median land rows per column, mean elevation of land cells in m MHW)
 def land_stats(topo: np.ndarray):
-    """(median land rows per column, mean elevation of land cells in m MHW)."""
     land = topo > LAND_DAM
     width = land.sum(axis=0)
     mean_m = float(np.mean(topo[land]) * 10.0) if land.any() else float("nan")
     return float(np.median(width)), mean_m
 
 
+# Run: N per domain, fill and prepend the rows, write the layer
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -426,13 +260,7 @@ def main() -> None:
     elif args.domains == "all":
         targets = sorted(setbacks_raw)
     elif args.domains == "measured":
-        # Scope by the MEASUREMENT, not by where the road happens to be. Any
-        # domain whose 1984 dune line sits >= half a cell seaward of interior
-        # row 0 is missing 1984 land from the 1996 survey, and that is true of
-        # domains with no NC-12 in them as well. Selecting the two relocation
-        # blocks made "unchanged" mean two different things along the island:
-        # 30 domains had N >= 1 and were passed over by a scope decision rather
-        # than by a measurement. This removes that discontinuity.
+        # Scope by the MEASUREMENT, not by where the road happens to be
         targets = sorted(d for d, m in shifts.items() if int(round(m / 10.0)) >= 1)
     else:
         targets = sorted(int(x) for x in args.domains.split(","))
@@ -470,9 +298,7 @@ def main() -> None:
             n = max(n, 0)
 
         w0, h0 = land_stats(topo)
-        # `none` still credits the setback with N: it is the variant that says
-        # "the dune-to-road distance was wrong, the island was not", so the
-        # correction lands entirely in the CSV and the arrays are passed through.
+        # `none` still credits the setback with N; the arrays pass through
         n_real = 0
         if n > 0 and args.variant != "none":
             block = fabricate_rows(
@@ -489,49 +315,16 @@ def main() -> None:
                 real = real_block(ext, dom_p, r0, n, topo.shape[1])
                 keep = np.isfinite(real)
             if args.fill == "measured":
-                # FLOOR THE REAL VALUE AT THE BACKDUNE PLATFORM, do not simply
-                # take it. The measured cells here are the 1996 surface, and at
-                # an eroding domain 1996 is the LATER and LOWER one -- so its
-                # elevation is a lower bound on 1984's, not an estimate of it.
-                # Taking it raw put a 0.57 m beach cell two rows inside the 1984
-                # interior at GIS 85, which is 1996 beach standing where 1984 had
-                # dry backdune. The floor keeps the real dune flank (1.98, 3.44)
-                # and the road's own cell, and declines to import the beach.
+                # FLOOR THE REAL VALUE AT THE BACKDUNE PLATFORM, do not simply take it
                 n_real = int((keep & (real >= block)).sum())
                 block = np.where(keep, np.maximum(real, block), block)
             elif args.fill == "median":
-                # KEEP EVERY DRY MEASUREMENT, INVENT ONE NUMBER.
-                #
-                # `measured` above justifies itself with "1996 is a lower bound
-                # on 1984" and then RAISES 44% of the block above the DEM to
-                # the platform, which is not a lower-bound operation - it
-                # asserts the ground was at least backdune height. This rule
-                # drops that second step. A dry cell is kept as measured; only
-                # the cells with no usable measurement get a value, and that
-                # value is the median of the block's OWN dry cells rather than
-                # a statistic imported from interior rows 1-3.
-                #
-                # One guard, one constant, and it never overrides a measurement
-                # upward. At GIS 85 it takes the measured share from 47% to
-                # 91%: only 28 of 300 cells are at or below MHW, 25 of them in
-                # the seaward-most row. NC-12 sits at rows 4-5, which are 100%
-                # dry, so the constant does not reach the road at all.
-                #
-                # WHAT IT ADMITS, deliberately: the 1996 beach ramp. Per-row
-                # medians at GIS 85 run -0.00, 0.70, 1.20, 1.84, 3.17, 4.96, so
-                # row 1 sits BELOW whatever fills row 0 and the block carries a
-                # dip two cells inside the island. That is what the platform
-                # floor existed to remove. It is admitted here because it is
-                # what the measurement says, and the alternative asserts more
-                # than the data supports.
+                # KEEP EVERY DRY MEASUREMENT, INVENT ONE NUMBER
                 if keep.any():
                     fill_v = float(np.median(real[keep]))
                     block = np.where(keep, real, fill_v)
                     n_real = int(keep.sum())
-                # No dry cell anywhere in the block: nothing to take a median
-                # of, so the backdune platform stands as the fallback and
-                # n_real stays 0. Does not occur at any of the 38 domains, but
-                # a silent nan-median would be worse than a stated fallback.
+                # No dry cell anywhere in the block
             new = np.vstack([block, topo])
             if args.lower_old_crest:
                 k = min(BACKDUNE_ROWS, topo.shape[0] - 1)
@@ -553,10 +346,7 @@ def main() -> None:
 
         np.save(dst / "topography" / array_name("topography", D), topo)
 
-        # Audit EVERY domain that was processed, not only the ones carrying a
-        # road. Under --domains measured the scope is the whole island, and a
-        # domain with no NC-12 still has rows inserted and still has to be
-        # accountable for them.
+        # Audit EVERY domain that was processed, not only the ones carrying a road
         has_road = D in setbacks_raw
         if has_road or n > 0:
             old_raw = setbacks_raw.get(D, float("nan"))

@@ -1,31 +1,10 @@
-r"""
-HAT_plot_seaward_insert_compare.py
-==============================================================================
-Two 1984-start versions drawn against each other in a common frame.
+"""
+Two 1984-start versions drawn against each other in a common frame (default: the two extractions, v1 and v2).
 
-    Default pair since 2026-09-07 -- the two EXTRACTIONS, the only versions kept:
-    v1   the original pick set (2026-08-27). GIS 85 setback -10 m, floored to 0.
-    v2   the re-pick with NC-12 visible (2026-09-02); what CURRENT names.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_plot_seaward_insert_compare.py
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_plot_seaward_insert_compare.py --domains 85,86
 
-    The script was written for the seaward-row insert (an extraction against a
-    layer with N rows inserted behind the dune, N measured as the 1984-1997
-    dune-line difference). The layers v3-v8 were deleted 2026-09-07 -- only
-    unmodified topography is kept -- so no insert pair exists on disk.
-    Any pair that does can be compared with --versions "a:label;b:label".
-
-Land width is drawn with BARRIER3D's definition (stop at the first cell at or
-below sea level), not a count of dry cells, so the panel agrees with what the
-model actually computes. v2 preserves it exactly.
-
-Everything is drawn in a COMMON frame: distance landward of v1's interior row 0.
-A variant whose row 0 has moved seaward therefore starts at negative x, and the
-fabricated ground is the part left of zero. Plotting each variant from its own
-row 0 would hide exactly the thing being compared.
-
-USAGE
-    python HAT_plot_seaward_insert_compare.py
-    python HAT_plot_seaward_insert_compare.py --domains 85,86
-==============================================================================
+Profiles and road position per domain; --versions compares any other pair. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -46,6 +25,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -58,39 +38,22 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 from site_layer.hat_topo_version import array_name, dune_topo_root  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 PRODUCT = "1984-start"
 YEAR = 1984
 LAND_DAM = 0.0
 ROAD_WIDTH_M = 20.0
 
-# Drawn thick to thin, because the versions coincide over most of the profile
-# and equal linewidths would show only the last one drawn.
-# The default pair is v1 vs v2, the two extractions (2026-09-07). It was v2 vs
-# v4 (base vs the measured+floor layer) until the layers were deleted that
-# day, and v1 vs v2 in the pre-re-pick numbering before 2026-09-03. The three
-# width variants this script was originally written for -- v1_pad_measured,
-# v1_translate_measured, v1_none_measured -- were DELETED on 2026-09-02: they
-# predated the island-width fix, so all three behaved as `pad`, and no run was
-# ever built from them. Pass --versions to compare anything else.
+# Drawn thick to thin, since the versions coincide over most of the profile
 VARIANTS = [
     ("v1", "v1 (original picks, as extracted)", "0.55", "-", 6.0),
     ("v2", "v2 (re-pick, as extracted; CURRENT)", "#b2182b", "-", 2.0),
 ]
+# -----------------------------------------------------------------------------
 
 
+# Island cells per alongshore column, BARRIER3D'S definition
 def b3d_width(topo: np.ndarray) -> np.ndarray:
-    """Island cells per alongshore column, BARRIER3D'S definition.
-
-    Reproduces FindWidths (Barrier3D/barrier3d/barrier3d.py:29): walk landward
-    from row 0 and stop at the FIRST cell at or below sea level. Anything past
-    an interior water gap is not island.
-
-    This panel used to count every dry cell in the column instead, which is a
-    different number -- on GIS 85 it disagrees in all 50 columns, median 44
-    against 37.5. That is the same mistake that made `translate` silently behave
-    like `pad`, and drawing it here would have shown v2's width changing when the
-    model sees it as identical to v1's.
-    """
     out = np.empty(topo.shape[1])
     for c in range(topo.shape[1]):
         col = topo[:, c]
@@ -99,6 +62,7 @@ def b3d_width(topo: np.ndarray) -> np.ndarray:
     return out
 
 
+# One version's topography for a domain, with its insert audit
 def load(version: str, domain: int):
     root = dune_topo_root(PRODUCT) / version
     topo = np.load(root / "topography" / array_name("topography", domain))
@@ -110,13 +74,8 @@ def load(version: str, domain: int):
     return topo, audit.get(domain)
 
 
+# v1's own raw setbacks, from the road-offset measurement
 def baseline_setbacks():
-    """v1's own raw setbacks, from the road-offset measurement.
-
-    v1 has no insert audit -- it is the thing the inserts are measured against --
-    so its baseline number has to come from the file that produced it, or the
-    comparison table prints nan in the row the reader most needs.
-    """
     from site_layer.hat_topo_version import road_setback_dir
     p = road_setback_dir(YEAR) / "RoadOffset_{}_domains.csv".format(YEAR)
     out = {}
@@ -126,6 +85,7 @@ def baseline_setbacks():
     return out
 
 
+# Run: the profile comparison for each domain
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -167,17 +127,11 @@ def main() -> None:
                 print("  [skip] {} has no domain {}".format(version, D))
                 continue
             n = int(aud["n_rows_inserted"]) if aud else 0
-            # The origin shift is read off the ARRAY, not guessed from the
-            # version name: a variant that inserted rows is taller than v1 by
-            # exactly n. A name-suffix test silently plotted later variants
-            # unshifted -- superimposing them on v1 and hiding the comparison.
+            # The origin shift is read off the ARRAY, not guessed from the version name
             shift = n if (n and topo.shape[0] == v1_rows + n) else 0
             n_max = max(n_max, shift)
             if aud is not None and road_x != road_x:
-                # THE ROAD DOES NOT MOVE. Its position in this common frame is
-                # v1's own raw setback; what every variant changes is where row 0
-                # sits relative to it. Drawing one block per variant, as an
-                # earlier version of this figure did, draws the opposite claim.
+                # The road does not move; what changes is where row 0 sits relative to it
                 road_x = float(aud["setback_raw_before_m"])
 
             med = np.median(topo, axis=1) * 10.0            # dam -> m MHW

@@ -1,113 +1,13 @@
 #!/usr/bin/env python3
-r"""
-HAT_imagery_review_quick.py
-==============================================================================
-The basic review (Hannah's advisor, 2026-09-10): one domain at a time, the
-1984 and 1997 photographs side by side, the 1984 ROAD OFFSET drawn on them
-raw and as modeled, and two questions. Nothing to pick, nothing to toggle.
+"""
+The quick review: one domain at a time, the 1984 road offset drawn raw and as modeled on the photos, two questions.
 
-    offset_ok   yes | no | unclear   does the modeled 1984 road offset look
-                                     right against the photographs?
-    rows_ok     yes | no | unclear   does N, the rows the footprint adds or
-                                     removes, look right?
-    notes       free text
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/3-placement/imagery-review/HAT_imagery_review_quick.py
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/3-placement/imagery-review/HAT_imagery_review_quick.py --domains 85,63
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/3-placement/imagery-review/HAT_imagery_review_quick.py --summary
 
-THE OFFSETS (decided with Hannah, 2026-09-10, revised the same afternoon)
-    on the photographs, one arrow per panel in the year's colour: that year's
-             dune line to the 1984 NC-12 line, both from the geojsons,
-             measured along the 50 profiles (the line's crossing nearest row
-             0, the road's crossing landward of it, moved HALF_M seaward to
-             the pavement edge), median over the profiles. BOTH years
-             reference the 1984 roadway (Hannah, 2026-09-10: "none of the
-             offset ... should be in reference to the 2004 road position");
-             the 2004 line is drawn for context only. What you would measure
-             by hand on the map, year by year, against the road as it was.
-    table    for the record in the text: `setback_raw84_m` from the footprint
-             table, the same 1984 distance but to the road MASK in whole
-             cells; it runs ~19 m larger than the model's reference because
-             the digitized line traces the toe, a cell or two seaward of
-             interior row 0.
-    modeled  the setback CASCADE receives for v3 (`setback_new_m`, row-0
-             convention, no floor) cut to whole cells: the road's first row is
-             int(setback / 10) from interior row 0, and the pavement is the two
-             rows from there. Drawn on the MODEL panel only, as the dark rows
-             and an arrow from row 0 in rows.
-    today    for reference only, in the text: the setback measured on the 1996
-             surface (`setback_v2_m`, signed) and what the model holds for it
-             (`setback_model_now_m`, floored at 0 where negative).
-    Both arrows are drawn on the profile nearest the middle of the domain, so
-    they start on the line they belong to; their LENGTH is the domain median,
-    which is the number printed. The ~1.2 m stated accuracy of the
-    georeferencing and the 10 m cell are the yardsticks.
-
-WHAT IS ON THE PHOTOGRAPHS (settled in interview, Hannah, 2026-09-10, after
-the overlays had grown to nine and "made it more confusing")
-    Two verdicts, two comparisons, nothing else:
-    * OFFSET. The 1984 NC-12 line and, on the middle profile, ONE white tick:
-      interior row 0 measured seaward from the pavement edge - on (a) as the
-      model places it for 1984 (the setback after its cut to cells, the same
-      number panel (c) shows), on (b) as the DEM has it. The reviewer asks
-      whether the crest visible in that year's photograph sits on the tick.
-    * ROWS N. Both digitized dune lines (1984 red, 1997 blue) on both
-      photographs, and one bracket between them on the middle profile
-      labelled with the median shift and the rows it became. The reviewer
-      asks whether each line follows the vegetation edge of its year and
-      whether the retreat looks like the number.
-    Plus the domain box. Removed from the photographs: interior row 0 as a
-    line, the implied 1984 crest, the dune-line-to-road arrows, the row-0-to-
-    road arrows, the dune search window, the 2004 road line. Their numbers
-    stay in the side panel; the model-side marks stay on panel (c).
-
-THE MODEL PANEL (upper right; the photographs stack down the left, 1984 over
-1997, and the legend sits lower right - Hannah, 2026-09-10)
-    The PROCESSED domain, the model input as the model holds it: the
-    straightened Barrier3D grid of dune-topo/v3 (two dune rows at berm + dune
-    height, then the interior, in the elevation classes of the placement
-    check), cross-shore rows across with the ocean on the right and alongshore
-    cells up the page, south at the bottom, so it faces the same way as the
-    photographs. Nothing is mapped back through the shear: the dune is a
-    straight band because that is what the model gets. With the model-side
-    measurements on it: interior row 0, the road rows at the 1984 setback
-    (dark), the rows the footprint inserted (red outline) or the seam it left
-    (blue dashes), and the modeled offset as an arrow in rows. (The outline
-    of today's pavement rows was dropped 2026-09-10: it is not part of the
-    model input and read as a second road.) If dune-topo/v3 is not on disk the CURRENT version is
-    drawn instead and the panel says so.
-
-WHAT IT WRITES
-    On Save: offset_ok, rows_ok, notes, reviewed_by, reviewed_at for the
-    domain on screen into 2-domain-reconstruction-1984/3-placement/imagery-review/
-    imagery_review_1984.csv (the sheet HAT_imagery_review_1984.py writes; that
-    script keeps these columns when it re-runs). Nothing else in the sheet is
-    touched, and the six older verdict columns are left as they are.
-    "Save figure" writes the view on screen at 200 dpi to
-        figures/3-placement/imagery-review/{rows-added,rows-removed,unchanged}/
-            HAT_imagery_review_quick_GIS<N>.png
-    with its caption in figures/CAPTIONS.md (one section for the set). The
-    figure carries a header (domain, island section, N, the 1984 setback and
-    its row), split legends for the photographs and the model input, and a
-    source line (USGS release and DOI, stated accuracy, which road line each
-    year is measured against).
-    "Summarize" (or --summary) tallies the sheet:
-        HAT_imagery_review_quick.txt                 counts, the "no" domains
-        figures/3-placement/imagery-review/island/HAT_imagery_review_quick.png
-            (a) N per domain along the island, coloured by rows_ok
-            (b) the raw and modeled 1984 offset per domain, with offset_ok
-
-KEYS   Right / Left  next / previous domain    Ctrl+S  save
-       Space or B    flip the year in blink mode
-       (keys are ignored while the cursor is in a text box)
-
-Photographs are read through the same cache as the full window
-(~/.cascade/imagery_review_cache/), so a domain seen in either is instant in
-the other.
-
-USAGE
-    python HAT_imagery_review_quick.py                  # every domain in the sheet
-    python HAT_imagery_review_quick.py --domains 85,63  # a subset
-    python HAT_imagery_review_quick.py --summary        # tally only, no window
-    python HAT_imagery_review_quick.py --smoke          # open, draw one, screenshot, close
-==============================================================================
+Answers offset_ok and rows_ok per domain into the review sheet; --summary
+tallies them. Interactive. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -143,11 +43,8 @@ from HAT_imagery_review_gui import Data, CACHE_DIR, YEAR_COLOUR  # noqa: E402   
 TITLE_SIZE, TITLE_PAD = 10.5, 6                           # one title style for every panel
 
 
+# The photographs' window made SQUARE about its centre, so that the panel boxes are equal squares ...
 def _square_window(pr, pl, bounds):
-    """The photographs' window made SQUARE about its centre, so that the panel
-    boxes are equal squares (Hannah, 2026-09-10). Wraps the batch script's
-    domain_window; the loader reads the tiles for this window and caches them
-    under it, so the padding is real photograph, not blank."""
     x_lo, x_hi, y_lo, y_hi = _domain_window_orig(pr, pl, bounds)
     side = max(x_hi - x_lo, y_hi - y_lo)
     cx, cy = (x_lo + x_hi) / 2, (y_lo + y_hi) / 2
@@ -160,6 +57,7 @@ from site_layer.hat_topo_version import insert_figures_dir, topo_dirs, array_nam
 from site_layer.hat_figure_style import elevation_cmap  # noqa: E402
 
 off = R.off
+# --- CONFIG ------------------------------------------------------------------
 BUILT = "v3"                      # the version the model panel shows; falls back to CURRENT
 ROAD_ROWS = R.ROAD_ROWS
 BERM_EL_M = 1.7                   # dune rows drawn at berm + dune height, as the placement check
@@ -170,8 +68,10 @@ VERDICT_C = {"yes": "#4d4d4d", "no": R.C_1984 if hasattr(R, "C_1984") else "#b21
              "unclear": "#e08214"}
 SUMMARY_PNG = "HAT_imagery_review_quick.png"
 SUMMARY_TXT = R.STEP_DIR / "HAT_imagery_review_quick.txt"
+# -----------------------------------------------------------------------------
 
 
+# A float, or NaN for anything that is not a number
 def _num(v) -> float:
     try:
         return float(v)
@@ -179,16 +79,15 @@ def _num(v) -> float:
         return np.nan
 
 
+# A stripped string, or '' for anything that is not one
 def _s(v) -> str:
     return v.strip() if isinstance(v, str) else ""
 
 
-# =============================================================================
-# THE OFFSETS OF ONE DOMAIN
-# =============================================================================
+# The offsets of one domain
 
+# raw, modeled (row and metres) and today's, from the footprint table
 def offsets(t: pd.Series) -> dict:
-    """raw, modeled (row and metres) and today's, from the footprint table."""
     raw = _num(t.get("setback_raw84_m", np.nan))
     new = _num(t.get("setback_new_m", np.nan))
     v2 = _num(t.get("setback_v2_m", np.nan))
@@ -205,16 +104,8 @@ ROAD_REF = 1984                                          # every offset is to th
 LINE_PAIR = {1984: (1984, ROAD_REF), 1997: (1997, ROAD_REF)}   # photo year -> (dune line year, NC-12 line year)
 
 
+# The offset between that year's dune line and that year's NC-12, from the geojsons, along the 50 ...
 def line_offsets(pr: pd.DataFrame, lines: dict, roads: dict, box) -> dict:
-    """The offset between that year's dune line and that year's NC-12, from the
-    geojsons, along the 50 profiles: per profile the line's crossing nearest
-    interior row 0 and the road's crossing nearest landward of it, the road
-    centreline moved HALF_M seaward to the pavement's edge; median over the
-    profiles. No cells, no mask: what the photograph's overlays show.
-    Returns {photo year: dict(m, n, x_line, x_road, y)} with the middle
-    profile's crossings for the arrow. Both years are measured to the 1984
-    NC-12 line (ROAD_REF): the question is the 1984 roadway position, and the
-    1997 arrow shows how far the dune had moved from it by then."""
     from shapely.geometry import LineString
     area = box.buffer(80.0)
     clipped = off.clip_for_drawing(lines, area)
@@ -259,6 +150,7 @@ def line_offsets(pr: pd.DataFrame, lines: dict, roads: dict, box) -> dict:
     return out
 
 
+# The points of a geometry, whatever its type
 def _points(g) -> list:
     if g.is_empty:
         return []
@@ -272,10 +164,8 @@ def _points(g) -> list:
 C_WINDOW = "#ffd92f"              # the dune search window, on the DEM panel only
 
 
+# The extractor's picked dune search window for one domain, (i0, i1) as cross-shore cells of the ...
 def search_window(frames, d: int) -> tuple[int, int] | None:
-    """The extractor's picked dune search window for one domain, (i0, i1) as
-    cross-shore cells of the straightened profile array, i1 exclusive - the
-    same cell frame as `row0` in the profile table. None if not picked."""
     try:
         _ro, _ext, windows = frames._extractor()
     except SystemExit as e:
@@ -287,9 +177,8 @@ def search_window(frames, d: int) -> tuple[int, int] | None:
     return int(w["i0"]), int(w["i1"])
 
 
+# The search window on the map
 def draw_search_window(ax, pr: pd.DataFrame, win: tuple[int, int] | None) -> None:
-    """The search window on the map: per profile the cells i0..i1-1 relative
-    to that profile's row 0 (map x = interior_x - row x 10)."""
     if win is None:
         return
     i0, i1 = win
@@ -308,13 +197,8 @@ def draw_search_window(ax, pr: pd.DataFrame, win: tuple[int, int] | None) -> Non
                              ls=(0, (2, 2)), zorder=3))
 
 
+# ONE tick per photograph on the middle profile
 def draw_crest_tick(ax, year: int, meas: dict, o: dict, slot: int = 0) -> None:
-    """ONE tick per photograph on the middle profile: interior row 0 measured
-    seaward from the 1984 pavement edge. On the 1984 photograph it is the row
-    the model places for 1984 (the setback after its cut to cells, the same
-    number panel (c) shows); on the 1997 photograph it is the DEM's own row 0.
-    The reviewer judges whether the crest visible in that photograph sits on
-    the tick. A dotted connector from the road says what the metres refer to."""
     if "row0" not in meas:
         return
     e = meas["row0"]
@@ -333,11 +217,8 @@ def draw_crest_tick(ax, year: int, meas: dict, o: dict, slot: int = 0) -> None:
             zorder=13, path_effects=halo)                    # below the tick; the bracket's label sits above
 
 
+# One bracket between the two dune lines on the middle profile, labelled with the median shift and ...
 def draw_shift_bracket(ax, pr: pd.DataFrame, meas: dict, shift: float, n: int) -> None:
-    """One bracket between the two dune lines on the middle profile, labelled
-    with the median shift and the rows it became. Ends at each line's
-    crossing of that profile; the LENGTH drawn is the domain median, which
-    is the number printed, so the bracket and the label agree."""
     if not np.isfinite(shift):
         return
     prs = pr.sort_values("interior_y")
@@ -354,6 +235,7 @@ def draw_shift_bracket(ax, pr: pd.DataFrame, meas: dict, shift: float, n: int) -
             fontsize=9, color=C_MODEL, fontweight="bold", zorder=13, path_effects=halo)
 
 
+# The offset panel's text lines for one domain
 def offset_lines(d: int, t: pd.Series, o: dict, cover: dict, meas: dict | None = None) -> list[str]:
     n = int(t["n_cells"])
     meas = meas or {}
@@ -404,15 +286,13 @@ def offset_lines(d: int, t: pd.Series, o: dict, cover: dict, meas: dict | None =
     return L
 
 
-# =============================================================================
-# THE MODEL DOMAIN
-# =============================================================================
+# The model domain
 
 _GRID: dict = {}
 
 
+# dune-topo/v3 if it is on disk, else the resolved CURRENT version
 def grid_dirs() -> tuple[Path, Path, str]:
-    """dune-topo/v3 if it is on disk, else the resolved CURRENT version."""
     if "dirs" not in _GRID:
         try:
             _GRID["dirs"] = topo_dirs(R.PRODUCT, override=BUILT)
@@ -422,8 +302,8 @@ def grid_dirs() -> tuple[Path, Path, str]:
     return _GRID["dirs"]
 
 
+# (topography m, dune m, version name) for one domain, cached
 def load_grid(d: int) -> tuple[np.ndarray, np.ndarray, str]:
-    """(topography m, dune m, version name) for one domain, cached."""
     if d not in _GRID:
         topo, dune, name = grid_dirs()
         z = np.load(topo / array_name("topography", d)) * R.CELL_M
@@ -432,9 +312,8 @@ def load_grid(d: int) -> tuple[np.ndarray, np.ndarray, str]:
     return _GRID[d]
 
 
+# The landward-most interior row the model panel shows
 def model_r_max(t: pd.Series, o: dict, pr: pd.DataFrame, win, n_rows: int) -> int:
-    """The landward-most interior row the model panel shows: at least what the
-    photographs show, and past the road and the footprint's rows."""
     n = int(t["n_cells"])
     ins = _num(t.get("insert_row_behind_road"))
     ins = int(ins) if (n != 0 and np.isfinite(ins)) else 0
@@ -442,11 +321,8 @@ def model_r_max(t: pd.Series, o: dict, pr: pd.DataFrame, win, n_rows: int) -> in
     return min(n_rows - ROAD_ROWS - 1, max(r_win, (o["row"] or 0) + abs(n) + 12, ins + abs(n) + 8))
 
 
+# The PROCESSED domain, the model input as the model holds it
 def draw_model(ax, d: int, t: pd.Series, o: dict, pr: pd.DataFrame, win, gd) -> None:
-    """The PROCESSED domain, the model input as the model holds it: the
-    straightened grid, dune rows a straight band, cross-shore rows across with
-    the ocean on the right and alongshore cells up the page (south at the
-    bottom, as the photographs). Nothing is mapped back through the shear."""
     z, dune, name = load_grid(d)
     n = int(t["n_cells"])
     cmap, norm, _bounds = elevation_cmap()
@@ -481,9 +357,7 @@ def draw_model(ax, d: int, t: pd.Series, o: dict, pr: pd.DataFrame, win, gd) -> 
                                    zorder=7))                                  # named in the legend, not here
     elif n < 0 and ins is not None:
         ax.axvline(ins - 0.5, color=R.C_REM, lw=2.4, ls=(0, (3, 1.5)), zorder=7, path_effects=halo)
-    # a SQUARE data window (the four panel boxes are equal squares): the rows
-    # shown set the side; the alongshore range is centred on the domain and
-    # padded with blank where the side exceeds 50 cells
+    # A SQUARE data window (the four panel boxes are equal squares)
     side = r_max + ROAD_ROWS + 1
     cy = (ncol - 1) / 2
     ax.set_xlim(r_max + 0.5, -ROAD_ROWS - 0.5)                                  # ocean right
@@ -505,14 +379,15 @@ def draw_model(ax, d: int, t: pd.Series, o: dict, pr: pd.DataFrame, win, gd) -> 
                  fontweight="bold", fontsize=TITLE_SIZE)
 
 
+# '1984-09-19' -> '19 September 1984'
 def _long_date(s: str) -> str:
-    """'1984-09-19' -> '19 September 1984'; a bare year stays a year."""
     try:
         return datetime.strptime(s, "%Y-%m-%d").strftime("%d %B %Y").lstrip("0")
     except ValueError:
         return s
 
 
+# Legend handles for the elevation classes
 def elevation_handles() -> list:
     cmap, _norm, bounds = elevation_cmap()
     labels = ["below 0 (water)"] + [f"{lo:g}-{hi:g}" for lo, hi in zip(bounds[1:-2], bounds[2:-1])] \
@@ -520,10 +395,9 @@ def elevation_handles() -> list:
     return [Patch(facecolor=cmap(i), edgecolor="0.4", lw=0.4, label=f"{lab} m") for i, lab in enumerate(labels)]
 
 
-# =============================================================================
-# THE WINDOW
-# =============================================================================
+# The window
 
+# The quick-review window
 class App:
     def __init__(self, data: Data, ids: list[int], smoke: bool = False):
         self.data, self.ids, self.i, self.smoke = data, ids, 0, smoke
@@ -568,7 +442,7 @@ class App:
         self.status("ready")
         self.show(0)
 
-    # ---- the right-hand panel ------------------------------------------------
+    # The right-hand panel
     def build_right(self, f):
         nav = ttk.Frame(f)
         nav.pack(fill=tk.X)
@@ -641,7 +515,7 @@ class App:
             return
         fn()
 
-    # ---- navigation ---------------------------------------------------------
+    # Navigation
     def step(self, k: int):
         j = self.i + k
         if 0 <= j < len(self.ids):
@@ -672,7 +546,7 @@ class App:
         except Exception:
             pass
 
-    # ---- drawing ------------------------------------------------------------
+    # Drawing
     def draw(self, d: int, rec: dict):
         self.fig.clear()
         self.blink_images = {}
@@ -692,12 +566,7 @@ class App:
             print(f"  GIS {d}: line offsets not measured ({e})")
             meas = {}
         self._meas = meas
-        # photographs down the left (1984 over 1997), the model input upper right,
-        # the legend lower right; in blink mode one photograph left, the model right.
-        # Four equal cells; every panel is a square data window with equal aspect,
-        # so the four boxes come out the same size and line up (Hannah, 2026-09-10).
-        # The header has its own row above; titles sit at one pad; the strip
-        # below holds the legend when the DEM panel takes the legend's cell.
+        # Photographs down the left (1984 over 1997), the model input upper right, the legend lower right
         dem = self.show_dem.get()
         dem_slot = None
         gkw = dict(wspace=0.16, hspace=0.24, left=0.03, right=0.99)
@@ -731,8 +600,7 @@ class App:
         roads_ref = {ROAD_REF: self.data.roads[ROAD_REF]} if ROAD_REF in self.data.roads else {}
 
         def overlays(ax, y=None):
-            # the settled set (interview 2026-09-10): the 1984 road, both dune
-            # lines, the domain box, one crest tick per year, one shift bracket
+            # The settled set (interview 2026-09-10)
             gd.boundary.plot(ax=ax, color="0.3", linewidth=0.8, zorder=4)
             off.draw_lines(ax, drawn, scale=1.0, style=off.LINE_STYLE)
             off.m.draw_roads(ax, roads_ref, scale=0.9)
@@ -777,8 +645,7 @@ class App:
                 if k == 0:
                     off._north_arrow(ax, x=0.94, y=0.12)
 
-        # ---- (d) the DEM, on request: the surface row 0 was picked on, with the
-        # diagnostic layers that belong to it (row 0 line, search window)
+        # (d) the DEM, on request, with the row 0 line and search window
         ad = None
         if dem_slot is not None:
             ad = self.fig.add_subplot(dem_slot, sharex=axes[0], sharey=axes[0])
@@ -862,7 +729,7 @@ class App:
         ax.set_ylim(event.ydata - (event.ydata - y0) * f, event.ydata + (y1 - event.ydata) * f)
         self.canvas.draw_idle()
 
-    # ---- blink ----------------------------------------------------------------
+    # Blink
     def _show_blink_year(self):
         for y, im in self.blink_images.items():
             im.set_visible(y == self.blink_year)
@@ -880,7 +747,7 @@ class App:
         self.blink_year = years[(years.index(self.blink_year) + 1) % len(years)]
         self._show_blink_year()
 
-    # ---- the form -------------------------------------------------------------
+    # The form
     def fill_info(self, d: int, rec: dict):
         self.info.configure(state="normal")
         self.info.delete("1.0", tk.END)
@@ -918,8 +785,8 @@ class App:
         self.refresh_combo()
         self.status(f"GIS {d} saved to {R.SHEET.name}")
 
+    # The view on screen as a figure, into the figures tree by the sign of N
     def export(self):
-        """The view on screen as a figure, into the figures tree by the sign of N."""
         d = self.ids[self.i]
         try:
             out = (R.insert_figures_dir_for_domain(R.PRODUCT, "3-placement", d, under="imagery-review")
@@ -957,7 +824,7 @@ class App:
         except Exception as e:
             self.status(f"summary failed: {e}")
 
-    # ---- lifecycle ------------------------------------------------------------
+    # Lifecycle
     def _smoke_done(self):
         out = CACHE_DIR.parent / "imagery_review_quick_smoke.png"       # outside the repo
         self.fig.savefig(out, dpi=100)
@@ -973,10 +840,9 @@ class App:
         self.root.mainloop()
 
 
-# =============================================================================
-# THE TALLY
-# =============================================================================
+# The tally
 
+# Tally the two questions from the sheet into a figure and a text file
 def summarize(sheet: Path | None = None) -> tuple[Path, Path]:
     sheet = sheet or R.SHEET
     if not sheet.is_file():
@@ -1075,8 +941,7 @@ def summarize(sheet: Path | None = None) -> tuple[Path, Path]:
     return out, SUMMARY_TXT
 
 
-# =============================================================================
-
+# Run: the window, or the summary with --summary
 def main() -> None:
     ap = argparse.ArgumentParser(description="the quick imagery review: offsets raw and modeled, two questions")
     ap.add_argument("--domains", default="", help="comma-separated GIS ids (default: the sheet's domains)")

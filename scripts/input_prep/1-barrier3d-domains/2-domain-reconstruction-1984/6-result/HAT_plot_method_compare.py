@@ -1,35 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_plot_method_compare.py
-==============================================================================
-One domain, two methodologies, side by side in the model's frame:
+"""
+One domain, two methodologies side by side in the model's frame: the v2 extraction and the v3 footprint.
 
-    v2   (default base) the re-pick extraction v3 is built on. The 1984 road
-         was measured against interior row 0, came out NEGATIVE (seaward of
-         row 0, in the dune), and was FLOORED to 0 - so the model placed NC-12
-         on rows 0-1, at the dune, and relocated it in year 1. No rows added.
-         Same pick set as v3, so the panels differ ONLY by the rows and the
-         setback. (--base v1 shows the original extraction instead, which
-         also differs by the 2026-09-02 re-pick.)
-    v3   the re-pick base (v2) + the symmetric 1984 footprint placed directly
-         behind the road AS PLACED under its 1984 setback (road against the
-         1984 dune line, row-0 convention; no floor) and filled by copying the
-         rows that follow. The road sits on measured cells; the block is behind it.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_plot_method_compare.py
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_plot_method_compare.py --domain 86 --rows 40
 
-Each panel: the two dune rows (berm + dune height) on top, the interior below
-in elevation classes, a metres axis on the right; NC-12 as the model places it
-(dark band); the measured 1984 road position (outlined); and the inserted rows
-outlined in the accent colour. The interior depth, the retreat the block stands
-for and what each version's hindcast did with the road (v1: arm
-pea1989basenoreloc; v3: arm behindroad-copy; both calibBE, full management,
-prescribed relocations off) go to the CAPTIONS.md beside the figure, not onto
-the canvas; the figure is drawn double-column in the house style of
-hat_figure_style.
-
-USAGE
-    python HAT_plot_method_compare.py                 # GIS 85
-    python HAT_plot_method_compare.py --domain 86 --rows 40
-==============================================================================
+Draws where each puts row 0 and the road, from the arrays and setbacks. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -53,6 +29,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch, Rectangle
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -69,6 +46,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
     C as STYLE_C, INK, apply_style, elevation_cmap, figsize, record_caption, save, spines_for_image, _title,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 PRODUCT = "1984-start"
 CELL_M = 10.0
 ROAD_ROWS = 2
@@ -83,10 +61,10 @@ RUN = "HAT_1984_2004_calibBE_road_bdm_groin"
 RUNS = {"v1": REPO / "output/raw_runs/pea1989basenoreloc/1984_2004/calibBE" / RUN,
         "v2": REPO / "output/raw_runs/1984_2004/calibBE" / RUN,
         "v3": REPO / "output/raw_runs/behindroad-copy/1984_2004/calibBE" / RUN}
+# -----------------------------------------------------------------------------
 from site_layer import hat_topo_version as _tv  # noqa: E402
 MEASURED = {  # the unfloored measurement each version's CSV was floored from
-    # v1 named dunestart_offset_ARCHIVE_1984start_v1/, which became a dated
-    # superseded folder; resolved since 2026-09-18.
+    # V1 named dunestart_offset_ARCHIVE_1984start_v1/, which became a dated superseded folder
     "v1": _tv.SETBACK_1984_V1_DIR / "RoadOffset_1984_domains.csv",
     "v2": _tv.road_setback_dir(1984) / "RoadOffset_1984_domains.csv",
     "v3": _tv.road_setback_dir(1984) / "RoadOffset_1984_domains.csv",
@@ -96,6 +74,7 @@ C_ROAD = STYLE_C["ROAD"]         # NC-12 as the model places it
 C_OLD = STYLE_C["REF"]           # the measured 1984 road position, an observation
 
 
+# The setback a version hands the model for one domain
 def model_setback(version: str, d: int) -> float:
     rows = list(csv.reader(open(dune_topo_root(PRODUCT) / version / "RoadSetback_1984_dunestart.csv", newline="")))
     ids = [int(float(x)) for x in rows[0] if x.strip()]
@@ -103,10 +82,12 @@ def model_setback(version: str, d: int) -> float:
     return dict(zip(ids, vals))[d]
 
 
+# The measured 1984 setback for one domain
 def measured_setback(version: str, d: int) -> float:
     return float(pd.read_csv(MEASURED[version]).set_index("domain").loc[d, "setback_dunestart_m"])
 
 
+# One domain's dune strip over its interior, in metres
 def stack(version: str, d: int):
     topo, dune, _ = topo_dirs(PRODUCT, override=version)
     z = np.load(topo / array_name("topography", d)) * CELL_M
@@ -114,8 +95,8 @@ def stack(version: str, d: int):
     return np.concatenate([np.tile(dn[None, :], (DUNE_ROWS, 1)), z], axis=0), z.shape[0]
 
 
+# Emergent relocation years the hindcast on this version produced, or None
 def run_years(version: str, d: int):
-    """Emergent relocation years the hindcast on this version produced, or None."""
     p = RUNS.get(version)
     if p is None or not p.is_dir():
         return None
@@ -127,6 +108,7 @@ def run_years(version: str, d: int):
     return [START + int(k) for k in np.flatnonzero(np.nan_to_num(rel) > 0)]
 
 
+# The road block, labelled
 def draw_road(ax, y: float, ncol: int, label: str) -> None:
     ax.add_patch(Rectangle((-0.5, y - 0.5), ncol, ROAD_ROWS, facecolor=C_ROAD, edgecolor=C_ROAD,
                            lw=1.2, alpha=0.5, zorder=5))
@@ -134,6 +116,7 @@ def draw_road(ax, y: float, ncol: int, label: str) -> None:
             fontweight="bold", color="white", zorder=6)
 
 
+# Run: the two methodologies for one domain
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--domain", type=int, default=85)

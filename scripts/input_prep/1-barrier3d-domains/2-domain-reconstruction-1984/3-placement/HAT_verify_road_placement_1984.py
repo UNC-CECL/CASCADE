@@ -1,55 +1,12 @@
 #!/usr/bin/env python3
-r"""
-HAT_verify_road_placement_1984.py
-==============================================================================
-Is NC-12 placed where the 1984 road and dune lines say it was?  (Hannah,
-2026-09-08: "help me ensure that the roadway is being placed correctly and
-that the offset matches reality")
+"""
+Is NC-12 placed where the 1984 road and dune lines say it was? Checked in three frames that must agree.
 
-The check runs in three frames and they have to agree:
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/3-placement/HAT_verify_road_placement_1984.py
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/3-placement/HAT_verify_road_placement_1984.py --domains 85,84
 
-  MAP        the 1984 dune line and the 1984 NC-12 centreline on the 1 m
-             lidar, in map metres, no Barrier3D processing. Two distances
-             per domain: ALONG the extractor's profiles (raster rows, the
-             frame the model indexes) and PERPENDICULAR (frame-free, nearest
-             point on the road from samples along the dune line). They differ
-             only by the obliquity of the profiles to the island.
-  ROW 0      the same distance expressed as the model needs it: metres
-             landward of interior row 0 (one cell behind the picked 1996
-             crest). The 1984 dune line is a toe, ~19 m seaward of row 0,
-             so the row-0 setback is the toe-to-road distance minus that
-             per-profile feature term:
-                 setback_new = (road - line84) - (row0 - line97)
-                             = (road - row0) + (line97 - line84)      [identity]
-             It is the SAME measurement; only the reference changes.
-  MODEL      what v3 receives: RoadSetback_1984_dunestart.csv must equal
-             setback_new_m; the road rows are int(setback/10) and +1; the
-             truncation loses 0-10 m; the array must hold rows_before + N
-             rows and the road must sit on it. With rows added the road as
-             placed lies on the v2 cells N rows behind today's pavement
-             (the block goes in behind it); with rows removed in front of
-             the road it lies on the old pavement's first row or 0-2 rows
-             seaward of it (`road_cells_offset`: the row count comes from
-             the shift median, the setback from the median of the sum).
-             bulldoze() overwrites the road rows with the road elevation
-             every year, so which measured cells lie under the pavement
-             does not change the run; the distance from the crest does.
-
-OUTPUTS  2-domain-reconstruction-1984/3-placement/road_placement_check_1984.csv     per road domain
-         2-domain-reconstruction-1984/3-placement/HAT_road_placement_check_1984.txt  the report
-         figures/3-placement/behind-road/
-             rows-{added,removed}/HAT_road_placement_check_GIS<N>.png
-                 map (1 m lidar, the two
-                 dune lines, NC-12, row 0, the model's road rows and the
-                 block / removed rows in map space) beside the v3 grid
-             HAT_road_placement_check_island.png   every road domain: the
-                 map distance along profiles against perpendicular, and
-                 the setback today / the 1984 one / the one the model holds
-
-USAGE
-    python HAT_verify_road_placement_1984.py                 # 85, 63, 49, 16
-    python HAT_verify_road_placement_1984.py --domains 85,84
-==============================================================================
+Compares the lines on the lidar with what the built version holds, per
+domain; writes a report and per-domain and island figures. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -74,6 +31,7 @@ from matplotlib.patches import Patch, Rectangle
 from shapely.geometry import Point
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -91,6 +49,7 @@ from site_layer.hat_figure_style import (C, DOMAIN_AXIS_LABEL, caption, elevatio
 import HAT_plot_duneline_offset as off                                          # noqa: E402
 
 INIT = REPO / "data" / "hatteras_init"
+# --- CONFIG ------------------------------------------------------------------
 PRODUCT = "1984-start"
 from site_layer.hat_topo_version import insert_scope_dir  # noqa: E402
 SCOPE_DIR = insert_scope_dir(PRODUCT)
@@ -107,12 +66,12 @@ HALF_M = 10.0                 # the geojson is a centreline; the model road is 2
 BERM_EL_M = 1.7
 SAMPLE_M = 10.0               # spacing of samples along the 1984 dune line
 C_ADD, C_REM, C_ROAD, C_ROAD_OLD, INK = off.C_1984, off.C_1997, C["ROAD"], C["BASE"], off.INK
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# THE MEASUREMENTS, PER PROFILE
-# =============================================================================
+# The measurements, per profile
 
+# Per-profile road and dune-line positions, both years
 def load_profiles() -> pd.DataFrame:
     road = pd.read_csv(ROAD_DIR / "RoadOffset_1984_profiles.csv")
     l84 = pd.read_csv(SHIFT_DIR / "duneline_shift_1984_profiles.csv")
@@ -143,9 +102,8 @@ def load_profiles() -> pd.DataFrame:
     return m
 
 
+# Nearest distance from samples along the 1984 dune line (inside the domain box) to the 1984 NC-12 ...
 def perpendicular(gdf, line84, road84, d: int) -> dict:
-    """Nearest distance from samples along the 1984 dune line (inside the
-    domain box) to the 1984 NC-12 centreline, minus the half width. Frame-free."""
     box = gdf[gdf["domain_id"].astype(int) == d].geometry.iloc[0]
     seg = line84.intersection(box)
     road = road84.intersection(box.buffer(400.0))
@@ -166,6 +124,7 @@ def perpendicular(gdf, line84, road84, d: int) -> dict:
                 perp_p90_m=round(float(np.percentile(a, 90)), 1), n_perp=int(a.size))
 
 
+# {domain: setback} from a two-row setback CSV
 def read_setback_csv(p: Path) -> dict:
     rows = list(csv.reader(open(p, newline="")))
     ids = [int(float(x)) for x in rows[0] if x.strip()]
@@ -173,10 +132,9 @@ def read_setback_csv(p: Path) -> dict:
     return dict(zip(ids, vals))
 
 
-# =============================================================================
-# THE CHECK, PER DOMAIN
-# =============================================================================
+# The check, per domain
 
+# Per-domain placement check across the three frames
 def check(tab: pd.DataFrame, prof: pd.DataFrame, gdf, line84, road84, topo_v2: Path, topo_v3: Path,
           sb_csv: dict) -> pd.DataFrame:
     rows = []
@@ -193,8 +151,7 @@ def check(tab: pd.DataFrame, prof: pd.DataFrame, gdf, line84, road84, topo_v2: P
         rec["setback_v2_m"] = round(float(np.median(rd["sb_v2_m"])), 1)
         rec["setback_new_m"] = round(float(np.median(rd["sb_new_m"])), 1)
         assert abs(rec["setback_new_m"] - float(t["setback_new_m"])) < 0.06, (d, "footprint table disagrees")
-        # the two medians do not add: the row count follows the shift median, the
-        # setback the median of the per-profile sum
+        # The two medians do not add: rows follow the shift median, setback the per-profile sum
         rec["median_nonadditivity_m"] = round(rec["setback_new_m"] - (rec["setback_v2_m"] + rec["shift_m"]), 1)
         rec.update(perpendicular(gdf, line84, road84, int(d)))
         rec["perp_minus_along_m"] = (round(rec["perp_med_m"] - rec["raw84_along_m"], 1)
@@ -245,13 +202,10 @@ def check(tab: pd.DataFrame, prof: pd.DataFrame, gdf, line84, road84, topo_v2: P
     return pd.DataFrame(rows).set_index("domain").sort_index()
 
 
-# =============================================================================
-# FIGURE, ONE DOMAIN: MAP BESIDE GRID
-# =============================================================================
+# Figure, one domain: map beside grid
 
+# A cross-shore band over rows r0..r1 (relative to row 0, inclusive) on every profile of the domain, ...
 def _band(ax, pr: pd.DataFrame, r0: float, r1: float, **kw):
-    """A cross-shore band over rows r0..r1 (relative to row 0, inclusive) on
-    every profile of the domain, as one polygon in map space."""
     pr = pr.sort_values("interior_y")
     y = pr["interior_y"].to_numpy()
     xa = pr["interior_x"].to_numpy() - r0 * CELL_M + CELL_M / 2
@@ -264,6 +218,7 @@ def _band(ax, pr: pd.DataFrame, r0: float, r1: float, **kw):
     ax.add_patch(plt.Polygon(poly, closed=True, **kw))
 
 
+# One domain's placement on the lidar and on the grid
 def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame, gdf, lines, roads,
                topo_v3: Path, dune_v3: Path) -> Path:
     off.apply_style()
@@ -280,7 +235,7 @@ def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame,
     ax = fig.add_subplot(gs[0, 0])
     ag = fig.add_subplot(gs[0, 1])
 
-    # ---- (a) the map --------------------------------------------------------
+    # (a) the map
     arr, extent = off.load_1m(gdf, [d])
     if arr is not None:
         off._hillshade(ax, arr, extent, res=1.0)
@@ -293,9 +248,7 @@ def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame,
     ax.plot(pr_s["interior_x"], pr_s["interior_y"], color=INK, lw=1.2, ls=(0, (4, 2)), zorder=6)
     # today's pavement rows (v2 frame = the map)
     _band(ax, pr, r_v2, r_v2 + 1, facecolor="none", edgecolor=C_ROAD_OLD, lw=1.0, ls=(0, (2, 2)), zorder=7)
-    # the model's road AS PLACED, on the v2 cells it actually covers: v3 row r
-    # is v2 row r in front of the seam and r + |N| behind it, so with rows
-    # removed the two road rows can straddle the seam and sit apart on the map
+    # The model's road AS PLACED, on the v2 cells it actually covers
     def v2_row(r):
         return r if (n >= 0 or r < ins) else r - n
     for rr in (r_new, r_new + 1):
@@ -328,8 +281,7 @@ def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame,
     x_road_new = x0 - r_map * CELL_M + CELL_M / 2        # seaward edge of the road as placed
     dy = 0.0
     x_l97 = x0 - float(mid["r_line97"]) * CELL_M
-    # window: the seaward ~700 m of the box around the road (set before the
-    # labels, which need the edges)
+    # Window: the seaward ~700 m of the box around the road
     b = box.bounds
     x_hi = min(b[2], max(x_l84, x_l97, float(pr["interior_x"].max())) + 120.0)
     x_lo = max(b[0], min(x_road_new, x_road_v2) - max(abs(n), 2) * CELL_M - 220.0)
@@ -347,8 +299,7 @@ def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame,
         yy = y_mid + (1.5 - k) * 58.0
         ax.annotate("", xy=(xb, yy), xytext=(xa, yy),
                     arrowprops=dict(arrowstyle="<->", color=col, lw=1.4, shrinkA=0, shrinkB=0), zorder=9)
-        # the label sits over its arrow's middle unless that is near a panel
-        # edge, where it hangs off the arrow's inner end instead of spilling out
+        # The label over its arrow's middle, or its inner end near a panel edge
         xm = (xa + xb) / 2
         if xm > x_lo + 0.62 * (x_hi - x_lo):
             xt, ha = max(xa, xb), "right"
@@ -369,7 +320,7 @@ def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame,
             color=off.INK_MUTED, rotation=90)
     off._title(ax, 0, f"GIS {d}: the lines on the 1 m lidar")
 
-    # ---- (b) the v3 grid ----------------------------------------------------
+    # (b) the v3 grid
     cmap, norm, bounds = elevation_cmap()
     z = np.load(topo_v3 / array_name("topography", d)) * CELL_M
     dune = np.load(dune_v3 / array_name("dune", d)) * CELL_M + BERM_EL_M
@@ -454,10 +405,9 @@ def fig_domain(d: int, chk: pd.DataFrame, tab: pd.DataFrame, prof: pd.DataFrame,
     return p
 
 
-# =============================================================================
-# FIGURE, EVERY ROAD DOMAIN
-# =============================================================================
+# Figure, every road domain
 
+# The check along the island
 def fig_island(chk: pd.DataFrame) -> Path:
     off.apply_style()
     doms = chk.index.to_numpy()
@@ -517,8 +467,7 @@ def fig_island(chk: pd.DataFrame) -> Path:
     return p
 
 
-# =============================================================================
-
+# The plain-text placement report
 def write_report(chk: pd.DataFrame, figs: list[Path]) -> Path:
     L = []
     w = L.append
@@ -588,6 +537,7 @@ def write_report(chk: pd.DataFrame, figs: list[Path]) -> Path:
     return p
 
 
+# Run: check every domain, draw the chosen ones and the island, write the report
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--domains", default="85,63,49,16")

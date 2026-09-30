@@ -1,23 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_plot_footprint_result.py
-==============================================================================
-The first RESULT of the 1984 footprint: the hindcast on v3 (rows behind the
-road, copy fill, 1984 setbacks) against the same run on v2, at the road.
+"""
+The first result of the 1984 footprint: the hindcast on v3 against the same run on v2, at the road.
 
-Reads the two runs' saved model state (the roadway objects in the .npz) and
-draws, for every road domain, the setback the model started with and every
-year it relocated NC-12, the two versions together. The island-wide skill of
-both runs is in the caption beside the figure, not on it: the figure is drawn
-double-column in the house style of hat_figure_style (v2 grey C["BASE"], v3
-purple C["ACCENT"], the recorded events C["REF"]).
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_plot_footprint_result.py
 
-    v2   output/raw_runs/1984_2004/calibBE/<run>              the calibration tree
-    v3   output/raw_runs/behindroad-copy/1984_2004/calibBE/<run>   arm behindroad-copy
-
-USAGE
-    python HAT_plot_footprint_result.py
-==============================================================================
+Reads the two runs' saved roadway state; draws, for every road domain, the
+setback and relocations through time. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -37,6 +25,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -54,9 +43,9 @@ from site_layer.hat_figure_style import (  # noqa: E402
     C as STYLE_C, INK, DOMAIN_AXIS_LABEL, apply_style, figsize, open_frame, record_caption, save, town_bands, _title,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 NAME = "HAT_1984_2004_calibBE_road_bdm_groin"
-# Asked for rather than spelled: the arm moved under arms/ on 2026-09-10 and
-# a hand-built path missed it. find_run_dir reads either layout.
+# Runs found through the registry, which reads either layout
 _RAW_RUNS = REPO / "output" / "raw_runs"
 RUNS = {"v2": find_run_dir(_RAW_RUNS, NAME, "1984_2004", "calibBE"),
         "v3": find_run_dir(_RAW_RUNS, NAME, "1984_2004", "calibBE",
@@ -70,11 +59,12 @@ C_REF = STYLE_C["REF"]                                     # the recorded events
 MK = {"v2": "o", "v3": "s"}
 LABEL = {"v2": "as extracted (1996 surface)", "v3": "1984 reconstruction"}
 EVENTS = {1989: (84, 87), 1999: (9, 14)}       # the recorded NC-12 relocations
+# -----------------------------------------------------------------------------
 
 
+# One run's roadway history per domain
 def load(d: Path):
-    # RESOLVED, NOT JOINED: run_layout knows where a run folder keeps each of
-    # its files, in the new layout and the old flat one alike.
+    # Resolved, not joined: run_layout knows either run-folder layout
     meta = json.load(open(resolve_run_file(d, "metadata_json", NAME)))
     c = np.load(resolve_run_file(d, "archive", NAME, must_exist=True),
                 allow_pickle=True)["cascade"][0]
@@ -90,6 +80,7 @@ def load(d: Path):
     return meta, out
 
 
+# Run: both runs, drawn domain by domain
 def main() -> None:
     apply_style()
     data = {k: load(d) for k, d in RUNS.items()}

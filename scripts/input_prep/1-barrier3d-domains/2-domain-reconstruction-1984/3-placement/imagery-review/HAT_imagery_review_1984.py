@@ -1,97 +1,14 @@
 #!/usr/bin/env python3
-r"""
-HAT_imagery_review_1984.py
-==============================================================================
-The 1984 footprint against the aerial photographs: for every domain where the
-footprint adds or removes rows (and a set of unchanged neighbours as controls),
-the same window of the island in the 1984 and 1997 photographs, on the 1 m
-lidar the rows are cut from, with the two digitized dune lines, NC-12, and BOTH
-candidate placements of the rows drawn on each. Under the panels, the
-photograph's brightness along the domain's 50 profiles, so the sand-to-
-vegetation transitions can be read as a curve without anyone picking them.
+"""
+The 1984 footprint against the aerial photographs: each changed domain in the 1984 and 1997 photos, on the lidar.
 
-WHAT IT DECIDES - NOTHING. It is a review aid (Hannah's colleagues, 2026-09-08:
-"look at the aerial imagery for the domains where we add and remove rows ...
-to see how the dunes and interior have actually changed"). The judgement is
-made by eye and written into `imagery_review_1984.csv`; this script fills the
-numbers, draws the figures, and leaves the verdict columns blank. Re-running it
-keeps whatever verdicts are already in the sheet.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/3-placement/imagery-review/HAT_imagery_review_1984.py
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/3-placement/imagery-review/HAT_imagery_review_1984.py --domains 85,63,84
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/3-placement/imagery-review/HAT_imagery_review_1984.py --resume
 
-THE QUESTION THE FIGURES ARE BUILT TO ANSWER (Hannah, 2026-09-08): did the dune
-field actually get narrower between 1984 and 1997, and if so from which side -
-so that the rows the footprint adds or removes can be placed where the width
-was actually lost or gained. v3 books every change behind NC-12 (rows added)
-or directly in front of it (rows removed); the seaward alternative books it at
-the dune. Both are drawn on every photograph so the reviewer can say which one
-the photographs support, per domain:
-
-    extra_width_was     seaward_of_crest | crest_to_road | behind_road | none
-                        where the 1984 island was wider (rows added) or
-                        narrower (rows removed) than in 1997
-    dune_field_change   narrower | wider | same | unclear
-    edge_moved          seaward | landward | both | none
-    placement_ok        yes | no | unclear      does v3's placement match
-    confidence          high | medium | low
-    notes               free text
-
-WHAT IS READ OFF THE PHOTOGRAPHS (decided with Hannah, 2026-09-08)
-    * the SEAWARD VEGETATION LINE - bright sand to dark vegetation, the
-      clearest edge on a greyscale photograph and roughly the dune toe, the
-      feature the digitized lines trace (~19 m seaward of interior row 0).
-      Preferred over the wet/dry line because it is less sensitive to the
-      beach state on the day: 1984-09-19 is days after Hurricane Diana and
-      1997-10-12 is a normal autumn beach.
-    * the ROAD CENTRELINE as visible in each photograph, so the crest-to-road
-      distance can be judged per year. Both NC-12 alignments are drawn (the
-      1984 line is the 1978 export, deliberately; see the road-line README),
-      and the reviewer should trust the pavement in the photograph over either.
-
-IMAGERY (D:\Hatteras_GIS\Aerial, the USGS Henderson release, doi
-10.5066/P1CXBCDW): georeferenced to the Dare County 2007 orthophotos in NC
-State Plane feet, ~1 ft pixels, stated horizontal accuracy 1.2 m for both 1984
-and 1997 (RSS of the 2007 control, the scan resolution and the fit). 1984 is
-one mosaic in UTM 18N at 0.26 m; 1997 is 32 frames, tiled per domain here, no
-mosaic built. Other years in the release (1978-2002) can be asked for with
---years; 1996 is there but Hannah judged it poor (2026-09-08), so the default
-pair is 1984 and 1997, the year the second dune line was digitized from.
-Anything under the 1.2 m accuracy is not evidence; a Barrier3D cell is 10 m.
-
-FRAME. Everything is drawn in map coordinates (EPSG:3725, the 1 m tiles'
-frame), so ALONGSHORE_FLIP does not apply. The model rows are placed on the map
-exactly as HAT_verify_road_placement_1984.py places them: map x = interior_x -
-row * 10 along each profile, where (interior_x, interior_y) is interior row 0
-from RoadOffset_1984_profiles.csv for the 82 road domains, and from the same
-cell_to_map chain (re-run through the extractor) for GIS 1-8, which that file
-does not cover. On the first road domain met, the re-run is checked against
-the CSV to the centimetre, so the two sources cannot silently disagree.
-
-BRIGHTNESS STRIP. For each profile and each 10 m cell along it (from 250 m
-seaward of row 0 to the landward edge of the window), the mean pixel value of
-the 10 x 10 m block; the strip is the median over the 50 profiles with the
-25-75 % band, per year, each year scaled to its own 2-98 % range over the
-window so that two films of different exposure can share an axis. Sand is
-bright, vegetation and water dark; a step down going landward is the
-vegetation line. It is a reading aid, not a measurement: nothing is picked,
-nothing is written from it.
-
-CONTROLS. Unchanged domains that border a changed one (both sides of every
-add/remove run), thinned to --controls evenly along the island. Same
-photographs, same reach, so the eye has a local baseline for "no change".
-
-OUTPUTS  2-domain-reconstruction-1984/3-placement/imagery-review/   (the evidence for the placement step, 2026-09-09)
-    imagery_review_1984.csv           the review sheet: numbers filled, verdicts blank
-    HAT_imagery_review_1984.txt       the report: sources, rules, domain list
-    ../../figures/3-placement/imagery-review/rows-{added,removed}/ , unchanged/
-        HAT_imagery_review_GIS<N>.png   one per reviewed domain
-    figures/CAPTIONS.md               the caption, one section
-
-USAGE
-    python HAT_imagery_review_1984.py                      # 52 changed + 10 controls
-    python HAT_imagery_review_1984.py --domains 85,63,84   # a pilot
-    python HAT_imagery_review_1984.py --years 1984,1997,1996
-    python HAT_imagery_review_1984.py --no-controls
-    python HAT_imagery_review_1984.py --resume             # after an interrupted run
-==============================================================================
+Draws one review figure per changed domain plus unchanged controls, and
+writes the review sheet (verdicts filled by hand or in the GUIs), a report and
+captions. Needs the D: drive for the photographs. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -123,6 +40,7 @@ from rasterio.warp import reproject, transform_bounds, Resampling
 from shapely.geometry import box as _box
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -138,6 +56,7 @@ from site_layer.hat_topo_version import (  # noqa: E402
     duneline_shift_dir, insert_figures_dir, insert_figures_dir_for_domain, rows_sign_sub, insert_scope_step)
 import HAT_plot_duneline_offset as off  # noqa: E402   house style, lines, tiles, roads
 
+# --- CONFIG ------------------------------------------------------------------
 PRODUCT = "1984-start"
 CELL_M = 10.0
 ROAD_ROWS = 2
@@ -167,16 +86,7 @@ STRETCH_PCT = (2.0, 98.0)
 
 VERDICT_COLS = ["dune_field_change", "edge_moved", "extra_width_was", "placement_ok",
                 "confidence", "notes"]
-# Written by the window (HAT_imagery_review_gui.py) from the reviewer's clicks on
-# each photograph: three features per year, on the profile nearest the click -
-#   toe   the seaward vegetation line (beach sand -> dune), what the dune lines trace
-#   back  the landward edge of the dune band (dune sand -> flat vegetated interior)
-#   road  the seaward edge of the pavement as it is in that year's photograph
-# - each as a position and as metres landward of interior row 0; the bands between
-# them per year; their change 1997 - 1984; and where the lost / gained width sat,
-# given N: the dune band, the strip from the back of the dune to the road, or the
-# remainder, behind the road. Measured by the reviewer, not by code. `band_suggests`
-# is DERIVED from the picks and labelled so; the verdict columns stay the reviewer's.
+# Written by the window (HAT_imagery_review_gui.py) from the reviewer's clicks on each photograph
 PICK_KINDS = ("toe", "back", "road")
 PICK_YEARS = (1984, 1997)
 MEASURED_COLS = ([f"{k}{str(y)[2:]}_{f}" for y in PICK_YEARS for k in PICK_KINDS
@@ -186,9 +96,7 @@ MEASURED_COLS = ([f"{k}{str(y)[2:]}_{f}" for y in PICK_YEARS for k in PICK_KINDS
                     "d_dune_band_m", "d_back_to_road_m", "d_toe_to_road_m",
                     "lost_dune_band_m", "lost_back_to_road_m", "lost_behind_road_m",
                     "band_suggests", "reviewed_by", "reviewed_at"])
-# The quick review (HAT_imagery_review_quick.py, 2026-09-10): two yes/no/unclear
-# answers per domain - is the 1984 road offset right, is N right - kept across re-runs
-# like the columns above.
+# The quick review (HAT_imagery_review_quick.py, 2026-09-10)
 QUICK_COLS = ["offset_ok", "rows_ok"]
 VERDICT_VOCAB = {
     "dune_field_change": "narrower | wider | same | unclear",
@@ -202,30 +110,20 @@ VERDICT_VOCAB = {
 C_ADD, C_REM, INK = off.C_1984, off.C_1997, off.INK
 C_ROAD, C_ROAD_OLD = "#1a1a1a", "0.35"
 C_SEA_ALT = "#7b3294"         # the seaward alternative placement, outline only
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# THE IMAGERY
-# =============================================================================
+# The imagery
 
+# The georeferenced tifs for one year, preferring a finished mosaic
 def _year_files(year: int) -> list[Path]:
-    """The georeferenced tifs for one year, preferring a finished mosaic.
-
-    The release folders are not uniform: 1984 has a mosaic plus the frames it
-    was built from (under 1984_georef_TIF/Input; /zip holds archives), 1996/1997
-    are frames only, later years are
-    mosaics under other names, and the 2025 draft folder holds every year
-    again as frames. One rule: a `<year>_full_aerial.tif` wins; otherwise the
-    frames named `<year>_MMDD_*.tif` outside any Input/zip/thumbnail folder.
-    """
     mosaics = [Path(p) for p in glob.glob(str(AERIAL_ROOT / f"{year}*" / f"{year}_full_aerial.tif"))]
     frames = []
     for pat in (AERIAL_ROOT / f"{year}_henderson" / "**" / f"{year}_*.tif",
                 AERIAL_ROOT / "Henderson_Hatteras2025" / "Hatteras_Georeferenced_DRAFT" / str(year)
                 / "**" / f"{year}_*.tif"):
         frames += [Path(p) for p in glob.glob(str(pat), recursive=True)]
-    # 1984's frames sit under 1984_georef_TIF/Input: georeferenced, 1 ft, the
-    # input to the mosaic, and the only thing that fills the mosaic's gaps
+    # 1984's frames sit under 1984_georef_TIF/Input and fill the mosaic's gaps
     bad = ("zip", "thumbnail")
     frames = [p for p in frames if p.suffix.lower() == ".tif"
               and not any(b in q.lower() for q in p.parts for b in bad)]
@@ -235,13 +133,12 @@ def _year_files(year: int) -> list[Path]:
         if p.name not in seen:
             seen.add(p.name)
             out.append(p)
-    # the mosaic is read first; the frames only fill where it has no pixels
-    # (the 1984 mosaic has gaps, e.g. the south of GIS 63)
+    # The mosaic first; frames fill only where it has no pixels
     return mosaics[:1] + out
 
 
+# The flight date from the frame names (YEAR_MMDD_...), or the year
 def _year_date(year: int) -> str:
-    """The flight date from the frame names (YEAR_MMDD_...), or the year."""
     for pat in (AERIAL_ROOT / f"{year}_henderson" / "**" / f"{year}_*",
                 AERIAL_ROOT / "Henderson_Hatteras2025" / "**" / f"{year}_*"):
         for p in glob.glob(str(pat), recursive=True):
@@ -251,8 +148,8 @@ def _year_date(year: int) -> str:
     return str(year)
 
 
+# One year's files with their footprints in the map frame
 class Imagery:
-    """One year's files with their footprints in the map frame."""
 
     def __init__(self, year: int, dst_crs, strict: bool = True):
         self.year = year
@@ -261,8 +158,7 @@ class Imagery:
         self.foot = []
         self.has_mosaic = False
         if not self.files:
-            # the drive is external and can disappear mid-session; the batch
-            # script stops, the window carries on from its cache
+            # The drive is external and can disappear mid-session
             if strict:
                 raise SystemExit(f"\nno georeferenced imagery for {year} under {AERIAL_ROOT}\n")
             print(f"  WARNING: no imagery for {year} under {AERIAL_ROOT} (drive off?); cached tiles only")
@@ -281,16 +177,8 @@ class Imagery:
     def covering(self, win) -> list[Path]:
         return [p for p, (g, _) in zip(self.files, self.foot) if g.intersects(win)]
 
+    # Distance to the nearest no-photograph pixel, in metres, on a coarse overview of one file ...
     def _edge_distance(self, path: Path):
-        """Distance to the nearest no-photograph pixel, in metres, on a coarse
-        overview of one file (computed once per file, cached).
-
-        The frames carry a dark FRINGE inside their black border (values ~40
-        on 1997_1012_040163d, not 0), so "pixel > 0" cannot tell photograph
-        from film edge. Instead every pixel of the tile takes the frame it lies
-        farthest inside, the ordinary seamline rule, and a fringe a few metres
-        wide can never win against a frame that has real photograph there.
-        """
         if not hasattr(self, "_dist"):
             self._dist = {}
         if path in self._dist:
@@ -309,13 +197,8 @@ class Imagery:
             self._dist[path] = (dist, ov_t, src.crs)
         return self._dist[path]
 
+    # (H, W, 3) uint8 in the map frame at `res`, 0 where no photograph
     def read(self, x0: float, x1: float, y0: float, y1: float, res: float, dst_crs):
-        """(H, W, 3) uint8 in the map frame at `res`, 0 where no photograph.
-
-        Where files overlap, each pixel comes from the file it lies farthest
-        inside (see _edge_distance). The mosaic is one file among the others,
-        so its gaps are filled by the frames and its own pixels win elsewhere.
-        """
         W, H = int(round((x1 - x0) / res)), int(round((y1 - y0) / res))
         dst_t = Affine(res, 0.0, x0, 0.0, -res, y1)
         out = np.zeros((3, H, W), dtype=np.uint8)
@@ -332,11 +215,7 @@ class Imagery:
                 if w.width <= 0 or w.height <= 0:
                     continue
                 st, sc = src.window_transform(w), src.crs
-                # A coarse request (an island-wide map, 2026-09-23) reads the
-                # frame decimated -- through its overviews where it has them --
-                # to ~res/2, instead of pulling every 0.3 m pixel into memory.
-                # A fine request (the domain windows) reads at full resolution
-                # as before.
+                # A coarse request reads the frame decimated; a fine one at full resolution
                 unit = 0.3048 if ("foot" in str(sc).lower() or "us_survey_feet" in str(sc).lower()) else 1.0
                 step = int(res / 2 / (src.res[0] * unit))
                 if step >= 2:
@@ -365,10 +244,9 @@ class Imagery:
         return np.moveaxis(out, 0, -1)
 
 
-# =============================================================================
-# THE PROFILES: interior row 0 on the map, for every domain
-# =============================================================================
+# The profiles: interior row 0 on the map, for every domain
 
+# A sibling script, loaded as a module
 def _load_module(path: Path, name: str):
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
@@ -376,8 +254,8 @@ def _load_module(path: Path, name: str):
     return mod
 
 
+# (interior_x, interior_y, row0) per profile, per domain
 class ProfileFrames:
-    """(interior_x, interior_y, row0) per profile, per domain."""
 
     def __init__(self):
         road = pd.read_csv(ROAD_DIR / "RoadOffset_1984_profiles.csv")
@@ -454,10 +332,9 @@ class ProfileFrames:
         return pr.sort_values("interior_y").reset_index(drop=True)
 
 
-# =============================================================================
-# THE ROWS ON THE MAP (as HAT_verify_road_placement_1984.py draws them)
-# =============================================================================
+# The rows on the map (as HAT_verify_road_placement_1984.py draws them)
 
+# The polygon of interior rows r0..r1 along the profiles
 def _band_poly(pr: pd.DataFrame, r0: float, r1: float) -> np.ndarray:
     y = pr["interior_y"].to_numpy()
     xa = pr["interior_x"].to_numpy() - r0 * CELL_M + CELL_M / 2
@@ -468,19 +345,13 @@ def _band_poly(pr: pd.DataFrame, r0: float, r1: float) -> np.ndarray:
     return np.concatenate([np.column_stack([xa, yy]), np.column_stack([xb[::-1], yy[::-1]])])
 
 
+# Draw one row band
 def _band(ax, pr, r0, r1, **kw):
     ax.add_patch(plt.Polygon(_band_poly(pr, r0, r1), closed=True, **kw))
 
 
+# Row ranges (relative to interior row 0, v2 frame) of everything drawn
 def placements(t: pd.Series) -> dict:
-    """Row ranges (relative to interior row 0, v2 frame) of everything drawn.
-
-    v3 (the live placement): rows added go directly behind the model's road as
-    placed under the 1984 setback, rows removed come out directly in front of
-    today's pavement; no-road domains use the crest row. The seaward
-    alternative: rows added between the 1984 line and row 0 (drawn as the |N|
-    cells seaward of row 0), rows removed as rows 0..|N|-1.
-    """
     n = int(t["n_cells"])
     out = {"n": n, "anchor": str(t.get("insert_anchor", "") or ""), "v3": None, "sea": None,
            "pav": None, "road": None}
@@ -497,8 +368,7 @@ def placements(t: pd.Series) -> dict:
             out["road"] = (r_new, r_new + 1)                 # on the v2 cells it covers
             out["v3"] = (r_new + ROAD_ROWS, r_new + ROAD_ROWS + n - 1)
         else:
-            # rows removed in front of the road: v3 row r maps to v2 row r
-            # before the seam and r + |N| after it
+            # Rows removed in front of the road
             def v2_row(r):
                 return r if r < ins else r - n
             out["road"] = (v2_row(r_new), v2_row(r_new + 1))
@@ -509,19 +379,18 @@ def placements(t: pd.Series) -> dict:
     return out
 
 
-# =============================================================================
-# THE BRIGHTNESS STRIP
-# =============================================================================
+# The brightness strip
 
+# Mean brightness per pixel, NaN where the photo has no data
 def luminance(img: np.ndarray) -> np.ndarray:
     L = img.astype(np.float32).mean(axis=-1)
     L[img.max(axis=-1) == 0] = np.nan
     return L
 
 
+# Per (profile, cell) mean brightness of the 10 x 10 m block, and the cells
 def strip(L: np.ndarray, x0: float, y1: float, res: float, pr: pd.DataFrame,
           r_min: int, r_max: int) -> tuple[np.ndarray, np.ndarray]:
-    """Per (profile, cell) mean brightness of the 10 x 10 m block, and the cells."""
     cells = np.arange(r_min, r_max + 1)
     out = np.full((len(pr), len(cells)), np.nan)
     h = CELL_M / 2
@@ -541,10 +410,8 @@ def strip(L: np.ndarray, x0: float, y1: float, res: float, pr: pd.DataFrame,
     return cells, out
 
 
+# The window drawn for one domain
 def domain_window(pr: pd.DataFrame, pl: dict, bounds) -> tuple[float, float, float, float]:
-    """The window drawn for one domain: from a little seaward of the seaward-most
-    dune line to WINDOW_PAD_LAND_M behind the landward-most row drawn, clipped to
-    the domain box; the box's full alongshore extent plus 10 m."""
     b = bounds
     x_sea = float((pr["interior_x"] - np.minimum(pr[["r_line84", "r_line97"]].min(axis=1), 0) * CELL_M).max())
     r_land = max([rr[1] for rr in (pl["v3"], pl["pav"], pl["road"], pl["sea"]) if rr is not None] + [12])
@@ -553,10 +420,9 @@ def domain_window(pr: pd.DataFrame, pl: dict, bounds) -> tuple[float, float, flo
     return x_lo, x_hi, b[1] - 10.0, b[3] + 10.0
 
 
-# =============================================================================
-# THE FIGURE, ONE DOMAIN
-# =============================================================================
+# The figure, one domain
 
+# One domain's review figure
 def fig_domain(d: int, t: pd.Series, pr: pd.DataFrame, imagery: list[Imagery], gdf, lines, roads,
                role: str, with_lidar: bool) -> tuple[Path, dict]:
     off.apply_style()
@@ -722,10 +588,9 @@ def fig_domain(d: int, t: pd.Series, pr: pd.DataFrame, imagery: list[Imagery], g
     return p, stats
 
 
-# =============================================================================
-# THE SHEET AND THE REPORT
-# =============================================================================
+# The sheet and the report
 
+# Unchanged domains next to changed ones, as controls
 def choose_controls(tab: pd.DataFrame, n_controls: int) -> list[int]:
     changed = set(int(d) for d in tab.index[tab["n_cells"] != 0])
     none = [int(d) for d in tab.index if int(tab.loc[d, "n_cells"]) == 0]
@@ -738,6 +603,7 @@ def choose_controls(tab: pd.DataFrame, n_controls: int) -> list[int]:
     return neigh
 
 
+# Write the review sheet, keeping any verdicts already in it
 def write_sheet(rows: list[dict], quiet: bool = False) -> Path:
     new = pd.DataFrame(rows).set_index("domain").sort_index()
     for c in VERDICT_COLS + MEASURED_COLS + QUICK_COLS:
@@ -764,6 +630,7 @@ def write_sheet(rows: list[dict], quiet: bool = False) -> Path:
     return SHEET
 
 
+# The plain-text review report
 def write_report(rows: list[dict], imagery: list[Imagery], controls: list[int], figs: list[Path]) -> Path:
     df = pd.DataFrame(rows).set_index("domain").sort_index()
     ch = df[df["role"] == "changed"]
@@ -836,6 +703,7 @@ def write_report(rows: list[dict], imagery: list[Imagery], controls: list[int], 
     return REPORT
 
 
+# The caption for the review figures
 def write_caption(imagery: list[Imagery], n_changed: int, n_controls: int) -> None:
     years = ", ".join(im.date for im in imagery)
     head = "## `HAT_imagery_review_GIS<N>.png` (3-placement/imagery-review/rows-added, rows-removed, unchanged)"
@@ -865,8 +733,8 @@ def write_caption(imagery: list[Imagery], n_changed: int, n_controls: int) -> No
     upsert_caption(head, body)
 
 
+# Replace or append one `## ...` section of CAPTIONS.md
 def upsert_caption(head: str, body: str) -> None:
-    """Replace or append one `## ...` section of CAPTIONS.md."""
     text = CAPTIONS.read_text(encoding="utf-8") if CAPTIONS.is_file() else "# Figure captions\n"
     if head in text:
         i = text.index(head)
@@ -876,8 +744,7 @@ def upsert_caption(head: str, body: str) -> None:
     CAPTIONS.write_text(text, encoding="utf-8")
 
 
-# =============================================================================
-
+# Run: every chosen domain's figure, then the sheet, report and caption
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[2])
     ap.add_argument("--domains", default="", help="comma-separated GIS ids (default: every changed domain + controls)")

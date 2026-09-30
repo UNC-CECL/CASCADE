@@ -1,47 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_plot_fill_options_grid.py
-==============================================================================
-The candidate interior fills as BARRIER3D DOMAIN VIEWS -- the grid the model
-would be handed under each, not a profile line through it.
+"""
+The candidate interior fills as Barrier3D domain views: the grid the model would be handed under each.
 
-A median profile hides the thing that decides overwash: whether the added rows
-are uniform across the domain or carry alongshore structure. The flat fill has
-none by construction; the matched backdune carries today's backdune texture;
-the measured fill inherits the 1996 dune face and is as variable as that dune
-was. The grid shows that directly.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/4-fill/HAT_plot_fill_options_grid.py [--domain 85] [--rows 26]
 
-    reference          v3, no rows added. NC-12 at its MEASURED offset.
-    flat backdune      median of interior rows 1-3, per column
-    matched backdune   today's near-dune profile copied to the 1984 position
-    measured + floor   the real DEM cell where dry, floored at the platform.
-                       THE SHIPPED RULE -- v4 at the ten block domains, v5
-                       island-wide.
-    measured + median  every dry cell kept as measured; only the cells at or
-                       below MHW filled, with the median of the block's own
-                       dry cells. `--fill median`.
-    raw DEM, no floor  A CONTROL, NOT A CANDIDATE.
-
-`taper` was drawn here until 2026-09-03 and is gone: it was fully invented and
-it anchored on row 0, which at GIS 85 IS the mis-picked 1996 crest, so it
-inherited a known-bad endpoint. `--fill taper` still exists in
-HAT_insert_seaward_rows.py - removing a build capability is a different
-decision from removing a figure panel.
-
-`matched backdune` is NOT a `--fill` choice in HAT_insert_seaward_rows.py. It
-is drawn here as a candidate; building it would need a new fill rule.
-
-THE ROAD IS DRAWN AT ITS MEASURED OFFSET, NOT THE FLOORED ONE
-    int() truncates toward zero, so a measured -15 m gives road_start = -1: the
-    road lands SEAWARD of interior row 0, drawn overlapping the dune strip and
-    hatched. That is not a plotting artefact, it is the failure --
-    roadway_manager would evaluate xyz_interior_grid[-1:1, :], valid Python
-    indexing from the LANDWARD end, and bulldoze the sound-side marsh. Flooring
-    it in the figure is what made the problem invisible in earlier versions.
-
-USAGE
-    python HAT_plot_fill_options_grid.py [--domain 85] [--rows 26]
-==============================================================================
+Guarded: the layers it draws were deleted 2026-09-07, so it stops
+before drawing until one is rebuilt. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -66,6 +30,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch, Rectangle
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -82,13 +47,8 @@ from site_layer.hat_figure_style import (apply_style, C, INK, caption,       # n
                               elevation_cmap, figsize, save,
                               spines_for_image, _title)
 
-# INS_V supplies N and the post-insert setback ONLY; the figure draws
-# blocks it builds itself. Repointed v4 -> v5 on 2026-09-03: N is
-# identical at all ten block domains (verified), and v5 is the version
-# taken forward, so v4 no longer has to exist for this figure to build.
-# DELETED 2026-09-07 with every layer (only unmodified topography is kept);
-# the literal is kept as the name of what this drew. require_version() in
-# main() says so before any array is opened.
+# --- CONFIG ------------------------------------------------------------------
+# INS_V supplies N and the post-insert setback ONLY
 BASE_V, INS_V = "v2", "v4"   # base was "v3" and the layer "v5" until the 2026-09-04 renumber
 OFFSET_SCRIPT = (REPO / "scripts/input_prep/4-mgmt-forcings/road_offset"
                  / "1-produce/HAT_road_offset_from_dune_start.py")
@@ -96,28 +56,21 @@ BERM_EL_M = 1.7
 DUNE_ROWS = 2
 ROAD_CELLS = 2
 BACKDUNE_ROWS = 3
+# -----------------------------------------------------------------------------
 
-# THE ROAD ELEVATION CASCADE ACTUALLY USES, m MHW.
-#
-# hatteras_site_config.HATTERAS_ROAD_ELEVATION_FILE resolves to THIS file.
-# There is a second one, road_offset/dunestart_offset/measured/1984/
-# RoadElevation_1984_dunestart.csv, and it must NOT be used here: it samples
-# along the 1984 alignment, which at the relocated domains (GIS 9-15, 84-87)
-# now lies UNDER the foredune, so it returns dune rather than roadbed. At
-# GIS 85 the two read 0.807 m and 1.833 m - a metre of difference that is
-# entirely the abandoned corridor being buried. See the long note beside
-# HATTERAS_ROAD_ELEVATION_FILE in hatteras_site_config.py.
+# THE ROAD ELEVATION CASCADE ACTUALLY USES, m MHW
 from site_layer.hat_topo_version import ROAD_ELEVATION_FILE as ROAD_ELEV_FILE  # noqa: E402
 
 
+# Per-domain road elevation, m MHW
 def road_elevation(domain):
-    """Per-domain road elevation, m MHW. None if this domain has no NC-12."""
     rows = list(csv.reader(open(ROAD_ELEV_FILE)))
     ids = [int(float(x)) for x in rows[0]]
     vals = [float(x) for x in rows[1]]
     return dict(zip(ids, vals)).get(domain)
 
 
+# The extractor module, for the 1984-start product
 def load_ext():
     spec = _iu.spec_from_file_location("hat_off", OFFSET_SCRIPT)
     m = _iu.module_from_spec(spec)
@@ -126,8 +79,8 @@ def load_ext():
     return m.load_extractor("1984-start")
 
 
+# The DEM cell at each added position, per profile
 def real_cells(dom, row0, n, n_along):
-    """The DEM cell at each added position, per profile. NaN where off-array."""
     z = dom["z"]
     out = np.full((n, n_along), np.nan)
     for i in range(n_along):
@@ -138,17 +91,9 @@ def real_cells(dom, row0, n, n_along):
     return out
 
 
+# `road_ele` paints the road block at a SINGLE elevation, which is what the model holds
 def draw(ax, topo, dune, setback, n_added, nrows, idx, title,
          road_ele=None):
-    """`road_ele` paints the road block at a SINGLE elevation, which is what
-    the model holds: bulldoze() does `np.zeros(...) + road_ele`, so after the
-    first pass every road cell carries the same value regardless of the ground
-    that was there. Left as None for the reference panel, whose setback is
-    negative and whose road therefore falls outside the interior array.
-
-    The per-panel note box of quantitative results was removed 2026-09-10: the
-    house rule is that statistics belong in the caption, and main() now builds
-    one caption line per panel from the same numbers."""
     cmap, norm, _ = elevation_cmap()
     n_along = topo.shape[1]
     strip = np.tile(BERM_EL_M + dune[None, :n_along], (DUNE_ROWS, 1))
@@ -181,6 +126,7 @@ def draw(ax, topo, dune, setback, n_added, nrows, idx, title,
     _title(ax, idx, title)
 
 
+# Run: one grid panel per candidate fill
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--domain", type=int, default=85)
@@ -219,21 +165,12 @@ def main() -> None:
             "no road elevation to draw.".format(D, ROAD_ELEV_FILE.name))
 
     blocks = [
-        # MATCHED BACKDUNE. The existing first n interior rows copied in front
-        # of themselves, so the near-dune PROFILE is reproduced at the 1984
-        # position: "the 1984 backdune looked like the present one, just
-        # further seaward". Every value is a measured cell, so unlike the flat
-        # fill it carries real alongshore texture - but it is counted as 0%
-        # measured because those cells are measurements of the WRONG PLACE,
-        # copied, not of the ground being filled.
+        # Matched backdune: the first n rows copied in front of themselves (0% measured)
         ("matched backdune", "copies the present near-dune profile to the "
          "1984 position: real cells, but measurements of a different place, "
          "so none of the block is taken from the DEM at these coordinates",
          v3[:n, :].copy(), 0.0),
-        # KEEP DRY, FILL WET WITH THE BLOCK'S OWN MEDIAN. `--fill median`.
-        # Same dry-land test as the shipped rule, but no second step: a
-        # measurement is never raised, and the one invented number comes from
-        # the ground being filled rather than from interior rows 1-3.
+        # KEEP DRY, FILL WET WITH THE BLOCK'S OWN MEDIAN
         ("measured + median", "keeps every dry cell as measured and fills only "
          "the cells at or below mean high water, with the median of the "
          "block’s own dry cells",
@@ -311,8 +248,7 @@ def main() -> None:
                     notes=" ".join(notes)))
 
     out = Path(args.out) if args.out else (
-        # NOTE 2026-09-08: this figure now lives in figures/superseded-layers/; the script is
-        # guarded (no layer on disk), so nothing is written here until a layer is rebuilt.
+        # Superseded-layers figure: guarded, writes nothing until a layer is rebuilt
         insert_figures_dir("1984-start", "4-fill")
         / "HAT_fill_options_grid_GIS{}.png".format(D))
     written = save(fig, out, vector=False)

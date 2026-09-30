@@ -1,44 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_imagery_review_summary.py
-==============================================================================
-What the imagery review says, once the sheet is filled: the verdicts along the
-island against the rows the footprint changes, and the reviewer's toe picks
-against the shift the footprint measured from the digitized lines.
+"""
+What the filled imagery review says: verdicts along the island, and the toe picks against the measured shift.
 
-Reads 2-domain-reconstruction-1984/3-placement/imagery-review/imagery_review_1984.csv (written by
-HAT_imagery_review_1984.py, filled by hand or through HAT_imagery_review_gui.py)
-and footprint_1984_by_domain.csv. Writes nothing model-facing. Runs on a
-half-filled or empty sheet and says so: unjudged domains are drawn hollow and
-counted as such.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/3-placement/imagery-review/HAT_imagery_review_summary.py
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/3-placement/imagery-review/HAT_imagery_review_summary.py --sheet <other.csv> --out-dir <dir>
 
-FIGURE  figures/3-placement/imagery-review/island/HAT_imagery_review_summary.png
-    (a) every reviewed domain along the island: the signed rows N as a bar,
-        coloured by the verdict `extra_width_was` (where the 1984 island was
-        wider / narrower than in 1997): behind the road (v3's placement),
-        between the crest and the road, seaward of the crest, or no real
-        change; hollow where not yet judged. Controls (N = 0) as markers,
-        filled where their `dune_field_change` says "same". A cross marks a
-        domain whose `placement_ok` is "no".
-    (b) THE PLACEMENT QUESTION, from the picks: per measured domain, where the
-        1984 width sat, as stacked bars of N x 10 m - the part lost or gained
-        in the dune band (toe to back of dune), in the strip from the back of
-        the dune to the road, and the remainder behind the road - with the
-        island-wide medians of the three shares by sign printed in the panel.
-        The rule reads off the medians.
-    (c) which feature moved: the shift of the toe, the back of the dune and
-        the road edge (1997 - 1984, + = the 1984 feature seaward) against
-        N x 10 m, per measured domain.
-
-REPORT  2-domain-reconstruction-1984/3-placement/imagery-review/HAT_imagery_review_summary.txt
-    counts by verdict for the changed domains (adds and removals apart),
-    placement_ok, confidence, the controls, the domains where v3's placement
-    is contradicted, and the agreement of the picks with N.
-
-USAGE
-    python HAT_imagery_review_summary.py
-    python HAT_imagery_review_summary.py --sheet <other.csv> --out-dir <dir>   # a copy, for testing
-==============================================================================
+Reads the review sheet; writes a summary figure and report. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -66,6 +33,7 @@ import HAT_imagery_review_1984 as R  # noqa: E402
 from site_layer.hat_topo_version import insert_figures_dir  # noqa: E402
 
 off = R.off
+# --- CONFIG ------------------------------------------------------------------
 CATEGORY = {                       # extra_width_was -> colour, label
     "behind_road": ("#4d4d4d", "behind the road (v3's placement)"),
     "crest_to_road": ("#e08214", "between the crest and the road"),
@@ -73,12 +41,15 @@ CATEGORY = {                       # extra_width_was -> colour, label
     "none": ("#bdbdbd", "no real change (artefact of the lines)"),
 }
 COMMUNITY_C = "#dfe9f3"
+# -----------------------------------------------------------------------------
 
 
+# A stripped string, or '' for anything that is not one
 def _s(v) -> str:
     return v.strip() if isinstance(v, str) else ""
 
 
+# A float, or NaN for anything that is not a number
 def _f(v) -> float:
     try:
         return float(v)
@@ -86,6 +57,7 @@ def _f(v) -> float:
         return np.nan
 
 
+# The review sheet, indexed by domain
 def load(sheet: Path) -> pd.DataFrame:
     df = pd.read_csv(sheet, dtype=str).fillna("")
     df["domain"] = df["domain"].astype(int)
@@ -100,6 +72,7 @@ def load(sheet: Path) -> pd.DataFrame:
     return df
 
 
+# Verdicts along the island and picks against the measured shift
 def fig_summary(df: pd.DataFrame, out: Path) -> Path:
     off.apply_style()
     fig = plt.figure(figsize=(15.0, 9.0), constrained_layout=True)
@@ -226,6 +199,7 @@ def fig_summary(df: pd.DataFrame, out: Path) -> Path:
     return out
 
 
+# The plain-text summary
 def write_report(df: pd.DataFrame, fig: Path, out: Path, sheet: Path) -> Path:
     ch = df[df["n_cells"] != 0]
     ct = df[df["n_cells"] == 0]
@@ -285,6 +259,7 @@ def write_report(df: pd.DataFrame, fig: Path, out: Path, sheet: Path) -> Path:
     return out
 
 
+# Summarize one sheet into one folder
 def run(sheet: Path | None = None, out_dir: Path | None = None) -> tuple[Path, Path]:
     sheet = sheet or R.SHEET
     if not sheet.is_file():
@@ -323,6 +298,7 @@ def run(sheet: Path | None = None, out_dir: Path | None = None) -> tuple[Path, P
     return fig, rep
 
 
+# Run: summarize the live sheet, or the one given
 def main() -> None:
     ap = argparse.ArgumentParser(description="summarize the imagery review sheet")
     ap.add_argument("--sheet", default="", help="a sheet other than the live one (testing)")

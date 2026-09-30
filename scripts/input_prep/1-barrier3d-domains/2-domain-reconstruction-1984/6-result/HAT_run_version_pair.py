@@ -1,33 +1,13 @@
 #!/usr/bin/env python3
-r"""
-HAT_run_version_pair.py
-==============================================================================
-Run ONE hindcast scenario on two dune-topo versions, identically, so the two
-runs differ in nothing but the topography and its setback CSV. The pair the
-advisor asked for (2026-09-09): v2 (the extraction) against v3 (the 1984
-reconstruction), full management, calibBE, groin on, under the modules'
-automatic behaviour - and the same pair with the recorded 1989/1999
-relocations prescribed, as the control.
+"""
+Run one hindcast scenario on two dune-topo versions identically, so they differ only in topography and setbacks.
 
-WHY A SCRIPT (the same reason HAT_run_row_insert_set.py is one). Two pieces
-of global state select a version and both must be put back: the forcing-tree
-setback CSV, which hatteras_site_config.py hardcodes, is copied per version
-from dune-topo/<version>/ and restored in `finally`; the topography version
-goes through HAT_TOPO_VERSION_1984_START, which outranks CURRENT and dies
-with the subprocess. hat_run.yaml is ignored (HAT_IGNORE_SETTINGS=1).
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_run_version_pair.py --relocations 1
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_run_version_pair.py
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_run_version_pair.py --versions v2,v3 --dry-run
 
-WHERE THE RUNS LAND
-    output/raw_runs/version-pair/<version>/1984_2004/calibBE/<run_name>/
-    via HAT_RUN_KIND=version HAT_RUN_TAG="version-pair/<version>", so the
-    runs file under raw_runs/versions/version-pair/<version>/ (2026-09-16).
-    The run name is the same for both versions by design; the tag tells them
-    apart, on disk and in the `kind`/`tag` columns of run_index.csv.
-
-USAGE
-    python HAT_run_version_pair.py --relocations 1          # the prescribed control
-    python HAT_run_version_pair.py                          # emergent (the modules decide)
-    python HAT_run_version_pair.py --versions v2,v3 --dry-run
-==============================================================================
+Drives the hindcast runner once per version with the version's setback CSV
+swapped in; logs to output/logs/. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -45,6 +25,7 @@ from datetime import datetime
 from pathlib import Path
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -56,6 +37,7 @@ REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 from cascade_pipeline.run_registry import arm_component  # noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 HINDCAST = REPO / "scripts" / "hatteras_ms" / "HAT_hindcast_1984_2024.py"
 from site_layer import hat_topo_version as _tv  # noqa: E402
 DUNE_TOPO = _tv.dune_topo_root("1984-start")
@@ -74,8 +56,10 @@ BASE_ENV = {
     "HAT_MAKE_GIFS": "0",
     "MPLBACKEND": "Agg",
 }
+# -----------------------------------------------------------------------------
 
 
+# Run: one hindcast per version, the setback swapped in and restored
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--versions", default="v2,v3")

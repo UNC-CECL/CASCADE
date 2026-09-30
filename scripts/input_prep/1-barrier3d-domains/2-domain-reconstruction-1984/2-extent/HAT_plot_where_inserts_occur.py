@@ -1,41 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_plot_where_inserts_occur.py
-==============================================================================
-Where the 1984 footprint changes the domain and where it does not -- zoomed on
-the two relocation blocks. Both signs. TWO figures since 2026-09-07 (they
-were panels of one):
+"""
+Where the 1984 footprint changes the domain and where it does not, zoomed on the two relocation blocks.
 
-    HAT_where_inserts_occur_blocks.png   (a) (b) the two relocation blocks,
-        GIS 9-14 and 84-87: the measured paired shift per domain with its
-        p10-p90, and the rows it becomes under the 10 m rule, +N added / -N
-        removed / no change.
-    HAT_where_inserts_occur_setback.png  the NC-12 setback at those domains,
-        as the model receives it now and from the new row 0 (with p10-p90).
-    (an island-wide panel was drawn here too, and RETIRED the same day: it
-     showed the same quantity as HAT_footprint_1984_shift.png, which is the
-     canonical island-wide view - Hannah's call, 2026-09-07)
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/2-extent/HAT_plot_where_inserts_occur.py
 
-REWRITTEN 2026-09-07. This used to contrast two layers (block scope v3 against
-island scope v4, both add-only) through their audit CSVs. Those layers were
-deleted that day and the footprint became symmetric, so the figures read ONE
-table, `2-domain-reconstruction-1984/2-extent/footprint_1984_by_domain.csv`, written by
-HAT_footprint_1984.py.
-
-THREE REASONS A DOMAIN IS UNCHANGED - now only one
-    Under the old block scope "unchanged" meant either "measured, no cell
-    needed" or "never asked". With island-wide scope and a symmetric rule there
-    is one reason left: |shift| is under a full 10 m cell.
-
-THE INTERVAL CAVEAT, DRAWN
-    The dune lines are 1984 and 1997 -- 13 years. The DEM surface at row 0 is
-    1996 ALACE, so the interval wanted is 12 years. The green triangles in the
-    blocks figure show N if the measurement were scaled 12/13; recorded, not
-    corrected -- scaling would assume steady change across 13 storm years.
-
-USAGE
-    python HAT_plot_where_inserts_occur.py
-==============================================================================
+Two figures from the footprint table: the blocks, and the setback now and
+under the footprint. Run HAT_footprint_1984.py first. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -58,6 +28,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -73,6 +44,7 @@ import HAT_plot_duneline_offset as off  # noqa: E402  the house style
 from site_layer.hat_figure_style import (C, DOMAIN_AXIS_LABEL, INK_MUTED, caption,   # noqa: E402
                               figsize, open_frame, save)
 
+# --- CONFIG ------------------------------------------------------------------
 FOOTPRINT_CSV = insert_scope_step("1984-start", "2-extent") / "footprint_1984_by_domain.csv"
 FIG_DIR = insert_figures_dir("1984-start", "2-extent", "island")     # the blocks: placement-independent
 FIG_SEAWARD = insert_figures_dir("1984-start", "3-placement", "seaward")  # the new setback assumes it
@@ -84,12 +56,15 @@ C_ADD, C_ADD_FILL = off.C_1984, off.C_1984_FILL
 C_REM, C_REM_FILL = off.C_1997, off.C_1997_FILL
 C_NONE, C_REF, INK = C["BASE_FILL"], C["REF"], off.INK
 C_NOW, C_SAME = C["BASE_FILL"], C["BASE"]   # the setback as extracted; unchanged domains
+# -----------------------------------------------------------------------------
 
 
+# Whole cells in a shift, truncated toward zero
 def n_of(m: float) -> int:
     return int(np.trunc(m / CELL_M))
 
 
+# A float, or NaN for anything that is not a number
 def _f(v):
     try:
         return float(v)
@@ -97,6 +72,7 @@ def _f(v):
         return float("nan")
 
 
+# The footprint table as per-domain arrays for the figures
 def load():
     if not FOOTPRINT_CSV.is_file():
         raise SystemExit(f"\n{FOOTPRINT_CSV} not found - run HAT_footprint_1984.py first\n")
@@ -115,8 +91,7 @@ def load():
     return D
 
 
-# =============================================================================
-
+# The two relocation blocks: shift and rows per domain
 def fig_blocks(D) -> Path:
     off.apply_style()
     shift, p10, p90, n, colour = D["shift"], D["p10"], D["p90"], D["n"], D["colour"]
@@ -187,6 +162,7 @@ def fig_blocks(D) -> Path:
     return p
 
 
+# The setback today against the setback under the footprint
 def fig_setback(D) -> Path:
     off.apply_style()
     n, colour = D["n"], D["colour"]
@@ -244,6 +220,7 @@ def fig_setback(D) -> Path:
     return p
 
 
+# Run: both figures
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.parse_args()

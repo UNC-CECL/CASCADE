@@ -1,59 +1,13 @@
 #!/usr/bin/env python3
-r"""
-HAT_build_footprint_version.py
-==============================================================================
-Build a 1984-start dune-topo VERSION from the footprint table: the symmetric
-1984 footprint (rows added where the 1984 dune line lay seaward of the 1997
-line, removed where it lay landward), placed BEHIND THE ROAD (or behind the
-crest row where there is no model road) and filled by the COPY rule.
+"""
+Build a 1984-start dune-topo version from the footprint table: rows added or removed behind the road.
 
-WHAT IS WRITTEN (dune-topo/<dst>/)
-    topography/domain_<N>_topography.npy   v2's array with the block inserted
-                                           (a copy of the N rows that follow the
-                                           insert point) or the rows removed
-    topography/domain_<N>_nodata.npy       the same row operation on the mask
-    dunes/domain_<N>_dune.npy              copied unchanged: the dune stays put
-    RoadSetback_1984_dunestart.csv         the 1984 setbacks: setback_new_m from
-                                           the footprint table, the road measured
-                                           against the 1984 dune line in the
-                                           model's row-0 convention, (road - row 0)
-                                           + shift per profile. Never negative, so
-                                           NO FLOOR. With the rows behind the road
-                                           this moves the model's road N rows
-                                           inland; where rows were removed in
-                                           front of the road it lands on the old
-                                           pavement's first row or the row
-                                           seaward of it (2026-09-08). Domains
-                                           the footprint has no setback for keep
-                                           v2's value.
-    HAT_footprint_audit.csv                what was done to every domain
-    RUN_MANIFEST.txt, README.md            provenance and the rules
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/5-build/HAT_build_footprint_version.py --dst-version v3
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/5-build/HAT_build_footprint_version.py --dst-version v3 --overwrite
 
-THE RULES, as decided with Hannah 2026-09-07/08 (HAT_footprint_1984.py and
-HAT_fill_copy_scope.py carry the argument; this script only applies them)
-    N               n_cells in footprint_1984_by_domain.csv
-    insert point    insert_row_behind_road: int(setback_new/10) + 2, behind
-                    the model's two roadway rows AS PLACED under the 1984
-                    setback; crest_row + 1 where there is no model road
-                    (GIS 1-5, 8)
-    add             block = z[r : r+N] copied cell by cell, inserted at r
-    remove          rows r .. r+|N|-1 deleted, r = int(setback_v2/10) - |N|: the
-                    |N| rows directly SEAWARD of today's roadway rows (Hannah,
-                    2026-09-08: the rows come out of the interior in front of
-                    the road); the road's cells and all behind them are kept
-    dune array      unchanged
-    setback         setback_new_m (the 1984 measurement); v2's value where absent
-
-VERIFIED AFTER WRITING
-    unchanged domains are byte-identical to v2; a changed domain has exactly
-    rows_before + N rows, its rows before the insert point are identical to
-    v2, and its block equals the rows that follow it (add) or its tail is
-    v2's tail (remove).
-
-USAGE
-    python HAT_build_footprint_version.py --dst-version v3
-    python HAT_build_footprint_version.py --dst-version v3 --overwrite
-==============================================================================
+Copy fill behind the road (behind the crest row where there is no road),
+1984 setbacks unfloored; writes the arrays, the setback CSV, an audit and a
+manifest. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -73,6 +27,7 @@ import numpy as np
 import pandas as pd
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -85,14 +40,17 @@ INIT = REPO / "data" / "hatteras_init"
 sys.path.insert(0, str(REPO / "scripts"))
 from site_layer.hat_topo_version import array_name, dune_topo_root, topo_dirs, insert_scope_step# noqa: E402
 
+# --- CONFIG ------------------------------------------------------------------
 PRODUCT = "1984-start"
 SRC_VERSION = "v2"
 from site_layer.hat_topo_version import insert_scope_dir  # noqa: E402
 SCOPE = insert_scope_dir(PRODUCT)
 FOOTPRINT_CSV = insert_scope_step(PRODUCT, "2-extent") / "footprint_1984_by_domain.csv"
 KINDS = ("topography", "nodata")          # the row operation applies to both
+# -----------------------------------------------------------------------------
 
 
+# Add (copy) or remove n rows at row r of one array
 def apply(z: np.ndarray, n: int, r: int) -> tuple[np.ndarray, str]:
     if n > 0:
         block = z[r:r + n].copy()
@@ -104,6 +62,7 @@ def apply(z: np.ndarray, n: int, r: int) -> tuple[np.ndarray, str]:
     return z, ""
 
 
+# Run: apply the footprint to every domain, write the version
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -141,7 +100,7 @@ def main() -> None:
                 if what:
                     rec["operation"] = what
                     changed += 1
-                # --- verify -------------------------------------------------
+                # Verify
                 if n == 0:
                     assert np.array_equal(a, b)
                 else:
@@ -158,10 +117,7 @@ def main() -> None:
         w = csv.DictWriter(fh, fieldnames=list(audit[0].keys()))
         w.writeheader()
         w.writerows(audit)
-    # --- the setback CSV: two rows, domain ids then values (the model-facing
-    # format hatteras_site_config reads). Start from v2's so the domain list and
-    # the format are exactly what the runner expects, then replace every value
-    # the footprint has a 1984 setback for.
+    # The setback CSV: start from the source version's, replace every footprinted value
     src_csv = root / SRC_VERSION / "RoadSetback_1984_dunestart.csv"
     rows = list(csv.reader(open(src_csv, newline="")))
     ids = [int(float(x)) for x in rows[0] if x.strip()]

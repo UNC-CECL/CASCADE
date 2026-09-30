@@ -1,33 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_plot_insert_three_scales.py
-==============================================================================
-The seaward row insert at three scales: GIS 85, the two relocation blocks, and
-the whole island.
+"""
+The seaward row insert at three scales: GIS 85, the two relocation blocks, and the whole island.
 
-WHAT THE INSERT IS
-    The 1984-start DEM is a 1996 ALACE beach on a 2009 backdune, so its dune has
-    already migrated landward past the 1984 NC-12 alignment. At GIS 85 that puts
-    the 1984 roadbed SEAWARD of interior row 0 -- setback -10 m, floored to 0,
-    and a road that relocates in model year 1 by construction.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_plot_insert_three_scales.py
 
-    The fix measures how far the dune line moved between 1984 and 1997 (both
-    digitized from imagery, same feature) and prepends that many interior rows
-    behind the dune, so row 0 sits at the 1984 dune position and NC-12 lands its
-    true distance behind it.
-
-WHY THREE SCALES
-    Row 1 shows the mechanism on the domain the work was for.
-    Row 2 shows every domain with a documented historical relocation, which is
-        where the correction is actually applied.
-    Row 3 shows the measured retreat for all 90 domains -- context for whether
-        GIS 85 is exceptional or typical. NOTE it is MEASURED island-wide but
-        APPLIED only to the ten block domains; the row 3 bars outside the shaded
-        blocks are what an island-wide version WOULD insert, not what it did.
-
-USAGE
-    python HAT_plot_insert_three_scales.py
-==============================================================================
+Guarded: the layers it draws were deleted 2026-09-07, so it stops
+before drawing until one is rebuilt. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -51,6 +29,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -68,41 +47,32 @@ from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa
                               DOMAIN_AXIS_LABEL, caption, figsize,
                               open_frame, save, town_bands, _title)
 
-# Resolved through hat_topo_version.duneline_shift_dir - ONE definition
-# of a path that eight scripts used to build by hand. Moved under
-# 2-domain-reconstruction-1984/ on 2026-09-03.
+# --- CONFIG ------------------------------------------------------------------
+# The measured shifts, from hat_topo_version.duneline_shift_dir (one definition, eight readers)
 SHIFT = duneline_shift_dir("1984-start")
 from site_layer import hat_topo_version as _tv  # noqa: E402
 ROAD = _tv.road_setback_dir(1984)
 BASE_VERSION = "v2"   # the re-picked extraction (was "v3")
-# DELETED 2026-09-07 with every layer (only unmodified topography is kept);
-# the literal is kept as the name of what this drew. require_version() in
-# main() says so before any array is opened.
+# DELETED 2026-09-07 with every layer (only unmodified topography is kept)
 VERSION = "v4"   # island scope, measured + floor (was "v5"). v2 + rows. Was "v4" (block
-                      # scope) until 2026-09-03. N is identical at the ten
-                      # BLOCK domains, so panels (a)-(c) are unchanged - but
-                      # panel (d) is NOT: it goes from 8 red bars to 38,
-                      # because v5 applies rows wherever the measurement
-                      # selects them. Every label below is derived from
-                      # VERSION and from the data, never written literally,
-                      # so switching the version cannot leave a stale caption.
+                      # scope) until 2026-09-03; every label derives from VERSION, so none go stale
 BLOCK_A, BLOCK_B = list(range(9, 15)), list(range(84, 88))
-# Shared vocabulary: BASE = the unmodified input, ACCENT = the change
-# under test, ADDED = fabricated ground. Same meanings in every figure.
+# Shared vocabulary: BASE unmodified, ACCENT the change under test
 GREY, RED = C["BASE"], C["ACCENT"]
+# -----------------------------------------------------------------------------
 LAND = 0.0
 
 
+# {domain: value} for one column of a CSV, blanks skipped
 def read(path, key="shift_m_median", idx="domain"):
     return {int(r[idx]): float(r[key]) for r in csv.DictReader(open(path))
             if r[key] not in ("", "nan")}
 
 
+# Run: the four panels
 def main() -> None:
     ap = argparse.ArgumentParser()
-    # Named for the versions drawn. The old default was a fixed
-    # "HAT_insert_three_scales.png", so repointing BASE_VERSION/VERSION from
-    # v1/v2 to v3/v4 would have overwritten the v1/v2 figure in place.
+    # Named for the versions drawn, so a repointed default cannot overwrite
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
     require_version("1984-start", VERSION, "VERSION, the layer drawn")
@@ -120,12 +90,7 @@ def main() -> None:
                      constrained_layout=True)
     gs = GridSpec(3, 2, figure=fig, height_ratios=[1.05, 0.92, 1.0])
 
-    # ---------------------------------------------------- ROW 1: GIS 85 alone
-    #
-    # The monospace block of GIS 85 numbers that used to sit at gs[0, 1] came
-    # off the canvas 2026-09-10: a statistics table is caption text under the
-    # house rules, and it is now the last third of caption() below. Panel (a)
-    # takes the full width in its place.
+    # Panel (a) full width; the GIS 85 numbers are caption text now
     ax = fig.add_subplot(gs[0, :])
     v1 = np.load(dune_topo_root("1984-start") / BASE_VERSION / "topography"
                  / array_name("topography", 85))
@@ -161,7 +126,7 @@ def main() -> None:
     open_frame(ax)
     _title(ax, 0, "one domain: GIS 85")
 
-    # ------------------------------------- ROW 2: the two relocation blocks
+    # Row 2: the two relocation blocks
     for j, (blk, name, yr) in enumerate(
             ((BLOCK_A, "GIS 9–14, inter-village", 1999),
              (BLOCK_B, "GIS 84–87, Pea Island", 1989))):
@@ -188,7 +153,7 @@ def main() -> None:
         open_frame(axb)
         _title(axb, 1 + j, name)
 
-    # ------------------------------------------------ ROW 3: the whole island
+    # Row 3: the whole island
     axi = fig.add_subplot(gs[2, :])
     gis = np.array(sorted(date))
     val = np.array([date[g] for g in gis])
@@ -258,8 +223,7 @@ def main() -> None:
                     b85=before[85], a85=after[85], w=int(10 * n)))
 
     out = Path(args.out) if args.out else (
-        # NOTE 2026-09-08: this figure now lives in figures/superseded-layers/; the script is
-        # guarded (no layer on disk), so nothing is written here until a layer is rebuilt.
+        # Superseded-layers figure: guarded, writes nothing until a layer is rebuilt
         insert_figures_dir("1984-start", "6-result")
         / "HAT_insert_three_scales_{}_{}.png".format(BASE_VERSION, VERSION))
     written = save(fig, out)

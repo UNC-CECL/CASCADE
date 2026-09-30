@@ -1,49 +1,13 @@
 #!/usr/bin/env python3
-r"""
-HAT_plot_version_figures.py
-==============================================================================
-The figures a BUILT dune-topo version gets, so that v3 sits beside v1 and v2
-with a figure set of its own (Hannah, 2026-09-09: "v3 should have figures
-here as well").
+"""
+The figures a built dune-topo version gets, so it sits beside v1 and v2 with a figure set of its own.
 
-WHY NOT THE EXTRACTOR'S FIGURES. v1 and v2 carry `figures/qc/` and
-`figures/gis_vs_processed/`: the raw DEM profile against the extracted one,
-per domain, and the island summary of windows and dune heights. Those are
-figures OF AN EXTRACTION - they need the picks, the raw profiles and the
-straightening frame. A built version is not extracted: it is its source
-version with rows inserted or removed and the road setback re-set, so the
-questions its figures answer are different - what does each domain look like
-now, beside what it looked like before; where did the rows go; what changed
-island-wide. Nothing here re-measures anything: every number is read from the
-version's own arrays, its setback CSV and its footprint audit.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/5-build/HAT_plot_version_figures.py
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/5-build/HAT_plot_version_figures.py --version v3 --source v2
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/5-build/HAT_plot_version_figures.py --no-grid
 
-WHAT IS WRITTEN, into dune-topo/<version>/
-    figures/grid/domain_NNN_grid_<version>.png    one per domain: the source
-        version and this version side by side as the model holds them - the
-        two dune rows on top (drawn at berm + dune height), every interior row
-        down the page, elevation classes (m MHW), NC-12's two rows at each
-        version's setback, and the footprint: the inserted block outlined
-        (add) or the removed rows hatched in the source and the seam marked
-        in the version (remove). Unchanged domains are drawn too, so the set
-        is complete; their two panels are identical.
-    HAT_dune_topo_summary_<version>.png           every domain on one page:
-        interior rows, the road setback, mean interior elevation and mean
-        dune height, source against version, with the communities banded.
-        The counterpart of the extractor's summary page.
-    HAT_dune_topo_island_planview_<version>_<year>_{trimmed,padded}.png
-        the island in plan view at the period's dune offsets, in the
-        extractor's poster style, with NC-12 drawn where the MODEL places it
-        (the version's setback), not from the GIS mask - a built version's
-        interior frame is no longer the mask's frame. The counterpart of the
-        extractor's plan views.
-    figures/README.md                             what these are and are not
-
-USAGE
-    python HAT_plot_version_figures.py                      # v3, source from its manifest
-    python HAT_plot_version_figures.py --version v3 --source v2
-    python HAT_plot_version_figures.py --domains 85,63      # only the grid panels of these
-    python HAT_plot_version_figures.py --no-grid            # summary and plan views only
-==============================================================================
+Grid panels per domain, a summary and plan views, and a figures/README.md,
+in the version's own figures/ folder. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -69,6 +33,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch, Rectangle
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -82,6 +47,7 @@ from site_layer.hat_topo_version import array_name, dune_topo_root, require_vers
 from site_layer.hat_figure_style import (apply_style, C, C_1984, C_1997, elevation_cmap, spines_for_image,  # noqa: E402
                               figsize, save, DOMAIN_AXIS_LABEL, town_bands, open_frame, _title)
 
+# --- CONFIG ------------------------------------------------------------------
 PRODUCT = "1984-start"
 CELL_M = 10.0
 DUNE_ROWS = 2
@@ -91,18 +57,16 @@ ROAD_OFFSET_SCRIPT = (REPO / "scripts" / "input_prep" / "4-mgmt-forcings" / "roa
                       / "1-produce" / "HAT_road_offset_from_dune_start.py")
 C_SRC_ROAD, C_ROAD = C["BASE"], C["ROAD"]
 C_ADD, C_REM = C_1984, C_1997               # the RdBu pair of the reconstruction figures: red added, blue removed
-# What the two versions are called on the figures (no working vocabulary; the
-# version names themselves are in the file names and the README).
+# What the two versions are called on the figures (no working vocabulary
 SRC_LABEL = "as extracted (1996 surface)"
 VER_LABEL = "1984 reconstruction"
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# READING A VERSION
-# =============================================================================
+# Reading a version
 
+# The two-row model-facing CSV
 def read_setback_csv(p: Path) -> dict[int, float]:
-    """The two-row model-facing CSV: domain ids, then metres landward of row 0."""
     if not p.is_file():
         return {}
     rows = list(csv.reader(open(p, newline="")))
@@ -111,12 +75,14 @@ def read_setback_csv(p: Path) -> dict[int, float]:
     return dict(zip(ids, vals))
 
 
+# {domain: audit row}, or {} if the version has no audit
 def read_audit(p: Path) -> dict[int, dict]:
     if not p.is_file():
         return {}
     return {int(r["domain"]): r for r in csv.DictReader(open(p, newline=""))}
 
 
+# The version this one was built from, read off its manifest
 def source_from_manifest(vdir: Path) -> str | None:
     m = vdir / "RUN_MANIFEST.txt"
     if not m.is_file():
@@ -128,6 +94,7 @@ def source_from_manifest(vdir: Path) -> str | None:
     return None
 
 
+# One built version: its folder, setbacks, audit and arrays
 class Version:
     def __init__(self, name: str):
         self.name = name
@@ -135,8 +102,8 @@ class Version:
         self.setback = read_setback_csv(self.dir / "RoadSetback_1984_dunestart.csv")
         self.audit = read_audit(self.dir / "HAT_footprint_audit.csv")
 
+    # (interior m MHW, dune height m) for one domain
     def arrays(self, d: int) -> tuple[np.ndarray, np.ndarray]:
-        """(interior m MHW, dune height m) for one domain."""
         topo = np.load(self.dir / "topography" / array_name("topography", d)) * CELL_M
         dune = np.load(self.dir / "dunes" / array_name("dune", d)) * CELL_M
         return topo, dune
@@ -146,10 +113,9 @@ class Version:
         return None if sb is None or not np.isfinite(sb) else int(sb // CELL_M)
 
 
-# =============================================================================
-# THE GRID, ONE DOMAIN, SOURCE BESIDE VERSION
-# =============================================================================
+# The grid, one domain, source beside version
 
+# One domain's grid, dune strip above the interior
 def draw_grid(ax, topo, dune, road_row, nrows, k, title, ylabel=True):
     cmap, norm, _ = elevation_cmap()
     n_along = topo.shape[1]
@@ -177,6 +143,7 @@ def draw_grid(ax, topo, dune, road_row, nrows, k, title, ylabel=True):
     spines_for_image(ax)
 
 
+# Source and version side by side for one domain
 def fig_grid(d: int, src: Version, ver: Version, out_dir: Path) -> Path:
     t0, d0 = src.arrays(d)
     t1, d1 = ver.arrays(d)
@@ -184,8 +151,7 @@ def fig_grid(d: int, src: Version, ver: Version, out_dir: Path) -> Path:
     n = int(a["n_cells"]) if a else 0
     ins = int(a["insert_row"]) if a and n else None
     nrows = max(t0.shape[0], t1.shape[0])
-    # a single-column figure per domain: the two panels side by side, the
-    # height following the row count so a deep domain is not squashed
+    # A single-column figure per domain
     fig, (ax0, ax1) = plt.subplots(1, 2, figsize=figsize("single", height=3.3 + nrows * 0.016), sharey=True,
                                    constrained_layout=True)
     draw_grid(ax0, t0, d0, src.road_row(d), nrows, 0, f"{t0.shape[0]} rows")
@@ -211,8 +177,7 @@ def fig_grid(d: int, src: Version, ver: Version, out_dir: Path) -> Path:
         ax1.text(n_along * 0.53, ins + DUNE_ROWS - 0.5, "seam", fontsize=7, ha="right",
                  va="center", color=C_REM, zorder=8, bbox=dict(fc="white", ec="none", alpha=0.85, pad=1.0))
     cmap, norm, bounds = elevation_cmap()
-    # one legend under the figure, two columns: the elevation classes (m MHW)
-    # and the footprint marks; a single column is too narrow for two legends
+    # One legend under the figure, two columns
     labels = ["< 0 m (water)"] + [f"{lo:g}–{hi:g} m" for lo, hi in zip(bounds[1:-2], bounds[2:-1])] + [f"> {bounds[-2]:g} m"]
     handles = [Patch(facecolor=cmap(i), edgecolor="0.4", lw=0.4, label=lab) for i, lab in enumerate(labels)]
     handles += [Patch(facecolor="none", edgecolor=C_ROAD, lw=1.2, label="NC-12 (two rows)")]
@@ -231,18 +196,17 @@ def fig_grid(d: int, src: Version, ver: Version, out_dir: Path) -> Path:
     return p
 
 
-# =============================================================================
-# THE SUMMARY PAGE
-# =============================================================================
+# The summary page
 
+# The footprint's totals, for the README (they were in a panel title)
 def summary_counts(src: Version, ver: Version) -> dict:
-    """The footprint's totals, for the README (they were in a panel title)."""
     ids = sorted(int(p.stem.split("_")[1]) for p in (ver.dir / "topography").glob("domain_*_topography.npy"))
     dn = np.array([ver.arrays(d)[0].shape[0] - src.arrays(d)[0].shape[0] for d in ids])
     return dict(n_add=int((dn > 0).sum()), rows_add=int(dn[dn > 0].sum()),
                 n_rem=int((dn < 0).sum()), rows_rem=int(-dn[dn < 0].sum()), n_same=int((dn == 0).sum()))
 
 
+# Rows, setbacks and heights for every domain, source against version
 def fig_summary(src: Version, ver: Version, sections, out: Path) -> Path:
     ids = sorted(int(p.stem.split("_")[1]) for p in (ver.dir / "topography").glob("domain_*_topography.npy"))
     rows0, rows1, sb0, sb1, z0, z1, h0, h1 = ([] for _ in range(8))
@@ -298,10 +262,9 @@ def fig_summary(src: Version, ver: Version, sections, out: Path) -> Path:
     return out
 
 
-# =============================================================================
-# THE ISLAND PLAN VIEW, IN THE EXTRACTOR'S STYLE
-# =============================================================================
+# The island plan view, in the extractor's style
 
+# The extractor module, for the product
 def load_extractor():
     spec = importlib.util.spec_from_file_location("hat_road_offset", ROAD_OFFSET_SCRIPT)
     ro = importlib.util.module_from_spec(spec)
@@ -309,6 +272,7 @@ def load_extractor():
     return ro.load_extractor(PRODUCT)
 
 
+# The whole island at its offsets, one year
 def fig_planview(ver: Version, ext, offsets: dict, year: int, mode: str, out: Path) -> Path | None:
     dom, off = offsets[year]
     omap = {int(a): float(b) for a, b in zip(dom, off)}
@@ -353,8 +317,7 @@ def fig_planview(ver: Version, ext, offsets: dict, year: int, mode: str, out: Pa
     cmap, norm = ext._island_norm()
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.34), constrained_layout=True)
     ax.set_facecolor(ext.ISLAND_OCEAN_COLOR)
-    # the villages as light bands, in the canvas's column frame: a translucent
-    # white so they read on the ocean colour and vanish under the island
+    # The villages as light bands, in the canvas's column frame
     col_of = {d: (starts[k], starts[k] + grids[k].shape[1]) for k, d in enumerate(use)}
     spans = {}
     try:
@@ -366,8 +329,7 @@ def fig_planview(ver: Version, ext, offsets: dict, year: int, mode: str, out: Pa
     except ImportError:
         pass
     town_bands(ax, spans=spans, shade=(1.0, 1.0, 1.0, 0.35))
-    # the extractor's cmap paints masked cells in the ocean colour, which would
-    # cover the bands; here the axes background is the ocean and the mask is clear
+    # The extractor's cmap paints masked cells in the ocean colour, which would cover the bands
     cmap = cmap.copy()
     cmap.set_bad((0.0, 0.0, 0.0, 0.0))
     im = ax.pcolormesh(np.ma.masked_invalid(canvas), cmap=cmap, norm=norm, shading="auto", rasterized=True)
@@ -398,8 +360,7 @@ def fig_planview(ver: Version, ext, offsets: dict, year: int, mode: str, out: Pa
     return out
 
 
-# =============================================================================
-
+# The figures/README.md listing what was drawn
 def write_readme(ver: Version, src: Version, n_grid: int, figs: list[Path], counts: dict) -> Path:
     p = ver.dir / "figures" / "README.md"
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -434,6 +395,7 @@ Files:
     return p
 
 
+# Run: grid, summary and plan-view figures, then the README
 def main() -> None:
     ap = argparse.ArgumentParser(description="figures for a built dune-topo version")
     ap.add_argument("--version", default="v3")

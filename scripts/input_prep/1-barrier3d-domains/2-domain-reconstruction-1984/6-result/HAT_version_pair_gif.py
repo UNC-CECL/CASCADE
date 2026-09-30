@@ -1,40 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_version_pair_gif.py
-==============================================================================
-v2 beside v3 through time: the animations of the relocation comparison, but
-with the two PANELS being the two dune-topo versions under ONE run scenario,
-instead of the two relocation arms under one version. This is the view that
-shows what the inserted and removed cells did (Hannah, 2026-09-09: "I want
-to see how the inserted cells affected things").
+"""
+v2 beside v3 through time: the relocation animations, with the two panels as the two dune-topo versions.
 
-WHAT IS DRAWN, per scenario (emergent: the modules decide; prescribed: the
-recorded 1989/1999 relocations imposed) and per alongshore window:
-    road_topography_<window>.gif   Barrier3D's own interior grids painted
-        year by year, NC-12 on them, v2 left and v3 right, one colour scale
-        and one year clock. Where v3 added rows the island is wider behind
-        the road from year 0; where it removed them, narrower in front.
-    road_relocation_<window>.gif   the dune line and the road as lines,
-        landward-positive from each domain's year-0 dune line, a star where
-        the module relocated, a ring where a prescribed move was applied.
-One folder per place - the whole island, the two event blocks, and the two
-reaches where the footprint is largest, Pea Island (GIS 78-87, rows added) and
-the Avon-Tri-Village removals (GIS 62-68) - with `topography.gif` and
-`dune-and-road.gif` in each.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_version_pair_gif.py
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_version_pair_gif.py --scenarios emergent
 
-Everything is read from the runs' saved state through the comparison
-script's own loaders; nothing is re-run. The makers are the ones the
-relocation comparison uses (cascade_pipeline.plotting.road_relocation_gif);
-only the panel labels and the pairing differ.
-
-WHERE  output/comparisons/relocation/versions/v2_vs_v3/<scenario>/<place>/
-       (its own folder: it is a cross-version comparison, not a set of one
-       version, so it does not belong under 1984_2004/v2/ or v3/)
-
-USAGE
-    python HAT_version_pair_gif.py                       # both scenarios
-    python HAT_version_pair_gif.py --scenarios emergent
-==============================================================================
+Reads the version-pair runs; writes one animation per scenario and a README. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -50,6 +21,7 @@ from datetime import datetime
 from pathlib import Path
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -60,14 +32,14 @@ def _find_root(start: Path) -> Path:
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "hatteras_ms"))
-# the relocation comparison moved into hatteras_ms/experiments/ on 2026-09-13
-# (cfd0b475); this import broke silently until 2026-09-17
+# The relocation comparison moved into hatteras_ms/experiments/ on 2026-09-13 (cfd0b475)
 sys.path.insert(0, str(REPO / "scripts" / "hatteras_ms" / "experiments"))
 import HAT_relocation_comparison as RC  # noqa: E402   loaders, windows, gif config
 from cascade_pipeline.run_info import RunInfo  # noqa: E402
 from cascade_pipeline.plotting.road_relocation_gif import (  # noqa: E402
     make_road_relocation_gif, make_topography_gif)
 
+# --- CONFIG ------------------------------------------------------------------
 # raw_runs by purpose since 2026-09-16: the version pair is under versions/
 RAW = REPO / "output" / "raw_runs" / "versions" / "version-pair"
 OUT = REPO / "output" / "comparisons" / "relocation" / "versions" / "v2_vs_v3"
@@ -79,11 +51,7 @@ SCENARIOS = {
 }
 LABEL = {"v2": "v2 — the extraction (today's setbacks)",
          "v3": "v3 — the 1984 reconstruction (1984 setbacks)"}
-# ONE FOLDER PER PLACE, two files in each (Hannah, 2026-09-09: "organize the
-# figures better"): a reader opens the reach they care about and finds both
-# views of it side by side. The relocation-comparison windows first, then the
-# two reaches where the footprint is largest.
-#   (folder, title, topography window, line window)
+# ONE FOLDER PER PLACE, two files in each (Hannah, 2026-09-09
 WINDOWS = (
     ("1-island", "the island",
      RC.TOPO_WINDOWS[0][1:], RC.GIF_WINDOWS[0][1:]),
@@ -97,8 +65,10 @@ WINDOWS = (
      (58, 72), (58, 72)),
 )
 FILES = {"topography": "topography.gif", "lines": "dune-and-road.gif"}
+# -----------------------------------------------------------------------------
 
 
+# The README beside one scenario's animations
 def write_readme(out_dir: Path, key: str, name: str, what: str, runs: dict) -> None:
     lines = [f"# v2 beside v3 \u2014 {key}", "", f"{name}: {what}.", "",
              f"Written {datetime.now():%Y-%m-%d %H:%M} by `HAT_version_pair_gif.py` from",
@@ -114,6 +84,7 @@ def write_readme(out_dir: Path, key: str, name: str, what: str, runs: dict) -> N
     (out_dir / "README.md").write_text(chr(10).join(lines) + chr(10), encoding="utf-8")
 
 
+# Run: the animations for each scenario
 def main() -> None:
     ap = argparse.ArgumentParser(description="v2 beside v3 through time")
     ap.add_argument("--scenarios", default=",".join(SCENARIOS))
@@ -142,8 +113,7 @@ def main() -> None:
                 for v in runs}
         back = {v: RC.back_barrier_matrix(casc[v]) for v in casc}
         written = []
-        # both panels are the SAME scenario: neither run carried a prescribed
-        # move in the emergent pair, both did in the prescribed one
+        # Both panels are the SAME scenario
         rings = (key == "prescribed", key == "prescribed")
         for folder, title, (tlo, thi), (llo, lhi) in WINDOWS:
             wdir = out_dir / folder

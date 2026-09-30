@@ -1,69 +1,12 @@
 #!/usr/bin/env python3
-r"""
-HAT_fill_copy_scope.py
-==============================================================================
-What the added rows would CONTAIN under the copy fill, for the behind-the-road
-placement of the 1984 footprint - scoped, drawn and audited, no version written.
+"""
+What the added rows would contain under the copy fill, behind the road: scoped, drawn and audited.
 
-THE FILL (Hannah's advisor; decided with Hannah 2026-09-07)
-    The block of N rows goes in directly behind the model's two roadway rows
-    AS PLACED under the 1984 setback (insert_row_behind_road in
-    footprint_1984_by_domain.csv = int(setback_new/10) + 2; 2026-09-08). It is filled
-    with a DIRECT COPY of the N interior rows immediately landward of the
-    insert point - rows r..r+N-1 of the existing interior, in order, cell by
-    cell across the 50 alongshore columns - so the block fabricates no value
-    and reads as the backbarrier it stands beside. The window follows N.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/4-fill/HAT_fill_copy_scope.py
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/4-fill/HAT_fill_copy_scope.py --domains 80,73
 
-    * seams: the seaward junction is continuous by construction (the block's
-      first row is the row that used to follow the road). The only seam is at
-      the LANDWARD end, where the block's last row (a copy of r+N-1) meets the
-      original row r; `seam_jump_m` is that step, alongshore mean of |dz|.
-    * no-road domains (GIS 2-5): the footprint puts the block BEHIND THE
-      CREST ROW (anchor "crest", insert_row = crest + 1, 2026-09-08), so the
-      rule is the same as behind the road - the window is the N rows that
-      follow the insert point, the crest stays at the front, nothing is
-      duplicated. (Until 2026-09-08 the block went in at row 0 and the window
-      skipped the crest, which left the crest row stranded between block and
-      source.)
-    * outliers: GIS 82/83 windows hold 10-11 m cells (Rodanthe structures in
-      the DEM). Copied as measured - they are already in the interior - and
-      flagged.
-    * water: no window holds a cell at or below MHW, so no rule is needed and
-      none is applied. If a future footprint changes that, `window_water_frac`
-      is the column to watch.
-    * removals need no fill. The |N| rows directly seaward of today's roadway
-      rows are deleted (insert_row = int(setback_v2/10) - |N|; Hannah,
-      2026-09-08: the rows come out of the interior in front of the road);
-      the after-panel is read from the built version and checked.
-
-WHAT IS ASSUMED
-    * the lost 1984 ground is booked behind the road, so the backbarrier next
-      to the road is the analogue for it (what was lost was ocean-side beach
-      and dune);
-    * the 1996/2009 backbarrier behind the road stands for 1984 backbarrier
-      (no accretion or subsidence in between);
-    * alongshore structure in the window appears twice cross-shore;
-    * the dune array, row 0, the road rows and the model's setback are as in
-      the behind-road placement - untouched.
-
-OUTPUTS  2-domain-reconstruction-1984/
-    fill_copy_by_domain.csv          per domain: N, insert row, source rows,
-                                     window stats, seam jump, flags
-    HAT_fill_copy_scope.txt          the report
-    figures/4-fill/rows-{added,removed}/HAT_fill_copy_grid_GIS<...>.png
-                                     for the example domains: the near-road
-                                     interior before and after, in elevation classes
-    figures/4-fill/rows-{added,removed}/HAT_fill_copy_method_GIS<...>.png
-                                     the method in three stages, model frame: the
-                                     domain as extracted (dune rows + interior),
-                                     the N rows inserted blank behind NC-12, the
-                                     copy fill with the source window and the copy
-                                     drawn as an arrow
-
-USAGE
-    python HAT_fill_copy_scope.py                    # examples 80, 85, 5, 49
-    python HAT_fill_copy_scope.py --domains 80,73
-==============================================================================
+The N rows behind the road copy the N rows that follow; no version is
+written. Writes an audit, a report and example figures. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -86,6 +29,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch, Rectangle
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -101,6 +45,7 @@ from site_layer.hat_topo_version import array_name, dune_topo_root, insert_figur
 from site_layer.hat_figure_style import C, caption, elevation_cmap, figsize, save  # noqa: E402
 import HAT_plot_duneline_offset as off  # noqa: E402  the house style
 
+# --- CONFIG ------------------------------------------------------------------
 PRODUCT = "1984-start"
 CELL_M = 10.0
 ROAD_ROWS = 2
@@ -115,15 +60,14 @@ C_ROAD_OLD = C["BASE"]
 INK = off.INK
 C_ADD, C_ADD_FILL = off.C_1984, off.C_1984_FILL
 C_REM = off.C_1997
+# -----------------------------------------------------------------------------
 C_ROAD = C["ROAD"]
 
 
-# =============================================================================
-# THE FILL, PER DOMAIN
-# =============================================================================
+# The fill, per domain
 
+# The audit table, and per domain the arrays (before, after, source rows)
 def plan_fill(tab: pd.DataFrame, topo_dir: Path) -> tuple[pd.DataFrame, dict]:
-    """The audit table, and per domain the arrays (before, after, source rows)."""
     rows, arrays = [], {}
     for d, r in tab.iterrows():
         n = int(r["n_cells"])
@@ -154,9 +98,7 @@ def plan_fill(tab: pd.DataFrame, topo_dir: Path) -> tuple[pd.DataFrame, dict]:
             continue
         ins = rec["insert_row"]
         flags = []
-        # one rule for every anchor: the window is the N rows that follow the
-        # insert point. For a no-road domain the footprint already put that
-        # point behind the crest row.
+        # One rule for every anchor: the window is the N rows after the insert point
         src0 = ins
         if r["insert_anchor"] == "crest":
             rec["crest_row"] = int(r["crest_row"])
@@ -168,8 +110,7 @@ def plan_fill(tab: pd.DataFrame, topo_dir: Path) -> tuple[pd.DataFrame, dict]:
             flags.append("WINDOW_SHORT")
         block = src.copy()
         after = np.concatenate([z[:ins], block, z[ins:]], axis=0)
-        # If the version has been built, the after-panel IS that version's
-        # array - read it and check it is what the rule says.
+        # If the version is built, check its array against the rule
         built = dune_topo_root(PRODUCT) / BUILT_VERSION / "topography" / array_name("topography", d)
         if built.is_file():
             zb = np.load(built) * CELL_M
@@ -197,10 +138,9 @@ def plan_fill(tab: pd.DataFrame, topo_dir: Path) -> tuple[pd.DataFrame, dict]:
     return pd.DataFrame(rows).set_index("domain"), arrays
 
 
-# =============================================================================
-# THE FIGURE: before / after / profile, for one domain
-# =============================================================================
+# The figure: before / after / profile, for one domain
 
+# The road block, labelled
 def _draw_road(ax, y: float, ncol: int, label: str, colour: str) -> None:
     ax.add_patch(Rectangle((-0.5, y - 0.5), ncol, ROAD_ROWS, facecolor=colour,
                            edgecolor=colour, lw=1.2, alpha=0.45, zorder=5))
@@ -208,8 +148,8 @@ def _draw_road(ax, y: float, ncol: int, label: str, colour: str) -> None:
             fontsize=7, fontweight="bold", color="white", zorder=6)
 
 
+# Before and after, side by side, the road rows marked in both
 def fig_domain(d: int, a: dict, rows_shown: int = 40) -> Path:
-    """Before and after, side by side, the road rows marked in both."""
     off.apply_style()
     cmap, norm, bounds = elevation_cmap()
     z0, z1, ins, n, src0, road = a["before"], a["after"], a["insert"], a["n"], a["src0"], a["road_row"]
@@ -223,9 +163,7 @@ def fig_domain(d: int, a: dict, rows_shown: int = 40) -> Path:
         ax.imshow(z[:R], cmap=cmap, norm=norm, aspect="auto", interpolation="nearest",
                   origin="upper", extent=[-0.5, z.shape[1] - 0.5, R - 0.5, -0.5])
         if road is not None:
-            # (a) NC-12 as the model holds it today, two rows at int(setback/10);
-            # (b) the same rows outlined as the measured pavement, and the model
-            #     road where v3's 1984 setback puts it - N rows inland, on the block
+            # (a) NC-12 as the model holds it today; (b) at v3's 1984 setback, N rows inland
             if k == 0:
                 _draw_road(ax, road, z.shape[1], "NC-12", C_ROAD)
             else:
@@ -271,9 +209,8 @@ def fig_domain(d: int, a: dict, rows_shown: int = 40) -> Path:
     return p
 
 
+# Before and after for a removal domain
 def _fig_domain_removal(d: int, a: dict, rows_shown: int = 40) -> Path:
-    """Before and after for a removal domain: the |N| rows directly seaward of
-    today's roadway rows go; the road's cells and everything behind are kept."""
     off.apply_style()
     cmap, norm, bounds = elevation_cmap()
     z0, z1, ins, n, road, road_new = a["before"], a["after"], a["insert"], a["n"], a["road_row"], a["road_row_new"]
@@ -335,10 +272,8 @@ def _fig_domain_removal(d: int, a: dict, rows_shown: int = 40) -> Path:
     return p
 
 
+# The three stages for a removal domain, model frame
 def _fig_method_removal(d: int, a: dict, dune_dir: Path, rows_shown: int = 40) -> Path:
-    """The three stages for a removal domain, model frame: as extracted, the
-    |N| rows identified (in front of NC-12), the rows removed and the road at
-    its 1984 setback."""
     off.apply_style()
     cmap, norm, bounds = elevation_cmap()
     z0, z1, ins, n, road, road_new = a["before"], a["after"], a["insert"], a["n"], a["road_row"], a["road_row_new"]
@@ -416,13 +351,8 @@ def _fig_method_removal(d: int, a: dict, dune_dir: Path, rows_shown: int = 40) -
     return p
 
 
+# The method in three stages, one domain, all in the MODEL's frame (dune rows on top, then the ...
 def fig_method(d: int, a: dict, dune_dir: Path, rows_shown: int = 40) -> Path:
-    """
-    The method in three stages, one domain, all in the MODEL's frame (dune rows
-    on top, then the interior): (a) the Barrier3D domain as extracted, (b) the
-    N rows identified by the footprint inserted BLANK behind the roadway rows,
-    (c) the same rows filled by copying the N interior rows that follow them.
-    """
     if a["n"] < 0:
         return _fig_method_removal(d, a, dune_dir, rows_shown)
     off.apply_style()
@@ -458,8 +388,7 @@ def fig_method(d: int, a: dict, dune_dir: Path, rows_shown: int = 40) -> Path:
             if k == 0:
                 _draw_road(ax, y_road, ncol, "NC-12, measured", C_ROAD)
             else:
-                # (b), (c): the model road at its 1984 setback - the block sits
-                # directly behind it; the measured pavement rows outlined
+                # (b), (c): the model road at its 1984 setback, the block directly behind it
                 ax.add_patch(Rectangle((-0.5, y_road - 0.5), ncol, ROAD_ROWS, facecolor="none",
                                        edgecolor=C_ROAD_OLD, lw=1.0, ls=(0, (2, 2)), zorder=5))
                 if road_new is not None:
@@ -477,10 +406,7 @@ def fig_method(d: int, a: dict, dune_dir: Path, rows_shown: int = 40) -> Path:
                         fontsize=7, fontweight="bold", color=C_ADD, zorder=6,
                         bbox=dict(facecolor="white", alpha=0.85, edgecolor="none", boxstyle="square,pad=0.2"))
         if k == 2:
-            # the source window, in the after frame, and the copy drawn as an arrow.
-            # The source starts at src0, which is the insert point for a road
-            # domain but one row behind the crest for a no-road domain (GIS 2-5)
-            # - so it is src0 + n after the insert, not ins + n.
+            # The source window, in the after frame, and the copy drawn as an arrow
             y_src = src0 + n + ROAD_ROWS
             ax.add_patch(Rectangle((-0.5, y_src - 0.5), ncol, n, facecolor="none", edgecolor=C_ADD,
                                    lw=1.4, ls=(0, (3, 2)), zorder=5))
@@ -524,8 +450,7 @@ def fig_method(d: int, a: dict, dune_dir: Path, rows_shown: int = 40) -> Path:
     return p
 
 
-# =============================================================================
-
+# The plain-text copy-fill report
 def write_report(aud: pd.DataFrame, topo_name: str, figs: list[Path]) -> Path:
     add = aud[aud.n_cells > 0]
     L = []
@@ -574,6 +499,7 @@ def write_report(aud: pd.DataFrame, topo_name: str, figs: list[Path]) -> Path:
     return p
 
 
+# Run: audit every domain, draw the examples, write the report
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)

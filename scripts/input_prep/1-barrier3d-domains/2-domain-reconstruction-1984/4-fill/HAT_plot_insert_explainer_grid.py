@@ -1,27 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_plot_insert_explainer_grid.py
-==============================================================================
-The 1984 seaward-row insert explained as Barrier3D PLAN-VIEW GRIDS (rows
-cross-shore, columns alongshore, colour = elevation), on one domain.
+"""
+The 1984 seaward-row insert explained as Barrier3D plan-view grids, on one domain.
 
-    top row     (a) the survey around the pick, in the extractor's frame,
-                    referenced to v2's interior row 0; 2009-survey cells
-                    hatched; the crest pick and the measured road marked
-                (b) the v2 domain as the model sees it: two dune rows then
-                    the interior; nothing seaward of the crest exists
-                (c) the inserted domain (v5 as the example): dune rows, the N
-                    added rows outlined, the old crest a ridge inside, and
-                    the road on rows 4-5 of the new interior
-    bottom row  the first rows of v4-v8 side by side: same dune rows, same
-                interior from old row 0 on, only the N added rows differ
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/4-fill/HAT_plot_insert_explainer_grid.py [--domain 85]
 
-Everything is drawn from the arrays on disk (v2, v4-v8 topography and dune
-files, the survey-year clip) - no run output.
-
-USAGE
-    python HAT_plot_insert_explainer_grid.py [--domain 85]
-==============================================================================
+Guarded: the layers it draws were deleted 2026-09-07, so it stops
+before drawing until one is rebuilt. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -55,14 +39,10 @@ from site_layer.hat_figure_style import (apply_style, C, INK, INK_MUTED,  # noqa
                               caption, elevation_cmap, figsize, save,
                               spines_for_image, _letter_inside, _title)
 
+# --- CONFIG ------------------------------------------------------------------
 PRODUCT = "1984-start"
 BASE = "v2"
-# DELETED 2026-09-07 with every layer (only unmodified topography is kept);
-# the literal is kept as the name of what this drew. require_version() in
-# main() says so before any array is opened.
-# (folder on disk, the fill rule it holds, the rule as a panel title). The
-# version token names the LAYER, which is working vocabulary: it is carried
-# here and in the caption's mapping, never on the canvas (2026-09-10).
+# (folder, fill rule, panel title); the version token stays off the canvas
 LAYERS = [("v4", "measured + floor", "measured\n+ floor"),
           ("v5", "measured + median", "measured\n+ median"),
           ("v6", "flat platform", "flat\nplatform"),
@@ -71,8 +51,10 @@ LAYERS = [("v4", "measured + floor", "measured\n+ floor"),
 CELL = 10.0
 BERM_M = 1.34            # Barrier3D BermEl for these runs (m MHW); dune file is height above it
 ROAD_ROWS = 2
+# -----------------------------------------------------------------------------
 
 
+# The survey-year array in the extractor's saved frame
 def survey_in_z_frame(ext, dom, D):
     s = np.load(dune_topo_root(PRODUCT).parent / "1-extraction" / "npy-arrays_survey" / f"domain_{D}.npy").astype(float)
     s = ext.orient_ocean_right(s, ext.OCEAN_LOC)[:, ::-1]
@@ -86,8 +68,8 @@ def survey_in_z_frame(ext, dom, D):
     return out
 
 
+# (rows x along) m MHW
 def model_grid(version, D, n_interior):
-    """(rows x along) m MHW: two dune rows then the first n_interior rows."""
     root = dune_topo_root(PRODUCT) / version
     topo = np.load(root / "topography" / f"domain_{D}_topography.npy") * CELL
     dune = np.load(root / "dunes" / f"domain_{D}_dune.npy") * CELL + BERM_M
@@ -97,6 +79,7 @@ def model_grid(version, D, n_interior):
     return np.vstack([dune, topo[:n_interior]])
 
 
+# Run: the grid panels for one domain
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--domain", type=int, default=85)
@@ -277,8 +260,7 @@ def main() -> None:
                     aft=raw_sb + 10 * n, kb=k_b, kb1=k_b + 1,
                     kc=k_c, kc1=k_c + 1))
 
-    # NOTE 2026-09-08: this figure now lives in figures/superseded-layers/; the script is
-    # guarded (no layer on disk), so nothing is written here until a layer is rebuilt.
+    # Superseded-layers figure: guarded, writes nothing until a layer is rebuilt
     out = Path(args.out) if args.out else insert_figures_dir(PRODUCT, "4-fill") / f"HAT_insert_explainer_grid_GIS{D}.png"
     written = save(fig, out, vector=False)
     print("wrote", written[0])

@@ -1,30 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_plot_dunelines_on_grid.py
-==============================================================================
-The digitized dune lines drawn ON the Barrier3D grid, and the same measurement
-across all 90 domains.
+"""
+The digitized dune lines drawn on the Barrier3D grid, and the same measurement across all 90 domains.
 
-WHY PUT THE LINES ON THE GRID
-    N is a difference between two digitized lines, expressed in model cells.
-    Every earlier figure showed that as numbers or as a profile. Drawing the
-    lines on the cells they are measured in makes three things checkable by eye:
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/1-measurement/HAT_plot_dunelines_on_grid.py [--domain 85]
 
-      * that the lines fall where the topography says a dune line should --
-        the 1997 line should track the seaward face of the surveyed dune;
-      * that interior row 0 sits LANDWARD of both, which is why the raw
-        measurement carries a definitional offset at all;
-      * that the band between the two lines -- the date term, which is N -- is
-        a coherent alongshore feature and not per-profile noise.
-
-    Both lines are drawn per profile, at the fractional cell where the geometry
-    actually crosses that profile's raster row, so the sawtooth is real: it is
-    the per-profile shear of the north-up clip, and it is present in both lines
-    identically, which is why it cancels in the difference.
-
-USAGE
-    python HAT_plot_dunelines_on_grid.py [--domain 85]
-==============================================================================
+N is the difference between two digitized lines in model cells; this shows it
+on the grid for one domain and as the decomposition for every domain. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -45,6 +26,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -62,9 +44,8 @@ from site_layer.hat_figure_style import (apply_style, C, C_1984, C_1984_FILL,   
                               elevation_cmap, figsize, open_frame, save,
                               spines_for_image, town_bands, _title)
 
-# Resolved through hat_topo_version.duneline_shift_dir - ONE definition
-# of a path that eight scripts used to build by hand. Moved under
-# 2-domain-reconstruction-1984/ on 2026-09-03.
+# --- CONFIG ------------------------------------------------------------------
+# The measured shifts, from hat_topo_version.duneline_shift_dir (one definition, eight readers)
 S = duneline_shift_dir("1984-start")
 BASE_V = "v2"   # the re-pick base; was "v3" until the 2026-09-04 renumber
 BERM_EL_M = 1.7
@@ -73,8 +54,10 @@ L84, L97, LROW0 = C_1984, C_1997, C["ROAD"]
 L_DATE, L_BAND = C["REF"], C_1984_FILL
 # the two relocation blocks, GIS 9-14 and 84-87: the modification under test
 BLOCKS = ((9, 14), (84, 87))
+# -----------------------------------------------------------------------------
 
 
+# {profile: (dune-line cell, interior row-0 cell)} for one domain
 def per_profile(fname, D):
     out = {}
     for r in csv.DictReader(open(S / fname)):
@@ -84,6 +67,7 @@ def per_profile(fname, D):
     return out
 
 
+# {domain: (line cell, row-0 cell, shift m)} medians
 def domain_medians(fname):
     out = {}
     for r in csv.DictReader(open(S / fname)):
@@ -93,12 +77,14 @@ def domain_medians(fname):
     return out
 
 
+# Shade the two relocation blocks
 def _blocks(ax):
     for lo, hi in BLOCKS:
         ax.axvspan(lo - .5, hi + .5, color=C["ACCENT_FILL"], alpha=.45,
                    lw=0, zorder=0)
 
 
+# Run: the grid panel for one domain, then the all-domain panels
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--domain", type=int, default=85)
@@ -129,7 +115,7 @@ def main() -> None:
                      constrained_layout=True)
     gs = fig.add_gridspec(3, 1, height_ratios=[1.3, 1.0, 1.0])
 
-    # ---- (a) the lines on the grid --------------------------------------
+    # (a) the lines on the grid
     ax = fig.add_subplot(gs[0])
     cmap, norm, bounds = elevation_cmap()
     strip = np.tile(BERM_EL_M + dune[None, :topo.shape[1]], (DUNE_ROWS, 1))
@@ -152,15 +138,14 @@ def main() -> None:
     ax.legend(loc="upper center", ncol=4, bbox_to_anchor=(0.5, -0.20),
               frameon=False, columnspacing=1.2)
     spines_for_image(ax)
-    # The bar is attached to (a) and describes only that panel; (b) and (c)
-    # are charts.
+    # The bar is attached to (a) and describes only that panel
     cax = ax.inset_axes([1.012, 0.0, 0.016, 1.0])
     cb = fig.colorbar(im, cax=cax, boundaries=bounds[1:], ticks=bounds[1:-1])
     cb.outline.set_linewidth(0.6)
     cb.ax.tick_params(length=2)
     cb.set_label("elevation (m MHW)")
 
-    # ---- (b) the same three references, all 90 domains ------------------
+    # (b) the same three references, all 90 domains
     ax2 = fig.add_subplot(gs[1])
     a84 = np.array([m84[g][0] for g in gis])
     a97 = np.array([m97[g][0] for g in gis])
@@ -177,12 +162,11 @@ def main() -> None:
     ax2.set_xlabel(DOMAIN_AXIS_LABEL)
     ax2.set_ylabel("cross-shore cell\n(median per domain)")
     _title(ax2, 1, "the same three references, all domains")
-    # no legend: the four handles are those of (a), whose legend sits
-    # directly above this panel
+    # No legend: (a)'s legend, directly above, covers these handles
     ax2.grid(axis="y")
     open_frame(ax2)
 
-    # ---- (c) the decomposition, all 90 domains --------------------------
+    # (c) the decomposition, all 90 domains
     ax3 = fig.add_subplot(gs[2])
     tot = np.array([m84[g][2] for g in gis])
     fea = np.array([m97[g][2] for g in gis])
@@ -199,13 +183,7 @@ def main() -> None:
     ax3.set_xlim(0, 91)
     ax3.set_xlabel(DOMAIN_AXIS_LABEL)
     ax3.set_ylabel("offset (m)")
-    # Do not overstate this. The feature term is TIGHT over most of the island
-    # (IQR +14.5 to +26.2 m) but it is not constant: it spikes to 130-145 m
-    # around GIS 35 and 63-68, the reaches where the date term is strongly
-    # negative -- i.e. where the shoreline prograded and the two lines are on
-    # opposite sides of row 0. Those are the domains where the differencing
-    # argument is weakest, and the caption says so rather than averaging
-    # them away.
+    # The feature term is tight but spikes at GIS 35 and 63-68; the caption says so
     _title(ax3, 2, "the decomposition, all domains")
     fig.legend(*ax3.get_legend_handles_labels(), loc="outside lower center",
                ncol=3, frameon=False)

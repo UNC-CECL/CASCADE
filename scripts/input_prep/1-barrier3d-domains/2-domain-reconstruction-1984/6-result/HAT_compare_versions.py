@@ -1,71 +1,12 @@
 #!/usr/bin/env python3
-r"""
-HAT_compare_versions.py
-==============================================================================
-v2 against v3 under the same hindcast, side by side: what the 1984
-reconstruction changes in what the model DOES. One figure and one table per
-run pair, read from the two runs' saved state (the .npz) and their metadata;
-nothing is re-run and nothing is re-scored.
+"""
+v2 against v3 under the same hindcast: what the 1984 reconstruction changes in what the model does.
 
-THE PAIRS (Hannah's advisor, 2026-09-09: "a comparison between v2 and v3
-under the modules' automatic behaviour, full management and calibrated")
-    emergent    HAT_1984_2004_calibBE_road_bdm_groin
-                full management, calibBE, groin on, the roadway and
-                beach-dune modules acting on their own (no prescribed
-                relocations). Both versions in output/raw_runs/version-pair/<v>/,
-                run by HAT_run_version_pair.py on the same code the same day.
-                (The earlier pair - v2 in the calibration tree of 2026-09-07,
-                v3 in behindroad-copy of 09-08 - sat on different commits, with
-                the pipeline and the live setback CSV changed between them, so
-                it was not a clean pair and was re-run.)
-    prescribed  HAT_1984_2004_calibBE_road_reloc_bdm_groin
-                the same with the recorded 1989 (GIS 84-87) and 1999
-                (GIS 9-14) relocations imposed: the control, showing what
-                the v3 setbacks change when the module is not deciding.
-                Both versions in output/raw_runs/version-pair/<v>/, run by
-                HAT_run_version_pair.py --relocations 1.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_compare_versions.py
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_compare_versions.py --pairs emergent
 
-THE FIGURES, per pair (two double-column figures since 2026-09-10, in the
-house style of hat_figure_style: v2 grey C["BASE"], v3 purple C["ACCENT"],
-the recorded events C["REF"]; no title sentence on the canvas, the run name
-and the pair go to CAPTIONS.md beside the PNGs)
-  HAT_compare_v2_v3_<pair>_relocations.png
-    (a) the NC-12 setback the model starts with, per road domain, two thin
-        lines with markers on a symlog axis
-    (b) every year the model relocated NC-12, per domain, the recorded
-        events outlined; counts in the legend. In the prescribed pair the
-        1989/1999 rows are inputs, so only the OTHER relocations are the
-        module's own.
-    (c) the number of relocations per year, island-wide, through time
-  HAT_compare_v2_v3_<pair>_geometry.png
-    (a) interior width per domain at 1984 (dashed) and 2004 (solid), both
-        versions: what the footprint added or removed, and what the run
-        then did with it
-    (b) island-mean interior width through time, (c) the difference
-        v3 - v2 on its own axis, (d) island-total cumulative overwash
-    (e) mean interior elevation of the land cells at 2004 per domain, both
-        versions, and (f) the difference v3 - v2 on its own axis
-    The island-wide shoreline skill of both runs (they are near-identical by
-    construction: the shoreline offset does not read the topography) is in
-    the table and the report, not on the figure.
-
-THE TABLE  version_compare_<pair>.csv, one row per domain: initial setback,
-    relocation years and count, drowned, interior rows and width at 1984
-    and 2004, mean land elevation at 1984 and 2004, cumulative overwash -
-    for v2, for v3, and the difference.
-THE REPORT  HAT_compare_versions.txt: the skill of the four runs, the
-    relocation counts and their timing against the recorded events (mean
-    error over the event blocks; a domain that never relocated is censored
-    and counted, not averaged), and the island-wide geometry medians.
-
-UNITS. Barrier3D stores decametres: widths and elevations x 10 -> m;
-QowTS is dam^3 per dam of shoreline per year, x 100 -> m^3/m. The buffer
-is 15 domains: GIS g is index g + 14.
-
-USAGE
-    python HAT_compare_versions.py                 # both pairs, whatever exists
-    python HAT_compare_versions.py --pairs emergent
-==============================================================================
+Reads each run pair's saved state and metadata (nothing re-run); writes one
+figure and one table per pair, captions and a report. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -88,6 +29,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -104,6 +46,7 @@ from site_layer.hat_figure_style import (  # noqa: E402
     C as STYLE_C, INK, DOMAIN_AXIS_LABEL, apply_style, figsize, open_frame, record_caption, save, town_bands, _title,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 RAW = REPO / "output" / "raw_runs"
 PAIRS = {
     "emergent": {
@@ -131,15 +74,14 @@ LABEL = {"v2": "as extracted (1996 surface)", "v3": "1984 reconstruction"}
 SHORT = {"v2": "as extracted", "v3": "reconstruction"}
 FIG_DIR = insert_figures_dir("1984-start", "6-result", "island")
 TAB_DIR = insert_scope_step("1984-start", "6-result")
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# READING A RUN
-# =============================================================================
+# Reading a run
 
+# One run's metadata and per-domain road history from its saved state
 def load_run(d: Path, name: str) -> dict:
-    # RESOLVED, NOT JOINED: run_layout knows where a run folder keeps each of
-    # its files, in the new layout and the old flat one alike.
+    # Resolved, not joined: run_layout knows either run-folder layout
     meta = json.load(open(resolve_run_file(d, "metadata_json", name)))
     c = np.load(resolve_run_file(d, "archive", name, must_exist=True),
                 allow_pickle=True)["cascade"][0]
@@ -168,11 +110,7 @@ def load_run(d: Path, name: str) -> dict:
             rec["setback_1984_m"] = float(sb[0]) if sb.size else np.nan
             rec["setback_2004_m"] = float(sb[-1]) if sb.size else np.nan
             rec["reloc_years"] = [START + int(k) for k in np.flatnonzero(np.nan_to_num(rel) > 0)]
-            # a PRESCRIBED event is applied as a displacement of the setback and
-            # does not raise the relocated flag: read it off the setback series
-            # as the jump at the event year in the event's block
-            # (displacements run 17-108 m; setbacks quantise to 10 m; an emergent
-            # relocation the same year would carry the flag and is excluded)
+            # A prescribed event is read off the setback series as its jump in the event year
             flagged = set(np.flatnonzero(np.nan_to_num(rel) > 0).tolist())
             rec["prescribed_years"] = [yr for yr, (lo, hi) in EVENTS.items()
                                        if lo <= g <= hi and sb.size > yr - START
@@ -191,11 +129,8 @@ def load_run(d: Path, name: str) -> dict:
     return {"meta": meta, "per": per, "dir": d}
 
 
+# Mean error of the first relocation against the recorded event year, per block
 def timing_score(per: dict) -> dict:
-    """Mean error of the first relocation against the recorded event year, per
-    block; domains that never relocate are censored, counted, not averaged.
-    Meaningful only when the events are NOT prescribed (scoring a run against
-    its own input is circular); the prescribed pair reports counts instead."""
     out = {}
     for yr, (lo, hi) in EVENTS.items():
         errs, cens = [], 0
@@ -209,9 +144,8 @@ def timing_score(per: dict) -> dict:
     return out
 
 
+# Relocations that are the module's own in the prescribed pair
 def own_relocations(per: dict) -> int:
-    """Relocations that are the module's own in the prescribed pair: everything
-    outside the (event year, event block) pairs."""
     n = 0
     for g, r in per.items():
         for y in r["reloc_years"]:
@@ -220,16 +154,12 @@ def own_relocations(per: dict) -> int:
     return n
 
 
-# =============================================================================
-# THE FIGURES
-# =============================================================================
-# Two double-column figures per pair (2026-09-10, the house style): the road
-# (setback, relocations, relocations per year) and the geometry (widths,
-# overwash, elevation, each difference on its own axis). The run name and the
-# pair description go to CAPTIONS.md beside the PNGs, not onto the canvas.
+# The figures
 
+# Two double-column figures per pair (2026-09-10, the house style)
+
+# The recorded relocation blocks, outlined, with the event year as a bar
 def _events(ax, label=True):
-    """The recorded relocation blocks, outlined, with the event year as a bar."""
     for yr, (lo, hi) in EVENTS.items():
         ax.axvspan(lo - .5, hi + .5, facecolor="none", edgecolor=C_REF, lw=0.8, ls=(0, (3, 2)), zorder=1)
         ax.hlines(yr, lo - .5, hi + .5, color=C_REF, lw=1.6, zorder=3)
@@ -239,6 +169,7 @@ def _events(ax, label=True):
                     ha="left" if right else "right", fontsize=7, color=C_REF, zorder=6)
 
 
+# The GIS-domain x axis
 def _domain_axis(ax, label=True):
     ax.set_xlim(0.2, 90.8)
     ax.set_xticks([1] + list(range(10, 91, 10)))
@@ -248,6 +179,7 @@ def _domain_axis(ax, label=True):
         ax.tick_params(labelbottom=False)
 
 
+# Relocations per domain and year, v2 against v3
 def fig_relocations(key: str, runs: dict, out: Path) -> Path:
     apply_style()
     per = {v: runs[v]["per"] for v in VS}
@@ -291,8 +223,7 @@ def fig_relocations(key: str, runs: dict, out: Path) -> Path:
         b.plot(xs, ys, MK[v], ms=4.0, color=C[v], mec="white", mew=0.5, ls="none", zorder=4)
         handles.append(Line2D([0], [0], marker=MK[v], ms=4.0, color=C[v], mec="white", mew=0.5, ls="none",
                               label=f"{LABEL[v]}: {len(xs)} relocations"))
-        # a prescribed event is an input: a tick in the run's colour across the
-        # recorded bar where it was applied, one per version, side by side
+        # A prescribed event is an input
         px = [(g + 1.5 * dx, y) for g in doms for y in per[v][g]["prescribed_years"]]
         if px:
             b.plot([x for x, _ in px], [y for _, y in px], "|", ms=7, color=C[v], mew=1.2, ls="none", zorder=5)
@@ -342,6 +273,7 @@ def fig_relocations(key: str, runs: dict, out: Path) -> Path:
     return out.with_suffix(".png")
 
 
+# Road setback and island geometry through time, v2 against v3
 def fig_geometry(key: str, runs: dict, out: Path) -> Path:
     apply_style()
     per = {v: runs[v]["per"] for v in VS}
@@ -428,6 +360,7 @@ def fig_geometry(key: str, runs: dict, out: Path) -> Path:
     return out.with_suffix(".png")
 
 
+# Captions for one pair's figures
 def write_captions(key: str, runs: dict, rel: Path, geo: Path) -> None:
     info = PAIRS[key]
     per = {v: runs[v]["per"] for v in VS}
@@ -477,10 +410,9 @@ def write_captions(key: str, runs: dict, rel: Path, geo: Path) -> None:
                    f"`version_compare_{key}.csv`.")
 
 
-# =============================================================================
-# TABLE AND REPORT
-# =============================================================================
+# Table and report
 
+# The per-domain comparison table for one pair
 def table(key: str, runs: dict) -> Path:
     rows = []
     for g in range(1, 91):
@@ -500,6 +432,7 @@ def table(key: str, runs: dict) -> Path:
     return p
 
 
+# A float, or NaN for anything that is not a number
 def _f(v):
     try:
         return float(v)
@@ -507,6 +440,7 @@ def _f(v):
         return np.nan
 
 
+# The plain-text report over every pair
 def report(results: dict, figs: list[Path], tabs: list[Path]) -> Path:
     L = [f"HAT_compare_versions.txt - v2 against v3 under the same hindcast ({datetime.now():%Y-%m-%d %H:%M})", ""]
     for key, runs in results.items():
@@ -548,6 +482,7 @@ def report(results: dict, figs: list[Path], tabs: list[Path]) -> Path:
     return p
 
 
+# Run: every pair found, then the report
 def main() -> None:
     ap = argparse.ArgumentParser(description="v2 against v3 under the same hindcast")
     ap.add_argument("--pairs", default=",".join(PAIRS))

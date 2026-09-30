@@ -1,39 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_plot_dunelines_on_dem.py
-==============================================================================
-The dune lines on the RAW DEM, in map coordinates, before any Barrier3D
-processing -- and what the DEM says at each line, island-wide.
+"""
+The dune lines on the raw DEM in map coordinates, and what the DEM says at each line, island-wide.
 
-WHY THIS FIGURE EXISTS
-    The 1984 dune line is SUBMERGED in the surveyed surface. That is not a
-    problem with the measurement, it is the measurement: by 1996 the island had
-    retreated past where its 1984 dune stood, so the ground at that position is
-    now below MHW and no survey covers it. How far offshore the line sits is
-    what sets how many interior rows have to be added.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/1-measurement/HAT_plot_dunelines_on_dem.py [--domain 85]
 
-    Drawing it on a processed Barrier3D grid cannot show this, because that grid
-    starts at the water trim and is expressed in cells. This draws the geometry
-    on the product's own raster, in metres, in the raster's own CRS.
-
-    DEM: 0-elevation/2009-2014-1996 (2-resampled-10m) -- the 1996 ALACE graft,
-    which is the product the 1984-start arrays are exported from. Resolved
-    through hat_elevation_products, not by joining strings.
-
-WHAT N IS, IN THESE TERMS
-    N is NOT how far offshore the 1984 line is. That distance -- row 0 to the
-    1984 line -- also contains the offset between a digitized line and the
-    model's interior row 0, which the 1997 line measures separately:
-
-        offshore distance (total)  =  N  +  (line vs row 0)
-
-    Inserting the full offshore distance would put row 0 on the digitized line,
-    a light/dark break at the dune toe, when row 0 is one cell landward of the
-    crest. At GIS 85 that would over-insert by ~1.7 cells.
-
-USAGE
-    python HAT_plot_dunelines_on_dem.py [--domain 85]
-==============================================================================
+Shows the 1984 dune line submerged in the surveyed surface. Writes one figure
+per domain asked for. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -58,6 +30,7 @@ from shapely.geometry import LineString, shape
 from shapely.ops import transform as sh_transform, unary_union
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -75,6 +48,7 @@ from site_layer.hat_figure_style import (apply_style, C, C_1984, C_1997,     # n
                               town_bands, _north_arrow, _scalebar, _title)
 
 from site_layer.hat_topo_version import DUNELINE_DIR as DL  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 PRODUCT = "2009-2014-1996"
 MHW_NAVD = 0.36
 NODATA_BELOW = -900.0
@@ -82,8 +56,10 @@ L84, L97 = C_1984, C_1997
 C_MHW = C["REF"]
 # the two relocation blocks, GIS 9-14 and 84-87: the modification under test
 BLOCKS = ((9, 14), (84, 87))
+# -----------------------------------------------------------------------------
 
 
+# One year's dune line, reprojected to the domain CRS
 def load_line(year, dst_crs):
     gj = json.load(open(DL / "duneline_{}.geojson".format(year)))
     src = gj.get("crs", {}).get("properties", {}).get("name", "EPSG:26918")
@@ -92,6 +68,7 @@ def load_line(year, dst_crs):
     return sh_transform(lambda x, y, z=None: tr.transform(x, y), geom)
 
 
+# The 10 m raster for a domain
 def tif_for(domain):
     d = product(PRODUCT).resampled_10m
     for nm in ("resampled_domain_{}_filled.tif".format(domain),
@@ -101,8 +78,8 @@ def tif_for(domain):
     return None
 
 
+# DEM values where `line` crosses each raster row of this domain
 def sample_along(line, dem, T, shape_, keep_cols=True):
-    """DEM values where `line` crosses each raster row of this domain."""
     vals, xs, ys = [], [], []
     for r in range(shape_[0]):
         yy = (T * (0, r + 0.5))[1]
@@ -118,6 +95,7 @@ def sample_along(line, dem, T, shape_, keep_cols=True):
     return np.array(vals), np.array(xs), np.array(ys)
 
 
+# (nodata, at or below MHW, above MHW) counts for elevations sampled on a line
 def classify(v):
     v = np.asarray(v, dtype=float)
     ok = v > NODATA_BELOW
@@ -126,6 +104,7 @@ def classify(v):
             int((ok & (v > MHW_NAVD)).sum()))
 
 
+# Run: the map panel for one domain and the island-wide panels
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--domain", type=int, default=85)
@@ -151,9 +130,9 @@ def main() -> None:
     gs = fig.add_gridspec(2, 2, height_ratios=[0.62, 1.0],
                           width_ratios=[1.25, 1.0])
 
-    # ---- (a) map view ---------------------------------------------------
-    # Elevation in the house classes, relative to MHW, so the water break in
-    # the colour scale is the MHW contour the panel is about.
+    # (a) map view
+
+    # Elevation in the house classes relative to MHW, so the water break is the MHW contour
     ax = fig.add_subplot(gs[0, :])
     shown = np.where(dem > NODATA_BELOW, dem - MHW_NAVD, np.nan)
     cmap, norm, cbounds = elevation_cmap()
@@ -181,14 +160,13 @@ def main() -> None:
     spines_for_image(ax)
     _scalebar(ax, 500.0, show_cells=False)
     _north_arrow(ax, x=0.955, y=0.60, length=0.16)
-    # an inset beside the map, so the bar is the map's height and not the
-    # gridspec row's (the map is aspect-equal and shorter than its row)
+    # Colourbar as an inset beside the map, so it is the map's height
     cax = ax.inset_axes([1.012, 0.0, 0.018, 1.0])
     cb = fig.colorbar(im, cax=cax, boundaries=cbounds[1:], ticks=cbounds[1:-1])
     cb.set_label("elevation (m MHW)")
     cb.outline.set_linewidth(0.6)
 
-    # ---- (b) what the DEM says at each line -----------------------------
+    # (b) what the DEM says at each line
     ax2 = fig.add_subplot(gs[1, 0])
     bins = np.linspace(-3, 7, 41)
     ax2.hist(v84[v84 > NODATA_BELOW], bins=bins, color=L84, alpha=0.8,
@@ -203,7 +181,7 @@ def main() -> None:
     ax2.grid(axis="y")
     open_frame(ax2)
 
-    # ---- (c) island-wide: is the 1984 line submerged? -------------------
+    # (c) island-wide: is the 1984 line submerged?
     ax3 = fig.add_subplot(gs[1, 1])
     gis, m84, m97, sub = [], [], [], []
     for dd in range(1, 91):

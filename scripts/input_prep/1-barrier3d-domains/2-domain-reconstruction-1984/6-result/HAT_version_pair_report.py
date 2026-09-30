@@ -1,32 +1,11 @@
 #!/usr/bin/env python3
-r"""
-HAT_version_pair_report.py
-==============================================================================
-v2 against v3 in ONE report: the relocation comparison's report.txt, but with
-the two dune-topo versions side by side in every section instead of one
-version per file. The companion of HAT_version_pair_gif.py, which does the
-same for the animations (Hannah, 2026-09-10: "a txt report directly comparing
-the two versions, similar to v3/calibBE_groin/report.txt").
+"""
+v2 against v3 in one report: the relocation comparison, with the two versions side by side in every section.
 
-WHAT IS READ. The two per-version sets that HAT_relocation_comparison.py
-wrote, v2/calibBE_groin/tables/ and v3/calibBE_groin/tables/, the run
-metadata of the four runs behind them, and the v3 footprint audit
-(dune-topo/v3/HAT_footprint_audit.csv: which domains got rows and how many).
-Nothing is re-run and nothing is re-scored: every number here is one of
-theirs, or a difference of two of theirs. A section whose numbers disagree
-with the per-version reports means one of the three is stale.
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_version_pair_report.py
+    python scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/6-result/HAT_version_pair_report.py --preset calibBE --set calibBE_groin
 
-WHAT IS WRITTEN, all under output/comparisons/relocation/versions/v2_vs_v3/
-    report.txt          the console output of this run, with the provenance
-                        of the four runs and the two table sets above it
-    tables/*.csv        the side-by-side tables the report prints, in full
-                        (the report prints the historical domains and the
-                        domains that differ; the CSVs hold every road domain)
-
-USAGE
-    python HAT_version_pair_report.py
-    python HAT_version_pair_report.py --preset calibBE --set calibBE_groin
-==============================================================================
+Reads each version's comparison tables; writes the side-by-side report and tables. Details: scripts/input_prep/1-barrier3d-domains/2-domain-reconstruction-1984/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -46,6 +25,7 @@ import numpy as np
 import pandas as pd
 
 
+# Walk up until a directory holds data/hatteras_init
 def _find_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -56,11 +36,11 @@ def _find_root(start: Path) -> Path:
 REPO = _find_root(Path(__file__).resolve())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "hatteras_ms"))
-# the relocation comparison moved into hatteras_ms/experiments/ on 2026-09-13
-# (cfd0b475); this import broke silently until 2026-09-17
+# The relocation comparison moved into hatteras_ms/experiments/ on 2026-09-13 (cfd0b475)
 sys.path.insert(0, str(REPO / "scripts" / "hatteras_ms" / "experiments"))
 import HAT_relocation_comparison as RC  # noqa: E402   _Tee, _arm_provenance, TOLERANCE_YEARS, windows
 
+# --- CONFIG ------------------------------------------------------------------
 # raw_runs by purpose since 2026-09-16: the version pair is under versions/
 RAW = REPO / "output" / "raw_runs" / "versions" / "version-pair"
 COMP = REPO / "output" / "comparisons" / "relocation" / "1984_2004"
@@ -76,19 +56,17 @@ TABLES = ("confusion", "first_relocation_year", "indexing_check", "near_miss_mar
 CELL_M = 10.0
 RULE = "-" * 74
 BAR = "=" * 74
+# -----------------------------------------------------------------------------
 
 pd.set_option("display.width", 200)
 pd.set_option("display.max_columns", 40)
 pd.set_option("display.max_rows", 200)
 
 
-# =============================================================================
-# READING
-# =============================================================================
+# Reading
 
+# The seven CSVs of one per-version comparison set, plus the 'generated' stamp of the report beside ...
 def read_set(version: str, set_name: str) -> dict:
-    """The seven CSVs of one per-version comparison set, plus the 'generated'
-    stamp of the report beside them."""
     d = COMP / version / set_name
     if not d.is_dir():
         raise SystemExit(f"no comparison set at {d} -- run HAT_relocation_comparison.py on {version} first")
@@ -106,9 +84,8 @@ def read_set(version: str, set_name: str) -> dict:
     return {"dir": d, "tables": tabs, "report_stamp": stamp}
 
 
+# v3's footprint audit
 def read_audit() -> pd.DataFrame:
-    """v3's footprint audit: one row per GIS domain, n_cells signed (+ added,
-    - removed, 0 unchanged)."""
     if not AUDIT.is_file():
         raise SystemExit(f"{AUDIT} is missing")
     a = pd.read_csv(AUDIT).rename(columns={"domain": "gis"})
@@ -116,20 +93,20 @@ def read_audit() -> pd.DataFrame:
     return a[["gis", "rows_v3_minus_v2", "operation"]]
 
 
+# Years as a space-separated string
 def _fmt_years(vals) -> str:
     return " ".join(str(int(v)) for v in vals)
 
 
+# A space-separated domain list as ints
 def _dom_list(s) -> list[int]:
     if isinstance(s, str) and s.strip():
         return [int(x) for x in s.split()]
     return []
 
 
+# A ruled table
 def _tab(df: pd.DataFrame, na_rep: str = "NaN") -> str:
-    """A ruled table: pandas' own per-column formatting, columns separated by
-    ' | ' and a rule under the header (Hannah, 2026-09-10: lines between the
-    columns so the tables read more easily). Right-aligned like to_string."""
     cols = []
     for c in df.columns:
         vals = df[c].to_string(index=False, na_rep=na_rep).splitlines() if len(df) else []
@@ -142,10 +119,9 @@ def _tab(df: pd.DataFrame, na_rep: str = "NaN") -> str:
     return chr(10).join(["  " + head, "  " + rule] + ["  " + b for b in body])
 
 
-# =============================================================================
-# THE COMPARISON. Everything printed becomes report.txt.
-# =============================================================================
+# The COMPARISON. Everything printed becomes report.txt.
 
+# The side-by-side sections and tables
 def compare(sets: dict, audit: pd.DataFrame, preset: str, out_dir: Path) -> None:
     tdir = out_dir / "tables"
     tdir.mkdir(parents=True, exist_ok=True)
@@ -171,7 +147,7 @@ def compare(sets: dict, audit: pd.DataFrame, preset: str, out_dir: Path) -> None
     print("  minus v2. Setbacks are metres landward of dune row 0, so a positive")
     print("  change means v3 starts the road FURTHER from the dune line.")
 
-    # ---------------------------------------------------------------- A
+    # Section A: what v3 changed at the road
     print()
     print(RULE)
     print("A. WHAT v3 CHANGED AT THE ROAD, before the model ran")
@@ -213,7 +189,7 @@ def compare(sets: dict, audit: pd.DataFrame, preset: str, out_dir: Path) -> None
     print()
     print("  saved all road domains -> start_conditions.csv")
 
-    # ---------------------------------------------------------------- 0
+    # Section 0: validity checks
     print()
     print(RULE)
     print("0. VALIDITY CHECKS, per version")
@@ -226,7 +202,7 @@ def compare(sets: dict, audit: pd.DataFrame, preset: str, out_dir: Path) -> None
     print(f"  prescribed displacements identical between versions: {'YES' if dj < 0.01 else 'NO'} "
           f"(largest difference {dj:.3f} m) -- the same measured 1989/1999 moves are applied to both")
 
-    # ---------------------------------------------------------------- 1
+    # Section 1: first modelled relocation
     print()
     print(RULE)
     print("1. FIRST MODELLED RELOCATION, free-running arm")
@@ -266,7 +242,7 @@ def compare(sets: dict, audit: pd.DataFrame, preset: str, out_dir: Path) -> None
     f.to_csv(tdir / "first_relocation_year.csv", index=False)
     print("  saved -> first_relocation_year.csv")
 
-    # ---------------------------------------------------------------- 1b
+    # Section 1b: near misses
     print()
     print(RULE)
     print("1b. NEAR MISSES: how much more dune migration would have fired it")
@@ -321,7 +297,7 @@ def compare(sets: dict, audit: pd.DataFrame, preset: str, out_dir: Path) -> None
     pd.concat([nh.assign(kind="historical"), cc.assign(kind="control")]).to_csv(tdir / "near_miss_margin.csv", index=False)
     print("  saved -> near_miss_margin.csv")
 
-    # ---------------------------------------------------------------- 2
+    # Section 2: hit / miss
     print()
     print(RULE)
     print("2. HIT / MISS, with false positives")
@@ -363,7 +339,7 @@ def compare(sets: dict, audit: pd.DataFrame, preset: str, out_dir: Path) -> None
     cr.to_csv(tdir / "confusion.csv", index=False)
     print("  saved -> confusion.csv")
 
-    # ---------------------------------------------------------------- 3
+    # Section 3: setback trajectories
     print()
     print(RULE)
     print("3. SETBACK TRAJECTORIES")
@@ -426,7 +402,7 @@ def compare(sets: dict, audit: pd.DataFrame, preset: str, out_dir: Path) -> None
     yy.to_csv(tdir / "setback_by_year.csv", index=False)
     print("  saved -> setback_summary.csv, setback_by_year.csv (per year, both arms)")
 
-    # ---------------------------------------------------------------- 4
+    # Section 4: road outcomes
     print()
     print(RULE)
     print("4. ROAD OUTCOMES, per arm and version")
@@ -463,7 +439,7 @@ def compare(sets: dict, audit: pd.DataFrame, preset: str, out_dir: Path) -> None
     mm.to_csv(tdir / "road_outcomes.csv", index=False)
     print("  saved -> road_outcomes.csv")
 
-    # ---------------------------------------------------------------- 5
+    # Section 5: animations
     print()
     print(RULE)
     print("5. ANIMATIONS (v2 left, v3 right; written by HAT_version_pair_gif.py)")
@@ -478,10 +454,9 @@ def compare(sets: dict, audit: pd.DataFrame, preset: str, out_dir: Path) -> None
     print("  same four runs is in 2-domain-reconstruction-1984/6-result/HAT_compare_versions.txt")
 
 
-# =============================================================================
-# HEADER AND MAIN
-# =============================================================================
+# Header and main
 
+# The report header
 def header(preset: str, runs: dict, sets: dict) -> str:
     L = [BAR,
          f"generated   {datetime.datetime.now():%Y-%m-%d %H:%M:%S} by {Path(__file__).name}",
@@ -507,6 +482,7 @@ def header(preset: str, runs: dict, sets: dict) -> str:
     return "\n".join(L) + "\n"
 
 
+# Run: read both versions' tables, write the report
 def main() -> None:
     ap = argparse.ArgumentParser(description="v2 against v3: the relocation comparison side by side")
     ap.add_argument("--preset", default="calibBE")
