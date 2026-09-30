@@ -24,8 +24,8 @@ from pathlib import Path
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 S = "scripts/"
 
-# (top folder it fills, label, command). Order = the layout's order.
 # --- CONFIG ------------------------------------------------------------------
+# (top folder it fills, label, command). Order = the layout's order.
 STEPS = [
     ("1-site", "site maps", [S + "figure_making/island/study_area_figures.py"]),
     ("2-observations", "CoastSat periods", [S + "figure_making/shoreline/plot_coastsat_calibration_periods.py"]),

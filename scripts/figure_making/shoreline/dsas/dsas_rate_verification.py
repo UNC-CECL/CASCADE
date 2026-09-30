@@ -42,8 +42,8 @@ print("="*70)
 print("\nCHECK 1: Comparison to CASCADE Background Erosion Rate")
 print("-"*70)
 
-# Your CASCADE background erosion rate (from your 1978-1997 calibration)
 # --- CONFIG ------------------------------------------------------------------
+# Your CASCADE background erosion rate (from your 1978-1997 calibration)
 CASCADE_BG_EROSION = -1.091  # dam/yr
 CASCADE_BG_EROSION_M = CASCADE_BG_EROSION * 10  # Convert to m/yr
 # -----------------------------------------------------------------------------

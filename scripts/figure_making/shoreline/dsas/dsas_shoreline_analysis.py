@@ -42,8 +42,8 @@ print("-"*70)
 # Load the intersection data
 df = pd.read_csv(str(_DSAS / "All_Shoreline_Transect_Intersections.csv"))
 
-# Define column names
 # --- CONFIG ------------------------------------------------------------------
+# Define column names
 TRANSECT_ID_COL = 'Transects_100m_LineID'
 DOMAIN_ID_COL = 'Transects_100m_AddSpatialJoin_domain_id'
 YEAR_COL = 'Year'

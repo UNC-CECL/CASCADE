@@ -17,8 +17,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-# Domain to visualize
 # --- CONFIG ------------------------------------------------------------------
+# Domain to visualize
 DOMAIN_NUMBER = 45  # Change this to visualize different domains
 
 # Time step to visualize

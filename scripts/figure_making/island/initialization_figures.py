@@ -41,8 +41,8 @@ from cascade_pipeline.domains import DomainGeometry
 from cascade_pipeline.plotting import init_planview
 
 
-# Derived from this file's location, so any checkout works
 # --- CONFIG ------------------------------------------------------------------
+# Derived from this file's location, so any checkout works
 PROJECT_BASE_DIR   = str(next(
     _p for _p in Path(__file__).resolve().parents
     if (_p / "pyproject.toml").exists()))
