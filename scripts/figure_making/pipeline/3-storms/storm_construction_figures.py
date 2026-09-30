@@ -1,53 +1,17 @@
 """
-storm_construction_figures.py
-==============================================================================
-How the storm series the model reads is built, drawn from the same records by
-the same rules as the generator
-(scripts/input_prep/3-env-forcings/3-storms/historical_storm_creation_v3_HAT.py).
+How the model's storm series is built: the generator's rule reproduced, checked, and drawn.
 
     python scripts/figure_making/pipeline/3-storms/storm_construction_figures.py
 
-Writes to output/figures/3-model-inputs/3-forcing/:
-
-    storm_construction_steps.png   the chain on a worked stretch (Edouard and
-                                   Fran, late August - early September 1996):
-                                   Duck water level and WIS waves -> Stockdon
-                                   run-up -> total water level against the berm
-                                   -> hours above it grouped into events ->
-                                   events split where the storm hours break ->
-                                   each event trimmed to 24 h around its peak
-    storm_events_by_duration.png   every event of 1996-2024 by its length above
-                                   the berm and its Rhigh, kept whole or
-                                   trimmed; and the storm hours each year
-                                   against the hours the model receives
-
-THE RULE (the series in use, v3_split12_trim24, adopted 2026-09-29)
-    1 hours when total water level exceeds the berm are storm hours
-    2 storm hours less than 24 h apart are grouped into one event
-    3 an event is split wherever consecutive storm hours are >= 12 h apart; a
-      piece shorter than 8 h is folded into the piece before it (after, for
-      the first)
-    4 an event of fewer than 8 storm hours is not a storm
-    5 an event longer than 24 h is cut to the 24 storm hours centred on its
-      peak total water level; Rhigh, Rlow and the period come from what is kept
-
-THE REPRODUCTION
-    The generator is a script with module-level execution, so its logic is
-    re-implemented here (build_events) and CHECKED before any figure is drawn:
-    the events must equal, row for row, the committed
-    <window>_storms_v3_split12_trim24_summary.csv of 1996_2010 and 2010_2024.
-    The run stops if they do not.
-
-REWORKED 2026-09-29 (Hannah: "rework the construction figures"). Until then
-this drew the v3_72 rule -- events over 72 h dropped whole -- which has not
-been the model's input since 2026-09-28 (trim24) and did not have the split.
+Rebuilds the events from the Duck water level and WIS waves and stops unless
+they equal the committed v3_split12_trim24 summaries; writes to
+output/figures/3-model-inputs/3-forcing/. Details: scripts/figure_making/pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
 Version: 2026-09-30
 """
-
 from __future__ import annotations
 
 import sys
@@ -62,19 +26,17 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 
+
+# --- CONFIG ------------------------------------------------------------------
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
-
 from site_layer import hat_env_forcings as env  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, C, C_1997, INK, INK_MUTED, figsize, figure_dir, save, record_caption,
     _title, open_frame,
 )
-
 OUT = figure_dir("inputs", "3-forcing")
-
-# the generator's inputs (historical_storm_creation_v3_HAT.py, "user inputs",
-# and the command line of the series in use)
+# The generator's inputs, as in the series in use
 BEACH_SLOPE = 0.06
 BERM_NAVD = 1.7
 MHW_NAVD = 0.36
@@ -86,19 +48,14 @@ VARIANT = "v3_split12_trim24"
 WINDOWS = ((1996, 2010), (2010, 2024))
 # the worked stretch: Edouard (peak 1 Sep) and Fran (peak 6 Sep) 1996
 EXAMPLE = (pd.Timestamp("1996-08-27"), pd.Timestamp("1996-09-08"))
-
 C_KEPT = C["ACCENT"]        # storm hours the model receives
 C_CUT = C["BASE"]           # storm hours the trim removes
 C_SHORT = C["BASE_FILL"]    # runs that never make an 8 h storm
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# THE GENERATOR, REPRODUCED
-# =============================================================================
-
+# Hourly water level and waves on one index, gaps dropped (the generator's load_data)
 def load_merged(start_year, end_year):
-    """load_data(): an hourly index over the window, the Duck water level and
-    WIS Hs/Tp placed on it, rows with any gap dropped."""
     idx = pd.date_range(f"{start_year}-01-01 00:00:00", f"{end_year}-12-31 23:00:00", freq="h")
     wl = pd.read_csv(env.DUCK_GAUGE_FILE, index_col="t")
     wl.index = pd.to_datetime(wl.index)
@@ -111,8 +68,8 @@ def load_merged(start_year, end_year):
     return df.dropna()
 
 
+# Stockdon et al. (2006) R2% run-up
 def r2_stockdon(hs, tp, slope=BEACH_SLOPE):
-    """calculate_r2_percent(): Stockdon et al. (2006) R2%."""
     L0 = 9.81 * tp ** 2 / (2 * np.pi)
     a = np.sqrt(hs * L0)
     setup = 0.35 * slope * a
@@ -120,9 +77,8 @@ def r2_stockdon(hs, tp, slope=BEACH_SLOPE):
     return 1.1 * (setup + np.sqrt(s_inc ** 2 + s_ig ** 2) / 2)
 
 
+# Split an event where storm hours break for >= SPLIT_GAP_H; fold short pieces into a neighbour
 def _split(group):
-    """The generator's split: cut where consecutive storm hours are >=
-    SPLIT_GAP_H apart, fold a piece under MIN_DUR_H into its neighbour."""
     group = group.sort_values("Time")
     gaps = group["Time"].diff().dt.total_seconds().div(3600).fillna(0).values
     cuts = [i for i, g in enumerate(gaps) if g >= SPLIT_GAP_H]
@@ -140,11 +96,8 @@ def _split(group):
     return [group.iloc[p] for p in pieces]
 
 
+# The generator's create_storms: hourly table and every event piece, kept or not
 def build_events(df, window_start_year):
-    """create_storms() with the series-in-use options. Returns the hourly
-    table (with the grouped system id) and EVERY piece, kept or not, with the
-    hours the trim keeps. Units as the generator: Rhigh/Rlow in dam above MHW,
-    duration in hours above the berm."""
     df = df.copy()
     df["R2"] = r2_stockdon(df.Hs, df.Tp)
     df["TWL"] = df.water_level + df.R2
@@ -183,8 +136,8 @@ def build_events(df, window_start_year):
     return d, ev
 
 
+# The rebuilt events must equal the committed series row for row
 def verify():
-    """The reproduction must equal the committed series row for row."""
     lines = []
     for w in WINDOWS:
         _, ev = build_events(load_merged(*w), w[0])
@@ -204,10 +157,7 @@ def verify():
     return lines
 
 
-# =============================================================================
-# FIGURES
-# =============================================================================
-
+# The construction chain on the worked Edouard/Fran stretch
 def fig_steps():
     lo, hi = EXAMPLE
     df = load_merged(lo.year, lo.year)
@@ -309,6 +259,7 @@ def fig_steps():
     return out
 
 
+# Every 1996-2024 event by duration and Rhigh, and storm hours per year
 def fig_events():
     evs = []
     for w in WINDOWS:
@@ -371,6 +322,7 @@ def fig_events():
     return out
 
 
+# Run: verify the reproduction, then draw both figures
 def main():
     apply_style()
     for line in verify():

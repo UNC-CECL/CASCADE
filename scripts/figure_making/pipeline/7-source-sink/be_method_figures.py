@@ -1,37 +1,16 @@
 """
-be_method_figures.py
-==============================================================================
-The source/sink (background erosion, BE) method figures for the current
-1996-2010 / 2010-2024 pair, which existed only for 1984/2004.
+How the source/sink (BE) end rates are solved and what zone field the runs carry.
 
     python scripts/figure_making/pipeline/7-source-sink/be_method_figures.py
 
-Writes output/figures/3-model-inputs/7-source-sink/:
-    be_end_solve.png   how the two end values the current (edgeBE) runs carry
-                       were solved: residual per Newton step at GIS 1 and 90,
-                       and the direct probes that set 2010 GIS 1
-    be_zone_field.png  the zone-by-zone calibration (calibBE) for the pair:
-                       residuals, which domains were eligible, and the rates.
-                       Made 2026-09-18, BEFORE the metres offset and wave
-                       option A; the current runs do not use it
-
-WHAT EXISTS AND WHAT DOES NOT
-    The 1984/2004 convergence figure reads convergence_history.json, the
-    per-pass RMSE of the iterated zone calibration. The 1996/2010 pair has no
-    such file: its zone field (2-calibrate/1996_2010__2010_2024/) is a single
-    pass. So no zone-iteration convergence figure can be drawn for it, and
-    none is invented. What the current runs DO carry is the edge-only preset,
-    solved on the adopted model (2026-09-28, secant steps plus direct probes
-    for 2010 GIS 1) and, for 2010 GIS 90, re-solved after the dune-cap fix;
-    be_end_solve.png draws both records (end-domain-boundaries/
-    2026-09-28-ends-resolved-adopted/ and 2026-09-28-ends-resolved-dunecap/).
+Reads the end-domain solve experiments and the site config's BE field; writes
+to output/figures/3-model-inputs/7-source-sink/. Details: scripts/figure_making/pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-30
+Version: 2026-09-29
 """
-
 from __future__ import annotations
 
 import json
@@ -46,34 +25,29 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
+
+# --- CONFIG ------------------------------------------------------------------
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
-
 from site_layer.hatteras_site_config import HATTERAS_BE_EDGE_ONLY  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, C, C_1984, C_1997, INK, INK_MUTED, DOMAIN_AXIS_LABEL, figsize, figure_dir, save,
     record_caption, _title, open_frame,
 )
-
 OUT = figure_dir("inputs", "7-source-sink")
 EDB = REPO / "output" / "raw_runs" / "experiments" / "end-domain-boundaries"
-# The ends the runs carry (2026-09-29): the adopted-model solve for 1996-2010 and
-# 2010 GIS 1, and the re-solve of 2010 GIS 90 after the dune-cap fix. Until
-# 2026-09-29 this figure drew the option A solve of 2026-09-27
-# (end-domain-boundaries/2026-09-27-ends-resolved-metres-offset/), which no run
-# carries any more. Since 2026-09-29 the runs carry the split12 re-solve (storms
-# v3_split12_trim24, GIS 1 moved +0.04 in each window), drawn after the steps above.
+# The end solves the runs carry, oldest to newest (history in README)
 ADOPTED = EDB / "2026-09-28-ends-resolved-adopted"
 DUNECAP = EDB / "2026-09-28-ends-resolved-dunecap"
 SPLIT12 = EDB / "2026-09-29-ends-resolved-split12"
 WAVES = "Hs2.0_period7.5_asymmetry0.6_highangle0.5"
 ZONES = REPO / "data" / "hatteras_init" / "7-source-sink" / "2-calibrate" / "1996_2010__2010_2024"
 TOL = 0.02
+# -----------------------------------------------------------------------------
 
 
+# The 2010-2024 target at GIS 1: the raw CoastSat domain mean
 def _gis1_target_2010():
-    """The 2010-2024 target at GIS 1: the raw domain mean of the CoastSat LRR
-    (the end values are solved against it; no LOWESS reaches GIS 1)."""
     from cascade_pipeline.coastsat_lowess import CoastSatDataset, LowessConfig, build_coastsat_series
     from cascade_pipeline.hindcast import build_target_table
     from site_layer.hat_observed_rates import COASTSAT_LRR_ROOT
@@ -87,9 +61,8 @@ def _gis1_target_2010():
                  .set_index("gis_domain")["target_lrr_m_yr"].loc[1])
 
 
+# The adopted solve's direct GIS 1 probes: imposed rate and residual
 def _direct_probes():
-    """The adopted solve's direct GIS 1 probes (2010, GIS 90 held at the secant
-    value): imposed rate and residual, read from the probe runs themselves."""
     target = _gis1_target_2010()
     rows = []
     for d in sorted((ADOPTED / "runs").glob("direct_gis1_*")):
@@ -101,6 +74,7 @@ def _direct_probes():
     return pd.DataFrame(rows).sort_values("imposed").reset_index(drop=True)
 
 
+# The end-rate solve, step by step, for both windows
 def fig_end_solve():
     adopted = json.loads((ADOPTED / "tables" / "ends.json").read_text())["ends_m_yr"]
     dunecap = json.loads((DUNECAP / "tables" / "ends.json").read_text())["ends_m_yr"]
@@ -196,6 +170,7 @@ def fig_end_solve():
     return out
 
 
+# The source/sink field the runs carry, by zone
 def fig_zone_field():
     m = pd.read_csv(ZONES / "be_zone_metrics.csv")
     g = m.domain.to_numpy()
@@ -252,6 +227,7 @@ def fig_zone_field():
     return out
 
 
+# Run: draw both figures
 def main():
     apply_style()
     print(fig_end_solve()[0].relative_to(REPO))

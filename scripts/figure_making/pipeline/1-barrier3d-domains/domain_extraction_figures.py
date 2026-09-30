@@ -1,30 +1,17 @@
 """
-domain_extraction_figures.py
-==============================================================================
-How one domain's Barrier3D arrays are cut from the 10 m DEM, step by step,
-using the extractor's own functions on its own saved picks.
+How one domain's Barrier3D arrays are cut from the 10 m DEM, step by step, with the extractor's own code.
 
     python scripts/figure_making/pipeline/1-barrier3d-domains/domain_extraction_figures.py [--gis 45] [--product 2004-start]
 
-Writes output/figures/3-model-inputs/1-domains/domain_extraction_gis<N>.png.
-
-WHAT IT CALLS
-    HAT_dune_topo_extractor.load_profiles (orient, MHW, clamp, beach start,
-    straighten, trim), find_dunes (the crest inside the picked window) and
-    build_interior (everything landward of the crest), with the window from
-    the product's picks file. extract_domain() is NOT called: it writes the
-    arrays. Instead the result is checked against the saved arrays of the
-    product's CURRENT version, and the script stops if they differ, so the
-    figure shows what the model reads. The road overlay is switched off.
-
-Every cross-shore panel has the ocean at the RIGHT.
+Uses HAT_dune_topo_extractor and the product's saved picks; stops if the
+result differs from the saved arrays. Writes
+output/figures/3-model-inputs/1-domains/domain_extraction_gis<N>.png. Details: scripts/figure_making/pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
 Version: 2026-09-29
 """
-
 from __future__ import annotations
 
 import argparse
@@ -39,21 +26,23 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 
+
+# --- CONFIG ------------------------------------------------------------------
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "1-barrier3d-domains" / "1-extraction"))
-
 import HAT_dune_topo_extractor as ex  # noqa: E402
 from site_layer import hat_topo_version as tv  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, C, C_1984, C_1997, INK, INK_MUTED, CELL_M, figsize, figure_dir, save,
     record_caption, _title, open_frame, elevation_cmap,
 )
-
 OUT = figure_dir("inputs", "1-domains")
 PROFILES = (8, 25, 42)          # alongshore profiles drawn in panel (c)
+# -----------------------------------------------------------------------------
 
 
+# Re-run the extractor's steps on one domain and check against the saved arrays
 def extract(gis, product):
     ex.SHOW_ROAD = False
     dom = ex.load_profiles(tv.npy_dirs(product)[0] / f"domain_{gis}.npy")
@@ -77,6 +66,7 @@ def extract(gis, product):
     return dom, i0, i1, de, dl, dh, topo, st, sd, ver
 
 
+# The extraction steps for one domain, ocean at the right
 def fig_extraction(gis, product):
     dom, i0, i1, de, dl, dh, topo, st, sd, ver = extract(gis, product)
     cmap, norm, bounds = elevation_cmap()
@@ -182,6 +172,7 @@ def fig_extraction(gis, product):
     return out
 
 
+# Run: parse the domain and product, draw the figure
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--gis", type=int, default=45)

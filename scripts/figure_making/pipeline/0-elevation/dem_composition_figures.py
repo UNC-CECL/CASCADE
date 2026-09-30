@@ -1,34 +1,16 @@
 """
-dem_composition_figures.py
-==============================================================================
-Which survey supplies each part of the model's topography, and how the 1 m
-surveys become the 10 m grid Barrier3D reads.
+Which survey supplies each part of the model's topography, and how 1 m surveys become the 10 m grid.
 
     python scripts/figure_making/pipeline/0-elevation/dem_composition_figures.py
 
-Writes to output/figures/3-model-inputs/0-elevation/:
-
-    dem_sources_alongshore.png   per GIS domain, the share of measured cells
-                                 each survey supplies, in both products:
-                                 2009-2014 (the 2004/2010 starts) and
-                                 2009-2014-1996 (the 1984/1996 starts)
-    dem_resample_one_domain.png  one domain (GIS 45): the survey each 1 m cell
-                                 comes from, the 1 m surface, and the 10 m
-                                 resample the domain arrays are cut from
-
-Read only: the products' clip_domain_<N>_{filled,survey}.tif (1 m) and
-resampled_domain_<N>_{filled,survey}.tif (10 m), resolved through
-scripts/site_layer/hat_elevation_products.py. Nothing is regenerated.
-
-The tiles are north-up UTM boxes, 500 m alongshore by 2000 m cross-shore;
-through the reach the ocean is to the east, so it sits at the right.
+Reads the elevation products' clipped and resampled domain tiles (read only);
+writes to output/figures/3-model-inputs/0-elevation/. Details: scripts/figure_making/pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
 Version: 2026-09-29
 """
-
 from __future__ import annotations
 
 import sys
@@ -43,30 +25,32 @@ import rasterio  # noqa: E402
 from matplotlib.colors import ListedColormap, BoundaryNorm  # noqa: E402
 from matplotlib.patches import Patch  # noqa: E402
 
+
+# --- CONFIG ------------------------------------------------------------------
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
-
 from site_layer.hat_elevation_products import product  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, C_1984, C_1997, DOMAIN_AXIS_LABEL, figsize, figure_dir, save, record_caption,
     _title, open_frame, elevation_cmap, town_bands,
 )
-
 OUT = figure_dir("inputs", "0-elevation")
 MHW_NAVD = 0.36
 EXAMPLE_GIS = 45
-# survey code -> label, colour. The vintage pair: the earlier survey red, the
-# later blue; the 2009 base neutral.
+# Survey code -> label, colour: earlier survey red, later blue, 2009 base neutral
 SURVEYS = [(1996, "1996 NOAA/NASA ALACE (graft)", C_1984),
            (2009, "2009 USACE lidar (base)", "#b8b8b8"),
            (2014, "2014 NOAA Post-Sandy (gap fill)", C_1997)]
+# -----------------------------------------------------------------------------
 
 
+# A raster's first band, nodata value and bounds
 def read(path):
     with rasterio.open(path) as r:
         return r.read(1), r.nodata, r.bounds
 
 
+# Per GIS domain, the share of dry (above-MHW) cells each survey supplies
 def shares(prod_name):
     p = product(prod_name)
     out = np.zeros((90, len(SURVEYS)))
@@ -80,6 +64,7 @@ def shares(prod_name):
     return out
 
 
+# Survey shares alongshore, for both elevation products
 def fig_sources():
     prods = [("2009-2014", "2009-2014: the 2004 and 2010 starts"),
              ("2009-2014-1996", "2009-2014-1996: the 1984 and 1996 starts")]
@@ -122,6 +107,7 @@ def fig_sources():
     return out
 
 
+# One domain: survey per 1 m cell, the 1 m surface and its 10 m resample
 def fig_resample(gis=EXAMPLE_GIS):
     p96 = product("2009-2014-1996")
     s1, _, b = read(p96.gapfill_1m / f"clip_domain_{gis}_survey.tif")
@@ -177,6 +163,7 @@ def fig_resample(gis=EXAMPLE_GIS):
     return out
 
 
+# Run: draw both figures
 def main():
     apply_style()
     for f in (fig_sources, fig_resample):

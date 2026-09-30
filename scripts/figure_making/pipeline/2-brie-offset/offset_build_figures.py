@@ -1,36 +1,16 @@
 """
-offset_build_figures.py
-==============================================================================
-How the BRIE shoreline offset is built from a digitised dune line, step by
-step, for the builds the current runs read (1996 and 2010 starts).
+How the BRIE shoreline offset is built from a digitised dune line, step by step, for the 1996 and 2010 starts.
 
     python scripts/figure_making/pipeline/2-brie-offset/offset_build_figures.py
 
-Writes output/figures/3-model-inputs/2-brie-offset/offset_build_<year>.png.
-
-THE STEPS DRAWN (the producers, not re-implemented)
-    1. duneline_to_raw_offsets.py intersects the dune line with the 100 m
-       transects. Each transect starts on the offshore datum line and runs
-       west across the island; the STATION of a crossing is its distance
-       along the transect from the datum. The raw file the build kept is read,
-       not recomputed.
-    2. island_offset_hybrid.py averages the ~5 transects of each 500 m domain
-       and subtracts the smallest domain mean, so the offset is 0 at the most
-       seaward domain and positive landward.
-    3. cascade_pipeline.hindcast.pad_offset_ring closes BRIE's periodic line
-       with 15 buffer domains per side (a cubic Hermite from GIS 90 back
-       round to GIS 1). The padded file IS what the runner hands Cascade.
-
-Every path resolves through site_layer.hat_topo_version: the dune-line vintage
-from DUNE_LINE_FOR_YEAR, the build from offset_version (env > CURRENT > the
-only v<n>). The ocean is on the right in the plan panels (easting across).
+Reads each build's raw, unpadded and padded offsets through hat_topo_version;
+writes output/figures/3-model-inputs/2-brie-offset/offset_build_<year>.png. Details: scripts/figure_making/pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
 Version: 2026-09-29
 """
-
 from __future__ import annotations
 
 import sys
@@ -47,9 +27,10 @@ import pandas as pd  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.patches import Rectangle  # noqa: E402
 
+
+# --- CONFIG ------------------------------------------------------------------
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
-
 from site_layer import hat_topo_version as tv  # noqa: E402
 from site_layer.hat_observed_rates import DOMAIN_BOXES  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
@@ -57,15 +38,16 @@ from site_layer.hat_figure_style import (  # noqa: E402
     record_caption, _title, open_frame, town_bands,
 )
 from cascade_pipeline.hindcast import pad_offset_ring  # noqa: E402
-
 OUT = figure_dir("inputs", "2-brie-offset")
 YEARS = (1996, 2010)
 ZOOM_GIS = (44, 47)
 BUFFERS = 15
 DATUM_X = 460198.45        # the offshore datum line the transects start on (EPSG:3725)
 UNSTABLE_DEG = 42.0
+# -----------------------------------------------------------------------------
 
 
+# The 100 m transects, with clean column names
 def load_transects():
     t = gpd.read_file(tv.TRANSECT_FILE_100M)
     t.columns = [c.split(".")[-1] for c in t.columns]
@@ -74,6 +56,7 @@ def load_transects():
     return t
 
 
+# One start year's dune line, raw offsets, unpadded and padded offset files
 def load_build(year):
     vintage = tv.dune_line_for_year(year)
     version = tv.offset_version(year)
@@ -85,6 +68,7 @@ def load_build(year):
     return vintage, version, build, raw, unpadded, padded, line
 
 
+# The offset build for one start year, from dune line to padded ring
 def fig_offset_build(year, transects, boxes):
     vintage, version, build, raw, unpadded, padded, line = load_build(year)
     line = line.to_crs(transects.crs)
@@ -211,6 +195,7 @@ def fig_offset_build(year, transects, boxes):
     return out
 
 
+# Run: one figure per start year
 def main():
     apply_style()
     import geopandas as _g

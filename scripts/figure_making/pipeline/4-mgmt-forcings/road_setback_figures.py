@@ -1,40 +1,16 @@
 """
-road_setback_figures.py
-==============================================================================
-How the NC-12 road setback the model reads is measured, on one domain, and
-what the 1996 and 2010 runs are handed along the reach.
+How the NC-12 road setback is measured on one domain, and what the 1996 and 2010 runs are handed.
 
     python scripts/figure_making/pipeline/4-mgmt-forcings/road_setback_figures.py
 
-Writes output/figures/3-model-inputs/4-management/:
-    road_setback_measurement.png   one domain: raw grid + rasterised road,
-                                   the straightened profiles, the per-profile
-                                   setbacks and the domain value
-    road_setback_inputs.png        the setbacks the 1996 and 2010 runs read,
-                                   the measurements they come from, and the
-                                   corrections applied on the way
-
-Everything is read from the producers' saved products (nothing re-measured):
-    raster/<line vintage>/masks/domain_N_road_<vintage>.npy
-        HAT_rasterize_road_to_domains.py: the NC-12 centreline buffered to
-        the road width and burned onto each domain's raw 10 m grid
-    dunestart_offset/measured/<year>/RoadOffset_<year>_profiles.csv, _domains.csv
-        HAT_road_offset_from_dune_start.py: the mask sheared with the same
-        per-profile shear as the topography, then per profile the distance
-        from interior row 0 (one cell landward of the picked dune crest) to
-        the road's seaward edge; the domain value is the median, then the
-        negative floor (ocean side) and the drowning-road move (bay side)
-    dunestart_offset/derived/<1996|2010>/RoadSetback_*_dunestart.csv
-        HAT_road_setback_derived_vintages.py: 1996 = the 1984 measurement +
-        the 1989 Pea Island relocation; 2010 = the 2004 measurement.
-Paths resolve through site_layer.hat_topo_version. Ocean on the right.
+Reads the measured setbacks and the road mask through hat_topo_version;
+writes to output/figures/3-model-inputs/4-management/. Details: scripts/figure_making/pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
 Version: 2026-09-29
 """
-
 from __future__ import annotations
 
 import sys
@@ -49,30 +25,34 @@ import pandas as pd  # noqa: E402
 from matplotlib.colors import ListedColormap  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 
+
+# --- CONFIG ------------------------------------------------------------------
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
-
 from site_layer import hat_topo_version as tv  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, C, C_1984, C_1997, INK, INK_MUTED, CELL_M, DOMAIN_AXIS_LABEL, figsize, figure_dir,
     save, record_caption, _title, open_frame, town_bands,
 )
-
 OUT = figure_dir("inputs", "4-management")
 EXAMPLE_GIS = 31
 EXAMPLE_YEAR = 2004          # the measurement the 2010 run reads unchanged
 PRODUCT = {1984: "1984-start", 2004: "2004-start"}
+# -----------------------------------------------------------------------------
 
 
+# A two-row CSV (domain ids, values) as a Series
 def two_row(path):
     a = np.loadtxt(path, delimiter=",")
     return pd.Series(a[1], index=a[0].astype(int))
 
 
+# The folder holding a start year's measured setback files
 def measured_dir(year):
     return tv.road_setback_file(year).parent
 
 
+# The setback measurement on the example domain
 def fig_measurement():
     year, gis = EXAMPLE_YEAR, EXAMPLE_GIS
     vintage = tv.road_line_for_year(year)
@@ -139,8 +119,7 @@ def fig_measurement():
     ax = fig.add_subplot(gs[1, 1])
     rows = np.arange(mask.shape[0])
     raw_c = [np.nonzero(mask[i])[0] for i in rows]
-    # landward of the road's most seaward cell, in both frames (raw columns
-    # grow toward the ocean; straightened cells grow away from it)
+    # Landward of the road's most seaward cell (raw columns grow seaward, straightened landward)
     lo = np.array([c.min() if len(c) else np.nan for c in raw_c])
     hi = np.array([c.max() if len(c) else np.nan for c in raw_c])
     ref = np.nanmax(hi)
@@ -177,6 +156,7 @@ def fig_measurement():
     return out
 
 
+# The setbacks the 1996 and 2010 runs are handed, alongshore
 def fig_inputs():
     gis = np.arange(1, 91)
     s96 = two_row(tv.road_setback_file(1996)).reindex(gis)
@@ -234,6 +214,7 @@ def fig_inputs():
     return out
 
 
+# Run: draw both figures
 def main():
     apply_style()
     print(fig_measurement()[0].relative_to(REPO))

@@ -1,32 +1,16 @@
 """
-observed_target_figures.py
-==============================================================================
-How the observed shoreline-change target the hindcast is scored against is
-built from CoastSat, for the two current windows (1996-2010, 2010-2024).
+How the observed shoreline target is built: CoastSat series, per-transect LRR, domain means, LOWESS.
 
     python scripts/figure_making/pipeline/5-scr/observed_target_figures.py
 
-Writes output/figures/3-model-inputs/5-observed-target/observed_target_<window>.png.
-
-THE STEPS DRAWN (the producers' own functions, not re-implemented)
-    1. One transect's CoastSat shoreline positions (chainage, + seaward) in the
-       calendar window, and the OLS slope through them: the LRR
-       (5-scr/lib/coastsat_lrr.compute_lrr; the calendar-window filter of
-       coastsat_domain_lrr.py, START y0-01-01, END y1-12-31). The slope drawn
-       is checked against transect_lrr_full.csv.
-    2. Transects grouped into their GIS domain (transect_domain_lookup.csv)
-       and averaged: the raw domain mean.
-    3. LOWESS at transect resolution over a 7-domain (3.5 km) window, averaged
-       back to domains, with GIS 1-10 kept as raw domain means
-       (cascade_pipeline.coastsat_lowess.spliced_lowess_series, the same two
-       steps hindcast.build_target_table applies to the scoring target).
+Reads the CoastSat time series and LRR products through hat_observed_rates;
+writes to output/figures/3-model-inputs/5-observed-target/. Details: scripts/figure_making/pipeline/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
 Contact: hahenry@unc.edu
-Version: 2026-09-30
+Version: 2026-09-29
 """
-
 from __future__ import annotations
 
 import sys
@@ -39,10 +23,11 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
+
+# --- CONFIG ------------------------------------------------------------------
 REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "input_prep" / "5-scr" / "lib"))
-
 from site_layer import hat_observed_rates as obs  # noqa: E402
 from site_layer.hat_figure_style import (  # noqa: E402
     apply_style, C, C_1997, INK, INK_MUTED, DOMAIN_AXIS_LABEL, figsize, figure_dir, save,
@@ -54,19 +39,21 @@ from cascade_pipeline.coastsat_lowess import (  # noqa: E402
 )
 from cascade_pipeline.domains import DEFAULT_DOMAINS  # noqa: E402
 from coastsat_lrr import load_timeseries, filter_dates, compute_lrr  # noqa: E402
-
 OUT = figure_dir("inputs", "5-observed-target")
 WINDOWS = ((1996, 2010), (2010, 2024))
 EXAMPLE_GIS = 45
 ZOOM = (38, 52)
 TARGET_WINDOW = 7   # 10 until 2026-09-28, with the runner
+# -----------------------------------------------------------------------------
 
 
+# The CoastSat time-series CSV for one transect id
 def timeseries_file(transect_id):
     site = "_".join(transect_id.split("_")[:3])
     return obs.COASTSAT_TIMESERIES / f"{site}_timeseries" / f"{transect_id}.csv"
 
 
+# One window's target, from satellite positions to the smoothed domain rate
 def fig_target(window):
     y0, y1 = window
     tag = f"{y0}_{y1}"
@@ -172,6 +159,7 @@ def fig_target(window):
     return out
 
 
+# Run: one figure per window
 def main():
     apply_style()
     for w in WINDOWS:
