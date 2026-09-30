@@ -1,56 +1,16 @@
-# ==============================================================================
-# HAT_road_setback_derived_vintages.py
-#
-# A road setback file for each of the two hindcast periods added 2026-09-11,
-# 1996-2010 and 2010-2024.
-#
-# NEITHER IS A MEASUREMENT. No NC-12 line was digitised for either vintage --
-# the repo holds two road lines, exported for 1978 and 2008 and labelled 1984
-# and 2004 (see "Road line vintages" in hatteras_site_config.py). So each new
-# file is DERIVED from a measured one, and the derivation lives here rather
-# than in a hand-edited CSV, because a hand-edit leaves no record of what was
-# added to what.
-#
-#   1996  =  RoadSetback_1984_dunestart.csv  +  the 1989 Pea Island relocation
-#
-#       The 1989 relocation (GIS 84-87) has ALREADY HAPPENED by 1996 and the
-#       1999 one has not, so the 1996 road is the 1984 road with exactly one
-#       event applied. The displacements are not retyped here: they are read
-#       from HATTERAS_ROAD_EVENTS, so this file and the event the model fires
-#       in a 1984-start run cannot disagree about how far the road moved.
-#
-#       WHAT THIS INHERITS. The 1984 setbacks are measured against interior
-#       row 0 of the 1984-start extraction, so these are too, and the 1996
-#       period must read that same product. Everything the 1978-vintage line
-#       gets wrong about 1984 it also gets wrong about 1996, eighteen years
-#       later rather than six.
-#
-#   2010  =  RoadSetback_2004_dunestart.csv, unchanged
-#
-#       The 2010 period reads the same topography product as the 2004 period
-#       and the same road line, and no relocation in the record falls between
-#       the two dates -- the next event is the 2022 bridge, which is inside the
-#       run rather than at year zero. So the measurement is identical and this
-#       is a copy under the period's own name, written rather than referenced
-#       so every period names its own file (Hannah, 2026-09-11).
-#
-# OUTPUTS
-#   dunestart_offset/derived/1996/RoadSetback_1996_dunestart.csv
-#   dunestart_offset/derived/2010/RoadSetback_2010_dunestart.csv
-#   dunestart_offset/derived/<year>/PROVENANCE.md   what was derived from what
-#
-# derived/ rather than beside the measured folders (2026-09-15): the address
-# says these are not measurements. The sources are read from
-# dunestart_offset/measured/, both through hat_topo_version.road_setback_file().
-#
-# Nothing existing is read for writing, and both outputs are new files.
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-18
-# ==============================================================================
+"""
+Road setback files for the 1996 and 2010 starts, derived rather than measured.
 
+    python scripts/input_prep/4-mgmt-forcings/road_offset/1-produce/HAT_road_setback_derived_vintages.py
+
+No NC-12 line was digitised for either vintage: 1996 applies the 1989
+relocation to the 1984 setbacks, 2010 copies 2004. Details: scripts/input_prep/4-mgmt-forcings/road_offset/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -65,23 +25,19 @@ from site_layer.hat_topo_version import road_setback_file          # noqa: E402
 from HAT_road_offset_from_dune_start import (           # noqa: E402
     read_two_row_csv, write_two_row_csv)
 
+# --- CONFIG ------------------------------------------------------------------
 RELOCATION_YEAR = 1989      # the one event between the 1984 line and 1996
 SOURCE_YEAR = {1996: 1984, 2010: 2004}
+# -----------------------------------------------------------------------------
 
 
+# measured/<year>/ for the sources, derived/<year>/ for the outputs -- ...
 def setback_path(year: int) -> Path:
-    """measured/<year>/ for the sources, derived/<year>/ for the outputs --
-    hat_topo_version.ROAD_SETBACK_KIND decides which, not this script."""
     return road_setback_file(year)
 
 
+# The displacement dict of the relocation event dated `year`
 def event_displacements(year: int) -> dict:
-    """The displacement dict of the relocation event dated `year`.
-
-    Read from HATTERAS_ROAD_EVENTS rather than from the measurement CSV
-    directly, so this applies the SAME rounded, whole-cell displacement the
-    model applies when the event fires.
-    """
     events = [e for e in HATTERAS_ROAD_EVENTS
               if getattr(e, "year", None) == year
               and getattr(e, "displacement_m", None)]
@@ -92,8 +48,8 @@ def event_displacements(year: int) -> dict:
     return dict(events[0].displacement_m)
 
 
+# The 1984 setbacks with the 1989 relocation applied
 def build_1996() -> dict:
-    """The 1984 setbacks with the 1989 relocation applied."""
     base = read_two_row_csv(setback_path(SOURCE_YEAR[1996]))
     if not base:
         raise FileNotFoundError(setback_path(SOURCE_YEAR[1996]))
@@ -120,8 +76,8 @@ def build_1996() -> dict:
     return derived
 
 
+# The 2004 setbacks, unchanged
 def build_2010() -> dict:
-    """The 2004 setbacks, unchanged."""
     base = read_two_row_csv(setback_path(SOURCE_YEAR[2010]))
     if not base:
         raise FileNotFoundError(setback_path(SOURCE_YEAR[2010]))
@@ -175,6 +131,7 @@ construction: re-run the producer rather than editing either one.
 }
 
 
+# Run: build both derived files and write them
 def main() -> None:
     built = {1996: build_1996(), 2010: build_2010()}
     for year, values in built.items():

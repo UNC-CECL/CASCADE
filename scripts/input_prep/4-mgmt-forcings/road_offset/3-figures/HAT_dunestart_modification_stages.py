@@ -1,69 +1,9 @@
-r"""
-HAT_dunestart_modification_stages.py
-===============================================================================
-The dune-start setback carries TWO modifications on top of the measurement, one
-at each edge of the island. This script draws the island BEFORE each of them, so
-the progression can be read stage by stage instead of taken on trust.
+"""
+The dune-start setback before each of its two modifications, drawn stage by stage.
 
-    setback_dunestart_m           raw measurement            1984: 1 negative, 1 drown
-       |  OCEAN-SIDE MOVE -- negative setbacks floored to interior row 0
-    setback_dunestart_floored_m   ocean-side applied         1984: 0 negative, 0 drown
-       |  BAY-SIDE MOVE -- roadways drowning on a wet bayside row moved seaward
-    setback_model_m          both applied, MODEL-FACING 1984: 0 negative, 0 drown
+    python scripts/input_prep/4-mgmt-forcings/road_offset/3-figures/HAT_dunestart_modification_stages.py
 
-  Counts are from the run: 1984 on 1984-start/v1, 2004 on 2004-start/v1, and
-  2004 is 0 negative / 0 drown at every stage. They have moved twice. The
-  gap-filled DEM took the bayside drowns that the BAY-SIDE move existed for to
-  zero, leaving every stage-0 drown a negative being tested on its wrapped row;
-  then the 1984 vintage was re-measured on its OWN product (2026-08-26) and the
-  1984 negatives went 6 -> 1, GIS 85 alone. The bay-side move is therefore a
-  no-op under both topographies rather than a step with work to do -- a property
-  of the DEMs, so the figure counts it from the data rather than asserting it.
-
-  stage 0  HAT_dunestart_stage0_raw.png          before BOTH moves
-  stage 1  HAT_dunestart_stage1_ocean_floor.png  ocean-side only, before the
-                                                 bay-side move
-  stage 2  ../HAT_dunestart_road_on_domains.png  the existing figure, both
-                                                 applied -- not redrawn here
-
-HOW FAR each ocean-side move actually is, cropped to the two stretches where it
-fires, is HAT_oceanfloor_offset_check.py -> HAT_dunestart_oceanfloor_check.png.
-At 90 domains these stage figures cannot show a 10 m move; that one can.
-
-WHY THIS IMPORTS RATHER THAN COPIES
------------------------------------
-The drown test, the interiors, the canvas and the palette all come from
-HAT_road_placement_on_domains.py by import. The whole value of a stage figure is
-that stage 2 is the SAME test as stages 0 and 1; a transcribed copy that drifted
-by one row would make the progression a fiction. Nothing about the test is
-re-implemented here -- only the negative-setback case, which stage 2 cannot
-contain by construction.
-
-HOW A NEGATIVE SETBACK IS DRAWN  (stage 0 only)
------------------------------------------------
-A negative setback has two positions, and only ONE of them is drawn on the plan
-view:
-
-  TRUE      where the road was measured -- seaward of interior row 0, out in the
-            dune/beach that the interior array does not cover. Drawn on a sand
-            band below the island, on a y-axis extended past 0. This is the only
-            position the plan view shows.
-  WRAPPED   where CASCADE would actually put it. `int(-70/10) = -7` and
-            `xyz_interior_grid[-7:-5, :]` is valid Python indexing from the
-            LANDWARD end, so the road is bulldozed into the bay with no error
-            raised. NOT drawn on the plan view -- a second mark for one road,
-            in a place no measurement supports, reads as two roads rather than
-            as one road and its consequence.
-
-The wrap is still what decides those domains' drown state, so it is not lost:
-panel C reports their percentages from the WRAPPED rows -- that is what the
-model would test -- and marks them apart so the number is never read as a
-measurement of the true position. The header text says so on the figure itself.
-
-REQUIREMENTS
-------------
-  numpy, matplotlib
-===============================================================================
+One figure per stage from the placement module's drawing code. Details: scripts/input_prep/4-mgmt-forcings/road_offset/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -86,9 +26,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patheffects import withStroke
 
-# =============================================================================
-# SHARED CODE -- imported, never transcribed
-# =============================================================================
+# Shared code -- imported, never transcribed
 
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
@@ -96,6 +34,7 @@ PLACEMENT = (PROJECT_ROOT / "scripts" / "input_prep" / "4-mgmt-forcings"
              / "road_offset" / "1-produce" / "HAT_road_placement_on_domains.py")
 
 
+# HAT_road_placement_on_domains.py, loaded as a module
 def load_placement():
     spec = importlib.util.spec_from_file_location("hat_placement", PLACEMENT)
     module = importlib.util.module_from_spec(spec)
@@ -105,13 +44,13 @@ def load_placement():
 
 P = load_placement()
 
-# The house style, through the module that already resolves it. P.apply_style()
-# has run at import, so this file only needs the helpers.
+# The house style, through the module that already resolves it
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 from site_layer.hat_figure_style import (  # noqa: E402
     C, DOMAIN_AXIS_LABEL, caption, figsize, open_frame, save,
     spines_for_image, town_bands, _title)
 
+# --- CONFIG ------------------------------------------------------------------
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 from site_layer import hat_topo_version as _tv  # noqa: E402
 DUNESTART = _tv.ROAD_SETBACK_ROOT
@@ -121,17 +60,12 @@ DOMAINS_CSV_FMT = "measured/{year}/RoadOffset_{year}_domains.csv"
 YEARS = (1984, 2004)
 CELL = P.CELL_SIZE_M
 
-# Sand, for the strip seaward of interior row 0 that the interior array does not
-# cover. Deliberately not the water colour -- a road measured out there is on
-# the beach, not in the sound, and the two must not read the same. The house
-# ADDED_FILL is that sand: it means ground that is not in the surveyed array.
+# Sand, for the strip seaward of interior row 0 that the interior array does not cover
 C_SAND = C["ADDED_FILL"]
 C_WRAP = C["INK"]
 
 STAGES = [
-    # `png` is fixed: other files in this tree reference these names. The
-    # LABELS are not -- "raw" was working vocabulary and says nothing about
-    # what was or was not done to the number.
+    # `png` names are fixed (referenced elsewhere); the labels say what was done
     dict(key="stage0", column="setback_dunestart_m",
          png="HAT_dunestart_stage0_raw.png",
          title="the setback as measured, before either correction",
@@ -155,19 +89,11 @@ STAGES = [
                  "the nearest viable row seaward, giving the model-facing "
                  "setback drawn in HAT_dunestart_road_on_domains.png."),
 ]
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# DATA
-# =============================================================================
-
+# One stage's setback per domain, from the per-domain diagnostics CSV
 def read_stage(year: int, column: str) -> dict:
-    """One stage's setback per domain, from the per-domain diagnostics CSV.
-
-    Filtered on `setback_model_m` being finite, which is exactly the in-span
-    set the model-facing file carries -- so all three stages cover the same 82
-    domains and the progression compares like with like.
-    """
     path = DUNESTART / DOMAINS_CSV_FMT.format(year=year)
     if not path.is_file():
         return {}
@@ -184,14 +110,8 @@ def read_stage(year: int, column: str) -> dict:
     return out
 
 
+# Where each road sits at this stage, and what bulldoze's test says about it
 def place_stage(interiors: dict, setbacks: dict) -> dict:
-    """
-    Where each road sits at this stage, and what bulldoze's test says about it.
-
-    Non-negative setbacks are handed to the imported `place_road` unchanged, so
-    stages 0/1 and the stage-2 figure cannot drift apart. Only the negative case
-    is handled here, because stage 2 has none by construction.
-    """
     positive = {d: v for d, v in setbacks.items() if v >= 0}
     out = P.place_road(interiors, positive)
     for d in out:
@@ -209,8 +129,7 @@ def place_stage(interiors: dict, setbacks: dict) -> dict:
         if abs(start) >= n:             # past the array even wrapped
             continue
 
-        # Exactly what numpy does with these indices -- negative subscripts
-        # count from the landward end. Not a simulation of it.
+        # Exactly what numpy does with these indices -- negative subscripts count from the landward end
         sea = P._wet_fraction(a[start - 1, :])
         bay = P._wet_fraction(a[end + 1, :])
         out[d] = dict(
@@ -228,10 +147,9 @@ def place_stage(interiors: dict, setbacks: dict) -> dict:
     return out
 
 
-# =============================================================================
-# PANELS
-# =============================================================================
+# Panels
 
+# One vintage's island at one stage
 def draw_island(ax, fig, shown, crop_rows, year, placed, panel_index,
                 floor_m):
     colour = P.C_YEAR[year]
@@ -248,13 +166,9 @@ def draw_island(ax, fig, shown, crop_rows, year, placed, panel_index,
     cb.outline.set_edgecolor(P.INK_MUTED)
     cb.outline.set_linewidth(0.6)
 
-    # The strip seaward of interior row 0. Only drawn when a road is out there,
-    # so stage 1 keeps the same axes as stage 2 and the two stack cleanly.
-    # Tested against -CELL/2, not 0: that is where the interior image starts, so
-    # a stage with no negatives has floor_m == -CELL/2 and must draw no band.
+    # The strip seaward of interior row 0
     if floor_m < -CELL / 2:
-        # No in-band caption: any text here sits on top of the drowned roads
-        # this band exists to show. The figure legend names the colour instead.
+        # No in-band caption: the legend names the colour
         ax.axhspan(floor_m, -CELL / 2, color=C_SAND, lw=0, zorder=1)
         ax.axhline(-CELL / 2, color=P.INK_SECOND, lw=1.0, ls=(0, (4, 2)),
                    zorder=5)
@@ -272,12 +186,7 @@ def draw_island(ax, fig, shown, crop_rows, year, placed, panel_index,
         ax.plot(seg[True][0], seg[True][1], color=P.C_DROWN, lw=3.4,
                 solid_capstyle="butt", path_effects=halo, zorder=7)
 
-    # The wrapped position is NOT drawn on the plan view. It was, and it put a
-    # second mark for one road in a place no measurement supports, which read as
-    # two roads rather than one road and its consequence. The wrap still governs
-    # the drown state of these domains -- that is where it belongs, and the
-    # lower panel marks them. The counts that used to sit in a box on this
-    # panel are in the caption: they are statistics, not picture.
+    # The wrapped position is NOT drawn on the plan view
 
     # The three village spans, named once on the upper panel.
     ax.set_xlim(0.5, len(P.DOMAINS) + 0.5)
@@ -291,6 +200,7 @@ def draw_island(ax, fig, shown, crop_rows, year, placed, panel_index,
     plt.setp(ax.get_xticklabels(), visible=False)
 
 
+# The drown test per domain, against the threshold
 def draw_drown_panel(ax, placed_by_year, panel_index=2):
     ax.axhspan(P.DROWN_PCT * 100, 104, color=P.C_DROWN, alpha=0.07, lw=0,
                zorder=1)
@@ -306,9 +216,7 @@ def draw_drown_panel(ax, placed_by_year, panel_index=2):
             ax.plot(bad, [pl[d]["governing"] * 100 for d in bad], lw=0,
                     marker="v", ms=6, mfc=P.C_DROWN, mec=P.SURFACE, mew=0.8,
                     zorder=7)
-        # Negatives are tested where numpy actually lands them, at the landward
-        # end of the array, so they are marked apart -- the number is real, but
-        # it does not describe the measured position.
+        # Negatives are tested where numpy actually lands them, at the landward end of the array
         neg = [d for d in xs if pl[d].get("negative")]
         if neg:
             ax.plot(neg, [pl[d]["governing"] * 100 for d in neg], lw=0,
@@ -328,10 +236,9 @@ def draw_drown_panel(ax, placed_by_year, panel_index=2):
     _title(ax, panel_index, "wet cells bordering the road")
 
 
-# =============================================================================
-# FIGURE
-# =============================================================================
+# Figure
 
+# One stage's figure, both vintages
 def build_figure(stage: dict, per, crop_rows) -> dict:
     print(f"\n{'=' * 84}")
     print(f"{stage['key'].upper()} -- {stage['column']}")
@@ -375,9 +282,7 @@ def build_figure(stage: dict, per, crop_rows) -> dict:
         Line2D([], [], color=P.NODATA, lw=8, label="outside the extraction"),
     ]
     if floor_m < -CELL / 2:
-        # The landward-index marker carries no legend entry -- the lower panel
-        # names it, and the entry was the longest item in the row. The band
-        # keeps its swatch.
+        # The landward-index marker carries no legend entry
         handles.append(Line2D([], [], color=C_SAND, lw=8,
                               label="seaward of interior row 0"))
     fig.legend(handles=handles, loc="lower center",
@@ -424,11 +329,9 @@ def build_figure(stage: dict, per, crop_rows) -> dict:
     return summary
 
 
+# Run: one figure per stage
 def main() -> int:
-    # PER VINTAGE (2026-08-26). This called P.load_interiors() with no
-    # argument -- one island under both panels, which the caption used to state
-    # outright. load_interiors() now requires a year, so this could not survive
-    # the change silently.
+    # Per vintage: each year on its own island (2026-08-26)
     per, crop_rows, _max_rows = P.load_years(YEARS)
     for year in YEARS:
         print(f"  {year}: {len(per[year]['interiors'])} interiors from "

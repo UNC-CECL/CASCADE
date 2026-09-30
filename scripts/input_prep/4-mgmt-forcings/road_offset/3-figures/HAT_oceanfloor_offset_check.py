@@ -1,56 +1,9 @@
-r"""
-HAT_oceanfloor_offset_check.py
-===============================================================================
-The OCEAN-SIDE move -- `max(setback, 0)` -- is the one modification that changes
-a MEASURED number before the model reads it. This script reports how big that
-change is, domain by domain, and draws it zoomed in on the only two stretches of
-island where it fires.
+"""
+How big the ocean-side move max(setback, 0) is, domain by domain, drawn where it fires.
 
-  setback_dunestart_m          what the profiles measured        (can be negative)
-     |  OCEAN-SIDE MOVE
-  setback_dunestart_floored_m  max(setback, 0)                   (never negative)
+    python scripts/input_prep/4-mgmt-forcings/road_offset/3-figures/HAT_oceanfloor_offset_check.py
 
-The whole-island stage figures (HAT_dunestart_stage0_raw.png, _stage1_...) show
-WHERE the move fires. At 90 domains across a 900 m cross-shore window a 10 m
-move is a line width, so they cannot show HOW FAR. This one crops to the
-affected domains plus two either side, and takes the y-axis down to the measured
-positions, so the displacement is drawn at a scale where it can be read.
-
-WHAT COUNTS AS "DIFFERENT"
---------------------------
-Three numbers, because they answer three different questions:
-
-  delta_m       floored - raw, i.e. |raw|. How far the road was moved in metres.
-  delta_rows    int(0/10) - int(raw/10). How far it moved in MODEL rows, which
-                is what CASCADE actually sees. Truncation toward zero means
-                these are not always delta_m / 10 -- a raw of -5 m is a 5 m move
-                and a ZERO-row move, because int(-5/10) == 0 already.
-  pct_seaward   share of the domain's own profiles that were themselves seaward
-                of interior row 0. The domain value is a median; a domain at
-                52% is a coin-flip that landed negative, and a domain at 100% is
-                a road genuinely out in front of the dune start.
-
-WHAT THE MOVE IS NOT
---------------------
-It is not a correction of the measurement. The road really was measured seaward
-of interior row 0 -- that is what a road sitting in the dune/beach strip looks
-like when the dune start is the reference. The move exists because a negative
-value cannot be handed to `bulldoze`: `int(-60/10) = -6` and
-`xyz_interior_grid[-6:-4, :]` is valid Python indexing from the LANDWARD end, so
-the road silently lands in the bay. The counterfactual wrap row is reported here
-per domain so the alternative to the move is on the record too.
-
-OUTPUTS  (all under dunestart_offset\modifications\)
-  HAT_dunestart_oceanfloor_check.png         the figure, captioned to stand alone
-  HAT_dunestart_oceanfloor_check_panels.png  panels (a) and (b) and the key only,
-                                             for a document that carries its own
-                                             caption -- same axes, same draw code
-  HAT_dunestart_oceanfloor_check.csv         the same numbers, machine-readable
-
-REQUIREMENTS
-------------
-  numpy, matplotlib
-===============================================================================
+Writes a CSV of the move per domain and zoomed figures of the two stretches. Details: scripts/input_prep/4-mgmt-forcings/road_offset/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -77,9 +30,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 from matplotlib.patheffects import withStroke
 
-# =============================================================================
-# SHARED CODE -- imported, never transcribed
-# =============================================================================
+# Shared code -- imported, never transcribed
 
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
@@ -87,6 +38,7 @@ PLACEMENT = (PROJECT_ROOT / "scripts" / "input_prep" / "4-mgmt-forcings"
              / "road_offset" / "1-produce" / "HAT_road_placement_on_domains.py")
 
 
+# HAT_road_placement_on_domains.py, loaded as a module
 def load_placement():
     spec = importlib.util.spec_from_file_location("hat_placement", PLACEMENT)
     module = importlib.util.module_from_spec(spec)
@@ -102,6 +54,7 @@ from pathlib import Path as _TVP
 _tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
                                if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_topo_version as _tv  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 DUNESTART = _tv.ROAD_SETBACK_ROOT
 OUT_DIR = DUNESTART / "modifications"
 DOMAINS_FMT = "measured/{year}/RoadOffset_{year}_domains.csv"
@@ -117,19 +70,11 @@ C_MOVE = "#52514e"
 CONTEXT_DOMAINS = 2         # unaffected neighbours drawn either side
 CLUSTER_GAP = 3             # domains this close or closer share one zoom panel
 HEADROOM_ABOVE_M = 170.0    # how far landward of row 0 the crop reaches
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# DATA
-# =============================================================================
-
+# Every in-span domain for a year, with both sides of the ocean-side move
 def read_domains(year: int) -> list:
-    """Every in-span domain for a year, with both sides of the ocean-side move.
-
-    In-span is `setback_model_m` finite -- the same filter the model-facing file
-    applies -- so a domain missing here is missing from the run, not from the
-    move.
-    """
     path = DUNESTART / DOMAINS_FMT.format(year=year)
     if not path.is_file():
         return []
@@ -149,13 +94,8 @@ def read_domains(year: int) -> list:
     return out
 
 
+# Per-profile setbacks, keyed by domain, in profile order
 def read_profiles(year: int) -> dict:
-    """Per-profile setbacks, keyed by domain, in profile order.
-
-    The domain number is a median of these. Without them the figure would report
-    a move on a single value and say nothing about whether the domain as a whole
-    was seaward of row 0 or straddling it.
-    """
     path = DUNESTART / PROFILES_FMT.format(year=year)
     out = {}
     if not path.is_file():
@@ -170,8 +110,8 @@ def read_profiles(year: int) -> dict:
     return {d: [v for _, v in sorted(vals)] for d, vals in out.items()}
 
 
+# The affected domains and every number the report and figure need
 def measure_move(year: int, interiors: dict) -> list:
-    """The affected domains and every number the report and figure need."""
     profiles = read_profiles(year)
     rows = []
     for rec in read_domains(year):
@@ -188,17 +128,14 @@ def measure_move(year: int, interiors: dict) -> list:
         end_raw = start_raw + P.ROAD_WIDTH_CELLS
         wrap_row = n + start_raw               # where numpy would really put it
 
-        # The counterfactual: what bulldoze's drown test would say about the
-        # wrapped road. Guarded because a raw setback deeper than the island
-        # would index out of the array entirely.
+        # The counterfactual: bulldoze's drown test on the wrapped road
         if abs(start_raw) < n:
             wrap_sea = P._wet_fraction(a[start_raw - 1, :])
             wrap_bay = P._wet_fraction(a[end_raw + 1, :])
         else:
             wrap_sea = wrap_bay = float("nan")
 
-        # And the destination: row 0 is where the move puts it, so the move is
-        # only defensible if the road survives there. Same test, same rows.
+        # And at the destination, row 0, with the same test
         floor_sea = P._wet_fraction(a[0, :])
         floor_bay = P._wet_fraction(a[P.ROAD_WIDTH_CELLS + 1, :])
 
@@ -225,14 +162,8 @@ def measure_move(year: int, interiors: dict) -> list:
     return rows
 
 
+# Every in-span domain's model-facing setback and profiles, for the year
 def context_rows(year: int) -> dict:
-    """Every in-span domain's model-facing setback and profiles, for the year.
-
-    The zoom panels carry two unaffected neighbours either side, and a neighbour
-    with nothing drawn on it is not context. These are what the SAME method puts
-    on a domain it did not have to floor -- 30-120 m landward here -- which is
-    the only thing that makes "+60 m" a size rather than a number.
-    """
     profiles = read_profiles(year)
     return {rec["domain"]: dict(model_m=rec["model"], raw_m=rec["raw"],
                                 profiles=np.asarray(profiles.get(rec["domain"],
@@ -240,15 +171,8 @@ def context_rows(year: int) -> dict:
             for rec in read_domains(year)}
 
 
+# Domains the move did NOT touch that still hold profiles seaward of row 0
 def near_misses(year: int) -> list:
-    """Domains the move did NOT touch that still hold profiles seaward of row 0.
-
-    The domain setback is a median, so the move fires on a vote, not on a
-    physical boundary. A domain at 48% negative is one profile away from being
-    floored and a domain at 52% is one profile past it -- both exist here, three
-    domains apart. That is the sensitivity of this modification, and it belongs
-    beside the six moves rather than in a footnote nobody computes.
-    """
     profiles = read_profiles(year)
     out = []
     for rec in read_domains(year):
@@ -260,13 +184,8 @@ def near_misses(year: int) -> list:
     return out
 
 
+# Affected domains grouped into the stretches of island they sit on
 def cluster(domains: list) -> list:
-    """Affected domains grouped into the stretches of island they sit on.
-
-    Not hardcoded to the two stretches that fire today. Re-pick the dune windows
-    and a third could appear; it should get its own panel rather than be
-    swallowed by a fixed x range.
-    """
     out = []
     for d in sorted(set(domains)):
         if out and d - out[-1][-1] <= CLUSTER_GAP:
@@ -276,13 +195,11 @@ def cluster(domains: list) -> list:
     return out
 
 
-# =============================================================================
-# FIGURE
-# =============================================================================
+# Figure
 
+# One stretch of island, cropped to it, at a scale where 10 m is visible
 def draw_zoom(ax, fig, canvas, rows_by_domain, context, lo, hi, floor_m,
               panel, show_cbar):
-    """One stretch of island, cropped to it, at a scale where 10 m is visible."""
     ax.set_facecolor(P.WATER)
     c0, c1 = (lo - 1) * P.ALONG_COLS, hi * P.ALONG_COLS
     crop_rows = int((HEADROOM_ABOVE_M + CELL) / CELL)
@@ -299,9 +216,7 @@ def draw_zoom(ax, fig, canvas, rows_by_domain, context, lo, hi, floor_m,
         cb.ax.tick_params(labelsize=8)
         cb.outline.set_edgecolor(P.INK_MUTED)
 
-    # Seaward of interior row 0 the interior array holds nothing -- this is the
-    # dune/beach strip the road was measured on. Sand, not the water grey: a
-    # road out here is on the beach, and the two must not read the same.
+    # Seaward of interior row 0 the interior array holds nothing
     ax.axhspan(floor_m, -CELL / 2, color=C_SAND, lw=0, zorder=1)
     ax.axhline(-CELL / 2, color=P.INK_SECOND, lw=1.1, ls=(0, (4, 2)), zorder=5)
 
@@ -314,20 +229,14 @@ def draw_zoom(ax, fig, canvas, rows_by_domain, context, lo, hi, floor_m,
         if r is None and ctx is None:
             continue                       # out of span -- nothing was measured
 
-        # The model-facing band, all 20 m of it, drawn as a band rather than a
-        # line -- at this crop the road's own width is legible, and the move is
-        # only meaningful against it. Unaffected neighbours get the same band,
-        # faded, so the size of the move can be read against a setback the
-        # method did not have to touch.
+        # The model-facing band, all 20 m of it, drawn as a band rather than a line
         band_m = r["floored_m"] if r else ctx["model_m"]
         ax.add_patch(Rectangle((d - 0.5, band_m), 1.0,
                                P.ROAD_WIDTH_CELLS * CELL,
                                fc=P.C_YEAR[year], ec=P.SURFACE, lw=0.8,
                                alpha=0.95 if r else 0.34, zorder=8))
 
-        # Every profile, at its own alongshore position, ON TOP of the band --
-        # the positive profiles of a floored domain sit inside the band's 20 m,
-        # and under it they were invisible exactly where they matter.
+        # Every profile, at its own alongshore position, ON TOP of the band
         ps = (r or ctx)["profiles"]
         if ps.size:
             xs = d - 0.5 + (np.arange(ps.size) + 0.5) / ps.size
@@ -367,15 +276,8 @@ def draw_zoom(ax, fig, canvas, rows_by_domain, context, lo, hi, floor_m,
     ax.grid(axis="y", color=P.INK_MUTED, alpha=0.18, lw=0.7)
 
 
+# A per-domain table and a caption, in the register of a figure caption
 def draw_caption(ax, rows, island_median, misses):
-    """A per-domain table and a caption, in the register of a figure caption.
-
-    Four columns, not nine. The counterfactual wrap row and both drowning tests
-    were columns and are now one sentence -- they are a single result (the
-    constraint is what keeps these roadways on the island), and a column per
-    quantity made the reader assemble that result themselves. Every quantity
-    dropped from the table is still in HAT_dunestart_oceanfloor_check.csv.
-    """
     ax.axis("off")
     head = (f"{'domain':>7}  {'measured':>10}  {'applied':>9}  "
             f"{'displacement':>14}  {'profiles seaward':>18}")
@@ -417,25 +319,16 @@ def draw_caption(ax, rows, island_median, misses):
             + f", while domain "
               f"{min(rows, key=lambda r: r['pct_seaward'])['domain']} "
               f"({min(r['pct_seaward'] for r in rows):.0f}%) is constrained.")
-    # Wrapped here rather than with matplotlib's wrap=True, which measures
-    # against the FIGURE width and would run the caption under the colorbar.
+    # Wrapped here rather than with matplotlib's wrap=True
     ax.text(0.42, 1.0,
             "\n\n".join(textwrap.fill(c, 92) for c in caption),
             transform=ax.transAxes, va="top", ha="left", fontsize=9.2,
             color=P.INK_SECOND, linespacing=1.5)
 
 
+# The check figure
 def build_figure(rows: list, interiors: dict, island_median: float,
                  misses: list, panels_only: bool = False) -> Path:
-    """The check figure; `panels_only` drops everything but (a), (b) and the key.
-
-    Both versions come out of this one function rather than a second script.
-    The panels ARE the result and they get reused -- in a document that carries
-    its own caption, in a slide -- so the standalone title, the methods
-    paragraph and the table are the parts that go, not parts that get re-drawn
-    somewhere else and drift. The legend stays in both: it is not commentary,
-    it is what says which band is measured and which is applied.
-    """
     canvas, _ = P.build_canvas(interiors)
     by_domain = {r["domain"]: r for r in rows}
     groups = cluster([r["domain"] for r in rows])
@@ -508,9 +401,7 @@ def build_figure(rows: list, interiors: dict, island_median: float,
     return out_png
 
 
-# =============================================================================
-# REPORT
-# =============================================================================
+# Report
 
 CSV_FIELDS = ["year", "domain", "section", "raw_m", "floored_m", "model_m",
               "delta_m", "delta_rows", "pct_seaward", "n_profiles",
@@ -519,6 +410,7 @@ CSV_FIELDS = ["year", "domain", "section", "raw_m", "floored_m", "model_m",
               "floor_seaside", "floor_bayside", "floor_drowned"]
 
 
+# The per-domain move as CSV
 def write_csv(rows: list) -> Path:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     out = OUT_DIR / "HAT_dunestart_oceanfloor_check.csv"
@@ -530,10 +422,9 @@ def write_csv(rows: list) -> Path:
     return out
 
 
+# Run: measure the move per vintage, write the CSV and figures
 def main() -> int:
-    # PER VINTAGE (2026-08-26). measure_move() already took a year and was
-    # handed ONE interiors dict for both -- so the 1984 rows were measured
-    # against the 2004-start island. load_interiors() now requires the year.
+    # Per vintage: each year on its own island (2026-08-26)
     per, _crop_rows, _max_rows = P.load_years(YEARS)
     interiors_by_year = {y: per[y]["interiors"] for y in YEARS}
     rows, all_model, misses = [], [], []
@@ -584,9 +475,7 @@ def main() -> int:
           f"{sum(r['floor_drowned'] for r in rows)} of {len(rows)} drown at "
           f"row 0 where the move puts them")
 
-    # The background strip is context for a per-domain measurement, not the
-    # measurement -- drawn from the FIRST vintage's interiors and labelled as
-    # such rather than pretending to be both.
+    # The background strip is context for a per-domain measurement, not the measurement
     bg = interiors_by_year[YEARS[0]]
     print(f"\n  [out] {build_figure(rows, bg, island_median, misses)}")
     print(f"  [out] "

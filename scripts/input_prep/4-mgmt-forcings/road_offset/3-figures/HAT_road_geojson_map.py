@@ -1,53 +1,9 @@
-r"""
-HAT_road_geojson_map.py
-===============================================================================
-The 1978 and 2008 NC-12 geojsons (the 1984 and 2004 periods' roads) drawn on the 2009 DEM, in MAP coordinates, for
-the whole modelled island. A reference sheet: find a GIS domain on the real
-island, and see where each road line actually runs across it.
+"""
+The 1978 and 2008 NC-12 lines on the 2009 DEM in map coordinates: a reference sheet for the whole island.
 
-  data/hatteras_init/4-mgmt-forcing/road_offset/raster/
-      HAT_road_geojson_on_2009_dem.png
+    python scripts/input_prep/4-mgmt-forcings/road_offset/3-figures/HAT_road_geojson_map.py
 
-WHY THIS IS A MAP AND NOT A DOMAIN-FRAME FIGURE
------------------------------------------------
-Every other road figure in this tree lives in the Barrier3D domain frame, which
-is reached through orient -> alongshore flip -> shear -> water trim. That chain
-is exactly what makes those figures comparable to the model, and exactly what
-makes them useless for checking the model's inputs against the world.
-
-This figure applies NO transform. The DEM is read in its native UTM 18N grid and
-the geojson is reprojected onto it with `to_crs`, the same single step
-HAT_check_geojson_vs_mask.py uses for the same reason. If the road line and the
-road visible in the LiDAR agree here, the source data is right; whether the
-DOMAIN arrays are right is a separate question that the domain-frame figures
-answer.
-
-WHY THE STRIPS RUN LEFT TO RIGHT
----------------------------------
-Hatteras runs very nearly north-south: GIS 1-90 spans 8.0 km east-west and 45.2
-km north-south, 5.7:1. Cut into six 15-domain segments at TRUE NORTH and TRUE
-SCALE, every segment is portrait (h/w 1.7-2.7) -- the island is simply taller
-than it is wide at any segmentation. Stacking portrait panels vertically would
-give a figure four feet tall, so the six run SOUTH (left) to NORTH (right)
-instead. North is up in every panel and the scale is true in both axes; only the
-reading order is unusual, and the panel titles carry it.
-
-WHAT THE COLOURS MEAN, AND THE ONE DISTINCTION ONLY THIS FIGURE CAN DRAW
-------------------------------------------------------------------------
-The source DEM stores NoData as exactly -10.0 m NAVD88, and everywhere else in
-this project that value has already been folded into the water sentinel --
-Barrier3D has no representation for "unknown", so by the time the topography is
-saved, a LiDAR hole and a genuinely wet cell are the same number. This figure
-reads the RAW tif, so it is the one place the two can be told apart, and it
-draws them differently: never surveyed is a distinct grey from water.
-
-That matters for reading GIS 78-80, where the roadway relocation fires. Those
-domains drown on coverage gaps, not on measured water, and here you can see it.
-
-REQUIREMENTS
-------------
-  numpy, matplotlib, rasterio, geopandas
-===============================================================================
+Strips of domains with both road lines, a scale bar and north arrow. Details: scripts/input_prep/4-mgmt-forcings/road_offset/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -75,25 +31,18 @@ from matplotlib.patheffects import withStroke
 import geopandas as gpd
 import rasterio
 
-# =============================================================================
-# CONFIG
-# =============================================================================
 
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 
-# MOVED TWICE. 2026-08-25 it went under superseded/ with the pre-90-domain
-# legacy and this path followed it there. 2026-08-26 it moved back OUT -- it is
-# a live input read by four scripts -- and this path did NOT follow, so the
-# script printed "no clip tifs found" and produced nothing. Repointed
-# 2026-08-26; the same stale path was in the offset producer and in
-# 2-audit/HAT_check_geojson_vs_mask.py, where it silently zeroed the check.
+# Clip rasters: this path moved twice (2026-08-25/26); repointed
 import sys as _b3dsys
 from pathlib import Path as _B3DP
 _b3dsys.path.insert(0, str(next(_q for _q in _B3DP(__file__).resolve().parents
                                 if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_topo_version as _b3d  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 DEM_DIR = _b3d.DOMAIN_CLIPS_DIR
 DEM_NAME = "domain_{d}/clip_domain_{d}.tif"          # 1 m, the full source grid
 
@@ -119,16 +68,11 @@ READ_STRIDE = 3                 # decimated read, ~3 m -- the display resolution
 LABEL_EVERY = 5                 # GIS number on every Nth domain box
 
 DPI = 300                       # 3 m/px on the page, so the road is resolvable
+# -----------------------------------------------------------------------------
 
 
+# Read one numeric constant out of the extractor without importing it
 def constant_from_extractor(name: str, fallback: float) -> float:
-    """
-    Read one numeric constant out of the extractor without importing it.
-
-    Importing a 2000-line module for two floats risks its import-time side
-    effects; copying the numbers risks them drifting apart. Parsing the
-    assignment is neither.
-    """
     try:
         src = EXTRACTOR.read_text(encoding="utf-8", errors="replace")
         m = re.search(rf"^{name}\s*=\s*(-?\d+(?:\.\d+)?)", src, re.MULTILINE)
@@ -144,6 +88,7 @@ MHW_M = constant_from_extractor("MHW_M", 0.36)
 RAW_NODATA_MAX_NAVD = constant_from_extractor("RAW_NODATA_MAX_NAVD", -9.0)
 
 
+# HAT_road_placement_on_domains.py, loaded as a module
 def load_placement():
     spec = importlib.util.spec_from_file_location("hat_placement", PLACEMENT)
     module = importlib.util.module_from_spec(spec)
@@ -153,30 +98,21 @@ def load_placement():
 
 P = load_placement()                       # palette, sections, rcParams
 
-# Never-surveyed is the PALEST thing on the sheet, deliberately. Most of each
-# 2000 m clip box is off-island and therefore NoData, so at any real saturation
-# it becomes the largest block of colour in the figure and the island reads as
-# mostly unsurveyed. It is absence of information and should recede; the holes
-# that matter sit INSIDE the island, where pale against green still reads.
+# Never-surveyed is the PALEST thing on the sheet, deliberately
 C_NODATA = "#e4e0d9"
 C_WATER = "#c3ccd4"         # at or below 0 m MHW
 C_BOX = "#5a5a55"
 
-# The two lines coincide except in the relocation blocks, so drawing them at the
-# same weight hides 1984 completely. 1984 goes underneath and wide, 2004 dashed
-# on top: coincident stretches read as a dashed orange line on a blue casing,
-# and the places they genuinely diverge are the places you see two lines.
+# The two lines coincide except in the relocation blocks
 LW_1984, LW_2004 = 2.8, 1.3
 
 
-# =============================================================================
-# DATA
-# =============================================================================
-
+# A domain's DEM clip
 def domain_path(d: int) -> Path:
     return DEM_DIR / DEM_NAME.format(d=d)
 
 
+# Every domain's map bounds
 def read_bounds() -> dict:
     out = {}
     for d in DOMAINS:
@@ -190,22 +126,8 @@ def read_bounds() -> dict:
     return out
 
 
+# One domain at full 1 m, block-reduced to the display resolution
 def read_domain(d: int):
-    """
-    One domain at full 1 m, block-reduced to the display resolution.
-
-    Reduced here rather than by rasterio's decimated read, because the two
-    quantities need OPPOSITE reductions and rasterio can only apply one per
-    read (and refuses `Resampling.min` on reads at all):
-
-        elevation   mean of the SURVEYED cells in the block
-        no-data     any() -- a block containing any hole is a hole
-
-    Averaging a hole together with real ground would invent an elevation and
-    quietly shrink the coverage gaps, which are the thing this figure exists to
-    show honestly. NoData is identified on the RAW NAVD88 values before the
-    datum shift, the same order the extractor uses.
-    """
     with rasterio.open(domain_path(d)) as src:
         raw = src.read(1).astype(float)
         b, (rx, ry), nodata = src.bounds, src.res, src.nodata
@@ -226,14 +148,13 @@ def read_domain(d: int):
     elev = np.divide(total, n_good, out=np.full(hole.shape, np.nan),
                      where=n_good > 0) - MHW_M
 
-    # Extent from the TRIMMED size, not the file's, so the image lands on the
-    # ground it was read from -- the trim discards up to s-1 rows/cols.
+    # Extent from the TRIMMED size, not the file's, so the image lands on the ground it was read from
     ext = (b.left, b.left + w * rx, b.top - h * ry, b.top)
     return elev, hole, ext
 
 
+# Both geojson lines, reprojected onto the DEM's own grid
 def load_roads(target_crs) -> dict:
-    """Both geojson lines, reprojected onto the DEM's own grid."""
     out = {}
     for year in YEARS:
         p = Path(str(GEOJSON_FMT).format(year=year))
@@ -244,24 +165,22 @@ def load_roads(target_crs) -> dict:
         try:
             out[year] = gdf.to_crs(target_crs)
         except Exception:
-            # The tifs carry a COMPOUND CRS (UTM 18N + NAVD88 height). If pyproj
-            # declines to transform onto it, fall back to its horizontal part --
-            # the vertical component is irrelevant to a plan-view reprojection.
+            # The tifs carry a COMPOUND CRS (UTM 18N + NAVD88 height)
             out[year] = gdf.to_crs("EPSG:26918")
             print(f"  [note] {year}: reprojected to EPSG:26918 "
                   f"(horizontal part of the compound CRS)")
     return out
 
 
-# =============================================================================
-# FIGURE
-# =============================================================================
+# Figure
 
+# The domains in groups of STRIP_SIZE
 def strips() -> list:
     return [DOMAINS[i:i + STRIP_SIZE]
             for i in range(0, len(DOMAINS), STRIP_SIZE)]
 
 
+# One strip of domains with both road lines
 def draw_strip(ax, group, bounds, roads):
     xs = [v for d in group if d in bounds
           for v in (bounds[d].left, bounds[d].right)]
@@ -276,9 +195,7 @@ def draw_strip(ax, group, bounds, roads):
             continue
         elev, hole, ext = read_domain(d)
 
-        # Three states, drawn as three layers rather than one ramp: water and
-        # "never surveyed" are states, not small elevations, and the whole point
-        # of reading the raw tif is that they can be separated here.
+        # Three states, drawn as three layers rather than one ramp
         ax.imshow(np.ma.masked_where(~hole, np.ones_like(elev)),
                   extent=ext, origin="upper", aspect="equal",
                   cmap=matplotlib.colors.ListedColormap([C_NODATA]),
@@ -315,10 +232,7 @@ def draw_strip(ax, group, bounds, roads):
             linestyle="-" if first else (0, (3.2, 1.8)),
             zorder=7 if first else 8)
 
-    # No section names on this figure. The strips are only ~3 km wide, so a
-    # boxed label sits on the island rather than beside it and hides the DEM
-    # and the road lines underneath. The GIS numbers already locate a domain,
-    # and the domain-frame figures carry the section bands.
+    # No section names on this figure
     ax.set_xlim(x0, x1)
     ax.set_ylim(y0, y1)
     ax.set_aspect("equal")
@@ -331,6 +245,7 @@ def draw_strip(ax, group, bounds, roads):
     return im
 
 
+# A scale bar, bottom-left
 def scale_bar(ax, length_m=1000.0):
     x0, x1 = ax.get_xlim()
     y0, y1 = ax.get_ylim()
@@ -345,6 +260,7 @@ def scale_bar(ax, length_m=1000.0):
             path_effects=[withStroke(linewidth=2.2, foreground=P.SURFACE)])
 
 
+# A north arrow, top-centre
 def north_arrow(ax):
     ax.annotate("N", xy=(0.5, 0.965), xytext=(0.5, 0.90),
                 xycoords="axes fraction", textcoords="axes fraction",
@@ -353,6 +269,7 @@ def north_arrow(ax):
                 zorder=11)
 
 
+# Run: every strip, one sheet
 def main() -> int:
     print("=" * 84)
     print("NC-12 geojson on the 2009 DEM -- map frame, no transforms")
@@ -378,8 +295,7 @@ def main() -> int:
         widths.append(max(xs) - min(xs) + 2 * PAD_M)
         heights.append(max(ys) - min(ys) + 2 * PAD_M)
 
-    # True scale in both axes means the panel widths are set by the data, not
-    # chosen. Width ratios come from each strip's own bbox.
+    # True scale in both axes means the panel widths are set by the data, not chosen
     fig_w = 22.0
     fig_h = fig_w * max(heights) / sum(widths) * 1.16
     fig = plt.figure(figsize=(fig_w, fig_h))

@@ -1,86 +1,17 @@
-# ==============================================================================
-# HAT_road_offset_from_dune_start.py
-#
-# NC-12 road setback and road elevation per Barrier3D domain, measured from the
-# SAME reference CASCADE indexes against: interior row 0 of the extracted
-# topography, which is one cell landward of the picked dune crest.
-#
-# WHY THIS EXISTS
-#   `roadway_manager.bulldoze` places the road with
-#
-#       road_start = int(road_setback / dy)                 # roadway_manager.py:99
-#       old_road_domain = xyz_interior_grid[road_start:road_end, :]
-#
-#   so `road_setback` is metres landward of interior row 0, and
-#   `cascade_pipeline/roadway.py:147` already documents it as "metres landward of
-#   the dune line". This script is the first measurement that actually honours
-#   that convention: it re-derives the dune line with the same picked windows and
-#   the same straightening the topography was built with, then measures the road
-#   against it, per alongshore profile.
-#
-#   It also removes a large error source. The clip boxes are north-up while the
-#   island trends NNE, so NC-12 crosses each 500 m domain diagonally: on GIS 11
-#   the road spans raw cross-shore cells 151-161, i.e. 110 m of cross-shore
-#   extent for a 20 m road. Any method that reduces that to a raw cross-shore
-#   median inherits the smear. Shearing the road mask with the SAME per-profile
-#   shear as the topography (`shear_like`) collapses it.
-#
-# TWO REFERENCE FRAMES, BOTH REPORTED
-#   The topography is 2009; the road_offset are 1984 and 2004. Those disagree, and the
-#   disagreement is the subject of old_method_offset/RoadSetback_oldmethod_audit.md.
-#   This script does not pick a winner:
-#     * setback_dunestart_m   measured directly here, road-vs-2009-dune. Internally
-#                        consistent with the grid CASCADE actually runs.
-#     * setback_legacy_m  read from the EXISTING RoadSetback_<year>.csv, which
-#                        is a road-vs-same-year-dune measurement. No
-#                        extrapolation is performed to produce it.
-#     * delta_m          the difference, which should track the dune-line
-#                        retreat between <year> and 2009. The 2-brie-offset
-#                        files are used ONLY to validate that, never as an input.
-#
-# OUTPUTS (nothing existing is overwritten; new tree under dunestart_offset\)
-#   dunestart_offset\measured\<year>\RoadSetback_<year>_dunestart.csv    2-row, model-facing
-#   dunestart_offset\measured\<year>\RoadElevation_<year>_dunestart.csv  2-row, m MHW
-#   dunestart_offset\measured\<year>\RoadOffset_<year>_domains.csv       per-domain detail
-#   dunestart_offset\measured\<year>\RoadOffset_<year>_profiles.csv      per-profile detail
-#   dunestart_offset\RoadOffset_dunestart_audit.md                       the write-up
-#
-#   measured\ because these ARE measurements: a digitised line against the
-#   period's own extraction. The derived\ sibling (1996, 2010) is written by
-#   HAT_road_setback_derived_vintages.py FROM these, never by this script.
-#   Which line each year reads is hat_topo_version.ROAD_LINE_FOR_YEAR: 1984
-#   reads the 1978 line's masks, 2004 the 2008 line's (2026-09-15).
-#
-# WHERE THIS DEPARTS FROM "MEASURE, DON'T CORRECT" -- TWO PLACES, BOTH FLAGGED
-#   Both act ONLY on the model-facing CSV. `setback_dunestart_m` in the _domains.csv
-#   is always the measurement, and every adjusted domain carries a flag naming
-#   what was done to it. (1) is the negative floor, below. (2) is the seaward
-#   relocation of roadways that drown at initialisation, documented at
-#   RELOCATE_DROWNING.
-#
-# (1) NEGATIVE SETBACKS ARE FLOORED
-#   A 1984 road measured against the 2009 dune line can land SEAWARD of interior
-#   row 0, giving a negative setback. A negative cannot be written to the
-#   model-facing file, because `int(-50/10) = -5` and
-#   `xyz_interior_grid[-5:-3, :]` is valid Python that indexes from the LANDWARD
-#   end -- the road would be bulldozed into the bay, silently. Nor is 0.0 a
-#   "no road" sentinel: `build_roadway_management_on` decides which domains are
-#   managed from the road SPAN, not the value, so a 0.0 inside the span still
-#   means "managed, road at row 0".
-#
-#   So the model-facing CSV carries max(setback, 0.0) and the true signed value
-#   is preserved in the _domains.csv and the audit, flagged NEGATIVE. That is a
-#   floor, and it is called one everywhere it appears.
-#
-# USAGE
-#     python HAT_road_offset_from_dune_start.py
-# ==============================================================================
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-23
+"""
+NC-12 setback and road elevation per domain, measured from interior row 0, the reference CASCADE indexes against.
 
+    python scripts/input_prep/4-mgmt-forcings/road_offset/1-produce/HAT_road_offset_from_dune_start.py
+
+Measures each period's road on its own extraction, floors negatives,
+relocates roads that drown at initialisation, and writes the model-facing
+RoadSetback CSVs, per-domain and per-profile tables, and an audit. Details: scripts/input_prep/4-mgmt-forcings/road_offset/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-23
+"""
 from __future__ import annotations
 
 import csv
@@ -101,128 +32,53 @@ from site_layer.hat_topo_version import (array_name, topo_dirs,  # noqa: E402
 
 import matplotlib
 
-# Anchored 2026-09-14: absolute into a home directory, or into a tree
-# renamed since. Rule 5 of ORGANIZATION.md.
+# Repo root, found by searching upward
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
 # Only the array helpers are used, never the picker.
 matplotlib.use("Agg")
 
-# ==============================================================================
-# CONFIG
-# ==============================================================================
 
 PROJECT_ROOT = Path(str(_PATH_REPO))
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
 
-# There is now exactly ONE copy of HAT_dune_topo_extractor.py in the repo, and
-# this is it. Until 2026-08-26 there were four, only one of which had
-# ALONGSHORE_FLIP = True; importing a wrong copy measured the road in the
-# mirrored alongshore frame -- the exact mismatch this whole exercise is meant
-# to eliminate. The duplicates are deleted, so that particular trap is gone,
-# but keep resolving the extractor by this single path rather than by a
-# relative one.
+# --- CONFIG ------------------------------------------------------------------
+# There is now exactly ONE copy of HAT_dune_topo_extractor.py in the repo, and this is it
 EXTRACTOR = (PROJECT_ROOT / "scripts" / "input_prep" / "1-barrier3d-domains" / "1-extraction"
              / "HAT_dune_topo_extractor.py")
 
 from site_layer import hat_topo_version as _tv  # noqa: E402
 ROADS_ROOT = _tv.ROADS_ROOT
-# MASKS ARE KEYED BY LINE VINTAGE, NOT START YEAR (2026-09-15). raster/1978/
-# and raster/2008/ hold the 1978 and 2008 lines; the 1984 start reads the
-# first, the 2004 start the second, through hat_topo_version.ROAD_LINE_FOR_YEAR
-# and road_mask_dir() / road_mask_file(). Nothing here spells "raster/<year>".
+# MASKS ARE KEYED BY LINE VINTAGE, NOT START YEAR (2026-09-15)
 
-# The existing same-year measurements, used as the second reference frame.
-# old_method_offset/ became a dated superseded folder on 2026-09-11 and this
-# kept naming it, so the second frame was silently absent; resolved 2026-09-18.
+# The existing same-year measurements, used as the second reference frame
 EXISTING_SETBACK_FMT = _tv.LEGACY_SETBACK_ROOT / "{year}" / "RoadSetback_{year}.csv"
 
-# Offset files, used ONLY to validate delta_m against measured retreat.
-# The flat <year>/ build this named was versioned on 2026-09-15, so the
-# check has been skipped since; each start's CURRENT build now (2026-09-18).
+# Offset files, used ONLY to validate delta_m against measured retreat
 OFFSET_FMT = None   # superseded by _tv.offset_file(year, "input")
 
 OUT_ROOT = ROADS_ROOT / "dunestart_offset"
 
 YEARS = [1984, 2004]
 
-# EACH YEAR BELONGS TO A TOPOGRAPHY PRODUCT (2026-08-26).
-#
-# The setback is measured from interior row 0, and row 0 is a property of the
-# EXTRACTION - which is now period-specific: 1984-start is built on the
-# 1996-grafted DEM, 2004-start on the plain 2009+2014 one. Measuring the 2004
-# road against 1984-start row 0 and writing it to dunestart_offset/measured/2004/ with
-# nothing saying so is the class of error hat_topo_version.py exists to
-# prevent, and it is silent - the numbers look plausible.
-#
-# FIRST FIX, SAME DAY, AND WHY IT WAS NOT ENOUGH. The first version of this
-# guard SKIPPED any year whose product did not match the extractor's own
-# TOPO_PRODUCT literal, telling you to repoint the extractor and re-run. That
-# made every run half a run - and write_audit() rewrites ONE markdown for the
-# whole tree, so the 14:04 1984-only run published an audit with no 2004
-# section at all, for a forcing that had not changed.
-#
-# Now load_extractor(product) configures a SEPARATE extractor module per
-# product, so one invocation measures both vintages, each against its own row
-# 0, and the audit is whole. The year -> product mapping is imported from
-# hat_topo_version.YEAR_PRODUCT rather than spelled here; a local literal is
-# how the figure scripts came to disagree with this one.
+# EACH YEAR BELONGS TO A TOPOGRAPHY PRODUCT (2026-08-26)
 DOMAINS = list(range(1, 91))        # D1 = Cape Point (south) -> D90 = Pea Island (north)
 
-# --- ROAD SPAN ----------------------------------------------------------
-# Domains written to the model-facing CSVs. Matches the legacy files and the
-# rasterizer's own FIRST_ROAD_DOMAIN/LAST_ROAD_DOMAIN = 9, 90.
-#
-# D8 is measured and reported but EXCLUDED, on evidence rather than convention:
-# at the Buxton bend NC-12 turns to run nearly east-west, PARALLEL to the raster
-# rows, so it crosses D8's corner rather than crossing the domain shore-normal.
-# HAT_check_geojson_vs_mask.py measures the consequence -- the road spans a
-# median of 75 cells per row there (102 max) against 2 cells in a normal domain,
-# and it touches only 25 of 50 profiles. A cross-shore "distance landward of the
-# dune" is not a meaningful quantity for a road running alongshore, so a scalar
-# setback for D8 would be a number without a physical reading.
-#
-# Domains outside this span are still measured, still land in the _domains.csv,
-# and are flagged EXCLUDED_FROM_SPAN so the exclusion is visible rather than
-# silent.
+# Road span
+
+# Domains written to the model-facing CSVs
 ROAD_SPAN = (9, 90)
 
-# --- UNSTRAIGHTENED CONTROL PASS ----------------------------------------
-# A second measurement with STRAIGHTEN = False, so the old-vs-new difference can
-# be attributed instead of just reported. Holding the dune feature, the road
-# mask, the aggregation and this code fixed and changing ONLY the frame splits
-# the total change exactly:
-#
-#     new_straightened - legacy  =  (new_straightened - new_raw)   <- frame
-#                                 + (new_raw          - legacy)    <- dune feature
-#
-# The control needs the pre-straightening pick set, because a window picked in
-# one frame is a valid index range in the other that points at different cells --
-# which is what the extractor's `straightened` guard exists to catch. That file
-# predates the flag (straighten: null), so the guard reads it as False and lets
-# the control through, which is correct.
-#
-# Residual caveat, stated rather than hidden: the two passes necessarily use two
-# different pick files, so a small part of the "frame" component is really
-# window-choice. The windows were drawn to bracket the same dune in each frame,
-# so it is second-order, but it is not zero.
-#
-# ALONGSHORE_FLIP is deliberately NOT varied. The setback is one scalar per
-# domain, collapsed by median over profiles; reversing the profile order leaves
-# that multiset unchanged, so the flip cannot move the setback at all. It decides
-# where the road sits WITHIN a domain, which is a different question.
+# Unstraightened control pass
+
+# A second measurement with STRAIGHTEN = False
 CONTROL_UNSTRAIGHTENED = True
-# MOVED 2026-08-25: 1-barrier3d-domains went period-first and the pre-90-domain
-# legacy went under superseded/. Path repointed so this script keeps reading
-# EXACTLY what it read before - no road number moves because of the reorg.
+# The control picks, repointed after the 2026-08-25 move so nothing moves
 CONTROL_WINDOW_JSON = _tv.CONTROL_PICKS_DIR / "HAT_dune_search_windows_2009_pea_hatteras.json"
 CONTROL_SUFFIX = "_rawframe"
 
-# Assumed roadway width. RoadwayConfig.road_width_m is a single global 20.0
-# (cascade_pipeline/roadway.py:45), so a per-domain width is not consumable
-# today -- but cascade.py:43 does accept an array, so the MEASURED width is
-# reported as a diagnostic in case that changes.
+# Assumed roadway width: one global 20 m; the measured width is a diagnostic
 ASSUMED_ROAD_WIDTH_M = 20.0
 
 # Flag thresholds. None of these alter a value; they only label it.
@@ -231,97 +87,28 @@ SCATTER_ELEV_STD_M = 0.50           # std of road-cell elevation
 MIN_ROAD_PROFILES = 25              # of 50; below this the domain is PARTIAL
 WATER_FRAC_FLAG = 0.20              # fraction of road cells at sentinel water
 
-# --- SEAWARD RELOCATION OF DROWNING ROADWAYS ----------------------------
-# The second departure from "measure, don't correct". Decided 2026-08-18.
-#
-# WHAT IT DOES
-#   A roadway whose flanking rows are >20% water at t=0 is width-drowned by
-#   `roadway_manager.bulldoze` on the first call: RoadwayManager sets
-#   _drown_break, cascade.py never calls update() again, and that domain spends
-#   the entire hindcast as an UNMANAGED barrier wearing a road label -- no
-#   overwash removal, no dune rebuilding, no relocation. Rather than lose the
-#   domain, the road is moved to the nearest row SEAWARD that survives the test.
-#
-# WHAT "NEAREST VIABLE" MEANS
-#   The largest road_start < current for which bulldoze's own flanking test
-#   passes -- `drown_test` below is that test, not an approximation of it. The
-#   road's own band is NOT required to be dry, because bulldoze never looks at
-#   it; requiring it would move roads further seaward than the model needs.
-#   There is NO cap on the distance: the nearest viable row is taken however far
-#   it is. See the caveat below for what that costs on GIS 79.
-#
-# THE ASSUMPTION THIS RESTS ON, STATED PLAINLY
-#   On the 2009_v3 topography the domains this fires on do NOT drown on measured
-#   water. They drown on LiDAR coverage gaps. Across the six flanking rows that
-#   fail at GIS 78/79/80 there are 106 wet cells, of which 105 were NEVER
-#   SURVEYED and 1 is genuinely measured wet. The extractor writes no-data back
-#   as SENTINEL_WATER_M because Barrier3D has no representation for "unknown",
-#   and `wet_fraction` counts every cell (see the audit script -- that is
-#   deliberate, so the figure reports what the run does).
-#
-#   So this relocation is NOT "the road was in water, we moved it out". It is
-#   "the 2009 DEM has no data there, CASCADE reads no-data as water, so the road
-#   is moved onto surveyed ground to keep the domain managed". Anyone reading a
-#   managed-vs-unmanaged result at GIS 78-80 needs that sentence.
-#
-# WHAT IT COSTS, PER DOMAIN
-#   GIS 78  490 -> 470 m ( 20 m)  lands on the measured per-profile MINIMUM
-#   GIS 80  490 -> 450 m ( 40 m)  inside the measured spread, ~p10 (already
-#                                 flagged SCATTER_SETBACK(71m))
-#   GIS 79  510 -> 400 m (110 m)  90 m SEAWARD OF THE SEAWARD-MOST PROFILE ever
-#                                 measured in that domain. This one is not a
-#                                 re-pick of the alongshore statistic; it is a
-#                                 position no profile showed. Accepted knowingly
-#                                 (no cap), and flagged BEYOND_MEASURED so it can
-#                                 never be mistaken for a measurement.
-#
-# Set RELOCATE_DROWNING = False to write the measured setbacks unchanged and let
-# the domains drown; everything is still measured and flagged either way.
+# Seaward relocation of drowning roadways
+
+# The second departure from "measure, don't correct"
 RELOCATE_DROWNING = True
 
-# bulldoze's own constants. Not tuning knobs -- roadway_manager.py:50-51,125-165;
-# RoadwayManager re-asserts 0.2 at :531; drown_threshold = 0 at :766.
+# bulldoze's own constants, not tuning knobs
 DROWN_THRESHOLD_M = 0.0
 DROWN_PCT = 0.2
 ROAD_WIDTH_CELLS = 2                # int(road_width 20 m / dx 10 m)
+# -----------------------------------------------------------------------------
 
 
-# ==============================================================================
-# EXTRACTOR IMPORT
-# ==============================================================================
+# Extractor import
 
+# Import the corrected extractor, configured for ONE topography product
 def load_extractor(product: str | None = None):
-    """Import the corrected extractor, configured for ONE topography product.
-
-    ONE RUN, BOTH VINTAGES (2026-08-26). This used to import the extractor once
-    and read TOPO_PRODUCT off it, so a year whose product did not match was
-    SKIPPED. That guard was right -- measuring 2004 against 1984-start row 0 is
-    silently wrong -- but it made a complete run impossible: whichever product
-    the extractor happened to sit on, the other year was skipped, and
-    `write_audit` rewrites ONE markdown file for the whole tree. A 1984-only run
-    on 2026-08-26 14:04 therefore published an audit with no 2004 section at
-    all, for a forcing that had not changed.
-
-    The extractor derives LOAD_PATH, PICKS_DIR, WINDOW_JSON and the save paths
-    from the TOPO_PRODUCT / VERSION literals at module level, so configuring it
-    means re-executing it with those two literals substituted. That is what this
-    does: the source is patched in memory, never on disk, and each product gets
-    its own module object. The alternative -- mutating TOPO_PRODUCT after import
-    -- would leave every derived path pointing at the old product, which is the
-    silent-wrong-row-0 failure again.
-
-    `product=None` keeps the file's own literals, which is what run_control's
-    unstraightened pass and any interactive import get.
-    """
     src = EXTRACTOR.read_text(encoding="utf-8")
     name = "hat_extractor"
 
     if product is not None:
         version = topo_dirs(product)[2]
-        # The whole assignment line is replaced, trailing comment and all --
-        # matching the quoted value would have to spell both quote styles, and
-        # the comment on VERSION ("bump this per settings variant") is not
-        # something this loader should try to preserve into a patched copy.
+        # The whole assignment line is replaced, trailing comment and all
         src, n_p = re.subn(r"^TOPO_PRODUCT\s*=.*$",
                            f'TOPO_PRODUCT = "{product}"', src,
                            count=1, flags=re.MULTILINE)
@@ -361,72 +148,20 @@ def load_extractor(product: str | None = None):
     return module
 
 
-# ==============================================================================
-# FRAME ALIGNMENT
-#
-# align_mask_to_topography() and interior_row0_line() USED TO LIVE HERE. They
-# were private copies that re-derived the extractor's frame from outside it --
-# two definitions of one chain, kept in step by hand. They now live in
-# HAT_dune_topo_extractor.py next to shear_like(), which is the only place that
-# knows the frame, and this script calls them through `ext`:
-#
-#     ext.align_mask_to_topography(raw_mask, dom)     (no `ext` first arg)
-#     ext.interior_row0_line(prof_arr, dune_loc)
-#
-# The extractor needed them anyway, to draw NC-12 on the picker and to report
-# road distances from interior row 0 in its settings sheet. Moving rather than
-# duplicating is what keeps this script's setback and the extractor's diagnostic
-# columns the same measurement.
-#
-# TWO LATENT BUGS WERE FIXED IN THE MOVE, both no-ops on the current settings:
-# interior_row0_line's all-water test now matches remove_water_rows (`<=`, so a
-# leading row of pure no-data trims like the real thing instead of being kept),
-# and lead_trim is only applied when TRIM_INTERIOR_ROWS is True. lead_trim is 0
-# on all 90 domains either way, which is why the outputs did not move -- verified
-# by diffing the CSVs before and after the refactor.
-# ==============================================================================
+# Frame alignment now lives in the extractor, called through `ext` (history in readme)
 
 
-# ==============================================================================
-# GEOLOCATION  (diagnostics only -- never feeds a setback)
-#
-# Put the measured per-profile cells back on the map, so RoadOffset_*_profiles.csv
-# can be loaded into GIS and eyeballed against the road instead of being read as
-# bare cell indices. Borrowed in spirit from
-# roya_files/road_setback_from_road_json_to_interior_start_REVISED.py, which works
-# natively in map coordinates -- but NOT its method: that script reconstructs the
-# interior point by walking (c0 + interior_start + 0.5) * cell metres from the
-# domain polygon edge along a PCA axis, a formula with no shear term, which would
-# put back the obliquity this pipeline exists to remove. Here the affine comes
-# straight from the same resampled_domain_*.tif the mask was burned onto, and the
-# index chain is inverted exactly.
-# ==============================================================================
+# Geolocation (diagnostics only -- never feeds a setback) Put the measured per-profile cells back on the map
 
-# MOVED TWICE, AND THE SECOND MOVE WAS MISSED UNTIL 2026-08-26.
-# 2026-08-25: 1-barrier3d-domains went period-first and domain-clips-1m went
-# under superseded/ with the pre-90-domain legacy, so this path was repointed
-# there. 2026-08-26: it was moved back OUT - it is a LIVE input, read by four
-# scripts including the rasterizer that builds the road masks - and this path
-# was not updated with it.
-#
-# Nothing errored, because the coordinate write-back is optional: every profile
-# simply got a blank road_x/road_y and one "[coords] no resampled tif" line.
-# Those two columns are what the audit's independent check of the index
-# inversion rests on - shapely distance from the reconstructed road points to
-# the digitised geojson, 6.62-6.68 m median - so losing them quietly loses the
-# check that would catch an alongshore-flip error.
+# MOVED TWICE, AND THE SECOND MOVE WAS MISSED UNTIL 2026-08-26
 TIF_FMT = _tv.DOMAIN_CLIPS_DIR / "domain_{domain}" / "resampled_domain_{domain}.tif"
 
 WRITE_PROFILE_COORDS = True
 _geo_warned: set[str] = set()
 
 
+# (transform, crs, n_rows, n_cols) for one domain, or None if unavailable
 def domain_georeference(ext, domain: int):
-    """(transform, crs, n_rows, n_cols) for one domain, or None if unavailable.
-
-    Returns None rather than raising: the coordinates are a QC convenience, and a
-    missing tif or a missing rasterio must never stop a setback being measured.
-    """
     if not WRITE_PROFILE_COORDS:
         return None
     try:
@@ -437,10 +172,7 @@ def domain_georeference(ext, domain: int):
             print("  [coords] rasterio not installed; profile x/y left blank")
         return None
 
-    # Only OCEAN_LOC = "right" is invertible with the simple chain below. The
-    # "top"/"bottom" branches apply np.rot90, which swaps the axes -- inverting
-    # that needs its own case, and getting it silently wrong would put points in
-    # the wrong place on a map, which is worse than leaving them out.
+    # Only OCEAN_LOC = "right" is invertible with the simple chain below
     if ext.OCEAN_LOC != "right":
         if "ocean_loc" not in _geo_warned:
             _geo_warned.add("ocean_loc")
@@ -459,20 +191,8 @@ def domain_georeference(ext, domain: int):
         return src.transform, src.crs, src.shape[0], src.shape[1]
 
 
+# Aligned-frame (profile, cross-shore cell) -> (x, y) in the tif's CRS
 def cell_to_map(geo, ext, dom: dict, profile: int, cross_cell: int):
-    """Aligned-frame (profile, cross-shore cell) -> (x, y) in the tif's CRS.
-
-    Inverts load_profiles' chain, in reverse order:
-
-        aligned cell k  ->  ocean-first column   k + c0 + shear[profile]
-        ocean-first     ->  oriented column      (n_cols - 1) - j
-        ALONGSHORE_FLIP ->  original row         (n_rows - 1) - profile
-        affine          ->  x, y at the CELL CENTRE (+0.5, +0.5)
-
-    The +0.5 is the same convention HAT_check_geojson_vs_mask.py documents: cell k
-    spans [k, k+1), so its centre is k + 0.5. Dropping it shifts every point half
-    a cell (5 m) northwest.
-    """
     if geo is None or cross_cell < 0:
         return "", ""
     transform, _crs, n_rows, n_cols = geo
@@ -487,12 +207,10 @@ def cell_to_map(geo, ext, dom: dict, profile: int, cross_cell: int):
     return round(float(x), 2), round(float(y), 2)
 
 
-# ==============================================================================
-# PER-DOMAIN MEASUREMENT
-# ==============================================================================
+# Per-domain measurement
 
+# Measure one domain's road setback and elevation against its dune start
 def measure_domain(ext, domain: int, year: int, windows: dict) -> tuple[dict, list[dict]]:
-    """Measure one domain's road setback and elevation against its dune start."""
     stem = f"domain_{domain}"
     dem_path = ext.LOAD_PATH / f"{stem}.npy"
     mask_path = road_mask_file(road_line_for_year(year), domain)
@@ -502,10 +220,7 @@ def measure_domain(ext, domain: int, year: int, windows: dict) -> tuple[dict, li
         "section": ext.section_for(stem),
         "setback_dunestart_m": np.nan,
         "setback_dunestart_floored_m": 0.0,
-        # What the model-facing CSV actually carries, and why it differs.
-        # Defaults live here rather than being added later so every record --
-        # in-span, excluded, no-road, and the control pass -- has the same
-        # fieldnames for write_csv's DictWriter.
+        # What the model-facing CSV actually carries, and why it differs
         "setback_model_m": np.nan,
         "drowns_at_init": "",
         "relocated_seaward_m": 0.0,
@@ -540,9 +255,7 @@ def measure_domain(ext, domain: int, year: int, windows: dict) -> tuple[dict, li
     record["obliquity_deg"] = dom["obliquity_deg"]
     record["shear_max_cells"] = int(np.max(dom["shear"]))
 
-    # Same window the topography was extracted with, and the same frame guard the
-    # extractor's run pass applies -- a window picked unstraightened is a valid
-    # index range that points at different cells.
+    # Same window the topography was extracted with, and the same frame guard the extractor's run pass applies
     w = windows.get(stem)
     if w is None:
         i0, i1 = ext.default_window(prof_arr, dom["start_beach"])
@@ -585,9 +298,7 @@ def measure_domain(ext, domain: int, year: int, windows: dict) -> tuple[dict, li
         if road_cells.size == 0 or row0[i] < 0:
             continue
 
-        # road_setback locates the SEAWARD edge of the road block, because
-        # bulldoze indexes [road_start : road_start + road_width]. Ocean-first
-        # cross-shore means the seaward edge is the minimum index.
+        # road_setback is the road block's seaward edge, the minimum index ocean-first
         seaward = int(road_cells.min())
         landward = int(road_cells.max())
         center = float(road_cells.mean())
@@ -603,9 +314,7 @@ def measure_domain(ext, domain: int, year: int, windows: dict) -> tuple[dict, li
         n_cells += int(road_cells.size)
         elev_mhw.extend(profile_elev[~wet].tolist())
 
-        # Map coordinates of the two cells the setback is measured between, so
-        # the pair can be plotted in GIS against the road. Diagnostics only --
-        # setback_m above is computed from the indices, never from these.
+        # Map coordinates of the two cells the setback is measured between
         interior_x, interior_y = cell_to_map(geo, ext, dom, i, int(row0[i]))
         road_x, road_y = cell_to_map(geo, ext, dom, i, seaward)
 
@@ -653,7 +362,7 @@ def measure_domain(ext, domain: int, year: int, windows: dict) -> tuple[dict, li
     else:
         flags.append("ALL_ROAD_CELLS_WET")
 
-    # --- flags: labels only, no value is altered ---
+    # Flags: labels only, no value is altered
     if record["setback_dunestart_m"] < 0:
         flags.append(f"NEGATIVE({record['setback_dunestart_m']:.0f}->floored 0)")
     if record["n_road_profiles"] < MIN_ROAD_PROFILES:
@@ -673,40 +382,17 @@ def measure_domain(ext, domain: int, year: int, windows: dict) -> tuple[dict, li
     return record, profiles
 
 
-# ==============================================================================
-# SEAWARD RELOCATION -- see RELOCATE_DROWNING for the decision and its cost
-# ==============================================================================
+# Seaward relocation -- see RELOCATE_DROWNING for the decision and its cost
 
+# The interior array CASCADE actually initialises with
 def load_saved_interior(ext, domain: int) -> np.ndarray | None:
-    """
-    The interior array CASCADE actually initialises with.
-
-    Deliberately the SAVED .npy, not a re-derived interior: the drown test has
-    to run on the same bytes `HAT_road_placement_on_domains.py` and
-    `HAT_road_setback_audit.py` read, or the three scripts can disagree about
-    which domains drown. Paths come off the extractor rather than being
-    hardcoded, so bumping VERSION does not silently point this at stale arrays.
-    """
-    # ext.TAG is gone: the arrays carry no year tag since 2026-08-26. The name
-    # comes from the resolver, which is also what the extractor writes with.
+    # Array names from the resolver: no year tag since 2026-08-26
     p = Path(ext.TOPO_SAVE_PATH) / array_name("topography", domain)
     return np.load(p) if p.is_file() else None
 
 
+# bulldoze's width-drown test, transcribed
 def drown_test(interior: np.ndarray, road_start: int) -> tuple | None:
-    """
-    bulldoze's width-drown test, transcribed. Returns (seaside, bayside, drowns).
-
-    The rows tested are the NEIGHBOURS of the bulldozed band -- road_start - 1
-    and road_end + 1 -- never the band itself. Interior values are decametres
-    MHW and bulldoze compares `grid * dz` against the threshold in metres, so
-    the * 10 is the model's, not a display convenience. Every cell counts,
-    no-data included: the extractor stores no-data as the water sentinel and
-    bulldoze reads the literal array.
-
-    None means the placement is not testable -- bulldoze indexes road_end + 1
-    with no bounds check, so that is an IndexError at t=0, not a drowning.
-    """
     n = interior.shape[0]
     end = road_start + ROAD_WIDTH_CELLS
     if road_start < 0 or end + 1 >= n:
@@ -717,14 +403,8 @@ def drown_test(interior: np.ndarray, road_start: int) -> tuple | None:
     return seaside, bayside, bool(seaside > DROWN_PCT or bayside > DROWN_PCT)
 
 
+# Largest road_start strictly seaward of the current one that does not drown
 def nearest_viable_seaward(interior: np.ndarray, road_start: int) -> int | None:
-    """
-    Largest road_start strictly seaward of the current one that does not drown.
-
-    Scans landward-to-seaward and returns the first pass, so the road moves the
-    shortest distance that survives initialisation. None means no row seaward of
-    here is viable -- the domain keeps its measured setback and drowns.
-    """
     for start in range(road_start - 1, -1, -1):
         t = drown_test(interior, start)
         if t is not None and not t[2]:
@@ -732,14 +412,8 @@ def nearest_viable_seaward(interior: np.ndarray, road_start: int) -> int | None:
     return None
 
 
+# Fill `setback_model_m` for every in-span domain, moving the drowned ones
 def relocate_drowning(ext, in_span: list[dict], cell: float) -> None:
-    """
-    Fill `setback_model_m` for every in-span domain, moving the drowned ones.
-
-    Mutates the records in place. `setback_dunestart_m` is never touched -- the
-    measurement stays recoverable from the _domains.csv, which is the whole
-    point of doing this here rather than in the measurement.
-    """
     for r in in_span:
         floored = float(r["setback_dunestart_floored_m"])
         r["setback_model_m"] = round(floored, 1)
@@ -752,8 +426,7 @@ def relocate_drowning(ext, in_span: list[dict], cell: float) -> None:
         start = int(floored / cell)
         t = drown_test(interior, start)
         if t is None:
-            # Past the end of the array: an IndexError mid-run, not a drowning.
-            # Left alone here; the audit script is where that is adjudicated.
+            # Past the end of the array is an overrun, not a drowning; the audit judges it
             r["flags"] = ",".join(filter(None, [r["flags"], "OVERRUN"]))
             continue
 
@@ -774,21 +447,17 @@ def relocate_drowning(ext, in_span: list[dict], cell: float) -> None:
         r["relocated_seaward_m"] = round(moved_m, 1)
         note = [f"MOVED_SEAWARD({moved_m:.0f}m,sea{sea:.0%},bay{bay:.0%})"]
 
-        # A move inside the domain's own per-profile spread is a re-pick of the
-        # alongshore statistic. A move beyond it is a position no profile
-        # showed, which is a different claim and has to say so.
+        # A move inside the domain's own per-profile spread is a re-pick of the alongshore statistic
         if (np.isfinite(r["setback_min_m"])
                 and r["setback_model_m"] < r["setback_min_m"]):
             note.append(f"BEYOND_MEASURED(min {r['setback_min_m']:.0f}m)")
         r["flags"] = ",".join(filter(None, [r["flags"]] + note))
 
 
-# ==============================================================================
-# EXISTING SAME-YEAR SETBACKS + OFFSET VALIDATION
-# ==============================================================================
+# Existing same-year setbacks + offset validation
 
+# Read a 2-row (GIS IDs, values) CASCADE forcing file
 def read_two_row_csv(path: Path) -> dict[int, float]:
-    """Read a 2-row (GIS IDs, values) CASCADE forcing file."""
     if not path.is_file():
         return {}
     raw = np.loadtxt(path, delimiter=",")
@@ -797,8 +466,8 @@ def read_two_row_csv(path: Path) -> dict[int, float]:
     return {int(k): float(v) for k, v in zip(raw[0], raw[1])}
 
 
+# Write the 2-row format load_padded_series expects
 def write_two_row_csv(path: Path, values: dict[int, float]) -> None:
-    """Write the 2-row format load_padded_series expects."""
     path.parent.mkdir(parents=True, exist_ok=True)
     ids = sorted(values)
     with open(path, "w", newline="") as f:
@@ -806,31 +475,12 @@ def write_two_row_csv(path: Path, values: dict[int, float]) -> None:
         f.write(",".join(f"{values[i]:.3f}" for i in ids) + "\n")
 
 
+# Per-domain dune-line station from the SHARED offshore datum, metres, LANDWARD-positive
 def load_stations(year: int) -> np.ndarray | None:
-    """Per-domain dune-line station from the SHARED offshore datum, metres,
-    LANDWARD-positive. 90 rows.
-
-    NOT the island-offset build (2026-09-22). This used to read
-    offset_file(year, "input"), and the retreat below differenced two of
-    those. Each build is zeroed on its OWN most seaward domain, and for these
-    two years those minima are 56.6 m apart (1984 zeroed at 1934.3 m, 2004 at
-    1990.9 m, both on GIS 78), so the difference carried a constant -56.6 m
-    and came out the wrong SIGN: a true median retreat of +13.8 m was reported
-    as -42.8 m before the sign convention below, i.e. 43 m of progradation.
-
-    A correlation is immune to a constant, so the corr(delta, retreat) result
-    this function exists to serve never moved -- only the median it printed
-    beside it, and that median reached RoadOffset_dunestart_audit.md.
-
-    The raw files share one offshore datum and have no such constant, so this
-    reads them, exactly as duneline_endpoint.py does for the same question.
-    """
     path = _tv.dune_raw_file_for_year(year, strict=False)
     if path is None or not path.is_file():
         return None
-    # First row per (domain, transect), then the mean of the transects in each
-    # domain -- the same two steps island_offset_hybrid.py takes, so this and
-    # the build differ only by the build's zeroing.
+    # First row per (domain, transect), then the mean of the transects in each domain
     seen, sums, counts = set(), {}, {}
     with open(path, newline="", encoding="utf-8-sig") as fh:
         for row in csv.DictReader(fh):
@@ -849,30 +499,8 @@ def load_stations(year: int) -> np.ndarray | None:
     return np.array([sums[d] / counts[d] for d in DOMAINS], dtype=float)
 
 
-# ==============================================================================
-# MAIN
-# ==============================================================================
-
+# The dune-search windows for the product/version an extractor is set to
 def load_windows(ext) -> dict:
-    """The dune-search windows for the product/version an extractor is set to.
-
-    The picks are the one input to this script that cannot be regenerated, and
-    the path to them is DERIVED, not configured:
-
-        PICK_SET    = RUN_NAME = VERSION
-        WINDOW_JSON = PICKS_DIR / f"HAT_dune_search_windows_{PICK_SET}.json"
-
-    So any process that bumps VERSION without writing a matching pick file
-    leaves this script pointing at a path that does not exist. That happened on
-    2026-08-26: nodata_audit/HAT_bridge_dropouts.py created 1984-start v2 and
-    moved the VERSION literal, and every re-run here died on a bare
-    FileNotFoundError naming a file nobody had ever created. The setbacks on
-    disk were fine -- they simply could not be re-measured.
-
-    The bridge script now carries picks forward as part of the bump. This
-    guard is the backstop for anything else that bumps a version, and it names
-    the fix rather than the missing file.
-    """
     if ext.WINDOW_JSON.is_file():
         return json.load(open(ext.WINDOW_JSON))
 
@@ -899,15 +527,11 @@ def load_windows(ext) -> dict:
         f"was re-picked, run the extractor's pick pass for it instead.\n")
 
 
+# Run: every period's extraction, measure, floor, relocate, write the CSVs and audit
 def main() -> None:
-    # ONE EXTRACTOR PER PRODUCT, both live for the whole run. Loading them up
-    # front means a missing product fails before any file is written, rather
-    # than after the first year has already been published.
+    # ONE EXTRACTOR PER PRODUCT, both live for the whole run
     exts = {year: load_extractor(YEAR_PRODUCT[year]) for year in YEARS}
-    # The picks are loaded up front for the SAME reason, and it is not
-    # hypothetical: they used to be read inside the per-year loop, so a missing
-    # 2004 pick set was only discovered after 1984 had already been published
-    # to the shared tree.
+    # The picks are loaded up front for the SAME reason, and it is not hypothetical
     windows_by_year = {year: load_windows(exts[year]) for year in YEARS}
 
     print("=" * 84)
@@ -948,9 +572,7 @@ def main() -> None:
             print("  [skip] no domain carried road")
             continue
 
-        # Measured everywhere, written only within ROAD_SPAN. Flag the excluded
-        # ones in the diagnostics so the gap between "has road" and "is forced"
-        # is on the record.
+        # Measured everywhere, written only within ROAD_SPAN
         in_span = [r for r in with_road
                    if ROAD_SPAN[0] <= r["domain"] <= ROAD_SPAN[1]]
         excluded = [r for r in with_road if r not in in_span]
@@ -968,7 +590,7 @@ def main() -> None:
                   f"(measured and kept in _domains.csv, not written to the "
                   f"model-facing files)")
 
-        # --- second reference frame: the existing same-year measurement ---
+        # Second reference frame: the existing same-year measurement
         existing = read_two_row_csv(Path(str(EXISTING_SETBACK_FMT).format(year=year)))
         for r in records:
             same = existing.get(r["domain"], np.nan)
@@ -980,12 +602,12 @@ def main() -> None:
 
         out_dir = road_setback_dir(year)
 
-        # --- seaward relocation of roadways that drown at initialisation ---
-        # Runs on the FLOORED value, because that is what CASCADE would index
-        # with, and fills setback_model_m for every in-span domain.
+        # Seaward relocation of roadways that drown at initialisation
+
+        # Runs on the floored value, the one CASCADE indexes with
         relocate_drowning(ext, in_span, ext.CELL_SIZE_M)
 
-        # --- model-facing files ---
+        # Model-facing files
         write_two_row_csv(
             out_dir / f"RoadSetback_{year}_dunestart.csv",
             {r["domain"]: r["setback_model_m"] for r in in_span},
@@ -994,7 +616,7 @@ def main() -> None:
                 if np.isfinite(r["road_elev_mhw_median"])}
         write_two_row_csv(out_dir / f"RoadElevation_{year}_dunestart.csv", elev)
 
-        # --- diagnostics: every measured domain, in-span or not ---
+        # Diagnostics: every measured domain, in-span or not
         write_csv(out_dir / f"RoadOffset_{year}_domains.csv", records)
         write_csv(out_dir / f"RoadOffset_{year}_profiles.csv",
                   [p for p in all_profiles
@@ -1011,14 +633,8 @@ def main() -> None:
         print(f"\n[audit] {OUT_ROOT / 'RoadOffset_dunestart_audit.md'}")
 
 
+# Re-measure with STRAIGHTEN = False so the frame effect is separable
 def run_control(exts: dict) -> None:
-    """Re-measure with STRAIGHTEN = False so the frame effect is separable.
-
-    One control pass per vintage, each on that vintage's own extractor. The
-    flag is toggled and restored PER MODULE: there are two module objects now,
-    so a single saved/restored value would leave the other one unstraightened
-    for the rest of the process.
-    """
     if not CONTROL_WINDOW_JSON.is_file():
         print(f"\n[control] skipped: no unstraightened picks at "
               f"{CONTROL_WINDOW_JSON}")
@@ -1054,6 +670,7 @@ def run_control(exts: dict) -> None:
             exts[year].STRAIGHTEN = was
 
 
+# A list of dicts as CSV
 def write_csv(path: Path, rows: list[dict]) -> None:
     import csv
     if not rows:
@@ -1065,6 +682,7 @@ def write_csv(path: Path, rows: list[dict]) -> None:
         writer.writerows(rows)
 
 
+# Per-period summary statistics of the setbacks
 def summarize(year, records, with_road, first_gis, last_gis) -> dict:
     sb = np.array([r["setback_dunestart_m"] for r in with_road], dtype=float)
     delta = np.array([r["delta_vs_legacy_m"] for r in with_road], dtype=float)
@@ -1075,14 +693,9 @@ def summarize(year, records, with_road, first_gis, last_gis) -> dict:
     retreat = None
     corr = np.nan
     if stations_year is not None and stations_2004 is not None and year != 2004:
-        # Stations grow LANDWARD from the offshore datum, so 2004 minus the
-        # earlier year is the landward movement between them: >0 = retreat.
-        # The operands were the other way round until 2026-09-22, which made
-        # the printed median the negative of the retreat it named.
+        # Stations grow LANDWARD from the offshore datum
         retreat = stations_2004 - stations_year
-        # Does delta_vs_legacy actually behave like retreat? If the legacy file
-        # and this one were measuring the same thing in different years, this
-        # correlation would be strongly POSITIVE. It is not -- see the audit.
+        # Does delta_vs_legacy behave like retreat? It would correlate positively if so
         by_domain = {d: retreat[d - 1] for d in DOMAINS}
         pairs = [(r["delta_vs_legacy_m"], by_domain[r["domain"]])
                  for r in with_road
@@ -1117,6 +730,7 @@ def summarize(year, records, with_road, first_gis, last_gis) -> dict:
     }
 
 
+# The period summary to the console
 def report(s: dict, records: list[dict]) -> None:
     print(f"  road span            : GIS {s['first_gis']}-{s['last_gis']} "
           f"({s['n_with_road']} domains with road, {s['n_no_road']} without)")
@@ -1143,31 +757,15 @@ def report(s: dict, records: list[dict]) -> None:
         print(f"  [warn] no viable row seaward, still drowning: {s['unfixable']}")
 
 
+# The one write-up for the whole tree, covering every year in `audit`
 def write_audit(audit: dict, exts: dict) -> None:
-    """The one write-up for the whole tree, covering every year in `audit`.
-
-    PROVENANCE IS PER VINTAGE NOW. This took a single `ext` and printed one
-    DEM path and one picks file for a document describing both years -- true
-    while a single extraction served every period, false since the tree went
-    period-first. Worse, the years are no longer guaranteed to be measured in
-    the same run, and this file is rewritten whole: a run that produced only
-    1984 published an audit whose 2004 section had simply vanished.
-
-    So: one provenance ROW per vintage, and a loud line naming any year that is
-    absent, rather than a document that quietly describes less than it claims.
-    """
     OUT_ROOT.mkdir(parents=True, exist_ok=True)
     path = OUT_ROOT / "RoadOffset_dunestart_audit.md"
 
-    # Does anything actually drown on THIS extraction? The no-data explanation
-    # below is a measurement taken on 2009_v4, not a recomputation, so it must
-    # not be printed under a version where nothing drowns -- it would assert a
-    # cell count that was never measured on the arrays in front of it. The
-    # gap-filled DEM (2009_v5) is exactly that case: 0 drowns, both years.
+    # The no-data explanation prints only when something drowns on this extraction
     total_drowned = sum(s["n_drowned"] for s in audit.values())
 
-    # Any vintage the run did not produce. The document is rewritten whole, so
-    # a silent omission here reads as "this forcing does not exist".
+    # Any vintage the run did not produce is named, not silently left out
     any_ext = exts[sorted(audit)[0]]
     missing = [y for y in YEARS if y not in audit]
     runs = ", ".join(f"{y} on {exts[y].TOPO_PRODUCT}/{exts[y].VERSION}"

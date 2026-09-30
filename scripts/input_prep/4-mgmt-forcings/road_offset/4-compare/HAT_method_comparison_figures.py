@@ -1,54 +1,9 @@
-r"""
-HAT_method_comparison_figures.py
-===============================================================================
-The two setback methods against each other, and both against where NC-12
-actually is.
+"""
+The two setback methods against each other, and both against where NC-12 actually is.
 
-  HAT_method_comparison_on_domains.png   both methods, each period on its own
-                                         interiors
-  HAT_method_vs_actual_road.png          both methods against the rasterized road
+    python scripts/input_prep/4-mgmt-forcings/road_offset/4-compare/HAT_method_comparison_figures.py
 
-Written to road_offset/ itself rather than into either method's folder, because
-neither figure belongs to one method.
-
-ENCODING CHANGES HERE -- READ THIS FIRST
-----------------------------------------
-In the per-method figures, hue = YEAR. In these two, hue = METHOD and the year
-is the panel:
-
-    grey    the superseded method: the minimum road elevation minus the
-            minimum dune elevation, taken independently per domain, against
-            the same-year digitised dune line
-    purple  the current method: per profile, measured landward from the dune
-            start, then the domain median
-
-That is the house BASE/ACCENT pair -- the input as it was against the change
-under test -- and it leaves the vintage red/blue free. Because hue is NOT the
-vintage in these two figures, the red pole is available, and it carries the
-one thing that is a failure rather than a category: a roadway that drowns at
-initialisation.
-
-WHAT "ACTUAL ROAD" MEANS, AND WHAT IT DOES NOT
-----------------------------------------------
-The reference band is the RASTERIZED NC-12 mask, per alongshore profile, in the
-same frame both methods are drawn in: `road_seaward_cell - interior_row0_cell`,
-read from dunestart_offset/measured/<year>/RoadOffset_<year>_profiles.csv. It is the road
-as the model grid sees it, with all 50 profiles kept instead of collapsed.
-
-It is NOT an independent check on the dune-start method. That method's setback
-IS the median of this quantity, so the two agree by construction, differing only
-by `int()` truncation and the negative floor. Read the band for two things it
-does show:
-
-  * how far the OLD method sits from the road actually burnt on the grid, which
-    IS an independent comparison, because that method never saw this grid;
-  * how much the road wanders WITHIN a domain -- the p10-p90 spread that any
-    single scalar setback has to throw away, whichever method produced it.
-
-REQUIREMENTS
-------------
-  numpy, pandas, matplotlib
-===============================================================================
+Two figures in road_offset/method_comparison/. Details: scripts/input_prep/4-mgmt-forcings/road_offset/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -72,12 +27,9 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib.patheffects import withStroke
 
-# =============================================================================
-# SHARED MACHINERY
-# =============================================================================
-# The placement script owns load_years / load_interiors / place_road and the
-# transcribed drown test. Importing it keeps ONE implementation: a second copy
-# would drift, and a drifted method comparison looks like a result.
+# Shared machinery
+
+# The placement script owns load_years / load_interiors / place_road and the transcribed drown test
 
 _HERE = Path(__file__).resolve().parent
 _PLACEMENT = _HERE.parent / "1-produce" / "HAT_road_placement_on_domains.py"
@@ -98,13 +50,10 @@ from site_layer.hat_figure_style import (  # noqa: E402
 
 apply_style()
 
+# --- CONFIG ------------------------------------------------------------------
 ROADS_ROOT = P.ROADS_ROOT
 
-# Cross-method output goes in its own folder, NOT at road_offset/ level and NOT
-# inside either method's folder. The rule this satisfies is unchanged -- a
-# legacy-vs-dune-start result belongs to neither method -- but the top level is
-# for the forcing, its source and its inputs, and four loose comparison files
-# sitting beside them read as though they were part of the product.
+# Cross-method output goes in its own folder, NOT at road_offset/ level and NOT inside either method's folder
 OUT_ROOT = ROADS_ROOT / "method_comparison"
 YEARS = P.YEARS
 DOMAINS = P.DOMAINS
@@ -114,13 +63,7 @@ SURFACE, WATER, NODATA = P.SURFACE, P.WATER, P.NODATA
 INK_MUTED, INK_SECOND = P.INK_MUTED, P.INK_SECOND
 INK = P.INK_SECOND
 
-# hue = METHOD here, not year. See the header. BASE is the input as it stood,
-# ACCENT the change under test. The rasterized road is the OBSERVATION both
-# methods are measured against, which is what C["REF"] means -- it was the
-# road ink for one draft, and a 42%-alpha near-black band is the same mid grey
-# as BASE, so the reference and the superseded method read as one thing. A
-# drowning roadway is the one failure state, and it takes the red pole, free
-# in this figure precisely because hue is not the vintage here.
+# Colours: BASE the old method, ACCENT the new, REF the observed road, red for drowning
 C_OLD, C_NEW = C["BASE"], C["ACCENT"]
 C_ACTUAL = C["REF"]
 C_DROWN = C_1984
@@ -135,20 +78,13 @@ METHOD_LABEL = {
 METHOD_TICK = {"old": "independent minima", "dunestart": "dune start"}
 
 PROFILES_FMT = ("dunestart_offset/measured/{year}/RoadOffset_{year}_profiles.csv")
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# LOAD
-# =============================================================================
+# Load
 
+# The rasterized road per domain, kept as a spread rather than a scalar
 def load_actual(year: int) -> dict:
-    """
-    The rasterized road per domain, kept as a spread rather than a scalar.
-
-    seaward_p10/p50/p90 are percentiles ACROSS the domain's profiles of the
-    road's seaward edge relative to interior row 0. width is the median
-    measured road width, so the band drawn is a real footprint.
-    """
     p = ROADS_ROOT / PROFILES_FMT.format(year=year)
     if not p.is_file():
         return {}
@@ -167,13 +103,8 @@ def load_actual(year: int) -> dict:
     return out
 
 
+# {method
 def load_placements(per: dict) -> dict:
-    """{method: {year: placed}} using the placement script's own logic.
-
-    `per` is the placement script's per-VINTAGE bundle, not one interiors dict.
-    It used to be the latter, which placed the 1984 road on 2004-start
-    interiors -- see the note at the top of HAT_road_placement_on_domains.py.
-    """
     out = {}
     for name in METHOD_ORDER:
         spec = P.METHODS[name]
@@ -187,10 +118,9 @@ def load_placements(per: dict) -> dict:
     return out
 
 
-# =============================================================================
-# SHARED DRAWING
-# =============================================================================
+# Shared drawing
 
+# An island panel for the methods to be drawn on
 def base_panel(ax, fig, shown, crop_rows, title, panel_index):
     ax.set_facecolor(NODATA)
     im = ax.imshow(np.ma.masked_invalid(shown), aspect="auto", origin="lower",
@@ -215,8 +145,8 @@ def base_panel(ax, fig, shown, crop_rows, title, panel_index):
     plt.setp(ax.get_xticklabels(), visible=False)
 
 
+# One flat segment per domain, so a road is a road and not a polyline
 def step_xy(values: dict, key="start_m"):
-    """One flat segment per domain, so a road is a road and not a polyline."""
     xs, ys = [], []
     for d in sorted(values):
         v = values[d] if not isinstance(values[d], dict) else values[d][key]
@@ -225,6 +155,7 @@ def step_xy(values: dict, key="start_m"):
     return xs, ys
 
 
+# One method's placed road as a step line
 def draw_method_line(ax, placed, colour, lw=2.4, zorder=6, halo=True):
     xs, ys = step_xy(placed)
     kw = dict(path_effects=[withStroke(linewidth=lw + 1.8, foreground=SURFACE)]
@@ -233,10 +164,9 @@ def draw_method_line(ax, placed, colour, lw=2.4, zorder=6, halo=True):
             **kw)
 
 
-# =============================================================================
-# FIGURE 1 -- both methods, each period on its own interiors
-# =============================================================================
+# Figure 1 -- both methods, each period on its own interiors
 
+# Both methods, each period on its own interiors
 def figure_methods(per, crop_rows, placements, out_png: Path):
     fig = plt.figure(figsize=figsize("double", height=8.0))
     gs = fig.add_gridspec(4, 1, height_ratios=[1.25, 1.25, 1.0, 0.62],
@@ -256,7 +186,7 @@ def figure_methods(per, crop_rows, placements, out_png: Path):
                                  lw=2.8 if name == "old" else 2.0,
                                  zorder=6 if name == "old" else 7)
 
-    # --- (c) how far apart, per domain -------------------------------------
+    # (c) how far apart, per domain
     ax_d.axhline(0, color=INK_MUTED, lw=0.8, zorder=3)
     medians = {}
     for year, style in zip(YEARS, [(0, ()), (0, (5, 1.6))]):
@@ -277,7 +207,7 @@ def figure_methods(per, crop_rows, placements, out_png: Path):
     _title(ax_d, 2, "difference between the two methods")
     plt.setp(ax_d.get_xticklabels(), visible=False)
 
-    # --- (D) drown status, one row per method-year --------------------------
+    # (d) drown status, one row per method-year
     rows = [(m, y) for m in METHOD_ORDER for y in YEARS
             if y in placements.get(m, {})]
     for k, (m, y) in enumerate(rows):
@@ -339,10 +269,9 @@ def figure_methods(per, crop_rows, placements, out_png: Path):
     print(f"[out] {out_png}")
 
 
-# =============================================================================
-# FIGURE 2 -- both methods against the rasterized road
-# =============================================================================
+# Figure 2 -- both methods against the rasterized road
 
+# Both methods against the rasterized road, with the error per domain
 def figure_actual(per, crop_rows, placements, actual,
                   out_png: Path):
     fig = plt.figure(figsize=figsize("double", height=8.0))
@@ -371,13 +300,9 @@ def figure_actual(per, crop_rows, placements, actual,
                 draw_method_line(ax, placements[name][year],
                                  METHOD_COLOUR[name], lw=2.0, zorder=7)
 
-    # --- (C) error against the rasterized road ------------------------------
-    # Both the per-DOMAIN error (line, against the domain's median road) and the
-    # per-PROFILE spread of that error (band, against p10-p90 of the profiles).
-    # The band is ported from the retired
-    # 3-figures/island_wide/HAT_plot_road_placement_accuracy.py: a method can sit
-    # on the median road and still miss most individual profiles, and only the
-    # band shows that.
+    # (c) error against the rasterized road
+
+    # Per-domain error line and per-profile spread band
     ax_e.axhline(0, color=C_ACTUAL, lw=1.0, zorder=3)
     err_medians = {}
     for name in METHOD_ORDER:
@@ -405,7 +330,7 @@ def figure_actual(per, crop_rows, placements, actual,
     _title(ax_e, 2, "distance from the road burnt on the grid")
     plt.setp(ax_e.get_xticklabels(), visible=False)
 
-    # --- (D) what a scalar has to throw away --------------------------------
+    # (d) what a scalar has to throw away
     spread_medians = {}
     for year, style in zip(YEARS, [(0, ()), (0, (5, 1.6))]):
         act = actual.get(year, {})
@@ -468,10 +393,7 @@ def figure_actual(per, crop_rows, placements, actual,
     print(f"[out] {out_png}")
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: both figures
 def main() -> int:
     print("=" * 88)
     print("METHOD COMPARISON -- old vs dune-start, and both vs the real road")

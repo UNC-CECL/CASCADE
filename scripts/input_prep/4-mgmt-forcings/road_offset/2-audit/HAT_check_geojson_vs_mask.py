@@ -1,39 +1,16 @@
-# ==============================================================================
-# HAT_check_geojson_vs_mask.py
-#
-# Does the rasterized road mask actually sit where the source geojson says the
-# road is? Read-only QC on the rasterization step alone.
-#
-# WHY THIS IS SEPARATE FROM THE PLACEMENT FIGURE
-#   HAT_method_comparison_figures.py scores modelled-vs-real road position,
-#   which folds together three things: rasterization, the alongshore collapse to
-#   one scalar, and cell quantization. This script isolates the FIRST one, and it
-#   does so in the ORIGINAL raster frame -- no orientation, no alongshore flip,
-#   no shear, no trim -- so it is independent of every transform the extractor
-#   applies. If this passes, a registration error downstream is not the
-#   rasterizer's fault.
-#
-# WHAT IT CHECKS
-#   1. CONTAINMENT  in each profile the geojson crosses, does it fall inside the
-#      mask's cell footprint? The mask is a 6 m buffer of that same line with
-#      all_touched, so containment should be essentially universal. Anything else
-#      means a CRS, snap-raster or extent mismatch.
-#   2. OFFSET       signed distance from the centerline to the mask's centre, in
-#      metres. Should sit near zero with a spread of well under a cell.
-#   3. COVERAGE     profiles where one source has road and the other does not.
-#   4. YEAR IDENTITY  do the 1978 and 2008 masks actually differ, and only where
-#      NC-12 was relocated? This is the check that the 2004 rasterization used
-#      the 2004 line -- a patched driver could silently re-burn 1984.
-#
-# USAGE
-#     python HAT_check_geojson_vs_mask.py
-# ==============================================================================
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-18
+"""
+Does the rasterized road mask sit where the source geojson says the road is?
 
+    python scripts/input_prep/4-mgmt-forcings/road_offset/2-audit/HAT_check_geojson_vs_mask.py
+
+Read-only QC on the rasterization alone, in the original raster frame;
+prints the checks and fails loudly if it compared nothing. Details: scripts/input_prep/4-mgmt-forcings/road_offset/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -42,8 +19,7 @@ import numpy as np
 import geopandas as gpd
 import rasterio
 
-# Anchored 2026-09-14: absolute into a home directory, or into a tree
-# renamed since. Rule 5 of ORGANIZATION.md.
+# Repo root, found by searching upward
 _PATH_REPO = next(_p for _p in Path(__file__).resolve().parents
                   if (_p / "pyproject.toml").exists())
 
@@ -54,31 +30,25 @@ from pathlib import Path as _TVP
 _tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
                                if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_topo_version as _tv  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 ROADS_ROOT = _tv.ROADS_ROOT
 
 MASK_FMT = ROADS_ROOT / "raster" / "{year}" / "masks" / "domain_{d}_road_{year}.npy"
 GEOJSON_FMT = ROADS_ROOT / "raw_offset" / "{year}" / "nc12_{year}.geojson"
-# MOVED 2026-08-25: 1-barrier3d-domains went period-first and the pre-90-domain
-# legacy went under superseded/. Path repointed so this script keeps reading
-# EXACTLY what it read before - no road number moves because of the reorg.
+# Clip rasters, repointed after the 2026-08-25 move so nothing moves
 TIF_FMT = _tv.DOMAIN_CLIPS_DIR / "domain_{d}" / "resampled_domain_{d}.tif"
 
 YEARS = [1978, 2008]   # LINE vintages (hat_topo_version.ROAD_LINE_FOR_YEAR), not period starts
 DOMAINS = list(range(1, 91))
 CELL_SIZE_M = 10.0
 
-# Documented relocation blocks: the 1999 Buxton-Avon work and the 1989 Pea
-# Island move. Used only to interpret check 4, never to gate it.
+# Documented relocation blocks (1999, 1989), used only to read check 4
 RELOCATION_BLOCKS = [(9, 16), (84, 88)]
+# -----------------------------------------------------------------------------
 
 
+# Centerline position per raster row, in ORIGINAL (row, col) cell units
 def geojson_cols_by_row(line_gdf, tif_path: Path):
-    """Centerline position per raster row, in ORIGINAL (row, col) cell units.
-
-    The geojson is EPSG:2264 in US survey feet; the domains are UTM 18N metres,
-    so this reprojects first. Vertices are binned to integer rows and averaged,
-    which is what a near-north-south line through a north-up grid needs.
-    """
     with rasterio.open(tif_path) as src:
         crs, inv, bounds, shape = src.crs, ~src.transform, src.bounds, src.shape
 
@@ -88,8 +58,7 @@ def geojson_cols_by_row(line_gdf, tif_path: Path):
         parts = geom.geoms if geom.geom_type.startswith("Multi") else [geom]
         for part in parts:
             xy = np.asarray(part.coords)
-            # densify so a long segment crossing the domain still lands in every
-            # row it passes through
+            # Densify so a long segment crossing the domain still lands in every row it passes through
             for (x0, y0), (x1, y1) in zip(xy[:-1], xy[1:]):
                 n = max(2, int(max(abs(x1 - x0), abs(y1 - y0)) / 2.0))
                 for x, y in zip(np.linspace(x0, x1, n), np.linspace(y0, y1, n)):
@@ -107,6 +76,7 @@ def geojson_cols_by_row(line_gdf, tif_path: Path):
     return {int(r): float(cols[rows == r].mean()) for r in np.unique(rows)}
 
 
+# One vintage: mask cells against the geojson, profile by profile
 def check_year(year: int) -> dict:
     geo = gpd.read_file(str(GEOJSON_FMT).format(year=year))
     contained = miss = 0
@@ -118,14 +88,7 @@ def check_year(year: int) -> dict:
     for d in DOMAINS:
         tif = Path(str(TIF_FMT).format(d=d))
         mask_path = Path(str(MASK_FMT).format(year=year, d=d))
-        # A MISSING TIF USED TO BE INDISTINGUISHABLE FROM "no road here".
-        # On 2026-08-26 domain-clips-1m moved out of superseded/ and TIF_FMT
-        # was not updated with it. Every domain took this branch, so the check
-        # reported "0 profiles with both line and mask" for BOTH years and a
-        # median offset of nan -- and then carried on to Check 4 and printed a
-        # result. This is the only guard against re-burning the wrong year;
-        # a guard that passes vacuously is worse than no guard, so the tif
-        # being absent is now counted and reported rather than skipped.
+        # A MISSING TIF USED TO BE INDISTINGUISHABLE FROM "no road here"
         if not tif.is_file():
             missing_tif.append(d)
             continue
@@ -149,11 +112,7 @@ def check_year(year: int) -> dict:
                 mask_no_geo.append((d, r))
                 continue
             c = line_cols[r]
-            # `c` is a FRACTIONAL column from the inverse affine, where cell k
-            # occupies [k, k+1). A cell's centre is therefore k + 0.5, so the
-            # mask's centre is cells.mean() + 0.5. Comparing against
-            # cells.mean() alone injects a spurious +0.5 cell (+5 m) bias into
-            # every profile.
+            # Cell k spans [k, k+1), so the mask centre is cells.mean() + 0.5
             inside = cells.min() <= c <= cells.max() + 1.0
             d_contained += inside
             d_miss += (not inside)
@@ -173,8 +132,8 @@ def check_year(year: int) -> dict:
     }
 
 
+# Do the two years' masks differ, and only where the road was relocated?
 def check_year_identity() -> None:
-    """Do the two years' masks differ, and only where the road was relocated?"""
     print("\n" + "=" * 78)
     print("CHECK 4  do the 1978 and 2008 masks actually differ, and where?")
     print("=" * 78)
@@ -208,8 +167,7 @@ def check_year_identity() -> None:
     print(f"  differing OUTSIDE them                   : {len(out_block)}"
           + (f" -> {[d for d, _ in out_block]}" if len(out_block) <= 24 else ""))
 
-    # Magnitude is what separates a real relocation from digitizing noise: a
-    # moved road changes hundreds of cells, a redrawn line changes a handful.
+    # Magnitude is what separates a real relocation from digitizing noise
     for label, group in (("inside blocks", in_block), ("outside blocks", out_block)):
         if not group:
             continue
@@ -221,6 +179,7 @@ def check_year_identity() -> None:
           + ", ".join(f"D{d}:{n}" for d, n in top))
 
 
+# Run: both vintages
 def main() -> None:
     print("=" * 78)
     print("geojson vs rasterized mask -- ORIGINAL raster frame, no transforms")
@@ -231,12 +190,7 @@ def main() -> None:
         total = r["contained"] + r["miss"]
         off = r["offset"]
         print(f"\n--- {year}")
-        # A VACUOUS PASS IS NOT A PASS. When domain-clips-1m moved out of
-        # superseded/ on 2026-08-26 and TIF_FMT was not updated, every domain
-        # was skipped for want of a tif: this printed "0 profiles", a median
-        # offset of nan, then carried on to Check 4 and produced a report. The
-        # README calls this the only guard against re-burning the wrong year,
-        # so it has to fail loudly when it has compared nothing.
+        # A vacuous pass is not a pass: comparing nothing fails loudly
         if r["missing_tif"]:
             print(f"  [STOP] no resampled tif for {len(r['missing_tif'])} of "
                   f"{len(DOMAINS)} domains -- this check cannot run.")

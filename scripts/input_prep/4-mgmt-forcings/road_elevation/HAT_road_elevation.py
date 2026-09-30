@@ -1,110 +1,11 @@
-r"""
-HAT_road_elevation.py
-===============================================================================
-Per-domain NC-12 road elevation: the MEAN of the 2009 LiDAR under the 2004 road
-alignment. ONE set of numbers, used for BOTH the 1984 and the 2004 start period.
+"""
+Per-domain NC-12 road elevation: the mean of the 2009 LiDAR under the 2008 road line, for both start periods.
 
-Replaces HAT_road_elevation_from_lidar.py, which sampled two alignments and
-wrote two files. That script was deleted on 2026-08-17; it was staged but never
-committed, so it is not in any commit. Its blob survives in the object store at
-becbfc878ae0afa3f4e76037ef0edff810fa857f until the next `git gc`, recoverable
-with `git cat-file -p <hash>`. The reason it is gone rather than kept is in WHY
-ONE FILE below.
+    python scripts/input_prep/4-mgmt-forcings/road_elevation/HAT_road_elevation.py
+    python scripts/input_prep/4-mgmt-forcings/road_elevation/HAT_road_elevation.py   # HAT_ROAD_ELEV_FILL=<product> to compare fills
 
-WHY ONE FILE AND NOT ONE PER VINTAGE
-------------------------------------
-There is only one DEM. Both vintages were sampled on the same 2009 surface, so
-any difference between a "1984" and a "2004" road elevation was never a
-difference in time -- it was a difference in WHERE ON THE 2009 SURFACE the two
-digitised lines happened to fall. Where NC-12 never moved the two lines sit on
-top of each other and the numbers are identical by construction. Where the road
-WAS relocated the 1984 line lies over the abandoned corridor, and the "1984 road
-elevation" there was the elevation of a place a road used to be.
-
-Neither of those is a measurement of temporal change in roadbed height. Writing
-two files implied one. This writes one.
-
-WHAT THE ABANDONED CORRIDOR ACTUALLY IS -- MEASURED, NOT ASSUMED
-----------------------------------------------------------------
-It is tempting to assume the abandoned alignment was overwashed and bulldozed
-flat, and so reads LOW in a 2009 DEM. It does not. Sampled here, the 1984 line
-through the relocated domains gives a mean of about 2.4 m NAVD88 against about
-1.5 m for the 2004 line, with a within-domain standard deviation up to 1.7 m --
-GIS 10 comes back at 4.3 m. The dune migrated over the corridor after the road
-left it. That sample is FOREDUNE, not roadbed, and not flattened ground either.
-
-This decides the choice rather than merely complicating it: the two candidates
-do NOT bracket the truth. Both sit above the natural grade of the neighbouring
-un-relocated domains (~1.0 m), so the 2004 value is the lower of the two AND the
-only one that is a graded surface -- the conservative choice as well as the
-correct one. RELOCATION BRACKET re-measures this on every run.
-
-WHY THE 1 m CLIP AND NOT THE 10 m RESAMPLE
-------------------------------------------
-NC-12 is a two-lane road: roughly 7-10 m of pavement plus shoulder. On the 10 m
-Barrier3D grid the road is ONE cell wide, so a buffered mask averages the crown
-into whatever is beside it -- in the inter-village stretch, the foredune that
-NC-12 runs immediately behind.
-
-Every domain folder also carries clip_domain_<N>.tif at 1 m, the native LiDAR
-before the Barrier3D resample. A 3.5 m buffer on that -- a 7 m corridor, about
-one carriageway -- gives a within-domain standard deviation of about 0.07 m
-island-wide. That is a road surface.
-
-HONESTY NOTE: on THIS alignment the 10 m grid would have given nearly the same
-answer -- the two agree to a median of 0.00 m and a max of 0.05 m. The 1.59 m
-standard deviation that originally motivated the 1 m clip was measured on the
-1984 line, which crosses a relocation scar; the 2004 line does not. So the 1 m
-clip is a precaution here rather than a rescue, and the sample it rests on is
-~3500 cells per domain against ~35 at 10 m. Both numbers are printed under
-INTERNAL CHECKS every run so this stays checkable rather than inherited.
-
-MEAN, NOT MEDIAN
-----------------
-Flat unweighted mean of every valid 1 m cell in the corridor. On this alignment
-mean and median differ by 0.005 m for a typical domain and 0.09 m at worst, so
-the choice is nearly free; the median is carried in the per-domain CSV so any
-domain where they diverge -- a bridge deck, a house, a driveway apron in the
-corridor -- is visible rather than silently absorbed.
-
-DATUM -- NOT AMBIGUOUS, DESPITE THE RUNNER
-------------------------------------------
-bulldoze() writes road_ele straight into xyz_interior_grid:
-
-    road_ele = road_ele / dz
-    new_road_domain = np.zeros(...) + road_ele
-
-and the interior arrays are MHW-RELATIVE, because HAT_dune_topo_extractor.py
-subtracts MHW_M = 0.36 before anything else. So road_ele MUST be MHW-relative
-metres. There is no reading under which NAVD88 is correct.
-
-The runner's ROAD_ELEVATION = 1.45 is high under EITHER reading -- see the audit
-document. This file writes MHW-relative; the per-domain CSV carries NAVD88
-alongside so nothing has to be taken on trust.
-
-TWO THINGS THIS FILE DOES NOT CORRECT
--------------------------------------
-1. THE TIME GAP. The DEM is 2009; one run starts in 1984. CASCADE decrements
-   road_ele by RSLR every year, so the 1984 run begins with a roadbed that is
-   already 25 years of sea-level rise low relative to its own MHW. No
-   back-correction is applied -- these are measurements, not reconstructions.
-
-2. THE RELOCATIONS. GIS 9-15 (relocated 1999) and GIS 84-87 (relocated 1989)
-   carry the elevation of the POST-relocation alignment in the 1984 run, because
-   that is the alignment sampled. In 1984 the road was physically elsewhere in
-   those domains. Flagged, not adjusted.
-
-OUTPUTS  (data/hatteras_init/4-mgmt-forcing/road_elevation/)
-------------------------------------------------------------
-  RoadElevation.csv          2-row CASCADE file (IDs, m MHW-relative)
-  RoadElevation_domains.csv  per-domain stats, both datums, flags
-  RoadElevation_audit.md     the tracking document
-  HAT_road_elevation.png     alongshore QC
-
-REQUIREMENTS
-------------
-  geopandas, rasterio, numpy, matplotlib
-===============================================================================
+One elevation set on the baseline surface (gap-filled from 2014), with QC
+flags, a relocation-bracket check, a CSV, a QC figure and an audit document. Details: scripts/input_prep/4-mgmt-forcings/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -138,12 +39,10 @@ from matplotlib.transforms import blended_transform_factory
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-# =============================================================================
-# CONFIG
-# =============================================================================
 
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
+# --- CONFIG ------------------------------------------------------------------
 HATTERAS_DATA_BASE = PROJECT_ROOT / "data" / "hatteras_init"
 import sys as _tvsys
 from pathlib import Path as _TVP
@@ -153,101 +52,14 @@ from site_layer import hat_topo_version as _tv  # noqa: E402
 MGMT_DIR = _tv.MGMT_ROOT
 BARRIER3D_DIR = _tv.DOMAIN_ROOT
 
-# Native-resolution LiDAR clips, one folder per domain. NOT the 10 m resample.
-#   clip_domain_<N>.tif      1 m, native
-#   resampled_domain_<N>.tif 10 m, the Barrier3D grid
-# MOVED. Was BARRIER3D_DIR/"2009-raw"/"2009-domain-clipresample", a path the
-# 2026-08-25 restructure removed; the clips then sat under superseded/ and
-# were lifted out on 2026-08-26 because four scripts read them. Same files,
-# same per-domain layout - see 1-barrier3d-domains/LINEAGE.md.
+# Native-resolution LiDAR clips, one folder per domain
 CLIP_ROOT = _tv.DOMAIN_CLIPS_DIR
 CLIP_GLOB = "clip_domain_*.tif"
 RESAMPLE_GLOB = "resampled_domain_*.tif"
 
-# --- WHICH SURFACE: raw 2009, or 2009 with its holes filled -------------
-# None    the original 2009 clips, LiDAR holes and all
-# "<tag>" 0-elevation/{1-gapfill-1m,2-resampled-10m}/<tag>/..._filled.tif
-#
-# ONLY GIS 78, 79 AND 80 CAN CHANGE. Every other domain on the 2004 alignment
-# has nodata_frac = 0 -- complete 2009 coverage under the road -- so filling is
-# a no-op there, and the unaffected neighbours 77 and 81 move by <= 0.002 m.
-# The three that do change are the same three that drowned on coverage gaps in
-# 2009_v4, and D79 is the reason this switch exists: its unfilled elevation is
-# a mean over 2287 corridor cells out of 3583, 36% of the corridor missing.
-#
-# WHY 2008 AND NOT 2014 -- THE ARGUMENT, WHICH NO LONGER DECIDES THE SETTING.
-# Kept because it is still the right way to think about a road surface, and
-# because it is the cost of the 2026-08-26 change recorded below: 2008 is not
-# on disk any more, so this is now an argument about three domains and
-# centimetres rather than a live choice. Read it, then read that note.
-#
-# this is a ROAD SURFACE, and the two questions have different answers. The
-# 2008 IOCM survey is one year from the 2009 base, so it measures the same
-# pavement. The 2014 Post-Sandy survey postdates Hurricane Irene (2011), the
-# Pea Island breach and the NC-12 reconstruction that followed -- at GIS 78-80
-# a 2014 surface under the corridor may be a REBUILT road, which is not what
-# "the 2009 road elevation" means. Topography has no such problem: there the
-# 2014 fill is simply the later and more complete survey of the same barrier.
-#
-# The choice is about provenance, not magnitude -- the two fills differ by
-# <= 0.015 m in the corridor. RELOCATION BRACKET and the QC flags re-measure
-# this every run; FILL_SOURCE is recorded in the audit.
-#
-# 2008 was SUPERSEDED as a TOPOGRAPHY fill (2014 replaced it) while remaining
-# the right answer for a ROAD SURFACE, for the reason above. It therefore lived
-# under 0-elevation/superseded/, and this script reaches its product through
-# scripts/site_layer/hat_elevation_products.py rather than by joining strings - which is
-# exactly what broke on 2026-08-25, when 2008 was moved there and the
-# hand-built path stopped resolving. It is now deleted rather than superseded;
-# resolving through the registry is why that reads as an error instead of as
-# "no fill available" in 90 domains.
-#
-# THE PROVENANCE CALL, TAKEN 2026-08-26: FILL_SOURCE = "2009-2014".
-#
-# This script could not re-run for one day. FILL_SOURCE was "2008_NOAA_IOCM"
-# and that product is gone: its rasters were never tracked (*.tif is
-# gitignored) and are not on disk, its registry entry was removed, and the
-# point-cloud path that built it was removed from HAT_dem_gap_fill.py along
-# with HAT_laz_ground_classify.py. _elev_product() raised immediately - the
-# intended failure, not a silent stale read, but a forcing you cannot
-# regenerate is a forcing you cannot check.
-#
-# WHY THE BASELINE AND NOT THE 1984 PRODUCT. There are two live products, and
-# under the road they are NOT interchangeable. Sampling this script's own 2004
-# alignment in the same 3.5 m corridor on both:
-#
-#     2009-2014-1996 minus 2009-2014, corridor mean:  median +0.222 m
-#     54 of 82 domains move more than 0.05 m
-#     cell counts IDENTICAL in every domain
-#
-# Identical counts means ALACE REPLACED measured 2009 pavement rather than
-# filling holes in it, and +0.222 m is not a roadbed: it is the island-wide
-# 1996-vs-2009 survey offset, which mosaic_1984_audit.csv reports per domain at
-# median +0.255 m (p10 +0.14, p90 +0.33) and HAT_dem_1984_mosaic.py leaves
-# UNCORRECTED by design ("bias correction OFF, feathering OFF"). Building a
-# 1984 road elevation from the 1984 DEM would push road_ele up ~0.22 m
-# island-wide and that increment would be the offset, not the road. A higher
-# road is buried by overwash less often, so it would reach the model.
-#
-# So: ONE elevation set, on the baseline, for both periods - see the note at
-# HATTERAS_ROAD_ELEVATION_FILE in hatteras_site_config.py.
-#
-# WHAT IS LOST BY NOT USING 2008. The 2008 IOCM survey was one year from the
-# 2009 base, so it measured the same pavement, and the header above argues a
-# 2014 surface under GIS 78-80 may be a REBUILT road (post-Irene, post-breach).
-# That argument still stands and is not resolved by this change - it is
-# bounded. Only GIS 78, 79 and 80 have any nodata under the 2004 alignment, so
-# only those three can move at all, and the two fills were measured to differ
-# by <= 0.015 m in the corridor. Three domains, centimetres, against a forcing
-# nobody could rebuild. The RELOCATION BRACKET check and the QC flags
-# re-measure it every run, and FILL_SOURCE is recorded in the audit.
-#
-# Override from the shell to compare products without editing this file:
-#     HAT_ROAD_ELEV_FILL=2009-2014-1996 python HAT_road_elevation.py
-#     HAT_ROAD_ELEV_FILL=none           python HAT_road_elevation.py
-# "none" samples the raw 2009 clips, holes and all. Whatever is used is written
-# into RoadElevation_audit.md, so a comparison run cannot be mistaken for the
-# shipped one afterwards.
+# Which surface: raw 2009, or 2009 with its holes filled
+
+# 'none' samples the raw 2009 clips; the choice is written to the audit
 FILL_SOURCE = os.environ.get("HAT_ROAD_ELEV_FILL", "2009-2014")
 if FILL_SOURCE.lower() in ("none", ""):
     FILL_SOURCE = None
@@ -257,16 +69,11 @@ from site_layer.hat_elevation_products import product as _elev_product  # noqa: 
 FILL_CLIP_GLOB = "clip_domain_*_filled.tif"
 FILL_RESAMPLE_GLOB = "resampled_domain_*_filled.tif"
 
-# The single alignment: the 2008 line, which is the 2004 period's road
-# (hat_topo_version.ROAD_LINE_FOR_YEAR) and the one contemporaneous with the
-# 2009 DEM everywhere on the island -- see the header. Filed under its true
-# vintage since 2026-09-15; it was raw_offset/2004/nc12_2004.geojson before.
+# The single alignment: the 2008 line, contemporaneous with the 2009 DEM
 ROAD_LINE = (MGMT_DIR / "road_offset" / "raw_offset" / "2008" / "nc12_2008.geojson")
 ROAD_LINE_YEAR = 2008
 
-# Sampled ONLY for the RELOCATION BRACKET check -- never written to the product.
-# It exists to test, rather than assume, what the abandoned corridor looks like
-# in the 2009 DEM. Set to None to skip the check.
+# Sampled ONLY for the RELOCATION BRACKET check -- never written to the product
 BRACKET_LINE = (MGMT_DIR / "road_offset" / "raw_offset" / "1978"
                 / "nc12_1978.geojson")
 BRACKET_LINE_YEAR = 1978
@@ -275,28 +82,22 @@ OUT_ROOT = _tv.ROAD_ELEVATION_DIR
 
 FIRST_ROAD_DOMAIN, LAST_ROAD_DOMAIN = 9, 90
 
-# Half-width of the sampling corridor. 3.5 m -> a 7 m strip, about one
-# carriageway of NC-12. Widen it and you start averaging in the shoulder and the
-# dune toe; the sweep printed under INTERNAL CHECKS shows exactly where that
-# begins to bite.
+# Half-width of the sampling corridor
 BUFFER_M = 3.5
 BUFFER_SWEEP = [2.0, 2.5, 3.5, 5.0, 8.0, 12.0]
 
-# all_touched=False on a 1 m grid: the buffer polygon is already several cells
-# wide, so touching-cell inclusion only adds edge pixels off the pavement.
+# all_touched=False: on a 1 m grid the buffer is already wide; touching adds only off-road edge pixels
 ALL_TOUCHED = False
 
 MHW_M = 0.36               # m NAVD88, Duck NC gauge (NOAA 8651370)
 
-# --- QC thresholds ------------------------------------------------------
+# Qc thresholds
 MIN_CELLS = 200            # flag a domain sampled on fewer 1 m cells
 MAX_STD_M = 0.40           # flag a domain whose road cells scatter more
 MAX_NODATA_FRAC = 0.25     # flag a mask sitting largely on LiDAR NoData
 MAX_JUMP_M = 0.35          # flag a step between ADJACENT domains larger than this
 
-# Domains where the alignment sampled here postdates the 1984 run's road.
-# Taken from HISTORICAL_ROAD_EVENTS in HAT_hindcast_1984_2024.py.
-# Informational only -- the value written is the same for both periods.
+# Domains where the alignment sampled here postdates the 1984 run's road
 RELOCATED_BEFORE_2004 = set(range(9, 16)) | set(range(84, 88))
 
 # Reference: the runner's current scalar, for the comparison table.
@@ -308,28 +109,24 @@ SECTIONS = [((1, 6), "Cape Point"), ((7, 8), "Buxton"), ((9, 20), "Buxton-Avon")
             ((21, 31), "Avon"), ((32, 67), "Wimble Shoals"),
             ((68, 83), "Tri-Village"), ((84, 90), "Pea Island")]
 
-# --- map figure ---------------------------------------------------------
-# The island is ~41 km north-south but each domain is only 2 km across, so an
-# equal-aspect map of the whole thing is a 6:1 sliver. Cut it into strips laid
-# side by side, each drawn at TRUE aspect. Distorting the aspect to fit would
-# make the road look like it changes direction where it does not.
+# Map figure
+
+# The island is ~41 km north-south but each domain is only 2 km across
 MAP_STRIPS = 4
 MAP_ROAD_CMAP = "plasma"       # road elevation; vivid, reads over the sand ramp
-# Background LiDAR: pale sand at MHW darkening to brown at the dune crests. Low
-# saturation on purpose -- the road is the subject, the island is the context.
+# Background LiDAR, low saturation: the road is the subject
 MAP_TOPO_COLORS = ["#f7f1e3", "#e2d3b3", "#bfa77f", "#8a7350"]
 MAP_TOPO_VMAX = 3.0            # m NAVD88; dune tops saturate above this
 C_WATER = "#cfe0ea"            # anything below MHW, plus LiDAR NoData
 MAP_MIN_WIDTH_M = 2400.0       # min cross-shore window per strip, keeps context
 DOMAIN_M = 500.0               # alongshore length of one Barrier3D domain
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# SAMPLING
-# =============================================================================
+# Sampling
 
+# domain id -> raster path, for whichever resolution `pattern` selects
 def find_clips(root: Path, pattern: str) -> dict:
-    """domain id -> raster path, for whichever resolution `pattern` selects."""
     out = {}
     for sub in sorted(Path(root).glob("domain_*")):
         if not sub.is_dir():
@@ -341,14 +138,8 @@ def find_clips(root: Path, pattern: str) -> dict:
     return out
 
 
+# domain id -> raster path, for the gap-fill tree
 def find_clips_flat(root: Path, pattern: str) -> dict:
-    """
-    domain id -> raster path, for the gap-fill tree.
-
-    The clipresample tree nests one folder per domain; the gap-fill tree is
-    flat and carries the id in the filename instead. Same contract, different
-    layout, so the caller does not have to care which surface it asked for.
-    """
     out = {}
     for tif in sorted(Path(root).glob(pattern)):
         m = re.search(r"domain_(\d+)_", tif.name)
@@ -357,26 +148,24 @@ def find_clips_flat(root: Path, pattern: str) -> dict:
     return out
 
 
+# (1 m clips, 10 m resamples, a label for the audit) for FILL_SOURCE
 def resolve_surfaces() -> tuple[dict, dict, str]:
-    """(1 m clips, 10 m resamples, a label for the audit) for FILL_SOURCE."""
     if not FILL_SOURCE:
         return (find_clips(CLIP_ROOT, CLIP_GLOB),
                 find_clips(CLIP_ROOT, RESAMPLE_GLOB),
                 "2009 clips, unfilled")
 
-    # _elev_product raises with the known product names if FILL_SOURCE is not
-    # one of them, and again if it is known but not on disk - so the probes
-    # that used to be inlined here cannot go stale when the layout moves.
+    # _elev_product raises on an unknown or missing product
     _p = _elev_product(FILL_SOURCE)
     one_m, ten_m = _p.gapfill_1m, _p.resampled_10m
 
-    # Both resolutions come from the SAME fill, so the 1 m vs 10 m agreement
-    # printed under INTERNAL CHECKS stays a like-for-like comparison.
+    # Both resolutions come from the SAME fill
     return (find_clips_flat(one_m, FILL_CLIP_GLOB),
             find_clips_flat(ten_m, FILL_RESAMPLE_GLOB),
             f"2009 clips, holes filled from {FILL_SOURCE}")
 
 
+# The road line, reprojected to the DEM CRS
 def load_line(path: Path):
     if not Path(path).exists():
         raise FileNotFoundError(f"road line not found:\n    {path}")
@@ -387,19 +176,8 @@ def load_line(path: Path):
     return gdf
 
 
+# Elevations under the buffered road line, and the fraction of the corridor that fell on NoData
 def corridor_values(line_in_raster_crs, src, z, bad, buffer_m: float):
-    """
-    Elevations under the buffered road line, and the fraction of the corridor
-    that fell on NoData.
-
-    The buffer is applied in the RASTER's CRS, converted through its linear
-    units factor -- the geojson is EPSG:2264 (US survey FEET) and the clips are
-    UTM 18N (metres), so a raw 3.5 would be 1.07 m if taken literally in the
-    source CRS.
-
-    `z` and `bad` are passed in so a caller sweeping several buffer widths reads
-    each raster exactly once.
-    """
     to_m = float(src.crs.linear_units_factor[1])
     geoms = [gm.buffer(buffer_m / to_m) for gm in line_in_raster_crs.geometry]
     mask = rasterize(
@@ -415,8 +193,8 @@ def corridor_values(line_in_raster_crs, src, z, bad, buffer_m: float):
     return z[mask & ~bad], nodata_frac
 
 
+# Elevation band plus a boolean mask of cells that are not real data
 def read_surface(src):
-    """Elevation band plus a boolean mask of cells that are not real data."""
     z = src.read(1).astype(float)
     bad = (z <= -100.0) | (~np.isfinite(z))
     if src.nodata is not None:
@@ -424,12 +202,8 @@ def read_surface(src):
     return z, bad
 
 
+# MEAN is the product
 def stats_for(vals: np.ndarray, nodata_frac: float) -> dict:
-    """
-    MEAN is the product. Median, percentiles and sigma are diagnostics that ride
-    along in the per-domain CSV so a domain where the mean is being dragged by a
-    structure in the corridor announces itself.
-    """
     if vals.size == 0:
         return dict(n_cells=0, nodata_frac=round(nodata_frac, 3),
                     elev_navd=np.nan, elev_mhw=np.nan, elev_median_navd=np.nan,
@@ -451,6 +225,7 @@ def stats_for(vals: np.ndarray, nodata_frac: float) -> dict:
     )
 
 
+# QC flags for one domain's sample
 def flags_for(r: dict) -> list:
     f = []
     if r["n_cells"] == 0:
@@ -466,8 +241,8 @@ def flags_for(r: dict) -> list:
     return f
 
 
+# Mean road elevation per domain on the 1 m clips, at BUFFER_M
 def sample_all(line, clips: dict) -> list:
-    """Mean road elevation per domain on the 1 m clips, at BUFFER_M."""
     rows = []
     for d in sorted(clips):
         if not (FIRST_ROAD_DOMAIN <= d <= LAST_ROAD_DOMAIN):
@@ -480,8 +255,7 @@ def sample_all(line, clips: dict) -> list:
         r.update(stats_for(vals, nodata_frac))
         rows.append(r)
 
-    # Continuity is an alongshore property, so it can only be flagged once every
-    # domain has a value. A road does not step 0.35 m between two 500 m cells.
+    # Continuity is an alongshore property, so it can only be flagged once every domain has a value
     order = sorted([r for r in rows if np.isfinite(r["elev_navd"])],
                    key=lambda r: r["domain"])
     for a, b in zip(order, order[1:]):
@@ -498,17 +272,10 @@ def sample_all(line, clips: dict) -> list:
     return rows
 
 
-# =============================================================================
-# INTERNAL CHECKS
-#
-# The ArcGIS elevation_2009 column that this method was originally validated
-# against no longer exists -- see the audit document. What is left is internal:
-# does the answer depend on the corridor width, and does the surface we are
-# obliged to model on agree with the surface we measured.
-# =============================================================================
+# Internal checks: does the answer depend on corridor width, and do the surfaces agree
 
+# Island median and typical within-domain sigma at several corridor widths
 def buffer_sweep(line, clips: dict) -> list:
-    """Island median and typical within-domain sigma at several corridor widths."""
     acc = {b: {"mean": [], "sd": []} for b in BUFFER_SWEEP}
     for d in sorted(clips):
         if not (FIRST_ROAD_DOMAIN <= d <= LAST_ROAD_DOMAIN):
@@ -529,18 +296,8 @@ def buffer_sweep(line, clips: dict) -> list:
     return out
 
 
+# What is actually under the 1984 alignment where the road was relocated? The case for using the 2004 ...
 def relocation_bracket(clips: dict, rows: list) -> dict | None:
-    """
-    What is actually under the 1984 alignment where the road was relocated?
-
-    The case for using the 2004 line everywhere rests on a claim about the
-    abandoned corridor, and a claim in a docstring is not evidence. This
-    measures it: same surface, same corridor width, the OTHER line, in the 11
-    domains where the two disagree.
-
-    Nothing here is ever written to RoadElevation.csv. It exists so the choice
-    can be defended with a number that is re-derived on every run.
-    """
     if BRACKET_LINE is None or not Path(BRACKET_LINE).exists():
         return None
     line = load_line(BRACKET_LINE)
@@ -564,8 +321,7 @@ def relocation_bracket(clips: dict, rows: list) -> dict | None:
     other = np.array([p["other"] for p in pairs])
     sd = np.array([p["other_sd"] for p in pairs])
 
-    # The grade the road would sit at if this reach were not relocated: the
-    # neighbouring un-relocated domains inside the same named reaches.
+    # The grade the road would sit at if this reach were not relocated
     ref = []
     for (lo, hi), _ in SECTIONS:
         if not any(lo <= d <= hi for d in RELOCATED_BEFORE_2004):
@@ -582,12 +338,8 @@ def relocation_bracket(clips: dict, rows: list) -> dict | None:
                               <= max(used.mean(), other.mean())))
 
 
+# Same corridor, same buffer, on the 10 m Barrier3D grid instead of the 1 m clip
 def resample_check(line, resamples: dict, rows: list) -> dict | None:
-    """
-    Same corridor, same buffer, on the 10 m Barrier3D grid instead of the 1 m
-    clip. This is not a validation -- the 1 m answer is the better one -- it
-    quantifies how much the grid the model actually runs on would have cost us.
-    """
     if not resamples:
         return None
     by = {r["domain"]: r for r in rows}
@@ -613,18 +365,10 @@ def resample_check(line, resamples: dict, rows: list) -> dict | None:
                 cells_10m=int(np.median(ncells)))
 
 
-# =============================================================================
-# OUTPUT
-# =============================================================================
+# Output
 
+# 2-row CASCADE file
 def write_cascade_csv(rows, path: Path) -> bool:
-    """
-    2-row CASCADE file: row 0 = GIS IDs, row 1 = elevation in m MHW-RELATIVE.
-
-    Refuses on a gap, because the runner fills its per-domain arrays BY POSITION
-    after dropping the ID row -- one missing domain shifts every domain north of
-    it and nothing reports it.
-    """
     by = {r["domain"]: r for r in rows}
     expected = list(range(FIRST_ROAD_DOMAIN, LAST_ROAD_DOMAIN + 1))
     missing = [d for d in expected
@@ -650,6 +394,7 @@ def write_cascade_csv(rows, path: Path) -> bool:
     return True
 
 
+# The per-domain table
 def write_domains_csv(rows, path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
     fields = list(rows[0].keys())
@@ -661,8 +406,8 @@ def write_domains_csv(rows, path: Path):
     print(f"[out] {path}")
 
 
+# Per-named-reach summary
 def section_stats(rows) -> list:
-    """Per-named-reach summary. A domain index is not a place; a reach is."""
     good = [r for r in rows if np.isfinite(r["elev_navd"])]
     out = []
     for (lo, hi), label in SECTIONS:
@@ -678,6 +423,7 @@ def section_stats(rows) -> list:
     return out
 
 
+# Elevation along the island with its spread and flags
 def qc_figure(rows, path: Path):
     rows = sorted([r for r in rows if np.isfinite(r["elev_navd"])],
                   key=lambda r: r["domain"])
@@ -715,8 +461,7 @@ def qc_figure(rows, path: Path):
                 lw=0, marker="x", ms=10, mew=2.0, color=C_INK, zorder=6,
                 label="road relocated before 2004 (1984 run: wrong place)")
 
-    # Reach means, so the alongshore pattern reads at a glance rather than
-    # having to be averaged by eye out of 82 points.
+    # Reach means, so the alongshore pattern reads at a glance
     for k, s in enumerate(section_stats(rows)):
         ax.plot([max(s["lo"], d.min()) - 0.4, min(s["hi"], d.max()) + 0.4],
                 [s["mean"]] * 2, color=C_INK, lw=2.6, alpha=0.75, zorder=5,
@@ -734,8 +479,7 @@ def qc_figure(rows, path: Path):
                  f"(1 m clip, {BUFFER_M:.1f} m buffer, mean of cells)"
                  f"\nused unchanged for both the 1984 and 2004 start periods",
                  fontsize=12)
-    # Bottom-left: the only quadrant with no data in it, and it keeps the
-    # reach labels along the top edge readable.
+    # Legend bottom-left, the one quadrant with no data
     ax.legend(loc="lower left", fontsize=8, framealpha=0.92, ncol=2)
     ax.grid(alpha=0.25)
     ax.set_xlim(d.min() - 0.5, d.max() + 0.5)
@@ -746,17 +490,8 @@ def qc_figure(rows, path: Path):
     print(f"[out] {path}")
 
 
+# Where the road is high and where it is low, in real geography
 def map_figure(rows, line, resamples: dict, path: Path):
-    """
-    Where the road is high and where it is low, in real geography.
-
-    The alongshore profile answers "how much"; it cannot answer "where", because
-    a domain index is not a place. This draws the road on the island it sits on,
-    coloured by the same numbers, over the 10 m LiDAR for context -- so a low
-    reach can be read against the island being narrow there.
-
-    Drawn in strips at TRUE aspect ratio. See MAP_STRIPS.
-    """
     good = sorted([r for r in rows if np.isfinite(r["elev_navd"])],
                   key=lambda r: r["domain"])
     if not good or not resamples:
@@ -790,8 +525,7 @@ def map_figure(rows, line, resamples: dict, path: Path):
     topo_cmap.set_under(C_WATER)    # below MHW -- water, functionally
     topo_norm = mcolors.Normalize(vmin=MHW_M, vmax=MAP_TOPO_VMAX)
 
-    # Road geometry per domain, clipped to that domain's box -- the SAME box the
-    # elevation was sampled in, so colour and geometry cannot disagree.
+    # Road geometry per domain, clipped to that domain's box
     segs = {}
     for d in doms:
         b = bounds[d]
@@ -822,9 +556,7 @@ def map_figure(rows, line, resamples: dict, path: Path):
                 ax.plot(xy[0], xy[1], color=col, lw=3.4,
                         solid_capstyle="round", zorder=4)
 
-        # Window on the road corridor, widened to MAP_MIN_WIDTH_M so the island
-        # around it stays visible -- where the island is narrow is exactly the
-        # context that explains a low reach.
+        # Window on the road corridor, widened to MAP_MIN_WIDTH_M so the island around it stays visible
         rx = np.concatenate([xy[0] for d in chunk for xy in segs[d]]
                             or [np.array([0.0])])
         cx = 0.5 * (rx.min() + rx.max())
@@ -859,8 +591,7 @@ def map_figure(rows, line, resamples: dict, path: Path):
         for s in ax.spines.values():
             s.set_edgecolor("0.7")
 
-    # Scale bar bottom-left, north arrow top-left, both on the southern strip
-    # and both kept clear of the GIS labels on the right.
+    # Scale bar bottom-left, north arrow top-left
     ax0 = axes[0]
     x0, x1 = ax0.get_xlim()
     y0, y1 = ax0.get_ylim()
@@ -912,6 +643,7 @@ def map_figure(rows, line, resamples: dict, path: Path):
     print(f"[out] {path}")
 
 
+# The audit document
 def write_markdown(rows, sweep, resamp, bracket, path: Path):
     L = []
     a = L.append
@@ -1294,10 +1026,7 @@ def write_markdown(rows, sweep, resamp, bracket, path: Path):
     print(f"[out] {path}")
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: sample every domain, check, write the CSV, figure and audit
 def main():
     clips, resamples, surface_label = resolve_surfaces()
 
@@ -1354,7 +1083,7 @@ def main():
         for d, f in flagged:
             print(f"    GIS {d:>2}: {f}")
 
-    # --- internal checks -------------------------------------------------
+    # Internal checks
     print(f"\n{'=' * 92}")
     print("INTERNAL CHECKS")
     print("=" * 92)
@@ -1412,7 +1141,7 @@ def main():
         print("    The 1 m clip is a precaution on this alignment, not a")
         print("    rescue -- though it rests on ~100x the sample.")
 
-    # --- outputs ---------------------------------------------------------
+    # Outputs
     out = Path(OUT_ROOT)
     print()
     write_domains_csv(rows, out / "RoadElevation_domains.csv")

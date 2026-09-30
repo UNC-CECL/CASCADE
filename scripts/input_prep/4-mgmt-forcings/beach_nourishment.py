@@ -1,40 +1,10 @@
 """
-beach_nourishment.py
-==============================================================================
-When and where the beach was nourished: figures for
-data/hatteras_init/4-mgmt-forcing/nourishment/.
+When and where the beach was nourished: figures of the fill projects the hindcast fires.
 
-THE QUESTION
-    The hindcast fires the projects in HATTERAS_NOURISHMENT_PROJECTS
-    (scripts/site_layer/hatteras_site_config.py) when they fall inside a run window.
-    That list is three entries and the record behind it is a spreadsheet
-    (Hatteras_Management_Timelines.xlsx, sheet Nourishment_Timeline), and
-    nothing in the data tree shows the two side by side, or shows the reader
-    which stretch of the island was filled in which year. These figures do.
-
-TWO SOURCES, DRAWN TOGETHER, NEVER MERGED
-    * the MODEL INPUT: the site-config projects, their extents and their
-      volumes spread to m^3/m over 500 m domains. This is what a run receives.
-    * the RECORD: the spreadsheet. Its domain flags for the same three
-      projects are narrower than the site config's (Rodanthe 85-88 against
-      84-89; Avon 23-26 against 21-28; Buxton the same 6-15) because the site
-      config re-derived the footprints from the project descriptions -- the
-      reasons are in the comments beside each entry. The record also carries
-      fourteen Pea Island / Oregon Inlet navigation fills (1990-2004, 2013)
-      that lie NORTH of GIS 90, off the modelled reach, and that no run sees.
-    The figures draw the model extent as the fill and the record's flags as
-    a darker inner bar, so a difference is visible rather than reconciled.
-
-OUTPUTS   data/hatteras_init/4-mgmt-forcing/nourishment/
-    nourishment_when_where.png/.pdf       year x domain event chart
-    nourishment_volume_alongshore.png/.pdf m^3/m per domain, as delivered
-    nourishment_domain_map.png/.pdf       the filled domains on the island
-    nourishment_projects.csv              every row drawn, both sources
-    CAPTIONS.md                           the text that is not on the canvas
-
-RUN
     python scripts/input_prep/4-mgmt-forcings/beach_nourishment.py
-==============================================================================
+
+Draws when and where each project fell, volume alongshore and a domain map,
+from HATTERAS_NOURISHMENT_PROJECTS and the nourishment data. Details: scripts/input_prep/4-mgmt-forcings/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -70,6 +40,7 @@ from site_layer.hatteras_site_config import (  # noqa: E402
     HATTERAS_PERIODS,
 )
 
+# --- CONFIG ------------------------------------------------------------------
 DATA_DIR = PROJECT_ROOT / "data" / "hatteras_init"
 from site_layer.hat_topo_version import MGMT_ROOT as MGMT_DIR, MGMT_RECORD_XLSX as RECORD_XLSX  # noqa: E402
 from site_layer.hat_observed_rates import DOMAIN_BOXES as DOMAIN_FILE  # noqa: E402
@@ -80,17 +51,15 @@ SPACING_M = HATTERAS_DOMAINS.domain_spacing_m
 N_DOMAINS = HATTERAS_DOMAINS.num_real_domains
 YEAR_LO, YEAR_HI = 1984, 2024
 
-# Vintage colours: the earlier fill is red, the later one blue, as everywhere
-# two vintages share a figure (hat_figure_style).
+# Vintage colours: the earlier fill red, the later blue
 YEAR_COLOUR = {2014: (C_1984, C_1984_FILL), 2022: (C_1997, C_1997_FILL)}
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# THE TWO SOURCES
-# =============================================================================
+# The two sources
 
+# The site-config list, one row per project, with the volumes a run gets
 def model_projects() -> pd.DataFrame:
-    """The site-config list, one row per project, with the volumes a run gets."""
     rows = []
     for p in HATTERAS_NOURISHMENT_PROJECTS:
         rows.append(dict(
@@ -110,10 +79,8 @@ def model_projects() -> pd.DataFrame:
 _VOL_RE = re.compile(r"([\d,]{5,})\s*cy")
 
 
+# The spreadsheet
 def record_projects() -> pd.DataFrame:
-    """The spreadsheet: one row per year that carries a note or a flag.
-    Domain flags (1) give the footprint; a note with no flags is a fill the
-    record places outside the 90 domains (Pea Island / Oregon Inlet)."""
     raw = pd.read_excel(RECORD_XLSX, sheet_name="Nourishment_Timeline",
                         header=None, skiprows=3)
     rows = []
@@ -130,8 +97,7 @@ def record_projects() -> pd.DataFrame:
         if not gis and not notes:
             continue
         vols = [int(m.replace(",", "")) for m in _VOL_RE.findall(notes)]
-        # One year can flag two separate stretches (2022: Buxton AND Avon),
-        # so each contiguous run of flags is its own row.
+        # One year can flag two stretches (2022: Buxton and Avon), so each run is its own row
         runs = _contiguous_runs(gis) or [[]]
         for run in runs:
             rows.append(dict(
@@ -149,6 +115,7 @@ def record_projects() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+# Consecutive domain numbers grouped into runs
 def _contiguous_runs(numbers):
     runs = []
     for n in sorted(numbers):
@@ -159,21 +126,19 @@ def _contiguous_runs(numbers):
     return runs
 
 
+# (start, end) of every hindcast window in the site config
 def period_windows():
-    """(start, end) of every hindcast window in the site config."""
     return sorted((int(k), int(v["end_year"])) for k, v in HATTERAS_PERIODS.items())
 
 
-# =============================================================================
-# FIGURE 1: WHEN x WHERE
-# =============================================================================
+# Figure 1: when x where
 
+# Each project by year and domain, against the hindcast windows
 def fig_when_where(model: pd.DataFrame, record: pd.DataFrame) -> Path:
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.52),
                            constrained_layout=True)
     windows = period_windows()
-    # Left margin: the hindcast windows as vertical brackets. Right margin: the
-    # off-reach fills. Both are OFF the domain axis, which runs 1-90.
+    # The hindcast windows as brackets on the left, off-reach fills on the right
     x_lo, x_hi = -2.5 * len(windows) - 1.5, N_DOMAINS + 6.5
     ax.set_xlim(x_lo, x_hi)
     ax.set_ylim(YEAR_LO - 0.8, YEAR_HI + 0.8)
@@ -264,9 +229,8 @@ def fig_when_where(model: pd.DataFrame, record: pd.DataFrame) -> Path:
     return save(fig, OUT_DIR / "nourishment_when_where", close=True)[0]
 
 
+# '1984–2004 and 1996–2010 carry no fill, 2004–2024 and 2010–2024 carry all three', computed from the ...
 def _windows_sentence(windows, fill_years):
-    """'1984–2004 and 1996–2010 carry no fill, 2004–2024 and 2010–2024 carry
-    all three', computed from the config so the caption cannot go stale."""
     def n_in(s, e):
         return sum(s <= y <= e for y in fill_years)
     by_count = {}
@@ -280,10 +244,9 @@ def _windows_sentence(windows, fill_years):
     return ", ".join(parts)
 
 
-# =============================================================================
-# FIGURE 2: VOLUME ALONGSHORE
-# =============================================================================
+# Figure 2: volume alongshore
 
+# Fill volume per domain, summed over the projects
 def fig_volume_alongshore(model: pd.DataFrame) -> Path:
     fig, ax = plt.subplots(figsize=figsize("double", aspect=0.40),
                            constrained_layout=True)
@@ -346,10 +309,9 @@ def fig_volume_alongshore(model: pd.DataFrame) -> Path:
     return save(fig, OUT_DIR / "nourishment_volume_alongshore", close=True)[0]
 
 
-# =============================================================================
-# FIGURE 3: THE DOMAIN MAP
-# =============================================================================
+# Figure 3: the domain map
 
+# The fills on a map of the rotated island
 def fig_domain_map(model: pd.DataFrame) -> Path:
     import geopandas as gpd
     from shapely.affinity import rotate as shapely_rotate
@@ -360,8 +322,7 @@ def fig_domain_map(model: pd.DataFrame) -> Path:
     origin = tuple(unary_union(domains.geometry.tolist()).centroid.coords[0])
 
     def to_strip(frame):
-        # Rotate 90 deg clockwise so south is left, north right, ocean below;
-        # rotation preserves distance, so the scale bar holds.
+        # Rotate 90 deg clockwise so south is left, north right, ocean below
         return frame.set_geometry(frame.geometry.apply(
             lambda g: shapely_rotate(g, -90, origin=origin)), crs=frame.crs)
 
@@ -395,8 +356,7 @@ def fig_domain_map(model: pd.DataFrame) -> Path:
     site_ends = set()
     for _, p in model.iterrows():
         site_ends |= {int(p.first_gis), int(p.last_gis)}
-    # Every tenth domain, unless a footprint end sits within one domain of it
-    # (20 beside 21, 90 beside 89), plus the footprint ends themselves.
+    # Every tenth domain, unless a footprint end sits within one domain of it (20 beside 21, 90 beside 89)
     label_domains = {d for d in range(10, N_DOMAINS + 1, 10)
                      if not any(abs(d - e) <= 1 for e in site_ends)} | {1} | site_ends
     for _, row in strip.iterrows():
@@ -427,8 +387,7 @@ def fig_domain_map(model: pd.DataFrame) -> Path:
     ax.text((minx + maxx) / 2, miny - 0.10 * dy, "Atlantic Ocean", ha="center",
             va="top", fontsize=8.5, color=INK_MUTED, style="italic")
 
-    # Scale bar in data units, 5 km, and a north arrow that points along the
-    # strip since the map is rotated off north.
+    # A 5 km scale bar, and a north arrow along the rotated strip
     bx, by = minx + 0.02 * (maxx - minx), miny - 0.40 * dy
     ax.plot([bx, bx + 5000], [by, by], color=INK, lw=2.2, solid_capstyle="butt", zorder=12)
     ax.text(bx + 2500, by + 0.05 * dy, "5 km", ha="center", va="bottom", fontsize=8, color=INK)
@@ -459,10 +418,7 @@ def fig_domain_map(model: pd.DataFrame) -> Path:
     return save(fig, OUT_DIR / "nourishment_domain_map", close=True)[0]
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: the three figures
 def main():
     apply_style()
     OUT_DIR.mkdir(parents=True, exist_ok=True)

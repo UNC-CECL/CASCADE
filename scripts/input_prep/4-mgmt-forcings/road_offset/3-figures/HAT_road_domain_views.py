@@ -1,43 +1,12 @@
-r"""
-HAT_road_domain_views.py
-===============================================================================
-One domain at a time: what CASCADE actually DOES to this grid.
+"""
+One domain at a time: what CASCADE does to its grid with the road on it.
 
-Merged from three scripts that drew the same geometry three ways
-(HAT_plot_road_initialization.py, HAT_plot_barrier3d_grid.py,
-HAT_browse_road_domains.py). They shared a config block, a geometry() and a
-drown test, and each copy was a place for those to drift. The drawing code below
-is ported VERBATIM; only the config, the CLI and the setback selection are new.
+    python scripts/input_prep/4-mgmt-forcings/road_offset/3-figures/HAT_road_domain_views.py --domains 52 --year 1984
+    python scripts/input_prep/4-mgmt-forcings/road_offset/3-figures/HAT_road_domain_views.py --domains drowning --mode map
+    python scripts/input_prep/4-mgmt-forcings/road_offset/3-figures/HAT_road_domain_views.py --browse --year 2004 --start 52
 
-MODES
------
-  --mode map        land/water plan view. The road as ONE row index applied to
-                    all 50 profiles, against an island whose landward edge is
-                    not straight, plus the two rows bulldoze tests.
-  --mode section    the assembled Barrier3D cross-section -- shoreface, beach
-                    wedge, dune rows, interior, bay -- with the REAL bulldoze()
-                    run on a copy of the real interior.
-  --mode both       both figures per domain (default).
-  --browse          interactive walk instead of writing files (n/p/w/q).
-                    Needs a GUI backend; everything else runs headless.
-
-WHICH SETBACK IS DRAWN -- the figures are only honest if this matches the run
------------------------------------------------------------------------------
-  --method legacy      archive/superseded_20260911/<year>/RoadSetback_<year>.csv
-                       what hatteras_site_config.py spends today
-  --method dunestart   dunestart_offset/measured/<year>/RoadSetback_<year>_dunestart.csv
-                       measured landward of interior row 0, the reference
-                       roadway_manager.py:99 actually uses
-
-Both files are 2 rows x 82 cols, GIS IDs then metres, so this is a drop-in.
-Change the default the SAME DAY you change hatteras_site_config.py:78,91.
-
-USAGE
------
-    python HAT_road_domain_views.py --domains 52 --year 1984
-    python HAT_road_domain_views.py --domains drowning --mode map
-    python HAT_road_domain_views.py --browse --year 2004 --start 52
-===============================================================================
+Map, profile and grid views, an overview, or a browser; merged from three
+earlier scripts. Details: scripts/input_prep/4-mgmt-forcings/road_offset/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -54,8 +23,7 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib
-# Backend is chosen in main(), not at import: --browse needs an interactive one
-# and forcing Agg here would silently kill the window.
+# Backend is chosen in main(), not at import
 import matplotlib.pyplot as plt
 from matplotlib.colors import (LinearSegmentedColormap, ListedColormap,
                                TwoSlopeNorm)
@@ -64,14 +32,8 @@ from matplotlib.lines import Line2D
 from matplotlib.widgets import Button
 
 
+# Walk up until a directory holds data\hatteras_init
 def _find_project_root(start: Path) -> Path:
-    """
-    Walk up until a directory holds data\\hatteras_init.
-
-    NOT parents[N]. These files have moved twice, and the old parents[4]
-    silently resolved to scripts\\ -- every data path below it was wrong, and so
-    was the sys.path entry the `import cascade.roadway_manager` depends on.
-    """
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
             return p
@@ -82,9 +44,7 @@ PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
 sys.path.insert(0, str(PROJECT_ROOT))
 import cascade.roadway_manager as rm          # noqa: E402  the real thing
 
-# =============================================================================
-# CONFIG -- every value traced to its source
-# =============================================================================
+# Config -- every value traced to its source
 
 DATA = PROJECT_ROOT / "data" / "hatteras_init"
 import sys as _tvsys
@@ -93,37 +53,24 @@ _tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
                                if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_topo_version as _tv  # noqa: E402
 ROADS_ROOT = _tv.ROADS_ROOT
-# Topography version resolved from the extractor, not hardcoded -- it was
-# "2009_v3" and kept drawing v3 interiors under v4 setbacks after the re-pick,
-# with no error. See hat_topo_version.py.
-# parents[4] IS scripts/ -- hat_topo_version.py moved there 2026-08-20.
+# Topography version resolved from the extractor, not hardcoded
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 from site_layer.hat_topo_version import (topo_dirs, array_name,  # noqa: E402
                              product_for_year)
 
-# BOUND FROM --year, NOT AT IMPORT (2026-08-26).
-#
-# This was `TOPO_DIR, DUNE_DIR, TOPO_RUN_NAME = topo_dirs()` at module level:
-# one topography, resolved before the CLI was parsed, so `--year 1984` drew a
-# 1984 setback on 2004-start interiors and `--year 2004` drew a 2004 setback on
-# the same ones. One of those two was always wrong, and after the tree went
-# period-first it was the 1984 one -- silently, since a plausible island is
-# still an island.
-#
-# Deferred to bind_topography(), called from main() once the year is known.
-# `SETBACK` is already rebound from --method the same way, so this follows the
-# pattern the file already uses rather than inventing one.
+# BOUND FROM --year, NOT AT IMPORT (2026-08-26)
 TOPO_DIR = DUNE_DIR = TOPO_RUN_NAME = RUN = TOPO_PRODUCT = None
 
 
+# Point the module at the extraction THIS vintage's setbacks came from
 def bind_topography(year: int) -> None:
-    """Point the module at the extraction THIS vintage's setbacks came from."""
     global TOPO_DIR, DUNE_DIR, TOPO_RUN_NAME, RUN, TOPO_PRODUCT
     TOPO_PRODUCT = product_for_year(year)
     TOPO_DIR, DUNE_DIR, TOPO_RUN_NAME = topo_dirs(TOPO_PRODUCT)
     RUN = TOPO_DIR.parent
 
 
+# The bound topography folder, or stop with how to bind it
 def _topo_dir() -> Path:
     if TOPO_DIR is None:
         raise SystemExit(
@@ -133,10 +80,8 @@ def _topo_dir() -> Path:
     return TOPO_DIR
 
 
-# One file, both periods. NOT because there is one surface -- there are two,
-# and they differ by a median +0.222 m in the road corridor -- but because that
-# difference is the uncorrected 1996-vs-2009 survey offset rather than a
-# roadbed. See hatteras_site_config.py, HATTERAS_ROAD_ELEVATION_FILE.
+# --- CONFIG ------------------------------------------------------------------
+# One road-elevation file for both periods: the surfaces differ by a survey offset, not a roadbed
 ROAD_ELEV_CSV = _tv.ROAD_ELEVATION_FILE
 
 _SETBACK_SOURCES = {
@@ -144,8 +89,7 @@ _SETBACK_SOURCES = {
     "dunestart": (ROADS_ROOT / "dunestart_offset" / "measured" / "{year}"
                   / "RoadSetback_{year}_dunestart.csv"),
 }
-# Matches hatteras_site_config.py:78,91. Change both together, or these
-# figures stop describing the model you run.
+# Matches hatteras_site_config.py:78,91
 SETBACK_METHOD = "dunestart"
 # Rebound in main() from --method; the ported drawing code reads this global.
 SETBACK = {y: Path(str(_SETBACK_SOURCES[SETBACK_METHOD]).format(year=y))
@@ -168,7 +112,7 @@ FIRST_ROAD_DOMAIN, LAST_ROAD_DOMAIN = 9, 90
 # Villages: a RoadwayManager is constructed (cascade.py:428) but never updated.
 VILLAGE_RANGES = [(21, 31), (68, 83)]
 
-# --- colour -------------------------------------------------------------
+# Colour
 C_ROAD, C_BAY, C_SEA = "#B71C1C", "#1565C0", "#FF8C00"   # validated set
 C_INK = "#1a1a2e"
 C_LAND, C_WATER = "#E8DCC0", "#B7D3E8"                   # recessive field
@@ -181,20 +125,22 @@ ELEV_CMAP = LinearSegmentedColormap.from_list("mhw_diverging", [
     (0.50, "#F2EFE6"),
     (0.56, "#D9C089"), (0.78, "#A9843F"), (1.00, "#5A4220"),
 ])
+# -----------------------------------------------------------------------------
 
 
+# Is a domain in a village?
 def is_village(gis: int) -> bool:
     return any(a <= gis <= b for a, b in VILLAGE_RANGES)
 
 
+# One domain's interior array, by exact name
 def load_interior(gis: int):
-    # Exact name, not a glob. The old "…_topography_*.npy" needed a year tag
-    # that no longer exists, and would have matched twice if one ever strayed
-    # in from the other period - picking arbitrarily.
+    # Exact name, not a glob: no year tag since 2026-08-26
     f = _topo_dir() / array_name("topography", gis)
     return np.load(f) * DZ if f.is_file() else None      # dam -> m MHW
 
 
+# {domain: setback} for one vintage and method
 def load_setbacks(year: int) -> dict:
     p = SETBACK[year]
     if not p.exists():
@@ -204,15 +150,8 @@ def load_setbacks(year: int) -> dict:
     return dict(zip(a[0].astype(int), a[1]))
 
 
+# Reproduce bulldoze()'s indexing exactly
 def geometry(interior: np.ndarray, setback_m: float) -> dict:
-    """
-    Reproduce bulldoze()'s indexing exactly.
-
-    Superset of the two originals: the section view used only road_start /
-    road_end / border / sea / bay / drowns, the map view also needs land, edge
-    and water_frac. ONE implementation, so the drown verdict cannot differ
-    between two figures of the same domain.
-    """
     n_rows, n_prof = interior.shape
     road_start = int(setback_m / DY)
     road_end = road_start + int(ROAD_WIDTH_M / DX)
@@ -236,8 +175,9 @@ def geometry(interior: np.ndarray, setback_m: float) -> dict:
     return g
 
 
-# --- mode: map -------------------------------------------------------------
+# Mode: map
 
+# One domain's map and profile view
 def plot_domain(gis: int, year: int, setback_m: float, out_dir: Path):
     interior = load_interior(gis)
     if interior is None:
@@ -253,35 +193,31 @@ def plot_domain(gis: int, year: int, setback_m: float, out_dir: Path):
     ax_edge = fig.add_subplot(gs[0, 1], sharey=ax)
     ax_w = fig.add_subplot(gs[1, :])
 
-    # ---- the field: land vs water, deliberately recessive ----
+    # The field: land vs water, deliberately recessive
     ax.imshow(g["land"].astype(int), cmap=ListedColormap([C_WATER, C_LAND]),
               aspect="auto", interpolation="nearest", origin="upper",
               extent=[-0.5, n_prof - 0.5, n_rows - 0.5, -0.5], zorder=1)
 
-    # ---- the island's landward edge: the jagged line ----
+    # The island's landward edge: the jagged line
     ax.step(np.arange(n_prof), g["edge"], where="mid", color=C_INK, lw=2.0,
             zorder=4)
 
-    # ---- the road: one row index, applied to every profile ----
+    # The road: one row index, applied to every profile
     ax.axhspan(g["road_start"] - 0.5, g["road_end"] - 0.5, color=C_ROAD,
                alpha=0.30, zorder=3, lw=0)
     for r in (g["road_start"] - 0.5, g["road_end"] - 0.5):
         ax.axhline(r, color=C_ROAD, lw=2.0, zorder=5)
 
-    # ---- the row bulldoze skips ----
+    # The row bulldoze skips
     ax.axhline(g["road_end"], color=C_SKIP, lw=2.0, ls=(0, (1, 2)), zorder=5)
 
-    # ---- the two rows bulldoze actually tests ----
+    # The two rows bulldoze actually tests
     if not g["off_grid"]:
         ax.axhline(g["border"], color=C_BAY, lw=2.0, zorder=6)
     if g["road_start"] > 0:
         ax.axhline(g["road_start"] - 1, color=C_SEA, lw=2.0, zorder=6)
 
-    # Direct labels, placed INSIDE the axes. The sea-side colour WARNed on
-    # contrast against a light surface in the validator, so it carries a label
-    # rather than relying on the legend -- and the label sits on an opaque
-    # white plate so the pale field underneath cannot erode it further.
-    # (Placing these outside the axes clipped them against the right panel.)
+    # Direct labels, placed INSIDE the axes
     lab = dict(ha="right", va="center", fontsize=8.5, fontweight="bold",
                zorder=8,
                bbox=dict(boxstyle="round,pad=0.28", fc="white", ec="none",
@@ -307,10 +243,9 @@ def plot_domain(gis: int, year: int, setback_m: float, out_dir: Path):
                  f"the island's landward edge is not a straight line",
                  fontsize=10, color=C_INK, pad=8)
 
-    # ---- right: how many profiles END at each row ----
-    # y is the SAME cross-shore row as the map (sharey), so a bar here lines up
-    # with the row it describes. Counting profiles rather than tracing the edge
-    # again keeps this panel from restating the map's black line.
+    # Right: how many profiles end at each row
+
+    # Same cross-shore row as the map, so each bar lines up with its row
     counts = np.bincount(g["edge"], minlength=n_rows)[:n_rows]
     ax_edge.barh(np.arange(n_rows), counts, height=0.85, color=C_INK,
                  zorder=3)
@@ -323,7 +258,7 @@ def plot_domain(gis: int, year: int, setback_m: float, out_dir: Path):
     ax_edge.grid(alpha=0.25, axis="x")
     ax_edge.tick_params(labelleft=False)   # shares the main panel's y axis
 
-    # ---- bottom: water fraction down the cross-shore ----
+    # Bottom: water fraction down the cross-shore
     rows = np.arange(n_rows)
     ax_w.fill_between(rows, g["water_frac"] * 100, color=C_WATER, zorder=1)
     ax_w.plot(rows, g["water_frac"] * 100, color=C_INK, lw=1.6, zorder=2)
@@ -343,7 +278,7 @@ def plot_domain(gis: int, year: int, setback_m: float, out_dir: Path):
     ax_w.set_ylabel("% of profiles\nthat are water")
     ax_w.grid(alpha=0.25)
 
-    # ---- legend: identity is never colour-alone ----
+    # Legend: identity is never colour-alone
     handles = [
         Patch(facecolor=C_LAND, label="land (> 0 m MHW)"),
         Patch(facecolor=C_WATER, label="water (<= 0 m MHW: sound, marsh, "
@@ -374,6 +309,7 @@ def plot_domain(gis: int, year: int, setback_m: float, out_dir: Path):
     return p, g
 
 
+# Every road domain: road, elevations and the drown test
 def plot_overview(year: int, setbacks: dict, out_dir: Path):
     gis, road, e_lo, e_med, e_hi, drown, managed = [], [], [], [], [], [], []
     for d in range(FIRST_ROAD_DOMAIN, LAST_ROAD_DOMAIN + 1):
@@ -432,8 +368,9 @@ def plot_overview(year: int, setbacks: dict, out_dir: Path):
     return p
 
 
-# --- mode: section ---------------------------------------------------------
+# Mode: section
 
+# One domain's topography and dune arrays
 def load_grid(gis: int):
     t = _topo_dir() / array_name("topography", gis)
     d = DUNE_DIR / array_name("dune", gis)
@@ -444,6 +381,7 @@ def load_grid(gis: int):
     return interior, dune_h
 
 
+# Per-domain road elevation, or the fallback
 def road_elevation(gis: int) -> float:
     if not ROAD_ELEV_CSV.exists():
         return ROAD_ELEVATION_FALLBACK
@@ -452,8 +390,8 @@ def road_elevation(gis: int) -> float:
     return float(m.get(gis, ROAD_ELEVATION_FALLBACK))
 
 
+# Call cascade's bulldoze() on a COPY -- it mutates the grid in place
 def run_real_bulldoze(interior, dune_h, road_ele, setback_m):
-    """Call cascade's bulldoze() on a COPY -- it mutates the grid in place."""
     grid = (interior / DZ).copy()                       # back to dam
     n_dune_cells = max(1, int(DUNE_WIDTH_M / DX))
     dune = np.tile((dune_h / DZ)[:, None], (1, n_dune_cells)) if dune_h is not None \
@@ -467,6 +405,7 @@ def run_real_bulldoze(interior, dune_h, road_ele, setback_m):
     return new_grid * DZ, new_dune * DZ, float(removed), bool(drown)
 
 
+# One domain as the Barrier3D grid
 def plot_grid(gis, year, setback_m, out_dir):
     got = load_grid(gis)
     if got is None:
@@ -490,7 +429,7 @@ def plot_grid(gis, year, setback_m, out_dir):
     gsp = fig.add_gridspec(3, 1, height_ratios=[1.15, 1.0, 1.0], hspace=0.42)
     ax_map, ax_sec, ax_bd = (fig.add_subplot(gsp[i, 0]) for i in range(3))
 
-    # ---------------- 1. the grid as an array, elevation-coloured ----------
+    # 1. the grid as an array, elevation-coloured
     dune_elev = (dune_h + BERM_MHW) if dune_h is not None else None
     block = interior.T.copy()                           # (profiles, rows)
     if dune_elev is not None:
@@ -519,7 +458,7 @@ def plot_grid(gis, year, setback_m, out_dir):
     cb = fig.colorbar(im, ax=ax_map, pad=0.01, fraction=0.03)
     cb.set_label("elevation (m, MHW-relative)", fontsize=9)
 
-    # ---------------- 2. the cross-shore section --------------------------
+    # 2. the cross-shore section
     ax_sec.axhspan(norm.vmin, 0, color="#DCEAF6", zorder=0)
     ax_sec.axhline(0, color=C_BAY, lw=1.6, zorder=2)
     ax_sec.text(x_beach[0], 0.06, "MHW", color=C_BAY, fontsize=8.5,
@@ -551,8 +490,7 @@ def plot_grid(gis, year, setback_m, out_dir):
     ax_sec.add_patch(Rectangle((g["road_start"] * DX - DX / 2, road_ele - 0.12),
                                ROAD_WIDTH_M, 0.24, facecolor=C_ROAD,
                                edgecolor="white", lw=1.0, zorder=7))
-    # The road label sits BELOW the road box and to the left of the test-row
-    # labels; placing it above collided with the rotated sea-side label.
+    # The road label sits BELOW the road box and to the left of the test-row labels
     ax_sec.annotate(f"road — {road_ele:.2f} m MHW, setback {setback_m:.0f} m",
                     xy=(g["road_start"] * DX + ROAD_WIDTH_M / 2, road_ele),
                     xytext=(g["road_start"] * DX - 30, road_ele - 1.6),
@@ -579,7 +517,7 @@ def plot_grid(gis, year, setback_m, out_dir):
     ax_sec.legend(loc="upper right", fontsize=8.5, framealpha=0.94)
     ax_sec.grid(alpha=0.2)
 
-    # ---------------- 3. what the real bulldoze() did ---------------------
+    # 3. what the real bulldoze() did
     med_a = np.median(after, axis=1)
     ax_bd.axhspan(norm.vmin, 0, color="#DCEAF6", zorder=0)
     ax_bd.axhline(0, color=C_BAY, lw=1.4, zorder=2)
@@ -596,8 +534,7 @@ def plot_grid(gis, year, setback_m, out_dir):
     ax_bd.set_xlim(x_int[0] - DX / 2, x_int[-1] + DX / 2)
     ax_bd.set_xlabel("cross-shore distance from the dune toe (m)")
     ax_bd.set_ylabel("elevation (m MHW)")
-    # Count over the ACTUAL rewritten block (2 road rows x 50 profiles), not
-    # the median profile -- summing metres down a median is not a quantity.
+    # Count over the ACTUAL rewritten block (2 road rows x 50 profiles), not the median profile
     blk_b = interior[g["road_start"]:g["road_end"], :]
     blk_a = after[g["road_start"]:g["road_end"], :]
     n_up = int((blk_a > blk_b + 1e-9).sum())
@@ -627,24 +564,10 @@ def plot_grid(gis, year, setback_m, out_dir):
     return p, g, drown, removed
 
 
-# --- mode: browse ----------------------------------------------------------
+# Mode: browse
 
+# Get a backend that opens a REAL window and blocks in plt.show()
 def ensure_interactive_backend():
-    """
-    Get a backend that opens a REAL window and blocks in plt.show().
-
-    PyCharm is the reason this exists. With "Show plots in tool window" on
-    (Settings > Tools > Python Scientific), PyCharm swaps the backend for
-    'module://backend_interagg', which draws into the SciView panel instead of a
-    window. plt.show() then returns IMMEDIATELY and no key_press_event is ever
-    delivered -- so the browser renders the first domain, never receives a
-    keystroke, and exits. That looks like "it only plots GIS 9".
-
-    Jupyter's 'module://matplotlib_inline.backend_inline' behaves the same way.
-
-    Testing for the literal string 'agg' does not catch either of them, so match
-    on the module:// prefix instead and switch to a windowing backend.
-    """
     current = matplotlib.get_backend()
     low = current.lower()
     ok = not (low == "agg" or low.startswith("module://") or "inline" in low)
@@ -661,8 +584,8 @@ def ensure_interactive_backend():
     return current, current       # could not switch; caller warns
 
 
+# Redraw both panels in place
 def draw(fig, axes, gis, year, setback_m):
-    """Redraw both panels in place. Returns the geometry dict, or None."""
     ax_map, ax_prof = axes
     ax_map.clear(); ax_prof.clear()
 
@@ -680,7 +603,7 @@ def draw(fig, axes, gis, year, setback_m):
     norm = matplotlib.colors.TwoSlopeNorm(
         vmin=min(-BAY_DEPTH_M, float(interior.min())), vcenter=0.0, vmax=vmax)
 
-    # ---- map: alongshore x, cross-shore y, row 0 at the bottom ----
+    # Map: alongshore x, cross-shore y, row 0 at the bottom
     ax_map.imshow(interior, cmap=ELEV_CMAP, norm=norm, aspect="auto",
                   origin="lower", interpolation="nearest",
                   extent=[-0.5, n_prof - 0.5, -0.5, n_rows - 0.5])
@@ -717,7 +640,7 @@ def draw(fig, axes, gis, year, setback_m):
     ax_map.legend(handles=handles, loc="upper left", fontsize=8,
                   framealpha=0.94)
 
-    # ---- profile: elevation x, cross-shore y (shared) ----
+    # Profile: elevation x, cross-shore y (shared)
     y = np.arange(n_rows)
     ax_prof.plot(interior, y, color="0.78", lw=0.6, zorder=2)
     med = np.median(interior, axis=1)
@@ -739,7 +662,7 @@ def draw(fig, axes, gis, year, setback_m):
     ax_prof.grid(alpha=0.25)
     plt.setp(ax_prof.get_yticklabels(), visible=False)
 
-    # ---- the numbers, on the figure so a screenshot carries them ----
+    # The numbers, on the figure so a screenshot carries them
     short = int((edge < g["road_start"]).sum())
     verdict = "DROWNS in year 1" if g["drowns"] else "road fits"
     vcol = C_ROAD if g["drowns"] else C_INK
@@ -757,13 +680,10 @@ def draw(fig, axes, gis, year, setback_m):
     return g
 
 
+# Cli
 
-# =============================================================================
-# CLI
-# =============================================================================
-
+# `all`, `drowning`, or an explicit comma / range list
 def resolve_domains(spec: str, setbacks: dict) -> list:
-    """`all`, `drowning`, or an explicit comma / range list."""
     span = [d for d in range(FIRST_ROAD_DOMAIN, LAST_ROAD_DOMAIN + 1)
             if d in setbacks]
     if spec == "all":
@@ -786,8 +706,8 @@ def resolve_domains(spec: str, setbacks: dict) -> list:
     return [d for d in got if d in setbacks]
 
 
+# Keyboard walk
 def browse(domains, year, setbacks, start, out_dir):
-    """Keyboard walk: n/p next/prev, w write png, q quit."""
     idx = domains.index(start) if start in domains else 0
     fig, axes = plt.subplots(2, 1, figsize=(13, 9),
                              gridspec_kw=dict(height_ratios=[3, 1]))
@@ -822,9 +742,9 @@ def browse(domains, year, setbacks, start, out_dir):
     return 0
 
 
+# Run: bind the year, then the chosen view
 def main() -> int:
-    # Declared up front: --method's default READS SETBACK_METHOD, and Python
-    # rejects a global statement that comes after a use in the same scope.
+    # Declared up front: --method's default reads SETBACK_METHOD
     global SETBACK_METHOD, SETBACK
 
     ap = argparse.ArgumentParser(

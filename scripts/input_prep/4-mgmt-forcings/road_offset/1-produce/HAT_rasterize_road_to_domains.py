@@ -1,71 +1,10 @@
-r"""
-HAT_rasterize_road_to_domains.py
-===============================================================================
-Burn a road geojson onto the exact per-domain grids produced by the CASCADE
-Clip & Resample Domains tool, so the setback can be measured along the same
-profiles that define the interior.
+"""
+Burn a road geojson onto each domain's grid, so the setback is measured along the same profiles as the interior.
 
-THE ONLY SCRIPT THAT MASKS THE ROAD. Set ROAD_YEAR in CONFIG and run it:
+    python scripts/input_prep/4-mgmt-forcings/road_offset/1-produce/HAT_rasterize_road_to_domains.py
 
-    python HAT_rasterize_road_to_domains.py
-
-The masks it writes are consumed by HAT_road_offset_from_dune_start.py (the
-setback) and by the audit/ and figures/ scripts.
-
-The road-side twin of gis-export-npy.py: same folder walk, same grids, same
-array orientation -- rasterizing NC-12 instead of converting the DEM.
-
-THE ONLY THING THAT MATTERS
----------------------------
-Grid alignment. The road mask must be cell-for-cell identical to the elevation
-array: same shape, same affine transform, same rotation (if any).
-
-This script never guesses. It opens each domain's resampled_*.tif and takes the
-affine straight from the raster, so alignment holds whether the Clip & Resample
-tool produced north-up or shoreline-rotated grids.
-
-OUTPUT LAYOUT
--------------
-Everything for one road vintage lands in ONE folder, so comparing vintages
-means comparing two directories:
-
-  data\hatteras_init\4-mgmt-forcing\roads\raster\1978\
-      RUN_MANIFEST.txt                        every setting that made this folder
-      masks\
-          domain_9_road_1978.npy              <- the setback scripts read these
-          domain_10_road_1978.npy
-          ...
-      HAT_road_mask_diagnostics_1978.csv      per-domain numbers, incl. elevation
-      HAT_road_mask_summary_1978.png          all domains on one page
-      figures\
-          domain_009_road_mask.png            per-domain map + profile
-
-NOTE ON THE ELEVATION COLUMNS
------------------------------
-road_elev_* is the elevation of the cells the mask landed on, MHW-relative
-(the extractor subtracts MHW_M = 0.36 before anything else, so this matches
-the frame CASCADE runs in).
-
-Do NOT read a low value as "misregistered" without looking at the figures. Two
-reasons the crown may not survive:
-
-  1. ROAD_BUFFER_M = 6 plus all_touched=True gives a ~24 m wide mask on 10 m
-     cells. NC-12 is ~8 m. Most of every "road" cell is shoulder and adjacent
-     ground, and the median follows them.
-  2. The DEM was resampled to 10 m. An 8 m road inside a 10 m cell is averaged
-     with whatever else is in that cell.
-
-So road_elev may be measuring the DEM's resolution rather than the road. The
-LOW_ELEV flag is INFORMATIONAL. What actually proves registration is the
-figures: does the mask trace the island, and does it sit where you digitized it.
-
-The setback does not depend on any of this -- it comes from the geojson
-geometry. The elevation only matters if you want a per-domain road_ele.
-
-REQUIREMENTS
-------------
-  rasterio, geopandas, shapely, numpy, matplotlib
-===============================================================================
+The only script that masks the road: set ROAD_YEAR in CONFIG. Writes the
+per-domain masks, diagnostics, a manifest and QC figures. Details: scripts/input_prep/4-mgmt-forcings/road_offset/README.md.
 
 Author:  Hannah A. Henry, Coastal Environmental Change Lab,
          University of North Carolina at Chapel Hill
@@ -89,14 +28,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.transforms import blended_transform_factory
 
-# =============================================================================
-# CONFIG
-# =============================================================================
 
-# Derived from this file's own location, never hardcoded: this constant had been
-# reduced to Path("/") -- every path below resolved to the filesystem root and
-# the script died on "missing clipresample root". scripts/input_prep/
-# 4-mgmt-forcings/road_offset/1-produce/<this file> -> parents[5].
+# Derived from this file's own location, never hardcoded
 PROJECT_ROOT = next(_p for _p in Path(__file__).resolve().parents
                     if (_p / "pyproject.toml").exists())
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
@@ -105,65 +38,20 @@ from pathlib import Path as _TVP
 _tvsys.path.insert(0, str(next(_q for _q in _TVP(__file__).resolve().parents
                                if (_q / "pyproject.toml").exists()) / "scripts"))
 from site_layer import hat_topo_version as _tv  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 ROADS_ROOT = _tv.ROADS_ROOT
 DOMAIN_ROOT = _tv.DOMAIN_ROOT
 
-# Same root gis-export-npy.py walks: one subfolder per domain, each holding
-# a resampled_*.tif. The REPO copy, not the OneDrive original, so a run does
-# not need the network drive.
-# MOVED 2026-08-25: 1-barrier3d-domains went period-first and the pre-90-domain
-# legacy went under superseded/. Path repointed so this script keeps reading
-# EXACTLY what it read before - no road number moves because of the reorg.
-# MOVED 2026-08-26 out of superseded/. These are LIVE INPUTS, not an
-# archive - four scripts read them, including the one that builds the
-# road masks the dune/topo extractor requires. Keeping them under a
-# directory called 'superseded' invited exactly the deletion this move
-# prevents.
+# Same root gis-export-npy.py walks
 CLIPRESAMPLE_ROOT = _tv.DOMAIN_CLIPS_DIR
 TIF_GLOB = "resampled_*.tif"
 
-# A GEOMETRY REFERENCE, NOT "THE ARRAYS THE EXTRACTOR READS" (corrected
-# 2026-08-26). That is what this comment used to claim, and it stopped being
-# true when 1-barrier3d-domains went period-first: the extractor now reads
-# <product>/npy-arrays, one per period, and nothing reads this directory as an
-# input to a forcing.
-#
-# What the cross-check needs is the GRID, not the elevations - the mask must
-# land on the same rows and columns the extractor will later shear and trim.
-# Every one of these arrays is (50, 200), identical in npy-arrays_2009_unfilled
-# and in both products, because all three are clipped from the same
-# resampled_*.tif boxes and the fills change values, never extents. So this
-# stays a valid alignment reference and is deliberately NOT repointed at a
-# product: doing that would make the road masks - which BOTH periods share -
-# depend on one period's DEM.
-#
-# It held 131 arrays against the live 90; the extras were pre-90-domain legacy
-# and were purged on 2026-08-26, leaving domains 1-90. find_elev_npy() looks
-# up by domain id, so the count never mattered here either way.
+# A GEOMETRY REFERENCE, NOT "THE ARRAYS THE EXTRACTOR READS" (corrected 2026-08-26)
 ELEV_NPY_DIR = DOMAIN_ROOT / "npy-arrays_2009_unfilled"
 
-# --- ROAD ---------------------------------------------------------------
-# THE ONE LINE TO CHANGE PER VINTAGE. Edit it and re-run; do NOT save a
-# per-year copy of this file. Everything below is derived from it, and the
-# output lands in its own road_offset\raster\<year>\ folder with a RUN_MANIFEST, so
-# the vintages stay separable without a second script.
-#
-# This file used to be driven by HAT_rasterize_road_run.py, which patched these
-# globals at import. That driver is gone; its settings are folded in here, so
-# there is ONE rasterization implementation and one place for the year and the
-# paths. The rules below are the ones road_offset\raster\1978\RUN_MANIFEST.txt
-# records, so a 2008 run is made by the same rules as the 1978 masks on disk.
-#
-# Overridable from the shell so building BOTH vintages needs no edit and no
-# second copy of this file -- which is the rule above, not an exception to it:
-#     HAT_ROAD_YEAR=1978 python HAT_rasterize_road_to_domains.py
-# With the variable unset the constant below is what runs, so the file still
-# reads as "the one line to change".
-#
-# ROAD_YEAR IS A LINE VINTAGE, NOT A PERIOD START (2026-09-15). The lines are
-# 1978 and 2008 exports and are now filed under those years; which period reads
-# which is hat_topo_version.ROAD_LINE_FOR_YEAR. Passing 1984 or 2004 here is
-# refused rather than resolved to a folder that no longer exists.
+# Road
+
+# THE ONE LINE TO CHANGE PER VINTAGE
 ROAD_YEAR = int(os.environ.get("HAT_ROAD_YEAR", 2008))
 if ROAD_YEAR not in (1978, 2008):
     raise SystemExit(
@@ -171,7 +59,7 @@ if ROAD_YEAR not in (1978, 2008):
         f"not a period start. See hat_topo_version.ROAD_LINE_FOR_YEAR.")
 ROAD_GEOJSON = ROADS_ROOT / "raw_offset" / str(ROAD_YEAR) / f"nc12_{ROAD_YEAR}.geojson"
 
-# --- OUTPUT LAYOUT ------------------------------------------------------
+# Output layout
 OUT_ROOT = ROADS_ROOT / "raster" / str(ROAD_YEAR)
 MASK_DIR = OUT_ROOT / "masks"          # <- the setback scripts read from here
 FIG_DIR = OUT_ROOT / "figures"
@@ -181,34 +69,26 @@ MANIFEST_PATH = OUT_ROOT / "RUN_MANIFEST.txt"
 
 SAVE_SUMMARY_FIG = True
 SAVE_DOMAIN_FIGS = True
-# Per-domain map figures. None = every road domain (slow, ~110 figures);
-# a list = just those. Defaults to the domains this investigation cares about:
-# the 1999 relocation block, the crash suspect, the LOW_ELEV heartland, the
-# NODATA cases, and the 1989 Pea Island block.
+# Per-domain map figures: None = every road domain (slow); default the domains under study
 QC_DOMAINS = [9, 11, 13, 15, 16, 22, 35, 74, 78, 79, 84, 85, 86, 87]
 
-# --- RASTERIZATION ------------------------------------------------------
-# Widen the road before burning. The geojson is a zero-width centerline, and a
-# zero-width line through a 10 m grid can skip cells diagonally, leaving gaps a
-# profile falls straight through. NC-12 is ~2 lanes plus shoulders.
-# Set 0.0 to burn the bare centerline: with ALL_TOUCHED the path stays
-# continuous, and road_elev then samples only the cells the road crosses. That
-# is the cheap test for whether the crown is resolved at 10 m.
+# Rasterization
+
+# Widen the road before burning, so no profile slips through the centreline
 ROAD_BUFFER_M = 6.0
 ALL_TOUCHED = True
 
-# --- DATUM / DIAGNOSTICS ------------------------------------------------
+# Datum / diagnostics
 MHW_M = 0.36              # cascade_export_npy -> extractor subtracts this
 BERM_ELEV_NAVD_M = 1.70   # m NAVD88; = 1.34 m MHW
 NODATA_VALUE = -10.0      # gis-export-npy.py: nodata_to_value=-10
 ROAD_ELEV_MIN_M = 0.6     # MHW; INFORMATIONAL flag only -- see the header
 FIRST_ROAD_DOMAIN, LAST_ROAD_DOMAIN = 9, 90
 
-# Display only. Must match OCEAN_LOC in HAT_dune_topo_extractor.py so the
-# figures show the same orientation the extractor works in.
+# Display only: must match the extractor's OCEAN_LOC
 OCEAN_LOC = "right"
 
-# --- STYLE (HAT_hindcast_1984_2024.py palette) --------------------------
+# Style (HAT_hindcast_1984_2024.py palette)
 C_MODEL, C_TOWN, C_WIMBLE, C_PIER, C_GROIN = ("#FF8C00", "#90AFC5", "#E0A800",
                                               "#1565C0", "#B71C1C")
 C_INK = "#1a1a2e"
@@ -222,17 +102,16 @@ SECTIONS = [
     ((68, 83), "Tri-Village"),
     ((84, 90), "Pea Island / N. Rodanthe"),
 ]
+# -----------------------------------------------------------------------------
 
 
-# =============================================================================
-# HELPERS
-# =============================================================================
-
+# The first number in a name
 def domain_id_from(text):
     m = re.search(r"(\d+)", str(text))
     return int(m.group(1)) if m else None
 
 
+# The island section a domain falls in
 def section_for(d):
     for (lo, hi), label in SECTIONS:
         if lo <= d <= hi:
@@ -240,8 +119,8 @@ def section_for(d):
     return ""
 
 
+# Walk the clipresample folders exactly as gis-export-npy.py does
 def find_domain_tifs(root):
-    """Walk the clipresample folders exactly as gis-export-npy.py does."""
     out = {}
     root = Path(root)
     if not root.exists():
@@ -262,6 +141,7 @@ def find_domain_tifs(root):
     return out
 
 
+# A domain's elevation array, if the folder has one
 def find_elev_npy(npy_dir, domain_id, folder_name):
     if not npy_dir:
         return None
@@ -275,6 +155,7 @@ def find_elev_npy(npy_dir, domain_id, folder_name):
     return None
 
 
+# The road line, checked to exist
 def load_road():
     if not Path(ROAD_GEOJSON).exists():
         raise FileNotFoundError(f"ROAD_GEOJSON not found: {ROAD_GEOJSON}")
@@ -286,11 +167,8 @@ def load_road():
     return gdf
 
 
+# Metres per linear unit of src's CRS
 def crs_to_metres(src):
-    """
-    Metres per linear unit of src's CRS. EPSG:2264 (NC State Plane) is US
-    SURVEY FEET, so buffering by 6.0 there is 6 ft = 1.8 m, not 6 m.
-    """
     try:
         return float(src.crs.linear_units_factor[1])
     except Exception:
@@ -298,8 +176,8 @@ def crs_to_metres(src):
         return 1.0
 
 
+# Rasterize into src's exact grid
 def burn(road_gdf, src):
-    """Rasterize into src's exact grid. The affine carries any rotation."""
     g = road_gdf.to_crs(src.crs)
     geoms = list(g.geometry)
     if ROAD_BUFFER_M > 0:
@@ -315,11 +193,8 @@ def burn(road_gdf, src):
     )
 
 
+# (n_along, n_cross) with index 0 = ocean, matching what the extractor works in after ...
 def ocean_first(arr):
-    """
-    (n_along, n_cross) with index 0 = ocean, matching what the extractor works
-    in after orient_ocean_right() -> [:, ::-1]. Display only.
-    """
     if OCEAN_LOC == "right":
         return arr[:, ::-1]
     if OCEAN_LOC == "left":
@@ -331,18 +206,10 @@ def ocean_first(arr):
     raise ValueError(f"OCEAN_LOC must be right/left/top/bottom, got {OCEAN_LOC!r}")
 
 
-# =============================================================================
-# FIGURES
-# =============================================================================
+# Figures
 
+# Confirm, by eye, that the mask landed on the island where it should
 def domain_figure(d, elev_raw, mask_raw, rec, fig_dir: Path):
-    """
-    Confirm, by eye, that the mask landed on the island where it should.
-
-    Left  : elevation map, ocean at the bottom, road mask overlaid.
-    Right : alongshore-mean cross-shore profile, with the road's cross-shore
-            span shaded and the berm marked.
-    """
     z = ocean_first(elev_raw) - MHW_M
     m = ocean_first(mask_raw) > 0
     z_disp = np.where(z <= NODATA_VALUE - MHW_M + 1e-6, np.nan, z)
@@ -409,8 +276,8 @@ def domain_figure(d, elev_raw, mask_raw, rec, fig_dir: Path):
     plt.close(fig)
 
 
+# Every domain on one page
 def summary_figure(recs, path: Path):
-    """Every domain on one page: where the road sits, what it sits on."""
     recs = sorted([r for r in recs if r["n_cells"] > 0],
                   key=lambda r: r["domain"])
     if not recs:
@@ -480,10 +347,9 @@ def summary_figure(recs, path: Path):
     print(f"[summary] {path}")
 
 
-# =============================================================================
-# OUTPUT
-# =============================================================================
+# Output
 
+# The per-domain diagnostics CSV
 def write_diagnostics(recs, path: Path):
     if not recs:
         return
@@ -496,6 +362,7 @@ def write_diagnostics(recs, path: Path):
     print(f"[diag] {path}")
 
 
+# The run's settings, beside the masks
 def write_manifest(recs, path: Path):
     cfg = {
         "run_time": datetime.now().isoformat(timespec="seconds"),
@@ -550,16 +417,9 @@ def write_manifest(recs, path: Path):
     print(f"[manifest] {path}")
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
+# Run: check inputs, burn every domain, write masks, diagnostics and figures
 def main():
-    # Check the inputs BEFORE mkdir. Carried over from the retired
-    # HAT_rasterize_road_run.py driver, and it is not decoration: the mkdir
-    # below is parents=True, so a wrong PROJECT_ROOT silently builds a whole
-    # stray tree and the run looks normal. That is exactly how the leftover
-    # C:\data\hatteras_init\ came to exist. Fail loudly instead.
+    # Check the inputs before mkdir, so a wrong root fails loudly
     for label, path in [("clipresample root", CLIPRESAMPLE_ROOT),
                         ("elevation npy dir", ELEV_NPY_DIR),
                         ("road geojson", ROAD_GEOJSON)]:
@@ -680,7 +540,7 @@ def main():
               f"{n_prof:>5} {rec['road_cs_median']:>7} {et:>6} "
               f"{rec['n_nodata']:>7}  {rec['flags']}")
 
-    # --- outputs ---------------------------------------------------------
+    # Outputs
     print()
     write_diagnostics(recs, DIAG_CSV)
     if SAVE_SUMMARY_FIG:
@@ -726,7 +586,7 @@ def main():
 
     write_manifest(recs, MANIFEST_PATH)
 
-    # --- verdict ---------------------------------------------------------
+    # Verdict
     rots = np.array(rots)
     print("\n" + "-" * 82)
     print("GRID ROTATION")

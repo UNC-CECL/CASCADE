@@ -1,48 +1,16 @@
-# ==============================================================================
-# HAT_road_method_diagnostic.py
-#
-# What changes when the road forcing moves from the legacy method to measuring
-# against the extracted dune start -- and, crucially, WHY each domain changes.
-#
-# THE DECOMPOSITION
-#   The legacy-to-new difference confounds two things. A control run with
-#   STRAIGHTEN = False -- same code, same DEM dune crest, same road mask, same
-#   median aggregation, only the frame changed -- separates them exactly:
-#
-#       new_straightened - legacy  =  (new_straightened - new_raw)   FRAME
-#                                   + (new_raw          - legacy)    REFERENCE
-#
-#   FRAME      the obliquity correction. North-up clip boxes make NC-12 cross
-#              each 500 m domain diagonally; straightening shears that out.
-#   REFERENCE  everything else, and it is two effects that these files cannot
-#              separate: the legacy method measures a digitized same-year
-#              DUNE-LINE GEOJSON, this one measures the DEM DUNE CREST inside the
-#              picked window, and those differ both in what feature they are and
-#              in what year the feature dates from. Labelled honestly as one
-#              component rather than split on an assumption.
-#
-#   Residual caveat: the two passes use two different pick files (a window picked
-#   in one frame points at different cells in the other), so a little of FRAME is
-#   really window choice. Second-order, not zero.
-#
-# WHAT IT SHOWS
-#   A  setback per domain, three methods, per year
-#   B  the two components
-#   C  |total change| as a FRACTION OF ISLAND WIDTH -- a 50 m shift is severe on
-#      a 150 m island and minor on a 600 m one, so metres alone hide which
-#      domains matter
-#   D  road elevation, legacy vs new: a near-null result, kept because it
-#      documents that the elevation was never the problem
-#
-# USAGE
-#     python HAT_road_method_diagnostic.py
-# ==============================================================================
-#
-# Author:  Hannah A. Henry, Coastal Environmental Change Lab,
-#          University of North Carolina at Chapel Hill
-# Contact: hahenry@unc.edu
-# Version: 2026-09-18
+"""
+What changes when the road forcing moves from the legacy method to the dune start, and why, per domain.
 
+    python scripts/input_prep/4-mgmt-forcings/road_offset/4-compare/HAT_road_method_diagnostic.py
+
+Decomposes the change with the unstraightened control run; writes a figure
+and a CSV in road_offset/method_comparison/. Details: scripts/input_prep/4-mgmt-forcings/road_offset/README.md.
+
+Author:  Hannah A. Henry, Coastal Environmental Change Lab,
+         University of North Carolina at Chapel Hill
+Contact: hahenry@unc.edu
+Version: 2026-09-18
+"""
 from __future__ import annotations
 
 import csv
@@ -56,9 +24,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
-# Derived, not hardcoded: a machine-specific absolute path here made the script
-# unrunnable for anyone else and silent about why. Two sibling scripts carried
-# the same defect in a form that resolved to the filesystem root.
+# Walk up until a directory holds data/hatteras_init
 def _find_project_root(start: Path) -> Path:
     for p in [start, *start.parents]:
         if (p / "data" / "hatteras_init").is_dir():
@@ -68,59 +34,39 @@ def _find_project_root(start: Path) -> Path:
 
 PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
 INIT_ROOT = PROJECT_ROOT / "data" / "hatteras_init"
-# Topography version resolved from the extractor, not hardcoded -- it was
-# "2009_v3" and silently survived the re-pick into 2009_v4. See hat_topo_version.py.
-# parents[4] IS scripts/ -- hat_topo_version.py moved there 2026-08-20.
+# Topography version resolved from the extractor, not hardcoded
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 from site_layer.hat_topo_version import (topo_dirs, array_name,  # noqa: E402
                              product_for_year)
 
-# PER VINTAGE, not once (2026-08-26). This was a module-level topo_dirs() with
-# no argument -- DEFAULT_PRODUCT -- and `island_width_m()` fed the SAME widths
-# into both years of the table, so `total_change_frac_width` normalised the
-# 1984 change by the 2004-start island. All 90 domains differ between the two
-# products and 65 differ in interior SHAPE, so that denominator was wrong for
-# every 1984 row. Same failure as the v3/v4 one above, in product form.
+# PER VINTAGE, not once (2026-08-26)
 _TOPO_CACHE: dict[int, tuple] = {}
 
 
+# The topography folders for a year's product
 def topo_for_year(year: int):
     if year not in _TOPO_CACHE:
         _TOPO_CACHE[year] = topo_dirs(product_for_year(year))
     return _TOPO_CACHE[year]
 
 
+# 'product/version' for a year
 def topo_label(year: int) -> str:
     return f"{product_for_year(year)}/{topo_for_year(year)[2]}"
 
 
-# array_name() is the single definition of these filenames - the same one
-# the extractor writes with. Nothing here spells a name.
+# Filenames from array_name(), the same definition the extractor writes with
 from site_layer import hat_topo_version as _tv  # noqa: E402
+# --- CONFIG ------------------------------------------------------------------
 ROADS_ROOT = _tv.ROADS_ROOT
 OFFSET_ROOT = ROADS_ROOT / "dunestart_offset" / "measured"   # the two measured starts
 # old_method_offset/ became a dated superseded folder on 2026-09-11; resolved 2026-09-18.
 LEGACY_SB_FMT = _tv.LEGACY_SETBACK_ROOT / "{year}" / "RoadSetback_{year}.csv"
 
-# Road elevation is NOT per-year, and it stays that way -- but the reason is no
-# longer "there is one 2009 DEM". There are two elevation products now, and in
-# the road corridor they disagree by a median +0.222 m (2009-2014-1996 minus
-# 2009-2014, 54 of 82 domains beyond 0.05 m). That difference is the
-# uncorrected island-wide 1996-vs-2009 survey offset, not a roadbed, so it is
-# kept OUT of the forcing: one set, sampled on the 2009-2014 baseline, read for
-# both years in YEARS. The old per-year RoadElevation_<year>.csv pair does not
-# exist -- writing two files implied a measured change in roadbed height
-# between 1984 and 2004 that nothing supports.
-# See data/.../road_elevation/RoadElevation_audit.md and the note beside
-# HATTERAS_ROAD_ELEVATION_FILE in hatteras_site_config.py.
+# Road elevation is NOT per-year, and it stays that way -- but the reason is no longer "there is one 2009 DEM"
 LEGACY_EL = _tv.ROAD_ELEVATION_FILE
 
-# 4-compare output lands in method_comparison/, NOT inside either method's
-# folder -- this is a legacy-vs-dune-start comparison, so it belongs to neither.
-# It wrote into dunestart_offset/ until 2026-08-28, which put a cross-method
-# result under one of the methods it compares and contradicted the rule stated
-# in this folder's README. Its sibling, HAT_method_comparison_figures.py, was
-# always correct about that rule; only this one drifted.
+# Output in method_comparison/, belonging to neither method
 OUT_ROOT = ROADS_ROOT / "method_comparison"
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 from site_layer.hat_figure_style import (  # noqa: E402
@@ -139,21 +85,13 @@ CELL_SIZE_M = 10.0
 SENTINEL_DAM = -0.3
 BERM_MHW_M = 1.70 - 0.36
 
-# Hue is the VINTAGE here and line style is the method, so the house pair
-# applies: the earlier survey red, the later blue. Until 2026-09-10 this file
-# had them the other way round (1984 blue, 2004 orange), which put it at odds
-# with every other two-vintage figure in the project.
+# Hue is the VINTAGE here and line style is the method, so the house pair applies
 C_1984 = C_EARLY
 C_2004 = C_LATE
 INK_SECOND = INK
 SURFACE = "white"
 
-# Method is encoded by LINE STYLE, year by hue. That keeps the validated
-# two-colour palette (normal-vision dE 33.6, worst CVD dE 26.5) and means no
-# series is distinguished by colour alone.
-# The prose that used to be burned onto the canvas: a title sentence, a
-# three-line method paragraph and two statistics boxes. It goes to CAPTIONS.md
-# beside the PNG, with the numbers filled from this run.
+# Method is encoded by LINE STYLE, year by hue
 CAPTION_TMPL = (
     "Road forcing: what changes when the setback is measured from the extracted "
     "dune start instead of by the superseded method, and why. Island widths for "
@@ -191,8 +129,10 @@ CAPTION_TMPL = (
 STYLE_NEW = (0, ())
 STYLE_RAW = (0, (5, 1.6))
 STYLE_LEGACY = (0, (1.4, 1.8))
+# -----------------------------------------------------------------------------
 
 
+# {domain: value} from a two-row CSV
 def read_two_row(path: Path) -> dict[int, float]:
     if not path.is_file():
         return {}
@@ -202,6 +142,7 @@ def read_two_row(path: Path) -> dict[int, float]:
     return {int(k): float(v) for k, v in zip(raw[0], raw[1])}
 
 
+# The per-domain offset table for a year
 def read_domains_csv(year: int, suffix: str = "") -> dict[int, dict]:
     path = OFFSET_ROOT / str(year) / f"RoadOffset_{year}_domains{suffix}.csv"
     if not path.is_file():
@@ -210,6 +151,7 @@ def read_domains_csv(year: int, suffix: str = "") -> dict[int, dict]:
         return {int(r["domain"]): r for r in csv.DictReader(f)}
 
 
+# A float, or NaN
 def to_float(v) -> float:
     try:
         return float(v)
@@ -217,12 +159,8 @@ def to_float(v) -> float:
         return np.nan
 
 
+# Median land width per domain, from the interiors CASCADE will read
 def island_width_m(year: int) -> dict[int, float]:
-    """Median land width per domain, from the interiors CASCADE will read.
-
-    `year` is required: the two periods start from different extractions, so
-    "the island width" is not one number per domain.
-    """
     topo_dir = topo_for_year(year)[0]
     out = {}
     for d in DOMAINS:
@@ -235,6 +173,7 @@ def island_width_m(year: int) -> dict[int, float]:
     return out
 
 
+# The per-domain decomposition, both years
 def build_table() -> list[dict]:
     rows = []
     for year in YEARS:
@@ -250,9 +189,7 @@ def build_table() -> list[dict]:
         for d in DOMAINS:
             if d not in new or int(new[d]["n_road_profiles"] or 0) == 0:
                 continue
-            # Honour the offset script's own span decision rather than
-            # duplicating ROAD_SPAN here: domains it measured but excluded from
-            # the model-facing files are not part of the forcing being compared.
+            # Honour the offset script's own span decision rather than duplicating ROAD_SPAN here
             if "EXCLUDED_FROM_SPAN" in (new[d].get("flags") or ""):
                 continue
             n_s = to_float(new[d].get("setback_dunestart_m"))
@@ -282,11 +219,13 @@ def build_table() -> list[dict]:
     return rows
 
 
+# (domains, values) for one year and column
 def series(rows, year, key):
     sel = [r for r in rows if r["year"] == year and np.isfinite(r[key])]
     return [r["domain"] for r in sel], [r[key] for r in sel]
 
 
+# Run: the table, the figure and the CSV
 def main() -> None:
     rows = build_table()
     if not rows:
@@ -308,7 +247,7 @@ def main() -> None:
     ax_el = fig.add_subplot(gs[3], sharex=ax_sb)
     ax_el.set_xlim(0.5, len(DOMAINS) + 0.5)
 
-    # ---------------- A: three methods ----------------
+    # A: three methods
     ax_sb.axhline(0.0, color=INK, lw=0.8, zorder=3)
     for year, colour in ((1984, C_1984), (2004, C_2004)):
         for key, style, width in (("setback_new_straight_m", STYLE_NEW, 1.8),
@@ -322,7 +261,7 @@ def main() -> None:
     ax_sb.set_axisbelow(True)
     plt.setp(ax_sb.get_xticklabels(), visible=False)
 
-    # ---------------- B: the two components ----------------
+    # B: the two components
     ax_cp.axhline(0.0, color=INK, lw=0.8, zorder=3)
     for year, colour in ((1984, C_1984), (2004, C_2004)):
         x, y = series(rows, year, "component_reference_m")
@@ -340,7 +279,7 @@ def main() -> None:
     ax_cp.set_axisbelow(True)
     plt.setp(ax_cp.get_xticklabels(), visible=False)
 
-    # ---------------- C: normalized severity ----------------
+    # C: normalized severity
     for year, colour, off in ((1984, C_1984, -0.2), (2004, C_2004, 0.2)):
         sel = [r for r in rows
                if r["year"] == year and np.isfinite(r["total_change_frac_width"])]
@@ -348,8 +287,7 @@ def main() -> None:
                   [r["total_change_frac_width"] for r in sel],
                   width=0.4, color=colour, edgecolor="none", zorder=5)
     ax_fr.axhline(0.25, color=INK_MUTED, lw=0.8, ls=":", zorder=6)
-    # Right-aligned: the tall bars are at GIS 11-15, so a left-hand label sits
-    # on top of them.
+    # Right-aligned, clear of the tall bars at GIS 11-15
     ax_fr.text(90.0, 0.26, "a quarter of the island's width",
                fontsize=7.5, color=INK_MUTED, va="bottom", ha="right")
     ax_fr.set_ylabel("|change| \u00f7 island width")
@@ -358,7 +296,7 @@ def main() -> None:
     ax_fr.set_axisbelow(True)
     plt.setp(ax_fr.get_xticklabels(), visible=False)
 
-    # ---------------- D: elevation, the null result ----------------
+    # D: elevation, the null result
     ax_el.axhline(BERM_MHW_M, color=INK_MUTED, lw=0.8, ls=":", zorder=3)
     ax_el.text(1.0, BERM_MHW_M + 0.03, f"berm {BERM_MHW_M:.2f} m MHW",
                fontsize=7.5, color=INK_MUTED, va="bottom")
